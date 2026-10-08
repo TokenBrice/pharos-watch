@@ -249,8 +249,7 @@ export function TriageSummary({
             className={healthData ? getStatusTone(healthData.status).badgeClassName : undefined}
           />
           <span className="mx-1 hidden self-center border-l border-border/40 py-2 sm:block" />
-          <SummaryBadge label="Reserve Drift" value={String(data.reserveDrift?.length ?? 0)} />
-          <SummaryBadge label="Class Warnings" value={String(data.classificationWarnings?.length ?? 0)} />
+          <SummaryBadge label="Reserve Drift" value={data.sectionErrors.reserveDrift || !data.reserveDrift ? "Unknown" : String(data.reserveDrift.length)} />
         </div>
 
         {reserveScoreInputHold ? (

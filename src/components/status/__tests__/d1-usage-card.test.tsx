@@ -53,4 +53,15 @@ describe("D1UsageCard", () => {
     expect(screen.getByText("Rows Written (24h)")).toBeTruthy();
     expect(screen.getByText("Replication")).toBeTruthy();
   });
+
+  it("labels base-1024 database and growth quantities with binary units", () => {
+    const summary = makeSummary({ databaseSizeBytes: 1024 ** 3 });
+    summary.capacity!.growthWindows = [{
+      window: "24h", windowSeconds: 86400, sampleCount: 24, spanHours: 23, valid: true, growthBytesPerDay: 100_000_000,
+    }];
+    render(<D1UsageCard summary={summary} nowSeconds={1_712_600_120} />);
+    expect(screen.getByText("1.00 GiB")).toBeTruthy();
+    expect(screen.getByText("+95.4 MiB/day")).toBeTruthy();
+    expect(screen.queryByText("1.00 GB")).toBeNull();
+  });
 });

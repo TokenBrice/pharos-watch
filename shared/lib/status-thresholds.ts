@@ -1,5 +1,5 @@
 import { CRON_INTERVALS } from "./cron-jobs";
-import type { ActivePriceCoverageHealth, StatusHealthValue } from "../types/status";
+import type { ActivePriceCoverageHealth, PublicationSurfaceHealth, StatusHealthOrUnknown, StatusHealthValue } from "../types/status";
 import type { z } from "zod";
 import type { FreshnessStatusSchema } from "../types/api-meta";
 
@@ -31,6 +31,38 @@ export function classifyFreshnessRatio(ratio: number): FreshnessStatus {
   if (ratio <= FRESHNESS_RATIOS.FRESH) return "fresh";
   if (ratio <= FRESHNESS_RATIOS.DEGRADED) return "degraded";
   return "stale";
+}
+
+/** Admin-only pending-candidate budget; never changes publication acceptance or public health. */
+export const STATUS_PUBLICATION_PENDING_MAX_AGE_SEC = 2 * 3600;
+
+export function classifyPublicationDiagnostic(surface: PublicationSurfaceHealth | undefined): {
+  status: StatusHealthOrUnknown;
+  reason: string | null;
+  maxAgeSec: number | null;
+  updatedAt: number | null;
+} {
+  if (!surface) return { status: "unknown", reason: "Publication health surface unavailable.", maxAgeSec: null, updatedAt: null };
+  const published = surface.lastPublishedGeneration;
+  const attempt = surface.lastAttemptedGeneration;
+  if (!published) return { status: "stale", reason: "No published generation recorded.", maxAgeSec: null, updatedAt: attempt?.startedAt ?? null };
+  if ((attempt?.state === "failed" || attempt?.state === "rejected") && attempt.startedAt > published.startedAt) {
+    return {
+      status: "degraded",
+      reason: attempt.failureReason ?? surface.lastFailureReason ?? `Latest generation ${attempt.state}.`,
+      maxAgeSec: null,
+      updatedAt: attempt.failedAt ?? attempt.startedAt,
+    };
+  }
+  if (surface.candidateAgeSec != null && surface.candidateAgeSec > STATUS_PUBLICATION_PENDING_MAX_AGE_SEC) {
+    return {
+      status: "degraded",
+      reason: `Candidate generation has been pending for ${surface.candidateAgeSec}s.`,
+      maxAgeSec: STATUS_PUBLICATION_PENDING_MAX_AGE_SEC,
+      updatedAt: attempt?.startedAt ?? null,
+    };
+  }
+  return { status: "healthy", reason: null, maxAgeSec: null, updatedAt: published.publishedAt ?? published.validatedAt ?? published.startedAt };
 }
 
 // --- Blacklist gap thresholds ---

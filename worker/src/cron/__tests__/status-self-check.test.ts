@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { makeExecutionContext } from "../../test-helpers/__shared/auth";
 
 type HealthProbeStatus = "healthy" | "degraded" | "stale";
 
@@ -48,8 +49,8 @@ const writeStatusProbeRunMock = vi.fn(async () => true);
 const writeStatusRawSnapshotMock = vi.fn(async () => true);
 const loadStatusSupplementsMock = vi.fn(async () => ({ sectionErrors: {} }));
 const updateDiscrepancyObservationMock = vi.fn(async () => ({
-  consecutiveDivergent: 2,
-  consecutiveProbeFailures: 0,
+  consecutiveDivergent: 2 as number | null,
+  consecutiveProbeFailures: 0 as number | null,
   persistenceSucceeded: true,
 }));
 function buildRawStatus(rawOverallStatus = "healthy", freshnessDiagnostics: Array<Record<string, unknown>> = []) {
@@ -60,7 +61,7 @@ const reconcileStatusStateMock = vi.fn(async () => ({
   effectiveStatus: "stale",
   persistenceSucceeded: true,
 }));
-const buildDiscrepancyMock = vi.fn((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+const buildDiscrepancyMock = vi.fn((_status: unknown, _probe: unknown, _now: number, streak: number | null) => ({
   hasDivergence: true,
   severityDelta: 1,
   statusSeverity: 2,
@@ -122,7 +123,7 @@ describe("runStatusSelfCheck", () => {
       buildProbeResponse(input, "healthy", init),
     );
     routeMock.mockImplementation(async ({ url }: { url: URL }) => buildProbeResponse(url));
-    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number | null) => ({
       hasDivergence: true,
       severityDelta: 1,
       statusSeverity: 2,
@@ -217,10 +218,26 @@ describe("runStatusSelfCheck", () => {
     ]);
   });
 
+  it("reports census failures alongside successful probes without fabricating zero counts", async () => {
+    const db = mockD1([
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+      { match: "FROM sqlite_master", rows: [{ name: "cron_runs" }, { name: "supply_history" }] },
+      { match: 'FROM "cron_runs"', rows: [{ row_count: null }] },
+      { match: 'FROM "supply_history"', rows: [{ row_count: 0 }] },
+      { match: "INSERT INTO cache (key, value, updated_at)", rows: [], runMeta: { changes: 1 } },
+    ]);
+    const result = await runStatusSelfCheck(db, { ctx: makeExecutionContext().ctx });
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.d1TableGrowthMonitoring).toMatchObject({
+      tableCount: 1, failedTables: ["cron_runs"], failedTableCount: 1,
+    });
+    expect(metadata.latencySummary.p95Ms).toBeTypeOf("number");
+    expect(routeMock).toHaveBeenCalled();
+  });
+
   it("persists a raw status snapshot after status evaluation", async () => {
     const result = await runStatusSelfCheck({} as D1Database, {
       selfUrl: "secret",
-      v9WorkflowMode: "shadow",
     });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       rawSnapshotPersistenceSucceeded?: boolean;
@@ -239,7 +256,7 @@ describe("runStatusSelfCheck", () => {
     expect(firstSnapshotWrite[2]).toMatchObject({
       rawOverallStatus: "healthy",
     });
-    expect(computeRawStatusMock).toHaveBeenCalledWith(expect.anything(), expect.any(Number), undefined, "shadow");
+    expect(computeRawStatusMock).toHaveBeenCalledWith(expect.anything(), expect.any(Number));
     expect(firstSnapshotWrite[3]?.publicHealth?.status).toBeTypeOf("string");
     expect(firstSnapshotWrite[3]?.supplements).toBeDefined();
     expect(metadata.rawSnapshotPersistenceSucceeded).toBe(true);
@@ -275,7 +292,7 @@ describe("runStatusSelfCheck", () => {
     fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) =>
       buildProbeResponse(input, "degraded", init),
     );
-    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number | null) => ({
       hasDivergence: false,
       severityDelta: 0,
       statusSeverity: 1,
@@ -357,7 +374,7 @@ describe("runStatusSelfCheck", () => {
       effectiveStatus: "healthy",
       persistenceSucceeded: true,
     });
-    buildDiscrepancyMock.mockImplementationOnce((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+    buildDiscrepancyMock.mockImplementationOnce((_status: unknown, _probe: unknown, _now: number, streak: number | null) => ({
       hasDivergence: false,
       severityDelta: 0,
       statusSeverity: 0,
@@ -391,7 +408,7 @@ describe("runStatusSelfCheck", () => {
     fetchMock
       .mockResolvedValueOnce(new Response("{}", { status: 503 }))
       .mockResolvedValueOnce(new Response("{}", { status: 200 }));
-    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number | null) => ({
       hasDivergence: false,
       severityDelta: 0,
       statusSeverity: 1,
@@ -501,7 +518,7 @@ describe("runStatusSelfCheck", () => {
     fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) =>
       buildProbeResponse(input, "healthy", init, { body: {}, status: 503 }),
     );
-    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number | null) => ({
       hasDivergence: false,
       severityDelta: 0,
       statusSeverity: 1,
@@ -590,7 +607,7 @@ describe("health probe semantic classification", () => {
       consecutiveProbeFailures: 0,
       persistenceSucceeded: true,
     });
-    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number | null) => ({
       hasDivergence: false,
       severityDelta: 0,
       statusSeverity: 0,
@@ -636,6 +653,21 @@ describe("health probe semantic classification", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.probeStatus).not.toBe("healthy");
     expect(metadata.probeStatus).toBe("stale");
+    expect(metadata.semanticStatus).toBeNull();
+    expect(metadata.semanticStatusReason).toBe("probe-semantic-evidence-unavailable");
+    expect(metadata.quality).toBeUndefined();
+  });
+
+  it("preserves unavailable counters after the discrepancy store's required read fails", async () => {
+    updateDiscrepancyObservationMock.mockResolvedValueOnce({
+      consecutiveDivergent: null, consecutiveProbeFailures: null, persistenceSucceeded: false,
+    });
+    const result = await runStatusSelfCheck({} as D1Database);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      discrepancyStreak: null, probeFailureStreak: null, outputPublishedAt: null,
+      reason: "status-self-check-persistence-failed",
+    });
   });
 });
 

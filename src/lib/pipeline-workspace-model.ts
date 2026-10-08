@@ -84,7 +84,6 @@ const PIPELINE_ERROR_META: Partial<Record<StatusSectionKey, { mode: PipelineMode
   reserveComposition: { mode: "reserves", label: "Reserve composition" },
   mintBurnReconciliation: { mode: "reserves", label: "Mint/burn reconciliation" },
   reserveDrift: { mode: "reserves", label: "Reserve drift" },
-  classificationWarnings: { mode: "reserves", label: "Classification warnings" },
   yieldHealth: { mode: "yield", label: "Yield health" },
   d1Usage: { mode: "storage", label: "D1 usage" },
   publicationHealth: { mode: "integrity", label: "Publication health" },
@@ -158,7 +157,7 @@ export function buildPipelineModeSummaries(data: StatusResponse): PipelineModeSu
   }
   if (data.coingeckoPriceDiff) {
     marketCount += data.coingeckoPriceDiff.mismatchedCount;
-    marketStates.push(data.coingeckoPriceDiff.mismatchedCount > 0 ? "watch" : "healthy");
+    marketStates.push(data.coingeckoPriceDiff.comparedCoins === 0 ? "unknown" : data.coingeckoPriceDiff.mismatchedCount > 0 ? "watch" : "healthy");
   } else {
     marketStates.push("unknown");
     marketCount += payloadIssueCount(Boolean(data.sectionErrors.coingeckoPriceDiff), 0);
@@ -190,13 +189,6 @@ export function buildPipelineModeSummaries(data: StatusResponse): PipelineModeSu
     if (data.reserveDrift.length > 0) reserveStates.push("watch");
   } else {
     reserveCount += payloadIssueCount(Boolean(data.sectionErrors.reserveDrift), 0);
-    reserveStates.push("unknown");
-  }
-  if (data.classificationWarnings) {
-    reserveCount += data.classificationWarnings.length;
-    if (data.classificationWarnings.length > 0) reserveStates.push("watch");
-  } else {
-    reserveCount += payloadIssueCount(Boolean(data.sectionErrors.classificationWarnings), 0);
     reserveStates.push("unknown");
   }
   if (data.mintBurnReconciliation) {

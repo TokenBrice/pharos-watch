@@ -118,6 +118,9 @@ describe("check-cron-connection-budget", () => {
     expect(report.workerReports.heavy.slotCount).toBe(3);
     expect(report.workerReports.public.slotCount).toBe(report.triggerReports.length - 3);
     expect(report.headroomFullTriggers).toHaveLength(2);
+    expect(report.triggerReports.find(
+      (trigger) => trigger.scheduleKey === "halfHourlyMeasuredExecutionSupplemental",
+    )).toMatchObject({ worker: "public", totalConnections: 3 });
   });
 
   it("enforces aggregate growth rather than resetting it per Worker", () => {

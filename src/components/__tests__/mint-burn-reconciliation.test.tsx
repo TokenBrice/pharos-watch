@@ -8,16 +8,10 @@ import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconc
 function makeSummary(rowCount = 1): MintBurnReconciliationSummary {
   return {
     checkedAt: 1_773_000_000,
-    comparedCoins: rowCount,
     criticalCount: rowCount,
-    insufficientCount: 0,
     rows: Array.from({ length: rowCount }, (_, index) => ({
       stablecoinId: `coin-${index}`,
       symbol: `SYM${index}`,
-      flowNet24hUsd: 1_000_000,
-      chainSupplyDelta24hUsd: 900_000,
-      absoluteDiffUsd: 100_000,
-      diffRatio: 0.12,
       status: "critical",
       coverageStatus: "full",
     })),
@@ -50,7 +44,7 @@ function group(symbol = "SYM0") {
 }
 
 describe("MintBurnReconciliationCard", () => {
-  it("keeps legacy critical and healthy rows unverified, with indicative values collapsed", () => {
+  it("keeps legacy rows unverified without retired circulation disclosures", () => {
     const summary = makeSummary(2);
     summary.rows[1]!.status = "ok";
     render(<MintBurnReconciliationCard summary={summary} />);
@@ -58,11 +52,8 @@ describe("MintBurnReconciliationCard", () => {
     expect(group("SYM1").getByText("Unverified")).toBeTruthy();
     expect(group().queryByText("Critical")).toBeNull();
     expect(group("SYM1").queryByText("Verified")).toBeNull();
-    const disclosure = group().getByText("Indicative circulating-supply comparison").closest("details")!;
-    expect(disclosure.open).toBe(false);
-    expect(within(disclosure).getByText(/Timing, filters and valuation are unverified/)).toBeTruthy();
-    expect(within(disclosure).getByText("Classified flow net 24h")).toBeTruthy();
-    expect(within(disclosure).getByText("Indicative gap")).toBeTruthy();
+    expect(screen.queryByText("Indicative circulating-supply comparison")).toBeNull();
+    expect(screen.queryByText("Classified flow net 24h")).toBeNull();
   });
 
   it("shows exact token precision for a verified latest scan without presenting a 24h audit", () => {
@@ -120,12 +111,11 @@ describe("MintBurnReconciliationCard", () => {
     expect(group("SYM1").queryByText("Verified")).toBeNull();
   });
 
-  it("keeps source incompatibility explanations inside indicative context", () => {
+  it("shows native conservation reasons directly", () => {
     const summary = makeSummary();
-    summary.rows[0]!.comparisonIssue = "Rebases change token supply without mint/burn events.";
+    summary.rows[0]!.conservationIssue = "Conservation evidence is stale.";
     render(<MintBurnReconciliationCard summary={summary} />);
-    const explanation = screen.getByText("Rebases change token supply without mint/burn events.");
-    expect(explanation.closest("details")?.open).toBe(false);
+    expect(screen.getByText("Conservation evidence is stale.")).toBeTruthy();
   });
 
   it("expands and collapses the long tail while prioritizing audit mismatches", () => {

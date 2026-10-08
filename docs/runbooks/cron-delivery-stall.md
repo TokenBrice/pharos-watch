@@ -18,6 +18,7 @@ The helper defaults to `stablecoin-api` and prints the selected script name. It 
 ## Triage and lost slots
 
 1. Read public health and admin live status. Retain `observedAt`, `lastAnyStartedAt`, `lastFiveMinuteStartedAt`, public lane clocks, `heavy.scheduleKey` / `heavy.lastStartedAt`, each role's age/budgets/status and unavailable reason.
+   `lastAnyStartedAt` is permanent investigative context subject to clock validity; it is never the public five-minute or heavy freshness clock. A new unrelated lane start cannot conceal delivery stalls, and a malformed/future overall clock makes liveness evidence unavailable.
 2. Use approved read-only D1 SELECT access: `SELECT slot_key, MAX(started_at) AS last_start FROM cron_slot_executions GROUP BY slot_key`. Use actual `started_at`, not scheduled time, leases, heartbeats or child completion.
 3. Correlate platform scheduled invocations, deployed Worker version, recent rollout and Cloudflare incident evidence. Separate delivery absence from a delivered slot whose child crashed or held publication.
 4. Inspect producer generations and dependent publication clocks. Missed triggers are lost opportunities, not proof that a later run replayed them. Historical gap repair requires the lane's existing generation-bound procedure; never invent completed rows.

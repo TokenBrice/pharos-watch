@@ -68,7 +68,7 @@ interface ProbeStats {
   latencySummary: ProbeLatencySummary;
   status: StatusLevel;
   transportStatus: StatusLevel;
-  semanticStatus: StatusLevel;
+  semanticStatus: StatusLevel | null;
 }
 
 interface ExternalProductionProbeTarget {
@@ -92,7 +92,6 @@ export interface StatusSelfCheckOptions {
   coingeckoApiKey?: string | null;
   cloudflareD1StatusBindings?: CloudflareD1StatusBindings;
   workerCanaryMode?: WorkerCanaryMode;
-  v9WorkflowMode?: string;
 }
 
 interface CollectedStatusSelfCheckProbes {
@@ -202,9 +201,9 @@ function computeProbeStats(probes: ProbeResult[]): ProbeStats {
     failCount,
     latencySummary,
     transportStatus,
-    semanticStatus: probes.reduce<StatusLevel>((worst, probe) =>
+    semanticStatus: probes.reduce<StatusLevel | null>((worst, probe) =>
       probe.semanticStatus && (probe.ok || probe.error?.startsWith("reported-"))
-        ? maxProbeStatus(worst, probe.semanticStatus) : worst, "healthy"),
+        ? (worst == null ? probe.semanticStatus : maxProbeStatus(worst, probe.semanticStatus)) : worst, null),
     status: maxProbeStatus(
       transportStatus,
       semanticProbeStatus,
@@ -703,6 +702,8 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
           checkedAt: snapshot.checkedAt,
           previousCheckedAt: snapshot.previousCheckedAt,
           tableCount: snapshot.tables.length,
+          failedTables: snapshot.failedTables,
+          failedTableCount: snapshot.failedTables.length,
           topGrowers: snapshot.topGrowers,
         }
       : null;
@@ -777,7 +778,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   }, () => failedOutputs.add("status_probe_runs"));
 
   await options.reportProgress?.({ stage: "raw-status" });
-  const raw = await computeRawStatus(db, now, undefined, options.v9WorkflowMode);
+  const raw = await computeRawStatus(db, now);
   const persistedStatus = await reconcileStatusState(db, now, raw.rawOverallStatus, raw.confidence, raw.causes.overall,
     () => failedOutputs.add("status_state"));
   const { effectiveStatus, persistenceSucceeded: statusPersistenceSucceeded } = persistedStatus;
@@ -830,7 +831,8 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       outputPublishedAt: failedOutputs.size === 0 ? now : null,
       failedOutputs: [...failedOutputs],
       ...(reason ? { reason } : {}),
-      ...(semanticStatus !== "healthy" ? { quality: { reason: `probe-plane-${semanticStatus}` } } : {}),
+      ...(semanticStatus != null && semanticStatus !== "healthy" ? { quality: { reason: `probe-plane-${semanticStatus}` } } : {}),
+      ...(semanticStatus == null ? { semanticStatusReason: "probe-semantic-evidence-unavailable" } : {}),
       sampleCount,
       passCount,
       failCount,

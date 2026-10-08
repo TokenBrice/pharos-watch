@@ -93,9 +93,9 @@ describe("PipelineSection", () => {
     const base = makeHealthyStatusResponse();
     const data = degraded(base, {
       sectionErrors: {
-        classificationWarnings: {
-          code: "classification_query_failed",
-          message: "Classification loader timed out",
+        reserveDrift: {
+          code: "reserve_drift_computation_failed",
+          message: "Reserve drift loader timed out",
         },
       },
     });
@@ -103,8 +103,8 @@ describe("PipelineSection", () => {
     render(<PipelineSection data={data} />);
 
     expect(screen.getByText("Loader coverage is incomplete")).toBeTruthy();
-    expect(screen.getByText("Classification warnings")).toBeTruthy();
-    expect(screen.getByText(/classificationWarnings · classification_query_failed/)).toBeTruthy();
+    expect(screen.getByText("Reserve drift")).toBeTruthy();
+    expect(screen.getByText(/reserveDrift · reserve_drift_computation_failed/)).toBeTruthy();
     expect(screen.getByText("Quality panel mounted")).toBeTruthy();
     expect(screen.queryByText("Metadata panel mounted")).toBeNull();
   });

@@ -79,6 +79,7 @@ const MintBurnHealthQueryErrorsSchema = z.object({
 export const SchedulerLivenessSchema = z.object({
   status: z.enum(["healthy", "degraded", "stale", "unavailable"]),
   observedAt: z.number().finite(),
+  /** Permanent context subject to clock validity; never renews either role's freshness. */
   lastAnyStartedAt: z.number().finite().nullable(),
   lastFiveMinuteStartedAt: z.number().finite().nullable(),
   ageSeconds: z.number().finite().nonnegative().nullable(),

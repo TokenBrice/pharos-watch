@@ -1,6 +1,7 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it } from "vitest";
 import { D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY } from "../../lib/status/d1-usage";
+import { D1_CAPACITY_CACHE_KEY } from "../../lib/status/d1-capacity-store";
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
 import {
   handleStatus,
@@ -43,13 +44,18 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const response = await handleStatus({ db, trustedAdmin: true, request, coingeckoApiKey: "cg-test-key" });
     const body = await readJsonResponse(response, 200) as {
-      coingeckoPriceDiff: { comparedCoins: number; mismatchedCount: number; rows: Array<{ stablecoinId: string }> };
+      coingeckoPriceDiff: { comparedCoins: number; mismatchedCount: number; rows: Array<{ stablecoinId: string }> } | null;
       sectionErrors: Record<string, unknown>;
     };
-    expect(body.coingeckoPriceDiff.comparedCoins).toBe(malformed ? 0 : 3);
-    expect(body.coingeckoPriceDiff.mismatchedCount).toBe(malformed ? 0 : 2);
-    expect(body.coingeckoPriceDiff.rows.map((row) => row.stablecoinId)).toEqual(malformed ? [] : ["pyusd-paypal", "usdc-circle"]);
-    expect(body.sectionErrors).not.toHaveProperty("coingeckoPriceDiff");
+    if (malformed) {
+      expect(body.coingeckoPriceDiff).toBeNull();
+      expect(body.sectionErrors).toHaveProperty("coingeckoPriceDiff");
+    } else {
+      expect(body.coingeckoPriceDiff?.comparedCoins).toBe(3);
+      expect(body.coingeckoPriceDiff?.mismatchedCount).toBe(2);
+      expect(body.coingeckoPriceDiff?.rows.map((row) => row.stablecoinId)).toEqual(["pyusd-paypal", "usdc-circle"]);
+      expect(body.sectionErrors).not.toHaveProperty("coingeckoPriceDiff");
+    }
   });
   it("surfaces tracked CoinGecko price mismatches above threshold", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -341,6 +347,8 @@ describe("handleStatus", () => {
     ]);
 
     const db = statusLoadersD1([
+      // This scenario measures live REST capacity rather than reusing the shared healthy cache fixture.
+      { match: "FROM cache WHERE key = ?", matchBinds: [D1_CAPACITY_CACHE_KEY], rows: [], first: null },
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: [D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY],
@@ -648,9 +656,11 @@ describe("handleStatus", () => {
 
     const body = (await readJsonResponse(res, 200)) as {
       sectionErrors: Record<string, { code: string; message: string } | undefined>;
+      discrepancy: { consecutiveDivergent: number | null };
     };
     expect(body.sectionErrors.statusState?.code).toBe("status_persistence_degraded");
     expect(body.sectionErrors.statusState?.message).toBe("Status persistence degraded.");
+    expect(body.discrepancy.consecutiveDivergent).toBeNull();
   });
 
   it("uses writer timestamps for event-backed freshness rows", async () => {

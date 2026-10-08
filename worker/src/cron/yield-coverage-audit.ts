@@ -13,7 +13,6 @@ import { readCachedJson } from "../lib/api-cache-read";
 import { getCache, setCache } from "../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { reportCronProgress } from "../lib/cron-progress";
-import type { ChainRpcConfig } from "../lib/chain-registry";
 import { loadDlStablecoinPools } from "./yield-sync/sources";
 import {
   AUTO_LENDING_POOL_MAP,
@@ -27,7 +26,6 @@ import { computeSafetyScoresSnapshot, type PublishedSafetyScoresResultMap } from
 import { loadStablecoinSupplyMapFromCacheValue, type StablecoinSupplyMapLoadResult } from "./yield-sync/supply-map";
 import type { YieldAdapterLifecycleEntry } from "../lib/yield-config/yield-config-registry";
 import { YIELD_ADAPTER_LIFECYCLE } from "../lib/yield-config/yield-config-rate-sources";
-import { probeQuarantinedDeterministicAdapters } from "./yield-coverage-audit-quarantine";
 import {
   applyYieldCoverageReviewDispositions,
   type YieldCoverageReviewDispositionSummary,
@@ -50,7 +48,7 @@ import {
 const OPERATOR_QUEUE_ITEM_LIMIT = 20;
 const REPORT_HEADLINE_ITEM_LIMIT = 50;
 const LIFECYCLE_BUCKET_LIMIT = 100;
-const YIELD_COVERAGE_AUDIT_PROGRESS_STAGES = 6;
+const YIELD_COVERAGE_AUDIT_PROGRESS_STAGES = 5;
 
 export interface ProtocolCategoryAuditMeta {
   cacheKey: typeof CIRCUIT_SOURCE.DL_PROTOCOLS;
@@ -218,7 +216,6 @@ async function loadSafetyScoresForAudit(db: D1Database): Promise<PublishedSafety
 export async function runYieldCoverageAudit(
   db: D1Database,
   signal?: AbortSignal,
-  chainRpcs?: Map<string, ChainRpcConfig>,
   reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
   const reportAuditProgress = async (
@@ -267,7 +264,7 @@ export async function runYieldCoverageAudit(
   });
 
   if (dlPools.length === 0) {
-    await reportAuditProgress("complete", "Yield coverage audit completed without DeFiLlama pools", 6, {
+    await reportAuditProgress("complete", "Yield coverage audit completed without DeFiLlama pools", 5, {
       reason: "no-dl-pools",
       poolMeta,
     });
@@ -305,7 +302,7 @@ export async function runYieldCoverageAudit(
   );
   if (rankingsCache.status !== "ok") {
     const reason = `yield-rankings-cache-${rankingsCache.status}`;
-    await reportAuditProgress("complete", "Yield coverage audit deferred pending a readable rankings cache", 6, {
+    await reportAuditProgress("complete", "Yield coverage audit deferred pending a readable rankings cache", 5, {
       reason,
     });
     return createCronResult({
@@ -370,7 +367,7 @@ export async function runYieldCoverageAudit(
     const reason =
       safetySnapshot.reason ??
       "safety-score-v9-publication:identity-missing";
-    await reportAuditProgress("complete", "Yield coverage audit deferred pending an identified safety snapshot", 6, {
+    await reportAuditProgress("complete", "Yield coverage audit deferred pending an identified safety snapshot", 5, {
       reason,
       safetySnapshotSource: safetySnapshot.source,
       safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
@@ -389,7 +386,7 @@ export async function runYieldCoverageAudit(
   }
   if (supplySnapshot.state !== "ok") {
     const reason = `stablecoins-cache-${supplySnapshot.state}`;
-    await reportAuditProgress("complete", "Yield coverage audit deferred pending an available supply snapshot", 6, {
+    await reportAuditProgress("complete", "Yield coverage audit deferred pending an available supply snapshot", 5, {
       reason,
       stablecoinSupplyMapState: supplySnapshot.state,
     });
@@ -448,27 +445,6 @@ export async function runYieldCoverageAudit(
     YIELD_ADAPTER_LIFECYCLE,
     nowMs,
   );
-  await reportAuditProgress("quarantine-probe", "Probing quarantined deterministic yield adapters", 3, {
-    providerFamilies: ["on-chain-rates"],
-    countTotals: {
-      quarantinedAdapters: lifecycleBuckets.quarantinedAdapters.length,
-    },
-  });
-  const quarantineProbe = await probeQuarantinedDeterministicAdapters({
-    quarantinedAdapters: lifecycleBuckets.quarantinedAdapters,
-    chainRpcs,
-    signal,
-  });
-  await reportAuditProgress("quarantine-probe", "Completed quarantined deterministic adapter probe", 4, {
-    providerFamilies: ["on-chain-rates"],
-    countTotals: {
-      quarantinedAdapters: lifecycleBuckets.quarantinedAdapters.length,
-      quarantineProbeConfigured: quarantineProbe.summary.configuredProbeCount,
-      quarantineProbeAttempted: quarantineProbe.summary.attemptedCount,
-      quarantineReadyToRestore: quarantineProbe.readyToRestore.length,
-    },
-    quarantineProbeSummary: quarantineProbe.summary,
-  });
   const staleVenueRiskScores = findStaleVenueRiskScores(nowMs);
   const candidateOperatorQueue = buildCoverageAuditOperatorQueue({
     gaps,
@@ -476,7 +452,6 @@ export async function runYieldCoverageAudit(
     yieldBearingMissingFromRankings,
     staleAutoLendingOverrides,
     deadCuratedPins,
-    quarantineReadyToRestore: quarantineProbe.readyToRestore,
     staleVenueRiskScores,
   });
 
@@ -491,16 +466,14 @@ export async function runYieldCoverageAudit(
     nowSec: reportedAt,
     publishedItemLimit: OPERATOR_QUEUE_ITEM_LIMIT,
   });
-  // C8: the admin panel can only render a bounded slice of the queue, so the
-  // payload carries the composition of the durable queue plus the two reasons
-  // an item is missing from it. candidateItemCount === sum(byKind) +
-  // truncatedItemCount + suppressedItemCount.
-  const queueByKind: Record<string, number> = {};
-  for (const item of [...operatorQueue.headlineGaps, ...operatorQueue.recommendationCandidates]) {
-    queueByKind[item.kind] = (queueByKind[item.kind] ?? 0) + 1;
-  }
+  // Full visible post-disposition totals are measured before either 20-item cap.
+  // candidate = visible + suppressed; visible = published + truncated.
   const queueTotals = {
-    byKind: queueByKind,
+    byKind: operatorReviewSummary.visibleByKind,
+    byKindScope: "full-visible" as const,
+    totalItemCount: operatorReviewSummary.visibleItemCount,
+    publishedItemCount: operatorReviewSummary.publishedItemCount,
+    truncatedItemCount: operatorReviewSummary.truncatedItemCount,
     suppressedItemCount: operatorReviewSummary.suppressedItemCount,
     truncated: operatorReviewSummary.truncatedItemCount > 0,
   };
@@ -550,8 +523,6 @@ export async function runYieldCoverageAudit(
     reviewDueAdapters: lifecycleBuckets.reviewDueAdapters,
     lifecycleSummary: lifecycleBuckets.lifecycleSummary,
     quarantinedAdapters: lifecycleBuckets.quarantinedAdapters,
-    quarantineReadyToRestore: quarantineProbe.readyToRestore,
-    quarantineProbeSummary: quarantineProbe.summary,
     intentionalGaps: lifecycleBuckets.intentionalGaps,
     protocolCategoryMeta: protocolCategoryLookup.meta,
     manifest: YIELD_ADAPTER_MANIFEST.map((entry) => ({
@@ -564,7 +535,7 @@ export async function runYieldCoverageAudit(
     safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
   };
 
-  await reportAuditProgress("cache-write", "Publishing yield coverage audit cache", 5, {
+  await reportAuditProgress("cache-write", "Publishing yield coverage audit cache", 4, {
     cacheKey: "yield-coverage-audit",
     countTotals: {
       ...auditCounts,
@@ -610,7 +581,7 @@ export async function runYieldCoverageAudit(
       },
     });
   }
-  await reportAuditProgress("complete", "Published yield coverage audit cache", 6, {
+  await reportAuditProgress("complete", "Published yield coverage audit cache", 5, {
     cacheKey: "yield-coverage-audit",
     countTotals: {
       ...auditCounts,
@@ -632,7 +603,6 @@ export async function runYieldCoverageAudit(
     staleAutoLendingOverrides.length +
     deadCuratedPins.length +
     staleVenueRiskScores.length +
-    quarantineProbe.readyToRestore.length +
     manifestMissingIds.length +
     yieldBearingMissingFromRankings.length;
 
@@ -654,8 +624,6 @@ export async function runYieldCoverageAudit(
       operatorQueueTruncated: queueTotals.truncated,
       protocolCategoryStatus,
       protocolCategoryCount: protocolCategoryLookup.meta.categorizedProtocolCount,
-      quarantineReadyToRestoreCount: quarantineProbe.readyToRestore.length,
-      quarantineProbeAttemptedCount: quarantineProbe.summary.attemptedCount,
       safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
     },
   });

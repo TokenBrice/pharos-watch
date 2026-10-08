@@ -30,7 +30,7 @@ export function buildDiscrepancy(
   overallStatus: StatusLevel,
   probe: StatusProbeSummary,
   now: number,
-  consecutiveDivergent: number,
+  consecutiveDivergent: number | null,
 ): StatusDiscrepancy {
   if (probe.status === "unknown" || probe.timestamp == null) {
     return {

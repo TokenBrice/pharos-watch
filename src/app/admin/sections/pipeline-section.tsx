@@ -69,8 +69,6 @@ export function PipelineSection({ data }: PipelineSectionProps) {
           <div className="space-y-5">
             <ScoreImpactPanel
               reserveComposition={data.reserveComposition}
-              reserveDrift={data.reserveDrift}
-              classificationWarnings={data.classificationWarnings}
             />
             <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
               <ReserveSyncHealthCard health={data.reserveComposition} nowSeconds={data.timestamp} />
@@ -81,9 +79,7 @@ export function PipelineSection({ data }: PipelineSectionProps) {
                 />
                 <MetadataIntegrityCard
                   reserveDrift={data.reserveDrift}
-                  classificationWarnings={data.classificationWarnings}
                   reserveDriftError={data.sectionErrors.reserveDrift}
-                  classificationWarningsError={data.sectionErrors.classificationWarnings}
                 />
               </div>
             </div>

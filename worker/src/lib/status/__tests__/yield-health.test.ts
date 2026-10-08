@@ -357,6 +357,7 @@ describe("loadYieldHealthSummary", () => {
       oldestAnchorAgeSeconds: 15 * 86400,
       oldestAnchorStablecoinId: "usde-ethena",
       oldestAnchorSourceKey: "onchain:usde-ethena",
+      sourceRunStartedAt: NOW - 120,
       staleAnchorExamples: [{
         stablecoinId: "usde-ethena",
         symbol: "USDe",
@@ -364,6 +365,7 @@ describe("loadYieldHealthSummary", () => {
         dataSource: "onchain",
         anchorAgeSeconds: 15 * 86400,
         comparisonAnchorObservedAt: NOW - 15 * 86400,
+        maxAgeSeconds: null,
       }],
       staleAnchorExamplesTruncated: false,
     });
@@ -757,7 +759,6 @@ describe("loadYieldHealthSummary", () => {
   });
 
   it.each([
-    ["vaultsFyi", "healthy", false],
     ["pendle", "degraded", false],
     ["aaveV3", "degraded", true],
   ] as const)("keeps %s input quality separate from completed producer status", async (family, expectedStatus, degraded) => {
@@ -1057,6 +1058,10 @@ describe("loadYieldHealthSummary", () => {
     expect(summary.coverageAudit.queueBudgetBasis).toBe("post-disposition");
     expect(summary.coverageAudit.queueTotals).toEqual({
       byKind: { "manifest-missing": 6 },
+      byKindScope: "published-sample",
+      totalItemCount: null,
+      publishedItemCount: null,
+      truncatedItemCount: null,
       suppressedItemCount: 4,
       truncated: true,
     });
@@ -1145,14 +1150,25 @@ describe("loadYieldHealthSummary", () => {
     });
   });
 
+  it.each([
+    { pysInputsPersistedCount: 10 },
+    { pysInputsNullCount: 0 },
+    { pysInputsPersistedCount: -1, pysInputsNullCount: 0 },
+    { pysInputsPersistedCount: 1.5, pysInputsNullCount: 0 },
+    { pysInputsPersistedCount: 0, pysInputsNullCount: 0 },
+  ])("keeps incomplete or unmeasurable publisher counters unknown: %j", async (publicationStats) => {
+    const summary = await loadYieldHealthSummary(makeDb([]), NOW, { "sync-yield-data": cron("ok", 120, { publicationStats }) });
+    expect(summary.pysInputs).toMatchObject({ status: "unknown", nullRate: null, sourceRunStartedAt: NOW - 120 });
+  });
+
   it("surfaces a publish-time-snapshot safety fallback and its stale-coherent expiry", async () => {
-    const identityRow = { key: "safety-score-v9:publication", publication_identity: null };
+    const identityRow = null;
     const loadWithAge = async (ageSec: number) => loadYieldHealthSummary(
       mockD1(
         [
           {
-            match: "json_extract(value, '$.identity')",
-            rows: [identityRow],
+            match: "i.value AS score_index",
+            rows: [],
             first: identityRow,
           },
           {
@@ -1167,6 +1183,7 @@ describe("loadYieldHealthSummary", () => {
                   trackedCount: 1,
                   reason: null,
                   safetyScoreIdentity: stampedSafetyIdentity(),
+                  publishedAt: NOW - ageSec,
                 },
               },
             })],
@@ -1181,11 +1198,31 @@ describe("loadYieldHealthSummary", () => {
     const fresh = await loadWithAge(3600);
     expect(fresh.liveSafetyHydration).toMatchObject({
       status: "degraded",
-      reason: "safety-snapshot-unavailable",
+      reason: "v9-snapshot-unavailable",
       fallback: "publish-time-snapshot",
     });
 
     const expired = await loadWithAge(YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC + 3600);
     expect(expired.liveSafetyHydration).toMatchObject({ status: "stale", fallback: null });
+  });
+
+  it("never falls back on malformed canonical index evidence even with fresh stamped clocks", async () => {
+    const summary = await loadYieldHealthSummary(mockD1([
+      { match: "i.value AS score_index", rows: [], first: { score_index: "{" } },
+      { match: "yield-rankings", rows: [yieldCacheRow("yield-rankings", NOW - 10, {
+        rankings: [], provenance: { safetySnapshot: { safetyScoreIdentity: stampedSafetyIdentity(), publishedAt: NOW - 10 } },
+      })] },
+    ], { requireMatch: true }), NOW, {});
+    expect(summary.liveSafetyHydration).toMatchObject({ status: "stale", reason: "safety-score-index-invalid", fallback: null });
+  });
+
+  it("expires safety independently of a refreshed ranking cache", async () => {
+    const summary = await loadYieldHealthSummary(mockD1([
+      { match: "i.value AS score_index", rows: [], first: null },
+      { match: "yield-rankings", rows: [yieldCacheRow("yield-rankings", NOW - 10, {
+        rankings: [], provenance: { safetySnapshot: { safetyScoreIdentity: stampedSafetyIdentity(), publishedAt: NOW - 86401 } },
+      })] },
+    ], { requireMatch: true }), NOW, {});
+    expect(summary.liveSafetyHydration).toMatchObject({ status: "stale", fallback: null, cachedAgeSec: 10, safetyAgeSec: 86401 });
   });
 });

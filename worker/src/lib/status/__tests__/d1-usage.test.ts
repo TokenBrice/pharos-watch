@@ -459,4 +459,42 @@ describe("refreshD1TableGrowthSnapshot", () => {
       failedTables: [],
     });
   });
+
+  it.each([null, undefined, "invalid", "0", -1, 0.5, NaN, Infinity])(
+    "marks malformed census counts as failed without losing valid zero (%s)",
+    async (rowCount) => {
+      const db = mockD1([
+        { match: "INSERT INTO cache (key, value, updated_at)", rows: [], runMeta: { changes: 1 } },
+        { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+        { match: "FROM sqlite_master", rows: [{ name: "cron_runs" }, { name: "supply_history" }, { name: "cache" }] },
+        { match: 'FROM "cron_runs"', rows: [], first: rowCount === undefined ? null : { row_count: rowCount } },
+        { match: 'FROM "supply_history"', rows: [{ row_count: 0 }] },
+        { match: 'FROM "cache"', rows: [{ row_count: 3 }] },
+      ], { requireMatch: true });
+      const snapshot = await refreshD1TableGrowthSnapshot(db, NOW);
+      expect(snapshot?.failedTables).toEqual(["cron_runs"]);
+      expect(snapshot?.tables).toEqual([
+        { tableName: "supply_history", rowCount: 0, previousRowCount: null, rowCountDelta: null, oldestTimestamp: null, newestTimestamp: null },
+        { tableName: "cache", rowCount: 3, previousRowCount: null, rowCountDelta: null, oldestTimestamp: null, newestTimestamp: null },
+      ]);
+      expect(() => db.assertAllMatchesUsed()).not.toThrow();
+    },
+  );
+
+  it("preserves negative deltas and isolates thrown measurement failures", async () => {
+    const previous = { checkedAt: NOW - 86400, utcDay: Math.floor((NOW - 86400) / 86400) * 86400, previousCheckedAt: null,
+      tables: [{ tableName: "cron_runs", rowCount: 10, previousRowCount: null, rowCountDelta: null, oldestTimestamp: null, newestTimestamp: null }],
+      topGrowers: [], failedTables: [] };
+    const db = mockD1([
+      { match: "INSERT INTO cache (key, value, updated_at)", rows: [], runMeta: { changes: 1 } },
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [{ value: JSON.stringify({ version: 1, snapshot: previous }), updated_at: previous.checkedAt }] },
+      { match: "FROM sqlite_master", rows: [{ name: "cron_runs" }, { name: "supply_history" }] },
+      { match: 'FROM "cron_runs"', rows: [{ row_count: 0 }] },
+      { match: 'FROM "supply_history"', rows: [], throwError: new Error("count failed") },
+    ], { requireMatch: true });
+    const snapshot = await refreshD1TableGrowthSnapshot(db, NOW);
+    expect(snapshot?.tables[0]).toMatchObject({ rowCount: 0, previousRowCount: 10, rowCountDelta: -10 });
+    expect(snapshot?.topGrowers).toEqual([]);
+    expect(snapshot?.failedTables).toEqual(["supply_history"]);
+  });
 });

@@ -16,7 +16,7 @@ import {
   type LiveReserveArtifactCleanupResult,
 } from "../lib/live-reserves/store";
 import {
-  CONFIGURED_COINS,
+  LIVE_RESERVE_ARTIFACT_KEEP_COIN_IDS,
   CONFIGURED_LIVE_RESERVE_BREAKER_KEYS,
   type LiveReserveBreakerOutcome,
   type LiveReserveDeferredTailOutcome,
@@ -118,7 +118,7 @@ async function loadBreakerRecordsForOutcomes(
 ): Promise<Record<string, CircuitRecord>> {
   if (outcomes.size === 0) return {};
   try {
-    return await getCircuitRecordsForSources(db, Array.from(outcomes.keys()));
+    return (await getCircuitRecordsForSources(db, Array.from(outcomes.keys()))).records;
   } catch (error) {
     await logCronEvent(db, {
       job: "sync-live-reserves",
@@ -278,7 +278,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
     try {
       artifactCleanup = await cleanupStaleLiveReserveArtifacts(
         args.db,
-        CONFIGURED_COINS.map((coin) => coin.id),
+        LIVE_RESERVE_ARTIFACT_KEEP_COIN_IDS,
         CONFIGURED_LIVE_RESERVE_BREAKER_KEYS,
       );
     } catch (error) {

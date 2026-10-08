@@ -69,7 +69,7 @@ describe("handleStatusHistoryRoute", () => {
       {
         match: "FROM status_discrepancy_state",
         rows: [],
-        first: { consecutive_divergent: 0, last_alert_at: null },
+        first: { consecutive_divergent: 0 },
       },
       {
         match: "FROM status_transitions",
@@ -112,6 +112,24 @@ describe("handleStatusHistoryRoute", () => {
       deferredCoins: 0,
       runBudgetTruncated: false,
     });
+  });
+
+  it("exposes unknown streak and an issue when discrepancy evidence cannot be read", async () => {
+    const db = mockD1([
+      { match: "FROM status_state", rows: [], first: null },
+      { match: "FROM status_probe_runs", rows: [], first: null },
+      { match: "FROM status_discrepancy_state", rows: [], throwError: new Error("discrepancy unavailable") },
+      { match: "FROM status_transitions", rows: [] },
+    ]);
+    const request = makeApiRequest("/api/status-history", { adminKey: "secret-key" });
+    const res = await handleStatusHistoryRoute({ db, trustedAdmin: true, request });
+    const body = await readJsonResponse(res, 200) as {
+      discrepancy: { consecutiveDivergent: number | null };
+      sectionErrors: Record<string, { code: string }>;
+    };
+    expect(body.discrepancy.consecutiveDivergent).toBeNull();
+    expect(body.sectionErrors.discrepancy.code).toBe("status_discrepancy_streak_failed");
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO status_discrepancy_state"))).toBe(false);
   });
 
   it("returns one page plus truthful hasMore evidence", async () => {

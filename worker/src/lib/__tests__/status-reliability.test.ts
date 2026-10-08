@@ -42,10 +42,8 @@ interface DiscrepancyStateRow {
   scope: string;
   consecutive_divergent: number;
   last_divergent_at: number | null;
-  last_alert_at: number | null;
   consecutive_probe_failures: number;
   last_probe_failure_at: number | null;
-  last_probe_alert_at: number | null;
   updated_at: number;
 }
 
@@ -107,6 +105,9 @@ function makeStatefulDb(options: StatefulDbOptions = {}) {
       bind: (...args: unknown[]) => createStatement(sql, args),
       all: async <T>() => bound.all<T>(),
       first: async <T>() => {
+        if (options.failOnSql && sql.includes(options.failOnSql)) {
+          throw new Error(options.failMessage ?? "missing migration");
+        }
         if (options.failFirstOnSql && !firstSqlFailureUsed && sql.includes(options.failFirstOnSql)) {
           firstSqlFailureUsed = true;
           throw new Error(options.failMessage ?? "transient read failed");
@@ -189,18 +190,16 @@ function makeStatefulDb(options: StatefulDbOptions = {}) {
       sqlite
         .prepare(
           `INSERT INTO status_discrepancy_state
-           (scope, consecutive_divergent, last_divergent_at, last_alert_at,
-            consecutive_probe_failures, last_probe_failure_at, last_probe_alert_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+           (scope, consecutive_divergent, last_divergent_at,
+            consecutive_probe_failures, last_probe_failure_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)`,
         )
         .run(
           row.scope,
           row.consecutive_divergent,
           row.last_divergent_at,
-          row.last_alert_at,
           row.consecutive_probe_failures,
           row.last_probe_failure_at,
-          row.last_probe_alert_at,
           row.updated_at,
         );
     },
@@ -607,7 +606,7 @@ describe("status-reliability", () => {
   });
 
   it("tracks discrepancy streaks", async () => {
-    const { db, store } = makeStatefulDb();
+    const { db } = makeStatefulDb();
 
     const first = await updateDiscrepancyObservation(db, 100, true, true);
     expect(first).toEqual({
@@ -623,31 +622,37 @@ describe("status-reliability", () => {
       persistenceSucceeded: true,
     });
 
-    expect(store.discrepancy).toMatchObject({ last_alert_at: null, last_probe_alert_at: null });
 
     expect(await getDiscrepancyStreak(db)).toBe(0);
   });
 
-  it("preserves legacy alert-timestamp columns on upsert", async () => {
-    const { db, store } = makeStatefulDb();
-    store.discrepancy = {
+  it.each([true, false])("does not mutate durable counters after a failed required read (finding=%s)", async (finding) => {
+    const { db, store } = makeStatefulDb({
+      failOnSql: "SELECT scope",
+      failMessage: "discrepancy read failed",
+    });
+    const durable = {
       scope: "global",
       consecutive_divergent: 3,
       last_divergent_at: 90,
-      last_alert_at: 80,
       consecutive_probe_failures: 4,
       last_probe_failure_at: 70,
-      last_probe_alert_at: 60,
       updated_at: 90,
     };
-
-    const result = await updateDiscrepancyObservation(db, 100, true, true);
-
-    expect(result).toMatchObject({
-      consecutiveDivergent: 4,
-      persistenceSucceeded: true,
+    store.discrepancy = durable;
+    const issues = vi.fn();
+    const prepare = vi.spyOn(db, "prepare");
+    expect(await updateDiscrepancyObservation(db, 100, finding, finding, issues)).toEqual({
+      consecutiveDivergent: null, consecutiveProbeFailures: null, persistenceSucceeded: false,
     });
-    expect(store.discrepancy).toMatchObject({ last_alert_at: 80, last_probe_alert_at: 60 });
+    expect(store.discrepancy).toMatchObject(durable);
+    expect(issues).toHaveBeenCalledWith(expect.objectContaining({ code: "status_discrepancy_read_failed" }));
+    expect(prepare.mock.calls.some(([sql]) => sql.includes("INSERT INTO status_discrepancy_state"))).toBe(false);
+  });
+
+  it("reports an unavailable streak instead of zero after a failed read", async () => {
+    const { db } = makeStatefulDb({ failOnSql: "SELECT consecutive_divergent", failMessage: "read failed" });
+    expect(await getDiscrepancyStreak(db)).toBeNull();
   });
 
   it("falls back to durable discrepancy counters when the write fails", async () => {
@@ -659,10 +664,8 @@ describe("status-reliability", () => {
       scope: "global",
       consecutive_divergent: 4,
       last_divergent_at: 90,
-      last_alert_at: 80,
       consecutive_probe_failures: 2,
       last_probe_failure_at: 70,
-      last_probe_alert_at: 60,
       updated_at: 90,
     };
 

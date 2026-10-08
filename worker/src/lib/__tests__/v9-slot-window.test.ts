@@ -310,6 +310,31 @@ describe("runV9AfterCoreWithinWindow", () => {
     expect(run).not.toHaveBeenCalled();
   });
 
+  it("proves absent-core Heavy admission is neutral before the producer callback", async () => {
+    const scheduledTimeMs = Date.parse("2026-07-26T12:08:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(scheduledTimeMs + 1_000);
+    const fixture = dbWithCoreSlot(null);
+    const run = vi.fn();
+    const result = await runV9AfterCoreWithinWindow({
+      ...options(fixture.db, scheduledTimeMs),
+      deadlineOffsetMs: 180_000,
+      minimumRemainingMs: 60_000,
+      lane: "sync-v9-supply-attribution",
+      currentSlotKey: "v9SupplyAttributionOffset",
+    }, run);
+    expect(result).toMatchObject({
+      status: "skipped_neutral", itemCount: 0,
+      productivity: { productive: false, reason: "v9-core-slot-not-ready" },
+    });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "v9-core-slot-not-ready", coreState: null, coreResultStatus: null,
+      coreWorkerVersion: null, expectedWorkerVersion: "worker-v2",
+      coreStablecoinsPublicationMatched: false, degradedCorePublicationMatched: false,
+    });
+    expect(run).not.toHaveBeenCalled();
+  });
+
   it("skips neutrally when the core slot never reached a terminal state", async () => {
     const scheduledTimeMs = Date.parse("2026-07-26T12:23:00Z");
     vi.useFakeTimers();

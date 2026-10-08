@@ -6,6 +6,8 @@ import {
   getLatestStatusProbe,
   getStatusStateSnapshot,
   listRecentStatusTransitions,
+  summarizeStatusPersistenceIssues,
+  type StatusPersistenceIssue,
 } from "../lib/status-reliability";
 import type { StatusHistoryResponse } from "@shared/types/status";
 import { makeAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
@@ -27,11 +29,12 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
     if (parsed instanceof Response) return parsed;
     const { limit } = parsed;
     let transitionQueryFailed = false;
+    const discrepancyIssues: StatusPersistenceIssue[] = [];
 
     const [{ state, staleness }, probe, streak, transitionRows, reserveOverviewResult] = await Promise.all([
       getStatusStateSnapshot(db, now),
       getLatestStatusProbe(db),
-      getDiscrepancyStreak(db),
+      getDiscrepancyStreak(db, (issue) => discrepancyIssues.push(issue)),
       listRecentStatusTransitions(db, limit + 1, { from, to }, () => {
         transitionQueryFailed = true;
       }),
@@ -69,6 +72,7 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
           };
         })()
       : null;
+    const discrepancyError = summarizeStatusPersistenceIssues(discrepancyIssues);
 
     const body: StatusHistoryResponse = {
       timestamp: now,
@@ -79,6 +83,9 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
       transitions,
       hasMore,
       reserveComposition,
+      sectionErrors: {
+        ...(discrepancyError ? { discrepancy: discrepancyError } : {}),
+      },
     };
 
     return jsonResponse(body, { noStore: true });

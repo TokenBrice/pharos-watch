@@ -2,6 +2,13 @@ import { describe, expect, it } from "vitest";
 import { summarizeCronMetadata } from "../cron-metadata-summary";
 
 describe("summarizeCronMetadata", () => {
+  it("does not invent numeric streaks when self-check counters are unavailable", () => {
+    const summary = summarizeCronMetadata("status-self-check", {
+      discrepancyStreak: null, probeFailureStreak: null, reason: "status-self-check-persistence-failed",
+    });
+    expect(summary.some((line) => line.includes("streak"))).toBe(false);
+    expect(summary).toContain("reason status-self-check-persistence-failed");
+  });
   it("summarizes unknown-job resource evidence without inventing heap or platform outcomes", () => {
     const resourcePressure = {
       phase: "read", observedAt: 100, bodyCapBytes: 4, cacheCapBytes: null,

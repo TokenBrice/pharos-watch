@@ -1,4 +1,5 @@
 import type { StatusResponse } from "@shared/types";
+import { classifyPublicationDiagnostic } from "@shared/lib/status-thresholds";
 import { formatAge } from "@/lib/pipeline-workspace-format";
 import { healthSeverity, worstSeverity, SEVERITY_RANK } from "@/lib/status/workspace-mode";
 import type {
@@ -16,20 +17,17 @@ export function buildPipelineIntegrityModel(data: StatusResponse): PipelineInteg
       if (!surface) return;
       const failure = failures.get(surface.surface);
       const attemptState = surface.lastAttemptedGeneration?.state;
-      const state: PipelineSeverity = failure || attemptState === "failed" || attemptState === "rejected"
-        ? "critical"
-        : surface.lastPublishedGeneration
-          ? "healthy"
-          : "unknown";
+      const diagnostic = classifyPublicationDiagnostic(surface);
+      const state: PipelineSeverity = failure ? "unknown" : healthSeverity(diagnostic.status);
       publicationRows.push({
         id: `publication-${surface.surface}`,
         label: surface.label,
         rawCode: surface.surface,
         state,
-        currentValue: failure ? "Failed" : surface.lastPublishedGeneration ? "Published" : "Unknown",
+        currentValue: failure ? "Unavailable" : diagnostic.status === "healthy" ? "Published" : diagnostic.status,
         detail: failure
           ? `${failure.message} (${failure.code}; source ${surface.sourceOfTruth})`
-          : `Source ${surface.sourceOfTruth}; latest attempt ${attemptState ?? "not reported"}.`,
+          : `Source ${surface.sourceOfTruth}; latest attempt ${attemptState ?? "not reported"}${diagnostic.reason ? `; ${diagnostic.reason}` : ""}.`,
       });
       failures.delete(surface.surface);
     });
@@ -38,8 +36,8 @@ export function buildPipelineIntegrityModel(data: StatusResponse): PipelineInteg
         id: `publication-${surface}`,
         label: surface,
         rawCode: surface,
-        state: "critical",
-        currentValue: "Failed",
+        state: "unknown",
+        currentValue: "Unavailable",
         detail: `${failure.message} (${failure.code})`,
       });
     });
