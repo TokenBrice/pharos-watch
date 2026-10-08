@@ -155,7 +155,7 @@ async function fetchFixture(target: HtmlFixtureRefreshTarget): Promise<string | 
   }
 }
 
-function writeFixture(target: HtmlFixtureRefreshTarget, body: string): void {
+export function writeFixture(target: HtmlFixtureRefreshTarget, body: string): void {
   const capturedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
   const header = `<!-- captured-at: ${capturedAt} -->\n<!-- source: ${target.url} -->\n`;
   const normalizedBody = body.replace(/^[ \t]+/gm, (indent) => indent.replace(/\t/g, "  ")).replace(/[ \t]+$/gm, "");

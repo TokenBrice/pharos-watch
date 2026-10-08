@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { parse as parseYaml } from "yaml";
 import { describe, expect, it, vi } from "vitest";
 import type { CommandResult, SpawnCommand } from "../lib/command-runner.mts";
 import {
@@ -7,6 +9,7 @@ import {
   type RunCoverageAuditOptions,
 } from "../maintenance/run-coverage-audit";
 import { parseArgs as parseReserveAuditArgs } from "../maintenance/generate-reserve-coverage-audit";
+import { parseArgs as parseDependencyAuditArgs } from "../maintenance/generate-dependency-coverage-audit";
 import { runOracleRiskCoverageCheck } from "../ci/check-oracle-risk-coverage";
 
 const domains = Object.keys(DOMAIN_SCRIPTS);
@@ -46,6 +49,25 @@ describe("run-coverage-audit", () => {
       "mechanism-archetype",
       "l2beat-snapshot",
     ]);
+  });
+
+  it("accepts the complete weekly production capture command and emits JSON for its consumer", () => {
+    const workflow = parseYaml(readFileSync(".github/workflows/weekly-validation.yml", "utf8")) as {
+      jobs: Record<string, { steps: Array<{ name?: string; run?: string }> }>;
+    };
+    const steps = workflow.jobs["dependency-coverage"].steps;
+    const capture = steps.find((step) => step.name === "Capture production dependency coverage")!;
+    const [npm, run, script, separator, ...argv] = capture.run!.trim().split(/\s+/);
+    expect([npm, run, script, separator]).toEqual(["npm", "run", "audit:coverage", "--"]);
+    const dispatched = parseCoverageAuditArgs(argv);
+    expect(dispatched.domains).toEqual(["dependency-coverage"]);
+    const parsed = parseDependencyAuditArgs(dispatched.forwarded);
+    expect(parsed.prod).toBe(true);
+    expect(parsed.format).toBe("json");
+    const consumer = steps.find((step) => step.name === "Evaluate published dependency structure")!;
+    const inputPath = consumer.run!.match(/JSON\.parse\(readFileSync\("([^"]+)", "utf8"\)\)/)?.[1];
+    expect(inputPath).toBeDefined();
+    expect(parsed.reportPath).toBe(inputPath);
   });
 
   it.each([

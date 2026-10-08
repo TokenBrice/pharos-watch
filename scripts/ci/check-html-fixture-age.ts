@@ -11,9 +11,8 @@
  * postdates `now` is a wrong clock or a hand-edited provenance line, and it
  * would otherwise buy the fixture an unbounded extension of the age bound.
  *
- * It runs from `.github/workflows/weekly-validation.yml`, never from the PR
- * gate: the verdict moves with the date, so a PR that touches nothing would
- * otherwise start failing on a Tuesday.
+ * The weekly gate owns calendar age and future-clock checks. PRs select
+ * `--metadata-only` for commit-stable stamp and refresh-inventory validation.
  *
  * Fixtures carrying an `<!-- archived: reason -->` header are deliberately
  * frozen regression inputs and are exempt from the staleness bound, but their
@@ -23,7 +22,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { reportViolations } from "../lib/report-violations.mts";
-import { runDirectCli } from "../lib/cli-args.mjs";
+import { parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 import {
   HTML_FIXTURE_REFRESH_TARGETS,
   type HtmlFixtureCapture,
@@ -151,6 +150,7 @@ export type HtmlFixtureAgeVerdict =
   | "fresh"
   | "archived"
   | "stale"
+  | "valid-metadata"
   | "future"
   | "missing-captured-at"
   | "unparsable-captured-at";
@@ -174,7 +174,7 @@ export interface HtmlFixtureAgeReport {
 
 function inspectCapture(
   capture: HtmlFixtureCapture,
-  now: Date,
+  now: Date | null,
   maxAgeDays: number,
 ): HtmlFixtureAgeFinding {
   const archived = capture.archivedReason !== null;
@@ -205,13 +205,17 @@ function inspectCapture(
   }
 
   const capturedAtMs = Date.parse(capture.capturedAt);
-  if (Number.isNaN(capturedAtMs)) {
+  if (Number.isNaN(capturedAtMs) || new Date(capturedAtMs).toISOString().replace(/\.\d{3}Z$/, "Z") !== capture.capturedAt) {
     return {
       ...base,
       verdict: "unparsable-captured-at",
       ageDays: null,
       violation: `${capture.fixture}: unparsable captured-at timestamp ${capture.capturedAt}`,
     };
+  }
+
+  if (now === null) {
+    return { ...base, verdict: archived ? "archived" : "valid-metadata", ageDays: null, violation: null };
   }
 
   const ageDays = Math.floor((now.getTime() - capturedAtMs) / DAY_MS);
@@ -272,13 +276,15 @@ export function evaluateHtmlFixtureAges({
   now,
   maxAgeDays = HTML_FIXTURE_MAX_AGE_DAYS,
   targets = HTML_FIXTURE_REFRESH_TARGETS,
+  metadataOnly = false,
 }: {
   captures: readonly HtmlFixtureCapture[];
   now: Date;
   maxAgeDays?: number;
   targets?: readonly HtmlFixtureRefreshTarget[];
+  metadataOnly?: boolean;
 }): HtmlFixtureAgeReport {
-  const findings = captures.map((capture) => inspectCapture(capture, now, maxAgeDays));
+  const findings = captures.map((capture) => inspectCapture(capture, metadataOnly ? null : now, maxAgeDays));
   const violations = [
     ...findings.flatMap((finding) => (finding.violation === null ? [] : [finding.violation])),
     ...inspectRefreshTargets(targets, captures),
@@ -291,6 +297,7 @@ export function runHtmlFixtureAgeCheck({
   now = new Date(),
   maxAgeDays = HTML_FIXTURE_MAX_AGE_DAYS,
   targets = HTML_FIXTURE_REFRESH_TARGETS,
+  metadataOnly = false,
   stdout = process.stdout,
   stderr = process.stderr,
 }: {
@@ -298,6 +305,7 @@ export function runHtmlFixtureAgeCheck({
   now?: Date;
   maxAgeDays?: number;
   targets?: readonly HtmlFixtureRefreshTarget[];
+  metadataOnly?: boolean;
   stdout?: { write(chunk: string): unknown };
   stderr?: { write(chunk: string): unknown };
 } = {}): 0 | 1 {
@@ -306,9 +314,10 @@ export function runHtmlFixtureAgeCheck({
     now,
     maxAgeDays,
     targets,
+    metadataOnly,
   });
   return reportViolations({
-    label: "check:html-fixture-age",
+    label: metadataOnly ? "check:html-fixture-metadata" : "check:html-fixture-age",
     heading: "Reserve HTML fixture capture violations",
     violations: report.violations,
     hint:
@@ -321,5 +330,12 @@ export function runHtmlFixtureAgeCheck({
 }
 
 runDirectCli(import.meta.url, () => {
-  process.exitCode = runHtmlFixtureAgeCheck();
+  const { values } = parseStrictCliArgs(process.argv.slice(2), {
+    options: { "metadata-only": { type: "boolean" } },
+  });
+  if (values.help) {
+    process.stdout.write("Usage: check-html-fixture-age.ts [--metadata-only]\n");
+    return;
+  }
+  process.exitCode = runHtmlFixtureAgeCheck({ metadataOnly: values["metadata-only"] === true });
 });

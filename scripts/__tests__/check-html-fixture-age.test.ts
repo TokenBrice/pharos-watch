@@ -1,5 +1,7 @@
-import { dirname } from "node:path";
-import { describe, expect, it } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   HTML_FIXTURE_MAX_AGE_DAYS,
@@ -10,6 +12,7 @@ import {
 import {
   HTML_FIXTURE_REFRESH_TARGETS,
   readHtmlFixtureCaptures,
+  writeFixture,
   type HtmlFixtureCapture,
 } from "../maintenance/refresh-reserve-html-fixtures.ts";
 
@@ -32,6 +35,26 @@ function inspectOne(capture: HtmlFixtureCapture, now: Date = NOW) {
 }
 
 describe("check-html-fixture-age", () => {
+  it("writes second-precision capture metadata by truncating the capture clock", () => {
+    const dir = mkdtempSync(join(tmpdir(), "pharos-html-capture-"));
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-01T12:34:56.987Z"));
+    try {
+      writeFixture({
+        name: "Issuer",
+        fixture: "issuer.html",
+        path: join(dir, "issuer.html"),
+        url: "https://issuer.example/reserves",
+      }, "<html>captured evidence</html>");
+      const captures = readHtmlFixtureCaptures(dir);
+      expect(captures[0].capturedAt).toBe("2026-04-01T12:34:56Z");
+      expect(evaluateHtmlFixtureAges({ captures, now: NOW, targets: [], metadataOnly: true }).failed).toBe(false);
+    } finally {
+      vi.useRealTimers();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it.each([
     ["2026-03-22T12:00:00Z", "fresh", 10],
     // 2026-01-01 is exactly the bound: the gate expires captures older than it.
@@ -90,6 +113,34 @@ describe("check-html-fixture-age", () => {
     },
   );
 
+  it("validates capture metadata without a calendar-dependent verdict", () => {
+    const captures = [
+      makeCapture("old.json", { capturedAt: "2020-01-01T00:00:00Z" }),
+      makeCapture("later.html", { capturedAt: "2030-01-01T00:00:00Z" }),
+    ];
+    const evaluate = (now: Date) => evaluateHtmlFixtureAges({ captures, now, targets: [], metadataOnly: true });
+    expect(evaluate(NOW).violations).toEqual([]);
+    expect(evaluate(new Date("2040-01-01T00:00:00Z"))).toEqual(evaluate(NOW));
+    expect(evaluate(NOW).findings.every((finding) => finding.verdict === "valid-metadata")).toBe(true);
+  });
+
+  it.each(["2026-02-30T00:00:00Z", "2026-03-22T12:00:00.123Z", null])(
+    "rejects invalid capture metadata %s in the stable mode",
+    (capturedAt) => {
+      expect(evaluateHtmlFixtureAges({
+        captures: [makeCapture("invalid.json", { capturedAt })],
+        now: NOW,
+        targets: [],
+        metadataOnly: true,
+      }).failed).toBe(true);
+    },
+  );
+
+  it("keeps refresh inventory validation in metadata-only mode", () => {
+    const target = { name: "Live", url: "https://issuer.example", fixture: "missing.html", path: "/missing.html" };
+    expect(evaluateHtmlFixtureAges({ captures: [], now: NOW, targets: [target], metadataOnly: true }).failed).toBe(true);
+  });
+
   it("fails a refresh target that no longer ages: deleted, archived, or hand-trimmed", () => {
     const target = { name: "Live source", url: "https://issuer.example/reserves", fixture: "live.html", path: "/x/live.html" };
     const evaluate = (captures: Parameters<typeof evaluateHtmlFixtureAges>[0]["captures"]) =>
@@ -147,6 +198,16 @@ describe("check-html-fixture-age", () => {
         `${capture.fixture} must be stamped or carry an exemption reason`,
       ).not.toBeNull();
     }
+  });
+
+  it("keeps the repository capture corpus canonical independently of the check date", () => {
+    const dir = dirname(HTML_FIXTURE_REFRESH_TARGETS[0].path);
+    const report = evaluateHtmlFixtureAges({
+      captures: [...readHtmlFixtureCaptures(dir), ...readNonHtmlFixtureCaptures(dir)],
+      now: new Date(0),
+      metadataOnly: true,
+    });
+    expect(report.violations).toEqual([]);
   });
 
   it("reports every violating fixture and keeps a passing corpus quiet", () => {
