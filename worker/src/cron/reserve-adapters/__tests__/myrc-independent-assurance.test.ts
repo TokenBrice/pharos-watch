@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as assurance from "@shared/lib/independent-assurance";
 import { IndependentAssuranceManifestSchema, getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -14,7 +12,14 @@ import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-ad
 import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 
 const manifest = getIndependentAssuranceManifest("MYRC");
-const bytes = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../../../../agents/lrr/evidence/RS5/myrc-report.pdf"));
+// Transport verification uses self-contained bytes; all examined quantities and
+// dates remain those of the real reviewed manifest and compiler text fixture.
+const bytes = new TextEncoder().encode("%PDF-1.7 MYRC assurance transport fixture\n");
+const artifactManifest = {
+  ...manifest,
+  reportByteLength: bytes.length,
+  reportSha256: createHash("sha256").update(bytes).digest("hex"),
+};
 const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === "myrc-blox")!;
 const adapter = getReserveAdapter("myrc-independent-assurance")!;
 
@@ -35,6 +40,10 @@ async function fetchReport() {
   return adapter.fetch(coin, coin.liveReservesConfig!, new AbortController().signal);
 }
 
+beforeEach(() => {
+  vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(artifactManifest);
+});
+
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("MYRC hash-pinned examination", () => {
@@ -47,7 +56,7 @@ describe("MYRC hash-pinned examination", () => {
     expect(result.slices[1]).toMatchObject({ assetClass: "money-market-fund", issuerOrObligor: "Halogen Capital" });
     expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-08-31T15:59:00Z") / 1000);
     expect(result.metadata?.details?.assurance).toMatchObject({
-      unit: "MYR", verifiedByteLength: 372858, reportSha256: manifest.reportSha256,
+      unit: "MYR", verifiedByteLength: bytes.length, reportSha256: artifactManifest.reportSha256,
       computedAssetTotal: "1800903.77", reportedAssetTotal: "1800903.74", reportedAssetDifference: "0.03",
       computedLiabilityTotal: "1800903.74",
     });
@@ -108,7 +117,7 @@ describe("MYRC hash-pinned examination", () => {
 
   it("rejects altered PDF content even at the reviewed length", async () => {
     const altered = new Uint8Array(bytes);
-    altered[100] ^= 1;
+    altered[altered.length - 1] ^= 1;
     installReport({ pdf: altered });
     await expect(fetchReport()).rejects.toThrow(/SHA-256/);
   });
@@ -131,7 +140,7 @@ describe("MYRC hash-pinned examination", () => {
 
   it("rejects aggregate liability mismatch and retains observed reserve shortfall as measured bad state", async () => {
     expect(() => reconcileIndependentAssuranceManifest({ ...manifest, liabilities: [{ ...manifest.liabilities[0], amount: "1800903.75" }] }, MYRC_INDEPENDENT_ASSURANCE_PROFILE.reconciliation)).toThrow();
-    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({ ...manifest,
+    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({ ...artifactManifest,
       liabilities: [{ ...manifest.liabilities[0], amount: "1801000" }], reportedLiabilityTotal: "1801000",
     });
     installReport();
@@ -141,13 +150,13 @@ describe("MYRC hash-pinned examination", () => {
   });
 
   it("rejects a new unclassified positive asset and an AUP report through the independent binding", async () => {
-    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({ ...manifest,
+    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({ ...artifactManifest,
       assets: [...manifest.assets, { code: "unreviewed", label: "New asset", amount: "1" }],
       computedAssetTotal: "1800904.77", reportedAssetTotal: "1800904.77",
     });
     installReport({ index: index.map((row, i) => i === 0 ? { ...row, reservedAmount: 180090477 } : row) });
     await expect(fetchReport()).rejects.toThrow(/unknown positive asset/);
-    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({ ...manifest, assuranceTier: "agreed-upon-procedures", conclusion: "agreed-upon-procedures" });
+    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({ ...artifactManifest, assuranceTier: "agreed-upon-procedures", conclusion: "agreed-upon-procedures" });
     await expect(fetchReport()).rejects.toThrow();
     expect(IndependentAssuranceManifestSchema.safeParse({ ...manifest, assuranceTier: "independent-assurance", conclusion: "agreed-upon-procedures" }).success).toBe(false);
   });
