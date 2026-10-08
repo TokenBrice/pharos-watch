@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { ORDERBOOK_TVL_FACTOR } from "../constants";
 import {
   aggregateCgTickersByExchange,
   buildCgTickerExchangeSummaries,
   buildCgTickerPriceObservations,
+  dexPriceEvidenceWeight,
   filterValidCgTickers,
 } from "../coingecko-tickers-shared";
 import type { CgTicker } from "../types";
@@ -64,23 +64,15 @@ describe("CoinGecko tickers shared helpers", () => {
       name: "Kinesis",
       volumeUsd: 30_000,
       priceVolumeWeightedSum: 29_900,
-      depthDownUsd: 0,
-      depthDownCount: 0,
-      depthUpUsd: 0,
-      depthUpCount: 0,
     });
     expect(aggregates.get("kraken")).toEqual({
       name: "Kraken",
       volumeUsd: 5_000,
       priceVolumeWeightedSum: 5_050,
-      depthDownUsd: 0,
-      depthDownCount: 0,
-      depthUpUsd: 0,
-      depthUpCount: 0,
     });
   });
 
-  it("builds synthetic orderbook TVL and price observations with plausibility gating", () => {
+  it("builds price-only observations with plausibility gating", () => {
     const summaries = buildCgTickerExchangeSummaries(
       new Map([
         [
@@ -89,10 +81,6 @@ describe("CoinGecko tickers shared helpers", () => {
             name: "Kinesis",
             volumeUsd: 20_000,
             priceVolumeWeightedSum: 20_000,
-            depthDownUsd: 0,
-            depthDownCount: 0,
-            depthUpUsd: 0,
-            depthUpCount: 0,
           },
         ],
         [
@@ -101,10 +89,6 @@ describe("CoinGecko tickers shared helpers", () => {
             name: "Tiny Exchange",
             volumeUsd: 10_000,
             priceVolumeWeightedSum: 12_000,
-            depthDownUsd: 0,
-            depthDownCount: 0,
-            depthUpUsd: 0,
-            depthUpCount: 0,
           },
         ],
       ]),
@@ -115,22 +99,12 @@ describe("CoinGecko tickers shared helpers", () => {
         exchangeId: "kinesis",
         exchangeName: "Kinesis",
         volumeUsd: 20_000,
-        volumeDerivedTvlUsd: 20_000 * ORDERBOOK_TVL_FACTOR,
-        syntheticTvlUsd: 20_000 * ORDERBOOK_TVL_FACTOR,
-        depthDownUsd: null,
-        depthUpUsd: null,
-        tvlBasis: "volume-derived",
         priceUsd: 1,
       },
       {
         exchangeId: "tiny",
         exchangeName: "Tiny Exchange",
         volumeUsd: 10_000,
-        volumeDerivedTvlUsd: 10_000 * ORDERBOOK_TVL_FACTOR,
-        syntheticTvlUsd: 10_000 * ORDERBOOK_TVL_FACTOR,
-        depthDownUsd: null,
-        depthUpUsd: null,
-        tvlBasis: "volume-derived",
         priceUsd: 1.2,
       },
     ]);
@@ -140,60 +114,26 @@ describe("CoinGecko tickers shared helpers", () => {
     expect(priceObs).toEqual([
       {
         price: 1,
-        tvl: 20_000 * ORDERBOOK_TVL_FACTOR,
+        tvl: 0,
+        observedVolumeUsd: 20_000,
         chain: "orderbook",
         protocol: "cg-ticker-kinesis",
+        sourceFamily: "cg_tickers",
+        poolKey: "orderbook:kinesis:usdc-circle",
+        identityConfidence: "exact",
       },
     ]);
   });
 
-  it("uses measured 2% downside orderbook depth when available, capped by volume-derived TVL", () => {
-    const summaries = buildCgTickerExchangeSummaries(
-      new Map([
-        [
-          "deep",
-          {
-            name: "Deep Exchange",
-            volumeUsd: 20_000,
-            priceVolumeWeightedSum: 20_000,
-            depthDownUsd: 500_000,
-            depthDownCount: 1,
-            depthUpUsd: 450_000,
-            depthUpCount: 1,
-          },
-        ],
-        [
-          "shallow",
-          {
-            name: "Shallow Exchange",
-            volumeUsd: 20_000,
-            priceVolumeWeightedSum: 20_000,
-            depthDownUsd: 12_000,
-            depthDownCount: 1,
-            depthUpUsd: 18_000,
-            depthUpCount: 1,
-          },
-        ],
-      ]),
-    );
-
-    expect(summaries).toEqual([
-      expect.objectContaining({
-        exchangeId: "deep",
-        volumeDerivedTvlUsd: 20_000 * ORDERBOOK_TVL_FACTOR,
-        syntheticTvlUsd: 20_000 * ORDERBOOK_TVL_FACTOR,
-        depthDownUsd: 500_000,
-        depthUpUsd: 450_000,
-        tvlBasis: "coingecko-depth-2pct-capped-by-volume",
-      }),
-      expect.objectContaining({
-        exchangeId: "shallow",
-        volumeDerivedTvlUsd: 20_000 * ORDERBOOK_TVL_FACTOR,
-        syntheticTvlUsd: 12_000,
-        depthDownUsd: 12_000,
-        depthUpUsd: 18_000,
-        tvlBasis: "coingecko-depth-2pct-capped-by-volume",
-      }),
-    ]);
+  it("weights ticker prices by observed flow independently of supplied synthetic TVL or depth", () => {
+    const summaries = buildCgTickerExchangeSummaries(aggregateCgTickersByExchange([
+      makeTicker({ cost_to_move_down_usd: 5, cost_to_move_up_usd: 500_000 }),
+    ]));
+    const [observation] = buildCgTickerPriceObservations("usdc-circle", summaries);
+    expect(observation.tvl).toBe(0);
+    expect(dexPriceEvidenceWeight(observation)).toBe(10_000);
+    expect(dexPriceEvidenceWeight({ ...observation, tvl: 30_000_000 })).toBe(10_000);
+    expect(dexPriceEvidenceWeight({ ...observation, observedVolumeUsd: undefined })).toBe(0);
+    expect(dexPriceEvidenceWeight({ price: 1, tvl: 50_000, chain: "ethereum", protocol: "curve", sourceFamily: "direct_api" })).toBe(50_000);
   });
 });

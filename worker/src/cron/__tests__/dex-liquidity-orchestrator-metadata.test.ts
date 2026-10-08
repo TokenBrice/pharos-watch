@@ -4,6 +4,7 @@ import { buildDexLiquidityCronMetadata } from "../dex-liquidity/orchestrator-met
 import { initLiquidityFallbackCounters } from "../dex-liquidity/pool-helpers";
 import type { DexLiquidityPostScoreAnalysis } from "../dex-liquidity/orchestrator-analysis";
 import type { DexPricePersistenceDiagnostics } from "../dex-liquidity/scoring";
+import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
 
 function metadataParams(): Parameters<typeof buildDexLiquidityCronMetadata>[0] {
   return {
@@ -85,5 +86,39 @@ describe("dex liquidity cron metadata", () => {
       inactiveMetricRowsSkipped: 30,
       inactiveMetricIdsSkipped: Array.from({ length: 25 }, (_, i) => `inactive-${i}`),
     });
+  });
+
+  it("preserves registry and step attribution through the typed metadata reader", () => {
+    const params = metadataParams();
+    params.registryRowsRead = 900;
+    params.registryMultiSourcePools = 100;
+    params.registryFamilyBySource = { dl: 500, cg_onchain: 400 };
+    params.stagedPoolsMerged = 400;
+    Object.assign(params.sourceCoverage, {
+      coinTvlStepCount150: 51,
+      coinTvlStepCount25: 52,
+      coinTvlStepIds150: ["tiny"],
+      coinTvlStepIds150Omitted: 50,
+      coinTvlStepIds25: ["tiny", "small"],
+      coinTvlStepIds25Omitted: 50,
+      coinTvlStepComparisons: 100,
+      coinTvlStepMissingBaseline: 2,
+      coinTvlStepMissingCurrent: 3,
+      coinTvlStepBaselineUnavailable: false,
+      coinTvlStepTop: [{
+        stablecoinId: "large", previousTvlUsd: 100, currentTvlUsd: 160,
+        ratio: 1.6, protocol: null, protocolDeltaUsd: null,
+      }],
+    });
+    const parsed = DexLiquidityCronMetadataSchema.parse(buildDexLiquidityCronMetadata(params));
+    expect(parsed).toMatchObject({
+      stagedPoolsMerged: 400,
+      registryRowsRead: 900,
+      registryMultiSourcePools: 100,
+      registryFamilyBySource: { dl: 500, cg_onchain: 400 },
+      sourceCoverage: params.sourceCoverage,
+    });
+    const cost = { queries: 10, rowsRead: 1_000, rowsWritten: 20, coverage: "partial", reasons: ["first-no-meta"] };
+    expect(DexLiquidityCronMetadataSchema.parse({ d1Cost: cost }).d1Cost).toEqual(cost);
   });
 });

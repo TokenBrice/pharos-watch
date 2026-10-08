@@ -18,7 +18,7 @@ import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
 import { toFiniteNumber } from "../../lib/number-utils";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { mergeCgPools, mergeGtPools } from "./fetch-crawlers";
-import type { CgTickerOrderbookMetadata } from "./coingecko-tickers-shared";
+import { buildCgTickerPriceObservations } from "./coingecko-tickers-shared";
 import type { AuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases/authoritative";
 import { getGtDexQuality, normalizeProtocol, parsePoolSymbols } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
@@ -74,6 +74,7 @@ export interface StagedPoolRow {
 }
 
 export type StagedPoolSkipReason =
+  | "future_observation"
   | "malformed_identity"
   | "invalid_tvl"
   | "invalid_price"
@@ -144,10 +145,10 @@ function hasMixedCaseNativeIdentity(row: StagedPoolRow): boolean {
   return values.some((value) => value !== value.toLowerCase());
 }
 
-function collectSupersededLegacyLowercaseRows(rows: readonly (StagedPoolRow | undefined)[]): WeakSet<StagedPoolRow> {
+function collectSupersededLegacyLowercaseRows(rows: readonly (StagedPoolRow | undefined)[], nowSec: number): WeakSet<StagedPoolRow> {
   const correctedByIdentity = new Map<string, number>();
   for (const row of rows) {
-    if (!row) continue;
+    if (!row || row.refreshed_at > nowSec) continue;
     const key = legacyLowercaseIdentityKey(row);
     if (!key || !hasMixedCaseNativeIdentity(row)) continue;
     correctedByIdentity.set(key, Math.max(correctedByIdentity.get(key) ?? Number.NEGATIVE_INFINITY, row.refreshed_at));
@@ -165,27 +166,6 @@ function collectSupersededLegacyLowercaseRows(rows: readonly (StagedPoolRow | un
   return supersededRows;
 }
 
-function readCgTickerOrderbookMetadata(rawJson: string | null): CgTickerOrderbookMetadata | null {
-  if (!rawJson) return null;
-  try {
-    const parsed = JSON.parse(rawJson) as Record<string, unknown>;
-    const orderbookDepthUsd = toFiniteNumber(parsed.orderbookDepthUsd);
-    const orderbookDepthUpUsd = toFiniteNumber(parsed.orderbookDepthUpUsd);
-    const orderbookTvlBasis =
-      parsed.orderbookTvlBasis === "coingecko-depth-2pct-capped-by-volume" ||
-      parsed.orderbookTvlBasis === "volume-derived"
-        ? parsed.orderbookTvlBasis
-        : undefined;
-    if (orderbookDepthUsd == null && orderbookDepthUpUsd == null && !orderbookTvlBasis) return null;
-    return {
-      ...(orderbookDepthUsd != null ? { orderbookDepthUsd } : {}),
-      ...(orderbookDepthUpUsd != null ? { orderbookDepthUpUsd } : {}),
-      ...(orderbookTvlBasis ? { orderbookTvlBasis } : {}),
-    };
-  } catch {
-    return null;
-  }
-}
 
 function pushPool<T>(poolMap: Map<string, T[]>, stablecoinId: string, pool: T): void {
   const existing = poolMap.get(stablecoinId) ?? [];
@@ -549,7 +529,7 @@ export async function mergeStagedPools(
   db: D1Database,
   metrics: Map<string, LiquidityMetrics>,
   knownPoolIndex: KnownPoolIdentityIndex,
-  nowSec: number,
+  syncStartSec: number,
   trackedDeployments: ReadonlyMap<string, string>,
   references?: PriceValidationReferences,
   authoritativeConfirmation?: AuthoritativeStagedPoolConfirmationIndex,
@@ -564,6 +544,7 @@ export async function mergeStagedPools(
   skippedByAuthoritativeProtocolCount: number;
   skipDimensions: StagedPoolSkipDimension[];
   priceObservations: Map<string, DexPriceObs[]>;
+  registryEvaluatedAtSec: number;
   registryRowsRead: number;
   registryMultiSourcePools: number;
   registryFamilyBySource: Record<string, number>;
@@ -585,11 +566,14 @@ export async function mergeStagedPools(
         // the stale_confidence_zero skip reason instead of silently never
         // appearing. Without the grace the read window and the zero gate align
         // exactly and the guard below is unreachable.
-        .bind(nowSec - STAGED_POOL_CONFIDENCE_HORIZON_HOURS * 3600 - 60)
+        .bind(syncStartSec - STAGED_POOL_CONFIDENCE_HORIZON_HOURS * 3600 - 60)
         .all<StagedPoolRow>(),
     3,
     signal,
   );
+  // Capture only after the SELECT completes: discovery can refresh rows while
+  // source staging is in flight. Persist this basis, never recapture at :46.
+  const registryEvaluatedAtSec = Math.floor(Date.now() / 1000);
   const rows: Array<StagedPoolRow | undefined> = result.results ?? [];
   const registryRowsRead = rows.length;
 
@@ -602,7 +586,7 @@ export async function mergeStagedPools(
   let optionalWildcardIdentitySkipped = 0;
   let authoritativeProtocolSkipped = 0;
   const skipDimensions = new Map<string, StagedPoolSkipDimension>();
-  const supersededLegacyLowercaseRows = collectSupersededLegacyLowercaseRows(rows);
+  const supersededLegacyLowercaseRows = collectSupersededLegacyLowercaseRows(rows, registryEvaluatedAtSec);
   const stagedIdentityCountsByStablecoin = new Map<string, StagedPoolIdentityCounts>();
   const observations: StagedPool[] = [];
 
@@ -610,6 +594,11 @@ export async function mergeStagedPools(
     const row = rows[rowIndex];
     rows[rowIndex] = undefined;
     if (!row) continue;
+    if (row.refreshed_at > registryEvaluatedAtSec) {
+      skippedCount++;
+      incrementSkipDimension(skipDimensions, "future_observation", row);
+      continue;
+    }
     if (supersededLegacyLowercaseRows.has(row)) {
       skippedCount++;
       incrementSkipDimension(skipDimensions, "legacy_lowercase_identity_superseded", row);
@@ -621,6 +610,24 @@ export async function mergeStagedPools(
       incrementSkipDimension(skipDimensions, "malformed_identity", row);
       continue;
     }
+    // Tickers are price-only, including pre-cutover rows with synthetic TVL.
+    // Never enter the pool resolver, volume totals, caps, coverage or routes.
+    if (stagedPool.source === "cg_tickers") {
+      if (registryEvaluatedAtSec - stagedPool.refreshedAt <= STAGED_POOL_PRICE_MAX_AGE_HOURS * 3600) {
+        const priceEvidence = buildCgTickerPriceObservations(stagedPool.stablecoinId, [{
+          exchangeId: stagedPool.dexId ?? stagedPool.protocol,
+          exchangeName: stagedPool.protocol,
+          volumeUsd: stagedPool.volume24h ?? 0,
+          priceUsd: stagedPool.priceUsd ?? 0,
+        }], references);
+        if (priceEvidence.length > 0) {
+          const existing = stagedPriceObs.get(stagedPool.stablecoinId) ?? [];
+          existing.push(...priceEvidence);
+          stagedPriceObs.set(stagedPool.stablecoinId, existing);
+        }
+      }
+      continue;
+    }
     if (hasInvalidTvl(stagedPool)) {
       skippedCount++;
       incrementSkipDimension(skipDimensions, "invalid_tvl", stagedPool, { threshold: STAGED_POOL_MAX_TVL_USD });
@@ -629,8 +636,8 @@ export async function mergeStagedPools(
     observations.push(stagedPool);
   }
   rows.length = 0;
-  const tradeIndexedChains = collectTradeIndexedChains(observations, nowSec);
-  const views: Array<RegistryPoolView | undefined> = resolveRegistryPools(observations, nowSec);
+  const tradeIndexedChains = collectTradeIndexedChains(observations, registryEvaluatedAtSec);
+  const views: Array<RegistryPoolView | undefined> = resolveRegistryPools(observations, registryEvaluatedAtSec);
   observations.length = 0;
   let registryMultiSourcePools = 0;
   const registryFamilyBySource: Record<string, number> = {};
@@ -640,7 +647,7 @@ export async function mergeStagedPools(
     if (view.sources.length >= 2) registryMultiSourcePools++;
     registryFamilyBySource[view.value.source] = (registryFamilyBySource[view.value.source] ?? 0) + 1;
     const stagedPool = { ...view.value, ...view.metadata, discoveredAt: view.discoveredAt };
-    const entry = buildStagedPoolEntry(stagedPool, nowSec);
+    const entry = buildStagedPoolEntry(stagedPool, registryEvaluatedAtSec);
     if (entry.confidence <= 0) continue;
     incrementStagedIdentityCounts(stagedIdentityCountsByStablecoin, stagedPool.stablecoinId, entry.identity);
   }
@@ -666,7 +673,7 @@ export async function mergeStagedPools(
     // but it must never inherit it for price confidence or weight.
     const crossSourcePrice = view.price != null && view.price.source !== view.value.source;
 
-    const entry = buildStagedPoolEntry(stagedPool, nowSec);
+    const entry = buildStagedPoolEntry(stagedPool, registryEvaluatedAtSec);
     const { dexId, poolType, qualityMultiplier, identity, confidence } = entry;
     let priceEligible = view.price != null;
     const normalizedProtocol = normalizeProtocol(stagedPool.protocol || dexId);
@@ -746,10 +753,10 @@ export async function mergeStagedPools(
     const viewChain = canonicalExitRouteChain(stagedPool.chain);
     const chainTradeIndexed = tradeIndexedChains.has(viewChain);
     const registryReading = buildRegistryVolumeReading(view, signatureBeforeChainGate && chainTradeIndexed);
-    const deadPool = isDeadRegistryPool(registryReading, adjustedTvl, nowSec);
+    const deadPool = isDeadRegistryPool(registryReading, adjustedTvl, registryEvaluatedAtSec);
     if (
       signatureBeforeChainGate && !chainTradeIndexed &&
-      isDeadRegistryPool(buildRegistryVolumeReading(view, true), adjustedTvl, nowSec)
+      isDeadRegistryPool(buildRegistryVolumeReading(view, true), adjustedTvl, registryEvaluatedAtSec)
     ) {
       // Would be dead but CoinGecko shows no traded pool on the chain: kept, and
       // counted so an indexing regression on a major chain stays visible.
@@ -872,9 +879,7 @@ export async function mergeStagedPools(
       volumeObservedAtSec: registryReading.observedAtSec,
       ...(registryReading.deadPoolSignature ? { volumeDeadPoolSignature: true as const } : {}),
     };
-    const maturityDays = stagedPoolMaturityDays(stagedPool.discoveredAt, nowSec);
-    const orderbookMetadata =
-      stagedPool.source === "cg_tickers" ? readCgTickerOrderbookMetadata(stagedPool.rawJson) : null;
+    const maturityDays = stagedPoolMaturityDays(stagedPool.discoveredAt, registryEvaluatedAtSec);
 
     if (stagedPool.source === "cg_onchain") {
       pushPool(cgPoolMap, stagedPool.stablecoinId, {
@@ -928,31 +933,15 @@ export async function mergeStagedPools(
         : "gecko_terminal",
       ...(crossSourcePriceProvenance ?? {}),
       ...(evmV2ExecutionCandidate ? { evmV2ExecutionCandidate } : {}),
-      ...(stagedPool.source === "cg_tickers"
-        ? {
-            pairQualityOverride: 0.85,
-            ...(orderbookMetadata ?? {}),
-            measurement: {
-              tvlMeasured: orderbookMetadata?.orderbookDepthUsd != null,
-              volumeMeasured: view.volume != null,
-              balanceMeasured: false,
-              maturityMeasured: false,
-              priceMeasured: priceEligible && stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
-              synthetic: true,
-              decayed: confidence < 1,
-            },
-          }
-        : {
-            measurement: {
-              tvlMeasured: true,
-              volumeMeasured: view.volume != null,
-              balanceMeasured: stagedPool.balanceRatio != null,
-              maturityMeasured: false,
-              priceMeasured: priceEligible && stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
-              synthetic: false,
-              decayed: confidence < 1,
-            },
-          }),
+      measurement: {
+        tvlMeasured: true,
+        volumeMeasured: view.volume != null,
+        balanceMeasured: stagedPool.balanceRatio != null,
+        maturityMeasured: false,
+        priceMeasured: priceEligible && stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
+        synthetic: false,
+        decayed: confidence < 1,
+      },
     });
   }
   views.length = 0;
@@ -1006,6 +995,7 @@ export async function mergeStagedPools(
     skippedByAuthoritativeProtocolCount: authoritativeProtocolSkipped,
     skipDimensions: [...skipDimensions.values()],
     priceObservations: stagedPriceObs,
+    registryEvaluatedAtSec,
     registryRowsRead,
     registryMultiSourcePools,
     registryFamilyBySource,

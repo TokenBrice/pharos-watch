@@ -22,10 +22,10 @@ const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
 // Chunk payload version carried by the header record. v2 (liquidity methodology
 // 6.9): pools carry raw DEC-19 volume readings (`volumeReading`) and nullable
 // volumes. v3 (6.92): the staged merge stamps the dead-pool signature onto those
-// readings. An older payload lacks what the consumer scores, so it is rejected
-// rather than scored as all-missing volume (v1) or without the dead-pool floor
-// under a 6.92 label (v2).
-const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 3;
+// readings. v4 (6.93): the header pins registry evaluation to its read-consumption
+// clock. Older payloads lack the consumer's scoring basis and are rejected
+// rather than silently rescored under a different clock or methodology.
+const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 4;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
 /** @internal Exported for focused scoring-stage tests. */
 export const DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT = 1;
@@ -255,6 +255,7 @@ function requirePoolVolumeReading(value: unknown): void {
 }
 
 function buildPoolHeader(poolState: DexLiquidityPoolState): PoolHeader {
+  assertTimestamp("registryEvaluatedAtSec", poolState.registryEvaluatedAtSec);
   const {
     metrics: _metrics,
     pancakeMeasuredExecutionTargets: _pancakeMeasuredExecutionTargets,
@@ -484,6 +485,7 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
       if (!isRecord(record.source) || !isRecord(record.pool)) {
         throw new Error("DEX liquidity scoring stage contains an invalid header");
       }
+      assertTimestamp("registryEvaluatedAtSec", record.pool.registryEvaluatedAtSec);
       decoder.sourceHeader = record.source;
       decoder.poolHeader = record.pool;
       return;

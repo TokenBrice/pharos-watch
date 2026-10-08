@@ -24,6 +24,7 @@ import {
 } from "../dex-liquidity/scoring";
 import type { DexPriceObs, PoolEntry } from "../dex-liquidity/types";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
 
 const NOW_SEC = 1_700_000_000;
 const GENERATION_ID = `dex-liquidity-${NOW_SEC}`;
@@ -216,6 +217,38 @@ afterEach(() => {
 });
 
 describe("DEX scoring publication atomicity", () => {
+  it("publishes a ticker-only price without claiming pool TVL", async () => {
+    const { sqlite, db } = seedPublishedDexGeneration();
+    await computePriceGeneration(db, new Map(), NOW_SEC, GENERATION_ID,
+      new Map([["usdc-circle", 1]]), new Map([["usdc-circle", [{
+        price: 1.001, tvl: 0, observedVolumeUsd: 100_000, chain: "orderbook",
+        protocol: "cg-ticker-example", sourceFamily: "cg_tickers", poolKey: "orderbook:example:usdc-circle",
+      }]]]));
+    const row = sqlite.prepare("SELECT dex_price_usd, source_total_tvl, price_sources_json FROM dex_prices WHERE stablecoin_id = 'usdc-circle'").get() as
+      { dex_price_usd: number; source_total_tvl: number; price_sources_json: string };
+    expect(row.dex_price_usd).toBe(1.001);
+    expect(row.source_total_tvl).toBe(0);
+    expect(isTrustedDexPriceRow({ updated_at: NOW_SEC, source_total_tvl: row.source_total_tvl }, NOW_SEC, "ui")).toBe(false);
+    expect(isTrustedDexPriceRow({ updated_at: NOW_SEC, source_total_tvl: row.source_total_tvl }, NOW_SEC, "depeg")).toBe(false);
+    expect(JSON.parse(row.price_sources_json)).toEqual([
+      { protocol: "cg-ticker-example", chain: "orderbook", price: 1.001, tvl: 0, sourceFamily: "cg_tickers" },
+    ]);
+  });
+
+  it("uses observed ticker flow rather than synthetic TVL in a mixed price median", async () => {
+    const { sqlite, db } = seedPublishedDexGeneration();
+    await computePriceGeneration(db, makePricePoolMap([{
+      stablecoinId: "usdc-circle", poolId: "ethereum:pool", project: "curve", chain: "ethereum",
+      tvlUsd: 100_000, price: 0.999, source: "direct_api",
+    }]), NOW_SEC, GENERATION_ID, new Map([["usdc-circle", 1]]),
+    new Map([["usdc-circle", [{
+      price: 1.001, tvl: 0, observedVolumeUsd: 100_000, chain: "orderbook",
+      protocol: "cg-ticker-example", sourceFamily: "cg_tickers",
+    }]]]));
+    expect(sqlite.prepare("SELECT dex_price_usd, source_total_tvl FROM dex_prices WHERE stablecoin_id = 'usdc-circle'").get())
+      .toEqual({ dex_price_usd: 0.999, source_total_tvl: 100_000 });
+  });
+
   it("keeps the previous dex_prices generation when a later staging batch fails", async () => {
     const { sqlite, db } = seedPublishedDexGeneration();
     const before = readPublicPrices(sqlite);

@@ -268,6 +268,15 @@ export interface DexRouteSelectionDiagnostic {
   maxProtocolConcentration: number;
 }
 
+/** Final packing omissions, including concentration quotas, never intermediate skips. */
+export function collectDexRoutePackingOmissions(
+  candidates: readonly ExitRouteObservation[],
+  selected: readonly ExitRouteObservation[],
+): Set<string> {
+  const selectedIds = new Set(selected.map((route) => route.routeId));
+  return new Set(candidates.filter((route) => !selectedIds.has(route.routeId)).map((route) => route.routeId));
+}
+
 export function applyDexRouteObservationBounds(
   stablecoinId: string,
   result: P4DexRouteObservationResult,

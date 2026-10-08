@@ -20,9 +20,9 @@ export interface RegistryPoolView {
    * with a usable reading inside the staged fresh window (24h), else the most
    * trusted row inside the volume admission window (72h), else the freshest row
    * with any reading (so an aged reading is classified stale, never counted),
-   * else null when no source observed volume. A row dated after the run clock,
-   * or a non-exempt zero refreshed before DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC
-   * (possibly a coerced absent value), is not a usable reading.
+   * else null when no source observed volume. Future observations are rejected
+   * whole before any field is resolved. A non-exempt zero refreshed before
+   * DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC is not a usable reading.
    */
   volume: StagedPool | null;
   discoveredAt: number;
@@ -65,6 +65,7 @@ function compareTrust(a: StagedPool, b: StagedPool): number {
 export function resolveRegistryPools(rows: StagedPool[], nowSec: number): RegistryPoolView[] {
   const groups = new Map<string, StagedPool[]>();
   for (const row of rows) {
+    if (row.refreshedAt > nowSec) continue;
     const key = `${row.stablecoinId}\u0000${row.poolId}`;
     const group = groups.get(key);
     if (group) group.push(row);
@@ -80,8 +81,7 @@ export function resolveRegistryPools(rows: StagedPool[], nowSec: number): Regist
     const price = group.find((row) => row.priceUsd != null && row.priceUsd > 0
       && nowSec - row.refreshedAt <= STAGED_POOL_PRICE_MAX_AGE_HOURS * 3600) ?? null;
     const volumeRows = group.filter((row) =>
-      row.refreshedAt <= nowSec
-      && row.volume24h != null && Number.isFinite(row.volume24h) && row.volume24h >= 0
+      row.volume24h != null && Number.isFinite(row.volume24h) && row.volume24h >= 0
       && !(row.volume24h === 0 && row.refreshedAt < DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC
         && DEX_VOLUME_ZERO_PROVENANCE_EXEMPT_SOURCES[row.source] !== true));
     const volume = volumeRows.find((row) => nowSec - row.refreshedAt <= STAGED_POOL_FRESH_HOURS * 3600)

@@ -62,6 +62,7 @@ describe("processPoolMetrics", () => {
 
   it("keeps exact native Curve identity and excludes inflated two-token discovery duplicates", async () => {
     const now = 1_710_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const address = "0x4ebdf703948ddcea3b11f675b4d1fba9d2414a14";
     const tokens = [
       "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",

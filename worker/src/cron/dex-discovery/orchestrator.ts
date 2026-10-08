@@ -569,6 +569,7 @@ export async function syncDexDiscovery(
             });
           } : undefined,
         );
+        const discoveredPoolCount = result.pools.filter((pool) => pool.source !== "cg_tickers").length;
 
         try {
           if (!hasDiscoveryFinalizationWindow(deadlineMs)) {
@@ -585,10 +586,10 @@ export async function syncDexDiscovery(
             outcome.outcome === "observed_pools" || outcome.outcome === "verified_no_pools")) {
             observedDeploymentOutcomesWritten += outcomesWritten;
           }
-          await updateDiscoveryMeta(db, candidate.stablecoinId, result.pools.length, nowSec, signal);
+          await updateDiscoveryMeta(db, candidate.stablecoinId, discoveredPoolCount, nowSec, signal);
 
           coinsCrawled += 1;
-          poolsDiscovered += result.pools.length;
+          poolsDiscovered += discoveredPoolCount;
           if (targetWindow.windowed) {
             const nextCursor = advanceDiscoveryTargetCursor(
               targetWindow.targets,

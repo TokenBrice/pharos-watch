@@ -5,6 +5,7 @@ import { analyzeDexLiquidityPostScoring } from "../orchestrator-analysis";
 import { isDexLiquidityDegraded } from "../orchestrator-metadata";
 import type { FullScoreResult, GlobalAgg } from "../types";
 import { makePool } from "./scoring-test-builders";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const BASE_SCORE_RESULT: FullScoreResult = {
   tvl: 100,
@@ -97,6 +98,7 @@ function makeCronMetadata(params: {
       currentGlobalTvl: params.currentGlobalTvl,
       sourceDegradedFamilies: params.failedSources ?? [],
       currentCoverage: params.currentCoverage ?? 159,
+      retainedPoolCountBySourceFamily: {},
       previousCoverage: 158,
       minExpectedCoverage: 94,
       nearCoverageGuard: false,
@@ -112,6 +114,36 @@ function makeCronMetadata(params: {
 }
 
 describe("analyzeDexLiquidityPostScoring", () => {
+  it("does not treat the ticker-only policy cutover as a coverage outage, but still guards real losses", async () => {
+    const fixtures = createLatestSchemaFixtureTracker();
+    const { sqlite, db } = fixtures.open();
+    try {
+      const insert = sqlite.prepare(`INSERT INTO dex_liquidity
+        (stablecoin_id, symbol, total_tvl_usd, liquidity_score, coverage_class, source_mix_json,
+         updated_at, publication_state)
+        VALUES (?, 'USD', 100, 80, 'fallback', ?, 1700000000, 'published')`);
+      for (let i = 0; i < 20; i++) insert.run(`ticker-${i}`, JSON.stringify({ cg_tickers: { poolCount: 1, tvlUsd: 100 } }));
+      for (let i = 0; i < 10; i++) insert.run(`real-${i}`, JSON.stringify({ dl: { poolCount: 1, tvlUsd: 100 } }));
+      const oldMetadata = JSON.parse(makeCronMetadata({ dlProtocolsAvailable: true, currentGlobalTvl: 3000, currentCoverage: 30 }));
+      oldMetadata.sourceCoverage.retainedPoolCountBySourceFamily = { cg_tickers: 20, dl: 10 };
+      sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-dex-liquidity', 1700000000, 100, 'ok', ?)")
+        .run(JSON.stringify(oldMetadata));
+      const cutover = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+        db, scoreResults: new Map(Array.from({ length: 10 }, (_, i) => [`real-${i}`, BASE_SCORE_RESULT])),
+      }));
+      expect(cutover.previousCoverage).toBe(10);
+      expect(cutover.currentCoverage).toBe(10);
+      expect(cutover.nearCoverageGuard).toBe(false);
+      expect(cutover.hardCoverageGuard).toBe(false);
+      const outage = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+        db, scoreResults: new Map(Array.from({ length: 5 }, (_, i) => [`real-${i}`, BASE_SCORE_RESULT])),
+      }));
+      expect(outage.hardCoverageGuard).toBe(true);
+    } finally {
+      fixtures.closeAll();
+    }
+  });
+
   it("monitors a material former top-ten asset after acceptance and quiet outside-top-ten publications", async () => {
     let candidates: NonNullable<Parameters<typeof makeCronMetadata>[0]["qualityDriftCandidates"]> = [];
     let previousTvl = 152_000_000;
@@ -149,6 +181,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
       { id: "dai", previous: 100, current: 91 },
       { id: "strict-upper", previous: 100, current: 150 },
       { id: "strict-lower", previous: 100, current: 50 },
+      { id: "tiny-step", previous: 1, current: 2 },
       { id: "zero-baseline", previous: 0, current: 10_000 },
     ];
     const db = mockD1([{
@@ -176,8 +209,18 @@ describe("analyzeDexLiquidityPostScoring", () => {
       ])),
     }));
 
-    expect(analysis.sourceCoverage.coinTvlStepCount150).toBe(2);
-    expect(analysis.sourceCoverage.coinTvlStepCount25).toBe(6);
+    expect(analysis.sourceCoverage.coinTvlStepCount150).toBe(3);
+    expect(analysis.sourceCoverage.coinTvlStepCount25).toBe(7);
+    expect(analysis.sourceCoverage).toMatchObject({
+      coinTvlStepIds150: ["surge", "crash", "tiny-step"],
+      coinTvlStepIds150Omitted: 0,
+      coinTvlStepIds25: ["surge", "crash", "strict-lower", "strict-upper", "upper-bound", "lower-bound", "tiny-step"],
+      coinTvlStepIds25Omitted: 0,
+      coinTvlStepComparisons: 9,
+      coinTvlStepMissingBaseline: 2,
+      coinTvlStepMissingCurrent: 0,
+      coinTvlStepBaselineUnavailable: false,
+    });
     expect(analysis.sourceCoverage.coinTvlStepTop).toEqual([
       { stablecoinId: "surge", previousTvlUsd: 100, currentTvlUsd: 400, ratio: 4, protocol: "uniswap", protocolDeltaUsd: 290 },
       { stablecoinId: "crash", previousTvlUsd: 200, currentTvlUsd: 20, ratio: 0.1, protocol: null, protocolDeltaUsd: null },
@@ -186,6 +229,76 @@ describe("analyzeDexLiquidityPostScoring", () => {
       { stablecoinId: "upper-bound", previousTvlUsd: 100, currentTvlUsd: 125, ratio: 1.25, protocol: "curve", protocolDeltaUsd: 25 },
     ]);
   });
+  it("caps stepped IDs by absolute delta and reports every omitted step", async () => {
+    const coins = Array.from({ length: 55 }, (_, index) => ({
+      id: `coin-${index}`,
+      previous: index + 1,
+      current: (index + 1) * 2,
+    }));
+    const db = mockD1([{
+      match: "FROM dex_liquidity_run_rows r",
+      rows: coins.map((coin) => ({
+        stablecoin_id: coin.id, total_tvl_usd: coin.previous, protocol_tvl_json: null,
+      })),
+    }]);
+    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      db,
+      scoreResults: new Map(coins.map((coin) => [coin.id, { ...BASE_SCORE_RESULT, tvl: coin.current }])),
+    }));
+    const expectedIds = coins.slice(5).reverse().map((coin) => coin.id);
+    expect(analysis.sourceCoverage).toMatchObject({
+      coinTvlStepCount150: 55,
+      coinTvlStepCount25: 55,
+      coinTvlStepIds150: expectedIds,
+      coinTvlStepIds150Omitted: 5,
+      coinTvlStepIds25: expectedIds,
+      coinTvlStepIds25Omitted: 5,
+      coinTvlStepComparisons: 55,
+    });
+  });
+
+  it("distinguishes absent current coins and missing positive baselines from valid comparisons", async () => {
+    const db = mockD1([{
+      match: "FROM dex_liquidity_run_rows r",
+      rows: [
+        { stablecoin_id: "gone", total_tvl_usd: 100, protocol_tvl_json: null },
+        { stablecoin_id: "zero-prior", total_tvl_usd: 0, protocol_tvl_json: null },
+        { stablecoin_id: "invalid-prior", total_tvl_usd: -10, protocol_tvl_json: null },
+        { stablecoin_id: "invalid-current", total_tvl_usd: 100, protocol_tvl_json: null },
+        { stablecoin_id: "current-zero", total_tvl_usd: 100, protocol_tvl_json: null },
+      ],
+    }]);
+    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      db,
+      scoreResults: new Map([
+        ["new", { ...BASE_SCORE_RESULT }],
+        ["zero-prior", { ...BASE_SCORE_RESULT }],
+        ["invalid-prior", { ...BASE_SCORE_RESULT }],
+        ["invalid-current", { ...BASE_SCORE_RESULT, tvl: Number.NaN }],
+        ["current-zero", { ...BASE_SCORE_RESULT, tvl: 0 }],
+      ]),
+    }));
+    expect(analysis.sourceCoverage).toMatchObject({
+      coinTvlStepMissingBaseline: 3,
+      coinTvlStepMissingCurrent: 1,
+      coinTvlStepComparisons: 1,
+      coinTvlStepCount150: 1,
+      coinTvlStepIds150: ["current-zero"],
+      coinTvlStepBaselineUnavailable: false,
+    });
+  });
+
+  it("reports missing baselines for a genuinely empty prior generation", async () => {
+    const db = mockD1([{ match: "FROM dex_liquidity_run_rows r", rows: [] }], { assertMatchesUsed: true });
+    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ db }));
+    expect(analysis.sourceCoverage).toMatchObject({
+      coinTvlStepComparisons: 0,
+      coinTvlStepMissingBaseline: 1,
+      coinTvlStepMissingCurrent: 0,
+      coinTvlStepBaselineUnavailable: false,
+    });
+  });
+
 
   it("keeps TVL step diagnostics empty when the previous published generation cannot be read", async () => {
     const db = mockD1([{
@@ -198,6 +311,16 @@ describe("analyzeDexLiquidityPostScoring", () => {
     expect(analysis.sourceCoverage.coinTvlStepCount150).toBe(0);
     expect(analysis.sourceCoverage.coinTvlStepCount25).toBe(0);
     expect(analysis.sourceCoverage.coinTvlStepTop).toEqual([]);
+    expect(analysis.sourceCoverage).toMatchObject({
+      coinTvlStepIds150: [],
+      coinTvlStepIds150Omitted: 0,
+      coinTvlStepIds25: [],
+      coinTvlStepIds25Omitted: 0,
+      coinTvlStepComparisons: 0,
+      coinTvlStepMissingBaseline: 0,
+      coinTvlStepMissingCurrent: 0,
+      coinTvlStepBaselineUnavailable: true,
+    });
   });
 
   it("treats previous coverage read failures as degraded unavailable state instead of a fake high baseline", async () => {

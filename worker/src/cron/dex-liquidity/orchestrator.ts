@@ -8,6 +8,7 @@ import type { SlotDeadline } from "../../lib/cron-timeouts";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiquidityFallbackCounters, LiquidityMetrics, LlamaPool } from "./types";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { createD1CostTracker, type D1CostTracker } from "../../lib/d1-cost";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import {
   acquireCronLease,
@@ -103,6 +104,7 @@ import type {
 } from "./scoring-stage-contract";
 import { createDexProgressReporter, type DexProgressReporter } from "./orchestrator-progress";
 import { acknowledgeDexSourcePagination, type PendingDexSourcePaginationUpdate } from "./source-pagination-state";
+import { boundMeasuredTargetFunnelGroups, boundTelemetryEntries, projectDexRecoveryStageResult, type DexRecoveryStageResult } from "./route-telemetry";
 
 const DEX_LIQUIDITY_PERSISTENCE_BLOCKING_FAILURES = new Set(["defillama-yields", "defillama-protocols"]);
 
@@ -185,6 +187,18 @@ async function buildDexLiquidityScoringStageState(
   };
 }
 
+const DEX_D1_COST_EXCLUSIONS = [
+  "outer-lease-and-progress-queries-excluded",
+  "cron-logger-and-terminal-writes-excluded",
+  "failed-run-cost-not-recorded",
+] as const;
+
+function withDexD1CostMetadata(result: CronResult, tracker: D1CostTracker): CronResult {
+  const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+  metadata.d1Cost = tracker.snapshot();
+  return { ...result, metadata: JSON.stringify(metadata) };
+}
+
 export async function stageDexLiquidityScoring(
   db: D1Database,
   graphApiKey: string | null,
@@ -196,6 +210,8 @@ export async function stageDexLiquidityScoring(
   deadline?: SlotDeadline,
 ): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
+  const d1Cost = createD1CostTracker(db, DEX_D1_COST_EXCLUSIONS);
+  db = d1Cost.db;
   const fallbackCounters = initLiquidityFallbackCounters();
   const reportDexProgress = createDexProgressReporter(reportProgress, {
     totalStablecoins: ACTIVE_STABLECOINS.length,
@@ -244,6 +260,7 @@ export async function stageDexLiquidityScoring(
   );
   throwIfAborted(signal);
   const cursorPersistence = await acknowledgeDexSourcePagination(db, ctx.pendingPaginationUpdates ?? []);
+  const targetEnrichment = boundTelemetryEntries(poolState.targetEnrichment ?? [], 64, 8_192);
 
   return {
     status: scoringSourceState.criticalSourceFailures.length > 0 ||
@@ -254,9 +271,11 @@ export async function stageDexLiquidityScoring(
       : "ok",
     itemCount,
     metadata: JSON.stringify({
+      d1Cost: d1Cost.snapshot(),
       generationId: stored.generationId,
       sourceSlotStartedAt: stored.sourceSlotStartedAt,
       syncStartSec,
+      registryEvaluation: { evaluatedAtSec: poolState.registryEvaluatedAtSec, basis: "registry-read-consumed" },
       chunkCount: stored.chunkCount,
       recordCount: stored.recordCount,
       payloadBytes: stored.payloadBytes,
@@ -275,6 +294,9 @@ export async function stageDexLiquidityScoring(
         material: materialPoolRejections,
       },
       fallbackCounters,
+      targetEnrichment,
+      targetEnrichmentGroupsOmitted: (poolState.targetEnrichment?.length ?? 0) - targetEnrichment.length,
+      graphApiKeyConfigured: poolState.graphApiKeyConfigured ?? null,
     }),
   };
 }
@@ -297,6 +319,7 @@ export interface DexLiquidityStageRecoveryOutcome {
   reason: DexLiquidityStageRecoveryReason;
   sourceSlotStartedAt: number;
   generationId: string;
+  stageResult?: DexRecoveryStageResult;
 }
 
 export async function consumeDexLiquidityScoringStage(
@@ -313,6 +336,8 @@ export async function consumeDexLiquidityScoringStage(
     stageRecovery?: DexLiquidityStageRecoveryInput;
   } = {},
 ): Promise<CronResult> {
+  const d1Cost = createD1CostTracker(db, DEX_D1_COST_EXCLUSIONS);
+  db = d1Cost.db;
   const expectedSourceSlotStartedAt = consumerSlotStartedAt == null
     ? undefined
     : consumerSlotStartedAt - DEX_LIQUIDITY_STAGE_LEAD_SEC;
@@ -340,7 +365,7 @@ export async function consumeDexLiquidityScoringStage(
       signal,
     );
   }
-  return await consumeLoadedDexLiquidityScoringStage(
+  const result = await consumeLoadedDexLiquidityScoringStage(
     db,
     staged,
     { publishShadowTargets: options.publishShadowTargets, deadline: options.deadline },
@@ -348,6 +373,7 @@ export async function consumeDexLiquidityScoringStage(
     signal,
     recovery,
   );
+  return withDexD1CostMetadata(result, d1Cost);
 }
 
 async function consumeLoadedDexLiquidityScoringStage(
@@ -377,6 +403,7 @@ async function consumeLoadedDexLiquidityScoringStage(
     staged.poolState,
     measuredTargetPublicationMode,
   );
+  scoreState.diagnostics.measuredTargetFunnel.stageOrigin = recovery == null ? "scheduled" : "recovery";
   const persistenceState = await persistDexLiquidityScoreState(
     ctx,
     staged.sourceState,
@@ -413,6 +440,8 @@ export async function reuseCurrentDexLiquidityScoringGeneration(
   consumerSlotStartedAt?: number,
   options: { stageRecovery?: DexLiquidityStageRecoveryInput; deadline?: SlotDeadline } = {},
 ): Promise<CronResult> {
+  const d1Cost = createD1CostTracker(db, DEX_D1_COST_EXCLUSIONS);
+  db = d1Cost.db;
   if (consumerSlotStartedAt != null) {
     const published = await publishHourStageAtHalfHourTick(
       db,
@@ -422,21 +451,21 @@ export async function reuseCurrentDexLiquidityScoringGeneration(
       signal,
       options.deadline,
     );
-    if (published != null) return published;
+    if (published != null) return withDexD1CostMetadata(published, d1Cost);
   }
   const generationId = await loadCurrentDexScoringGenerationId(db, signal);
   if (!generationId) {
     return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: { reason: "current-dex-liquidity-generation-missing", persistence: { generationId: null, skipped: true, skippedReason: "hourly-price-not-due" } },
+      metadata: { d1Cost: { ...d1Cost.snapshot() }, reason: "current-dex-liquidity-generation-missing", persistence: { generationId: null, skipped: true, skippedReason: "hourly-price-not-due" } },
       productivity: { productive: false, reason: "current-dex-liquidity-generation-missing" },
     });
   }
   return createCronResult({
     status: "skipped_neutral",
     itemCount: 0,
-    metadata: { reason: "liquidity-cadence-reuse", cadenceReuse: true, persistence: { generationId, skipped: false, skippedReason: "liquidity-cadence-reuse" } },
+    metadata: { d1Cost: { ...d1Cost.snapshot() }, reason: "liquidity-cadence-reuse", cadenceReuse: true, persistence: { generationId, skipped: false, skippedReason: "liquidity-cadence-reuse" } },
     productivity: { productive: false, reason: "liquidity-cadence-reuse" },
   });
 }
@@ -615,6 +644,13 @@ async function recoverDexLiquidityScoringStageOutput(
   signal?: AbortSignal,
   deadline?: SlotDeadline,
 ): Promise<{ staged: LoadedDexLiquidityScoringStage; recovery: DexLiquidityStageRecoveryOutcome }> {
+  // Recovery must have the source producer's Graph capability. Without it,
+  // subgraphs return empty descriptors and a partial target catalog can publish.
+  if (!recovery.graphApiKey?.trim()) {
+    throw new Error(
+      `DEX liquidity scoring stage recovery refused for source slot ${expectedSourceSlotStartedAt}: missing-graph-api-key`,
+    );
+  }
   const leaseOwner = createLeaseOwner(DEX_LIQUIDITY_STAGE_RECOVERY_JOB);
   const acquired = await runWithOverloadRetry(
     () => acquireCronLease(db, DEX_LIQUIDITY_STAGE_RECOVERY_JOB, leaseOwner, DEX_LIQUIDITY_STAGE_RECOVERY_LEASE_TTL_SEC),
@@ -626,8 +662,9 @@ async function recoverDexLiquidityScoringStageOutput(
       `DEX liquidity scoring stage recovery skipped for source slot ${expectedSourceSlotStartedAt}: stage lease is held`,
     );
   }
+  let stageResult: CronResult;
   try {
-    await stageDexLiquidityScoring(
+    stageResult = await stageDexLiquidityScoring(
       db,
       recovery.graphApiKey,
       signal,
@@ -662,6 +699,7 @@ async function recoverDexLiquidityScoringStageOutput(
       reason,
       sourceSlotStartedAt: expectedSourceSlotStartedAt,
       generationId: staged.generationId,
+      stageResult: projectDexRecoveryStageResult(stageResult),
     },
   };
 }
@@ -1167,7 +1205,7 @@ async function buildDexLiquidityPoolState(
       rows: stagedWriteback.pools.length,
     }));
   }
-  await enrichQuoterV2ExecutionTargets({
+  const quoterEnrichment = await enrichQuoterV2ExecutionTargets({
     metrics,
     chainAddressToId: sourceState.lookups.chainAddressToId,
     stablecoinPriceById: sourceState.stablecoinPriceById,
@@ -1178,7 +1216,7 @@ async function buildDexLiquidityPoolState(
     pancakeMeasuredTargets: sourceState.pancakeMeasuredExecutionTargets,
     slipstreamMeasuredTargets: sourceState.slipstreamMeasuredExecutionTargets,
   });
-  await enrichUniswapV4ExecutionTargets({
+  const v4Enrichment = await enrichUniswapV4ExecutionTargets({
     metrics,
     chainAddressToId: sourceState.lookups.chainAddressToId,
     stablecoinPriceById: sourceState.stablecoinPriceById,
@@ -1255,6 +1293,9 @@ async function buildDexLiquidityPoolState(
   });
 
   return {
+    registryEvaluatedAtSec: staged.registryEvaluatedAtSec,
+    targetEnrichment: [...(quoterEnrichment?.telemetry ?? []), ...(v4Enrichment ?? [])],
+    graphApiKeyConfigured: Boolean(ctx.graphApiKey),
     fallback,
     metrics,
     poolRejections,
@@ -1306,7 +1347,21 @@ async function scoreDexLiquidityPoolState(
     ctx.signal,
     poolState.slipstreamMeasuredExecutionTargets,
     measuredTargetPublicationMode,
+    poolState.registryEvaluatedAtSec,
   );
+  const funnel = diagnostics.measuredTargetFunnel;
+  funnel.sourceFailures = [...new Set(sourceState.failedSources)].slice(0, 32);
+  funnel.sourceFailuresOmitted = Math.max(0, new Set(sourceState.failedSources).size - 32);
+  funnel.graphApiKeyConfigured = poolState.graphApiKeyConfigured ?? null;
+  funnel.sourceSkippedReasons = poolState.graphApiKeyConfigured === false
+    ? { "univ3-subgraph": "missing-graph-api-key", "uniswap-v4-subgraph": "missing-graph-api-key" } : {};
+  funnel.enrichment = boundTelemetryEntries(poolState.targetEnrichment ?? [], 64, 8_192);
+  funnel.enrichmentGroupsOmitted = (poolState.targetEnrichment?.length ?? 0) - funnel.enrichment.length;
+  for (const group of funnel.groups) {
+    group.enriched = (poolState.targetEnrichment ?? []).filter((entry) => entry.adapterProfileId === group.adapterProfileId && entry.chain === group.chain)
+      .reduce((sum, entry) => sum + entry.enriched, 0);
+  }
+  boundMeasuredTargetFunnelGroups(funnel);
   const analysis = await analyzeDexLiquidityPostScoring({
     db: ctx.db,
     currentGenerationId: buildDexLiquidityPublicationGenerationId(ctx.syncStartSec),
@@ -1436,6 +1491,7 @@ async function persistDexLiquidityScoreState(
           scoreState.globalAgg,
           ctx.syncStartSec,
           ctx.signal,
+          scoreState.diagnostics.routeRemovalEvidence,
         ),
       3,
       ctx.signal,
@@ -1591,6 +1647,7 @@ function buildDexLiquidityCronResult(
         stagedPoolsSkippedByOptionalWildcardIdentity: poolState.stagedSkippedByOptionalWildcardIdentityCount,
         stagedPoolsSkippedByAuthoritativeProtocol: poolState.stagedSkippedByAuthoritativeProtocolCount,
         stagedPoolSkipDimensions: poolState.stagedSkipDimensions,
+        registryEvaluatedAtSec: poolState.registryEvaluatedAtSec,
         registryRowsRead: poolState.registryRowsRead,
         registryMultiSourcePools: poolState.registryMultiSourcePools,
         registryFamilyBySource: poolState.registryFamilyBySource,
@@ -1613,6 +1670,7 @@ function buildDexLiquidityCronResult(
         fallbackCounters: scoreState.diagnostics.fallbackCounters,
         deadPoolExclusions: scoreState.diagnostics.deadPoolExclusions,
         deadPoolUnindexedChainSkips: poolState.deadPoolUnindexedChainSkips ?? {},
+        measuredTargetFunnel: scoreState.diagnostics.measuredTargetFunnel,
         persistence: persistenceState.persistence,
         historicalSnapshot: persistenceState.historicalSnapshot,
       }),

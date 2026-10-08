@@ -9,6 +9,7 @@ import {
 import type { PoolProcessingRejection } from "./process-pool-types";
 import type { LiquidityFallbackCounters } from "./types";
 import type { DeadPoolUnindexedChainSkips } from "./staging-merge";
+import type { MeasuredTargetFunnel } from "./route-telemetry";
 
 export function isDexLiquidityDegraded(params: {
   criticalSourceFailures: string[];
@@ -44,6 +45,7 @@ export function buildDexLiquidityCronMetadata(params: {
   stagedPoolsSkippedByAuthoritativeProtocol: number;
   stagedWritebackRows?: number;
   stagedWritebackSkippedUntrustedIds?: number;
+  registryEvaluatedAtSec?: number;
   registryRowsRead?: number;
   registryMultiSourcePools?: number;
   registryFamilyBySource?: Record<string, number>;
@@ -85,6 +87,7 @@ export function buildDexLiquidityCronMetadata(params: {
   deadPoolUnindexedChainSkips: DeadPoolUnindexedChainSkips;
   persistence: PersistScoresResult;
   historicalSnapshot: HistoricalSnapshotWriteResult;
+  measuredTargetFunnel?: MeasuredTargetFunnel;
 }): Record<string, unknown> {
   const rejectedPoolCount = params.poolRejections.reduce(
     (sum, rejection) => sum + rejection.count,
@@ -107,6 +110,10 @@ export function buildDexLiquidityCronMetadata(params: {
     stagedPoolSkipDimensions: params.stagedPoolSkipDimensions,
     stagedWritebackRows: params.stagedWritebackRows,
     stagedWritebackSkippedUntrustedIds: params.stagedWritebackSkippedUntrustedIds,
+    registryEvaluation: params.registryEvaluatedAtSec == null ? undefined : {
+      evaluatedAtSec: params.registryEvaluatedAtSec,
+      basis: "registry-read-consumed",
+    },
     registryRowsRead: params.registryRowsRead,
     registryMultiSourcePools: params.registryMultiSourcePools,
     registryFamilyBySource: params.registryFamilyBySource,
@@ -130,6 +137,9 @@ export function buildDexLiquidityCronMetadata(params: {
     fallbackCounters: params.fallbackCounters,
     retainedDeadPoolExclusions: params.deadPoolExclusions,
     deadPoolUnindexedChainSkips: params.deadPoolUnindexedChainSkips,
+    measuredTargetFunnel: params.measuredTargetFunnel,
+    exitRouteSelection: params.persistence.exitRouteSelection,
+    exitRouteContinuity: params.persistence.exitRouteContinuity,
     persistence: {
       generationId: params.persistence.generationId ?? null,
       expectedRowCount: params.persistence.expectedRowCount ?? null,

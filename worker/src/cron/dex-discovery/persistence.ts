@@ -11,7 +11,6 @@ import { tryParseJson } from "../../lib/json-parse";
 import {
   STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
   STAGED_POOL_MAX_TVL_USD,
-  STAGED_POOL_PRICE_MAX_AGE_HOURS,
   type DiscoveryMeta,
   type StagedPool,
 } from "./types";
@@ -346,7 +345,6 @@ export async function recordDiscoveryAttemptFence(
 export interface DexPoolStagingRetentionResult {
   rowCutoff: number;
   rawJsonCutoff: number;
-  tickerRawJsonCutoff: number;
   deletedRows: number;
   rawJsonClearedRows: number;
   oldestRemainingAt: number | null;
@@ -362,7 +360,6 @@ export async function cleanupStaging(
 ): Promise<DexPoolStagingRetentionResult> {
   const rowCutoff = nowSec - STAGING_DELETE_TTL_SEC;
   const rawJsonCutoff = nowSec - STAGING_RAW_JSON_TTL_SEC;
-  const tickerRawJsonCutoff = nowSec - STAGED_POOL_PRICE_MAX_AGE_HOURS * 3600;
   const family = await runCappedPruneFamily({
     db,
     signal,
@@ -387,11 +384,11 @@ export async function cleanupStaging(
               SELECT rowid
                 FROM dex_pool_registry
                WHERE raw_json IS NOT NULL
-                 AND refreshed_at < CASE WHEN source = 'cg_tickers' THEN ? ELSE ? END
+                 AND refreshed_at < ?
                ORDER BY refreshed_at ASC, rowid ASC
                LIMIT ?
             )`,
-        bindsForLimit: (limit) => [tickerRawJsonCutoff, rawJsonCutoff, limit],
+        bindsForLimit: (limit) => [rawJsonCutoff, limit],
         batchLimit: STAGING_CLEANUP_MAX_ROWS_PER_RUN,
         runLimit: STAGING_CLEANUP_MAX_ROWS_PER_RUN,
       },
@@ -407,7 +404,6 @@ export async function cleanupStaging(
   return {
     rowCutoff,
     rawJsonCutoff,
-    tickerRawJsonCutoff,
     deletedRows: family.changed.rows,
     rawJsonClearedRows: family.changed.rawJson,
     oldestRemainingAt: family.probes.oldest.oldest_remaining_at ?? null,

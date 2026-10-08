@@ -1163,7 +1163,7 @@ describe("crawlCoin DexScreener hardening", () => {
     );
   });
 
-  it("keeps CoinGecko tickers staging output aligned with current orderbook rows", async () => {
+  it("persists CoinGecko ticker price-only records without synthetic pool metrics", async () => {
     vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
     vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({
       response: new Response(null, { status: 200 }),
@@ -1216,10 +1216,10 @@ describe("crawlCoin DexScreener hardening", () => {
         protocol: "kinesis",
         dexId: "kinesis",
         symbol: "USDC / USD",
-        tvlUsd: 60_000,
+        tvlUsd: null,
         volume24h: 30_000,
-        qualityMultiplier: QUALITY_MULTIPLIERS["orderbook"],
-        poolType: "orderbook",
+        qualityMultiplier: null,
+        poolType: null,
         feeTier: null,
         balanceRatio: null,
         isStable: null,
@@ -1228,16 +1228,11 @@ describe("crawlCoin DexScreener hardening", () => {
         quoteSymbol: "USD",
         priceUsd: (1.001 * 20_000 + 0.999 * 10_000) / 30_000,
         lockedLiqPct: null,
-        rawJson: JSON.stringify({
-          orderbookTvlBasis: "coingecko-depth-2pct-capped-by-volume",
-          orderbookDepthUsd: 60_000,
-          orderbookDepthUpUsd: 70_000,
-        }),
+        rawJson: null,
         discoveredAt: expect.any(Number),
         refreshedAt: expect.any(Number),
       },
     ]);
-    expect(vi.mocked(fetchJsonWithRetry).mock.calls[0]?.[0]).toContain("depth=true");
     const tickerFetchOptions = vi.mocked(fetchJsonWithRetry).mock.calls[0]?.[3] as
       | { maxResponseBytes?: number }
       | undefined;

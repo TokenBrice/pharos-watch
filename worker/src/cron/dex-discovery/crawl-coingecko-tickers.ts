@@ -2,13 +2,11 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { sleepWithSignal } from "../../lib/abort";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { USER_AGENT } from "../../lib/constants";
-import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { CG_TICKERS_RATE_MS } from "../dex-liquidity/constants";
 import {
   aggregateCgTickersByExchange,
   buildCgTickerExchangeSummaries,
-  buildCgTickerOrderbookMetadata,
   buildCgTickerPriceObservations,
   filterValidCgTickers,
 } from "../dex-liquidity/coingecko-tickers-shared";
@@ -30,7 +28,7 @@ const defaultCoinGeckoTickersStageDependencies: CoinGeckoTickersStageDependencie
 };
 
 /**
- * Hard per-response byte cap for the `depth=true` tickers payload. CoinGecko
+ * Hard per-response byte cap for the tickers payload. CoinGecko
  * serves at most 100 tickers per page and the heaviest tracked coin measures
  * ~76 KiB, so this keeps the run's largest variable-size provider body bounded
  * with several times' headroom. The shared reader rejects an over-cap declared
@@ -61,7 +59,7 @@ export async function crawlCoinGeckoTickersStage({
   }
 
   try {
-    const url = cgUrl(`/coins/${geckoId}/tickers?include_exchange_logo=false&depth=true`, cgApiKey);
+    const url = cgUrl(`/coins/${geckoId}/tickers?include_exchange_logo=false`, cgApiKey);
     const result = await dependencies.fetchJsonWithRetry<{ tickers?: CgTicker[] }>(url, {
       headers: cgHeaders({ "User-Agent": USER_AGENT }, cgApiKey),
       signal: context.buildStageSignal(DISCOVERY_STAGE_TIMEOUT_MS.cgTickers),
@@ -75,7 +73,6 @@ export async function crawlCoinGeckoTickersStage({
       for (const summary of exchangeSummaries) {
         const poolId = `orderbook:${summary.exchangeId}:${context.stablecoinId}`.toLowerCase();
         if (context.hasKnownPool(poolId)) continue;
-        const orderbookMetadata = buildCgTickerOrderbookMetadata(summary);
 
         context.addPool(toStagedPool(context, {
           poolId,
@@ -84,10 +81,11 @@ export async function crawlCoinGeckoTickersStage({
           protocol: summary.exchangeId,
           dexId: summary.exchangeId,
           symbol: `${symbol ?? context.stablecoinId} / USD`,
-          tvlUsd: summary.syntheticTvlUsd,
+          // Registry price record, consumed independently of pool admission.
+          tvlUsd: null,
           volume24h: summary.volumeUsd,
-          qualityMultiplier: QUALITY_MULTIPLIERS["orderbook"],
-          poolType: "orderbook",
+          qualityMultiplier: null,
+          poolType: null,
           feeTier: null,
           balanceRatio: null,
           isStable: null,
@@ -96,7 +94,7 @@ export async function crawlCoinGeckoTickersStage({
           quoteSymbol: "USD",
           priceUsd: summary.priceUsd,
           lockedLiqPct: null,
-          rawJson: orderbookMetadata ? JSON.stringify(orderbookMetadata) : null,
+          rawJson: null,
         }));
       }
 

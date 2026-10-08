@@ -10,6 +10,7 @@ import { createDexMeasuredExecutionRpcBudget } from "../measured-execution/profi
 import { captureQuoterV2Pools, QUOTER_V2_CAPTURE_MAX_POOLS, QUOTER_V2_CAPTURE_MAX_REQUESTS, QUOTER_V2_CAPTURE_MAX_WALL_MS } from "./quoter-v2-pool-capture";
 import { normalizeProtocol } from "./pool-helpers";
 import type { LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
+import { incrementReason, type TargetEnrichmentTelemetry } from "./route-telemetry";
 
 /** Address-bound recovery only; fingerprints continue through the unique-source candidate resolver. */
 export async function enrichQuoterV2ExecutionTargets(input: {
@@ -22,7 +23,7 @@ export async function enrichQuoterV2ExecutionTargets(input: {
   deadline?: SlotDeadline;
   pancakeMeasuredTargets: Map<string, DexMeasuredExecutionTarget>;
   slipstreamMeasuredTargets: Map<string, DexMeasuredExecutionTarget>;
-}): Promise<{ exactPoolCount: number; exactCapableAssets: string[] }> {
+}): Promise<{ exactPoolCount: number; exactCapableAssets: string[]; telemetry: TargetEnrichmentTelemetry }> {
   const groups = new Map<string, { chain: string; adapterProfileId: DexMeasuredExecutionDeployment["adapterProfileId"]; pools: Map<`0x${string}`, Array<{ stablecoinId: string; pool: PoolEntry }>> }>();
   for (const [stablecoinId, metric] of input.metrics) {
     for (const pool of metric.topPools) {
@@ -47,6 +48,12 @@ export async function enrichQuoterV2ExecutionTargets(input: {
       groups.set(key, group);
     }
   }
+  const telemetry: TargetEnrichmentTelemetry = [...groups.values()].map((group) => ({
+    adapterProfileId: group.adapterProfileId, chain: group.chain,
+    candidates: [...group.pools.values()].reduce((sum, refs) => sum + refs.length, 0),
+    attempted: 0, enriched: 0, dropReasons: {},
+  }));
+  const attempted = new Set<PoolEntry>();
   const assets = new Set<string>();
   let exactPoolCount = 0;
   let remaining = QUOTER_V2_CAPTURE_MAX_POOLS;
@@ -55,9 +62,14 @@ export async function enrichQuoterV2ExecutionTargets(input: {
   const rpcBudget = createDexMeasuredExecutionRpcBudget({ maxRequests: QUOTER_V2_CAPTURE_MAX_REQUESTS, deadlineMs: deadline });
   for (const group of groups.values()) {
     throwIfAborted(input.signal);
+    const groupTelemetry = telemetry.find((entry) => entry.adapterProfileId === group.adapterProfileId && entry.chain === group.chain)!;
     if (remaining === 0 || rpcBudget.remainingRequests === 0 || rpcBudget.stopReason || Date.now() >= deadline) break;
     const selected = [...group.pools.keys()].slice(0, Math.min(remaining, QUOTER_V2_CAPTURE_MAX_POOLS));
     remaining -= selected.length;
+    for (const address of selected) for (const reference of group.pools.get(address)!) {
+      attempted.add(reference.pool);
+      groupTelemetry.attempted++;
+    }
     const timeout = AbortSignal.timeout(Math.max(1, deadline - Date.now()));
     const signal = input.signal ? AbortSignal.any([input.signal, timeout]) : timeout;
     const result = await captureQuoterV2Pools({
@@ -71,7 +83,11 @@ export async function enrichQuoterV2ExecutionTargets(input: {
       if (!timeout.aborted) throw error;
       return null;
     });
-    if (!result?.ok) continue;
+    if (!result?.ok) {
+      incrementReason(groupTelemetry.dropReasons, result === null ? "deadline-exhausted" : "source-failure",
+        selected.reduce((sum, address) => sum + group.pools.get(address)!.length, 0));
+      continue;
+    }
     const builderInput = { pools: result.pools, chainAddressToId: input.chainAddressToId,
       symbolToChainScopedIds: new Map<string, Map<string, string[]>>(),
       stablecoinPriceById: input.stablecoinPriceById, capturedAt: input.capturedAt, adapterProfileId: group.adapterProfileId };
@@ -83,7 +99,10 @@ export async function enrichQuoterV2ExecutionTargets(input: {
       for (const reference of group.pools.get(address)!) {
         const physicalId = canonicalExitRouteAssetKey(group.chain, address);
         const target = targets.get(buildMeasuredPoolDirectionKey(reference.stablecoinId, physicalId));
-        if (!target) continue;
+        if (!target) {
+          incrementReason(groupTelemetry.dropReasons, "descriptor-builder-unresolved");
+          continue;
+        }
         const retainedTarget = { ...target, retainedTvlUsd: reference.pool.tvlUsd };
         const extra = { ...(reference.pool.extra ?? {}) };
         // Factory membership has now proved the exact CL family; a preexisting
@@ -96,9 +115,16 @@ export async function enrichQuoterV2ExecutionTargets(input: {
         accumulator.set(buildMeasuredPoolDirectionKey(reference.stablecoinId, physicalId), retainedTarget);
         if (isDexMeasuredExecutionDeploymentScoreEligible(group.adapterProfileId, group.chain)) assets.add(reference.stablecoinId);
         attached = true;
+        groupTelemetry.enriched++;
       }
       if (attached) exactPoolCount++;
     }
   }
-  return { exactPoolCount, exactCapableAssets: [...assets].sort() };
+  for (const group of groups.values()) {
+    const entry = telemetry.find((row) => row.adapterProfileId === group.adapterProfileId && row.chain === group.chain)!;
+    const deferred = [...group.pools.values()].flat().filter((reference) => !attempted.has(reference.pool)).length;
+    if (deferred > 0) incrementReason(entry.dropReasons,
+      remaining === 0 ? "enrichment-cap" : Date.now() >= deadline ? "deadline-exhausted" : "request-budget-exhausted", deferred);
+  }
+  return { exactPoolCount, exactCapableAssets: [...assets].sort(), telemetry };
 }
