@@ -1,9 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
-  MALFORMED_REDEMPTION_TELEMETRY,
   parseReserveCompositionRow,
   parseSnapshotMetadata,
 } from "../live-reserves/store-row-decoding";
+import {
+  decodeLiveReserveRedemptionTelemetry,
+  LIVE_RESERVE_SOURCE_MODEL_VALUES,
+  LIVE_RESERVE_EVIDENCE_CLASS_VALUES,
+  LIVE_RESERVE_WARNING_EFFECT_VALUES,
+  LIVE_RESERVE_FRESHNESS_MODE_VALUES,
+  LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES,
+  LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES,
+  LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES,
+  LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES,
+} from "@shared/types/live-reserves";
 
 function row(slices: unknown[]) {
   return {
@@ -85,7 +95,7 @@ describe("stored live reserve slice integrity", () => {
 });
 
 describe("stored live reserve snapshot metadata normalization", () => {
-  it("keeps only vocabulary-valid redemption fields and flags malformed telemetry", () => {
+  it("quarantines the whole malformed telemetry claim rather than salvaging positive capacity", () => {
     const metadata = parseSnapshotMetadata(JSON.stringify({
       freshnessMode: "verified",
       details: { note: "kept" },
@@ -112,21 +122,11 @@ describe("stored live reserve snapshot metadata normalization", () => {
 
     expect(metadata.freshnessMode).toBe("verified");
     expect(metadata.details).toEqual({ note: "kept" });
-    expect(metadata.redemption).toMatchObject({
-      capacityUsd: 1_000,
-      capacityKind: "live-direct",
-      routeStatus: "open",
-      routeStatusSource: "static-config",
-      routeStatusReason: "reviewed",
-      holderEligibility: "verified-customer",
-      sourceUrls: ["https://issuer.example/redeem"],
-    });
-    expect(Object.keys(metadata.redemption ?? {}).sort()).toEqual([
-      "capacityKind", "capacityUsd", "holderEligibility", "routeStatus", "routeStatusReason", "routeStatusSource", "sourceUrls",
-    ]);
-    // Non-numeric telemetry for a known number key is a producer bug, not
-    // silently-missing data.
-    expect((metadata.redemption as Record<PropertyKey, unknown>)[MALFORMED_REDEMPTION_TELEMETRY]).toBe(true);
+    expect(metadata.redemption?.capacityUsd).toBeUndefined();
+    expect(Object.keys(metadata.redemption ?? {})).toEqual([]);
+    expect(decodeLiveReserveRedemptionTelemetry(metadata).status).toBe("invalid");
+    const reloaded = JSON.parse(JSON.stringify(metadata));
+    expect(reloaded.redemption.capacityUsd).toBeUndefined();
   });
 
   it("treats a non-object redemption block as malformed and drops invalid top-level fields", () => {
@@ -139,7 +139,7 @@ describe("stored live reserve snapshot metadata normalization", () => {
     expect(metadata.freshnessMode).toBeUndefined();
     expect(metadata.details).toBeUndefined();
     expect(Object.keys(metadata.redemption ?? {})).toEqual([]);
-    expect((metadata.redemption as Record<PropertyKey, unknown>)[MALFORMED_REDEMPTION_TELEMETRY]).toBe(true);
+    expect(decodeLiveReserveRedemptionTelemetry(metadata).status).toBe("invalid");
 
     const clean = parseSnapshotMetadata(JSON.stringify({ capacityUsd: 5 }));
     expect(clean.redemption).toBeUndefined();
@@ -166,6 +166,25 @@ describe("stored live reserve snapshot metadata normalization", () => {
     });
   });
 
+  it("treats null legacy fields as unavailable while retaining valid legacy measured zero", () => {
+    const absent = parseSnapshotMetadata(JSON.stringify({
+      immediateRedeemableUsd: null, immediateRedeemableRatio: null, redemptionFeeBps: null,
+    }));
+    expect(decodeLiveReserveRedemptionTelemetry(absent).status).toBe("absent");
+    expect(absent.redemption).toBeUndefined();
+    const measured = parseSnapshotMetadata(JSON.stringify({
+      immediateRedeemableUsd: 0, immediateRedeemableRatio: null, redemptionFeeBps: null,
+    }));
+    expect(decodeLiveReserveRedemptionTelemetry(measured)).toEqual({ status: "valid", telemetry: { capacityUsd: 0 } });
+  });
+
+  it("does not rewrite retained valid source URLs on decode", () => {
+    const sourceUrls = ["https://issuer.example", "https://issuer.example/", "https://issuer.example"];
+    const metadata = parseSnapshotMetadata(JSON.stringify({ redemption: { capacityUsd: 100, sourceUrls } }));
+    expect(metadata.redemption?.sourceUrls).toEqual(sourceUrls);
+    expect(JSON.parse(JSON.stringify(metadata)).redemption.sourceUrls).toEqual(sourceUrls);
+  });
+
   it("lets a nested redemption block win over legacy flat fields", () => {
     const metadata = parseSnapshotMetadata(JSON.stringify({
       freshnessMode: "not-applicable",
@@ -187,7 +206,7 @@ describe("stored live reserve snapshot metadata normalization", () => {
     });
   });
 
-  it("drops malformed legacy flat fields without fabricating nested telemetry", () => {
+  it("quarantines malformed legacy flat fields without fabricating usable telemetry", () => {
     const metadata = parseSnapshotMetadata(JSON.stringify({
       freshnessMode: "not-applicable",
       immediateRedeemableUsd: "not-a-number",
@@ -198,6 +217,58 @@ describe("stored live reserve snapshot metadata normalization", () => {
     expect(metadata.immediateRedeemableUsd).toBeUndefined();
     expect(metadata.immediateRedeemableRatio).toBeUndefined();
     expect(metadata.redemptionFeeBps).toBeUndefined();
-    expect(metadata.redemption).toBeUndefined();
+    expect(decodeLiveReserveRedemptionTelemetry(metadata).status).toBe("invalid");
+  });
+
+  it.each([null, "0", -1])("preserves invalid supplied raw deviation %s but rejects the scoring row", (rawSumDeviation) => {
+    const stored = { ...row([{ name: "Cash", pct: 100, risk: "low" }]),
+      metadata: JSON.stringify({ diag: { rawSumDeviation, sourceDetail: "retained" } }) };
+    expect(parseSnapshotMetadata(stored.metadata).diag).toEqual({ rawSumDeviation, sourceDetail: "retained" });
+    const decoded = parseReserveCompositionRow(stored, null);
+    expect(decoded.record).toBeNull();
+    expect(decoded.issue?.code).toBe("invalid-payload");
+  });
+
+  it("preserves zero, extensions, and invalid nested precedence over a valid legacy claim", () => {
+    const v9RouteAttempt = { status: "accepted", state: { observed: 0 } };
+    expect(parseSnapshotMetadata(JSON.stringify({ redemption: { capacityUsd: 0, v9RouteAttempt } })).redemption)
+      .toEqual({ capacityUsd: 0, v9RouteAttempt });
+    const invalid = parseSnapshotMetadata(JSON.stringify({
+      immediateRedeemableUsd: 1_000_000, redemption: { capacityUsd: 1_000, dailyLimitUsd: -1 },
+    }));
+    expect(invalid.redemption?.capacityUsd).toBeUndefined();
+    expect(decodeLiveReserveRedemptionTelemetry(invalid).status).toBe("invalid");
+  });
+
+  it("accepts shared vocabularies while unknown nested values remain quarantined", () => {
+    for (const adapter_source_model of LIVE_RESERVE_SOURCE_MODEL_VALUES) {
+      for (const adapter_evidence_class of LIVE_RESERVE_EVIDENCE_CLASS_VALUES) {
+        const decoded = parseReserveCompositionRow({
+          ...row([{ name: "Cash", pct: 100, risk: "low" }]), adapter_source_model, adapter_evidence_class,
+        }, null);
+        expect(decoded.record).toMatchObject({ adapterSourceModel: adapter_source_model, adapterEvidenceClass: adapter_evidence_class });
+      }
+    }
+    for (const effect of LIVE_RESERVE_WARNING_EFFECT_VALUES) {
+      const decoded = parseReserveCompositionRow({ ...row([{ name: "Cash", pct: 100, risk: "low" }]),
+        warnings: JSON.stringify([{ code: "source", message: "source issue", effect }]) }, null);
+      expect(decoded.record?.warnings[0].effect).toBe(effect);
+    }
+    for (const freshnessMode of LIVE_RESERVE_FRESHNESS_MODE_VALUES) {
+      expect(parseSnapshotMetadata(JSON.stringify({ freshnessMode })).freshnessMode).toBe(freshnessMode);
+    }
+    for (const [field, values] of [
+      ["capacityKind", LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES],
+      ["freshnessKind", LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES],
+      ["routeStatus", LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES],
+      ["routeStatusSource", LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES],
+    ] as const) {
+      for (const value of values) {
+        expect(parseSnapshotMetadata(JSON.stringify({ redemption: { [field]: value } })).redemption?.[field]).toBe(value);
+      }
+      expect(decodeLiveReserveRedemptionTelemetry(
+        parseSnapshotMetadata(JSON.stringify({ redemption: { [field]: "unknown-value" } })),
+      ).status).toBe("invalid");
+    }
   });
 });

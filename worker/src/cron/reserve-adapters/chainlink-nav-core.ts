@@ -1,4 +1,4 @@
-import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type {
   LiveReserveRedemptionTelemetry,
   LiveReservesConfig,
@@ -6,6 +6,7 @@ import type {
 } from "@shared/types/live-reserves";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   DECIMALS_SELECTOR,
@@ -28,7 +29,7 @@ import {
 } from "./helpers";
 import type { OnchainCallers } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
-import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { decodeAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
 import { validateDecimals } from "./slice-math";
 
@@ -55,31 +56,8 @@ const ONDO_OUSG_REDEMPTION_SOURCE_URLS = [
   "https://docs.ondo.finance/qualified-access-products/ousg/instant-limits",
 ] as const;
 
-export interface ChainlinkNavRedemptionCapacityParams {
-  managerAddress: string;
-  usdcAddress: string;
-  routerAddress: string;
-  sourceAddress: string;
-  pauseSelector?: string;
-}
-
-export interface ChainlinkNavParams {
-  navScope: "native-fund-share" | "portfolio";
-  oracleAddress: string;
-  tokenAddress: string;
-  assetLabel: string;
-  assetRisk: ReserveSlice["risk"];
-  sourceKey?: string;
-  /** "latestRoundData" (default) = standard AggregatorV3Interface;
-   *  "getPrice" = Ondo-style oracle returning a single uint256 with 18 decimals.
-   *  "getPriceData" = Ondo-style oracle returning uint256 price + uint256 timestamp.
-   *  "getAssetPrice" = Ondo oracle router returning a token-scoped uint256 with 18 decimals. */
-  oracleMethod?: "latestRoundData" | "getPrice" | "getPriceData" | "getAssetPrice";
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-  maxOracleAgeSec?: number;
-  redemptionCapacity?: ChainlinkNavRedemptionCapacityParams;
-}
+export type ChainlinkNavParams = LiveReserveAdapterParamsByKey["chainlink-nav"];
+export type ChainlinkNavRedemptionCapacityParams = NonNullable<ChainlinkNavParams["redemptionCapacity"]>;
 
 export interface ChainlinkNavData {
   navPerToken: bigint;
@@ -248,7 +226,7 @@ export function adaptChainlinkNavResponse(data: ChainlinkNavData, params: Chainl
 
 /**
  * Shared NAV-read core. Fetches oracle + token data, validates freshness, and
- * produces an AdapterResult. Used by both `chainlink-nav` and
+ * produces an AdapterResult. Used by the `chainlink-nav`, `ondo-ousg`, and
  * `superstate-liquidity` registry-bound adapters.
  */
 export async function fetchChainlinkNavCore(

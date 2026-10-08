@@ -1,25 +1,21 @@
-import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
+import { getLiveReserveAdapterDefinition, getLiveReserveAdapterValidationPolicy } from "@shared/lib/live-reserve-adapters";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import {
   getAllowedRedemptionCapacityWarningReason,
   isRedemptionFreshnessAllowedByPolicy,
 } from "@shared/lib/redemption-backstop-configs/policies";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 import type {
   RedemptionCapacityConfidence,
+  RedemptionCapacityRejectionReason,
   RedemptionHolderEligibility,
   RedemptionLiveCapacityKind,
   RedemptionLiveFreshnessKind,
   RedemptionRouteStatus,
   RedemptionRouteStatusSource,
 } from "@shared/types/redemption";
-import { LiveReserveRedemptionOutputValuationSchema, LiveReserveRedemptionTelemetrySchema } from "@shared/types/live-reserves";
-import { isValidIsoDateOnly } from "@shared/types/date-primitives";
-import {
-  RedemptionHolderEligibilitySchema,
-  RedemptionLiveCapacityKindSchema,
-  RedemptionLiveFreshnessKindSchema,
-} from "@shared/types/redemption";
+import { decodeLiveReserveRedemptionTelemetry, type LiveReserveRedemptionTelemetry, type LiveReserveRedemptionTelemetryKnownFields } from "@shared/types/live-reserves";
 import type { LiveReserveRedemptionOutputValuation, LiveReserveWarning } from "@shared/types/live-reserves";
 import {
   hasScoringEligibleLiveReserveFreshness,
@@ -35,7 +31,6 @@ import {
   parseAcceptedSfrxusdCrosschainV9RouteState,
   type SfrxusdCrosschainV9RouteState,
 } from "../sfrxusd-crosschain-redemption-route";
-import { MALFORMED_REDEMPTION_TELEMETRY } from "../live-reserves/store-row-decoding";
 
 export interface RedemptionBackstopLiveMetadata {
   updatedAt: number | null;
@@ -47,6 +42,7 @@ export interface RedemptionBackstopLiveMetadata {
   canUseCapacity: boolean;
   canUseFee: boolean;
   capacityReason: string | null;
+  capacityRejectionReason?: RedemptionCapacityRejectionReason | null;
   feeReason: string | null;
   immediateRedeemableUsd: number | null;
   immediateRedeemableRatio: number | null;
@@ -72,30 +68,9 @@ export interface RedemptionBackstopLiveMetadata {
   v9SfrxusdCrosschainRouteState: SfrxusdCrosschainV9RouteState | null;
   v9OutputValuation?: LiveReserveRedemptionOutputValuation | null;
   outputAssetKeys?: string[] | null;
+  sharedResourceKey?: string | null;
 }
 
-interface ParsedRedemptionTelemetry {
-  fields: Record<string, unknown>;
-  malformed: boolean;
-}
-
-function isMalformedRedemptionTelemetryMarker(raw: Record<string, unknown>): boolean {
-  return (raw as { [MALFORMED_REDEMPTION_TELEMETRY]?: boolean })[MALFORMED_REDEMPTION_TELEMETRY] === true;
-}
-
-function getRedemptionTelemetry(metadata: Record<string, unknown>): ParsedRedemptionTelemetry {
-  if (!Object.prototype.hasOwnProperty.call(metadata, "redemption")) {
-    return { fields: {}, malformed: false };
-  }
-  const raw = metadata.redemption;
-  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-    const fields = raw as Record<string, unknown>;
-    return isMalformedRedemptionTelemetryMarker(fields)
-      ? { fields: {}, malformed: true }
-      : { fields, malformed: false };
-  }
-  return { fields: {}, malformed: true };
-}
 
 interface ParsedTelemetryNumber {
   value: number | null;
@@ -143,62 +118,13 @@ function hasTelemetryValue(value: ParsedTelemetryNumber): boolean {
   return value.value != null || value.invalid;
 }
 
-function coerceRouteStatus(value: unknown): RedemptionRouteStatus | null {
-  return value === "open" ||
-    value === "degraded" ||
-    value === "paused" ||
-    value === "cohort-limited" ||
-    value === "unknown"
-    ? value
-    : null;
-}
-
-function coerceRouteStatusSource(value: unknown): RedemptionRouteStatusSource | null {
-  return value === "static-config" ||
-    value === "market-implied" ||
-    value === "operator-notice" ||
-    value === "protocol-api" ||
-    value === "onchain"
-    ? value
-    : null;
-}
 
 function coerceString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
-function coerceReviewedAtDate(value: unknown): string | null {
-  const date = coerceString(value);
-  return date && isValidIsoDateOnly(date) ? date : null;
-}
 
-function coerceUrlArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  const urls: string[] = [];
-  const seen = new Set<string>();
-  for (const item of value) {
-    if (typeof item !== "string") continue;
-    try {
-      const parsed = new URL(item);
-      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") continue;
-      const normalizedUrl = parsed.toString();
-      if (seen.has(normalizedUrl)) continue;
-      seen.add(normalizedUrl);
-      urls.push(normalizedUrl);
-    } catch {
-      continue;
-    }
-  }
-  return urls;
-}
 
-function coerceSchemaValue<T>(
-  schema: { safeParse: (value: unknown) => { success: true; data: T } | { success: false } },
-  value: unknown,
-): T | null {
-  const parsed = schema.safeParse(value);
-  return parsed.success ? parsed.data : null;
-}
 
 const SCOREABLE_REDEMPTION_CAPACITY_KINDS = new Set<RedemptionLiveCapacityKind>([
   "live-direct",
@@ -212,7 +138,7 @@ const SCOREABLE_NESTED_REDEMPTION_FRESHNESS_KINDS = new Set<RedemptionLiveFreshn
   "same-run-onchain",
   "same-run-api",
 ]);
-const MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC = 10 * 60;
+const MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC = MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC;
 
 function hasScoreableNestedRedemptionEvidence(
   capacityKind: RedemptionLiveCapacityKind | null,
@@ -273,6 +199,80 @@ function resolveCapacityNotes(
     if (note) notes.add(note);
   }
   return [...notes];
+}
+
+/** Capacity scope cannot repair composition, authority, or immutable generation. */
+export function evaluateRedemptionCapacityEvidenceAdmission(
+  stablecoinId: string,
+  snapshot: ReserveSnapshotMetadataRecord | null | undefined,
+  now: number,
+): {
+  eligible: boolean;
+  rejectionReason: RedemptionCapacityRejectionReason | null;
+  independentNestedEvidence: boolean;
+} {
+  const reject = (rejectionReason: RedemptionCapacityRejectionReason) => ({
+    eligible: false, rejectionReason, independentNestedEvidence: false,
+  });
+  if (!snapshot) return reject("missing-snapshot");
+  const reasons = snapshot.admission?.reasons ?? [];
+  const strictReason = reasons.find((reason) =>
+    reason !== "non-independent" && reason !== "degraded-snapshot" &&
+    reason !== "insufficient-slices" && reason !== "invalid-freshness",
+  );
+  if (strictReason) return reject(strictReason);
+  if (!Number.isSafeInteger(snapshot.fetchedAt) || snapshot.fetchedAt <= 0 || snapshot.fetchedAt > now) {
+    return reject("invalid-freshness");
+  }
+  if (now - snapshot.fetchedAt > LIVE_RESERVE_FRESHNESS_SEC) return reject("stale");
+  const parsed = decodeLiveReserveRedemptionTelemetry(snapshot.metadata);
+  if (parsed.status === "invalid") return reject("malformed-telemetry");
+  const telemetry = parsed.status === "valid" ? parsed.telemetry : {};
+  const meta = WORKER_TRACKED_META_BY_ID.get(stablecoinId);
+  const adapterValidation = meta?.liveReservesConfig && getLiveReserveAdapterValidationPolicy(meta.liveReservesConfig.adapter);
+  const { sourceAgeBudgetSec } = resolveLiveReserveSourceAgeBudget(
+    meta?.liveReservesConfig?.scoring?.maxSourceAgeSec, adapterValidation?.maxSourceAgeSec, LIVE_RESERVE_FRESHNESS_SEC,
+  );
+  if (snapshot.metadata.freshnessMode === "verified") {
+    const compositionTimestamp = snapshot.metadata.sourceTimestamp;
+    if (typeof compositionTimestamp !== "number" || !Number.isFinite(compositionTimestamp) ||
+      compositionTimestamp <= 0 || compositionTimestamp > now + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC) {
+      return reject("invalid-freshness");
+    }
+    if (now - compositionTimestamp > sourceAgeBudgetSec) return reject("stale");
+  }
+  if (telemetry.sourceTimestamp != null) {
+    if (telemetry.sourceTimestamp <= 0) return reject("missing-source-timestamp");
+    if (telemetry.sourceTimestamp > now + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC) return reject("future-source-timestamp");
+    const nestedSourceBudget = telemetry.freshnessKind === "verified-source-timestamp"
+      ? sourceAgeBudgetSec : Math.min(sourceAgeBudgetSec, LIVE_RESERVE_FRESHNESS_SEC);
+    if (now - telemetry.sourceTimestamp > nestedSourceBudget) return reject("stale-source-timestamp");
+  }
+  const requiresIndependentNested = reasons.includes("invalid-freshness") ||
+    (snapshot.metadata.freshnessMode === "unverified" && telemetry.freshnessKind !== "unverified");
+  if (requiresIndependentNested) {
+    // Only timestamp-less composition is separable. A broken/future disclosure
+    // or invalid fetch clock is not a scope mismatch.
+    if (snapshot.metadata.freshnessMode !== "unverified" ||
+      snapshot.metadata.diag?.invalidFreshness === true ||
+      snapshot.admission?.freshness?.sourceFreshnessInvalid === true) return reject("invalid-freshness");
+    if (telemetry.freshnessKind !== "same-run-onchain" ||
+      !hasScoreableNestedRedemptionEvidence(telemetry.capacityKind ?? null, telemetry.freshnessKind)) {
+      return reject("invalid-freshness");
+    }
+    if (telemetry.sourceTimestamp == null) return reject("missing-source-timestamp");
+    if (!Number.isSafeInteger(telemetry.blockNumber) || (telemetry.blockNumber ?? 0) <= 0) return reject("missing-block-number");
+    const model = getRedemptionBackstopConfig(stablecoinId)?.capacityModel;
+    const requiredOutputs = model?.kind === "reserve-sync-metadata" || model?.kind === "executable-observer"
+      ? model.requiredOutputAssetKeys : undefined;
+    if (!requiredOutputs?.length ||
+      !requiredOutputs.every((key) => telemetry.outputAssetKeys?.includes(key))) {
+      return reject("route-output-identity-unobserved");
+    }
+    if (telemetry.routeStatusSource !== "onchain" || telemetry.holderEligibility == null) return reject("invalid-freshness");
+    if (telemetry.capacityUsd == null && telemetry.capacityRatioOfSupply == null) return reject("redeemable-capacity-unobserved");
+  }
+  return { eligible: true, rejectionReason: null, independentNestedEvidence: requiresIndependentNested };
 }
 
 function resolveCapacityReason(args: {
@@ -376,23 +376,13 @@ interface TelemetryBundle {
 }
 
 function parseTelemetryFields(
-  redemptionTelemetry: Record<string, unknown>,
+  redemptionTelemetry: LiveReserveRedemptionTelemetryKnownFields,
   metadata: Record<string, unknown>,
 ): TelemetryBundle {
   return {
-    nestedCapacityUsd: parseTelemetryNumber(redemptionTelemetry, "capacityUsd", "Live redemption capacity USD", {
-      min: 0,
-    }),
-    nestedCapacityRatio: parseTelemetryNumber(
-      redemptionTelemetry,
-      "capacityRatioOfSupply",
-      "Live redemption capacity ratio",
-      { min: 0, max: 1 },
-    ),
-    nestedFeeBps: parseTelemetryNumber(redemptionTelemetry, "feeBps", "Live redemption fee bps", {
-      min: 0,
-      max: 10_000,
-    }),
+    nestedCapacityUsd: { value: redemptionTelemetry.capacityUsd ?? null, invalid: false },
+    nestedCapacityRatio: { value: redemptionTelemetry.capacityRatioOfSupply ?? null, invalid: false },
+    nestedFeeBps: { value: redemptionTelemetry.feeBps ?? null, invalid: false },
     buyFeeBpsMin: parseTelemetryNumber(metadata, "buyFeeBpsMin", "Live buy-fee minimum bps", {
       min: 0,
       max: 10_000,
@@ -401,27 +391,14 @@ function parseTelemetryFields(
       min: 0,
       max: 10_000,
     }),
-    sourceTimestamp: parseTelemetryNumber(redemptionTelemetry, "sourceTimestamp", "Live redemption source timestamp", {
-      min: 0,
-    }),
-    settlementDelaySec: parseTelemetryNumber(
-      redemptionTelemetry,
-      "settlementDelaySec",
-      "Live redemption settlement delay",
-      { min: 0 },
-    ),
-    queueDepthUsd: parseTelemetryNumber(redemptionTelemetry, "queueDepthUsd", "Live redemption queue depth", {
-      min: 0,
-    }),
-    dailyLimitUsd: parseTelemetryNumber(redemptionTelemetry, "dailyLimitUsd", "Live redemption daily limit", {
-      min: 0,
-    }),
-    minRedeemUsd: parseTelemetryNumber(redemptionTelemetry, "minRedeemUsd", "Live redemption minimum redeem", {
-      min: 0,
-    }),
+    sourceTimestamp: { value: redemptionTelemetry.sourceTimestamp ?? null, invalid: false },
+    settlementDelaySec: { value: redemptionTelemetry.settlementDelaySec ?? null, invalid: false },
+    queueDepthUsd: { value: redemptionTelemetry.queueDepthUsd ?? null, invalid: false },
+    dailyLimitUsd: { value: redemptionTelemetry.dailyLimitUsd ?? null, invalid: false },
+    minRedeemUsd: { value: redemptionTelemetry.minRedeemUsd ?? null, invalid: false },
     settlementBoundUnproven: redemptionTelemetry.settlementBoundUnproven === true,
-    capacityKind: coerceSchemaValue(RedemptionLiveCapacityKindSchema, redemptionTelemetry.capacityKind),
-    freshnessKind: coerceSchemaValue(RedemptionLiveFreshnessKindSchema, redemptionTelemetry.freshnessKind),
+    capacityKind: redemptionTelemetry.capacityKind ?? null,
+    freshnessKind: redemptionTelemetry.freshnessKind ?? null,
   };
 }
 
@@ -434,13 +411,15 @@ interface ResolvedRouteStatus {
   warning: string | null;
 }
 
-function resolveRouteStatus(redemptionTelemetry: Record<string, unknown>): ResolvedRouteStatus {
-  const routeStatus = coerceRouteStatus(redemptionTelemetry.routeStatus);
-  const routeStatusSource = coerceRouteStatusSource(redemptionTelemetry.routeStatusSource);
+function resolveRouteStatus(redemptionTelemetry: LiveReserveRedemptionTelemetryKnownFields): ResolvedRouteStatus {
+  const routeStatus = redemptionTelemetry.routeStatus === "suspended" ? null : redemptionTelemetry.routeStatus ?? null;
+  const routeStatusSource = redemptionTelemetry.routeStatusSource ?? null;
   const routeStatusMissingSource = routeStatus != null && routeStatusSource == null;
   const shouldUseSourcedRouteStatus = routeStatus != null && !routeStatusMissingSource;
   const shouldPreserveUnsourcedUnknownRouteStatus = routeStatus === "unknown" && routeStatusMissingSource;
-  const warning = routeStatusMissingSource
+  const warning = redemptionTelemetry.routeStatus === "suspended"
+    ? "Live redemption suspended status requires authored routeSuspension evidence and was ignored"
+    : routeStatusMissingSource
     ? routeStatus === "unknown"
       ? "Live redemption route status is unknown without source attribution"
       : "Live redemption route status omitted source attribution and was ignored"
@@ -450,7 +429,7 @@ function resolveRouteStatus(redemptionTelemetry: Record<string, unknown>): Resol
     routeStatusSource: shouldUseSourcedRouteStatus ? routeStatusSource : null,
     routeStatusReason: shouldUseSourcedRouteStatus ? coerceString(redemptionTelemetry.routeStatusReason) : null,
     routeStatusReviewedAt: shouldUseSourcedRouteStatus
-      ? coerceReviewedAtDate(redemptionTelemetry.routeStatusReviewedAt)
+      ? redemptionTelemetry.routeStatusReviewedAt ?? null
       : null,
     warning,
   };
@@ -462,14 +441,15 @@ export function readRedemptionBackstopLiveMetadata(
   now = Math.floor(Date.now() / 1000),
 ): RedemptionBackstopLiveMetadata {
   const metadata = snapshotMetadata?.metadata ?? {};
-  const parsedRedemptionTelemetry = getRedemptionTelemetry(metadata);
-  const redemptionTelemetry = parsedRedemptionTelemetry.fields;
-  const redemptionTelemetryMalformed = parsedRedemptionTelemetry.malformed;
+  const parsedRedemptionTelemetry = decodeLiveReserveRedemptionTelemetry(metadata);
+  const redemptionTelemetry: LiveReserveRedemptionTelemetry = parsedRedemptionTelemetry.status === "valid" ? parsedRedemptionTelemetry.telemetry : {};
+  const redemptionTelemetryMalformed = parsedRedemptionTelemetry.status === "invalid";
   const updatedAt = snapshotMetadata?.fetchedAt ?? null;
   const trackedMeta = WORKER_TRACKED_META_BY_ID.get(stablecoinId);
   const adapterKey = trackedMeta?.liveReservesConfig?.adapter ?? null;
   const adapterDefinition = adapterKey ? getLiveReserveAdapterDefinition(adapterKey) : null;
-  const isFresh = updatedAt != null && now - updatedAt <= LIVE_RESERVE_FRESHNESS_SEC;
+  const isFresh = updatedAt != null && Number.isSafeInteger(updatedAt) && updatedAt > 0 && updatedAt <= now &&
+    now - updatedAt <= LIVE_RESERVE_FRESHNESS_SEC;
   const hasScoringEligibleFreshness = hasScoringEligibleLiveReserveFreshness(metadata, now);
   const canUseDegradedSyncCapacity = canUseCapacityDespiteDegradedSync(stablecoinId, snapshotMetadata);
   const hasBlockingWarnings = hasBlockingRedemptionWarnings(
@@ -495,25 +475,19 @@ export function readRedemptionBackstopLiveMetadata(
     capacityKind,
     freshnessKind,
   } = parseTelemetryFields(redemptionTelemetry, metadata);
-  const parsedOutputValuation = LiveReserveRedemptionOutputValuationSchema.safeParse(
-    redemptionTelemetry.outputValuation,
-  );
-  const outputValuationPresent = Object.prototype.hasOwnProperty.call(
-    redemptionTelemetry,
-    "outputValuation",
-  );
+  const outputValuation = redemptionTelemetry.outputValuation;
   const configuredOutputKeys = new Set([
     ...(getRedemptionBackstopConfig(stablecoinId)?.outputAssets ?? []),
     ...(getRedemptionBackstopConfig(stablecoinId)?.unresolvedOutputAssetKeys ?? []),
   ]);
   const outputValuationUnknownAsset =
-    parsedOutputValuation.success &&
-    parsedOutputValuation.data.basketWeights.some(
+    outputValuation != null &&
+    outputValuation.basketWeights.some(
       (weight) => !WORKER_TRACKED_META_BY_ID.has(weight.assetId) && !configuredOutputKeys.has(weight.assetId),
     );
   const outputValuationFuture =
-    parsedOutputValuation.success &&
-    parsedOutputValuation.data.observedAt > now + MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC;
+    outputValuation != null &&
+    outputValuation.observedAt > now + MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC;
   const sourceTimestampFuture =
     sourceTimestamp.value != null &&
     sourceTimestamp.value > now + MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC;
@@ -554,9 +528,7 @@ export function readRedemptionBackstopLiveMetadata(
     dailyLimitUsd,
     minRedeemUsd,
   ]);
-  if (outputValuationPresent && !parsedOutputValuation.success) {
-    telemetryWarnings.push("Live redemption output valuation is malformed and was ignored");
-  } else if (outputValuationUnknownAsset) {
+  if (outputValuationUnknownAsset) {
     telemetryWarnings.push(
       "Live redemption output valuation contains an asset outside the reviewed route output set and was ignored",
     );
@@ -580,7 +552,33 @@ export function readRedemptionBackstopLiveMetadata(
     (hasNestedCapacityTelemetry ? nestedCapacityUsd.value != null || nestedCapacityRatio.value != null : false);
   const fallbackFeeTelemetryAvailable =
     !feeTelemetryInvalid && (hasNestedFeeTelemetry ? nestedFeeBps.value != null : false);
-  const capacityReason = resolveCapacityReason({
+  const admission = evaluateRedemptionCapacityEvidenceAdmission(stablecoinId, snapshotMetadata, now);
+  const model = getRedemptionBackstopConfig(stablecoinId)?.capacityModel;
+  const requiredOutputs = model?.kind === "reserve-sync-metadata" || model?.kind === "executable-observer"
+    ? model.requiredOutputAssetKeys : undefined;
+  const outputIdentityMissing = !!requiredOutputs?.length &&
+    !requiredOutputs.every((key) => redemptionTelemetry.outputAssetKeys?.includes(key));
+  const settlementBoundCapacityUnavailable = settlementBoundUnproven &&
+    !(resolvedRouteStatus.routeStatus === "paused" && (nestedCapacityUsd.value ?? nestedCapacityRatio.value) === 0);
+  const capacityRejectionReason: RedemptionCapacityRejectionReason | null = admission.rejectionReason ??
+    (capacityTelemetryInvalid ? "malformed-telemetry" :
+      !isFresh ? "stale" :
+      snapshotMetadata?.syncStatus !== "ok" && !canUseDegradedSyncCapacity ? "degraded-snapshot" :
+      hasBlockingWarnings ? "degraded-snapshot" :
+      capacityKind && !SCOREABLE_REDEMPTION_CAPACITY_KINDS.has(capacityKind) ? "unsupported-capacity-kind" :
+      verifiedSourceTimestampIssue === "missing" ? "missing-source-timestamp" :
+      verifiedSourceTimestampIssue === "future" ? "future-source-timestamp" :
+      !isRedemptionFreshnessAllowed(stablecoinId, freshnessKind, hasScoringEligibleFreshness) ? "invalid-freshness" :
+      outputIdentityMissing ? "route-output-identity-unobserved" :
+      settlementBoundCapacityUnavailable ? "settlement-bound-unproven" :
+      !fallbackCapacityTelemetryAvailable ? "redeemable-capacity-unobserved" : null);
+  const capacityReason = admission.rejectionReason
+    ? `Live redemption evidence rejected: ${admission.rejectionReason}`
+    : outputIdentityMissing
+      ? "Live redemption evidence does not bind the selected route output"
+      : settlementBoundCapacityUnavailable
+        ? "Live redemption settlement completion bound is unproven"
+        : resolveCapacityReason({
     snapshotMetadata,
     isFresh,
     hasBlockingWarnings,
@@ -594,7 +592,11 @@ export function readRedemptionBackstopLiveMetadata(
     stablecoinId,
     canUseDegradedSyncCapacity,
   });
-  const feeReason = resolveFeeReason({
+  const feeReason = admission.rejectionReason &&
+    admission.rejectionReason !== "route-output-identity-unobserved" &&
+    admission.rejectionReason !== "redeemable-capacity-unobserved"
+    ? `Live redemption fee evidence rejected: ${admission.rejectionReason}`
+    : resolveFeeReason({
     snapshotMetadata,
     isFresh,
     hasBlockingWarnings,
@@ -604,17 +606,21 @@ export function readRedemptionBackstopLiveMetadata(
     feeTelemetryInvalid,
     stablecoinId,
   });
+  const preserveEvidence = admission.eligible && isFresh && !hasBlockingWarnings && !redemptionTelemetryMalformed &&
+    (snapshotMetadata?.syncStatus === "ok" || canUseDegradedSyncCapacity);
+  // Rejected positive evidence must not erase an independently observed pause,
+  // route impairment, daily limit, or asynchronous settlement constraint.
+  const preserveRouteStatus = preserveEvidence ||
+    (resolvedRouteStatus.routeStatus != null && resolvedRouteStatus.routeStatus !== "open");
 
-  const parsedOutputAssetKeys = LiveReserveRedemptionTelemetrySchema.shape.outputAssetKeys.safeParse(
-    redemptionTelemetry.outputAssetKeys,
-  );
+  const outputAssetKeys = redemptionTelemetry.outputAssetKeys ?? null;
   return {
     updatedAt,
     isFresh,
     hasScoringEligibleFreshness,
     hasBlockingWarnings,
     capacityNotes: [...telemetryWarnings, ...capacityNotes],
-    outputAssetKeys: parsedOutputAssetKeys.success ? parsedOutputAssetKeys.data ?? null : null,
+    outputAssetKeys,
     capacityConfidence:
       capacityTelemetryInvalid
         ? null
@@ -625,16 +631,17 @@ export function readRedemptionBackstopLiveMetadata(
           : fallbackCapacityTelemetryAvailable
             ? "dynamic"
             : null,
-    canUseCapacity: capacityReason == null,
+    canUseCapacity: capacityReason == null && capacityRejectionReason == null,
     canUseFee: feeReason == null,
     capacityReason,
+    capacityRejectionReason,
     feeReason,
-    immediateRedeemableUsd: capacityTelemetryInvalid
+    immediateRedeemableUsd: !preserveEvidence || capacityTelemetryInvalid || settlementBoundCapacityUnavailable
       ? null
       : hasNestedCapacityTelemetry
         ? nestedCapacityUsd.value
         : null,
-    immediateRedeemableRatio: capacityTelemetryInvalid
+    immediateRedeemableRatio: !preserveEvidence || capacityTelemetryInvalid || settlementBoundCapacityUnavailable
       ? null
       : hasNestedCapacityTelemetry
         ? nestedCapacityRatio.value
@@ -643,20 +650,21 @@ export function readRedemptionBackstopLiveMetadata(
     capacityKind,
     freshnessKind,
     sourceTimestamp: validSourceTimestamp,
-    evidenceObservedAt,
-    sourceUrls: coerceUrlArray(redemptionTelemetry.sourceUrls),
+    evidenceObservedAt: preserveEvidence ? evidenceObservedAt : null,
+    sourceUrls: redemptionTelemetry.sourceUrls ?? [],
     settlementDelaySec: settlementDelaySec.value,
     queueDepthUsd: queueDepthUsd.value,
     dailyLimitUsd: dailyLimitUsd.value,
     minRedeemUsd: minRedeemUsd.value,
-    liveHolderEligibility: coerceSchemaValue(RedemptionHolderEligibilitySchema, redemptionTelemetry.holderEligibility),
+    liveHolderEligibility: redemptionTelemetry.holderEligibility ?? null,
+    sharedResourceKey: preserveEvidence ? coerceString(redemptionTelemetry.sharedResourceKey) : null,
     redemptionFeeBps: feeTelemetryInvalid ? null : hasNestedFeeTelemetry ? nestedFeeBps.value : null,
     buyFeeBpsMin: buyFeeBpsMin.value,
     buyFeeBpsMax: buyFeeBpsMax.value,
-    routeStatus: resolvedRouteStatus.routeStatus,
-    routeStatusSource: resolvedRouteStatus.routeStatusSource,
-    routeStatusReason: resolvedRouteStatus.routeStatusReason,
-    routeStatusReviewedAt: resolvedRouteStatus.routeStatusReviewedAt,
+    routeStatus: preserveRouteStatus ? resolvedRouteStatus.routeStatus : null,
+    routeStatusSource: preserveRouteStatus ? resolvedRouteStatus.routeStatusSource : null,
+    routeStatusReason: preserveRouteStatus ? resolvedRouteStatus.routeStatusReason : null,
+    routeStatusReviewedAt: preserveRouteStatus ? resolvedRouteStatus.routeStatusReviewedAt : null,
     v9FpiControllerRouteState: parseAcceptedFpiControllerV9RouteState(redemptionTelemetry.v9RouteAttempt),
     v9SfrxusdCrosschainRouteState:
       hasScoringEligibleFreshness &&
@@ -667,13 +675,13 @@ export function readRedemptionBackstopLiveMetadata(
           )
         : null,
     v9OutputValuation:
-      parsedOutputValuation.success &&
+      outputValuation != null &&
       !outputValuationUnknownAsset &&
       !outputValuationFuture &&
       hasScoringEligibleFreshness &&
       !hasBlockingWarnings &&
       capacityReason == null
-        ? parsedOutputValuation.data
+        ? outputValuation
         : null,
   };
 }

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { URL } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
@@ -12,6 +14,29 @@ import {
   adaptUsdAiProofOfReserves,
   parseUsdAiProofOfReserves,
 } from "../usdai-proof-of-reserves";
+
+const OCTOBER_RAW_PAYLOAD = readFileSync(new URL("./fixtures/usdai-oct7-2026.json", import.meta.url), "utf8");
+
+describe("USD.AI captured full-book boundary", () => {
+  it("does not promote an undated share book or add its six auxiliary amount-only entries", async () => {
+    const { result, report } = await runAdapter("usdai-proof-of-reserves", NO_ANCHOR_COIN, {
+      network: { json: { [NO_ANCHOR_CONFIG.inputs.primary.url]: OCTOBER_RAW_PAYLOAD } },
+      nowSec: Date.parse("2026-10-07T20:47:43Z") / 1000,
+    });
+    expect(result.metadata).toMatchObject({ freshnessMode: "unverified", ignoredMissingShareEntryCount: 6 });
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(report.warnings.some((warning) => warning.effect === "degraded")).toBe(true);
+    const liquid = parseUsdAiProofOfReserves(OCTOBER_RAW_PAYLOAD)[0];
+    expect(String(liquid.amount)).toBe("344101883192942000000000000");
+    expect(String(liquid.share)).toBe("659954474541340800");
+    // The liquid balance/share implies a system denominator, not the
+    // separately captured vault's 545,013,940.488789 USDai NAV.
+    const impliedSystemUnits = Number(liquid.amount) / 1e18 / (Number(liquid.share) / 1e18);
+    expect(impliedSystemUnits).toBeCloseTo(521_402_454.9679552, 5);
+    expect(impliedSystemUnits).not.toBeCloseTo(545_013_940.4887891, 0);
+  });
+});
 const SAMPLE_RAW_PAYLOAD = JSON.stringify([
   {
     type: "TBILL",

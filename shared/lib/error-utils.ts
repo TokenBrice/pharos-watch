@@ -17,6 +17,13 @@ function errorProperty(value: object, key: string, isError = false): unknown {
  * Bounded, runtime-neutral diagnostics. Workers supply their existing sanitizer
  * so every string is redacted before bounds, rather than truncating secrets.
  */
+export function describeError(
+  error: unknown,
+  sanitize: (value: string) => string = (value) => value,
+): ErrorDescriptor {
+  return buildErrorDescriptor(error, sanitize, true);
+}
+
 function buildErrorDescriptor(
   error: unknown,
   sanitize: (value: string) => string,
@@ -81,18 +88,11 @@ function buildErrorDescriptor(
   return visit(error, 0);
 }
 
-export function describeError(
-  error: unknown,
-  sanitize: (value: string) => string = (value) => value,
-): ErrorDescriptor {
-  return buildErrorDescriptor(error, sanitize, true);
-}
-
-// Message-only callers must not format lazy stacks: V8 can retain multi-MiB
-// script line tables even though the caller discards the descriptor's stack.
 export function toErrorMessage(
   error: unknown,
   sanitize: (value: string) => string = (value) => value,
 ): string {
+  // Reading a lazy stack materializes V8's retained script line index, even
+  // when the caller only needs a message. Keep message-only diagnostics lazy.
   return buildErrorDescriptor(error, sanitize, false).message;
 }

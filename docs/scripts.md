@@ -4,7 +4,7 @@
 
 ## Overview
 
-Operational and CI helper scripts live in `scripts/`, while worker-bound operational tooling that imports `worker/src/**` lives in `worker/scripts/`. Together they support build integrity, smoke checks, data sync, and targeted maintenance tasks.
+CI/operational helpers in `scripts/` and Worker-bound tools importing `worker/src/**` in `worker/scripts/` support build integrity, smoke checks, data sync and targeted maintenance.
 
 Snapshot pulls using `scripts/lib/sync-from-api.ts` retain fixed-backoff retries for 5xx and caller-declared transient statuses. Before retrying they cancel the failed response body. One 30-second `AbortSignal.timeout` deadline (caller-overridable with `timeoutMs`, composed with caller cancellation) covers attempts, waits, and returned-body reads; aborts are not retried.
 
@@ -26,7 +26,7 @@ The [daily social pipeline](./daily-social.md) owns the seven-topic calendar, so
 
 ## Operator CLI Contract
 
-State-changing and release-control scripts use `scripts/lib/cli-args.mjs`, a strict wrapper around Node's `util.parseArgs`. These entrypoints reject unknown options, missing values, accidental duplicate options, unexpected positionals, and declared option conflicts before network or filesystem effects. Every migrated command supports `-h` / `--help`; usage errors exit `2`, runtime failures exit `1`, and help exits `0`.
+State-changing/release-control entrypoints use `scripts/lib/cli-args.mjs`, a strict Node `util.parseArgs` wrapper. Before network/filesystem effects they reject unknown options, missing values, duplicate options, unexpected positionals and declared conflicts. Migrated commands support `-h` / `--help`; exits: usage `2`, runtime failure `1`, help `0`.
 
 Every committed source file that reads `process.argv` is enrolled by exact path in `scripts/lib/cli-argv-policy.mjs`. Operator and production-mutating entrypoints must reach a parser that imports and calls the shared strict wrapper; read-only, build/local-artifact, and test/dev entrypoints require an explicit categorized exemption and audit reason. `npm run check:cli-args-policy` rejects unclassified additions, stale or duplicate declarations, strict/exempt overlaps, and strict-parser claims that are not reachable from the entrypoint. Add or remove entries in the source-owned policy with the corresponding script change; there is no count baseline to update.
 
@@ -92,7 +92,7 @@ Compare captures before and after an infrastructure change by `period`, `sortBy`
 
 ## Routing Index
 
-The command name, composition, and default invocation are owned by the root [`package.json`](../package.json). Run the selected npm command with `-- --help`, or invoke a direct entrypoint with `--help`, for its current flags and defaults. `scripts/lib/cli-argv-policy.mjs` owns argument-safety classification; do not copy its roster into documentation.
+Root [`package.json`](../package.json) owns command names, composition and default invocations. Use npm `-- --help` or direct-entrypoint `--help` for current flags/defaults. `scripts/lib/cli-argv-policy.mjs` owns argument-safety classification; do not duplicate its roster.
 
 ### Validation Command Index
 
@@ -174,6 +174,8 @@ The shadow-era replay summary and fixed July B1 historical DEX root-ledger entry
 
 `npm run audit:live-reserve-config-changes -- --base <ref>` compares working-tree semantic fingerprints to an explicit deployed/PR base offline, printing changed IDs and both digests as JSON; missing recovery fetchers fail. New/removed bindings and display/scoring edits are excluded. It shares runtime's pure selector; tests are git-independent. Bounds/acceptance: [config recovery](./live-reserves.md#deploy-time-configuration-recovery).
 
+`scripts/maintenance/refresh-independent-assurance-reports.ts` registers MYRC's offline extraction via `scripts/lib/independent-assurance-profiles/myrc.ts`. [MYRC reserve verification](./live-reserves.md#fund-and-issuer-transparency-feeds) owns distinct cash/fund rows, shared reconciliation tolerances, excluded circulation, exact-PDF/extraction provenance and examined-balance clocks.
+
 `npm run audit:mint-burn-conservation-admission -- --ids <csv> --out <dir>` runs the production raw-token conservation audit over a frozen per-chain window (timestamp-driven by default; `--window-blocks` overrides) for every config of the requested stablecoin ids; semantics and the reviewed-identity sidecar are owned by [Mint/Burn Flows: Raw Token Conservation](./mint-burn-flows.md#raw-token-conservation). It journals every JSON-RPC exchange to `<out>/journal.jsonl` with URLs redacted to origin and chain path (never the API key), reproduces records offline with `--replay <journal.jsonl>`, and — given reviewer semantic files via `--semantic-dir` — emits `sidecar-draft.json` entries (`--emit-sidecar-draft`) that `--merge-into-sidecar` merges into the committed sidecar. The command exits 1 when any audited window is not `ok`; journals and drafts stay under `agents/`.
 
 Audit and draft modes do not mutate admission authority. Only explicit `--merge-into-sidecar` changes the reviewed sidecar and regenerates its runtime projection; retain the journal and restore the exact sidecar/projection pair on rollback, never disable the ingestion fence.
@@ -228,7 +230,7 @@ In the standard local npm setup, `package.json` runs `scripts/maintenance/prepar
 git config core.hooksPath .githooks
 ```
 
-The pre-commit hook runs `npm run sync:staged-artifacts` and regenerates and stages the committed generated artifacts affected by the staged sources, so a source commit and its derived artifacts land together. Its auto-stage path is strictly offline: no `autoStage` entry may be `network-derived`, so outputs such as `public-datasets` require manual regeneration with `npm run generate:public-datasets`. Staged selection includes deletions, and the sync preflights all selected generators and source state before running them; it stages outputs in one all-or-nothing operation only after every generator succeeds. The execution plan uses the same registry phase planner as prebuild, including declared offline prerequisites before their dependents: a changed canonical catalog regenerates its packed Worker bytes before the evaluation manifest hashes them. Only `autoStage` outputs are added to the index. Network-derived prerequisites are refused. The source guard includes unstaged and untracked inputs throughout that dependency closure; dirty output files are rejected before any generator runs. On failure, clean tracked outputs are restored from the index, newly created files matching registered output globs are removed, and existing ignored prerequisite files regain their original bytes. Rollback preserves pre-existing glob members; empty directories may remain. The evaluation manifest and registry share the authored fixed hash-input inventory; recursive capture summaries and their parser also trigger regeneration without broadening the score identity to unrelated operational code. `PHAROS_SKIP_ARTIFACT_HOOK=1` is an explicit bypass, not evidence that generated outputs are current.
+The pre-commit hook runs `npm run sync:staged-artifacts`, regenerating/staging committed artifacts affected by staged sources, including deletions. Auto-stage is offline: `autoStage` cannot be `network-derived`; regenerate `public-datasets` manually with `npm run generate:public-datasets`. All selected generators and source state are preflighted; outputs stage atomically only after every generator succeeds. The shared prebuild phase planner orders offline prerequisites before dependents (canonical catalog → packed Worker bytes → evaluation manifest). Only `autoStage` outputs enter the index; network-derived prerequisites are refused. The source guard covers unstaged/untracked inputs throughout the dependency closure and rejects dirty outputs before generation. Failure restores clean tracked outputs from the index, removes newly created registered-glob files, and restores existing ignored prerequisites' bytes; pre-existing glob members survive, though empty directories may remain. Manifest and registry share authored fixed hash inputs; recursive capture summaries/their parser trigger regeneration without adding unrelated operational code to score identity. `PHAROS_SKIP_ARTIFACT_HOOK=1` bypasses the hook, not artifact freshness proof.
 
 The hook does not run a local test/build gate; [Testing](./testing.md#commands) owns local validation behavior.
 

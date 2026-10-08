@@ -34,17 +34,60 @@ function isGroupedDecimal(value: string): boolean {
     && groups.slice(1).every((group) => group.length === 3 && isAsciiDigits(group));
 }
 
-export function parseFiniteNumber(value: unknown, options: ParseFiniteNumberOptions): number {
-  let parsed = Number.NaN;
-  if (typeof value === "number") {
-    parsed = value;
-  } else if (typeof value === "string" && value.trim() !== "") {
-    const trimmed = value.trim();
-    if (!options.allowGrouped || isDecimal(trimmed) || isGroupedDecimal(trimmed)) {
-      parsed = Number(options.allowGrouped ? trimmed.replaceAll(",", "") : trimmed);
+function isUngroupedDecimal(value: string): boolean {
+  let index = value[0] === "+" || value[0] === "-" ? 1 : 0;
+  let hasDigit = false;
+  let hasDecimalPoint = false;
+  while (index < value.length) {
+    const code = value.charCodeAt(index);
+    if (code >= 48 && code <= 57) {
+      hasDigit = true;
+    } else if (code === 46 && !hasDecimalPoint) {
+      hasDecimalPoint = true;
+    } else {
+      break;
     }
+    index++;
   }
-  if (!Number.isFinite(parsed) || (options.min != null && parsed < options.min)) {
+  if (!hasDigit) return false;
+  if (index === value.length) return true;
+  if (value[index] !== "e" && value[index] !== "E") return false;
+
+  index++;
+  if (value[index] === "+" || value[index] === "-") index++;
+  const exponentStart = index;
+  while (index < value.length) {
+    const code = value.charCodeAt(index);
+    if (code < 48 || code > 57) return false;
+    index++;
+  }
+  return index > exponentStart;
+}
+
+/**
+ * Converts decimal issuer amounts without coercing non-scalars or radix text.
+ * Grouped mode retains its stricter decimal syntax and forbids exponents.
+ */
+export function parseDecimalNumber(
+  value: unknown,
+  options?: Pick<ParseFiniteNumberOptions, "allowGrouped">,
+): number | null {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value !== "string") return null;
+
+  const trimmed = value.trim();
+  if (options?.allowGrouped) {
+    if (!isDecimal(trimmed) && !isGroupedDecimal(trimmed)) return null;
+  } else if (!isUngroupedDecimal(trimmed)) {
+    return null;
+  }
+  const parsed = Number(options?.allowGrouped ? trimmed.replaceAll(",", "") : trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function parseFiniteNumber(value: unknown, options: ParseFiniteNumberOptions): number {
+  const parsed = parseDecimalNumber(value, options);
+  if (parsed == null || (options.min != null && parsed < options.min)) {
     throw new Error(`${options.label} is not a finite number: ${String(value)}`);
   }
   return parsed;

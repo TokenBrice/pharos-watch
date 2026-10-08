@@ -1,6 +1,6 @@
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import type { LiveReserveWarning } from "@shared/types/live-reserves";
+import type { LiveReserveWarning, LiveReserveRedemptionTelemetryKnownFields } from "@shared/types/live-reserves";
 import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import {
   encodeAddress,
@@ -22,6 +22,7 @@ import {
 } from "./helpers";
 import { multicallResultOrNull } from "./erc4626";
 import { parseBoundedDecimals, ratioFromRaw } from "./slice-math";
+import { parseDecimalNumber } from "./strict-amount";
 import { observeSfrxusdCrosschainRedemptionRoute } from "./sfrxusd-crosschain-redemption";
 import type { SfrxusdCrosschainV9RouteAttempt } from "../../lib/sfrxusd-crosschain-redemption-route";
 import type { ExecutableRedemptionObservation } from "./executable-redemption-observers";
@@ -41,28 +42,21 @@ type Erc4626CapacitySource =
   | "sbold-sp-withdrawable"
   | "fraxtal-hop-withdrawable";
 
-export interface RedemptionCapacityTelemetry {
-  capacityUsd: number;
+export interface RedemptionCapacityTelemetry extends Pick<LiveReserveRedemptionTelemetryKnownFields,
+  "settlementBoundUnproven" | "capacityRatioOfSupply" | "settlementDelaySec" | "blockNumber" |
+  "sourceUrls" | "sourceTimestamp" | "capacityKind" | "holderEligibility" |
+  "routeStatus" | "routeStatusReason" | "feeBps" | "outputAssetKeys"
+> {
+  capacityUsd: NonNullable<LiveReserveRedemptionTelemetryKnownFields["capacityUsd"]>;
   capacityRaw: string;
   capacitySource:
     | Erc4626CapacitySource
     | ExecutableRedemptionObservation["capacitySource"];
-  settlementBoundUnproven?: true;
-  freshnessKind: "same-run-onchain" | "same-run-api";
+  freshnessKind: Extract<NonNullable<LiveReserveRedemptionTelemetryKnownFields["freshnessKind"]>, "same-run-onchain" | "same-run-api">;
   /** Route-status evidence claim; absent unless this run observed an openness verdict. */
-  routeStatusSource?: "onchain" | "protocol-api";
+  routeStatusSource?: Extract<NonNullable<LiveReserveRedemptionTelemetryKnownFields["routeStatusSource"]>, "onchain" | "protocol-api">;
   idleUnderlyingBalanceRaw?: string;
   underlyingDecimals: number;
-  capacityRatioOfSupply?: number;
-  settlementDelaySec?: number;
-  blockNumber?: number;
-  sourceUrls?: string[];
-  sourceTimestamp?: number;
-  capacityKind?: "live-direct" | "live-direct-bounded" | "documented-bound";
-  holderEligibility?: "any-holder";
-  routeStatus?: "open" | "paused" | "degraded";
-  routeStatusReason?: string;
-  feeBps?: number;
   observerDiagnostics?: Record<string, unknown>;
   yearnV3WithdrawableRaw?: string;
   sboldSpWithdrawableRaw?: string;
@@ -78,7 +72,8 @@ export interface RedemptionCapacityTelemetry {
 type Erc4626CapacityRoute = Pick<
   RedemptionCapacityTelemetry,
   "freshnessKind" | "routeStatusSource" | "capacityKind" | "settlementDelaySec" |
-    "blockNumber" | "sourceUrls" | "holderEligibility" | "routeStatus" | "routeStatusReason"
+    "blockNumber" | "sourceUrls" | "sourceTimestamp" | "settlementBoundUnproven" |
+    "holderEligibility" | "routeStatus" | "routeStatusReason"
 >;
 type Erc4626CapacityDiagnostics = { capacityUnavailable?: true; collateralHealthGate?: "open" | "restricted" | "unreadable" };
 
@@ -139,7 +134,7 @@ interface MorphoVault {
   listed?: unknown;
   asset?: { address?: unknown } | null;
   chain?: { id?: unknown } | null;
-  warnings?: MorphoVaultWarning[] | null;
+  warnings?: unknown;
   liquidity?: unknown;
   liquidityUsd?: unknown;
   forceDeallocatableLiquidity?: unknown;
@@ -375,13 +370,13 @@ async function fetchSboldSpWithdrawableCapacity(input: Pick<ObserveConfiguredErc
 
 function parseOptionalNonNegativeNumber(value: unknown): number | undefined {
   if (value == null) return undefined;
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+  const parsed = parseDecimalNumber(value);
+  return parsed != null && parsed >= 0 ? parsed : undefined;
 }
 
 function parseMorphoChainId(value: unknown): number | null {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  const parsed = parseDecimalNumber(value);
+  return parsed != null && Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
 function parseNonNegativeBigIntLike(value: unknown): bigint | null {
@@ -396,10 +391,30 @@ function parseNonNegativeBigIntLike(value: unknown): bigint | null {
   return parsed >= 0n ? parsed : null;
 }
 
-function describeMorphoWarning(value: MorphoVaultWarning): string {
-  const type = typeof value.type === "string" ? value.type : "unknown";
-  const level = typeof value.level === "string" ? value.level : "unknown";
+function describeMorphoWarning(value: unknown): string {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) return "malformed";
+  const warning = value as MorphoVaultWarning;
+  const type = typeof warning.type === "string" ? warning.type : "unknown";
+  const level = typeof warning.level === "string" ? warning.level : "unknown";
   return `${type}/${level}`;
+}
+
+function classifyMorphoV2Warning(value: unknown): LiveReserveWarning | null {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) return null;
+  const warning = value as MorphoVaultWarning;
+  if (warning.type === "deposit_disabled" && warning.level === "RED") {
+    return reserveInfoWarning(
+      "morpho-vault-v2-deposit-disabled",
+      "Morpho V2 reports deposit_disabled/RED; API liquidity is diagnostic only",
+    );
+  }
+  if (warning.type === "low_liquidity" && warning.level === "YELLOW") {
+    return reserveInfoWarning(
+      "morpho-vault-v2-low-liquidity",
+      "Morpho V2 reports low_liquidity/YELLOW; withdrawals remain degraded and capacity is idle-only",
+    );
+  }
+  return null;
 }
 
 function morphoFailure(
@@ -459,19 +474,50 @@ async function fetchMorphoVaultLiquidity(input: MorphoQueryInput): Promise<Capac
     if (vault.listed !== true) {
       return morphoFailure(input, "unlisted", "liquidity vault is not listed");
     }
-    if (vault.warnings?.length) {
-      const warningList = vault.warnings.map(describeMorphoWarning).join(", ");
-      return probeFailure(
-        `${input.warningCodePrefix}-warning`,
-        `${input.versionLabel} liquidity vault warnings for ${input.coinId}: ${warningList}`,
-      );
+    const isVaultV1 = input.warningCodePrefix === "morpho-vault-v1";
+    if (vault.warnings != null && !Array.isArray(vault.warnings)) {
+      return morphoFailure(input, "warning", "liquidity warnings field is malformed");
     }
 
     const liquidity = input.parseLiquidity(vault);
-    if (liquidity.liquidityRaw == null) {
+    if (
+      liquidity.liquidityRaw == null
+      || (!isVaultV1 && (
+        (vault.liquidityUsd != null && liquidity.liquidityUsd == null)
+        || (vault.forceDeallocatableLiquidity != null && liquidity.forceDeallocatableLiquidityRaw == null)
+        || (vault.forceDeallocatableLiquidityUsd != null && liquidity.forceDeallocatableLiquidityUsd == null)
+      ))
+    ) {
       return morphoFailure(input, "liquidity-invalid", "liquidity payload has invalid liquidity");
     }
-    const isVaultV1 = input.warningCodePrefix === "morpho-vault-v1";
+    if (Array.isArray(vault.warnings) && vault.warnings.length > 0) {
+      const warningList = vault.warnings.map(describeMorphoWarning).join(", ");
+      const reviewedWarnings: LiveReserveWarning[] = [];
+      if (!isVaultV1) {
+        for (const warning of vault.warnings) {
+          const reviewed = classifyMorphoV2Warning(warning);
+          if (reviewed != null) reviewedWarnings.push(reviewed);
+        }
+      }
+      const allReviewed = reviewedWarnings.length === vault.warnings.length;
+      const lowLiquidity = reviewedWarnings.some((warning) => warning.code === "morpho-vault-v2-low-liquidity");
+      return {
+        capacityRaw: null,
+        warnings: allReviewed ? reviewedWarnings : [reserveDegradedWarning(
+          `${input.warningCodePrefix}-warning`,
+          `${input.versionLabel} liquidity vault warnings for ${input.coinId}: ${warningList}`,
+        )],
+        ...(lowLiquidity ? {
+          route: {
+            freshnessKind: "same-run-api",
+            routeStatus: "degraded",
+            routeStatusSource: "protocol-api",
+            routeStatusReason: "Morpho V2 reports low_liquidity/YELLOW",
+          },
+        } : {}),
+        diagnostics: { morphoWarnings: vault.warnings },
+      };
+    }
     return {
       capacityRaw: liquidity.liquidityRaw,
       warnings: [],
@@ -597,11 +643,15 @@ function makeUnavailableObservation(
   warnings: LiveReserveWarning[],
   route?: Erc4626CapacityRoute,
   v9RouteAttempt?: SfrxusdCrosschainV9RouteAttempt,
+  diagnostics: Record<string, unknown> = {},
 ): Erc4626CapacityObservation {
+  const unavailableDiagnostics = { ...diagnostics, routeOpennessUnproven: true };
   if (idleCapacityRaw != null && underlyingDecimals != null) {
-    return makeObservation("erc4626-idle-underlying", idleCapacityRaw, underlyingDecimals, warnings, undefined, undefined, undefined, v9RouteAttempt);
+    return makeObservation("erc4626-idle-underlying", idleCapacityRaw, underlyingDecimals, warnings,
+      { ...route, freshnessKind: "same-run-onchain" }, unavailableDiagnostics, undefined, v9RouteAttempt);
   }
-  return makeObservation(source, 0n, underlyingDecimals ?? 0, warnings, route, { capacityUnavailable: true }, undefined, v9RouteAttempt);
+  return makeObservation(source, 0n, underlyingDecimals ?? 0, warnings, route,
+    { ...unavailableDiagnostics, capacityUnavailable: true }, undefined, v9RouteAttempt);
 }
 
 export async function observeConfiguredErc4626Capacity(
@@ -641,6 +691,8 @@ export async function observeConfiguredErc4626Capacity(
     );
     if (attempt.status === "accepted") {
       const capacityRaw = BigInt(attempt.state.capacity.cappedPreviewOutputFrxUsdRaw);
+      const settlementBoundUnproven = attempt.state.settlementUpperBoundSec == null
+        || attempt.state.settlementEvidence === "unbounded";
       return makeObservation(
         "fraxtal-hop-withdrawable",
         capacityRaw,
@@ -649,20 +701,24 @@ export async function observeConfiguredErc4626Capacity(
         {
           freshnessKind: "same-run-onchain",
           routeStatusSource: "onchain",
-          capacityKind: "live-direct-bounded",
-          blockNumber: attempt.state.fraxtalBlock.blockNumber,
+          capacityKind: settlementBoundUnproven ? "documented-bound" : "live-direct-bounded",
+          ...(settlementBoundUnproven ? { settlementBoundUnproven: true } : {}),
+          sourceTimestamp: Math.min(
+            attempt.state.ethereumBlock.blockTimestamp,
+            attempt.state.fraxtalBlock.blockTimestamp,
+          ),
           sourceUrls: attempt.state.sourceUrls,
           holderEligibility: "any-holder",
           routeStatus: "open",
         },
         {},
-        { sfrxusdCrosschainWithdrawableRaw: capacityRaw.toString() },
+        settlementBoundUnproven ? {} : { sfrxusdCrosschainWithdrawableRaw: capacityRaw.toString() },
         attempt,
       );
     }
     return makeUnavailableObservation(
       "fraxtal-hop-withdrawable",
-      input.idleCapacityRaw,
+      null,
       18,
       [
         reserveDegradedWarning(
@@ -670,7 +726,14 @@ export async function observeConfiguredErc4626Capacity(
           `sfrxUSD cross-chain redemption route validation failed closed: ${attempt.rejectionCode}`,
         ),
       ],
-      routeForSource("fraxtal-hop-withdrawable"),
+      {
+        ...routeForSource("fraxtal-hop-withdrawable"),
+        ...(attempt.rejectionCode === "route-paused" ? {
+          routeStatus: "paused",
+          routeStatusSource: "onchain",
+          routeStatusReason: "sfrxUSD cross-chain route pause observed on-chain",
+        } : {}),
+      },
       attempt,
     );
   }
@@ -697,10 +760,10 @@ export async function observeConfiguredErc4626Capacity(
         ? "morpho-vault-v2-liquidity"
         : configured.source;
   if (probe.capacityRaw != null && underlyingDecimals != null) {
-    return makeObservation(source, probe.capacityRaw, underlyingDecimals, [], probe.route, probe.diagnostics, probe.telemetry);
+    return makeObservation(source, probe.capacityRaw, underlyingDecimals, probe.warnings, probe.route, probe.diagnostics, probe.telemetry);
   }
 
-  return makeUnavailableObservation(source, input.idleCapacityRaw, underlyingDecimals, probe.warnings, probe.route);
+  return makeUnavailableObservation(source, input.idleCapacityRaw, underlyingDecimals, probe.warnings, probe.route, undefined, probe.diagnostics);
 }
 
 const ROUTE_OPEN_REASON_BY_CAPACITY_SOURCE: Partial<Record<Erc4626CapacitySource, string>> = {
@@ -780,7 +843,8 @@ export function buildExecutableRedemptionCapacityTelemetry(
     holderEligibility: observation.holderEligibility,
     routeStatus: observation.routeStatus,
     routeStatusReason: observation.routeStatusReason,
-    feeBps: observation.feeBps,
+    ...(observation.feeBps != null ? { feeBps: observation.feeBps } : {}),
+    outputAssetKeys: observation.outputAssetKeys,
     observerDiagnostics: observation.diagnostics,
   };
 }
@@ -793,6 +857,10 @@ export function finalizeErc4626RedemptionCapacity(input: {
 }): RedemptionCapacityTelemetry | null {
   const { configured } = input;
   if (!configured || configured.diagnostics.capacityUnavailable === true) return null;
+  // Remote withdrawability is diagnostic, not an executable whole-route bound.
+  // Retain the accepted packet and route diagnosis without emitting a fake zero
+  // or falling back to independently measured Ethereum idle.
+  if (configured.source === "fraxtal-hop-withdrawable" && configured.route.settlementBoundUnproven) return null;
 
   const { supplyAssetsRaw, idleCapacityRaw, pause } = input;
   const underlyingDecimals = configured.underlyingDecimals;
@@ -813,8 +881,11 @@ export function finalizeErc4626RedemptionCapacity(input: {
   }
 
   const idleRaw = idleCapacityRaw ?? 0n;
-  let capacitySource: Erc4626CapacitySource = "erc4626-idle-underlying";
-  let uncappedCapacityRaw = idleRaw;
+  // The two-chain route never falls back to one-chain idle or loses its
+  // completion-bound marker because a larger idle balance wins.
+  const crosschain = configured.source === "fraxtal-hop-withdrawable";
+  let capacitySource: Erc4626CapacitySource = crosschain ? configured.source : "erc4626-idle-underlying";
+  let uncappedCapacityRaw = crosschain ? configured.capacityRaw : idleRaw;
   if (
     configured.source !== "erc4626-idle-underlying" &&
     configured.capacityRaw > uncappedCapacityRaw
@@ -831,7 +902,18 @@ export function finalizeErc4626RedemptionCapacity(input: {
   const provenance = routeForSource(capacitySource);
   const diagnostics = configured.diagnostics as Erc4626CapacityDiagnostics;
   const usesSboldSpWithdrawable = configured.source === "sbold-sp-withdrawable";
-  const defaultRouteOpenness = resolveRouteOpenness(capacitySource, capacityRaw, pause);
+  const observedRouteOpenness = resolveRouteOpenness(capacitySource, capacityRaw, pause);
+  const defaultRouteOpenness = observedRouteOpenness.routeStatus === "paused"
+    ? observedRouteOpenness
+    : route.routeStatus === "paused" || route.routeStatus === "degraded"
+      ? {
+          routeStatus: route.routeStatus,
+          routeStatusSource: route.routeStatusSource,
+          routeStatusReason: route.routeStatusReason,
+        }
+      : configured.diagnostics.routeOpennessUnproven === true
+        ? {}
+        : observedRouteOpenness;
   const routeOpenness =
     usesSboldSpWithdrawable && pause.paused !== true
       ? diagnostics.collateralHealthGate === "restricted"
@@ -877,9 +959,12 @@ export function finalizeErc4626RedemptionCapacity(input: {
         }
       : {}),
     ...(capacitySource === "fraxtal-hop-withdrawable"
-      ? { ...route, capacityKind: route.capacityKind ?? "live-direct-bounded" as const }
+      ? { ...route, ...routeOpenness, capacityKind: route.capacityKind ?? "documented-bound" as const }
       : {}),
     ...(publishProbeTelemetry ? configured.telemetry : {}),
+    ...(configured.diagnostics.morphoWarnings != null
+      ? { observerDiagnostics: { morphoWarnings: configured.diagnostics.morphoWarnings } }
+      : {}),
   };
 }
 

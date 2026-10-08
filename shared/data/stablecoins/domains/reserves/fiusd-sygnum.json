@@ -70,7 +70,7 @@
     "compositionBasis": "Exact FIUSD Class G fund-unit claim; dated full USD Fund portfolio security-type allocation, without token-unit reconciliation or assurance inference",
     "compositionAsOf": "2026-09-25",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unidentified portfolio security-type percentage remains in the dated USD Fund report. Current FIUSD unit-to-token reconciliation, custody/subcustody allocations, executable liquidity, and instrument-specific exposure are separate unresolved data.",
+    "knownUnknownExposure": "The dated September 25 Fidelity USD Fund report classifies security types; exact current FIUSD unit-to-token attribution, custody/subcustody allocation, executable liquidity and instrument-specific exposure remain unresolved. Source-maintenance check 2026-10-07: the official fidelity.ie ILF holdings PDF is reachable despite other Fidelity/Sygnum 403 responses. Parse the USD fund section, not separate GBP/EUR or USD Treasury funds. This whole-fund security inventory does not establish token-scoped shares or reconciliation. Preserve configured portfolio-scope exclusion and existing 48-hour source/fetch fallback; report publication cadence is independently unverified. General fund-unit descriptions do not authorize a scope change or fresh composition claim.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

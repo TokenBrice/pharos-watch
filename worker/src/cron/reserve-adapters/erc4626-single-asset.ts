@@ -258,7 +258,7 @@ export async function fetchErc4626SingleAssetReserves(
   let configuredCapacity: Erc4626CapacityObservation | null = null;
   if (assetAddress) {
     const supplyAssetsRaw = convertToAssetsRaw ?? totalAssetsRaw;
-    executableObservation = await observeExecutableRedemptionRoute(
+    executableObservation = usesExecutableRedemptionRoute ? await observeExecutableRedemptionRoute(
       coin.id,
       contractAddress,
       signal,
@@ -268,7 +268,7 @@ export async function fetchErc4626SingleAssetReserves(
           (url): url is string => Boolean(url),
         ),
       },
-    );
+    ) : null;
     if (executableObservation) {
       redemptionCapacity = buildExecutableRedemptionCapacityTelemetry(
         executableObservation,
@@ -354,9 +354,6 @@ export async function fetchErc4626SingleAssetReserves(
       redemptionCapacity.routeStatusReason = "Configured redemption pause flag is active on-chain";
     }
   }
-  if (lockPaused || redemptionCapacity?.routeStatus === "paused") {
-    warnings.push(reserveDegradedWarning("erc4626-redemption-paused", "ERC-4626 redemption route is paused on-chain"));
-  }
 
   // totalAssets includes strategy accounting, not just tokens held by the vault.
   // An unreadable holding is unattributed, never an assumed token dependency.
@@ -425,19 +422,23 @@ export async function fetchErc4626SingleAssetReserves(
     }
   }
 
-  const routeStatus =
-    lockPaused || redemptionCapacity?.routeStatus === "paused"
-      ? "paused" as const
-      : hasDegradingWarnings(warnings)
-        ? "degraded" as const
-        : redemptionCapacity?.routeStatus ?? "unknown" as const;
-  // A degraded reserve run is this run's own verdict, so its route claim keeps
-  // the read family that produced it; every other source claim must come from
-  // an openness verdict observed this run.
-  const routeStatusSource = routeStatus === "degraded"
-    ? redemptionCapacity?.routeStatusSource
-      ?? (redemptionCapacity?.freshnessKind === "same-run-api" ? "protocol-api" as const : "onchain" as const)
-    : redemptionCapacity?.routeStatusSource;
+  const onchainPaused = lockPaused || pauseProbe.paused === true || pauseProbe.shutdown === true;
+  const observedRoute = redemptionCapacity ?? configuredCapacity?.route;
+  const routeStatus = onchainPaused ? "paused" as const : observedRoute?.routeStatus ?? "unknown" as const;
+  const routeStatusSource = onchainPaused ? "onchain" as const : observedRoute?.routeStatusSource;
+  const routeStatusReason = redemptionCapacity?.routeStatusReason
+    ?? (onchainPaused
+      ? "Vault pause or shutdown flag is active on-chain"
+      : configuredCapacity?.route.routeStatusReason);
+  const unboundedCrosschainRoute = !redemptionCapacity && configuredCapacity?.route.settlementBoundUnproven
+    ? configuredCapacity.route
+    : null;
+  if (routeStatus === "paused") {
+    const warning = unknownExposurePct === 0 && !hasDegradingWarnings(warnings)
+      ? reserveInfoWarning
+      : reserveDegradedWarning;
+    warnings.push(warning("erc4626-redemption-paused", "ERC-4626 redemption route is paused on-chain"));
+  }
 
   return {
     slices,
@@ -501,19 +502,27 @@ export async function fetchErc4626SingleAssetReserves(
               ...(redemptionCapacity.feeBps != null
                 ? { feeBps: redemptionCapacity.feeBps }
                 : {}),
-              ...(redemptionCapacity.routeStatusReason
-                ? { routeStatusReason: redemptionCapacity.routeStatusReason }
-                : {}),
               ...(redemptionCapacity.observerDiagnostics
                 ? { observerDiagnostics: redemptionCapacity.observerDiagnostics }
                 : {}),
             }
           : {
-              capacityKind: "documented-eventual" as const,
+              capacityKind: unboundedCrosschainRoute ? "documented-bound" as const : "documented-eventual" as const,
             }),
         ...(redemptionCapacity ? { freshnessKind: redemptionCapacity.freshnessKind } : {}),
+        ...(unboundedCrosschainRoute ? {
+          settlementBoundUnproven: true,
+          freshnessKind: unboundedCrosschainRoute.freshnessKind,
+          sourceTimestamp: unboundedCrosschainRoute.sourceTimestamp,
+          sourceUrls: unboundedCrosschainRoute.sourceUrls,
+          holderEligibility: unboundedCrosschainRoute.holderEligibility,
+        } : {}),
         routeStatus,
         ...(routeStatusSource != null ? { routeStatusSource } : {}),
+        ...(routeStatusReason != null ? { routeStatusReason } : {}),
+        ...(!redemptionCapacity && configuredCapacity?.diagnostics.morphoWarnings != null
+          ? { observerDiagnostics: { morphoWarnings: configuredCapacity.diagnostics.morphoWarnings } }
+          : {}),
         ...(configuredCapacity?.v9RouteAttempt
           ? { v9RouteAttempt: configuredCapacity.v9RouteAttempt }
           : {}),

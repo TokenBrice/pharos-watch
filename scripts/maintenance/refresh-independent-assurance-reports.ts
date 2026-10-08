@@ -33,7 +33,7 @@ const TOLERANCE_OVERRIDES: Partial<Record<
     reportedLiabilityTotalTolerance: { absolute: "1", relativePpm: 1 },
   },
   MYRC: {
-    // Reviewed assertion 1,800,903.74 versus itemized MYR assets 1,800,903.77.
+    // August 2026 cash/fund schedule exceeds the asserted account total by MYR 0.03.
     reportedAssetTotalTolerance: { absolute: "0.03", relativePpm: 0.02 },
   },
 };

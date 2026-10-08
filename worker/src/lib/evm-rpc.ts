@@ -927,25 +927,38 @@ export async function fetchEvmBlockHeader(
     return null;
   }
 
-  const block = await fetchJsonRpcResult<EvmBlockResult>(
+  let acceptedHeader: EvmBlockHeader | null = null;
+  await fetchJsonRpcResult<EvmBlockResult>(
     urls,
     "eth_getBlockByNumber",
     [toBlockTag(blockNumberOrTag), false],
     options,
+    {
+      acceptResult: (result): result is EvmBlockResult => {
+        if (typeof result !== "object" || result === null) return false;
+        const block = result as EvmBlockResult;
+        const number = parseHexInteger(block.number);
+        const timestamp = parseHexInteger(block.timestamp);
+        if (
+          number == null ||
+          !Number.isSafeInteger(number) ||
+          number < 0 ||
+          (typeof blockNumberOrTag === "number" && number !== blockNumberOrTag) ||
+          timestamp == null ||
+          !Number.isSafeInteger(timestamp) ||
+          timestamp <= 0 ||
+          typeof block.hash !== "string" ||
+          !/^0x[0-9a-fA-F]{64}$/.test(block.hash)
+        ) {
+          return false;
+        }
+        acceptedHeader = { number, timestamp, hash: block.hash.toLowerCase() as `0x${string}` };
+        return true;
+      },
+      rejectedReason: () => "block header has invalid number, hash, or timestamp",
+    },
   );
-  const parsedNumber = parseHexInteger(block?.number);
-  const timestamp = parseHexInteger(block?.timestamp);
-  const hash = block?.hash?.toLowerCase();
-  if (
-    parsedNumber === null ||
-    (typeof blockNumberOrTag === "number" && parsedNumber !== blockNumberOrTag) ||
-    timestamp === null ||
-    !hash ||
-    !/^0x[0-9a-f]{64}$/.test(hash)
-  ) {
-    return null;
-  }
-  return { number: parsedNumber, timestamp, hash: hash as `0x${string}` };
+  return acceptedHeader;
 }
 
 /** Header lookup for the JSON-RPC safe tag. Kept separate so existing

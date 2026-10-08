@@ -15,6 +15,7 @@ import { classifyPegClass, normalizePegTypeFromCurrency } from "@shared/lib/peg-
 import { hasRuntimeOnchainSupplyPath } from "@shared/lib/onchain-supply-probe";
 import type { DeadStablecoin, StablecoinMeta } from "@shared/types";
 import { NativeBankDenomSchema } from "@shared/types/stablecoin-meta-schemas";
+import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { MANIFEST_SOURCES } from "@shared/data/live-reserves/independent-assurance";
 import { REVIEWED_ORACLE_RISK_BRANCH_DISPOSITIONS } from "@shared/data/coverage-dispositions/oracle-risk-branch-dispositions";
 import listingDecisionsAsset from "@shared/data/stablecoins/listing-decisions.json";
@@ -340,6 +341,26 @@ export function getReserveDependencyTypeLinkIssues(coin: Pick<StablecoinMeta, "r
   });
 
   return issues;
+}
+
+export function getTerminalLiveReserveConfigIssue(
+  coin: Pick<StablecoinMeta, "status" | "liveReservesConfig">,
+): string | null {
+  return (coin.status === "frozen" || coin.status === "delisted")
+    && coin.liveReservesConfig != null && !coin.liveReservesConfig.suspended
+    ? `${coin.status} assets must not retain an unsuspended liveReservesConfig`
+    : null;
+}
+
+export function getExpiredReserveSupplyAdmissionBootstrapIssue(
+  coin: Pick<StablecoinMeta, "liveReservesConfig">,
+  nowMs = Date.now(),
+): string | null {
+  const reviewBy = coin.liveReservesConfig?.bootstrapForSupplyAdmission?.reviewBy;
+  return reviewBy != null && isValidIsoDateOnly(reviewBy)
+    && Date.parse(`${reviewBy}T00:00:00Z`) <= nowMs
+    ? `liveReservesConfig.bootstrapForSupplyAdmission expired at ${reviewBy}T00:00:00Z; remove or explicitly re-authorize it`
+    : null;
 }
 
 export function getLiveReserveDependencyTypeLinkIssues(
@@ -820,6 +841,10 @@ function runStablecoinDataCheck(): void {
       for (const issue of getLiveReserveDependencyTypeLinkIssues(entry.coin.liveReservesConfig?.params)) {
         reportError(`${entry.file} (${entry.coin.id}): ${issue}`);
       }
+      const terminalConfigIssue = getTerminalLiveReserveConfigIssue(entry.coin);
+      if (terminalConfigIssue) reportError(`${entry.file} (${entry.coin.id}): ${terminalConfigIssue}`);
+      const expiredBootstrapIssue = getExpiredReserveSupplyAdmissionBootstrapIssue(entry.coin);
+      if (expiredBootstrapIssue) reportError(`${entry.file} (${entry.coin.id}): ${expiredBootstrapIssue}`);
 
       const algorithmicBackingIssue = getTrackedAlgorithmicBackingIssue(entry.coin);
       if (algorithmicBackingIssue) {

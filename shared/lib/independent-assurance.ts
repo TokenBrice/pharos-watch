@@ -19,7 +19,8 @@ const INDEPENDENT_ASSURANCE_PRODUCTS = [
   "XSGD",
   "XUSD",
   "AUDD", "USAT", "USDPT", "BRLA", "AUSD", "FIDD", "SBC", "TRYB", "TGBP",
-  "PGOLD", "CADD", "BRLV", "AUDM", "USX", "FDUSD", "MYRC",
+  "PGOLD", "CADD", "BRLV", "AUDM", "USX", "FDUSD",
+  "MYRC",
 ] as const;
 
 export type IndependentAssuranceProduct = (typeof INDEPENDENT_ASSURANCE_PRODUCTS)[number];

@@ -55,7 +55,7 @@ export function makeWorkerSafetyScoreV9Publication(
   );
   return {
     model: "v9-critical-path",
-    schemaVersion: 6,
+    schemaVersion: 7,
     lifecycle: "active",
     candidateId: projected.source.candidateId,
     policyVersion: projected.methodology.version,

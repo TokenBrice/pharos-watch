@@ -16,7 +16,8 @@ import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import MIDAS_MTBILL_CAPTURE from "./fixtures/midas-mtbill-transparency.json";
 import SOLOMON_CHANCERY_CAPTURE from "./fixtures/solomon-chancery-token-backing.json";
-import { BLOX_ATTESTATIONS } from "./fixtures/blox-attestations";
+import QCAD_BALANCES_CAPTURE from "./fixtures/qcad-balances-2026-10-07.json";
+import { FOREST_ACCOUNTING_NETWORK, FOREST_MANAGER, SPARK_BALANCE_CALL, SPARK_INVENTORY_NETWORK, SPARK_SUSDS } from "./fixtures/identity-bound-reserve-readers";
 import { resolveAdapterCoin, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { BTCFI_HANDLER_ROWS, BTCFI_MARKET_ROWS } from "./reserve-adapter-payloads.test-support";
@@ -61,16 +62,11 @@ const CORPUS_NOT_REPLAYABLE_NAMES = [
   "audd-independent-assurance", "audx-independent-assurance", "brla-independent-assurance", "cadd-independent-assurance",
   "europ-independent-assurance", "fdusd-independent-assurance", "fidd-independent-assurance", "gemini-independent-assurance",
   "issuer-attested-report", "rlusd-independent-assurance", "sbc-independent-assurance",
-  "straitsx-independent-assurance", "paxos-independent-assurance", "blox-independent-assurance",
+  "straitsx-independent-assurance", "paxos-independent-assurance", "myrc-independent-assurance",
 ] as const;
-const UNBOUND_CORPUS_NAMES: Record<string, true> = {
-  "blox-independent-assurance": true,
-};
 export const CORPUS_NOT_REPLAYABLE = reasonsFromNames(
   CORPUS_NOT_REPLAYABLE_NAMES,
-  (name) => UNBOUND_CORPUS_NAMES[name]
-    ? `No bound catalog coin yet (retired, parked, staged or newly declared key), so there is nothing to replay; parser behaviour stays owned by ${name}.test.ts.`
-    : `Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by ${name}.test.ts.`,
+  (name) => `Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by ${name}.test.ts.`,
   {
     "audx-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
     "europ-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by its adapter test file.",
@@ -107,7 +103,7 @@ export const CORPUS_BACKLOG = reasonsFromNames(
     "hylo-solana": "Bound to hyusd-hylo but no committed wire capture yet; the happy path and its failure modes are owned by hylo-solana.test.ts.",
     "icp-gldt": "On-chain ICP canister reads; the committed capture covers the swap canister's get_swap_configs candid reply only, and the balance/ledger-supply reads are owned by icp-gldt.test.ts (owner: P4GldtFinish).",
     "kerne-signed-por": "Pre-launch kUSD adapter; the signed payload is synthetic test data rather than a committed wire capture, so replay remains owned by kerne-signed-por.test.ts.",
-    "leverup-lvusd": "Pinned Monad observations are committed, but the adapter test mocks multicall and prices directly; a complete RPC/price wire replay is still owed. Identity, vault census and shortfall behavior remain covered by leverup-lvusd.test.ts.",
+    "leverup-lvusd": "Six captured Monad state responses at block 111423307 replay through the real RPC/price network boundary in leverup-lvusd.test.ts, including the severe designated-reserve deficit. A score-grade happy-path corpus capture is unavailable: the real book is undercollateralized and the historical market quote has no retained timestamp/confidence.",
   },
 );
 
@@ -130,6 +126,26 @@ const TETHER_CAPTURE = {
 const JPMORGAN_NAV_CAPTURE = readFileSync(new URL("./fixtures/jpmorgan-nav.html", import.meta.url), "utf8");
 
 export const CORPUS_CASES: Record<string, AdapterCorpusCase> = {
+  "spark-usdc-v1-inventory": {
+    coinId: "susdc-spark-v1",
+    nowSec: 1791407717,
+    network: SPARK_INVENTORY_NETWORK,
+    drift: {
+      label: "receipt custody is absent despite readable idle cash",
+      network: { ...SPARK_INVENTORY_NETWORK, rpc: { ...SPARK_INVENTORY_NETWORK.rpc, [`${SPARK_SUSDS}:${SPARK_BALANCE_CALL}`]: null } },
+      outcome: "error",
+    },
+  },
+  "forest-road-reserve-manager": {
+    coinId: "usdfr-forest-road",
+    nowSec: 1791407717,
+    network: FOREST_ACCOUNTING_NETWORK,
+    drift: {
+      label: "aggregate backing diverges from normalized cash and accrued net credit",
+      network: { ...FOREST_ACCOUNTING_NETWORK, rpc: { ...FOREST_ACCOUNTING_NETWORK.rpc, [`${FOREST_MANAGER}:0x02df9274`]: 1n } },
+      outcome: "error",
+    },
+  },
   "jpmorgan-nav": {
     coinId: "jltxx-jpmorgan",
     nowSec: Date.parse("2026-10-03T00:49:01Z") / 1000,
@@ -142,23 +158,6 @@ export const CORPUS_CASES: Record<string, AdapterCorpusCase> = {
             "- **Transaction NAV As of 10/01/2026**: $1.00",
             "- **Transaction NAV As of 10/01/2026**: $NaN",
           ),
-        },
-      },
-      outcome: "error",
-    },
-  },
-  "blox-attestation-index": {
-    coinId: "myrc-blox",
-    nowSec: Date.parse("2026-10-01T00:00:00Z") / 1000,
-    network: { json: { "https://api.blox.my/blox-admin/attestations": BLOX_ATTESTATIONS } },
-    drift: {
-      label: "the reviewed reserve total changes",
-      network: {
-        json: {
-          "https://api.blox.my/blox-admin/attestations": [
-            { ...BLOX_ATTESTATIONS[0], reservedAmount: BLOX_ATTESTATIONS[0].reservedAmount + 1 },
-            ...BLOX_ATTESTATIONS.slice(1),
-          ],
         },
       },
       outcome: "error",
@@ -335,24 +334,20 @@ CORPUS_CASES.jupusd = {
 };
 
 const SINGLE_ASSET_ENDPOINT = "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json";
-// Trimmed happy path from single-asset.test.ts; only fields read by the QCAD
-// catalog configuration are retained.
-const SINGLE_ASSET_FIXTURE = {
-  totalFiatReserves: "105000000",
-  totalSupply: "100000000",
-  chains: [{ lastSyncedAt: "2026-03-20T12:00:00Z" }],
-};
+// Full issuer capture: ETH/Base/ARC inventory deliberately does not establish
+// the catalog's Ethereum/Base/Solana perimeter or a reserve-accounting clock.
+const SINGLE_ASSET_FIXTURE = QCAD_BALANCES_CAPTURE;
 CORPUS_CASES["single-asset"] = {
   coinId: "qcad-stablecorp",
-  nowSec: Date.parse("2026-03-20T12:01:00Z") / 1000,
+  nowSec: Date.parse("2026-10-07T21:01:00Z") / 1000,
   network: { json: { [SINGLE_ASSET_ENDPOINT]: SINGLE_ASSET_FIXTURE } },
   drift: {
-    label: "the source timestamp is dropped",
+    label: "a native liability component identity is absent",
     network: {
       json: {
         [SINGLE_ASSET_ENDPOINT]: {
           ...SINGLE_ASSET_FIXTURE,
-          chains: [{ lastSyncedAt: undefined }],
+          chains: SINGLE_ASSET_FIXTURE.chains.map(({ chain: _chain, ...row }) => row),
         },
       },
     },

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
-import { AUDD_INDEPENDENT_ASSURANCE_PROFILE } from "../audd-independent-assurance";
+import { AUDD_INDEPENDENT_ASSURANCE_PROFILE } from "../audd-independent-assurance-profile";
 import { indexFixture, verifyFixtureIndex } from "./independent-assurance.test-support";
 
 describe("audd-independent-assurance (William Buck ASRS 4400 AUP)", () => {

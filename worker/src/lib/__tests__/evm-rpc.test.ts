@@ -708,6 +708,73 @@ describe("evm-rpc helpers", () => {
     ).resolves.toBeNull();
   });
 
+  it.each([
+    null,
+    {},
+    { number: "0x11", timestamp: "0xc8", hash: `0x${"b".repeat(64)}` },
+    { timestamp: "0xc8", hash: `0x${"b".repeat(64)}` },
+    { number: "not-hex", timestamp: "0xc8", hash: `0x${"b".repeat(64)}` },
+    { number: "0x10", timestamp: "0xc8" },
+    { number: "0x10", timestamp: "0xc8", hash: "0x1234" },
+    { number: "0x10", timestamp: "0xc8", hash: 123 },
+    { number: "0x10", hash: `0x${"b".repeat(64)}` },
+    { number: "0x10", timestamp: "invalid", hash: `0x${"b".repeat(64)}` },
+    { number: "0x10", timestamp: "0x0", hash: `0x${"b".repeat(64)}` },
+    { number: "0x10", timestamp: "0x20000000000000", hash: `0x${"b".repeat(64)}` },
+  ])("tries the next provider only after rejecting the entire invalid header: %j", async (result) => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(rpcResponse({ result }))
+      .mockResolvedValueOnce(rpcResponse({
+        result: { number: "0x10", timestamp: "0x64", hash: `0x${"A".repeat(64)}` },
+      }));
+    await expect(fetchEvmBlockHeader("rootstock", 16, {
+      extraRpcUrls: ["https://primary.example", "https://fallback.example"],
+    })).resolves.toEqual({ number: 16, timestamp: 100, hash: `0x${"a".repeat(64)}` });
+    expect(attemptedUrls()).toEqual(["https://primary.example", "https://fallback.example"]);
+    for (const call of fetchWithRetryMock.mock.calls) {
+      expect(JSON.parse(String(call[1].body)).params).toEqual(["0x10", false]);
+    }
+  });
+
+  it.each([
+    { number: "0x11", timestamp: "0x64", hash: `0x${"a".repeat(64)}` },
+    { number: "0x10", timestamp: "0x64" },
+    { number: "0x10", timestamp: "0x64", hash: `0x${"g".repeat(64)}` },
+    { number: "0x10", timestamp: "0x0", hash: `0x${"a".repeat(64)}` },
+    { number: "0x10", timestamp: 100, hash: `0x${"a".repeat(64)}` },
+    { number: "0x10", timestamp: "0x20000000000000", hash: `0x${"a".repeat(64)}` },
+  ])("withholds the header when every configured provider fails admission: %j", async (result) => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result }));
+    await expect(fetchEvmBlockHeader("rootstock", 16, {
+      extraRpcUrls: ["https://primary.example", "https://fallback.example"],
+    })).resolves.toBeNull();
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(["0x20000000000000", "not-hex"])(
+    "rejects an unsafe or malformed numbered finalized header: %s",
+    async (number) => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      fetchWithRetryMock.mockResolvedValueOnce(rpcResponse({
+        result: { number, timestamp: "0x64", hash: `0x${"a".repeat(64)}` },
+      }));
+      await expect(fetchEvmBlockHeader("rootstock", "finalized", {
+        extraRpcUrls: ["https://primary.example"],
+      })).resolves.toBeNull();
+    },
+  );
+
+  it.each([-1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+    "rejects invalid requested block numbers without issuing a header request: %s",
+    async (number) => {
+      await expect(fetchEvmBlockHeader("rootstock", number, {
+        extraRpcUrls: ["https://primary.example"],
+      })).resolves.toBeNull();
+      expect(fetchWithRetryMock).not.toHaveBeenCalled();
+    },
+  );
+
   it("resolves an explicitly finalized block header without relabeling latest state", async () => {
     fetchWithRetryMock.mockResolvedValueOnce(
       rpcResponse({

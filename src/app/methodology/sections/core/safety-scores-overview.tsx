@@ -56,12 +56,13 @@ export function SafetyScoresOverview() {
         substitute for an executable route.
       </p>
       <p>
-        Faster settlement needs a reviewed delay and source. A route with unproven same-notional capacity, cost or
-        settlement stays visible but receives no invented executable or backup credit. Genuine unresearched or
-        undisclosed whole-exit uncertainty remains bounded at 35 where the policy permits it, not measured zero
-        and not an Exit-wide ceiling. Proven pipeline or curation gaps are excluded rather than charged. The bounded
-        floor is applied after portfolio selection; evidence explanations do not switch on or off when the floor
-        binds. Measured exhaustion still needs complete admitted evidence.
+        Settlement ceilings require a dated current source for the completed endpoint, not a processing target,
+        average or cooldown. Exact-route reviews naming missing capacity, cost or settlement remain gaps even
+        beside captured numbers, unless newer admitted exact evidence proves that same rail and request.
+        Costs are request-specific; issuer zero and fee floors do not establish all-in ceilings.
+        Unresearched or undisclosed whole-exit uncertainty remains bounded at 35 where policy permits it, not
+        measured zero or an Exit-wide ceiling. Proven pipeline/curation gaps are excluded. Redemption fee
+        reviews do not close independent DEX portfolio coverage, and exhaustion still needs complete evidence.
       </p>
       <p>
         Equal-score route ties and every other canonical V10 array use locale-independent JavaScript code-unit order.
@@ -110,6 +111,14 @@ export function SafetyScoresOverview() {
         an adapter-owned reserve category to reviewed classification and dependency metadata across rebalancing or
         label changes. Explicit keys must match uniquely and otherwise fail closed; historical unkeyed captures retain
         a unique normalized-name compatibility join.
+      </p>
+      <p>
+        The live-reserve/redemption closure preserves original freshness mode, invalid-source diagnosis and
+        matching configuration identity in new accepted generations. A failed or future fetch cannot become
+        fresh evidence, and direct controller observations do not upgrade reserve composition. Required typed
+        route identity separates the observed rail from its producer key; independent-resource checks prevent
+        Reservoir&apos;s shared PSM cash from being counted three times. Pillar weights, stress requests,
+        portfolio thresholds and grade gates are unchanged.
       </p>
       <p>
         Classification research lasts 365 days; composition has its own clock. Named-firm attestations, audits and
@@ -387,7 +396,7 @@ export function SafetyScoresOverview() {
         measured danger. Current consumers use the accepted publication and status, not a fallback scorer.
       </p>
       <p>
-        Since methodology v10.11, exact orderbook execution is research-only with diagnostic certification.
+        Since methodology v10.12, exact orderbook execution is research-only with diagnostic certification.
         The dormant Kraken request observer is retired: a public book does not prove same-run account access,
         deposits, withdrawals, fees or maximum settlement. Ordinary exchange spot prices and generic CoinGecko
         synthetic books remain separate evidence; reviewed Securitize and synchronous ERC-4626 routes keep
@@ -404,7 +413,8 @@ export function SafetyScoresOverview() {
         BIB01 remains quarantined with no policy change, and no TUSD allowance is borrowed.
         Reserve snapshots no longer invent redemption
         terms or capacity; actual River exits and Origin vault/redemption remain. Static/weak source evidence
-        and staged MYRC verification do not activate independent scoring. Fresh admitted inputs can change
+        does not activate independent scoring. MYRC retains its upstream released independent-assurance adapter
+        and original report clocks, with no further promotion in this release. Fresh admitted inputs can change
         availability or scores and require their own attributed comparison.
       </p>
       <p className="text-xs text-muted-foreground">

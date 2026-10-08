@@ -148,6 +148,7 @@
         { "path": "docs/runbooks/dependency-network.md", "anchor": "scope-and-commands" },
         { "path": "docs/live-reserves.md", "anchor": "adding-a-new-adapter" },
         { "path": "docs/live-reserves.md", "anchor": "registry-defined-adapter-classes" },
+        { "path": "docs/live-reserves.md", "anchor": "adapter-specific-evidence-boundaries" },
         { "path": "docs/live-reserves.md", "anchor": "snapshot-admission-gates" }
       ],
       "background": [

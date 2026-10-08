@@ -3,6 +3,7 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  calculateRawPercentageSumDeviation,
   fetchJsonAdapterInput,
   parseFiniteNumber,
   parseTimestampLikeToUnixSeconds,
@@ -173,7 +174,7 @@ export function adaptTetherTransparency(
     slices: slices.filter((slice) => slice.pct > 0),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
-      diag: { rawSumDeviation: Math.abs(compositionTotal - 100) },
+      diag: { rawSumDeviation: calculateRawPercentageSumDeviation(slices.map((slice) => slice.pct)) },
       ...verifiedFreshnessMetadata(sourceTimestamp),
       collateralizationRatio: totalAssets / totalLiabilities,
       ...(params.currencyIso === "usdt"

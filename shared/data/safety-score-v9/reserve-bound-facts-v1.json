@@ -226,7 +226,7 @@
       {
         "factKey": "myrc-blox:halogen-fund-unit:open-ended-maturity",
         "kind": "maturity-applicability",
-        "scope": { "kind": "exposure", "exposureKey": "reserve:ca01ae861df16ae78ab4aa05" },
+        "scope": { "kind": "exposure", "exposureKey": "reserve:159bb5cd984bd7b0423ab087" },
         "asOfSec": 1756080000,
         "publisher": "Blox Blockchain Sdn Bhd / Halogen Capital Sdn Bhd",
         "sourceUrls": [

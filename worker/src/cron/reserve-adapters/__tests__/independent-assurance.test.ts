@@ -18,14 +18,15 @@ import {
   fetchIndependentAssuranceReserves,
   straitsxIndependentAssuranceProfile,
   verifyIndependentAssuranceReport,
-  type IndependentAssuranceProfile,
 } from "../independent-assurance";
 import { getReserveAdapter } from "../index";
+import type { IndependentAssuranceProfile } from "../types";
 import { USDGO_INDEPENDENT_ASSURANCE_PROFILE } from "../usdgo-transparency";
 import { validateAdapterOutput } from "../validate";
 import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
 import {
   PDF_BYTES,
+  installFetch as installAssuranceFetch,
   indexFixture,
   verifyFixtureIndex,
   verifyIndex as verifyAssuranceIndex,
@@ -220,6 +221,22 @@ function assuranceFenceCases() {
         '<a href="https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/cafe_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20September%202026.pdf">September 2026</a>',
     },
     {
+      adapter: "rlusd-independent-assurance",
+      coinId: "rlusd-ripple",
+      product: "RLUSD",
+      html: indexFixture("rlusd-independent-assurance.html"),
+      newerHtml: indexFixture("rlusd-independent-assurance.html") +
+        '<a href="https://ripple.com/RLUSD_Reserve_Report_September_2026.pdf">September</a>',
+    },
+    {
+      adapter: "sbc-independent-assurance",
+      coinId: "sbc-brale",
+      product: "SBC",
+      html: `<a href="${getIndependentAssuranceManifest("SBC").reportUrl}">August</a>`,
+      newerHtml: `<a href="${getIndependentAssuranceManifest("SBC").reportUrl}">August</a>` +
+        '<a href="https://brale.xyz/SBC-Stable-Coin-Reserve-Attestation-Report-09-2026.pdf">September</a>',
+    },
+    {
       adapter: "fidd-independent-assurance",
       coinId: "fidd-fidelity",
       product: "FIDD",
@@ -265,6 +282,53 @@ describe("independent-assurance manifest framework", () => {
       ).rejects.toThrow("newer unreviewed report");
     },
   );
+  it.each(assuranceFenceCases())(
+    "$adapter validates pinned bytes and publishes the reviewed product's measured assets",
+    async (testCase) => {
+      const reviewed = getIndependentAssuranceManifest(testCase.product);
+      vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({
+        ...reviewed,
+        reportByteLength: PDF_BYTES.length,
+        reportSha256: createHash("sha256").update(PDF_BYTES).digest("hex"),
+      });
+      const options = "options" in testCase ? testCase.options : undefined;
+      installAssuranceFetch(testCase.product, testCase.html, options);
+      const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === testCase.coinId);
+      if (!coin?.liveReservesConfig) throw new Error(`missing assurance config for ${testCase.coinId}`);
+      const adapter = getReserveAdapter(testCase.adapter)!;
+      const result = await adapter.fetch(coin, coin.liveReservesConfig, new AbortController().signal);
+      expect(result.slices.length).toBeGreaterThan(0);
+      expect(result.slices.reduce((total, slice) => total + slice.pct, 0)).toBeCloseTo(100, 5);
+      expect(result.slices.every((slice) =>
+        slice.sourceKey?.startsWith(`${testCase.adapter}:${testCase.product.toLowerCase()}:`),
+      )).toBe(true);
+      expect(result.metadata?.sourceTimestamp).toBe(assurance.independentAssuranceSourceTimestamp(reviewed));
+      expect(result.metadata?.details).toMatchObject({
+        assurance: { product: testCase.product, assets: reviewed.assets, liabilities: reviewed.liabilities },
+      });
+      expect(validateAdapterOutput(result, {
+        adapter,
+        now: assurance.independentAssuranceSourceTimestamp(reviewed) + 60,
+      }).valid).toBe(true);
+    },
+  );
+
+  it("rejects specialized keys and invalid product bindings before reading upstream", async () => {
+    const coin = routedAssuranceCoin("audx-aussie-dollar-token");
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    await expect(fetchIndependentAssuranceAdapter(coin, {
+      ...coin.liveReservesConfig!,
+      adapter: "gemini-independent-assurance",
+    }, new AbortController().signal)).rejects.toThrow();
+    await expect(fetchIndependentAssuranceAdapter(coin, {
+      ...coin.liveReservesConfig!,
+      adapter: "agora-independent-assurance",
+      params: { ...coin.liveReservesConfig!.params, product: "AUDX" },
+    }, new AbortController().signal)).rejects.toThrow();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
 
   it.each(["08/09/2026", "08.09.2026"])(
     "rejects AUDX's ambiguous numeric report date %s",

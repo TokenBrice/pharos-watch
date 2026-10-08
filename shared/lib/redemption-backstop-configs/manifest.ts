@@ -64,6 +64,11 @@ export function buildRedemptionBackstopRegistry(
 
   for (const moduleEntry of manifest) {
     for (const entry of moduleEntry.entries) {
+      if (!moduleEntry.allowedRouteFamilies.includes(entry.config.routeFamily)) {
+        throw new Error(
+          `Redemption backstop config "${entry.id}" uses route family "${entry.config.routeFamily}" outside ${moduleEntry.name} (${entry.sourceFilePath ?? moduleEntry.filePath}).`,
+        );
+      }
       const owner = ownerById.get(entry.id);
       if (owner && owner !== moduleEntry) {
         throw new Error(

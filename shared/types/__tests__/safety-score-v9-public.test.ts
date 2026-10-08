@@ -319,6 +319,7 @@ describe("SafetyScoreV9ResponseSchema", () => {
     exit.diversification = { routeKey: "dex:backup", routeLabel: "Independent backup", bonus: 2 };
     exit.alternatives = [{
       key: "dex:backup", label: "Independent backup", routeFamily: "dex-amm", score: 80,
+      routeId: "backup", lane: "dex",
       included: true, exclusionReason: null, confidenceFactor: 1,
       confidenceDimensions: structuredClone(primary.confidenceDimensions), capacityEvidenceTier: "live-direct",
       rawSameNotionalCostBps: 0,
@@ -401,6 +402,7 @@ describe("SafetyScoreV9ResponseSchema", () => {
 
   it("rejects old envelopes and proofless legacy trace bytes on the current publication reader", () => {
     expect(SafetyScoreV9CurrentResponseSchema.safeParse({ ...currentResponse(), schemaVersion: 5 }).success).toBe(false);
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse({ ...currentResponse(), schemaVersion: 6 }).success).toBe(false);
     const current = currentResponse();
     const legacy = { ...current, cards: [{ ...current.cards[0], scoreTrace: { ...current.cards[0]!.scoreTrace, schemaVersion: 3 } }] };
     expect(SafetyScoreV9CurrentResponseSchema.safeParse(legacy).success).toBe(false);

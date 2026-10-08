@@ -987,6 +987,40 @@ describe("generate-dependency-coverage-audit", () => {
     })).toEqual(["adapter mapping review gap invariant failed with 1 finding"]);
   });
 
+  it.each(["suspended", "staged"] as const)("retains explicit %s provenance only for all-suspended authored bindings", (status) => {
+    const config = { ...liveConfig("sodax-sonic"), suspended: { reason: "Wrong liability identity", since: "2026-10-08" } };
+    const source = coin({ id: "legacy", liveReservesConfig: config });
+    const review = {
+      adapter: "sodax-sonic", reviewer: "reviewer", reviewedAt: "2026-10-08",
+      sourceFiles: ["worker/src/cron/reserve-adapters/sodax-sonic.ts"], rationale: "New-token census cannot attest legacy liabilities.",
+      retainedBinding: { status, reason: "The only authored binding is suspended for wrong identity." },
+    };
+    const audit = buildDependencyCoverageAudit({
+      activeCoins: [], sourceCoins: [source], adapterMappingReviews: [review],
+    });
+    expect(audit.adapterMappingReviewGaps).toEqual([]);
+    expect(evaluateDependencyCoverageStructure(audit, { requireAdapterMappingCoverage: true })).toEqual([]);
+    expect(audit.dependencyEdges).toEqual([]);
+
+    const { retainedBinding: _retention, ...unmarked } = review;
+    const unmarkedAudit = buildDependencyCoverageAudit({
+      activeCoins: [], sourceCoins: [source], adapterMappingReviews: [unmarked],
+    });
+    expect(unmarkedAudit.adapterMappingReviewGaps).toEqual([
+      expect.objectContaining({ adapter: "sodax-sonic", reason: "stale-review" }),
+    ]);
+    for (const sourceCoins of [[], [coin({ id: "new", liveReservesConfig: liveConfig("sodax-sonic") })], [source, coin({ id: "new", liveReservesConfig: liveConfig("sodax-sonic") })]]) {
+      const invalid = buildDependencyCoverageAudit({ activeCoins: [], sourceCoins, adapterMappingReviews: [review] });
+      expect(invalid.adapterMappingReviewGaps).toContainEqual(expect.objectContaining({ reason: "stale-review" }));
+      expect(invalid.adapterMappingReviewGaps).toContainEqual(expect.objectContaining({ reason: "invalid-provenance" }));
+    }
+    const blankReason = buildDependencyCoverageAudit({
+      activeCoins: [], sourceCoins: [source], adapterMappingReviews: [{ ...review, retainedBinding: { status, reason: " " } }],
+    });
+    expect(blankReason.adapterMappingReviewGaps).toContainEqual(expect.objectContaining({ reason: "stale-review" }));
+    expect(blankReason.adapterMappingReviewGaps).toContainEqual(expect.objectContaining({ reason: "invalid-provenance" }));
+  });
+
   it("reports a retained link missing from the current report even when the static registry still has it", () => {
     const upstream = coin({ id: "upstream", symbol: "UP" });
     const dependent = coin({

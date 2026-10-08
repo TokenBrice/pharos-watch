@@ -8,6 +8,8 @@ import {
   type ChainlinkNavParams,
 } from "../chainlink-nav-core";
 import { installAdapterNetwork, runAdapter, type AdapterNetwork, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 
 const ORACLE_ADDRESS = "0x74f2199AEb743f68f05943e5715A33EaF2b61f53";
 const WRAPPER_ADDRESS = "0x00000000000000000000000000000000000000aa";
@@ -126,6 +128,33 @@ function runNav(
 }
 
 describe("adaptChainlinkNavResponse", () => {
+  it("keeps identical native-share and portfolio NAV evidence apart at real scoring admission", () => {
+    const observed = { navPerToken: 1_119_000n, navDecimals: 6, totalSupply: 500_000_000n, tokenDecimals: 6, roundId: 384n, updatedAt: 1773405239 };
+    const native = adaptChainlinkNavResponse(observed, params);
+    const portfolio = adaptChainlinkNavResponse(observed, { ...params, navScope: "portfolio" });
+    expect(portfolio.slices).toEqual(native.slices);
+    expect(portfolio.metadata?.sourceTimestamp).toBe(native.metadata?.sourceTimestamp);
+    for (const [scope, result, eligible] of [
+      ["native-fund-share", native, true], ["portfolio", portfolio, false],
+    ] as const) {
+      const config = makeChainlinkNavConfig({ params: { navScope: scope } });
+      const coin = { ...NAV_COIN, liveReservesConfig: config };
+      const snapshot = {
+        stablecoinId: coin.id, slices: result.slices, fetchedAt: observed.updatedAt + 120,
+        attemptId: "nav-scope-regression", source: "chainlink-nav",
+        metadata: result.metadata ?? {}, warnings: result.warnings ?? [],
+        warningCount: result.warnings?.length ?? 0,
+        adapterSourceModel: "single-bucket" as const, adapterEvidenceClass: "independent" as const,
+        configFingerprint: computeLiveReserveConfigFingerprint(config),
+      };
+      const admission = evaluateLiveReserveAdmission(snapshot, {
+        lastSuccessAt: snapshot.fetchedAt, lastSuccessAttemptId: snapshot.attemptId,
+      }, coin, snapshot.fetchedAt);
+      expect(admission.eligible).toBe(eligible);
+      if (!eligible) expect(admission.reasons).toContain("degraded-snapshot");
+    }
+  });
+
   const params: ChainlinkNavParams = {
     navScope: "native-fund-share",
     oracleAddress: "0x74f2199AEb743f68f05943e5715A33EaF2b61f53",

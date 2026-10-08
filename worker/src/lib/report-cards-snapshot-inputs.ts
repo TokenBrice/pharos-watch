@@ -436,9 +436,12 @@ export async function loadReportCardsSnapshotInputs(
     REPORT_CARD_REDEMPTION_FRESHNESS_SEC,
     redemptionSnapshotUnavailable,
   );
-  const reserveInputHealth = redemptionBackstopSnapshot.reserveInputHealth ?? "unavailable";
-  if (reserveInputHealth === "unavailable") redemptionSnapshotUnavailable = true;
-  if (reserveInputHealth !== "fresh") redemptionFreshness.stale = true;
+  // Run-level binding integrity only; capture quarantines individual assets at
+  // the scoring clock so one coin cannot withhold every redemption row (R8).
+  if (redemptionBackstopSnapshot.reserveInputAssessment?.state !== "fresh") {
+    redemptionSnapshotUnavailable = true;
+    redemptionFreshness.stale = true;
+  }
   const redemptionStale = redemptionFreshness.stale;
   const redemptionBackstopMap = redemptionStale ? {} : redemptionBackstopSnapshot.map;
   if (redemptionStale) {
@@ -466,9 +469,9 @@ export async function loadReportCardsSnapshotInputs(
   const redemptionState: V9PublicationInputHealth["redemption"]["state"] =
     !hasApplicableRedemption
       ? "not-applicable"
-      : redemptionSnapshotUnavailable || reserveInputHealth === "unavailable"
+      : redemptionSnapshotUnavailable
         ? "unavailable"
-        : redemptionFreshness.stale || reserveInputHealth === "stale"
+        : redemptionFreshness.stale
           ? "stale"
           : "current";
 

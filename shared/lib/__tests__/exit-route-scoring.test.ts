@@ -13,7 +13,7 @@ import {
 import {
   computeCapacityScore,
   computeModeledExitSizeUsd,
-  computeRedemptionBackstopScore,
+  REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
 } from "@shared/lib/redemption-backstop-scoring";
 import { selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -133,18 +133,9 @@ describe("shared component composition", () => {
     };
     const shared = composeExitComponentScore(components, EXIT_ROUTE_SCORING_TABLES.componentWeights);
     expect(shared).toBe(76.25);
-    // The redemption domain view's public entry point, on an uncapped route
-    // family, is the same weighted ladder rounded to a whole score.
-    const domain = computeRedemptionBackstopScore({
-      routeFamily: "stablecoin-redeem",
-      accessScore: components.access,
-      settlementScore: components.settlement,
-      executionCertaintyScore: components.executionCertainty,
-      capacityScore: components.capacity,
-      outputAssetQualityScore: components.outputAssetQuality,
-      costScore: components.cost,
-    });
-    expect(domain.score).toBe(76);
+    // Pure composition has no executable-evidence claim or route-family cap.
+    const domain = composeExitComponentScore(components, REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS);
+    expect(domain).toBe(76.25);
 
     // The V9 pillar reads the same weights out of the validated policy
     // envelope, so the ladder is bit-identical on both sides.

@@ -82,7 +82,7 @@ function generateExitProjectionFixture(
         compiledFacts,
         candidate: {
           model: "v9-critical-path",
-          schemaVersion: 6,
+          schemaVersion: 7,
           lifecycle: "active",
           candidateId: "safety-score-v9:fixture",
           policyVersion: policy.policy.releaseVersion,

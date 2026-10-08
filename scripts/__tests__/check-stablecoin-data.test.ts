@@ -9,7 +9,37 @@ import {
   getReserveDependencyTypeLinkIssues,
   getLiveReserveDependencyTypeLinkIssues,
   getListingGovernanceIssues,
+  getTerminalLiveReserveConfigIssue,
+  getExpiredReserveSupplyAdmissionBootstrapIssue,
 } from "../ci/check-stablecoin-data";
+
+describe("terminal live-reserve binding gate", () => {
+  const config: NonNullable<StablecoinMeta["liveReservesConfig"]> = {
+    adapter: "jpmorgan-nav", version: 1, semantics: "single-asset",
+    inputs: { primary: { kind: "http-html", url: "https://example.com/nav" } },
+  };
+  it("rejects an authored bootstrap from UTC start of its review deadline until removed or re-authorized", () => {
+    const authorized = { liveReservesConfig: { ...config, bootstrapForSupplyAdmission: { reviewBy: "2026-10-10" } } };
+    expect(getExpiredReserveSupplyAdmissionBootstrapIssue(authorized, Date.parse("2026-10-09T23:59:59Z"))).toBeNull();
+    expect(getExpiredReserveSupplyAdmissionBootstrapIssue(authorized, Date.parse("2026-10-10T00:00:00Z"))).not.toBeNull();
+    expect(getExpiredReserveSupplyAdmissionBootstrapIssue(authorized, Date.parse("2026-10-11T00:00:00Z"))).not.toBeNull();
+    expect(getExpiredReserveSupplyAdmissionBootstrapIssue({ liveReservesConfig: config }, Date.parse("2026-10-11T00:00:00Z"))).toBeNull();
+    expect(getExpiredReserveSupplyAdmissionBootstrapIssue({
+      liveReservesConfig: { ...config, bootstrapForSupplyAdmission: { reviewBy: "2026-11-10" } },
+    }, Date.parse("2026-10-11T00:00:00Z"))).toBeNull();
+    expect(getExpiredReserveSupplyAdmissionBootstrapIssue({})).toBeNull();
+  });
+  it.each(["frozen", "delisted"] as const)("rejects unsuspended %s bindings but retains archived evidence", (status) => {
+    expect(getTerminalLiveReserveConfigIssue({ status, liveReservesConfig: config })).not.toBeNull();
+    expect(getTerminalLiveReserveConfigIssue({ status })).toBeNull();
+    expect(getTerminalLiveReserveConfigIssue({ status, liveReservesConfig: {
+      ...config, suspended: { since: "2026-10-07", reason: "operator hold" },
+    } })).toBeNull();
+  });
+  it.each(["active", "quarantined", "pre-launch"] as const)("allows %s research/producer bindings", (status) => {
+    expect(getTerminalLiveReserveConfigIssue({ status, liveReservesConfig: config })).toBeNull();
+  });
+});
 
 describe("authored linked reserve type gate", () => {
   it("rejects a missing type without rejecting typed or unlinked holdings", () => {

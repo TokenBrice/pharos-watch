@@ -1,4 +1,5 @@
 import { resolveChainId } from "@shared/types/chain-identity";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import {
   createV9EvidenceReference,
   createV9ClassificationEvidence,
@@ -32,6 +33,7 @@ import {
   type V9EvidenceCauseScope, type V9RuntimeProducerVerdict, type V9CauseResolutionDiagnostic,
 } from "@shared/types/safety-score-v9-causes";
 import { createReviewedAssetRegistry } from "./extension-reviewed-registry";
+import { usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
 
 // Immutable imported evaluation input; validation failures stay asset-local.
 const classifications = createReviewedAssetRegistry({
@@ -560,6 +562,31 @@ export function compileRouteFactorStatuses(
   const capacityEvidenceTier = route.capacityEvidenceTier ?? "unknown";
   const factorStatuses = { ...route.factorStatuses };
   let knownFactorStatus: V9FactStatusV2 | undefined;
+  const config = route.lane === "redemption" ? getRedemptionBackstopConfig(context.asset.assetId) : null;
+  const reviewed = config?.v9RouteReviewTerms;
+  const reviewSec = reviewed?.reviewedAt ? Date.parse(`${reviewed.reviewedAt}T00:00:00Z`) / 1_000 : NaN;
+  const certificate = route.executionCertificate;
+  const certifiedPoint = certificate?.points.find((point) =>
+    point.requestedNotionalUsd === route.request?.requestedNotionalUsd &&
+    point.maxCostBps === route.request?.maxCostBps);
+  // A later admitted exact execution supersedes an older terms-gap review,
+  // but a new producer clock, another rail, or diagnostic proof does not.
+  const newerExactEvidence = certificate !== undefined &&
+    certificate.identity.assetId === context.asset.assetId &&
+    route.executionModelId === certificate.modelId &&
+    route.status.observationState === "known" &&
+    certifiedPoint !== undefined && certifiedPoint.certification !== "diagnostic" &&
+    certificate.observedAtSec >= reviewSec + 86_400 &&
+    certificate.source.timestamp >= reviewSec + 86_400 &&
+    route.status.evidenceRefIds.some((id) => {
+      const evidence = context.evidence.get(id);
+      return evidence !== undefined && evidence.disposition !== "rejected" &&
+        evidence.freshness.state !== "stale";
+    });
+  const explicitMissing = reviewed?.scoringDisposition === "bounded-terms-gap" &&
+    usesPrimaryRedemptionReviewTerms(context.asset.assetId, route) &&
+    Number.isFinite(reviewSec) && reviewSec <= context.fixedInput.clockSec && !newerExactEvidence
+    ? reviewed.missingScoringFields : undefined;
   for (const [factorKey, missing] of [
     ["access", route.holderAccess === "unknown"],
     ["holderEligibility", route.holderAccess === "unknown"],
@@ -571,8 +598,10 @@ export function compileRouteFactorStatuses(
     ["cost", route.feeEvidence !== undefined || route.capacityCurve.some((point) => point.executionCostBps === null)],
     ["settlement", route.settlementBoundUnproven === true || route.settlementSlaSec === null],
   ] as const) {
-    if (factorStatuses[factorKey]) continue;
-    factorStatuses[factorKey] = missing
+    const explicitlyMissing = explicitMissing?.some((field) => field === factorKey) === true;
+    const existing = factorStatuses[factorKey];
+    if (existing && (!explicitlyMissing || existing.observationState !== "known")) continue;
+    factorStatuses[factorKey] = missing || explicitlyMissing
       ? missingLocalFact(context, {
           componentKey: `exit-route:${route.routeKey}:${factorKey}`, reasonCode: "missing-same-notional-route",
           ownerDomain: "exit", responsibility: "unresearched", policyRuleId: "v9.exit.route-factors",

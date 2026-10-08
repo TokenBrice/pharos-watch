@@ -4,7 +4,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import { fetchJsonWithRetry, verifiedFreshnessMetadata } from "./helpers";
 import { requireJsonInput } from "./input-guards";
-import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 
 export const MIDAS_MTBILL_TRANSPARENCY_URL = "https://api-prod.midas.app/api/transparency?token=mTBILL";
 const MILLION = 1_000_000;

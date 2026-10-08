@@ -1,12 +1,10 @@
-import {
-  REDEMPTION_ACCESS_LABELS,
-  REDEMPTION_OUTPUT_ASSET_LABELS,
-  REDEMPTION_SETTLEMENT_LABELS,
-} from "@shared/lib/redemption-backstop-scoring";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import type { RedemptionBackstopEntry } from "@shared/types";
 import {
+  REDEMPTION_ACCESS_LABELS,
+  REDEMPTION_OUTPUT_ASSET_LABELS,
+  REDEMPTION_SETTLEMENT_LABELS,
   formatRedemptionDocsProvenance,
   formatRedemptionModelConfidence,
   formatRedemptionResolutionState,

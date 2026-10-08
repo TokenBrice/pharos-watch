@@ -20,11 +20,19 @@ export function defillamaAssetKey(chain: string, address: string): string {
   return `${DEFILLAMA_PRICE_CHAIN_ALIASES[chain] ?? chain}:${chain === "solana" ? address : address.toLowerCase()}`;
 }
 
+export interface BranchPriceObservation {
+  sourceKind: "configured-nominal" | "pinned-oracle" | "market-api";
+  sourceLookup: string;
+  quoteTimestamp: number | null;
+  quoteConfidence: number | null;
+}
+
 export async function fetchDefiLlamaPrices(
   assets: Array<{ key: string; chain: string; address: string }>,
   signal: AbortSignal,
   ctx?: AdapterContext,
   warnings?: LiveReserveWarning[],
+  observations?: Map<string, BranchPriceObservation>,
 ): Promise<Map<string, number>> {
   if (assets.length === 0) return new Map();
   const lookups = assets.map(({ key, chain, address }) => ({
@@ -68,6 +76,14 @@ export async function fetchDefiLlamaPrices(
       warnings.push(reserveDegradedWarning("defillama-quote-quality", message));
     }
     prices.set(key, quote.price);
+    observations?.set(key, {
+      sourceKind: "market-api",
+      sourceLookup: assetKey,
+      quoteTimestamp: typeof quote.timestamp === "number" && Number.isFinite(quote.timestamp) && quote.timestamp > 0
+        ? quote.timestamp : null,
+      quoteConfidence: typeof quote.confidence === "number" && Number.isFinite(quote.confidence)
+        ? quote.confidence : null,
+    });
   }
   return prices;
 }

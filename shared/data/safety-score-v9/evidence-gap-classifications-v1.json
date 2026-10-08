@@ -23815,7 +23815,7 @@
       "assetId": "myrc-blox",
       "scope": {
         "componentKey": "reserve-exposure",
-        "exposureId": "reserve:ca01ae861df16ae78ab4aa05",
+        "exposureId": "reserve:159bb5cd984bd7b0423ab087",
         "factorKey": "maturity",
         "pillar": "backing",
         "requiredDatum": "maturityDaysMax",

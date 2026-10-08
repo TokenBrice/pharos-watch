@@ -3,10 +3,10 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { sha256Hex } from "../../lib/hash";
-import { fetchIndependentAssuranceReserves, type IndependentAssuranceProfile } from "./independent-assurance";
+import { fetchIndependentAssuranceReserves } from "./independent-assurance";
 import { readHtmlAttribute } from "./helpers";
 import { fetchTextResponseWithRetry } from "./request";
-import type { AdapterContext } from "./types";
+import type { AdapterContext, IndependentAssuranceProfile } from "./types";
 
 export interface PaxosDiscoveryPin {
   mainUrl: string;

@@ -24,8 +24,8 @@ import {
 } from "./safety-score-v9-public-facts";
 import { refineCard } from "./safety-score-v9-public-internal";
 import { findSafetyScoreV9ParentAttributionIssues } from "./safety-score-v9-public-attribution";
-import { SafetyScoreV9BreakdownsSchema } from "./safety-score-v9-public-breakdowns";
-import { SafetyScoreV9ScoreTraceSchema } from "./safety-score-v9-public-trace";
+import { SafetyScoreV9BreakdownsSchema, SafetyScoreV9HistoricalBreakdownsSchema } from "./safety-score-v9-public-breakdowns";
+import { SafetyScoreV9ScoreTraceSchema, SafetyScoreV9WitnessScoreTraceSchema } from "./safety-score-v9-public-trace";
 import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
 import { V9EffectiveDependenciesV3Schema } from "./safety-score-v9-facts";
 import { ReserveSliceSchema } from "./reserves";
@@ -381,8 +381,11 @@ export const SafetyScoreV9CurrentCardBaseSchema = z
   })
   .strict();
 
-export const SafetyScoreV9CurrentCardSchema = SafetyScoreV9CurrentCardBaseSchema
-  .superRefine((card, ctx) => {
+type CardRefinementInput = Omit<z.infer<typeof SafetyScoreV9CurrentCardBaseSchema>, "breakdowns"> & {
+  breakdowns: z.infer<typeof SafetyScoreV9HistoricalBreakdownsSchema> | null;
+};
+
+function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx): void {
     refineCardBase(card, ctx);
     refineCard(card, ctx);
     if (card.ratingStatus === "pipeline-gap" && (card.scoreTrace.aggregation !== null ||
@@ -414,7 +417,18 @@ export const SafetyScoreV9CurrentCardSchema = SafetyScoreV9CurrentCardBaseSchema
         }
       }
     }
-  });
+}
+
+export const SafetyScoreV9CurrentCardSchema = SafetyScoreV9CurrentCardBaseSchema.superRefine(refineCurrentCard);
+
+/** Report7/breakdown6 retain strict pre-10.11 route shapes. */
+const SafetyScoreV9HistoricalCardBaseSchema = SafetyScoreV9CurrentCardBaseSchema.extend({
+  breakdowns: SafetyScoreV9HistoricalBreakdownsSchema.nullable(),
+});
+export const SafetyScoreV9HistoricalCardSchema = SafetyScoreV9HistoricalCardBaseSchema.superRefine(refineCurrentCard);
+export const SafetyScoreV9WitnessHistoricalCardSchema = SafetyScoreV9HistoricalCardBaseSchema.extend({
+  scoreTrace: SafetyScoreV9WitnessScoreTraceSchema,
+}).superRefine(refineCurrentCard);
 export type SafetyScoreV9CurrentCard = z.infer<typeof SafetyScoreV9CurrentCardSchema>;
 
 export type SafetyScoreV9Card = SafetyScoreV9CurrentCard;
@@ -499,11 +513,11 @@ function refineResponse(
   }
 }
 
-/** Current schema-6 envelope: explicit proof-derived availability and partial evidence. */
+/** Current schema-7 envelope: proof-derived availability and exact typed exit-route identity. */
 export const SafetyScoreV9CurrentResponseSchema = z
   .object({
     ...SafetyScoreV9ResponseShape,
-    schemaVersion: z.literal(6),
+    schemaVersion: z.literal(7),
     cards: z.array(SafetyScoreV9CurrentCardSchema),
   })
   .strict()

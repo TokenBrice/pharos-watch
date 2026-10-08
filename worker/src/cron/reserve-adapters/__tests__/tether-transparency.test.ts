@@ -62,6 +62,14 @@ describe("adaptTetherTransparency", () => {
     expect(reordered.slices).toEqual(result.slices);
   });
 
+  it.each([0, 0.5, 1.5])("reports source drift %s while preserving unrounded gold percentages", (drift) => {
+    const result = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, {
+      ...XAUT_PARAMS, slices: [{ ...XAUT_PARAMS.slices[0], pct: 100 - drift }],
+    });
+    expect(result.metadata?.diag?.rawSumDeviation).toBe(drift);
+    expect(result.slices[0].pct).toBe(100 - drift);
+  });
+
   it("keeps the signed composition denominator and clock separate from live totals", () => {
     const result = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, USDT_PARAMS);
     expect(result.metadata?.details).toMatchObject({

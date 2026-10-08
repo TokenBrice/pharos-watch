@@ -37,6 +37,7 @@ vi.mock("../../../lib/scheduled-recovery-checkpoint", async () => {
   return {
     beginLiveReserveCheckpoint: vi.fn(async () => makeLiveReserveCheckpoint()),
     loadLiveReserveCheckpoint: vi.fn(),
+    releaseUnstartedLiveReserveRecoveryClaim: vi.fn(async () => ({ disposition: "released" })),
     setLiveReserveCheckpointChildDisposition: vi.fn(async () => {}),
     finishLiveReserveCheckpoint: vi.fn(async () => {}),
   };
@@ -64,6 +65,7 @@ import { getReserveProducerPriority } from "../../../lib/reserve-producer-priori
 import {
   finishLiveReserveCheckpoint,
   loadLiveReserveCheckpoint,
+  releaseUnstartedLiveReserveRecoveryClaim,
   setLiveReserveCheckpointChildDisposition,
   type ScheduledRecoveryCheckpoint,
 } from "../../../lib/scheduled-recovery-checkpoint";
@@ -75,6 +77,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
   beforeEach(() => {
     sentinelSourceStates.clear();
     vi.mocked(getReserveProducerPriority).mockResolvedValue(null);
+    vi.mocked(releaseUnstartedLiveReserveRecoveryClaim).mockReset().mockResolvedValue({ disposition: "released" });
     vi.mocked(syncLiveReserves).mockResolvedValue(undefined as never);
     vi.mocked(syncRedemptionBackstops).mockResolvedValue(undefined as never);
     vi.mocked(syncKinesisSupply).mockResolvedValue(undefined as never);
@@ -111,7 +114,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
       scheduledTimeMs: null,
       slotStartedAt: 0,
       runLeasedCron: runLeasedCron as unknown as ScheduledRuntimeContext["runLeasedCron"],
-      ...(recoveryCheckpoint ? { recoveryCheckpoint } : {}),
+      ...(recoveryCheckpoint ? { recoveryCheckpoint, invocationId: recoveryCheckpoint.invocationId } : {}),
     });
   }
 
@@ -154,6 +157,63 @@ describe("runFourHourlyReserveSyncSlot", () => {
     expect(logSkippedCronRun).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       status: "skipped_neutral", reason: "heavy-slot-co-tenancy",
     }));
+  });
+
+  it.each(["released", "not-owned", "already-started"] as const)(
+    "awaits the second guard's release without starting children or concealing a CAS miss (%s)",
+    async (disposition) => {
+      vi.mocked(getReserveProducerPriority).mockResolvedValue({
+        reason: "heavy-slot-co-tenancy", scheduleKey: "v9PublicationOffset",
+        slotStartedAt: 900, observedAt: 1000, lookaheadSec: 1440, condition: "heavy-slot-running",
+      });
+      let completeRelease!: () => void;
+      let releaseStarted!: () => void;
+      const gate = new Promise<void>((resolve) => { completeRelease = resolve; });
+      const started = new Promise<void>((resolve) => { releaseStarted = resolve; });
+      vi.mocked(releaseUnstartedLiveReserveRecoveryClaim).mockImplementationOnce(async () => {
+        releaseStarted();
+        await gate;
+        return { disposition };
+      });
+      let settled = false;
+      const pending = runFourHourlyReserveSyncSlot(buildRuntime(recoveryCheckpoint())).then((summary) => {
+        settled = true;
+        return summary;
+      });
+      try {
+        await started;
+        expect(settled).toBe(false);
+        expect(logSkippedCronRun).not.toHaveBeenCalled();
+      } finally {
+        completeRelease();
+        await pending;
+      }
+      expect(logSkippedCronRun).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+        metadata: expect.objectContaining({ recoveryClaimRelease: { disposition } }),
+      }));
+      expect(syncLiveReserves).not.toHaveBeenCalled();
+      expect(syncRedemptionBackstops).not.toHaveBeenCalled();
+      expect(syncKinesisSupply).not.toHaveBeenCalled();
+      expect(setLiveReserveCheckpointChildDisposition).not.toHaveBeenCalled();
+      expect(finishLiveReserveCheckpoint).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([undefined, "foreign-invocation"])("does not release another invocation's checkpoint (%s)", async (invocationId) => {
+    vi.mocked(getReserveProducerPriority).mockResolvedValue({
+      reason: "heavy-slot-co-tenancy", scheduleKey: "v9PublicationOffset",
+      slotStartedAt: 900, observedAt: 1000, lookaheadSec: 1440, condition: "heavy-slot-running",
+    });
+    const runtime = buildRuntime(recoveryCheckpoint());
+    runtime.invocationId = invocationId;
+    const result = await runFourHourlyReserveSyncSlot(runtime);
+    expect(result).toMatchObject({ jobsNeutralSkipped: 4 });
+    expect(releaseUnstartedLiveReserveRecoveryClaim).not.toHaveBeenCalled();
+    expect(logSkippedCronRun).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      metadata: expect.objectContaining({ recoveryClaimRelease: { disposition: "not-owned" } }),
+    }));
+    expect(setLiveReserveCheckpointChildDisposition).not.toHaveBeenCalled();
+    expect(finishLiveReserveCheckpoint).not.toHaveBeenCalled();
   });
 
   it("keeps recovery's two-connection head separate from independent Kinesis I/O", async () => {

@@ -52,6 +52,19 @@ function telemetryValue(
 }
 
 describe("buildRedemptionBackstopCardViewModel", () => {
+  it.each([
+    { accessModel: "permissionless-onchain", accessLabel: "Permissionless onchain" },
+    { accessModel: "whitelisted-onchain", accessLabel: "Whitelisted onchain" },
+    { accessModel: "issuer-api", accessLabel: "Issuer / institutional" },
+    { accessModel: "manual", accessLabel: "Manual / discretionary" },
+  ] as const)("keeps the full $accessModel label in route prose", ({ accessModel, accessLabel }) => {
+    const viewModel = buildRedemptionBackstopCardViewModel(entry({ accessModel }));
+    expect(viewModel.accessLabel).toBe(accessLabel);
+    expect(viewModel.settlementLabel).toBe("Atomic");
+    expect(viewModel.outputAssetLabel).toBe("Stable output");
+    expect(viewModel.routeFamilyLabel).toBe("Stablecoin redeem");
+  });
+
   it("formats immediate capacity, scoring horizon, and telemetry context", () => {
     const viewModel = buildRedemptionBackstopCardViewModel(
       entry({

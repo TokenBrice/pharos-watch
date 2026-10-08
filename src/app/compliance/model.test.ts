@@ -14,8 +14,6 @@ const fixtures = vi.hoisted(() => {
     { id: "frozen-coin", name: "Frozen Coin", symbol: "FRZ", status: "frozen", flags: { pegCurrency: "USD" } },
   ];
 
-  const registerReference = { label: "Register", url: "https://registercheck.example/entry" };
-
   const compliance = [
     {
       id: "euro-emt",
@@ -62,17 +60,6 @@ const fixtures = vi.hoisted(() => {
         applicability: "unclear",
         issuerPathway: "unknown",
         foreignExceptionStatus: "unknown",
-        references: [registerReference],
-        applicabilityBasis: {
-          summary: "Offered to US persons",
-          references: [{ label: "Basis", url: "https://basis.example/" }],
-        },
-        negativeEvidenceReview: {
-          summary: "No authorization filing found for Review Labs",
-          sourcesChecked: ["OCC", "FDIC"],
-          // Same reference as the profile-level list: the projection must dedupe.
-          references: [registerReference],
-        },
       },
     },
     {
@@ -217,7 +204,7 @@ describe("Compliance model", () => {
     expect(ids(viewModel({ regime: "genius", search: "intent labs" }).watchRows)).toEqual(["dollar-intent"]);
   });
 
-  it("projects GENIUS disclosure, regulator, review, and deduplicated nested references", () => {
+  it("projects GENIUS disclosure and regulators without loading fold evidence", () => {
     const { watchRows } = viewModel({ regime: "genius" });
     const intent = watchRows.find((row) => row.id === "dollar-intent");
     const review = watchRows.find((row) => row.id === "dollar-review");
@@ -230,21 +217,16 @@ describe("Compliance model", () => {
     expect(intent.reserveReportNote).toContain("published 2026-07-29");
     expect(intent.monthlyAttestationPresent).toBe(true);
     expect(intent.hasAnyDisclosure).toBe(true);
-    expect(intent.negativeEvidenceSourcesChecked).toEqual([]);
+    expect(intent).not.toHaveProperty("references");
 
     // No disclosure evidence at all must not read as "has disclosure".
     expect(review.hasAnyDisclosure).toBe(false);
     expect(review.reserveReportNote).toBeUndefined();
     expect(review.monthlyAttestationPresent).toBe(false);
     expect(review.foreignExceptionStatus).toBe("unknown");
-    expect(review.negativeEvidenceSummary).toContain("Review Labs");
-    expect(review.negativeEvidenceSourcesChecked).toEqual(["OCC", "FDIC"]);
-    expect(review.applicabilitySummary).toBe("Offered to US persons");
-    // Profile-level and nested review references collapse to one entry.
-    expect(review.references).toEqual([
-      { label: "Register", url: "https://registercheck.example/entry" },
-      { label: "Basis", url: "https://basis.example/" },
-    ]);
+    for (const field of ["notes", "negativeEvidenceSummary", "negativeEvidenceSourcesChecked", "applicabilitySummary", "references"]) {
+      expect(review).not.toHaveProperty(field);
+    }
   });
 
   it("merges regimes into one overview row per asset and keeps the total independent of filters", () => {

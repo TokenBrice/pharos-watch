@@ -1,6 +1,7 @@
 import { expect, it, vi } from "vitest";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { mockWorkerRuntimeRegistry } from "../../test-helpers/cron";
 
 const mocks = vi.hoisted(() => ({
   adapterInitialized: false,
@@ -17,7 +18,11 @@ vi.mock("../sync-live-reserves-shared", () => ({
   CONFIGURED_COINS: [{ id: "coin", liveReservesConfig: mocks.config }],
 }));
 vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => ({
-  WORKER_TRACKED_META_BY_ID: new Map([["coin", { liveReservesConfig: mocks.config }]]),
+  ...mockWorkerRuntimeRegistry({ stablecoins: [{
+    id: "coin", name: "Coin", symbol: "COIN",
+    flags: { backing: "rwa-backed", pegCurrency: "USD", governance: "centralized", yieldBearing: false, rwa: true, navToken: false },
+    liveReservesConfig: mocks.config,
+  }] }),
   WORKER_ACTIVE_LIVE_RESERVE_CIRCUIT_SOURCES: [],
 }));
 vi.mock("../../lib/live-reserves/store", () => ({ loadReserveSyncStateMap: mocks.states }));

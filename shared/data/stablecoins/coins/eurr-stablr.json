@@ -52,27 +52,6 @@
   ],
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 2,
-    "semantics": "single-asset",
-    "breakerScope": "eurr-stablr",
-    "display": {
-      "url": "https://www.stablr.com/proof-of-reserve",
-      "label": "StablR Proof of Reserve"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "label": "Fiat euro reserves",
-      "risk": "very-low"
-    }
-  },
   "launchDate": "2024-12-17",
   "notices": [
     {

@@ -9,6 +9,7 @@ import type {
 import type {
   RedemptionBackstopConfig,
   RedemptionCostModel,
+  PhysicalToUsdRoute,
 } from "./schema";
 
 /**
@@ -59,7 +60,14 @@ export function expandIds(
   ids: readonly string[],
   config: RedemptionBackstopConfig,
 ): Record<string, RedemptionBackstopConfig> {
-  return Object.fromEntries(ids.map((id) => [id, cloneRedemptionBackstopConfig(config)]));
+  const configs = new Map<string, RedemptionBackstopConfig>();
+  for (const id of ids) {
+    if (configs.has(id)) {
+      throw new Error(`Redemption backstop config "${id}" is duplicated.`);
+    }
+    configs.set(id, cloneRedemptionBackstopConfig(config));
+  }
+  return Object.fromEntries(configs);
 }
 
 export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig): RedemptionBackstopConfig {
@@ -67,16 +75,46 @@ export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig):
     ...config,
     capacityModel: {
       ...config.capacityModel,
-      ...(config.capacityModel.kind === "reserve-sync-metadata" && config.capacityModel.requiredOutputAssetKeys
+      ...((config.capacityModel.kind === "reserve-sync-metadata" || config.capacityModel.kind === "executable-observer")
+        && config.capacityModel.requiredOutputAssetKeys
         ? { requiredOutputAssetKeys: [...config.capacityModel.requiredOutputAssetKeys] }
         : {}),
     },
     costModel: { ...config.costModel },
+    ...(config.physicalCommodityDelivery
+      ? {
+          physicalCommodityDelivery: {
+            ...config.physicalCommodityDelivery,
+            feeModel: { ...config.physicalCommodityDelivery.feeModel },
+          },
+        }
+      : {}),
+    ...(config.physicalToUsd ? { physicalToUsd: clonePhysicalToUsdRoute(config.physicalToUsd) } : {}),
+    ...(config.routeSuspension
+      ? {
+          routeSuspension: {
+            ...config.routeSuspension,
+            sources: config.routeSuspension.sources.map((source) => ({ ...source })),
+          },
+        }
+      : {}),
     ...(config.v9RouteCostTerms ? { v9RouteCostTerms: { ...config.v9RouteCostTerms } } : {}),
     ...(config.v9RouteReviewTerms
       ? {
           v9RouteReviewTerms: {
             ...config.v9RouteReviewTerms,
+            ...(config.v9RouteReviewTerms.businessDayTerms
+              ? {
+                  businessDayTerms: {
+                    ...config.v9RouteReviewTerms.businessDayTerms,
+                    cutoff: { ...config.v9RouteReviewTerms.businessDayTerms.cutoff },
+                    conditions: [...config.v9RouteReviewTerms.businessDayTerms.conditions],
+                    ...(config.v9RouteReviewTerms.businessDayTerms.stages
+                      ? { stages: config.v9RouteReviewTerms.businessDayTerms.stages.map((stage) => ({ ...stage })) }
+                      : {}),
+                  },
+                }
+              : {}),
             ...(config.v9RouteReviewTerms.missingScoringFields
               ? { missingScoringFields: [...config.v9RouteReviewTerms.missingScoringFields] }
               : {}),
@@ -100,6 +138,39 @@ export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig):
       : {}),
     ...(config.docs ? { docs: config.docs.map(cloneRedemptionDocSource) } : {}),
     ...(config.notes ? { notes: [...config.notes] } : {}),
+  };
+}
+
+function clonePhysicalLot(lot: PhysicalToUsdRoute["lot"]): PhysicalToUsdRoute["lot"] {
+  return { ...lot, bars: lot.bars.map((bar) => ({ ...bar })) };
+}
+
+function clonePhysicalThroughput(throughput: NonNullable<PhysicalToUsdRoute["throughput"]>) {
+  return { ...throughput, evidence: { ...throughput.evidence } };
+}
+
+function clonePhysicalToUsdRoute(route: PhysicalToUsdRoute): PhysicalToUsdRoute {
+  return {
+    ...route,
+    lot: clonePhysicalLot(route.lot),
+    ...(route.throughput ? { throughput: clonePhysicalThroughput(route.throughput) } : {}),
+    vaultLocations: [...route.vaultLocations],
+    fees: { ...route.fees },
+    settlementLegs: route.settlementLegs.map((leg) => ({ ...leg })),
+    ...(route.bestEffortIssuerCashOut
+      ? {
+          bestEffortIssuerCashOut: {
+            ...route.bestEffortIssuerCashOut,
+            lot: clonePhysicalLot(route.bestEffortIssuerCashOut.lot),
+            ...(route.bestEffortIssuerCashOut.throughput
+              ? { throughput: clonePhysicalThroughput(route.bestEffortIssuerCashOut.throughput) }
+              : {}),
+            fees: { ...route.bestEffortIssuerCashOut.fees },
+            settlementLegs: route.bestEffortIssuerCashOut.settlementLegs.map((leg) => ({ ...leg })),
+          },
+        }
+      : {}),
+    evidence: route.evidence.map((source) => ({ ...source })),
   };
 }
 
@@ -131,13 +202,13 @@ export function resolveRedemptionCostBpsAtNotional(
   const normalFeeBps =
     observedFeeBps ??
     costModel.feeBpsMax ??
-    costModel.feeBpsMin ??
+    // A minimum is a floor, not evidence of the maximum payable fee.
     (costModel.kind === "fee-bps" ? costModel.feeBps : null);
+  if (normalFeeBps == null) return null;
   const variableFeeBps = normalFeeBps;
   const fixedCostUsd = costModel.gasOrBridgeCostUsd ?? 0;
-  if (variableFeeBps == null && costModel.minFeeUsd == null && fixedCostUsd === 0) return null;
-  if (variableFeeBps != null && costModel.minFeeUsd == null && fixedCostUsd === 0) return variableFeeBps;
-  const percentageFeeUsd = ((variableFeeBps ?? 0) * requestedNotionalUsd) / BPS_PER_UNIT;
+  if (costModel.minFeeUsd == null && fixedCostUsd === 0) return variableFeeBps;
+  const percentageFeeUsd = (variableFeeBps * requestedNotionalUsd) / BPS_PER_UNIT;
   const variableFeeUsd = Math.max(percentageFeeUsd, costModel.minFeeUsd ?? 0);
   return ((variableFeeUsd + fixedCostUsd) / requestedNotionalUsd) * BPS_PER_UNIT;
 }
@@ -237,9 +308,10 @@ function trackedReviewedDocs(stablecoinId: string): RedemptionDocSource[] {
 }
 
 /** Offchain-issuer base config.
- *  Uses supply-full capacity since the full supply is eventually redeemable,
- *  while the route-family cap (65) constrains the final score to reflect
- *  the inherent delays and access restrictions of institutional redemption. */
+ *  The supply-full model is an authoring default, not evidence that every holder
+ *  can redeem the full supply: each config must carry its own capacity sources,
+ *  and unsupported rows stay heuristic/unquantified. The route-family cap (65)
+ *  still bounds the score for institutional delays and access restrictions. */
 export const issuerBase: RedemptionBackstopConfig = {
   routeFamily: "offchain-issuer",
   accessModel: "issuer-api",

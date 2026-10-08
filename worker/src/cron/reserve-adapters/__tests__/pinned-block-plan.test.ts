@@ -4,12 +4,12 @@ import type * as Rpc from "../../../lib/evm-rpc";
 vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
   ...await importOriginal<typeof Rpc>(),
   fetchEvmBlockNumber: vi.fn(),
-  fetchEvmBlockTimestamp: vi.fn(),
+  fetchEvmBlockHeader: vi.fn(),
   fetchEvmMulticall3Aggregate3AtBlock: vi.fn(),
   fetchEvmUint256AtBlock: vi.fn(),
 }));
 
-import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmUint256AtBlock } from "../../../lib/evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmUint256AtBlock } from "../../../lib/evm-rpc";
 import { pinnedBlockPlan } from "../evm-observation-plan";
 import { fetchOnchainMulticall3, makeOnchainCallers } from "../onchain";
 import { validateAdapterOutput } from "../validate";
@@ -21,7 +21,9 @@ const calls = [{ label: "quantity", contract, data: "0x18160ddd" }];
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(fetchEvmBlockNumber).mockResolvedValue(100);
-  vi.mocked(fetchEvmBlockTimestamp).mockResolvedValue(1_800_000_000);
+  vi.mocked(fetchEvmBlockHeader).mockResolvedValue({
+    number: 100, timestamp: 1_800_000_000, hash: `0x${"11".repeat(32)}`,
+  });
 });
 
 describe("pinnedBlockPlan", () => {
@@ -46,12 +48,12 @@ describe("pinnedBlockPlan", () => {
     expect(await caller.uint256(contract, calls[0].data)).toBe(100n);
     expect((await pinnedBlockPlan({ chain, signal, ctx: plan.ctx })).observedBlock).toEqual(plan.observedBlock);
     expect(fetchEvmBlockNumber).toHaveBeenCalledTimes(1);
-    expect(fetchEvmBlockTimestamp).toHaveBeenCalledWith(chain, 100, expect.objectContaining({ signal }));
+    expect(fetchEvmBlockHeader).toHaveBeenCalledWith(chain, 100, expect.objectContaining({ signal }));
   });
 
-  it("fails closed when the anchor timestamp cannot be established", async () => {
-    vi.mocked(fetchEvmBlockTimestamp).mockResolvedValue(null);
-    await expect(pinnedBlockPlan({ chain, signal: new AbortController().signal })).rejects.toThrow("observation block timestamp");
+  it("fails closed when the numbered anchor header cannot be established", async () => {
+    vi.mocked(fetchEvmBlockHeader).mockResolvedValue(null);
+    await expect(pinnedBlockPlan({ chain, signal: new AbortController().signal })).rejects.toThrow(/observation block header/);
     expect(fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
   });
 

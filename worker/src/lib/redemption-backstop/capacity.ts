@@ -5,7 +5,6 @@ import {
 } from "@shared/lib/redemption-backstop-providers";
 import {
   resolveCapacityBasis,
-  resolveReserveSyncCapacityConfidence,
   type CapacityResolution,
   type CapacityResolverContext,
   type RedemptionBackstopBuildOptions,
@@ -14,10 +13,10 @@ import { resolveFixedUsdCapacity } from "../redemption-backstop-capacity/fixed-u
 import { resolveReserveSyncCapacity } from "../redemption-backstop-capacity/reserve-sync";
 import { resolveSupplyFullCapacity } from "../redemption-backstop-capacity/supply-full";
 import { resolveSupplyRatioCapacity } from "../redemption-backstop-capacity/supply-ratio";
+import { resolveExecutableObserverCapacity } from "../redemption-backstop-capacity/executable-observer";
 
 export {
   resolveCapacityBasis,
-  resolveReserveSyncCapacityConfidence,
   type CapacityResolution,
   type RedemptionBackstopBuildOptions,
 };
@@ -33,6 +32,7 @@ export async function resolveRedemptionCapacity(
   const context: CapacityResolverContext = { db, stablecoinId, supplyUsd, now, options };
   // Exhaustive dispatch: adding a RedemptionCapacityModel kind without a
   // resolver case fails typecheck via the `satisfies never` default.
+  // Static resolvers return synchronously; this boundary owns the public Promise.
   switch (model.kind) {
     case "unquantified": {
       const provider = REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[REDEMPTION_BACKSTOP_PROVIDER_IDS.UNQUANTIFIED_MODEL];
@@ -66,6 +66,8 @@ export async function resolveRedemptionCapacity(
       return resolveFixedUsdCapacity(model, context);
     case "reserve-sync-metadata":
       return resolveReserveSyncCapacity(model, context);
+    case "executable-observer":
+      return resolveExecutableObserverCapacity(model, context);
     default:
       return model satisfies never;
   }

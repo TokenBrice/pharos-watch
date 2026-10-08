@@ -1,4 +1,26 @@
 {
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "axis-susdx",
+    "display": {
+      "url": "https://docs.axis.to/reference/staking-contracts.md",
+      "label": "Axis active-share USDx accounting"
+    },
+    "inputs": { "primary": { "kind": "onchain-evm", "chain": "ethereum", "rpcMode": "alchemy" } },
+    "params": {
+      "slice": {
+        "name": "USDx principal and vested rewards in the StakedUSDx vault",
+        "risk": "high",
+        "coinId": "usdx-axis",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xa1fa7777974312f7d801a8880714a218f76233f8"
+      },
+      "redemptionRoute": "async-request",
+      "redemptionLock": [{ "selector": "cooldownDuration()", "kind": "cooldown-seconds" }]
+    }
+  },
   "id": "susdx-axis",
   "name": "Staked Axis USD",
   "symbol": "sUSDx",

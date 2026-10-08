@@ -173,6 +173,7 @@
         "reviewedAt": "2026-07-22",
         "evidenceRef": "https://stablecorp.ca/transparency"
       },
+      "reserveUnit": "CAD",
       "reserveProbe": {
         "kind": "json-path",
         "path": [
@@ -185,13 +186,11 @@
           "totalSupply"
         ]
       },
-      "timestampProbe": {
-        "kind": "json-path",
-        "path": [
-          "chains",
-          "0",
-          "lastSyncedAt"
-        ]
+      "liabilityTimestampComponents": {
+        "path": ["chains"],
+        "identityField": "chain",
+        "timestampField": "lastSyncedAt",
+        "quantityField": "totalSupply"
       },
       "reserveSourceLabel": "Stablecorp balances API"
     }

@@ -4,16 +4,25 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { mockLiveReserveAdapterRegistry, getReserveAdapterMock, shouldAttemptFetchMock, recordOutcomeSafeMock } from "./live-reserves.test-support";
 
-vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => mockWorkerRuntimeRegistry({ stablecoins: Array.from({ length: 8 }, (_, index) => ({
-  id: `coin-${index}`, name: `Coin ${index}`, symbol: `C${index}`,
-  flags: { backing: "rwa-backed", pegCurrency: "USD", governance: "centralized", yieldBearing: false, rwa: true, navToken: false },
-  liveReservesConfig: { adapter: "m0", version: 1, semantics: "collateral-mix", inputs: { primary: { kind: "http-json", url: `https://example.com/${index}` } } },
-})) }));
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
+  const registry = mockWorkerRuntimeRegistry({ stablecoins: Array.from({ length: 8 }, (_, index) => ({
+    id: `coin-${index}`, name: `Coin ${index}`, symbol: `C${index}`,
+    flags: { backing: "rwa-backed", pegCurrency: "USD", governance: "centralized", yieldBearing: false, rwa: true, navToken: false },
+    liveReservesConfig: { adapter: "m0", version: 1, semantics: "collateral-mix", inputs: { primary: { kind: "http-json", url: `https://example.com/${index}` } } },
+  })) });
+  return {
+    ...registry,
+    WORKER_TRACKED_STABLECOINS: [...registry.WORKER_TRACKED_STABLECOINS],
+    WORKER_TRACKED_META_BY_ID: new Map(registry.WORKER_TRACKED_META_BY_ID),
+  };
+});
 
 import { CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import { syncReserveCoin } from "../sync-live-reserves-core";
 import { syncLiveReserves } from "../sync-live-reserves";
-import { recoverLiveReserveConfigChanges } from "../reserve-recovery-config";
+import { recoverLiveReserveConfigChanges, selectReserveSupplyAdmissionBootstrapTargets } from "../reserve-recovery-config";
+import { WORKER_TRACKED_STABLECOINS, WORKER_TRACKED_META_BY_ID, WORKER_ACTIVE_STABLECOINS, WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import type { WorkerRuntimeStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { loadFreshIndependentLiveReserveMap } from "../../lib/live-reserves/store";
 import type { ConfiguredCoin, LiveReserveConfig } from "../sync-live-reserves-shared";
 import type { AdapterContext } from "../reserve-adapters/index";
@@ -24,7 +33,11 @@ const fixtures = createLatestSchemaFixtureTracker();
 const slices = [{ name: "Treasuries", pct: 100, risk: "low" as const }];
 const signal = () => new AbortController().signal;
 const good = async () => ({ slices, metadata: { freshnessMode: "verified" as const, sourceTimestamp: Math.floor(Date.now() / 1000) } });
-afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); vi.useRealTimers(); });
+afterEach(() => {
+  WORKER_TRACKED_STABLECOINS.splice(8);
+  (WORKER_TRACKED_META_BY_ID as Map<string, WorkerRuntimeStablecoinMeta>).delete("jltxx-jpmorgan");
+  fixtures.closeAll(); vi.restoreAllMocks(); vi.useRealTimers();
+});
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-10-07T01:00:00Z"));
@@ -53,6 +66,130 @@ async function seed(mismatches = 1) {
   fetch.mockClear();
   return { ...fixture, fetch };
 }
+
+function bootstrapCoin(): WorkerRuntimeStablecoinMeta {
+  return {
+    ...WORKER_TRACKED_STABLECOINS[0]!,
+    id: "jltxx-jpmorgan", status: "quarantined", navToken: true,
+    flags: { ...WORKER_TRACKED_STABLECOINS[0]!.flags, navToken: true },
+    liveReservesConfig: {
+      adapter: "jpmorgan-nav", version: 1, semantics: "single-asset",
+      inputs: { primary: { kind: "http-html", url: "https://example.com/jltxx" } },
+      bootstrapForSupplyAdmission: { reviewBy: "2026-10-10" }, params: {},
+    },
+  };
+}
+
+function registerBootstrapCoin(coin: WorkerRuntimeStablecoinMeta): void {
+  WORKER_TRACKED_STABLECOINS.push(coin);
+  (WORKER_TRACKED_META_BY_ID as Map<string, WorkerRuntimeStablecoinMeta>).set(coin.id, coin);
+  expect(WORKER_ACTIVE_STABLECOINS.some((active) => active.id === coin.id)).toBe(false);
+  expect(WORKER_ACTIVE_IDS.has(coin.id)).toBe(false);
+}
+
+describe("quarantined supply-prerequisite reserve bootstrap", () => {
+  it.each(["checked", "producer-priority", "lease-held"] as const)(
+    "reports expired bootstrap identity on %s without initializing an adapter or consuming a binding", async (mode) => {
+      const { db, sqlite, fetch } = await seed(0);
+      const coin = bootstrapCoin();
+      coin.liveReservesConfig!.bootstrapForSupplyAdmission = { reviewBy: "2026-10-07" };
+      registerBootstrapCoin(coin);
+      if (mode === "producer-priority") sqlite.prepare("UPDATE cron_slot_executions SET state = 'running'").run();
+      else if (mode === "lease-held") sqlite.prepare("INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at) VALUES (?, ?, ?, ?, ?)")
+        .run("sync-live-reserves", "producer", Math.floor(Date.now() / 1000) + 900, Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000));
+      getReserveAdapterMock.mockClear();
+      expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({
+        disposition: mode === "checked" ? "config-recovery-checked"
+          : mode === "producer-priority" ? "config-recovery-priority" : "config-recovery-skipped",
+        supplyAdmissionBootstrapExpired: [coin.id], attempted: [],
+      });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_sync_state WHERE stablecoin_id = ?").get(coin.id)).toEqual({ count: 0 });
+      expect(getReserveAdapterMock).not.toHaveBeenCalled();
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+  it("publishes once through durable recovery without changing quarantine or the active queue", async () => {
+    const { db, sqlite, fetch } = await seed(0);
+    const coin = bootstrapCoin();
+    registerBootstrapCoin(coin);
+    const activeIds = CONFIGURED_COINS.map((item) => item.id);
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({
+      mismatchCount: 0, supplyAdmissionBootstrapIds: [coin.id], supplyAdmissionBootstrapExpired: [],
+      attempted: [coin.id], healed: [coin.id],
+    });
+    expect(sqlite.prepare("SELECT config_fingerprint FROM reserve_composition WHERE stablecoin_id = ?").get(coin.id))
+      .toEqual({ config_fingerprint: computeLiveReserveConfigFingerprint(coin.liveReservesConfig!) });
+    expect(coin.status).toBe("quarantined");
+    expect(CONFIGURED_COINS.map((item) => item.id)).toEqual(activeIds);
+    expect((await loadFreshIndependentLiveReserveMap(db)).has(coin.id)).toBe(false);
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ attempted: [], supplyAdmissionBootstrapCount: 0 });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("consumes a failed binding once even if the authorization deadline changes", async () => {
+    const { db, sqlite } = await seed(0);
+    const coin = bootstrapCoin();
+    registerBootstrapCoin(coin);
+    const fetch = mockLiveReserveAdapterRegistry(async () => { throw new Error("issuer unavailable"); });
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ failed: [coin.id], healed: [] });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_composition WHERE stablecoin_id = ?").get(coin.id)).toEqual({ count: 0 });
+    coin.liveReservesConfig!.bootstrapForSupplyAdmission = { reviewBy: "2026-11-10" };
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ attempted: [], supplyAdmissionBootstrapCount: 0 });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["active", "pre-launch", "frozen", "delisted"] as const)("excludes %s regardless of authorization", (status) => {
+    const coin = { ...bootstrapCoin(), status };
+    expect(selectReserveSupplyAdmissionBootstrapTargets([coin], new Map(), new Map(), () => true, Date.now())).toEqual([]);
+  });
+
+  it("excludes absent/expired/invalid authorization, suspension, unknown source and missing fetcher", () => {
+    const coin = bootstrapCoin();
+    const config = coin.liveReservesConfig!;
+    const select = (candidate: WorkerRuntimeStablecoinMeta, hasFetcher = true) =>
+      selectReserveSupplyAdmissionBootstrapTargets([candidate], new Map(), new Map(), () => hasFetcher, Date.now());
+    for (const replacement of [
+      { ...config, bootstrapForSupplyAdmission: undefined },
+      { ...config, bootstrapForSupplyAdmission: { reviewBy: "2026-10-07" } },
+      { ...config, bootstrapForSupplyAdmission: { reviewBy: "2026-02-30" } },
+      { ...config, suspended: { since: "2026-10-01", reason: "incomplete scope" } },
+      { ...config, adapter: "m0" as const },
+      { ...config, inputs: { primary: { kind: "http-html" as const, url: "invalid" } } },
+    ]) expect(select({ ...coin, liveReservesConfig: replacement })).toEqual([]);
+    expect(select(coin, false)).toEqual([]);
+    const fingerprint = computeLiveReserveConfigFingerprint(config);
+    expect(selectReserveSupplyAdmissionBootstrapTargets([coin], new Map([[coin.id, fingerprint]]), new Map(), () => true, Date.now())).toEqual([]);
+    expect(selectReserveSupplyAdmissionBootstrapTargets([coin], new Map(), new Map([[coin.id, fingerprint]]), () => true, Date.now())).toEqual([]);
+  });
+
+  it.each(["producer", "heavy"] as const)("keeps an untouched opportunity after %s priority deferral", async (lane) => {
+    const { db, sqlite, fetch } = await seed(0);
+    const coin = bootstrapCoin();
+    registerBootstrapCoin(coin);
+    if (lane === "producer") sqlite.prepare("UPDATE cron_slot_executions SET state = 'running'").run();
+    else sqlite.prepare(`INSERT INTO cron_slot_executions
+      (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
+      VALUES ('halfHourlyChartsOffset', ?, 'running', 'heavy', 1, ?, ?)`)
+      .run(Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000));
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ disposition: "config-recovery-priority", attempted: [] });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_sync_state WHERE stablecoin_id = ?").get(coin.id)).toEqual({ count: 0 });
+    expect(fetch).not.toHaveBeenCalled();
+    sqlite.prepare("UPDATE cron_slot_executions SET state = 'finished', finished_at = ?").run(Math.floor(Date.now() / 1000) - 1);
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ healed: [coin.id] });
+  });
+
+  it("fences simultaneous prerequisite writers under the existing family lease", async () => {
+    const { db, fetch } = await seed(0);
+    const coin = bootstrapCoin();
+    registerBootstrapCoin(coin);
+    const results = await Promise.all([
+      recoverLiveReserveConfigChanges(db, signal(), {}),
+      recoverLiveReserveConfigChanges(db, signal(), {}),
+    ]);
+    expect(results.flatMap((result) => result.healed)).toEqual([coin.id]);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe("deploy config reserve recovery", () => {
   it("rejects the old generation, fetches/admit the deployed fingerprint, and does not fetch again", async () => {

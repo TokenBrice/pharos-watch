@@ -47,7 +47,7 @@ export const entry: ChangelogEntry = {
       label: "Direct CEX telemetry retirement",
       tag: "infra",
       description:
-        "Removed non-scoring direct Binance/Coinbase/Kraken depth telemetry, dormant exact Kraken observer/review-producer/runtime paths and disabled BTCUSD provider placeholders. Orderbook admission closes to research-only/diagnostic: public books do not prove same-run account, deposit, withdrawal, fee or maximum-settlement gates, and no current reviewed Kraken model existed. Ordinary exchange pricing, CoinGecko synthetic orderbook pools, generic direct-orderbook-depth evidence, redemption/ERC-4626 routes and pool/TVL/supply accounting remain. The coordinated Safety policy release requires neutral captured-input replay; no equivalence result is claimed.",
+        "Removed non-scoring direct Binance/Coinbase/Kraken depth telemetry, dormant exact Kraken observer/review-producer/runtime paths and disabled BTCUSD provider placeholders. Orderbook admission closes to research-only/diagnostic: public books do not prove same-run account, deposit, withdrawal, fee or maximum-settlement gates, and no current reviewed Kraken model existed. Ordinary exchange pricing, CoinGecko synthetic orderbook pools, generic direct-orderbook-depth evidence, redemption/ERC-4626 routes and pool/TVL/supply accounting remain. The coordinated Safety v10.12 policy release requires neutral captured-input replay; no equivalence result is claimed.",
     },
     {
       label: "Permanent fallback diagnostics and bounded retention",
@@ -152,10 +152,10 @@ export const entry: ChangelogEntry = {
         "Attestation indexes no longer invent redemption telemetry from reserve-report dates; original balance clocks, the 33-day source-age ceiling and genuine stale-redemption rejection remain. Removed only seven acknowledgements of that obsolete fabricated error. ZARP/Ripio/USDU/ZARSC indexes validate report identity/date while composition stays static; AUDD's AUP gives no assurance opinion, and BRLV/AUDM remain issuer-attested. Retired unused Solomon legacy, USDH, Abracadabra MIM, StoneYield and OpenEden USDO runtime tails plus USDY automatic newest-report discovery because two natural supported publications were unproven; archived/curated coin evidence, replacement Chancery/ONRE, active cUSDO and retained quarantined TBILL configuration, and USDY reviewed generations/manual refresh remain.",
     },
     {
-      label: "MYRC exact-PDF verifier is staged, not admitted",
+      label: "MYRC released independent assurance retained",
       tag: "coverage",
       description:
-        "Added offline exact-PDF compilation and staged/unbound MYRC ISAE 3000 verification; the current August report is stale and cannot activate independent scoring. Both MYRC source keys and source-owned evidence scopes migrate together, preserving original review clocks, weights, custody unknowns and the MYR 0.03 discrepancy; static adapter config v2 excludes old fingerprints. The live index stays static until a fresh <=33-day favorable complete opinion/book, reviewed 1 MYRC = 1 MYR basis, >=60% publication coverage and first-write/recovery packet pass. No MYR quantity becomes USD by relabeling.",
+        "Retained upstream's myrc-independent-assurance adapter with official newest-report discovery and exact examined-PDF verification, replacing the branch's staged-only Blox proposal. Cash and Halogen fund source identities and source-owned evidence scopes remain aligned, preserving original review clocks, weights, custody unknowns and the MYR 0.03 discrepancy. August 31 balances remain subject to the 33-day cap; September 29 signing/upload/access cannot renew them. The reviewed MYR basis and complete favorable opinion/book gates remain, with no further evidence promotion or production-health claim in this retirement release.",
     },
     {
       label: "Yield collector retirement without historical erasure",

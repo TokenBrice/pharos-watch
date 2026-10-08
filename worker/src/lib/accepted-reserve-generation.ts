@@ -8,11 +8,12 @@ import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserves/store-shared";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReserveSnapshotMetadataRecord } from "./live-reserves/store-shared";
 import { assessReserveSnapshotFreshness, evaluateLiveReserveAdmission, hasScoringEligibleLiveReserveFreshness } from "./live-reserves/store-snapshot-state";
-import { MALFORMED_REDEMPTION_TELEMETRY, parseSnapshotMetadata, parseWarnings } from "./live-reserves/store-row-decoding";
+import { parseSnapshotMetadata, parseWarnings } from "./live-reserves/store-row-decoding";
+import { decodeLiveReserveRedemptionTelemetry, LiveReserveDiagnosticsSchema } from "@shared/types/live-reserves";
 import type { ScheduledCheckpointIdentity } from "./scheduled-recovery-checkpoint";
 import type { CronResult } from "./cron-logger";
 
-export const ACCEPTED_RESERVE_GENERATION_KEY = "live-reserves:accepted-generation:v1";
+export const ACCEPTED_RESERVE_GENERATION_KEY = "live-reserves:accepted-generation:v2";
 export class AcceptedReserveViewError extends Error {
   constructor(readonly reason: "accepted-reserve-view-unavailable" | "accepted-reserve-view-invalid") { super(reason); }
 }
@@ -55,7 +56,7 @@ export async function sealAcceptedReserveGeneration(db: D1Database, identity: Sc
     ORDER BY cohort.stablecoin_id`).bind(JSON.stringify(memberIds)).all<ProjectedMemberRow>();
   if (rows.results.length !== memberIds.length || new Set(rows.results.map((row) => row.stablecoin_id)).size !== memberIds.length || rows.results.some((row) => !memberIds.includes(row.stablecoin_id))) throw new Error("accepted reserve member census mismatch");
   const content: Omit<AcceptedReserveGeneration, "contentSha256"> = {
-    schemaVersion: 1, generationId: `reserve:${identity.slotStartedAt}:${queueHash}`,
+    schemaVersion: 2, generationId: `reserve:${identity.slotStartedAt}:${queueHash}`,
     root: { scheduleKey: "fourHourlyReserveSync", slotStartedAt: identity.slotStartedAt, queueHash },
     sealedBy: { attemptNo: identity.attemptNo, executionGeneration: identity.executionGeneration, invocationId: identity.invocationId },
     producerCompletedAtSec: completedAtSec,
@@ -67,12 +68,17 @@ export async function sealAcceptedReserveGeneration(db: D1Database, identity: Sc
       const finalWarnings = legacyFallback && warnings.length === 0 ? parseWarnings(row.state_warnings) : warnings;
       const adapterKey = WORKER_TRACKED_META_BY_ID.get(row.stablecoin_id)?.liveReservesConfig?.adapter;
       const adapter = adapterKey ? getLiveReserveAdapterDefinition(adapterKey) : undefined;
-      let malformed = MALFORMED_REDEMPTION_TELEMETRY in finalMetadata;
+      let malformed = decodeLiveReserveRedemptionTelemetry(finalMetadata).status === "invalid";
+      const diag = finalMetadata.diag;
+      if (diag && Object.prototype.hasOwnProperty.call(diag, "rawSumDeviation") &&
+        !LiveReserveDiagnosticsSchema.shape.rawSumDeviation.unwrap().safeParse(diag.rawSumDeviation).success) malformed = true;
       try {
-        const rawMetadata: unknown = row.metadata ? JSON.parse(row.metadata) : {};
-        const rawWarnings: unknown = row.warnings ? JSON.parse(row.warnings) : [];
+        const selectedMetadata = finalMetadata === metadata ? row.metadata : row.state_metadata;
+        const selectedWarnings = finalWarnings === warnings ? row.warnings : row.state_warnings;
+        const rawMetadata: unknown = selectedMetadata ? JSON.parse(selectedMetadata) : {};
+        const rawWarnings: unknown = selectedWarnings ? JSON.parse(selectedWarnings) : [];
         if (!rawMetadata || typeof rawMetadata !== "object" || Array.isArray(rawMetadata)) malformed = true;
-        if (!Array.isArray(rawWarnings) || rawWarnings.length !== warnings.length) malformed = true;
+        if (!Array.isArray(rawWarnings) || rawWarnings.length !== finalWarnings.length) malformed = true;
       } catch { malformed = true; }
       const parsed = AcceptedReserveSnapshotSchema.safeParse({ stablecoinId: row.stablecoin_id, fetchedAt: row.fetched_at, attemptId: row.attempt_id ?? null,
         source: row.source, metadata: finalMetadata, warnings: finalWarnings, warningCount: row.warning_count ?? finalWarnings.length,
@@ -118,31 +124,49 @@ export function consumedReserveInput(envelope: AcceptedReserveGeneration, stable
   return { generationId: envelope.generationId, contentSha256: envelope.contentSha256, stablecoinId, attemptId: snapshot.attemptId, configFingerprint: snapshot.configFingerprint, freshness: record.admission.freshness };
 }
 
+export type RedemptionReserveQuarantineReason = "config-mismatch" | "freshness-unverified" | "stale";
+
+/**
+ * `state` judges the run's binding integrity; an asset whose consumed reserve
+ * evidence is no longer scoring-admissible is quarantined alone (R8) so one
+ * coin cannot withhold every redemption row.
+ */
+export interface ConsumedRedemptionReserveAssessment {
+  state: "fresh" | "unavailable";
+  quarantined: Readonly<Record<string, RedemptionReserveQuarantineReason>>;
+}
+
+const UNAVAILABLE_CONSUMED_RESERVES: ConsumedRedemptionReserveAssessment = { state: "unavailable", quarantined: {} };
+
 /** Immutable row census is mandatory; no inferred bindings for legacy manifests. */
-export function assessConsumedRedemptionReserves(entries: readonly RedemptionBackstopEntry[], metadata: unknown, runClockSec: number, now: number): "fresh" | "stale" | "unavailable" {
+export function assessConsumedRedemptionReserves(entries: readonly RedemptionBackstopEntry[], metadata: unknown, runClockSec: number, now: number): ConsumedRedemptionReserveAssessment {
   const parsed = RedemptionReserveRunMetadataSchema.safeParse(metadata);
-  if (!parsed.success || parsed.data.runClockSec !== runClockSec) return "unavailable";
+  if (!parsed.success || parsed.data.runClockSec !== runClockSec) return UNAVAILABLE_CONSUMED_RESERVES;
   const census = parsed.data.consumedReserveInputs;
+  const quarantined: Record<string, RedemptionReserveQuarantineReason> = {};
   let consumed = 0;
-  let stale = false;
   for (const entry of entries) {
     const input = entry.reserveInput;
-    if (!input) { if (census[entry.stablecoinId]) return "unavailable"; continue; }
+    if (!input) { if (census[entry.stablecoinId]) return UNAVAILABLE_CONSUMED_RESERVES; continue; }
     consumed++;
-    if (!census[entry.stablecoinId]) return "unavailable";
-    if (input.stablecoinId !== entry.stablecoinId || input.generationId !== parsed.data.reserveGenerationId || input.contentSha256 !== parsed.data.reserveContentSha256 || stableJsonStringifyV1(census[entry.stablecoinId]) !== stableJsonStringifyV1(input) || input.attemptId !== input.freshness.attemptId) return "unavailable";
+    if (!census[entry.stablecoinId]) return UNAVAILABLE_CONSUMED_RESERVES;
+    if (input.stablecoinId !== entry.stablecoinId || input.generationId !== parsed.data.reserveGenerationId || input.contentSha256 !== parsed.data.reserveContentSha256 || stableJsonStringifyV1(census[entry.stablecoinId]) !== stableJsonStringifyV1(input) || input.attemptId !== input.freshness.attemptId) return UNAVAILABLE_CONSUMED_RESERVES;
+    const f = input.freshness;
+    if (f.fetchedAt === null || f.fetchedAt > runClockSec || f.assessedAt !== runClockSec || f.fetchAgeSec !== f.assessedAt - f.fetchedAt || f.fetchBudgetSec !== LIVE_RESERVE_FRESHNESS_SEC) return UNAVAILABLE_CONSUMED_RESERVES;
     const coin = WORKER_TRACKED_META_BY_ID.get(entry.stablecoinId);
     const config = coin?.liveReservesConfig;
-    if (!coin || !config || config.suspended || (input.configFingerprint !== null && computeLiveReserveConfigFingerprint(config) !== input.configFingerprint)) return "unavailable";
-    const f = input.freshness;
-    if (f.fetchedAt === null || f.fetchedAt > runClockSec || f.assessedAt !== runClockSec || f.fetchAgeSec !== f.assessedAt - f.fetchedAt || f.fetchBudgetSec !== LIVE_RESERVE_FRESHNESS_SEC) return "unavailable";
+    if (!coin || !config || config.suspended || computeLiveReserveConfigFingerprint(config) !== input.configFingerprint) {
+      quarantined[entry.stablecoinId] = "config-mismatch";
+      continue;
+    }
     const snapshot = { fetchedAt: f.fetchedAt, attemptId: f.attemptId, metadata: {
-      freshnessMode: f.sourceTimestamp === null ? "not-applicable" as const : "verified" as const,
+      ...(f.freshnessMode !== null ? { freshnessMode: f.freshnessMode } : {}),
       ...(f.sourceTimestamp !== null ? { sourceTimestamp: f.sourceTimestamp } : {}),
+      diag: { invalidFreshness: f.sourceFreshnessInvalid },
     } };
-    if (!hasScoringEligibleLiveReserveFreshness(snapshot.metadata, now)) return "unavailable";
-    if (f.stale || assessReserveSnapshotFreshness(snapshot, coin, now, LIVE_RESERVE_FRESHNESS_SEC).stale) stale = true;
+    if (!hasScoringEligibleLiveReserveFreshness(snapshot.metadata, now)) quarantined[entry.stablecoinId] = "freshness-unverified";
+    else if (f.stale || assessReserveSnapshotFreshness(snapshot, coin, now, LIVE_RESERVE_FRESHNESS_SEC).stale) quarantined[entry.stablecoinId] = "stale";
   }
-  if (consumed !== Object.keys(census).length) return "unavailable";
-  return stale ? "stale" : "fresh";
+  if (consumed !== Object.keys(census).length) return UNAVAILABLE_CONSUMED_RESERVES;
+  return { state: "fresh", quarantined };
 }

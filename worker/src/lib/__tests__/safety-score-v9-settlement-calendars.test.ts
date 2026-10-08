@@ -5,6 +5,7 @@ import { buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-rou
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 import { withRedemptionBackstopConfig } from "./safety-score-v9-extension-routes.test-support";
 import { resolveReviewedRedemptionSettlementDelay } from "@shared/lib/redemption-backstop-configs/settlement";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { ReserveBoundedFactSchema, type V9ReserveBoundedFact } from "@shared/types/reserve-bounded-facts";
 import rawBounds from "@shared/data/safety-score-v9/reserve-bound-facts-v1.json";
 import { resolveV9ReserveFactorBounds } from "@shared/lib/safety-score-v9/reserve-bound-facts";
@@ -29,6 +30,59 @@ function fixed(row: RedemptionBackstopEntry, clockSec = clock): ReportCardsFixed
 }
 
 describe("business-calendar settlement consumers", () => {
+  it.each(["route-only", "processing-gap", "future", "stale"] as const)(
+    "does not let a %s scalar review reuse the producer's persisted favorable SLA", (scenario) => {
+      const scalar = { settlementModel: "days" as const, settlementDelaySec: 86400,
+        reviewedAt: scenario === "future" ? "2026-10-06" : scenario === "stale" ? "2025-01-01" : "2026-10-05",
+        docs: [{ label: "Exact endpoint terms", url: "https://example.com/terms",
+          supports: scenario === "route-only" ? ["route" as const] : ["settlement" as const] }],
+        ...(scenario === "processing-gap" ? { scoringDisposition: "bounded-terms-gap" as const,
+          missingScoringFields: ["settlement" as const], rationale: "Processing starts after unbounded checks; completion is not bounded." } : {}),
+      };
+      const row = makeSupplyFullRedemption({ stablecoinId: "usdc-circle", settlementModel: "days", settlementDelaySec: 86400 });
+      withRedemptionBackstopConfig(row.stablecoinId, { settlementModel: "days", v9RouteReviewTerms: scalar }, () => {
+        expect(resolveReviewedRedemptionSettlementDelay(scalar, clock)).toBeUndefined();
+        expect(buildSafetyScoreV9RouteReviews(fixed(row), row.stablecoinId)[0]).toMatchObject({
+          settlementModel: "bounded-delay", settlementSlaSec: null, settlementHorizonSec: 14 * 86400,
+        });
+      });
+    },
+  );
+  it("admits a current scalar for a sourced completed exact endpoint", () => {
+    expect(resolveReviewedRedemptionSettlementDelay({
+      settlementDelaySec: 259200, reviewedAt: "2026-10-05",
+      docs: [{ label: "Funded claim after maturity", url: "https://example.com/funded-claim", supports: ["settlement"] }],
+    }, clock)).toBe(259200);
+  });
+  it.each(["eutbl-spiko", "ustbl-spiko", "safo-spiko-usd", "eursafo-spiko"])(
+    "keeps %s issuer zero fee without inventing an unconditional cash-completion scalar", (assetId) => {
+      const config = getRedemptionBackstopConfig(assetId)!;
+      const row = makeSupplyFullRedemption({ stablecoinId: assetId, settlementModel: "same-day", settlementDelaySec: 86400, feeBps: 0 });
+      const clockSec = Date.parse("2026-10-07T12:00:00Z") / 1000;
+      expect(config.costModel).toMatchObject({ kind: "fee-bps", feeBps: 0 });
+      expect(config.v9RouteReviewTerms!.missingScoringFields).toContain("settlement");
+      expect(buildSafetyScoreV9RouteReviews(fixed(row, clockSec), assetId)[0]).toMatchObject({
+        coverageClass: "diagnostic", settlementModel: "bounded-delay", settlementSlaSec: null,
+      });
+    },
+  );
+  it("retains APY's reviewed funded-claim maturity rather than treating every queue as unbounded", () => {
+    const assetId = "apyusd-apyx";
+    const row = makeSupplyFullRedemption({ stablecoinId: assetId, routeFamily: "queue-redeem", settlementModel: "queued" });
+    const clockSec = Date.parse("2026-10-07T12:00:00Z") / 1000;
+    expect(buildSafetyScoreV9RouteReviews(fixed(row, clockSec), assetId)[0])
+      .toMatchObject({ settlementModel: "queued", settlementSlaSec: 259200 });
+  });
+  it.each(["hbd-hive", "syusd-aegis", "usp-pikudao", "avusd-avant", "savusd-avant", "hbusdt-hyperbeat", "usn-noon",
+    "ustbl-spiko", "safo-spiko-usd", "uktbl-spiko", "gbpsafo-spiko", "eutbl-spiko", "eursafo-spiko", "spkcc-spiko", "eurspkcc-spiko"])(
+    "does not promote %s processing/cooldown/conditional terms into completed settlement", (assetId) => {
+      const config = getRedemptionBackstopConfig(assetId)!;
+      const row = makeSupplyFullRedemption({ stablecoinId: assetId, routeFamily: config.routeFamily,
+        settlementModel: config.settlementModel });
+      expect(buildSafetyScoreV9RouteReviews(fixed(row, Date.parse("2026-10-07T12:00:00Z") / 1000), assetId)[0])
+        .toMatchObject({ coverageClass: "diagnostic", settlementSlaSec: null });
+    },
+  );
   it("projects a current binding guarantee using its worst reviewed annual holiday walk", () => {
     const row = makeSupplyFullRedemption({ stablecoinId: "usdc-circle", settlementModel: "days", settlementDelaySec: undefined });
     withRedemptionBackstopConfig(row.stablecoinId, { settlementModel: "days", v9RouteReviewTerms: reviewed }, () => {

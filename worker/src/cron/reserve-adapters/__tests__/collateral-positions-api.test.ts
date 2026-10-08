@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { adaptCollateralPositions } from "../collateral-positions-api";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
-import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "../validate";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import {
   runAdapter,
   type AdapterNetworkSpec,
@@ -26,6 +26,20 @@ describe("adaptCollateralPositions", () => {
     expect(adaptCollateralPositions(COLLATERAL_POSITIONS_BY_ASSET, incomplete).metadata?.freshnessMode).toBe("unverified");
   });
 
+  it("withholds source freshness when every material price timestamp is missing or invalid", () => {
+    for (const timestamp of [undefined, 0, Number.NaN]) {
+      const prices = Object.fromEntries(Object.entries(COLLATERAL_POSITION_PRICES).map(([address, price]) => [
+        address, { ...price, timestamp },
+      ]));
+      const result = adaptCollateralPositions(COLLATERAL_POSITIONS_BY_ASSET, prices);
+      expect(result.metadata?.freshnessMode).toBe("unverified");
+      expect(result.metadata?.sourceTimestamp).toBeUndefined();
+      expect(result.warnings).toEqual(expect.arrayContaining([
+        expect.objectContaining({ code: "price-timestamp-coverage", effect: "degraded" }),
+      ]));
+    }
+  });
+
   it("aggregates open collateral positions into reserve slices and folds small tails into Other", () => {
     const result = adaptCollateralPositions(
       COLLATERAL_POSITIONS_BY_ASSET,
@@ -42,7 +56,7 @@ describe("adaptCollateralPositions", () => {
       collateralAssetCount: 3,
       activePositionCount: 3,
       missingPriceCount: 0,
-      freshnessMode: "not-applicable",
+      freshnessMode: "unverified",
     });
   });
 
@@ -142,7 +156,7 @@ describe("adaptCollateralPositions", () => {
       },
       0,
     );
-    expect(result.warnings).toBeUndefined();
+    expect(result.warnings?.map((warning) => warning.code) ?? []).not.toContain("unknown-asset");
     expect(result.slices).toContainEqual({
       sourceKey: "collateral-positions-api:ysybold",
       name: "ysyBOLD (Staked yBOLD)",
@@ -201,7 +215,7 @@ describe("adaptCollateralPositions", () => {
       0,
     );
 
-    expect(result.warnings).toBeUndefined();
+    expect(result.warnings?.map((warning) => warning.code) ?? []).not.toContain("unknown-asset");
     expect(result.slices).toEqual([
       { sourceKey: "collateral-positions-api:chfau", name: "CHFAU (AllUnity CHF)", pct: 100, risk: "low", coinId: "chfau-allunity", depType: "collateral" },
     ]);

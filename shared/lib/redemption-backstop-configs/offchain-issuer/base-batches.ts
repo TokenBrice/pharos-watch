@@ -91,6 +91,11 @@ const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
       "https://www.gate.com/learn/articles/gusd-redemption-flexible-exit-options-for-stable-and-transparent-yield/11559",
       ["fees", "settlement"],
     ),
+    sourceRef(
+      "Gate GUSD zero-fee redemption quota announcement (2026-07-16; reviewed 2026-10-07)",
+      "https://miniapp.gate.com/announcements/article/100710",
+      ["route", "fees", "access"],
+    ),
   ],
   "reur-royal-euro": [sourceRefRouteCapacityAccess("REUR", "https://www.rcoins.digital/REUR.html")],
   "rusd-royal-dollar": [sourceRefRouteCapacityAccess("RUSD", "https://www.rcoins.digital/RUSD.html")],
@@ -228,12 +233,37 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
     ["wbrl-ripio", "wclp-ripio", "wcop-ripio", "wpen-ripio", "wmxn-ripio"],
     {
       ...issuerBase,
-      reviewedAt: "2026-05-17",
+      capacityModel: { kind: "unquantified" },
+      holderEligibility: "unknown",
+      routeStatus: "unknown",
+      settlementModel: "days",
+      reviewedAt: "2026-10-07",
+      v9RouteReviewTerms: {
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields: ["capacity", "settlement", "cost"],
+        rationale:
+          "The five Ripio product pages and local wallet terms establish platform conversion leads, not token-specific holder redemption obligations, funded capacity, bank-credit deadlines or all-in cost. Generic wFIAT burn-to-bank marketing and reserve attestations do not establish these route bounds; ordinary-holder eligibility remains unknown.",
+        reviewedAt: "2026-10-07",
+        docs: [
+          sourceRef("Ripio wFIAT (undated; reviewed 2026-10-07)", "https://www.ripio.com/en/wfiat", ["route", "access"]),
+          ...[
+            ["wBRL", "wbrl", "br"],
+            ["wCLP", "wclp", "cl"],
+            ["wCOP", "wcop", "co"],
+            ["wMXN", "wmxn", "mx"],
+          ].flatMap(([ticker, slug, country]) => [
+            sourceRef(`Ripio ${ticker} product (reviewed 2026-10-07)`, `https://www.ripio.com/en/cryptocurrencies/${slug}`, ["route", "access"]),
+            sourceRef(`Ripio ${country} wallet terms (reviewed 2026-10-07)`, `https://terms.ripio.com/${country}/wallet`, ["route", "access", "fees", "settlement"]),
+          ]),
+          sourceRef("Ripio wPEN product (reviewed 2026-10-07)", "https://www.ripio.com/en/cryptocurrencies/wpen", ["route", "access"]),
+          sourceRef("Ripio terms index (no Peru terms found; reviewed 2026-10-07)", "https://terms.ripio.com/", ["route", "access"]),
+        ],
+      },
       docs: [
-        sourceRefFull("Ripio local stablecoins", "https://www.ripio.com/en/cryptos/local-stablecoins"),
+        sourceRef("Ripio local stablecoins (reviewed 2026-10-07)", "https://www.ripio.com/en/cryptos/local-stablecoins", ["route", "access"]),
       ],
       notes: [
-        "Reviewed as a heuristic issuer route because current tracked materials describe 1:1 local-currency backing and selected attestations, but do not publish a hard immediate redemption-capacity source for all five Ripio wFIAT entries.",
+        "Current materials describe 1:1 local-currency backing and selected attestations, but establish neither token-specific full-supply redemption rights nor executable capacity for these five Ripio wFIAT entries. Days is diagnostic only, not a same-day or maximum settlement promise.",
       ],
     },
     { sourceFilePath: SOURCE_FILE_PATH },
@@ -246,15 +276,22 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
     ["kgst-kyrgyz-som"],
     {
       ...issuerBase,
-      capacityModel: {
-        kind: "supply-full",
-        confidence: "heuristic",
-      },
+      capacityModel: { kind: "unquantified" },
+      settlementModel: "days",
       holderEligibility: "unknown",
       routeStatus: "unknown",
-      reviewedAt: REVIEWED_NON_USD_BATCH_AT,
+      reviewedAt: "2026-10-07",
+      v9RouteReviewTerms: {
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields: ["capacity", "settlement", "cost"],
+        rationale:
+          "KGST's official site describes KGS reserve backing and a BEP-20 token, but publishes no ordinary-holder redemption procedure or obligation, funded fiat capacity, completion deadline or redemption tariff. Days is a diagnostic category only.",
+        reviewedAt: "2026-10-07",
+        docs: [sourceRef("KGST issuer website (undated; reviewed 2026-10-07)", "https://www.kgstoken.kg/", ["route", "access"])],
+      },
+      docs: [sourceRef("KGST issuer website (undated; reviewed 2026-10-07)", "https://www.kgstoken.kg/", ["route", "access"])],
       notes: [
-        "Current primary issuer materials do not establish an ordinary-holder redemption route or a full-supply redemption obligation, so the route and capacity remain heuristic and unverified.",
+        "Current primary issuer materials do not establish an ordinary-holder redemption route or a full-supply redemption obligation. Eligibility and route status remain unknown; capacity is unquantified rather than inferred from KGS backing.",
       ],
     },
     { sourceFilePath: SOURCE_FILE_PATH },
@@ -333,8 +370,15 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
         ? {
             ...entry.config,
             outputAssets: ["usdc-circle"],
+            reviewedAt: "2026-10-07",
+            docs: [
+              ...entry.config.docs!,
+              sourceRef("Circle USYC smart contracts (reviewed 2026-10-07)", "https://developers.circle.com/tokenized/usyc/smart-contracts", ["route", "access"]),
+              sourceRef("USYC Teller verified implementation (reviewed 2026-10-07)", "https://eth.blockscout.com/api/v2/smart-contracts/0xb69ecb156Dc0028198028c501340d5367845ca72", ["route", "access", "fees"]),
+            ],
             notes: [
               "Payout identity reviewed 2026-09-30: https://usyc.docs.hashnote.com/overview/subscription-and-redemption specifies that the modeled USYC Teller burns USYC and returns USDC; Private Liquidity Teller terms are separate.",
+              "The documented supply-full bound is eventual issuer redemption only. Public Teller totalAssets(address(0)) and default-account redemption limits are diagnostics, not capacity for any actual holder: authority, receiver eligibility, account quota and the treasury's payout-plus-fee budget must all be proved by an exact holder-scoped Teller observer before a measured branch is admitted.",
             ],
             costModel: {
               ...documentedVariableFee("Redemption fee 0.03%"),
@@ -351,16 +395,16 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
               // Gate's published fast-redemption fee as the ceiling.
               costModel: {
                 ...documentedVariableFee(
-                  "Gate Learn (last updated 2026-03-29) prices GUSD redemption to USDC at 0.05% for standard redemption (credited D+3) and 0.1% for fast redemption (typically within 10 minutes). The modeled same-day route is the fast path, so the 10 bps fast fee is the ceiling; the July 2026 per-currency fee-free exit quota in the original subscription asset can lower the charge to zero, and the current authenticated redemption page remains the controlling quote",
+                  "Gate Learn (last updated 2026-03-29) prices GUSD redemption to USDC at 0.05% for standard redemption (credited D+3) and 0.1% for fast redemption (typically within 10 minutes). The modeled same-day route is the fast path, so 10 bps remains the ceiling. Gate's July 16, 2026 announcement makes the zero-fee quota original-currency-specific and calculated from cumulative minted minus cumulative redeemed in that currency; excess follows standard fees, and the authenticated redemption page controls the actual quote",
                 ),
                 feeBpsMin: 0,
                 feeBpsMax: 10,
               },
               notes: [
                 "Gate's 2026-07-27 GUSD upgrade announcement advertises instant credit, and the help centre states fast redemption is typically credited within 5 minutes. Settlement is nonetheless retained at same-day because the current product-page FAQ defers the actual arrival time to the authenticated redemption page and documents a standard redemption path credited on D+3, so no public SLA bounds the full-supply capacity this route models.",
-                "The 1:1 fee-free exit is conditional: it applies only in the original subscription asset and only within a per-currency fee-free exit quota whose size Gate has not published. The quota applies to both fast and standard redemption, so it bounds cost rather than speed.",
+                "Gate's July 16, 2026 zero-fee quota applies only to redemption in the original subscription currency. Per-currency eligibility is cumulative minted minus cumulative redeemed in that currency, not an unlimited zero-fee entitlement; excess is charged under the standard schedule. This cost quota is not funded redemption capacity or a speed guarantee.",
                 "Access is Gate-account-internal and jurisdiction-gated: the announcement states that users in the UK and other restricted regions cannot access the service.",
-                "Fee ceiling reviewed 2026-10-03 against Gate Learn's GUSD redemption article: 0.05% standard (D+3) and 0.1% fast. Pharos binds the 10 bps fast fee because this route keeps same-day settlement; pairing the cheaper standard fee with same-day settlement would mix the two exits.",
+                "Fee provenance reviewed 2026-10-07 against Gate's July 16 zero-quota announcement and Gate Learn's 0.05% standard (D+3) / 0.1% fast terms. Pharos retains the 0–10 bps issuer range and does not pair the cheaper standard fee with same-day settlement.",
               ],
             }
         : entry.config,

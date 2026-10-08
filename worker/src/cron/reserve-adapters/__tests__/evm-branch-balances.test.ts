@@ -149,6 +149,72 @@ interface BranchRpcOptions {
   extra?: Record<string, AdapterRpcValue>;
 }
 
+describe("branch valuation provenance", () => {
+  it.each([
+    ["current market", { price: 1, timestamp: NOW_SEC - 30, confidence: 0.95 }, false],
+    ["stale market", { price: 1, timestamp: NOW_SEC - 86401, confidence: 0.95 }, true],
+    ["undated market", { price: 1, confidence: 0.95 }, true],
+  ])("retains %s quote clocks without replacing them with the block clock", async (_label, quote, degraded) => {
+    const branch = usdcBranch();
+    const key = assetKey("ethereum", branch.token.address);
+    const { result } = await runAdapter("evm-branch-balances", { ...coin, liveReservesConfig: makeBranchConfig([branch]) }, {
+      config: makeBranchConfig([branch]), nowSec: NOW_SEC,
+      network: {
+        block: { timestamp: NOW_SEC },
+        rpc: branchRpc({ balances: { [branch.token.address]: 1_000_000n }, decimals: { [branch.token.address]: 6n } }),
+        json: { [`${PRICES_BASE}/${key}`]: { coins: { [key]: quote } } },
+      },
+    });
+    expect(result.metadata?.details).toMatchObject({
+      branchObservations: [expect.objectContaining({ priceObservation: {
+        sourceKind: "market-api", sourceLookup: key,
+        quoteTimestamp: "timestamp" in quote ? quote.timestamp : null,
+        quoteConfidence: quote.confidence,
+      } })],
+    });
+    expect(result.warnings?.some((warning) => warning.code === "defillama-quote-quality") ?? false).toBe(degraded);
+    expect(result.metadata?.details?.nominalReconciliation).toBeUndefined();
+  });
+
+  it("keeps a configured nominal price undated", async () => {
+    const branch = wbtcBranch({ priceUsd: 60_000 });
+    const { result } = await runAdapter("evm-branch-balances", { ...coin, liveReservesConfig: makeBranchConfig([branch]) }, {
+      config: makeBranchConfig([branch]), nowSec: NOW_SEC,
+      network: { rpc: branchRpc({ balances: { [branch.token.address]: 100_000_000n }, decimals: { [branch.token.address]: 8n } }) },
+    });
+    expect(result.metadata?.details).toMatchObject({
+      branchObservations: [expect.objectContaining({ priceObservation: {
+        sourceKind: "configured-nominal", sourceLookup: "config:WBTC:priceUsd",
+        quoteTimestamp: null, quoteConfidence: null,
+      } })],
+    });
+    expect(result.metadata?.details?.nominalReconciliation).toBeUndefined();
+  });
+
+  it("identifies a pinned oracle quote by contract, selector, token and the numbered block clock", async () => {
+    const branch = usdcBranch();
+    const oracle = "0x1111111111111111111111111111111111111111";
+    const selector = "0x41976e09";
+    const { result } = await runAdapter("evm-branch-balances", { ...coin, liveReservesConfig: makeBranchConfig([branch]) }, {
+      config: makeBranchConfig([branch], { params: { priceOracle: { contract: oracle, selector, decimals: 18 } } }),
+      nowSec: NOW_SEC,
+      network: {
+        block: { timestamp: NOW_SEC },
+        rpc: branchRpc({
+          balances: { [branch.token.address]: 1_000_000n }, decimals: { [branch.token.address]: 6n },
+          extra: { [`${oracle}:${selector}${branch.token.address.slice(2).padStart(64, "0")}`]: WAD },
+        }),
+      },
+    });
+    expect(result.metadata?.details).toMatchObject({
+      branchObservations: [expect.objectContaining({ priceObservation: {
+        sourceKind: "pinned-oracle", sourceLookup: `ethereum:${oracle}:${selector}:${branch.token.address}`,
+        quoteTimestamp: NOW_SEC, quoteConfidence: null,
+      } })],
+    });
+  });
+});
+
 /** balanceOf(holder)/decimals() answers per token address. */
 function branchRpc(options: BranchRpcOptions = {}): Record<string, AdapterRpcValue> {
   const rpc: Record<string, AdapterRpcValue> = {};
@@ -605,6 +671,97 @@ describe("fetchEvmBranchBalancesReserves", () => {
     await expect(run).rejects.toThrow(
       /HoneyFactory vault state unavailable; cannot derive custody-mode branch composition/,
     );
+  });
+
+  it.each([true, false])("keeps skipped-asset capacity conservative with complete census %s", async (complete) => {
+    const skippedAsset = "0x00000000000000000000000000000000000000a2";
+    const skippedVault = "0x00000000000000000000000000000000000000b2";
+    const config = makeBranchConfig([
+      honeyBranch(),
+      {
+        name: "Unconfigured capacity collateral", holder: skippedVault,
+        token: { chain: "berachain", address: skippedAsset, decimals: 6 },
+        risk: "high", priceUsd: 1,
+      },
+    ], {
+      chain: "berachain",
+      params: {
+        ...(complete ? { census: {
+          kind: "reviewed-roster", reviewedAt: "2023-11-13",
+          sourceUrls: ["https://example.com/census"],
+        } } : {}),
+        redemptionCapacity: {
+          kind: "honey-factory-vaults", factoryAddress: HONEY_FACTORY,
+          expectedHoneyAddress: HONEY_TOKEN, maxAssets: 4,
+          stableAssets: [{ address: HONEY_ASSET, decimals: 6 }],
+          sourceUrls: ["https://docs.berachain.com/general/tokens/honey"],
+        },
+      },
+    });
+    const network = honeyNetwork({
+      assetCount: 2, assetAddresses: [HONEY_ASSET, skippedAsset],
+      vaultAddresses: [HONEY_VAULT, skippedVault],
+      custody: true, convertToAssets: 20_000_000n,
+    });
+    const { result } = await runBranches(config, network);
+    expect(result.metadata).toMatchObject({ censusComplete: complete, valuationComplete: true });
+    expect(result.slices).toHaveLength(2);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "redemption-capacity-non-stable-assets-skipped",
+      effect: complete ? "info" : "degraded",
+    }));
+    // Both vaults are funded, but only the configured USDC output contributes.
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 7, routeStatus: "open", routeStatusSource: "onchain",
+    });
+  });
+
+  it.each([true, false])("separates a Honey pause only when composition is complete %s", async (complete) => {
+    const config = makeBranchConfig([honeyBranch()], {
+      chain: "berachain",
+      params: {
+        ...(complete ? { census: {
+          kind: "reviewed-roster", reviewedAt: "2023-11-13",
+          sourceUrls: ["https://example.com/census"],
+        } } : {}),
+        redemptionCapacity: {
+          kind: "honey-factory-vaults", factoryAddress: HONEY_FACTORY,
+          expectedHoneyAddress: HONEY_TOKEN, maxAssets: 4,
+          stableAssets: [{ address: HONEY_ASSET, decimals: 6 }],
+          sourceUrls: ["https://docs.berachain.com/general/tokens/honey"],
+        },
+      },
+    });
+    const { result } = await runBranches(config, honeyNetwork({
+      assetAddresses: [HONEY_ASSET], vaultAddresses: [HONEY_VAULT],
+      custody: true, factoryPaused: true,
+    }));
+    expect(result.slices[0]).toMatchObject({ pct: 100 });
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "honey-redemption-paused", effect: complete ? "info" : "degraded",
+    }));
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 0, routeStatus: "paused", routeStatusSource: "onchain",
+    });
+  });
+
+  it("never excuses a failed custody-critical probe even with a reviewed complete roster", async () => {
+    const config = makeBranchConfig([honeyBranch()], {
+      chain: "berachain",
+      params: {
+        census: { kind: "reviewed-roster", reviewedAt: "2023-11-13", sourceUrls: ["https://example.com/census"] },
+        redemptionCapacity: {
+          kind: "honey-factory-vaults", factoryAddress: HONEY_FACTORY,
+          expectedHoneyAddress: HONEY_TOKEN, maxAssets: 4,
+          stableAssets: [{ address: HONEY_ASSET, decimals: 6 }],
+          sourceUrls: ["https://docs.berachain.com/general/tokens/honey"],
+        },
+      },
+    });
+    await expect(runBranches(config, honeyNetwork({
+      assetAddresses: [HONEY_ASSET], vaultAddresses: [HONEY_VAULT],
+      custody: true, factoryPaused: true, failConvertToAssets: true,
+    }))).rejects.toThrow(/cannot derive custody-mode branch composition/);
   });
 
   it("computes percentage slices from branch balances and prices", async () => {

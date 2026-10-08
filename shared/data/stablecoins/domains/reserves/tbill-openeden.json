@@ -63,7 +63,7 @@
     "compositionBasis": "Pinned OpenEden TBILL daily NAV balance sheet",
     "compositionAsOf": "2026-07-10",
     "scope": "full-composition",
-    "knownUnknownExposure": "All balance-sheet asset categories are classified; the report does not establish provider-level legal safeguards or a separate assurance opinion.",
+    "knownUnknownExposure": "The retained July 10 balance-sheet categories are classified but do not establish provider safeguards or a separate assurance opinion. Source-maintenance check 2026-10-07: public v3 positions/aggregates APIs expose dated named securities with live nested book clock 20:48:04.208Z; the independently dated close packet must not be mixed into that live book. Positions total $294140375.145 versus live account $294141376.725, leaving $1001.58 unidentified; do not label the residual cash/accrued interest or rescale already normalized weights. Ethereum details/1 supply is not the full multichain fund denominator, and estimated/on-chain exchange rates are distinct. Listing remains quarantined: producer implementation does not activate lifecycle. Candidate 3-day source/48-hour fetch requires full scope and liability reconciliation; holiday cadence is unverified and cannot justify widening to 4 days. New API observations do not replace retained composition weights or dates.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

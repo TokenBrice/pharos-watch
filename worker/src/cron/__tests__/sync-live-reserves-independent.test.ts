@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
+import { computeLiveReserveConfigFingerprint, LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { CONFIGURED_COINS, type ConfiguredCoin } from "../sync-live-reserves-shared";
 import type { LiveReserveSnapshotMetadata } from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
@@ -84,6 +84,7 @@ describe("syncLiveReserves", () => {
         warnings: null,
         adapter_source_model: adapterDefinition.sourceModel,
         adapter_evidence_class: adapterDefinition.evidenceClass,
+        config_fingerprint: computeLiveReserveConfigFingerprint(args.coin.liveReservesConfig),
       },
     };
   }
@@ -457,6 +458,7 @@ describe("syncLiveReserves", () => {
           warnings: compositionWrite!.binds[7],
           adapter_source_model: compositionWrite!.binds[8],
           adapter_evidence_class: compositionWrite!.binds[9],
+          config_fingerprint: compositionWrite!.binds[10],
         }],
       },
     ]);

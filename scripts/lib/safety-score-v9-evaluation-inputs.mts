@@ -112,6 +112,7 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "shared/lib/report-card-policy.ts",
   "shared/types/live-reserves.ts",
   "shared/types/reserve-input.ts",
+  "shared/types/live-reserve-core.ts",
   "shared/data/safety-score-v9/reserve-bound-facts-v1.json",
   "worker/src/lib/safety-score-v9/extension-reserve-bounds.ts",
   "worker/src/cron/reserve-adapters/origin-vault-balances.ts",

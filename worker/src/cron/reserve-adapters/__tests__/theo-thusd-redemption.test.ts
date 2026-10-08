@@ -5,7 +5,7 @@ import type * as OnchainModule from "../onchain";
 import type * as EvmRpcModule from "../../../lib/evm-rpc";
 import { fetchTheoThusdRedemptionReserves } from "../theo-thusd-redemption";
 import { fetchOnchainMulticall3 } from "../onchain";
-import { fetchEvmBlockNumber, fetchEvmBlockTimestamp } from "../../../lib/evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmBlockHeader } from "../../../lib/evm-rpc";
 
 vi.mock("../onchain", async (importOriginal) => ({
   ...await importOriginal<typeof OnchainModule>(),
@@ -14,7 +14,7 @@ vi.mock("../onchain", async (importOriginal) => ({
 vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
   ...await importOriginal<typeof EvmRpcModule>(),
   fetchEvmBlockNumber: vi.fn(),
-  fetchEvmBlockTimestamp: vi.fn(),
+  fetchEvmBlockHeader: vi.fn(),
 }));
 const word = (value: bigint | number) => `0x${BigInt(value).toString(16).padStart(64, "0")}` as `0x${string}`;
 const addressWord = (address: string) => `0x${address.slice(2).padStart(64, "0")}` as `0x${string}`;
@@ -30,7 +30,9 @@ const config: LiveReservesConfig = {
 let reads: Record<string, `0x${string}` | null>;
 beforeEach(() => {
   vi.mocked(fetchEvmBlockNumber).mockResolvedValue(26088429);
-  vi.mocked(fetchEvmBlockTimestamp).mockResolvedValue(1790748096);
+  vi.mocked(fetchEvmBlockHeader).mockResolvedValue({
+    number: 26088429, timestamp: 1790748096, hash: `0x${"11".repeat(32)}`,
+  });
   reads = {
     thusd: addressWord("0xa3fe5c7596024e6811e14f029937d5bd8ae485b3"),
     destination: addressWord("0xec417ccb6dd26868cca993a92f37217b1d4b3c2f"),
@@ -98,8 +100,8 @@ describe("Theo allowance-limited executed rail", () => {
     reads[label] = value;
     await expect(run()).rejects.toThrow("theo-thusd-redemption");
   });
-  it("fails before capacity publication when the block timestamp is missing", async () => {
-    vi.mocked(fetchEvmBlockTimestamp).mockResolvedValue(null);
-    await expect(run()).rejects.toThrow("observation block timestamp");
+  it("fails before capacity publication when the numbered block header is unavailable", async () => {
+    vi.mocked(fetchEvmBlockHeader).mockResolvedValue(null);
+    await expect(run()).rejects.toThrow(/observation block header/);
   });
 });

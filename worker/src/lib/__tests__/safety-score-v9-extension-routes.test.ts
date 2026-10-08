@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
-import { evaluateV9Exit, projectV9ExitEvaluationRoute } from "@shared/lib/safety-score-v9/exit";
+import { evaluateV9Exit, projectV9ExitEvaluationRoute, resolveV9DistinctExitCapacity } from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
   getRedemptionBackstopConfig,
@@ -25,6 +25,7 @@ import {
 import { buildRedemptionExitRouteObservation } from "../redemption-exit-route-observations";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 import { dexRouteObservation, withRedemptionBackstopConfig } from "./safety-score-v9-extension-routes.test-support";
+import { makeExitRoute } from "@shared/lib/__tests__/safety-score-v9-exit.test-support";
 
 const NOW = Date.UTC(2026, 6, 13) / 1_000;
 const V9_FIXTURE_CLOCK = Date.UTC(2027, 0, 1) / 1_000;
@@ -95,10 +96,29 @@ function redemptionPegFixture({
 }
 
 describe("reviewed settlement output binding", () => {
+  it("deduplicates Reservoir wrappers against one shared physical PSM inventory", () => {
+    const key = "ethereum:reservoir-psm:0x4809010926aec940b550d34a46a52739f996d75d";
+    const routes = ["rusd-reservoir", "srusd-reservoir", "wsrusd-reservoir"].map((stablecoinId) => {
+      const row = makeSupplyFullRedemption({ stablecoinId });
+      const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), stablecoinId)[0]!.observation;
+      row.capacityProfile = { ...row.capacityProfile!, exitRouteObservations: [{
+        ...observation, sharedResourceKey: key,
+      }] };
+      const review = buildSafetyScoreV9RouteReviews(fixedInputStub(row), stablecoinId)[0]!;
+      expect(review.physicalResourceKeys).toContain(key);
+      return makeExitRoute({ routeKey: stablecoinId, routeId: observation.routeId,
+        physicalResourceKeys: review.physicalResourceKeys });
+    });
+    const capacity = resolveV9DistinctExitCapacity(routes, {
+      requestedNotionalUsd: 100_000, maxCostBps: 200, comparisonWindowSec: 300, rawSupplyRequestUsd: 100_000,
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(capacity.includedRouteKeys).toHaveLength(3);
+    expect(capacity.valuedExecutableUsd).toBe(100_000);
+  });
   it.each([
     { output: { kind: "fiat" as const, currency: "USD" }, sla: null },
     { output: { kind: "tracked-stablecoin" as const, trackedAssetIds: ["usdc-circle"] }, sla: null },
-    { output: { kind: "tracked-stablecoin" as const, trackedAssetIds: ["usdon-ondo"] }, sla: 0 },
+    { output: { kind: "tracked-stablecoin" as const, trackedAssetIds: ["usdon-ondo"] }, sla: 3600 },
   ])("does not lend the USDon instant SLA to a different captured endpoint ($output.kind)", ({ output, sla }) => {
     const { fixedInput } = redemptionPegFixture({
       rowOverrides: { stablecoinId: "slvon-ondo", settlementModel: "days", outputAssetType: "nav" },
@@ -107,7 +127,7 @@ describe("reviewed settlement output binding", () => {
     });
     const review = buildSafetyScoreV9RouteReviews(fixedInput, "slvon-ondo")[0]!;
     expect(review.settlementSlaSec).toBe(sla);
-    expect(review.settlementModel).toBe(sla === 0 ? "atomic" : "bounded-delay");
+    expect(review.settlementModel).toBe("bounded-delay");
   });
 });
 
@@ -452,7 +472,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       feeBps: 0,
     });
     const frozenRow = structuredClone(row);
-    const fixedInput = fixedInputStub(row);
+    const fixedInput = fixedInputStub(row, Date.UTC(2026, 9, 7) / 1_000);
     const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, row.stablecoinId)[0]!;
     const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
 
@@ -510,6 +530,42 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       expect(row).toEqual(frozen);
     });
   });
+  it("uses each request point's cost before a scalar and recomputes unlike legacy requests", () => {
+    const row = makeSupplyFullRedemption({ feeBps: null });
+    const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!.observation;
+    observation.requestedNotionalUsd = 1_000_000;
+    observation.executionCostBps = 12;
+    observation.capacityCurve = [
+      { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: 100_000, completionRatio: 1, executionCostBps: 111 },
+      { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000, completionRatio: 1 },
+      { requestedNotionalUsd: 5_000_000, maxCostBps: 200, executableUsd: 5_000_000, completionRatio: 1 },
+      { requestedNotionalUsd: 1_000_000, maxCostBps: 100, executableUsd: 1_000_000, completionRatio: 1 },
+    ];
+    row.capacityProfile = { ...row.capacityProfile!, exitRouteObservations: [observation] };
+    withRedemptionBackstopConfig(row.stablecoinId, {
+      costModel: { kind: "fee-bps", feeBps: 10, minFeeUsd: 1_000, gasOrBridgeCostUsd: 100 },
+    }, () => {
+      expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]!.executionCosts)
+        .toEqual(expect.arrayContaining([
+          { requestedNotionalUsd: 100_000, maxCostBps: 200, executionCostBps: 111 },
+          { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executionCostBps: 12 },
+          { requestedNotionalUsd: 5_000_000, maxCostBps: 200, executionCostBps: expect.closeTo(10.2, 10) },
+          { requestedNotionalUsd: 1_000_000, maxCostBps: 100, executionCostBps: 11 },
+        ]));
+    });
+  });
+  it.each([{ feeBpsMin: 25 }, { minFeeUsd: 1_000 }])(
+    "withholds a same-notional cost bound for minimum-only fees %j", (minimum) => {
+      const row = makeSupplyFullRedemption({ feeBps: null });
+      withRedemptionBackstopConfig(row.stablecoinId, {
+        costModel: { kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "formula", ...minimum },
+        v9RouteCostTerms: undefined,
+      }, () => {
+        expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0])
+          .toMatchObject({ feeEvidence: "disclosed-unquantified" });
+      });
+    },
+  );
 
   it("preserves the captured redemption model-confidence rollup", () => {
     const fixedInput = fixedInputStub(makeSupplyFullRedemption({ modelConfidence: "high" }));
@@ -612,6 +668,9 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
 
   it("expires a favorable settlement after the producer persisted its current reviewed model", () => {
     const stablecoinId = "usdy-ondo-finance";
+    withV9RouteReviewTerms(stablecoinId, {
+      ...FASTER_REVIEWED_SETTLEMENT, settlementModel: "atomic", settlementDelaySec: 0,
+    }, () => {
     const config = getRedemptionBackstopConfig(stablecoinId)!;
     const currentClock = Date.UTC(2026, 7, 26) / 1_000;
     const staleClock = Date.UTC(2027, 7, 26) / 1_000;
@@ -631,6 +690,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       settlementModel: "bounded-delay",
       settlementSlaSec: null,
       settlementHorizonSec: 14 * 86_400,
+    });
     });
   });
 
@@ -659,11 +719,12 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     };
     const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
 
-    expect([...review.executionCosts].sort((a, b) => a.requestedNotionalUsd - b.requestedNotionalUsd)).toEqual(
-      [100_000, 1_000_000, 5_000_000, 25_000_000].map((requestedNotionalUsd) => ({
-        requestedNotionalUsd, maxCostBps: 200, executionCostBps: 30,
-      })),
-    );
+    for (const point of review.executionCosts) {
+      expect(point.executionCostBps).toBe(
+        point.requestedNotionalUsd === observation.requestedNotionalUsd && point.maxCostBps === observation.maxCostBps
+          ? 30 : point.maxCostBps,
+      );
+    }
     expect(review).toMatchObject({ executionCertainty: "bounded", modelConfidence: "high" });
     expect(review.output).toMatchObject({
       kind: "tracked-stablecoin",
@@ -686,7 +747,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     });
     const fixed = fixedInputStub(row, Date.UTC(2026, 9, 6) / 1_000);
     const review = buildSafetyScoreV9RouteReviews(fixed, row.stablecoinId)[0]!;
-    expect(review).toMatchObject({ feeEvidence: "disclosed-unquantified", settlementSlaSec: 302_400 });
+    expect(review).toMatchObject({ feeEvidence: "disclosed-unquantified", settlementSlaSec: null });
     expect(review.executionCosts.length).toBeGreaterThan(0);
     expect(review.executionCosts.every((point) => point.executionCostBps === point.maxCostBps)).toBe(true);
     expect(row).toMatchObject({ feeBps: 0, feeModelKind: "fixed-bps" });

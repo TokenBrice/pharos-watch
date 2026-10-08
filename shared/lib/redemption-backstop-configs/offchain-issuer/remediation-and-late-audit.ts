@@ -239,18 +239,20 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(
       0,
-      "OSL StableHub launch states USDGO/USD and USDGO/USDC 1:1 exchange rails are zero-fee on platform",
+      "Anchorage Covered Stablecoin Service Fee Schedule (updated 2026-08-25): no Covered Stablecoin Service Fees are charged in connection with USDGO. This is the issuer service fee only; client, bank and network costs remain separate.",
     ),
     docs: [
-      sourceRefRouteCapacityFees(
-        "OSL StableHub launch",
-        "https://www.osl.com/en/announcement/osl-stablehub-grand-launch-multi-stablecoin-and-usd-seamless-1-1-exchange",
+      sourceRef(
+        "Anchorage Covered Stablecoin Service Fee Schedule (updated 2026-08-25; reviewed 2026-10-07)",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-service-fee-schedule",
+        ["fees"],
       ),
       sourceRefRouteCapacity(
         "OSL USDGO launch",
         "https://www.osl.com/hk-en/press-release/osl-group-officially-launches-regulated-enterprise-stablecoin-usdgo",
       ),
     ],
+    notes: ["Issuer fee zero is established by Anchorage's covered-stablecoin schedule, not OSL's exchange pricing. Client/bank/network charges and completed-payout timing are not bounded by that schedule."],
   },
   "audd-novatti": {
     ...issuerBase,
@@ -455,8 +457,20 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "usat-tether": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    settlementModel: "days",
+    v9RouteReviewTerms: {
+      settlementModel: "days",
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement", "cost"],
+      rationale: "Anchorage's USAT client policy promises only commercially reasonable processing and settlement efforts, permits delay/restriction/refusal and publishes no completed-payout duration. The covered-stablecoin schedule omits USAT, so neither a numeric fee maximum nor fee zero is established.",
+      reviewedAt: "2026-10-07",
+      docs: [
+        sourceRef("Anchorage USAT client policy (updated 2026-08-21; reviewed 2026-10-07)", "https://www.anchorage.com/usat-policies-disclosures", ["route", "fees", "settlement"]),
+        sourceRef("Anchorage covered-stablecoin fee schedule: USAT not listed", "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-service-fee-schedule", ["fees"]),
+      ],
+    },
     costModel: undisclosedReviewedFee(
-      "USA₮ issuer materials state issued tokens are redeemable 1:1 in U.S. dollars pursuant to Anchorage Digital Bank's terms; public redemption fee schedule is not disclosed",
+      "Anchorage's USAT client policy provides 1:1 USD redemption net of disclosed fees; the current covered-stablecoin fee schedule omits USAT, so no numeric USAT issuer fee is established.",
     ),
     docs: [
       sourceRefRouteCapacity("USA₮ homepage", "https://usat.io/"),
@@ -465,7 +479,10 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
         "https://usat.io/news/usat-establishes-transparency-benchmark-with-first-reserve-report/",
       ),
       sourceRef("USA₮ website terms", "https://usat.io/terms/", ["access"]),
+      sourceRef("Anchorage USAT client policy (updated 2026-08-21; reviewed 2026-10-07)", "https://www.anchorage.com/usat-policies-disclosures", ["route", "fees", "settlement"]),
+      sourceRef("Anchorage covered-stablecoin fee schedule: USAT not listed", "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-service-fee-schedule", ["fees"]),
     ],
+    notes: ["This route is scoped to Anchorage's USAT Clients, not Tether USDt redemption terms. Commercially reasonable efforts and 1:1 value do not establish same-day completion, a guaranteed payout maximum or issuer fee zero."],
   },
   "moveusd-cfx": {
     ...issuerBase,

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import type { RedemptionBackstopEntry, RedemptionCapacityProfile } from "@shared/types/redemption";
+import { ExitRouteObservationSchema } from "@shared/types/exit-route";
 import {
   buildRedemptionExitRouteObservation,
   buildPhysicalToUsdExitObservation,
   deriveSupplyModelExitRouteObservation,
+  usesPrimaryRedemptionReviewTerms,
 } from "../redemption-exit-route-observations";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 
@@ -37,6 +39,10 @@ describe("physical-to-USD modelled capacity", () => {
     const documented = buildPhysicalToUsdExitObservation(input)!;
     expect(documented.capacityCurve?.map((point) => point.executableUsd)).toEqual([0, 700_000, 700_000, 700_000]);
     expect(documented.physicalToUsd).toMatchObject({ grossUsd: 700_000, netUsd: 693_000, costBps: 100 });
+    expect(usesPrimaryRedemptionReviewTerms(input.assetId, documented)).toBe(false);
+    expect(usesPrimaryRedemptionReviewTerms("another-asset", documented)).toBe(true);
+    expect(usesPrimaryRedemptionReviewTerms(input.assetId, { routeId: documented.routeId })).toBe(true);
+    expect(usesPrimaryRedemptionReviewTerms(input.assetId, { ...documented, routeId: "execution:request-digest" })).toBe(true);
     expect(buildPhysicalToUsdExitObservation({ ...input, routeOpen: false })?.capacityCurve?.map((point) => point.executableUsd)).toEqual([0, 0, 0, 0]);
   });
 });
@@ -66,6 +72,15 @@ function build(overrides: Partial<Parameters<typeof buildRedemptionExitRouteObse
 }
 
 describe("issuer payout identity", () => {
+  it("retains shared physical inventory identity without changing route capacity", () => {
+    const key = "ethereum:reservoir-psm:0x4809010926aec940b550d34a46a52739f996d75d";
+    const ordinary = build()!;
+    const shared = build({ sharedResourceKey: key })!;
+    expect(shared.sharedResourceKey).toBe(key);
+    expect(shared.executableUsd).toBe(ordinary.executableUsd);
+    expect(shared.capacityCurve).toEqual(ordinary.capacityCurve);
+    expect(shared.commonModeKeys).toEqual(ordinary.commonModeKeys);
+  });
   it("retains the fiat default for an issuer without explicit outputs", () => {
     expect(build({ config: { ...config, outputAssetType: "stable-single" } })?.output)
       .toEqual({ kind: "fiat", currency: "USD" });
@@ -109,6 +124,22 @@ describe("issuer payout identity", () => {
 });
 
 describe("redemption same-notional route observations", () => {
+  it("retains exact request costs for a valued basket with a USD minimum and additive gas", () => {
+    const observation = build({
+      config: { ...config, outputAssetType: "stable-basket", outputAssets: ["usdc-circle", "usdt-tether"],
+        costModel: { kind: "fee-bps", feeBps: 10, minFeeUsd: 1_000, gasOrBridgeCostUsd: 100 } },
+      resolvedFeeBps: null,
+      outputValuation: { unitValueUsd: 1, expectedUnitValueUsd: 1, sourceId: "basket:exact",
+        observedAt: Date.UTC(2026, 6, 13) / 1_000,
+        basketWeights: [{ assetId: "usdc-circle", weight: 0.5 }, { assetId: "usdt-tether", weight: 0.5 }] },
+    })!;
+    expect(observation.executionCostBps).toBeCloseTo(10.2, 10);
+    expect(observation.capacityCurve).toEqual(expect.arrayContaining([
+      expect.objectContaining({ requestedNotionalUsd: 100_000, executionCostBps: 110 }),
+      expect.objectContaining({ requestedNotionalUsd: 1_000_000, executionCostBps: 11 }),
+      expect.objectContaining({ requestedNotionalUsd: 5_000_000, executionCostBps: expect.closeTo(10.2, 10) }),
+    ]));
+  });
   it("withholds live-direct scoring when its producing evidence time is missing", () => {
     const observation = build({
       sourceMode: "dynamic",
@@ -354,10 +385,13 @@ describe("redemption same-notional route observations", () => {
     };
     const bounded = build({ config: { ...config, costModel }, resolvedFeeBps: 10 });
     expect(bounded).toMatchObject({ executableUsd: 5_000_000, scoreEligible: true });
+    // The 210 bps request breaches the 200 bps budget: it stays zero-capacity
+    // without a realized cost, which the published contract forbids above budget.
     expect(bounded?.capacityCurve?.filter((point) => [100_000, 1_000_000].includes(point.requestedNotionalUsd))).toEqual([
       { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: 0, completionRatio: 0 },
-      { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000, completionRatio: 1 },
+      { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000, completionRatio: 1, executionCostBps: 21 },
     ]);
+    expect(ExitRouteObservationSchema.safeParse(bounded).error?.issues).toBeUndefined();
     expect(build({
       config: { ...config, costModel: { ...costModel, feeBpsMax: 250 } },
       resolvedFeeBps: 10,

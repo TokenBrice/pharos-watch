@@ -5,7 +5,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import { makeReservesDb } from "./live-reserves-store.test-support";
 import { resolveReserveResult } from "../live-reserves/store-views";
-import { assessReserveSnapshotFreshness } from "../live-reserves/store-snapshot-state";
+import { assessReserveFetchFreshness, assessReserveSnapshotFreshness } from "../live-reserves/store-snapshot-state";
 
 const DAY = 86_400;
 const now = 1_800_000_000;
@@ -53,6 +53,8 @@ describe("reserve freshness assessment publishes the budgets its verdict used", 
       attemptId: "attempt-1",
       fetchAgeSec: 60,
       fetchBudgetSec: FETCH_BUDGET,
+      freshnessMode: "verified",
+      sourceFreshnessInvalid: false,
       sourceTimestamp: now - budget,
       sourceAgeSec: budget,
       sourceAgeBudgetSec: budget,
@@ -92,6 +94,20 @@ describe("reserve freshness assessment publishes the budgets its verdict used", 
       sourceAgeBudgetSec: null,
       sourceAgeBudgetCap: null,
     });
+  });
+  it.each([0, -1, -600])("rejects future fetch clocks without borrowing upstream skew: age %s", (age) => {
+    const assessment = assessReserveFetchFreshness({ fetchedAt: now - age, attemptId: "attempt" }, now, FETCH_BUDGET);
+    expect(assessment).toMatchObject({ stale: age < 0, fetchAgeSec: age,
+      staleReasons: age < 0 ? ["invalid-fetch-clock"] : [] });
+  });
+
+  it("leaves bootstrap fetch absence non-stale and preserves source diagnosis", () => {
+    expect(assessReserveFetchFreshness({ fetchedAt: null, attemptId: null }, now, FETCH_BUDGET)).toMatchObject({
+      stale: false, fetchAgeSec: null, freshnessMode: null, sourceFreshnessInvalid: false,
+    });
+    expect(assessReserveSnapshotFreshness({ fetchedAt: now, metadata: {
+      freshnessMode: "not-applicable", diag: { invalidFreshness: true },
+    } }, usyc, now, FETCH_BUDGET)).toMatchObject({ freshnessMode: "not-applicable", sourceFreshnessInvalid: true });
   });
 });
 
@@ -134,6 +150,8 @@ describe("resolveReserveResult publishes the evaluator's freshness beside its ve
       attemptId: "attempt-7",
       fetchAgeSec: fetchBudget,
       fetchBudgetSec: fetchBudget,
+      freshnessMode: "verified",
+      sourceFreshnessInvalid: false,
       sourceTimestamp: now - adapterCap,
       sourceAgeSec: adapterCap,
       sourceAgeBudgetSec: adapterCap,
@@ -158,6 +176,14 @@ describe("resolveReserveResult publishes the evaluator's freshness beside its ve
     expect(sourceExpired?.provenance?.scoringRejectionReasons).toContain("stale");
   });
 
+  it("presents a future retained Worker fetch as live-stale and score-ineligible", async () => {
+    const result = await resolveReserveResult(db(-1, 60), "iusd-infinifi", now, fetchBudget);
+    expect(result?.mode).toBe("live-stale");
+    expect(result?.provenance?.scoringEligible).toBe(false);
+    expect(result?.provenance?.scoringRejectionReasons).toEqual(expect.arrayContaining(["stale", "invalid-freshness"]));
+    expect(result?.sync?.freshness).toMatchObject({ fetchAgeSec: -1, staleReasons: ["invalid-fetch-clock"] });
+  });
+
   it("describes the rejected generation on fallback responses with a null legacy attempt", async () => {
     const result = await resolveReserveResult(makeReservesDb({
       composition: { slices: "not json", fetched_at: now - fetchBudget - 1 },
@@ -173,6 +199,8 @@ describe("resolveReserveResult publishes the evaluator's freshness beside its ve
       attemptId: null,
       fetchAgeSec: fetchBudget + 1,
       fetchBudgetSec: fetchBudget,
+      freshnessMode: null,
+      sourceFreshnessInvalid: false,
       sourceTimestamp: null,
       sourceAgeSec: null,
       sourceAgeBudgetSec: null,

@@ -1,0 +1,30 @@
+{
+  "totalSupply": "2474672.340000",
+  "totalFiatReserves": "2474672.34",
+  "chains": [
+    {
+      "chain": "ETH",
+      "totalSupply": "2474172.34",
+      "lastSyncedAt": "2026-10-07T21:00:00.230Z",
+      "name": "Ethereum",
+      "link": "https://etherscan.io/token/0x3Fa142dD3f384414e05E71Ad0939274EdC82EC0A",
+      "perc": "99.979795"
+    },
+    {
+      "chain": "BASE",
+      "totalSupply": "0",
+      "lastSyncedAt": "2026-10-07T21:00:00.312Z",
+      "name": "Base",
+      "link": "https://basescan.org/token/0xA15705E6fC8b3E08e7253f3758dE1a754baA0761",
+      "perc": "0.000000"
+    },
+    {
+      "chain": "ARC",
+      "totalSupply": "500",
+      "lastSyncedAt": "2026-10-07T21:00:00.424Z",
+      "name": "Arc",
+      "link": "https://explorer.arc.io/token/0xd70C2FA4232e054B373eFAEa98E4138511c2a309",
+      "perc": "0.020205"
+    }
+  ]
+}

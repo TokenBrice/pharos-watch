@@ -123,6 +123,7 @@ function buildStaticScoreSnapshot(stablecoinId: string, config: RedemptionBackst
     settlementScore,
     executionCertaintyScore,
     capacityScore: capacity.score,
+    executableCapacityUsd: immediateCapacityUsd,
     outputAssetQualityScore,
     costScore,
     totalScoreCap: config.totalScoreCap,

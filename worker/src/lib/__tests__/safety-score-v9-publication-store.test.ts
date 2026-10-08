@@ -216,7 +216,7 @@ describe("Safety Score V9 publication store", () => {
       await persistSafetyScoreV9Publication(db, currentInput(publication));
       const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
         .get(SAFETY_SCORE_V9_CACHE_KEYS.publication) as { value: string };
-      const payload = Buffer.from(stableJsonStringifyV1({ ...publication, schemaVersion: 5 }));
+      const payload = Buffer.from(stableJsonStringifyV1({ ...publication, schemaVersion: 6 }));
       const compressed = gzipSync(payload);
       const legacyPublication = stableJsonStringifyV1({
         ...JSON.parse(row.value),

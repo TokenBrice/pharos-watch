@@ -3,6 +3,7 @@ import {
   configsFromBackstopEntries,
   defineBackstopRegistry,
   defineBatch,
+  defineConfigFamily,
   finalizeBackstopRegistry,
 } from "@shared/lib/redemption-backstop-configs/factory";
 import {
@@ -73,6 +74,25 @@ describe("redemption backstop config helpers", () => {
     expect(baseConfig.docs![0]!.supports).toEqual(["route", "fees"]);
   });
 
+  it("isolates executable-observer output identities between expanded clones", () => {
+    const expanded = expandIds(["alpha", "beta"], {
+      ...createBaseConfig(),
+      capacityModel: {
+        kind: "executable-observer",
+        observerId: "lido-earnusd-queue",
+        capacityUse: "diagnostic-only",
+        requiredOutputAssetKeys: ["usdc-circle"],
+      },
+    });
+
+    const alpha = expanded["alpha"]!;
+    if (alpha.capacityModel.kind === "executable-observer") {
+      alpha.capacityModel.requiredOutputAssetKeys.push("asset:mutated");
+    }
+
+    expect(expanded["beta"]!.capacityModel).toMatchObject({ requiredOutputAssetKeys: ["usdc-circle"] });
+  });
+
   it("clones registry entries and keeps source file paths on the entries", () => {
     const baseConfig = createBaseConfig();
     const entries = [
@@ -107,6 +127,80 @@ describe("redemption backstop config helpers", () => {
   it("rejects duplicate registry entries without an explicit override reason", () => {
     const entries = defineBatch(["alpha", "alpha"], createBaseConfig());
     expect(() => defineBackstopRegistry(entries)).toThrow();
+  });
+
+  it("rejects duplicate family rows, expanded ids, and extracted entries before losing either config", () => {
+    const base = createBaseConfig();
+    let built = 0;
+    expect(() => defineConfigFamily([{ id: "alpha" }, { id: "alpha" }], () => {
+      built += 1;
+      return base;
+    })).toThrow();
+    expect(built).toBe(1);
+    expect(() => expandIds(["alpha", "alpha"], base)).toThrow();
+    expect(() => configsFromBackstopEntries(defineBatch(["alpha", "alpha"], base))).toThrow();
+    const override = { ...base, settlementModel: "days" as const };
+    expect(configsFromBackstopEntries([
+      { id: "alpha", config: base },
+      { id: "alpha", config: override, overrideReason: "Reviewed replacement" },
+    ])["alpha"]!.settlementModel).toBe("days");
+  });
+
+  it("isolates nested physical, suspension, and calendar terms from the authored registry", () => {
+    const fees = { issuerFeeBps: 0, issuerFixedUsd: 0, deliveryUsdPerLot: 0,
+      insuranceBps: 0, assayUsdPerLot: 0, taxBps: 0, conversionBps: 0 };
+    const lot = { minimumTokens: 1, incrementTokens: 1,
+      bars: [{ barId: "bar", fineTroyOunces: 1, maximumFineTroyOunces: undefined }] };
+    const throughput = { tokens: 1, periodSec: 60,
+      evidence: { url: "https://example.com/throughput", quote: "One token each minute" } };
+    const settlementLegs = [{ leg: "release", maximumBusinessDays: 1 }];
+    const config: RedemptionBackstopConfig = {
+      ...createBaseConfig(),
+      physicalCommodityDelivery: { commodity: "XAU", deliverableOuncesPerToken: 1,
+        minimumDeliveryTokens: 1, deliveryTermsUnbounded: false, sameNotionalEligible: false,
+        feeModel: { bps: 0, flatUsd: 0, deliveryUsd: 0 } },
+      physicalToUsd: { metal: "XAU", fineTroyOuncesPerToken: 1, lot, throughput,
+        vaultLocations: ["london"], barClass: "good-delivery", saleLocation: "in-vault",
+        deliveryScope: "same-jurisdiction", eligibility: "verified-customer", fees, settlementLegs,
+        bestEffortIssuerCashOut: { operatingProcess: "Quoted sale", lot, throughput, fees, settlementLegs },
+        reviewedAt: "2026-01-01", reviewExpiresAt: "2026-12-31",
+        evidence: [{ url: "https://example.com/delivery", quote: "Delivery terms" }] },
+      routeStatus: "suspended",
+      routeSuspension: { routeId: "redemption:alpha:offchain-issuer", channel: "Portal",
+        suspendedAt: "2026-01-01", reviewedAt: "2026-01-02", reviewer: "reviewer", reason: "Closed",
+        sources: [{ url: "https://example.com/notice", quote: "Portal closed" }] },
+      v9RouteReviewTerms: { businessDayTerms: { businessDays: 2, calendarId: "us-federal-reserve",
+        cutoff: { time: "12:00", timezone: "America/New_York" }, assurance: "binding-guarantee",
+        conditional: true, conditions: ["Compliance"], startEvent: "Accepted",
+        stages: [{ name: "Review", businessDays: 2 }] } },
+    };
+    const original = structuredClone(config);
+    const entries = [{ id: "alpha", config }];
+    const registry = defineBackstopRegistry(entries);
+    const sibling = defineBackstopRegistry(entries)["alpha"];
+    const changed = registry["alpha"]!;
+    changed.physicalCommodityDelivery!.feeModel.deliveryUsd = 99;
+    const physical = changed.physicalToUsd!;
+    physical.lot.bars[0]!.fineTroyOunces = 99;
+    physical.throughput!.evidence.quote = "Changed";
+    physical.vaultLocations.push("zurich");
+    physical.fees.issuerFeeBps = 99;
+    physical.settlementLegs[0]!.maximumBusinessDays = 99;
+    physical.evidence[0]!.quote = "Changed";
+    const cashOut = physical.bestEffortIssuerCashOut!;
+    cashOut.lot.bars[0]!.barId = "Changed";
+    cashOut.throughput!.evidence.quote = "Changed";
+    cashOut.fees.issuerFixedUsd = 99;
+    cashOut.settlementLegs[0]!.maximumBusinessDays = 99;
+    changed.routeSuspension!.sources[0]!.quote = "Changed";
+    const calendar = changed.v9RouteReviewTerms!.businessDayTerms!;
+    calendar.cutoff.time = "13:00";
+    calendar.conditions.push("Changed");
+    calendar.stages![0]!.businessDays = 99;
+    expect(config).toEqual(original);
+    expect(sibling).toEqual(original);
+    expect(Object.prototype.hasOwnProperty.call(physical.lot.bars[0], "maximumFineTroyOunces")).toBe(true);
+    expect(physical.lot.bars[0]!.maximumFineTroyOunces).toBeUndefined();
   });
 
 
@@ -228,6 +322,24 @@ describe("redemption backstop config helpers", () => {
     expect(resolveRedemptionCostBpsAtNotional(reviewedSchedule, 100_000, 5)).toBe(100);
     expect(resolveRedemptionCostBpsAtNotional(reviewedSchedule, 1_000_000, 5)).toBe(10);
     expect(resolveRedemptionCostBpsAtNotional(undisclosedReviewedFee(), 1_000_000)).toBeNull();
+  });
+
+  it("requires a ceiling or exact quote instead of treating fee floors as complete costs", () => {
+    const minimumBps = { ...documentedVariableFee("Minimum plus unbounded haircut"), feeBpsMin: 25 };
+    const minimumUsd = { ...documentedVariableFee("Minimum dollar charge"), minFeeUsd: 100 };
+    expect(resolveRedemptionCostBpsAtNotional(minimumBps, 1_000_000)).toBeNull();
+    expect(resolveRedemptionCostBpsAtNotional(minimumUsd, 1_000_000)).toBeNull();
+    expect(resolveRedemptionCostBpsAtNotional({ ...minimumUsd, gasOrBridgeCostUsd: 10 }, 1_000_000)).toBeNull();
+    expect(resolveRedemptionCostBpsAtNotional({ ...minimumBps, feeBpsMax: 75, minFeeUsd: 1_000 }, 100_000)).toBe(100);
+    expect(resolveRedemptionCostBpsAtNotional(fixedFee(0), 1_000_000)).toBe(0);
+    expect(resolveRedemptionCostBpsAtNotional(minimumBps, 1_000_000, 40)).toBe(40);
+    expect(resolveRedemptionCostBpsAtNotional(minimumUsd, 1_000_000, 0)).toBe(1);
+    for (const observed of [Number.NaN, Number.POSITIVE_INFINITY, -1]) {
+      expect(resolveRedemptionCostBpsAtNotional(minimumBps, 1_000_000, observed)).toBeNull();
+    }
+    for (const notional of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(resolveRedemptionCostBpsAtNotional(fixedFee(0), notional, 0)).toBeNull();
+    }
   });
 
   it("keeps post-freeze route terms isolated to the V9 projector", () => {

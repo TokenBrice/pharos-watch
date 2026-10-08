@@ -1,5 +1,6 @@
 import { describe, expect, it, afterEach, vi } from "vitest";
 import fixture from "./fixtures/midas-mtbill-transparency.json";
+import octoberCapture from "./fixtures/midas-rejection-oct7-2026.json";
 import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
 import source from "@shared/data/stablecoins/coins/mtbill-midas.json";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
@@ -11,6 +12,30 @@ const ustb = "('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')";
 afterEach(() => vi.restoreAllMocks());
 
 describe("mTBILL issuer portfolio", () => {
+  it("rejects the stale September mTBILL latest packet at the October fetch clock", () => {
+    expect(() => adaptMidasMtbillTransparency(
+      octoberCapture.products.mTBILL.payload,
+      Date.parse(octoberCapture.products.mTBILL.accessedAt) / 1000,
+    )).toThrow(/stale-portfolio-timestamp/);
+  });
+
+  it("does not use the requested historical checkpoint timestamp as publisher observation time", () => {
+    expect(() => adaptMidasMtbillTransparency(
+      octoberCapture.historical, Date.parse("2026-10-07T20:45:24Z") / 1000,
+    )).toThrow();
+  });
+
+  it.each(["mAPOLLO", "mFONE", "mGLOBAL", "mHYPER", "mRE7"] as const)(
+    "rejects the captured incompatible %s book even at its own fresh source clock",
+    (product) => {
+      const payload = octoberCapture.products[product].payload;
+      const sourceClock = "updatedAt" in payload ? Date.parse(payload.updatedAt) / 1000 : Date.parse("2026-10-07T20:45:24Z") / 1000;
+      // No timestamp rewriting, signed-debt deletion, opaque-wallet relabeling,
+      // or substitute product: feed the actual captured body to the narrow parser.
+      expect(() => adaptMidasMtbillTransparency(payload, sourceClock + 120)).toThrow();
+    },
+  );
+
   it("persists distinct rejected clocks and unchanged freshness budgets", () => {
     const sourceTimestamp = Math.floor(Date.parse(fixture.updatedAt) / 1000);
     expect(() => adaptMidasMtbillTransparency(fixture, sourceTimestamp + 259201)).toThrow(

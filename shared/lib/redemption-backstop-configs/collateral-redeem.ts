@@ -778,7 +778,9 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "HBD is modeled as a protocol conversion route rather than a fiat issuer rail: holders can convert HBD through Hive mechanics, but the output and haircut behavior depend on protocol debt-ratio conditions",
       ],
       v9RouteReviewTerms: {
-        settlementDelaySec: 302_400,
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields: ["settlement"],
+        rationale: "The 3.5-day median-price conversion window does not establish a sourced maximum to completed output receipt for the exact HBD conversion request.",
         reviewedAt: "2026-10-03",
         docs: [sourceRef("Hive HBD conversion terms (reviewed 2026-10-03)", "https://hive.io/hbd/", ["route", "fees", "settlement"])],
       },
@@ -895,6 +897,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       notes: [
         "Any HCHF holder can redeem against the lowest-collateral-ratio Troves; HCHF is burned and the protocol transfers face-value HBAR to the redeemer.",
         "supply-full is the eventual system bound, not a guaranteed hot buffer: same-block capacity depends on current open Troves and their collateral.",
+        "Capacity scope reviewed 2026-10-07: entire-system debt and TCR/MCR establish liabilities and a system gate, not immediately redeemable net debt. Below-MCR troves, gas compensation, minimum-net-debt constraints and partial-redemption termination prevent using system debt as executable capacity. The configured HBAR route remains supply-full/documented-bound eventual-only until an exact eligible-trove or request observer exists.",
         "Fee ceiling reviewed 2026-10-07: the registry identifies HCHF token 0.0.6070123 and source version 30f7253f635f6015267b0fcdb5554d259b76e5db; _calcRedemptionRate caps the dynamic protocol charge at 100%. This adverse ceiling does not claim a current fee or include Hedera network costs.",
       ],
     }),

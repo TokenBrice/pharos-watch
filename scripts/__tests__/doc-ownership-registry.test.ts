@@ -144,6 +144,8 @@ describe("doc-ownership registry integrity", () => {
       "docs/worker-infrastructure.md#shared-database-helpers": 25_871,
       "docs/report-cards.md#v10-model": 45_115,
       "docs/digest-pipeline.md#generation": 43_892,
+      // Main's env-interface, scripts, and status backend exceptions no longer
+      // apply after bounded routing/restructuring; retain the default 25KB cap.
     };
     const remainingExceptions = new Set(Object.keys(legacySectionCeilings));
     const domainIds = [

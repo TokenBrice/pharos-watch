@@ -93,21 +93,25 @@ describe("buildBackingMetricsView", () => {
     expect(view?.details.some((row) => row.value.includes("$"))).toBe(false);
   });
 
-  it("preserves MYR/MYRC nominal basis and original report clock/discrepancy without denying report assurance", () => {
+  it("preserves the released MYRC report clock without requiring top-level native quantities", () => {
     const metadata = {
-      nativeQuantityBasis: {
-        reserveUnit: { kind: "currency" as const, unit: "MYR" }, supplyToken: "MYRC", nominalValuePerToken: 1,
-        reviewedAt: "2026-10-03", evidenceRef: "https://example.com/reviewed-test-report",
-      },
-      totalReserveQuantity: 2_477_388.98, supplyTokens: 2_458_786,
-      details: { assurance: { reportAsOf: "2026-08-31T23:59:00+08:00", reportedAssetDifference: "0.03" } },
+      details: { assurance: {
+        unit: "MYR",
+        reportAsOf: "2026-08-31T23:59:00+08:00",
+        computedAssetTotal: "1800903.77",
+        computedLiabilityTotal: "1800903.74",
+        reportedAssetDifference: "0.03",
+      } },
     };
-    const view = build({ liveRatio: 1.00756, liveRatioBasis: resolveLiveRatioBasis(metadata), liveMetadata: metadata });
+    const view = build({
+      liveRatio: 1800903.77 / 1800903.74,
+      liveRatioBasis: resolveLiveRatioBasis(metadata),
+      liveMetadata: metadata,
+    });
     expect(view?.details).toEqual(expect.arrayContaining([
-      expect.objectContaining({ key: "native-nominal-basis", value: "1 MYRC = 1 MYR" }),
       expect.objectContaining({ key: "assurance-report-asof", value: "2026-08-31T23:59:00+08:00" }),
-      expect.objectContaining({ key: "native-report-discrepancy", value: "0.03 MYR" }),
     ]));
+    expect(view?.details.some((row) => ["native-reserves", "native-supply", "native-nominal-basis"].includes(row.key))).toBe(false);
     expect(view?.details.some((row) => row.note?.includes("not USD or independent assurance"))).toBe(false);
     expect(view?.details.some((row) => row.value.includes("$"))).toBe(false);
   });

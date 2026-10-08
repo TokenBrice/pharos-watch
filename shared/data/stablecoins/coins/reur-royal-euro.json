@@ -69,27 +69,7 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 2,
-    "semantics": "single-asset",
-    "breakerScope": "reur-royal-euro",
-    "display": {
-      "url": "https://www.rcoins.digital/",
-      "label": "Rcoins Digital"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "label": "Euro cash reserves at top-tier international banks",
-      "risk": "low"
-    }
-  },
+
   "launchDate": "2026-02-11",
   "priceBasis": "contractual-par",
   "exitMechanism": "discretionary",

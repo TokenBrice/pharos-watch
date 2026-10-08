@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "./request";
 import type { AdapterContext } from "./types";
-import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 
 /**
  * Bounded read helpers for the public Hedera mirror node REST API

@@ -5,7 +5,7 @@
  * after commit, and ambiguous acknowledgements. Never batch a coin's begin with
  * its success: that would make its pending-attempt fence tautological.
  */
-import { WORKER_FROZEN_IDS, WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { WORKER_FROZEN_IDS, WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../collections";
 import { buildInClause, executeAtomicBatch } from "../db";
@@ -62,7 +62,7 @@ export async function beginReserveSyncAttempt(
   db: D1Database,
   record: ReserveSyncAttemptStartRecord,
 ): Promise<void> {
-  const config = WORKER_ACTIVE_STABLECOINS.find((coin) => coin.id === record.stablecoinId)?.liveReservesConfig;
+  const config = WORKER_TRACKED_META_BY_ID.get(record.stablecoinId)?.liveReservesConfig;
   const persisted = { ...record, configFingerprint: record.configFingerprint ?? (config ? computeLiveReserveConfigFingerprint(config) : null) };
   await runWithOverloadRetry(async () => {
     if (record.deadlineMs != null && Date.now() > record.deadlineMs) throw new Error("Reserve attempt start deadline expired");
@@ -105,7 +105,7 @@ export async function finalizeReserveSyncSuccess(
   finalizeDeadlineMs: number,
   onAuthoritativeWrite?: () => Promise<void>,
 ): Promise<{ finalized: boolean }> {
-  const config = WORKER_ACTIVE_STABLECOINS.find((coin) => coin.id === composition.stablecoinId)?.liveReservesConfig;
+  const config = WORKER_TRACKED_META_BY_ID.get(composition.stablecoinId)?.liveReservesConfig;
   const configFingerprint = composition.configFingerprint ?? (config ? computeLiveReserveConfigFingerprint(config) : null);
   const payloadSha256 = await sha256Hex(
     reserveCompositionPayloadJson(reserveCompositionPayloadFromRecord(composition)),
@@ -171,7 +171,7 @@ export async function finalizeReserveSyncAttempt(
   deadlineMs = Number.MAX_SAFE_INTEGER,
 ): Promise<{ finalized: boolean }> {
   if (Date.now() > deadlineMs) throw new Error("Reserve attempt finalization deadline expired");
-  const config = WORKER_ACTIVE_STABLECOINS.find((coin) => coin.id === syncState.stablecoinId)?.liveReservesConfig;
+  const config = WORKER_TRACKED_META_BY_ID.get(syncState.stablecoinId)?.liveReservesConfig;
   const configFingerprint = syncState.configFingerprint ?? (config ? computeLiveReserveConfigFingerprint(config) : null);
   const [finalizeResult] = await executeAtomicBatch(db, [
     buildReserveSyncFinalizeAttemptStatement(db, { ...syncState, configFingerprint }, deadlineMs),

@@ -449,7 +449,7 @@ describe("snapshotPublicDataset", () => {
     );
     expect(envelope.safetyScoreIdentity).toEqual(source.snapshot.safetyScoreIdentity);
     expect(envelope.reportCards.lifecycle).toBe("active");
-    expect(envelope.reportCards.schemaVersion).toBe(7);
+    expect(envelope.reportCards.schemaVersion).toBe(8);
     expect(envelope.reportCards.cards.find((card) => card.id === "usdt-tether")).toMatchObject({ grade: null, score: null, ratingStatus: "pipeline-gap" });
     expect(envelope.reportCards.cards.find((card) => card.id === "usdc-circle")).toMatchObject({ ratingStatus: "rated", partialEvidence: { excludedPillars: ["exit"], causes: ["B"] } });
     expect(envelope.reportCards.cards.map((card) => card.id)).toEqual([

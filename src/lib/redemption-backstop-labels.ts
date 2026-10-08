@@ -1,11 +1,59 @@
-import { REDEMPTION_ROUTE_FAMILY_LABELS } from "@shared/lib/redemption-backstop-scoring";
 import type {
+  RedemptionAccessModel,
+  RedemptionOutputAssetType,
+  RedemptionSettlementModel,
   RedemptionDocsProvenance,
   RedemptionModelConfidence,
   RedemptionResolutionState,
   RedemptionRouteFamily,
   RedemptionRouteStatus,
 } from "@shared/types";
+
+const REDEMPTION_ROUTE_FAMILY_LABELS: Record<RedemptionRouteFamily, string> = {
+  "stablecoin-redeem": "Stablecoin redeem",
+  "basket-redeem": "Basket redeem",
+  "collateral-redeem": "Collateral redeem",
+  "psm-swap": "PSM / swap floor",
+  "queue-redeem": "Queue redeem",
+  "offchain-issuer": "Offchain issuer",
+};
+
+export const REDEMPTION_ACCESS_LABELS: Record<RedemptionAccessModel, string> = {
+  "permissionless-onchain": "Permissionless onchain",
+  "whitelisted-onchain": "Whitelisted onchain",
+  "issuer-api": "Issuer / institutional",
+  manual: "Manual / discretionary",
+};
+
+/**
+ * Authored-short projection of the access labels, for the fixed-width slots
+ * that cannot take the full string: the hero passport strip's one-line budget
+ * and the redemption route rail's ACCESS node. Prose surfaces keep the full
+ * `REDEMPTION_ACCESS_LABELS` vocabulary.
+ */
+export const REDEMPTION_ACCESS_PASSPORT_LABELS: Record<RedemptionAccessModel, string> = {
+  "permissionless-onchain": "Permissionless",
+  "whitelisted-onchain": "Whitelisted",
+  "issuer-api": "Institutional",
+  manual: "Manual",
+};
+
+export const REDEMPTION_SETTLEMENT_LABELS: Record<RedemptionSettlementModel, string> = {
+  atomic: "Atomic",
+  immediate: "Immediate",
+  "same-day": "Same day",
+  days: "1-7 days",
+  queued: "Queued",
+};
+
+export const REDEMPTION_OUTPUT_ASSET_LABELS: Record<RedemptionOutputAssetType, string> = {
+  "stable-single": "Stable output",
+  "stable-basket": "Stable basket",
+  "bluechip-collateral": "Blue-chip collateral",
+  "physical-commodity-delivery": "Physical commodity delivery",
+  "mixed-collateral": "Mixed collateral",
+  nav: "NAV / non-cash",
+};
 
 type CoverageTone = "emerald" | "sky" | "amber" | "violet" | "rose" | "slate";
 type RedemptionRouteFamilyDisplay = {

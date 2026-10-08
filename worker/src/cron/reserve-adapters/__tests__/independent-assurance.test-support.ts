@@ -3,7 +3,8 @@ import { resolve } from "node:path";
 import type { IndependentAssuranceProduct } from "@shared/lib/independent-assurance";
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
-import { verifyIndependentAssuranceReport, type IndependentAssuranceProfile } from "../independent-assurance";
+import { verifyIndependentAssuranceReport } from "../independent-assurance";
+import type { IndependentAssuranceProfile } from "../types";
 import { installAdapterNetwork, runAdapter, type AdapterHttpResponse } from "./reserve-adapter.test-support";
 
 export const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nfixture\n");

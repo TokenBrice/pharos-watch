@@ -383,6 +383,8 @@ function projectExitBreakdown(
             },
           }),
       key: route.routeKey,
+      routeId: route.routeId,
+      lane: route.lane,
       label: routeLabel(input, route),
       routeFamily: route.routeFamily,
       score: route.score,
@@ -417,6 +419,8 @@ function projectExitBreakdown(
         ? null
         : {
             key: completePrimary.routeKey,
+            routeId: completePrimary.routeId,
+            lane: completePrimary.lane,
             label: routeLabel(input, completePrimary),
             routeFamily: completePrimary.routeFamily,
             ...(completePrimary.feeEvidence ? { feeEvidence: completePrimary.feeEvidence } : {}),
@@ -1335,7 +1339,7 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
       });
       return responseSchema.parse({
         model: "v9-critical-path",
-        schemaVersion: 6,
+        schemaVersion: 7,
         lifecycle: "active",
         candidateId: args.candidateId,
         policyVersion: args.policyVersion,

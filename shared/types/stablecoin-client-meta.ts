@@ -92,9 +92,33 @@ export const GENIUS_COMPLIANCE_PROFILE_FIELDS = [
   "reviewedAt",
 ] as const satisfies ReadonlyArray<keyof GeniusSourceProfile>;
 
+/** Eager compliance-table posture; long-form evidence stays in per-coin detail. */
+export const GENIUS_COMPLIANCE_SUMMARY_FIELDS = [
+  "applicability",
+  "authorizationStatus",
+  "issuerPathway",
+  "issuerEntity",
+  "issuerDomicile",
+  "licensingRegulator",
+  "primaryFederalRegulator",
+  "stateRegulator",
+  "foreignExceptionStatus",
+  "foreignExceptionEvidence",
+  "enforcementStatus",
+  "daspOfferSaleStatus",
+  "reserveDisclosurePresent",
+  "reserveDisclosureUrl",
+  "redemptionPolicyPresent",
+  "monthlyAttestationPresent",
+  "reviewer",
+  "reviewedAt",
+] as const satisfies ReadonlyArray<keyof GeniusSourceProfile>;
+
 export type GeniusClientProfile = Pick<GeniusSourceProfile, (typeof GENIUS_CLIENT_PROFILE_FIELDS)[number]>;
 
 export type GeniusComplianceProfile = Pick<GeniusSourceProfile, (typeof GENIUS_COMPLIANCE_PROFILE_FIELDS)[number]>;
+
+export type GeniusComplianceSummary = Pick<GeniusSourceProfile, (typeof GENIUS_COMPLIANCE_SUMMARY_FIELDS)[number]>;
 
 /** Canonical source fields in the cross-coin list projection. */
 export const STABLECOIN_CLIENT_LIST_FIELDS = [

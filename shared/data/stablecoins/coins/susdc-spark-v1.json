@@ -1,12 +1,11 @@
 {
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "spark-usdc-v1-inventory",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "collateral-mix",
     "breakerScope": "susdc-spark-v1",
-    "display": { "url": "https://docs.spark.finance/products/spark-savings", "label": "Reviewed Legacy V1 sUSDS position" },
-    "inputs": { "primary": { "kind": "onchain-evm", "chain": "ethereum", "rpcMode": "public-rpc" } },
-    "params": { "rpcUrl": "https://ethereum-rpc.publicnode.com" }
+    "display": { "url": "https://docs.spark.finance/products/spark-savings", "label": "Spark V1 local receipt inventory" },
+    "inputs": { "primary": { "kind": "onchain-evm", "chain": "ethereum", "rpcMode": "public-rpc" } }
   },
   "id": "susdc-spark-v1",
   "launchDate": "2025-03-03",
