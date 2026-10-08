@@ -208,7 +208,7 @@ function InstrumentRow({
           <MetricCell
             label="DEX check"
             value={coin.dexPriceCheck ? (coin.dexPriceCheck.agrees ? "agree" : "diverge") : "—"}
-            subline={coin.dexPriceCheck ? `${coin.dexPriceCheck.sourcePools} pools · ${formatCurrency(coin.dexPriceCheck.sourceTvl)}` : formatTrackingSpanDays(coin.trackingSpanDays)}
+            subline={coin.dexPriceCheck ? `${coin.dexPriceCheck.sourcePools} price ${coin.dexPriceCheck.sourcePools === 1 ? "source" : "sources"} · ${formatCurrency(coin.dexPriceCheck.sourceTvl)}` : formatTrackingSpanDays(coin.trackingSpanDays)}
           />
         </div>
       </div>

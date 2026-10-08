@@ -47,7 +47,7 @@ export const entry: ChangelogEntry = {
       label: "Direct CEX telemetry retirement",
       tag: "infra",
       description:
-        "Removed non-scoring direct Binance/Coinbase/Kraken depth telemetry, dormant exact Kraken observer/review-producer/runtime paths and disabled BTCUSD provider placeholders. Orderbook admission closes to research-only/diagnostic: public books do not prove same-run account, deposit, withdrawal, fee or maximum-settlement gates, and no current reviewed Kraken model existed. Ordinary exchange pricing, CoinGecko synthetic orderbook pools, generic direct-orderbook-depth evidence, redemption/ERC-4626 routes and pool/TVL/supply accounting remain. The coordinated Safety v10.12 policy release requires neutral captured-input replay; no equivalence result is claimed.",
+        "Removed non-scoring direct Binance/Coinbase/Kraken depth telemetry, dormant exact Kraken observer/review-producer/runtime paths and disabled BTCUSD provider placeholders. Orderbook admission closes to research-only/diagnostic: public books do not prove same-run account, deposit, withdrawal, fee or maximum-settlement gates, and no current reviewed Kraken model existed. Ordinary exchange pricing, generic direct-orderbook-depth evidence, redemption/ERC-4626 routes and pool/TVL/supply accounting remain unchanged by the orderbook closure. The separate Liquidity v6.93 / Pricing v6.44 cutover removes ticker-derived synthetic liquidity while retaining price-only exchange evidence. The coordinated Safety v10.12 policy release requires neutral captured-input replay; no equivalence result is claimed.",
     },
     {
       label: "Permanent fallback diagnostics and bounded retention",

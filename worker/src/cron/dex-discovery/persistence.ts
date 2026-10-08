@@ -334,12 +334,8 @@ export async function recordDiscoveryAttemptFence(
 /**
  * Cleanup stale staging data.
  * - Delete rows past the delete TTL (merge horizon plus a day), after confidence has fully decayed.
- * - NULL raw provider payloads after four hours — except CoinGecko-tickers rows,
- *   whose raw payload carries the orderbook-depth evidence behind published
- *   `direct-orderbook-depth` routes. That evidence follows the staged price
- *   window instead: clearing it after four hours made every cg-tickers route
- *   blink off until the tier rotation revisited the coin, while the staged row
- *   itself stayed mergeable for fourteen days.
+ * - Raw provider payloads, including legacy ticker payloads, are cleared after four hours.
+ *   Ticker price evidence uses normalized price/observed-flow columns and does not depend on raw depth.
  * - Bound both oldest-first passes so a retention shortening drains gradually.
  */
 export interface DexPoolStagingRetentionResult {
