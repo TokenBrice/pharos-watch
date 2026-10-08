@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode, Ref } from "react";
-import { ChartPie } from "lucide-react";
+import { ChartPie, Unlink } from "lucide-react";
 import { CoinNotices } from "@/components/coin-notice";
 import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
 import { BACKING_METRICS_ANCHOR_ID, BackingMetricsCard } from "@/components/stablecoin-detail/backing-metrics-card";
@@ -9,6 +9,8 @@ import { BridgingDeploymentsModule } from "@/components/stablecoin-detail/bridgi
 import { ContractDeployments } from "@/components/stablecoin-detail/contract-deployments";
 import { CustodyModule } from "@/components/stablecoin-detail/custody-card";
 import { EvidenceStateStrip } from "@/components/stablecoin-detail/evidence-module";
+import { FailureScenarioModule } from "@/components/stablecoin-detail/failure-scenario/failure-scenario-module";
+import type { FailureScenarioSelection } from "@/components/stablecoin-detail/failure-scenario/scenario-model";
 import { FreezeSeizureModule } from "@/components/stablecoin-detail/freeze-seizure-card";
 import { KeyLinksCard } from "@/components/stablecoin-detail/key-links-card";
 import { ContagionSnapshot } from "@/components/stablecoin-detail/contagion-snapshot";
@@ -49,6 +51,8 @@ interface DetailRiskContextSectionsProps {
   activeBannerId: string;
   /** False when the Context zone has nothing to show at `xl+` (see `hasContextZoneContent`). */
   contextHasContent: boolean;
+  /** The coin's publishable failure scenario; null renders no banner and no module. */
+  failureScenario: FailureScenarioSelection | null;
   frozenNote: ReactNode;
   mechanismBacking: MechanismBackingView | null;
   /** The variant parent's `deriveLiquidationEngine` result, computed server-side. */
@@ -431,6 +435,7 @@ function ControlBoard({
 export function DetailRiskContextSections({
   activeBannerId,
   contextHasContent,
+  failureScenario,
   frozenNote,
   mechanismBacking,
   parentLiquidationEngine,
@@ -525,6 +530,25 @@ export function DetailRiskContextSections({
         {showDepegResolver ? (
           <StablecoinDepegResolverCard stablecoinId={viewModel.id} logoSrc={viewModel.logoSrc} />
         ) : null}
+        {/* How it breaks: a curated hypothetical failure path, rendered only
+            for a publishable record (a marked draft on a dev server). It sits
+            directly under the score and reserves, ahead of the pillar
+            evidence, because it narrates the path that evidence weighs. */}
+        {failureScenario ? (
+          <div className="space-y-6">
+            <SectionBanner
+              id="how-it-breaks"
+              label="How it breaks"
+              icon={Unlink}
+              active={activeBannerId === "how-it-breaks"}
+            />
+            <FailureScenarioModule selection={failureScenario} />
+          </div>
+        ) : null}
+        {/* Scrollspy marker: the Risk pill lights again below the interleaved
+            module, so the evidence boards are not labelled "How it breaks". */}
+        {failureScenario ? <div id="risk-evidence-resume" aria-hidden="true" /> : null}
+
         {/* The live stress layer sits beside the structural score, before the
             pillar evidence (decision S4). A frozen archive or a NAV token
             states why it is absent, under the module's own title. */}

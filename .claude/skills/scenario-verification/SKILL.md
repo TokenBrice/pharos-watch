@@ -1,0 +1,1 @@
+../../../.codex/skills/scenario-verification/SKILL.md

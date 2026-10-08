@@ -98,6 +98,7 @@ export function EvidenceFooter({
   showWorkToggle = false,
   sources,
   sourcesLabel = "Sources",
+  numberedSources = false,
   sourcesFootnote,
   notes,
   notesCount,
@@ -113,6 +114,11 @@ export function EvidenceFooter({
   sources?: readonly EvidenceFooterSource[];
   /** Fold label when there are no notes. */
   sourcesLabel?: string;
+  /**
+   * Numbers the list (`<ol>`, 1-based in `sources` order) for a module whose
+   * body cites its sources by number, e.g. the failure scenario's steps.
+   */
+  numberedSources?: boolean;
   /** Rendered under the source list inside the fold, e.g. a provenance line. */
   sourcesFootnote?: ReactNode;
   /** Reviewer narrative, folded together with the sources. */
@@ -186,7 +192,9 @@ export function EvidenceFooter({
     >
       <div className="mt-2 space-y-3 pb-1 text-xs leading-relaxed text-muted-foreground">
         {hasNotes ? <div className="space-y-2">{notes}</div> : null}
-        {sources && hasSources ? <SourceLinkList aria-label={sourcesLabel} sources={sources} className="space-y-2" /> : null}
+        {sources && hasSources ? (
+          <SourceLinkList aria-label={sourcesLabel} sources={sources} numbered={numberedSources} className="space-y-2" />
+        ) : null}
         {hasSources && sourcesFootnote ? <div>{sourcesFootnote}</div> : null}
       </div>
     </ModuleDisclosure>

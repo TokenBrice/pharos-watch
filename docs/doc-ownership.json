@@ -52,13 +52,25 @@
         "shared/lib/stablecoins/**",
         "shared/lib/stablecoin-id-registry.ts",
         "shared/lib/classification.ts",
-        "shared/lib/psi-historical-assets.ts"
+        "shared/lib/psi-historical-assets.ts",
+        "data/failure-scenarios.json",
+        "shared/types/failure-scenarios.ts",
+        "shared/lib/failure-scenarios.ts",
+        "shared/lib/__tests__/failure-scenarios.test.ts",
+        "shared/lib/failure-scenario-checks/**",
+        "shared/data/failure-scenario-documents.json",
+        "shared/data/failure-scenarios/**",
+        "scripts/ci/check-failure-scenarios.ts",
+        "scripts/maintenance/approve-failure-scenario.ts",
+        "scripts/maintenance/verify-failure-scenarios.ts",
+        ".codex/skills/scenario-verification/**"
       ],
       "docs": [
         { "path": "docs/stablecoin-data.md", "anchor": "registry-editing-entry" },
         { "path": "docs/classification.md", "anchor": "classification-entry" },
         { "path": "docs/process/adding-a-stablecoin.md", "anchor": "source-of-truth" },
-        "docs/process/stablecoin-research-sidecars.md"
+        "docs/process/stablecoin-research-sidecars.md",
+        "docs/process/failure-scenarios.md"
       ],
       "background": ["docs/listing-policy.md", "docs/about-page.md", "docs/shadow-stablecoins.md"],
       "alsoRead": ["shared/data/stablecoins/AGENTS.md"],
@@ -68,12 +80,16 @@
         "npm run check:generated-artifacts -- --only=stablecoin-client-projections",
         "npm run typecheck",
         "npm run typecheck:worker",
-        "npx vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts"
+        "npx vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts",
+        "npm run check:failure-scenarios",
+        "npx vitest run shared/lib/__tests__/failure-scenarios.test.ts scripts/maintenance/__tests__/verify-failure-scenarios.test.ts"
       ],
       "rules": [
         "Keep canonical order, generated data, and schemas aligned.",
         "Commit base coin sources before final sitemap-date generation.",
-        "Do not add ad hoc supply overrides outside documented fail-closed admission paths."
+        "Do not add ad hoc supply overrides outside documented fail-closed admission paths.",
+        "Failure scenarios: only the maintainer approves exact content, and any edit invalidates its content hash; drafts never publish in production.",
+        "Failure-scenario verification is pinned and read-only; changed and unavailable rows require maintainer review, and unregistered falsifiers stay explicitly unchecked."
       ],
       "hints": ["Update methodology docs only when scoring or classification semantics change."]
     },
