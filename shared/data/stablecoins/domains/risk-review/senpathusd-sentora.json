@@ -317,8 +317,8 @@
           }
         ],
         "fallbackBehavior": "Verified composite source multiplies its serial base feeds and divides its serial quote feeds; second-feed slots are zero, and no alternative price source or freshness rejection exists in the composite. ChainlinkDataFeedLib explicitly leaves staleness checks to upstream feeds. This is not independent RedStone/Chainlink failover. Source recovery by Sol curation campaign 2026-10-09 (W2L25Rupiah), observed 2026-10-09T11:48:15.350Z through https://api-tempo-mainnet.n.dwellir.com at block 43332025, hash 0x200d10b4fa3b73ddc7b2c176d95870ca05561ca11c11e6343c83e2154b4f97c4, timestamp 2026-10-09T11:47:57Z, binds both feed implementations to the recovered TempoPriceFeeds.sol executable prefixes, excluding compiler metadata. TempoPriceFeedBase hardcodes the shared adapter; TempoCbBTCPriceFeed and TempoPathUSDPriceFeed select cbBTC and pathUSD. PriceFeedWithoutRoundsForMultiFeedAdapter.latestRoundData returns the adapter's lastValue and lastBlockTimestamp without its own age rejection or alternative source. The shared adapter's implementation source and its own freshness/fallback/signer rules remain unverified; its verifier endpoint returned 404, which is a source-recovery failure, not non-disclosure. RedStone publisher configuration observed 2026-10-09T10:36:29Z lists a 24-hour cbBTC update trigger and a 6-hour pathUSD trigger, both at 0.5% deviation. These remain relayer targets, not contract-enforced staleness bounds. The prior block 42485981 whole-branch topology observation and review date are unchanged.",
-        "observedAt": "2026-10-09",
-        "observedBlock": 43332025,
+        "observedAt": "2026-10-04",
+        "observedBlock": 42485981,
         "collateralParameters": [
           {
             "asset": "0x20c000000000000000000000c412ec89d0c08be5",
