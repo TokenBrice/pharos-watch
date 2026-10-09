@@ -102,7 +102,7 @@ let bundledProbe = "";
 let bundledInputs: string[] = [];
 
 describe("Safety Score V9 canonical publication resource budget", {
-  timeout: 120_000,
+  timeout: 210_000,
 }, () => {
   beforeAll(() => {
     temporaryDirectory = mkdtempSync(join(tmpdir(), "pharos-v9-resource-"));
@@ -323,8 +323,9 @@ describe("Safety Score V9 canonical publication resource budget", {
         cwd: ROOT,
         encoding: "utf8",
         // Wall-clock guard only (memory is the asserted bound): the 397-active registry
-        // runs near the 128 MiB ceiling, and shared CI runners exceeded 45s under GC pressure.
-        timeout: 100_000,
+        // runs near the 128 MiB ceiling, and the GC-bound child exceeded 100s inside a
+        // fully parallel test:pr run while taking ~30s alone.
+        timeout: 180_000,
         env: { ...process.env, SAFETY_SCORE_V9_RESOURCE_CAPTURE: "" },
       },
     );

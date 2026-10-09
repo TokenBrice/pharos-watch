@@ -19,7 +19,7 @@ export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
       "Transfer census: bound exact-input independent-liability capture to whole-asset/shared-chain cohorts, source-clock fair rotation, settled three-chain cancellation, a 180-second network window, inherited preparation/slot deadline reserves and bounded hash-pinned RPC chunks/body/output sizes. Deferred, timed-out and unobserved deployments remain unknown; no partial partition or zero supply is synthesized. Schedule, connection peaks, published supply and evidence freshness are unchanged.",
       "Documentation only: retain the separate inclusive 120-day reserve-composition admission and 100-day mechanism-assurance windows. No window, request grid, capacity/settlement evidence, replay-equivalence, mover, gap-closure or production-resource result is inferred from this version bundle. Fixed-clock integrated replay and fresh producer/production observation remain release obligations.",
     ],
-    commits: ["9d4e453ea", "81ea3eaff", "414af922b", "6bf5be0c3", "55f75c1b7", "a1ec828fd", "a844334cd", "4bc929945"],
+    commits: ["9d4e453ea", "81ea3eaff", "414af922b", "6bf5be0c3", "55f75c1b7", "a1ec828fd", "a844334cd", "6ec5c2724", "2bb1dc7ca"],
     reconstructed: false,
   },
   {
