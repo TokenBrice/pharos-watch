@@ -111,6 +111,8 @@ interface Candidate {
   state: PairState;
   evidence: ChainEvidence;
   resolved: boolean;
+  /** First-detection clock of the pair's current flag; survives a release that is later withheld. */
+  firstFlaggedAt: number;
 }
 
 function setChainCurrent(candidate: Candidate, value: number | null): void {
@@ -181,11 +183,61 @@ async function readChart(candidate: Candidate, now: number, signal?: AbortSignal
   }
 }
 
+/**
+ * R2: an unreadable state row must neither release quarantines nor resurrect disproven baselines.
+ * Rebuild pairs from the last accepted publication: guarded chains from `supplyChainGuard` provenance
+ * (frozen baseline, first detection, held ambiguous total, or a confirmed native-low level), then every
+ * other published chain current as its accepted level — including a confirmed low/zero whose guard
+ * sidecar disappeared once the chain stopped being flagged. Only unpublished chains bootstrap from seed.
+ */
+function recoverStateFromPublication(state: ChainDropoutState, previousAssetsById: ReadonlyMap<string, PeggedAsset>, now: number): void {
+  for (const previous of previousAssetsById.values()) {
+    const assetId = String(previous.id);
+    const guard = previous.supplyChainGuard;
+    if (guard) {
+      const heldTotal = guard.concurrentGainUsd != null && guard.status === "quarantined" ? getCirculatingRawOrNull(previous) : null;
+      for (const chain of guard.chains) {
+        const key = pairKey(assetId, chain.chainId ?? `label:${chain.chainLabel}`);
+        if (state.pairs[key]) continue;
+        const identity = { assetId, chainLabel: chain.chainLabel, ...(chain.chainId ? { chainId: chain.chainId } : {}) };
+        // A published native-low corroboration released the pair at the native amount: recover that
+        // confirmed level, never the old positive baseline it disproved.
+        const confirmedLow = chain.resolution === "onchain-total-supply" && chain.repairedCurrentUsd != null && chain.observedAt != null
+          && chain.repairedCurrentUsd <= CHAIN_DROPOUT_POLICY.collapseRatio * chain.baselineUsd;
+        state.pairs[key] = confirmedLow
+          ? { ...identity, baselineUsd: chain.repairedCurrentUsd!, baselineObservedAt: chain.observedAt!, baselineSource: "state", quarantinedSince: null, releasedAt: chain.observedAt! }
+          : {
+            ...identity,
+            baselineUsd: chain.baselineUsd,
+            baselineObservedAt: chain.baselineObservedAt,
+            baselineSource: "state",
+            quarantinedSince: guard.quarantinedSince ?? now,
+            ...(guard.concurrentGainUsd != null ? { ambiguousSince: guard.quarantinedSince ?? now } : {}),
+            ...(heldTotal != null ? { heldTotalUsd: heldTotal } : {}),
+          };
+      }
+    }
+    const rows = previous.chainCirculating ?? {};
+    const canonical = canonicalizeChainCirculating(rows);
+    const observedAt = previous.supplyObservedAt ?? now;
+    for (const [label, row] of Object.entries(rows)) {
+      const chainId = canonicalizeChainCirculating({ [label]: row }).keys().next().value as string | undefined;
+      const key = pairKey(assetId, chainId ?? `label:${label}`);
+      if (state.pairs[key]) continue;
+      const current = chainId ? canonical.get(chainId)?.current : normalizeChainSupplyValue(row.current);
+      if (current == null) continue;
+      state.pairs[key] = { assetId, chainLabel: label, ...(chainId ? { chainId } : {}), baselineUsd: current, baselineObservedAt: observedAt, baselineSource: "state", quarantinedSince: null };
+    }
+  }
+}
+
 export async function guardChainDropouts(input: {
   assets: PeggedAsset[];
   now: number;
   state: ChainDropoutState;
   stateReadFailed?: boolean;
+  /** Last accepted publication; recovers sticky quarantines when the persisted state is unreadable. */
+  previousAssetsById?: ReadonlyMap<string, PeggedAsset>;
   skipAssetIds?: ReadonlySet<string>;
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
@@ -193,6 +245,7 @@ export async function guardChainDropouts(input: {
   const { now, signal } = input;
   // The caller owns this newly loaded generation; no module-global mutable state.
   const state = input.state;
+  if (input.stateReadFailed && input.previousAssetsById) recoverStateFromPublication(state, input.previousAssetsById, now);
   const result: SupplyChainGuardResult = { flagged: 0, repaired: 0, quarantinedAssetIds: [], unavailableAssetIds: [], historyFetches: 0, stateReadFailed: input.stateReadFailed ?? false, state };
   const candidates: Candidate[] = [];
   // Per asset: same-run gains on healthy chains, and the pre-run vetted whole-asset total
@@ -255,7 +308,7 @@ export async function guardChainDropouts(input: {
         pair.releasedAt = now;
         continue;
       }
-      candidates.push({ asset, labels: group.labels, pegKey, state: pair, resolved: false, evidence: { ...(group.chainId ? { chainId: group.chainId } : {}), chainLabel: pair.chainLabel, listCurrentUsd: observation.current, baselineUsd: pair.baselineUsd, baselineObservedAt: pair.baselineObservedAt, baselineSource, resolution: "unavailable" } });
+      candidates.push({ asset, labels: group.labels, pegKey, state: pair, resolved: false, firstFlaggedAt: pair.quarantinedSince!, evidence: { ...(group.chainId ? { chainId: group.chainId } : {}), chainLabel: pair.chainLabel, listCurrentUsd: observation.current, baselineUsd: pair.baselineUsd, baselineObservedAt: pair.baselineObservedAt, baselineSource, resolution: "unavailable" } });
     }
   }
   const chainRpcs = input.chainRpcs ?? buildChainRpcs();
@@ -323,6 +376,15 @@ export async function guardChainDropouts(input: {
         delete candidate.evidence.observedAt;
         candidate.evidence.resolution = "unavailable";
         candidate.resolved = false;
+        if (candidate.state.quarantinedSince == null) {
+          // A native-low release this run is withheld with its publication: the pair stays flagged
+          // against its vetted baseline and keeps its original first-detection clock.
+          candidate.state.quarantinedSince = candidate.firstFlaggedAt;
+          candidate.state.baselineUsd = candidate.evidence.baselineUsd;
+          candidate.state.baselineObservedAt = candidate.evidence.baselineObservedAt;
+          candidate.state.baselineSource = candidate.evidence.baselineSource;
+          delete candidate.state.releasedAt;
+        }
       }
       unrepaired = affected;
     }

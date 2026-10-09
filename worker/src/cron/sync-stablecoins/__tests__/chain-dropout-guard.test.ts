@@ -151,6 +151,20 @@ describe("chain dropout guard", () => {
     expect(next.supplyRestored).toBeUndefined();
     expect(next.supplyChainGuard).toBeUndefined();
     expect(getCirculatingRawOrNull(next)).toBe(getCirculatingRawOrNull(usdg()));
+
+    // The persisted state is unreadable too: the confirmed zero is recovered from the latest
+    // publication (`next`), whose guard sidecar is already gone because the chain is no longer flagged.
+    mocks.getCache.mockRejectedValue(new Error("D1 unavailable"));
+    const unreadable = await loadChainDropoutState({} as D1Database);
+    expect(unreadable.stateReadFailed).toBe(true);
+    const afterFailure = usdg();
+    afterFailure.chainCirculating = { "X Layer": afterFailure.chainCirculating!["X Layer"] };
+    expect(next.supplyChainGuard).toBeUndefined();
+    const recovered = await guardChainDropouts({ assets: [afterFailure], now: NOW + 7200, ...unreadable, previousAssetsById: new Map([["usdg-paxos", next]]) });
+    expect(recovered.flagged).toBe(0);
+    expect(afterFailure.chainCirculating!["X Layer"].current).toBe(0);
+    expect(afterFailure.supplyRestored).toBeUndefined();
+    expect(afterFailure.supplyChainGuard).toBeUndefined();
   });
 
   it("uses reviewed native onchain units at USD par for repair", async () => {
@@ -172,6 +186,31 @@ describe("chain dropout guard", () => {
     const result = await guardChainDropouts({ assets: [usdg()], now: NOW, ...loaded });
     expect(result.quarantinedAssetIds).toEqual(["usdg-paxos"]);
     await persistChainDropoutState({} as D1Database, result, NOW);
+    expect(mocks.setCache).not.toHaveBeenCalled();
+  });
+
+  it("recovers a non-seeded quarantine from the last publication when the state read fails on a later outage day", async () => {
+    const outage = (prevDay: number): PeggedAsset => ({
+      ...usdg(),
+      circulating: { peggedUSD: 321_300_000 },
+      chainCirculating: {
+        Ethereum: { current: 321_300_000, circulatingPrevDay: 321_300_000 },
+        Solana: { current: 0, circulatingPrevDay: prevDay },
+      },
+    });
+    const day1 = outage(627_500_000);
+    await guardChainDropouts({ assets: [day1], now: NOW, state: { version: 1, pairs: {} } });
+    expect(day1).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "quarantined", quarantinedSince: NOW } });
+
+    mocks.getCache.mockRejectedValue(new Error("D1 unavailable"));
+    const loaded = await loadChainDropoutState({} as D1Database);
+    const day2 = outage(0);
+    const second = await guardChainDropouts({ assets: [day2], now: NOW + DAY, ...loaded, previousAssetsById: new Map([["usdg-paxos", day1]]) });
+    expect(second.quarantinedAssetIds).toEqual(["usdg-paxos"]);
+    expect(day2.chainCirculating!.Solana.current).toBeNull();
+    expect(day2.supplyChainGuard).toMatchObject({ status: "quarantined", quarantinedSince: NOW });
+    expect(getCirculatingRawOrNull(day2)).toBe(321_300_000 + 627_500_000);
+    await persistChainDropoutState({} as D1Database, second, NOW + DAY);
     expect(mocks.setCache).not.toHaveBeenCalled();
   });
 
@@ -237,6 +276,26 @@ describe("chain dropout guard", () => {
       expect(outage.supplyChainGuard?.chains[0].repairedCurrentUsd).toBeUndefined();
       state = run.state;
     }
+  });
+
+  it("keeps the first-detection clock when a native-low release is withheld for a concurrent healthy-chain gain", async () => {
+    const contract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
+    mocks.onchain.mockResolvedValue(40_000_000n * 10n ** BigInt(contract.decimals!));
+    const asset = usdg();
+    asset.chainCirculating = {
+      "X Layer": asset.chainCirculating!["X Layer"],
+      Ethereum: { current: 330_000_000, circulatingPrevDay: 321_300_000 },
+    };
+    asset.circulating = { peggedUSD: 330_000_000 };
+    const result = await guardChainDropouts({ assets: [asset], now: NOW, state: { version: 1, pairs: {} } });
+    expect(asset.chainCirculating!["X Layer"].current).toBeNull();
+    expect(asset.supplyChainGuard).toMatchObject({ status: "quarantined", quarantinedSince: NOW, concurrentGainUsd: 8_700_000 });
+    expect(asset.supplyChainGuard?.chains[0].repairedCurrentUsd).toBeUndefined();
+    expect(getCirculatingRawOrNull(asset)).toBeGreaterThan(0);
+    const xlayer = Object.values(result.state.pairs).find((pair) => pair.chainId === "xlayer")!;
+    expect(xlayer).toMatchObject({ quarantinedSince: NOW, baselineSource: "seed", ambiguousSince: NOW });
+    expect(xlayer.baselineUsd).toBeGreaterThan(1_400_000_000);
+    expect(xlayer.releasedAt).toBeUndefined();
   });
 
   it("nulls an immaterial flagged chain without changing aggregate or restored status", async () => {

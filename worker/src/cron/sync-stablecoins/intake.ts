@@ -535,6 +535,7 @@ export async function loadStablecoinsIntake(
     assets,
     now: input.syncStartSec,
     ...chainDropoutState,
+    previousAssetsById,
     skipAssetIds: new Set(supplyGapReconciliation.reconciledIds),
     chainRpcs: input.chainRpcs,
     signal: input.signal,
