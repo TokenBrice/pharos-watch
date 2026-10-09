@@ -151,7 +151,7 @@ describe("stablecoin detail view-model builder", () => {
         circulatingPrevWeek: { peggedUSD: 100 },
         circulatingPrevMonth: { peggedUSD: 0 },
       },
-      // USD market cap doubled over the week while the token count fell: the Supply trend follows tokens.
+      // The displayed live-list token count wins over detail current; historical anchors remain native tokens.
       nativeSupply: { current: 150, prevWeek: 160, prevMonth: 0 },
       queries: {
         pegSummary: { data: { coins: [makePegSummaryCoin({ pegScore: 45, eventCount: 2 })] } as PegSummaryResponse },
@@ -161,14 +161,15 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.status).toBe("ready");
     if (viewModel.status !== "ready") return;
     expect(viewModel.mcap).toBe(200);
+    expect(viewModel.hero.market.supply).toBe(200 / 0.98);
     expect(viewModel.hero.market.prevDayTrendClass).toContain("text-red-700");
     expect(viewModel.hero.market.supplyTrend).toMatchObject({
-      current: 150,
+      current: 200 / 0.98,
       safePrevWeek: 160,
       safePrevMonth: null,
       hasPrevMonth: false,
     });
-    expect(viewModel.hero.market.supplyTrend.prevWeekTrendClass).toContain("text-red-700");
+    expect(viewModel.hero.market.supplyTrend.prevWeekTrendClass).toContain("text-green-700");
     expect(viewModel.hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")?.display)
       .toMatchObject({ value: "45", sub: "2 incidents" });
     expect(viewModel.hero.signalRailItems.find((item) => item.key === "safety"))
@@ -188,7 +189,7 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.status).toBe("ready");
     if (viewModel.status !== "ready") return;
     expect(viewModel.hero.market.supplyTrend).toMatchObject({
-      current: null,
+      current: viewModel.hero.market.supply,
       safePrevWeek: null,
       safePrevMonth: null,
       hasPrevMonth: false,
