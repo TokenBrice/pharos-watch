@@ -255,7 +255,8 @@ export function createLaneCommand(
     case "pages-artifact":
       return withLane(command);
     case "pr-tests":
-      return withLane(command, deferCriticalOwners ? { PR_TESTS_DEFER_CRITICAL_OWNERS: "1" } : undefined);
+      // Always explicit: an inherited "1" must not drop owner tests when no coverage leaf runs them.
+      return withLane(command, { PR_TESTS_DEFER_CRITICAL_OWNERS: deferCriticalOwners ? "1" : "0" });
     case "critical-coverage":
       return withLane(command, {
         ...(env as Record<string, string>),

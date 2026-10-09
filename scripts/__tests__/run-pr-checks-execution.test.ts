@@ -156,16 +156,19 @@ describe("readiness execution", () => {
 
   it("defers critical-owner tests out of pr-tests only when the coverage leaf executes them", async () => {
     fixture.changedFiles = ["worker/src/lib/evm-rpc.ts"];
-    const deferFlag = async (argv: string[]) => {
+    const deferFlag = async (argv: string[], env = testEnv) => {
       const h = harness();
-      await runPrChecks(argv, testEnv, h.options);
+      await runPrChecks(argv, env, h.options);
       const ran = (fragment: string): unknown[] | undefined => h.runCommandImpl.mock.calls.find(([command]) => command.cmd.includes(fragment));
-      return { coverageRan: ran("coverage:critical") !== undefined, flag: (ran("test:pr")?.[1] as Record<string, string> | undefined)?.PR_TESTS_DEFER_CRITICAL_OWNERS };
+      const testEnvFor = { ...env, ...(ran("test:pr")?.[1] as Record<string, string> | undefined) };
+      return { coverageRan: ran("coverage:critical") !== undefined, flag: testEnvFor.PR_TESTS_DEFER_CRITICAL_OWNERS };
     };
     expect(await deferFlag([`--base=${baseSha}`, "--with-coverage"])).toEqual({ coverageRan: true, flag: "1" });
-    expect(await deferFlag([`--base=${baseSha}`])).toEqual({ coverageRan: false, flag: undefined });
+    expect(await deferFlag([`--base=${baseSha}`])).toEqual({ coverageRan: false, flag: "0" });
+    // An inherited flag must not drop owner tests when coverage is deferred to CI.
+    expect(await deferFlag([`--base=${baseSha}`], { ...testEnv, PR_TESTS_DEFER_CRITICAL_OWNERS: "1" })).toEqual({ coverageRan: false, flag: "0" });
     fixture.changedFiles = ["worker/src/api/example.ts"];
-    expect(await deferFlag([`--base=${baseSha}`])).toEqual({ coverageRan: false, flag: undefined });
+    expect(await deferFlag([`--base=${baseSha}`])).toEqual({ coverageRan: false, flag: "0" });
   });
 
   it("records classifier-selected coverage and Pages as deferred to CI without weakening a clean pass", async () => {
