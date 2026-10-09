@@ -593,7 +593,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
       );
       const historicalTargetIds = (historicalTargetResult.results ?? [])
         .map((row) => row.target_id)
-        .filter((targetId) => options.targetIds == null || byTargetId.has(targetId));
+        .filter((targetId) => byTargetId.has(targetId));
       for (let offset = 0; offset < historicalTargetIds.length; offset += DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE) {
         const targetIdBatch = historicalTargetIds.slice(offset, offset + DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE);
         const lkgBlockedTargetIds = new Set<string>();
@@ -625,14 +625,6 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
           const row = historicalRows[rowIndex];
           historicalRows[rowIndex] = undefined;
           if (!row) continue;
-          const currentTarget = byTargetId.get(row.target_id)?.quotedTarget;
-          if (
-            currentTarget &&
-            latestPublishedAt - row.quote_published_at >
-              getDexMeasuredHistoryFreshnessSec(currentTarget.adapterProfileId)
-          ) {
-            continue;
-          }
           const recordCycle = (cycle: DexMeasuredExecutionHistoryCycle) => {
             const cycles = historyCyclesByTargetId.get(row.target_id) ?? [];
             cycles.push(cycle);
@@ -666,6 +658,13 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
             recordIntegrityBarrier();
             continue;
           }
+          if (
+            profile &&
+            (profile.quotedAt <= latestPublishedAt - getDexMeasuredHistoryFreshnessSec(quotedTarget.adapterProfileId) ||
+              profile.quotedAt > latestPublishedAt)
+          ) {
+            continue;
+          }
           recordCycle({
             generationId: row.generation_id,
             publishedAt: row.quote_published_at,
@@ -683,7 +682,9 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
             profile === null ||
             lkgBlockedTargetIds.has(row.target_id) ||
             latest?.resolution === "last-known-good" ||
-            (latest != null && (latest.status === "measured" || !isOperationalDexMeasuredFailure(latest.failureReason)))
+            latest == null ||
+            latest.status === "measured" ||
+            !isOperationalDexMeasuredFailure(latest.failureReason)
           ) {
             continue;
           }
@@ -698,7 +699,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
             quoteGenerationId: row.generation_id,
             targetGenerationId: row.target_generation_id,
             resolution: "last-known-good",
-            latestFailureReason: latest?.failureReason ?? "quote-missing",
+            latestFailureReason: latest.failureReason,
           });
         }
         historicalRows.length = 0;

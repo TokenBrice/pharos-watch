@@ -24,8 +24,11 @@ export type { LoadedDexMeasuredQuoteEvidence } from "./evidence-reader";
  * would fail closed on read instead of scoring.
  */
 const GENERATION_RETENTION_SEC = 4 * 60 * 60;
-/** Bound each prune pass so a retention shortening drains gradually instead of one oversized D1 delete in the cron tail. */
+/** Ledger generations and payload rows have different units: a quote cohort contains hundreds of rows. */
 const GENERATION_PRUNE_MAX_PER_RUN = 16;
+/** Keep physical DELETEs bounded while outpacing the four active quote cohorts per hour. */
+const GENERATION_PAYLOAD_PRUNE_BATCH_SIZE = 256;
+const GENERATION_PAYLOAD_PRUNE_MAX_ROWS_PER_RUN = 4_096;
 
 // Attribution must be captured while the exact leased child still owns its
 // execution fence, including candidates interrupted before publication.
@@ -663,17 +666,38 @@ export async function pruneDexMeasuredExecutionGenerations(
             ELSE 1 END)))
     AND NOT EXISTS (SELECT 1 FROM dex_measured_execution_quotes reference
       WHERE reference.target_generation_id = candidate.generation_id)`;
+  // Preserve current/in-flight pool backing evidence and published manifests.
+  // Materialize IDs once per DELETE, not the public JSON tree per candidate.
+  const referenceCtes = `WITH retained_evidence AS (
+    SELECT top_pools_json AS evidence_json FROM dex_liquidity
+    UNION ALL SELECT row.top_pools_json FROM dex_liquidity_run_rows row
+      JOIN dex_liquidity_publication_generations generation ON generation.generation_id = row.generation_id
+      WHERE generation.state IN ('staged', 'published')
+    UNION ALL SELECT dependency_snapshot_json FROM surface_publication_generations
+      WHERE state = 'published' AND dependency_snapshot_json IS NOT NULL
+  ), protected_generations AS MATERIALIZED (
+    SELECT identity.value AS generation_id FROM retained_evidence reference,
+      json_tree(CASE WHEN json_valid(reference.evidence_json) THEN reference.evidence_json ELSE '{}' END) identity
+      WHERE identity.key IN ('quoteGenerationId', 'targetGenerationId')
+    UNION ALL SELECT NULL FROM retained_evidence reference
+      WHERE reference.evidence_json IS NOT NULL AND NOT json_valid(reference.evidence_json)
+  )`;
+  const unreferencedGeneration = `NOT EXISTS (
+    SELECT 1 FROM protected_generations reference
+    WHERE reference.generation_id IS NULL OR reference.generation_id = candidate.generation_id
+  )`;
   const retiredGenerationCandidates = `
          SELECT candidate.generation_id FROM surface_publication_generations candidate
          WHERE candidate.surface IN (?, ?) AND candidate.started_at < ?
            AND (candidate.state IN ('failed', 'rejected', 'superseded') OR (${abandonedCandidate}))
+           AND (${unreferencedGeneration})
          ORDER BY candidate.started_at ASC, candidate.generation_id ASC LIMIT ?`;
   const family = await runCappedPruneFamily({
     db,
     signal,
     statements: {
       quotes: {
-        sql: `DELETE FROM dex_measured_execution_quotes
+        sql: `${referenceCtes} DELETE FROM dex_measured_execution_quotes
        WHERE rowid IN (
          SELECT row.rowid FROM dex_measured_execution_quotes row
          JOIN surface_publication_generations generation ON generation.generation_id = row.generation_id
@@ -685,14 +709,14 @@ export async function pruneDexMeasuredExecutionGenerations(
           DEX_SHADOW_MEASURED_QUOTE_SURFACE,
           cutoff,
           nowSec,
-          limit,
+          GENERATION_PRUNE_MAX_PER_RUN,
           limit,
         ],
-        batchLimit: GENERATION_PRUNE_MAX_PER_RUN,
-        runLimit: GENERATION_PRUNE_MAX_PER_RUN,
+        batchLimit: GENERATION_PAYLOAD_PRUNE_BATCH_SIZE,
+        runLimit: GENERATION_PAYLOAD_PRUNE_MAX_ROWS_PER_RUN,
       },
       targets: {
-        sql: `DELETE FROM dex_measured_execution_targets
+        sql: `${referenceCtes} DELETE FROM dex_measured_execution_targets
        WHERE rowid IN (
          SELECT row.rowid FROM dex_measured_execution_targets row
          JOIN surface_publication_generations generation ON generation.generation_id = row.generation_id
@@ -706,20 +730,21 @@ export async function pruneDexMeasuredExecutionGenerations(
           DEX_SHADOW_MEASURED_TARGET_SURFACE,
           cutoff,
           nowSec,
-          limit,
+          GENERATION_PRUNE_MAX_PER_RUN,
           limit,
         ],
-        batchLimit: GENERATION_PRUNE_MAX_PER_RUN,
-        runLimit: GENERATION_PRUNE_MAX_PER_RUN,
+        batchLimit: GENERATION_PAYLOAD_PRUNE_BATCH_SIZE,
+        runLimit: GENERATION_PAYLOAD_PRUNE_MAX_ROWS_PER_RUN,
       },
       generations: {
-        sql: `DELETE FROM surface_publication_generations
+        sql: `${referenceCtes} DELETE FROM surface_publication_generations
        WHERE rowid IN (
          SELECT candidate.rowid
            FROM surface_publication_generations candidate
           WHERE candidate.surface IN (?, ?, ?, ?)
             AND candidate.started_at < ?
             AND (candidate.state IN ('failed', 'rejected', 'superseded') OR (${abandonedCandidate}))
+            AND (${unreferencedGeneration})
             AND NOT EXISTS (
               SELECT 1 FROM dex_measured_execution_quotes q
                WHERE q.generation_id = candidate.generation_id

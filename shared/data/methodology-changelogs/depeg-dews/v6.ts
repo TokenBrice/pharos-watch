@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.34",
+    title: "Genuine DEX-family quorum for hard depeg decisions",
+    date: "2026-10-09",
+    effectiveAt: 1791590400,
+    summary:
+      "CoinGecko exchange tickers remain price/soft diagnostic evidence but cannot supply hard DEX corroboration for depeg confirmation, recovery or opposition.",
+    impact: [
+      "Hard collectors exclude normalized cg_tickers families and legacy cg-ticker-<exchange> protocols before family representative selection. Tickers cannot shadow a genuine family, create a quorum, qualify a pool veto/high-TVL exception, or supply hard confirmation keys and peak candidates.",
+      "Pending aggregate confirmation, recovery and opposite-direction opposition require genuine non-ticker family support. One genuine family plus tickers no longer meets a two-family hard quorum, so confirmation may stay pending and recovery may stay open until independent evidence arrives.",
+      "Aggregate prices/status, soft diagnostic group counts, pricing producers/weights, primary-price admission, DEWS formula, depeg thresholds/windows and recorded event history remain unchanged. No peg lineage or historical backfill is added.",
+      "Activates at the next UTC day boundary after release, 2026-10-10 00:00 UTC (1791590400). Historical latency and production acceptance are not established by this entry.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.33",
     title: "Confidence-qualified weekly DEX history for liquidity erosion",
     date: "2026-10-08",

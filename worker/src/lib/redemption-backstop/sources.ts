@@ -49,6 +49,7 @@ import {
 } from "../redemption-exit-route-observations";
 import { buildFpiControllerV9ExitRouteObservation } from "../fpi-controller-redemption-route";
 import { buildSfrxusdCrosschainV9ExitRouteObservation } from "../sfrxusd-crosschain-redemption-route";
+import { classifyRedemptionLossReason, redemptionLossOutcome } from "./loss";
 
 // Complete the disclosure join only after a snapshot has collected every
 // success/failure row. The local index captures states, not mutable row references.
@@ -560,6 +561,7 @@ export function buildFailedRedemptionBackstopEntry(
   stablecoinId: string,
   config: RedemptionBackstopConfig,
   now = Math.floor(Date.now() / 1000),
+  runId: string | null = null,
 ): RedemptionBackstopEntry {
   const staticFields = resolveStaticFields(stablecoinId, config);
   const settlementModel = resolveReviewedRedemptionSettlement(config, now);
@@ -572,6 +574,10 @@ export function buildFailedRedemptionBackstopEntry(
 
   const entry: RedemptionBackstopEntry = {
     stablecoinId,
+    lossOutcomes: [redemptionLossOutcome({
+      assetId: stablecoinId, routeKey: `redemption:${stablecoinId}:${config.routeFamily}`,
+      reason: "sync-error", disposition: classifyRedemptionLossReason("sync-error"), runId, observedAtSec: now,
+    })],
     score: null,
     dexLiquidityScore: null,
     accessScore: staticFields.accessScore,

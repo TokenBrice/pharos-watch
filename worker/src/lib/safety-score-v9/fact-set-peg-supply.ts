@@ -270,23 +270,33 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
       failureDomains: reference?.failureDomains ?? [],
     };
   }
-  const observedAtSec = peg.priceObservedAt ?? source.observedAtSec;
-  const evidenceId = addEvidence(
-    context,
-    createV9EvidenceReference(
-      {
-        evidenceId: `${context.asset.assetId}:peg`,
-        sourceId: peg.priceSource ?? "report-cards-peg-summary",
-        sourceGenerationId: source.generationId,
-        disposition: "observed",
-        observedAtSec,
-        contentSha256: domainDigest("safety-score-v9.peg-fact.v1", peg),
-        maxAgeSec: source.maxAgeSec,
-      },
-      context.fixedInput.clockSec,
-    ),
-  );
-  const evidence = context.evidence.get(evidenceId)!;
+  // Absence on a legacy capture is explicitly unknown too. The shared source
+  // clock dates analytics/history only and cannot certify a current price.
+  const observedAtSec = peg.priceObservedAt;
+  const validPriceClock =
+    typeof observedAtSec === "number" &&
+    Number.isSafeInteger(observedAtSec) &&
+    observedAtSec > 0 &&
+    observedAtSec <= context.fixedInput.clockSec;
+  const evidenceId = validPriceClock
+    ? addEvidence(
+        context,
+        createV9EvidenceReference(
+          {
+            evidenceId: `${context.asset.assetId}:peg`,
+            sourceId: peg.priceSource ?? "report-cards-peg-summary",
+            sourceGenerationId: source.generationId,
+            disposition: "observed",
+            observedAtSec,
+            contentSha256: domainDigest("safety-score-v9.peg-fact.v1", peg),
+            maxAgeSec: source.maxAgeSec,
+          },
+          context.fixedInput.clockSec,
+        ),
+      )
+    : null;
+  const evidenceRefIds = evidenceId === null ? [] : [evidenceId];
+  const evidence = evidenceId === null ? null : context.evidence.get(evidenceId)!;
   const activeDepeg = configuredReferenceId === null ? peg.activeDepeg : activeDepegBps !== null;
   const pegScore = deriveSafetyScoreV9PegScore(peg, context.fixedInput.clockSec);
   const quietPegObservation =
@@ -324,7 +334,23 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     peg.currentPriceUnavailable === true &&
     (activeDepeg || peg.eventCount > 0 || peg.worstDeviationBps !== null);
   let status: V9FactStatusV2;
-  if (evidence.freshness.state === "stale") {
+  if (!validPriceClock) {
+    status = missingLocalFact(context, {
+      componentKey: "peg",
+      reasonCode: "missing-peg-input",
+      ownerDomain: "peg",
+      responsibility: "producer-failed",
+      policyRuleId: "v9.peg.current",
+      message: observedAtSec === undefined
+        ? "The legacy peg capture has no original price observation clock; freshness is unknown."
+        : observedAtSec === null
+          ? "The original price observation clock is unknown; freshness cannot be assessed."
+          : "The original price observation clock is invalid or future-dated; the price is inadmissible.",
+      // Bounded-unknown requires supporting timed evidence under the existing
+      // fact contract. An unassessable original clock supplies none: missing.
+      observationState: "missing",
+    }).status;
+  } else if (evidence?.freshness.state === "stale") {
     status = missingLocalFact(context, {
       componentKey: "peg",
       reasonCode: "missing-peg-input",
@@ -333,7 +359,7 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
       policyRuleId: "v9.peg.current",
       message: "The last-known peg observation is stale.",
       observationState: "stale",
-      evidenceRefIds: [evidenceId],
+      evidenceRefIds,
     }).status;
   } else if (!complete) {
     status = missingLocalFact(context, {
@@ -358,13 +384,13 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
           ? `The configured peg reference ${reference?.referenceKey ?? "unknown"} could not be resolved; child peg metrics are withheld.`
           : "The peg row lacks an explicit reference, score, deviation, or active-depeg peak.",
       observationState: "bounded-unknown",
-      evidenceRefIds: [evidenceId],
+      evidenceRefIds,
     }).status;
   } else {
     status = createV9FactStatus({
       applicability: requiredV9Applicability("v9.peg.current"),
       observationState: "known",
-      evidenceRefIds: [evidenceId],
+      evidenceRefIds,
     });
   }
   return {

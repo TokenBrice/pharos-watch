@@ -156,6 +156,15 @@ describe("nominal price reference reader contract", () => {
     expect(isObservedPrice(market)).toBe(true);
   });
 
+  it("preserves explicit unknown clocks while admitting same-asset legacy clock compatibility", () => {
+    const raw = { ...makeStablecoin(), priceUpdatedAt: 1_700_000_000, priceSyncedAt: 1_700_000_100 };
+    const { priceObservedAt: _clock, ...legacy } = raw;
+    expect(StablecoinDataSchema.parse(legacy).priceObservedAt).toBe(1_700_000_000);
+    expect(StablecoinDataSchema.parse({ ...raw, priceObservedAt: null }).priceObservedAt).toBeNull();
+    expect(StablecoinDataSchema.parse({ ...raw, priceObservedAt: 1_699_999_900 }).priceObservedAt).toBe(1_699_999_900);
+    expect(StablecoinDataSchema.parse({ ...raw, priceObservedAt: null, priceObservedAtMode: "unknown" }).priceObservedAt).toBeNull();
+  });
+
   it.each(["nominal_reference", "future-mode"])("does not promote %s to an observation", (mode) => {
     const row = StablecoinDataSchema.parse({
       ...makeStablecoin(),

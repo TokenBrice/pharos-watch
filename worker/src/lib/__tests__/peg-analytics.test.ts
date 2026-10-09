@@ -136,6 +136,64 @@ describe("derivePegAnalyticsSnapshot", () => {
     expect(snapshot.pegDataById.get("usdt-tether")?.depegEventCoverageLimited).toBe(false);
   });
 
+  it("preserves separate original asset clocks and cached provenance rather than the generation clock", async () => {
+    const snapshot = await derivePegAnalyticsSnapshot(db, {
+      peggedAssets: [
+        {
+          id: "usdt-tether", symbol: "AAA", name: "AAA Stable", pegType: "peggedUSD", price: 1,
+          priceSource: "cached", priceConfidence: "fallback", priceObservedAt: 1_699_900_000,
+          priceUpdatedAt: 1_700_000_000, priceSyncedAt: 1_700_000_100, priceObservedAtMode: "upstream",
+          circulating: { peggedUSD: 2_000_000 },
+        } as never,
+        {
+          id: "usdc-circle", symbol: "NAV", name: "NAV Stable", pegType: "peggedUSD", price: 1,
+          priceSource: "chainlink-nav", priceObservedAt: 1_699_999_990, priceObservedAtMode: "local_fetch",
+          circulating: { peggedUSD: 2_000_000 },
+        } as never,
+      ],
+      methodologyAsOf: 1_700_000_100,
+      includeNavTokens: true,
+    });
+    expect(snapshot.pegDataById.get("usdt-tether")).toMatchObject({
+      priceSource: "cached", priceObservedAt: 1_699_900_000, priceObservedAtMode: "upstream",
+    });
+    expect(snapshot.pegDataById.get("usdc-circle")).toMatchObject({
+      priceSource: "chainlink-nav", priceObservedAt: 1_699_999_990, priceObservedAtMode: "local_fetch",
+    });
+  });
+
+  it.each([
+    { provenance: { priceObservedAt: null, priceUpdatedAt: 1_700_000_000 }, expected: null },
+    { provenance: { priceSyncedAt: 1_700_000_000 }, expected: null },
+    { provenance: { priceUpdatedAt: 1_699_999_900 }, expected: 1_699_999_900 },
+    { provenance: { priceObservedAt: 1_800_000_000 }, expected: 1_800_000_000 },
+  ])("preserves unknown, legacy asset-only and future clocks without renewal: $provenance", async ({ provenance, expected }) => {
+    const snapshot = await derivePegAnalyticsSnapshot(db, {
+      peggedAssets: [{
+        id: "usdt-tether", symbol: "AAA", name: "AAA Stable", pegType: "peggedUSD", price: 1,
+        priceSource: "coingecko", ...provenance, circulating: { peggedUSD: 2_000_000 },
+      } as never],
+      methodologyAsOf: 1_700_000_100,
+    });
+    expect(snapshot.pegDataById.get("usdt-tether")?.priceObservedAt).toBe(expected);
+    expect(snapshot.pegDataById.get("usdt-tether")?.priceSource).toBe("coingecko");
+  });
+
+  it("keeps nominal provenance but never treats a nominal reference as an observed deviation", async () => {
+    const snapshot = await derivePegAnalyticsSnapshot(db, {
+      peggedAssets: [{
+        id: "usdt-tether", symbol: "AAA", name: "AAA Stable", pegType: "peggedUSD", price: 1,
+        priceSource: "protocol-par", priceObservedAt: null, priceObservedAtMode: "nominal_reference",
+        circulating: { peggedUSD: 2_000_000 },
+      } as never],
+      methodologyAsOf: 1_700_000_100,
+    });
+    expect(snapshot.pegDataById.get("usdt-tether")).toMatchObject({
+      priceSource: "protocol-par", priceObservedAt: null, priceObservedAtMode: "nominal_reference",
+      currentPriceUnavailable: true, currentDeviationBps: null,
+    });
+  });
+
   it("loads depeg provenance so audited false positives are excluded from scoring", async () => {
     db = mockD1([
       {

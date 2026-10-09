@@ -92,6 +92,21 @@ describe("classifyPrimaryDepegTrust", () => {
 describe("hasFreshMultiSourcePrimaryAgreement", () => {
   const nowSec = 1_700_000_000;
 
+  it.each(["cg-ticker", "cg_tickers", "cg-ticker-binance"])("collapses %s with the CoinGecko primary lineage", (tickerKey) => {
+    const input = {
+      price: 1,
+      priceSource: `coingecko+${tickerKey}`,
+      agreeSources: ["coingecko", tickerKey],
+      priceConfidence: "high" as const,
+      priceObservedAt: nowSec - 60,
+    };
+    expect(resolveDepegSourceFamily(tickerKey)).toBe("coingecko");
+    expect([...getPrimaryDepegSourceFamilies(input)]).toEqual(["coingecko"]);
+    expect(hasFreshMultiSourcePrimaryAgreement(input, nowSec)).toBe(false);
+    expect(chooseIndependentOffchainDepegConfirmer(input)).toBeNull();
+    expect([...getFreshIndependentPrimarySourceFamilies(input, nowSec, "coingecko")]).toEqual([]);
+  });
+
   it("accepts fresh high-confidence corroborated independent-family agreement", () => {
     expect(hasFreshMultiSourcePrimaryAgreement(makeSoftAgreementDepegPrice(nowSec), nowSec)).toBe(true);
   });

@@ -7,6 +7,7 @@ import { admitV10ReserveReportScope, admitV10ReserveObservation, shouldApplyV10R
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import type { ReserveObservationEnvelope, ReserveScopedAdmission } from "@shared/types/safety-score-v9-reserve-scope";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
+import { isCarryEligible } from "@shared/lib/evidence-loss";
 import {
   RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT,
   validateReserveCompositionTotal,
@@ -825,7 +826,12 @@ export function addReserveClassificationEvidence(
 }
 
 function selectScopedReserveObservations(meta: V9ExtensionRegistryMeta, fixedInput: Readonly<SafetyScoreV9CompilerInput>) {
-  const live = fixedInput.liveReserveProvenanceMap[meta.id]?.reserveObservation;
+  const capturedLive = fixedInput.liveReserveProvenanceMap[meta.id]?.reserveObservation;
+  const lineage = "reserveLossLineageById" in fixedInput ? fixedInput.reserveLossLineageById?.[meta.id] : undefined;
+  const invalidated = lineage?.invalidations.composition || lineage?.invalidations["observation"]
+    || (capturedLive && lineage?.invalidations[capturedLive.scopeId])
+    || (lineage?.latest?.scope.key === "composition" && !isCarryEligible(lineage.latest, fixedInput.clockSec));
+  const live = invalidated ? undefined : capturedLive;
   const observations = meta.reserveReview?.observations ?? [];
   const observationRefs = observations.length || live ? resolveV10ReserveObservationDeploymentRefs(meta) : [];
   const observedScopes = new Map<string, { observation: ReserveObservationEnvelope; admission: ReserveScopedAdmission }>();

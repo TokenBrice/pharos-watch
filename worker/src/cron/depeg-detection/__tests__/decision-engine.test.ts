@@ -942,6 +942,57 @@ describe("decideDepegAsset", () => {
     ]);
   });
 
+  it.each([false, true])("requires genuine pool families for aggregate recovery (independent=%s)", (independent) => {
+    const now = 1_750_000_900;
+    const decision = decideDepegAsset({
+      now,
+      asset: makeAsset({
+        price: 0.999,
+        priceSource: "coingecko",
+        agreeSources: ["coingecko"],
+        priceConfidence: "single-source",
+        priceUpdatedAt: now - 60,
+        priceObservedAt: now - 60,
+        priceObservedAtMode: "upstream",
+      }),
+      meta: usdMeta,
+      existing: makeExistingEvent({
+        stablecoin_id: usdMeta.id, symbol: usdMeta.symbol, peg_type: "peggedUSD",
+        direction: "below", peg_reference: 1, recovery_first_seen_at: now - 1_000,
+        recovery_last_seen_at: now - 450,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+      dexRow: {
+        stablecoin_id: usdMeta.id, dex_price_usd: 0.999, deviation_from_primary_bps: null,
+        source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: now - 60,
+      },
+      protocolSources: [
+        { protocol: "curve", chain: "ethereum", sourceFamily: "curve", price: 0.999, tvl: 3_000_000, updatedAt: now - 60 },
+        { protocol: "kinesis_money", chain: "orderbook", sourceFamily: "cg_tickers", price: 0.999, tvl: 0, updatedAt: now - 60 },
+        ...(independent ? [
+          { protocol: "uniswap", chain: "ethereum", sourceFamily: "uniswap", price: 0.999, tvl: 2_000_000, updatedAt: now - 60 },
+        ] : []),
+      ],
+      challengerPools: [
+        // Legacy ticker rows cannot veto a quorum of genuine recovering pool families.
+        { protocol: "kinesis_money", chain: "orderbook", sourceFamily: "cg_tickers", price: 0.95, tvlUsd: 10_000_000, observedAt: now - 60 },
+      ],
+    });
+    if (independent) {
+      expect(decision.commands).toContainEqual({
+        type: "close-event", id: 7, endedAt: now, recoveryPrice: 0.999, closeReason: "recovered-dex",
+      });
+    } else {
+      expect(decision.commands).toEqual([{ type: "clear-recovery", id: 7 }]);
+      expect(decision.diagnostics).toContainEqual({
+        level: "warn",
+        message: "[depeg] Ignored aggregate DEX recovery for USDT: 1 corroborating protocol group(s), challenged=false; keeping event open until corroborated recovery appears",
+      });
+    }
+  });
+
   it("keeps a recovered reading open when DEX recovery lacks independent support", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_900,

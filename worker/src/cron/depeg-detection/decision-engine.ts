@@ -10,6 +10,7 @@ import {
   buildPendingReason,
   countDexProtocolCorroborations,
   dexPoolIndependentGroupKey,
+  isHardDexQuorumSource,
   markNativeOriginPending,
   rowPriceCoverage,
   type DepegRow,
@@ -124,6 +125,7 @@ function hasRecoveryChallenge(
 ): boolean {
   if (!challengers || challengers.length === 0) return false;
   return challengers.some((pool) => {
+    if (!isHardDexQuorumSource(pool)) return false;
     const signal = deriveDepegSignal(pool.price, pegRef);
     return signal != null && signalCrossesThreshold(signal, threshold) && signal.direction === depegDirection;
   });
@@ -178,6 +180,7 @@ function derivePoolChallengerEvidence(params: {
   const recoveryPools: Array<{ value: number; weight: number }> = [];
   let highTvl = false;
   for (const pool of params.challengers ?? []) {
+    if (!isHardDexQuorumSource(pool)) continue;
     const signal = deriveDepegSignal(pool.price, params.pegRef);
     if (signal == null) continue;
     const groupKey = dexPoolIndependentGroupKey(pool);
@@ -294,7 +297,7 @@ function deriveDexEvidence(params: {
   const dexSignal = input.dexRow && isTrustedDexPriceRow(input.dexRow, now, "depeg")
     ? deriveDepegSignal(input.dexRow.dex_price_usd, pegRef)
     : null;
-  const dexDirectionProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, threshold, direction, "confirm");
+  const dexDirectionProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, threshold, direction, "confirm", "hard");
   const existingDirection = existing?.direction === "above" || existing?.direction === "below"
     ? existing.direction
     : direction;
@@ -304,8 +307,9 @@ function deriveDexEvidence(params: {
     threshold,
     existingDirection,
     "confirm",
+    "hard",
   );
-  const dexRecoveryProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, recoveryThreshold, direction, "recover");
+  const dexRecoveryProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, recoveryThreshold, direction, "recover", "hard");
   const recoveryVetoDirection: DepegDirection = existingDirection;
   const dexRecoveryChallenged = hasRecoveryChallenge(input.challengerPools, pegRef, threshold, recoveryVetoDirection);
   const poolChallengerEvidence = derivePoolChallengerEvidence({

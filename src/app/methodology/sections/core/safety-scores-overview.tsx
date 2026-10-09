@@ -15,6 +15,15 @@ export function SafetyScoresOverview() {
         structural constraints, dependency limits and track record still matter; missing-data ceilings do not.
       </p>
       <p>
+        Methodology v10.13 uses each asset&apos;s original price-observation clock for peg freshness.
+        Publishing a new cache does not refresh a carried price. Missing, invalid or future clocks mean missing
+        peg evidence, not a timed favorable fact. Live reserve retention requires proven operational-only loss
+        within the original expiry; semantic or unproven failures revoke the affected evidence until a new
+        admitted success. Malformed redemption rows quarantine only their assets inside a trusted run, but
+        stale or unavailable redemption publications still hold the whole Safety publication.
+        Scoring weights, Exit continuity holds and route-output valuation rules are unchanged.
+      </p>
+      <p>
         Exit compares every admissible route alone and every independently usable pair, then takes the best feasible
         portfolio. The stronger member is primary; its backup adds{" "}
         <span className="font-mono">min(10, 100 − primary score) × backup score / 100</span>. An improving correlated

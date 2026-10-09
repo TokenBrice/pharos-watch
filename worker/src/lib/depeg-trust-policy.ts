@@ -71,7 +71,9 @@ export function resolveDepegSourceFamily(sourceKey: string | null | undefined): 
     normalized === "coingecko-native-implied" ||
     normalized === "coingecko-mirror" ||
     normalized === "coingecko-low-volume" ||
-    normalized === "cg-ticker"
+    normalized === "cg-ticker" ||
+    normalized === "cg_tickers" ||
+    normalized.startsWith("cg-ticker-")
   ) {
     return "coingecko";
   }

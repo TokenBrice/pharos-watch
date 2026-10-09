@@ -10,6 +10,8 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { maximumBusinessDaySettlement } from "@shared/lib/business-calendars";
 import { addEvidence, addGap, type AssetBuildContext } from "./fact-set-context";
 import { computeSafetyScoreV9ReserveExposureKey } from "./fact-set-schema";
+import type { ReserveLossLineage } from "@shared/types/live-reserves";
+import { isCarryEligible } from "@shared/lib/evidence-loss";
 
 export const SAFETY_SCORE_V9_RESERVE_BOUND_FACTS_DIGEST = domainDigest("safety-score-v9.reserve-bound-facts.v1", rawRegistry);
 // Validate rows per asset in the baseline builder; one malformed entry never rejects the cohort.
@@ -19,6 +21,7 @@ interface ReserveBoundAdmissionContext {
   clockSec: number;
   liveProvenance?: AssetBuildContext["fixedInput"]["liveReserveProvenanceMap"][string];
   liveMaxAgeSec?: AssetBuildContext["extension"]["sources"]["liveReserves"]["maxAgeSec"];
+  liveLossLineage?: ReserveLossLineage;
 }
 
 /** Selection and compilation share the same generation, identity and freshness gates. */
@@ -36,6 +39,11 @@ function admitReserveBound(payload: ReserveBoundedFact, rows: readonly ReserveSl
     const run = context.liveProvenance?.boundedFactsGeneration;
     if (!run || run.sourceGenerationId !== payload.provenance.sourceGenerationId || run.observedAtSec !== payload.asOfSec) rejectionReason = "producer-generation-mismatch";
     else maxAge = Math.min(maxAge, run.maxAgeSec);
+    const lineage = context.liveLossLineage;
+    if (lineage?.invalidations.composition || lineage?.invalidations["bounds"] || lineage?.invalidations[payload.factKey]
+      || (lineage?.latest?.scope.key === "composition" && !isCarryEligible(lineage.latest, clock))) {
+      rejectionReason = "producer-scope-invalidated";
+    }
   }
   if (fact.scope.kind !== "reserve-envelope") {
     const exposureKey = fact.scope.exposureKey;
@@ -100,7 +108,9 @@ export function compileSafetyScoreV9ReserveBoundFacts(context: AssetBuildContext
   const rows = context.fixedInput.liveReserveMap[context.asset.assetId]?.length ? context.fixedInput.liveReserveMap[context.asset.assetId]! : context.asset.reviewedStaticReserveRows?.rows ?? [];
   const bySource = new Map(rows.filter((row) => row.sourceKey).map((row) => [row.sourceKey!, computeSafetyScoreV9ReserveExposureKey(row)]));
   return (context.asset.reserveBoundFacts ?? []).map((payload) => {
-    const admission = admitReserveBound(payload, rows, { clockSec: clock, liveProvenance: context.fixedInput.liveReserveProvenanceMap[context.asset.assetId], liveMaxAgeSec: context.extension.sources.liveReserves.maxAgeSec });
+    const admission = admitReserveBound(payload, rows, { clockSec: clock, liveProvenance: context.fixedInput.liveReserveProvenanceMap[context.asset.assetId],
+      liveLossLineage: "reserveLossLineageById" in context.fixedInput ? context.fixedInput.reserveLossLineageById?.[context.asset.assetId] : undefined,
+      liveMaxAgeSec: context.extension.sources.liveReserves.maxAgeSec });
     const { fact, maxAge } = admission;
     let rejectionReason = admission.rejectionReason;
     const producer = payload.provenance.kind === "producer-observation";

@@ -8,6 +8,7 @@ interface LegacyDexPoolSource {
   chain: string;
   price: number;
   tvl: number;
+  sourceFamily?: unknown;
 }
 
 type LegacyJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
@@ -72,7 +73,7 @@ export async function loadLegacyDexPoolChallengers(
     .all<{ stablecoin_id: string; top_pools_json: string; updated_at: number }>();
 
   for (const row of rows.results ?? []) {
-    const pools = decodeLegacyJsonArray<Array<{ project?: unknown; chain?: unknown; tvlUsd?: unknown; price?: unknown; poolId?: unknown }>[number]>(
+    const pools = decodeLegacyJsonArray<Array<{ project?: unknown; chain?: unknown; tvlUsd?: unknown; price?: unknown; poolId?: unknown; source?: unknown }>[number]>(
       row.top_pools_json,
       {
         stablecoinId: row.stablecoin_id,
@@ -96,7 +97,10 @@ export async function loadLegacyDexPoolChallengers(
           poolId: typeof pool.poolId === "string" ? pool.poolId : "",
           chain: typeof pool.chain === "string" ? pool.chain : "unknown",
           protocol: typeof pool.project === "string" ? pool.project : "unknown",
-          sourceFamily: "legacy-top-pools",
+          // Preserve ticker lineage instead of laundering it into a legacy pool family.
+          sourceFamily: typeof pool.source === "string" && pool.source.trim().toLowerCase() === "cg_tickers"
+            ? "cg_tickers"
+            : "legacy-top-pools",
           priceUsd: price,
           tvlUsd,
           snapshotAt: row.updated_at,
@@ -146,7 +150,9 @@ export async function loadLegacyDexPoolChallengers(
           poolId: `${row.stablecoin_id}:${source.protocol}:${source.chain}`,
           chain: source.chain,
           protocol: source.protocol,
-          sourceFamily: "legacy-price-sources",
+          sourceFamily: typeof source.sourceFamily === "string" && source.sourceFamily.trim().toLowerCase() === "cg_tickers"
+            ? "cg_tickers"
+            : "legacy-price-sources",
           priceUsd: price,
           tvlUsd: tvl,
           snapshotAt: row.updated_at,

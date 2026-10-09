@@ -24,7 +24,7 @@ import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExec
 import reviewedExecutionModels from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
 import { v9EvidenceResponsibilityForCauseProof } from "@shared/types/safety-score-v9-causes";
-import { findRedemptionReserveQuarantine, redemptionReserveQuarantineScope } from "./redemption-reserve-quarantine";
+import { findRedemptionQuarantine, redemptionQuarantineScope } from "./redemption-quarantine";
 import type {
   V9EvidenceResponsibility,
   V9ExitRouteFactV2,
@@ -746,12 +746,12 @@ export function buildRoutes(context: AssetBuildContext): {
     routes.push(buildSuspendedRoute(context, suspension));
   }
   const generationId = context.fixedInput.redemptionGenerationId;
-  // A redemption row withheld at capture because its consumed reserve evidence
-  // lost admission keeps the same producer-failed rail, bound to that verdict.
+  // A redemption row withheld at capture keeps a producer-failed rail bound to
+  // its scoped admission verdict.
   const quarantineScope = config && !redemption
-    ? redemptionReserveQuarantineScope(context.asset.assetId, generationId, config.routeFamily) : null;
+    ? redemptionQuarantineScope(context.asset.assetId, generationId, config.routeFamily) : null;
   const quarantine = quarantineScope
-    ? findRedemptionReserveQuarantine(context.fixedInput.pipelineGapByAssetId, context.asset.assetId, quarantineScope) : undefined;
+    ? findRedemptionQuarantine(context.fixedInput.pipelineGapByAssetId, context.asset.assetId, quarantineScope) : undefined;
   let unavailableRail: { routeId: string; routeFamily: V9ExitRouteFactV2["routeFamily"]; evidenceId: string; capacityGapId: string } | null = null;
   if (
     redemption?.provider === "reserve-sync-metadata" &&

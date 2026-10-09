@@ -16,6 +16,8 @@ import {
   reserveRecoveryAdmissionSql,
   type ReserveProducerPriority,
 } from "./reserve-producer-priority";
+import { reserveLossOutcome } from "./live-reserves/loss";
+import { RESERVE_INVALIDATIONS_UNION_SQL } from "./live-reserves/store-statements";
 
 export { pruneLiveReserveRecoveryCheckpoints } from "./scheduled-recovery-prune";
 
@@ -546,6 +548,12 @@ function buildReserveAttemptAbandonmentStatements(
   },
 ): D1PreparedStatement[] {
   if (!checkpoint.currentItemKey || !checkpoint.currentDomainAttemptId) return [];
+  const loss = reserveLossOutcome({ assetId: checkpoint.currentItemKey,
+    sourceId: `reserve-collector:${checkpoint.currentItemKey}`, attemptId: checkpoint.currentDomainAttemptId,
+    runId: checkpoint.invocationId, observedAtSec: input.timestamp, reason: "collector-abandoned", legs: [] });
+  const metadata = JSON.stringify({ ...JSON.parse(input.metadata), reserveLoss: loss,
+    reserveInvalidations: { composition: loss } });
+  const metadataSql = `json_set(?, '$.reserveInvalidations', ${RESERVE_INVALIDATIONS_UNION_SQL})`;
   const sharedBinds = [
     checkpoint.currentItemKey,
     checkpoint.currentDomainAttemptId,
@@ -560,27 +568,27 @@ function buildReserveAttemptAbandonmentStatements(
            status, warnings, warning_count, last_error, metadata
          )
          SELECT stablecoin_id, COALESCE(last_attempted_at, ?), adapter_key, breaker_key,
-                pending_attempt_id, 'error', NULL, 0, ?, ?
+                pending_attempt_id, 'error', NULL, 0, ?, ${metadataSql}
            FROM reserve_sync_state
           WHERE stablecoin_id = ?
             AND pending_attempt_id = ?
             AND last_attempt_id = ?
             AND ${input.checkpointGuardSql}`,
       )
-      .bind(input.timestamp, input.error, input.metadata, ...sharedBinds),
+      .bind(input.timestamp, input.error, metadata, metadata, ...sharedBinds),
     db
       .prepare(
         `UPDATE reserve_sync_state
             SET pending_attempt_id = NULL,
                 last_status = 'error',
                 last_error = ?,
-                metadata = ?
+                metadata = ${metadataSql}
           WHERE stablecoin_id = ?
             AND pending_attempt_id = ?
             AND last_attempt_id = ?
             AND ${input.checkpointGuardSql}`,
       )
-      .bind(input.error, input.metadata, ...sharedBinds),
+      .bind(input.error, metadata, metadata, ...sharedBinds),
   ];
 }
 

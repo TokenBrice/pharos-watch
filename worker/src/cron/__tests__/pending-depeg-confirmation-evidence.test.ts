@@ -124,6 +124,34 @@ describe("collectConfirmationEvidence source-family independence", () => {
 });
 
 describe("collectConfirmationEvidence DEX source grouping and freshness", () => {
+  it.each([
+    { price: 0.95, status: "confirm" },
+    { price: 0.999, status: "recover" },
+    { price: 1.05, status: "contradict" },
+  ])("does not let a ticker be the deciding aggregate $status family", async ({ price, status }) => {
+    const sources = [
+      { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price, tvl: 3_000_000, updatedAt: NOW_SEC - 30 },
+      { protocol: "kinesis_money", sourceFamily: "cg_tickers", chain: "orderbook", price, tvl: 0, updatedAt: NOW_SEC - 30 },
+    ];
+    const evidence = await collect(noOffchain({
+      dexPriceRows: dexRows(NOW_SEC - 30, price),
+      dexPriceSources: new Map([[COIN_ID, sources]]),
+    }));
+    expect(evidence.dexStatus).toBe("insufficient");
+    expect(evidence.dexConfirmationKeys).toEqual([]);
+    expect(evidence.confirmingSources).toEqual([]);
+    expect(evidence.hardOpposingSources).toEqual([]);
+    const genuine = await collect(noOffchain({
+      dexPriceRows: dexRows(NOW_SEC - 30, price),
+      dexPriceSources: new Map([[COIN_ID, [
+        ...sources,
+        { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price, tvl: 2_000_000, updatedAt: NOW_SEC - 30 },
+      ]]]),
+    }));
+    expect(genuine.dexStatus).toBe(status);
+    expect([...genuine.confirmingSources, ...genuine.opposingSources].some((key) => key.includes("cg_tickers"))).toBe(false);
+  });
+
   it("groups independent DEX protocol families and retains peak candidates", async () => {
     const evidence = await collect(noOffchain({ dexPriceRows: dexRows(), dexPriceSources: dexSources() }));
     expect(evidence).toMatchObject({ dexStatus: "confirm", dexConfirmationKeys: ["dex:curve", "dex:uniswap"] });
@@ -156,6 +184,18 @@ describe("collectConfirmationEvidence DEX source grouping and freshness", () => 
 });
 
 describe("collectConfirmationEvidence pool challenger status classification", () => {
+  it.each([0.98, 0.999, 1.05])("never treats a ticker challenger at %s as a hard pool vote", async (price) => {
+    const evidence = await collect(noOffchain({
+      poolChallengers: pools([
+        { price, tvlUsd: 10_000_000, protocol: "kinesis_money", sourceFamily: "cg_tickers" },
+      ]),
+    }));
+    expect(evidence.poolStatus).toBe("insufficient");
+    expect(evidence.poolConfirmations).toEqual([]);
+    expect(evidence.confirmingSources).toEqual([]);
+    expect(evidence.hardOpposingSources).toEqual([]);
+  });
+
   const poolCases = [
     { label: "reports poolStatus='contradict' when at least one qualifying pool is opposite-direction above bar", values: [{ price: 0.997, tvlUsd: 5_000_000, protocol: "curve", sourceFamily: "curve" }, { price: 1.012, tvlUsd: 5_000_000, protocol: "uniswap", sourceFamily: "uniswap" }], status: "contradict", opposing: "pool:uniswap:uniswap", confirmations: 0 },
     { label: "reports poolStatus='confirm' with highTvl=true when a single qualifying pool has TVL >= $5M", values: [{ price: 0.98, tvlUsd: 6_000_000, protocol: "curve", sourceFamily: "curve" }], status: "confirm", confirmations: 1 },

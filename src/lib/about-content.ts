@@ -148,7 +148,7 @@ export const COMPUTED_FEATURES: readonly AboutFeatureItem[] = [
   {
     title: "Safety Grades",
     description:
-      "Composite A+ to F grades built from V10 Backing Quality, Exit Strength, and Economic Control, followed by peg, deployment, and binding-cap adjustments.",
+      "Composite A+ to F grades built from V10.13 Backing Quality, Exit Strength, and Economic Control, followed by peg, deployment, and binding-cap adjustments. Freshness follows original asset evidence clocks; missing data is not proof of safety or failure.",
     icon: FlaskConical,
     href: "/safety-scores/",
     linkLabel: "Open scorecards",

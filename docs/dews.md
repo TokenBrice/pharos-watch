@@ -6,13 +6,15 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both resolve their published version and changelog through `shared/lib/methodology-versions/registry.ts`.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.33`<!-- GENERATED-END: methodology-version-depeg-dews -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.34`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical constants:** `shared/lib/methodology-versions/constants.ts`
 
 Each API response includes the shared `methodology` envelope with `version`, `versionLabel`, `currentVersion`, `currentVersionLabel`, `changelogPath`, `asOf`, and `isCurrent` fields.
 
 The 2026-10-08 `v6.33` release repairs Liquidity Erosion's weekly DEX-history admission: nearest positive TVL, confidence >=0.5 and inclusive 36-hour tolerance, with the selected row's original score/TVL/date retained. Missing eligible evidence leaves both historical anchors unavailable. Live DEX history reaches back 8.5 days; historical reconstruction reaches back 15.5 days from the earliest event UTC day, without changing supply-history bounds. Input availability, scores and bands may change. Release requires owner-approved U-C20-16 production-history replay; no replay result is recorded here.
+
+Shared `v6.34` changes hard Depeg Tracker corroboration, not the DEWS formula: CoinGecko tickers (normalized `cg_tickers` and legacy `cg-ticker-<exchange>`) cannot supply hard DEX confirmation/recovery/opposition or pool veto/high-TVL exceptions. Ticker prices and soft diagnostics remain unchanged. See [Depeg Detection](./depeg-detection.md#methodology-versioning). The new entry provisionally activates at 2026-10-09 00:00 UTC; re-date at release. No production replay or latency result is claimed.
 
 ---
 

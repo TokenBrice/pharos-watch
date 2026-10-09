@@ -5,6 +5,8 @@ import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { ConsumedReserveInputSchema, RedemptionReserveRunMetadataSchema } from "@shared/types/reserve-input";
 import type * as SourcesModule from "../../lib/redemption-backstop/sources";
 import type * as RedemptionConfigsModule from "@shared/lib/redemption-backstops";
+import type { AcceptedReserveGeneration } from "@shared/types/accepted-reserve-generation";
+import type * as AcceptedReserveModule from "../../lib/accepted-reserve-generation";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 const DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES: MockTableConfig[] = [
@@ -86,10 +88,15 @@ vi.mock("../../lib/redemption-backstops-store-write", () => ({
   upsertRedemptionBackstopSnapshots: upsertRedemptionBackstopSnapshotsMock,
 }));
 
-vi.mock("../../lib/accepted-reserve-generation", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/accepted-reserve-generation")>()),
-  loadAcceptedReserveGeneration: loadAcceptedReserveGenerationMock,
-}));
+vi.mock("../../lib/accepted-reserve-generation", async (importOriginal) => {
+  const original = await importOriginal<typeof AcceptedReserveModule>();
+  return {
+    ...original,
+    loadAcceptedReserveGeneration: loadAcceptedReserveGenerationMock,
+    loadAcceptedReserveMetadataMap: async (_db: D1Database, envelope: AcceptedReserveGeneration, now: number) =>
+      original.acceptedReserveMetadataMap(envelope, now),
+  };
+});
 
 vi.mock("@shared/lib/redemption-backstops", async (importOriginal) => ({
   ...(await importOriginal<typeof RedemptionConfigsModule>()),
@@ -286,6 +293,7 @@ describe("syncRedemptionBackstops", () => {
     expect(persisted.find((entry) => entry.stablecoinId === "cusd-cap")).toEqual({
       ...upstream,
       outputDependencyResolution: { stablecoinId: "iusd-infinifi", resolutionState: "failed" },
+      lossOutcomes: [],
     });
     expect(persisted.find((entry) => entry.stablecoinId === "iusd-infinifi")?.resolutionState).toBe("failed");
     expect(upstream).not.toHaveProperty("outputDependencyResolution");
@@ -898,15 +906,19 @@ describe("syncRedemptionBackstops", () => {
       "iusd-infinifi",
       expect.objectContaining({ routeFamily: "basket-redeem" }),
       expect.any(Number),
+      expect.stringMatching(/^redemption:/),
     );
     expect(upsertRedemptionBackstopSnapshotsMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.arrayContaining([
         expect.objectContaining({ stablecoinId: "cusd-cap", resolutionState: "resolved" }),
-        expect.objectContaining({ stablecoinId: "iusd-infinifi", resolutionState: "failed" }),
+        expect.objectContaining({ stablecoinId: "iusd-infinifi", resolutionState: "failed", lossOutcomes: [
+          expect.objectContaining({ disposition: "unknown", reason: "sync-error", scope: { assetId: "iusd-infinifi", kind: "route", key: "redemption:iusd-infinifi:basket-redeem" } }),
+        ] }),
       ]),
       expect.objectContaining({
         expectedCount: 2,
+        runId: expect.stringMatching(/^redemption:/),
         metadata: expect.objectContaining({ configured: 2 }),
       }),
     );
@@ -914,6 +926,7 @@ describe("syncRedemptionBackstops", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.failed).toBe(1);
     expect(metadata.failedIds).toEqual(["iusd-infinifi"]);
+    expect(metadata.lossSummary).toMatchObject({ total: 1, byDisposition: { unknown: 1, operational: 0 } });
   });
 
   it("caps failed metadata ids at 25 and marks truncation", async () => {
@@ -942,6 +955,7 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.failed).toBe(26);
     expect(metadata.failedIds).toEqual(configuredIdsMock.slice(0, 25));
     expect(metadata.failedIdsTruncated).toBe(true);
+    expect(metadata.lossSummary).toMatchObject({ total: 26, byDisposition: { unknown: 26, operational: 0 } });
   });
 
   it("marks the run degraded but keeps computing effective-exit scores from stale-but-present DEX data", async () => {

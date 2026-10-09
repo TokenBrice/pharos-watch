@@ -70,9 +70,13 @@ function conservativeCurve(
     : (result as DexMeasuredExecutionObservationHistory["conservativeCapacityCurve"]);
 }
 
+function cycleObservedAt(cycle: DexMeasuredExecutionHistoryCycle): number | null {
+  return cycle.status === "measured" ? cycle.profile?.quotedAt ?? null : cycle.publishedAt;
+}
+
 /**
- * Summarizes complete published producer cycles inside the score freshness
- * window. Only verified measured profiles influence the conservative curve.
+ * Summarizes complete producer cycles within their original evidence clocks.
+ * Publication clocks order cycles; only fresh original quotes influence credit.
  */
 export function summarizeDexMeasuredExecutionHistory(input: {
   cycles: readonly DexMeasuredExecutionHistoryCycle[];
@@ -81,12 +85,11 @@ export function summarizeDexMeasuredExecutionHistory(input: {
 }): DexMeasuredExecutionObservationHistory | null {
   const windowStart = input.nowSec - input.freshnessMaxSec;
   const sortedCycles = [...input.cycles]
-    .filter(
-      (cycle) =>
-        Number.isInteger(cycle.publishedAt) &&
-        cycle.publishedAt >= windowStart &&
-        cycle.publishedAt <= input.nowSec,
-    )
+    .filter((cycle) => {
+      const observedAt = cycleObservedAt(cycle);
+      return Number.isInteger(cycle.publishedAt) && cycle.publishedAt <= input.nowSec &&
+        observedAt !== null && Number.isInteger(observedAt) && observedAt > windowStart && observedAt <= input.nowSec;
+    })
     .sort(
       (left, right) =>
         right.publishedAt - left.publishedAt || right.generationId.localeCompare(left.generationId),
@@ -122,8 +125,8 @@ export function summarizeDexMeasuredExecutionHistory(input: {
     completeProducerCycleCount: activeCycles.length,
     successfulObservationCount: successful.length,
     consecutiveSuccessCount,
-    observationWindowStartedAt: Math.min(...activeCycles.map((cycle) => cycle.publishedAt)),
-    observationWindowEndedAt: Math.max(...activeCycles.map((cycle) => cycle.publishedAt)),
+    observationWindowStartedAt: Math.min(...activeCycles.map((cycle) => cycleObservedAt(cycle)!)),
+    observationWindowEndedAt: Math.max(...activeCycles.map((cycle) => cycleObservedAt(cycle)!)),
     latestOperationalFailureAt,
     conservativeStatistic: "pointwise-minimum",
     conservativeCapacityCurve: capacityCurve,
