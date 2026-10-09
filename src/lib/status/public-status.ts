@@ -1,4 +1,4 @@
-import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
+import { getBlacklistGapStatus, getStablecoinPublicationImpactStatus } from "@shared/lib/status-thresholds";
 import { getPublicMintBurnStatus, getStatusSeverity, type PublicStatusTone } from "@shared/lib/public-health";
 import type { HealthResponse, StatusHealthValue } from "@shared/types";
 import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
@@ -101,6 +101,27 @@ export function getPublicHealthWarningPresentation(
     title: "Heavy scheduled delivery evidence unavailable",
     detail: "The live heavy slot-start observation is missing, invalid, or unreadable. Heavy delivery cannot be claimed healthy.",
   };
+  if (warning.startsWith("stablecoin-publication-incomplete:")) {
+    const ids = healthData.stablecoinPublication?.missingActiveIds ?? [];
+    const publication = healthData.stablecoinPublication;
+    const impact = publication && getStablecoinPublicationImpactStatus(
+      publication, healthData.activePriceCoverage ?? { missingActiveAssets: [] }, healthData.timestamp,
+    );
+    return {
+      title: "Stablecoin publication coverage",
+      detail: ids.length === 0
+        ? "Published listing counts do not reconcile. Public health remains degraded until exact coverage is verified."
+        : `Published listings are missing ${formatAffectedAssets(ids.length, ids)}. ${
+          impact === "healthy"
+            ? "These isolated small-asset omissions remain visible warnings without degrading public health."
+            : "Material, unverified, or widespread omissions degrade public health until coverage recovers."
+        }`,
+    };
+  }
+  if (warning === "stablecoin-publication-unknown") return {
+    title: "Stablecoin publication coverage",
+    detail: "Exact listing coverage is unavailable; public health degrades until publication evidence recovers.",
+  };
   if (warning.startsWith(ACTIVE_PRICE_INCOMPLETE_PREFIX)) {
     const fallbackIds = warning
       .slice(ACTIVE_PRICE_INCOMPLETE_PREFIX.length)
@@ -134,7 +155,7 @@ export function getPublicHealthWarningPresentation(
     const labels = getActivePriceAssetLabels(healthData.activePriceCoverage, ids);
     return {
       title: "Long-running price gaps",
-      detail: `${formatAffectedAssets(ids.length, labels)} ${ids.length === 1 ? "has" : "have"} had no accepted live price for more than a week. Market caps keep publishing; each is under catalog review to re-source the price or retire the listing.`,
+      detail: `${formatAffectedAssets(ids.length, labels)} ${ids.length === 1 ? "has" : "have"} had no accepted live price for more than a week. Each is under catalog review to re-source the price or retire the listing; an absent listing has only dated last-known market-cap evidence.`,
     };
   }
 
@@ -248,6 +269,18 @@ export function getImpactedPublicSurfaces(
   healthData: HealthResponse,
 ): PublicImpactedSurface[] {
   const items: PublicImpactedSurface[] = [];
+  if (healthData.stablecoinPublication && getStablecoinPublicationImpactStatus(
+    healthData.stablecoinPublication, healthData.activePriceCoverage ?? { missingActiveAssets: [] }, healthData.timestamp,
+  ) !== "healthy") {
+    items.push({
+      id: "stablecoin-publication",
+      title: "Stablecoin publication coverage",
+      detail: healthData.stablecoinPublication.status === "unknown"
+        ? "Exact publication coverage is unavailable."
+        : "Material, unverified, or widespread active listing omissions remain unresolved.",
+      tone: "degraded",
+    });
+  }
   const mintBurnStatus = getPublicMintBurnStatus(healthData.mintBurn.sync);
   const blacklistStatus = getBlacklistGapStatus({
     missingRatio: healthData.blacklist.missingRatio,

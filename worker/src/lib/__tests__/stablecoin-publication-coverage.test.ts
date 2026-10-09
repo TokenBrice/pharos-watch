@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   STABLECOIN_PUBLICATION_WAIVERS,
@@ -9,8 +9,14 @@ import {
   evaluateStablecoinActivePriceCoverage,
   evaluateStablecoinPublicationCoverage,
   loadPreviousStablecoinActivePriceCoverage,
+  seedAbsentActivePriceCoverageMarketCaps,
 } from "../stablecoin-publication-coverage";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC } from "@shared/lib/status-thresholds";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 const QUARANTINED_NIGHT_WATCH_OMISSIONS = [
   "benji-franklin-templeton",
@@ -218,6 +224,96 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       rejectionReason: "no-accepted-price",
       alertEligible: true,
     });
+  });
+
+  it("seeds absent-row cap from the previous publication and carries its original clock through compact generations", () => {
+    const nowSec = 1_790_000_000;
+    const first = evaluateStablecoinActivePriceCoverage([], ["missing"], {
+      nowSec,
+      previousAcceptedAssetsById: new Map([["missing", {
+        id: "missing", price: 1.019, priceSource: "coingecko",
+        circulating: { peggedUSD: 12_000_000 }, supplyObservedAt: nowSec - 900,
+      }]]),
+    });
+    const compact = compactStablecoinActivePriceCoverage(first, 0);
+    const detail = parsePersistedMissingActivePriceState(compact.missingActiveState[0], { nowSec })!;
+    const second = evaluateStablecoinActivePriceCoverage([], ["missing"], {
+      nowSec: nowSec + 900, previousCoverage: { missingActiveIds: ["missing"], missingActiveAssets: [detail] },
+    });
+    expect(second.missingActiveAssets[0]).toMatchObject({
+      marketCapUsd: null, lastKnownMarketCapUsd: 12_000_000,
+      lastKnownMarketCapObservedAt: nowSec - 900, lastKnownMarketCapSource: "publication",
+      consecutiveMissingGenerations: 2,
+    });
+  });
+
+  it("seeds legacy prior-gap cap only with its publication clock", () => {
+    const nowSec = 1_790_000_000;
+    const previous = evaluateStablecoinActivePriceCoverage([
+      { id: "missing", price: null, circulating: { peggedUSD: 5_000_000 } },
+    ], ["missing"], { nowSec: nowSec - 900 });
+    delete previous.missingActiveAssets[0]!.lastKnownMarketCapUsd;
+    delete previous.missingActiveAssets[0]!.lastKnownMarketCapObservedAt;
+    const next = evaluateStablecoinActivePriceCoverage([], ["missing"], {
+      nowSec, previousCoverage: { ...previous, observedAt: nowSec - 900 },
+    });
+    expect(next.missingActiveAssets[0]).toMatchObject({
+      marketCapUsd: null, lastKnownMarketCapUsd: 5_000_000,
+      lastKnownMarketCapObservedAt: nowSec - 900,
+    });
+  });
+
+  it("preserves current cap separately from retained evidence in compact coverage", () => {
+    const nowSec = 1_790_000_000;
+    const coverage = evaluateStablecoinActivePriceCoverage([
+      { id: "unpriced", price: null, circulating: { peggedUSD: 60_000_000 } },
+    ], ["unpriced"], { nowSec });
+    const compact = compactStablecoinActivePriceCoverage(coverage, 0);
+    expect(parsePersistedMissingActivePriceState(compact.missingActiveState[0], { nowSec })).toMatchObject({
+      marketCapUsd: 60_000_000, lastKnownMarketCapUsd: 60_000_000, lastKnownMarketCapObservedAt: nowSec,
+    });
+  });
+
+  it("bootstraps only absent rows from one bounded supply snapshot read and carries table/date provenance", async () => {
+    const nowSec = 1_790_000_000;
+    const coverage = evaluateStablecoinActivePriceCoverage([{ id: "unpriced", price: null }], ["missing", "unpriced"], { nowSec });
+    const db = mockD1([{
+      match: "JOIN supply_history", rows: [
+        { stablecoin_id: "missing", snapshot_date: nowSec - 11 * 86400, circulating_usd: 32_686_926.18 },
+      ],
+    }], { requireMatch: true });
+    await seedAbsentActivePriceCoverageMarketCaps(db, coverage, nowSec);
+    expect(coverage.missingActiveAssets[0]).toMatchObject({
+      marketCapUsd: null, lastKnownMarketCapUsd: 32_686_926.18,
+      lastKnownMarketCapObservedAt: nowSec - 11 * 86400, lastKnownMarketCapSource: "supply_history",
+    });
+    const next = evaluateStablecoinActivePriceCoverage([], ["missing"], { nowSec: nowSec + 900, previousCoverage: coverage });
+    expect(next.missingActiveAssets[0]).toMatchObject({
+      lastKnownMarketCapUsd: 32_686_926.18, lastKnownMarketCapObservedAt: nowSec - 11 * 86400,
+      lastKnownMarketCapSource: "supply_history",
+    });
+    const noReadDb = mockD1([], { requireMatch: true });
+    const prepare = vi.spyOn(noReadDb, "prepare");
+    await seedAbsentActivePriceCoverageMarketCaps(noReadDb, next, nowSec + 900);
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
+  it("selects only the latest bounded non-future supply snapshot for absent ids", async () => {
+    const nowSec = 1_790_000_000;
+    const { sqlite, db } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES (?, ?, ?)");
+    insert.run("fresh", nowSec - 900, 32_686_926.18);
+    insert.run("fresh", nowSec - 1800, 31_000_000);
+    insert.run("fresh", nowSec + 900, 10_000_000);
+    insert.run("stale", nowSec - STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC - 1, 5_000_000);
+    insert.run("unpriced", nowSec - 900, 5_000_000);
+    const coverage = evaluateStablecoinActivePriceCoverage([{ id: "unpriced", price: null }],
+      ["fresh", "stale", "absent", "unpriced"], { nowSec });
+    await seedAbsentActivePriceCoverageMarketCaps(db, coverage, nowSec);
+    expect(coverage.missingActiveAssets.map((gap) => gap.lastKnownMarketCapUsd)).toEqual([
+      32_686_926.18, null, null, null,
+    ]);
+    expect(coverage.missingActiveAssets[0]?.lastKnownMarketCapObservedAt).toBe(nowSec - 900);
   });
 
   it("retains unknown compact continuity and still honors review expiry", async () => {
@@ -468,6 +564,36 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       lastAcceptedSource: "pyth",
       lastAcceptedObservedAt: null,
     });
+  });
+
+  it("loads verbose retained cap evidence and normalizes unknown source provenance to null", async () => {
+    const nowSec = 1_790_000_000;
+    const coverage = evaluateStablecoinActivePriceCoverage([], ["valid", "invalid"], { nowSec });
+    const persistedCoverage = {
+      ...coverage,
+      missingActiveAssets: coverage.missingActiveAssets.map((detail, index) => ({
+        ...detail, lastKnownMarketCapUsd: 32_686_926.18,
+        lastKnownMarketCapObservedAt: nowSec - 900,
+        lastKnownMarketCapSource: index === 0 ? "supply_history" : "invalid-source",
+      })),
+    };
+    const db = mockD1([{
+      match: "activePriceCoverage", rows: [],
+      first: { started_at: nowSec, metadata: JSON.stringify({ activePriceCoverage: persistedCoverage }) },
+    }], { requireMatch: true });
+    const result = await loadPreviousStablecoinActivePriceCoverage(db, nowSec + 900);
+    expect(result.status).toBe("ok");
+    if (result.status !== "ok") throw new Error("Expected readable verbose continuity");
+    expect(result.coverage.missingActiveAssets).toEqual([
+      expect.objectContaining({
+        stablecoinId: "valid", lastKnownMarketCapUsd: 32_686_926.18,
+        lastKnownMarketCapObservedAt: nowSec - 900, lastKnownMarketCapSource: "supply_history",
+      }),
+      expect.objectContaining({
+        stablecoinId: "invalid", lastKnownMarketCapUsd: 32_686_926.18,
+        lastKnownMarketCapObservedAt: nowSec - 900, lastKnownMarketCapSource: null,
+      }),
+    ]);
   });
 
   it("loads bounded streak state from the latest prior cron metadata", async () => {

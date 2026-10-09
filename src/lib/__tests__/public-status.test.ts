@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HealthResponse } from "@shared/types";
-import { buildPublicHealthStatusCauses } from "@/lib/status/issue-evidence-model";
+import { buildPublicHealthStatusCauses, normalizeStatusIssues } from "@/lib/status/issue-evidence-model";
 import { countPublicImpactOpenCircuits, getCircuitImpactStatus, isPublicImpactCircuitKey } from "@shared/lib/public-health";
 import { CIRCUIT_SOURCE_REGISTRY } from "@shared/lib/circuit-sources";
 import { makeActivePriceCoverage, makeHealthyHealthResponse, makeMissingActiveAsset } from "@/test-utils/status-fixtures";
@@ -16,6 +16,49 @@ import {
 const BASE_HEALTH: HealthResponse = makeHealthyHealthResponse();
 
 describe("public status helpers", () => {
+  it.each([
+    ["info", "watch", false],
+    ["warning", "impacting", true],
+  ] as const)("classifies publication causes by %s severity, not their code alone", (severity, kind, publicImpacting) => {
+    const issues = normalizeStatusIssues({
+      overall: [], availability: [], dataQuality: [{
+        code: "stablecoin_publication_incomplete", severity, layer: "data-quality", message: "Missing listing",
+      }],
+    });
+    expect(issues[0]).toMatchObject({ kind, publicImpacting });
+  });
+
+  it.each([30_000_000, 60_000_000])("keeps publication UI impact aligned for a last-known cap of %s", (cap) => {
+    const health: HealthResponse = {
+      ...BASE_HEALTH,
+      warnings: ["stablecoin-publication-incomplete:hbd-hive"],
+      stablecoinPublication: {
+        status: "incomplete", missingActiveIds: ["hbd-hive"], expectedActiveCount: 1,
+        presentActiveCount: 0, waivedActiveCount: 0, waivedActiveIds: [], expiredWaiverIds: [], observedAt: BASE_HEALTH.timestamp,
+      },
+      activePriceCoverage: makeActivePriceCoverage([makeMissingActiveAsset({
+        stablecoinId: "hbd-hive", marketCapUsd: null, lastKnownMarketCapUsd: cap,
+        lastKnownMarketCapObservedAt: BASE_HEALTH.timestamp, lastKnownMarketCapSource: "supply_history",
+      })]),
+    };
+    expect(getImpactedPublicSurfaces(health).some((surface) => surface.id === "stablecoin-publication"))
+      .toBe(cap === 60_000_000);
+    const presentation = getPublicHealthWarningPresentation(health.warnings[0]!, health);
+    expect(presentation.detail).toContain("hbd-hive");
+    expect(presentation.detail).not.toBe(health.warnings[0]);
+  });
+  it("explains an unnamed publication count mismatch without asserting missing assets", () => {
+    const health: HealthResponse = {
+      ...BASE_HEALTH,
+      stablecoinPublication: {
+        status: "incomplete", missingActiveIds: [], expectedActiveCount: 1, presentActiveCount: 0,
+        waivedActiveCount: 0, waivedActiveIds: [], expiredWaiverIds: [], observedAt: BASE_HEALTH.timestamp,
+      },
+    };
+    const presentation = getPublicHealthWarningPresentation("stablecoin-publication-incomplete:count-mismatch", health);
+    expect(presentation.detail).toContain("counts");
+    expect(presentation.detail).not.toContain("missing active assets");
+  });
   it.each([
     ["heavy_scheduled_delivery_stalled", "Heavy scheduled delivery stalled", "Public delivery can remain healthy"],
     ["heavy_scheduler_liveness_unavailable", "Heavy scheduled delivery evidence unavailable", "cannot be claimed healthy"],

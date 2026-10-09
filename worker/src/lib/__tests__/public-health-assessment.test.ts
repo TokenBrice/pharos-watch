@@ -4,10 +4,10 @@ import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { STATUS_MISSING_PRICE_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, STATUS_PUBLICATION_IMMATERIAL_MISSING_MARGIN, STATUS_MISSING_PRICE_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { makePriceCoverageMetadata } from "./public-health.test-support";
 import { fxRatesCacheRows } from "./fx-rate-state.test-support";
-import { STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
+import { STABLECOIN_PRICE_GAP_REVIEWS, evaluateStablecoinActivePriceCoverage, evaluateStablecoinPublicationCoverage, seedAbsentActivePriceCoverageMarketCaps } from "../stablecoin-publication-coverage";
 import { assessD1Capacity } from "@shared/lib/d1-capacity";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -336,6 +336,97 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     });
     expect(result.stablecoinPublicationImpactStatus).toBe("degraded");
     expect(result.overallStatus).not.toBe("healthy");
+    expect(result.warnings).toContain(`stablecoin-publication-incomplete:${missingId}`);
+  });
+
+  it.each([
+    ["small", 10_000_000, 900, 1, "healthy"],
+    ["growth factor", 60_000_000, 900, 1, "degraded"],
+    ["material", MATERIAL_MARKET_CAP_USD, 900, 1, "degraded"],
+    ["no evidence", null, 900, 1, "degraded"],
+    ["stale evidence", 10_000_000, STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC + 1, 1, "degraded"],
+    ["margin boundary", 10_000_000, 900, STATUS_PUBLICATION_IMMATERIAL_MISSING_MARGIN, "healthy"],
+    ["breadth", 10_000_000, 900, STATUS_PUBLICATION_IMMATERIAL_MISSING_MARGIN + 1, "degraded"],
+  ] as const)("classifies absent publication rows using %s evidence", async (_label, cap, age, count, expected) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const ids = [...ACTIVE_IDS];
+    const missing = ids.slice(0, count);
+    const assets = ids.filter((id) => !missing.includes(id)).map((id) => ({ id, price: 1, priceSource: "coingecko" }));
+    const activePriceCoverage = evaluateStablecoinActivePriceCoverage(assets, ids, {
+      nowSec,
+      previousAcceptedAssetsById: new Map(missing.map((id) => [id, {
+        id, circulating: cap == null ? null : { peggedUSD: cap }, supplyObservedAt: nowSec - age,
+      }])),
+    });
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: {
+        activePublicationCoverage: evaluateStablecoinPublicationCoverage(assets.map((asset) => asset.id), nowSec),
+        activePriceCoverage,
+      },
+    }), nowSec, { logPrefix: "test" });
+    expect(result.overallStatus).toBe(expected);
+    expect(result.stablecoinPublicationImpactStatus).toBe(expected);
+    expect(result.warnings).toContain(`stablecoin-publication-incomplete:${missing.join(",")}`);
+  });
+
+  it("seeds the reported HBD snapshot on the next missing generation and keeps health warning-only", async () => {
+    const nowSec = Date.UTC(2026, 9, 9, 12) / 1000;
+    const ids = [...ACTIVE_IDS];
+    const assets = ids.filter((id) => id !== "hbd-hive").map((id) => ({ id, price: 1, priceSource: "coingecko" }));
+    const previous = evaluateStablecoinActivePriceCoverage(assets, ids, { nowSec: nowSec - 900 });
+    previous.missingActiveAssets[0]!.consecutiveMissingGenerations = 18;
+    const coverage = evaluateStablecoinActivePriceCoverage(assets, ids, { nowSec, previousCoverage: previous });
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES (?, ?, ?)")
+      .run("hbd-hive", 1_790_553_600, 32_686_926.18);
+    await seedAbsentActivePriceCoverageMarketCaps(db, coverage, nowSec);
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: {
+        activePublicationCoverage: evaluateStablecoinPublicationCoverage(assets.map((asset) => asset.id), nowSec),
+        activePriceCoverage: coverage,
+      },
+    }), nowSec, { logPrefix: "test" });
+    expect(result.overallStatus).toBe("healthy");
+    expect(result.warnings).toContain("stablecoin-publication-incomplete:hbd-hive");
+    expect(result.activePriceCoverage.missingActiveAssets[0]).toMatchObject({
+      marketCapUsd: null, lastKnownMarketCapUsd: 32_686_926.18,
+      lastKnownMarketCapObservedAt: 1_790_553_600, lastKnownMarketCapSource: "supply_history",
+      consecutiveMissingGenerations: 19,
+    });
+  });
+
+  it("fails closed for an unnamed count mismatch even when the producer claims complete", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const metadata = makePriceCoverageMetadata(nowSec, null);
+    (metadata.activePublicationCoverage as Record<string, unknown>).presentActiveCount = ACTIVE_IDS.size - 1;
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: metadata,
+    }), nowSec, { logPrefix: "test" });
+    expect(result.overallStatus).toBe("degraded");
+    expect(result.stablecoinPublication.status).toBe("incomplete");
+    expect(result.warnings).toContain("stablecoin-publication-incomplete:count-mismatch");
+  });
+
+  it("keeps a critical-duration small absent row warning-only", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const missingId = [...ACTIVE_IDS][0]!;
+    const metadata = makePriceCoverageMetadata(nowSec, missingId, STATUS_MISSING_PRICE_THRESHOLDS.generationsCritical);
+    const publication = metadata.activePublicationCoverage as Record<string, unknown>;
+    Object.assign(publication, { complete: false, presentActiveCount: ACTIVE_IDS.size - 1, missingActiveIds: [missingId] });
+    const coverage = metadata.activePriceCoverage as Record<string, unknown>;
+    coverage.presentActiveCount = ACTIVE_IDS.size - 1;
+    const gaps = coverage.missingActiveAssets as Record<string, unknown>[];
+    Object.assign(gaps[0]!, {
+      marketCapUsd: null, lastKnownMarketCapUsd: 10_000_000,
+      lastKnownMarketCapObservedAt: nowSec - 3600, lastKnownMarketCapSource: "publication",
+      rejectionReason: "active-row-missing",
+    });
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: metadata,
+    }), nowSec, { logPrefix: "test" });
+    expect(result.overallStatus).toBe("healthy");
+    expect(result.activePriceCoverageImpactStatus).toBe("healthy");
+    expect(result.warnings).toContain(`active-price-coverage-critical-duration:${missingId}`);
     expect(result.warnings).toContain(`stablecoin-publication-incomplete:${missingId}`);
   });
 

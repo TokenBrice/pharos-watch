@@ -1,6 +1,7 @@
 import {
   assessActivePriceGapDuration,
   getBlacklistGapStatus,
+  getStablecoinPublicationImpactStatus,
 } from "@shared/lib/status-thresholds";
 import { getD1CapacityImpactStatus } from "@shared/lib/d1-capacity";
 import {
@@ -702,9 +703,9 @@ export async function assessPublicHealth(
   const alertBroker = { ...EMPTY_ALERT_BROKER_SUMMARY };
   const alertBrokerImpactStatus: HealthResponse["status"] = "healthy";
 
-  const stablecoinPublicationImpactStatus = stablecoinPublication.status === "complete"
-    ? "healthy"
-    : "degraded";
+  const stablecoinPublicationImpactStatus = getStablecoinPublicationImpactStatus(
+    stablecoinPublication, activePriceCoverage, now,
+  );
   if (stablecoinPublication.status === "incomplete") {
     warnings.push(
       `stablecoin-publication-incomplete:${stablecoinPublication.missingActiveIds.join(",") || "count-mismatch"}`,
@@ -727,7 +728,7 @@ export async function assessPublicHealth(
   const acknowledgedGapIds = new Set(activePriceCoverage.acknowledgedGapIds ?? []);
   const alertEligibleIds = activePriceCoverage.alertEligibleIds.filter((id) => !acknowledgedGapIds.has(id));
   const activePriceCoverageAlertEligible = alertEligibleIds.length > 0;
-  const gapDuration = assessActivePriceGapDuration(activePriceCoverage);
+  const gapDuration = assessActivePriceGapDuration(activePriceCoverage, now);
   const criticalDurationIds = gapDuration.criticalGapIds;
   const activePriceCoverageDurationStatus = gapDuration.status;
   const activePriceCoverageImpactStatus: HealthResponse["status"] =

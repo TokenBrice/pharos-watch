@@ -12,6 +12,7 @@ import {
   resolveStablecoinPriceGapReviews,
   evaluateStablecoinActivePriceCoverage,
   loadPreviousStablecoinActivePriceCoverage,
+  seedAbsentActivePriceCoverageMarketCaps,
   type PreviousStablecoinActivePriceCoverage,
 } from "../../lib/stablecoin-publication-coverage";
 import { fillMissingSupplyHistory } from "./phase-helpers";
@@ -360,6 +361,7 @@ export async function runStablecoinsPostIntakePublication(
     previousCoverage: input.previousActivePriceCoverage,
     previousAcceptedAssetsById: input.previousAssetsById,
   });
+  await seedAbsentActivePriceCoverageMarketCaps(input.db, activePriceCoverage, Math.floor(Date.now() / 1000));
   const previousAssetIds = new Set(input.previousAssetsById.keys());
   input.previousAssetsById.clear();
 

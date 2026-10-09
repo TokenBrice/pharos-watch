@@ -27,6 +27,8 @@ const PUBLIC_IMPACT_CODES: ReadonlySet<string> = new Set([
   "mint_burn_health_query_failed",
   "active_price_coverage_duration_degraded",
   "active_price_coverage_unknown",
+  "stablecoin_publication_incomplete",
+  "stablecoin_publication_unknown",
   "open_circuit_groups",
   "circuit_query_failed",
   "cron_error_runs",

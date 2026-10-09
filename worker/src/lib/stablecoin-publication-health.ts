@@ -87,6 +87,7 @@ function parseStablecoinPublicationHealth(
   const missingActiveIds = stringArray(coverage.missingActiveIds);
   const complete = coverage.complete === true
     && expectedActiveCount === ACTIVE_IDS.size
+    && presentActiveCount + waivedActiveCount === expectedActiveCount
     && missingActiveIds.length === 0;
   return {
     status: complete ? "complete" : "incomplete",
