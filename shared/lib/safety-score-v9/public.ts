@@ -1058,6 +1058,26 @@ function allPublicReasonCodes(input: V9PublicCardProjectionInput): V9ReasonCode[
   ]);
 }
 
+function projectPartialEvidence(input: V9PublicCardProjectionInput): V9UninternedPublicCard["partialEvidence"] {
+  const partial = input.trace.partialEvidence;
+  if (partial === null) return null;
+  // A/B triggers the exclusion, but the whole excluded pillar also retains
+  // diagnostic C/U/D roots. Keep those visible without changing their causes
+  // or feeding them back into scoring and parent-exclusion propagation.
+  let missingGapIds: string[] | undefined;
+  for (const pillar of PILLARS) {
+    const evaluation = input.scoreInput.pillars[pillar];
+    if (evaluation.aggregationDisposition !== "excluded-a-b") continue;
+    for (const id of evaluation.causeGapIds) {
+      if (!partial.causeGapIds.includes(id)) (missingGapIds ??= []).push(id);
+    }
+  }
+  return missingGapIds === undefined ? partial : {
+    ...partial,
+    causeGapIds: uniqueSorted([...partial.causeGapIds, ...missingGapIds]),
+  };
+}
+
 function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): V9InternedPublicCardDraft {
   const isRateable = input.trace.finalScore !== null;
   const caps = input.trace.caps.map((cap) => ({
@@ -1079,7 +1099,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
     score: input.trace.finalScore,
     grade: input.trace.finalGrade,
     ratingStatus: input.trace.ratingStatus,
-    partialEvidence: input.trace.partialEvidence,
+    partialEvidence: projectPartialEvidence(input),
     qualityScore: input.trace.weightedQuality,
     pegMultiplier: input.trace.pegMultiplier,
     pegAdjustedScore: input.trace.preCapScore,

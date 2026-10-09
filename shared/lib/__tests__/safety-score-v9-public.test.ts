@@ -534,6 +534,76 @@ describe("Safety Score v9 public projection", () => {
     expect(card.breakdowns?.control.components[0]?.score).toBe(94);
     expect(SafetyScoreV9CurrentCardSchema.safeParse({ ...card, grade: "NR" }).success).toBe(false);
   });
+
+  it("retains local diagnostics alongside inherited A gaps in an excluded wrapper pillar", () => {
+    const input = fixture("srusd-reservoir", {
+      score: null, grade: null, pillars: { backing: 92, exit: null, control: null },
+    });
+    const parentGap = "rusd-reservoir:gap:route:redemption:capacity";
+    const localGap = "srusd-reservoir:gap:route:redemption:capacity";
+    const diagnosticGap = "srusd-reservoir:gap:exit-route:redemption:access";
+    const partial = input.trace.partialEvidence!;
+    partial.causeGapIds.push(parentGap, localGap);
+    partial.excludedComponentKeys.push("dependency:parent", "redemption:srusd");
+    input.scoreInput.pillars.exit.causeGapIds.push(parentGap, localGap, diagnosticGap);
+    input.scoreInput.pillars.exit.excludedCauseGapIds = [localGap];
+    input.scoreInput.pillars.exit.excludedComponentKeys = ["redemption:srusd"];
+    input.scoreInput.pillars.exit.excludedCauses = ["A"];
+    const originalPartial = structuredClone(partial);
+    input.trace.unresolvedFacts = [
+      {
+        code: "missing-same-notional-route", path: `exit:route:cause:${diagnosticGap}`,
+        sourceGapId: diagnosticGap, causeGapIds: [diagnosticGap], cause: "U",
+        scoringDisposition: "bounded-uncertainty", responsibility: "unresearched",
+        critical: false, reason: "Access has not been researched.",
+      },
+      {
+        code: "missing-same-notional-route", path: `exit:summary:cause:${diagnosticGap}`,
+        causeGapIds: [diagnosticGap], cause: "U", scoringDisposition: "bounded-uncertainty",
+        responsibility: "unresearched", critical: false, reason: "Diagnostic access view.",
+      },
+    ];
+    const response = buildSafetyScoreV9Response({
+      candidateId: "safety-score-v9:v1:wrapper-diagnostic-test", policyVersion: "10.12",
+      publicationGenerationId: "report-cards:v9:v1:wrapper-diagnostic-test",
+      publishedAtSec: 1_001, results: [input],
+    });
+    const card = response.cards[0]!;
+    // Public refs sort by the local-then-foreign gap table, not resolved ID text.
+    const projectedIds = card.partialEvidence!.causeGapRefs.map((ref) => resolveCauseGapId(response, card, ref)).sort();
+    expect(projectedIds).toEqual([...new Set([...partial.causeGapIds, diagnosticGap])].sort());
+    expect(card.foreignCauseGapRefs.map((ref) => response.foreignCauseGaps[ref])).toContain(parentGap);
+    expect(card.partialEvidence).toMatchObject({
+      excludedPillars: ["control", "exit"], causes: ["A"],
+      excludedComponentKeys: expect.arrayContaining(["dependency:parent", "redemption:srusd"]),
+    });
+    expect(card).toMatchObject({ ratingStatus: "pipeline-gap", score: null, grade: null });
+    expect(card.pillars.exit.causeGapRefs!.every((ref) => card.partialEvidence!.causeGapRefs.includes(ref))).toBe(true);
+    const facts = [...iterateEvidenceResponsibilityFacts(card.scoreTrace.evidenceResponsibility)];
+    expect(facts.map((fact) => fact[5])).toEqual(["U", "U"]);
+    expect(facts.map((fact) => fact[6].map((ref) => resolveCauseGapId(response, card, ref))))
+      .toEqual([[diagnosticGap], [diagnosticGap]]);
+    expect(facts.map((fact) => fact[2] === null ? null : resolveCauseGapId(response, card, fact[2])))
+      .toEqual([diagnosticGap, null]);
+    expect(card.scoreTrace.evidenceResponsibility.totalFactCount).toBe(2);
+    expect(card.scoreTrace.evidenceResponsibility.summaries.find((summary) => summary.responsibility === "unresearched")?.factCount).toBe(1);
+    expect(input.trace.partialEvidence).toBe(partial);
+    expect(partial).toEqual(originalPartial);
+    expect(partial.causeGapIds).not.toContain(diagnosticGap);
+    const missingDiagnostic = {
+      ...card,
+      partialEvidence: {
+        ...card.partialEvidence!,
+        causeGapRefs: card.partialEvidence!.causeGapRefs.filter((ref) => resolveCauseGapId(response, card, ref) !== diagnosticGap),
+      },
+    };
+    const rejected = SafetyScoreV9CurrentCardSchema.safeParse(missingDiagnostic);
+    expect(rejected.success).toBe(false);
+    expect(rejected.error?.issues).toContainEqual({
+      code: "custom", path: ["partialEvidence"],
+      message: "Excluded pillar gaps must remain visible in partial evidence",
+    });
+  });
   it.each(["backing", "exit", "control"] as const)(
     "projects post-dependency exclusions while retaining the surviving %s diagnostic",
     surviving => {
