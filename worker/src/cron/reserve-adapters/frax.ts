@@ -378,7 +378,11 @@ async function valueUnpricedFpiCollateralRows(
     (quantities.get(row) ?? 0) > 0 && rowPrice == null && chain && token ? [{ key, chain, address: token }] : []);
   let quotes = new Map<string, number>();
   try {
-    quotes = await fetchDefiLlamaPrices(quoteLookups, signal, ctx);
+    const result = await fetchDefiLlamaPrices(quoteLookups, signal, ctx);
+    if (result.warnings.some((warning) => warning.code === "defillama-quote-quality")) {
+      throw new Error("Frax FPI DefiLlama quotes fail quality policy");
+    }
+    quotes = result.prices;
   } catch (error) {
     rethrowIfAborted(error, signal);
   }

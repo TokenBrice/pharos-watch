@@ -610,7 +610,7 @@ async function fetchLlammaMarketExposures(signal: AbortSignal, ctx: AdapterConte
   const descriptors = await fetchLlammaMarketDescriptors(signal, ctx);
   if (descriptors.length === 0) return [];
 
-  const [priceMap, bandTotals] = await Promise.all([
+  const [{ prices: priceMap, warnings: priceWarnings }, bandTotals] = await Promise.all([
     fetchDefiLlamaPrices(
       Array.from(
         new Map(
@@ -626,10 +626,10 @@ async function fetchLlammaMarketExposures(signal: AbortSignal, ctx: AdapterConte
       ),
       signal,
       ctx,
-      warnings,
     ),
     fetchLlammaBandTotals(descriptors, signal, ctx),
   ]);
+  warnings.push(...priceWarnings);
 
   return descriptors.map((market) => {
     const totals = bandTotals.get(market.marketId);
@@ -807,7 +807,7 @@ async function fetchYieldBasisMarketExposures(
   const positions = await fetchYieldBasisMarketPositions(signal, ctx);
   if (positions.length === 0) return [];
 
-  const priceMap = await fetchDefiLlamaPrices(
+  const { prices: priceMap, warnings: priceWarnings } = await fetchDefiLlamaPrices(
     Array.from(
       new Map(
         positions.map((position) => [
@@ -822,8 +822,8 @@ async function fetchYieldBasisMarketExposures(
     ),
     signal,
     ctx,
-    warnings,
   );
+  warnings.push(...priceWarnings);
 
   return positions.map((position) => {
     const price = priceMap.get(normalizeAddress(position.assetAddress));

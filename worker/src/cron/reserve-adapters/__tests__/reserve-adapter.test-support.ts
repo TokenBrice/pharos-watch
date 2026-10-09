@@ -17,6 +17,7 @@ import { expect, vi } from "vitest";
 import { decodeFunctionData, encodeAbiParameters, parseAbi, toFunctionSelector } from "viem/utils";
 import { mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
 import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
 import type {
   LiveReserveAdapterKey,
@@ -27,6 +28,7 @@ import { buildChainRpcs, registryRpcEndpoints, type ChainRpcConfig } from "../..
 import { MULTICALL3_ADDRESS } from "../../../lib/evm-rpc";
 import { getReserveAdapter } from "../index";
 import type { AdapterContext, AdapterResult } from "../types";
+import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 import {
   validateAdapterOutput,
   type ValidationInput,
@@ -723,4 +725,22 @@ export async function runAdapter(
     ).toBe(true);
   }
   return { result, report, coin, config, network };
+}
+
+/** Evaluate a same-run snapshot using its real catalog config and adapter class. */
+export function evaluateAdapterSnapshotAdmission(run: AdapterRun, nowSec: number) {
+  const adapter = getReserveAdapter(run.config.adapter)!;
+  const warnings = run.result.warnings ?? [];
+  return evaluateLiveReserveAdmission({
+    stablecoinId: run.coin.id,
+    source: run.config.adapter,
+    slices: run.result.slices,
+    fetchedAt: nowSec,
+    metadata: run.result.metadata ?? {},
+    warnings,
+    warningCount: warnings.length,
+    adapterSourceModel: adapter.sourceModel,
+    adapterEvidenceClass: adapter.evidenceClass,
+    configFingerprint: computeLiveReserveConfigFingerprint(run.config),
+  }, { lastSuccessAt: nowSec, lastSuccessAttemptId: null }, { liveReservesConfig: run.config }, nowSec);
 }

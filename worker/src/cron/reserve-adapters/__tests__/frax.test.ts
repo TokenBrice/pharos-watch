@@ -563,7 +563,10 @@ describe("frax balance-sheet fetch boundary", () => {
   describe("issuer row without a USD value", () => {
     const SFRXUSD = "0xfc00000000000000000000000000000000000008";
     const SFRXUSD_PRICE_URL = `https://coins.llama.fi/prices/current/fraxtal:${SFRXUSD}`;
-    const runWithUnpricedSfrxusd = (balanceRaw: bigint | null) =>
+    const runWithUnpricedSfrxusd = (
+      balanceRaw: bigint | null,
+      quoteOverrides: { timestamp?: number; confidence?: number } = {},
+    ) =>
       runAdapter("frax-fpi-collateral", "fpi-frax", {
         network: {
           code: { "0x2397321b301b80a1c0911d6f9ed4b6033d43cf51": "0x" },
@@ -582,6 +585,7 @@ describe("frax balance-sheet fetch boundary", () => {
             },
             [SFRXUSD_PRICE_URL]: { coins: { [`fraxtal:${SFRXUSD}`]: {
               price: 1.2, timestamp: FPI_COLLATERAL_SAMPLE.updatedAtTimestampSec, confidence: 0.99,
+              ...quoteOverrides,
             } } },
           },
         },
@@ -611,6 +615,19 @@ describe("frax balance-sheet fetch boundary", () => {
       expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "degraded" }));
       expect(result.warnings?.some((warning) => warning.code === "asset-value-unavailable")).toBe(false);
       expect(result.metadata).toMatchObject({ compositionComplete: false, knownCollateralUsd: 5_200_000 });
+      expect(result.metadata?.totalCollateralUsd).toBeUndefined();
+      expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
+    });
+
+    it.each([
+      { timestamp: 1, confidence: 0.99 },
+      { timestamp: undefined, confidence: 0.99 },
+      { timestamp: FPI_COLLATERAL_SAMPLE.updatedAtTimestampSec, confidence: 0.79 },
+      { timestamp: FPI_COLLATERAL_SAMPLE.updatedAtTimestampSec! + 86400, confidence: 0.99 },
+    ])("keeps unqualified quote estimates unavailable (case $#)", async (quoteOverrides) => {
+      const { result } = await runWithUnpricedSfrxusd(80_000_000_000_000_000n, quoteOverrides);
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "degraded" }));
+      expect(result.metadata).toMatchObject({ compositionComplete: false, unavailableAssetLabels: ["sfrxUSD"] });
       expect(result.metadata?.totalCollateralUsd).toBeUndefined();
       expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
     });

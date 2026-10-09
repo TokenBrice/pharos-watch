@@ -203,11 +203,12 @@ describe("hylo-solana", () => {
         },
       },
     });
-    const prices = await fetchDefiLlamaPrices(
+    const { prices, warnings } = await fetchDefiLlamaPrices(
       [{ key: "hyloSOL", chain: "solana", address }],
       new AbortController().signal,
       { chainRpcs: network.chainRpcs, requestCache: new Map(), nowSec: NOW_SEC },
     );
     expect(prices.get("hyloSOL")).toBe(111.21);
+    expect(warnings).toEqual([]);
   });
 });

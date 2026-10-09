@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { DEFILLAMA_COINS } from "../../lib/constants";
 import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, fetchTextWithRetry } from "../../lib/fetch-retry";
 import { createRequestBodyObserver, getCachedRequest } from "./request";
@@ -27,14 +28,18 @@ export interface BranchPriceObservation {
   quoteConfidence: number | null;
 }
 
+export interface DefiLlamaPriceResult {
+  prices: Map<string, number>;
+  warnings: LiveReserveWarning[];
+}
+
 export async function fetchDefiLlamaPrices(
   assets: Array<{ key: string; chain: string; address: string }>,
   signal: AbortSignal,
   ctx?: AdapterContext,
-  warnings?: LiveReserveWarning[],
   observations?: Map<string, BranchPriceObservation>,
-): Promise<Map<string, number>> {
-  if (assets.length === 0) return new Map();
+): Promise<DefiLlamaPriceResult> {
+  if (assets.length === 0) return { prices: new Map(), warnings: [] };
   const lookups = assets.map(({ key, chain, address }) => ({
     key,
     assetKey: defillamaAssetKey(chain, address),
@@ -60,19 +65,26 @@ export async function fetchDefiLlamaPrices(
     }), ctx);
   const now = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
   const prices = new Map<string, number>();
+  const warnings: LiveReserveWarning[] = [];
   for (const { key, assetKey } of lookups) {
     const quote = quotes[assetKey];
     if (!quote || typeof quote.price !== "number" || !Number.isFinite(quote.price) || quote.price <= 0) {
       const message = `DefiLlama quote ${assetKey} is missing or non-numeric`;
-      if (warnings) warnings.push(reserveDegradedWarning("defillama-quote-missing", message));
+      warnings.push(reserveDegradedWarning("defillama-quote-missing", message));
       continue;
     }
     const stale = typeof quote.timestamp !== "number" || !Number.isFinite(quote.timestamp)
       || quote.timestamp <= 0 || now - quote.timestamp > 86_400;
+    const future = typeof quote.timestamp === "number" && Number.isFinite(quote.timestamp)
+      && quote.timestamp - now > MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC;
     const uncertain = typeof quote.confidence !== "number" || !Number.isFinite(quote.confidence) || quote.confidence < 0.8;
-    if (stale || uncertain) {
-      const message = `DefiLlama quote ${assetKey} fails ${stale ? "one-day freshness" : ""}${stale && uncertain ? " and " : ""}${uncertain ? "0.8 confidence" : ""} policy`;
-      if (!warnings) throw new Error(message);
+    if (stale || future || uncertain) {
+      const failures = [
+        ...(stale ? ["one-day freshness"] : []),
+        ...(future ? ["future timestamp skew"] : []),
+        ...(uncertain ? ["0.8 confidence"] : []),
+      ];
+      const message = `DefiLlama quote ${assetKey} fails ${failures.join(" and ")} policy`;
       warnings.push(reserveDegradedWarning("defillama-quote-quality", message));
     }
     prices.set(key, quote.price);
@@ -85,5 +97,5 @@ export async function fetchDefiLlamaPrices(
         ? quote.confidence : null,
     });
   }
-  return prices;
+  return { prices, warnings };
 }

@@ -172,12 +172,12 @@ export async function fetchLiquityV1Reserves(
   const capacityUsd = totalDebtUsd;
 
   const totalCollateralEth = decimalNumberFromBigInt(totalCollateralRaw, LIQUITY_V1_COLLATERAL_DECIMALS);
-  const ethPriceMap = await fetchDefiLlamaPrices(
+  const { prices: ethPriceMap, warnings: priceWarnings } = await fetchDefiLlamaPrices(
     [{ key: "ETH", chain: "ethereum", address: WETH_ETHEREUM_ADDRESS }],
     signal,
     ctx,
-    warnings,
   );
+  warnings.push(...priceWarnings);
   const ethPriceUsd = ethPriceMap.get("ETH");
   let totalCollateralUsd: number | undefined;
   let collateralizationRatio: number | undefined;

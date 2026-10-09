@@ -303,14 +303,13 @@ async function readDjedAttempt(
     ? assetsByUnit.get(`${params.shenUnit.policyId}${params.shenUnit.assetNameHex}`) ?? null
     : null;
 
-  const priceMap = await fetchDefiLlamaPrices(
+  const { prices: priceMap, warnings: priceWarnings } = await fetchDefiLlamaPrices(
     [
       { key: "ADA", chain: "coingecko", address: "cardano" },
       { key: "DJED", chain: "coingecko", address: "djed" },
     ],
     signal,
     ctx,
-    [],
   );
 
   const result = adaptDjedCardanoState(
@@ -329,6 +328,7 @@ async function readDjedAttempt(
   // the attempt context, but the adapter owns the snapshot's own copy).
   return {
     ...result,
+    ...(priceWarnings.length > 0 ? { warnings: [...(result.warnings ?? []), ...priceWarnings] } : {}),
     metadata: {
       ...result.metadata,
       observedBlock: { chain: "cardano", number: reader.tip.blockNo, timestamp: reader.tip.blockTimeSec },

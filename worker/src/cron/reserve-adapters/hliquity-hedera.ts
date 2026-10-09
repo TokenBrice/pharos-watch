@@ -317,10 +317,13 @@ export async function fetchHliquityHederaReserves(
     : null;
 
   const { rate: chfUsdRate, date: fxRateDate } = await fetchFrankfurterChfUsd(signal, ctx, nowSec);
-  const hbarPriceMap = await fetchDefiLlamaPrices([HBAR_DEFLILLAMA_KEY], signal, ctx);
+  const { prices: hbarPriceMap, warnings: priceWarnings } = await fetchDefiLlamaPrices([HBAR_DEFLILLAMA_KEY], signal, ctx);
+  if (priceWarnings.some((warning) => warning.code === "defillama-quote-quality")) {
+    throw new Error(priceWarnings.map((warning) => warning.message).join("; "));
+  }
   const hbarPriceUsd = hbarPriceMap.get("HBAR");
 
-  return adaptHliquityHederaState({
+  const result = adaptHliquityHederaState({
     block,
     troveCollateralRaw,
     stabilityPoolCollateralRaw,
@@ -334,4 +337,8 @@ export async function fetchHliquityHederaReserves(
     fxRateDate,
     nowSec,
   });
+  return {
+    ...result,
+    ...(priceWarnings.length > 0 ? { warnings: [...(result.warnings ?? []), ...priceWarnings] } : {}),
+  };
 }

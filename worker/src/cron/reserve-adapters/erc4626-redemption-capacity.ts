@@ -358,7 +358,12 @@ async function fetchSboldSpWithdrawableCapacity(input: Pick<ObserveConfiguredErc
         : "restricted";
   return {
     capacityRaw: withdrawableRaw,
-    warnings: [],
+    warnings: collateralHealthGate === "unreadable"
+      ? [reserveInfoWarning(
+          "sbold-collateral-health-unavailable",
+          `sBOLD collateral-health gate could not be read for ${input.coinId}`,
+        )]
+      : [],
     route: {
       ...routeForSource("sbold-sp-withdrawable"),
       capacityKind: collateralHealthGate === "open" ? "live-direct" : "documented-bound",
@@ -915,7 +920,7 @@ export function finalizeErc4626RedemptionCapacity(input: {
         ? {}
         : observedRouteOpenness;
   const routeOpenness =
-    usesSboldSpWithdrawable && pause.paused !== true
+    usesSboldSpWithdrawable && defaultRouteOpenness.routeStatus !== "paused"
       ? diagnostics.collateralHealthGate === "restricted"
         ? {
             routeStatus: "degraded" as const,
@@ -923,7 +928,12 @@ export function finalizeErc4626RedemptionCapacity(input: {
             routeStatusReason:
               "sBOLD collateral in BOLD exceeds maxCollInBold; _maxWithdraw() and _maxRedeem() return zero",
           }
-        : defaultRouteOpenness.routeStatus === "open" && diagnostics.collateralHealthGate === "open"
+        : diagnostics.collateralHealthGate !== "open"
+          ? {
+              routeStatus: "unknown" as const,
+              routeStatusReason: "sBOLD collateral-health gate could not be read on-chain this run",
+            }
+          : defaultRouteOpenness.routeStatus === "open"
           ? {
               routeStatus: "open" as const,
               routeStatusSource: "onchain" as const,

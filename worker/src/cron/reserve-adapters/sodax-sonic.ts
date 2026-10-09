@@ -116,7 +116,9 @@ async function fetchFixedConstantLegPrices(
     lookups.push({ key: reserve, chain: "coingecko", address: geckoId });
   }
   if (lookups.length === 0) return new Map();
-  return fetchDefiLlamaPrices(lookups, signal, ctx, warnings);
+  const result = await fetchDefiLlamaPrices(lookups, signal, ctx);
+  warnings.push(...result.warnings);
+  return result.prices;
 }
 
 export async function fetchSodaxSonicReserves(

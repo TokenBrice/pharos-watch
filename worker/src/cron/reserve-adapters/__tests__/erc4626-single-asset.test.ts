@@ -569,25 +569,50 @@ describe("fetchErc4626SingleAssetReserves", () => {
     });
   });
 
-  it("keeps the existing documented-bound sBOLD telemetry when maxCollInBold is unreadable", async () => {
+  it.each(["maxCollInBold", "collInBold"] as const)("withholds sBOLD route openness when %s is unreadable", async (unreadable) => {
     installErc4626Network({ idleBalance: 1_000_000n, paused: 0, extraHandlers: [({ call }) => {
-      if (call?.data === "0x160b71df") return jsonResponse({ result: calcFragmentsResult(85_000_000n) });
-      if (call?.data === "0xbf2428e6") return null;
+      if (call?.data === "0x160b71df") {
+        const result = calcFragmentsResult(85_000_000n);
+        return jsonResponse({ result: unreadable === "collInBold" ? result.slice(0, 2 + 3 * 64) : result });
+      }
+      if (call?.data === "0xbf2428e6") {
+        return unreadable === "maxCollInBold" ? null : jsonResponse({ result: uint256Result(7_500_000n) });
+      }
+      return undefined;
+    }] });
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "sbold-sp-withdrawable" }));
+
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "sbold-collateral-health-unavailable",
+      effect: "info",
+    }));
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 85,
+      capacityRatioOfSupply: 0.85,
+      capacityKind: "documented-bound",
+      freshnessKind: "same-run-onchain",
+      routeStatus: "unknown",
+    });
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusSource");
+  });
+
+  it.each(["open", "restricted", "unreadable"] as const)("preserves an observed sBOLD pause with a %s collateral-health gate", async (gate) => {
+    installErc4626Network({ idleBalance: 1_000_000n, paused: 1, extraHandlers: [({ call }) => {
+      if (call?.data === "0x160b71df") return jsonResponse({ result: calcFragmentsResult(85_000_000n, gate === "restricted" ? 7_500_001n : 0n) });
+      if (call?.data === "0xbf2428e6") return gate === "unreadable" ? null : jsonResponse({ result: uint256Result(7_500_000n) });
       return undefined;
     }] });
 
     const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "sbold-sp-withdrawable" }));
 
-    expect(nonInfoWarnings(result.warnings)).toEqual([]);
-    expect(result.metadata?.redemption).toEqual({
-      capacityUsd: 85,
-      capacityRatioOfSupply: 0.85,
-      capacityKind: "documented-bound",
-      routeStatusReason: "sBOLD Stability Pool withdrawable BOLD positive via calcFragments() this run",
-      freshnessKind: "same-run-onchain",
-      routeStatus: "open",
+    expect(result.metadata?.redemption).toMatchObject({
+      routeStatus: "paused",
       routeStatusSource: "onchain",
     });
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "erc4626-redemption-paused",
+      effect: "degraded",
+    }));
   });
 
   it("withholds sBOLD route openness when the vault pause probe is unreadable", async () => {

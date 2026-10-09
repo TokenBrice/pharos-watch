@@ -297,8 +297,7 @@ export async function fetchYouvesTezosReserves(
   }
 
   // DefiLlama valuation for every material asset plus the uUSD liability.
-  const warnings: LiveReserveWarning[] = [];
-  const priceMap = await fetchDefiLlamaPrices(
+  const { prices: priceMap, warnings: priceWarnings } = await fetchDefiLlamaPrices(
     [
       { key: "xtz", ...SLICE_META.xtz.defillama },
       { key: "tzbtc", ...SLICE_META.tzbtc.defillama },
@@ -307,7 +306,6 @@ export async function fetchYouvesTezosReserves(
     ],
     signal,
     ctx,
-    warnings,
   );
   const requirePrice = (key: string): number => {
     const price = priceMap.get(key);
@@ -324,7 +322,7 @@ export async function fetchYouvesTezosReserves(
     usdt: toTokens(collateralRaw.get("usdt") ?? 0n, 6),
   };
 
-  return adaptYouvesTezosState({
+  const result = adaptYouvesTezosState({
     head,
     supplyTokens,
     engineMintedTokens,
@@ -338,4 +336,8 @@ export async function fetchYouvesTezosReserves(
       uusd: requirePrice("uusd"),
     },
   });
+  return {
+    ...result,
+    ...(priceWarnings.length > 0 ? { warnings: [...(result.warnings ?? []), ...priceWarnings] } : {}),
+  };
 }

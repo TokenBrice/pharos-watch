@@ -1,7 +1,7 @@
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { toTokenUnits } from "@shared/lib/math";
 import type { ReserveAdapterCoin } from "@shared/types/core";
-import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import {
   fetchEvmRpcBatch,
@@ -382,11 +382,10 @@ export async function fetchUsdrifRifReserves(
     throw new Error(`${ADAPTER_KEY}: bucket liabilities do not equal canonical USDRIF total supply`);
   }
 
-  const warnings: LiveReserveWarning[] = [];
-  const priceMap = await fetchDefiLlamaPrices([
+  const { prices: priceMap, warnings } = await fetchDefiLlamaPrices([
     { key: "rif", chain: ROOTSTOCK_CHAIN, address: params.rifToken.address },
     { key: "doc", chain: ROOTSTOCK_CHAIN, address: params.docToken.address },
-  ], signal, ctx, warnings);
+  ], signal, ctx);
   const rifMarketPrice = priceMap.get("rif");
   const docMarketPrice = priceMap.get("doc");
   if (rifMarketPrice == null || docMarketPrice == null || rifMarketPrice <= 0 || docMarketPrice <= 0) {

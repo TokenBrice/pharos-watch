@@ -402,7 +402,7 @@ async function fetchChainCensus(
   if (active.length === 0) {
     return { chain, block: { number: 0, timestamp: 0 }, markets: [], supplyTokens };
   }
-  const priceMap = await fetchDefiLlamaPrices(
+  const { prices: priceMap, warnings: priceWarnings } = await fetchDefiLlamaPrices(
     active.map((entry) => ({
       key: entry.descriptor.collateralAddress,
       chain,
@@ -410,8 +410,8 @@ async function fetchChainCensus(
     })),
     signal,
     ctx,
-    warnings,
   );
+  warnings.push(...priceWarnings);
 
   const markets: MarketExposure[] = active.map((entry) => {
     const price = priceMap.get(entry.descriptor.collateralAddress);
@@ -552,12 +552,12 @@ export async function fetchMoneyReserves(
   // liability is market-valued when DefiLlama quotes MONEY; with no quote it
   // falls back to par (debt is denominated in MONEY, so par is the neutral
   // unit of account) instead of failing the whole census.
-  const moneyPriceMap = await fetchDefiLlamaPrices(
+  const { prices: moneyPriceMap, warnings: moneyPriceWarnings } = await fetchDefiLlamaPrices(
     CHAIN_LEGS.map((chain) => ({ key: `money:${chain}`, chain, address: MONEY_TOKEN })),
     signal,
     ctx,
-    warnings,
   );
+  warnings.push(...moneyPriceWarnings);
   const moneyPrice = moneyPriceMap.get(MONEY_TOKEN) ?? moneyPriceMap.get(`money:${CHAIN_LEGS[0]}`);
   const marketPrice = moneyPrice != null && Number.isFinite(moneyPrice) && moneyPrice > 0 ? moneyPrice : null;
   const liabilityPrice = marketPrice ?? 1;

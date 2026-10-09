@@ -224,11 +224,21 @@ type CborValue =
 
 function cborEncode(value: CborValue): Uint8Array {
   const chunks: number[] = [];
-  function head(major: number, val: number): void {
-    if (val < 24) chunks.push((major << 5) | val);
-    else if (val <= 0xff) chunks.push((major << 5) | 24, val);
-    else if (val <= 0xffff) chunks.push((major << 5) | 25, val >>> 8, val & 0xff);
-    else chunks.push((major << 5) | 26, (val >>> 24) & 0xff, (val >>> 16) & 0xff, (val >>> 8) & 0xff, val & 0xff);
+  function head(major: number, value: number | bigint): void {
+    const val = typeof value === "bigint" ? value : BigInt(value);
+    if (val < 0n || val > 0xffff_ffff_ffff_ffffn) {
+      throw new Error("icp: cbor integer outside uint64 range");
+    }
+    if (val < 24n) chunks.push((major << 5) | Number(val));
+    else if (val <= 0xffn) chunks.push((major << 5) | 24, Number(val));
+    else if (val <= 0xffffn) chunks.push((major << 5) | 25, Number(val >> 8n), Number(val & 0xffn));
+    else if (val <= 0xffff_ffffn) {
+      chunks.push((major << 5) | 26);
+      for (let shift = 24n; shift >= 0n; shift -= 8n) chunks.push(Number((val >> shift) & 0xffn));
+    } else {
+      chunks.push((major << 5) | 27);
+      for (let shift = 56n; shift >= 0n; shift -= 8n) chunks.push(Number((val >> shift) & 0xffn));
+    }
   }
   function enc(x: CborValue): void {
     if (x === null) { chunks.push(0xf6); return; }
@@ -239,7 +249,7 @@ function cborEncode(value: CborValue): Uint8Array {
       if (Number.isInteger(x) && x < 0) { head(1, -1 - x); return; }
       throw new Error("icp: unsupported float");
     }
-    if (typeof x === "bigint") { head(0, Number(x)); return; }
+    if (typeof x === "bigint") { head(x >= 0n ? 0 : 1, x >= 0n ? x : -1n - x); return; }
     if (typeof x === "string") {
       const bytes = new TextEncoder().encode(x);
       head(3, bytes.length);

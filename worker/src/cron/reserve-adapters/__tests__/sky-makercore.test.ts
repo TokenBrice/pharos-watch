@@ -539,7 +539,7 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
     },
   );
 
-  it("degrades when an unknown module has malformed debt", async () => {
+  it("rejects the shared book when an unknown module has malformed debt", async () => {
     const groups: SkyGroupResult[] = [
       {
         group: "stablecoins",
@@ -556,13 +556,10 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
         datetime: "2026-04-05T17:33:24",
       },
     ];
-    const { result } = await runSky(groups);
-
-    expect(result.metadata?.unknownExposurePct).toBe(0);
-    expectWarningEffect(result, "unknown-asset", "degraded");
+    await expect(runSky(groups)).rejects.toThrow(/new-module\.debt/);
   });
 
-  it("degrades when a known module has malformed debt", async () => {
+  it("rejects the shared book when a known module has malformed debt", async () => {
     const groups: SkyGroupResult[] = [
       {
         group: "stablecoins",
@@ -579,9 +576,33 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
         datetime: "2026-04-05T17:33:24",
       },
     ];
-    const { result } = await runSky(groups);
+    await expect(runSky(groups)).rejects.toThrow(/stablecoins\.debt/);
+  });
 
-    expectWarningEffect(result, "malformed-debt", "degraded");
+  it.each(["", "-1", "NaN", "Infinity", "0x10"])("rejects unreadable group debt before normalizing the mix (%s)", async (debt) => {
+    const groups: SkyGroupResult[] = [
+      { group: "spark", group_name: "Spark", debt: "900", collateral: "900", datetime: "2026-04-05T17:33:24" },
+      { group: "new-module", group_name: "New Module", debt, collateral: "1000", datetime: "2026-04-05T17:33:24" },
+    ];
+    expect(() => adaptSkyModules(groups)).toThrow(/new-module\.debt/);
+    await expect(runSky(groups)).rejects.toThrow(/new-module\.debt/);
+  });
+
+  it("publishes complete shared-book statistics for genuine zero and positive debt", async () => {
+    const { result } = await runSky([
+      { group: "spark", group_name: "Spark", debt: "900", collateral: "1000", datetime: "2026-04-05T17:33:24" },
+      { group: "new-module", group_name: "New Module", debt: "100", collateral: "100", datetime: "2026-04-05T17:33:24" },
+      { group: "legacy-rwa", group_name: "Legacy RWA", debt: "0", collateral: "0", datetime: "" },
+    ], { capacity: false });
+
+    expect(result.metadata).toMatchObject({
+      totalLiabilitiesUsd: 1000,
+      totalReserveUsd: 1100,
+      collateralizationRatio: 1.1,
+      unknownExposurePct: 10,
+    });
+    expect(result.slices.find((slice) => slice.name === "Other modules")?.pct).toBe(10);
+    expect(result.warnings?.some((warning) => warning.code === "source-timestamp-coverage-incomplete")).toBe(false);
   });
 
   it("propagates an aborted signal before publishing a snapshot", async () => {
