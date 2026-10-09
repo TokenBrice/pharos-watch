@@ -111,7 +111,7 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "All currently enumerated adapter markets have chain-qualified oracle paths and borrower-liquidation branches. Direct share accounting has no independent external price input. Exact oracle feed/rate control, freshness enforcement and fallback closure remain incomplete; no oracleless lending or high-quality feed claim is made.",
+    "summary": "The six markets pinned on 2026-10-03 have chain-qualified borrower oracle paths. The cbBTC oracle's exact-match source confirms one nonzero feed input and no local timestamp or stale-price rejection. Other nested price paths remain incompletely reviewed. Direct VaultV2 share accounting remains separate from collateral pricing; the current issuer roster includes additional candidate markets without establishing their current allocation.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -138,8 +138,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine07",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane39Nereus)",
     "confidence": "limited",
     "sources": [
       {
@@ -157,14 +157,22 @@
       {
         "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
         "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "cbBTC oracle exact creation/runtime match; immutable feed inputs and ChainlinkDataFeedLib stale-price behavior, source reviewed 2026-10-09T10:36:34Z",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xa6d6950c9f177f1de7f7757fb33539e3ec60182a?fields=all"
+      },
+      {
+        "label": "Armitage Select exact vault identity and published candidate-market roster, accessed 2026-10-09T10:36:34Z; not a new allocated-market census",
+        "url": "https://armitage.wintermute.com/docs/llms-full.txt"
       }
     ],
     "branches": [
       {
         "id": "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
         "label": "cbBTC collateral market 0x64d65c9a",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "tier": "single-source-or-laggy",
+        "summary": "The exact creation/runtime-matched MorphoChainlinkOracleV2 source has one nonzero price feed, BASE_FEED_1 0xf4030086522a5beea4988f8ca5b36dbc97bee88c, and no base/quote vault or other nonzero feed. ChainlinkDataFeedLib consumes the answer without checking its timestamp or staleness. Upstream aggregator operator/custody review remains incomplete; no independent feed redundancy is claimed.",
         "collateralAssets": [
           "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
         ],
@@ -180,7 +188,7 @@
             "observedAt": "2026-10-03"
           }
         ],
-        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
+        "fallbackBehavior": "Exact-match source calls latestRoundData on the sole nonzero feed, rejects negative answers, and discards the returned timestamps. It has no alternate-feed or age-rejection path; a reverting feed propagates the revert. A zero optional input returns one by construction, not fallback to a second provider. Source reviewed 2026-10-09T10:36:34Z; the configured market identity retains its 2026-10-03 block pin.",
         "observedAt": "2026-10-03",
         "observedBlock": 26110193,
         "collateralParameters": [
@@ -209,6 +217,10 @@
           {
             "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "cbBTC oracle exact creation/runtime match and single-feed/no-staleness-check source, reviewed 2026-10-09T10:36:34Z",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xa6d6950c9f177f1de7f7757fb33539e3ec60182a?fields=all"
           }
         ]
       },

@@ -69,11 +69,19 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Ethereum is canonical Maple share issuance; Robinhood, Arbitrum, Ink and Solana are CCIP BurnMint representations backed through Ethereum LockRelease escrow, not additional canonical issuance. Remote EVM owners are verified RBACTimelock contracts with enumerable roles and active bypass quorums, so ordinary delays are not universal protection. Remaining lane controls, Solana execution and runtime materiality remain bounded gaps.",
+    "summary": "Ethereum is canonical Maple share issuance; Robinhood, Arbitrum, Ink and Solana are CCIP BurnMint representations backed through Ethereum LockRelease escrow, not additional canonical issuance. Maple's September 28, 2026 migration disclosure confirms unchanged holder token addresses and replacement CCIP pools rolling out through Q4. Historical controller pins do not establish replacement-pool authority. Remote EVM owner bypass quorums, remaining lane controls, Solana execution and runtime materiality retain their separately dated findings and bounded gaps.",
     "reviewedAt": "2026-10-03",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
     "confidence": "manual-review",
     "sources": [
+      {
+        "label": "CCIP 2.0 migration, published 2026-09-28; documentary route review 2026-10-09T10:31:57Z by Sol curation campaign 2026-10-09 (Lane32Maple)",
+        "url": "https://maple.finance/insights/syrupusd-assets-are-upgrading-to-chainlink-ccip-2-0"
+      },
+      {
+        "label": "Maple exact crosschain token and pool identities; accessed 2026-10-09T10:31:57Z",
+        "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md"
+      },
       {
         "label": "Chainlink exact syrupUSDG deployments and pools",
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"

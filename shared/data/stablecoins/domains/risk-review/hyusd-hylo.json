@@ -30,14 +30,14 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Current Hylo V2 documentation specifies Sanctum SOL-LST accounting plus Pyth SOL/USD, BTC/USD, HYPE/USD, and a USDC/USD gating path. The official address directory still labels the tracked exchange as V1 and leaves the V2 xBTC mint TBD. Current ProgramData reads show exchange deployment slot 447625876 and router slot 439863765 under the mutable upgrade vault. These sources do not independently certify a complete deployed collateral/oracle branch inventory or its failure and liquidation semantics, so the branch review remains unresolved.",
+    "summary": "Hylo's current V2 documentation names Sanctum SOL-LST accounting plus Pyth SOL/USD, BTC/USD, HYPE/USD and the USDC/USD par gate. Its public SDK publishes exact feed IDs and addresses, freshness and confidence validators, and USDC par-tolerance logic; it also includes ZEC, ONYC, PST and ETH feed candidates beyond the documentation's pool roster. These public materials need a complete identity-bound deployed branch inventory and source/runtime correspondence before a known aggregate tier can be curated. The official address directory still labels the exchange V1 and xBTC TBD. No SDK candidate is asserted to be a live funded branch.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "unresolved",
-      "reviewedAt": "2026-10-01",
-      "reviewer": "Sol curation pass 2026-10-01 (CurB30hyUSD)",
-      "rationale": "Rechecked 2026-10-01 against the official address directory, current V2 architecture, July V2 audit, SDK v2.0.5 IDL, and pinned finalized ProgramData/config accounts. The V2 docs now include HYPE/USD alongside SOL/USD, BTC/USD, and USDC/USD, but the address directory still presents V1 programs and xBTC TBD. Exchange ProgramData was last deployed at slot 447625876, after the earlier September review. No identity-bound deployed oracle-feed and complete branch/failure-behavior inventory was certified from these sources; retain unresolved rather than promote a docs-only branch map.",
+      "reviewedAt": "2026-10-09",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane37Reservoir)",
+      "rationale": "Observed 2026-10-09T10:33:04Z: the current official SDK commit 30373ffe5f22b54eeae1edc5d11b9fc642b357e3 publishes SOL, BTC, HYPE and USDC feed identities plus additional ZEC, ONYC, PST and ETH candidates. oracle.rs implements full Pyth verification, publish-time, posted-slot and confidence checks, with configurable interval validation from 1 to 60 seconds; par_tolerance.rs specifies the USDC face-value gate. This is public-but-uncurated branch evidence. A complete deployment-bound account census and source/runtime match remain necessary; neither current parameters nor active branch membership are inferred from SDK constants. Keep applicability unresolved and the tier opaque pending that curation.",
       "sources": [
         {
           "label": "Hylo on-chain address directory read 2026-09-04",
@@ -54,11 +54,23 @@
         {
           "label": "Hylo V2 audit scope and program IDs",
           "url": "https://hylo-audits.s3.us-east-2.amazonaws.com/Accretion-HyloV2-July2026.pdf"
+        },
+        {
+          "label": "Hylo SDK pinned price feed identities and additional branch candidates",
+          "url": "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/pyth/feeds.rs"
+        },
+        {
+          "label": "Hylo SDK pinned Pyth freshness, verification and confidence validation",
+          "url": "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/pyth/oracle.rs"
+        },
+        {
+          "label": "Hylo SDK pinned USDC par-tolerance gate",
+          "url": "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/par_tolerance.rs"
         }
       ]
     },
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB30hyUSD)",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane37Reservoir)",
     "confidence": "limited",
     "sources": [
       {
@@ -84,6 +96,18 @@
       {
         "label": "Hylo V2 audit report",
         "url": "https://hylo-audits.s3.us-east-2.amazonaws.com/Accretion-HyloV2-July2026.pdf"
+      },
+      {
+        "label": "Hylo SDK pinned price feed identities and additional branch candidates",
+        "url": "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/pyth/feeds.rs"
+      },
+      {
+        "label": "Hylo SDK pinned Pyth freshness, verification and confidence validation",
+        "url": "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/pyth/oracle.rs"
+      },
+      {
+        "label": "Hylo SDK pinned USDC par-tolerance gate",
+        "url": "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/par_tolerance.rs"
       }
     ]
   }

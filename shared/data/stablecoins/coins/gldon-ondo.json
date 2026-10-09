@@ -87,6 +87,14 @@
       "url": "https://cdn.sanity.io/files/8k2tqa6n/production/c526d3cb52fc1e92988e2db1b33d563864ad6b5d.pdf"
     },
     {
+      "label": "Redemption terms (reviewed 2026-10-09, Lane05Ondo)",
+      "url": "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md"
+    },
+    {
+      "label": "Authenticated redemption quotes and access",
+      "url": "https://docs.ondo.finance/api-reference/quickstart.md"
+    },
+    {
       "label": "Ethereum deployment (block 23984676; implementation history, not public issue date)",
       "url": "https://etherscan.io/tx/0xd44893c63ea157f403239cb968ffee492e53423c283b42c222260882e5a1e2a1"
     },

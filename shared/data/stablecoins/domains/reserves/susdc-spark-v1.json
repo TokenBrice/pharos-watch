@@ -90,7 +90,7 @@
     "compositionBasis": "Complete implementation-defined local gross token inventory at one pinned Ethereum block; sUSDS valued by its native convertToAssets in USDS units, USDS and USDC at accounting par; no fee or stress deduction",
     "compositionAsOf": "2026-10-03",
     "scope": "full-composition",
-    "knownUnknownExposure": "All nonzero holdings in the implementation-defined local reserve inventory are identified, including idle USDC and USDS dust. Ultimate backing is inherited from each linked asset; stressed realization, enforceable priority and independently reconciled legal encumbrance are not established by this gross local inventory.",
+    "knownUnknownExposure": "All nonzero holdings in the implementation-defined local reserve inventory are identified, including idle USDC and USDS dust. Ultimate backing is inherited from each linked asset; stressed realization, enforceable priority and independently reconciled legal encumbrance are not established by this gross local inventory. Sol curation campaign 2026-10-09 (Lane31Standard), source review 2026-10-09T10:36:33Z: the linked verified Legacy UsdcVault implementation routes holder withdraw/redeem through sUSDS and the PSM, while exit transfers sUSDS shares. Neither those paths nor the linked Spark legacy documentation establish a holder realization horizon for the separate idle USDC and USDS dust. Their liquidity stays unknown with exact exposure-scoped researched non-disclosure classifications; the October 3 inventory, weights and prior observation dates are unchanged.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": []
   },

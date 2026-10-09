@@ -78,7 +78,7 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
     kind: "unused-live-redemption-telemetry",
     stablecoinId: "mantrausd-mantra",
     reason:
-      "The M-wrapper producer measures native-M backing and a sampled approved-swapper cohort, not executable wM output through the reviewed same-chain holder route. Native-M telemetry must not be attributed to wM capacity; the route remains source-reviewed unconfigured.",
+      "The M-wrapper producer measures native-M backing and a sampled approved-swapper cohort, not executable wM output through the reviewed same-chain holder route. Native-M telemetry must not be attributed to wM capacity; the documentary mantraUSD-to-wM path remains unconfigured pending pinned enabled-path and exact-output capacity evidence recorded in its coverage disposition.",
     owner: POLICY_OWNER,
     reviewedAt: "2026-10-03",
   },

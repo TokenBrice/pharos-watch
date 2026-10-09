@@ -29,12 +29,12 @@
       "assuranceMethod": "audit",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "PoR verification sweep 2026-08 (July 2026 certificate read directly: physical inventory of 508 gold bars vs the Parcel Ownership List dated 30 June 2026; no token reconciliation performed; scope corrected and composition review advanced in lockstep)",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane38Matrixdock): certificate SGMSG-26-00478 re-read at 2026-10-09T10:44:31Z; publication remains July 17, 2026 and inventory remains June 30, 2026. Physical inspection of 508 gold bars, not token-liability reconciliation; no later report appears in the issuer audit index.",
       "confidence": "verified",
       "sources": [
         {
           "label": "Matrixdock Gold Bureau Veritas Audit Jul 2026 (covers XAUm gold and XAGm silver)",
-          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=54e9714e-c65f-4b0c-8bcf-c7869956dd20"
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media"
         },
         {
           "label": "Matrixdock press release - two years of independent verification (2026-07-21)",

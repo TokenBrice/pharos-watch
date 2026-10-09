@@ -51,16 +51,16 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "BitGo Trust Company (qualified custodian)",
+        "name": "BitGo Trust Company (customer USDA account services; reserve custody unverified)",
         "role": "custodian",
         "jurisdiction": "United States"
       }
     ],
-    "segregation": "segregated",
+    "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane27Anzens)",
     "confidence": "probable",
     "sources": [
       {
@@ -72,7 +72,7 @@
         "url": "https://www.anzens.com/landing/terms-and-conditions"
       }
     ],
-    "uncertainty": "Anzens names BitGo Trust for USDA token custody and customer-account services, and describes segregated Anzens-user accounts. These disclosures do not establish custody or segregation of the issuer's cash and Treasury reserve portfolio. The reviewed public sources do not establish reserve bankruptcy remoteness, publish reserve account-level custody terms or provider allocations, or state explicit reserve rehypothecation prohibitions.",
-    "knownUnknownExposurePct": 0
+    "uncertainty": "Reviewed 2026-10-09T10:36:53Z. The base coin retains January 31, 2026 examination context identifying BitGo fiat custody and Superstate fund shares held directly by Anzens; that historical mixed-layer description does not establish a current whole-book custody tier or reserve-provider weights. Anzens Terms section 8 assigns customer-account onboarding and digital-asset transaction execution to BitGo Trust. Section 9 identifies cash, cash equivalents, U.S. Treasury bills and Treasury-focused money-market funds as USDA reserves, but does not establish current custodian shares or segregated reserve accounts. Customer-token custody does not establish whole-reserve custody. Reserve segregation, bankruptcy remoteness and rehypothecation protections remain unverified on the reviewed current surfaces. The unknown percentage concerns current provider allocation, not an assertion that no historical provider was named. No composition date or holding weight is refreshed.",
+    "knownUnknownExposurePct": 100
   }
 }

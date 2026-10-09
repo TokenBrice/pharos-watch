@@ -12,7 +12,7 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "Lido/Mellow earnUSD MetaVault allocates across earnUSDc (conservative) and earnUSDe (experimental) underlying vaults; USDC/USDT deposits and USDC withdrawal denomination do not establish current allocation weights, holdings or encumbrances.",
+  "collateral": "Lido/Mellow earnUSD MetaVault allocates across earnUSDc (conservative) and earnUSDe (experimental) underlying vaults. The exact issuer API and deployment registry list USDC, USDT and USDe deposit assets; permitted deposits and USDC withdrawal denomination do not establish current allocation weights, holdings or encumbrances.",
   "pegMechanism": "Returns compound into vault shares using privileged oracle reports. Deposits and request-and-claim withdrawals are processed by queues; the documented USDC withdrawal wait is typically about three days, not a guaranteed maximum.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
@@ -70,6 +70,10 @@
     {
       "label": "Website",
       "url": "https://earn.lido.fi/"
+    },
+    {
+      "label": "Vault API",
+      "url": "https://points.mellow.finance/v1/vaults"
     },
     {
       "label": "Docs",

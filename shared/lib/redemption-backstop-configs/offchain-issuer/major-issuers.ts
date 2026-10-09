@@ -459,13 +459,34 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "usdm-moneta": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    reviewedAt: "2026-10-09",
     settlementModel: "days",
-    costModel: undisclosedReviewedFee("Eligible users can redeem USDM 1:1 for USD; public fee schedule not disclosed"),
+    capacityModel: { kind: "unquantified" },
+    costModel: documentedVariableFee(
+      "Moneta's current FAQ publishes a burning fee of min($5,000, max($50, 0.1% of the burn amount)), including Cardano network fees. Bank fees may apply independently. This capped formula is disclosed, not a fixed 10 bps or a complete bank-payout cost bound.",
+      "formula",
+    ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale: "The current FAQ restricts the live manual-wire rail to KYB-approved institutions and states a default $10,000 daily mint/burn account limit, with higher limits requiring contact. An account limit is not guaranteed funded capacity, a whole-token redemption partition, or a final USD settlement SLA. The published capped/minimum issuer-fee formula is not representable exactly by the current uncapped cost shape, and independent bank charges remain unbounded. Moneta's terms do not establish redemption of NBX-attributable issuance from Moneta's reserve book.",
+      reviewedAt: "2026-10-09",
+      docs: [
+        sourceRef("Moneta FAQ: current institutional access, account limit and capped burning formula", "https://moneta.global/resources/faq/", ["route", "access", "capacity", "fees"]),
+      ],
+    },
     docs: [
       sourceRefRouteCapacity("USDM litepaper", "https://moneta.global/resources/litepaper/"),
       sourceRef("USDM retail launch", "https://moneta.global/retail-launch/", ["route", "settlement"]),
+      sourceRef("Moneta FAQ: current institutional access, account limit and capped burning formula", "https://moneta.global/resources/faq/", ["route", "access", "capacity", "fees"]),
     ],
-    notes: ["Retail exchange documentation describes 1-3 business day processing driven by bank-transfer timing"],
+    notes: [
+      "Current FAQ review 2026-10-09: linked-bank-account redemption for KYC-verified individuals is described as coming soon; the currently available manual-wire rail is limited to KYB-approved institutions.",
+      "The default daily mint/burn account limit does not prove a global rail cap or guaranteed throughput. Contact-based higher limits are not funded capacity.",
+      "The historical 1-3 business day processing description does not establish a binding completed-payout SLA.",
+      "The reviewed capped issuer-fee formula remains disclosed-unquantified until a notional-aware capped/minimum-fee producer exists. Do not substitute fixedFee(10), omit the cap, or treat bank charges as zero.",
+      "Moneta and NBX issue the same Cardano token against separate reserve books; source terms for one issuer do not prove a complete whole-token route or interchangeable issuer access.",
+    ],
   },
   "usdh-native-markets": {
     ...issuerBase,
@@ -584,6 +605,16 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     settlementModel: "days",
+    v9RouteReviewTerms: {
+      settlementModel: "days",
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+      rationale: "The August 6, 2026 prospectus supplement permits surrender processing to exceed 24 hours for congestion or technological reasons. Wire/ACH may take up to five days and stablecoin conversion/transfer may take up to ten days; these staged conditional statements do not establish an unconditional initial-request-to-completed-payout maximum.",
+      reviewedAt: "2026-10-09",
+      docs: [
+        sourceRef("Figure Certificate Company August 6, 2026 surrender supplement (reviewed 2026-10-09)", "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf", ["route", "settlement"]),
+      ],
+    },
     costModel: fixedFee(
       0,
       "FCC imposes no surrender charge. Actual ACH pass-through fees are deducted from proceeds and unquantified; FCC or its affiliates pay blockchain charges for approved wallets, while invalid non-approved-wallet transfers remain holder-borne.",

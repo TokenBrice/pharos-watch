@@ -201,7 +201,7 @@
         "reserveName": "Unclassified non-FiRM issuance residual (excluding verified Frontier bad debt)",
         "pct": 31.456297,
         "disposition": "insufficient-evidence",
-        "rationale": "Original 34% tail less the separately verified Frontier bad-debt slice; no measured collateral breakdown exists for the remainder, which must be charged as bounded-unknown, not measured unsafe."
+        "rationale": "Original 34% tail less the separately verified Frontier bad-debt slice; no measured collateral breakdown exists for the remainder, which must be charged as bounded-unknown, not measured unsafe. Sol curation campaign 2026-10-09 (Lane42Inverse), observed 2026-10-09T10:35:59Z: the Fed overview separately reports supply, circulating borrowing, idle DOLA and venue positions, while DOLA Feds documentation describes FiRM, Frontier and PSM issuance. Those counters do not reconcile this exact residual to independent backing after undrawn issuance and circular DOLA claims are netted. The historical weight, composition clock and unknown classification are retained."
       },
       {
         "reserveIndex": 2,

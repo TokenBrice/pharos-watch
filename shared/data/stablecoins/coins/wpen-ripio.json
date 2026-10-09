@@ -4,14 +4,14 @@
   "detailProvider": "defillama",
   "name": "Ripio wPEN",
   "symbol": "WPEN",
-  "oneLiner": "WPEN is Ripio's Peruvian-sol wrapped fiat stablecoin, issued and redeemed through Ripio's wFIAT on/off-ramp infrastructure against local-currency reserves.",
+  "oneLiner": "WPEN is Ripio's reserve-backed Peruvian-sol stablecoin; holders have no issuer redemption right and exit through markets or available ramps.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "PEN",
     "governance": "centralized"
   },
   "collateral": "Ripio describes wPEN as a 1:1 Peruvian-sol token backed by local-currency liquid instruments under its wFIAT framework. The reviewed public archive publishes token-specific certifications for wARS, wBRL, wCOP, and wMXN, but no wPEN-specific report or instrument split was found there on 2026-10-01. A September 16 issuer announcement claims independently attested collateral for the full suite without linking a wPEN report.",
-  "pegMechanism": "Fiat-backed 1:1 PEN stablecoin under Ripio's wFIAT framework: a Ripio subsidiary mints and burns supply via role-based access control (DEFAULT_ADMIN_ROLE / MINTER_ROLE) against PEN collateral, with mint and redeem routed through Ripio's PEN on/off-ramp; the contract is a UUPS-upgradeable, pausable ERC-20 with EIP-2612 permit",
+  "pegMechanism": "Fiat-backed PEN stablecoin under Ripio's wFIAT framework: a Ripio subsidiary mints and burns supply via role-based access control against PEN collateral, targeting 1 WPEN = 1 PEN through markets or available ramps. The wFIAT whitepaper expressly denies token holders any issuer redemption right or claim to funds.",
   "mechanismArchetype": "fiat-cash",
   "geckoId": "peruvian-sol",
   "links": [
@@ -25,7 +25,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://www.ripio.com/en/assets/wars/whitepaper"
+      "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf"
     }
   ],
   "jurisdiction": {

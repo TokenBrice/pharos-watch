@@ -32,7 +32,7 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "one-day",
+      "liquidityHorizon": "unknown",
       "sourceKey": "nest-vault-positions:ntbill"
     },
     {
@@ -104,12 +104,30 @@
       ],
       "liquidityHorizon": "unknown",
       "sourceKey": "nest-vault-positions:pending-deposits"
+    },
+    {
+      "name": "USDG liquid balance",
+      "pct": 0,
+      "risk": "low",
+      "coinId": "usdg-paxos",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Paxos Global Dollar issuer",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "nest-vault-positions:usdg"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Codex Nest current nOPAL reserve refresh; Claude ODR-E9 live-name join repair",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane25Nest)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Nest vault positions API (re-opened 2026-09-04)",
@@ -138,12 +156,20 @@
       {
         "label": "BlackOpal LiquidStone II fund",
         "url": "https://www.blackopal.finance/"
+      },
+      {
+        "label": "Nest exact nOPAL registry and USDG asset address (accessed 2026-10-09)",
+        "url": "https://api.nest.credit/v1/vaults/nest-opal-vault"
+      },
+      {
+        "label": "Robinhood Chain canonical USDG contract (accessed 2026-10-09)",
+        "url": "https://docs.robinhood.com/chain/contracts/"
       }
     ],
-    "rationale": "Re-opened 2026-09-04 against Nest's positions and NAV APIs. The current settled holdings are $81,864,352.06 in OALS2T/LiquidStone II, $3,678,528.83 in nTBILL, $200,663.00 in USDT/USDT0, $199,983.79 in USDC, and $64,994.90 in pUSD, with no pending transactions. Normalization produces 95.1817%, 4.2769%, 0.2333%, 0.2325%, and 0.0756%, respectively; stale residual and pending-deposit rows are omitted. OALS2T's obligor-level receivable composition and fund service providers remain undisclosed.",
-    "compositionBasis": "Nest positions and NAV APIs fetched 2026-09-04, normalized to the current nOPAL NAV; settled positions only",
+    "rationale": "Classification-only review on 2026-10-09. The exact nOPAL positions API identifies a USDG liquid balance at Robinhood chain 4663 contract 0x5fc5360d0400a0fd4f2af552add042d716f1d168; Robinhood's canonical token directory corroborates that address. The zero-percent USDG row is a keyed classification, not an asserted current allocation; live observations own its weight. All previously authored percentages and compositionAsOf retain their September 4 provenance and are not refreshed by this review. BlackOpal and Nest describe short-duration receivables and a liquid sleeve but do not disclose a contractual whole-OALS2T maturity maximum or stressed liquidation horizon. The nTBILL receipt's underlying short-duration strategy does not establish a contractual maturity maximum for the receipt itself. Its current up-to-four-day redemption estimate is qualified by liquidity-dependent processing and does not support the previously authored one-day stressed liquidation horizon, which remains unknown.",
+    "compositionBasis": "Classification metadata for exact live-adapter source keys; historical percentages remain the Nest positions/NAV snapshot fetched 2026-09-04, not current whole-book composition.",
     "compositionAsOf": "2026-09-04",
-    "scope": "full-composition",
+    "scope": "classification-only",
     "knownUnknownExposure": "OALS2T's obligor-level receivable composition, fund service providers, and any fund-level financial audit are not public. Stablecoin and nTBILL legs are identified.",
     "knownUnknownExposurePct": 95.1817,
     "nonLinkDispositions": [

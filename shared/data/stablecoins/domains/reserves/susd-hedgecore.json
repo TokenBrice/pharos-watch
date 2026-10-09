@@ -15,8 +15,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos Dependency Map WS1.D documented-route review",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane20Last)",
     "confidence": "probable",
     "sources": [
       {
@@ -36,8 +36,8 @@
         "url": "https://docs.hedgecore.io/docs/protocol/analytics-monitoring"
       }
     ],
-    "rationale": "N04-07: yield-generation documentation accessed 2026-09-30 continues to describe USDC -> StakeableAsset -> StrategyRouter -> VenusUSDVault -> Venus Protocol, while allowing future strategy additions. This establishes a documented route, not freshly measured allocation or canonical Circle custody. The 100% row is retained as historical strategy context and its August 20 composition date is unchanged. Publication remains blocked on a same-block sUSD/hUSDC liability-to-asset reconciliation and verification of the BSC USDC held claim and bridge escrow. Next evidence: read the immutable underlying/strategy/vault asset contracts, vUSDC balances and exchange rate, idle balances, debt and circulating liabilities at one BSC block; annotate a verified bridge representation before admitting any issuer look-through edge.",
-    "compositionBasis": "Historical BSC block 117054691 route context; issuer yield-generation documentation accessed 2026-09-30 without refreshed balances",
+    "rationale": "Primary yield-generation, analytics and wrapper documentation re-read at 2026-10-09T10:31:59Z. The issuer still describes USDC -> StakeableAsset -> StrategyRouter -> VenusUSDVault -> Venus Protocol and allows future strategies, but supplies no dated complete position inventory or same-block sUSD/hUSDC liability-to-asset denominator. getProtocolStats() documentation distinguishes cumulative totalUSDCDeposited from contractUSDCBalance; neither establishes current gross vUSDC backing. The 100% row remains historical strategy context, with its August 20 composition date unchanged and selected-slices scope retained. Current allocation, BSC USDC representation custody and all-path reconciliation require independently pinned contract identity, gross vUSDC assets/exchange rate, idle balances, debt and outstanding liabilities. The fragment classifies only the missing current composition disclosure as researched non-disclosure; it grants no current reserve, custody or dependency credit.",
+    "compositionBasis": "Historical BSC block 117054691 route context; issuer documentation re-read 2026-10-09 without refreshed balances",
     "compositionAsOf": "2026-08-20",
     "scope": "selected-slices",
     "knownUnknownExposure": "The documented Venus USDC route is confirmed, but current allocation, supply-to-vault reconciliation and BSC representation custody are unresolved. A 100% historical strategy statement is not a current measured Circle USDC share.",

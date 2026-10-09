@@ -42,9 +42,13 @@
       {
         "label": "Andersen tGBP agreed-upon procedures report - August 31, 2026 (page 2 reserve table visually verified)",
         "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf"
+      },
+      {
+        "label": "Tokenised GBP report archive checked 2026-10-09 (August is newest; onchain supply has a separate October timestamp)",
+        "url": "https://www.tokenisedgbp.com/transparency"
       }
     ],
-    "rationale": "The August 31, 2026 Andersen report's image-based page 2 table identifies GBP 3,455,964.06 of cash accounts, GBP 4,489,335.00 of bonds and GBP 12,060,272.00 of money market funds, totaling GBP 20,005,571.06. Percentages are these reported amounts divided by the reported reserve total, rounded to six decimal places. The AUP engagement provides factual findings, not assurance. Bond issuers, instrument types and maturities are not identified in the table, so the bond slice remains unclassified rather than assumed to be Treasury bills.",
+    "rationale": "The August 31, 2026 Andersen report's image-based page 2 table identifies GBP 3,455,964.06 of cash accounts, GBP 4,489,335.00 of bonds and GBP 12,060,272.00 of money market funds, totaling GBP 20,005,571.06. Percentages are these reported amounts divided by the reported reserve total, rounded to six decimal places. The AUP engagement provides factual findings, not assurance. Bond issuers, instrument types and maturities are not identified in the table, so the bond slice remains unclassified rather than assumed to be Treasury bills. Supplemental source check 2026-10-09 by Sol curation campaign 2026-10-09 (Lane51Tokenised): the issuer archive still lists August 31 as the newest report. Its October 9 timestamp labels onchain token supply, not reserve composition. No newer dated allocation or bond identities were disclosed on the reviewed archive and report surfaces. Existing reserve weights, compositionAsOf and the original composition review date are unchanged; the scoped campaign classification records the separate research timestamp.",
     "compositionBasis": "August 31, 2026 Andersen AUP page 2 reserve table; reported asset amounts normalized to the reported GBP reserve total",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",

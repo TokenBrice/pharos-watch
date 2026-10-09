@@ -122,6 +122,11 @@
       "type": "warning",
       "title": "Deployment-control semantics remain bounded",
       "message": "SONG Safety Score V9 deployment-control review on 2026-07-15 verified the Centrifuge ward and 4-of-9 Safe authority path from issuer, protocol, and Safe sources, but did not establish complete current cap, incident, economic-loss, and materiality reconciliation across all mint surfaces."
+    },
+    {
+      "type": "info",
+      "title": "Issuer redemption terms remain incomplete",
+      "message": "Anemoy describes daily access and stablecoin redemptions for approved non-US professional investors. Its public materials do not establish committed executable capacity or a guaranteed maximum time for final receipt; Centrifuge processes redemption requests at the manager's cadence."
     }
   ],
   "launchDate": "2025-06-25"

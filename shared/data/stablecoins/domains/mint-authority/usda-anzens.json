@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "USDA is issued by Anzens, a FinCEN-registered MSB; minting and redemption run 1:1 through Anzens' centralized backend via KYC-verified bank transfers against USD cash and Treasuries custodied at BitGo Trust on Cardano.",
+    "summary": "USDA is issued through Anzens' centralized Cardano backend with KYC-verified minting and redemption. Current terms identify cash, cash equivalents, Treasury bills and Treasury-focused funds as reserves. BitGo customer-account services do not establish current whole-reserve custody, and the exact policy authorization threshold remains unresolved.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -102,6 +102,10 @@
         {
           "label": "Anzens company updates: current USDA reserve attestation series",
           "url": "https://www.linkedin.com/company/anzens-usda"
+        },
+        {
+          "label": "Anzens Terms revised April 14, 2025; current scope clarification observed 2026-10-09",
+          "url": "https://www.anzens.com/landing/terms-and-conditions"
         }
       ],
       "disposition": "scoreable",

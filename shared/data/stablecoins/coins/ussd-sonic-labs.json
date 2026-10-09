@@ -9,7 +9,7 @@
     "rwa": true
   },
   "collateral": "Sonic frxUSD held 1:1 by the USSD BrandedCustodian contract on Sonic. USSD inherits frxUSD's upstream reserve exposure rather than directly holding Frax's tokenized Treasury and approved-stablecoin portfolio.",
-  "pegMechanism": "USSD is minted and redeemed 1:1 against Sonic frxUSD through Frax-derived permissionless contracts. Broader approved-asset and tokenized-Treasury routes belong to the upstream frxUSD reserve layer; cross-chain USSD additionally relies on its omnichain infrastructure.",
+  "pegMechanism": "USSD is minted and redeemed 1:1 against Sonic frxUSD through Frax-derived permissionless contracts. Holders first unwrap USSD to frxUSD; any further redemption is through Frax or authorized providers, not directly with Sonic. Broader approved-asset and tokenized-Treasury routes belong to the upstream frxUSD reserve layer; cross-chain USSD additionally relies on its omnichain infrastructure.",
   "mechanismArchetype": "tbill",
   "llamaId": "356",
   "detailProvider": "coingecko",
@@ -29,6 +29,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/SonicLabs"
+    },
+    {
+      "label": "Redemption disclaimer",
+      "url": "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FFigzFE2ScpiZHSkLRCev%2Fuploads%2F6pFXKqf7Kq4tnm3p3bmw%2FFRXUSD%20_%20USSD%20Disclaimer.pdf?alt=media"
     },
     {
       "label": "Docs",

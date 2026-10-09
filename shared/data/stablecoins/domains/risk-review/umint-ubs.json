@@ -78,11 +78,11 @@
         "pricingAuthority": "internal-price",
         "applicability": {
           "disposition": "top-level-only",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine04 native class scope review",
-          "confidence": "limited",
-          "rationale": "The exact CMTAT_EVCC deployment records UBS USD class AT-acc ISIN SGXZ89386486 and represents a fund NAV claim, not borrower collateral. Public UBS issuance/redemption announcements support administered fund pricing, but the private offering memorandum, deployed NAVLink address and valuation-authority execution details remain unavailable; no external-oracle independence or complete valuation closure is asserted.",
-          "sources": [{"label": "Native verified CMTAT_EVCC", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"}, {"label": "UBS production subscription and redemption", "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html"}]
+          "reviewedAt": "2026-10-09",
+          "reviewer": "Sol curation campaign 2026-10-09 (Lane26Unitas)",
+          "confidence": "probable",
+          "rationale": "Applicability-only review of the exact native Ethereum CMTAT_EVCC deployment, whose verified constructor identifies UBS USD class AT-acc shares and ISIN SGXZ89386486. The authorized distributor's March 20, 2025 native-uMINT disclosure states daily NAV and daily subscription/redemption; UBS's November 4, 2025 release confirms an in-production native fund subscription/redemption workflow. These sources establish an applicable internal fund-NAV pricing path without a borrower-collateral or liquidation branch. They do not establish the private valuation policy, deployed NAVLink/controller identity, complete pricing-authority execution reach, or independent valuation safeguards; aggregate oracleRisk.confidence remains limited.",
+          "sources": [{"label": "Native verified CMTAT_EVCC constructor and implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"}, {"label": "DigiFT native uMINT disclosure, Plan design sections 1 and 10 (March 20, 2025)", "url": "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764"}, {"label": "UBS in-production native uMINT subscription and redemption (November 4, 2025)", "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html"}]
         }
       }
     ]

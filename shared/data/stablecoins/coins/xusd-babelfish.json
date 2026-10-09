@@ -39,7 +39,7 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "onchain",
+  "custodyModel": "unknown",
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "evm-branch-balances",

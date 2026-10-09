@@ -34,7 +34,7 @@
     "compositionBasis": "BDO Mexico Q2 2026 valuation of MXNB reserve bank-account balances",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The report identifies Nvio and Hey Banco but does not disclose the balance at each institution, account terms, deposit protection, or direct bank confirmation. The issuer's current transparency page provides only aggregate reserves and circulation.",
+    "knownUnknownExposure": "The Q2 valuation report does not name the reserve banks or disclose the balance at each institution, account terms, deposit protection, or direct bank confirmation. Nvio and Hey Banco are retained historical custody leads, not institutions independently identified by the Q2 report. The issuer's transparency page provides only aggregate reserves and circulation.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

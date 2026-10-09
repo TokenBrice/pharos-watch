@@ -2,8 +2,8 @@
   "id": "chfsafo-spiko",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane53Spiko)",
     "sources": [
       {
         "label": "Spiko allowlisted holder controls",
@@ -16,9 +16,21 @@
       {
         "label": "Exact CHF Token-2022 register",
         "url": "https://solscan.io/token/6Gst8o3L5uNtkUvhEg23HpDLpYRdNQTgdn1Bc7jnCM5c"
+      },
+      {
+        "label": "September 2026 SICAV prospectus, common share rules page 10",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Exact CHF ISIN and eight native registers",
+        "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+      },
+      {
+        "label": "Immutable issuer Solana ACL architecture and authority inventory",
+        "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"
       }
     ],
-    "evidence": "Spiko permission architecture restricts token holding to allowlisted KYC addresses. The exact CHF Solana mint at finalized slot 452748326 has default frozen accounts, an explicit freeze authority, permanent delegate and pausable authority. These are holder-control surfaces, separate from mint permission."
+    "evidence": "The September 2026 SICAV prospectus page 10 requires shares to be held and transferred only between allowlisted investors. The issuer's exact CHF API binds ISIN FR0014015LG6 to all eight catalog registers: Ethereum, Polygon, Starknet, Arbitrum, Etherlink, Base, Stellar and Solana. Spiko Finance maintains the shareholder register under the Management Company's responsibility, making issuer register/allowlisting policy a common access failure domain. This establishes holder transfer restrictions across the exact share class, not current chain-by-chain administrator or material-supply closure. The historical Solana observation at finalized slot 452748326 identified default frozen accounts, an explicit freeze authority, permanent delegate and pausable authority; that observation is retained, not refreshed. Immutable issuer Solana source describes default-frozen Token-2022 accounts and an allow/block gate where the block list takes precedence; source publication alone does not establish current on-chain signer thresholds. No underlying-reserve freeze exposure is inferred from these holder restrictions."
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

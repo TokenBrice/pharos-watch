@@ -59,6 +59,16 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       feeBpsMin: 12.5,
       feeBpsMax: 55,
     },
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      rationale: "The public standard destruction tariff effective 2026-09-01 is marginal on rolling 30-day net redemption activity: 12.5, 25, 35 and 50 bps, with 5 bps added for in-kind gold conversion. It is not a single exact-request quote or a universal customer-specific fee ceiling: PAXG terms section 15.1 makes a conflicting private Pricing Supplement controlling. Section 11.4 leaves physical delivery to the holder and section 15.3 passes through bank charges without a numeric ceiling. Sections 11.5 and 12.3 do not bind complete large-request settlement. The existing 55 bps field bounds only the published standard issuer conversion tariff, never all-in USD realization.",
+      reviewedAt: "2026-10-09",
+      docs: [
+        sourceRef("PAX Gold standard destruction tariff effective 2026-09-01", "https://support.paxos.com/articles/2899561282-pax-gold-fees", ["route", "fees"]),
+        sourceRef("PAXG controlling pricing, holder delivery and large-withdrawal settlement terms", "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions", ["route", "fees", "access", "settlement"]),
+      ],
+    },
     docs: [
       sourceRefFull("PAXG physical terms and separately unbounded delivery charges", "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions"),
       sourceRef("PAX Gold Fees; effective 2026-09-01", "https://support.paxos.com/articles/2899561282-pax-gold-fees", ["route", "fees"]),
@@ -267,16 +277,17 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     },
     executionModel: "rules-based-nav",
     costModel: undisclosedReviewedFee(
-      "Gold DAO materials describe reverse swapping GLDT into GLD NFTs at the published gold-denomination ratio; public materials reviewed do not publish one fixed redemption fee",
+      "Public fees are 1 GLDT per GLD NFT unlocked and CHF 300 per Zurich pickup; an all-in same-notional USD fee requires NFT denomination, lot count and captured CHF/USD handling",
     ),
     docs: [
       sourceRefFull("Gold DAO physical redemption and reverse swap", "https://docs.gold-dao.org/how-to/redeem-physical-gold"),
+      sourceRef("GLDT FAQ: 1 GLDT per NFT unlocked", "https://gldt.org/", ["fees"]),
       sourceRefFull("Bity vault pickup: CHF 300 per visit", "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts"),
     ],
     notes: [
       "Modeled route is GLDT's documented reverse-swap path into GLD NFT gold-denomination backing, not ordinary secondary-market liquidity.",
       "Physical gold custody and delivery remain upstream of the GLD NFT system, so Pharos keeps the route in the delayed commodity issuer family.",
-      "The published CHF 300 Zurich vault pickup charge is a delivery term, not a USD flat redemption fee. Ruling B does not invent an FX conversion or deduct unbounded delivery; reverse-swap fees remain unpublished and output quality is capped at 55.",
+      "Re-reviewed 2026-10-09: the FAQ charges 1 GLDT per unlocked NFT, not per reverse-swap batch. Its examples charge 5 GLDT for five 1g NFTs and 1 GLDT for one 10g NFT. The CHF 300 Zurich pickup charge applies regardless of gold size or quantity. These fees are public, but no token-denominated lot evaluator or captured CHF/USD conversion establishes an all-in USD fee; retain scoped cause B and the unresolved numerical cost rather than inventing a flat USD amount or universal basis-point rate.",
     ],
   },
   "vnxau-vnx": {

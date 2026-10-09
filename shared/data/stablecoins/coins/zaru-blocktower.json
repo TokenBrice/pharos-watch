@@ -8,7 +8,7 @@
     "pegCurrency": "ZAR",
     "governance": "centralized"
   },
-  "collateral": "Rand bank deposits at Standard Bank and unit-trust money-market funds at Sanlam; the retrieved Moore report measures the July 31, 2026 book, not current allocations.",
+  "collateral": "Rand bank deposits at Standard Bank and unit-trust money-market funds at Sanlam; the retrieved Moore report measures the August 31, 2026 Solana book, not current whole-token allocations.",
   "pegMechanism": "One ZAR per token through BlockTower's verified institutional mint/redemption service; retail access through network partners. Fiat settlement may take up to five business days, and partner fees and minimums vary.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
@@ -61,7 +61,7 @@
     },
     {
       "label": "Reserve report",
-      "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf"
+      "url": "https://framerusercontent.com/assets/Q3LUtjT3Rql8mWBWWS6RfU5c4.pdf"
     },
     {
       "label": "Canonical Solana mint creation and initialization, slot 373091718",
@@ -71,24 +71,24 @@
   "geckoId": "zar-universal",
   "proofOfReserves": {
     "type": "agreed-upon-procedures",
-    "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+    "url": "https://framerusercontent.com/assets/Q3LUtjT3Rql8mWBWWS6RfU5c4.pdf",
     "provider": "Moore Blockchain and Digital Assets JHB (Pty) Ltd; ISRS 4400 (Revised) procedures expressly provide no assurance opinion",
     "attestorTier": "regional",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "South Africa",
     "latestReport": {
-      "periodEnd": "2026-07-31",
-      "publishedAt": "2026-08-28",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-10-01",
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "liabilityReconciliation": "partial",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane22Stoneyield)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Retrieved independent reserve report",
-          "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf"
+          "label": "Moore ISRS 4400 report signed October 1, 2026; Solana snapshot August 31 at 14:00 UTC, slot 443168748; no assurance opinion; accessed 2026-10-09T10:38:10Z",
+          "url": "https://framerusercontent.com/assets/Q3LUtjT3Rql8mWBWWS6RfU5c4.pdf"
         }
       ]
     }

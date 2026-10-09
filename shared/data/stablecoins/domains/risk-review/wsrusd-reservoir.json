@@ -116,7 +116,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native wsrUSD (wrapped srUSD) on Ethereum (6,261-byte wrapper token, no LayerZero endpoint). totalSupply read 2026-07-20.",
+        "reviewNote": "Native Ethereum Savingcoin ERC-4626 wsrUSD over rUSD, not a share claim on the separate srUSD token. Source and constructor reviewed at 2026-10-09T10:31:38Z by Sol curation campaign 2026-10-09 (Lane02Reservoir): asset is rUSD 0x09d4214c03d01f49544c0448dbe3a27f768f2b34; _deposit burns rUSD and mints shares, while _withdraw burns shares and mints rUSD. No LayerZero endpoint is part of this native token; the separately registered Ethereum adapter is bridge machinery. The historical 2026-07-20 totalSupply observation is unchanged.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -131,6 +131,10 @@
           {
             "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
             "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          },
+          {
+            "label": "Verified Savingcoin source and constructor reviewed 2026-10-09T10:31:38Z",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
           }
         ]
       },
@@ -1003,6 +1007,9 @@
           "linea:0x4809010926aec940b550d34a46a52739f996d75d",
           "monad:0x4809010926aec940b550d34a46a52739f996d75d",
           "pharos:0x4809010926aec940b550d34a46a52739f996d75d",
+          "plasma:0x4809010926aec940b550d34a46a52739f996d75d",
+          "megaeth:0x4809010926aec940b550d34a46a52739f996d75d",
+          "xdc:0x4809010926aec940b550d34a46a52739f996d75d",
           "solana:7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE"
         ],
         "capabilities": [
@@ -1030,6 +1037,9 @@
           "contract:linea:0x4809010926aec940b550d34a46a52739f996d75d",
           "contract:monad:0x4809010926aec940b550d34a46a52739f996d75d",
           "contract:pharos:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:plasma:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:megaeth:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:xdc:0x4809010926aec940b550d34a46a52739f996d75d",
           "contract:solana:ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp",
           "program:solana:GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq",
           "eoa:ethereum:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
@@ -1092,7 +1102,10 @@
           "hyperevm:0x04716db62c085d9e08050fcf6f7d775a03d07720",
           "linea:0x4809010926aec940b550d34a46a52739f996d75d",
           "monad:0x4809010926aec940b550d34a46a52739f996d75d",
-          "pharos:0x4809010926aec940b550d34a46a52739f996d75d"
+          "pharos:0x4809010926aec940b550d34a46a52739f996d75d",
+          "plasma:0x4809010926aec940b550d34a46a52739f996d75d",
+          "megaeth:0x4809010926aec940b550d34a46a52739f996d75d",
+          "xdc:0x4809010926aec940b550d34a46a52739f996d75d"
         ],
         "capabilities": [
           "admin",
@@ -1118,7 +1131,10 @@
           "contract:hyperevm:0x04716db62c085d9e08050fcf6f7d775a03d07720",
           "contract:linea:0x4809010926aec940b550d34a46a52739f996d75d",
           "contract:monad:0x4809010926aec940b550d34a46a52739f996d75d",
-          "contract:pharos:0x4809010926aec940b550d34a46a52739f996d75d"
+          "contract:pharos:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:plasma:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:megaeth:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:xdc:0x4809010926aec940b550d34a46a52739f996d75d"
         ],
         "authorityType": "eoa",
         "routeChecks": {
@@ -1230,7 +1246,7 @@
             }
           ]
         },
-        "evidence": "Rechecked 2026-10-05: canonical adapter bytecode exactly matches fully verified WsrusdOftAdapter at Ethereum block 26124870 (SHA256 3276abd4a85bcb70eee7e36eda2a6f72907b6cab33919f15fb9adef604ab5965). All 18 remote EVM OFT runtimes remain equal to the W3R16 captures and source-equivalent to the exact-match Base reference after only compiler-labelled immutable/metadata normalization. Pinned owner and EndpointV2 delegate reads identify two separate code-empty EOAs, b757… and adc0…, on every remote with successful reads. The source enumerates all seven owner setters, but independent endpoint/validator authorities, historical peer inventory and complete cross-chain liability reach remain outside the partial certificate. Administrative powers remain Bridge Risk, not native wrapper mint authority."
+        "evidence": "Rechecked 2026-10-05: canonical adapter bytecode exactly matches fully verified WsrusdOftAdapter at Ethereum block 26124870 (SHA256 3276abd4a85bcb70eee7e36eda2a6f72907b6cab33919f15fb9adef604ab5965). All 18 remote EVM OFT runtimes remain equal to the W3R16 captures and source-equivalent to the exact-match Base reference after only compiler-labelled immutable/metadata normalization. Pinned owner and EndpointV2 delegate reads identify two separate code-empty EOAs, b757… and adc0…, on every remote with successful reads. The source enumerates all seven owner setters, but independent endpoint/validator authorities, historical peer inventory and complete cross-chain liability reach remain outside the partial certificate. Administrative powers remain Bridge Risk, not native wrapper mint authority. Route linkage reviewed 2026-10-09T10:41:31Z by Sol curation campaign 2026-10-09 (Lane02Reservoir): the issuer inventory, existing September 4 Plasma/MegaETH/XDC route observations, and October 5 whole-EVM source/peer review identify these three deployments as the same Reservoir wsrUSD OFT rail and owner. Their omitted routeRefs and contract failure-domain keys are now included on this owner control and the canonical adapter control. Historical block clocks, independent destination endpoint/delegate uncertainty, and every partial executionScope closure flag are unchanged; the added edges establish neither fresh balances nor exhaustive execution closure."
       },
       {
         "id": "wsrusd-solana-oft-program",

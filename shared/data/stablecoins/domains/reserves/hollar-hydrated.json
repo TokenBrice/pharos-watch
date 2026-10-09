@@ -15,12 +15,12 @@
         "custody",
         "concentration"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB06GBPSAFO)",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane48Initia)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -38,11 +38,15 @@
       {
         "label": "Hydration public RPC, block 15249643",
         "url": "https://rpc.hydradx.cloud"
+      },
+      {
+        "label": "Hydration referendum 367 HSM collateral consolidation, accessed 2026-10-09",
+        "url": "https://hydration.subsquare.io/referenda/367"
       }
     ],
-    "rationale": "Reviewed Hydration's HOLLAR and Borrow documentation on 2026-10-01 and read the token at Hydration block 15249643. The token registers five facilitators: Hydration Market, HOLLAR FlashMinter, HOLLAR Stability Module, GIGAHDX, and BIL. Their bucket capacities and levels describe mint authority and liabilities, not collateral holdings or asset weights. Public documentation names eligible collateral and HSM yield strategies but does not provide a dated complete allocation spanning these paths. Keep the unresolved aggregate and known-unknown exposure at 100%; this review does not refresh the composition date.",
-    "compositionBasis": "Hydration's documented HOLLAR collateral set; current per-asset and HSM-versus-borrow-market weights are unpublished",
-    "scope": "full-composition",
+    "rationale": "The 2026-10-09 review of HOLLAR documentation confirms eligible borrower collateral and conditional HSM buybacks, while referendum 367 identifies an HSM-only historical allocation on 17 July 2026 and its planned consolidation into aUSDT/aUSDC. Neither disclosure establishes a current whole-liability collateral allocation across the borrower market, HSM and other facilitators. The existing 2026-10-01 token observation identified five facilitators; bucket levels measure liabilities, not backing weights. Retain 100% unresolved allocation and the original composition date. Conditional buybacks and yield strategies do not establish immediate whole-basket realization, so aggregate liquidity remains unknown.",
+    "compositionBasis": "Classification-only unresolved HOLLAR backing; documented eligible collateral and historical HSM-only holdings do not establish current whole-book weights",
+    "scope": "classification-only",
     "knownUnknownExposure": "A complete dated collateral and HSM-asset denominator is not established. Current facilitator bucket levels do not reveal per-asset reserve weights, HSM holdings, GIGAHDX/BIL collateral coverage, cross-venue debt, or double-counting adjustments.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [

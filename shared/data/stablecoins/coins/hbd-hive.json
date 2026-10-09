@@ -9,7 +9,7 @@
     "yieldBearing": true
   },
   "collateral": "Hive protocol value and conversion rules between HBD and HIVE, including haircut logic when HBD debt exceeds protocol thresholds",
-  "pegMechanism": "Protocol-level conversion mechanism targets one U.S. dollar of HIVE per HBD, with witness-set interest and haircut rules under stress",
+  "pegMechanism": "Permissionless HBD-to-HIVE conversion targets one U.S. dollar of HIVE per HBD with no extra protocol conversion fee and a 3.5-day completion window using the coming period's median price; the debt-ratio haircut can reduce the payout below one dollar",
   "mechanismArchetype": "algorithmic",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -46,6 +46,14 @@
     {
       "label": "Docs",
       "url": "https://developers.hive.io/"
+    },
+    {
+      "label": "HBD conversion and haircut terms",
+      "url": "https://hive.io/hbd/"
+    },
+    {
+      "label": "Hive conversion operation specification",
+      "url": "https://developers.hive.io/apidefinitions/broadcast-ops.html#broadcast_ops_convert"
     }
   ],
   "governanceQuality": "dao-governance",

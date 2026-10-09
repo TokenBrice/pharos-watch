@@ -52,9 +52,15 @@ describe("wave-3 redemption handoff uptake", () => {
   it.each(["slvon-ondo", "iauon-ondo"])("binds %s instant terms to USDon, not a USDC promise", (id) => {
     const config = getRedemptionBackstopConfig(id)!;
     expect(config.outputAssets).toEqual(["usdon-ondo"]);
-    expect(config.v9RouteReviewTerms).toMatchObject({ settlementModel: "atomic", settlementDelaySec: 0, minRedeemUsd: 1 });
+    expect(config.v9RouteReviewTerms).toMatchObject({
+      settlementModel: "immediate",
+      minRedeemUsd: 1,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+    });
+    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
     expect(config.capacityModel.kind).toBe("unquantified");
-    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBe(10);
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
     expect(config.costModel.kind).toBe("dynamic-or-unclear");
   });
 

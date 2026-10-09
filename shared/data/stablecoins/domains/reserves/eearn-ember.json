@@ -65,13 +65,17 @@
       {
         "label": "Ethereum PublicNode RPC",
         "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Ember withdrawal timing FAQ; Sol curation campaign 2026-10-09 (Lane18Ember), accessed 2026-10-09T10:30:53Z",
+        "url": "https://learn.ember.so/ember-protocol/faqs"
       }
     ],
     "rationale": "The 2026-09-21 ERC-4626 observer read separates 0.018665813382% idle USDC from 99.981334186618% deployed Ember Earn strategy positions. Ember's product disclosure identifies eEARN as a USDC-denominated, Ember-managed stablecoin-yield vault using lending, fixed-income, liquidity, and rate-carry strategies. The deployed slice is therefore classified as an Ember protocol position rather than misidentified as direct USDC; its changing constituent positions remain unlinked.",
     "compositionBasis": "Ember Earn product disclosure, verified vault contract identity, and live ERC-4626 idle-versus-deployed observer reads",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The observer identifies idle USDC separately from the Ember-managed deployed strategy position. Ember discloses the strategy families but not a current constituent-by-constituent allocation, so the deployed slice remains a reviewed non-link rather than a direct USDC dependency. On 2026-10-01, the cited eEARN product URL serves a generic Ember landing page; protocol-wide core concepts describe pooled deposits deployed into DeFi, cross-chain, and CeFi strategies, not current eEARN-specific constituents or venue allocations.",
+    "knownUnknownExposure": "The observer identifies idle USDC separately from the Ember-managed deployed strategy position. Ember discloses the strategy families but not a current constituent-by-constituent allocation, so the deployed slice remains a reviewed non-link rather than a direct USDC dependency. On 2026-10-01, the cited eEARN product URL serves a generic Ember landing page; protocol-wide core concepts describe pooled deposits deployed into DeFi, cross-chain, and CeFi strategies, not current eEARN-specific constituents or venue allocations. Sol curation campaign 2026-10-09 (Lane18Ember), observed 2026-10-09T10:30:53Z: the withdrawal FAQ permits strategy-dependent delays beyond the specified withdrawal period. An idle USDC balance therefore does not establish a holder-accessible liquidation horizon for the vault position; liquidity remains unknown. Historical composition and review dates are unchanged.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

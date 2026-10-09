@@ -4,20 +4,22 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "USDU BSC issuance runs through UnitasMintingV2, whose 3-of-5 Safe admin can change rate limits and mint roles; the token's separate 3-of-5 owner Safe can replace that minter. Solana retains a non-null, self-referential Token-2022 mint authority; its signer custody is unresolved, so minting is not asserted to be disabled.",
+    "summary": "USDU BSC issuance runs through UnitasMintingV2, whose 3-of-5 Safe admin can change rate limits and mint roles; the token's separate 3-of-5 owner Safe can replace that minter. The BSC token's immutable bytecode observation at block 103620388 applies only to that deployment. Solana retains a non-null, self-referential Token-2022 mint authority and an issuer-listed upgradeable USDu program; the live program-to-mint signing relation remains unresolved. Whole-asset mint-logic upgradeability is therefore unknown, and minting is not asserted to be disabled.",
     "upgradeability": {
-      "model": "immutable",
-      "canChangeMintLogic": false,
-      "observedAt": "2026-07-15",
-      "observedBlock": 103620388,
+      "model": "unknown",
+      "canChangeMintLogic": "unknown",
       "sources": [
         {
-          "label": "BscScan contract",
+          "label": "BSC token immutable source reviewed at block 103620388 on 2026-07-15; deployment-local only",
           "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
         },
         {
           "label": "USDU Solana mint",
           "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
+        },
+        {
+          "label": "Issuer exact Solana program and mint roster; signing relation not disclosed",
+          "url": "https://docs.unitas.so/mainnet-program-and-address-index.md"
         }
       ]
     },

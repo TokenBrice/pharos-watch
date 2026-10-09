@@ -55,7 +55,7 @@
       "decimals": 18
     }
   ],
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "single-entity",
   "proofOfReserves": {
     "type": "independent-audit",

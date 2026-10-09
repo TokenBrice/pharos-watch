@@ -48,6 +48,41 @@
     "reviewer": "Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-15"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "The native srUSD SavingModule prices mint and redemption through currentPrice(), which compounds the governance-set currentRate over elapsed days. The MANAGER role can change that rate through update(uint256) and set the redemption fee. This establishes a discretionary internal exchange-rate input rather than independent market-price discovery. Parent rUSD reserve valuation and Berachain bridge controls remain separate exposures.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-09",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane37Reservoir)",
+      "rationale": "The verified native SavingModule at Ethereum 0x5475611dffb8ef4d697ae39df9395513b6e947d7 binds immutable rUSD and srUSD addresses in its decoded constructor and deployed bytecode. previewMint and previewRedeem use currentPrice; MANAGER-controlled update changes currentRate and accumulated compounding. This wrapper-local price authority applies to share issuance and redemption without a borrower-collateral liquidation branch.",
+      "sources": [
+        {
+          "label": "Verified Ethereum SavingModule source and decoded token identities",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5475611dffb8ef4d697ae39df9395513b6e947d7"
+        },
+        {
+          "label": "Reservoir savings product governance-set interest",
+          "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane37Reservoir)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified Ethereum SavingModule source and decoded token identities",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5475611dffb8ef4d697ae39df9395513b6e947d7"
+      },
+      {
+        "label": "Reservoir savings product governance-set interest",
+        "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd.md"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "srUSD has a native Ethereum Savingcoin route and a separate Reservoir LayerZero V2 route to the Berachain SrusdOft representation. Rechecked 2026-10-05: the Ethereum adapter and Berachain OFT have reciprocal peers at the correct Berachain EID 30362; the old zero-peer observation queried unrelated EID 30181. Both legs retain the Reservoir owner EOA and an independent EndpointV2 configuration delegate EOA. Exact runtime/source correspondence establishes lock/unlock and remote burn/mint semantics, not a complete validator-controller, in-flight-liability or generation-bound materiality proof.",

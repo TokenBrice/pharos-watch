@@ -81,7 +81,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "sDOLA minting, unwrapping, and yield accrual operate on Ethereum. Inverse reports that governance mill 396 shut down all sDOLA Chainlink CCIP lanes on 2026-08-11. At pinned blocks read 2026-10-01, the Ethereum, Base, Optimism, Arbitrum, and Berachain pools each returned an empty supported-chain list. Peripheral token contracts remain historical burn-mint representations; they are not live CCIP destinations.",
+    "summary": "sDOLA minting, unwrapping, and yield accrual operate on Ethereum. Inverse reports that governance mill 396 shut down all sDOLA Chainlink CCIP lanes on 2026-08-11. At pinned blocks read 2026-10-01, the Ethereum, Base, Optimism, Arbitrum, and Berachain pools each returned an empty supported-chain list. Peripheral token contracts remain historical burn-mint representations; they are not live CCIP destinations. Sol curation campaign 2026-10-09 (Lane42Inverse), observed 2026-10-09T10:35:59Z: the current issuer Cross-Chain Availability section still identifies all five closed lanes and warns that transfers will not complete. Historical receipt deployments and reactivatable governance permissions remain in the inventory; this documentary observation does not renew the October 1 state pins or establish current circulating-supply shares.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "verified",
@@ -110,6 +110,10 @@
       {
         "label": "Chainlink CCIP docs",
         "url": "https://docs.chain.link/ccip"
+      },
+      {
+        "label": "Inverse sDOLA Cross-Chain Availability, observed 2026-10-09T10:35:59Z",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola.md"
       }
     ],
     "routes": [

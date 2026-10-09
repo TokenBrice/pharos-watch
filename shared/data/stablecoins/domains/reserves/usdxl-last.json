@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Grok T40 wave-2 unknown reduction",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane20Last)",
     "confidence": "unknown",
     "sources": [
       {
@@ -39,9 +39,13 @@
       {
         "label": "HyperEVM JSON-RPC (facilitator list re-pin)",
         "url": "https://rpc.hyperliquid.xyz/evm"
+      },
+      {
+        "label": "HypurrFi USDXL agent reference (debt positions and partial USDT0 reserve)",
+        "url": "https://docs.hypurrfi.com/agents/usdxl"
       }
     ],
-    "rationale": "Re-opened 2026-07-30: USDXL remains a CDP-style synthetic dollar minted against HypurrFi borrower collateral (Aave V3 fork on HyperEVM) with separate facilitator paths (market loans, flash loans, USDT0 PSM). Live getFacilitatorsList() at HyperEVM block 41877329 still returns the three known facilitators, but neither Last nor HypurrFi publishes a dated collateral inventory or category weights across all paths. The 100% unresolved envelope is retained; no weights are inferred from eligible-asset lists. Wind-down notices (Legacy/Pooled market closure) do not create a published reserve split.",
+    "rationale": "Re-opened 2026-07-30: USDXL remains a CDP-style synthetic dollar minted against HypurrFi borrower collateral (Aave V3 fork on HyperEVM) with separate facilitator paths (market loans, flash loans, USDT0 PSM). Historical getFacilitatorsList() at HyperEVM block 41877329 returned the three known facilitators; this review does not renew that observation. At 2026-10-09T10:31:59Z the rendered issuer agent reference described debt positions in Pooled Markets and HypurrFi Markets plus a partial USDT0 reserve, but supplied no dated full collateral inventory, all-facilitator backing denominator or category weights. Direct redemptions remain described as not currently enabled. The 100% unresolved envelope and July 30 composition date are retained; no weights are inferred from collateral eligibility, pool cash liquidity or mint instructions. The shared fragment records researched non-disclosure of current whole-composition evidence without admitting this envelope.",
     "compositionBasis": "Issuer-documented collateral and liquidity families; current allocation unavailable",
     "compositionAsOf": "2026-07-30",
     "scope": "full-composition",

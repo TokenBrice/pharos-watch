@@ -72,7 +72,7 @@ function defineReviewedCollateralConfig(reviewedAt: string, overrides: Partial<R
 }
 
 const xgldRedemptionConfig = defineCollateralConfig({
-  reviewedAt: "2026-10-05",
+  reviewedAt: "2026-10-09",
   capacityModel: { kind: "unquantified" },
   accessModel: "whitelisted-onchain",
   holderEligibility: "whitelisted-primary",
@@ -81,8 +81,15 @@ const xgldRedemptionConfig = defineCollateralConfig({
   outputAssetType: "stable-single",
   outputAssets: ["xaut-tether"],
   costModel: fixedFee(10, "Published native BNB XAUt redemption fee is 0.1%; gas and any bridge costs are separate"),
-  docs: [sourceRef("Unitas XGLD native redemption", "https://docs.unitas.so/overview/xgld.md", ["route", "capacity", "access", "fees", "settlement"])],
-  notes: ["Whitelisted native BNB holders redeem to XAUt 0x21cAef8A43163Eea865baeE23b9C2E327696A3bf, not physical gold or USD. The seven-day cooldown is not an end-to-end completion SLA. Base holders must bridge to BNB. No measured funded capacity, static buffer or full-supply bound is inferred."],
+  docs: [
+    sourceRef("Unitas XGLD native redemption", "https://docs.unitas.so/overview/xgld.md", ["route", "capacity", "access", "fees", "settlement"]),
+    sourceRef("Unitas XGLD Base-to-BNB redemption prerequisite", "https://docs.unitas.so/guides/how-to-bridge-xgld.md", ["route", "access"]),
+    sourceRef("Unitas XGLD primary and secondary access guide", "https://docs.unitas.so/guides/how-to-buy-xgld.md", ["route", "access"]),
+  ],
+  notes: [
+    "Whitelisted native BNB holders redeem to XAUt 0x21cAef8A43163Eea865baeE23b9C2E327696A3bf, not physical gold or USD. The seven-day cooldown is not an end-to-end completion SLA. Base holders must bridge to BNB. No measured funded capacity, static buffer or full-supply bound is inferred.",
+    "Primary-access whitelisting does not imply restrictions on local XGLD holder transfers. The issuer's purchase guide separately identifies LI.FI/EIP-7702 and PancakeSwap secondary access; those interfaces establish neither an exact-capable DEX model nor same-notional exit capacity. The issuer guides still name only BNB and Base; independently reviewed Ethereum and Mantle representations are not asserted to have direct native redemption.",
+  ],
 });
 // JPYm/CHFm: live telemetry now reads the coin's Mento V3 FPMM pool USDm
 // balance as direct redemption capacity; the underlying CDP fee mechanics
@@ -518,7 +525,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "asset:ygamiusdc",
       ],
       costModel: documentedVariableFee(
-        "Parallelizer module: dynamic minting/burning fees adjust to correct peg deviations; depeg penalty applied proportionally",
+        "Proportional basket redemption has no fixed fee: fair value at collateral ratio >=100%, with a dynamic penalty on top of the lower ratio below 100%. Adaptive mint/burn fees are separate operations. The illustrative 10 x 0.985 x 0.98 example is not a current same-notional quote or a maximum cost bound.",
       ),
       docs: [
         sourceRefRouteCapacityFees(
@@ -533,6 +540,10 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
           "Parallel USDp implementation",
           "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp/implementation",
         ),
+        sourceRefRouteCapacityFees(
+          "Parallel proportional redemption fee and penalty (observed October 9, 2026)",
+          "https://docs.parallel.best/products/parallel-v3/fees",
+        ),
       ],
       notes: [
         "Output declared 2026-07-19: Parallel V3 docs state stablecoins can be burnt at oracle value for any asset in the backing (or redeemed pro-rata across it), and the implementation page lists the current per-chain backing set — frxUSD, sfrxUSD, USDe, sUSDe (Ethereum); USDS, sUSDS (Base); USDe, sUSDe (HyperEVM); USDC and the ygamiUSDC Silo Vault (Avalanche). The declared set is the full documented backing including the untracked ygamiUSDC vault token; the set is DAO-mutable.",
@@ -541,21 +552,28 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
     "hyusd-hylo": defineReviewedCollateralConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
       routeStatus: "unknown",
       outputAssetType: "mixed-collateral",
-      reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_AT,
-      costModel: undisclosedReviewedFee(
-        "Hylo V2 docs describe pool-specific dynamic redemption fees; the active production version and routable pool set could not be reconciled from public primary sources",
+      reviewedAt: "2026-10-09",
+      costModel: documentedVariableFee(
+        "Hylo publishes separate configurable USDC mint and redeem fees (0% and 0.2% in the reviewed documentation) and collateral-ratio-dependent piecewise redemption curves for volatile pools. These are documented mechanics, not a fixed current fee or a verified complete deployed route set",
+        "formula",
       ),
       docs: [
-        sourceRefRouteCapacity("Hylo multi-asset architecture", "https://docs.hylo.so/protocol-overview/multi-asset-architecture"),
+        sourceRefRouteCapacity("Hylo multi-asset architecture", "https://docs.hylo.so/protocol-overview/multi-asset-architecture.md"),
         sourceRef(
           "Hylo dynamic collateral routing",
-          "https://docs.hylo.so/protocol-overview/dynamic-collateral-routing",
+          "https://docs.hylo.so/protocol-overview/dynamic-collateral-routing.md",
           ["route", "fees", "settlement"],
+        ),
+        sourceRef(
+          "Hylo official mainnet mint and program directory",
+          "https://docs.hylo.so/security/onchain-addresses.md",
+          ["route"],
         ),
       ],
       notes: [
-        "Hylo's current architecture page distinguishes V1's SOL-only LST pool from V2's independent SOL, BTC, and USDC collateral pools, and its routing page says redemptions select among pools using dynamic fees.",
-        "No primary source reviewed identifies which architecture and complete pool/output set is active for the tracked hyUSD deployment. The route is therefore unknown and outputAssets is intentionally unset so neither the legacy SOL-only nor the V2 multi-asset claim can score.",
+        "Terms observed 2026-10-09T10:33:04Z by Sol curation campaign 2026-10-09 (Lane37Reservoir): V2 docs describe SOL-LST, cbBTC, HYPE and USDC pools. hyUSD USDC redemptions convert one for one less the configured fee, while volatile-pool redemption fees rise with collateral ratio and a redemption that would leave CR above the curve upper bound is not quoted.",
+        "USDC redemption availability requires enough USDC and the Pyth USDC/USD price within its configured par tolerance, at most $0.001. The documentation's current 0.2% fee is mutable, so no static fee ceiling, current capacity, guaranteed settlement horizon or whole-liability coverage is authored.",
+        "The official directory still labels the exchange V1 and xBTC TBD. Keep routeStatus unknown and outputAssets unset until a complete identity-bound production route/output census is admitted. Documentation establishes fee mechanics, not current executable capacity; CodeExitDexProducer owns exact same-notional runtime evidence.",
       ],
     }),
     "fusd-freedom-dollar": defineReviewedCollateralConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
@@ -605,10 +623,16 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       outputAssets: ["asset:btc"],
       capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.95, confidence: "documented-bound" },
       reviewedAt: REVIEWED_EXIT_CREDIT_AT,
-      costModel: undisclosedReviewedFee(
-        "Money On Chain docs describe permissionless DOC redemption into RBTC, but the reviewed public materials do not publish a single fixed numeric redemption fee schedule",
+      costModel: documentedVariableFee(
+        "MoCExchange.calculateCommissionsWithPrices evaluates account, amount, redemption transaction types and vendorAccount; RBTC redemption subtracts btcCommission, btcMarkup and applicable interests, while MoC payment depends on balance and allowance. The published around-0.1% statement is not an exact account/vendor/notional fee bound.",
+        "formula",
       ),
       docs: [
+        sourceRef(
+          "Money On Chain account/vendor-dependent fee calculation",
+          "https://docs.moneyonchain.com/main-rbtc-contract/integration-with-moc-platform/fees-calculation.md",
+          ["fees"],
+        ),
         sourceRef("DOC overview", "https://moneyonchain.com/doc-stablecoin/", ["route"]),
         sourceRefRouteCapacity(
           "Money On Chain main concepts",
@@ -626,20 +650,29 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Verified 2026-08-12: MoCState 0xb9C42EFc8ec54490a37cA91c423F7285Fa01e257 returned freeDoc() = 2,874,833.75, its connector() and the connector's docToken() resolved to the tracked Rootstock DOC deployment, and the probe's pause target read false. The documented fallback stays because DOC is also deployed on Arbitrum and Ethereum while only the Rootstock-local balance is redeemable, and Rootstock exposes a single public RPC.",
       ],
     }),
-    "usbd-bima": defineReviewedCollateralConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
+    "usbd-bima": defineReviewedCollateralConfig("2026-10-09", {
       outputAssets: ["asset:btc"],
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(
-        "Redemption fee = coreRate + 75 bps; coreRate rises with redeemed supply and decays with a 24-hour half-life",
+        "Collateral redemption fee = min(redemptionFeeFloor + updated baseRate, maxRedemptionFee); baseRate decays using the branch's minuteDecayFactor and increases by half the redeemed debt fraction before the fee is charged. Sunsetting branches charge zero. Current branch parameters and same-notional execution must be observed; no fixed floor or half-life is assumed",
         "formula",
       ),
       docs: [
-        sourceRefRouteCapacityFees("BIMA redeeming USBD", "https://docs.bima.money/redeeming-usbd"),
+        sourceRefRouteCapacityFees(
+          "Bima mainnet TroveManager redemption and fee implementation",
+          "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/contracts/core/TroveManager.sol",
+        ),
+        sourceRef(
+          "Bima mainnet deployment and collateral registry",
+          "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/docs/mainnet.md",
+          ["route"],
+        ),
         sourceRef("BIMA risk management + liquidations", "https://docs.bima.money/risk-management-+-liquidations", [
           "capacity",
         ]),
       ],
       notes: [
+        "The published mainnet implementation permits branch-specific redemptionFeeFloor, maxRedemptionFee and minuteDecayFactor parameters. redeemCollateral updates baseRate using this redemption's drawn collateral and starting debt supply before calculating the fee, so getRedemptionRateWithDecay alone is not a same-notional execution quote.",
         "Docs also describe a PSM against USDC, USDP, and GUSD, but the primary modeled exit is direct redemption into BTC-derivative vault collateral",
       ],
     }),
@@ -778,11 +811,15 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "HBD is modeled as a protocol conversion route rather than a fiat issuer rail: holders can convert HBD through Hive mechanics, but the output and haircut behavior depend on protocol debt-ratio conditions",
       ],
       v9RouteReviewTerms: {
+        settlementModel: "days",
         scoringDisposition: "bounded-terms-gap",
         missingScoringFields: ["settlement"],
-        rationale: "The 3.5-day median-price conversion window does not establish a sourced maximum to completed output receipt for the exact HBD conversion request.",
-        reviewedAt: "2026-10-03",
-        docs: [sourceRef("Hive HBD conversion terms (reviewed 2026-10-03)", "https://hive.io/hbd/", ["route", "fees", "settlement"])],
+        rationale: "Hive documents automatic HBD-to-HIVE conversion after 3.5 days, but the median-price conversion window is not a completed same-notional USD exit. Debt-ratio haircuts, HIVE payout valuation and downstream realization remain separate, unbounded route facts.",
+        reviewedAt: "2026-10-09",
+        docs: [
+          sourceRef("Hive HBD completed conversion terms (reviewed 2026-10-09)", "https://hive.io/hbd/", ["route", "fees", "settlement"]),
+          sourceRef("Hive convert operation output-deposit specification", "https://developers.hive.io/apidefinitions/broadcast-ops.html#broadcast_ops_convert", ["route", "settlement"]),
+        ],
       },
       docs: [sourceRef("Hive HBD", "https://hive.io/hbd/", ["route", "capacity", "fees", "settlement"])],
     }),

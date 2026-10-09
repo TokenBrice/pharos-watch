@@ -11,7 +11,7 @@
     "governance": "centralized"
   },
   "collateral": "Brazilian-real fiat cash deposited in a Brazilian bank account, backing Ripio wBRL one-to-one against the Brazilian real per Ripio's wFIAT token certifications",
-  "pegMechanism": "WBRL is issued and managed by Ripio against local fiat reserves, but ordinary holders do not have a documented direct redemption right with the issuer. Exits depend on secondary-market liquidity, Ripio on/off-ramp flows, or issuer-managed market operations.",
+  "pegMechanism": "WBRL is issued and managed by Ripio against local fiat reserves. The wFIAT whitepaper expressly denies token holders any issuer redemption right or claim to funds. Exits depend on secondary-market liquidity, available Ripio on/off-ramp flows, or issuer-managed market operations.",
   "proofOfReserves": {
     "type": "agreed-upon-procedures",
     "url": "https://action.ripio.com/en/wfiat-attestations",
@@ -47,6 +47,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/ripioapp"
+    },
+    {
+      "label": "Docs",
+      "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf"
     }
   ],
   "jurisdiction": {

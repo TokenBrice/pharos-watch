@@ -79,7 +79,8 @@ describe("business-calendar settlement consumers", () => {
       const config = getRedemptionBackstopConfig(assetId)!;
       const row = makeSupplyFullRedemption({ stablecoinId: assetId, routeFamily: config.routeFamily,
         settlementModel: config.settlementModel });
-      expect(buildSafetyScoreV9RouteReviews(fixed(row, Date.parse("2026-10-07T12:00:00Z") / 1000), assetId)[0])
+      // Evaluate after the campaign's date-only October 9 reviews are admissible.
+      expect(buildSafetyScoreV9RouteReviews(fixed(row, Date.parse("2026-10-10T12:00:00Z") / 1000), assetId)[0])
         .toMatchObject({ coverageClass: "diagnostic", settlementSlaSec: null });
     },
   );

@@ -81,26 +81,29 @@
     "providers": [
       {
         "name": "BabelFish XUSD reserve contract",
-        "role": "other",
-        "sharePct": 100
+        "role": "other"
       }
     ],
-    "segregation": "segregated",
+    "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "verified",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane47Babelfish)",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "BabelFish XUSD composition documentation",
         "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/tutorials-and-guides/xusd-statistics"
       },
       {
+        "label": "BabelFish current basket and balancing-curve disclosure",
+        "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/balancing-curves.md"
+      },
+      {
         "label": "BabelFish reserve contract",
         "url": "https://rootstock.blockscout.com/address/0x1440d19436bEEaf8517896bffB957A88ec95a00F"
       }
     ],
-    "uncertainty": "Constituent balances are directly observable in the dedicated on-chain reserve contract, but public documentation does not establish legal bankruptcy remoteness or whether governance can deploy or rehypothecate the basket."
+    "uncertainty": "Custody-scope correction observed 2026-10-09T10:36:33Z: issuer statistics identify the masset-manager contract as a balance observation surface, but do not establish that it holds the whole liability backing or provide a complete custody allocation. The retained August 13 mechanism review found only partial liability coverage at block 9109001; the earlier 100% provider share and aggregate onchain label were unsupported. Provider share is now omitted and aggregate custody remains unknown. The current documentation identifies native and bridged basket constituents, without enforceable whole-book segregation, bankruptcy-remoteness, rehypothecation or successor-custody terms. No new holdings percentages or liability coverage are inferred."
   }
 }

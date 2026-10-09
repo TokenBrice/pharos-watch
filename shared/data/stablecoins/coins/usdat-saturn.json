@@ -12,7 +12,7 @@
     "m0"
   ],
   "collateral": "100% backed by PYUSDx held directly in the USDat proxy after Saturn's August 2026 migration from the legacy M-backed implementation; PYUSDx is M0's yield-bearing, non-rebasing token backed by PYUSD and issued by MoonPay",
-  "pegMechanism": "Permissioned 1:1 wrap and unwrap through the PYUSDx SwapFacility. The upgraded MultiMint implementation returns PYUSDx on unwrap and retains compliance whitelist, freeze, pause, and forced-transfer controls; the legacy M reserve was progressively replaced with PYUSDx and is now zero",
+  "pegMechanism": "Permissioned 1:1 wrap and unwrap through the PYUSDx SwapFacility. The upgraded MultiMint implementation returns PYUSDx on unwrap and retains compliance whitelist, freeze, pause, and forced-transfer controls; the legacy M reserve was progressively replaced with PYUSDx and is now zero. A separate Ethereum USDat-to-USDC holder exit uses Saturn quotes and M0 limit orders without Saturn address whitelisting, subject to a validated route, supported wallet and eligibility restrictions. Approved solvers may fill orders partially; no completion maximum is disclosed.",
   "mechanismArchetype": "fiat-cash",
   "implementationLaunchDate": "2026-08-19",
   "mechanismArchetypeReview": {
@@ -57,6 +57,10 @@
     {
       "label": "Docs",
       "url": "https://saturncredit.gitbook.io/saturn-docs"
+    },
+    {
+      "label": "USDat holder redemption terms",
+      "url": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview/mint-and-redeem.md"
     },
     {
       "label": "App",
