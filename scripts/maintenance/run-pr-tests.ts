@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import { localBin } from "../lib/local-bin.mts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
+import { CRITICAL_TEST_FILES } from "../lib/critical-test-files.mts";
 import { createPrTestPlan, partitionTestFiles, readPrTestPlan, readPrTestTimings, takeTestShard } from "../lib/pr-test-plan.mts";
 import { publishShardTimings } from "../lib/shard-timings.mts";
 import { hasVitestOption, withCiVitestArgs } from "../lib/vitest-ci-args.mts";
@@ -71,6 +72,14 @@ export function runPrTests({
       return 0;
     }
     if (shard) files = partitionTestFiles(files, shard.shardCount, readPrTestTimings().tests)[shard.shard - 1];
+  }
+  if (env.PR_TESTS_DEFER_CRITICAL_OWNERS === "1") {
+    // Set only by local check:pr when its critical-coverage leaf runs every
+    // critical-owner test file in the same gate; running them here too is duplicate work.
+    const owners = new Set(CRITICAL_TEST_FILES);
+    const remaining = files.filter((file) => !owners.has(file));
+    process.stderr.write(`[test:pr] ${files.length - remaining.length} critical-owner test file(s) deferred to the critical-coverage leaf; ${remaining.length} remain.\n`);
+    files = remaining;
   }
   // An empty explicit shard must not turn into Vitest's unrestricted full run.
   if (files.length === 0) return 0;

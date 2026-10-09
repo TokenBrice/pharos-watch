@@ -80,6 +80,8 @@ export interface CriticalCoverageBuildOptions {
   exists?: (path: string) => boolean;
   baseRef?: string;
   durations?: Readonly<Record<string, number>>;
+  /** Vitest file-worker cap; defaults to the CI-calibrated 4. */
+  maxWorkers?: number;
 }
 
 function selectCriticalCoverageFiles(options: CriticalCoverageBuildOptions): string[] {
@@ -93,14 +95,14 @@ function selectCriticalCoverageFiles(options: CriticalCoverageBuildOptions): str
   return selected.length > 0 && affected.every((file) => selected.includes(file)) ? selected : [...criticalFiles];
 }
 
-function buildCriticalCoverageOptions(criticalFiles: readonly string[]): string[] {
+function buildCriticalCoverageOptions(criticalFiles: readonly string[], maxWorkers = 4): string[] {
   if (criticalFiles.length === 0) throw new Error("Empty critical coverage source selection");
   return [
     "--coverage",
     "--coverage.thresholds.lines=0",
     // The all-critical suite contains wall-clock-sensitive contract tests.
     // Unbounded file workers can starve those probes on large local/CI hosts.
-    "--maxWorkers=4",
+    `--maxWorkers=${maxWorkers}`,
     // Scope v8 remapping to the enrolled critical source. Per-file numbers for
     // the enrolled files are unchanged, but the reporter stops remapping the
     // rest of the loaded module graph — the heaviest part of this invocation.
@@ -137,7 +139,7 @@ export function buildCriticalCoverageArgs(
   if (selectedTests.length === 0) throw new Error("Empty critical coverage shard selection");
   return [
     "run",
-    ...buildCriticalCoverageOptions(selectedSources),
+    ...buildCriticalCoverageOptions(selectedSources, options.maxWorkers),
     ...selectedTests,
     ...args,
   ];
