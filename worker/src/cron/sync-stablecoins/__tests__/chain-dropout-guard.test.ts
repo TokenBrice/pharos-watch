@@ -202,6 +202,43 @@ describe("chain dropout guard", () => {
     expect(mocks.setCache).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    ["full", 100_000_000],
+    ["partial", 85_000_000],
+  ])("never double-counts a %s source reattribution of a dropped destination, across two persisted runs", async (_case, source) => {
+    // Past the incident seed so baselines come only from the asset's own healthy history.
+    const start = CHAIN_DROPOUT_SEED_VALID_UNTIL + DAY;
+    const bridged = (sourceUsd: number, destinationUsd: number): PeggedAsset => ({
+      ...usdg(),
+      circulating: { peggedUSD: sourceUsd + destinationUsd },
+      chainCirculating: {
+        Ethereum: { current: sourceUsd, circulatingPrevDay: 80_000_000 },
+        "X Layer": { current: destinationUsd, circulatingPrevDay: 20_000_000 },
+      },
+    });
+    // A chart lane that would "repair" the destination to its true $20M.
+    mocks.chart.mockResolvedValue({ response: { ok: true }, body: JSON.stringify([{ date: start - 3600, totalCirculatingUSD: { peggedUSD: 20_000_000 } }]) });
+    const healthy = await guardChainDropouts({ assets: [bridged(80_000_000, 20_000_000)], now: start, state: { version: 1, pairs: {} } });
+    expect(healthy.flagged).toBe(0);
+
+    let state = healthy.state;
+    for (const now of [start + 900, start + 1800]) {
+      await persistChainDropoutState({} as D1Database, { ...healthy, state }, now);
+      const calls = mocks.setCache.mock.calls;
+      mocks.getCache.mockResolvedValue({ value: calls[calls.length - 1][2], updatedAt: now });
+      const loaded = await loadChainDropoutState({} as D1Database);
+      const outage = bridged(source, 0);
+      const run = await guardChainDropouts({ assets: [outage], now, ...loaded });
+      // Never source + repaired destination ($120M / $105M): the vetted pre-reattribution total is held.
+      expect(getCirculatingRawOrNull(outage)).toBe(100_000_000);
+      expect(outage.chainCirculating!["X Layer"].current).toBeNull();
+      expect(outage.chainCirculating!.Ethereum.current).toBe(source);
+      expect(outage.supplyChainGuard).toMatchObject({ status: "quarantined", chains: [{ chainId: "xlayer", resolution: "carried-baseline" }] });
+      expect(outage.supplyChainGuard?.chains[0].repairedCurrentUsd).toBeUndefined();
+      state = run.state;
+    }
+  });
+
   it("nulls an immaterial flagged chain without changing aggregate or restored status", async () => {
     const asset = usdg();
     asset.chainCirculating = { "Hyperliquid L1": asset.chainCirculating!["Hyperliquid L1"] };

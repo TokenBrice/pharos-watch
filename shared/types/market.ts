@@ -143,6 +143,12 @@ export const SupplyChainGuardProvenanceSchema = z.object({
   reason: z.literal("supply-chain-dropout"),
   status: z.enum(["repaired", "quarantined", "unavailable", "chains-unavailable"]),
   quarantinedSince: z.number().int().nonnegative().optional(),
+  /**
+   * Same-run supply gain on this asset's healthy chains large enough to explain the drop (e.g. a bridge
+   * representation reattributed to its source). Attribution is ambiguous, so repairs are withheld and a
+   * material drop holds the vetted whole-asset total.
+   */
+  concurrentGainUsd: z.number().finite().nonnegative().optional(),
   chains: z.array(z.object({
     chainId: z.string().optional(),
     chainLabel: z.string(),
