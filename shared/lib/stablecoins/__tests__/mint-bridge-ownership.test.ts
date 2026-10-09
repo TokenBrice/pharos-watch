@@ -15,6 +15,7 @@ import {
   type MintBridgeOwnershipViolation,
 } from "../mint-bridge-ownership";
 import { makeStablecoinMeta } from "./test-support";
+import { normalizeDeploymentId } from "../../../types/deployment-id";
 
 const SOURCE = { label: "Fixture review", url: "https://example.com/review" };
 const ETHEREUM_TOKEN = "0x1111111111111111111111111111111111111111";
@@ -185,65 +186,40 @@ const NON_ACTIVE_LIFECYCLE_STATUSES = [
 ] as const;
 
 describe("Mint Authority / Bridge Risk ownership boundary", () => {
-  it.each([
-    // Round-two R2F1 verification confirms Solana as a reviewed satellite OFT for both assets.
-    { assetId: "usdai-usd-ai", unresolvedChains: [] },
-    { assetId: "susdai-usd-ai", unresolvedChains: [] },
-  ])(
-    "$assetId keeps canonical Arbitrum issuance in Mint Authority and satellite issuance in Bridge Risk",
-    ({ assetId, unresolvedChains }) => {
-      const meta = ACTIVE_META_BY_ID.get(assetId);
-      if (!meta?.mintAuthority || !meta.bridgeRouteRisk?.routes) {
-        throw new Error(`expected boundary metadata for ${assetId}`);
-      }
-      const nativeRoute = meta.bridgeRouteRisk.routes.find(
-        (route) => route.issuanceModel === "native-issuance",
-      );
-      if (!nativeRoute) throw new Error(`expected canonical route for ${assetId}`);
+  it.each(["usdai-usd-ai", "susdai-usd-ai"])(
+    "%s keeps canonical issuance in Mint Authority and every satellite deployment in Bridge Risk",
+    (assetId) => {
+      const meta = ACTIVE_META_BY_ID.get(assetId)!;
+      expect(meta).toBeDefined();
+      const routes = meta.bridgeRouteRisk!.routes!;
+      const nativeRoutes = routes.filter((route) => route.issuanceModel === "native-issuance");
+      const satelliteRoutes = routes.filter((route) => route.issuanceModel !== "native-issuance");
+      expect(nativeRoutes).toHaveLength(1);
+      expect(nativeRoutes[0]!.destinationChain).toBe("arbitrum");
+      expect(meta.mintAuthority!.controls!.length).toBeGreaterThan(0);
+      expect(meta.mintAuthority!.controls!.every((control) => control.chain === "arbitrum")).toBe(true);
+      expect(meta.mintAuthority!.controls!.some((control) =>
+        control.role === "bridge-admin" || control.authorityType === "bridge" || control.routeChecks,
+      )).toBe(false);
 
-      expect(nativeRoute.id).toBe(`arbitrum:${nativeRoute.contractAddress.toLowerCase()}`);
-      expect(meta.mintAuthority.controls?.length).toBeGreaterThan(0);
-      expect(meta.mintAuthority.controls?.every((control) => control.chain === "arbitrum")).toBe(true);
-      expect(
-        meta.mintAuthority.controls?.some(
-          (control) => control.role === "bridge-admin" || control.authorityType === "bridge" || control.routeChecks,
-        ),
-      ).toBe(false);
-
-      const satelliteRoutes = meta.bridgeRouteRisk.routes.filter(
-        (route) => route.issuanceModel !== "native-issuance",
+      // Derive completeness from the catalog instead of transcribing its mutable chain list.
+      expect(routes.map((route) => normalizeDeploymentId(route.id)).sort()).toEqual(
+        meta.contracts!.map((deployment) => normalizeDeploymentId(`${deployment.chain}:${deployment.address}`)).sort(),
       );
       expect(satelliteRoutes.length).toBeGreaterThan(0);
-      const reviewedSatelliteRoutes = satelliteRoutes.filter((route) => route.reviewDisposition === "reviewed");
-      expect(reviewedSatelliteRoutes.map((route) => route.destinationChain).sort()).toEqual([
-        "base", "ethereum", "plasma", "solana",
-      ]);
-      expect(reviewedSatelliteRoutes.every((route) => route.controllerChain && route.controllerAddress)).toBe(true);
-      const unresolvedRoutes = satelliteRoutes.filter((route) => route.reviewDisposition !== "reviewed");
-      expect(unresolvedRoutes).toEqual(
-        unresolvedChains.map((destinationChain) =>
-          expect.objectContaining({
-            destinationChain,
-            issuanceModel: "unknown",
-            routeClass: "unknown",
-            riskTier: "opaque-or-unknown",
-            semantics: "unknown",
-            scope: "unknown",
-            reviewDisposition: "unresolved",
-          }),
-        ),
-      );
-      for (const unresolvedRoute of unresolvedRoutes) {
-        expect(unresolvedRoute).not.toHaveProperty("controllerAddress");
+      expect(satelliteRoutes.filter((route) => route.reviewDisposition === "reviewed")
+        .every((route) => route.controllerChain && route.controllerAddress)).toBe(true);
+      for (const route of satelliteRoutes.filter((route) => route.reviewDisposition !== "reviewed")) {
+        expect(route).toMatchObject({
+          issuanceModel: "unknown", routeClass: "unknown", riskTier: "opaque-or-unknown",
+          semantics: "unknown", scope: "unknown", reviewDisposition: "unresolved",
+        });
+        expect(route).not.toHaveProperty("controllerAddress");
       }
-      expect(
-        meta.mintAuthority.controls?.some((control) =>
-          control.deploymentRefs?.some((ref) => satelliteRoutes.some((route) => route.id === ref)),
-        ),
-      ).toBe(false);
-
-      const violations = validateMintBridgeOwnership(meta);
-      expect(violations.filter((violation) => violation.severity === "error")).toEqual([]);
+      expect(meta.mintAuthority!.controls!.some((control) =>
+        control.deploymentRefs?.some((ref) => satelliteRoutes.some((route) => route.id === ref)),
+      )).toBe(false);
+      expect(validateMintBridgeOwnership(meta).filter((violation) => violation.severity === "error")).toEqual([]);
     },
   );
 

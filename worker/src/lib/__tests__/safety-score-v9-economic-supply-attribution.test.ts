@@ -462,6 +462,23 @@ describe("economic materiality consumers", () => {
     review.deployments.push({ ...review.deployments[0]!, contractOrTokenId: "native:xdai", posture: "restrictable" });
     expect(resolveSafetyScoreV9ReviewedTransferFact(review, CLOCK, scope).posture).toBe("restrictable");
   });
+  it("guards existing independent-liability eligibility against registry and route drift", () => {
+    for (const assetId of ReviewedEconomicSupplyPlanFileSchema.parse(reviewRegistry).independentLiabilityAssetIds) {
+      const meta = ACTIVE_META_BY_ID.get(assetId)!;
+      expect(meta).toBeDefined();
+      const routes = meta.bridgeRouteRisk!.routes!;
+      expect(routes.every(route => route.reviewDisposition === "reviewed" && route.representationId === undefined &&
+        (route.semantics === "burn-mint" && route.issuanceModel === "bridge-representation" && route.routeClass !== "native" ||
+          route.semantics === "native-mint" && route.issuanceModel === "native-issuance" && route.routeClass === "native"))).toBe(true);
+      const deployments = meta.contracts!.map(contract => {
+        expect(isFixedDecimalDeployment(contract)).toBe(true);
+        const chain = resolveChainId(contract.chain)!;
+        return `${chain}:${normalizeReviewedDeploymentAddress(chain, contract.address)}`;
+      }).sort();
+      expect(routes.map(route => route.id).sort()).toEqual(deployments);
+      expect(new Set(deployments).size).toBe(deployments.length);
+    }
+  });
   it("guards every registry-authored native single-route entry and preserves xDAI's compiled partition", () => {
     const registry = ReviewedEconomicSupplyPlanFileSchema.parse(reviewRegistry);
     for (const entry of registry.nativeSingleRouteReviews) {

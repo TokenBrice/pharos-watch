@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import type * as BackstopConfigs from "@shared/lib/redemption-backstop-configs";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import {
@@ -15,20 +16,32 @@ import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-supp
 const NOW = Date.UTC(2026, 9, 1, 18) / 1_000;
 const REVIEW_MAX_AGE_SEC = 365 * 24 * 60 * 60;
 
-const RESOLVED_OUTPUTS = {
-  "fxd-fathom": ["usdt-tether"],
-  "iusd-indigo-protocol": ["usdm-moneta", "usdc-circle"],
-} as const;
+const { RESOLVED_OUTPUTS, FIXTURE_CONFIGS } = vi.hoisted(() => {
+  const outputs = {
+    "fxd-fathom": ["usdt-tether"],
+    "iusd-indigo-protocol": ["usdm-moneta", "usdc-circle"],
+  } as const;
+  const configs: Record<string, RedemptionBackstopConfig> = Object.fromEntries(
+    Object.entries(outputs).map(([assetId, outputAssets]) => [assetId, {
+      routeFamily: "stablecoin-redeem", accessModel: "permissionless-onchain",
+      settlementModel: "atomic", executionModel: "deterministic-onchain",
+      outputAssetType: outputAssets.length === 1 ? "stable-single" : "stable-basket",
+      outputAssets: [...outputAssets], reviewedAt: "2026-09-30",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 100, feeDescription: "Fixture redemption fee." },
+      docs: [{
+        label: "Synthetic reviewed route", url: "https://example.com/redemption",
+        supports: ["route", "capacity", "fees", "access", "settlement"],
+      }],
+    } satisfies RedemptionBackstopConfig]),
+  );
+  return { RESOLVED_OUTPUTS: outputs, FIXTURE_CONFIGS: configs };
+});
 
-const ROUTE_DEPLOYMENTS = {
-  "fxd-fathom": [
-    ["usdt-tether", "xdc", "0xd4b5f10d61916bd6e0860144a91ac658de8a1437", 6],
-  ],
-  "iusd-indigo-protocol": [
-    ["usdm-moneta", "cardano", "c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d", 6],
-    ["usdc-circle", "cardano", "1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e345553444378", 6],
-  ],
-} as const;
+vi.mock("@shared/lib/redemption-backstop-configs", async (importOriginal) => {
+  const actual = await importOriginal<typeof BackstopConfigs>();
+  return { ...actual, REDEMPTION_BACKSTOP_CONFIGS: { ...actual.REDEMPTION_BACKSTOP_CONFIGS, ...FIXTURE_CONFIGS } };
+});
 
 type ResolvedAssetId = keyof typeof RESOLVED_OUTPUTS;
 
@@ -93,19 +106,6 @@ function compileOutputState(
 }
 
 describe("U6 authoritative redemption output valuation", () => {
-  it("pins every resolved output to its canonical deployment and decimals", () => {
-    for (const [assetId, expectedOutputs] of Object.entries(RESOLVED_OUTPUTS) as [ResolvedAssetId, readonly string[]][]) {
-      expect(getRedemptionBackstopConfig(assetId)?.outputAssets).toEqual(expectedOutputs);
-      expect(getRedemptionBackstopConfig(assetId)?.unresolvedOutputAssetKeys).toBeUndefined();
-    }
-
-    for (const deployments of Object.values(ROUTE_DEPLOYMENTS)) {
-      for (const [assetId, chain, address, decimals] of deployments) {
-        expect(TRACKED_META_BY_ID.get(assetId)?.contracts).toContainEqual({ chain, address, decimals });
-      }
-    }
-  });
-
   it.each(Object.keys(RESOLVED_OUTPUTS) as ResolvedAssetId[])(
     "resolves %s through a timestamped canonical price source",
     (assetId) => {

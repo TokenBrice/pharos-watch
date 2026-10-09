@@ -1,5 +1,7 @@
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import type { StablecoinMeta } from "@shared/types/core";
+import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
+import type * as SupplyAttributionContract from "../safety-score-v9/supply-attribution-contract";
 
 // Synthetic inventories exercise complete census and route joins, not the
 // current eligibility or deployment inventory of the production asset IDs.
@@ -53,3 +55,22 @@ export const CENSUS_FIXTURE_META_BY_ID = new Map([
   censusMeta("usbd-bima", ["ethereum", "base", "arbitrum", "optimism", "polygon", "nibiru"], 1),
   censusMeta("yusd-aegis", ["ethereum", "base", "arbitrum", "optimism"], 1),
 ].map(meta => [meta.id, meta]));
+
+export async function censusRegistryMock(importOriginal: <T>() => Promise<T>) {
+  const actual = await importOriginal<typeof StablecoinRegistry>();
+  return {
+    ...actual,
+    ACTIVE_META_BY_ID: new Map([...actual.ACTIVE_META_BY_ID, ...CENSUS_FIXTURE_META_BY_ID]),
+  };
+}
+
+export async function censusSupplyAttributionMock(importOriginal: <T>() => Promise<T>) {
+  const actual = await importOriginal<typeof SupplyAttributionContract>();
+  return {
+    ...actual,
+    REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE: {
+      ...actual.REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE,
+      independentLiabilityAssetIds: [...CENSUS_FIXTURE_INDEPENDENT_IDS],
+    },
+  };
+}

@@ -21,23 +21,13 @@ import {
 } from "../safety-score-v9/transfer-materiality";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { CENSUS_FIXTURE_CLOCK_SEC } from "./safety-score-v9-transfer-census.test-support";
-import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
-import type * as SupplyAttributionContract from "../safety-score-v9/supply-attribution-contract";
 
-// Hoisted mock factories load fixtures before the static subject imports.
+// Vitest hoists mock factories before static imports; load their fixture helpers inside the factories.
 
-vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
-  const actual = await importOriginal<typeof StablecoinRegistry>();
-  const { CENSUS_FIXTURE_META_BY_ID } = await import("./safety-score-v9-transfer-census.test-support");
-  return { ...actual, ACTIVE_META_BY_ID: new Map([...actual.ACTIVE_META_BY_ID, ...CENSUS_FIXTURE_META_BY_ID]) };
-});
-vi.mock("../safety-score-v9/supply-attribution-contract", async (importOriginal) => {
-  const actual = await importOriginal<typeof SupplyAttributionContract>();
-  const { CENSUS_FIXTURE_INDEPENDENT_IDS } = await import("./safety-score-v9-transfer-census.test-support");
-  return { ...actual, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE: {
-    ...actual.REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE, independentLiabilityAssetIds: [...CENSUS_FIXTURE_INDEPENDENT_IDS],
-  } };
-});
+vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) =>
+  (await import("./safety-score-v9-transfer-census.test-support")).censusRegistryMock(importOriginal));
+vi.mock("../safety-score-v9/supply-attribution-contract", async (importOriginal) =>
+  (await import("./safety-score-v9-transfer-census.test-support")).censusSupplyAttributionMock(importOriginal));
 
 const CLOCK_SEC = CENSUS_FIXTURE_CLOCK_SEC;
 const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"a".repeat(64)}`;

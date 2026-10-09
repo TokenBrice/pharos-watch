@@ -12,23 +12,13 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { CENSUS_FIXTURE_META_BY_ID } from "./safety-score-v9-transfer-census.test-support";
-import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
-import type * as SupplyAttributionContract from "../safety-score-v9/supply-attribution-contract";
 
-// Hoisted mock factories load fixtures before the static subject imports.
+// Vitest hoists mock factories before static imports; load their fixture helpers inside the factories.
 
-vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
-  const actual = await importOriginal<typeof StablecoinRegistry>();
-  const { CENSUS_FIXTURE_META_BY_ID } = await import("./safety-score-v9-transfer-census.test-support");
-  return { ...actual, ACTIVE_META_BY_ID: new Map([...actual.ACTIVE_META_BY_ID, ...CENSUS_FIXTURE_META_BY_ID]) };
-});
-vi.mock("../safety-score-v9/supply-attribution-contract", async (importOriginal) => {
-  const actual = await importOriginal<typeof SupplyAttributionContract>();
-  const { CENSUS_FIXTURE_INDEPENDENT_IDS } = await import("./safety-score-v9-transfer-census.test-support");
-  return { ...actual, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE: {
-    ...actual.REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE, independentLiabilityAssetIds: [...CENSUS_FIXTURE_INDEPENDENT_IDS],
-  } };
-});
+vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) =>
+  (await import("./safety-score-v9-transfer-census.test-support")).censusRegistryMock(importOriginal));
+vi.mock("../safety-score-v9/supply-attribution-contract", async (importOriginal) =>
+  (await import("./safety-score-v9-transfer-census.test-support")).censusSupplyAttributionMock(importOriginal));
 
 import { sleepWithSignal } from "../abort";
 import { SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
@@ -486,7 +476,7 @@ describe("transfer census admission and execution budgets", () => {
       const generation = await observeSafetyScoreV9TransferMaterialityGeneration(input(ids, clock), {
         ...dependencies,
         fetchEvmBlockHeader: async () => ({ number: 100, timestamp: clock - 10, hash: `0x${"1".repeat(64)}` as `0x${string}` }),
-        fetchEvmMulticall3Aggregate3AtBlock: async (chain, calls, block, options) => {
+        fetchEvmMulticall3Aggregate3AtBlock: async (chain, calls, _block, options) => {
           expect(calls).toHaveLength(128); // Four complete 64-deployment assets, each on its own chain.
           expect(options).toMatchObject({ multicallBatchSize: 64, maxResponseBytes: 131072, maxRetries: 0 });
           return dependencies.fetchEvmMulticall3Aggregate3AtBlock(chain, calls);

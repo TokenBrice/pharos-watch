@@ -330,7 +330,7 @@ describe("fetchBridgeTransparencyReserves", () => {
   });
 
   it("measures CASH's single combined Treasury/MMF bucket without inventing instrument weights", async () => {
-    const { result, report, coin, config } = await runAdapter("bridge-transparency", "cash-phantom", {
+    const { result, report, config } = await runAdapter("bridge-transparency", "cash-phantom", {
       network: { json: { [CASH_ENDPOINT]: CASH_PAYLOAD } },
       nowSec: CASH_NOW_SEC,
     });
@@ -364,7 +364,28 @@ describe("fetchBridgeTransparencyReserves", () => {
     // A display rename must not sever reviewed uncertainty from measured keys.
     const classifications = buildReviewedReserveClassifications(
       result.slices.map((slice) => ({ ...slice, name: `Measured ${slice.sourceKey}` })),
-      coin,
+      {
+        id: "fixture-combined-reserves",
+        reserves: [
+          {
+            name: "Combined short-duration instruments", sourceKey: "bridge-transparency:treasury",
+            pct: 93, risk: "very-low", assetClass: "other",
+            riskFactors: ["custody", "counterparty", "liquidity", "concentration"], liquidityHorizon: "one-day",
+          },
+          {
+            name: "Cash", sourceKey: "bridge-transparency:cash", pct: 7, risk: "very-low",
+            assetClass: "bank-deposit", riskFactors: ["custody", "counterparty"], liquidityHorizon: "immediate",
+          },
+        ],
+        reserveReview: {
+          reviewedAt: "2026-10-06", reviewer: "Fixture reviewer", confidence: "verified",
+          sources: [{ label: "Fixture categories", url: "https://example.com/reserves" }],
+          rationale: "Synthetic keyed category review; no instrument weights disclosed.",
+          compositionBasis: "Fixture source categories", compositionAsOf: "2026-10-06",
+          scope: "classification-only", knownUnknownExposure: "Combined instrument allocation is undisclosed.",
+          knownUnknownExposurePct: 93,
+        },
+      },
       CASH_NOW_SEC,
     );
     const treasury = classifications.find((classification) => classification.assetClass === "other");

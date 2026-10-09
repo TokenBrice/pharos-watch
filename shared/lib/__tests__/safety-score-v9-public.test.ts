@@ -545,7 +545,9 @@ describe("Safety Score v9 public projection", () => {
     const partial = input.trace.partialEvidence!;
     partial.causeGapIds.push(parentGap, localGap);
     partial.excludedComponentKeys.push("dependency:parent", "redemption:srusd");
-    input.scoreInput.pillars.exit.causeGapIds.push(parentGap, localGap, diagnosticGap);
+    input.scoreInput.pillars.exit.causeGapIds = [
+      ...input.scoreInput.pillars.exit.causeGapIds, parentGap, localGap, diagnosticGap,
+    ];
     input.scoreInput.pillars.exit.excludedCauseGapIds = [localGap];
     input.scoreInput.pillars.exit.excludedComponentKeys = ["redemption:srusd"];
     input.scoreInput.pillars.exit.excludedCauses = ["A"];
