@@ -8,6 +8,7 @@ import type { DeadPoolUnindexedChainSkips, StagedPoolSkipDimension } from "./sta
 import type { DataSources, DexPriceObs, LiquidityMetrics } from "./types";
 import type { PoolProcessingRejection } from "./process-pool-types";
 import type { TargetEnrichmentTelemetry } from "./route-telemetry";
+import type { UniV3CandidateCarryForwardTelemetry } from "./univ3-candidate-snapshot";
 
 export interface DexLiquidityDirectApiSourceSummary {
   circuitEvents: DirectApiFetchPhaseResult["circuitEvents"];
@@ -37,6 +38,12 @@ export interface DexLiquidityScoringSourceState {
    * before this key existed still type-check and parse.
    */
   degradedSources?: string[];
+  /**
+   * Per-chain Uni V3 execution-candidate snapshot decisions from the source
+   * stage (persisted, carried, unavailable). Optional so stage headers written
+   * before this key existed still decode.
+   */
+  uniV3CandidateCarryForward?: UniV3CandidateCarryForwardTelemetry;
   directApiSourceSummary: DexLiquidityDirectApiSourceSummary;
 }
 

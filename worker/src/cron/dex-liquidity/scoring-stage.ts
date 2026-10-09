@@ -281,6 +281,7 @@ function* iterateScoringStageRecords(
     primaryRawPoolCount: sourceState.primaryRawPoolCount,
     failedSources: sourceState.failedSources,
     degradedSources: sourceState.degradedSources,
+    uniV3CandidateCarryForward: sourceState.uniV3CandidateCarryForward,
     criticalSourceFailures: sourceState.criticalSourceFailures,
     fallbackSignals: sourceState.fallbackSignals,
     directApiSourceSummary: sourceState.directApiSourceSummary,

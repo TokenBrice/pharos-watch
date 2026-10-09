@@ -129,7 +129,7 @@ export function addDexRouteTurnover(summary: ExitRouteSelection, coin: ExitRoute
 export function projectDexRecoveryStageResult(result: CronResult): DexRecoveryStageResult {
   const raw = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
   const metadata: Record<string, unknown> = {};
-  for (const key of ["generationId", "sourceSlotStartedAt", "syncStartSec", "registryEvaluation", "failedSources", "degradedSources", "fallbackSignals", "targetEnrichment", "targetEnrichmentGroupsOmitted", "graphApiKeyConfigured", "d1Cost"]) {
+  for (const key of ["generationId", "sourceSlotStartedAt", "syncStartSec", "registryEvaluation", "failedSources", "degradedSources", "uniV3CandidateCarryForward", "fallbackSignals", "targetEnrichment", "targetEnrichmentGroupsOmitted", "graphApiKeyConfigured", "d1Cost"]) {
     if (raw[key] !== undefined) metadata[key] = raw[key];
   }
   return { status: result.status ?? "ok", itemCount: result.itemCount, metadata };
