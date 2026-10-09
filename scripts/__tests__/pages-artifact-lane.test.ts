@@ -71,6 +71,23 @@ describe("Pages artifact input profile", () => {
     }
   });
 
+  it("restores post-refresh outputs it regenerated from release data, even when a gate fails", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-pages-restore-"));
+    try {
+      dataFixture(root);
+      write(root, "public/llms.txt", "candidate llms\n");
+      spawn.mockReset();
+      spawn.mockImplementation((_program: string, args: string[]) => {
+        if (args.includes("generated:post-refresh")) write(root, "public/llms.txt", "release-derived llms\n");
+        return { status: args.includes("check:pages-release") ? 1 : 0, signal: null };
+      });
+      await expect(runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false })).rejects.toThrow(/pages-release-artifact-gates/);
+      expect(readFileSync(join(root, "public/llms.txt"), "utf8")).toBe("candidate llms\n");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("considers only unexpired identity-matched main artifacts, newest first", () => {
     const sha = "a".repeat(40);
     const artifact = { id: 1, name: `pages-release-data-${sha}`, expired: false, created_at: "2026-10-07", workflow_run: { id: 10, head_branch: "main", head_sha: sha } };

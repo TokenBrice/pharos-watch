@@ -7,10 +7,20 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { PAGES_RELEASE_DATA_ARCHIVE, PAGES_RELEASE_DATA_PATHS, preparePagesReleaseData, overlayPagesReleaseData, replayPagesDetailSnapshots, type PagesReleaseDataAcquisitionResult } from "../lib/pages-release-data.mts";
+import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const PAGES_PREVIOUS_SITEMAP_URL = "https://stablecoin-dashboard.pages.dev/sitemap.xml";
 const PUBLIC_FLAGS = ["HERO_VERDICT", "QUIET_DEVIATIONS", "MOBILE_STICKY_SUMMARY", "DEPEG_RESOLVER", "DEPEG_RESOLVER_REVIEWER"];
+// Post-refresh outputs (tracked public/llms.txt among them) are regenerated
+// from the overlaid release data, so they are restored with the inputs: the
+// lane must leave no edits behind in the candidate checkout.
+const RESTORED_PATHS = [...new Set<string>([
+  ...PAGES_RELEASE_DATA_PATHS,
+  ...(GENERATED_ARTIFACT_REGISTRY as { buildLifecycle: string; outputPaths: string[] }[])
+    .filter((artifact) => artifact.buildLifecycle === "post-refresh")
+    .flatMap((artifact) => artifact.outputPaths),
+])];
 
 export function scrubPagesBuildEnvironment(env: Partial<NodeJS.ProcessEnv>): NodeJS.ProcessEnv {
   return {
@@ -65,7 +75,7 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
     const result = spawnSync(program, args, { cwd: repoRoot, env: scrubPagesBuildEnvironment({ ...env, ...overrides }), stdio: "inherit" });
     if (result.error || result.status !== 0) throw new Error(`pages-artifact-stage-failed: ${stage} (${result.error?.message ?? `exit ${result.status}, signal ${result.signal ?? "none"}`})`);
   };
-  const originals = PAGES_RELEASE_DATA_PATHS.filter((path) => existsSync(join(repoRoot, path)));
+  const originals = RESTORED_PATHS.filter((path) => existsSync(join(repoRoot, path)));
   let inputsBackedUp = false;
   try {
     for (const path of originals) {
@@ -111,10 +121,10 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
     command("pages-release-artifact-gates", "npm", ["run", "check:pages-release"]);
     return result;
   } finally {
-    // A standalone local rehearsal must not leave release snapshots staged over
-    // the candidate's authored inputs, even when a build/gate fails.
+    // A standalone local rehearsal must not leave release snapshots or their
+    // derived outputs over the candidate's authored files, even on failure.
     if (inputsBackedUp) {
-      for (const path of PAGES_RELEASE_DATA_PATHS) {
+      for (const path of RESTORED_PATHS) {
         rmSync(join(repoRoot, path), { recursive: true, force: true });
         if (originals.includes(path)) cpSync(join(temporary, "original", path), join(repoRoot, path), { recursive: true });
       }
