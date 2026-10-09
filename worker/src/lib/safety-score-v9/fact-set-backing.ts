@@ -137,7 +137,21 @@ function normalizeMechanismReview(
     )
       ? componentResearchEvidence(context, specificEvidenceKey)
       : evidenceIds;
-    const original = fact.status;
+    let original = fact.status;
+    // Admission must use the bound evidence's clock, not only the reviewed
+    // component's state. Expiry removes credit but keeps dated history and
+    // lets the ordinary scoped cause resolver distinguish A/B/C from U.
+    if (
+      original.observationState === "known" &&
+      factEvidenceIds.some((evidenceId) => context.evidence.get(evidenceId)?.freshness.state === "stale")
+    ) {
+      original = {
+        ...original,
+        applicability: requiredV9Applicability(original.applicability.policyRuleId),
+        observationState: "stale",
+      };
+      fact.quality = null;
+    }
     if (original.observationState === "known") {
       assertKnownComponentEvidenceCurrent(context, specificEvidenceKey, factEvidenceIds);
       fact.status = createV9FactStatus({
