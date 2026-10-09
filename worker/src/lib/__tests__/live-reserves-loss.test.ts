@@ -5,7 +5,7 @@ import { computeLiveReserveConfigFingerprint, LIVE_RESERVE_ADAPTER_DEFINITIONS }
 import type { EvidenceLossOutcome } from "@shared/types/evidence-loss";
 import type { AcceptedReserveGeneration } from "@shared/types/accepted-reserve-generation";
 import type { ReserveCompositionRecord } from "../live-reserves/store-shared";
-import { beginReserveSyncAttempt, finalizeReserveSyncAttempt, finalizeReserveSyncSuccess, loadReserveSyncStateMap, loadFreshIndependentLiveReserveMap } from "../live-reserves/store";
+import { beginReserveSyncAttempt, didReserveSyncAttemptBecomeAuthoritative, finalizeReserveSyncAttempt, finalizeReserveSyncSuccess, loadReserveSyncStateMap, loadFreshIndependentLiveReserveMap } from "../live-reserves/store";
 import { evaluateLiveReserveAdmission } from "../live-reserves/store-snapshot-state";
 import { reserveLossLineage, reserveLossOutcome, reserveRedemptionParentLoss } from "../live-reserves/loss";
 import { acceptedReserveMetadataMap } from "../accepted-reserve-generation";
@@ -98,6 +98,28 @@ describe("reserve loss integrity", () => {
       } finally { sqlite.close(); }
     },
   );
+
+  it("recognizes committed success for checkpoint recovery without treating retained evidence or finalized failure as current success", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const record = await seed(db);
+      expect(await didReserveSyncAttemptBecomeAuthoritative(db, ASSET, record.attemptId!)).toBe(true);
+      expect(await didReserveSyncAttemptBecomeAuthoritative(db, ASSET, "different-attempt")).toBe(false);
+      await beginReserveSyncAttempt(db, { stablecoinId: ASSET, adapterKey: record.source, breakerKey: "fixture",
+        attemptedAt: 1_010, attemptId: "current-failure", configFingerprint: record.configFingerprint });
+      const pending = (await loadReserveSyncStateMap(db)).get(ASSET)!;
+      expect(evaluateLiveReserveAdmission(record, pending, WORKER_TRACKED_META_BY_ID.get(ASSET), 1_020).eligible).toBe(true);
+      expect(await didReserveSyncAttemptBecomeAuthoritative(db, ASSET, record.attemptId!)).toBe(false);
+      expect(await didReserveSyncAttemptBecomeAuthoritative(db, ASSET, "current-failure")).toBe(false);
+      const loss = lossFor(ASSET, "current-failure", 1_010, "semantic");
+      await expect(finalizeReserveSyncAttempt(db, { ...pending, lastStatus: "error", lastError: loss.reason,
+        metadata: { reserveLoss: loss } })).resolves.toEqual({ finalized: true });
+      expect(await didReserveSyncAttemptBecomeAuthoritative(db, ASSET, "current-failure")).toBe(false);
+      expect(await didReserveSyncAttemptBecomeAuthoritative(db, ASSET, record.attemptId!)).toBe(false);
+      const failed = (await loadReserveSyncStateMap(db)).get(ASSET)!;
+      expect(evaluateLiveReserveAdmission(record, failed, WORKER_TRACKED_META_BY_ID.get(ASSET), 1_020).eligible).toBe(false);
+    } finally { sqlite.close(); }
+  });
 
   it("uses actual reserve loss rather than healthy success identity to revoke a consumed parent", () => {
     const healthy = { latest: null, invalidations: {},
@@ -231,6 +253,55 @@ describe("reserve loss integrity", () => {
       await expect(finalizeReserveSyncAttempt(lostAck, { ...pending, lastStatus: "error", metadata: { reserveLoss: lossFor(ASSET, "ambiguous", 1_020) } })).resolves.toEqual({ finalized: true });
       const state = (await loadReserveSyncStateMap(db)).get(ASSET)!;
       expect(evaluateLiveReserveAdmission(recordFor(), state, WORKER_TRACKED_META_BY_ID.get(ASSET), 1_030).eligible).toBe(true);
+    } finally { sqlite.close(); }
+  });
+
+  it("rolls back a failed loss-history write and does not authenticate an uncommitted failure", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const record = await seed(db);
+      await fail(db, lossFor(ASSET, "previous-operational", 1_010));
+      await beginReserveSyncAttempt(db, { stablecoinId: ASSET, adapterKey: record.source, breakerKey: "fixture",
+        attemptedAt: 1_020, attemptId: "uncommitted", configFingerprint: record.configFingerprint });
+      const pending = (await loadReserveSyncStateMap(db)).get(ASSET)!;
+      const beforeState = sqlite.prepare("SELECT * FROM reserve_sync_state").get();
+      const beforeComposition = sqlite.prepare("SELECT * FROM reserve_composition").get();
+      const beforeHistory = sqlite.prepare("SELECT * FROM reserve_sync_attempt_history ORDER BY attempted_at").all();
+      sqlite.exec(`CREATE TRIGGER reject_loss_history BEFORE INSERT ON reserve_sync_attempt_history
+        WHEN NEW.attempt_id = 'uncommitted'
+        BEGIN SELECT RAISE(ABORT, 'loss history unavailable'); END`);
+      const loss = lossFor(ASSET, "uncommitted", 1_020, "semantic");
+      await expect(finalizeReserveSyncAttempt(db, { ...pending, lastStatus: "error", lastError: loss.reason,
+        metadata: { reserveLoss: loss } })).rejects.toThrow("loss history unavailable");
+      expect(sqlite.prepare("SELECT * FROM reserve_sync_state").get()).toEqual(beforeState);
+      expect(sqlite.prepare("SELECT * FROM reserve_composition").get()).toEqual(beforeComposition);
+      expect(sqlite.prepare("SELECT * FROM reserve_sync_attempt_history ORDER BY attempted_at").all()).toEqual(beforeHistory);
+      const state = (await loadReserveSyncStateMap(db)).get(ASSET)!;
+      expect(state.pendingAttemptId).toBe("uncommitted");
+      expect(state.metadata.reserveLoss?.attemptId).toBe("previous-operational");
+      expect(evaluateLiveReserveAdmission(record, state, WORKER_TRACKED_META_BY_ID.get(ASSET), 1_030).eligible).toBe(true);
+    } finally { sqlite.close(); }
+  });
+
+  it("rejects a conflicting terminal retry instead of authenticating different loss under the same attempt tuple", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const record = await seed(db);
+      const semantic = lossFor(ASSET, "finalized-semantic", 1_010, "semantic");
+      await fail(db, semantic);
+      const state = (await loadReserveSyncStateMap(db)).get(ASSET)!;
+      const beforeState = sqlite.prepare("SELECT * FROM reserve_sync_state").get();
+      const beforeHistory = sqlite.prepare("SELECT * FROM reserve_sync_attempt_history ORDER BY attempted_at").all();
+      const conflicting = lossFor(ASSET, "finalized-semantic", 1_010);
+      await expect(finalizeReserveSyncAttempt(db, { ...state, lastError: conflicting.reason,
+        metadata: { reserveLoss: conflicting } })).resolves.toEqual({ finalized: false });
+      expect(sqlite.prepare("SELECT * FROM reserve_sync_state").get()).toEqual(beforeState);
+      expect(sqlite.prepare("SELECT * FROM reserve_sync_attempt_history ORDER BY attempted_at").all()).toEqual(beforeHistory);
+      const retained = (await loadReserveSyncStateMap(db)).get(ASSET)!;
+      expect(retained.metadata.reserveLoss).toEqual(semantic);
+      expect(retained.metadata.reserveInvalidations?.composition).toEqual(semantic);
+      expect(evaluateLiveReserveAdmission(record, retained, WORKER_TRACKED_META_BY_ID.get(ASSET), 1_030).eligible).toBe(false);
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_composition_history").get()).toEqual({ count: 1 });
     } finally { sqlite.close(); }
   });
 

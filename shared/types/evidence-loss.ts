@@ -2,7 +2,7 @@ import { z } from "zod";
 import { CanonicalKeySchema, CanonicalTextSchema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
 
 /** Evidence classification, independent of cron terminal status and Safety causes. */
-export const EvidenceLossDispositionSchema = z.enum(["operational", "evidential", "semantic", "unknown"]);
+const EvidenceLossDispositionSchema = z.enum(["operational", "evidential", "semantic", "unknown"]);
 export type EvidenceLossDisposition = z.output<typeof EvidenceLossDispositionSchema>;
 
 export const OperationalEvidenceLossReasonSchema = z.enum([
@@ -10,7 +10,7 @@ export const OperationalEvidenceLossReasonSchema = z.enum([
 ]);
 
 /** Bounded producer vocabulary keeps cron summaries bounded without truncating identities. */
-export const EvidenceLossReasonSchema = CanonicalKeySchema.refine((reason) => reason.length <= 96, {
+const EvidenceLossReasonSchema = CanonicalKeySchema.refine((reason) => reason.length <= 96, {
   message: "Evidence loss reasons must be at most 96 characters",
 });
 const EvidenceLossScopeSchema = z.object({
