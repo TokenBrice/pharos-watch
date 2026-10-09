@@ -91,7 +91,15 @@ Use `worker/scripts/rebuild-blacklist-current-balances.ts` only after the source
 4. Run the confirmed rebuild. More than 10% provider failures abort before D1 mutation. `--force` bypasses only this failure-rate guard and should be used only after reviewing the provider failures.
 5. Verify current balances, then preview and execute `--clear-writer-pause`. Do not clear the pause after a failed rebuild until the retained rows have been checked.
 
-Active rows stay in place during the rebuild so a transient `provider_failed` result retains the last resolved native/USD amounts and source. Wrangler treats each `--file` import as its own transactional chunk; the helper must not emit explicit `BEGIN TRANSACTION` / `COMMIT` statements because D1 rejects them. A failed chunk rolls back that chunk, but earlier successful chunks remain committed, so inspect the retained rows before retrying or clearing the writer pause.
+Rebuilds refresh only active, non-destroyed, unambiguous records for the selected configured contract. The complete contract/config-scoped ledger stays in place, including released addresses, destroy snapshots, and other contracts on the same asset/chain. Observations reuse the runtime upsert policy: a transient `provider_failed` result retains the last resolved native/USD amounts, source, observation time, and last-success timestamp while updating attempts, failure streaks, and error metadata.
+
+Both balance-maintenance tools first admit all observations into a unique `blacklist_balance_stage_<uuid>` scratch table, validate the admitted row count, then publish one bounded file import containing canonical derived-cache invalidation, a scoped `INSERT ... SELECT ... ON CONFLICT` upsert, and scratch-table removal. Wrangler treats each `--file` import as its own transaction; explicit `BEGIN TRANSACTION` / `COMMIT` statements are not emitted because D1 rejects them. Admission chunks may commit independently, but a failed admission leaves the authoritative ledger and its caches unchanged. Publication either commits both ledger updates and invalidation or neither. Caught failures remove the scratch table; if cleanup fails, the error names the scratch table for review. After an interrupted process, inspect and remove only its abandoned scratch table, never retained ledger rows.
+
+Do not run older delete-and-replace revisions of either balance tool: they can erase retained scoped history and partially commit replacement rows.
+
+### KYC balance observation admission
+
+`worker/scripts/reconcile-blacklist-current-balances-from-kyc-rip.ts` is dry-run by default and supports the runtime-configured USDT/Ethereum, USDC/Ethereum, and USDT/Tron scopes. Review the normalized count, asset/chain distribution, and `rowsToUpsert`; live admission requires `--execute --confirm worker/scripts/reconcile-blacklist-current-balances-from-kyc-rip.ts`. Unsupported, malformed, duplicate, or below-minimum normalized results do not reach staging. The tool writes current-state observations only, not event-time amounts, and never deletes rows absent from the provider response. A successful publication invalidates the canonical producer summary and gap-metric caches so the next summary request reads the changed D1 ledger without waiting for the next scheduled sync.
 
 ## CI Deploy Sequence
 

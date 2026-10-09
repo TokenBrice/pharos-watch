@@ -10,6 +10,10 @@ import {
   type FrozenManifestEvent,
 } from "../reconcile-night-watch-blacklist";
 import type { RemoteD1Client } from "../lib/remote-d1";
+import type { BlacklistSummaryResponse } from "@shared/types/market";
+import { CONTRACT_CONFIGS } from "../../src/lib/blacklist-contracts";
+import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../src/lib/blacklist-summary-service";
+import { derivedCacheRows, seedDerivedCaches, sqliteRemoteD1 } from "./blacklist-current-balance-maintenance.test-support";
 
 const SCRIPT_NAME = "worker/scripts/reconcile-night-watch-blacklist.ts";
 const frozenManifest = frozenManifestJson as FrozenManifest;
@@ -265,6 +269,42 @@ describe("Night Watch blacklist reconciliation", () => {
       reconciliation_run_id: expectedApplyRunId,
     });
   });
+
+  it.each([false, true])(
+    "invalidates producer caches before authoritative writes, including partial import failure=%s",
+    async (failSecondImport) => {
+      const { sqlite, db } = databases.open();
+      const insertCursor = sqlite.prepare(`INSERT INTO blacklist_sync_state
+        (config_key, last_block, cursor_value, last_observed_safe_head) VALUES (?, ?, ?, ?)`);
+      insertCursor.run(frozenManifest.configKey, frozenManifest.cursorExclusive, frozenManifest.cursorExclusive, frozenManifest.cutoffInclusive);
+      for (const config of CONTRACT_CONFIGS.filter((item) => item.chain.chainId === "arbitrum")) {
+        insertCursor.run(config.configKey, 500_000_000, 500_000_000, 500_000_000);
+      }
+      seedDerivedCaches(sqlite);
+      const now = Math.floor(nowMs / 1000);
+      await materializeBlacklistSummarySnapshot(db, now, now);
+      const before = await (await handleBlacklistSummary(db)).json() as BlacklistSummaryResponse;
+      expect(before.totalEvents).toBe(0);
+      const { d1 } = sqliteRemoteD1(sqlite, failSecondImport ? { failChunk: 2, batchSize: 5 } : {});
+      const run = runNightWatchBlacklistReconciliation(options(true), dependencies(d1));
+      if (failSecondImport) {
+        await expect(run).rejects.toThrow("simulated import failure");
+      } else {
+        expect((await run).status).toBe("verified");
+      }
+      expect(derivedCacheRows(sqlite)).toEqual([]);
+      const persisted = sqlite.prepare("SELECT COUNT(*) AS count FROM blacklist_events").get() as { count: number };
+      expect(persisted.count).toBe(failSecondImport ? 3 : 86);
+      const after = await (await handleBlacklistSummary(db)).json() as BlacklistSummaryResponse;
+      expect(after.totalEvents).toBe(persisted.count);
+      if (!failSecondImport) {
+        const balances = sqlite.prepare("SELECT SUM(amount_usd) AS total, COUNT(*) AS count FROM blacklist_current_balances")
+          .get() as { total: number; count: number };
+        expect(after.stats.trackedFrozenTotal).toBeCloseTo(balances.total);
+        expect(after.stats.trackedAddressCount).toBe(balances.count);
+      }
+    },
+  );
 
   it.each(["amount_native", "observed_at", "last_attempted_at"] as const)(
     "preserves a concurrent change to %s without overwriting it",

@@ -1,6 +1,13 @@
 import { runOperatorCli } from "./operator-cli.test-support";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import type { BlacklistSummaryResponse } from "@shared/types/market";
+import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../src/lib/blacklist-summary-service";
+import { getBlacklistConfigsForSymbolAndChain } from "../../src/lib/blacklist-contracts";
+import {
+  balanceId, derivedCacheRows, ledgerRows, seedDerivedCaches, seedLedger, sqliteRemoteD1,
+} from "./blacklist-current-balance-maintenance.test-support";
 import {
   parseCurrentBalanceArgs,
   runCurrentBalanceReconciliation,
@@ -8,6 +15,8 @@ import {
 import { createRemoteD1Mock } from "../../../scripts/test-utils/d1";
 
 const SCRIPT_NAME = "worker/scripts/reconcile-blacklist-current-balances-from-kyc-rip.ts";
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 function okPayload(data: unknown[]): Response {
   return new Response(JSON.stringify({ data }), { status: 200 });
@@ -87,58 +96,106 @@ describe("current-balance kyc.rip reconciliation", () => {
     );
 
     expect(summary.mode).toBe("dry-run");
-    expect(summary.rowsToInsert).toBe(2);
+    expect(summary.rowsToUpsert).toBe(2);
     expect(d1.queryMock).not.toHaveBeenCalled();
     expect(d1.executeStatementsMock).not.toHaveBeenCalled();
   });
 
-  it("executes one guarded replacement file in apply mode", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(okPayload(currentRows));
-    const d1 = createRemoteD1Mock([{ count: 3 }]);
-
+  it("admits scoped observations while retaining released, destroyed, and other-contract rows and invalidating caches", async () => {
+    const { sqlite, db } = fixtures.open();
+    const seeded = seedLedger(sqlite);
+    seedDerivedCaches(sqlite);
+    const retained = ledgerRows(sqlite).filter((row) => row.id !== balanceId(seeded[0]!));
+    const now = Math.floor(Date.now() / 1000);
+    await materializeBlacklistSummarySnapshot(db, now, now);
+    const before = await (await handleBlacklistSummary(db)).json() as BlacklistSummaryResponse;
+    expect(before.stats.trackedFrozenTotal).toBe(300);
+    const { d1, imports } = sqliteRemoteD1(sqlite);
     const summary = await runCurrentBalanceReconciliation(
       { apply: true, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 1 },
-      { fetchImpl, d1, now: () => 1_700_000_000_000 },
+      { fetchImpl: vi.fn().mockResolvedValue(okPayload([{ ...currentRows[0], frozen_balance: "250" }, currentRows[1]])),
+        d1, now: () => 1_700_000_000_000 },
     );
-
-    expect(summary.targetRowsToDelete).toBe(3);
-    expect(d1.queryMock).toHaveBeenCalledTimes(1);
-    expect(d1.executeStatementsMock).toHaveBeenCalledTimes(1);
-    const [rawStatements, prefix] = d1.executeStatementsMock.mock.calls[0]!;
-    const statements = rawStatements as string[];
-    expect(prefix).toBe("blacklist-kyc-rip-reconcile");
-    expect(statements.join("\n")).not.toContain("BEGIN TRANSACTION;");
-    expect(statements.join("\n")).not.toContain("COMMIT;");
-    expect(statements.join("\n")).not.toContain("CREATE TEMP TABLE");
-    expect(statements[0]).toContain("DELETE FROM blacklist_current_balances");
-    expect(statements.slice(1)).toHaveLength(2);
-    expect(statements.slice(1).every((statement) => statement.includes("INSERT OR REPLACE INTO"))).toBe(true);
+    expect(summary.existingTargetRows).toBe(6);
+    expect(summary.rowsToUpsert).toBe(2);
+    expect(imports).toHaveLength(2);
+    expect(sqlite.prepare("SELECT * FROM blacklist_current_balances WHERE id = ?").get(balanceId(seeded[0]!)))
+      .toMatchObject({ amount_usd: 250, config_key: seeded[0]!.configKey, contract_address: seeded[0]!.contractAddress,
+        last_successful_observed_at: 1_700_000_000, consecutive_failures: 0, attempt_count: 4 });
+    for (const row of retained) {
+      expect(sqlite.prepare("SELECT * FROM blacklist_current_balances WHERE id = ?").get(row.id)).toEqual(row);
+    }
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM blacklist_current_balances WHERE config_key IS NULL AND contract_address IS NULL")
+      .get()).toEqual({ count: 0 });
+    expect(derivedCacheRows(sqlite)).toEqual([]);
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'unrelated-cache'").get()).toEqual({ value: "{}" });
+    const after = await (await handleBlacklistSummary(db)).json() as BlacklistSummaryResponse;
+    expect(after.stats.trackedFrozenTotal).toBe(500);
+    expect(after.stats.trackedAddressCount).toBe(7);
   });
 
-  it("emits direct replacement inserts for runs larger than the remote D1 default chunk size", async () => {
+  it("keeps every retained scope intact when the second admission import fails beyond 200 statements", async () => {
+    const { sqlite } = fixtures.open();
+    seedLedger(sqlite);
+    seedDerivedCaches(sqlite);
+    const before = ledgerRows(sqlite);
+    const cachesBefore = derivedCacheRows(sqlite);
+    const rows = [
+      ...Array.from({ length: 204 }, (_, index) => ({
+        address: `0x${String(index + 1).padStart(40, "0")}`,
+        asset: index % 2 === 0 ? "USDT" : "USDC", chain: "ETH", frozen_balance: "999",
+      })),
+      { address: getBlacklistConfigsForSymbolAndChain("USDT", "tron")[0]!.contractAddress,
+        asset: "USDT", chain: "TRON", frozen_balance: "999" },
+    ];
+    const { d1, imports } = sqliteRemoteD1(sqlite, { failChunk: 2 });
+    await expect(runCurrentBalanceReconciliation(
+      { apply: true, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 1 },
+      { fetchImpl: vi.fn().mockResolvedValue(okPayload(rows)), d1 },
+    )).rejects.toThrow("simulated import failure");
+    expect(imports[0]).toHaveLength(200);
+    expect(imports[1]).toHaveLength(6);
+    expect(ledgerRows(sqlite)).toEqual(before);
+    expect(derivedCacheRows(sqlite)).toEqual(cachesBefore);
+    expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name LIKE 'blacklist_balance_stage_%'").all()).toEqual([]);
+  });
+
+  it("publishes every admitted observation across more than one import chunk", async () => {
+    const { sqlite } = fixtures.open();
+    seedLedger(sqlite);
+    seedDerivedCaches(sqlite);
     const rows = Array.from({ length: 205 }, (_, index) => ({
       address: `0x${String(index + 1).padStart(40, "0")}`,
-      asset: "USDT",
-      chain: "ETH",
-      frozen_balance: String(index + 1),
+      asset: "USDT", chain: "ETH", frozen_balance: "999",
     }));
-    const fetchImpl = vi.fn().mockResolvedValue(okPayload(rows));
-    const d1 = createRemoteD1Mock([{ count: 3 }]);
-
-    await runCurrentBalanceReconciliation(
+    const { d1, imports } = sqliteRemoteD1(sqlite);
+    const summary = await runCurrentBalanceReconciliation(
       { apply: true, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 1 },
-      { fetchImpl, d1, now: () => 1_700_000_000_000 },
+      { fetchImpl: vi.fn().mockResolvedValue(okPayload(rows)), d1 },
     );
-
-    const [rawStatements] = d1.executeStatementsMock.mock.calls[0]!;
-    const statements = rawStatements as string[];
-    expect(statements).toHaveLength(206);
-    expect(statements.join("\n")).not.toContain("kyc_rip_current_balance_stage");
-    expect(statements[0]).toContain("DELETE FROM blacklist_current_balances");
-    expect(statements[200]).toContain("INSERT OR REPLACE INTO blacklist_current_balances");
+    expect(summary.rowsToUpsert).toBe(205);
+    expect(imports.map((chunk) => chunk.length)).toEqual([200, 6, 1]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count, SUM(amount_usd) AS total FROM blacklist_current_balances")
+      .get()).toEqual({ count: 210, total: 205 * 999 + 200 });
+    expect(derivedCacheRows(sqlite)).toEqual([]);
   });
 
-  it("blocks destructive replacement when normalized rows are below the minimum", async () => {
+  it("rolls back cache invalidation and ledger changes together when final publication fails", async () => {
+    const { sqlite } = fixtures.open();
+    seedLedger(sqlite);
+    seedDerivedCaches(sqlite);
+    const before = ledgerRows(sqlite);
+    const cachesBefore = derivedCacheRows(sqlite);
+    const { d1 } = sqliteRemoteD1(sqlite, { failPublish: true, batchSize: 1 });
+    await expect(runCurrentBalanceReconciliation(
+      { apply: true, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 1 },
+      { fetchImpl: vi.fn().mockResolvedValue(okPayload(currentRows)), d1 },
+    )).rejects.toThrow("simulated import failure");
+    expect(ledgerRows(sqlite)).toEqual(before);
+    expect(derivedCacheRows(sqlite)).toEqual(cachesBefore);
+  });
+
+  it("blocks admission when normalized rows are below the minimum", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(okPayload([
       currentRows[0],
       { ...currentRows[0], chain: "TRON", address: "invalid-tron-address" },
@@ -156,7 +213,7 @@ describe("current-balance kyc.rip reconciliation", () => {
     expect(d1.executeStatementsMock).not.toHaveBeenCalled();
   });
 
-  it("blocks destructive replacement when normalized ids are duplicated", async () => {
+  it("blocks admission when normalized ids are duplicated", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(okPayload([currentRows[0], currentRows[0]]));
     const d1 = createRemoteD1Mock([{ count: 3 }]);
 

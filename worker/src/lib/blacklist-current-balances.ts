@@ -28,6 +28,79 @@ export interface BlacklistCurrentBalanceRow {
   consecutiveFailures: number;
 }
 
+export const BLACKLIST_CURRENT_BALANCE_COLUMNS = `id, stablecoin, chain_id, address, config_key, contract_address,
+          amount_native, amount_usd, source, status, observed_at,
+          last_successful_observed_at, attempt_count, last_attempted_at,
+          last_error_class, consecutive_failures`;
+
+export const BLACKLIST_CURRENT_BALANCE_UPSERT_POLICY = `ON CONFLICT(id) DO UPDATE SET
+         config_key = COALESCE(excluded.config_key, blacklist_current_balances.config_key),
+         contract_address = COALESCE(excluded.contract_address, blacklist_current_balances.contract_address),
+         amount_native = CASE
+           WHEN excluded.status = 'provider_failed'
+             THEN COALESCE(blacklist_current_balances.amount_native, excluded.amount_native)
+           ELSE excluded.amount_native
+         END,
+         amount_usd = CASE
+           WHEN excluded.status = 'provider_failed'
+             THEN COALESCE(blacklist_current_balances.amount_usd, excluded.amount_usd)
+           ELSE excluded.amount_usd
+         END,
+         source = CASE
+           WHEN excluded.status = 'provider_failed'
+             THEN COALESCE(blacklist_current_balances.source, excluded.source)
+           ELSE excluded.source
+         END,
+         status = excluded.status,
+         observed_at = CASE
+           WHEN excluded.status = 'provider_failed'
+             AND (blacklist_current_balances.amount_native IS NOT NULL OR blacklist_current_balances.amount_usd IS NOT NULL)
+             THEN blacklist_current_balances.observed_at
+           ELSE excluded.observed_at
+         END,
+         last_successful_observed_at = CASE
+           WHEN excluded.status = 'provider_failed'
+             THEN COALESCE(
+               blacklist_current_balances.last_successful_observed_at,
+               CASE
+                 WHEN blacklist_current_balances.status = 'resolved' THEN blacklist_current_balances.observed_at
+                 ELSE NULL
+               END
+             )
+           ELSE excluded.observed_at
+         END,
+         attempt_count = blacklist_current_balances.attempt_count + 1,
+         last_attempted_at = excluded.last_attempted_at,
+         last_error_class = excluded.last_error_class,
+         consecutive_failures = CASE
+           WHEN excluded.status = 'provider_failed'
+             THEN COALESCE(blacklist_current_balances.consecutive_failures, 0) + 1
+           ELSE 0
+         END`;
+
+export function buildBlacklistCurrentBalanceValues(
+  row: Omit<BlacklistCurrentBalanceRow, "id">,
+): (string | number | null)[] {
+  return [
+    buildBlacklistContractBalanceKey(row.stablecoin, row.chainId, row.address, row.configKey, row.contractAddress),
+    row.stablecoin,
+    row.chainId,
+    row.address,
+    row.configKey,
+    row.contractAddress,
+    row.amountNative,
+    row.amountUsd,
+    row.source,
+    row.status,
+    row.observedAt,
+    row.status === "resolved" ? row.observedAt : row.lastSuccessfulObservedAt,
+    row.attemptCount,
+    row.lastAttemptedAt,
+    row.lastErrorClass,
+    row.status === "provider_failed" ? row.consecutiveFailures || 1 : 0,
+  ];
+}
+
 function buildBlacklistCurrentBalanceId(
   stablecoin: BlacklistStablecoin,
   chainId: string,
@@ -211,75 +284,11 @@ export async function upsertBlacklistCurrentBalance(
   await db
     .prepare(
       `INSERT INTO blacklist_current_balances
-         (id, stablecoin, chain_id, address, config_key, contract_address,
-          amount_native, amount_usd, source, status, observed_at,
-          last_successful_observed_at, attempt_count, last_attempted_at,
-          last_error_class, consecutive_failures)
+         (${BLACKLIST_CURRENT_BALANCE_COLUMNS})
        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE NOT EXISTS (SELECT 1 FROM cache WHERE key = ?)
-       ON CONFLICT(id) DO UPDATE SET
-         config_key = COALESCE(excluded.config_key, blacklist_current_balances.config_key),
-         contract_address = COALESCE(excluded.contract_address, blacklist_current_balances.contract_address),
-         amount_native = CASE
-           WHEN excluded.status = 'provider_failed'
-             THEN COALESCE(blacklist_current_balances.amount_native, excluded.amount_native)
-           ELSE excluded.amount_native
-         END,
-         amount_usd = CASE
-           WHEN excluded.status = 'provider_failed'
-             THEN COALESCE(blacklist_current_balances.amount_usd, excluded.amount_usd)
-           ELSE excluded.amount_usd
-         END,
-         source = CASE
-           WHEN excluded.status = 'provider_failed'
-             THEN COALESCE(blacklist_current_balances.source, excluded.source)
-           ELSE excluded.source
-         END,
-         status = excluded.status,
-         observed_at = CASE
-           WHEN excluded.status = 'provider_failed'
-             AND (blacklist_current_balances.amount_native IS NOT NULL OR blacklist_current_balances.amount_usd IS NOT NULL)
-             THEN blacklist_current_balances.observed_at
-           ELSE excluded.observed_at
-         END,
-         last_successful_observed_at = CASE
-           WHEN excluded.status = 'provider_failed'
-             THEN COALESCE(
-               blacklist_current_balances.last_successful_observed_at,
-               CASE
-                 WHEN blacklist_current_balances.status = 'resolved' THEN blacklist_current_balances.observed_at
-                 ELSE NULL
-               END
-             )
-           ELSE excluded.observed_at
-         END,
-         attempt_count = blacklist_current_balances.attempt_count + 1,
-         last_attempted_at = excluded.last_attempted_at,
-         last_error_class = excluded.last_error_class,
-         consecutive_failures = CASE
-           WHEN excluded.status = 'provider_failed'
-             THEN COALESCE(blacklist_current_balances.consecutive_failures, 0) + 1
-           ELSE 0
-         END`,
+       ${BLACKLIST_CURRENT_BALANCE_UPSERT_POLICY}`,
     )
-    .bind(
-      id,
-      row.stablecoin,
-      row.chainId,
-      row.address,
-      row.configKey,
-      row.contractAddress,
-      row.amountNative,
-      row.amountUsd,
-      row.source,
-      row.status,
-      row.observedAt,
-      row.status === "resolved" ? row.observedAt : row.lastSuccessfulObservedAt,
-      row.attemptCount,
-      row.lastAttemptedAt,
-      row.lastErrorClass,
-      row.status === "provider_failed" ? row.consecutiveFailures || 1 : 0,
-      BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY,
-    )
+    .bind(...buildBlacklistCurrentBalanceValues(row), BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY)
     .run();
 }

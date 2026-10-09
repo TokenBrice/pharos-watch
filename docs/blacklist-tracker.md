@@ -248,6 +248,8 @@ The summary loader reads the complete retained ledger — released addresses, de
 
 Unblacklist events do not delete historical snapshot rows. Destroy events may replace a stored amount with a better emitted seizure/burn amount. When a blacklist and release arrive in the same batch, the blacklist snapshot is still captured before the release marker is treated as non-deleting.
 
+Operator rebuilds and KYC current-balance admission also preserve this complete ledger. They use runtime contract/config identities and the same last-known-value upsert policy, stage every observation before any authoritative write, and publish scoped upserts with canonical summary/gap-cache invalidation in one file transaction. A failed admission cannot remove or partially replace retained rows; rows absent from the active/provider set are not deletion candidates. The [balance-maintenance procedure](./deployment-process.md#blacklist-current-balance-rebuild) owns staging, failure recovery, and writer-pause handling.
+
 Legacy `activeAddressCount`, `activeFrozenTotal`, and `activeAmountGapCount` remain in `/api/blacklist-summary` for wire compatibility. They represent the local net-active event state, not the public historical freeze-ledger total.
 
 ### Cursor State
