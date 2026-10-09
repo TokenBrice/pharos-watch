@@ -85,6 +85,11 @@ export const StablecoinDetailResponseSchema = z.object({
   currentSupplyObservedAt: z.number().finite().positive().optional(),
   /** Canonical carry-forward provenance for the admitted current supply overlay. */
   currentSupplyRestored: z.boolean().optional(),
+  /**
+   * Canonical supply-chain-dropout quarantine past its carry ceiling: current supply is unavailable,
+   * so consumers must not substitute the provider's dated history for it.
+   */
+  currentSupplyUnavailableReason: z.literal("supply-chain-dropout").optional(),
   tokens: z.array(StablecoinDetailTokenSchema).optional(),
 }).passthrough();
 export type StablecoinDetailResponse = z.infer<typeof StablecoinDetailResponseSchema>;

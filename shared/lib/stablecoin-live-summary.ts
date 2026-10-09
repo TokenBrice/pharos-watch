@@ -49,10 +49,12 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     undefined,
   );
   const latestDate = latest?.date ?? null;
-  const hasCurrentSupply = admitSupplyBuckets(detail.currentCirculatingUSD).status === "observed";
-  let circulating = hasCurrentSupply ? detail.currentCirculatingUSD! : latest?.totalCirculatingUSD ?? {};
+  // Canonical quarantine says current supply is unavailable: never back-fill it from provider history.
+  const supplyUnavailable = detail.currentSupplyUnavailableReason != null;
+  const hasCurrentSupply = !supplyUnavailable && admitSupplyBuckets(detail.currentCirculatingUSD).status === "observed";
+  let circulating = supplyUnavailable ? {} : hasCurrentSupply ? detail.currentCirculatingUSD! : latest?.totalCirculatingUSD ?? {};
   // Older detail responses may have only native history. Never assume a $1 peg.
-  if (admitSupplyBuckets(circulating).status !== "observed") {
+  if (!supplyUnavailable && admitSupplyBuckets(circulating).status !== "observed") {
     const native = latest?.totalCirculating;
     const price = isObservedPrice(detail) ? detail.price : null;
     circulating = native && admitSupplyBuckets(native).status === "observed" &&
@@ -73,15 +75,15 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     ...(detail.nominalPriceReference ? { nominalPriceReference: detail.nominalPriceReference } : {}),
     consensusSources: detail.consensusSources,
     agreeSources: detail.agreeSources,
-    supplyObservedAt: hasCurrentSupply ? detail.currentSupplyObservedAt ?? null : latestDate,
-    ...(hasCurrentSupply && detail.currentSupplyRestored === true ? { supplyRestored: true } : {}),
+    supplyObservedAt: hasCurrentSupply ? detail.currentSupplyObservedAt ?? null : supplyUnavailable ? null : latestDate,
+    ...(supplyUnavailable || (hasCurrentSupply && detail.currentSupplyRestored === true) ? { supplyRestored: true } : {}),
     circulating,
     circulatingPrevDay: hasCurrentSupply ? detail.currentCirculatingPrevDayUSD ?? {}
       : latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400, "totalCirculatingUSD"),
     circulatingPrevWeek: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 7 * 86_400, "totalCirculatingUSD"),
     circulatingPrevMonth: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 30 * 86_400, "totalCirculatingUSD"),
     nativeSupply: {
-      current: sumPegBucketsOrNull(latest?.totalCirculating),
+      current: supplyUnavailable ? null : sumPegBucketsOrNull(latest?.totalCirculating),
       prevWeek: latestDate == null
         ? null
         : sumPegBucketsOrNull(detailBucketsAt(detail, latestDate - 7 * 86_400, "totalCirculating")),

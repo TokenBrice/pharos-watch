@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { enrichMissingDetailPrice } from "../stablecoin-detail/price";
+import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
+import { StablecoinDetailResponseSchema } from "@shared/types/market";
 import { handleStablecoinDetail, resetStablecoinDetailStateForTests } from "../stablecoin-detail";
 import { routeStablecoinDetail } from "../stablecoin-detail/router";
 import { publishDetailCacheGeneration } from "../../lib/detail-cache-generation";
@@ -232,6 +234,44 @@ describe("missing detail price enrichment", () => {
     expect(result.headers.get("Cache-Control")).toBe("no-store");
     expect(result.headers.get("Warning")).toBe('110 - "Historical detail is stale"');
     expect(await result.json()).toMatchObject({ price: 0.997, tokens, providerField: "preserved" });
+  });
+
+  describe("expired supply-chain-dropout quarantine", () => {
+    const quarantinedSince = NOW - 8 * 86_400;
+    const expiredQuarantine = {
+      circulating: {}, supplyRestored: true, supplyObservedAt: quarantinedSince,
+      supplySource: "defillama",
+      supplyChainGuard: {
+        reason: "supply-chain-dropout", status: "unavailable", quarantinedSince,
+        chains: [{
+          chainId: "xlayer", chainLabel: "X Layer", listCurrentUsd: 0, baselineUsd: 1_427_900_000,
+          baselineObservedAt: quarantinedSince, baselineSource: "state", resolution: "unavailable",
+        }],
+      },
+    };
+
+    it("keeps current supply unavailable through detail and projection despite positive provider history", async () => {
+      const result = await enrichMissingDetailPrice(makeDb(expiredQuarantine), "usdt-tether", makeResponse());
+      const body = await result.json() as Record<string, unknown>;
+      expect(body.currentSupplyUnavailableReason).toBe("supply-chain-dropout");
+      expect(body.currentCirculatingUSD).toBeUndefined();
+      expect(body.tokens).toEqual(tokens);
+
+      const summary = projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(body));
+      expect(summary.circulating).toEqual({});
+      expect(summary.supplyRestored).toBe(true);
+      expect(summary.supplyObservedAt).toBeNull();
+      expect(summary.nativeSupply.current).toBeNull();
+    });
+
+    it("ignores a provider-supplied unavailability marker when canonical supply is observed", async () => {
+      const result = await enrichMissingDetailPrice(makeDb({ circulating: { peggedUSD: 100 } }), "usdt-tether",
+        makeResponse(JSON.stringify({ tokens, currentSupplyUnavailableReason: "supply-chain-dropout" })));
+      const body = await result.json() as Record<string, unknown>;
+      expect(body.currentSupplyUnavailableReason).toBeUndefined();
+      expect(projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(body)).circulating)
+        .toEqual({ peggedUSD: 100 });
+    });
   });
 });
 

@@ -19,9 +19,10 @@ export async function enrichMissingDetailPrice(
   try {
     const detail = await response.clone().json() as Record<string, unknown> | null;
     if (!detail || typeof detail !== "object" || Array.isArray(detail)) return response;
-    // Only the admitted canonical publication can set restoration provenance.
-    if ("currentSupplyRestored" in detail) {
+    // Only the admitted canonical publication can set restoration or unavailability provenance.
+    if ("currentSupplyRestored" in detail || "currentSupplyUnavailableReason" in detail) {
       delete detail.currentSupplyRestored;
+      delete detail.currentSupplyUnavailableReason;
       const headers = new Headers(response.headers);
       headers.delete("Content-Length");
       response = new Response(JSON.stringify(detail), { status: response.status, statusText: response.statusText, headers });
@@ -69,6 +70,13 @@ export async function enrichMissingDetailPrice(
       detail.currentSupplyObservedAt = typeof supplyObservedAt === "number" && Number.isFinite(supplyObservedAt) &&
         supplyObservedAt > 0 && supplyObservedAt <= now ? supplyObservedAt : canonical.updatedAt;
     }
+    // A quarantined row past its carry ceiling publishes `{}`: current supply is explicitly
+    // unavailable, and provider history must not stand in for it (R1/R2).
+    const supplyUnavailable = coin != null && !coin.frozen && stablecoinId !== LEGACY_SOLOMON_USDV_ID &&
+      !hasCurrentSupply && coin.supplyChainGuard?.status === "unavailable";
+    if (supplyUnavailable) {
+      detail.currentSupplyUnavailableReason = coin.supplyChainGuard!.reason;
+    }
     if (coin?.nominalPriceReference) detail.nominalPriceReference = coin.nominalPriceReference;
     const observedAt = coin?.priceObservedAt ?? coin?.priceUpdatedAt;
     const canEnrichPrice = !hasDetailPrice && coin != null && !coin.frozen && isObservedPrice(coin) &&
@@ -77,7 +85,7 @@ export async function enrichMissingDetailPrice(
       !!coin.priceSource && coin.priceSource !== "cached" &&
       (coin.priceConfidence === "high" || coin.priceConfidence === "single-source") &&
       typeof observedAt === "number" && Number.isFinite(observedAt) && observedAt > 0 && observedAt <= now;
-    if (!hasCurrentSupply && !coin?.nominalPriceReference && !canEnrichPrice) return response;
+    if (!hasCurrentSupply && !supplyUnavailable && !coin?.nominalPriceReference && !canEnrichPrice) return response;
 
     const headers = new Headers(response.headers);
     // Detail display follows the current publication, not the stricter observation
