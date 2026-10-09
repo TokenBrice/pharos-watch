@@ -55,7 +55,9 @@ const PairStateSchema = z.object({
   // pair stays flagged, repairs stay withheld and a material drop holds this pre-ambiguity vetted
   // whole-asset total: once the inflated healthy chain becomes its own baseline, the gain is invisible.
   ambiguousSince: TimestampSchema.optional(),
-  heldTotalUsd: z.number().finite().nonnegative().optional(),
+  // `null`: no complete coherent total was available when attribution became ambiguous (R1), so a
+  // material drop publishes unavailable supply rather than a partial sum.
+  heldTotalUsd: z.number().finite().nonnegative().nullable().optional(),
 }).strict();
 export const ChainDropoutStateSchema = z.object({ version: z.literal(1), pairs: z.record(z.string(), PairStateSchema) }).strict();
 export type ChainDropoutState = z.infer<typeof ChainDropoutStateSchema>;
@@ -213,7 +215,7 @@ function recoverStateFromPublication(state: ChainDropoutState, previousAssetsByI
             baselineSource: "state",
             quarantinedSince: guard.quarantinedSince ?? now,
             ...(guard.concurrentGainUsd != null ? { ambiguousSince: guard.quarantinedSince ?? now } : {}),
-            ...(heldTotal != null ? { heldTotalUsd: heldTotal } : {}),
+            ...(guard.concurrentGainUsd != null ? { heldTotalUsd: heldTotal } : {}),
           };
       }
     }
@@ -250,7 +252,7 @@ export async function guardChainDropouts(input: {
   const candidates: Candidate[] = [];
   // Per asset: same-run gains on healthy chains, and the pre-run vetted whole-asset total
   // (each chain at its persisted/seed/prev-day reference, before this run moves any baseline).
-  const conservation = new Map<PeggedAsset, { gains: number; vettedTotal: number }>();
+  const conservation = new Map<PeggedAsset, { gains: number; vettedTotal: number; vettedComplete: boolean }>();
   for (const asset of input.assets) {
     const meta = ACTIVE_META_BY_ID.get(String(asset.id));
     if (!meta || meta.detailProvider !== "defillama" || asset.frozen || asset.supplyRestored || input.skipAssetIds?.has(meta.id) || (asset.supplySource && asset.supplySource !== "defillama")) continue;
@@ -277,8 +279,10 @@ export async function guardChainDropouts(input: {
       const baselineSource = previous ? "state" : seed ? "seed" : "list-prev-day";
       const pair: PairState = previous ?? { assetId: meta.id, chainLabel: label, ...(group.chainId ? { chainId: group.chainId } : {}), baselineUsd: baseline ?? 0, baselineObservedAt: seed ? CHAIN_DROPOUT_SEED_OBSERVED_AT : Math.max(0, now - 86400), baselineSource, quarantinedSince: null };
       const flagged = baseline != null && baseline >= CHAIN_DROPOUT_POLICY.minBaselineUsd && (observation.current == null || observation.current <= CHAIN_DROPOUT_POLICY.collapseRatio * baseline);
-      const totals = conservation.get(asset) ?? { gains: 0, vettedTotal: 0 };
-      totals.vettedTotal += baseline ?? observation.current ?? 0;
+      const totals = conservation.get(asset) ?? { gains: 0, vettedTotal: 0, vettedComplete: true };
+      // A chain with neither a reference nor a current observation leaves the vetted total unknown (R1).
+      if (baseline == null && observation.current == null) totals.vettedComplete = false;
+      else totals.vettedTotal += baseline ?? observation.current!;
       if (!flagged && observation.current != null && baseline != null && observation.current > baseline) {
         totals.gains += observation.current - baseline;
       }
@@ -357,7 +361,7 @@ export async function guardChainDropouts(input: {
     // or carry could double count, so without reviewed bridge-aware accounting every additive repair and
     // carry is withheld (observed amounts stay in logs, never scaled or clamped), the dropped chains
     // publish unavailable, and a material drop holds the vetted whole-asset total from before the gain.
-    const { gains, vettedTotal } = conservation.get(asset)!;
+    const { gains, vettedTotal, vettedComplete } = conservation.get(asset)!;
     // A native confirmation at or below the list value is non-additive: it cannot double count, so it
     // stands (an independently confirmed redemption) and leaves the unresolved deficit.
     const confirmations = affected.filter((candidate) =>
@@ -368,10 +372,17 @@ export async function guardChainDropouts(input: {
     const persisted = unresolved.find((candidate) => candidate.state.ambiguousSince != null);
     const ambiguous = ambiguousNow || persisted != null;
     // The held total must not resurrect a chain whose redemption was natively confirmed: replace that
-    // chain's vetted baseline (inside the held total) with its confirmed native amount.
+    // chain's contribution with its confirmed native amount. That contribution is exact only for a
+    // total summed this run (its reference is the same pre-run baseline); a persisted packet froze an
+    // earlier, unrecorded contribution that later baselines may have moved, so it becomes unknown (R1).
+    // A negative remainder is inconsistent evidence, never clamped to a published zero (R7).
     const confirmedAdjustment = confirmations
       .reduce((sum, candidate) => sum + candidate.evidence.baselineUsd - candidate.evidence.repairedCurrentUsd!, 0);
-    const heldTotal = Math.max(0, (persisted?.state.heldTotalUsd ?? vettedTotal) - confirmedAdjustment);
+    // A persisted hold (number, or null when it was unknown) wins over a re-summed total whose healthy
+    // baselines may already have absorbed the reattributed supply.
+    const heldBase = persisted ? persisted.state.heldTotalUsd ?? null : vettedComplete ? vettedTotal : null;
+    const adjustedHeld = heldBase == null || (persisted != null && confirmations.length > 0) ? null : heldBase - confirmedAdjustment;
+    const heldTotal = adjustedHeld != null && adjustedHeld >= 0 ? adjustedHeld : null;
     if (ambiguous) {
       for (const candidate of unresolved) {
         candidate.state.ambiguousSince ??= now;
@@ -434,12 +445,12 @@ export async function guardChainDropouts(input: {
       asset.supplyRestored = true;
       result.quarantinedAssetIds.push(String(asset.id));
       asset.supplyObservedAt = Math.min(...unrepaired.map((candidate) => candidate.evidence.baselineObservedAt));
-      if (now - quarantinedSince > SUPPLEMENTAL_RESTORE_MAX_AGE_SEC) {
+      if (now - quarantinedSince > SUPPLEMENTAL_RESTORE_MAX_AGE_SEC || (ambiguous && heldTotal == null)) {
         asset.circulating = {};
         status = "unavailable";
         result.unavailableAssetIds.push(String(asset.id));
       } else {
-        asset.circulating![pegKey] = ambiguous ? heldTotal : (asset.circulating![pegKey] ?? 0) + deficit;
+        asset.circulating![pegKey] = ambiguous ? heldTotal! : (asset.circulating![pegKey] ?? 0) + deficit;
         status = "quarantined";
         for (const candidate of unrepaired) {
           candidate.evidence.resolution = "carried-baseline";

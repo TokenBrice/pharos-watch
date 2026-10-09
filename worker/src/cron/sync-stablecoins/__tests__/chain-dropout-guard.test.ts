@@ -194,6 +194,55 @@ describe("chain dropout guard", () => {
     expect(result.state.pairs[JSON.stringify(["usdg-paxos", "xlayer"])]).toMatchObject({ baselineUsd: nativeUsd, quarantinedSince: null, releasedAt: now });
   });
 
+  it("publishes unavailable, not a partial held total, when an ambiguous asset has a chain with no reference or current", async () => {
+    const now = CHAIN_DROPOUT_SEED_VALID_UNTIL + DAY;
+    const state: ChainDropoutState = { version: 1, pairs: {
+      [JSON.stringify(["usdg-paxos", "xlayer"])]: { assetId: "usdg-paxos", chainLabel: "X Layer", chainId: "xlayer", baselineUsd: 100_000_000, baselineObservedAt: now - 900, baselineSource: "state", quarantinedSince: null },
+      [JSON.stringify(["usdg-paxos", "ethereum"])]: { assetId: "usdg-paxos", chainLabel: "Ethereum", chainId: "ethereum", baselineUsd: 20_000_000, baselineObservedAt: now - 900, baselineSource: "state", quarantinedSince: null },
+    } };
+    const asset: PeggedAsset = {
+      ...usdg(),
+      circulating: { peggedUSD: 25_000_000 },
+      chainCirculating: {
+        Ethereum: { current: 25_000_000, circulatingPrevDay: 20_000_000 },
+        "X Layer": { current: 0, circulatingPrevDay: 100_000_000 },
+        Ink: { current: null },
+      },
+    };
+    const result = await guardChainDropouts({ assets: [asset], now, state });
+    expect(asset.circulating).toEqual({});
+    expect(asset).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "unavailable" } });
+    expect(result.unavailableAssetIds).toEqual(["usdg-paxos"]);
+    expect(result.state.pairs[JSON.stringify(["usdg-paxos", "xlayer"])]).toMatchObject({ heldTotalUsd: null, quarantinedSince: now });
+  });
+
+  it("makes a persisted ambiguous hold unknown, never a clamped zero, when another chain is later natively confirmed", async () => {
+    const now = CHAIN_DROPOUT_SEED_VALID_UNTIL + DAY;
+    const contract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
+    mocks.onchain.mockResolvedValue(0n * 10n ** BigInt(contract.decimals!));
+    // Frozen $100M packet held for Solana (B=$80M) when X Layer (A) was $20M; A then grew to $100M
+    // as an independent baseline before burning to a natively confirmed zero.
+    const state: ChainDropoutState = { version: 1, pairs: {
+      [JSON.stringify(["usdg-paxos", "solana"])]: { assetId: "usdg-paxos", chainLabel: "Solana", chainId: "solana", baselineUsd: 80_000_000, baselineObservedAt: now - 2 * DAY, baselineSource: "state", quarantinedSince: now - DAY, ambiguousSince: now - DAY, heldTotalUsd: 100_000_000 },
+      [JSON.stringify(["usdg-paxos", "xlayer"])]: { assetId: "usdg-paxos", chainLabel: "X Layer", chainId: "xlayer", baselineUsd: 100_000_000, baselineObservedAt: now - 900, baselineSource: "state", quarantinedSince: null },
+    } };
+    const asset: PeggedAsset = {
+      ...usdg(),
+      circulating: { peggedUSD: 0 },
+      chainCirculating: {
+        Solana: { current: 0, circulatingPrevDay: 0 },
+        "X Layer": { current: 0, circulatingPrevDay: 100_000_000 },
+      },
+    };
+    const result = await guardChainDropouts({ assets: [asset], now, state });
+    expect(asset.chainCirculating!["X Layer"].current).toBe(0);
+    expect(asset.chainCirculating!.Solana.current).toBeNull();
+    expect(asset.circulating).toEqual({});
+    expect(asset).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "unavailable" } });
+    expect(result.unavailableAssetIds).toEqual(["usdg-paxos"]);
+    expect(result.state.pairs[JSON.stringify(["usdg-paxos", "solana"])]).toMatchObject({ heldTotalUsd: null, quarantinedSince: now - DAY });
+  });
+
   it("uses reviewed native onchain units at USD par for repair", async () => {
     const contract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
     mocks.onchain.mockResolvedValue(1_409_030_000n * 10n ** BigInt(contract.decimals!));
