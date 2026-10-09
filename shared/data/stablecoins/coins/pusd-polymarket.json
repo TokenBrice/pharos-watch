@@ -2,13 +2,13 @@
   "id": "pusd-polymarket",
   "name": "Polymarket USD",
   "symbol": "PUSD",
-  "oneLiner": "PUSD is Polymarket's USDC-backed prediction-market account stablecoin on Polygon; minted when users deposit USDC and redeemable through the Polymarket app.",
+  "oneLiner": "PUSD is Polymarket's USDC-backed prediction-market account token on Polygon, with an onchain unwrap route to USDC.e subject to administrative pausing.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
   "collateral": "USDC and bridged USDC.e backing on Polygon used for Polymarket prediction-market account balances",
-  "pegMechanism": "Minted when users deposit supported USDC into Polymarket rails and redeemable back to USDC through the Polymarket application flow",
+  "pegMechanism": "Supported USDC deposits mint pUSD; holders can approve the CollateralOfframp and call unwrap to receive USDC.e on Polygon, subject to the shared administrative pause gate",
   "detailProvider": "defillama",
   "geckoId": "polymarket-usd",
   "llamaId": "406",

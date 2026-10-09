@@ -12,7 +12,7 @@
     "m0"
   ],
   "collateral": "Fully reserved 1:1 by U.S. dollars and other high-quality liquid USD-denominated assets held in segregated accounts for stablecoin holders; MoonPay's terms allow depository institutions, qualified custodians, and secure virtual-currency wallets but do not publish XO's current asset allocation",
-  "pegMechanism": "1:1 fiat-backed mint and redemption operated by MoonPay using M0 infrastructure on Solana; consumer access is provided through the Exodus self-custodial wallet and Exodus Pay app, with on/off ramps via MoonPay's payment rails; the Solana SPL Token-2022 mint includes pausable, permanent-delegate, and transfer-hook controls held by MoonPay",
+  "pegMechanism": "1:1 fiat-backed mint and redemption operated by MoonPay using M0 infrastructure on Solana; consumer access is provided through Exodus Pay and MoonPay's payment rails. MoonPay's Stablecoin Terms require onboarding, exclude customers in Canada, New York, Colorado, and the EEA, and promise commercially reasonable redemption efforts without a stated end-to-end settlement maximum. The Solana SPL Token-2022 mint includes pausable, permanent-delegate, and transfer-hook controls held by MoonPay.",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "xo-cash",
@@ -32,6 +32,10 @@
     {
       "label": "M0 Dashboard",
       "url": "https://dashboard.m0.org/stablecoins"
+    },
+    {
+      "label": "Stablecoin Terms",
+      "url": "https://www.moonpay.com/legal/stablecoin_terms"
     }
   ],
   "jurisdiction": {

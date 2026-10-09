@@ -9,7 +9,7 @@
     "governance": "centralized"
   },
   "collateral": "Brazilian real (BRL) cash reserves held at a financial institution authorized by the Central Bank of Brazil",
-  "pegMechanism": "1:1 mint and redemption at Transfero for BRL; KYC verification required; redemption incurs a 1% fee in Brazil",
+  "pegMechanism": "1:1 mint and redemption for BRL through Transfero's reserve-manager and teller process; KYC verification is required. The historically reviewed Brazil redemption fee is 1%. The current linked whitepaper describes token burning and a reserve-manager payment order but does not state a maximum end-to-end fiat payout time.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "249",
   "detailProvider": "coingecko",
@@ -50,6 +50,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/BrzToken"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf"
     }
   ],
   "jurisdiction": {

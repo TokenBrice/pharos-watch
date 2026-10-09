@@ -69,6 +69,10 @@
     "confidence": "verified",
     "sources": [
       {
+        "label": "Alto foundation report August 27, 2026, pages 18-21 (scope-only review by Sol curation campaign 2026-10-09 (Lane54Enosys), observed 2026-10-09T10:30:34Z)",
+        "url": "https://www.altofoundation.org/transparency/alto-foundation-transparency-report-2025-26.pdf"
+      },
+      {
         "label": "Alto issuer protocol snapshot generated 2026-09-30T04:59:16.540Z (accessed 2026-09-30)",
         "url": "https://www.altofoundation.org/api/protocol-snapshot"
       },
@@ -93,7 +97,7 @@
     "compositionBasis": "Issuer active mint-market nominal DUSD debt from 2026-09-30T04:59:16.540Z plus pinned frxUSD USM balance at Ethereum block 26088256",
     "compositionAsOf": "2026-09-30",
     "scope": "selected-slices",
-    "knownUnknownExposure": "At Ethereum block 26098753 on 2026-10-01, the 18 recorded minters' minted counters sum exactly to totalSupply (1,323,222.932595131357881304 DUSD). The omitted majority path is AltoConvexCreditLineMarket 0x6b3458c87cd38aefa6a5d059eb19f609420dd852 with 999,000 DUSD minted. Its collateral is Curve LP 0x104d6a1b97a6cef88d905d7b865a378d90be932a, staked in Convex reward pool 0x0e80fe9d6f6df530ab2ff69ad0259e77e2ffedeb; LP coins are frxUSD and DUSD itself. These verified identities reconcile issuance but do not turn the historical selected-slice nominal weights into whole-reserve market-value weights. Full composition requires LP look-through, elimination of self-issued DUSD and valuation of remaining market collateral.",
+    "knownUnknownExposure": "At Ethereum block 26098753 on 2026-10-01, the 18 recorded minters' minted counters sum exactly to totalSupply (1,323,222.932595131357881304 DUSD). The omitted majority path is AltoConvexCreditLineMarket 0x6b3458c87cd38aefa6a5d059eb19f609420dd852 with 999,000 DUSD minted. Its collateral is Curve LP 0x104d6a1b97a6cef88d905d7b865a378d90be932a, staked in Convex reward pool 0x0e80fe9d6f6df530ab2ff69ad0259e77e2ffedeb; LP coins are frxUSD and DUSD itself. These verified identities reconcile issuance but do not turn the historical selected-slice nominal weights into whole-reserve market-value weights. Full composition requires LP look-through, elimination of self-issued DUSD and valuation of remaining market collateral. Sol curation campaign 2026-10-09 (Lane54Enosys), observed 2026-10-09T10:30:34Z: the issuer API snapshot generated 2026-10-09T10:13:13.699Z lists eight mint/borrow markets and $196,153.47 TVL against $1,315,846.88 DUSD supply, but no USM inventory, majority credit-line LP look-through or reconciled whole-backing denominator. The August 27 foundation report pages 18-21 gives historical treasury and PSM/mint figures; its treasury list expressly excludes holdings below $1,000 and LP venues can change. Neither disclosure supplies a current complete composition. Historical weights and compositionAsOf remain unchanged; the scoped reserve-composition gap is classified C in the campaign fragment.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

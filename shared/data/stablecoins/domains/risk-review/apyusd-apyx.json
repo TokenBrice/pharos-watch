@@ -13,10 +13,10 @@
     "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
-    "tier": "external-validated-network",
-    "summary": "apyUSD is an ERC-4626 wrapper over canonical Ethereum apxUSD. Ethereum is the native Lock/Release home; Base, BNB Chain, and Solana are Chainlink CCIP Burn/Mint representations. Chainlink's current directory identifies the exact token pool controlling bridge mint and burn on every representation: Base 0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d, BNB Chain 0x363332b186a4afce7a754a49f34d1543aec5e786, and Solana H8om8rLRoDiGgveP6rbdQ2irWgjzdfanSe9tdCr6FYxE.",
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Ctrl1)",
+    "tier": "external-lock-mint",
+    "summary": "apyUSD is an ERC-4626 wrapper over canonical Ethereum apxUSD. The Chainlink directory observed at 2026-10-09T10:38:09Z identifies Ethereum LockRelease pool 0x0f1bac2ea0311130da778c1ca287204338739f73 and BurnMint pools on Base, BNB Chain, and Solana. Those destination tokens represent locked Ethereum shares, so the end-to-end bridge risk tier is external-lock-mint even though remote pools burn and mint locally. Exact published pools remain Base 0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d, BNB Chain 0x363332b186a4afce7a754a49f34d1543aec5e786, and Solana H8om8rLRoDiGgveP6rbdQ2irWgjzdfanSe9tdCr6FYxE. This directory review establishes route identity and pool mechanics only; it does not refresh historical controller pins, establish current authority closure, or supply runtime materiality shares.",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane16Vaneck)",
     "confidence": "verified",
     "protocols": [
       {
@@ -29,7 +29,7 @@
           "burn-mint",
           "lock-release"
         ],
-        "note": "The official directory lists all four authored deployments: Ethereum as Lock/Release home, and Base, BNB Chain and Solana as Burn/Mint representations. The three representation token pools have route-scoped bridge-mint and bridge-burn controls."
+        "note": "The directory observed at 2026-10-09T10:38:09Z lists all four authored deployments: Ethereum LockRelease pool 1.6.1, Base and BNB Chain BurnMint pools 1.6.1, and Solana BurnMint pool 1.6.2. The home lockbox makes the end-to-end representation route external-lock-mint; destination-local burn/mint remains recorded separately."
       }
     ],
     "sources": [
@@ -85,7 +85,7 @@
         "protocol": "Chainlink CCIP (BurnMintTokenPool)",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
-        "riskTier": "external-validated-network",
+        "riskTier": "external-lock-mint",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
@@ -128,7 +128,7 @@
         "protocol": "Chainlink CCIP (BurnMintTokenPool)",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
-        "riskTier": "external-validated-network",
+        "riskTier": "external-lock-mint",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
@@ -161,7 +161,7 @@
         "protocol": "Chainlink CCIP (BurnMintTokenPool)",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
-        "riskTier": "external-validated-network",
+        "riskTier": "external-lock-mint",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",

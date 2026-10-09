@@ -458,13 +458,13 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0xe35a879e5efb4f1bb7f70dcf3250f2e19f096bd8",
         "protocol": "Curve LayerZero scrvUSD bridge and MinterProxy",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Etherlink block 54935229 still identifies 1100000000000000000 raw shares and the documented MinterProxy/bridge. Terminating indexed token and bridge pages contain two mints/Issued events totaling that amount and no burns or Delayed events, but the independent creation-to-pin RPC census remains incomplete. Native RPC rejects broad history ranges, Ankr caps requests at 500 blocks, the alternate Thirdweb endpoint caps at 112 blocks, and the RouteMe endpoint returns 429; the indexed history is not promoted to definitive incident absence. A complete indexed endpoint history locates default receive version 1 at block 1076508 and its change to version 3 at block 50248990. The complete current-library indexed history contains 75 events, but the earlier receive-library configuration and controller incident coverage are not independently closed. Current uaConfigLookup is zero, so the bridge inherits mutable defaults; receive version 3 resolves to 0x282b3386571f7f794450d5789911a9804fa346b4, whose configuration requires 15 confirmations and four required DVNs, without optional DVNs. The complete Curve archive, issuer X/blog, audit indexes and rekt reporting were searched, including direct scoped KelpDAO, DNS and vsdCRV disclosures; these do not fill the asset-specific historical gap. The single indexed set_minter grant is not an exhaustive trace/permission or signer-custody certificate. Owner-grantable uncapped mint and mutable default authority remain adverse. No incident-free route, zero undelivered messages, complete execution scope or supply-partition claim is made.",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Route identity only reviewed by Sol curation campaign 2026-10-09 (Lane36Curve) at 2026-10-09T10:40:49Z. The immutable issuer manifest identifies the exact Ethereum/Etherlink bridge, satellite and MinterProxy. Ethereum verified source locks canonical scrvUSD with transferFrom and releases escrow on authenticated inbound messages; Etherlink source burns outbound satellite shares and calls the MinterProxy on authenticated inbound messages. Dwellir reads observed 2026-10-09T10:40:26.488Z at Etherlink block 54935229, hash 0xba51ff585334be6586499d6349746eff300cda9d3e98bd3f661761e51337e9df, timestamp 2026-10-05T08:03:34Z, independently return the exact satellite, endpoint and MinterProxy bindings. This establishes an external lock-mint peripheral representation, without refreshing the historical control review. Etherlink block 54935229 still identifies 1100000000000000000 raw shares and the documented MinterProxy/bridge. Terminating indexed token and bridge pages contain two mints/Issued events totaling that amount and no burns or Delayed events, but the independent creation-to-pin RPC census remains incomplete. Native RPC rejects broad history ranges, Ankr caps requests at 500 blocks, the alternate Thirdweb endpoint caps at 112 blocks, and the RouteMe endpoint returns 429; the indexed history is not promoted to definitive incident absence. A complete indexed endpoint history locates default receive version 1 at block 1076508 and its change to version 3 at block 50248990. The complete current-library indexed history contains 75 events, but the earlier receive-library configuration and controller incident coverage are not independently closed. Current uaConfigLookup is zero, so the bridge inherits mutable defaults; receive version 3 resolves to 0x282b3386571f7f794450d5789911a9804fa346b4, whose configuration requires 15 confirmations and four required DVNs, without optional DVNs. The complete Curve archive, issuer X/blog, audit indexes and rekt reporting were searched, including direct scoped KelpDAO, DNS and vsdCRV disclosures; these do not fill the asset-specific historical gap. The single indexed set_minter grant is not an exhaustive trace/permission or signer-custody certificate. Owner-grantable uncapped mint and mutable default authority remain adverse. No incident-free route, zero undelivered messages, complete execution scope or supply-partition claim is made.",
         "controllerChain": "etherlink",
         "controllerAddress": "0x5bca7ddf1bcccb2ee8e46c56bfc9d3cdc77262bc",
         "observedAt": "2026-10-05",
@@ -505,6 +505,14 @@
           {
             "label": "Etherlink indexed endpoint history; default receive version 1 to 3 migration",
             "url": "https://explorer.etherlink.com/api/v2/addresses/0x2d61dcdd36f10b22176e0433b86f74567d529aaa/logs"
+          },
+          {
+            "label": "Verified Ethereum scrvUSD Etherlink escrow source: canonical lock and release",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2e16150df237f938cc70730895de33eb45594419"
+          },
+          {
+            "label": "Dwellir Etherlink immutable bridge binding reads at block 54935229, timestamp 2026-10-05T08:03:34Z",
+            "url": "https://api-etherlink-mainnet.n.dwellir.com"
           }
         ]
       }

@@ -33,13 +33,25 @@
       {
         "label": "dTRINITY official website",
         "url": "https://www.dtrinity.org/"
+      },
+      {
+        "label": "Pinned official Fraxtal JSON-RPC: root, vault and adapter census",
+        "url": "https://rpc.frax.com"
+      },
+      {
+        "label": "Verified Fraxtal DStakeCollateralVault source and ABI",
+        "url": "https://fraxscan.com/address/0x5432ed4a370718d6904485e2fc114762c68cc7be#code"
+      },
+      {
+        "label": "Verified Fraxtal DStakeRouterDLend source and ABI",
+        "url": "https://fraxscan.com/address/0xefc15efb330112a2c313d5da8f1b29893ad4cd99#code"
       }
     ],
     "rationale": "dTRINITY documents sdUSD as an ERC-4626 receipt whose dUSD is supplied into dLEND. The live deployed-position row is therefore classified as a dLEND protocol position with a tracked dUSD wrapper dependency. Unstaking is permissionless but depends on unutilized dLEND liquidity, so no fixed liquidity horizon is asserted.",
     "compositionBasis": "Live ERC-4626 deployed-position observation on 2026-09-21 plus dTRINITY sdUSD and dLEND documentation",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The dUSD dependency is identified at 100%, but dLEND market allocation, utilization, and available unstaking liquidity are dynamic.",
+    "knownUnknownExposure": "The dUSD dependency is identified at 100%, but dLEND market allocation, utilization, and available unstaking liquidity are dynamic. Separate technical census by Sol curation campaign 2026-10-09 (W2L15Nereus), observed 2026-10-09T11:53:45Z, recovered Fraxtal state through the official keyless RPC after the Dwellir helper rejected its unregistered chain. Numeric block 42367956, hash 0x8ea9afdf491ea20bcafc15dc8ebf8d3d35d816147f6c71f8227a2855a816080f, timestamp 2026-10-09T11:50:23Z, had matching before/after headers. Fraxtal sdUSD 0x58acc2600835211dcb5847c5fa422791fd492409 points to vault 0x5432ed4a370718d6904485e2fc114762c68cc7be and router 0xefc15efb330112a2c313d5da8f1b29893ad4cd99; the vault corroborates the same router, sdUSD and dUSD 0x788d96f655735f52c676a133f4dfc53cec614d4a. getSupportedAssets returned only 0xdf697e9608cd286f83d8f76f33a258ac1a8d2764, also the router's default deposit asset, mapped to adapter 0xced414797155d79fce11bf3d11f36b1b31860e08. That share balance was 41190618876 raw units at the vault and zero at the root/router; dUSD balances were zero at the root/vault and 48 raw units at the router. These are current local technical observations, not USD weights, whole-allocation completeness, downstream debt or absence-of-borrowing proof. Ethereum router/module/adaptor and both chains' reachable lending surfaces still require closure. Composition percentages, composition clock, custody safeguards and expired August allocation review are unchanged.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -55,16 +67,20 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane21Finchain)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "dTRINITY sdUSD documentation",
         "url": "https://docs.dtrinity.org/protocol-components/sdusd"
+      },
+      {
+        "label": "dTRINITY dLEND lending and risk-management documentation",
+        "url": "https://docs.dtrinity.org/protocol-components/dlend"
       }
     ],
-    "uncertainty": "The protocol identifies on-chain dSTAKE and dLEND contracts but does not establish legal segregation, bankruptcy remoteness, or rehypothecation treatment for dUSD supplied to lending markets."
+    "uncertainty": "Capital reuse reviewed at 2026-10-09T10:39:47Z: dSTAKE supplies its dUSD to dLEND's shared pool for borrowers, exposing sdUSD holders to borrower credit, utilization and bad-debt risk. The documented restriction on rehypothecating borrower-posted collateral does not prohibit lending the vault's supplied dUSD. Legal segregation and bankruptcy remoteness remain unknown; those safeguards were not re-reviewed or upgraded. This standing strategy disclosure is not a current whole-allocation inventory, leverage bound or executable unstaking measurement."
   }
 }

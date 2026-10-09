@@ -14,7 +14,7 @@ import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fa
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 
-const now = Date.UTC(2026, 9, 8, 12) / 1_000;
+const now = Date.UTC(2026, 9, 10, 12) / 1_000;
 const supplyUsd = 100_000_000;
 const db = {} as D1Database;
 const eventualClaims = [
@@ -174,12 +174,12 @@ describe("RD2 issuer-fee and output boundaries", () => {
 
   it("keeps GLDon's instant alternatives separate from the standard USDC/USDT investor put", async () => {
     const { config, observation, reviews } = await captured("gldon-ondo");
-    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBe(10);
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
     // RD5-03 withholds completed-settlement scalars despite the diagnostic immediate category.
     expect(resolveReviewedRedemptionSettlementDelay(config.v9RouteReviewTerms, now)).toBeUndefined();
-    expect(observation).toMatchObject({ scoreEligible: false, output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdon-ondo", "usdc-circle"] } });
+    expect(observation).toMatchObject({ scoreEligible: false, output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdon-ondo"] } });
     expect(observation.output).not.toHaveProperty("basketWeights");
-    expect(reviews).toMatchObject([{ holderAccess: "allowlisted", coverageClass: "diagnostic", minRedeemUsd: 1 }]);
+    expect(reviews).toMatchObject([{ holderAccess: "institutional-eligible", coverageClass: "diagnostic", minRedeemUsd: 1 }]);
   });
 
   it("retains GoldZip physical delivery without inventing USD proceeds or free delivery", async () => {

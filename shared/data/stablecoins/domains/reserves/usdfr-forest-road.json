@@ -99,7 +99,7 @@
     "compositionBasis": "Pinned Ethereum ReserveManager totalBackingValue/deployedPrincipal and canonical USDC balance at block 26107707",
     "compositionAsOf": "2026-10-02",
     "scope": "full-composition",
-    "knownUnknownExposure": "Deployed credit book has onchain accounting and facility identifiers, but borrower identities, executed liens/segregation instruments, independently confirmed collateral and financial assurance remain unavailable. Idle USDC alone creates the tracked collateral dependency.",
+    "knownUnknownExposure": "Deployed credit book has onchain accounting and facility identifiers, but borrower identities, executed liens/segregation instruments, independently confirmed collateral and financial assurance remain unavailable. Idle USDC alone creates the tracked collateral dependency. The October 9 liquidity review found no whole-credit-book realization deadline: issuer operating limits bound direct USDfr redemption by idle USDC, while principal and PIK accrual enter NAV before cash arrives. The sUSDfr queue's 21-day minimum is a separate holder route, not a maximum liquidity horizon for this credit-book exposure; the timestamped research classification preserves that distinction.",
     "knownUnknownExposurePct": 97.344125,
     "nonLinkDispositions": [
       {

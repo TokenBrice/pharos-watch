@@ -2,6 +2,7 @@ import { defineConfigFamily } from "./factory";
 import type { RedemptionBackstopConfig } from "./shared";
 import {
   documentedBoundSupplyFull,
+  documentedVariableFee,
   fixedFee,
   queueRedeemBase,
   sourceRef,
@@ -53,15 +54,32 @@ export const NEST_NAV_VAULT_CONFIGS: Record<string, RedemptionBackstopConfig> = 
           0,
           `${ticker} NestVault fees(2) returned flat 0 and rate 0 on the documented Plume USDC and pUSD paths at Plume block 97180152 (2026-10-03); this zero covers only the direct queued-redemption fee, not transaction gas, optional bridge legs, or other chains`,
         )
-      : undisclosedReviewedFee(
-          `Nest docs describe ${ticker} redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee`,
-        ),
+      : id === "nopal-nest"
+        ? documentedVariableFee(
+            "nOPAL queued redemption applies a configurable percentage plus flat fee. The exact Plume USDC read-only quote for 100000000000 raw shares on 2026-10-09 returned ratePpm 150, flatAmount 0 and feeAmount 16557225 raw USDC. This route-specific observation is not an asset-wide fixed fee, a same-notional all-in cost, or a guarantee for other chains or outputs.",
+            "formula",
+          )
+        : undisclosedReviewedFee(
+            `Nest docs describe ${ticker} redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee`,
+          ),
       docs: [
         ...nestNavVaultBase.docs!,
         ...(zeroQueuedFee ? [
           sourceRef(
             "Nest protocol NestVaultCore fee source (reviewed 2026-10-03)",
             "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/NestVaultCore.sol",
+            ["fees"],
+          ),
+        ] : []),
+        ...(id === "nopal-nest" ? [
+          sourceRef(
+            "Nest nOPAL read-only redemption quote (reviewed 2026-10-09)",
+            "https://api.nest.credit/v1/actions/vaults/nest-opal-vault/redeem/quote",
+            ["fees"],
+          ),
+          sourceRef(
+            "Nest queued redemption percentage-plus-flat formula (reviewed 2026-10-09)",
+            "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/libraries/NestVaultRedeemLogic.sol",
             ["fees"],
           ),
         ] : []),

@@ -682,7 +682,7 @@
         "id": "0x729badf297ee9f2f6b3f717b96fd355fc6ec00422284ce1968e76647b258cf44",
         "label": "syrupUSDC collateral market 0x729badf2",
         "tier": "opaque-or-unknown",
-        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "summary": "Exact collateral/oracle identity and LLTV are established by the October 3 pinned census and corroborated by the October 9 Morpho marketById observation. Fully verified exact MorphoChainlinkOracleV2 source resolves its immediate valuation input: syrupUSDC convertToAssets(100000000), with all four external-feed slots and quote vault zero. The ChainlinkOracleV2 name therefore does not establish a Chainlink price feed. The oracle has no administrator, fallback or freshness check of its own; upstream syrupUSDC rate/controller closure remains incompletely reviewed. This is one market, not a second branch. No independence, redundancy, funded recovery or current allocation credit is claimed.",
         "collateralAssets": [
           "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
         ],
@@ -691,14 +691,15 @@
         ],
         "feeds": [
           {
-            "provider": "Unresolved feed/rate topology",
-            "path": "IOracle.price() at market oracle 0x80032f4cb6e3573b9ed61e888af658e48fb790cc; API returns zero external feed slots; conversion vault/rate path not fully reviewed",
-            "address": "0x80032f4cb6e3573b9ed61e888af658e48fb790cc",
+            "provider": "syrupUSDC ERC-4626 conversion rate; no external Chainlink feed in this exact oracle",
+            "path": "MorphoChainlinkOracleV2 0x80032f4cb6e3573b9ed61e888af658e48fb790cc BASE_VAULT=0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b, BASE_VAULT_CONVERSION_SAMPLE=100000000; price() consumes convertToAssets(sample); all BASE_FEED/QUOTE_FEED slots and QUOTE_VAULT are zero",
+            "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-09",
+            "observedBlock": 26110193
           }
         ],
-        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
+        "fallbackBehavior": "Fully verified immutable MorphoChainlinkOracleV2 source calls the syrupUSDC vault's convertToAssets(100000000) directly. Zero feed slots and quote vault contribute 1 by ChainlinkDataFeedLib/VaultLib; there is no alternative oracle, administrator setter, timestamp check or fallback in this oracle. A reverted upstream conversion propagates failure. Upstream syrupUSDC rate update/controller semantics remain a separate unresolved review; no heartbeat or staleness bound is invented.",
         "observedAt": "2026-10-03",
         "observedBlock": 26110193,
         "collateralParameters": [
@@ -721,12 +722,24 @@
             "url": "https://api.morpho.org/graphql"
           },
           {
+            "label": "Sol curation campaign 2026-10-09 (Lane23Steakhouse): chainId 1 marketById parameters and oracle type observed 2026-10-09T10:35:28Z; corroborates the existing pinned syrupUSDC branch",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
             "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
             "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
           },
           {
             "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Fully verified exact immutable syrupUSDC market oracle, decoded constructor inputs and VaultLib/ChainlinkDataFeedLib source; Sol curation campaign 2026-10-09 (W2L19Figure)",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80032f4cb6e3573b9ed61e888af658e48fb790cc"
+          },
+          {
+            "label": "Exact oracle runtime bytes equal the fully verified Blockscout deployment at Ethereum block 26110193, hash 0x7c1445e54e779269c3961399108a9635f407f54957917c55a4e806310376197b, timestamp 2026-10-03T07:03:47.000Z; observed 2026-10-09T11:43:17.954Z by Sol curation campaign 2026-10-09 (W2L19Figure)",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ]
       }

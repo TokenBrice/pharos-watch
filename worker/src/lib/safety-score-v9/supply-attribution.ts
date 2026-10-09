@@ -89,9 +89,10 @@ function hasUpstreamChainSupply(
   fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
   assetId: string,
 ): boolean {
-  return REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId)
-    ? hasCompleteEligibleProviderSupply(fixedInput, assetId)
-    : Object.values(fixedInput.chainCirculatingById[assetId] ?? {}).some(row => row.current > 0);
+  // A positive provider subtotal cannot suppress an exhaustive deployment
+  // census. Complete, current, aggregate-reconciled provider inventories still
+  // win; ambiguous same-chain rows and omitted zero legs do not.
+  return hasCompleteEligibleProviderSupply(fixedInput, assetId);
 }
 
 export function safetyScoreV9SupplyAttributionExpectedAssetIds(

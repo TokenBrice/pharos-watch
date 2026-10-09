@@ -10,8 +10,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-08",
-    "reviewer": "Pharos live-reserve identity-scope review RS6-05",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane48Initia)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -25,9 +25,21 @@
       {
         "label": "New-token identity and pool-roster check at Sonic block 80534069, 2026-10-07T20:23:36Z; accessed 2026-10-07T21:08:26.010Z",
         "url": "https://api-sonic-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Balanced v1 transition guide, accessed 2026-10-09",
+        "url": "https://docs.balanced.network/"
+      },
+      {
+        "label": "Balanced legacy loans and collateral withdrawal, accessed 2026-10-09",
+        "url": "https://docs.balanced.network/withdraw-funds"
+      },
+      {
+        "label": "Balanced old/new bnUSD migration identity, accessed 2026-10-09",
+        "url": "https://docs.balanced.network/migrate-assets"
       }
     ],
-    "rationale": "The tracked asset is legacy ICON bnUSD(old) v1. The historical SODAX Sonic borrower collateral census and pool custody review describe the distinct new bnUSD v2 token, not this liability. Those v2 weights, upstream dependency links and custody claims have been withdrawn from the legacy curated fallback. The unclassified residual is an explicit absence of attributable reserve composition, not a measured zero or a new financial observation. Correct v1 evidence requires its own complete Stability Fund, issuance, bridge and backing perimeter; a future v2 binding requires a separately reviewed identity and liability scope.",
+    "rationale": "The tracked asset is legacy ICON bnUSD(old) v1. The historical SODAX Sonic borrower collateral census and pool custody review describe the distinct new bnUSD v2 token, not this liability. Those v2 weights, upstream dependency links and custody claims remain excluded from the legacy curated fallback. The 2026-10-09 review of the issuer transition, withdrawal and migration documentation confirms that legacy loans require bnUSD(old), whereas the migration delivers a distinct new bnUSD at a stated 1:1 rate. These disclosures provide no complete dated legacy Stability Fund, collateral, issuance and bridge backing denominator. The unclassified residual records unresolved attributable composition, not measured zero backing. No historical composition date, v2 allocation or holder capacity is refreshed.",
     "compositionBasis": "Classification-only unclassified residual: no complete reserve census attributable to tracked legacy ICON bnUSD(old) is admitted",
     "scope": "classification-only",
     "knownUnknownExposure": "All backing attributable to tracked legacy ICON bnUSD(old) remains unresolved; the separate Sonic v2 borrower census establishes no legacy composition or holder capacity.",

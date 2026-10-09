@@ -77,7 +77,7 @@
         "reserveName": "GPU-backed infrastructure loans (NVIDIA hardware)",
         "pct": 36.98901914,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "GPU infrastructure loans are private-credit positions, not tracked stablecoin dependencies."
+        "rationale": "GPU infrastructure loans are private-credit positions, not tracked stablecoin dependencies. Sol curation campaign 2026-10-09 (Lane42Inverse), observed 2026-10-09T10:35:59Z: the current issuer reserve API publishes documentId, borrower, term in seconds, remaining amounts and share per loan. Borrower FAQ describes approximately 36-month amortization, while the overview describes 3-year principal amortization. Those descriptions do not establish a contractual maximum for every position in this September 21 reserve envelope. No maturityDaysMax, new weights or refreshed composition clock is inferred; current loan-term data requires a complete identity and gross-exposure reconciliation before a whole-slice observed-tenor bound can be admitted."
       }
     ]
   },

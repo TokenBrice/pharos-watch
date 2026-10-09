@@ -5,7 +5,7 @@
   "oneLiner": "USDSM is Stable mint Ltd's dollar token, backed by cash and liquid financial assets and redeemable at par after holder onboarding.",
   "flags": { "backing": "rwa-backed", "governance": "centralized" },
   "collateral": "Issuer-disclosed U.S. dollar cash deposits and high-quality liquid financial assets; current banks, asset weights and independently reconciled backing are undisclosed",
-  "pegMechanism": "Legal-person participants mint against received USD deposits; legal and natural holders can request par USD redemption after AML/KYC onboarding. Etherlink is the primary deployment, with LayerZero V2 burn-and-mint interoperability across Ethereum, Base and Arbitrum.",
+  "pegMechanism": "Legal-person participants mint against received USD deposits; legal and natural holders can request par USD redemption after issuer acceptance and AML/KYC onboarding, including Redemption-Only Clients. Terms sections 9.1 and 9.4 impose no redemption minimum or issuer redemption fee, but third-party bank/intermediary charges may apply. Payment is without undue delay after token receipt and screening; private-platform indicative processing periods do not establish a final-bank-receipt SLA. Etherlink is the primary deployment, with LayerZero V2 burn-and-mint interoperability across Ethereum, Base and Arbitrum.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

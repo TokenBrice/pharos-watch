@@ -98,28 +98,28 @@
   },
   "proofOfReserves": {
     "type": "agreed-upon-procedures",
-    "url": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
-    "provider": "KAP Jojo Sunarjo & Rekan (registered public accountant; August 2026 agreed-upon-procedures report, not an audit opinion)",
+    "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+    "provider": "KAP Jojo Sunarjo & Rekan (registered public accountant; September 2026 agreed-upon-procedures report, not an audit opinion)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Indonesia",
     "attestorLicense": "Registered Public Accountant licence 0444/KM.1/2013",
     "latestReport": {
-      "periodEnd": "2026-08-28",
-      "publishedAt": "2026-09-01",
-      "publishedAtBasis": "signed-date-standin",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-09",
+      "publishedAtBasis": "explicit",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "Sol curation pass 2026-10-01 (R2VMisc07; complete signed pages rendered)",
+      "liabilityReconciliation": "partial",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane19Sygnum)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "IDRX August 28, 2026 AUP; complete signed pages 3–4 and total reserve/circulation comparison; signed September 1, 2026",
-          "url": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf"
+          "label": "IDRX September 30, 2026 AUP; signed pages 3–4 rendered, signed October 7; reviewed 2026-10-09T10:35:35Z; enumerated chain subtotal does not establish whole-token liability coverage",
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf"
         },
         {
-          "label": "IDRX public document API index (record 18, observed 2026-09-21)",
+          "label": "IDRX public document API index record 19, created 2026-10-09T03:14:33.747Z; observed 2026-10-09T10:35:35Z",
           "url": "https://idrx.co/api/documents?page=1&take=100"
         }
       ]

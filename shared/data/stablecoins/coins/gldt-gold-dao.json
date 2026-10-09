@@ -10,7 +10,7 @@
     "rwa": true
   },
   "collateral": "GLD NFTs representing physical gold bars stored in Swiss vaults; GLDT is minted when GLD NFTs are locked in the swap canister at a ratio of 1 gram of GLD NFT backing for 100 GLDT",
-  "pegMechanism": "Commodity redemption/swap model: 1 GLDT represents 0.01 grams of gold, and GLDT can be reverse-swapped into GLD NFTs when enough tokens are supplied to unlock the corresponding NFT denomination",
+  "pegMechanism": "Commodity redemption/swap model: 1 GLDT represents 0.01 grams of gold, and GLDT can be reverse-swapped into GLD NFTs when enough tokens are supplied to unlock the corresponding NFT denomination. The reverse-swap fee is 1 GLDT per NFT unlocked, not one fee per batch. Physical pickup requires Bity KYC and a CHF 300 vault charge in Zurich; Bity's separate NFT buyback quotes USDT at LBMA spot less 3%, not a guaranteed spendable-USD payout.",
   "mechanismArchetype": "commodity-claim",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -62,6 +62,14 @@
     {
       "label": "Twitter",
       "url": "https://x.com/TheGoldDAO"
+    },
+    {
+      "label": "Physical gold redemption guide",
+      "url": "https://docs.gold-dao.org/how-to/redeem-physical-gold"
+    },
+    {
+      "label": "Bity GLD NFT buyback terms",
+      "url": "https://help.bity.com/en/articles/9680058-how-can-i-resell-my-gld-nft"
     }
   ],
   "contracts": [

@@ -39,15 +39,17 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       eligibility: "verified-customer",
       fees: { issuerFeeBps: 45, issuerFixedUsd: 100, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
       settlementLegs: [
+        { leg: "kms-erc20-to-native-kinesis-token", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
         { leg: "issuer-request-contact-only", maximumBusinessDays: 2, typicalBusinessDays: null },
         { leg: "issuer-acceptance-and-bullion-release", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
         { leg: "bullion-delivery", maximumBusinessDays: null, typicalBusinessDays: null },
       ],
       bestEffortIssuerCashOut: {
-        operatingProcess: "Verified customers sell KAU on the Kinesis platform for C1USD, convert C1USD to USD cash, then withdraw to their linked bank. This is platform trading, not guaranteed bullion repurchase.",
+        operatingProcess: "Holders first request discretionary 1:1 redemption of the tracked KMS Labs Ethereum KAU ERC-20 to native Kinesis KAU; availability and completion time are not guaranteed. Verified customers may then sell native KAU on the Kinesis platform for C1USD, convert C1USD to USD cash, then withdraw to their linked bank. This is platform trading, not guaranteed bullion repurchase.",
         lot: { minimumTokens: null, incrementTokens: null, bars: [] },
         fees: { issuerFeeBps: 22, issuerFixedUsd: 25, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: null, conversionBps: null },
         settlementLegs: [
+          { leg: "kms-erc20-to-native-kinesis-token", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
           { leg: "platform-sale-order-execution", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
           { leg: "c1usd-to-usd-conversion", maximumBusinessDays: null, typicalBusinessDays: null },
           { leg: "usd-bank-withdrawal", maximumBusinessDays: null, typicalBusinessDays: null },
@@ -62,6 +64,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
         { url: "https://kinesis.money/about-us/documents/terms-of-use/", quote: "If Kinesis agrees to accept a requested Redemption of Kinesis Currency, it shall be on the basis that you will be required to comply with the terms and undertakings of this Clause 8. You acknowledge and agree that when placing an order, it may be executed in part. If part of an order is not executed, it will remain open until such time as it is executed or you cancel it in Kinesis Exchange." },
         { url: "https://support.kinesis.money/hc/en-gb/articles/35218102923293-Convert-between-Currency-One-Stablecoins-and-cash", quote: "Convert between cash and supported Currency One stablecoins with a 0% conversion fee (spreads or minimums may apply). Use the convert function to move Currency One stablecoins back into their corresponding fiat currencies. Navigate to your fiat currency tile under Assets. Select Withdraw and follow the prompts to send funds to your linked bank account." },
         { url: "https://support.kinesis.money/hc/en-gb/articles/12398056853661-Sending-and-receiving-assets", quote: "Users must fully KYC-verify their accounts to buy and sell through on the Kinesis platform." },
+        { url: "https://kmslabs.money/kms-labs-tcs/", quote: "Contract Address: KAU ERC20 0x14DAB79fD7B7B3f748d434812Fd6a9Aac460EA52. Redemption will only be 1:1 for each of the Tokens to the respective Kinesis Tokens. KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe. A holder must first redeem the Tokens to Kinesis Tokens and then follow Kinesis Cayman's redemption process then in force." },
       ],
     },
     costModel: {
@@ -97,15 +100,17 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       eligibility: "verified-customer",
       fees: { issuerFeeBps: 45, issuerFixedUsd: 100, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
       settlementLegs: [
+        { leg: "kms-erc20-to-native-kinesis-token", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
         { leg: "issuer-request-contact-only", maximumBusinessDays: 2, typicalBusinessDays: null },
         { leg: "issuer-acceptance-and-bullion-release", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
         { leg: "bullion-delivery", maximumBusinessDays: null, typicalBusinessDays: null },
       ],
       bestEffortIssuerCashOut: {
-        operatingProcess: "Verified customers sell KAG on the Kinesis platform for C1USD, convert C1USD to USD cash, then withdraw to their linked bank. This is platform trading, not guaranteed bullion repurchase.",
+        operatingProcess: "Holders first request discretionary 1:1 redemption of the tracked KMS Labs Ethereum KAG ERC-20 to native Kinesis KAG; availability and completion time are not guaranteed. Verified customers may then sell native KAG on the Kinesis platform for C1USD, convert C1USD to USD cash, then withdraw to their linked bank. This is platform trading, not guaranteed bullion repurchase.",
         lot: { minimumTokens: null, incrementTokens: null, bars: [] },
         fees: { issuerFeeBps: 22, issuerFixedUsd: 25, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: null, conversionBps: null },
         settlementLegs: [
+          { leg: "kms-erc20-to-native-kinesis-token", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
           { leg: "platform-sale-order-execution", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
           { leg: "c1usd-to-usd-conversion", maximumBusinessDays: null, typicalBusinessDays: null },
           { leg: "usd-bank-withdrawal", maximumBusinessDays: null, typicalBusinessDays: null },
@@ -120,6 +125,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
         { url: "https://kinesis.money/about-us/documents/terms-of-use/", quote: "If Kinesis agrees to accept a requested Redemption of Kinesis Currency, it shall be on the basis that you will be required to comply with the terms and undertakings of this Clause 8. You acknowledge and agree that when placing an order, it may be executed in part. If part of an order is not executed, it will remain open until such time as it is executed or you cancel it in Kinesis Exchange." },
         { url: "https://support.kinesis.money/hc/en-gb/articles/35218102923293-Convert-between-Currency-One-Stablecoins-and-cash", quote: "Convert between cash and supported Currency One stablecoins with a 0% conversion fee (spreads or minimums may apply). Use the convert function to move Currency One stablecoins back into their corresponding fiat currencies. Navigate to your fiat currency tile under Assets. Select Withdraw and follow the prompts to send funds to your linked bank account." },
         { url: "https://support.kinesis.money/hc/en-gb/articles/12398056853661-Sending-and-receiving-assets", quote: "Users must fully KYC-verify their accounts to buy and sell through on the Kinesis platform." },
+        { url: "https://kmslabs.money/kms-labs-tcs/", quote: "Contract Address: KAG ERC20 0x56Ba8B58B7d1f6d384A1C4dD553F39ebc8741B8e. Redemption will only be 1:1 for each of the Tokens to the respective Kinesis Tokens. KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe. A holder must first redeem the Tokens to Kinesis Tokens and then follow Kinesis Cayman's redemption process then in force." },
       ],
     },
     costModel: {
@@ -206,7 +212,9 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
         { url: "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025", quote: "Decide how many grams you want (minimum 1 g). Bars: sealed PAMP Lady Fortuna, 999.9 fine. Europe: 3–7 business days, insured post" },
       ],
     },
-    costModel: fixedFee(0, "No custody or transfer fees per Gold Token SA; minimum 1 gram"),
+    costModel: documentedVariableFee(
+      "Custody and routine administration are embedded services, not proof of cost-free physical exit. DGLD terms disclose an initially 0.20% burning fee for direct issuer delivery plus holder-paid delivery expenses. Under section 8.2.2, an approved third-party delivery does not burn tokens or charge the issuer burning fee, but independent provider premiums, logistics, handling, insurance, customs and taxes remain separately quoted. Neither delivery method establishes an all-in same-notional USD liquidation cost.",
+    ),
     docs: [
       sourceRefRouteCapacity("DGLD homepage", "https://dgld.ch/"),
       sourceRef("DGLD Swiss redemptions", "https://dgld.ch/news/dgld-european-swiss-redemptions", [
@@ -215,6 +223,8 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
         "access",
         "settlement",
       ]),
+      sourceRef("DGLD July 2026 general terms: physical delivery and costs", "https://dgld.ch/docs/terms", ["route", "fees", "settlement"]),
+      sourceRef("DGLD physical delivery FAQ", "https://dgld.ch/about-faq", ["route", "fees"]),
     ],
   },
   // Re-reviewed 2026-08-19 (issue #865). The issuer route itself is unchanged
@@ -258,7 +268,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(
-      "AUDC redeems AUDD 1:1; the issuer says minting and redemption are fee-free, but distributors or external bank-account payouts can impose additional charges",
+      "AUDC's platform mint/redeem fee is zero, but the 10 February 2026 PDS section 3.1(b) specifies 0.10%-1.00% external-bank payout fees through AUDD Digital or direct AUDC fallback. Distributor fees vary; fees may be waived or changed with notice. No applicable fee at the scored notional is selected; gas and third-party charges remain additional",
     ),
     docs: [
       sourceRefRouteCapacity("AUDD home", "https://www.audd.digital/"),
@@ -368,8 +378,14 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     docs: [
       sourceRefRouteCapacity("BRLA Digital", "https://brla.digital/"),
       sourceRef("Avenia documentation", "https://docs.avenia.io/", ["route", "access"]),
+      sourceRef("Avenia platform terms, sections 2.1 and 5.3-5.6", "https://app.avenia.io/Avenia-TC.pdf", ["route", "access", "settlement"]),
+      sourceRef("Avenia PIX payout outcomes and account-specific quotes", "https://integration-guide.avenia.io/docs/Operations/quotesAndTickets/", ["route", "access", "settlement"]),
     ],
-    notes: ["Native multichain fiat-backed BRL stablecoin; KYC-gated primary mint and redeem rail via Avenia"],
+    notes: [
+      "Native multichain fiat-backed BRL stablecoin; KYC-gated primary mint and redeem rail via Avenia",
+      "Platform terms section 5.6 describes normal transaction settlement within two business days, with explicit longer-delay exceptions for liquidity, blockchains, banks and intermediaries. This is not an unconditional end-to-end bank-credit SLA. Sale proceeds are paid by PIX to matching account-holder details (sections 5.3-5.4). Reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (Lane33Hyperithm).",
+      "Public quote examples are illustrative; FIAT_IN is a BRL deposit-account limit, not funded BRLA redemption capacity. Preserve the existing bounded terms gaps for capacity, settlement and cost; no same-day guarantee, numerical fee or capacity curve is established by these documents.",
+    ],
   },
   "ctusd-citrea": {
     ...issuerBase,

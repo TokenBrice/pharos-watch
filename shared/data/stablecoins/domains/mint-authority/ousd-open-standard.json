@@ -716,7 +716,7 @@
       "scopedQuestions": [
         {
           "controlRef": "tempo:0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
-          "question": "At Tempo block 42723374 on 2026-10-05 the administrator still delegates via EIP-7702 to 0x0000fb7702036ff9f76044a501ac1aa74cbab16b. Ethereum publishes verified UniversalGaslessDelegate source at that address, but the pinned Tempo runtime differs at 34 byte positions, so exact source correspondence is not yet established. The Tempo native handler implementation 0x86234502292ee398a0c6ac4f060b315dd020d179 still has no Sourcify record and no source at the queried Ethereum/Base explorer endpoints. Which source-bound delegated execution and handler checks apply to this exact Tempo authority path? Off-chain custody and human approval composition remain a separate unknown; no Safe quorum or custody uplift is claimed.",
+          "question": "At Tempo block 42723374 on 2026-10-05 the administrator still delegates via EIP-7702 to 0x0000fb7702036ff9f76044a501ac1aa74cbab16b. Ethereum publishes verified UniversalGaslessDelegate source at that address, but the pinned Tempo runtime differs at 34 byte positions, so exact source correspondence is not yet established. The Tempo native handler implementation 0x86234502292ee398a0c6ac4f060b315dd020d179 still has no Sourcify record and no source at the queried Ethereum/Base explorer endpoints. Wave-two source recovery reviewed 2026-10-09T11:54:33Z by Sol curation campaign 2026-10-09 (W2L23Standard) located the Tempo Explorer Contract tab for handler 0x5176dfcab18ff5519bc1cfa4c6ef2d8008371d5f: it publishes an EIP-1967 proxy shell, eight source files and the implementation pointer 0x86234502292ee398a0c6ac4f060b315dd020d179. The proxy ABI supplies constructor, errors, Upgraded and fallback only; this source recovery does not expose implementation mint/limit logic, authenticate a current block-pinned runtime match, or renew the October 5 state pin. Which source-bound delegated execution and handler checks apply to this exact Tempo authority path? Off-chain custody and human approval composition remain a separate unknown; no Safe quorum or custody uplift is claimed.",
           "subject": "execution-scope",
           "reviewedAt": "2026-10-05",
           "reviewer": "Pharos wave-4 scoped control research (K08)",
@@ -736,6 +736,10 @@
             {
               "label": "TIP-403 specification",
               "url": "https://tempo.xyz/developers/docs/protocol/tip403/spec"
+            },
+            {
+              "label": "Tempo Explorer handler proxy shell and implementation pointer; not handler execution source",
+              "url": "https://explore.tempo.xyz/address/0x5176DfCab18fF5519Bc1CfA4C6Ef2d8008371d5f?tab=contract"
             },
             {
               "label": "OUSD reserve-ledger mint transaction",

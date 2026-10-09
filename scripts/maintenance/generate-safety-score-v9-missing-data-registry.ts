@@ -78,7 +78,13 @@ export function classifyV9MissingDataWorkType(
   return workTypeForDescriptor(descriptorForReason(entry.reasonCode, entry.path));
 }
 
+// missing-pillar-evidence routes only by its compiled fact-gap local-component
+// path (see descriptorForReason). Card projections carry no such path; the
+// compiled gap queue, including the asset-compilation quarantine gap, owns it.
+const FACT_PATH_ROUTED_REASON = "missing-pillar-evidence";
+
 export function classifyV9ScoreProjectionWorkType(reasonCode: string): V9MissingDataWorkType | null {
+  if (reasonCode === FACT_PATH_ROUTED_REASON) return null;
   const disposition = curationDispositionForReason(reasonCode);
   if (disposition?.disposition === "non-curation") return null;
   return workTypeForDescriptor(descriptorForReason(reasonCode));
@@ -86,6 +92,7 @@ export function classifyV9ScoreProjectionWorkType(reasonCode: string): V9Missing
 
 /** Sole routing source for the legacy markdown view of the typed registry. */
 export function classifyV9CurationWorklistStream(reasonCode: string): string | null {
+  if (reasonCode === FACT_PATH_ROUTED_REASON) return null;
   const disposition = curationDispositionForReason(reasonCode);
   if (!disposition) descriptorForReason(reasonCode);
   return disposition?.disposition === "routed" ? disposition.stream : null;

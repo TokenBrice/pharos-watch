@@ -98,6 +98,10 @@
       {
         "label": "Starknet publication describing native mRe7YIELD deployment",
         "url": "https://www.starknet.io/blog/bitcoin-defi-domain/"
+      },
+      {
+        "label": "Current Midas documentation export, Native Bridge and Smart Contracts Registry sections; generic native-bridge claims do not replace the exact StarkGate route proof, observed 2026-10-09T10:35:23Z by Sol curation campaign 2026-10-09 (Lane46Midas)",
+        "url": "https://docs.midas.app/llms-full.txt"
       }
     ],
     "routes": [

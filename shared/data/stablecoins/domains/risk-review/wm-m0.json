@@ -18,7 +18,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-lock-mint",
-    "summary": "wM has one canonical Ethereum wrapper deployment; Arbitrum, Base, Plume, and Solana are bridge representations reached through M0 issuer-native burn/mint routes. Current Arbitrum and Base SpokePortal admins/operators, route paths, pause state, and upgrade implementations are structured below; Plume uses an owner-controlled Hyperlane Portal/Bridge with a separate pauser; Solana Portal message validation, Portal upgrade authority, and m_ext ProgramData upgrade authority are route-scoped separately from the local M-backed wrapper mint recorded in Mint Authority. The route tier remains issuer-native-lock-mint.",
+    "summary": "wM route evidence combines historical Ethereum, Arbitrum, Base, Plume and Solana observations with seven unresolved Portal V2 deployments. Current M0 documentation describes Ethereum hub lock/release, spoke M mint/burn, SwapFacility extension conversion and modular Wormhole, Hyperlane and LayerZero adapters. The existing pinned controls and seven unresolved route classifications are retained: current documentation does not complete their historical ingress, remote-governance execution, incident or runtime supply-attribution evidence. Documentation observed 2026-10-09T10:31:18Z by Sol curation campaign 2026-10-09 (Lane03M0); this does not refresh the original on-chain checkpoints or aggregate review date.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "verified",
@@ -40,6 +40,14 @@
       {
         "label": "M0 core bridging process",
         "url": "https://docs.m0.org/protocol/m-portals#core-bridging-process"
+      },
+      {
+        "label": "Portal V2 architecture, roles and ingress checks (observed 2026-10-09T10:31:18Z; Lane03M0)",
+        "url": "https://docs.m0.org/protocol/portal-v2"
+      },
+      {
+        "label": "Current M0 platform deployment identities (observed 2026-10-09T10:31:18Z; Lane03M0)",
+        "url": "https://docs.m0.org/resources/addresses/m0-platform"
       }
     ],
     "routes": [
@@ -1078,9 +1086,14 @@
             "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
           ],
           "threshold": 3,
-          "observedBlock": 125256534,
+          "version": "1.4.1",
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 126629187,
           "source": "onchain",
-          "observedAt": "2026-10-02"
+          "observedAt": "2026-10-09"
         },
         "modulesOrGuardsStatus": "unknown",
         "capDescription": "DEFAULT_ADMIN administers Portal and default Hyperlane-adapter roles and authorizes UUPS replacement logic for the local M bridge representation. This is not native Ethereum M issuance. No immutable cap protection or Safe-extension non-interference is claimed.",
@@ -1098,11 +1111,15 @@
             "url": "https://github.com/m0-platform/m-portal-v2/blob/27820ee62b2bedfdf089df96492aadf1976cdb47/evm/src/Portal.sol"
           },
           {
-            "label": "Pinned bsc JSON-RPC (2026-10-02)",
+            "label": "Pinned BSC JSON-RPC: original roles and 2026-10-09 Safe census",
             "url": "https://api-bsc-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "Exact creation/runtime-matched BSC Safe singleton source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x29fcb43b46531bca003ddc8fcb67ffe91900c762?fields=all"
           }
         ],
-        "evidence": "At block 125256534, hasRole(DEFAULT_ADMIN_ROLE,0x48670b46380fe1645f0e3e821a25162db2589d19) was true on Portal and default adapter; getOwners and getThreshold returned the recorded 5-owner/3-signature state at the same pin. Guard/fallback/module non-interference and exhaustive role membership are not certified."
+        "evidence": "At block 125256534, hasRole(DEFAULT_ADMIN_ROLE,0x48670b46380fe1645f0e3e821a25162db2589d19) was true on Portal and default adapter; getOwners and getThreshold returned the recorded 5-owner/3-signature state at that pin. Separate Safe-only census at BSC block 126629187, hash 0x97387f1b7593a29a981fcdb6222d225a84e970ed0ff9e5542fd669ff0b567063, timestamp 2026-10-09T11:38:31.000Z, observed 2026-10-09T11:39:02.021Z by Sol curation campaign 2026-10-09 (W2L15Nereus): owners and threshold unchanged, VERSION 1.4.1, getModulesPaginated(0x1,100) returned an empty array and terminal 0x1, guard storage zero, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, singleton slot 0x29fcb43b46531bca003ddc8fcb67ffe91900c762. Sourcify exact creation/runtime-matched singleton source corroborates the guard/fallback slots and module pagination. This establishes local Safe state, not fallback non-interference, role continuity since the old pin, full route execution reach, historical receipts or incident absence; modulesOrGuardsStatus remains unknown."
       },
       {
         "id": "wm-bsc-portal-v2-operator-pauser",

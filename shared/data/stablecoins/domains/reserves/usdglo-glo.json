@@ -73,8 +73,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv07)",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane47Babelfish)",
     "confidence": "verified",
     "sources": [
       {
@@ -84,8 +84,12 @@
       {
         "label": "Brale USDGLO transparency",
         "url": "https://brale.xyz/stablecoins/USDGLO"
+      },
+      {
+        "label": "Brale governing terms, updated May 27, 2026",
+        "url": "https://brale.xyz/legal/terms"
       }
     ],
-    "uncertainty": "Brale states that reserve assets are held in unencumbered accounts segregated from its other accounts, but the report does not identify the banking counterparties, legal insolvency treatment, provider shares, or rehypothecation terms."
+    "uncertainty": "Custody-scope correction observed 2026-10-09T10:36:33Z: the August 31 management assertion identifies Brale's unencumbered reserve accounts segregated from its other accounts, but does not identify reserve banks, instrument custodians, provider shares, insolvency treatment, non-reuse controls or successor-custody arrangements. The transparency archive and May 27 governing terms provide no whole-book provider proof. Brale's issuer licensing does not establish the regulation of every unnamed reserve custodian; the aggregate custodyModel is unknown. The existing compositionAsOf and report dates are unchanged."
   }
 }

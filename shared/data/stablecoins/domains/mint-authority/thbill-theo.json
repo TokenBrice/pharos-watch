@@ -1,10 +1,10 @@
 {
   "id": "thbill-theo",
   "mintAuthority": {
-    "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "Canonical thBILL is a UUPS ERC-4626 multi-asset vault: public deposit and mint paths transfer supported collateral before minting shares, with no privileged raw-mint function. A two-day TimelockController holds DEFAULT_ADMIN_ROLE and UUPS authority; Theo's 4-of-6 Safe controls that timelock.",
+    "summary": "Canonical thBILL transfers supported collateral before minting shares, but its accepted tULTRA receipt permits privileged optimistic issuance without receiving underlying assets. Theo's service router and delegated signing account can create those receipts and deposit them into thBILL. Governance upgrades remain timelocked; the live optimistic issuance path is not.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -141,27 +141,172 @@
           }
         ],
         "evidence": "At Ethereum block 25712112, Safe state was 4-of-6, version 1.4.1, with the listed owners, no enabled modules, and zero guard. Timelock role checks confirmed this Safe holds PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE; it can therefore schedule and execute thBILL administration and UUPS upgrades after the two-day delay."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8a2c307d1462ff4fa98c9c119d3a3457ad505eb1",
+        "deploymentRefs": [
+          "ethereum:0x5fa487bca6158c64046b2813623e20755091da0b"
+        ],
+        "label": "Theo thBILL optimistic mint service router",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "capDescription": "The router holds MINTER_ROLE on the accepted tULTRA receipt. Its privileged caller supplies tTokenAssets independently of amountAssetIn; the receipt mints against pending assets without transferring underlying and the router deposits those shares into canonical thBILL. No economic issuance cap was identified on this active path.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-09",
+        "observedBlock": 26154579,
+        "failureDomainKeys": [
+          "theo-optimistic-mint",
+          "theo-tultra-pending-assets"
+        ],
+        "sources": [
+          {
+            "label": "Theo issuer thBILL minter address",
+            "url": "https://docs.theo.xyz/developers/deployed-addresses.md"
+          },
+          {
+            "label": "Verified TTokenRouterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8a2c307d1462ff4fa98c9c119d3a3457ad505eb1"
+          },
+          {
+            "label": "Verified tULTRA TTokenV3 implementation and inherited optimistic mint",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd020ce4aa335a11933f1e38a00020bd7f8c80a2b"
+          },
+          {
+            "label": "Pinned Ethereum RPC: block 26154579, 2026-10-09T11:33:35Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Ethereum block 26154579",
+            "url": "https://eth.blockscout.com/block/26154579"
+          }
+        ],
+        "evidence": "Pinned Ethereum block 26154579, hash 0xaeb74e22f56f812a995351bb758eea9cfb274344c7b0fd438042e8c595ba7c21, timestamp 2026-10-09T11:33:35Z. Birth-to-pin RoleGranted/RoleRevoked census covers blocks 23735968-26154579 in 4838 contiguous helper chunks, observed 2026-10-09T11:48:02.755Z: eight events leave sole DEFAULT_ADMIN_ROLE holder 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 and sole MINTER_ROLE holder 0x0f21ee679e40123dea03cc64983035ce24bffcf3; pinned hasRole reads corroborate the live and revoked candidates. Router runtime matches verified source. Canonical depositAssetsList contains tULTRA 0x82b840b6edf77f90c92a70b99f0b5d50e7967330; its pinned implementation is TTokenV3 0xd020ce4aa335a11933f1e38a00020bd7f8c80a2b with verified runtime, router MINTER_ROLE, allowPending=true and maxMint(router)=uint256.max. Direct receipt depositOptimistic simulation from the router returns 1000000 shares without transferring underlying. A router depositOptimistic simulation from its live minter, amountAssetIn=0 USDC, tTokenAssets=1000000, to=canonical thBILL and iToken=canonical thBILL completes without revert; the void function returns 0x, which the helper labels empty, not evidence of absence. Verified source then deposits the newly created receipt shares and mints canonical shares. This establishes authority, not an observed exploit, loss or financial shortfall.",
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x8a2c307d1462ff4fa98c9c119d3a3457ad505eb1",
+          "reviewedAt": "2026-10-09",
+          "observedAt": "2026-10-09",
+          "expiresAt": "2027-10-09",
+          "reviewer": "Sol curation campaign 2026-10-09 (W2L26Anchorx)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified TTokenRouterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8a2c307d1462ff4fa98c9c119d3a3457ad505eb1"
+            },
+            {
+              "label": "Verified TTokenV3 and inherited TToken optimistic mint",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd020ce4aa335a11933f1e38a00020bd7f8c80a2b"
+            },
+            {
+              "label": "Pinned Ethereum block 26154579, hash 0xaeb74e22f56f812a995351bb758eea9cfb274344c7b0fd438042e8c595ba7c21",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            }
+          ],
+          "pin": {
+            "position": "26154579",
+            "hash": "0xaeb74e22f56f812a995351bb758eea9cfb274344c7b0fd438042e8c595ba7c21",
+            "runtimeIdentity": "0x4196bb916cde2a9dbe7843a12342f720b7f69222eff576cc14cd05aa7468c450",
+            "signerIdentity": "MINTER_ROLE:0x0f21ee679e40123dea03cc64983035ce24bffcf3;DEFAULT_ADMIN_ROLE:0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02"
+          },
+          "observedState": {
+            "position": "26154579",
+            "hash": "0xaeb74e22f56f812a995351bb758eea9cfb274344c7b0fd438042e8c595ba7c21",
+            "runtimeIdentity": "0x4196bb916cde2a9dbe7843a12342f720b7f69222eff576cc14cd05aa7468c450",
+            "signerIdentity": "MINTER_ROLE:0x0f21ee679e40123dea03cc64983035ce24bffcf3;DEFAULT_ADMIN_ROLE:0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": false,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "router-optimistic-native-mint",
+              "targetDeployment": "ethereum:0x8a2c307d1462ff4fa98c9c119d3a3457ad505eb1",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xe1ed63af"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "thbill-theo"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x5fa487bca6158c64046b2813623e20755091da0b"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0f21ee679e40123dea03cc64983035ce24bffcf3",
+        "deploymentRefs": [
+          "ethereum:0x5fa487bca6158c64046b2813623e20755091da0b"
+        ],
+        "label": "Theo optimistic router delegated signing account",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "capDescription": "Sole live router MINTER_ROLE holder. One account key can call the optimistic mint router; its EIP-7702 delegation also allows self-authorized or EntryPoint execution. No independent-human, institutional-custody or complete execution-closure claim is made.",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-09",
+        "observedBlock": 26154579,
+        "failureDomainKeys": [
+          "theo-optimistic-mint",
+          "theo-tultra-pending-assets"
+        ],
+        "sources": [
+          {
+            "label": "Verified router role and issuance source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8a2c307d1462ff4fa98c9c119d3a3457ad505eb1"
+          },
+          {
+            "label": "Verified Simple7702Account delegate",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe6cae83bde06e4c305530e199d7217f42808555b"
+          },
+          {
+            "label": "Pinned Ethereum RPC block 26154579",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          }
+        ],
+        "evidence": "At block 26154579 (0xaeb74e22f56f812a995351bb758eea9cfb274344c7b0fd438042e8c595ba7c21; 2026-10-09T11:33:35Z), the complete router birth-to-pin eight-event role census and hasRole(MINTER_ROLE,account)=true establish this sole live minter. eth_getCode returns 0xef0100e6cae83bde06e4c305530e199d7217f42808555b: this is an EIP-7702 delegated externally owned account, not an empty-code account or a multisig. The pinned delegate runtime matches verified Simple7702Account; its _checkSignature recovers address(this), and execute/executeBatch admit self or the fixed ERC-4337 EntryPoint. The account's own signing key remains a direct transaction authority. An authorized pinned router call from this account reaches optimistic receipt creation and canonical share issuance with zero USDC input. Delegate/EntryPoint and other downstream paths are not an exhaustive execution certificate."
       }
     ],
-    "economicCapSemantics": "raiseable",
-    "capSemanticsReview": {
-      "verdict": "raiseable-collateral-only",
-      "rationale": "D14/A7 review on 2026-10-03 at ethereum block 26113622 (0x5f41a07faa7b201ebd6180fd900a8e50989c7d3ac2f09c64d5b5d6272ad71cb9): the UUPS implementation remains 0x325478a069b0dbbdfbee909fa3741f84259ba519. Verified ERC4626MultiAsset.deposit/mint call _deposit, which transfers each accepted asset from the caller before _mint; a pinned mint simulation without allowance reverted ERC20InsufficientAllowance. No public administrator raw-mint entry point exists. DEFAULT_ADMIN_ROLE can change deposit-asset/configuration admission and authorize UUPS upgrades, but those powers do not bypass the current deposit workflow; collateral admission and upgrade authority alone are excluded D14 triggers. Retain raiseable and add raiseable-collateral-only proof, without asserting off-chain Treasury reconciliation or D29 governance qualification.",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
-      "sources": [
-        {
-          "label": "Verified thBILL deposit-constrained implementation",
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x325478a069b0dbbdfbee909fa3741f84259ba519"
-        }
-      ]
-    },
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25712112, direct reads and verified source established that canonical thBILL is a UUPS ERC-4626 multi-asset vault, correcting the prior issuer-backend and immutable-proxy claims. Its public deposit/mint flow transfers supported collateral before internal share minting and exposes no privileged raw-mint entry point. The current implementation is 0x325478a069b0dbbdfbee909fa3741f84259ba519; sole DEFAULT_ADMIN_ROLE holder timelock 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 has a 172800-second minimum delay, not zero. Safe 0x94877640dd9e6f1e3cb56bf7b5665b7152601295 holds proposer, executor, and canceller roles and was 4-of-6 with no modules or guard. Current share creation is collateral-transfer constrained, while governance can change deposit configuration or implementation after the delay, so the posture is partially bounded and economic cap semantics are raiseable. Economic-posture fields reviewed 2026-08-15: upgrades traverse the two-day timelock, but repo evidence does not reconcile the off-chain fund claim and all spoke supply, and no issuer supervisor or independent attestor is evidenced. D14/A7 review on 2026-10-03 at ethereum block 26113622 (0x5f41a07faa7b201ebd6180fd900a8e50989c7d3ac2f09c64d5b5d6272ad71cb9): the UUPS implementation remains 0x325478a069b0dbbdfbee909fa3741f84259ba519. Verified ERC4626MultiAsset.deposit/mint call _deposit, which transfers each accepted asset from the caller before _mint; a pinned mint simulation without allowance reverted ERC20InsufficientAllowance. No public administrator raw-mint entry point exists. DEFAULT_ADMIN_ROLE can change deposit-asset/configuration admission and authorize UUPS upgrades, but those powers do not bypass the current deposit workflow; collateral admission and upgrade authority alone are excluded D14 triggers. Retain raiseable and add raiseable-collateral-only proof, without asserting off-chain Treasury reconciliation or D29 governance qualification. This D14 refresh does not re-date older quorum or reserve-reconciliation observations.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Review on 2026-10-09 at Ethereum block 26154579 (0xaeb74e22f56f812a995351bb758eea9cfb274344c7b0fd438042e8c595ba7c21; 2026-10-09T11:33:35Z), with role census observed 2026-10-09T11:48:02.755Z. Canonical thBILL's verified IToken implementation remains 0x325478a069b0dbbdfbee909fa3741f84259ba519 and the vault is not paused. Its direct deposit/mint still transfers collateral, but accepted tULTRA 0x82b840b6edf77f90c92a70b99f0b5d50e7967330 has active privileged optimistic issuance against pending assets rather than receipt of underlying assets. Router 0x8a2c307d1462ff4fa98c9c119d3a3457ad505eb1 holds that receipt's MINTER_ROLE; its own complete birth-to-pin role census and pinned hasRole reads establish sole minter 0x0f21ee679e40123dea03cc64983035ce24bffcf3 and sole admin timelock 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02. A pinned authorized router simulation with zero USDC input and positive tTokenAssets reaches canonical share issuance without reverting. The original all-path raiseable-collateral-only proof considered the outer vault only and is removed, not re-dated: an accepted receipt transfer is not proof of independent collateral receipt. Economic cap semantics are unbounded and posture unbounded-adverse for this evidenced issuance power; no exploit, incident, reserve loss or collateralization ratio is asserted. The timelock's minimum delay remains 172800 seconds at this pin, but the already-authorized optimistic mint path has no such delay. Historical Safe/quorum observations are preserved at their original dates. Receipt/admin/EntryPoint execution outside the demonstrated path and the complete cross-deployment liability inventory remain open; the partial router certificate grants no full-execution, governed-process, custody, reconciliation or supervision credit.",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L26Anchorx)",
+      "reviewedAt": "2026-10-09",
       "sources": [
         {
           "label": "Verified thBILL deposit-constrained implementation",
@@ -186,6 +331,26 @@
         {
           "label": "Ethereum observation block 25712112",
           "url": "https://eth.blockscout.com/block/25712112"
+        },
+        {
+          "label": "Theo issuer-declared thBILL minter",
+          "url": "https://docs.theo.xyz/developers/deployed-addresses.md"
+        },
+        {
+          "label": "Verified optimistic mint router",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8a2c307d1462ff4fa98c9c119d3a3457ad505eb1"
+        },
+        {
+          "label": "Verified tULTRA TTokenV3 implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd020ce4aa335a11933f1e38a00020bd7f8c80a2b"
+        },
+        {
+          "label": "Verified EIP-7702 signing delegate",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe6cae83bde06e4c305530e199d7217f42808555b"
+        },
+        {
+          "label": "Pinned Ethereum block 26154579, 2026-10-09T11:33:35Z",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
         }
       ],
       "disposition": "scoreable"

@@ -14,7 +14,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "nOPAL has four reviewed independent native-issuance routes on Ethereum, Plume, BSC, and Plasma, plus reviewed LayerZero OFT representations on Solana, World Chain, and Avalanche. The issuer registry and current explorer records identify the exact deployments. Structured controls record the Solana OFT mint-authority/program-admin path and the World Chain/Avalanche owner-controlled bridge-mint, peer-configuration, and upgrade paths. Complete LayerZero DVN configuration, controller key custody, route limits, and recovery remain undisclosed. The Arc deployment is identity-verified, but its issuance and transfer classification and control ownership remain unresolved.",
+    "summary": "nOPAL has four reviewed independent native-issuance routes on Ethereum, Plume, BSC, and Plasma, plus reviewed LayerZero OFT representations on Solana, World Chain, and Avalanche. The issuer registry and explorer records identify the exact deployments. Structured controls record the Solana OFT mint-authority/program-admin path and World Chain/Avalanche bridge-mint, peer-configuration, and upgrade paths. Complete LayerZero DVN configuration, controller key custody, route limits, and recovery remain undisclosed. Arc ownership and selected current role/authorization paths are pinned, including direct enter/exit/manage alternatives to the owner timelock; Arc issuance-versus-representation accounting, full authority closure and incident state remain unresolved.",
     "reviewedAt": "2026-09-21",
     "reviewer": "Claude curation campaign 2026-09-21 (Ctrl4)",
     "confidence": "verified",
@@ -290,12 +290,12 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "At Arc block 24299495, nOPAL is an EIP-1967 proxy with implementation 0x28206c5694f6dc228ef040990aab10e30bdf8758 and ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2. Token and ProxyAdmin ownership bind to the current 3-of-6 Safe. Owner-authorized zero-asset issuance, peer changes and immediate upgrades are proven by read-only execution. Complete native-versus-representation liability accounting, current peers/DVNs and incident-history closure remain unresolved.",
+        "reviewNote": "At Arc block 25057559 (2026-10-09T10:35:23Z), the exact share remains an EIP-1967 proxy with implementation 0x28206c5694f6dc228ef040990aab10e30bdf8758. Token, ProxyAdmin and RolesAuthority owners are TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062; getMinDelay() is 172800 seconds. Token authority is RolesAuthority 0x4e9be1e46366e0f255ca7578467e3e0bbe7514de, whose own authority is zero. Pinned role reads identify external timelock admin, Safe proposer/canceller and open execution; pinned canCall confirms non-owner enter/exit/manage paths without the timelock requirement. Verified NestShareOFT source permits zero-asset issuance and arbitrary external manage calls on those paths. Native-versus-representation liability partition, every authority holder's signing/execution reach, peers/DVNs and incident history remain unresolved. Historical direct Safe ownership is not current; owner-path delay is not an aggregate delay.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "arc",
-        "controllerAddress": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
-        "observedAt": "2026-10-04",
-        "observedBlock": 24299495,
+        "controllerAddress": "0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
+        "observedAt": "2026-10-09",
+        "observedBlock": 25057559,
         "sources": [
           {
             "label": "Nest current nOPAL registry",
@@ -312,6 +312,18 @@
           {
             "label": "Arc pinned ownership, Safe and authorization traces",
             "url": "https://rpc.drpc.mainnet.arc.io"
+          },
+          {
+            "label": "Pinned Arc owner, proxy slot, authority and timelock reads at block 25057559 (2026-10-09T10:35:23Z)",
+            "url": "https://api-arc-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Exact Arc nOPAL proxy verified source",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+          },
+          {
+            "label": "Exact Arc NestShareOFT implementation verified source",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x28206c5694f6dc228ef040990aab10e30bdf8758"
           }
         ]
       }
@@ -458,40 +470,25 @@
           "upgrade"
         ],
         "controllerChain": "arc",
-        "controllerAddress": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
-        "authorityType": "safe",
-        "threshold": 3,
-        "signerCount": 6,
-        "modulesOrGuardsStatus": "none-detected",
-        "safe": {
-          "version": "1.3.0",
-          "owners": [
-            "0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9",
-            "0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572",
-            "0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6",
-            "0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f",
-            "0x98be74d3d5604904d0686eef9b4267f681f9520a",
-            "0x6d303f4e0e3406c397855551a006c8b33d4f3240"
-          ],
-          "threshold": 3,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 24299495,
-          "observedAt": "2026-10-04",
-          "source": "onchain"
-        },
+        "controllerAddress": "0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
+        "authorityType": "timelock",
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
-          "contract:arc:0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
-          "contract:arc:0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2"
+          "contract:arc:0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
+          "contract:arc:0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2",
+          "contract:arc:0x4e9be1e46366e0f255ca7578467e3e0bbe7514de",
+          "account:arc:0xf6c00a6ac137680a5e9ecc7ab342df2c4d190510",
+          "account:arc:0x4371e7ec29bbb60872e15c5123c3cac948967eb7"
         ],
         "routeChecks": {
           "trustedPeerOrRemote": "At Arc block 24362178 (2026-10-05), endpoint() remained 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. Each Arc peer EID named by issuer config at commit a42e58cd49e8e7abc2dfffdcecd1b85ebdcb9f9c was zero: 30101, 30370, 30102, 30319, 30383 and 30106. Earlier owner setPeer authorization simulations remain evidence of mutable configuration. These point reads do not prove an exhaustive historical peer/DVN or liability census.",
-          "pausersAdminsUpgraders": "Token and ProxyAdmin owner() both return the 3-of-6 Safe. upgradeAndCall using the current implementation succeeds from that owner and rejects an unrelated caller. A debug_traceCall of enter with zero deposited assets emits a mint Transfer for 1000000 raw shares; the unrelated caller is rejected.",
-          "unsupportedReason": "Complete Arc liability/representation accounting, effective LayerZero validation configuration, authority reach and incident history remain unclosed."
+          "pausersAdminsUpgraders": "At Arc block 25057559, token, ProxyAdmin and RolesAuthority 0x4e9be1e46366e0f255ca7578467e3e0bbe7514de are owned by TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062; RolesAuthority.authority() is zero. The timelock has a 172800-second owner/upgrade-path minimum, but this is not an aggregate issuance or execution delay: pinned canCall returns true for 0xf6c00a6ac137680a5e9ecc7ab342df2c4d190510 on enter 0x39d6ba32 and exit 0x18457e61, and for 0x4371e7ec29bbb60872e15c5123c3cac948967eb7 on both arbitrary manage selectors 0xf6e715d0 and 0x224d8703. Verified source applies requiresAuth directly to these paths without a timelock. Pinned timelock roles identify Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 as proposer/canceller, an open executor role, and 0x442fc59547ec00018a395c7416ed12d88a9082e6 as DEFAULT_ADMIN; the timelock itself and original constructor admin no longer hold DEFAULT_ADMIN.",
+          "unsupportedReason": "Current owner, authority owner, timelock role memberships and faster authorized enter/exit/manage alternatives are known at the pin. Complete Arc liability/representation accounting, LayerZero validation configuration, every authority holder's execution/signing reach, and independently supported incident history remain unclosed. No absence-of-bypass or whole-control closure credit is asserted."
         },
-        "observedAt": "2026-10-04",
-        "observedBlock": 24299495,
+        "observedAt": "2026-10-09",
+        "observedBlock": 25057559,
         "sources": [
           {
             "label": "Nest exact nOPAL deployment registry",
@@ -512,9 +509,37 @@
           {
             "label": "Arc official RPC creation-to-pin Transfer inventory",
             "url": "https://rpc.mainnet.arc.io"
+          },
+          {
+            "label": "Pinned Arc owner, ProxyAdmin owner, authority and minimum delay at block 25057559 (2026-10-09T10:35:23Z)",
+            "url": "https://api-arc-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Current Arc TimelockController verified source",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062"
+          },
+          {
+            "label": "Exact Arc NestShareOFT implementation verified source",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x28206c5694f6dc228ef040990aab10e30bdf8758"
+          },
+          {
+            "label": "Exact Arc RolesAuthority verified authorization and mutation source",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x4e9be1e46366e0f255ca7578467e3e0bbe7514de"
+          },
+          {
+            "label": "Arc timelock role history, deployment through current explorer page",
+            "url": "https://explorer.arc.io/api/v2/addresses/0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062/logs"
+          },
+          {
+            "label": "Arc RolesAuthority role/capability history, page one",
+            "url": "https://explorer.arc.io/api/v2/addresses/0x4e9be1e46366e0f255ca7578467e3e0bbe7514de/logs"
+          },
+          {
+            "label": "Arc RolesAuthority role/capability history, final page",
+            "url": "https://explorer.arc.io/api/v2/addresses/0x4e9be1e46366e0f255ca7578467e3e0bbe7514de/logs?index=0&block_number=20366331&items_count=50"
           }
         ],
-        "evidence": "At Arc block 24299495 (hash 0xc911b5ae96f7a6f64d1d7782d6599bbf3c426b40d398616689824659a4d4493e), exact proxy slots, owner calls and successful read-only upgradeAndCall bind immediate implementation replacement to the 3-of-6 Safe. debug_traceCall proves owner-authorized issuance of 1000000 raw shares with zero deposited assets; no collateral gate or fixed cap is claimed. Safe v1.3.0 returned six owners, threshold 3, no enabled modules and zero guard. Fallback handler is 0x017062a1de2fe6b99be3d9d37841fed19f573804; exhaustive fallback/noninterference and incident closure are not certified. The first Safe owner was corrected from a shifted hexadecimal transcription using the original block-24299495 getOwners() result and reverified at block 24362178 (hash 0x57d527fdc5a30b90065838dec317ee417205777091f61563d6fa02d5b63b7f68): 0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9. The fresh threshold, six-owner set and empty module pagination agree with that original read. A complete Transfer census from creation block 20362264 through 24362178 contains 30 mints and 14 burns; net issuance 64682272491 raw equals totalSupply() at the pin. Event conservation does not establish collateral backing or incident-free operation. Exact implementation runtime metadata names IPFS QmQM2U7xfxxqshTy45kNizT3nLkHLmY7N4xpZP7FcBa4et, but source recovery and runtime-equivalent authority/liability closure remain incomplete."
+        "evidence": "Sol curation campaign 2026-10-09 (W2L17Nest): observed 2026-10-09T11:38:41.288Z and 2026-10-09T11:41:18.643Z at Arc block 25057559, hash 0x39c65f0577614654a78f84c41c224f31ef140e7f24641fe16c77f7b1267f185b, timestamp 2026-10-09T10:35:23Z, using https://api-arc-mainnet.n.dwellir.com. RolesAuthority owner is the same TimelockController as token/ProxyAdmin, and its authority is zero. Positive hasRole reads confirm external DEFAULT_ADMIN 0x442fc59547ec00018a395c7416ed12d88a9082e6, Safe proposer/canceller, and address-zero executor; negative reads confirm the timelock and constructor admin lack DEFAULT_ADMIN. Explorer discovery reaches deployment with 32 timelock events and 74 authority events across two pages; it is a discovery census, not independent pinned log-completeness proof. Pinned canCall independently confirms direct enter/exit for role-15 holder 0xf6c00a6ac137680a5e9ecc7ab342df2c4d190510 and both arbitrary manage overloads for role-2 holder 0x4371e7ec29bbb60872e15c5123c3cac948967eb7. Exact verified source allows zero-asset issuance and arbitrary external calls without delay on those authorized paths. The 172800-second owner/upgrade delay grants no aggregate delay or bypass-absence credit. Incident closure, signer/executor identity closure, LayerZero configuration and native-versus-representation liability accounting remain unresolved."
       }
     ]
   }

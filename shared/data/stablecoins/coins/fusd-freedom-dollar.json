@@ -24,6 +24,10 @@
     {
       "label": "Docs",
       "url": "https://www.freedomdollar.com/en/white-paper"
+    },
+    {
+      "label": "Issuer Zano incident update (September 27, 2026)",
+      "url": "https://www.freedomdollar.com/en/blog/fusd-update-zano-network-security-incident"
     }
   ],
   "proofOfReserves": {
@@ -35,6 +39,11 @@
   },
   "collateralQuality": "exotic",
   "notices": [
+    {
+      "type": "warning",
+      "title": "September 2026 Zano incident",
+      "message": "In its September 27, 2026 update, Freedom Dollar reported unauthorized fUSD created through a Zano inflation bug and several million dollars of assets exchanged for counterfeit tokens. The team said it would absorb those losses and asked users to pause all fUSD activity pending a stable patched chain. The notice did not confirm completed reimbursement or resumed services. Source reviewed by Sol curation campaign 2026-10-09 (Lane28Rupiah)."
+    },
     {
       "type": "info",
       "title": "Unsupported private chain",

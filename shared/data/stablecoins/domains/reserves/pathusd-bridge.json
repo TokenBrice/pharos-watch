@@ -34,15 +34,19 @@
         "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD"
       },
       {
-        "label": "Bridge public pathUSD transparency API",
+        "label": "Bridge pathUSD public reserve categories observed 2026-10-09T10:38:56Z by Sol curation campaign 2026-10-09 (Lane19Sygnum); payload as of 2026-10-09T10:20:33Z",
         "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd"
+      },
+      {
+        "label": "Bridge reserve management; generic treasury partner and liquidity conditions, reviewed 2026-10-09T10:38:56Z by Sol curation campaign 2026-10-09 (Lane19Sygnum)",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
       }
     ],
-    "rationale": "Tempo identifies pathUSD as issued by Bridge and backed one-for-one by USD-denominated reserves. The Bridge FAQ describes eligible cash, short Treasuries, overnight Treasury repo and money-market-fund exposure. On 2026-10-01 the public pathUSD API reported dated cash and treasury amounts, superseding the earlier statement that no allocation was published. The existing aggregate composition and its date are retained pending review of the treasury category's instrument scope and the API's reserve-total discrepancy.",
+    "rationale": "Tempo identifies pathUSD as issued by Bridge and backed one-for-one by USD-denominated reserves. The October 9, 2026 public API payload at 10:20:33Z reports cash of $19,161,280.75 and treasury of $52,096,485.21, totaling $71,257,765.96, versus reported total reserves of $71,257,752.29: a $13.67 discrepancy. Generic reserve-management documentation lists traditional and tokenized treasury partners but does not identify the instruments within pathUSD's treasury category or their shares. No composition weights are normalized over either conflicting denominator, no treasury-class or tracked-token allocation is assumed, and no liquidity bound is joined to unidentified reserve exposures. The existing composition and composition date remain unchanged; the current researched classification is supplied separately in the campaign fragment.",
     "compositionBasis": "Bridge custom-stablecoin reserve policy; dated public cash/treasury amounts now available, with instrument-level mapping unresolved",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "Bridge publishes dated cash and treasury category amounts for pathUSD. The treasury category's instrument-level split, pathUSD-specific provider shares and the difference between reported total reserves and summed category amounts remain unresolved.",
+    "knownUnknownExposure": "Cash and treasury category amounts are public, but the current instrument-level treasury split, pathUSD-specific provider allocation and $13.67 category-sum versus reserve-total discrepancy remain unresolved. Generic banking-hours and business-day liquidity terms do not certify identified pathUSD exposure rows or same-notional exit capacity.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -50,7 +54,7 @@
         "reserveName": "Short-dated U.S. Treasuries, overnight Treasury repos, money market funds, and cash",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "Dated cash and treasury amounts are public, but the treasury instrument split and the category-sum versus reserve-total discrepancy require review before a structured composition is admitted."
+        "rationale": "Dated cash and treasury amounts are public. At October 9, 2026 10:20:33Z they exceed the stated reserve total by $13.67; treasury instrument identities and shares remain unspecified. The historical opaque basket is retained instead of inventing a reconciled current composition."
       }
     ]
   },

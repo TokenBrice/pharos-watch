@@ -393,7 +393,8 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     expect(gapIds.length).toBeGreaterThan(0);
     for (const gapId of gapIds) {
       const gap = asset.gaps.find((candidate) => candidate.gapId === gapId)!;
-      expect(gap.causeProof).toMatchObject({ cause: "B", assertion: "required-data-public" });
+      // The researched KMS disclosure still does not attest HSM-resident signing keys.
+      expect(gap.causeProof).toMatchObject({ cause: "C", assertion: "researched-nondisclosure" });
     }
   });
 

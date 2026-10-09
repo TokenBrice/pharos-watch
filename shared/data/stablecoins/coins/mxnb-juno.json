@@ -14,7 +14,7 @@
   "detailProvider": "coingecko",
   "geckoId": "mxnb",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "attestation",
     "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf",
     "provider": "BDO Mexico (Castillo Miranda y Compania) quarterly financial valuation reports, signed by a corporate-finance/valuation partner acting as consultants under IVSC valuation standards; the report expressly does not confirm reserve accounts with banks and expresses no assurance opinion",
     "attestorTier": "regional",
@@ -23,10 +23,11 @@
     "latestReport": {
       "periodEnd": "2026-06-30",
       "publishedAt": "2026-07-16",
-      "assuranceMethod": "agreed-upon-procedures",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "unknown",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-08 (Q2 PDF read; composition review advanced in lockstep; reserves MXN 35,333,251.88 vs 34,828,276.31 circulating)",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane50Tori); Q2 consultancy valuation re-read, not an audit or named assurance-standard engagement; original June 30 / July 16 dates retained",
       "confidence": "probable",
       "sources": [
         {

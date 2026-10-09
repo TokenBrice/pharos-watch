@@ -46,7 +46,8 @@ describe("getRedemptionBackstopConfig", () => {
     const config = getRedemptionBackstopConfig("usdat-saturn")!;
     expect(resolveCapacitySemantics(config.capacityModel)).toBe("eventual-only");
     expect(config.outputAssets).toEqual(["usdc-circle"]);
-    expect(config.holderEligibility ?? resolveDefaultHolderEligibility(config)).toBe("whitelisted-primary");
+    expect(config.accessModel).toBe("permissionless-onchain");
+    expect(config.holderEligibility ?? resolveDefaultHolderEligibility(config)).toBe("unknown");
     expect(config.capacityModel).not.toHaveProperty("ratio");
     expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(["capacity", "settlement", "cost"]);
     expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();

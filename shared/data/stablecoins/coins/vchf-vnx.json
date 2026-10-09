@@ -9,7 +9,7 @@
     "governance": "centralized"
   },
   "collateral": "Aggregate CHF-value reserves held by VNX Commodities AG in bank accounts and/or securities custody accounts; the latest published AREVA report does not disclose the holdings or category split",
-  "pegMechanism": "Direct 1:1 redemption through VNX Commodities AG; tokens minted on demand for verified customers depositing equivalent CHF value",
+  "pegMechanism": "The current VNX Global platform offers CHF-denominated VCHF issuance and redemption to verified organizations classified as sophisticated customers. Its terms allow redemption delays for reserve illiquidity, unavailability or loss and permit in-kind reserve assets. Fiat withdrawal carries a CHF 30 SWIFT fee and may incur a separate account-history-dependent unused-funds fee; these are not an all-in USD redemption quote. This current platform is distinct from VNX Commodities AG's suspended legacy vnx.li exchange.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "157",
   "detailProvider": "defillama",
@@ -27,6 +27,14 @@
     {
       "label": "Docs",
       "url": "https://vnx.gitbook.io/vnx-platform/"
+    },
+    {
+      "label": "Current VCHF Platform",
+      "url": "https://vnx.io/swiss-franc"
+    },
+    {
+      "label": "VNX Global Terms",
+      "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf"
     }
   ],
   "jurisdiction": {

@@ -4,14 +4,14 @@
   "detailProvider": "defillama",
   "name": "Ripio wCOP",
   "symbol": "wCOP",
-  "oneLiner": "WCOP is Ripio's Colombian-peso wrapped fiat stablecoin, issued and redeemed through Ripio's wFIAT on/off-ramp infrastructure against local-currency reserves.",
+  "oneLiner": "WCOP is Ripio's reserve-backed Colombian-peso stablecoin; holders have no issuer redemption right and exit through markets or available ramps.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "COP",
     "governance": "centralized"
   },
   "collateral": "Colombian-peso fiat cash deposited in a Colombian bank account, backing Ripio wCOP one-to-one against the Colombian peso per Ripio's wFIAT token certification",
-  "pegMechanism": "WCOP is issued and managed by Ripio against local fiat reserves, but ordinary holders do not have a documented direct redemption right with the issuer. Exits depend on secondary-market liquidity, Ripio on/off-ramp flows, or issuer-managed market operations.",
+  "pegMechanism": "WCOP is issued and managed by Ripio against local fiat reserves. The wFIAT whitepaper expressly denies token holders any issuer redemption right or claim to funds. Exits depend on secondary-market liquidity, available Ripio on/off-ramp flows, or issuer-managed market operations.",
   "proofOfReserves": {
     "type": "agreed-upon-procedures",
     "url": "https://action.ripio.com/en/wfiat-attestations",
@@ -52,7 +52,11 @@
     {
       "id": "proof-of-reserve",
       "label": "Proof of Reserve",
-      "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      "url": "https://action.ripio.com/en/wfiat-attestations"
+    },
+    {
+      "label": "Docs",
+      "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf"
     }
   ],
   "contracts": [

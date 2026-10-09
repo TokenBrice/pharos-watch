@@ -481,12 +481,11 @@
             "claimAddress": "0xfa71747531bc4bc8d86f847a3585b5e89043a8be"
           },
           "assetId": null,
-          "noCurrentReach": false,
+          "noCurrentReach": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-09T10:39:24Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xfa71747531bc4bc8d86f847a3585b5e89043a8be"
             ],
             "responsibility": "integration-missing"
           }
@@ -552,12 +551,11 @@
             "claimAddress": "0x333c21aba51f5e3bcd9b0a60073b572736bf9353"
           },
           "assetId": null,
-          "noCurrentReach": false,
+          "noCurrentReach": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-09T10:39:24Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x333c21aba51f5e3bcd9b0a60073b572736bf9353"
             ],
             "responsibility": "integration-missing"
           }
@@ -623,12 +621,11 @@
             "claimAddress": "0x1b9d6b0fed627dfa572b821c677cd46caf30c76d"
           },
           "assetId": null,
-          "noCurrentReach": false,
+          "noCurrentReach": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-09T10:39:24Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x1b9d6b0fed627dfa572b821c677cd46caf30c76d"
             ],
             "responsibility": "integration-missing"
           }
@@ -693,12 +690,11 @@
             "claimAddress": "0xf9ff7de84373b777ecda41e6dfcb3199d08f681d"
           },
           "assetId": null,
-          "noCurrentReach": false,
+          "noCurrentReach": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-09T10:39:24Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xf9ff7de84373b777ecda41e6dfcb3199d08f681d"
             ],
             "responsibility": "integration-missing"
           }
@@ -1828,20 +1824,6 @@
         }
       ],
       "unresolved": [
-        {
-          "branchKey": "authority:aavadai",
-          "nodeKey": "underlying:0xd586e7f844cea2f87f50152665bcbc2c279d8d70",
-          "reason": "research-incomplete",
-          "responsibility": "integration-missing",
-          "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
-            "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
-            ],
-            "responsibility": "integration-missing"
-          }
-        },
         {
           "branchKey": "all-chain-census",
           "nodeKey": "nxusd-avalanche",

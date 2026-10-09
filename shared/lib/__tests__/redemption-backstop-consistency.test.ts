@@ -6,6 +6,7 @@ import { configsFromBackstopEntries } from "@shared/lib/redemption-backstop-conf
 import { buildRedemptionBackstopRegistry, type RedemptionBackstopConfigManifestEntry } from "@shared/lib/redemption-backstop-configs/manifest";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { resolveReviewedRedemptionSettlementDelay } from "@shared/lib/redemption-backstop-configs/settlement";
 import {
   REDEMPTION_BACKSTOP_CONFIGS,
   getRedemptionBackstopConfig,
@@ -54,9 +55,27 @@ describe("redemption backstop config consistency", () => {
 
   it.each(["slvon-ondo", "iauon-ondo"])("does not apply the %s USDon review before its evidence date", (id) => {
     const config = getRedemptionBackstopConfig(id)!;
-    const reviewClockSec = Date.UTC(2026, 9, 7) / 1_000;
-    expect(resolveReviewedRedemptionSettlement(config, reviewClockSec - 1)).toBe("immediate");
-    expect(resolveReviewedRedemptionSettlement(config, Date.UTC(2026, 9, 8) / 1_000)).toBe("atomic");
+    const reviewed = config.v9RouteReviewTerms!;
+    const reviewClockSec = Date.parse(`${reviewed.reviewedAt}T00:00:00Z`) / 1_000;
+    // The current documentary route never promises completed settlement, on
+    // either side of its evidence date.
+    for (const clockSec of [reviewClockSec - 1, reviewClockSec + 86_400]) {
+      expect(resolveReviewedRedemptionSettlement(config, clockSec)).toBe("immediate");
+      expect(resolveReviewedRedemptionSettlementDelay(reviewed, clockSec)).toBeUndefined();
+    }
+    // Isolate the admission guard with a completion-bound fixture; this is not
+    // a claim that the real Ondo route has an atomic completed endpoint.
+    const datedCompletionFixture = {
+      ...config,
+      v9RouteReviewTerms: {
+        ...reviewed,
+        settlementModel: "atomic" as const,
+        settlementDelaySec: 0,
+        missingScoringFields: reviewed.missingScoringFields!.filter((field) => field !== "settlement"),
+      },
+    };
+    expect(resolveReviewedRedemptionSettlement(datedCompletionFixture, reviewClockSec - 1)).toBe("immediate");
+    expect(resolveReviewedRedemptionSettlement(datedCompletionFixture, reviewClockSec + 86_400)).toBe("atomic");
   });
 
   it("every config ID exists in TRACKED_META_BY_ID", () => {

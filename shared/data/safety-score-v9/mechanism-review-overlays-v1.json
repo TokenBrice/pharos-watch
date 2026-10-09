@@ -10111,9 +10111,13 @@
         {
           "label": "August 31 2026 cNGN ISAE3000 examination, pp.3-9; undated signatures",
           "url": "https://drive.google.com/file/d/1Hw3aKTD29QxEqawYQjpRmGtVuK1_lV92/view?usp=drive_link"
+        },
+        {
+          "label": "Current issuer audit section inspected 2026-10-09; contract-audit dates are not financial-report chronology",
+          "url": "https://www.cngn.co/transparency"
         }
       ],
-      "notes": "W3R39 2026-10-05 correction: the issuer-linked August 31, 2026 report is publicly reachable and covers eight named chain liabilities and a NGN3,550,845,048.39 reserve book against NGN3,329,961,223.91 circulating cNGN. Its practitioner signature and management stamp show no dated signing/publication event. The earlier assertion that no 2026 report is linked is retracted. No publication date is invented, and named-attestor composition/assurance admission remains blocked. The explicit unavailable assurance row is removed so ordinary report fallback stays bounded under its missing-publishedAt gate; staged exact B attribution explains public-but-unadmitted assurance. Existing limited claim/segregation grade is retained, not upgraded. Current bank names/allocations, insolvency safeguards and custody succession remain undisclosed.",
+      "notes": "W3R39 2026-10-05 correction: the issuer-linked August 31, 2026 report is publicly reachable and covers eight named chain liabilities and a NGN3,550,845,048.39 reserve book against NGN3,329,961,223.91 circulating cNGN. Its practitioner signature and management stamp show no dated signing/publication event. The earlier assertion that no 2026 report is linked is retracted. No publication date is invented, and named-attestor composition/assurance admission remains blocked. The explicit unavailable assurance row is removed so ordinary report fallback stays bounded under its missing-publishedAt gate; the then-staged B attribution described public-but-unadmitted assurance. Existing limited claim/segregation grade is retained, not upgraded. Current bank names/allocations, insolvency safeguards and custody succession remain undisclosed. Campaign clarification at 2026-10-09T10:35:46Z by Sol curation campaign 2026-10-09 (Lane24Naira): the full August examination and signature panels were independently re-read. Missing required signing/publication chronology is C researched non-disclosure, replacing the prior B exclusion without denying that the report is public. Composition as-of and this overlay review date remain unchanged; no new quality claim, collateralization measurement, or custody-continuity claim is authored.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {

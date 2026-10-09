@@ -10,7 +10,7 @@
     "rwa": true
   },
   "collateral": "BRL cash and cash equivalents plus overnight repurchase agreements collateralized by Brazilian corporate debentures; the August 31, 2026 reserve and circulation totals received reasonable assurance from UHY Bendoraytes",
-  "pegMechanism": "Fiat-backed 1:1 peg to the Brazilian Real; mint/redeem 1:1 for BRL through Avenia (formerly BRLA Digital) platform after KYC; native multichain deployment without wrapping or bridge dependencies",
+  "pegMechanism": "Fiat-backed 1:1 peg to the Brazilian Real; mint/redeem through Avenia after approved KYC, with BRL sale proceeds paid by PIX to matching account-holder details. Platform terms describe two-business-day settlement with external-delay exceptions, not an unconditional bank-credit SLA; native multichain deployment without wrapping.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "365",
   "detailProvider": "defillama",
@@ -42,6 +42,10 @@
     {
       "label": "Website",
       "url": "https://avenia.io/brla"
+    },
+    {
+      "label": "Issuer platform and redemption terms",
+      "url": "https://app.avenia.io/Avenia-TC.pdf"
     },
     {
       "label": "Twitter",

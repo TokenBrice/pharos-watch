@@ -48,11 +48,15 @@
       {
         "label": "Issuer holder terms",
         "url": "https://zaru.network/blog/zar-universal-white-paper"
+      },
+      {
+        "label": "Binding ZARU holder terms, September 16, 2026; reviewed 2026-10-09T10:38:10Z",
+        "url": "https://blocktower.tech/legal/zaru-terms-of-use"
       }
     ],
-    "evidence": "At finalized Solana slot 452748072, the exact tracked Token-2022 mint has freezeAuthority 8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62, a permanent delegate 8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62, and a retained pausable authority. These are direct holder freeze/seizure controls; transfer hook is presently unset. Issuer terms expressly reserve freeze and recovery/burn powers.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "The retained October 2 technical observation at finalized Solana slot 452748072 identifies freezeAuthority and permanent delegate 8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62 and a pausable authority; no new RPC state is asserted. Independently re-read holder terms dated September 16, 2026, sections 4, 11 and 14 prohibit restricted-person use, permit blocked-address account freezes and forfeiture, and require ZARU or reserve surrender under valid government orders. They also permit suspension of issuer services. These are issuer-controlled holder access powers, not evidence of prudential mint supervision or a complete current material-deployment supply census.",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane22Stoneyield)",
+    "reviewedAt": "2026-10-09"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

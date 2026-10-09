@@ -98,13 +98,13 @@
         "id": "earnUSDc-downstream-pricing",
         "chain": "ethereum",
         "address": "0x8d229b565a0c6bf2d693c343bea0ec96103def5f",
-        "pricingAuthority": "unknown",
+        "pricingAuthority": "internal-price",
         "applicability": {
           "disposition": "unresolved",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-09",
+          "reviewer": "Sol curation campaign 2026-10-09 (Lane13Lido)",
           "confidence": "limited",
-          "rationale": "The official deployment registry names this underlying vault Oracle and Mellow confirms earnUSDc allocation. Complete current downstream lending markets, collateral oracle branches, cross-chain strategy pricing and matched material weights are not established; the named address alone cannot grant borrower-oracle exemption.",
+          "rationale": "The exact earnUSDc Ethereum proxy identifies verified Oracle implementation 0x0000000f0d3d1c31b72368366a4049c05e291d58, whose trusted roles submit internal prices to the linked vault. This resolves the named path's pricing authority only. Complete current downstream lending markets, collateral oracle branches, cross-chain strategy pricing and matched material weights remain unestablished; applicability stays unresolved and no global borrower-oracle exemption is granted.",
           "sources": [
             {
               "label": "Lido Oracle reporting and privileged roles",
@@ -117,6 +117,14 @@
             {
               "label": "Mellow named underlying conservative and experimental vaults",
               "url": "https://docs.mellow.finance/lido-earn/earnusd"
+            },
+            {
+              "label": "Exact earnUSDc Ethereum Oracle proxy and implementation binding",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8d229b565a0c6bf2d693c343bea0ec96103def5f"
+            },
+            {
+              "label": "Verified shared role-gated internal Oracle implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000f0d3d1c31b72368366a4049c05e291d58"
             }
           ]
         }
@@ -125,13 +133,13 @@
         "id": "earnUSDe-downstream-pricing",
         "chain": "ethereum",
         "address": "0xbcdfaf92783b2c391a1c80682e75bb6ef47b9c3c",
-        "pricingAuthority": "unknown",
+        "pricingAuthority": "internal-price",
         "applicability": {
           "disposition": "unresolved",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-09",
+          "reviewer": "Sol curation campaign 2026-10-09 (Lane13Lido)",
           "confidence": "limited",
-          "rationale": "The official deployment registry names this underlying vault Oracle and Mellow confirms earnUSDe allocation. Complete current downstream lending markets, collateral oracle branches, cross-chain strategy pricing and matched material weights are not established; the named address alone cannot grant borrower-oracle exemption.",
+          "rationale": "The exact earnUSDe Ethereum proxy identifies verified Oracle implementation 0x0000000f0d3d1c31b72368366a4049c05e291d58, whose trusted roles submit internal prices to the linked vault. This resolves the named path's pricing authority only. Complete current downstream lending markets, collateral oracle branches, cross-chain strategy pricing and matched material weights remain unestablished; applicability stays unresolved and no global borrower-oracle exemption is granted.",
           "sources": [
             {
               "label": "Lido Oracle reporting and privileged roles",
@@ -144,6 +152,14 @@
             {
               "label": "Mellow named underlying conservative and experimental vaults",
               "url": "https://docs.mellow.finance/lido-earn/earnusd"
+            },
+            {
+              "label": "Exact earnUSDe Ethereum Oracle proxy and implementation binding",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbcdfaf92783b2c391a1c80682e75bb6ef47b9c3c"
+            },
+            {
+              "label": "Verified shared role-gated internal Oracle implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000f0d3d1c31b72368366a4049c05e291d58"
             }
           ]
         }

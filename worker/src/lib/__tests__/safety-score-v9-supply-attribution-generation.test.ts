@@ -318,6 +318,18 @@ function buildFixtureCache(): FixtureCache {
     makeV9FixedInput({ assetId: "wm-m0", clockSec: SOURCE_CLOCK_SEC });
   const input = normalizeFixedInput({
     ...wmInput,
+    // XAUT-only generation fixtures need a complete wM provider inventory;
+    // one positive Ethereum subtotal no longer suppresses its census.
+    chainCirculatingById: {
+      ...wmInput.chainCirculatingById,
+      "wm-m0": {
+        ...wmInput.chainCirculatingById["wm-m0"],
+        Arbitrum: { current: 0, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
+        Base: { current: 0, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
+        Plume: { current: 0, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
+        Solana: { current: 0, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
+      },
+    },
     activeAssetIds: ["wm-m0", "xaut-tether"],
     resolvedBlacklistStatuses: { "wm-m0": false, "xaut-tether": false },
     dexLiqMap: {

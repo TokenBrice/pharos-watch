@@ -45,6 +45,40 @@ function runNest(
 }
 
 describe("fetchNestVaultPositionsReserves", () => {
+  it("keys USDG liquid balances specifically while keeping unfamiliar symbols unknown", async () => {
+    const { result } = await runNest(
+      "nopal-nest",
+      {
+        data: {
+          positions: {
+            liquidAssets: [
+              { symbol: "USDG", position: { value: 75 }, pendingTransactions: [] },
+              { symbol: "UNRECOGNIZED", position: { value: 25 }, pendingTransactions: [] },
+            ],
+            yieldAssets: [],
+          },
+        },
+      },
+      { data: { nav: 100, price: 1, totalSupply: 100 } },
+      { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } },
+    );
+
+    expect(result.slices).toHaveLength(2);
+    expect(result.slices.find((slice) => slice.sourceKey === "nest-vault-positions:usdg")).toMatchObject({
+      name: "USDG liquid balance",
+      pct: 75,
+      risk: "low",
+      coinId: "usdg-paxos",
+      depType: "collateral",
+    });
+    const unknown = result.slices.find((slice) => slice.sourceKey === "nest-vault-positions:unknown");
+    expect(unknown).toMatchObject({ name: "UNRECOGNIZED liquid balance", pct: 25, risk: "high" });
+    expect(unknown?.coinId).toBeUndefined();
+    expect(unknown?.depType).toBeUndefined();
+    expect(result.metadata?.unknownExposurePct).toBe(25);
+    expectWarnings(result, []);
+  });
+
   it("retains saved positive Nest dust and sub-six-decimal tracked balances", async () => {
     const fixture = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "fixtures", "nest-precision-2026-09-29.json"), "utf8")) as {
       vaults: Array<{

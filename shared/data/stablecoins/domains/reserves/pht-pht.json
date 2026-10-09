@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-31",
-    "reviewer": "Codex T31 Safety Score V9 reserve review",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane28Rupiah)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -41,9 +41,17 @@
       {
         "label": "Tronscan APACX reserve wallet account",
         "url": "https://apilist.tronscanapi.com/api/account?address=TCRjE31cgksHetFLQd6JENAfBfXhHjMEFU"
+      },
+      {
+        "label": "APACX transparency disclosure, re-read October 9, 2026",
+        "url": "https://docs.apacx.io/transparency.md"
+      },
+      {
+        "label": "APACX mint and collateral disclosure, re-read October 9, 2026",
+        "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht.md"
       }
     ],
-    "rationale": "Fresh review remains unable to assign supported reserve weights. APACX's mint guide says all existing PHT are minted with apcxUSDT backed 1:1 by USDT and its transparency page names reserve wallet TCRjE31cgksHetFLQd6JENAfBfXhHjMEFU. However, at Ethereum block 25648905 (2026-07-30T23:18:47Z), current Vat.ilks reads show positive normalized debt in five distinct branches: USDT-A, cPHP-A, ApcxUSDT-A, demoUSDT-A, and USDC-A. The issuer statement and live CDP branch graph therefore conflict, while no branch-level collateral balances or reconciliation are published. The named Tron reserve wallet held 800002.000009 USDT at the 2026-07-30T23:15:58Z Tronscan capture, which does not reconcile the multi-branch PHT collateral claims. Preserve the full residual unknown rather than forcing an unsupported allocation.",
+    "rationale": "Issuer-document review at 2026-10-09T10:40:09Z still cannot establish a dated complete reserve allocation. APACX's mint guide states that all existing PHT use apcxUSDT backed 1:1 by USDT, while its transparency page lists only the apcxUSDT reserve wallet and says the apcxUSDC wallet is to be announced soon. Neither page publishes a dated branch-level collateral composition or a reserve-to-PHT reconciliation. Historical observations are retained without refreshing their clocks: Ethereum block 25648905 (2026-07-30T23:18:47Z) showed positive normalized debt in USDT-A, cPHP-A, ApcxUSDT-A, demoUSDT-A and USDC-A, and the July 30 Tronscan capture recorded 800002.000009 USDT in the named reserve wallet. Those old observations did not reconcile the multi-branch PHT claims and are not current holdings evidence. CompositionAsOf and the 100% insufficient-evidence placeholder remain unchanged; no complete composition, custody or financial-assurance credit is claimed.",
     "compositionBasis": "APACX collateral disclosure cross-checked against the live Ethereum Vat/ILK branch graph and the named Tron reserve wallet; branch balances and reconciliation remain undisclosed",
     "compositionAsOf": "2026-07-31",
     "scope": "selected-slices",

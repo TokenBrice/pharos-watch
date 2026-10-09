@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { getRedemptionBackstopConfig, resolveV9RedemptionRouteCostBpsAtNotional } from "../redemption-backstops";
+import { getRedemptionBackstopConfig, resolveReviewedRedemptionSettlement, resolveV9RedemptionRouteCostBpsAtNotional } from "../redemption-backstops";
 import { resolveCapacitySemantics } from "../redemption-backstop-confidence";
 import { resolveReviewedRouteSuspension } from "../redemption-route-suspension";
 import { RedemptionBackstopConfigSchema } from "../redemption-backstop-configs/schema";
 import { NEST_NAV_VAULT_CONFIGS } from "../redemption-backstop-configs/queue-redeem-nest-nav";
 import { NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS } from "../redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized";
+import { resolveReviewedRedemptionSettlementDelay } from "../redemption-backstop-configs/settlement";
 
 const reviewedClock = Date.UTC(2026, 9, 7) / 1_000;
 
@@ -32,13 +33,30 @@ describe("tokenized issuer route evidence boundaries", () => {
     expect(config.v9RouteReviewTerms?.minRedeemUsd).toBeUndefined();
   });
 
-  it.each(["iauon-ondo", "slvon-ondo"])("keeps %s atomic USDon separate from standard put capacity", (id) => {
+  it.each(["iauon-ondo", "slvon-ondo"])("keeps %s documented USDon redemption separate from standard put capacity", (id) => {
     const config = getRedemptionBackstopConfig(id)!;
     expect(config.capacityModel).toEqual({ kind: "unquantified" });
     expect(config.outputAssets).toEqual(["usdon-ondo"]);
-    expect(config.v9RouteReviewTerms).toMatchObject({ settlementModel: "atomic", settlementDelaySec: 0, minRedeemUsd: 1, missingScoringFields: ["capacity"] });
-    expect(config.costModel.feeBpsMax).toBe(10);
-    expect(config.docs?.some((source) => source.supports?.includes("capacity"))).toBe(false);
+    expect(config.v9RouteReviewTerms).toMatchObject({
+      settlementModel: "immediate",
+      minRedeemUsd: 1,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+    });
+    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
+    expect(config.v9RouteReviewTerms?.businessDayTerms).toBeUndefined();
+    expect(config.costModel.feeBpsMax).toBeUndefined();
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
+    const capacitySource = config.docs?.find((source) =>
+      source.url === "https://docs.ondo.finance/api-reference/limits/get-trading-limits.md");
+    expect(capacitySource?.supports).toContain("capacity");
+    // Account/asset limits are documentary constraints, not executable
+    // standard-put capacity or an end-to-end instant completion guarantee.
+    const reviewClockSec = Date.parse(`${config.v9RouteReviewTerms!.reviewedAt}T00:00:00Z`) / 1_000;
+    for (const clockSec of [reviewClockSec - 1, reviewClockSec + 86_400]) {
+      expect(resolveReviewedRedemptionSettlement(config, clockSec)).toBe("immediate");
+      expect(resolveReviewedRedemptionSettlementDelay(config.v9RouteReviewTerms, clockSec)).toBeUndefined();
+    }
   });
 
   it("keeps mTBILL's coherent instant fee and heuristic buffer, not standard-branch limits", () => {

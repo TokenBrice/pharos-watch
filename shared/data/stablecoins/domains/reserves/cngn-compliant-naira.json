@@ -47,9 +47,13 @@
       {
         "label": "Issuer transparency, rendered 2026 reserve-audit archive",
         "url": "https://www.cngn.co/transparency#audit-report"
+      },
+      {
+        "label": "Issuer transparency re-opened 2026-10-09T10:32:06Z; audit section lists smart-contract audits without financial-report publication chronology",
+        "url": "https://www.cngn.co/transparency"
       }
     ],
-    "rationale": "Full independent report examined as of August 31, 2026 at 21:45 WAT. Table 2's four reported rounded shares describe the whole NGN3,550,845,048.39 reserve book; Table 1 reconciles NGN3,329,961,223.91 circulating liabilities. Table 4 identifies CDS MMF and FAAM MMF. Tables 5-7 identify Nigerian Treasury bills, financial-institution fixed-term placements and bank deposits. Bank counterparties, fund-share liquidity and fixed-term maxima are not inferred. The accountant signature is undated and management's signature stamp has no visible date; report-publication provenance remains unresolved. These measured rows cannot enter named-attestor scoring until that mandatory date is established; the generic 38-day route must not bypass the gate.",
+    "rationale": "Full independent report examined as of August 31, 2026 at 21:45 WAT. Table 2's four reported rounded shares describe the whole NGN3,550,845,048.39 reserve book; Table 1 reconciles NGN3,329,961,223.91 circulating liabilities. Table 4 identifies CDS MMF and FAAM MMF. Tables 5-7 identify Nigerian Treasury bills, financial-institution fixed-term placements and bank deposits. Bank counterparties, fund-share liquidity and fixed-term maxima are not inferred. The accountant signature is undated and management's signature stamp has no visible date; report-publication provenance remains unresolved. These measured rows cannot enter named-attestor scoring until that mandatory date is established; the generic 38-day route must not bypass the gate. Sol curation campaign 2026-10-09 (Lane24Naira) independently re-read the complete report and visually inspected signatures on pages 5 and 7 at 2026-10-09T10:32:06Z. The current transparency audit section supplies contract-audit dates, not this financial report's publication or signing date. The original composition and review dates are retained; missing admissible chronology is researched non-disclosure, not an uncurated published date.",
     "compositionBasis": "August 31, 2026 reserve fair values: MMFs NGN1,906,693,594.74; Treasury bills NGN455,102,195.58; bank deposits NGN820,332,487.05; fixed-term investments NGN368,716,771.02. Reported rounded whole-book percentages 54/13/23/10 sum to 100.",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",

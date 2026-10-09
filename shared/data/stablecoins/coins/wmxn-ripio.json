@@ -4,14 +4,14 @@
   "detailProvider": "defillama",
   "name": "Ripio wMXN",
   "symbol": "wMXN",
-  "oneLiner": "WMXN is Ripio's Mexican-peso wrapped fiat stablecoin, issued and redeemed through Ripio's wFIAT on/off-ramp infrastructure against local-currency reserves.",
+  "oneLiner": "WMXN is Ripio's reserve-backed Mexican-peso stablecoin; holders have no issuer redemption right and exit through markets or available ramps.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "MXN",
     "governance": "centralized"
   },
   "collateral": "Mexican-peso fiat cash deposited in a Mexican bank account, backing Ripio wMXN one-to-one against the Mexican peso per Ripio's wFIAT token certification",
-  "pegMechanism": "Issuer-controlled wFIAT token: the Ripio affiliate mints WMXN against local Mexican-peso reserves and burns supply as needed, holding 1 WMXN = 1 MXN through on/off-ramp convertibility on Ripio and other VASP platforms plus DEX arbitrage; holders have no contractual on-chain redemption right",
+  "pegMechanism": "Issuer-controlled wFIAT token: the Ripio affiliate mints WMXN against local Mexican-peso reserves and burns supply as needed, targeting 1 WMXN = 1 MXN through available on/off-ramp conversion and DEX arbitrage. The wFIAT whitepaper expressly denies token holders any issuer redemption right or claim to funds.",
   "proofOfReserves": {
     "type": "agreed-upon-procedures",
     "url": "https://action.ripio.com/en/wfiat-attestations",
@@ -51,6 +51,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/ripioapp"
+    },
+    {
+      "label": "Docs",
+      "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf"
     }
   ],
   "contracts": [

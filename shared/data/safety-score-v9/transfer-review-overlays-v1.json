@@ -1918,8 +1918,8 @@
     },
     {
       "assetId": "sdai-sky",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACCESS acc-A",
+      "reviewedAt": "2026-10-09",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane11Sky)",
       "deployments": [
         {
           "chainId": "ethereum",
@@ -1969,6 +1969,23 @@
             {
               "label": "Optimistic Etherscan sDAI contract",
               "url": "https://optimistic.etherscan.io/address/0x2218a117083f5b482b0bb821d27056ba9c04b1d3#code"
+            }
+          ]
+        },
+        {
+          "chainId": "worldchain",
+          "contractOrTokenId": "0x859dbe24b90c9f2f7742083d3cf59ca41f55be5d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Worldscan verifies direct immutable OptimismMintableERC20 1.3.0 code. Pinned runtime at World Chain block 35966146, hash 0xf294a8c1cd77abb22c920b18164a3c9e69cb0de25ceaa775a26785ac9e847924, timestamp 2026-10-06T06:25:31Z, observed 2026-10-09T10:40:50.894Z, matches the explorer deployed bytecode and embeds Ethereum sDAI as REMOTE_TOKEN and 0x4200000000000000000000000000000000000010 as BRIDGE. Holder transfers inherit unmodified ERC20; no upgrade, blacklist, pause, transfer gate or nonempty transfer hook exists. onlyBridge mint/burn is a separate economic-control surface; ordinary holder transfer posture does not erase bridge or inherited DAI exposure.",
+          "sources": [
+            {
+              "label": "Exact verified World Chain OptimismMintableERC20 source",
+              "url": "https://worldscan.org/address/0x859dbe24b90c9f2f7742083d3cf59ca41f55be5d#code"
+            },
+            {
+              "label": "Pinned World Chain runtime read",
+              "url": "https://api-worldchain-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -2665,8 +2682,8 @@
     },
     {
       "assetId": "susds-sky",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "W1R02 all-deployment transfer review",
+      "reviewedAt": "2026-10-09",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane11Sky)",
       "deployments": [
         {
           "chainId": "ethereum",
@@ -2733,6 +2750,27 @@
             {
               "label": "Pinned deployment RPC",
               "url": "https://arbitrum-one-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "unichain",
+          "contractOrTokenId": "0xa06b10db9f390990364a3984c04fadf1c13691b5",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "At Unichain block 60518930, hash 0xbf80e4f4bcaf5b5d4a2dcfa878d63d6a11365675faefe388d7e9253c77d9e234, timestamp 2026-10-06T06:14:49Z, EIP-1967 implementation resolved to 0x15c2a564b987470fafcab0b036029532bd168e10; observed 2026-10-09T10:40:44.018Z. The verified implementation exposes ordinary holder transfer/transferFrom with invalid-address, balance and allowance checks, no transfer permissioning or freeze hook, and ward-gated _authorizeUpgrade/rely/deny. The holder-transfer path is currently unrestricted but restrictable through UUPS upgrades. This does not certify the full ward/execution inventory or negate inherited USDS freeze exposure.",
+          "sources": [
+            {
+              "label": "Exact verified ERC-1967 proxy and implementation identity",
+              "url": "https://unichain.blockscout.com/api/v2/smart-contracts/0xa06b10db9f390990364a3984c04fadf1c13691b5"
+            },
+            {
+              "label": "Exact verified Unichain SUsds implementation",
+              "url": "https://unichain.blockscout.com/api/v2/smart-contracts/0x15c2a564b987470fafcab0b036029532bd168e10"
+            },
+            {
+              "label": "Pinned Unichain implementation read",
+              "url": "https://api-unichain-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -4089,23 +4127,115 @@
     },
     {
       "assetId": "susn-noon",
-      "reviewedAt": "2026-09-22",
-      "reviewer": "Claude ACC-B TRANSFER-FACT; Pharos WS-H adverse re-review",
+      "reviewedAt": "2026-10-09",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L28Hydrated)",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xe24a3dc889621612422a64e6388927901608b91d",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At Ethereum block 26036288 on 2026-09-22, this proxy still reported symbol sUSN, its EIP-1967 implementation slot resolved to Sourcify exact-match StakingVaultOFTUpgradeableHyperlane 0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d (the 2026-07-20 review's 0xd1ffb6a6... was superseded by the timelocked 2026-08-04 upgrade), and its EIP-1967 admin slot held ProxyAdmin 0x1908284b50ee152c9f00c8e65a81fc1c4520bd81. The verified implementation's _update reverts with BlacklistedAddress whenever the sender or recipient is on the internal blacklist, and blacklistAccount(address) is callable by any BLACKLIST_MANAGER_ROLE holder, a role currently held by no account but grantable instantly by the owning 3-of-6 Noon Safe, which can also pause the vault and thereby block new unstake requests with no timelock. The proxy's upgrade path additionally holds an armed, expiry-free timelock operation scheduled 2026-06-10, so transfer logic is replaceable without further notice until it is cancelled. A single privileged call therefore freezes a named holder.",
+          "evidence": "Re-derived at Ethereum block 26154579 (0xaeb74e22f56f812a995351bb758eea9cfb274344c7b0fd438042e8c595ba7c21, 2026-10-09T11:33:35Z), observed from 2026-10-09T11:49:28.516Z. The proxy 0xe24a3dc889621612422a64e6388927901608b91d reports sUSN and now resolves to 0xef2ea4250b7ce4d0aa9ca70607ecef278c6eab15, replacing the implementation observed on September 22. Its pinned runtime equals the Sourcify exact-match StakingVaultOFTUpgradeableHyperlane runtime. blacklistAccount(address) is BLACKLIST_MANAGER_ROLE-gated; _update() rejects blacklisted senders or recipients and is whenNotPaused, so ordinary holder transfers remain restrictable. owner()=0x1ea169ecccf7714e7ba04900e1a3357cca77327f, hasRole(DEFAULT_ADMIN_ROLE,owner)=true, hasRole(BLACKLIST_MANAGER_ROLE,owner)=false, getRoleAdmin(BLACKLIST_MANAGER_ROLE)=DEFAULT_ADMIN_ROLE, and paused()=false. This positively proves the owner can grant the blacklist role and exercise global pause; no complete census of other role holders, independent-key topology, or timelock protection is asserted. Ethereum lock/unlock logic still preserves canonical shares for representations. Four newly identity-verified HyperEVM/Base/Citrea/Berachain representations have separate pinned blacklist/pause observations in bridgeRouteRisk.routes and the transfer-review fragment. zkSync, deprecated Sophon and Starknet holder-transfer source coverage remains unresolved; this is not an aggregate all-deployment access certificate. Upstream USN reserve access is separate.",
           "sources": [
             {
-              "label": "Sourcify exact-match current sUSN implementation",
-              "url": "https://sourcify.dev/server/v2/contract/1/0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d?fields=all"
+              "label": "Current Ethereum sUSN implementation; Sourcify exact match and pinned runtime equality",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xef2ea4250b7ce4d0aa9ca70607ecef278c6eab15?fields=all"
             },
             {
-              "label": "Ethereum public RPC used for the block 25575197 slot reads",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "sUSN Ethereum proxy on Etherscan",
+              "url": "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d#code"
+            },
+            {
+              "label": "Pinned Ethereum Dwellir RPC block 26154579",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "chainId": "hyperevm",
+          "contractOrTokenId": "0x34a2798d47b238a7cba9d87d49618dee6c4d999f",
+          "scope": "additional",
+          "posture": "restrictable",
+          "evidence": "Sol curation campaign 2026-10-09 (W2L28Hydrated): issuer registry plus block 48077395 (0x9ef94d1f06b98d8312aaab0d3b50699fe6019c50f48ddf810815ebc70725dc34, 2026-10-09T11:37:26Z), observed 2026-10-09T11:38:01.257Z, establishes Staked USN/sUSN, 18 decimals, totalSupply 125658471222334408891162 atomic shares, and the stated owner. EIP-1967 implementation is 0xffc95e7e447dc94dce706b8afda751349e676227; its pinned runtime equals Base's exact-match Sourcify StakedUSNHyperlane runtime byte-for-byte including metadata. handle() mints only through a configured mailbox against a registered remote sender; outgoing bridge transfers burn shares. mailbox()=0x3a464f746d23ab22155710f44db16dca53e0775e, token ISM()=0, hyperlaneEnabled()=true. Owner has BLACKLIST_MANAGER_ROLE and DEFAULT_ADMIN_ROLE; paused()=false. _update() enforces per-account blacklist and global pause. Default mailbox ISM, validator quorum, proxy upgrade topology and runtime materiality remain unreviewed; atomic shares are not circulating USD or proof of immateriality.",
+          "sources": [
+            {
+              "label": "Noon issuer deployment registry",
+              "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+            },
+            {
+              "label": "Exact-match Base implementation; pinned cross-chain runtime equality",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0xa02ca8c6130b75b320faa785034e95d4374a8942?fields=all"
+            },
+            {
+              "label": "Pinned HyperEVM RPC block 48077395",
+              "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "chainId": "base",
+          "contractOrTokenId": "0x34a2798d47b238a7cba9d87d49618dee6c4d999f",
+          "scope": "additional",
+          "posture": "restrictable",
+          "evidence": "Sol curation campaign 2026-10-09 (W2L28Hydrated): issuer registry plus block 52378239 (0xdae1be2c8531ec5231d086f5223b72bf8689f9fd580cfc553efd622da264008a, 2026-10-09T11:37:05Z), observed 2026-10-09T11:38:00.236Z, establishes Staked USN/sUSN, 18 decimals, totalSupply 6236386238822830820430272 atomic shares, and the stated owner. EIP-1967 implementation is 0xa02ca8c6130b75b320faa785034e95d4374a8942; its pinned runtime equals the Sourcify exact-match StakedUSNHyperlane runtime byte-for-byte. handle() mints only through a configured mailbox against a registered remote sender; outgoing bridge transfers burn shares. mailbox()=0xea87ae93fa0019a82a727bfd3ebd1cfca8f64f1d, token ISM()=0, hyperlaneEnabled()=true. Owner has BLACKLIST_MANAGER_ROLE and DEFAULT_ADMIN_ROLE; paused()=false. _update() enforces per-account blacklist and global pause. Default mailbox ISM, validator quorum, proxy upgrade topology and runtime materiality remain unreviewed; atomic shares are not circulating USD or proof of immateriality.",
+          "sources": [
+            {
+              "label": "Noon issuer deployment registry",
+              "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+            },
+            {
+              "label": "Exact-match Base implementation and pinned runtime",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0xa02ca8c6130b75b320faa785034e95d4374a8942?fields=all"
+            },
+            {
+              "label": "Pinned Base RPC block 52378239",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "chainId": "citrea",
+          "contractOrTokenId": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+          "scope": "additional",
+          "posture": "restrictable",
+          "evidence": "Sol curation campaign 2026-10-09 (W2L28Hydrated): issuer registry plus block 13721671 (0xe51c10a37dc8ab1135ee3f231365b87acb48971035593edb3df9dafdc8e2dbb2, 2026-10-09T11:37:05Z), observed 2026-10-09T11:38:25.964499Z, establishes Staked USN/sUSN, 18 decimals, totalSupply 2010000000000000 atomic shares, and the stated owner. EIP-1967 implementation is 0x6d1019bdbe1da163134aba821bbfc1ccaeb988a8; its pinned runtime equals Base's exact-match Sourcify StakedUSNHyperlane runtime byte-for-byte including metadata. Citrea's explorer independently marks this implementation fully verified. Dwellir has no registered Citrea endpoint, so official numeric-pinned RPC reads used matching block headers before and after. handle() mints only through a configured mailbox against a registered remote sender; outgoing bridge transfers burn shares. mailbox()=0x3a464f746d23ab22155710f44db16dca53e0775e, token ISM()=0, hyperlaneEnabled()=true. Owner has BLACKLIST_MANAGER_ROLE and DEFAULT_ADMIN_ROLE; paused()=false. _update() enforces per-account blacklist and global pause. Default mailbox ISM, validator quorum, proxy upgrade topology and runtime materiality remain unreviewed; atomic shares are not circulating USD or proof of immateriality.",
+          "sources": [
+            {
+              "label": "Noon issuer deployment registry",
+              "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+            },
+            {
+              "label": "Exact-match Base implementation; pinned cross-chain runtime equality",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0xa02ca8c6130b75b320faa785034e95d4374a8942?fields=all"
+            },
+            {
+              "label": "Fully verified Citrea implementation",
+              "url": "https://explorer.mainnet.citrea.xyz/api/v2/smart-contracts/0x6d1019bdbe1da163134aba821bbfc1ccaeb988a8"
+            },
+            {
+              "label": "Pinned official Citrea RPC block 13721671",
+              "url": "https://rpc.mainnet.citrea.xyz"
+            }
+          ]
+        },
+        {
+          "chainId": "berachain",
+          "contractOrTokenId": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+          "scope": "additional",
+          "posture": "restrictable",
+          "evidence": "Sol curation campaign 2026-10-09 (W2L28Hydrated): issuer registry plus block 27265554 (0xaef6cb126f4950034de8ff9495bee2755588eca2692ce4c754a5905b0881df43, 2026-10-09T11:37:04Z), observed 2026-10-09T11:38:02.420Z, establishes Staked USN/sUSN, 18 decimals, totalSupply 1007004911767116529633656 atomic shares, and the stated owner. EIP-1967 implementation is 0x657284c8337ab91b1a7d4eb66be97596f4878117; its pinned runtime equals Base's exact-match Sourcify StakedUSNHyperlane runtime byte-for-byte including metadata. Bera explorer retrieval was blocked; source semantics are established by exact pinned runtime equality, not by interpreting the failed fetch. handle() mints only through a configured mailbox against a registered remote sender; outgoing bridge transfers burn shares. mailbox()=0x7f50c5776722630a0024fae05fde8b47571d7b39, token ISM()=0, hyperlaneEnabled()=true. Owner has BLACKLIST_MANAGER_ROLE and DEFAULT_ADMIN_ROLE; paused()=false. _update() enforces per-account blacklist and global pause. Default mailbox ISM, validator quorum, proxy upgrade topology and runtime materiality remain unreviewed; atomic shares are not circulating USD or proof of immateriality.",
+          "sources": [
+            {
+              "label": "Noon issuer deployment registry",
+              "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+            },
+            {
+              "label": "Exact-match Base implementation; pinned cross-chain runtime equality",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0xa02ca8c6130b75b320faa785034e95d4374a8942?fields=all"
+            },
+            {
+              "label": "Pinned Berachain RPC block 27265554",
+              "url": "https://api-berachain-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -5627,30 +5757,34 @@
     },
     {
       "assetId": "usdcx-movement",
-      "reviewedAt": "2026-07-22",
-      "reviewer": "GPT SOL-TRANSFER wave6",
+      "reviewedAt": "2026-10-09",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane15Securitize)",
       "deployments": [
         {
           "chainId": "movement",
           "contractOrTokenId": "0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At Movement block 74981963 and ledger version 174443182, the USDCx object stored a live TransferRef in usdcx::Management. The current pause affects mint and burn only, but package policy 1 permits compatible upgrades and the package owner is a live 4-of-6 multisig. That owner can upgrade the same module to use its stored TransferRef, which Aptos defines as capable of moving assets regardless of holder-store frozen status, so holder-transfer behavior is replaceable.",
+          "evidence": "Re-observed 2026-10-09T10:36:29Z at the unchanged Movement ledger pin 220370475 (block height 97379184): exact USDCx metadata 0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e stores a live TransferRef; Roles.admin and package ObjectCore.owner bind to 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1. Its MultisigAccount requires 3 signatures from 6 owners, replacing the older overlay 4-of-6 observation. PackageRegistry has compatible upgrade policy 1 and upgrade_number 0. The deployed module ABI exposes no holder-selective freeze entry point; live TransferRef plus compatible package replacement retains restrictable holder-transfer posture without asserting an active freeze or source-to-bytecode equivalence. Aptos documents TransferRef as able to freeze or bypass frozen stores. No material supply share, exclusive liability attestation, current supply or independent-human signer claim is authored.",
           "sources": [
             {
-              "label": "USDCx token resources at ledger 174443182",
-              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=174443182"
+              "label": "USDCx exact TransferRef/admin, ledger 220370475",
+              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=220370475"
             },
             {
-              "label": "USDCx package resources and upgrade policy",
-              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/resources?ledger_version=174443182"
+              "label": "USDCx exact compatible package owner/policy, ledger 220370475",
+              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/resources?ledger_version=220370475"
             },
             {
-              "label": "Deployed USDCx module",
-              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=174443182"
+              "label": "USDCx exact 3-of-6 admin, ledger 220370475",
+              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1/resources?ledger_version=220370475"
             },
             {
-              "label": "Aptos TransferRef semantics",
+              "label": "USDCx deployed ABI, ledger 220370475",
+              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=220370475"
+            },
+            {
+              "label": "Aptos TransferRef capabilities",
               "url": "https://aptos.dev/build/smart-contracts/fungible-asset"
             }
           ]
@@ -9969,8 +10103,8 @@
     },
     {
       "assetId": "xgld-unitas",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "W1R69 exact verified source review",
+      "reviewedAt": "2026-10-09",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane43Unitas)",
       "deployments": [
         {
           "chainId": "bsc",
@@ -10003,6 +10137,40 @@
             {
               "label": "Issuer exact deployment census and primary-access distinction",
               "url": "https://docs.unitas.so/overview/xgld.md"
+            }
+          ]
+        },
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Current exact BSC XGLDToken/OFT/ERC20 source has ordinary holder transfer/transferFrom with no holder whitelist, pause, seizure or overridden transfer update. Retained 2026-10-05 finalized ethereum block 26125488 establishes whole-runtime equality, hex-text SHA256 877e88dcdf877380ae73ce8656f03b89b0c3ae5b2246eaf3e295dca22e8495b7, to the exact-match BSC runtime. This source-bound review applies that immutable code to the previously omitted deployment; it does not refresh the original block observation, infer economic supply share or establish bridge administrator topology. Privileged burn burns msg.sender balance; upstream XAUt freeze exposure and primary mint/redemption whitelisting are separate.",
+          "sources": [
+            {
+              "label": "Current exact-match XGLDToken and inherited ERC20 source",
+              "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution"
+            },
+            {
+              "label": "Retained October 5 finalized runtime-equality pin at block 26125488",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "mantle",
+          "contractOrTokenId": "0x385c279445581a186a4182a5503094ebb652ec71",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Current exact BSC XGLDToken/OFT/ERC20 source has ordinary holder transfer/transferFrom with no holder whitelist, pause, seizure or overridden transfer update. Retained 2026-10-05 finalized mantle block 101532003 establishes whole-runtime equality, hex-text SHA256 877e88dcdf877380ae73ce8656f03b89b0c3ae5b2246eaf3e295dca22e8495b7, to the exact-match BSC runtime. This source-bound review applies that immutable code to the previously omitted deployment; it does not refresh the original block observation, infer economic supply share or establish bridge administrator topology. Privileged burn burns msg.sender balance; upstream XAUt freeze exposure and primary mint/redemption whitelisting are separate.",
+          "sources": [
+            {
+              "label": "Current exact-match XGLDToken and inherited ERC20 source",
+              "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution"
+            },
+            {
+              "label": "Retained October 5 finalized runtime-equality pin at block 101532003",
+              "url": "https://rpc.mantle.xyz"
             }
           ]
         }

@@ -9,7 +9,7 @@
     "rwa": true
   },
   "collateral": "Separate USD reserve books: Moneta bank deposits and money market funds managed by Fidelity and Western Asset Management; NBX deposits at Sparebanken Norge and Amundi USD money market funds. Neither issuer's reserve backs the other's issuance.",
-  "pegMechanism": "Par USD redemption against the responsible issuer, subject to KYC and issuer-attribution checks. NBX redeems its own attributable issuance from its separate reserve; Moneta-attributable USDM presented to NBX is redeemable only from settled Moneta funds already received. Mixed or unresolved attribution can delay processing. An independent reserve-verification oracle gates minting on Cardano; the latest NBX whitepaper does not name the current provider.",
+  "pegMechanism": "Par USD redemption against the responsible issuer, subject to KYC and issuer-attribution checks. Moneta's current bank-wire rail is limited to KYB-approved institutions; its FAQ states a default $10,000 daily mint/burn limit and a 0.1% burning fee with a $50 minimum and $5,000 cap, including Cardano network fees but excluding possible bank fees. NBX redeems its own attributable issuance from its separate reserve; Moneta-attributable USDM presented to NBX is redeemable only from settled Moneta funds already received. Mixed or unresolved attribution can delay processing. An independent reserve-verification oracle gates minting on Cardano; the latest NBX whitepaper does not name the current provider.",
   "mechanismArchetype": "fiat-cash",
   "implementationLaunchDate": "2024-03-16",
   "mechanismArchetypeReview": {
@@ -47,6 +47,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/USDMOfficial"
+    },
+    {
+      "label": "Moneta redemption access, limits and capped fees",
+      "url": "https://moneta.global/resources/faq/"
     }
   ],
   "jurisdiction": {

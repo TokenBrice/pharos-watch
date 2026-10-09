@@ -122,7 +122,7 @@
     {
       "type": "info",
       "title": "Centrifuge V3 multi-chain availability",
-      "message": "JTRSY is also distributed across Centrifuge V3 to additional chains. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+      "message": "The catalog records eight JTRSY deployments. Centrifuge's current share-bridge guide limits burn-and-mint bridging to EVM networks and excludes Solana targets; the Solana deployment's issuance and transfer architecture remains unresolved."
     }
   ],
   "launchDate": "2024-08-05"

@@ -17,6 +17,7 @@ describe("Safety Score v9 curation worklist routing", () => {
   it("keeps ordinary non-curation reasons silently unmapped", () => {
     expect(classifyV9CurationWorklistStream("bounded-mechanism-review")).toBeNull();
     expect(classifyV9CurationWorklistStream("nonmaterial-bridge-supply-unmatched")).toBeNull();
+    expect(classifyV9CurationWorklistStream("missing-pillar-evidence")).toBeNull();
   });
 
   it("fails closed when a reason has no typed curation disposition", () => {

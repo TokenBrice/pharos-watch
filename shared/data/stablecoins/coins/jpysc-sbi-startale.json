@@ -18,7 +18,7 @@
     }
   ],
   "collateral": "Segregated Shinsei Trust & Banking trust accounts holding yen cash and Japanese government bonds, with JGBs capped at 50% of reserves under Japan's Type III Electronic Payment Instrument framework",
-  "pegMechanism": "Trust-bank-backed JPY stablecoin issued by Shinsei Trust & Banking and distributed by SBI VC Trade. The June 24, 2026 launch is closed-loop for verified SBI VC Trade users; the Ethereum token is deployed, but external-wallet withdrawals and open public-chain circulation remain disabled pending legal and tax policy.",
+  "pegMechanism": "Trust-bank-backed JPY stablecoin issued by SBI Shinsei Trust Bank and distributed by SBI VC Trade in a closed-loop launch with external-wallet withdrawals disabled. The issuer also documents direct redemption by application and identity checks, followed by token transfer and JPY payment to a bank account in the holder's name. The September 30, 2026 terms set a standard two-bank-business-day period after request acceptance, with verification-related extensions; this is not an unconditional same-day payout guarantee.",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "proofOfReserves": {
@@ -27,21 +27,21 @@
     "provider": "SBI Shinsei Trust Bank (trustee statutory disclosure)",
     "attestorTier": "self",
     "latestReport": {
-      "periodEnd": "2026-09-07",
-      "publishedAt": "2026-09-07",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-09-30",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "Pharos reserve research (GLM issue-sweep 2026-09-29)",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane09Ripio)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "SBI Shinsei Trust / SBI VC Trade press release, 2026-09-07 (¥1.0B short-term JGBs in the JPYSC trust property; issuance ≈¥20.1B as of 2026-09-07)",
-          "url": "https://www.sbigroup.co.jp/news/pdf/group/2026/0907_a.pdf"
+          "label": "SBI Shinsei Trust statutory JPYSC balance table as of September 30, 2026; observed 2026-10-09T10:38:55Z",
+          "url": "https://www.shinseitrust.com/stablecoin/jpysc.html"
         },
         {
-          "label": "SBI Holdings news release page, 2026-09-07 (HTML version)",
-          "url": "https://www.sbigroup.co.jp/news/2026/0907_16567.html"
+          "label": "JPYSC terms updated September 30, 2026, section 6 summary",
+          "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf"
         }
       ]
     }
@@ -58,6 +58,14 @@
     {
       "label": "Twitter",
       "url": "https://x.com/StartaleGroup"
+    },
+    {
+      "label": "Docs",
+      "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf"
+    },
+    {
+      "label": "Issuer",
+      "url": "https://www.shinseitrust.com/stablecoin/jpysc.html"
     }
   ],
   "jurisdiction": {

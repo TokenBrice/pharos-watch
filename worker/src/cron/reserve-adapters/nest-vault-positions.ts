@@ -183,6 +183,16 @@ function bucketLiquidToken(token: NestPositionToken): SliceValue {
       depType: "collateral",
     };
   }
+  if (symbol === "USDG") {
+    return {
+      sourceKey: "nest-vault-positions:usdg",
+      value,
+      name: "USDG liquid balance",
+      risk: "low",
+      coinId: "usdg-paxos",
+      depType: "collateral",
+    };
+  }
   return {
     sourceKey: "nest-vault-positions:unknown",
     value,

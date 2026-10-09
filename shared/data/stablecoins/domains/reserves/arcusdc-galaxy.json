@@ -92,8 +92,12 @@
       {
         "label": "arc fixed-block RPC observation 23952285",
         "url": "https://rpc.mainnet.arc.io"
+      },
+      {
+        "label": "Exact Arc VaultV2 published source, accessed 2026-10-09; full compiler verification unclaimed",
+        "url": "https://explorer.arc.io/api/v2/smart-contracts/0x8e357432cc12ff425c36432f312968aeb16112af"
       }
     ],
-    "uncertainty": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=89746600641673546252952918 atomic shares; accrueInterestView returned assets=89710295395927, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 89710295395927 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=999595 USDC atomic units. All present local positions are onchain lending claims; borrowed USDC is intentionally reused by borrowers. Upstream USDC reserve custody and borrower-collateral custody are separate inherited/credit exposures. No legal segregation or insolvency-remoteness claim is established."
+    "uncertainty": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=89746600641673546252952918 atomic shares; accrueInterestView returned assets=89710295395927, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 89710295395927 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=999595 USDC atomic units. All present local positions are onchain lending claims; borrowed USDC is intentionally reused by borrowers. Upstream USDC reserve custody and borrower-collateral custody are separate inherited/credit exposures. No legal segregation or insolvency-remoteness claim is established. The 2026-10-09 campaign reviewed Morpho's Vault V2 documentation and the exact Arc explorer's published VaultV2 source. Their contract-level noncustodial and in-kind redemption descriptions do not identify enforceable Galaxy-vault holder segregation or bankruptcy protections. The original position pin and custody review date are unchanged; the separately timestamped custodyEscrow C classification records this legal-disclosure search."
   }
 }

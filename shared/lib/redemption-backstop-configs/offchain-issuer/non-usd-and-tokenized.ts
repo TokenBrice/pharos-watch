@@ -1,4 +1,3 @@
-import { defineConfigFamily } from "../factory";
 import type { RedemptionBackstopConfig } from "../shared";
 import {
   documentedBoundSupplyFull,
@@ -18,8 +17,8 @@ import {
   reviewedIssuerApiExpansionSupplyFull,
 } from "./shared";
 
-/** vchf-vnx and vgbp-vnx share an identical issuer-redemption shape and the
- *  VNX gitbook docs[]. */
+/** Retained VNX issuer-redemption base; VCHF adds its current published fee
+ *  schedule independently below. */
 const vnxGitbookBase: RedemptionBackstopConfig = {
   ...issuerBase,
   ...reviewedDirectRedemptionSupplyFull,
@@ -57,7 +56,31 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       sourceRef("Loon support centre (reviewed 2026-10-03)", "https://loon.finance/support-centre/", ["fees"]),
     ],
   },
-  ...expandIds(["vchf-vnx", "vgbp-vnx"], vnxGitbookBase),
+  ...expandIds(["vgbp-vnx"], vnxGitbookBase),
+  "vchf-vnx": {
+    ...vnxGitbookBase,
+    reviewedAt: "2026-10-09",
+    costModel: documentedVariableFee(
+      "VNX Global Terms Annex III(C) charges CHF 30 for a SWIFT withdrawal from the platform account. A separate 3% unused-funds fee applies when less than 75% of previously transferred funds has been spent, on funds exceeding the cumulative USD 100,000-equivalent threshold. This is a disclosed account-history-dependent tariff, not an all-in USD redemption quote: CHF/USD conversion, fee applicability, network and third-party charges remain unquantified. Annex III(A)'s 2% conversion fee is a separate service and is not assumed to apply to every VCHF redemption.",
+    ),
+    docs: [
+      ...vnxGitbookBase.docs!,
+      sourceRef(
+        "VNX Global current VCHF terms and fee schedule (reviewed 2026-10-09)",
+        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+        ["route", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "Current VCHF institutional platform",
+        "https://vnx.io/swiss-franc",
+        ["route", "access"],
+      ),
+    ],
+    notes: [
+      "Sol curation campaign 2026-10-09 (Lane52Vnx), observed 2026-10-09T10:35:08Z: current terms name VNX Global Ltd., separately from the legacy VNX Commodities AG platform. Section 3.2 restricts direct issuance/redemption to verified organizations classified as sophisticated customers and permits reserve-related delay and in-kind redemption. These clauses do not establish an unconditional settlement SLA, complete cash output or currently executable capacity.",
+      "The fixed fee is CHF 30, not USD 30. No feeBpsMax, minFeeUsd, gasOrBridgeCostUsd or numerical all-in cost is authored. The existing B/cost classification remains valid until an exact account-history scenario and authoritative CHF/USD conversion can be evaluated at the requested notional and captured by the producer.",
+    ],
+  },
   "tryb-bilira": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
@@ -128,16 +151,31 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "idrt-rupiah-token": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee(
-      "Direct 1:1 issuance and redemption through PT Rupiah Token Indonesia after KYC; public fee schedule not disclosed",
-    ),
-    docs: [sourceRefRouteCapacity("Rupiah Token website", "https://www.rupiahtoken.com/")],
+    costModel: {
+      ...documentedVariableFee(
+        "Issuer redemption fee is 0.5% plus an IDR 6,500 bank-transfer charge when applicable",
+        "formula",
+      ),
+      feeBpsMin: 50,
+    },
+    docs: [
+      sourceRefRouteCapacity("Rupiah Token website", "https://www.rupiahtoken.com/"),
+      sourceRef(
+        "Rupiah Token IDRT-to-IDR withdrawal fee FAQ",
+        "https://rupiahtoken.com/faq/berapa-biaya-pencairan-idrt-ke-idr",
+        ["fees"],
+      ),
+    ],
+    notes: [
+      "Sol curation campaign 2026-10-09 (Lane28Rupiah), observed 2026-10-09T10:37:58Z: the issuer publishes a 0.5% withdrawal fee plus IDR 6,500 bank-transfer fee if applicable. The percentage leg is 50 bps, but the IDR flat leg has no capture-bound USD conversion in this config.",
+      "The 50 bps value is a lower bound, not an all-in ceiling. No feeBpsMax, minFeeUsd or gasOrBridgeCostUsd is invented. Cost remains unresolved until the producer can value the applicable IDR charge at the captured FX reference and requested notional; this fragment changes no capacity, settlement or holder-eligibility terms.",
+    ],
   },
   "idrx-idrx": {
     ...issuerBase,
     ...reviewedIssuerApiExpansionSupplyFull,
     costModel: documentedVariableFee(
-      "IDRX redemption fees are flat IDR charges that depend on redemption size (Rp5,000 up to Rp250,000,000; Rp35,000 above that during office hours), so the effective bps varies by ticket size",
+      "IDRX redemption fees are deducted from received IDR: Rp5,000 below Rp250,000,000 via BI-FAST; Rp35,000 at or above Rp250,000,000 via RTGS. A bank with a lower BI-FAST limit can force RTGS and its fee below that threshold. These local-IDR flat fees are not a fixed USD amount or fixed-bps fee.",
     ),
     docs: [
       sourceRef("IDRX redeem IDR guide", "https://docs.idrx.co/services/redeem-idr", [
@@ -154,7 +192,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ],
     notes: [
       "Primary modeled route is the issuer's direct burn-to-bank-account redemption flow for IDRX rather than the separate partner-mediated other-stablecoin off-ramp",
-      "Docs state redemptions up to Rp250,000,000 process in real time while larger bank payouts are handled during office hours, with a stated outer bound of 24 hours after request submission",
+      "The fee table states BI-FAST below Rp250,000,000 is real-time, 24/7, while RTGS at or above that threshold operates Monday–Friday, 08:00–15:00 WIB. Bank-specific lower BI-FAST limits may force RTGS earlier; no unconditional calendar-time bank-credit bound is inferred from that office-hours window.",
     ],
   },
   "mxnb-juno": {
@@ -240,12 +278,29 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     settlementModel: "days",
-    costModel: undisclosedReviewedFee(
-      "Tracked issuer materials describe direct 1:1 USDA redemption into USD through KYC-verified banking rails; public fee schedule not disclosed",
-    ),
-    docs: [sourceRef("Anzens website", "https://www.anzens.com/", ["route", "capacity", "settlement"])],
+    costModel: {
+      ...documentedVariableFee(
+        "Anzens Terms section 15(e) publishes a $30 domestic-wire fee and $70 international-wire fee. Burning also incurs variable Cardano gas; additional banking, custody, ACH and partner fees may apply. These are published components, not an all-in cost ceiling",
+        "formula",
+      ),
+    },
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      rationale:
+        "The published wire schedule does not bound gas and additional applicable fees. Section 12 targets USDA account credit within two business days and withdrawal processing within three business days, but expressly allows delay and excludes the receiving bank's time. Neither target is a binding end-to-end settlement SLA or a justified five-business-day guarantee.",
+      reviewedAt: "2026-10-09",
+      docs: [
+        sourceRef("Anzens Terms revised April 14, 2025, sections 12 and 15", "https://www.anzens.com/landing/terms-and-conditions", ["route", "access", "fees", "settlement"]),
+      ],
+    },
+    docs: [
+      sourceRef("Anzens website", "https://www.anzens.com/", ["route", "capacity", "settlement"]),
+      sourceRef("Anzens Terms revised April 14, 2025, sections 12 and 15", "https://www.anzens.com/landing/terms-and-conditions", ["route", "access", "fees", "settlement"]),
+    ],
     notes: [
-      "Tracked metadata describes redemption through bank transfers rather than an instant onchain stablecoin withdrawal rail",
+      "Redemption credits the Anzens account before a separate bank withdrawal. Foreign-account withdrawals have a $100,000 minimum and use Encryptus; that condition is not applied to the domestic rail.",
+      "Wire prices are rail-specific components. No generic minimum, zero gas, uniform basis-point fee, complete cost ceiling or guaranteed settlement delay is authored for the aggregate issuer route.",
     ],
   },
   "cash-phantom": {
@@ -265,21 +320,17 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(
-      "Brale pricing lists stablecoin offramp as included with API plans, while wire and ACH payout rails can still carry transfer fees",
+      "Brale publishes 0 bps on standard money movement and bank-payout usage fees of $0.25 per ACH, $2 per RTP and $20 per wire. Onchain transfers cost actual gas plus 20%. The Business User Agreement retains account-specific fees and discretionary pricing changes; no uniform all-in basis-point fee or maximum is established",
+      "formula",
     ),
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "Brale's Business User Agreement (updated 2026-05-27) permits discretionary redemption delays and account transaction limits, while fees are described inside the account; the 2026-09-04 review found no public scored-notional capacity, settlement SLA, or all-in payout-rail cost.",
-      reviewedAt: "2026-09-04",
+        "Brale's Business User Agreement (updated 2026-05-27), sections 3.2 and 3.5, permits discretionary redemption delays and account transaction limits. Current public pricing discloses ACH/RTP/wire fees and actual gas plus 20%, but the reviewed materials do not establish scored-notional capacity, an end-to-end settlement SLA or a complete payout cost ceiling.",
+      reviewedAt: "2026-10-09",
       docs: [
-        sourceRef("Brale business user agreement (updated 2026-05-27)", "https://brale.xyz/legal/business-user-agreement", [
-          "route",
-          "capacity",
-          "access",
-          "settlement",
-        ]),
+        sourceRef("Brale business user agreement (updated 2026-05-27)", "https://brale.xyz/legal/business-user-agreement", ["route", "capacity", "access", "settlement", "fees"]),
         sourceRef("Brale pricing", "https://brale.xyz/pricing", ["fees"]),
       ],
     },
@@ -417,9 +468,10 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...reviewedDirectRedemptionSupplyFull,
     capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "heuristic", basis: "hot-buffer" },
     settlementModel: "days",
+    outputAssets: ["usdc-circle"],
     costModel: {
       ...documentedVariableFee(
-        "USDY InstantManager's default redemption fee configuration returned 0 bps at Ethereum block 25,825,933; individual user fee overrides may apply",
+        "The documented Ethereum USDY InstantManager pays USDC. Its verified BaseRWAManager._processRedemption computes redemptionUSDValue from the RWA oracle and token decimals, calls ondoRedemptionFees.getAndUpdateFee(rwaToken, receivingToken, userId, redemptionUSDValue), subtracts that fee, and converts the remainder through the receiving-token oracle. A historical zero default fee is not an all-holder bound; actual registered-user fee state, gas and executable request-specific payout remain unmeasured.",
         "formula",
       ),
       feeBpsMin: 0,
@@ -460,91 +512,116 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     notes: [
       "The 5% hot-buffer ratio is a conservative modeling heuristic, not a documented lower bound; current Ondo materials do not publish a durable bank-demand-deposit allocation or instant-redemption floor.",
       "At Ethereum block 26143090 (2026-10-07), public defaults showed 27,220,717.712216 USDC router liquidity, $15M global headroom, a $10M/86400s new-user limit and zero default flat/bps fees. These are separate diagnostics, not additive inventory or actual-holder entitlement. Zero user ID is not registered; active user sources, instantiated limits and fee overrides take precedence.",
+      "At Ethereum block 26154601 (2026-10-09T11:37:59Z; hash 0xf6d6c7e8f5c1585fb116934eabfc00023f0f89330f014b504eb0a4b593af8672), InstantManager redeemPaused was false and minimumRedemptionUSD was 1e18 ($1). The configured redemption-fee contract 0xe1cb24077d77d2fe763fcac63e5653d97dc8d20c returned an active USDY default with zero flat and bps fees and an inactive USDY/USDC default override. These pinned configuration facts do not establish registered-user overrides, volume-dependent fees, executable same-notional payout, gas or eligible capacity; cost remains unmeasured and no all-holder zero-fee bound is asserted.",
     ],
   },
-  /** iauon-ondo and slvon-ondo share the Ondo GM shape; they differ only in ticker,
-   *  asset page URL, Final Terms document, and the underlying-fund name in the notes. */
-  ...defineConfigFamily(
-    [
-      {
-        id: "iauon-ondo", label: "IAUon", slug: "iauon", underlyingTicker: "IAU", fundName: "iShares Gold Trust",
-        finalTermsUrl: "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
-      },
-      {
-        id: "slvon-ondo", label: "SLVon", slug: "slvon", underlyingTicker: "SLV", fundName: "iShares Silver Trust",
-        finalTermsUrl: "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
-      },
+  ...expandIds(["iauon-ondo", "slvon-ondo"], {
+    ...issuerBase,
+    reviewedAt: "2026-10-09",
+    holderEligibility: "verified-customer",
+    settlementModel: "immediate",
+    outputAssetType: "stable-single",
+    outputAssets: ["usdon-ondo"],
+    capacityModel: { kind: "unquantified" },
+    costModel: documentedVariableFee(
+      "Ondo Stocks retains the difference between its investor quote and underlying execution price, plus any fees; holders also pay gas. No numeric all-in spread or fee ceiling is published.",
+    ),
+    v9RouteReviewTerms: {
+      settlementModel: "immediate",
+      minRedeemUsd: 1,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "Issuer terms describe instant redemption to USDon for eligible onboarded investors, but execution needs an authenticated signed attestation and current account/asset trading limits. The public materials do not establish executable capacity, an all-in quote cost, or an unconditional scored-notional completion deadline. USDC conversion is a separate whitelist- and swapper-liquidity-dependent leg and is not modeled as the unconditional output.",
+      reviewedAt: "2026-10-09",
+      docs: [
+        sourceRef("Ondo Stocks redemption output, minimum and liquidity conditions", "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md", ["route", "access", "settlement"]),
+        sourceRef("Ondo Stocks investor quote spreads and gas", "https://docs.ondo.finance/ondo-stocks/fees-and-taxes.md", ["fees"]),
+        sourceRef("Ondo Stocks authenticated attestation workflow", "https://docs.ondo.finance/api-reference/quickstart.md", ["route", "access"]),
+        sourceRef("Ondo Stocks current account and asset limits", "https://docs.ondo.finance/api-reference/limits/get-trading-limits.md", ["route", "access", "capacity"]),
+      ],
+    },
+    docs: [
+      sourceRef("Ondo Stocks redemption output, minimum and liquidity conditions", "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md", ["route", "access", "settlement"]),
+      sourceRef("Ondo Stocks investor quote spreads and gas", "https://docs.ondo.finance/ondo-stocks/fees-and-taxes.md", ["fees"]),
+      sourceRef("Ondo Stocks authenticated attestation workflow", "https://docs.ondo.finance/api-reference/quickstart.md", ["route", "access"]),
+      sourceRef("Ondo Stocks current account and asset limits", "https://docs.ondo.finance/api-reference/limits/get-trading-limits.md", ["route", "access", "capacity"]),
+      sourceRef("Ondo Stocks eligibility restrictions", "https://docs.ondo.finance/ondo-stocks/eligibility.md", ["access"]),
     ],
-    ({ label, slug, underlyingTicker, fundName, finalTermsUrl }) => ({
-        ...issuerBase,
-        reviewedAt: "2026-10-07",
-        capacityModel: { kind: "unquantified" },
-        settlementModel: "immediate",
-        executionModel: "rules-based-nav",
-        outputAssetType: "stable-single",
-        outputAssets: ["usdon-ondo"],
-        v9RouteReviewTerms: {
-          settlementModel: "atomic",
-          settlementDelaySec: 0,
-          minRedeemUsd: 1,
-          scoringDisposition: "bounded-terms-gap",
-          missingScoringFields: ["capacity"],
-          rationale:
-            "The modeled atomic USDon endpoint has a $1 minimum but no published funded holder capacity. The legal standard USDC/USDT put is a separate potentially postponed branch and does not quantify instantaneous USDon payout; conditional USDC swapper inventory and underlying ETF assets are not USDon capacity.",
-          reviewedAt: "2026-10-07",
-          docs: [
-            sourceRef("Ondo Stocks investing and redeeming (reviewed 2026-10-07)", "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md", ["route", "access", "settlement"]),
-            sourceRef("Ondo Global Markets base prospectus (2025-11-11; standard put context)", "https://www.mfsa.mt/wp-content/uploads/2025/12/Ondo-Global-Markets-BVI-Limited-Base-Prospectus-Document-dated-11-November-2025.pdf", ["route", "access"]),
-          ],
-        },
-        costModel: {
-          ...documentedVariableFee(
-            `${label} Final Terms (2025-11-11) set the maximum issuer redemption fee at up to 0.1% of the ${underlyingTicker} market price, at the issuer's discretion; the live quote and user gas are separate`,
-          ),
-          feeBpsMax: 10,
-        },
-        docs: [
-          sourceRef("Ondo Stocks investing and redeeming", "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md", ["route", "access", "settlement"]),
-          sourceRef(`${label} asset page`, `https://app.ondo.finance/assets/${slug}`, ["route"]),
-          sourceRef("Ondo Global Markets overview", "https://docs.ondo.finance/ondo-global-markets/overview", [
-            "route",
-            "access",
-            "settlement",
-          ]),
-          sourceRef(
-            "Ondo Global Markets important notes",
-            "https://docs.ondo.finance/ondo-global-markets/important-notes",
-            ["access", "fees", "settlement"],
-          ),
-          sourceRef(`${label} Final Terms (dated 2025-11-11; reviewed 2026-10-03)`, finalTermsUrl, ["fees"]),
-          sourceRef("Ondo Global Markets base prospectus (2025-11-11; standard put context)", "https://www.mfsa.mt/wp-content/uploads/2025/12/Ondo-Global-Markets-BVI-Limited-Base-Prospectus-Document-dated-11-November-2025.pdf", ["route", "access"]),
-        ],
-        notes: [
-          `${label} is modeled as an eligible-investor NAV redemption route to Ondo GM value, not as direct holder ownership or delivery of underlying ${fundName} shares.`,
-          "The instant endpoint is USDon. USDC is a separate liquidity-conditioned, whitelist-gated swapper conversion, not an unconditional full-supply payout. Market hours, eligible-investor restrictions, live quotes and same-notional USDon valuation remain required; no static funded capacity is inferred.",
-        ],
-    }),
-  ),
+    notes: [
+      "Sol curation campaign 2026-10-09 (Lane05Ondo), observed 2026-10-09T10:35:23Z: exact issuer metadata identifies GLDon, IAUon and SLVon as Ondo Stocks trackers; this shared documented route grants no live same-notional capacity or quote-cost credit.",
+      "USDon is the direct redemption output. Instant conversion to USDC requires sufficient USDC in the swapper and explicit whitelist access; bank-wire USD redemptions are not currently supported.",
+      "Market/session closures, asset pauses, exposure limits and outstanding attestations restrict execution. The issuer's instant-processing description is retained without inventing an unconditional settlement SLA.",
+    ],
+  }),
+  "gldon-ondo": {
+    ...issuerBase,
+    reviewedAt: "2026-10-09",
+    holderEligibility: "verified-customer",
+    settlementModel: "immediate",
+    outputAssetType: "stable-single",
+    outputAssets: ["usdon-ondo"],
+    capacityModel: { kind: "unquantified" },
+    costModel: documentedVariableFee(
+      "Ondo Stocks retains the difference between its investor quote and underlying execution price, plus any fees; holders also pay gas. No numeric all-in spread or fee ceiling is published.",
+    ),
+    v9RouteReviewTerms: {
+      settlementModel: "immediate",
+      minRedeemUsd: 1,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "Issuer terms describe instant redemption to USDon for eligible onboarded investors, but execution needs an authenticated signed attestation and current account/asset trading limits. The public materials do not establish executable capacity, an all-in quote cost, or an unconditional scored-notional completion deadline. USDC conversion is a separate whitelist- and swapper-liquidity-dependent leg and is not modeled as the unconditional output.",
+      reviewedAt: "2026-10-09",
+      docs: [
+        sourceRef("Ondo Stocks redemption output, minimum and liquidity conditions", "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md", ["route", "access", "settlement"]),
+        sourceRef("Ondo Stocks investor quote spreads and gas", "https://docs.ondo.finance/ondo-stocks/fees-and-taxes.md", ["fees"]),
+        sourceRef("Ondo Stocks authenticated attestation workflow", "https://docs.ondo.finance/api-reference/quickstart.md", ["route", "access"]),
+        sourceRef("Ondo Stocks current account and asset limits", "https://docs.ondo.finance/api-reference/limits/get-trading-limits.md", ["route", "access", "capacity"]),
+        sourceRef("GLDon Final Terms: separate standard investor put", "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf", ["route", "fees", "access", "settlement"]),
+      ],
+    },
+    docs: [
+      sourceRef("Ondo Stocks redemption output, minimum and liquidity conditions", "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md", ["route", "access", "settlement"]),
+      sourceRef("Ondo Stocks investor quote spreads and gas", "https://docs.ondo.finance/ondo-stocks/fees-and-taxes.md", ["fees"]),
+      sourceRef("Ondo Stocks authenticated attestation workflow", "https://docs.ondo.finance/api-reference/quickstart.md", ["route", "access"]),
+      sourceRef("Ondo Stocks current account and asset limits", "https://docs.ondo.finance/api-reference/limits/get-trading-limits.md", ["route", "access", "capacity"]),
+      sourceRef("Ondo Stocks eligibility restrictions", "https://docs.ondo.finance/ondo-stocks/eligibility.md", ["access"]),
+      sourceRef("GLDon Final Terms: separate standard investor put", "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf", ["route", "fees", "access", "settlement"]),
+      sourceRef("Ondo November 11, 2025 base prospectus: contextual standard put only", "https://www.mfsa.mt/wp-content/uploads/2025/12/Ondo-Global-Markets-BVI-Limited-Base-Prospectus-Document-dated-11-November-2025.pdf", ["route", "access", "settlement"]),
+      sourceRef("Ondo August 28, 2026 supplement: contextual standard put only", "https://www.mfsa.mt/wp-content/uploads/2026/09/Ondo-Global-Markets-BVI-Limited-Supplement-Document-dated-28-August-2026.pdf", ["route"]),
+      sourceRef("Ondo holder eligibility notes", "https://docs.ondo.finance/ondo-stocks/important-notes.md", ["access"]),
+      sourceRef("Ondo Stocks issuer and swapper contract addresses", "https://docs.ondo.finance/addresses.md", ["route"]),
+    ],
+    notes: [
+      "Sol curation campaign 2026-10-09 (Lane05Ondo), observed 2026-10-09T10:35:23Z: exact issuer metadata identifies GLDon as an Ondo Stocks tracker; this documented route grants no live same-notional capacity or quote-cost credit.",
+      "USDon is the direct redemption output. Instant conversion to USDC requires sufficient USDC in the swapper and explicit whitelist access; bank-wire USD redemptions are not currently supported.",
+      "Market/session closures, asset pauses, exposure limits and outstanding attestations restrict execution. The issuer's instant-processing description is retained without inventing an unconditional settlement SLA.",
+      "Retained contextual review 2026-10-07: eligible onboarded investors must be outside the United States and satisfy additional jurisdictional restrictions; USDon/USDC swap access is separately whitelisted.",
+      "Retained contextual review 2026-10-07: current operational docs state a $1 redemption minimum; the Final Terms' 0.01-USDC minimum subscription is a different scope.",
+      "Retained contextual review 2026-10-07: GLDon Final Terms permit issuer issuance and redemption fees up to 0.1%, excluding transaction costs and gas. The separate standard USDC/USDT investor put permits underlying liquidation/payout instruction up to T+5 with postponements. Neither term establishes the selected instant USDon route's all-in cost, executable capacity or completed-settlement SLA.",
+      "GLDon is a tracker, not a right to direct ownership or delivery of GLD ETF shares or physical gold. Conditional USDC conversion is not an equal-weight payout portfolio.",
+      "Ondo separately documents GMIssuerManager redemption into underlying securities through Alpaca's Instant Tokenization Network: Ethereum 0xec8bBB0c90c0B5F4D8240D0F7b49DA3b0aA41f4E and BNB Chain 0x341f9e6463161F0C90037Cbc0150DC54e6d1e06e. Holder eligibility, execution capacity and binding GLDon in-kind rights are unestablished; this rail is recorded without adding an output or upgrading exit scoring.",
+      "Capacity and settlement categories are diagnostic defaults only; no immediate ratio, funded USD capacity, guaranteed settlement duration or all-in zero cost is inferred.",
+    ],
+  },
   "thbill-theo": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "usdt-tether"],
     costModel: documentedVariableFee(
-      "KYC-gated mint/redemption processed instantly in USDC; underlying collateral settled within T+4 business days",
+      "KYC/KYB-gated redemption pays USDC or USDT; current thBILL documents do not establish an all-in numeric redemption fee",
     ),
     docs: [
       sourceRef("Theo thBILL payout documentation (reviewed 2026-09-30)", "https://docs.theo.xyz/products/thbill/mint-and-redeem.md", ["route", "access"]),
-      sourceRef("Theo thBILL overview", "https://docs.theo.xyz/thbill", ["route", "capacity", "settlement", "access"]),
-      sourceRef(
-        "Theo minting service",
-        "https://docs.theo.xyz/technical-reference/ttokens-and-itokens/ttokens/minting-service",
-        ["route", "settlement"],
-      ),
+      sourceRef("Theo thBILL product documentation: instant minting and T+1 redemption", "https://docs.theo.xyz/products/thbill.md", ["route", "access", "settlement"]),
+      sourceRef("Theo thBILL product page: advertised T+0 settlement", "https://theo.xyz/thbill", ["route", "access", "settlement"]),
     ],
     notes: [
       "Payout identity reviewed 2026-09-30: Theo explicitly says holders receive USDC or USDT, not underlying fund units or Treasury securities.",
-      "Direct minting and redemption require KYC; Theo describes optimistic issuance against USDC while issuer settlement completes asynchronously",
+      "Direct minting and redemption require KYC/KYB. Current mint-and-redeem documentation confirms the stablecoin payout without promising fund-unit delivery.",
+      "Timing source discrepancy reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (Lane33Hyperithm): product documentation says redemption is T+1, while the product page advertises T+0 and 24/7 settlement. Neither is adopted as an unconditional exact-route SLA; no current primary support for the former T+4 underlying-settlement assertion was established.",
     ],
   },
   "rwausdi-multipli": {
@@ -720,15 +797,37 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   },
   "jpysc-sbi-startale": {
     ...issuerBase,
-    ...documentedBoundSupplyFull("2026-08-13"),
+    ...documentedBoundSupplyFull("2026-10-09"),
+    accessModel: "manual",
+    settlementModel: "days",
     outputAssetType: "stable-single",
     unresolvedOutputAssetKeys: ["fiat:JPY"],
     unresolvedOutputDisposition: "reviewed-external",
     costModel: documentedVariableFee(
-      "Direct issuer redemption costs 3,000 JPY plus consumption tax per redemption; bank transfer fees are borne by the holder",
+      "Direct issuer redemption costs 3,000 JPY plus applicable consumption tax per procedure; the holder also pays bank-transfer and blockchain gas/network charges, with no published all-in USD ceiling",
     ),
     holderEligibility: "verified-customer",
     routeExitCorrelation: "independent-issuer-rail",
+    v9RouteReviewTerms: {
+      settlementModel: "days",
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "The direct issuer route is an application/email procedure, followed by identity and legality checks, transfer to the designated wallet, and JPY bank payment. Section 4(2) sets a standard of two Japanese bank business days after request acceptance but allows verification-related extensions. The no-amount-ceiling clause establishes a legal/eventual bound only; current executable capacity, an unconditional settlement SLA, and a scored-notional all-in USD cost are not established. Native JPY output remains explicitly unpriced.",
+      reviewedAt: "2026-10-09",
+      docs: [
+        sourceRef(
+          "SBI Shinsei Trust JPYSC direct procedure (reviewed 2026-10-09)",
+          "https://www.shinseitrust.com/stablecoin/jpysc.html",
+          ["route", "access", "settlement", "fees"],
+        ),
+        sourceRef(
+          "JPYSC terms updated 2026-09-30, sections 2(2), 4(1)-(3), 4(11)-(12) (reviewed 2026-10-09)",
+          "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+          ["route", "access", "settlement", "fees", "capacity"],
+        ),
+      ],
+    },
     docs: [
       sourceRef("SBI Shinsei Trust JPYSC product page", "https://www.shinseitrust.com/stablecoin/jpysc.html", [
         "route",
@@ -756,6 +855,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "The current terms allow a principal beneficiary to request partial redemption subject to identity and transaction checks, with prompt JPY payment after receipt; JPY remains an unresolved fiat output rather than a tracked stablecoin.",
       "supply-full is the documented legal redemption bound, not a claim that same-day bank liquidity equals current token supply; requests can lapse or be delayed under the terms' wallet-designation and transfer windows.",
       "Fee review 2026-10-07: the 2026-09-30 terms, sections 4(3)(ro) and 4(11)(ni), charge 3,000 JPY plus applicable consumption tax per direct redemption procedure; holder-borne bank transfer and network fees are separate. V9 has no fixed-maximum-in-JPY term, so no bps ceiling or invented USD conversion is added.",
+      "Sol curation campaign 2026-10-09 (Lane09Ripio), observed 2026-10-09T10:38:55Z: the current governing terms specify two Japanese bank business days as a conditional standard after request acceptance. The direct email/application channel is manual, not the inherited issuer API/same-day route; checks can extend the period, and no Japan banking calendar or unconditional elapsed-seconds SLA is authored.",
     ],
   },
   "hlusd-hela": {

@@ -4,6 +4,14 @@
     "reviewedStatus": "inherited",
     "sources": [
       {
+        "label": "USDCx live TransferRef and admin at ledger 220370475; re-observed 2026-10-09T10:36:29Z by Sol curation campaign 2026-10-09 (Lane15Securitize)",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=220370475"
+      },
+      {
+        "label": "Aptos TransferRef: freeze or bypass holder-store freeze",
+        "url": "https://aptos.dev/build/smart-contracts/fungible-asset"
+      },
+      {
         "label": "Circle xReserve",
         "url": "https://www.circle.com/xreserve"
       },
@@ -12,12 +20,12 @@
         "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin"
       },
       {
-        "label": "Movement USDCx package module at reviewed ledger version",
-        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=174443182"
+        "label": "Movement USDCx deployed module at ledger 220370475",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=220370475"
       },
       {
-        "label": "Movement USDCx package resources (owner, upgrade policy) re-read 2026-08-09",
-        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/resources"
+        "label": "Movement USDCx package owner and upgrade policy at ledger 220370475",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/resources?ledger_version=220370475"
       },
       {
         "label": "Movement USDCx admin multisig resources (3-of-6) re-read 2026-10-01",

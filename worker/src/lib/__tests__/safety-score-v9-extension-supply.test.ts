@@ -42,6 +42,7 @@ describe("buildSafetyScoreV9SupplyReview", () => {
   it("classifies null-review producer outcomes without synthesizing supply", () => {
     const base = {
       activeAssetIds: ["alpha"],
+      aggregateCirculatingById: {},
       chainCirculatingById: {
         alpha: {
           Ethereum: { current: 60 },
@@ -130,6 +131,32 @@ describe("buildSafetyScoreV9SupplyReview", () => {
       chainRowCount: 0,
       canonicalizationFailureCount: 0,
       reviewRouteCount: 2,
+      attributionRejectionCode: null,
+    });
+
+    const acceptedButUnjoined = {
+      ...missingGeneration,
+      safetyScoreV9SupplyAttributionById: {
+        "wm-m0": {
+          model: "reviewed-deployment-unit-partition-v1",
+          deployments: [{
+            routeId: "ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291",
+            chainId: "ethereum",
+            contractAddress: "0x437cc33344a0b27a429f795ff6b469c72698b291",
+            currentSupplyUsd: 100,
+          }],
+        },
+      },
+      supplyAttributionJournalById: {
+        "wm-m0": [{
+          completedAtSec: 9_900,
+          admissionCode: "supply-attribution.admission.accepted",
+        }],
+      },
+    } as unknown as ReportCardsFixedInput;
+    expect(diagnose(acceptedButUnjoined, "bounded-unknown")).toMatchObject({
+      state: "ambiguous-route-join",
+      responsibility: "integration-missing",
       attributionRejectionCode: null,
     });
 

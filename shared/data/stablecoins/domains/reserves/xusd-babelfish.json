@@ -68,39 +68,46 @@
       {
         "label": "BabelFish reserve contract",
         "url": "https://rootstock.blockscout.com/address/0x1440d19436bEEaf8517896bffB957A88ec95a00F"
+      },
+      {
+        "label": "W2 source recovery: unpinned manager token-balance census, not admitted composition",
+        "url": "https://rootstock.blockscout.com/api/v2/addresses/0x1440d19436bEEaf8517896bffB957A88ec95a00F/token-balances"
       }
     ],
     "rationale": "The independent BabelFish adapter read the configured Rootstock reserve-contract balances at the exact capture. Normalizing the three positive dollar-pegged balances produced 89.4% DLLR, 9.7% bridged USDT, and 0.9% DOC; configured USDC and DAI balances were zero.",
     "compositionBasis": "Exact live Rootstock reserve-contract balances captured on 2026-07-15",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "The composition is fully linked, but each constituent retains its issuer, bridge, smart-contract, and liquidity risks.",
+    "knownUnknownExposure": "The historical July 15 three-row composition is fully linked for its original observation only. Source recovery recorded 2026-10-09T11:41:39Z by Sol curation campaign 2026-10-09 (W2L22Spark): the canonical Rootstock explorer token-balances endpoint for the issuer-documented manager returned twelve positive ERC-20 balances: DLLR, RUSDT, DOC, USDTbs, DAIes, USDCbs, DAIbs, USDCes, USDTes, BUSDbs, RDOC and ZUSD. These are unpinned explorer balances, not an exhaustive admitted backing census or whole-liability USD valuation. In particular, BIP-0011's BUSD deposit/swap removal does not establish a zero legacy BUSD balance. Several receipts lack quoted USD valuation, and the manager-to-whole-liability join remains unproved. The mandated helper has no registered Rootstock endpoint. No new percentages, zero-tail finding, liability coverage or composition date are asserted. knownUnknownExposurePct 0 belongs only to the retained historical review.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
       {
         "name": "BabelFish XUSD reserve contract",
-        "role": "other",
-        "sharePct": 100
+        "role": "other"
       }
     ],
-    "segregation": "segregated",
+    "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "verified",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane47Babelfish)",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "BabelFish XUSD composition documentation",
         "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/tutorials-and-guides/xusd-statistics"
       },
       {
+        "label": "BabelFish current basket and balancing-curve disclosure",
+        "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/balancing-curves.md"
+      },
+      {
         "label": "BabelFish reserve contract",
         "url": "https://rootstock.blockscout.com/address/0x1440d19436bEEaf8517896bffB957A88ec95a00F"
       }
     ],
-    "uncertainty": "Constituent balances are directly observable in the dedicated on-chain reserve contract, but public documentation does not establish legal bankruptcy remoteness or whether governance can deploy or rehypothecate the basket."
+    "uncertainty": "Custody-scope correction observed 2026-10-09T10:36:33Z: issuer statistics identify the masset-manager contract as a balance observation surface, but do not establish that it holds the whole liability backing or provide a complete custody allocation. The retained August 13 mechanism review found only partial liability coverage at block 9109001; the earlier 100% provider share and aggregate onchain label were unsupported. Provider share is now omitted and aggregate custody remains unknown. The current documentation identifies native and bridged basket constituents, without enforceable whole-book segregation, bankruptcy-remoteness, rehypothecation or successor-custody terms. No new holdings percentages or liability coverage are inferred."
   }
 }
