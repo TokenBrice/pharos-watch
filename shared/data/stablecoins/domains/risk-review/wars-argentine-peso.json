@@ -54,9 +54,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "WARS has six reviewed independent native deployments, each with a separate issuer-operated BridgeDeposit burn path and LimitedMinterBridge destination mint path. Source WARS is burned before an authorized operator fulfills a destination mint; the adapter applies a 30,000,000 WARS per-token daily limit. Bridge admin, pause, fee, route configuration, adapter, and operator powers are structured below rather than counted as global native Mint Authority. The reviewed Celo bridge representation is tracked separately; its current outbound-only bridge machinery is recorded against the six reviewed destination routes without adding reverse Celo routes.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint/bridge boundary migration; verified Ripio bridge review",
+    "summary": "WARS now has ten registered issuer-listed deployments. Eight are reviewed native local-mint/burn liabilities, including newly registered Arc and HyperEVM; the Celo issuer-operated burn/mint representation retains its existing reviewed controls. Ripio BridgeDeposit burns source tokens rather than locking canonical supply, with destination issuance through LimitedMinterBridge. The issuer-listed zero-supply Tempo TIP-20 token is registered but its exact issuer/bridge liability relationship remains unresolved, so exhaustive independent-liability transfer-census re-admission is withheld. Existing bridge controls and historical route observations are preserved; no static shares are authored.",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W3ReadmitRipio)",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -302,6 +302,110 @@
           {
             "label": "Ripio BridgeDeposit source",
             "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ]
+      },
+      {
+        "id": "arc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "destinationChain": "arc",
+        "canonicalChain": "arc",
+        "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "protocol": "Ripio LatamStable issuer-native deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "controllerChain": "arc",
+        "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Arc block 25089200 (2026-10-09T15:02:56Z), the issuer-listed wARS proxy resolves to LatamStable implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 and Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 holds MINTER_ROLE. Its 9856-byte implementation exactly matches the pinned HyperEVM exact-source-verified implementation, not the older Ethereum variant. Verified mint calls local _mint, and burn/burnFrom destroy local supply; neither issuance path locks or releases canonical tokens. The issuer bridge directory identifies Arc as a supported native-token endpoint. Audit metadata confirms wARS, 18 decimals and 112490757.682783 native units; these are historical identity facts, not static materiality shares.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-10-09",
+        "observedBlock": 25089200,
+        "sources": [
+          {
+            "label": "Ripio issuer deployment and bridge directory",
+            "url": "https://bridge.ripio.com/developers"
+          },
+          {
+            "label": "HyperEVM exact-match LatamStable source; bytecode-identical Arc implementation",
+            "url": "https://hyperevmscan.io/address/0xba0030bba7112171a8a5bcc417ee1994051321b9#code"
+          },
+          {
+            "label": "Arc pinned proxy and native minter reads at block 25089200 (2026-10-09T15:02:56Z)",
+            "url": "https://api-arc-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "HyperEVM pinned implementation bytecode at block 48090420 (2026-10-09T15:10:59Z)",
+            "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "hyperevm:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "destinationChain": "hyperevm",
+        "canonicalChain": "hyperevm",
+        "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "protocol": "Ripio LatamStable issuer-native deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At HyperEVM block 48090420 (2026-10-09T15:10:59Z), the issuer-listed wARS proxy resolves to exact-source-verified LatamStable implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 and Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 holds MINTER_ROLE. Verified mint directly calls local _mint, while burn/burnFrom destroy local supply; these native liabilities do not depend on a canonical lock/release escrow. Audit metadata confirms wARS, 18 decimals and 409279807.617718859506384744 native units. The implementation is the compliance-enabled 9856-byte variant, not the Ethereum variant; existing other-chain reviews are not re-dated.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-10-09",
+        "observedBlock": 48090420,
+        "sources": [
+          {
+            "label": "Ripio current issuer deployment roster",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          },
+          {
+            "label": "HyperEVM exact-match LatamStable implementation",
+            "url": "https://hyperevmscan.io/address/0xba0030bba7112171a8a5bcc417ee1994051321b9#code"
+          },
+          {
+            "label": "HyperEVM pinned proxy and native minter reads at block 48090420 (2026-10-09T15:10:59Z)",
+            "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c0000000000000000000009ebea3d43a08bad1",
+        "destinationChain": "tempo",
+        "contractAddress": "0x20c0000000000000000000009ebea3d43a08bad1",
+        "protocol": "Ripio issuer-listed Tempo TIP-20 deployment; liability route not established",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Tempo block 43354001 (2026-10-09T15:11:33Z) confirms issuer-listed Peso Argentino / wARS, six decimals, zero supply, currency ARS and the standard TIP-20 ISSUER_ROLE. The protocol provides local mint/burn, but Ripio's bridge deployment directory does not cover Tempo or identify this token's liability relationship to other-chain wARS. Both the previously reviewed Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 and issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b return false for ISSUER_ROLE at this pin. Token-standard capability and temporary zero supply do not positively exclude canonical escrow or prove an independent issuer route. Register the deployment, withhold census eligibility until exact issuer/route binding and no-escrow proof are reviewed.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-10-09",
+        "observedBlock": 43354001,
+        "sources": [
+          {
+            "label": "Ripio current issuer deployment roster",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          },
+          {
+            "label": "Ripio bridge deployment directory; Tempo not in published bridge roster",
+            "url": "https://bridge.ripio.com/developers"
+          },
+          {
+            "label": "Tempo TIP-20 native mint/burn and role specification",
+            "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+          },
+          {
+            "label": "Tempo pinned identity and role reads at block 43354001 (2026-10-09T15:11:33Z)",
+            "url": "https://api-tempo-mainnet.n.dwellir.com"
           }
         ]
       }

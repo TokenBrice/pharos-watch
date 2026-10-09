@@ -1346,33 +1346,7 @@
         "allInScope": true
       }
     ],
-    "usdo-openeden": [
-      {
-        "factKey": "usdo-openeden:reserve:7c0d903fb0332872c1d7c426:open-ended-maturity",
-        "kind": "maturity-applicability",
-        "scope": {
-          "kind": "exposure",
-          "exposureKey": "reserve:7c0d903fb0332872c1d7c426"
-        },
-        "asOfSec": 1791187868,
-        "publisher": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2",
-        "sourceUrls": [
-          "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652"
-        ],
-        "assertion": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2: \"The fund does not have a maturity date.\" Exact held claim: BlackRock USD Institutional Digital Liquidity Fund Ltd. non-voting participating Class A shares / Ethereum 0x7712c34205737192402172409a8F7ccef8aA2AEc. Applicable duration has no finite contractual maximum. Optional termination/redemption and underlying portfolio maturity are not claim maturity maxima; no liquidity assertion.",
-        "contentDigest": "8476ec949caae6870974cb37c6432b7bb15ddb551c95d8ba2a34db5071addfbb",
-        "provenance": {
-          "kind": "reviewed-research",
-          "reviewedAt": "2026-10-05",
-          "reviewer": "E08PerpetualMaturity governing-claim review / W3R42",
-          "confidence": "high"
-        },
-        "claimId": "BlackRock USD Institutional Digital Liquidity Fund Ltd. non-voting participating Class A shares / Ethereum 0x7712c34205737192402172409a8F7ccef8aA2AEc",
-        "conclusion": "open-ended",
-        "governingInstrument": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2",
-        "allInScope": true
-      }
-    ],
+    "usdo-openeden": [],
     "jaaa-janus-henderson-anemoy": [
       {
         "factKey": "jaaa-janus-henderson-anemoy:reserve:4a82d397df2ecd3c6575e829:open-ended-maturity",

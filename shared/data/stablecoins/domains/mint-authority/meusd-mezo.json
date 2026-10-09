@@ -109,66 +109,92 @@
         },
         "executionScope": {
           "controllerDeployment": "mezo:0x98d8899c3030741925be630c710a98b57f397c7a",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-09",
           "observedAt": "2026-10-01",
           "expiresAt": "2026-11-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc06)",
-          "confidence": "partial",
+          "reviewer": "Sol curation campaign 2026-10-09 (W4T06Liquity)",
+          "confidence": "verified",
           "sources": [
-            {
-              "label": "MUSD owner-managed mint allowlist source",
-              "url": "https://raw.githubusercontent.com/mezo-org/musd/main/solidity/contracts/token/MUSD.sol"
-            },
-            {
-              "label": "Pinned Mezo Safe and ProxyAdmin observations",
-              "url": "https://jsonrpc-mezo.boar.network"
-            }
+            {"label": "MUSD owner-managed mint allowlist source", "url": "https://raw.githubusercontent.com/mezo-org/musd/main/solidity/contracts/token/MUSD.sol"},
+            {"label": "Mezo block 12220336, hash 0x6d938948922b272aa865390746cf774077f5e678550f0086d2053542b888b766, 2026-10-01T16:45:44Z; numeric-pinned executor census and canonical hash-pinned recheck observed 2026-10-09", "url": "https://jsonrpc-mezo.boar.network"},
+            {"label": "Verified GnosisSafe singleton source; exact byte-for-byte correspondence with Mezo singleton runtime at block 12220336", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd9db270c1b5e3bd161e8c8503c55ceabee709552"},
+            {"label": "Verified CompatibilityFallbackHandler source; exact byte-for-byte correspondence with Mezo fallback runtime at block 12220336", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4"}
           ],
           "pin": {
             "position": "12220336",
-            "hash": null,
-            "runtimeIdentity": "Mezo MUSD owner and BorrowerOperations ProxyAdmin owner return this Safe",
-            "signerIdentity": "5-of-9 owners recorded in safe.owners at block 12220336"
+            "hash": "0x6d938948922b272aa865390746cf774077f5e678550f0086d2053542b888b766",
+            "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf",
+            "signerIdentity": "threshold=5;owners=0x7f043ff8b5ce02e543ee83fcdec94944d24ebd5d,0x3f9bb00672ad7254eba4be9fe65860ce298a3ab8,0x930b76784c1fb86335ab174dfe321b44ea0adfda,0xabb0c40dbc7ff3455087888c87217064ad10a944,0x9be76d5ab050aa8c77f6ad25f25f633b2cb8ed85,0x696ba87e3ef864335a9e30ae4653b516fb93a1ab,0x91149ef9449bd1068346b6098ebb9624c2d3e849,0xf63bc5326c4d5ab123a20ec5d5805b365a3355e4,0x6f016c33e55e40f24239fb9ab96a6e3d75059686"
           },
           "observedState": {
             "position": "12220336",
-            "hash": null,
-            "runtimeIdentity": "Empty getModulesPaginated(0x1,100); zero standard guard slot",
-            "signerIdentity": "getThreshold()=5; getOwners() returns the nine recorded owners"
+            "hash": "0x6d938948922b272aa865390746cf774077f5e678550f0086d2053542b888b766",
+            "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf",
+            "signerIdentity": "threshold=5;owners=0x7f043ff8b5ce02e543ee83fcdec94944d24ebd5d,0x3f9bb00672ad7254eba4be9fe65860ce298a3ab8,0x930b76784c1fb86335ab174dfe321b44ea0adfda,0xabb0c40dbc7ff3455087888c87217064ad10a944,0x9be76d5ab050aa8c77f6ad25f25f633b2cb8ed85,0x696ba87e3ef864335a9e30ae4653b516fb93a1ab,0x91149ef9449bd1068346b6098ebb9624c2d3e849,0xf63bc5326c4d5ab123a20ec5d5805b365a3355e4,0x6f016c33e55e40f24239fb9ab96a6e3d75059686"
           },
-          "inventory": "partial",
-          "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
-          },
+          "inventory": "complete",
+          "closure": {"entrypoints": true, "mutableTargets": true, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": true},
           "paths": [
             {
-              "id": "mezo-owner-mint-allowlist",
-              "targetDeployment": "mezo:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+              "id": "mezo-owner-maximal-execution",
+              "targetDeployment": "mezo:0x98d8899c3030741925be630c710a98b57f397c7a",
               "entrypointKind": "evm-selector",
-              "entrypoints": ["0x74c2a922", "0x1932c9f8", "0xe93c0bd1"],
+              "entrypoints": ["0x6a761202"],
               "callMode": "call",
-              "capabilities": ["mint", "parameter-change"],
+              "capabilities": ["mint", "burn", "upgrade", "freeze", "seize", "oracle-update", "bridge-mint", "custody-transfer", "parameter-change"],
               "capSemantics": {"kind": "unbounded", "bound": null},
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
-              "unavoidableDelaySec": null,
+              "unavoidableDelaySec": 0,
               "activation": "active",
               "affectedLiabilityIds": ["meusd-mezo"],
-              "affectedDeployments": ["mezo:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "mezo:0x98d8899c3030741925be630c710a98b57f397c7a",
+                "executorDeployment": "mezo:0x98d8899c3030741925be630c710a98b57f397c7a",
+                "sourceDeployment": "mezo:0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+                "targets": "any-address",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "12220336",
+                  "hash": "0x6d938948922b272aa865390746cf774077f5e678550f0086d2053542b888b766",
+                  "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf",
+                  "signerIdentity": "threshold=5;owners=0x7f043ff8b5ce02e543ee83fcdec94944d24ebd5d,0x3f9bb00672ad7254eba4be9fe65860ce298a3ab8,0x930b76784c1fb86335ab174dfe321b44ea0adfda,0xabb0c40dbc7ff3455087888c87217064ad10a944,0x9be76d5ab050aa8c77f6ad25f25f633b2cb8ed85,0x696ba87e3ef864335a9e30ae4653b516fb93a1ab,0x91149ef9449bd1068346b6098ebb9624c2d3e849,0xf63bc5326c4d5ab123a20ec5d5805b365a3355e4,0x6f016c33e55e40f24239fb9ab96a6e3d75059686"
+                },
+                "sourceRuntimeIdentity": "sha256:2c242392114e17787f9b23e6cbbab269d734c5483753277932545332f4d77afb",
+                "observedSourceRuntimeIdentity": "sha256:2c242392114e17787f9b23e6cbbab269d734c5483753277932545332f4d77afb",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+                  "location": "contracts/GnosisSafe.sol execTransaction/checkSignatures and contracts/base/Executor.sol execute: owner-threshold-authorized arbitrary target/value/calldata CALL or DELEGATECALL without executor delay. Source bytecode exactly matches the pinned Mezo singleton. Complete conservative adverse upper envelope, not a benign-target inventory; no target exclusions, financial reconciliation or key-custody independence credit."
+                }
+              }
             }
-          ]
+          ],
+          "extensions": {
+            "exhaustive": true,
+            "paginationEnd": "0x0000000000000000000000000000000000000001",
+            "sourceRuntimeCorrespondence": true,
+            "entries": [
+              {
+                "deployment": "mezo:0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+                "runtimeIdentity": "sha256:eec6894136b0ea9a5dabd2d1873e5bf079569176f0f540b5543484877b0f90f4",
+                "kind": "fallback-handler",
+                "pathRefs": ["mezo-owner-maximal-execution"],
+                "mutableReachClosed": true
+              }
+            ]
+          }
         },
         "sources": [
           {
@@ -180,7 +206,7 @@
             "url": "https://etherscan.io/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
           }
         ],
-        "evidence": "At canonical Mezo block 12220336 (2026-10-01), MUSD owner() and BorrowerOperations ProxyAdmin owner() both return 0x98d8899c3030741925be630c710a98b57f397c7a. The Safe returns threshold 5 and the same nine recorded owners; getModulesPaginated(0x1,100) returns no modules and the standard guard_manager.guard.address storage slot is zero. This resolves the earlier getGuard() revert without assuming a nonexistent public getter. The MUSD source's onlyOwner addToMintList permits arbitrary additional minters, independently of the collateral-limited CDP route. Ethereum/Base bridge administration remains outside native Mint Authority."
+        "evidence": "At canonical Mezo block 12220336 (2026-10-01T16:45:44Z), MUSD owner() and BorrowerOperations ProxyAdmin owner() return the recorded protocol Safe. Research on 2026-10-09 recovered the same block through the official Mezo RPC because Dwellir has no registered Mezo endpoint; the header hash was rechecked and masterCopy/fallback runtime were also read with EIP-1898 requireCanonical. The Safe returns threshold 5, the same nine owners, empty terminal module pagination, zero guard storage and CompatibilityFallbackHandler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. Singleton 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 and fallback runtime exactly match their verified source bytecode. GnosisSafe.execTransaction and Executor.execute positively prove arbitrary CALL/DELEGATECALL; the fallback's simulate path reverts persistent changes. The complete execution certificate is the v10.08 conservative maximal adverse upper envelope with every capability, root/global unbounded reach and zero executor delay, rather than a downstream target census. Historical block/state dates and expiry are preserved; no favorable target exclusions, independent-human-signing or supply reconciliation is inferred. Ethereum/Base bridge administration remains outside native Mint Authority."
       },
       {
         "chain": "mezo",

@@ -70,7 +70,7 @@
         "semantics": "other",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Official Kinesis material identifies native KAG as issued by Kinesis Cayman on the Kinesis network and the Ethereum ERC-20 as a KMS Labs 1:1 claim on Kinesis KAG held in KMS Labs reserves, redeemable into Kinesis KAG subject to compliance. That disclosure establishes an issuer-custody representation route, but the reviewed sources do not expose a verifiable Kinesis-side lockbox, reserve account, or supply-conserving mint/burn invariant, so the route remains at the adverse opaque-or-unknown tier rather than receiving a favorable issuer-native lock/mint classification.",
+        "reviewNote": "Kinesis-native KAG is issued by Kinesis Cayman; Ethereum KAG is an 18-decimal KMS Labs ERC-20 claim on native KAG held in KMS Labs reserves, redeemable into native KAG subject to compliance. KMS Labs identifies native reserve wallet GAJ6XIVDKRHVMYF5ZUDDJCX755F25JXGIAWX4JO2OUHC4B2XHVTA6ERC, but this account is not a proved lockbox or automatic supply-conserving mint/burn path. The disclosed issuer-custody representation therefore requires an economic reserve/receipt/in-flight plan and is not independent-liability census eligible. The opaque-or-unknown tier and original control observation dates remain unchanged. R1 source review: Sol curation campaign 2026-10-09 (W4T05Infinifi).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
         "observedBlock": 26095796,
@@ -90,6 +90,10 @@
           {
             "label": "Ethereum PublicNode JSON-RPC role and storage reads",
             "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "KMS Labs exact KAG identity, 18 decimals, reserve wallet and native-versus-ERC20 claim boundary; accessed 2026-10-09",
+            "url": "https://kmslabs.money/"
           }
         ]
       }

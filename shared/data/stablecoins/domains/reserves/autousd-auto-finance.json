@@ -26,8 +26,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Unknown resolver W1R39",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4C01Aave)",
     "confidence": "verified",
     "sources": [
       {
@@ -47,6 +47,14 @@
         "url": "https://eth.blockscout.com/block/26114891"
       },
       {
+        "label": "Complete root destination and queue rosters at Ethereum block 26155000, hash 0x66b0949c52520c504b6f19d8d7924c3f0ad9eafa82828f22ba34cb759192e5aa, timestamp 2026-10-09T12:57:47Z; observed 2026-10-09T14:23:13.620Z via keyless Dwellir",
+        "url": "https://etherscan.io/block/26155000"
+      },
+      {
+        "label": "Ethereum Dwellir pinned root allocation census",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
         "label": "Verified AutopoolETH implementation",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695"
       }
@@ -54,7 +62,7 @@
     "rationale": "Metadata-only review of the exact keyed live deployed and idle categories; historical authored deployed percentage is unchanged and the zero-percent keyed idle row supplies classification only, never a new measured allocation. At Ethereum block 26114891 (2026-10-03T22:45:59Z), asset() identifies USDC and paused() is false. Official large-withdrawal documentation states that enough idle assets require no swaps, while deployed assets depend on withdrawal-queue destinations and available swap liquidity. Immediate liquidity applies only to the idle underlying slice, not to the deployed strategy position or final fiat redemption.",
     "compositionBasis": "Historical authored allocation retained; exact keyed live metadata supplemented from official withdrawal mechanics and pinned Ethereum contract reads",
     "scope": "full-composition",
-    "knownUnknownExposure": "The USDC base asset, 18 registered destinations and four withdrawal-queue destinations were observed at block 26114891. Full strategy-level allocation, legal custody rights and deployed-position unwind bounds are not established by this metadata review.",
+    "knownUnknownExposure": "The October 3 observation identified USDC as the base asset, 18 registered destinations and four withdrawal-queue destinations. A new root-only census at Ethereum block 26155000 (2026-10-09T12:57:47Z), observed 2026-10-09T14:23:13.620Z, returned complete getDestinations() with 18 addresses and five addresses in both getDebtReportingQueue() and getWithdrawalQueue(). getAssetBreakdown() and totalAssets() were also read at that pin. No historical percentage or composition date is refreshed. The current root roster does not establish each destination's funded allocation, borrowing surfaces, legal custody rights or unwind bounds; whole-allocation leverage remains unresolved. The documented ERC-3156 solver flash-rebalance facility alone proves neither persistent wrapper debt nor a leverage multiple.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

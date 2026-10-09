@@ -30,9 +30,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "WCLP has seven independent native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, Gnosis, and HyperEVM; their native MINTER_ROLE, DEFAULT_ADMIN_ROLE, and UUPS upgrade paths remain in Mint Authority. The HyperEVM creation transaction initializes every privileged role to Ripio's reviewed 4-of-7 Safe. Celo is a reviewed issuer-operated burn/mint representation: the live token role graph, registered LimitedMinterBridge, BridgeDeposit linkage, operator roles, enabled outbound peers, replay guard, rate limits, pause controls, and fixed-destination minter are identified from verified source and current Celo state.",
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Ctrl6)",
+    "summary": "WCLP now has ten registered issuer-listed deployments. Eight are reviewed native local-mint/burn liabilities, including newly registered Arc; the existing HyperEVM review and Celo issuer-operated direct-burn/mint representation are preserved. Local native issuance and Ripio's reviewed BridgeDeposit/LimitedMinterBridge rail do not conserve canonical escrow. The issuer-listed zero-supply Tempo TIP-20 token is registered but its exact issuer/bridge liability relationship remains unresolved, so exhaustive independent-liability transfer-census re-admission is withheld. No static supply shares or favorable zero-supply exclusions are authored.",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W3ReadmitRipio)",
     "confidence": "probable",
     "protocols": [
       {
@@ -360,6 +360,77 @@
           "protocol:ripio-latam-stable",
           "contract:hyperevm:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
           "safe:hyperevm:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ]
+      },
+      {
+        "id": "arc:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "destinationChain": "arc",
+        "canonicalChain": "arc",
+        "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "protocol": "Ripio LatamStable issuer-native deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "controllerChain": "arc",
+        "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Arc block 25089200 (2026-10-09T15:02:56Z), the issuer-listed wCLP proxy resolves to LatamStable implementation 0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba and Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 holds MINTER_ROLE. Its 9856-byte implementation is bytecode-identical to the pinned HyperEVM exact-source-verified implementation. Local mint creates supply directly and burn/burnFrom destroy it; these issuance paths have no canonical-token escrow. The issuer bridge directory lists Arc. Audit metadata confirms wCLP, 18 decimals and zero supply; zero is deployed, not absent, and does not waive future census coverage.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-10-09",
+        "observedBlock": 25089200,
+        "sources": [
+          {
+            "label": "Ripio issuer deployment and bridge directory",
+            "url": "https://bridge.ripio.com/developers"
+          },
+          {
+            "label": "HyperEVM exact-match LatamStable source; bytecode-identical Arc implementation",
+            "url": "https://hyperevmscan.io/address/0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba#code"
+          },
+          {
+            "label": "Arc pinned proxy and native minter reads at block 25089200 (2026-10-09T15:02:56Z)",
+            "url": "https://api-arc-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "HyperEVM pinned implementation bytecode at block 48090420 (2026-10-09T15:10:59Z)",
+            "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c000000000000000000000f6af9c68e4c4b6e5",
+        "destinationChain": "tempo",
+        "contractAddress": "0x20c000000000000000000000f6af9c68e4c4b6e5",
+        "protocol": "Ripio issuer-listed Tempo TIP-20 deployment; liability route not established",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Tempo block 43354001 (2026-10-09T15:11:33Z) confirms issuer-listed Peso Chileno / wCLP, six decimals, zero supply, currency CLP and the standard TIP-20 ISSUER_ROLE. The protocol provides local mint/burn, but Ripio's bridge deployment directory does not cover Tempo or establish this token's liability relationship to other-chain wCLP. Both the previously reviewed Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 and issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b return false for ISSUER_ROLE at this pin. Generic mint/burn capability and zero supply do not positively exclude canonical escrow or establish an independent route. The deployed token is registered; census eligibility remains withheld pending exact issuer/route binding and no-escrow proof.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-10-09",
+        "observedBlock": 43354001,
+        "sources": [
+          {
+            "label": "Ripio current issuer deployment roster",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          },
+          {
+            "label": "Ripio bridge deployment directory; Tempo not in published bridge roster",
+            "url": "https://bridge.ripio.com/developers"
+          },
+          {
+            "label": "Tempo TIP-20 native mint/burn and role specification",
+            "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+          },
+          {
+            "label": "Tempo pinned identity and role reads at block 43354001 (2026-10-09T15:11:33Z)",
+            "url": "https://api-tempo-mainnet.n.dwellir.com"
+          }
         ]
       }
     ],

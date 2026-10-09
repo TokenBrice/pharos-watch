@@ -46,14 +46,74 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "gtUSDCp has three independent native ERC-4626 vault-share issuance deployments on Ethereum, Base and Arbitrum. Deposits and contract fee accrual issue local shares; no direct gtUSDCp bridge representation, adapter, lockbox, escrow or token-specific Across route is currently verified.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex bridge-boundary migration; verified finding 2026-08-16",
+    "summary": "The three registered contracts are distinct, independently priced ERC-4626 vault products, not fungible deployments of one cross-chain gtUSDCp liability. Each vault issues and burns its own shares against local USDC without canonical gtUSDCp escrow. The Prime brand alone does not establish that all same-name vaults belong in this asset. Current CoinGecko identity gauntlet-usdc-prime names only Ethereum V2, while this catalog also retains Base V1 and Arbitrum V1.1; the older Ethereum V1 is separately registered as gtusdc-gauntlet. The prior complete-family inventory and transfer-census eligibility conclusion is withdrawn. Re-admission is deferred pending a reconciled catalog liability scope and evidence that its deployment set and published aggregate are complete for that scope.",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W3ReadmitGauntlet)",
     "confidence": "verified",
     "sources": [
       {
+        "label": "Gauntlet VaultBook separate USDC Prime V2 products by chain",
+        "url": "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/v2-vaults.md"
+      },
+      {
+        "label": "Gauntlet VaultBook vault-specific deposits and allocation returns",
+        "url": "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/morpho-vaults-overview/morpho-vault-structure.md"
+      },
+      {
+        "label": "Morpho SDK V1-to-V2 migration redeems and deposits with separate share-price bounds",
+        "url": "https://docs.morpho.org/developers/sdks/morpho-sdk/#actions-overview"
+      },
+      {
         "label": "Gauntlet USDC Prime vault",
         "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
+      },
+      {
+        "label": "Exact Ethereum Gauntlet USDC Prime VaultV2 verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
+      },
+      {
+        "label": "Exact Base Gauntlet USDC Prime MetaMorpho verified source",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61"
+      },
+      {
+        "label": "Exact Arbitrum Gauntlet USDC Prime MetaMorphoV1_1 verified source",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
+      },
+      {
+        "label": "Morpho VaultV2 pinned local share issuance and redemption source",
+        "url": "https://github.com/morpho-org/vault-v2/blob/549b113106e505b83952c7b296622534338d5f92/src/VaultV2.sol"
+      },
+      {
+        "label": "Morpho exact Base V1 Prime vault listing",
+        "url": "https://app.morpho.org/base/vault/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61/gauntlet-usdc-prime"
+      },
+      {
+        "label": "Morpho exact Arbitrum V1.1 Prime vault listing",
+        "url": "https://app.morpho.org/arbitrum/vault/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed/gauntlet-usdc-prime"
+      },
+      {
+        "label": "Gauntlet branded-vault disclaimer (December 2025)",
+        "url": "https://storage.googleapis.com/gauntlet-public-web-assets/gauntlet-branded-vault-disclaimer-dec-2025.pdf"
+      },
+      {
+        "label": "CoinGecko exact gauntlet-usdc-prime identity (Ethereum V2 only, accessed October 9)",
+        "url": "https://api.coingecko.com/api/v3/coins/gauntlet-usdc-prime?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false"
+      },
+      {
+        "label": "Morpho per-vault share-price and listed-directory semantics",
+        "url": "https://docs.morpho.org/developers/api/morpho-vaults/"
+      },
+      {
+        "label": "Ethereum pinned vault identity and convertToAssets at block 26155658 (2026-10-09T15:09:47Z)",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Base pinned vault identity and convertToAssets at block 52384634 (2026-10-09T15:10:15Z)",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Arbitrum pinned vault identity and convertToAssets at block 513233920 (2026-10-09T15:10:17Z)",
+        "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
       }
     ],
     "routes": [
@@ -69,13 +129,17 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native gtUSDCp issuance on ethereum: the Gauntlet USDC Prime vault (gtusdcp) exposes asset() = USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and owner() = 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec (Gauntlet); shares mint against USDC deposits (verified on-chain 2026-07-20); no direct gtUSDCp bridge representation is currently verified.",
+        "reviewNote": "Native Ethereum VaultV2 shares: the existing July 20 observation identifies chain-local USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and Gauntlet owner 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec. Exact verified source re-read October 9 establishes local enter/createShares and exit/deleteShares paths against that local asset, plus local fee-share issuance; no cross-chain receipt minter or canonical gtUSDCp lock/release path exists in this vault implementation. Share decimals are assetDecimals plus max(0, 18 minus assetDecimals), matching catalog 18. October 9 identity-only helper read at block 26155658, hash 0x3e1fae321cb65f4ba61c1e98eebc5b13e08ee6ee39c2c49d8fa055ea6bed35d5, timestamp 2026-10-09T15:09:47Z, observed 2026-10-09T15:38:51.278Z, confirms name Gauntlet USDC Prime, symbol gtusdcp, 18 decimals and the same asset; convertToAssets(1000000000000000000) returns 1038251 raw USDC. The shares belong to this exact independently priced vault, not all Prime-branded vaults. This identity read does not refresh the historical authority or share-gate state pins.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
           {
             "label": "Exact Ethereum Gauntlet USDC Prime VaultV2 verified source",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
+          },
+          {
+            "label": "Ethereum pinned vault identity and independent share exchange rate (block 26155658)",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ]
       },
@@ -91,13 +155,17 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native gtUSDCp issuance on base: the Gauntlet USDC Prime vault (gtUSDCp) exposes owner() = the Gauntlet authority 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0; shares mint against USDC deposits (verified on-chain 2026-07-20); no direct gtUSDCp bridge representation is currently verified.",
+        "reviewNote": "Native Base MetaMorpho shares: the existing July 20 observation identifies Gauntlet owner 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0. Exact verified MetaMorpho source re-read October 9 establishes ERC-4626 deposit/mint and withdraw/redeem against chain-local USDC, local fee-share issuance and ordinary ERC-20 share balances; the vault does not mint a receipt against canonical gtUSDCp escrow on another chain. USDC six decimals plus the twelve-decimal share offset match catalog 18. October 9 identity-only helper read at block 52384634, hash 0x150e8d39674c8a6a8caf51b6771cb991ff6b708caed3c03e494d56089a33d0b5, timestamp 2026-10-09T15:10:15Z, observed 2026-10-09T15:39:06.520Z, confirms name Gauntlet USDC Prime, symbol gtUSDCp, 18 decimals and asset 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913; convertToAssets(1000000000000000000) returns 1114543 raw USDC. This is a distinct independently priced product, not an Ethereum V2 share representation; the existing catalog grouping conflicts with current CoinGecko scope. This identity read does not refresh the historical authority or transfer state pins.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
           {
             "label": "Exact Base Gauntlet USDC Prime MetaMorpho verified source",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61"
+          },
+          {
+            "label": "Base pinned vault identity and independent share exchange rate (block 52384634)",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ]
       },
@@ -113,13 +181,17 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native gtUSDCp issuance on arbitrum: the Gauntlet USDC Prime vault (gtUSDCp) exposes asset() = Arbitrum USDC 0xaf88d065e77c8cc2239327c5edb3a432268e5831 and owner() = the Gauntlet authority 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0 (verified on-chain 2026-07-20); no direct gtUSDCp bridge representation is currently verified.",
+        "reviewNote": "Native Arbitrum MetaMorphoV1_1 shares: the existing July 20 observation identifies chain-local USDC 0xaf88d065e77c8cc2239327c5edb3a432268e5831 and Gauntlet owner 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0. Exact verified source re-read October 9 establishes local ERC-4626 deposit/mint and withdraw/redeem plus fee-share issuance; the vault does not mint a receipt against canonical gtUSDCp escrow on another chain. USDC six decimals plus the twelve-decimal share offset match catalog 18. October 9 identity-only helper read at block 513233920, hash 0x04496d65afb73f84cb148bb85bd33e343437ed311ff23b9b1de3a5495701a7eb, timestamp 2026-10-09T15:10:17Z, observed 2026-10-09T15:39:18.517Z, confirms name Gauntlet USDC Prime, symbol gtUSDCp, 18 decimals and the same asset; convertToAssets(1000000000000000000) returns 1037963 raw USDC. This is a distinct independently priced product, not an Ethereum V2 share representation; the existing catalog grouping conflicts with current CoinGecko scope. This identity read does not refresh the historical authority or transfer state pins.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
           {
             "label": "Exact Arbitrum Gauntlet USDC Prime MetaMorphoV1_1 verified source",
             "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
+          },
+          {
+            "label": "Arbitrum pinned vault identity and independent share exchange rate (block 513233920)",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
           }
         ]
       }

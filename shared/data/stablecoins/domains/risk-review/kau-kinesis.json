@@ -50,7 +50,7 @@
         "semantics": "other",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Kinesis identifies Ethereum KAU as a 1:1 claim on native KAU held in reserve by KMS Labs, with redemption subject to KMS Labs terms and compliance onboarding. No trustless bridge, reserve lock, redemption burn, escrow, or route-level conservation contract was identified in the reviewed materials.",
+        "reviewNote": "Ethereum KAU is an 18-decimal KMS Labs ERC-20 claim on native KAU held in reserve, subject to KMS Labs terms and compliance onboarding. KMS Labs identifies native reserve wallet GAJ6XIVDKRHVMYF5ZUDDJCX755F25JXGIAWX4JO2OUHC4B2XHVTA6ERC, but this account is not a proved lockbox or automatic supply-conserving mint/burn path. The disclosed issuer-custody representation therefore requires an economic reserve/receipt/in-flight plan and is not independent-liability census eligible. The opaque-or-unknown tier and original control observation dates remain unchanged. R1 source review: Sol curation campaign 2026-10-09 (W4T05Infinifi).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
         "observedBlock": 26095802,
@@ -66,6 +66,10 @@
           {
             "label": "ERC20F verified implementation source (Blockscout)",
             "url": "https://eth.blockscout.com/address/0x0f25045d15c163478bb67c56c5d9d602628f4f62?tab=contract"
+          },
+          {
+            "label": "KMS Labs exact KAU identity, 18 decimals, reserve wallet and native-versus-ERC20 claim boundary; accessed 2026-10-09",
+            "url": "https://kmslabs.money/"
           }
         ]
       }

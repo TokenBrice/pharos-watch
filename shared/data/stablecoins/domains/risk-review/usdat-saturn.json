@@ -118,7 +118,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Monad block 109541539, the 6-decimal SaturnOFT USDat deployment resolves to implementation 0x79eda68d227eaa4b6431b123aa89f31f4bc70e5d. Its sole MINTER_ROLE and BURNER_ROLE holder is pool 0x8ab40e2dabcd24dcff0a06a68eb59990405270f0, whose current typeAndVersion() is BurnWithFromMintTokenPool 1.6.1. The Ethereum and BNB peer token/pool mappings remain the canonical USDat/Ethereum pool and the BNB USDat representation/BNB pool, respectively. The representation ProxyAdmin and token default admin remain governed by SaturnTimelock 0xf0237a1cb794ea830129966049ef99243082ff0c with a 172800-second delay. This corrects the prior pool-name typo without changing the burn/mint representation semantics.",
+        "reviewNote": "Sol curation campaign 2026-10-09 (W4T10Saturn): at Monad block 111920449 (hash 0x65672fc0842b594d729874d3eee62687730dd066f183343e2058fe62fb2b33e3, 2026-10-09T14:30:21Z), a header-checked Dwellir batch binds nonempty token proxy code, EIP-1967 implementation 0x79eda68d227eaa4b6431b123aa89f31f4bc70e5d and decimals 6. Only deployment identity was refreshed; the following roles, pool and governance findings remain historical. At Monad block 109541539, the 6-decimal SaturnOFT USDat deployment resolves to implementation 0x79eda68d227eaa4b6431b123aa89f31f4bc70e5d. Its sole MINTER_ROLE and BURNER_ROLE holder is pool 0x8ab40e2dabcd24dcff0a06a68eb59990405270f0, whose current typeAndVersion() is BurnWithFromMintTokenPool 1.6.1. The Ethereum and BNB peer token/pool mappings remain the canonical USDat/Ethereum pool and the BNB USDat representation/BNB pool, respectively. The representation ProxyAdmin and token default admin remain governed by SaturnTimelock 0xf0237a1cb794ea830129966049ef99243082ff0c with a 172800-second delay. This corrects the prior pool-name typo without changing the burn/mint representation semantics.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "monad",
         "controllerAddress": "0x8ab40e2dabcd24dcff0a06a68eb59990405270f0",
@@ -126,9 +126,22 @@
           "protocol:chainlink-ccip",
           "contract:monad:0x8ab40e2dabcd24dcff0a06a68eb59990405270f0"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 109541539,
+        "observedAt": "2026-10-09",
+        "observedBlock": 111920449,
+        "deploymentIdentity": {
+          "codeKind": "proxy",
+          "chain": "monad",
+          "address": "0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
+          "implementation": "0x79eda68d227eaa4b6431b123aa89f31f4bc70e5d",
+          "observedAtSec": 1791556221,
+          "block": 111920449,
+          "sourceUrl": "https://api-monad-mainnet-full.n.dwellir.com"
+        },
         "sources": [
+          {
+            "label": "Monad header-checked EIP-1967 proxy/code/decimals pin at block 111920449",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          },
           {
             "label": "USDat on Monadscan",
             "url": "https://monadscan.com/address/0x0Bb150DFa86EA5d7742F07FEfCD8E8edA81D64eF"
@@ -164,7 +177,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At BNB block 125055878, the 6-decimal SaturnOFT USDat deployment resolves to implementation 0x65458213bb2398f968ca1760b806956966b9adac. Its sole MINTER_ROLE and BURNER_ROLE holder is pool 0x904939a965edc2efbd44fd4db223f07680510c61, whose typeAndVersion() is BurnWithFromMintTokenPool 1.6.1. Ethereum and Monad peer mappings remain intact. The pool owner is RBACTimelock 0x950350b073956bd1d22bb1c18c4d45263b5aa3a5 and rate-limit admin is 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c; their 10800- and 86400-second delays and owner role/bypasser roster were re-read at BNB block 125058285 after the provider pruned the earlier historical state. This remains a CCIP representation, not a second native issuer.",
+        "reviewNote": "Sol curation campaign 2026-10-09 (W4T10Saturn): at BNB block 126652049 (hash 0x47d2c12a92fa8013e01706814e1b302776d50b482697038eec1e7aa6cf28a9e7, 2026-10-09T14:30:02Z), canonical hash-pinned PublicNode storage/code/decimals reads bind nonempty token proxy code, EIP-1967 implementation 0x65458213bb2398f968ca1760b806956966b9adac and decimals 6; numbered headers agree before and after the reads. Only deployment identity was refreshed; the following pool/role/governance findings remain historical. At BNB block 125055878, the 6-decimal SaturnOFT USDat deployment resolves to implementation 0x65458213bb2398f968ca1760b806956966b9adac. Its sole MINTER_ROLE and BURNER_ROLE holder is pool 0x904939a965edc2efbd44fd4db223f07680510c61, whose typeAndVersion() is BurnWithFromMintTokenPool 1.6.1. Ethereum and Monad peer mappings remain intact. The pool owner is RBACTimelock 0x950350b073956bd1d22bb1c18c4d45263b5aa3a5 and rate-limit admin is 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c; their 10800- and 86400-second delays and owner role/bypasser roster were re-read at BNB block 125058285 after the provider pruned the earlier historical state. This remains a CCIP representation, not a second native issuer.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "bsc",
         "controllerAddress": "0x904939a965edc2efbd44fd4db223f07680510c61",
@@ -172,9 +185,22 @@
           "protocol:chainlink-ccip",
           "contract:bsc:0x904939a965edc2efbd44fd4db223f07680510c61"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 125055878,
+        "observedAt": "2026-10-09",
+        "observedBlock": 126652049,
+        "deploymentIdentity": {
+          "codeKind": "proxy",
+          "chain": "bsc",
+          "address": "0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
+          "implementation": "0x65458213bb2398f968ca1760b806956966b9adac",
+          "observedAtSec": 1791556202,
+          "block": 126652049,
+          "sourceUrl": "https://bsc-rpc.publicnode.com"
+        },
         "sources": [
+          {
+            "label": "BNB canonical hash-pinned EIP-1967 proxy/code/decimals at block 126652049",
+            "url": "https://bsc-rpc.publicnode.com"
+          },
           {
             "label": "BNB USDat proxy/token",
             "url": "https://bscscan.com/address/0x0Bb150DFa86EA5d7742F07FEfCD8E8edA81D64eF"

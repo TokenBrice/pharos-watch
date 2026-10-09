@@ -187,15 +187,27 @@
         "authorityType": "multisig",
         "executionScope": {
           "controllerDeployment": "xrpl:rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-09",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewer": "Sol curation campaign 2026-10-09 (W4C05Origin)",
           "confidence": "partial",
           "sources": [
             {
               "label": "XRPL: RLUSD issuer account rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
               "url": "https://xrpscan.com/account/rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
+            },
+            {
+              "label": "XRPL AccountRoot: AllowTrustLineClawback is irreversible; historical issuer flag 0x819a0000 is documented at ledger 107354222",
+              "url": "https://xrpl.org/docs/references/protocol/ledger-data/ledger-entry-types/accountroot"
+            },
+            {
+              "label": "XRPL Clawback: issuer can reclaim entire trust-line balance; activation at the later scope pin remains unclosed",
+              "url": "https://xrpl.org/docs/references/protocol/transactions/types/clawback"
+            },
+            {
+              "label": "XRPL permission delegation: amendment state and delegate inventory require exact-ledger review",
+              "url": "https://xrpl.org/docs/concepts/accounts/permission-delegation"
             }
           ],
           "pin": {
@@ -288,6 +300,42 @@
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "native-clawback",
+              "targetDeployment": "xrpl:524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+              "entrypointKind": "xrpl-transaction",
+              "entrypoints": [
+                "Clawback"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "seize"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "unknown",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "xrpl:524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
               "upgradeRefs": [],
               "bypassRefs": []
             }

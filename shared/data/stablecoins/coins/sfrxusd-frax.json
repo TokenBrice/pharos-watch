@@ -201,6 +201,21 @@
       "chain": "movement",
       "address": "0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9",
       "decimals": 6
+    },
+    {
+      "chain": "blast",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "tempo",
+      "address": "0x00000000fd8c4b8a413a06821456801295921a71",
+      "decimals": 18
+    },
+    {
+      "chain": "robinhood",
+      "address": "0x00000000fd8c4b8a413a06821456801295921a71",
+      "decimals": 18
     }
   ],
   "collateralQuality": "rwa",

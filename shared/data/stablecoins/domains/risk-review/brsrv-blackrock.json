@@ -105,9 +105,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "Ethereum, Tempo and Solana are native OnChain share rails under one Securitize shareholder register. Ethereum currently carries the issued stock; Tempo and Solana stock were zero at the observed pins. No bridge-representation route or bridge-specific capability is established; native mint and upgrade powers remain in Mint Authority.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "summary": "All three registered BRSRV deployments are direct native OnChain fund-share issuance rails of Securitize's common shareholder register. The July 31 prospectus authorizes direct mint/burn on Ethereum, Tempo and Solana, rather than canonical-token lock/release or bridge receipts. Reviewed for complete exact-input independent-liability transfer census; zero-stock rails remain in scope and no static shares are authored. Native issuance authorization and upgrade questions remain in Mint Authority.",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4T02Avant)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -117,6 +117,18 @@
       {
         "label": "BlackRock BRSRV fund reporting",
         "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
+      },
+      {
+        "label": "Ethereum pinned BRSRV identity at block 26110197",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Tempo pinned BRSRV identity at block 42641165",
+        "url": "https://api-tempo-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Solana finalized exact mint identities at slot 454891046",
+        "url": "https://solana-rpc.publicnode.com"
       }
     ],
     "routes": [
@@ -132,7 +144,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The July 2026 prospectus identifies this supported public blockchain as a native fund-share issuance rail backed by one official shareholder register. Current exact deployment and stock are reverified. No generic bridge or separately collateralized wrapper is inferred; native administrative controls are in mintAuthority.",
+        "reviewNote": "Independent native liability: the July 31 prospectus pages 4-5 defines Ethereum, Tempo and Solana records plus the off-chain register as the official shareholder register; page 7 issues shares directly through the transfer agent. Verified DSToken issueTokensWithMultipleLocks/burn creates and destroys fund shares rather than escrowing another chain's canonical token. The token's compliance locks are shareholder transfer restrictions, not bridge escrow. Pinned October 9 identity read at Ethereum block 26110197 confirms symbol BRSRV and 6 decimals. Existing role/implementation pins are retained; no new signing-policy closure or runtime supply allocation is claimed.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-02",
         "observedBlock": 26107703,
@@ -167,7 +179,7 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The July 2026 prospectus identifies this supported public blockchain as a native fund-share issuance rail backed by one official shareholder register. Current exact deployment and stock are reverified. No generic bridge or separately collateralized wrapper is inferred; native administrative controls are in mintAuthority.",
+        "reviewNote": "Independent native liability on the same legally definitive fund-share register, not a receipt against Ethereum escrow. The July 31 prospectus expressly names Tempo and authorizes direct mint/burn, with off-chain redemption regardless of network availability. Existing October 5 reviewed runtime correspondence binds the Tempo DSToken/TokenLibrary issuance implementation to verified Ethereum source; unresolved issuer authorization remains separate. October 9 pinned identity at Tempo block 42641165 confirms BRSRV and 6 decimals. The earlier zero stock does not remove this registered deployment from the required complete census.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-02",
         "observedBlock": 42323853,
@@ -198,7 +210,7 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The July 2026 prospectus identifies this supported public blockchain as a native fund-share issuance rail backed by one official shareholder register. Current exact deployment and stock are reverified. No generic bridge or separately collateralized wrapper is inferred; native administrative controls are in mintAuthority.",
+        "reviewNote": "Independent native Solana fund-share issuance under the prospectus's common shareholder register, with direct mint and burn rather than escrow receipts or a LockRelease adapter. Finalized atomic mint snapshot at slot 454891046 (blockhash CmkAxc1dMUfs2Uuszipv2Wfo8GDtVTJwBQU1ThPzX6Kc, blockTime 1791555521) confirms exact BRSRV mint, name, 6 decimals and Securitize program-controlled mint authority J8hicFRuULsSJQXyK828gtszFjh1odeAxYJtx9R1DL12. Its observed zero supply does not exempt this leg from a complete current census. Program signing and upgrade questions remain unresolved in Mint Authority.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-02",
         "observedBlock": 452748384,

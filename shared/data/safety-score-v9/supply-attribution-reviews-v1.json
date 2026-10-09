@@ -3147,15 +3147,18 @@
     }
   ],
   "independentLiabilityAssetIds": [
-    "sfrxusd-frax",
-    "usdai-usd-ai",
-    "usbd-bima",
     "usdz-anzen",
-    "ussd-sonic-labs",
-    "wars-argentine-peso",
-    "wclp-ripio",
     "wsrusd-reservoir",
-    "yusd-aegis"
+    "brsrv-blackrock",
+    "jpyt-dephaser",
+    "mhyper-midas",
+    "gldon-ondo",
+    "iauon-ondo",
+    "slvon-ondo",
+    "chfsafo-spiko",
+    "ustb-superstate",
+    "usdai-usd-ai",
+    "susdai-usd-ai"
   ],
   "nativeSingleRouteReviews": [
     {

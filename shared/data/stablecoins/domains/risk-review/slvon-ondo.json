@@ -20,7 +20,7 @@
     "tier": "external-validated-network",
     "summary": "SLVon has issuer-native GM issuance on Ethereum, BSC, and Solana, plus a HyperEVM bridge representation. Ethereum and BSC also expose separate OndoOFT burn/mint bridge minters. Fresh pinned reads locate the unified Messenger behind each OFT, match all six reciprocal EVM peers, and enumerate the selected Endpoint V2 send/receive ULN configurations and token-specific rate limits. No SLVon-specific lockbox is proven; these remain external-validated-network lanes. Owner signer/module posture and economically complete circulating bridge materiality remain unresolved.",
     "reviewedAt": "2026-08-16",
-    "reviewer": "Codex bridge route boundary migration",
+    "reviewer": "Codex bridge route boundary migration; Sol curation campaign 2026-10-09 (W4T08Nexus), route accounting only",
     "confidence": "verified",
     "protocols": [
       {
@@ -46,6 +46,18 @@
       {
         "label": "L2BEAT LayerZero",
         "url": "https://l2beat.com/interop/protocols/layerzero"
+      },
+      {
+        "label": "R1 2026-10-09 verified canonical SLVon OndoOFT: direct burnFrom/mint, no escrow",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf9deffd6164d2b6714f3344cfc35c4f766fa9d6e"
+      },
+      {
+        "label": "R1 2026-10-09 exact verified HyperEVM SLVon OndoOFT",
+        "url": "https://hyperevmscan.io/address/0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85#code"
+      },
+      {
+        "label": "Ondo Stocks bridge: native burn/mint on all supported EVM chains and same token amount",
+        "url": "https://docs.ondo.finance/tools/ondo-bridge.md"
       }
     ],
     "routes": [
@@ -151,7 +163,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At HyperEVM block 43372762, SLVon on HyperEVM is minted solely by the OndoOFT contract 0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85. The OFT owner() is 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d, endpoint() is the HyperEVM LayerZero V2 endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, token() points to this deployment, and approvalRequired() is false. This is a bridge representation, not an independent native issuance chain.",
+        "reviewNote": "At HyperEVM block 43372762, SLVon on HyperEVM is minted solely by the OndoOFT contract 0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85. The OFT owner() is 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d, endpoint() is the HyperEVM LayerZero V2 endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, token() points to this deployment, and approvalRequired() is false. This is a bridge representation, not an independent native issuance chain. R1 source review 2026-10-09: the exact HyperEVM adapter is verified OndoOFT; canonical Ethereum verified _debit calls innerToken.burnFrom and _credit calls innerToken.mint. These are positive direct-burn/no-canonical-escrow paths, not a conclusion from an absent lockbox read. Issuer docs specify the same burn/mint architecture and destination token amount for Ethereum, BNB and HyperEVM. Solana remains independent native GM issuance, yielding four registered native/direct-burn liabilities with EVM 18 and Solana 9 decimals. Existing state pins and control questions retain their dates; no numeric supply share or census result is authored.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 43372762,

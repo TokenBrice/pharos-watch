@@ -100,6 +100,21 @@
       "chain": "celo",
       "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
       "decimals": 18
+    },
+    {
+      "chain": "arc",
+      "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+      "decimals": 18
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+      "decimals": 18
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c0000000000000000000009ebea3d43a08bad1",
+      "decimals": 6
     }
   ],
   "collateralQuality": "rwa",

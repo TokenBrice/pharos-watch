@@ -4,7 +4,7 @@
     {
       "sourceKey": "bridge-transparency:cash",
       "name": "Cash and deposit accounts in the BBI Reserve",
-      "pct": 7,
+      "pct": 5.9,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Depository institutions holding the Bridge Building Inc Reserve (institutions undisclosed)",
@@ -18,7 +18,7 @@
     {
       "sourceKey": "bridge-transparency:treasury",
       "name": "U.S. Treasury and government money-market fund exposure",
-      "pct": 93,
+      "pct": 94.1,
       "risk": "very-low",
       "assetClass": "other",
       "issuerOrObligor": "United States Treasury underlying exposure; government money-market fund counterparties undisclosed",
@@ -33,8 +33,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA24GHO)",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4T09Phantom)",
     "confidence": "verified",
     "sources": [
       {
@@ -54,9 +54,9 @@
         "url": "https://www.usecash.xyz/"
       }
     ],
-    "rationale": "Bridge's CASH-specific dashboard, last updated Oct 1, 2026, 6:10 AM UTC, reports 130,542,113 CASH circulating and $130,543,126 reserve assets, with $9,102,116 Cash (7.0%) and $121,441,011 Treasury (93.0%). The dashboard lists the exact authored Solana and HyperEVM contracts. Its Treasury footnote includes money-market funds comprised of T-bill ladders with less than three-month duration; this does not establish a 90-day maximum maturity for every asset in the combined bucket. BBI Terms section 02 and the Bridge issuance FAQ corroborate the eligible reserve classes, segregation and issuer self-reporting. No provider weights or direct Treasury versus money-market-fund split are inferred.",
-    "compositionBasis": "Issuer-published CASH dashboard allocation at its Oct 1, 2026, 6:10 AM UTC update: Cash $9,102,116 (7.0%) and Treasury $121,441,011 (93.0%), against $130,543,126 reserve assets and 130,542,113 CASH circulating.",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "Bridge's CASH-specific dashboard, last updated Oct 9, 2026, 2:00 PM UTC, reports 126,450,961 CASH circulating and $126,452,175 reserve assets, with $7,495,318 Cash (5.9%) and $118,956,857 Treasury (94.1%). The dashboard lists the exact authored Solana and HyperEVM contracts. Its Treasury footnote includes money-market funds comprised of T-bill ladders with less than three-month duration; this does not establish a maximum contractual maturity for every asset in the combined bucket. BBI Terms section 02(a) bounds direct Treasury-bill maturities to three calendar months, but the bill share of the combined bucket is undisclosed. The Bridge issuance FAQ corroborates the eligible reserve classes, segregation and issuer self-reporting. No provider weights, direct Treasury versus money-market-fund split, 90-day conversion, or cash/deposit contractual tenor are inferred.",
+    "compositionBasis": "Issuer-published CASH dashboard allocation at its Oct 9, 2026, 2:00 PM UTC update: Cash $7,495,318 (5.9%) and Treasury $118,956,857 (94.1%), against $126,452,175 reserve assets and 126,450,961 CASH circulating.",
+    "compositionAsOf": "2026-10-09",
     "scope": "full-composition",
     "knownUnknownExposure": "The dashboard allocates reserve assets between two published buckets, but the combined Treasury/government-MMF bucket does not establish an instrument-level asset class. It is conservatively classified as other until the direct Treasury versus MMF allocation and fund counterparties are disclosed. Other residual unknowns: issuer self-reporting with no published independent CASH attestation; deposit bank identities; any tokenized-asset usage permitted by eligible classes (e)/(f); and repo holdings within the eligible envelope. No provider weights or synthetic component split are inferred.",
     "knownUnknownExposurePct": 0

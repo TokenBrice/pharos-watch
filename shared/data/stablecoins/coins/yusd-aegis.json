@@ -58,6 +58,36 @@
       "chain": "katana",
       "address": "0xca2671dcd031a72359f456c212f62a9bda737cd7",
       "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xf07781182b47e728b040f9e35321260e359ff9f7",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xca2671dcd031a72359f456c212f62a9bda737cd7",
+      "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0xca2671dcd031a72359f456c212f62a9bda737cd7",
+      "decimals": 18
+    },
+    {
+      "chain": "plasma",
+      "address": "0xf07781182b47e728b040f9e35321260e359ff9f7",
+      "decimals": 18
+    },
+    {
+      "chain": "starknet",
+      "address": "0x01a507e10aa772ee87bf0d075aee6c5420deaad03731789b9d0b8c7b63ebce86",
+      "decimals": 18
+    },
+    {
+      "chain": "hedera",
+      "address": "0xf07781182b47e728b040f9e35321260e359ff9f7",
+      "decimals": 18
     }
   ],
   "collateralQuality": "exotic",

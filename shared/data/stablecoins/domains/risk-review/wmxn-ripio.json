@@ -82,10 +82,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "WMXN has six independent native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis; their issuer-direct native minting and UUPS upgrade paths remain in Mint Authority. Ripio's LimitedMinterBridge and BridgeDeposit form an issuer-operated burn/mint transfer rail with route-scoped bridge mint, rate-limit, pause, admin, operator, and replay/accounting controls. Celo is a probable bridge representation: its current role graph grants bridge-style minter contracts but its source-chain burn and destination fulfillment binding remain unresolved. No third-party bridge was identified.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint-bridge-boundary migration for WMXN",
-    "confidence": "probable",
+    "summary": "WMXN now has ten registered issuer-listed deployments. Eight are reviewed native local-mint/burn liabilities, including newly registered Arc and zero-supply HyperEVM. The existing Celo direct-burn/mint representation and its pinned token-to-minter-to-BridgeDeposit role linkage are preserved. Ripio BridgeDeposit burns source WMXN through burnFrom and destination mintTo creates tokens rather than releasing canonical escrow. The issuer-listed zero-supply Tempo TIP-20 token is registered but its exact issuer/bridge liability relationship remains unresolved, so exhaustive independent-liability transfer-census re-admission is withheld. No static shares are authored.",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W3ReadmitRipio)",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "issuer",
@@ -94,7 +94,7 @@
         "bridgeTypes": [
           "burnAndMint"
         ],
-        "note": "Official sources define source-chain burn, operator-gated destination fulfillment, per-token daily caps, arbitrary-recipient minting, pause, and idempotency/accounting state; current Celo source-chain binding remains unresolved."
+        "note": "Official and Celo verified sources define source-chain burn, operator-gated destination fulfillment, per-token daily caps, arbitrary-recipient minting, pause and idempotency/accounting state. The Celo token-to-minter-to-BridgeDeposit authorization chain is confirmed at block 79654966."
       }
     ],
     "sources": [
@@ -121,6 +121,18 @@
       {
         "label": "Ripio Celo WMXN launch announcement",
         "url": "https://action.ripio.com/es/blog/las-stablecoins-wfiat-ya-estan-disponibles-en-celo"
+      },
+      {
+        "label": "Celo BridgeDeposit verified source (burnFrom and fulfillBridgeMint)",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+      },
+      {
+        "label": "Celo LimitedMinterBridge verified source (direct recipient mintTo)",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+      },
+      {
+        "label": "Celo pinned role linkage at block 79654966 (2026-10-09T14:22:04Z)",
+        "url": "https://api-celo-mainnet-archive.n.dwellir.com"
       }
     ],
     "routes": [
@@ -303,7 +315,7 @@
         "id": "celo:0x337e7456b420bd3481e7fa61fa9850343d610d34",
         "destinationChain": "celo",
         "contractAddress": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
-        "protocol": "Ripio wMXN Celo bridge representation (probable)",
+        "protocol": "Ripio wMXN Celo direct-burn/mint representation",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "issuer-native-burn-mint",
@@ -312,10 +324,10 @@
         "controllerChain": "celo",
         "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Ripio's 31 July 2026 Celo launch announcement publishes this WMXN deployment. At Celo block 75022345, the token role graph did not grant the issuer EOA 0x466c02e2 direct MINTER_ROLE; instead it granted minting to bridge-style LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 and fixed-destination LimitedMinter 0xd168cfbbe260d48cd119497a9a2ee8482080c5e7. The route is therefore classified as a probable bridge representation, not an additional native issuer liability. A complete Celo source-chain burn and destination fulfillment trace remains unresolved.",
+        "reviewNote": "At Celo block 79654966 (2026-10-09T14:22:04Z), WMXN returned symbol wMXN and decimals 18, granted MINTER_ROLE to LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6, and that minter granted MINTER_ROLE to BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47. Both contracts have verified Celo source. BridgeDeposit.depositForBridge transfers only the fixed fee and burns the bridged principal through burnFrom; fulfillBridgeMint calls LimitedMinterBridge.mintTo, which directly mints to the final recipient. Neither path holds canonical WMXN principal as lock/release escrow. The fixed-destination LimitedMinter is an issuer on-ramp mint path, not an escrow. This is a reviewed direct-burn/mint liability eligible for complete exact-input transfer census, without asserting that any particular transfer has settled or authoring materialSupplyShare.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 75022345,
+        "observedAt": "2026-10-09",
+        "observedBlock": 79654966,
         "sources": [
           {
             "label": "Ripio Celo WMXN launch announcement",
@@ -328,6 +340,18 @@
           {
             "label": "Celo JSON-RPC fixed-block reads",
             "url": "https://forno.celo.org"
+          },
+          {
+            "label": "Celo BridgeDeposit verified source",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+          },
+          {
+            "label": "Celo LimitedMinterBridge verified source",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+          },
+          {
+            "label": "Celo pinned identity and role reads at block 79654966",
+            "url": "https://api-celo-mainnet-archive.n.dwellir.com"
           }
         ],
         "failureDomainKeys": [
@@ -337,6 +361,110 @@
           "contract:celo:0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
           "eoa:celo:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
           "safe:celo:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ]
+      },
+      {
+        "id": "arc:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "destinationChain": "arc",
+        "canonicalChain": "arc",
+        "contractAddress": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "protocol": "Ripio LatamStable issuer-native deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "controllerChain": "arc",
+        "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Arc block 25089200 (2026-10-09T15:02:56Z), the issuer-listed wMXN proxy resolves to LatamStable implementation 0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7 and Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 holds MINTER_ROLE. Its 9856-byte implementation exactly matches the pinned HyperEVM exact-source-verified implementation, not the older Ethereum variant. Verified mint creates local supply directly; burn/burnFrom destroy local supply rather than conserving canonical escrow. The issuer bridge directory lists Arc. Audit metadata confirms wMXN, 18 decimals and 949.73 native units, not a static supply share.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-10-09",
+        "observedBlock": 25089200,
+        "sources": [
+          {
+            "label": "Ripio issuer deployment and bridge directory",
+            "url": "https://bridge.ripio.com/developers"
+          },
+          {
+            "label": "HyperEVM exact-match LatamStable source; bytecode-identical Arc implementation",
+            "url": "https://hyperevmscan.io/address/0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7#code"
+          },
+          {
+            "label": "Arc pinned proxy and native minter reads at block 25089200 (2026-10-09T15:02:56Z)",
+            "url": "https://api-arc-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "HyperEVM pinned implementation bytecode at block 48090420 (2026-10-09T15:10:59Z)",
+            "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "hyperevm:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "destinationChain": "hyperevm",
+        "canonicalChain": "hyperevm",
+        "contractAddress": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "protocol": "Ripio LatamStable issuer-native deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At HyperEVM block 48090420 (2026-10-09T15:10:59Z), the issuer-listed wMXN proxy resolves to exact-source-verified LatamStable implementation 0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7 and Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 holds MINTER_ROLE. Verified local mint and burn/burnFrom create and destroy independent native supply, with no canonical lock/release in these paths. Audit metadata confirms wMXN, 18 decimals and zero supply; the deployed zero-supply token remains part of the authoritative census. This is the 9856-byte compliance variant, not the older Ethereum implementation.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-10-09",
+        "observedBlock": 48090420,
+        "sources": [
+          {
+            "label": "Ripio current issuer deployment roster",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          },
+          {
+            "label": "HyperEVM exact-match LatamStable implementation",
+            "url": "https://hyperevmscan.io/address/0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7#code"
+          },
+          {
+            "label": "HyperEVM pinned proxy and native minter reads at block 48090420 (2026-10-09T15:10:59Z)",
+            "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c00000000000000000000032449be232fd987e",
+        "destinationChain": "tempo",
+        "contractAddress": "0x20c00000000000000000000032449be232fd987e",
+        "protocol": "Ripio issuer-listed Tempo TIP-20 deployment; liability route not established",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Tempo block 43354001 (2026-10-09T15:11:33Z) confirms issuer-listed Peso Mexicano / wMXN, six decimals, zero supply, currency MXN and the standard TIP-20 ISSUER_ROLE. The protocol provides local mint/burn, but Ripio's bridge deployment directory does not cover Tempo or establish this token's liability relationship to other-chain wMXN. Both the previously reviewed Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 and issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b return false for ISSUER_ROLE at this pin. Generic mint/burn capability and zero supply do not positively exclude canonical escrow or establish an independent route. Register the deployment and withhold census eligibility pending exact issuer/route binding and no-escrow proof.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-10-09",
+        "observedBlock": 43354001,
+        "sources": [
+          {
+            "label": "Ripio current issuer deployment roster",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          },
+          {
+            "label": "Ripio bridge deployment directory; Tempo not in published bridge roster",
+            "url": "https://bridge.ripio.com/developers"
+          },
+          {
+            "label": "Tempo TIP-20 native mint/burn and role specification",
+            "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+          },
+          {
+            "label": "Tempo pinned identity and role reads at block 43354001 (2026-10-09T15:11:33Z)",
+            "url": "https://api-tempo-mainnet.n.dwellir.com"
+          }
         ]
       }
     ],

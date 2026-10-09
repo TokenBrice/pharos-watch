@@ -44,7 +44,7 @@
     "tier": "external-validated-network",
     "summary": "USN is natively issued on Ethereum through MinterHandlerV2. Its zkSync, Sophon, and Starknet deployments are burn-mint bridge representations: Hyperlane warp/router paths cover those tracked routes, while LayerZero Endpoint V2 peers are live between Ethereum and zkSync/Sophon only. The official TAC registry also identifies the USN representation 0x51a30e647d33a044967fa3dbb04d6ed6f45455f6 on TAC, but tac is not registered in shared/lib/chains/index.ts and is intentionally omitted from the catalog contract and route inventory. Its TAC block 24352134 owner Safe 0x868dd9bce1d60362f2169e7b91e6aa2f71f64750, token implementation 0x01a660f4b4f87b8b42ba6f02c63c38c87af610c2, proxy admin 0xf4059d5f0b70f828ed2f087b43e91351203b2bbe, Hyperlane mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e, mailbox owner 0xb801c2712f92e2d29e1120862e0f9c93d80cbbca, and default ISM 0xad3bce653f56d4e03d0789d01d055b06cf6ac48f remain named Bridge Risk evidence gaps pending chain admission. Current tracked-route token owners, proxy slots, mailbox owners, default ISMs, Hyperlane remote mappings, and LayerZero peer reads are recorded below; Hyperlane validator sets and LayerZero DVN/message-library/executor configuration remain unresolved, so the external-validated-network tier is provisional.",
     "reviewedAt": "2026-08-16",
-    "reviewer": "Pharos mint-bridge boundary migration; Codex usn-noon",
+    "reviewer": "Pharos mint-bridge boundary migration; Codex usn-noon; Sol curation campaign 2026-10-09 (W4T08Nexus), route accounting/identity only",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -98,9 +98,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "USN is native on Ethereum: minting is administered by the reviewed MinterHandlerV2 under Noon's 3-of-6 admin Safe.",
+        "reviewNote": "R1 review 2026-10-09: Ethereum is the issuer-documented native USN home chain. At block 26155399 (2026-10-09T14:17:47Z), name/symbol were USN, decimals were 18, and the implementation was 0x79fd7fe2a8ebcae47798321b2ac97107df3de229. Its verified USNUpgradeableHyperlane source burns USN in sendTokensViaHyperlane and LayerZero _debit, then mints on authenticated handle/_credit; neither outgoing path locks canonical USN. The issuer's USN-specific architecture states burn-mint across all supported chains, unlike the separately documented sUSN lockbox. This is a direct-burn liability inventory, not canonical escrow plus receipts; native mint authority remains separately reviewed.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-09",
+        "observedBlock": 26155399,
         "sources": [
           {
             "label": "Noon interoperability docs",
@@ -109,6 +110,18 @@
           {
             "label": "Hyperlane docs",
             "url": "https://docs.hyperlane.xyz/"
+          },
+          {
+            "label": "Current verified Ethereum USN burn/mint implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x79fd7fe2a8ebcae47798321b2ac97107df3de229?fields=sources"
+          },
+          {
+            "label": "Ethereum Dwellir identity and implementation pin, block 26155399",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Noon exact deployment registry, including deprecated chains",
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
           }
         ]
       },
@@ -127,9 +140,10 @@
         "controllerChain": "zksync",
         "controllerAddress": "0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6",
         "reviewDisposition": "reviewed",
-        "reviewNote": "HypERC20 warp token: name()='USN Token', owner()=0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263 (contract), mailbox()=0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e (Hyperlane zkSync mailbox) read on zkSync Era at 2026-07-20; mint executes only on Hyperlane message delivery.",
+        "reviewNote": "R1 review 2026-10-09: the issuer's exact zkSync USN OFT address matches the catalog. At block 72401880 (2026-10-09T14:17:50Z), name was USN Token, symbol USN, decimals 18, and implementation 0xb00b492099323e386dfd1e014850ca16396e8c22. The explorer-verified contract is USNOFTHyperlane: Hyperlane sendTokensViaHyperlane and LayerZero _debit burn the local token, while handle and _credit mint it. Combined with the verified Ethereum canonical-side direct burn and the issuer's USN-specific all-chain burn-mint architecture, this route has no canonical-USN lock/release escrow. Bridge validation and owner/rate-limiter controls remain separate risk facts; no static supply share is authored.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-09",
+        "observedBlock": 72401880,
         "sources": [
           {
             "label": "Noon interoperability docs",
@@ -138,6 +152,18 @@
           {
             "label": "Hyperlane docs",
             "url": "https://docs.hyperlane.xyz/"
+          },
+          {
+            "label": "Explorer-verified zkSync USNOFTHyperlane implementation",
+            "url": "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0xb00B492099323E386dFD1E014850Ca16396E8C22"
+          },
+          {
+            "label": "zkSync Dwellir identity and implementation pin, block 72401880",
+            "url": "https://api-zksync-era-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "Noon exact deployment registry, including deprecated chains",
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
           }
         ],
         "failureDomainKeys": [
@@ -160,9 +186,10 @@
         "controllerChain": "sophon",
         "controllerAddress": "0xc1aa99c3881b26901af70738a7c217dc32536d36",
         "reviewDisposition": "reviewed",
-        "reviewNote": "HypERC20 warp token: name()='USN Token', owner()=0x553d36879016ce22977a622804eee76dc0dc88e0 (contract), mailbox()=0x9bbdf86b272d224323136e15594fdce487f40ce7 (Hyperlane Sophon mailbox) read on Sophon at 2026-07-20; mint executes only on Hyperlane message delivery.",
+        "reviewNote": "R1 review 2026-10-09: Noon explicitly lists this Sophon USN OFT under deprecated chains; deprecation does not prove zero supply or remove the registered deployment. At Sophon block 29673169 (2026-10-09T14:14:36Z), name was USN Token, symbol USN, decimals 18, and implementation remained 0xf90d5784e175b6142958ec32b77b7aa63582d957. The issuer's USN-specific architecture states origin burn and destination mint across all supported chains, with no canonical-USN lockbox; its lock/unlock address applies only to sUSN. Ethereum's current verified USN implementation positively confirms direct canonical burn on both Hyperlane and LayerZero. This is a direct-burn representation, not a claim against escrowed canonical USN; the complete census must still include Sophon.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-09",
+        "observedBlock": 29673169,
         "sources": [
           {
             "label": "Noon interoperability docs",
@@ -171,6 +198,18 @@
           {
             "label": "Hyperlane docs",
             "url": "https://docs.hyperlane.xyz/"
+          },
+          {
+            "label": "Sophon public RPC identity and implementation pin, block 29673169",
+            "url": "https://rpc.sophon.xyz"
+          },
+          {
+            "label": "Noon exact deployment registry, including deprecated Sophon",
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+          },
+          {
+            "label": "Verified canonical Ethereum USN direct-burn implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x79fd7fe2a8ebcae47798321b2ac97107df3de229?fields=sources"
           }
         ],
         "failureDomainKeys": [
@@ -193,7 +232,7 @@
         "controllerChain": "starknet",
         "controllerAddress": "0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b",
         "reviewDisposition": "reviewed",
-        "reviewNote": "starknet_call at 2026-07-20: symbol()=USN, owner()=0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox()=0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8 (Hyperlane Starknet mailbox); mint executes only on Hyperlane message delivery.",
+        "reviewNote": "R1 architecture review 2026-10-09: the issuer's exact Starknet USN deployment matches the catalog and its USN-specific architecture states origin burn and destination mint across all supported chains, without the canonical escrow explicitly documented for sUSN. The verified current Ethereum USN source positively confirms canonical Hyperlane direct burn, rather than lock/release. A newly repeated Dwellir decimals call at historical Starknet block 14197601 (2026-09-01T11:38:46Z) returns 18; this is a historical identity pin, not a current implementation or owner refresh. Existing July/August owner/mailbox facts retain their original dates. The route is a direct-burn representation and must remain in the exhaustive census.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -204,6 +243,18 @@
           {
             "label": "Hyperlane docs",
             "url": "https://docs.hyperlane.xyz/"
+          },
+          {
+            "label": "Starknet Dwellir historical decimals pin, block 14197601",
+            "url": "https://api-starknet-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Noon exact Starknet USN deployment registry",
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+          },
+          {
+            "label": "Verified canonical Ethereum USN direct-burn implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x79fd7fe2a8ebcae47798321b2ac97107df3de229?fields=sources"
           }
         ],
         "failureDomainKeys": [

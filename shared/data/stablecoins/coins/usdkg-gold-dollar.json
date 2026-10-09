@@ -2,14 +2,23 @@
   "id": "usdkg-gold-dollar",
   "name": "USDKG",
   "symbol": "USDKG",
-  "oneLiner": "USDKG is Gold Dollar's Kyrgyz-licensed stablecoin backed by about 376 kg gold in sealed boxes at an unnamed bank under LLC Virelint Group's storage agreement.",
+  "oneLiner": "USDKG is Gold Dollar's gold-backed dollar token; the issuer has announced termination and offers holders email-based exchange for fiat or USDT.",
+  "marketAvailability": "legacy-or-wind-down",
+  "windDownSourceUrl": "https://www.usdkg.com/",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Issuer operations terminating",
+      "message": "The issuer's termination notice cites Kyrgyz Cabinet Order 639-t dated August 20, 2026 and says USDKG operations, including blockchain activities, are ceasing. Holders may email hello@usdkg.com to request exchange for fiat or USDT; no payout duration is published."
+    }
+  ],
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
     "rwa": true
   },
   "collateral": "Physical gold bars (~376 kg, 30 bars) sourced from the Kyrgyz Ministry of Finance via state gold enterprise Kyrgyzaltyn (LBMA Good Delivery listed); stored in sealed boxes at an unnamed bank under custody of LLC Virelint Group",
-  "pegMechanism": "1:1 mint and redemption against USD, Kyrgyzstani som, physical gold, or approved cryptocurrencies through Gold Dollar; KYC/AML verification required for all redemptions",
+  "pegMechanism": "Historically minted and redeemed against USD, Kyrgyzstani som, physical gold or approved cryptocurrencies through Gold Dollar. The current termination notice directs holders to email the issuer for fiat or USDT exchange without a published payout duration.",
   "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "defillama",
   "geckoId": "usdkg",

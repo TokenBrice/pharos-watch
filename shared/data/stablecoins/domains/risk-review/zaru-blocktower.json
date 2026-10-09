@@ -60,9 +60,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "All four declared deployments expose native issuer minting. No third-party bridge representation or bridge controller is established; native mint and upgrade controls remain in Mint Authority.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "summary": "All four registered ZARU deployments are independent native issuer liabilities: Solana Token-2022 and Ethereum/Base/Arc ERC20F mint/burn rails. The issuer's native-token-standard expansion model, directly observed issuer authorities and verified ERC20F role-controlled mint/burn establish direct issuance, not canonical-token escrow, LockRelease or pooled bridge receipts. Eligible for a complete exact-input transfer census, including every zero-supply leg; no static shares or authority-key custody credit are authored.",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4T02Avant)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -72,6 +72,26 @@
       {
         "label": "Issuer homepage identifies live Arc deployment",
         "url": "https://zaru.network/"
+      },
+      {
+        "label": "Verified ERC20F direct mint and burn implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      },
+      {
+        "label": "Ethereum pinned identity at block 26124902",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Base pinned identity at block 52199351",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Arc pinned identity at block 24360273",
+        "url": "https://api-arc-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Solana finalized atomic mint identities at slot 454891046",
+        "url": "https://solana-rpc.publicnode.com"
       }
     ],
     "routes": [
@@ -87,7 +107,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native mint authority is independently observed. No third-party bridge, lockbox, messaging controller or bridge representation is identified.",
+        "reviewNote": "Independent direct Token-2022 issuer mint/burn, backed by rand rather than another chain's escrow. The issuer whitepaper sections 4.04/4.08/4.11 states mint only when reserve rand is received, burn on redemption and expansion using each chain's native token standard. Moore's October 1 report independently identifies this exact Solana mint at snapshot slot 443168748. Finalized identity snapshot slot 454891046 (blockhash CmkAxc1dMUfs2Uuszipv2Wfo8GDtVTJwBQU1ThPzX6Kc, blockTime 1791555521) confirms ZAR Universal/ZARU, 6 decimals and ordinary issuer mint authority 8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62. No bridge/controller or canonical lock-and-release liability is present in this native issuance path; signing-policy independence remains unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "solana",
         "controllerAddress": "8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62",
@@ -116,7 +136,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native mint authority is independently observed. No third-party bridge, lockbox, messaging controller or bridge representation is identified.",
+        "reviewNote": "Independent native issuer liability: the deployed ERC20F implementation provides onlyRole(MINTER_ROLE) mint() and onlyRole(BURNER_ROLE) burn(), not a canonical-token lock/release adapter. The existing complete role census identifies issuer EOA 0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1, with no bridge minter. Existing October 5 executable-runtime correspondence remains the source binding; October 9 pinned Ethereum block 26124902 additionally confirms ZARU, 18 decimals and implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62. Issuer fiat-backed native expansion is documented in whitepaper section 4.08; this is not a receipt against Solana escrow.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "ethereum",
         "controllerAddress": "0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1",
@@ -149,7 +169,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native mint authority is independently observed. No third-party bridge, lockbox, messaging controller or bridge representation is identified.",
+        "reviewNote": "Independent native issuer liability: verified ERC20F role-controlled mint()/burn(), with the complete existing role census identifying issuer EOA 0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1 rather than a bridge minter. Existing October 5 executable-runtime correspondence is retained; October 9 pinned Base block 52199351 confirms ZARU, 18 decimals and implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62. The issuer native-token-standard expansion model covers this direct fiat-backed issuance. No canonical lockbox or cross-chain receipt is used in this issuance path; zero stock must still be observed by the complete census.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "base",
         "controllerAddress": "0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1",
@@ -182,7 +202,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native mint authority is independently observed. No third-party bridge, lockbox, messaging controller or bridge representation is identified.",
+        "reviewNote": "Independent native issuer liability: the existing terminal eight-grant/zero-revoke role census through Arc block 24360273 establishes only issuer EOA 0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1; reviewed ERC20F executable correspondence proves direct role-controlled mint()/burn(), with no LockRelease adapter or bridge minter in that path. October 9 pinned identity at that same Arc block confirms ZARU and 18 decimals. Whitepaper section 4.08 specifies native-token-standard expansion and the issuer homepage identifies Arc deployment. Native issuance remains separate from issuer key-custody uncertainty; no supply share is asserted.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "arc",
         "controllerAddress": "0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1",

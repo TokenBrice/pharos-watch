@@ -176,7 +176,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Nest's current smart-contract registry and nTBILL integration guide list the BNB Chain USDT NestVault as a native deposit path. At BSC block 116344431, the nTBILL share owner() and NestVault owner() both returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; RolesAuthority.canCall(NestVault, nTBILL share, enter(...)) returned true and maxDeposit(address) returned uint256.max. The current mint path is native issuance, not a bridge representation.",
+        "reviewNote": "Nest's current smart-contract registry and nTBILL integration guide list the BNB Chain USDT NestVault as a native deposit path. At BSC block 116344431, the nTBILL share owner() and NestVault owner() both returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; RolesAuthority.canCall(NestVault, nTBILL share, enter(...)) returned true and maxDeposit(address) returned uint256.max. The current mint path is native issuance, not a bridge representation. Accounting review 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas): verified source for implementation 0xee3e8334d90a18589935209f6a9a75b02b6a76d7 was recovered through the Etherscan v2 API; NestVaultOFT._debit/_credit call SHARE.exit/enter with zero asset movement, proving direct share burn/mint mechanics. Exact immutable SHARE binding, live implementation/peer mapping and 18-to-6 decimal economic-unit conversion remain unproven. A Dwellir binding read at the historical BSC pin failed because historical state is unavailable. No independent census eligibility is authored; historical native-authority observations are unchanged.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 116344431,
@@ -192,6 +192,10 @@
           {
             "label": "BNB Chain nTBILL NestVault",
             "url": "https://bscscan.com/address/0x109df814e265cb62a1b366a4c0450b0a7af38a0c#code"
+          },
+          {
+            "label": "Recovered NestVaultOFT implementation direct SHARE.exit/enter source, reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas)",
+            "url": "https://bscscan.com/address/0xee3e8334d90a18589935209f6a9a75b02b6a76d7#code"
           }
         ]
       },
@@ -208,7 +212,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Nest's current smart-contract registry identifies the Solana nTBILL mint 2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4, OFT store 5B25A3r4yyN5iGi9PZEyte2ZyZEyx8CdASEX5GQErRSL, and Plume composer 0x719e01497ed0e4e917fd0482355b9a64ddbad873. Nest's current integration and cross-chain architecture docs state that Solana USDC crosses CCTP to Plume, the composer performs the vault action, and LayerZero OFT delivers nTBILL back to Solana; redemptions reverse this path. The route is a bridge representation, not independent native Solana issuance.",
+        "reviewNote": "Nest's current smart-contract registry identifies the Solana nTBILL mint 2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4, OFT store 5B25A3r4yyN5iGi9PZEyte2ZyZEyx8CdASEX5GQErRSL, and Plume composer 0x719e01497ed0e4e917fd0482355b9a64ddbad873. Nest's current integration and cross-chain architecture docs state that Solana USDC crosses CCTP to Plume, the composer performs the vault action, and LayerZero OFT delivers nTBILL back to Solana; redemptions reverse this path. The route is a bridge representation, not independent native Solana issuance. Accounting review 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas): the retained generic burn-mint label is not positive decoded OFTStore.oft_type evidence. The exact store's Native-versus-Adapter mode and mint binding require finalized account-state proof before independent census eligibility; Native mode from sibling nWISDOM is not transplanted.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "solana",
         "controllerAddress": "5B25A3r4yyN5iGi9PZEyte2ZyZEyx8CdASEX5GQErRSL",

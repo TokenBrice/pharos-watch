@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Juno/Bitso documents MXNB issuance and redemption through issuer APIs and lists MXNB on Arbitrum as an issuer stablecoin rather than a wrapped bridge asset. No separate bridge protocol was verified, so the route is reviewed as issuer-native mint/redeem across supported chains.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "summary": "The five registered MXNB deployments are issuer-native FiatTokenV2_2 liabilities, with verified direct local-supply mint/burn implementations. However, the issuer also lists an unregistered live Arc deployment: pinned Arc block 25087646 returns MXNB, 6 decimals and 2195860.833859 tokens. A five-deployment census would therefore be incomplete. Independent-liability eligibility is deferred until the Arc native-liability review and catalog/route registration are complete; no eligibility or static supply shares are authored.",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4T05Infinifi)",
     "confidence": "verified",
     "sources": [
       {
@@ -30,6 +30,18 @@
       {
         "label": "Juno issuance docs",
         "url": "https://docs.bitso.com/juno/docs/trigger-an-issuance"
+      },
+      {
+        "label": "MXNB issuer-supported networks and exact proxy identities",
+        "url": "https://mxnb.mx/en-US/transparency"
+      },
+      {
+        "label": "MXNB whitepaper: native issuance, direct mint/burn and common MXN redemption claim, pages 4-8",
+        "url": "https://assets-prod.mxnb.mx/commons/whitepaper.pdf"
+      },
+      {
+        "label": "Arc block 25087646, hash 0x9bcd9785a04baabecd740f36e44360bb6ce32014ea38f1964d5003f9a27b11f8, 2026-10-09T14:49:47Z; observed 2026-10-09T14:49:48Z: live omitted MXNB deployment, 6 decimals, 2195860.833859 tokens",
+        "url": "https://api-arc-mainnet.n.dwellir.com"
       }
     ],
     "routes": [
@@ -45,17 +57,22 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native MXNB issuance on ethereum: owner() of the FiatToken-fork proxy returns the issuer EOA 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739 (verified on-chain 2026-07-20; no contract code at the owner address, no bridge endpoint surface), matching the reviewed mintAuthority (masterMinter = owner on every chain).",
+        "reviewNote": "Independent native MXNB liability on Ethereum. At block 26155400 (2026-10-09T14:17:59Z; hash 0x4d8c18c536b484c3c3de7c104160744f7432ccccc6b2232b5e7add3822bb9562; observed 2026-10-09T14:18:23.881Z), name/symbol are MXNB, decimals are 6, implementation() is 0x72beddf7032eec58f199857b79a8e37020c14e42 and owner()/masterMinter() are 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739. Verified FiatTokenV2_2 mint/burn directly increment/decrement local totalSupply; no canonical-token escrow, LockRelease or OFT adapter occurs in this native issuance path. The issuer's common MXN redemption claim covers this native liability, not a wrapped receipt. No supply share is inferred.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-09",
+        "observedBlock": 26155400,
         "sources": [
           {
-            "label": "MXNB token on ethereum explorer (owner() probed 2026-07-20)",
-            "url": "https://blockscout.com/search?q=0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+            "label": "MXNB issuer-supported networks",
+            "url": "https://mxnb.mx/en-US/transparency"
           },
           {
-            "label": "Juno MXNB",
-            "url": "https://juno.finance/"
+            "label": "Ethereum deployed FiatTokenV2_2 verified source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x72beddf7032eec58f199857b79a8e37020c14e42?fields=sources"
+          },
+          {
+            "label": "Ethereum Dwellir pinned native identity/decimals read, block 26155400",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ]
       },
@@ -71,17 +88,22 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native MXNB issuance on polygon: owner() of the FiatToken-fork proxy returns the issuer EOA 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739 (verified on-chain 2026-07-20; no contract code at the owner address, no bridge endpoint surface), matching the reviewed mintAuthority (masterMinter = owner on every chain).",
+        "reviewNote": "Independent native MXNB liability on Polygon. At block 95233515 (2026-10-09T14:18:12Z; hash 0x2fe428ae4229e373195c006fab2bca943a543b0df0d31f7c31e363733149138d; observed 2026-10-09T14:18:24.921Z), name/symbol are MXNB, decimals are 6, implementation() is 0x72beddf7032eec58f199857b79a8e37020c14e42 and owner()/masterMinter() are 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739. Verified FiatTokenV2_2 mint/burn directly increment/decrement local totalSupply; no canonical-token escrow, LockRelease or OFT adapter occurs in this native issuance path. The issuer's common MXN redemption claim covers this native liability, not a wrapped receipt. No supply share is inferred.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-09",
+        "observedBlock": 95233515,
         "sources": [
           {
-            "label": "MXNB token on polygon explorer (owner() probed 2026-07-20)",
-            "url": "https://blockscout.com/search?q=0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+            "label": "MXNB issuer-supported networks",
+            "url": "https://mxnb.mx/en-US/transparency"
           },
           {
-            "label": "Juno MXNB",
-            "url": "https://juno.finance/"
+            "label": "Polygon deployed FiatTokenV2_2 verified source",
+            "url": "https://sourcify.dev/server/v2/contract/137/0x72beddf7032eec58f199857b79a8e37020c14e42?fields=sources"
+          },
+          {
+            "label": "Polygon Dwellir pinned native identity/decimals read, block 95233515",
+            "url": "https://api-polygon-mainnet-full.n.dwellir.com"
           }
         ]
       },
@@ -97,17 +119,22 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native MXNB issuance on arbitrum: owner() of the FiatToken-fork proxy returns the issuer EOA 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739 (verified on-chain 2026-07-20; no contract code at the owner address, no bridge endpoint surface), matching the reviewed mintAuthority (masterMinter = owner on every chain).",
+        "reviewNote": "Independent native MXNB liability on Arbitrum. At block 513221746 (2026-10-09T14:18:12Z; hash 0x2b1a132a22f332ab03a3d5d62d970a0c4f2d981ba4150f68fc22f64dbeebf800; observed 2026-10-09T14:18:25.948Z), name/symbol are MXNB, decimals are 6, implementation() is 0x72beddf7032eec58f199857b79a8e37020c14e42 and owner()/masterMinter() are 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739. Verified FiatTokenV2_2 mint/burn directly increment/decrement local totalSupply; no canonical-token escrow, LockRelease or OFT adapter occurs in this native issuance path. The issuer's common MXN redemption claim covers this native liability, not a wrapped receipt. No supply share is inferred.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-09",
+        "observedBlock": 513221746,
         "sources": [
           {
-            "label": "MXNB token on arbitrum explorer (owner() probed 2026-07-20)",
-            "url": "https://blockscout.com/search?q=0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+            "label": "MXNB issuer-supported networks",
+            "url": "https://mxnb.mx/en-US/transparency"
           },
           {
-            "label": "Juno MXNB",
-            "url": "https://juno.finance/"
+            "label": "Arbitrum deployed FiatTokenV2_2 verified source",
+            "url": "https://sourcify.dev/server/v2/contract/42161/0x72beddf7032eec58f199857b79a8e37020c14e42?fields=sources"
+          },
+          {
+            "label": "Arbitrum Dwellir pinned native identity/decimals read, block 513221746",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
           }
         ]
       },
@@ -123,17 +150,22 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native MXNB issuance on avalanche: owner() of the FiatToken-fork proxy returns the issuer EOA 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739 (verified on-chain 2026-07-20; no contract code at the owner address, no bridge endpoint surface), matching the reviewed mintAuthority (masterMinter = owner on every chain).",
+        "reviewNote": "Independent native MXNB liability on Avalanche. At block 97129430 (2026-10-09T14:18:11Z; hash 0x714fb7ec988bc4cf6e870262a4cda9423ab5b77d8b61ba4ae97344ec8638b70c; observed 2026-10-09T14:18:26.991Z), name/symbol are MXNB, decimals are 6, implementation() is 0xeb53dcd00cb466f11158870a89cdaa1bea3159b3 and owner()/masterMinter() are 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739. Routescan verified FiatTokenV2_2 mint/burn directly increment/decrement local totalSupply; no canonical-token escrow, LockRelease or OFT adapter occurs in this native issuance path. The issuer's common MXN redemption claim covers this native liability, not a wrapped receipt. No supply share is inferred.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-09",
+        "observedBlock": 97129430,
         "sources": [
           {
-            "label": "MXNB token on avalanche explorer (owner() probed 2026-07-20)",
-            "url": "https://blockscout.com/search?q=0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+            "label": "MXNB issuer-supported networks",
+            "url": "https://mxnb.mx/en-US/transparency"
           },
           {
-            "label": "Juno MXNB",
-            "url": "https://juno.finance/"
+            "label": "Avalanche deployed FiatTokenV2_2 verified source",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xeb53dcd00cb466f11158870a89cdaa1bea3159b3"
+          },
+          {
+            "label": "Avalanche Dwellir pinned native identity/decimals read, block 97129430",
+            "url": "https://api-avalanche-mainnet-archive.n.dwellir.com/ext/bc/C/rpc"
           }
         ]
       },
@@ -149,17 +181,22 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native MXNB issuance on base: owner() of the FiatToken-fork proxy returns the issuer EOA 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739 (verified on-chain 2026-07-20; no contract code at the owner address, no bridge endpoint surface), matching the reviewed mintAuthority (masterMinter = owner on every chain).",
+        "reviewNote": "Independent native MXNB liability on Base. At block 52383072 (2026-10-09T14:18:11Z; hash 0xc50b5beddbc2c04bfb9fc8881915a7d7996acde3fcd29379711bae408dd76cd9; observed 2026-10-09T14:18:28.038Z), name/symbol are MXNB, decimals are 6, implementation() is 0x72beddf7032eec58f199857b79a8e37020c14e42 and owner()/masterMinter() are 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739. Verified FiatTokenV2_2 mint/burn directly increment/decrement local totalSupply; no canonical-token escrow, LockRelease or OFT adapter occurs in this native issuance path. The issuer's common MXN redemption claim covers this native liability, not a wrapped receipt. No supply share is inferred.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-09",
+        "observedBlock": 52383072,
         "sources": [
           {
-            "label": "MXNB token on base explorer (owner() probed 2026-07-20)",
-            "url": "https://blockscout.com/search?q=0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+            "label": "MXNB issuer-supported networks",
+            "url": "https://mxnb.mx/en-US/transparency"
           },
           {
-            "label": "Juno MXNB",
-            "url": "https://juno.finance/"
+            "label": "Base deployed FiatTokenV2_2 verified source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x72beddf7032eec58f199857b79a8e37020c14e42?fields=sources"
+          },
+          {
+            "label": "Base Dwellir pinned native identity/decimals read, block 52383072",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ]
       }

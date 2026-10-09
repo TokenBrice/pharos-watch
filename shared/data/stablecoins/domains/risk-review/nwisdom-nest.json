@@ -137,7 +137,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Nest's current smart-contract and integration pages list the BNB nWISDOM share token and local USDT NestVault. At BNB block 116342916, owner() on the share token and USDT NestVault returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; LayerZero share movement is a separate bridge rail.",
+        "reviewNote": "Nest's current smart-contract and integration pages list the BNB nWISDOM share token and local USDT NestVault. At BNB block 116342916, owner() on the share token and USDT NestVault returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; LayerZero share movement is a separate bridge rail. Accounting review 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas): the issuer manifest identifies NestVault proxy 0xf6d67d698c139c217cf645c285dfac183f3ca45b. Etherscan v2 reports implementation 0x3fc3299a18d5271e9097d7f165170af205e4cd59, whose recovered verified NestVaultOFT source directly calls SHARE.exit/enter rather than escrowing shares. This is source recovery, not pinned live proxy/immutable SHARE/peer-binding proof; the historical Dwellir binding batch failed due to unavailable historical state. No independent census eligibility or static share is authored. Historical native-authority observations and the separately decoded Solana Native OFT mode remain unchanged.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 116342916,
@@ -149,6 +149,10 @@
           {
             "label": "BNB nWISDOM token",
             "url": "https://bscscan.com/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+          },
+          {
+            "label": "Recovered BNB NestVaultOFT implementation source, reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas)",
+            "url": "https://bscscan.com/address/0x3fc3299a18d5271e9097d7f165170af205e4cd59#code"
           }
         ]
       },

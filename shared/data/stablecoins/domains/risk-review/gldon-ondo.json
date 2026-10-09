@@ -69,7 +69,7 @@
     "tier": "external-validated-network",
     "summary": "Native Ethereum/BNB/Solana issuance and HyperEVM representation are inventoried. Current review binds custom OFT storage to the actual Messenger OApps and reads ETH/BNB↔HyperEVM peer, library, DVN and delegate state. Complete Solana messaging, rate limits, owner/delegate bypass closure and fresh liability materiality remain unresolved.",
     "reviewedAt": "2026-10-03",
-    "reviewer": "Refine06 primary-source and pinned RPC review",
+    "reviewer": "Refine06 primary-source and pinned RPC review; Sol curation campaign 2026-10-09 (W4T08Nexus), route accounting only",
     "confidence": "manual-review",
     "sources": [
       {
@@ -119,6 +119,18 @@
       {
         "label": "Ondo Stocks technical classification",
         "url": "https://docs.ondo.finance/ondo-stocks/technical.md"
+      },
+      {
+        "label": "R1 2026-10-09 verified canonical GLDon OndoOFT: direct burnFrom/mint, no escrow",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6d119ebada730583ef8dc7b8506fa317a374796a"
+      },
+      {
+        "label": "R1 2026-10-09 exact verified HyperEVM GLDon OndoOFT",
+        "url": "https://hyperevmscan.io/address/0x1750c8e2546338aca047e3b9ece8d8d986579115#code"
+      },
+      {
+        "label": "Ondo Stocks bridge: native burn/mint on all supported EVM chains and same token amount",
+        "url": "https://docs.ondo.finance/tools/ondo-bridge.md"
       }
     ],
     "routes": [
@@ -251,7 +263,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer classifies HyperEVM as bridged. MINTER_ROLE has only the exact OndoOFT, whose token() matches this deployment and approvalRequired() is false.",
+        "reviewNote": "Issuer classifies HyperEVM as bridged. MINTER_ROLE has only the exact OndoOFT, whose token() matches this deployment and approvalRequired() is false. R1 source review 2026-10-09: exact HyperEVM adapter 0x1750c8e2546338aca047e3b9ece8d8d986579115 is verified OndoOFT, and the canonical Ethereum adapter's verified _debit calls innerToken.burnFrom while _credit calls innerToken.mint, rather than locking/releasing canonical GLDon. Issuer bridge docs positively specify native burn/mint on Ethereum, BNB and HyperEVM with the same destination token amount; Solana is separately native GM issuance. The four registered deployments therefore form a direct-burn/no-canonical-escrow liability inventory (EVM 18 decimals, Solana 9). Existing block observations and control gaps retain their original dates; this review authors eligibility, not a reconciled supply census.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-02",
         "observedBlock": 47503251,

@@ -65,10 +65,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "YUSD native issuance remains on independent Ethereum and BSC deployments; Ethereum and BSC YUSDMintBurnOFTAdapters, Avalanche YUSDOFT, and Katana YUSDOFT form a LayerZero V2 burn/mint mesh. Source-side adapters burn through chain-local AegisMinting and destination OFTs mint on LayerZero credit, while Safe-controlled peers, delegates, endpoint validation, DVNs, and active cross-chain operators remain Bridge Risk rather than native Mint Authority. Katana's current OFT bytecode is not explorer-verified, so its source provenance remains an explicit route gap.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex FIX2-12 mint/bridge boundary review; Kimi P2 control cohort dc-3 (lead usds-sky)",
-    "confidence": "verified",
+    "summary": "Ethereum and BSC native YUSD use chain-local AegisMinting and burn/mint OFT adapters; Avalanche and Katana retain their earlier LayerZero route reviews. The expanded issuer deployment census registers Arbitrum, Base, Monad, Plasma, Starknet, and Hedera, including deployed zero-supply tokens. Arbitrum/Base verified YUSDOFT source and Plasma's immutable-masked runtime match prove direct burn/mint without canonical escrow. Starknet's verified mint/burn adapter source and pinned token/role bindings likewise prove direct burn/mint. Monad's different runtime remains source-unbound, and Hedera cannot be read through the required pinned helper despite successful keyless secondary identity reads. Whole-asset independent-liability eligibility remains withdrawn; older controls and Katana source-provenance limits are not refreshed by this census.",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W3ReadmitAegis); prior controls: Codex FIX2-12 mint/bridge boundary review and Kimi P2 control cohort dc-3",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "l2beat",
@@ -243,6 +243,217 @@
           {
             "label": "Katana JSON-RPC",
             "url": "https://rpc.katana.network/"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0xf07781182b47e728b040f9e35321260e359ff9f7",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf07781182b47e728b040f9e35321260e359ff9f7",
+        "protocol": "LayerZero OFT (Aegis)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer manifest identifies YUSDOFT. At Arbitrum block 513233920 (hash 0x04496d65afb73f84cb148bb85bd33e343437ed311ff23b9b1de3a5495701a7eb, timestamp 2026-10-09T15:10:17Z), helper reads return name/symbol YUSD, decimals 18, supply 10.090001 YUSD, token() equal to this deployment, approvalRequired() false, endpoint 0x1a44076050125825900e736c501f859c50fe728c, and owner 0x4fe78ef65bd8edded480efab030ba680646503c8. Sourcify verifies YUSDOFT and its inherited OFT._debit calls _burn while _credit calls _mint. YUSDOFT only adds blacklist hooks; it does not replace these paths with lock/release or canonical-supply escrow. This establishes direct burn/mint, not an independent native collateral-mint route or a whole-asset census.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xf07781182b47e728b040f9e35321260e359ff9f7",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:arbitrum:0xf07781182b47e728b040f9e35321260e359ff9f7"
+        ],
+        "observedAt": "2026-10-09",
+        "observedBlock": 513233920,
+        "sources": [
+          {
+            "label": "Issuer Arbitrum YUSDOFT deployment manifest",
+            "url": "https://github.com/Aegis-im/aegis-contracts/blob/b48bf0644a70c308a9eca005399d279ee14c5c25/deployments/arbitrum/YUSDOFT.json"
+          },
+          {
+            "label": "Verified Arbitrum YUSDOFT and inherited direct burn/mint source",
+            "url": "https://sourcify.dev/server/v2/contract/42161/0xf07781182b47e728b040f9e35321260e359ff9f7?fields=all"
+          },
+          {
+            "label": "Pinned helper: block 513233920, timestamp 2026-10-09T15:10:17Z",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "base:0xca2671dcd031a72359f456c212f62a9bda737cd7",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xca2671dcd031a72359f456c212f62a9bda737cd7",
+        "protocol": "LayerZero OFT (Aegis)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer manifest identifies YUSDOFT. At Base block 52384634 (hash 0x150e8d39674c8a6a8caf51b6771cb991ff6b708caed3c03e494d56089a33d0b5, timestamp 2026-10-09T15:10:15Z), helper reads return name/symbol YUSD, decimals 18, supply 11.626401 YUSD, token() equal to this deployment, approvalRequired() false, endpoint 0x1a44076050125825900e736c501f859c50fe728c, and owner 0x4fe78ef65bd8edded480efab030ba680646503c8. Pinned runtime exactly matches Sourcify's verified onchain runtime. Inherited OFT._debit burns the sender's balance and _credit mints the recipient's balance; YUSDOFT adds blacklist hooks only. No canonical-supply escrow or lock/release path implements this route.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0xca2671dcd031a72359f456c212f62a9bda737cd7",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:base:0xca2671dcd031a72359f456c212f62a9bda737cd7"
+        ],
+        "observedAt": "2026-10-09",
+        "observedBlock": 52384634,
+        "sources": [
+          {
+            "label": "Issuer Base YUSDOFT deployment manifest",
+            "url": "https://github.com/Aegis-im/aegis-contracts/blob/b48bf0644a70c308a9eca005399d279ee14c5c25/deployments/base/YUSDOFT.json"
+          },
+          {
+            "label": "Verified Base YUSDOFT and inherited direct burn/mint source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xca2671dcd031a72359f456c212f62a9bda737cd7?fields=all"
+          },
+          {
+            "label": "Pinned helper: block 52384634, timestamp 2026-10-09T15:10:15Z",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "monad:0xca2671dcd031a72359f456c212f62a9bda737cd7",
+        "destinationChain": "monad",
+        "contractAddress": "0xca2671dcd031a72359f456c212f62a9bda737cd7",
+        "protocol": "Aegis issuer-listed YUSDOFT (exact runtime source unresolved)",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Registered from issuer manifest and helper-pinned name/symbol YUSD, decimals 18, and supply 0.01 YUSD at Monad block 111930245 (hash 0x6ed3f77799dce09511de207c5562f3d0ac60f278c9096e47d3f3cbf49dcb79ca, timestamp 2026-10-09T15:19:38Z). token() names this deployment and approvalRequired() is false, but the runtime is 13,201 bytes and does not match the verified Base YUSDOFT after masking only compiler-reported immutables. Sourcify returned no match, the issuer manifest contains no runtime/source input, and explorer retrieval was restricted. Exact verified source or an independently bound compilation proving direct burn/mint and no canonical escrow is still required; getters and the shared contract name alone do not establish it. Retrieval failures are not non-disclosure evidence.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-09",
+        "observedBlock": 111930245,
+        "sources": [
+          {
+            "label": "Issuer Monad YUSDOFT deployment manifest",
+            "url": "https://github.com/Aegis-im/aegis-contracts/blob/b48bf0644a70c308a9eca005399d279ee14c5c25/deployments/monad/YUSDOFT.json"
+          },
+          {
+            "label": "Pinned helper: block 111930245, timestamp 2026-10-09T15:19:38Z",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "plasma:0xf07781182b47e728b040f9e35321260e359ff9f7",
+        "sourceChain": "ethereum",
+        "destinationChain": "plasma",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf07781182b47e728b040f9e35321260e359ff9f7",
+        "protocol": "LayerZero OFT (Aegis)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Deployed zero-supply YUSD remains in the census. Issuer manifest plus helper reads at Plasma block 34617859 (hash 0x0c15efd767033abdffcb26c8a8f336cf7ca2c9884194095fbbc6105387a3416b, timestamp 2026-10-09T15:19:21Z) establish name/symbol YUSD, decimals 18, supply zero, token() equal to this deployment, approvalRequired() false, endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, and owner 0x4fe78ef65bd8edded480efab030ba680646503c8. Its 13,161-byte pinned runtime matches verified Base YUSDOFT after masking only that compilation's immutableReferences, retaining all executable code and metadata. Inherited OFT._debit burns and _credit mints; YUSDOFT does not override those paths or hold canonical supply in escrow. This is an independent direct-burn liability route, not proof of whole-asset eligibility.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "plasma",
+        "controllerAddress": "0xf07781182b47e728b040f9e35321260e359ff9f7",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:plasma:0xf07781182b47e728b040f9e35321260e359ff9f7"
+        ],
+        "observedAt": "2026-10-09",
+        "observedBlock": 34617859,
+        "sources": [
+          {
+            "label": "Issuer Plasma YUSDOFT deployment manifest",
+            "url": "https://github.com/Aegis-im/aegis-contracts/blob/b48bf0644a70c308a9eca005399d279ee14c5c25/deployments/plasma/YUSDOFT.json"
+          },
+          {
+            "label": "Verified Base compilation used for exact immutable-masked runtime comparison",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xca2671dcd031a72359f456c212f62a9bda737cd7?fields=all"
+          },
+          {
+            "label": "Pinned helper: block 34617859, timestamp 2026-10-09T15:19:21Z",
+            "url": "https://api-plasma-mainnet.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "starknet:0x01a507e10aa772ee87bf0d075aee6c5420deaad03731789b9d0b8c7b63ebce86",
+        "sourceChain": "ethereum",
+        "destinationChain": "starknet",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x01a507e10aa772ee87bf0d075aee6c5420deaad03731789b9d0b8c7b63ebce86",
+        "protocol": "LayerZero OFTMintBurnAdapter (Aegis Starknet)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer config distinguishes the ERC20 token from adapter 0x015084fb98a9fe079176bf51928dd0cd6ed45e4dfe5607a4df8b343c4cccefcb. Helper reads at Starknet block 16130981 (hash 0x34b64c7506a5433f1dc8ec3b8dd57095a1de5d61a2c8076c092e628556f4af6, timestamp 2026-10-09T15:21:18Z) establish name/symbol YUSD, decimals 18 and zero supply; adapter token() and get_minter_burner() both name this token, approval_required() is false, and token has_role(MINTER_ROLE/BURNER_ROLE, adapter) both return true. Voyager verifies the token ERC20MintBurnUpgradeable and adapter OFTMintBurnAdapter classes matching issuer class hashes. Verified adapter _debit invokes permissioned_burn(from, amount_sent_ld), and _credit invokes permissioned_mint(to, amount). Any transfer fee is separately minted to the adapter, not canonical tokens locked for destination issuance. This proves direct burn/mint without a canonical lock/release escrow. Zero supply is deployment presence, not absence.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "starknet",
+        "controllerAddress": "0x015084fb98a9fe079176bf51928dd0cd6ed45e4dfe5607a4df8b343c4cccefcb",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:starknet:0x015084fb98a9fe079176bf51928dd0cd6ed45e4dfe5607a4df8b343c4cccefcb"
+        ],
+        "observedAt": "2026-10-09",
+        "observedBlock": 16130981,
+        "sources": [
+          {
+            "label": "Issuer token/adapter identities and Cairo class hashes",
+            "url": "https://github.com/Aegis-im/aegis-contracts/blob/b48bf0644a70c308a9eca005399d279ee14c5c25/config/networks.json"
+          },
+          {
+            "label": "Voyager verified ERC20MintBurnUpgradeable source and deployment class",
+            "url": "https://voyager.online/contract/0x01a507e10aa772ee87bf0d075aee6c5420deaad03731789b9d0b8c7b63ebce86"
+          },
+          {
+            "label": "Voyager verified OFTMintBurnAdapter source and deployment class",
+            "url": "https://voyager.online/contract/0x015084fb98a9fe079176bf51928dd0cd6ed45e4dfe5607a4df8b343c4cccefcb"
+          },
+          {
+            "label": "Pinned helper: block 16130981, timestamp 2026-10-09T15:21:18Z",
+            "url": "https://api-starknet-mainnet.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "hedera:0xf07781182b47e728b040f9e35321260e359ff9f7",
+        "destinationChain": "hedera",
+        "contractAddress": "0xf07781182b47e728b040f9e35321260e359ff9f7",
+        "protocol": "Aegis issuer-listed YUSDOFT (required pinned helper unsupported)",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Issuer Hedera manifest and keyless Hashio secondary reads identify a deployed YUSD token with name/symbol YUSD and 18 decimals, so it is registered rather than omitted as a zero-supply candidate. Numeric block 100919357 returned timestamp 2026-10-09T15:19:41Z and hash 0x4511296fa5c67db7ef77394585d9cea9c984cf8ab69b59707ac06fcbe187ee87; secondary calls returned zero supply, token() self, approvalRequired() false and a runtime matching verified Base YUSDOFT after compiler-reported immutable masking. These are secondary findings, not helper provenance. The mandatory helper retry at 2026-10-09T15:39:13.700Z failed before a state read because Hedera has no registered supplemental Dwellir endpoint. The required chain-specific pinned-helper evidence and reviewed route remain unavailable, blocking whole-asset re-admission even with favorable secondary evidence. This transport gap is not issuer non-disclosure or proof of absence.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-09",
+        "sources": [
+          {
+            "label": "Issuer Hedera YUSDOFT deployment manifest",
+            "url": "https://github.com/Aegis-im/aegis-contracts/blob/b48bf0644a70c308a9eca005399d279ee14c5c25/deployments/hedera/YUSDOFT.json"
+          },
+          {
+            "label": "Hedera documented keyless relay (secondary identity/runtime reads, not helper evidence)",
+            "url": "https://mainnet.hashio.io/api"
+          },
+          {
+            "label": "Hedera JSON-RPC relay documentation",
+            "url": "https://docs.hedera.com/evm/development/json-rpc"
           }
         ]
       }

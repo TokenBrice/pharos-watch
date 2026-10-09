@@ -247,26 +247,30 @@
         ],
         "executionScope": {
           "controllerDeployment": "plume:0x16424edf021697e34b800e1d98857536b0f2287b",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-09",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc08)",
+          "reviewer": "Sol curation campaign 2026-10-09 (W4C05Origin)",
           "confidence": "partial",
           "sources": [
             {
               "label": "Verified Plume collateral-deposit Teller",
               "url": "https://explorer.plume.org/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b"
+            },
+            {
+              "label": "Historical Plume block 96703539 hash and timestamp (header only; no historical runtime correspondence claimed)",
+              "url": "https://explorer.plume.org/api/v2/blocks/96703539"
             }
           ],
           "pin": {
             "position": "96703539",
-            "hash": null,
+            "hash": "0x2f94f6c1261c268bf831f31a351f5841f4b345cb6bb8619ead0755a493557b9c",
             "runtimeIdentity": "plume:0x16424edf021697e34b800e1d98857536b0f2287b (verified TellerWithMultiAssetSupport source)",
             "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0x16424edf021697e34b800e1d98857536b0f2287b for vault.enter selector 0x39d6ba32"
           },
           "observedState": {
             "position": "96703539",
-            "hash": null,
+            "hash": "0x2f94f6c1261c268bf831f31a351f5841f4b345cb6bb8619ead0755a493557b9c",
             "runtimeIdentity": "plume:0x16424edf021697e34b800e1d98857536b0f2287b (verified TellerWithMultiAssetSupport source)",
             "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0x16424edf021697e34b800e1d98857536b0f2287b for vault.enter selector 0x39d6ba32"
           },
@@ -343,27 +347,31 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0x16424edf021697e34b800e1d98857536b0f2287b",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-09",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc08)",
+          "reviewer": "Sol curation campaign 2026-10-09 (W4C05Origin)",
           "confidence": "partial",
           "sources": [
             {
               "label": "Verified Ethereum collateral-deposit Teller",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b"
+            },
+            {
+              "label": "Historical Ethereum block 26098751 (2026-10-01T16:46:35Z): exact Teller runtime matches verified deployed bytecode",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
             }
           ],
           "pin": {
             "position": "26098751",
-            "hash": null,
-            "runtimeIdentity": "ethereum:0x16424edf021697e34b800e1d98857536b0f2287b (verified TellerWithMultiAssetSupport source)",
+            "hash": "0xe02bf8d9e16ba054fcfdc429cc18f32c4a2a4201b41d8e0dc5d9619be81e4686",
+            "runtimeIdentity": "sha256-rpc-code-text:7b7fe75d9b6c4c96dbf1d2d5c991621718b14767990437f726af7e82fa2d584d",
             "signerIdentity": "RolesAuthority ethereum:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0x16424edf021697e34b800e1d98857536b0f2287b for vault.enter selector 0x39d6ba32"
           },
           "observedState": {
             "position": "26098751",
-            "hash": null,
-            "runtimeIdentity": "ethereum:0x16424edf021697e34b800e1d98857536b0f2287b (verified TellerWithMultiAssetSupport source)",
+            "hash": "0xe02bf8d9e16ba054fcfdc429cc18f32c4a2a4201b41d8e0dc5d9619be81e4686",
+            "runtimeIdentity": "sha256-rpc-code-text:7b7fe75d9b6c4c96dbf1d2d5c991621718b14767990437f726af7e82fa2d584d",
             "signerIdentity": "RolesAuthority ethereum:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0x16424edf021697e34b800e1d98857536b0f2287b for vault.enter selector 0x39d6ba32"
           },
           "inventory": "partial",
@@ -439,26 +447,30 @@
         ],
         "executionScope": {
           "controllerDeployment": "plume:0xf6aada00bc2a206f06bce86ddd8348b70daa1059",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-09",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc08)",
+          "reviewer": "Sol curation campaign 2026-10-09 (W4C05Origin)",
           "confidence": "partial",
           "sources": [
             {
               "label": "Verified Plume NestVaultOFT",
               "url": "https://explorer.plume.org/api/v2/smart-contracts/0x5766a40abfb8802303235a2f5f12a71ed84d4700"
+            },
+            {
+              "label": "Historical Plume block 96703539 hash and timestamp (header only; no historical proxy/runtime correspondence claimed)",
+              "url": "https://explorer.plume.org/api/v2/blocks/96703539"
             }
           ],
           "pin": {
             "position": "96703539",
-            "hash": null,
+            "hash": "0x2f94f6c1261c268bf831f31a351f5841f4b345cb6bb8619ead0755a493557b9c",
             "runtimeIdentity": "plume:0x5766a40abfb8802303235a2f5f12a71ed84d4700 (verified NestVaultOFT implementation)",
             "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32"
           },
           "observedState": {
             "position": "96703539",
-            "hash": null,
+            "hash": "0x2f94f6c1261c268bf831f31a351f5841f4b345cb6bb8619ead0755a493557b9c",
             "runtimeIdentity": "plume:0x5766a40abfb8802303235a2f5f12a71ed84d4700 (verified NestVaultOFT implementation)",
             "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32"
           },
@@ -535,27 +547,35 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0xf6aada00bc2a206f06bce86ddd8348b70daa1059",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-09",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc08)",
+          "reviewer": "Sol curation campaign 2026-10-09 (W4C05Origin)",
           "confidence": "partial",
           "sources": [
             {
               "label": "Verified Ethereum NestVaultOFT",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2"
+            },
+            {
+              "label": "Historical Ethereum block 26098751 (2026-10-01T16:46:35Z): exact proxy/implementation runtimes and EIP-1967 implementation slot",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            },
+            {
+              "label": "Runtime-matched Ethereum NestVaultOFT transparent proxy",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf6aada00bc2a206f06bce86ddd8348b70daa1059"
             }
           ],
           "pin": {
             "position": "26098751",
-            "hash": null,
-            "runtimeIdentity": "ethereum:0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2 (verified NestVaultOFT implementation)",
+            "hash": "0xe02bf8d9e16ba054fcfdc429cc18f32c4a2a4201b41d8e0dc5d9619be81e4686",
+            "runtimeIdentity": "proxy-sha256-rpc-code-text:0b5804c60332b4afebd7f3ea9227f96d5c86d712b31dfc5ef28587239bc01239;implementation:0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2;implementation-sha256-rpc-code-text:660afe3af24ac0f382e1628c3adeb0165d1d1dd3771067207a84220c92eae390",
             "signerIdentity": "RolesAuthority ethereum:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32"
           },
           "observedState": {
             "position": "26098751",
-            "hash": null,
-            "runtimeIdentity": "ethereum:0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2 (verified NestVaultOFT implementation)",
+            "hash": "0xe02bf8d9e16ba054fcfdc429cc18f32c4a2a4201b41d8e0dc5d9619be81e4686",
+            "runtimeIdentity": "proxy-sha256-rpc-code-text:0b5804c60332b4afebd7f3ea9227f96d5c86d712b31dfc5ef28587239bc01239;implementation:0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2;implementation-sha256-rpc-code-text:660afe3af24ac0f382e1628c3adeb0165d1d1dd3771067207a84220c92eae390",
             "signerIdentity": "RolesAuthority ethereum:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32"
           },
           "inventory": "partial",

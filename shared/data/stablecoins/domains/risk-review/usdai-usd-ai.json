@@ -34,9 +34,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Canonical USDai issuance remains native to the PYUSD-backed Arbitrum hub. Ethereum, Base, and Plasma now use OToken v1.1 implementations whose mint/burn functions require the constructor-fixed LayerZero OAdapter; stored BRIDGE_ADMIN_ROLE grants remain but no longer authorize token minting in the current logic. The adapter is still owned by a chain-local Safe, 3-of-3 on Ethereum and Base and 3-of-4 on Plasma. Proxy upgrades remain governed by chain-local 48-hour DVNTimelocks. Solana is a verified LayerZero burn-mint representation, but its 1-of-2 SPL mint authority admits a Squads vault independently of the OFT program; that vault requires a verified 3-of-3 quorum and can also upgrade the program, with no onchain timelock. Historical role-grant mint exposure is retained in the route notes, and all satellite transfer controls remain Bridge Risk.",
+    "summary": "Canonical USDai issuance remains native to the PYUSD-backed Arbitrum hub. Ethereum, Base, and Plasma use OToken v1.1 implementations whose mint/burn functions require the constructor-fixed LayerZero OAdapter; stored BRIDGE_ADMIN_ROLE grants no longer authorize token minting in the current logic. Existing reviews establish chain-local Safe adapter owners and 48-hour DVNTimelock proxy upgrades on those three chains. Solana is a verified LayerZero burn-mint representation, but its 1-of-2 SPL mint authority admits an autonomous verified Squads 3-of-3 vault independently of the OFT program, without an onchain timelock. The October 9 Arc review adds the sixth issuer-listed deployment: pinned OToken v1.1 runtime exactly matches the verified Ethereum implementation, and the verified Arc OAdapter burns on debit and mints on credit without canonical token escrow. Arc owner, peer/DVN and upgrade execution-path completeness are not inherited from the other chains. All satellite transfer controls remain Bridge Risk; prior control observations retain their original dates.",
     "reviewedAt": "2026-10-01",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); Codex 2026-08-16 route-control refresh; Sol curation pass 2026-10-01 (CurA27A7A5); R2WUsdAi Solana follow-up",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); Codex 2026-08-16 route-control refresh; Sol curation pass 2026-10-01 (CurA27A7A5); R2WUsdAi Solana follow-up; Sol curation campaign 2026-10-09 (W3ReadmitUsdai)",
     "confidence": "verified",
     "protocols": [
       {
@@ -243,6 +243,48 @@
           {
             "label": "USD.AI Console OFT source pinned to deployed-state layout",
             "url": "https://github.com/usdai-foundation/solana-oft-deployment/tree/7b3e659e224d06dac703b363df47dbe9f840eb42"
+          }
+        ]
+      },
+      {
+        "id": "arc:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "sourceChain": "arbitrum",
+        "destinationChain": "arc",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "protocol": "USDai OBridge (LayerZero V2)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Official Arc manifest pins OTokenUSDai and OAdapterUSDai. At Arc block 25092185 (hash 0xbe627596e00d829c9df40e318cae0743d487b3a2486236c8978f7140778663ab), the proxy implementation is 0x30198aa66d057a6216db471fce234b98edc1e5ad and its full runtime exactly matches verified Ethereum OToken v1.1 implementation 0x24a92e28a8c5d8812dcfaf44bcb20cc0babd1392, including the constructor-fixed adapter 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5. The Arc adapter's verified OAdapter v1.0 source is bound to the pinned runtime byte-for-byte: _debit invokes _token.burn(_from, amountSentLD), and _credit invokes _token.mint(_to, _amountLD), not a canonical lock/release escrow. token() matches USDai; approvalRequired() is false; oftVersion() returns IOFT 0x02e49c2c/version 1 on LayerZero V2 endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. Pinned name/symbol are USDai, decimals are 18, and totalSupply is 2.900. Owner 0x5f0bc72fb5952b2f3f2e11404398ed507b25841f is observed but its quorum/extensions, token upgrader, peers and DVNs are not closed by this accounting-mode review. No lower risk tier or measured supply share is inferred.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arc",
+        "controllerAddress": "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+        "failureDomainKeys": [
+          "protocol:usdai-obridge",
+          "contract:arc:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5"
+        ],
+        "observedAt": "2026-10-09",
+        "observedBlock": 25092185,
+        "sources": [
+          {
+            "label": "USD.AI official Arc deployment manifest, pinned commit",
+            "url": "https://github.com/usdai-foundation/usdai-contracts/blob/0c8946fb6b3c041636c058d84fc40bb910a025f4/deployments/arc.json"
+          },
+          {
+            "label": "Verified Arc direct burn/mint OAdapter source and runtime",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5"
+          },
+          {
+            "label": "Verified Ethereum OToken v1.1 source, exact Arc runtime equivalent",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x24a92e28a8c5d8812dcfaf44bcb20cc0babd1392"
+          },
+          {
+            "label": "Arc pinned runtime and metadata block",
+            "url": "https://explorer.arc.io/block/25092185"
           }
         ]
       }

@@ -460,14 +460,46 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   },
   "usdkg-gold-dollar": {
     ...issuerBase,
-    ...documentedBoundSupplyFull("2026-04-16"),
+    capacityModel: { kind: "unquantified" },
+    accessModel: "manual",
+    executionModel: "opaque",
+    holderEligibility: "unknown",
+    routeStatus: "suspended",
+    reviewedAt: "2026-10-09",
+    routeSuspension: {
+      routeId: "redemption:usdkg-gold-dollar:offchain-issuer",
+      channel: "Gold Dollar USDKG ordinary issuer minting and redemption",
+      suspendedAt: "2026-10-09",
+      reviewedAt: "2026-10-09",
+      reviewer: "Sol curation campaign 2026-10-09 (W3UsdkgLifecycle)",
+      reason:
+        "The current issuer notice announces termination of USDKG operations, including blockchain activities, citing Cabinet Order 639-t dated 20 August 2026. The suspension-as-of date is this review's observation date, not an inferred onset date. Only ad-hoc email exchange for fiat or USDT remains described; its capacity, fees and completed-payout duration are not established. This suspension applies to the ordinary issuer rail, not holder transfers, DEX trading or a separately evidenced recovery channel.",
+      sources: [{
+        url: "https://www.usdkg.com/",
+        quote: "In accordance with Order No. 639-t of the Cabinet of Ministers of the Kyrgyz Republic dated August 20, 2026, the USDKG project is ceasing its operations, including its activities on blockchain networks. Holders of USDKG tokens may contact us to exchange their tokens for fiat currency or USDT by email at: hello@usdkg.com",
+      }],
+    },
     settlementModel: "days",
     costModel: undisclosedReviewedFee(
-      "Gold Dollar documents 1:1 USDKG mint and redemption against USD, KGS, physical gold, or approved cryptocurrencies after KYC/AML; public docs reviewed do not publish a fixed numeric redemption fee",
+      "The issuer termination notice offers email-based exchange for fiat or USDT but publishes no numeric redemption fee or complete cost ceiling",
     ),
-    docs: [sourceRefRouteCapacity("Gold Dollar USDKG", "https://usdkg.com/")],
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "Termination supersedes the previous ordinary issuer terms. Email-based recovery establishes no scored-notional capacity, completed-payout maximum or all-in fee bound; the days category must not become a scored 14-day settlement projection.",
+      reviewedAt: "2026-10-09",
+      docs: [
+        sourceRef("USDKG Notice of Termination of Operations", "https://www.usdkg.com/", ["route", "access", "settlement", "fees"]),
+      ],
+    },
+    docs: [
+      sourceRef("USDKG Notice of Termination of Operations", "https://www.usdkg.com/", ["route", "access", "settlement", "fees"]),
+      sourceRef("Kyrgyz Cabinet Order 639-t, 20 August 2026 (issuer-linked signed PDF)", "https://cdn.prod.website-files.com/675ee2248e357f63d8256c8d/6ac3b6bb5876bc8d7d7c2e98_%D0%9A%D0%B0%D0%B1%D0%9C%D0%B8%D0%BD%20%D0%A0%D0%B0%D1%81%D0%BF%D0%BE%D1%80%D1%8F%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5%20%D0%A0%D0%9A%D0%9C_%D0%BA%D1%8B%D1%80%D0%B3.pdf", ["route"]),
+    ],
     notes: [
-      "Licensed under Kyrgyz Republic Law on Virtual Assets (2022) / Cabinet Resolution No. 514; multiple redemption outputs supported (USD, KGS, physical gold, or approved crypto)",
+      "The recovered issuer-linked Cabinet Order 639-t dated 20 August 2026 directs liquidation of OJSC EVA and OJSC Coin Nomad Exchange. The number/date are visible in the signed PDF footer; the order provides no holder payout terms.",
+      "Residual fiat or USDT exchange requires contacting hello@usdkg.com. No bounded settlement, full-supply capacity, par payout or physical-gold delivery is inferred.",
     ],
   },
   "usat-tether": {

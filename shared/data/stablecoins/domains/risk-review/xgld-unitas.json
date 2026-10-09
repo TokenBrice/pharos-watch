@@ -168,11 +168,27 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer names Base as an OFT representation; current 6-decimal token and reciprocal BNB/Base peers are pinned. Direct redemption requires returning to BNB.",
+        "reviewNote": "Issuer names Base as an OFT representation; reciprocal BNB/Base peers were pinned in the historical October 2 review, not refreshed here. Direct redemption requires returning to BNB. Sol curation campaign 2026-10-09 (W3IdentityXgld) observed exact token identity at Base block 52383346/hash 0xdd11b98c587c40f8877bc2d4e3dcf3a1c5309f48ee698346fb45322a29679e40 (2026-10-09T14:27:19Z), observed 2026-10-09T14:27:39.449Z: name Unitas Gold, symbol XGLD, decimals 6 and token() self. Whole 13191-byte runtime equals the current BSC, Ethereum and Mantle roots and the exact-match verified BSC XGLDToken runtime; decoded-byte SHA256 b65294d9315de963fec70c39e3ed3c155ad9042ec9c3b62e4b819bd06e09fcf4. Verified OFT source has no executable upgrade/delegatecall path, corroborated by zero EIP-1967 implementation and beacon slots. Typed immutable identity is token-root-only, not bridge security, controller signing, mint or liability-conservation closure.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095841,
+        "observedAt": "2026-10-09",
+        "observedBlock": 52383346,
+        "deploymentIdentity": {
+          "codeKind": "immutable",
+          "chain": "base",
+          "address": "0xea953ea6634d55dac6697c436b1e81a679db5882",
+          "observedAtSec": 1791556059,
+          "block": 52383346,
+          "sourceUrl": "https://api-base-mainnet-archive.n.dwellir.com"
+        },
         "sources": [
+          {
+            "label": "W3IdentityXgld exact token runtime, identity and zero implementation/beacon slots at Base block 52383346/hash 0xdd11b98c587c40f8877bc2d4e3dcf3a1c5309f48ee698346fb45322a29679e40, 2026-10-09T14:27:19Z; observed 2026-10-09T14:27:39.449Z",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Exact-match BSC XGLDToken source; full runtime equals this Base representation at its own pin",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=all"
+          },
           {
             "label": "XGLD primary mechanism",
             "url": "https://docs.unitas.so/overview/xgld.md"
@@ -200,10 +216,18 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At finalized Ethereum block 26125488 (hash 0x8016a21c410460b072fd1ef10d0cb9118609f90f135b5923a118d626c120a2eb), name Unitas Gold, symbol XGLD, decimals 6, token() self, EndpointV2 eid 30101, owner/delegate 0x5777a1e27dbc0959777e4e9aa158fbcd0d07161d and reciprocal BSC/Base/Mantle peers are pinned. Its entire runtime hex-text SHA256 877e88dcdf877380ae73ce8656f03b89b0c3ae5b2246eaf3e295dca22e8495b7 equals all other XGLD tokens and the exact-match Sourcify BSC XGLDToken runtime. Creation block 25219689 through this pin has three PeerSet events, solely those three peers. Supply is observed zero at this pin, not assumed permanently absent. Issuer docs omit this deployment; no independent Ethereum native-issuance entitlement, signer policy, full messaging-security closure or fixed materiality is inferred.",
+        "reviewNote": "Historical October 5 evidence: at finalized Ethereum block 26125488 (hash 0x8016a21c410460b072fd1ef10d0cb9118609f90f135b5923a118d626c120a2eb), name Unitas Gold, symbol XGLD, decimals 6, token() self, EndpointV2 eid 30101, owner/delegate 0x5777a1e27dbc0959777e4e9aa158fbcd0d07161d and reciprocal BSC/Base/Mantle peers are pinned. Its entire runtime hex-text SHA256 877e88dcdf877380ae73ce8656f03b89b0c3ae5b2246eaf3e295dca22e8495b7 equals all other XGLD tokens and the exact-match Sourcify BSC XGLDToken runtime. Creation block 25219689 through this pin has three PeerSet events, solely those three peers. Supply is observed zero at this pin, not assumed permanently absent. Issuer docs omit this deployment; no independent Ethereum native-issuance entitlement, signer policy, full messaging-security closure or fixed materiality is inferred. Fresh identity-only review by Sol curation campaign 2026-10-09 (W3IdentityXgld), observed 2026-10-09T14:27:41.216Z at Ethereum block 26155446/hash 0xba468313515b2ab0ef2cd713ac8faf01bab69ff740dfacda80e2e13b20701bde (2026-10-09T14:27:11Z): the same name/symbol/6 decimals/self-token and entire 13191-byte runtime remain bound to this exact deployment. Decoded-byte SHA256 b65294d9315de963fec70c39e3ed3c155ad9042ec9c3b62e4b819bd06e09fcf4 equals all four current roots and exact-match verified BSC XGLDToken. Verified source has no executable upgrade/delegatecall path, corroborated by zero EIP-1967 implementation/beacon slots. No fresh peer/security/supply census or aggregate authority closure is claimed.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-05",
-        "observedBlock": 26125488,
+        "observedAt": "2026-10-09",
+        "observedBlock": 26155446,
+        "deploymentIdentity": {
+          "codeKind": "immutable",
+          "chain": "ethereum",
+          "address": "0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
+          "observedAtSec": 1791556061,
+          "block": 26155446,
+          "sourceUrl": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+        },
         "controllerChain": "ethereum",
         "controllerAddress": "0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
         "failureDomainKeys": [
@@ -211,6 +235,7 @@
           "contract:ethereum:0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde"
         ],
         "sources": [
+          { "label": "W3IdentityXgld exact token runtime, identity and zero implementation/beacon slots at Ethereum block 26155446/hash 0xba468313515b2ab0ef2cd713ac8faf01bab69ff740dfacda80e2e13b20701bde, 2026-10-09T14:27:11Z; observed 2026-10-09T14:27:41.216Z", "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com" },
           { "label": "Issuer XGLD mechanism and documented native BNB issuance", "url": "https://docs.unitas.so/overview/xgld.md" },
           { "label": "Exact-match BSC XGLDToken source and onchain runtime", "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=all" },
           { "label": "Ethereum finalized identity, runtime, peer history and nonce reads", "url": "https://ethereum-rpc.publicnode.com" }
@@ -229,10 +254,18 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At finalized Mantle block 101532003 (hash 0xb478b2712cc46411cbba42a5b2b9db5fdbc05f965fd05ec1069ac87c24a7b30e), name Unitas Gold, symbol XGLD, decimals 6, token() self, EndpointV2 eid 30181, owner/delegate 0xbb984ce670100aa855f6152f88b26ee57f4ea82a and reciprocal BSC/Base/Ethereum peers are pinned. Its entire runtime hex-text SHA256 877e88dcdf877380ae73ce8656f03b89b0c3ae5b2246eaf3e295dca22e8495b7 equals all other XGLD tokens and the exact-match Sourcify BSC XGLDToken runtime. A complete contiguous 600-page 10000-block RPC census spans creation block 95532694 through this pin and identifies only the BSC/Base/Ethereum peers. Nonzero totalSupply 545 raw six-decimal units and Base outbound nonce 1 prove this cannot be omitted as an unused configured address. Issuer docs omit this deployment; native mint entitlement, full messaging-security/controller closure and economic materiality remain unasserted.",
+        "reviewNote": "Historical October 5 evidence: at finalized Mantle block 101532003 (hash 0xb478b2712cc46411cbba42a5b2b9db5fdbc05f965fd05ec1069ac87c24a7b30e), name Unitas Gold, symbol XGLD, decimals 6, token() self, EndpointV2 eid 30181, owner/delegate 0xbb984ce670100aa855f6152f88b26ee57f4ea82a and reciprocal BSC/Base/Ethereum peers are pinned. Its entire runtime hex-text SHA256 877e88dcdf877380ae73ce8656f03b89b0c3ae5b2246eaf3e295dca22e8495b7 equals all other XGLD tokens and the exact-match Sourcify BSC XGLDToken runtime. A complete contiguous 600-page 10000-block RPC census spans creation block 95532694 through this pin and identifies only the BSC/Base/Ethereum peers. Nonzero totalSupply 545 raw six-decimal units and Base outbound nonce 1 prove this cannot be omitted as an unused configured address. Issuer docs omit this deployment; native mint entitlement, full messaging-security/controller closure and economic materiality remain unasserted. Fresh identity-only review by Sol curation campaign 2026-10-09 (W3IdentityXgld), observed 2026-10-09T14:27:42.978Z at Mantle block 101712864/hash 0x1fa53f0701e9be1d7598bfa14abbead7cfc57ea65bac0fb77836b26ff0df2fe8 (2026-10-09T14:27:20Z): the same name/symbol/6 decimals/self-token and entire 13191-byte runtime remain bound to this exact deployment. Decoded-byte SHA256 b65294d9315de963fec70c39e3ed3c155ad9042ec9c3b62e4b819bd06e09fcf4 equals all four current roots and exact-match verified BSC XGLDToken. Verified source has no executable upgrade/delegatecall path, corroborated by zero EIP-1967 implementation/beacon slots. No fresh peer/security/supply census or aggregate authority closure is claimed.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-05",
-        "observedBlock": 101532003,
+        "observedAt": "2026-10-09",
+        "observedBlock": 101712864,
+        "deploymentIdentity": {
+          "codeKind": "immutable",
+          "chain": "mantle",
+          "address": "0x385c279445581a186a4182a5503094ebb652ec71",
+          "observedAtSec": 1791556062,
+          "block": 101712864,
+          "sourceUrl": "https://api-mantle-mainnet.n.dwellir.com"
+        },
         "controllerChain": "mantle",
         "controllerAddress": "0x385c279445581a186a4182a5503094ebb652ec71",
         "failureDomainKeys": [
@@ -240,6 +273,7 @@
           "contract:mantle:0x385c279445581a186a4182a5503094ebb652ec71"
         ],
         "sources": [
+          { "label": "W3IdentityXgld exact token runtime, identity and zero implementation/beacon slots at Mantle block 101712864/hash 0x1fa53f0701e9be1d7598bfa14abbead7cfc57ea65bac0fb77836b26ff0df2fe8, 2026-10-09T14:27:20Z; observed 2026-10-09T14:27:42.978Z", "url": "https://api-mantle-mainnet.n.dwellir.com" },
           { "label": "Issuer XGLD mechanism and documented native BNB issuance", "url": "https://docs.unitas.so/overview/xgld.md" },
           { "label": "Exact-match BSC XGLDToken source and onchain runtime", "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=all" },
           { "label": "Mantle finalized identity and exhaustive historical peer RPC census", "url": "https://rpc.mantle.xyz" }

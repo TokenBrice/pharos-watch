@@ -17,11 +17,13 @@
   ],
   "reserveReview": {
     "compositionSource": "live-adapter",
-    "reviewedAt": "2026-10-08",
-    "reviewer": "RegistryActivation RS7-04 active-share binding review",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4C01Aave)",
     "confidence": "verified",
     "sources": [
       { "label": "Axis staking accounting and solvency invariant", "url": "https://docs.axis.to/reference/staking-contracts.md" },
+      { "label": "Axis holder redemption lifecycle: cooldown eligibility followed by privileged servicing", "url": "https://docs.axis.to/susdx-the-rewards-vault/stake-and-unstake.md" },
+      { "label": "Axis binding terms revised July 26, 2026: no guaranteed processing timeframe (5.3) and variable service fees (6)", "url": "https://www.axis.to/terms-of-service" },
       { "label": "Canonical V2 vault deployment", "url": "https://docs.axis.to/reference/contract-addresses.md" },
       { "label": "Ethereum block 26107703 used for asset and accounting reads", "url": "https://etherscan.io/block/26107703" },
       { "label": "StakedUSDx vault", "url": "https://etherscan.io/address/0xeb892628d1e58bc475a6dcb7f5dbc4f591632aa4#code" },
@@ -31,7 +33,7 @@
     "compositionBasis": "Exact single-asset ERC-4626/ERC-7540 claim confirmed by asset() and published vault accounting; active shares are backed by USDx principal and vested rewards.",
     "compositionAsOf": "2026-10-07",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unidentified direct wrapper asset is asserted. All underlying portfolio, hedge, custody and legal uncertainty remains on usdx-axis; asynchronous servicing and upgrade risk are local wrapper exposures.",
+    "knownUnknownExposure": "No unidentified direct wrapper asset is asserted. All underlying portfolio, hedge, custody and legal uncertainty remains on usdx-axis; asynchronous servicing and upgrade risk are local wrapper exposures. Liquidity classification reviewed October 9, 2026: the seven-day cooldown establishes request eligibility only; REDEMPTION_SERVICER_ROLE must make the request claimable. Terms clause 5.3 expressly guarantees no processing timeframe. No finite realization horizon is established, so liquidityHorizon remains unknown. This classification review does not refresh the October 7 composition checkpoint or the original accounting observations.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

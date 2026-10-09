@@ -2,7 +2,7 @@
   "id": "gtusdcp-gauntlet",
   "name": "Gauntlet USDC Prime",
   "symbol": "gtUSDCp",
-  "oneLiner": "gtUSDCp represents Gauntlet-curated ERC-4626 USDC vaults on Morpho; Ethereum uses Vault V2, while Base and Arbitrum use MetaMorpho.",
+  "oneLiner": "Three specific Gauntlet-curated USDC vaults on Ethereum, Base and Arbitrum, with independent share prices rather than one fungible cross-chain token.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -13,7 +13,7 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC supplied to Gauntlet-curated on-chain strategies. Ethereum uses Morpho Vault V2; Base uses MetaMorpho and Arbitrum uses MetaMorphoV1_1. Market allocations and collateral exposures are dynamic.",
-  "pegMechanism": "ERC-4626 shares are denominated in chain-local USDC. Interest and realized losses can change the share exchange rate; redemptions depend on available vault and lending-market liquidity.",
+  "pegMechanism": "Each ERC-4626 vault share is a claim on that exact vault's chain-local USDC assets, with an independent exchange rate affected by interest, fees and realized losses. Shares in different Prime vaults are not interchangeable; redemptions depend on the selected vault's available liquidity.",
   "detailProvider": "coingecko",
   "geckoId": "gauntlet-usdc-prime",
   "links": [

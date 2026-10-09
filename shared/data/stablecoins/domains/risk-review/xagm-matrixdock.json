@@ -44,7 +44,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "XAGm has independent native issuer-liability deployments on Ethereum and Sui; those native mint controls remain in Mint Authority. Its active cross-chain transfer overlay is LayerZero V2: the Ethereum MTokenMessenger burns source XAGm and can mint destination XAGm, while the Sui messenger state exposes the XAGm MessengerCap and peer/admin capabilities. This is an external-validated-network bridge tier; unresolved DVN/executor, Sui peer-byte, and route-limit reads remain explicit.",
+    "summary": "XAGm has issuer-native silver-claim deployments on Ethereum and Sui; those native mint controls remain in Mint Authority. Its reviewed cross-chain overlay is LayerZero V2. Research on 2026-10-09 confirmed Ethereum token/messenger mutual binding and 9 decimals at block 26118754, hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10 (2026-10-04T11:41:11Z), and exactly matched the deployed token implementation bytecode to verified MTokenMain/MToken source: ccSendToken burns locally and ccReceiveToken mints locally, without token escrow. The recorded Sui MessengerCap/peer state and issuer-native announcement do not by themselves prove that the active Sui send/receive paths never use canonical-token custody; source-bound Sui messenger execution remains unconfirmed. Independent-liability transfer-census eligibility is therefore not authored. Unresolved DVN/executor, Sui peer-byte and route-limit reads also remain explicit; the historical whole-bridge review date is not refreshed.",
     "reviewedAt": "2026-08-16",
     "reviewer": "OpenAI Codex mint-bridge boundary migration; xagm-matrixdock 2026-08-16",
     "confidence": "manual-review",
@@ -89,6 +89,22 @@
       {
         "label": "LayerZero official Sui EID documentation",
         "url": "https://docs.layerzero.network/v2/developers/sui/oft/overview"
+      },
+      {
+        "label": "XAGm verified token implementation; exact deployed-runtime match at Ethereum block 26118754 reviewed 2026-10-09",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5e072c6689610c66e49a3067a4b488b4e27bc744"
+      },
+      {
+        "label": "XAGm Ethereum block 26118754 identity, decimals, messenger binding and implementation bytecode pinned through supplemental Dwellir on 2026-10-09",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Issuer cross-chain XAGm silver weight equivalence and 9-decimal precision",
+        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/token-design.md"
+      },
+      {
+        "label": "Issuer Ethereum/Sui XAGm exact deployment directory",
+        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/smart-contract/contract-address.md"
       }
     ],
     "routes": [

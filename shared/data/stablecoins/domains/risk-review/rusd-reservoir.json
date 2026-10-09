@@ -30,9 +30,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Reservoir rUSD is deployed across many chains and issuer docs list official contract addresses. No external bridge protocol was resolved, so reviewed evidence supports issuer/protocol-native multichain minting rather than a liquidity bridge.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "summary": "Reservoir's Ethereum rUSD has native issuer minting, while peripheral representations use LayerZero OFTs. The canonical Ethereum RusdOftAdapter 0xf0e9f6d9ba5d1b3f76e0f82f9dcdb9ebeef4b4da is a lock/release escrow: verified source inherits OFTAdapter._debit and _credit without overriding either, locking rUSD through safeTransferFrom and releasing it through safeTransfer. Its custom _lzReceive can instead redeem held rUSD through the PSM for composed messages. At Ethereum block 26155432 (2026-10-09T14:24:23Z), token() returned canonical rUSD 0x09d4214c03d01f49544c0448dbe3a27f768f2b34 and the adapter had deployed bytecode. This inventory is not eligible for an independent-liability transfer census; an exhaustive economic escrow/receipt/in-flight plan is required.",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4T09Phantom)",
     "confidence": "verified",
     "sources": [
       {
@@ -42,6 +42,14 @@
       {
         "label": "Reservoir docs",
         "url": "https://docs.reservoir.xyz"
+      },
+      {
+        "label": "Ethereum RusdOftAdapter verified source including inherited OFTAdapter lock/release implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf0e9f6d9ba5d1b3f76e0f82f9dcdb9ebeef4b4da"
+      },
+      {
+        "label": "Ethereum pinned adapter token and bytecode reads at block 26155432",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       }
     ],
     "routes": [

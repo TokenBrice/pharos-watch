@@ -56,6 +56,16 @@
       "chain": "metis",
       "address": "0x303241e2b3b4aed0bb0f8623e7442368fed8faf3",
       "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xe9d672f89493c7286a9bafc6b763364ec0bfe4fe",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x303241e2b3b4aed0bb0f8623e7442368fed8faf3",
+      "decimals": 18
     }
   ],
   "collateralQuality": "exotic",

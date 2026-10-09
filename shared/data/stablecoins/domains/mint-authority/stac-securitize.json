@@ -99,10 +99,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "executionScope": {
           "controllerDeployment": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-11-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataSecuritize)",
+          "reviewedAt": "2026-10-09",
+          "observedAt": "2026-10-09",
+          "expiresAt": "2026-11-09",
+          "reviewer": "Sol curation campaign 2026-10-09 (W4C06Schuman)",
           "confidence": "partial",
           "sources": [
             {
@@ -110,19 +110,19 @@
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x77684815f44b28726bc3efa4471b88ef3b93feb0"
             },
             {
-              "label": "Ethereum pinned RPC",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Dwellir Ethereum block 26155384 (2026-10-09T14:14:35Z): owner, implementation, trust service and MASTER role",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "26099926",
-            "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
+            "position": "26155384",
+            "hash": "0x779c1c2f6e751166c9157d5a1dad25061c8a523d9ae72a6bbed43af98890a3fa",
             "runtimeIdentity": "eth_getCode:0x",
             "signerIdentity": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee"
           },
           "observedState": {
-            "position": "26099926",
-            "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
+            "position": "26155384",
+            "hash": "0x779c1c2f6e751166c9157d5a1dad25061c8a523d9ae72a6bbed43af98890a3fa",
             "runtimeIdentity": "eth_getCode:0x",
             "signerIdentity": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee"
           },
@@ -168,11 +168,51 @@
               "permissionChangeRefs": [],
               "upgradeRefs": [],
               "bypassRefs": []
+            },
+            {
+              "id": "stac-ethereum-owner-master-token-powers",
+              "targetDeployment": "ethereum:0x51c2d74017390cbbd30550179a16a1c28f7210fc",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x475a9fa9",
+                "0x15f570dc",
+                "0x3ce5aae9",
+                "0x082af7c0"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "seize",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "stac-securitize"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x51c2d74017390cbbd30550179a16a1c28f7210fc"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [
+                "stac-ethereum-owner-uups-upgrade"
+              ],
+              "bypassRefs": []
             }
           ]
         },
-        "observedAt": "2026-07-14",
-        "observedBlock": 25531350,
+        "observedAt": "2026-10-09",
+        "observedBlock": 26155384,
         "sources": [
           {
             "label": "STAC token proxy (Blockscout)",
@@ -185,9 +225,13 @@
           {
             "label": "DSTrustService verified source (Blockscout API)",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xec0f580a0fe6ea53654537d34788aebad70a6370"
+          },
+          {
+            "label": "Dwellir Ethereum block 26155384 (2026-10-09T14:14:35Z), observed 2026-10-09T14:23:01Z and 14:24:11Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ],
-        "evidence": "At Ethereum block 25531350, owner() returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and eth_getCode returned 0x, confirming an EOA. getDSService(1) returned DSTrustService 0xec0F580a0FE6eA53654537d34788AeBaD70A6370, where getRole(owner) returned 1 (MASTER). BaseDSContract gates _authorizeUpgrade with onlyMaster; ServiceConsumer accepts the token owner or a trust-service MASTER, and setServiceOwner removes the prior MASTER when assigning the next service owner. The current owner is therefore the terminal current UUPS upgrade authority and, as MASTER, also satisfies DSToken's onlyIssuerOrAbove mint gate."
+        "evidence": "At Ethereum block 26155384 (hash 0x779c1c2f6e751166c9157d5a1dad25061c8a523d9ae72a6bbed43af98890a3fa; 2026-10-09T14:14:35Z), owner() returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee, the implementation remained 0x77684815f44b28726bc3efa4471b88ef3b93feb0, and getDSService(1) bound the token to 0xec0F580a0FE6eA53654537d34788AeBaD70A6370, where getRole(owner) returned 1 (MASTER). eth_getCode(owner) returned 0x at this pin; this does not establish custody independence. Verified DSToken and ServiceConsumer source establish MASTER-authorized issuance, burn, seizure and service replacement, with BaseDSContract._authorizeUpgrade gated by onlyMaster and no enforced delay in these entrypoints. The added partial path records issueTokens, burn, seize and setDSService selectors. Full service, mutable-target, alternate-permission, bypass and liability closure is not established; every closure flag remains false and the executionScope gap is intentionally retained."
       },
       {
         "chain": "solana",

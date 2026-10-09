@@ -81,19 +81,19 @@
     "sources": [
       {
         "label": "Midas smart-contract directory",
-        "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+        "url": "https://midas-docs.gitbook.io/midas-docs/resources/smart-contracts-addresses"
       },
       {
         "label": "Ethereum Midas LayerZero adapter",
         "url": "https://etherscan.io/address/0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0#code"
       },
       {
-        "label": "Monad Midas LayerZero adapter",
-        "url": "https://explorer.monad.xyz/address/0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df"
+        "label": "Monad MidasLzMintBurnOFTAdapter verified source; direct token burn/mint reviewed 2026-10-09 by Sol (W4T07Midas)",
+        "url": "https://monadscan.com/address/0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df#code"
       },
       {
-        "label": "Plasma Midas LayerZero adapter",
-        "url": "https://plasma-explorer.com/address/0x801c551b22dcd0a3e23ff8e6134e662e1837d75b"
+        "label": "Plasma MidasLzMintBurnOFTAdapter verified source; direct token burn/mint reviewed 2026-10-09 by Sol (W4T07Midas)",
+        "url": "https://plasmascan.to/address/0x801c551b22dcd0a3e23ff8e6134e662e1837d75b#code"
       },
       {
         "label": "Katana Midas LayerZero adapter",
@@ -121,7 +121,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Ethereum is a native Midas issuance deployment: the shared operator EOA and Ethereum issuance vault hold M_HYPER_MINT_OPERATOR_ROLE. The canonical-side MidasLzMintBurnOFTAdapter 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0 is separately reviewed as bridge machinery; it uses LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c, with peers EID 30390 = Monad adapter 0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df and EID 30383 = Plasma adapter 0x801c551b22dcd0a3e23ff8e6134e662e1837d75b, owned by Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89.",
+        "reviewNote": "Ethereum is a native Midas issuance deployment: the shared operator EOA and Ethereum issuance vault hold M_HYPER_MINT_OPERATOR_ROLE. The canonical-side MidasLzMintBurnOFTAdapter 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0 is separately reviewed as bridge machinery; it uses LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c, with peers EID 30390 = Monad adapter 0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df and EID 30383 = Plasma adapter 0x801c551b22dcd0a3e23ff8e6134e662e1837d75b, owned by Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89. Independent-liability accounting review 2026-10-09 by Sol (W4T07Midas): verified MintBurnOFTAdapter._debit calls minterBurner.burn on the sender and _credit calls mint on the recipient; Midas's self-only implementations directly burn/mint mHYPER, with no transferFrom lockbox or release leg. Ethereum block 26154369 confirms token() is the registered token, symbol mHYPER and decimals 18. The four issuer-listed deployments represent the same mHYPER shares; complete census eligibility does not waive bridge authority or producer admission.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 25770940,
@@ -133,7 +133,7 @@
         "sources": [
           {
             "label": "Midas smart-contract directory",
-            "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+            "url": "https://midas-docs.gitbook.io/midas-docs/resources/smart-contracts-addresses"
           },
           {
             "label": "Ethereum mHYPER token",
@@ -142,6 +142,14 @@
           {
             "label": "Ethereum Midas LayerZero adapter",
             "url": "https://etherscan.io/address/0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0#code"
+          },
+          {
+            "label": "Exact Ethereum token/adapter/decimals read: block 26154369, hash 0xe37b850c5c182cdf1b868af39bcf2606d9ae52a9213e5b42a1004e99ff0269d7, timestamp 2026-10-09T10:51:35Z; observed 2026-10-09T14:20:28Z by Sol (W4T07Midas)",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Verified mHYPER implementation: inherited mToken mint/burn call ERC20 _mint/_burn, reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas)",
+            "url": "https://etherscan.io/address/0x3f0ec5b26ec6e50907abea87a798bf395189bcd5#code"
           }
         ]
       },
@@ -158,7 +166,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Monad is a LayerZero bridge representation, not an independent native issuance chain. Immutable adapter 0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df (13,682-byte non-proxy runtime) points to endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and peer EID 30101 = Ethereum adapter 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0. The adapter owner is Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89; it can configure peers, endpoint delegate/configuration, and rate limits. Shared operator EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 also holds the representation token mint role at the observation block.",
+        "reviewNote": "Monad is a LayerZero bridge representation, not an independent native issuance chain. Immutable adapter 0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df (13,682-byte non-proxy runtime) points to endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and peer EID 30101 = Ethereum adapter 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0. The adapter owner is Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89; it can configure peers, endpoint delegate/configuration, and rate limits. Shared operator EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 also holds the representation token mint role at the observation block. Independent-liability accounting review 2026-10-09 by Sol (W4T07Midas): this exact adapter's verified source uses the same direct underlying-token burn/mint implementation as Ethereum, not canonical escrow. At Monad block 111917930, token() equals the registered deployment and its symbol/decimals are mHYPER/18. Representation control remains bridge-scoped; source burns make the outstanding shares independent census units without creating separate backing or supply.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 96621994,
@@ -175,15 +183,23 @@
         "sources": [
           {
             "label": "Monad mHYPER token",
-            "url": "https://explorer.monad.xyz/address/0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7"
+            "url": "https://monadscan.com/address/0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7#code"
           },
           {
             "label": "Monad Midas LayerZero adapter",
-            "url": "https://explorer.monad.xyz/address/0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df"
+            "url": "https://monadscan.com/address/0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df#code"
           },
           {
             "label": "Midas smart-contract directory",
-            "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+            "url": "https://midas-docs.gitbook.io/midas-docs/resources/smart-contracts-addresses"
+          },
+          {
+            "label": "Exact Monad token/adapter/decimals read: block 111917930, hash 0x791d59bb9015c4579b0772ea4d216f5ee97a4d32697ea0de4a3d2ac6ba8152c8, timestamp 2026-10-09T14:17:40Z; observed 2026-10-09 by Sol (W4T07Midas)",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "Verified mHYPER implementation: inherited mToken mint/burn call ERC20 _mint/_burn, reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas)",
+            "url": "https://monadscan.com/address/0xeb097d57fd58e090244e0d6e1ff816d2773f06de#code"
           }
         ]
       },
@@ -199,7 +215,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Plasma is a canonical Midas issuance deployment: the issuer's smart-contract directory lists the Plasma mHYPER token and issuance vault, and shared operator EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 holds M_HYPER_MINT_OPERATOR_ROLE at the observation block. The documented Plasma issuance-vault proxy 0xa603cf264adeb8e7f0f063c116929adac2d4286e is currently revoked from that role. Canonical-side adapter 0x801c551b22dcd0a3e23ff8e6134e662e1837d75b is separately reviewed as Ethereum↔Plasma LayerZero bridge machinery.",
+        "reviewNote": "Plasma is a canonical Midas issuance deployment: the issuer's smart-contract directory lists the Plasma mHYPER token and issuance vault, and shared operator EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 holds M_HYPER_MINT_OPERATOR_ROLE at the observation block. The documented Plasma issuance-vault proxy 0xa603cf264adeb8e7f0f063c116929adac2d4286e is currently revoked from that role. Canonical-side adapter 0x801c551b22dcd0a3e23ff8e6134e662e1837d75b is separately reviewed as Ethereum↔Plasma LayerZero bridge machinery. Independent-liability accounting review 2026-10-09 by Sol (W4T07Midas): this exact adapter's verified source directly burns/mints the underlying mHYPER rather than locking/releasing canonical shares. Re-read of Plasma block 29982696 confirms token() equals the registered deployment, symbol mHYPER and decimals 18. Historical role/peer observations retain their original clocks; no current authority refresh or static materiality share is claimed.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 29982696,
@@ -212,15 +228,23 @@
         "sources": [
           {
             "label": "Midas smart-contract directory",
-            "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+            "url": "https://midas-docs.gitbook.io/midas-docs/resources/smart-contracts-addresses"
           },
           {
             "label": "Plasma mHYPER token",
-            "url": "https://plasma-explorer.com/address/0xb31bea5c2a43f942a3800558b1aa25978da75f8a"
+            "url": "https://plasmascan.to/address/0xb31bea5c2a43f942a3800558b1aa25978da75f8a#code"
           },
           {
             "label": "Plasma Midas LayerZero adapter",
-            "url": "https://plasma-explorer.com/address/0x801c551b22dcd0a3e23ff8e6134e662e1837d75b"
+            "url": "https://plasmascan.to/address/0x801c551b22dcd0a3e23ff8e6134e662e1837d75b#code"
+          },
+          {
+            "label": "Exact Plasma token/adapter/decimals read: block 29982696, hash 0x90801549dd65333289d087e84d831d287cd523e78a5b35da1e6d1a6db0f37cca, timestamp 2026-08-16T23:34:02Z; re-read 2026-10-09T14:20:30Z by Sol (W4T07Midas)",
+            "url": "https://api-plasma-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Verified mHYPER implementation: inherited mToken mint/burn call ERC20 _mint/_burn, reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas)",
+            "url": "https://plasmascan.to/address/0xe8b32cb5a6b87e24cfe18b5dd8254bbce33ce9fa#code"
           }
         ]
       },
@@ -237,7 +261,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Katana is a LayerZero bridge representation, not an independent native issuance chain. Adapter 0x0516ded0209874fa9381ee721e8f1bcbe6ec2832 points to the Katana token and LayerZero endpoint. Historical peer EID 30101 pointed to Ethereum adapter 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0, but the current peers(30101) read is zero at Katana block 44183975 on 2026-10-02. The owner remains Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89. The historical adapter mint role was granted at block 30323406, revoked at block 36074971, and absent at block 40181191; that role observation is not re-dated. A LayerZero execute302 delivery at block 30324545 emitted a Katana mHYPER mint. The zero current peer and retained admin powers do not prove permanent inability to reactivate, or zero liabilities; the token retains nonzero totalSupply at the current pin.",
+        "reviewNote": "Katana is a LayerZero bridge representation, not an independent native issuance chain. Adapter 0x0516ded0209874fa9381ee721e8f1bcbe6ec2832 points to the Katana token and LayerZero endpoint. Historical peer EID 30101 pointed to Ethereum adapter 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0, but the current peers(30101) read is zero at Katana block 44183975 on 2026-10-02. The owner remains Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89. The historical adapter mint role was granted at block 30323406, revoked at block 36074971, and absent at block 40181191; that role observation is not re-dated. A LayerZero execute302 delivery at block 30324545 emitted a Katana mHYPER mint. The zero current peer and retained admin powers do not prove permanent inability to reactivate, or zero liabilities; the token retains nonzero totalSupply at the current pin. Independent-liability accounting review 2026-10-09 by Sol (W4T07Midas): the exact verified adapter has identical direct underlying-token burn/mint source to the other three routes, with no lock/release escrow. The issuer directory binds the exact Katana token; its verified mHYPER implementation 0x86e6ea4f7930cec5ff657a1511b09f062a047403 inherits ERC20Upgradeable.decimals() = 18 without overriding it. This is source/identity proof, not a new Katana RPC or role observation.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 40181191,
@@ -263,6 +287,14 @@
           {
             "label": "Katana LayerZero delivery transaction",
             "url": "https://katanascan.com/tx/0xd48181a695d60b631606609f8316c0fea41241845e7f8eebb25aebc3fdaa603c"
+          },
+          {
+            "label": "Exact Katana mHYPER implementation and inherited 18 decimals; verified source reviewed 2026-10-09 by Sol (W4T07Midas)",
+            "url": "https://katanascan.com/address/0x86e6ea4f7930cec5ff657a1511b09f062a047403#code"
+          },
+          {
+            "label": "Issuer's exact four-chain mHYPER deployment inventory; recovered primary directory reviewed 2026-10-09 by Sol (W4T07Midas)",
+            "url": "https://midas-docs.gitbook.io/midas-docs/resources/smart-contracts-addresses"
           }
         ]
       }

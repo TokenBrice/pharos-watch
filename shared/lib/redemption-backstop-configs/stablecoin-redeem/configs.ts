@@ -1071,10 +1071,11 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "usdt-tether"],
     capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
-    costModel: undisclosedReviewedFee(
-      "Flying Tulip shows the sell quote at the prevailing rate and any exit or cooldown parameters in-app; public docs do not publish one fixed redemption fee",
+    costModel: documentedVariableFee(
+      "The verified Ethereum MintAndRedeem implementation deducts ceil(ftUSDAmount * collateralInfo(collateralToken).redeemFeeBps / 10000), then converts the post-fee amount at the current redeem factor with floor rounding. The collateral fee is mutable and must be read at the producer's common block; a pinned 7-bps observation is not a perpetual or all-chain fee schedule. Current oracle/output valuation, gas and optional relayer charges remain separate, and the formula guarantees neither executable availability nor funded capacity.",
+      "formula",
     ),
-    reviewedAt: "2026-08-09",
+    reviewedAt: "2026-10-09",
     docs: [
       sourceRef("Flying Tulip ftUSD", "https://docs.flyingtulip.com/product-suite/ft-usd/", [
         "route",
@@ -1082,10 +1083,13 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         "fees",
         "settlement",
       ]),
+      sourceRef("Flying Tulip official production address book", "https://flyingtulip.com/address-book/flying-tulip-address-book-prod.json", ["route"]),
+      sourceRef("Verified Ethereum MintAndRedeem implementation", "https://eth.blockscout.com/api/v2/smart-contracts/0x8852B132B72613a16f1E3960978a3d45c0A7c3C6", ["fees"]),
     ],
     notes: [
       "Flying Tulip's current buy flow names USDC and USDT inputs, and the sell flow returns ftUSD to the selected input asset; the small Sonic USSD reserve position is not documented as a direct holder redemption output.",
       "The 10% ratio is a reviewed heuristic reflecting typical delta-neutral protocol on-hand stable buffers rather than a published instant-liquidity floor for this specific protocol.",
+      "Ethereum proxy 0xAa48EcBC843cF7E9A29155D112b8Cb27902bD23C resolves to implementation 0x8852B132B72613a16f1E3960978a3d45c0A7c3C6 at block 26154449 (2026-10-09T11:07:35Z); its constructor binds catalog ftUSD 0xF7D85EC4E7710f71992752eac2111312e73E9C9C. USDC and USDT collateralInfo return enabled=true, decimals=6 and redeemFeeBps=7 at this pin. Sonic was not measured. See agents/curation-campaign/W4C07Tether-ftusd-fees.json for block hash, calldata and results; a current exact-notional producer quote is still required.",
     ],
   }),
   "usdz-anzen": defineReviewedStablecoinRedeemConfig("2026-04-16", {
@@ -1468,9 +1472,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         "Aave sGHO governance configuration",
         "https://governance.aave.com/t/arfc-sgho-launch-configuration/24346",
       ),
+      sourceRef("Aave canonical Savings GHO vault identity (reviewed 2026-10-09)", "https://aave.com/docs/ecosystem/gho/sgho", ["route"]),
     ],
     notes: [
-      "This route models the current legacy sGHO/stkGHO-compatible contract's previewRedeem exit into GHO, not the separate Aave Umbrella stkGHO safety-module cooldown route.",
+      "This route models the canonical ERC-4626 Savings GHO vault 0xe1753f2e00940cc31213dd92013cf019dfe4ca1d on Ethereum. Aave identifies it separately from legacy Merit-based sGHO and the Umbrella stkGHO safety-module cooldown route; the canonical savings vault has instant GHO withdrawals with no cooldown.",
       "Fresh sGHO telemetry scores the contract's live previewRedeem(totalSupply) output as current direct redemption capacity into GHO; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
   }),

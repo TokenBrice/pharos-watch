@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Delta-neutral gold carry (leased physical gold hedged with CME gold futures)",
-      "pct": 73.9938666,
+      "pct": 77.74266272394208,
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Theo-managed strategy; gold leased to precious-metals businesses including the MG999 fund (FundBridge Capital as manager, Libeara tokenization, Vistra administration) and other independent lessees; CME short futures margined at a US-regulated Fortune-500 FCM in CFTC-segregated customer funds",
@@ -20,7 +20,7 @@
     },
     {
       "name": "Tokenized Treasury basket (thBILL)",
-      "pct": 25.7207314,
+      "pct": 21.99933454773512,
       "risk": "low",
       "coinId": "thbill-theo",
       "depType": "collateral",
@@ -40,7 +40,7 @@
     },
     {
       "name": "USDC redemption liquidity",
-      "pct": 0.2704108,
+      "pct": 0.24301202604355693,
       "risk": "very-low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -50,7 +50,7 @@
     },
     {
       "name": "USDT redemption liquidity",
-      "pct": 0.0149912,
+      "pct": 0.014990702279248586,
       "risk": "very-low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -60,8 +60,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC08); W1R37 primary-source liquidity review 2026-10-03",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4C07Tether)",
     "confidence": "verified",
     "sources": [
       {
@@ -79,11 +79,19 @@
       {
         "label": "Theo transparency dashboard, 2026-10-03: USDC and USDT liquidity reserve explicitly available for redemptions and instant liquidity; metadata review only, October 1 weights retained",
         "url": "https://app.theo.xyz/transparency"
+      },
+      {
+        "label": "Theo rendered transparency dashboard dated 2026-10-09; composition accessed 2026-10-09T14:24:11Z",
+        "url": "https://app.theo.xyz/transparency"
+      },
+      {
+        "label": "Theo public historical API, October 9 row at timestamp 1791554418; partial on-chain book excludes Gold Carry",
+        "url": "https://theo-api.theo.xyz/v1/public/thusd/historical/30"
       }
     ],
-    "rationale": "The October 1 rendered dashboard discloses USD amounts of $98,716,576 gold carry, $34,314,500 thBILL, $360,760 USDC and $20,000 USDT. Disclosed subtotals are $133,031,076 actively deployed and $380,760 liquidity reserves, totaling $133,411,836, consistent with the rounded displayed total of $133.41M. Independently recomputed total-reserve shares are 100 times each displayed USD amount divided by $133,411,836, rounded to seven decimal places: 73.9938666%, 25.7207314%, 0.2704108% and 0.0149912%, totaling 100% within floating-point tolerance. Source time is the dashboard's Last updated: Oct 01, 2026. The 74.21%/25.79% labels apply only to deployed positions. These are rounded issuer-reported amounts, not an independently attested aggregate balance sheet; internal gold-lease, futures-margin and Treasury-collateral allocations remain undisclosed.",
-    "compositionBasis": "Theo rendered transparency dashboard dated 2026-10-01; total-reserve percentages independently calculated from all disclosed USD balances and subtotals",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "The October 9 rendered dashboard discloses $103,721,175 Gold Carry, $29,350,639 thBILL, $324,217 USDC and $20,000 USDT. Their sum is $133,416,031, consistent with the rounded $133.42M reserve headline. The displayed deployed subtotal of $133,071,813 differs by $1 from the sum of its rounded component amounts; percentages use the sum of all four displayed component amounts, without assigning the discrepancy to any holding. Full-reserve weights are 100 times each amount divided by $133,416,031, with no percentage rounding. The 77.94%/22.06% labels cover deployed positions only. The public historical API's October 9 row independently identifies thBILL, USDC and USDT but omits Gold Carry and reports only $29,694,855.74, so it is not a whole-book denominator or evidence of undercollateralization. The dashboard remains the composition authority. These are rounded issuer-reported values, not independent assurance; internal gold-lease, futures-margin and Treasury-collateral allocations remain undisclosed.",
+    "compositionBasis": "Theo rendered transparency dashboard dated 2026-10-09; total-reserve percentages calculated from all four displayed USD component amounts",
+    "compositionAsOf": "2026-10-09",
     "scope": "full-composition",
     "knownUnknownExposure": "The internal composition of the gold carry position (lease book versus CME futures margin versus T-bill collateral, and MG999 versus other lessees) is not published; the dashboard reports the position only as an aggregate. The reserve-side split of staked versus unstaked backing is likewise not published.",
     "knownUnknownExposurePct": 0,
@@ -91,7 +99,7 @@
       {
         "reserveIndex": 0,
         "reserveName": "Delta-neutral gold carry (leased physical gold hedged with CME gold futures)",
-        "pct": 73.9938666,
+        "pct": 77.74266272394208,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The gold carry position is a managed strategy exposure across gold leases and exchange-traded futures, not a tracked stablecoin or tokenized-fund dependency with a linkable coin identity."
       }

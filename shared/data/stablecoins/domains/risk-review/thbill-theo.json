@@ -56,7 +56,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Ethereum block 26103217 on 2026-10-02, thBILL returned symbol thBILL and decimals 6. The separate OFT adapter at 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a returns this deployment from token(); its owner and endpoint delegate are the Ethereum 4-of-6 Safe 0x94877640dd9e6f1e3cb56bf7b5665b7152601295. Its endpoint eid is 30101 and peers are configured to Arbitrum 30110, Base 30184, HyperEVM 30367 and Stable 30396 at the authored OFT address. The October 1 block 26095798 observation remains the source for IToken implementation 0x325478a069b0dbbdfbee909fa3741f84259ba519 and Timelock 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 holding DEFAULT_ADMIN_ROLE with a 172800-second delay; it did not enumerate all role holders. No current cross-chain economic materiality or in-flight reconciliation is inferred from these identity reads.",
+        "reviewNote": "At Ethereum block 26103217 on 2026-10-02, thBILL returned symbol thBILL and decimals 6. The separate OFT adapter at 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a returns this deployment from token(); its owner and endpoint delegate are the Ethereum 4-of-6 Safe 0x94877640dd9e6f1e3cb56bf7b5665b7152601295. Its endpoint eid is 30101 and peers are configured to Arbitrum 30110, Base 30184, HyperEVM 30367 and Stable 30396 at the authored OFT address. The October 1 block 26095798 observation remains the source for IToken implementation 0x325478a069b0dbbdfbee909fa3741f84259ba519 and Timelock 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 holding DEFAULT_ADMIN_ROLE with a 172800-second delay; it did not enumerate all role holders. No current cross-chain economic materiality or in-flight reconciliation is inferred from these identity reads. Sol curation campaign 2026-10-09 (W4T11Tether), source reviewed 2026-10-09T14:23:20Z: the verified MyOFTAdapter directly inherits OFTAdapter without debit/credit overrides. Its immutable constructor token is this Ethereum thBILL deployment. The inherited _debit locks canonical shares using innerToken.safeTransferFrom(_from,address(this),amountSentLD); _credit releases them using innerToken.safeTransfer(_to,_amountLD). Destination OFT burns do not eliminate this canonical escrow, so a complete economic escrow/receipt/in-flight plan is required rather than independent-liability census eligibility. The October 2 state observation is not refreshed by this source review.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-02",
         "observedBlock": 26103217,
@@ -72,6 +72,10 @@
           {
             "label": "Blockscout verified thBILL TimelockController",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02"
+          },
+          {
+            "label": "Verified Ethereum thBILL MyOFTAdapter and inherited OFTAdapter lock/release source (accessed 2026-10-09)",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
           }
         ]
       },
