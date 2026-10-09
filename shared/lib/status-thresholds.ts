@@ -1,5 +1,5 @@
 import { CRON_INTERVALS } from "./cron-jobs";
-import type { ActivePriceCoverageHealth, PublicationSurfaceHealth, StatusHealthOrUnknown, StatusHealthValue } from "../types/status";
+import type { ActivePriceCoverageGap, ActivePriceCoverageHealth, StablecoinPublicationHealth, PublicationSurfaceHealth, StatusHealthOrUnknown, StatusHealthValue } from "../types/status";
 import type { z } from "zod";
 import type { FreshnessStatusSchema } from "../types/api-meta";
 
@@ -145,6 +145,45 @@ export const STATUS_MISSING_PRICE_THRESHOLDS = {
   durationMaterialMarketCapUsd: 100_000_000,
 } as const;
 
+/** Three isolated minor omissions tolerate upstream tail churn; four is a breadth incident. */
+export const STATUS_PUBLICATION_IMMATERIAL_MISSING_MARGIN = 3;
+/** A month covers intermittent daily snapshots; doubling retained caps bounds growth risk.
+ * Current caps are unscaled; absent or older evidence still fails closed. */
+export const STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC = 30 * 24 * 3600;
+export const STATUS_LAST_KNOWN_MARKET_CAP_GROWTH_FACTOR = 2;
+
+/** Materiality-only cap: retained evidence is conservatively scaled, never published as current. */
+export function getActivePriceGapMaterialityMarketCapUsd(
+  asset: Pick<ActivePriceCoverageGap, "marketCapUsd" | "lastKnownMarketCapUsd" | "lastKnownMarketCapObservedAt">,
+  nowSec: number,
+): number | null {
+  if (asset.marketCapUsd != null && Number.isFinite(asset.marketCapUsd) && asset.marketCapUsd >= 0) {
+    return asset.marketCapUsd;
+  }
+  const cap = asset.lastKnownMarketCapUsd;
+  const observedAt = asset.lastKnownMarketCapObservedAt;
+  return cap != null && Number.isFinite(cap) && cap >= 0
+    && observedAt != null && Number.isFinite(observedAt) && observedAt > 0
+    && observedAt <= nowSec && nowSec - observedAt <= STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC
+    ? cap * STATUS_LAST_KNOWN_MARKET_CAP_GROWTH_FACTOR : null;
+}
+
+export function getStablecoinPublicationImpactStatus(
+  publication: Pick<StablecoinPublicationHealth, "status" | "missingActiveIds">,
+  coverage: Pick<ActivePriceCoverageHealth, "missingActiveAssets">,
+  nowSec: number,
+): StatusHealthValue {
+  if (publication.status === "complete") return "healthy";
+  if (publication.status === "unknown" || publication.missingActiveIds.length === 0
+    || publication.missingActiveIds.length > STATUS_PUBLICATION_IMMATERIAL_MISSING_MARGIN) return "degraded";
+  const gapsById = new Map(coverage.missingActiveAssets.map((asset) => [asset.stablecoinId, asset]));
+  return publication.missingActiveIds.some((id) => {
+    const asset = gapsById.get(id);
+    const cap = asset ? getActivePriceGapMaterialityMarketCapUsd(asset, nowSec) : null;
+    return cap == null || cap >= STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd;
+  }) ? "degraded" : "healthy";
+}
+
 /**
  * Gap *duration* for a single missing active price, in consecutive missing
  * generations. Deliberately independent of `missingPriceRatio`: coverage breadth
@@ -183,14 +222,17 @@ export interface ActivePriceGapDurationVerdict {
  */
 export function assessActivePriceGapDuration(
   coverage: Pick<ActivePriceCoverageHealth, "missingActiveAssets" | "acknowledgedGapIds">,
+  nowSec: number = Math.floor(Date.now() / 1000),
 ): ActivePriceGapDurationVerdict {
   const acknowledgedGapIds = new Set(coverage.acknowledgedGapIds ?? []);
   const alertGaps = coverage.missingActiveAssets.filter(
     (asset) => asset.alertEligible && !asset.acknowledgedGap && !acknowledgedGapIds.has(asset.stablecoinId),
   );
   const materialGaps = alertGaps.filter(
-    (asset) => asset.marketCapUsd == null
-      || asset.marketCapUsd >= STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd,
+    (asset) => {
+      const cap = getActivePriceGapMaterialityMarketCapUsd(asset, nowSec);
+      return cap == null || cap >= STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd;
+    },
   );
   const worstGenerations = materialGaps.some((asset) => asset.consecutiveMissingGenerations == null)
     ? null

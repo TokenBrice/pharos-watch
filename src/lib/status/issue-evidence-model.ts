@@ -34,7 +34,7 @@ const ISSUE_KIND_RANK: Record<DashboardIssueKind, number> = {
   watch: 3,
 };
 const MAINTENANCE_CAUSE_CODES = new Set(["ddr_repair_debt_present", "reserve_sync_history_write_gap"]);
-const PUBLICATION_BLOCKING_CAUSE_CODES = new Set(["stablecoin_publication_incomplete"]);
+const PUBLICATION_CAUSE_CODES = new Set(["stablecoin_publication_incomplete", "stablecoin_publication_unknown"]);
 const ACTIVE_PRICE_COVERAGE_CAUSE_CODE = "active_price_coverage_incomplete";
 const ACTIVE_PRICE_COVERAGE_CAUSE_CODES = new Set([ACTIVE_PRICE_COVERAGE_CAUSE_CODE, "active_price_coverage_unknown"]);
 const MULTI_INSTANCE_CAUSE_CODES = new Set(["cache_warning"]);
@@ -86,7 +86,7 @@ function getIssueIdentity(cause: StatusCause): string {
 }
 
 function getIssueKind(cause: StatusCause, publicImpacting: boolean): DashboardIssueKind {
-  if (cause.severity === "critical" || publicImpacting || PUBLICATION_BLOCKING_CAUSE_CODES.has(cause.code)) {
+  if (cause.severity === "critical" || publicImpacting) {
     return "impacting";
   }
   if (MAINTENANCE_CAUSE_CODES.has(cause.code)) return "maintenance";
@@ -97,7 +97,7 @@ function getIssueKind(cause: StatusCause, publicImpacting: boolean): DashboardIs
 function getAffectedSurface(cause: StatusCause, publicImpacting: boolean): string {
   if (ACTIVE_PRICE_COVERAGE_CAUSE_CODES.has(cause.code)) return "Stablecoin prices";
   if (publicImpacting) return "Public service";
-  if (PUBLICATION_BLOCKING_CAUSE_CODES.has(cause.code)) return "Publication";
+  if (PUBLICATION_CAUSE_CODES.has(cause.code)) return "Publication";
   if (cause.layer === "data-quality") return "Data pipeline";
   if (cause.layer === "availability") return "Operator reliability";
   return "Status system";

@@ -5,6 +5,7 @@ import {
   STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC,
   assessActivePriceGapDuration,
   getCacheRatioThresholds,
+  getStablecoinPublicationImpactStatus,
 } from "@shared/lib/status-thresholds";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
@@ -617,6 +618,7 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationI
   (input) => {
       const publication = input.dataQuality.stablecoinPublication;
       if (publication == null || publication.status === "complete") return null;
+      const status = getStablecoinPublicationImpactStatus(publication, input.activePriceCoverage, input.nowSec);
       const cause = publication.status === "incomplete"
         ? (() => {
             const missing = publication.missingActiveIds;
@@ -624,14 +626,14 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationI
             return makeCause(
               "data-quality",
               "stablecoin_publication_incomplete",
-              "warning",
+              status === "healthy" ? "info" : "warning",
               `Stablecoin publication is missing ${missing.length} unwaived active ID(s)` +
                 (examples ? `: ${examples}${missing.length > 12 ? ", ..." : ""}.` : "."),
               { metric: "missingActiveStablecoins", value: missing.length, threshold: 1 },
             );
           })()
         : makeCause("data-quality", "stablecoin_publication_unknown", "warning", "Exact stablecoin publication coverage evidence is unavailable.");
-      return ruleResult("degraded", [cause]);
+      return ruleResult(status, [cause]);
   },
   (input) => {
       const coverage = input.activePriceCoverage;
@@ -670,7 +672,7 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationI
         // A duration-driven degradation opens a public uptime incident, so it
         // gets its own allowlisted cause; the generic incomplete-coverage
         // warning above stays admin-only.
-        const gapDuration = assessActivePriceGapDuration(coverage);
+        const gapDuration = assessActivePriceGapDuration(coverage, input.nowSec);
         if (gapDuration.status !== "healthy") {
           causes.push(makeCause(
             "data-quality",

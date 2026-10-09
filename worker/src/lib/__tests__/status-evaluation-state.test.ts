@@ -704,6 +704,32 @@ describe("status cause text", () => {
     );
   });
 
+  it.each([
+    [30_000_000, "healthy", "info"],
+    [60_000_000, "degraded", "warning"],
+  ] as const)("aligns publication cause and floor for retained cap %s", (cap, expectedStatus, severity) => {
+    const nowSec = 1_790_000_000;
+    const evaluated = evaluateStablecoinActivePriceCoverage([], ["missing"], {
+      nowSec, previousAcceptedAssetsById: new Map([["missing", {
+        id: "missing", circulating: { peggedUSD: cap }, supplyObservedAt: nowSec - 900,
+      }]]),
+    });
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      nowSec,
+      dataQuality: makeDataQuality({
+        stablecoinPublication: {
+          status: "incomplete", expectedActiveCount: 1, presentActiveCount: 0, waivedActiveCount: 0,
+          missingActiveIds: ["missing"], waivedActiveIds: [], expiredWaiverIds: [], observedAt: nowSec,
+        },
+      }),
+      activePriceCoverage: { ...evaluated, status: "incomplete", observedAt: nowSec },
+    }));
+    expect(result.status).toBe(expectedStatus);
+    expect(result.causes).toContainEqual(expect.objectContaining({
+      code: "stablecoin_publication_incomplete", severity,
+    }));
+  });
+
   it("emits a durable warning without degrading for incomplete active-price coverage", () => {
     const activePriceCoverage = {
       ...makePublicHealth().activePriceCoverage,
