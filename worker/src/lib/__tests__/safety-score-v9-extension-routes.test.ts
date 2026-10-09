@@ -1810,6 +1810,41 @@ describe("captured local-fiat output and cost references", () => {
     });
   });
 
+  it("resolves unpinned producer output at fact-build time and fails closed without captured FX", () => {
+    const { fixedInput, row } = redemptionPegFixture({
+      rowOverrides: { stablecoinId: "usdc-circle" },
+      pegDataById: { captured: { pegCurrency: "EUR", pegReference: reference } },
+    });
+    const config: RedemptionBackstopConfig = {
+      routeFamily: "offchain-issuer", accessModel: "issuer-api", settlementModel: "atomic",
+      executionModel: "rules-based-nav", outputAssetType: "stable-single",
+      unresolvedOutputAssetKeys: ["fiat:EUR"],
+      capacityModel: { kind: "fixed-usd", amountUsd: 100_000_000, confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 10 },
+      docs: [{ label: "Synthetic terms", url: "https://example.com/terms", supports: ["capacity", "fees", "settlement"] }],
+      reviewedAt: "2026-07-01",
+    };
+    const observation = buildRedemptionExitRouteObservation({
+      stablecoinId: row.stablecoinId, config,
+      capacityProfile: { ...row.capacityProfile!, scoringHorizon: "immediate" },
+      scoringCapacityUsd: 100_000_000, supplyUsd: 100_000_000,
+      routeStatus: "open", resolutionState: "resolved", sourceMode: "dynamic",
+      capacityConfidence: "live-direct", capacityKind: "live-direct", freshnessKind: "same-run-api",
+      evidenceObservedAt: NOW - 600, resolvedFeeBps: null, now: NOW,
+      fiatReferences: { clockSec: NOW, pegDataById: {
+        captured: { pegCurrency: "EUR", pegReference: { ...reference, source: "fx" } },
+      } },
+    })!;
+    expect(observation).not.toHaveProperty("outputUnitValueUsd");
+    row.capacityProfile!.exitRouteObservations = [observation];
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output?.valuation).toMatchObject({
+      unitValueUsd: 1.25, expectedUnitValueUsd: 1.25, observedAtSec: reference.asOf,
+      sourceId: "captured-fiat-fx-reference", maxAgeSec: 86_400,
+    });
+    setPegData(fixedInput, {});
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output).toBeNull();
+  });
+
   it("retains the fee-clock fiat quote instead of switching to a later FX generation", () => {
     const { fixedInput, row } = redemptionPegFixture({
       rowOverrides: { stablecoinId: "usdc-circle" }, output: { kind: "fiat", currency: "CHF" },

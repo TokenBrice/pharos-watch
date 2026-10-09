@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const EXIT_ROUTE_OUTPUT_VALUATION_TIMESTAMP_TOLERANCE_SEC = 60;
+
 export const DexExitEvidenceKindSchema = z.enum([
   "measured-executable-depth",
   "reserve-based-amm-simulation",
@@ -632,7 +634,7 @@ function enforceRedemptionExitRouteLane(
   }
   if (
     observation.outputUnitValueObservedAt !== undefined &&
-    observation.outputUnitValueObservedAt > observation.observedAt + 60
+    observation.outputUnitValueObservedAt > observation.observedAt + EXIT_ROUTE_OUTPUT_VALUATION_TIMESTAMP_TOLERANCE_SEC
   ) {
     ctx.addIssue({
       code: "custom",

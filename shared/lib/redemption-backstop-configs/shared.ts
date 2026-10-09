@@ -193,6 +193,20 @@ function cloneRedemptionDocSource(doc: RedemptionDocSource): RedemptionDocSource
   };
 }
 
+export function resolveRedemptionPercentageFeeBps(
+  costModel: RedemptionCostModel,
+  resolvedFeeBps: number | null = null,
+): number | null {
+  const observedFeeBps =
+    resolvedFeeBps != null && Number.isFinite(resolvedFeeBps) && resolvedFeeBps >= 0
+      ? resolvedFeeBps
+      : null;
+  return observedFeeBps ??
+    costModel.feeBpsMax ??
+    // A minimum is a floor, not evidence of the maximum payable fee.
+    (costModel.kind === "fee-bps" ? costModel.feeBps : null);
+}
+
 /**
  * Resolve the effective redemption cost at one requested notional.
  *
@@ -207,15 +221,7 @@ export function resolveRedemptionCostBpsAtNotional(
   fiatReferences?: RedemptionFiatReferenceContext,
 ): number | null {
   if (!Number.isFinite(requestedNotionalUsd) || requestedNotionalUsd <= 0) return null;
-  const observedFeeBps =
-    resolvedFeeBps != null && Number.isFinite(resolvedFeeBps) && resolvedFeeBps >= 0
-      ? resolvedFeeBps
-      : null;
-  const normalFeeBps =
-    observedFeeBps ??
-    costModel.feeBpsMax ??
-    // A minimum is a floor, not evidence of the maximum payable fee.
-    (costModel.kind === "fee-bps" ? costModel.feeBps : null);
+  const normalFeeBps = resolveRedemptionPercentageFeeBps(costModel, resolvedFeeBps);
   if (normalFeeBps == null) return null;
   if (costModel.feeComponents) {
     let componentCostUsd = 0;

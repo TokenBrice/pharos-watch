@@ -1,5 +1,5 @@
 import { resolveFeeConfidence, resolveFeeModelKind } from "@shared/lib/redemption-backstop-confidence";
-import { resolveRedemptionCostBpsAtNotional } from "@shared/lib/redemption-backstop-configs/shared";
+import { resolveRedemptionCostBpsAtNotional, resolveRedemptionPercentageFeeBps } from "@shared/lib/redemption-backstop-configs/shared";
 import type { RedemptionBackstopConfig, RedemptionCostModel } from "@shared/lib/redemption-backstops";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";
@@ -8,7 +8,7 @@ import {
   type RedemptionBackstopLiveMetadata,
 } from "./live-metadata";
 import { resolveRedemptionDocs } from "@shared/lib/redemption-backstop-docs";
-import type { RedemptionFiatReferenceContext } from "@shared/lib/redemption-fiat-reference";
+import { resolveRedemptionFiatUsdRate, type RedemptionFiatReferenceContext } from "@shared/lib/redemption-fiat-reference";
 
 export interface ResolvedRedemptionCost {
   selectedLiveFee?: boolean;
@@ -117,12 +117,21 @@ function resolveRedemptionCost(
 
   if (costModel.feeComponents) {
     const costScenarioScores = resolveCostScenarioScores(costModel, null, fiatReferences);
+    const notes: string[] = [];
+    if (!costScenarioScores) {
+      if (resolveRedemptionPercentageFeeBps(costModel) === null) {
+        notes.push("redemption-cost-percentage-ceiling-absent");
+      } else if (costModel.feeComponents.some((component) =>
+        resolveRedemptionFiatUsdRate(component.currency, fiatReferences) === null)) {
+        notes.push("redemption-cost-fiat-reference-unavailable");
+      }
+    }
     return buildCost({
       score: costScenarioScores?.activeUser ?? 40,
       // Request-specific components are never a reusable percentage telemetry value.
       feeBps: null,
       costScenarioScores,
-      notes: costScenarioScores ? [] : ["redemption-cost-fiat-reference-unavailable"],
+      notes,
     });
   }
 

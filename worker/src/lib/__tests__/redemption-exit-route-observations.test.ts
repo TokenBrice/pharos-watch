@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
-import type { RedemptionBackstopEntry, RedemptionCapacityProfile } from "@shared/types/redemption";
-import { ExitRouteObservationSchema } from "@shared/types/exit-route";
+import { RedemptionBackstopEntrySchema, type RedemptionBackstopEntry, type RedemptionCapacityProfile } from "@shared/types/redemption";
+import { EXIT_ROUTE_OUTPUT_VALUATION_TIMESTAMP_TOLERANCE_SEC, ExitRouteObservationSchema } from "@shared/types/exit-route";
 import {
   buildRedemptionExitRouteObservation,
   buildPhysicalToUsdExitObservation,
@@ -120,6 +120,77 @@ describe("issuer payout identity", () => {
       kind: "unresolved-asset",
       assetKeys: [...keys],
     });
+  });
+});
+
+describe("local-fiat valuation chronology", () => {
+  const stablecoinId = "synthetic-eur-issuer";
+  const fiatConfig: RedemptionBackstopConfig = {
+    ...config,
+    settlementModel: "atomic",
+    outputAssetType: "stable-single",
+    unresolvedOutputAssetKeys: ["fiat:EUR"],
+    costModel: { kind: "fee-bps", feeBps: 10 },
+  };
+  const now = Date.UTC(2026, 6, 13) / 1_000;
+  const reviewSec = Date.parse(fiatConfig.reviewedAt!) / 1_000;
+
+  it.each(["documented", "live", "supply-model"] as const)(
+    "omits a newer FX pin without invalidating the %s redemption row",
+    (source) => {
+      const fiatReferences = {
+        clockSec: now,
+        pegDataById: {
+          captured: { pegCurrency: "EUR", pegReference: { valueUsd: 1.25, source: "fx" as const, contributorCount: 0, asOf: now } },
+        },
+      };
+      const entry = makeSupplyFullRedemption({ stablecoinId });
+      const observation = source === "supply-model"
+        ? deriveSupplyModelExitRouteObservation(entry, now, fiatReferences, fiatConfig)!
+        : build({
+            stablecoinId, config: fiatConfig, fiatReferences, now, resolvedFeeBps: null,
+            ...(source === "live" ? {
+              sourceMode: "dynamic", capacityKind: "live-direct", freshnessKind: "same-run-api",
+              capacityConfidence: "live-direct", evidenceObservedAt: now - 600,
+            } : {}),
+          })!;
+      expect(observation).not.toBeNull();
+      expect(observation.output).toEqual({ kind: "fiat", currency: "EUR" });
+      expect(observation.observedAt).toBe(source === "live" ? now - 600 : reviewSec);
+      expect(observation.scoreEligible).toBe(true);
+      for (const field of ["outputUnitValueUsd", "outputExpectedUnitValueUsd", "outputUnitValueSourceId",
+        "outputUnitValueObservedAt", "allInCostBps"]) {
+        expect(observation).not.toHaveProperty(field);
+      }
+      expect(ExitRouteObservationSchema.safeParse(observation).success).toBe(true);
+      expect(RedemptionBackstopEntrySchema.safeParse({
+        ...entry,
+        capacityProfile: { ...entry.capacityProfile!, exitRouteObservations: [observation] },
+      }).success).toBe(true);
+    },
+  );
+
+  it.each([
+    { offset: -1, pinned: true },
+    { offset: 0, pinned: true },
+    { offset: 1, pinned: false },
+  ])("admits FX pins at the shared tolerance boundary plus $offset seconds", ({ offset, pinned }) => {
+    const observedAt = now - 600;
+    const asOf = observedAt + EXIT_ROUTE_OUTPUT_VALUATION_TIMESTAMP_TOLERANCE_SEC + offset;
+    const observation = build({
+      stablecoinId, config: fiatConfig, now, resolvedFeeBps: null,
+      sourceMode: "dynamic", capacityKind: "live-direct", freshnessKind: "same-run-api",
+      capacityConfidence: "live-direct", evidenceObservedAt: observedAt,
+      fiatReferences: { clockSec: now, pegDataById: {
+        captured: { pegCurrency: "EUR", pegReference: { valueUsd: 1.25, source: "fx", contributorCount: 0, asOf } },
+      } },
+    })!;
+    expect(observation.outputUnitValueObservedAt).toBe(pinned ? asOf : undefined);
+    if (pinned) expect(observation).toMatchObject({
+      outputUnitValueUsd: 1.25, outputExpectedUnitValueUsd: 1.25,
+      outputUnitValueSourceId: "captured-fiat-fx-reference:EUR", executionCostBps: 10, allInCostBps: 10,
+    });
+    expect(ExitRouteObservationSchema.safeParse(observation).success).toBe(true);
   });
 });
 

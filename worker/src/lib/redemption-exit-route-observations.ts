@@ -7,6 +7,7 @@ import { PHYSICAL_TO_USD_EXIT_POLICY, resolveExitScoringRequest } from "@shared/
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ExitRouteObservation, ExitRouteOutput } from "@shared/types/market";
+import { EXIT_ROUTE_OUTPUT_VALUATION_TIMESTAMP_TOLERANCE_SEC } from "@shared/types/exit-route";
 import type { LiveReserveRedemptionOutputValuation } from "@shared/types/live-reserves";
 import { buildExitRouteCapacityPoint, mergeExitCurveRequests } from "@shared/lib/exit-route-capacity-point";
 import { resolveRedemptionFiatReference, resolveRedemptionFiatUsdRate, type RedemptionFiatReferenceContext } from "@shared/lib/redemption-fiat-reference";
@@ -143,11 +144,16 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
 function capturedFiatOutputValuation(
   output: ExitRouteOutput,
   costBps: number | null,
+  observedAt: number,
   fiatReferences?: RedemptionFiatReferenceContext,
 ) {
   const reference = output.kind === "fiat" && output.currency && output.currency !== "USD"
     ? resolveRedemptionFiatReference(output.currency, fiatReferences) : null;
-  if (!reference || costBps === null) return {};
+  // A current FX cache can postdate the route evidence. Leave it unpinned
+  // when the observation contract cannot admit its clock; fact building can
+  // still resolve a current reference independently, or fail closed.
+  if (!reference || costBps === null ||
+      reference.asOf > observedAt + EXIT_ROUTE_OUTPUT_VALUATION_TIMESTAMP_TOLERANCE_SEC) return {};
   return {
     outputUnitValueUsd: reference.valueUsd,
     outputExpectedUnitValueUsd: reference.valueUsd,
@@ -416,7 +422,7 @@ export function buildRedemptionExitRouteObservation(
     ...(input.settlementBoundUnproven ? { settlementBoundUnproven: true } : {}),
     settlementHorizonSec,
     output,
-    ...capturedFiatOutputValuation(output, mainCostBps, fiatReferences),
+    ...capturedFiatOutputValuation(output, mainCostBps, evidence.observedAt, fiatReferences),
     evidenceKind: evidence.evidenceKind,
     capacityEvidenceTier: evidence.capacityEvidenceTier,
     ...(boundedUnknownFee
@@ -571,7 +577,7 @@ export function deriveSupplyModelExitRouteObservation(
     // Published rows do not carry outputAssets; the reviewed static config of
     // the same code version supplies the documented output composition.
     output,
-    ...capturedFiatOutputValuation(output, feeBoundBps, fiatReferences),
+    ...capturedFiatOutputValuation(output, feeBoundBps, reviewTimestamp, fiatReferences),
     evidenceKind: "documented-terms",
     ...(boundedUnknownFee
       ? { feeEvidence: hasFeeComponents || (entry.feeConfidence === "formula" &&
