@@ -520,6 +520,51 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     expect(immature.scoreInput.pillars.exit.evidenceLevel).not.toBe("strong");
   });
 
+  it.each(["exact-lower-bound", "exact-complete"] as const)(
+    "keeps known route facts separate from immaterial %s execution evidence",
+    (coverageClass) => {
+      const draft = structuredClone(exactFixedInput());
+      const observation = draft.dexLiqMap.alpha!.exitRouteObservations![0]!;
+      observation.executableUsd = 13;
+      observation.completionRatio = 13 / observation.requestedNotionalUsd;
+      observation.capacityCurve = observation.capacityCurve!.map((point) => ({
+        ...point,
+        executableUsd: 13,
+        completionRatio: 13 / point.requestedNotionalUsd,
+      }));
+      const fixed = rebuildFixed(draft);
+      const reviewed = structuredClone(extension());
+      reviewed.registryFingerprint = fixed.registryFingerprint;
+      reviewed.assets[0]!.routeReviews[0]!.coverageClass = coverageClass;
+      const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!;
+      const route = asset.exitRoutes[0]!;
+      expect(asset.exitStatus).toMatchObject({ observationState: "known", gapIds: [] });
+      expect(route).toMatchObject({
+        scoreEligible: true,
+        coverageClass,
+        status: { observationState: "known", gapIds: [] },
+      });
+      const result = evaluateV9Exit({
+        circulatingUsd: asset.supply.circulatingUsd,
+        gaps: asset.gaps,
+        portfolioFactStatus: asset.exitStatus,
+        routes: [projectV9ExitEvaluationRoute(route)],
+      }, V9_CANDIDATE_POLICY_V1);
+      if (coverageClass === "exact-lower-bound") {
+        expect(result.routes[0]).toMatchObject({
+          included: false,
+          score: null,
+          exclusionReason: "missing-same-notional-route",
+        });
+        expect(result.reasons).toContain("missing-same-notional-route");
+        expect(result.reasons).not.toContain("no-viable-exit-path");
+      } else {
+        expect(result.routes[0]).toMatchObject({ included: true, score: 0 });
+        expect(result.reasons).toContain("no-viable-exit-path");
+      }
+    },
+  );
+
   it("joins route display names and supply IDs into one canonical chain common mode", () => {
     const original = exactFixedInput();
     const template = original.chainCirculatingById.alpha!.ethereum!;
@@ -691,6 +736,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
   it.each([
     "deploymentCensusUnsupportedMethod",
     "deploymentCensusProviderOutage",
+    "deploymentCensusNonExhaustiveProvider",
     "nonExecutableEvidence:defillama-pool-shaped",
     "executionCapabilityGate:curve-stableswap:rate-bearing-inputs",
     "executionCapabilityGate:measured-execution:target-unresolved",

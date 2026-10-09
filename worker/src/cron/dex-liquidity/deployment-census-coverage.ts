@@ -334,7 +334,14 @@ export function classifyDexPlaceholderCoverage(params: {
           break;
         case "provider-outage":
           providerInaccessibleCount++;
-          increment(reasonCounts, "deploymentCensusProviderOutage");
+          // A successful supplemental empty response is a reader-scope limit,
+          // not evidence that the provider failed. It still cannot prove absence.
+          increment(
+            reasonCounts,
+            censusState.attemptResult === "provider_non_exhaustive"
+              ? "deploymentCensusNonExhaustiveProvider"
+              : "deploymentCensusProviderOutage",
+          );
           break;
         case "invalid":
           invalidOutcomeCount++;
@@ -375,7 +382,8 @@ export function classifyDexPlaceholderCoverage(params: {
   } else if (
     params.censusAvailable === false ||
     missingOutcomeCount > 0 ||
-    staleOutcomeCount > 0
+    staleOutcomeCount > 0 ||
+    reasonCounts.deploymentCensusNonExhaustiveProvider
   ) {
     state = "discovery-deferral";
   } else if (expectedKeys.size === 0) {
