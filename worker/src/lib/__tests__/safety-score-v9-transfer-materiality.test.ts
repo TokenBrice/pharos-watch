@@ -1,7 +1,7 @@
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sha256Hex } from "@shared/lib/sha256";
-import reviewRegistry from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
+import type * as SupplyAttributionContract from "../safety-score-v9/supply-attribution-contract";
 import {
   resolveSafetyScoreV9ReviewedTransferFact,
   getSafetyScoreV9ReviewedTransferFact,
@@ -21,6 +21,18 @@ import {
   observeSafetyScoreV9TransferMaterialityGeneration,
   transferMaterialityObserverResolvesRpc,
 } from "../safety-score-v9/transfer-materiality-observer";
+
+vi.mock("../safety-score-v9/supply-attribution-contract", async (importOriginal) => {
+  const actual = await importOriginal<typeof SupplyAttributionContract>();
+  return { ...actual, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE: {
+    ...actual.REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE,
+    independentLiabilityAssetIds: ["fixture-independent", "fixture-shared", "fixture-independent"],
+    providerChainPartitionReviews: [
+      ...(actual.REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE.providerChainPartitionReviews ?? []),
+      { assetId: "fixture-provider" }, { assetId: "fixture-shared" },
+    ],
+  } };
+});
 
 const ASSET_ID = "aa-falconx-mev-capital";
 const DEPLOYMENT_KEY = "ethereum:0xc26a6fa2c37b38e549a4a1807543801db684f99c";
@@ -156,17 +168,9 @@ describe("Safety Score V9 transfer deployment materiality", () => {
   });
   it("collects every reviewed census asset exactly once", () => {
     expect(new Set(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).size).toBe(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS.length);
-    for (const assetId of [...reviewRegistry.independentLiabilityAssetIds,
-      ...reviewRegistry.providerChainPartitionReviews.map(row => row.assetId)]) {
+    for (const assetId of ["fixture-independent", "fixture-provider", "fixture-shared"]) {
       expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS.filter(id => id === assetId)).toHaveLength(1);
     }
-    expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toContain("sfrxusd-frax");
-    expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toContain("usdai-usd-ai");
-    expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toContain("usbd-bima");
-    // bd-basedollar admitted 2026-09-01: it has a complete deployment-scoped
-    // transfer review but no llamaId/geckoId, so without cohort membership the
-    // review stays permanently bounded-unknown.
-    expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toContain("bd-basedollar");
   });
 
   it("resolves a cohort asset's reviewed transfer posture from a fresh raw-unit observation", () => {

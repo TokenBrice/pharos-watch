@@ -13,6 +13,7 @@ import {
   createV9FactGapV3,
   evaluateV9FactSet,
   knownStatus,
+  mechanismFact,
   minimalAsset,
   projectV9ExitEvaluationRoute,
   requiredV9Applicability,
@@ -23,6 +24,7 @@ import type { V9AssetFactsV2, V9AssetFactsV3 } from "./safety-score-v9-facts.fix
 import { bridgeControl, bridgeSupplyRow, commonDomainFixture, staleBridgeStatus, unresolvedArchetype } from "./safety-score-v9-facts.test-support";
 import { resolveV9EvidenceCause } from "../safety-score-v9/evidence";
 import { CompiledV9FactSetV3Schema } from "../../types/safety-score-v9-facts";
+import { buildV9EvidenceGapQueue } from "../safety-score-v9/evidence-gap-queue";
 
 function mutableNativeFactSet() {
   // Schema parsing creates an authoring DTO; structuredClone preserves compiled aliasing.
@@ -69,6 +71,50 @@ function certifyGap(asset: V9AssetFactsV3, gap: V9AssetFactsV3["gaps"][number], 
   }, AS_OF_SEC));
 }
 describe("Safety Score v9 fact evaluation", () => {
+  it.each(["protocol-position", "shared-reserve", "ucits-trs-fund"] as const)(
+    "admits %s oracle tier gaps without relaxing path binding", (archetype) => {
+    const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
+    const asset = core.assets.find((row) => row.assetId === "alpha")!;
+    asset.archetype = archetype;
+    const review = archetype === "ucits-trs-fund"
+      ? { archetype, fundClaimAndSegregation: mechanismFact(), navAndReconciliation: mechanismFact(),
+        portfolioHedge: mechanismFact(), counterpartyAndCollateral: mechanismFact(),
+        custodyContinuity: mechanismFact(), defaultRecovery: mechanismFact() }
+      : archetype === "shared-reserve"
+        ? { archetype, holderClaim: mechanismFact(), liabilityConservation: mechanismFact(),
+          reserveCustody: mechanismFact(), encumbranceAndAllocation: mechanismFact(), defaultRecovery: mechanismFact() }
+        : { archetype, holderClaim: mechanismFact(), liabilityConservation: mechanismFact(),
+          positionCustody: mechanismFact(), encumbranceAndAllocation: mechanismFact(), defaultRecovery: mechanismFact() };
+    asset.mechanismRiskReview = {
+      status: knownStatus("evidence:base", "backing.mechanism.review"), review,
+    };
+    const gap = createV9FactGapV3({
+      gapId: "alpha:gap:economic-control:oracle::tier",
+      reasonCode: "missing-oracle-profile", ownerDomain: "control",
+      policyRuleId: "v9.control.tier", observationState: "bounded-unknown",
+      path: { kind: "local-component", componentKey: "economic-control:oracle" },
+      causeScope: { pillar: "control", componentKey: "economic-control:oracle",
+        factorKey: "tier", routeKey: null, exposureId: null, requiredDatum: "tier" },
+      message: `The ${archetype} oracle tier requires review.`, responsibility: "unresearched",
+    });
+    asset.gaps.push(gap);
+    asset.economicControlReview.oracle.factorStatuses = { tier: createV9FactStatus({
+      applicability: requiredV9Applicability("v9.control.tier"), observationState: "bounded-unknown",
+      gapIds: [gap.gapId], evidenceRefIds: ["evidence:base"],
+    }) };
+    const entry = buildV9EvidenceGapQueue({
+      factSet: compileV9FactSetV3(core), policy: V9_CANDIDATE_POLICY_V1,
+    }).entries.find((row) => row.gapId === gap.gapId)!;
+    expect(entry.policyBindingIssues).toEqual([]);
+    expect(entry).toMatchObject({ action: "collect-evidence", cause: "U", treatment: "pillar" });
+
+    gap.path = { kind: "methodology", componentKey: "economic-control:oracle" };
+    const invalidPathEntry = buildV9EvidenceGapQueue({
+      factSet: compileV9FactSetV3(core), policy: V9_CANDIDATE_POLICY_V1,
+    }).entries.find((row) => row.gapId === gap.gapId)!;
+    expect(invalidPathEntry.policyBindingIssues).toEqual(["path-kind-not-permitted"]);
+    expect(invalidPathEntry.action).toBe("reconcile-policy-binding");
+  });
   it.each(["A", "C", "U"] as const)("classifies nonbinding inventory evidence independently of its numeric score (%s)", (cause) => {
     const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
     const asset = core.assets.find((row) => row.assetId === "alpha")!;
@@ -269,6 +315,51 @@ describe("Safety Score v9 fact evaluation", () => {
     expect(child.trace.ratingStatus).not.toBe("pipeline-gap");
     expect(child.trace.partialEvidence).toBeNull();
     expect(child.trace.nrReasons.every((reason) => reason.code !== "missing-parent-score")).toBe(true);
+  });
+  it.each(["C", "U"] as const)("links opaque oracle topology to its scoped tier gap (%s)", (cause) => {
+    const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
+    const asset = core.assets.find((row) => row.assetId === "alpha")!;
+    const gap = createV9FactGapV3({
+      gapId: "alpha:gap:economic-control:oracle::tier",
+      reasonCode: "missing-oracle-profile", ownerDomain: "control",
+      policyRuleId: "control.oracle.tier", observationState: "bounded-unknown",
+      path: { kind: "local-component", componentKey: "economic-control:oracle" },
+      message: "The reviewed inventory does not establish oracle tier.",
+      responsibility: "unresearched", evidenceRefIds: ["evidence:base"],
+    });
+    if (cause === "C") certifyGap(asset, gap, cause);
+    asset.gaps.push(gap);
+    asset.economicControlReview.oracle = {
+      status: knownStatus("evidence:base", "control.oracle.review"),
+      tier: "opaque-or-unknown", liquidationBranchesApplicable: false, branches: [],
+      factorStatuses: { tier: createV9FactStatus({
+        applicability: requiredV9Applicability("control.oracle.tier"), observationState: "bounded-unknown",
+        gapIds: [gap.gapId], evidenceRefIds: gap.evidenceRefIds,
+      }) },
+    };
+    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1)
+      .assets.find((row) => row.assetId === asset.assetId)!;
+    const oracleScore = V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality["opaque-or-unknown"];
+    expect(evaluated.control.components.find((component) => component.kind === "oracle")).toMatchObject({
+      score: oracleScore, cause, causeGapIds: [gap.gapId],
+    });
+    expect(evaluated.scoreInput.pillars.control.reasons).toContainEqual(expect.objectContaining({
+      code: "oracle-topology-undisclosed", cause, causeGapIds: [gap.gapId],
+      responsibility: cause === "C" ? "issuer-undisclosed" : "unresearched",
+    }));
+    expect(evaluated.trace.boundedUncertaintyAttribution).toContainEqual(expect.objectContaining({
+      code: "oracle-topology-undisclosed", cause, causeGapIds: [gap.gapId],
+    }));
+    expect(evaluated.trace.nrReasons.some((reason) => reason.field === "boundedUncertaintyAttribution")).toBe(false);
+
+    // Existing matching-code witnesses keep the same score and attribution.
+    gap.reasonCode = "oracle-topology-undisclosed";
+    const alreadyLinked = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1)
+      .assets.find((row) => row.assetId === asset.assetId)!;
+    expect(alreadyLinked.control.score).toBe(evaluated.control.score);
+    expect(alreadyLinked.trace.finalScore).toBe(evaluated.trace.finalScore);
+    expect(alreadyLinked.trace.finalGrade).toBe(evaluated.trace.finalGrade);
+    expect(alreadyLinked.trace.boundedUncertaintyAttribution).toEqual(evaluated.trace.boundedUncertaintyAttribution);
   });
   it("attributes a derived oracle reason to the exact reviewed disclosure gap", () => {
     const native = mutableNativeFactSet();

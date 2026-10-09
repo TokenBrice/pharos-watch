@@ -30,6 +30,8 @@ export interface EvmRpcOptions {
   extraRpcUrls?: string[];
   signal?: AbortSignal;
   timeoutMs?: number;
+  /** Optional streamed response-body ceiling; omitted callers retain the fetch helper's default. */
+  maxResponseBytes?: number;
   /** Absolute wall-clock deadline. Each retry/fallback caps its timeout to the remaining time. */
   deadlineMs?: number;
   /** Invoked immediately before each RPC URL attempt with the URL about to be requested. False prevents the request. */
@@ -403,7 +405,7 @@ async function fetchJsonRpcResult<T>(
           }),
         },
         maxRetries,
-        { timeoutMs, retryMode: "network-only" },
+        { timeoutMs, retryMode: "network-only", ...(options?.maxResponseBytes === undefined ? {} : { maxResponseBytes: options.maxResponseBytes }) },
       );
 
       if (result == null || !result.response.ok) {
@@ -551,7 +553,7 @@ async function runEvmRpcBatch<Value>(
             body: JSON.stringify(payload),
           },
           maxRetries,
-          { timeoutMs: Math.min(configuredTimeoutMs, remainingMs), retryMode: "network-only" },
+          { timeoutMs: Math.min(configuredTimeoutMs, remainingMs), retryMode: "network-only", ...(options?.maxResponseBytes === undefined ? {} : { maxResponseBytes: options.maxResponseBytes }) },
         );
         if (result == null) {
           demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);

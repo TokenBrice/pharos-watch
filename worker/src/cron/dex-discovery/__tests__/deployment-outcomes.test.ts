@@ -8,6 +8,8 @@ import {
 import type { StagedPool } from "../types";
 import { stagedPool } from "./discovery.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
+import { makeMeasuredProfile } from "@shared/test-utils/measured-execution.test-support";
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
@@ -313,6 +315,42 @@ describe("DEX deployment outcomes", () => {
       nowSec: 100,
     });
     expect(evm[0]).toMatchObject({ outcome: "observed_pools", observedPoolCount: 1 });
+  });
+
+  it("leaves previously admitted exact routes unchanged when completed census rows are persisted", async () => {
+    const { sqlite, db } = fixtures.open();
+    const observedAt = 1_752_560_000;
+    const profile = makeMeasuredProfile(observedAt - 60);
+    const admitted = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle", observedAt,
+      retainedPools: [{
+        poolId: profile.poolId, project: profile.protocol, chain: profile.chain,
+        tvlUsd: profile.retainedTvlUsdAtQuote, symbol: "USDC-USDT", poolType: "uniswap-v3", source: "dl",
+        extra: { measuredExecution: profile, measuredExecutionPhysicalPoolId: profile.poolId },
+      }],
+    });
+    expect(admitted.observations).toHaveLength(1);
+    expect(admitted.observations[0]?.scoreEligible).toBe(true);
+    const scoreDetails = JSON.stringify({
+      exitRouteObservations: admitted.observations, exitRouteObservationCoverage: admitted.coverage,
+    });
+    sqlite.prepare(`INSERT INTO dex_liquidity
+      (stablecoin_id, symbol, updated_at, score_components_json)
+      VALUES (?, ?, ?, ?)`).run("usdc-circle", "USDC", observedAt, scoreDetails);
+
+    await upsertDexDeploymentOutcomes(db, [{
+      ...outcomeWrite(DEPLOYMENT), stablecoinId: "usdc-circle",
+      outcome: "provider_inaccessible", observedPoolCount: 0,
+      reason: "Provider census is not exhaustive for this chain", observedAt,
+    }]);
+    await upsertDexDeploymentOutcomes(db, [{
+      ...outcomeWrite(DEPLOYMENT), stablecoinId: "usdc-circle", observedAt: observedAt + 1,
+    }]);
+
+    expect(sqlite.prepare(`SELECT updated_at, score_components_json FROM dex_liquidity
+      WHERE stablecoin_id = 'usdc-circle'`).get()).toEqual({
+      updated_at: observedAt, score_components_json: scoreDetails,
+    });
   });
 
   it("persists canonical identities while removing only the same-coin lowercase legacy twin", async () => {

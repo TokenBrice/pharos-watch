@@ -119,6 +119,35 @@ describe("buildRedemptionBackstopEntry", () => {
     nowSec: now,
     options: { exitExecutionReviews: [], ...options },
   });
+  it("shares captured FX between local-fee scenarios and issuer output admission", async () => {
+    const config = route({ routeFamily: "offchain-issuer", reviewedAt: "2023-11-01",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound", basis: "issuer-term-redemption" },
+      costModel: { kind: "fee-bps", feeBps: 0, feeComponents: [{ currency: "CHF", terms: { flatAmount: 30 } }] } });
+    const stablecoinsCache = { kind: "ok" as const, updatedAt: now - 60, payload: {
+      peggedAssets: [makeAsset({ id: "vchf-vnx", symbol: "VCHF", pegType: "peggedCHF",
+        price: 1.25, priceSource: "coingecko", priceObservedAt: now - 60 })],
+      fxFallbackRates: { peggedCHF: 1.25 },
+    } };
+    const admitted = await buildEntry("vchf-vnx", config, 1_000_000, null, { stablecoinsCache });
+    expect(admitted.feeBps).toBeNull();
+    expect(admitted.costScenarioScores).toEqual({ retail: 40, activeUser: 80, institutional: 100 });
+    expect(admitted.capacityProfile?.exitRouteObservations?.[0]).toMatchObject({
+      output: { kind: "fiat", currency: "CHF" }, scoreEligible: true,
+    });
+    const observation = admitted.capacityProfile!.exitRouteObservations![0]!;
+    expect(observation.feeEvidence).toBeUndefined();
+    expect(observation.capacityCurve?.some((point) => point.executionCostBps !== undefined)).toBe(true);
+    const missing = await buildEntry("vchf-vnx", config, 1_000_000, null);
+    expect(missing.costScenarioScores).toBeUndefined();
+    expect(missing.capacityProfile?.exitRouteObservations?.[0]).toMatchObject({
+      feeEvidence: "disclosed-unquantified", scoreEligible: false,
+    });
+    const stale = await buildEntry("vchf-vnx", config, 1_000_000, null, {
+      stablecoinsCache: { ...stablecoinsCache, updatedAt: now - STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC - 1 },
+    });
+    expect(stale.costScenarioScores).toBeUndefined();
+  });
+
   it("binds only selected live capacity or fee evidence, not unused static telemetry", async () => {
     const stablecoinId = "lusd-liquity";
     const reserveInput = { generationId: "reserve:1700000000:test", contentSha256: "a".repeat(64), stablecoinId, attemptId: "success",

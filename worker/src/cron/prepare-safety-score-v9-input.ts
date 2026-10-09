@@ -25,6 +25,7 @@ import {
 import {
   buildSafetyScoreV9CaptureControl, commitCaptureControl, v9WorkerProvenance, type V9WorkerProvenance,
 } from "../lib/safety-score-v9/capture-control";
+import { DEFAULT_CRON_TIMEOUT_MS, type SlotDeadline } from "../lib/cron-timeouts";
 
 export const V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS = 3 * 60_000;
 const V9_INPUT_STABLECOINS_SETTLE_POLL_MS = 2_500;
@@ -145,8 +146,11 @@ export async function prepareSafetyScoreV9Input(
   expectedDexGenerationId?: string,
   chainRpcs: Map<string, ChainRpcConfig> = new Map(),
   workerMetadata?: V9WorkerProvenance,
+  slotDeadline?: SlotDeadline,
 ): Promise<CronResult> {
   throwIfAborted(signal);
+  const preparationDeadlineMs = Math.min(Date.now() + DEFAULT_CRON_TIMEOUT_MS,
+    slotDeadline?.platformDeadlineMs ?? Infinity);
 
   const stablecoinsReadiness = await waitForStablecoinsCacheReadiness(db, signal);
   if (stablecoinsReadiness.status === "pending") {
@@ -231,6 +235,7 @@ export async function prepareSafetyScoreV9Input(
         scoringClockSec: input.clockSec,
         chainRpcs,
         signal,
+        deadlineMs: preparationDeadlineMs,
       });
     const transferMaterialityObservations = Object.values(
       transferMaterialityGeneration.observationsByAssetId,

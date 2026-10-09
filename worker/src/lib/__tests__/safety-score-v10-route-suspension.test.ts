@@ -123,7 +123,8 @@ describe("reviewed exact-channel suspension", () => {
   it("does not admit future reviews or apply the notice to another route", () => {
     const config = { ...getRedemptionBackstopConfig(ID)!, routeStatus: "suspended" as const, routeSuspension: suspension };
     expect(resolveReviewedRouteSuspension(config, suspension.routeId, Date.UTC(2026, 5, 30) / 1_000)).toBeUndefined();
-    const reviewClock = Date.UTC(2026, 6, 1) / 1_000;
+    const reviewClock = Date.UTC(2026, 6, 2) / 1_000;
+    expect(resolveReviewedRouteSuspension(config, suspension.routeId, reviewClock - 86_400)).toBeUndefined();
     expect(resolveReviewedRouteSuspension(config, suspension.routeId, reviewClock - 1)).toBeUndefined();
     expect(resolveReviewedRouteSuspension(config, suspension.routeId, reviewClock)).toBe(suspension);
     expect(resolveReviewedRouteSuspension(config, suspension.routeId, reviewClock + 1)).toBe(suspension);

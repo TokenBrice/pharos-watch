@@ -14,7 +14,8 @@ import { isRedemptionSettlementFaster, resolveReviewedRedemptionSettlementDelay 
 import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-route-suspension";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
-import type { ExitRouteObservation } from "@shared/types/exit-route";
+import { resolveRedemptionFiatReference, REDEMPTION_FIAT_REFERENCE_MAX_AGE_SEC } from "@shared/lib/redemption-fiat-reference";
+import type { ExitRouteObservation, ExitRouteOutput } from "@shared/types/exit-route";
 import { exitRawUsd, exitUsdBoundary } from "@shared/lib/safety-score-v9/exit-execution-units";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
 import {
@@ -22,6 +23,7 @@ import {
   isDexMeasuredExecutionObservationHistoryMature,
 } from "@shared/types/measured-execution";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import { allocationReviewClockSec as reviewAdmissionClockSec } from "@shared/types/safety-score-v9-allocation";
 import {
   deriveSupplyModelExitRouteObservation,
   buildPhysicalToUsdExitObservation,
@@ -254,7 +256,13 @@ function buildOutputReview(
   sourceGenerationId: string,
   assetId: string,
 ): RouteOutputReview | null {
-  const output = observation.output;
+  const explicitFiatKey = observation.output.kind === "unresolved-asset" &&
+    observation.output.assetKeys?.length === 1 ? observation.output.assetKeys[0] : undefined;
+  const output: ExitRouteOutput = explicitFiatKey && /^fiat:[A-Z]{3}$/.test(explicitFiatKey) &&
+    explicitFiatKey !== "fiat:USD" &&
+    (observation.routeFamily === "issuer-redemption" ||
+      (observation.routeFamily === "eventual-redemption" && observation.scope.kind === "issuer"))
+    ? { kind: "fiat", currency: explicitFiatKey.slice(5) } : observation.output;
   if (observation.executionCertificate) {
     const certificate = observation.executionCertificate;
     const point = certificate.points.find((entry) => entry.requestedNotionalUsd === observation.requestedNotionalUsd &&
@@ -303,8 +311,9 @@ function buildOutputReview(
     const peg = fixedInput.pegDataById[assetId];
     const reference = peg?.pegReference;
     const expectedCurrency = terms?.commodity === "XAU" ? "GOLD" : "SILVER";
-    const reviewedAtSec = config?.reviewedAt ? Date.parse(`${config.reviewedAt}T00:00:00Z`) / 1000 : NaN;
-    if (!Number.isFinite(reviewedAtSec) || reviewedAtSec > fixedInput.clockSec ||
+    const reviewedAtSec = config?.reviewedAt ? Date.parse(config.reviewedAt) / 1000 : NaN;
+    const reviewAdmissionSec = config?.reviewedAt ? reviewAdmissionClockSec(config.reviewedAt) : NaN;
+    if (!Number.isFinite(reviewedAtSec) || reviewAdmissionSec > fixedInput.clockSec ||
         fixedInput.clockSec - reviewedAtSec > V9_REVIEW_EVIDENCE_MAX_AGE_SEC || !config?.docs?.length) return null;
     if (!terms || output.sameNotionalEligible !== false || peg?.pegCurrency !== expectedCurrency ||
         !reference?.usdPerTroyOunce || reference.asOf > fixedInput.clockSec ||
@@ -395,16 +404,42 @@ function buildOutputReview(
   } as const;
   let valuation: RouteValuation | null = null;
   if (output.kind === "fiat") {
-    valuation = {
-      basis: "reviewed-par",
-      referenceAssetKey: assetKeys[0]!,
-      unitValueUsd: 1,
-      expectedUnitValueUsd: 1,
-      sourceId: "safety-score-v9-extension-fiat-par",
-      observedAtSec,
-      confidence: "high",
-      ...shared,
-    };
+    const currency = output.currency ?? assetKeys[0]?.slice(5);
+    if (currency !== "USD") {
+      const carriesPinnedFiatFx = observation.outputUnitValueSourceId === `captured-fiat-fx-reference:${currency}`;
+      const pinnedAt = observation.outputUnitValueObservedAt;
+      const pinnedValue = observation.outputUnitValueUsd;
+      if (carriesPinnedFiatFx && (pinnedAt === undefined || !Number.isSafeInteger(pinnedAt) || pinnedAt <= 0 ||
+          pinnedAt > fixedInput.clockSec || fixedInput.clockSec - pinnedAt > REDEMPTION_FIAT_REFERENCE_MAX_AGE_SEC ||
+          pinnedValue === undefined || !Number.isFinite(pinnedValue) || pinnedValue <= 0 ||
+          pinnedValue !== observation.outputExpectedUnitValueUsd)) return null;
+      const reference = carriesPinnedFiatFx
+        ? { valueUsd: pinnedValue!, asOf: pinnedAt! }
+        : currency ? resolveRedemptionFiatReference(currency, fixedInput) : null;
+      if (!reference) return null;
+      valuation = {
+        basis: "price",
+        referenceAssetKey: assetKeys[0]!,
+        unitValueUsd: reference.valueUsd,
+        expectedUnitValueUsd: reference.valueUsd,
+        sourceId: "captured-fiat-fx-reference",
+        observedAtSec: reference.asOf,
+        confidence: "high",
+        ...shared,
+        maxAgeSec: REDEMPTION_FIAT_REFERENCE_MAX_AGE_SEC,
+      };
+    } else {
+      valuation = {
+        basis: "reviewed-par",
+        referenceAssetKey: assetKeys[0]!,
+        unitValueUsd: 1,
+        expectedUnitValueUsd: 1,
+        sourceId: "safety-score-v9-extension-fiat-par",
+        observedAtSec,
+        confidence: "high",
+        ...shared,
+      };
+    }
   } else if (output.kind === "tracked-stablecoin" && assetKeys.length === 1) {
     const capturedValuation = trackedStablecoinValuation(fixedInput, assetKeys[0]!, observedAtSec);
     const carriesPinnedDexValuation =
@@ -673,7 +708,7 @@ function redemptionCoverageClass(
 ): RouteReview["coverageClass"] {
   const config = getRedemptionBackstopConfig(entry.stablecoinId);
   const reviewed = config?.v9RouteReviewTerms;
-  const reviewSec = reviewed?.reviewedAt ? Date.parse(`${reviewed.reviewedAt}T00:00:00Z`) / 1_000 : NaN;
+  const reviewSec = reviewed?.reviewedAt ? reviewAdmissionClockSec(reviewed.reviewedAt) : NaN;
   // Primary terms bind every redemption-lane ID unless separately reviewed.
   if (reviewed?.scoringDisposition === "bounded-terms-gap" &&
     usesPrimaryRedemptionReviewTerms(entry.stablecoinId, observation) &&
@@ -726,13 +761,14 @@ function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number,
     (reviewedSettlementDelaySec !== undefined &&
       reviewedSettlementDelaySec < capturedSettlementHorizonSec);
   const reviewedAtSec = reviewed?.reviewedAt
-    ? Date.parse(`${reviewed.reviewedAt}T00:00:00.000Z`) / 1_000
+    ? Date.parse(reviewed.reviewedAt) / 1_000
     : Number.NaN;
+  const reviewAdmissionSec = reviewed?.reviewedAt ? reviewAdmissionClockSec(reviewed.reviewedAt) : NaN;
   const reviewedSettlementEvidenceIsCurrent =
     reviewedSettlementDelaySec !== undefined &&
     (reviewed?.docs?.length ?? 0) > 0 &&
     Number.isFinite(reviewedAtSec) &&
-    reviewedAtSec <= clockSec &&
+    reviewAdmissionSec <= clockSec &&
     clockSec - reviewedAtSec <= V9_REVIEW_EVIDENCE_MAX_AGE_SEC;
   // Score-improving settlement research shares V9's existing reviewed-evidence
   // expiry window. Conservative overlays remain admissible without evidence.
@@ -806,6 +842,7 @@ function redemptionSettlement(
 function redemptionExecutionCosts(
   entry: RedemptionBackstopEntry,
   observation: ExitRouteObservation,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
 ): RouteReview["executionCosts"] {
   const config = getRedemptionBackstopConfig(entry.stablecoinId);
   if (hasUnquantifiedDocumentedRedemptionCost(config, observation)) {
@@ -826,6 +863,7 @@ function redemptionExecutionCosts(
             config,
             point.requestedNotionalUsd,
             entry.feeBps,
+            fixedInput,
           )
         : entry.feeBps !== null && Number.isFinite(entry.feeBps)
           ? entry.feeBps
@@ -843,6 +881,7 @@ function hasUnquantifiedDocumentedRedemptionCost(
   return observation.evidenceKind === "documented-terms" &&
     config?.costModel.kind === "dynamic-or-unclear" &&
     config.costModel.feeBpsMax == null &&
+    config.costModel.feeComponents === undefined &&
     config.v9RouteCostTerms === undefined;
 }
 
@@ -855,12 +894,12 @@ function buildRedemptionRouteReview(
   const routeSuspension = resolveReviewedRouteSuspension(staticConfig, observation.routeId, fixedInput.clockSec);
   if (observation.executionCertificate && !routeSuspension) return buildCertifiedRouteReview(fixedInput, entry.stablecoinId, observation);
   const unresolvedOutputDispositionReviewedAtSec = staticConfig?.reviewedAt
-    ? Date.parse(`${staticConfig.reviewedAt}T00:00:00.000Z`) / 1_000
+    ? reviewAdmissionClockSec(staticConfig.reviewedAt)
     : Number.NaN;
   const unresolvedOutputDispositionAdmitted =
     staticConfig?.unresolvedOutputDisposition !== undefined &&
     Number.isFinite(unresolvedOutputDispositionReviewedAtSec) &&
-    unresolvedOutputDispositionReviewedAtSec + 86_400 <= fixedInput.clockSec;
+    unresolvedOutputDispositionReviewedAtSec <= fixedInput.clockSec;
   const unresolvedOutputResponsibility =
     !unresolvedOutputDispositionAdmitted
       ? null
@@ -894,8 +933,13 @@ function buildRedemptionRouteReview(
     ...(routeSuspension ? { routeSuspension } : {}),
     // Old captures mislabeled published formulas as issuer non-disclosure.
     // Correct provenance only: no formula evaluation or <=200 bps claim.
-    ...(hasUnquantifiedDocumentedRedemptionCost(staticConfig, observation)
-      ? { feeEvidence: staticConfig?.costModel.confidence === "formula"
+    ...(hasUnquantifiedDocumentedRedemptionCost(staticConfig, observation) ||
+      ((staticConfig?.v9RouteCostTerms?.feeComponents ?? staticConfig?.costModel.feeComponents) !== undefined &&
+        observation.executionCostBps === undefined &&
+        !observation.capacityCurve?.some((point) => point.executionCostBps !== undefined) &&
+        resolveV9RedemptionRouteCostBpsAtNotional(staticConfig!, observation.requestedNotionalUsd, entry.feeBps, fixedInput) === null)
+      ? { feeEvidence: staticConfig?.costModel.feeComponents !== undefined ||
+          staticConfig?.v9RouteCostTerms?.feeComponents !== undefined || staticConfig?.costModel.confidence === "formula"
           ? "disclosed-unquantified" as const : "undisclosed-reviewed" as const }
       : observation.feeEvidence === "undisclosed-reviewed" &&
     entry.feeConfidence === "formula" &&
@@ -915,7 +959,7 @@ function buildRedemptionRouteReview(
     queueDepthUsd: entry.queueDepthUsd ?? null,
     dailyLimitUsd: entry.dailyLimitUsd ?? null,
     minRedeemUsd: reviewedTerms.minRedeemUsd,
-    executionCosts: redemptionExecutionCosts(entry, observation),
+    executionCosts: redemptionExecutionCosts(entry, observation, fixedInput),
     physicalResourceKeys: routeSuspension ? [] : physicalResourceKeys,
     output: outputReview,
     ...(unresolvedOutputResponsibility === null ? {} : { unresolvedOutputResponsibility }),
@@ -1013,7 +1057,7 @@ export function buildSafetyScoreV9RetainedRedemptionRoutes(
     if (observation) retained.push({ lane: "redemption", observation, disposition: "observed", rejection: null });
   }
   if (redemption && (redemption.capacityProfile?.exitRouteObservations?.length ?? 0) === 0) {
-    const observation = deriveSupplyModelExitRouteObservation(redemption, fixedInput.clockSec);
+    const observation = deriveSupplyModelExitRouteObservation(redemption, fixedInput.clockSec, fixedInput);
     if (observation) retained.push({ lane: "redemption", observation, disposition: "observed", rejection: null });
   }
   return retained;

@@ -282,7 +282,11 @@ describe("syncDexDiscovery", () => {
       return {
         pools: [makeStagedPool("ethereum:0xpool1")],
         unresolvedChains: [],
-        deploymentOutcomes: [],
+        deploymentOutcomes: [{
+          stablecoinId: "coin-a", chain: "ethereum", address: "0xaaa",
+          outcome: "observed_pools", providers: ["coingecko"], reason: "Observed eligible pools",
+          observedPoolCount: 1, observedAt: 1_700_000_000,
+        }],
         checkedDeploymentKeys: [],
       };
     });
@@ -305,6 +309,12 @@ describe("syncDexDiscovery", () => {
       undefined,
     );
     expect(vi.mocked(cleanupStaging)).not.toHaveBeenCalled();
+    expect(upsertDexDeploymentOutcomes).toHaveBeenLastCalledWith(
+      db,
+      [expect.objectContaining({ outcome: "observed_pools", observedAt: 1_700_000_000 })],
+      undefined,
+    );
+    expect(updateDiscoveryMeta).not.toHaveBeenCalled();
 
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata).toMatchObject({
@@ -313,6 +323,8 @@ describe("syncDexDiscovery", () => {
       budgetExhausted: true,
       stagingWritesSkippedForBudget: 0,
       cleanupSkippedForBudget: true,
+      deploymentOutcomesWritten: 1,
+      observedDeploymentOutcomesWritten: 1,
       finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
       runSeq: 1,
       tierBreakdown: {
@@ -327,6 +339,39 @@ describe("syncDexDiscovery", () => {
 
     dateNowSpy.mockRestore();
   });
+
+  it.each(["verified_no_pools", "provider_inaccessible"] as const)(
+    "preserves completed %s census evidence without advancing the exhausted crawl",
+    async (outcome) => {
+      let nowMs = 1_700_000_000_000;
+      const clock = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+      const row = {
+        stablecoinId: "coin-a", chain: "ethereum", address: "0xaaa",
+        outcome, providers: ["coingecko"], observedPoolCount: 0, observedAt: 1_700_000_000,
+        reason: outcome === "verified_no_pools"
+          ? "A provider completed the direct-token query with no eligible pool"
+          : "Provider census is not exhaustive for this chain",
+      };
+      vi.mocked(crawlCoin).mockImplementation(async () => {
+        nowMs += DEX_DISCOVERY_RUN_BUDGET_MS + 1_000;
+        return { pools: [], unresolvedChains: [], deploymentOutcomes: [row], checkedDeploymentKeys: [] };
+      });
+
+      const result = await syncDexDiscovery(db, null);
+
+      expect(result.status).toBe("degraded");
+      expect(upsertDexDeploymentOutcomes).toHaveBeenLastCalledWith(db, [row], undefined);
+      expect(updateDiscoveryMeta).not.toHaveBeenCalled();
+      expect(cleanupStaging).not.toHaveBeenCalled();
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        coinsCrawled: 0, budgetExhausted: true, cleanupSkippedForBudget: true,
+        deploymentOutcomesWritten: 1,
+        observedDeploymentOutcomesWritten: outcome === "verified_no_pools" ? 1 : 0,
+        outputPublishedAt: outcome === "verified_no_pools" ? 1_700_000_000 : null,
+      });
+      clock.mockRestore();
+    },
+  );
 
   it("reports budget exhaustion as findings after a completed crawl publishes and advances discovery meta", async () => {
     let nowMs = 1_700_000_000_000;

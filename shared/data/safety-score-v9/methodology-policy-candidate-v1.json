@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.12",
+  "releaseVersion": "10.14",
   "semantic": {
     "accessLookthrough": {
       "edgeKinds": ["reserve-position", "receipt", "bridge-representation"],
@@ -1837,7 +1837,10 @@
       "archetypes": [
         "cdp",
         "synthetic-delta-neutral",
-        "algorithmic"
+        "algorithmic",
+        "ucits-trs-fund",
+        "shared-reserve",
+        "protocol-position"
       ],
       "pathKinds": [
         "local-component"

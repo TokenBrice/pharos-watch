@@ -1514,32 +1514,60 @@ function addWrapperAllocationEvidence(
   });
 }
 
-function buildAllocationScopeIdentityReview(meta: V9ExtensionRegistryMeta): V9AllocationScopeIdentityReview {
+function buildAllocationScopeIdentityReview(meta: V9ExtensionRegistryMeta, clockSec: number): V9AllocationScopeIdentityReview {
   const deployments: V9AllocationScopeIdentityReview["deployments"] = [];
   const registeredDeploymentKeys = (meta.contracts ?? []).flatMap((contract) => {
     const chain = resolveChainId(contract.chain);
     return chain === null ? [] : [canonicalExitRouteScopedKey(chain, contract.address)];
   }).sort(compareText);
   const upgrade = meta.mintAuthority?.upgradeability;
-  if (!upgrade?.observedAt || upgrade.observedBlock === undefined || upgrade.sources.length === 0) return { assetId: meta.id, registeredDeploymentKeys, deployments };
-  const observedAtSec = allocationReviewClockSec(upgrade.observedAt);
-  const sourceUrl = upgrade.sources[0]!.url;
+  if (upgrade?.observedAt && upgrade.observedBlock !== undefined && upgrade.sources.length > 0) {
+    const observedAtSec = allocationReviewClockSec(upgrade.observedAt);
+    const sourceUrl = upgrade.sources[0]!.url;
+    for (const contract of meta.contracts ?? []) {
+      const chain = resolveChainId(contract.chain);
+      if (chain === null) continue;
+      const address = canonicalExitRouteScopedId(chain, contract.address);
+      const deploymentKey = `${chain}:${address}`;
+      // Unscoped addresses never identify a deployment across multiple chains.
+      const scoped = upgrade.deploymentRefs?.some((ref) => normalizeDeploymentId(ref) === deploymentKey) ||
+        (meta.contracts?.length === 1);
+      if (!scoped) continue;
+      if (upgrade.model === "immutable") {
+        deployments.push({ codeKind: "immutable", chain, address, observedAtSec, block: upgrade.observedBlock, sourceUrl });
+      } else if (upgrade.proxyAddresses?.some((proxy) => canonicalExitRouteScopedId(chain, proxy) === address) &&
+        upgrade.implementationAddresses?.length === 1) {
+        deployments.push({ codeKind: "proxy", chain, address, implementation: canonicalExitRouteScopedId(chain, upgrade.implementationAddresses[0]!),
+          observedAtSec, block: upgrade.observedBlock, sourceUrl });
+      }
+    }
+  }
+  const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
   for (const contract of meta.contracts ?? []) {
     const chain = resolveChainId(contract.chain);
     if (chain === null) continue;
     const address = canonicalExitRouteScopedId(chain, contract.address);
     const deploymentKey = `${chain}:${address}`;
-    // Unscoped addresses never identify a deployment across multiple chains.
-    const scoped = upgrade.deploymentRefs?.some((ref) => normalizeDeploymentId(ref) === deploymentKey) ||
-      (meta.contracts?.length === 1);
-    if (!scoped) continue;
-    if (upgrade.model === "immutable") {
-      deployments.push({ codeKind: "immutable", chain, address, observedAtSec, block: upgrade.observedBlock, sourceUrl });
-    } else if (upgrade.proxyAddresses?.some((proxy) => canonicalExitRouteScopedId(chain, proxy) === address) &&
-      upgrade.implementationAddresses?.length === 1) {
-      deployments.push({ codeKind: "proxy", chain, address, implementation: canonicalExitRouteScopedId(chain, upgrade.implementationAddresses[0]!),
-        observedAtSec, block: upgrade.observedBlock, sourceUrl });
-    }
+    // Native observations retain their existing ownership and admission path.
+    if (deployments.some((deployment) => deployment.chain === chain && deployment.address === address)) continue;
+    const routes = (meta.bridgeRouteRisk?.routes ?? []).filter((route) =>
+      route.issuanceModel === "bridge-representation" && route.routeClass !== "native" &&
+      resolveChainId(route.destinationChain) === chain &&
+      canonicalExitRouteScopedId(chain, route.contractAddress) === address);
+    if (routes.length !== 1) continue;
+    const route = routes[0]!;
+    const identity = route.deploymentIdentity;
+    if (route.reviewDisposition !== "reviewed" || !route.observedAt || !identity ||
+      normalizeDeploymentId(route.id) !== deploymentKey || identity.chain !== chain ||
+      canonicalExitRouteScopedId(chain, identity.address) !== address ||
+      route.observedBlock !== identity.block || !route.sources?.some((source) => source.url === identity.sourceUrl)) continue;
+    const routeObservedAtSec = allocationReviewClockSec(route.observedAt);
+    if (routeObservedAtSec > clockSec || clockSec - routeObservedAtSec > maxAgeSec ||
+      identity.observedAtSec > routeObservedAtSec || identity.observedAtSec > clockSec ||
+      clockSec - identity.observedAtSec > maxAgeSec) continue;
+    deployments.push(identity.codeKind === "immutable"
+      ? { ...identity, chain, address }
+      : { ...identity, chain, address, implementation: canonicalExitRouteScopedId(chain, identity.implementation) });
   }
   return { assetId: meta.id, registeredDeploymentKeys, deployments };
 }
@@ -2676,7 +2704,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           operationalResilience,
           wrapperAllocationReview,
           wrapperLocalReviews,
-          allocationScopeIdentityReview: buildAllocationScopeIdentityReview(meta),
+          allocationScopeIdentityReview: buildAllocationScopeIdentityReview(meta, clockSec),
           wrapperCustodyReview:
             (meta.variantKind === "savings-passthrough" ||
               meta.variantKind === "risk-absorption" ||

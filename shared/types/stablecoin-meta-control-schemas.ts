@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema, V9SameChainSystemTransportSchema, V1005ExecutionClassRefSchema, V1005ExecutionCertificatesSchema, V1005AuthorityGraphSchema, V1005VotingControlSchema, V1005OperationalIssuanceSchema, V9ControlQuestionSubjectSchema } from "./safety-score-v9-control-scope";
 import { normalizeDeploymentId } from "./deployment-id";
+import { V9AllocationDeploymentIdentitySchema } from "./safety-score-v9-allocation";
 import {
   BRIDGE_ROUTE_CLASS_VALUES,
   BRIDGE_ROUTE_CONTROL_CAPABILITY_VALUES,
@@ -313,6 +314,7 @@ const BridgeRouteDeploymentSchema = /* @__PURE__ */ (() => z
     observedAt: ReviewDateSchema.optional(),
     observedBlock: z.number().finite().int().nonnegative().optional(),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
+    deploymentIdentity: V9AllocationDeploymentIdentitySchema.optional(),
   })
   .strict()
   .superRefine((route, ctx) => {

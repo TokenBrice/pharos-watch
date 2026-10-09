@@ -573,19 +573,18 @@ export async function syncDexDiscovery(
         const discoveredPoolCount = discoveredPools.length;
 
         try {
-          if (!hasDiscoveryFinalizationWindow(deadlineMs)) {
-            // The provider work already completed, so preserve its staged rows
-            // before reserving the remaining run budget for finalization.
-            stagedRowsChanged += await upsertStagedPools(db, result.pools, signal);
-            budgetExhausted = true;
-            break;
-          }
           stagedRowsChanged += await upsertStagedPools(db, result.pools, signal);
           const outcomesWritten = await upsertDexDeploymentOutcomes(db, result.deploymentOutcomes, signal);
           deploymentOutcomesWritten += outcomesWritten;
           if (result.deploymentOutcomes.some((outcome) =>
             outcome.outcome === "observed_pools" || outcome.outcome === "verified_no_pools")) {
             observedDeploymentOutcomesWritten += outcomesWritten;
+          }
+          if (!hasDiscoveryFinalizationWindow(deadlineMs)) {
+            // Preserve both completed provider outputs before deferring meta,
+            // cursor advancement and cleanup to the next run.
+            budgetExhausted = true;
+            break;
           }
           await updateDiscoveryMeta(db, candidate.stablecoinId, discoveredPoolCount, nowSec, signal);
 

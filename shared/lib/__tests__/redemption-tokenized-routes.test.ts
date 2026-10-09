@@ -7,7 +7,7 @@ import { NEST_NAV_VAULT_CONFIGS } from "../redemption-backstop-configs/queue-red
 import { NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS } from "../redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized";
 import { resolveReviewedRedemptionSettlementDelay } from "../redemption-backstop-configs/settlement";
 
-const reviewedClock = Date.UTC(2026, 9, 7) / 1_000;
+const reviewedClock = Date.UTC(2026, 9, 8) / 1_000;
 
 describe("tokenized issuer route evidence boundaries", () => {
   it.each(["kgst-kyrgyz-som", "wbrl-ripio", "wclp-ripio", "wcop-ripio", "wmxn-ripio", "wpen-ripio", "hlusd-hela"])(
@@ -98,10 +98,11 @@ describe("tokenized issuer route evidence boundaries", () => {
     expect(resolveCapacitySemantics(config.capacityModel)).toBe("eventual-only");
   });
 
-  it("admits EURR's exact reviewed suspension only at its review clock and route identity", () => {
+  it("admits EURR's exact reviewed suspension only after the review day and at its route identity", () => {
     const config = getRedemptionBackstopConfig("eurr-stablr")!;
     expect(RedemptionBackstopConfigSchema.safeParse(config).success).toBe(true);
     expect(config.routeStatus).toBe("suspended");
+    expect(resolveReviewedRouteSuspension(config, "redemption:eurr-stablr:offchain-issuer", reviewedClock - 86_400)).toBeUndefined();
     expect(resolveReviewedRouteSuspension(config, "redemption:eurr-stablr:offchain-issuer", reviewedClock)).toBeDefined();
     expect(resolveReviewedRouteSuspension(config, "redemption:eurr-stablr:offchain-issuer", reviewedClock - 1)).toBeUndefined();
     expect(resolveReviewedRouteSuspension(config, "redemption:usdr-stablr:offchain-issuer", reviewedClock)).toBeUndefined();

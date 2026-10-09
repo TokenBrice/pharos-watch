@@ -34,6 +34,7 @@ import {
 } from "@shared/types/safety-score-v9-causes";
 import { createReviewedAssetRegistry } from "./extension-reviewed-registry";
 import { usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
+import { allocationReviewClockSec as reviewAdmissionClockSec } from "@shared/types/safety-score-v9-allocation";
 
 // Immutable imported evaluation input; validation failures stay asset-local.
 const classifications = createReviewedAssetRegistry({
@@ -564,7 +565,7 @@ export function compileRouteFactorStatuses(
   let knownFactorStatus: V9FactStatusV2 | undefined;
   const config = route.lane === "redemption" ? getRedemptionBackstopConfig(context.asset.assetId) : null;
   const reviewed = config?.v9RouteReviewTerms;
-  const reviewSec = reviewed?.reviewedAt ? Date.parse(`${reviewed.reviewedAt}T00:00:00Z`) / 1_000 : NaN;
+  const reviewSec = reviewed?.reviewedAt ? reviewAdmissionClockSec(reviewed.reviewedAt) : NaN;
   const certificate = route.executionCertificate;
   const certifiedPoint = certificate?.points.find((point) =>
     point.requestedNotionalUsd === route.request?.requestedNotionalUsd &&
@@ -576,8 +577,8 @@ export function compileRouteFactorStatuses(
     route.executionModelId === certificate.modelId &&
     route.status.observationState === "known" &&
     certifiedPoint !== undefined && certifiedPoint.certification !== "diagnostic" &&
-    certificate.observedAtSec >= reviewSec + 86_400 &&
-    certificate.source.timestamp >= reviewSec + 86_400 &&
+    certificate.observedAtSec >= reviewSec &&
+    certificate.source.timestamp >= reviewSec &&
     route.status.evidenceRefIds.some((id) => {
       const evidence = context.evidence.get(id);
       return evidence !== undefined && evidence.disposition !== "rejected" &&

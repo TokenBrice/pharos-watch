@@ -124,6 +124,30 @@ describe("issuer payout identity", () => {
 });
 
 describe("redemption same-notional route observations", () => {
+  it.each([
+    { time: "2026-07-01T12:00:00Z", admitted: false },
+    { time: "2026-07-01T23:59:59Z", admitted: false },
+    { time: "2026-07-02T00:00:00Z", admitted: true },
+  ])("admits documented date-only capacity only after its UTC review day at $time", ({ time, admitted }) => {
+    const observation = build({ now: Date.parse(time) / 1000 })!;
+    expect(observation.scoreEligible).toBe(admitted);
+    expect(observation.capacityEvidenceTier).toBe(admitted ? "documented" : "unknown");
+    if (admitted) expect(observation.observedAt).toBe(Date.parse("2026-07-01T00:00:00Z") / 1000);
+  });
+
+  it("preserves exact timestamp admission and independently dated live evidence", () => {
+    const reviewedAt = "2026-07-01T12:34:56Z";
+    const reviewSec = Date.parse(reviewedAt) / 1000;
+    expect(build({ config: { ...config, reviewedAt }, now: reviewSec - 1 })?.scoreEligible).toBe(false);
+    expect(build({ config: { ...config, reviewedAt }, now: reviewSec })).toMatchObject({
+      scoreEligible: true, observedAt: reviewSec,
+    });
+    expect(build({ now: reviewSec, sourceMode: "dynamic", capacityKind: "live-direct",
+      freshnessKind: "same-run-onchain", evidenceObservedAt: reviewSec })).toMatchObject({
+      scoreEligible: true, observedAt: reviewSec, capacityEvidenceTier: "live-direct",
+    });
+  });
+
   it("retains exact request costs for a valued basket with a USD minimum and additive gas", () => {
     const observation = build({
       config: { ...config, outputAssetType: "stable-basket", outputAssets: ["usdc-circle", "usdt-tether"],
@@ -459,6 +483,16 @@ const supplyFullEntry: RedemptionBackstopEntry = makeSupplyFullRedemption();
 describe("derived supply-model route observations", () => {
   const now = Date.UTC(2026, 6, 13) / 1_000;
 
+  it.each([
+    { time: "2026-07-01T12:00:00Z", admitted: false },
+    { time: "2026-07-01T23:59:59Z", admitted: false },
+    { time: "2026-07-02T00:00:00Z", admitted: true },
+  ])("derives reviewed supply capacity only after the date-only review day at $time", ({ time, admitted }) => {
+    const observation = deriveSupplyModelExitRouteObservation(supplyFullEntry, Date.parse(time) / 1000);
+    if (admitted) expect(observation).toMatchObject({ scoreEligible: true });
+    else expect(observation).toBeNull();
+  });
+
   it("projects an atomic full-supply row onto the same-notional request", () => {
     const observation = deriveSupplyModelExitRouteObservation(supplyFullEntry, now);
     expect(observation).toMatchObject({
@@ -647,7 +681,7 @@ describe("derived supply-model route observations", () => {
         stablecoinId,
         config: configured!,
         routeStatus: configured!.routeStatus ?? "open",
-        now: Date.UTC(2026, 6, 15, 12) / 1_000,
+        now: Date.UTC(2026, 9, 10, 12) / 1_000,
         ...overrides,
       });
     };
@@ -720,7 +754,7 @@ describe("derived supply-model route observations", () => {
     expect(buildConfigured("deuro-deuro", {
       outputValuation: {
         sourceId: "collateral-positions-api:deuro-bridge-basket:test",
-        observedAt: Date.UTC(2026, 6, 15, 12) / 1_000,
+        observedAt: Date.UTC(2026, 9, 10, 12) / 1_000,
         unitValueUsd: 1.15,
         expectedUnitValueUsd: 1.15,
         basketWeights: deuroBasket,
@@ -826,7 +860,7 @@ describe("derived supply-model route observations", () => {
           reviewedAt: avalonConfig!.reviewedAt,
         },
       },
-      now,
+      Date.UTC(2026, 9, 10, 12) / 1_000,
     );
 
     expect(observation).toMatchObject({

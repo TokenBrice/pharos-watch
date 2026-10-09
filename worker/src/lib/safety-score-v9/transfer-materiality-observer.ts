@@ -16,6 +16,26 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { REVIEWED_PROVIDER_CHAIN_PARTITIONS, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
 import { ReviewedRegistryEntryError } from "./extension-reviewed-registry";
 import { fetchSafetyScoreV9SolanaRpc, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
+import type { EvmRpcOptions } from "../evm-rpc";
+
+export const TRANSFER_MATERIALITY_CAPTURE_BUDGET = Object.freeze({
+  maxAssets: 96,
+  maxDeploymentsPerAsset: 64,
+  maxDeploymentsPerChain: 64,
+  maxDeploymentsPerRun: 256,
+  chainConcurrency: 3,
+  chainTimeoutMs: 15_000,
+  wallTimeoutMs: 180_000,
+  publicationReserveMs: 15_000,
+  maxEvmRequests: 768,
+  multicallBatchSize: 64,
+  maxResponseBytes: 128 * 1024,
+  maxQuantityDigits: 78,
+  maxLedgerIdentifierDigits: 20,
+});
+const MAX_TRANSFER_CENSUS_RAW_QUANTITY = 10n ** BigInt(TRANSFER_MATERIALITY_CAPTURE_BUDGET.maxQuantityDigits);
 
 interface ObserverDependencies {
   fetchEvmBlockNumber: typeof fetchEvmBlockNumber;
@@ -131,6 +151,7 @@ async function observeChainDeployments(
   chainRpcs: Map<string, ChainRpcConfig>,
   dependencies: ObserverDependencies,
   signal?: AbortSignal,
+  evmBudget?: Pick<EvmRpcOptions, "deadlineMs" | "beforeRequest">,
 ): Promise<Map<string, SafetyScoreV9TransferMaterialityObservation>> {
   const rejectedRows = () => new Map(targets.map((target) => [target.deploymentKey, rejected(target.deploymentKey)]));
   if (chainId === "solana") {
@@ -165,9 +186,11 @@ async function observeChainDeployments(
           const mint = await dependencies.observeEconomicSolanaMint({
             address: target.address, decimals: target.expectedDecimals, clockSec: scoringClockSec, chainRpcs, signal,
           }, read);
-          if (mint) rows.set(target.deploymentKey, {
+          const blockNumber = mint?.slot.split(":")[0];
+          if (mint && mint.amount.length <= TRANSFER_MATERIALITY_CAPTURE_BUDGET.maxQuantityDigits &&
+            blockNumber !== undefined && blockNumber.length <= TRANSFER_MATERIALITY_CAPTURE_BUDGET.maxLedgerIdentifierDigits) rows.set(target.deploymentKey, {
             deploymentKey: target.deploymentKey, rawTokenUnits: mint.amount, decimals: target.expectedDecimals,
-            blockNumber: mint.slot.split(":")[0]!, observedAtSec: mint.observedAtSec, status: "accepted",
+            blockNumber, observedAtSec: mint.observedAtSec, status: "accepted",
           });
         }
       } catch (error) { rethrowIfAborted(error, signal); }
@@ -188,10 +211,13 @@ async function observeChainDeployments(
             target.address, signal ?? new AbortController().signal, url, undefined, {
               clockSec: scoringClockSec, expectedChainId: chainId === "aptos" ? 1 : 126,
               identityKind: target.assetId === "sfrxusd-frax" ? "oft-package" : "metadata-address",
+              maxResponseBytes: TRANSFER_MATERIALITY_CAPTURE_BUDGET.maxResponseBytes,
             },
           );
           if (!supply || supply.decimals !== target.expectedDecimals || supply.ledgerTimestampSec === undefined ||
+              supply.ledgerVersion.length > TRANSFER_MATERIALITY_CAPTURE_BUDGET.maxLedgerIdentifierDigits ||
               !/^(0|[1-9][0-9]*)$/.test(supply.ledgerVersion) || supply.rawSupply < 0n ||
+              supply.rawSupply >= MAX_TRANSFER_CENSUS_RAW_QUANTITY ||
               supply.ledgerTimestampSec > scoringClockSec || reviewedDeploymentObservationTimingIssue({
                 clockSec: scoringClockSec, captureStartedAtSec: supply.ledgerTimestampSec,
                 captureEndedAtSec: supply.ledgerTimestampSec, observedAtSec: supply.ledgerTimestampSec,
@@ -211,7 +237,12 @@ async function observeChainDeployments(
   const resolvedRpcs = rpcConfig(chainId, chainRpcs);
   if (!resolvedRpcs) return rejectedRows();
   try {
-    let options = { chainRpcs: resolvedRpcs, signal };
+    let options: EvmRpcOptions = {
+      chainRpcs: resolvedRpcs, signal, ...evmBudget,
+      maxRetries: 0,
+      multicallBatchSize: TRANSFER_MATERIALITY_CAPTURE_BUDGET.multicallBatchSize,
+      maxResponseBytes: TRANSFER_MATERIALITY_CAPTURE_BUDGET.maxResponseBytes,
+    };
     let blockNumber = await dependencies.resolveClosestBlockAtOrBeforeTimestamp(
       chainId,
       scoringClockSec,
@@ -234,9 +265,9 @@ async function observeChainDeployments(
         const endpointOrigin = new URL(endpoint.url).origin;
         if (seenOrigins.has(endpointOrigin)) continue;
         seenOrigins.add(endpointOrigin);
-        const isolated = { chainRpcs: new Map(resolvedRpcs).set(chainId, {
+        const isolated: EvmRpcOptions = { ...options, chainRpcs: new Map(resolvedRpcs).set(chainId, {
           ...config, endpoints: [endpoint],
-        }), signal };
+        }) };
         try {
           const latestNumber = await dependencies.fetchEvmBlockNumber(chainId, isolated);
           const latest = latestNumber === null ? null : await dependencies.fetchEvmBlockHeader(chainId, latestNumber, isolated);
@@ -332,13 +363,25 @@ export async function observeSafetyScoreV9TransferMaterialityGeneration(input: {
   scoringClockSec: number;
   chainRpcs: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
+  /** Absolute preparation/slot deadline; network work reserves time for the atomic capture write. */
+  deadlineMs?: number;
 }, dependencyOverrides: Partial<ObserverDependencies> = {}): Promise<SafetyScoreV9TransferMaterialityGeneration> {
   const dependencies = { ...DEFAULT_DEPENDENCIES, ...dependencyOverrides };
+  const budget = TRANSFER_MATERIALITY_CAPTURE_BUDGET;
+  throwIfAborted(input.signal);
+  const deadlineMs = Math.min(Date.now() + budget.wallTimeoutMs,
+    input.deadlineMs === undefined ? Infinity : input.deadlineMs - budget.publicationReserveMs);
   const active = new Set(input.activeAssetIds);
+  const assets = SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS.filter(assetId => active.has(assetId));
+  if (assets.length > budget.maxAssets) throw new Error("Transfer materiality capture exceeds the bounded cohort");
+  const startIndex = assets.length === 0 ? 0 :
+    Math.floor(input.scoringClockSec / SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC) % assets.length;
   const observationsByAssetId: Record<string, SafetyScoreV9TransferMaterialityObservation[]> = {};
   const targetsByChainId = new Map<string, DeploymentTarget[]>();
-  for (const assetId of SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS) {
-    if (!active.has(assetId)) continue;
+  const admittedByChainId = new Map<string, number>();
+  let admittedDeployments = 0;
+  for (let cursor = 0; cursor < assets.length; cursor++) {
+    const assetId = assets[(startIndex + cursor) % assets.length]!;
     throwIfAborted(input.signal);
     const meta = ACTIVE_META_BY_ID.get(assetId);
     const rows: SafetyScoreV9TransferMaterialityObservation[] = [];
@@ -368,19 +411,43 @@ export async function observeSafetyScoreV9TransferMaterialityGeneration(input: {
         continue;
       }
     }
-    for (const deployment of meta?.contracts ?? []) {
+    const deployments = (meta?.contracts ?? []).filter(deployment =>
+      chainScope === null || chainScope.includes(resolveChainId(deployment.chain) ?? ""));
+    // Admit whole inventories only. Oversized assets cannot fill a partial
+    // packet, and skipped assets remain unknown rather than becoming zeros.
+    if (deployments.length > budget.maxDeploymentsPerAsset) {
+      observationsByAssetId[assetId] = rows;
+      continue;
+    }
+    const assetChainCounts = new Map<string, number>();
+    for (const deployment of deployments) {
       const chainId = resolveChainId(deployment.chain);
-      if (chainScope !== null && (chainId === null || !chainScope.includes(chainId))) continue;
-      if (chainId === null || deployment.kind === "native-denom" || !isFixedDecimalDeployment(deployment) ||
-        (CHAIN_META[chainId]?.type !== "evm" && chainId !== "solana" && chainId !== "aptos" && chainId !== "movement")) {
-        rows.push(rejected(`${deployment.chain}:${normalizeReviewedDeploymentAddress(chainId ?? deployment.chain, deployment.address)}`));
-        continue;
+      if (chainId !== null) assetChainCounts.set(chainId, (assetChainCounts.get(chainId) ?? 0) + 1);
+    }
+    // A crowded shared chain must not enlarge the direct-call fallback until
+    // even its first asset can never finish. Rotate whole assets under both caps.
+    let admitted = admittedDeployments + deployments.length <= budget.maxDeploymentsPerRun;
+    for (const [chainId, count] of assetChainCounts) {
+      if ((admittedByChainId.get(chainId) ?? 0) + count > budget.maxDeploymentsPerChain) {
+        admitted = false;
+        break;
       }
-      const deploymentKey = `${chainId}:${normalizeReviewedDeploymentAddress(chainId, deployment.address)}`;
-      targetsByChainId.set(chainId, [
-        ...(targetsByChainId.get(chainId) ?? []),
-        { assetId, chainId, address: deployment.address, expectedDecimals: deployment.decimals, deploymentKey },
-      ]);
+    }
+    if (admitted) {
+      admittedDeployments += deployments.length;
+      for (const [chainId, count] of assetChainCounts) {
+        admittedByChainId.set(chainId, (admittedByChainId.get(chainId) ?? 0) + count);
+      }
+    }
+    for (const deployment of deployments) {
+      const chainId = resolveChainId(deployment.chain);
+      const deploymentKey = `${chainId ?? deployment.chain}:${normalizeReviewedDeploymentAddress(chainId ?? deployment.chain, deployment.address)}`;
+      rows.push(rejected(deploymentKey));
+      if (!admitted || chainId === null || deployment.kind === "native-denom" || !isFixedDecimalDeployment(deployment) ||
+        (CHAIN_META[chainId]?.type !== "evm" && chainId !== "solana" && chainId !== "aptos" && chainId !== "movement")) continue;
+      let targets = targetsByChainId.get(chainId);
+      if (!targets) targetsByChainId.set(chainId, targets = []);
+      targets.push({ assetId, chainId, address: deployment.address, expectedDecimals: deployment.decimals, deploymentKey });
     }
     observationsByAssetId[assetId] = rows;
   }
@@ -389,15 +456,44 @@ export async function observeSafetyScoreV9TransferMaterialityGeneration(input: {
   // behind the scoring clock; their actual block timestamps remain mandatory.
   const chainTargets = [...targetsByChainId.entries()].sort(([left], [right]) =>
     left === "solana" ? -1 : right === "solana" ? 1 : 0);
-  for (let offset = 0; offset < chainTargets.length; offset += 3) {
+  let evmRequests = 0;
+  for (let offset = 0; offset < chainTargets.length; offset += budget.chainConcurrency) {
     throwIfAborted(input.signal);
-    const batch = chainTargets.slice(offset, offset + 3);
-    const batchResults = await Promise.all(batch.map(async ([chainId, targets]) => ({
-      targets,
-      observed: await observeChainDeployments(chainId, targets, input.scoringClockSec, input.chainRpcs, dependencies, input.signal),
-    })));
+    if (Date.now() >= deadlineMs) break;
+    const batch = chainTargets.slice(offset, offset + budget.chainConcurrency);
+    // Await every aborted task's settlement before reusing its connections.
+    const batchResults = await Promise.all(batch.map(async ([chainId, targets]) => {
+      const chainDeadlineMs = Math.min(Date.now() + budget.chainTimeoutMs, deadlineMs);
+      const timeout = createTimeoutSignal({
+        timeoutMs: Math.max(0, chainDeadlineMs - Date.now()),
+        timeoutReason: "Transfer materiality chain deadline exceeded", parentSignal: input.signal,
+      });
+      try {
+        const observed = await observeChainDeployments(chainId, targets, input.scoringClockSec,
+          input.chainRpcs, dependencies, timeout.signal, {
+            deadlineMs: chainDeadlineMs,
+            beforeRequest: () => {
+              if (timeout.signal.aborted || Date.now() >= chainDeadlineMs ||
+                evmRequests >= budget.maxEvmRequests) return false;
+              evmRequests++;
+              return true;
+            },
+          });
+        return { targets, observed: timeout.isTimedOut() || Date.now() > chainDeadlineMs ? null : observed };
+      } catch {
+        return { targets, observed: null };
+      } finally {
+        timeout.dispose();
+      }
+    }));
+    throwIfAborted(input.signal);
     for (const { targets, observed } of batchResults) {
-      for (const target of targets) observationsByAssetId[target.assetId]!.push(observed.get(target.deploymentKey)!);
+      if (!observed) continue;
+      for (const target of targets) {
+        const rows = observationsByAssetId[target.assetId]!;
+        const index = rows.findIndex(row => row.deploymentKey === target.deploymentKey);
+        rows[index] = observed.get(target.deploymentKey) ?? rejected(target.deploymentKey);
+      }
     }
   }
   return createSafetyScoreV9TransferMaterialityGeneration({
@@ -406,6 +502,6 @@ export async function observeSafetyScoreV9TransferMaterialityGeneration(input: {
     sourceBaseInputGenerationId: input.baseInputGenerationId,
     registryFingerprint: input.registryFingerprint,
     capturedAtSec: input.scoringClockSec,
-    observationsByAssetId,
+    observationsByAssetId: Object.fromEntries(assets.map(assetId => [assetId, observationsByAssetId[assetId]!])),
   });
 }

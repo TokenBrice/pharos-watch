@@ -1,4 +1,5 @@
 import { BPS_PER_UNIT } from "../math";
+import { resolveRedemptionFiatUsdRate, type RedemptionFiatReferenceContext } from "../redemption-fiat-reference";
 import { trackedRedemptionDocSources } from "../redemption-backstop-docs";
 import type {
   RedemptionDocSource,
@@ -80,7 +81,8 @@ export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig):
         ? { requiredOutputAssetKeys: [...config.capacityModel.requiredOutputAssetKeys] }
         : {}),
     },
-    costModel: { ...config.costModel },
+    costModel: { ...config.costModel, ...(config.costModel.feeComponents
+      ? { feeComponents: cloneFeeComponents(config.costModel.feeComponents) } : {}) },
     ...(config.physicalCommodityDelivery
       ? {
           physicalCommodityDelivery: {
@@ -98,7 +100,9 @@ export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig):
           },
         }
       : {}),
-    ...(config.v9RouteCostTerms ? { v9RouteCostTerms: { ...config.v9RouteCostTerms } } : {}),
+    ...(config.v9RouteCostTerms ? { v9RouteCostTerms: { ...config.v9RouteCostTerms,
+      ...(config.v9RouteCostTerms.feeComponents
+        ? { feeComponents: cloneFeeComponents(config.v9RouteCostTerms.feeComponents) } : {}) } } : {}),
     ...(config.v9RouteReviewTerms
       ? {
           v9RouteReviewTerms: {
@@ -139,6 +143,13 @@ export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig):
     ...(config.docs ? { docs: config.docs.map(cloneRedemptionDocSource) } : {}),
     ...(config.notes ? { notes: [...config.notes] } : {}),
   };
+}
+
+function cloneFeeComponents(components: NonNullable<RedemptionCostModel["feeComponents"]>) {
+  return components.map((component) => ({ ...component,
+    ...(component.terms ? { terms: { ...component.terms } } : {}),
+    ...(component.tiers ? { tiers: component.tiers.map((tier) => ({ ...tier, terms: { ...tier.terms } })) } : {}),
+  }));
 }
 
 function clonePhysicalLot(lot: PhysicalToUsdRoute["lot"]): PhysicalToUsdRoute["lot"] {
@@ -193,6 +204,7 @@ export function resolveRedemptionCostBpsAtNotional(
   costModel: RedemptionCostModel,
   requestedNotionalUsd: number,
   resolvedFeeBps: number | null = null,
+  fiatReferences?: RedemptionFiatReferenceContext,
 ): number | null {
   if (!Number.isFinite(requestedNotionalUsd) || requestedNotionalUsd <= 0) return null;
   const observedFeeBps =
@@ -205,6 +217,24 @@ export function resolveRedemptionCostBpsAtNotional(
     // A minimum is a floor, not evidence of the maximum payable fee.
     (costModel.kind === "fee-bps" ? costModel.feeBps : null);
   if (normalFeeBps == null) return null;
+  if (costModel.feeComponents) {
+    let componentCostUsd = 0;
+    for (const component of costModel.feeComponents) {
+      const rate = resolveRedemptionFiatUsdRate(component.currency, fiatReferences);
+      if (rate === null) return null;
+      const nativeNotional = requestedNotionalUsd / rate;
+      const terms = component.terms ??
+        component.tiers?.find((tier) => tier.upToNotional === undefined || nativeNotional < tier.upToNotional)?.terms;
+      if (!terms) return null;
+      const amount = (terms.flatAmount ?? 0) + nativeNotional * (terms.feeBps ?? 0) / BPS_PER_UNIT;
+      componentCostUsd += Math.min(Math.max(amount, terms.minAmount ?? 0), terms.maxAmount ?? Infinity) * rate;
+    }
+    const percentageFeeUsd = (normalFeeBps * requestedNotionalUsd) / BPS_PER_UNIT;
+    const feeUsd = Math.max(percentageFeeUsd, costModel.minFeeUsd ?? 0) +
+      (costModel.gasOrBridgeCostUsd ?? 0) + componentCostUsd;
+    const costBps = feeUsd / requestedNotionalUsd * BPS_PER_UNIT;
+    return Number.isFinite(costBps) && costBps >= 0 ? costBps : null;
+  }
   const variableFeeBps = normalFeeBps;
   const fixedCostUsd = costModel.gasOrBridgeCostUsd ?? 0;
   if (costModel.minFeeUsd == null && fixedCostUsd === 0) return variableFeeBps;
@@ -217,11 +247,13 @@ export function resolveV9RedemptionRouteCostBpsAtNotional(
   config: RedemptionBackstopConfig,
   requestedNotionalUsd: number,
   resolvedFeeBps: number | null = null,
+  fiatReferences?: RedemptionFiatReferenceContext,
 ): number | null {
   return resolveRedemptionCostBpsAtNotional(
     { ...config.costModel, ...config.v9RouteCostTerms },
     requestedNotionalUsd,
     resolvedFeeBps,
+    fiatReferences,
   );
 }
 

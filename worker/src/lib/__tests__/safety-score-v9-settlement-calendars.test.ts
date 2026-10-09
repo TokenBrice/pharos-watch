@@ -5,7 +5,7 @@ import { buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-rou
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 import { withRedemptionBackstopConfig } from "./safety-score-v9-extension-routes.test-support";
 import { resolveReviewedRedemptionSettlementDelay } from "@shared/lib/redemption-backstop-configs/settlement";
-import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { getRedemptionBackstopConfig, resolveReviewedRedemptionSettlement } from "@shared/lib/redemption-backstops";
 import { ReserveBoundedFactSchema, type V9ReserveBoundedFact } from "@shared/types/reserve-bounded-facts";
 import rawBounds from "@shared/data/safety-score-v9/reserve-bound-facts-v1.json";
 import { resolveV9ReserveFactorBounds } from "@shared/lib/safety-score-v9/reserve-bound-facts";
@@ -17,19 +17,46 @@ import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fa
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { evaluateV9ReserveExposures } from "@shared/lib/safety-score-v9/backing";
 import type { ReserveSlice } from "@shared/types/reserves";
+import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-route-suspension";
 
 const clock = Date.parse("2026-10-05T12:00:00Z") / 1000;
 const businessDayTerms: RedemptionBusinessDayTerms = {
   businessDays: 1, calendarId: "us-federal-reserve", cutoff: { time: "16:00", timezone: "America/New_York" },
   assurance: "binding-guarantee", conditional: false, conditions: [], startEvent: "Eligible received request",
 };
-const reviewed = { businessDayTerms, reviewedAt: "2026-10-05", docs: [{ label: "Binding settlement terms", url: "https://example.com/terms", supports: ["settlement" as const] }] };
+const reviewed = { businessDayTerms, reviewedAt: "2026-10-04", docs: [{ label: "Binding settlement terms", url: "https://example.com/terms", supports: ["settlement" as const] }] };
 function fixed(row: RedemptionBackstopEntry, clockSec = clock): ReportCardsFixedInput {
   return { clockSec, dexGenerationId: "dex-fixture", redemptionGenerationId: "redemption-fixture", dexLiqMap: {},
     redemptionBackstopMap: { [row.stablecoinId]: row }, pegDataById: {} } as unknown as ReportCardsFixedInput;
 }
 
 describe("business-calendar settlement consumers", () => {
+  it.each([
+    { time: "2026-10-05T12:00:00Z", admitted: false },
+    { time: "2026-10-05T23:59:59Z", admitted: false },
+    { time: "2026-10-06T00:00:00Z", admitted: true },
+  ])("admits dated settlement and exact-route suspension only after the review day at $time", ({ time, admitted }) => {
+    const now = Date.parse(time) / 1000;
+    const scalar = { settlementModel: "immediate" as const, settlementDelaySec: 3600,
+      reviewedAt: "2026-10-05",
+      docs: [{ label: "Completed settlement", url: "https://example.com/terms", supports: ["settlement" as const] }] };
+    const row = makeSupplyFullRedemption({ settlementModel: "days", settlementDelaySec: undefined });
+    withRedemptionBackstopConfig(row.stablecoinId, {
+      settlementModel: "days", v9RouteReviewTerms: scalar, routeStatus: "suspended",
+      routeSuspension: { routeId: `redemption:${row.stablecoinId}:offchain-issuer`,
+        channel: "Issuer redemption", suspendedAt: "2026-10-05", reviewer: "Chronology fixture",
+        reviewedAt: "2026-10-05", reason: "Reviewed channel suspension",
+        sources: [{ url: "https://example.com/status", quote: "This issuer channel is suspended." }] },
+    }, (config) => {
+      expect(resolveReviewedRedemptionSettlementDelay(scalar, now)).toBe(admitted ? 3600 : undefined);
+      expect(resolveReviewedRedemptionSettlement(config, now)).toBe(admitted ? "immediate" : "days");
+      expect(resolveReviewedRouteSuspension(config, config.routeSuspension!.routeId, now))
+        .toBe(admitted ? config.routeSuspension : undefined);
+      if (!admitted) expect(buildSafetyScoreV9RouteReviews(fixed(row, now), row.stablecoinId)[0])
+        .toMatchObject({ settlementSlaSec: null, settlementHorizonSec: 14 * 86400 });
+    });
+  });
+
   it.each(["route-only", "processing-gap", "future", "stale"] as const)(
     "does not let a %s scalar review reuse the producer's persisted favorable SLA", (scenario) => {
       const scalar = { settlementModel: "days" as const, settlementDelaySec: 86400,
@@ -50,7 +77,7 @@ describe("business-calendar settlement consumers", () => {
   );
   it("admits a current scalar for a sourced completed exact endpoint", () => {
     expect(resolveReviewedRedemptionSettlementDelay({
-      settlementDelaySec: 259200, reviewedAt: "2026-10-05",
+      settlementDelaySec: 259200, reviewedAt: "2026-10-04",
       docs: [{ label: "Funded claim after maturity", url: "https://example.com/funded-claim", supports: ["settlement"] }],
     }, clock)).toBe(259200);
   });
@@ -58,7 +85,7 @@ describe("business-calendar settlement consumers", () => {
     "keeps %s issuer zero fee without inventing an unconditional cash-completion scalar", (assetId) => {
       const config = getRedemptionBackstopConfig(assetId)!;
       const row = makeSupplyFullRedemption({ stablecoinId: assetId, settlementModel: "same-day", settlementDelaySec: 86400, feeBps: 0 });
-      const clockSec = Date.parse("2026-10-07T12:00:00Z") / 1000;
+      const clockSec = Date.parse("2026-10-10T12:00:00Z") / 1000;
       expect(config.costModel).toMatchObject({ kind: "fee-bps", feeBps: 0 });
       expect(config.v9RouteReviewTerms!.missingScoringFields).toContain("settlement");
       expect(buildSafetyScoreV9RouteReviews(fixed(row, clockSec), assetId)[0]).toMatchObject({
@@ -69,7 +96,7 @@ describe("business-calendar settlement consumers", () => {
   it("retains APY's reviewed funded-claim maturity rather than treating every queue as unbounded", () => {
     const assetId = "apyusd-apyx";
     const row = makeSupplyFullRedemption({ stablecoinId: assetId, routeFamily: "queue-redeem", settlementModel: "queued" });
-    const clockSec = Date.parse("2026-10-07T12:00:00Z") / 1000;
+    const clockSec = Date.parse("2026-10-10T12:00:00Z") / 1000;
     expect(buildSafetyScoreV9RouteReviews(fixed(row, clockSec), assetId)[0])
       .toMatchObject({ settlementModel: "queued", settlementSlaSec: 259200 });
   });

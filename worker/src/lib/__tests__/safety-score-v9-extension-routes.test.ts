@@ -294,7 +294,7 @@ describe("buildSafetyScoreV9RouteReviews physical-commodity outputs", () => {
     });
 
     withRedemptionBackstopConfig(id, {
-      reviewedAt: "2026-07-13",
+      reviewedAt: "2026-07-12",
       outputAssetType: "physical-commodity-delivery",
       physicalCommodityDelivery: {
         commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 1,
@@ -1792,5 +1792,104 @@ describe("explicit holder restrictions remain separate from route evidence", () 
     expect(review.queueDepthUsd).toBe(1_500_000);
     expect(review.dailyLimitUsd).toBe(1_000_000);
     expect(review.minRedeemUsd).toBe(1_000_000);
+  });
+});
+
+describe("captured local-fiat output and cost references", () => {
+  const reference = { valueUsd: 1.25, source: "fx", contributorCount: 0, asOf: NOW - 60 };
+
+  it.each(["CHF", "JPY", "IDR", "EUR"])("values %s fiat with the captured currency reference, not USD par", (currency) => {
+    const { fixedInput } = redemptionPegFixture({
+      rowOverrides: { stablecoinId: "usdc-circle" },
+      output: { kind: "fiat", currency },
+      pegDataById: { captured: { pegCurrency: currency, pegReference: reference } },
+    });
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output?.valuation).toMatchObject({
+      unitValueUsd: 1.25, expectedUnitValueUsd: 1.25, observedAtSec: NOW - 60,
+      sourceId: "captured-fiat-fx-reference", maxAgeSec: 86_400,
+    });
+  });
+
+  it("retains the fee-clock fiat quote instead of switching to a later FX generation", () => {
+    const { fixedInput, row } = redemptionPegFixture({
+      rowOverrides: { stablecoinId: "usdc-circle" }, output: { kind: "fiat", currency: "CHF" },
+      pegDataById: { captured: { pegCurrency: "CHF", pegReference: { ...reference, valueUsd: 2 } } },
+    });
+    const observation = row.capacityProfile!.exitRouteObservations![0]!;
+    Object.assign(observation, { outputUnitValueUsd: 1.25, outputExpectedUnitValueUsd: 1.25,
+      outputUnitValueObservedAt: NOW - 60, outputUnitValueSourceId: "captured-fiat-fx-reference:CHF",
+      executionCostBps: 10, allInCostBps: 10 });
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output?.valuation?.unitValueUsd).toBe(1.25);
+    observation.outputUnitValueObservedAt = NOW - 86_401;
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output).toBeNull();
+  });
+
+  it.each([undefined, { ...reference, asOf: NOW + 1 }, { ...reference, asOf: NOW - 86_401 },
+    { ...reference, source: "fallback" }, { ...reference, source: "median", contributorCount: 1 },
+  ])("withholds non-USD fiat output for missing, future, stale or unadmitted FX", (pegReference) => {
+    const { fixedInput } = redemptionPegFixture({
+      rowOverrides: { stablecoinId: "usdc-circle" }, output: { kind: "fiat", currency: "CHF" },
+      pegDataById: { captured: { pegCurrency: "CHF", pegReference } },
+    });
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output).toBeNull();
+  });
+
+  it.each(["issuer-redemption", "eventual-redemption"] as const)(
+    "values an explicit single external fiat identity on a %s issuer route",
+    (routeFamily) => {
+      withRedemptionBackstopConfig("usdc-circle", { unresolvedOutputAssetKeys: ["fiat:JPY"] }, () => {
+        const { fixedInput, row } = redemptionPegFixture({
+          rowOverrides: { stablecoinId: "usdc-circle" },
+          output: { kind: "unresolved-asset", assetKeys: ["fiat:JPY"] },
+          pegDataById: { captured: { pegCurrency: "JPY", pegReference: reference } },
+        });
+        row.capacityProfile!.exitRouteObservations![0]!.routeFamily = routeFamily;
+        expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output).toMatchObject({
+          kind: "fiat", assetKeys: ["fiat:JPY"], valuation: { unitValueUsd: 1.25 },
+        });
+      });
+    },
+  );
+
+  it("keeps delayed protocol fiat identities and ambiguous issuer outputs unresolved", () => {
+    withRedemptionBackstopConfig("usdc-circle", { unresolvedOutputAssetKeys: ["fiat:JPY", "fiat:CHF"] }, () => {
+      const { fixedInput, row } = redemptionPegFixture({
+        rowOverrides: { stablecoinId: "usdc-circle" },
+        output: { kind: "unresolved-asset", assetKeys: ["fiat:JPY"] },
+        pegDataById: { captured: { pegCurrency: "JPY", pegReference: reference } },
+      });
+      const observation = row.capacityProfile!.exitRouteObservations![0]!;
+      observation.routeFamily = "eventual-redemption";
+      observation.scope = { kind: "protocol", protocol: "synthetic-vault" };
+      expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output).toBeNull();
+      observation.scope = { kind: "issuer", issuerId: "usdc-circle" };
+      observation.output = { kind: "unresolved-asset", assetKeys: ["fiat:JPY", "fiat:CHF"] };
+      expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output).toBeNull();
+      observation.output = { kind: "unresolved-asset", assetKeys: ["fiat:JPY"] };
+      setPegData(fixedInput, {});
+      expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output).toBeNull();
+    });
+  });
+
+  it("fails closed on local cost FX even when a reusable zero-bps fallback exists", () => {
+    withRedemptionBackstopConfig("usdc-circle", { costModel: { kind: "fee-bps", feeBps: 0,
+      feeComponents: [{ currency: "CHF", terms: { flatAmount: 30 } }] } }, (config) => {
+      const { fixedInput, row } = redemptionPegFixture({ rowOverrides: { stablecoinId: "usdc-circle", feeBps: 0 } });
+      const observation = row.capacityProfile!.exitRouteObservations![0]!;
+      row.capacityProfile!.exitRouteObservations = [{ ...observation, executionCostBps: undefined,
+        capacityCurve: observation.capacityCurve?.map((point) => ({ ...point, executionCostBps: undefined })) }];
+      expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.feeEvidence).toBe("disclosed-unquantified");
+      setPegData(fixedInput, { captured: { pegCurrency: "CHF", pegReference: reference } });
+      const review = buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!;
+      expect(review.executionCosts.find((point) => point.requestedNotionalUsd === observation.requestedNotionalUsd)?.executionCostBps)
+        .toBe(37.5 / observation.requestedNotionalUsd * 10_000);
+      const produced = buildRedemptionExitRouteObservation({
+        stablecoinId: "usdc-circle", config, capacityProfile: row.capacityProfile,
+        scoringCapacityUsd: 1_000_000, supplyUsd: 1_000_000, routeStatus: "open", resolutionState: "resolved",
+        sourceMode: "static", capacityConfidence: "documented-bound", resolvedFeeBps: 0, now: NOW,
+      });
+      expect(produced?.feeEvidence).toBe("disclosed-unquantified");
+      expect(produced?.scoreEligible).toBe(false);
+    });
   });
 });
