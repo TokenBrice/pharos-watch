@@ -17,6 +17,10 @@ export interface CurrentPegObservation {
    * cannot be assessed. This does not withhold an otherwise observed deviation.
    */
   currentSupplyUnavailable: boolean;
+  /** Original asset clock/provenance, never the analytics or cache generation clock. */
+  priceObservedAt: PegSummaryCoin["priceObservedAt"];
+  priceSource: PegSummaryCoin["priceSource"];
+  priceObservedAtMode: PegSummaryCoin["priceObservedAtMode"];
 }
 
 export function deriveCurrentPegObservationMap(options: {
@@ -80,6 +84,13 @@ export function deriveCurrentPegObservationMap(options: {
       pegReferenceUnavailable,
       currentPriceUnavailable,
       currentSupplyUnavailable,
+      // priceUpdatedAt is the same asset's retained price clock on legacy list
+      // rows. priceSyncedAt and asOf describe processing, not price evidence.
+      priceObservedAt: asset?.priceObservedAt === undefined
+        ? asset?.priceUpdatedAt ?? null
+        : asset.priceObservedAt,
+      priceSource: asset?.priceSource ?? undefined,
+      priceObservedAtMode: asset?.priceObservedAtMode ?? null,
     });
   }
 

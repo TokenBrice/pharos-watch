@@ -17,6 +17,7 @@ import { resolveReserveResult } from "../live-reserves/store-views";
 import { getConfiguredLiveReserveCoins } from "../live-reserves/store-shared";
 import { parseSnapshotMetadata } from "../live-reserves/store-row-decoding";
 import { decodeLiveReserveRedemptionTelemetry } from "@shared/types/live-reserves";
+import { reserveLossOutcome } from "../live-reserves/loss";
 
 import { RESERVE_FEED_REVIEWS } from "../reserve-feed-reviews";
 describe("live-reserves-store", () => {
@@ -42,8 +43,11 @@ describe("live-reserves-store", () => {
     expect(overview.freshCoins).toBe(0);
     expect(overview.acknowledgedFeedIds).toEqual([review.stablecoinId]);
     expect(overview.healthConfiguredCoins).toBe(overview.configuredCoins - 1);
-    expect(overview.healthAuthoritativeFreshCoins).toBe(overview.independentFreshEligible
-      + overview.independentFreshUnverified + overview.staticValidatedFresh - 1);
+    // An unproved later failure already removes this historical snapshot's scoring contribution.
+    expect(overview.independentFreshEligible).toBe(0);
+    expect(overview.independentFreshUnverified).toBe(0);
+    expect(overview.staticValidatedFresh).toBe(0);
+    expect(overview.healthAuthoritativeFreshCoins).toBe(0);
     const expired = await computeReserveCompositionOverview(db, review.expiresAt);
     expect(expired.acknowledgedFeedIds).toEqual([]);
     expect(expired.healthConfiguredCoins).toBe(expired.configuredCoins);
@@ -597,23 +601,27 @@ describe("live-reserves-store", () => {
     expect(scoringMap.get("lusd-liquity")).toEqual([{ name: "ETH", pct: 100, risk: "very-low" }]);
   });
 
-  it("judges scoring on the snapshot's own warnings, not the latest attempt's status", async () => {
+  it("keeps original snapshot warning gates after a proved operational skip", async () => {
     const now = 10_000;
+    const deferredState = (id: string) => {
+      const config = WORKER_TRACKED_META_BY_ID.get(id)!.liveReservesConfig!;
+      const fingerprint = computeLiveReserveConfigFingerprint(config);
+      const loss = reserveLossOutcome({ assetId: id, sourceId: fingerprint, attemptId: `${id}:deferred`,
+        observedAtSec: now, reason: "budget-deferred",
+        legs: [{ key: "primary", sourceId: fingerprint, result: "not-started", loss: {
+          key: "primary", sourceId: fingerprint, disposition: "operational", reason: "budget-deferred", proof: `${id}:not-entered` } }],
+        priorEvidence: { ref: `reserve-composition:${id}:${id}:success`, observedAtSec: now - 100, expiresAtSec: now - 100 + 172801 } });
+      return reserveSyncRow({ stablecoin_id: id, adapter_key: config.adapter, breaker_key: `live-reserves:${id}`,
+        last_attempted_at: now, last_success_at: now - 100, last_status: "skipped",
+        last_attempt_id: `${id}:deferred`, last_success_attempt_id: `${id}:success`, config_fingerprint: fingerprint,
+        metadata: JSON.stringify({ reserveLoss: loss, reserveInvalidations: {} }) });
+    };
     const degradedThenErrored = mockD1([
       {
         match: "reserve_sync_state",
         rows: [
-          // Latest attempt failed; the stored snapshot came from an earlier degraded run.
-          reserveSyncRow({ last_attempted_at: now, last_success_at: now - 100, last_status: "error", last_error: "HTTP 502" }),
-          reserveSyncRow({
-            stablecoin_id: "lusd-liquity",
-            adapter_key: "liquity-v1",
-            breaker_key: "live-reserves:lusd-liquity",
-            last_attempted_at: now,
-            last_success_at: now - 100,
-            last_status: "error",
-            last_error: "HTTP 502",
-          }),
+          deferredState("iusd-infinifi"),
+          deferredState("lusd-liquity"),
         ],
       },
       {
@@ -622,6 +630,7 @@ describe("live-reserves-store", () => {
           reserveCompositionRow({
             slices: JSON.stringify([{ name: "Known Farm", pct: 100, risk: "low" }]),
             fetched_at: now - 100,
+            attempt_id: "iusd-infinifi:success",
             warnings: JSON.stringify([{ code: "stale-source-data", message: "old", severity: "warning", effect: "degraded" }]),
             metadata: JSON.stringify({ freshnessMode: "verified", sourceTimestamp: now - 100 }),
             adapter_source_model: "dynamic-mix",
@@ -631,6 +640,7 @@ describe("live-reserves-store", () => {
             stablecoin_id: "lusd-liquity",
             slices: JSON.stringify([{ name: "ETH", pct: 100, risk: "very-low" }]),
             fetched_at: now - 100,
+            attempt_id: "lusd-liquity:success",
             source: "liquity-v1",
             metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
             adapter_source_model: "single-bucket",

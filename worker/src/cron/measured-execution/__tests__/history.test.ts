@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { DexMeasuredExecutionProfile } from "@shared/types/measured-execution";
+import { isDexMeasuredExecutionObservationHistoryMature, type DexMeasuredExecutionProfile } from "@shared/types/measured-execution";
 import { summarizeDexMeasuredExecutionHistory, type DexMeasuredExecutionHistoryCycle } from "../history";
 
 function profile(
@@ -219,6 +219,26 @@ describe("summarizeDexMeasuredExecutionHistory", () => {
       8_000_000,
       9_000_000,
     ]);
+  });
+
+  it.each([999, 1_000])("does not credit an expired original quote even when its generation was just published (quotedAt=%s)", (quotedAt) => {
+    const expired = measured("recently-published-old-quote", 1_990, [0, 0, 0, 0]);
+    expired.profile!.quotedAt = quotedAt;
+    const fresh1 = measured("fresh1", 1_800, [100_000, 900_000, 8_000_000, 9_000_000]);
+    fresh1.profile!.quotedAt = 1_700;
+    const fresh2 = measured("fresh2", 1_900, [100_000, 900_000, 8_000_000, 9_000_000]);
+    fresh2.profile!.quotedAt = 1_850;
+    const result = summarizeDexMeasuredExecutionHistory({ nowSec: 2_000, freshnessMaxSec: 1_000, cycles: [expired, fresh1] });
+    expect(result).toMatchObject({
+      completeProducerCycleCount: 1, successfulObservationCount: 1, consecutiveSuccessCount: 1,
+      observationWindowStartedAt: 1_700, observationWindowEndedAt: 1_700, latestOperationalFailureAt: null,
+    });
+    expect(isDexMeasuredExecutionObservationHistoryMature(result)).toBe(false);
+    expect(isDexMeasuredExecutionObservationHistoryMature(summarizeDexMeasuredExecutionHistory({
+      nowSec: 2_000, freshnessMaxSec: 1_000, cycles: [fresh1, fresh2],
+    }))).toBe(true);
+    expect(result?.conservativeCapacityCurve.map((point) => point.executableUsd)).toEqual([100_000, 900_000, 8_000_000, 9_000_000]);
+    expect(expired.profile!.quotedAt).toBe(quotedAt);
   });
 
   it("deduplicates producer generations before counting maturity", () => {

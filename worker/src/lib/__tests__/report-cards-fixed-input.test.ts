@@ -234,6 +234,20 @@ function dexRow(exitRouteObservations: ExitRouteObservation[]): DexLiquidityData
 const exactFixedInput = makeV9RegistryFixedInput;
 
 describe("retained v3 fixed report-card input", () => {
+  it("preserves historical v3 identity and bytes without adding native redemption loss provenance", async () => {
+    const historical = exactFixedInput();
+    expect(historical.schemaVersion).toBe(3);
+    expect(Object.prototype.hasOwnProperty.call(historical, "redemptionLossOutcomesByAssetId")).toBe(false);
+    const historicalBytes = JSON.stringify(historical);
+    const replayed = normalizeFixedInput(JSON.parse(historicalBytes));
+    expect(replayed.baseInputGenerationId).toBe(historical.baseInputGenerationId);
+    expect(JSON.stringify(replayed)).toBe(historicalBytes);
+    expect(normalizeFixedInput(withoutBaseInputGenerationId(historical)).baseInputGenerationId).toBe(historical.baseInputGenerationId);
+    const stored = await buildReportCardsFixedInputCacheEntry(historical);
+    expect(await parseReportCardsFixedInputCacheValue(stored.value)).toEqual(historical);
+    expect(() => normalizeFixedInput({ ...historical, redemptionLossOutcomesByAssetId: {} })).toThrow(/redemptionLossOutcomesByAssetId/);
+  });
+
   it("preserves archived Bluechip grades without inventing a current observation", () => {
     const normalized = normalizeFixedInput({
       ...withoutBaseInputGenerationId(exactFixedInput()),

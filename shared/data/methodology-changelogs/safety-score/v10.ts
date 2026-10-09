@@ -2,6 +2,24 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
   {
+    version: "10.13",
+    title: "Original-clock peg freshness and reserve/redemption integrity",
+    date: "2026-10-08",
+    effectiveAt: 1791504000,
+    summary:
+      "Safety Score tightens reserve and redemption evidence admission and measures peg freshness from each asset's original price observation, without changing scoring weights or whole-publication hold policy.",
+    impact: [
+      "Retained live reserve evidence requires proven operational-only loss for the affected datum and valid original fetch/source clocks. Semantic, evidential and unknown loss revokes eligibility; invalidation stays sticky through later scheduling deferrals until a newly admitted success. Attempt labels alone are not operational proof, and retention never renews evidence time.",
+      "Persist actual returned fallback evidence rather than choosing the best prior score-grade snapshot, and preserve historical successes separately. Captured Backing lineage retains original authority/loss history. Accepted metadata and reserve-backed redemption keep original census, current configuration and original clocks; only actual present non-carryable composition/redemption loss or invalidation revokes the consumed parent. Healthy newer success alone does not reject it, and no newest-success/non-null tuple gate or post-recovery marker is introduced. In-flight pending work is not a failure: prior finalized success or operational proof, original clocks and existing invalidation remain. Only finalized later attempts require their own matching identity and observed-clock proof; older packets cannot cover finalized mismatches. Tied-clock unstamped error/withheld failure is unknown; clean legacy ok/degraded stored success remains admissible under ordinary gates. Existing recovery abandonment records terminal unknown; no new pending timeout is added.",
+      "Peg facts use each asset's original priceObservedAt under the unchanged 1,800-second production budget, not cache generation or another asset's clock. Missing, null, invalid or future clocks produce a missing peg fact with unknown freshness. Only an absent legacy raw-list clock may use that same asset's priceUpdatedAt. Historical wire/identity compatibility does not establish score equivalence under corrected admission.",
+      "Redemption retains typed per-asset/per-route loss lineage and quarantines malformed rows without discarding valid peers from the newest trusted run. Untrusted manifests/censuses remain global failures. Existing whole-publication redemption-stale/redemption-unavailable and all-rows-quarantined holds, the eight-hour output budget and original nested evidence clocks remain unchanged; this release adds no redemption operational carry.",
+      "Separately versioned Liquidity v6.94 prevents historical quote resurrection for absent latest targets and expires measured-history observations by original quotedAt. Depeg/DEWS v6.34 excludes CoinGecko tickers from hard DEX quorum. Pricing v6.44, Exit continuity holds and route-output valuation clock rules remain unchanged.",
+      "Activation is provisionally 2026-10-09 00:00 UTC (1791504000), following the next-day convention; re-date date/effectiveAt at release. No fixed-input equivalence, production acceptance, mover or stability-improvement result is claimed.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "10.12",
     title: "Research-only exact orderbooks and source-bound reserve inputs",
     date: "2026-10-08",

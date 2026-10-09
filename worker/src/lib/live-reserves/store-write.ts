@@ -12,6 +12,7 @@ import { buildInClause, executeAtomicBatch } from "../db";
 import { runWithOverloadRetry } from "../d1-overload-retry";
 import { throwIfAborted } from "../abort";
 import { sha256Hex } from "../hash";
+import { failureStateWithLoss } from "./loss";
 import {
   LIVE_RESERVE_HISTORY_RETENTION_SEC,
   type LiveReserveHistoryPruneResult,
@@ -173,22 +174,45 @@ export async function finalizeReserveSyncAttempt(
   if (Date.now() > deadlineMs) throw new Error("Reserve attempt finalization deadline expired");
   const config = WORKER_TRACKED_META_BY_ID.get(syncState.stablecoinId)?.liveReservesConfig;
   const configFingerprint = syncState.configFingerprint ?? (config ? computeLiveReserveConfigFingerprint(config) : null);
-  const [finalizeResult] = await executeAtomicBatch(db, [
-    buildReserveSyncFinalizeAttemptStatement(db, { ...syncState, configFingerprint }, deadlineMs),
-    buildReserveSyncAttemptHistoryInsertStatement(db, {
-      stablecoinId: syncState.stablecoinId,
-      attemptedAt: syncState.lastAttemptedAt ?? Math.floor(Date.now() / 1000),
-      adapterKey: syncState.adapterKey,
-      breakerKey: syncState.breakerKey,
-      status: syncState.lastStatus,
-      warningCount: syncState.warningCount,
-      warnings: syncState.warnings,
-      lastError: syncState.lastError,
-      metadata: syncState.metadata,
-      attemptId: syncState.lastAttemptId ?? null,
-    }),
-  ], { returnResults: true });
-  return { finalized: (finalizeResult.meta.changes ?? 0) > 0 };
+  syncState = failureStateWithLoss({ ...syncState, configFingerprint });
+  let writeError: unknown;
+  try {
+    const [finalizeResult] = await executeAtomicBatch(db, [
+      buildReserveSyncFinalizeAttemptStatement(db, syncState, deadlineMs),
+      buildReserveSyncAttemptHistoryInsertStatement(db, {
+        stablecoinId: syncState.stablecoinId,
+        attemptedAt: syncState.lastAttemptedAt ?? Math.floor(Date.now() / 1000),
+        adapterKey: syncState.adapterKey,
+        breakerKey: syncState.breakerKey,
+        status: syncState.lastStatus,
+        warningCount: syncState.warningCount,
+        warnings: syncState.warnings,
+        lastError: syncState.lastError,
+        metadata: syncState.metadata,
+        attemptId: syncState.lastAttemptId ?? null,
+      }),
+    ], { returnResults: true });
+    if ((finalizeResult.meta.changes ?? 0) > 0) return { finalized: true };
+  } catch (error) {
+    writeError = error;
+  }
+  // A lost acknowledgement is not permission to inherit: authenticate the exact
+  // terminal state AND immutable attempt packet before accepting a retry/no-op.
+  const row = await runWithOverloadRetry(() => db.prepare(
+    `SELECT json_extract(s.metadata, '$.reserveLoss') AS loss
+       FROM reserve_sync_state s
+      WHERE s.stablecoin_id = ? AND s.last_attempt_id IS ? AND s.pending_attempt_id IS NULL
+        AND s.last_attempted_at IS ? AND s.last_status = ?
+        AND EXISTS (SELECT 1 FROM reserve_sync_attempt_history h
+          WHERE h.stablecoin_id = s.stablecoin_id AND h.attempt_id IS s.last_attempt_id
+            AND h.attempted_at IS s.last_attempted_at AND h.status = s.last_status
+            AND json_extract(h.metadata, '$.reserveLoss') IS json_extract(s.metadata, '$.reserveLoss'))
+      LIMIT 1`,
+  ).bind(syncState.stablecoinId, syncState.lastAttemptId ?? null, syncState.lastAttemptedAt, syncState.lastStatus)
+    .first<{ loss: string }>());
+  if (row?.loss === JSON.stringify(syncState.metadata.reserveLoss)) return { finalized: true };
+  if (writeError) throw writeError;
+  return { finalized: false };
 }
 
 async function loadStringColumn(

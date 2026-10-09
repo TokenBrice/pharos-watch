@@ -9,6 +9,8 @@ import type {
 } from "@shared/types/live-reserves";
 import { LIVE_RESERVE_FRESHNESS_SEC, selectScoringDegradedWarnings, type ReserveCompositionRecord, type ReserveSyncStateRecord } from "./store-shared";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
+import { isCarryEligible } from "@shared/lib/evidence-loss";
+import { reserveLossLineage } from "./loss";
 
 export function hasConsistentSnapshotState(
   syncState: Pick<ReserveSyncStateRecord, "lastSuccessAt" | "lastSuccessAttemptId"> | null | undefined,
@@ -152,10 +154,11 @@ export interface LiveReserveAdmissionResult {
   freshness: ReserveFreshnessView | null;
 }
 
-/** Snapshot admission deliberately does not depend on a later attempt's status. */
+/** Later refresh loss may reuse only proved operational evidence; sticky revocations survive skips. */
 export function evaluateLiveReserveAdmission(
   record: ReserveCompositionRecord | AcceptedReserveSnapshot | null,
-  syncState: Pick<ReserveSyncStateRecord, "lastSuccessAt" | "lastSuccessAttemptId"> | null,
+  syncState: Pick<ReserveSyncStateRecord, "lastSuccessAt" | "lastSuccessAttemptId">
+    & Partial<Pick<ReserveSyncStateRecord, "lastAttemptedAt" | "lastAttemptId" | "pendingAttemptId" | "lastStatus" | "metadata">> | null,
   coin: Pick<StablecoinMeta, "liveReservesConfig"> | undefined,
   now: number,
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
@@ -170,6 +173,22 @@ export function evaluateLiveReserveAdmission(
     return { eligible: false, reasons, freshness: null };
   }
   if (!hasConsistentSnapshotState(syncState, record)) reasons.push("inconsistent-snapshot");
+  const lineage = reserveLossLineage(syncState ? { ...syncState, stablecoinId: record.stablecoinId,
+    configFingerprint: record.configFingerprint, metadata: syncState.metadata ?? {} } : null);
+  if (lineage.invalidations.composition) reasons.push("live-scope-invalidated");
+  const pending = syncState?.pendingAttemptId != null;
+  const laterAttempt = !pending && typeof syncState?.lastAttemptedAt === "number"
+    && (syncState.lastAttemptedAt > record.fetchedAt
+      || (syncState.lastAttemptId != null && syncState.lastAttemptId !== record.attemptId));
+  if (laterAttempt || lineage.latest?.scope.key === "composition") {
+    const loss = lineage.latest;
+    if (!loss || loss.scope.assetId !== record.stablecoinId || loss.scope.key !== "composition"
+      || loss.sourceId !== record.configFingerprint
+      || (!pending && ((syncState?.lastAttemptId != null && loss.attemptId !== syncState.lastAttemptId)
+        || loss.observedAtSec !== syncState?.lastAttemptedAt))
+      || loss.priorEvidence?.ref !== `reserve-composition:${record.stablecoinId}:${record.attemptId}`
+      || !isCarryEligible(loss, now)) reasons.push("refresh-loss-unproved");
+  }
   if (config) {
     if (typeof record.configFingerprint !== "string"
       || !/^[a-f0-9]{64}$/.test(record.configFingerprint)

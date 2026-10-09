@@ -16,6 +16,7 @@ import {
 import { ReserveSliceSchema } from "./reserves";
 import { HttpUrlSchema } from "./validators";
 import { isValidIsoDateOnly } from "./date-primitives";
+import { EvidenceLossLegSchema, EvidenceLossOutcomeSchema } from "./evidence-loss";
 import {
   RedemptionHolderEligibilitySchema,
   RedemptionLiveCapacityKindValues,
@@ -53,6 +54,29 @@ export interface LiveReserveWarning {
   severity: "info" | "warning";
   effect: LiveReserveWarningEffect;
 }
+
+/** Complete ordered collector chain, including returned fallback legs. Never truncate for admission. */
+export const ReserveAttemptLegSchema = z.object({
+  key: z.string().min(1),
+  sourceId: z.string().min(1),
+  result: z.enum(["returned", "failed", "not-started"]),
+  loss: EvidenceLossLegSchema.nullable(),
+}).strict();
+export type ReserveAttemptLeg = z.output<typeof ReserveAttemptLegSchema>;
+const ReserveLossOutcomeSchema = EvidenceLossOutcomeSchema.refine(
+  (outcome) => outcome.legs.length <= 65, "Reserve loss leg bound exceeded",
+);
+
+/** One latest loss plus one sticky revocation per datum; bounded independently of attempt history. */
+export const ReserveLossLineageSchema = z.object({
+  latest: ReserveLossOutcomeSchema.nullable(),
+  attemptLegs: z.array(ReserveAttemptLegSchema).max(64).optional(),
+  authority: z.object({ attemptId: z.string().min(1).nullable(),
+    observedAtSec: z.number().int().positive(), sourceId: z.string().min(1) }).strict().optional(),
+  invalidations: z.record(z.string().min(1), ReserveLossOutcomeSchema)
+    .refine((entries) => Object.keys(entries).length <= 8, "Reserve invalidation scope bound exceeded"),
+}).strict();
+export type ReserveLossLineage = z.output<typeof ReserveLossLineageSchema>;
 
 export const LiveReserveRedemptionOutputValuationSchema = /* @__PURE__ */ (() => z
   .object({
@@ -355,6 +379,11 @@ export type LiveReserveLiabilityScopeMetadata = z.output<typeof LiveReserveLiabi
 
 export const LiveReserveSnapshotMetadataSchema = /* @__PURE__ */ (() => z
   .object({
+    reserveAttemptLegs: z.array(ReserveAttemptLegSchema).max(64).optional(),
+    reserveLoss: ReserveLossOutcomeSchema.optional(),
+    reserveInvalidations: z.record(z.string().min(1), ReserveLossOutcomeSchema)
+      .refine((entries) => Object.keys(entries).length <= 8, "Reserve invalidation scope bound exceeded").optional(),
+    reserveLossLineage: ReserveLossLineageSchema.optional(),
     reserveObservation: ReserveObservationEnvelopeSchema.optional(),
     boundedFactsGeneration: ReserveBoundedFactsGenerationSchema.optional(),
     sourceTimestamp: z.number().finite().optional(),

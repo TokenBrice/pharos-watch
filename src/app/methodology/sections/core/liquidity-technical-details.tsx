@@ -68,6 +68,15 @@ function LiquidityComponentCard({
 export function LiquidityTechnicalDetails() {
   return (
     <MethodologyDetails summary="Technical details: component weights, TVL scaling, and quality adjustments">
+      <p>
+        Since v6.94, historical measured quotes can enrich only targets present in the latest accepted quote
+        catalog. An absent target cannot be resurrected as last-known-good; retention needs an existing latest
+        operational failure and preserves its real reason. Successful history and maturity observations use
+        original quotedAt, strictly after the adapter window start and no later than the assessment clock.
+        Republishing an old quote cannot renew its count, maturity or capacity. Existing maturity thresholds,
+        three-hour ceiling, operational-failure classification and one-hour Exit continuity hold remain.
+        This versions score-facing evidence admission, not a new retained-TVL measurement epoch.
+      </p>
       <div className="flex flex-col items-center gap-3">
         <div className="grid grid-cols-2 gap-2 w-full md:grid-cols-5 md:gap-3">
           {LIQUIDITY_SCORE_WEIGHTS.map((component) => (

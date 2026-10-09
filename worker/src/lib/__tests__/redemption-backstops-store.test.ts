@@ -29,6 +29,8 @@ import { assessReserveFetchFreshness } from "../live-reserves/store-snapshot-sta
 const LEGACY_V3997_REDEMPTION_BACKSTOP_ROW = makeRealisticRedemptionRow({
   stablecoin_id: "usdc-circle",
   methodology_version: "3.997",
+  snapshot_run_id: "legacy-run",
+  updated_at: 1_746_800_000,
   details_json: JSON.stringify({
     resolutionState: "resolved",
     capacityConfidence: "documented-bound",
@@ -115,10 +117,33 @@ describe("loadRedemptionBackstopSnapshot", () => {
     assertAllD1MatchesUsed(db);
   });
 
+  it.each([undefined, []] as const)("projects the same unknown failed-row loss for absent or empty outcomes (%j)", async (lossOutcomes) => {
+    const row = makeRealisticRedemptionRow({ snapshot_run_id: "run-failed", score: null });
+    row.details_json = JSON.stringify({
+      ...JSON.parse(row.details_json),
+      resolutionState: "failed",
+      ...(lossOutcomes === undefined ? {} : { lossOutcomes }),
+    });
+    const db = mockD1Strict([
+      completedRunsQuery([completedRunRow({ run_id: "run-failed" })]),
+      runRowsQuery("run-failed", [row]),
+    ]);
+    const loaded = await loadRedemptionBackstopSnapshot(db);
+    const losses = loaded.lossOutcomesByAssetId?.["eurc-circle"];
+    expect(losses).toEqual([expect.objectContaining({
+      scope: { assetId: "eurc-circle", kind: "route", key: "redemption:eurc-circle:offchain-issuer" },
+      disposition: "unknown", reason: "sync-error", legacy: true,
+      attemptId: null, runId: null, generationId: null, observedAtSec: row.updated_at,
+      proof: null, priorEvidence: null,
+    })]);
+    expect(loaded.map["eurc-circle"].lossOutcomes).toEqual(losses);
+    assertAllD1MatchesUsed(db);
+  });
+
   it("prefers the latest completed run when loading a snapshot", async () => {
     const db = mockD1Strict([
       completedRunsQuery([completedRunRow({ run_id: "run-new", methodology_version: "1.1" })]),
-      runRowsQuery("run-new", [makeRealisticRedemptionRow({ snapshot_run_id: "run-new" })]),
+      runRowsQuery("run-new", [makeRealisticRedemptionRow({ snapshot_run_id: "run-new", methodology_version: "1.1" })]),
     ]);
 
     const result = await loadRedemptionBackstopSnapshot(db);
@@ -131,21 +156,20 @@ describe("loadRedemptionBackstopSnapshot", () => {
     assertAllD1MatchesUsed(db);
   });
 
-  it("does not use legacy current rows when immutable run rows are present but all malformed", async () => {
+  it("quarantines attributable malformed rows from the newest run without serving older evidence", async () => {
     const db = mockD1Strict([
       completedRunsQuery([
-        completedRunRow({ run_id: "run-corrupt", methodology_version: "1.1" }),
+        completedRunRow({ run_id: "run-corrupt" }),
         completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_000, min_updated_at: 1_699_999_990, max_updated_at: 1_699_999_990 }),
       ]),
       runRowsQuery("run-corrupt", [makeRealisticRedemptionRow({ snapshot_run_id: "run-corrupt", score: 101 })]),
-      runRowsQuery("run-valid", [makeRealisticRedemptionRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })]),
     ]);
-
     const result = await loadRedemptionBackstopSnapshot(db);
-
-    expect(result.runId).toBe("run-valid");
-    expect(result.snapshotSource).toBe("run-rows");
-    expect(result.latestUpdatedAt).toBe(1_699_999_990);
+    expect(result.runId).toBe("run-corrupt");
+    expect(result.map).toEqual({});
+    expect(result.quarantinedAssetIds).toEqual(["eurc-circle"]);
+    expect(result.lossOutcomesByAssetId?.["eurc-circle"]).toMatchObject([{ disposition: "semantic", reason: "malformed-persisted-row" }]);
+    expect(result.latestUpdatedAt).toBe(1_700_000_000);
     assertAllD1MatchesUsed(db);
   });
 
@@ -156,41 +180,31 @@ describe("loadRedemptionBackstopSnapshot", () => {
     ]);
 
     await expect(loadRedemptionBackstopSnapshot(db)).rejects.toThrow(
-      "No valid completed redemption backstop run found",
+      "Untrusted newest redemption run census",
     );
     assertAllD1MatchesUsed(db);
   });
 
-  it("falls back to an earlier completed run when the newest completed manifest is not complete", async () => {
+  it("fails globally for an incomplete newest manifest without hiding behind an earlier run", async () => {
     const db = mockD1Strict([
       completedRunsQuery([
-        completedRunRow({ run_id: "run-incomplete", completed_at: 1_700_000_010, expected_count: 2 }),
-        completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_000, min_updated_at: 1_699_999_990, max_updated_at: 1_699_999_990 }),
+        completedRunRow({ run_id: "run-incomplete", expected_count: 2 }),
+        completedRunRow({ run_id: "run-valid" }),
       ]),
-      runRowsQuery("run-valid", [makeRealisticRedemptionRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })]),
     ]);
-
-    const result = await loadRedemptionBackstopSnapshot(db);
-
-    expect(result.runId).toBe("run-valid");
-    expect(result.latestUpdatedAt).toBe(1_699_999_990);
+    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toThrow("Untrusted newest redemption run manifest");
     assertAllD1MatchesUsed(db);
   });
 
 
-  it("falls back to an earlier completed run when the newest completed manifest has no max timestamp", async () => {
+  it("fails globally when the newest completed manifest has no output clock", async () => {
     const db = mockD1Strict([
       completedRunsQuery([
-        completedRunRow({ run_id: "run-missing-max", max_updated_at: null, methodology_version: "1.1" }),
-        completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_000, min_updated_at: 1_699_999_990, max_updated_at: 1_699_999_990, methodology_version: "1.1" }),
+        completedRunRow({ run_id: "run-missing-max", max_updated_at: null }),
+        completedRunRow({ run_id: "run-valid" }),
       ]),
-      runRowsQuery("run-valid", [makeRealisticRedemptionRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })]),
     ]);
-
-    const result = await loadRedemptionBackstopSnapshot(db);
-
-    expect(result.runId).toBe("run-valid");
-    expect(result.latestUpdatedAt).toBe(1_699_999_990);
+    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toThrow("Untrusted newest redemption run manifest");
     assertAllD1MatchesUsed(db);
   });
 
@@ -209,19 +223,12 @@ describe("loadRedemptionBackstopSnapshot", () => {
   });
 
 
-  it("falls back when the newest completed run has unreadable rows", async () => {
+  it("fails globally when route identity cannot be trusted", async () => {
     const db = mockD1Strict([
-      completedRunsQuery([
-        completedRunRow({ run_id: "run-bad", methodology_version: "1.1" }),
-        completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_000, min_updated_at: 1_699_999_990, max_updated_at: 1_699_999_990 }),
-      ]),
+      completedRunsQuery([completedRunRow({ run_id: "run-bad" }), completedRunRow({ run_id: "run-valid" })]),
       runRowsQuery("run-bad", [makeRealisticRedemptionRow({ snapshot_run_id: "run-bad", route_family: "bad-family" })]),
-      runRowsQuery("run-valid", [makeRealisticRedemptionRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })]),
     ]);
-
-    const result = await loadRedemptionBackstopSnapshot(db);
-
-    expect(result.runId).toBe("run-valid");
+    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toThrow("Untrusted redemption row identity or clock");
     assertAllD1MatchesUsed(db);
   });
 
@@ -239,7 +246,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
   it("uses the completed run manifest methodology version for snapshot attribution", async () => {
     const db = mockD1Strict([
       completedRunsQuery([completedRunRow({ run_id: "run-v404", methodology_version: "4.04" })]),
-      runRowsQuery("run-v404", [makeRealisticRedemptionRow({ snapshot_run_id: "run-v404", methodology_version: "4.03" })]),
+      runRowsQuery("run-v404", [makeRealisticRedemptionRow({ snapshot_run_id: "run-v404", methodology_version: "4.04" })]),
     ]);
 
     const result = await buildRedemptionBackstopsSnapshot(db);
@@ -248,7 +255,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
     expect(result.methodology.versionLabel).toBe("v4.04");
     expect(result.methodology.changelogPath).toBe(REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH);
     expect(result.snapshotSource).toBe("run-rows");
-    expect(result.coins["eurc-circle"]?.methodologyVersion).toBe("4.03");
+    expect(result.coins["eurc-circle"]?.methodologyVersion).toBe("4.04");
     assertAllD1MatchesUsed(db);
   });
 
@@ -296,7 +303,9 @@ describe("loadRedemptionBackstopSnapshot", () => {
       completedRunsQuery([completedRunRow()]),
       runRowsQuery("run-live", [makeRealisticRedemptionRow({ score: 65, details_json: detailsJson })]),
     ]);
-    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toBeInstanceOf(RedemptionBackstopSnapshotUnavailableError);
+    const loaded = await loadRedemptionBackstopSnapshot(db);
+    expect(loaded.quarantinedAssetIds).toEqual(["eurc-circle"]);
+    expect(loaded.map).not.toHaveProperty("eurc-circle");
     assertAllD1MatchesUsed(db);
   });
 
@@ -310,14 +319,15 @@ describe("loadRedemptionBackstopSnapshot", () => {
     const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     try {
       const db = mockD1Strict([
-        completedRunsQuery([completedRunRow()]),
+        completedRunsQuery([completedRunRow({ methodology_version: version })]),
         runRowsQuery("run-live", [makeRealisticRedemptionRow({
           methodology_version: version, details_json: detailsJson,
         })]),
       ]);
-      await expect(loadRedemptionBackstopSnapshot(db)).rejects.toMatchObject({
-        message: expect.stringContaining(`eurc-circle:${reason}`),
-      });
+      const loaded = await loadRedemptionBackstopSnapshot(db);
+      expect(loaded.quarantinedAssetIds).toEqual(["eurc-circle"]);
+      expect(loaded.lossOutcomesByAssetId?.["eurc-circle"]?.[0].reason).toBe("malformed-persisted-row");
+      expect(loaded.map).not.toHaveProperty("eurc-circle");
       const records = warning.mock.calls.map(([line]) => JSON.parse(String(line)));
       expect(records).toContainEqual(expect.objectContaining({
         event: "redemption-backstop-row-rejected",
@@ -332,7 +342,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
 
   it("continues admitting complete current details under an unrecognized methodology version", async () => {
     const db = mockD1Strict([
-      completedRunsQuery([completedRunRow()]),
+      completedRunsQuery([completedRunRow({ methodology_version: "v4.07" })]),
       runRowsQuery("run-live", [makeRealisticRedemptionRow({ methodology_version: "v4.07" })]),
     ]);
     const { map } = await loadRedemptionBackstopSnapshot(db);
@@ -352,20 +362,24 @@ describe("loadRedemptionBackstopSnapshot", () => {
         methodology_version: "4.07", details_json: JSON.stringify(details),
       })]),
     ]);
-    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toBeInstanceOf(RedemptionBackstopSnapshotUnavailableError);
+    const loaded = await loadRedemptionBackstopSnapshot(db);
+    expect(loaded.quarantinedAssetIds).toEqual(["eurc-circle"]);
+    expect(loaded.map).not.toHaveProperty("eurc-circle");
     assertAllD1MatchesUsed(db);
   });
 
   it.each(["4.07", "3.997"])("rejects corrupt evidence even when diagnostics can be salvaged in %s", async (version) => {
     const details = JSON.parse(makeRealisticRedemptionRow().details_json);
     const db = mockD1Strict([
-      completedRunsQuery([completedRunRow()]),
+      completedRunsQuery([completedRunRow({ methodology_version: version })]),
       runRowsQuery("run-live", [makeRealisticRedemptionRow({
         methodology_version: version,
         details_json: JSON.stringify({ ...details, reserveInput: {}, notes: ["note", 123] }),
       })]),
     ]);
-    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toBeInstanceOf(RedemptionBackstopSnapshotUnavailableError);
+    const loaded = await loadRedemptionBackstopSnapshot(db);
+    expect(loaded.quarantinedAssetIds).toEqual(["eurc-circle"]);
+    expect(loaded.map).not.toHaveProperty("eurc-circle");
     assertAllD1MatchesUsed(db);
   });
 
@@ -379,7 +393,9 @@ describe("loadRedemptionBackstopSnapshot", () => {
         details_json: JSON.stringify({ ...details, [field]: invalid, notes: ["note", 123] }),
       }]),
     ]);
-    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toBeInstanceOf(RedemptionBackstopSnapshotUnavailableError);
+    const loaded = await loadRedemptionBackstopSnapshot(db);
+    expect(loaded.quarantinedAssetIds).toEqual(["usdc-circle"]);
+    expect(loaded.map).not.toHaveProperty("usdc-circle");
     assertAllD1MatchesUsed(db);
   });
 
@@ -395,7 +411,9 @@ describe("loadRedemptionBackstopSnapshot", () => {
         methodology_version: "4.07", score, details_json: JSON.stringify({ ...details, resolutionState }),
       })]),
     ]);
-    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toBeInstanceOf(RedemptionBackstopSnapshotUnavailableError);
+    const loaded = await loadRedemptionBackstopSnapshot(db);
+    expect(loaded.quarantinedAssetIds).toEqual(["eurc-circle"]);
+    expect(loaded.map).not.toHaveProperty("eurc-circle");
     assertAllD1MatchesUsed(db);
   });
 
@@ -421,28 +439,23 @@ describe("loadRedemptionBackstopSnapshot", () => {
     assertAllD1MatchesUsed(db);
   });
 
-  it("falls back atomically from corrupt details to the earlier run's own timestamp and generation", async () => {
+  it("keeps a peer's newest adverse zero while quarantining only the bad row", async () => {
     const db = mockD1Strict([
       completedRunsQuery([
-        completedRunRow({ run_id: "run-corrupt", expected_count: 2, written_count: 2 }),
-        completedRunRow({
-          run_id: "run-old", max_updated_at: 1_699_999_990, methodology_version: "3.997",
-          metadata_json: JSON.stringify({ reserveGenerationId: "reserve-old" }),
-        }),
+        completedRunRow({ run_id: "run-new", expected_count: 2, written_count: 2 }),
+        completedRunRow({ run_id: "run-old" }),
       ]),
-      runRowsQuery("run-corrupt", [
-        makeRealisticRedemptionRow({ stablecoin_id: "new-only", details_json: "not-json" }),
-        makeRealisticRedemptionRow({ stablecoin_id: "otherwise-valid-new" }),
+      runRowsQuery("run-new", [
+        makeRealisticRedemptionRow({ snapshot_run_id: "run-new", stablecoin_id: "bad", details_json: "not-json" }),
+        makeRealisticRedemptionRow({ snapshot_run_id: "run-new", stablecoin_id: "peer", score: 0, immediate_capacity_usd: 0, immediate_capacity_ratio: 0 }),
       ]),
-      runRowsQuery("run-old", [makeRealisticRedemptionRow({ updated_at: 1_699_999_990 })]),
     ]);
     const result = await loadRedemptionBackstopSnapshot(db);
-    expect(result).toMatchObject({
-      runId: "run-old", latestUpdatedAt: 1_699_999_990, methodologyVersion: "3.997",
-      runMetadata: { reserveGenerationId: "reserve-old" },
-    });
-    expect(Object.keys(result.map)).toEqual(["eurc-circle"]);
-    expect(result.map["eurc-circle"].updatedAt).toBe(1_699_999_990);
+    expect(result.runId).toBe("run-new");
+    expect(Object.keys(result.map)).toEqual(["peer"]);
+    expect(result.map.peer).toMatchObject({ score: 0, immediateCapacityUsd: 0, updatedAt: 1_700_000_000 });
+    expect(result.quarantinedAssetIds).toEqual(["bad"]);
+    expect(result.lossOutcomesByAssetId?.bad[0]).toMatchObject({ disposition: "semantic", reason: "malformed-persisted-row", runId: "run-new" });
     assertAllD1MatchesUsed(db);
   });
 
@@ -851,70 +864,39 @@ describe("loadRedemptionBackstopLiveSignalRows", () => {
     assertAllD1MatchesUsed(db);
   });
 
-  it("skips invalid newer completed manifests when selecting the live-signal run", async () => {
-    const db = mockD1Strict([
-      completedRunsQuery([
-        completedRunRow({ run_id: "run-incomplete", completed_at: 1_700_000_030, expected_count: 2 }),
-        completedRunRow({ run_id: "run-missing-max", completed_at: 1_700_000_020, max_updated_at: null }),
-        completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_010 }),
-      ]),
-      {
-        match: LIVE_SIGNAL_ROWS_SQL,
-        matchBinds: ["run-valid"],
-        rows: [
-          {
-            stablecoin_id: "eurc-circle",
-            immediate_capacity_ratio: null,
-            route_family: "offchain-issuer",
-            updated_at: 1_700_000_000,
-          },
-        ],
-      },
-    ]);
-
-    const rows = await loadRedemptionBackstopLiveSignalRows(db, ["eurc-circle"]);
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.stablecoin_id).toBe("eurc-circle");
+  it("fails globally for an untrusted newest live-signal manifest", async () => {
+    const db = mockD1Strict([completedRunsQuery([
+      completedRunRow({ run_id: "run-incomplete", expected_count: 2 }),
+      completedRunRow({ run_id: "run-valid" }),
+    ])]);
+    await expect(loadRedemptionBackstopLiveSignalRows(db, ["eurc-circle"])).rejects.toThrow("Untrusted newest redemption live-signal manifest");
     assertAllD1MatchesUsed(db);
   });
 
-  it("falls back instead of returning a short live-signal set from a partial completed run", async () => {
+  it("fails globally for a missing live-signal census row instead of serving older evidence", async () => {
     const db = mockD1Strict([
       completedRunsQuery([
-        completedRunRow({ run_id: "run-partial", completed_at: 1_700_000_020, expected_count: 2, written_count: 2 }),
-        completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_010 }),
+        completedRunRow({ run_id: "run-partial", expected_count: 2, written_count: 2 }),
+        completedRunRow({ run_id: "run-valid" }),
       ]),
-      {
-        match: LIVE_SIGNAL_ROWS_SQL,
-        matchBinds: ["run-partial"],
-        rows: [
-          {
-            stablecoin_id: "eurc-circle",
-            immediate_capacity_ratio: 0.1,
-            route_family: "offchain-issuer",
-            updated_at: 1_700_000_000,
-          },
-        ],
-      },
-      {
-        match: LIVE_SIGNAL_ROWS_SQL,
-        matchBinds: ["run-valid"],
-        rows: [
-          {
-            stablecoin_id: "eurc-circle",
-            immediate_capacity_ratio: 0.42,
-            route_family: "offchain-issuer",
-            updated_at: 1_699_999_990,
-          },
-        ],
-      },
+      { match: LIVE_SIGNAL_ROWS_SQL, matchBinds: ["run-partial"], rows: [
+        { stablecoin_id: "eurc-circle", immediate_capacity_ratio: 0.1, route_family: "offchain-issuer", updated_at: 1_700_000_000 },
+      ] },
     ]);
+    await expect(loadRedemptionBackstopLiveSignalRows(db, ["eurc-circle"])).rejects.toThrow("Untrusted newest redemption live-signal census");
+    assertAllD1MatchesUsed(db);
+  });
 
-    const rows = await loadRedemptionBackstopLiveSignalRows(db, ["eurc-circle"]);
-
-    expect(rows).toEqual([
-      expect.objectContaining({ stablecoin_id: "eurc-circle", immediate_capacity_ratio: 0.42 }),
+  it("keeps the newest adverse peer when another live-signal payload is malformed", async () => {
+    const db = mockD1Strict([
+      completedRunsQuery([completedRunRow({ expected_count: 2, written_count: 2 })]),
+      { match: LIVE_SIGNAL_ROWS_SQL, matchBinds: ["run-live"], rows: [
+        { stablecoin_id: "eurc-circle", immediate_capacity_ratio: 0, route_family: "offchain-issuer", updated_at: 1_700_000_000 },
+        { stablecoin_id: "usdc-circle", immediate_capacity_ratio: 2, route_family: "offchain-issuer", updated_at: 1_700_000_000 },
+      ] },
+    ]);
+    expect(await loadRedemptionBackstopLiveSignalRows(db, ["eurc-circle", "usdc-circle"])).toEqual([
+      { stablecoin_id: "eurc-circle", immediate_capacity_ratio: 0, route_family: "offchain-issuer", updated_at: 1_700_000_000 },
     ]);
     assertAllD1MatchesUsed(db);
   });

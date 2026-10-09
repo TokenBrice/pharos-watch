@@ -52,6 +52,7 @@ export function completedRunRow(overrides: Record<string, unknown> = {}): Record
 export function makeRealisticRedemptionRow(overrides: Record<string, unknown> = {}) {
   return {
     stablecoin_id: "eurc-circle",
+    snapshot_run_id: "run-live",
     score: 65,
     dex_liquidity_score: 44,
     access_score: 40,
@@ -72,7 +73,7 @@ export function makeRealisticRedemptionRow(overrides: Record<string, unknown> = 
     fee_bps: null,
     queue_enabled: 0,
     updated_at: 1_700_000_000,
-    methodology_version: "1.1",
+    methodology_version: "4.07",
     details_json: JSON.stringify({
       resolutionState: "resolved",
       capacityConfidence: "heuristic",

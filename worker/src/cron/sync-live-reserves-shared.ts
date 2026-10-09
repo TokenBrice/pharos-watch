@@ -2,6 +2,7 @@ import { WORKER_ACTIVE_STABLECOINS, WORKER_TRACKED_META_BY_ID, hasWorkerLiveRese
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapter-descriptors";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import type { LiveReserveEvidenceClass } from "@shared/types/live-reserves";
+import type { ReserveAttemptLeg } from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "./reserve-adapters/index";
 import type { ReserveSyncStateRecord } from "../lib/live-reserves/store";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -93,6 +94,7 @@ export interface ReserveAttemptFailureSummary {
 
 export interface ReserveAdapterAttemptChainError extends Error {
   attemptSummaries: ReserveAttemptFailureSummary[];
+  reserveAttemptLegs?: ReserveAttemptLeg[];
 }
 
 export type LiveReserveCursorTailState = "recording" | "incomplete" | "complete";

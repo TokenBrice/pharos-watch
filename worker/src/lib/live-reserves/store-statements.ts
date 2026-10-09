@@ -11,6 +11,22 @@ import {
 
 const SQLITE_NOW_MS_EXPRESSION = "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)";
 
+/** Whole C0 packets are atomic values; RFC 7396 json_patch would erase required null fields. */
+export const RESERVE_INVALIDATIONS_UNION_SQL = `json((
+  SELECT json_group_object(scope_key, json(loss_value))
+  FROM (
+    SELECT key AS scope_key, value AS loss_value
+    FROM json_each(COALESCE(json_extract(reserve_sync_state.metadata, '$.reserveInvalidations'), '{}'))
+    UNION ALL
+    SELECT incoming.key AS scope_key, incoming.value AS loss_value
+    FROM json_each(COALESCE(json_extract(?, '$.reserveInvalidations'), '{}')) AS incoming
+    WHERE NOT EXISTS (
+      SELECT 1 FROM json_each(COALESCE(json_extract(reserve_sync_state.metadata, '$.reserveInvalidations'), '{}')) AS prior
+      WHERE prior.key = incoming.key
+    )
+  )
+))`;
+
 const serializeWarnings = (w: readonly unknown[]): string | null => (w.length > 0 ? JSON.stringify(w) : null);
 
 const HISTORY_TARGETS = {
@@ -312,7 +328,7 @@ export function buildReserveSyncFinalizeAttemptStatement(
              warning_count = ?,
              warnings = ?,
              last_error = ?,
-             metadata = ?,
+             metadata = json_set(?, '$.reserveInvalidations', ${RESERVE_INVALIDATIONS_UNION_SQL}),
              last_attempt_id = ?,
              pending_attempt_id = NULL,
              config_fingerprint = ?
@@ -329,6 +345,7 @@ export function buildReserveSyncFinalizeAttemptStatement(
       record.warningCount,
       serializeWarnings(record.warnings),
       record.lastError,
+      JSON.stringify(record.metadata),
       JSON.stringify(record.metadata),
       record.lastAttemptId ?? null,
       record.configFingerprint ?? null,

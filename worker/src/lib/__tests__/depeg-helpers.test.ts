@@ -279,6 +279,48 @@ describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
 });
 
 describe("collectDexProtocolCorroborations", () => {
+  it.each([
+    { mode: "confirm" as const, price: 0.96 },
+    { mode: "recover" as const, price: 1 },
+    { mode: "contradict" as const, price: 1.04 },
+  ])("excludes ticker quorum votes in $mode while preserving soft evidence", ({ mode, price }) => {
+    const sources = [
+      { protocol: "curve", chain: "ethereum", price, tvl: 2_000_000, updatedAt: 1, sourceFamily: "curve" },
+      { protocol: "kinesis_money", chain: "orderbook", price, tvl: 0, updatedAt: 1, sourceFamily: "cg_tickers" },
+      { protocol: "cg-ticker-binance", chain: "orderbook", price, tvl: 0, updatedAt: 1, sourceFamily: "cg_tickers" },
+      { protocol: "cg-ticker-kraken", chain: "orderbook", price, tvl: 0, updatedAt: 1, sourceFamily: "cg_tickers" },
+    ];
+    expect(collectDexProtocolCorroborations(sources, 1, 200, "below", mode).map((group) => group.key))
+      .toEqual(["curve", "cg_tickers"]);
+    expect(collectDexProtocolCorroborations(sources, 1, 200, "below", mode, "hard").map((group) => group.key))
+      .toEqual(["curve"]);
+    sources.push({ protocol: "uniswap", chain: "ethereum", price, tvl: 2_000_000, updatedAt: 1, sourceFamily: "uniswap" });
+    expect(collectDexProtocolCorroborations(sources, 1, 200, "below", mode, "hard").map((group) => group.key))
+      .toEqual(["curve", "uniswap"]);
+  });
+
+  it("does not admit legacy ticker protocol labels without a source family into hard quorum", () => {
+    const sources = [
+      { protocol: "cg-ticker-binance", chain: "orderbook", price: 0.96, tvl: 0, updatedAt: 1 },
+    ];
+    expect(collectDexProtocolCorroborations(sources, 1, 200, "below", "confirm")).toHaveLength(1);
+    expect(collectDexProtocolCorroborations(sources, 1, 200, "below", "confirm", "hard")).toEqual([]);
+  });
+
+  it("normalizes ticker labels and filters legacy tickers before selecting a family representative", () => {
+    const sources = [
+      { protocol: " CG-TICKER-Binance ", chain: "orderbook", price: 0.90, tvl: 0, updatedAt: 1, sourceFamily: "curve" },
+      { protocol: "kinesis_money", chain: "orderbook", price: 0.91, tvl: 0, updatedAt: 1, sourceFamily: " CG_TICKERS " },
+      { protocol: "curve", chain: "ethereum", price: 0.96, tvl: 2_000_000, updatedAt: 1, sourceFamily: "curve" },
+    ];
+    const soft = collectDexProtocolCorroborations(sources, 1, 200, "below", "confirm");
+    expect(soft.map((group) => group.key)).toEqual(["curve", "cg_tickers"]);
+    expect(soft[0]!.source.protocol).toBe(" CG-TICKER-Binance ");
+    const hard = collectDexProtocolCorroborations(sources, 1, 200, "below", "confirm", "hard");
+    expect(hard.map((group) => group.key)).toEqual(["curve"]);
+    expect(hard[0]!.source.protocol).toBe("curve");
+  });
+
   it("counts DEX corroboration by source family instead of protocol labels", () => {
     const groups = collectDexProtocolCorroborations(
       [

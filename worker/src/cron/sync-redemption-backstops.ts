@@ -6,6 +6,8 @@ import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-fre
 import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { summarizeEvidenceLossOutcomes } from "@shared/lib/evidence-loss";
+import { classifyRedemptionEntryLosses } from "../lib/redemption-backstop/loss";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
 import exitExecutionModelReviews from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
@@ -17,7 +19,7 @@ import type { RedemptionReserveRunMetadata } from "@shared/types/reserve-input";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { createCronResult, type CronMetadataRecord } from "../lib/cron-result";
 import { loadDexLiquidityScores } from "../lib/dex-liquidity";
-import { AcceptedReserveViewError, acceptedReserveMetadataMap, consumedReserveInput, loadAcceptedReserveGeneration } from "../lib/accepted-reserve-generation";
+import { AcceptedReserveViewError, loadAcceptedReserveMetadataMap, consumedReserveInput, loadAcceptedReserveGeneration } from "../lib/accepted-reserve-generation";
 import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store-write";
 import {
   applyOutputDependencyResolution,
@@ -110,6 +112,7 @@ export async function syncRedemptionBackstops(
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const now = Math.floor(Date.now() / 1000);
+  const runId = `redemption:${crypto.randomUUID()}`;
   await reportProgress?.({ stage: "loading-redemption-reserves" });
   let acceptedReserveGeneration;
   try {
@@ -170,7 +173,7 @@ export async function syncRedemptionBackstops(
     preloadWarnings.push(`dex-liquidity:${message}`);
   }
 
-  const reserveSnapshotMetadataById = acceptedReserveMetadataMap(acceptedReserveGeneration, now);
+  const reserveSnapshotMetadataById = await loadAcceptedReserveMetadataMap(db, acceptedReserveGeneration, now);
 
   await reportProgress?.({ stage: "loading-redemption-availability" });
   const routeAvailabilityById = await loadSevereActiveDepegAvailabilityMap(
@@ -238,12 +241,15 @@ export async function syncRedemptionBackstops(
       failedIds.push(stablecoinId);
       const config = configById.get(stablecoinId);
       if (config) {
-        collectedSnapshots.push(buildFailedRedemptionBackstopEntry(stablecoinId, config, now));
+        collectedSnapshots.push(buildFailedRedemptionBackstopEntry(stablecoinId, config, now, runId));
       }
     }
   }
   throwIfAborted(signal);
-  const snapshots = applyOutputDependencyResolution(collectedSnapshots, configById);
+  const snapshots = applyOutputDependencyResolution(collectedSnapshots, configById).map((entry) => ({
+    ...entry,
+    lossOutcomes: classifyRedemptionEntryLosses(entry, runId),
+  }));
 
   const dynamicCount = snapshots.filter((entry) => entry.sourceMode === "dynamic").length;
   const estimatedCount = snapshots.filter((entry) => entry.sourceMode === "estimated").length;
@@ -289,6 +295,7 @@ export async function syncRedemptionBackstops(
   const capacityCoverageFloorBreached = !missingCapacityWithinTolerance;
   const hasDegradedSyncSignal = hasBlockingUnresolved || liquidityStale || hasNoActiveConfiguredRows;
   const runMetadata: CronMetadataRecord & RedemptionReserveRunMetadata = {
+    lossSummary: { ...summarizeEvidenceLossOutcomes(snapshots.flatMap((entry) => entry.lossOutcomes)) },
     reserveViewSchemaVersion: 2,
     reserveGenerationId: acceptedReserveGeneration.generationId,
     reserveContentSha256: acceptedReserveGeneration.contentSha256,
@@ -357,6 +364,7 @@ export async function syncRedemptionBackstops(
 
   await reportProgress?.({ stage: "publishing-redemption-backstops", itemsDone: configuredIds.length, itemsTotal: configuredIds.length });
   const writeResult = await upsertRedemptionBackstopSnapshots(db, snapshots, {
+    runId,
     expectedCount: configuredIds.length,
     metadata: runMetadata,
   });

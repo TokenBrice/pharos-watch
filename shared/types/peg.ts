@@ -98,6 +98,10 @@ export const PegSummaryCoinSchema = z.object({
   priceSource: z.string().optional(),
   priceConfidence: PriceConfidenceSchema.nullable().optional(),
   priceUpdatedAt: z.number().nullable().optional(),
+  /**
+   * Original per-asset price observation clock; null means unknown. Absent on
+   * legacy captures also means unknown, never the analytics/cache/NAV clock.
+   */
   priceObservedAt: z.number().nullable().optional(),
   priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),
   nominalPriceReference: NominalPriceReferenceSchema.optional(),

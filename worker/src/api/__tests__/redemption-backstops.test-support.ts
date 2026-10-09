@@ -3,6 +3,7 @@ import { mockD1Strict } from "@shared/test-utils/mock-d1";
 export function makeRedemptionRow(overrides: Record<string, unknown> = {}) {
   return {
     stablecoin_id: "cusd-cap",
+    snapshot_run_id: typeof overrides.snapshot_run_id === "string" ? overrides.snapshot_run_id : null,
     score: 88,
     dex_liquidity_score: 29,
     access_score: 100,
@@ -26,6 +27,9 @@ export function makeRedemptionRow(overrides: Record<string, unknown> = {}) {
     methodology_version: "1.1",
     details_json: JSON.stringify({
       resolutionState: "resolved",
+      routeStatus: "open",
+      routeStatusSource: "static-config",
+      holderEligibility: "any-holder",
       outputDependencyResolution: {
         stablecoinId: "downstream-output",
         resolutionState: "missing-capacity",
@@ -71,7 +75,8 @@ export function makeCompletedRunsDb(
   return mockD1Strict([
     { match: COMPLETED_RUNS_SQL, matchBinds: [5], rows: manifests },
     ...Object.entries(rowsByRun).map(([runId, rows]) => ({
-      match: RUN_ROWS_BY_RUN_ID_SQL, matchBinds: [runId], rows,
+      match: RUN_ROWS_BY_RUN_ID_SQL, matchBinds: [runId],
+      rows: rows.map((row) => ({ ...row, snapshot_run_id: row.snapshot_run_id ?? runId })),
     })),
   ]);
 }

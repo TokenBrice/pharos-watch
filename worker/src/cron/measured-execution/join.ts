@@ -350,6 +350,7 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
     if (
       currentTargetIds.has(targetId) ||
       quote.resolution !== "last-known-good" ||
+      quote.latestFailureReason === "quote-missing" ||
       quote.status !== "measured" ||
       !isMatureFreshCurveQuote(
         quote,
@@ -449,6 +450,7 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
     if (
       currentTargetIds.has(targetId) ||
       quote.resolution !== "last-known-good" ||
+      quote.latestFailureReason === "quote-missing" ||
       quote.status !== "measured" ||
       !input.poolsByStablecoin.has(target.stablecoinId)
     ) {

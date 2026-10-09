@@ -2293,14 +2293,9 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     fixedInput.updatedAt,
     clockSec,
   );
-  const pegObservedAtSec = maximumObservedAt(
-    [
-      ...Object.values(fixedInput.pegDataById).map((peg) => peg.priceObservedAt),
-      ...Object.values(fixedInput.navPriceById ?? {}).map((navPrice) => navPrice.observedAtSec),
-    ],
-    fixedInput.updatedAt,
-    clockSec,
-  );
+  // This shared clock dates analytics/history generation, not any asset's price.
+  // Current-price freshness consumes only each peg row's original observation.
+  const pegObservedAtSec = fixedInput.clockSec;
   const registryObservedAtSec = boundedObservedAt(fixedInput.updatedAt, clockSec);
   const liveReservesGenerationDigest = domainDigest("safety-score-v9.live-reserves.v1", {
     reserves: fixedInput.liveReserveMap,
@@ -2430,7 +2425,10 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         });
         const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
         admissionPath = "reserveBoundFacts";
-        const reserveBoundFacts = buildSafetyScoreV9ReserveBoundFacts(assetId, reserveRows, { clockSec, liveProvenance: fixedInput.liveReserveProvenanceMap[assetId], liveMaxAgeSec: sources.liveReserves.maxAgeSec });
+        const reserveBoundFacts = buildSafetyScoreV9ReserveBoundFacts(assetId, reserveRows, { clockSec,
+          liveProvenance: fixedInput.liveReserveProvenanceMap[assetId],
+          liveLossLineage: "reserveLossLineageById" in fixedInput ? fixedInput.reserveLossLineageById?.[assetId] : undefined,
+          liveMaxAgeSec: sources.liveReserves.maxAgeSec });
         const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
         admissionPath = "reserveScopeAdmissions";
         const reserveScopeAdmissions = buildSafetyScoreV10ScopedReserveAdmissions(meta, fixedInput);

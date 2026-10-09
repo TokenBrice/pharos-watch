@@ -1,11 +1,45 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { loadPublishedDexPoolChallengers } from "../challenger-load";
+import { loadLegacyDexPoolChallengers } from "../challenger-legacy";
+import { isHardDexQuorumSource } from "../../../lib/depeg-helpers";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { loaderFixtures, loaderScenario } from "./challenger-load.test-support";
 
 afterEach(() => loaderFixtures.closeAll());
 
 describe("challenger load", () => {
+  it("preserves ticker lineage in legacy JSON fallbacks without dropping soft observations", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT stablecoin_id, top_pools_json",
+        rows: [{
+          stablecoin_id: "top-ticker", updated_at: 100,
+          top_pools_json: JSON.stringify([{
+            poolId: "orderbook:kinesis:top-ticker", project: "kinesis_money",
+            chain: "orderbook", source: "cg_tickers", price: 0.98, tvlUsd: 6_000_000,
+          }]),
+        }],
+      },
+      {
+        match: "SELECT stablecoin_id, price_sources_json",
+        rows: [{
+          stablecoin_id: "source-ticker", updated_at: 100,
+          price_sources_json: JSON.stringify([{
+            protocol: "kinesis_money", chain: "orderbook", sourceFamily: "cg_tickers",
+            price: 0.98, tvl: 6_000_000,
+          }]),
+        }],
+      },
+    ], { assertMatchesUsed: true });
+    const result = await loadLegacyDexPoolChallengers(db, 20_000, 1_000, 120);
+    for (const stablecoinId of ["top-ticker", "source-ticker"]) {
+      const rows = result.challengersByStablecoin.get(stablecoinId)!;
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ sourceFamily: "cg_tickers", priceUsd: 0.98, tvlUsd: 6_000_000 });
+      expect(isHardDexQuorumSource(rows[0]!)).toBe(false);
+    }
+  });
+
   it("serves the exact freshness boundary but falls back one second later", async () => {
     const { db, payload } = loaderScenario();
     payload(100, "current");

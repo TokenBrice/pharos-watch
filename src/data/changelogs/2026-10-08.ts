@@ -8,6 +8,24 @@ export const entry: ChangelogEntry = {
     "This dated release records source changes, not production acceptance. Ordinary pricing, venue discovery, historical evidence and canonical publication remain distinct from retired diagnostic collectors. Staged verifiers, cohort admissions, editorial mode flips, resource deletion and destructive D1 cleanup still require their own evidence and operated windows. No production soak, neutral replay, storage saving or completed cleanup is claimed here.",
   summary: [
     {
+      label: "Safety v10.13 original-clock and evidence integrity",
+      tag: "coverage",
+      description:
+        "Peg freshness uses each asset's original price clock, with missing/invalid/future clocks unavailable. Reserve retention after finalized failure needs operational-only per-datum proof within original expiry; semantic/unproven losses stay invalid until new admitted success. Returned fallbacks persist honestly. In-flight pending work preserves prior finalized evidence/proof, original clocks and existing invalidation; only finalized later attempts need their own identity/clock-bound proof. Tied-clock unstamped failures remain unknown without rejecting clean legacy successes. Backing lineage retains original authority/losses. Only actual present non-carryable composition/redemption loss or invalidation revokes a consumed parent; healthy newer success alone does not reject it and no post-recovery marker is added. Typed redemption losses and malformed-row quarantine preserve valid peers from the newest trusted run, but global untrusted-envelope/stale/unavailable holds remain. No Exit hold localisation, continuity removal, valuation-clock change or production stability gain is claimed.",
+    },
+    {
+      label: "Liquidity v6.94 measured-history admission and pruning",
+      tag: "infra",
+      description:
+        "Historical quotes cannot resurrect absent latest targets; successful history/maturity observations expire by original quotedAt, not publication time. Score-facing route/model confidence can change, without a TVL-basis break or new continuity policy. Repaired the measured retention 16-row regression with 256 physical rows per DELETE, at most 4,096 quote and 4,096 target rows per run, and a separate 16-generation candidate/empty-ledger budget. Current/reference protections and original expiry remain.",
+    },
+    {
+      label: "Depeg/DEWS v6.34 genuine hard DEX quorum",
+      tag: "coverage",
+      description:
+        "Excluded normalized cg_tickers and legacy cg-ticker protocols before hard family selection for confirmation, recovery, opposition and pool veto/high-TVL exceptions. One genuine family plus tickers no longer passes a two-family quorum. Ticker prices, soft diagnostics and Pricing v6.44 stay unchanged. Historical latency is unmeasured; new methodology entries use provisional 2026-10-09 00:00 UTC activation and must be re-dated at release.",
+    },
+    {
       label: "Funded DEX collection capacity (ADR-39)",
       tag: "infra",
       description:

@@ -1,4 +1,4 @@
-import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
+import { emptyReserveCompositionOverview, type ReserveLossLineage } from "@shared/types/live-reserves";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { WORKER_TRACKED_META_BY_ID, type WorkerLiveReserveStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ReserveCompositionOverview, ReserveCompositionRecord, ReserveSnapshotMetadataRecord } from "./store-shared";
@@ -22,6 +22,7 @@ import {
 } from "./store-snapshot-state";
 import { parseReserveCompositionRow } from "./store-row-decoding";
 import { matchReserveFeedReview, resolveReserveFeedReviews } from "../reserve-feed-reviews";
+import { reserveLossLineage } from "./loss";
 
 
 interface LiveReserveResumePointer {
@@ -331,13 +332,26 @@ async function loadFreshAuthoritativeReserveSnapshots(
   now = Math.floor(Date.now() / 1000),
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
   minSlices = 1,
-): Promise<Map<string, AuthoritativeReserveSnapshot>> {
+): Promise<{ snapshots: Map<string, AuthoritativeReserveSnapshot>; lossLineageById: Map<string, ReserveLossLineage> }> {
   const configuredCoins = getConfiguredLiveReserveCoins();
   const [syncById, compositionById] = await Promise.all([
     loadReserveSyncStateMap(db),
     loadReserveCompositionRowMap(db),
   ]);
   const snapshots = new Map<string, AuthoritativeReserveSnapshot>();
+  const lossLineageById = new Map<string, ReserveLossLineage>();
+  for (const coin of configuredCoins) {
+    const state = syncById.get(coin.id);
+    if (!state) continue;
+    const lineage = reserveLossLineage(state);
+    // Unstamped legacy successes have no new parent authority to enforce.
+    // Keep actual recorded failures, including legacy refresh loss, attributable.
+    if (state.lastSuccessAttemptId != null || lineage.latest != null
+      || state.metadata.reserveLossLineage !== undefined || state.metadata.reserveLoss !== undefined
+      || state.metadata.reserveInvalidations !== undefined || state.metadata.reserveAttemptLegs !== undefined) {
+      lossLineageById.set(coin.id, lineage);
+    }
+  }
 
   const coinsById = new Map(configuredCoins.map((coin) => [coin.id, coin]));
   for (const { stablecoinId, record } of iterateReserveSnapshots(coinsById.keys(), syncById, compositionById)) {
@@ -359,7 +373,7 @@ async function loadFreshAuthoritativeReserveSnapshots(
     });
   }
 
-  return snapshots;
+  return { snapshots, lossLineageById };
 }
 
 export async function loadFreshIndependentLiveReserveMap(
@@ -368,11 +382,12 @@ export async function loadFreshIndependentLiveReserveMap(
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
   minSlices = 1,
 ): Promise<LiveReserveScoringMap> {
-  const snapshots = await loadFreshAuthoritativeReserveSnapshots(db, now, freshnessSec, minSlices);
+  const { snapshots, lossLineageById } = await loadFreshAuthoritativeReserveSnapshots(db, now, freshnessSec, minSlices);
   const eligibleSnapshots = Array.from(snapshots.entries());
   const map = new Map(
     eligibleSnapshots.map(([coinId, snapshot]) => [coinId, snapshot.slices]),
   ) as LiveReserveScoringMap;
+  Object.defineProperty(map, "lossLineageById", { value: lossLineageById, enumerable: false });
   Object.defineProperty(map, "provenanceById", {
     value: new Map(
       eligibleSnapshots.map(([coinId, snapshot]) => [
@@ -403,7 +418,7 @@ function buildReserveSnapshotMetadataRecord(
     stablecoinId,
     fetchedAt: record.fetchedAt,
     source: record.source,
-    metadata: record.metadata,
+    metadata: { ...record.metadata, reserveLossLineage: reserveLossLineage(syncState) },
     warningCount: record.warningCount,
     warnings: record.warnings,
     sourceModel: record.adapterSourceModel,

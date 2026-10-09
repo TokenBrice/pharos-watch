@@ -15,7 +15,9 @@ function fixture(id = "hbd-hive", metadata: Record<string, unknown> = { freshnes
   const config = TRACKED_META_BY_ID.get(id)?.liveReservesConfig;
   const composition = reserveCompositionRow({ stablecoin_id: id, source, metadata: JSON.stringify(metadata), config_fingerprint: fingerprint ?? (config ? computeLiveReserveConfigFingerprint(config) : null),
     adapter_source_model: "dynamic-mix", adapter_evidence_class: "independent", attempt_id: "success", warnings: "[]" });
-  const sync = reserveSyncRow({ stablecoin_id: id, adapter_key: source, last_status: status, last_attempted_at: 1_100, last_success_attempt_id: "success" });
+  const sync = reserveSyncRow({ stablecoin_id: id, adapter_key: source, last_status: status,
+    last_attempted_at: status === "error" || status === "skipped" ? 1_100 : 1_000,
+    last_attempt_id: status === "error" || status === "skipped" ? "failure" : "success", last_success_attempt_id: "success" });
   return mockReserveD1([
     { match: "reserve_composition", rows: [composition], first: composition },
     { match: "reserve_sync_state", rows: [sync], first: sync },
@@ -81,12 +83,12 @@ describe("live reserve admission", () => {
     expect((await capacity(["invalid-freshness"])).immediateCapacityUsd).toBeNull();
   });
 
-  it("counts HBD's retained clean snapshot despite its later failed attempt", async () => {
+  it("rejects HBD's retained clean snapshot after an unproved node-disagreement failure", async () => {
     const db = fixture("hbd-hive", { freshnessMode: "not-applicable" }, undefined, "error");
-    expect((await resolveReserveResult(db, "hbd-hive", 1_200))?.provenance?.scoringEligible).toBe(true);
-    expect((await loadFreshIndependentLiveReserveMap(db, 1_200)).has("hbd-hive")).toBe(true);
+    expect((await resolveReserveResult(db, "hbd-hive", 1_200))?.provenance?.scoringEligible).toBe(false);
+    expect((await loadFreshIndependentLiveReserveMap(db, 1_200)).has("hbd-hive")).toBe(false);
     const overview = await computeReserveCompositionOverview(db, 1_200);
-    expect(overview.independentFreshEligible).toBe(1);
+    expect(overview.independentFreshEligible).toBe(0);
     expect(overview.errorCoins).toBe(1);
   });
 

@@ -82,12 +82,27 @@ export function mockRegistry(options: MockRegistryOptions): MockRegistryExports 
 /** The same fixture universe exposed through the bounded Worker registry. */
 export function mockWorkerRuntimeRegistry(options: MockRegistryOptions) {
   const registry = mockRegistry(options);
+  const circuitSources = new Set<string>();
+  for (const coin of registry.ACTIVE_STABLECOINS) {
+    if (coin.status != null && coin.status !== "active") continue;
+    if (typeof coin.liveReserveCircuitSource === "string" && coin.liveReserveCircuitSource.length > 0) {
+      circuitSources.add(coin.liveReserveCircuitSource);
+      continue;
+    }
+    const rawConfig = coin.liveReservesConfig;
+    if (!rawConfig || typeof rawConfig !== "object" || Array.isArray(rawConfig)) continue;
+    const config = rawConfig as Record<string, unknown>;
+    if (config.suspended || typeof config.adapter !== "string" || config.adapter.length === 0) continue;
+    const scope = typeof config.breakerScope === "string" && config.breakerScope.length > 0 ? config.breakerScope : config.adapter;
+    circuitSources.add(`live-reserves:${scope}`);
+  }
   return {
     WORKER_TRACKED_STABLECOINS: registry.TRACKED_STABLECOINS,
     WORKER_TRACKED_META_BY_ID: registry.TRACKED_META_BY_ID,
     WORKER_ACTIVE_STABLECOINS: registry.ACTIVE_STABLECOINS,
     WORKER_ACTIVE_IDS: registry.ACTIVE_IDS,
     WORKER_ACTIVE_META_BY_ID: registry.ACTIVE_META_BY_ID,
+    WORKER_ACTIVE_LIVE_RESERVE_CIRCUIT_SOURCES: [...circuitSources],
     WORKER_FROZEN_IDS: registry.FROZEN_IDS,
     WORKER_READABLE_IDS: registry.READABLE_IDS,
     hasWorkerLiveReserves: (coin: MockRegistryStablecoin) => coin.liveReservesConfig != null,
