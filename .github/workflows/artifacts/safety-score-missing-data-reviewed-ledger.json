@@ -132563,8 +132563,9 @@
       ],
       "rationale": "Recovered the substantive Securitize Markets primary STEP disclosure: BUIDL Class A fund shares have no maturity date. Curate exact-exposure open-ended maturity using the already-admitted October 5 standing-research pin and digest unchanged, with no numeric maturity or composition date. Recovered ordinary dealing text does not guarantee complete-position USD realization; append exact liquidity C classification and retain raw unknown horizon. One known maturity fact is proposed; liquidity remains bounded C until independent bound/availability proof.",
       "changeRefs": [
-        "shared/data/stablecoins/domains/reserves/mtbill-midas.json",
-        "agents/curation-campaign/fragments/W2L03Midas.json#operations/0"
+        "shared/data/safety-score-v9/reserve-bound-facts-v1.json#assets.mtbill-midas",
+        "agents/curation-campaign/fragments-merged/W2L03Midas.json#operations/0",
+        "agents/curation-campaign/fragments/W2L03Midas.json#authoredRegistryInsertions/0"
       ],
       "sentinels": [
         {
