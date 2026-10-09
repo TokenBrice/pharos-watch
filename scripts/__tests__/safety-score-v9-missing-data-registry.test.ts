@@ -256,6 +256,12 @@ describe("Safety Score v9 missing-data work routing", () => {
     },
   );
 
+  it("leaves path-routed missing-pillar-evidence projections to the compiled fact-gap queue", () => {
+    // Pipeline-gap cards publish this code on pillar reasons without a
+    // local-component path; routing must not crash the weekly generators.
+    expect(classifyV9ScoreProjectionWorkType("missing-pillar-evidence")).toBeNull();
+  });
+
   it("defines a work disposition for every reason code the evaluators can emit", () => {
     // Routing contract for the weekly sweep generators: any code eligible for
     // a card pillar reason, nr reason, or compiled fact gap must resolve to a
