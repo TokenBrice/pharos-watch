@@ -73,4 +73,16 @@ describe("stablecoin intake admission", () => {
     expect(fetch).not.toHaveBeenCalled();
     expect(supplemental.fetchSupplementalTrackedTokens).not.toHaveBeenCalled();
   });
+
+  it("withholds publication when both the guard state and the previous publication are unreadable", async () => {
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    insert.run("stablecoins", "{", 1_776_999_000);
+    insert.run("sync-stablecoins:chain-dropout-state", "{", 1_776_999_000);
+    upstream({ peggedAssets: Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({ id: `intake-fixture-${index}`, circulating: { peggedUSD: 100 } })) });
+    const result = await loadStablecoinsIntake({ db, syncStartSec: 1_777_000_000, fallbackToCoingecko: async () => fallbackResult });
+    expect(result).toMatchObject({ kind: "withheld", result: { status: "degraded", itemCount: 0 } });
+    if (result.kind !== "withheld") throw new Error("Expected a withheld generation");
+    expect(JSON.parse(String(result.result.metadata))).toEqual({ reason: "supply-chain-guard-baselines-unavailable", previousCacheState: "malformed" });
+  });
 });

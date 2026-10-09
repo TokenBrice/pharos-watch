@@ -8,6 +8,7 @@ import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { createCronResult } from "../../lib/cron-result";
 import { isRecord } from "@shared/lib/type-guards";
 import type { PeggedAsset } from "./enrich-prices";
 import {
@@ -61,9 +62,16 @@ interface StablecoinsIntakeFallbackResult {
   errorMessage: string;
 }
 
+/** No guard baseline authority is readable: publishing could admit a rejected collapse (R2). */
+interface StablecoinsIntakeWithheldResult {
+  kind: "withheld";
+  result: CronResult;
+}
+
 export type StablecoinsIntakeResult =
   | StablecoinsIntakeMainResult
-  | StablecoinsIntakeFallbackResult;
+  | StablecoinsIntakeFallbackResult
+  | StablecoinsIntakeWithheldResult;
 
 const DEFILLAMA_STABLECOINS_URL = `${DEFILLAMA_BASE}/stablecoins?includePrices=true`;
 const DL_PARSE_MAX_ATTEMPTS = 3;
@@ -531,6 +539,27 @@ export async function loadStablecoinsIntake(
   }
 
   const chainDropoutState = await loadChainDropoutState(input.db, input.signal);
+  // Recovery from the last accepted publication is the only fallback for an unreadable guard state.
+  // If that publication is unreadable too, a quarantined collapse whose prevDay has aged to zero is
+  // indistinguishable from a first run, so this generation is withheld rather than bootstrapped.
+  if (chainDropoutState.stateReadFailed && (previousCacheState.state === "error" || previousCacheState.state === "malformed")) {
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "error",
+      event: "supply-chain-guard-baselines-unavailable",
+      message: "Chain dropout state and previous publication are both unreadable; withholding publication",
+      metadata: { previousCacheState: previousCacheState.state },
+    });
+    return {
+      kind: "withheld",
+      result: createCronResult({
+        status: "degraded",
+        itemCount: 0,
+        metadata: { reason: "supply-chain-guard-baselines-unavailable", previousCacheState: previousCacheState.state },
+      }),
+    };
+  }
   const supplyChainGuard = await guardChainDropouts({
     assets,
     now: input.syncStartSec,
