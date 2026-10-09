@@ -358,15 +358,24 @@ export async function guardChainDropouts(input: {
     // carry is withheld (observed amounts stay in logs, never scaled or clamped), the dropped chains
     // publish unavailable, and a material drop holds the vetted whole-asset total from before the gain.
     const { gains, vettedTotal } = conservation.get(asset)!;
-    const dropped = affected.reduce((sum, candidate) => sum + candidate.evidence.baselineUsd - (candidate.evidence.listCurrentUsd ?? 0), 0);
+    // A native confirmation at or below the list value is non-additive: it cannot double count, so it
+    // stands (an independently confirmed redemption) and leaves the unresolved deficit.
+    const confirmations = affected.filter((candidate) =>
+      candidate.evidence.repairedCurrentUsd != null && candidate.evidence.repairedCurrentUsd <= (candidate.evidence.listCurrentUsd ?? 0));
+    const unresolved = affected.filter((candidate) => !confirmations.includes(candidate));
+    const dropped = unresolved.reduce((sum, candidate) => sum + candidate.evidence.baselineUsd - (candidate.evidence.listCurrentUsd ?? 0), 0);
     const ambiguousNow = dropped > 0 && gains > 0;
-    const persisted = affected.find((candidate) => candidate.state.ambiguousSince != null);
+    const persisted = unresolved.find((candidate) => candidate.state.ambiguousSince != null);
     const ambiguous = ambiguousNow || persisted != null;
-    const heldTotal = persisted?.state.heldTotalUsd ?? vettedTotal;
+    // The held total must not resurrect a chain whose redemption was natively confirmed: replace that
+    // chain's vetted baseline (inside the held total) with its confirmed native amount.
+    const confirmedAdjustment = confirmations
+      .reduce((sum, candidate) => sum + candidate.evidence.baselineUsd - candidate.evidence.repairedCurrentUsd!, 0);
+    const heldTotal = Math.max(0, (persisted?.state.heldTotalUsd ?? vettedTotal) - confirmedAdjustment);
     if (ambiguous) {
-      for (const candidate of affected) {
+      for (const candidate of unresolved) {
         candidate.state.ambiguousSince ??= now;
-        candidate.state.heldTotalUsd ??= heldTotal;
+        candidate.state.heldTotalUsd = heldTotal;
         if (candidate.evidence.repairedCurrentUsd == null) continue;
         asset.circulating![pegKey] = (asset.circulating![pegKey] ?? 0) - (candidate.evidence.repairedCurrentUsd - (candidate.evidence.listCurrentUsd ?? 0));
         warn("supply-chain-guard-repair-withheld", "Concurrent healthy-chain gain makes chain attribution ambiguous; repair withheld", {
@@ -386,7 +395,7 @@ export async function guardChainDropouts(input: {
           delete candidate.state.releasedAt;
         }
       }
-      unrepaired = affected;
+      unrepaired = unresolved;
     }
     const repairs = affected.filter((candidate) => candidate.evidence.repairedCurrentUsd != null);
     const deficit = unrepaired.reduce((sum, candidate) => sum + candidate.evidence.baselineUsd - (candidate.evidence.listCurrentUsd ?? 0), 0);

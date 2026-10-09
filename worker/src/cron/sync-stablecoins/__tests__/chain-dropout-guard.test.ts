@@ -167,6 +167,33 @@ describe("chain dropout guard", () => {
     expect(afterFailure.supplyChainGuard).toBeUndefined();
   });
 
+  it.each([
+    ["native zero", 0, 0, 25_000_000],
+    ["native below list", 30_000_000, 10_000_000, 35_000_000],
+  ])("keeps a %s confirmation despite a concurrent healthy-chain gain", async (_case, listUsd, nativeUsd, expectedTotal) => {
+    const now = CHAIN_DROPOUT_SEED_VALID_UNTIL + DAY;
+    const contract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
+    mocks.onchain.mockResolvedValue(BigInt(nativeUsd) * 10n ** BigInt(contract.decimals!));
+    const state: ChainDropoutState = { version: 1, pairs: {
+      [JSON.stringify(["usdg-paxos", "xlayer"])]: { assetId: "usdg-paxos", chainLabel: "X Layer", chainId: "xlayer", baselineUsd: 100_000_000, baselineObservedAt: now - 900, baselineSource: "state", quarantinedSince: null },
+      [JSON.stringify(["usdg-paxos", "ethereum"])]: { assetId: "usdg-paxos", chainLabel: "Ethereum", chainId: "ethereum", baselineUsd: 20_000_000, baselineObservedAt: now - 900, baselineSource: "state", quarantinedSince: null },
+    } };
+    const asset: PeggedAsset = {
+      ...usdg(),
+      circulating: { peggedUSD: 25_000_000 + listUsd },
+      chainCirculating: {
+        Ethereum: { current: 25_000_000, circulatingPrevDay: 20_000_000 },
+        "X Layer": { current: listUsd, circulatingPrevDay: 100_000_000 },
+      },
+    };
+    const result = await guardChainDropouts({ assets: [asset], now, state });
+    expect(getCirculatingRawOrNull(asset)).toBe(expectedTotal);
+    expect(asset.chainCirculating!["X Layer"].current).toBe(nativeUsd);
+    expect(asset.supplyRestored).toBeUndefined();
+    expect(asset.supplyChainGuard).toMatchObject({ status: "repaired", chains: [{ resolution: "onchain-total-supply", repairedCurrentUsd: nativeUsd }] });
+    expect(result.state.pairs[JSON.stringify(["usdg-paxos", "xlayer"])]).toMatchObject({ baselineUsd: nativeUsd, quarantinedSince: null, releasedAt: now });
+  });
+
   it("uses reviewed native onchain units at USD par for repair", async () => {
     const contract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
     mocks.onchain.mockResolvedValue(1_409_030_000n * 10n ** BigInt(contract.decimals!));
