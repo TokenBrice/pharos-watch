@@ -47,6 +47,17 @@ const PairStateSchema = z.object({
   chartPoint: z.object({ valueUsd: z.number().finite().nonnegative(), pointDate: TimestampSchema, fetchedAt: TimestampSchema }).optional(),
   // Failed/invalid chart reads also consume the hourly attempt budget, without claiming an observation.
   chartAttemptedAt: TimestampSchema.optional(),
+  // Set when a flagged pair is released at a confirmed level (corroboration, reviewed release or
+  // immaterial chart release). Such a pair is never pruned, so a confirmed low baseline is never
+  // replaced by the stale incident seed or an aged previous-day value.
+  releasedAt: TimestampSchema.optional(),
+  // Attribution became ambiguous (a concurrent healthy-chain gain could explain the drop). While the
+  // pair stays flagged, repairs stay withheld and a material drop holds this pre-ambiguity vetted
+  // whole-asset total: once the inflated healthy chain becomes its own baseline, the gain is invisible.
+  ambiguousSince: TimestampSchema.optional(),
+  // `null`: no complete coherent total was available when attribution became ambiguous (R1), so a
+  // material drop publishes unavailable supply rather than a partial sum.
+  heldTotalUsd: z.number().finite().nonnegative().nullable().optional(),
 }).strict();
 export const ChainDropoutStateSchema = z.object({ version: z.literal(1), pairs: z.record(z.string(), PairStateSchema) }).strict();
 export type ChainDropoutState = z.infer<typeof ChainDropoutStateSchema>;
@@ -64,6 +75,10 @@ export interface SupplyChainGuardResult {
 
 function pairKey(assetId: string, identity: string): string {
   return JSON.stringify([assetId, identity]);
+}
+function findSeed(assetId: string, chainId: string | undefined, chainLabel: string, now: number) {
+  if (now >= CHAIN_DROPOUT_SEED_VALID_UNTIL) return undefined;
+  return CHAIN_DROPOUT_SEED.find((entry) => entry.assetId === assetId && (entry.chainId ? entry.chainId === chainId : entry.chainLabel === chainLabel));
 }
 function warn(event: string, message: string, metadata: Record<string, unknown>, error?: unknown): void {
   logWorkerEvent({ scope: "lib", job: "sync-stablecoins", level: "warn", event, message, metadata, ...(error ? { error } : {}) });
@@ -98,6 +113,8 @@ interface Candidate {
   state: PairState;
   evidence: ChainEvidence;
   resolved: boolean;
+  /** First-detection clock of the pair's current flag; survives a release that is later withheld. */
+  firstFlaggedAt: number;
 }
 
 function setChainCurrent(candidate: Candidate, value: number | null): void {
@@ -168,11 +185,61 @@ async function readChart(candidate: Candidate, now: number, signal?: AbortSignal
   }
 }
 
+/**
+ * R2: an unreadable state row must neither release quarantines nor resurrect disproven baselines.
+ * Rebuild pairs from the last accepted publication: guarded chains from `supplyChainGuard` provenance
+ * (frozen baseline, first detection, held ambiguous total, or a confirmed native-low level), then every
+ * other published chain current as its accepted level — including a confirmed low/zero whose guard
+ * sidecar disappeared once the chain stopped being flagged. Only unpublished chains bootstrap from seed.
+ */
+function recoverStateFromPublication(state: ChainDropoutState, previousAssetsById: ReadonlyMap<string, PeggedAsset>, now: number): void {
+  for (const previous of previousAssetsById.values()) {
+    const assetId = String(previous.id);
+    const guard = previous.supplyChainGuard;
+    if (guard) {
+      const heldTotal = guard.concurrentGainUsd != null && guard.status === "quarantined" ? getCirculatingRawOrNull(previous) : null;
+      for (const chain of guard.chains) {
+        const key = pairKey(assetId, chain.chainId ?? `label:${chain.chainLabel}`);
+        if (state.pairs[key]) continue;
+        const identity = { assetId, chainLabel: chain.chainLabel, ...(chain.chainId ? { chainId: chain.chainId } : {}) };
+        // A published native-low corroboration released the pair at the native amount: recover that
+        // confirmed level, never the old positive baseline it disproved.
+        const confirmedLow = chain.resolution === "onchain-total-supply" && chain.repairedCurrentUsd != null && chain.observedAt != null
+          && chain.repairedCurrentUsd <= CHAIN_DROPOUT_POLICY.collapseRatio * chain.baselineUsd;
+        state.pairs[key] = confirmedLow
+          ? { ...identity, baselineUsd: chain.repairedCurrentUsd!, baselineObservedAt: chain.observedAt!, baselineSource: "state", quarantinedSince: null, releasedAt: chain.observedAt! }
+          : {
+            ...identity,
+            baselineUsd: chain.baselineUsd,
+            baselineObservedAt: chain.baselineObservedAt,
+            baselineSource: "state",
+            quarantinedSince: guard.quarantinedSince ?? now,
+            ...(guard.concurrentGainUsd != null ? { ambiguousSince: guard.quarantinedSince ?? now } : {}),
+            ...(guard.concurrentGainUsd != null ? { heldTotalUsd: heldTotal } : {}),
+          };
+      }
+    }
+    const rows = previous.chainCirculating ?? {};
+    const canonical = canonicalizeChainCirculating(rows);
+    const observedAt = previous.supplyObservedAt ?? now;
+    for (const [label, row] of Object.entries(rows)) {
+      const chainId = canonicalizeChainCirculating({ [label]: row }).keys().next().value as string | undefined;
+      const key = pairKey(assetId, chainId ?? `label:${label}`);
+      if (state.pairs[key]) continue;
+      const current = chainId ? canonical.get(chainId)?.current : normalizeChainSupplyValue(row.current);
+      if (current == null) continue;
+      state.pairs[key] = { assetId, chainLabel: label, ...(chainId ? { chainId } : {}), baselineUsd: current, baselineObservedAt: observedAt, baselineSource: "state", quarantinedSince: null };
+    }
+  }
+}
+
 export async function guardChainDropouts(input: {
   assets: PeggedAsset[];
   now: number;
   state: ChainDropoutState;
   stateReadFailed?: boolean;
+  /** Last accepted publication; recovers sticky quarantines when the persisted state is unreadable. */
+  previousAssetsById?: ReadonlyMap<string, PeggedAsset>;
   skipAssetIds?: ReadonlySet<string>;
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
@@ -180,8 +247,12 @@ export async function guardChainDropouts(input: {
   const { now, signal } = input;
   // The caller owns this newly loaded generation; no module-global mutable state.
   const state = input.state;
+  if (input.stateReadFailed && input.previousAssetsById) recoverStateFromPublication(state, input.previousAssetsById, now);
   const result: SupplyChainGuardResult = { flagged: 0, repaired: 0, quarantinedAssetIds: [], unavailableAssetIds: [], historyFetches: 0, stateReadFailed: input.stateReadFailed ?? false, state };
   const candidates: Candidate[] = [];
+  // Per asset: same-run gains on healthy chains, and the pre-run vetted whole-asset total
+  // (each chain at its persisted/seed/prev-day reference, before this run moves any baseline).
+  const conservation = new Map<PeggedAsset, { gains: number; vettedTotal: number; vettedComplete: boolean }>();
   for (const asset of input.assets) {
     const meta = ACTIVE_META_BY_ID.get(String(asset.id));
     if (!meta || meta.detailProvider !== "defillama" || asset.frozen || asset.supplyRestored || input.skipAssetIds?.has(meta.id) || (asset.supplySource && asset.supplySource !== "defillama")) continue;
@@ -203,11 +274,19 @@ export async function guardChainDropouts(input: {
       const observation = group.chainId ? canonical.get(group.chainId)! : { current: normalizeChainSupplyValue(rows[label].current), circulatingPrevDay: normalizeChainSupplyValue(rows[label].circulatingPrevDay) ?? undefined };
       const key = pairKey(meta.id, identity);
       const previous = state.pairs[key];
-      const seed = now < CHAIN_DROPOUT_SEED_VALID_UNTIL ? CHAIN_DROPOUT_SEED.find((entry) => entry.assetId === meta.id && (entry.chainId ? entry.chainId === group.chainId : entry.chainLabel === label)) : undefined;
+      const seed = findSeed(meta.id, group.chainId, label, now);
       const baseline = previous?.baselineUsd ?? seed?.baselineUsd ?? observation.circulatingPrevDay;
       const baselineSource = previous ? "state" : seed ? "seed" : "list-prev-day";
       const pair: PairState = previous ?? { assetId: meta.id, chainLabel: label, ...(group.chainId ? { chainId: group.chainId } : {}), baselineUsd: baseline ?? 0, baselineObservedAt: seed ? CHAIN_DROPOUT_SEED_OBSERVED_AT : Math.max(0, now - 86400), baselineSource, quarantinedSince: null };
       const flagged = baseline != null && baseline >= CHAIN_DROPOUT_POLICY.minBaselineUsd && (observation.current == null || observation.current <= CHAIN_DROPOUT_POLICY.collapseRatio * baseline);
+      const totals = conservation.get(asset) ?? { gains: 0, vettedTotal: 0, vettedComplete: true };
+      // A chain with neither a reference nor a current observation leaves the vetted total unknown (R1).
+      if (baseline == null && observation.current == null) totals.vettedComplete = false;
+      else totals.vettedTotal += baseline ?? observation.current!;
+      if (!flagged && observation.current != null && baseline != null && observation.current > baseline) {
+        totals.gains += observation.current - baseline;
+      }
+      conservation.set(asset, totals);
       if (!flagged) {
         if (observation.current != null) {
           pair.baselineUsd = observation.current;
@@ -217,6 +296,8 @@ export async function guardChainDropouts(input: {
           delete pair.chartPoint;
           delete pair.chartAttemptedAt;
           state.pairs[key] = pair;
+          delete pair.ambiguousSince;
+          delete pair.heldTotalUsd;
         }
         continue;
       }
@@ -228,9 +309,10 @@ export async function guardChainDropouts(input: {
         pair.baselineUsd = observation.current;
         pair.baselineObservedAt = now;
         pair.quarantinedSince = null;
+        pair.releasedAt = now;
         continue;
       }
-      candidates.push({ asset, labels: group.labels, pegKey, state: pair, resolved: false, evidence: { ...(group.chainId ? { chainId: group.chainId } : {}), chainLabel: pair.chainLabel, listCurrentUsd: observation.current, baselineUsd: pair.baselineUsd, baselineObservedAt: pair.baselineObservedAt, baselineSource, resolution: "unavailable" } });
+      candidates.push({ asset, labels: group.labels, pegKey, state: pair, resolved: false, firstFlaggedAt: pair.quarantinedSince!, evidence: { ...(group.chainId ? { chainId: group.chainId } : {}), chainLabel: pair.chainLabel, listCurrentUsd: observation.current, baselineUsd: pair.baselineUsd, baselineObservedAt: pair.baselineObservedAt, baselineSource, resolution: "unavailable" } });
     }
   }
   const chainRpcs = input.chainRpcs ?? buildChainRpcs();
@@ -243,11 +325,15 @@ export async function guardChainDropouts(input: {
       repair(candidate, onchain, now, "onchain-total-supply");
       result.repaired++;
     } else {
+      // The native read is the vetted amount: publish it (not the disproven list value) and release.
+      repair(candidate, onchain, now, "onchain-total-supply");
+      result.repaired++;
       candidate.state.baselineUsd = onchain;
       candidate.state.baselineObservedAt = now;
+      candidate.state.baselineSource = "state";
       candidate.state.quarantinedSince = null;
-      candidate.resolved = true;
-      warn("supply-chain-guard-collapse-corroborated", "Independent native supply corroborates real collapse; quarantine released", { assetId: candidate.state.assetId, chainId: candidate.state.chainId, onchainUsd: onchain });
+      candidate.state.releasedAt = now;
+      warn("supply-chain-guard-collapse-corroborated", "Independent native supply corroborates real collapse; publishing native amount and releasing quarantine", { assetId: candidate.state.assetId, chainId: candidate.state.chainId, onchainUsd: onchain, listCurrentUsd: candidate.evidence.listCurrentUsd });
     }
   }
   candidates.sort((a, b) => (b.evidence.baselineUsd - (b.evidence.listCurrentUsd ?? 0)) - (a.evidence.baselineUsd - (a.evidence.listCurrentUsd ?? 0)));
@@ -268,6 +354,61 @@ export async function guardChainDropouts(input: {
     let affected = candidates.filter((candidate) => candidate.asset === asset && (!candidate.resolved || candidate.evidence.repairedCurrentUsd != null));
     if (affected.length === 0) continue;
     let unrepaired = affected.filter((candidate) => !candidate.resolved);
+    const pegKey = affected[0].pegKey;
+    // Attribution ambiguity: any same-run gain on this asset's healthy chains may be the dropped supply
+    // reattributed by the provider (e.g. a bridge representation moved back to its source chain), and a
+    // concurrent mint cannot be told apart from that move. A gain of any size bounds how much of a repair
+    // or carry could double count, so without reviewed bridge-aware accounting every additive repair and
+    // carry is withheld (observed amounts stay in logs, never scaled or clamped), the dropped chains
+    // publish unavailable, and a material drop holds the vetted whole-asset total from before the gain.
+    const { gains, vettedTotal, vettedComplete } = conservation.get(asset)!;
+    // A native confirmation at or below the list value is non-additive: it cannot double count, so it
+    // stands (an independently confirmed redemption) and leaves the unresolved deficit.
+    const confirmations = affected.filter((candidate) =>
+      candidate.evidence.repairedCurrentUsd != null && candidate.evidence.repairedCurrentUsd <= (candidate.evidence.listCurrentUsd ?? 0));
+    const unresolved = affected.filter((candidate) => !confirmations.includes(candidate));
+    const dropped = unresolved.reduce((sum, candidate) => sum + candidate.evidence.baselineUsd - (candidate.evidence.listCurrentUsd ?? 0), 0);
+    const ambiguousNow = dropped > 0 && gains > 0;
+    const persisted = unresolved.find((candidate) => candidate.state.ambiguousSince != null);
+    const ambiguous = ambiguousNow || persisted != null;
+    // The held total must not resurrect a chain whose redemption was natively confirmed: replace that
+    // chain's contribution with its confirmed native amount. That contribution is exact only for a
+    // total summed this run (its reference is the same pre-run baseline); a persisted packet froze an
+    // earlier, unrecorded contribution that later baselines may have moved, so it becomes unknown (R1).
+    // A negative remainder is inconsistent evidence, never clamped to a published zero (R7).
+    const confirmedAdjustment = confirmations
+      .reduce((sum, candidate) => sum + candidate.evidence.baselineUsd - candidate.evidence.repairedCurrentUsd!, 0);
+    // A persisted hold (number, or null when it was unknown) wins over a re-summed total whose healthy
+    // baselines may already have absorbed the reattributed supply.
+    const heldBase = persisted ? persisted.state.heldTotalUsd ?? null : vettedComplete ? vettedTotal : null;
+    const adjustedHeld = heldBase == null || (persisted != null && confirmations.length > 0) ? null : heldBase - confirmedAdjustment;
+    const heldTotal = adjustedHeld != null && adjustedHeld >= 0 ? adjustedHeld : null;
+    if (ambiguous) {
+      for (const candidate of unresolved) {
+        candidate.state.ambiguousSince ??= now;
+        candidate.state.heldTotalUsd = heldTotal;
+        if (candidate.evidence.repairedCurrentUsd == null) continue;
+        asset.circulating![pegKey] = (asset.circulating![pegKey] ?? 0) - (candidate.evidence.repairedCurrentUsd - (candidate.evidence.listCurrentUsd ?? 0));
+        warn("supply-chain-guard-repair-withheld", "Concurrent healthy-chain gain makes chain attribution ambiguous; repair withheld", {
+          assetId: candidate.state.assetId, chainLabel: candidate.state.chainLabel, repairedCurrentUsd: candidate.evidence.repairedCurrentUsd, concurrentGainUsd: gains,
+        });
+        delete candidate.evidence.repairedCurrentUsd;
+        delete candidate.evidence.observedAt;
+        candidate.evidence.resolution = "unavailable";
+        candidate.resolved = false;
+        if (candidate.state.quarantinedSince == null) {
+          // A native-low release this run is withheld with its publication: the pair stays flagged
+          // against its vetted baseline and keeps its original first-detection clock.
+          candidate.state.quarantinedSince = candidate.firstFlaggedAt;
+          candidate.state.baselineUsd = candidate.evidence.baselineUsd;
+          candidate.state.baselineObservedAt = candidate.evidence.baselineObservedAt;
+          candidate.state.baselineSource = candidate.evidence.baselineSource;
+          delete candidate.state.releasedAt;
+        }
+      }
+      unrepaired = unresolved;
+    }
+    const repairs = affected.filter((candidate) => candidate.evidence.repairedCurrentUsd != null);
     const deficit = unrepaired.reduce((sum, candidate) => sum + candidate.evidence.baselineUsd - (candidate.evidence.listCurrentUsd ?? 0), 0);
     const aggregate = getCirculatingRawOrNull(asset)!;
     const material = deficit > 0 && deficit >= CHAIN_DROPOUT_POLICY.quarantineDeficitRatio * (aggregate + deficit);
@@ -285,6 +426,7 @@ export async function guardChainDropouts(input: {
         candidate.state.baselineObservedAt = now;
         candidate.state.baselineSource = "state";
         candidate.state.quarantinedSince = null;
+        candidate.state.releasedAt = now;
         candidate.resolved = true;
         warn("supply-chain-guard-immaterial-chart-release", "Later daily series confirms lower immaterial chain level; accepting list observation", {
           assetId: candidate.state.assetId, chainLabel: candidate.state.chainLabel, firstFlaggedAt,
@@ -303,12 +445,12 @@ export async function guardChainDropouts(input: {
       asset.supplyRestored = true;
       result.quarantinedAssetIds.push(String(asset.id));
       asset.supplyObservedAt = Math.min(...unrepaired.map((candidate) => candidate.evidence.baselineObservedAt));
-      if (now - quarantinedSince > SUPPLEMENTAL_RESTORE_MAX_AGE_SEC) {
+      if (now - quarantinedSince > SUPPLEMENTAL_RESTORE_MAX_AGE_SEC || (ambiguous && heldTotal == null)) {
         asset.circulating = {};
         status = "unavailable";
         result.unavailableAssetIds.push(String(asset.id));
       } else {
-        asset.circulating![affected[0].pegKey] = (asset.circulating![affected[0].pegKey] ?? 0) + deficit;
+        asset.circulating![pegKey] = ambiguous ? heldTotal! : (asset.circulating![pegKey] ?? 0) + deficit;
         status = "quarantined";
         for (const candidate of unrepaired) {
           candidate.evidence.resolution = "carried-baseline";
@@ -316,16 +458,21 @@ export async function guardChainDropouts(input: {
         }
       }
     } else {
-      const repairs = affected.filter((candidate) => candidate.evidence.repairedCurrentUsd != null);
       if (repairs.length > 0) {
         asset.supplySource = "defillama-chain-repair";
         asset.supplyObservedAt = Math.min(...repairs.map((candidate) => candidate.evidence.observedAt!));
       }
     }
-    asset.supplyChainGuard = { reason: "supply-chain-dropout", status, ...(quarantinedSince != null ? { quarantinedSince } : {}), chains: affected.map((candidate) => candidate.evidence) };
+    asset.supplyChainGuard = {
+      reason: "supply-chain-dropout", status,
+      ...(quarantinedSince != null ? { quarantinedSince } : {}),
+      ...(ambiguous ? { concurrentGainUsd: gains } : {}),
+      chains: affected.map((candidate) => candidate.evidence),
+    };
   }
   for (const [key, pair] of Object.entries(state.pairs)) {
-    if (pair.baselineUsd < CHAIN_DROPOUT_POLICY.minBaselineUsd && pair.quarantinedSince == null) delete state.pairs[key];
+    if (pair.baselineUsd < CHAIN_DROPOUT_POLICY.minBaselineUsd && pair.quarantinedSince == null && pair.releasedAt == null
+      && !findSeed(pair.assetId, pair.chainId, pair.chainLabel, now)) delete state.pairs[key];
   }
   if (result.flagged > 0) warn("supply-chain-dropout", "Guarded anomalous DefiLlama chain supply observations", { reason: "supply-chain-dropout", flagged: result.flagged, repaired: result.repaired, quarantinedAssetIds: result.quarantinedAssetIds, unavailableAssetIds: result.unavailableAssetIds, historyFetches: result.historyFetches, stateReadFailed: result.stateReadFailed });
   return result;

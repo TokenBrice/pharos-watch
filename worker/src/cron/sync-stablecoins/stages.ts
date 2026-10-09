@@ -117,6 +117,7 @@ export async function runStablecoinsIntakeStage(
       ),
   });
 
+  if (intake.kind === "withheld") return intake.result;
   if (intake.kind === "fallback") {
     return {
       kind: "fallback",
