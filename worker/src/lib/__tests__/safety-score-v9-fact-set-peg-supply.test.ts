@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { PegSummaryCoin } from "@shared/types/peg";
-import { normalizeFixedInput } from "../report-cards-fixed-input";
-import { createAssetBuildContext } from "../safety-score-v9/fact-set-context";
 import { buildPeg, buildSupply } from "../safety-score-v9/fact-set-peg-supply";
-import { makeV9Extension, makeV9FixedInput, makeV9RoleExtension, makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
+import { makeV9Extension, makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { factBuilderContext } from "./safety-score-v9-fact-builders.test-support";
 
 describe("direct peg fact builder", () => {
@@ -51,72 +47,6 @@ describe("direct peg fact builder", () => {
       status: { observationState: "bounded-unknown" }, pegScore: null, currentDeviationBps: null,
     });
     expect([...context.gaps.values()]).toContainEqual(expect.objectContaining({ reasonCode: "missing-applicable-peg" }));
-  });
-
-  it.each([null, undefined, 0, -1, 1.5, Number.MAX_SAFE_INTEGER])(
-    "does not stamp an unknown, legacy, invalid or future price clock (%s) with a shared clock",
-    (clock) => {
-      const fixed = makeV9FixedInput({ pegScore: 88, currentDeviationBps: -123 });
-      const row: PegSummaryCoin = fixed.pegDataById.alpha!;
-      if (clock === undefined) delete row.priceObservedAt;
-      else row.priceObservedAt = clock;
-      const { baseInputGenerationId: _identity, ...draft } = fixed;
-      const context = factBuilderContext(normalizeFixedInput(draft));
-      const result = buildPeg(context);
-      expect(result.status).toMatchObject({ observationState: "missing", evidenceRefIds: [] });
-      expect(context.evidence.has("alpha:peg")).toBe(false);
-      expect([...context.gaps.values()]).toContainEqual(expect.objectContaining({
-        reasonCode: "missing-peg-input",
-        message: expect.stringMatching(clock === undefined ? /legacy/ : /clock/),
-      }));
-    },
-  );
-
-  it("does not renew a cached observation from a fresh shared source or unrelated NAV price", () => {
-    const clockSec = makeV9FixedInput().clockSec;
-    const fixed = makeV9FixedInput({ pegObservedAtSec: clockSec - 501, pegScore: 88 });
-    const row: PegSummaryCoin = fixed.pegDataById.alpha!;
-    row.priceSource = "cached";
-    row.priceObservedAtMode = "upstream";
-    const navId = ACTIVE_STABLECOINS.find((coin) => coin.flags.navToken)!.id;
-    fixed.navPriceById = { [navId]: { priceUsd: 1, sourceId: "chainlink-nav", observedAtSec: clockSec, confidence: "high" } };
-    const { baseInputGenerationId: _identity, ...draft } = fixed;
-    const context = factBuilderContext(normalizeFixedInput(draft), makeV9Extension({
-      registryFingerprint: fixed.registryFingerprint, clockSec, observedAtSec: clockSec,
-    }));
-    const result = buildPeg(context);
-    expect(result.status.observationState).toBe("stale");
-    expect(context.evidence.get("alpha:peg")).toMatchObject({
-      sourceId: "cached", observedAtSec: clockSec - 501,
-      freshness: { state: "stale", ageSec: 501, maxAgeSec: 500 },
-    });
-  });
-
-  it("keeps two assets' distinct freshness verdicts within the same source generation", () => {
-    const fixed = makeV9TwoAssetFixedInput();
-    fixed.pegDataById.alpha!.priceObservedAt = fixed.clockSec - 501;
-    fixed.pegDataById.beta!.priceObservedAt = fixed.clockSec - 100;
-    const { baseInputGenerationId: _identity, ...draft } = fixed;
-    const normalized = normalizeFixedInput(draft);
-    const extension = makeV9RoleExtension(normalized, {});
-    const results = extension.assets.map((asset) => {
-      const context = createAssetBuildContext(normalized, extension, asset, "a".repeat(64));
-      return { result: buildPeg(context), evidence: context.evidence.get(`${asset.assetId}:peg`) };
-    });
-    expect(results.map(({ result }) => result.status.observationState)).toEqual(["stale", "known"]);
-    expect(results.map(({ evidence }) => evidence?.observedAtSec)).toEqual([fixed.clockSec - 501, fixed.clockSec - 100]);
-    expect(results[0]!.result.sourceGenerationId).toBe(results[1]!.result.sourceGenerationId);
-  });
-
-  it("rejects nominal prices before clock admission even when their timestamp is current", () => {
-    const fixed = makeV9FixedInput();
-    const row: PegSummaryCoin = fixed.pegDataById.alpha!;
-    row.priceSource = "protocol-par";
-    row.priceObservedAtMode = "nominal_reference";
-    const { baseInputGenerationId: _identity, ...draft } = fixed;
-    const context = factBuilderContext(normalizeFixedInput(draft));
-    expect(buildPeg(context)).toMatchObject({ status: { observationState: "missing" }, pegScore: null });
-    expect(context.evidence.has("alpha:peg")).toBe(false);
   });
 });
 

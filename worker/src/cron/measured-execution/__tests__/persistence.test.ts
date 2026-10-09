@@ -346,7 +346,7 @@ describe("measured execution durable publication", () => {
 });
 
 describe("measured execution last-known-good selection", () => {
-  it("never revives absent latest targets even from complete fresh superseded generations", async () => {
+  it("selects only complete superseded history inside the inclusive lookback", async () => {
     const { db, sqlite } = databases.open();
     const target = fixtureTarget("ethereum");
     seedGeneration(sqlite, { generationId: "latest", targetGenerationId: "latest-targets",
@@ -364,7 +364,12 @@ describe("measured execution last-known-good selection", () => {
     sqlite.exec("DELETE FROM dex_measured_execution_quotes WHERE generation_id = 'missing-row'");
     sqlite.exec("UPDATE surface_publication_generations SET published_rows = 2 WHERE generation_id = 'wrong-count'");
     const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
-    expect([...evidence!.byTargetId.keys()]).toEqual([target.targetId]);
+    expect([...evidence!.byTargetId.keys()].sort()).toEqual([
+      target.targetId, fixtureTarget("complete").targetId, fixtureTarget("cutoff").targetId,
+    ].sort());
+    expect(evidence?.byTargetId.get(fixtureTarget("cutoff").targetId)).toMatchObject({
+      quoteGenerationId: "cutoff", resolution: "last-known-good",
+    });
   });
   it("uses a prior measured row when the latest outcome is an operational failure", async () => {
     const measuredTarget = fixtureTarget("ethereum");
@@ -595,7 +600,7 @@ describe("measured execution last-known-good selection", () => {
     ).toBe(true);
   });
 
-  it("does not carry a target absent from the latest quote catalog as quote-missing", async () => {
+  it("exposes exact-identity historical evidence for a target absent from the latest quote generation", async () => {
     const latestTarget = fixtureTarget("ethereum");
     const historicalTarget = fixtureTarget("base");
     const historicalProfile = fixtureProfile(historicalTarget, {
@@ -618,10 +623,17 @@ describe("measured execution last-known-good selection", () => {
     const historicalEntry = evidence?.byTargetId.get(historicalTarget.targetId);
 
     expect(latestEntry).toMatchObject({ status: "failed", failureReason: "pool-revert", resolution: "latest" });
-    expect(historicalEntry).toBeUndefined();
+    expect(historicalEntry).toMatchObject({
+      status: "measured",
+      resolution: "last-known-good",
+      latestFailureReason: "quote-missing",
+      quoteGenerationId: "quote-generation-lkg",
+      targetGenerationId: "target-generation-lkg",
+    });
   });
 
   it("loads and summarizes large historical target sets in bounded batches", async () => {
+    const latestTarget = fixtureTarget("ethereum");
     const historical = Array.from({ length: 65 }, (_, index) => {
       const target = fixtureTarget(`history-${index}`);
       return {
@@ -634,21 +646,19 @@ describe("measured execution last-known-good selection", () => {
         publishedAt: 1_900,
       };
     });
-    const { db, sqlite } = databases.open();
-    seedGeneration(sqlite, {
-      generationId: "latest", targetGenerationId: "latest-targets", publishedAt: 2_000, state: "published",
-      rows: historical.map(({ target }) => ({ target, status: "failed" as const, failureReason: "request-budget-exhausted" })),
+    const { db } = evidenceDb({
+      target: latestTarget,
+      latest: {
+        status: "failed",
+        failureReason: "pool-revert",
+        profile: null,
+      },
+      historical,
     });
-    for (const [index, row] of historical.entries()) {
-      seedGeneration(sqlite, {
-        generationId: `quote-generation-${index}`, targetGenerationId: `target-generation-${index}`,
-        publishedAt: 1_900, state: "superseded", rows: [row],
-      });
-    }
 
     const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
 
-    expect(evidence?.byTargetId).toHaveLength(65);
+    expect(evidence?.byTargetId).toHaveLength(66);
     expect(evidence?.byTargetId.get(historical[64]!.target.targetId)).toMatchObject({
       status: "measured",
       resolution: "last-known-good",
@@ -658,28 +668,6 @@ describe("measured execution last-known-good selection", () => {
 });
 
 describe("measured execution clock-bounded cohort reads", () => {
-  it.each([1_000, 1_300])("does not count an expired original quote republished inside the historical generation window toward maturity (quotedAt=%s)", async (quotedAt) => {
-    const { db, sqlite } = databases.open();
-    const target = fixtureTarget("ethereum");
-    const targetGenerationId = "original-clock-targets";
-    for (const cohort of [
-      { generationId: "fresh-history", publishedAt: 12_080, quotedAt: 11_900, state: "superseded" as const },
-      { generationId: "recent-publication-expired-quote", publishedAt: 12_090, quotedAt, state: "superseded" as const },
-      { generationId: "fresh-latest", publishedAt: 12_100, quotedAt: 12_050, state: "published" as const },
-    ]) {
-      seedGeneration(sqlite, { generationId: cohort.generationId, targetGenerationId, publishedAt: cohort.publishedAt,
-        state: cohort.state, rows: [{ target, profile: fixtureProfile(target, {
-          targetGenerationId, quoteGenerationId: cohort.generationId, quotedAt: cohort.quotedAt,
-        }) }] });
-    }
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
-    expect(evidence?.byTargetId.get(target.targetId)?.observationHistory).toMatchObject({
-      completeProducerCycleCount: 2, successfulObservationCount: 2, consecutiveSuccessCount: 2,
-      observationWindowStartedAt: 11_900, observationWindowEndedAt: 12_050,
-    });
-    expect(evidence?.byTargetId.get(target.targetId)?.profile?.quotedAt).toBe(12_050);
-  });
-
   it("retains twelve quarter-hour observations without leaking later supplemental history", async () => {
     const { db, sqlite } = databases.open();
     const target = fixtureTarget("ethereum");
@@ -697,13 +685,13 @@ describe("measured execution clock-bounded cohort reads", () => {
     expect(latest?.quoteGenerationId).toBe("quarter-hour-quotes-11");
     expect(latest?.byTargetId.get(target.targetId)?.observationHistory).toMatchObject({
       completeProducerCycleCount: 12, successfulObservationCount: 12,
-      observationWindowStartedAt: 1_000, observationWindowEndedAt: 10_900,
+      observationWindowStartedAt: 1_060, observationWindowEndedAt: 10_960,
     });
     const clocked = await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, { publishedAtCeilingSec: 5_560 });
     expect(clocked?.quoteGenerationId).toBe("quarter-hour-quotes-5");
     expect(clocked?.byTargetId.get(target.targetId)?.observationHistory).toMatchObject({
       completeProducerCycleCount: 6, successfulObservationCount: 6,
-      observationWindowEndedAt: 5_500,
+      observationWindowEndedAt: 5_560,
     });
   });
 
@@ -814,8 +802,8 @@ describe("measured execution generation prune", () => {
     const quoteIds = () => sqlite.prepare("SELECT generation_id FROM dex_measured_execution_quotes ORDER BY generation_id")
       .all().map((row: Record<string, unknown>) => row.generation_id);
     const first = await pruneDexMeasuredExecutionGenerations(db, nowSec);
-    expect(first).toMatchObject({ cutoff, deletedQuoteRows: 16, deletedTargetRows: 15,
-      deletedGenerationRows: 16, deletedRows: 47, error: null });
+    expect(first).toMatchObject({ cutoff, deletedQuoteRows: 16, deletedTargetRows: 14,
+      deletedGenerationRows: 16, deletedRows: 46, error: null });
     expect(quoteIds()).toEqual(["candidate", "cutoff", "old-16", "old-17", "published", "recent"]);
     for (let pass = 0; pass < 3; pass++) await pruneDexMeasuredExecutionGenerations(db, nowSec);
     expect(quoteIds()).toEqual(["candidate", "cutoff", "published", "recent"]);
@@ -838,22 +826,24 @@ describe("measured execution generation prune", () => {
     sqlite.prepare(`INSERT INTO cron_leases VALUES ('sync-dex-liquidity', 'unrelated-owner', ?, ?, ?)`).run(nowSec + 900, nowSec, nowSec);
     sqlite.prepare(`INSERT INTO surface_publication_generations
       (surface, generation_id, started_at, state, expected_rows, producer_schedule_key, producer_job, producer_path, producer_kind, invocation_id)
-      VALUES ('dex-measured-execution-targets', ?, ?, 'candidate', 4133,
+      VALUES ('dex-measured-execution-targets', ?, ?, 'candidate', 37,
         'halfHourlyChartsOffset', 'sync-dex-liquidity', 'halfHourlyChartsOffset', 'scheduled-job', 'invocation')`)
       .run(generationId, nowSec - 14_401);
     const targetInsert = sqlite.prepare(`INSERT INTO dex_measured_execution_targets
       (generation_id, target_id, stablecoin_id, adapter_profile_id, protocol, chain, pool_id, captured_at, target_json)
       VALUES (?, ?, 'usdc-circle', 'uniswap-v3-quoter-v2', 'uniswap-v3', 'ethereum', ?, ?, '{}')`);
-    for (let index = 0; index < 4_133; index++) targetInsert.run(generationId, `target-${index}`, `pool-${index}`, nowSec - 14_401);
+    for (let index = 0; index < 37; index++) targetInsert.run(generationId, `target-${index}`, `pool-${index}`, nowSec - 14_401);
     const count = () => Number(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets WHERE generation_id = ?").get(generationId)!.count);
     const ledgerQuery = sqlite.prepare("SELECT state FROM surface_publication_generations WHERE generation_id = ?");
     expect(await pruneDexMeasuredExecutionGenerations(db, nowSec)).toMatchObject({
-      deletedTargetRows: 4_096, deletedGenerationRows: 0, error: null,
+      deletedTargetRows: 16, deletedGenerationRows: 0, error: null,
     });
-    expect(count()).toBe(37);
+    expect(count()).toBe(21);
     expect(ledgerQuery.get(generationId)).toMatchObject({ state: "candidate" });
+    expect(await pruneDexMeasuredExecutionGenerations(db, nowSec)).toMatchObject({ deletedTargetRows: 16, error: null });
+    expect(count()).toBe(5);
     expect(await pruneDexMeasuredExecutionGenerations(db, nowSec)).toMatchObject({
-      deletedTargetRows: 37, deletedGenerationRows: 1, error: null,
+      deletedTargetRows: 5, deletedGenerationRows: 1, error: null,
     });
     expect(count()).toBe(0);
     expect(ledgerQuery.get(generationId)).toBeUndefined();
@@ -932,84 +922,15 @@ describe("measured execution generation prune", () => {
   it("bounds a dense terminal generation delete to physical rows rather than generation count", async () => {
     const { db, sqlite } = databases.open();
     const target = fixtureTarget("ethereum");
-    const rows = Array.from({ length: 4_133 }, (_, index) => ({
+    const rows = Array.from({ length: 37 }, (_, index) => ({
       target: { ...target, targetId: `dense-${index}` }, status: "failed" as const, failureReason: "pool-revert",
     }));
     seedGeneration(sqlite, { generationId: "dense-quotes", targetGenerationId: "dense-targets",
       publishedAt: 10_000, state: "failed", rows });
     const result = await pruneDexMeasuredExecutionGenerations(db, 100_000);
-    expect(result).toMatchObject({ deletedQuoteRows: 4_096, deletedTargetRows: 0, deletedGenerationRows: 0, error: null });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_quotes").get()!.count).toBe(37);
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets").get()!.count).toBe(4_133);
-  });
-
-  it("drains production-sized expired cohorts faster than new quote rows arrive", async () => {
-    const { db, sqlite } = databases.open();
-    const target = fixtureTarget("ethereum");
-    const nowSec = 100_000;
-    for (let generation = 0; generation < 5; generation++) {
-      const rows = Array.from({ length: 700 }, (_, index) => ({
-        target: { ...target, targetId: `cohort-${index}` }, status: "failed" as const, failureReason: "pool-revert",
-      }));
-      seedGeneration(sqlite, { generationId: `expired-${generation}`, targetGenerationId: `inventory-${generation}`,
-        publishedAt: nowSec - 14_500 + generation, state: "superseded", rows });
-    }
-    const result = await pruneDexMeasuredExecutionGenerations(db, nowSec);
-    expect(result).toMatchObject({ deletedQuoteRows: 3_500, deletedTargetRows: 3_500,
-      deletedGenerationRows: 10, error: null });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_quotes").get()!.count).toBe(0);
-  });
-
-  it.each(["current-pool", "staged-pool", "published-pool"] as const)(
-    "preserves terminal quote/target evidence referenced by %s",
-    async (reference) => {
-      const { db, sqlite } = databases.open();
-      const target = fixtureTarget("ethereum");
-      const nowSec = 100_000;
-      const identity = { quoteGenerationId: "protected-quotes", targetGenerationId: "protected-targets" };
-      seedGeneration(sqlite, { generationId: identity.quoteGenerationId, targetGenerationId: identity.targetGenerationId,
-        publishedAt: 10_000, state: "superseded", rows: [{ target, status: "failed", failureReason: "pool-revert" }] });
-      seedGeneration(sqlite, { generationId: "unreferenced-quotes", targetGenerationId: "unreferenced-targets",
-        publishedAt: 10_001, state: "superseded", rows: [{ target, status: "failed", failureReason: "pool-revert" }] });
-      const pools = JSON.stringify([{ extra: { measuredExecution: identity } }]);
-      const components = "{}";
-      if (reference === "current-pool") {
-        sqlite.prepare(`INSERT INTO dex_liquidity
-          (stablecoin_id, symbol, updated_at, publication_state, top_pools_json, score_components_json)
-          VALUES ('usdc-circle', 'USDC', ?, 'published', ?, ?)`).run(nowSec, pools, components);
-      } else {
-        sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
-          (generation_id, started_at, state, expected_row_count, written_row_count, created_at)
-          VALUES ('liquidity', ?, ?, 1, 1, ?)`)
-          .run(nowSec, reference === "published-pool" ? "published" : "staged", nowSec);
-        sqlite.prepare(`INSERT INTO dex_liquidity_run_rows
-          (generation_id, stablecoin_id, symbol, updated_at, top_pools_json, score_components_json)
-          VALUES ('liquidity', 'usdc-circle', 'USDC', ?, ?, ?)`).run(nowSec, pools, components);
-      }
-      expect(await pruneDexMeasuredExecutionGenerations(db, nowSec)).toMatchObject({
-        deletedQuoteRows: 1, deletedTargetRows: 1, deletedGenerationRows: 2, error: null,
-      });
-      expect(sqlite.prepare("SELECT generation_id FROM dex_measured_execution_quotes").all())
-        .toEqual([{ generation_id: identity.quoteGenerationId }]);
-      expect(sqlite.prepare("SELECT generation_id FROM dex_measured_execution_targets").all())
-        .toEqual([{ generation_id: identity.targetGenerationId }]);
-      expect(sqlite.prepare("SELECT generation_id FROM surface_publication_generations ORDER BY generation_id").all())
-        .toEqual([{ generation_id: identity.quoteGenerationId }, { generation_id: identity.targetGenerationId }]);
-    },
-  );
-
-  it("keeps a target manifest referenced by the current published quote even without quote payload rows", async () => {
-    const { db, sqlite } = databases.open();
-    seedGeneration(sqlite, { generationId: "old-quotes", targetGenerationId: "protected-targets",
-      publishedAt: 10_000, state: "superseded",
-      rows: [{ target: fixtureTarget("ethereum"), status: "failed", failureReason: "pool-revert" }] });
-    seedGeneration(sqlite, { generationId: "current-quotes", targetGenerationId: "protected-targets",
-      publishedAt: 100_000, state: "published", rows: [] });
-    expect(await pruneDexMeasuredExecutionGenerations(db, 100_000)).toMatchObject({
-      deletedQuoteRows: 1, deletedTargetRows: 0, deletedGenerationRows: 1, error: null,
-    });
-    expect(sqlite.prepare("SELECT generation_id FROM dex_measured_execution_targets").all())
-      .toEqual([{ generation_id: "protected-targets" }]);
+    expect(result).toMatchObject({ deletedQuoteRows: 16, deletedTargetRows: 0, deletedGenerationRows: 0, error: null });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_quotes").get()!.count).toBe(21);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets").get()!.count).toBe(37);
   });
 
   it("reports cleanup errors without throwing after publication", async () => {

@@ -41,38 +41,6 @@ export function SafetyScoresTechnicalDetails() {
           distinct digest, so a gate change can no longer alter a published score invisibly. The
           active values did not change when this landed: the release rotated provenance, not scores.
         </p>
-        <p>
-          Peg freshness uses the asset&apos;s original priceObservedAt and the unchanged 1,800-second production
-          budget. Missing, null, nonpositive, fractional, unsafe-integer or future clocks produce a missing peg
-          fact with unknown freshness; a cache or cohort timestamp cannot substitute. Only an absent legacy
-          raw-list field may inherit that same asset&apos;s priceUpdatedAt. Preserving historical bytes and
-          capture identity does not imply score equivalence under corrected clock admission.
-        </p>
-        <p>
-          Reserve attempts retain typed per-datum loss and attempted fallback legs. Operational-only proof
-          permits retained evidence only within all original clocks; unknown, evidential or semantic loss
-          invalidates the datum, and later deferral cannot clear that invalidation. Returned fallback evidence
-          is persisted honestly, not replaced with a better prior snapshot. Captured Backing lineage retains
-          original reserve authority and loss history. Reserve-backed redemption keeps its original census,
-          current configuration and original clocks; only actual present non-carryable composition/redemption
-          loss or invalidation revokes its consumed parent. Healthy newer success alone does not reject it,
-          and no newest-success tuple gate or post-recovery marker is added.
-        </p>
-        <p>
-          In-flight pending reserve work is not a failure: prior finalized success or operational proof,
-          original clocks and existing invalidation remain. Only finalized later attempts need their own
-          matching identity and observed-clock proof; older packets cannot cover finalized mismatches.
-          Tied-clock unstamped error/withheld failure is unknown; clean legacy ok/degraded stored success
-          remains admitted when ordinary gates pass. Existing recovery abandonment records terminal unknown;
-          no new pending timeout is added.
-        </p>
-        <p>
-          Redemption losses retain asset, route and original input identity. Malformed rows preserve valid
-          peers from the newest trusted run; a corrupt manifest or census remains a global failure.
-          Whole-publication stale/unavailable and all-rows-quarantined holds remain, alongside the eight-hour
-          output budget and original nested observation clocks. This adds no operational carry and does not
-          change Exit continuity holds or output-price valuation.
-        </p>
         <p className="pharos-numeric">
           candidate = weakestIncluded + {formula.compensabilityHeadroom} × tanh((renormalizedWeightedQuality − weakestIncluded) /{" "}
           {formula.compensabilityHeadroom})

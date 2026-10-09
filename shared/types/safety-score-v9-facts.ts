@@ -2,7 +2,6 @@ import { z } from "zod";
 import { RedemptionRouteSuspensionSchema } from "./redemption";
 import { V9ReserveBoundedFactSchema } from "./reserve-bounded-facts";
 import { ReserveScopedAdmissionSchema } from "./safety-score-v9-reserve-scope";
-import { ReserveLossLineageSchema } from "./live-reserves";
 import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import { V9AccessClaimGraphSchema, v9AccessClaimGraphStatuses } from "./safety-score-v9-access-lookthrough";
 import { V9InProcessControlExecutionScopeSchema, V9ExactControlPolicySchema, V9WeightedQuorumSchema, V9SameChainSystemTransportSchema, V9ControlQuestionSubjectSchema } from "./safety-score-v9-control-scope";
@@ -1836,7 +1835,6 @@ const V9AssetFactsV3ObjectSchema = z
     reserveResiduals: canonicalArrayBy(V9ReserveResidualFactSchema, (residual) => residual.residualId),
     reserveCompositionEvidenceClass: V9ReserveCompositionEvidenceClassSchema.optional(),
     reserveCompositionProvenance: V9ReserveCompositionProvenanceSchema.optional(),
-    reserveLossLineage: ReserveLossLineageSchema.optional(),
     exitRoutes: canonicalArrayBy(V9ExitRouteFactV2Schema.safeExtend({
       capacityEvidenceTier: ExitRouteCapacityEvidenceTierSchema,
       factorStatuses: V9ExitFactorStatusesSchema,

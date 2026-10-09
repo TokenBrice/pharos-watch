@@ -210,7 +210,7 @@ describe("syncLiveReserves", () => {
     });
   });
 
-  it("retains historical detail but revokes scoring after a parser or validation failure", async () => {
+  it("keeps the fresh prior snapshot scoring after a parser or validation failure", async () => {
     const now = 1_900_000_000;
     const coin = getIndependentConfiguredCoin();
     const lastSuccessAt = now - 30 * 60;
@@ -254,8 +254,11 @@ describe("syncLiveReserves", () => {
     expect(resolved?.mode).toBe("live");
     expect(resolved?.reserves).toEqual([{ name: "Prior verified reserves", pct: 100, risk: "low" }]);
     expect(resolved?.sync?.status).toBe("error");
-    expect(resolved?.provenance?.scoringEligible).toBe(false);
-    expect(scoringMap.has(coin.id)).toBe(false);
+    // The failed attempt wrote no snapshot. The prior one was validated when it
+    // was observed and is still inside the freshness bound, so it keeps scoring;
+    // only the bound retires it.
+    expect(resolved?.provenance?.scoringEligible).toBe(true);
+    expect(scoringMap.get(coin.id)).toEqual([{ name: "Prior verified reserves", pct: 100, risk: "low" }]);
   });
 
   it("keeps stale source-age warnings degrading even when the warning code is allowlisted", async () => {
@@ -346,7 +349,7 @@ describe("syncLiveReserves", () => {
     expect(overview.freshCoins).toBe(0);
   });
 
-  it("revokes genuine stale redemption evidence without rejecting independently valid composition", async () => {
+  it("still rejects genuine separately observed stale redemption evidence", async () => {
     const coin = getIndependentConfiguredCoin();
     const { sqlite, db } = fixtures.open();
     const breakerKey = `live-reserves:${coin.liveReservesConfig.breakerScope ?? coin.liveReservesConfig.adapter}`;
@@ -362,19 +365,13 @@ describe("syncLiveReserves", () => {
       }),
       breakerCanFetch: new Map([[breakerKey, true]]), d1FinalizeTimeoutMs: 30_000, previousState: null,
     });
-    expect(result).toMatchObject({ status: "synced", breakerOutcome: true });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_composition").get()).toEqual({ count: 1 });
-    const snapshot = sqlite.prepare("SELECT metadata, warnings FROM reserve_composition WHERE stablecoin_id = ?").get(coin.id);
-    if (!snapshot || typeof snapshot.metadata !== "string" || typeof snapshot.warnings !== "string") throw new Error("Missing scoped reserve evidence");
-    const metadata = JSON.parse(snapshot.metadata);
-    expect(metadata).not.toHaveProperty("redemption");
-    expect(metadata.reserveInvalidations.redemption).toMatchObject({ disposition: "semantic",
-      scope: { assetId: coin.id, kind: "datum", key: "redemption" }, reason: "redemption-source-stale" });
-    expect(metadata.reserveInvalidations).not.toHaveProperty("composition");
-    expect(JSON.parse(snapshot.warnings)).toContainEqual(expect.objectContaining({
-      code: "redemption-scope-invalidated", effect: "info",
+    expect(result).toMatchObject({ status: "failed", breakerOutcome: true });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_composition").get()).toEqual({ count: 0 });
+    const state = sqlite.prepare("SELECT warnings FROM reserve_sync_state WHERE stablecoin_id = ?").get(coin.id);
+    if (!state || typeof state.warnings !== "string") throw new Error("Missing stale redemption warning");
+    expect(JSON.parse(state.warnings)).toContainEqual(expect.objectContaining({
+      code: "stale-redemption-source-timestamp", effect: "fatal",
     }));
-    expect((await loadFreshIndependentLiveReserveMap(db, Math.floor(Date.now() / 1000))).has(coin.id)).toBe(true);
   });
 
   it("keeps an allowlisted degraded warning recorded while admitting the snapshot to scoring", async () => {
@@ -648,7 +645,7 @@ describe("syncLiveReserves", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("reserve_composition_history"))).toBe(true);
   });
 
-  it("retains detail but rejects unproved circuit debt for scoring", async () => {
+  it("preserves prior reserve detail and keeps it scoring when the circuit is open", async () => {
     const now = 1_900_000_000;
     const coin = getIndependentConfiguredCoin();
     const lastSuccessAt = now - 45 * 60;
@@ -698,7 +695,7 @@ describe("syncLiveReserves", () => {
       stale: false,
       lastSuccessAt,
     });
-    expect(scoringMap.has(coin.id)).toBe(false);
+    expect(scoringMap.has(coin.id)).toBe(true);
   });
 
   describe("fallback snapshot admission guard", () => {
@@ -770,20 +767,37 @@ describe("syncLiveReserves", () => {
       freshnessMode: "unverified",
       details: { freshnessSource: "fallback-api", freshnessReason: "Fallback API publishes no source timestamp" },
     };
+    const priorSlices = [{ name: "Prior verified reserves", pct: 100, risk: "low" }];
     const fallbackSlices = [{ name: "Fallback API reserves", pct: 100, risk: "low" }];
 
-    it("persists a score-ineligible fallback instead of suppressing new evidence in favor of the prior score", async () => {
+    it("withholds a score-ineligible fallback read while the stored snapshot still scores", async () => {
       const outcome = await syncFallbackResult({ storedAgeSec: 4 * 60 * 60, fallbackMetadata: unverifiedFallback });
+
       expect(outcome.result.status).toBe("synced");
-      expect(outcome.result.publishedAt).toBe(outcome.state?.last_success_at);
-      expect(outcome.resolved?.reserves).toEqual(fallbackSlices);
-      expect(outcome.resolved?.provenance?.scoringEligible).toBe(false);
-      expect(outcome.scoringReserves).toBeUndefined();
-      expect(outcome.state?.last_success_attempt_id).not.toBe(outcome.previousLastSuccessAttemptId);
-      expect(outcome.state?.last_success_at).toBeGreaterThan(outcome.lastSuccessAt);
-      const warnings = JSON.parse(outcome.state!.warnings ?? "[]") as Array<{ code: string }>;
-      expect(warnings.some((warning) => warning.code === "primary-fallback-used")).toBe(true);
-      expect(warnings.some((warning) => warning.code === "fallback-withheld-score-grade-retained")).toBe(false);
+      expect(outcome.result.publishedAt).toBeUndefined();
+      expect(outcome.resolved?.reserves).toEqual(priorSlices);
+      expect(outcome.resolved?.provenance?.scoringEligible).toBe(true);
+      expect(outcome.scoringReserves).toEqual(priorSlices);
+      expect(outcome.state).toMatchObject({
+        last_status: "degraded",
+        last_success_at: outcome.lastSuccessAt,
+        last_success_attempt_id: outcome.previousLastSuccessAttemptId,
+      });
+      const warnings = JSON.parse(outcome.state!.warnings ?? "[]") as Array<{ code: string; effect: string }>;
+      expect(warnings.map((warning) => warning.code)).toEqual(expect.arrayContaining([
+        "primary-fallback-used",
+        "fallback-withheld-score-grade-retained",
+      ]));
+      expect(warnings.find((warning) => warning.code === "fallback-withheld-score-grade-retained")?.effect).toBe("degraded");
+      expect(JSON.parse(outcome.state!.metadata)).toMatchObject({
+        reason: "fallback-withheld-score-grade-retained",
+        withheldFallback: {
+          admissionReasons: expect.arrayContaining(["invalid-freshness"]),
+          retainedSnapshotAttemptId: outcome.previousLastSuccessAttemptId,
+          retainedSnapshotFetchedAt: outcome.lastSuccessAt,
+        },
+      });
+      expect(outcome.attemptStatuses).toEqual(["degraded"]);
     });
 
     it("writes the fallback read once the stored snapshot has aged out of admission", async () => {

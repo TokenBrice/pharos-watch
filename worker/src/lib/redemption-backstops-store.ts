@@ -1,4 +1,5 @@
 import { logWorkerEvent } from "./structured-log";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { assessConsumedRedemptionReserves, type ConsumedRedemptionReserveAssessment } from "./accepted-reserve-generation";
 import { RedemptionReserveRunMetadataSchema, type RedemptionReserveRunMetadata } from "@shared/types/reserve-input";
 import type {  RedemptionBackstopEntry,
@@ -21,8 +22,6 @@ import {
   RedemptionCostScenarioScoresSchema,
   RedemptionDocsSchema,
 } from "@shared/types/redemption";
-import { RedemptionAssetCensusSchema, type RedemptionAssetCensus, type RedemptionLossOutcomesByAssetId } from "@shared/types/redemption";
-import { classifyRedemptionEntryLosses, classifyRedemptionLossReason, redemptionLossOutcome } from "./redemption-backstop/loss";
 import {
   REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
@@ -84,9 +83,6 @@ export interface RedemptionBackstopLoadResult {
   snapshotSource?: RedemptionSnapshotSource;
   reserveInputAssessment?: ConsumedRedemptionReserveAssessment;
   runMetadata?: RedemptionBackstopRunMetadata;
-  lossOutcomesByAssetId?: RedemptionLossOutcomesByAssetId;
-  assetCensus?: RedemptionAssetCensus;
-  quarantinedAssetIds?: string[];
 }
 
 interface RedemptionBackstopRunRow {
@@ -364,58 +360,30 @@ function toEntry(row: RedemptionBackstopRow, runId: string, rejectionReasons: st
   return parsed.data;
 }
 
-interface DecodedRedemptionBackstopRows {
-  map: RedemptionBackstopMap;
-  assetCensus: RedemptionAssetCensus;
-  lossOutcomesByAssetId: RedemptionLossOutcomesByAssetId;
-  quarantinedAssetIds: string[];
-}
-
 function decodeBackstopRows(
   rows: readonly RedemptionBackstopRow[],
-  run: RedemptionBackstopRunRow,
-): DecodedRedemptionBackstopRows {
-  const map: RedemptionBackstopMap = {};
-  const assetCensus: RedemptionAssetCensus = {};
-  const lossOutcomesByAssetId: RedemptionLossOutcomesByAssetId = {};
-  const quarantinedAssetIds: string[] = [];
-  const manifestCensus = run.metadata?.assetCensus === undefined ? null : RedemptionAssetCensusSchema.safeParse(run.metadata.assetCensus);
-  if (manifestCensus && (!manifestCensus.success || Object.keys(manifestCensus.data).length !== run.expected_count)) {
-    throw new RedemptionBackstopSnapshotUnavailableError("Untrusted redemption asset census");
+  errorMessage: string,
+  runId: string,
+  rejectionReasons: string[],
+): RedemptionBackstopMap {
+  try {
+    const map: RedemptionBackstopMap = {};
+    for (const row of rows) {
+      const entry = toEntry(row, runId, rejectionReasons);
+      // Skip individual rows that fail schema validation rather than letting a
+      // single malformed row abort the entire snapshot decode. Skipped rows
+      // make the run row count fall short of written_count, so the caller's
+      // count guard rejects the run and falls through to an older valid run.
+      if (entry) {
+        map[row.stablecoin_id] = entry;
+      }
+    }
+    return map;
+  } catch (error) {
+    throw new RedemptionBackstopSnapshotUnavailableError(errorMessage, {
+      cause: error,
+    });
   }
-  const seen = new Set<string>();
-  for (const row of rows) {
-    const id = row.stablecoin_id;
-    const family = manifestCensus?.success ? manifestCensus.data[id]?.routeFamily : row.route_family;
-    if (typeof id !== "string" || id.length === 0 || id.trim() !== id || seen.has(id) ||
-      !RedemptionRouteFamilySchema.safeParse(family).success ||
-      (manifestCensus?.success && !manifestCensus.data[id]) ||
-      row.snapshot_run_id !== run.run_id || row.updated_at !== run.max_updated_at ||
-      row.methodology_version !== run.methodology_version ||
-      (manifestCensus?.success && row.route_family !== family)) {
-      throw new RedemptionBackstopSnapshotUnavailableError("Untrusted redemption row identity or clock");
-    }
-    seen.add(id);
-    assetCensus[id] = { routeFamily: family };
-    const rejectionReasons: string[] = [];
-    const entry = toEntry(row, run.run_id, rejectionReasons);
-    if (!entry) {
-      quarantinedAssetIds.push(id);
-      lossOutcomesByAssetId[id] = [redemptionLossOutcome({
-        assetId: id, routeKey: `redemption:${id}:${family}`, reason: "malformed-persisted-row",
-        disposition: classifyRedemptionLossReason("malformed-persisted-row"), runId: run.run_id, observedAtSec: row.updated_at,
-      })];
-      continue;
-    }
-    if (entry.lossOutcomes?.some((loss) => loss.scope.assetId !== id || (!loss.legacy && loss.runId !== run.run_id))) {
-      throw new RedemptionBackstopSnapshotUnavailableError("Untrusted redemption loss identity");
-    }
-    const losses = entry.lossOutcomes?.length ? entry.lossOutcomes : (entry.resolutionState === "failed"
-      ? classifyRedemptionEntryLosses(entry, null) : []);
-    map[id] = losses.length > 0 ? { ...entry, lossOutcomes: losses } : entry;
-    if (losses.length > 0) lossOutcomesByAssetId[id] = losses;
-  }
-  return { map, assetCensus, lossOutcomesByAssetId, quarantinedAssetIds };
 }
 
 export function resolveSnapshotMethodologyVersion(
@@ -455,6 +423,7 @@ async function getRecentCompletedRedemptionBackstopRuns(
       .bind(limit)
     .all<RedemptionBackstopRunRow>();
   return (rows.results ?? [])
+    .filter((row) => typeof row.run_id === "string" && row.run_id.length > 0)
     .map((row) => ({
       ...row,
       metadata: normalizeRedemptionBackstopRunMetadata(row.metadata_json),
@@ -463,8 +432,8 @@ async function getRecentCompletedRedemptionBackstopRuns(
 
 async function queryRedemptionBackstopMapFromRunRows(
   db: D1Database,
-  run: RedemptionBackstopRunRow,
-): Promise<DecodedRedemptionBackstopRows & { rawRowCount: number }> {
+  runId: string,
+): Promise<{ map: RedemptionBackstopMap; rawRowCount: number; rowRejectionReasons: string[] }> {
   let rows: D1Result<RedemptionBackstopRow>;
   try {
     rows = await db
@@ -473,7 +442,7 @@ async function queryRedemptionBackstopMapFromRunRows(
            FROM redemption_backstop_run_rows
           WHERE snapshot_run_id = ?`,
       )
-      .bind(run.run_id)
+      .bind(runId)
       .all<RedemptionBackstopRow>();
   } catch (error) {
     throw new RedemptionBackstopSnapshotUnavailableError("Failed to load immutable redemption backstop run rows", {
@@ -482,9 +451,11 @@ async function queryRedemptionBackstopMapFromRunRows(
   }
 
   const resultRows = rows.results ?? [];
+  const rowRejectionReasons: string[] = [];
   return {
-    ...decodeBackstopRows(resultRows, run),
+    map: decodeBackstopRows(resultRows, "Failed to decode immutable redemption backstop run rows", runId, rowRejectionReasons),
     rawRowCount: resultRows.length,
+    rowRejectionReasons,
   };
 }
 
@@ -509,36 +480,58 @@ export async function loadRedemptionBackstopLiveSignalRows(
   if (stablecoinIds.length === 0) return [];
 
   const recentRuns = await getRecentCompletedRedemptionBackstopRuns(db);
-  const run = recentRuns[0];
-  if (!run || typeof run.run_id !== "string" || run.run_id.length === 0 ||
-    !Number.isSafeInteger(run.expected_count) || run.expected_count < 0 ||
-    run.written_count !== run.expected_count || (run.expected_count > 0 && run.max_updated_at == null)) {
-    throw new RedemptionBackstopSnapshotUnavailableError("Untrusted newest redemption live-signal manifest");
-  }
-  let rows: D1Result<RedemptionBackstopLiveSignalRow>;
-  try {
-    rows = await db.prepare(
-      `SELECT stablecoin_id, immediate_capacity_ratio, route_family, updated_at
-         FROM redemption_backstop_run_rows
-        WHERE snapshot_run_id = ?`,
-    ).bind(run.run_id).all<RedemptionBackstopLiveSignalRow>();
-  } catch (error) {
-    throw new RedemptionBackstopSnapshotUnavailableError("Failed to load newest redemption live-signal rows", { cause: error });
-  }
-  const resultRows = rows.results ?? [];
-  const identities = new Set<string>();
-  if (resultRows.length !== run.written_count || resultRows.some((row) => {
-    if (typeof row.stablecoin_id !== "string" || row.stablecoin_id.length === 0 || identities.has(row.stablecoin_id) ||
-      row.updated_at !== run.max_updated_at) return true;
-    identities.add(row.stablecoin_id);
-    return false;
-  })) throw new RedemptionBackstopSnapshotUnavailableError("Untrusted newest redemption live-signal census");
   const requestedIds = new Set(stablecoinIds);
-  return resultRows.filter((row) => requestedIds.has(row.stablecoin_id) &&
-    (row.immediate_capacity_ratio == null || (Number.isFinite(row.immediate_capacity_ratio) &&
-      row.immediate_capacity_ratio >= 0 && row.immediate_capacity_ratio <= 1)) &&
-    (row.route_family == null || RedemptionRouteFamilySchema.safeParse(row.route_family).success));
+  let rowReadError: unknown;
 
+  for (const run of recentRuns) {
+    if (run.written_count !== run.expected_count) continue;
+    if (run.expected_count > 0 && run.max_updated_at == null) continue;
+
+    let rows: D1Result<RedemptionBackstopLiveSignalRow>;
+    try {
+      rows = await db
+        .prepare(
+          `SELECT stablecoin_id, immediate_capacity_ratio, route_family, updated_at
+             FROM redemption_backstop_run_rows
+            WHERE snapshot_run_id = ?`,
+        )
+        .bind(run.run_id)
+        .all<RedemptionBackstopLiveSignalRow>();
+    } catch (error) {
+      rowReadError ??= error;
+      continue;
+    }
+
+    const resultRows = rows.results ?? [];
+    const decodedRows = resultRows.filter(
+      (row) =>
+        typeof row.stablecoin_id === "string" &&
+        row.stablecoin_id.length > 0 &&
+        (row.immediate_capacity_ratio == null ||
+          (typeof row.immediate_capacity_ratio === "number" &&
+            Number.isFinite(row.immediate_capacity_ratio) &&
+            row.immediate_capacity_ratio >= 0 &&
+            row.immediate_capacity_ratio <= 1)) &&
+        (row.route_family == null || RedemptionRouteFamilySchema.safeParse(row.route_family).success) &&
+        typeof row.updated_at === "number" &&
+        Number.isFinite(row.updated_at) &&
+        row.updated_at >= 0,
+    );
+    const decodedIds = new Set(decodedRows.map((row) => row.stablecoin_id));
+    if (
+      resultRows.length !== run.written_count ||
+      decodedRows.length !== run.written_count ||
+      decodedIds.size !== run.written_count
+    ) {
+      continue;
+    }
+
+    return decodedRows.filter((row) => requestedIds.has(row.stablecoin_id));
+  }
+
+  throw new RedemptionBackstopSnapshotUnavailableError("No valid completed redemption backstop run found for live signals", {
+    cause: rowReadError,
+  });
 }
 
 export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<RedemptionBackstopLoadResult> {
@@ -553,34 +546,49 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
       throw new RedemptionBackstopSnapshotUnavailableError("No completed redemption backstop run found");
     }
 
-    const run = recentRuns[0];
-    if (typeof run.run_id !== "string" || run.run_id.trim().length === 0 ||
-      typeof run.methodology_version !== "string" || run.methodology_version.length === 0 ||
-      !Number.isSafeInteger(run.expected_count) || run.expected_count < 0 ||
-      run.written_count !== run.expected_count ||
-      (run.expected_count > 0 && (!Number.isSafeInteger(run.max_updated_at) || run.max_updated_at! <= 0 ||
-        run.min_updated_at !== run.max_updated_at || run.completed_at == null || run.completed_at < run.max_updated_at!))) {
-      throw new RedemptionBackstopSnapshotUnavailableError("Untrusted newest redemption run manifest");
-    }
-    const decoded = await queryRedemptionBackstopMapFromRunRows(db, run);
-    if (decoded.rawRowCount !== run.written_count ||
-      Object.keys(decoded.map).length + decoded.quarantinedAssetIds.length !== run.written_count) {
-      throw new RedemptionBackstopSnapshotUnavailableError("Untrusted newest redemption run census");
-    }
-    return {
-      map: decoded.map,
-      assetCensus: decoded.assetCensus,
-      lossOutcomesByAssetId: decoded.lossOutcomesByAssetId,
-      quarantinedAssetIds: decoded.quarantinedAssetIds,
-      latestUpdatedAt: run.max_updated_at,
-      runId: run.run_id,
-      methodologyVersion: run.methodology_version,
-      snapshotSource: "run-rows",
-      runMetadata: run.metadata,
-      reserveInputAssessment: assessConsumedRedemptionReserves(Object.values(decoded.map), run.metadata, run.max_updated_at ?? 0,
-        Math.floor(Date.now() / 1000), decoded.quarantinedAssetIds),
-    };
+    const rejectionReasons: string[] = [];
 
+    for (const run of recentRuns) {
+      if (run.written_count !== run.expected_count) {
+        rejectionReasons.push(`${run.run_id}: incomplete (${run.written_count}/${run.expected_count})`);
+        continue;
+      }
+      if (run.expected_count > 0 && run.max_updated_at == null) {
+        rejectionReasons.push(`${run.run_id}: missing max_updated_at`);
+        continue;
+      }
+
+      let map: RedemptionBackstopMap;
+      let rawRowCount: number;
+      let rowRejectionReasons: string[];
+      try {
+        ({ map, rawRowCount, rowRejectionReasons } = await queryRedemptionBackstopMapFromRunRows(db, run.run_id));
+      } catch (error) {
+        const message = toErrorMessage(error);
+        rejectionReasons.push(`${run.run_id}: query failed (${message})`);
+        continue;
+      }
+
+      const rowCount = Object.keys(map).length;
+      if (rawRowCount !== run.written_count || rowCount !== run.written_count) {
+        rejectionReasons.push(`${run.run_id}: run-row count mismatch (${rowCount}/${run.written_count}); row-rejections=${rowRejectionReasons.join(",")}`);
+        continue;
+      }
+
+      return {
+        map,
+        latestUpdatedAt: run.max_updated_at,
+        runId: run.run_id,
+        methodologyVersion: run.methodology_version,
+        snapshotSource: "run-rows",
+        runMetadata: run.metadata,
+        reserveInputAssessment: assessConsumedRedemptionReserves(Object.values(map), run.metadata, run.max_updated_at ?? 0, Math.floor(Date.now() / 1000)),
+      };
+    }
+
+    throw new RedemptionBackstopSnapshotUnavailableError(
+      `No valid completed redemption backstop run found (${rejectionReasons.join("; ")})`,
+    );
   } catch (error) {
     if (error instanceof RedemptionBackstopSnapshotUnavailableError) {
       throw error;

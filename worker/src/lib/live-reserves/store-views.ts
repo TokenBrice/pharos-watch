@@ -168,10 +168,11 @@ export async function resolveReserveResult(
     freshnessSec,
   );
 
-  // Prior live detail remains visible after a failed refresh because it was
-  // validly observed. Scoring separately requires operational-only carry proof
-  // and the original evidence clocks; feed acknowledgement supplies neither.
-  // Only genuine fetch/source staleness demotes displayed detail to `live-stale`.
+  // Prior live detail deliberately stays visible when the *current* sync attempt
+  // failed: the earlier snapshot was validly observed, and scoring judges it on
+  // its own warnings, not on the later attempt's status. Only genuine
+  // staleness (Worker fetch age or effective upstream observation age, computed
+  // above) may demote it, and that surfaces as `live-stale` rather than hiding it.
   if (liveSnapshot) {
     const provenance = buildReserveProvenanceView(liveSnapshot, admission);
     const adapterBadge = buildReserveDisplayBadgeView(liveSnapshot);

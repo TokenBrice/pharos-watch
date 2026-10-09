@@ -4,7 +4,6 @@ import { LIVE_RESERVE_FRESHNESS_MODE_VALUES } from "./live-reserve-core";
 export const LIVE_RESERVE_ADMISSION_REJECTION_CODE_VALUES = [
   "unconfigured", "suspended", "missing-snapshot", "inconsistent-snapshot", "config-mismatch",
   "non-independent", "stale", "invalid-freshness", "degraded-snapshot", "insufficient-slices",
-  "refresh-loss-unproved", "live-scope-invalidated",
 ] as const;
 export const LiveReserveAdmissionRejectionCodeSchema = z.enum(LIVE_RESERVE_ADMISSION_REJECTION_CODE_VALUES);
 export type LiveReserveAdmissionRejectionCode = z.output<typeof LiveReserveAdmissionRejectionCodeSchema>;

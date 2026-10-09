@@ -75,20 +75,6 @@ function compile(fact?: ReserveBoundedFact) {
   return compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets.find((row) => row.assetId === "alpha")!;
 }
 describe("reserve bound compiler admission", () => {
-  it("expires retained live liquid-fraction bounds at the original three-hour clock", () => {
-    const fact = ousdRows[0]!.boundedFacts![0]!;
-    const liveProvenance = { source: "origin-vault-balances", fetchedAt: 1790972117,
-      boundedFactsGeneration: { sourceGenerationId: "ethereum:26106961", observedAtSec: 1790972111, maxAgeSec: 10800 } };
-    for (const [age, admitted] of [[10800, true], [10801, false]] as const) {
-      const selected = buildSafetyScoreV9ReserveBoundFacts("ousd-origin-protocol", ousdRows, {
-        clockSec: fact.asOfSec + age, liveProvenance, liveMaxAgeSec: 28800,
-      });
-      expect(selected.some((row) => row.provenance.kind === "producer-observation")).toBe(admitted);
-    }
-    expect(fact.asOfSec).toBe(1790972111);
-    expect(liveProvenance.boundedFactsGeneration.observedAtSec).toBe(1790972111);
-  });
-
   it("keeps dependency-light bound policy identical to the validated candidate", () => {
     expect(V9_CANDIDATE_RESERVE_BOUND_POLICY.backing).toEqual(V9_CANDIDATE_POLICY_V1.policy.semantic.backing);
     expect(V9_CANDIDATE_RESERVE_BOUND_POLICY.reviewedResearchMaxAgeSec).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec);

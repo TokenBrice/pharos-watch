@@ -6,9 +6,6 @@ import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-inp
 import { computePegScore } from "@shared/lib/peg-score";
 import { buildSafetyScoreV9PegProvenanceSummary, projectSafetyScoreV9PegScoreResult } from "../safety-score-v9/peg-provenance";
 import { pegSummary } from "./safety-score-v9-peg-provenance.test-support";
-import { redemptionLossOutcome } from "../redemption-backstop/loss";
-import { makeRedemptionWriteRecord } from "./redemption-backstops-store.test-support";
-import { assessReserveFetchFreshness } from "../live-reserves/store-snapshot-state";
 import {
   buildNativeV9InputCacheEntry,
   computeNativeDexLiquidityPayloadFingerprint,
@@ -27,21 +24,13 @@ import {
   createReportCardsFixedInput,
 } from "../../test-helpers/report-cards-fixed-input";
 
-import { createAssetBuildContext, createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
+import { createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
 import { createReportCardEvidenceJournalV1 } from "@shared/lib/report-card-evidence-journal";
 import { captureReservePipelineGaps } from "../safety-score-v9/capture";
-import { reserveLossLineage, reserveLossOutcome } from "../live-reserves/loss";
-import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
-import { materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
-import { buildReserves } from "../safety-score-v9/fact-set-backing";
-import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 const CLOCK_SEC = 1_783_891_200;
 const DEX_UPDATED_AT = 1_783_891_100;
 const SOURCE_GENERATION = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${CLOCK_SEC}`;
 const ACTIVE_IDS = ACTIVE_STABLECOINS.map((coin) => coin.id);
-const RESERVE_REPLAY_META = new Map(["usdc-circle", "usdt-tether"].map((id) =>
-  [id, { id, mechanismArchetype: "fiat-cash" as const, launchDate: "2020-01-01" }]));
-const RESERVE_REPLAY_REGISTRY_FINGERPRINT = domainDigest("safety-score-v9.reserve-loss-fixture-registry.v1", [...RESERVE_REPLAY_META]);
 
 function nativeDraft(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const dexLiqMap = {
@@ -103,228 +92,7 @@ function nativeInput(overrides: Record<string, unknown> = {}): NativeSafetyScore
   return normalizeNativeV9Input(nativeDraft(overrides));
 }
 
-describe("frozen redemption loss lineage", () => {
-  it("round-trips a quarantined cohort while preserving the whole-publication stale hold", async () => {
-    const runId = "redemption:all-quarantined";
-    const loss = redemptionLossOutcome({
-      assetId: "usdc-circle", routeKey: "redemption:usdc-circle:offchain-issuer", reason: "malformed-persisted-row",
-      disposition: "semantic", runId, observedAtSec: CLOCK_SEC - 100,
-    });
-    const input = nativeInput({
-      redemptionLossOutcomesByAssetId: { "usdc-circle": [loss] },
-      inputFreshness: {
-        dexLiquidity: { updatedAt: DEX_UPDATED_AT, ageSeconds: CLOCK_SEC - DEX_UPDATED_AT, stale: false },
-        redemptionBackstops: { updatedAt: CLOCK_SEC - 100, ageSeconds: 100, stale: true },
-      },
-      v9PublicationInputHealth: {
-        dex: { state: "current", generationId: `dex-liquidity-${DEX_UPDATED_AT}`, updatedAtSec: DEX_UPDATED_AT },
-        redemption: { state: "stale", generationId: runId, updatedAtSec: CLOCK_SEC - 100 },
-        liveReserves: { state: "available", coverageRatio: 1 },
-      },
-    });
-    const identity = buildSafetyScoreV9InputIdentity({
-      methodologyVersion: input.methodologyVersion, baseInputGenerationId: input.baseInputGenerationId,
-      publicationGenerationId: input.sourceGeneration,
-    });
-    const stored = await buildNativeV9InputCacheEntry(input, identity);
-    const replayed = await parseNativeV9InputCacheValue(stored.value);
-    expect(replayed.redemptionStale).toBe(true);
-    expect(replayed.v9PublicationInputHealth.redemption.state).toBe("stale");
-    expect(replayed.redemptionLossOutcomesByAssetId).toEqual({ "usdc-circle": [loss] });
-    expect(replayed.baseInputGenerationId).toBe(input.baseInputGenerationId);
-    const mutated = structuredClone(input);
-    mutated.redemptionLossOutcomesByAssetId!["usdc-circle"][0].reason = "different-rejection";
-    expect(() => normalizeNativeV9Input(mutated)).toThrow(/does not match payload/);
-  });
-
-  it("fails closed when a nonlegacy loss belongs to a different producer run", () => {
-    const loss = redemptionLossOutcome({
-      assetId: "usdc-circle", routeKey: "redemption:usdc-circle:offchain-issuer", reason: "sync-error",
-      disposition: "unknown", runId: "redemption:wrong-run", observedAtSec: CLOCK_SEC,
-    });
-    expect(() => nativeInput({ redemptionLossOutcomesByAssetId: { "usdc-circle": [loss] } })).toThrow(/redemption loss identity mismatch/);
-  });
-});
-
-function reserveProjection(value: NativeSafetyScoreV9Input) {
-  const extension = buildSafetyScoreV9BaselineExtension(value, {
-    metaById: RESERVE_REPLAY_META, registryFingerprint: RESERVE_REPLAY_REGISTRY_FINGERPRINT,
-  });
-  const admitted = materializeSafetyScoreV9FactSetExtension(value, extension);
-  const context = createAssetBuildContext(value, admitted, admitted.assets.find((asset) => asset.assetId === "usdc-circle")!,
-    domainDigest("safety-score-v9.reserve-loss-replay-test.v1", admitted));
-  return { facts: buildReserves(context), evidence: [...context.evidence.values()] };
-}
-
-
 describe("native Safety Score V9 input", () => {
-  it("admits healthy older parents and pending attempts but requires each finalized attempt's own operational proof", () => {
-    const runId = "redemption:legacy-parent";
-    const entry = makeRedemptionWriteRecord({
-      stablecoinId: "usdc-circle", updatedAt: CLOCK_SEC,
-      reserveInput: { generationId: "reserve:legacy-parent", contentSha256: "a".repeat(64),
-        stablecoinId: "usdc-circle", attemptId: "success", configFingerprint: "b".repeat(64),
-        freshness: assessReserveFetchFreshness({ fetchedAt: CLOCK_SEC - 60, attemptId: "success",
-          metadata: { freshnessMode: "not-applicable" } }, CLOCK_SEC, 172800) },
-    });
-    const map = { "usdc-circle": entry };
-    const overrides = {
-      redemptionBackstopMap: map, redemptionGenerationId: runId, redemptionStale: false,
-      redemptionPayloadFingerprint: computeRedemptionPayloadFingerprint(map, runId),
-      inputMethodologyVersions: { safetyScore: SAFETY_SCORE_METHODOLOGY_VERSION, dexLiquidity: ["1.0"],
-        pegScore: [], redemptionBackstop: [entry.methodologyVersion] },
-      inputFreshness: { dexLiquidity: { updatedAt: DEX_UPDATED_AT, ageSeconds: CLOCK_SEC - DEX_UPDATED_AT, stale: false },
-        redemptionBackstops: { updatedAt: CLOCK_SEC, ageSeconds: 0, stale: false } },
-      v9PublicationInputHealth: {
-        dex: { state: "current", generationId: `dex-liquidity-${DEX_UPDATED_AT}`, updatedAtSec: DEX_UPDATED_AT },
-        redemption: { state: "current", generationId: runId, updatedAtSec: CLOCK_SEC },
-        liveReserves: { state: "available", coverageRatio: 1 },
-      },
-    };
-    expect(nativeInput(overrides).redemptionBackstopMap["usdc-circle"].reserveInput).toEqual(entry.reserveInput);
-    expect(nativeInput({ ...overrides, reserveLossLineageById: {} }).redemptionBackstopMap["usdc-circle"].reserveInput).toEqual(entry.reserveInput);
-    for (const lineage of [
-      { latest: null, invalidations: {} },
-      { latest: null, invalidations: {}, authority: { attemptId: null, observedAtSec: CLOCK_SEC, sourceId: "b".repeat(64) } },
-      { latest: null, invalidations: {}, authority: { attemptId: "new-success", observedAtSec: CLOCK_SEC, sourceId: "b".repeat(64) } },
-    ]) {
-      expect(nativeInput({ ...overrides, reserveLossLineageById: { "usdc-circle": lineage } })
-        .redemptionBackstopMap["usdc-circle"].reserveInput).toEqual(entry.reserveInput);
-    }
-    const operationalLoss = (attemptId: string, observedAtSec: number) => reserveLossOutcome({
-      assetId: entry.stablecoinId, sourceId: entry.reserveInput!.configFingerprint, attemptId, observedAtSec,
-      reason: "budget-deferred", legs: [{ key: "primary", sourceId: entry.reserveInput!.configFingerprint,
-        result: "not-started", loss: { key: "primary", sourceId: entry.reserveInput!.configFingerprint,
-          disposition: "operational", reason: "budget-deferred", proof: `${attemptId}:before-collector` } }],
-      priorEvidence: { ref: "reserve-composition:usdc-circle:success", observedAtSec: CLOCK_SEC - 60,
-        expiresAtSec: CLOCK_SEC - 60 + 172801 },
-    });
-    const previous = operationalLoss("previous-deferral", CLOCK_SEC - 10);
-    const state = { stablecoinId: entry.stablecoinId, configFingerprint: entry.reserveInput!.configFingerprint,
-      lastSuccessAt: CLOCK_SEC - 60, lastSuccessAttemptId: "success",
-      lastAttemptedAt: CLOCK_SEC, lastAttemptId: "current-deferral", pendingAttemptId: "current-deferral",
-      metadata: { reserveLoss: previous } };
-    const cleanPending = reserveLossLineage({ ...state, metadata: {}, lastStatus: "ok" });
-    expect(cleanPending.latest).toBeNull();
-    expect(nativeInput({ ...overrides, reserveLossLineageById: { "usdc-circle": cleanPending } })
-      .redemptionBackstopMap["usdc-circle"].reserveInput).toEqual(entry.reserveInput);
-    const pending = reserveLossLineage(state);
-    expect(pending.latest).toEqual(previous);
-    expect(nativeInput({ ...overrides, reserveLossLineageById: { "usdc-circle": pending } })
-      .redemptionBackstopMap["usdc-circle"].reserveInput).toEqual(entry.reserveInput);
-    const unprovedFinalized = reserveLossLineage({ ...state, pendingAttemptId: null, lastStatus: "error" });
-    expect(unprovedFinalized.latest).toMatchObject({ disposition: "unknown", attemptId: "current-deferral",
-      observedAtSec: CLOCK_SEC, reason: "current-attempt-proof-mismatched" });
-    expect(() => nativeInput({ ...overrides, reserveLossLineageById: { "usdc-circle": unprovedFinalized } }))
-      .toThrow(/revoked reserve parent/);
-    const finalized = reserveLossLineage({ ...state, pendingAttemptId: null,
-      metadata: { reserveLoss: operationalLoss("current-deferral", CLOCK_SEC) } });
-    expect(nativeInput({ ...overrides, reserveLossLineageById: { "usdc-circle": finalized } })
-      .redemptionBackstopMap["usdc-circle"].reserveInput).toEqual(entry.reserveInput);
-  });
-
-  it("round-trips complete reserve loss lineage and inherited route proof without renewing original clocks", async () => {
-    const loss = reserveLossOutcome({ assetId: "usdc-circle", sourceId: "reserve:fixture",
-      attemptId: "reserve:failed", runId: "reserve:run", observedAtSec: CLOCK_SEC - 10,
-      reason: "validation-failed", legs: [], rejection: { key: "admission", sourceId: "reserve:fixture",
-        disposition: "semantic", reason: "validation-failed", proof: "reserve:failed:admission" },
-      priorEvidence: { ref: "reserve-composition:usdc-circle:success", observedAtSec: CLOCK_SEC - 60, expiresAtSec: CLOCK_SEC + 100 } });
-    const routeLoss = { ...loss, scope: { assetId: "usdc-circle", kind: "route" as const, key: "redemption:usdc-circle:offchain-issuer" } };
-    const lineage = { latest: loss, invalidations: { composition: loss },
-      attemptLegs: [{ key: "primary", sourceId: "reserve:fixture", result: "returned" as const, loss: null }] };
-    const input = nativeInput({ registryFingerprint: RESERVE_REPLAY_REGISTRY_FINGERPRINT,
-      registryRevision: `sha256:${RESERVE_REPLAY_REGISTRY_FINGERPRINT}`, reserveLossLineageById: { "usdc-circle": lineage },
-      redemptionLossOutcomesByAssetId: { "usdc-circle": [routeLoss] } });
-    const identity = buildSafetyScoreV9InputIdentity({ methodologyVersion: input.methodologyVersion,
-      baseInputGenerationId: input.baseInputGenerationId, publicationGenerationId: input.sourceGeneration });
-    const stored = await buildNativeV9InputCacheEntry(input, identity);
-    const replayed = await parseNativeV9InputCacheValue(stored.value);
-    expect(reserveProjection(replayed)).toEqual(reserveProjection(input));
-    expect(reserveProjection(replayed).facts.reserveLossLineage).toEqual(lineage);
-    expect(replayed).toEqual(input);
-    expect(replayed.reserveLossLineageById?.["usdc-circle"]).toEqual(lineage);
-    expect(replayed.redemptionLossOutcomesByAssetId?.["usdc-circle"]?.[0]).toEqual(routeLoss);
-    const changed = structuredClone(input);
-    changed.reserveLossLineageById!["usdc-circle"].latest!.reason = "different-rejection";
-    changed.reserveLossLineageById!["usdc-circle"].invalidations.composition.reason = "different-rejection";
-    changed.redemptionLossOutcomesByAssetId!["usdc-circle"][0].reason = "different-rejection";
-    expect(() => normalizeNativeV9Input(changed)).toThrow(/does not match payload/);
-  });
-  it("rejects inherited reserve route proof unless its complete parent packet matches", () => {
-    const parent = reserveLossOutcome({ assetId: "usdc-circle", sourceId: "reserve:fixture",
-      attemptId: "reserve:failed", runId: "reserve:run", observedAtSec: CLOCK_SEC - 10,
-      reason: "validation-failed", legs: [], rejection: { key: "admission", sourceId: "reserve:fixture",
-        disposition: "semantic", reason: "validation-failed", proof: "reserve:failed:admission" },
-      priorEvidence: { ref: "reserve-composition:usdc-circle:success", observedAtSec: CLOCK_SEC - 60, expiresAtSec: CLOCK_SEC + 100 } });
-    const routeLoss = { ...parent, scope: { assetId: "usdc-circle", kind: "route" as const, key: "redemption:usdc-circle:offchain-issuer" } };
-    const draft = { reserveLossLineageById: { "usdc-circle": { latest: parent, invalidations: { composition: parent } } },
-      redemptionLossOutcomesByAssetId: { "usdc-circle": [routeLoss] } };
-    expect(() => nativeInput(draft)).not.toThrow();
-    for (const changed of [
-      { ...routeLoss, reason: "different-parent-reason" },
-      { ...routeLoss, observedAtSec: CLOCK_SEC - 9 },
-      { ...routeLoss, priorEvidence: { ...routeLoss.priorEvidence!, observedAtSec: CLOCK_SEC - 59 } },
-      { ...routeLoss, legs: [{ ...routeLoss.legs[0]!, proof: "different-stage-proof" }, ...routeLoss.legs.slice(1)] },
-    ]) {
-      expect(() => nativeInput({ ...draft, redemptionLossOutcomesByAssetId: { "usdc-circle": [changed] } }))
-        .toThrow(/redemption loss identity mismatch/);
-    }
-  });
-
-  it("expires operationally retained Backing references at their original eight-hour clock", () => {
-    const originalFetch = CLOCK_SEC - 28800;
-    const loss = reserveLossOutcome({ assetId: "usdc-circle", sourceId: "fixture-reserve-api",
-      attemptId: "reserve-skipped", observedAtSec: CLOCK_SEC - 10, reason: "budget-deferred",
-      legs: [{ key: "primary", sourceId: "fixture-reserve-api", result: "not-started", loss: {
-        key: "primary", sourceId: "fixture-reserve-api", disposition: "operational",
-        reason: "budget-deferred", proof: "reserve-skipped:before-collector" } }],
-      priorEvidence: { ref: "reserve-composition:usdc-circle:success", observedAtSec: originalFetch, expiresAtSec: originalFetch + 172801 } });
-    for (const [elapsed, freshness] of [[0, "current"], [1, "stale"]] as const) {
-      const value = nativeInput({ clockSec: CLOCK_SEC + elapsed, updatedAt: CLOCK_SEC + elapsed,
-        registryFingerprint: RESERVE_REPLAY_REGISTRY_FINGERPRINT, registryRevision: `sha256:${RESERVE_REPLAY_REGISTRY_FINGERPRINT}`,
-        capturedAt: new Date((CLOCK_SEC + elapsed) * 1000).toISOString(),
-        inputFreshness: { dexLiquidity: { updatedAt: DEX_UPDATED_AT, ageSeconds: CLOCK_SEC + elapsed - DEX_UPDATED_AT, stale: false },
-          redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true } },
-        liveReserveMap: { "usdc-circle": [{ sourceKey: "fixture:cash", name: "Cash", pct: 100,
-          risk: "very-low", assetClass: "cash", issuerOrObligor: "issuer:usdc", liquidityHorizon: "immediate", maturityDaysMax: 0, riskFactors: ["custody"] }] },
-        liveReserveProvenanceMap: { "usdc-circle": { source: "fixture-reserve-api", fetchedAt: originalFetch } },
-        reserveLossLineageById: { "usdc-circle": { latest: loss, invalidations: {} } } });
-      const { facts, evidence } = reserveProjection(value);
-      const references = evidence.filter((row) => row.sourceId === "fixture-reserve-api");
-      expect(references.length).toBeGreaterThan(0);
-      expect(references.every((row) => row.observedAtSec === originalFetch && row.freshness.state === freshness)).toBe(true);
-      expect(facts.reserveLossLineage?.latest?.priorEvidence?.observedAtSec).toBe(originalFetch);
-    }
-  });
-
-
-
-  it.each([undefined, null, CLOCK_SEC - 3_601])(
-    "round-trips legacy, unknown and original peg clocks (%s) without clock substitution",
-    async (priceObservedAt) => {
-      const peg = {
-        ...pegSummary([], CLOCK_SEC, CLOCK_SEC - 86_400, "6.098"),
-        id: "usdc-circle", symbol: "USDC", name: "USD Coin",
-        priceSource: "cached", priceObservedAtMode: "upstream" as const,
-        ...(priceObservedAt === undefined ? {} : { priceObservedAt }),
-      };
-      const input = nativeInput({ pegDataById: { "usdc-circle": peg } });
-      const identity = buildSafetyScoreV9InputIdentity({
-        methodologyVersion: input.methodologyVersion,
-        baseInputGenerationId: input.baseInputGenerationId,
-        publicationGenerationId: input.sourceGeneration,
-      });
-      const stored = await buildNativeV9InputCacheEntry(input, identity);
-      const replayed = await parseNativeV9InputCacheValue(stored.value);
-      expect(replayed.baseInputGenerationId).toBe(input.baseInputGenerationId);
-      expect(replayed.pegDataById["usdc-circle"]).toEqual(peg);
-      expect(replayed.pegDataById["usdc-circle"]!.priceObservedAt).toBe(priceObservedAt);
-      if (priceObservedAt === undefined) {
-        expect(Object.prototype.hasOwnProperty.call(replayed.pegDataById["usdc-circle"]!, "priceObservedAt")).toBe(false);
-      }
-    },
-  );
-
   it("v10.01 captures actual failed attempts but not missing configuration or superseded failures", () => {
     const rejected = createReportCardEvidenceJournalV1({
       schemaVersion: 1, lane: "reserve", assetId: "usdc-circle", attemptId: "attempt:failed", sourceId: "fixture:reserves",

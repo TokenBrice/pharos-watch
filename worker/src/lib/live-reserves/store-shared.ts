@@ -8,7 +8,6 @@ import type {
   LiveReserveSnapshotMetadata,
   LiveReserveSourceModel,
   LiveReserveWarning,
-  ReserveLossLineage,
 } from "@shared/types/live-reserves";
 import type { LiveReserveAdmissionResult } from "./store-snapshot-state";
 export type { ReserveCompositionOverview } from "@shared/types/live-reserves";
@@ -159,7 +158,6 @@ export type LiveReserveSnapshotProvenance = SharedSnapshotProvenance;
 
 export interface LiveReserveScoringMap extends Map<string, ReserveSlice[]> {
   readonly provenanceById: ReadonlyMap<string, LiveReserveSnapshotProvenance>;
-  readonly lossLineageById: ReadonlyMap<string, ReserveLossLineage>;
 }
 
 export interface ReserveSnapshotMetadataRecord {
@@ -203,9 +201,9 @@ const UNALLOWLISTABLE_DEGRADED_WARNING_CODES = new Set([
 
 /**
  * Degrading warnings the coin's scoring allowlist does not excuse. A snapshot
- * carrying one is stored and displayed but never enters V9 scoring. This gate
- * judges the snapshot's original warnings; latest-attempt proof and durable
- * scope invalidation are separate, additional admission gates.
+ * carrying one is stored and displayed but never enters V9 scoring. Judged on
+ * the snapshot's own warnings, not the sync row's latest status: a later
+ * attempt that failed wrote no snapshot, so it says nothing about this one.
  */
 export function selectScoringDegradedWarnings(
   warnings: readonly LiveReserveWarning[],

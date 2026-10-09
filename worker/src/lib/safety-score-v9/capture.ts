@@ -35,19 +35,13 @@ import { compareCodeUnits } from "@shared/lib/compare";
 import { assessConsumedRedemptionReserves } from "../accepted-reserve-generation";
 import { logWorkerEvent } from "../structured-log";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
-import { captureRedemptionQuarantine } from "./redemption-quarantine";
-import { classifyRedemptionLossReason, redemptionLossOutcome } from "../redemption-backstop/loss";
-import type { RedemptionLossOutcomesByAssetId, RedemptionQuarantineReason } from "@shared/types/redemption";
+import { captureRedemptionReserveQuarantine } from "./redemption-reserve-quarantine";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { reserveRedemptionParentLoss } from "../live-reserves/loss";
-import type { ReserveLossLineage } from "@shared/types/live-reserves";
-import { isCarryEligible } from "@shared/lib/evidence-loss";
 
 /** Freeze actual failed attempts; a configured/missing row alone is not a failure proof. */
 export function captureReservePipelineGaps(
   journal: ReportCardEvidenceJournalByIdV1,
   liveReserveMap: ReadonlyMap<string, unknown>, clockSec: number,
-  lossLineageById?: ReadonlyMap<string, ReserveLossLineage>,
 ): PipelineGapByAssetId {
   const rows: PipelineGapByAssetId = {};
   for (const [assetId, attempts] of Object.entries(journal)) {
@@ -71,33 +65,7 @@ export function captureReservePipelineGaps(
         ? latest.sidecarMaterializationSha256 : latest.contentSha256,
     })];
   }
-  if (lossLineageById) for (const [assetId, lineage] of lossLineageById) {
-    if (liveReserveMap.has(assetId)) continue;
-    const loss = lineage.invalidations.composition ?? lineage.latest;
-    if (!loss || loss.scope.key !== "composition" || isCarryEligible(loss, clockSec)) continue;
-    rows[assetId] = [createRuntimeGapVerdict({
-      assetId, scope: { pillar: "backing", componentKey: "reserve-composition", factorKey: null,
-        routeKey: null, exposureId: null, requiredDatum: "reserve-composition" },
-      sourceId: loss.sourceId ?? "live-reserves", sourceGenerationId: loss.attemptId ?? `legacy:${loss.observedAtSec ?? 0}`,
-      observedAtSec: loss.observedAtSec ?? 0, asOfSec: clockSec,
-      producerState: loss.disposition === "operational" ? "stale-producer" : "producer-failed",
-      rejectionCode: `reserve-refresh-${loss.disposition}`, reason: loss.reason,
-    })];
-  }
   return rows;
-}
-
-/** The immutable redemption run cannot launder a newer revocation of its consumed reserve datum. */
-export function captureReserveBackedRedemptionLoss(
-  entry: NativeSafetyScoreV9Input["redemptionBackstopMap"][string],
-  lineage: ReserveLossLineage | undefined,
-  clockSec: number,
-) {
-  if (!entry.reserveInput || !lineage) return null;
-  const parent = reserveRedemptionParentLoss(lineage, clockSec);
-  if (!parent) return null;
-  return { parent, routeLoss: { ...parent, scope: { assetId: entry.stablecoinId, kind: "route" as const,
-    key: `redemption:${entry.stablecoinId}:${entry.routeFamily}` } } };
 }
 
 export interface BuildNativeSafetyScoreV9CaptureOptions {
@@ -158,7 +126,6 @@ export async function buildNativeSafetyScoreV9Capture(
     redemptionSnapshotProvenance,
     liveReserveMap,
     liveReserveProvenanceMap,
-    reserveLossLineageById: storedReserveLossLineageById,
     liquidityStale,
     redemptionStale: readRedemptionStale,
     inputFreshness,
@@ -168,8 +135,6 @@ export async function buildNativeSafetyScoreV9Capture(
       ? { preloadedStablecoinsCache: options.preloadedStablecoinsCache }
       : {}),
   });
-
-  const reserveLossLineageById = new Map(storedReserveLossLineageById);
 
   const peggedAssets: StablecoinData[] = stablecoinsCached.payload.peggedAssets;
   const fxFallbackRates = stablecoinsCached.payload.fxFallbackRates;
@@ -192,59 +157,22 @@ export async function buildNativeSafetyScoreV9Capture(
     dexLiquidity: freshnessAtClock(inputFreshness.dexLiquidity, clockSec, "DEX liquidity"),
     redemptionBackstops: freshnessAtClock(inputFreshness.redemptionBackstops, clockSec, "redemption backstops"),
   };
-  const envelopeTrusted = (v9PublicationInputHealth.redemption.state === "current" || v9PublicationInputHealth.redemption.state === "stale") &&
-    redemptionSnapshotProvenance.runId != null && redemptionSnapshotProvenance.latestUpdatedAt != null &&
-    redemptionSnapshotProvenance.latestUpdatedAt <= clockSec;
   const consumedReserves = v9PublicationInputHealth.redemption.state === "current"
-    ? assessConsumedRedemptionReserves(Object.values(readRedemptionBackstopMap), redemptionSnapshotProvenance.runMetadata,
-      redemptionSnapshotProvenance.latestUpdatedAt ?? 0, clockSec, redemptionSnapshotProvenance.quarantinedAssetIds)
+    ? assessConsumedRedemptionReserves(Object.values(readRedemptionBackstopMap), redemptionSnapshotProvenance.runMetadata, redemptionSnapshotProvenance.latestUpdatedAt ?? 0, clockSec)
     : null;
   const consumedInputUnavailable = v9PublicationInputHealth.redemption.state === "unavailable" || consumedReserves?.state === "unavailable";
   const consumedInputFresh = v9PublicationInputHealth.redemption.state === "not-applicable" || consumedReserves?.state === "fresh";
   const redemptionOutputExpired = scoringInputFreshness.redemptionBackstops.ageSeconds != null && scoringInputFreshness.redemptionBackstops.ageSeconds > CRON_INTERVALS["sync-redemption-backstops"] * 2;
   // An asset whose consumed reserve evidence lost admission at the scoring clock
   // loses its redemption row alone (R8); every other asset keeps the producer run.
-  const quarantined: Record<string, RedemptionQuarantineReason> = { ...consumedReserves?.quarantined };
-  const redemptionLossOutcomesByAssetId: RedemptionLossOutcomesByAssetId = Object.fromEntries(
-    Object.entries(redemptionSnapshotProvenance.lossOutcomesByAssetId ?? {}).map(([id, losses]) => [id, [...losses]]),
-  );
-  for (const id of redemptionSnapshotProvenance.quarantinedAssetIds ?? []) quarantined[id] = "malformed-persisted-row";
-  for (const [id, entry] of Object.entries(readRedemptionBackstopMap)) {
-    if (entry.resolutionState === "failed") quarantined[id] = "sync-error";
-    const reserveLoss = captureReserveBackedRedemptionLoss(entry, reserveLossLineageById?.get(id), clockSec);
-    if (reserveLoss) {
-      quarantined[id] = "reserve-invalidated";
-      (redemptionLossOutcomesByAssetId[id] ??= []).push(reserveLoss.routeLoss);
-      const lineage = reserveLossLineageById.get(id) ?? { latest: null, invalidations: {} };
-      reserveLossLineageById.set(id, { ...lineage, invalidations: {
-        ...lineage.invalidations, [reserveLoss.parent.scope.key]: reserveLoss.parent,
-      } });
-    }
-  }
-  const outputStale = readRedemptionStale || scoringInputFreshness.redemptionBackstops.stale || redemptionOutputExpired;
-  if (envelopeTrusted && !consumedInputUnavailable && outputStale) {
-    for (const id of Object.keys(redemptionSnapshotProvenance.assetCensus ?? readRedemptionBackstopMap)) quarantined[id] = "output-stale";
-  }
-  for (const [id, reason] of Object.entries(quarantined)) {
-    const family = redemptionSnapshotProvenance.assetCensus?.[id]?.routeFamily ?? getRedemptionBackstopConfig(id)?.routeFamily;
-    if (!family) continue;
-    const losses = redemptionLossOutcomesByAssetId[id] ??= [];
-    if (reason === "reserve-invalidated") continue; // Preserve the exact inherited parent packet.
-    if (losses.some((loss) => loss.reason === reason)) continue;
-    losses.push(redemptionLossOutcome({
-      assetId: id, routeKey: `redemption:${id}:${family}`, reason,
-      disposition: classifyRedemptionLossReason(reason),
-      runId: redemptionSnapshotProvenance.runId ?? null,
-      observedAtSec: redemptionSnapshotProvenance.latestUpdatedAt ?? clockSec,
-    }));
-  }
+  const quarantined = consumedReserves?.quarantined ?? {};
   const admittedRedemptionRows = Object.entries(readRedemptionBackstopMap).filter(([stablecoinId]) => !(stablecoinId in quarantined));
-  const allRowsQuarantined = Object.keys(redemptionSnapshotProvenance.assetCensus ?? readRedemptionBackstopMap).length > 0 && admittedRedemptionRows.length === 0;
-  const redemptionStale = outputStale || !consumedInputFresh || allRowsQuarantined;
+  const allRowsQuarantined = Object.keys(readRedemptionBackstopMap).length > 0 && admittedRedemptionRows.length === 0;
+  const redemptionStale = readRedemptionStale || scoringInputFreshness.redemptionBackstops.stale || redemptionOutputExpired || !consumedInputFresh || allRowsQuarantined;
   if (redemptionStale) scoringInputFreshness.redemptionBackstops.stale = true;
   if (!redemptionStale && Object.keys(quarantined).length > 0) {
-    logWorkerEvent({ scope: "lib", level: "warn", event: "v9-capture-redemption-quarantine",
-      message: "Safety Score v9 capture quarantined attributable redemption row evidence",
+    logWorkerEvent({ scope: "lib", level: "warn", event: "v9-capture-redemption-reserve-quarantine",
+      message: "Safety Score v9 capture quarantined redemption rows with inadmissible consumed reserve evidence",
       runId: redemptionSnapshotProvenance.runId ?? null, metadata: { quarantined } });
   }
   const redemptionBackstopMap = redemptionStale ? {} : Object.fromEntries(admittedRedemptionRows);
@@ -312,16 +240,13 @@ export async function buildNativeSafetyScoreV9Capture(
   // reported, were tautologies left over from the V8-shaped bridge.
   const activeAssetIds = ACTIVE_STABLECOINS.map((coin) => coin.id).sort();
   const reserveJournal = await loadReportCardEvidenceJournalByIdV1(db, activeAssetIds, clockSec);
-  const pipelineGapByAssetId = captureReservePipelineGaps(reserveJournal, liveReserveMap, clockSec, reserveLossLineageById);
-  if (envelopeTrusted && !consumedInputUnavailable) {
+  const pipelineGapByAssetId = captureReservePipelineGaps(reserveJournal, liveReserveMap, clockSec);
+  if (!redemptionStale) {
     for (const [assetId, reason] of Object.entries(quarantined)) {
-      const routeFamily = redemptionSnapshotProvenance.assetCensus?.[assetId]?.routeFamily ?? getRedemptionBackstopConfig(assetId)?.routeFamily;
+      const routeFamily = getRedemptionBackstopConfig(assetId)?.routeFamily;
       if (!routeFamily || !activeAssetIds.includes(assetId)) continue;
-      const losses = redemptionLossOutcomesByAssetId[assetId];
-      (pipelineGapByAssetId[assetId] ??= []).push(captureRedemptionQuarantine({
+      (pipelineGapByAssetId[assetId] ??= []).push(captureRedemptionReserveQuarantine({
         assetId, redemptionGenerationId, routeFamily, reason, clockSec,
-        lossOutcome: reason === "reserve-invalidated" ? losses?.[losses.length - 1]
-          : losses?.find((loss) => loss.reason === reason),
       }));
     }
   }
@@ -332,8 +257,6 @@ export async function buildNativeSafetyScoreV9Capture(
   const { fallbackCoins: liveToFallbackCoins } = summarizeCollateralDriftFromLiveReserveMap(liveReserveMap);
 
   const registryFingerprint = computeReportCardsRegistryFingerprint();
-  // Keep each row's original price source/time/mode intact. clockSec is the
-  // analytics/history generation time; updatedAt is cache publication only.
   const pegDataById = Object.fromEntries(nonNavPegDataById);
   const input = normalizeNativeV9Input({
     schemaVersion: 4,
@@ -365,12 +288,8 @@ export async function buildNativeSafetyScoreV9Capture(
     navPriceById: buildNavPriceById(peggedAssets, clockSec),
     activeDepegPeakBpsById: Object.fromEntries(activeDepegPeakBpsById),
     redemptionBackstopMap,
-    redemptionLossOutcomesByAssetId: Object.fromEntries(Object.entries(redemptionLossOutcomesByAssetId).filter(([id]) => activeAssetIds.includes(id))),
     liveReserveMap: Object.fromEntries(liveReserveMap),
     liveReserveProvenanceMap: Object.fromEntries(liveReserveProvenanceMap),
-    reserveLossLineageById: Object.fromEntries(
-      [...reserveLossLineageById].filter(([assetId]) => activeAssetIds.includes(assetId)),
-    ),
     pipelineGapByAssetId,
     chainCirculatingById: Object.fromEntries(
       peggedAssets.map((asset) => [

@@ -6,14 +6,12 @@ import { sha256Hex } from "./hash";
 import { executeAtomicBatch } from "./db";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserves/store-shared";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import type { ReserveSnapshotMetadataRecord, ReserveSyncStateRecord } from "./live-reserves/store-shared";
+import type { ReserveSnapshotMetadataRecord } from "./live-reserves/store-shared";
 import { assessReserveSnapshotFreshness, evaluateLiveReserveAdmission, hasScoringEligibleLiveReserveFreshness } from "./live-reserves/store-snapshot-state";
 import { parseSnapshotMetadata, parseWarnings } from "./live-reserves/store-row-decoding";
 import { decodeLiveReserveRedemptionTelemetry, LiveReserveDiagnosticsSchema } from "@shared/types/live-reserves";
 import type { ScheduledCheckpointIdentity } from "./scheduled-recovery-checkpoint";
 import type { CronResult } from "./cron-logger";
-import { reserveLossLineage } from "./live-reserves/loss";
-import { loadReserveSyncStateMap } from "./live-reserves/store-read";
 
 export const ACCEPTED_RESERVE_GENERATION_KEY = "live-reserves:accepted-generation:v2";
 export class AcceptedReserveViewError extends Error {
@@ -83,13 +81,7 @@ export async function sealAcceptedReserveGeneration(db: D1Database, identity: Sc
         if (!Array.isArray(rawWarnings) || rawWarnings.length !== finalWarnings.length) malformed = true;
       } catch { malformed = true; }
       const parsed = AcceptedReserveSnapshotSchema.safeParse({ stablecoinId: row.stablecoin_id, fetchedAt: row.fetched_at, attemptId: row.attempt_id ?? null,
-        source: row.source, metadata: { ...finalMetadata,
-          reserveLossLineage: reserveLossLineage({ metadata: parseSnapshotMetadata(row.state_metadata),
-            stablecoinId: row.stablecoin_id, lastAttemptedAt: row.last_attempted_at, lastSuccessAt: row.last_success_at,
-            lastSuccessAttemptId: row.last_success_attempt_id ?? null,
-            lastAttemptId: row.last_attempt_id, lastStatus: row.last_status ?? undefined,
-            configFingerprint: row.config_fingerprint, adapterKey: adapterKey }) },
-        warnings: finalWarnings, warningCount: row.warning_count ?? finalWarnings.length,
+        source: row.source, metadata: finalMetadata, warnings: finalWarnings, warningCount: row.warning_count ?? finalWarnings.length,
         adapterSourceModel: row.adapter_source_model ?? adapter?.sourceModel, adapterEvidenceClass: row.adapter_evidence_class ?? adapter?.evidenceClass, configFingerprint: row.config_fingerprint ?? null,
         sliceCount: row.slice_count, lastSuccessAt: row.last_success_at, lastSuccessAttemptId: row.last_success_attempt_id ?? null });
       return { stablecoinId: row.stablecoin_id, snapshot: parsed.success && !malformed ? parsed.data : null,
@@ -112,30 +104,18 @@ export async function sealAcceptedReserveGeneration(db: D1Database, identity: Sc
   return loadAcceptedReserveGeneration(db);
 }
 
-export function acceptedReserveMetadataMap(envelope: AcceptedReserveGeneration, now: number,
-  currentStateById?: ReadonlyMap<string, ReserveSyncStateRecord>): Map<string, ReserveSnapshotMetadataRecord> {
+export function acceptedReserveMetadataMap(envelope: AcceptedReserveGeneration, now: number): Map<string, ReserveSnapshotMetadataRecord> {
   const map = new Map<string, ReserveSnapshotMetadataRecord>();
   for (const member of envelope.members) {
     const snapshot = member.snapshot;
     if (!snapshot) continue;
-    const currentState = currentStateById?.get(member.stablecoinId);
-    const authority = currentStateById ? currentState ?? null : { ...snapshot,
-      lastAttemptedAt: member.latestAttempt.attemptedAt, lastAttemptId: member.latestAttempt.attemptId,
-      lastStatus: member.latestAttempt.status ?? undefined };
-    const admission = evaluateLiveReserveAdmission(snapshot, authority,
-      WORKER_TRACKED_META_BY_ID.get(member.stablecoinId), now);
+    const admission = evaluateLiveReserveAdmission(snapshot, snapshot, WORKER_TRACKED_META_BY_ID.get(member.stablecoinId), now);
     if (admission.reasons.includes("config-mismatch")) continue;
-    map.set(member.stablecoinId, { stablecoinId: member.stablecoinId, fetchedAt: snapshot.fetchedAt, source: snapshot.source,
-      metadata: currentStateById ? { ...snapshot.metadata, reserveLossLineage: reserveLossLineage(currentState) } : snapshot.metadata,
+    map.set(member.stablecoinId, { stablecoinId: member.stablecoinId, fetchedAt: snapshot.fetchedAt, source: snapshot.source, metadata: snapshot.metadata,
       warningCount: snapshot.warningCount, warnings: snapshot.warnings, sourceModel: snapshot.adapterSourceModel, evidenceClass: snapshot.adapterEvidenceClass,
       syncStatus: member.latestAttempt.status ?? "skipped", admission });
   }
   return map;
-}
-
-/** Current revocation fences the immutable seal; it never supplies newer mutable evidence as accepted. */
-export async function loadAcceptedReserveMetadataMap(db: D1Database, envelope: AcceptedReserveGeneration, now: number) {
-  return acceptedReserveMetadataMap(envelope, now, await loadReserveSyncStateMap(db));
 }
 
 export function consumedReserveInput(envelope: AcceptedReserveGeneration, stablecoinId: string, record: ReserveSnapshotMetadataRecord): ConsumedReserveInput {
@@ -159,22 +139,11 @@ export interface ConsumedRedemptionReserveAssessment {
 const UNAVAILABLE_CONSUMED_RESERVES: ConsumedRedemptionReserveAssessment = { state: "unavailable", quarantined: {} };
 
 /** Immutable row census is mandatory; no inferred bindings for legacy manifests. */
-export function assessConsumedRedemptionReserves(entries: readonly RedemptionBackstopEntry[], metadata: unknown, runClockSec: number, now: number, quarantinedAssetIds: readonly string[] = []): ConsumedRedemptionReserveAssessment {
+export function assessConsumedRedemptionReserves(entries: readonly RedemptionBackstopEntry[], metadata: unknown, runClockSec: number, now: number): ConsumedRedemptionReserveAssessment {
   const parsed = RedemptionReserveRunMetadataSchema.safeParse(metadata);
   if (!parsed.success || parsed.data.runClockSec !== runClockSec) return UNAVAILABLE_CONSUMED_RESERVES;
   const census = parsed.data.consumedReserveInputs;
   const quarantined: Record<string, RedemptionReserveQuarantineReason> = {};
-  const omittedIds = new Set(quarantinedAssetIds);
-  if (omittedIds.size !== quarantinedAssetIds.length || entries.some((entry) => omittedIds.has(entry.stablecoinId))) return UNAVAILABLE_CONSUMED_RESERVES;
-  for (const id of omittedIds) {
-    const input = census[id];
-    if (!input) continue;
-    const f = input.freshness;
-    if (input.stablecoinId !== id || input.generationId !== parsed.data.reserveGenerationId ||
-      input.contentSha256 !== parsed.data.reserveContentSha256 || input.attemptId !== f.attemptId ||
-      f.fetchedAt === null || f.fetchedAt > runClockSec || f.assessedAt !== runClockSec ||
-      f.fetchAgeSec !== f.assessedAt - f.fetchedAt || f.fetchBudgetSec !== LIVE_RESERVE_FRESHNESS_SEC) return UNAVAILABLE_CONSUMED_RESERVES;
-  }
   let consumed = 0;
   for (const entry of entries) {
     const input = entry.reserveInput;
@@ -198,6 +167,6 @@ export function assessConsumedRedemptionReserves(entries: readonly RedemptionBac
     if (!hasScoringEligibleLiveReserveFreshness(snapshot.metadata, now)) quarantined[entry.stablecoinId] = "freshness-unverified";
     else if (f.stale || assessReserveSnapshotFreshness(snapshot, coin, now, LIVE_RESERVE_FRESHNESS_SEC).stale) quarantined[entry.stablecoinId] = "stale";
   }
-  if (consumed + [...omittedIds].filter((id) => census[id] !== undefined).length !== Object.keys(census).length) return UNAVAILABLE_CONSUMED_RESERVES;
+  if (consumed !== Object.keys(census).length) return UNAVAILABLE_CONSUMED_RESERVES;
   return { state: "fresh", quarantined };
 }

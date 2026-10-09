@@ -95,41 +95,6 @@ afterEach(() => {
 });
 
 describe("evaluatePromotionDecision", () => {
-  it.each([false, true])("promotes mixed DEX evidence only with two genuine families (independent=%s)", async (independent) => {
-    const { sqlite, db } = openFixture();
-    const row = makePendingRow({ id: 300 });
-    insertPending(sqlite, row);
-    const plan = makePlan({ row, temporalSameDirectionConfirmed: true });
-    const evidence = await collectConfirmationEvidence({
-      ...plan, db, now: NOW_SEC, coingeckoAllowed: false, coingeckoApiKey: undefined,
-      signal: undefined, cexAllowed: false, cexPrices: null,
-      dexPriceRows: new Map([[row.stablecoin_id, {
-        stablecoin_id: row.stablecoin_id, dex_price_usd: 0.95, deviation_from_primary_bps: null,
-        source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: NOW_SEC - 30,
-      }]]),
-      dexPriceSources: new Map([[row.stablecoin_id, [
-        { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.95, tvl: 3_000_000, updatedAt: NOW_SEC - 30 },
-        { protocol: "kinesis_money", sourceFamily: "cg_tickers", chain: "orderbook", price: 0.95, tvl: 0, updatedAt: NOW_SEC - 30 },
-        ...(independent ? [{
-          protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.95, tvl: 2_000_000, updatedAt: NOW_SEC - 30,
-        }] : []),
-      ]]]),
-      poolChallengers: new Map(),
-    });
-    await settle(db, plan, evidence);
-    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
-    if (independent) {
-      expect(state.pending).toBeUndefined();
-      expect(state.events).toHaveLength(1);
-      expect(state.events[0]).toMatchObject({ confirmation_sources: "temporal:15m+dex:curve+dex:uniswap" });
-      expect(state.outcomes[0]).toMatchObject({ outcome: "promoted" });
-    } else {
-      expect(state.pending).toMatchObject({ id: row.id });
-      expect(state.events).toEqual([]);
-      expect(state.outcomes).toEqual([]);
-    }
-  });
-
   it("promotes and persists complete event and outcome rows", async () => {
     const { sqlite, db } = openFixture();
     const row = makePendingRow({

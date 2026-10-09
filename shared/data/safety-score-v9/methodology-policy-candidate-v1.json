@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.13",
+  "releaseVersion": "10.12",
   "semantic": {
     "accessLookthrough": {
       "edgeKinds": ["reserve-position", "receipt", "bridge-representation"],

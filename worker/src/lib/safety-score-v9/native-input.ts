@@ -36,10 +36,6 @@ import {
 } from "../report-cards-fixed-input-cache-codec";
 import { V9PublicationInputHealthSchema } from "./publication-assessment";
 import { parseJson } from "../json-parse";
-import { reserveRedemptionParentLoss } from "../live-reserves/loss";
-import { ReserveLossLineageSchema } from "@shared/types/live-reserves";
-import { isCarryEligible } from "@shared/lib/evidence-loss";
-import { RedemptionLossOutcomesByAssetIdSchema } from "@shared/types/redemption";
 
 /**
  * DEX liquidity row as the native V9 capture carries it. The V8 report-card
@@ -86,9 +82,7 @@ const NativeChainCirculatingRowSchema = z
 
 const NativeSafetyScoreV9InputPayloadFields = createFixedInputPayloadFields({
   publicationHealthSchema: V9PublicationInputHealthSchema,
-  afterRedemptionBackstopMap: {
-    redemptionLossOutcomesByAssetId: RedemptionLossOutcomesByAssetIdSchema.optional(),
-  },
+  afterRedemptionBackstopMap: {},
   chainCirculatingByIdSchema: z.record(
     z.string(),
     z.record(z.string(), NativeChainCirculatingRowSchema),
@@ -116,7 +110,6 @@ export const NativeSafetyScoreV9InputSchema = z
     registryFingerprint: Sha256Schema,
     inputMethodologyVersions: ReportCardsFixedInputMethodologyVersionsSchema,
     dexLiqMap: z.record(z.string(), NativeDexLiquidityRowSchema),
-    reserveLossLineageById: z.record(z.string().min(1), ReserveLossLineageSchema).optional(),
     baseInputGenerationId: BaseInputGenerationIdSchema,
   })
   .strict();
@@ -126,9 +119,8 @@ export type NativeSafetyScoreV9Input = z.infer<typeof NativeSafetyScoreV9InputSc
 /**
  * The structural input the V9 compiler accepts. The native v4 capture is the
  * production shape; the retained v3 exact fixed input is structurally a
- * superset of it and stays admissible with its captured bytes/identity intact.
- * Legacy peg rows without priceObservedAt replay as unknown-clock facts under
- * the current evaluator; neither normalization nor compilation invents a clock.
+ * superset of it and stays admissible so frozen v3 captures keep replaying
+ * byte-for-byte through the same pipeline.
  */
 export type SafetyScoreV9CompilerInput = Omit<
   NativeSafetyScoreV9Input,
@@ -255,34 +247,6 @@ function assertNativeV9InputConsistency(
       `Native V9 input redemption payload fingerprint ${input.redemptionPayloadFingerprint} does not match payload ${currentRedemptionPayloadFingerprint}`,
     );
   }
-  for (const [assetId, lineage] of Object.entries(input.reserveLossLineageById ?? {})) {
-    const outcomes = [...Object.values(lineage.invalidations), ...(lineage.latest ? [lineage.latest] : [])];
-    if (!input.activeAssetIds.includes(assetId) || outcomes.some((loss) =>
-      loss.scope.assetId !== assetId || loss.scope.kind !== "datum") ||
-      Object.entries(lineage.invalidations).some(([key, loss]) => key !== loss.scope.key)) {
-      throw new Error(`Native V9 input reserve loss identity mismatch for ${assetId}`);
-    }
-    if ((input.liveReserveMap[assetId]?.length ?? 0) > 0 && (lineage.invalidations.composition ||
-      (lineage.latest?.scope.key === "composition" && (!isCarryEligible(lineage.latest, input.clockSec)
-        || lineage.latest.priorEvidence?.observedAtSec !== input.liveReserveProvenanceMap[assetId]?.fetchedAt)))) {
-      throw new Error(`Native V9 input admits revoked reserve evidence for ${assetId}`);
-    }
-  }
-  for (const [assetId, outcomes] of Object.entries(input.redemptionLossOutcomesByAssetId ?? {})) {
-    const lineage = input.reserveLossLineageById?.[assetId];
-    const parents = lineage ? [...Object.values(lineage.invalidations), ...(lineage.latest ? [lineage.latest] : [])] : [];
-    if (!input.activeAssetIds.includes(assetId) || outcomes.some((outcome) => outcome.scope.assetId !== assetId ||
-      (!outcome.legacy && outcome.runId !== input.v9PublicationInputHealth.redemption.generationId &&
-        !parents.some((parent) => stableJsonStringifyV1({ ...outcome, scope: parent.scope }) === stableJsonStringifyV1(parent))))) {
-      throw new Error(`Native V9 input redemption loss identity mismatch for ${assetId}`);
-    }
-  }
-  for (const [assetId, entry] of Object.entries(input.redemptionBackstopMap)) {
-    const lineage = input.reserveLossLineageById?.[assetId];
-    if (entry.reserveInput && reserveRedemptionParentLoss(lineage, input.clockSec)) {
-      throw new Error(`Native V9 input admits a revoked reserve parent for ${assetId}`);
-    }
-  }
   assertCommonFixedInputConsistency(input, {
     phase: "evidence",
     laneLabel: "Native V9 input",
@@ -335,16 +299,6 @@ export function normalizeNativeV9Input(value: unknown, navAssetIds?: ReadonlySet
     inputMethodologyVersions: normalizeReportCardsFixedInputMethodologyVersions(input.inputMethodologyVersions),
     ...normalizeCommonFixedInputRecords(input),
     dexLiqMap: normalizeNativeDexLiquidityMap(input.dexLiqMap),
-    ...(input.redemptionLossOutcomesByAssetId === undefined ? {} : {
-      redemptionLossOutcomesByAssetId: normalizeSortedRowMap(input.redemptionLossOutcomesByAssetId, (outcomes) => outcomes),
-    }),
-    ...(input.reserveLossLineageById === undefined ? {} : {
-      reserveLossLineageById: normalizeSortedRowMap(input.reserveLossLineageById, (lineage) => ({
-        ...lineage,
-        latest: lineage.latest,
-        invalidations: normalizeSortedRowMap(lineage.invalidations, (outcome) => outcome),
-      })),
-    }),
     redemptionBackstopMap: normalizeFixedRedemptionBackstopMap(input.redemptionBackstopMap),
   });
   const suppliedBaseInputGenerationId = input.baseInputGenerationId;

@@ -15,7 +15,6 @@ import xdaiReserveSource from "@shared/data/stablecoins/domains/reserves/xdai-gn
 import xdaiLiveObservation from "./fixtures/xdai-live-reserve-observation.json";
 import { ReserveObservationEnvelopeSchema } from "@shared/types/safety-score-v9-reserve-scope";
 import { ReviewEvidenceBuilder } from "../safety-score-v9/extension-shared";
-import { reserveLossOutcome } from "../live-reserves/loss";
 
 const clockSec = Date.parse("2026-10-02T12:00:00Z") / 1000;
 const asOfSec = Date.parse("2026-08-31T23:59:59Z") / 1000;
@@ -195,19 +194,6 @@ describe("diagnostic report scope monotonicity", () => {
     expect(records.map(row => row.url).sort()).toEqual(live.sources.map(row => row.url).sort());
     expect(records.some(row => row.url?.includes("dwellir"))).toBe(false);
   });
-  it("expires retained on-chain scope evidence under its original 4.8-hour/explicit expiry", () => {
-    const live = ReserveObservationEnvelopeSchema.parse(xdaiLiveObservation);
-    const parsed = parseStablecoinMetaAssets([{ ...xdaiMetaSource, ...xdaiReserveSource,
-      reserveReview: { ...xdaiReserveSource.reserveReview, observations: [] } }], "xdai-original-expiry")[0]!;
-    const originalExpiry = Math.min(live.expiresAtSec, live.observedAtSec! + 17280);
-    for (const [clock, admitted] of [[originalExpiry - 1, true], [originalExpiry + 1, false]] as const) {
-      const admissions = buildSafetyScoreV10ScopedReserveAdmissions(parsed, { ...input(), clockSec: clock,
-        liveReserveProvenanceMap: { [parsed.id]: { source: "xdai-bridge", fetchedAt: 1790972022, reserveObservation: live } } });
-      expect(admissions.some((row) => row.admitted)).toBe(admitted);
-    }
-    expect(live.observedAtSec).toBe(1790971600);
-  });
-
   it("selects live before admissible authored evidence and falls back only when live is rejected", () => {
     const live = ReserveObservationEnvelopeSchema.parse(xdaiLiveObservation);
     const authored = structuredClone(live);
@@ -224,22 +210,16 @@ describe("diagnostic report scope monotonicity", () => {
     const liveEvidence = new ReviewEvidenceBuilder(parsed.id, 1790972280);
     addScopedReserveEvidence(parsed, liveAdmissions, liveInput, liveEvidence);
     expect(liveEvidence.finish().researchEvidence.map(row => row.url).sort()).toEqual(live.sources.map(row => row.url).sort());
-    for (const condition of ["expired", "unverified", "invalidated"] as const) {
+    for (const condition of ["expired", "unverified"] as const) {
       const rejected = structuredClone(live);
       if (condition === "expired") rejected.expiresAtSec = 1790972279;
-      else if (condition === "unverified") rejected.confidence = "unknown";
+      else rejected.confidence = "unknown";
       const rejectedInput = { ...input(), clockSec: 1790972280,
         liveReserveProvenanceMap: { [parsed.id]: { source: "xdai-bridge", fetchedAt: 1790972022, reserveObservation: rejected } } };
-      const loss = reserveLossOutcome({ assetId: parsed.id, sourceId: "xdai-bridge", attemptId: "revoked",
-        observedAtSec: 1790972200, reason: "validation-failed", legs: [],
-        rejection: { key: "admission", sourceId: "xdai-bridge", disposition: "semantic",
-          reason: "validation-failed", proof: "revoked:admission" } });
-      const admittedInput = condition === "invalidated" ? { ...rejectedInput,
-        reserveLossLineageById: { [parsed.id]: { latest: loss, invalidations: { composition: loss } } } } : rejectedInput;
-      const admissions = buildSafetyScoreV10ScopedReserveAdmissions(parsed, admittedInput);
+      const admissions = buildSafetyScoreV10ScopedReserveAdmissions(parsed, rejectedInput);
       expect(admissions).toMatchObject([{ admitted: true, observedAtSec: authored.observedAtSec }]);
       const evidence = new ReviewEvidenceBuilder(parsed.id, 1790972280);
-      addScopedReserveEvidence(parsed, admissions, admittedInput, evidence);
+      addScopedReserveEvidence(parsed, admissions, rejectedInput, evidence);
       expect(evidence.finish().researchEvidence.map(row => row.url)).toEqual(["https://example.com/reviewed-rpc"]);
     }
     authored.expiresAtSec = 1790972279;
