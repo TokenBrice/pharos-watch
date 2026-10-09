@@ -7,11 +7,14 @@ import {
   extractPrCheckFlags,
 } from "../maintenance/run-pr-checks.ts";
 
+const localDefault = { withCoverage: false, withPages: false };
+const optedIn = { withCoverage: true, withPages: true };
+
 describe("local PR check orchestration", () => {
   it("selects only the preflight and docs lanes for docs-only changes", () => {
     const changedFiles = ["docs/testing.md"];
 
-    expect(buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), { skipCoverage: false })).toEqual([
+    expect(buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), localDefault)).toEqual([
       "classifier-smoke",
       "gitleaks",
       "verified-doc-links",
@@ -24,7 +27,7 @@ describe("local PR check orchestration", () => {
 
   it("adds docs checks to the normal lanes for mixed docs changes", () => {
     const changedFiles = ["README.md", "src/app/page.tsx"];
-    const plan = buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), { skipCoverage: false });
+    const plan = buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), optedIn);
 
     expect(plan).toEqual([
       "classifier-smoke",
@@ -44,12 +47,12 @@ describe("local PR check orchestration", () => {
     const changedFiles = ["AGENTS.md", "src/app/page.tsx"];
     const classification = classifyChangedFiles(changedFiles);
     expect(classification.docsChanged).toBe(true);
-    expect(buildPrCheckPlan(changedFiles, classification, { skipCoverage: false })).toContain("doc-sync");
+    expect(buildPrCheckPlan(changedFiles, classification, localDefault)).toContain("doc-sync");
   });
 
   it("hands doc-sync ownership to the docs lane for mixed plans", () => {
     const changedFiles = ["docs/testing.md", "shared/lib/classification.ts"];
-    const plan = buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), { skipCoverage: false });
+    const plan = buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), localDefault);
 
     expect(plan).toContain("doc-sync");
     expect(plan).toContain("pr-static");
@@ -69,7 +72,7 @@ describe("local PR check orchestration", () => {
 
   it("keeps the static lane's own doc-sync when the docs lane is not in the plan", () => {
     const changedFiles = ["shared/lib/classification.ts"];
-    const plan = buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), { skipCoverage: false });
+    const plan = buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), localDefault);
 
     expect(plan).not.toContain("doc-sync");
     const staticCommand = createLaneCommand("pr-static", {
@@ -82,32 +85,31 @@ describe("local PR check orchestration", () => {
     expect(staticCommand.cmd).not.toContain("--skip-doc-sync");
   });
 
-  it("runs touched critical coverage when the classifier requests it", () => {
-    const changedFiles = ["scripts/lib/critical-coverage.mjs"];
-    const plan = buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), { skipCoverage: false });
+  it("defers classifier-selected coverage and Pages lanes to CI unless opted in", () => {
+    const changedFiles = ["scripts/lib/critical-coverage.mjs", "src/app/page.tsx"];
+    const classification = classifyChangedFiles(changedFiles);
+    expect(classification).toMatchObject({ criticalCoverageChanged: true, pagesArtifactRequired: true });
 
-    expect(plan.at(-1)).toBe("critical-coverage");
-  });
-
-  it("suppresses touched critical coverage when requested", () => {
-    const changedFiles = ["scripts/lib/critical-coverage.mjs"];
-    const plan = buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), { skipCoverage: true });
-
+    const plan = buildPrCheckPlan(changedFiles, classification, localDefault);
+    expect(plan).not.toContain("pages-artifact");
     expect(plan).not.toContain("critical-coverage");
+    expect(buildPrCheckPlan(changedFiles, classification, { withCoverage: true, withPages: false })).not.toContain("pages-artifact");
+    expect(buildPrCheckPlan(changedFiles, classification, optedIn).slice(-2)).toEqual(["pages-artifact", "critical-coverage"]);
   });
 
   it("consumes local-only flags without leaking them into test:pr arguments", () => {
-    expect(extractPrCheckFlags(["--shard=1/2", "--skip-coverage", "--no-fetch", "--runInBand"])).toEqual({
+    expect(extractPrCheckFlags(["--shard=1/2", "--with-coverage", "--with-pages", "--no-fetch", "--runInBand"])).toEqual({
       forwardedTestArgs: ["--shard=1/2", "--runInBand"],
       noFetch: true,
-      skipCoverage: true,
+      withCoverage: true,
+      withPages: true,
       plan: false,
     });
   });
 
   it("always starts with the classifier smoke and gitleaks lanes", () => {
     const changedFiles = ["src/app/page.tsx"];
-    const plan = buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), { skipCoverage: false });
+    const plan = buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), localDefault);
 
     expect(plan.slice(0, 2)).toEqual(["classifier-smoke", "gitleaks"]);
   });

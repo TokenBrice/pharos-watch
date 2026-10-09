@@ -35,7 +35,10 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 export interface PrCheckFlags {
   forwardedTestArgs: string[];
   noFetch: boolean;
-  skipCoverage: boolean;
+  /** Opt in to the CI-owned critical-coverage lane locally. */
+  withCoverage: boolean;
+  /** Opt in to the CI-owned pages-artifact lane locally. */
+  withPages: boolean;
   plan: boolean;
 }
 
@@ -79,14 +82,17 @@ export interface RunPrChecksOptions {
 export function extractPrCheckFlags(rest: readonly string[]): PrCheckFlags {
   const forwardedTestArgs: string[] = [];
   let noFetch = false;
-  let skipCoverage = false;
+  let withCoverage = false;
+  let withPages = false;
   let plan = false;
 
   for (const arg of rest) {
     if (arg === "--no-fetch") {
       noFetch = true;
-    } else if (arg === "--skip-coverage") {
-      skipCoverage = true;
+    } else if (arg === "--with-coverage") {
+      withCoverage = true;
+    } else if (arg === "--with-pages") {
+      withPages = true;
     } else if (arg === "--plan") {
       plan = true;
     } else if (arg === "--json") {
@@ -96,13 +102,13 @@ export function extractPrCheckFlags(rest: readonly string[]): PrCheckFlags {
     }
   }
 
-  return { forwardedTestArgs, noFetch, skipCoverage, plan };
+  return { forwardedTestArgs, noFetch, withCoverage, withPages, plan };
 }
 
 export function buildPrCheckPlan(
   _changedFiles: readonly string[],
   classification: PrCheckClassification,
-  flags: Pick<PrCheckFlags, "skipCoverage">,
+  flags: Pick<PrCheckFlags, "withCoverage" | "withPages">,
 ): PrCheckLane[] {
   const lanes: PrCheckLane[] = ["classifier-smoke", "gitleaks"];
 
@@ -114,9 +120,9 @@ export function buildPrCheckPlan(
     lanes.push(...DOC_CHECK_LANES);
   }
   lanes.push("pr-static", "pr-tests");
-  if (classification.pagesArtifactRequired) lanes.push("pages-artifact");
+  if (classification.pagesArtifactRequired && flags.withPages) lanes.push("pages-artifact");
 
-  if (classification.criticalCoverageChanged && !flags.skipCoverage) {
+  if (classification.criticalCoverageChanged && flags.withCoverage) {
     lanes.push("critical-coverage");
   }
 
@@ -314,7 +320,7 @@ export async function runPrChecks(
   let treeClean = false;
   let weakened = false;
   const incompleteReasons: string[] = [];
-  let flags: PrCheckFlags = { noFetch: false, skipCoverage: false, plan: false, forwardedTestArgs: [] };
+  let flags: PrCheckFlags = { noFetch: false, withCoverage: false, withPages: false, plan: false, forwardedTestArgs: [] };
   const leaves: PrCheckReceiptLeaf[] = [];
   const json = argv.includes("--json");
   const log = (message: string) => (json ? stderr : stdout).write(`${message}\n`);
@@ -325,7 +331,7 @@ export async function runPrChecks(
     const { base, head, rest, staged } = parseChangedFileArgs(argv, env);
     flags = extractPrCheckFlags(rest);
     if (staged) throw new Error("check:pr tests the checkout; use check:focused --staged for index-selected iteration.");
-    weakened = flags.plan || flags.skipCoverage || flags.forwardedTestArgs.length > 0;
+    weakened = flags.plan || flags.forwardedTestArgs.length > 0;
     if (flags.forwardedTestArgs.some((arg) => /^--plan(?:-out|-only)?(?:=|$)/.test(arg))) {
       throw new Error("Test plan-only flags cannot certify readiness. Use check:pr --plan for a non-executing gate-wide plan.");
     }
@@ -373,10 +379,13 @@ export async function runPrChecks(
     const context = { base: baseSha, env, forwardedTestArgs: flags.forwardedTestArgs, head: headSha, resolvedBaseSha: baseSha, skipDocSync, deferCriticalOwners };
     const commands = expandStaticLeaves(lanes.map((lane) => createLaneCommand(lane, context)), changedFiles, baseSha, headSha, skipDocSync);
     // Keep omissions explicit without inventing an executed parent static leaf.
+    // Classifier-selected Pages/coverage lanes that this run did not opt into
+    // stay required on GitHub; they are deferred, not skipped.
+    const ciRequired = { "pages-artifact": classification.pagesArtifactRequired, "critical-coverage": classification.criticalCoverageChanged };
     for (const lane of [...DOC_CHECK_LANES, "pr-tests", "pages-artifact", "critical-coverage"] as const) {
       if (!lanes.includes(lane)) leaves.push({
         id: lane, command: createLaneCommand(lane, context).cmd,
-        status: lane === "critical-coverage" && classification.criticalCoverageChanged ? "skipped" : "not-selected",
+        status: (lane === "pages-artifact" || lane === "critical-coverage") && ciRequired[lane] ? "deferred-to-ci" : "not-selected",
         durationMs: 0,
       });
     }
@@ -391,9 +400,12 @@ export async function runPrChecks(
         log(`[check:pr] CI partitions (${plan.shardCount}; local tests are unsharded): ${JSON.stringify(plan.shards)}`);
         if (deferCriticalOwners) log("[check:pr] Local pr-tests defer critical-owner test files to the critical-coverage leaf, which executes all of them.");
       } else log("[check:pr] Selected test files/partitions: none (docs-only).");
-      if (classification.criticalCoverageChanged) {
+      if (lanes.includes("critical-coverage")) {
         log(`[check:pr] Critical owners (full suite):\n${collectOwningTests(CRITICAL_FILES, CRITICAL_OWNERSHIP).join("\n")}`);
-      } else log("[check:pr] Critical owners: coverage not selected.");
+      } else log("[check:pr] Critical owners: coverage not run locally.");
+      for (const leaf of leaves.filter((candidate) => candidate.status === "deferred-to-ci")) {
+        log(`[check:pr] ${leaf.id}: deferred to the GitHub PR gate (run locally with --with-${leaf.id === "pages-artifact" ? "pages" : "coverage"}).`);
+      }
       log("[check:pr] PLAN ONLY: no checks executed; not readiness proof. Test discovery may import modules. No fetch, clean install/bootstrap assertion, merge checkout, CI artifact transport or production acceptance. Timing history is scheduling telemetry, not a runtime SLA.");
       leaves.push(...commands.map((command): PrCheckReceiptLeaf => ({
         id: command.lane, command: command.cmd, status: "skipped", durationMs: 0,
@@ -446,7 +458,7 @@ export async function runPrChecks(
     const outcome = computeReceiptOutcome(leaves, weakened);
     reportGateResult({
       base: baseSha, head: headSha, changedFiles, classification,
-      lanes: leaves.filter((leaf) => leaf.status !== "not-selected").map((leaf) => ({
+      lanes: leaves.filter((leaf) => leaf.status !== "not-selected" && leaf.status !== "deferred-to-ci").map((leaf) => ({
         ...leaf, status: leaf.status as "passed" | "failed" | "skipped", failureTail: leaf.firstError ?? "",
       })),
       status: outcome, incompleteReasons, durationMs: Math.max(0, now() - startedAt),
@@ -473,7 +485,7 @@ export async function runPrChecks(
       flags: { ...flags, noFetchEnv: env.PHAROS_PR_NO_FETCH === "1" }, weakened,
       incompleteReasons,
       startedAt: new Date(startedAt).toISOString(), finishedAt: new Date(now()).toISOString(),
-      leaves: flags.plan ? leaves.map((leaf) => leaf.status === "failed" || leaf.status === "not-selected" ? leaf : { ...leaf, status: "skipped" }) : leaves,
+      leaves: flags.plan ? leaves.map((leaf) => ["failed", "not-selected", "deferred-to-ci"].includes(leaf.status) ? leaf : { ...leaf, status: "skipped" }) : leaves,
       outcome: computeReceiptOutcome(leaves, weakened),
     }, repoRoot);
   }

@@ -162,10 +162,22 @@ describe("readiness execution", () => {
       const ran = (fragment: string): unknown[] | undefined => h.runCommandImpl.mock.calls.find(([command]) => command.cmd.includes(fragment));
       return { coverageRan: ran("coverage:critical") !== undefined, flag: (ran("test:pr")?.[1] as Record<string, string> | undefined)?.PR_TESTS_DEFER_CRITICAL_OWNERS };
     };
-    expect(await deferFlag([`--base=${baseSha}`])).toEqual({ coverageRan: true, flag: "1" });
-    expect(await deferFlag([`--base=${baseSha}`, "--skip-coverage"])).toEqual({ coverageRan: false, flag: undefined });
+    expect(await deferFlag([`--base=${baseSha}`, "--with-coverage"])).toEqual({ coverageRan: true, flag: "1" });
+    expect(await deferFlag([`--base=${baseSha}`])).toEqual({ coverageRan: false, flag: undefined });
     fixture.changedFiles = ["worker/src/api/example.ts"];
     expect(await deferFlag([`--base=${baseSha}`])).toEqual({ coverageRan: false, flag: undefined });
+  });
+
+  it("records classifier-selected coverage and Pages as deferred to CI without weakening a clean pass", async () => {
+    fixture.changedFiles = ["worker/src/lib/evm-rpc.ts", "src/app/page.tsx"];
+    const h = harness();
+    expect(await runPrChecks([`--base=${baseSha}`], testEnv, h.options)).toBe(0);
+    expect(h.runCommandImpl.mock.calls.some(([command]) => /coverage:critical|check:pages-artifact/.test(command.cmd))).toBe(false);
+    expect(h.receipts[0]).toMatchObject({ weakened: false, outcome: "passed" });
+    expect(h.receipts[0].leaves).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "pages-artifact", status: "deferred-to-ci" }),
+      expect.objectContaining({ id: "critical-coverage", status: "deferred-to-ci" }),
+    ]));
   });
 
   it("starts pages-artifact only after every other leaf has settled", async () => {
@@ -186,7 +198,7 @@ describe("readiness execution", () => {
       ? Promise.resolve({ status: 0, aborted: false, output: command.cmd.startsWith("git rev-parse") ? baseSha : "0" })
       : track(command.cmd, { status: 0, aborted: false, output: "" }));
     h.runSecrets.mockImplementation(() => track("gitleaks", { ok: true, exitCode: 0, summary: "clean" }));
-    expect(await runPrChecks([`--base=${baseSha}`], testEnv, h.options)).toBe(0);
+    expect(await runPrChecks([`--base=${baseSha}`, "--with-coverage", "--with-pages"], testEnv, h.options)).toBe(0);
     expect(inFlightAtPagesStart).toEqual([[]]);
     expect(h.receipts[0].leaves.at(-1)).toMatchObject({ id: "critical-coverage", status: "passed" });
   });

@@ -5,7 +5,8 @@ import { z } from "zod";
 export interface PrCheckReceiptLeaf {
   id: string;
   command: string;
-  status: "passed" | "failed" | "skipped" | "not-selected";
+  /** `deferred-to-ci`: selected, but owned by the GitHub PR gate unless opted in locally. */
+  status: "passed" | "failed" | "skipped" | "not-selected" | "deferred-to-ci";
   durationMs: number;
   firstError?: string;
 }
@@ -48,7 +49,7 @@ const ReceiptSchema = z.object({
   leaves: z.array(z.object({
     id: z.string(),
     command: z.string(),
-    status: z.enum(["passed", "failed", "skipped", "not-selected"]),
+    status: z.enum(["passed", "failed", "skipped", "not-selected", "deferred-to-ci"]),
     durationMs: z.number().nonnegative(),
     firstError: z.string().optional(),
   })),
