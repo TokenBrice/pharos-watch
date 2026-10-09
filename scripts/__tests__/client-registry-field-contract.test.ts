@@ -22,7 +22,7 @@ import {
   readGeniusComplianceSummaryFields,
   validateGeniusComplianceProjection,
 } from "../build-data/build-client-registry.mjs";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { TRACKED_SOURCE_COINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   GENIUS_CLIENT_PROFILE_FIELDS,
   GENIUS_COMPLIANCE_PROFILE_FIELDS,
@@ -62,6 +62,61 @@ describe("client registry field contract", () => {
       expect(unconfigured).not.toHaveProperty("reserveReview");
       expect(unconfigured.flags).toEqual({ pegCurrency: "USD", governance: "centralized", navToken: true });
       expect(unconfigured.reserves).toEqual([{ risk: "low", pct: 100, coinId: "usdc-circle" }]);
+    }
+  });
+
+  it.each(["sodax-sonic", "nest-vault-positions", "single-asset", "evm-branch-balances"])(
+    "omits suspended %s reader provenance from list and detail projections",
+    (adapter) => {
+      const liveReservesConfig = { adapter, version: 1 };
+      const coin = {
+        id: "bnusd-balanced",
+        liveReservesConfig: {
+          ...liveReservesConfig,
+          suspended: {
+            reason: "The reader measures a different liability from the tracked asset.",
+            since: "2026-10-08",
+          },
+        },
+        reserves: [{ name: "Reviewed collateral", pct: 100, risk: "high" }],
+      };
+      for (const projected of [
+        projectListCoin(coin, readCanonicalClientFields(), "core-stablecoin"),
+        projectDetailCoin(coin, readCanonicalClientDetailFields()),
+      ]) {
+        expect(projected).not.toHaveProperty("liveReserveAdapter");
+        expect(projected).not.toHaveProperty("liveReservesConfig");
+      }
+      expect(projectDetailCoin(coin, readCanonicalClientDetailFields()).reserves).toEqual(coin.reserves);
+      const enabledCoin = { ...coin, liveReservesConfig };
+      for (const projected of [
+        projectListCoin(enabledCoin, readCanonicalClientFields(), "core-stablecoin") as StablecoinClientListMeta,
+        projectDetailCoin(enabledCoin, readCanonicalClientDetailFields()) as StablecoinClientDetailMeta,
+      ]) {
+        expect(projected.liveReserveAdapter).toBe(adapter);
+      }
+      expect(coin.liveReservesConfig.suspended).toBeDefined();
+    },
+  );
+
+  it("omits every authored suspended reader from both generated client outputs", () => {
+    const suspendedCoins = TRACKED_SOURCE_COINS.filter((coin) => coin.liveReservesConfig?.suspended);
+    expect(suspendedCoins.map((coin) => coin.id)).toEqual(expect.arrayContaining([
+      "bnusd-balanced", "inalpha-nest", "tgbp-tokenised", "usdxl-last",
+    ]));
+    const { output, detailOutputs } = buildClientRegistryOutput();
+    const listCoins = JSON.parse(output) as StablecoinClientListMeta[];
+    for (const sourceCoin of suspendedCoins) {
+      const list = listCoins.find((coin) => coin.id === sourceCoin.id);
+      const detailOutput = detailOutputs.find((entry: { id: string; output: string }) => entry.id === sourceCoin.id);
+      expect(list).toBeDefined();
+      expect(detailOutput).toBeDefined();
+      const detail = JSON.parse(detailOutput!.output) as StablecoinClientDetailMeta;
+      for (const projected of [list!, detail]) {
+        expect(projected).not.toHaveProperty("liveReserveAdapter");
+        expect(projected).not.toHaveProperty("liveReservesConfig");
+      }
+      expect(detail.reserves).toEqual(sourceCoin.reserves);
     }
   });
 

@@ -257,6 +257,8 @@ export function projectDetailCoin(coin, detailFields, geniusComplianceFields = D
 }
 
 export function projectLiveReserveAdapter(coin) {
+  // Match the full registry's operator kill switch before publishing reader provenance.
+  if (coin?.liveReservesConfig?.suspended) return undefined;
   const adapter = coin?.liveReservesConfig?.adapter;
   return typeof adapter === "string" && adapter.length > 0 ? adapter : undefined;
 }
