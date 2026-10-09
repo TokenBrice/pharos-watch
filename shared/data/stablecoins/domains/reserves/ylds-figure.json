@@ -86,10 +86,6 @@
       {
         "label": "FCC June 30, 2026 Form 10-Q, filed August 14; supplemental historical observation by Sol curation campaign 2026-10-09 (W2L19Figure) at 2026-10-09T11:39:28Z, not the audited composition source",
         "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000011/fcc-20260630.htm"
-      },
-      {
-        "label": "Recovered FCC June 30 Form 10-Q text",
-        "url": "https://r.jina.ai/https://www.sec.gov/Archives/edgar/data/1974395/000197439526000011/fcc-20260630.htm"
       }
     ],
     "rationale": "Restated onto the audited period end so the composition and the independent attestor's report cover the same date. FCC's FY2025 Form 10-K Schedule I (Reg S-X Rule 12-21, investments of unaffiliated issuers as of December 31, 2025) reports $242.941 million of UMB Bank repurchase agreements collateralized by U.S. Treasury securities maturing 1/2/2026 and nine U.S. Treasury bills totalling $84.647 million maturing between 1/6/2026 and 2/24/2026, for $327.588 million of investments. Schedule V (Rule 12-27, qualified assets on deposit) adds $1.182 million of cash at UMB Bank, $0.700 million at Flagstar Bank and $0.056 million at Lead Bank (held via affiliate Figure Payments Corporation), for $329.526 million of qualified assets. Normalized weights are 73.7244%, 25.6875%, 0.3587%, 0.2124% and 0.0170%. The KPMG LLP report of independent registered public accounting firm dated 2026-03-19 states it audited the balance sheets 'including the schedules of investments' as of December 31, 2025, so these slices sit inside the audit opinion. The later 10-Q for the quarter ended 2026-03-31 (accession 0001974395-26-000008) shows a comparable but larger mix ($389.556 million repo, $208.906 million T-bills, $2.362 million Goldman Sachs Financial Square money market fund, $0.700 million Flagstar cash on $601.524 million of qualified assets); that filing carries no accountant's review report and its interim statements are labelled unaudited, so it is not used as the attested composition.",
