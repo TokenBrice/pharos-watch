@@ -369,6 +369,75 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     }
   });
 
+  it.each([500, 501])("admits known mechanism evidence only through its %s-second age boundary", (ageSec) => {
+    const fixed = exactFixedInput();
+    const reviewed = extension();
+    const input = reviewed.assets[0]!;
+    const evidenceKey = "stablecoin.proof-of-reserves.latest-report";
+    const evidenceId = `alpha:research:${evidenceKey}`;
+    const observedAtSec = fixed.clockSec - ageSec;
+    input.researchEvidence = [{
+      evidenceKey, sourceId: evidenceKey, observedAtSec, publishedAtSec: observedAtSec,
+      publishedBy: "issuer", url: "https://example.com/attestation", contentSha256: "a".repeat(64),
+      confidence: "verified", maxAgeSec: 500,
+    }];
+    input.componentEvidence = [{
+      componentKey: "mechanism-risk-review:assuranceAndReconciliation", evidenceKeys: [evidenceKey],
+    }];
+    const before = structuredClone(input.mechanismRiskReview);
+    const isolated = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
+      fixed, materializeSafetyScoreV9FactSetExtension(fixed, reviewed),
+    );
+    expect(isolated.quarantines).toEqual([]);
+    const asset = isolated.factSet.assets[0]!;
+    expect(asset.gaps.map((gap) => gap.gapId)).not.toContain("alpha:gap:asset-compilation");
+    const compiled = asset.mechanismRiskReview.review;
+    if (!compiled || compiled.archetype !== "fiat-cash") throw new Error("Expected compiled fiat-cash review");
+    const expired = ageSec > 500;
+    expect(compiled.assuranceAndReconciliation).toMatchObject({
+      quality: expired ? null : "strong",
+      status: {
+        applicability: { state: "required" }, observationState: expired ? "stale" : "known",
+        evidenceRefIds: [evidenceId], gapIds: expired ? ["alpha:gap:mechanism-review:assuranceAndReconciliation"] : [],
+      },
+    });
+    expect(compiled.claimAndSegregation.status.observationState).toBe("known");
+    expect(compiled.custodyContinuity.status.observationState).toBe("known");
+    expect(input.mechanismRiskReview).toEqual(before);
+    expect(asset.evidence.find((row) => row.evidenceId === evidenceId)).toMatchObject({
+      observedAtSec, publishedAtSec: observedAtSec,
+      freshness: { state: expired ? "stale" : "current", ageSec, maxAgeSec: 500 },
+    });
+    if (expired) {
+      expect(asset.gaps).toContainEqual(expect.objectContaining({
+        gapId: "alpha:gap:mechanism-review:assuranceAndReconciliation",
+        observationState: "stale", responsibility: "unresearched", causeProof: expect.objectContaining({ cause: "U" }),
+        evidenceHistory: { publishedBy: "issuer", evidenceRefIds: [evidenceId] },
+      }));
+      expect(evaluateV9FactSet(isolated.factSet, V9_CANDIDATE_POLICY_V1).assets[0]!.backing.contributions)
+        .toContainEqual(expect.objectContaining({
+          componentKey: "mechanism:assurance-and-reconciliation", observationState: "stale",
+          cause: "U", scoringDisposition: "bounded-uncertainty",
+          score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality,
+        }));
+    }
+  });
+
+  it("still quarantines an identity-broken mechanism evidence binding", () => {
+    const fixed = exactFixedInput();
+    const reviewed = extension();
+    reviewed.assets[0]!.componentEvidence = [{
+      componentKey: "mechanism-risk-review:assuranceAndReconciliation", evidenceKeys: ["absent-report"],
+    }];
+    const isolated = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
+      fixed, materializeSafetyScoreV9FactSetExtension(fixed, reviewed),
+    );
+    expect(isolated.quarantines).toEqual([{
+      assetId: "alpha", code: "fact-validation-failed",
+      message: expect.stringMatching(/unknown (research )?evidence/i),
+    }]);
+  });
+
   it("rebinds non-measured metric evidence to mechanism-review evidence", () => {
     const cdp = extension();
     cdp.assets[0]!.archetype = "cdp";
