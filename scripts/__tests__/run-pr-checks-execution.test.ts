@@ -153,6 +153,43 @@ describe("readiness execution", () => {
     expect(h.receipts[0]).toMatchObject({ headSha, outcome: "failed" });
     expect(h.stderr.write.mock.calls.join("")).toContain("Tests and coverage inspect the checkout");
   });
+
+  it("defers critical-owner tests out of pr-tests only when the coverage leaf executes them", async () => {
+    fixture.changedFiles = ["worker/src/lib/evm-rpc.ts"];
+    const deferFlag = async (argv: string[]) => {
+      const h = harness();
+      await runPrChecks(argv, testEnv, h.options);
+      const ran = (fragment: string): unknown[] | undefined => h.runCommandImpl.mock.calls.find(([command]) => command.cmd.includes(fragment));
+      return { coverageRan: ran("coverage:critical") !== undefined, flag: (ran("test:pr")?.[1] as Record<string, string> | undefined)?.PR_TESTS_DEFER_CRITICAL_OWNERS };
+    };
+    expect(await deferFlag([`--base=${baseSha}`])).toEqual({ coverageRan: true, flag: "1" });
+    expect(await deferFlag([`--base=${baseSha}`, "--skip-coverage"])).toEqual({ coverageRan: false, flag: undefined });
+    fixture.changedFiles = ["worker/src/api/example.ts"];
+    expect(await deferFlag([`--base=${baseSha}`])).toEqual({ coverageRan: false, flag: undefined });
+  });
+
+  it("starts pages-artifact only after every other leaf has settled", async () => {
+    fixture.changedFiles = ["worker/src/lib/evm-rpc.ts", "src/app/page.tsx"];
+    const h = harness();
+    const inFlight = new Set<string>();
+    const inFlightAtPagesStart: string[][] = [];
+    const track = async <T,>(id: string, result: T): Promise<T> => {
+      if (id.includes("check:pages-artifact")) inFlightAtPagesStart.push([...inFlight]);
+      inFlight.add(id);
+      // Keep the coverage leaf in flight across the whole static track, so a
+      // pages-artifact leaf scheduled concurrently would observe it.
+      for (let hop = id.includes("coverage:critical") ? 1000 : 1; hop > 0; hop--) await Promise.resolve();
+      inFlight.delete(id);
+      return result;
+    };
+    h.runCommandImpl.mockImplementation((command) => command.cmd.startsWith("git ")
+      ? Promise.resolve({ status: 0, aborted: false, output: command.cmd.startsWith("git rev-parse") ? baseSha : "0" })
+      : track(command.cmd, { status: 0, aborted: false, output: "" }));
+    h.runSecrets.mockImplementation(() => track("gitleaks", { ok: true, exitCode: 0, summary: "clean" }));
+    expect(await runPrChecks([`--base=${baseSha}`], testEnv, h.options)).toBe(0);
+    expect(inFlightAtPagesStart).toEqual([[]]);
+    expect(h.receipts[0].leaves.at(-1)).toMatchObject({ id: "critical-coverage", status: "passed" });
+  });
 });
 
 it("detects tracked and untracked dirt while respecting ignored files and overriding hidden-untracked configuration", () => {

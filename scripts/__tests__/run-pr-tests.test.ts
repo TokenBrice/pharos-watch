@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPrTestPlan, readPrTestPlan } from "../lib/pr-test-plan.mts";
+import { CRITICAL_TEST_FILES } from "../lib/critical-test-files.mts";
 import { runPrTests } from "../maintenance/run-pr-tests";
 
 const temporary: string[] = [];
@@ -35,6 +36,17 @@ describe("PR test runner prepared plans", () => {
     runPrTests({ argv: ["--base=base"], env, spawn: localSpawn as never });
     const localFiles = localSpawn.mock.calls.find(([, args]) => args[0] === "run")![1].filter((arg) => arg.endsWith(".test.ts"));
     expect(plan.shards.flat().sort()).toEqual(localFiles.sort());
+  });
+
+  it("drops exactly the critical-owner files when the coverage leaf owns them", () => {
+    const plain = selectingSpawn();
+    runPrTests({ argv: ["--base=base"], env, spawn: plain as never });
+    const deferred = selectingSpawn();
+    runPrTests({ argv: ["--base=base"], env: { ...env, PR_TESTS_DEFER_CRITICAL_OWNERS: "1" }, spawn: deferred as never });
+    const selected = plain.mock.calls.find(([, args]) => args[0] === "run")![1].slice(1);
+    const remaining = deferred.mock.calls.find(([, args]) => args[0] === "run")?.[1].slice(1) ?? [];
+    expect(selected.some((file) => CRITICAL_TEST_FILES.includes(file))).toBe(true);
+    expect(remaining).toEqual(selected.filter((file) => !CRITICAL_TEST_FILES.includes(file)));
   });
 
   it("executes only the requested prepared files without rerunning selection or native Vitest sharding", () => {

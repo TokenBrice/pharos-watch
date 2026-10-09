@@ -183,7 +183,7 @@ async function resolveBaseSha(
 
 export function createLaneCommand(
   lane: PrCheckLane,
-  { base, env, forwardedTestArgs, head, resolvedBaseSha, skipDocSync }: {
+  { base, env, forwardedTestArgs, head, resolvedBaseSha, skipDocSync, deferCriticalOwners }: {
     base: string;
     env: NodeJS.ProcessEnv;
     forwardedTestArgs: readonly string[];
@@ -191,6 +191,8 @@ export function createLaneCommand(
     resolvedBaseSha: string;
     /** Set when the docs lane in the same composed plan owns `check:doc-sync`. */
     skipDocSync?: boolean;
+    /** Set when the same plan's critical-coverage leaf executes every critical-owner test file. */
+    deferCriticalOwners?: boolean;
   },
 ): PrCheckCommand {
   const withLane = (command: SpawnCommand, extraEnv?: Record<string, string>): PrCheckCommand => ({
@@ -246,9 +248,10 @@ export function createLaneCommand(
     case "docs-generated-artifacts":
       return withLane(command, { PR_BASE_SHA: resolvedBaseSha, PR_HEAD_SHA: head });
     case "pr-static":
-    case "pr-tests":
     case "pages-artifact":
       return withLane(command);
+    case "pr-tests":
+      return withLane(command, deferCriticalOwners ? { PR_TESTS_DEFER_CRITICAL_OWNERS: "1" } : undefined);
     case "critical-coverage":
       return withLane(command, {
         ...(env as Record<string, string>),
@@ -368,7 +371,8 @@ export async function runPrChecks(
     });
     const lanes = buildPrCheckPlan(changedFiles, classification, flags);
     const skipDocSync = lanes.includes("doc-sync");
-    const context = { base: baseSha, env, forwardedTestArgs: flags.forwardedTestArgs, head: headSha, resolvedBaseSha: baseSha, skipDocSync };
+    const deferCriticalOwners = lanes.includes("critical-coverage");
+    const context = { base: baseSha, env, forwardedTestArgs: flags.forwardedTestArgs, head: headSha, resolvedBaseSha: baseSha, skipDocSync, deferCriticalOwners };
     const commands = expandStaticLeaves(lanes.map((lane) => createLaneCommand(lane, context)), changedFiles, baseSha, headSha, skipDocSync);
     // Keep omissions explicit without inventing an executed parent static leaf.
     for (const lane of [...DOC_CHECK_LANES, "pr-tests", "pages-artifact", "critical-coverage"] as const) {
@@ -387,6 +391,7 @@ export async function runPrChecks(
         const plan = createPrTestPlan(baseSha, selectTests(baseSha, changedFiles, env));
         log(`[check:pr] Selected test files (${plan.fileCount}):\n${plan.shards.flat().join("\n")}`);
         log(`[check:pr] CI partitions (${plan.shardCount}; local tests are unsharded): ${JSON.stringify(plan.shards)}`);
+        if (deferCriticalOwners) log("[check:pr] Local pr-tests defer critical-owner test files to the critical-coverage leaf, which executes all of them.");
       } else log("[check:pr] Selected test files/partitions: none (docs-only).");
       if (classification.criticalCoverageChanged) {
         log(`[check:pr] Critical owners (full suite):\n${collectOwningTests(CRITICAL_FILES, CRITICAL_OWNERSHIP).join("\n")}`);
@@ -397,7 +402,7 @@ export async function runPrChecks(
       })));
       return 0;
     }
-    for (const command of commands) {
+    const runLeaf = async (command: PrCheckCommand): Promise<PrCheckReceiptLeaf> => {
       log(`[check:pr] ${command.cmd}`);
       const leafStarted = now();
       let result: CommandResult;
@@ -413,15 +418,31 @@ export async function runPrChecks(
       } catch (error) {
         result = { status: 1, aborted: false, error: error instanceof Error ? error : new Error(String(error)) };
       }
-      if (result.output) log(result.output.trimEnd());
       const failed = result.status !== 0 || Boolean(result.error);
-      leaves.push({
+      log(`[check:pr] ${failed ? "failed" : "passed"}: ${command.lane}`);
+      if (result.output) log(result.output.trimEnd());
+      return {
         id: command.lane, command: command.cmd, status: failed ? "failed" : "passed",
         durationMs: Math.max(0, now() - leafStarted),
         ...(failed ? { firstError: firstActionableError(result.output, result.error?.message ?? `Command exited ${result.status}${result.signal ? ` (${result.signal})` : ""}`) } : {}),
-      });
-      // All independent leaves execute, including after thrown/spawn failures.
-    }
+      };
+    };
+    // All independent leaves execute, including after thrown/spawn failures.
+    // Vitest lanes and the read-only secret/docs/static leaves run as two
+    // concurrent serial tracks. pages-artifact overlays release data into the
+    // checkout and deletes .next/out, so it runs alone after both finish.
+    const executed = new Map<PrCheckCommand, PrCheckReceiptLeaf>();
+    const runTrack = async (track: readonly PrCheckCommand[]) => {
+      for (const command of track) executed.set(command, await runLeaf(command));
+    };
+    const testTrack = commands.filter((command) => command.lane === "pr-tests" || command.lane === "critical-coverage");
+    const pagesTrack = commands.filter((command) => command.lane === "pages-artifact");
+    await Promise.all([
+      runTrack(testTrack),
+      runTrack(commands.filter((command) => !testTrack.includes(command) && !pagesTrack.includes(command))),
+    ]);
+    await runTrack(pagesTrack);
+    leaves.push(...commands.map((command) => executed.get(command)!));
     log("[check:pr] Final leaf summary (status | milliseconds | command | first actionable error):");
     for (const leaf of leaves) log(`${leaf.status} | ${leaf.durationMs} | ${leaf.command}${leaf.firstError ? ` | ${leaf.firstError}` : ""}`);
     const outcome = computeReceiptOutcome(leaves, weakened);
