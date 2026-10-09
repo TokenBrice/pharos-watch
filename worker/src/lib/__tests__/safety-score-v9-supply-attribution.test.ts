@@ -3,6 +3,7 @@ import { chainRpcs } from "./safety-score-v9-supply-observation.test-support";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import wmRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 const rpcMocks = vi.hoisted(() => ({
   observeCentrifugeReviewedDeploymentUnitPartitionAttempt: vi.fn(),
@@ -48,6 +49,7 @@ vi.mock("../safety-score-v9/xaut-supply-observer", async (importOriginal) => {
 import {
   captureSafetyScoreV9SupplyAttribution,
   deriveLockMintSupplyPartition,
+  safetyScoreV9SupplyAttributionExpectedAssetIds,
   safetyScoreV9ChainRows,
   safetyScoreV9ChainSupplyObservedAtSec,
 } from "../safety-score-v9/supply-attribution";
@@ -662,17 +664,30 @@ describe("Safety Score V9 Centrifuge burn/mint supply attribution", () => {
     });
   });
 
-  it("skips attribution when an upstream chain partition already exists", async () => {
-    const capture = await captureSafetyScoreV9SupplyAttribution(
-      fixedInput({ Ethereum: { current: aggregateSupplyUsd } }),
-      chainRpcs(),
-    );
+  it("does not let a positive partial provider row suppress the deployment census", async () => {
+    rpcMocks.observeCentrifugeReviewedDeploymentUnitPartitionAttempt.mockResolvedValue({
+      status: "rejected",
+      rejectionCode: "deployment-state-unavailable",
+      failedRouteId: null,
+    });
+    const input = fixedInput({ Ethereum: { current: aggregateSupplyUsd } });
+    const before = structuredClone(input);
+    const capture = await captureSafetyScoreV9SupplyAttribution(input, chainRpcs());
 
+    expect(capture.expectedAssetIds).toEqual([assetId]);
     expect(capture.attributionById).toEqual({});
-    expect(capture.journalRecords).toEqual([]);
-    expect(
-      rpcMocks.observeCentrifugeReviewedDeploymentUnitPartitionAttempt,
-    ).not.toHaveBeenCalled();
+    expect(capture.journalRecords).toEqual([expect.objectContaining({
+      assetId,
+      rejectionCode: "deployment-state-unavailable",
+      fallbackCode: "supply-attribution.fallback.aggregate-only",
+    })]);
+    expect(input).toEqual(before);
+    expect(rpcMocks.observeCentrifugeReviewedDeploymentUnitPartitionAttempt).toHaveBeenCalledOnce();
+    expect(buildSafetyScoreV9SupplyReview(
+      { ...input, safetyScoreV9SupplyAttributionById: capture.attributionById },
+      assetId,
+      ACTIVE_META_BY_ID.get(assetId)!.bridgeRouteRisk,
+    )).toBeNull();
   });
 
   it("fails closed to aggregate-only when any deployment identity drifts", async () => {
@@ -700,5 +715,42 @@ describe("Safety Score V9 Centrifuge burn/mint supply attribution", () => {
         "plume:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
       contentSha256: null,
     });
+  });
+});
+
+describe("Supply attribution complete-provider precedence", () => {
+  it("requires every wM chain, including observed-zero legs, before skipping its census", () => {
+    const assetId = "wm-m0";
+    const routes = ACTIVE_META_BY_ID.get(assetId)!.bridgeRouteRisk!.routes!;
+    const chains = routes.map(route => route.destinationChain!);
+    expect(new Set(chains).size).toBe(chains.length);
+    const rows = Object.fromEntries(chains.map((chain, index) => {
+      const current = index === 0 ? 100 : 0;
+      return [chain, {
+        current,
+        circulatingPrevDay: current,
+        circulatingPrevWeek: current,
+        circulatingPrevMonth: current,
+      }];
+    }));
+    const input: ReportCardsFixedInput = {
+      ...xautFixedInput(),
+      activeAssetIds: [assetId],
+      chainCirculatingById: { [assetId]: rows },
+      aggregateCirculatingById: { [assetId]: { circulating: { peggedUSD: 100 }, observedAtSec: OBSERVED_AT_SEC } },
+    };
+    expect(safetyScoreV9SupplyAttributionExpectedAssetIds(input)).toEqual([]);
+
+    const incomplete = structuredClone(input);
+    delete incomplete.chainCirculatingById[assetId]![chains[chains.length - 1]!];
+    expect(safetyScoreV9SupplyAttributionExpectedAssetIds(incomplete)).toEqual([assetId]);
+
+    const inconsistent = structuredClone(input);
+    inconsistent.chainCirculatingById[assetId]![chains[0]!]!.current = 99;
+    expect(safetyScoreV9SupplyAttributionExpectedAssetIds(inconsistent)).toEqual([assetId]);
+
+    const stale = structuredClone(input);
+    stale.aggregateCirculatingById[assetId]!.observedAtSec = OBSERVED_AT_SEC - 7_200;
+    expect(safetyScoreV9SupplyAttributionExpectedAssetIds(stale)).toEqual([assetId]);
   });
 });

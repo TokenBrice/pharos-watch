@@ -17,6 +17,7 @@ import type { SafetyScoreV9CompilerInput } from "./native-input";
 import {
   safetyScoreV9ChainRows,
   safetyScoreV9SupplyAttributionExpectedAssetIds,
+  SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS,
 } from "./supply-attribution";
 import { normalizeReviewedDeploymentAddress, reviewedSupplyRouteKind, reviewedEconomicDeploymentAttributionValidationError, hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
 import { ReviewedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
@@ -143,6 +144,11 @@ export function diagnoseSafetyScoreV9NullSupplyReviewOutcome(input: {
       responsibility: "producer-failed",
       ...base,
     };
+  }
+  // The caller already failed to build a review. An admitted packet that cannot
+  // join that review is an integration failure, not an absent producer outcome.
+  if (input.fixedInput.safetyScoreV9SupplyAttributionById?.[input.assetId]) {
+    return { state: "ambiguous-route-join", responsibility: "integration-missing", ...base };
   }
   if (expectsRuntimeAttribution) {
     return {
@@ -705,9 +711,11 @@ export function buildSafetyScoreV9SupplyReview(
   const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
   const chains = Object.keys(chainRows).sort(compareText);
   const hasEconomicSupplyPlan = REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId);
-  const requiresExhaustiveProviderSupply = hasEconomicSupplyPlan || INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET.has(assetId);
-  // Reviewed economic and independent-liability inventories require a complete
-  // provider partition; other captured rows retain their original reconciliation.
+  const requiresExhaustiveProviderSupply = hasEconomicSupplyPlan ||
+    INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET.has(assetId) ||
+    SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS.includes(assetId);
+  // Every reviewed census lane requires a complete provider fallback. A
+  // rejected dedicated census must not certify its original positive subtotal.
   const totalUsd = requiresExhaustiveProviderSupply
     ? getCirculatingRawOrNull(fixedInput.aggregateCirculatingById[assetId] ?? {})
     : chains.reduce((sum, chain) => sum + chainRows[chain]!.current, 0);
