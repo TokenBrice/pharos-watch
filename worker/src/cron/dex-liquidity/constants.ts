@@ -108,7 +108,7 @@ export const UNIV3_POOL_MAX_PAGES = 5;
 /**
  * The Base Uni V3 lane reads exactly one page. The 2026-09-27 replacement
  * deployment answers a full 1000-pool page in a measured 7.8-8.8s, and the
- * family's per-chain timeout (`SUBGRAPH_PER_CHAIN_TIMEOUT_MS`, 15s) covers
+ * family's per-chain timeout (`SUBGRAPH_PER_CHAIN_TIMEOUT_MS`) covers
  * every page of a chain with one shared signal, so a second page would abort
  * the whole chain mid-run and discard its observations. The TVL-desc page
  * already contains every tracked Base stablecoin pool above the $50K
@@ -305,8 +305,19 @@ export const USD_QUOTE_COIN_IDS = new Set([
   "paxos-standard",
 ]);
 
-/** Per-chain timeout for subgraph queries */
-export const SUBGRAPH_PER_CHAIN_TIMEOUT_MS = 15_000;
+/**
+ * Per-chain timeout for subgraph queries, shared by every page of one chain.
+ *
+ * Raised from 15 s on 2026-10-09: since 2026-10-05 ~05:00 UTC the Ethereum
+ * Uni V3 page (tracked-currency `or` filter, TVL-desc) aborted with a
+ * `TimeoutError` exactly 15.000 s after the family started in 87 of 115 hourly
+ * source stages, before its first page returned, so no Ethereum Uni V3
+ * execution candidate survived those runs. The source stage has a 13-minute
+ * wrapper and runs ~4 minutes, so the two sequential families can absorb the
+ * extra 15 s each. The candidate snapshot (`UNIV3_CANDIDATE_SNAPSHOT_MAX_AGE_SEC`)
+ * keeps target identity across the failures this does not prevent.
+ */
+export const SUBGRAPH_PER_CHAIN_TIMEOUT_MS = 30_000;
 
 /**
  * Default per-family chain fan-out. Six reviewed sources still fit the
@@ -314,6 +325,19 @@ export const SUBGRAPH_PER_CHAIN_TIMEOUT_MS = 15_000;
  * scheduled once a prior response has released its header-wait slot.
  */
 export const SUBGRAPH_FAMILY_MAX_CONCURRENCY = 5;
+
+/**
+ * Longest a chain's last successfully fetched Uni V3 execution-candidate set
+ * may stand in for the subgraph when the subgraph does not answer this run.
+ *
+ * Candidates are static pool identity (address, token pair, fee, decimals), not
+ * a measurement: executable depth is still quoted live every 15 minutes
+ * against each target, so a carried identity whose liquidity has left is
+ * measured as such immediately. The bound only limits how long the inventory
+ * may miss pools that appeared after the last successful listing. Mirrors the
+ * 14-day `dex_pool_registry` horizon at half the width.
+ */
+export const UNIV3_CANDIDATE_SNAPSHOT_MAX_AGE_SEC = 7 * 24 * 3600;
 
 /**
  * Confidence weight for DEX price observations by source family.
