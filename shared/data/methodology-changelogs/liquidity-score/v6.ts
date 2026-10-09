@@ -6,8 +6,8 @@ export const LIQUIDITY_SCORE_V6: readonly MethodologyChangelogEntry[] = [
   {
     version: "6.94",
     title: "Current-target quote retention and original-clock measured history",
-    date: "2026-10-08",
-    effectiveAt: 1791504000,
+    date: "2026-10-09",
+    effectiveAt: 1791590400,
     summary:
       "Measured quote history can enrich only targets present in the latest accepted quote catalog, and successful history/maturity observations expire by original quotedAt rather than publication time.",
     impact: [
@@ -15,7 +15,7 @@ export const LIQUIDITY_SCORE_V6: readonly MethodologyChangelogEntry[] = [
       "Successful observations enter the adapter history window only when their original quotedAt is strictly after the window start and no later than the assessment clock. Recently publishing an old quote cannot extend maturity, observation counts or retained capacity. Failed-cycle timing continues to use publication time; existing maturity thresholds and three-hour ceiling remain.",
       "This is a score-facing evidence-admission change: measured-route availability and model confidence can change. Composite weights, retained TVL measurement, volume admission, operational-failure classification and the one-hour Exit continuity hold are unchanged. No TVL-basis break is appended for 6.94.",
       "Measured retention also repairs the 16-row pruning regression: 256 physical rows per DELETE, at most 4,096 quote rows and 4,096 target rows per run, with a separate 16-generation candidate/empty-ledger budget. Current publications and referenced targets remain protected; pruning changes neither evidence expiry nor score methodology by itself.",
-      "Activation is provisionally 2026-10-09 00:00 UTC (1791504000); re-date date/effectiveAt at release. No production churn reduction, replay equivalence or improved Safety Score stability is claimed.",
+      "Activates at the next UTC day boundary after release, 2026-10-10 00:00 UTC (1791590400). No production churn reduction, replay equivalence or improved Safety Score stability is claimed.",
     ],
     commits: [],
     reconstructed: false,

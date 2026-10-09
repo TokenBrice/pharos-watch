@@ -30,7 +30,7 @@ export const LEGACY_CHANGELOG_ROUTE_FIXTURES = [
     breadcrumbName: "Depeg Tracker + DEWS Changelog",
     pageTitle: "Depeg Tracker + DEWS Changelog",
     datePublished: "2026-02-18",
-    dateModified: "2026-10-08",
+    dateModified: "2026-10-09",
     citationUrn: "urn:pharos:methodology:dews@v6.34",
   },
   {
@@ -52,7 +52,7 @@ export const LEGACY_CHANGELOG_ROUTE_FIXTURES = [
     breadcrumbName: "Liquidity Score Changelog",
     pageTitle: "Liquidity Score Changelog",
     datePublished: "2026-02-19",
-    dateModified: "2026-10-08",
+    dateModified: "2026-10-09",
     citationUrn: "urn:pharos:methodology:liquidity-score@v6.94",
   },
   {
@@ -96,7 +96,7 @@ export const LEGACY_CHANGELOG_ROUTE_FIXTURES = [
     breadcrumbName: "Scoring Changelog",
     pageTitle: "Safety Scores Changelog",
     datePublished: "2026-02-25",
-    dateModified: "2026-10-08",
+    dateModified: "2026-10-09",
     citationUrn: "urn:pharos:methodology:safety-score@v10.13",
   },
   {
