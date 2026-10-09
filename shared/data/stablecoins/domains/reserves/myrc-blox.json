@@ -31,8 +31,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurM02USDK)",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4C02Bilira)",
     "confidence": "verified",
     "sources": [
       {
@@ -42,13 +42,21 @@
       {
         "label": "BLOX MYRC transparency",
         "url": "https://www.blox.my/myrc/transparency"
+      },
+      {
+        "label": "Halogen Shariah MYR Liquid Fund Replacement Information Memorandum dated 2025-08-25 (retrieved 2026-10-09)",
+        "url": "https://media.halogen.my/fund/hsmlf/info-memorandum.pdf"
+      },
+      {
+        "label": "Halogen Shariah MYR Liquid Fund Product Highlights Sheet dated 2025-08-25 (retrieved 2026-10-09)",
+        "url": "https://media.halogen.my/fund/hsmlf/product-highlight-sheet.pdf"
       }
     ],
     "rationale": "The August 2026 ISAE 3000 reasonable-assurance examination reports 1,800,903.74 MYRC in circulation and MYR 1,800,903.74 of reserve assets in its assertion. Its itemized breakdown states MYR 1,200,903.77 cash (66.68%) and MYR 600,000.00 Halogen Shariah MYR Liquid Fund (33.32%), totaling MYR 1,800,903.77. The MYR 0.03 difference between the assertion and breakdown is retained explicitly rather than silently reconciled. The report is signed 2026-09-29 and the archive lists an upload on 2026-09-30; neither is treated as a separately stated publication date. Named banks, provider shares and account safeguards remain undisclosed.",
     "compositionBasis": "Published allocation percentages in the Tommy Ung & Partners PLT August 2026 reserve examination",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The August 2026 examination identifies 66.68% MYR cash/bank deposits and 33.32% Halogen Shariah MYR Liquid Fund, but bank identities, provider shares, account segregation and legal terms remain undisclosed. The breakdown total exceeds the asserted total by MYR 0.03.",
+    "knownUnknownExposure": "The August 2026 examination identifies 66.68% MYR cash/bank deposits and 33.32% Halogen Shariah MYR Liquid Fund, but bank identities, provider shares, account segregation and legal terms remain undisclosed. The breakdown total exceeds the asserted total by MYR 0.03. The governing fund memorandum and Product Highlights Sheet retrieved on 2026-10-09 impose an average investment duration of no more than one year, not a hard maximum maturity of every holding or of the fund units. Subscription and redemption are available on Business Days, with discretionary fund/class termination; no finite unit maturity or explicit open-ended unit term is stated in these documents. No maturityDaysMax is inferred from average duration or redemption speed.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

@@ -71,6 +71,16 @@
       "chain": "hyperevm",
       "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
       "decimals": 18
+    },
+    {
+      "chain": "arc",
+      "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+      "decimals": 18
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c000000000000000000000f6af9c68e4c4b6e5",
+      "decimals": 6
     }
   ],
   "collateralQuality": "rwa",

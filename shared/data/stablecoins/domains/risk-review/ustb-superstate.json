@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USTB is issued natively on Ethereum and Solana. Plume is conservatively modeled as an Ethereum-issued bridge representation: Superstate documents an issuer-native EVM burn/mint path, and the EVM deployments report Ethereum/Plume as supported destinations in both directions. The Plume deployment also exposes issuer-controlled minting, pause, peer configuration, and upgrade paths, but the evidence does not prove that historical Plume mints created independent local liabilities rather than bridge-funded destination supply. No external validator, DVN, rate-limit committee, or timelock was evidenced. SVM bridging is explicitly unsupported.",
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA23USTB)",
+    "summary": "Superstate's current fund documentation identifies the same USTB fund-share claim issued on Ethereum, Plume and Solana, with subscriptions and tokenization available on all three. The issuer explicitly defines the Ethereum-Plume bridge as burning source tokens and delivering the specified destination tokens, not retaining canonical USTB in escrow; Solana bridging is unsupported and cross-chain relocation requires redemption and a new purchase. This exhaustive native/direct-burn roster supports complete transfer-census eligibility without a bridge escrow plan. Plume remains a conservatively modeled bridge representation, with issuer-controlled destination minting, pause, peer configuration and upgrade powers unchanged; no external validator, DVN, rate-limit committee or timelock is credited. Book-entry fund shares are not an additional registered token deployment.",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4T10Saturn)",
     "confidence": "verified",
     "protocols": [
       {
@@ -25,6 +25,14 @@
       }
     ],
     "sources": [
+      {
+        "label": "Current issuer USTB fund claim and exact three issuance networks",
+        "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb.md"
+      },
+      {
+        "label": "Current issuer direct source-burn/destination-delivery and no SVM bridging semantics",
+        "url": "https://docs.superstate.com/investors/smart-contracts.md"
+      },
       {
         "label": "Superstate USTB product page",
         "url": "https://superstate.com/assets/ustb"
@@ -94,7 +102,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Superstate documents EVM bridge() as burning source-chain USTB and delivering the specified amount on a supported destination. Ethereum supportedChainIds(98866) returned true at block 26095796, and Plume supportedChainIds(1) returned true at block 96620648. Both token owners remain the same issuer EOA. The Plume proxy exposes issuer-controlled minting, but these reads do not establish independent local liabilities; this route remains conservatively classified as a representation.",
+        "reviewNote": "Superstate documents EVM bridge() as burning source-chain USTB and delivering the specified amount on a supported destination. Ethereum supportedChainIds(98866) returned true at block 26095796, and Plume supportedChainIds(1) returned true at block 96620648. Both token owners remain the same issuer EOA. Sol curation campaign 2026-10-09 (W4T10Saturn) reviewed the issuer's exact three-network fund and subscription/tokenization documentation: Plume balances are the same USTB fund-share liability, while the documented direct-burn bridge path does not leave canonical source USTB in escrow. Plume remains a bridge representation for control ownership, but qualifies for the independent native/direct-burn census; no historical mint provenance or current supply share is inferred.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "plume",
         "controllerAddress": "0xad309bb6f13074128b4F23EF9EA2fe8552AfCA83",

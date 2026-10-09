@@ -117,7 +117,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Ethereum is the sole native issuance deployment: Router deposits collateral into AssetReserve and delegates to StableMinter, which calls NUSD.mint() under MINTER_ROLE. Arbitrum and Plasma are LayerZero OFT_NUSD representations reviewed separately.",
+        "reviewNote": "Ethereum is the sole native issuance deployment: Router deposits collateral into AssetReserve and delegates to StableMinter, which calls NUSD.mint() under MINTER_ROLE. Arbitrum and Plasma are LayerZero OFT_NUSD representations reviewed separately. Accounting review 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas): exact verified OFTAdapterv2_Neutrl 0x8e14d37b56b3d17e0f3abc3b36aa304868f3476b inherits OFTAdapter._debit, which calls innerToken.safeTransferFrom(_from, address(this), amountSentLD), and _credit, which calls innerToken.safeTransfer(_to, _amountLD). Canonical NUSD remains outstanding in that adapter; the destination OFT burns do not make this an independent-liability census. An exhaustive economic escrow/receipt/in-flight plan is required; no current balance or static materiality share is authored.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 25770368,
@@ -137,6 +137,10 @@
           {
             "label": "Neutrl minting documentation",
             "url": "https://docs.neutrl.finance/protocol-mechanics/minting"
+          },
+          {
+            "label": "Canonical OFTAdapterv2_Neutrl verified lock/release source, reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas)",
+            "url": "https://etherscan.io/address/0x8e14d37b56b3d17e0f3abc3b36aa304868f3476b#code"
           }
         ]
       },
@@ -153,7 +157,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Arbitrum block 495272137, endpoint() returned the local LayerZero V2 endpoint, owner() returned the shared Safe, and peers(30101) returned the Ethereum OFTAdapter. The verified OFT_NUSD representation has no native Router/StableMinter path.",
+        "reviewNote": "At Arbitrum block 495272137, endpoint() returned the local LayerZero V2 endpoint, owner() returned the shared Safe, and peers(30101) returned the Ethereum OFTAdapter. The verified OFT_NUSD representation has no native Router/StableMinter path. Accounting review 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas) confirms that its canonical Ethereum peer 0x8e14d37b56b3d17e0f3abc3b36aa304868f3476b locks/releases NUSD rather than burning/minting it. This lock/mint route requires an economic plan, not independent census eligibility; historical peer and authority clocks are unchanged.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "arbitrum",
         "controllerAddress": "0xccda7b3ead40c897e0befad4d9cb8e55cf5a70d2",
@@ -174,6 +178,10 @@
           {
             "label": "Arbitrum fixed-block RPC",
             "url": "https://arb1.arbitrum.io/rpc"
+          },
+          {
+            "label": "Canonical OFTAdapterv2_Neutrl verified lock/release source, reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas)",
+            "url": "https://etherscan.io/address/0x8e14d37b56b3d17e0f3abc3b36aa304868f3476b#code"
           }
         ]
       },
@@ -190,7 +198,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Plasma block 29976262, endpoint() returned the local LayerZero V2 endpoint, owner() returned the shared Safe, and peers(30101) returned the Ethereum OFTAdapter. PlasmaScan verifies the OFT_NUSD representation, which has no native Router/StableMinter path.",
+        "reviewNote": "At Plasma block 29976262, endpoint() returned the local LayerZero V2 endpoint, owner() returned the shared Safe, and peers(30101) returned the Ethereum OFTAdapter. PlasmaScan verifies the OFT_NUSD representation, which has no native Router/StableMinter path. Accounting review 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas) confirms that its canonical Ethereum peer 0x8e14d37b56b3d17e0f3abc3b36aa304868f3476b locks/releases NUSD rather than burning/minting it. This lock/mint route requires an economic plan, not independent census eligibility; historical peer and authority clocks are unchanged.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "plasma",
         "controllerAddress": "0xccda7b3ead40c897e0befad4d9cb8e55cf5a70d2",
@@ -211,6 +219,10 @@
           {
             "label": "Plasma fixed-block RPC",
             "url": "https://rpc.plasma.to"
+          },
+          {
+            "label": "Canonical OFTAdapterv2_Neutrl verified lock/release source, reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas)",
+            "url": "https://etherscan.io/address/0x8e14d37b56b3d17e0f3abc3b36aa304868f3476b#code"
           }
         ]
       }

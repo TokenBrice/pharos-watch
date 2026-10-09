@@ -4,7 +4,7 @@ import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
@@ -12,19 +12,24 @@ import {
   materializeSafetyScoreV9FactSetExtension,
 } from "../safety-score-v9/fact-set";
 import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
-import {
-  buildSafetyScoreV9SupplyReview,
-  SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS,
-} from "../safety-score-v9/extension-supply";
+import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
 import { safetyScoreV9TransferDeploymentKey } from "../safety-score-v9/extension-transfer";
 import {
   createSafetyScoreV9TransferMaterialityGeneration,
   type SafetyScoreV9TransferMaterialityGeneration,
   type SafetyScoreV9TransferMaterialityObservation,
 } from "../safety-score-v9/transfer-materiality";
-import { makeV9FixedInput, v9TestClockSec } from "../../test-helpers/v9-fixed-input";
+import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
+import { CENSUS_FIXTURE_CLOCK_SEC } from "./safety-score-v9-transfer-census.test-support";
 
-const CLOCK_SEC = v9TestClockSec();
+// Vitest hoists mock factories before static imports; load their fixture helpers inside the factories.
+
+vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) =>
+  (await import("./safety-score-v9-transfer-census.test-support")).censusRegistryMock(importOriginal));
+vi.mock("../safety-score-v9/supply-attribution-contract", async (importOriginal) =>
+  (await import("./safety-score-v9-transfer-census.test-support")).censusSupplyAttributionMock(importOriginal));
+
+const CLOCK_SEC = CENSUS_FIXTURE_CLOCK_SEC;
 const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"a".repeat(64)}`;
 const REGISTRY_FINGERPRINT = "b".repeat(64);
 const AGGREGATE_SUPPLY_USD = 34_668_686.813536435;
@@ -100,24 +105,6 @@ function review(
 }
 
 describe("Safety Score V9 transfer-materiality supply partition", () => {
-  it("allowlists only reviewed disjoint native and direct-burn inventories, not canonical escrow assets", () => {
-    expect(SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS).toEqual([
-      "sfrxusd-frax",
-      "usbd-bima",
-      "usdai-usd-ai",
-      "usdz-anzen",
-      "ussd-sonic-labs",
-      "wars-argentine-peso",
-      "wclp-ripio",
-      "wsrusd-reservoir",
-      "yusd-aegis",
-    ]);
-    expect(SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS).not.toContain("idrt-rupiah-token");
-    expect(SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS).not.toContain("vusd-virtue");
-    for (const assetId of ["gho-aave", "avusd-avant", "apxusd-apyx", "usd0-usual", "rusd-reservoir", "usdtb-ethena"]) {
-      expect(SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS).not.toContain(assetId);
-    }
-  });
 
   it("replaces an incomplete provider partition atomically, rather than appending supplies to its denominator", () => {
     const assetId = "ussd-sonic-labs";
@@ -186,9 +173,10 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
       capturedAtSec: CLOCK_SEC - 60, observationsByAssetId: { [assetId]: observationsFor(assetId) },
     });
     const metaById = new Map([[assetId, meta]]);
-    const before = compileSafetyScoreV9FactSetFromFixedInput(fixed, buildSafetyScoreV9BaselineExtension(fixed, { metaById })).assets[0]!;
+    const before = compileSafetyScoreV9FactSetFromFixedInput(fixed, buildSafetyScoreV9BaselineExtension(fixed, { metaById, reviewedTransferFacts: new Map() })).assets[0]!;
     const after = compileSafetyScoreV9FactSetFromFixedInput(fixed, buildSafetyScoreV9BaselineExtension(fixed, {
       metaById, transferMaterialityGeneration: packet,
+      reviewedTransferFacts: new Map(),
     })).assets[0]!;
     expect(before.gaps.filter(gap => gap.causeScope?.requiredDatum === "materialSupplyShare").length).toBeGreaterThan(0);
     expect(after.gaps.filter(gap => gap.causeScope?.requiredDatum === "materialSupplyShare")).toEqual([]);
@@ -234,9 +222,10 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
       observationsByAssetId: { [assetId]: observationsFor(assetId) },
     });
     const metaById = new Map([[assetId, meta]]);
-    const beforeExtension = buildSafetyScoreV9BaselineExtension(replayInput, { metaById });
+    const beforeExtension = buildSafetyScoreV9BaselineExtension(replayInput, { metaById, reviewedTransferFacts: new Map() });
     const afterExtension = buildSafetyScoreV9BaselineExtension(replayInput, {
       metaById,
+      reviewedTransferFacts: new Map(),
       transferMaterialityGeneration: exactGeneration,
     });
     const beforeFactSet = compileSafetyScoreV9FactSetFromFixedInput(replayInput, beforeExtension);
@@ -288,7 +277,7 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     [
       "route shares",
       (supplyReview: NonNullable<ReturnType<typeof buildSafetyScoreV9SupplyReview>>) => {
-        supplyReview.selectedBridgeRoutes[0]!.supplyShare -= 0.01;
+        supplyReview.selectedBridgeRoutes[0]!.supplyShare *= 0.9;
       },
     ],
     [
@@ -317,6 +306,7 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     });
     const baseline = buildSafetyScoreV9BaselineExtension(replayInput, {
       metaById: new Map([[assetId, ACTIVE_META_BY_ID.get(assetId)!]]),
+      reviewedTransferFacts: new Map(),
       transferMaterialityGeneration: exactGeneration,
     });
     const extension = {
@@ -414,6 +404,7 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     });
     const extension = buildSafetyScoreV9BaselineExtension(replayInput, {
       metaById: new Map([[assetId, meta]]),
+      reviewedTransferFacts: new Map(),
       transferMaterialityGeneration: exactGeneration,
     });
     const factSet = compileSafetyScoreV9FactSetFromFixedInput(replayInput, extension);
@@ -422,6 +413,8 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
       .assets[0]!.scoreInput.pillars.control.reasons;
 
     expect(extension.assets[0]!.supplyReview).toBeNull();
+    expect(extension.assets[0]!.admissionQuarantine).toBeUndefined();
+    expect(compiled.controls.filter(control => control.controlKind === "bridge")).toHaveLength(20);
     // Each controller and the aggregate remain unresolved, but their public
     // projections bind the existing factor facts rather than a broad alias.
     const materialityGapIds = compiled.controls

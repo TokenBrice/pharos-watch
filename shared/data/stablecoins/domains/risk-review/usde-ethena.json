@@ -1486,6 +1486,10 @@
             "url": "https://rpc.tempo.xyz"
           },
           {
+            "label": "USDeOFTTempo implementation source recovered 2026-10-09; explorer runtime match is not exhaustive execution closure",
+            "url": "https://contracts.tempo.xyz/v2/contract/4217/0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a?fields=all"
+          },
+          {
             "label": "Tempo TIP-20 specification",
             "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
           }
@@ -1523,6 +1527,10 @@
           {
             "label": "Tempo TIP-20 mint, burn and role specification",
             "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+          },
+          {
+            "label": "USDeOFTTempo verified source recovered 2026-10-09; existing partial execution certificate unchanged",
+            "url": "https://contracts.tempo.xyz/v2/contract/4217/0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a?fields=all"
           },
           {
             "label": "Tempo pinned RPC role and supply-cap observation",

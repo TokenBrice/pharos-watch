@@ -230,8 +230,9 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     });
 
     it("keeps withdrawal fees undisclosed and parameterizes access posture", () => {
-      const feeFixed = boundedUnknownFeeRedemptionFixedInput();
-      const feeExtension = strategyVaultExtension();
+      const feeFixed = boundedUnknownFeeRedemptionFixedInput({ clockSec: 86_400 });
+      const feeExtension = makeV9Extension({ clockSec: feeFixed.clockSec });
+      feeExtension.assets[0]!.variantKind = "strategy-vault";
       feeExtension.registryFingerprint = feeFixed.registryFingerprint;
       feeExtension.assets[0]!.assetId = "usdc-circle";
       feeExtension.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(feeFixed, "usdc-circle");

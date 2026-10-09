@@ -79,6 +79,8 @@ export interface MoveFungibleAssetSupplyReadOptions {
   identityKind?: "metadata-address" | "oft-package";
   expectedMetadataAddress?: string;
   expectedDecimals?: number;
+  /** Optional streamed body ceiling; omitted readers preserve their existing limits. */
+  maxResponseBytes?: number;
 }
 
 type DwellirMoveEndpoint = Extract<DwellirNativeEndpoint, { protocol: "aptos-rest" }>;
@@ -150,8 +152,8 @@ async function fetchMoveSupplyAtEndpoint(
   if (!/^0x[0-9a-fA-F]{1,64}$/.test(metadataAddress)) return null;
   const baseUrl = rpcUrl.replace(/\/$/, "");
   const bounded = options?.expectedMetadataAddress !== undefined
-    ? { maxResponseBytes: 128 * 1024, maxRetries: 0, headers: getRpcAuthHeaders(baseUrl) }
-    : undefined;
+    ? { maxResponseBytes: options.maxResponseBytes ?? 128 * 1024, maxRetries: 0, headers: getRpcAuthHeaders(baseUrl) }
+    : options?.maxResponseBytes === undefined ? undefined : { maxResponseBytes: options.maxResponseBytes };
   const read = <T>(url: string) => nativeEndpoint
     ? ctx!.dwellirNative!.readJson<T>(nativeEndpoint.network, url.slice(baseUrl.length), signal, ctx)
     : fetchJsonWithRetry<T>(url, signal, 10_000, ctx, bounded);

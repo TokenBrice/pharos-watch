@@ -827,8 +827,9 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       outputAssets: ["asset:ada"],
       outputAssetType: "mixed-collateral",
       executionModel: "rules-based-nav",
-      costModel: undisclosedReviewedFee(
-        "Djed app/docs describe burning DJED against ADA reserves subject to reserve-ratio rules; public materials reviewed do not publish one global fixed redemption fee",
+      costModel: documentedVariableFee(
+        "The official Cardano DJED mainnet app publishes a stablecoin-selling multiplier of 197/200 and separate operator-fee parameters: ratio 1/400, minimum 5.15 ADA and maximum 25 ADA (public API reviewed 2026-10-09). Buy/sell prices include the base fee. An unauthenticated 100,000-DJED burn quote returned 414,457.628544 ADA before a 25 ADA operator fee, and approximately 414,432.628544 ADA after that fee. These are current quote/model observations, not a timeless all-in bps fee or a guarantee of execution. Request/network charges, minimum-ADA return semantics, independent ADA valuation and same-notional production readback remain separate; never model the complete route as fixedFee(150).",
+        "formula",
       ),
       docs: [
         sourceRefFull("Djed app", "https://app.djed.xyz/"),
@@ -836,6 +837,9 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
           "Djed mainnet announcement",
           "https://cotinetwork.medium.com/djed-is-now-available-on-mainnet-9a2ac66daea4",
         ),
+        sourceRef("DJED mainnet burn quotation (reviewed 2026-10-09)", "https://djed.xyz/djed", ["route", "fees"]),
+        sourceRef("DJED mainnet public fee parameters (reviewed 2026-10-09)", "https://api.djed.xyz/stable-coin-params", ["fees"]),
+        sourceRef("DJED mainnet same-notional selling-price API", "https://api.djed.xyz/user/stablecoin/stablecoin-selling-price", ["fees"]),
       ],
       notes: [
         "Modeled as Cardano protocol collateral redemption into ADA reserves, with SHEN reserve-ratio constraints rather than issuer fiat redemption.",

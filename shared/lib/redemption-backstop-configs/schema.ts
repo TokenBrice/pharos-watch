@@ -113,11 +113,46 @@ const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
 
 export type RedemptionCapacityModel = z.infer<typeof RedemptionCapacityModelSchema>;
 
+const NativeFeeTermsSchema = z.strictObject({
+  flatAmount: NonNegativeNumberSchema.optional(),
+  feeBps: NonNegativeNumberSchema.optional(),
+  minAmount: NonNegativeNumberSchema.optional(),
+  maxAmount: NonNegativeNumberSchema.optional(),
+}).superRefine((terms, ctx) => {
+  if (terms.flatAmount === undefined && terms.feeBps === undefined) {
+    ctx.addIssue({ code: "custom", message: "A fee component requires a flat amount or percentage" });
+  }
+  if (terms.minAmount !== undefined && terms.maxAmount !== undefined && terms.minAmount > terms.maxAmount) {
+    ctx.addIssue({ code: "custom", message: "Fee minimum cannot exceed maximum" });
+  }
+});
+const RedemptionFeeComponentSchema = z.strictObject({
+  currency: z.string().regex(/^[A-Z]{3}$/, "Expected an ISO fiat currency"),
+  terms: NativeFeeTermsSchema.optional(),
+  tiers: z.array(z.strictObject({
+    upToNotional: z.number().finite().positive().optional(),
+    terms: NativeFeeTermsSchema,
+  })).min(1).max(16).optional(),
+}).superRefine((component, ctx) => {
+  if ((component.terms === undefined) === (component.tiers === undefined)) {
+    ctx.addIssue({ code: "custom", message: "Choose either fee terms or notional tiers" });
+  }
+  component.tiers?.forEach((tier, index, tiers) => {
+    if (index === tiers.length - 1 ? tier.upToNotional !== undefined :
+        tier.upToNotional === undefined || tier.upToNotional <= (tiers[index - 1]?.upToNotional ?? 0)) {
+      ctx.addIssue({ code: "custom", path: ["tiers", index, "upToNotional"],
+        message: "Tier thresholds must increase strictly; the final tier must be unbounded" });
+    }
+  });
+});
+export type RedemptionFeeComponent = z.infer<typeof RedemptionFeeComponentSchema>;
+
 const RedemptionCostShapeSchema = {
   minFeeUsd: NonNegativeNumberSchema.optional(),
   feeBpsMin: NonNegativeNumberSchema.optional(),
   feeBpsMax: NonNegativeNumberSchema.optional(),
   gasOrBridgeCostUsd: NonNegativeNumberSchema.optional(),
+  feeComponents: z.array(RedemptionFeeComponentSchema).min(1).max(16).optional(),
 };
 
 const RedemptionCostTermsSchema = z.strictObject(RedemptionCostShapeSchema);

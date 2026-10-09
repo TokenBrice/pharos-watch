@@ -60,9 +60,13 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "vchf-vnx": {
     ...vnxGitbookBase,
     reviewedAt: "2026-10-09",
-    costModel: documentedVariableFee(
-      "VNX Global Terms Annex III(C) charges CHF 30 for a SWIFT withdrawal from the platform account. A separate 3% unused-funds fee applies when less than 75% of previously transferred funds has been spent, on funds exceeding the cumulative USD 100,000-equivalent threshold. This is a disclosed account-history-dependent tariff, not an all-in USD redemption quote: CHF/USD conversion, fee applicability, network and third-party charges remain unquantified. Annex III(A)'s 2% conversion fee is a separate service and is not assumed to apply to every VCHF redemption.",
-    ),
+    costModel: {
+      ...documentedVariableFee(
+        "VNX Global Terms Annex III(C) charges CHF 30 for a CHF SWIFT withdrawal from the platform account. The separate 3% unused-funds charge depends on cumulative account funding above USD 100,000-equivalent and less than 75% usage; Annex III(A)'s 2% conversion fee applies to a separate instructed service. Account-history, payout-rail, network and third-party charges remain scenario-dependent and unbounded.",
+        "formula",
+      ),
+      feeComponents: [{ currency: "CHF", terms: { flatAmount: 30 } }],
+    },
     docs: [
       ...vnxGitbookBase.docs!,
       sourceRef(
@@ -78,7 +82,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ],
     notes: [
       "Sol curation campaign 2026-10-09 (Lane52Vnx), observed 2026-10-09T10:35:08Z: current terms name VNX Global Ltd., separately from the legacy VNX Commodities AG platform. Section 3.2 restricts direct issuance/redemption to verified organizations classified as sophisticated customers and permits reserve-related delay and in-kind redemption. These clauses do not establish an unconditional settlement SLA, complete cash output or currently executable capacity.",
-      "The fixed fee is CHF 30, not USD 30. No feeBpsMax, minFeeUsd, gasOrBridgeCostUsd or numerical all-in cost is authored. The existing B/cost classification remains valid until an exact account-history scenario and authoritative CHF/USD conversion can be evaluated at the requested notional and captured by the producer.",
+      "Re-reviewed 2026-10-09: the CHF 30 component binds one CHF SWIFT account withdrawal, not every possible VCHF payout rail. No feeBpsMax, minFeeUsd, gasOrBridgeCostUsd or all-in ceiling is authored. Captured CHF/USD conversion is now supported, but the existing B/cost gap remains until the scored account history, rail, payout count and remaining charges are bound.",
     ],
   },
   "tryb-bilira": {
@@ -157,6 +161,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         "formula",
       ),
       feeBpsMin: 50,
+      feeComponents: [{ currency: "IDR", terms: { flatAmount: 6_500 } }],
     },
     docs: [
       sourceRefRouteCapacity("Rupiah Token website", "https://www.rupiahtoken.com/"),
@@ -167,16 +172,20 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       ),
     ],
     notes: [
-      "Sol curation campaign 2026-10-09 (Lane28Rupiah), observed 2026-10-09T10:37:58Z: the issuer publishes a 0.5% withdrawal fee plus IDR 6,500 bank-transfer fee if applicable. The percentage leg is 50 bps, but the IDR flat leg has no capture-bound USD conversion in this config.",
-      "The 50 bps value is a lower bound, not an all-in ceiling. No feeBpsMax, minFeeUsd or gasOrBridgeCostUsd is invented. Cost remains unresolved until the producer can value the applicable IDR charge at the captured FX reference and requested notional; this fragment changes no capacity, settlement or holder-eligibility terms.",
+      "Re-reviewed 2026-10-09: the issuer fee FAQ binds 0.5% plus IDR 6,500 for a bank transfer when applicable. The component conservatively includes that conditional charge for one transfer; it does not assert that every scored request uses exactly one payout.",
+      "The retained 50 bps minimum is a floor, not an all-in ceiling. No feeBpsMax, minFeeUsd or gasOrBridgeCostUsd is invented. Captured IDR/USD conversion is supported, but payout cardinality, charge applicability and any remaining bank charges are not bound; cost stays unresolved. Capacity, settlement and holder eligibility are unchanged.",
     ],
   },
   "idrx-idrx": {
     ...issuerBase,
     ...reviewedIssuerApiExpansionSupplyFull,
-    costModel: documentedVariableFee(
-      "IDRX redemption fees are deducted from received IDR: Rp5,000 below Rp250,000,000 via BI-FAST; Rp35,000 at or above Rp250,000,000 via RTGS. A bank with a lower BI-FAST limit can force RTGS and its fee below that threshold. These local-IDR flat fees are not a fixed USD amount or fixed-bps fee.",
-    ),
+    costModel: {
+      ...documentedVariableFee(
+        "IDRX's published bank-rail base tariff is IDR 5,000 below IDR 250,000,000 via BI-FAST and IDR 35,000 at or above it via RTGS; bank-specific limits can select RTGS earlier. The component conservatively uses IDR 35,000 for one bank payout, not an all-in ceiling; additional bank/amount-dependent fees and payout cardinality remain unbounded.",
+        "formula",
+      ),
+      feeComponents: [{ currency: "IDR", terms: { flatAmount: 35_000 } }],
+    },
     docs: [
       sourceRef("IDRX redeem IDR guide", "https://docs.idrx.co/services/redeem-idr", [
         "route",
@@ -189,10 +198,16 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         ["route", "access", "settlement"],
       ),
       sourceRef("IDRX fees", "https://docs.idrx.co/services/fees", ["fees", "settlement"]),
+      sourceRef(
+        "IDRX additional redemption fees depend on receiving bank and amount",
+        "https://docs.idrx.co/api/transaction-api/get-api-transaction-get-additional-fees",
+        ["fees"],
+      ),
     ],
     notes: [
       "Primary modeled route is the issuer's direct burn-to-bank-account redemption flow for IDRX rather than the separate partner-mediated other-stablecoin off-ramp",
       "The fee table states BI-FAST below Rp250,000,000 is real-time, 24/7, while RTGS at or above that threshold operates Monday–Friday, 08:00–15:00 WIB. Bank-specific lower BI-FAST limits may force RTGS earlier; no unconditional calendar-time bank-credit bound is inferred from that office-hours window.",
+      "Fee re-review 2026-10-09: the additional-fees API documentation discloses bank/amount-dependent charges and uses a conflicting exact-IDR-250,000,000 boundary. Its sample payment-gateway amount is not a live quote. IDR 35,000 bounds only the published base tariff for one of the named bank rails; no complete bank/e-wallet schedule or single-payout guarantee is established, so feeBpsMax remains absent.",
     ],
   },
   "mxnb-juno": {
@@ -803,9 +818,13 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     outputAssetType: "stable-single",
     unresolvedOutputAssetKeys: ["fiat:JPY"],
     unresolvedOutputDisposition: "reviewed-external",
-    costModel: documentedVariableFee(
-      "Direct issuer redemption costs 3,000 JPY plus applicable consumption tax per procedure; the holder also pays bank-transfer and blockchain gas/network charges, with no published all-in USD ceiling",
-    ),
+    costModel: {
+      ...documentedVariableFee(
+        "Direct issuer redemption costs JPY 3,000 per procedure plus applicable consumption tax; holder-borne bank-transfer and gas/network charges remain unbounded.",
+        "formula",
+      ),
+      feeComponents: [{ currency: "JPY", terms: { flatAmount: 3_000 } }],
+    },
     holderEligibility: "verified-customer",
     routeExitCorrelation: "independent-issuer-rail",
     v9RouteReviewTerms: {
@@ -813,7 +832,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "The direct issuer route is an application/email procedure, followed by identity and legality checks, transfer to the designated wallet, and JPY bank payment. Section 4(2) sets a standard of two Japanese bank business days after request acceptance but allows verification-related extensions. The no-amount-ceiling clause establishes a legal/eventual bound only; current executable capacity, an unconditional settlement SLA, and a scored-notional all-in USD cost are not established. Native JPY output remains explicitly unpriced.",
+        "The direct issuer route is an application/email procedure, followed by identity and legality checks, transfer to the designated wallet, and JPY bank payment. Section 4(2) sets a standard of two Japanese bank business days after request acceptance but allows verification-related extensions. The no-amount-ceiling clause establishes a legal/eventual bound only; current executable capacity, an unconditional settlement SLA, and a scored-notional all-in USD cost are not established. The explicit fiat:JPY output requires admitted captured FX; the JPY 3,000 fee component does not bound tax, wire or gas charges.",
       reviewedAt: "2026-10-09",
       docs: [
         sourceRef(
@@ -852,9 +871,9 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ],
     notes: [
       "The primary modeled route is direct 1:1 JPY redemption from SBI Shinsei Trust after the holder transfers JPYSC to the issuer-designated wallet; the separate SBI VC Trade account route is not required.",
-      "The current terms allow a principal beneficiary to request partial redemption subject to identity and transaction checks, with prompt JPY payment after receipt; JPY remains an unresolved fiat output rather than a tracked stablecoin.",
+      "The current terms allow a principal beneficiary to request partial redemption subject to identity and transaction checks, with prompt JPY payment after receipt; fiat:JPY is a reviewed external output, valued only when an admitted captured FX reference is available.",
       "supply-full is the documented legal redemption bound, not a claim that same-day bank liquidity equals current token supply; requests can lapse or be delayed under the terms' wallet-designation and transfer windows.",
-      "Fee review 2026-10-07: the 2026-09-30 terms, sections 4(3)(ro) and 4(11)(ni), charge 3,000 JPY plus applicable consumption tax per direct redemption procedure; holder-borne bank transfer and network fees are separate. V9 has no fixed-maximum-in-JPY term, so no bps ceiling or invented USD conversion is added.",
+      "Fee re-review 2026-10-09: the 2026-09-30 terms, sections 4(3)(ro), 4(11)(ni) and 4(12)(ro), bind JPY 3,000 per direct redemption procedure plus consumption tax and holder-borne wire, gas and other costs. Only the JPY 3,000 component is structured; no tax rate, feeBpsMax or all-in ceiling is inferred.",
       "Sol curation campaign 2026-10-09 (Lane09Ripio), observed 2026-10-09T10:38:55Z: the current governing terms specify two Japanese bank business days as a conditional standard after request acceptance. The direct email/application channel is manual, not the inherited issuer API/same-day route; checks can extend the period, and no Japan banking calendar or unconditional elapsed-seconds SLA is authored.",
     ],
   },

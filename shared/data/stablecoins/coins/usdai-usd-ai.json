@@ -90,6 +90,11 @@
       "chain": "solana",
       "address": "USDai5XCUzNebYzUk6EuRiFCvnyoyEdj7VSyijYcz2A",
       "decimals": 6
+    },
+    {
+      "chain": "arc",
+      "address": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+      "decimals": 18
     }
   ],
   "governanceQuality": "multisig",

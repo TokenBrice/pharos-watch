@@ -129,6 +129,22 @@ describe("pinned Move fungible-asset census reads", () => {
     expect(vi.mocked(fetchJsonWithRetry).mock.calls.slice(-2).every(([url]) => url.endsWith("?ledger_version=98"))).toBe(true);
   });
 
+  it.each([undefined, 131072])("preserves Move transport defaults unless a census body cap is explicit (%s)", async maxResponseBytes => {
+    vi.mocked(fetchJsonWithRetry)
+      .mockResolvedValueOnce({ chain_id: 1, ledger_version: "100", ledger_timestamp: String(clock * 1_000_000) })
+      .mockResolvedValueOnce({ type: "0x1::fungible_asset::ConcurrentSupply", data: { current: { value: "123" } } })
+      .mockResolvedValueOnce({ type: "0x1::fungible_asset::Metadata", data: { decimals: 6 } });
+    expect(await fetchMoveFungibleAssetSupply(metadataAddress, signal(), base, undefined, {
+      clockSec: clock, expectedChainId: 1, maxResponseBytes,
+    })).toEqual({ rawSupply: 123n, decimals: 6, ledgerVersion: "100", ledgerTimestampSec: clock });
+    const calls = vi.mocked(fetchJsonWithRetry).mock.calls;
+    expect(calls).toHaveLength(3);
+    for (const call of calls) {
+      if (maxResponseBytes === undefined) expect(call[4]).toBeUndefined();
+      else expect(call[4]).toEqual({ maxResponseBytes });
+    }
+  });
+
   it("authenticates the deployed OFT package metadata and all mint/burn/transfer refs at the same ledger", async () => {
     vi.mocked(fetchJsonWithRetry)
       .mockResolvedValueOnce({ chain_id: 126, ledger_version: "100", ledger_timestamp: String(clock * 1_000_000) })

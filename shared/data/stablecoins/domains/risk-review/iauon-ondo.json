@@ -20,7 +20,7 @@
     "tier": "external-validated-network",
     "summary": "IAUon's Ethereum and BSC native deployments have OndoOFT bridge overlays and HyperEVM is a LayerZero OFT bridge representation. October 2 pinned reads bind each OFT's tokenId and internal Messenger, the six reciprocal peers, three required DVNs on every selected send/receive path, and token-specific inbound/outbound limits. Off-chain DVN signer custody, additional administrator authorization, Safe extension closure and a reconciled circulating-supply partition remain unresolved. Native GMTokenManager and Solana issuance stay in Mint Authority.",
     "reviewedAt": "2026-08-28",
-    "reviewer": "Codex",
+    "reviewer": "Codex; Sol curation campaign 2026-10-09 (W4T08Nexus), route accounting only",
     "confidence": "verified",
     "protocols": [
       {
@@ -42,6 +42,18 @@
       {
         "label": "IAUon docs",
         "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+      },
+      {
+        "label": "R1 2026-10-09 verified canonical IAUon OndoOFT: direct burnFrom/mint, no escrow",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8ffe0da486a4075e7bbb5763fad4732d41f9667c"
+      },
+      {
+        "label": "R1 2026-10-09 exact verified HyperEVM IAUon OndoOFT",
+        "url": "https://hyperevmscan.io/address/0xce61f9246755cc399fd7f37d6b3478590b75aace#code"
+      },
+      {
+        "label": "Ondo Stocks bridge: native burn/mint on all supported EVM chains and same token amount",
+        "url": "https://docs.ondo.finance/tools/ondo-bridge.md"
       }
     ],
     "routes": [
@@ -131,7 +143,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At HyperEVM block 43,374,894, IAUon is minted solely by OndoOFT 0xce61f9246755cc399fd7f37d6b3478590b75aace. Its endpoint() is the HyperEVM LayerZero V2 endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, token() is this deployment, owner() is OndoOwner 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d, and approvalRequired() is false. This is a LayerZero bridge representation, not native issuance.",
+        "reviewNote": "At HyperEVM block 43,374,894, IAUon is minted solely by OndoOFT 0xce61f9246755cc399fd7f37d6b3478590b75aace. Its endpoint() is the HyperEVM LayerZero V2 endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, token() is this deployment, owner() is OndoOwner 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d, and approvalRequired() is false. This is a LayerZero bridge representation, not native issuance. R1 source review 2026-10-09: the exact HyperEVM adapter is verified OndoOFT; canonical Ethereum verified _debit burns through innerToken.burnFrom and _credit mints through innerToken.mint, not canonical escrow. Issuer docs specify native burn/mint on Ethereum, BNB and HyperEVM with the same destination token amount. Together with native Solana GM issuance, all four registered liabilities are native/direct-burn and no canonical IAUon remains locked behind representations. Catalog amount identity is 18 decimals on EVM and 9 on Solana. Historical state pins and unresolved control scope are not refreshed, and census quantities/shares remain producer-owned.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 43374894,

@@ -13,22 +13,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SOL-8 Safety Score V9 blocker challenge",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4T04Frax)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Gemini Dollar reserve and attestation disclosures",
         "url": "https://www.gemini.com/dollar"
       },
       {
-        "label": "BPM GUSD reserves examination - May 2026",
-        "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/37f7Yx41qkN4XELuRzQrDv/e7d67a902d19e5fbf6a85ee620838d51/Gemini_Trust_Company__LLC_053126_GUSD_Reserves_Report_May_2026_-_Issued.pdf"
+        "label": "BPM GUSD reserves examination - August 31, 2026; signed October 6, 2026",
+        "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/7m6P0Or1IDsjF8Nj71yoOY/aff37499c0d462e444c5e614ed065e79/Gemini_Trust_Company__LLC_-_GUSD_RR_August_2026_-_Issued.pdf"
       }
     ],
-    "rationale": "The May 29, 2026 BPM examination reports the reserve holdings as cash deposits at State Street and Western Alliance Bank. A separate net cash payable from timing and settlement differences reconciles the gross deposits to circulating GUSD and is not treated as a reserve asset slice.",
-    "compositionBasis": "May 29, 2026 BPM independent examination",
-    "compositionAsOf": "2026-05-29",
+    "rationale": "The August 31, 2026 BPM examination, signed October 6, reports reserve holdings as cash deposits at State Street and Western Alliance Bank. Net cash receivables/payables arising from timing and settlement reconcile gross deposits to issued and circulating GUSD; they are not separate reserve asset slices. The report establishes this dated asset-class composition, not the contractual maturity or demand terms of the bank accounts, the allocation between banks, or bridge escrow/receipt/in-flight accounting.",
+    "compositionBasis": "August 31, 2026 BPM independent examination",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The examination discloses the complete reserve asset class and names both banks, but does not disclose the allocation between them.",
     "knownUnknownExposurePct": 0

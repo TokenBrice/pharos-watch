@@ -11,6 +11,7 @@ import {
 import { buildRedemptionBackstopEntry } from "../redemption-backstop/sources";
 import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
+import { defineReviewedStablecoinRedeemConfig } from "@shared/lib/redemption-backstop-configs/stablecoin-redeem/shared";
 
 const REVIEW_DATE = "2026-04-22";
 const ACTIVE_DEPEG_AVAILABILITY_SQL = `SELECT stablecoin_id, direction, started_at
@@ -437,9 +438,15 @@ describe("wave2 redemption exit-route embeds", () => {
     };
   }
 
-  it("attaches diagnostic eventual-redemption for the live Avalon USDa supply-full row", async () => {
-    const config = getRedemptionBackstopConfig("usda-avalon");
-    expect(config).toBeDefined();
+  it("attaches diagnostic eventual-redemption for a reviewed supply-full route with a bounded settlement horizon", async () => {
+    const config = defineReviewedStablecoinRedeemConfig("2026-04-22", {
+      outputAssets: ["usdt-tether"], settlementModel: "days", executionModel: "rules-based-nav",
+      docs: [{ label: "Fixture redemption", url: "https://example.com/redemption", supports: ["route", "capacity", "settlement", "fees", "access"] }],
+      v9RouteReviewTerms: {
+        settlementDelaySec: 14 * 86_400, reviewedAt: "2026-04-22",
+        docs: [{ label: "Fixture settlement", url: "https://example.com/settlement", supports: ["settlement"] }],
+      },
+    });
 
     const entry = await buildRedemptionBackstopEntry(
       mockD1Strict([
@@ -457,7 +464,7 @@ describe("wave2 redemption exit-route embeds", () => {
         },
       ]),
       "usda-avalon",
-      config!,
+      config,
       50_000_000,
       0,
       now,

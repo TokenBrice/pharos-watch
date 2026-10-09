@@ -150,7 +150,8 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   ) => {
     const status = controlKey !== null ? controlsByKey.get(controlKey)?.status
       : path.startsWith("mint") ? args.mint.status
-        : path.startsWith("oracle") ? args.oracle.status
+        : path.startsWith("oracle") ? code === "oracle-topology-undisclosed"
+          ? args.oracle.factorStatuses?.tier ?? args.oracle.status : args.oracle.status
           : path.startsWith("bridge") ? args.bridge.status : args.facts.controlStatus;
     const causal = resolveV9StatusCauses([status], args.facts.gaps);
     const resolved = resolveV9ReasonTreatment(args.policy, code, causal.cause ?? "U");

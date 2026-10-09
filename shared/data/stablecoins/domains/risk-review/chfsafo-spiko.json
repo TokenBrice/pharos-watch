@@ -77,9 +77,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Eight exact CHF deployments are native registers for the same UCITS share class, maintained by Spiko Finance. No CHF-specific third-party bridge or CCIP transport was verified. Native liability creation belongs in Mint Authority; cross-register migration/control closure remains unresolved.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "summary": "The September 2026 SICAV prospectus identifies all eight networks as issuer-maintained share registers and lets investors choose their register network at subscription; the exact CHF API binds every catalog address to ISIN FR0014015LG6 and five share decimals. These are independently issued native fund-share liabilities, not receipts minted against canonical CHFSAFO locked on another chain. Spiko's documented direct issuer mint/redemption-burn architecture and shareholder-register terms support transfer-census eligibility without a cross-chain escrow plan. A same-register redemption queue holds shares pending burn; it is not bridge lock/release backing. Current cross-register administrator state, transfer conservation and material supply still require their own evidence and runtime census.",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4T10Saturn)",
     "confidence": "probable",
     "sources": [
       {
@@ -93,6 +93,10 @@
       {
         "label": "Exact CHF native registers and five share decimals",
         "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+      },
+      {
+        "label": "Spiko direct issuer mint and redemption-burn architecture",
+        "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
       }
     ],
     "routes": [

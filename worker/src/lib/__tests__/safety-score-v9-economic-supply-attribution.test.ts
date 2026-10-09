@@ -25,6 +25,9 @@ import { REVIEWED_PROVIDER_CHAIN_PARTITIONS, deriveReviewedProviderChainPartitio
 import { createSafetyScoreV9TransferMaterialityGeneration, exactInputBoundTransferMaterialityPacket, type SafetyScoreV9TransferMaterialityObservation } from "../safety-score-v9/transfer-materiality";
 import { buildSupply } from "../safety-score-v9/fact-set-peg-supply";
 import { factBuilderContext } from "./safety-score-v9-fact-builders.test-support";
+import { normalizeReviewedDeploymentAddress } from "../safety-score-v9/supply-attribution-contract";
+import { safetyScoreV9TransferDeploymentKey } from "@shared/types/safety-score-v9-transfer-overlays";
+import { normalizeDeploymentId } from "@shared/types/deployment-id";
 
 const CLOCK = 1790850000;
 const CANONICAL = `ethereum:0x${"1".repeat(40)}`;
@@ -81,6 +84,16 @@ function independentFixture(): EconomicFixture {
 afterEach(() => vi.restoreAllMocks());
 
 describe("reviewed economic supply accounting", () => {
+  it.each([
+    ["stellar", "GCABCdef123", "GCABCdef123"],
+    ["algorand", "IssuerAbC123", "IssuerAbC123"],
+    ["solana", "So11111111111111111111111111111111111111112", "So11111111111111111111111111111111111111112"],
+    ["ethereum", `0x${"A".repeat(40)}`, `0x${"a".repeat(40)}`],
+  ])("preserves chain-qualified %s deployment identity across census, supply and route keys", (chain, address, expectedAddress) => {
+    expect(normalizeReviewedDeploymentAddress(chain, address)).toBe(expectedAddress);
+    expect(safetyScoreV9TransferDeploymentKey(chain, address)).toBe(`${chain}:${expectedAddress}`);
+    expect(normalizeDeploymentId(`${chain}:${address}`)).toBe(`${chain}:${expectedAddress}`);
+  });
   it("deduplicates 20 escrow-backed receipt claims from 100 canonical units", () => {
     const packet = deriveReviewedEconomicDeploymentPartition(fixture())!;
     expect(packet.deployments.map(row => row.currentSupplyUsd)).toEqual([80, 20]);
@@ -460,7 +473,7 @@ describe("economic materiality consumers", () => {
       const deployments = meta.contracts!.map(contract => {
         expect(isFixedDecimalDeployment(contract)).toBe(true);
         const chain = resolveChainId(contract.chain)!;
-        return `${chain}:${chain === "solana" ? contract.address : contract.address.toLowerCase()}`;
+        return `${chain}:${normalizeReviewedDeploymentAddress(chain, contract.address)}`;
       }).sort();
       expect(routes.map(route => route.id).sort()).toEqual(deployments);
       expect(new Set(deployments).size).toBe(deployments.length);

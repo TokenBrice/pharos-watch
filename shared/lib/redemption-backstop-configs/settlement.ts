@@ -3,6 +3,7 @@ import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "../safety-score-v9/evidence";
 import { maximumBusinessDaySettlement } from "../business-calendars";
 import type { RedemptionV9RouteReviewTerms } from "./schema";
 import type { RedemptionBackstopConfig } from "./schema";
+import { allocationReviewClockSec as reviewAdmissionClockSec } from "../../types/safety-score-v9-allocation";
 
 const REDEMPTION_SETTLEMENT_CONSERVATISM: readonly RedemptionSettlementModel[] = [
   "atomic",
@@ -42,8 +43,9 @@ export function resolveReviewedRedemptionSettlementDelay(
   clockSec: number,
 ): number | undefined {
   if (!reviewed || reviewed.missingScoringFields?.includes("settlement")) return undefined;
-  const reviewSec = reviewed.reviewedAt ? Date.parse(`${reviewed.reviewedAt}T00:00:00Z`) / 1_000 : Number.NaN;
-  if (!Number.isFinite(reviewSec) || reviewSec > clockSec ||
+  const reviewSec = reviewed.reviewedAt ? Date.parse(reviewed.reviewedAt) / 1_000 : Number.NaN;
+  const reviewAdmissionSec = reviewed.reviewedAt ? reviewAdmissionClockSec(reviewed.reviewedAt) : Number.NaN;
+  if (!Number.isFinite(reviewSec) || reviewAdmissionSec > clockSec ||
       clockSec - reviewSec > V9_REVIEW_EVIDENCE_MAX_AGE_SEC ||
       !(reviewed.docs ?? []).some((doc) => doc.supports?.includes("settlement"))) return undefined;
   if (!reviewed.businessDayTerms) return reviewed.settlementDelaySec;
@@ -68,13 +70,14 @@ export function resolveReviewedRedemptionSettlement(
     return reviewedModel;
   }
   const reviewedAtSec = reviewed.reviewedAt
-    ? Date.parse(`${reviewed.reviewedAt}T00:00:00.000Z`) / 1_000
+    ? Date.parse(reviewed.reviewedAt) / 1_000
     : Number.NaN;
+  const reviewAdmissionSec = reviewed.reviewedAt ? reviewAdmissionClockSec(reviewed.reviewedAt) : Number.NaN;
   const current =
     resolveReviewedRedemptionSettlementDelay(reviewed, clockSec) !== undefined &&
     (reviewed.docs?.length ?? 0) > 0 &&
     Number.isFinite(reviewedAtSec) &&
-    reviewedAtSec <= clockSec &&
+    reviewAdmissionSec <= clockSec &&
     clockSec - reviewedAtSec <= V9_REVIEW_EVIDENCE_MAX_AGE_SEC;
   return current ? reviewedModel : config.settlementModel;
 }

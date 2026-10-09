@@ -3602,40 +3602,40 @@
     },
     {
       "assetId": "jpyt-dephaser",
-      "reviewedAt": "2026-08-08",
-      "reviewer": "OpenAI Codex C11 access review",
+      "reviewedAt": "2026-10-09",
+      "reviewer": "Sol curation campaign 2026-10-09 (W4T03Crown)",
       "deployments": [
         {
           "chainId": "optimism",
           "contractOrTokenId": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "At Optimism block 155309915, JPYT retained direct non-proxy code and zero EIP-1967 implementation/admin slots. Verified transfer logic has no pause, blacklist, freeze, allowlist, seizure, or transfer hook; role-gated mint and allowance-gated burnFrom do not restrict holder transfers.",
+          "evidence": "At optimism block 157978304 (hash 0xb9db9dc08e26d5e8f6012dcb26178667fe3e56b3130ef7be0573e15d2a6be15e, timestamp 2026-10-09T14:16:25.000Z, observed 2026-10-09T14:17:09.362Z), pinned token runtime exactly matches verified DephaserJPY source. Both chains return Dephaser JPY / JPYT / 6 decimals and have independent native issuance via their local DepositManager, not bridge escrow. The complete immutable token source inherits ordinary ERC20 transfers without pause, blacklist, freeze, allowlist, seizure or transfer hook. burn() burns only the privileged caller's balance; burnFrom() first spends holder allowance. Role administrators can change issuance roles but cannot replace token code or restrict holder transfers. Upstream collateral restrictions are not JPYT transfer restrictions.",
           "sources": [
             {
-              "label": "Optimism Blockscout verified source",
+              "label": "optimism verified DephaserJPY source",
               "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
             },
             {
-              "label": "Optimism RPC",
-              "url": "https://mainnet.optimism.io"
+              "label": "optimism pinned Dwellir archive RPC",
+              "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
             }
           ]
         },
         {
           "chainId": "base",
           "contractOrTokenId": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
-          "scope": "material-bridge",
+          "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "At Base block 49714630, JPYT likewise retained direct non-proxy code and zero EIP-1967 implementation/admin slots. Its verified DephaserJPY transfer paths have no holder restriction, so this deployment is permissionless.",
+          "evidence": "At base block 52383016 (hash 0x76b7199a5fccffc3ff9bd3bec1b9d7618d6fc802a64e24cdaf12a226d4683b43, timestamp 2026-10-09T14:16:19.000Z, observed 2026-10-09T14:17:11.624Z), pinned token runtime exactly matches verified DephaserJPY source. Both chains return Dephaser JPY / JPYT / 6 decimals and have independent native issuance via their local DepositManager, not bridge escrow. The complete immutable token source inherits ordinary ERC20 transfers without pause, blacklist, freeze, allowlist, seizure or transfer hook. burn() burns only the privileged caller's balance; burnFrom() first spends holder allowance. Role administrators can change issuance roles but cannot replace token code or restrict holder transfers. Upstream collateral restrictions are not JPYT transfer restrictions.",
           "sources": [
             {
-              "label": "Sourcify Base ABI",
-              "url": "https://sourcify.dev/server/v2/contract/8453/0xc47da4cb96ce65a96844a01bfae509f9d5454534?fields=abi,compilation"
+              "label": "base verified DephaserJPY source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
             },
             {
-              "label": "Base RPC",
-              "url": "https://mainnet.base.org"
+              "label": "base pinned Dwellir archive RPC",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
             }
           ]
         }

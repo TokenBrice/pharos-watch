@@ -73,18 +73,30 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "JPYT is minted natively on each OP Stack chain by DePhaser's per-chain DepositManager contracts (sole MINTER_ROLE holders) against stablecoin deposits routed into Aave; the reviewed mint profile supersedes the earlier canonical-bridge guess.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "summary": "JPYT has two independent native liabilities, on Optimism and Base. At the 2026-10-09 pins each token has exactly one MINTER_ROLE and BURNER_ROLE holder: its local DepositManager. Verified managers mint local JPYT against USDT or USDC deposited into Aave and burn holder-authorized JPYT on withdrawal; neither locks canonical JPYT to issue another-chain receipt. Aave collateral custody and pending collateral withdrawals are not canonical-JPYT bridge escrow. Both exact token deployments are six-decimal Dephaser JPY / JPYT ERC-20s.",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4T03Crown)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "DePhaser docs",
-        "url": "https://docs.dephaser.com/"
+        "label": "DePhaser native mint and burn money flow",
+        "url": "https://docs.dephaser.com/how-it-works/money-flow.md"
       },
       {
-        "label": "L2BEAT OP Mainnet",
-        "url": "https://l2beat.com/interop/protocols/op-mainnet"
+        "label": "Optimism DepositManager verified implementation",
+        "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5"
+      },
+      {
+        "label": "Base DepositManager verified implementation",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb"
+      },
+      {
+        "label": "Optimism pinned Dwellir archive RPC",
+        "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Base pinned Dwellir archive RPC",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
       }
     ],
     "routes": [
@@ -100,13 +112,14 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native JPYT issuance on optimism: MINTER_ROLE (sole member) is held by the DePhaser DepositManager 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9 (verified on-chain 2026-07-20), which mints JPYT against USDT deposits routed into Aave; no bridge representation.",
+        "reviewNote": "At Optimism block 157978304 (hash 0xb9db9dc08e26d5e8f6012dcb26178667fe3e56b3130ef7be0573e15d2a6be15e, timestamp 2026-10-09T14:16:25Z), name/symbol/decimals return Dephaser JPY/JPYT/6 and token runtime matches verified DephaserJPY exactly. MINTER_ROLE and BURNER_ROLE each have one member, local DepositManager 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9; its pinned implementation is verified UsdtDepositManager 0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5. _deposit transfers USDT to Aave before minting local JPYT; _requestWithdrawal burns holder-authorized local JPYT before withdrawing USDT. There is no canonical-JPYT lock/release, OFT adapter, cross-chain message or pooled representation path in these sources. This is independent native issuance; no runtime supply share is authored.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-09",
+        "observedBlock": 157978304,
         "sources": [
           {
-            "label": "JPYT on optimism explorer (MINTER_ROLE probed 2026-07-20)",
-            "url": "https://blockscout.com/search?q=0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+            "label": "Optimism verified DephaserJPY source",
+            "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
           }
         ]
       },
@@ -122,13 +135,14 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native JPYT issuance on base: MINTER_ROLE (sole member) is held by the DePhaser DepositManager 0x0eab9d66adb8527cd7c0e7e7c1782580431ec276 (verified on-chain 2026-07-20), which mints JPYT against USDC deposits routed into Aave; no bridge representation.",
+        "reviewNote": "At Base block 52383016 (hash 0x76b7199a5fccffc3ff9bd3bec1b9d7618d6fc802a64e24cdaf12a226d4683b43, timestamp 2026-10-09T14:16:19Z), name/symbol/decimals return Dephaser JPY/JPYT/6 and token runtime matches verified DephaserJPY exactly. MINTER_ROLE and BURNER_ROLE each have one member, local DepositManager 0x0eab9d66adb8527cd7c0e7e7c1782580431ec276; its pinned implementation is verified UsdcDepositManager 0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb. _deposit transfers USDC to Aave before minting local JPYT; _requestWithdrawal burns holder-authorized local JPYT before withdrawing USDC. There is no canonical-JPYT lock/release, OFT adapter, cross-chain message or pooled representation path in these sources. This is independent native issuance; no runtime supply share is authored.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-09",
+        "observedBlock": 52383016,
         "sources": [
           {
-            "label": "JPYT on base explorer (MINTER_ROLE probed 2026-07-20)",
-            "url": "https://blockscout.com/search?q=0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+            "label": "Base verified DephaserJPY source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
           }
         ]
       }

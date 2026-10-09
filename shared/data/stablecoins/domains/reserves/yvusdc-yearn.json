@@ -50,13 +50,17 @@
       {
         "name": "Yearn-whitelisted strategy protocols",
         "role": "other"
+      },
+      {
+        "name": "stcUSD/USDC Pawn Broker Market",
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4C08Usdu)",
     "confidence": "probable",
     "sources": [
       {
@@ -66,8 +70,16 @@
       {
         "label": "Yearn v3 vault documentation",
         "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3"
+      },
+      {
+        "label": "Pinned Ethereum allocation and loan reads at block 26155393 (2026-10-09T14:16:35Z)",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Verified stcUSD/USDC Pawn Broker Market source and ABI",
+        "url": "https://etherscan.io/address/0xe63a2abc24cd9538398d825a4bfe5778d25687df#code"
       }
     ],
-    "uncertainty": "The reviewed sources establish the Yearn v3 vault and strategy allocator, but do not establish statutory segregation, bankruptcy remoteness, provider shares, or legal permission to reuse pledged assets. The 2026-07-14 review marked rehypothecation permitted solely because USDC was deployed into strategies; that inference was withdrawn on 2026-10-01 under ruling D10. Strategy and lending exposure remain present."
+    "uncertainty": "At Ethereum block 26155393 (2026-10-09T14:16:35Z; hash 0xb0424cd282fc358a4981935dbad47326d43ee707c680d97e7cc2b7ad00f23d0a), four funded strategy current_debt values sum exactly to totalDebt 19313442360275 raw USDC units; totalIdle is 10010085935. The default queue alone omits funded PawnBroker 0xe63a2abc24cd9538398d825a4bfe5778d25687df, with current_debt 6038311770369. Pinned getters identify its USDC asset, stcUSD collateral and borrower 0xd362efc75ef1879f37a900823495f402cfdb0986; the verified ABI exposes borrower loans, repayment and collateral liquidation. This establishes a collateralized lending claim, not borrower-wide leverage or an absence of external reuse. Statutory segregation, bankruptcy remoteness and legal reuse permission remain unknown. The 2026-07-14 inference that strategy deployment alone established permitted rehypothecation remains withdrawn; the expired whole-allocation review is not refreshed from a default-queue sample."
   }
 }

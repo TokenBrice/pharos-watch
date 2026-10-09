@@ -38,7 +38,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USDCx is an issuer-native Circle xReserve burn/mint representation on Movement, not an independently canonical Movement-native issuance deployment. The reviewed route binds Ethereum USDC domain 0 to Movement domain 10005; xReserve collateral, RemoteDomainDepositor attestations, and Movement attester/admin/package controls are represented in route-scoped Bridge Risk controls. The current collateral balance and Movement supply are not exact equality proof, and the route remains issuer-native-burn-mint.",
+    "summary": "USDCx is a Circle xReserve lock/mint representation on Movement, not an independently canonical Movement-native issuance deployment. The reviewed route binds Ethereum USDC domain 0 to Movement domain 10005; xReserve locks source USDC, attested remote issuance mints USDCx, and remote burns authorize reserved USDC release. xReserve collateral, RemoteDomainDepositor attestations, and Movement attester/admin/package controls remain route-scoped Bridge Risk controls. The historical collateral balance and Movement supply are not exact equality proof; economic escrow/receipt/in-flight accounting is required before materiality attribution.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge boundary migration RELOC-015",
     "confidence": "verified",
@@ -103,10 +103,10 @@
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "issuer-native-burn-mint",
-        "semantics": "burn-mint",
+        "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Circle xReserve domain 0 on Ethereum maps remote domain 10005 to the authored Movement USDCx representation; Ethereum USDC is inherited canonical collateral and no canonical Movement-native USDCx issuance is claimed. Current xReserve registration and collateral reads were observed at Ethereum block 25770561, with Movement ledger version 195984896 / block height 85264354. The collateral balance and Movement supply differ, so this route does not assert exact equality.",
+        "reviewNote": "Circle xReserve domain 0 on Ethereum maps remote domain 10005 to the authored Movement USDCx representation; Ethereum USDC is inherited canonical collateral and no canonical Movement-native USDCx issuance is claimed. Historical xReserve registration and collateral reads were observed at Ethereum block 25770561, with Movement ledger version 195984896 / block height 85264354. The collateral balance and Movement supply differ, so this route does not assert exact equality. Accounting classification reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas): Circle's deposit procedure explicitly locks USDC in xReserve 0x8888888199b2df864bf678259607d6d5ebb4e3ce before remote minting, and its withdrawal procedure releases that USDC after the remote burn attestation. Remote token burn/mint is not source-USDC burn/mint. This exact registered route therefore requires an economic escrow/receipt/in-flight plan and cannot use the independent-liability transfer census.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
           "protocol:circle-xreserve",
@@ -141,6 +141,10 @@
           {
             "label": "Current Movement USDCx view reads",
             "url": "https://mainnet.movementnetwork.xyz/v1/view?ledger_version=195984896"
+          },
+          {
+            "label": "Circle deposit step 2 locks source USDC; withdrawals release it after remote burn; reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas)",
+            "url": "https://developers.circle.com/xreserve/concepts/how-xreserve-works"
           }
         ]
       }

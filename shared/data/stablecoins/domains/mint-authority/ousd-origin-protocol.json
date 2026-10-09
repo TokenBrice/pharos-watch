@@ -143,10 +143,10 @@
         },
         "executionScope": {
           "controllerDeployment": "ethereum:0x4ff1b9d9ba8558f5eafcec096318ea0d8b541971",
-          "reviewedAt": "2026-10-02",
+          "reviewedAt": "2026-10-09",
           "observedAt": "2026-10-02",
           "expiresAt": "2026-10-31",
-          "reviewer": "DataCOusdNexus",
+          "reviewer": "Sol curation campaign 2026-10-09 (W4C05Origin)",
           "confidence": "partial",
           "sources": [
             {
@@ -164,6 +164,30 @@
             {
               "label": "Verified Curve bribe module: operator-mutable targets and Safe-funded ETH calls",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6320db7a3c1b95fd5684dc725c2cda9b82fa20fa"
+            },
+            {
+              "label": "Re-read historical pin 26101011 (2026-10-02T00:19:47Z): Safe singleton, 2-of-8 signers, complete five-module pagination, zero guard and fallback slot",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            },
+            {
+              "label": "Runtime-matched Safe 1.4.1 singleton and extension discovery semantics",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x41675c099f32341bf84bfc5382af534df5c7461a"
+            },
+            {
+              "label": "Runtime-matched Merkl module: Safe-mutable factory and operator bribeAll",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6241f5e4ad5af39ef3ae54801e0ae431e0b70369"
+            },
+            {
+              "label": "Runtime-matched rewards module: mutable strategy roster",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1b84e64279d63f48ddd88b9b2a7871e817152a44"
+            },
+            {
+              "label": "Runtime-matched Ethereum bridge helper: operator mint/wrap/redeem and bridge calls",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x630c1763d38abe76301f58909fa174e7b84a7ecd"
+            },
+            {
+              "label": "Runtime-matched ExtensibleFallbackHandler: Safe-configured dynamic selector handlers remain unclosed",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5"
             }
           ],
           "pin": {
@@ -212,9 +236,9 @@
             }
           ],
           "extensions": {
-            "exhaustive": false,
+            "exhaustive": true,
             "paginationEnd": "0x0000000000000000000000000000000000000001",
-            "sourceRuntimeCorrespondence": false,
+            "sourceRuntimeCorrespondence": true,
             "entries": [
               {
                 "deployment": "ethereum:0x6241f5e4ad5af39ef3ae54801e0ae431e0b70369",

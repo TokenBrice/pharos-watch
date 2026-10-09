@@ -279,6 +279,7 @@ describe("half-hourly charts scheduling", () => {
       "dex-liquidity-123",
       scheduledRuntime.chainRpcs,
       scheduledRuntime.env.CF_VERSION_METADATA,
+      scheduledRuntime.deadline,
     );
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
     expect(mocks.runCronSentinel).toHaveBeenCalledWith(scheduledRuntime.db, {
@@ -347,6 +348,7 @@ describe("half-hourly charts scheduling", () => {
       "dex-liquidity-current",
       scheduledRuntime.chainRpcs,
       scheduledRuntime.env.CF_VERSION_METADATA,
+      scheduledRuntime.deadline,
     );
     expect(mocks.runCronSentinel).not.toHaveBeenCalled();
   });
@@ -398,6 +400,7 @@ describe("half-hourly charts scheduling", () => {
       `dex-liquidity-${960 - 3_600}`,
       scheduledRuntime.chainRpcs,
       scheduledRuntime.env.CF_VERSION_METADATA,
+      scheduledRuntime.deadline,
     );
     expect(summary.jobs[2]).toMatchObject({
       job: "prepare-safety-score-v9-input",

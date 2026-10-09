@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { createSlotDeadline, DEFAULT_CRON_TIMEOUT_MS } from "../../lib/cron-timeouts";
 
 const ASSET_ID = "usdc-circle";
 const CLOCK_SEC = 1_783_891_200;
@@ -307,6 +308,18 @@ describe("prepareSafetyScoreV9Input", () => {
       pendingStartedAt: null,
     });
     expect(result.itemCount).toBe(1);
+  });
+
+  it("passes the existing slot deadline, clipped to the preparation budget, to the census", async () => {
+    vi.useFakeTimers();
+    const now = CLOCK_SEC * 1000;
+    vi.setSystemTime(now);
+    const slot = createSlotDeadline(now - 13 * 60_000);
+    await prepareSafetyScoreV9Input(makeDb(), undefined, undefined, new Map(), undefined, slot);
+    expect(mockObserveTransferMateriality.mock.calls[0]![0].deadlineMs).toBe(slot.platformDeadlineMs);
+    mockObserveTransferMateriality.mockClear();
+    await prepareSafetyScoreV9Input(makeDb());
+    expect(mockObserveTransferMateriality.mock.calls[0]![0].deadlineMs).toBe(now + DEFAULT_CRON_TIMEOUT_MS);
   });
 
   it("publishes the exact input without replacing transfer materiality after an unexpected observer failure", async () => {

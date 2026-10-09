@@ -52,9 +52,24 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "fdusd-first-digital": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee("Redeemable 1:1; public fee schedule not disclosed"),
+    costModel: undisclosedReviewedFee(
+      "The publisher-branded FDUSD Webflow page advertises zero mint/redemption fees only when the client mints more than they redeem; it does not define the measurement period. The mirrored FD121 Account User Agreement allows changing or separately agreed fees and assigns bank/wallet charges to the client. No universally applicable numeric issuer-fee schedule or all-in cost ceiling was recovered.",
+    ),
     docs: [
       sourceRefRouteCapacityAccess("First Digital Labs FDUSD", "https://www.firstdigitallabs.com/fdusd"),
+      sourceRef(
+        "FDUSD publisher-branded mirror: conditional fee statement (reviewed 2026-10-09)",
+        "https://firstdigitallabs.webflow.io/fdusd",
+        ["fees"],
+      ),
+      sourceRef(
+        "FD121 Account User Agreement publisher-branded mirror: fees sections 9.1-9.2 (version 2025-08-01)",
+        "https://firstdigitallabs.webflow.io/legal/fd121-account-user-agreement",
+        ["fees"],
+      ),
+    ],
+    notes: [
+      "Fee-source recovery used publisher-branded Webflow bodies because canonical First Digital Labs pages returned HTTP 403. Current canonical-body equivalence has not been established; no zero-fee qualification is assumed for the modeled holder/request, and aggregate fee cost remains unresolved.",
     ],
   },
   "rlusd-ripple": {
@@ -462,14 +477,17 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     reviewedAt: "2026-10-09",
     settlementModel: "days",
     capacityModel: { kind: "unquantified" },
-    costModel: documentedVariableFee(
-      "Moneta's current FAQ publishes a burning fee of min($5,000, max($50, 0.1% of the burn amount)), including Cardano network fees. Bank fees may apply independently. This capped formula is disclosed, not a fixed 10 bps or a complete bank-payout cost bound.",
-      "formula",
-    ),
+    costModel: {
+      ...documentedVariableFee(
+        "Moneta's issuer burning fee is 0.1%, with a USD 50 minimum and USD 5,000 maximum, including Cardano network fees. Independent bank charges remain unbounded.",
+        "formula",
+      ),
+      feeComponents: [{ currency: "USD", terms: { feeBps: 10, minAmount: 50, maxAmount: 5_000 } }],
+    },
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
-      rationale: "The current FAQ restricts the live manual-wire rail to KYB-approved institutions and states a default $10,000 daily mint/burn account limit, with higher limits requiring contact. An account limit is not guaranteed funded capacity, a whole-token redemption partition, or a final USD settlement SLA. The published capped/minimum issuer-fee formula is not representable exactly by the current uncapped cost shape, and independent bank charges remain unbounded. Moneta's terms do not establish redemption of NBX-attributable issuance from Moneta's reserve book.",
+      rationale: "The current FAQ restricts the live manual-wire rail to KYB-approved institutions and states a default $10,000 daily mint/burn account limit, with higher limits requiring contact. An account limit is not guaranteed funded capacity, a whole-token redemption partition, or a final USD settlement SLA. The issuer fee is represented exactly by a capped/minimum USD component, but independent bank charges remain unbounded, so no all-in cost ceiling is asserted. Moneta's terms do not establish redemption of NBX-attributable issuance from Moneta's reserve book.",
       reviewedAt: "2026-10-09",
       docs: [
         sourceRef("Moneta FAQ: current institutional access, account limit and capped burning formula", "https://moneta.global/resources/faq/", ["route", "access", "capacity", "fees"]),
@@ -484,7 +502,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "Current FAQ review 2026-10-09: linked-bank-account redemption for KYC-verified individuals is described as coming soon; the currently available manual-wire rail is limited to KYB-approved institutions.",
       "The default daily mint/burn account limit does not prove a global rail cap or guaranteed throughput. Contact-based higher limits are not funded capacity.",
       "The historical 1-3 business day processing description does not establish a binding completed-payout SLA.",
-      "The reviewed capped issuer-fee formula remains disclosed-unquantified until a notional-aware capped/minimum-fee producer exists. Do not substitute fixedFee(10), omit the cap, or treat bank charges as zero.",
+      "Re-reviewed 2026-10-09: the capped/minimum USD component represents only the issuer burning fee, not independent bank charges. The omitted feeBpsMax keeps all-in cost unresolved. Do not substitute fixedFee(10), add 10 bps again, omit the cap or treat bank charges as zero.",
       "Moneta and NBX issue the same Cardano token against separate reserve books; source terms for one issuer do not prove a complete whole-token route or interchangeable issuer access.",
     ],
   },

@@ -134,6 +134,24 @@ describe("evm-rpc helpers", () => {
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
   });
 
+  it.each([undefined, 131072])("forwards only an explicitly requested RPC body ceiling (%s)", async maxResponseBytes => {
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0x64" }));
+    expect(await fetchEvmUint256AtBlock(undefined, "0xToken", "0x18160ddd", "latest", {
+      extraRpcUrls: ["https://rpc.example"], maxResponseBytes,
+    })).toBe(100n);
+    const options = fetchWithRetryMock.mock.calls[0]![3];
+    if (maxResponseBytes === undefined) expect(options).not.toHaveProperty("maxResponseBytes");
+    else expect(options.maxResponseBytes).toBe(maxResponseBytes);
+  });
+
+  it("forwards the optional body ceiling to JSON-RPC batches without changing their default", async () => {
+    fetchWithRetryMock.mockResolvedValue(rpcResponse([{ jsonrpc: "2.0", id: 1, result: "0x64" }]));
+    expect(await fetchEvmRpcBatch(undefined, [{ method: "eth_blockNumber", params: [] }], {
+      extraRpcUrls: ["https://rpc.example"], maxResponseBytes: 131072,
+    })).toEqual(["0x64"]);
+    expect(fetchWithRetryMock.mock.calls[0]![3]).toHaveProperty("maxResponseBytes", 131072);
+  });
+
   it("falls back to a later RPC URL when the first one fails", async () => {
     fetchWithRetryMock
       .mockResolvedValueOnce(new Response(JSON.stringify({ error: "Not found" }), { status: 404 }))

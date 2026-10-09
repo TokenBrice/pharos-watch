@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4C04Kast)",
     "confidence": "verified",
     "sources": [
       {
@@ -35,12 +35,21 @@
       {
         "label": "Mento Reserve dashboard",
         "url": "https://reserve.mento.org/"
+      },
+      {
+        "label": "Mento V3 CDP collateral and weekend/holiday restrictions (classification review 2026-10-09)",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp.md"
+      },
+      {
+        "label": "Mento V3 FPMM execution constraints (classification review 2026-10-09)",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm.md"
       }
     ],
-    "rationale": "JPYm's live reserve exposure is USDm (Mento Dollar), linked to tracked cUSD-celo. Mento documentation describes USDm as reserve-backed, and the live reserve row is a single 100% USDm CDP collateral exposure; no additional dependency slice is inferred.",
-    "compositionBasis": "Mento USDm stable-token documentation and current reserve dashboard",
-    "scope": "full-composition",
-    "knownUnknownExposure": "The USDm dependency identity is known, but the underlying Mento Reserve basket is an upstream asset's reserve composition and is not duplicated as JPYm collateral.",
+    "rationale": "Mento's current CDP documentation identifies USDm as collateral for each FX stablecoin instance. The existing JPYm row remains linked to tracked cusd-celo; accepted live adapter observations own its amount and weight. This review classifies the collateral identity and liquidity uncertainty only. Price-dependent CDP withdrawals and normal redemptions are restricted during FX market closures, and the public CDP and FPMM documents give no guaranteed full-position realization deadline. The unknown liquidity horizon is retained; no current holdings or whole-position exit capacity is certified.",
+    "compositionBasis": "Classification-only review of the existing USDm CDP collateral row against Mento's current protocol documentation; live adapter observations independently own composition",
+    "compositionSource": "live-adapter",
+    "scope": "classification-only",
+    "knownUnknownExposure": "The direct USDm collateral identity is established, but its complete realization horizon is not disclosed. The upstream Mento Reserve basket is not duplicated as JPYm collateral. Zero unidentified exposure does not certify liquidity or refresh any composition timestamp.",
     "knownUnknownExposurePct": 0
   }
 }

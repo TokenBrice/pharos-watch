@@ -1,5 +1,6 @@
 import type { RedemptionRouteSuspension } from "../types/redemption";
 import type { RedemptionBackstopConfig } from "./redemption-backstop-configs/schema";
+import { allocationReviewClockSec as reviewAdmissionClockSec } from "../types/safety-score-v9-allocation";
 
 /** Capture-time, exact-route admission; other issuer channels and DEX routes are untouched. */
 export function resolveReviewedRouteSuspension(
@@ -9,6 +10,6 @@ export function resolveReviewedRouteSuspension(
 ): RedemptionRouteSuspension | undefined {
   const suspension = config?.routeStatus === "suspended" ? config.routeSuspension : undefined;
   if (!suspension || suspension.routeId !== routeId) return undefined;
-  const reviewedAtSec = Date.parse(`${suspension.reviewedAt}T00:00:00Z`) / 1_000;
+  const reviewedAtSec = reviewAdmissionClockSec(suspension.reviewedAt);
   return reviewedAtSec <= clockSec ? suspension : undefined;
 }

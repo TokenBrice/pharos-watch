@@ -49,6 +49,8 @@ import {
 } from "../redemption-exit-route-observations";
 import { buildFpiControllerV9ExitRouteObservation } from "../fpi-controller-redemption-route";
 import { buildSfrxusdCrosschainV9ExitRouteObservation } from "../sfrxusd-crosschain-redemption-route";
+import { deriveCurrentPegObservationMap } from "../current-peg-observations";
+import type { RedemptionFiatReferenceContext } from "@shared/lib/redemption-fiat-reference";
 
 // Complete the disclosure join only after a snapshot has collected every
 // success/failure row. The local index captures states, not mutable row references.
@@ -88,6 +90,7 @@ function resolveStaticFields(
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
   now = Math.floor(Date.now() / 1000),
   liveMetadata?: RedemptionBackstopLiveMetadata,
+  fiatReferences?: RedemptionFiatReferenceContext,
 ) {
   const settlementModel = resolveReviewedRedemptionSettlement(config, now);
   const accessScore = REDEMPTION_ACCESS_SCORES[config.accessModel];
@@ -109,6 +112,7 @@ function resolveStaticFields(
     reserveSnapshotMetadata,
     now,
     liveMetadata,
+    fiatReferences,
   );
 }
 
@@ -244,7 +248,20 @@ export async function buildRedemptionBackstopEntry(
     liveHolderEligibility: capacity.liveHolderEligibility,
   });
   const modeledExitSizeUsd = computeModeledExitSizeUsd(supplyUsd);
-  const staticFields = resolveStaticFields(stablecoinId, config, reserveSnapshotMetadata, now, liveMetadata);
+  let fiatReferences: RedemptionFiatReferenceContext | undefined;
+  if (cache?.kind === "ok" && cache.updatedAt <= now &&
+      now - cache.updatedAt <= STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC &&
+      (config.costModel.feeComponents || config.v9RouteCostTerms?.feeComponents ||
+        (config.routeFamily === "offchain-issuer" && WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.flags.pegCurrency !== "USD"))) {
+    const currentPegObservations = deriveCurrentPegObservationMap({
+      peggedAssets: cache.payload.peggedAssets, fxFallbackRates: cache.payload.fxFallbackRates, asOf: cache.updatedAt,
+    });
+    fiatReferences = { clockSec: now, pegDataById: Object.fromEntries(
+      [...currentPegObservations].map(([id, observation]) => [id, { ...observation,
+        pegCurrency: WORKER_TRACKED_META_BY_ID.get(id)!.flags.pegCurrency }]),
+    ) };
+  }
+  const staticFields = resolveStaticFields(stablecoinId, config, reserveSnapshotMetadata, now, liveMetadata, fiatReferences);
   const settlementModel = resolveReviewedRedemptionSettlement(config, now);
   const scored = computeRedemptionBackstopScore({
     routeFamily: config.routeFamily,
@@ -384,6 +401,7 @@ export async function buildRedemptionBackstopEntry(
         ...(liveMetadata.v9OutputValuation ? { outputValuation: liveMetadata.v9OutputValuation } : {}),
         ...(capacity.sharedResourceKey ? { sharedResourceKey: capacity.sharedResourceKey } : {}),
         resolvedFeeBps: observerModel ? directObservation?.allInFeeBps ?? null : staticFields.feeBps,
+        fiatReferences,
         now,
       });
   const capacityProfile = baseCapacityProfile
@@ -513,7 +531,7 @@ export async function buildRedemptionBackstopEntry(
   }
   let finalizedEntry = entry;
   if (entry.capacityProfile && !entry.capacityProfile.exitRouteObservations) {
-    const derived = deriveSupplyModelExitRouteObservation(entry, now);
+    const derived = deriveSupplyModelExitRouteObservation(entry, now, fiatReferences, config);
     if (derived) {
       finalizedEntry = { ...entry, capacityProfile: { ...entry.capacityProfile, exitRouteObservations: [derived] } };
     }

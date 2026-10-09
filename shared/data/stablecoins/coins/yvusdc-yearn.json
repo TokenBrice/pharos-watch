@@ -12,7 +12,7 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "USDC allocated through the Yearn v3 strategy allocator; at Ethereum block 26095933 on October 1, 2026, funded default-queue strategies were USDC to USDS Depositor, USDC to sUSDS Lender, and Yearn USDC. Spark USDC Lender remained in the default queue with zero recorded debt.",
+  "collateral": "USDC allocated through the Yearn v3 strategy allocator. At Ethereum block 26155393 on October 9, 2026, four funded strategies reconciled exactly to totalDebt: USDC to USDS Depositor, USDC to sUSDS Lender, Yearn USDC, and the off-default-queue stcUSD/USDC Pawn Broker Market. Spark USDC Lender had zero recorded debt.",
   "pegMechanism": "ERC-4626 Yearn v3 vault shares accrue value against USDC as the underlying strategies generate yield; redemptions return USDC subject to the v3 queue and strategy liquidity",
   "detailProvider": "coingecko",
   "links": [

@@ -36,10 +36,10 @@
         "observedBlock": 26098754,
         "executionScope": {
           "controllerDeployment": "ethereum:0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
-          "reviewedAt": "2026-10-05",
+          "reviewedAt": "2026-10-09",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-01-01",
-          "reviewer": "R21 execution-entrypoint review 2026-10-05; prior DataUnitas pin retained",
+          "reviewer": "Sol curation campaign 2026-10-09 (W4C08Usdu); source-backed redeem burn correction; prior R21/DataUnitas pin retained",
           "confidence": "partial",
           "sources": [
             {
@@ -85,7 +85,8 @@
               ],
               "callMode": "call",
               "capabilities": [
-                "mint"
+                "mint",
+                "burn"
               ],
               "capSemantics": {
                 "kind": "unbounded",

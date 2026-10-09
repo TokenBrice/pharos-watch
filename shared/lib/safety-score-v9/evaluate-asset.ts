@@ -953,6 +953,12 @@ function controlPillar(
       if (matchingGaps.length > 0) return matchingGaps;
     }
 
+    if (reason.code === "oracle-topology-undisclosed") {
+      return gapsForStatus(
+        asset.economicControlReview.oracle.factorStatuses?.tier ?? asset.economicControlReview.oracle.status,
+      );
+    }
+
     if (reason.code === "incomplete-oracle-liquidation-branch") {
       return gapsForStatus(asset.economicControlReview.oracle.status);
     }

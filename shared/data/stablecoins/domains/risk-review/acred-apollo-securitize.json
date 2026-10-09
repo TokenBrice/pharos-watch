@@ -85,6 +85,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Sol curation campaign 2026-10-09 (W4T10Saturn): documentary review of verified SecuritizeBridge implementation 0xa42a23db258666ade7a40f52ea55819da4fa9853 confirms bridgeDSTokens calls dsToken.burn(msg.sender, value, 'bridge') before Wormhole dispatch, and receiveWormholeMessages calls dsToken.issueTokens(investorWallet, value). This exact EVM rail does not lock source ACRED or release escrowed ACRED. The existing pinned proxy binding is retained; this source review is not a new state pin or an all-seven-route independent-liability attestation.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-13",
         "sources": [
@@ -110,6 +111,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Sol curation campaign 2026-10-09 (W4T10Saturn): the existing adapter pin resolves to verified SecuritizeBridge implementation 0xa42a23db258666ade7a40f52ea55819da4fa9853. Its source burns the sender's ACRED before Wormhole dispatch and issues destination ACRED on authenticated receipt, without token lock/release escrow. This establishes this direct-burn EVM path, not Solana/Aptos independence or complete current material-supply attribution.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-13",
         "sources": [
@@ -135,6 +137,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Sol curation campaign 2026-10-09 (W4T10Saturn): the existing adapter pin resolves to verified SecuritizeBridge implementation 0xa42a23db258666ade7a40f52ea55819da4fa9853. Its source burns the sender's ACRED before Wormhole dispatch and issues destination ACRED on authenticated receipt, without token lock/release escrow. This establishes this direct-burn EVM path, not Solana/Aptos independence or complete current material-supply attribution.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-13",
         "sources": [
@@ -160,6 +163,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Sol curation campaign 2026-10-09 (W4T10Saturn): the existing adapter pin resolves to verified SecuritizeBridge implementation 0xa42a23db258666ade7a40f52ea55819da4fa9853. Its source burns the sender's ACRED before Wormhole dispatch and issues destination ACRED on authenticated receipt, without token lock/release escrow. This establishes this direct-burn EVM path, not Solana/Aptos independence or complete current material-supply attribution.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-13",
         "sources": [

@@ -31,7 +31,7 @@ const V9WholeAllocationReviewSchema = z.object({
   if (review.expiresAt <= review.reviewedAt) ctx.addIssue({ code: "custom", path: ["expiresAt"], message: "Review must expire after review date" });
 });
 
-const V9AllocationDeploymentIdentitySchema = z.discriminatedUnion("codeKind", [
+export const V9AllocationDeploymentIdentitySchema = z.discriminatedUnion("codeKind", [
   z.object({ codeKind: z.literal("immutable"), chain: CanonicalChainIdSchema, address: CanonicalTextSchema, observedAtSec: UnixSecondsSchema, block: z.number().int().nonnegative(), sourceUrl: z.string().url() }).strict(),
   z.object({ codeKind: z.literal("proxy"), chain: CanonicalChainIdSchema, address: CanonicalTextSchema, implementation: CanonicalTextSchema, observedAtSec: UnixSecondsSchema, block: z.number().int().nonnegative(), sourceUrl: z.string().url() }).strict(),
 ]);

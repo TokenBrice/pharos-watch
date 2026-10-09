@@ -1,5 +1,5 @@
 import { resolveFeeConfidence, resolveFeeModelKind } from "@shared/lib/redemption-backstop-confidence";
-import { resolveRedemptionCostBpsAtNotional } from "@shared/lib/redemption-backstop-configs/shared";
+import { resolveRedemptionCostBpsAtNotional, resolveRedemptionPercentageFeeBps } from "@shared/lib/redemption-backstop-configs/shared";
 import type { RedemptionBackstopConfig, RedemptionCostModel } from "@shared/lib/redemption-backstops";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";
@@ -8,6 +8,7 @@ import {
   type RedemptionBackstopLiveMetadata,
 } from "./live-metadata";
 import { resolveRedemptionDocs } from "@shared/lib/redemption-backstop-docs";
+import { resolveRedemptionFiatUsdRate, type RedemptionFiatReferenceContext } from "@shared/lib/redemption-fiat-reference";
 
 export interface ResolvedRedemptionCost {
   selectedLiveFee?: boolean;
@@ -61,14 +62,16 @@ export function resolveBoundedFeeScore(feeBps: number): number {
 export function resolveCostScenarioScores(
   costModel: RedemptionCostModel,
   fallbackFeeBps: number | null,
+  fiatReferences?: RedemptionFiatReferenceContext,
 ): NonNullable<RedemptionBackstopEntry["costScenarioScores"]> | undefined {
   const costs = {
-    retail: resolveRedemptionCostBpsAtNotional(costModel, COST_SCENARIO_SIZES_USD.retail, fallbackFeeBps),
-    activeUser: resolveRedemptionCostBpsAtNotional(costModel, COST_SCENARIO_SIZES_USD.activeUser, fallbackFeeBps),
+    retail: resolveRedemptionCostBpsAtNotional(costModel, COST_SCENARIO_SIZES_USD.retail, fallbackFeeBps, fiatReferences),
+    activeUser: resolveRedemptionCostBpsAtNotional(costModel, COST_SCENARIO_SIZES_USD.activeUser, fallbackFeeBps, fiatReferences),
     institutional: resolveRedemptionCostBpsAtNotional(
       costModel,
       COST_SCENARIO_SIZES_USD.institutional,
       fallbackFeeBps,
+      fiatReferences,
     ),
   };
   if (Object.values(costs).every((costBps) => costBps == null)) return undefined;
@@ -86,6 +89,7 @@ function resolveRedemptionCost(
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
   now = Math.floor(Date.now() / 1000),
   liveMetadata?: RedemptionBackstopLiveMetadata,
+  fiatReferences?: RedemptionFiatReferenceContext,
 ): ResolvedRedemptionCost {
   const feeConfidence = resolveFeeConfidence(costModel);
   const feeModelKind = resolveFeeModelKind(costModel);
@@ -110,6 +114,26 @@ function resolveRedemptionCost(
   });
   const resolvedLiveMetadata =
     liveMetadata ?? readRedemptionBackstopLiveMetadata(stablecoinId, reserveSnapshotMetadata, now);
+
+  if (costModel.feeComponents) {
+    const costScenarioScores = resolveCostScenarioScores(costModel, null, fiatReferences);
+    const notes: string[] = [];
+    if (!costScenarioScores) {
+      if (resolveRedemptionPercentageFeeBps(costModel) === null) {
+        notes.push("redemption-cost-percentage-ceiling-absent");
+      } else if (costModel.feeComponents.some((component) =>
+        resolveRedemptionFiatUsdRate(component.currency, fiatReferences) === null)) {
+        notes.push("redemption-cost-fiat-reference-unavailable");
+      }
+    }
+    return buildCost({
+      score: costScenarioScores?.activeUser ?? 40,
+      // Request-specific components are never a reusable percentage telemetry value.
+      feeBps: null,
+      costScenarioScores,
+      notes,
+    });
+  }
 
   if (
     resolvedLiveMetadata.canUseFee &&
@@ -181,6 +205,7 @@ export function resolveRedemptionStaticFields(
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
   now = Math.floor(Date.now() / 1000),
   liveMetadata?: RedemptionBackstopLiveMetadata,
+  fiatReferences?: RedemptionFiatReferenceContext,
 ): RedemptionStaticFields {
   const {
     score: costScore,
@@ -191,7 +216,7 @@ export function resolveRedemptionStaticFields(
     feeModelKind,
     costScenarioScores,
     notes,
-  } = resolveRedemptionCost(stablecoinId, config.costModel, reserveSnapshotMetadata, now, liveMetadata);
+  } = resolveRedemptionCost(stablecoinId, config.costModel, reserveSnapshotMetadata, now, liveMetadata, fiatReferences);
 
   return {
     ...scores,

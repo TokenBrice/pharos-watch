@@ -21,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4C06Schuman)",
     "confidence": "verified",
     "sources": [
       {
@@ -30,8 +30,8 @@
         "url": "https://app.morpho.org/ethereum/vault/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57"
       },
       {
-        "label": "Pinned RPC identity, accounting and controls",
-        "url": "https://eth-mainnet.g.alchemy.com/v2"
+        "label": "Dwellir Ethereum block 26155384 (2026-10-09T14:14:35Z), complete root/adapter/market accounting observed 2026-10-09T14:31:34Z through 14:32:33Z",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       },
       {
         "label": "Morpho Vault V2 documentation",
@@ -52,11 +52,15 @@
       {
         "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
         "url": "https://sentora.com/legal/terms-of-use"
+      },
+      {
+        "label": "Exact verified sole adapter source and interface",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d7d615c2d3b9d3656a045d8e584aada84910c8b"
       }
     ],
-    "rationale": "At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 25441975740170, totalSupply raw 25389250769299894397889057, idle raw 2531230145, sole adapter market assets raw 25439444510025, with an exact zero accounting difference. The only funded market lent PYUSD against mWIN at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. The single 100% slice records the verified denomination and position claim, not an invented allocation or underlying borrower-credit rating.",
+    "rationale": "At Ethereum block 26155384 (hash 0x779c1c2f6e751166c9157d5a1dad25061c8a523d9ae72a6bbed43af98890a3fa; 2026-10-09T14:14:35Z), asset() was PYUSD 0x6c3ea9036406852006290770bedfcaba0e23a0e8; totalAssets raw 22136454784679 and totalSupply raw 22086740812052298549131247. adaptersLength() was 1, binding sole adapter 0x0d7d615c2d3b9d3656a045d8e584aada84910c8b to this parentVault. Root idle PYUSD raw 2595684935925 plus adapter realAssets raw 19540769848754 reconciled exactly to totalAssets. marketIdsLength() was 1; market 0xeecbfa4b6caa83c5000ce68a77808c80504e2ff56e81095c7742a615ecd9c774 loans PYUSD against mWIN 0x4e72025984424e52838cf8953e2863eff036b67a at 77% LLTV. The adapter position's borrowShares and collateral were zero. The 100% row identifies the immediate PYUSD-denominated idle/lender claim; neither zero current adapter debt nor exact accounting establishes all borrower/SPV borrowing authority, latent strategy reach, custody safeguards, or a whole-allocation exemption.",
     "compositionBasis": "Complete pinned idle-plus-sole-adapter accounting; single parent-denominated strategy dependency",
-    "compositionAsOf": "2026-10-02",
+    "compositionAsOf": "2026-10-09",
     "scope": "full-composition",
     "knownUnknownExposure": "Current immediate asset and adapter inventory are identified. Borrower legal recovery, default liquidation proceeds and future allocations remain uncertain.",
     "knownUnknownExposurePct": 0

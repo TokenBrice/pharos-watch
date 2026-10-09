@@ -419,6 +419,21 @@ export function SafetyScoresOverview() {
         and original report clocks, with no further promotion in this release. Fresh admitted inputs can change
         availability or scores and require their own attributed comparison.
       </p>
+      <p>
+        Methodology v10.14 follows the reverted v10.13 release without reusing its version. Pipeline-gap
+        diagnostics and partial-evidence flags remain visible, while expired mechanism research degrades
+        without quarantining the asset. Supply observers require complete provider proof; non-exhaustive
+        DEX emptiness cannot certify absence, and completed census outcomes survive a discovery tail timeout.
+        Fresh admitted census and deployment-supply evidence are still required to close coverage gaps.
+      </p>
+      <p>
+        Reviewed bridge-representation identities can support exhaustive wrapper identity reviews without
+        changing native Mint Authority ownership or granting immutable credit to proxies. Local-fiat charges
+        and outputs use admitted captured FX, never fetched or assumed rates; incomplete fee schedules stay
+        gaps. Date-only route reviews wait until the next UTC midnight. Oracle uncertainty binds its actual
+        tier witness, and the transfer census uses bounded whole-asset admission and source-clock rotation;
+        deferred deployments remain unknown. Pillar weights, grade gates and evidence freshness are unchanged.
+      </p>
       <p className="text-xs text-muted-foreground">
         See also:{" "}
         <Link href="/methodology/scoring-changelog/" className={METHODOLOGY_LINK_CLASS}>Safety Score changelog</Link>

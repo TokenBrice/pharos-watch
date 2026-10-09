@@ -276,9 +276,13 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       ],
     },
     executionModel: "rules-based-nav",
-    costModel: undisclosedReviewedFee(
-      "Public fees are 1 GLDT per GLD NFT unlocked and CHF 300 per Zurich pickup; an all-in same-notional USD fee requires NFT denomination, lot count and captured CHF/USD handling",
-    ),
+    costModel: {
+      ...documentedVariableFee(
+        "CHF 300 for the described Zurich pickup workflow plus 1 GLDT per unlocked GLD NFT; NFT denomination/count, repeat-pickup charges and complete physical-to-USD realization remain unbounded.",
+        "formula",
+      ),
+      feeComponents: [{ currency: "CHF", terms: { flatAmount: 300 } }],
+    },
     docs: [
       sourceRefFull("Gold DAO physical redemption and reverse swap", "https://docs.gold-dao.org/how-to/redeem-physical-gold"),
       sourceRef("GLDT FAQ: 1 GLDT per NFT unlocked", "https://gldt.org/", ["fees"]),
@@ -287,7 +291,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     notes: [
       "Modeled route is GLDT's documented reverse-swap path into GLD NFT gold-denomination backing, not ordinary secondary-market liquidity.",
       "Physical gold custody and delivery remain upstream of the GLD NFT system, so Pharos keeps the route in the delayed commodity issuer family.",
-      "Re-reviewed 2026-10-09: the FAQ charges 1 GLDT per unlocked NFT, not per reverse-swap batch. Its examples charge 5 GLDT for five 1g NFTs and 1 GLDT for one 10g NFT. The CHF 300 Zurich pickup charge applies regardless of gold size or quantity. These fees are public, but no token-denominated lot evaluator or captured CHF/USD conversion establishes an all-in USD fee; retain scoped cause B and the unresolved numerical cost rather than inventing a flat USD amount or universal basis-point rate.",
+      "Re-reviewed 2026-10-09: the FAQ charges 1 GLDT per unlocked NFT, not per reverse-swap batch. Its examples charge 5 GLDT for five 1g NFTs and 1 GLDT for one 10g NFT. The CHF 300 charge applies to the described Zurich pickup workflow regardless of gold size or quantity. Only that CHF component is structured; no feeBpsMax, universal token-fee rate, NFT count or complete USD realization bound is inferred. The separate physicalToUsd model and its original review/expiry dates remain unchanged; Bity's alternative buyback pays USDT and does not include physical pickup.",
     ],
   },
   "vnxau-vnx": {

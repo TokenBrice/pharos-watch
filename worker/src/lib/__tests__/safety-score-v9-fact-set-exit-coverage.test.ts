@@ -50,6 +50,33 @@ import { factBuilderContext } from "./safety-score-v9-fact-builders.test-support
 
 describe("explicit route factor gaps and source chronology", () => {
   it.each([
+    { clock: "2026-07-13T12:00:00Z", admitted: false },
+    { clock: "2026-07-13T23:59:59Z", admitted: false },
+    { clock: "2026-07-14T00:00:00Z", admitted: true },
+  ])("admits the same date-only review in coverage and factor gates at $clock", ({ clock, admitted }) => {
+    const assetId = "usdc-circle";
+    const draft = exactFixedInput({ assetId, clockSec: Date.parse(clock) / 1000 });
+    draft.redemptionBackstopMap = { [assetId]: makeSupplyFullRedemption({ feeBps: 7, updatedAt: draft.clockSec }) };
+    draft.redemptionStale = false;
+    draft.redemptionGenerationId = "redemption:review-admission";
+    draft.inputFreshness.redemptionBackstops = { updatedAt: draft.clockSec, ageSeconds: 0, stale: false };
+    const fixed = rebuildFixed(draft);
+    withRedemptionBackstopConfig(assetId, { v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap", missingScoringFields: ["cost"], reviewedAt: "2026-07-13",
+      rationale: "The exact route cost bound has not been established.",
+      docs: [{ label: "Route terms", url: "https://example.com/route", supports: ["route"] }],
+    } }, () => {
+      const reviewed = structuredClone(extension({ assetId, clockSec: fixed.clockSec, registryFingerprint: fixed.registryFingerprint }));
+      reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, assetId);
+      reviewed.assets[0]!.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, assetId);
+      const route = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!.exitRoutes
+        .find((candidate) => candidate.lane === "redemption")!;
+      expect(route.coverageClass).toBe(admitted ? "diagnostic" : "exact-lower-bound");
+      expect(route.factorStatuses.cost!.observationState).toBe(admitted ? "missing" : "known");
+    });
+  });
+
+  it.each([
     { factor: "cost", nonCanonical: false }, { factor: "cost", nonCanonical: true },
     { factor: "settlement", nonCanonical: false }, { factor: "settlement", nonCanonical: true },
     { factor: "capacity", nonCanonical: false }, { factor: "capacity", nonCanonical: true },
@@ -435,8 +462,8 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
   });
 
   it("preserves reviewed capacity without inventing a quantified fee or admitting execution credit", () => {
-    const fixed = boundedUnknownFeeRedemptionFixedInput();
-    const reviewed = structuredClone(extension());
+    const fixed = boundedUnknownFeeRedemptionFixedInput({ clockSec: 86_400 });
+    const reviewed = structuredClone(extension({ clockSec: fixed.clockSec }));
     reviewed.registryFingerprint = fixed.registryFingerprint;
     reviewed.assets[0]!.assetId = "usdc-circle";
     reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "usdc-circle");

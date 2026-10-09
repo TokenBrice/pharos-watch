@@ -85,11 +85,14 @@
       "deploymentRefs": ["bsc:0xe60106a5cab7e7c64830919d36ab20caaf50ac91"],
       "implementationAddresses": ["0xe60106a5cab7e7c64830919d36ab20caaf50ac91"],
       "canChangeMintLogic": false,
-      "observedAt": "2026-10-03",
-      "observedBlock": 125441304,
+      "observedAt": "2026-10-09",
+      "observedBlock": 126651687,
       "sources": [{
         "label": "Exact BNB XGLDToken source and non-proxy resolution",
         "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution"
+      }, {
+        "label": "Sol curation campaign 2026-10-09 (W3IdentityXgld): exact native token identity, 13191-byte runtime decoded-byte SHA256 b65294d9315de963fec70c39e3ed3c155ad9042ec9c3b62e4b819bd06e09fcf4, zero EIP-1967 implementation/beacon slots, block 126651687/hash 0x16af0e88c535d0367e81e5c8ef84fabb91970d1dc2ffc77907cf544bca150e3a, 2026-10-09T14:27:19Z; observed 2026-10-09T14:27:37.747Z. Token-root immutability only; authority/controller census is not refreshed.",
+        "url": "https://api-bsc-mainnet-full.n.dwellir.com"
       }]
     },
     "economicCapSemantics": "unbounded",

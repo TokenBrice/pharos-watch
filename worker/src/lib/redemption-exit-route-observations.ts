@@ -7,14 +7,17 @@ import { PHYSICAL_TO_USD_EXIT_POLICY, resolveExitScoringRequest } from "@shared/
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ExitRouteObservation, ExitRouteOutput } from "@shared/types/market";
+import { EXIT_ROUTE_OUTPUT_VALUATION_TIMESTAMP_TOLERANCE_SEC } from "@shared/types/exit-route";
 import type { LiveReserveRedemptionOutputValuation } from "@shared/types/live-reserves";
 import { buildExitRouteCapacityPoint, mergeExitCurveRequests } from "@shared/lib/exit-route-capacity-point";
+import { resolveRedemptionFiatReference, resolveRedemptionFiatUsdRate, type RedemptionFiatReferenceContext } from "@shared/lib/redemption-fiat-reference";
 import type {
   RedemptionBackstopEntry,
   RedemptionCapacityProfile,
   RedemptionLiveCapacityKind,
   RedemptionLiveFreshnessKind,
 } from "@shared/types/redemption";
+import { allocationReviewClockSec as reviewAdmissionClockSec } from "@shared/types/safety-score-v9-allocation";
 
 import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserves/store";
 // Conservative documented ceilings for projecting a reviewed settlement model
@@ -64,6 +67,7 @@ interface BuildRedemptionExitRouteObservationInput {
   settlementBoundUnproven?: true;
   resolvedFeeBps: number | null;
   outputValuation?: LiveReserveRedemptionOutputValuation | null;
+  fiatReferences?: RedemptionFiatReferenceContext;
   sharedResourceKey?: ExitRouteObservation["sharedResourceKey"];
   now: number;
 }
@@ -73,9 +77,9 @@ function floorTimestampSec(timestamp: number | undefined): number | null {
   return Math.floor(timestamp);
 }
 
-function reviewedAtSec(reviewedAt: string | undefined): number | null {
-  if (!reviewedAt) return null;
-  const timestamp = Date.parse(`${reviewedAt}T00:00:00.000Z`);
+function reviewedAtSec(reviewedAt: string | undefined, clockSec: number): number | null {
+  if (!reviewedAt || reviewAdmissionClockSec(reviewedAt) > clockSec) return null;
+  const timestamp = Date.parse(reviewedAt);
   return Number.isFinite(timestamp) ? Math.floor(timestamp / 1_000) : null;
 }
 
@@ -112,7 +116,7 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
     };
   }
 
-  const reviewTimestamp = reviewedAtSec(input.config.reviewedAt);
+  const reviewTimestamp = reviewedAtSec(input.config.reviewedAt, input.now);
   const hasReviewedTerms = reviewTimestamp != null && (input.config.docs?.length ?? 0) > 0;
   if (input.capacityConfidence === "documented-bound" && hasReviewedTerms) {
     return {
@@ -137,6 +141,29 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
   };
 }
 
+function capturedFiatOutputValuation(
+  output: ExitRouteOutput,
+  costBps: number | null,
+  observedAt: number,
+  fiatReferences?: RedemptionFiatReferenceContext,
+) {
+  const reference = output.kind === "fiat" && output.currency && output.currency !== "USD"
+    ? resolveRedemptionFiatReference(output.currency, fiatReferences) : null;
+  // A current FX cache can postdate the route evidence. Leave it unpinned
+  // when the observation contract cannot admit its clock; fact building can
+  // still resolve a current reference independently, or fail closed.
+  if (!reference || costBps === null ||
+      reference.asOf > observedAt + EXIT_ROUTE_OUTPUT_VALUATION_TIMESTAMP_TOLERANCE_SEC) return {};
+  return {
+    outputUnitValueUsd: reference.valueUsd,
+    outputExpectedUnitValueUsd: reference.valueUsd,
+    outputUnitValueSourceId: `captured-fiat-fx-reference:${output.currency}`,
+    outputUnitValueObservedAt: reference.asOf,
+    executionCostBps: costBps,
+    allInCostBps: costBps,
+  };
+}
+
 function resolveOutput(
   stablecoinId: string,
   config: Pick<
@@ -149,6 +176,11 @@ function resolveOutput(
   // Explicit unresolved identities override variantOf and issuer peg currency.
   // Alternative payouts must not silently become the parent token or fiat.
   if (config.unresolvedOutputAssetKeys?.length && !config.outputAssets?.length && config.outputAssetType !== "stable-basket") {
+    const fiatKey = config.unresolvedOutputAssetKeys.length === 1 ? config.unresolvedOutputAssetKeys[0] : undefined;
+    if (config.routeFamily === "offchain-issuer" && config.outputAssetType !== "physical-commodity-delivery" &&
+        fiatKey && /^fiat:[A-Z]{3}$/.test(fiatKey) && fiatKey !== "fiat:USD") {
+      return { kind: "fiat", currency: fiatKey.slice(5) };
+    }
     return { kind: "unresolved-asset", assetKeys: [...config.unresolvedOutputAssetKeys] };
   }
   if (config.outputAssetType === "physical-commodity-delivery" && config.physicalCommodityDelivery) {
@@ -285,6 +317,9 @@ export function buildRedemptionExitRouteObservation(
   }
 
   const evidence = resolveRouteEvidence(input);
+  const fiatReferences = input.fiatReferences
+    ? { ...input.fiatReferences, clockSec: input.now }
+    : undefined;
   const routeIsImmediate =
     input.capacityProfile.scoringHorizon === "immediate" &&
     (input.config.settlementModel === "atomic" || input.config.settlementModel === "immediate");
@@ -292,6 +327,7 @@ export function buildRedemptionExitRouteObservation(
     input.config,
     modeledExitSizeUsd,
     input.resolvedFeeBps,
+    fiatReferences,
   );
   const configuredOutputAssetIds = [
     ...(input.config.outputAssets ?? input.config.unresolvedOutputAssetKeys ?? []),
@@ -317,8 +353,13 @@ export function buildRedemptionExitRouteObservation(
   const boundedUnknownFee =
     mainCostBps === null &&
     evidence.supportsScoring &&
-    input.config.costModel.kind === "dynamic-or-unclear";
+    (input.config.costModel.kind === "dynamic-or-unclear" ||
+      (input.config.v9RouteCostTerms?.feeComponents ?? input.config.costModel.feeComponents) !== undefined);
+  const output = resolveOutput(input.stablecoinId, input.config, outputValuation);
+  const fiatOutputValued = output.kind !== "fiat" || !output.currency || output.currency === "USD" ||
+    resolveRedemptionFiatUsdRate(output.currency, fiatReferences) !== null;
   const scoreEligible =
+    fiatOutputValued &&
     input.config.outputAssetType !== "physical-commodity-delivery" &&
     !input.settlementBoundUnproven &&
     input.resolutionState === "resolved" &&
@@ -339,6 +380,7 @@ export function buildRedemptionExitRouteObservation(
             input.config,
             request,
             input.resolvedFeeBps,
+            fiatReferences,
           );
           const point = buildExitRouteCapacityPoint({
             requestedNotionalUsd: request,
@@ -379,12 +421,13 @@ export function buildRedemptionExitRouteObservation(
     ...point,
     ...(input.settlementBoundUnproven ? { settlementBoundUnproven: true } : {}),
     settlementHorizonSec,
-    output: resolveOutput(input.stablecoinId, input.config, outputValuation),
+    output,
+    ...capturedFiatOutputValuation(output, mainCostBps, evidence.observedAt, fiatReferences),
     evidenceKind: evidence.evidenceKind,
     capacityEvidenceTier: evidence.capacityEvidenceTier,
     ...(boundedUnknownFee
-      ? { feeEvidence: input.config.costModel.kind === "dynamic-or-unclear" &&
-          input.config.costModel.confidence === "formula"
+      ? { feeEvidence: (input.config.v9RouteCostTerms?.feeComponents ?? input.config.costModel.feeComponents) !== undefined ||
+          (input.config.costModel.kind === "dynamic-or-unclear" && input.config.costModel.confidence === "formula")
             ? "disclosed-unquantified" as const
             : "undisclosed-reviewed" as const }
       : {}),
@@ -432,6 +475,8 @@ export function buildRedemptionExitRouteObservation(
 export function deriveSupplyModelExitRouteObservation(
   entry: RedemptionBackstopEntry,
   now: number,
+  fiatReferences?: RedemptionFiatReferenceContext,
+  config?: RedemptionBackstopConfig,
 ): ExitRouteObservation | null {
   const profile = entry.capacityProfile;
   const eventualUsd = profile?.eventualUsd;
@@ -457,7 +502,7 @@ export function deriveSupplyModelExitRouteObservation(
   ) {
     return null;
   }
-  const reviewTimestamp = reviewedAtSec(entry.docs?.reviewedAt);
+  const reviewTimestamp = reviewedAtSec(entry.docs?.reviewedAt, now);
   if (reviewTimestamp === null) return null;
 
   // Only "atomic" satisfies the 300s same-notional horizon and projects onto a
@@ -477,8 +522,11 @@ export function deriveSupplyModelExitRouteObservation(
   // without a stated ceiling remain cost-unbounded. Preserve modeled capacity,
   // but distinguish disclosed terms from issuer non-disclosure; neither proves
   // a same-notional execution cost bound.
-  const staticConfig = getRedemptionBackstopConfig(entry.stablecoinId);
-  const feeBoundBps =
+  const staticConfig = config ?? getRedemptionBackstopConfig(entry.stablecoinId);
+  const hasFeeComponents = (staticConfig?.v9RouteCostTerms?.feeComponents ?? staticConfig?.costModel.feeComponents) !== undefined;
+  const feeBoundBps = hasFeeComponents && staticConfig
+    ? resolveV9RedemptionRouteCostBpsAtNotional(staticConfig, modeledExitSizeUsd, entry.feeBps, fiatReferences)
+    :
     entry.feeModelKind === "fixed-bps" && entry.feeBps != null
       ? entry.feeBps
       : entry.feeModelKind === "documented-variable" && staticConfig?.costModel.feeBpsMax != null
@@ -489,20 +537,36 @@ export function deriveSupplyModelExitRouteObservation(
     feeBoundBps === null &&
     (
       entry.feeModelKind === "undisclosed-reviewed" ||
+      hasFeeComponents ||
       entry.feeModelKind === "documented-variable" ||
       entry.feeModelKind === "formula"
     );
   const requests = mergeExitCurveRequests(modeledExitSizeUsd, eventualUsd);
-  const capacityCurve = requests.map((request) =>
-    buildExitRouteCapacityPoint({
+  const capacityCurve = requests.map((request) => {
+    const costBps = hasFeeComponents && staticConfig
+      ? resolveV9RedemptionRouteCostBpsAtNotional(staticConfig, request, entry.feeBps, fiatReferences) : feeBoundBps;
+    const point = buildExitRouteCapacityPoint({
       requestedNotionalUsd: request,
       maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
       capacityUsd: eventualUsd,
-      admitted: withinCost || boundedUnknownFee,
-    }, { clampNegativeCapacity: true, usdDecimals: null, ratioDecimals: null }),
-  );
+      admitted: (costBps !== null && costBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps) || boundedUnknownFee,
+    }, { clampNegativeCapacity: true, usdDecimals: null, ratioDecimals: null });
+    if (hasFeeComponents && costBps !== null && costBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps) {
+      point.executionCostBps = costBps;
+    }
+    return point;
+  });
   const point = capacityCurve.find((candidate) => candidate.requestedNotionalUsd === modeledExitSizeUsd)!;
   const { scope, commonModeKeys } = resolveScopeAndCommonModes(entry.stablecoinId, entry.routeFamily);
+  const output = resolveOutput(entry.stablecoinId, {
+    routeFamily: entry.routeFamily,
+    outputAssetType: entry.outputAssetType,
+    outputAssets: staticConfig?.outputAssets,
+    physicalCommodityDelivery: staticConfig?.physicalCommodityDelivery,
+    unresolvedOutputAssetKeys: staticConfig?.unresolvedOutputAssetKeys,
+  });
+  const fiatOutputValued = output.kind !== "fiat" || !output.currency || output.currency === "USD" ||
+    resolveRedemptionFiatUsdRate(output.currency, fiatReferences) !== null;
 
   return {
     routeId: `redemption:${entry.stablecoinId}:${entry.routeFamily}`,
@@ -512,23 +576,18 @@ export function deriveSupplyModelExitRouteObservation(
     settlementHorizonSec: REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[entry.settlementModel],
     // Published rows do not carry outputAssets; the reviewed static config of
     // the same code version supplies the documented output composition.
-    output: resolveOutput(entry.stablecoinId, {
-      routeFamily: entry.routeFamily,
-      outputAssetType: entry.outputAssetType,
-      outputAssets: getRedemptionBackstopConfig(entry.stablecoinId)?.outputAssets,
-      physicalCommodityDelivery: staticConfig?.physicalCommodityDelivery,
-      unresolvedOutputAssetKeys:
-        getRedemptionBackstopConfig(entry.stablecoinId)?.unresolvedOutputAssetKeys,
-    }),
+    output,
+    ...capturedFiatOutputValuation(output, feeBoundBps, reviewTimestamp, fiatReferences),
     evidenceKind: "documented-terms",
     ...(boundedUnknownFee
-      ? { feeEvidence: entry.feeConfidence === "formula" &&
-          (entry.feeModelKind === "formula" || entry.feeModelKind === "documented-variable")
+      ? { feeEvidence: hasFeeComponents || (entry.feeConfidence === "formula" &&
+          (entry.feeModelKind === "formula" || entry.feeModelKind === "documented-variable"))
           ? "disclosed-unquantified" as const
           : "undisclosed-reviewed" as const }
       : {}),
     confidence: "medium",
-    scoreEligible: entry.outputAssetType !== "physical-commodity-delivery" && routeFamily !== "eventual-redemption" && withinCost,
+    scoreEligible: fiatOutputValued && entry.outputAssetType !== "physical-commodity-delivery" &&
+      routeFamily !== "eventual-redemption" && withinCost,
     observedAt: reviewTimestamp,
     freshnessSeconds: Math.max(0, (floorTimestampSec(now) ?? 0) - reviewTimestamp),
     commonModeKeys,

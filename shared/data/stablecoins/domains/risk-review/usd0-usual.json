@@ -66,6 +66,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Sol curation campaign 2026-10-09 (W4T11Tether), source reviewed 2026-10-09T14:27:55Z: Usual's official deployment directory identifies Ethereum USD0 L1OFTAdapter 0xe14c486b93c3b62f76f88cf8fe4b36fb672f3b26 and CCIP LockReleaseTokenPool 0xc3d39b77032114c8884276dae0f02cdf75162782. Both verified constructor token arguments bind to this canonical Ethereum USD0. L1OFTAdapter _debit locks shares with innerToken.safeTransferFrom(_from,address(this),amountSentLD) and _credit releases them with innerToken.safeTransfer(_to,_amountLD); the CCIP pool uses lock/release and releaseOrMint transfers the conserved token to the recipient. Arbitrum OFTMintAndBurnAdapter and Base/BNB BurnMintTokenPools are destination rails, not proof that canonical supply burns. Independent-liability transfer-census eligibility is not justified; an exhaustive economic escrow/receipt/in-flight plan is required. The historical July state observation is not refreshed by this source review.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "ethereum",
         "controllerAddress": "0xde6e1F680C4816446C8D515989E2358636A38b04",
@@ -79,6 +80,18 @@
           {
             "label": "Usual USD0 mint, redeem, and multichain architecture",
             "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/flow-and-architecture"
+          },
+          {
+            "label": "Usual official contract deployments: USD0 canonical lock/release rails and destination burn/mint pools",
+            "url": "https://tech.usual.money/smart-contracts/contract-deployments.md"
+          },
+          {
+            "label": "Verified Ethereum USD0 L1OFTAdapter lock/release source and constructor token",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe14c486b93c3b62f76f88cf8fe4b36fb672f3b26"
+          },
+          {
+            "label": "Verified Ethereum USD0 CCIP LockReleaseTokenPool and constructor token",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc3d39b77032114c8884276dae0f02cdf75162782"
           }
         ]
       },

@@ -392,11 +392,18 @@
         "liquidity"
       ],
       "liquidityHorizon": "seven-days"
+    },
+    {
+      "sourceKey": "accountable:yuzu:deployment:global-dollar-pt-usdg-loop",
+      "name": "Global Dollar USDG Pendle PT loop",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "protocol-position"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos Dependency Map WS1.D PT claim-identity review",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W4C08Usdu); classification-only USDG PT row, prior WS1.D identity caveat retained",
     "confidence": "probable",
     "sources": [
       {
@@ -424,7 +431,7 @@
     "compositionBasis": "Accountable exposure_split snapshot dated 2026-08-28 09:26:05 UTC, normalized to the nearest contemporaneous timeline reserve total with an explicit reconciliation residual",
     "compositionAsOf": "2026-08-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "Reviewed 2026-10-01: the Accountable API reports exposure_split_ts 2026.09.30 09:19:41 UTC. Current unmapped or identity-incomplete labels include [Global_Dollar]_PT_USDG_Loop ($1,852,089.9399398), [Aave]_USDG ($120,097.573408), [Re]_reUSD_LP ($1,983,800.363839857), [Re]_PT_reUSD ($1,510,790.30879608), [Morpho]_USDC ($4,161,069.90054416), and [Morpho]_USDT ($822,196.891571827). Labels alone disclose neither exact held token contracts and chain/expiry nor loop debt and gross-versus-net accounting. The independently re-fetched API reports total backing value $63,851,724.51 at dataset timestamp 2026-10-01T08:01:52.084Z; this newer October 1 observation is not the contemporaneous September 30 split denominator. No new dependency link or full-composition refresh is inferred. The authored compositionAsOf and 0.348657% knownUnknownExposurePct remain the historical August 28 composition and residual; that percentage does not measure the current unidentified buckets. Next evidence: dated position inventory with exact LP/PT contracts, redemption assets, debt treatment and a matching backing-total observation.",
+    "knownUnknownExposure": "Reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (W4C08Usdu): the Accountable API reports exposure_split_ts 2026.10.07 13:44:59 UTC. It discloses [Global_Dollar]_PT_USDG_Loop at $1,844,356.9222082, [Re]_reUSD_LP at $1,984,911.575656435, [Re]_PT_reUSD at $1,512,260.02196848, [Agora]_AUSD_LP at $497,181.439586359, [Yuzu]_yzPRIME at $3,079,235.99381803 and Rest_of_Assets at $152,046.02170379867. The unmapped aggregate combines the AUSD LP and reUSD PT labels; Rest_of_Assets is separate. The exact configured USDG PT source key admits a zero-percent classification-only protocol-position row, not a new historical allocation or a direct USDG holding. Its ultimate obligor, held PT contract, market, expiry and liquidity remain unknown; no coinId or dependency edge is authored. The same Alpha split contains negative [Ethena]_sUSDe_Loop (-$631,943.2779085842) and [Sky]_sUSDS_Loop (-$0.107069834488867) entries; the Prime split is a separate exposure_split_rwa object and is not added to Alpha. Labels disclose neither exact held LP/PT contracts and expiries nor gross assets, strategy debt and the accounting meaning of signed values. No new whole-book weights, dependency link, liquidity horizon or maturity maximum is inferred. The authored compositionAsOf and 0.348657% knownUnknownExposurePct remain the historical August 28 composition and residual, not a measure of current unidentified exposure. Next evidence: dated gross position and debt inventory with exact LP/PT contracts, claim terms and a reconciled contemporaneous Alpha-only backing denominator.",
     "knownUnknownExposurePct": 0.348657,
     "nonLinkDispositions": [
       {
