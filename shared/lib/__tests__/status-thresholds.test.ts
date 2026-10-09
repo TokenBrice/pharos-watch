@@ -77,6 +77,11 @@ describe("publication materiality evidence", () => {
     expect(getStablecoinPublicationImpactStatus({ status, missingActiveIds: [] }, { missingActiveAssets: [] }, now))
       .toBe("degraded");
   });
+  it("fails closed when a missing publication id has no coverage entry", () => {
+    expect(getStablecoinPublicationImpactStatus(
+      { status: "incomplete", missingActiveIds: ["x"] }, { missingActiveAssets: [] }, now,
+    )).toBe("degraded");
+  });
 });
 
 describe("getBlacklistGapStatus", () => {

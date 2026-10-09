@@ -47,6 +47,18 @@ describe("public status helpers", () => {
     expect(presentation.detail).toContain("hbd-hive");
     expect(presentation.detail).not.toBe(health.warnings[0]);
   });
+  it("explains an unnamed publication count mismatch without asserting missing assets", () => {
+    const health: HealthResponse = {
+      ...BASE_HEALTH,
+      stablecoinPublication: {
+        status: "incomplete", missingActiveIds: [], expectedActiveCount: 1, presentActiveCount: 0,
+        waivedActiveCount: 0, waivedActiveIds: [], expiredWaiverIds: [], observedAt: BASE_HEALTH.timestamp,
+      },
+    };
+    const presentation = getPublicHealthWarningPresentation("stablecoin-publication-incomplete:count-mismatch", health);
+    expect(presentation.detail).toContain("counts");
+    expect(presentation.detail).not.toContain("missing active assets");
+  });
   it.each([
     ["heavy_scheduled_delivery_stalled", "Heavy scheduled delivery stalled", "Public delivery can remain healthy"],
     ["heavy_scheduler_liveness_unavailable", "Heavy scheduled delivery evidence unavailable", "cannot be claimed healthy"],

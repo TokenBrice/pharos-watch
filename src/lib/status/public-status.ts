@@ -109,11 +109,13 @@ export function getPublicHealthWarningPresentation(
     );
     return {
       title: "Stablecoin publication coverage",
-      detail: `Published listings are missing ${formatAffectedAssets(ids.length, ids)}. ${
-        impact === "healthy"
-          ? "These isolated small-asset omissions remain visible warnings without degrading public health."
-          : "Material, unverified, or widespread omissions degrade public health until coverage recovers."
-      }`,
+      detail: ids.length === 0
+        ? "Published listing counts do not reconcile. Public health remains degraded until exact coverage is verified."
+        : `Published listings are missing ${formatAffectedAssets(ids.length, ids)}. ${
+          impact === "healthy"
+            ? "These isolated small-asset omissions remain visible warnings without degrading public health."
+            : "Material, unverified, or widespread omissions degrade public health until coverage recovers."
+        }`,
     };
   }
   if (warning === "stablecoin-publication-unknown") return {

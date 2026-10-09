@@ -593,6 +593,18 @@ function parsePreviousCoverageMetadata(metadataJson: string): PreviousStablecoin
     const rawCoverage = metadata.activePriceCoverage;
     if (!rawCoverage || typeof rawCoverage !== "object" || Array.isArray(rawCoverage)) return null;
     const coverage = rawCoverage as Record<string, unknown>;
+    // Unknown source labels are unavailable provenance, not a malformed streak.
+    // Normalize before the shared enum guard, matching the detail parser below.
+    if (Array.isArray(coverage.missingActiveAssets)) {
+      for (const value of coverage.missingActiveAssets) {
+        if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+        const entry = value as Record<string, unknown>;
+        if (entry.lastKnownMarketCapSource != null
+          && entry.lastKnownMarketCapSource !== "publication" && entry.lastKnownMarketCapSource !== "supply_history") {
+          entry.lastKnownMarketCapSource = null;
+        }
+      }
+    }
     if (!ActivePriceCoverageHealthSchema.safeParse({
       ...coverage, status: coverage.complete === true ? "complete" : "incomplete", observedAt: null,
     }).success) return null;

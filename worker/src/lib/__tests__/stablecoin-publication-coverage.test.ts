@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   STABLECOIN_PUBLICATION_WAIVERS,
@@ -292,7 +292,10 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       lastKnownMarketCapUsd: 32_686_926.18, lastKnownMarketCapObservedAt: nowSec - 11 * 86400,
       lastKnownMarketCapSource: "supply_history",
     });
-    await seedAbsentActivePriceCoverageMarketCaps(mockD1([], { requireMatch: true }), next, nowSec + 900);
+    const noReadDb = mockD1([], { requireMatch: true });
+    const prepare = vi.spyOn(noReadDb, "prepare");
+    await seedAbsentActivePriceCoverageMarketCaps(noReadDb, next, nowSec + 900);
+    expect(prepare).not.toHaveBeenCalled();
   });
 
   it("selects only the latest bounded non-future supply snapshot for absent ids", async () => {
@@ -561,6 +564,36 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       lastAcceptedSource: "pyth",
       lastAcceptedObservedAt: null,
     });
+  });
+
+  it("loads verbose retained cap evidence and normalizes unknown source provenance to null", async () => {
+    const nowSec = 1_790_000_000;
+    const coverage = evaluateStablecoinActivePriceCoverage([], ["valid", "invalid"], { nowSec });
+    const persistedCoverage = {
+      ...coverage,
+      missingActiveAssets: coverage.missingActiveAssets.map((detail, index) => ({
+        ...detail, lastKnownMarketCapUsd: 32_686_926.18,
+        lastKnownMarketCapObservedAt: nowSec - 900,
+        lastKnownMarketCapSource: index === 0 ? "supply_history" : "invalid-source",
+      })),
+    };
+    const db = mockD1([{
+      match: "activePriceCoverage", rows: [],
+      first: { started_at: nowSec, metadata: JSON.stringify({ activePriceCoverage: persistedCoverage }) },
+    }], { requireMatch: true });
+    const result = await loadPreviousStablecoinActivePriceCoverage(db, nowSec + 900);
+    expect(result.status).toBe("ok");
+    if (result.status !== "ok") throw new Error("Expected readable verbose continuity");
+    expect(result.coverage.missingActiveAssets).toEqual([
+      expect.objectContaining({
+        stablecoinId: "valid", lastKnownMarketCapUsd: 32_686_926.18,
+        lastKnownMarketCapObservedAt: nowSec - 900, lastKnownMarketCapSource: "supply_history",
+      }),
+      expect.objectContaining({
+        stablecoinId: "invalid", lastKnownMarketCapUsd: 32_686_926.18,
+        lastKnownMarketCapObservedAt: nowSec - 900, lastKnownMarketCapSource: null,
+      }),
+    ]);
   });
 
   it("loads bounded streak state from the latest prior cron metadata", async () => {
