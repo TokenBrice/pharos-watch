@@ -68,6 +68,10 @@
       {
         "label": "Issuer complete daily holdings workbook, October 2, 2026 (tokenized unlisted class)",
         "url": "https://www.chinaamc.com.hk/jeecg-boot/mainFund/fundQuery/getHoldingsDetail?fundID=USDDMMF&curLang=EN"
+      },
+      {
+        "label": "Issuer complete daily holdings workbook, October 9, 2026; diagnostic review 2026-10-09T10:32:15Z by Sol curation campaign 2026-10-09 (Lane17Peso)",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/mainFund/fundQuery/getHoldingsDetail?fundID=USDDMMF&curLang=EN"
       }
     ],
     "rationale": "The issuer's August 31 factsheet page 2 gives the complete asset-class allocation: Other Money Market Instrument 63.54%, Time Deposit 24.71%, Cash and Cash Equivalent 11.75%, totaling 100.00%. These are pooled USD sub-fund category weights backing Class I and other share classes, not token supply or an independently audited Class I-only denominator. Existing June accounts and October top-ten observations remain historical corroboration, not the source of these weights. The September 14 prospectus, USD sub-fund printed page 160, prohibits purchasing instruments with remaining maturity above 397 days except Government and other Public Securities. The exception cannot apply to bank time deposits, so their governing maximum is 397 days, not the 50.85-day WAM. No maximum is assigned to the mixed Other Money Market Instrument bucket because permitted money-market fund shares and the public-security exception require constituent-level scope.",
@@ -112,7 +116,7 @@
         }
       }
     ],
-    "knownUnknownExposure": "August category weights are complete, but do not identify the August constituents or obligors. The issuer's recovered October 2 full holdings workbook lists 62 rows, totaling 100.0497% of reported NAV without normalization, rather than only the 72.54% top-ten display. It identifies named banks and ISINs but lacks a classification join to the August categories, leaves the 23.8501% Credit Agricole instrument unnamed, truncates term-deposit maturity descriptions, and supplies no per-position realization bounds. These independently dated holdings are not transplanted into August weights. The prior June 30 unaudited accounts cover pooled gross assets of USD 603917339, not current token liabilities. August WAM 50.85 days is an average, not maximum tenor. Class I token-to-fund liability reconciliation and exact distributor custody shares remain unestablished.",
+    "knownUnknownExposure": "August category weights are complete, but do not identify the August constituents or obligors. The issuer's recovered October 2 full holdings workbook lists 62 rows, totaling 100.0497% of reported NAV without normalization, rather than only the 72.54% top-ten display. It identifies named banks and ISINs but lacks a classification join to the August categories, leaves the 23.8501% Credit Agricole instrument unnamed, truncates term-deposit maturity descriptions, and supplies no per-position realization bounds. These independently dated holdings are not transplanted into August weights. The prior June 30 unaudited accounts cover pooled gross assets of USD 603917339, not current token liabilities. August WAM 50.85 days is an average, not maximum tenor. Class I token-to-fund liability reconciliation and exact distributor custody shares remain unestablished. A supplemental Lane17Peso observation at 2026-10-09T10:32:15Z recovered the independently dated October 9 workbook: 63 rows total 100.0523% of reported NAV, its Total NAV cell is blank, and the 7.7719% Credit Agricole instrument remains unnamed. The workbook says percentages may differ from 100% due to rounding, but provides no reconciled gross denominator or classification of that instrument. No normalization, newer composition date, new August obligor weights or current financial-assurance claim is inferred.",
     "knownUnknownExposurePct": 63.54,
     "nonLinkDispositions": [
       {

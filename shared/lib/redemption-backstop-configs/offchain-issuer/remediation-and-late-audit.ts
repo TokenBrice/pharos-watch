@@ -206,7 +206,9 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
         { url: "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025", quote: "Decide how many grams you want (minimum 1 g). Bars: sealed PAMP Lady Fortuna, 999.9 fine. Europe: 3–7 business days, insured post" },
       ],
     },
-    costModel: fixedFee(0, "No custody or transfer fees per Gold Token SA; minimum 1 gram"),
+    costModel: documentedVariableFee(
+      "Custody and routine administration are embedded services, not proof of cost-free physical exit. DGLD terms disclose an initially 0.20% burning fee for direct issuer delivery plus holder-paid delivery expenses. Under section 8.2.2, an approved third-party delivery does not burn tokens or charge the issuer burning fee, but independent provider premiums, logistics, handling, insurance, customs and taxes remain separately quoted. Neither delivery method establishes an all-in same-notional USD liquidation cost.",
+    ),
     docs: [
       sourceRefRouteCapacity("DGLD homepage", "https://dgld.ch/"),
       sourceRef("DGLD Swiss redemptions", "https://dgld.ch/news/dgld-european-swiss-redemptions", [
@@ -215,6 +217,8 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
         "access",
         "settlement",
       ]),
+      sourceRef("DGLD July 2026 general terms: physical delivery and costs", "https://dgld.ch/docs/terms", ["route", "fees", "settlement"]),
+      sourceRef("DGLD physical delivery FAQ", "https://dgld.ch/about-faq", ["route", "fees"]),
     ],
   },
   // Re-reviewed 2026-08-19 (issue #865). The issuer route itself is unchanged
@@ -258,7 +262,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(
-      "AUDC redeems AUDD 1:1; the issuer says minting and redemption are fee-free, but distributors or external bank-account payouts can impose additional charges",
+      "AUDC's platform mint/redeem fee is zero, but the 10 February 2026 PDS section 3.1(b) specifies 0.10%-1.00% external-bank payout fees through AUDD Digital or direct AUDC fallback. Distributor fees vary; fees may be waived or changed with notice. No applicable fee at the scored notional is selected; gas and third-party charges remain additional",
     ),
     docs: [
       sourceRefRouteCapacity("AUDD home", "https://www.audd.digital/"),
@@ -368,8 +372,14 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     docs: [
       sourceRefRouteCapacity("BRLA Digital", "https://brla.digital/"),
       sourceRef("Avenia documentation", "https://docs.avenia.io/", ["route", "access"]),
+      sourceRef("Avenia platform terms, sections 2.1 and 5.3-5.6", "https://app.avenia.io/Avenia-TC.pdf", ["route", "access", "settlement"]),
+      sourceRef("Avenia PIX payout outcomes and account-specific quotes", "https://integration-guide.avenia.io/docs/Operations/quotesAndTickets/", ["route", "access", "settlement"]),
     ],
-    notes: ["Native multichain fiat-backed BRL stablecoin; KYC-gated primary mint and redeem rail via Avenia"],
+    notes: [
+      "Native multichain fiat-backed BRL stablecoin; KYC-gated primary mint and redeem rail via Avenia",
+      "Platform terms section 5.6 describes normal transaction settlement within two business days, with explicit longer-delay exceptions for liquidity, blockchains, banks and intermediaries. This is not an unconditional end-to-end bank-credit SLA. Sale proceeds are paid by PIX to matching account-holder details (sections 5.3-5.4). Reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (Lane33Hyperithm).",
+      "Public quote examples are illustrative; FIAT_IN is a BRL deposit-account limit, not funded BRLA redemption capacity. Preserve the existing bounded terms gaps for capacity, settlement and cost; no same-day guarantee, numerical fee or capacity curve is established by these documents.",
+    ],
   },
   "ctusd-citrea": {
     ...issuerBase,

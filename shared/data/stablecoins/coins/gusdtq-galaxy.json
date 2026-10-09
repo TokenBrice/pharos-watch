@@ -13,7 +13,7 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdt-tether",
   "collateral": "USDT-denominated idle balances and lender positions in Galaxy-curated Morpho markets. Borrower collateral, valuation and market liquidity vary; the share does not represent cash held solely at the parent issuer.",
-  "pegMechanism": "ERC-4626 deposits exchange USDT for NAV-bearing shares. Borrower interest and configured fee-share accrual change assets per share; realized lending losses can reduce NAV. Withdraw/redeem burns shares for idle USDT and liquidity from the configured adapter; force-deallocation is separate and cannot create liquidity in fully borrowed markets.",
+  "pegMechanism": "ERC-4626 deposits exchange USDT for NAV-bearing shares. Borrower interest and configured fee-share accrual change assets per share; realized lending losses can reduce NAV. Withdraw/redeem burns shares for idle USDT and liquidity from the configured adapter. Morpho's documented in-kind fallback uses a flash loan and leaves the holder with a direct underlying lending position; it does not guarantee cash realization or a settlement deadline when markets are illiquid.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
@@ -58,6 +58,10 @@
     {
       "label": "Docs",
       "url": "https://docs.morpho.org/curate/"
+    },
+    {
+      "label": "Vault V2 withdrawal and in-kind redemption mechanics",
+      "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
     }
   ],
   "contracts": [

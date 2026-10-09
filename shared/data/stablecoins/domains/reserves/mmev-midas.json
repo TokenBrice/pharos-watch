@@ -22,8 +22,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-15",
-    "reviewer": "OpenAI Codex reserve disclosure review",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane08Midas)",
     "confidence": "probable",
     "sources": [
       {
@@ -53,12 +53,20 @@
       {
         "label": "Midas current mMEV final terms, issuer and contractual scope",
         "url": "https://docs.midas.app/resources/legal-product-documentation/mmev"
+      },
+      {
+        "label": "Literal mMEV issuer API accessed October 9, 2026; publisher updatedAt June 18, 2026",
+        "url": "https://api-prod.midas.app/api/transparency?token=mMEV"
+      },
+      {
+        "label": "Current Midas complete documentation, Asset Transparency and Risk Monitoring; accessed October 9, 2026",
+        "url": "https://docs.midas.app/llms-full.txt"
       }
     ],
     "rationale": "The September 15 mMEV transparency page explicitly identifies the same underlying strategy and wallets as mROX. Its current exposure matches the issuer API under token=mROX, while token=mMEV remains dated June 18. The fresh joint strategy reports gross assets, material borrow offsets and net equity; main positions exclude absolute deltas below $100,000 and are rounded to $1,000. The issuer-prepared September 8 report also covers mMEV and mROX jointly. Neither source establishes a complete standalone mMEV reserve allocation, and the whole joint pool must not be attributed to mMEV. Current linked final terms identify Midas Software GmbH as issuer; the strategy manager is not the token obligor.",
     "compositionBasis": "Midas mMEV product, risk, and transparency disclosures",
     "scope": "full-composition",
-    "knownUnknownExposure": "Complete signed positions, residuals, custody and standalone mMEV allocation remain unresolved. Source-maintenance check 2026-10-07: the literal mMEV API reports June 18 updatedAt and a book approximately 4.2 times the later NAV; separately fetched mROX is dated September 18 and remains a joint-pool scope. Both observations are stale, and mROX must not replace mMEV merely because it is newer. Preserve 5-day NAV scoring/7-day transport; no composition budget can admit these stale or wrong-product books. Historical weekly reports and new request time do not refresh curated composition.",
+    "knownUnknownExposure": "October 9 disclosure review: the literal mMEV API still has updatedAt 2026-06-18T07:06:48.270Z and the separate mROX API has updatedAt 2026-09-18T11:06:17.713Z. Current platform documentation describes periodic portfolio reporting and internal delta/margin monitoring but does not publish a fresh standalone mMEV allocation, complete signed position census or joint-pool entitlement denominator. Both API books are stale and the mROX book is not a token-specific mMEV reserve census. Preserve 100% unknown exposure and existing NAV age limits; this classification review creates no compositionAsOf and does not renew old holdings, reports or assurance.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

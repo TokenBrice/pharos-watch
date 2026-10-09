@@ -1918,8 +1918,8 @@
     },
     {
       "assetId": "sdai-sky",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACCESS acc-A",
+      "reviewedAt": "2026-10-09",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane11Sky)",
       "deployments": [
         {
           "chainId": "ethereum",
@@ -1969,6 +1969,23 @@
             {
               "label": "Optimistic Etherscan sDAI contract",
               "url": "https://optimistic.etherscan.io/address/0x2218a117083f5b482b0bb821d27056ba9c04b1d3#code"
+            }
+          ]
+        },
+        {
+          "chainId": "worldchain",
+          "contractOrTokenId": "0x859dbe24b90c9f2f7742083d3cf59ca41f55be5d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Worldscan verifies direct immutable OptimismMintableERC20 1.3.0 code. Pinned runtime at World Chain block 35966146, hash 0xf294a8c1cd77abb22c920b18164a3c9e69cb0de25ceaa775a26785ac9e847924, timestamp 2026-10-06T06:25:31Z, observed 2026-10-09T10:40:50.894Z, matches the explorer deployed bytecode and embeds Ethereum sDAI as REMOTE_TOKEN and 0x4200000000000000000000000000000000000010 as BRIDGE. Holder transfers inherit unmodified ERC20; no upgrade, blacklist, pause, transfer gate or nonempty transfer hook exists. onlyBridge mint/burn is a separate economic-control surface; ordinary holder transfer posture does not erase bridge or inherited DAI exposure.",
+          "sources": [
+            {
+              "label": "Exact verified World Chain OptimismMintableERC20 source",
+              "url": "https://worldscan.org/address/0x859dbe24b90c9f2f7742083d3cf59ca41f55be5d#code"
+            },
+            {
+              "label": "Pinned World Chain runtime read",
+              "url": "https://api-worldchain-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -2665,8 +2682,8 @@
     },
     {
       "assetId": "susds-sky",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "W1R02 all-deployment transfer review",
+      "reviewedAt": "2026-10-09",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane11Sky)",
       "deployments": [
         {
           "chainId": "ethereum",
@@ -2733,6 +2750,27 @@
             {
               "label": "Pinned deployment RPC",
               "url": "https://arbitrum-one-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "unichain",
+          "contractOrTokenId": "0xa06b10db9f390990364a3984c04fadf1c13691b5",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "At Unichain block 60518930, hash 0xbf80e4f4bcaf5b5d4a2dcfa878d63d6a11365675faefe388d7e9253c77d9e234, timestamp 2026-10-06T06:14:49Z, EIP-1967 implementation resolved to 0x15c2a564b987470fafcab0b036029532bd168e10; observed 2026-10-09T10:40:44.018Z. The verified implementation exposes ordinary holder transfer/transferFrom with invalid-address, balance and allowance checks, no transfer permissioning or freeze hook, and ward-gated _authorizeUpgrade/rely/deny. The holder-transfer path is currently unrestricted but restrictable through UUPS upgrades. This does not certify the full ward/execution inventory or negate inherited USDS freeze exposure.",
+          "sources": [
+            {
+              "label": "Exact verified ERC-1967 proxy and implementation identity",
+              "url": "https://unichain.blockscout.com/api/v2/smart-contracts/0xa06b10db9f390990364a3984c04fadf1c13691b5"
+            },
+            {
+              "label": "Exact verified Unichain SUsds implementation",
+              "url": "https://unichain.blockscout.com/api/v2/smart-contracts/0x15c2a564b987470fafcab0b036029532bd168e10"
+            },
+            {
+              "label": "Pinned Unichain implementation read",
+              "url": "https://api-unichain-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -5627,30 +5665,34 @@
     },
     {
       "assetId": "usdcx-movement",
-      "reviewedAt": "2026-07-22",
-      "reviewer": "GPT SOL-TRANSFER wave6",
+      "reviewedAt": "2026-10-09",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane15Securitize)",
       "deployments": [
         {
           "chainId": "movement",
           "contractOrTokenId": "0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At Movement block 74981963 and ledger version 174443182, the USDCx object stored a live TransferRef in usdcx::Management. The current pause affects mint and burn only, but package policy 1 permits compatible upgrades and the package owner is a live 4-of-6 multisig. That owner can upgrade the same module to use its stored TransferRef, which Aptos defines as capable of moving assets regardless of holder-store frozen status, so holder-transfer behavior is replaceable.",
+          "evidence": "Re-observed 2026-10-09T10:36:29Z at the unchanged Movement ledger pin 220370475 (block height 97379184): exact USDCx metadata 0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e stores a live TransferRef; Roles.admin and package ObjectCore.owner bind to 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1. Its MultisigAccount requires 3 signatures from 6 owners, replacing the older overlay 4-of-6 observation. PackageRegistry has compatible upgrade policy 1 and upgrade_number 0. The deployed module ABI exposes no holder-selective freeze entry point; live TransferRef plus compatible package replacement retains restrictable holder-transfer posture without asserting an active freeze or source-to-bytecode equivalence. Aptos documents TransferRef as able to freeze or bypass frozen stores. No material supply share, exclusive liability attestation, current supply or independent-human signer claim is authored.",
           "sources": [
             {
-              "label": "USDCx token resources at ledger 174443182",
-              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=174443182"
+              "label": "USDCx exact TransferRef/admin, ledger 220370475",
+              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=220370475"
             },
             {
-              "label": "USDCx package resources and upgrade policy",
-              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/resources?ledger_version=174443182"
+              "label": "USDCx exact compatible package owner/policy, ledger 220370475",
+              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/resources?ledger_version=220370475"
             },
             {
-              "label": "Deployed USDCx module",
-              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=174443182"
+              "label": "USDCx exact 3-of-6 admin, ledger 220370475",
+              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1/resources?ledger_version=220370475"
             },
             {
-              "label": "Aptos TransferRef semantics",
+              "label": "USDCx deployed ABI, ledger 220370475",
+              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=220370475"
+            },
+            {
+              "label": "Aptos TransferRef capabilities",
               "url": "https://aptos.dev/build/smart-contracts/fungible-asset"
             }
           ]
@@ -9969,8 +10011,8 @@
     },
     {
       "assetId": "xgld-unitas",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "W1R69 exact verified source review",
+      "reviewedAt": "2026-10-09",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane43Unitas)",
       "deployments": [
         {
           "chainId": "bsc",
@@ -10003,6 +10045,40 @@
             {
               "label": "Issuer exact deployment census and primary-access distinction",
               "url": "https://docs.unitas.so/overview/xgld.md"
+            }
+          ]
+        },
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Current exact BSC XGLDToken/OFT/ERC20 source has ordinary holder transfer/transferFrom with no holder whitelist, pause, seizure or overridden transfer update. Retained 2026-10-05 finalized ethereum block 26125488 establishes whole-runtime equality, hex-text SHA256 877e88dcdf877380ae73ce8656f03b89b0c3ae5b2246eaf3e295dca22e8495b7, to the exact-match BSC runtime. This source-bound review applies that immutable code to the previously omitted deployment; it does not refresh the original block observation, infer economic supply share or establish bridge administrator topology. Privileged burn burns msg.sender balance; upstream XAUt freeze exposure and primary mint/redemption whitelisting are separate.",
+          "sources": [
+            {
+              "label": "Current exact-match XGLDToken and inherited ERC20 source",
+              "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution"
+            },
+            {
+              "label": "Retained October 5 finalized runtime-equality pin at block 26125488",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "mantle",
+          "contractOrTokenId": "0x385c279445581a186a4182a5503094ebb652ec71",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Current exact BSC XGLDToken/OFT/ERC20 source has ordinary holder transfer/transferFrom with no holder whitelist, pause, seizure or overridden transfer update. Retained 2026-10-05 finalized mantle block 101532003 establishes whole-runtime equality, hex-text SHA256 877e88dcdf877380ae73ce8656f03b89b0c3ae5b2246eaf3e295dca22e8495b7, to the exact-match BSC runtime. This source-bound review applies that immutable code to the previously omitted deployment; it does not refresh the original block observation, infer economic supply share or establish bridge administrator topology. Privileged burn burns msg.sender balance; upstream XAUt freeze exposure and primary mint/redemption whitelisting are separate.",
+          "sources": [
+            {
+              "label": "Current exact-match XGLDToken and inherited ERC20 source",
+              "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution"
+            },
+            {
+              "label": "Retained October 5 finalized runtime-equality pin at block 101532003",
+              "url": "https://rpc.mantle.xyz"
             }
           ]
         }

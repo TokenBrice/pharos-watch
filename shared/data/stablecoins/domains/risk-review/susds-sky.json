@@ -74,11 +74,23 @@
       {
         "label": "Arbitrum public RPC control reads",
         "url": "https://arbitrum-one-rpc.publicnode.com"
+      },
+      {
+        "label": "Unichain sUSDS verified ERC-1967 proxy and implementation identity",
+        "url": "https://unichain.blockscout.com/api/v2/smart-contracts/0xa06b10db9f390990364a3984c04fadf1c13691b5"
+      },
+      {
+        "label": "Unichain sUSDS verified SUsds transfer and upgrade implementation",
+        "url": "https://unichain.blockscout.com/api/v2/smart-contracts/0x15c2a564b987470fafcab0b036029532bd168e10"
+      },
+      {
+        "label": "Pinned Unichain implementation read at block 60518930",
+        "url": "https://api-unichain-mainnet.n.dwellir.com"
       }
     ],
-    "evidence": "sUSDS is structurally linked to usds-sky by variantOf and mintAuthority.inheritedFrom. Pinned reads on 2026-10-01 resolved the tracked proxies to their previously reviewed implementations: Ethereum block 26095796 to 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0; Base block 52024108 to 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8; Optimism block 157619394 to 0x6f0888dda6a5e35451d5be0fabb20171715788b3; Arbitrum block 510584105 to 0x5aee6b37d6e31860804575aee3e2f368a0a428e7. Each correct EIP-1967 admin slot was zero. The re-fetched verified implementations expose ordinary holder transfers and ward-gated UUPS upgrades, with no current blacklist, pause, seizure, or holder-freeze function. Finalized Solana USDS mint observations at slots 452212936 and 452212938 both returned active freezeAuthority AYPtjx4Hc8us1ikULUedkmZ3wtiD6tmL7gK3qe4V3oHt. The inherited freeze disposition remains adverse; local upgrade-driven transfer restrictability is retained.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA06sUSDS)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "All five tracked sUSDS deployments have reviewed local transfer posture. The existing Ethereum, Base, Optimism and Arbitrum implementation reviews identify ordinary holder transfers and ward-gated UUPS upgrades, with no current holder blacklist, pause or transfer whitelist. The newly covered Unichain proxy 0xa06b10db9f390990364a3984c04fadf1c13691b5 resolved at block 60518930 (hash 0xbf80e4f4bcaf5b5d4a2dcfa878d63d6a11365675faefe388d7e9253c77d9e234, timestamp 2026-10-06T06:14:49Z) to verified SUsds implementation 0x15c2a564b987470fafcab0b036029532bd168e10. Its transfer and transferFrom enforce invalid-address, balance and allowance checks only; _authorizeUpgrade, rely and deny are ward-gated. Thus local holder transfers are presently unrestricted but every tracked proxy is restrictable by upgrade authority, not immutable permissionless. The pinned Unichain observation was made 2026-10-09T10:40:44.018Z; the explorer independently reports the same implementation. No complete Unichain ward/controller closure is asserted. Mint/burn and bridge authority are separate economic controls. Inherited upstream USDS and reserve-side freeze exposure remains carried through variantOf and mintAuthority.inheritedFrom; this supplemental local-transfer review does not erase that inherited exposure.",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane11Sky)",
+    "reviewedAt": "2026-10-09"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

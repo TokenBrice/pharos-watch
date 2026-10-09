@@ -55,16 +55,20 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane21Finchain)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "dTRINITY sdUSD documentation",
         "url": "https://docs.dtrinity.org/protocol-components/sdusd"
+      },
+      {
+        "label": "dTRINITY dLEND lending and risk-management documentation",
+        "url": "https://docs.dtrinity.org/protocol-components/dlend"
       }
     ],
-    "uncertainty": "The protocol identifies on-chain dSTAKE and dLEND contracts but does not establish legal segregation, bankruptcy remoteness, or rehypothecation treatment for dUSD supplied to lending markets."
+    "uncertainty": "Capital reuse reviewed at 2026-10-09T10:39:47Z: dSTAKE supplies its dUSD to dLEND's shared pool for borrowers, exposing sdUSD holders to borrower credit, utilization and bad-debt risk. The documented restriction on rehypothecating borrower-posted collateral does not prohibit lending the vault's supplied dUSD. Legal segregation and bankruptcy remoteness remain unknown; those safeguards were not re-reviewed or upgraded. This standing strategy disclosure is not a current whole-allocation inventory, leverage bound or executable unstaking measurement."
   }
 }

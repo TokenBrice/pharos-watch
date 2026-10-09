@@ -73,7 +73,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USDp backing is held on four Parallelizer chains; the official implementation also documents a LayerZero Bridging Module across 24 chains. Token authority() and role-110 gates do not by themselves prove absence of bridge controls. Existing native-issuance route rows require a deployment-scoped bridge-minter and transfer-rail census before their classification can be reaffirmed.",
+    "summary": "USDp backing is held on four Parallelizer chains; the issuer documents a DAO-controlled LayerZero OFT Bridging Module across 24 chains, with required LayerZero Labs and Nethermind DVNs plus one of Horizen or Canary. Token authority() and role-110 gates do not by themselves prove absence of bridge controls. Existing native-issuance route rows require a deployment-scoped bridge-minter and transfer-rail census before their classification can be reaffirmed; the historical issuer-native tier is not a verified classification of the separate LayerZero rail.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Codex mint/bridge boundary migration (2026-08-16)",
     "confidence": "verified",
@@ -89,6 +89,14 @@
       {
         "label": "Parallel app",
         "url": "https://app.parallel.best/"
+      },
+      {
+        "label": "Parallel LayerZero OFT bridging module and DAO controls",
+        "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/bridging-module"
+      },
+      {
+        "label": "Parallel published October 2026 bridge parameters and DVN roster",
+        "url": "https://docs.parallel.best/products/parallel-v3/fees"
       }
     ],
     "routes": [

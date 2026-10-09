@@ -245,10 +245,10 @@
         },
         {
           "controlRef": "steakUSDG vault owner",
-          "question": "What verified implementation and complete internal authorization census bind the parameter-only supervisor 0xca50d23f1c18c1dfaff5d3cae3aa4b9dc5c8db73? At Robinhood block 78953544 its deployed runtime is not identical to the verified Ethereum VaultV2Supervisor reference. The exact immutable share core has no upgrade entrypoint, and this supervisor cannot expand native minting; this is a parameter-controller identity gap, not an unidentified native mint or upgrade path.",
+          "question": "What verified implementation and complete internal authorization census bind the parameter-only supervisor 0xca50d23f1c18c1dfaff5d3cae3aa4b9dc5c8db73? At Robinhood block 78953544 its deployed runtime is not identical to the verified Ethereum VaultV2Supervisor reference. The exact immutable share core has no upgrade entrypoint, and this supervisor cannot expand native minting. On 2026-10-09T10:35:28Z, the issuer's Supervisor v2 deployment table and source-repository README still list only Ethereum, Base and Arbitrum, without a Robinhood deployment/source binding or exact authorization census. Generic high-security multisig and default Aragon-Guardian descriptions do not establish this controller's execution closure.",
           "subject": "execution-scope",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol mint-authority calibration v2 (Refine12)",
+          "reviewedAt": "2026-10-09",
+          "reviewer": "Sol curation campaign 2026-10-09 (Lane23Steakhouse)",
           "sources": [
             {
               "label": "Robinhood RPC: eth_getCode supervisor at block 78953544",
@@ -265,6 +265,14 @@
             {
               "label": "Exact immutable Robinhood VaultV2 source",
               "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+            },
+            {
+              "label": "Supervisor v2 issuer deployment table and immediate operations, accessed 2026-10-09T10:35:28Z",
+              "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
+            },
+            {
+              "label": "Issuer source repository README deployment inventory, accessed 2026-10-09T10:35:28Z",
+              "url": "https://raw.githubusercontent.com/Steakhouse-Financial/vault-v2-supervisor/main/README.md"
             }
           ]
         }

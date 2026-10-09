@@ -2313,6 +2313,14 @@
       ],
       "sources": [
         {
+          "label": "Lane07Spiko source-availability review 2026-10-09T10:32:51Z: verified Minter source (historical execution pins unchanged)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+        },
+        {
+          "label": "Lane07Spiko source-availability review 2026-10-09T10:32:51Z: pinned Solana minter and mainnet authority table (not a complete execution certificate)",
+          "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"
+        },
+        {
           "label": "Spiko smart contracts (tech blog)",
           "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
         },

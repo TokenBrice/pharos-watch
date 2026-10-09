@@ -13,7 +13,7 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC-denominated idle balances and lender positions in KPK-curated Morpho markets. Borrower collateral, valuation and market liquidity vary; the share does not represent cash held solely at the parent issuer.",
-  "pegMechanism": "ERC-4626 deposits exchange USDC for NAV-bearing shares. Borrower interest and configured fee-share accrual change assets per share; realized lending losses can reduce NAV. Withdraw/redeem burns shares for idle USDC and liquidity from the configured adapter; force-deallocation is separate and cannot create liquidity in fully borrowed markets.",
+  "pegMechanism": "ERC-4626 deposits exchange USDC for NAV-bearing shares. Borrower interest and configured fee-share accrual change assets per share; realized lending losses can reduce NAV. Withdraw/redeem burns shares for idle USDC and liquidity from the configured adapter; force-deallocation is separate and cannot create liquidity in fully borrowed markets. VaultV2 deliberately returns zero from maxWithdraw and maxRedeem as conservative underestimates, not measurements of available exit liquidity.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {

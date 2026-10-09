@@ -10,7 +10,7 @@
     "rwa": true
   },
   "collateral": "The issuer states that each GGBR represents 1/1000th of a troy ounce and that the GGBR Trust holds 1,000,000 troy ounces of in-situ Happy 2 gold in Pinal County, Arizona for token-holder beneficiaries. It claims NI 43-101 / S-K 1300 verification and roughly 40:1 coverage against 25,000,000 tokens; the underlying dated geological report, trust deed and title/lien records were not obtained from the reviewed public pages.",
-  "pegMechanism": "Issuer-targeted gold spot exposure at 1/1000th of a troy ounce per GGBR, supported by advertised oracle price feeds, managed liquidity and arbitrage, with physical gold redemption advertised through regulated dealers. GGBR minting is issuer-controlled through the GoldfishTokenFactory; the deployed factory's gold-reserve verification and allocation checks are commented out, so its mint path does not enforce those reserve checks.",
+  "pegMechanism": "Issuer-targeted gold spot exposure at 1/1000th of a troy ounce per GGBR, supported by advertised oracle price feeds, managed liquidity and arbitrage. The redemption app advertises physical gold with a 13,500 GGBR minimum, 3% fee, KYC, and 5-7 business days of processing; shipping and insurance may cost extra, and processing is not a final delivery or USD-cashout guarantee. GGBR minting is issuer-controlled through the GoldfishTokenFactory; the deployed factory's gold-reserve verification and allocation checks are commented out, so its mint path does not enforce those reserve checks.",
   "mechanismArchetype": "commodity-claim",
   "commodityOunces": 0.001,
   "detailProvider": "commodity",
@@ -30,6 +30,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/goldfishggbr"
+    },
+    {
+      "label": "Physical gold redemption terms",
+      "url": "https://app.goldfishgold.com/redemption"
     }
   ],
   "jurisdiction": {

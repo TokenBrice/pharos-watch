@@ -40,6 +40,8 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
   [
     {
       id: "wsrusd-reservoir",
+      reviewedAt: "2026-10-09",
+      holderEligibility: "any-holder" as const,
       executionModel: "rules-based-nav" as const,
       costModel: documentedVariableFee(
         "The deployed Savingcoin wsrUSD wrapper redeems directly into its immutable rUSD asset, then the PSM burns rUSD for USDC. Fresh identity and rounded-conversion reads quantify this branch; no static fee fallback is declared and the separate srUSD SavingModule fee is not charged on this route",
@@ -60,6 +62,8 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
         "rUSD, srUSD and wsrUSD all share PSM 0x4809010926aec940b550d34a46a52739f996d75d; the USDC inventory is one shared resource, never three additive buffers.",
         "When the PSM read is unavailable the adapter withholds telemetry entirely, and the route falls back to the reviewed 25 bps minimum USDC PSM balance documented by Reservoir",
         "Branch identity reviewed 2026-10-07: verified Savingcoin constructor and deployed code identify rUSD 0x09d4214c03d01f49544c0448dbe3a27f768f2b34 as the underlying; withdraw burns wsrUSD and mints rUSD. This is not an obligatory srUSD SavingModule redemption. Only fresh admitted branch reads may establish the current zero protocol fee; unavailable fee evidence remains unquantified.",
+        "Holder eligibility reviewed 2026-10-09T10:31:38Z by Sol curation campaign 2026-10-09 (Lane02Reservoir): Savingcoin withdraw/redeem has no holder allowlist or administrative role gate; the immutable rUSD output then enters PSM redeem, which is external whenNotPaused with no holder role gate. Any holder can invoke the native on-chain route with the necessary balance/allowance, subject to the current PSM pause and available USDC. The issuer product's non-U.S./non-sanctioned user restriction is retained as interface/legal context, not invented on-chain whitelisting.",
+        "Current savings documentation states wsrUSD carries no fees and has no lock-up; it conditions immediate redemptions on available PSM liquidity. Verified Savingcoin _withdraw burns shares and mints rUSD without the separate srUSD SavingModule fee. Preserve the existing formula/rounded-conversion fee model and current-state producer requirements: zero stated protocol fee is not zero rounding loss, gas, all-in same-notional cost, or an unconditional whole-position settlement guarantee.",
       ],
     },
     {
@@ -174,6 +178,19 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssets: ["wm-m0"],
     capacityModel: { kind: "reserve-sync-metadata", requiredOutputAssetKeys: ["wm-m0"] },
     costModel: documentedVariableFee("SwapFacility extension-to-extension unwrap/wrap contains no additional protocol deduction; exact wM rounding and gas require same-notional observation", "formula"),
+    v9RouteReviewTerms: {
+      settlementModel: "atomic",
+      settlementDelaySec: 0,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "cost"],
+      rationale:
+        "The reviewed SwapFacility _swapExtensions branch transfers USDR, unwraps it to M and wraps the observed M balance difference into wM in one transaction, without a separate protocol-fee deduction. Extension approval, permissioning, pause and lock checks can prevent execution. No current executable wM capacity, rounding receipt or complete all-in cost is supplied by native-M reserve telemetry.",
+      reviewedAt: "2026-10-09",
+      docs: [
+        sourceRef("RISE SwapFacility implementation, _swap and _swapExtensions", "https://explorer.risechain.com/api/v2/smart-contracts/0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e", ["route", "access", "fees", "settlement"]),
+        sourceRef("M0 Swap Facility documented conditions", "https://docs.m0.org/build/accessing-liquidity", ["route", "access", "settlement"]),
+      ],
+    },
     docs: [
       sourceRef("RISE SwapFacility implementation", "https://explorer.risechain.com/api/v2/smart-contracts/0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e", ["route", "access", "fees", "settlement"]),
       sourceRef("M0 liquidity routes", "https://docs.m0.org/build/accessing-liquidity", ["route", "access", "settlement"]),
@@ -669,6 +686,20 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssetType: "stable-basket",
     outputAssets: ["usdt-tether", "usdc-circle", "dai-makerdao"],
     accessModel: "whitelisted-onchain",
+    settlementModel: "queued",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+      rationale: "The native AegisMinting route records a pending redemption request, followed by a separate funds-manager approval and collateral payout. Atomic approval/payout does not establish a request-to-receipt settlement maximum.",
+      reviewedAt: "2026-10-09",
+      docs: [
+        sourceRef(
+          "Ethereum AegisMinting verified source: requestRedeem and approveRedeemRequest",
+          "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources",
+          ["route", "settlement"],
+        ),
+      ],
+    },
     capacityModel: { kind: "supply-ratio", ratio: 0.15, confidence: "heuristic" },
     costModel: undisclosedReviewedFee(
       "Aegis documents 1:1 minting and redemption for approved users, but does not publish a fixed redemption fee",
@@ -678,10 +709,16 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRefRouteCapacityAccess("Aegis liquidity", "https://docs.aegis.im/overview/liquidity"),
       sourceRef("Aegis FAQ", "https://docs.aegis.im/aegis-faq/how-can-i-get-my-earned-yusd", ["route"]),
       sourceRef("Aegis Accountable dashboard", "https://aegis.accountable.capital/", ["capacity"]),
+      sourceRef(
+        "Ethereum AegisMinting verified source: pending request, funds-manager approval and configurable redemption fee",
+        "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources",
+        ["route", "access", "fees", "settlement"],
+      ),
     ],
     notes: [
       "Direct mint and redemption are reserved for approved primary-market users, while most secondary users access YUSD via DEX liquidity or supported venues",
       "Because YUSD relies on a delta-neutral BTC hedge rather than a pure cash-equivalent reserve bucket, the reviewed route keeps a conservative 15% immediate-capacity bound instead of scoring against full supply",
+      "Ethereum AegisMinting locks YUSD in a pending request before separate funds-manager approval transfers the supported collateral output. The approval transaction is atomic, but elapsed request-to-payout settlement is unbounded by the reviewed source; configurable redeemFeeBP is not a fresh same-notional all-in cost observation",
     ],
   }),
   "usn-noon": defineStablecoinRedeemConfig({
@@ -998,21 +1035,36 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "wm-m0": defineStablecoinRedeemConfig({
     outputAssets: ["m-m0"],
-    capacityModel: { kind: "reserve-sync-metadata" },
-    reviewedAt: "2026-04-16",
+    capacityModel: {
+      kind: "reserve-sync-metadata",
+      requiredOutputAssetKeys: ["m-m0"],
+    },
+    reviewedAt: "2026-10-09",
     totalScoreCap: 70,
     costModel: fixedFee(
       0,
-      "wM docs describe wrap and unwrap as fee-free permissionless calls against the underlying M token",
+      "The reviewed Ethereum WrappedMToken unwrap transfers the nominal M principal to SwapFacility without a protocol deduction; SwapFacility conversions are documented without trading fees. Gas and earning-index rounding still need exact same-notional observation",
     ),
     docs: [
-      sourceRefRouteCapacityFees("M0 wM token", "https://www.m0.org/faq"),
+      sourceRef(
+        "Ethereum WrappedMToken verified implementation: onlySwapFacility and _unwrap",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x6d9db63afccf515f393d5e65be69d38bb3b29d13",
+        ["route", "access", "fees", "settlement"],
+      ),
+      sourceRef(
+        "M0 SwapFacility liquidity guide: conditional atomic conversions",
+        "https://docs.m0.org/build/accessing-liquidity",
+        ["route", "access", "fees", "settlement"],
+      ),
+      sourceRef("M0 deployment identities", "https://docs.m0.org/resources/addresses/m0-platform", ["route"]),
       sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
     ],
     notes: [
-      "Permissionless ERC-20 wrapper: wrap() deposits M and mints wM; unwrap() redeems 1:1 back to M with no fee or queue",
-      "Fresh live reserve metadata reads the current M token balance held by the wM contract as the directly unwrapable capacity bound.",
-      "Config-level cap reflects that the wM->M unwrap does not by itself return the holder to a liquid stablecoin; the downstream M redemption rail (institution-only M0 mint/burn) still gates actual par exit",
+      "Reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (Lane03M0): Ethereum wM wrap/unwrap entrypoints are callable only by SwapFacility. Users convert through the facility; _unwrap checks pause and the original caller's freeze state, burns the facility's wM and sends nominal M to the facility.",
+      "The reviewed implementation was previously identity-bound to Ethereum wM at block 26095800 in the October 1 risk review; this source review does not claim a fresh proxy/storage checkpoint or identical controls on every chain.",
+      "M0 documents approved-extension conversions as atomic, permissionless for end users and without trading fees. The configuration is conditional on the exact facility and extension remaining enabled, the caller being unfrozen, and the wrapper being unpaused.",
+      "Live M-balance metadata is a reserve-derived bound, not an exact holder execution certificate or same-notional unwind curve. It cannot prove current allowance, access, gas, rounding, settlement confidence or downstream USD realization.",
+      "Unwrapping returns M, not USDC or fiat. Current M0 Orchestration coverage is per liquidity source and requires an authenticated supported-assets/quote read; generic 1:1 or any-size statements do not establish an executable current exit quote.",
     ],
   }),
   "ftusd-flying-tulip": defineStablecoinRedeemConfig({
@@ -1128,6 +1180,15 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssets: ["usdc-circle"],
     capacityModel: { kind: "reserve-sync-metadata" },
     reviewedAt: "2026-07-09",
+    v9RouteReviewTerms: {
+      settlementModel: "atomic",
+      settlementDelaySec: 0,
+      reviewedAt: "2026-10-09",
+      docs: [
+        sourceRef("Polymarket pUSD holder unwrap requirements (reviewed 2026-10-09)", "https://docs.polymarket.com/concepts/pusd", ["route", "access", "settlement"]),
+        sourceRef("Verified immutable CollateralOfframp.unwrap source (reviewed 2026-10-09)", "https://polygon.blockscout.com/api/v2/smart-contracts/0x2957922eb93258b93368531d39facca3b4dc5854", ["route", "access", "settlement"]),
+      ],
+    },
     outputAssetType: "stable-basket",
     costModel: fixedFee(0, "1:1 wrap/unwrap via CollateralOnramp/Offramp; Polymarket documents no unwrap fee"),
     docs: [
@@ -1298,11 +1359,22 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         "https://etherscan.io/address/0x36857EF0B10A61A68d58C29eE256990fa9699722#readContract",
         ["settlement"],
       ),
+      sourceRef(
+        "Noon current liquidity: sUSN seven-day cooldown to USN",
+        "https://docs.noon.capital/2.-usdusn-and-usdsusn/liquidity.md",
+        ["route", "settlement"],
+      ),
+      sourceRef(
+        "Noon sUSN Staking Terms, Section 11 suspension powers",
+        "https://docs.noon.capital/7.-terms-and-policies/asset-terms-susn-staking-terms.md",
+        ["access", "settlement"],
+      ),
     ],
     notes: [
       "Exits run a holder-initiated request/claim rail with no operator step: a withdraw moves USN to the WithdrawalHandler with a timestamp in the same transaction, and claimWithdrawal pays after the handler's on-chain withdrawPeriod (604,800 seconds today, live-read each run by the redemption observer).",
       "withdrawPeriod is changeable only through the 48-hour GenericTimelock that admins the handler, but the value is unbounded and a change applies retroactively to requests already in flight; ten whitelisted addresses keep a one-transaction instant path.",
       "Capacity is the vault's measured idle USN read on-chain each run (100% of totalAssets as of the 2026-09-22 review), combined with the 7-day settlement bound; if the live snapshot is unavailable, the route is left unrated instead of using a prior model.",
+      "Noon's current liquidity documentation states a seven-day sUSN-to-USN cooldown. The July 31, 2026 staking terms, Section 11, separately permit a temporary freeze on all staking withdrawals and interest payments during a treasury Suspension Event. These documented terms do not establish current same-notional measuredUnwind capacity, a full USD-realization bound or an exact-complete route certificate.",
     ],
   }),
   "usdcx-movement": defineReviewedStablecoinRedeemConfig(REVIEWED_STABLECOIN_AUDIT_AT, {

@@ -174,6 +174,10 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x09e05ff6142f2f9de8b6b65855a1d56b6cfe4c58"
         },
         {
+          "label": "Public verified SubProxy authorization and delegatecall source; accessed 2026-10-09T10:38:41Z",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3300f198988e4c9c63f75df86de36421f06af8c4"
+        },
+        {
           "label": "Supplemental Ethereum control observation block 26124951",
           "url": "https://etherscan.io/block/26124951"
         }
@@ -183,7 +187,7 @@
       "reviewedAt": "2026-10-03",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Complete executable/storage-write closure of SubProxy delegatecall targets remains unestablished. Supplemental 2026-10-05 source/runtime and pinned Ethereum block 26124951 census narrow the known alternatives: StarGuard's only live event-derived ward is Pause Proxy, spellData is empty, and maxDelay=604800 is a deadline, not a minimum delay; ESM's verified source exposes denyProxy, not SubProxy.exec. Neither an empty current spell nor event-derived wards proves absence of historical unlogged SubProxy delegatecall writes. Aggregate review and incidentState=none are therefore not promoted; immutable wrapper-local D14 and binding Sky D29/D32 doctrine are unchanged."
+        "Complete executable/storage-write closure of SubProxy delegatecall targets remains unestablished. Supplemental 2026-10-05 source/runtime and pinned Ethereum block 26124951 census narrow the known alternatives: StarGuard's only live event-derived ward is Pause Proxy, spellData is empty, and maxDelay=604800 is a deadline, not a minimum delay; ESM's verified source exposes denyProxy, not SubProxy.exec. Neither an empty current spell nor event-derived wards proves absence of historical unlogged SubProxy delegatecall writes. Aggregate review and incidentState=none are therefore not promoted; immutable wrapper-local D14 and binding Sky D29/D32 doctrine are unchanged. Cause research by Sol curation campaign 2026-10-09 (Lane49Secured), observed 2026-10-09T10:38:41Z: the verified SubProxy source publicly exposes wards, rely, deny and exec with target.delegatecall(args). The missing executable/storage-write closure is public-but-uncurated control evidence (B), not issuer non-disclosure of local reconciliation or supervision. This source observation does not refresh historical onchain pins or establish a complete authority review."
       ],
       "scopedQuestions": [
         {

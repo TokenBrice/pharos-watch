@@ -31,6 +31,10 @@
       "url": "https://docs.hliquity.org/"
     },
     {
+      "label": "Redemption fee documentation (Lane07Spiko reviewed 2026-10-09T10:32:51Z)",
+      "url": "https://docs.hliquity.org/deep-dive/redemptions-and-hchf-price-stability"
+    },
+    {
       "label": "GitHub",
       "url": "https://github.com/SwisscoastAG/HLiquity"
     },

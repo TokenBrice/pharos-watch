@@ -10,7 +10,7 @@
     "rwa": true
   },
   "collateral": "LBMA Good Delivery physical gold bars allocated in LBMA-approved Brink's Global Services and ICBC Standard Bank vaults; each token represents one fine troy ounce; insured against theft and loss; bankruptcy-remote custody under Paxos Trust Company",
-  "pegMechanism": "Direct 1:1 redemption through Paxos Trust Company for physical gold bars or cash equivalent; monthly independent attestation by KPMG LLP under AICPA standards confirms full backing",
+  "pegMechanism": "Each PAXG represents one fine troy ounce of allocated London Good Delivery gold. Verified Paxos customers may convert to USD at a short-lived market quote or redeem allocated gold, with a minimum 430 PAXG per bar. Effective September 1, 2026, the public destruction-fee schedule charges rolling 30-day net redemptions marginally at 0.125%, 0.250%, 0.350% and 0.500%, plus 0.05% for in-kind gold conversion; delivery, bank charges and controlling private pricing supplements remain separate. Monthly independent KPMG examinations reconcile redemption assets and redeemable tokens.",
   "mechanismArchetype": "commodity-claim",
   "commodityOunces": 1,
   "detailProvider": "commodity",
@@ -59,6 +59,14 @@
     {
       "label": "Twitter",
       "url": "https://x.com/paxos"
+    },
+    {
+      "label": "PAX Gold destruction fees effective September 1, 2026",
+      "url": "https://support.paxos.com/articles/2899561282-pax-gold-fees"
+    },
+    {
+      "label": "PAX Gold redemption and fee terms",
+      "url": "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions"
     }
   ],
   "jurisdiction": {

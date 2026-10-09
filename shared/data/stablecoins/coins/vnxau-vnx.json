@@ -10,7 +10,7 @@
     "rwa": true
   },
   "collateral": "Physical gold reported in custody at Philoro in Liechtenstein; the latest AUP reconciles 13,100 tokens to 13,100 gross grams but does not validate gold quality, value, legal rights, or physical presence",
-  "pegMechanism": "Each VNXAU corresponds to one gram of allocated gold. The current issuer case study states that VNX Commodities AG does not provide purchase, sale, exchange, custody or trading services in relation to VNXAU; existing token rights and cancellation are governed by applicable contractual arrangements.",
+  "pegMechanism": "Each VNXAU corresponds to one gram of allocated gold. The legacy vnx.li platform suspended exchange operations on June 30, 2026, with remaining-balance withdrawals available only until July 31. VNX Commodities AG's current case study provides no purchase, sale, exchange, custody or trading service; existing token rights and cancellation remain contractual. VNX Global's separate proprietary exchange may offer fiat or other digital assets, but its terms make availability discretionary and resource-dependent, without proving resumption of the legacy rail or a physical-delivery obligation.",
   "mechanismArchetype": "commodity-claim",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -72,6 +72,18 @@
     {
       "label": "Docs",
       "url": "https://vnx.gitbook.io/vnx-platform/vnx-gold/executive-summary"
+    },
+    {
+      "label": "Current VNXAU Structure",
+      "url": "https://vnx.li/vnxau"
+    },
+    {
+      "label": "Legacy Platform Suspension",
+      "url": "https://vnx.li/blog"
+    },
+    {
+      "label": "VNX Global Terms",
+      "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf"
     }
   ],
   "jurisdiction": {

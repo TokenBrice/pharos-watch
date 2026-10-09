@@ -18,8 +18,8 @@
   "geckoId": "matrixdock-silver",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=54e9714e-c65f-4b0c-8bcf-c7869956dd20",
-    "provider": "Bureau Veritas (XAGm silver first entered the semi-annual Matrixdock audit programme with the July 2026 cycle — one XAGm audit to date, so no recurring cadence is claimed; certificate hosted on Matrixdock's GitBook, not matrixdock.com)",
+    "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/physical-silver-vault-audit",
+    "provider": "Bureau Veritas (XAGm silver first entered the semi-annual Matrixdock audit programme with the July 2026 cycle; the currently indexed certificate covers the June 30, 2026 inventory and does not reconcile token liabilities)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Singapore",
@@ -30,12 +30,12 @@
       "assuranceMethod": "audit",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "Sol curation pass 2026-10-01 (ValM03EUSD)",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane38Matrixdock); certificate SGMSG-26-00478 re-read at 2026-10-09T10:35:04Z, historical report dates preserved",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Bureau Veritas physical bullion inventory report",
-          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=54e9714e-c65f-4b0c-8bcf-c7869956dd20"
+          "label": "Bureau Veritas certificate SGMSG-26-00478, July 17, 2026 (June 30 physical silver inventory; assets-only)",
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Frlo39Pv6A1ZIVdLEROOh%2FMatrixdock%20Silver%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media"
         }
       ]
     }

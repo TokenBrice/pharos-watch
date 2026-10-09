@@ -2,46 +2,70 @@
   "id": "audd-novatti",
   "reserves": [
     {
-      "name": "AUD bank deposits",
-      "pct": 100,
+      "sourceKey": "audd-independent-assurance:audd:banking-circle",
+      "name": "AUD cash at Banking Circle (AUDC Reserve Account)",
+      "pct": 16.65989676362508,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Westpac Banking Corporation (AMAL Trustees bare trust) and Banking Circle",
+      "issuerOrObligor": "Banking Circle",
       "riskFactors": [
         "counterparty",
         "custody",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "audd-independent-assurance:audd:westpac",
+      "name": "AUD cash at Westpac under the AMAL Bare Trust",
+      "pct": 83.34010323637492,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Westpac Banking Corporation via AMAL Trustees Pty Ltd ATF AMAL Bare Trust",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
         "concentration"
       ],
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-09",
-    "reviewer": "PoR verification sweep 2026-09 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane50Tori)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "William Buck AUDD Agreed-Upon Procedures Report - August 2026",
-        "url": "https://www.audd.digital/wp-content/uploads/2026/09/AUDC-Agreed-upon-procedures-report-Aug26_.pdf"
+        "label": "William Buck AUDD Agreed-Upon Procedures Report - September 2026",
+        "url": "https://www.audd.digital/wp-content/uploads/2026/10/AUDC-Agreed-upon-procedures-report-Sep26_.pdf"
       },
       {
         "label": "AUDD transparency",
         "url": "https://www.audd.digital/transparency/"
       }
     ],
-    "rationale": "William Buck ASRS 4400 AUP as of 31 August 2026 11:59pm UTC (signed 2026-09-04, PDF read this pass; expressly no opinion, no independence requirement): AUD 11,256,449.87 at Westpac in the AMAL Trustees bare trust and AUD 288,159.90 at Banking Circle, totalling AUD 11,544,609.77 against 11,408,211.96 AUDD on-chain across eight networks (excess AUD 136,397.81), agreed without exception. 100% cash. The curated row aggregates both bank deposits; the AUP-verified institution split is 97.50% Westpac/AMAL bare trust and 2.50% Banking Circle. The live assurance adapter independently emits institution-specific, source-keyed rows at 97.503944% and 2.496056% from the same dated report; the aggregate curated row does not supply their slice identities. The report no longer discloses in1Bank; the January 2026 in1Bank deposit-return statement records the earlier custody move, and current reserves sit with Banking Circle and the AMAL trustee structure.",
-    "compositionBasis": "William Buck agreed-upon procedures report as of 31 August 2026",
-    "compositionAsOf": "2026-08-31",
+    "rationale": "William Buck ASRS 4400 report as of 30 September 2026 23:59 UTC, signed 5 October 2026: AUD 1,880,893.19 at Banking Circle and AUD 9,409,051.86 at Westpac under the AMAL bare trust, both expressly 100% cash, total AUD 11,289,945.05. Percentages derive without favourable rounding from those amounts and the complete reserve denominator. Page 4 states 11,159,088.49 AUDD across nine networks, including 10.00 on ARC, while the individual displayed chain amounts sum to 11,159,088.48; the one-cent reported-total difference is retained, not silently treated as exact equality. The procedures agree account statements and chain confirmations without exception, but expressly provide no assurance opinion and have no independence requirement. Exact institution source keys match the existing adapter; the report does not disclose deposit tenor or reserve-wide insolvency/rehypothecation protections.",
+    "compositionBasis": "William Buck September 2026 factual findings and complete cash reserve schedule, page 4",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The report identifies the complete cash reserve and account institutions; detailed deposit terms and deposit-insurance coverage are not disclosed.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "AUD bank deposits",
-        "pct": 100,
+        "reserveName": "AUD cash at Banking Circle (AUDC Reserve Account)",
+        "pct": 16.65989676362508,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Trustee-held and bank AUD cash are external fiat reserves, not tracked stablecoin dependencies."
+        "rationale": "AUD cash in a bank account is an external fiat reserve, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "AUD cash at Westpac under the AMAL Bare Trust",
+        "pct": 83.34010323637492,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Trustee-held AUD bank cash is an external fiat reserve, not a tracked stablecoin dependency."
       }
     ]
   },
@@ -50,12 +74,12 @@
       {
         "name": "Banking Circle",
         "role": "bank",
-        "sharePct": 2.5
+        "sharePct": 16.65989676362508
       },
       {
         "name": "Westpac Banking Corporation",
         "role": "bank",
-        "sharePct": 97.5,
+        "sharePct": 83.34010323637492,
         "jurisdiction": "Australia"
       },
       {
@@ -67,13 +91,13 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-09-09",
-    "reviewer": "PoR verification sweep 2026-09",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane50Tori)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "William Buck AUDD Agreed-Upon Procedures Report - August 2026",
-        "url": "https://www.audd.digital/wp-content/uploads/2026/09/AUDC-Agreed-upon-procedures-report-Aug26_.pdf"
+        "label": "William Buck AUDD Agreed-Upon Procedures Report - September 2026",
+        "url": "https://www.audd.digital/wp-content/uploads/2026/10/AUDC-Agreed-upon-procedures-report-Sep26_.pdf"
       }
     ],
     "uncertainty": "The Westpac reserve is held under an AMAL bare trust, while the report describes the Banking Circle balance as an AUDC Reserve Account. The source does not establish statutory bankruptcy remoteness for the complete reserve or disclose rehypothecation terms."

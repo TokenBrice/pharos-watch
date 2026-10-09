@@ -70,8 +70,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve re-verification",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane47Babelfish)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -85,8 +85,12 @@
       {
         "label": "GlobeNewswire Pleasing Golden launch release - 2025-10-29 (re-opened 2026-07-28)",
         "url": "https://www.globenewswire.com/news-release/2025/10/29/3176301/0/en/pleasing-international-launches-rwa-platform-pleasing-golden-introducing-tokenized-gold-pgold-and-synthetic-dollar-pusd.html"
+      },
+      {
+        "label": "Pleasing binding custody and insurance terms observed October 9, 2026",
+        "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md"
       }
     ],
-    "uncertainty": "Re-opened 2026-07-28: Terms still place vaulted metal with 'qualified custodians in Hong Kong' and say detailed custodian relationships 'are disclosed in the Transparency page,' but no public Transparency page or named vault/custodian list was found. How PGOLD works and the launch release restate institutional vault storage and Hong Kong redemption without naming providers. Segregation, bankruptcy remoteness, rehypothecation, insurance coverage, and current reserve evidence remain undisclosed."
+    "uncertainty": "Custody-scope correction observed 2026-10-09T10:36:33Z: section 8 of the governing Terms identifies only unspecified custodians/vault providers, says insurance may not cover all losses, and refers to a Transparency page for provider relationships. The readable product and legal documentation do not establish a complete named provider allocation or successor-custody terms. The current Reserve Report attachment was not independently readable in this review; that source-recovery limitation is not evidence of issuer silence. Unnamed qualified custodians do not establish an institutional-unregulated whole-book model; aggregate custodyModel is unknown. Existing historical composition, report dates and mechanism C classification dates are unchanged."
   }
 }

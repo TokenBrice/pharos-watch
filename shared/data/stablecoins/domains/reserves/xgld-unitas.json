@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine06 primary-source and Accountable review",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane43Unitas)",
     "confidence": "probable",
     "sources": [
       {
@@ -35,13 +35,21 @@
       {
         "label": "XGLD borrowing, vaults and OES strategy",
         "url": "https://docs.unitas.so/overview/xgld.md"
+      },
+      {
+        "label": "XGLD primary access, secondary-market and valuation guide",
+        "url": "https://docs.unitas.so/guides/how-to-buy-xgld.md"
+      },
+      {
+        "label": "Unitas published address index; Solana USDu scope",
+        "url": "https://docs.unitas.so/mainnet-program-and-address-index.md"
       }
     ],
-    "rationale": "100% denotes the complete disclosed strategy envelope, not measured XAUt or USDT net weights. XGLD Accountable dashboard reopened 2026-10-03 reports gross reserves USD 12,500,048.65: Binance USD 11,885,621.03 and BNB USD 614,427.62, against token-supply valuation USD 11,268,230.83 (ratio 1.109318). Its surplus is gross assets minus token liabilities, not debt-netted NAV. Binance is a reported venue, not proof of direct exchange possession because docs describe OES mirroring. Terms identify Unipay Labs Limited as platform operator under Singapore law but explicitly cover USDu/sUSDu, not an XGLD issuing entity.",
+    "rationale": "Classification-only research on 2026-10-09 retains the 2026-10-03 composition date and unmeasured 100% strategy envelope. The XGLD-specific Accountable response reports gross venue totals for Binance and Bnb_smartchain, without a token/position inventory or borrowed-USDT liability schedule. Neither venue label identifies an economic reserve class, exhaustive issuer/obligor census, contractual maturity maximum or reserve realization horizon. The primary XGLD page describes XAUt collateral, BYBIT borrowing and delta-neutral strategies; its seven-day holder cooldown does not establish liquidity of either reserve location. Published platform terms and the address index concern USDu/sUSDu and do not identify XGLD's immediate legal custodian. No live percentage, debt-netted NAV, financial-assurance credit or tracked-parent allocation is inferred.",
     "compositionBasis": "Issuer strategy and gross Accountable venue disclosure; borrowed debt not netted",
     "compositionAsOf": "2026-10-03",
     "scope": "full-composition",
-    "knownUnknownExposure": "Gross venue names are disclosed, but complete current positions, borrowed liabilities, immediate legal custodians, segregation and net weights are not; no 100% XAUt attribution or zero-debt solvency claim is authored.",
+    "knownUnknownExposure": "Both live Accountable location slices, Binance and Bnb_smartchain, lack exact economic-instrument inventories, complete obligor identities, contractual maturities and reserve realization terms in the XGLD-specific primary surfaces reviewed 2026-10-09. Gross location values cannot establish those facts. Borrowed liabilities, immediate legal custodians, segregation and net weights remain unestablished; the original compositionAsOf is retained.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

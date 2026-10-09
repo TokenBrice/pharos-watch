@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "ZAR cash and bank deposits at Standard Bank",
-      "pct": 43.4,
+      "pct": 42.70203797802517,
       "risk": "low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Standard Bank of South Africa Limited",
@@ -16,7 +16,7 @@
     },
     {
       "name": "ZAR unit-trust money-market funds at Sanlam",
-      "pct": 56.6,
+      "pct": 57.297962021974826,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "Sanlam Investment Management (Pty) Ltd; underlying fund constituents undisclosed",
@@ -30,8 +30,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane22Stoneyield)",
     "confidence": "verified",
     "sources": [
       {
@@ -39,30 +39,30 @@
         "url": "https://zaru.network/blog/zar-universal-white-paper"
       },
       {
-        "label": "Retrieved independent reserve report",
-        "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf"
+        "label": "Moore October 1 AUP report; August 31 Solana snapshot; accessed 2026-10-09T10:38:10Z",
+        "url": "https://framerusercontent.com/assets/Q3LUtjT3Rql8mWBWWS6RfU5c4.pdf"
       }
     ],
-    "rationale": "Historical July 31 book only: ZAR 23,314,336.68 bank deposits and 30,402,618.53 money-market funds total 53,716,955.21 against 52,946,200.1241 circulating ZARU. Percentages are rounded from those amounts and do not assert current weights. Moore obtained supporting documents directly from Standard Bank and Sanlam; segregation and lack of encumbrance primarily rely on management representations. No assurance opinion is expressed.",
-    "compositionBasis": "Retrieved independent report; historical snapshot and scope retained",
-    "compositionAsOf": "2026-07-31",
-    "scope": "full-composition",
-    "knownUnknownExposure": "Current allocations, fund look-through, maximum maturity, and enforceable insolvency priority remain undisclosed or unverified.",
-    "knownUnknownExposurePct": 56.6,
+    "rationale": "Historical August 31, 2026 14:00 UTC report scope only: ZAR 26,763,587.22 Standard Bank cash and deposits plus ZAR 35,911,611.64 Sanlam money-market funds equal ZAR 62,675,198.86. Percentages are derived without rounding from these reported amounts. Moore reconciled 61,576,130.774140 Solana ZARU at slot 443168748 with all associated token accounts and obtained asset support directly from the two custodians. This is an ISRS 4400 agreed-upon-procedures engagement, expressly without assurance. The report does not reconcile the current four-deployment liability book or supply current whole-token allocations. These selected historical slices grant no current whole-composition or financial-assurance claim.",
+    "compositionBasis": "Moore AUP report signed October 1, 2026; selected historical Solana-book asset categories, not current whole-token composition",
+    "compositionAsOf": "2026-08-31",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "Current whole-token allocations and reserve-to-liability scope across Solana, Ethereum, Base and Arc remain unestablished. The historical report does not disclose Sanlam fund constituents, hard maturity maxima or independently verified bankruptcy remoteness.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "ZAR cash and bank deposits at Standard Bank",
-        "pct": 43.4,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Off-chain fiat deposit or fund share, not a tracked stablecoin dependency."
+        "pct": 42.70203797802517,
+        "disposition": "insufficient-evidence",
+        "rationale": "The historical August 31 Standard Bank category is an identified off-chain fiat deposit, not a tracked stablecoin dependency. Its current whole-token weight is unestablished because the historical Solana-only report does not reconcile the current four-deployment reserve and liability book; no resolved current composition share is inferred."
       },
       {
         "reserveIndex": 1,
         "reserveName": "ZAR unit-trust money-market funds at Sanlam",
-        "pct": 56.6,
+        "pct": 57.297962021974826,
         "disposition": "insufficient-evidence",
-        "rationale": "The historical report identifies the off-chain Sanlam money-market fund balance, but does not disclose its underlying constituent exposures or maturity limits. The entire 56.6% fund slice remains unresolved for look-through classification; no tracked stablecoin dependency is inferred."
+        "rationale": "The August 31 historical report identifies Sanlam money-market funds but does not disclose constituents or hard maturity maxima. No tracked stablecoin link or current whole-book weight is inferred."
       }
     ]
   },

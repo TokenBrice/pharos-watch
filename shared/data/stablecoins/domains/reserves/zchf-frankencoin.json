@@ -274,9 +274,17 @@
       {
         "label": "Ethereum RPC: ysyBOLD asset() at block 26089449 (2026-09-30)",
         "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Switzerlend issuer LENDS share identity and governing-document links, accessed 2026-10-09",
+        "url": "https://shares.lend.ch/"
+      },
+      {
+        "label": "Switzerlend LENDS token shareholder agreement, sections 1.4 and 10, accessed 2026-10-09",
+        "url": "https://storage.googleapis.com/aktionariat/public/40880/100926f2-49f5-4958-ace3-ecaabeef4526/LENDS_TOKEN_Agreement.pdf"
       }
     ],
-    "rationale": "Historical weights retain the 2026-09-04 active collateral capture valued through Frankencoin's CHF price mapping. At Ethereum block 26089449, ysyBOLD asset() returned the tracked yBOLD contract 0x9f4330700a36b29952869fac9b33f45eedd8a3d8, corroborating Yearn's current vault record. The held ysyBOLD vault-share intermediary is now explicit while the canonical ybold-yearn collateral dependency and 0.1% historical share are retained. PAXG and XAUt remain exact tracked upstreams; other rows remain classified exogenous collateral.",
+    "rationale": "Historical weights retain the 2026-09-04 active collateral capture valued through Frankencoin's CHF price mapping. At Ethereum block 26089449, ysyBOLD asset() returned the tracked yBOLD contract 0x9f4330700a36b29952869fac9b33f45eedd8a3d8, corroborating Yearn's current vault record. The held ysyBOLD vault-share intermediary is explicit while the canonical ybold-yearn collateral dependency and 0.1% historical share are retained. PAXG and XAUt remain exact tracked upstreams; other rows remain classified exogenous collateral. Supplemental LENDS duration research by Sol curation campaign 2026-10-09 (Lane48Initia), observed 2026-10-09T10:31:48Z, found no contractual maximum redemption tenor: section 1.4 of the issuer-linked shareholder agreement imposes no issuer repurchase duty, and section 10's 31 December 2033 agreement term can renew or end with replacement shares rather than repayment. The document retains an unfilled SHA contract reference and an older source-contract address, so no current whole-exposure maturity-applicability proof is asserted. This supplemental research changes neither the 2026-09-30 composition review nor the 2026-09-04 weights.",
     "compositionBasis": "Retained 2026-09-04 Frankencoin collateral balances and prices; ysyBOLD-to-yBOLD identity refreshed by fixed-block asset() read on 2026-09-30",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",

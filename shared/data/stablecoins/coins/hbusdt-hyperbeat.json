@@ -40,7 +40,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://accountable.hyperbeat.org/",
-    "provider": "Accountable instance (dashboard backend returned persistent HTTP 503 across two consecutive days of checks 2026-08-07/08, port and sibling API paths unreachable, and archive.org has never captured rendered content - the claimed live proof-of-solvency feed is not retrievable, unlike every other verified Accountable deployment)",
+    "provider": "Accountable proof-of-solvency dashboard; the historical August 7-8, 2026 review recorded HTTP 503, while the October 9, 2026 source review could not resolve accountable.hyperbeat.org. No current full-allocation proof was retrieved; the issuer's solvency documentation alone does not establish current constituent weights.",
     "attestorTier": "undisclosed",
     "cadence": "undisclosed"
   },

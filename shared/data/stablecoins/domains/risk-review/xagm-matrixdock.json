@@ -7,6 +7,41 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "Matrixdock supplies the mint and redemption execution quote, including currency and redemption fees, and executes only within the customer's chosen slippage. XAGm's ozPerToken accounting adjusts silver weight for custody fees; it does not provide an independent execution-price authority.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-09",
+      "reviewer": "Sol curation campaign 2026-10-09 (Lane38Matrixdock)",
+      "rationale": "Issuer mint/redemption prices govern the direct silver claim. The documented process has no borrower collateral or liquidation branches; the published daily weight adjustment is separate from the issuer's execution quote.",
+      "sources": [
+        {
+          "label": "Matrixdock XAGm minting and redemption execution process",
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md"
+        },
+        {
+          "label": "Matrixdock XAGm weight and fee accounting",
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/token-design.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane38Matrixdock)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Matrixdock XAGm minting and redemption execution process",
+        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md"
+      },
+      {
+        "label": "Matrixdock XAGm weight and fee accounting",
+        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/token-design.md"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "XAGm has independent native issuer-liability deployments on Ethereum and Sui; those native mint controls remain in Mint Authority. Its active cross-chain transfer overlay is LayerZero V2: the Ethereum MTokenMessenger burns source XAGm and can mint destination XAGm, while the Sui messenger state exposes the XAGm MessengerCap and peer/admin capabilities. This is an external-validated-network bridge tier; unresolved DVN/executor, Sui peer-byte, and route-limit reads remain explicit.",

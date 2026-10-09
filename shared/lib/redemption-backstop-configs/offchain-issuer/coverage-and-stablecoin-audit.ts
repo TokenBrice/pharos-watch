@@ -33,9 +33,9 @@ function midasBusinessDayReview(businessDays: 6 | 10): RedemptionV9RouteReviewTe
     },
     reviewedAt: "2026-10-05",
     docs: businessDays === 6 ? [
-      sourceRef("Signed July 17, 2026 mHYPER final terms: 23:59 CET/CEST cutoff, one-day realisation and 15% gate", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media&token=b06233b0-229f-47ce-b622-127fb63f231f", ["settlement"]),
-      sourceRef("Midas 2026 base, conditions 8.3(c) and 12", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FqYMbXAF5ckgGOgrqYF9N%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=58c911b9-1ab7-495c-97ba-d379fe9c4e5e", ["settlement"]),
-    ] : [sourceRef("Midas governing 2025 base, Business Day and redemption/deferral clauses", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media&token=9bfe7105-c648-406b-b51c-b9c4431bc335", ["settlement"])],
+      sourceRef("Signed July 17, 2026 mHYPER final terms: 23:59 CET/CEST cutoff, one-day realisation and 15% gate", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media", ["settlement"]),
+      sourceRef("Midas 2026 base, conditions 8.3(c) and 12", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media", ["settlement"]),
+    ] : [sourceRef("Midas governing 2025 base, Business Day and redemption/deferral clauses", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media", ["settlement"])],
   };
 }
 function assertKnownTableKeys(
@@ -103,10 +103,11 @@ const MIDAS_LYT_FEE_DISCLOSURES: Partial<
     url: "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/",
   },
   "mhyper-midas": {
-    statement: "Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee",
-    feeBpsMax: 50,
-    label: "Midas mHYPER Final Terms",
-    url: "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/Rh0tXsofDB8UQWaklyuE/Midas_Final_Terms_mHYPER_2025.pdf",
+    statement:
+      "The signed July 17, 2026 mHYPER Final Terms specify Redemption Fees 0% for standard redemption; the separate 0.5% Instant Redemption Fee and up-to-50% deferred-price holdback do not establish standard-route all-in execution cost or funded capacity.",
+    feeBpsMax: 0,
+    label: "Midas mHYPER signed Final Terms (July 17, 2026; reviewed October 9, 2026)",
+    url: "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media",
   },
   "mmev-midas": {
     statement: "Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee",
@@ -169,6 +170,13 @@ const MIDAS_LYT_CONFIGS = defineConfigFamily(
     const docs = [
       sourceRefFull(`Midas ${ticker}`, productUrl),
       ...(feeDisclosure ? [sourceRef(feeDisclosure.label, feeDisclosure.url, ["fees"])] : []),
+      ...(id === "mhyper-midas" ? [
+        sourceRef(
+          "mHYPER signed July 17, 2026 terms: exact USDC output, standard fee and conditional redemption rules",
+          "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media",
+          ["route", "fees", "access", "settlement"],
+        ),
+      ] : []),
       ...midasLytBase.docs!,
     ];
     const termsGap = MIDAS_LYT_TERMS_GAPS[id];
@@ -177,6 +185,11 @@ const MIDAS_LYT_CONFIGS = defineConfigFamily(
       : null;
     return {
       ...midasLytBase,
+      ...(id === "mhyper-midas" ? {
+        outputAssetType: "stable-single" as const,
+        outputAssets: ["usdc-circle"],
+        reviewedAt: "2026-10-09",
+      } : {}),
       costModel: feeDisclosure
         ? feeDisclosure.feeBpsMax === 0
           ? fixedFee(0, feeDisclosure.statement)
@@ -584,8 +597,13 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       ]),
       sourceRef(
         "Midas mRe7YIELD Final Terms",
-        "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FYUqswmPoBMklqxjG6bwA%2FMidas_Final_Terms_mRE7YIELD_Update_2025.pdf?alt=media&token=d7c79079-7ed2-43a3-9eea-98250f51244a",
+        "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FYUqswmPoBMklqxjG6bwA%2FMidas_Final_Terms_mRE7YIELD_Update_2025.pdf?alt=media",
         ["fees"],
+      ),
+      sourceRef(
+        "Midas incorporated 2025 Base Prospectus, General Terms 5.3",
+        "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media",
+        ["route", "settlement"],
       ),
     ],
     notes: [

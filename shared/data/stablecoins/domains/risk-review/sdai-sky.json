@@ -62,11 +62,19 @@
       {
         "label": "OP Mainnet public RPC control reads",
         "url": "https://optimism-rpc.publicnode.com"
+      },
+      {
+        "label": "World Chain sDAI verified immutable OptimismMintableERC20 source",
+        "url": "https://worldscan.org/address/0x859dbe24b90c9f2f7742083d3cf59ca41f55be5d#code"
+      },
+      {
+        "label": "Pinned World Chain sDAI runtime read at block 35966146",
+        "url": "https://api-worldchain-mainnet.n.dwellir.com"
       }
     ],
-    "evidence": "The three tracked deployments were reviewed separately. Ethereum sDAI 0x83f20f44975d03b1b09e64809b757c47f942beea is a verified non-proxy SavingsDai wrapper: at block 25535318 asset() and dai() returned DAI 0x6b175474e89094c44da98b954eedeac495271d0f, pot() returned 0x197e90f9fad81970ba7976f33cbd77088e5d7cf7, daiJoin() returned 0x9759a6ac90977b93b58547b4a71c78317f391a28, and both EIP-1967 slots were zero. Its source has no owner, role, pause, blacklist, gate, or arbitrary-holder-burn method; transfer/transferFrom are ordinary balance-and-allowance paths, and withdraw/redeem burn another holder's shares only with that holder's allowance. A zero-share transfer simulation returned true. Base 0x99ac4484e8a1dbd6a185380b3a811913ac884d87 and OP Mainnet 0x2218a117083f5b482b0bb821d27056ba9c04b1d3 are source-matched immutable OptimismMintableERC20 representations. At Base block 48648113 and OP block 154243398, each reported BRIDGE 0x4200000000000000000000000000000000000010 and REMOTE_TOKEN as Ethereum sDAI. Their mint/burn functions are onlyBridge: direct zero-amount burns from that bridge succeed for an arbitrary from address, while a non-bridge caller reverts. The current verified Base v1.1.0 and OP v1.13.2 L2StandardBridge implementations pass msg.sender as the withdrawal burn address, so current withdrawal paths burn only the caller's representation; zero-share transfer and withdrawal simulations succeeded. The free Base and OP endpoints rejected later fixed-block simulations as archive-only, but verified/matched code and the pinned bridge/token reads remain sufficient. The 2026-07-21 supply observation places 99.9015773187% of sDAI economic supply on immutable Ethereum sDAI and only 0.0984226812% on the two peripheral bridge representations. No current material deployment exposes a holder blacklist, freeze, pause, seizure, or privileged burn path. sDAI retains upstream-only status through its tracked DAI parent rather than suppressing parent and reserve-side exposure with a direct override.",
-    "reviewer": "GPT SOL-BIND wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "All four tracked sDAI deployments have reviewed local transfer posture. The prior Ethereum SavingsDai review identifies immutable non-proxy code with ordinary transfer/transferFrom and no holder blacklist, pause, privileged arbitrary-holder burn or upgrade entrypoint. Base and Optimism remain immutable OptimismMintableERC20 representations whose local transfers inherit ordinary ERC20 checks; onlyBridge mint/burn authority is a distinct economic control. The newly covered World Chain sDAI 0x859dbe24b90c9f2f7742083d3cf59ca41f55be5d has exact-match verified OptimismMintableERC20 1.3.0 source on Worldscan. Its immutable REMOTE_TOKEN is canonical Ethereum sDAI and immutable BRIDGE is 0x4200000000000000000000000000000000000010, both embedded in the runtime. No token-level blacklist, pause, upgrade or holder-transfer permissioning is present; ERC20 transfer hooks are empty. Pinned eth_getCode at World Chain block 35966146 (hash 0xf294a8c1cd77abb22c920b18164a3c9e69cb0de25ceaa775a26785ac9e847924, timestamp 2026-10-06T06:25:31Z), observed 2026-10-09T10:40:50.894Z, returned direct runtime matching the explorer's deployed bytecode. The bridge alone can mint/burn, including an arbitrary from argument at the token interface; this review does not certify all bridge execution paths or current route supply shares. Historical three-deployment supply fractions are not used as current materiality evidence. sDAI retains upstream-only exposure through the DAI dependency and its backing rather than erasing parent exposure.",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane11Sky)",
+    "reviewedAt": "2026-10-09"
   },
   "oracleRisk": {
     "tier": "medianized-with-delay",

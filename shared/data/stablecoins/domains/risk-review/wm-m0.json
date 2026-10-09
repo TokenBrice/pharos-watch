@@ -18,7 +18,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-lock-mint",
-    "summary": "wM has one canonical Ethereum wrapper deployment; Arbitrum, Base, Plume, and Solana are bridge representations reached through M0 issuer-native burn/mint routes. Current Arbitrum and Base SpokePortal admins/operators, route paths, pause state, and upgrade implementations are structured below; Plume uses an owner-controlled Hyperlane Portal/Bridge with a separate pauser; Solana Portal message validation, Portal upgrade authority, and m_ext ProgramData upgrade authority are route-scoped separately from the local M-backed wrapper mint recorded in Mint Authority. The route tier remains issuer-native-lock-mint.",
+    "summary": "wM route evidence combines historical Ethereum, Arbitrum, Base, Plume and Solana observations with seven unresolved Portal V2 deployments. Current M0 documentation describes Ethereum hub lock/release, spoke M mint/burn, SwapFacility extension conversion and modular Wormhole, Hyperlane and LayerZero adapters. The existing pinned controls and seven unresolved route classifications are retained: current documentation does not complete their historical ingress, remote-governance execution, incident or runtime supply-attribution evidence. Documentation observed 2026-10-09T10:31:18Z by Sol curation campaign 2026-10-09 (Lane03M0); this does not refresh the original on-chain checkpoints or aggregate review date.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "verified",
@@ -40,6 +40,14 @@
       {
         "label": "M0 core bridging process",
         "url": "https://docs.m0.org/protocol/m-portals#core-bridging-process"
+      },
+      {
+        "label": "Portal V2 architecture, roles and ingress checks (observed 2026-10-09T10:31:18Z; Lane03M0)",
+        "url": "https://docs.m0.org/protocol/portal-v2"
+      },
+      {
+        "label": "Current M0 platform deployment identities (observed 2026-10-09T10:31:18Z; Lane03M0)",
+        "url": "https://docs.m0.org/resources/addresses/m0-platform"
       }
     ],
     "routes": [

@@ -8,7 +8,7 @@
     "governance": "centralized"
   },
   "collateral": "Bitcoin liquid staking/restaking derivatives and other approved BTC wrappers deposited into BIMA vaults; the Peg Stability Module can also hold approved stablecoins such as USDC, USDP, and GUSD for peg operations, though no PSM stablecoin balance is present in the reviewed composition (100% WBTC collateral wrapper).",
-  "pegMechanism": "Liquity-style overcollateralized vaults with a 150% minimum collateral ratio; USBD can be redeemed permissionlessly for $1 of BTC-denominated collateral from the lowest-ratio vaults with a fee of coreRate + 75 bps; a Peg Stability Module adds near-1:1 USDC/USDP/GUSD swaps",
+  "pegMechanism": "Liquity-style overcollateralized vaults with a 150% minimum collateral ratio; USBD can be redeemed permissionlessly for BTC-denominated collateral from the lowest-ratio vaults. The branch-specific fee is capped fee-floor plus a decaying base rate that increases with the redemption itself; the Peg Stability Module adds near-1:1 USDC/USDP/GUSD swaps.",
   "mechanismArchetype": "cdp",
   "llamaId": "253",
   "detailProvider": "defillama",
@@ -25,6 +25,10 @@
     {
       "label": "Docs",
       "url": "https://docs.bima.money/"
+    },
+    {
+      "label": "Redemption fee implementation (Sol curation campaign 2026-10-09, Lane38Matrixdock)",
+      "url": "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/contracts/core/TroveManager.sol"
     }
   ],
   "contracts": [

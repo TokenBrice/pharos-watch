@@ -26,7 +26,6 @@ import {
 const REVIEWED_QUEUE_REDEMPTION_AT = REVIEWED_FIRST_WAVE_AT;
 const REVIEWED_WRAPPER_QUEUE_AT = REVIEWED_WRAPPER_WAVE_AT;
 const REVIEWED_PHASE_4_COVERAGE_AT = "2026-05-10";
-const REVIEWED_CONFIG_ONLY_GAPS_AT = "2026-05-17";
 const REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT = "2026-07-19";
 
 function defineQueueRedeemConfig(overrides: Partial<RedemptionBackstopConfig>): RedemptionBackstopConfig { return { ...queueRedeemBase, ...overrides }; }
@@ -485,9 +484,13 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Downstream par-exit quality then depends on USDF's own USDT redemption route.",
     ],
   }),
-  "susd1plus-lorenzo": defineReviewedQueueRedeemConfig(REVIEWED_CONFIG_ONLY_GAPS_AT, {
+  "susd1plus-lorenzo": defineQueueRedeemConfig({
+    reviewedAt: "2026-10-09",
     settlementModel: "days",
     executionModel: "rules-based-nav",
+    outputAssetType: "stable-single",
+    outputAssets: ["usd1-world-liberty-financial"],
+    capacityModel: { kind: "unquantified" },
     costModel: fixedFee(
       0,
       "Lorenzo states it does not charge user deposit or withdrawal fees; yield is distributed net of protocol and execution service fees",
@@ -496,10 +499,12 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       sourceRefFull("Lorenzo USD1+ OTF launch", "https://medium.com/@lorenzoprotocol/usd1-mainnet-launch-72550abac2ed"),
       sourceRef("Lorenzo OTF app", "https://app.lorenzo-protocol.xyz/otf", ["route", "access", "settlement"]),
       sourceRef("Lorenzo website", "https://lorenzo-protocol.xyz/home", ["capacity"]),
+      sourceRef("Lorenzo sUSD1+ OTF Redemption Guide (March 27, 2026)", "https://lorenzo-protocol.ghost.io/susd1-otf-redemption-guide/", ["route", "access", "settlement", "fees"]),
     ],
     notes: [
-      "sUSD1+ holders submit withdrawal requests through the Lorenzo OTF flow; published terms describe weekly review cycles and typical 7-14 day settlement.",
-      "Executed redemptions automatically convert sUSD1+ into USD1 at processing-day NAV, so the route is modeled as queued eventual redeemability rather than an immediate stablecoin buffer.",
+      "The March 27, 2026 redemption guide permits requests at any time and describes bulk settlement in the next NAV cycle, normally 3-6 days. Large withdrawals or network congestion may extend processing; this is not a hard maximum or business-calendar settlement SLA.",
+      "Requested shares remain visible but unusable while pending and burn at settlement; holders receive USD1 at settlement-day Unit NAV. The request-screen USD1 amount is an estimate, not a fixed payout quote.",
+      "The guide discloses 35% management/performance fees separately from withdrawal fees and a non-exhaustive, mutable geographical exclusion list. No unrestricted access, committed full-supply capacity, or measured stress-notional unwind is inferred.",
     ],
   }),
   "susde-ethena": erc4626ReserveTelemetryQueueConfig({
@@ -726,12 +731,17 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["settlement"],
-      rationale: "FIFO redemptions processed within 48 hours do not establish an unconditional maximum to completed holder payout.",
-      reviewedAt: "2026-10-02",
+      rationale: "The USP page states processing within 48 hours, but governing Terms sections 4.5 and 5.3 permit delay for illiquidity, unavailability or loss of backing assets and at the issuer's sole discretion. They promise commercially reasonable efforts and say completion may take several business days. No unconditional completed-holder-payout maximum is established. Reviewed by Sol curation campaign 2026-10-09 (Lane47Babelfish) at 2026-10-09T10:36:33Z.",
+      reviewedAt: "2026-10-09",
       docs: [
         sourceRef(
           "Piku USP vault holder terms",
           "https://piku.co/app/detail/USP",
+          ["route", "settlement"],
+        ),
+        sourceRef(
+          "Piku governing Terms of Use, sections 4.5 and 5.3 (last updated June 2, 2026)",
+          "https://docs.piku.co/piku/terms-of-use.md",
           ["route", "settlement"],
         ),
       ],
@@ -770,7 +780,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     docs: [
       sourceRef(
         "Avant redeeming avAssets",
-        "https://docs.avantprotocol.com/overview/using-the-avant-protocol/redeeming-avassets",
+        "https://docs.avantprotocol.com/overview/using-avant-protocol/redeeming-avassets.md",
         ["route", "settlement", "fees", "capacity"],
       ),
       sourceRefRouteCapacity("Avant core tokens", "https://docs.avantprotocol.com/overview/core-tokens"),
@@ -780,19 +790,24 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["settlement"],
-      rationale: "The normal redemption window depends on liquidity and other conditions; it is not an unconditional seven-day maximum to completed USDC payout.",
-      reviewedAt: "2026-10-03",
+      rationale: "The redemption guide's seven-day waiting period depends on market liquidity and other conditions. Completion requires a separate action once redeemable; the guide and governing terms do not establish an unconditional maximum to completed USDC receipt.",
+      reviewedAt: "2026-10-09",
       docs: [
         sourceRef(
-          "Avant redeeming avAssets (reviewed 2026-10-03)",
-          "https://docs.avantprotocol.com/overview/using-avant-protocol/redeeming-avassets",
+          "Avant redeeming avAssets (reviewed 2026-10-09)",
+          "https://docs.avantprotocol.com/overview/using-avant-protocol/redeeming-avassets.md",
           ["route", "settlement"],
+        ),
+        sourceRef(
+          "Avant governing terms (reviewed 2026-10-09)",
+          "https://docs.avantprotocol.com/legal-and-risk/terms-of-use.md",
+          ["settlement"],
         ),
       ],
     },
     notes: [
-      "Avant docs describe redeeming avUSD back into USDC through an onchain request flow that usually completes within hours but can take up to 7 days depending on liquidity",
-      "The documented redemption window is conditional on liquidity and other conditions, not an independently proven maximum to completed same-notional output. V9 retains an explicit settlement gap.",
+      "Avant documents avUSD redemption into USDC through a request followed by completion from Active Redemptions once redeemable; its stated waiting period can take up to seven days depending on market liquidity and other conditions",
+      "The conditional waiting period is not an independently proven maximum to completed same-notional output. V9 retains an explicit settlement gap",
     ],
   }),
   "usdu-unitas": defineQueueRedeemConfig({
@@ -839,28 +854,29 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
   }),
   "usdat-saturn": defineQueueRedeemConfig({
     outputAssets: ["usdc-circle"],
-    accessModel: "whitelisted-onchain",
-    settlementModel: "same-day",
+    accessModel: "permissionless-onchain",
+    holderEligibility: "unknown",
+    settlementModel: "queued",
     capacityModel: { kind: "unquantified" },
     costModel: undisclosedReviewedFee(
-      "Current Saturn docs describe quoted USDat-to-USDC orders through a validated M0 route, with output and route cost shown before confirmation. No generic all-in fee schedule or completed same-notional USDC quote is admitted; wallet gas remains separate.",
+      "Saturn displays the USDat-to-USDC output and route cost before confirmation and rejects quotes above the greater of $3 or 10 bps. This interface acceptance guard excludes wallet gas and does not prove a completed same-notional all-in cost or funded solver capacity.",
     ),
-    reviewedAt: "2026-10-07",
+    reviewedAt: "2026-10-09",
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
-      reviewedAt: "2026-10-07",
-      rationale: "The canonical wrapper migrated to PYUSDx backing, which does not bind measured backing to the configured USDC holder exit. Current USDC orders require a validated route and may fill partially; no exact output-bound funded throughput, completion maximum or same-notional all-in cost is established.",
+      reviewedAt: "2026-10-09",
+      rationale: "The documented holder route does not require Saturn address whitelisting, but still depends on a validated M0 route, supported wallet and applicable eligibility restrictions. M0 OrderBook escrows USDat and approved solvers may fill orders partially. No completion maximum, funded same-notional USDC throughput or wallet-gas-inclusive cost bound is disclosed; the PYUSDx backing balance cannot substitute for these route facts.",
       docs: [
-        sourceRef("Saturn USDat mint and redeem (reviewed 2026-10-07)", "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview/mint-and-redeem.md", ["route", "access", "fees", "settlement"]),
+        sourceRef("Saturn USDat mint and redeem (reviewed 2026-10-09)", "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview/mint-and-redeem.md", ["route", "access", "fees", "settlement"]),
       ],
     },
     docs: [
-      sourceRef("Saturn USDat mint and redeem (reviewed 2026-10-07)", "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview/mint-and-redeem.md", ["route", "access", "fees", "settlement"]),
+      sourceRef("Saturn USDat mint and redeem (reviewed 2026-10-09)", "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview/mint-and-redeem.md", ["route", "access", "fees", "settlement"]),
     ],
     notes: [
-      "The reviewed USDC destination is retained conservatively with restricted access and applicable jurisdiction eligibility. Current docs describe validated M0 limit orders with approved solver fills, possibly partial; secondary-market Curve swaps are a separate exit.",
-      "The exact canonical wrapper now measures PYUSDx backing, not USDC holder throughput. The obsolete M0/Uniswap 50%-of-supply assumption is removed; fresh backing, bridged supply and same-id wrapper balances cannot restore capacity without an exact verified USDC holder route.",
+      "Primary minting and direct PYUSDx wrapping remain whitelisted flows. The separate Ethereum USDat-to-USDC holder route explicitly permits requests without Saturn address whitelisting; supported-wallet and jurisdiction eligibility are not an any-holder guarantee.",
+      "M0 OrderBook escrows submitted USDat, approved solvers pay USDC and partial fills are possible. Secondary-market Curve swaps remain a separate exit. The quoted route-cost guard excludes wallet gas and does not restore executable capacity or final settlement bounds.",
     ],
   }),
   "usdnr-nerona": defineQueueRedeemConfig({
@@ -891,12 +907,15 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     settlementModel: "days",
     capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: undisclosedReviewedFee(
-      "Hermetica documents KYC-gated USDH mint and redemption against a delta-neutral BTC position; public docs reviewed do not publish a fixed redemption fee",
+      "The documented approved-participant USDC/USDT redemption route has no published fixed or all-in same-notional fee bound. Generic platform fees may change. The deployed minting-otc-v1-1 source discloses configurable fee arithmetic for a BTC-address payout flow, not verified fee terms for this stablecoin payout rail.",
     ),
     reviewedAt: "2026-04-16",
     docs: [
       sourceRef("Hermetica", "https://hermetica.fi/", ["route"]),
       sourceRefRouteCapacityAccess("Hermetica documentation", "https://docs.hermetica.fi/"),
+      sourceRef("Hermetica approved-participant stablecoin redemptions", "https://docs.hermetica.fi/usdh/how-it-works/mint", ["route", "access"]),
+      sourceRef("Hermetica fee discretion, Terms of Service section 8.2", "https://docs.hermetica.fi/resources/legal/terms-of-service.md", ["fees"]),
+      sourceRef("Exact deployed Hermetica OTC source; BTC-address payout is a distinct flow", "https://api.hiro.so/v2/contracts/source/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/minting-otc-v1-1", ["fees"]),
     ],
     notes: [
       "Delta-neutral BTC strategy (spot long + short perpetual) on Stacks; KYC-gated mint/redeem via the Hermetica app",
@@ -987,12 +1006,12 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       ),
       docs: [
         sourceRefFull(
-          "Avant staking avAssets",
-          "https://docs.avantprotocol.com/overview/using-the-avant-protocol/staking-avtokens-avusd-avbtc",
+          "Avant staking for savAssets",
+          "https://docs.avantprotocol.com/overview/using-avant-protocol/staking-for-savassets.md",
         ),
         sourceRef(
           "Avant unstaking savAssets",
-          "https://docs.avantprotocol.com/overview/using-the-avant-protocol/unstaking-savassets",
+          "https://docs.avantprotocol.com/overview/using-avant-protocol/unstaking-savassets.md",
           ["settlement", "capacity"],
         ),
       ],
@@ -1001,13 +1020,13 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["settlement"],
-      rationale: "The one-day cooldown establishes unstaking eligibility, not a sourced maximum to completed avUSD receipt.",
-      reviewedAt: "2026-08-19",
+      rationale: "The issuer documents a 24-hour savUSD-to-avUSD cooldown followed by a separate Withdraw transaction. Additional unstaking resets the combined timer; no unconditional maximum to completed avUSD receipt is published.",
+      reviewedAt: "2026-10-09",
       docs: [
         sourceRef(
-          "Avant unstaking savAssets",
-          "https://docs.avantprotocol.com/overview/using-the-avant-protocol/unstaking-savassets",
-          ["route"],
+          "Avant unstaking savAssets (reviewed 2026-10-09)",
+          "https://docs.avantprotocol.com/overview/using-avant-protocol/unstaking-savassets.md",
+          ["route", "settlement"],
         ),
       ],
     },
@@ -1060,14 +1079,17 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
   "hbusdt-hyperbeat": defineReviewedQueueRedeemConfig(REVIEWED_YIELD_COVERAGE_WAVE_AT, {
     settlementModel: "days",
     executionModel: "rules-based-nav",
-    costModel: fixedFee(0, "Hyperbeat docs state classic redemption completes within two days with no fee"),
+    costModel: fixedFee(0, "The Hyperbeat Midas integration documents no fee for classic requests; its 48-hour processing description is not a current unconditional end-to-end settlement maximum"),
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["settlement"],
-      rationale: "Classic redemption processes withdrawals within two days; the source does not establish an unconditional two-day maximum to completed USDT receipt.",
-      reviewedAt: "2026-01-06",
+      rationale: "The older Midas integration states that classic requests are processed within 48 hours and assets are sent automatically upon processing. The current hbUSDT app instead displays an up-to-one-day withdrawal period and Hyperbeat Core infrastructure for the same token proxy. Hyperbeat's governing terms retain liquidity-related execution delays. These sources do not establish one unconditional current end-to-end maximum to completed USDT0 receipt or reconcile current app infrastructure with the older classic route; neither advertised period is authored as a final settlement bound.",
+      reviewedAt: "2026-10-09",
       docs: [
-        sourceRef("Hyperbeat USDT vault", "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault", ["route"]),
+        sourceRef("Hyperbeat USDT vault", "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault", ["route", "settlement"]),
+        sourceRef("Hyperbeat USDT Midas integration", "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt", ["route", "settlement"]),
+        sourceRef("Current Hyperbeat USDT app", "https://hyperbeat.org/dapp/vaults/usdt", ["route", "settlement"]),
+        sourceRef("Hyperbeat terms: liquidity-related delays", "https://hyperbeat.org/terms", ["settlement"]),
       ],
     },
     docs: [

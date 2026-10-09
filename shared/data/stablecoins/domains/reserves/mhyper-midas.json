@@ -13,8 +13,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol NR wave 2026-10-02 (NrMhyper)",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane08Midas)",
     "confidence": "verified",
     "sources": [
       {
@@ -34,7 +34,7 @@
         "url": "https://www.fordefi.com/customer-stories/how-midas-brings-tokenized-investment-opportunities-on-chain-with-fordefis-defi-native-custody-2ti85"
       },
       {
-        "label": "Midas current mHYPER protocol exposures, updated 2026-10-02T07:06:50.671Z",
+        "label": "Midas mHYPER protocol exposures, updated 2026-10-09T10:06:22.767Z; accessed October 9, 2026",
         "url": "https://api-prod.midas.app/api/transparency?token=mHYPER"
       },
       {
@@ -44,13 +44,17 @@
       {
         "label": "mHYPER immutable SAVE checkpoint, 2026-09-29",
         "url": "https://gateway.pinata.cloud/ipfs/QmQxfaGhtGrP4im4B8TYyPHBn2MkxZQMx8Ta8JeDsUVCSX"
+      },
+      {
+        "label": "mHYPER signed Final Terms dated July 17, 2026; delta-neutral mandate, leverage and claim scope",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media"
       }
     ],
-    "rationale": "mHYPER references a managed market-neutral portfolio. The current issuer API, updated 2026-10-02T07:06:50.671Z and matched to the 07:00 hourly snapshot, reports protocol assets of 32.9521918602 million USD, borrow liabilities of -1.4642030152 million USD and net equity of 31.4879888449 million USD. The 29 September immutable SAVE checkpoint separately reports protocol assets, borrow liabilities and reported token supply. These are current protocol-level observations, not a complete underlying asset, signed hedge or legal custody inventory. The historical compositionAsOf is deliberately unchanged; this review adds diagnostic provenance without refreshing the old curated composition or reducing its unknown exposure.",
+    "rationale": "Classification and disclosure scope re-reviewed October 9, 2026, without renewing the July 20 composition. The exact-product issuer API updated 2026-10-09T10:06:22.767Z reports assets of 31.5319457355 million USD, borrow liabilities of -0.0000181694 million USD and net equity of 31.5319275661 million USD. It has protocol-level aggregates but no main_positions inventory; cex_1, cex_2 and cex_3 remain anonymous. These are diagnostic totals, not a complete instrument, signed hedge, custody or all-liability inventory. The signed July 17, 2026 Final Terms establish the binding delta-neutral reference-portfolio mandate but not measured holdings or hedge compliance.",
     "compositionBasis": "Current Midas product and attestation disclosures; live NAV row identity from the Midas Chainlink NAV oracle adapter",
     "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "Source-maintenance check 2026-10-07: mHYPER updatedAt=2026-10-07T20:06:50.144Z contains protocol equity but no main_positions. Pendle 37.40%, Morpho 32.96% and anonymous CEX1/2/3 collectively 28.21% are diagnostic net-equity shares, not verified gross reserve weights or dependency links. Instrument identity, CEX operators, hedge legs, borrow offsets and token liabilities remain unresolved. Preserve the 7-day NAV cap; a candidate 3-day composition dashboard budget cannot clear missing identity and full census. A fresh API timestamp alone does not update the curated portfolio basis.",
+    "knownUnknownExposure": "October 9 disclosure review: protocol assets/equity and anonymous CEX1/2/3 balances do not identify complete economically valued reserve instruments, signed hedge legs, venue operators, custody allocations or every token liability. No main_positions are published for mHYPER. The July 17, 2026 signed terms cap gross leverage at 8.0x and require delta neutrality, but mandate limits are not observed allocation or reserve reconciliation. Preserve the July 20 compositionAsOf, 100% unknown exposure and existing NAV source-age limits; neither the current API timestamp nor this review renews composition.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

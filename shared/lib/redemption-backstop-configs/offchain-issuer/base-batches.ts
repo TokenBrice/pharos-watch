@@ -68,6 +68,11 @@ const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
       "fees",
       "access",
     ]),
+    sourceRef(
+      "cNGN Redeem Asset API (reviewed 2026-10-09 by Sol curation campaign, Lane24Naira)",
+      "https://docs.cngn.co/api-reference/redeem-asset.md",
+      ["route", "access"],
+    ),
   ],
   "eusd-telcoin": [
     sourceRefFull("Telcoin Digital Asset Bank terms", "https://bank.telco.in/terms-of-use"),

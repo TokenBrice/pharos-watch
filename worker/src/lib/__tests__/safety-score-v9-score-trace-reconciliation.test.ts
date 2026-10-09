@@ -139,7 +139,9 @@ describe("Safety Score V9 score-trace reconciliation", { timeout: 30_000 }, () =
   });
 
   it("binds oracle applicability aliases to existing scoped witnesses without a new gap", () => {
-    const assetIds = ["earnusd-lido", "fiusd-sygnum", "umint-ubs", "xgld-unitas"];
+    // UMINT's exact native NAV path now has a reviewed applicability scope; the
+    // remaining unresolved profiles must still reuse their existing witnesses.
+    const assetIds = ["earnusd-lido", "fiusd-sygnum", "xgld-unitas"];
     const pipeline = buildSafetyScoreV9Candidate({
       fixedInput: createUsdcFixedInput(CURRENT_CLOCK_SEC, assetIds),
       publishedAtSec: CURRENT_CLOCK_SEC + 10,
@@ -162,6 +164,46 @@ describe("Safety Score V9 score-trace reconciliation", { timeout: 30_000 }, () =
           resolveCauseGapId(pipeline.candidate, card, source) === gapId))).toBe(true);
       expectReasonAttributionReconciliation(card);
     }
+  });
+
+  it("admits UMINT's reviewed NAV applicability without resolving its undisclosed oracle profile", () => {
+    const assetId = "umint-ubs";
+    const pipeline = buildSafetyScoreV9Candidate({
+      fixedInput: createUsdcFixedInput(CURRENT_CLOCK_SEC, [assetId]),
+      publishedAtSec: CURRENT_CLOCK_SEC + 10,
+    });
+    const asset = pipeline.compiledFacts.assets.find((entry) => entry.assetId === assetId)!;
+    const oracle = asset.economicControlReview.oracle;
+    const gapId = `${assetId}:gap:economic-control:oracle`;
+    // Daily native-class NAV establishes applicability, not the private
+    // valuation controller, fallback or methodology retained as researched C.
+    expect(oracle.paths).toEqual([
+      expect.objectContaining({
+        id: "ethereum:0xc06036793272219179f846ef6bfc3b16e820df0b",
+        observationState: "known",
+        applicability: expect.objectContaining({ state: "required", gapId: null }),
+      }),
+    ]);
+    expect(oracle.status).toMatchObject({
+      observationState: "bounded-unknown",
+      applicability: { state: "required", gapId: null },
+      gapIds: [gapId],
+    });
+    expect(asset.gaps.find((gap) => gap.gapId === gapId)!.causeProof).toMatchObject({
+      cause: "C", assertion: "researched-nondisclosure",
+    });
+    const evaluated = pipeline.evaluatedSet.assets.find((entry) => entry.assetId === assetId)!;
+    const reasons = evaluated.scoreInput.pillars.control.reasons;
+    expect(reasons.some((reason) => reason.code === "unresolved-oracle-branch-applicability")).toBe(false);
+    expect(reasons.find((reason) => reason.code === "incomplete-oracle-liquidation-branch")).toMatchObject({
+      sourceGapId: gapId, causeGapIds: [gapId], cause: "C",
+    });
+    const card = pipeline.candidate.cards.find((entry) => entry.id === assetId)!;
+    const facts = [...iterateEvidenceResponsibilityFacts(card.scoreTrace.evidenceResponsibility)];
+    expect(facts.some(([, , ref, , , , refs]) =>
+      (ref === null ? refs : [ref]).some((source) =>
+        resolveCauseGapId(pipeline.candidate, card, source) === gapId))).toBe(true);
+    expectReasonAttributionReconciliation(card);
   });
 
   it("attributes deployment bridge materiality to factor gaps before aggregate review gaps", () => {

@@ -4,17 +4,17 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.bitso.com/juno"
+        "label": "MXNB whitepaper: issuer pause and blacklist roles, pages 5-6",
+        "url": "https://assets-prod.mxnb.mx/commons/whitepaper.pdf"
       },
       {
-        "label": "Website",
-        "url": "https://mxnb.mx/"
+        "label": "Successful Ethereum blacklist call and Blacklisted event, block 26128999",
+        "url": "https://etherscan.io/tx/0x6ce282329f6081399248e9cdebb8d00bfbb2c4ea0a0c3d849bb2ff8c10bd1e63"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "The issuer whitepaper documents a pauser that stops transfers, minting and burning and a blacklister that prevents transfers to or from selected accounts. Ethereum transaction 0x6ce282329f6081399248e9cdebb8d00bfbb2c4ea0a0c3d849bb2ff8c10bd1e63 succeeded at block 26128999 (2026-10-05T21:56:23Z): caller 0x27e2cef6a4b4634f96b40eda71357ba3d2eb0142 invoked blacklist(address) on the canonical MXNB proxy 0xf197ffc28c23e0309b5559e7a166f2c6164c80aa and emitted Blacklisted for 0x098b716b8aaf21512996dc57eb0615e2383e2f96. This proves exercised local transfer restriction, not a complete cross-chain blacklister census or independent controller custody.",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane50Tori)",
+    "reviewedAt": "2026-10-09"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

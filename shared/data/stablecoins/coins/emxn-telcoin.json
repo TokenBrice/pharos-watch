@@ -9,7 +9,7 @@
     "governance": "centralized"
   },
   "collateral": "Mexican-peso Digital Cash reserve backing managed by Telcoin for eMXN issued on Polygon",
-  "pegMechanism": "Issuer-managed Mexican-peso Digital Cash stablecoin used for payments and settlement in the Telcoin Wallet; Telcoin's Terms of Use effective 2026-06-30 (section XXIX) document a 1:1 redemption policy for verified Telcoin Account holders (0.15% fee, $2,000 per-transaction cap, 1-3 business days standard), but no eMXN-specific reserve-attestation report has been published",
+  "pegMechanism": "Issuer-managed Mexican-peso Digital Cash used for payments and settlement in the Telcoin Wallet. Telcoin's Terms of Use effective 2026-06-30, section XXIX, commit to commercially reasonable 1:1 redemption into the underlying reference currency for verified eligible account holders. The issuer fee is 0.15%, with additional bank and partner charges; section 24 uses a third-party FX data product at request time rather than publishing a same-notional USD payout quote. Standard processing is 1-3 business days, while large requests above $2,000 may take 3-5 business days or longer and redemptions remain subject to discretionary delays and limits. No eMXN-specific reserve-attestation report is linked on the reviewed Digital Cash page",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

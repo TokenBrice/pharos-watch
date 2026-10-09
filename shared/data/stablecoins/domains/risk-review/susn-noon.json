@@ -45,6 +45,10 @@
       {
         "label": "Hyperlane docs",
         "url": "https://docs.hyperlane.xyz/"
+      },
+      {
+        "label": "Noon current deployment registry; additional sUSN routes and deprecated Sophon, observed 2026-10-09T10:35:23Z by Sol curation campaign 2026-10-09 (Lane46Midas)",
+        "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
       }
     ],
     "routes": [

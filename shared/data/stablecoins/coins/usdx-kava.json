@@ -10,7 +10,7 @@
     "governance": "centralized-dependent"
   },
   "collateral": "Kava CDP collateral and protocol liquidity backing the legacy USDX debt token",
-  "pegMechanism": "Kava Mint overcollateralized debt positions issue USDX against crypto collateral, with liquidations and protocol parameters intended to defend the peg",
+  "pegMechanism": "Kava Mint overcollateralized debt positions issue USDX against crypto collateral. The documented $1 repayment credit applies to borrowers repaying Mint debt, not a general holder right to redeem USDX for one dollar of collateral; market prices may differ",
   "mechanismArchetype": "cdp",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
