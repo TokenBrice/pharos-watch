@@ -143,6 +143,45 @@ function sizeGuardRungBudget(
 }
 
 describe("stablecoins pricing metadata", () => {
+  it.each([false, true])("reports completed supply publication with bounded quality findings (quarantined=%s)", (quarantined) => {
+    const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset) => ({
+      id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
+      circulating: { peggedUSD: 1 },
+    }));
+    const result = buildStablecoinsSyncResult({
+      ...syncInput(assets),
+      supplyChainGuard: {
+        flagged: 25, repaired: quarantined ? 0 : 25,
+        quarantinedAssetIds: quarantined ? Array.from({ length: 25 }, (_, index) => `asset-${index}`) : [],
+        unavailableAssetIds: quarantined ? ["asset-0"] : [],
+        historyFetches: 8, stateReadFailed: false,
+      },
+    });
+    expect(result.status).toBe("ok");
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata.supplyChainGuard).toMatchObject({
+      flagged: 25, repaired: quarantined ? 0 : 25, historyFetches: 8,
+      quarantinedAssetCount: quarantined ? 25 : 0,
+      unavailableAssetCount: quarantined ? 1 : 0,
+    });
+    expect(metadata.supplyChainGuard.quarantinedAssetIds).toHaveLength(quarantined ? 20 : 0);
+    expect(metadata.supplyChainGuard.state).toBeUndefined();
+    expect(metadata.reason).toBeUndefined();
+    expect(metadata.quality).toEqual(quarantined ? {
+      reason: "supply-chain-dropout-quarantine", quarantinedAssetCount: 25, unavailableAssetCount: 1,
+    } : undefined);
+  });
+
+  it.each([Infinity, 1])("retains supply quality findings through metadata compaction (budget=%s)", (budget) => {
+    const { guard } = allMissingSizeGuardFixture();
+    const quality = {
+      reason: "supply-chain-dropout-quarantine", quarantinedAssetCount: 1, unavailableAssetCount: 1,
+    };
+    guard.metadata.quality = quality;
+    const metadata = JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, budget));
+    expect(metadata.quality).toEqual(quality);
+  });
+
   it.each(["kava-pricefeed", "mento-fpmm", "mento-broker", "protocol-redeem-cached-rate"])(
     "retains %s fallback observations in source health",
     (source) => {

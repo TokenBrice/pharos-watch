@@ -73,6 +73,50 @@ describe("SupplyMovesCard", () => {
     expect(peakLink.textContent).toContain("+202%");
   });
 
+  it.each(["current", "previous week"] as const)("skips coins with unavailable %s supply", (unavailable) => {
+    const coin = makeStablecoin({
+      id: "usdr-real",
+      symbol: "USDR",
+      currentSupply: 30_000_000,
+      previousWeekSupply: 20_000_000,
+    });
+    if (unavailable === "current") coin.circulating = {};
+    else coin.circulatingPrevWeek = {};
+    useStablecoinsMock.mockReturnValue({
+      data: {
+        peggedAssets: [
+          coin,
+          makeStablecoin({ id: "usdc-circle", symbol: "USDC", currentSupply: 12_000_000, previousWeekSupply: 10_000_000 }),
+        ],
+      },
+      isLoading: false,
+    });
+
+    render(<SupplyMovesCard />);
+
+    expect(screen.queryByRole("link", { name: /USDR/ })).toBeNull();
+    expect(screen.getByRole("link", { name: "USDC — peak 7-day supply mover: +20.0%" })).toBeTruthy();
+  });
+
+  it.each([
+    [10_000_000, 5_000_000, "+100%"],
+    [5_000_000, 10_000_000, "-50.0%"],
+    [0, 10_000_000, "-100%"],
+  ])("retains explicit supply moves when either side meets the floor: %s / %s", (currentSupply, previousWeekSupply, change) => {
+    useStablecoinsMock.mockReturnValue({
+      data: {
+        peggedAssets: [
+          makeStablecoin({ id: "usdr-real", symbol: "USDR", currentSupply, previousWeekSupply }),
+        ],
+      },
+      isLoading: false,
+    });
+
+    render(<SupplyMovesCard />);
+
+    expect(screen.getByRole("link", { name: `USDR — peak 7-day supply mover: ${change}` })).toBeTruthy();
+  });
+
   // USDai's reviewed protocol-internal burn happened at 2026-09-23T20:48:00Z.
   it.each([
     ["seven days after the burn", "2026-09-30T20:48:00Z", "USDC — peak 7-day supply mover: +20.0%"],

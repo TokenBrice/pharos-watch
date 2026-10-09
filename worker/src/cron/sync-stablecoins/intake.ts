@@ -28,6 +28,7 @@ import {
   reconcileTrackedSupplyGaps,
   type SupplyGapReconciliationResult,
 } from "./supply-gap-reconciliation";
+import { guardChainDropouts, loadChainDropoutState, type SupplyChainGuardResult } from "./chain-dropout-guard";
 import {
   hydrateGeckoIdAliases,
   loadPreviousStablecoinsById,
@@ -50,6 +51,7 @@ interface StablecoinsIntakeMainResult {
   previousCacheState: PreviousStablecoinsCacheState;
   cgData: CoinGeckoMcapData;
   supplyGapReconciliation: SupplyGapReconciliationResult;
+  supplyChainGuard: SupplyChainGuardResult;
   trackedCoverage: TrackedCoverageRestoreResult;
 }
 
@@ -528,6 +530,16 @@ export async function loadStablecoinsIntake(
     });
   }
 
+  const chainDropoutState = await loadChainDropoutState(input.db, input.signal);
+  const supplyChainGuard = await guardChainDropouts({
+    assets,
+    now: input.syncStartSec,
+    ...chainDropoutState,
+    skipAssetIds: new Set(supplyGapReconciliation.reconciledIds),
+    chainRpcs: input.chainRpcs,
+    signal: input.signal,
+  });
+
   return {
     kind: "main",
     assets,
@@ -539,6 +551,7 @@ export async function loadStablecoinsIntake(
     previousCacheState,
     cgData,
     supplyGapReconciliation,
+    supplyChainGuard,
     trackedCoverage,
   };
 }

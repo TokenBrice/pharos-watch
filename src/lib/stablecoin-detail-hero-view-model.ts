@@ -166,8 +166,8 @@ function resolveEffectivePegScore(isNavToken: boolean, pegScoreResult: PegSummar
   return isNavToken || pegScoreResult?.pegScore == null ? null : pegScoreResult.pegScore;
 }
 
-function buildSupplyTrend(nativeSupply: NativeSupplyCheckpoints | null): HeroSupplyTrendViewModel {
-  const current = nativeSupply?.current ?? null;
+function buildSupplyTrend(supply: number | null, nativeSupply: NativeSupplyCheckpoints | null): HeroSupplyTrendViewModel {
+  const current = supply ?? nativeSupply?.current ?? null;
   const safePrevWeek = posOrNull(nativeSupply?.prevWeek ?? null);
   const safePrevMonth = posOrNull(nativeSupply?.prevMonth ?? null);
   return {
@@ -327,7 +327,7 @@ export function buildStablecoinDetailHeroViewModel({
       supply,
       safePrevDay,
       prevDayTrendClass: getTrendClass(mcap !== null && safePrevDay !== null, mcap ?? 0, safePrevDay ?? 0),
-      supplyTrend: buildSupplyTrend(nativeSupply),
+      supplyTrend: buildSupplyTrend(supply, nativeSupply),
     },
     peg: { activeDepeg: pegScoreResult?.activeDepeg === true },
     tertiaryMetrics,

@@ -34,6 +34,7 @@ import {
 import { buildSyncMetadata, type CronResult, type PreviousStablecoinsCacheState } from "./shared";
 import { queueTrackedAdditionsNotice } from "./telegram-tracked-additions";
 import type { PeggedAsset } from "./enrich-prices";
+import { persistChainDropoutState, type SupplyChainGuardResult } from "./chain-dropout-guard";
 
 type MainMetadataInput = Omit<
   Parameters<typeof buildStablecoinsSyncResult>[0],
@@ -291,6 +292,7 @@ interface StablecoinsPostIntakePublicationBase {
   fxFallbackRates?: Record<string, number>;
   priceCacheEntries: PriceCacheWriteEntry[];
   providerDiagnostics: PricingProviderAttemptDiagnostic[];
+  supplyChainGuard?: SupplyChainGuardResult;
   returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
   abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
   policy: StablecoinsPublicationPathPolicy;
@@ -404,6 +406,10 @@ export async function runStablecoinsPostIntakePublication(
       syncStartSec: cacheResult.syncStartSec,
       upstreamFetchOk: input.metadata.path === "main",
     });
+  }
+
+  if (input.supplyChainGuard) {
+    await persistChainDropoutState(input.db, input.supplyChainGuard, input.syncStartSec, input.signal);
   }
 
   await reportStablecoinsStage(

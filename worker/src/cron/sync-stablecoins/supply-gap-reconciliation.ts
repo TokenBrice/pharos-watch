@@ -644,15 +644,16 @@ function applySingleMissingChainGap(
   return { reconciledCurrent: totals.current };
 }
 
-function getPegReferencePriceUsd(
-  candidate: SupplyGapCandidate,
+export function getPegReferencePriceUsd(
+  assetId: string,
+  pegKey: string,
   fxFallbackRates?: Record<string, number>,
 ): number | null {
-  const meta = ACTIVE_META_BY_ID.get(String(candidate.asset.id));
+  const meta = ACTIVE_META_BY_ID.get(assetId);
   if (meta?.flags.navToken || meta?.flags.yieldBearing) return null;
   if (meta?.flags.pegCurrency === "USD") return 1;
 
-  const rate = toPositiveFiniteNumber(fxFallbackRates?.[candidate.pegKey]);
+  const rate = toPositiveFiniteNumber(fxFallbackRates?.[pegKey]);
   return rate ?? null;
 }
 
@@ -666,7 +667,7 @@ async function applyCuratedOnChainSupplyGap(input: {
   const meta = ACTIVE_META_BY_ID.get(String(input.candidate.asset.id));
   if (!meta) return null;
 
-  const priceUsd = getPegReferencePriceUsd(input.candidate, input.fxFallbackRates);
+  const priceUsd = getPegReferencePriceUsd(String(input.candidate.asset.id), input.candidate.pegKey, input.fxFallbackRates);
   if (priceUsd == null) return null;
 
   const onChainMcap = await fetchCuratedAggregateOnChainMcap(

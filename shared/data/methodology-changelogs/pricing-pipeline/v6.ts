@@ -2,6 +2,24 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.45",
+    title: "Sticky chain-dropout guard for DefiLlama list supply",
+    date: "2026-10-09",
+    effectiveAt: 1791590400,
+    summary:
+      "A positive DefiLlama list row whose chain current collapses to zero, null or at most half of a persisted vetted per-chain baseline no longer publishes that collapse as supply. The chain is repaired from a reviewed issuer-native on-chain read or DefiLlama's per-chain daily chart, published as unavailable, or, when the deficit is material, the asset is quarantined until the collapse is corroborated.",
+    impact: [
+      "Trigger: on 2026-10-09 the DefiLlama list served zero current supply on about twenty chains while their previous-day values and DefiLlama's own per-chain daily charts stayed correct. Published supply fell about $9.6B; USDG $3.10B to $1.645B (X Layer 1,409M on-chain), USDC by $7.5B (Hyperliquid L1), and USDY, USDT, satUSD and others fell too. No existing lane fired: explicit zero was admitted as observed, CoinGecko gap-fill only covers absent chains, and history/on-chain repair only covers whole-asset zero",
+      "`CHAIN_DROPOUT_POLICY` flags a chain when its baseline is at least $1M and current is null or at most 0.5x baseline. The baseline is the persisted state (cache `sync-stablecoins:chain-dropout-state`), else a reviewed 2026-10-08 incident seed valid until 2026-11-09, else the payload's chain previous-day value. A flagged baseline is frozen, so a continuing zero that ages into previous-day zero stays flagged",
+      "A repaired chain replaces its current value and adds only the repaired-minus-list difference to the aggregate (`supplySource = defillama-chain-repair`). Repair comes from a reviewed issuer-native totalSupply read (USDG on X Layer and Ink) or a DefiLlama per-chain daily point at most 48h old above 0.5x baseline. Chart fetches are sequential, body-consumed, capped at eight per run and hourly per pair. An unrepaired chain publishes null, never zero",
+      "An unrepaired deficit of at least 2% of the asset quarantines it with `supplyRestored`: frozen vetted baselines are carried for at most the existing 7-day restore ceiling, then the asset publishes as unavailable. Elapsed time never accepts a collapse; only list recovery, on-chain corroboration or a dated reviewed release can. Immaterial dropouts keep the DefiLlama aggregate, publish the chain as null, and release once DefiLlama's daily chart records the lower level after first detection",
+      "Every guarded row carries `supplyChainGuard` provenance (status, per-chain baseline/source/resolution). Run metadata reports flagged, repaired, quarantined and unavailable counts. Daily `supply_history` skips quarantined rows without blocking coverage, and chain history defers chains with an unavailable contributor. DefiLlama remains the supply source; prices, consensus and the CoinGecko gap-fill band are unchanged",
+      "Activation is provisionally 2026-10-10 00:00 UTC (1791590400); re-date effectiveAt at release",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.44",
     title: "Price-only ticker admission and observed-flow weights",
     date: "2026-10-08",

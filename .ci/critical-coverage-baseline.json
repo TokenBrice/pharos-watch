@@ -101,6 +101,8 @@
     "worker/src/cron/sync-live-reserves.ts": 96.6,
     "worker/src/cron/sync-stablecoins.ts": 97.3,
     "worker/src/cron/sync-stablecoins/cache-publication.ts": 91.2,
+    "worker/src/cron/sync-stablecoins/chain-dropout-guard.ts": 94.1,
+    "worker/src/cron/sync-stablecoins/chain-dropout-seed.ts": 100,
     "worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts": 94.5,
     "worker/src/cron/sync-stablecoins/enrich-prices-coingecko-low-volume-pass.ts": 100,
     "worker/src/cron/sync-stablecoins/enrich-prices-defillama-pass.ts": 96.4,

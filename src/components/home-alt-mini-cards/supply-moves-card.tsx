@@ -11,7 +11,7 @@ import { useStablecoins } from "@/hooks/use-stablecoins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 import { resolveQueryViewState } from "@/lib/query-view-state";
-import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { hasReviewedProtocolInternalFlowSince } from "@shared/lib/reviewed-protocol-internal-flows";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { StablecoinData } from "@shared/types";
@@ -43,8 +43,9 @@ function computeSupplyMovers(coins: readonly StablecoinData[], nowSec: number): 
   for (const c of coins) {
     if (!ACTIVE_STABLECOIN_ID_SET.has(c.id)) continue;
     if (hasReviewedProtocolInternalFlowSince(c.id, internalFlowSinceSec)) continue;
-    const current = getCirculatingRaw(c);
-    const prev = getPrevWeekRaw(c);
+    const current = getCirculatingRawOrNull(c);
+    const prev = getPrevWeekRawOrNull(c);
+    if (current === null || prev === null) continue;
     if (current < MIN_TRACKED_MCAP_USD && prev < MIN_TRACKED_MCAP_USD) continue;
     if (prev <= 0) continue;
     const pctChange = ((current - prev) / prev) * 100;

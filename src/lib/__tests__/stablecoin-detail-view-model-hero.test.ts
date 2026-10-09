@@ -7,6 +7,28 @@ import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { buildDetailHero } from "./stablecoin-detail-view-model.test-support";
 
 describe("stablecoin detail hero view-model builder", () => {
+  it.each([
+    [900, 900, "text-red-700", "text-red-700"],
+    [0, 0, "text-red-700", "text-red-700"],
+    [null, 1_100, "text-green-700", "text-green-700"],
+  ] as const)("uses displayed supply %s before native current for token-basis trends", (supply, current, weekClass, monthClass) => {
+    const hero = buildDetailHero({
+      coin: TRACKED_META_BY_ID.get("usdc-circle")!,
+      supply,
+      nativeSupply: { current: 1_100, prevWeek: 1_000, prevMonth: 950 },
+    });
+
+    expect(hero.market.supply).toBe(supply);
+    expect(hero.market.supplyTrend).toMatchObject({
+      current,
+      safePrevWeek: 1_000,
+      safePrevMonth: 950,
+      hasPrevMonth: true,
+    });
+    expect(hero.market.supplyTrend.prevWeekTrendClass).toContain(weekClass);
+    expect(hero.market.supplyTrend.prevMonthTrendClass).toContain(monthClass);
+  });
+
   it("derives hero display metrics and signal rail from raw detail inputs", () => {
     const coin = TRACKED_META_BY_ID.get("usdc-circle");
     expect(coin).toBeDefined();
