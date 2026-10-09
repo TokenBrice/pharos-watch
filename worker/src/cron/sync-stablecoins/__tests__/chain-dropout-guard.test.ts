@@ -110,16 +110,47 @@ describe("chain dropout guard", () => {
     expect(Object.values(recovery.state.pairs).find((pair) => pair.chainId === "xlayer")).toMatchObject({ baselineUsd: 1_400_000_000, baselineObservedAt: NOW + 9 * DAY, quarantinedSince: null });
   });
 
-  it("independent native totalSupply corroborates a real collapse, accepts list zero and drops the quarantined baseline", async () => {
-    mocks.onchain.mockResolvedValue(0n);
+  it("publishes the native amount, not the disproven list zero, when native supply corroborates a low-but-positive collapse", async () => {
+    const contract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
+    mocks.onchain.mockResolvedValue(40_000_000n * 10n ** BigInt(contract.decimals!));
     const asset = usdg();
     asset.chainCirculating = { "X Layer": asset.chainCirculating!["X Layer"] };
+    const before = getCirculatingRawOrNull(asset)!;
     const result = await guardChainDropouts({ assets: [asset], now: NOW, state: { version: 1, pairs: {} } });
-    expect(result).toMatchObject({ flagged: 1, repaired: 0, quarantinedAssetIds: [], historyFetches: 0 });
-    expect(asset.chainCirculating!["X Layer"].current).toBe(0);
+    expect(asset.chainCirculating!["X Layer"].current).toBe(40_000_000);
+    expect(asset.supplyChainGuard?.chains.find((chain) => chain.chainId === "xlayer"))
+      .toMatchObject({ resolution: "onchain-total-supply", listCurrentUsd: 0, repairedCurrentUsd: 40_000_000 });
+    const xlayer = Object.values(result.state.pairs).find((pair) => pair.chainId === "xlayer")!;
+    expect(xlayer).toMatchObject({ baselineUsd: 40_000_000, quarantinedSince: null, releasedAt: NOW });
+    expect(asset.supplyChainGuard?.status).toBe("repaired");
     expect(asset.supplyRestored).toBeUndefined();
-    expect(result.state.pairs).toEqual({});
-    expect(mocks.chart).not.toHaveBeenCalled();
+    expect(asset.supplySource).toBe("defillama-chain-repair");
+    expect(getCirculatingRawOrNull(asset)).toBe(before + 40_000_000);
+  });
+
+  it("keeps a natively confirmed zero at zero across persist/reload when later native and chart reads fail", async () => {
+    mocks.onchain.mockResolvedValueOnce(0n);
+    const first = usdg();
+    first.chainCirculating = { "X Layer": first.chainCirculating!["X Layer"] };
+    const confirmed = await guardChainDropouts({ assets: [first], now: NOW, state: { version: 1, pairs: {} } });
+    expect(first.chainCirculating!["X Layer"].current).toBe(0);
+    expect(first.supplyRestored).toBeUndefined();
+    await persistChainDropoutState({} as D1Database, confirmed, NOW);
+    const saved = ChainDropoutStateSchema.parse(JSON.parse(mocks.setCache.mock.calls[0][2]));
+    expect(Object.values(saved.pairs)).toEqual([expect.objectContaining({ chainId: "xlayer", baselineUsd: 0, releasedAt: NOW })]);
+
+    mocks.getCache.mockResolvedValue({ value: JSON.stringify(saved), updatedAt: NOW });
+    const loaded = await loadChainDropoutState({} as D1Database);
+    mocks.onchain.mockRejectedValue(new Error("rpc down"));
+    mocks.chart.mockResolvedValue({ response: { ok: false, status: 503 }, body: "" });
+    const next = usdg();
+    next.chainCirculating = { "X Layer": next.chainCirculating!["X Layer"] };
+    const later = await guardChainDropouts({ assets: [next], now: NOW + 3600, ...loaded });
+    expect(later.flagged).toBe(0);
+    expect(next.chainCirculating!["X Layer"].current).toBe(0);
+    expect(next.supplyRestored).toBeUndefined();
+    expect(next.supplyChainGuard).toBeUndefined();
+    expect(getCirculatingRawOrNull(next)).toBe(getCirculatingRawOrNull(usdg()));
   });
 
   it("uses reviewed native onchain units at USD par for repair", async () => {
@@ -142,6 +173,33 @@ describe("chain dropout guard", () => {
     expect(result.quarantinedAssetIds).toEqual(["usdg-paxos"]);
     await persistChainDropoutState({} as D1Database, result, NOW);
     expect(mocks.setCache).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["non-array chart", JSON.stringify({ error: "unavailable" })],
+    ["unparseable chart", "{"],
+    ["latest chart point without a usable peg bucket", JSON.stringify([
+      { date: NOW - 2 * DAY, totalCirculatingUSD: { peggedUSD: 1_400_000_000 } },
+      { date: NOW - 3600, totalCirculatingUSD: { peggedUSD: -1 } },
+    ])],
+  ])("fails closed when the native read throws and the chart is a %s", async (_case, body) => {
+    mocks.onchain.mockRejectedValue(new Error("rpc down"));
+    mocks.chart.mockResolvedValue({ response: { ok: true }, body });
+    const asset = usdg();
+    asset.chainCirculating = { "X Layer": asset.chainCirculating!["X Layer"] };
+    const result = await guardChainDropouts({ assets: [asset], now: NOW, state: { version: 1, pairs: {} } });
+    expect(result).toMatchObject({ repaired: 0, quarantinedAssetIds: ["usdg-paxos"] });
+    expect(asset.chainCirculating!["X Layer"].current).toBeNull();
+    expect(asset.supplyChainGuard?.chains[0]).toMatchObject({ resolution: "carried-baseline" });
+    expect(Object.values(result.state.pairs)[0]).toMatchObject({ quarantinedSince: NOW, chartAttemptedAt: NOW });
+    expect(Object.values(result.state.pairs)[0].chartPoint).toBeUndefined();
+  });
+
+  it("keeps publication successful when persisting guard state fails", async () => {
+    mocks.setCache.mockRejectedValue(new Error("D1 write failed"));
+    const result = await guardChainDropouts({ assets: [usdg()], now: NOW, state: { version: 1, pairs: {} } });
+    await expect(persistChainDropoutState({} as D1Database, result, NOW)).resolves.toBeUndefined();
+    expect(mocks.setCache).toHaveBeenCalledTimes(1);
   });
 
   it("nulls an immaterial flagged chain without changing aggregate or restored status", async () => {

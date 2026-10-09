@@ -47,6 +47,10 @@ const PairStateSchema = z.object({
   chartPoint: z.object({ valueUsd: z.number().finite().nonnegative(), pointDate: TimestampSchema, fetchedAt: TimestampSchema }).optional(),
   // Failed/invalid chart reads also consume the hourly attempt budget, without claiming an observation.
   chartAttemptedAt: TimestampSchema.optional(),
+  // Set when a flagged pair is released at a confirmed level (corroboration, reviewed release or
+  // immaterial chart release). Such a pair is never pruned, so a confirmed low baseline is never
+  // replaced by the stale incident seed or an aged previous-day value.
+  releasedAt: TimestampSchema.optional(),
 }).strict();
 export const ChainDropoutStateSchema = z.object({ version: z.literal(1), pairs: z.record(z.string(), PairStateSchema) }).strict();
 export type ChainDropoutState = z.infer<typeof ChainDropoutStateSchema>;
@@ -64,6 +68,10 @@ export interface SupplyChainGuardResult {
 
 function pairKey(assetId: string, identity: string): string {
   return JSON.stringify([assetId, identity]);
+}
+function findSeed(assetId: string, chainId: string | undefined, chainLabel: string, now: number) {
+  if (now >= CHAIN_DROPOUT_SEED_VALID_UNTIL) return undefined;
+  return CHAIN_DROPOUT_SEED.find((entry) => entry.assetId === assetId && (entry.chainId ? entry.chainId === chainId : entry.chainLabel === chainLabel));
 }
 function warn(event: string, message: string, metadata: Record<string, unknown>, error?: unknown): void {
   logWorkerEvent({ scope: "lib", job: "sync-stablecoins", level: "warn", event, message, metadata, ...(error ? { error } : {}) });
@@ -203,7 +211,7 @@ export async function guardChainDropouts(input: {
       const observation = group.chainId ? canonical.get(group.chainId)! : { current: normalizeChainSupplyValue(rows[label].current), circulatingPrevDay: normalizeChainSupplyValue(rows[label].circulatingPrevDay) ?? undefined };
       const key = pairKey(meta.id, identity);
       const previous = state.pairs[key];
-      const seed = now < CHAIN_DROPOUT_SEED_VALID_UNTIL ? CHAIN_DROPOUT_SEED.find((entry) => entry.assetId === meta.id && (entry.chainId ? entry.chainId === group.chainId : entry.chainLabel === label)) : undefined;
+      const seed = findSeed(meta.id, group.chainId, label, now);
       const baseline = previous?.baselineUsd ?? seed?.baselineUsd ?? observation.circulatingPrevDay;
       const baselineSource = previous ? "state" : seed ? "seed" : "list-prev-day";
       const pair: PairState = previous ?? { assetId: meta.id, chainLabel: label, ...(group.chainId ? { chainId: group.chainId } : {}), baselineUsd: baseline ?? 0, baselineObservedAt: seed ? CHAIN_DROPOUT_SEED_OBSERVED_AT : Math.max(0, now - 86400), baselineSource, quarantinedSince: null };
@@ -228,6 +236,7 @@ export async function guardChainDropouts(input: {
         pair.baselineUsd = observation.current;
         pair.baselineObservedAt = now;
         pair.quarantinedSince = null;
+        pair.releasedAt = now;
         continue;
       }
       candidates.push({ asset, labels: group.labels, pegKey, state: pair, resolved: false, evidence: { ...(group.chainId ? { chainId: group.chainId } : {}), chainLabel: pair.chainLabel, listCurrentUsd: observation.current, baselineUsd: pair.baselineUsd, baselineObservedAt: pair.baselineObservedAt, baselineSource, resolution: "unavailable" } });
@@ -243,11 +252,15 @@ export async function guardChainDropouts(input: {
       repair(candidate, onchain, now, "onchain-total-supply");
       result.repaired++;
     } else {
+      // The native read is the vetted amount: publish it (not the disproven list value) and release.
+      repair(candidate, onchain, now, "onchain-total-supply");
+      result.repaired++;
       candidate.state.baselineUsd = onchain;
       candidate.state.baselineObservedAt = now;
+      candidate.state.baselineSource = "state";
       candidate.state.quarantinedSince = null;
-      candidate.resolved = true;
-      warn("supply-chain-guard-collapse-corroborated", "Independent native supply corroborates real collapse; quarantine released", { assetId: candidate.state.assetId, chainId: candidate.state.chainId, onchainUsd: onchain });
+      candidate.state.releasedAt = now;
+      warn("supply-chain-guard-collapse-corroborated", "Independent native supply corroborates real collapse; publishing native amount and releasing quarantine", { assetId: candidate.state.assetId, chainId: candidate.state.chainId, onchainUsd: onchain, listCurrentUsd: candidate.evidence.listCurrentUsd });
     }
   }
   candidates.sort((a, b) => (b.evidence.baselineUsd - (b.evidence.listCurrentUsd ?? 0)) - (a.evidence.baselineUsd - (a.evidence.listCurrentUsd ?? 0)));
@@ -285,6 +298,7 @@ export async function guardChainDropouts(input: {
         candidate.state.baselineObservedAt = now;
         candidate.state.baselineSource = "state";
         candidate.state.quarantinedSince = null;
+        candidate.state.releasedAt = now;
         candidate.resolved = true;
         warn("supply-chain-guard-immaterial-chart-release", "Later daily series confirms lower immaterial chain level; accepting list observation", {
           assetId: candidate.state.assetId, chainLabel: candidate.state.chainLabel, firstFlaggedAt,
@@ -325,7 +339,8 @@ export async function guardChainDropouts(input: {
     asset.supplyChainGuard = { reason: "supply-chain-dropout", status, ...(quarantinedSince != null ? { quarantinedSince } : {}), chains: affected.map((candidate) => candidate.evidence) };
   }
   for (const [key, pair] of Object.entries(state.pairs)) {
-    if (pair.baselineUsd < CHAIN_DROPOUT_POLICY.minBaselineUsd && pair.quarantinedSince == null) delete state.pairs[key];
+    if (pair.baselineUsd < CHAIN_DROPOUT_POLICY.minBaselineUsd && pair.quarantinedSince == null && pair.releasedAt == null
+      && !findSeed(pair.assetId, pair.chainId, pair.chainLabel, now)) delete state.pairs[key];
   }
   if (result.flagged > 0) warn("supply-chain-dropout", "Guarded anomalous DefiLlama chain supply observations", { reason: "supply-chain-dropout", flagged: result.flagged, repaired: result.repaired, quarantinedAssetIds: result.quarantinedAssetIds, unavailableAssetIds: result.unavailableAssetIds, historyFetches: result.historyFetches, stateReadFailed: result.stateReadFailed });
   return result;
