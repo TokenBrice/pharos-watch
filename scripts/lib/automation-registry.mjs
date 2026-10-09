@@ -520,7 +520,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     script: "scripts/maintenance/generate-llms-txt.ts",
     sourcePaths: [
       "data/digests.json",
-      "docs/*.md",
+      "shared/lib/public-doc-manifest.json",
       "shared/lib/public-docs.ts",
       "src/lib/case-studies/**",
       "src/lib/glossary-content.ts",

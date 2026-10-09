@@ -109,7 +109,6 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
       { id: "doc-sync", program: "npm", args: ["run", "check:doc-sync"] },
       { id: "doc-ownership-invariants", program: "npm", args: ["exec", "--", "vitest", "run", "scripts/__tests__/doc-ownership-registry.test.ts"] },
       { id: "agents-doc-artifact", program: "npm", args: ["run", "check:generated-artifacts", "--", "--only=agents-doc"] },
-      { id: "docs-generated-artifacts", program: "node", args: ["--import", "tsx", "scripts/ci/check-docs-generated-artifacts.mts"] },
     ],
   },
   { id: "gate", selector: "always", timeoutMinutes: 5, commands: [] },

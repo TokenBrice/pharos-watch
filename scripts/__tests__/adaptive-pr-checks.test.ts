@@ -182,9 +182,8 @@ describe("adaptive PR checks", () => {
     expect(selectChangedGeneratedArtifactIds(["data/coin.json"], registry)).toEqual(["catalog", "index"]);
   });
 
-  // A docs-only PR still verifies the one artifact derived from docs (llms.txt);
-  // artifact freshness is now selected from the changed sources themselves
-  // rather than from whether a Pages surface moved.
+  // No generated artifact reads internal docs Markdown, so a docs-only PR
+  // selects no artifact freshness check; freshness follows changed sources.
   it("keeps docs-only PRs on the small static baseline", () => {
     expect(buildPrStaticCheckPlan(["docs/testing.md"]).commands.map((command) => command.name)).toEqual([
       "lint:changed",
@@ -193,7 +192,6 @@ describe("adaptive PR checks", () => {
       "check:env-contract",
       "check:shared-types-imports",
       "check:critical-coverage-completeness",
-      "check:generated-artifacts",
     ]);
   });
 

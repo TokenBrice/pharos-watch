@@ -19,7 +19,6 @@ describe("local PR check orchestration", () => {
       "doc-sync",
       "doc-ownership-invariants",
       "agents-doc-artifact",
-      "docs-generated-artifacts",
     ]);
   });
 
@@ -35,7 +34,6 @@ describe("local PR check orchestration", () => {
       "doc-sync",
       "doc-ownership-invariants",
       "agents-doc-artifact",
-      "docs-generated-artifacts",
       "pr-static",
       "pr-tests",
       "pages-artifact",

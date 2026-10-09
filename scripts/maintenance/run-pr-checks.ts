@@ -47,7 +47,6 @@ export type PrCheckLane =
   | "doc-sync"
   | "doc-ownership-invariants"
   | "agents-doc-artifact"
-  | "docs-generated-artifacts"
   | "pr-static"
   | "pr-tests"
   | "pages-artifact"
@@ -245,7 +244,6 @@ export function createLaneCommand(
     case "doc-sync":
     case "doc-ownership-invariants":
     case "agents-doc-artifact":
-    case "docs-generated-artifacts":
       return withLane(command, { PR_BASE_SHA: resolvedBaseSha, PR_HEAD_SHA: head });
     case "pr-static":
     case "pages-artifact":
