@@ -316,10 +316,10 @@ describe("sensitive selection boundaries", () => {
         "docs/report-cards.md",
         "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts",
         "worker/src/lib/__tests__/safety-score-v9-capture.test.ts",
-        "worker/src/lib/__tests__/safety-score-v9-redemption-quarantine.test.ts",
+        "worker/src/lib/__tests__/safety-score-v9-redemption-reserve-quarantine.test.ts",
         "worker/src/lib/safety-score-v9/capture.ts",
         "worker/src/lib/safety-score-v9/fact-set-exit.ts",
-        "worker/src/lib/safety-score-v9/redemption-quarantine.ts",
+        "worker/src/lib/safety-score-v9/redemption-reserve-quarantine.ts",
       ],
     },
     {

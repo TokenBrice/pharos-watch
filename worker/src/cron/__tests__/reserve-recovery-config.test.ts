@@ -226,7 +226,7 @@ describe("deploy config reserve recovery", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_leases").get()).toEqual({ count: 0 });
   });
 
-  it("heals composition once while revoking stale redemption across ten minutes, four hours and isolate restarts", async () => {
+  it("consumes one opportunity after stale evidence rejection across ten minutes, four hours and isolate restarts", async () => {
     const { db, sqlite } = await seed();
     const fetch = mockLiveReserveAdapterRegistry(async () => ({
       slices, metadata: {
@@ -235,16 +235,9 @@ describe("deploy config reserve recovery", () => {
       },
     }));
     const now = Date.now();
-    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ failed: [], healed: ["coin-0"] });
-    expect((await loadFreshIndependentLiveReserveMap(db)).has("coin-0")).toBe(true);
-    expect(sqlite.prepare("SELECT config_fingerprint FROM reserve_composition WHERE stablecoin_id = 'coin-0'").get()).toEqual({
-      config_fingerprint: computeLiveReserveConfigFingerprint(CONFIGURED_COINS[0]!.liveReservesConfig!),
-    });
-    const stored = sqlite.prepare("SELECT metadata FROM reserve_composition WHERE stablecoin_id = 'coin-0'").get() as { metadata: string };
-    const metadata = JSON.parse(stored.metadata);
-    expect(metadata).not.toHaveProperty("redemption");
-    expect(metadata.reserveInvalidations.redemption).toMatchObject({ disposition: "semantic", reason: "redemption-source-stale" });
-    expect(metadata.reserveInvalidations).not.toHaveProperty("composition");
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ failed: ["coin-0"], healed: [] });
+    expect((await loadFreshIndependentLiveReserveMap(db)).has("coin-0")).toBe(false);
+    expect(sqlite.prepare("SELECT config_fingerprint FROM reserve_composition WHERE stablecoin_id = 'coin-0'").get()).toEqual({ config_fingerprint: "previous-config" });
     for (const elapsedMs of [10 * 60_000, 4 * 3600_000]) {
       vi.mocked(Date.now).mockReturnValue(now + elapsedMs);
       if (elapsedMs === 4 * 3600_000) sqlite.prepare(`INSERT INTO cron_slot_executions
@@ -253,7 +246,7 @@ describe("deploy config reserve recovery", () => {
         .run(getCronSlotStartedAtForSchedule("fourHourlyReserveSync", Date.now()),
           Math.floor(Date.now() / 1000) - 60, Math.floor(Date.now() / 1000) - 1, Math.floor(Date.now() / 1000) - 1);
       expect(await recoverLiveReserveConfigChanges(createSqliteD1(sqlite), signal(), {})).toMatchObject({
-        mismatchCount: 0, skippedSameFingerprintCount: 0, skippedSameFingerprint: [], attempted: [],
+        mismatchCount: 1, skippedSameFingerprintCount: 1, skippedSameFingerprint: ["coin-0"], attempted: [],
       });
     }
     expect(fetch).toHaveBeenCalledTimes(1);

@@ -167,9 +167,6 @@ export async function derivePegAnalyticsSnapshot(
       pegReferenceUnavailable: false,
       currentPriceUnavailable: !meta.flags.navToken,
       currentSupplyUnavailable: !meta.flags.navToken,
-      priceObservedAt: null,
-      priceSource: undefined,
-      priceObservedAtMode: null,
     };
 
     const { trackingStart, coverage: historyCoverage } = resolveTrackingAnchor(
@@ -190,9 +187,11 @@ export async function derivePegAnalyticsSnapshot(
       pegType: asset?.pegType ?? "",
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
-      priceSource: currentPegObservation.priceSource,
-      priceObservedAt: currentPegObservation.priceObservedAt,
-      priceObservedAtMode: currentPegObservation.priceObservedAtMode,
+      ...(!isObservedPrice(asset ?? {}) ? {
+        // PegSummaryCoin.priceSource is optional, not nullable: a null list source is published as absent.
+        priceSource: asset?.priceSource ?? undefined,
+        priceObservedAtMode: asset?.priceObservedAtMode,
+      } : {}),
       ...(asset?.nominalPriceReference ? { nominalPriceReference: asset.nominalPriceReference } : {}),
       currentDeviationBps: currentPegObservation.currentDeviationBps,
       pegReference: currentPegObservation.pegReference,

@@ -34,13 +34,6 @@ export function PegScoreDewsOverview() {
             DEX cross-validation uses explicit trust gates: detection and pending confirmation only trust fresh DEX rows with at least $1M of aggregate source TVL, while the public DEX Price Check UI requires a lighter but still non-trivial floor of $250K. Aggregate DEX rows also need deeper corroboration before they can mutate live event state: recoveries/suppression and pending confirmation now require at least two protocol-level DEX groups, and ambiguous-primary recoveries are vetoed when a large challenger pool still shows the old depeg direction. Pool challenger confirmation counts distinct protocol/source-family groups, with the documented $5M single-pool exception preserved. For already-open depegs, same-direction aggregate DEX disagreement is advisory rather than a synthetic recovery signal, so events stay continuous until the normal recovery path confirms the coin is back inside threshold.
           </p>
           <p>
-            Since shared Depeg/DEWS v6.34, CoinGecko exchange tickers cannot provide hard DEX confirmation,
-            recovery or opposing evidence. Normalized cg_tickers families and legacy cg-ticker protocols are
-            excluded before family representatives are selected, including pool vetoes and the $5M exception.
-            One genuine DEX family plus tickers does not satisfy a two-family quorum. Ticker prices and soft
-            diagnostic group counts remain; pricing weights, DEWS formulas and confirmation windows are unchanged.
-          </p>
-          <p>
             Every onset waits beyond the full trigger threshold for at least 15 minutes, even when multiple sources already agree. Pending confirmation chooses off-chain confirmers by source family from the primary <code className="mx-1 text-xs">agreeSources</code> set. CoinGecko-family primary evidence cannot be confirmed by CoinGecko again, and Pharos does not treat DefiLlama&apos;s <code className="mx-1 text-xs">coingecko:&#123;id&#125;</code> mirror as independent. A native CoinGecko quote may initiate a pending non-USD candidate, but it cannot confirm itself: promotion also requires a fresh canonical USD price from a non-CoinGecko family to agree after normalization through the authoritative FX reference. Promoted rows store canonical keys such as <code className="mx-1 text-xs">temporal:15m</code>, <code className="mx-1 text-xs">primary:defillama</code>, and <code className="mx-1 text-xs">dex:curve</code> for auditability.
           </p>
           <p>

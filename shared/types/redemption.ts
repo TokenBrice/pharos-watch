@@ -6,7 +6,6 @@ import { HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema } from "./
 import { isValidIsoDateOnly } from "./date-primitives";
 import { BusinessCalendarIdSchema, BusinessClockTimeSchema, BusinessTimezoneSchema } from "./business-calendars";
 import { ConsumedReserveInputSchema, LIVE_RESERVE_ADMISSION_REJECTION_CODE_VALUES } from "./reserve-input";
-import { EvidenceLossOutcomeSchema } from "./evidence-loss";
 
 /** Shared route identity/capability authority; Worker strategies supply only executable reads. */
 export interface ExecutableRedemptionObserverDefinition {
@@ -45,9 +44,6 @@ export const RedemptionCapacityRejectionReasonSchema = z.enum([
   "future-source-timestamp",
   "stale-source-timestamp",
   "missing-block-number",
-  "reserve-semantic-invalidated",
-  "reserve-evidential-invalidated",
-  "reserve-unknown-invalidated",
 ]);
 export type RedemptionCapacityRejectionReason = z.infer<typeof RedemptionCapacityRejectionReasonSchema>;
 
@@ -300,7 +296,6 @@ export type RedemptionConfidenceDetails = z.infer<typeof RedemptionConfidenceDet
 const RedemptionBackstopEntryBaseSchema = z.object({
   stablecoinId: z.string(),
   reserveInput: ConsumedReserveInputSchema.optional(),
-  lossOutcomes: z.array(EvidenceLossOutcomeSchema).optional(),
   score: ScoreSchema.nullable(),
   /**
    * Retired in redemption methodology v4.3. Nothing computes, writes, or reads
@@ -381,7 +376,6 @@ export type RedemptionBackstopEntry = z.infer<typeof RedemptionBackstopEntrySche
 // coherence is enforced once the complete entry is assembled.
 export const RedemptionBackstopDetailsSchema = RedemptionBackstopEntryBaseSchema.pick({
   reserveInput: true,
-  lossOutcomes: true,
   resolutionState: true,
   outputDependencyResolution: true,
   capacityConfidence: true,
@@ -427,20 +421,6 @@ export type RedemptionBackstopDetails = z.infer<typeof RedemptionBackstopDetails
 
 export const RedemptionBackstopMapSchema = z.record(z.string(), RedemptionBackstopEntrySchema);
 export type RedemptionBackstopMap = Record<string, RedemptionBackstopEntry>;
-
-/** Complete immutable producer census; never the bounded cron diagnostic sample. */
-export const RedemptionAssetCensusSchema = z.record(
-  z.string().trim().min(1),
-  z.strictObject({ routeFamily: RedemptionRouteFamilySchema }),
-);
-export type RedemptionAssetCensus = z.infer<typeof RedemptionAssetCensusSchema>;
-export const RedemptionLossOutcomesByAssetIdSchema = z.record(z.string().trim().min(1), z.array(EvidenceLossOutcomeSchema));
-export type RedemptionLossOutcomesByAssetId = z.infer<typeof RedemptionLossOutcomesByAssetIdSchema>;
-export const RedemptionQuarantineReasonSchema = z.enum([
-  "config-mismatch", "freshness-unverified", "stale", "sync-error", "malformed-persisted-row", "output-stale",
-  "reserve-invalidated",
-]);
-export type RedemptionQuarantineReason = z.infer<typeof RedemptionQuarantineReasonSchema>;
 
 export const RedemptionBackstopMethodologySchema = MethodologyEnvelopeSchema.extend({
   componentWeights: z.object({

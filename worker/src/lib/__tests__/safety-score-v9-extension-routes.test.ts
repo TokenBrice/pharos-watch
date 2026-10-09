@@ -1391,8 +1391,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     const newerExtension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(newerInput);
 
     expect(newerInput.baseInputGenerationId).not.toBe(olderInput.baseInputGenerationId);
-    expect(olderExtension.sources.peg).toMatchObject({ observedAtSec: olderInput.clockSec });
-    expect(newerExtension.sources.peg).toMatchObject({ observedAtSec: newerInput.clockSec });
+    expect(newerExtension.sources.peg).toMatchObject({ observedAtSec: V9_FIXTURE_CLOCK - 30 });
     expect(newerExtension.sources.peg.generationId).not.toBe(olderExtension.sources.peg.generationId);
     expect(newerExtension.assets[0]?.routeReviews[0]?.output?.valuation).toMatchObject({
       basis: "nav",

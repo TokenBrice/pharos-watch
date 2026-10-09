@@ -157,14 +157,9 @@ describe("handleStablecoinReserves", () => {
     } finally { vi.useRealTimers(); }
   });
 
-  it.each([
-    ["live", "error", false],
-    ["live-stale", "error", false],
-    ["curated-fallback", "error", undefined],
-    ["live", "ok", true],
-  ] as const)(
-    "uses one assessment clock for %s freshness and acknowledgement across review expiry (%s)",
-    async (mode, status, scoringEligible) => {
+  it.each(["live", "live-stale", "curated-fallback"] as const)(
+    "uses one assessment clock for %s freshness and acknowledgement across review expiry",
+    async (mode) => {
       const now = acknowledgedReview.expiresAt - 1;
       const fetchedAt = mode === "live-stale" ? now - LIVE_RESERVE_FRESHNESS_SEC - 1 : now;
       const composition = mode === "curated-fallback" ? null : reviewedCompositionRow(fetchedAt);
@@ -174,10 +169,7 @@ describe("handleStablecoinReserves", () => {
         { match: "FROM reserve_composition", rows: [], first: composition },
         {
           match: "FROM reserve_sync_state", rows: [],
-          first: reviewedSyncRow(now, {
-            last_success_at: composition ? fetchedAt : null, last_status: status,
-            ...(status === "ok" ? { last_error: null, metadata: "{}" } : {}),
-          }),
+          first: reviewedSyncRow(now, { last_success_at: composition ? fetchedAt : null }),
         },
       ]);
       const prepare = db.prepare.bind(db);
@@ -192,18 +184,15 @@ describe("handleStablecoinReserves", () => {
         const res = await handleStablecoinReserves(db, acknowledgedReview.stablecoinId);
         const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
         expect(body.mode).toBe(mode);
-        expect(body.sync?.acknowledgedFeed).toEqual(status === "error" ? acknowledgedReview : undefined);
-        expect(body.sync?.status).toBe(status);
+        expect(body.sync?.acknowledgedFeed).toEqual(acknowledgedReview);
+        expect(body.sync?.status).toBe("error");
         expect(body.sync?.freshness?.assessedAt).toBe(now);
         expect(body.sync?.stale).toBe(mode === "live-stale");
-        expect(body.provenance?.scoringEligible).toBe(scoringEligible);
-        if (composition && status === "error") expect(body.provenance?.scoringRejectionReasons).toContain("refresh-loss-unproved");
-        if (status === "ok") expect(body.provenance?.scoringRejectionReasons).toEqual([]);
+        expect(body.provenance?.scoringEligible).toBe(mode === "live" ? true : mode === "live-stale" ? false : undefined);
         if (mode === "live-stale") expect(body.provenance?.scoringRejectionReasons).toContain("stale");
         if (composition) expect(body.reserves).toEqual(JSON.parse(composition.slices));
         expect(res.headers.get("Cache-Control")).toBe(
-          mode === "live-stale" ? "public, s-maxage=1800, max-age=120"
-            : status === "ok" ? "public, s-maxage=3600, max-age=300" : "public, s-maxage=300, max-age=60",
+          mode === "live-stale" ? "public, s-maxage=1800, max-age=120" : "public, s-maxage=300, max-age=60",
         );
       } finally {
         prepareSpy.mockRestore();

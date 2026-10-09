@@ -6,14 +6,12 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.34`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.33`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
 
 The shared `v6.33` release of 2026-10-08 changes only DEWS weekly DEX-history admission; depeg onset, confirmation, recovery and PegScore rules are unchanged. Its release remains conditional on owner-approved production-history replay described in [DEWS](./dews.md#methodology-versioning).
-
-`v6.34` excludes CoinGecko exchange tickers from hard DEX confirmation, recovery and opposition. Hard collectors reject normalized `cg_tickers` families and legacy `cg-ticker-<exchange>` protocols before selecting family representatives, including pool-veto/high-TVL exceptions and hard keys/peak candidates. One genuine family plus tickers no longer satisfies a two-family quorum; confirmation may remain pending and recovery open until independent evidence arrives. Aggregate prices/status and soft group diagnostics remain, as do Pricing `v6.44`, primary admission, thresholds/windows and recorded event history. Activation is provisional at 2026-10-09 00:00 UTC and must be re-dated at release; historical latency impact is not established.
 
 ## Downstream: Depeg Duration Resolver
 
@@ -232,8 +230,6 @@ Primary-price trust gates:
 - `unusable`: invalid/missing/non-finite price, or a non-observed price (`priceObservedAtMode: "nominal_reference"`, an unsupported mode, or any `protocol-par` source component). Since pricing v6.38 the nominal par routes publish par this way whenever no trusted market quote is admitted, so par can neither open, confirm nor recover an event; an open row stays open (tracked coins are never orphan-closed) until observed price evidence decides it, while a trusted market discount on those assets is evaluated like any other primary price
 
 Before those gates are applied, `priceSource` and `agreeSources` are normalized through the pricing-source registry. Composite labels are expanded into their component source keys, unknown sources do not become pool-challenge eligible by accident, and each known key resolves to its registered `depegSourceFamily`. CoinGecko variants, DefiLlama list/detail/contract variants, and CoinMarketCap-style list aggregators are therefore not counted as independent hard corroboration just because their labels differ; promoted DEX protocol lanes and hard market/oracle/protocol sources keep provider- or protocol-specific families.
-
-Every hard DEX group/quorum below means genuine non-ticker evidence. CoinGecko exchange ticker rows cannot corroborate an aggregate, oppose a pending direction, veto recovery or use the single-pool $5M exception; the separate direct Binance CEX confirmer remains unchanged. Soft diagnostic grouping may still count ticker rows and must not be interpreted as hard independence.
 
 Deviation calculation:
 

@@ -4,17 +4,16 @@ import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
-import { captureRedemptionQuarantine } from "../safety-score-v9/redemption-quarantine";
-import type { RedemptionQuarantineReason } from "@shared/types/redemption";
+import { captureRedemptionReserveQuarantine } from "../safety-score-v9/redemption-reserve-quarantine";
 import { makeV9Extension, makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
 const ASSET = "usdc-circle";
 
-function compile(quarantined: boolean, reason: RedemptionQuarantineReason = "freshness-unverified") {
+function compile(quarantined: boolean) {
   const original = makeV9FixedInput({ assetId: ASSET, clockSec: Date.UTC(2026, 6, 13) / 1000 });
-  const quarantine = captureRedemptionQuarantine({
+  const quarantine = captureRedemptionReserveQuarantine({
     assetId: ASSET, redemptionGenerationId: original.redemptionGenerationId,
-    routeFamily: getRedemptionBackstopConfig(ASSET)!.routeFamily, reason, clockSec: original.clockSec,
+    routeFamily: getRedemptionBackstopConfig(ASSET)!.routeFamily, reason: "freshness-unverified", clockSec: original.clockSec,
   });
   const fixed = normalizeFixedInput({
     ...original, baseInputGenerationId: undefined,
@@ -38,22 +37,11 @@ describe("redemption rows quarantined for inadmissible consumed reserve evidence
     const gap = asset.gaps.find((candidate) => route.factorStatuses.capacity!.gapIds.includes(candidate.gapId))!;
     expect(gap).toMatchObject({
       responsibility: "producer-failed",
-      causeProof: { cause: "A", producerState: "producer-failed", rejectionCode: "redemption-admission-freshness-unverified" },
+      causeProof: { cause: "A", producerState: "producer-failed", rejectionCode: "redemption-reserve-input-freshness-unverified" },
     });
     expect(asset.evidence.find((row) => row.evidenceId === quarantine.evidence.evidenceId)).toEqual(quarantine.evidence);
 
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
     expect(evaluated.exit.causeGapIds).toContain(gap.gapId);
-  });
-
-  it.each(["sync-error", "malformed-persisted-row"] as const)("preserves a diagnostic missing rail for %s", (reason) => {
-    const { compiled } = compile(true, reason);
-    const asset = compiled.assets[0]!;
-    const route = asset.exitRoutes.find((candidate) => candidate.lane === "redemption")!;
-    expect(route).toMatchObject({ coverageClass: "diagnostic", scoreEligible: false, capacityCurve: [] });
-    expect(route.status.observationState).toBe("missing");
-    expect(asset.gaps.find((gap) => route.factorStatuses.capacity!.gapIds.includes(gap.gapId))?.causeProof).toMatchObject({
-      cause: "A", rejectionCode: `redemption-admission-${reason}`,
-    });
   });
 });

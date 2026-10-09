@@ -481,17 +481,7 @@ function assertCompatibleReserveClassification(
  */
 export const RESERVE_DENOMINATOR_FLOAT_TOLERANCE = 1e-9;
 
-/** Capture-bound loss proof is diagnostic authority, never a synthetic holding or a refreshed clock. */
-export function buildReserves(context: AssetBuildContext) {
-  const lineage = "reserveLossLineageById" in context.fixedInput
-    ? context.fixedInput.reserveLossLineageById?.[context.asset.assetId] : undefined;
-  return {
-    ...buildReserveComposition(context),
-    ...(lineage === undefined ? {} : { reserveLossLineage: lineage }),
-  };
-}
-
-function buildReserveComposition(context: AssetBuildContext): {
+export function buildReserves(context: AssetBuildContext): {
   reserveStatus: V9FactStatusV2;
   reserveExposures: V9ReserveExposureFactV2[];
   reserveResiduals: V9AssetFactsV3["reserveResiduals"];

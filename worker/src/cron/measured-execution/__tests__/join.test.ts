@@ -498,7 +498,7 @@ describe("measured execution join activation", () => {
             measuredTarget.targetId,
             makeJoinQuote(measuredTarget, profile, {
               resolution: "last-known-good",
-              latestFailureReason: "rpc-failure",
+              latestFailureReason: "quote-missing",
               observationHistory: makeObservationHistory(profile),
             }),
           ],
@@ -566,7 +566,7 @@ describe("measured execution join activation", () => {
           measuredTarget.targetId,
           makeJoinQuote(measuredTarget, profile, {
             resolution: "last-known-good",
-            latestFailureReason: "rpc-failure",
+            latestFailureReason: "quote-missing",
             observationHistory: makeObservationHistory(profile, {
               completeProducerCycleCount: 3,
               observationWindowEndedAt: 2_000,
@@ -598,24 +598,6 @@ describe("measured execution join activation", () => {
     ]);
   });
 
-  it("never turns a quote-missing history packet into a retained route", () => {
-    const { measuredTarget, profile } = makeV3LkgRoute([[1_000, 999], [100_000, 99_900]]);
-    const retained = buildDexMeasuredExecutionRetainedRoutePools({
-      poolsByStablecoin: new Map([[measuredTarget.stablecoinId, []]]),
-      evidence: {
-        quoteGenerationId: "latest", targetGenerationId: "latest-targets", publishedAt: 2_000,
-        byTargetId: new Map([[measuredTarget.targetId, makeJoinQuote(measuredTarget, profile, {
-          resolution: "last-known-good", latestFailureReason: "quote-missing",
-          observationHistory: makeObservationHistory(profile, {
-            completeProducerCycleCount: 3, observationWindowEndedAt: 2_000,
-          }),
-        })]]),
-      },
-      nowSec: 2_000,
-    });
-    expect(retained.size).toBe(0);
-  });
-
   it("does not retain an immature, stale, or still-current measured route", () => {
     const { measuredTarget, profile } = makeV3LkgRoute([[1_000, 999]]);
     const quote = {
@@ -626,7 +608,7 @@ describe("measured execution join activation", () => {
       quoteGenerationId: "quote-generation-lkg",
       targetGenerationId: "target-generation-lkg",
       resolution: "last-known-good" as const,
-      latestFailureReason: "rpc-failure",
+      latestFailureReason: "quote-missing",
       observationHistory: makeObservationHistory(profile, {
         completeProducerCycleCount: 1,
         successfulObservationCount: 1,

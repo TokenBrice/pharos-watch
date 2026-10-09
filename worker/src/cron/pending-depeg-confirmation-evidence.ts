@@ -6,7 +6,6 @@ import {
   collectDexProtocolCorroborations,
   dexPoolIndependentGroupKey,
   dexProtocolGroupKey,
-  isHardDexQuorumSource,
   isNativeOriginPending,
 } from "../lib/depeg-helpers";
 import {
@@ -311,18 +310,12 @@ export async function collectConfirmationEvidence(
       pendingState.direction,
       "confirm",
     );
-    const hardConfirmGroups = collectDexProtocolCorroborations(
-      protocolSources, pegReference, threshold, pendingState.direction, "confirm", "hard",
-    );
     const recoverGroups = collectDexProtocolCorroborations(
       protocolSources,
       pegReference,
       threshold,
       pendingState.direction,
       "recover",
-    );
-    const hardRecoverGroups = collectDexProtocolCorroborations(
-      protocolSources, pegReference, threshold, pendingState.direction, "recover", "hard",
     );
     const contradictGroups = collectDexProtocolCorroborations(
       protocolSources,
@@ -331,27 +324,24 @@ export async function collectConfirmationEvidence(
       pendingState.direction,
       "contradict",
     );
-    const hardContradictGroups = collectDexProtocolCorroborations(
-      protocolSources, pegReference, threshold, pendingState.direction, "contradict", "hard",
-    );
-    if (aggregateDexStatus === "confirm" && hardConfirmGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
+    if (aggregateDexStatus === "confirm" && confirmGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
       evidence.dexStatus = "confirm";
-      evidence.dexConfirmationKeys = buildDexConfirmationKeys(hardConfirmGroups.map((group) => group.key));
+      evidence.dexConfirmationKeys = buildDexConfirmationKeys(confirmGroups.map((group) => group.key));
       addSources(evidence.confirmingSources, evidence.dexConfirmationKeys);
       evidence.dexPeakCandidates = [
         { bps: dexSignal?.bps, price: dexRow.dex_price_usd },
-        ...hardConfirmGroups.map((group) => ({ bps: group.signal.bps, price: group.source.price })),
+        ...confirmGroups.map((group) => ({ bps: group.signal.bps, price: group.source.price })),
       ];
-    } else if (aggregateDexStatus === "recover" && hardRecoverGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
+    } else if (aggregateDexStatus === "recover" && recoverGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
       evidence.dexStatus = "recover";
-      const keys = buildDexConfirmationKeys(hardRecoverGroups.map((group) => group.key));
+      const keys = buildDexConfirmationKeys(recoverGroups.map((group) => group.key));
       addSources(evidence.opposingSources, keys);
-      addSources(evidence.hardOpposingSources, hardRecoverGroups.map((group) => `dex-family:${group.key}`));
-    } else if (aggregateDexStatus === "contradict" && hardContradictGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
+      addSources(evidence.hardOpposingSources, recoverGroups.map((group) => `dex-family:${group.key}`));
+    } else if (aggregateDexStatus === "contradict" && contradictGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
       evidence.dexStatus = "contradict";
-      const keys = buildDexConfirmationKeys(hardContradictGroups.map((group) => group.key));
+      const keys = buildDexConfirmationKeys(contradictGroups.map((group) => group.key));
       addSources(evidence.opposingSources, keys);
-      addSources(evidence.hardOpposingSources, hardContradictGroups.map((group) => `dex-family:${group.key}`));
+      addSources(evidence.hardOpposingSources, contradictGroups.map((group) => `dex-family:${group.key}`));
     }
     logWorkerEvent({
       scope: "lib",
@@ -431,10 +421,10 @@ export async function collectConfirmationEvidence(
       if (currentPoolStatus === "confirm") {
         const existing = poolConfirmGroups.get(poolGroupKey);
         const candidate = { key: poolGroupKey, pool, signal: poolSignal };
-        if (isHardDexQuorumSource(pool) && (existing == null || poolSignal.absBps > existing.signal.absBps)) {
+        if (existing == null || poolSignal.absBps > existing.signal.absBps) {
           poolConfirmGroups.set(poolGroupKey, candidate);
         }
-        if (isHardDexQuorumSource(pool) && pool.tvlUsd >= POOL_CHALLENGE_HIGH_TVL_USD) {
+        if (pool.tvlUsd >= POOL_CHALLENGE_HIGH_TVL_USD) {
           if (poolHighTvlConfirm == null || pool.tvlUsd > poolHighTvlConfirm.pool.tvlUsd) {
             poolHighTvlConfirm = candidate;
           }
@@ -455,10 +445,10 @@ export async function collectConfirmationEvidence(
             deviationBps: poolSignal?.absBps ?? "n/a",
           },
         });
-      } else if (currentPoolStatus === "contradict" && isHardDexQuorumSource(pool)) {
+      } else if (currentPoolStatus === "contradict") {
         poolContradictGroups.add(poolGroupKey);
         poolContradictFamilies.add(dexProtocolGroupKey(pool));
-      } else if (currentPoolStatus === "recover" && isHardDexQuorumSource(pool)) {
+      } else if (currentPoolStatus === "recover") {
         poolRecoverGroups.add(poolGroupKey);
         poolRecoverFamilies.add(dexProtocolGroupKey(pool));
       }

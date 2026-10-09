@@ -209,9 +209,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   priceSource: asset.priceSource,
   priceConfidence: asset.priceConfidence ?? null,
   priceUpdatedAt: asset.priceUpdatedAt ?? null,
-  // Only absent legacy fields may use this asset's retained priceUpdatedAt.
-  // Explicit null is unknown evidence timing, not permission to renew it.
-  priceObservedAt: asset.priceObservedAt === undefined ? asset.priceUpdatedAt ?? null : asset.priceObservedAt,
+  priceObservedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
   priceObservedAtMode: asset.priceObservedAtMode ?? null,
   ...(asset.nominalPriceReference != null ? { nominalPriceReference: asset.nominalPriceReference } : {}),
   priceSyncedAt: asset.priceSyncedAt ?? null,

@@ -10,7 +10,7 @@ import {
   loadRedemptionBackstopSnapshot,
   RedemptionBackstopSnapshotUnavailableError,
 } from "./redemption-backstops-store";
-import type { RedemptionBackstopRunMetadata, RedemptionBackstopLoadResult } from "./redemption-backstops-store";
+import type { RedemptionBackstopRunMetadata } from "./redemption-backstops-store";
 import {
   loadStablecoinsCache,
   type StablecoinsCacheLoadOk,
@@ -26,7 +26,6 @@ import type { ReserveSlice } from "@shared/types/core";
 import type { StablecoinData } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { LiveReserveSnapshotProvenance } from "./live-reserves/store";
-import type { ReserveLossLineage } from "@shared/types/live-reserves";
 import { parseJsonObject } from "./json-parse";
 import type { V9PublicationInputHealth } from "./safety-score-v9/publication-assessment";
 import { resolveDexDeploymentCensusMaxAgeSec } from "../cron/dex-liquidity/deployment-census-coverage";
@@ -47,13 +46,9 @@ export interface ReportCardsSnapshotInputs {
     methodologyVersion: string | null;
     latestUpdatedAt: number | null;
     runMetadata?: RedemptionBackstopRunMetadata;
-    lossOutcomesByAssetId?: RedemptionBackstopLoadResult["lossOutcomesByAssetId"];
-    assetCensus?: RedemptionBackstopLoadResult["assetCensus"];
-    quarantinedAssetIds?: string[];
   };
   liveReserveMap: Map<string, ReserveSlice[]>;
   liveReserveProvenanceMap: ReadonlyMap<string, LiveReserveSnapshotProvenance>;
-  reserveLossLineageById?: ReadonlyMap<string, ReserveLossLineage>;
   liquidityStale: boolean;
   redemptionStale: boolean;
   inputFreshness: ReportCardsInputFreshness;
@@ -361,7 +356,7 @@ export async function loadReportCardsSnapshotInputs(
     throw new ReportCardsSnapshotUnavailableError("Cached stablecoins data is corrupt");
   }
 
-  let redemptionBackstopSnapshot: RedemptionBackstopLoadResult;
+  let redemptionBackstopSnapshot: Awaited<ReturnType<typeof loadRedemptionBackstopSnapshot>>;
   let redemptionSnapshotUnavailable = false;
   if (redemptionBackstopMapResult.status === "fulfilled") {
     redemptionBackstopSnapshot = redemptionBackstopMapResult.value;
@@ -428,8 +423,6 @@ export async function loadReportCardsSnapshotInputs(
     liveReserveMapResult.status === "fulfilled" && "provenanceById" in liveReserveMapResult.value
       ? liveReserveMapResult.value.provenanceById
       : new Map<string, LiveReserveSnapshotProvenance>();
-  const reserveLossLineageById = liveReserveMapResult.status === "fulfilled"
-    ? liveReserveMapResult.value.lossLineageById : undefined;
   const liveReserveCoverageRatio =
     liveReserveMapResult.status !== "fulfilled" ||
     CONFIGURED_INDEPENDENT_LIVE_RESERVE_COIN_COUNT === 0
@@ -472,7 +465,7 @@ export async function loadReportCardsSnapshotInputs(
         : "current";
   const hasApplicableRedemption =
     redemptionSnapshotUnavailable ||
-    Object.keys(redemptionBackstopSnapshot.assetCensus ?? redemptionBackstopSnapshot.map).length > 0;
+    Object.keys(redemptionBackstopSnapshot.map).length > 0;
   const redemptionState: V9PublicationInputHealth["redemption"]["state"] =
     !hasApplicableRedemption
       ? "not-applicable"
@@ -491,13 +484,9 @@ export async function loadReportCardsSnapshotInputs(
       methodologyVersion: redemptionBackstopSnapshot.methodologyVersion ?? null,
       latestUpdatedAt: redemptionBackstopSnapshot.latestUpdatedAt,
       runMetadata: redemptionBackstopSnapshot.runMetadata,
-      lossOutcomesByAssetId: redemptionBackstopSnapshot.lossOutcomesByAssetId,
-      assetCensus: redemptionBackstopSnapshot.assetCensus,
-      quarantinedAssetIds: redemptionBackstopSnapshot.quarantinedAssetIds,
     },
     liveReserveMap,
     liveReserveProvenanceMap,
-    reserveLossLineageById,
     liquidityStale,
     redemptionStale,
     inputFreshness: {

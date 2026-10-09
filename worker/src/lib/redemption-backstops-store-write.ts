@@ -1,4 +1,4 @@
-import { RedemptionBackstopDetailsSchema, RedemptionAssetCensusSchema, type RedemptionBackstopEntry } from "@shared/types/redemption";
+import { RedemptionBackstopDetailsSchema, type RedemptionBackstopEntry } from "@shared/types/redemption";
 import { RedemptionReserveRunMetadataSchema } from "@shared/types/reserve-input";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
@@ -69,7 +69,6 @@ function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
   return JSON.stringify(
     RedemptionBackstopDetailsSchema.parse({
       ...(record.reserveInput ? { reserveInput: record.reserveInput } : {}),
-      ...(record.lossOutcomes ? { lossOutcomes: record.lossOutcomes } : {}),
       resolutionState: record.resolutionState,
       capacityConfidence: record.capacityConfidence,
       ...(record.capacityRejectionReason ? { capacityRejectionReason: record.capacityRejectionReason } : {}),
@@ -582,10 +581,6 @@ export async function upsertRedemptionBackstopSnapshots(
   if (uniqueStablecoinIds.size !== records.length) {
     throw new Error("Duplicate stablecoin IDs in redemption backstop snapshot records");
   }
-  const assetCensus = RedemptionAssetCensusSchema.parse(Object.fromEntries(records.map((record) => [
-    record.stablecoinId, { routeFamily: record.routeFamily },
-  ])));
-  options = { ...options, metadata: { ...options?.metadata, assetCensus } };
 
   if (options?.metadata?.stablecoinsInput !== undefined) {
     RedemptionReserveRunMetadataSchema.shape.stablecoinsInput.parse(options.metadata.stablecoinsInput);

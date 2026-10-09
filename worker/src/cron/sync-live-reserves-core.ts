@@ -4,8 +4,7 @@ import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtim
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../lib/live-reserves/store-shared";
-import type { ReserveAttemptLeg } from "@shared/types/live-reserves";
-import type { EvidenceLossOutcome } from "@shared/types/evidence-loss";
+import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterResult, ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { shouldAttemptFetch } from "../lib/circuit-breaker";
 import { hasDegradingWarnings, hasFatalWarnings, validateAdapterOutput } from "./reserve-adapters/validate";
@@ -28,12 +27,19 @@ import {
   didReserveSyncSuccessBecomeAuthoritative,
   finalizeReserveSyncAttempt,
   finalizeReserveSyncSuccess,
+  getReserveCompositionRow,
   type ReserveCompositionRecord,
+  type ReserveCompositionRow,
   type ReserveSyncStateRecord,
   selectScoringDegradedWarnings,
 } from "../lib/live-reserves/store";
-import { reserveLossLineage, reserveLossOutcome, unknownReserveLeg } from "../lib/live-reserves/loss";
+import { parseReserveCompositionRow } from "../lib/live-reserves/store-row-decoding";
+import { evaluateLiveReserveAdmission } from "../lib/live-reserves/store-snapshot-state";
 
+import { PRIMARY_FALLBACK_USED_WARNING_CODE } from "./reserve-adapter-runner";
+export { PRIMARY_FALLBACK_USED_WARNING_CODE } from "./reserve-adapter-runner";
+/** A score-ineligible fallback read was not persisted because the stored snapshot is still admissible. */
+export const FALLBACK_WITHHELD_WARNING_CODE = "fallback-withheld-score-grade-retained";
 
 const TRACKED_STABLECOIN_IDS = new Set(WORKER_TRACKED_META_BY_ID.keys());
 export const ADAPTER_LATENCY_BUCKET_UPPER_BOUNDS_MS = [
@@ -356,7 +362,6 @@ export async function syncReserveCoin(args: {
   let adapterDurationMs = 0;
   let d1DurationMs = 0;
   let failureStage: "adapter-exception" | "storage-exception" = "storage-exception";
-  let attemptLegs: ReserveAttemptLeg[] = [];
   const deadlineMs = args.deadlineMs ?? Number.POSITIVE_INFINITY;
   const timeStage = async <T>(stage: keyof NonNullable<LiveReservePhaseTimings["stages"]> | null, operation: () => Promise<T>): Promise<T> => {
     if (Date.now() >= deadlineMs) throw new Error("run-budget-exhausted");
@@ -384,22 +389,6 @@ export async function syncReserveCoin(args: {
   ) => {
     if (!attemptStarted) return { finalized: false };
     const d1StartedMs = Date.now();
-    const sourceId = computeLiveReserveConfigFingerprint(config);
-    const semantic = ["source-stale", "validation-failed", "empty-slices", "fatal-warning", "unknown-adapter"].includes(reason)
-      || warnings.some((warning) => warning.effect === "fatal" || warning.effect === "degraded");
-    const rejection = semantic ? { key: "admission", sourceId, disposition: "semantic" as const, reason,
-      proof: `reserve-attempt:${attemptId}:admission` }
-      : reason.startsWith("storage-") || reason === "success-finalize-rejected"
-        ? unknownReserveLeg("authority-readback", sourceId, "authority-unverified") : undefined;
-    // Only the collector's typed no-start packet can demonstrate an operational loss.
-    // Generic timeout/storage/parser text and circuit debt never provide that proof.
-    const priorEvidence = prevSuccessAt && prevSuccessAttemptId ? {
-      ref: `reserve-composition:${coin.id}:${prevSuccessAttemptId}`,
-      observedAtSec: prevSuccessAt, expiresAtSec: prevSuccessAt + LIVE_RESERVE_FRESHNESS_SEC + 1,
-    } : null;
-    const reserveLoss = reserveLossOutcome({ assetId: coin.id, sourceId, attemptId,
-      runId: args.checkpoint?.invocationId ?? attemptId, observedAtSec: attemptStartedAt, reason,
-      legs: attemptLegs, rejection, priorEvidence });
     try {
       return await timeStage("failureWrite", () => finalizeReserveSyncAttempt(db, buildReserveSyncStateRecord({
           stablecoinId: coin.id,
@@ -416,9 +405,6 @@ export async function syncReserveCoin(args: {
             reason,
             failureCategory: classifyFailure(reason, lastError),
             ...(metadataExtras ?? {}),
-            reserveAttemptLegs: attemptLegs,
-            reserveLoss,
-            reserveInvalidations: reserveLossLineage(previousState).invalidations,
           },
       }), args.deadlineMs));
     } finally {
@@ -466,47 +452,40 @@ export async function syncReserveCoin(args: {
 
     adapterStartMs = Date.now();
     failureStage = "adapter-exception";
-    let result = await runAdapter(coin, config, adapter, args.deadlineMs);
-    attemptLegs = result.metadata?.reserveAttemptLegs ?? [];
+    const result = await runAdapter(coin, config, adapter, args.deadlineMs);
     failureStage = "storage-exception";
     const durationMs = Date.now() - adapterStartMs;
     adapterDurationMs += durationMs;
     const sourceBudget = resolveLiveReserveSourceAgeBudget(
       config.scoring?.maxSourceAgeSec, adapter.validation?.maxSourceAgeSec, LIVE_RESERVE_FRESHNESS_SEC,
     );
-    const validationOptions = {
-      adapter, now: attemptStartedAt,
+    const validation = validateAdapterOutput(result, {
+      adapter,
+      now: attemptStartedAt,
       maxSourceAgeSec: sourceBudget.sourceAgeBudgetCap === "fetch-budget" ? undefined : sourceBudget.sourceAgeBudgetSec,
-      subjectId: coin.id, knownStablecoinIds: TRACKED_STABLECOIN_IDS,
-    };
-    let validation = validateAdapterOutput(result, validationOptions);
-    let redemptionScopeLoss: EvidenceLossOutcome | undefined;
+      subjectId: coin.id,
+      knownStablecoinIds: TRACKED_STABLECOIN_IDS,
+    });
     if (!validation.valid) {
+      const message = validation.warnings.map((warning) => warning.message).join("; ");
       const staleOnly = validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")
         && validation.warnings.every((warning) => warning.effect !== "fatal" || warning.code === "stale-redemption-source-timestamp")
         && !(result.warnings ?? []).some((warning) => warning.effect === "fatal");
       if (staleOnly) {
-        // A successfully read stale rail invalidates that datum, not the independent book read alongside it.
-        const sourceId = computeLiveReserveConfigFingerprint(config);
-        redemptionScopeLoss = reserveLossOutcome({ assetId: coin.id, sourceId, attemptId,
-          runId: args.checkpoint?.invocationId ?? attemptId, observedAtSec: attemptStartedAt,
-          scopeKey: "redemption", reason: "redemption-source-stale", legs: attemptLegs,
-          rejection: { key: "redemption-admission", sourceId, disposition: "semantic",
-            reason: "redemption-source-stale", proof: `reserve-attempt:${attemptId}:redemption-admission` } });
-        const { redemption: _staleTelemetry, ...compositionMetadata } = result.metadata ?? {};
-        result = { ...result, metadata: compositionMetadata, warnings: [
-          ...(result.warnings ?? []), { code: "redemption-scope-invalidated",
-            message: "Stale nested redemption evidence withheld; current reserve composition independently revalidated",
-            severity: "warning", effect: "info" },
-        ] };
-        validation = validateAdapterOutput(result, validationOptions);
+        // The source was read successfully, but its evidence cannot be published.
+        // Heal transport failure debt without refreshing the retained snapshot.
+        const { finalized } = await recordFailure(
+          "degraded", `Validation failed: ${message}`, "source-stale", validation.warnings,
+          { durationMs, failureCategory: "validation", sourceTimestamp: result.metadata?.sourceTimestamp },
+        );
+        return timedResult({
+          breakerKey, status: "failed", ...(finalized ? { breakerOutcome: true } : {}),
+          warningMessages: validation.warnings.map((warning) => `${coin.id}:${warning.code}`), hasWarnings: true,
+        });
       }
-      if (!validation.valid) {
-        const message = validation.warnings.map((warning) => warning.message).join("; ");
-        logWorkerEventArgs("handler", "warn", `[sync-live-reserves] Adapter output invalid for ${coin.id}: ${message}`);
-        await recordFailure("error", `Validation failed: ${message}`, "validation-failed", validation.warnings, { durationMs });
-        return timedResult({ breakerKey, status: "failed", warningMessages: validation.warnings.map((warning) => `${coin.id}:${warning.code}`), hasWarnings: true });
-      }
+      logWorkerEventArgs("handler", "warn", `[sync-live-reserves] Adapter output invalid for ${coin.id}: ${message}`);
+      await recordFailure("error", `Validation failed: ${message}`, "validation-failed", validation.warnings, { durationMs });
+      return timedResult({ breakerKey, status: "failed", warningMessages: validation.warnings.map((warning) => `${coin.id}:${warning.code}`), hasWarnings: true });
     }
 
     if (result.slices.length === 0) {
@@ -529,7 +508,6 @@ export async function syncReserveCoin(args: {
 
     const snapshotMetadata = {
       ...(result.metadata ?? {}),
-      ...(redemptionScopeLoss ? { reserveLoss: redemptionScopeLoss, reserveInvalidations: { redemption: redemptionScopeLoss } } : {}),
       diag: { ...(typeof result.metadata?.diag === "object" && result.metadata.diag !== null ? result.metadata.diag : {}), durationMs },
     };
 
@@ -555,11 +533,9 @@ export async function syncReserveCoin(args: {
       previousLastSuccessAttemptId: prevSuccessAttemptId,
       attemptId,
       now: attemptStartedAt,
-      status: redemptionScopeLoss || hasDegradingWarnings(degradedWarningsOutsideAllowlist) ? "degraded" : "ok",
+      status: hasDegradingWarnings(degradedWarningsOutsideAllowlist) ? "degraded" : "ok",
       warnings,
       metadata: {
-        reserveAttemptLegs: attemptLegs,
-        ...(redemptionScopeLoss ? { reserveLoss: redemptionScopeLoss, reserveInvalidations: { redemption: redemptionScopeLoss } } : {}),
         warningEffects: {
           info: warnings.filter((warning) => warning.effect === "info").length,
           degraded: warnings.filter((warning) => warning.effect === "degraded").length,
@@ -570,6 +546,70 @@ export async function syncReserveCoin(args: {
       lastSuccessAt: attemptStartedAt,
       lastSuccessAttemptId: attemptId,
     });
+
+    // A fallback read that cannot score must not displace a stored snapshot
+    // that still can: a partially successful run would otherwise be worse for
+    // scoring than a failed one, which writes nothing. Both snapshots are
+    // judged by the scoring admission rule on one clock.
+    const primaryFallbackWarning = warnings.find((warning) => warning.code === PRIMARY_FALLBACK_USED_WARNING_CODE);
+    if (primaryFallbackWarning) {
+      const admissionNow = Math.floor(Date.now() / 1000);
+      const fallbackAdmission = evaluateLiveReserveAdmission(
+        { ...compositionRecord, configFingerprint: computeLiveReserveConfigFingerprint(config) },
+        successState,
+        coin,
+        admissionNow,
+      );
+      if (!fallbackAdmission.eligible) {
+        const retainedReadStartedMs = Date.now();
+        let retainedRow: ReserveCompositionRow | null;
+        try {
+          retainedRow = await timeStage(null, () => getReserveCompositionRow(db, coin.id));
+        } finally {
+          d1DurationMs += Date.now() - retainedReadStartedMs;
+        }
+        const retained = retainedRow ? parseReserveCompositionRow(retainedRow, previousState).record : null;
+        if (retained && evaluateLiveReserveAdmission(retained, previousState, coin, admissionNow).eligible) {
+          const withheldWarning: LiveReserveWarning = {
+            code: FALLBACK_WITHHELD_WARNING_CODE,
+            message: `Fallback reserve read withheld (not score-grade: ${fallbackAdmission.reasons.join(", ")}); the score-grade snapshot fetched at ${retained.fetchedAt} stays authoritative until it stops being admissible`,
+            severity: "warning",
+            effect: "degraded",
+          };
+          const attemptWarnings = [...warnings, withheldWarning];
+          logWorkerEventArgs("handler", "warn", `[sync-live-reserves] ${coin.id}: ${withheldWarning.message}`);
+          const { finalized } = await recordFailure(
+            "degraded",
+            primaryFallbackWarning.message,
+            FALLBACK_WITHHELD_WARNING_CODE,
+            attemptWarnings,
+            {
+              withheldFallback: {
+                admissionReasons: fallbackAdmission.reasons,
+                retainedSnapshotAttemptId: retained.attemptId ?? null,
+                retainedSnapshotFetchedAt: retained.fetchedAt,
+              },
+              warningEffects: {
+                info: attemptWarnings.filter((warning) => warning.effect === "info").length,
+                degraded: attemptWarnings.filter((warning) => warning.effect === "degraded").length,
+                fatal: attemptWarnings.filter((warning) => warning.effect === "fatal").length,
+              },
+              durationMs,
+            },
+          );
+          if (!finalized) {
+            return timedResult({ breakerKey, status: "failed", warningMessages: [], hasWarnings: false });
+          }
+          return timedResult({
+            breakerKey,
+            status: "synced",
+            breakerOutcome: true,
+            warningMessages: attemptWarnings.map((warning) => `${coin.id}:${warning.code}`),
+            hasWarnings: true,
+          });
+        }
+      }
+    }
 
     let finalizeSucceeded = false;
     let failureAlreadyRecorded = false;
@@ -647,10 +687,6 @@ export async function syncReserveCoin(args: {
     let attemptFailureSummaries: ReserveAttemptFailureSummary[] | undefined;
     if (isReserveAdapterAttemptChainError(error)) {
       extras.attemptSummaries = error.attemptSummaries;
-      attemptLegs = error.reserveAttemptLegs ?? [{
-        key: "collector", sourceId: computeLiveReserveConfigFingerprint(config), result: "failed",
-        loss: unknownReserveLeg("collector", computeLiveReserveConfigFingerprint(config)),
-      }];
       attemptFailureSummaries = error.attemptSummaries;
     }
     if (adapterStartMs !== null) {

@@ -233,14 +233,6 @@ function normalizeDexGroupPart(value: string | null | undefined, fallback: strin
   return normalized.length > 0 ? normalized : fallback;
 }
 
-/** Ticker observations are price-only evidence, never independent pool quorum votes. */
-export function isHardDexQuorumSource(
-  source: Pick<DexPoolSource, "protocol" | "sourceFamily">,
-): boolean {
-  return normalizeDexGroupPart(source.sourceFamily, "unknown") !== "cg_tickers" &&
-    !normalizeDexGroupPart(source.protocol, "unknown").startsWith("cg-ticker-");
-}
-
 export function dexProtocolGroupKey(source: Pick<DexPoolSource, "protocol" | "chain" | "sourceFamily">): string {
   return normalizeDexGroupPart(source.sourceFamily, "unknown");
 }
@@ -263,12 +255,10 @@ export function collectDexProtocolCorroborations(
   threshold: number,
   direction: DepegDirection,
   mode: "confirm" | "recover" | "contradict",
-  evidenceRole: "soft" | "hard" = "soft",
 ): DexProtocolCorroboration[] {
   if (!protocolSources || protocolSources.length === 0) return [];
   const groups = new Map<string, DexProtocolCorroboration>();
   for (const source of protocolSources) {
-    if (evidenceRole === "hard" && !isHardDexQuorumSource(source)) continue;
     const signal = deriveDepegSignal(source.price, pegRef);
     if (signal == null) continue;
 
@@ -299,9 +289,8 @@ export function countDexProtocolCorroborations(
   threshold: number,
   direction: DepegDirection,
   mode: "confirm" | "recover" | "contradict",
-  evidenceRole: "soft" | "hard" = "soft",
 ): number {
-  return collectDexProtocolCorroborations(protocolSources, pegRef, threshold, direction, mode, evidenceRole).length;
+  return collectDexProtocolCorroborations(protocolSources, pegRef, threshold, direction, mode).length;
 }
 
 /** Load per-protocol price breakdowns from dex_prices.price_sources_json for trusted rows. */

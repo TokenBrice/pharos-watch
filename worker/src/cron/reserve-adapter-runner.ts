@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { throwIfAborted } from "../lib/abort";
 import type { AdapterContext, AdapterResult, ReserveAdapterDefinition } from "./reserve-adapters/types";
 import type { AdapterLatencyCollector, AdapterLatencyStage } from "./sync-live-reserves-core";
 import {
@@ -10,9 +11,6 @@ import {
   type LiveReserveConfig,
 } from "./sync-live-reserves-shared";
 import { createAdapterIoLimiter, RESERVE_ADAPTER_MAX_PARALLEL_IO } from "./reserve-adapters/concurrency";
-import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
-import type { ReserveAttemptLeg } from "@shared/types/live-reserves";
-import { unknownReserveLeg } from "../lib/live-reserves/loss";
 
 /** Stamped by the fallback runner on a result read from `inputs.fallbacks` after the primary failed. */
 export const PRIMARY_FALLBACK_USED_WARNING_CODE = "primary-fallback-used";
@@ -271,27 +269,10 @@ export function createReserveAdapterRunner(args: {
     adapter: ReserveAdapterDefinition,
     deadlineMs?: number,
   ): Promise<AdapterResult> => {
-    const sourceId = computeLiveReserveConfigFingerprint(config);
-    const legs: ReserveAttemptLeg[] = [];
-    const failedLeg = (key: string, _error: unknown, notStarted = false): ReserveAttemptLeg => ({
-      key, sourceId: `${sourceId}:${key}`, result: notStarted ? "not-started" : "failed",
-      loss: notStarted ? { key, sourceId: `${sourceId}:${key}`, disposition: "operational",
-        reason: "budget-deferred", proof: `reserve-collector:${sourceId}:${key}:not-started:${Date.now()}` }
-        : unknownReserveLeg(key, `${sourceId}:${key}`, "collector-exception"),
-    });
-    const returned = (key: string, result: AdapterResult): AdapterResult => ({
-      ...result, metadata: { ...result.metadata, reserveAttemptLegs: [
-        ...legs, { key, sourceId: `${sourceId}:${key}`, result: "returned", loss: null },
-      ] },
-    });
     try {
-      if (Date.now() >= (deadlineMs ?? Infinity)) {
-        legs.push(failedLeg("primary", null, true));
-        throw new Error("run-budget-exhausted");
-      }
-      return returned("primary", await tryPrimary(coin, config, adapter, deadlineMs));
+      if (Date.now() >= (deadlineMs ?? Infinity)) throw new Error("run-budget-exhausted");
+      return await tryPrimary(coin, config, adapter, deadlineMs);
     } catch (primaryError) {
-      if (legs.length === 0) legs.push(failedLeg("primary", primaryError));
       const fallbackAttempts: Array<{
         input: LiveReserveConfig["inputs"]["primary"];
         error: unknown;
@@ -300,16 +281,9 @@ export function createReserveAdapterRunner(args: {
       // Hive's second node corroborates the first; substituting it as primary
       // would falsely turn a failed two-node proof into a one-node success.
       const fallbackInputs = adapter.key === "hive-hbd-protocol" ? [] : config.inputs.fallbacks ?? [];
-      for (const [index, fb] of fallbackInputs.entries()) {
-        if (args.signal.aborted || Date.now() >= (deadlineMs ?? Infinity)) {
-          const key = `fallback-${index}`;
-          legs.push(args.signal.aborted ? failedLeg(key, args.signal.reason) : failedLeg(key, null, true));
-          // Every remaining declared leg is explicit, not silently dropped on cancellation.
-          for (let remaining = index + 1; remaining < fallbackInputs.length; remaining++) {
-            legs.push(failedLeg(`fallback-${remaining}`, null, !args.signal.aborted));
-          }
-          break;
-        }
+      for (const fb of fallbackInputs) {
+        throwIfAborted(args.signal);
+        if (Date.now() >= (deadlineMs ?? Infinity)) throw new Error("run-budget-exhausted");
         try {
           const fbConfig = { ...config, inputs: { ...config.inputs, primary: fb } };
           const fallbackResult = await runAdapterAttempt(
@@ -334,19 +308,16 @@ export function createReserveAdapterRunner(args: {
             severity: "info" as const,
             effect: "info" as const,
           };
-          return returned(`fallback-${index}`, {
+          return {
             ...fallbackResult,
             warnings: [...(fallbackResult.warnings ?? []), fallbackWarning],
-          });
+          };
         } catch (error) {
-          legs.push(failedLeg(`fallback-${index}`, error));
           fallbackAttempts.push({ input: fb, error, index: fallbackAttempts.length });
           logWorkerEventArgs("handler", "warn", `[sync-live-reserves] Fallback failed for ${coin.id}:`, error);
         }
       }
-      const chainError = buildReserveAdapterAttemptChainError(config, primaryError, fallbackAttempts);
-      chainError.reserveAttemptLegs = legs;
-      throw chainError;
+      throw buildReserveAdapterAttemptChainError(config, primaryError, fallbackAttempts);
     }
   };
 }
