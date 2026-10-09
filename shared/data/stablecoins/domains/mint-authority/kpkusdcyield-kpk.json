@@ -91,6 +91,10 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
           },
           {
+            "label": "Sol curation campaign 2026-10-09 (W2L13Kpk): Safe owners, threshold, complete module page, singleton, guard and fallback slots at Ethereum block 26154662 (hash 0xf60cac1fe0b417fe0ee522542ac4beb45d649b4004c4c7c5dcff838b39c6a06b; timestamp 2026-10-09T11:50:11Z), observed 2026-10-09T12:04:42.341Z; no permission/noninterference closure",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
             "url": "https://blue-api.morpho.org/graphql"
           }
@@ -112,10 +116,12 @@
           ],
           "threshold": 5,
           "enabledModules": [],
-          "observedBlock": 26107704,
-          "observedAt": "2026-10-02",
+          "observedBlock": 26154662,
+          "observedAt": "2026-10-09",
           "source": "onchain",
-          "guard": "0x0000000000000000000000000000000000000000"
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a"
         }
       },
       {
@@ -169,6 +175,10 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9646fdad06d3e24444381f44362a3b0eb343d337"
           },
           {
+            "label": "Sol curation campaign 2026-10-09 (W2L13Kpk): Safe owners, threshold, complete module page, singleton, guard and fallback slots at Ethereum block 26154662 (hash 0xf60cac1fe0b417fe0ee522542ac4beb45d649b4004c4c7c5dcff838b39c6a06b; timestamp 2026-10-09T11:50:11Z), observed 2026-10-09T12:04:42.341Z; no permission/noninterference closure",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
             "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
             "url": "https://eth.blockscout.com/api/v2/addresses/0xc3a8702bc57e0b787bd62d429a993265f596be1e/logs"
           }
@@ -189,10 +199,12 @@
           "enabledModules": [
             "0xc3a8702bc57e0b787bd62d429a993265f596be1e"
           ],
-          "observedBlock": 26107704,
-          "observedAt": "2026-10-02",
+          "observedBlock": 26154662,
+          "observedAt": "2026-10-09",
           "source": "onchain",
-          "guard": "0x0000000000000000000000000000000000000000"
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a"
         }
       },
       {

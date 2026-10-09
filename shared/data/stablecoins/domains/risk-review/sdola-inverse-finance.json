@@ -433,8 +433,8 @@
         "label": "sDOLA representation owner / governance receiver",
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-01",
-        "observedBlock": 52048981,
+        "observedAt": "2026-10-09",
+        "observedBlock": 52378281,
         "sources": [
           {
             "label": "Issuer sDOLA shutdown documentation",
@@ -453,120 +453,114 @@
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x881e3a65b4d4a04dd529061dd0071cf975f58bcd"
           }
         ],
-        "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
+        "capDescription": "Authenticated arbitrary target/calldata execution has a complete adverse maximal scope; no cap, target, dormant-permission or economic-loss exclusions are credited.",
         "canRaiseCap": true,
         "failureDomainKeys": [
           "protocol:chainlink-ccip",
           "contract:base:0x1c064265e053d23d120c518fdbb542e6537f82d1"
         ],
-        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved. Supplemental 2026-10-05 review at Base block 52199652 confirms the same dormant/reactivatable posture. Exact runtime-matched ERC20Mintable source declares SetMinter but setMinter(address,bool) never emits it, has no once-only guard, and writes private minters at compiler storage slot 11. Source-bound reads show both former pool and owner currently false, not an exhaustive minter inventory. Complete closure requires historical setMinter calldata/internal-call discovery, not Rely/Deny or SetMinter event census. The pinned Router has an Ethereum off-ramp and owner-controlled applyRampUpdates; empty token-pool peers do not close governance-message reach. Existing partial certificate and its observation pin are unchanged.",
+        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved. Supplemental 2026-10-05 review at Base block 52199652 confirms the same dormant/reactivatable posture. Exact runtime-matched ERC20Mintable source declares SetMinter but setMinter(address,bool) never emits it, has no once-only guard, and writes private minters at compiler storage slot 11. Source-bound reads show both former pool and owner currently false, not an exhaustive minter inventory. Complete closure requires historical setMinter calldata/internal-call discovery, not Rely/Deny or SetMinter event census. The pinned Router has an Ethereum off-ramp and owner-controlled applyRampUpdates; empty token-pool peers do not close governance-message reach. Supplemental Sol curation campaign 2026-10-09 (W2L20Chinaamc) review observed 2026-10-09T11:39:37.313Z at base block 52378281 (0xa263b45847acc0e5d8301a8a1a346910b2f155d182a68d948a69192659fc82c3, 2026-10-09T11:38:29.000Z): exact runtime/source correspondence and getter reads bind immutable router 0x881e3a65b4d4a04dd529061dd0071cf975f58bcd, Ethereum source selector 5009297550715157269 and allowed sender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3. Receipt owner() still returns this governance receiver. Its authenticated ccipReceive ingress retains unrestricted targetContract.call(callData) with no executor delay; token-pool lane shutdown does not disable this independent governance-message entrypoint. The complete conservative-maximal certificate deliberately retains every control capability, unbounded impairment and global-claim reach as an adverse upper envelope. It grants no target exclusions, minter absence, local liability-share, signer independence, custody, upstream timelock or favorable process credit. Historical evidence above and the separate former-pool partial certificate remain; its exhaustive router/off-ramp and dormant-minter closure is not asserted.",
         "executionScope": {
           "controllerDeployment": "base:0x1c064265e053d23d120c518fdbb542e6537f82d1",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2027-09-30",
-          "reviewer": "Sol curation pass 2026-10-01 (DataInverse)",
-          "confidence": "partial",
+          "reviewedAt": "2026-10-09",
+          "observedAt": "2026-10-09",
+          "expiresAt": "2027-10-09",
+          "reviewer": "Sol curation campaign 2026-10-09 (W2L20Chinaamc)",
+          "confidence": "verified",
           "sources": [
             {
-              "label": "Issuer sDOLA shutdown documentation",
-              "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+              "label": "Verified GovernanceProxy arbitrary-call source; base executable correspondence",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1c064265e053d23d120c518fdbb542e6537f82d1"
             },
             {
-              "label": "Pinned base RPC control observations",
+              "label": "Pinned base block 52378281, 2026-10-09T11:38:29.000Z; header 0xa263b45847acc0e5d8301a8a1a346910b2f155d182a68d948a69192659fc82c3; observed 2026-10-09T11:39:37.313Z",
               "url": "https://api-base-mainnet-archive.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "52048981",
-            "hash": "0x1a541fea1d0d466b444665520abdb28910068ea92345ce0fd0e13c1908da736a",
+            "position": "52378281",
+            "hash": "0xa263b45847acc0e5d8301a8a1a346910b2f155d182a68d948a69192659fc82c3",
             "runtimeIdentity": "sha256:5d7dd52432851c167b9df469eead63d1c47e6f400faa0a85a4ee6ceb743b4f09",
-            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+            "signerIdentity": "router:base:0x881e3a65b4d4a04dd529061dd0071cf975f58bcd;allowedSourceChain:5009297550715157269;allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
           },
           "observedState": {
-            "position": "52048981",
-            "hash": "0x1a541fea1d0d466b444665520abdb28910068ea92345ce0fd0e13c1908da736a",
+            "position": "52378281",
+            "hash": "0xa263b45847acc0e5d8301a8a1a346910b2f155d182a68d948a69192659fc82c3",
             "runtimeIdentity": "sha256:5d7dd52432851c167b9df469eead63d1c47e6f400faa0a85a4ee6ceb743b4f09",
-            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+            "signerIdentity": "router:base:0x881e3a65b4d4a04dd529061dd0071cf975f58bcd;allowedSourceChain:5009297550715157269;allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "targetDeployment": "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005",
+              "id": "governance-ccip-maximal-call",
+              "targetDeployment": "base:0x1c064265e053d23d120c518fdbb542e6537f82d1",
               "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x85572ffb"
+              ],
               "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
+                "parameter-change"
+              ],
               "capSemantics": {
-                "kind": "unknown",
+                "kind": "unbounded",
                 "bound": null
               },
-              "claimImpairment": "unknown",
-              "economicLossScope": "unknown",
-              "unavoidableDelaySec": null,
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
               "affectedLiabilityIds": [
                 "sdola-inverse-finance"
               ],
-              "affectedDeployments": [
-                "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005"
-              ],
-              "reach": "unknown",
+              "affectedDeployments": [],
+              "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
               "bypassRefs": [],
-              "id": "governance-owner-set-minter",
-              "entrypoints": [
-                "0xcf456ae7"
-              ],
-              "capabilities": [
-                "parameter-change"
-              ],
-              "activation": "active"
-            },
-            {
-              "targetDeployment": "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005",
-              "entrypointKind": "evm-selector",
-              "callMode": "call",
-              "capSemantics": {
-                "kind": "unknown",
-                "bound": null
-              },
-              "claimImpairment": "unknown",
-              "economicLossScope": "unknown",
-              "unavoidableDelaySec": null,
-              "affectedLiabilityIds": [
-                "sdola-inverse-finance"
-              ],
-              "affectedDeployments": [
-                "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005"
-              ],
-              "reach": "unknown",
-              "controlRefs": [],
-              "reactivationRefs": [
-                "governance-owner-set-minter"
-              ],
-              "permissionChangeRefs": [
-                "governance-owner-set-minter"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": [],
-              "id": "former-pool-mint",
-              "entrypoints": [
-                "0x40c10f19"
-              ],
-              "capabilities": [
-                "bridge-mint"
-              ],
-              "activation": "disabled-reactivatable"
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "base:0x1c064265e053d23d120c518fdbb542e6537f82d1",
+                "executorDeployment": "base:0x1c064265e053d23d120c518fdbb542e6537f82d1",
+                "sourceDeployment": "base:0x1c064265e053d23d120c518fdbb542e6537f82d1",
+                "targets": "any-address",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "52378281",
+                  "hash": "0xa263b45847acc0e5d8301a8a1a346910b2f155d182a68d948a69192659fc82c3",
+                  "runtimeIdentity": "sha256:5d7dd52432851c167b9df469eead63d1c47e6f400faa0a85a4ee6ceb743b4f09",
+                  "signerIdentity": "router:base:0x881e3a65b4d4a04dd529061dd0071cf975f58bcd;allowedSourceChain:5009297550715157269;allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+                },
+                "sourceRuntimeIdentity": "sha256:5d7dd52432851c167b9df469eead63d1c47e6f400faa0a85a4ee6ceb743b4f09",
+                "observedSourceRuntimeIdentity": "sha256:5d7dd52432851c167b9df469eead63d1c47e6f400faa0a85a4ee6ceb743b4f09",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1c064265e053d23d120c518fdbb542e6537f82d1",
+                  "location": "src/GovernanceProxy.sol _ccipReceive and inherited CCIPReceiver.ccipReceive: onlyRouter plus immutable allowedSourceChain/allowedSender, abi.decode(data,(address,bytes)), targetContract.call(callData); no target or calldata allowlist and no executor timelock. Exact pinned runtime equals the verified deployed bytecode."
+                }
+              }
             }
           ]
         }
@@ -728,8 +722,8 @@
         "label": "sDOLA representation owner / governance receiver",
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-01",
-        "observedBlock": 157644266,
+        "observedAt": "2026-10-09",
+        "observedBlock": 157973602,
         "sources": [
           {
             "label": "Issuer sDOLA shutdown documentation",
@@ -748,120 +742,114 @@
             "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0x3206695cae29952f4b0c22a169725a865bc8ce0f"
           }
         ],
-        "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
+        "capDescription": "Authenticated arbitrary target/calldata execution has a complete adverse maximal scope; no cap, target, dormant-permission or economic-loss exclusions are credited.",
         "canRaiseCap": true,
         "failureDomainKeys": [
           "protocol:chainlink-ccip",
           "contract:optimism:0xaf956837af704d825c1fcbe2651d5c3c37ad5289"
         ],
-        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved. Supplemental 2026-10-05 review at Optimism block 157794937 confirms the same dormant/reactivatable posture. Exact runtime-matched ERC20Mintable source declares SetMinter but setMinter(address,bool) never emits it, has no once-only guard, and writes private minters at compiler storage slot 11. Source-bound reads show both former pool and owner currently false, not an exhaustive minter inventory. Complete closure requires historical setMinter calldata/internal-call discovery, not an event-only census. The pinned Router retains an Ethereum off-ramp and owner-controlled ramp replacement. Existing partial certificate and its observation pin are unchanged.",
+        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved. Supplemental 2026-10-05 review at Optimism block 157794937 confirms the same dormant/reactivatable posture. Exact runtime-matched ERC20Mintable source declares SetMinter but setMinter(address,bool) never emits it, has no once-only guard, and writes private minters at compiler storage slot 11. Source-bound reads show both former pool and owner currently false, not an exhaustive minter inventory. Complete closure requires historical setMinter calldata/internal-call discovery, not an event-only census. The pinned Router retains an Ethereum off-ramp and owner-controlled ramp replacement. Supplemental Sol curation campaign 2026-10-09 (W2L20Chinaamc) review observed 2026-10-09T11:40:53.131Z at optimism block 157973602 (0x4065dc28cc03718c02fda93661e5f4dd5598fe5288d2a1e5acd1dbf800f8c4cc, 2026-10-09T11:39:41.000Z): exact runtime/source correspondence and getter reads bind immutable router 0x3206695cae29952f4b0c22a169725a865bc8ce0f, Ethereum source selector 5009297550715157269 and allowed sender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3. Receipt owner() still returns this governance receiver. Its authenticated ccipReceive ingress retains unrestricted targetContract.call(callData) with no executor delay; token-pool lane shutdown does not disable this independent governance-message entrypoint. The complete conservative-maximal certificate deliberately retains every control capability, unbounded impairment and global-claim reach as an adverse upper envelope. It grants no target exclusions, minter absence, local liability-share, signer independence, custody, upstream timelock or favorable process credit. Historical evidence above and the separate former-pool partial certificate remain; its exhaustive router/off-ramp and dormant-minter closure is not asserted.",
         "executionScope": {
           "controllerDeployment": "optimism:0xaf956837af704d825c1fcbe2651d5c3c37ad5289",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2027-09-30",
-          "reviewer": "Sol curation pass 2026-10-01 (DataInverse)",
-          "confidence": "partial",
+          "reviewedAt": "2026-10-09",
+          "observedAt": "2026-10-09",
+          "expiresAt": "2027-10-09",
+          "reviewer": "Sol curation campaign 2026-10-09 (W2L20Chinaamc)",
+          "confidence": "verified",
           "sources": [
             {
-              "label": "Issuer sDOLA shutdown documentation",
-              "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+              "label": "Verified GovernanceProxy arbitrary-call source; optimism executable correspondence",
+              "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0xaf956837af704d825c1fcbe2651d5c3c37ad5289"
             },
             {
-              "label": "Pinned optimism RPC control observations",
+              "label": "Pinned optimism block 157973602, 2026-10-09T11:39:41.000Z; header 0x4065dc28cc03718c02fda93661e5f4dd5598fe5288d2a1e5acd1dbf800f8c4cc; observed 2026-10-09T11:40:53.131Z",
               "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "157644266",
-            "hash": "0xb86ee33c80defee3e99aeb87e9d002d87c791f618c63c0e96d4f73e918b5490e",
+            "position": "157973602",
+            "hash": "0x4065dc28cc03718c02fda93661e5f4dd5598fe5288d2a1e5acd1dbf800f8c4cc",
             "runtimeIdentity": "sha256:8a6337708382888e4572976e6ef8f27207c3e47b8a493e832226a0eca7491925",
-            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+            "signerIdentity": "router:optimism:0x3206695cae29952f4b0c22a169725a865bc8ce0f;allowedSourceChain:5009297550715157269;allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
           },
           "observedState": {
-            "position": "157644266",
-            "hash": "0xb86ee33c80defee3e99aeb87e9d002d87c791f618c63c0e96d4f73e918b5490e",
+            "position": "157973602",
+            "hash": "0x4065dc28cc03718c02fda93661e5f4dd5598fe5288d2a1e5acd1dbf800f8c4cc",
             "runtimeIdentity": "sha256:8a6337708382888e4572976e6ef8f27207c3e47b8a493e832226a0eca7491925",
-            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+            "signerIdentity": "router:optimism:0x3206695cae29952f4b0c22a169725a865bc8ce0f;allowedSourceChain:5009297550715157269;allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "targetDeployment": "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e",
+              "id": "governance-ccip-maximal-call",
+              "targetDeployment": "optimism:0xaf956837af704d825c1fcbe2651d5c3c37ad5289",
               "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x85572ffb"
+              ],
               "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
+                "parameter-change"
+              ],
               "capSemantics": {
-                "kind": "unknown",
+                "kind": "unbounded",
                 "bound": null
               },
-              "claimImpairment": "unknown",
-              "economicLossScope": "unknown",
-              "unavoidableDelaySec": null,
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
               "affectedLiabilityIds": [
                 "sdola-inverse-finance"
               ],
-              "affectedDeployments": [
-                "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e"
-              ],
-              "reach": "unknown",
+              "affectedDeployments": [],
+              "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
               "bypassRefs": [],
-              "id": "governance-owner-set-minter",
-              "entrypoints": [
-                "0xcf456ae7"
-              ],
-              "capabilities": [
-                "parameter-change"
-              ],
-              "activation": "active"
-            },
-            {
-              "targetDeployment": "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e",
-              "entrypointKind": "evm-selector",
-              "callMode": "call",
-              "capSemantics": {
-                "kind": "unknown",
-                "bound": null
-              },
-              "claimImpairment": "unknown",
-              "economicLossScope": "unknown",
-              "unavoidableDelaySec": null,
-              "affectedLiabilityIds": [
-                "sdola-inverse-finance"
-              ],
-              "affectedDeployments": [
-                "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e"
-              ],
-              "reach": "unknown",
-              "controlRefs": [],
-              "reactivationRefs": [
-                "governance-owner-set-minter"
-              ],
-              "permissionChangeRefs": [
-                "governance-owner-set-minter"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": [],
-              "id": "former-pool-mint",
-              "entrypoints": [
-                "0x40c10f19"
-              ],
-              "capabilities": [
-                "bridge-mint"
-              ],
-              "activation": "disabled-reactivatable"
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "optimism:0xaf956837af704d825c1fcbe2651d5c3c37ad5289",
+                "executorDeployment": "optimism:0xaf956837af704d825c1fcbe2651d5c3c37ad5289",
+                "sourceDeployment": "optimism:0xaf956837af704d825c1fcbe2651d5c3c37ad5289",
+                "targets": "any-address",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "157973602",
+                  "hash": "0x4065dc28cc03718c02fda93661e5f4dd5598fe5288d2a1e5acd1dbf800f8c4cc",
+                  "runtimeIdentity": "sha256:8a6337708382888e4572976e6ef8f27207c3e47b8a493e832226a0eca7491925",
+                  "signerIdentity": "router:optimism:0x3206695cae29952f4b0c22a169725a865bc8ce0f;allowedSourceChain:5009297550715157269;allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+                },
+                "sourceRuntimeIdentity": "sha256:8a6337708382888e4572976e6ef8f27207c3e47b8a493e832226a0eca7491925",
+                "observedSourceRuntimeIdentity": "sha256:8a6337708382888e4572976e6ef8f27207c3e47b8a493e832226a0eca7491925",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0xaf956837af704d825c1fcbe2651d5c3c37ad5289",
+                  "location": "src/GovernanceProxy.sol _ccipReceive and inherited CCIPReceiver.ccipReceive: onlyRouter plus immutable allowedSourceChain/allowedSender, abi.decode(data,(address,bytes)), targetContract.call(callData); no target or calldata allowlist and no executor timelock. Exact pinned runtime equals the verified deployed bytecode."
+                }
+              }
             }
           ]
         }
@@ -1023,8 +1011,8 @@
         "label": "sDOLA representation owner / governance receiver",
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-01",
-        "observedBlock": 510773779,
+        "observedAt": "2026-10-09",
+        "observedBlock": 513185222,
         "sources": [
           {
             "label": "Issuer sDOLA shutdown documentation",
@@ -1043,120 +1031,114 @@
             "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x141fa059441e0ca23ce184b6a78bafd2a517dde8"
           }
         ],
-        "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
+        "capDescription": "Authenticated arbitrary target/calldata execution has a complete adverse maximal scope; no cap, target, dormant-permission or economic-loss exclusions are credited.",
         "canRaiseCap": true,
         "failureDomainKeys": [
           "protocol:chainlink-ccip",
           "contract:arbitrum:0x607bcd974bb69c78ecdbf0b68748b791bba24d94"
         ],
-        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved. Supplemental 2026-10-05 review confirms the dormant/reactivatable posture at the pinned Arbitrum observation recorded in R16 research. Exact runtime-matched ERC20Mintable source declares SetMinter but setMinter(address,bool) never emits it, has no once-only guard, and writes private minters at compiler storage slot 11. Source-bound reads show both former pool and owner currently false, not an exhaustive minter inventory. Complete closure requires historical setMinter calldata/internal-call discovery, not an event-only census. The pinned Router retains an Ethereum off-ramp and owner-controlled ramp replacement. Existing partial certificate and its observation pin are unchanged.",
+        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved. Supplemental 2026-10-05 review confirms the dormant/reactivatable posture at the pinned Arbitrum observation recorded in R16 research. Exact runtime-matched ERC20Mintable source declares SetMinter but setMinter(address,bool) never emits it, has no once-only guard, and writes private minters at compiler storage slot 11. Source-bound reads show both former pool and owner currently false, not an exhaustive minter inventory. Complete closure requires historical setMinter calldata/internal-call discovery, not an event-only census. The pinned Router retains an Ethereum off-ramp and owner-controlled ramp replacement. Supplemental Sol curation campaign 2026-10-09 (W2L20Chinaamc) review observed 2026-10-09T11:40:53.419Z at arbitrum block 513185222 (0x3fa5a5018ff95619c157a3f3b15ddf564a4d3ec87bf25654877f1201f51160c4, 2026-10-09T11:40:10.000Z): exact runtime/source correspondence and getter reads bind immutable router 0x141fa059441e0ca23ce184b6a78bafd2a517dde8, Ethereum source selector 5009297550715157269 and allowed sender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3. Receipt owner() still returns this governance receiver. Its authenticated ccipReceive ingress retains unrestricted targetContract.call(callData) with no executor delay; token-pool lane shutdown does not disable this independent governance-message entrypoint. The complete conservative-maximal certificate deliberately retains every control capability, unbounded impairment and global-claim reach as an adverse upper envelope. It grants no target exclusions, minter absence, local liability-share, signer independence, custody, upstream timelock or favorable process credit. Historical evidence above and the separate former-pool partial certificate remain; its exhaustive router/off-ramp and dormant-minter closure is not asserted.",
         "executionScope": {
           "controllerDeployment": "arbitrum:0x607bcd974bb69c78ecdbf0b68748b791bba24d94",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2027-09-30",
-          "reviewer": "Sol curation pass 2026-10-01 (DataInverse)",
-          "confidence": "partial",
+          "reviewedAt": "2026-10-09",
+          "observedAt": "2026-10-09",
+          "expiresAt": "2027-10-09",
+          "reviewer": "Sol curation campaign 2026-10-09 (W2L20Chinaamc)",
+          "confidence": "verified",
           "sources": [
             {
-              "label": "Issuer sDOLA shutdown documentation",
-              "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+              "label": "Verified GovernanceProxy arbitrary-call source; arbitrum executable correspondence",
+              "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x607bcd974bb69c78ecdbf0b68748b791bba24d94"
             },
             {
-              "label": "Pinned arbitrum RPC control observations",
+              "label": "Pinned arbitrum block 513185222, 2026-10-09T11:40:10.000Z; header 0x3fa5a5018ff95619c157a3f3b15ddf564a4d3ec87bf25654877f1201f51160c4; observed 2026-10-09T11:40:53.419Z",
               "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "510773779",
-            "hash": "0x1985e13ef45e0268fe0813987305a06df4961897355daf2cf02381e7cc1b994b",
+            "position": "513185222",
+            "hash": "0x3fa5a5018ff95619c157a3f3b15ddf564a4d3ec87bf25654877f1201f51160c4",
             "runtimeIdentity": "sha256:4b68f06f7b74e8324570992b215e47545f945c8b364b1f563616f7e649d9d388",
-            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+            "signerIdentity": "router:arbitrum:0x141fa059441e0ca23ce184b6a78bafd2a517dde8;allowedSourceChain:5009297550715157269;allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
           },
           "observedState": {
-            "position": "510773779",
-            "hash": "0x1985e13ef45e0268fe0813987305a06df4961897355daf2cf02381e7cc1b994b",
+            "position": "513185222",
+            "hash": "0x3fa5a5018ff95619c157a3f3b15ddf564a4d3ec87bf25654877f1201f51160c4",
             "runtimeIdentity": "sha256:4b68f06f7b74e8324570992b215e47545f945c8b364b1f563616f7e649d9d388",
-            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+            "signerIdentity": "router:arbitrum:0x141fa059441e0ca23ce184b6a78bafd2a517dde8;allowedSourceChain:5009297550715157269;allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "targetDeployment": "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898",
+              "id": "governance-ccip-maximal-call",
+              "targetDeployment": "arbitrum:0x607bcd974bb69c78ecdbf0b68748b791bba24d94",
               "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x85572ffb"
+              ],
               "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
+                "parameter-change"
+              ],
               "capSemantics": {
-                "kind": "unknown",
+                "kind": "unbounded",
                 "bound": null
               },
-              "claimImpairment": "unknown",
-              "economicLossScope": "unknown",
-              "unavoidableDelaySec": null,
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
               "affectedLiabilityIds": [
                 "sdola-inverse-finance"
               ],
-              "affectedDeployments": [
-                "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898"
-              ],
-              "reach": "unknown",
+              "affectedDeployments": [],
+              "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
               "bypassRefs": [],
-              "id": "governance-owner-set-minter",
-              "entrypoints": [
-                "0xcf456ae7"
-              ],
-              "capabilities": [
-                "parameter-change"
-              ],
-              "activation": "active"
-            },
-            {
-              "targetDeployment": "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898",
-              "entrypointKind": "evm-selector",
-              "callMode": "call",
-              "capSemantics": {
-                "kind": "unknown",
-                "bound": null
-              },
-              "claimImpairment": "unknown",
-              "economicLossScope": "unknown",
-              "unavoidableDelaySec": null,
-              "affectedLiabilityIds": [
-                "sdola-inverse-finance"
-              ],
-              "affectedDeployments": [
-                "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898"
-              ],
-              "reach": "unknown",
-              "controlRefs": [],
-              "reactivationRefs": [
-                "governance-owner-set-minter"
-              ],
-              "permissionChangeRefs": [
-                "governance-owner-set-minter"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": [],
-              "id": "former-pool-mint",
-              "entrypoints": [
-                "0x40c10f19"
-              ],
-              "capabilities": [
-                "bridge-mint"
-              ],
-              "activation": "disabled-reactivatable"
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "arbitrum:0x607bcd974bb69c78ecdbf0b68748b791bba24d94",
+                "executorDeployment": "arbitrum:0x607bcd974bb69c78ecdbf0b68748b791bba24d94",
+                "sourceDeployment": "arbitrum:0x607bcd974bb69c78ecdbf0b68748b791bba24d94",
+                "targets": "any-address",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "513185222",
+                  "hash": "0x3fa5a5018ff95619c157a3f3b15ddf564a4d3ec87bf25654877f1201f51160c4",
+                  "runtimeIdentity": "sha256:4b68f06f7b74e8324570992b215e47545f945c8b364b1f563616f7e649d9d388",
+                  "signerIdentity": "router:arbitrum:0x141fa059441e0ca23ce184b6a78bafd2a517dde8;allowedSourceChain:5009297550715157269;allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+                },
+                "sourceRuntimeIdentity": "sha256:4b68f06f7b74e8324570992b215e47545f945c8b364b1f563616f7e649d9d388",
+                "observedSourceRuntimeIdentity": "sha256:4b68f06f7b74e8324570992b215e47545f945c8b364b1f563616f7e649d9d388",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x607bcd974bb69c78ecdbf0b68748b791bba24d94",
+                  "location": "src/GovernanceProxy.sol _ccipReceive and inherited CCIPReceiver.ccipReceive: onlyRouter plus immutable allowedSourceChain/allowedSender, abi.decode(data,(address,bytes)), targetContract.call(callData); no target or calldata allowlist and no executor timelock. Exact pinned runtime equals the verified deployed bytecode."
+                }
+              }
             }
           ]
         }
@@ -1318,8 +1300,8 @@
         "label": "sDOLA representation owner / governance receiver",
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26936295,
+        "observedAt": "2026-10-09",
+        "observedBlock": 27265667,
         "sources": [
           {
             "label": "Issuer sDOLA shutdown documentation",
@@ -1350,120 +1332,114 @@
             "url": "https://sourcify.dev/server/v2/contract/8453/0xca78ee4544ec5a33af86f1e786efc7d3652bf005?fields=all"
           }
         ],
-        "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
+        "capDescription": "Authenticated arbitrary target/calldata execution has a complete adverse maximal scope; no cap, target, dormant-permission or economic-loss exclusions are credited.",
         "canRaiseCap": true,
         "failureDomainKeys": [
           "protocol:chainlink-ccip",
           "contract:berachain:0x1992af61fbf8ee38741bcc57d636caa22a1a7702"
         ],
-        "evidence": "Historical observations retain empty pool supported-chain list, rejected former-pool mint, owner reactivation and nonzero receipt supply. W3R12 on 2026-10-04 recovered the Berachain governance proxy's executable correspondence: block 27071315 runtime SHA-256 6b8e29d969482f06a02135d0ae8fe2a0b25ff5634f1f3b6e71025e44a4bd9f88 exactly matches Sourcify's verified Base GovernanceProxy outside six compiler-declared immutable ranges, including identical metadata. Immutable words bind router 0x71a275704c283486fba26dad3dd0db78804426ef, Ethereum selector 5009297550715157269 and sender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3; getter reads confirm router/sender. Its authenticated CCIP entrypoint performs arbitrary targetContract.call(callData). Ethereum block 26122351 binds that sender's owner to Timelock 0x926df14a23be491164dcf93f4c468a50ef659d5b. Complete explorer pages contain 49 external and 17 internal inbound transactions, with pagination end; mutation calldata and all three internal parent traces reconstruct the Timelock as enabled, deployer 0x11ec78492d53c9276dd7a184b1dbfb34e50b710d as disabled, and mill 396 helper 0x2a0fec62992d2c0f1b0c598551c1627f18286f84 as disabled. Pinned allowListedCallers reads validate all three. Supplemental 2026-10-05 review at Berachain block 27086966 additionally binds receipt runtime SHA-256 1c17c07570675216756b65988104fca2bad6053f08e86d1c44fdb11fe7fd2899 to verified Base ERC20Mintable: all 8407 bytes, including metadata, match outside compiler-declared immutable ranges 2440+32, 2477+32, 2529+32. Immutable words are 18, 80094 and the deployment domain separator. The matched source's private minters mapping is at slot 11; setMinter is repeatable and emits no SetMinter despite declaring that event. Both known former pool and owner mapping words are zero at the new pin; exhaustive historical minter calldata/internal calls and Router off-ramp replacement reach remain unresolved. No complete downstream dormant permission, CCIP router/bypass or affected-liability inventory is claimed; execution certificate remains partial at its original pin.",
+        "evidence": "Historical observations retain empty pool supported-chain list, rejected former-pool mint, owner reactivation and nonzero receipt supply. W3R12 on 2026-10-04 recovered the Berachain governance proxy's executable correspondence: block 27071315 runtime SHA-256 6b8e29d969482f06a02135d0ae8fe2a0b25ff5634f1f3b6e71025e44a4bd9f88 exactly matches Sourcify's verified Base GovernanceProxy outside six compiler-declared immutable ranges, including identical metadata. Immutable words bind router 0x71a275704c283486fba26dad3dd0db78804426ef, Ethereum selector 5009297550715157269 and sender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3; getter reads confirm router/sender. Its authenticated CCIP entrypoint performs arbitrary targetContract.call(callData). Ethereum block 26122351 binds that sender's owner to Timelock 0x926df14a23be491164dcf93f4c468a50ef659d5b. Complete explorer pages contain 49 external and 17 internal inbound transactions, with pagination end; mutation calldata and all three internal parent traces reconstruct the Timelock as enabled, deployer 0x11ec78492d53c9276dd7a184b1dbfb34e50b710d as disabled, and mill 396 helper 0x2a0fec62992d2c0f1b0c598551c1627f18286f84 as disabled. Pinned allowListedCallers reads validate all three. Supplemental 2026-10-05 review at Berachain block 27086966 additionally binds receipt runtime SHA-256 1c17c07570675216756b65988104fca2bad6053f08e86d1c44fdb11fe7fd2899 to verified Base ERC20Mintable: all 8407 bytes, including metadata, match outside compiler-declared immutable ranges 2440+32, 2477+32, 2529+32. Immutable words are 18, 80094 and the deployment domain separator. The matched source's private minters mapping is at slot 11; setMinter is repeatable and emits no SetMinter despite declaring that event. Both known former pool and owner mapping words are zero at the new pin; exhaustive historical minter calldata/internal calls and Router off-ramp replacement reach remain unresolved. No complete downstream dormant permission, CCIP router/bypass or affected-liability inventory is claimed; the historical execution certificate was partial. Supplemental Sol curation campaign 2026-10-09 (W2L20Chinaamc) review observed 2026-10-09T11:42:02.104Z at berachain block 27265667 (0xf708f973bf29b443db75478eaa2b4b1161d13bddc1515b3924cd124d3c480959, 2026-10-09T11:40:50.000Z): exact runtime/source correspondence and getter reads bind immutable router 0x71a275704c283486fba26dad3dd0db78804426ef, Ethereum source selector 5009297550715157269 and allowed sender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3. Receipt owner() still returns this governance receiver. Its authenticated ccipReceive ingress retains unrestricted targetContract.call(callData) with no executor delay; token-pool lane shutdown does not disable this independent governance-message entrypoint. The complete conservative-maximal certificate deliberately retains every control capability, unbounded impairment and global-claim reach as an adverse upper envelope. It grants no target exclusions, minter absence, local liability-share, signer independence, custody, upstream timelock or favorable process credit. Historical evidence above and the separate former-pool partial certificate remain; its exhaustive router/off-ramp and dormant-minter closure is not asserted.",
         "executionScope": {
           "controllerDeployment": "berachain:0x1992af61fbf8ee38741bcc57d636caa22a1a7702",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2027-09-30",
-          "reviewer": "Sol curation pass 2026-10-01 (DataInverse)",
-          "confidence": "partial",
+          "reviewedAt": "2026-10-09",
+          "observedAt": "2026-10-09",
+          "expiresAt": "2027-10-09",
+          "reviewer": "Sol curation campaign 2026-10-09 (W2L20Chinaamc)",
+          "confidence": "verified",
           "sources": [
             {
-              "label": "Issuer sDOLA shutdown documentation",
-              "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+              "label": "Verified GovernanceProxy arbitrary-call source; berachain executable correspondence",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x1c064265e053d23d120c518fdbb542e6537f82d1?fields=all"
             },
             {
-              "label": "Pinned berachain RPC control observations",
+              "label": "Pinned berachain block 27265667, 2026-10-09T11:40:50.000Z; header 0xf708f973bf29b443db75478eaa2b4b1161d13bddc1515b3924cd124d3c480959; observed 2026-10-09T11:42:02.104Z",
               "url": "https://api-berachain-mainnet.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "26936295",
-            "hash": "0xaa20bf46a86c1700ee990bf35ce65a02be856a97c39029a4d67718475bfda2dd",
+            "position": "27265667",
+            "hash": "0xf708f973bf29b443db75478eaa2b4b1161d13bddc1515b3924cd124d3c480959",
             "runtimeIdentity": "sha256:6b8e29d969482f06a02135d0ae8fe2a0b25ff5634f1f3b6e71025e44a4bd9f88",
-            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+            "signerIdentity": "router:berachain:0x71a275704c283486fba26dad3dd0db78804426ef;allowedSourceChain:5009297550715157269;allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
           },
           "observedState": {
-            "position": "26936295",
-            "hash": "0xaa20bf46a86c1700ee990bf35ce65a02be856a97c39029a4d67718475bfda2dd",
+            "position": "27265667",
+            "hash": "0xf708f973bf29b443db75478eaa2b4b1161d13bddc1515b3924cd124d3c480959",
             "runtimeIdentity": "sha256:6b8e29d969482f06a02135d0ae8fe2a0b25ff5634f1f3b6e71025e44a4bd9f88",
-            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+            "signerIdentity": "router:berachain:0x71a275704c283486fba26dad3dd0db78804426ef;allowedSourceChain:5009297550715157269;allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "targetDeployment": "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03",
+              "id": "governance-ccip-maximal-call",
+              "targetDeployment": "berachain:0x1992af61fbf8ee38741bcc57d636caa22a1a7702",
               "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x85572ffb"
+              ],
               "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
+                "parameter-change"
+              ],
               "capSemantics": {
-                "kind": "unknown",
+                "kind": "unbounded",
                 "bound": null
               },
-              "claimImpairment": "unknown",
-              "economicLossScope": "unknown",
-              "unavoidableDelaySec": null,
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
               "affectedLiabilityIds": [
                 "sdola-inverse-finance"
               ],
-              "affectedDeployments": [
-                "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03"
-              ],
-              "reach": "unknown",
+              "affectedDeployments": [],
+              "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
               "bypassRefs": [],
-              "id": "governance-owner-set-minter",
-              "entrypoints": [
-                "0xcf456ae7"
-              ],
-              "capabilities": [
-                "parameter-change"
-              ],
-              "activation": "active"
-            },
-            {
-              "targetDeployment": "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03",
-              "entrypointKind": "evm-selector",
-              "callMode": "call",
-              "capSemantics": {
-                "kind": "unknown",
-                "bound": null
-              },
-              "claimImpairment": "unknown",
-              "economicLossScope": "unknown",
-              "unavoidableDelaySec": null,
-              "affectedLiabilityIds": [
-                "sdola-inverse-finance"
-              ],
-              "affectedDeployments": [
-                "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03"
-              ],
-              "reach": "unknown",
-              "controlRefs": [],
-              "reactivationRefs": [
-                "governance-owner-set-minter"
-              ],
-              "permissionChangeRefs": [
-                "governance-owner-set-minter"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": [],
-              "id": "former-pool-mint",
-              "entrypoints": [
-                "0x40c10f19"
-              ],
-              "capabilities": [
-                "bridge-mint"
-              ],
-              "activation": "disabled-reactivatable"
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "berachain:0x1992af61fbf8ee38741bcc57d636caa22a1a7702",
+                "executorDeployment": "berachain:0x1992af61fbf8ee38741bcc57d636caa22a1a7702",
+                "sourceDeployment": "berachain:0x1992af61fbf8ee38741bcc57d636caa22a1a7702",
+                "targets": "any-address",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "27265667",
+                  "hash": "0xf708f973bf29b443db75478eaa2b4b1161d13bddc1515b3924cd124d3c480959",
+                  "runtimeIdentity": "sha256:6b8e29d969482f06a02135d0ae8fe2a0b25ff5634f1f3b6e71025e44a4bd9f88",
+                  "signerIdentity": "router:berachain:0x71a275704c283486fba26dad3dd0db78804426ef;allowedSourceChain:5009297550715157269;allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+                },
+                "sourceRuntimeIdentity": "sha256:6b8e29d969482f06a02135d0ae8fe2a0b25ff5634f1f3b6e71025e44a4bd9f88",
+                "observedSourceRuntimeIdentity": "sha256:6b8e29d969482f06a02135d0ae8fe2a0b25ff5634f1f3b6e71025e44a4bd9f88",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://sourcify.dev/server/v2/contract/8453/0x1c064265e053d23d120c518fdbb542e6537f82d1?fields=all",
+                  "location": "src/GovernanceProxy.sol _ccipReceive and inherited CCIPReceiver.ccipReceive: onlyRouter plus immutable allowedSourceChain/allowedSender, abi.decode(data,(address,bytes)), targetContract.call(callData); no target or calldata allowlist and no executor timelock. Pinned Berachain runtime equals the verified Base compiler template outside all six declared 32-byte immutable ranges; both instances of router, source selector and sender agree with pinned getters, and metadata is identical."
+                }
+              }
             }
           ]
         }

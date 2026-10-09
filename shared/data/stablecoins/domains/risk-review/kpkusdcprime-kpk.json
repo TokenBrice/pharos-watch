@@ -115,7 +115,7 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Vault share NAV uses internal asset/share accounting; underlying active Morpho borrower markets require collateral pricing. Exact market/oracle identities and LLTVs are inventoried, including nonzero dust; underlying feed administrators, update/staleness safeguards and complete fallback topology remain unverified. API type names alone do not establish oracle quality. Historical zero-supply positions are excluded from this current-exposure review.",
+    "summary": "Vault share NAV uses internal asset/share accounting; Morpho borrower markets require collateral pricing. At Ethereum block 26154662, the adapter enumerates eight markets; the current/historical reviewed union has eight positive Morpho supply positions, with matching internal supply shares and zero borrowing/collateral. weETH retains one raw USDC unit of expected assets. This position census establishes identities and dust, not feed administrators, update/staleness safeguards or complete oracle fallback topology; the profile remains unresolved.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -197,6 +197,10 @@
       {
         "label": "Morpho gate semantics and irreversible abdication",
         "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Sol curation campaign 2026-10-09 (W2L13Kpk): adapter market enumeration and current/historical position union at Ethereum block 26154662, hash 0xf60cac1fe0b417fe0ee522542ac4beb45d649b4004c4c7c5dcff838b39c6a06b, timestamp 2026-10-09T11:50:11Z; observed 2026-10-09T12:17:36.364Z; oracle quality not established",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       },
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",

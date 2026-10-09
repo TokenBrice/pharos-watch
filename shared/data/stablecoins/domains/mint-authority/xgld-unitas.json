@@ -5,7 +5,7 @@
     "inheritedFrom": "xaut-tether",
     "authorityPosture": "unbounded-adverse",
     "confidence": "unknown",
-    "summary": "XGLD inherits XAUt issuer risk and adds two active BNB native minter contracts plus an owner that can replace that roster without a token-code upgrade. Token code is non-proxy; downstream owner signing and the older minter implementation remain unresolved.",
+    "summary": "XGLD inherits XAUt issuer risk and adds two active BNB native minters plus a source-verified XGLDTimelockController owner that can replace the roster through scheduled arbitrary calls. The token is non-proxy; the timelock's live role/signing and pending-operation census, and the active original minter's unverified implementation, remain unresolved.",
     "controls": [
       {
         "label": "Unitas BNB native XGLD minter administration",
@@ -35,9 +35,17 @@
           {
             "label": "BNB XGLD deployment",
             "url": "https://bscscan.com/address/0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
+          },
+          {
+            "label": "Recovered exact XGLDTimelockController verified source/ABI, including TimelockController arbitrary-call and role semantics",
+            "url": "https://api.etherscan.io/v2/api?chainid=56&module=contract&action=getsourcecode&address=0x99997b18733ff4a9d8e0b9c7d9dec59625f87228"
+          },
+          {
+            "label": "Pinned BSC block 126630805/hash 0x8dd758e7fd8ceef45ca0c89bcbd3e70efe70afa67f6c35aaf0f8098d5e3f6f02, 2026-10-09T11:50:39Z; observed 2026-10-09T11:50:40.933Z",
+            "url": "https://api-bsc-mainnet-full.n.dwellir.com"
           }
         ],
-        "evidence": "At BNB block 125834908/hash 0xc5cbacf307db795c017df3f202435d5e912cf5675a60ff3a6702780b39f5f57f, owner() still identifies this 6550-byte custom contract (runtime SHA256 701d3d33d486deadd2a5f7a151c2afa55b63d848dd94e05f02231710bca8d9db), with zero EIP-1967 implementation slot; Safe getOwners/getThreshold revert, so no Safe quorum is inferred. Exact token source remains non-proxy and permits owner-only roster changes and arbitrary-amount minter issuance. The complete MinterAdded/MinterRemoved/BurnerAdded/BurnerRemoved census from creation 99201716 through 125834908 contains four additions and no removals: minters 0x6e705a2e978a30dc92df69b428a333f6b82c0c0e/0x2a9e3ea72575e05337a7703c8fad65a82a5b5865 and burners 0x82a7cc65dc43a9cd5b105581b954ef082595c361/0x2ac5abd45fea3d72afc1c68500ba4a677153003c. All four live mapping getters remain true. Named-controller executable signing/target/bypass policy is still unverified, not a missing role census."
+        "evidence": "Sol curation campaign 2026-10-09 (W2L12Unitas) recovered the exact authenticated Etherscan source/ABI: contracts/XGLDTimelockController.sol inherits OpenZeppelin TimelockController, separates proposer/canceller roles, and exposes scheduled execute/executeBatch arbitrary CALL targets. updateDelay is self-call-only; role grants/revocations are admin-controlled. At BSC block 126630805/hash 0x8dd758e7fd8ceef45ca0c89bcbd3e70efe70afa67f6c35aaf0f8098d5e3f6f02 (2026-10-09T11:50:39Z), token owner() remains this address and its 6550-byte runtime SHA256 701d3d33d486deadd2a5f7a151c2afa55b63d848dd94e05f02231710bca8d9db matches the historical byte identity. getMinDelay() returns 172800 seconds for newly scheduled operations. This is not an unavoidable delay certificate: current/pending role, signer, operation and mutable-delay paths remain unclosed, and no Safe quorum is inferred. The historical token roster remains two minters; the current minters(original)=true observation retains the unverified original path."
       },
       {
         "label": "Unitas original BNB native minter",
@@ -50,10 +58,10 @@
         "observedAt": "2026-10-05",
         "observedBlock": 125834908,
         "sources": [{
-          "label": "Active original minter; implementation not verified by Sourcify",
-          "url": "https://bscscan.com/address/0x6e705a2e978a30dc92df69b428a333f6b82c0c0e"
+          "label": "Exact original minter: authenticated explorer reports source code not verified",
+          "url": "https://api.etherscan.io/v2/api?chainid=56&module=contract&action=getsourcecode&address=0x6e705a2e978a30dc92df69b428a333f6b82c0c0e"
         }],
-        "evidence": "Creation-to-pin role census and minters(address)=true at BNB block 125834908 establish this still-active native path. Its 14773-byte runtime SHA256 is 5d960b93ac40550ef0afee093970a264bffbe0dd6b7a44d508530f31926d6568, unchanged from the prior pin; EIP-1967 implementation slot is zero. Fresh exact-address Sourcify v2 returns no match, BscScan retrieval is blocked, and the current issuer repository tree does not publish XGLD implementation files. Failed retrieval is not non-disclosure or a collateral-enforcement proof; executable order enforcement and downstream authority remain unresolved."
+        "evidence": "Creation-to-pin historical role census identifies this native path. Fresh minters(address)=true at BSC block 126630805/hash 0x8dd758e7fd8ceef45ca0c89bcbd3e70efe70afa67f6c35aaf0f8098d5e3f6f02 (2026-10-09T11:50:39Z) proves it remains active. The October 9 authenticated exact-address Etherscan source response is status=1 with empty SourceCode and ABI='Contract source code not verified', a positive verification-status observation distinct from prior Sourcify 404/BscScan 403 failures. The historical 14773-byte runtime SHA256 5d960b93ac40550ef0afee093970a264bffbe0dd6b7a44d508530f31926d6568 and zero EIP-1967 slot are not freshly observed. Executable order/collateral enforcement and downstream authority remain U; unverified source alone does not prove an issuer non-disclosure conclusion."
       },
       {
         "label": "Unitas XGLDMinting BNB native minter",
@@ -144,15 +152,27 @@
         {
           "label": "Issuer XGLD launch disclosure searched for incidents",
           "url": "https://paragraph.com/@unitaslabs/unitas-introduces-xgld"
+        },
+        {
+          "label": "Exact owner verified source recovered through authenticated Etherscan; credential omitted",
+          "url": "https://api.etherscan.io/v2/api?chainid=56&module=contract&action=getsourcecode&address=0x99997b18733ff4a9d8e0b9c7d9dec59625f87228"
+        },
+        {
+          "label": "Exact original minter verification-status response; credential omitted",
+          "url": "https://api.etherscan.io/v2/api?chainid=56&module=contract&action=getsourcecode&address=0x6e705a2e978a30dc92df69b428a333f6b82c0c0e"
+        },
+        {
+          "label": "Pinned BSC native-owner continuity and original-minter authorization, block 126630805/hash 0x8dd758e7fd8ceef45ca0c89bcbd3e70efe70afa67f6c35aaf0f8098d5e3f6f02, 2026-10-09T11:50:39Z; observed 2026-10-09T11:50:40.933Z",
+          "url": "https://api-bsc-mainnet-full.n.dwellir.com"
         }
       ],
-      "evidence": "R13 rechecked the native roster, controller code/slots and exact runtime-corresponding token/new-minter/rate sources at BNB block 125834908. The full creation-to-pin role census still has two minters/two burners, all live mapping checks true; custom owner and original-minter runtime hashes are unchanged. Exact Sourcify queries still have no source match for those two named controllers; BscScan retrieval is blocked and the issuer's current unitas-evm-contract tree has no XGLD-specific implementation paths. The 2443 BNB token mint Transfer events, including OFT credits, were retrieved but cannot certify original-minter order authorization or collateral enforcement. Incident research searched issuer XGLD docs, audit reports, launch blog/social-indexed disclosures and Rekt; no realized XGLD incident was identified in retrieved disclosures, but this does not complete the aggregate mint review or establish incidentState=none. Fresh issuer-linked 2025 ScaleBit/SlowMist EVM reports scope USDu, UnitasMinting/V2 and staking/admin files, not these exact XGLD controllers; SlowMist section 4.1 expressly says its audited code was not deployed to mainnet. No sibling audit assurance or finding is imported. Native token code is non-proxy, yet owner can add arbitrary minters without delay. Accountable still reports gross reserves/token supply, not net NAV after borrowed USDT. The previously retrieved 25 September HT Digital letter names USDu Solana and assets held for USDu, not either XGLD deployment; no USDu-specific assurance is imported. Reconciliation and supervision remain unknown and the unbounded-adverse fallback is preserved. Base OFT controls remain Bridge Risk. Native XAUt redemption documentation still specifies whitelisting, 7-day cooldown and 10bps fee, not an end-to-end completion SLA.",
+      "evidence": "October 9 source recovery by Sol curation campaign 2026-10-09 (W2L12Unitas) succeeds for the exact owner: verified XGLDTimelockController/TimelockController source establishes scheduled arbitrary CALL execution and source-level role/delay mutability. Its byte identity and token owner binding remain pinned at BSC 126630805; current getMinDelay is 172800 seconds for new schedules, without a whole-authority unavoidable-delay claim. Authenticated explorer confirms the still-active original minter has no verified source in that API. Historical October 5 roster/source/state and incident research remain historical; no fresh complete role/signer/operation/bypass census, original-minter implementation, native liability reconciliation or financial supervision is established. Review remains unresolved and no current C clocks are refreshed.",
       "reviewer": "R13 current-source and pinned native-controller review",
       "reviewedAt": "2026-10-05",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Custom owner contract 0x99997b18733ff4a9d8e0b9c7d9dec59625f87228 is identified, but its executable signature authorization, mutable target and bypass paths are not publicly verified. This is a gap in the named controller's implementation, not an unknown token-level minter census or a claim about human key-custody quality.",
-        "Active original minter 0x6e705a2e978a30dc92df69b428a333f6b82c0c0e is identified by the complete role census, but its collateral enforcement and downstream executable authority are not publicly verified."
+        "Source-verified XGLDTimelockController owner 0x99997b18733ff4a9d8e0b9c7d9dec59625f87228 has scheduled arbitrary-call execution; the complete current role-holder/signing, pending-operation and fastest mutable-delay/bypass census is not established. A 172800-second getMinDelay value is not by itself a complete unavoidable-delay or multisig certificate.",
+        "Active original minter 0x6e705a2e978a30dc92df69b428a333f6b82c0c0e is source-unverified in the authenticated explorer response; executable collateral enforcement and downstream authority remain unresolved."
       ]
     }
   }

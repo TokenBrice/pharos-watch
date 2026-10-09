@@ -49,6 +49,14 @@
       {
         "label": "Signed mAPOLLO Final Terms dated 17 July 2026: notional reference portfolio and holder claim",
         "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media"
+      },
+      {
+        "label": "W2L03Midas pinned SAVE registry reads at Ethereum block 26154369 (2026-10-09T10:51:35Z): mapollo-por latest publication timestamp 2026-10-07T11:03:23Z; technical publication identity only",
+        "url": "https://etherscan.io/address/0x2d6e9f608807436de5d9603b00abe3fed1bc809d#readContract"
+      },
+      {
+        "label": "Pinned SAVE block 26154369, hash 0xe37b850c5c182cdf1b868af39bcf2606d9ae52a9213e5b42a1004e99ff0269d7",
+        "url": "https://etherscan.io/block/26154369"
       }
     ],
     "rationale": "The official API updated 2026-10-02T07:06:43.214Z discloses signed main positions and protocol-level assets, borrow liabilities and equity. Net protocol equity shares sum to 99.99%, but protocol buckets do not establish complete asset-level backing weights, hedge reconciliation, custody allocation or a reserve-to-token-liability reconciliation. The signed 17 July 2026 terms define a notional reference portfolio without a requirement to acquire the underlying. Preserve the unresolved NAV envelope and omit compositionAsOf; this research date does not refresh a verified composition.",

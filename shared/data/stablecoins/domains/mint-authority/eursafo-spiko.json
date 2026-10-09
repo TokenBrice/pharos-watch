@@ -79,11 +79,11 @@
       {
         "executionScope": {
           "controllerDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
-          "reviewedAt": "2026-10-05",
+          "reviewedAt": "2026-10-09",
           "observedAt": "2026-10-05",
           "expiresAt": "2027-10-01",
-          "reviewer": "R05 pinned on-chain and verified-source review 2026-10-05",
-          "confidence": "partial",
+          "reviewer": "Sol curation campaign 2026-10-09 (W2L02Spiko)",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Verified Minter implementation",
@@ -114,15 +114,15 @@
             "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
             "signerIdentity": "0x5ed5a75eeed1934ea060186e35187eaa73331366; PM group 2; group mask 0x8000000000000000000000000000000000000000000000000000000000000004; contract; group-10 initiators 2 and group-9 approvers 7; independent ADMIN 3-of-6"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
             "entrypoints": true,
-            "mutableTargets": false,
+            "mutableTargets": true,
             "delegateAndFallback": true,
             "permissions": true,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
@@ -257,7 +257,9 @@
         },
         "chain": "ethereum",
         "address": "0x5ed5a75eeed1934ea060186e35187eaa73331366",
-        "deploymentRefs": ["ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"],
+        "deploymentRefs": [
+          "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+        ],
         "label": "EURSAFO Ethereum Minter proxy",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -339,24 +341,47 @@
               "id": "admin-maximal-execution",
               "targetDeployment": "ethereum:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
               "entrypointKind": "evm-selector",
-              "entrypoints": ["0x6a761202"],
+              "entrypoints": [
+                "0x6a761202"
+              ],
               "callMode": "call",
-              "capabilities": ["mint", "burn", "upgrade", "freeze", "seize", "oracle-update", "bridge-mint", "custody-transfer", "parameter-change"],
-              "capSemantics": { "kind": "unbounded", "bound": null },
+              "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": 0,
               "activation": "active",
-              "affectedLiabilityIds": ["eursafo-spiko"],
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
               "affectedDeployments": [],
               "reach": "root",
-              "controlRefs": [], "reactivationRefs": [], "permissionChangeRefs": [], "upgradeRefs": [], "bypassRefs": [],
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
               "downstreamCallDomain": {
                 "kind": "conservative-maximal",
                 "controllerDeployment": "ethereum:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
                 "executorDeployment": "ethereum:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
                 "sourceDeployment": "ethereum:0x41675c099f32341bf84bfc5382af534df5c7461a",
-                "targets": "any-contract", "calldata": "arbitrary-bytes", "capabilities": "all-reachable",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
@@ -625,11 +650,11 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0xe582cddcb3d2374adbb34c9afe76683d019c8a2b",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-09",
+          "observedAt": "2026-10-05",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
-          "confidence": "partial",
+          "reviewer": "Sol curation campaign 2026-10-09 (W2L02Spiko)",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Verified Minter implementation",
@@ -638,29 +663,37 @@
             {
               "label": "Verified PermissionManager implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            },
+            {
+              "label": "Verified native fund Token implementations (full inheritance source)",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x13ae01cbce8530012516fbc1273803d4995aee71"
+            },
+            {
+              "label": "Pinned Ethereum block 26124840 and complete PermissionManager event census from creation 19690257",
+              "url": "https://etherscan.io/block/26124840"
             }
           ],
           "pin": {
-            "position": "26098764",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0xe582cddcb3d2374adbb34c9afe76683d019c8a2b; group 10; requirement mask 0x401"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0xe582cddcb3d2374adbb34c9afe76683d019c8a2b; PM groups 4, 6 and 10; group mask 0x8000000000000000000000000000000000000000000000000000000000000450; zero runtime code; no group-admin authority"
           },
           "observedState": {
-            "position": "26098764",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0xe582cddcb3d2374adbb34c9afe76683d019c8a2b; group 10; requirement mask 0x401"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0xe582cddcb3d2374adbb34c9afe76683d019c8a2b; PM groups 4, 6 and 10; group mask 0x8000000000000000000000000000000000000000000000000000000000000450; zero runtime code; no group-admin authority"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
@@ -681,6 +714,39 @@
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "burn-holders",
+              "targetDeployment": "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x9dc29fac"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "burn",
+                "seize"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
               "activation": "active",
               "affectedLiabilityIds": [
                 "eursafo-spiko"
@@ -728,11 +794,11 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-09",
+          "observedAt": "2026-10-05",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
-          "confidence": "partial",
+          "reviewer": "Sol curation campaign 2026-10-09 (W2L02Spiko)",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Verified Minter implementation",
@@ -741,29 +807,37 @@
             {
               "label": "Verified PermissionManager implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            },
+            {
+              "label": "Verified native fund Token implementations (full inheritance source)",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x13ae01cbce8530012516fbc1273803d4995aee71"
+            },
+            {
+              "label": "Pinned Ethereum block 26124840 and complete PermissionManager event census from creation 19690257",
+              "url": "https://etherscan.io/block/26124840"
             }
           ],
           "pin": {
-            "position": "26098764",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949; group 9; requirement mask 0x201; single EOA"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949; PM groups 6 and 9; group mask 0x8000000000000000000000000000000000000000000000000000000000000240; zero runtime code; no group-admin authority"
           },
           "observedState": {
-            "position": "26098764",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949; group 9; requirement mask 0x201; single EOA"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949; PM groups 6 and 9; group mask 0x8000000000000000000000000000000000000000000000000000000000000240; zero runtime code; no group-admin authority"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
@@ -784,6 +858,38 @@
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "cancel-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xb76ff11f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "access-only",
+              "unavoidableDelaySec": 0,
               "activation": "active",
               "affectedLiabilityIds": [
                 "eursafo-spiko"
@@ -1772,21 +1878,53 @@
             {
               "id": "admin-maximal-execution",
               "targetDeployment": "arbitrum:0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
-              "entrypointKind": "evm-selector", "entrypoints": ["0x6a761202"], "callMode": "call",
-              "capabilities": ["mint", "burn", "upgrade", "freeze", "seize", "oracle-update", "bridge-mint", "custody-transfer", "parameter-change"],
-              "capSemantics": { "kind": "unbounded", "bound": null },
-              "claimImpairment": "unbounded", "economicLossScope": "global-claim", "unavoidableDelaySec": 0, "activation": "active",
-              "affectedLiabilityIds": ["eursafo-spiko"], "affectedDeployments": [], "reach": "root",
-              "controlRefs": [], "reactivationRefs": [], "permissionChangeRefs": [], "upgradeRefs": [], "bypassRefs": [],
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x6a761202"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
               "downstreamCallDomain": {
                 "kind": "conservative-maximal",
                 "controllerDeployment": "arbitrum:0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
                 "executorDeployment": "arbitrum:0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
                 "sourceDeployment": "arbitrum:0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
-                "targets": "any-contract", "calldata": "arbitrary-bytes", "capabilities": "all-reachable",
-                "arbitraryCallVerified": true, "sourceRuntimeCorrespondence": "verified",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "510775539", "hash": "0x3a41146efae528ab5ff4d2a716531fb37a50fbcc595b5f07252bdbe2c41429e0",
+                  "position": "510775539",
+                  "hash": "0x3a41146efae528ab5ff4d2a716531fb37a50fbcc595b5f07252bdbe2c41429e0",
                   "runtimeIdentity": "sha256:rpc-hex-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
                   "signerIdentity": "sha256:owners-and-threshold-abi:ef659141288e48eccdac7d29926f55a265abc287029108cd88e205b6f0f48848"
                 },
@@ -1920,21 +2058,53 @@
             {
               "id": "admin-maximal-execution",
               "targetDeployment": "base:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
-              "entrypointKind": "evm-selector", "entrypoints": ["0x6a761202"], "callMode": "call",
-              "capabilities": ["mint", "burn", "upgrade", "freeze", "seize", "oracle-update", "bridge-mint", "custody-transfer", "parameter-change"],
-              "capSemantics": { "kind": "unbounded", "bound": null },
-              "claimImpairment": "unbounded", "economicLossScope": "global-claim", "unavoidableDelaySec": 0, "activation": "active",
-              "affectedLiabilityIds": ["eursafo-spiko"], "affectedDeployments": [], "reach": "root",
-              "controlRefs": [], "reactivationRefs": [], "permissionChangeRefs": [], "upgradeRefs": [], "bypassRefs": [],
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x6a761202"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
               "downstreamCallDomain": {
                 "kind": "conservative-maximal",
                 "controllerDeployment": "base:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
                 "executorDeployment": "base:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
                 "sourceDeployment": "base:0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
-                "targets": "any-contract", "calldata": "arbitrary-bytes", "capabilities": "all-reachable",
-                "arbitraryCallVerified": true, "sourceRuntimeCorrespondence": "verified",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "52042428", "hash": "0x8154966807b13c53729cffddb8ad5c00dde05ef829c98509de94adb365a607fe",
+                  "position": "52042428",
+                  "hash": "0x8154966807b13c53729cffddb8ad5c00dde05ef829c98509de94adb365a607fe",
                   "runtimeIdentity": "sha256:rpc-hex-text:4c0d9dfd76a6bf1150fe312519f388fbfe69e70130b4d0c4705b44d796313305",
                   "signerIdentity": "sha256:owners-and-threshold-abi:1c6ff6ffef115e79683bd6a4cab95dd1d529f673ff4c85e0b2b58bdf4d2b23f1"
                 },
@@ -2072,21 +2242,53 @@
             {
               "id": "admin-maximal-execution",
               "targetDeployment": "polygon:0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
-              "entrypointKind": "evm-selector", "entrypoints": ["0x6a761202"], "callMode": "call",
-              "capabilities": ["mint", "burn", "upgrade", "freeze", "seize", "oracle-update", "bridge-mint", "custody-transfer", "parameter-change"],
-              "capSemantics": { "kind": "unbounded", "bound": null },
-              "claimImpairment": "unbounded", "economicLossScope": "global-claim", "unavoidableDelaySec": 0, "activation": "active",
-              "affectedLiabilityIds": ["eursafo-spiko"], "affectedDeployments": [], "reach": "root",
-              "controlRefs": [], "reactivationRefs": [], "permissionChangeRefs": [], "upgradeRefs": [], "bypassRefs": [],
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x6a761202"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
               "downstreamCallDomain": {
                 "kind": "conservative-maximal",
                 "controllerDeployment": "polygon:0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
                 "executorDeployment": "polygon:0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
                 "sourceDeployment": "polygon:0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
-                "targets": "any-contract", "calldata": "arbitrary-bytes", "capabilities": "all-reachable",
-                "arbitraryCallVerified": true, "sourceRuntimeCorrespondence": "verified",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "95120070", "hash": "0xfbe2c365030498388cc62a41de1f78a9af731a1c9450af2274e5a6ef9752e262",
+                  "position": "95120070",
+                  "hash": "0xfbe2c365030498388cc62a41de1f78a9af731a1c9450af2274e5a6ef9752e262",
                   "runtimeIdentity": "sha256:rpc-hex-text:4c0d9dfd76a6bf1150fe312519f388fbfe69e70130b4d0c4705b44d796313305",
                   "signerIdentity": "sha256:owners-and-threshold-abi:df00b3b81440235c1088b3cdb6094ee447cd743d2ab06ddae1c5d87347bab121"
                 },
@@ -2220,21 +2422,53 @@
             {
               "id": "admin-maximal-execution",
               "targetDeployment": "etherlink:0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538",
-              "entrypointKind": "evm-selector", "entrypoints": ["0x6a761202"], "callMode": "call",
-              "capabilities": ["mint", "burn", "upgrade", "freeze", "seize", "oracle-update", "bridge-mint", "custody-transfer", "parameter-change"],
-              "capSemantics": { "kind": "unbounded", "bound": null },
-              "claimImpairment": "unbounded", "economicLossScope": "global-claim", "unavoidableDelaySec": 0, "activation": "active",
-              "affectedLiabilityIds": ["eursafo-spiko"], "affectedDeployments": [], "reach": "root",
-              "controlRefs": [], "reactivationRefs": [], "permissionChangeRefs": [], "upgradeRefs": [], "bypassRefs": [],
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x6a761202"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
               "downstreamCallDomain": {
                 "kind": "conservative-maximal",
                 "controllerDeployment": "etherlink:0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538",
                 "executorDeployment": "etherlink:0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538",
                 "sourceDeployment": "etherlink:0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
-                "targets": "any-contract", "calldata": "arbitrary-bytes", "capabilities": "all-reachable",
-                "arbitraryCallVerified": true, "sourceRuntimeCorrespondence": "verified",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "54683983", "hash": "0x6aa7c956fbd4938bdfe48859cf3e155674080dea7ef8da4b0600846e6373d6a7",
+                  "position": "54683983",
+                  "hash": "0x6aa7c956fbd4938bdfe48859cf3e155674080dea7ef8da4b0600846e6373d6a7",
                   "runtimeIdentity": "sha256:rpc-hex-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
                   "signerIdentity": "sha256:owners-and-threshold-abi:1c6ff6ffef115e79683bd6a4cab95dd1d529f673ff4c85e0b2b58bdf4d2b23f1"
                 },

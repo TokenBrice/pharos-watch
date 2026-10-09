@@ -37,7 +37,34 @@
         "counterparty",
         "legal"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "boundedFacts": [
+        {
+          "factKey": "mtbill-midas:buidl:open-ended-maturity:2026-10-05",
+          "kind": "maturity-applicability",
+          "scope": {
+            "kind": "exposure",
+            "exposureKey": "reserve:7578c872c37b77eb35704c63"
+          },
+          "asOfSec": 1791187868,
+          "publisher": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2",
+          "sourceUrls": [
+            "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652"
+          ],
+          "assertion": "Securitize Markets, acting as BUIDL distributor on behalf of BlackRock, states in Expected Maturity: \"The fund does not have a maturity date.\" Plan Design 2 identifies the claim as non-voting participating Class A shares issued as digital tokens. This applies only to the named BUIDL fund-share exposure, not to mTBILL itself or the underlying Treasury portfolio. The independently retained October 5 standing BUIDL research pin and source digest from reserve-bound-facts-v1.json are reused without refreshing asOfSec; the May 4, 2024 document date is preserved. No finite share maturity, not-applicable maturity, redemption guarantee or new holdings date is inferred.",
+          "contentDigest": "8476ec949caae6870974cb37c6432b7bb15ddb551c95d8ba2a34db5071addfbb",
+          "provenance": {
+            "kind": "reviewed-research",
+            "reviewedAt": "2026-10-09",
+            "reviewer": "Sol curation campaign 2026-10-09 (W2L03Midas)",
+            "confidence": "high"
+          },
+          "claimId": "BlackRock USD Institutional Digital Liquidity Fund Ltd. non-voting participating Class A shares / Ethereum 0x7712c34205737192402172409a8F7ccef8aA2AEc",
+          "conclusion": "open-ended",
+          "governingInstrument": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2",
+          "allInScope": true
+        }
+      ]
     },
     {
       "sourceKey": "midas-mtbill:unclassified-residual",

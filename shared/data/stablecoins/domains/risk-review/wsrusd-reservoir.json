@@ -1140,6 +1140,7 @@
         "routeChecks": {
           "trustedPeerOrRemote": "Rechecked 2026-10-05 at independently pinned blocks on every catalogued EVM OFT and Ethereum adapter. Census uses official LayerZero V2 endpoint IDs, including Berachain 30362 and Pharos 30407, and reads peers plus SEND/SEND_AND_CALL enforced options for each disclosed remote. Ethereum block 26124870 has 19 populated remote peers and zero Plume peer; every inspected remote EVM OFT has the Ethereum adapter as its sole populated peer among the disclosed EIDs. This is not a creation-to-pin PeerSet event census, nor proof that all configured libraries can execute a lane.",
           "pausersAdminsUpgraders": "Verified OFT/adapter source enumerates setPeer, setDelegate, setEnforcedOptions, setMsgInspector, setPreCrime, transferOwnership and renounceOwnership. All 18 remote EVM OFT executable runtimes remain source-equivalent; owner() returns EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 and EndpointV2 delegates(app) independently returns EOA 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0. Inspector and pre-crime are zero in successful pinned reads. The actual Plume endpoint is 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36, not the current metadata endpoint. Independent EndpointV2 owners are runtime-present contracts, not inferred Safes. Their governance, library/DVN administration, historical peer inventory and all mutable-target reach are not closed.",
+          "attestorQuorum": "Execution dependency census reviewed 2026-10-09T11:50:35Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). All 18 remote EVM OFT runtimes match the exact-match Base WsrusdOft executable after ONLY compiler-labelled immutable offsets and compiler CBOR metadata normalization. At each stated pin owner() is 0xb7570e32ded63b25163369d5eb4d8e89e70e5602, owner and delegate eth_getCode are 0x, and msgInspector()/preCrime() are zero. This is known configuration, not key-custody/threshold evidence or an incident-negative review. getConfig type 2 tuples are decoded using the verified UlnConfig ABI; recorded addresses are not claims of independent DVN operators or closed DVN administration. base: block 52183937 hash 0xf1fd2bccbda43dd6212911b7798cd1d227583a365df51275390984098cc03032 timestamp 2026-10-04T23:40:21.000Z; observed through 2026-10-09T11:46:52.060Z; RPC https://api-base-mainnet-archive.n.dwellir.com; OFT endpoint 0x1a44076050125825900e736c501f859c50fe728c, endpoint owner 0xa0392d116d71ed3b75086194aba6de3cd1e39b7e, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0xb5320b0b3a13cc860893e2bd79fcd7e13484dda2/0xc70ab6f32772f59fbfc23889caf4ba3376c84baf; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x554833698ae0fb22ecc90b01222903fd62ca4b47\",\"0x9e059a54699a285714207b43b055483e78faac25\",\"0xa7b5189bca84cd304d8553977c7c614329750d99\",\"0xcd37ca043f8479064e10635020c65ffc005d36f6\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x554833698ae0fb22ecc90b01222903fd62ca4b47\",\"0x9e059a54699a285714207b43b055483e78faac25\",\"0xa7b5189bca84cd304d8553977c7c614329750d99\",\"0xcd37ca043f8479064e10635020c65ffc005d36f6\"],\"optional\":[]}]. berachain: block 27071251 hash 0xc8846baa4858233817837764a7157cfa0de9aa7fb8b437713005ac065e0a0e9c timestamp 2026-10-04T23:40:18.000Z; observed through 2026-10-09T11:46:53.213Z; RPC https://api-berachain-mainnet.n.dwellir.com; OFT endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, endpoint owner 0x5ab51e3fa70538d01e9579add517e732abe582ad, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7/0xe1844c5d63a9543023008d332bd3d2e6f1fe1043; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x06e8042729cef3ae6d6db5350f48f9d736c3675d\",\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0xdd7b5e1db4aafd5c8ec3b764efb8ed265aa5445b\",\"0xecbaa45c33ce6fa284995e5f8314f5bc7f1c2008\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x06e8042729cef3ae6d6db5350f48f9d736c3675d\",\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0xdd7b5e1db4aafd5c8ec3b764efb8ed265aa5445b\",\"0xecbaa45c33ce6fa284995e5f8314f5bc7f1c2008\"],\"optional\":[]}]. sonic: block 80359387 hash 0x7bce4e8c08b07d3de6e8f5cad6472f95a8a02d9a24066527064965341eaacaaf timestamp 2026-10-04T23:40:18.000Z; observed through 2026-10-09T11:46:54.912Z; RPC https://api-sonic-mainnet-archive.n.dwellir.com; OFT endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, endpoint owner 0x802563fb3e5be9f388d4a73fd4992da4d53c2cb0, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7/0xe1844c5d63a9543023008d332bd3d2e6f1fe1043; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x05aaefdf9db6e0f7d27fa3b6ee099edb33da029e\",\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0x54dd79f5ce72b51fcbbcb170dd01e32034323565\",\"0xb2c7832aa8dda878de6f949485f927e9e532e92c\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x05aaefdf9db6e0f7d27fa3b6ee099edb33da029e\",\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0x54dd79f5ce72b51fcbbcb170dd01e32034323565\",\"0xb2c7832aa8dda878de6f949485f927e9e532e92c\"],\"optional\":[]}]. arbitrum: block 511755845 hash 0xdfbe50d6ce9aac9fe72c7eb4c3a9c9ca907103860faee4739cdf7b0812595926 timestamp 2026-10-04T23:40:21.000Z; observed through 2026-10-09T11:46:53.911Z; RPC https://api-arbitrum-mainnet-archive.n.dwellir.com; OFT endpoint 0x1a44076050125825900e736c501f859c50fe728c, endpoint owner 0x9a3ce220d17a92dd4df9766cee48fdd0c448ba4f, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0x975bcd720be66659e3eb3c0e4f1866a3020e493a/0x7b9e184e07a6ee1ac23eae0fe8d6be2f663f05e6; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x19670df5e16bea2ba9b9e68b48c054c5baea06b8\",\"0x2f55c492897526677c5b68fb199ea31e2c126416\",\"0xa7b5189bca84cd304d8553977c7c614329750d99\",\"0xf2e380c90e6c09721297526dbc74f870e114dfcb\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x19670df5e16bea2ba9b9e68b48c054c5baea06b8\",\"0x2f55c492897526677c5b68fb199ea31e2c126416\",\"0xa7b5189bca84cd304d8553977c7c614329750d99\",\"0xf2e380c90e6c09721297526dbc74f870e114dfcb\"],\"optional\":[]}]. bsc: block 126630737 hash 0xf07e5112af2f22fa36e2e1e46133f3c75d50dd5e08235417a774e5205a2a33b3 timestamp 2026-10-09T11:50:08.000Z; observed through 2026-10-09T11:50:30.816Z; RPC https://api-bsc-mainnet-full.n.dwellir.com; OFT endpoint 0x1a44076050125825900e736c501f859c50fe728c, endpoint owner 0xefaccec3b9661b5ff62418243c013f2f58ce1350, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0x9f8c645f2d0b2159767bd6e0839de4be49e823de/0xb217266c3a98c8b2709ee26836c98cf12f6ccec1; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x247624e2143504730aec22912ed41f092498bef2\",\"0x31f748a368a893bdb5abb67ec95f232507601a73\",\"0xfa9ba83c102283958b997adc8b44ed3a3cdb5dda\",\"0xfd6865c841c2d64565562fcc7e05e619a30615f0\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x247624e2143504730aec22912ed41f092498bef2\",\"0x31f748a368a893bdb5abb67ec95f232507601a73\",\"0xfa9ba83c102283958b997adc8b44ed3a3cdb5dda\",\"0xfd6865c841c2d64565562fcc7e05e619a30615f0\"],\"optional\":[]}]. avalanche: block 96768961 hash 0x0ce417f8aa6ac43d51d49b334d0de24cfd6eca7dc8bc602704027e44ee01a94d timestamp 2026-10-04T23:40:16.000Z; observed through 2026-10-09T11:46:53.449Z; RPC https://api-avalanche-mainnet-archive.n.dwellir.com/ext/bc/C/rpc; OFT endpoint 0x1a44076050125825900e736c501f859c50fe728c, endpoint owner 0xd486d534f4c937c81b9bedf748ba4f3d0dd5b83e, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0x197d1333dea5fe0d6600e9b396c7f1b1cfcc558a/0xbf3521d309642fa9b1c91a08609505ba09752c61; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x07c05eab7716acb6f83ebf6268f8eecda8892ba1\",\"0x962f502a63f5fbeb44dc9ab932122648e8352959\",\"0xa59ba433ac34d2927232918ef5b2eaafcf130ba5\",\"0xcc49e6fca014c77e1eb604351cc1e08c84511760\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x07c05eab7716acb6f83ebf6268f8eecda8892ba1\",\"0x962f502a63f5fbeb44dc9ab932122648e8352959\",\"0xa59ba433ac34d2927232918ef5b2eaafcf130ba5\",\"0xcc49e6fca014c77e1eb604351cc1e08c84511760\"],\"optional\":[]}]. unichain: block 60408862 hash 0xd5cae1fb938918308cce1c1ef1f528ff4adcd9ce3b5cdf633f18737ca2afdc6b timestamp 2026-10-04T23:40:21.000Z; observed through 2026-10-09T11:46:54.141Z; RPC https://api-unichain-mainnet.n.dwellir.com; OFT endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, endpoint owner 0x32b323efc09d5812510b6510b242647c603947ab, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7/0xe1844c5d63a9543023008d332bd3d2e6f1fe1043; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x00a979a5d306e9c5f8cf473659e75f8002e06fc8\",\"0x25e0e650a78e6304a3983fc4b7ffc6544b1beea6\",\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0xc6a6324932b399d6a673b7ed0af671f28033e046\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x00a979a5d306e9c5f8cf473659e75f8002e06fc8\",\"0x25e0e650a78e6304a3983fc4b7ffc6544b1beea6\",\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0xc6a6324932b399d6a673b7ed0af671f28033e046\"],\"optional\":[]}]. plume: block 98345627 hash 0x74c3c674393efd2834db2e17c8f486a3e67c0c1dba3ce8d6d76ca36a3c7c744d timestamp 2026-10-09T11:43:16Z; observed through 2026-10-09T11:46:51.924637Z; RPC https://rpc.plume.org; OFT endpoint 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36, endpoint owner 0x4d95e5c86f2c35adecb5e498f37e156c28706bfa, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0xfe7c30860d01e28371d40434806f4a8fcdd3a098/0x5b19bd330a84c049b62d5b0fc2ba120217a18c1c; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x395b14700812cccc38b8e64f0a06ce2045fe9ba3\",\"0x4208d6e27538189bb48e603d6123a94b8abe0a0b\",\"0x5e0744f8fbf26446c683bcf4cd405ad56ba76f8a\",\"0x882a1ee8891c7d22310dedf032ef9653785532b8\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x395b14700812cccc38b8e64f0a06ce2045fe9ba3\",\"0x4208d6e27538189bb48e603d6123a94b8abe0a0b\",\"0x5e0744f8fbf26446c683bcf4cd405ad56ba76f8a\",\"0x882a1ee8891c7d22310dedf032ef9653785532b8\"],\"optional\":[]}]. sei: block 236599865 hash 0x14efb2518b79f649dc8e2d3cae561eb0806611c999db6095113464dbdbde9cbf timestamp 2026-10-09T11:43:16Z; observed through 2026-10-09T11:46:51.270489Z; RPC https://evm-rpc.sei-apis.com; OFT endpoint 0x1a44076050125825900e736c501f859c50fe728c, endpoint owner 0xd9194759d1c22c997441d05ecacd384133a8da68, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7/0xe1844c5d63a9543023008d332bd3d2e6f1fe1043; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x33051ad47157a50bb49a646256b854c60f707c86\",\"0x6788f52439aca6bff597d3eec2dc9a44b8fee842\",\"0x87048402c32632b7c4d0a892d82bc1160e8b2393\",\"0xd24972c11f91c1bb9eaee97ec96bb9c33cf7af24\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x33051ad47157a50bb49a646256b854c60f707c86\",\"0x6788f52439aca6bff597d3eec2dc9a44b8fee842\",\"0x87048402c32632b7c4d0a892d82bc1160e8b2393\",\"0xd24972c11f91c1bb9eaee97ec96bb9c33cf7af24\"],\"optional\":[]}]. worldchain: block 35910791 hash 0x5c6a11ae3e3d6329dd38ae021493fabd66fce5bc98a74fa57e6e4e489dce20d5 timestamp 2026-10-04T23:40:21.000Z; observed through 2026-10-09T11:46:52.526Z; RPC https://api-worldchain-mainnet.n.dwellir.com; OFT endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, endpoint owner 0xcda599ac989e1478a4f5dda4d108fbca668ecc85, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7/0xe1844c5d63a9543023008d332bd3d2e6f1fe1043; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x6788f52439aca6bff597d3eec2dc9a44b8fee842\",\"0x95729ea44326f8add8a9b1d987279dbdc1dd3dff\",\"0xdd7b5e1db4aafd5c8ec3b764efb8ed265aa5445b\",\"0xe9c24dd582e37faaca7d44c799530688de92da73\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x6788f52439aca6bff597d3eec2dc9a44b8fee842\",\"0x95729ea44326f8add8a9b1d987279dbdc1dd3dff\",\"0xdd7b5e1db4aafd5c8ec3b764efb8ed265aa5445b\",\"0xe9c24dd582e37faaca7d44c799530688de92da73\"],\"optional\":[]}]. katana: block 44803386 hash 0xf597e628b254502767e2dd14b6fad05e5678b0e6fa17ebea1fa7c1a3fefe38ba timestamp 2026-10-09T11:43:17Z; observed through 2026-10-09T11:46:51.915493Z; RPC https://rpc.katanarpc.com; OFT endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, endpoint owner 0xe590a6730d7a8790e99ce3db11466acb644c3942, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7/0xe1844c5d63a9543023008d332bd3d2e6f1fe1043; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0x53ff818a1c492e667e2cd0b5afe0fc82c66d33c7\",\"0x84a410a8a912e333b957680998a76e526f98e207\",\"0xacde1f22eeab249d3ca6ba8805c8fee9f52a16e7\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0x53ff818a1c492e667e2cd0b5afe0fc82c66d33c7\",\"0x84a410a8a912e333b957680998a76e526f98e207\",\"0xacde1f22eeab249d3ca6ba8805c8fee9f52a16e7\"],\"optional\":[]}]. hyperevm: block 47682292 hash 0x6ce70812a617e6a3bf314eb9c26a01a67c10d589aeffd1e542be6dba425e0b90 timestamp 2026-10-04T23:40:20.000Z; observed through 2026-10-09T11:46:52.334Z; RPC https://api-hyperliquid-mainnet-evm.n.dwellir.com; OFT endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, endpoint owner 0x2554a6cf53d5ad7803eeebf7774fdd058c3edc73, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0xfd76d9cb0bac839725ab79127e7411fe71b1e3ca/0x7cacbe439ead55fa1c22790330b12835c6884a91; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x83342ec538df0460e730a8f543fe63063e2d44c4\",\"0x8e49ef1dfae17e547ca0e7526ffda81fbaca810a\",\"0xbb83ecf372cbb6daa629ea9a9a53bec6d601f229\",\"0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x83342ec538df0460e730a8f543fe63063e2d44c4\",\"0x8e49ef1dfae17e547ca0e7526ffda81fbaca810a\",\"0xbb83ecf372cbb6daa629ea9a9a53bec6d601f229\",\"0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f\"],\"optional\":[]}]. linea: block 32232705 hash 0xe8da3bba9a58dc635cef4a9fa7f61b2e42fd704f36a168745b21a5cbd1bde4b9 timestamp 2026-10-04T23:40:16.000Z; observed through 2026-10-09T11:46:52.743Z; RPC https://api-linea-mainnet-archive.n.dwellir.com; OFT endpoint 0x1a44076050125825900e736c501f859c50fe728c, endpoint owner 0x34ee86f14fd32868407d42cf14dfad503317354c, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0x32042142dd551b4ebe17b6fed53131dd4b4eea06/0xe22ed54177ce1148c557de74e4873619e6c6b205; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x129ee430cb2ff2708ccaddbdb408a88fe4ffd480\",\"0x7fe673201724925b5c477d4e1a4bd3e954688cf5\",\"0xda63525a0fc42bcc2cad1dd28708d5ed11849347\",\"0xdd7b5e1db4aafd5c8ec3b764efb8ed265aa5445b\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x129ee430cb2ff2708ccaddbdb408a88fe4ffd480\",\"0x7fe673201724925b5c477d4e1a4bd3e954688cf5\",\"0xda63525a0fc42bcc2cad1dd28708d5ed11849347\",\"0xdd7b5e1db4aafd5c8ec3b764efb8ed265aa5445b\"],\"optional\":[]}]. monad: block 110599874 hash 0xec56cc7e25c7b4ff7e2fc6c09b04e9adf0b91fe5d27f240ea6ee1d9ca8401655 timestamp 2026-10-04T23:40:21.000Z; observed through 2026-10-09T11:46:54.263Z; RPC https://api-monad-mainnet-full.n.dwellir.com; OFT endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, endpoint owner 0xe590a6730d7a8790e99ce3db11466acb644c3942, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7/0xe1844c5d63a9543023008d332bd3d2e6f1fe1043; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0x493626c5d852b9b187a9eb709d0b0978a3877238\",\"0xacde1f22eeab249d3ca6ba8805c8fee9f52a16e7\",\"0xdcdd4628f858b45260c31d6ad076bd2c3d3c2f73\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0x493626c5d852b9b187a9eb709d0b0978a3877238\",\"0xacde1f22eeab249d3ca6ba8805c8fee9f52a16e7\",\"0xdcdd4628f858b45260c31d6ad076bd2c3d3c2f73\"],\"optional\":[]}]. pharos: block 19793959 hash 0xe0abdc7b4e6f93f128fb19918c911bae88f6ae78a07d7994384cca0d2da77eae timestamp 2026-10-09T11:43:14Z; observed through 2026-10-09T11:49:47.704512Z; RPC https://api.zan.top/public/pharos-mainnet; OFT endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, endpoint owner 0xa0bfdc1b3eab5db2106eaf81b2c68b8fd6ae47b1, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7/0xe1844c5d63a9543023008d332bd3d2e6f1fe1043; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0x7b8a0fd9d6ae5011d5cbd3e85ed6d5510f98c9bf\",\"0xa83c79e69117eefb888592a23bc02cb6029ada3a\",\"0xdd7b5e1db4aafd5c8ec3b764efb8ed265aa5445b\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0x7b8a0fd9d6ae5011d5cbd3e85ed6d5510f98c9bf\",\"0xa83c79e69117eefb888592a23bc02cb6029ada3a\",\"0xdd7b5e1db4aafd5c8ec3b764efb8ed265aa5445b\"],\"optional\":[]}]. plasma: block 34216261 hash 0x17e0a9ca50d7220502903ce3a27403b53c72f5ec4110cea4f519c15d9ef000c1 timestamp 2026-10-04T23:44:30.000Z; observed through 2026-10-09T11:46:52.995Z; RPC https://api-plasma-mainnet.n.dwellir.com; OFT endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, endpoint owner 0xa0bfdc1b3eab5db2106eaf81b2c68b8fd6ae47b1, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7/0xe1844c5d63a9543023008d332bd3d2e6f1fe1043; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x2465ee263149a18d61c9224244c61a5871dc0473\",\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0xa51ce237fafa3052d5d3308df38a024724bb1274\",\"0xd4ce45957fbcb88b868ad2c759c7db9bc2741e56\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x2465ee263149a18d61c9224244c61a5871dc0473\",\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0xa51ce237fafa3052d5d3308df38a024724bb1274\",\"0xd4ce45957fbcb88b868ad2c759c7db9bc2741e56\"],\"optional\":[]}]. megaeth: block 28360459 hash 0x501cecb5deffc3af520468280e04bb0eab67e71e8605a1d6eac939a7724a5c49 timestamp 2026-10-04T23:44:30.000Z; observed through 2026-10-09T11:46:54.611Z; RPC https://api-megaeth-mainnet.n.dwellir.com; OFT endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, endpoint owner 0xa0bfdc1b3eab5db2106eaf81b2c68b8fd6ae47b1, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7/0xe1844c5d63a9543023008d332bd3d2e6f1fe1043; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0x7decc6df3af9cfc275e25d2f9703ecf7ad800d5d\",\"0x8ede21203e062d7d1eaec11c4c72ad04cdc15658\",\"0xeede111103535e473451311e26c3e6660b0f77e1\"],\"optional\":[]},{\"confirmations\":20,\"requiredCount\":4,\"optionalCount\":0,\"optionalThreshold\":0,\"required\":[\"0x282b3386571f7f794450d5789911a9804fa346b4\",\"0x7decc6df3af9cfc275e25d2f9703ecf7ad800d5d\",\"0x8ede21203e062d7d1eaec11c4c72ad04cdc15658\",\"0xeede111103535e473451311e26c3e6660b0f77e1\"],\"optional\":[]}]. xdc: block 108008335 hash 0xcce99af8cd393a97d79e8f6208530fa7d6dfe2df733a4c91810634e9b54507d7 timestamp 2026-10-04T23:44:30.000Z; observed through 2026-10-09T11:46:53.685Z; RPC https://api-xdc-mainnet.n.dwellir.com; OFT endpoint 0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa, endpoint owner 0xc4eb60e973b057f21471208ba18e487ca7aef513, delegate 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; Ethereum EID 30101 send/receive libraries 0xe1844c5d63a9543023008d332bd3d2e6f1fe1043/0x2367325334447c5e1e0f1b3a6fb947b262f58312; effective ULN send/receive [{\"confirmations\":20,\"requiredCount\":1,\"optionalCount\":4,\"optionalThreshold\":3,\"required\":[\"0x307d81ef09c72730f57667bf1e9b62db4904053f\"],\"optional\":[\"0x1294e3347ec64fd63e1d0594dc1294247cd237c7\",\"0x6788f52439aca6bff597d3eec2dc9a44b8fee842\",\"0xdd7b5e1db4aafd5c8ec3b764efb8ed265aa5445b\",\"0xdfdb9b369ef5821e9e6cb9b3329c74c38fe93194\"]},{\"confirmations\":20,\"requiredCount\":1,\"optionalCount\":4,\"optionalThreshold\":3,\"required\":[\"0x307d81ef09c72730f57667bf1e9b62db4904053f\"],\"optional\":[\"0x1294e3347ec64fd63e1d0594dc1294247cd237c7\",\"0x6788f52439aca6bff597d3eec2dc9a44b8fee842\",\"0xdd7b5e1db4aafd5c8ec3b764efb8ed265aa5445b\",\"0xdfdb9b369ef5821e9e6cb9b3329c74c38fe93194\"]}]. The thirteen historic October 4 numeric pins remain their own evidence dates, not October 9 state. BSC pruned-state failure and four unsupported helper chains were recovered with a new BSC Dwellir pin and numeric/hash-checked public RPC pins. Complete endpoint-owner, library, DVN, executor administration, arbitrary peer/history, mutable-target and liability/bypass closure remain unestablished. Preserve partial inventory and all seven false executionScope closure flags.",
           "unsupportedReason": "Source-equivalent OFT code and current owner/delegate/known-EID settings do not prove complete execution scope. EndpointV2 permits an independent delegate to change libraries/configuration and clear/skip/nilify/burn queued messages. Ethereum endpoint owner OneSig 0xbe010a7e3686fdf65e93344ab664d065a0b02478 has verified source exactly matching pinned runtime and current 5-of-7 threshold with executorRequired=true at block 26124870. Its arbitrary-call authority and all per-chain endpoint/library/DVN controllers require complete execution inventory; endpoint quorum does not constrain the independently authorized Reservoir EOA delegate. No protective custody, irreversible shutdown or conservation conclusion is inferred."
         },
         "capDescription": "This EOA administers the LayerZero transfer-rail configuration for the adapter and EVM representations; it does not replace the immutable native wrapper or create a second canonical issuance path.",
@@ -1147,6 +1148,82 @@
         "observedAt": "2026-08-16",
         "observedBlock": 25771270,
         "sources": [
+          {
+            "label": "Verified ULN configuration tuple ABI used for destination census",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc02ab410f0734efa3f14628780e6e695156024c2"
+          },
+          {
+            "label": "Pinned base owner/endpoint/ULN census, block 52183937, observed 2026-10-09T11:46:52.060Z",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Pinned berachain owner/endpoint/ULN census, block 27071251, observed 2026-10-09T11:46:53.213Z",
+            "url": "https://api-berachain-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Pinned sonic owner/endpoint/ULN census, block 80359387, observed 2026-10-09T11:46:54.912Z",
+            "url": "https://api-sonic-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Pinned arbitrum owner/endpoint/ULN census, block 511755845, observed 2026-10-09T11:46:53.911Z",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Pinned avalanche owner/endpoint/ULN census, block 96768961, observed 2026-10-09T11:46:53.449Z",
+            "url": "https://api-avalanche-mainnet-archive.n.dwellir.com/ext/bc/C/rpc"
+          },
+          {
+            "label": "Pinned unichain owner/endpoint/ULN census, block 60408862, observed 2026-10-09T11:46:54.141Z",
+            "url": "https://api-unichain-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Pinned worldchain owner/endpoint/ULN census, block 35910791, observed 2026-10-09T11:46:52.526Z",
+            "url": "https://api-worldchain-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Pinned hyperevm owner/endpoint/ULN census, block 47682292, observed 2026-10-09T11:46:52.334Z",
+            "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"
+          },
+          {
+            "label": "Pinned linea owner/endpoint/ULN census, block 32232705, observed 2026-10-09T11:46:52.743Z",
+            "url": "https://api-linea-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Pinned monad owner/endpoint/ULN census, block 110599874, observed 2026-10-09T11:46:54.263Z",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "Pinned plasma owner/endpoint/ULN census, block 34216261, observed 2026-10-09T11:46:52.995Z",
+            "url": "https://api-plasma-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Pinned megaeth owner/endpoint/ULN census, block 28360459, observed 2026-10-09T11:46:54.611Z",
+            "url": "https://api-megaeth-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Pinned xdc owner/endpoint/ULN census, block 108008335, observed 2026-10-09T11:46:53.685Z",
+            "url": "https://api-xdc-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Pinned sei owner/endpoint/ULN census, block 236599865, observed 2026-10-09T11:46:51.270489Z",
+            "url": "https://evm-rpc.sei-apis.com"
+          },
+          {
+            "label": "Pinned katana owner/endpoint/ULN census, block 44803386, observed 2026-10-09T11:46:51.915493Z",
+            "url": "https://rpc.katanarpc.com"
+          },
+          {
+            "label": "Pinned plume owner/endpoint/ULN census, block 98345627, observed 2026-10-09T11:46:51.924637Z",
+            "url": "https://rpc.plume.org"
+          },
+          {
+            "label": "Pinned pharos owner/endpoint/ULN census, block 19793959, observed 2026-10-09T11:49:47.704512Z",
+            "url": "https://api.zan.top/public/pharos-mainnet"
+          },
+          {
+            "label": "Pinned bsc owner/endpoint/ULN census, block 126630737, observed 2026-10-09T11:50:30.816Z",
+            "url": "https://api-bsc-mainnet-full.n.dwellir.com"
+          },
           {
             "label": "Ethereum Blockscout verified MyOFTAdapter source",
             "url": "https://eth.blockscout.com/address/0xbb431abd156b960e5b77cc45c75f107e3991258a?tab=contract"
@@ -1170,12 +1247,16 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-09",
+          "observedAt": "2026-10-09",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataReservoir)",
+          "reviewer": "Sol curation campaign 2026-10-09 (W2L01Reservoir)",
           "confidence": "partial",
           "sources": [
+            {
+              "label": "Pinned Ethereum owner/runtime census at block 26154596 (2026-10-09T11:36:59Z), observed 2026-10-09T11:37:50.453Z",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            },
             {
               "label": "Verified adapter and included OAppCore source matched to pinned runtime",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbb431abd156b960e5b77cc45c75f107e3991258a"
@@ -1186,14 +1267,14 @@
             }
           ],
           "pin": {
-            "position": "26099924",
-            "hash": "0xb6d2f61f51a2741fb1dff4acfafa1a3726b42875ba6e5617bce1a08cca701488",
+            "position": "26154596",
+            "hash": "0xf72b5105f463a78e71ae49fc4c4a85ccf460488df9133ccc69bf13328f6ad5fd",
             "runtimeIdentity": "adapter ethereum:0xbb431abd156b960e5b77cc45c75f107e3991258a eth_getCode-text SHA256 3276abd4a85bcb70eee7e36eda2a6f72907b6cab33919f15fb9adef604ab5965; exact verified-source runtime",
             "signerIdentity": "owner() = 0xb7570e32ded63b25163369d5eb4d8e89e70e5602; controller eth_getCode = 0x; operator/key custody undisclosed"
           },
           "observedState": {
-            "position": "26099924",
-            "hash": "0xb6d2f61f51a2741fb1dff4acfafa1a3726b42875ba6e5617bce1a08cca701488",
+            "position": "26154596",
+            "hash": "0xf72b5105f463a78e71ae49fc4c4a85ccf460488df9133ccc69bf13328f6ad5fd",
             "runtimeIdentity": "adapter ethereum:0xbb431abd156b960e5b77cc45c75f107e3991258a eth_getCode-text SHA256 3276abd4a85bcb70eee7e36eda2a6f72907b6cab33919f15fb9adef604ab5965; exact verified-source runtime",
             "signerIdentity": "owner() = 0xb7570e32ded63b25163369d5eb4d8e89e70e5602; controller eth_getCode = 0x; operator/key custody undisclosed"
           },
@@ -1372,12 +1453,16 @@
         "evidence": "Rechecked 2026-10-05 at Ethereum block 26124870: adapter delegates() still returns code-empty EOA 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0. The pinned EndpointV2 runtime exactly matches fully verified source. _assertAuthorized accepts the OApp or its delegate; source enumerates library/configuration setters plus clear, skip, nilify and burn of message-channel state. The old setSendLibrary permission simulation is retained as historical evidence, not a complete execution proof. The independent endpoint owner and message-library/DVN controllers still prevent exhaustive bypass and liability closure.",
         "executionScope": {
           "controllerDeployment": "ethereum:0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-09",
+          "observedAt": "2026-10-09",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataReservoir)",
+          "reviewer": "Sol curation campaign 2026-10-09 (W2L01Reservoir)",
           "confidence": "partial",
           "sources": [
+            {
+              "label": "Pinned Ethereum delegate/runtime census at block 26154596 (2026-10-09T11:36:59Z), observed 2026-10-09T11:37:50.453Z",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            },
             {
               "label": "Verified EndpointV2 and MessageLibManager source",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1a44076050125825900e736c501f859c50fe728c"
@@ -1388,14 +1473,14 @@
             }
           ],
           "pin": {
-            "position": "26099924",
-            "hash": "0xb6d2f61f51a2741fb1dff4acfafa1a3726b42875ba6e5617bce1a08cca701488",
+            "position": "26154596",
+            "hash": "0xf72b5105f463a78e71ae49fc4c4a85ccf460488df9133ccc69bf13328f6ad5fd",
             "runtimeIdentity": "endpoint ethereum:0x1a44076050125825900e736c501f859c50fe728c eth_getCode-text SHA256 a84ad07a40daf6a6ecb9b141fd6f7a1b78784886dfa9f2497268ff000b756f38; exact verified-source runtime",
             "signerIdentity": "delegates(adapter) = 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; controller eth_getCode = 0x; operator/key custody undisclosed"
           },
           "observedState": {
-            "position": "26099924",
-            "hash": "0xb6d2f61f51a2741fb1dff4acfafa1a3726b42875ba6e5617bce1a08cca701488",
+            "position": "26154596",
+            "hash": "0xf72b5105f463a78e71ae49fc4c4a85ccf460488df9133ccc69bf13328f6ad5fd",
             "runtimeIdentity": "endpoint ethereum:0x1a44076050125825900e736c501f859c50fe728c eth_getCode-text SHA256 a84ad07a40daf6a6ecb9b141fd6f7a1b78784886dfa9f2497268ff000b756f38; exact verified-source runtime",
             "signerIdentity": "delegates(adapter) = 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; controller eth_getCode = 0x; operator/key custody undisclosed"
           },
@@ -1449,6 +1534,672 @@
             }
           ]
         }
+      },
+      {
+        "id": "wsrusd-base-layerzero-endpoint-owner",
+        "label": "wsrUSD base EndpointV2 owner OneSig",
+        "routeRefs": [
+          "base:0x62344be8ca1c339b46274a4017dd87af436900b1"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xa0392d116d71ed3b75086194aba6de3cd1e39b7e",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:base:0x1a44076050125825900e736c501f859c50fe728c",
+          "contract:base:0xa0392d116d71ed3b75086194aba6de3cd1e39b7e"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 52183937,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned base endpoint owner binding, executable and signer/executor state",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At base block 52183937, hash 0xf1fd2bccbda43dd6212911b7798cd1d227583a365df51275390984098cc03032, timestamp 2026-10-04T23:40:21.000Z, observed 2026-10-09T11:57:32.242Z, EndpointV2 0x1a44076050125825900e736c501f859c50fe728c owner() = 0xa0392d116d71ed3b75086194aba6de3cd1e39b7e; owner runtime text SHA256 bce9fe6179f5526d9c23604bc1c5adb832b7a42d933eda7eb9e73a31e19739b7 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30184, nonce=548. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-berachain-layerzero-endpoint-owner",
+        "label": "wsrUSD berachain EndpointV2 owner OneSig",
+        "routeRefs": [
+          "berachain:0x316cd39632cac4f4cdfc21757c4500fe12f64514"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "berachain",
+        "controllerAddress": "0x5ab51e3fa70538d01e9579add517e732abe582ad",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:berachain:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "contract:berachain:0x5ab51e3fa70538d01e9579add517e732abe582ad"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 27071251,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned berachain endpoint owner binding, executable and signer/executor state",
+            "url": "https://api-berachain-mainnet.n.dwellir.com"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At berachain block 27071251, hash 0xc8846baa4858233817837764a7157cfa0de9aa7fb8b437713005ac065e0a0e9c, timestamp 2026-10-04T23:40:18.000Z, observed 2026-10-09T11:57:32.008Z, EndpointV2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b owner() = 0x5ab51e3fa70538d01e9579add517e732abe582ad; owner runtime text SHA256 c58b65d24275b56ff73dd285b73079dd74830d48a1d78957dd9a2dfa8eb5ffc0 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30362, nonce=282. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-sonic-layerzero-endpoint-owner",
+        "label": "wsrUSD sonic EndpointV2 owner OneSig",
+        "routeRefs": [
+          "sonic:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0x802563fb3e5be9f388d4a73fd4992da4d53c2cb0",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:sonic:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "contract:sonic:0x802563fb3e5be9f388d4a73fd4992da4d53c2cb0"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 80359387,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned sonic endpoint owner binding, executable and signer/executor state",
+            "url": "https://api-sonic-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At sonic block 80359387, hash 0x7bce4e8c08b07d3de6e8f5cad6472f95a8a02d9a24066527064965341eaacaaf, timestamp 2026-10-04T23:40:18.000Z, observed 2026-10-09T11:57:32.490Z, EndpointV2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b owner() = 0x802563fb3e5be9f388d4a73fd4992da4d53c2cb0; owner runtime text SHA256 ce050b77f5002d7e0edcf22f89e03690f3ff1ff527a3a23703ac925c4d2b0bb4 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30332, nonce=257. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-arbitrum-layerzero-endpoint-owner",
+        "label": "wsrUSD arbitrum EndpointV2 owner OneSig",
+        "routeRefs": [
+          "arbitrum:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x9a3ce220d17a92dd4df9766cee48fdd0c448ba4f",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:arbitrum:0x1a44076050125825900e736c501f859c50fe728c",
+          "contract:arbitrum:0x9a3ce220d17a92dd4df9766cee48fdd0c448ba4f"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 511755845,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned arbitrum endpoint owner binding, executable and signer/executor state",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At arbitrum block 511755845, hash 0xdfbe50d6ce9aac9fe72c7eb4c3a9c9ca907103860faee4739cdf7b0812595926, timestamp 2026-10-04T23:40:21.000Z, observed 2026-10-09T11:57:34.113Z, EndpointV2 0x1a44076050125825900e736c501f859c50fe728c owner() = 0x9a3ce220d17a92dd4df9766cee48fdd0c448ba4f; owner runtime text SHA256 4517dbd8f53b919f04001e0894ca403596730fa386d751e52f86f7f204254b59 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30110, nonce=542. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-bsc-layerzero-endpoint-owner",
+        "label": "wsrUSD bsc EndpointV2 owner OneSig",
+        "routeRefs": [
+          "bsc:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xefaccec3b9661b5ff62418243c013f2f58ce1350",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:bsc:0x1a44076050125825900e736c501f859c50fe728c",
+          "contract:bsc:0xefaccec3b9661b5ff62418243c013f2f58ce1350"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 126631667,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned bsc endpoint owner binding, executable and signer/executor state",
+            "url": "https://api-bsc-mainnet-full.n.dwellir.com"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At bsc block 126631667, hash 0x761005ccb7199df21790c7b0f6e7248e5b053dda1a70f6eac817a1f958ca64f3, timestamp 2026-10-09T11:57:07.000Z, observed 2026-10-09T11:57:34.841Z, EndpointV2 0x1a44076050125825900e736c501f859c50fe728c owner() = 0xefaccec3b9661b5ff62418243c013f2f58ce1350; owner runtime text SHA256 e47971d9d83e1760c7071ecec36f2c95e13a279953a31d7cd9f5379ab35cde06 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30102, nonce=519. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-avalanche-layerzero-endpoint-owner",
+        "label": "wsrUSD avalanche EndpointV2 owner OneSig",
+        "routeRefs": [
+          "avalanche:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xd486d534f4c937c81b9bedf748ba4f3d0dd5b83e",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:avalanche:0x1a44076050125825900e736c501f859c50fe728c",
+          "contract:avalanche:0xd486d534f4c937c81b9bedf748ba4f3d0dd5b83e"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 96768961,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned avalanche endpoint owner binding, executable and signer/executor state",
+            "url": "https://api-avalanche-mainnet-archive.n.dwellir.com/ext/bc/C/rpc"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At avalanche block 96768961, hash 0x0ce417f8aa6ac43d51d49b334d0de24cfd6eca7dc8bc602704027e44ee01a94d, timestamp 2026-10-04T23:40:16.000Z, observed 2026-10-09T11:57:35.105Z, EndpointV2 0x1a44076050125825900e736c501f859c50fe728c owner() = 0xd486d534f4c937c81b9bedf748ba4f3d0dd5b83e; owner runtime text SHA256 5fb6ac6cb45f30c915826ae7324427663cdbd3cf0992d8abd76cf16c96d85779 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30106, nonce=399. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-unichain-layerzero-endpoint-owner",
+        "label": "wsrUSD unichain EndpointV2 owner OneSig",
+        "routeRefs": [
+          "unichain:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "unichain",
+        "controllerAddress": "0x32b323efc09d5812510b6510b242647c603947ab",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:unichain:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "contract:unichain:0x32b323efc09d5812510b6510b242647c603947ab"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 60408862,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned unichain endpoint owner binding, executable and signer/executor state",
+            "url": "https://api-unichain-mainnet.n.dwellir.com"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At unichain block 60408862, hash 0xd5cae1fb938918308cce1c1ef1f528ff4adcd9ce3b5cdf633f18737ca2afdc6b, timestamp 2026-10-04T23:40:21.000Z, observed 2026-10-09T11:57:34.361Z, EndpointV2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b owner() = 0x32b323efc09d5812510b6510b242647c603947ab; owner runtime text SHA256 b4f51ffa5bc781ee0e8f0586d86cc60a3870c1fac820fe9437228e4afc5d3267 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30320, nonce=194. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-plume-layerzero-endpoint-owner",
+        "label": "wsrUSD plume EndpointV2 owner OneSig",
+        "routeRefs": [
+          "plume:0x0bbcc2c1991d0af8ec6a5ed922e6f5606923fe15"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "plume",
+        "controllerAddress": "0x4d95e5c86f2c35adecb5e498f37e156c28706bfa",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:plume:0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36",
+          "contract:plume:0x4d95e5c86f2c35adecb5e498f37e156c28706bfa"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 98345627,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned plume endpoint owner binding, executable and signer/executor state",
+            "url": "https://rpc.plume.org"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At plume block 98345627, hash 0x74c3c674393efd2834db2e17c8f486a3e67c0c1dba3ce8d6d76ca36a3c7c744d, timestamp 2026-10-09T11:43:16Z, observed 2026-10-09T11:57:32.918947Z, EndpointV2 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36 owner() = 0x4d95e5c86f2c35adecb5e498f37e156c28706bfa; owner runtime text SHA256 7f2831985ec70de6830c9ab904427b11f2edb805f04510fe33284ef813553ff2 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30370, nonce=160. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-sei-layerzero-endpoint-owner",
+        "label": "wsrUSD sei EndpointV2 owner OneSig",
+        "routeRefs": [
+          "sei:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "sei",
+        "controllerAddress": "0xd9194759d1c22c997441d05ecacd384133a8da68",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:sei:0x1a44076050125825900e736c501f859c50fe728c",
+          "contract:sei:0xd9194759d1c22c997441d05ecacd384133a8da68"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 236599865,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned sei endpoint owner binding, executable and signer/executor state",
+            "url": "https://evm-rpc.sei-apis.com"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At sei block 236599865, hash 0x14efb2518b79f649dc8e2d3cae561eb0806611c999db6095113464dbdbde9cbf, timestamp 2026-10-09T11:43:16Z, observed 2026-10-09T11:57:31.760716Z, EndpointV2 0x1a44076050125825900e736c501f859c50fe728c owner() = 0xd9194759d1c22c997441d05ecacd384133a8da68; owner runtime text SHA256 571a1e48c51d492e07929121fd648d381fc9561da2c63cf15b64620f079d2564 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30280, nonce=213. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-worldchain-layerzero-endpoint-owner",
+        "label": "wsrUSD worldchain EndpointV2 owner OneSig",
+        "routeRefs": [
+          "worldchain:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "worldchain",
+        "controllerAddress": "0xcda599ac989e1478a4f5dda4d108fbca668ecc85",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:worldchain:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "contract:worldchain:0xcda599ac989e1478a4f5dda4d108fbca668ecc85"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 35910791,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned worldchain endpoint owner binding, executable and signer/executor state",
+            "url": "https://api-worldchain-mainnet.n.dwellir.com"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At worldchain block 35910791, hash 0x5c6a11ae3e3d6329dd38ae021493fabd66fce5bc98a74fa57e6e4e489dce20d5, timestamp 2026-10-04T23:40:21.000Z, observed 2026-10-09T11:57:33.889Z, EndpointV2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b owner() = 0xcda599ac989e1478a4f5dda4d108fbca668ecc85; owner runtime text SHA256 624940d5734aed1eed1b8965afecec6cf939b3b9fa448ed4193324bba3f84721 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30319, nonce=145. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-katana-layerzero-endpoint-owner",
+        "label": "wsrUSD katana EndpointV2 owner OneSig",
+        "routeRefs": [
+          "katana:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "katana",
+        "controllerAddress": "0xe590a6730d7a8790e99ce3db11466acb644c3942",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:katana:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "contract:katana:0xe590a6730d7a8790e99ce3db11466acb644c3942"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 44803386,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned katana endpoint owner binding, executable and signer/executor state",
+            "url": "https://rpc.katanarpc.com"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At katana block 44803386, hash 0xf597e628b254502767e2dd14b6fad05e5678b0e6fa17ebea1fa7c1a3fefe38ba, timestamp 2026-10-09T11:43:17Z, observed 2026-10-09T11:57:32.888521Z, EndpointV2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b owner() = 0xe590a6730d7a8790e99ce3db11466acb644c3942; owner runtime text SHA256 cae8b96729ba5eb3cda5cf910fc3eeac741ff5f2f651ceb75daa16846f8c0359 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30375, nonce=145. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-hyperevm-layerzero-endpoint-owner",
+        "label": "wsrUSD hyperevm EndpointV2 owner OneSig",
+        "routeRefs": [
+          "hyperevm:0x04716db62c085d9e08050fcf6f7d775a03d07720"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x2554a6cf53d5ad7803eeebf7774fdd058c3edc73",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:hyperevm:0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9",
+          "contract:hyperevm:0x2554a6cf53d5ad7803eeebf7774fdd058c3edc73"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 47682292,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned hyperevm endpoint owner binding, executable and signer/executor state",
+            "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At hyperevm block 47682292, hash 0x6ce70812a617e6a3bf314eb9c26a01a67c10d589aeffd1e542be6dba425e0b90, timestamp 2026-10-04T23:40:20.000Z, observed 2026-10-09T11:57:32.962Z, EndpointV2 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9 owner() = 0x2554a6cf53d5ad7803eeebf7774fdd058c3edc73; owner runtime text SHA256 1ea33c2a844566c4161d33416f8d44b1839f9a5e741b679a6c8369ab0b44d700 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30367, nonce=200. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-linea-layerzero-endpoint-owner",
+        "label": "wsrUSD linea EndpointV2 owner OneSig",
+        "routeRefs": [
+          "linea:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0x34ee86f14fd32868407d42cf14dfad503317354c",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:linea:0x1a44076050125825900e736c501f859c50fe728c",
+          "contract:linea:0x34ee86f14fd32868407d42cf14dfad503317354c"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 32232705,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned linea endpoint owner binding, executable and signer/executor state",
+            "url": "https://api-linea-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At linea block 32232705, hash 0xe8da3bba9a58dc635cef4a9fa7f61b2e42fd704f36a168745b21a5cbd1bde4b9, timestamp 2026-10-04T23:40:16.000Z, observed 2026-10-09T11:57:32.717Z, EndpointV2 0x1a44076050125825900e736c501f859c50fe728c owner() = 0x34ee86f14fd32868407d42cf14dfad503317354c; owner runtime text SHA256 4b5c41e674af3de035949a9ac8b45e69f55f12eeffea134ae916f8e533fea2f3 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30183, nonce=435. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-monad-layerzero-endpoint-owner",
+        "label": "wsrUSD monad EndpointV2 owner OneSig",
+        "routeRefs": [
+          "monad:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xe590a6730d7a8790e99ce3db11466acb644c3942",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:monad:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "contract:monad:0xe590a6730d7a8790e99ce3db11466acb644c3942"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 110599874,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned monad endpoint owner binding, executable and signer/executor state",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At monad block 110599874, hash 0xec56cc7e25c7b4ff7e2fc6c09b04e9adf0b91fe5d27f240ea6ee1d9ca8401655, timestamp 2026-10-04T23:40:21.000Z, observed 2026-10-09T11:57:33.570Z, EndpointV2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b owner() = 0xe590a6730d7a8790e99ce3db11466acb644c3942; owner runtime text SHA256 1c74085a1ded4d572fc90d2fc937bd9009c44e025b78b0ffd8fcdeb9fbc76606 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30390, nonce=562. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-pharos-layerzero-endpoint-owner",
+        "label": "wsrUSD pharos EndpointV2 owner OneSig",
+        "routeRefs": [
+          "pharos:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "pharos",
+        "controllerAddress": "0xa0bfdc1b3eab5db2106eaf81b2c68b8fd6ae47b1",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:pharos:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "contract:pharos:0xa0bfdc1b3eab5db2106eaf81b2c68b8fd6ae47b1"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 19793959,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned pharos endpoint owner binding, executable and signer/executor state",
+            "url": "https://api.zan.top/public/pharos-mainnet"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At pharos block 19793959, hash 0xe0abdc7b4e6f93f128fb19918c911bae88f6ae78a07d7994384cca0d2da77eae, timestamp 2026-10-09T11:43:14Z, observed 2026-10-09T11:57:35.871431Z, EndpointV2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b owner() = 0xa0bfdc1b3eab5db2106eaf81b2c68b8fd6ae47b1; owner runtime text SHA256 2d78508f76f3d87ab9639d426877bbcbb38af5d603875e13aa0128a1931f5cab source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30407, nonce=178. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-plasma-layerzero-endpoint-owner",
+        "label": "wsrUSD plasma EndpointV2 owner OneSig",
+        "routeRefs": [
+          "plasma:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "plasma",
+        "controllerAddress": "0xa0bfdc1b3eab5db2106eaf81b2c68b8fd6ae47b1",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:plasma:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "contract:plasma:0xa0bfdc1b3eab5db2106eaf81b2c68b8fd6ae47b1"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 34216261,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned plasma endpoint owner binding, executable and signer/executor state",
+            "url": "https://api-plasma-mainnet.n.dwellir.com"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At plasma block 34216261, hash 0x17e0a9ca50d7220502903ce3a27403b53c72f5ec4110cea4f519c15d9ef000c1, timestamp 2026-10-04T23:44:30.000Z, observed 2026-10-09T11:57:33.195Z, EndpointV2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b owner() = 0xa0bfdc1b3eab5db2106eaf81b2c68b8fd6ae47b1; owner runtime text SHA256 9d49cb3202ab655ef9df6283de039406c207d11c2616b181227710f0089e8156 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30383, nonce=268. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-megaeth-layerzero-endpoint-owner",
+        "label": "wsrUSD megaeth EndpointV2 owner OneSig",
+        "routeRefs": [
+          "megaeth:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "megaeth",
+        "controllerAddress": "0xa0bfdc1b3eab5db2106eaf81b2c68b8fd6ae47b1",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:megaeth:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "contract:megaeth:0xa0bfdc1b3eab5db2106eaf81b2c68b8fd6ae47b1"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 28360459,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned megaeth endpoint owner binding, executable and signer/executor state",
+            "url": "https://api-megaeth-mainnet.n.dwellir.com"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At megaeth block 28360459, hash 0x501cecb5deffc3af520468280e04bb0eab67e71e8605a1d6eac939a7724a5c49, timestamp 2026-10-04T23:44:30.000Z, observed 2026-10-09T11:57:33.418Z, EndpointV2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b owner() = 0xa0bfdc1b3eab5db2106eaf81b2c68b8fd6ae47b1; owner runtime text SHA256 117e24dd6e89a9ff470e549dd98def005302750883f872e61f1f5240f740d3c5 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30398, nonce=765. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
+      },
+      {
+        "id": "wsrusd-xdc-layerzero-endpoint-owner",
+        "label": "wsrUSD xdc EndpointV2 owner OneSig",
+        "routeRefs": [
+          "xdc:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "xdc",
+        "controllerAddress": "0xc4eb60e973b057f21471208ba18e487ca7aef513",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:xdc:0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa",
+          "contract:xdc:0xc4eb60e973b057f21471208ba18e487ca7aef513"
+        ],
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Pinned EndpointV2 owner() independently equals this exact OneSig. Executable code matches the verified OneSig reference after only compiler-declared ONE_SIG_ID offsets at bytes 1084/2814 (32 bytes each) and compiler CBOR metadata normalization. OneSig executes threshold-authorized arbitrary CALL targets/data; setThreshold/setSigner/executor/seed setters are onlySelfCall. This threshold is not a restriction on the independently authorized Reservoir OApp owner or Endpoint delegate.",
+          "unsupportedReason": "OneSig executable/signing identity and stored threshold are known. Complete endpoint/library/DVN/executor downstream administration, other reachable controller paths and economic liability/bypass closure remain unestablished; no complete executionScope, independent-human/key-custody credit or incident-negative claim is made."
+        },
+        "observedAt": "2026-10-09",
+        "observedBlock": 108008335,
+        "sources": [
+          {
+            "label": "Verified exact-match OneSig source and compiler immutable offsets",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbe010a7e3686fdf65e93344ab664d065a0b02478?fields=all"
+          },
+          {
+            "label": "Pinned xdc endpoint owner binding, executable and signer/executor state",
+            "url": "https://api-xdc-mainnet.n.dwellir.com"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-09T11:58:58Z by Sol curation campaign 2026-10-09 (W2L01Reservoir). At xdc block 108008335, hash 0xcce99af8cd393a97d79e8f6208530fa7d6dfe2df733a4c91810634e9b54507d7, timestamp 2026-10-04T23:44:30.000Z, observed 2026-10-09T11:57:34.609Z, EndpointV2 0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa owner() = 0xc4eb60e973b057f21471208ba18e487ca7aef513; owner runtime text SHA256 45e69e26ff0be3055ee980039379ee2f444e82e26eaebad809aa3ed6169d3b93 source-equivalent to the exact-match OneSig executable; threshold=5, totalSigners=7, executorRequired=true, ONE_SIG_ID=30365, nonce=197. getSigners() complete returned roster [\"0x0cb72c1f6a36c225a7e2b21712e8853a4a1acc47\",\"0x5bc6aa6ad117a8b50abf9e1658971f5da1968c5c\",\"0x73e9c017ad37e2113e709d8070cc9e1b28180e1e\",\"0x771dcacb96024d1e55fd21fe8a8187aa7ec9e77e\",\"0xe67db04d7eff4e9ec282ed929632d4ff058112d7\",\"0xdfe4027209c795b84d39ffbff86bf73572571bad\",\"0x2be094f1c9aaf76ad3a789ea4f047bbe7d1db552\"]; getExecutors() returned [\"0x39f86ecef62c5bce23428d6b7c7050d9ecb0e346\"]. No owner key custody, human independence, zero-loss guarantee, full execution inventory or supply materiality is inferred. Source timestamps remain the stated individual pin dates."
       }
     ]
   }

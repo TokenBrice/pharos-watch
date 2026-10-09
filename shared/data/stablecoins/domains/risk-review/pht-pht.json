@@ -452,7 +452,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "PHT's canonical Ethereum CDP issuance is separated from its LayerZero bridge machinery. The Ethereum MyOFTAdapter wraps canonical PHT and shares its EOA owner with the Polygon UUPS OFT. Independent archive reads at Polygon blocks 94756020 and 94908462 reproduce peers(30101)=0x567a173bb4baf009d13222759330c1a84b667bd2, the Ethereum adapter. Effective ULN/DVN validation and executable route proof, owner-controlled replacement and unresolved Tron runtime keep the aggregate bridge tier opaque-or-unknown.",
+    "summary": "PHT's canonical Ethereum CDP issuance is separate from LayerZero bridge machinery. October 9 pinned Ethereum/Polygon reads resolve bilateral peers, effective four-required-DVN ULN configurations and a distinct endpoint delegate. Owner-controlled Polygon UUPS replacement, unreviewed delegate/DVN signing reach, whole-supply conservation and unverified Tron execution keep the aggregate bridge tier opaque-or-unknown.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao); FIX2-17 boundary migration",
     "confidence": "manual-review",
@@ -481,6 +481,22 @@
       {
         "label": "LayerZero OFT technical reference",
         "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      },
+      {
+        "label": "Sol curation campaign 2026-10-09 (W2L12Unitas): pinned Ethereum security census, block 26154636/hash 0x6f8596098b8887bde16ee874486360e4f50ef5f83650915c07c46e1bee95ad88, 2026-10-09T11:44:59Z; observed 2026-10-09T11:45:04.204Z",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Sol curation campaign 2026-10-09 (W2L12Unitas): pinned Polygon security census, block 95227349/hash 0x0162bb3f2ebce35cb99054e71ed6b87052cb0488d27f422235be975a3b48f3e4, 2026-10-09T11:44:03Z; observed 2026-10-09T11:44:04.690Z",
+        "url": "https://api-polygon-mainnet-full.n.dwellir.com"
+      },
+      {
+        "label": "Verified EndpointV2 and MessageLibManager: delegate authorization and effective library selection",
+        "url": "https://sourcify.dev/server/v2/contract/137/0x1a44076050125825900e736c501f859c50fe728c?fields=sources,abi"
+      },
+      {
+        "label": "Verified ReceiveUln302 and UlnBase: type-2 effective default resolution and all-required-DVN validation",
+        "url": "https://sourcify.dev/server/v2/contract/137/0x1322871e4ab09bc7f5717189434f97bbd9546e95?fields=sources,abi"
       }
     ],
     "routes": [
@@ -520,10 +536,10 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Independent archive RPC reads at Polygon blocks 94756020 and 94908462 reproduce peers(30101)=0x567a173bb4baf009d13222759330c1a84b667bd2, the Ethereum adapter; the prior zero-peer claim was false. The reverse Ethereum adapter peers(30109) identifies this Polygon proxy. Bilateral peer configuration alone does not establish effective ULN/DVN validation or executable route proof. Verified OFT source and owner-controlled UUPS replacement identify bridge machinery; the four-DVN claim remains unverified and the tier stays opaque-or-unknown.",
+        "reviewNote": "Pinned Polygon block 95227349 (2026-10-09T11:44:03Z; hash 0x0162bb3f2ebce35cb99054e71ed6b87052cb0488d27f422235be975a3b48f3e4) resolves peers(30101) to Ethereum adapter 0x567a173bb4baf009d13222759330c1a84b667bd2. Endpoint getConfig type 2 resolves four required DVNs, no optional DVNs and 120 send/15 receive confirmations; both receive-library timeout records are zero. The endpoint delegate is 0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2, distinct from the retained token owner. This closes configuration discovery, not delegate/DVN signer independence, immutable authentication, whole-supply conservation or route-tier admission. The UUPS implementation remains 0x98210a4b34eafd668838108c99ad13a2b4340618; riskTier remains opaque-or-unknown.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-03",
-        "observedBlock": 94908462,
+        "observedAt": "2026-10-09",
+        "observedBlock": 95227349,
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "failureDomainKeys": [
@@ -545,6 +561,10 @@
           {
             "label": "Independent Polygon Alchemy archive peers(30101) reads at blocks 94756020 and 94908462; nonzero Ethereum adapter result",
             "url": "https://polygon-mainnet.g.alchemy.com/"
+          },
+          {
+            "label": "Pinned Polygon security census: block 95227349/hash 0x0162bb3f2ebce35cb99054e71ed6b87052cb0488d27f422235be975a3b48f3e4, 2026-10-09T11:44:03Z; observed 2026-10-09T11:44:04.690Z",
+            "url": "https://api-polygon-mainnet-full.n.dwellir.com"
           }
         ]
       },
@@ -607,8 +627,8 @@
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "lockboxOrEscrow": "MyOFTAdapter inherits LayerZero OFTAdapter and returns the canonical PHT token; its source-side debit and destination credit are bridge accounting, not a second native PHT issuer.",
-          "trustedPeerOrRemote": "Ethereum adapter peers(30109) identifies Polygon PHT 0xe75220cb014dfb2d354bb59be26d7458bb8d0706, and peers(30420) identifies Tron PHT 0xed9206f7c98d4e0c947dd339b8d1ff188c40c3fe. Polygon peers(30101) returns this Ethereum adapter 0x567a173bb4baf009d13222759330c1a84b667bd2 at blocks 94756020 and 94908462. These bilateral mappings do not independently prove effective ULN/DVN authentication or an executable route.",
-          "pausersAdminsUpgraders": "The adapter endpoint is LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() is 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5. Owner-controlled peer/delegate and route-configuration powers are bridge administration; no adapter implementation-upgrade authority was separately evidenced."
+          "trustedPeerOrRemote": "Pinned Ethereum block 26154636/hash 0x6f8596098b8887bde16ee874486360e4f50ef5f83650915c07c46e1bee95ad88 (2026-10-09T11:44:59Z) binds peers(30109) to Polygon PHT. Effective send library is 0xbb2ea70c9e858123480642cf96acbcce1372dce1 and default receive library is 0xc02ab410f0734efa3f14628780e6e695156024c2. Both type-2 ULN responses require DVNs 0x380275805876ff19055ea900cdb2b46a94ecf20d, 0x589dedbd617e0cbcb916a9223f4d1300c294236b, 0xa4fe5a5b9a846458a70cd0748228aed3bf65c2cd and 0xa59ba433ac34d2927232918ef5b2eaafcf130ba5, with zero optional count/threshold. Send confirmations are 15 and receive confirmations 120. App/default receive timeout records are zero. Historical peers(30420) identity is retained without a fresh Tron-path claim.",
+          "pausersAdminsUpgraders": "At Ethereum block 26154636, owner() remains 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5; endpoint delegates(adapter) separately resolves 0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2. Endpoint source admits the delegate independently for message-library/configuration changes. The delegate's signing policy and endpoint/library administrator reach remain unclosed; no immutable authentication or operator independence is claimed."
         },
         "observedAt": "2026-10-01",
         "observedBlock": 26095930,
@@ -624,9 +644,13 @@
           {
             "label": "Ethereum public RPC fixed-block reads",
             "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Pinned Ethereum block 26154636/hash 0x6f8596098b8887bde16ee874486360e4f50ef5f83650915c07c46e1bee95ad88; 2026-10-09T11:44:59Z, observed 2026-10-09T11:45:04.204Z; reviewer Sol curation campaign 2026-10-09 (W2L12Unitas)",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ],
-        "evidence": "At Ethereum block 26095930 on 2026-10-01, MyOFTAdapter 0x567a173bb4baf009d13222759330c1a84b667bd2 returned canonical PHT and LayerZero EndpointV2; owner() returned 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5, peers(30420) returned Tron PHT, and peers(30109) returned Polygon PHT 0xe75220cb014dfb2d354bb59be26d7458bb8d0706. The prior zero Polygon peer is superseded. Owner controls and aggregate opaque tier are retained."
+        "evidence": "October 9 partial security census re-observed the owner, Polygon peer, effective send/receive libraries, default-resolved four-required-DVN ULN settings, zero grace-period timeout records and distinct endpoint delegate at Ethereum block 26154636. The original October 1 token/endpoint and Tron-peer observations remain historical. Configuration discovery is known; complete signing/bypass/conservation and Tron execution are not."
       },
       {
         "id": "pht-polygon-oft-owner",
@@ -652,9 +676,9 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "trustedPeerOrRemote": "Polygon peers(30101) returns Ethereum adapter 0x567a173bb4baf009d13222759330c1a84b667bd2 at blocks 94756020 and 94908462 in independent archive RPC reads. Ethereum adapter peers(30109) identifies this Polygon proxy. The prior zero-peer claim is withdrawn; effective ULN/DVN authentication and executable route proof remain unverified.",
-          "pausersAdminsUpgraders": "The proxy resolved to implementation 0x98210a4b34eafd668838108c99ad13a2b4340618 with admin slot zero. The implementation exposes UUPS upgradeToAndCall, and owner() is 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5; no timelock or multisig was resolved.",
-          "unsupportedReason": "The OFT deployment and nonzero bilateral Ethereum/Polygon peer mappings are identified. Effective ULN/DVN validation, executable authenticated remote execution, delegate configuration and whole-supply conservation remain unproven; peer configuration alone does not justify a favorable tier."
+          "trustedPeerOrRemote": "At Polygon block 95227349/hash 0x0162bb3f2ebce35cb99054e71ed6b87052cb0488d27f422235be975a3b48f3e4 (2026-10-09T11:44:03Z), peers(30101) binds the Ethereum adapter. Effective send library is 0x6c26c61a97006888ea9e4fa36584c7df57cd9da3; default receive library is 0x1322871e4ab09bc7f5717189434f97bbd9546e95. Both getConfig type-2 responses require DVNs 0x13feb7234ff60a97af04477d6421415766753ba3, 0x23de2fe932d9043291f870324b74f820e11dc81a, 0x25e0e650a78e6304a3983fc4b7ffc6544b1beea6 and 0x31f748a368a893bdb5abb67ec95f232507601a73; optional count/threshold are zero. Send confirmations are 120, receive confirmations 15. Both app/default receive timeout records have zero library and expiry. Verified UlnBase.getUlnConfig resolves defaults; this is effective configuration, not an independence or full execution certificate.",
+          "pausersAdminsUpgraders": "At Polygon block 95227349, implementation remained 0x98210a4b34eafd668838108c99ad13a2b4340618 and owner remained 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5. Verified implementation exposes owner-authorized UUPS upgradeToAndCall. Endpoint delegates(proxy) separately binds 0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2, which EndpointV2 authorizes to change message libraries/configuration; its signing policy is not established.",
+          "unsupportedReason": "Effective Ethereum/Polygon library, DVN, confirmation, peer and delegate configuration is now pinned. Remaining proof includes delegate and DVN executable signing/control reach, endpoint/library administration, owner-controlled replacement, whole-supply conservation and Tron authenticated execution. No favorable tier or operator-independence credit is inferred."
         },
         "observedAt": "2026-10-01",
         "observedBlock": 94756020,
@@ -670,9 +694,13 @@
           {
             "label": "Polygon public RPC fixed-block reads",
             "url": "https://polygon-bor-rpc.publicnode.com"
+          },
+          {
+            "label": "Pinned Polygon block 95227349/hash 0x0162bb3f2ebce35cb99054e71ed6b87052cb0488d27f422235be975a3b48f3e4; 2026-10-09T11:44:03Z, observed 2026-10-09T11:44:04.690Z; reviewer Sol curation campaign 2026-10-09 (W2L12Unitas)",
+            "url": "https://api-polygon-mainnet-full.n.dwellir.com"
           }
         ],
-        "evidence": "At Polygon block 94756020 on 2026-10-01, PHT proxy retained owner 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5, implementation 0x98210a4b34eafd668838108c99ad13a2b4340618, zero EIP-1967 admin and beacon slots, token() equal to the proxy, and LayerZero EndpointV2. peers(30101) points to the Ethereum adapter, which now points back at its Polygon EID. The prior owner-controlled UUPS replacement risk remains unchanged."
+        "evidence": "October 9 partial security census at Polygon block 95227349 re-observed the owner, UUPS implementation, endpoint, Ethereum peer, effective libraries, four-required-DVN ULN settings, zero timeout records and the distinct endpoint delegate. Historical zero admin/beacon and token() observations remain dated October 1. No full execution or supply-conservation certificate, operator independence or favorable risk tier is asserted."
       },
       {
         "id": "pht-tron-oft-owner",
@@ -696,12 +724,12 @@
         "authorityType": "eoa",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The Tron PhtOFT is a native LayerZero OFT: token() returns the contract itself, approvalRequired() returns false, and endpoint() returns LayerZero Endpoint V2 0x0af59750d5db5460e5d89e268c474d5f7407c061, while the deployed bytecode carries no mint, burn, upgrade, or proxiable selector. Bridge mint and burn therefore run only through the authenticated LayerZero path under no supply cap; the current peer table was not enumerated.",
+        "capDescription": "Historical Tron API observations identified an OFT-shaped endpoint and no named cap getters. They do not establish an immutable mint/burn invariant, absence of hidden direct issuance, or historical state at an attached block. The pin-aware helper rejects triggerconstantcontract as unsupported-pinned-state; no new Tron state or cap conclusion is admitted.",
         "routeChecks": {
           "lockboxOrEscrow": "APACX identifies Ethereum↔Tron movement through LayerZero OFT, but the unverified Tron runtime does not prove a supply-conserving burn/mint invariant or a lockbox.",
-          "trustedPeerOrRemote": "At Tron block 85862190 on 2026-09-01, owner() returned 0xfb99a0af49941ec1ca2fc726be1e287f4c70f5ee (TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4) and endpoint() returned LayerZero Endpoint V2 0x0af59750d5db5460e5d89e268c474d5f7407c061, so the route's messaging endpoint is resolved. The current peer table and delegate were still not enumerated, so an authenticated remote is not claimed.",
-          "caps": "At Tron block 85862190 on 2026-09-01, cap(), maxSupply(), mintCap(), supplyCap(), and mintingLimit() all returned empty on TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs, token() returned the contract itself, and approvalRequired() returned false, so it is a native LayerZero OFT with no supply ceiling. Its deployed bytecode contains no mint(address,uint256), burn(address,uint256), upgradeTo(address), upgradeToAndCall(address,bytes), or proxiableUUID() selector, so there is no owner-controlled direct-mint or upgrade path and no cap bounds an authenticated lzReceive mint.",
-          "pausersAdminsUpgraders": "At Tron block 85862190 on 2026-09-01, the TronGrid contract record for the non-proxy PhtOFT exposed the standard LayerZero OFT ABI, and its deployed bytecode contains setPeer, setDelegate, setEnforcedOptions, setMsgInspector, setPreCrime, transferOwnership, and renounceOwnership but no mint, burn, upgradeTo, upgradeToAndCall, or proxiableUUID selector. The owner therefore controls peer, delegate, enforced-option, and ownership configuration with no upgrade or direct-mint path."
+          "trustedPeerOrRemote": "Earlier TronGrid observations identify an endpoint-shaped address and owner, but current/solidified constant calls do not accept a historical state pin. The current peer table, delegate and effective DVN configuration remain unresolved.",
+          "caps": "No complete verified source and pin-capable state evidence establish a durable supply ceiling or prove the absence of direct-mint/bypass paths. Empty cap getters and selector absence are not affirmative cap or execution-closure proof.",
+          "pausersAdminsUpgraders": "The historical ABI/selector inventory suggests LayerZero configuration entrypoints but does not prove complete runtime behavior or absence of hidden upgrade/direct-mint paths. Retain unverified Tron execution rather than upgrading it from selector absence."
         },
         "observedAt": "2026-08-16",
         "observedBlock": 85415139,
@@ -720,6 +748,62 @@
           }
         ],
         "evidence": "At Tron block 85415139, TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs returned totalSupply()=44,489,605.678905 and owner()=0xfb99a0af49941ec1ca2fc726be1e287f4c70f5ee, corresponding to TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4. Tronscan reports name=PhtOFT, is_proxy=false, verify_status=0, and selectors including send, lzReceive, setPeer, and setDelegate. The exact bridge mint/burn, endpoint, peer, delegate, upgrade, and direct-mint semantics remain unresolved."
+      },
+      {
+        "id": "pht-ethereum-endpoint-delegate",
+        "label": "PHT Ethereum adapter LayerZero endpoint delegate",
+        "routeRefs": [
+          "ethereum:0xbe370ad45d44eb45174c4ec60b88839fef32c077"
+        ],
+        "capabilities": ["admin", "peer-config"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2",
+        "authorityType": "unknown",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "delegate:ethereum:0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2"
+        ],
+        "observedAt": "2026-10-09",
+        "observedBlock": 26154636,
+        "sources": [
+          {
+            "label": "Pinned Ethereum block 26154636/hash 0x6f8596098b8887bde16ee874486360e4f50ef5f83650915c07c46e1bee95ad88, 2026-10-09T11:44:59Z; observed 2026-10-09T11:45:04.204Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Verified Ethereum EndpointV2 source and delegate authorization",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x1a44076050125825900e736c501f859c50fe728c?fields=sources,abi"
+          }
+        ],
+        "evidence": "Sol curation campaign 2026-10-09 (W2L12Unitas) observed delegates(adapter) equal to this distinct controller. EndpointV2 _assertAuthorized permits the OApp or delegate to set message libraries/configuration and manage authenticated message channels. This does not confer token setPeer, UUPS or native CDP issuance authority. Controller signing/execution policy is unreviewed; no multisig, EOA or independent-operator conclusion is inferred."
+      },
+      {
+        "id": "pht-polygon-endpoint-delegate",
+        "label": "PHT Polygon OFT LayerZero endpoint delegate",
+        "routeRefs": [
+          "polygon:0xe75220cb014dfb2d354bb59be26d7458bb8d0706"
+        ],
+        "capabilities": ["admin", "peer-config"],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2",
+        "authorityType": "unknown",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "delegate:polygon:0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2"
+        ],
+        "observedAt": "2026-10-09",
+        "observedBlock": 95227349,
+        "sources": [
+          {
+            "label": "Pinned Polygon block 95227349/hash 0x0162bb3f2ebce35cb99054e71ed6b87052cb0488d27f422235be975a3b48f3e4, 2026-10-09T11:44:03Z; observed 2026-10-09T11:44:04.690Z",
+            "url": "https://api-polygon-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "Verified Polygon EndpointV2 source and delegate authorization",
+            "url": "https://sourcify.dev/server/v2/contract/137/0x1a44076050125825900e736c501f859c50fe728c?fields=sources,abi"
+          }
+        ],
+        "evidence": "Sol curation campaign 2026-10-09 (W2L12Unitas) observed delegates(proxy) equal to this distinct controller. EndpointV2 _assertAuthorized permits the OApp or delegate to set message libraries/configuration and manage authenticated message channels. This is distinct from the token owner's setPeer/UUPS authority. Controller signing/execution policy and cross-chain operator identity are unreviewed; address equality alone proves no independence or common human custody."
       }
     ]
   }

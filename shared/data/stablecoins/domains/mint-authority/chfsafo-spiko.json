@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "CHFSAFO shares the AMF-authorized Spiko SICAV SAFO framework, CACEIS depositary/valuation and native register architecture used by EURSAFO and GBPSAFO. Five chain-local 3-of-6 ADMIN Safes are observed on its EVM registers; its Solana mint uses the same issuer MinterConfig and admin vault as EURSAFO. Shared family operator/custody review limitations remain documented without asserting exhaustive code or financial reconciliation closure.",
+    "summary": "CHFSAFO has five observed EVM ADMIN Safes and a shared Solana MinterConfig. The Solana admin Squads account has one voting/executing member, who also directly holds the program upgrade authority. Current executable bytes match the verified issuer source; this does not establish independent key custody, exhaustive register control closure or financial reconciliation.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -146,11 +146,12 @@
           "solana:6Gst8o3L5uNtkUvhEg23HpDLpYRdNQTgdn1Bc7jnCM5c"
         ],
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-10-03",
-        "observedBlock": 452885479,
+        "canRaiseCap": true,
+        "capDescription": "The verified current program permits the configured admin to change the daily limit and approve pending mints without a daily-limit recheck; the limit is not an immutable economic supply cap.",
+        "observedAt": "2026-10-09",
+        "observedBlock": 454856255,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "The earlier finalized slot 452748326 identified this mint authority, five decimals and zero supply but left its hierarchy unverified. A fresh finalized getMultipleAccounts at slot 452885479 confirms the exact CHF mintAuthority is this same shared MinterConfig, owned by issuer program 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw. Decoding the immutable issuer MinterConfig layout gives admin vault 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9, pending_admin None, initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd and bump 255, identical to the EURSAFO sibling's shared controller. The official source names the admin Squads account CqexeLYpGafaLfX7Nb3tD8ShLmWP1mmap16iR9M59u1A; its current account is owned by Squads v4. This establishes shared controller identity, not independently verified program-binary correspondence or key-custody independence.",
+        "evidence": "Sol curation campaign 2026-10-09 (W2L27Newrails), observed 2026-10-09T11:43:28Z: one finalized getMultipleAccounts response at bank-context slot 454856255 binds the exact CHF mintAuthority to this MinterConfig, owned by issuer program 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw. getBlock for that slot gives hash F9jDR1JsLdZGzBsH55EcSMhcCe4ZhW81AUud14PowXnj, timestamp 1791546198 (2026-10-09T11:43:18Z). MinterConfig decodes to admin vault 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9, pending_admin None, initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd and bump 255. ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe executable bytes after the 45-byte loader header, with trailing zero padding removed, hash to 0aff1fc23cc42369aacdcaf797d2579c691019c3170115b91116c3394f70a68d, exactly matching OSEc's independently verified issuer commit afdab14fb1a59bf3abe2f263870023349a560e2e (verification dated 2026-09-01T13:05:46.166083). Its set_daily_limit is admin-gated and adjustable; approve_mint mints the pending amount without rechecking MintDailyLimit. These are RPC-returned finalized-bank contextual observations, not historical-slot account queries. No complete Squads execution certificate, incident-free state, supply share, human independence or key-custody proof is asserted.",
         "sources": [
           {
             "label": "Exact CHF Solana mint",
@@ -161,9 +162,56 @@
             "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"
           },
           {
-            "label": "Finalized exact CHF/shared controller binding at slot 452885479",
+            "label": "Finalized exact CHF/controller/runtime census at bank-context slot 454856255, block time 2026-10-09T11:43:18Z",
             "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Independent executable/source verification, current byte hash matched at slot 454856255",
+            "url": "https://verify.osec.io/status/8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw"
           }
+        ]
+      },
+      {
+        "label": "CHF Solana admin Squads vault",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "chain": "solana",
+        "address": "2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9",
+        "deploymentRefs": ["solana:6Gst8o3L5uNtkUvhEg23HpDLpYRdNQTgdn1Bc7jnCM5c"],
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": ["solana-key:GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h"],
+        "observedAt": "2026-10-09",
+        "observedBlock": 454856255,
+        "evidence": "Sol curation campaign 2026-10-09 (W2L27Newrails), observed 2026-10-09T11:43:28Z: the same finalized bank-context slot 454856255 census binds this vault as MinterConfig.admin and the issuer mainnet deployment inventory binds it to Squads account CqexeLYpGafaLfX7Nb3tD8ShLmWP1mmap16iR9M59u1A. The account is owned by Squads v4 SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf; its source-layout decode gives threshold 1, time_lock 0, config_authority the zero pubkey, transaction_index 25, stale_transaction_index 0 and exactly one member GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h with permissions mask 7 (initiate, vote, execute). This is one cryptographic signer, not a multi-person independence attestation. The verified issuer minter source gives the admin daily-limit adjustment and pending-mint approval. Block hash F9jDR1JsLdZGzBsH55EcSMhcCe4ZhW81AUud14PowXnj, timestamp 1791546198 (2026-10-09T11:43:18Z). Squads runtime/source parity, alternative execution paths, spending-limit closure and incident state remain unestablished; no exhaustive execution certificate is asserted.",
+        "sources": [
+          {"label": "Finalized CHF/config/Squads census at bank-context slot 454856255", "url": "https://api.mainnet-beta.solana.com"},
+          {"label": "Immutable issuer mainnet minter and admin-vault inventory", "url": "https://github.com/spiko-tech/solana-contracts/blob/afdab14fb1a59bf3abe2f263870023349a560e2e/deployments/minter-mainnet-beta.json"},
+          {"label": "Immutable Squads Multisig account and permission layout", "url": "https://github.com/Squads-Protocol/v4/blob/af94153ff77a28b6effe46b9c94baaa93742b48c/programs/squads_multisig_program/src/state/multisig.rs"},
+          {"label": "Verified issuer minter executable/source identity", "url": "https://verify.osec.io/status/8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw"}
+        ]
+      },
+      {
+        "label": "CHF Solana minter program upgrade signer",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "chain": "solana",
+        "address": "GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h",
+        "deploymentRefs": ["solana:6Gst8o3L5uNtkUvhEg23HpDLpYRdNQTgdn1Bc7jnCM5c"],
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "failureDomainKeys": ["solana-key:GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h"],
+        "observedAt": "2026-10-09",
+        "observedBlock": 454856255,
+        "evidence": "Sol curation campaign 2026-10-09 (W2L27Newrails), observed 2026-10-09T11:43:28Z: the same finalized bank-context slot 454856255 account response identifies the exact mint's authority PDA as issuer MinterConfig and its owning executable program 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw as BPFLoaderUpgradeable-owned. Its Program account points to ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; ProgramData's loader state has deployment slot 443429864 and Some(upgrade_authority_address) equal to this signer, corroborating the immutable issuer deployment inventory. The signer is an on-curve public key with a system-owned zero-data account and is also the sole admin Squads member. Program replacement can replace the mint-critical code which signs as the existing MinterConfig PDA; the observed daily limit is therefore not an immutable supply cap. Block hash F9jDR1JsLdZGzBsH55EcSMhcCe4ZhW81AUud14PowXnj, timestamp 1791546198 (2026-10-09T11:43:18Z). This proves the local upgrade signer identity, not key custody, an incident-free history, complete execution-domain closure or a runtime liability share.",
+        "sources": [
+          {"label": "Finalized exact program, ProgramData and signer census at bank-context slot 454856255", "url": "https://api.mainnet-beta.solana.com"},
+          {"label": "Immutable issuer program upgrade authority inventory", "url": "https://github.com/spiko-tech/solana-contracts/blob/afdab14fb1a59bf3abe2f263870023349a560e2e/deployments/minter-mainnet-beta.json"},
+          {"label": "Verified immutable issuer minter source", "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"}
         ]
       },
       {
@@ -235,9 +283,9 @@
     "supervision": "prudential",
     "review": {
       "disposition": "scoreable",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Refine05 primary-source and pinned-RPC review",
-      "evidence": "Five exact CHF EVM token requirement masks and chain-local ADMIN Safe signer/module reads establish observed direct-mint and upgrade controllers; their full permission-group census and guard/fallback/delay closure have not been independently established. The fresh CHF Solana mint/configuration binding now identifies the same MinterConfig, admin vault and initiator as EURSAFO, not a CHF-specific new issuance hierarchy. EURSAFO and GBPSAFO retain scoreable family reviews while explicitly acknowledging remaining non-Ethereum operator/custody limitations. CHFSAFO follows that same family authoring convention: the shared AMF-authorized SICAV/prospectus, CACEIS depositary and daily fund valuation, recurring fund reporting and named PwC appointment support the same prudential/periodic/unbounded-reconciled vocabulary. This is not a claim that the retrieved June SAFO report has an audit opinion or that a current independently signed CHF-token/all-register liability reconciliation has been published. Starknet/Stellar operator and upgrade enumeration, the complete EVM permission-group roster, and EVM guard/fallback/delay observations remain family-shared review limitations; no CHF-specific divergent controller or additional chain is established. Independent key custody and human signer independence remain undisclosed and are recorded per control. Native circulation exclusions and complete cross-register financial reconciliation remain unavailable in Backing.",
+      "reviewedAt": "2026-10-09",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L27Newrails)",
+      "evidence": "The October 9 substantive review adds the exact Solana minter executable/source match, adjustable admin cap and approval semantics, one-member admin Squads topology and the same member's direct program upgrade authority at finalized bank-context slot 454856255, block hash F9jDR1JsLdZGzBsH55EcSMhcCe4ZhW81AUud14PowXnj, timestamp 1791546198, observation 2026-10-09T11:43:28Z. It does not refresh the prior October 2/3 EVM, fund, custody or reconciliation observations. Five exact CHF EVM token requirement masks and chain-local ADMIN Safe signer/module reads establish observed direct-mint and upgrade controllers; their full permission-group census and guard/fallback/delay closure have not been independently established. The shared AMF-authorized SICAV/prospectus, CACEIS depositary and daily fund valuation, recurring fund reporting and named PwC appointment retain the previously reviewed prudential/periodic/unbounded-reconciled vocabulary, not a new independently signed CHF-token/all-register reconciliation or audit opinion. Starknet/Stellar operator and upgrade enumeration, the complete EVM permission-group roster, and EVM guard/fallback/delay observations remain unestablished. Solana Squads runtime/source parity and alternative execution-path closure remain unestablished despite the issuer minter's independently verified current byte hash. Independent key custody and signing policy remain unresolved. Native circulation exclusions and complete cross-register financial reconciliation remain unavailable in Backing.",
       "sources": [
         {
           "label": "Spiko SICAV prospectus, 1 September 2026",
@@ -266,6 +314,14 @@
         {
           "label": "Spiko control architecture",
           "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        },
+        {
+          "label": "October 9 finalized Solana exact-controller census at bank-context slot 454856255",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Independent verified issuer minter source, current executable hash matched October 9",
+          "url": "https://verify.osec.io/status/8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw"
         }
       ],
       "unresolvedQuestions": [],
@@ -319,10 +375,17 @@
         },
         {
           "controlRef": "CHF Solana mint authority",
-          "question": "Establish independent key custody and signing policy for the shared MinterConfig initiator and admin Squads controllers; known shared controller identity does not attest human independence or complete program-runtime correspondence.",
+          "question": "Complete the shared admin Squads deployed-runtime/source and alternative-execution-path census, including spending-limit and program-upgrade reach. The issuer minter byte/source correspondence, MinterConfig principals and one-member Squads topology are observed; they do not establish complete execution closure.",
           "subject": "execution-scope",
-          "reviewedAt": "2026-10-03", "reviewer": "Refine05 Spiko sibling consistency review",
-          "sources": [{"label": "Immutable shared minter authorities and code", "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"}, {"label": "Finalized exact CHF/controller binding at slot 452885479", "url": "https://api.mainnet-beta.solana.com"}]
+          "reviewedAt": "2026-10-09", "reviewer": "Sol curation campaign 2026-10-09 (W2L27Newrails)",
+          "sources": [{"label": "Immutable shared minter authorities and code", "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"}, {"label": "Finalized exact CHF/controller census at bank-context slot 454856255", "url": "https://api.mainnet-beta.solana.com"}, {"label": "Verified issuer minter executable/source correspondence", "url": "https://verify.osec.io/status/8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw"}]
+        },
+        {
+          "controlRef": "CHF Solana mint authority",
+          "question": "Establish independently evidenced key custody and signing policy for the shared MinterConfig initiator and admin/program-upgrade signer; public key identities and the observed one-member Squads configuration do not attest beneficial key control or operational signing policy.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-09", "reviewer": "Sol curation campaign 2026-10-09 (W2L27Newrails)",
+          "sources": [{"label": "Immutable shared issuer authority inventory", "url": "https://github.com/spiko-tech/solana-contracts/blob/afdab14fb1a59bf3abe2f263870023349a560e2e/deployments/minter-mainnet-beta.json"}, {"label": "Finalized exact Solana principal census at bank-context slot 454856255", "url": "https://api.mainnet-beta.solana.com"}]
         }
       ]
     }

@@ -10,7 +10,7 @@
     "navToken": true
   },
   "collateral": "Market-neutral DeFi lending, liquidity, arbitrage, carry, and liquidation strategies allocated through Midas liquid-yield token rails; strategy manager is RockawayX (appointed February 2026, replacing MEV Capital after Midas terminated that partnership).",
-  "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+  "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor. An Ethereum instant-redemption transaction at block 26147168 on October 8, 2026 returned 58.922772 USDC through the mMEV redemption-vault swapper, mTBILL and USTB. This confirms one small residual on-chain execution, not current same-notional funded capacity, a complete all-in cost bound or an unconditional settlement guarantee.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "midas-mmev",
@@ -41,6 +41,10 @@
     {
       "label": "CoinGecko",
       "url": "https://www.coingecko.com/en/coins/midas-mmev"
+    },
+    {
+      "label": "mMEV small-value redemption execution, October 8, 2026; reviewed October 9 by Sol (W2L06Midas)",
+      "url": "https://etherscan.io/tx/0x804747cba84e48b2e936f89088ea693f19a9045bfb2bc40cadfe2ca3bf914ff5"
     }
   ],
   "jurisdiction": {

@@ -62,6 +62,26 @@
       "chain": "starknet",
       "address": "0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17",
       "decimals": 18
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0x34a2798d47b238a7cba9d87d49618dee6c4d999f",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x34a2798d47b238a7cba9d87d49618dee6c4d999f",
+      "decimals": 18
+    },
+    {
+      "chain": "citrea",
+      "address": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+      "decimals": 18
+    },
+    {
+      "chain": "berachain",
+      "address": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+      "decimals": 18
     }
   ],
   "collateralQuality": "exotic",

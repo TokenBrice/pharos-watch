@@ -373,13 +373,25 @@
         },
         {
           "controlRef": "GLDon Solana GM program upgrade authority",
-          "question": "The upgrade authority is now bound to Squads v4 vault index 0 of EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr, with current 4-of-7 quorum and 7200-second configured delay. Complete spending-limit, reconfiguration and Squads-program upgrade/bypass reach plus human key independence remain unverified; the topology observation is not a full execution certificate.",
+          "question": "The retained finalized-slot 453074463 observation binds the upgrade authority to Squads v4 vault index 0 of EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr, with 4-of-7 quorum and 7200-second configured delay; no new account-state pin is asserted. Squads publishes that its Solana v4 program SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf has been immutable since November 2024, that autonomous config changes require member voting, and that spending limits permit selected members to spend without a proposal. These protocol-family disclosures do not verify the exact deployed runtime/build, spending-limit inventory or every reachable reconfiguration/bypass path for this vault. The required pinned helper currently rejects Solana because no supplemental endpoint is registered. Exact execution closure remains unverified; human key independence is separate and receives no credit.",
           "subject": "execution-scope",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "W1R54 primary-source and finalized account review",
+          "reviewedAt": "2026-10-09",
+          "reviewer": "Sol curation campaign 2026-10-09 (W2L04Ondo)",
           "sources": [{
             "label": "Exact GM program-data upgrade-authority account",
             "url": "https://solscan.io/account/F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU"
+          }, {
+            "label": "Squads Solana v4 exact program identity; source reference only, observed 2026-10-09T11:46:19Z",
+            "url": "https://github.com/Squads-Protocol/v4"
+          }, {
+            "label": "Squads publisher's November 2024 v4 immutability disclosure; not an exact-runtime pin, observed 2026-10-09T11:46:19Z",
+            "url": "https://docs.squads.so/main/security/how-secure-is-squads.md"
+          }, {
+            "label": "Squads autonomous/config-authority semantics; observed 2026-10-09T11:46:19Z",
+            "url": "https://docs.squads.so/main/development/reference/accounts.md"
+          }, {
+            "label": "Squads proposal-free spending-limit and config-change semantics; observed 2026-10-09T11:46:19Z",
+            "url": "https://docs.squads.so/main/development/reference/spending-limits.md"
           }]
         }
       ]

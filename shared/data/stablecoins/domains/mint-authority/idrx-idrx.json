@@ -603,7 +603,7 @@
             }
           ]
         },
-        "evidence": "Resolved 2026-07-30 from the complete BSC role history: MINTER_ROLE granted 2023-11-29 and current at block 113086546; independently re-verified at latest block on 2026-07-30 (hasRole = true). R2 re-verified at BSC block 125135204 on 2026-10-01: MINTER_ROLE remains true, DEFAULT_ADMIN_ROLE false, eth_getCode = 0x and transaction nonce = 0. This is an undeployed counterfactual 2-of-3 Safe, not a demonstrated single-key EOA. Replaying the exact createProxyWithNonce calldata from Base creation transaction 0x4eede2f05b5fa1fad852b42cd9ea516d103d74e9883135738055cc984887ffe7 against the BSC Safe factory 0xa6b71e26c5e0845f74c812102ca7114b6a896ab2 at the same pinned block returns this exact address. The initialization fixes threshold 2 and three owners: 0xe51b67864a38f42126231d30ed8f3e72ec7f32f4, 0xb4fca8725a9e65b4cd1ef27d71e7c7537148061b, 0x0f9f4cbbec64524deb0d743f9caf34be81bd1576. The mint role is dormant until deployment; direct-mint exposure is retained as a latent Safe-controlled path, with no claim that a Safe currently exists on BSC. Separate DEFAULT_ADMIN EOA authority remains unchanged.",
+        "evidence": "Resolved 2026-07-30 from the complete BSC role history: MINTER_ROLE granted 2023-11-29 and current at block 113086546; independently re-verified at latest block on 2026-07-30 (hasRole = true). R2 re-verified at BSC block 125135204 on 2026-10-01: MINTER_ROLE remains true, DEFAULT_ADMIN_ROLE false, eth_getCode = 0x and transaction nonce = 0. This is an undeployed counterfactual 2-of-3 Safe, not a demonstrated single-key EOA. Replaying the exact createProxyWithNonce calldata from Base creation transaction 0x4eede2f05b5fa1fad852b42cd9ea516d103d74e9883135738055cc984887ffe7 against the BSC Safe factory 0xa6b71e26c5e0845f74c812102ca7114b6a896ab2 at the same pinned block returns this exact address. The initialization fixes threshold 2 and three owners: 0xe51b67864a38f42126231d30ed8f3e72ec7f32f4, 0xb4fca8725a9e65b4cd1ef27d71e7c7537148061b, 0x0f9f4cbbec64524deb0d743f9caf34be81bd1576. The mint role is dormant until deployment; direct-mint exposure is retained as a latent Safe-controlled path, with no claim that a Safe currently exists on BSC. Separate DEFAULT_ADMIN EOA authority remains unchanged. Sol curation campaign 2026-10-09 (W2L11Idrx) independently observed at 2026-10-09T11:50:44Z: BSC block 126630688, hash 0x83844aae0fd3e4a43bd278cc4dd405ec72cc21e824da4c17b6aeb5fd52e0b154, timestamp 2026-10-09T11:49:46Z; hasRole(MINTER_ROLE)=true, hasRole(DEFAULT_ADMIN_ROLE)=false, hasRole(UPGRADER_ROLE)=false and eth_getCode=0x. The target proxy implementation slot resolves to 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0 at the same pin. This partial recheck does not refresh the historical Safe initializer, nonce, factory/runtime correspondence or execution certificate; all seven closure predicates remain unresolved.",
         "sources": [
           {
             "label": "BSC IDRX proxy",
@@ -612,10 +612,14 @@
           {
             "label": "Exact Base counterfactual Safe creation calldata replayed on BSC at block 125135204",
             "url": "https://base.blockscout.com/tx/0x4eede2f05b5fa1fad852b42cd9ea516d103d74e9883135738055cc984887ffe7"
+          },
+          {
+            "label": "Dwellir BSC role/code/implementation observations; block 126630688, hash 0x83844aae0fd3e4a43bd278cc4dd405ec72cc21e824da4c17b6aeb5fd52e0b154, timestamp 2026-10-09T11:49:46Z",
+            "url": "https://api-bsc-mainnet-full.n.dwellir.com"
           }
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 125135204
+        "observedAt": "2026-10-09",
+        "observedBlock": 126630688
       },
       {
         "chain": "bsc",
@@ -687,15 +691,19 @@
             }
           ]
         },
-        "evidence": "Resolved 2026-07-30 from the complete BSC role history: DEFAULT_ADMIN_ROLE granted 2025-09-26 and the original deployer fully revoked; hasRole(DEFAULT_ADMIN_ROLE) = true at block 113086546; eth_getCode = 0x (EOA). Also holds PAUSER_ROLE and BLACKLIST_ROLE. DEFAULT_ADMIN can grant/revoke MINTER_ROLE and UPGRADER_ROLE without delay.",
+        "evidence": "Resolved 2026-07-30 from the complete BSC role history: DEFAULT_ADMIN_ROLE granted 2025-09-26 and the original deployer fully revoked; hasRole(DEFAULT_ADMIN_ROLE) = true at block 113086546; eth_getCode = 0x (EOA). Also holds PAUSER_ROLE and BLACKLIST_ROLE. DEFAULT_ADMIN can grant/revoke MINTER_ROLE and UPGRADER_ROLE without delay. Sol curation campaign 2026-10-09 (W2L11Idrx) independently observed at 2026-10-09T11:50:44Z: BSC block 126630688, hash 0x83844aae0fd3e4a43bd278cc4dd405ec72cc21e824da4c17b6aeb5fd52e0b154, timestamp 2026-10-09T11:49:46Z; hasRole(DEFAULT_ADMIN_ROLE)=true, hasRole(MINTER_ROLE)=false, hasRole(UPGRADER_ROLE)=false and eth_getCode=0x. The target proxy implementation slot resolves to 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0 at the same pin. The July PAUSER/BLACKLIST history and October 1 grantRole simulation are not re-observed by this limited call set. Aggregate review dates, historical role census and both partial execution certificates remain unchanged.",
         "sources": [
           {
             "label": "BSC IDRX proxy",
             "url": "https://bscscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          },
+          {
+            "label": "Dwellir BSC role/code/implementation observations; block 126630688, hash 0x83844aae0fd3e4a43bd278cc4dd405ec72cc21e824da4c17b6aeb5fd52e0b154, timestamp 2026-10-09T11:49:46Z",
+            "url": "https://api-bsc-mainnet-full.n.dwellir.com"
           }
         ],
-        "observedAt": "2026-07-30",
-        "observedBlock": 113086546
+        "observedAt": "2026-10-09",
+        "observedBlock": 126630688
       },
       {
         "chain": "bsc",

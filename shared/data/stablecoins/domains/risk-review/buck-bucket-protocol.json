@@ -26,7 +26,7 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), all 40 reviewed legacy V1 CDP Bucket mint ceilings are zero and all 40 stored SingleOracle prices exceed the reviewed ten-second freshness limit. Thirty-nine SingleOracles have threshold 1; AF_LP has threshold 4. Historical liquidation-code and update-route assessments remain dated 2026-07-14; this snapshot does not prove successful price refresh or executable exit liquidity.",
+    "summary": "At checkpoint 332044056 (2026-10-09T11:50:19.219Z), a historical GraphQL census exhausts the V1 protocol's 170 dynamic fields: 40 Buckets, 40 Tanks, 18 Reservoirs, 57 Wells, 14 Pipes and one emission object. All 40 Bucket mint ceilings are zero. Reads of the 40 previously reviewed SingleOracle IDs find 39 thresholds of 1 and AF_LP threshold 4; every stored update predates August 30. These are current object facts, not proof of deployed code binding, successful refresh, independent backing valuation or executable liquidity. Source/update-route reviews and branch assessments retain their historical dates.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -60,6 +60,10 @@
       {
         "label": "Pinned Bucket mainnet oracle implementation",
         "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+      },
+      {
+        "label": "Sui historical GraphQL checkpoint.query census, checkpoint 332044056, digest HPWJsRQGMHV1FycaLxdYVe8979NiV6jGMA5KZQUTd4Ua, 2026-10-09T11:50:19.219Z; observed 2026-10-09T11:52Z",
+        "url": "https://graphql.mainnet.sui.io/graphql"
       },
       {
         "label": "Finalized Sui checkpoint 298434520 anchor transaction",

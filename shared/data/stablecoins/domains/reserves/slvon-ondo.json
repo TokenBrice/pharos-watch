@@ -41,13 +41,17 @@
       {
         "label": "SLVon Final Terms: collateral and named custody providers (signed 2026-02-19)",
         "url": "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf"
+      },
+      {
+        "label": "Ankura October 6, 2026 daily report, 8pm ET; archive member 2026/10 October/Daily Report - Ondo Stocks - 2026-10-06_20_00_ET - Ankura Attestation.pdf; aggregate reference recovered October 9 by W2L04Ondo and reviewed by W2L07Ondo, not SLVon composition",
+        "url": "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&dl=1"
       }
     ],
     "rationale": "Re-opened 2026-08-29: Ondo's current Global Markets trust-and-transparency documentation states that tokenized stocks and ETFs are fully backed by the underlying security plus cash in transit, with daily holdings verification by Ankura Trust and custody at one or more US-registered broker-dealers. SLVon is the tokenized iShares Silver Trust (SLV) exposure. The reviewed Ondo API documentation says current price feeds are display-only and that an official oracle is still in development; no Chainlink or Chronicle NAV configuration is present for SLVon in the Pharos registry, and no current dated SLVon holdings report was retrieved from the public product page. The reserve remains one fund-share envelope because SLV shares versus cash-in-transit weights are undisclosed.",
     "compositionBasis": "Ondo SLVon product, trust and transparency, and oracle guidance",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "Independently re-fetched public Ankura-verified consolidated Ondo Stocks daily and monthly report folders on 2026-10-02. The latest daily report is September 29 and the latest monthly report is August; neither discloses a SLVon-specific allocation between SLV shares, cash in transit, or other eligible collateral, nor SLVon-specific custodial provider shares. SLVon Final Terms identify the intended underlying security and permit other collateral, but do not supply dated holdings or weights. The aggregate reserve basket remains 100% unresolved.",
+    "knownUnknownExposure": "The October 2 reserve search reviewed September 29 daily and August monthly consolidated Ondo Stocks reports without SLVon-specific shares, cash, other collateral or custodial provider weights. Wave 2 recovered the October 6, 2026 8pm ET Ankura daily report from the official archive. It verifies aggregate assets $1,676,475,682.48 against obligations $1,575,625,529.70 (106.40%), including pooled securities, cash, other Ondo Stocks, USDY and USDon. It still provides no SLVon-specific allocation or liability denominator; neither its aggregate ratio nor the underlying SLV ETF's physical-silver holdings can be attributed to the SLVon wrapper. Final Terms identify the intended security and permit other collateral without dated weights. The aggregate reserve basket remains 100% unresolved; original composition, review and custody clocks are not refreshed by this aggregate reference.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

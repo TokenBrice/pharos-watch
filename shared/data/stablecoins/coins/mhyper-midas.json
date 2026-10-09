@@ -10,7 +10,7 @@
     "navToken": true
   },
   "collateral": "Hyperithm LLC-managed reference portfolio targeting delta-neutral absolute returns through basis arbitrage, market making and on-chain/off-chain yield strategies. The signed July 17, 2026 terms require delta neutrality and cap gross leverage at 8.0x. Tokenholders hold a qualified subordinated issuer certificate, not ownership of the underlying assets; product-specific Security and Collateral are not applicable.",
-  "pegMechanism": "NAV-linked Swiss-law ledger-based investment certificate, not a fixed $1 peg. The July 17, 2026 final terms specify USDC settlement, zero standard redemption fee, a one-Business-Day realisation period, a 23:59 CET/CEST cutoff and a gate of 15% of outstanding tokens per settlement day. The base prospectus requires payment within five Business Days after the realisation period, subject to applicable gates and market-disruption deferrals. Instant redemption separately charges 0.5% and can retain up to 50% under the Deferred Price Method; neither route guarantees unconditional immediate whole-position liquidity.",
+  "pegMechanism": "NAV-linked Swiss-law ledger-based investment certificate, not a fixed $1 peg. The July 17, 2026 final terms specify USDC settlement, zero standard redemption fee, a one-Business-Day realisation period, a 23:59 CET/CEST cutoff and a gate of 15% of outstanding tokens per settlement day. The base prospectus requires payment within five Business Days after the realisation period, subject to applicable gates and market-disruption deferrals. Instant redemption separately charges 0.5% and can retain up to 50% under the Deferred Price Method; neither route guarantees unconditional immediate whole-position liquidity. An Ethereum instant redemption at block 26137236 on October 7, 2026 returned 9.015541 USDC; this small execution does not establish same-notional funded capacity.",
   "detailProvider": "coingecko",
   "geckoId": "midas-mhyper",
   "proofOfReserves": {
@@ -20,20 +20,20 @@
     "attestorTier": "self",
     "cadence": "daily-nav",
     "latestReport": {
-      "publishedAt": "2026-09-29",
+      "publishedAt": "2026-10-06",
       "publishedAtBasis": "explicit",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "Sol NR wave 2026-10-02 (NrMhyper)",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L06Midas)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "mHYPER SAVE checkpoint, published on Ethereum 2026-09-29; protocol assets, borrow liabilities and reported token supply",
-          "url": "https://gateway.pinata.cloud/ipfs/QmQxfaGhtGrP4im4B8TYyPHBn2MkxZQMx8Ta8JeDsUVCSX"
+          "label": "mHYPER SAVE checkpoint 483cd7f1-5e28-54ec-ba98-f4763bfa73d4, published on Ethereum 2026-10-06T11:35:35Z; 1token protocol assets and borrow liabilities at 08:00 UTC plus reported cross-chain token supply; partial reconciliation, not a financial audit",
+          "url": "https://gateway.pinata.cloud/ipfs/QmXtqUwU2JnceLPjc3oHEtzK37yYcUtfoKG6PH6nF22tbA"
         },
         {
-          "label": "Midas attestation registry, latest mHYPER checkpoint pinned at Ethereum block 26103204",
+          "label": "Latest mHYPER checkpoint read at Ethereum block 26154369 (0xe37b850c5c182cdf1b868af39bcf2606d9ae52a9213e5b42a1004e99ff0269d7), 2026-10-09T10:51:35Z; observed 2026-10-09T11:39:23Z through https://api-ethereum-mainnet-erigon.n.dwellir.com",
           "url": "https://etherscan.io/address/0x2d6e9f608807436de5d9603b00abe3fed1bc809d"
         },
         {
@@ -67,6 +67,10 @@
     {
       "label": "mHYPER Key Information Document, 2 February 2026",
       "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/0mtdYQ1fSELYbNqAP9jd/KID_mHYPER.pdf"
+    },
+    {
+      "label": "mHYPER small-value redemption execution, October 7, 2026; reviewed October 9 by Sol (W2L06Midas)",
+      "url": "https://etherscan.io/tx/0x20b7d2cfb6b4862dfd55b78393348464505a3ff5a210a2be431ceb5865d7c9aa"
     }
   ],
   "jurisdiction": {

@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-adverse",
     "confidence": "unknown",
-    "summary": "Current Alchemix V3 native alUSD Alchemists are deployed on Ethereum, Arbitrum and Optimism and use USDC-denominated MYT collateral. The April 2026 migration supersedes the previous description of V2 as the current issuance mechanism. Legacy V2/token controls remain recorded where their permissions have not been disproved; V3 minter identity and proxy state are pinned, with remaining L2 cap and upgrade-envelope questions explicit. Metis remains a bridge representation.",
+    "summary": "Alchemix V3 native alUSD Alchemists on Ethereum, Arbitrum and Optimism use USDC-denominated MYT collateral. A pinned October 9 census identifies each V3 admin and proxy owner as a 3-of-7 Safe, with separate DAO Guardian and Sentinel roles. Legacy V2 minters are currently unwhitelisted on these three chains, but token-admin reactivation and upgrade powers remain. Exhaustive legacy authorization and Fantom upgrade closure remain unresolved; Metis is a bridge representation.",
     "controls": [
       {
         "label": "AlchemistV2 (CDP minter)",
@@ -177,21 +177,29 @@
           "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
           "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
           "version": "1.3.0",
-          "observedBlock": 25770293,
-          "observedAt": "2026-08-16",
-          "source": "safe-api"
+          "observedBlock": 26154553,
+          "observedAt": "2026-10-09",
+          "source": "onchain"
         },
-        "canRaiseCap": false,
-        "capDescription": "This Safe is the AlchemistV2 protocol admin() and can change Alchemist issuance configuration; the AlToken ceiling remains controlled by the separate two-member ADMIN_ROLE set.",
-        "evidence": "At Ethereum block 25770293, AlchemistV2.admin() returned 0xf56d660138815fc5d7a06cd0e1630225e788293d. This separate 3-of-7 Safe is the protocol administrator for the native CDP and is not the EIP-1967 ProxyAdmin owner or an AlToken ADMIN_ROLE member.",
+        "canRaiseCap": true,
+        "capDescription": "This Safe administers both V2 and V3 Alchemists. It can raise the V3 MYT-share deposit cap and alter collateralization parameters. The Ethereum AlToken ceiling remains a separate token ADMIN_ROLE power; the V3 proxy-upgrade capability is recorded separately.",
+        "evidence": "At Ethereum block 26154553 (2026-10-09T11:28:23Z, hash 0x35e2a3ffff752d4b72a8b3c22de1647f80ed4b2f3e9d74730133550f3032f298), V2.admin(), V3.admin(), Transmuter.admin() and MYT.owner() returned this Safe. Curator and Allocator PermissionedProxy slot 0 contain this Safe, operators(this Safe) are true, and pending admins are zero. The MYT curator is 0x7d61e3cde8b58c4be192a7a35e9d626c419302a4 and its allocator is 0x693b7594ae0633d9c5574d0da46a040f92f5b281; the Safe itself is not a direct vault allocator. Pinned getThreshold/getOwners establish 3-of-7, getModulesPaginated returned an empty roster with terminal sentinel 0x1, and guard storage is zero. Safe proxy and singleton runtime bytes exactly match fully verified Blockscout sources. This inventory grants no internal key-custody or complete execution-scope certificate.",
         "sources": [
           {
             "label": "Ethereum AlchemistV2 explorer",
             "url": "https://etherscan.io/address/0x5c6374a2ac4ebc38dea0fc1f8716e5ea1add94dd"
           },
           {
-            "label": "Ethereum native-admin Safe API",
-            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xF56D660138815fC5d7a06cd0E1630225E788293D/"
+            "label": "Pinned Ethereum role, Safe and runtime reads via Dwellir, block 26154553",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Alchemix current contract roles",
+            "url": "https://docs.alchemix.fi/governance/guides/contract-roles"
+          },
+          {
+            "label": "Fully verified Safe singleton matched to pinned runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd9db270c1b5e3bd161e8c8503c55ceabee709552"
           }
         ],
         "chain": "ethereum",
@@ -199,8 +207,8 @@
         "deploymentRefs": [
           "ethereum:0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770293
+        "observedAt": "2026-10-09",
+        "observedBlock": 26154553
       },
       {
         "label": "Alchemix Optimism alUSD ADMIN_ROLE Safe",
@@ -290,31 +298,61 @@
       {
         "label": "Alchemix Arbitrum AlchemistV2 protocol admin",
         "role": "minter-admin",
-        "authorityType": "contract",
+        "authorityType": "safe",
         "directMintAbility": "parameter-only",
+        "threshold": 3,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0xc0cdb2ff3699de3c90beb7ec9f312a4b0dd9dbc1",
+            "0xf0daaa720286868c8c7b235f450429c197cd579b",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0x22d77fc3b7e87bfd6d8ca57071cbfc71e8da5213",
+            "0xf2a980f072b14cf1b9b464f37fd5a95390f1064d",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+          "version": "1.3.0",
+          "observedBlock": 513184751,
+          "observedAt": "2026-10-09",
+          "source": "onchain"
+        },
         "deploymentRefs": [
           "arbitrum:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
         ],
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "AlchemistV2.admin() is a separate chain-local protocol-admin contract that can change native issuance parameters; its governing owner or timelock semantics were not identified from a verified source.",
-        "evidence": "At the reviewed Arbitrum AlchemistV2 read, admin() returned 0xee1aa1c3d0622fced823c7720cf9e8079558484b. The returned address is a code-bearing 171-byte admin contract, but its governing owner/timelock semantics were not resolved. It is retained as an explicit native parameter-control evidence gap.",
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "This 3-of-7 Safe administers V2 and V3 Alchemists and can raise the V3 MYT-share deposit cap and alter collateralization parameters. The V3 proxy-upgrade capability is recorded separately.",
+        "evidence": "At Arbitrum block 513184751 (2026-10-09T11:38:06Z, hash 0xe50e92218a9c6afcdd40e6808015235937a3aa1b230bf9443c7a923dfbdc8b04), V2.admin(), V3.admin(), Transmuter.admin() and MYT.owner() returned this Safe. Curator 0xc8a2bde198d21e9abb0b306b4ad27f0711aef20d and Allocator 0x143c2118417f2df7489ad241023b3be915906865 have this Safe in PermissionedProxy slot 0, operators(this Safe) true and pendingAdmin zero. The vault has the Allocator enabled and this Safe disabled as a direct allocator. getThreshold/getOwners establish 3-of-7; the module roster is empty with terminal sentinel 0x1 and guard storage is zero. Pinned Safe proxy, singleton, Alchemist implementation and Curator runtime bytes match fully verified Ethereum/Optimism bytecode twins. Arbitrum Allocator source recovery remains incomplete. No internal key-custody or complete execution-scope claim is made.",
         "sources": [
           {
             "label": "Arbitrum AlchemistV2 explorer",
             "url": "https://arbiscan.io/address/0xb46ee2e4165f629b4abce04b7eb4237f951ac66f"
           },
           {
-            "label": "Arbitrum public RPC",
-            "url": "https://arb1.arbitrum.io/rpc"
+            "label": "Pinned Arbitrum roles, Safe and runtime reads via Dwellir, block 513184751",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Alchemix current contract roles",
+            "url": "https://docs.alchemix.fi/governance/guides/contract-roles"
+          },
+          {
+            "label": "Fully verified byte-identical Safe singleton source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3e5c63644e683549055b9be8653de26e0b4cd36e"
           }
         ],
         "chain": "arbitrum",
         "address": "0xee1aa1c3d0622fced823c7720cf9e8079558484b",
-        "observedAt": "2026-08-16",
-        "observedBlock": 495266757,
+        "observedAt": "2026-10-09",
+        "observedBlock": 513184751,
         "failureDomainKeys": [
-          "contract:arbitrum:0xee1aa1c3d0622fced823c7720cf9e8079558484b"
+          "safe:arbitrum:0xee1aa1c3d0622fced823c7720cf9e8079558484b"
         ]
       },
       {
@@ -516,31 +554,61 @@
       {
         "label": "Alchemix Optimism AlchemistV2 protocol admin",
         "role": "minter-admin",
-        "authorityType": "contract",
+        "authorityType": "safe",
         "directMintAbility": "parameter-only",
+        "threshold": 3,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0xc0cdb2ff3699de3c90beb7ec9f312a4b0dd9dbc1",
+            "0xf0daaa720286868c8c7b235f450429c197cd579b",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0x22d77fc3b7e87bfd6d8ca57071cbfc71e8da5213",
+            "0xf2a980f072b14cf1b9b464f37fd5a95390f1064d",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "version": "1.3.0",
+          "observedBlock": 157973535,
+          "observedAt": "2026-10-09",
+          "source": "onchain"
+        },
         "deploymentRefs": [
           "optimism:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
         ],
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "AlchemistV2.admin() is a separate chain-local protocol-admin contract that can change native issuance parameters; its governing owner or timelock semantics were not identified from a verified source.",
-        "evidence": "At Optimism block 155658381, AlchemistV2.admin() returned 0x3dda174aa9e897e18b8e10e6ce39c2a52398181d. The returned address is a code-bearing 171-byte admin contract, but its governing owner/timelock semantics were not resolved. It is retained as an explicit native parameter-control evidence gap.",
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "This 3-of-7 Safe administers V2 and V3 Alchemists and can raise the V3 MYT-share deposit cap and alter collateralization parameters. The V3 proxy-upgrade capability is recorded separately.",
+        "evidence": "At Optimism block 157973535 (2026-10-09T11:37:27Z, hash 0x2c6cece3d94c5bdb85de06184aacbd8977cfd8fd5a2c076af45e84587dc525b6), V2.admin(), V3.admin(), Transmuter.admin() and MYT.owner() returned this Safe. Curator 0xc8a2bde198d21e9abb0b306b4ad27f0711aef20d and Allocator 0x143c2118417f2df7489ad241023b3be915906865 have this Safe in PermissionedProxy slot 0, operators(this Safe) true and pendingAdmin zero. The vault has the Allocator enabled and this Safe disabled as a direct allocator. getThreshold/getOwners establish 3-of-7; the module roster is empty with terminal sentinel 0x1 and guard storage is zero. Safe proxy, singleton, Alchemist, Curator and Allocator runtime bytes exactly match fully verified Optimism sources. No internal key-custody or complete execution-scope claim is made.",
         "sources": [
           {
             "label": "Optimism AlchemistV2 explorer",
             "url": "https://optimistic.etherscan.io/address/0x10294d57a419c8eb78c648372c5baa27fd1484af"
           },
           {
-            "label": "Optimism public RPC",
-            "url": "https://mainnet.optimism.io"
+            "label": "Pinned Optimism roles, Safe and runtime reads via Dwellir, block 157973535",
+            "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Alchemix current contract roles",
+            "url": "https://docs.alchemix.fi/governance/guides/contract-roles"
+          },
+          {
+            "label": "Fully verified Safe singleton matched to pinned runtime",
+            "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0xfb1bffc9d739b8d520daf37df666da4c687191ea"
           }
         ],
         "chain": "optimism",
         "address": "0x3dda174aa9e897e18b8e10e6ce39c2a52398181d",
-        "observedAt": "2026-08-16",
-        "observedBlock": 155658381,
+        "observedAt": "2026-10-09",
+        "observedBlock": 157973535,
         "failureDomainKeys": [
-          "contract:optimism:0x3dda174aa9e897e18b8e10e6ce39c2a52398181d"
+          "safe:optimism:0x3dda174aa9e897e18b8e10e6ce39c2a52398181d"
         ]
       },
       {
@@ -873,10 +941,10 @@
           "ethereum:0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
         ],
         "canRaiseCap": false,
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095800,
+        "observedAt": "2026-10-09",
+        "observedBlock": 26154553,
         "capDescription": "The canonical AlToken whiteList entry is true and ceiling(address) is nonzero. Token ADMIN_ROLE can raise that ceiling. The V3 Alchemist uses USDC-denominated MYT collateral and is an upgradeable proxy.",
-        "evidence": "At Ethereum block 26095800, version() returned 3.0.0, debtToken() returned the tracked canonical alUSD, underlyingToken() returned USDC, and AlToken.whiteList(this Alchemist) was true. ceiling and hasMinted were nonzero. EIP-1967 implementation was 0xd5f26c90ead033554bf36227d0bbe993f6f76570 and admin was 0xdf0dd1203a3a607d34ac01824abbd4f91367272b; ProxyAdmin.owner() and Alchemist.admin() both returned the existing V3 admin Safe 0xf56d660138815fc5d7a06cd0e1630225e788293d.",
+        "evidence": "At Ethereum block 26154553 (2026-10-09T11:28:23Z, hash 0x35e2a3ffff752d4b72a8b3c22de1647f80ed4b2f3e9d74730133550f3032f298), debtToken() returned canonical alUSD and myt() returned 0x9b44efca3e2a707b63dc00ce79d646e5e5d24ba5. Token whiteList(this Alchemist) is true and paused(this Alchemist) false. ceiling is 8674447057547608045828570 and hasMinted 7053528220159666619498406, both raw 18-decimal alUSD units. depositCap is 100000000000000000000000000 raw MYT-share units and minimumCollateralization is 1111111111111111111 at 1e18 scale. The Alchemist implementation runtime exactly matches fully verified source, whose borrower _mint enforces collateralized debt and whose admin can raise depositCap; this is not an immutable economic supply cap. The known legacy V2 minter is currently unwhitelisted, without proving the absence of other authorized addresses. The current proxy upgrade controller is separately recorded.",
         "sources": [
           {
             "label": "Official Alchemix V3 Ethereum contracts",
@@ -885,6 +953,14 @@
           {
             "label": "Canonical AlToken verified source and whitelist/ceiling ABI",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
+          },
+          {
+            "label": "Pinned Ethereum V3 roles, mint gates and runtime, block 26154553",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Fully verified V3 implementation matched to pinned runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5f26c90ead033554bf36227d0bbe993f6f76570"
           }
         ]
       },
@@ -892,16 +968,17 @@
         "label": "Alchemix V3 Arbitrum alUSD Alchemist",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "unknown",
+        "directMintAbility": "cap-limited",
         "chain": "arbitrum",
         "address": "0x930750a3510e703535e943e826aba3c364ffc1de",
         "deploymentRefs": [
           "arbitrum:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
         ],
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-10-01",
-        "observedBlock": 510584266,
-        "evidence": "At Arbitrum block 510584266, debtToken() returned tracked alUSD and underlyingToken() returned native USDC. Historical Alchemist EIP-1967 implementation was 0x40ba0d16ec0a0df332de9fa394a4591b2264999e, admin 0x31058ad1296f72203ec563f18b2f48764d7c380c, and ProxyAdmin.owner() 0xee1aa1c3d0622fced823c7720cf9e8079558484b. New token-side pin at block 511874411 on 2026-10-05 binds token implementation 0x37704b70cba0ffd12eb039274ff46992544a1f16 to its fully verified deployed runtime; this Alchemist is whitelisted and not paused, and mintingMaxLimitOf is zero. Exact AlchemicTokenV2Base.mint therefore skips the optional xBridge rate-limit branch and calls _mint. Zero mintCeiling/totalMinted belong to the separate CrossChainCanonicalBase bridge-token exchange path, not a native Alchemist mint ceiling. This closes the zero-ceiling ambiguity, not the Alchemist's internal debt/collateral constraints or whole native minter census.",
+        "canRaiseCap": false,
+        "observedAt": "2026-10-09",
+        "observedBlock": 513184751,
+        "capDescription": "Borrower issuance is collateral-constrained in the pinned V3 implementation. The protocol-admin Safe can raise the MYT-share deposit cap; proxy upgrades can replace the constraint. A zero optional xBridge mint limit does not bound native minting to zero.",
+        "evidence": "At Arbitrum block 513184751 (2026-10-09T11:38:06Z, hash 0xe50e92218a9c6afcdd40e6808015235937a3aa1b230bf9443c7a923dfbdc8b04), debtToken() returned canonical alUSD, myt() returned 0xeba62b842081cef5a8184318dc5c4e4aaca9f651, depositCap is 2000000000000000000000000 raw MYT-share units and minimumCollateralization is 1111111111111111111 at 1e18 scale. The V3 Alchemist runtime is byte-identical to the fully verified Ethereum implementation: borrower _mint enforces collateralized debt, and the Alchemist cannot change its own token whitelist or optional xBridge limit. Token whitelisted(this Alchemist) is true, paused is false and mintingMaxLimitOf is zero. The October 5 verified token-source observation established that zero skips the optional xBridge rate-limit branch; its historical runtime pin remains separately cited. The known V2 minter is currently unwhitelisted. This resolves this V3 minter's mechanics, not the exhaustive historical whitelist census or upgrade authority constraints.",
         "sources": [
           {
             "label": "Official Alchemix V3 Arbitrum contracts",
@@ -914,6 +991,14 @@
           {
             "label": "Pinned token implementation, native whitelist/pause and zero optional xBridge max limit on 2026-10-05",
             "url": "https://arbiscan.io/block/511874411"
+          },
+          {
+            "label": "Pinned Arbitrum V3 roles, mint gates and runtime, block 513184751",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Fully verified byte-identical V3 implementation source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5f26c90ead033554bf36227d0bbe993f6f76570"
           }
         ]
       },
@@ -921,16 +1006,17 @@
         "label": "Alchemix V3 Optimism alUSD Alchemist",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "unknown",
+        "directMintAbility": "cap-limited",
         "chain": "optimism",
         "address": "0x930750a3510e703535e943e826aba3c364ffc1de",
         "deploymentRefs": [
           "optimism:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
         ],
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-10-01",
-        "observedBlock": 157619416,
-        "evidence": "At Optimism block 157619416, debtToken() returned tracked alUSD and underlyingToken() returned native USDC. Historical Alchemist EIP-1967 implementation was 0x031b6228a825e0e1a37653e153cea6c02b571385, admin 0x31058ad1296f72203ec563f18b2f48764d7c380c, and ProxyAdmin.owner() 0x3dda174aa9e897e18b8e10e6ce39c2a52398181d. New token-side pin at block 157795772 on 2026-10-05 binds token implementation 0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6 to its fully verified deployed runtime; this Alchemist is whitelisted and not paused, and mintingMaxLimitOf is zero. Exact AlchemicTokenV2Base.mint therefore skips the optional xBridge rate-limit branch and calls _mint. Zero mintCeiling/totalMinted belong to the separate CrossChainCanonicalBase bridge-token exchange path, not a native Alchemist mint ceiling. This closes the zero-ceiling ambiguity, not the Alchemist's internal debt/collateral constraints or whole native minter census.",
+        "canRaiseCap": false,
+        "observedAt": "2026-10-09",
+        "observedBlock": 157973535,
+        "capDescription": "Borrower issuance is collateral-constrained in the pinned V3 implementation. The protocol-admin Safe can raise the MYT-share deposit cap; proxy upgrades can replace the constraint. A zero optional xBridge mint limit does not bound native minting to zero.",
+        "evidence": "At Optimism block 157973535 (2026-10-09T11:37:27Z, hash 0x2c6cece3d94c5bdb85de06184aacbd8977cfd8fd5a2c076af45e84587dc525b6), debtToken() returned canonical alUSD, myt() returned 0xaf510a560744880410f0f65e3341a020fbc2ca41, depositCap is 2000000000000000000000000 raw MYT-share units and minimumCollateralization is 1111111111111111111 at 1e18 scale. The V3 Alchemist runtime exactly matches fully verified source: borrower _mint enforces collateralized debt, and the Alchemist cannot change its own token whitelist or optional xBridge limit. Token whitelisted(this Alchemist) is true, paused is false and mintingMaxLimitOf is zero. The October 5 verified token-source observation established that zero skips the optional xBridge rate-limit branch; its historical runtime pin remains separately cited. The known V2 minter is currently unwhitelisted. This resolves this V3 minter's mechanics, not the exhaustive historical whitelist census or upgrade authority constraints.",
         "sources": [
           {
             "label": "Official Alchemix V3 Optimism contracts",
@@ -943,7 +1029,138 @@
           {
             "label": "Pinned token implementation, native whitelist/pause and zero optional xBridge max limit on 2026-10-05",
             "url": "https://optimistic.etherscan.io/block/157795772"
+          },
+          {
+            "label": "Pinned Optimism V3 roles, mint gates and runtime, block 157973535",
+            "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Fully verified V3 implementation matched to pinned runtime",
+            "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0x031b6228a825e0e1a37653e153cea6c02b571385"
           }
+        ]
+      },
+      {
+        "label": "Alchemix V3 Ethereum Alchemist ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "chain": "ethereum",
+        "address": "0xf56d660138815fc5d7a06cd0e1630225e788293d",
+        "deploymentRefs": ["ethereum:0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"],
+        "threshold": 3,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0xc0cdb2ff3699de3c90beb7ec9f312a4b0dd9dbc1",
+            "0xf0daaa720286868c8c7b235f450429c197cd579b",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0x22d77fc3b7e87bfd6d8ca57071cbfc71e8da5213",
+            "0xf2a980f072b14cf1b9b464f37fd5a95390f1064d",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "version": "1.3.0",
+          "observedBlock": 26154553,
+          "observedAt": "2026-10-09",
+          "source": "onchain"
+        },
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-09",
+        "observedBlock": 26154553,
+        "capDescription": "The V3 admin Safe owns the Alchemist ProxyAdmin and can replace mint-critical logic. The collateral and deposit caps of the current implementation do not limit replacement logic.",
+        "evidence": "Ethereum block 26154553 (2026-10-09T11:28:23Z, hash 0x35e2a3ffff752d4b72a8b3c22de1647f80ed4b2f3e9d74730133550f3032f298): EIP-1967 slots of V3 Alchemist 0xeb83112d925268bede86654c13d423a987587e3e resolve implementation 0xd5f26c90ead033554bf36227d0bbe993f6f76570 and ProxyAdmin 0xdf0dd1203a3a607d34ac01824abbd4f91367272b. ProxyAdmin.owner() returns this 3-of-7 Safe. Its pinned module roster is empty and guard zero; the same exact Safe topology is recorded in the existing protocol-admin control. This is the current V3 path, distinct from the historical V2 ProxyAdmin owner.",
+        "sources": [
+          {"label": "Pinned Ethereum V3 proxy and Safe census, block 26154553", "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"},
+          {"label": "Official Ethereum V3 deployment inventory", "url": "https://docs.alchemix.fi/dev/contracts/ethereum"}
+        ]
+      },
+      {
+        "label": "Alchemix V3 Arbitrum Alchemist ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "chain": "arbitrum",
+        "address": "0xee1aa1c3d0622fced823c7720cf9e8079558484b",
+        "deploymentRefs": ["arbitrum:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"],
+        "threshold": 3,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0xc0cdb2ff3699de3c90beb7ec9f312a4b0dd9dbc1",
+            "0xf0daaa720286868c8c7b235f450429c197cd579b",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0x22d77fc3b7e87bfd6d8ca57071cbfc71e8da5213",
+            "0xf2a980f072b14cf1b9b464f37fd5a95390f1064d",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+          "version": "1.3.0",
+          "observedBlock": 513184751,
+          "observedAt": "2026-10-09",
+          "source": "onchain"
+        },
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-09",
+        "observedBlock": 513184751,
+        "capDescription": "The V3 admin Safe owns the Alchemist ProxyAdmin and can replace mint-critical logic. The collateral and deposit caps of the current implementation do not limit replacement logic.",
+        "evidence": "Arbitrum block 513184751 (2026-10-09T11:38:06Z, hash 0xe50e92218a9c6afcdd40e6808015235937a3aa1b230bf9443c7a923dfbdc8b04): EIP-1967 slots of V3 Alchemist 0x930750a3510e703535e943e826aba3c364ffc1de resolve implementation 0x40ba0d16ec0a0df332de9fa394a4591b2264999e and ProxyAdmin 0x31058ad1296f72203ec563f18b2f48764d7c380c. ProxyAdmin.owner() returns this 3-of-7 Safe. Its pinned module roster is empty and guard zero; the same exact Safe topology is recorded in the existing protocol-admin control. No complete execution certificate or custody assurance is inferred.",
+        "sources": [
+          {"label": "Pinned Arbitrum V3 proxy and Safe census, block 513184751", "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"},
+          {"label": "Official Arbitrum V3 deployment inventory", "url": "https://docs.alchemix.fi/dev/contracts/arbitrum"}
+        ]
+      },
+      {
+        "label": "Alchemix V3 Optimism Alchemist ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "chain": "optimism",
+        "address": "0x3dda174aa9e897e18b8e10e6ce39c2a52398181d",
+        "deploymentRefs": ["optimism:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"],
+        "threshold": 3,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0xc0cdb2ff3699de3c90beb7ec9f312a4b0dd9dbc1",
+            "0xf0daaa720286868c8c7b235f450429c197cd579b",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0x22d77fc3b7e87bfd6d8ca57071cbfc71e8da5213",
+            "0xf2a980f072b14cf1b9b464f37fd5a95390f1064d",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "version": "1.3.0",
+          "observedBlock": 157973535,
+          "observedAt": "2026-10-09",
+          "source": "onchain"
+        },
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-09",
+        "observedBlock": 157973535,
+        "capDescription": "The V3 admin Safe owns the Alchemist ProxyAdmin and can replace mint-critical logic. The collateral and deposit caps of the current implementation do not limit replacement logic.",
+        "evidence": "Optimism block 157973535 (2026-10-09T11:37:27Z, hash 0x2c6cece3d94c5bdb85de06184aacbd8977cfd8fd5a2c076af45e84587dc525b6): EIP-1967 slots of V3 Alchemist 0x930750a3510e703535e943e826aba3c364ffc1de resolve implementation 0x031b6228a825e0e1a37653e153cea6c02b571385 and ProxyAdmin 0x31058ad1296f72203ec563f18b2f48764d7c380c. ProxyAdmin.owner() returns this 3-of-7 Safe. Its pinned module roster is empty and guard zero; the same exact Safe topology is recorded in the existing protocol-admin control. No complete execution certificate or custody assurance is inferred.",
+        "sources": [
+          {"label": "Pinned Optimism V3 proxy and Safe census, block 157973535", "url": "https://api-optimism-mainnet-archive.n.dwellir.com"},
+          {"label": "Official Optimism V3 deployment inventory", "url": "https://docs.alchemix.fi/dev/contracts/optimism"}
         ]
       }
     ],
@@ -969,13 +1186,13 @@
       }
     ],
     "review": {
-      "evidence": "Re-reviewed 2026-10-01: the issuer states that all V2 borrower positions migrated to V3 in April 2026. Current V3 Alchemist and MYT addresses on Ethereum, Arbitrum and Optimism were checked at pinned blocks, confirming canonical debt tokens, USDC underlyings, token whitelist entries, and mutable proxy paths. The historical V2 and token-admin observations are retained as legacy permission evidence, not a current portfolio or borrower-mechanism description. V3 proxy owner identities are recorded in the new controls; the legacy aggregate upgradeability envelope has not yet been remapped to those V3 paths. Metis and LayerZero/xERC20 representation powers stay in Bridge Risk.",
-      "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
-      "reviewedAt": "2026-10-01",
+      "evidence": "October 9 per-chain census pins V3 Alchemist/Transmuter administration, MYT owner/curator/allocator, DAO Guardian/Sentinel membership, minter whitelist/pause/limits, the known V2 minters, V3 EIP-1967 implementations/ProxyAdmins and Safe owners/threshold/modules/guard. Ethereum block 26154553 is 2026-10-09T11:28:23Z, Arbitrum 513184751 is 2026-10-09T11:38:06Z and Optimism 157973535 is 2026-10-09T11:37:27Z; full hashes and keyless RPC sources are in the controls and lane evidence artifacts. L2 protocol-admin identities now resolve to 3-of-7 Safes rather than unknown contracts. Two L2 V3 minter mechanics now resolve to collateral-constrained paths, without economic hard-cap credit because parameters and implementation are mutable. Known V2 minters are unwhitelisted at these pins but reactivation and legacy upgrade powers remain. The source whitelist mappings are non-enumerable and whitelist setters emit no dedicated membership event; querying known addresses does not prove completeness. The aggregate review therefore remains unresolved. Representation powers stay in Bridge Risk.",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L21Alchemix)",
+      "reviewedAt": "2026-10-09",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Complete the deployment-scoped V3 Alchemist/MYT upgradeability and internal debt/collateral authorization envelope. Token-side L2 zero-ceiling ambiguity was resolved on 2026-10-05: mintCeiling belongs to bridge-token exchanges, while native whitelisted mint skips xBridge rate limits when maxLimit is zero.",
-        "Reconcile all current and legacy token-authorized minters with the issuer's V3 deployment list before treating this multi-chain native mint review as complete."
+        "Reconcile every current, stopped and reactivatable token-authorized minter using a complete historical whitelist-setter transaction/internal-call census and pinned membership, not only the three official V3 and known V2 addresses. Resolve the remaining Fantom native token-proxy administrator.",
+        "Complete MYT collateral-authority closure, including all strategy owners, extra operators/sentinels, permissioned forwarding selectors, pending/reactivatable paths and the Arbitrum Allocator runtime/source binding. The pinned documented roles and Safe topology alone are not a complete execution-scope certificate."
       ],
       "sources": [
         {
@@ -989,6 +1206,22 @@
         {
           "label": "The Transmuter, Elaborated",
           "url": "https://v2-docs.alchemix.fi/resources/guides/the-transmuter-elaborated"
+        },
+        {
+          "label": "Current Alchemix V3 role and capability inventory",
+          "url": "https://docs.alchemix.fi/governance/guides/contract-roles"
+        },
+        {
+          "label": "Ethereum pinned role census, block 26154553",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+        },
+        {
+          "label": "Arbitrum pinned role census, block 513184751",
+          "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Optimism pinned role census, block 157973535",
+          "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
         }
       ]
     },

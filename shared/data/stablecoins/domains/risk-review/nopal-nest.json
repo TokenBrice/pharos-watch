@@ -14,7 +14,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "nOPAL has four reviewed independent native-issuance routes on Ethereum, Plume, BSC, and Plasma, plus reviewed LayerZero OFT representations on Solana, World Chain, and Avalanche. The issuer registry and current explorer records identify the exact deployments. Structured controls record the Solana OFT mint-authority/program-admin path and the World Chain/Avalanche owner-controlled bridge-mint, peer-configuration, and upgrade paths. Complete LayerZero DVN configuration, controller key custody, route limits, and recovery remain undisclosed. The Arc deployment is identity-verified, but its issuance and transfer classification and control ownership remain unresolved.",
+    "summary": "nOPAL has four reviewed independent native-issuance routes on Ethereum, Plume, BSC, and Plasma, plus reviewed LayerZero OFT representations on Solana, World Chain, and Avalanche. The issuer registry and explorer records identify the exact deployments. Structured controls record the Solana OFT mint-authority/program-admin path and World Chain/Avalanche bridge-mint, peer-configuration, and upgrade paths. Complete LayerZero DVN configuration, controller key custody, route limits, and recovery remain undisclosed. Arc ownership and selected current role/authorization paths are pinned, including direct enter/exit/manage alternatives to the owner timelock; Arc issuance-versus-representation accounting, full authority closure and incident state remain unresolved.",
     "reviewedAt": "2026-09-21",
     "reviewer": "Claude curation campaign 2026-09-21 (Ctrl4)",
     "confidence": "verified",
@@ -290,7 +290,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "At Arc block 25057559 (2026-10-09T10:35:23Z), the exact share remains an EIP-1967 proxy with implementation 0x28206c5694f6dc228ef040990aab10e30bdf8758. Both token owner() and ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2 owner() now return TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062, whose getMinDelay() is 172800 seconds. authority() remains 0x4e9be1e46366e0f255ca7578467e3e0bbe7514de. Verified NestShareOFT source retains authorized zero-asset enter() minting and OFT mint/burn, but the complete native-versus-representation liability partition, role/authority census, peers/DVNs and incident history remain unresolved. The historical direct Safe ownership is not current.",
+        "reviewNote": "At Arc block 25057559 (2026-10-09T10:35:23Z), the exact share remains an EIP-1967 proxy with implementation 0x28206c5694f6dc228ef040990aab10e30bdf8758. Token, ProxyAdmin and RolesAuthority owners are TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062; getMinDelay() is 172800 seconds. Token authority is RolesAuthority 0x4e9be1e46366e0f255ca7578467e3e0bbe7514de, whose own authority is zero. Pinned role reads identify external timelock admin, Safe proposer/canceller and open execution; pinned canCall confirms non-owner enter/exit/manage paths without the timelock requirement. Verified NestShareOFT source permits zero-asset issuance and arbitrary external manage calls on those paths. Native-versus-representation liability partition, every authority holder's signing/execution reach, peers/DVNs and incident history remain unresolved. Historical direct Safe ownership is not current; owner-path delay is not an aggregate delay.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "arc",
         "controllerAddress": "0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
@@ -477,12 +477,15 @@
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:arc:0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
-          "contract:arc:0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2"
+          "contract:arc:0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2",
+          "contract:arc:0x4e9be1e46366e0f255ca7578467e3e0bbe7514de",
+          "account:arc:0xf6c00a6ac137680a5e9ecc7ab342df2c4d190510",
+          "account:arc:0x4371e7ec29bbb60872e15c5123c3cac948967eb7"
         ],
         "routeChecks": {
           "trustedPeerOrRemote": "At Arc block 24362178 (2026-10-05), endpoint() remained 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. Each Arc peer EID named by issuer config at commit a42e58cd49e8e7abc2dfffdcecd1b85ebdcb9f9c was zero: 30101, 30370, 30102, 30319, 30383 and 30106. Earlier owner setPeer authorization simulations remain evidence of mutable configuration. These point reads do not prove an exhaustive historical peer/DVN or liability census.",
-          "pausersAdminsUpgraders": "At Arc block 25057559, token and ProxyAdmin owner() both return TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 and its getMinDelay() returns 172800 seconds. Token authority() returns 0x4e9be1e46366e0f255ca7578467e3e0bbe7514de. Earlier Safe-owned zero-asset issuance and upgrade traces are historical only; current timelock roles, authority bypass reach and native/representation accounting require closure.",
-          "unsupportedReason": "Complete Arc liability/representation accounting, effective LayerZero validation configuration, current TimelockController roles and AuthUpgradeable authority reach, and incident history remain unclosed. The observed minimum timelock delay does not certify absence of faster authority paths."
+          "pausersAdminsUpgraders": "At Arc block 25057559, token, ProxyAdmin and RolesAuthority 0x4e9be1e46366e0f255ca7578467e3e0bbe7514de are owned by TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062; RolesAuthority.authority() is zero. The timelock has a 172800-second owner/upgrade-path minimum, but this is not an aggregate issuance or execution delay: pinned canCall returns true for 0xf6c00a6ac137680a5e9ecc7ab342df2c4d190510 on enter 0x39d6ba32 and exit 0x18457e61, and for 0x4371e7ec29bbb60872e15c5123c3cac948967eb7 on both arbitrary manage selectors 0xf6e715d0 and 0x224d8703. Verified source applies requiresAuth directly to these paths without a timelock. Pinned timelock roles identify Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 as proposer/canceller, an open executor role, and 0x442fc59547ec00018a395c7416ed12d88a9082e6 as DEFAULT_ADMIN; the timelock itself and original constructor admin no longer hold DEFAULT_ADMIN.",
+          "unsupportedReason": "Current owner, authority owner, timelock role memberships and faster authorized enter/exit/manage alternatives are known at the pin. Complete Arc liability/representation accounting, LayerZero validation configuration, every authority holder's execution/signing reach, and independently supported incident history remain unclosed. No absence-of-bypass or whole-control closure credit is asserted."
         },
         "observedAt": "2026-10-09",
         "observedBlock": 25057559,
@@ -518,9 +521,25 @@
           {
             "label": "Exact Arc NestShareOFT implementation verified source",
             "url": "https://explorer.arc.io/api/v2/smart-contracts/0x28206c5694f6dc228ef040990aab10e30bdf8758"
+          },
+          {
+            "label": "Exact Arc RolesAuthority verified authorization and mutation source",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x4e9be1e46366e0f255ca7578467e3e0bbe7514de"
+          },
+          {
+            "label": "Arc timelock role history, deployment through current explorer page",
+            "url": "https://explorer.arc.io/api/v2/addresses/0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062/logs"
+          },
+          {
+            "label": "Arc RolesAuthority role/capability history, page one",
+            "url": "https://explorer.arc.io/api/v2/addresses/0x4e9be1e46366e0f255ca7578467e3e0bbe7514de/logs"
+          },
+          {
+            "label": "Arc RolesAuthority role/capability history, final page",
+            "url": "https://explorer.arc.io/api/v2/addresses/0x4e9be1e46366e0f255ca7578467e3e0bbe7514de/logs?index=0&block_number=20366331&items_count=50"
           }
         ],
-        "evidence": "Sol curation campaign 2026-10-09 (Lane25Nest): observed 2026-10-09T10:37:31Z at Arc block 25057559, hash 0x39c65f0577614654a78f84c41c224f31ef140e7f24641fe16c77f7b1267f185b, timestamp 2026-10-09T10:35:23Z. Exact token owner and ProxyAdmin owner are TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062; getMinDelay is 172800 seconds and token authority is 0x4e9be1e46366e0f255ca7578467e3e0bbe7514de. The EIP-1967 implementation remains 0x28206c5694f6dc228ef040990aab10e30bdf8758. Verified source supports authorized zero-asset enter and arbitrary manage calls, but these reads do not establish every authorization path, timelock-role topology, incident closure or whole-chain liability accounting. Historical 3-of-6 Safe ownership and immediate-upgrade traces are superseded as current controller facts; no independent-key, quorum or absence-of-bypass credit is claimed."
+        "evidence": "Sol curation campaign 2026-10-09 (W2L17Nest): observed 2026-10-09T11:38:41.288Z and 2026-10-09T11:41:18.643Z at Arc block 25057559, hash 0x39c65f0577614654a78f84c41c224f31ef140e7f24641fe16c77f7b1267f185b, timestamp 2026-10-09T10:35:23Z, using https://api-arc-mainnet.n.dwellir.com. RolesAuthority owner is the same TimelockController as token/ProxyAdmin, and its authority is zero. Positive hasRole reads confirm external DEFAULT_ADMIN 0x442fc59547ec00018a395c7416ed12d88a9082e6, Safe proposer/canceller, and address-zero executor; negative reads confirm the timelock and constructor admin lack DEFAULT_ADMIN. Explorer discovery reaches deployment with 32 timelock events and 74 authority events across two pages; it is a discovery census, not independent pinned log-completeness proof. Pinned canCall independently confirms direct enter/exit for role-15 holder 0xf6c00a6ac137680a5e9ecc7ab342df2c4d190510 and both arbitrary manage overloads for role-2 holder 0x4371e7ec29bbb60872e15c5123c3cac948967eb7. Exact verified source allows zero-asset issuance and arbitrary external calls without delay on those authorized paths. The 172800-second owner/upgrade delay grants no aggregate delay or bypass-absence credit. Incident closure, signer/executor identity closure, LayerZero configuration and native-versus-representation liability accounting remain unresolved."
       }
     ]
   }

@@ -4,21 +4,21 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Current sUSN implementation source (Sourcify exact match)",
-        "url": "https://sourcify.dev/server/v2/contract/1/0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d?fields=sources,abi,metadata"
+        "label": "Current Ethereum sUSN implementation; Sourcify exact match and pinned runtime equality",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xef2ea4250b7ce4d0aa9ca70607ecef278c6eab15?fields=all"
       },
       {
         "label": "sUSN Ethereum proxy on Etherscan",
         "url": "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d#code"
       },
       {
-        "label": "Ethereum PublicNode RPC (slot and role reads)",
-        "url": "https://ethereum-rpc.publicnode.com"
+        "label": "Pinned Ethereum Dwellir RPC block 26154579",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       }
     ],
-    "evidence": "Re-derived 2026-09-22 at Ethereum block 26036288: the sUSN proxy 0xe24a3dc889621612422a64e6388927901608b91d resolves to the Sourcify exact-match StakingVaultOFTUpgradeableHyperlane implementation 0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d (the 2026-07-30 review's 0xd1ffb6a6... was superseded by the timelocked 2026-08-04 upgrade) behind ProxyAdmin 0x1908284b50ee152c9f00c8e65a81fc1c4520bd81. The verified source keeps the per-account blacklist mapping: blacklistAccount(address) (onlyRole(BLACKLIST_MANAGER_ROLE)) sets it, and both the deposit path and _update revert with BlacklistedAddress when the sender or recipient is blacklisted, so a single privileged call freezes a named holder's sUSN on the canonical Ethereum deployment. No account holds BLACKLIST_MANAGER_ROLE at head, but owner() and DEFAULT_ADMIN_ROLE resolve to the Noon 3-of-6 admin Safe 0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f, so that Safe can grant itself the manager role and blacklist in the same instant, with no timelock on either step. The same Safe holds further instant freeze reach: vault pause() blocks new unstake requests, and owner-only USN pause or blacklistAccount can freeze the USN claim leg of an in-flight withdrawal after its 7-day wait. The zkSync, Sophon, and Starknet deployments are Hyperlane lock-mint warp representations of this same token family, so a canonical-chain blacklist also traps their locked collateral. Upstream USN reserve-side exposure remains tracked on the parent usn-noon record.",
-    "reviewer": "Kimi T39 Safety Score V9 access review; Pharos WS-H adverse re-review",
-    "reviewedAt": "2026-09-22"
+    "evidence": "Re-derived at Ethereum block 26154579 (0xaeb74e22f56f812a995351bb758eea9cfb274344c7b0fd438042e8c595ba7c21, 2026-10-09T11:33:35Z), observed from 2026-10-09T11:49:28.516Z. The proxy 0xe24a3dc889621612422a64e6388927901608b91d reports sUSN and now resolves to 0xef2ea4250b7ce4d0aa9ca70607ecef278c6eab15, replacing the implementation observed on September 22. Its pinned runtime equals the Sourcify exact-match StakingVaultOFTUpgradeableHyperlane runtime. blacklistAccount(address) is BLACKLIST_MANAGER_ROLE-gated; _update() rejects blacklisted senders or recipients and is whenNotPaused, so ordinary holder transfers remain restrictable. owner()=0x1ea169ecccf7714e7ba04900e1a3357cca77327f, hasRole(DEFAULT_ADMIN_ROLE,owner)=true, hasRole(BLACKLIST_MANAGER_ROLE,owner)=false, getRoleAdmin(BLACKLIST_MANAGER_ROLE)=DEFAULT_ADMIN_ROLE, and paused()=false. This positively proves the owner can grant the blacklist role and exercise global pause; no complete census of other role holders, independent-key topology, or timelock protection is asserted. Ethereum lock/unlock logic still preserves canonical shares for representations. Four newly identity-verified HyperEVM/Base/Citrea/Berachain representations have separate pinned blacklist/pause observations in bridgeRouteRisk.routes and the transfer-review fragment. zkSync, deprecated Sophon and Starknet holder-transfer source coverage remains unresolved; this is not an aggregate all-deployment access certificate. Upstream USN reserve access is separate.",
+    "reviewer": "Sol curation campaign 2026-10-09 (W2L28Hydrated)",
+    "reviewedAt": "2026-10-09"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
@@ -204,6 +204,146 @@
           "contract:starknet:0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17",
           "contract:starknet:0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072",
           "contract:starknet:0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8"
+        ]
+      },
+      {
+        "id": "hyperevm:0x34a2798d47b238a7cba9d87d49618dee6c4d999f",
+        "sourceChain": "ethereum",
+        "destinationChain": "hyperevm",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x34a2798d47b238a7cba9d87d49618dee6c4d999f",
+        "protocol": "Noon Hyperlane sUSN representation",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x3d6b578afdfdcd9e74eb0cdbddcf2435502fc5b8",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Sol curation campaign 2026-10-09 (W2L28Hydrated): issuer registry plus block 48077395 (0x9ef94d1f06b98d8312aaab0d3b50699fe6019c50f48ddf810815ebc70725dc34, 2026-10-09T11:37:26Z), observed 2026-10-09T11:38:01.257Z, establishes Staked USN/sUSN, 18 decimals, totalSupply 125658471222334408891162 atomic shares, and the stated owner. EIP-1967 implementation is 0xffc95e7e447dc94dce706b8afda751349e676227; its pinned runtime equals Base's exact-match Sourcify StakedUSNHyperlane runtime byte-for-byte including metadata. handle() mints only through a configured mailbox against a registered remote sender; outgoing bridge transfers burn shares. mailbox()=0x3a464f746d23ab22155710f44db16dca53e0775e, token ISM()=0, hyperlaneEnabled()=true. Owner has BLACKLIST_MANAGER_ROLE and DEFAULT_ADMIN_ROLE; paused()=false. _update() enforces per-account blacklist and global pause. Default mailbox ISM, validator quorum, proxy upgrade topology and runtime materiality remain unreviewed; atomic shares are not circulating USD or proof of immateriality.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-09",
+        "observedBlock": 48077395,
+        "sources": [
+          {
+            "label": "Noon issuer deployment registry",
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+          },
+          {
+            "label": "Exact-match Base implementation; pinned cross-chain runtime equality",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xa02ca8c6130b75b320faa785034e95d4374a8942?fields=all"
+          },
+          {
+            "label": "Pinned HyperEVM RPC block 48077395",
+            "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "base:0x34a2798d47b238a7cba9d87d49618dee6c4d999f",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x34a2798d47b238a7cba9d87d49618dee6c4d999f",
+        "protocol": "Noon Hyperlane sUSN representation",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "base",
+        "controllerAddress": "0xf56d33ef52642ce226a566610a979dc8d954592d",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Sol curation campaign 2026-10-09 (W2L28Hydrated): issuer registry plus block 52378239 (0xdae1be2c8531ec5231d086f5223b72bf8689f9fd580cfc553efd622da264008a, 2026-10-09T11:37:05Z), observed 2026-10-09T11:38:00.236Z, establishes Staked USN/sUSN, 18 decimals, totalSupply 6236386238822830820430272 atomic shares, and the stated owner. EIP-1967 implementation is 0xa02ca8c6130b75b320faa785034e95d4374a8942; its pinned runtime equals the Sourcify exact-match StakedUSNHyperlane runtime byte-for-byte. handle() mints only through a configured mailbox against a registered remote sender; outgoing bridge transfers burn shares. mailbox()=0xea87ae93fa0019a82a727bfd3ebd1cfca8f64f1d, token ISM()=0, hyperlaneEnabled()=true. Owner has BLACKLIST_MANAGER_ROLE and DEFAULT_ADMIN_ROLE; paused()=false. _update() enforces per-account blacklist and global pause. Default mailbox ISM, validator quorum, proxy upgrade topology and runtime materiality remain unreviewed; atomic shares are not circulating USD or proof of immateriality.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-09",
+        "observedBlock": 52378239,
+        "sources": [
+          {
+            "label": "Noon issuer deployment registry",
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+          },
+          {
+            "label": "Exact-match Base implementation and pinned runtime",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xa02ca8c6130b75b320faa785034e95d4374a8942?fields=all"
+          },
+          {
+            "label": "Pinned Base RPC block 52378239",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "citrea:0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+        "sourceChain": "ethereum",
+        "destinationChain": "citrea",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+        "protocol": "Noon Hyperlane sUSN representation",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "citrea",
+        "controllerAddress": "0xb2ad758ee2710527a28d906f9588938c2e5cfc80",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Sol curation campaign 2026-10-09 (W2L28Hydrated): issuer registry plus block 13721671 (0xe51c10a37dc8ab1135ee3f231365b87acb48971035593edb3df9dafdc8e2dbb2, 2026-10-09T11:37:05Z), observed 2026-10-09T11:38:25.964499Z, establishes Staked USN/sUSN, 18 decimals, totalSupply 2010000000000000 atomic shares, and the stated owner. EIP-1967 implementation is 0x6d1019bdbe1da163134aba821bbfc1ccaeb988a8; its pinned runtime equals Base's exact-match Sourcify StakedUSNHyperlane runtime byte-for-byte including metadata. Citrea's explorer independently marks this implementation fully verified. Dwellir has no registered Citrea endpoint, so official numeric-pinned RPC reads used matching block headers before and after. handle() mints only through a configured mailbox against a registered remote sender; outgoing bridge transfers burn shares. mailbox()=0x3a464f746d23ab22155710f44db16dca53e0775e, token ISM()=0, hyperlaneEnabled()=true. Owner has BLACKLIST_MANAGER_ROLE and DEFAULT_ADMIN_ROLE; paused()=false. _update() enforces per-account blacklist and global pause. Default mailbox ISM, validator quorum, proxy upgrade topology and runtime materiality remain unreviewed; atomic shares are not circulating USD or proof of immateriality.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-09",
+        "observedBlock": 13721671,
+        "sources": [
+          {
+            "label": "Noon issuer deployment registry",
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+          },
+          {
+            "label": "Exact-match Base implementation; pinned cross-chain runtime equality",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xa02ca8c6130b75b320faa785034e95d4374a8942?fields=all"
+          },
+          {
+            "label": "Fully verified Citrea implementation",
+            "url": "https://explorer.mainnet.citrea.xyz/api/v2/smart-contracts/0x6d1019bdbe1da163134aba821bbfc1ccaeb988a8"
+          },
+          {
+            "label": "Pinned official Citrea RPC block 13721671",
+            "url": "https://rpc.mainnet.citrea.xyz"
+          }
+        ]
+      },
+      {
+        "id": "berachain:0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+        "sourceChain": "ethereum",
+        "destinationChain": "berachain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+        "protocol": "Noon Hyperlane sUSN representation",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "berachain",
+        "controllerAddress": "0x94e9f383b085d32973634ea7c9bb2038ef9a3c58",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Sol curation campaign 2026-10-09 (W2L28Hydrated): issuer registry plus block 27265554 (0xaef6cb126f4950034de8ff9495bee2755588eca2692ce4c754a5905b0881df43, 2026-10-09T11:37:04Z), observed 2026-10-09T11:38:02.420Z, establishes Staked USN/sUSN, 18 decimals, totalSupply 1007004911767116529633656 atomic shares, and the stated owner. EIP-1967 implementation is 0x657284c8337ab91b1a7d4eb66be97596f4878117; its pinned runtime equals Base's exact-match Sourcify StakedUSNHyperlane runtime byte-for-byte including metadata. Bera explorer retrieval was blocked; source semantics are established by exact pinned runtime equality, not by interpreting the failed fetch. handle() mints only through a configured mailbox against a registered remote sender; outgoing bridge transfers burn shares. mailbox()=0x7f50c5776722630a0024fae05fde8b47571d7b39, token ISM()=0, hyperlaneEnabled()=true. Owner has BLACKLIST_MANAGER_ROLE and DEFAULT_ADMIN_ROLE; paused()=false. _update() enforces per-account blacklist and global pause. Default mailbox ISM, validator quorum, proxy upgrade topology and runtime materiality remain unreviewed; atomic shares are not circulating USD or proof of immateriality.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-09",
+        "observedBlock": 27265554,
+        "sources": [
+          {
+            "label": "Noon issuer deployment registry",
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+          },
+          {
+            "label": "Exact-match Base implementation; pinned cross-chain runtime equality",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xa02ca8c6130b75b320faa785034e95d4374a8942?fields=all"
+          },
+          {
+            "label": "Pinned Berachain RPC block 27265554",
+            "url": "https://api-berachain-mainnet.n.dwellir.com"
+          }
         ]
       }
     ],

@@ -65,12 +65,16 @@
       {
         "label": "Verified STBTv2 getLatestReserve issuer-feed implementation",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
+      },
+      {
+        "label": "STBT Daily Asset Statement 2026-10-08, recovered through the pinned on-chain document roster; SHA-256 c05e73d1e17d03907bca9de23e9057a1d6b27d9dd48932f2ad42b5dbd8baa80e",
+        "url": "https://app.matrixdock.com/bond/anon/website/api/v1/doc-download/54ERjq"
       }
     ],
     "rationale": "Issuer dashboard observed on 2026-10-02 attributes 95.00% of STBT to Treasury bills, 2.93% to USTB and 2.07% to BUIDL. These published liability-allocation weights total 100 and are not normalized from the separately shown USD 23,791,487.76 reserve NAV. Cash shown as surplus is not assigned a fabricated holder weight.",
     "compositionBasis": "Undated rounded issuer dashboard composition-of-STBT column, observed 2026-10-02",
     "scope": "full-composition",
-    "knownUnknownExposure": "At Ethereum block 26110197 on October 3, 2026, getLatestReserve() returned raw 23791487760000000000000000 (18 decimals), USD 23,791,487.76, matching the observed dashboard NAV. This pins the getter state, not the reserve composition's valuation time: the getter returns no timestamp and the dashboard remains undated. No independently signed reserve-to-liability reconciliation is supplied. Custodian/broker identities, encumbrances and current third-party token deployment identities are undisclosed. Terms permit affiliate reuse and provide no holder asset title.",
+    "knownUnknownExposure": "Wave-2 source recovery found the issuer's October 8 Daily Asset Statement through getAllDocuments/getDocument at Ethereum block 26154601 (2026-10-09T11:37:59Z; hash 0xf6d6c7e8f5c1585fb116934eabfc00023f0f89330f014b504eb0a4b593af8672). Download SHA-256 exactly matches the on-chain document hash. The statement dates Treasury holdings and Fidelity Treasury sweep to October 8, bank cash to October 9, and leaves BUIDL/USTB screenshots undated. Disclosed gross rows sum to $23,811,887.72; the pinned October 9 issuer feed is $23,805,202.46, lower by exactly the $6,685.26 Fidelity sweep amount. A reconciled whole-book denominator and common observation date remain unproved. The recovered partial envelope carries these facts diagnostically without refreshing the historical probable weights or assigning a compositionAsOf. No independent reserve-to-liability assurance is established.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -79,6 +83,57 @@
         "pct": 95,
         "disposition": "untracked-exogenous-asset",
         "rationale": "U.S. Treasury bills are exogenous sovereign securities, not tracked stablecoins."
+      }
+    ],
+    "observations": [
+      {
+        "scopeId": "matrixdock:stbt:daily-asset-statement:2026-10-08",
+        "liabilityBookKey": "matrixdock:stbt:issuer-underlying-assets",
+        "deploymentRefs": [],
+        "reviewer": "Sol curation campaign 2026-10-09 (W2L07Ondo)",
+        "confidence": "verified",
+        "sources": [
+          {
+            "url": "https://app.matrixdock.com/bond/anon/website/api/v1/doc-download/54ERjq",
+            "accessedAtSec": 1791546418,
+            "sha256": "c05e73d1e17d03907bca9de23e9057a1d6b27d9dd48932f2ad42b5dbd8baa80e"
+          }
+        ],
+        "reviewedAtSec": 1791546418,
+        "expiresAtSec": 1794096000,
+        "sourceGeneration": "matrixdock:stbt:daily-asset-statement:2026-10-08:c05e73d1e17d03907bca9de23e9057a1d6b27d9dd48932f2ad42b5dbd8baa80e",
+        "sourceSha256": "c05e73d1e17d03907bca9de23e9057a1d6b27d9dd48932f2ad42b5dbd8baa80e",
+        "completeness": "partial",
+        "obligations": [
+          {
+            "key": "dated-treasury-holdings",
+            "disposition": "included",
+            "reason": "Page 1 explicitly dates settled holdings October 8, 2026: Treasury bills maturing October 13, October 22 and November 3 have market values $11,004,376.22, $7,572,611.29 and $3,854,564.50, totaling $22,431,552.01. Fidelity Institutional Treasury Only sweep balances total $6,685.26. The page's total is $22,438,237.27."
+          },
+          {
+            "key": "bank-cash-date-mismatch",
+            "disposition": "unresolved",
+            "reason": "Page 2 dates bank cash October 9, 2026, with available, collected and current balance $99,220.69. It does not share the Treasury page's October 8 close."
+          },
+          {
+            "key": "undated-fund-screenshots",
+            "disposition": "unresolved",
+            "reason": "Page 2 shows BUIDL $489,085.15; page 3 shows 69,874.215366 USTB valued at $785,344.61. Neither screenshot prints an observation date. These remain a cause-bearing remainder candidate, not dated known weights."
+          },
+          {
+            "key": "gross-denominator-reconciliation",
+            "disposition": "unresolved",
+            "reason": "The disclosed row sum is $23,811,887.72. At Ethereum block 26154601, STBT getLatestReserve and FallbackReserveFeed latestRoundData both return $23,805,202.46, round 193 updated October 9 at 11:30:47Z. The $6,685.26 difference exactly equals Fidelity Treasury sweep balances, but no source reconciles their exclusion or establishes a complete same-close gross book. Do not normalize to the feed NAV."
+          },
+          {
+            "key": "whole-economic-liability-book",
+            "disposition": "unresolved",
+            "reason": "The issuer statement does not join a complete cross-deployment liability partition, encumbrance census or reserve-to-liability assurance. deploymentRefs remains empty instead of implying financial coverage for every token deployment."
+          }
+        ],
+        "kind": "portfolio-observation",
+        "observedAtSec": 1791417600,
+        "wholeAssetDenominator": null
       }
     ]
   },

@@ -4675,6 +4675,87 @@
           "excerpt": "The exploit transaction that resulted in an approximate $6 million loss affecting the Mainnet USDC Lower Risk and Mainnet USDC Higher Risk fleets originated from a protocol-level NAV-accounting and offboarding issue, where capped but still-active (not delisted) ARKs remained included in FleetCommander share-price accounting."
         }
       ]
+    },
+    {
+      "reviewId": "w2l10-brsrv-tempo-native-negative-2026-10-09",
+      "assetId": "brsrv-blackrock",
+      "scope": {
+        "kind": "control",
+        "controlKey": "mint-meta:brsrv-blackrock:6b46427ffdd664cdfd7a"
+      },
+      "reviewedAt": "2026-10-09T11:45:25Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L10Blackrock)",
+      "windowStartSec": 1784751302,
+      "windowEndSec": 1791157646,
+      "conclusion": "no-known-incident",
+      "searchedSurfaces": [
+        {
+          "kind": "issuer-status",
+          "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle",
+          "finding": "Exact RSVXX/CUSIP 09261A839 product status and July 31 OnChain prospectus recovered. Product reports October 8 NAV and describes the permissioned share class; no exact Tempo native-control incident is disclosed on these reviewed surfaces. Product reporting is not an exhaustive security feed. No unpublished governance or social-channel absence is claimed."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://rpc.tempo.xyz",
+          "finding": "Numeric pin 42641165/hash 0xb493b1920838f0a607624e1d666d4daee4cf80a1ef40011583956ceabce93a5c, timestamp 2026-10-04T23:47:26Z. Recovered 116 contiguous finite windows (31137322 through 42641165, at most 100000 blocks each), 29 logs across exact token and bound TrustService. Token creation at 31237292 and TrustService creation at 31237322; eth_getCode immediately before each creation is 0x. Token 16 events: Upgraded1, Initialized1, OwnershipTransferred3, DSServiceSet11. Trust13: Upgraded1, Initialized1, RoleAdded9, RoleRemoved2. All 8 event-bearing transactions were retrieved and signed by original deployer 0x864f58e46d018a802bda516ae9708675128854d8; owner/MASTER transitions proceed from that deployer to initialization service 0x99a9987f2caabdf160e3d6ab33ec135419b9ba89 and final documented MASTER 0xe01605f6b6dc593b7d2917f4a0940db2a625b09e, reconciling emitted prior-role actors. No emitted event follows setup block 31237514 in this recovered finite window. No Issue/Burn/Transfer/Seize/Pause/Unpause or later upgrade/service/role mutation is present. Routine setup is not adjudicated as an incident. Current-pin token owner, getDSService(1), getRole(MASTER), code and zero supply independently read through Dwellir. Complete decoded privileged-event inventory: [{\"event\":\"Upgraded\",\"block\":31237292,\"tx\":\"0xc81290126b99a30b7ce4b849ec335fbb2b965c58854b9dbbc732c65903b66b32\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"implementation\":\"0x0fc27145a78be5eeb133aca8a20569c90b389c56\"}},{\"event\":\"OwnershipTransferred\",\"block\":31237292,\"tx\":\"0xc81290126b99a30b7ce4b849ec335fbb2b965c58854b9dbbc732c65903b66b32\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"previousOwner\":\"0x0000000000000000000000000000000000000000\",\"newOwner\":\"0x864f58e46d018a802bda516ae9708675128854d8\"}},{\"event\":\"Initialized\",\"block\":31237292,\"tx\":\"0xc81290126b99a30b7ce4b849ec335fbb2b965c58854b9dbbc732c65903b66b32\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"version\":1}},{\"event\":\"OwnershipTransferred\",\"block\":31237294,\"tx\":\"0x3bf1a3117aaddc341439f98fcafa504a70b05d274fb7bd7044961920bf59789f\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"previousOwner\":\"0x864f58e46d018a802bda516ae9708675128854d8\",\"newOwner\":\"0x99a9987f2caabdf160e3d6ab33ec135419b9ba89\"}},{\"event\":\"Upgraded\",\"block\":31237322,\"tx\":\"0x2f04f4be08d95d04709e407229222c82ba5ac16d6730c1555978c327dbfeae4e\",\"address\":\"0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275\",\"args\":{\"implementation\":\"0x0ea6d8ef1e8b9efd9395e9bd8288a24f2754f02d\"}},{\"event\":\"Initialized\",\"block\":31237322,\"tx\":\"0x2f04f4be08d95d04709e407229222c82ba5ac16d6730c1555978c327dbfeae4e\",\"address\":\"0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275\",\"args\":{\"version\":1}},{\"event\":\"DSTrustServiceRoleRemoved\",\"block\":31237324,\"tx\":\"0xc25f31f4f70ccb5b1000848419c3b524fd43f712636199dfa156460fd06ddcf2\",\"address\":\"0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275\",\"args\":{\"targetAddress\":\"0x864f58e46d018a802bda516ae9708675128854d8\",\"role\":1,\"sender\":\"0x864f58e46d018a802bda516ae9708675128854d8\"}},{\"event\":\"DSTrustServiceRoleAdded\",\"block\":31237324,\"tx\":\"0xc25f31f4f70ccb5b1000848419c3b524fd43f712636199dfa156460fd06ddcf2\",\"address\":\"0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275\",\"args\":{\"targetAddress\":\"0x99a9987f2caabdf160e3d6ab33ec135419b9ba89\",\"role\":1,\"sender\":\"0x864f58e46d018a802bda516ae9708675128854d8\"}},{\"event\":\"DSTrustServiceRoleAdded\",\"block\":31237464,\"tx\":\"0xcc2c44ea066a73f2c5153d9f2edf7b819d9672af597c174f2172ea85e201459d\",\"address\":\"0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275\",\"args\":{\"targetAddress\":\"0x84d37dfa4e6a1395faceab1120506718a9eeac86\",\"role\":2,\"sender\":\"0x99a9987f2caabdf160e3d6ab33ec135419b9ba89\"}},{\"event\":\"DSTrustServiceRoleAdded\",\"block\":31237464,\"tx\":\"0xcc2c44ea066a73f2c5153d9f2edf7b819d9672af597c174f2172ea85e201459d\",\"address\":\"0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275\",\"args\":{\"targetAddress\":\"0xb7d43cd861eee4f3b3c4cd69b853c7f5525d4dc4\",\"role\":2,\"sender\":\"0x99a9987f2caabdf160e3d6ab33ec135419b9ba89\"}},{\"event\":\"DSTrustServiceRoleAdded\",\"block\":31237464,\"tx\":\"0xcc2c44ea066a73f2c5153d9f2edf7b819d9672af597c174f2172ea85e201459d\",\"address\":\"0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275\",\"args\":{\"targetAddress\":\"0xfbdd6a4f828c4d29aa8dafc4570a241907660fc0\",\"role\":2,\"sender\":\"0x99a9987f2caabdf160e3d6ab33ec135419b9ba89\"}},{\"event\":\"DSTrustServiceRoleAdded\",\"block\":31237464,\"tx\":\"0xcc2c44ea066a73f2c5153d9f2edf7b819d9672af597c174f2172ea85e201459d\",\"address\":\"0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275\",\"args\":{\"targetAddress\":\"0xb8707668acf4c3e025a90e88515b923529e10a69\",\"role\":2,\"sender\":\"0x99a9987f2caabdf160e3d6ab33ec135419b9ba89\"}},{\"event\":\"DSTrustServiceRoleAdded\",\"block\":31237464,\"tx\":\"0xcc2c44ea066a73f2c5153d9f2edf7b819d9672af597c174f2172ea85e201459d\",\"address\":\"0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275\",\"args\":{\"targetAddress\":\"0xa9994621f1c3ee59846df756488229e8efdcb8bf\",\"role\":8,\"sender\":\"0x99a9987f2caabdf160e3d6ab33ec135419b9ba89\"}},{\"event\":\"DSTrustServiceRoleAdded\",\"block\":31237464,\"tx\":\"0xcc2c44ea066a73f2c5153d9f2edf7b819d9672af597c174f2172ea85e201459d\",\"address\":\"0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275\",\"args\":{\"targetAddress\":\"0x7c8b1e4e9fecda57b6107278bab614e67f3a8bf4\",\"role\":2,\"sender\":\"0x99a9987f2caabdf160e3d6ab33ec135419b9ba89\"}},{\"event\":\"DSTrustServiceRoleAdded\",\"block\":31237464,\"tx\":\"0xcc2c44ea066a73f2c5153d9f2edf7b819d9672af597c174f2172ea85e201459d\",\"address\":\"0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275\",\"args\":{\"targetAddress\":\"0x5072ed40eba6be38c2370cad1cb1df0202924e53\",\"role\":2,\"sender\":\"0x99a9987f2caabdf160e3d6ab33ec135419b9ba89\"}},{\"event\":\"DSServiceSet\",\"block\":31237480,\"tx\":\"0x9a46e429f977b9ee28c0d6ffd9a9fce3f924cb6e0ce13d8f354724f546835149\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"serviceId\":4,\"serviceAddress\":\"0xc50ac5b3e1e5b3ad213368fb0cf5949e3fcf6f2d\"}},{\"event\":\"DSServiceSet\",\"block\":31237480,\"tx\":\"0x9a46e429f977b9ee28c0d6ffd9a9fce3f924cb6e0ce13d8f354724f546835149\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"serviceId\":512,\"serviceAddress\":\"0x84d37dfa4e6a1395faceab1120506718a9eeac86\"}},{\"event\":\"DSServiceSet\",\"block\":31237480,\"tx\":\"0x9a46e429f977b9ee28c0d6ffd9a9fce3f924cb6e0ce13d8f354724f546835149\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"serviceId\":1024,\"serviceAddress\":\"0xb7d43cd861eee4f3b3c4cd69b853c7f5525d4dc4\"}},{\"event\":\"DSServiceSet\",\"block\":31237480,\"tx\":\"0x9a46e429f977b9ee28c0d6ffd9a9fce3f924cb6e0ce13d8f354724f546835149\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"serviceId\":1,\"serviceAddress\":\"0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275\"}},{\"event\":\"DSServiceSet\",\"block\":31237480,\"tx\":\"0x9a46e429f977b9ee28c0d6ffd9a9fce3f924cb6e0ce13d8f354724f546835149\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"serviceId\":8,\"serviceAddress\":\"0x12aa50c88d10efa7ead035dc4c8520a03063eaf4\"}},{\"event\":\"DSServiceSet\",\"block\":31237480,\"tx\":\"0x9a46e429f977b9ee28c0d6ffd9a9fce3f924cb6e0ce13d8f354724f546835149\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"serviceId\":256,\"serviceAddress\":\"0xb82cc0316d4ae667923b4d89f1555cd6e7b0f145\"}},{\"event\":\"DSServiceSet\",\"block\":31237480,\"tx\":\"0x9a46e429f977b9ee28c0d6ffd9a9fce3f924cb6e0ce13d8f354724f546835149\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"serviceId\":32,\"serviceAddress\":\"0xb286ea37feeb1a62e8a611dee1203d8d14c3b921\"}},{\"event\":\"DSServiceSet\",\"block\":31237480,\"tx\":\"0x9a46e429f977b9ee28c0d6ffd9a9fce3f924cb6e0ce13d8f354724f546835149\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"serviceId\":64,\"serviceAddress\":\"0x471730c1bdf592b18888aa5055948c1634f83bb1\"}},{\"event\":\"DSServiceSet\",\"block\":31237480,\"tx\":\"0x9a46e429f977b9ee28c0d6ffd9a9fce3f924cb6e0ce13d8f354724f546835149\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"serviceId\":4096,\"serviceAddress\":\"0xfbdd6a4f828c4d29aa8dafc4570a241907660fc0\"}},{\"event\":\"DSServiceSet\",\"block\":31237480,\"tx\":\"0x9a46e429f977b9ee28c0d6ffd9a9fce3f924cb6e0ce13d8f354724f546835149\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"serviceId\":8193,\"serviceAddress\":\"0xb8707668acf4c3e025a90e88515b923529e10a69\"}},{\"event\":\"DSServiceSet\",\"block\":31237480,\"tx\":\"0x9a46e429f977b9ee28c0d6ffd9a9fce3f924cb6e0ce13d8f354724f546835149\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"serviceId\":8196,\"serviceAddress\":\"0x833a2852d4a8b49409ab1961483478c4735205f0\"}},{\"event\":\"OwnershipTransferred\",\"block\":31237512,\"tx\":\"0xccc3bf0f0b20f99b76915db9f8af81f79b4bfd63b5d65d42658cf48a1324544f\",\"address\":\"0xe36e2e79beb1b7f618201eead6106a7d737695e3\",\"args\":{\"previousOwner\":\"0x99a9987f2caabdf160e3d6ab33ec135419b9ba89\",\"newOwner\":\"0xe01605f6b6dc593b7d2917f4a0940db2a625b09e\"}},{\"event\":\"DSTrustServiceRoleRemoved\",\"block\":31237514,\"tx\":\"0x74d440e12fdfda116763a7b279455b89cddf5ecce01afcf1054adccd0758dfd7\",\"address\":\"0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275\",\"args\":{\"targetAddress\":\"0x99a9987f2caabdf160e3d6ab33ec135419b9ba89\",\"role\":1,\"sender\":\"0x99a9987f2caabdf160e3d6ab33ec135419b9ba89\"}},{\"event\":\"DSTrustServiceRoleAdded\",\"block\":31237514,\"tx\":\"0x74d440e12fdfda116763a7b279455b89cddf5ecce01afcf1054adccd0758dfd7\",\"address\":\"0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275\",\"args\":{\"targetAddress\":\"0xe01605f6b6dc593b7d2917f4a0940db2a625b09e\",\"role\":1,\"sender\":\"0x99a9987f2caabdf160e3d6ab33ec135419b9ba89\"}}]. This negative covers the exact Tempo native service only. It does not certify nested issuer authorization, absence of all possible events, financial mint reconciliation, the multi-chain master, Ethereum or Solana. Unverified nested implementation and executable-authorizer questions remain open."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://api.llama.fi/hacks",
+          "finding": "Full 1297-row independent incident table retrieved 2026-10-09T11:43:29Z; name substrings BlackRock/BRSRV/RSVXX/Securitize return zero matches. Supplementary table silence is not perpetual incident absence or a source of financial authorization."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact issuer fund status",
+          "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle",
+          "observedAt": "2026-10-09T11:45:25Z",
+          "location": "RSVXX/CUSIP 09261A839; About This Fund and NAV as of 08-Oct-2026",
+          "excerpt": "The Fund issues OnChain Shares through a permissioned system that operates in connection with one or more public, permissionless blockchains."
+        },
+        {
+          "label": "July 31 OnChain prospectus",
+          "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf",
+          "observedAt": "2026-10-09T11:45:25Z",
+          "location": "Printed pp.4-5 Use of the Blockchain: registered shareholder rails and administrative permissions",
+          "excerpt": "these public blockchains include Ethereum, Tempo, and Solana"
+        },
+        {
+          "label": "Numeric-pinned exact Tempo token and TrustService histories",
+          "url": "https://rpc.tempo.xyz",
+          "observedAt": "2026-10-09T11:42:38Z",
+          "location": "eth_getLogs finite windows 31137322..42641165; 29 logs, 8 fetched transactions; pin hash b493b1920838f0a607624e1d666d4daee4cf80a1ef40011583956ceabce93a5c; scratch/W2L10Blackrock/tempo-census.json",
+          "excerpt": "DSTrustServiceRoleAdded: final MASTER 0xe01605f6b6dc593b7d2917f4a0940db2a625b09e at block 31237514."
+        },
+        {
+          "label": "Independently pinned Tempo authority state and header",
+          "url": "https://api-tempo-mainnet.n.dwellir.com",
+          "observedAt": "2026-10-09T11:44:48.801Z",
+          "location": "block 42641165, hash 0xb493b1920838f0a607624e1d666d4daee4cf80a1ef40011583956ceabce93a5c, timestamp 2026-10-04T23:47:26Z; owner(), getDSService(1), getRole(master), eth_getCode(master), totalSupply(); scratch/W2L10Blackrock/tempo-authority-bindings.json",
+          "excerpt": "getDSService(1)=0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275; getRole(0xe01605f6b6dc593b7d2917f4a0940db2a625b09e)=1; totalSupply()=0."
+        },
+        {
+          "label": "Verified DSToken event ABI",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc4ecf0307ff0c45c0546e0debedbbd0e47ac3354",
+          "observedAt": "2026-10-09T11:45:25Z",
+          "location": "Verified Ethereum reference event ABI; existing October 5 Tempo implementation-runtime correspondence retained, not newly asserted by ABI decoding",
+          "excerpt": "DSToken; DSServiceSet, Issue, Burn, OwnershipTransferred, Upgraded event definitions."
+        },
+        {
+          "label": "Verified TrustService event ABI",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xcf5f7cec13168144b82ef83fda638e81938c218b",
+          "observedAt": "2026-10-09T11:45:25Z",
+          "location": "Verified TrustService event ABI; exact role-event topics independently Keccak-derived",
+          "excerpt": "DSTrustServiceRoleAdded(address,uint8,address); DSTrustServiceRoleRemoved(address,uint8,address)."
+        },
+        {
+          "label": "Supplementary independent incident index",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-09T11:43:29Z",
+          "location": "1297-row full JSON name filters BlackRock/BRSRV/RSVXX/Securitize; zero matches",
+          "excerpt": "No matching exact fund or transfer-agent name."
+        }
+      ]
     }
 ]
 }

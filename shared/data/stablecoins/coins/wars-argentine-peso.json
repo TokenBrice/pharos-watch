@@ -44,6 +44,22 @@
       "id": "proof-of-reserve",
       "label": "Proof of Reserve",
       "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+    },
+    {
+      "label": "wARS conversion and canonical whitepaper",
+      "url": "https://www.ripio.com/es/criptomonedas/wars"
+    },
+    {
+      "label": "Ripio Argentina off-ramp requirements",
+      "url": "https://docs.ripio.com/ramps-api/overview/countries/argentina.md"
+    },
+    {
+      "label": "Ripio off-ramp trade and final payout lifecycle",
+      "url": "https://docs.ripio.com/ramps-api/guides/off-ramp-integration.md"
+    },
+    {
+      "label": "Ripio asynchronous fiat withdrawal documentation",
+      "url": "https://docs.ripio.com/crypto-as-a-service/fiat-withdrawals/create-fiat-withdrawal.md"
     }
   ],
   "jurisdiction": {
@@ -147,5 +163,12 @@
       }
     }
   },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Account-based conversion is distinct from a token redemption right",
+      "message": "Ripio advertises conversion of wARS to pesos through its platform. The linked token whitepaper grants holders no direct redemption right. Argentina off-ramp documentation requires approved KYC, accepted terms and a validated payout account; fiat withdrawal is asynchronous, and a completed crypto sale may still have a failed fiat payout. Public documentation does not establish a maximum time to final ARS receipt or funded capacity at the scored notional."
+    }
+  ],
   "launchDate": "2025-11-01"
 }

@@ -33,13 +33,17 @@
       {
         "label": "GLDon issuer metadata; underlying holdings are not wrapper reserves",
         "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+      },
+      {
+        "label": "Ankura October 6, 2026 daily report, 8pm ET; archive member 2026/10 October/Daily Report - Ondo Stocks - 2026-10-06_20_00_ET - Ankura Attestation.pdf; aggregate reference only, reviewed 2026-10-09T11:53:28Z by Sol curation campaign 2026-10-09 (W2L04Ondo)",
+        "url": "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&dl=1"
       }
     ],
     "rationale": "The 100% share-and-cash envelope mirrors IAUon and SLVon; issuer API Physical Gold weight describes the underlying ETF, not a measured GLDON reserve mix. Final Terms permit Other Collateral and Additional Collateral, whose current usage is not established. Program trust disclosures require additional collateral beyond full backing at all times and describe a contractually obligated Ondo Foundation guarantee through Flux Finance, Inc. These are documented program commitments, not a measured GLDON overcollateralization ratio or a token-specific independent reconciliation.",
     "compositionBasis": "Issuer product and backing disclosures reopened 2026-10-02",
     "compositionAsOf": "2026-10-02",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current GLDON-specific GLD/cash/Other Collateral weights and liabilities are undisclosed. Named providers establish roles, not asset-specific provider shares or unconditional no-reuse protections.",
+    "knownUnknownExposure": "Current GLDON-specific GLD/cash/Other Collateral weights and liabilities are undisclosed. Named providers establish roles, not asset-specific provider shares or unconditional no-reuse protections. Source recovery on 2026-10-09 retrieved the October 6, 2026 8pm ET Ankura report: $1,676,475,682.48 program assets and $1,575,625,529.70 program obligations include Ondo Stocks, USDY and USDon. The 106.40% reported aggregate ratio and named account categories do not establish GLDON-specific backing weights, custodian shares or liabilities. This reference does not refresh the October 2 composition or prior reserve/custody review dates.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

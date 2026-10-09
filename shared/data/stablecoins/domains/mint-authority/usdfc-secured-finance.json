@@ -191,6 +191,22 @@
         {
           "label": "Current Filecoin core-owner and Safe pin, block 6429411",
           "url": "https://api.node.glif.io/rpc/v1"
+        },
+        {
+          "label": "Filecoin public RPC historical-state retention limits",
+          "url": "https://docs.filecoin.io/networks-and-tools/networks/mainnet/rpcs.md"
+        },
+        {
+          "label": "Blockscout indexed token-proxy Upgraded events and historical block identities",
+          "url": "https://filecoin.blockscout.com/api/v2/addresses/0x80b98d3aa09ffff255c3ba4a241111ff1262f045/logs?topic=0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b"
+        },
+        {
+          "label": "Recovered indexed initial USDFC BorrowerOperations openTrove transaction",
+          "url": "https://filecoin.blockscout.com/api/v2/transactions/0x41188a1f0e27a8f277461fc1c03f8f0849772468e88fed9c0f73b5fa0c1a108a"
+        },
+        {
+          "label": "Recovered indexed initial USDFC mint transaction logs",
+          "url": "https://filecoin.blockscout.com/api/v2/transactions/0x41188a1f0e27a8f277461fc1c03f8f0849772468e88fed9c0f73b5fa0c1a108a/logs"
         }
       ],
       "evidence": "R17 re-pins Filecoin core controls at block 6429411, hash 0x0acbb64bb2c1d62c8375c5d74aa2c52d7cb130c358c137f623154245d242a8f0. Implementation remains 0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b, BorrowerOperations remains 0x1de3c2e21dd5af7e5109d2502d0d570d57a1abb0, and token/ProxyAdmin owners remain the recorded 2-of-3 Safe with unchanged owners, empty modules and zero guard. Verified ProxyAdmin upgrade()/upgradeAndCall() are immediate onlyOwner calls: mandatory delay is zero, not unresearched. The prior Sourcify executable-runtime match is retained without claiming exact metadata verification. Official September 26 disclosure describes lending patches, still-paused markets and pending compensation/position repair. Its linked lending history names order-book, Itayose, recovery and TokenVault changes, not core USDFC mint remediation; the social post dates patches September 25 while the history dates Ethereum/Arbitrum execution September 24. Filtered lifetime Blockscout queries recover 575 mint events, 3732 deduplicated burns, two upgrades and two ownership changes from token creation block4807452 through the pin. Their net raw issuance is 186897978724044529018007, whereas pinned totalSupply is 190455538808608777432105. That mismatch is an unresolved historical observation/reconciliation issue, not proof of an exploit. GLIF rejects creation-to-pin event history and returns null for the earliest mint and both historical upgrade receipts; its recent filtered mint query also does not reproduce the indexer's latest mint. Thus an indexed lifetime census is recovered, but authenticated core abnormal-issuance and affected-contract reconciliation is not complete. Issuer disclosures, exact core/lending inventories, source/audit material, September7–26 incident thread and independent incident-index searches were reviewed. No core compromise, absence or resolution is inferred from lending patches or distinct oracle upgrades. Aggregate review remains unresolved and native authority remains unbounded-adverse.",
@@ -198,7 +214,9 @@
       "reviewedAt": "2026-10-05",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "The latest official update establishes still-paused lending/TokenVault remediation, not core USDFC BorrowerOperations/Safe incident status. Filtered lifetime indexer history is now recovered, but its net issuance does not match pinned totalSupply; GLIF cannot authenticate earliest mint or historical upgrade receipts and does not reproduce the latest indexed mint in its recent event query. Obtain an aligned authenticated historical issuance/upgrade census and exact affected-contract reconciliation before any core incident verdict."
+        "The latest official update establishes still-paused lending/TokenVault remediation, not core USDFC BorrowerOperations/Safe incident status. Filtered lifetime indexer history is now recovered, but its net issuance does not match pinned totalSupply; GLIF cannot authenticate earliest mint or historical upgrade receipts and does not reproduce the latest indexed mint in its recent event query. Obtain an aligned authenticated historical issuance/upgrade census and exact affected-contract reconciliation before any core incident verdict.",
+        "Wave-2 source recovery by Sol curation campaign 2026-10-09 (W2L18Secured), observed 2026-10-09T11:42:48Z: the supplemental Dwellir helper rejects Filecoin because no endpoint is registered, before any state read. Official Filecoin RPC documentation says public endpoints guarantee only the latest 2000 blocks and identifies archival access as a separate provider prerequisite. This explains a historical-read capability limitation, not the issuance mismatch or either core control's incident state. The October 5 pin, review disposition and unresolved core census remain unchanged.",
+        "Wave-2 indexed-history recovery reviewed 2026-10-09T11:55:58Z by Sol curation campaign 2026-10-09 (W2L18Secured): Blockscout returns token-proxy initialization at block 4807452 (2025-03-21T04:06:00Z), implementation 0x68e1ece44233f55ab2cd155016bb515564d1851f, and upgrade at block 5282449 (2025-09-02T02:24:30Z), implementation 0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b; the Upgraded filter has two rows and no next-page cursor. Transaction 0x41188a1f0e27a8f277461fc1c03f8f0849772468e88fed9c0f73b5fa0c1a108a is indexed as successful BorrowerOperations.openTrove at block 4807947 and contains zero-origin token Transfers. These are recovered explorer records, not raw archival receipts or proof of a complete issuance census. The retained net-issuance and pinned-supply figures differ by 3557560084564248414098 raw units; that difference is not an incident verdict. Exact-block eth_call POST attempts to the documented Lava and Chainup endpoints returned endpoint-discontinued and ring-balancer failures respectively, and Lava's replacement gateway requires sign-in. Obtain an archival receipt/state-capable source and reconcile all implementation intervals to the retained pin. No current token supply nested in historical explorer transaction responses is substituted for the pinned historical supply."
       ],
       "scopedQuestions": [
         {
