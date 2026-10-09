@@ -18,7 +18,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "The five registered MXNB deployments are issuer-native FiatTokenV2_2 liabilities, with verified direct local-supply mint/burn implementations. However, the issuer also lists an unregistered live Arc deployment: pinned Arc block 25087646 returns MXNB, 6 decimals and 2195860.833859 tokens. A five-deployment census would therefore be incomplete. Independent-liability eligibility is deferred until the Arc native-liability review and catalog/route registration are complete; no eligibility or static supply shares are authored.",
+    "summary": "The five reviewed MXNB deployments are issuer-native FiatTokenV2_2 liabilities, with verified direct local-supply mint/burn implementations. The issuer also lists a live Arc deployment (pinned Arc block 25087646: MXNB, 6 decimals, 2195860.833859 tokens), now registered in contracts[] but without a reviewed Arc route row. Independent-liability eligibility is deferred until the Arc native-liability route review is complete; no eligibility or static supply shares are authored.",
     "reviewedAt": "2026-10-09",
     "reviewer": "Sol curation campaign 2026-10-09 (W4T05Infinifi)",
     "confidence": "verified",
