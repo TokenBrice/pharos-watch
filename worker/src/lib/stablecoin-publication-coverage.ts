@@ -4,6 +4,7 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { ActivePriceCoverageHealthSchema } from "@shared/types/status/core";
 import { NominalPriceReferenceSchema, type NominalPriceReference } from "@shared/types/core";
+import { STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, getActivePriceGapMaterialityMarketCapUsd } from "@shared/lib/status-thresholds";
 import type {
   ActivePriceCoverageGap,
   ActivePriceCoverageGapAcknowledgement,
@@ -48,6 +49,7 @@ export interface StablecoinPriceCoverageAsset {
   priceUpdatedAt?: number | null;
   nominalPriceReference?: NominalPriceReference | null;
   circulating?: Record<string, number> | null;
+  supplyObservedAt?: number | null;
 }
 
 export type MissingActivePriceDetail = ActivePriceCoverageGap;
@@ -85,6 +87,7 @@ export type StablecoinActivePriceCoverage = {
 export interface PreviousStablecoinActivePriceCoverage {
   missingActiveIds: string[];
   missingActiveAssets: MissingActivePriceDetail[];
+  observedAt?: number | null;
   unavailableReason?: "previous-coverage-read-failed" | "previous-coverage-malformed";
 }
 
@@ -105,6 +108,10 @@ export type PersistedMissingActivePriceState = readonly [
   lastAcceptedObservedAt: number | null,
   rejectionReason: string,
   streakUnavailableReason?: MissingActivePriceDetail["streakUnavailableReason"],
+  lastKnownMarketCapUsd?: number | null,
+  lastKnownMarketCapObservedAt?: number | null,
+  lastKnownMarketCapSource?: MissingActivePriceDetail["lastKnownMarketCapSource"],
+  marketCapUsd?: number | null,
 ];
 
 export interface CompactedStablecoinActivePriceCoverage extends StablecoinActivePriceCoverage {
@@ -519,6 +526,10 @@ export function parseMissingActivePriceDetail(
     stablecoinId: entry.stablecoinId,
     symbol: stringOrNull(entry.symbol) ?? entry.stablecoinId,
     marketCapUsd: finiteNumberOrNull(entry.marketCapUsd),
+    lastKnownMarketCapUsd: finiteNumberOrNull(entry.lastKnownMarketCapUsd),
+    lastKnownMarketCapObservedAt: dateSecondsOrNull(entry.lastKnownMarketCapObservedAt),
+    lastKnownMarketCapSource: entry.lastKnownMarketCapSource === "publication" || entry.lastKnownMarketCapSource === "supply_history"
+      ? entry.lastKnownMarketCapSource : null,
     currentPrice: finiteNumberOrNull(entry.currentPrice),
     currentSource: stringOrNull(entry.currentSource),
     currentObservedAt: dateSecondsOrNull(entry.currentObservedAt),
@@ -552,7 +563,10 @@ export function parsePersistedMissingActivePriceState(
   return {
     stablecoinId: value[0],
     symbol: ACTIVE_STABLECOIN_SYMBOL_BY_ID.get(value[0]) ?? value[0],
-    marketCapUsd: null,
+    marketCapUsd: finiteNumberOrNull(value[10]),
+    lastKnownMarketCapUsd: finiteNumberOrNull(value[7]),
+    lastKnownMarketCapObservedAt: dateSecondsOrNull(value[8]),
+    lastKnownMarketCapSource: value[9] === "publication" || value[9] === "supply_history" ? value[9] : null,
     currentPrice: null,
     currentSource: null,
     currentObservedAt: null,
@@ -633,6 +647,10 @@ export function compactStablecoinActivePriceCoverage(
       detail.lastAcceptedObservedAt,
       boundedStateString(detail.rejectionReason) ?? "no-accepted-price",
       detail.streakUnavailableReason ?? null,
+      detail.lastKnownMarketCapUsd ?? null,
+      detail.lastKnownMarketCapObservedAt ?? null,
+      detail.lastKnownMarketCapSource ?? null,
+      detail.marketCapUsd,
     ]),
   };
 }
@@ -650,7 +668,7 @@ export async function loadPreviousStablecoinActivePriceCoverage(
 > {
   try {
     const row = await db.prepare(
-      `SELECT metadata
+      `SELECT metadata, started_at
          FROM cron_runs
         WHERE job = 'sync-stablecoins'
           AND started_at < ?
@@ -658,13 +676,55 @@ export async function loadPreviousStablecoinActivePriceCoverage(
           AND metadata LIKE '%"activePriceCoverage"%'
         ORDER BY started_at DESC, id DESC
         LIMIT 1`,
-    ).bind(beforeStartedAt).first<{ metadata: string }>();
+    ).bind(beforeStartedAt).first<{ metadata: string; started_at: number }>();
     if (!row) return { status: "missing" };
     const coverage = parsePreviousCoverageMetadata(row.metadata);
-    return coverage ? { status: "ok", coverage } : { status: "read-error", reason: "previous-coverage-malformed" };
+    return coverage ? { status: "ok", coverage: { ...coverage, observedAt: row.started_at } }
+      : { status: "read-error", reason: "previous-coverage-malformed" };
   } catch (error) {
     logWorkerEventArgs("lib", "warn", "[sync-stablecoins] Failed to load previous active price coverage:", error);
     return { status: "read-error", reason: "previous-coverage-read-failed" };
+  }
+}
+
+/** Producer-only bootstrap for already absent rows. One bounded existing-history read;
+ * never a price replacement, new supply publication, or request-path dependency. */
+export async function seedAbsentActivePriceCoverageMarketCaps(
+  db: D1Database,
+  coverage: StablecoinActivePriceCoverage,
+  nowSec: number,
+): Promise<void> {
+  const gaps = coverage.missingActiveAssets.filter((gap) =>
+    gap.rejectionReason === "active-row-missing" && getActivePriceGapMaterialityMarketCapUsd(gap, nowSec) == null,
+  );
+  if (gaps.length === 0) return;
+  try {
+    const rows = await db.prepare(`
+      WITH absent AS (SELECT value AS stablecoin_id FROM json_each(?))
+      SELECT h.stablecoin_id, h.snapshot_date, h.circulating_usd
+      FROM absent
+      JOIN supply_history h ON h.stablecoin_id = absent.stablecoin_id
+        AND h.snapshot_date = (
+          SELECT MAX(snapshot_date) FROM supply_history
+          WHERE stablecoin_id = absent.stablecoin_id AND snapshot_date BETWEEN ? AND ?
+        )
+      LIMIT ?`).bind(
+      JSON.stringify(gaps.map((gap) => gap.stablecoinId)),
+      nowSec - STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, nowSec, gaps.length,
+    ).all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
+    if (!rows.success) throw new Error("supply-history-cap-read-failed");
+    const gapsById = new Map(gaps.map((gap) => [gap.stablecoinId, gap]));
+    for (const row of rows.results ?? []) {
+      const gap = gapsById.get(row.stablecoin_id);
+      if (!gap || !Number.isFinite(row.circulating_usd) || row.circulating_usd < 0
+        || !Number.isFinite(row.snapshot_date) || row.snapshot_date <= 0
+        || row.snapshot_date > nowSec || nowSec - row.snapshot_date > STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC) continue;
+      gap.lastKnownMarketCapUsd = row.circulating_usd;
+      gap.lastKnownMarketCapObservedAt = row.snapshot_date;
+      gap.lastKnownMarketCapSource = "supply_history";
+    }
+  } catch (error) {
+    logWorkerEventArgs("lib", "warn", "[sync-stablecoins] Failed to seed absent-row market-cap evidence:", error);
   }
 }
 
@@ -738,6 +798,20 @@ export function evaluateStablecoinActivePriceCoverage(
         : 0;
     const consecutiveMissingGenerations = previousStreak == null ? null : previousStreak + 1;
     const previousAccepted = acceptedObservation(options.previousAcceptedAssetsById?.get(stablecoinId));
+    const previousAsset = options.previousAcceptedAssetsById?.get(stablecoinId);
+    const previousCap = marketCapOrNull(previousAsset);
+    const lastKnownMarketCapUsd = marketCapUsd ?? previousCap
+      ?? previousDetail?.lastKnownMarketCapUsd ?? previousDetail?.marketCapUsd ?? null;
+    const lastKnownMarketCapObservedAt = marketCapUsd != null
+      ? dateSecondsOrNull(asset?.supplyObservedAt) ?? nowSec
+      : previousCap != null
+        ? dateSecondsOrNull(previousAsset?.supplyObservedAt)
+        : previousDetail?.lastKnownMarketCapUsd != null
+          ? previousDetail.lastKnownMarketCapObservedAt ?? null
+          : options.previousCoverage?.observedAt ?? null;
+    const lastKnownMarketCapSource = marketCapUsd != null || previousCap != null
+      ? "publication" : previousDetail?.lastKnownMarketCapSource
+        ?? (previousDetail?.marketCapUsd != null ? "publication" : null);
     const lastAcceptedPrice = previousAccepted?.price ?? previousDetail?.lastAcceptedPrice ?? null;
     const lastAcceptedSource = previousAccepted?.source ?? previousDetail?.lastAcceptedSource ?? null;
     const lastAcceptedObservedAt = previousAccepted?.observedAt ?? previousDetail?.lastAcceptedObservedAt ?? null;
@@ -755,6 +829,9 @@ export function evaluateStablecoinActivePriceCoverage(
         ?? ACTIVE_STABLECOIN_SYMBOL_BY_ID.get(stablecoinId)
         ?? stablecoinId,
       marketCapUsd,
+      lastKnownMarketCapUsd,
+      lastKnownMarketCapObservedAt,
+      lastKnownMarketCapSource,
       currentPrice,
       currentSource: typeof asset?.priceSource === "string" ? asset.priceSource : null,
       currentObservedAt: dateSecondsOrNull(asset?.priceObservedAt ?? asset?.priceUpdatedAt),

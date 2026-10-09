@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   FRESHNESS_RATIOS,
   getBlacklistGapStatus,
+  getStablecoinPublicationImpactStatus,
+  getActivePriceGapMaterialityMarketCapUsd,
+  STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC,
   getCacheHealthyMaxRatio,
   getCacheRatioThresholds,
   getHighConfidenceTileSeverity,
@@ -49,6 +52,30 @@ describe("missing-price duration bands", () => {
     expect(STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated).toBe(0.15);
     expect(STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded).toBe(0.18);
     expect(STATUS_MISSING_PRICE_THRESHOLDS.ratioStale).toBe(0.45);
+  });
+});
+
+describe("publication materiality evidence", () => {
+  const now = 1_790_000_000;
+  it.each([
+    [now, 60_000_000, 120_000_000],
+    [now - STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, 30_000_000, 60_000_000],
+    [now - STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC - 1, 30_000_000, null],
+    [now + 1, 30_000_000, null],
+    [null, 30_000_000, null],
+  ])("admits dated evidence without renewing its clock (%s)", (observedAt, cap, expected) => {
+    expect(getActivePriceGapMaterialityMarketCapUsd({
+      marketCapUsd: null, lastKnownMarketCapUsd: cap, lastKnownMarketCapObservedAt: observedAt,
+    }, now)).toBe(expected);
+  });
+  it("keeps current-generation caps unscaled", () => {
+    expect(getActivePriceGapMaterialityMarketCapUsd({
+      marketCapUsd: 60_000_000, lastKnownMarketCapUsd: 60_000_000, lastKnownMarketCapObservedAt: now,
+    }, now)).toBe(60_000_000);
+  });
+  it.each(["unknown", "incomplete"] as const)("fails closed for %s publication without ids", (status) => {
+    expect(getStablecoinPublicationImpactStatus({ status, missingActiveIds: [] }, { missingActiveAssets: [] }, now))
+      .toBe("degraded");
   });
 });
 

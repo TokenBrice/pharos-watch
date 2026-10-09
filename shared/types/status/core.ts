@@ -249,6 +249,10 @@ export const ActivePriceCoverageGapSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
   marketCapUsd: z.number().nullable(),
+  /** Supply evidence retained across absent rows; never a current market cap. */
+  lastKnownMarketCapUsd: z.number().nonnegative().nullable().optional(),
+  lastKnownMarketCapObservedAt: z.number().nullable().optional(),
+  lastKnownMarketCapSource: z.enum(["publication", "supply_history"]).nullable().optional(),
   currentPrice: z.number().nullable(),
   currentSource: z.string().nullable(),
   currentObservedAt: z.number().nullable(),
