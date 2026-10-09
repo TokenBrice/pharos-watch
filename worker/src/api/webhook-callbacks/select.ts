@@ -14,6 +14,7 @@ import {
   callbackUsername,
   hasExactParts,
   type CallbackHandler,
+  requireAdminForMutatingCallback,
 } from "./_shared";
 
 export const handleSelectCallback: CallbackHandler = async (ctx) => {
@@ -24,6 +25,14 @@ export const handleSelectCallback: CallbackHandler = async (ctx) => {
   }
   const storedSelection = parseStoredCommandSelectionIntent(ctx.storedIntent);
   if (storedSelection) {
+    const actorUserId = callbackActorUserId(cb);
+    if (storedSelection.initiatorUserId != null && storedSelection.initiatorUserId !== actorUserId) {
+      await answerCallback({ text: "Only the user who started this selection can choose." });
+      return;
+    }
+    if (!(await requireAdminForMutatingCallback(
+      db, botToken, cb, chatId, undefined, ctx.beforeIrreversibleEffect,
+    ))) return;
     await executeNormalizedPendingSelection(
       db,
       botToken,
@@ -68,6 +77,9 @@ export const handleSelectCallback: CallbackHandler = async (ctx) => {
     await answerCallback({ text: "Selection not recognized." });
     return;
   }
+  if (!(await requireAdminForMutatingCallback(
+    db, botToken, cb, chatId, undefined, ctx.beforeIrreversibleEffect,
+  ))) return;
   await executePendingDisambiguationSelection(
     db,
     botToken,

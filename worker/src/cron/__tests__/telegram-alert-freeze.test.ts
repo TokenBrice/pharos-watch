@@ -4,6 +4,8 @@ import { dispatchFreezeAlertOutbox } from "../telegram-freeze-outbox";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { createFreezeIdentityFixture } from "./telegram-alert-freeze.test-support";
+import { recordTelegramJobTargetFinalDelivery } from "../telegram-alert-job-target-outcomes";
 
 function db(rows: unknown[], latestRun: number | null): D1Database {
   return makeNoopD1({
@@ -137,6 +139,89 @@ describe("freeze Telegram source gate", () => {
 });
 
 describe("freeze dedicated outbox", () => {
+  it.each(["pending", "sending", "sent", "execution_unknown"] as const)(
+    "queues identical freeze text independently when the first event is %s",
+    async (firstState) => {
+      const { sqlite, db, now, insertFreeze } = await createFreezeIdentityFixture();
+      try {
+        insertFreeze("event-1", now + 1);
+        expect((await dispatchFreezeAlertOutbox(db, now + 2)).queued).toBe(1);
+        sqlite.prepare(
+          "UPDATE telegram_pending_alerts SET delivery_state = ? WHERE source_event_id = 'freeze:event-1'",
+        ).run(firstState);
+        insertFreeze("event-2", now + 3);
+        expect((await dispatchFreezeAlertOutbox(db, now + 4)).queued).toBe(1);
+
+        const rows = sqlite.prepare(
+          `SELECT source_event_id, dedupe_key, message_html, delivery_state
+             FROM telegram_pending_alerts ORDER BY source_event_id`,
+        ).all() as Array<{ source_event_id: string; dedupe_key: string; message_html: string; delivery_state: string }>;
+        expect(rows).toHaveLength(2);
+        expect(rows[0].message_html).toBe(rows[1].message_html);
+        expect(rows[0].dedupe_key).not.toBe(rows[1].dedupe_key);
+        expect(rows.map((row) => [row.source_event_id, row.delivery_state])).toEqual([
+          ["freeze:event-1", firstState],
+          ["freeze:event-2", "pending"],
+        ]);
+        expect(sqlite.prepare(
+          "SELECT source_event_id, status FROM telegram_freeze_alert_targets ORDER BY source_event_id",
+        ).all()).toEqual([
+          { source_event_id: "freeze:event-1", status: "queued" },
+          { source_event_id: "freeze:event-2", status: "queued" },
+        ]);
+
+        for (const row of rows) {
+          expect(await recordTelegramJobTargetFinalDelivery(db, {
+            pendingDedupeKey: row.dedupe_key,
+            sourceEventId: row.source_event_id,
+          }, {
+            state: row.delivery_state === "execution_unknown" ? "execution_unknown" : "accepted",
+            at: now + 5,
+          })).toBe(true);
+        }
+        expect(sqlite.prepare(
+          "SELECT source_event_id, final_delivery_state FROM telegram_alert_job_targets ORDER BY source_event_id",
+        ).all()).toEqual([
+          { source_event_id: "freeze:event-1", final_delivery_state: firstState === "execution_unknown" ? "execution_unknown" : "accepted" },
+          { source_event_id: "freeze:event-2", final_delivery_state: "accepted" },
+        ]);
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  it.each(([
+    ["source_event_id", "freeze:other-source"],
+    ["preference_generation", 99],
+    ["message_html", "different payload"],
+    ["alert_scope_json", "[]"],
+    ["markup_policy_json", "{}"],
+  ] as const).flatMap(([column, value]) =>
+    ["pending", "sending"].map((deliveryState) => ({ column, value, deliveryState })),
+  ))("keeps freeze handoff planned when $deliveryState $column does not match", async ({ column, value, deliveryState }) => {
+    const { sqlite, db, now, insertFreeze } = await createFreezeIdentityFixture();
+    try {
+      insertFreeze("event-fenced", now + 1);
+      await dispatchFreezeAlertOutbox(db, now + 2);
+      // Neither pending nor in-flight collisions may be rewritten to fabricate
+      // the exact immutable payload/provenance needed to prove a handoff.
+      sqlite.prepare("UPDATE telegram_freeze_alert_events SET status = 'planning'").run();
+      sqlite.prepare("UPDATE telegram_freeze_alert_targets SET status = 'planned'").run();
+      sqlite.prepare("UPDATE telegram_alert_job_targets SET status = 'planned'").run();
+      sqlite.prepare(`UPDATE telegram_pending_alerts SET delivery_state = ?, ${column} = ?`).run(deliveryState, value);
+      const pendingBefore = sqlite.prepare("SELECT * FROM telegram_pending_alerts").get();
+
+      expect((await dispatchFreezeAlertOutbox(db, now + 3)).queued).toBe(0);
+      expect(sqlite.prepare("SELECT * FROM telegram_pending_alerts").get()).toEqual(pendingBefore);
+      expect(sqlite.prepare("SELECT status FROM telegram_freeze_alert_targets").get()).toEqual({ status: "planned" });
+      expect(sqlite.prepare("SELECT status FROM telegram_alert_job_targets").get()).toEqual({ status: "planned" });
+      expect(sqlite.prepare("SELECT status FROM telegram_freeze_alert_events").get()).toEqual({ status: "queued" });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("advances no-audience freeze events without durable outbox work", async () => {
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {

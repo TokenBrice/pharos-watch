@@ -121,8 +121,9 @@ describe("filterAlertableBands", () => {
 });
 
 describe("buildDepegSnapshot", () => {
-  it("maps active depeg rows to structured payloads", () => {
+  it("maps active depeg rows to structured payloads with persisted event identity", () => {
     const rows: ActiveDepegRow[] = [{
+      event_id: 42,
       stablecoin_id: "usdc-circle",
       symbol: "USDC",
       direction: "below",
@@ -133,6 +134,7 @@ describe("buildDepegSnapshot", () => {
     }];
     const result = buildDepegSnapshot(rows);
     expect(result["usdc-circle"]).toEqual({
+      eventId: 42,
       stablecoinId: "usdc-circle",
       symbol: "USDC",
       direction: "below",

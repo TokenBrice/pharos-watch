@@ -35,6 +35,7 @@ import {
 type DispatchSourceData = Awaited<ReturnType<typeof loadDispatchSourceData>>;
 type DispatchSnapshotState = ReturnType<typeof buildDispatchSnapshotState>;
 type ClosedDepegResolutionRow = {
+  event_id: number;
   stablecoin_id: string;
   symbol: string;
   peak_deviation_bps: number;
@@ -198,7 +199,12 @@ export async function buildTelegramDispatchEvents(
     .flatMap((row) => {
       const previous = safeDepegSnapshot[row.stablecoin_id];
       const currentDeviationBps = Math.abs(Number(row.peak_deviation_bps ?? 0));
-      if (!previous || previous.direction !== row.direction || currentDeviationBps <= previous.deviationBps) {
+      if (
+        !previous ||
+        (previous.eventId != null && previous.eventId !== row.event_id) ||
+        previous.direction !== row.direction ||
+        currentDeviationBps <= previous.deviationBps
+      ) {
         return [];
       }
       const crossesSupportedStep = DEPEG_STEP_VALUES.some((step) =>
@@ -218,18 +224,42 @@ export async function buildTelegramDispatchEvents(
     });
 
   const depegResolved: DepegResolved[] = [];
-  const resolvedCandidateIds = [...previousActiveIds].filter(
-    (stablecoinId) => !currentRowByStablecoinId.has(stablecoinId),
-  );
+  const reopenedAfterMinutesByStablecoinId = new Map<string, number>();
+  const resolvedCandidateIds = [...previousActiveIds].filter((stablecoinId) => {
+    const current = currentRowByStablecoinId.get(stablecoinId);
+    const previous = safeDepegSnapshot[stablecoinId];
+    return !current || (previous.eventId != null && previous.eventId !== current.event_id);
+  });
   if (resolvedCandidateIds.length > 0) {
     throwIfAborted(signal);
     const resolvedRows: ClosedDepegResolutionRow[] = [];
-    for (const idChunk of chunkArray(resolvedCandidateIds)) {
+    // Modern snapshots resolve the exact prior event, not whichever event for
+    // the coin happened to close most recently. Legacy snapshots keep the
+    // documented latest-closed-row fallback until their baseline is refreshed.
+    const priorEventIds = resolvedCandidateIds.flatMap((stablecoinId) => {
+      const eventId = safeDepegSnapshot[stablecoinId].eventId;
+      return eventId != null ? [eventId] : [];
+    });
+    for (const eventIdChunk of chunkArray(priorEventIds)) {
+      throwIfAborted(signal);
+      const inClause = buildInClause(eventIdChunk);
+      const chunkRows = await db.prepare(
+        `SELECT id AS event_id, stablecoin_id, symbol, peak_deviation_bps, started_at,
+                ended_at, recovery_price, peg_reference, close_reason
+           FROM depeg_events
+          WHERE ended_at IS NOT NULL AND id IN (${inClause.sql})`,
+      ).bind(...inClause.binds).all<ClosedDepegResolutionRow>();
+      resolvedRows.push(...(chunkRows.results ?? []));
+    }
+    const legacyCandidateIds = resolvedCandidateIds.filter(
+      (stablecoinId) => safeDepegSnapshot[stablecoinId].eventId == null,
+    );
+    for (const idChunk of chunkArray(legacyCandidateIds)) {
       throwIfAborted(signal);
       const inClause = buildInClause(idChunk);
       const chunkRows = await db
         .prepare(
-          `SELECT event.stablecoin_id, event.symbol, event.peak_deviation_bps, event.started_at, event.ended_at, event.recovery_price, event.peg_reference, event.close_reason
+          `SELECT event.id AS event_id, event.stablecoin_id, event.symbol, event.peak_deviation_bps, event.started_at, event.ended_at, event.recovery_price, event.peg_reference, event.close_reason
              FROM depeg_events event
              JOIN (
                SELECT stablecoin_id, MAX(ended_at) as ended_at
@@ -252,11 +282,22 @@ export async function buildTelegramDispatchEvents(
     for (const stablecoinId of resolvedCandidateIds) {
       throwIfAborted(signal);
       const resolved = resolvedByStablecoinId.get(stablecoinId);
+      const previous = safeDepegSnapshot[stablecoinId];
       if (!resolved || resolved.ended_at == null || resolved.started_at == null) continue;
+      if (previous.eventId != null && resolved.event_id !== previous.eventId) continue;
       if (!isRecoveryClosure(resolved)) continue;
 
+      const reopened = currentRowByStablecoinId.get(stablecoinId);
+      if (reopened) {
+        if (reopened.started_at != null && reopened.started_at >= resolved.ended_at) {
+          reopenedAfterMinutesByStablecoinId.set(
+            stablecoinId,
+            Math.max(1, Math.round((reopened.started_at - resolved.ended_at) / 60)),
+          );
+        }
+        continue;
+      }
       const durationSeconds = Math.max(0, resolved.ended_at - resolved.started_at);
-      const previous = safeDepegSnapshot[stablecoinId];
       depegResolved.push({
         stablecoinId,
         symbol: resolved.symbol ?? previous?.symbol ?? getSymbol(stablecoinId),
@@ -269,7 +310,10 @@ export async function buildTelegramDispatchEvents(
   }
 
   const depegTriggered: DepegAlertPayload[] = activeDepegRows
-    .filter((row) => !previousActiveIds.has(row.stablecoin_id))
+    .filter((row) => {
+      const previous = safeDepegSnapshot[row.stablecoin_id];
+      return !previous || (previous.eventId != null && previous.eventId !== row.event_id);
+    })
     .map((row) => ({
       stablecoinId: row.stablecoin_id,
       symbol: row.symbol,
@@ -278,6 +322,9 @@ export async function buildTelegramDispatchEvents(
       price: activeDepegDisplayPrice(row),
       pegReference: Number(row.peg_reference ?? 1),
       priceCurrency: eventPriceCurrency(row.stablecoin_id, Number(row.peg_reference ?? 1)),
+      ...(reopenedAfterMinutesByStablecoinId.has(row.stablecoin_id)
+        ? { reopenedAfterMinutes: reopenedAfterMinutesByStablecoinId.get(row.stablecoin_id) }
+        : {}),
     }));
 
   const { changes: rawSafetyChanges, suppressedMethodologyChanges } = !safetySnapshotNeedsSeed

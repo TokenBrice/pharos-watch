@@ -187,7 +187,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     db
       .prepare(
         `SELECT /* pharos:telegram-dispatch:active-depegs */
-           id AS event_id, stablecoin_id, symbol, direction, peak_deviation_bps, start_price, peak_price, peg_reference
+           id AS event_id, stablecoin_id, symbol, direction, peak_deviation_bps, start_price, peak_price, peg_reference, started_at
          FROM depeg_events WHERE ended_at IS NULL`,
       )
       .all<ActiveDepegRowWithEventId>()
@@ -282,17 +282,9 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
         safetySourceAssessment.envelope.safetyScoreIdentity,
       ));
 
-  // Augment the current depeg snapshot with the active event id per coin so the
-  // close-then-reopen-within-one-window diff in dispatch-telegram-events can tell
-  // event #1 (now ended) and event #2 (now active) apart. Legacy snapshots
-  // without `eventId` still diff on stablecoin_id alone (backward compatible).
+  // The canonical builder persists event identity. Legacy snapshots without
+  // eventId retain the stablecoin-only diff until the next baseline write.
   const currentDepegSnapshot = buildDepegSnapshot(sourceData.activeDepegRows);
-  for (const row of sourceData.activeDepegRows) {
-    const entry = currentDepegSnapshot[row.stablecoin_id];
-    if (entry) {
-      (entry as DepegSnapshot[string] & { eventId?: number }).eventId = row.event_id;
-    }
-  }
 
   // P1.7: when dews/depeg snapshots are stale we enter the seed branch and skip
   // fan-out. If we ALSO overwrite the launch snapshot here, any pre-launch coin

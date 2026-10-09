@@ -1,5 +1,8 @@
 import { makeBulkPendingRow, makeSubscriptionRow, pendingDisambiguationTable } from "./telegram-rows.test-support";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { TelegramWebhookEffectFence, createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
+import { claimTelegramProcessedUpdate } from "../telegram-webhook-store";
 import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../lib/telegram/subscription-eligibility";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { TELEGRAM_BOT_COMMANDS } from "@shared/lib/telegram-bot-registration";
@@ -15,6 +18,7 @@ import {
   makeCallbackRequest,
   sentMessageBody,
   makeStablecoinsCacheTable,
+  latestSendMessageBody,
   resetTelegramWebhookTest,
   makeTelegramWebhookDb,
   mockTelegramMembership,
@@ -53,6 +57,140 @@ function pendingActionPayload(
 
 describe("handleTelegramWebhook", () => {
   beforeEach(resetTelegramWebhookTest);
+  const sqliteFixtures = createLatestSchemaFixtureTracker();
+  afterEach(sqliteFixtures.closeAll);
+
+  describe.each(["numeric", "callback"] as const)("deferred %s selection authorization", (completion) => {
+    it.each([
+      ["subscribe", "supergroup", "member", false],
+      ["set", "supergroup", "member", false],
+      ["unsubscribe", "supergroup", "member", false],
+      ["subscribe", "group", "unavailable", false],
+      ["set", "group", "unavailable", false],
+      ["unsubscribe", "group", "unavailable", false],
+      ["subscribe", "supergroup", "administrator", true],
+      ["set", "supergroup", "administrator", true],
+      ["unsubscribe", "supergroup", "administrator", true],
+      ["subscribe", "private", "member", true],
+      ["set", "private", "member", true],
+      ["unsubscribe", "private", "member", true],
+    ] as const)("freshly authorizes %s in %s with membership %s", async (action, chatType, membership, allowed) => {
+      const { sqlite, db } = sqliteFixtures.open();
+      const ambiguous = resolveTicker("USDF");
+      if (ambiguous.status !== "ambiguous") throw new Error("Expected ambiguous USDF fixture");
+      const coinId = ambiguous.matches[0].id;
+      sqlite.prepare(`
+        INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at)
+        VALUES ('-123', ?, ?)
+      `).run(Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000));
+      sqlite.prepare(`
+        INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews)
+        VALUES ('-123', ?, 0)
+      `).run(coinId);
+      mockTelegramMembership(fetchSpy, "administrator");
+      const command = action === "subscribe"
+        ? "subscribe dews USDF"
+        : action === "unsubscribe" ? "unsubscribe USDF" : "set USDF dews DANGER";
+      const addressedCommand = chatType === "private"
+        ? `/${command}`
+        : `/${command.replace(" ", "@PharosWatchBot ")}`;
+      const started = await handleTelegramWebhook(
+        db,
+        makeWebhookRequest(-123, addressedCommand, "test-secret", { chatType, fromId: 111, updateId: 800 }),
+        "test-secret",
+        "bot-token",
+      );
+      expect(started.status).toBe(200);
+      expect(fetchSpy.mock.calls.filter(([url]) => String(url).endsWith("/getChatMember")))
+        .toHaveLength(chatType === "private" ? 0 : 1);
+      const pending = sqlite.prepare("SELECT * FROM telegram_pending_disambiguation WHERE chat_id = '-123'").get();
+      expect(pending).toMatchObject({ action_type: action, initiator_user_id: "111" });
+      const before = sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '-123'").all();
+      fetchSpy.mockClear();
+      if (membership === "unavailable") {
+        fetchSpy.mockImplementation(async (url) => new Response(
+          JSON.stringify({ ok: !String(url).endsWith("/getChatMember") }),
+          { status: String(url).endsWith("/getChatMember") ? 503 : 200 },
+        ));
+      } else {
+        mockTelegramMembership(fetchSpy, membership);
+      }
+      const request = completion === "callback"
+        ? makeCallbackRequest("select:1", { chatId: -123, chatType, fromId: 111, updateId: 801 })
+        : makeWebhookRequest(-123, "1", "test-secret", { chatType, fromId: 111, updateId: 801 });
+      const response = await handleTelegramWebhook(db, request, "test-secret", "bot-token");
+      expect(response.status).toBe(200);
+      const memberCalls = fetchSpy.mock.calls.filter(([url]) => String(url).endsWith("/getChatMember"));
+      expect(memberCalls).toHaveLength(chatType === "private" ? 0 : 1);
+      if (chatType !== "private") {
+        expect(JSON.parse(String(memberCalls[0][1]?.body))).toEqual({ chat_id: "-123", user_id: 111 });
+      }
+      if (allowed) {
+        expect(sqlite.prepare(`
+          SELECT alert_dews, dews_min_band FROM telegram_subscriptions
+           WHERE chat_id = '-123' AND stablecoin_id = ?
+        `).get(coinId)).toEqual(action === "unsubscribe"
+          ? undefined
+          : { alert_dews: 1, dews_min_band: action === "set" ? "DANGER" : null });
+        expect(sqlite.prepare("SELECT * FROM telegram_pending_disambiguation WHERE chat_id = '-123'").get()).toBeUndefined();
+      } else {
+        expect(sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '-123'").all()).toEqual(before);
+        expect(sqlite.prepare("SELECT * FROM telegram_pending_disambiguation WHERE chat_id = '-123'").get()).toEqual(pending);
+      }
+    });
+  });
+
+  describe.each(["numeric", "callback", "command"] as const)("recovered %s selection authorization", (completion) => {
+    it.each([
+      ["supergroup", "member", 111, false],
+      ["supergroup", "administrator", 111, true],
+      ["supergroup", "administrator", 222, false],
+      ["private", "member", 111, true],
+    ] as const)("reauthorizes recovered intent in %s with %s actor %s", async (chatType, membership, actor, allowed) => {
+      const { sqlite, db } = sqliteFixtures.open();
+      const updateId = 802;
+      const claimed = await claimTelegramProcessedUpdate(db, {
+        updateId,
+        nowSec: Math.floor(Date.now() / 1000) - 600,
+        updateType: completion === "callback" ? "callback_query" : "message",
+        chatId: "-123",
+        processingStaleSec: 300,
+      });
+      if (claimed.status !== "claimed" || !claimed.claimOwner || claimed.claimGeneration == null) {
+        throw new Error("Expected initial webhook claim");
+      }
+      const fence = new TelegramWebhookEffectFence(
+        db, updateId, { owner: claimed.claimOwner, generation: claimed.claimGeneration }, undefined, null,
+      );
+      await fence.plan(createTelegramWebhookIntent("command:subscribe", {
+        coinIds: ["usdc-circle"],
+        presetIds: [],
+        alertTypes: ["dews"],
+        depegWorseningBpsStep: null,
+        clearPending: true,
+        initiatorUserId: "111",
+      }, "required"));
+      // Recover without a pending row: authorization must not depend on it.
+      mockTelegramMembership(fetchSpy, membership);
+      const request = completion === "callback"
+        ? makeCallbackRequest("select:1", { chatId: -123, chatType, fromId: actor, updateId })
+        : makeWebhookRequest(
+          -123,
+          completion === "command" ? "/start@PharosWatchBot sub_dews_usdc-circle" : "1",
+          "test-secret",
+          { chatType, fromId: actor, updateId },
+        );
+      await handleTelegramWebhook(db, request, "test-secret", "bot-token");
+      expect(fetchSpy.mock.calls.filter(([url]) => String(url).endsWith("/getChatMember")))
+        .toHaveLength(chatType === "private" || actor !== 111 ? 0 : 1);
+      expect(sqlite.prepare("SELECT stablecoin_id FROM telegram_subscriptions WHERE chat_id = '-123'").all())
+        .toEqual(allowed ? [{ stablecoin_id: "usdc-circle" }] : []);
+      if (!allowed) {
+        expect(sqlite.prepare("SELECT mutation_applied_at FROM telegram_processed_updates WHERE update_id = ?").get(updateId))
+          .toEqual({ mutation_applied_at: null });
+      }
+    });
+  });
 
   it.each(TELEGRAM_BOT_COMMANDS.map(({ command }) => `/${command}`))(
     "routes %s through its registered handler in a private chat",
@@ -437,6 +575,7 @@ describe("handleTelegramWebhook", () => {
       { alertTypes: ["dews"], presetIds: [] },
       ["USDA"],), "999")),
     ]);
+    mockTelegramMembership(fetchSpy, "administrator");
 
     await handleTelegramWebhook(
       db,
@@ -665,7 +804,7 @@ describe("handleTelegramWebhook", () => {
     expect(text).toContain("USDF");
   });
 
-  it("allows the initiating group member to complete a pending selection", async () => {
+  it("allows the initiating group admin to complete a pending selection", async () => {
     const ambiguous = resolveTicker("USDF");
     if (ambiguous.status !== "ambiguous") {
       throw new Error("Expected USDF to be ambiguous for group ownership test");
@@ -682,6 +821,7 @@ describe("handleTelegramWebhook", () => {
         ],
       },
     ]);
+    mockTelegramMembership(fetchSpy, "administrator");
 
     await handleTelegramWebhook(
       db,
@@ -691,7 +831,7 @@ describe("handleTelegramWebhook", () => {
     );
 
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(true);
-    expect(sentMessageBody().text).toContain("Updated subscriptions");
+    expect(latestSendMessageBody().text).toContain("Updated subscriptions");
   });
 
   it("finalizes pending /unsubscribe disambiguation with the shared completion handler", async () => {

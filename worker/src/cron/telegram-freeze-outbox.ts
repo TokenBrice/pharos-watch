@@ -7,7 +7,11 @@ import {
   resolveAlertLinkPreviewOptions,
   splitMessage,
 } from "../lib/telegram/alerts";
-import { buildPendingAlertScope } from "../lib/telegram/pending-provenance";
+import {
+  buildPendingAlertScope,
+  serializePendingAlertScope,
+  serializePendingMarkupPolicy,
+} from "../lib/telegram/pending-provenance";
 import {
   buildDedupeKey,
   buildPendingAlertEnqueueStatement,
@@ -239,7 +243,32 @@ async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, no
         linkPreviewOptions: resolveAlertLinkPreviewOptions(alerts, chunkIndex) ?? undefined,
       };
       const targetKey = buildDedupeKey(message);
-      await executeAtomicBatch(db, [
+      const matchingPendingSql = `EXISTS (
+        SELECT 1 FROM telegram_pending_alerts pending
+         WHERE pending.dedupe_key = ?
+           AND pending.source_event_id = ?
+           AND pending.chat_id = ?
+           AND pending.chunk_index = ?
+           AND pending.message_html = ?
+           AND pending.disable_notification = ?
+           AND pending.preference_generation = ?
+           AND pending.alert_scope_json = ?
+           AND pending.markup_policy_json = ?
+           AND pending.expires_at = ?
+           AND pending.source_type = 'risk_alert'
+           AND pending.alert_type = 'freeze'
+      )`;
+      const matchingPendingBinds = [
+        targetKey, sourceEventId, chatId, chunkIndex, chunk,
+        message.disableNotification ? 1 : 0, message.preferenceGeneration,
+        serializePendingAlertScope(scope),
+        serializePendingMarkupPolicy({
+          replyMarkup: message.replyMarkup,
+          linkPreviewOptions: message.linkPreviewOptions,
+        }),
+        durableExpiresAt,
+      ];
+      const handoffResults = await executeAtomicBatch(db, [
         db.prepare(
           `INSERT INTO telegram_alert_source_events (
              source_event_id, schema_version, status, detected_at, expires_at, event_payload, baseline_payload,
@@ -266,19 +295,30 @@ async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, no
              job_id, target_key, source_event_id, item_key, created_at
            ) VALUES (?, ?, ?, ?, ?)`,
         ).bind(`telegram:${sourceEventId}:freeze`, targetKey, sourceEventId, `freeze:${event.tapeEventId}`, nowSec),
-        buildPendingAlertEnqueueStatement(db, message, nowSec, { ttlSec: durableExpiresAt - nowSec }),
+        buildPendingAlertEnqueueStatement(db, message, nowSec, { ttlSec: durableExpiresAt - nowSec }, {
+          // Freeze payload/provenance is immutable even before transport starts.
+          // A conflicting row must not be rewritten into a matching handoff.
+          sql: `NOT EXISTS (
+            SELECT 1 FROM telegram_pending_alerts WHERE dedupe_key = ?
+          ) OR ${matchingPendingSql}`,
+          binds: [targetKey, ...matchingPendingBinds],
+        }),
         db.prepare(
           `UPDATE telegram_alert_job_targets
               SET status = 'queued'
-            WHERE job_id = ? AND target_key = ? AND status = 'planned'`,
-        ).bind(`telegram:${sourceEventId}:freeze`, targetKey),
+            WHERE job_id = ? AND target_key = ? AND status = 'planned'
+              AND source_event_id = ?
+              AND ${matchingPendingSql}`,
+        ).bind(`telegram:${sourceEventId}:freeze`, targetKey, sourceEventId, ...matchingPendingBinds),
         db.prepare(
           `UPDATE telegram_freeze_alert_targets
               SET status = 'queued', queued_at = ?, pending_dedupe_key = ?
-            WHERE source_event_id = ? AND target_key = ? AND status = 'planned'`,
-        ).bind(nowSec, targetKey, sourceEventId, target.target_key),
-      ]);
-      queued += 1;
+            WHERE source_event_id = ? AND target_key = ? AND status = 'planned'
+              AND preference_generation = ?
+              AND ${matchingPendingSql}`,
+        ).bind(nowSec, targetKey, sourceEventId, target.target_key, message.preferenceGeneration, ...matchingPendingBinds),
+      ], { returnResults: true });
+      queued += Number(handoffResults[handoffResults.length - 1]?.meta?.changes ?? 0);
     }
   }
   await db.prepare(

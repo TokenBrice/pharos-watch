@@ -27,6 +27,7 @@ import type { TelegramWebhookOperationIntent } from "./telegram-webhook-store";
 import {
   commandRequiresGroupAdmin,
   isRecapMutationArgs,
+  maybeGateNonAdminGroupActor,
 } from "./telegram-webhook-ingress-policy";
 
 export type ParsedTelegramCommand = NonNullable<ReturnType<typeof parseCommand>>;
@@ -297,7 +298,9 @@ export async function handlePendingActionBeforeDispatch(args: {
       await reply("Only the user who started this pending selection can complete it.");
       return "finished";
     }
-    await handleDisambiguationReply(db, chatId, text, pendingAction, botToken, username, operation);
+    await handleDisambiguationReply(
+      db, chatId, text, pendingAction, botToken, username, chatType, actorUserId, reply, operation,
+    );
     return "finished";
   }
 
@@ -368,6 +371,9 @@ async function handleDisambiguationReply(
   pending: PendingAction,
   botToken: string,
   username: string | null,
+  chatType: string,
+  actorUserId: string | null,
+  reply: ReplyFn,
   operation?: PendingSelectionOperationContext,
 ): Promise<void> {
   if (pending.actionType === "confirm-bulk" || pending.actionType === "forget-confirm") {
@@ -387,6 +393,12 @@ async function handleDisambiguationReply(
     await sendAuditedTelegramReply(db, chatId, escapeHtml(reminder), botToken);
     return;
   }
+  if (
+    isGroupChatType(chatType)
+    && !(await maybeGateNonAdminGroupActor(
+      db, botToken, chatId, actorUserId, `/${pending.actionType}`, reply,
+    ))
+  ) return;
   await executePendingDisambiguationSelection(
     db,
     botToken,

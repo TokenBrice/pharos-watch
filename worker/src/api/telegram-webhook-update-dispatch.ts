@@ -1,5 +1,6 @@
 import {
   SETUP_PENDING_ACTION_TYPE,
+  canActOnPendingOwner,
   type TelegramWebhookUpdate,
 } from "./telegram-webhook-shared";
 import {
@@ -294,6 +295,27 @@ export async function handleTelegramMessageUpdate(args: {
     }
 
     const storedSelection = parseStoredCommandSelectionIntent(effectFence?.storedIntent);
+    if (storedSelection && !canActOnPendingOwner(storedSelection.initiatorUserId, actorUserId)) {
+      await reply("Only the user who started this pending selection can complete it.");
+      return finishOk();
+    }
+    if (storedSelection && !parsedCommand) {
+      // A recovered numeric reply has no command text. Route the immutable
+      // selection through the same fresh authorization gate as its command.
+      await dispatchParsedTelegramCommand({
+        db,
+        botToken,
+        chatId,
+        chatType,
+        actorUserId,
+        parsedCommand: { command: `/${storedSelection.actionType}`, args: "", botMention: null },
+        commandContext,
+        reply,
+        replyWithMarkup,
+        storedSelection,
+      });
+      return finishOk();
+    }
     const resumeStoredCommand = Boolean(
       parsedCommand
       && effectFence?.storedIntent
@@ -467,7 +489,7 @@ async function dispatchParsedTelegramCommand(args: {
 
   if (
     isChannelChatType(chatType) &&
-    commandRequiresGroupAdmin(parsedCommand.command, parsedCommand.args)
+    (storedSelection || commandRequiresGroupAdmin(parsedCommand.command, parsedCommand.args))
   ) {
     await reply("Channel-originated mutations are not supported. Manage alerts from a private chat or group.");
     await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "denied", "channel_mutation");
@@ -476,14 +498,14 @@ async function dispatchParsedTelegramCommand(args: {
 
   if (
     isGroupChatType(chatType) &&
-    commandRequiresGroupAdmin(parsedCommand.command, parsedCommand.args)
+    (storedSelection || commandRequiresGroupAdmin(parsedCommand.command, parsedCommand.args))
   ) {
     const proceed = await maybeGateNonAdminGroupActor(
       db,
       botToken,
       chatId,
       actorUserId,
-      parsedCommand.command,
+      storedSelection ? `/${storedSelection.actionType}` : parsedCommand.command,
       reply,
     );
     if (!proceed) {

@@ -37,7 +37,7 @@ export const SNAPSHOT_MAX_AGE_SEC = DAY_SECONDS; // 24h
 // ---------- Types ----------
 
 export type DewsSnapshot = Record<string, string>;
-export type DepegSnapshot = Record<string, DepegAlertPayload>;
+export type DepegSnapshot = Record<string, DepegAlertPayload & { eventId?: number }>;
 export type SafetySnapshot = AlertSafetySourceSnapshot;
 
 export interface DewsRow {
@@ -48,6 +48,8 @@ export interface DewsRow {
 }
 
 export interface ActiveDepegRow {
+  event_id?: number;
+  started_at?: number;
   stablecoin_id: string;
   symbol: string;
   direction: "above" | "below";
@@ -118,6 +120,7 @@ export function buildDepegSnapshot(rows: ActiveDepegRow[]): DepegSnapshot {
   for (const row of rows) {
     const displayPrice = row.peak_price ?? row.start_price;
     snapshot[row.stablecoin_id] = {
+      eventId: row.event_id,
       stablecoinId: row.stablecoin_id,
       symbol: row.symbol,
       direction: row.direction,
