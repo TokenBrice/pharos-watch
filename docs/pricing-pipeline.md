@@ -37,10 +37,12 @@ Continuity reads distinguish an absent prior generation from a failed read or ma
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.44`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.45`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
+
+The 2026-10-09 `v6.45` change adds a sticky chain-dropout guard for DefiLlama list supply. A positive row whose chain current is null, zero, or at most half of a persisted vetted per-chain baseline (at least $1M) no longer publishes that collapse as supply. The chain is repaired from a reviewed issuer-native on-chain read or a fresh DefiLlama per-chain daily point; otherwise it is published as `null`. A material deficit (at least 2%) quarantines the asset with `supplyRestored`, carrying the frozen baselines for at most 7 days and then publishing unavailable supply, never accepting the collapse because time passed. The trigger was the 2026-10-09 DefiLlama list regression that understated USDG by 47% and USDC by $7.5B. Contract and thresholds: [Chain dropout guard](./supply-snapshot.md#chain-dropout-guard). The entry provisionally activates at 2026-10-10 00:00 UTC and must be re-dated at release.
 
 The 2026-10-08 `v6.44` change makes discovery CoinGecko Tickers price-only: admission requires at least $1,000 observed USD flow, non-future evidence within 24h and peg-aware plausibility; aggregate median weight is observed flow × existing ticker confidence (0.55), not synthetic TVL/depth. A ticker-only `dex_prices` publication may have `source_total_tvl = 0` but remains behind the unchanged primary, UI and depeg trust gates. Liquidity v6.93 independently removes synthetic ticker liquidity and fixes the registry evaluation clock. Both entries provisionally activate at 2026-10-09 00:00 UTC and must be re-dated at release; Safety formula is unchanged and improved Safety Score stability is unmeasured.
 

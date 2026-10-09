@@ -133,6 +133,25 @@ export const SupplyGapFillProvenanceSchema = z.object({
 });
 export type SupplyGapFillProvenance = z.infer<typeof SupplyGapFillProvenanceSchema>;
 
+/** Current-chain dropout evidence; historical aggregate buckets are never rewritten by this lane. */
+export const SupplyChainGuardProvenanceSchema = z.object({
+  reason: z.literal("supply-chain-dropout"),
+  status: z.enum(["repaired", "quarantined", "unavailable", "chains-unavailable"]),
+  quarantinedSince: z.number().int().nonnegative().optional(),
+  chains: z.array(z.object({
+    chainId: z.string().optional(),
+    chainLabel: z.string(),
+    listCurrentUsd: z.number().finite().nonnegative().nullable(),
+    baselineUsd: z.number().finite().nonnegative(),
+    baselineObservedAt: z.number().int().nonnegative(),
+    baselineSource: z.enum(["state", "seed", "list-prev-day"]),
+    resolution: z.enum(["onchain-total-supply", "defillama-chain-history", "carried-baseline", "unavailable"]),
+    repairedCurrentUsd: z.number().finite().nonnegative().optional(),
+    observedAt: z.number().int().nonnegative().optional(),
+  })).min(1),
+});
+export type SupplyChainGuardProvenance = z.infer<typeof SupplyChainGuardProvenanceSchema>;
+
 const StablecoinDataRawSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -156,6 +175,7 @@ const StablecoinDataRawSchema = z.object({
   supplyObservedAt: z.number().nullable().optional(),
   supplyRestored: z.boolean().optional(),
   supplyGapFill: SupplyGapFillProvenanceSchema.optional(),
+  supplyChainGuard: SupplyChainGuardProvenanceSchema.optional(),
   circulating: SupplyBucketsSchema,
   circulatingPrevDay: SupplyBucketsSchema.nullish(),
   circulatingPrevWeek: SupplyBucketsSchema.nullish(),
@@ -191,6 +211,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   ...(asset.supplyObservedAt != null ? { supplyObservedAt: asset.supplyObservedAt } : {}),
   ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
   ...(asset.supplyGapFill != null ? { supplyGapFill: asset.supplyGapFill } : {}),
+  ...(asset.supplyChainGuard != null ? { supplyChainGuard: asset.supplyChainGuard } : {}),
   circulating: asset.circulating,
   circulatingPrevDay: asset.circulatingPrevDay ?? {},
   circulatingPrevWeek: asset.circulatingPrevWeek ?? {},

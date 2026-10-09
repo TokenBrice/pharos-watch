@@ -5,6 +5,7 @@ import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
 import { buildSyncMetadata, type CronResult, type PriceSourceHealth, type TrackedCoverageRestoreResult } from "./shared";
 import type { CanonicalDeduplicationResult } from "./phase-helpers";
 import type { SupplyGapReconciliationResult } from "./supply-gap-reconciliation";
+import type { SupplyChainGuardResult } from "./chain-dropout-guard";
 import type { GtProbeStats } from "../../lib/geckoterminal-price-probe-stats";
 import {
   createEmptyPriceSourceHealthDistribution,
@@ -357,6 +358,9 @@ function sizeGuardMetadataForRung(
     priceObservationEffectiveness: guard.metadata.priceObservationEffectiveness,
     depegErrorCount: guard.metadata.depegErrorCount,
     stalenessCheckFailed: guard.metadata.stalenessCheckFailed,
+    reason: guard.metadata.reason,
+    supplyChainGuard: guard.metadata.supplyChainGuard,
+    quality: guard.metadata.quality,
     activePublicationCoverage: guard.publicationCoverage,
     activePriceCoverage: compactStablecoinActivePriceCoverage(
       guard.activePriceCoverage,
@@ -389,6 +393,8 @@ function sizeGuardTerminalMetadata(guard: StablecoinsMetadataSizeGuardInput): Re
     rejectedPrices: guard.metadata.rejectedPrices,
     depegErrorCount: guard.metadata.depegErrorCount,
     stalenessCheckFailed: guard.metadata.stalenessCheckFailed,
+    supplyChainGuard: guard.metadata.supplyChainGuard,
+    quality: guard.metadata.quality,
     activePublicationCoverage: {
       complete: guard.publicationCoverage.complete,
       expectedActiveCount: guard.publicationCoverage.expectedActiveCount,
@@ -445,6 +451,7 @@ export function buildStablecoinsSyncResult(input: {
   stalenessCheckFailed: boolean;
   stalenessCheckFailureReason?: string;
   supplyGapReconciliation?: SupplyGapReconciliationResult | null;
+  supplyChainGuard?: Omit<SupplyChainGuardResult, "state">;
   trackedCoverage?: TrackedCoverageRestoreResult | null;
   gtProbe: { stats: GtProbeStats };
   depegErrorCount: number;
@@ -505,6 +512,8 @@ export function buildStablecoinsSyncResult(input: {
     providerDiagnostics: input.providerDiagnostics ?? [],
     authoritativeOverrideStats: input.authoritativeOverrideStats,
   });
+  const supplyQuarantined = (input.supplyChainGuard?.quarantinedAssetIds.length ?? 0) > 0
+    || (input.supplyChainGuard?.unavailableAssetIds.length ?? 0) > 0;
   const status: CronResult["status"] =
     input.depegErrorCount > 0
       || input.stalenessCheckFailed
@@ -558,6 +567,27 @@ export function buildStablecoinsSyncResult(input: {
     depegPipelineSucceeded: input.depegPipelineSucceeded ?? input.depegErrorCount === 0,
     stalenessCheckFailed: input.stalenessCheckFailed,
   };
+  if (input.supplyChainGuard) {
+    const guard = input.supplyChainGuard;
+    metadata.supplyChainGuard = {
+      reason: supplyQuarantined ? "supply-chain-dropout-quarantine" : "supply-chain-dropout",
+      flagged: guard.flagged,
+      repaired: guard.repaired,
+      quarantinedAssetIds: guard.quarantinedAssetIds.slice(0, MAX_DIAGNOSTIC_ARRAY_ITEMS),
+      quarantinedAssetCount: guard.quarantinedAssetIds.length,
+      unavailableAssetIds: guard.unavailableAssetIds.slice(0, MAX_DIAGNOSTIC_ARRAY_ITEMS),
+      unavailableAssetCount: guard.unavailableAssetIds.length,
+      historyFetches: guard.historyFetches,
+      stateReadFailed: guard.stateReadFailed,
+    };
+    if (supplyQuarantined) {
+      metadata.quality = {
+        reason: "supply-chain-dropout-quarantine",
+        quarantinedAssetCount: guard.quarantinedAssetIds.length,
+        unavailableAssetCount: guard.unavailableAssetIds.length,
+      };
+    }
+  }
   if (input.stalenessWarning) metadata.stalenessWarning = true;
   if (input.stalenessCheckFailureReason) {
     metadata.stalenessCheckFailureReason = input.stalenessCheckFailureReason;

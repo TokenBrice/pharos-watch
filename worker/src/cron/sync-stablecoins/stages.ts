@@ -47,6 +47,7 @@ import {
 } from "./post-enrichment";
 import type { CoinGeckoMcapData } from "./supplemental-assets";
 import type { SupplyGapReconciliationResult } from "./supply-gap-reconciliation";
+import type { SupplyChainGuardResult } from "./chain-dropout-guard";
 import type { PeggedAsset } from "./enrich-prices";
 
 interface StablecoinsIntakeStageOptions {
@@ -79,6 +80,7 @@ export type StablecoinsIntakeStageResult =
       previousCacheState: PreviousStablecoinsCacheState;
       cgData: CoinGeckoMcapData;
       supplyGapReconciliation: SupplyGapReconciliationResult;
+      supplyChainGuard: SupplyChainGuardResult;
       trackedCoverage: TrackedCoverageRestoreResult;
     };
 
@@ -146,6 +148,7 @@ export async function runStablecoinsIntakeStage(
     fxFallbackRates,
     validationReferences,
     supplyGapReconciliation: intake.supplyGapReconciliation,
+    supplyChainGuard: intake.supplyChainGuard,
     trackedCoverage: intake.trackedCoverage,
   };
 }

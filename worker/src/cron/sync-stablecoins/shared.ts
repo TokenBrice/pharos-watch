@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { StablecoinListResponseSchema } from "@shared/types/market";
+import { StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema } from "@shared/types/market";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/types/chain-identity";
@@ -109,6 +109,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
         gecko_id: _ignoredSnakeCase,
         supplyObservedAt: _ignoredSupplyObservedAt,
         supplyRestored: _ignoredSupplyRestored,
+        supplyChainGuard: _ignoredSupplyChainGuard,
         ...rest
       } = asset as PeggedAsset & { gecko_id?: unknown };
       const hasUsablePrice = typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
@@ -138,6 +139,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
           ? confidence
           : null;
       const supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt);
+      const supplyChainGuard = SupplyChainGuardProvenanceSchema.safeParse(asset.supplyChainGuard);
 
       return {
         ...rest,
@@ -155,6 +157,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
         priceSourceConfidenceProfile: hasUsablePrice ? (asset.priceSourceConfidenceProfile ?? null) : null,
         ...(supplyObservedAt != null ? { supplyObservedAt } : {}),
         ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
+        ...(supplyChainGuard.success ? { supplyChainGuard: supplyChainGuard.data } : {}),
         circulatingPrevDay: toPegBuckets(asset.circulatingPrevDay),
         circulatingPrevWeek: toPegBuckets(asset.circulatingPrevWeek),
         circulatingPrevMonth: toPegBuckets(asset.circulatingPrevMonth),
