@@ -24,6 +24,8 @@ Admin broadcasts are lower priority than risk alerts. They enqueue into `telegra
 
    Dry-run and live requests both preflight `messageHtml` before target selection. Unsupported Telegram HTML tags/attributes/entities, malformed tags, or unbalanced tags return `422` with an error position and write an admin-audit error. The accepted subset is `a[href]`, `b`/`strong`, `i`/`em`, `u`/`ins`, `s`/`strike`/`del`, `code`, `pre`, `tg-spoiler`, and `blockquote` with optional `expandable`; keep operator notices inside that subset.
 
+   In the operator broadcast panel, live send stays disabled until a successful preview covers the exact current `messageHtml` and audience. Editing either requires a new preview. If a preview response is lost, **Retry same intent** replays the original request body and idempotency key; a successful retry confirms only that original draft, not edits made while its outcome was unknown. Reconcile that intent, then use **Preview (dry run)** to review the edited draft before sending live.
+
 3. **Estimate drain time.** Read the dry-run `targetMessageCount` and `deliveryEstimate`. Proceed only when `hasMaterialTtlReserve` is true: estimated fleet drain must leave at least the hard 15-minute reserve inside the 45-minute TTL. The API returns `409` when that reserve is unavailable; no acknowledgement flag can bypass it.
 4. **Choose the smallest scope.** Prefer `deliverable-watchers`. Use `global-subscribers` only for global-alert policy notices, and `all` only when intentionally targeting every subscriber row.
 5. **Avoid market-event windows.** Do not broadcast during an active depeg, DEWS burst, safety-grade publication issue, or Telegram 429 storm.

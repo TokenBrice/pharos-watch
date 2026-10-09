@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AdminMutationError } from "@/lib/admin-access";
+import { RequestFailure } from "@/lib/request";
 
 const { adminMutationMock } = vi.hoisted(() => ({
   adminMutationMock: vi.fn(),
@@ -125,6 +126,52 @@ describe("TelegramBroadcastPanel", () => {
     fireEvent.change(screen.getByLabelText("Audience"), { target: { value: "global-subscribers" } });
     expect(button("Send live broadcast").disabled).toBe(true);
     expect(adminMutationMock).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    { edit: "message", messageHtml: "<b>Draft B</b>", scope: "all" },
+    { edit: "audience only", messageHtml: "<b>Draft A</b>", scope: "global-subscribers" },
+    { edit: "message and audience", messageHtml: "<b>Draft B</b>", scope: "global-subscribers" },
+  ])("does not certify the edited $edit when an uncertain preview retries the original intent", async ({
+    messageHtml,
+    scope,
+  }) => {
+    adminMutationMock
+      .mockRejectedValueOnce(
+        new RequestFailure("network", "/api/admin-telegram-broadcast", "Preview response lost"),
+      )
+      .mockResolvedValue(okResult({ targetChatCount: 12, chunkCount: 1 }));
+    render(<TelegramBroadcastPanel />);
+
+    typeMessage("<b>Draft A</b>");
+    fireEvent.change(screen.getByLabelText("Canary chat ID (private chat)"), { target: { value: "123456789" } });
+    fireEvent.click(button("Preview (dry run)"));
+    await screen.findByText("Outcome unknown");
+
+    typeMessage(messageHtml);
+    fireEvent.change(screen.getByLabelText("Audience"), { target: { value: scope } });
+    fireEvent.click(button("Retry same intent"));
+    await screen.findByText("Broadcast preview completed. Review the projected fan-out below before sending live.");
+
+    expect(adminMutationMock).toHaveBeenCalledTimes(2);
+    const originalRequest = adminMutationMock.mock.calls[0]?.[1];
+    const retriedRequest = adminMutationMock.mock.calls[1]?.[1];
+    expect(retriedRequest?.body).toEqual(originalRequest?.body);
+    expect(retriedRequest?.body).toMatchObject({ messageHtml: "<b>Draft A</b>", scope: "all", dryRun: true });
+    expect(retriedRequest?.idempotencyKey).toBe(originalRequest?.idempotencyKey);
+    expect(button("Send live broadcast").disabled).toBe(true);
+    fireEvent.click(button("Send live broadcast"));
+    expect(adminMutationMock).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(button("Preview (dry run)"));
+    await waitFor(() => expect(button("Send live broadcast").disabled).toBe(false));
+    expect(adminMutationMock).toHaveBeenCalledTimes(3);
+    expect(adminMutationMock.mock.calls[2]?.[1]?.body).toMatchObject({ messageHtml, scope, dryRun: true });
+    expect(adminMutationMock.mock.calls[2]?.[1]?.idempotencyKey).not.toBe(originalRequest?.idempotencyKey);
+
+    fireEvent.click(button("Send live broadcast"));
+    await waitFor(() => expect(adminMutationMock).toHaveBeenCalledTimes(4));
+    expect(adminMutationMock.mock.calls[3]?.[1]?.body).toMatchObject({ messageHtml, scope, dryRun: false });
   });
 
   it("leaves the live send disabled when the preview fails", async () => {

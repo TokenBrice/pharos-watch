@@ -38,7 +38,12 @@ interface BroadcastFormState {
   canaryChatId: string;
 }
 
-function buildBody(state: BroadcastFormState, dryRun: boolean): Record<string, unknown> {
+interface BroadcastRequestBody extends Pick<BroadcastFormState, "messageHtml" | "scope"> {
+  dryRun: boolean;
+  canaryChatId?: string;
+}
+
+function buildBody(state: BroadcastFormState, dryRun: boolean): BroadcastRequestBody {
   const canaryChatId = state.canaryChatId.trim();
   return {
     messageHtml: state.messageHtml,
@@ -80,10 +85,8 @@ export function TelegramBroadcastPanel() {
     setState((previous) => ({ ...previous, ...next }));
   }
 
-  // The preview-first invariant belongs to the lane, not to the primary
-  // button: the failure banner's retry/new-intent actions rebuild the body
-  // from current form state too, so any of them could fan an unreviewed draft
-  // out to every subscriber.
+  // Guard every live-lane action, including the failure banner's retry and
+  // new-intent actions, so none can send without a matching preview.
   async function run(lane: string, dryRun: boolean, mode: AdminMutationIntentMode) {
     if (!dryRun && !canSendLive) return;
     const execution = await runIntent({
@@ -97,9 +100,12 @@ export function TelegramBroadcastPanel() {
     });
     if (execution === null) return;
     if (execution.status === "succeeded") {
-      // Record the click-time draft: `state` here is the render snapshot this
-      // request was built from, so it is exactly what the preview reviewed.
-      if (dryRun) setPreviewedDraft({ messageHtml: state.messageHtml, scope: state.scope });
+      // Same-intent retries replay the original request, even if the form
+      // changed after an uncertain outcome. Certify only that executed body.
+      if (dryRun) {
+        const body = execution.request.body as BroadcastRequestBody;
+        setPreviewedDraft({ messageHtml: body.messageHtml, scope: body.scope });
+      }
       setReceipt({
         receipt: buildAdminMutationReceiptMetadata(execution),
         message: dryRun
