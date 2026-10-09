@@ -118,8 +118,8 @@ function deriveContextKeys(row: MergedRow): ContextKey[] {
   }
   if (row.depegEventCount >= 1) keys.push("depeg-history");
   if (row.venueRiskTier === "high") keys.push("high-venue-risk");
-  if (row.warningSignals.includes("unstable-apy")) keys.push("unstable-apy");
-  if (row.warningSignals.includes("thin-tvl")) keys.push("thin-tvl");
+  if (row.warningSignals?.includes("unstable-apy")) keys.push("unstable-apy");
+  if (row.warningSignals?.includes("thin-tvl")) keys.push("thin-tvl");
   if (row.currentDeviationBps != null && Math.abs(row.currentDeviationBps) > 25) {
     keys.push("current-deviation");
   }

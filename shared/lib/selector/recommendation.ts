@@ -92,7 +92,7 @@ export function whyKeyTriggers(
     case "low-variance":
       return row.apyVariance30d != null && row.apyVariance30d <= 0.5;
     case "clean-yield-source":
-      return row.venueRiskTier === "low" && row.warningSignals.length === 0;
+      return row.venueRiskTier === "low" && row.warningSignals?.length === 0;
     case "native-wrapper-rail":
       return row.deploymentPlace === "native-wrapper";
     case "yield-source-recently-switched":

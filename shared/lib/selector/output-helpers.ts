@@ -60,7 +60,7 @@ function liveReadingFor(reason: ExclusionReason, row: MergedRow): string {
       return row.venueRiskTier != null ? `venue risk ${row.venueRiskTier}` : "venue risk gap";
     case "yield-warning-unstable":
     case "yield-warning-thin-tvl":
-      return row.warningSignals.length > 0 ? row.warningSignals.join(", ") : "yield warning";
+      return row.warningSignals?.length ? row.warningSignals.join(", ") : "yield warning";
     case "custody-regulated-only-violation":
     case "custody-onchain-only-violation":
       return row.custodyModel != null

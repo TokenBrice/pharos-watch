@@ -16,6 +16,9 @@ import {
 } from "./snapshot-fixture";
 import { BluechipGradeSchema } from "../../../types/core";
 import { SELECTOR_VERSION } from "../version";
+import { runSelector } from "../engine";
+import { FIXTURE_DATASET, makeInput } from "./fixture";
+import { makeYieldRailRow } from "./engine.test-support";
 
 function expectValid(value: unknown) {
   const result = validateSelectorSnapshot(value);
@@ -680,5 +683,45 @@ describe("selector snapshot contract", () => {
         ],
       }),
     );
+  });
+});
+
+describe("verified selected-rail snapshot projection", () => {
+  const dataset = { ...FIXTURE_DATASET, datasetHash: "a".repeat(64) };
+  it("round-trips selected alternate components and chain hints without primary evidence", () => {
+    const row = makeYieldRailRow();
+    const input = makeInput({ profile: "yield", venuePreferences: ["lend"], minApy: 5 });
+    const output = runSelector(input, { rows: new Map([[row.id, row]]) }, dataset);
+    const snapshot = createVerifiedSelectorSnapshot(output);
+    const roundTrip = validateVerifiedSelectorSnapshot(JSON.parse(JSON.stringify(snapshot)));
+    expect(roundTrip.ok).toBe(true);
+    if (!roundTrip.ok) throw new Error(`Expected verified snapshot: ${roundTrip.error}`);
+    expect(roundTrip.snapshot).toEqual(snapshot);
+    expect(computeSelectorSnapshotSid(roundTrip.snapshot)).toEqual(computeSelectorSnapshotSid(snapshot));
+    const rec = roundTrip.snapshot.recommended[0]!;
+    expect(rec.recommendedSource).toMatchObject({ sourceKey: "alternate-lending", apy30d: 5, pharosYieldScore: null });
+    expect(rec.components).toEqual(output.recommended[0]!.components);
+    expect(rec.components.find((component) => component.key === "sourceRiskInverted")?.rawValue).toBe(70);
+    expect(rec.components.find((component) => component.key === "pharosYieldScore")?.rawValue).toBeNull();
+    expect(rec.components.find((component) => component.key === "yieldVariance")?.rawValue).toBeNull();
+    expect(rec.chainHints).toEqual(output.recommended[0]!.chainHints);
+    expect(rec.whyKeys).toEqual(output.recommended[0]!.whyKeys);
+    expect(rec.score).toBe(output.recommended[0]!.score);
+    expect(roundTrip.snapshot.engineVersion).toBe(SELECTOR_VERSION);
+  });
+
+  it("keeps selector-v2.7 snapshots on the current component replay path", () => {
+    const row = makeYieldRailRow();
+    const output = runSelector(makeInput({ profile: "yield", venuePreferences: ["wrap"] }), {
+      rows: new Map([[row.id, row]]),
+    }, dataset);
+    const snapshot = createVerifiedSelectorSnapshot({
+      ...output,
+      engineVersion: "selector-v2.7",
+      methodologyVersions: { ...output.methodologyVersions, exclusionFilters: "selector-v2.7" },
+    });
+    expect(validateVerifiedSelectorSnapshot(snapshot).ok).toBe(true);
+    expect(snapshot.recommended[0]!.components).toEqual(output.recommended[0]!.components);
+    expect(snapshot.recommended[0]!.score).toBe(output.recommended[0]!.score);
   });
 });

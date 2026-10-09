@@ -178,12 +178,13 @@ function applyProfileExclusions(
   row: MergedRow,
   profile: SelectorProfile,
   input: SelectorInput,
+  sourceRow: MergedRow = row,
 ): ExclusionRecord | null {
   switch (profile) {
     case "treasury":
       return treasuryExclusions(row, input);
     case "yield":
-      return yieldExclusions(row, input);
+      return yieldExclusions(row, input, sourceRow);
     case "trading":
       return tradingExclusions(row, input);
   }
@@ -209,37 +210,38 @@ function treasuryExclusions(row: MergedRow, input: SelectorInput): ExclusionReco
   return null;
 }
 
-function yieldExclusions(row: MergedRow, input: SelectorInput): ExclusionRecord | null {
+function yieldExclusions(row: MergedRow, input: SelectorInput, sourceRow: MergedRow): ExclusionRecord | null {
   if (row.safetyGrade != null && YIELD_TRADING_GRADE_REJECT.has(row.safetyGrade)) {
     return fail(row.id, "safety-grade-floor");
   }
   if (row.pharosYieldScore == null) {
     return fail(row.id, "pys-null");
   }
-  if (row.apy30d == null) {
-    return fail(row.id, "pys-null");
-  }
-  const benchmarkFloor =
-    row.benchmarkRate != null ? row.benchmarkRate * 0.75 : 0;
-  const apyFloor = Math.max(input.minApy ?? 0, benchmarkFloor);
-  if (row.apy30d < apyFloor) {
-    return fail(row.id, "apy-below-floor");
-  }
-  if (
-    row.venueRiskTier === "high" &&
-    (row.safetyGrade === "C" || row.safetyGrade === "C-")
-  ) {
-    return fail(row.id, "high-venue-on-c-tier");
-  }
-  if (row.warningSignals.includes("unstable-apy")) {
-    return fail(row.id, "yield-warning-unstable");
-  }
-  if (row.warningSignals.includes("thin-tvl")) {
-    return fail(row.id, "yield-warning-thin-tvl");
-  }
+  const sourceExclusion = evaluateYieldSourceExclusions(sourceRow, input);
+  if (sourceExclusion != null) return sourceExclusion;
   const yieldFloorRecord = failPegScoreFloor(row, yieldPegScoreFloor(input.depegTolerance));
   if (yieldFloorRecord != null) {
     return yieldFloorRecord;
+  }
+  return null;
+}
+
+/** Source-dependent gates, evaluated for each resolved rail before ranking it. */
+export function evaluateYieldSourceExclusions(
+  row: MergedRow,
+  input: SelectorInput,
+): ExclusionRecord | null {
+  if (row.apy30d == null) return fail(row.id, "pys-null");
+  const benchmarkFloor = row.benchmarkRate != null ? row.benchmarkRate * 0.75 : 0;
+  const apyFloor = Math.max(input.minApy ?? 0, benchmarkFloor);
+  if (row.apy30d < apyFloor) return fail(row.id, "apy-below-floor");
+  if (row.venueRiskTier === "high" && (row.safetyGrade === "C" || row.safetyGrade === "C-")) {
+    return fail(row.id, "high-venue-on-c-tier");
+  }
+  if (row.warningSignals?.includes("unstable-apy")) return fail(row.id, "yield-warning-unstable");
+  if (row.warningSignals?.includes("thin-tvl")) return fail(row.id, "yield-warning-thin-tvl");
+  if (input.yieldNativeOnly && row.deploymentPlace !== "native-wrapper" && row.deploymentPlace !== "issuer-savings") {
+    return fail(row.id, "yield-native-only-violation");
   }
   return null;
 }
@@ -306,10 +308,9 @@ export function applyInputDrivenExclusions(
       return fail(row.id, "custody-onchain-only-violation");
     }
   }
-  if (input.profile === "yield" && input.yieldNativeOnly && row.deploymentPlace != null) {
-    if (row.deploymentPlace !== "native-wrapper" && row.deploymentPlace !== "issuer-savings") {
-      return fail(row.id, "yield-native-only-violation");
-    }
+  if (input.profile === "yield" && input.yieldNativeOnly &&
+      row.deploymentPlace !== "native-wrapper" && row.deploymentPlace !== "issuer-savings") {
+    return fail(row.id, "yield-native-only-violation");
   }
   return null;
 }
@@ -321,11 +322,12 @@ export function applyInputDrivenExclusions(
 export function evaluateExclusions(
   row: MergedRow,
   input: SelectorInput,
+  sourceRow: MergedRow = row,
 ): ExclusionRecord | null {
   return (
     applyUniversalExclusions(row, input) ??
-    applyProfileExclusions(row, input.profile, input) ??
-    applyInputDrivenExclusions(row, input)
+    applyProfileExclusions(row, input.profile, input, sourceRow) ??
+    applyInputDrivenExclusions(sourceRow, input)
   );
 }
 
@@ -365,6 +367,7 @@ export interface CoverageResult {
 export function hasRequiredSignals(
   row: MergedRow,
   profile: SelectorProfile,
+  sourceRow: MergedRow = row,
 ): CoverageResult {
   const missing: string[] = [];
   if (row.safetyProvenance !== "safety-score-v9") {
@@ -378,8 +381,10 @@ export function hasRequiredSignals(
       for (const reason of reasons) missing.push(`safety-nr: ${reason}`);
     }
   }
+  // PYS proves yield-domain coverage, not alternate source quality. APY coverage
+  // belongs to the selected rail; its unavailable PYS is handled by scoring.
   for (const signal of REQUIRED_SIGNALS_BY_PROFILE[profile]) {
-    if (row[signal] == null) {
+    if ((signal === "apy30d" ? sourceRow : row)[signal] == null) {
       missing.push(String(signal));
     }
   }

@@ -8,6 +8,7 @@ import {
   type SelectorProfile,
 } from "../types";
 import { buildFixtureData, FIXTURE_DATASET, makeInput, makeMergedRowWithIdentity } from "./fixture";
+import { makeYieldRailRow } from "./engine.test-support";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -189,6 +190,121 @@ describe("runSelector — Treasury happy path", () => {
       expect.objectContaining({ reason: "peg-score-floor", count: 1 }),
     ]);
     expect(out.usedRelaxedFallback).toBe(false);
+  });
+});
+
+describe("runSelector — selected yield rail evidence", () => {
+  const input = makeInput({ profile: "yield", venuePreferences: ["lend"] });
+
+  it.each([
+    ["minimum APY", { apy30d: 4 }, { minApy: 5 }],
+    ["combined APY/native constraints", { apy30d: 1 }, { minApy: 5, yieldNativeOnly: true }],
+    ["benchmark APY floor", { apy30d: 2.9 }, {}],
+    ["native-only", {}, { yieldNativeOnly: true }],
+    ["unknown native deployment", { deploymentPlace: null }, { yieldNativeOnly: true }],
+  ] as const)("filters the preferred alternate against %s before venue ranking", (_name, alternate, constraints) => {
+    const row = makeYieldRailRow(alternate);
+    const out = runSelector({ ...input, ...constraints }, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    const rec = out.recommended[0];
+    expect(rec?.profile).toBe("yield");
+    if (rec?.profile !== "yield") throw new Error("Expected yield recommendation");
+    expect(rec.recommendedSource.sourceKey).toBe("primary-wrapper");
+    expect(rec.components.find((component) => component.key === "excessApy")?.rawValue).toBe(6);
+    expect(rec.chainHints.topByYield).toEqual(["ethereum"]);
+  });
+
+  it("filters high-risk alternates on C-tier coins using the alternate risk tier", () => {
+    const row = makeYieldRailRow({}, { safetyGrade: "C" });
+    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    const rec = out.recommended[0];
+    expect(rec?.profile).toBe("yield");
+    if (rec?.profile !== "yield") throw new Error("Expected yield recommendation");
+    expect(rec.recommendedSource.sourceKey).toBe("primary-wrapper");
+    expect(rec.components.find((component) => component.key === "sourceRiskInverted")?.rawValue).toBe(10);
+  });
+
+  it("uses selected alternate evidence for scoring, explanations, watch context and chain hints", () => {
+    const row = makeYieldRailRow();
+    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    const rec = out.recommended[0];
+    expect(rec?.profile).toBe("yield");
+    if (rec?.profile !== "yield") throw new Error("Expected yield recommendation");
+    expect(rec.recommendedSource).toMatchObject({ sourceKey: "alternate-lending", apy30d: 5, pharosYieldScore: null });
+    expect(rec.components.find((component) => component.key === "excessApy")?.rawValue).toBe(1);
+    expect(rec.components.find((component) => component.key === "sourceRiskInverted")?.rawValue).toBe(70);
+    for (const key of ["pharosYieldScore", "yieldVariance"]) {
+      expect(rec.components.find((component) => component.key === key)).toMatchObject({
+        rawValue: null, weight: 0, redistributed: true,
+      });
+      expect(rec.confidenceReasons).toContain(`missing-critical-${key}`);
+    }
+    expect(rec.whyKeys).not.toEqual(expect.arrayContaining(["top-pys"]));
+    for (const key of ["yield-above-benchmark", "low-variance", "clean-yield-source", "native-wrapper-rail"]) {
+      expect(rec.whyKeys).not.toContain(key);
+    }
+    expect(rec.lowestSubDimension).toMatchObject({ key: "sourceRisk", contextKeys: expect.arrayContaining(["high-venue-risk", "yield-source-switched"]) });
+    expect(rec.watchText).toBeTruthy();
+    expect(rec.confidenceReasons).toEqual(expect.arrayContaining(["short-yield-history", "yield-source-switched"]));
+    expect(rec.chainHints).toMatchObject({ topByLiquidity: ["ethereum"], topByYield: ["arbitrum"], primary: "arbitrum" });
+    expect(rec.safetyGrade).toBe(row.safetyGrade);
+    expect(rec.supplyUsd).toBe(row.supplyUsd);
+  });
+
+  it("lets eligible alternates survive primary APY and warning failures", () => {
+    const row = makeYieldRailRow({}, { apy30d: 1, warningSignals: ["unstable-apy", "thin-tvl"] });
+    row.yieldSources = row.yieldSources!.map((source) => source.isPrimary ? { ...source, apy30d: 1 } : source);
+    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    expect(out.recommended[0]?.recommendedSource?.sourceKey).toBe("alternate-lending");
+    expect(out.recommended[0]?.lowestSubDimension.contextKeys).not.toContain("unstable-apy");
+    expect(out.recommended[0]?.lowestSubDimension.contextKeys).not.toContain("thin-tvl");
+  });
+
+  it("uses alternate APY coverage when the primary APY is unavailable", () => {
+    const row = makeYieldRailRow({}, { apy30d: null });
+    row.yieldSources = row.yieldSources!.filter((source) => !source.isPrimary);
+    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    expect(out.recommended[0]?.recommendedSource?.sourceKey).toBe("alternate-lending");
+    expect(out.coverageWarnings.skippedForCoverage).toEqual([]);
+  });
+
+  it("keeps selected venue depth separate from coin-level DEX depth in watch output", () => {
+    const row = makeYieldRailRow({ sourceRiskScore: 30, venueRiskTier: "mid", sourceTvlUsd: 1_000_000 }, {
+      effectiveTvlUsd: 500_000_000,
+    });
+    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    const rec = out.recommended[0]!;
+    expect(rec.recommendedSource?.sourceTvlUsd).toBe(1_000_000);
+    expect(rec.lowestSubDimension.key).toBe("sourceRisk");
+    expect(rec.watchText).toBeTruthy();
+    const deepRow = makeYieldRailRow({ sourceRiskScore: 30, venueRiskTier: "mid", sourceTvlUsd: 100_000_000 }, {
+      effectiveTvlUsd: 1_000_000,
+    });
+    const deepOutput = runSelector(input, { rows: new Map([[deepRow.id, deepRow]]) }, FIXTURE_DATASET);
+    expect(rec.watchText).not.toBe(deepOutput.recommended[0]!.watchText);
+  });
+
+  it("does not borrow missing alternate history or source risk from the primary", () => {
+    const row = makeYieldRailRow({ observationCount30d: null, sourceRiskScore: null, venueRiskTier: "low" });
+    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    const rec = out.recommended[0]!;
+    expect(rec.components.find((component) => component.key === "sourceRiskInverted")?.rawValue).toBeNull();
+    expect(rec.confidenceReasons).toContain("source-risk-missing");
+    expect(rec.confidenceReasons).not.toContain("short-yield-history");
+    expect(rec.whyKeys).not.toContain("clean-yield-source");
+  });
+
+  it("does not relax source gates when filling a peg-floor fallback", () => {
+    const row = makeYieldRailRow({ apy30d: 1 }, { pegScore: 50 });
+    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    expect(out.recommended[0]?.relaxedReason).toBe("peg-score-floor");
+    expect(out.recommended[0]?.recommendedSource?.sourceKey).toBe("primary-wrapper");
+  });
+
+  it("excludes the coin when every resolved rail fails the APY floor", () => {
+    const row = makeYieldRailRow();
+    const out = runSelector({ ...input, minApy: 11 }, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    expect(out.recommended).toEqual([]);
+    expect(out.exclusionSummary).toContainEqual(expect.objectContaining({ reason: "apy-below-floor" }));
   });
 });
 
@@ -655,8 +771,12 @@ describe("runSelector — universal properties", () => {
       expect(out.recommended).toEqual([]);
       expect(out.usedRelaxedFallback).toBe(false);
       expect(out.relaxedReasons).toEqual([]);
+      // Per-rail source gates (native-only) precede the peg floor; custody and decentralization gates follow it.
       expect(out.exclusionSummary).toContainEqual(
-        expect.objectContaining({ reason: "peg-score-floor", sampleIds: ["blocked"] }),
+        expect.objectContaining({
+          reason: input.yieldNativeOnly ? "yield-native-only-violation" : "peg-score-floor",
+          sampleIds: ["blocked"],
+        }),
       );
     },
   );

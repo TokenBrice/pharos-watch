@@ -158,8 +158,9 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         (yieldRisk?.sourceSwitchCount30d ?? 0) > 0,
       yieldProtocolSlug: yieldRisk?.venueProtocol ?? yieldEntry?.yieldSource ?? null,
       yieldVenueChain: yieldRisk?.venueChain ?? null,
-      yieldObservationDays30d: yieldRisk?.observationCount30d ?? 0,
+      yieldObservationDays30d: yieldRisk?.observationCount30d ?? null,
       yieldFreshness: yieldFreshnessFrom(yieldEntry, args.now),
+      yieldSourceTvlUsd: yieldEntry?.sourceTvlUsd ?? null,
       yieldSources: buildYieldSourceCandidates(yieldEntry, args.now),
 
       trackingSpanDays: peg?.trackingSpanDays ?? 0,
@@ -222,7 +223,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         benchmarkRate: row.benchmarkRate,
         sourceRiskScore: row.sourceRiskScore,
         venueRiskTier: row.venueRiskTier,
-        warningSignals: [...row.warningSignals].sort(),
+        warningSignals: row.warningSignals == null ? null : [...row.warningSignals].sort(),
         deploymentPlace: row.deploymentPlace,
         sourceSwitch: row.sourceSwitch,
         yieldProtocolSlug: row.yieldProtocolSlug,
@@ -317,7 +318,7 @@ function buildYieldSourceCandidates(
   };
 
   const alternates = (ranking.altSources ?? []).map((source) =>
-    altYieldSourceCandidate(source, ranking.pharosYieldScore, now),
+    altYieldSourceCandidate(source, now),
   );
 
   return [selected, ...alternates];
@@ -325,7 +326,6 @@ function buildYieldSourceCandidates(
 
 function altYieldSourceCandidate(
   source: AltYieldSource,
-  pharosYieldScore: number | null,
   now: number,
 ): NonNullable<MergedRow["yieldSources"]>[number] {
   const risk = source.sourceRisk ?? null;
@@ -335,7 +335,8 @@ function altYieldSourceCandidate(
     chain: risk?.venueChain ?? null,
     yieldType: source.yieldType,
     apy30d: source.apy30d,
-    pharosYieldScore,
+    // The alternate producer publishes APY and risk, not a rail-specific PYS.
+    pharosYieldScore: null,
     sourceTvlUsd: source.sourceTvlUsd,
     dataSource: source.dataSource,
     sourceRiskScore: risk?.sourceRiskScore ?? null,
