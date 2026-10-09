@@ -39,15 +39,17 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       eligibility: "verified-customer",
       fees: { issuerFeeBps: 45, issuerFixedUsd: 100, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
       settlementLegs: [
+        { leg: "kms-erc20-to-native-kinesis-token", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
         { leg: "issuer-request-contact-only", maximumBusinessDays: 2, typicalBusinessDays: null },
         { leg: "issuer-acceptance-and-bullion-release", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
         { leg: "bullion-delivery", maximumBusinessDays: null, typicalBusinessDays: null },
       ],
       bestEffortIssuerCashOut: {
-        operatingProcess: "Verified customers sell KAU on the Kinesis platform for C1USD, convert C1USD to USD cash, then withdraw to their linked bank. This is platform trading, not guaranteed bullion repurchase.",
+        operatingProcess: "Holders first request discretionary 1:1 redemption of the tracked KMS Labs Ethereum KAU ERC-20 to native Kinesis KAU; availability and completion time are not guaranteed. Verified customers may then sell native KAU on the Kinesis platform for C1USD, convert C1USD to USD cash, then withdraw to their linked bank. This is platform trading, not guaranteed bullion repurchase.",
         lot: { minimumTokens: null, incrementTokens: null, bars: [] },
         fees: { issuerFeeBps: 22, issuerFixedUsd: 25, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: null, conversionBps: null },
         settlementLegs: [
+          { leg: "kms-erc20-to-native-kinesis-token", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
           { leg: "platform-sale-order-execution", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
           { leg: "c1usd-to-usd-conversion", maximumBusinessDays: null, typicalBusinessDays: null },
           { leg: "usd-bank-withdrawal", maximumBusinessDays: null, typicalBusinessDays: null },
@@ -62,6 +64,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
         { url: "https://kinesis.money/about-us/documents/terms-of-use/", quote: "If Kinesis agrees to accept a requested Redemption of Kinesis Currency, it shall be on the basis that you will be required to comply with the terms and undertakings of this Clause 8. You acknowledge and agree that when placing an order, it may be executed in part. If part of an order is not executed, it will remain open until such time as it is executed or you cancel it in Kinesis Exchange." },
         { url: "https://support.kinesis.money/hc/en-gb/articles/35218102923293-Convert-between-Currency-One-Stablecoins-and-cash", quote: "Convert between cash and supported Currency One stablecoins with a 0% conversion fee (spreads or minimums may apply). Use the convert function to move Currency One stablecoins back into their corresponding fiat currencies. Navigate to your fiat currency tile under Assets. Select Withdraw and follow the prompts to send funds to your linked bank account." },
         { url: "https://support.kinesis.money/hc/en-gb/articles/12398056853661-Sending-and-receiving-assets", quote: "Users must fully KYC-verify their accounts to buy and sell through on the Kinesis platform." },
+        { url: "https://kmslabs.money/kms-labs-tcs/", quote: "Contract Address: KAU ERC20 0x14DAB79fD7B7B3f748d434812Fd6a9Aac460EA52. Redemption will only be 1:1 for each of the Tokens to the respective Kinesis Tokens. KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe. A holder must first redeem the Tokens to Kinesis Tokens and then follow Kinesis Cayman's redemption process then in force." },
       ],
     },
     costModel: {
@@ -97,15 +100,17 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       eligibility: "verified-customer",
       fees: { issuerFeeBps: 45, issuerFixedUsd: 100, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
       settlementLegs: [
+        { leg: "kms-erc20-to-native-kinesis-token", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
         { leg: "issuer-request-contact-only", maximumBusinessDays: 2, typicalBusinessDays: null },
         { leg: "issuer-acceptance-and-bullion-release", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
         { leg: "bullion-delivery", maximumBusinessDays: null, typicalBusinessDays: null },
       ],
       bestEffortIssuerCashOut: {
-        operatingProcess: "Verified customers sell KAG on the Kinesis platform for C1USD, convert C1USD to USD cash, then withdraw to their linked bank. This is platform trading, not guaranteed bullion repurchase.",
+        operatingProcess: "Holders first request discretionary 1:1 redemption of the tracked KMS Labs Ethereum KAG ERC-20 to native Kinesis KAG; availability and completion time are not guaranteed. Verified customers may then sell native KAG on the Kinesis platform for C1USD, convert C1USD to USD cash, then withdraw to their linked bank. This is platform trading, not guaranteed bullion repurchase.",
         lot: { minimumTokens: null, incrementTokens: null, bars: [] },
         fees: { issuerFeeBps: 22, issuerFixedUsd: 25, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: null, conversionBps: null },
         settlementLegs: [
+          { leg: "kms-erc20-to-native-kinesis-token", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
           { leg: "platform-sale-order-execution", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
           { leg: "c1usd-to-usd-conversion", maximumBusinessDays: null, typicalBusinessDays: null },
           { leg: "usd-bank-withdrawal", maximumBusinessDays: null, typicalBusinessDays: null },
@@ -120,6 +125,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
         { url: "https://kinesis.money/about-us/documents/terms-of-use/", quote: "If Kinesis agrees to accept a requested Redemption of Kinesis Currency, it shall be on the basis that you will be required to comply with the terms and undertakings of this Clause 8. You acknowledge and agree that when placing an order, it may be executed in part. If part of an order is not executed, it will remain open until such time as it is executed or you cancel it in Kinesis Exchange." },
         { url: "https://support.kinesis.money/hc/en-gb/articles/35218102923293-Convert-between-Currency-One-Stablecoins-and-cash", quote: "Convert between cash and supported Currency One stablecoins with a 0% conversion fee (spreads or minimums may apply). Use the convert function to move Currency One stablecoins back into their corresponding fiat currencies. Navigate to your fiat currency tile under Assets. Select Withdraw and follow the prompts to send funds to your linked bank account." },
         { url: "https://support.kinesis.money/hc/en-gb/articles/12398056853661-Sending-and-receiving-assets", quote: "Users must fully KYC-verify their accounts to buy and sell through on the Kinesis platform." },
+        { url: "https://kmslabs.money/kms-labs-tcs/", quote: "Contract Address: KAG ERC20 0x56Ba8B58B7d1f6d384A1C4dD553F39ebc8741B8e. Redemption will only be 1:1 for each of the Tokens to the respective Kinesis Tokens. KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe. A holder must first redeem the Tokens to Kinesis Tokens and then follow Kinesis Cayman's redemption process then in force." },
       ],
     },
     costModel: {

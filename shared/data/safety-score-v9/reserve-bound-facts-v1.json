@@ -1,6 +1,39 @@
 {
   "schemaVersion": 1,
   "assets": {
+    "jpysc-sbi-startale": [
+      {
+        "factKey": "jpysc-sbi-startale:reserve:5457d74b7925413de5ebb346:statutory-jgb-maturity-maximum",
+        "kind": "contractual-maturity-maximum",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:5457d74b7925413de5ebb346"
+        },
+        "asOfSec": 1780272000,
+        "publisher": "Japanese Financial Services Agency / e-Gov current enforced ordinances",
+        "sourceUrls": [
+          "https://laws.e-gov.go.jp/api/2/law_data/505M60000002048_20260601_508M60000002051?elm=MainProvision-Article_3",
+          "https://laws.e-gov.go.jp/api/2/law_data/357M50000040016_20260601_508M60000002051?elm=MainProvision-Article_22",
+          "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+          "https://www.shinseitrust.com/stablecoin/jpysc.html"
+        ],
+        "assertion": "JPYSC terms Article 3(1) identify the exact yen-denominated specified trust beneficial interest; the September 30 issuer balance table identifies the entire Japanese-government-bond exposure. Current enforced electronic-payment ordinance Article 3(2)(1) requires acquisition-to-principal-redemption tenor not exceeding three calendar months: 取得の日から元本の償還の日までの期間が三月を超えない国債証券. Trustee ordinance Article 22(10)(4)-(5) binds the issuing trust bank to that bond definition and Article 3 management requirements. This is an enforceable eligibility maximum for all JGBs in this exact trust reserve exposure, not an observed position roster or a claim that other deposits mature within three months. Calendar months retain their legal unit; no 90-day conversion or stressed liquidation bound is asserted. Content digest fingerprints the raw Article 3 API JSON, one LF, then raw Article 22 API JSON.",
+        "contentDigest": "0082d9d712018a23b48c3ef212d473f9c85966ac3f9c5be1b386c28314994a08",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-09",
+          "reviewer": "Sol curation campaign 2026-10-09 (W2L14Startale)",
+          "confidence": "high"
+        },
+        "claimId": "JPYSC fund code 2034401 trust-property Japanese government bonds / reserve:5457d74b7925413de5ebb346",
+        "legallyBinding": true,
+        "allInScope": true,
+        "maximumTerm": {
+          "value": 3,
+          "unit": "calendar-months"
+        }
+      }
+    ],
     "frnt-wyoming": [
       {
         "factKey": "frnt-wyoming:2026-10-07:observed-treasury-bill-roster",

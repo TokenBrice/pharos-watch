@@ -2,11 +2,11 @@
   "id": "mxnb-juno",
   "reserves": [
     {
-      "name": "MXN reserves in Nvio and Hey Banco bank accounts",
+      "name": "MXN reserve bank-account balances; banks not identified in the Q2 report",
       "pct": 100,
       "risk": "low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Nvio and Hey Banco; individual reserve-account balances are undisclosed",
+      "issuerOrObligor": "Reserve-account banks undisclosed in the Q2 2026 valuation report",
       "riskFactors": [
         "counterparty",
         "liquidity",
@@ -28,9 +28,13 @@
       {
         "label": "MXNB attestation index",
         "url": "https://mxnb.mx/en-US/transparency"
+      },
+      {
+        "label": "Recovered canonical MXNB whitepaper, reserve-management mandate; reviewed in wave 2, not a dated holdings report",
+        "url": "https://assets-prod.mxnb.mx/commons/whitepaper.pdf"
       }
     ],
-    "rationale": "BDO Mexico (Castillo Miranda y Compania) Q2 2026 financial valuation as of 30 June 2026 (published 2026-07-16, PDF read this pass): a single aggregate line 'Reserves on bank accounts' MXN 35,333,251.88 against MXN 34,828,276.31 of MXNB in circulation (surplus 504,975.57). The engagement is consultancy under IVSC standards, expressly does not confirm balances with banks, and restricts use to management; its scope paragraph still says 'as of March 31, 2026' (stale copy-paste). No bank names or instrument split are disclosed - composition stays one bank-deposit category at probable confidence.",
+    "rationale": "BDO Mexico (Castillo Miranda y Compania) Q2 2026 financial valuation as of 30 June 2026 (signed 2026-07-16): a single aggregate line 'Reserves on bank accounts' MXN 35,333,251.88 against MXN 34,828,276.31 of MXNB in circulation (surplus 504,975.57). The engagement is consultancy under IVSC standards, expressly does not confirm balances with banks, and restricts use to management; its scope paragraph still says 'as of March 31, 2026' (stale copy-paste). No bank names or instrument split are disclosed. Wave-2 review of the current issuer index, October 7 aggregate dashboard and recovered canonical whitepaper found no newer weighted portfolio: the whitepaper permits pesos, cash equivalents and short-term Mexican government securities, without category weights, institution balances or maximum tenors. The historical bank-account category retains probable confidence and its original composition and review clocks; it is not restated as current holdings.",
     "compositionBasis": "BDO Mexico Q2 2026 valuation of MXNB reserve bank-account balances",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
@@ -39,7 +43,7 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "MXN reserves in Nvio and Hey Banco bank accounts",
+        "reserveName": "MXN reserve bank-account balances; banks not identified in the Q2 report",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The attested bank-account reserve is an off-chain fiat claim, not a tracked stablecoin dependency."
@@ -82,7 +86,7 @@
       },
       {
         "label": "MXNB whitepaper",
-        "url": "https://mxnb.mx/whitepaper.pdf"
+        "url": "https://assets-prod.mxnb.mx/commons/whitepaper.pdf"
       },
       {
         "label": "BDO Mexico MXNB Q1 2026 valuation report",

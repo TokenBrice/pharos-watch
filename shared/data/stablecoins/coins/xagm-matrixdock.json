@@ -11,7 +11,7 @@
     "rwa": true
   },
   "collateral": "LBMA-accredited 99.9% Good Delivery silver bars held in Asian vaults under Matrixdock's fractional-reserve-safeguard framework",
-  "pegMechanism": "Silver-backed commodity token redeemable through Matrixdock for KYC-approved users; issuer materials expose supply, bullion weight, and an oz-per-token metric that may drift slightly from exactly one ounce",
+  "pegMechanism": "KYC-approved holders can redeem XAGm through Matrixdock for supported USDC or USDT at a partner-dependent sale price, or request physical LBMA silver with a 2100 XAGm minimum and inventory-dependent bar availability. Stablecoin orders require an accepted quote and slippage limit; T+3 begins after execution. Physical delivery does not establish a final USD sale price or an end-to-end cash settlement bound. Each redemption order carries a 0.50% issuer fee; currency, delivery and gas costs remain separate. Silver weight follows the applicable ozPerToken ratio.",
   "mechanismArchetype": "commodity-claim",
   "commodityOunces": 1,
   "detailProvider": "commodity",
@@ -52,6 +52,14 @@
     {
       "label": "Announcement",
       "url": "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain"
+    },
+    {
+      "label": "Redemption Docs",
+      "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media"
     }
   ],
   "jurisdiction": {

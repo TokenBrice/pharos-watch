@@ -68,13 +68,17 @@
       {
         "label": "BabelFish reserve contract",
         "url": "https://rootstock.blockscout.com/address/0x1440d19436bEEaf8517896bffB957A88ec95a00F"
+      },
+      {
+        "label": "W2 source recovery: unpinned manager token-balance census, not admitted composition",
+        "url": "https://rootstock.blockscout.com/api/v2/addresses/0x1440d19436bEEaf8517896bffB957A88ec95a00F/token-balances"
       }
     ],
     "rationale": "The independent BabelFish adapter read the configured Rootstock reserve-contract balances at the exact capture. Normalizing the three positive dollar-pegged balances produced 89.4% DLLR, 9.7% bridged USDT, and 0.9% DOC; configured USDC and DAI balances were zero.",
     "compositionBasis": "Exact live Rootstock reserve-contract balances captured on 2026-07-15",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "The composition is fully linked, but each constituent retains its issuer, bridge, smart-contract, and liquidity risks.",
+    "knownUnknownExposure": "The historical July 15 three-row composition is fully linked for its original observation only. Source recovery recorded 2026-10-09T11:41:39Z by Sol curation campaign 2026-10-09 (W2L22Spark): the canonical Rootstock explorer token-balances endpoint for the issuer-documented manager returned twelve positive ERC-20 balances: DLLR, RUSDT, DOC, USDTbs, DAIes, USDCbs, DAIbs, USDCes, USDTes, BUSDbs, RDOC and ZUSD. These are unpinned explorer balances, not an exhaustive admitted backing census or whole-liability USD valuation. In particular, BIP-0011's BUSD deposit/swap removal does not establish a zero legacy BUSD balance. Several receipts lack quoted USD valuation, and the manager-to-whole-liability join remains unproved. The mandated helper has no registered Rootstock endpoint. No new percentages, zero-tail finding, liability coverage or composition date are asserted. knownUnknownExposurePct 0 belongs only to the retained historical review.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

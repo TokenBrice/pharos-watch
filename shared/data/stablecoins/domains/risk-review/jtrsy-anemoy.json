@@ -253,10 +253,10 @@
         "controllerChain": "solana",
         "controllerAddress": "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Official Centrifuge deployment registry identifies this mint, but the EVM share bridge guide excludes Solana targets. Finalized joint mint/authority/multisig observation at slot 452524950 (2026-10-02; block hash 4zyMTBniC7n4tmKLK47FbBiUpCARjvZ6qk2J26goge8c) confirms Token-2022, 6 decimals, zero supply, default-frozen accounts, and mint/freeze/permanent-delegate/metadata-update authority 3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb. Although its account is System-owned with no data, that authority is an off-curve Squads v4 vault PDA (index 0, bump 255) of multisig F8uKD1uQ4o2NVizM8VfNvBMNoL18WXXbhTjKqfzvBTSX. The multisig is owned by SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf, has threshold 2, eight members but only six Vote-enabled signers, zero timelock and zero config authority; signer independence is unknown. Seven returned mint-history transactions include creation and authority transfers from Eg37TXi7ojfPT4kQPFUu6umtvz3cCN2Xif5TgQKDd68C, with no mint/burn instruction. Metadata-pointer authority remains Eg37. This proves control capability, not a current issuer-native liability accounting or Ethereum-to-Solana transfer path; those semantics remain unresolved.",
+        "reviewNote": "Official Centrifuge deployment registry identifies this mint, but the EVM share bridge guide excludes Solana targets. Finalized joint mint/authority/multisig observation at slot 452524950 (2026-10-02; block hash 4zyMTBniC7n4tmKLK47FbBiUpCARjvZ6qk2J26goge8c) confirms Token-2022, 6 decimals, zero supply, default-frozen accounts, and mint/freeze/permanent-delegate/metadata-update authority 3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb. Although its account is System-owned with no data, that authority is an off-curve Squads v4 vault PDA (index 0, bump 255) of multisig F8uKD1uQ4o2NVizM8VfNvBMNoL18WXXbhTjKqfzvBTSX. The multisig is owned by SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf, has threshold 2, eight members but only six Vote-enabled signers, zero timelock and zero config authority; signer independence is unknown. Seven returned mint-history transactions include creation and authority transfers from Eg37TXi7ojfPT4kQPFUu6umtvz3cCN2Xif5TgQKDd68C, with no mint/burn instruction. Metadata-pointer authority remains Eg37. This proves control capability, not a current issuer-native liability accounting or Ethereum-to-Solana transfer path; those semantics remain unresolved. Wave-2 diagnostic census by Sol curation campaign 2026-10-09 (W2L18Secured), observed 2026-10-09T11:52:43Z: one atomic finalized getMultipleAccounts response from https://api.mainnet-beta.solana.com has context slot 454858260, joined to that exact finalized slot's getBlock hash Hjv9jAhg5cVj42G2seueWvFCwHZsWGS11zYjxCZWv1dB and block timestamp 2026-10-09T11:52:15Z. This new response again has zero raw supply, six decimals, the same four extensions and recorded authorities; no transfer-hook or confidential-mint extension is returned. Its Squads bytes decode under the cited af94153 layout to threshold 2, eight members, six Vote-enabled, six Execute-enabled and seven Initiate-enabled members, zero timelock, zero config authority, transaction index 58 and stale index 50. The endpoint's response context slot is the observation pin; minContextSlot 452524950 was only a lower bound, not a requested historical pin. Solana's permanent-delegate specification permits transfer or burn from any account for this mint and holders cannot revoke that delegate. No deployed-program runtime/source match, exhaustive reachable execution certificate, holder-liability/legal burn mapping or negative incident census is established, so capAuthority, claimImpairment, incidentState and route architecture remain unresolved. This direct keyless read is diagnostic source recovery because the supplemental Dwellir helper has no Solana method; it is not a helper-admitted execution certificate or a production supply-attribution packet.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 452524950,
+        "observedAt": "2026-10-09",
+        "observedBlock": 454858260,
         "sources": [
           {
             "label": "Centrifuge protocol deployments",
@@ -281,6 +281,14 @@
           {
             "label": "Squads v4 vault PDA derivation at af94153",
             "url": "https://github.com/Squads-Protocol/v4/blob/af94153ff77a28b6effe46b9c94baaa93742b48c/sdk/multisig/src/pda.ts"
+          },
+          {
+            "label": "Solana finalized atomic mint and Squads account census, context slot 454858260",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Solana Token-2022 permanent-delegate transfer and burn semantics",
+            "url": "https://solana.com/docs/tokens/extensions/permanent-delegate"
           }
         ],
         "failureDomainKeys": [

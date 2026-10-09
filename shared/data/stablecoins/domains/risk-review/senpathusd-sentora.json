@@ -113,7 +113,7 @@
     "tier": "opaque-or-unknown",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "Exact funded market and immutable oracle input census is verified at Tempo block 42485981. MorphoChainlinkOracleV2 executable instructions match the verified Ethereum reference after only the pinned feed-address and SCALE_FACTOR substitutions, excluding compiler metadata. Its feed pair is serial RedStone cbBTC/pathUSD pricing, not independent failover. Both feeds and their shared adapter are upgradeable by the same ProxyAdmin owned by a 2-of-3 Safe. Upstream implementation timestamp/fallback and signer-set source correspondence remains incomplete; opaque tier is deliberately retained without standard-external or redundant credit.",
+    "summary": "Exact funded market and immutable oracle input census is verified at Tempo block 42485981. MorphoChainlinkOracleV2 executable instructions match the verified Ethereum reference after only the pinned feed-address and SCALE_FACTOR substitutions, excluding compiler metadata. Its feed pair is serial RedStone cbBTC/pathUSD pricing, not independent failover. Both feeds and their shared adapter are upgradeable by the same ProxyAdmin owned by a 2-of-3 Safe. A separate October 9 numbered-block review recovered both feed implementations and matched their executable prefixes to Tempo verifier sources; adapter source correspondence, enforced upstream freshness/fallback and signer authority remain incomplete. The opaque tier and prior aggregate review date are retained.",
     "reviewedAt": "2026-10-04",
     "reviewer": "W2R24 pinned executable correspondence, source and upstream proxy census",
     "confidence": "verified",
@@ -281,7 +281,7 @@
         "id": "0x75add2f66f5c81917f6fd3b9603481defc1098359515d91c652913437ada14f5",
         "label": "Morpho market 0x75add2f66f5c81917f6fd3b9603481defc1098359515d91c652913437ada14f5",
         "tier": "opaque-or-unknown",
-        "summary": "The exact market oracle 0xa59e9acd8499343ae7b944df898fc20388acd245 executable matches verified MorphoChainlinkOracleV2 after read-backed BASE_FEED_1, QUOTE_FEED_1 and SCALE_FACTOR substitutions, excluding compiler metadata. BASE_FEED_1 is RedStone cbBTC at 0x6b1e20c88fe56ba3bbd488556170927c3c799084; QUOTE_FEED_1 is RedStone pathUSD at 0xf5528a63c0d6e5f23fe8a4f0dac2ae7a04174753. Other feed/vault inputs are zero. Both proxy feeds use adapter 0x368ee51e47a594fe1e9908b48228748a30bc7ca4, current quorum 3, and shared ProxyAdmin 0xfb1267a29c0aa19daae4a483ea895862a69e4aa5, owned by 2-of-3 Safe 0x32e59ecd77eb9989d6517accdd5581e2b4ac0523. Actual feed/adapter source correspondence and full mutable freshness/fallback/signer authority remain unverified; tier stays opaque.",
+        "summary": "The exact market oracle 0xa59e9acd8499343ae7b944df898fc20388acd245 executable matches verified MorphoChainlinkOracleV2 after read-backed BASE_FEED_1, QUOTE_FEED_1 and SCALE_FACTOR substitutions, excluding compiler metadata. BASE_FEED_1 is RedStone cbBTC at 0x6b1e20c88fe56ba3bbd488556170927c3c799084; QUOTE_FEED_1 is RedStone pathUSD at 0xf5528a63c0d6e5f23fe8a4f0dac2ae7a04174753. Other feed/vault inputs are zero. The prior block 42485981 census records shared adapter 0x368ee51e47a594fe1e9908b48228748a30bc7ca4, quorum 3 and ProxyAdmin 0xfb1267a29c0aa19daae4a483ea895862a69e4aa5 owned by 2-of-3 Safe 0x32e59ecd77eb9989d6517accdd5581e2b4ac0523; those authority facts were not refreshed. At block 43332025, the two proxy implementation slots resolve to 0xdaef2f322582a1bdb0f504c8a9e2a408c358142b and 0x81221489808ab42c7062a45e41eb926f398750c1. Each 1916-byte executable prefix matches its exact Tempo verifier source runtime after excluding the differing 53-byte compiler metadata trailer. Adapter implementation 0xe4bfe4071d363e1d4274fb8f79cb510b75913020 remains source-unverified. No full bytecode/metadata match or complete adapter freshness/fallback/signer-authority proof is claimed; tier stays opaque.",
         "collateralAssets": [
           "0x20c000000000000000000000c412ec89d0c08be5"
         ],
@@ -314,7 +314,7 @@
             "observedAt": "2026-10-09"
           }
         ],
-        "fallbackBehavior": "Verified composite source multiplies its serial base feeds and divides its serial quote feeds; second-feed slots are zero, and no alternative price source or freshness rejection exists in the composite. ChainlinkDataFeedLib explicitly leaves staleness checks to upstream feeds. This is not independent RedStone/Chainlink failover. Feed proxies implement upgradeable TransparentUpgradeableProxy; shared adapter and admin identities are pinned, but feed/adapter implementation source correspondence and any upstream fallback/freshness enforcement remain unverified. The RedStone publisher configuration observed 2026-10-09T10:36:29Z lists tempoMultiFeed cbBTC at 0x6b1e20c88fe56ba3bbd488556170927c3c799084 with a 24-hour update trigger and pathUSD at 0xf5528a63c0d6e5f23fe8a4f0dac2ae7a04174753 with a 6-hour trigger, both at 0.5% deviation. These are relayer update targets, not contract-enforced staleness bounds or independent failover. The prior block 42485981 topology observation and review date are unchanged.",
+        "fallbackBehavior": "Verified composite source multiplies its serial base feeds and divides its serial quote feeds; second-feed slots are zero, and no alternative price source or freshness rejection exists in the composite. ChainlinkDataFeedLib explicitly leaves staleness checks to upstream feeds. This is not independent RedStone/Chainlink failover. Source recovery by Sol curation campaign 2026-10-09 (W2L25Rupiah), observed 2026-10-09T11:48:15.350Z through https://api-tempo-mainnet.n.dwellir.com at block 43332025, hash 0x200d10b4fa3b73ddc7b2c176d95870ca05561ca11c11e6343c83e2154b4f97c4, timestamp 2026-10-09T11:47:57Z, binds both feed implementations to the recovered TempoPriceFeeds.sol executable prefixes, excluding compiler metadata. TempoPriceFeedBase hardcodes the shared adapter; TempoCbBTCPriceFeed and TempoPathUSDPriceFeed select cbBTC and pathUSD. PriceFeedWithoutRoundsForMultiFeedAdapter.latestRoundData returns the adapter's lastValue and lastBlockTimestamp without its own age rejection or alternative source. The shared adapter's implementation source and its own freshness/fallback/signer rules remain unverified; its verifier endpoint returned 404, which is a source-recovery failure, not non-disclosure. RedStone publisher configuration observed 2026-10-09T10:36:29Z lists a 24-hour cbBTC update trigger and a 6-hour pathUSD trigger, both at 0.5% deviation. These remain relayer targets, not contract-enforced staleness bounds. The prior block 42485981 whole-branch topology observation and review date are unchanged.",
         "observedAt": "2026-10-04",
         "observedBlock": 42485981,
         "collateralParameters": [
@@ -328,6 +328,18 @@
         "backstop": "No exact-vault funded loss backstop was identified in the reviewed vault source and protocol documentation.",
         "shutdownOrBadDebtBehavior": "Underlying bad debt reduces reported adapter realAssets; VaultV2 recognizes losses through pro-rata share-value depreciation. No legal recovery waterfall is established.",
         "sources": [
+          {
+            "label": "Numbered-block feed implementation/storage and runtime census, block 43332025, 2026-10-09T11:47:57Z; observed 2026-10-09T11:48:15.350Z by Sol curation campaign 2026-10-09 (W2L25Rupiah)",
+            "url": "https://api-tempo-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Exact Tempo cbBTC implementation verifier source; executable prefix matched excluding compiler metadata at block 43332025",
+            "url": "https://contracts.tempo.xyz/v2/contract/4217/0xdaef2f322582a1bdb0f504c8a9e2a408c358142b?fields=all"
+          },
+          {
+            "label": "Exact Tempo pathUSD implementation verifier source; executable prefix matched excluding compiler metadata at block 43332025",
+            "url": "https://contracts.tempo.xyz/v2/contract/4217/0x81221489808ab42c7062a45e41eb926f398750c1?fields=all"
+          },
           {
             "label": "RedStone exact Tempo cbBTC/pathUSD publisher update configuration; observed 2026-10-09T10:36:29Z by Sol curation campaign 2026-10-09 (Lane15Securitize)",
             "url": "https://app.redstone.finance/push-feeds"

@@ -435,7 +435,7 @@
         "id": "market-2761e7fe2dc3b712a7cf6d46286abc26864a65767d823c32ca554fa4ba309c6b",
         "label": "mHYPER / USDC",
         "tier": "opaque-or-unknown",
-        "summary": "Morpho API identifies mHYPER collateral 0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7, market 0x2761e7fe2dc3b712a7cf6d46286abc26864a65767d823c32ca554fa4ba309c6b, oracle 0x3a898579ce3407219475678aea3e45e6bf1b1e9c, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xd5d960e8c380b724a48ac59e2dff1b2cb4a1eaee idToMarketParams(bytes32) at block 110117695 confirmed the exact oracle and LLTV; price() returned raw 1131068870000000000000000. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0xf3bbd544f8453ee82211709422d8d7906f816584. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "summary": "Morpho API identifies mHYPER collateral 0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7, market 0x2761e7fe2dc3b712a7cf6d46286abc26864a65767d823c32ca554fa4ba309c6b, oracle 0x3a898579ce3407219475678aea3e45e6bf1b1e9c, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xd5d960e8c380b724a48ac59e2dff1b2cb4a1eaee idToMarketParams(bytes32) at block 110117695 confirmed the exact oracle and LLTV; price() returned raw 1131068870000000000000000. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0xf3bbd544f8453ee82211709422d8d7906f816584. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established. Incremental primary-source observation reviewed at 2026-10-09T11:55:48Z by Sol curation campaign 2026-10-09 (W2L10Blackrock): transaction 0xb7c230cfdc3270e82c89acc0bc15fbcf42ca4ed4e5ca71a345d6184d3bcb7cbc successfully called setRoundDataSafe(int256) on this base feed at Monad block 111024524 (2026-10-06T11:19:51Z), sent by 0xd1e01471f3e1002d4eec1b39b7dbd7aff952a99f. The explorer identifies the feed implementation as verified MHyperCustomAggregatorFeed. This establishes a historical successful updater, not current role membership, a complete administrator census, signing threshold, feed freshness or fallback quality. Earlier market/price observation dates and the opaque-or-unknown tier are retained.",
         "collateralAssets": [
           "mHYPER"
         ],
@@ -487,6 +487,14 @@
           {
             "label": "monad idToMarketParams and exact price() archive calls at block 110117695, read 2026-10-03; credentials omitted",
             "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Historical mHYPER/USD successful setter at Monad block 111024524, October 6, 2026; incrementally reviewed October 9",
+            "url": "https://monadscan.com/tx/0xb7c230cfdc3270e82c89acc0bc15fbcf42ca4ed4e5ca71a345d6184d3bcb7cbc"
+          },
+          {
+            "label": "Verified MHyperCustomAggregatorFeed implementation ABI; historical updater observation only, no current role census",
+            "url": "https://monadscan.com/address/0xce274db5ad9d695d216beba383068cf6653adaba#code"
           }
         ],
         "observedAt": "2026-10-03",

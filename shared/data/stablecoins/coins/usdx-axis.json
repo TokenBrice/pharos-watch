@@ -25,7 +25,7 @@
     ]
   },
   "flags": { "backing": "crypto-backed", "governance": "centralized-dependent" },
-  "collateral": "Issuer asset-form snapshot dated October 2, 2026: liquid hedge inventory 70.73%, stablecoins and settlement tokens 21.41%, yield-bearing and staked collateral 6.25%, fiat cash and FX balances 1.31%, and tokenized Treasuries or reserve-backed cash equivalents 0.30%. These are gross backing shares before hedge offsets, not net-risk or per-token allocations.",
+  "collateral": "Issuer asset-form snapshot dated October 8, 2026: liquid hedge inventory 67.92%, stablecoins and settlement tokens 25.18%, yield-bearing and staked collateral 5.79%, tokenized Treasuries or reserve-backed cash equivalents 0.56%, and fiat cash and FX balances 0.54% (display-rounded; reserves sidecar retains exact source weights). Gross shares precede hedge offsets. The issuer marks 45.6252% of the whole book unclassified within liquid inventory; constituent identities, dependency weights and canonical V2-versus-legacy reserve partition remain unresolved.",
   "pegMechanism": "Approved primary-market accounts sign EIP-712 orders against USDC or USDT collateral; authorized operators settle minting and redemption atomically onchain. Offchain RFQ pricing reflects portfolio unwind costs, and the contract does not independently value collateral using an external oracle. Retail holders rely on secondary markets. Indicative instant and seven-day redemption bands are not committed capacity or settlement guarantees.",
   "llamaId": "442",
   "detailProvider": "defillama",

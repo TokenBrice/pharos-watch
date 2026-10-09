@@ -115,7 +115,7 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Vault share NAV uses internal asset/share accounting; underlying active Morpho borrower markets require collateral pricing. Exact market/oracle identities and LLTVs are inventoried, including nonzero dust; underlying feed administrators, update/staleness safeguards and complete fallback topology remain unverified. API type names alone do not establish oracle quality. Historical zero-supply positions are excluded from this current-exposure review.",
+    "summary": "Vault share NAV uses internal asset/share accounting; Morpho borrower markets require collateral pricing. At Ethereum block 26154662, the adapter enumerates six markets including USD3; the current/historical reviewed union has nine positive Morpho supply positions. Removed srNUSD, YFI and PT-cUSD markets each retain one raw USDC unit of expected assets and are not silently excluded. srNUSD's configured primary/backup and switching delays are now pinned; USD3's current proxy implementation, admin owner and timelock delay are pinned. Upstream source freshness/administration and complete controller/fallback closure remain unresolved; no oracle tier is upgraded.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -197,6 +197,10 @@
       {
         "label": "Morpho gate semantics and irreversible abdication",
         "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Sol curation campaign 2026-10-09 (W2L13Kpk): adapter market census, current/historical position union, srNUSD clone configuration and USD3 proxy/admin reads at Ethereum block 26154662, hash 0xf60cac1fe0b417fe0ee522542ac4beb45d649b4004c4c7c5dcff838b39c6a06b, timestamp 2026-10-09T11:50:11Z; observed 2026-10-09T12:16:43.516Z through 2026-10-09T12:20:08.013Z; no whole-topology certification",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       },
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
@@ -375,7 +379,7 @@
             "observedBlock": 26110242
           }
         ],
-        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "fallbackBehavior": "The runtime-identified EIP-1167 clone delegates to MetaOracleDeviationTimelock 0xcc319ef091bc520cf6835565826212024b2d25ec. Verified implementation price() tries the selected oracle and uses the other if that call reverts. At block 26154662 primaryOracle and currentOracle are 0xe10a7d39e4ed00351dfe17378b5896e5f8ab422f, backupOracle is 0x39e160111c2d8ee3817fa63e60a87839f07de138, deviationThreshold=10000000000000000, challengeTimelockDuration=14400 seconds, healingTimelockDuration=43200 seconds, and challengeExpiresAt=healingExpiresAt=0. This establishes configured switching behavior and state, not upstream source independence, freshness or guaranteed stressed liquidation.",
         "collateralParameters": [
           {
             "asset": "srNUSD",
@@ -388,6 +392,14 @@
         "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
         "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
         "sources": [
+          {
+            "label": "Sol curation campaign 2026-10-09 (W2L13Kpk): clone getters at Ethereum block 26154662, hash 0xf60cac1fe0b417fe0ee522542ac4beb45d649b4004c4c7c5dcff838b39c6a06b, timestamp 2026-10-09T11:50:11Z; observed 2026-10-09T12:16:43.516Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Verified MetaOracleDeviationTimelock implementation: primary/backup, challenge/healing and revert fallback semantics",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xcc319ef091bc520cf6835565826212024b2d25ec"
+          },
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
             "url": "https://blue-api.morpho.org/graphql"
@@ -740,6 +752,46 @@
         ],
         "observedAt": "2026-10-03",
         "observedBlock": 26110242
+      },
+      {
+        "id": "market-e3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7",
+        "label": "USD3 / USDC",
+        "tier": "opaque-or-unknown",
+        "summary": "At Ethereum block 26154662 the Yield adapter enumerates this market; adapter and Morpho supplyShares both equal 467860860214387392 and expectedSupplyAssets=493990488270 raw USDC. Morpho idToMarketParams identifies USDC loan token, USD3 collateral 0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc, oracle 0x68b4c2b2b2e245ab54a3bd55dfd5a9d84f029c06, IRM 0x870ac11d48b15db9a138cf899d20f13f79ba00bc and LLTV 915000000000000000. Verified oracle source uses the USD3 ERC-4626 conversion path. USD3's implementation slot names 0xd1f1c3f485063712873285bf4ef25ab068f13893 and admin slot names 0x41c838664a9c64905537ff410333b9f5964cc596. ProxyAdmin.owner() is current TimelockController 0x3d3c41419ab401cd25055e8f9421d7d96d887885, whose getMinDelay() is 604800 seconds. Candidate role checks are not an exhaustive membership/permission certificate; complete pricing authority and strategy valuation/freshness remain unresolved.",
+        "collateralAssets": ["USD3"],
+        "chains": ["ethereum"],
+        "collateralParameters": [
+          {
+            "asset": "USD3",
+            "maximumLtvPct": 91.5,
+            "note": "Exact Morpho idToMarketParams LLTV at block 26154662; not an executable liquidation or recovery guarantee."
+          }
+        ],
+        "liquidationState": "unknown",
+        "sources": [
+          {
+            "label": "Sol curation campaign 2026-10-09 (W2L13Kpk): Ethereum block 26154662, hash 0xf60cac1fe0b417fe0ee522542ac4beb45d649b4004c4c7c5dcff838b39c6a06b, timestamp 2026-10-09T11:50:11Z; observations 2026-10-09T12:16:43.516Z through 2026-10-09T12:20:08.013Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Verified USD3 market oracle conversion source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x68b4c2b2b2e245ab54a3bd55dfd5a9d84f029c06"
+          },
+          {
+            "label": "Verified USD3 implementation: strategy-based NAV",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd1f1c3f485063712873285bf4ef25ab068f13893"
+          },
+          {
+            "label": "Verified ProxyAdmin source; owner-gated upgrades",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x41c838664a9c64905537ff410333b9f5964cc596"
+          },
+          {
+            "label": "Verified current USD3 TimelockController source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3d3c41419ab401cd25055e8f9421d7d96d887885"
+          }
+        ],
+        "observedAt": "2026-10-09",
+        "observedBlock": 26154662
       }
     ],
     "paths": [
@@ -1014,6 +1066,30 @@
             {
               "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
               "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-e3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7",
+        "chain": "ethereum",
+        "address": "0x68b4c2b2b2e245ab54a3bd55dfd5a9d84f029c06",
+        "pricingAuthority": "internal-price",
+        "branchId": "market-e3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-09",
+          "reviewer": "Sol curation campaign 2026-10-09 (W2L13Kpk)",
+          "confidence": "verified",
+          "rationale": "The pinned positive Yield loan position is secured by USD3 valued through its ERC-4626 conversion oracle. This borrower pricing path applies despite the KPK vault itself having no borrowing position; source identity and applicability do not establish oracle quality.",
+          "sources": [
+            {
+              "label": "Ethereum block 26154662, hash 0xf60cac1fe0b417fe0ee522542ac4beb45d649b4004c4c7c5dcff838b39c6a06b, timestamp 2026-10-09T11:50:11Z; observed 2026-10-09T12:17:36.364Z",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            },
+            {
+              "label": "Verified USD3 market oracle conversion source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x68b4c2b2b2e245ab54a3bd55dfd5a9d84f029c06"
             }
           ]
         }

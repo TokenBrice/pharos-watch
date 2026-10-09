@@ -113,7 +113,7 @@ const MIDAS_LYT_FEE_DISCLOSURES: Partial<
     statement: "Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee",
     feeBpsMax: 50,
     label: "Midas mMEV Final Terms",
-    url: "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FEoSLAqc1ZoCEV1LBkiup%2FMidas_Final_Terms_mMEV_Update_2025.pdf?alt=media&token=d58efef6-7d01-4889-9af7-3c86f1a9e932",
+    url: "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/uu3D8USyAPPyq1a6Qy7k/Midas_Final_Terms_mMEV_Update_2025.pdf",
   },
   "mapollo-midas": {
     statement:

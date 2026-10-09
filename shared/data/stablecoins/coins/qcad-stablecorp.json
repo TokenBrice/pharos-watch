@@ -50,7 +50,7 @@
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Sol curation pass 2026-10-01 (R2WNrFiatB; OwnerFollowups D21): retain the May 31, 2026 Davidson & Company CSAE 3000 reasonable-assurance report and existing May-dated reserve envelope in period lockstep. The archived original report prints July 15, 2026 for both practitioner and management signatures; publishedAt uses that exact signed-date stand-in under the owner ruling, not an asserted upload date. Independent-audit is the reporting family for the examination-equivalent opinion, not a financial-statement audit. Assets-and-liabilities and full reconciliation cover the report's trust-scope Ethereum liability of 651,000 QCAD only. The newer July 31 report signed September 14 remains a reference, not this composition's period authority. Stablecorp excludes pre-November 20, 2025 legacy QCAD and holds its reserves separately; neither report proves the full catalog reserve denominator or all-deployment cash split.",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNrFiatB; OwnerFollowups D21): retain the May 31, 2026 Davidson & Company CSAE 3000 reasonable-assurance report and existing May-dated reserve envelope in period lockstep. The archived original report prints July 15, 2026 for both practitioner and management signatures; publishedAt uses that exact signed-date stand-in under the owner ruling, not an asserted upload date. Independent-audit is the reporting family for the examination-equivalent opinion, not a financial-statement audit. Assets-and-liabilities and full reconciliation cover the report's trust-scope Ethereum liability of 651,000 QCAD only. The newer July 31 report signed September 14 remains a reference, not this composition's period authority. Stablecorp excludes pre-November 20, 2025 legacy QCAD and holds its reserves separately; neither report proves the full catalog reserve denominator or all-deployment cash split. Sol curation campaign 2026-10-09 (W2L13Kpk), observed 2026-10-09T11:41:16Z: recovered the July original-byte report from the September 26 archive (SHA-256 f2bb6b0e56d6bbe04c361a2b9faee467d84ea81c95fd805425f8144b63b641e3). Pages 1-3 give CSAE 3000 reasonable assurance, direct bank confirmations and accounting-to-blockchain reconciliation at July 5/31, signed September 14. Pages 5-6 disclose July 31 trust liabilities and Canadian currency reserves of CAD 1,652,020.55 each; Appendix A names only the catalog Ethereum contract and marks Solana, Algorand and Stellar N/A. This recovered trust-only report does not establish coverage of catalog Base/Solana or a current trust/legacy book partition; no aggregate assurance, composition or review clock is refreshed.",
       "confidence": "verified",
       "coverage": {
         "scopeId": "qcad-digital-trust:may-2026",
@@ -101,6 +101,10 @@
         {
           "label": "QCAD July 2026 trust-only report (newer reference; not aggregate composition evidence)",
           "url": "https://www.sedarplus.ca/csa-party/records/document.html?id=6666d890fab71d252fa9af1a8666a452030d94252e83ba6cd3c1b3ddcb90c53d"
+        },
+        {
+          "label": "Recovered July 2026 QCAD trust-only report: archived September 26; signed September 14; observed October 9",
+          "url": "https://web.archive.org/web/20260926003714id_/https://www.sedarplus.ca/csa-party/records/document.html?id=6666d890fab71d252fa9af1a8666a452030d94252e83ba6cd3c1b3ddcb90c53d"
         },
         {
           "label": "Archived May 2026 QCAD report: practitioner and management signed July 15, 2026",

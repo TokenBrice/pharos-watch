@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Commercial paper",
-      "pct": 49.2,
+      "pct": 44.5,
       "risk": "medium",
       "assetClass": "public-credit",
       "riskFactors": ["credit", "duration", "liquidity", "custody"],
@@ -11,7 +11,7 @@
     },
     {
       "name": "Certificates of deposit",
-      "pct": 25.1,
+      "pct": 31.3,
       "risk": "medium",
       "assetClass": "public-credit",
       "riskFactors": ["credit", "counterparty", "duration", "custody"],
@@ -19,7 +19,7 @@
     },
     {
       "name": "Time deposits",
-      "pct": 17.6,
+      "pct": 17.5,
       "risk": "low",
       "assetClass": "bank-deposit",
       "riskFactors": ["credit", "counterparty", "custody"],
@@ -27,7 +27,7 @@
     },
     {
       "name": "Cash",
-      "pct": 8,
+      "pct": 6.7,
       "risk": "low",
       "assetClass": "cash",
       "riskFactors": ["counterparty", "custody"],
@@ -35,8 +35,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine04 primary-source review",
+    "reviewedAt": "2026-10-09",
+    "reviewer": "Sol curation campaign 2026-10-09 (W2L19Figure)",
     "confidence": "verified",
     "sources": [
       {
@@ -56,42 +56,46 @@
         "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
       },
       {
-        "label": "Fidelity July 31, 2026 asset allocation and duration factsheet",
+        "label": "Fidelity August 31, 2026 asset allocation and duration factsheet; recovered 2026-10-09T11:39:28Z",
         "url": "https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf"
+      },
+      {
+        "label": "Recovered issuer August 31 factsheet text; observation 2026-10-09T11:39:28Z",
+        "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf"
       }
     ],
-    "rationale": "Issuer factsheet dated July 31, 2026 reports CP 49.2%, CDs 25.1%, time deposits 17.6% and cash 8.0% of total net assets, 43 positions and USD 45m whole-fund size. Published weights sum to 99.9% because of rounding; no 0.1% asset or normalization is invented. WAM 41 days and WAL 59 days are measured averages, not maximum tenor. The factsheet identifies Class 1 ACC (FILQ-A), ISIN KYG3R61G1088 and a Moody's Aaa-mf fund assessment; its glossary explicitly says this is not a credit rating. These are issuer portfolio disclosures, not an independent token-to-fund reconciliation.",
-    "compositionBasis": "Published July 31, 2026 whole-fund asset-class percentages of total net assets",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "Issuer factsheet dated August 31, 2026 reports commercial paper 44.5%, certificates of deposit 31.3%, time deposits 17.5% and cash 6.7% of total net assets, summing to 100% without normalization. It reports 52 positions and USD 46m whole-fund size, WAM 39 days and WAL 67 days. These averages are not maximum tenor. The exact Class 1 ACC identity is FILQ-A, ISIN KYG3R61G1088; Class 1 DIST is a separate claim. The Moody's Aaa-mf fund assessment is explicitly not a credit rating. Direct PDF access returned 403; the issuer document was recovered through its text mirror at 2026-10-09T11:39:28Z. Its August 31 portfolio date, not the mirror's October 9 HTTP timestamp or this review date, governs freshness. The observation is historical and outside the ordinary 31+7-day composition window on October 9; it supplies no current composition or independent token-to-fund financial assurance.",
+    "compositionBasis": "Published August 31, 2026 whole-fund asset-class percentages of total net assets",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "Security-level counterparties, current October composition and complete Class 1 ACC token-to-fund asset/liability reconciliation remain unavailable. July whole-fund size is not FILQ-A current token liabilities. Named custodians and auditors do not prove account-level custody allocation or financial assurance.",
+    "knownUnknownExposure": "Security-level counterparties, current October composition and complete Class 1 ACC token-to-fund asset/liability reconciliation remain unavailable. August whole-fund size is not FILQ-A current token liabilities. Named custodians and auditors do not prove account-level custody allocation or financial assurance. The newly recovered August composition remains historical; no current backing or Exit capacity is inferred.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Commercial paper",
-        "pct": 49.2,
+        "pct": 44.5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Published off-chain money-market instrument category, not a tracked stablecoin."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Certificates of deposit",
-        "pct": 25.1,
+        "pct": 31.3,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Published off-chain negotiable deposit instrument category, not a tracked stablecoin."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Time deposits",
-        "pct": 17.6,
+        "pct": 17.5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Published off-chain bank deposit category, not a tracked stablecoin."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Cash",
-        "pct": 8,
+        "pct": 6.7,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Published off-chain cash category, not a tracked stablecoin."
       }

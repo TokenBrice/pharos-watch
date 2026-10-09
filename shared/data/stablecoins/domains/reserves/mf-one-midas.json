@@ -47,6 +47,14 @@
       {
         "label": "Midas mFONE portfolio API, October 2 observation",
         "url": "https://api-prod.midas.app/api/transparency?token=mFONE"
+      },
+      {
+        "label": "W2L03Midas pinned SAVE registry read at Ethereum block 26154369 (2026-10-09T10:51:35Z): mFONE latest publication timestamp 2026-10-08T18:06:11Z; technical publication identity only",
+        "url": "https://etherscan.io/address/0x2d6e9f608807436de5d9603b00abe3fed1bc809d#readContract"
+      },
+      {
+        "label": "Pinned SAVE block 26154369, hash 0xe37b850c5c182cdf1b868af39bcf2606d9ae52a9213e5b42a1004e99ff0269d7",
+        "url": "https://etherscan.io/block/26154369"
       }
     ],
     "rationale": "Midas describes mF-ONE as exposure to Fasanara private-credit and digital-asset strategies. The September 11 aggregate proof-of-reserve view and operational wallet listings do not disclose underlying facility or asset weights. The reserve remains one unresolved strategy envelope without invented borrower, asset or venue allocations. September 15 evidence follow-up retrieved the September 14 onchain-linked SAVE attestation. Its public Fasanara email identifies FASANARA SICAV-RAIF, Sub-Fund 29/F-ONE, Class A-A USD, with Infinite Tokens S.A., Compartment D as noteholder and Midas Software GmbH as beneficiary. This narrows legal and fund identity but does not provide current loan-level composition. The email-derived $59,163,707.13 and $183,228.00 onchain component do not reconcile to the attestation's $65,249,114.22 ops-reported gross reserve; the published calculation uses the ops fallback. No reserve weights or improved coverage are inferred from that remainder.",

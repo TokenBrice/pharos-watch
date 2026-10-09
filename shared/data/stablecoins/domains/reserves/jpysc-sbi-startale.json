@@ -29,9 +29,17 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (Lane09Ripio)",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane09Ripio); exact statutory JGB tenor supplement (W2L14Startale)",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Current enforced June 1, 2026 electronic-payment ordinance Article 3: JGB acquisition-to-redemption maximum three calendar months; demand withdrawal and cancellable term-deposit eligibility, not stressed settlement",
+        "url": "https://laws.e-gov.go.jp/api/2/law_data/505M60000002048_20260601_508M60000002051?elm=MainProvision-Article_3"
+      },
+      {
+        "label": "Current enforced trustee ordinance Article 22(10)(4)-(5) binds issuing trust banks to the Article 3 reserve requirements",
+        "url": "https://laws.e-gov.go.jp/api/2/law_data/357M50000040016_20260601_508M60000002051?elm=MainProvision-Article_22"
+      },
       {
         "label": "SBI Shinsei Trust statutory JPYSC balance table as of September 30, 2026; observed 2026-10-09T10:38:55Z",
         "url": "https://www.shinseitrust.com/stablecoin/jpysc.html"
@@ -41,11 +49,11 @@
         "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf"
       }
     ],
-    "rationale": "The issuer's September 30 balance table itemizes the complete JPY20,101,088,515 trust property: JPY10,303,388,515 ordinary deposits (51.26%), JPY8,800,000,000 term deposits (43.78%), and JPY997,700,000 Japanese government bonds at market value (4.96%). These disclosed percentages sum to 100; no inferred or normalized allocation is used. Outstanding trust-beneficiary issuance is separately reported as JPY20,070,668,515. This is current issuer self-verification, not an independent financial engagement or whole-chain supply reconciliation. Deposit-bank identities and allocations, term-deposit withdrawal conditions and maturities, and JGB positions and maturity limits are not disclosed. Legacy deposit risk is high because the underlying banks and terms are unnamed; JGB risk is medium because position duration is unestablished. The October 1 custody review retains its own clock.",
+    "rationale": "The issuer's September 30 balance table itemizes the complete JPY20,101,088,515 trust property: JPY10,303,388,515 ordinary deposits (51.26%), JPY8,800,000,000 term deposits (43.78%), and JPY997,700,000 Japanese government bonds at market value (4.96%). These disclosed percentages sum to 100; no inferred or normalized allocation is used. Outstanding trust-beneficiary issuance is separately reported as JPY20,070,668,515. This is current issuer self-verification, not an independent financial engagement or whole-chain supply reconciliation. The October 9 statutory supplement establishes the whole JGB exposure's enforceable acquisition-to-redemption maximum of three calendar months through electronic-payment ordinance Article 3(2)(1) and trustee ordinance Article 22(10)(4)-(5); the exact bound is authored separately without inventing a raw tenor or changing the September 30 composition clock. Article 3 also requires demand withdrawal and cancellable term deposits without principal loss from cancellation, but supplies neither bank identities, instrument-specific deposit maturity limits nor a stressed final-cash settlement horizon. JGB positions and actual maturities remain undisclosed. Legacy deposit risk remains high because the banks and instrument terms are unnamed; JGB legacy risk remains medium, with no position roster inferred. The October 1 custody review retains its own clock.",
     "compositionBasis": "Issuer statutory disclosure of the complete JPYSC trust property as of September 30, 2026",
     "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "All reserve asset classes are identified; underlying bank identities, bank concentration, deposit terms, liquidation timing, and bond maturities remain unknown.",
+    "knownUnknownExposure": "All reserve asset classes are identified. JGB eligibility tenor is legally capped at three calendar months; underlying bank identities, bank concentration, deposit contractual maturities, stressed liquidation timing, and actual bond positions and maturities remain unknown.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

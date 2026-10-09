@@ -512,6 +512,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     notes: [
       "The 5% hot-buffer ratio is a conservative modeling heuristic, not a documented lower bound; current Ondo materials do not publish a durable bank-demand-deposit allocation or instant-redemption floor.",
       "At Ethereum block 26143090 (2026-10-07), public defaults showed 27,220,717.712216 USDC router liquidity, $15M global headroom, a $10M/86400s new-user limit and zero default flat/bps fees. These are separate diagnostics, not additive inventory or actual-holder entitlement. Zero user ID is not registered; active user sources, instantiated limits and fee overrides take precedence.",
+      "At Ethereum block 26154601 (2026-10-09T11:37:59Z; hash 0xf6d6c7e8f5c1585fb116934eabfc00023f0f89330f014b504eb0a4b593af8672), InstantManager redeemPaused was false and minimumRedemptionUSD was 1e18 ($1). The configured redemption-fee contract 0xe1cb24077d77d2fe763fcac63e5653d97dc8d20c returned an active USDY default with zero flat and bps fees and an inactive USDY/USDC default override. These pinned configuration facts do not establish registered-user overrides, volume-dependent fees, executable same-notional payout, gas or eligible capacity; cost remains unmeasured and no all-holder zero-fee bound is asserted.",
     ],
   },
   ...expandIds(["iauon-ondo", "slvon-ondo"], {

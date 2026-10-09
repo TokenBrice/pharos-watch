@@ -60646,6 +60646,779 @@
         "https://docs.hubbleprotocol.io/faq/usdh-peg-stability/peg-stability-module"
       ],
       "rationale": "Current primary documentation names reserve vaults and the USDC PSM mechanism without a dated complete market-value composition and reconciled denominator. Existing numerical envelope is dated August 8 and is not renewed by these source reviews. Raw public balances remain research leads; full same-slot PSM/CDP/receipt inventory, exclusions and LP look-through are not established by the issuer documents. C records absent full composition disclosure, never a claim that balances are private or zero."
+    },
+    {
+      "id": "w2l03midas-mtbill-buidl-liquidity-20261009",
+      "assetId": "mtbill-midas",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:7578c872c37b77eb35704c63",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "reviewedAt": "2026-10-09T11:45:51Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L03Midas)",
+      "sources": [
+        {
+          "url": "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652",
+          "observedAt": "2026-10-09T11:45:51Z",
+          "datumAsOf": "2024-05-04",
+          "location": "Plan Design 9 and 11, full redemption, finality, payment, and Circle secondary sale",
+          "excerpt": "Payment of redemption proceeds will generally be made on the applicable Redemption Date, provided that payment details have already been provided to the Transfer Agent. Circle secondary-market sale is at the sole discretion of Circle and is not guaranteed.",
+          "assertion": "Daily dealing and generally same-business-day wire processing do not establish an unconditional whole-position final USD realization maximum; no current same-snapshot full-position availability is published in this disclosure."
+        }
+      ],
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "searchedSurfaces": [
+        "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652"
+      ],
+      "rationale": "Recovered substantive primary distributor disclosure previously inaccessible in wave 1. It publishes good-order, finality and bank-account prerequisites, ordinary daily redemption and generally same-day payment, but no guaranteed full-position elapsed USD-realization bound or current withdrawal numerator/denominator. The optional Circle BUIDL/USDC facility is explicitly discretionary and not guaranteed. Retain liquidityHorizon unknown; do not convert normal dealing targets to stressed realization or a guaranteed calendar-day horizon. The May 4, 2024 source date is unchanged; this is new source-recovery research, not a reserve-composition refresh."
+    },
+    {
+      "id": "campaign-w2l07-xagm-physical-usd-output",
+      "assetId": "xagm-matrixdock",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "output",
+        "routeKey": "redemption:redemption:ebdf5ef5-e7ab-4b14-87dd-f0807db29fa0:physical-to-usd:xagm-matrixdock",
+        "exposureId": null,
+        "requiredDatum": "output"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:54:20Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L07Ondo)",
+      "sources": [
+        {
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media",
+          "observedAt": "2026-10-09T11:54:20Z",
+          "datumAsOf": "2026-03-17",
+          "location": "Whitepaper dated March 17, 2026, pages 11–13: redemption process and risk disclosures",
+          "excerpt": "Redemption pricing depends on metal resource partners and may differ from spot; no guarantee of liquidity, pricing or timing. Physical delivery requires separate arrangements.",
+          "assertion": "The governing public description does not establish a final realizable USD sale price and end-to-end settlement for the physical redemption branch at the requested $1 million notional."
+        },
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+          "observedAt": "2026-10-09T11:54:20Z",
+          "datumAsOf": null,
+          "location": "Redeeming XAGm for stablecoins; physical redemption",
+          "excerpt": "Stablecoin orders require an accepted quote and slippage limit; settlement within T+3 follows execution. Physical redemption has a 2,100 XAGm minimum and pickup or delivery arrangements.",
+          "assertion": "A conditional stablecoin-sale branch is not a final-USD certificate for the physical-to-USD modeled route. Physical metal quantities cannot be equated to cash output."
+        },
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq.md",
+          "observedAt": "2026-10-09T11:54:20Z",
+          "datumAsOf": null,
+          "location": "Redemption and fees",
+          "excerpt": "Supported stablecoins are USDC and USDT; physical bar redemption is subject to inventory availability; redemption fee is 0.50%.",
+          "assertion": "A stated issuer fee and supported payment assets do not disclose an executable physical-sale quote, all-in sale costs or a final cash settlement bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq.md"
+      ],
+      "rationale": "Exact captured physical-to-usd:xagm-matrixdock route is the modeled-metal-sale branch, requestedNotionalUsd 1000000, physical-final-settlement-missing. Primary terms disclose physical delivery and separately conditional partner stablecoin sales, not a final same-notional physical-to-USD realization. No spot price, current ozPerToken, bar inventory or 0.50% issuer fee fills that missing output. Classify this researched disclosure limitation C; do not re-label an unsuccessful fetch or unrelated stablecoin branch as a quantified physical output."
+    },
+    {
+      "id": "w2l11-idrx-6844e403a5152afde98fcc71-liquidity",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:6844e403a5152afde98fcc71",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:44:16Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L11Idrx)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Appendix 1a, PDF page 8",
+          "excerpt": "Jenis Produk: GIRO; Saldo Tersedia: 16,740,530,150.32",
+          "assertion": "The September 30 giro screenshot establishes a historical available IDR balance, not current availability under the 10,800-second bound budget or a stressed realization horizon."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Terms and Conditions, PDF page 10, C.17 and C.20",
+          "excerpt": "IDRX does not guarantee that the IDRX Platform or Services will always be accessible at all times; IDRX is not responsible for the services and performance of Third Party services.",
+          "assertion": "Issuer service terms disclose no governing instrument or full-exposure reserve realization/maturity guarantee for this exact provider balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+        "https://docs.idrx.co/services/redeem-idr.md"
+      ],
+      "rationale": "IDR bank deposits at PT Bank Ina Perdana Tbk: The September 30 giro screenshot establishes a historical available IDR balance, not current availability under the 10,800-second bound budget or a stressed realization horizon. Issuer redemption release and bank-rail descriptions govern a holder service, not realization of this exact reserve exposure. Preserve the dated composition and all raw unknown liquidity/maturity fields; no historical snapshot, ordinary transfer estimate or product-category inference is promoted into a favorable bound."
+    },
+    {
+      "id": "w2l11-idrx-e0caabb30a060b194a576bd5-liquidity",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:e0caabb30a060b194a576bd5",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:44:16Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L11Idrx)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Appendix 1f, PDF page 11",
+          "excerpt": "Saldo: Rp 1.604.097.929",
+          "assertion": "The payment dashboard establishes a historical wallet balance, without a claim-specific maximum realization time or complete current available-funds reconciliation."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Terms and Conditions, PDF page 10, C.17 and C.20",
+          "excerpt": "IDRX does not guarantee that the IDRX Platform or Services will always be accessible at all times; IDRX is not responsible for the services and performance of Third Party services.",
+          "assertion": "Issuer service terms disclose no governing instrument or full-exposure reserve realization/maturity guarantee for this exact provider balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+        "https://docs.idrx.co/services/redeem-idr.md"
+      ],
+      "rationale": "IDR balance held at Duitku (PT Kharisma Catur Mandala): The payment dashboard establishes a historical wallet balance, without a claim-specific maximum realization time or complete current available-funds reconciliation. Issuer redemption release and bank-rail descriptions govern a holder service, not realization of this exact reserve exposure. Preserve the dated composition and all raw unknown liquidity/maturity fields; no historical snapshot, ordinary transfer estimate or product-category inference is promoted into a favorable bound."
+    },
+    {
+      "id": "w2l11-idrx-ff4051fa938807f328287034-liquidity",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:ff4051fa938807f328287034",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:44:16Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L11Idrx)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Appendix 1g, PDF page 12",
+          "excerpt": "IDR total 996.226.547; Tersedia 339.250; Locked 995.887.296",
+          "assertion": "The Pintu Pro screenshot separates available and locked balances. Their displayed sum differs from the stated total by one rupiah. Neither an unreconciled historical fraction nor the existence of a withdrawal button establishes a current or stressed full-exposure realization horizon."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Terms and Conditions, PDF page 10, C.17 and C.20",
+          "excerpt": "IDRX does not guarantee that the IDRX Platform or Services will always be accessible at all times; IDRX is not responsible for the services and performance of Third Party services.",
+          "assertion": "Issuer service terms disclose no governing instrument or full-exposure reserve realization/maturity guarantee for this exact provider balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+        "https://docs.idrx.co/services/redeem-idr.md"
+      ],
+      "rationale": "IDR balance held at PINTU (PT Pintu Kemana Saja): The Pintu Pro screenshot separates available and locked balances. Their displayed sum differs from the stated total by one rupiah. Neither an unreconciled historical fraction nor the existence of a withdrawal button establishes a current or stressed full-exposure realization horizon. Issuer redemption release and bank-rail descriptions govern a holder service, not realization of this exact reserve exposure. Preserve the dated composition and all raw unknown liquidity/maturity fields; no historical snapshot, ordinary transfer estimate or product-category inference is promoted into a favorable bound."
+    },
+    {
+      "id": "w2l11-idrx-2704e3479acc40f38c2b334e-liquidity",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:2704e3479acc40f38c2b334e",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:44:16Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L11Idrx)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Appendix 1e, PDF page 10",
+          "excerpt": "Rupiah active balance 73,430,008 IDR; frozen balance 633,482,180 IDR; estimated IDR value 706,912,188 IDR",
+          "assertion": "The Indodax screenshot separates active and frozen balances. A September 30 historical fraction is stale under current-availability admission and cannot supply a present full-exposure realization bound; no stress or final-settlement commitment is disclosed."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Terms and Conditions, PDF page 10, C.17 and C.20",
+          "excerpt": "IDRX does not guarantee that the IDRX Platform or Services will always be accessible at all times; IDRX is not responsible for the services and performance of Third Party services.",
+          "assertion": "Issuer service terms disclose no governing instrument or full-exposure reserve realization/maturity guarantee for this exact provider balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+        "https://docs.idrx.co/services/redeem-idr.md"
+      ],
+      "rationale": "IDR balance held at Indodax (PT Indodax Nasional Indonesia): The Indodax screenshot separates active and frozen balances. A September 30 historical fraction is stale under current-availability admission and cannot supply a present full-exposure realization bound; no stress or final-settlement commitment is disclosed. Issuer redemption release and bank-rail descriptions govern a holder service, not realization of this exact reserve exposure. Preserve the dated composition and all raw unknown liquidity/maturity fields; no historical snapshot, ordinary transfer estimate or product-category inference is promoted into a favorable bound."
+    },
+    {
+      "id": "w2l11-idrx-e76160d36494d6d94909ef88-liquidity",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:e76160d36494d6d94909ef88",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:44:16Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L11Idrx)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Appendix 1b, PDF page 8",
+          "excerpt": "Rekening Utama; Saldo Akhir IDR 67.784.983,00",
+          "assertion": "The bank-account summary establishes a historical balance and transactions, without a current availability denominator or a claim-specific stressed realization horizon."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Terms and Conditions, PDF page 10, C.17 and C.20",
+          "excerpt": "IDRX does not guarantee that the IDRX Platform or Services will always be accessible at all times; IDRX is not responsible for the services and performance of Third Party services.",
+          "assertion": "Issuer service terms disclose no governing instrument or full-exposure reserve realization/maturity guarantee for this exact provider balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+        "https://docs.idrx.co/services/redeem-idr.md"
+      ],
+      "rationale": "IDR bank deposits at PT Bank Nationalnobu Tbk: The bank-account summary establishes a historical balance and transactions, without a current availability denominator or a claim-specific stressed realization horizon. Issuer redemption release and bank-rail descriptions govern a holder service, not realization of this exact reserve exposure. Preserve the dated composition and all raw unknown liquidity/maturity fields; no historical snapshot, ordinary transfer estimate or product-category inference is promoted into a favorable bound."
+    },
+    {
+      "id": "w2l11-idrx-e76160d36494d6d94909ef88-maturity",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "maturity",
+        "routeKey": null,
+        "exposureId": "reserve:e76160d36494d6d94909ef88",
+        "requiredDatum": "maturityDaysMax"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:44:16Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L11Idrx)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Appendix 1b, PDF page 8",
+          "excerpt": "Rekening Utama; Saldo Akhir IDR 67.784.983,00",
+          "assertion": "The summary identifies a bank-account balance but supplies no governing account agreement, exact deposit product, contractual maturity maximum or source-bound whole-exposure maturity-applicability clause. A generic bank-deposit label does not prove N/A or open-ended maturity."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Terms and Conditions, PDF page 10, C.17 and C.20",
+          "excerpt": "IDRX does not guarantee that the IDRX Platform or Services will always be accessible at all times; IDRX is not responsible for the services and performance of Third Party services.",
+          "assertion": "Issuer service terms disclose no governing instrument or full-exposure reserve realization/maturity guarantee for this exact provider balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+        "https://docs.idrx.co/services/redeem-idr.md"
+      ],
+      "rationale": "IDR bank deposits at PT Bank Nationalnobu Tbk: The summary identifies a bank-account balance but supplies no governing account agreement, exact deposit product, contractual maturity maximum or source-bound whole-exposure maturity-applicability clause. A generic bank-deposit label does not prove N/A or open-ended maturity. Issuer redemption release and bank-rail descriptions govern a holder service, not realization of this exact reserve exposure. Preserve the dated composition and all raw unknown liquidity/maturity fields; no historical snapshot, ordinary transfer estimate or product-category inference is promoted into a favorable bound."
+    },
+    {
+      "id": "w2l11-idrx-49785466b99abe3671ca321f-liquidity",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:49785466b99abe3671ca321f",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:44:16Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L11Idrx)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Appendix 1c, PDF page 9",
+          "excerpt": "Saldo Rekening Rp10.244.545",
+          "assertion": "The bank dashboard establishes a historical balance, without a current availability denominator or a claim-specific stressed realization horizon."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Terms and Conditions, PDF page 10, C.17 and C.20",
+          "excerpt": "IDRX does not guarantee that the IDRX Platform or Services will always be accessible at all times; IDRX is not responsible for the services and performance of Third Party services.",
+          "assertion": "Issuer service terms disclose no governing instrument or full-exposure reserve realization/maturity guarantee for this exact provider balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+        "https://docs.idrx.co/services/redeem-idr.md"
+      ],
+      "rationale": "IDR bank deposits at PT Bank Rakyat Indonesia (Persero) Tbk: The bank dashboard establishes a historical balance, without a current availability denominator or a claim-specific stressed realization horizon. Issuer redemption release and bank-rail descriptions govern a holder service, not realization of this exact reserve exposure. Preserve the dated composition and all raw unknown liquidity/maturity fields; no historical snapshot, ordinary transfer estimate or product-category inference is promoted into a favorable bound."
+    },
+    {
+      "id": "w2l11-idrx-49dddaa229734348fbba34b9-liquidity",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:49dddaa229734348fbba34b9",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:44:16Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L11Idrx)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Appendix 1d, PDF page 9",
+          "excerpt": "Balance Detail; IDR 10,085,000.14",
+          "assertion": "The account dashboard establishes a historical balance, without a current availability denominator or a claim-specific stressed realization horizon."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Terms and Conditions, PDF page 10, C.17 and C.20",
+          "excerpt": "IDRX does not guarantee that the IDRX Platform or Services will always be accessible at all times; IDRX is not responsible for the services and performance of Third Party services.",
+          "assertion": "Issuer service terms disclose no governing instrument or full-exposure reserve realization/maturity guarantee for this exact provider balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+        "https://docs.idrx.co/services/redeem-idr.md"
+      ],
+      "rationale": "IDR bank deposits at PT Bank Mandiri (Persero) Tbk: The account dashboard establishes a historical balance, without a current availability denominator or a claim-specific stressed realization horizon. Issuer redemption release and bank-rail descriptions govern a holder service, not realization of this exact reserve exposure. Preserve the dated composition and all raw unknown liquidity/maturity fields; no historical snapshot, ordinary transfer estimate or product-category inference is promoted into a favorable bound."
+    },
+    {
+      "id": "w2l11-idrx-49dddaa229734348fbba34b9-maturity",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "maturity",
+        "routeKey": null,
+        "exposureId": "reserve:49dddaa229734348fbba34b9",
+        "requiredDatum": "maturityDaysMax"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:44:16Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L11Idrx)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Appendix 1d, PDF page 9",
+          "excerpt": "Balance Detail; IDR 10,085,000.14",
+          "assertion": "The balance detail supplies no governing account agreement, exact deposit product, contractual maturity maximum or source-bound whole-exposure maturity-applicability clause. A dashboard account balance does not prove N/A or open-ended maturity."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-09T11:44:16Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Terms and Conditions, PDF page 10, C.17 and C.20",
+          "excerpt": "IDRX does not guarantee that the IDRX Platform or Services will always be accessible at all times; IDRX is not responsible for the services and performance of Third Party services.",
+          "assertion": "Issuer service terms disclose no governing instrument or full-exposure reserve realization/maturity guarantee for this exact provider balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+        "https://docs.idrx.co/services/redeem-idr.md"
+      ],
+      "rationale": "IDR bank deposits at PT Bank Mandiri (Persero) Tbk: The balance detail supplies no governing account agreement, exact deposit product, contractual maturity maximum or source-bound whole-exposure maturity-applicability clause. A dashboard account balance does not prove N/A or open-ended maturity. Issuer redemption release and bank-rail descriptions govern a holder service, not realization of this exact reserve exposure. Preserve the dated composition and all raw unknown liquidity/maturity fields; no historical snapshot, ordinary transfer estimate or product-category inference is promoted into a favorable bound."
+    },
+    {
+      "id": "w2l14-v9g-f1c72cc974f7b0e2",
+      "assetId": "jpysc-sbi-startale",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:752f80c12e4e4590f32ad54d",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:47:28Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L14Startale)",
+      "sources": [
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/jpysc.html",
+          "observedAt": "2026-10-09T11:47:28Z",
+          "datumAsOf": "2026-09-30",
+          "location": "発行残高 September 30 complete trust-property table; recovered through r.jina.ai text copy",
+          "excerpt": "普通預金残高（比率）：¥10,303,388,515（51.26%）; 定期預金残高（比率）：¥8,800,000,000（43.78%）; 日本国債時価（比率）：¥997,700,000（4.96%）",
+          "assertion": "The recovered exact issuer balance table and governing terms identify this reserve class but do not disclose a stressed realization horizon for this entire exposure. The current enforced ordinance requires demand withdrawal or cancellable term deposits where applicable; ability to request cancellation is not a guaranteed final-cash stressed settlement bound. Conditional JPYSC holder redemption within two Japanese business days is not the liquidation horizon of this individual reserve instrument."
+        },
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+          "observedAt": "2026-10-09T11:47:28Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Articles 4(2), 4(4), 6 and 14; recovered through r.jina.ai text copy",
+          "excerpt": "本信託財産の預貯金先の銀行等の破綻等又は本信託財産の運用損等により",
+          "assertion": "This is the specific JPYSC governing document, not generic SBI bank deposit terms; it does not supply the missing exposure-specific datum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.shinseitrust.com/stablecoin/jpysc.html",
+        "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+        "https://laws.e-gov.go.jp/api/2/law_data/505M60000002048_20260601_508M60000002051?elm=MainProvision-Article_3",
+        "https://laws.e-gov.go.jp/api/2/law_data/357M50000040016_20260601_508M60000002051?elm=MainProvision-Article_22"
+      ],
+      "rationale": "The recovered exact issuer balance table and governing terms identify this reserve class but do not disclose a stressed realization horizon for this entire exposure. The current enforced ordinance requires demand withdrawal or cancellable term deposits where applicable; ability to request cancellation is not a guaranteed final-cash stressed settlement bound. Conditional JPYSC holder redemption within two Japanese business days is not the liquidation horizon of this individual reserve instrument."
+    },
+    {
+      "id": "w2l14-v9g-c86e292159739b4d",
+      "assetId": "jpysc-sbi-startale",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "maturity",
+        "routeKey": null,
+        "exposureId": "reserve:752f80c12e4e4590f32ad54d",
+        "requiredDatum": "maturityDaysMax"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:47:28Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L14Startale)",
+      "sources": [
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/jpysc.html",
+          "observedAt": "2026-10-09T11:47:28Z",
+          "datumAsOf": "2026-09-30",
+          "location": "発行残高 September 30 complete trust-property table; recovered through r.jina.ai text copy",
+          "excerpt": "普通預金残高（比率）：¥10,303,388,515（51.26%）; 定期預金残高（比率）：¥8,800,000,000（43.78%）; 日本国債時価（比率）：¥997,700,000（4.96%）",
+          "assertion": "The recovered exact issuer table labels ordinary or term deposits without instrument-level contractual maturity dates or a hard whole-exposure maximum. The current enforced ordinance supplies withdrawal/cancellation eligibility, not a maximum deposit term; its three-calendar-month JGB limit does not cover deposits. No zero-day maturity, bank-deposit N/A, or generic bank-product term is inferred."
+        },
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+          "observedAt": "2026-10-09T11:47:28Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Articles 4(2), 4(4), 6 and 14; recovered through r.jina.ai text copy",
+          "excerpt": "本信託財産の預貯金先の銀行等の破綻等又は本信託財産の運用損等により",
+          "assertion": "This is the specific JPYSC governing document, not generic SBI bank deposit terms; it does not supply the missing exposure-specific datum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.shinseitrust.com/stablecoin/jpysc.html",
+        "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+        "https://laws.e-gov.go.jp/api/2/law_data/505M60000002048_20260601_508M60000002051?elm=MainProvision-Article_3",
+        "https://laws.e-gov.go.jp/api/2/law_data/357M50000040016_20260601_508M60000002051?elm=MainProvision-Article_22"
+      ],
+      "rationale": "The recovered exact issuer table labels ordinary or term deposits without instrument-level contractual maturity dates or a hard whole-exposure maximum. The current enforced ordinance supplies withdrawal/cancellation eligibility, not a maximum deposit term; its three-calendar-month JGB limit does not cover deposits. No zero-day maturity, bank-deposit N/A, or generic bank-product term is inferred."
+    },
+    {
+      "id": "w2l14-v9g-5feed84f990a215f",
+      "assetId": "jpysc-sbi-startale",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "obligorConcentration",
+        "routeKey": null,
+        "exposureId": "reserve:752f80c12e4e4590f32ad54d",
+        "requiredDatum": "issuerOrObligorKey"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:47:28Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L14Startale)",
+      "sources": [
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/jpysc.html",
+          "observedAt": "2026-10-09T11:47:28Z",
+          "datumAsOf": "2026-09-30",
+          "location": "発行残高 September 30 complete trust-property table; recovered through r.jina.ai text copy",
+          "excerpt": "普通預金残高（比率）：¥10,303,388,515（51.26%）; 定期預金残高（比率）：¥8,800,000,000（43.78%）; 日本国債時価（比率）：¥997,700,000（4.96%）",
+          "assertion": "The recovered September 30 exact trust-property balance table discloses aggregate ordinary and term deposit amounts but no deposit-taking bank names or allocations. The issuer and trustee are not automatically the underlying deposit obligors. The current enforced ordinance constrains eligible financial institutions without naming the actual institutions holding this exposure."
+        },
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+          "observedAt": "2026-10-09T11:47:28Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Articles 4(2), 4(4), 6 and 14; recovered through r.jina.ai text copy",
+          "excerpt": "本信託財産の預貯金先の銀行等の破綻等又は本信託財産の運用損等により",
+          "assertion": "This is the specific JPYSC governing document, not generic SBI bank deposit terms; it does not supply the missing exposure-specific datum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.shinseitrust.com/stablecoin/jpysc.html",
+        "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+        "https://laws.e-gov.go.jp/api/2/law_data/505M60000002048_20260601_508M60000002051?elm=MainProvision-Article_3",
+        "https://laws.e-gov.go.jp/api/2/law_data/357M50000040016_20260601_508M60000002051?elm=MainProvision-Article_22"
+      ],
+      "rationale": "The recovered September 30 exact trust-property balance table discloses aggregate ordinary and term deposit amounts but no deposit-taking bank names or allocations. The issuer and trustee are not automatically the underlying deposit obligors. The current enforced ordinance constrains eligible financial institutions without naming the actual institutions holding this exposure."
+    },
+    {
+      "id": "w2l14-v9g-33d14657df1eeef0",
+      "assetId": "jpysc-sbi-startale",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:afb889168e14e7aacff094b0",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:47:28Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L14Startale)",
+      "sources": [
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/jpysc.html",
+          "observedAt": "2026-10-09T11:47:28Z",
+          "datumAsOf": "2026-09-30",
+          "location": "発行残高 September 30 complete trust-property table; recovered through r.jina.ai text copy",
+          "excerpt": "普通預金残高（比率）：¥10,303,388,515（51.26%）; 定期預金残高（比率）：¥8,800,000,000（43.78%）; 日本国債時価（比率）：¥997,700,000（4.96%）",
+          "assertion": "The recovered exact issuer balance table and governing terms identify this reserve class but do not disclose a stressed realization horizon for this entire exposure. The current enforced ordinance requires demand withdrawal or cancellable term deposits where applicable; ability to request cancellation is not a guaranteed final-cash stressed settlement bound. Conditional JPYSC holder redemption within two Japanese business days is not the liquidation horizon of this individual reserve instrument."
+        },
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+          "observedAt": "2026-10-09T11:47:28Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Articles 4(2), 4(4), 6 and 14; recovered through r.jina.ai text copy",
+          "excerpt": "本信託財産の預貯金先の銀行等の破綻等又は本信託財産の運用損等により",
+          "assertion": "This is the specific JPYSC governing document, not generic SBI bank deposit terms; it does not supply the missing exposure-specific datum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.shinseitrust.com/stablecoin/jpysc.html",
+        "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+        "https://laws.e-gov.go.jp/api/2/law_data/505M60000002048_20260601_508M60000002051?elm=MainProvision-Article_3",
+        "https://laws.e-gov.go.jp/api/2/law_data/357M50000040016_20260601_508M60000002051?elm=MainProvision-Article_22"
+      ],
+      "rationale": "The recovered exact issuer balance table and governing terms identify this reserve class but do not disclose a stressed realization horizon for this entire exposure. The current enforced ordinance requires demand withdrawal or cancellable term deposits where applicable; ability to request cancellation is not a guaranteed final-cash stressed settlement bound. Conditional JPYSC holder redemption within two Japanese business days is not the liquidation horizon of this individual reserve instrument."
+    },
+    {
+      "id": "w2l14-v9g-111bc3b0ce4e4444",
+      "assetId": "jpysc-sbi-startale",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "maturity",
+        "routeKey": null,
+        "exposureId": "reserve:afb889168e14e7aacff094b0",
+        "requiredDatum": "maturityDaysMax"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:47:28Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L14Startale)",
+      "sources": [
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/jpysc.html",
+          "observedAt": "2026-10-09T11:47:28Z",
+          "datumAsOf": "2026-09-30",
+          "location": "発行残高 September 30 complete trust-property table; recovered through r.jina.ai text copy",
+          "excerpt": "普通預金残高（比率）：¥10,303,388,515（51.26%）; 定期預金残高（比率）：¥8,800,000,000（43.78%）; 日本国債時価（比率）：¥997,700,000（4.96%）",
+          "assertion": "The recovered exact issuer table labels ordinary or term deposits without instrument-level contractual maturity dates or a hard whole-exposure maximum. The current enforced ordinance supplies withdrawal/cancellation eligibility, not a maximum deposit term; its three-calendar-month JGB limit does not cover deposits. No zero-day maturity, bank-deposit N/A, or generic bank-product term is inferred."
+        },
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+          "observedAt": "2026-10-09T11:47:28Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Articles 4(2), 4(4), 6 and 14; recovered through r.jina.ai text copy",
+          "excerpt": "本信託財産の預貯金先の銀行等の破綻等又は本信託財産の運用損等により",
+          "assertion": "This is the specific JPYSC governing document, not generic SBI bank deposit terms; it does not supply the missing exposure-specific datum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.shinseitrust.com/stablecoin/jpysc.html",
+        "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+        "https://laws.e-gov.go.jp/api/2/law_data/505M60000002048_20260601_508M60000002051?elm=MainProvision-Article_3",
+        "https://laws.e-gov.go.jp/api/2/law_data/357M50000040016_20260601_508M60000002051?elm=MainProvision-Article_22"
+      ],
+      "rationale": "The recovered exact issuer table labels ordinary or term deposits without instrument-level contractual maturity dates or a hard whole-exposure maximum. The current enforced ordinance supplies withdrawal/cancellation eligibility, not a maximum deposit term; its three-calendar-month JGB limit does not cover deposits. No zero-day maturity, bank-deposit N/A, or generic bank-product term is inferred."
+    },
+    {
+      "id": "w2l14-v9g-61e097a9211d8021",
+      "assetId": "jpysc-sbi-startale",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "obligorConcentration",
+        "routeKey": null,
+        "exposureId": "reserve:afb889168e14e7aacff094b0",
+        "requiredDatum": "issuerOrObligorKey"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:47:28Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L14Startale)",
+      "sources": [
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/jpysc.html",
+          "observedAt": "2026-10-09T11:47:28Z",
+          "datumAsOf": "2026-09-30",
+          "location": "発行残高 September 30 complete trust-property table; recovered through r.jina.ai text copy",
+          "excerpt": "普通預金残高（比率）：¥10,303,388,515（51.26%）; 定期預金残高（比率）：¥8,800,000,000（43.78%）; 日本国債時価（比率）：¥997,700,000（4.96%）",
+          "assertion": "The recovered September 30 exact trust-property balance table discloses aggregate ordinary and term deposit amounts but no deposit-taking bank names or allocations. The issuer and trustee are not automatically the underlying deposit obligors. The current enforced ordinance constrains eligible financial institutions without naming the actual institutions holding this exposure."
+        },
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+          "observedAt": "2026-10-09T11:47:28Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Articles 4(2), 4(4), 6 and 14; recovered through r.jina.ai text copy",
+          "excerpt": "本信託財産の預貯金先の銀行等の破綻等又は本信託財産の運用損等により",
+          "assertion": "This is the specific JPYSC governing document, not generic SBI bank deposit terms; it does not supply the missing exposure-specific datum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.shinseitrust.com/stablecoin/jpysc.html",
+        "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+        "https://laws.e-gov.go.jp/api/2/law_data/505M60000002048_20260601_508M60000002051?elm=MainProvision-Article_3",
+        "https://laws.e-gov.go.jp/api/2/law_data/357M50000040016_20260601_508M60000002051?elm=MainProvision-Article_22"
+      ],
+      "rationale": "The recovered September 30 exact trust-property balance table discloses aggregate ordinary and term deposit amounts but no deposit-taking bank names or allocations. The issuer and trustee are not automatically the underlying deposit obligors. The current enforced ordinance constrains eligible financial institutions without naming the actual institutions holding this exposure."
+    },
+    {
+      "id": "w2l14-v9g-e789ff8529bf2bc2",
+      "assetId": "jpysc-sbi-startale",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:5457d74b7925413de5ebb346",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:47:28Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L14Startale)",
+      "sources": [
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/jpysc.html",
+          "observedAt": "2026-10-09T11:47:28Z",
+          "datumAsOf": "2026-09-30",
+          "location": "発行残高 September 30 complete trust-property table; recovered through r.jina.ai text copy",
+          "excerpt": "普通預金残高（比率）：¥10,303,388,515（51.26%）; 定期預金残高（比率）：¥8,800,000,000（43.78%）; 日本国債時価（比率）：¥997,700,000（4.96%）",
+          "assertion": "The recovered exact issuer balance table and governing terms identify this reserve class but do not disclose a stressed realization horizon for this entire exposure. The current enforced ordinance requires demand withdrawal or cancellable term deposits where applicable; ability to request cancellation is not a guaranteed final-cash stressed settlement bound. Conditional JPYSC holder redemption within two Japanese business days is not the liquidation horizon of this individual reserve instrument."
+        },
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+          "observedAt": "2026-10-09T11:47:28Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Articles 4(2), 4(4), 6 and 14; recovered through r.jina.ai text copy",
+          "excerpt": "本信託財産の預貯金先の銀行等の破綻等又は本信託財産の運用損等により",
+          "assertion": "This is the specific JPYSC governing document, not generic SBI bank deposit terms; it does not supply the missing exposure-specific datum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.shinseitrust.com/stablecoin/jpysc.html",
+        "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+        "https://laws.e-gov.go.jp/api/2/law_data/505M60000002048_20260601_508M60000002051?elm=MainProvision-Article_3",
+        "https://laws.e-gov.go.jp/api/2/law_data/357M50000040016_20260601_508M60000002051?elm=MainProvision-Article_22"
+      ],
+      "rationale": "The recovered exact issuer balance table and governing terms identify this reserve class but do not disclose a stressed realization horizon for this entire exposure. The current enforced ordinance requires demand withdrawal or cancellable term deposits where applicable; ability to request cancellation is not a guaranteed final-cash stressed settlement bound. Conditional JPYSC holder redemption within two Japanese business days is not the liquidation horizon of this individual reserve instrument."
+    },
+    {
+      "id": "w2-w2l16agant-mxnb-current-reserve-composition",
+      "assetId": "mxnb-juno",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-composition",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reserve-composition"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-09T11:38:47Z",
+      "reviewer": "Sol curation campaign 2026-10-09 (W2L16Agant)",
+      "sources": [
+        {
+          "url": "https://mxnb.mx/en-US/transparency",
+          "observedAt": "2026-10-09T11:38:47Z",
+          "datumAsOf": "2026-10-07",
+          "location": "Fiat and token balances; embedded Attestation reports roster",
+          "excerpt": "$53.2M MXN reserves / $52.7M MXNB in circulation, By October 7th 2026; latest linked 2026 report is Q2.",
+          "assertion": "The dated issuer total and latest report roster do not disclose a current weighted portfolio by cash, cash equivalents, securities or institutions."
+        },
+        {
+          "url": "https://assets-prod.mxnb.mx/commons/whitepaper.pdf",
+          "observedAt": "2026-10-09T11:38:47Z",
+          "datumAsOf": null,
+          "location": "Pages 7-8, Reserve management",
+          "excerpt": "Custody of reserves in Mexican pesos and cash-equivalents is held with multiple banking partners. Funds follow a strict, internally audited investment process in short-term government securities (Mexican Government bonds) at predefined durations.",
+          "assertion": "The issuer investment mandate identifies eligible asset types but discloses no category allocation percentages, account balances or predefined duration numbers."
+        },
+        {
+          "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf",
+          "observedAt": "2026-10-09T11:38:47Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Report pages 3-5; June 30 results and July 16 signature",
+          "excerpt": "Reserves on bank accounts $35,333,251.88; we do not confirm the amount of the reserve accounts with the respective banks.",
+          "assertion": "The historical aggregate bank-account balance has no bank names or instrument allocation and does not establish current post-quarter holdings."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://mxnb.mx/en-US/transparency",
+        "https://assets-prod.mxnb.mx/commons/whitepaper.pdf",
+        "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf"
+      ],
+      "rationale": "Successfully retrieved current issuer totals/report roster and canonical whitepaper disclose no dated current allocation among permitted cash, cash-equivalent and government-security reserves. Q2 remains historical probable consultancy evidence; its age alone is not nondisclosure. No current percentages or verified portfolio are fabricated."
     }
   ]
 }

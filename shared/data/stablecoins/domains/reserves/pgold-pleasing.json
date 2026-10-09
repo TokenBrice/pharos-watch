@@ -36,7 +36,7 @@
       },
       {
         "label": "VISTO CPA PGOLD independent assurance report - 2026-06-25",
-        "url": "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5"
+        "url": "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media"
       },
       {
         "label": "GlobeNewswire Pleasing Golden launch release - 2025-10-29 (re-opened 2026-08-08)",
@@ -71,7 +71,7 @@
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (Lane47Babelfish)",
+    "reviewer": "Sol curation campaign 2026-10-09 (W2L24Sui)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -89,8 +89,12 @@
       {
         "label": "Pleasing binding custody and insurance terms observed October 9, 2026",
         "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md"
+      },
+      {
+        "label": "VISTO CPA June 25 report visually recovered October 9, 2026; PDF pages 2-8",
+        "url": "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media"
       }
     ],
-    "uncertainty": "Custody-scope correction observed 2026-10-09T10:36:33Z: section 8 of the governing Terms identifies only unspecified custodians/vault providers, says insurance may not cover all losses, and refers to a Transparency page for provider relationships. The readable product and legal documentation do not establish a complete named provider allocation or successor-custody terms. The current Reserve Report attachment was not independently readable in this review; that source-recovery limitation is not evidence of issuer silence. Unnamed qualified custodians do not establish an institutional-unregulated whole-book model; aggregate custodyModel is unknown. Existing historical composition, report dates and mechanism C classification dates are unchanged."
+    "uncertainty": "Report source recovery completed 2026-10-09T11:51:05Z: the token-free June 25, 2026 VISTO report was visually read in a dedicated PDF renderer after static extraction failed. PDF page 2 identifies a Hong Kong store room at Unit 1032, 10/F Block B, Focal Industrial Centre, 21 Man Lok Street, Hung Hom. Appendix A-1 (PDF page 6) reports 50.86% physically stock-taken, 38.9% under shipping and 10.24% held by Pleasing Golden International Limited or its beneficial owners; two segregated storage custodians remain unnamed. Appendix A-3 (PDF page 8) identifies Pleasing Golden International Limited and Pleasing International (HK) Limited as affiliated operational entities under the same ultimate beneficial owner, not independent custody or holder-protection evidence. The signed board resolution asserts segregated storage and no third-party encumbrances, but does not establish enforceable holder segregation, bankruptcy priority or a current whole-book provider allocation. The assurance conclusion concerns point-in-time quantity, excluding gold quality and valuation; no post-June continuity is assured. The governing Terms still describe unspecified custodians and insurance that may not cover all losses. Recovery removes the unreadable-attachment blocker, not the custody-continuity or complete-assurance gaps. Aggregate custodyModel, safeguards, historical composition/report dates and original mechanism C dates remain unchanged."
   }
 }
