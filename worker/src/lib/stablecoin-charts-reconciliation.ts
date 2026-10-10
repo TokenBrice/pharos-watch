@@ -98,8 +98,9 @@ export function mergeStructuralSupplementalHistoryIntoCharts(
         (row) => row.date,
         MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC,
       );
+      // Supplemental archives extend the observed provider universe; an absent
+      // overlay is not evidence that the provider's own bucket is unavailable.
       if (snapshot) addBucketValue(totals, overlay.pegType, snapshot.circulatingUsd);
-      else totals[normalizeLegacyPegType(overlay.pegType)] = null;
     }
 
     return {

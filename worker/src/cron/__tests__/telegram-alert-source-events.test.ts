@@ -343,6 +343,12 @@ describe("Telegram alert source-event resolution", () => {
 
   it.each([2_501, 5_000])("opens delivery for %i preset followers plus direct/global before source expiry", async (count) => {
     const harness = createHarness();
+    let planCountSql: string | undefined;
+    harness.db = createSqliteD1(harness.sqlite, {
+      onAll(sql) {
+        if (sql.startsWith("SELECT plan.plan_key,")) planCountSql = sql;
+      },
+    });
     for (let index = 0; index < count; index += 1) {
       const chatId = `chat-${String(index).padStart(5, "0")}`;
       insertPresetFollower(harness.sqlite, chatId);
@@ -408,6 +414,14 @@ describe("Telegram alert source-event resolution", () => {
       .toEqual({ count: count + 2 });
     expect(harness.sqlite.prepare("SELECT chat_id FROM telegram_pending_alerts WHERE chat_id IN ('direct', 'global') ORDER BY chat_id").all())
       .toEqual([{ chat_id: "direct" }, { chat_id: "global" }]);
+    // Index choice is part of the scale contract: each plan must seek its own
+    // chunks, rather than scan every target captured for the source.
+    expect(planCountSql).toBeDefined();
+    const plan = harness.sqlite.prepare(`EXPLAIN QUERY PLAN ${planCountSql!}`)
+      .all(source.sourceEventId, 1, 0, "[]")
+      .map((row) => row.detail).join("\n");
+    expect(plan).toContain("SEARCH target USING COVERING INDEX idx_tajt_source_generation_plan");
+    expect(plan).toContain("(source_event_id=? AND plan_generation=? AND plan_key=?)");
   });
 
   it("merges duplicate preset followers for one chat using the strictest preference", async () => {

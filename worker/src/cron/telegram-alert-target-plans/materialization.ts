@@ -289,9 +289,10 @@ async function verifyMaterializedTargetPlans(
                   AND item.plan_generation = plan.plan_generation
                   AND item.plan_key = plan.plan_key) AS items
          FROM telegram_alert_target_plans plan
-        WHERE plan.source_event_id = ? AND plan.plan_generation = ? AND plan.page_index = ?`,
+        WHERE plan.source_event_id = ? AND plan.plan_generation = ? AND plan.page_index = ?
+          AND plan.plan_key IN (SELECT value FROM json_each(?))`,
     )
-    .bind(claim.sourceEventId, claim.generation, pageIndex)
+    .bind(claim.sourceEventId, claim.generation, pageIndex, JSON.stringify(plans.map((plan) => plan.planKey)))
     .all<{ plan_key: string; targets: number; items: number }>();
   const countsByPlan = new Map((rows.results ?? []).map((row) => [row.plan_key, row]));
   for (const plan of plans) {

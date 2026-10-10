@@ -765,8 +765,8 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
        WHERE chat_id IN (?, ?, ?)
          AND (${ACTIVE_PRESET_FLAGS_SQL})`,
       binds: ["recap-1", "recap-2", "recap-3"],
-      requiredDetails: ["sqlite_autoindex_telegram_preset_subscriptions_1"],
-      note: "Mirrors the planner's bounded preset membership read by due chat ids.",
+      requiredDetails: ["idx_telegram_preset_followers_cursor"],
+      note: "Mirrors the planner's bounded preset membership read by due chat ids; the 0268 covering chat/preset cursor index serves it.",
     },
     {
       id: "recap-target-guarded-transition",

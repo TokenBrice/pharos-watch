@@ -32,7 +32,6 @@ export function normalizeStablecoinChartPoints(payload: unknown): StablecoinChar
   if (!Array.isArray(payload)) return null;
 
   const points: StablecoinChartPoint[] = [];
-  const pegKeys = new Set<string>();
   for (const entry of payload) {
     if (!entry || typeof entry !== "object") return null;
 
@@ -50,19 +49,12 @@ export function normalizeStablecoinChartPoints(payload: unknown): StablecoinChar
       ? undefined
       : StablecoinChartAggregateUniverseSchema.safeParse(aggregateUniverseValue);
     if (aggregateUniverse && !aggregateUniverse.success) return null;
-    for (const key of Object.keys(totalCirculatingUSD)) pegKeys.add(key);
 
     points.push({
       date,
       totalCirculatingUSD,
       ...(aggregateUniverse?.success ? { aggregateUniverse: aggregateUniverse.data } : {}),
     });
-  }
-  // The feed's observed key union is its cohort census, not evidence of zero before/after a read.
-  for (const point of points) {
-    for (const key of pegKeys) {
-      if (!(key in point.totalCirculatingUSD)) point.totalCirculatingUSD[key] = null;
-    }
   }
 
   return points;

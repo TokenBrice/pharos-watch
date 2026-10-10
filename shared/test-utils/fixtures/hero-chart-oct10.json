@@ -1,0 +1,239 @@
+{
+  "capturedAt": "2026-10-10T15:44:29Z",
+  "chartPoints": [
+    {
+      "date": 1511913600,
+      "totalCirculatingUSD": {
+        "peggedUSD": 110105
+      }
+    },
+    {
+      "date": 1576713600,
+      "totalCirculatingUSD": {
+        "peggedUSD": 4093955951
+      }
+    },
+    {
+      "date": 1704240000,
+      "totalCirculatingUSD": {
+        "peggedUSD": 130495587520,
+        "peggedVAR": 100348576,
+        "peggedEUR": 303221670,
+        "peggedJPY": 14244847,
+        "peggedCNY": 38543,
+        "peggedUAH": 6834,
+        "peggedARS": 4159364,
+        "peggedGBP": 100115,
+        "peggedCAD": 1569484
+      }
+    },
+    {
+      "date": 1727827200,
+      "totalCirculatingUSD": {
+        "peggedUSD": 172692608334,
+        "peggedVAR": 102885653,
+        "peggedEUR": 339522588,
+        "peggedJPY": 11764713,
+        "peggedCNY": 17299,
+        "peggedUAH": 9668,
+        "peggedARS": 3196660,
+        "peggedGBP": 12033,
+        "peggedCAD": 1156388,
+        "peggedCHF": 9521279,
+        "peggedAUD": 606160,
+        "peggedREAL": 574645
+      }
+    },
+    {
+      "date": 1791417600,
+      "totalCirculatingUSD": {
+        "peggedUSD": 312243322681,
+        "peggedVAR": 12219686,
+        "peggedEUR": 822494858,
+        "peggedJPY": 156461917,
+        "peggedCNY": 3587,
+        "peggedUAH": 3121,
+        "peggedARS": 9710537,
+        "peggedGBP": 29450162,
+        "peggedCAD": 4305557,
+        "peggedCHF": 45205889,
+        "peggedAUD": 13924583,
+        "peggedREAL": 32045580,
+        "peggedRUB": 547706730,
+        "peggedMXN": 1547650,
+        "peggedSGD": 12943682,
+        "peggedPHP": 3612998,
+        "peggedTRY": 4607745,
+        "peggedCOP": 443832,
+        "peggedKES": 67995,
+        "peggedZAR": 668,
+        "peggedNGN": 51050,
+        "peggedXOF": 9163,
+        "peggedGHS": 23439,
+        "peggedCLP": 67898,
+        "peggedPEN": 42800,
+        "peggedMYR": 76246,
+        "peggedKRW": 555659,
+        "peggedHKD": 778205
+      }
+    },
+    {
+      "date": 1791590400,
+      "totalCirculatingUSD": {
+        "peggedUSD": 310976001560.95,
+        "peggedVAR": 12213578.32,
+        "peggedEUR": 831986727.26,
+        "peggedJPY": 155133464.21,
+        "peggedCNY": 3593.47,
+        "peggedUAH": 3118.73,
+        "peggedARS": 9694046.69,
+        "peggedGBP": 29461183.42,
+        "peggedCAD": 4312444.45,
+        "peggedCHF": 44817194.59,
+        "peggedAUD": 13040398.79,
+        "peggedREAL": 28508866.31,
+        "peggedRUB": 550289253.3,
+        "peggedMXN": 1606487.14,
+        "peggedSGD": 13037566.92,
+        "peggedPHP": 3611864.64,
+        "peggedTRY": 1982741.35,
+        "peggedCOP": 487701.09,
+        "peggedKES": 68080.32,
+        "peggedZAR": 672.61,
+        "peggedNGN": 51073.07,
+        "peggedXOF": 9166.77,
+        "peggedGHS": 23565.2,
+        "peggedCLP": 98850.14,
+        "peggedPEN": 42848.13,
+        "peggedMYR": 76264.9,
+        "peggedKRW": 555351.56,
+        "peggedHKD": 778105.35
+      }
+    }
+  ],
+  "histories": {
+    "usdtHistory": [
+      {
+        "date": 1424822400,
+        "circulatingUsd": 304476,
+        "price": 1.21016
+      },
+      {
+        "date": 1511913600,
+        "circulatingUsd": 109970,
+        "price": 1.01913
+      },
+      {
+        "date": 1576713600,
+        "circulatingUsd": 3152192758,
+        "price": 1.0008635737278766
+      },
+      {
+        "date": 1704240000,
+        "circulatingUsd": 92020117112,
+        "price": 1.0020236858172413
+      },
+      {
+        "date": 1727827200,
+        "circulatingUsd": 119650346135,
+        "price": 0.9992162065074813
+      },
+      {
+        "date": 1791417600,
+        "circulatingUsd": 184259846638.7077,
+        "price": 0.9992827026234137
+      },
+      {
+        "date": 1791504000,
+        "circulatingUsd": 184216597340.0239,
+        "price": 0.999115
+      }
+    ],
+    "usdcHistory": [
+      {
+        "date": 1536624000,
+        "circulatingUsd": 2,
+        "price": null
+      },
+      {
+        "date": 1576713600,
+        "circulatingUsd": 472237266,
+        "price": 0.9994543103051127
+      },
+      {
+        "date": 1704240000,
+        "circulatingUsd": 24114881441,
+        "price": 1.0021169087948028
+      },
+      {
+        "date": 1727827200,
+        "circulatingUsd": 35308113870,
+        "price": 0.9995331138111485
+      },
+      {
+        "date": 1791417600,
+        "circulatingUsd": 73710970794.97316,
+        "price": 0.9997475
+      },
+      {
+        "date": 1791504000,
+        "circulatingUsd": 73235102656.37689,
+        "price": 0.9998199999999999
+      }
+    ],
+    "usdsHistory": [
+      {
+        "date": 1726617600,
+        "circulatingUsd": 98507054,
+        "price": null
+      },
+      {
+        "date": 1727827200,
+        "circulatingUsd": 1053224069,
+        "price": 0.9627204907618813
+      },
+      {
+        "date": 1791417600,
+        "circulatingUsd": 7114110733.356234,
+        "price": 0.999825
+      },
+      {
+        "date": 1791504000,
+        "circulatingUsd": 7001871845.755212,
+        "price": 0.999750843759442
+      }
+    ],
+    "daiHistory": [
+      {
+        "date": 1574121600,
+        "circulatingUsd": 1827422,
+        "price": 1.000650588888066
+      },
+      {
+        "date": 1576713600,
+        "circulatingUsd": 65556883,
+        "price": 1.001236941108159
+      },
+      {
+        "date": 1704240000,
+        "circulatingUsd": 5221682248,
+        "price": 1.0000943784185694
+      },
+      {
+        "date": 1727827200,
+        "circulatingUsd": 4824456080,
+        "price": 0.9994203714427887
+      },
+      {
+        "date": 1791417600,
+        "circulatingUsd": 4761653569.115228,
+        "price": 0.9998883725373662
+      },
+      {
+        "date": 1791504000,
+        "circulatingUsd": 4763580787.697216,
+        "price": 0.9999666323123183
+      }
+    ]
+  }
+}

@@ -5,8 +5,20 @@ import {
   mergeStructuralSupplementalHistoryIntoCharts,
   STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS,
 } from "../stablecoin-charts-reconciliation";
+import octoberFixture from "@shared/test-utils/fixtures/hero-chart-oct10.json";
+import { normalizeStablecoinChartPoints } from "../stablecoin-charts-payload";
+import { StablecoinChartResponseSchema } from "@shared/types/market";
 
 describe("stablecoin-charts reconciliation", () => {
+  it("preserves real provider history when supplemental archives have not started", () => {
+    const merged = mergeStructuralSupplementalHistoryIntoCharts(StablecoinChartResponseSchema.parse(octoberFixture.chartPoints), [], [
+      { id: "usd-overlay", pegType: "peggedUSD" },
+      { id: "gold-overlay", pegType: "peggedGOLD" },
+      { id: "chf-overlay", pegType: "peggedCHF" },
+      { id: "zar-overlay", pegType: "peggedZAR" },
+    ]);
+    expect(normalizeStablecoinChartPoints(merged)).toEqual(octoberFixture.chartPoints);
+  });
   it("excludes llama-backed charts while preserving the audited empty BRZ legacy chart", () => {
     const llamaBacked = STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.filter(
       ({ id }) => ACTIVE_META_BY_ID.get(id)?.llamaId != null,
@@ -37,13 +49,13 @@ describe("stablecoin-charts reconciliation", () => {
     );
 
     expect(merged).toEqual([
-      { date: 100, totalCirculatingUSD: { peggedUSD: null, peggedGOLD: 7 } },
+      { date: 100, totalCirculatingUSD: { peggedUSD: 100, peggedGOLD: 7 } },
       { date: 200, totalCirculatingUSD: { peggedUSD: 130, peggedGOLD: 7 } },
       { date: 300, totalCirculatingUSD: { peggedUSD: 145, peggedGOLD: 7 } },
     ]);
   });
 
-  it("withholds prehistory buckets and overlays beyond the shared distance budget", () => {
+  it("omits unobserved overlays before history and beyond the shared distance budget", () => {
     const date = 1_700_000_000;
     const dates = [date - 1, date, date + MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC, date + MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC + 1];
     const merged = mergeStructuralSupplementalHistoryIntoCharts(
@@ -52,10 +64,10 @@ describe("stablecoin-charts reconciliation", () => {
       [{ id: "gold", pegType: "peggedGOLD" }],
     );
     expect(merged.map((point) => point.totalCirculatingUSD)).toEqual([
-      { peggedUSD: 100, peggedGOLD: null },
+      { peggedUSD: 100 },
       { peggedUSD: 100, peggedGOLD: 20 },
       { peggedUSD: 100, peggedGOLD: 20 },
-      { peggedUSD: 100, peggedGOLD: null },
+      { peggedUSD: 100 },
     ]);
   });
 
@@ -76,12 +88,12 @@ describe("stablecoin-charts reconciliation", () => {
     ]);
   });
 
-  it("withholds a bucket when a configured contributor has no admitted history", () => {
+  it("preserves a provider bucket when a supplemental contributor has no admitted history", () => {
     expect(mergeStructuralSupplementalHistoryIntoCharts(
       [{ date: 100, totalCirculatingUSD: { peggedUSD: 100 } }],
       [],
       [{ id: "missing", pegType: "peggedUSD" }],
-    )).toEqual([{ date: 100, totalCirculatingUSD: { peggedUSD: null } }]);
+    )).toEqual([{ date: 100, totalCirculatingUSD: { peggedUSD: 100 } }]);
   });
 
 });
