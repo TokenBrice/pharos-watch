@@ -3,6 +3,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { PysBreakdown, type PysBreakdownProps } from "@/components/pys-breakdown";
+import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { formatSignedPysDelta } from "@/lib/yield-presentation";
 import {
@@ -48,6 +49,29 @@ function renderWithProvider(props: PysBreakdownProps) {
 }
 
 describe("PysBreakdown", () => {
+  it.each([
+    [5, 4, "+1.00 pp", "4.00%"],
+    [1, -1, "+2.00 pp", "-1.00%"],
+    [4, 4.001, "+0.00 pp", "4.00%"],
+  ] as const)("uses percentage points with reference levels for %s APY versus %s benchmark", (apy, rate, delta, reference) => {
+    const spread = apy - rate;
+    renderWithProvider(baseProps({ mode: "popover", apy30d: apy, benchmarkSpread: spread, benchmarkAdjustment: spread * 0.25 }));
+    const label = screen.getByLabelText(/Plus benchmark adjustment/).getAttribute("aria-label");
+    expect(label).toContain(`${delta} spread versus SOFR (${reference})`);
+    render(<YieldWhyPysStrip benchmarkSpread={spread} benchmarkLabel="SOFR" benchmarkRate={rate}
+      stabilityPct={90} sustainabilityMult={0.9} grade="A" safetyScore={90}
+      adjustedRiskPenalty={1} sourceRiskPenalty={1} sourceRiskDriverLabel={null} />);
+    expect(screen.getByLabelText(`Bench spread: ${delta}, vs SOFR (${reference})`)).toBeTruthy();
+  });
+
+  it.each([null, undefined])("renders unavailable benchmark evidence for %s strip inputs", (missing) => {
+    // Exercise omitted runtime props without weakening the required typed caller contract.
+    render(<YieldWhyPysStrip benchmarkSpread={missing as number | null} benchmarkLabel="SOFR"
+      benchmarkRate={missing as number | null}
+      stabilityPct={90} sustainabilityMult={0.9} grade="A" safetyScore={90}
+      adjustedRiskPenalty={1} sourceRiskPenalty={1} sourceRiskDriverLabel={null} />);
+    expect(screen.getByLabelText("Bench spread: —, Benchmark unavailable")).toBeTruthy();
+  });
 
   it("renders score, breakdown lines, and methodology link with version label", () => {
     const { container } = renderWithProvider(baseProps({ mode: "inline", score: 50 }));
@@ -375,8 +399,8 @@ describe("PysBreakdown — printed equation (D14)", () => {
 
   function printedPercent(label: string | null, prefix: string): number {
     const start = label?.indexOf(`${prefix} `) ?? -1;
-    const match = start >= 0 ? label!.slice(start + prefix.length + 1).match(/^([+-]?[\d.]+)%/) : null;
-    if (!match) throw new Error(`no printed percent for "${prefix}" in: ${label}`);
+    const match = start >= 0 ? label!.slice(start + prefix.length + 1).match(/^([+-]?[\d.]+)(?:%| pp)/) : null;
+    if (!match) throw new Error(`no printed yield addend for "${prefix}" in: ${label}`);
     return Number(match[1]);
   }
 

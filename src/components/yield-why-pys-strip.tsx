@@ -1,9 +1,10 @@
-import { formatSignedPercent } from "@shared/lib/format";
+import { formatYieldApyDelta } from "@/lib/yield-presentation";
 import { PYS_SUSTAINABILITY_FLOOR } from "@shared/lib/yield-scoring";
 
 interface YieldWhyPysStripProps {
   benchmarkSpread: number | null;
   benchmarkLabel?: string | null;
+  benchmarkRate: number | null;
   stabilityPct: number | null;
   sustainabilityMult: number | null;
   grade: string | null;
@@ -16,6 +17,7 @@ interface YieldWhyPysStripProps {
 export function YieldWhyPysStrip({
   benchmarkSpread,
   benchmarkLabel,
+  benchmarkRate,
   stabilityPct,
   sustainabilityMult,
   grade,
@@ -24,8 +26,10 @@ export function YieldWhyPysStrip({
   sourceRiskPenalty,
   sourceRiskDriverLabel,
 }: YieldWhyPysStripProps) {
-  const benchSpreadValue = benchmarkSpread !== null ? formatSignedPercent(benchmarkSpread, 1) : "—";
-  const benchSubLabel = benchmarkLabel ? `vs ${benchmarkLabel}` : "Benchmark unavailable";
+  const benchSpreadValue = benchmarkSpread != null ? formatYieldApyDelta(benchmarkSpread) : "—";
+  const benchSubLabel = benchmarkLabel && benchmarkRate != null
+    ? `vs ${benchmarkLabel} (${benchmarkRate.toFixed(2)}%)`
+    : "Benchmark unavailable";
   const stabilityValue = stabilityPct !== null ? `${stabilityPct}%` : "—";
   const stabilitySub = sustainabilityMult === PYS_SUSTAINABILITY_FLOOR ? "(floor)" : "30d APY variance";
   const safetyValue =

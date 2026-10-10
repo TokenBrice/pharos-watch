@@ -179,9 +179,8 @@ export const YIELD_RISK_BUDGET_MIN_SAFETY = {
   opportunistic: 50,
 } as const;
 
-// Risk budget collapses safety/depth/source-confidence/warnings into a single
-// conservative→all dimension. Stops are stackable on top of other
-// filters via merge semantics in `handleApplyRiskBudget`.
+// Risk budget replaces safety/depth/source-confidence/warnings as one
+// conservative→all dimension while preserving non-risk research filters.
 export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
   {
     key: "conservative",

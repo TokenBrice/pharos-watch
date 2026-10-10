@@ -27,6 +27,7 @@ import {
   type YieldHistorySourceOption,
   type YieldHistoryChartSeriesPoint,
   type YieldSourceSegment,
+  type YieldHistorySourceDisplay,
 } from "./yield-history-chart-model";
 
 interface AxisTickProps {
@@ -146,6 +147,8 @@ export function YieldHistoryTooltip({
   showBreakdown,
   compact,
   spikesByDate,
+  primarySource,
+  overlaySources = [],
 }: {
   active?: boolean;
   payload?: Array<{ dataKey?: string; payload: YieldHistoryChartSeriesPoint }>;
@@ -153,6 +156,8 @@ export function YieldHistoryTooltip({
   showBreakdown: boolean;
   compact: boolean;
   spikesByDate?: Map<number, SpikeTooltipInfo>;
+  primarySource?: YieldHistorySourceDisplay;
+  overlaySources?: readonly YieldHistorySourceDisplay[];
 }) {
   const labelTimestamp = toTimestampMs(label);
   if (!active || !payload || payload.length === 0 || !Number.isFinite(labelTimestamp)) {
@@ -173,17 +178,23 @@ export function YieldHistoryTooltip({
     >
       <p className="font-medium text-foreground">{formatTooltipDate(labelTimestamp)}</p>
       <div className="mt-2 space-y-1.5 text-muted-foreground">
-        {point.yieldSource ? (
+        {point.apy !== null && point.yieldSource ? (
           <div className="flex items-center justify-between gap-4">
-            <span>Source</span>
+            <span>Primary source</span>
             <span className="max-w-[160px] truncate text-right text-foreground">{point.yieldSource}</span>
           </div>
         ) : null}
-        <div className="flex items-center justify-between gap-4">
-          <span>APY</span>
-          <span className="font-mono tabular-nums text-foreground">{point.apy == null ? "Unavailable" : `${formatChartNumber(point.apy)}%`}</span>
-        </div>
-        {showBreakdown ? (
+        {[{ key: "apy" as const, label: primarySource?.label ?? "APY" },
+          ...overlaySources.map((source, index) => ({ key: `apy_overlay_${index}` as const, label: source.label })),
+        ].map((series) => (
+          <div key={series.key} className="flex items-center justify-between gap-4">
+            <span>{series.label}</span>
+            <span className="font-mono tabular-nums text-foreground">
+              {point[series.key] == null ? "Unavailable" : `${formatChartNumber(point[series.key]!)}%`}
+            </span>
+          </div>
+        ))}
+        {showBreakdown && point.apy !== null ? (
           <>
             <div className="flex items-center justify-between gap-4">
               <span>Base</span>
@@ -376,23 +387,20 @@ export function SourceStrip({
 
   /* Build legend entries deduped by sourceKey while preserving first-appearance
      order. "other" — if present — counts how many original sources collapsed. */
-  const legendOrder: string[] = [];
-  const legendByKey = new Map<string, { label: string; color: string; isOther: boolean; count: number }>();
+  const legendByKey = new Map<string, { label: string; color: string; sources: Set<string> }>();
   for (const segment of segments) {
-    const existing = legendByKey.get(segment.sourceKey);
-    if (existing) {
-      if (segment.isOther) existing.count += 1;
-      continue;
+    const key = segment.isOther ? "other" : segment.sourceKey;
+    const entry = legendByKey.get(key);
+    if (entry) {
+      entry.sources.add(segment.sourceKey);
+    } else {
+      legendByKey.set(key, {
+        label: segment.isOther ? "other" : segment.sourceLabel,
+        color: segment.color,
+        sources: new Set([segment.sourceKey]),
+      });
     }
-    legendByKey.set(segment.sourceKey, {
-      label: segment.sourceLabel,
-      color: segment.color,
-      isOther: segment.isOther,
-      count: 1,
-    });
-    legendOrder.push(segment.sourceKey);
   }
-  /* For "other", count distinct original-source contributions to display "other (N)". */
 
   const ariaSummary = segments
     .map(
@@ -406,29 +414,30 @@ export function SourceStrip({
       <div
         role="img"
         aria-label={`Source timeline: ${ariaSummary}`}
-        className="flex h-2.5 w-full overflow-hidden rounded-full border border-border/60 bg-background/40"
+        className="relative h-2.5 w-full overflow-hidden rounded-full border border-border/60 bg-background/40"
       >
         {segments.map((segment, index) => {
           const widthPct = Math.max(((segment.endTs - segment.startTs) / span) * 100, 0);
-          if (widthPct <= 0) return null;
+          const leftPct = ((segment.startTs - timeStart) / span) * 100;
           return (
             <div
               key={`${segment.sourceKey}-${segment.startTs}-${index}`}
-              className={cn(
-                segment.color,
-                index > 0 ? "border-l border-background/80" : null,
-              )}
-              style={{ width: `${widthPct}%` }}
-              title={`${segment.sourceLabel} — ${formatChartDate(segment.startTs, "short")} to ${formatChartDate(segment.endTs, "short")}`}
+              className={cn("absolute inset-y-0", segment.color)}
+              style={{
+                left: `${leftPct}%`,
+                width: widthPct > 0 ? `${widthPct}%` : "2px",
+                transform: widthPct > 0 ? undefined : leftPct >= 100 ? "translateX(-100%)" : "translateX(-50%)",
+              }}
+              title={segment.startTs === segment.endTs
+                ? `${segment.sourceLabel} — observed ${formatChartDate(segment.startTs, "short")}`
+                : `${segment.sourceLabel} — ${formatChartDate(segment.startTs, "short")} to ${formatChartDate(segment.endTs, "short")}`}
             />
           );
         })}
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
-        {legendOrder.map((key) => {
-          const entry = legendByKey.get(key);
-          if (!entry) return null;
-          const label = entry.isOther ? `other (${entry.count})` : entry.label;
+        {[...legendByKey].map(([key, entry]) => {
+          const label = key === "other" ? `other (${entry.sources.size})` : entry.label;
           return (
             <span key={key} className="inline-flex items-center gap-1.5">
               <span className={cn("h-2 w-2 rounded-sm", entry.color)} />

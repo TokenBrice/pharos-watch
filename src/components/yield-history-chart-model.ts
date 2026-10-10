@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useYieldHistory } from "@/hooks/api-hooks";
 import { DAY_MS } from "@/lib/constants";
 import { toTimestampMs } from "@/lib/time";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { formatChartDate, formatDecimal } from "@shared/lib/format";
 import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
+import { deriveDataHealth } from "@/lib/data-health";
+import { DATA_SURFACE_DESCRIPTORS } from "@shared/lib/data-surface-descriptors";
 import type { YieldHistoryPoint } from "@shared/types";
 
 export const BRAND_ACCENT = "oklch(0.72 0.14 248)";
@@ -163,10 +165,8 @@ interface YieldSourceSegmentInput {
   sourceLabel?: string;
 }
 
-/* Walk history points in time order; collapse adjacent points sharing a sourceKey
-   into one segment. Sources beyond `maxDistinctSources` (by first-appearance) are
-   recolored/relabeled as "other" — their original boundaries are preserved but
-   they share a single muted lane in the rendered strip. */
+/* Group adjacent observations by source identity. Beyond the color cap, sources
+   share the muted legend lane but retain their identity and measured boundaries. */
 export function deriveYieldSourceSegments(
   history: ReadonlyArray<YieldSourceSegmentInput>,
   options?: { maxDistinctSources?: number },
@@ -192,13 +192,6 @@ export function deriveYieldSourceSegments(
     }
   }
 
-  /* If a segment is a single point (start === end) and there are later segments,
-     extend it to the next segment's start so widths render visibly. */
-  for (let i = 0; i < raw.length - 1; i++) {
-    if (raw[i].endTs === raw[i].startTs) {
-      raw[i].endTs = raw[i + 1].startTs;
-    }
-  }
 
   /* Determine top-N sources by first-appearance order. */
   const firstAppearance = new Map<string, number>();
@@ -219,8 +212,8 @@ export function deriveYieldSourceSegments(
     return {
       startTs: segment.startTs,
       endTs: segment.endTs,
-      sourceKey: isOther ? "other" : segment.sourceKey,
-      sourceLabel: isOther ? "other" : segment.sourceLabel,
+      sourceKey: segment.sourceKey,
+      sourceLabel: segment.sourceLabel,
       color: isOther ? SOURCE_STRIP_OTHER_COLOR : colorBySource.get(segment.sourceKey) ?? SOURCE_STRIP_OTHER_COLOR,
       isOther,
     };
@@ -350,7 +343,7 @@ function emptyChartPoint(date: number): YieldHistoryChartSeriesPoint {
 function mergeHistorySeries(
   primary: YieldHistoryChartPoint[],
   overlays: Map<number, number>[],
-  nowMs: number,
+  nowMs: number | null,
 ): YieldHistoryChartSeriesPoint[] {
   const rows = new Map<number, YieldHistoryChartSeriesPoint>();
   for (const point of primary) rows.set(point.date, { ...point });
@@ -367,8 +360,9 @@ function mergeHistorySeries(
   });
   // Retention is hourly for 30 days, then daily. Insert only genuinely
   // missing cadence buckets; normal cron timestamp jitter is not a gap.
-  const hourlyCutoff = nowMs - YIELD_HISTORY_RAW_DAYS * DAY_MS;
+  const hourlyCutoff = nowMs === null ? null : nowMs - YIELD_HISTORY_RAW_DAYS * DAY_MS;
   for (const dates of seriesDates) {
+    if (hourlyCutoff === null) break;
     for (let i = 1; i < dates.length; i++) {
       let cursor = dates[i - 1];
       const next = dates[i];
@@ -413,6 +407,13 @@ export function useYieldHistoryChartModel({
 >) {
   const [days, setDays] = useState(() => normalizeDefaultDays(defaultDays));
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [nowMs, setNowMs] = useState<number | null>(null);
+  useEffect(() => {
+    const updateClock = () => setNowMs(Date.now());
+    updateClock();
+    const timer = setInterval(updateClock, 60_000);
+    return () => clearInterval(timer);
+  }, []);
   const [internalSourceKey, setInternalSourceKey] = useState<string>("best");
 
   const selectedSourceKey = externalSourceKey ?? internalSourceKey;
@@ -471,8 +472,8 @@ export function useYieldHistoryChartModel({
   }, [additionalOverlayKeys.length, overlayQueries[0]?.data, overlayQueries[1]?.data, overlayQueries[2]?.data, overlayQueries[3]?.data, overlayQueries[4]?.data, overlayQueries[5]?.data, overlayQueries[6]?.data]);
 
   const mergedChartData = useMemo(
-    () => mergeHistorySeries(chartData, overlayData, Date.now()),
-    [chartData, overlayData],
+    () => mergeHistorySeries(chartData, overlayData, nowMs),
+    [chartData, overlayData, nowMs],
   );
 
   const overlayLabels = useMemo(() => {
@@ -483,6 +484,26 @@ export function useYieldHistoryChartModel({
   const primarySourceLabel = useMemo(() => {
     return getSourceDisplay(primarySourceKey, availableSources, primarySourceKey);
   }, [availableSources, primarySourceKey]);
+  const sourceQueries = [historyQuery, ...overlayQueries].map((query, index) => {
+    const identity = index === 0 ? primarySourceLabel : overlayLabels[index - 1];
+    return {
+      ...identity,
+      dataKey: index === 0 ? "apy" : `apy_overlay_${index - 1}`,
+      hasData: query.data !== undefined,
+      isLoading: query.isLoading,
+      error: query.error,
+      warning: query.data?.warning ?? query.meta?.warning ?? null,
+      health: deriveDataHealth({
+        label: identity.label,
+        dataUpdatedAt: query.dataUpdatedAt,
+        staleTime: DATA_SURFACE_DESCRIPTORS.yieldHistory.producerIntervalSec * 1000,
+        hasData: query.data !== undefined,
+        error: query.error,
+        meta: query.meta,
+      }, nowMs ?? query.dataUpdatedAt),
+      onRetry: () => { void query.refetch(); },
+    };
+  });
 
   const hasBreakdown = useMemo(() => {
     return chartData.some((point) => point.apyBase !== null);
@@ -565,6 +586,7 @@ export function useYieldHistoryChartModel({
     primarySourceLabel,
     bodyWarning: historyQuery.data?.warning ?? null,
     historyQuery,
+    sourceQueries,
     chartData,
     mergedChartData,
     overlayLabels,

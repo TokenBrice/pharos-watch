@@ -176,11 +176,11 @@ function getCapacitySummary(entry: RedemptionBackstopEntry): CapacitySummary {
   const scoringCapacityUsd =
     entry.capacityProfile?.scoringUsd != null &&
     Number.isFinite(entry.capacityProfile.scoringUsd) &&
-    entry.capacityProfile.scoringUsd > 0
+    entry.capacityProfile.scoringUsd >= 0
       ? formatCurrency(entry.capacityProfile.scoringUsd, 1)
       : null;
   const immediateCapacityUsd =
-    entry.immediateCapacityUsd != null && Number.isFinite(entry.immediateCapacityUsd) && entry.immediateCapacityUsd > 0
+    entry.immediateCapacityUsd != null && Number.isFinite(entry.immediateCapacityUsd) && entry.immediateCapacityUsd >= 0
       ? formatCurrency(entry.immediateCapacityUsd, 1)
       : null;
   const usesScoringCapacityHeadline =
@@ -205,10 +205,20 @@ function getCapacitySummary(entry: RedemptionBackstopEntry): CapacitySummary {
             : "Heuristic capacity assumption.";
 
   if (entry.capacitySemantics === "eventual-only") {
+    const eventualUsd = entry.capacityProfile?.eventualUsd;
+    const hasAdmittedEventualBound =
+      eventualUsd != null &&
+      Number.isFinite(eventualUsd) &&
+      eventualUsd >= 0 &&
+      scoringHorizon === "eventual" &&
+      entry.resolutionState === "resolved" &&
+      !entry.capacityRejectionReason;
     return {
       title,
-      headline: "Not separately quantified",
-      detail: `${capacityEvidence} Modeled as eventual redeemability of current supply, not as an immediate cash buffer.`,
+      headline: hasAdmittedEventualBound ? formatCurrency(eventualUsd, 1) : "Not separately quantified",
+      detail: hasAdmittedEventualBound
+        ? `${capacityEvidence} Modeled as eventual redeemability of current supply, not as an immediate cash buffer.`
+        : `${capacityEvidence} Eventual route capacity is unquantified; no current-supply coverage or immediate cash buffer is asserted.`,
     };
   }
 

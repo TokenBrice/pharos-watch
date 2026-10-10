@@ -18,6 +18,7 @@ vi.mock("@/components/yield-history-chart", () => ({
 
 const baseRow = makeYieldViewModelRow({
   benchmarkLabel: "USD 3M T-Bill",
+  benchmarkRate: 3.7,
   warningSignals: [],
   provenance: { ...YIELD_TEST_PROVENANCE, sourceFreshness: "fresh" },
   sourceRisk: { sourceRiskScore: 70, sourceRiskPenalty: 1.02, sourceAgeSeconds: 60 },
@@ -286,7 +287,9 @@ describe("YieldInstrumentBoard — Why this PYS strip", () => {
     const strip = screen.getByRole("group", { name: "Why this PYS" });
     expect(strip).toBeTruthy();
     expect(strip.textContent).toContain("Bench spread");
-    expect(strip.textContent).toContain("vs USD 3M T-Bill");
+    expect(strip.textContent).toContain("+0.60 pp");
+    expect(strip.textContent).not.toContain("+0.60%");
+    expect(strip.textContent).toContain("vs USD 3M T-Bill (3.70%)");
     expect(strip.textContent).toContain("Stability");
     expect(strip.textContent).toContain("90%");
     expect(strip.textContent).toContain("30d APY variance");

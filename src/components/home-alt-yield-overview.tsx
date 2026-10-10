@@ -6,6 +6,8 @@ import { useMemo } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { HomeAltTrackerLink } from "@/components/home-alt-tracker-link";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
+import { YieldApiWarnings } from "@/components/yield/yield-data-health";
 import { YieldSafetyBadge } from "@/components/yield-leaderboard-row-parts";
 import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
 import { useYieldRankingsSummary } from "@/hooks/api-hooks";
@@ -180,7 +182,7 @@ function LeaderRow({
 }
 
 export function HomeAltYieldOverview(): React.JSX.Element | null {
-  const { data, isLoading } = useYieldRankingsSummary();
+  const { data, isLoading, error, meta, dataUpdatedAt, refetch } = useYieldRankingsSummary();
   const logos = logosById;
   const logoMap = logos ?? {};
 
@@ -189,6 +191,17 @@ export function HomeAltYieldOverview(): React.JSX.Element | null {
     const built = buildOverview(data.rankings, data.provenance?.safetySnapshot ?? null);
     return { ...built, medianApy: data.medianApy };
   }, [data]);
+  const healthNotices = (
+    <>
+      <QueryFreshnessNotices
+        queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData: !!data, meta }]}
+        error={error}
+        hasData={!!data}
+        onRetry={() => { void refetch(); }}
+      />
+      <YieldApiWarnings warnings={data?.warnings} />
+    </>
+  );
 
   if (isLoading) return <HomeAltYieldOverviewFallback />;
 
@@ -199,6 +212,7 @@ export function HomeAltYieldOverview(): React.JSX.Element | null {
           Yield Intelligence overview
         </h2>
         <OverviewHeader coveredCount={null} />
+        {healthNotices}
         <div className="pharos-card-shell flex items-center justify-center p-6">
           <span className="font-mono text-sm text-muted-foreground">Yield rankings unavailable</span>
         </div>
@@ -213,6 +227,7 @@ export function HomeAltYieldOverview(): React.JSX.Element | null {
       </h2>
 
       <OverviewHeader coveredCount={overview.coveredCount} />
+      {healthNotices}
 
       <div className="pharos-card-shell overflow-hidden p-4">
         <StatStrip

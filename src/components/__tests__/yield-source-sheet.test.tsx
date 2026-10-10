@@ -114,6 +114,17 @@ describe("YieldSourceSheet", () => {
     rerender(<YieldSourceSheet {...props} ranking={makeRanking("usdc", "best-usdc", "alt-usdc")} />);
     expect(screen.getByRole("link", { name: "usdc-best" }).getAttribute("href")).toBe("https://example.com/usdc/best");
     expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
+    const retained = makeRanking("usdc", "best-usdc", "alt-usdc");
+    fireEvent.click(screen.getByRole("button", { name: /usdc-alt/i }));
+    rerender(<YieldSourceSheet {...props} ranking={retained} error={new Error("refresh failed")} />);
+    expect(screen.getByRole("link", { name: "usdc-best" })).toBeTruthy();
+    expect(screen.getByTestId("yield-history-chart").textContent).toContain("alt-usdc");
+    expect(screen.getByRole("status")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(onRetry).toHaveBeenCalledTimes(2);
+    rerender(<YieldSourceSheet {...props} ranking={retained} />);
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByTestId("yield-history-chart").textContent).toContain("alt-usdc");
   });
 
   it("records provider opens from the chosen source link", () => {
@@ -137,6 +148,17 @@ describe("YieldSourceSheet", () => {
     rerender(<YieldSourceSheet ranking={usdt} logo={undefined} riskFreeRate={0.02} medianApy={0.03} open onOpenChange={vi.fn()} />);
 
     expect(screen.getByTestId("yield-history-chart").textContent).toContain("best-usdt");
+  });
+
+  it.each([1, 2])("returns to chosen history after selecting among %i alternates without reopening", (count) => {
+    const ranking = makeRanking("usdc", "best-usdc", "alt-usdc");
+    if (count === 2) ranking.altSources.push(makeAltYieldSource({ sourceKey: "alt-second", yieldSource: "second-alt" }));
+    renderYieldSourceSheet(ranking);
+    fireEvent.click(screen.getByRole("button", { name: /usdc-alt/i }));
+    expect(screen.getByTestId("yield-history-chart").textContent).toContain("alt-usdc");
+    fireEvent.click(screen.getByRole("button", { name: "Show chosen source history" }));
+    expect(screen.getByTestId("yield-history-chart").textContent).toContain("best-usdc");
+    expect(screen.getByRole("button", { name: "Show chosen source history" }).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("resolves a missing row rate from its registry benchmark for the history chart", () => {
@@ -189,7 +211,7 @@ describe("YieldSourceSheet", () => {
     expect(screen.getByLabelText("Why this source won")).toBeTruthy();
     expect(screen.getByText("Curated source preferred")).toBeTruthy();
     expect(screen.getAllByText("Curated").length).toBeGreaterThan(0);
-    expect(screen.getByText("Source changed (+0.80% APY30d)")).toBeTruthy();
+    expect(screen.getByText("Source changed (+0.80 pp APY30d)")).toBeTruthy();
     expect(screen.getByText("1 alternate rejected")).toBeTruthy();
   });
 

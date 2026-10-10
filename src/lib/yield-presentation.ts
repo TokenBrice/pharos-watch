@@ -73,9 +73,13 @@ export function formatYieldBenchmarkSpread(spread: number, label: string, rate: 
     : `${Math.abs(spread).toFixed(2)} pp ${spread > 0 ? "above" : "below"} ${reference}`;
 }
 
+export function formatYieldApyDelta(delta: number): string {
+  const displayed = Math.abs(delta) < 0.005 ? 0 : delta;
+  return `${displayed >= 0 ? "+" : ""}${displayed.toFixed(2)} pp`;
+}
+
 export function formatYieldBenchmarkSpreadChip(spread: number): string {
-  const displayed = Math.abs(spread) < 0.005 ? 0 : spread;
-  return `${displayed >= 0 ? "+" : ""}${displayed.toFixed(2)} pp vs benchmark`;
+  return `${formatYieldApyDelta(spread)} vs benchmark`;
 }
 
 export function formatYieldDriverContext(key: string, value: number): string {

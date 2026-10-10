@@ -42,22 +42,34 @@ describe("PysHistorySparkline", () => {
     );
   });
 
-  it("skips null entries and only draws non-null points", () => {
-    // 10 points: every other one null → 5 non-null which is < 7 → placeholder
-    const tooFewHistory = buildPoints(10, (i) => (i % 2 === 0 ? 60 : null));
-    const tooFew = render(<PysHistorySparkline history={tooFewHistory} />);
+  it("breaks SVG segments across unavailable scores without counting gaps as measurements", () => {
+    const tooFew = render(<PysHistorySparkline history={buildPoints(10, (i) => i % 2 === 0 ? 60 : null)} />);
     expect(tooFew.container.querySelector("polyline")).toBeNull();
+    expect(screen.getByTestId("pys-sparkline-placeholder")).toBeDefined();
     cleanup();
 
-    // 30 points: every third null → ~20 non-null → polyline with 20 vertices
-    const mixedHistory = buildPoints(30, (i) => (i % 3 === 0 ? null : 50 + i));
-    const expectedNonNull = mixedHistory.filter(
-      (p) => p.pysAtPublish !== null && p.pysAtPublish !== undefined,
-    ).length;
-    const { container } = render(<PysHistorySparkline history={mixedHistory} />);
-    const polyline = container.querySelector("polyline");
-    expect(polyline).not.toBeNull();
-    expect(polyline?.getAttribute("points")?.split(" ")).toHaveLength(expectedNonNull);
+    const history = buildPoints(12, (i) => {
+      if (i === 0 || i === 5) return null;
+      if (i === 6 || i === 11) return undefined;
+      return 50 + i;
+    });
+    const { container } = render(<PysHistorySparkline history={history} />);
+    const segments = [...container.querySelectorAll("polyline")];
+    expect(segments).toHaveLength(2);
+    expect(segments.map((segment) => segment.getAttribute("points")?.split(" ").length)).toEqual([4, 4]);
+    expect(segments.every((segment) => segment.getAttribute("stroke") === CHART_GREEN)).toBe(true);
+    expect(screen.getByRole("img").getAttribute("aria-label")).toContain("starts at 51, ends at 60, ranges 51 to 60");
+    expect(screen.getByText("PYS 60 (+9)")).toBeDefined();
+  });
+
+  it("never connects isolated measurements across alternating NR observations", () => {
+    const history = Array.from({ length: 16 }, (_, i) => ({
+      ts: BASE_TS + i * 60 * 60 * 1000,
+      pysAtPublish: i % 2 === 0 ? 50 + i : null,
+    }));
+    const { container } = render(<PysHistorySparkline history={history} />);
+    expect(container.querySelectorAll("polyline")).toHaveLength(0);
+    expect(screen.getByText("PYS 64 (+14)")).toBeDefined();
   });
 
   it("uses emerald stroke when the series is ascending", () => {

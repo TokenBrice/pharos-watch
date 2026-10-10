@@ -7,7 +7,7 @@ import { RowSparkline } from "@/components/row-sparkline";
 
 /* Compact PYS history sparkline.
    Reads optional `pysAtPublish` snapshots persisted per published row, draws a
-   horizontal polyline over the last N days. Null values are gaps and skipped.
+   horizontal polyline over the last N days. Null values break the line.
    Pure SVG — no chart library. */
 
 export interface PysHistorySparklinePoint {
@@ -28,9 +28,10 @@ const SVG_WIDTH = 300;
 const SVG_HEIGHT = 24;
 
 interface PreparedSeries {
-  /** Non-null points inside the window, sorted ascending by ts. */
-  points: Array<{ ts: number; pys: number }>;
-  /** Min/max for vertical scaling. */
+  /** Timestamped points inside the window, including unavailable scores. */
+  points: Array<{ ts: number; pys: number | null }>;
+  /** Finite observations alone determine statistics and collecting readiness. */
+  measured: Array<{ ts: number; pys: number }>;
   min: number;
   max: number;
 }
@@ -40,30 +41,32 @@ function preparePysSeries(
   windowMs: number,
 ): PreparedSeries {
   if (history.length === 0) {
-    return { points: [], min: 0, max: 0 };
+    return { points: [], measured: [], min: 0, max: 0 };
   }
   const sorted = [...history]
     .filter((p) => Number.isFinite(p.ts))
     .sort((a, b) => a.ts - b.ts);
   if (sorted.length === 0) {
-    return { points: [], min: 0, max: 0 };
+    return { points: [], measured: [], min: 0, max: 0 };
   }
   const cutoff = sorted[sorted.length - 1].ts - windowMs;
-  const points: Array<{ ts: number; pys: number }> = [];
+  const points: PreparedSeries["points"] = [];
+  const measured: PreparedSeries["measured"] = [];
   let min = Number.POSITIVE_INFINITY;
   let max = Number.NEGATIVE_INFINITY;
   for (const p of sorted) {
     if (p.ts < cutoff) continue;
-    if (p.pysAtPublish === undefined || p.pysAtPublish === null) continue;
-    if (!Number.isFinite(p.pysAtPublish)) continue;
-    points.push({ ts: p.ts, pys: p.pysAtPublish });
-    if (p.pysAtPublish < min) min = p.pysAtPublish;
-    if (p.pysAtPublish > max) max = p.pysAtPublish;
+    const pys = p.pysAtPublish != null && Number.isFinite(p.pysAtPublish) ? p.pysAtPublish : null;
+    points.push({ ts: p.ts, pys });
+    if (pys === null) continue;
+    measured.push({ ts: p.ts, pys });
+    if (pys < min) min = pys;
+    if (pys > max) max = pys;
   }
-  if (points.length === 0) {
-    return { points: [], min: 0, max: 0 };
+  if (measured.length === 0) {
+    return { points, measured, min: 0, max: 0 };
   }
-  return { points, min, max };
+  return { points, measured, min, max };
 }
 
 function formatSignedDelta(delta: number): string {
@@ -87,7 +90,7 @@ export function PysHistorySparkline({
   const windowMs = windowDays * 24 * 60 * 60 * 1000;
   const series = useMemo(() => preparePysSeries(history, windowMs), [history, windowMs]);
 
-  if (series.points.length < MIN_POINTS_REQUIRED) {
+  if (series.measured.length < MIN_POINTS_REQUIRED) {
     return (
       <span
         className={cn("text-[10px] text-muted-foreground", className)}
@@ -98,8 +101,8 @@ export function PysHistorySparkline({
     );
   }
 
-  const first = series.points[0];
-  const last = series.points[series.points.length - 1];
+  const first = series.measured[0];
+  const last = series.measured[series.measured.length - 1];
   const rowData = series.points.map((point) => point.pys);
   const rowXValues = series.points.map((point) => point.ts);
   const stroke = getTrendColor(first.pys, last.pys);

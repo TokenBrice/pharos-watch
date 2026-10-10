@@ -158,6 +158,7 @@ export interface YieldDetailSectionReadyModel extends YieldDetailReadyModel {
   setShowAllSources: Dispatch<SetStateAction<boolean>>;
   selectedSourceKeys: Set<string>;
   toggleSource: (sourceKey: string) => void;
+  showChosenSource: () => void;
 }
 
 export interface YieldDetailSectionLoadingModel {
@@ -247,5 +248,8 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
     setShowAllSources,
     selectedSourceKeys,
     toggleSource,
+    showChosenSource: () => replaceParams((params) => {
+      params.set("sources", model.sourceExplorer.selectedSource.sourceKey);
+    }),
   };
 }

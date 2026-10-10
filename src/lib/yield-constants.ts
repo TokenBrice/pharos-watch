@@ -31,8 +31,8 @@ const WARNING_SIGNAL_DESCRIPTIONS: Record<string, string> = {
   "reference-benchmark-degraded": "The USD reference rate every non-USD hurdle is re-based onto is retained or stale, so this row's PYS is estimated until it refreshes.",
   "benchmark-degraded": "The row uses a retained or fallback benchmark. Treat benchmark-relative comparisons with caution.",
   "benchmark-stale": "The selected benchmark is older than its scoring window, so PYS is unavailable until it refreshes.",
-  "safety-unrated": "This estimated PYS uses the conservative 40-point safety fallback until a Report Card score is available.",
-  "opportunity-evidence-missing": "This estimated PYS is missing a venue review or market-size input, so it cannot be treated as an exact opportunity-risk rating.",
+  "safety-unrated": "Report Card safety evidence is unavailable. Check the published score qualification and safety provenance; this warning alone does not establish a fallback score.",
+  "opportunity-evidence-missing": "Critical opportunity-risk evidence, such as venue review or market size, is missing; PYS is not rated until it is available.",
   "zero-yield": "Current source reports zero yield. Verify whether the program paused or the source failed.",
   "low-source-tvl": "Venue TVL is small. Use the depth lens and retained alternates before comparing this APY with deeper venues.",
 };

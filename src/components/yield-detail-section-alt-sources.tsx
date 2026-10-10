@@ -8,6 +8,7 @@ import { TableSourceLink } from "@/components/table/client";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { cn } from "@/lib/utils";
+import { formatYieldApyDelta } from "@/lib/yield-presentation";
 import { ALT_SOURCE_INITIAL_COUNT } from "@/components/yield-detail-section-model";
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
@@ -103,7 +104,6 @@ export function YieldDetailSectionAltSources({
           const isSelected = selectedSourceKeys.has(source.sourceKey);
           const isBest = source.sourceKey === bestSourceKey;
           const delta = source.apy30d - bestApy;
-          const deltaSign = delta >= 0 ? "+" : "";
           const confidence = source.confidenceTier
             ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[source.confidenceTier]?.label ?? null
             : null;
@@ -167,8 +167,7 @@ export function YieldDetailSectionAltSources({
                       delta >= 0 ? "text-emerald-500" : "text-muted-foreground",
                     )}
                   >
-                    {deltaSign}
-                    {formatPercent(delta)}
+                    {formatYieldApyDelta(delta)}
                   </p>
                 </div>
               </div>
@@ -260,7 +259,6 @@ export function YieldDetailSectionAltSources({
             const isSelected = selectedSourceKeys.has(source.sourceKey);
             const isBest = source.sourceKey === bestSourceKey;
             const delta = source.apy30d - bestApy;
-            const deltaSign = delta >= 0 ? "+" : "";
             const confidence = source.confidenceTier
               ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[source.confidenceTier]?.label ?? null
               : null;
@@ -311,8 +309,7 @@ export function YieldDetailSectionAltSources({
                       delta >= 0 ? "text-emerald-500" : "text-muted-foreground",
                     )}
                   >
-                    {deltaSign}
-                    {formatPercent(delta)}
+                    {formatYieldApyDelta(delta)}
                   </span>
                 </TableCell>
                 <TableCell className="px-0 py-2 text-right font-mono text-[10px] tabular-nums text-muted-foreground">

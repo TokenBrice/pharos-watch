@@ -516,7 +516,8 @@ export function YieldExpandedDetails({
       {row.pharosYieldScore !== null ? (
         <YieldWhyPysStrip
           benchmarkSpread={breakdown.benchmarkSpread}
-          benchmarkLabel={row.benchmarkLabel}
+          benchmarkLabel={benchmark.label}
+          benchmarkRate={benchmark.rate}
           stabilityPct={stabilityPct}
           sustainabilityMult={breakdown.sustainabilityMult}
           grade={grade}

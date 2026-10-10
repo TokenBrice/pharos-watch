@@ -449,12 +449,35 @@ describe("RedemptionBackstopCard", () => {
     expect(html).toContain("do not publish a bounded numeric redemption fee");
   });
 
-  it("renders eventual-only capacity without pretending it is immediate", () => {
+  it("renders unquantified eventual-only capacity without implying current-supply coverage", () => {
     const html = renderToStaticMarkup(<RedemptionBackstopCard entry={BASE_ENTRY} />);
 
     expect(html).toContain("Eventual Redeemability");
     expect(html).toContain("Not separately quantified");
-    expect(html).toContain("eventual redeemability");
+    expect(html).toContain("Eventual route capacity is unquantified");
+    expect(html).toContain("no current-supply coverage or immediate cash buffer is asserted");
+    expect(html).not.toContain("eventual redeemability of current supply");
+  });
+
+  it("renders supply-wide eventual redeemability only with an admitted bound", () => {
+    const html = renderToStaticMarkup(
+      <RedemptionBackstopCard entry={{
+        ...BASE_ENTRY,
+        capacityConfidence: "documented-bound",
+        capacityProfile: {
+          eventualUsd: 30_000_000,
+          scoringUsd: 30_000_000,
+          scoringHorizon: "eventual",
+          capacityProfileConfidence: "documented-bound",
+        },
+      }} />,
+    );
+
+    expect(html).toContain("Eventual Redeemability");
+    expect(html).toContain("$30.0M");
+    expect(html).toContain("eventual redeemability of current supply");
+    expect(html).toContain("not as an immediate cash buffer");
+    expect(html).not.toContain("Eventual route capacity is unquantified");
   });
 
   it("renders v4 capacity horizon, exit correlation, cost scenarios, and confidence detail", () => {

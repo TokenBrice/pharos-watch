@@ -13,6 +13,7 @@ vi.mock("@/components/yield-history-chart", () => ({
 }));
 
 const row = makeYieldViewModelRow({
+  benchmarkRate: 3.7,
   altSources: [{
     sourceKey: "morpho",
     yieldSource: "Morpho",
@@ -56,10 +57,11 @@ describe("YieldMobileCard", () => {
   });
 
   it("threads the payload scaling factor through the row display (E7)", () => {
-    // scalingFactor has no visible strip output today; the card must accept
-    // the payload value (live 8) and render the expanded PYS strip unchanged.
     renderYieldMobileCard(row, { scalingFactor: 8, expanded: true });
-    expect(screen.getByRole("group", { name: "Why this PYS" })).toBeTruthy();
+    const strip = screen.getByRole("group", { name: "Why this PYS" });
+    expect(strip.textContent).toContain("+0.60 pp");
+    expect(strip.textContent).not.toContain("+0.60%");
+    expect(strip.textContent).toContain("vs USD short rate (3.70%)");
   });
 });
 
@@ -87,6 +89,8 @@ describe("YieldMobileCard — zone chip benchmark resolution", () => {
     const chart = screen.getByTestId("yield-history-chart");
     expect(chart.getAttribute("data-benchmark-rate")).toBe("1.94");
     expect(chart.getAttribute("data-benchmark-label")).toBe("EUR 3M compounded €STR");
+    expect(screen.getByRole("group", { name: "Why this PYS" }).textContent)
+      .toContain("vs EUR 3M compounded €STR (1.94%)");
   });
 
   it("still falls back to the risk-free frame when no registry is provided", () => {

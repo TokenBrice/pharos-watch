@@ -10,11 +10,11 @@ export const compareYieldRows: (
   b: YieldWorkbenchRanking,
   sort: TableSortState<YieldTableSortKey>,
 ) => number = createTableComparator<YieldTableSortKey, YieldWorkbenchRanking>({
-  pys: (r) => r.pharosYieldScore ?? -1,
+  pys: (r) => r.pharosYieldScore,
   apy30d: (r) => r.apy30d,
-  safetyScore: (r) => r.safetyScore ?? -1,
-  tvl: (r) => r.sourceTvlUsd ?? 0,
-  yieldStability: (r) => r.yieldStability ?? -1,
+  safetyScore: (r) => r.safetyScore,
+  tvl: (r) => r.sourceTvlUsd,
+  yieldStability: (r) => r.yieldStability,
   yieldType: (r) => r.yieldType,
   sourceCount: (r) => 1 + getYieldAlternateSourceCount(r),
 });

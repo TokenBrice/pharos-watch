@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatYieldWarningSignal,
+  formatYieldWarningSignalDescription,
   getPysColor,
   formatYieldRatioPercent,
   resolveYieldScoreQualification,
@@ -18,6 +19,16 @@ describe("formatYieldWarningSignal", () => {
   it("converts unknown signals from kebab-case to space-separated", () => {
     expect(formatYieldWarningSignal("some-new-signal")).toBe("some new signal");
   });
+});
+
+describe("missing-evidence warning descriptions", () => {
+  it.each(["safety-unrated", "opportunity-evidence-missing"])(
+    "does not assert an estimated PYS or historical fallback from %s alone",
+    (signal) => {
+      expect(formatYieldWarningSignalDescription(signal)).not.toMatch(/This estimated PYS|uses the conservative 40-point/);
+      expect(formatYieldWarningSignalDescription(signal)).toMatch(/evidence|unavailable/);
+    },
+  );
 });
 
 describe("getPysColor", () => {

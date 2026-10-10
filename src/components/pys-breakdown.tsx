@@ -11,13 +11,13 @@ import {
   computePYS,
   computeSourceRiskScoreFromPenalty,
 } from "@shared/lib/yield-scoring";
-import { formatPercent, formatScore, formatSignedPercent } from "@shared/lib/format";
+import { formatPercent, formatScore } from "@shared/lib/format";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
 import { cn } from "@/lib/utils";
-import { formatSignedPysDelta } from "@/lib/yield-presentation";
+import { formatSignedPysDelta, formatYieldApyDelta } from "@/lib/yield-presentation";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { YieldBenchmarkSelectionMode, YieldPysNullReason } from "@shared/types";
 import type { YieldSourceRiskDriver } from "@/lib/yield-source-risk";
@@ -235,11 +235,11 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
     ? `${Math.round(safetyScore)}/100 safety`
     : "Safety unavailable";
   const consistencyPct = sustainabilityMult == null ? null : Math.round(sustainabilityMult * 100);
-  const benchmarkRefLabel = benchmarkLabel ?? "benchmark";
 
   const effectiveScalingFactor = scalingFactor;
   const apyVarianceScore = sustainabilityMult == null ? null : Math.max(0, Math.min(1, 1 - sustainabilityMult));
   const benchmarkRate = benchmarkSpread === null ? null : apy30d - benchmarkSpread;
+  const benchmarkRefLabel = `${benchmarkLabel ?? "benchmark"}${benchmarkRate !== null ? ` (${formatPercent(benchmarkRate)})` : ""}`;
   const neutralizeComponents: NeutralizeInput = {
     apy30d,
     safetyScore,
@@ -282,7 +282,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
         {benchmarkSpread !== null ? (
           <div
             className="flex items-baseline justify-between gap-3"
-            aria-label={`Plus benchmark adjustment ${formatSignedPercent(benchmarkAdjustment, 1)} (${(PYS_BENCHMARK_SPREAD_WEIGHT * 100).toFixed(0)} percent of ${formatSignedPercent(benchmarkSpread, 1)} spread versus ${benchmarkRefLabel})`}
+            aria-label={`Plus benchmark adjustment ${formatYieldApyDelta(benchmarkAdjustment)} (${(PYS_BENCHMARK_SPREAD_WEIGHT * 100).toFixed(0)} percent of ${formatYieldApyDelta(benchmarkSpread)} spread versus ${benchmarkRefLabel})`}
           >
             <span aria-hidden="true" className="flex items-center gap-1 text-muted-foreground">
               <span>+ benchmark adj.</span>
@@ -293,7 +293,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
                   </span>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-[260px] text-[11px]">
-                  {`${(PYS_BENCHMARK_SPREAD_WEIGHT * 100).toFixed(0)}% of ${formatSignedPercent(benchmarkSpread, 1)} spread vs ${benchmarkRefLabel}`}
+                  {`${(PYS_BENCHMARK_SPREAD_WEIGHT * 100).toFixed(0)}% of ${formatYieldApyDelta(benchmarkSpread)} spread vs ${benchmarkRefLabel}`}
                 </TooltipContent>
               </Tooltip>
               {showBenchmarkFallback ? (
@@ -306,13 +306,13 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
                 />
               ) : null}
             </span>
-            <span aria-hidden="true" className="font-mono tabular-nums">{formatSignedPercent(benchmarkAdjustment, 1)}</span>
+            <span aria-hidden="true" className="font-mono tabular-nums">{formatYieldApyDelta(benchmarkAdjustment)}</span>
           </div>
         ) : null}
         {hurdleRebase !== 0 ? (
           <div
             className="flex items-baseline justify-between gap-3"
-            aria-label={`Plus USD hurdle re-base ${formatSignedPercent(hurdleRebase, 1)} (USD risk-free rate minus ${benchmarkRefLabel}; equal excess over the local hurdle scores equally in every currency)`}
+            aria-label={`Plus USD hurdle re-base ${formatYieldApyDelta(hurdleRebase)} (USD risk-free rate minus ${benchmarkRefLabel}; equal excess over the local hurdle scores equally in every currency)`}
           >
             <span aria-hidden="true" className="flex items-center gap-1 text-muted-foreground">
               <span>+ USD hurdle re-base</span>
@@ -327,7 +327,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
                 </TooltipContent>
               </Tooltip>
             </span>
-            <span aria-hidden="true" className="font-mono tabular-nums">{formatSignedPercent(hurdleRebase, 1)}</span>
+            <span aria-hidden="true" className="font-mono tabular-nums">{formatYieldApyDelta(hurdleRebase)}</span>
           </div>
         ) : null}
         <div className="h-px bg-border/60" aria-hidden="true" />
