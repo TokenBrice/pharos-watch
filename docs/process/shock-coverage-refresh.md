@@ -26,7 +26,7 @@ Worst-case gap between scheduled attempts is 48h, leaving a roughly 24h manual/r
 
 `measure` depends on `targets` and uses `fail-fast: false`, so all asset jobs may finish even when one fails. The `refresh` fan-in job has `needs: measure`: it runs only after the whole measurement matrix succeeds, downloads the artifacts, then executes the attestation, registry, consistency, freshness, and test steps above before creating a branch, commit, or PR. A partial matrix refresh cannot create a partial PR.
 
-Each matrix job writes the journal and its committed `<journal>.summary.json` projection together. The attestation and registry generators discover journals only through those summaries (raw bodies leave Git for R2 in the later upload step), so a summary written only at upload time would leave a fresh measurement invisible to the registry and fail the freshness assertion.
+Each matrix job writes the journal and its committed `<journal>.summary.json` projection together. Both generators discover through summaries, not raw bodies; the collector carries each parsed source into registry admission without reopening it. A summary written only during R2 upload would leave fresh measurements invisible and fail freshness checks.
 
 ### Replay attestations are load-bearing
 

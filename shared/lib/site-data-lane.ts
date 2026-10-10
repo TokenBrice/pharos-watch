@@ -77,13 +77,6 @@ export function resolveSiteDataUpstreamPath(
   return isSiteDataAllowedApiPath(upstreamPath) ? `${upstreamPath}${suffix}` : null;
 }
 
-export function isSiteDataPath(
-  pathname: string,
-  method: string | null | undefined = SITE_DATA_ALLOWED_METHOD,
-): boolean {
-  return resolveSiteDataUpstreamPath(pathname, method) != null;
-}
-
 function resolveSiteDataAllowedUiHostnames(env: SiteDataUiOriginEnv = {}): Set<string> {
   return new Set([
     new URL(resolveOrigin(env.SITE_ORIGIN, SITE_ORIGIN)).hostname,

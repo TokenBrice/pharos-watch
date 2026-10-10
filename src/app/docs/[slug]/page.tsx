@@ -104,7 +104,6 @@ const mdxComponents = {
 
 function renderDoc(doc: (typeof PUBLIC_DOC_BY_SLUG extends ReadonlyMap<string, infer T> ? T : never), slug: string) {
   const source = preparePublicDocMarkdown(fs.readFileSync(path.join(DOCS_DIR, doc.source), "utf-8"), {
-    source: doc.source,
     stripTitle: true,
   });
   const meta = (docsMetadata as Record<string, { dateModified: string; dateCreated: string }>)[slug];

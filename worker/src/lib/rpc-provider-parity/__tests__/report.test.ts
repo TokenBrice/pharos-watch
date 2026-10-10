@@ -7,7 +7,6 @@ import {
   evaluateRpcParityGate,
   headLagThresholdBlocks,
   loadRpcProviderTrialReport,
-  percentileNearestRank,
   RPC_PARITY_GATE_MIN_RUNS,
   RPC_PARITY_GATE_MIN_SUCCESS_RATE,
 } from "../report";
@@ -415,6 +414,17 @@ describe("rpc parity gate math", () => {
     expect(summary.gate.failing).not.toContain("latency");
   });
 
+  it("reports measured nearest-rank p50 and p95 for varied head lag and latency", () => {
+    const runs = parityRunWindow(4, (chainId, runIndex) => (
+      chainId === PARITY_REGISTRY_CHAIN
+        ? { lagBlocks: [4, 1, 3, 2][runIndex], dwellirLatencyMs: [40, 10, 30, 20][runIndex] }
+        : {}
+    ));
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.headLagBlocks).toEqual({ p50: 2, p95: 4, samples: 4 });
+    expect(summary.latency.dwellir.warmRunMedian).toEqual({ p50Ms: 20, p95Ms: 40, samples: 4 });
+  });
+
   it("scales the head-lag threshold from the chain's nominal block time", () => {
     expect(headLagThresholdBlocks(12)).toBe(3);
     expect(headLagThresholdBlocks(2)).toBe(3);
@@ -422,9 +432,6 @@ describe("rpc parity gate math", () => {
     expect(headLagThresholdBlocks(0.25)).toBe(24);
     expect(headLagThresholdBlocks(0.01)).toBe(600);
     expect(headLagThresholdBlocks(0)).toBe(3);
-    expect(percentileNearestRank([], 0.95)).toBeNull();
-    expect(percentileNearestRank([40, 10, 30, 20], 0.5)).toBe(20);
-    expect(percentileNearestRank([40, 10, 30, 20], 0.95)).toBe(40);
   });
 
   it("evaluates a gate from a summary alone", () => {

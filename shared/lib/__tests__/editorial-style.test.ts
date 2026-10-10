@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   EDITORIAL_POLICY,
-  EDITORIAL_REGISTER_IDS,
   EDITORIAL_STYLE_HASH,
   EDITORIAL_STYLE_VERSION,
   buildEditorialPrompt,
@@ -28,8 +27,9 @@ describe("editorial style policy", () => {
 
   it("rejects an unknown register instead of silently scanning nothing", () => {
     expect(() => editorialRegister("not-a-register")).toThrow(/Unknown register/);
-    expect(EDITORIAL_REGISTER_IDS).toContain("daily");
-    expect(EDITORIAL_REGISTER_IDS).toContain("cemetery");
+    const registerIds = EDITORIAL_POLICY.registers.map((register) => register.id);
+    expect(registerIds).toContain("daily");
+    expect(registerIds).toContain("cemetery");
   });
 });
 

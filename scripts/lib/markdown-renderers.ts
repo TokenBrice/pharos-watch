@@ -188,7 +188,7 @@ export function renderDocMarkdown(doc: PublicDoc): string {
       canonical: `https://pharos.watch/docs/${doc.slug}/`,
       description: doc.summary,
     }) +
-    preparePublicDocMarkdown(source, { absoluteLinks: true, source: doc.source })
+    preparePublicDocMarkdown(source, { absoluteLinks: true })
   );
 }
 

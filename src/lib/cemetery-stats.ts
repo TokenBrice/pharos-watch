@@ -22,6 +22,7 @@ import {
   formatPercentFromRatio,
   formatUtcDayLabel,
 } from "@shared/lib/format";
+import { median } from "@shared/lib/stats";
 import { MECHANISM_ARCHETYPE_VALUES, type MechanismArchetype } from "@shared/types/core";
 import {
   CEMETERY_PEAK_BUCKET_KEYS,
@@ -308,13 +309,6 @@ function sum(values: readonly number[]): number {
   let total = 0;
   for (const value of values) total += value;
   return total;
-}
-
-function median(values: readonly number[]): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
 /** Peak descending, id ascending (locale-independent): deterministic for equal peaks. */

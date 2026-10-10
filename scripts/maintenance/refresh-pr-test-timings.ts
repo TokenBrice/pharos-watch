@@ -5,6 +5,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "n
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { z } from "zod";
+import { median } from "@shared/lib/stats";
 import { parseCliInteger, parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { PR_TEST_TIMINGS_PATH } from "../lib/pr-test-plan.mts";
 
@@ -22,12 +23,6 @@ function ghJson(args: string[]): unknown {
   return JSON.parse(execFileSync("gh", args, { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 }));
 }
 
-function median(values: number[]): number {
-  values.sort((a, b) => a - b);
-  const middle = Math.floor(values.length / 2);
-  return values.length % 2 ? values[middle] : (values[middle - 1] + values[middle]) / 2;
-}
-
 export function deriveTimingDurations(samples: readonly { file: string; durationMs: number }[]): Record<string, number> {
   const byFile = new Map<string, number[]>();
   for (const { file, durationMs } of samples) {
@@ -36,7 +31,7 @@ export function deriveTimingDurations(samples: readonly { file: string; duration
     byFile.set(file, values);
   }
   return Object.fromEntries([...byFile].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
-    .map(([file, values]) => [file, Math.max(1, Math.round(median(values)))]));
+    .map(([file, values]) => [file, Math.max(1, Math.round(median(values)!))]));
 }
 
 /** Download only timing artifacts; never runs tests or modifies CI state. */

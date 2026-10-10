@@ -12,6 +12,7 @@ import {
   deriveNativeV9BaseInputGenerationId,
   NATIVE_V9_INPUT_CACHE_KEY,
   NativeSafetyScoreV9InputSchema,
+  NativeDexLiquidityRowSchema,
   normalizeNativeV9Input,
   parseNativeV9InputCacheArtifact,
   parseNativeV9InputCacheValue,
@@ -319,6 +320,25 @@ describe("native Safety Score V9 input", () => {
         }),
       ),
     ).toThrow(/coverage observation count does not match DEX observations/);
+  });
+
+  it("preserves complete ordered native issues for inconsistent coverage counters", () => {
+    const result = NativeDexLiquidityRowSchema.safeParse({
+      updatedAt: DEX_UPDATED_AT, exitRouteObservations: [],
+      exitRouteObservationCoverage: {
+        status: "populated", capabilityMatrixVersion: "fixture-v1", retainedPoolCount: 1,
+        observationCount: 0, scoreEligibleObservationCount: 1, unsupportedPoolCount: 0,
+        evidenceCounts: {}, unsupportedReasons: {},
+      },
+    });
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error("Expected inconsistent coverage rejection");
+    const path = ["exitRouteObservationCoverage", "scoreEligibleObservationCount"];
+    expect(result.error.issues).toEqual([
+      { code: "custom", path, message: "score-eligible observations cannot exceed total observations" },
+      { code: "custom", path, message: "score-eligible observations cannot exceed total observations" },
+      { code: "custom", path, message: "coverage eligible-observation count does not match DEX observations" },
+    ]);
   });
 
   it("derives one generation id per payload regardless of field order", () => {

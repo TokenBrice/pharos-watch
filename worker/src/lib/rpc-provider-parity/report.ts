@@ -1,3 +1,4 @@
+import { percentileNearestRank } from "@shared/lib/stats";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { getCircuitRecord } from "../circuit-breaker";
 import { CIRCUIT_SOURCE } from "../constants";
@@ -57,14 +58,6 @@ export function headLagThresholdBlocks(blockTimeSec: number): number {
   return Math.max(3, Math.ceil(RPC_PARITY_HEAD_LAG_WINDOW_SEC / blockTimeSec));
 }
 
-/** Nearest-rank percentile — no interpolation, so every published value is a measured sample. */
-export function percentileNearestRank(values: readonly number[], percentile: number): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((left, right) => left - right);
-  const rank = Math.max(0, Math.min(sorted.length - 1, Math.ceil(percentile * sorted.length) - 1));
-  return sorted[rank] ?? null;
-}
-
 const PROBE_STEPS = RPC_PARITY_PROBE_STEPS;
 
 function emptyFailedStepCounts(): RpcParityFailedStepCounts {
@@ -79,8 +72,8 @@ function firstFailedStep(failures: RpcParityStepFailures): RpcParityProbeStep | 
 function summarizeLatency(values: readonly (number | null)[]): RpcParityLatencySummary {
   const measured = values.filter((value): value is number => value !== null);
   return {
-    p50Ms: percentileNearestRank(measured, 0.5),
-    p95Ms: percentileNearestRank(measured, 0.95),
+    p50Ms: percentileNearestRank(measured, 50),
+    p95Ms: percentileNearestRank(measured, 95),
     samples: measured.length,
   };
 }
@@ -365,8 +358,8 @@ export function buildRpcParityChainSummary(input: {
     lastSkip,
     dwellirSuccessRate,
     headLagBlocks: {
-      p50: percentileNearestRank(lagValues, 0.5),
-      p95: percentileNearestRank(lagValues, 0.95),
+      p50: percentileNearestRank(lagValues, 50),
+      p95: percentileNearestRank(lagValues, 95),
       samples: lagValues.length,
     },
     stateParity: {

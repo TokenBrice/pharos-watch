@@ -77,12 +77,15 @@ describe("percentileNearestRank", () => {
     expect(percentileNearestRank([1, 2, 3, 4], 50)).toBe(2);
     expect(percentileNearestRank([1, 2, 3, 4], 75)).toBe(3);
     expect(percentileNearestRank([10, 20, 30], 50)).toBe(20);
+    expect(percentileNearestRank([40, 10, 30, 20], 50)).toBe(20);
+    expect(percentileNearestRank([40, 10, 30, 20], 95)).toBe(40);
   });
 
   it("clamps percentile bounds and returns null for empty finite input", () => {
     expect(percentileNearestRank([3, 1, 2], -10)).toBe(1);
     expect(percentileNearestRank([3, 1, 2], 110)).toBe(3);
     expect(percentileNearestRank([], 50)).toBeNull();
+    expect(percentileNearestRank([], 95)).toBeNull();
     expect(percentileNearestRank([1], NaN)).toBeNull();
   });
 });

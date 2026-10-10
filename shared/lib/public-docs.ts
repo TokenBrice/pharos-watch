@@ -219,7 +219,7 @@ export function preparePublicDocMarkdown(
   {
     absoluteLinks = false,
     stripTitle = false,
-  }: { absoluteLinks?: boolean; source?: string; stripTitle?: boolean } = {},
+  }: { absoluteLinks?: boolean; stripTitle?: boolean } = {},
 ): string {
   const redacted = redactPublicDocSource(markdown);
   const withoutTitle = stripTitle ? stripLeadingMarkdownH1(redacted) : redacted;

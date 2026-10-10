@@ -160,42 +160,7 @@ Root [`package.json`](../package.json) owns command names, composition and defau
 
 ### Validation Command Index
 
-```bash
-npm test
-npm run test:all
-npm run test:pr -- --base=origin/main
-npm run test:watch
-npm run lint
-npm run lint:changed -- --base=origin/main
-npm run lint:typed
-npm run typecheck
-npm run typecheck:tests
-npm run typecheck:worker
-npm run check:pr
-npm run check:bootstrap
-npm run check:structural
-npm run check:release
-npm run check:pages-artifact
-npm run check:html-fixture-metadata
-npm run check:dependency-audit
-npm run ci:census -- --since=YYYY-MM-DD --out=agents/ci-census.json
-npm run test:a11y
-npm run test:a11y:hydrated
-```
-
-[Testing: Commands](./testing.md#commands) owns the validation behavior behind this discoverable command roster; use `package.json` for the full live npm-script list.
-
-| Command | Contract / source |
-| --- | --- |
-| `check:pr` | `scripts/maintenance/run-pr-checks.ts` guards exact `.nvmrc` Node and npm 11.x through `scripts/lib/runtime-guard.mts`, rejects staged selection and a head other than the checkout, resolves base/head identities, and executes every independent selected leaf even after failures. The CI-owned `critical-coverage` and `pages-artifact` lanes are recorded `deferred-to-ci` unless `--with-coverage`/`--with-pages` opt in. `scripts/lib/pr-check-receipt.mts` writes `.tmp/pr-check-receipts/<HEAD>.json` with runtime, refs, tree state, flags, leaf status/duration/first error and `passed`, `failed`, or `incomplete` outcome. Dirty tracked or untracked state (respecting `.gitignore`) yields `incomplete` with reason `dirty-worktree` unless a leaf fails; JSON execution status matches the receipt outcome. A zero exit from a dirty or weakened run is not a passing readiness receipt. |
-| `check:pr -- --plan` | Gate-wide non-executing plan: selected static/docs commands, discovered tests, CI partitions and critical owners. Test discovery may import modules; no assertions, fetch, clean install/bootstrap proof, or readiness proof. The plain runner replaces the receipt with incomplete plan evidence. |
-| `check:pr -- --ci-parity` | Opt-in independent clean clone and tested merge checkout, clean install/bootstrap immutability, trusted scans, selected browser prerequisites, serialized explicit CI test/coverage partitions and selected Pages artifact lane. `scripts/maintenance/run-ci-parity.ts` records author base/head separately from tested merge SHA/tree; it does not reproduce hosted-runner OS, GitHub artifact transport or production mutations/health. `--plan` prints this profile without executing or writing a receipt. |
-| `check:pages-artifact` | `scripts/ci/run-pages-artifact-lane.ts` replays the newest available successful trusted-main release snapshot via authenticated GitHub GETs, regenerates compile/post-refresh inputs offline, builds with production flags and clean compiler/output state, runs postbuild and every `check:pages-release` artifact gate, then restores input snapshots and the post-refresh outputs regenerated from them (including tracked `public/llms.txt`), so the checkout is left unmodified. Unavailable/expired release data uses committed snapshots plus offline detail bootstrap and reports `degraded-data`; empty detail payloads are weaker size evidence, not realistic release-data proof. Invalid downloaded data fails. No live refresh, production credentials or publishing. |
-| `check:release` | `scripts/maintenance/run-release-rehearsal.ts` uses that shared Pages runner without acquiring release data, preserves local build typechecking, then validates migrations and strict dry-run packages for both Workers. Default rehearsal is offline: no migration application or deployment. `--live-continuity` explicitly adds the live previous sitemap check. |
-| `check:html-fixture-metadata` | `scripts/ci/check-html-fixture-age.ts --metadata-only` validates canonical capture stamps and refresh-target inventory without calendar age/future-clock enforcement. Weekly `check:html-fixture-age` owns those time-dependent checks. |
-| `check:dependency-audit` | `scripts/ci/verify-dependency-audit.ts` audits the full lockfile, including dev dependencies. PR static guards pass `--new-since=<baseSha>` (frozen `PR_BASE_SHA`, otherwise merge-base with `origin/main`), audit base/current lockfiles with `--package-lock-only`, fail on new high/critical advisory/package pairs, and print pre-existing pairs as tracked by weekly audit; missing base evidence fails. No-flag weekly mode retains exact reviewed/unexpired exception policy and a separate package-signature check. The [registry](../scripts/ci/dependency-audit-exceptions.json) remains empty; braces [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) remains a weekly incident, not an accepted exception. `audit:deps` remains production-only. |
-| `ci:census` | `scripts/maintenance/ci-failure-census.ts` uses authenticated `gh` GETs for workflow/run/attempt/job evidence. `--since` is required; `--until` defaults to today's inclusive UTC day; optional `--cut` creates descriptive `created_at` cohorts. `--out` writes JSON and `<out>.md`, otherwise both print. Latest run-ID conclusions and retained execution attempts are separate; censored branches and cancellation provenance remain explicit. This reports evidence, not guessed causal categories. |
-| `lint:typed` | `package.json` pins an 8192 MiB Node heap and warning-as-error typed ESLint over the maintained production glob set. |
+[`package.json`](../package.json) owns the live commands and their composition; use each entrypoint's help for flags. [Testing: Commands](./testing.md#commands) owns lane behavior, not this discoverability index. Implementation-only changes to runners do not require a copied command or option roster here; behavior, operations, methodology and data-source policy still require their owning documentation.
 
 ### Build And Generated Artifacts
 
@@ -217,19 +182,11 @@ Build and release ordering is documented in [Deployment Process](./deployment-pr
 
 ### PR And Release Gates
 
-Before **every** authorized first or replacement push, run full plain `npm run check:pr` on the final committed state, without skip/filter/plan-only flags, after full generated-artifact convergence. Focused checks are authoring feedback, never readiness proof. The passing receipt must describe current HEAD, clean state, and the unweakened run. There is no pre-push hook. [Pre-push readiness](./testing.md#pre-push-readiness) owns runtime activation, refs, receipt requirements and the ordered workflow; [release gates](./deployment-process.md#release-snapshot-state-machine) and [boundary waivers](./process/boundary-waivers.md) own release policy.
+Use [Pre-push readiness](./testing.md#pre-push-readiness) for the ordered runtime/ref/artifact/receipt contract and [release policy](./deployment-process.md#release-snapshot-state-machine) for deployment gates. [Boundary waivers](./process/boundary-waivers.md) retain their reviewed scope. Focused, filtered and plan-only checks are authoring feedback, never readiness proof; unmapped production paths are routing failures.
 
-Use `--ci-parity` additionally after a remote failure the local gate did not reproduce, and for lockfile/setup/security-policy changes; plain `check:pr` remains the everyday readiness gate. When CI fails, collect every failed leaf, fix all causes in one causal revision, rerun full readiness, then push once. A zero focused plan for unmapped production paths is a routing failure, not a pass.
+[`scripts/lib/pr-test-plan.mts`](../scripts/lib/pr-test-plan.mts) owns selection and weighted shard plans; [CI Pipeline](./testing.md#ci-pipeline) owns plan consumption and timing refresh/provenance/review. Timing lanes must remain explicit and consistent across headings and overflow links; scheduling telemetry never establishes test or coverage correctness.
 
-`scripts/lib/pr-test-plan.mts` owns one-time `test:pr --plan-out` selection and weighted 4/8-shard plans; [CI Pipeline](./testing.md#ci-pipeline) owns plan consumption and static groups.
-
-`node --import tsx scripts/maintenance/refresh-pr-test-timings.ts --runs=5` refreshes committed scheduling weights: [when, provenance, and review](./testing.md#ci-pipeline).
-
-Plain-test and critical-coverage runners supply an explicit timing lane; headings and overflow artifact links use the same lane. Timing rows remain scheduling telemetry, never test or coverage correctness gates.
-
-Critical ownership reads base-revision Git blobs using their declared byte lengths; embedded NULs and multibyte text cannot shift later file records. Frontend-to-Worker import checks cover literal dynamic imports as well as static imports, retaining the documented waiver.
-
-For `check:focused` selection and preview behavior, use the [smallest adequate check matrix](./testing.md#smallest-adequate-check-per-area).
+Critical ownership reads base-revision Git blobs by declared byte length, so NULs and multibyte text cannot shift later records. Import-boundary checks include literal dynamic imports and retain only the reviewed waiver. Use the [smallest adequate check matrix](./testing.md#smallest-adequate-check-per-area) for focused selection and preview.
 
 `check:unused-code` credits namespace property reads, literal-key reads and literal `vi.spyOn`/`jest.spyOn` members individually; default imports consume only `default`, and side-effect imports preserve reachability without consuming named exports. Computed or escaping namespace uses retain conservative whole-module consumption and print their source/target in the audit. Dynamic import results and unqualified import types remain conservative, with aggregate audit counts. Newly exposed exports require individual review, not a blanket allowlist. Scanner fixtures must use external temporary workspace roots, never the repository root.
 
@@ -244,6 +201,8 @@ Useful test-only evidence belongs in recognized `*.test-support.ts` files, not p
 Use the `test:smoke-*`, `validate:*-smoke`, `serve:static-export`, and `ops:*` commands in `package.json`. Choose the incident-specific procedure through the [documentation index](./README.md) before taking remedial action. Local smoke harnesses and operator watches are evidence tools; production deployment acceptance is owned by the release workflows and [Deployment Process](./deployment-process.md#operational-acceptance). `night-watch-worker --dry-run` prints its preview to stdout (`--json` selects JSON), preserves report, evidence, and checkpoint files, and performs no remote collection, including with `--fixture`. Ordinary fixture rendering remains a file-writing mode.
 
 Pages smoke preserves unrelated `STATIC_EXPORT_*` overrides, but its selected host/port and nonblank API-key/site-secret fallbacks win over blank environment values.
+
+API smoke validates the complete redemption response with `RedemptionBackstopsResponseSchema`, including score/resolution coherence. A small wire adapter retains map-key identity, explicit status/eligibility fields and nonempty provider, methodology and source labels; it does not mirror the schema vocabulary.
 
 `ops:cron-delivery` reads Cloudflare scheduled-invocation ground truth; see [cron delivery stall](./runbooks/cron-delivery-stall.md).
 
