@@ -1032,13 +1032,8 @@ function commonModeSignalsByAsset(
           : localControlShare !== null
             ? commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, false)
             : commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, shareUnavailable);
-      const groupClause = controlCensus
-        ? `${effectiveMembers.length} reviewed paths across ${censusAssetIds.length} independent root liabilities share ${key}`
-        : `${effectiveMembers.length} reviewed paths across ${censusAssetIds.length} assets share ${key}`;
-      // Where the coin's own measured share drives the severity (moderate, or
-      // high with a measured — not unavailable — share), lead the reason with
-      // that share and demote the cross-asset group trigger to secondary
-      // context; readers otherwise misread the group count as the driver.
+      // A measured asset-local exposure owns its reason. Cohort counts and
+      // peer evidence quality must not alter it when another asset is quarantined.
       const ownShare = severity !== "low" && shareInfo !== null ? shareInfo.share : null;
       // Evidence ownership is local to the receiving asset. A reviewed
       // bounded-unknown member is still adverse — an unverified critical
@@ -1053,13 +1048,18 @@ function commonModeSignalsByAsset(
               (mintControlAssessment === null || mintControlAssessment.identitiesKnown)
             ? "measured-adverse"
             : "integration-missing";
-      const memberQualityClause = groupHasBoundedUnknownMember
-        ? `; ${boundedUnknownMemberCount} shared member${boundedUnknownMemberCount === 1 ? " is" : "s are"} bounded-unknown and remains adverse`
-        : "";
-      const reason =
-        ownShare !== null
-          ? `This asset's own reviewed share is ${formatCommonModeSharePct(ownShare)} at ${key}, ${qualifier} (also ${groupClause}${memberQualityClause}).`
-          : `${groupClause}${memberQualityClause}, ${qualifier}.`;
+      let reason: string;
+      if (ownShare !== null) {
+        reason = `This asset's own reviewed share is ${formatCommonModeSharePct(ownShare)} at ${key}, ${qualifier}.`;
+      } else {
+        const groupClause = controlCensus
+          ? `${effectiveMembers.length} reviewed paths across ${censusAssetIds.length} independent root liabilities share ${key}`
+          : `${effectiveMembers.length} reviewed paths across ${censusAssetIds.length} assets share ${key}`;
+        const memberQualityClause = groupHasBoundedUnknownMember
+          ? `; ${boundedUnknownMemberCount} shared member${boundedUnknownMemberCount === 1 ? " is" : "s are"} bounded-unknown and remains adverse`
+          : "";
+        reason = `${groupClause}${memberQualityClause}, ${qualifier}.`;
+      }
       const defaultEconomicLossScope = commonModeEconomicScope(group.failureDomain.kind);
       const economicLossScope =
         controlDomainScope.economicLossScope === "deployment"

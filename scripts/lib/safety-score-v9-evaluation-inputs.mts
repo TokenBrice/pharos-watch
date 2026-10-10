@@ -69,13 +69,16 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/types/safety-score-v9-allocation.ts",
   "shared/types/safety-score-v9-backing.ts",
   "shared/types/safety-score-v9-control-scope.ts",
+  "shared/types/safety-score-v9-fact-input-primitives.ts",
   "shared/types/safety-score-v9-fact-primitives.ts",
   "shared/types/safety-score-v9-facts.ts",
   "shared/types/safety-score-v9-immutable.ts",
+  "shared/types/safety-score-v9-operational-resilience-primitives.ts",
   "shared/types/safety-score-v9-operational-resilience.ts",
   "shared/types/safety-score-v9-public-facts.ts",
   "shared/types/safety-score-v9-public-internal.ts",
   "shared/types/safety-score-v9-public.ts",
+  "shared/types/safety-score-v9-vocabulary.ts",
   "shared/types/safety-score-v9-wrapper.ts",
   "shared/types/safety-score-v9.ts",
   "shared/types/stablecoin-meta-schemas.ts",
@@ -106,6 +109,8 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
  * `shared/lib/format.ts` and the `methodology-changelogs/{liquidity-score,
  * redemption-backstop}/v*.ts` entries sit just past this boundary for the same
  * reason: they feed version *labels* rather than scoring behaviour.
+ * `shared/types/safety-score-v9-grade.ts` is projection-only: public grade/
+ * pillar consistency checks read it, but scoring uses the validated policy.
  */
 export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "worker/src/cron/reserve-adapters/xdai-bridge.ts",

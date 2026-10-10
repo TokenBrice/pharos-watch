@@ -17,6 +17,10 @@ import {
   makeDocumentedRedemption,
   makeNormalizedExitRoute,
 } from "./safety-score-v9-exit.test-support";
+import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, validateExitExecutionModelReviews } from "../safety-score-v9/exit-execution";
+import { makeExecutionCertificate } from "./safety-score-v9-exit-execution.test-support";
+import executionReviews from "../../data/safety-score-v9/exit-execution-model-reviews-v1.json";
+import { domainDigest } from "../safety-score-v9/primitives";
 
 function route(overrides: Partial<V9ExitEvaluationRoute> = {}): V9ExitEvaluationRoute {
   return makeExitRoute({ capacityEvidenceTier: "live-direct", ...overrides });
@@ -593,6 +597,7 @@ describe("evaluateV9Exit", () => {
               lane: "dex",
               routeFamily: "dex-amm",
               evidenceKind: "measured-executable-depth",
+              feeEvidence: executionCostBps === 200 ? "disclosed-unquantified" : null,
               capacityCurve: [
                 {
                   requestedNotionalUsd: 1_000_000,
@@ -625,6 +630,65 @@ describe("evaluateV9Exit", () => {
     const measuredCosts = [0, 20, 50, 80, 100, 120, 150, 180, 199];
     const measuredScores = measuredCosts.map((cost) => traceAtCost(cost).score!);
     expect(measuredScores.every((score, index) => index === 0 || score <= measuredScores[index - 1]!)).toBe(true);
+  });
+
+  it("prices admitted measured certificate cost monotonically through the exact request budget", () => {
+    const review = validateExitExecutionModelReviews(executionReviews, V9_CANDIDATE_POLICY_V1)
+      .find((entry) => entry.identity.assetId === "susds-sky")!;
+    const clockSec = Math.ceil(Date.parse(review.reviewedAt) / 1000);
+    const model = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.executionModels[review.modelId]!;
+    const traces = [199.99, 200].map((executionCostBps) => {
+      const certificate = makeExecutionCertificate();
+      Object.assign(certificate, {
+        modelId: review.modelId, identity: review.identity, holder: review.holder,
+        reviewDigest: exitExecutionReviewDigest(review), observedAtSec: clockSec,
+        sourceMaxAgeSec: model.sourceMaxAgeSec, priceMaxAgeSec: model.priceMaxAgeSec,
+      });
+      certificate.source.timestamp = clockSec;
+      certificate.observationGenerationId = domainDigest("safety-score-v10.exit-execution-source.v1", certificate.source);
+      Object.assign(certificate.inputReference, {
+        assetKey: review.identity.assetId, deployment: review.identity.deployment,
+        decimals: review.producer.inputDecimals, observedAtSec: clockSec,
+      });
+      certificate.inputGenerationId = exitExecutionInputGenerationId(review.identity.assetId, { requestedNotionalUsd: 100_000, maxCostBps: 200 }, certificate.inputReference);
+      certificate.gates = model.requiredGates.map((gateId) => ({
+        gateId, verdict: "passed", evidenceId: `observed:${gateId}`, observedAtSec: clockSec, reason: null,
+      }));
+      const point = certificate.points[0]!;
+      Object.assign(point, {
+        executionCostBps, allInCostBps: executionCostBps,
+        requestedRawInput: "100000000000000000000000", executedRawInput: "100000000000000000000000",
+        fees: [],
+      });
+      Object.assign(point.outputs[0]!, {
+        assetKey: review.identity.outputAssetKeys[0], deployment: `${review.producer.chain}:${review.producer.outputToken}`,
+        decimals: review.producer.outputDecimals, observedAtSec: clockSec,
+        rawUnits: executionCostBps === 200 ? "98000000000000000000000" : "98000100000000000000000",
+      });
+      const admitted = admitExitExecutionCertificate({
+        certificate, envelope: V9_CANDIDATE_POLICY_V1, assetId: review.identity.assetId,
+        clockSec, inputGenerationId: certificate.inputGenerationId,
+        observationGenerationId: certificate.observationGenerationId,
+        request: { requestedNotionalUsd: 100_000, maxCostBps: 200 },
+      });
+      expect(admitted.state).toBe("observed");
+      const result = evaluateV9Exit({
+        circulatingUsd: 2_000_000, assetId: review.identity.assetId, clockSec,
+        routes: [route({
+          executionModelId: certificate.modelId, executionCertificate: certificate,
+          coverageClass: point.certification,
+          capacityCurve: [{
+            requestedNotionalUsd: point.requestedNotionalUsd, maxCostBps: point.maxCostBps,
+            executableUsd: point.executableUsd, completionRatio: 1, executionCostBps,
+          }],
+        })],
+      }, V9_CANDIDATE_POLICY_V1);
+      return result.routes[0]!;
+    });
+    // Components round to two decimals; factor contributions retain the formula.
+    expect(traces[0]!.factorContributions!.cost!.score).toBeCloseTo(0.005, 6);
+    expect(traces[1]!.components!.cost).toBe(0);
+    expect(traces[1]!.score).toBeLessThanOrEqual(traces[0]!.score!);
   });
 
   it("floors a zero-capacity route to zero instead of letting an undisclosed cost carry it", () => {

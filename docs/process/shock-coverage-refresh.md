@@ -62,7 +62,7 @@ npx tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.t
 
 Measuring the same head block twice is idempotent: the measure script keeps the existing journal and verifies the new measurement matches it, rather than overwriting.
 
-To byte-replay a single journal on demand:
+To byte-replay a journal, supply its original path even when only the companion summary is committed. Replay resolves hash-verified local cache, pinned R2, then lifecycle R2; missing/expired or corrupt bodies fail rather than replaying the summary. Simulation equality and code-pin checks remain mandatory:
 
 ```bash
 npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --replay <journal-path>

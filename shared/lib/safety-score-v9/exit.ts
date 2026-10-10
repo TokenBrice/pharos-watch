@@ -466,7 +466,7 @@ function resolveIncludedRouteCapacity(
   request: V9ExitStressRequest,
   envelope: V9ValidatedPolicyEnvelope,
 ):
-  | { state: "included"; capacityPoint: V9ExitCapacityPoint; valuedExecutableUsd: number }
+  | { state: "included"; capacityPoint: V9ExitCapacityPoint; valuedExecutableUsd: number; costEvidence: "measured" | "upper-bound" }
   | { state: "excluded"; exclusionReason: V9ReasonCode | null }
   | { state: "incomparable" }
   | { state: "unsupported" } {
@@ -498,6 +498,14 @@ function resolveIncludedRouteCapacity(
   return {
     state: "included",
     capacityPoint,
+    // Certified receipts and physical-sale models quantify cost. Legacy curves
+    // used the request ceiling as an unknown-cost sentinel; keep that evidence
+    // distinction here rather than relabelling a measured boundary cost.
+    costEvidence: hasUnquantifiedFee(route)
+      ? "upper-bound"
+      : (route.executionModelId && proof) || route.physicalToUsd || capacityPoint.executionCostBps < request.maxCostBps
+        ? "measured"
+        : "upper-bound",
     valuedExecutableUsd:
       capacityPoint.executableUsd *
       route.outputValueRetention *
@@ -687,7 +695,7 @@ function evaluateRoute(
       capsApplied: [],
     };
   }
-  const { capacityPoint, valuedExecutableUsd } = resolvedCapacity;
+  const { capacityPoint, valuedExecutableUsd, costEvidence } = resolvedCapacity;
   const policy = envelope.policy.semantic.exit;
   const completionRatio = valuedExecutableUsd / request.requestedNotionalUsd;
   // A lower bound proves executable capacity, never its absence above that
@@ -747,12 +755,8 @@ function evaluateRoute(
       route.physicalToUsd ? policy.outputAssetScores["physical-commodity-delivery"] : policy.outputAssetScores[route.outputQuality],
       route.unboundedDeliveryCap === undefined ? 100 : policy.unboundedDeliveryCap,
     ) * route.outputValueRetention,
-    // A cost sitting exactly on the request bound is an upper bound, not a
-    // measurement: producers report execution inside maxCostBps without the
-    // realized marginal cost. Bounded-unknown cost scores at the policy
-    // midpoint instead of pricing the worst case as if it were observed.
     cost:
-      hasUnquantifiedFee(route) || (!route.physicalToUsd && capacityPoint.executionCostBps >= request.maxCostBps)
+      costEvidence === "upper-bound"
         ? policy.boundedCostScore
         : clampScore(100 * (1 - capacityPoint.executionCostBps / Math.max(1, request.maxCostBps))),
   };

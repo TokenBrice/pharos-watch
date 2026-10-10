@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 import { parseCliInteger, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
-import { buildMechanismCaptureSummary, summaryPathForCapture } from "../lib/mechanism-measurement/capture-summary";
+import { buildMechanismCaptureSummary, resolveCaptureBody, summaryPathForCapture, type ResolveCaptureBodyOptions } from "../lib/mechanism-measurement/capture-summary";
 import { fetchBlockByNumber, pinBlock } from "../lib/mechanism-measurement/core";
 import { JournaledShockCaller, ReplayShockCaller } from "../lib/mechanism-measurement/shock-journal";
 import { measureConfiguredShockCoverageTarget } from "../lib/mechanism-measurement/shock-measure";
@@ -14,6 +14,7 @@ import {
   SHOCK_COVERAGE_TARGETS,
   type ShockCoverageTarget,
 } from "../lib/mechanism-measurement/shock-targets";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_OUT_DIR = "shared/data/safety-score-v9/mechanism-measurements";
 
@@ -210,9 +211,10 @@ function writeCaptureSummary(journalPath: string): void {
   writeFileSync(summaryPathForCapture(journalPath), `${JSON.stringify(summary, null, 2)}\n`, "utf8");
 }
 
-async function replayEvidence(path: string): Promise<void> {
-  const absolutePath = resolve(path);
-  const recorded = ShockCoverageEvidenceV1Schema.parse(JSON.parse(readFileSync(absolutePath, "utf8")));
+export async function replayEvidence(path: string, options: ResolveCaptureBodyOptions = {}): Promise<void> {
+  const absolutePath = resolve(options.rootDir ?? process.cwd(), path);
+  const body = await resolveCaptureBody(absolutePath, { missingCaptureLabel: "shock coverage", ...options });
+  const recorded = ShockCoverageEvidenceV1Schema.parse(JSON.parse(body.toString("utf8")));
   const target = replayTargetFromEvidence(recorded);
 
   const caller = new ReplayShockCaller(recorded.calls, recorded.codePins);
@@ -284,7 +286,7 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
   );
 }
 
-void runCliEntrypoint(
+if (isDirectRun(import.meta.url, process.argv[1])) void runCliEntrypoint(
   async () => {
     const options = parseOptions(process.argv.slice(2));
     if (!options) return;

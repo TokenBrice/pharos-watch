@@ -47,7 +47,7 @@ export interface ChainMaturityReview {
 
 export interface ResolvedChainMaturityReview extends ChainMaturityReview {
   readonly admission: ChainMaturityAdmissionDecision;
-  readonly state: "admitted" | "pending" | "failed" | "expired";
+  readonly state: "admitted" | "pending" | "failed" | "expired" | "not-yet-admitted";
   readonly evaluationClockSec: number;
 }
 
@@ -901,6 +901,18 @@ function resolveChainMaturityReviewsAt(
   }
   return CHAIN_MATURITY_REVIEWS_V1.map((review) => {
     const expired = evaluationClockSec >= Date.parse(`${review.nextReviewAt}T00:00:00.000Z`) / 1000;
+    // Review dates become usable after the UTC day; missing source access
+    // holds admission, and recorded access cannot support earlier captures.
+    const admissionStartsAtSec = Math.max(
+      Date.parse(`${review.reviewedAt}T00:00:00.000Z`) / 1000 + DAY_SEC,
+      ...CHAIN_MATURITY_GATE_IDS.flatMap((gateId) =>
+        review.gates[gateId].sources.map((source) =>
+          source.verification?.accessedAt == null
+            ? Number.POSITIVE_INFINITY
+            : Date.parse(`${source.verification.accessedAt}T00:00:00.000Z`) / 1000,
+        ),
+      ),
+    );
     const hasFailure = CHAIN_MATURITY_GATE_IDS.some((gateId) => review.gates[gateId].result === "fail");
     const hasPending = CHAIN_MATURITY_GATE_IDS.some((gateId) => review.gates[gateId].result === "pending");
     const state: ResolvedChainMaturityReview["state"] = hasFailure
@@ -909,7 +921,9 @@ function resolveChainMaturityReviewsAt(
         ? "pending"
         : expired
           ? "expired"
-          : "admitted";
+          : evaluationClockSec < admissionStartsAtSec
+            ? "not-yet-admitted"
+            : "admitted";
     return {
       ...review,
       admission: state === "admitted" ? "admit" : "exclude",

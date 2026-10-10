@@ -19,10 +19,8 @@ const IMPORT_CLOSURE_ALLOWLIST: Record<string, true> = {
   // outside the selected score-bearing implementation closure.
   "shared/types/date-primitives.ts": true,
   "shared/types/methodology-envelope.ts": true,
-  "shared/types/safety-score-v9-fact-input-primitives.ts": true,
+  // Public grade/weight consistency projection; scoring reads validated policy.
   "shared/types/safety-score-v9-grade.ts": true,
-  "shared/types/safety-score-v9-operational-resilience-primitives.ts": true,
-  "shared/types/safety-score-v9-vocabulary.ts": true,
   "shared/types/validators.ts": true,
 };
 
@@ -156,5 +154,23 @@ describe("VERITAS finding VER-010: evaluation build identity binds imported fact
       .filter((path) => !manifestPaths[path] && !IMPORT_CLOSURE_ALLOWLIST[path])
       .sort();
     expect(missing).toEqual([]);
+  });
+
+  it("pins runtime schema imports used by fact and incident admission", () => {
+    for (const owner of [
+      "shared/types/safety-score-v9-facts.ts",
+      "shared/types/safety-score-v9-incidents.ts",
+      "shared/types/safety-score-v9-operational-resilience.ts",
+    ]) {
+      for (const specifier of runtimeImports(owner)) {
+        const dependency = resolveStaticImport(owner, specifier);
+        if (dependency === null) continue;
+        expect(
+          (V9_EVALUATION_BUILD_SOURCE_PATHS as readonly string[]).includes(dependency) ||
+          IMPORT_CLOSURE_ALLOWLIST[dependency] === true,
+          `${owner}: ${dependency}`,
+        ).toBe(true);
+      }
+    }
   });
 });

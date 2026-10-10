@@ -733,10 +733,10 @@ export function reviewedDeploymentObservationTimingIssue(input: {
       failedRouteId: futureUnsupportedBySource.routeId,
     };
   }
-  if (input.clockSec - input.observedAtSec > REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC) {
+  if (input.clockSec - earliestBlockTimeSec > REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC) {
     return {
       code: "stale",
-      failedRouteId: boundaryRouteId(input.deployments, "latest"),
+      failedRouteId: boundaryRouteId(input.deployments, "earliest"),
     };
   }
   return null;

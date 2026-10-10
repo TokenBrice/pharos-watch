@@ -10,7 +10,7 @@ import {
   resolveChainMaturityAdmissionsAt,
 } from "@shared/data/safety-score-v9/chain-maturity-reviews-v1";
 import { commonModeSignalSeverity, type V9CommonModeContext } from "../safety-score-v9/evaluate-set";
-import { V9_CANDIDATE_POLICY_V1, loadV9MethodologyPolicy } from "../safety-score-v9/policy";
+import { V9_CANDIDATE_POLICY_V1, loadV9MethodologyPolicy, loadV9CandidateMethodologyPolicy } from "../safety-score-v9/policy";
 
 const EXPECTED_ADMITTED = ["base", "ethereum", "hedera"] as const;
 
@@ -122,6 +122,56 @@ describe("Safety Score v9 chain-maturity registry", () => {
       expect(chainMaturityReviewForSlug(chainSlug)?.admission, chainSlug).toBe("exclude");
       expect(chainMaturityReviewForSlug(chainSlug)?.state, chainSlug).toBe("pending");
     }
+  });
+
+  it("excludes future reviews until the review day and independent evidence access are available", () => {
+    const reviewedDay = Date.parse("2026-08-24T00:00:00Z") / 1000;
+    const accessBoundary = Date.parse("2026-09-21T00:00:00Z") / 1000;
+    for (const clock of [0, reviewedDay - 1, reviewedDay, reviewedDay + 86400, accessBoundary - 1]) {
+      expect(resolveChainMaturityAdmissionsAt(clock).admittedChainSlugs).toEqual([]);
+      expect(chainMaturityReviewForSlug("ethereum", clock)?.state).toBe("not-yet-admitted");
+    }
+    expect(resolveChainMaturityAdmissionsAt(accessBoundary).admittedChainSlugs).toEqual(EXPECTED_ADMITTED);
+    const expiry = Date.parse(chainMaturityReviewForSlug("ethereum")!.nextReviewAt + "T00:00:00Z") / 1000;
+    expect(chainMaturityReviewForSlug("ethereum", expiry - 1)?.state).toBe("admitted");
+    expect(chainMaturityReviewForSlug("ethereum", expiry)?.state).toBe("expired");
+  });
+
+  it.each(["missing-verification", "missing-access", "null-access"] as const)(
+    "holds an otherwise passing review when a gate source has %s",
+    (missingField) => {
+      const review = CHAIN_MATURITY_REVIEWS_V1.find((candidate) => candidate.chainSlug === "ethereum")!;
+      const evidence = review.gates.continuity.sources[0]!;
+      const verification = evidence.verification!;
+      try {
+        Reflect.set(
+          evidence,
+          "verification",
+          missingField === "missing-verification"
+            ? undefined
+            : { ...verification, accessedAt: missingField === "null-access" ? null : undefined },
+        );
+        const resolution = resolveChainMaturityAdmissionsAt();
+        expect(resolution.admittedChainSlugs).toEqual(["base", "hedera"]);
+        expect(resolution.reviews.find((candidate) => candidate.chainSlug === "ethereum")).toMatchObject({
+          state: "not-yet-admitted",
+          admission: "exclude",
+        });
+      } finally {
+        Reflect.set(evidence, "verification", verification);
+      }
+      expect(chainMaturityReviewForSlug("ethereum")?.state).toBe("admitted");
+    },
+  );
+
+  it("retains the historical capture clock without importing future Ethereum maturity relief", () => {
+    const captureClockSec = Date.parse("2026-08-01T00:00:00Z") / 1000;
+    const replayPolicy = loadV9CandidateMethodologyPolicy(captureClockSec);
+    expect(replayPolicy.policy.semantic.materiality.matureChains).toEqual([]);
+    expect(commonModeSignalSeverity(
+      { kind: "chain", key: "ethereum" }, chainContext("ethereum", 1),
+      replayPolicy.policy.semantic.materiality,
+    )).toBe("high");
   });
 
   it("retains TRON's unresolved finality proof and conservative exclusion at the November 24 boundary", () => {

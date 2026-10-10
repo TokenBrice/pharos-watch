@@ -118,6 +118,35 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(buildV9EvaluationBuildManifest(root)).toEqual(buildV9EvaluationBuildManifest(root));
   });
 
+  it("includes runtime admission schema leaves and classifies public grade projection outside scoring", () => {
+    const paths = new Set<string>(V9_EVALUATION_BUILD_SOURCE_PATHS);
+    for (const owner of [
+      "shared/types/safety-score-v9-fact-input-primitives.ts",
+      "shared/types/safety-score-v9-fact-primitives.ts",
+      "shared/types/safety-score-v9-operational-resilience-primitives.ts",
+    ]) {
+      expect(paths.has(owner), owner).toBe(true);
+    }
+    expect(paths.has("shared/types/safety-score-v9-vocabulary.ts")).toBe(true);
+    // Grade thresholds/weights here validate public projections; the evaluator
+    // reads its independently pinned validated methodology policy.
+    expect(paths.has("shared/types/safety-score-v9-grade.ts")).toBe(false);
+  });
+
+  it.each([
+    "shared/types/safety-score-v9-fact-input-primitives.ts",
+    "shared/types/safety-score-v9-operational-resilience-primitives.ts",
+    "shared/types/safety-score-v9-vocabulary.ts",
+  ])("rotates build identity independently for runtime admission leaf %s", (path) => {
+    const root = fixtureRoot();
+    const before = buildV9EvaluationBuildManifest(root);
+    expect(before.files.map((file) => file.path)).toContain(path);
+    writeFileSync(resolve(root, path), `changed admission contract ${path}\n`);
+    const after = buildV9EvaluationBuildManifest(root);
+    expect(after.digest).not.toBe(before.digest);
+    expect(renderV9EvaluationBuildManifest(after)).toContain(path);
+  });
+
   it("does not discover newly added operational files by name", () => {
     const root = fixtureRoot();
     const operational = resolve(root, "worker/src/lib/safety-score-v9-new-publication-step.ts");
