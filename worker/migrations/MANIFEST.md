@@ -55,6 +55,7 @@
 | 0265     | `0265_yield_history_observation_clock.sql`               | Add nullable raw/daily yield source observation clocks; legacy rows remain unknown and publication clocks stay distinct. |
 | 0266     | `0266_tape_freeze_chain_identity.sql`                     | Normalize archived freeze chain display names to canonical registry IDs without changing event identity or payload. |
 | 0267     | `0267_block_timestamp_cache_hash.sql`                    | Add nullable cached block hashes plus indexed semantic blacklist log identities and bounded Tron snapshot reconciliation reads; no migration-time data rewrite. |
+| 0268     | `0268_telegram_planning_lookup_indexes.sql`               | Add idempotent covering indexes for exact Telegram plan chunk reconciliation and chat/preset follower cursor seeks without cohort rescans. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -362,6 +363,8 @@ Migration `0263` adds only the accepted-capture R2 index and publication-time in
 
 Migration `0264` adds only the dependency scenario chunk table and creation-clock retention index, with no migration backfill or deletion. Apply before the new public Worker reader activates; the publisher requires live version-bound capability proof before committing chunk manifests. Retention keeps chunks referenced by retained/latest manifests, protects current/recent publication attempts, and deletes at most 500 aged orphan rows per successful refresh. Capture the pre-window Time Travel bookmark, migration ledger and Worker version. Worker rollback does not remove D1 chunks or restore the latest marker; an old reader cannot consume a chunk manifest, so stop refreshes and use an explicitly verified retained single-row artifact if restoring that reader. Never restore D1 for a code-only rollback.
 
+Migration `0268` adds only non-unique covering indexes, with no row mutation or backfill. Capture the pre-window Time Travel bookmark, migration ledger and Worker version; apply before Worker activation because bounded follower reads name the new cursor index. Older Workers remain compatible and gain the indexed target lookup. Worker rollback leaves both indexes installed.
+
 ## Recent Migration Rollback Notes
 
 Historical drops dated August 10 are not indefinitely recoverable through their old Time Travel bookmarks: the maximum window is 30 days Paid / 7 days Free. Their recovery notes below require independently verified external archives, compatible source/schema and an isolated restoration plan; no live shared-D1 rewind to those expired points is available.
@@ -447,6 +450,7 @@ Historical drops dated August 10 are not indefinitely recoverable through their 
 - `0260_scheduled_child_attempts.sql`: roll back both scripts without removing the additive nullable protocol column, attempt ledger, producer histories or publications. Preserve terminal claims and live leases/checkpoints; restore D1 only for unexpected schema/data mutation using the verified pre-window bookmark.
 - `0261_native_dex_generations.sql`: apply before the native diagnostic Worker; older Workers ignore these additive tables/index/triggers and continue their existing isolated stores. Worker rollback leaves native generations intact. No legacy rows are imported, no score pointer is changed, and destructive schema cleanup remains a separately approved operation.
 - `0262_safety_score_publication_journal.sql`: apply before Worker activation; old Workers ignore the two new tables and indexes. Retain the pre-window Time Travel bookmark, migration ledger and deployed public/heavy versions. Worker rollback stops journaling without reversing accepted scores or deleting evidence; schema removal requires a separate cleanup rollout. Observe the first heavy accepted and held attempts and daily bounded prune.
+- `0268_telegram_planning_lookup_indexes.sql`: restore the prior Worker for a code rollback; keep the additive indexes. Drop them only in a later measured cleanup migration, never as part of a Worker rollback.
 
 ## Rollback Procedure
 

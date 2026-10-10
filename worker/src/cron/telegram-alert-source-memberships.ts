@@ -89,18 +89,6 @@ function mergePresetSubscriber(existing: SubscriberRow, additional: SubscriberRo
   };
 }
 
-function addPresetSubscriber(
-  map: Map<string, SubscriberRow[]>,
-  stablecoinId: string,
-  subscriber: SubscriberRow,
-): void {
-  const rows = map.get(stablecoinId) ?? [];
-  const existingIndex = rows.findIndex((row) => row.chat_id === subscriber.chat_id);
-  if (existingIndex === -1) rows.push(subscriber);
-  else rows[existingIndex] = mergePresetSubscriber(rows[existingIndex], subscriber);
-  map.set(stablecoinId, rows);
-}
-
 async function recordPageFailure(
   db: D1Database,
   page: ResolutionPageRow,
@@ -424,7 +412,12 @@ async function loadSourcePresetRows(
     const type = args.types[index];
     const projected = projectPresetFollowers([], targetResults[index]?.results ?? []);
     for (const [stablecoinId, rows] of projected) {
-      for (const row of rows) addPresetSubscriber(maps[type], stablecoinId, row);
+      const rowsByChat = new Map<string, SubscriberRow>();
+      for (const row of rows) {
+        const existing = rowsByChat.get(row.chat_id);
+        rowsByChat.set(row.chat_id, existing ? mergePresetSubscriber(existing, row) : row);
+      }
+      maps[type].set(stablecoinId, [...rowsByChat.values()]);
     }
   }
   return maps;
