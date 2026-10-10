@@ -1,3 +1,4 @@
+import { chunkArray } from "@shared/lib/collections";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
@@ -49,14 +50,6 @@ export const DEX_PRICE_CHALLENGER_PAYLOAD_INSERT_SQL =
      price_usd = excluded.price_usd,
      tvl_usd = excluded.tvl_usd`;
 
-function chunkRows<T>(rows: readonly T[], chunkSize: number): T[][] {
-  const chunks: T[][] = [];
-  for (let index = 0; index < rows.length; index += chunkSize) {
-    chunks.push(rows.slice(index, index + chunkSize));
-  }
-  return chunks;
-}
-
 function prepareMultiRowStatements(
   db: D1Database,
   rows: readonly (readonly unknown[])[],
@@ -71,7 +64,7 @@ function prepareMultiRowStatements(
   const rowsPerStatement = Math.floor(
     CHALLENGER_D1_MAX_BOUND_PARAMETERS / CHALLENGER_PAYLOAD_COLUMN_COUNT,
   );
-  return chunkRows(rows, rowsPerStatement).map((rowChunk) => {
+  return chunkArray(rows, rowsPerStatement).map((rowChunk) => {
     const placeholders = `(${new Array(CHALLENGER_PAYLOAD_COLUMN_COUNT).fill("?").join(", ")})`;
     const valuesSql = new Array(rowChunk.length).fill(placeholders).join(", ");
     return db

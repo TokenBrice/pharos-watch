@@ -1,3 +1,4 @@
+import { chunkArray } from "@shared/lib/collections";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { throwIfAborted } from "./abort";
@@ -54,14 +55,6 @@ function serializedBytes(value: string): number {
 
 function assertJournalTable(table: string): void {
   if (!BOUNDED_JOURNAL_TABLES.has(table)) throw new Error(`Unsupported bounded journal table: ${table}`);
-}
-
-function chunks<T>(values: readonly T[], size: number): T[][] {
-  const result: T[][] = [];
-  for (let offset = 0; offset < values.length; offset += size) {
-    result.push(values.slice(offset, offset + size));
-  }
-  return result;
 }
 
 function canonicalRecords<TRecord extends JournalRecord, TProjection>(
@@ -178,7 +171,7 @@ export async function loadBoundedJournal<TRecord extends JournalRecord, TProject
   }
 
   const recordsById: Record<string, TRecord[]> = {};
-  for (const assetChunk of chunks(canonicalAssetIds, D1_BIND_CHUNK_SIZE)) {
+  for (const assetChunk of chunkArray(canonicalAssetIds, D1_BIND_CHUNK_SIZE)) {
     if (assetChunk.length === 0) continue;
     const placeholders = assetChunk.map(() => "?").join(", ");
     // SAFETY: config.table is internal configuration and the remaining interpolation is generated bind placeholders.

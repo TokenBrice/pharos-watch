@@ -95,10 +95,3 @@ export function unresolvedArchetype(asset: V9AssetFactsV2, gapId: string) {
     review: null,
   };
 }
-
-export function assuranceStatus(asset: V9AssetFactsV2, status: V9AssetFactsV2["reserveStatus"]) {
-  const review = asset.mechanismRiskReview.review;
-  if (review?.archetype !== "fiat-cash") throw new Error("Expected fiat fixture");
-  review.assuranceAndReconciliation.status = status;
-  return review.assuranceAndReconciliation;
-}

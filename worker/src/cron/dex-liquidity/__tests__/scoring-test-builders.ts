@@ -1,4 +1,4 @@
-import type { DexPriceObs, LiquidityMetrics, PoolEntry } from "../types";
+import type { DexPriceObs, GtNewPool, LiquidityMetrics, PoolEntry } from "../types";
 import { summarizeRetainedPoolVolume } from "../scoring-helpers";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 
@@ -29,6 +29,24 @@ export function makePool(overrides: Partial<PoolEntry> = {}): PoolEntry {
     source: "dl",
     ...overrides,
   } as PoolEntry;
+}
+
+export function makeGtPool(address: string, overrides: Partial<GtNewPool> = {}): GtNewPool {
+  return {
+    address,
+    chain: "ethereum",
+    dexId: "uniswap-v3",
+    name: "USDC / USDT",
+    tvlUsd: 100_000,
+    volume24hUsd: 10_000,
+    qualityMultiplier: 0.8,
+    maturityDays: 30,
+    price: 1,
+    symbol: "USDC / USDT",
+    poolType: "uniswap-v3-5bp",
+    sourceFamily: "direct_api",
+    ...overrides,
+  };
 }
 
 export function makeObs(overrides: Partial<DexPriceObs> = {}): DexPriceObs {

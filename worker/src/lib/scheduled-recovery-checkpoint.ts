@@ -329,25 +329,6 @@ export async function loadLiveReserveCheckpoint(
   return row ? mapCheckpointRow(row) : null;
 }
 
-export async function loadLatestLiveReserveCheckpoint(
-  db: D1Database,
-): Promise<ScheduledRecoveryCheckpoint | null> {
-  const row = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `SELECT ${CHECKPOINT_COLUMNS}
-           FROM worker_scheduled_checkpoints
-          WHERE schedule_key = ? AND job = ?
-            AND state IN ('running', 'recovering', 'ready')
-          ORDER BY slot_started_at DESC, attempt_no DESC
-          LIMIT 1`,
-      )
-      .bind(LIVE_RESERVE_SCHEDULE_KEY, LIVE_RESERVE_CHECKPOINT_JOB)
-      .first<ScheduledCheckpointRow>(),
-  );
-  return row ? mapCheckpointRow(row) : null;
-}
-
 // Starting the next item also acknowledges the prior item. Persist its domain
 // attempt in the same write so recovery can fence any crash before domain work.
 export async function markLiveReserveCheckpointItemStarted(

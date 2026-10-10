@@ -23,18 +23,6 @@ import { refineV9PublicGapContext } from "./safety-score-v9-public-causes";
 
 export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 8;
 
-export const V9_PUBLICATION_HOLD_REASON_CODES = [
-  "dex-stale",
-  "dex-unavailable",
-  "redemption-stale",
-  "redemption-unavailable",
-  "live-reserves-unavailable",
-  "live-reserves-coverage-below-floor",
-  "coverage-floor-failed",
-  "producer-failed-pipeline-gap",
-  "assessment-failed",
-] as const;
-
 const V9PublicationSimpleHoldReasonSchema = z
   .object({
     code: z.enum([

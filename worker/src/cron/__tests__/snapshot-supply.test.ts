@@ -375,42 +375,6 @@ describe("snapshotSupply", () => {
     expect(result.itemCount).toBe(3);
   });
 
-  it("replaces a removed asset without deleting rows outside snapshot ownership", async () => {
-    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
-    const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
-    const previousIds = [...DEFAULT_REQUIRED_IDS, "eurt-test"];
-    const db = mockD1({
-      stablecoins: {
-        assets: { peggedAssets: [
-          makeSnapshotAsset({ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100 } }),
-          makeSnapshotAsset({ id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 50 } }),
-          makeSnapshotAsset({ id: "eurt-test", symbol: "EURT", circulating: { peggedEUR: 25 } }),
-          makeSnapshotAsset({ id: "admin-backfill-only", symbol: "ADMIN", circulating: { peggedUSD: 10 } }),
-        ] },
-        updatedAt: freshUpdatedAt,
-        first: false,
-      },
-      cacheRows: [{
-        key: "snapshot-supply:last-write",
-        value: completionMarker({ snapshotDate, requiredIds: previousIds, ownedRowIds: previousIds }),
-        updatedAt: freshUpdatedAt,
-        first: false,
-      }],
-    });
-
-    const result = await snapshotSupply(db, undefined, {
-      requiredActiveIds: DEFAULT_REQUIRED_IDS,
-      snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
-    });
-
-    expect(result.itemCount).toBe(2);
-    const deleteBinds = db.getHistory()
-      .filter((entry) => entry.sql.includes("DELETE FROM supply_history"))
-      .flatMap((entry) => entry.binds);
-    expect(deleteBinds).toContain("eurt-test");
-    expect(deleteBinds).not.toContain("admin-backfill-only");
-  });
-
   it("replaces owned rows exactly while preserving an outside admin row in SQLite", async () => {
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {

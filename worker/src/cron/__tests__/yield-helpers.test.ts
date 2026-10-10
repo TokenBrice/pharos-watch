@@ -18,7 +18,6 @@ import {
   computeApyFromPrice,
   computePYS,
   computeYieldStability,
-  computeApyVarianceScore,
   detectWarningSignals,
   isDeterministicApyWithinSanityBounds,
   matchAllDlPools,
@@ -267,6 +266,11 @@ describe("computeYieldStability", () => {
     expect(computeYieldStability([5])).toBeNull();
   });
 
+  it("returns null for near-zero mean (insufficient signal)", () => {
+    expect(computeYieldStability([0, 0, 0])).toBeNull();
+    expect(computeYieldStability([1e-11, 0, 1e-11, 0])).toBeNull();
+  });
+
   it("returns 1 for perfectly stable yields", () => {
     expect(computeYieldStability([5, 5, 5, 5])).toBe(1);
   });
@@ -286,38 +290,6 @@ describe("computeYieldStability", () => {
   it("returns null when CV is Infinity (tiny mean, extreme variance)", () => {
     // mean = 5e-10 (above 1e-10 guard), variance overflows to Infinity → cv = Infinity
     expect(computeYieldStability([1e-9, 1e200, -1e200, 1e-9])).toBeNull();
-  });
-});
-
-describe("computeApyVarianceScore", () => {
-  it("returns null for fewer than 2 samples", () => {
-    expect(computeApyVarianceScore([])).toBeNull();
-    expect(computeApyVarianceScore([5])).toBeNull();
-  });
-
-  it("returns null for near-zero mean (insufficient signal)", () => {
-    expect(computeApyVarianceScore([0, 0, 0])).toBeNull();
-    expect(computeApyVarianceScore([1e-11, 0, 1e-11, 0])).toBeNull();
-  });
-
-  it("returns 0 for constant samples", () => {
-    expect(computeApyVarianceScore([5, 5, 5])).toBe(0);
-  });
-
-  it("returns higher score for more variance", () => {
-    const low = computeApyVarianceScore([5, 5.1, 4.9])!;
-    const high = computeApyVarianceScore([1, 10, 1, 10])!;
-    expect(high).toBeGreaterThan(low);
-  });
-
-  it("caps at 1", () => {
-    const result = computeApyVarianceScore([0.001, 100, 0.001, 100]);
-    expect(result).toBeLessThanOrEqual(1);
-  });
-
-  it("returns null when CV is Infinity", () => {
-    // Same mechanism: mean bypasses near-zero guard but variance overflows
-    expect(computeApyVarianceScore([1e-9, 1e200, -1e200, 1e-9])).toBeNull();
   });
 });
 

@@ -1,3 +1,4 @@
+import { chunkArray } from "@shared/lib/collections";
 import {
   CRON_INTERVALS,
   getCronJobMeta,
@@ -10,7 +11,7 @@ import { CronRunStatusSchema } from "@shared/types/status";
 import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
 import { cronEventCacheKey } from "../cron-logger";
 import { confirmedCronOutputAt, CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
-import { staleSlotEventCacheKey } from "../scheduled-slot-fence";
+import { staleSlotEventCacheKey } from "../scheduled-slot-reconciliation";
 import { buildInClause } from "../db";
 import { logWorkerEvent } from "../structured-log";
 import { classifyFreshness } from "./freshness-oracle";
@@ -194,14 +195,6 @@ function buildCronHistoryQuery(jobCount: number, mode: CronHistoryQueryMode = "d
           ORDER BY started_at DESC`;
 }
 
-function chunkCronJobs(jobs: string[]): string[][] {
-  const chunks: string[][] = [];
-  for (let i = 0; i < jobs.length; i += CRON_HISTORY_QUERY_JOB_BATCH_SIZE) {
-    chunks.push(jobs.slice(i, i + CRON_HISTORY_QUERY_JOB_BATCH_SIZE));
-  }
-  return chunks;
-}
-
 interface CronHistoryRow {
   job: string;
   started_at: number;
@@ -261,7 +254,7 @@ async function fetchCronHistoryRows(
     // Each batch is an independent SELECT, so fire all batches concurrently
     // rather than awaiting them in sequence; D1's HTTP/2 connection is
     // multiplexed and this avoids serialising N batch round-trips.
-    const batches = chunkCronJobs(cronJobs);
+    const batches = chunkArray(cronJobs, CRON_HISTORY_QUERY_JOB_BATCH_SIZE);
     const batchResults = await Promise.all(
       batches.map(async (jobBatch) => {
         const batchJobSet = new Set(jobBatch);
@@ -295,7 +288,7 @@ async function fetchCronHistoryRows(
     // that superseded an earlier error. Both lookups preserve the indexed
     // per-job LIMIT and compound-query batch bound of the display-history read.
     const [requiredBatches, provenBatches] = await Promise.all([
-      Promise.all(chunkCronJobs(jobsMissingRequiredRun).map(async (jobBatch) => {
+      Promise.all(chunkArray(jobsMissingRequiredRun, CRON_HISTORY_QUERY_JOB_BATCH_SIZE).map(async (jobBatch) => {
         const jobSet = new Set(jobBatch);
         const result = await db
           .prepare(buildCronHistoryQuery(jobBatch.length, "latest-required"))
@@ -304,7 +297,7 @@ async function fetchCronHistoryRows(
         return (result.results ?? []).filter((row) => jobSet.has(row.job)
           && parseCronRunStatus(row.status) !== NEUTRAL_CRON_RUN_STATUS);
       })),
-      Promise.all(chunkCronJobs(jobsMissingProvenSkip).map(async (jobBatch) => {
+      Promise.all(chunkArray(jobsMissingProvenSkip, CRON_HISTORY_QUERY_JOB_BATCH_SIZE).map(async (jobBatch) => {
         const jobSet = new Set(jobBatch);
         const result = await db
           .prepare(buildCronHistoryQuery(jobBatch.length, "latest-proven-satisfied"))

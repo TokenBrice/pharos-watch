@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { executeAtomicBatch } from "../../lib/db";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { canonicalTelegramWebhookIntentBytes } from "../../lib/telegram/processed-updates";
 import {
   TelegramWebhookEffectFence,
   buildMutationOperations,
@@ -44,6 +45,56 @@ describe("TelegramWebhookEffectFence", () => {
   const fixtures: DatabaseSync[] = [];
   afterEach(() => {
     while (fixtures.length > 0) fixtures.pop()?.close();
+  });
+
+  it.each([
+    ["ingress:no-effect", "none", "{}"],
+    ["outbound:command-reply", "none", '{"effectKind":"command-reply"}'],
+    ["command:/help", "none", '{"command":"/help"}'],
+    ["command:subscribe", "required", '{"alertTypes":["dews","depeg"],"clearPending":true,"coinIds":["usdc-circle"],"depegWorseningBpsStep":null,"presetIds":[]}'],
+    ["command:unsubscribe", "required", '{"clearPending":false,"coinIds":[],"presetIds":[]}'],
+    ["command:set", "required", '{"clearPending":true,"scope":"all","setting":{"a":1,"B":2}}'],
+    ["command:set", "required", '{"clearPending":true,"coinIds":["usdc-circle"],"setting":{"enabled":false}}'],
+    ["command:subscribe", "required", '{"expiresAt":1700000300,"payload":{"alertTypes":["depeg"],"coinIds":[]},"stage":"bulk-confirm-prompt"}'],
+    ["command:unsubscribe", "required", '{"actionPayload":{},"actionType":"unsubscribe","ambiguousTicker":"USD","candidateIds":["usdc-circle"],"clearPending":true,"expiresAt":1700000300,"remainingTickers":[],"resolvedCoinIds":[],"stage":"disambiguation-prompt"}'],
+    ["pending:clear", "required", '{"actionType":"subscribe","expiresAt":1700000300,"reason":"cancel"}'],
+    ["callback:settings-gt", "required", '{"alertType":"depeg","next":1}'],
+    ["callback:settings-q", "required", '{"enabled":false}'],
+    ["callback:settings-sc", "required", '{"snoozeUntil":null}'],
+    ["callback:settings-c", "required", '{"coinId":"usdc-circle","setting":"depeg","value":"on"}'],
+    ["callback:setup", "required", '{"action":"advance","nextState":{"a":[{"a":1,"B":2},null],"B":false}}'],
+    ["callback:snooze", "required", '{"duration":"1h","untilSec":1700003600}'],
+    ["member:lifecycle", "required", '{"status":"left"}'],
+    ["chat:migration", "required", '{"newChatId":"43","oldChatId":"42"}'],
+  ] as const)("preserves canonical persisted and retry bytes for %s (%s)", async (kind, mutation, payloadBytes) => {
+    const { sqlite, db } = createFixture();
+    fixtures.push(sqlite);
+    insertClaim(sqlite, 8, "owner-1");
+    const golden = `{"kind":"${kind}","mutation":"${mutation}","payload":${payloadBytes},"version":1}`;
+    const stored = createTelegramWebhookIntent(kind, JSON.parse(payloadBytes), mutation);
+    const fence = new TelegramWebhookEffectFence(db, 8, { owner: "owner-1", generation: 1 }, stored, null);
+    const reverseKeys = (value: unknown): unknown => Array.isArray(value)
+      ? value.map(reverseKeys)
+      : typeof value === "object" && value != null
+        ? Object.fromEntries(Object.entries(value).reverse().map(([key, entry]) => [key, reverseKeys(entry)]))
+        : value;
+    const reordered = createTelegramWebhookIntent(kind, reverseKeys(stored.payload) as Record<string, unknown>, mutation);
+    expect(canonicalTelegramWebhookIntentBytes(reordered)).toBe(golden);
+    await fence.plan(reordered);
+    expect(sqlite.prepare("SELECT intent_payload FROM telegram_processed_updates WHERE update_id = 8").get())
+      .toEqual({ intent_payload: golden });
+  });
+
+  it("keeps the canonical encoder separate from persisted intent size validation", async () => {
+    const { sqlite, db } = createFixture();
+    fixtures.push(sqlite);
+    insertClaim(sqlite, 9, "owner-1");
+    const fence = new TelegramWebhookEffectFence(db, 9, { owner: "owner-1", generation: 1 }, undefined, null);
+    const intent = createTelegramWebhookIntent("outbound:command-reply", { messages: Array(200).fill("x".repeat(512)) });
+    expect(new TextEncoder().encode(canonicalTelegramWebhookIntentBytes(intent)).byteLength).toBeGreaterThan(65_536);
+    await expect(fence.plan(intent)).rejects.toThrow("Telegram webhook intent exceeds the storage limit");
+    expect(sqlite.prepare("SELECT intent_payload, effect_state FROM telegram_processed_updates WHERE update_id = 9").get())
+      .toEqual({ intent_payload: null, effect_state: "unstarted" });
   });
 
   it("persists a subscribe deep link and records its mutating intent before replying", async () => {

@@ -60,6 +60,10 @@ function canonicalizeJson(value: unknown): unknown {
   );
 }
 
+export function canonicalTelegramWebhookIntentBytes(intent: TelegramWebhookOperationIntent): string {
+  return JSON.stringify(canonicalizeJson(intent));
+}
+
 function isBoundedIntentValue(value: unknown, depth = 0): boolean {
   if (depth > 6) return false;
   if (value == null || typeof value === "boolean") return true;
@@ -241,7 +245,7 @@ function serializeIntent(intent: TelegramWebhookOperationIntent): string {
     throw new Error("Unsupported Telegram webhook intent version");
   }
   if (!isKnownIntentSchema(intent)) throw new Error("Invalid Telegram webhook intent schema");
-  const serialized = JSON.stringify(canonicalizeJson(intent));
+  const serialized = canonicalTelegramWebhookIntentBytes(intent);
   if (new TextEncoder().encode(serialized).byteLength > TELEGRAM_WEBHOOK_INTENT_MAX_BYTES) {
     throw new Error("Telegram webhook intent exceeds the storage limit");
   }

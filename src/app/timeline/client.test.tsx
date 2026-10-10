@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { TapeEvent } from "@shared/types/tape-event";
+import { makeTapeEvent } from "@shared/test-utils/tape-event";
 import type { ApiMeta } from "@/lib/api";
 
 type UseEventsResult = {
@@ -69,29 +70,6 @@ beforeEach(() => {
     meta: null,
   });
 });
-
-function makeTapeEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
-  return {
-    id: "1747200000000-depeg-abc12345",
-    type: "depeg.opened",
-    severity: "warning",
-    ts: Date.now() - 120_000,
-    endsAt: null,
-    coinId: "usdc-circle",
-    issuerId: null,
-    pegCurrency: "USD",
-    chain: null,
-    title: "USDC depeg opened (-500 bps)",
-    summary: "USDC drifted to -500 bps versus its USD peg.",
-    payload: {},
-    sourceTable: "depeg_events",
-    sourceRowId: "1",
-    transition: "opened",
-    sourceUrl: "/stablecoin/usdc-circle/#peg-history",
-    methodologyVersion: null,
-    ...overrides,
-  };
-}
 
 function mockEvents(events: TapeEvent[], overrides: Partial<UseEventsResult> = {}) {
   const nextCursor = overrides.data?.nextCursor ?? null;

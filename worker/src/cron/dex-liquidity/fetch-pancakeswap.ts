@@ -1,3 +1,4 @@
+import { chunkArray } from "@shared/lib/collections";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
@@ -109,14 +110,6 @@ function buildPoolHourDataQuery(poolIds: string[], oldestIncludedHourStart: numb
   }`;
 }
 
-function chunkPoolIds(poolIds: string[], chunkSize: number): string[][] {
-  const chunks: string[][] = [];
-  for (let index = 0; index < poolIds.length; index += chunkSize) {
-    chunks.push(poolIds.slice(index, index + chunkSize));
-  }
-  return chunks;
-}
-
 function summarizeBodySnippet(body: string): string {
   return body
     .replace(/\s+/g, " ")
@@ -226,7 +219,7 @@ export async function fetchPancakeSwapPools(
         // these carry a measured 24h volume; a failed batch or a malformed row
         // leaves the pool's volume unobserved (null), never a measured zero.
         const volumeObservedPoolIds = new Set<string>();
-        const hourDataPoolIdBatches = chunkPoolIds(pagePools.map((pool) => pool.id), HOUR_DATA_BATCH_SIZE);
+        const hourDataPoolIdBatches = chunkArray(pagePools.map((pool) => pool.id), HOUR_DATA_BATCH_SIZE);
         let failedHourDataBatches = 0;
         for (let batchIndex = 0; batchIndex < hourDataPoolIdBatches.length; batchIndex++) {
           throwIfAborted(signal);

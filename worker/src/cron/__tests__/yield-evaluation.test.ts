@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import {
   SOURCE_RISK_GOLDEN_ROWS,
   type YieldSourceRiskGoldenCaseId,
@@ -1597,6 +1598,29 @@ describe("source eligibility and unavailable score inputs", () => {
     expect(discovered?.rejected).toBe(freshness === "fresh");
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe(freshness === "fresh" ? canonicalKey : discoveredKey);
     expect(discovered?.anomalies.includes("diverges-from-canonical")).toBe(freshness === "fresh");
+  });
+
+  it("scores the same two-decimal stability published for read-time scoring", () => {
+    const startSec = 1776729600;
+    const sourceKey = "defillama:coin-a:base";
+    const result = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({ currentApy: 5 }) }],
+      sourceHistory: new Map([[buildHistoryKey("coin-a", sourceKey), historyRows(sourceKey, 1, startSec, 4)]]),
+    }));
+    const row = result.evaluatedSources[0];
+    expect(row.yieldStability).toBe(0.89);
+    expect(row.apyVarianceScore).toBeCloseTo(0.11, 12);
+    expect(row.apyVarianceScore).toBe(yieldStabilityToApyVarianceScore(row.yieldStability));
+    expect(row.pharosYieldScore).toBe(computePYS({
+      apy30d: row.apy30d,
+      safetyScore: row.safetyScore,
+      apyVarianceScore: yieldStabilityToApyVarianceScore(row.yieldStability),
+      benchmarkRate: row.benchmarkRate,
+      benchmarkCurrency: row.benchmarkCurrency,
+      usdBenchmarkRate: row.usdBenchmarkRate,
+      sourceRiskPenalty: row.sourceRiskPenalty,
+      scalingFactor: 8,
+    }));
   });
 
   it("keeps a source without measured variance published but unscored", () => {

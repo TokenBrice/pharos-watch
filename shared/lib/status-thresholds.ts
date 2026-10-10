@@ -22,17 +22,6 @@ export const FRESHNESS_RATIOS = {
  */
 export type FreshnessStatus = z.output<typeof FreshnessStatusSchema>;
 
-/**
- * Classify an age/interval ratio into the canonical freshness status tier.
- * Shared between worker buildFreshnessMeta and the frontend X-Data-Age fallback
- * so threshold changes propagate in one place.
- */
-export function classifyFreshnessRatio(ratio: number): FreshnessStatus {
-  if (ratio <= FRESHNESS_RATIOS.FRESH) return "fresh";
-  if (ratio <= FRESHNESS_RATIOS.DEGRADED) return "degraded";
-  return "stale";
-}
-
 /** Admin-only pending-candidate budget; never changes publication acceptance or public health. */
 export const STATUS_PUBLICATION_PENDING_MAX_AGE_SEC = 2 * 3600;
 

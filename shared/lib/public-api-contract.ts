@@ -2,8 +2,6 @@ import { API_ORIGIN, SITE_ORIGIN } from "./runtime-origins";
 
 export const PUBLIC_API_HOST = API_ORIGIN;
 export const PUBLIC_API_KEY_HEADER = "X-API-Key";
-export const PUBLIC_API_RETRY_GUIDANCE =
-  "Respect Retry-After on 429 responses and add jitter to polling intervals.";
 
 /**
  * Donor (supporter) key claim switch. `false` makes `POST /api/donor-key-claims`

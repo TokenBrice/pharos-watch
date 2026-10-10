@@ -27,8 +27,6 @@ const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
 // rather than silently rescored under a different clock or methodology.
 const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 4;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
-/** @internal Exported for focused scoring-stage tests. */
-export const DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT = 1;
 export const DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL = 24;
 const DEX_LIQUIDITY_SCORING_STAGE_READ_PAGE_SIZE = 4;
 const DEX_LIQUIDITY_SCORING_STAGE_MAX_AGE_SEC = 55 * 60;

@@ -188,15 +188,6 @@ describe("HeroPassportStrip", () => {
     expect(value.textContent).toBe("Custodial Cash");
   });
 
-  it("applies data-driven text tones to tinted values only", () => {
-    const { getByRole } = render(<HeroPassportStrip items={ITEMS} />);
-
-    const freeze = getByRole("link", { name: "Freezable — issuer can freeze, block, or seize balances" });
-    expect(freeze.querySelectorAll("span")[1].className).toContain("text-amber-700");
-    const mechanism = getByRole("link", { name: "Peg mechanism: Custodial Cash — jump to Key Information" });
-    expect(mechanism.querySelectorAll("span")[1].className).toContain("text-foreground");
-  });
-
   it("renders nothing when fewer than three facts resolve", () => {
     const { container } = render(<HeroPassportStrip items={ITEMS.slice(0, 2)} />);
     expect(container.firstChild).toBeNull();

@@ -24,16 +24,8 @@ export function completedRunsQuery(rows: Record<string, unknown>[]): MockTableCo
   return { match: COMPLETED_RUNS_SQL, matchBinds: [5], rows };
 }
 
-export function completedRunsTable(rows: Record<string, unknown>[]): MockTableConfig {
-  return { match: "FROM redemption_backstop_runs", rows };
-}
-
 export function runRowsQuery(runId: string, rows: Record<string, unknown>[]): MockTableConfig {
   return { match: RUN_ROWS_BY_RUN_ID_SQL, matchBinds: [runId], rows };
-}
-
-export function runRowsTable(runId: string, rows: Record<string, unknown>[]): MockTableConfig {
-  return { match: "WHERE snapshot_run_id = ?", matchBinds: [runId], rows };
 }
 
 export function completedRunRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {

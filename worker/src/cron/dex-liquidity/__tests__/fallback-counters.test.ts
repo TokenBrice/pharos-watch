@@ -12,7 +12,6 @@ import { accumulatePoolMetrics } from "../process-pool-accumulation";
 import { convertToGtNewPools } from "../../../lib/dex-api-pool-shaping";
 import type { DexApiPool } from "../../../lib/dex-api-types";
 import type {
-  GtNewPool,
   LiquidityMetrics,
   LlamaPool,
 } from "../types";
@@ -20,27 +19,10 @@ import type {
   PoolProtocolEnrichment,
   ResolvedPoolIdentity,
 } from "../process-pool-types";
+import { makeGtPool } from "./scoring-test-builders";
 
 function makeMetrics(overrides: Partial<LiquidityMetrics> = {}): LiquidityMetrics {
   return { ...initMetrics("usdc-circle", "USDC"), ...overrides };
-}
-
-function makeGtPool(address: string, overrides: Partial<GtNewPool> = {}): GtNewPool {
-  return {
-    address,
-    chain: "ethereum",
-    dexId: "uniswap-v3",
-    name: "USDC / USDT",
-    tvlUsd: 100_000,
-    volume24hUsd: 10_000,
-    qualityMultiplier: 0.8,
-    maturityDays: 30,
-    price: 1,
-    symbol: "USDC / USDT",
-    poolType: "uniswap-v3-5bp",
-    sourceFamily: "direct_api",
-    ...overrides,
-  };
 }
 
 function makePoolEntry(

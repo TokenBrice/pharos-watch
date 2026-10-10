@@ -4,7 +4,6 @@ import { createPrTestPlan } from "../lib/pr-test-plan.mts";
 import { selectPrTestFiles } from "../lib/pr-test-selection.mts";
 
 const docRatchet = "scripts/__tests__/doc-ownership-registry.test.ts";
-const closure = "scripts/__tests__/veritas-ver-010-v9-evaluation-build-identity.test.ts";
 const manifest = "scripts/__tests__/generate-safety-score-v9-evaluation-build-manifest.test.ts";
 const isolate = "scripts/__tests__/isolate-local-state-registry.test.ts";
 
@@ -13,10 +12,10 @@ describe("declared non-import-graph PR test ownership", () => {
     ["docs/report-cards.md", [docRatchet]],
     ["docs/worker-infrastructure.md", [docRatchet]],
     ["docs/doc-ownership.json", [docRatchet]],
-    ["shared/lib/safety-score-v9/mint-posture.ts", [closure, manifest]],
-    ["shared/types/reserve-input.ts", [closure, manifest]],
-    ["shared/lib/supply.ts", [closure, manifest, isolate]],
-    ["scripts/lib/safety-score-v9-evaluation-inputs.mts", [closure, manifest]],
+    ["shared/lib/safety-score-v9/mint-posture.ts", [manifest]],
+    ["shared/types/reserve-input.ts", [manifest]],
+    ["shared/lib/supply.ts", [manifest, isolate]],
+    ["scripts/lib/safety-score-v9-evaluation-inputs.mts", [manifest]],
     ["worker/src/lib/dex-liquidity/quote-v2.ts", [isolate]],
     ["shared/lib/isolate-local-state-registry.ts", [isolate]],
     ["functions/new-runtime.tsx", [isolate]],

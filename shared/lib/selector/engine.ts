@@ -86,16 +86,6 @@ interface RecommendationPhase {
   relaxedReasons: Set<ExclusionReason>;
 }
 
-/**
- * Look up a merged row from the data bag. Exported so tests and the
- * template-coverage gate can call it directly.
- *
- * @internal
- */
-export function mergeRow(id: string, data: SelectorData): MergedRow | null {
-  return data.rows.get(id) ?? null;
-}
-
 function selectUniverse(
   input: SelectorInput,
   data: SelectorData,

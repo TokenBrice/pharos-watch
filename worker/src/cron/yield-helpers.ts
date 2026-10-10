@@ -8,7 +8,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
  * Functions by pipeline stage:
  * - APY computation:    computeApyFromRate(), computeApyFromPrice()
  * - Scoring:            computePYS() (Pharos Yield Score)
- * - Variance analysis:  computeYieldStability(), computeApyVarianceScore()
+ * - Variance analysis:  computeYieldStability()
  * - Warning detection:  detectWarningSignals()
  * - Pool matching:      matchAllDlPools() (3-layer resolution), findBestLendingPool()
  *
@@ -95,16 +95,6 @@ export function computeYieldStability(apySamples: number[]): number | null {
   const cv = Math.sqrt(variance) / Math.abs(mean);
   if (!Number.isFinite(cv)) return null;
   return Math.max(0, Math.min(1, Math.round((1 - cv) * 100) / 100));
-}
-
-export function computeApyVarianceScore(apySamples: number[]): number | null {
-  if (apySamples.length < 2) return null;
-  const mean = apySamples.reduce((s, v) => s + v, 0) / apySamples.length;
-  if (Math.abs(mean) < 1e-10) return null;
-  const variance = apySamples.reduce((s, v) => s + (v - mean) ** 2, 0) / apySamples.length;
-  const cv = Math.sqrt(variance) / Math.abs(mean);
-  if (!Number.isFinite(cv)) return null;
-  return Math.min(1, cv);
 }
 
 interface WarningInput {

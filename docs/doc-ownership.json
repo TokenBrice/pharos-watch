@@ -461,7 +461,7 @@
       "testOwnership": [
         {
           "sources": ["shared/**", "worker/src/lib/**", "worker/wrangler*.toml", "package.json", "scripts/lib/safety-score-v9-evaluation-inputs.mts", "scripts/lib/package-imports.mts", "scripts/lib/automation-registry.mjs", "scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts"],
-          "tests": ["scripts/__tests__/veritas-ver-010-v9-evaluation-build-identity.test.ts", "scripts/__tests__/generate-safety-score-v9-evaluation-build-manifest.test.ts"]
+          "tests": ["scripts/__tests__/generate-safety-score-v9-evaluation-build-manifest.test.ts"]
         },
         {
           "sources": ["shared/lib/safety-score-v9/**", "worker/src/lib/safety-score-v9/**", "worker/src/cron/compute-safety-score-v9.ts"],
