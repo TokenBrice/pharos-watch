@@ -13,6 +13,8 @@ The lifecycle is **draft → verify → one-time maintainer approval → monthly
 
 Alternative entry routes use the optional `branchPoint`: at least two uniquely identified branches, each with at least one stage, inserted after a non-final trunk stage named by `afterStageId`. Branch stages rejoin at the following trunk stage; they are alternatives, not actions executed one after another. Stage IDs must be unique across the trunk and every branch. Required `keyFigures` carry value, label, evidence status, and source IDs; their references and all branch-stage references resolve against the scenario's sources.
 
+The dossier footer marks the premise as hypothetical and defers evidence strength to each claim's authored label. On-chain observations never upgrade unrelated documented, inferred, or unverified mechanics, including off-chain reserve access and redemption gates.
+
 Window endpoints may name trunk or branch stages. For deterministic ordering validation, the flattened order is the trunk prefix through `afterStageId`, then every branch's stages in authored branch order, then the remaining trunk. This ordering is a reference-validation convention, not an assertion that alternative branches happen sequentially. Missing endpoints and windows running backward in that order are rejected.
 
 ## One-time maintainer approval

@@ -297,7 +297,7 @@ export function FailureScenarioModule({ selection }: { selection: FailureScenari
           foldId={`${FAILURE_SCENARIO_MODULE_ID}-sources`}
           trailing={<ReviewStamp selection={selection} />}
         >
-          <span>Hypothetical premise · mechanics verified on-chain · outcomes inferred</span>
+          <span>Hypothetical premise · evidence labeled per claim</span>
         </EvidenceFooter>
       }
       verdict={scenario.thesis}

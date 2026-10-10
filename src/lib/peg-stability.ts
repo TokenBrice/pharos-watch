@@ -25,7 +25,7 @@ interface PegStabilityMetrics {
  * Compute peg stability metrics from depeg events and tracking history.
  *
  * @param events       Depeg events for this stablecoin
- * @param earliestDate Earliest data point date string (from detail chart data)
+ * @param earliestDate Producer history observation boundary, not a display/chart window
  * @param now          Current time in seconds (defaults to Date.now()/1000)
  */
 export function computePegStability(
@@ -35,16 +35,14 @@ export function computePegStability(
 ): PegStabilityMetrics | null {
   const nowSec = now ?? Math.floor(Date.now() / 1000);
 
-  // Display uses the full available chart/event history. Do not route this
-  // through coinTrackingStart(), which applies PegScore's 4-year scoring clamp
-  // and would shorten visible tracking spans for older coins.
-  const earliestSec = earliestDate != null
-    ? Math.floor(earliestDate)
-    : events.length > 0
-      ? events.reduce((m, e) => Math.min(m, e.startedAt), Infinity)
-      : null;
+  // Producer coverage can be scoring-window bounded; every loaded incident is
+  // nevertheless observed history. Include the oldest incident, never a chart seed.
+  const earliestSec = events.reduce(
+    (earliest, event) => Math.min(earliest, event.startedAt),
+    earliestDate != null ? Math.floor(earliestDate) : Infinity,
+  );
 
-  if (earliestSec === null) return null;
+  if (!Number.isFinite(earliestSec)) return null;
 
   const historySpanSec = nowSec - earliestSec;
   if (historySpanSec <= 0) return null;

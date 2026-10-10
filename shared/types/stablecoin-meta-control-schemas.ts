@@ -577,7 +577,44 @@ const AuthorityControlFields = {
   evidence: z.string().min(12).optional(),
 };
 
-function validateExactAuthority(control: z.output<z.ZodObject<typeof AuthorityControlFields>>, chain: string | undefined, address: string | undefined, ctx: z.RefinementCtx): void {
+function validateExactAuthority(control: z.output<z.ZodObject<typeof AuthorityControlFields>>, chain: string | undefined, address: string | undefined, ctx: z.RefinementCtx, domain: "mint" | "bridge"): void {
+  if (control.threshold != null && control.signerCount != null && control.threshold > control.signerCount) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "threshold cannot exceed signerCount",
+      path: ["threshold"],
+    });
+  }
+
+  // Bridge reviews may describe a Safe as a multisig or record it upstream of a timelock.
+  if (control.safe != null && control.authorityType !== "safe" &&
+      !(domain === "bridge" && (control.authorityType === "timelock" || control.authorityType === "multisig"))) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "safe details require a Safe authority or a bridge multisig/Safe-governed timelock",
+      path: ["safe"],
+    });
+  }
+
+  if (control.safe?.threshold != null && control.threshold != null && control.safe.threshold !== control.threshold) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "safe.threshold must match threshold when both are present",
+      path: ["safe", "threshold"],
+    });
+  }
+
+  if (
+    control.safe?.owners != null &&
+    control.signerCount != null &&
+    control.safe.owners.length !== control.signerCount
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "safe.owners length must match signerCount when both are present",
+      path: ["safe", "owners"],
+    });
+  }
   const deployment = chain && address ? normalizeDeploymentId(`${chain}:${address}`) : null;
   if (control.weightedQuorum && (control.threshold != null || control.signerCount != null || control.authorityType !== "multisig")) {
     ctx.addIssue({ code: "custom", message: "Weighted multisig excludes uniform threshold and signerCount", path: ["weightedQuorum"] });
@@ -635,7 +672,7 @@ const BridgeRouteControlSchema = /* @__PURE__ */ (() => z
   })
   .strict()
   .superRefine((control, ctx) => {
-    validateExactAuthority(control, control.controllerChain, control.controllerAddress, ctx);
+    validateExactAuthority(control, control.controllerChain, control.controllerAddress, ctx, "bridge");
     const transport = control.sameChainSystemTransport;
     if ((control.authorityType === "chain-consensus") !== (transport != null)) {
       ctx.addIssue({ code: "custom", message: "Chain consensus authority requires the typed same-chain transport family" });
@@ -680,45 +717,10 @@ const MintAuthorityControlSchema = /* @__PURE__ */ (() => z
   })
   .strict()
   .superRefine((control, ctx) => {
-    validateExactAuthority(control, control.chain, control.address, ctx);
+    validateExactAuthority(control, control.chain, control.address, ctx, "mint");
     if (control.authorityType === "chain-consensus") ctx.addIssue({ code: "custom", message: "Same-chain transport belongs to route controls, not native mint authority" });
     if (control.executionScope && control.executionClassRef) ctx.addIssue({ code: "custom", path: ["executionClassRef"], message: "Individual scope and class reference are mutually exclusive" });
     if (control.executionClassRef && normalizeDeploymentId(`${control.chain ?? ""}:${control.address ?? ""}`) !== control.executionClassRef.memberRef) ctx.addIssue({ code: "custom", path: ["executionClassRef", "memberRef"], message: "Execution class must bind the exact controller" });
-    if (control.threshold != null && control.signerCount != null && control.threshold > control.signerCount) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "threshold cannot exceed signerCount",
-        path: ["threshold"],
-      });
-    }
-
-    if (control.safe != null && control.authorityType !== "safe") {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "safe details are only allowed when authorityType is safe",
-        path: ["safe"],
-      });
-    }
-
-    if (control.safe?.threshold != null && control.threshold != null && control.safe.threshold !== control.threshold) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "safe.threshold must match threshold when both are present",
-        path: ["safe", "threshold"],
-      });
-    }
-
-    if (
-      control.safe?.owners != null &&
-      control.signerCount != null &&
-      control.safe.owners.length !== control.signerCount
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "safe.owners length must match signerCount when both are present",
-        path: ["safe", "owners"],
-      });
-    }
   }))();
 
 const MintAuthorityReviewSchema = /* @__PURE__ */ (() => z

@@ -91,6 +91,10 @@ interface ChainAccumulator {
   }>;
 }
 
+function supplyChangeRatio(current: number, previous: number): Ratio | null {
+  return current === 0 && previous === 0 ? ZERO_RATIO : relativeChangeRatio(current, previous);
+}
+
 export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
   const { peggedAssets, safetyScores, pegRates } = input;
 
@@ -298,11 +302,11 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       type: meta.type,
       totalUsd: acc.totalUsd,
       change24h,
-      change24hPct: change24h == null ? null : (relativeChangeRatio(acc.pairedCurrent24h, acc.prevDay) ?? ZERO_RATIO),
+      change24hPct: change24h == null ? null : supplyChangeRatio(acc.pairedCurrent24h, acc.prevDay),
       change7d,
-      change7dPct: change7d == null ? null : (relativeChangeRatio(acc.pairedCurrent7d, acc.prevWeek) ?? ZERO_RATIO),
+      change7dPct: change7d == null ? null : supplyChangeRatio(acc.pairedCurrent7d, acc.prevWeek),
       change30d,
-      change30dPct: change30d == null ? null : (relativeChangeRatio(acc.pairedCurrent30d, acc.pairedPrevMonth) ?? ZERO_RATIO),
+      change30dPct: change30d == null ? null : supplyChangeRatio(acc.pairedCurrent30d, acc.pairedPrevMonth),
       stablecoinCount: acc.coins.length,
       dominantStablecoin: {
         id: dominant.id,
@@ -348,11 +352,11 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
           // Chain-local denominator: the chain's own total, never the global aggregate.
           chainShare: (coin.supplyUsd / detailAcc.totalUsd) as Ratio,
           change24h: coin.prevDay == null ? null : coin.supplyUsd - coin.prevDay,
-          change24hPct: coin.prevDay == null ? null : (relativeChangeRatio(coin.supplyUsd, coin.prevDay) ?? ZERO_RATIO),
+          change24hPct: coin.prevDay == null ? null : supplyChangeRatio(coin.supplyUsd, coin.prevDay),
           change7d: coin.prevWeek == null ? null : coin.supplyUsd - coin.prevWeek,
-          change7dPct: coin.prevWeek == null ? null : (relativeChangeRatio(coin.supplyUsd, coin.prevWeek) ?? ZERO_RATIO),
+          change7dPct: coin.prevWeek == null ? null : supplyChangeRatio(coin.supplyUsd, coin.prevWeek),
           change30d: coin.prevMonth == null ? null : coin.supplyUsd - coin.prevMonth,
-          change30dPct: coin.prevMonth == null ? null : (relativeChangeRatio(coin.supplyUsd, coin.prevMonth) ?? ZERO_RATIO),
+          change30dPct: coin.prevMonth == null ? null : supplyChangeRatio(coin.supplyUsd, coin.prevMonth),
           backing: coin.backing,
         })),
     }
@@ -372,11 +376,11 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       chainIdsWithUnavailableObservations: [...unavailableObservationsByChain.keys()].sort(),
     },
     globalChange24hPct: hasGlobal24hHistory
-      ? (relativeChangeRatio(globalPairedCurrent24hUsd, globalPrevDayUsd) ?? ZERO_RATIO) : null,
+      ? supplyChangeRatio(globalPairedCurrent24hUsd, globalPrevDayUsd) : null,
     globalChange7dPct: hasGlobal7dHistory
-      ? (relativeChangeRatio(globalPairedCurrent7dUsd, globalPrevWeekUsd) ?? ZERO_RATIO) : null,
+      ? supplyChangeRatio(globalPairedCurrent7dUsd, globalPrevWeekUsd) : null,
     globalChange30dPct: hasGlobal30dHistory
-      ? (relativeChangeRatio(globalPairedCurrent30dUsd, globalPrevMonthUsd) ?? ZERO_RATIO)
+      ? supplyChangeRatio(globalPairedCurrent30dUsd, globalPrevMonthUsd)
       : null,
     ...(chainDetail ? { chainDetail } : {}),
     updatedAt: input.updatedAt,

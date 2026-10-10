@@ -5,6 +5,7 @@ import { HeroPriceMetric } from "@/components/stablecoin-detail/hero-card-metric
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
+import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import type {
   DexLiquidityData,
   Infrastructure,
@@ -285,6 +286,29 @@ function renderHero(overrides: HeroBuilderOverrides = {}): string {
 }
 
 describe("HeroCard", () => {
+  it("renders current-relative 7D and 30D supply growth despite a lagged provider history", () => {
+    const now = 1_790_793_000;
+    const day = 86_400;
+    const summary = projectStablecoinLiveSummary({
+      price: 1, priceSource: "coingecko", currentCirculatingUSD: { peggedUSD: 200 }, currentSupplyObservedAt: now,
+      tokens: [
+        { date: now - 33 * day, totalCirculating: { peggedUSD: 50 } },
+        { date: now - 30 * day, totalCirculating: { peggedUSD: 80 } },
+        { date: now - 10 * day, totalCirculating: { peggedUSD: 100 } },
+        { date: now - 7 * day, totalCirculating: { peggedUSD: 140 } },
+        { date: now - 3 * day, totalCirculating: { peggedUSD: 160 } },
+      ],
+    });
+    const html = renderHero({ supply: 200, nativeSupply: summary.nativeSupply });
+    expect(html).toContain("+42.86%");
+    expect(html).toContain("+150.00%");
+    expect(html).not.toContain("+100.00%");
+    expect(html).toContain("7D");
+    expect(html).toContain("30D");
+    const unavailable = renderHero({ supply: 200, nativeSupply: { current: 200, prevWeek: null, prevMonth: null } });
+    expect(unavailable).not.toContain("+100.00%");
+    expect(unavailable).not.toContain('> 30D</span>');
+  });
   it("labels restored market cap with its original supply observation date", () => {
     const html = renderHero({ coinData: { supplyRestored: true, supplyObservedAt: 1_700_000_000 } });
     expect(html).toContain("Stale supply · as of Nov 14");

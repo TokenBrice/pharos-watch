@@ -95,6 +95,21 @@ import { coinTrackingStart, computePegScore } from "@shared/lib/peg-score";
 import { getFirstSeenDates } from "../db";
 
 describe("derivePegAnalyticsSnapshot", () => {
+  it("publishes the uncapped observation boundary separately from scoring coverage", async () => {
+    const firstObservation = 1_500_000_000;
+    vi.mocked(getFirstSeenDates).mockResolvedValue(new Map([["usdt-tether", firstObservation]]));
+    const snapshot = await derivePegAnalyticsSnapshot(db, {
+      peggedAssets: [makeStablecoin({ id: "usdt-tether", price: 1 })], methodologyAsOf: 1_700_000_000,
+    });
+    expect(snapshot.pegDataById.get("usdt-tether")?.observationStartedAt).toBe(firstObservation);
+    const { db: cacheDb } = sqliteFixtures.open();
+    expect(await publishPegAnalyticsCache(cacheDb, snapshot)).toBe(true);
+    const retained = await loadPegAnalyticsCache(cacheDb);
+    expect(retained.kind).toBe("ok");
+    if (retained.kind === "ok") {
+      expect(retained.pegDataById.get("usdt-tether")?.observationStartedAt).toBe(firstObservation);
+    }
+  });
   it("withholds canonical analytics on projection failure and retains the accepted incident chronology", async () => {
     const { sqlite, db: sqliteDb } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);

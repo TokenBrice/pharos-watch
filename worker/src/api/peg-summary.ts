@@ -18,7 +18,7 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
 import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { classifyPrimaryDepegTrust, isTrustedDexPriceRow } from "../lib/depeg-trust-policy";
-import { deriveDepegSignal } from "../lib/depeg-signals";
+import { deriveDepegSignal, signalCrossesThreshold } from "../lib/depeg-signals";
 import { deriveCurrentPegObservationMap } from "../lib/current-peg-observations";
 import { IncidentProjectionUnavailableError } from "../lib/depeg-event-projection";
 import {
@@ -278,6 +278,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       activeDepeg: pegData.activeDepeg,
       lastEventAt: pegData.lastEventAt,
       trackingSpanDays: pegData.trackingSpanDays,
+      observationStartedAt: pegData.observationStartedAt ?? null,
       historyCoverage: pegData.historyCoverage,
       recent90d: pegData.recent90d,
       methodologyVersion,
@@ -292,7 +293,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       const absBps = Math.abs(currentBps);
       allAbsBps.push(absBps);
       const pegThreshold = getDepegThresholdBps(pegData.pegType || asset?.pegType);
-      if (absBps < pegThreshold) coinsAtPeg++;
+      if (observation?.currentSignal && !signalCrossesThreshold(observation.currentSignal, pegThreshold)) coinsAtPeg++;
       if (!worstCurrent || absBps > Math.abs(worstCurrent.bps)) {
         worstCurrent = { id: meta.id, symbol: meta.symbol, bps: currentBps };
       }

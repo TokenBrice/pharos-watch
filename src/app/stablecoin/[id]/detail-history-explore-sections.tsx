@@ -54,7 +54,7 @@ export function DetailHistoryExploreSections({
             <LazySection minHeight={360}>
               <DepegHistory
                 stablecoinId={viewModel.id}
-                earliestTrackingDate={viewModel.earliestTrackingDate}
+                observationStartedAt={viewModel.pegScoreResult?.observationStartedAt ?? null}
                 hasPriceData={isObservedPrice(viewModel.coinData) && viewModel.coinData.price != null}
                 depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
                 historyCoverage={viewModel.pegScoreResult?.historyCoverage ?? null}

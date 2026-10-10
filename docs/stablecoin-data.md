@@ -106,6 +106,8 @@ The existing `legacy-stablecoin-redirects` generator combines this ledger, curre
 
 Mint Authority assesses native issuance on canonical deployment(s) plus controls that can expand or replace that issuance. Bridge Risk assesses representations and cross-chain machinery: bridge mint/burn, adapters, lockboxes or escrow, messaging, peer configuration, limits, upgrades, validators, and administrators. A controller may be authored in both domains only for distinct capabilities; the same bridge capability must not appear in both.
 
+Native and bridge controls share quorum consistency checks: `threshold <= signerCount`, duplicated Safe thresholds agree, and observed owner count matches `signerCount`. Safe metadata requires `authorityType: "safe"` for native controls; bridge reviews also admit Safe multisigs and Safe-governed timelocks. Weighted quorums and same-chain system transport retain their separate contracts.
+
 The shared deployment identity is the exact `BridgeRouteDeployment.id` in normalized `chain:contractAddress` form. Use the canonical lowercase chain ID; lowercase EVM addresses, while preserving the authored casing of case-sensitive non-EVM identifiers. Every reference must name an existing `bridgeRouteRisk.routes[].id`.
 
 For an active multi-deployment asset:

@@ -26,3 +26,37 @@ export function makeSafeControl(
     ...overrides,
   };
 }
+
+export function makeBridgeAuthority(control: Record<string, unknown>): Record<string, unknown> {
+  const { chain, address, role: _role, directMintAbility: _ability, ...authority } = control;
+  return {
+    tier: "issuer-native-burn-mint",
+    summary: "Reviewed fixture bridge authority and its exact deployment.",
+    reviewedAt: "2026-05-24",
+    reviewer: "Fixture reviewer",
+    confidence: "verified",
+    sources: [{ label: "Bridge docs", url: "https://example.com/bridge" }],
+    routes: [{
+      id: "ethereum:0x1111111111111111111111111111111111111111",
+      destinationChain: "ethereum",
+      contractAddress: "0x1111111111111111111111111111111111111111",
+      protocol: "Fixture bridge",
+      issuanceModel: "native-issuance",
+      routeClass: "native",
+      riskTier: "single-chain-or-native",
+      semantics: "native-mint",
+      scope: "canonical",
+      reviewDisposition: "reviewed",
+      observedAt: "2026-05-24",
+      sources: [{ label: "Bridge docs", url: "https://example.com/bridge" }],
+    }],
+    controls: [{
+      id: "fixture-bridge-authority",
+      routeRefs: ["ethereum:0x1111111111111111111111111111111111111111"],
+      capabilities: ["admin"],
+      controllerChain: chain,
+      controllerAddress: address,
+      ...authority,
+    }],
+  };
+}

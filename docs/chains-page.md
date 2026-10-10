@@ -128,6 +128,8 @@ Every positive-supply chain in the response carries exactly `min(stablecoinCount
 
 When `chain` is supplied, `chainDetail` contains the active aggregate coins for that canonical chain, sorted by descending chain-local supply. Each row includes canonical `chainShare` and 24h/7d/30d change ratios; the detail total is the denominator for those shares. The unclassified backing bucket remains `other`, distinct from worker health or data-quality buckets.
 
+Chain, coin-detail and global 24h/7d/30d ratios retain `null` for positive supply grown from an observed zero baseline; absolute chain/coin deltas remain valid. Observed zero-to-zero is no change (`0`), not missing history.
+
 `worker/src/api/chains.ts`:
 
 - loads the strict stablecoins cache and restricts it to active core-aggregate assets (`isActiveChainAggregateAsset`), which scopes every downstream peg rate, aggregate, and total

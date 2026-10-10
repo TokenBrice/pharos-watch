@@ -47,8 +47,10 @@ export interface ReserveQualityClientSummary {
   chipToneClass: string;
   lede: string;
   ladder: ReserveQualityLadderClientRow[];
-  liquidWithinOneDayPct: number;
-  unknownHorizonPct: number;
+  /** Whole-basket aggregates are unavailable for explicitly contextual reviews. */
+  liquidWithinOneDayPct: number | null;
+  unknownHorizonPct: number | null;
+  contextual?: boolean;
   /** `reserveReview.knownUnknownExposurePct` — total share of unresolved reserve dispositions. */
   unidentifiedObligorsPct: number | null;
   /** Share of the basket the review marks as self-reserve (issuer's own assets). */
@@ -216,7 +218,7 @@ function buildLadder(slices: readonly ReserveSlice[]): ReserveQualityLadderClien
   return LADDER_ORDER.filter((horizon) => (shares.get(horizon) ?? 0) > 0).map((horizon) => ({
     key: horizon,
     label: HORIZON_LABELS[horizon],
-    pct: round1(shares.get(horizon)!),
+    pct: shares.get(horizon)!,
   }));
 }
 
@@ -224,25 +226,28 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
   const slices = coin.reserves ?? [];
   const hasQualityData =
     slices.some((slice) => slice.assetClass != null) && slices.some((slice) => slice.liquidityHorizon != null);
-  if (!hasQualityData) return null;
 
   const review = coin.reserveReview ?? null;
+  // Preserve legacy reviewless curated books; an explicit limited scope never
+  // grants whole-token composition authority, even when its rows total 100%.
+  const contextual = review?.scope != null && review.scope !== "full-composition";
+  if (slices.length === 0 || (!hasQualityData && !contextual)) return null;
 
   const ladder = buildLadder(slices);
   const ladderPct = (horizon: ReserveLiquidityHorizon): number =>
     ladder.find((row) => row.key === horizon)?.pct ?? 0;
-  const liquidWithinOneDayPct = round1(ladderPct("immediate") + ladderPct("one-day"));
+  const liquidWithinOneDayPct = ladderPct("immediate") + ladderPct("one-day");
   const unknownHorizonPct = ladderPct("unknown");
 
   const selfReservePct = (review?.nonLinkDispositions ?? [])
     .filter((disposition) => disposition.disposition === "self-reserve")
     .reduce((total, disposition) => total + disposition.pct, 0);
-  const selfExposurePct = selfReservePct > 0 ? round1(selfReservePct) : null;
+  const selfExposurePct = selfReservePct > 0 ? selfReservePct : null;
   // Field-level guard: the client-coin builder feeds this projection before
   // stripping, and the stripping contract is tested with malformed sentinel
   // review objects — treat anything non-numeric as absent.
   const unidentifiedObligorsPct =
-    typeof review?.knownUnknownExposurePct === "number" ? round1(review.knownUnknownExposurePct) : null;
+    typeof review?.knownUnknownExposurePct === "number" ? review.knownUnknownExposurePct : null;
 
   const topSlice = slices.reduce<ReserveSlice | null>(
     (top, slice) => (top == null || slice.pct > top.pct ? slice : top),
@@ -254,19 +259,24 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
     topSlice.pct >= TOP_POSITION_MIN_PCT &&
     TOP_POSITION_RISKS.has(topSlice.risk);
 
-  const chip = resolveChip(liquidWithinOneDayPct, unknownHorizonPct);
+  const chip = contextual
+    ? { label: "Selected evidence", toneClass: SEVERITY_TONE_CLASS.neutral.pill }
+    : resolveChip(liquidWithinOneDayPct, unknownHorizonPct);
 
   return {
     chipLabel: chip.label,
     chipToneClass: chip.toneClass,
-    lede: buildLede(slices.length, liquidWithinOneDayPct, unknownHorizonPct, unidentifiedObligorsPct, selfExposurePct),
-    ladder,
-    liquidWithinOneDayPct,
-    unknownHorizonPct,
-    unidentifiedObligorsPct,
-    selfExposurePct,
-    topPositionName: hasTopPosition ? topSlice.name : null,
-    topPositionPct: hasTopPosition ? round1(topSlice.pct) : null,
+    lede: contextual
+      ? `${slices.length} contextual reserve ${slices.length === 1 ? "slice" : "slices"}; not a whole-token composition or liquidity assessment.`
+      : buildLede(slices.length, liquidWithinOneDayPct, unknownHorizonPct, unidentifiedObligorsPct, selfExposurePct),
+    contextual,
+    ladder: contextual ? [] : ladder,
+    liquidWithinOneDayPct: contextual ? null : liquidWithinOneDayPct,
+    unknownHorizonPct: contextual ? null : unknownHorizonPct,
+    unidentifiedObligorsPct: contextual ? null : unidentifiedObligorsPct,
+    selfExposurePct: contextual ? null : selfExposurePct,
+    topPositionName: !contextual && hasTopPosition ? topSlice.name : null,
+    topPositionPct: !contextual && hasTopPosition ? round1(topSlice.pct) : null,
     asOf: review?.compositionAsOf ?? null,
     sliceCount: slices.length,
     confidenceLabel:

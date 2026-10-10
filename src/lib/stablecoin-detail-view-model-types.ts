@@ -182,7 +182,6 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   supplyHistory: SupplyHistoryPoint[];
   /** Supply query freshness (ms) for the Market Data header chip. */
   supplyUpdatedAt: number;
-  earliestTrackingDate: number | null;
   reserves: ReserveResult | null;
   reserveFetchError: unknown | null;
   supplyError: unknown | null;

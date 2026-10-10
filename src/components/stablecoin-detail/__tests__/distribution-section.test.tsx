@@ -61,6 +61,27 @@ it.each([
   expect(screen.queryByRole("figure")).toBeNull();
 });
 
+it.each(["not-yet-registered-chain", "sUSDe unattributed OFT escrow", "savUSD unattributed CCIP escrow"])(
+  "includes positive unattributed supply in the whole distribution denominator (%s)",
+  (label) => {
+    useStablecoinsMock.mockReturnValue({
+      data: { peggedAssets: [{ id: "usdc-circle", chainCirculating: {
+        Ethereum: { current: 100_000 }, [label]: { current: 100_000 },
+      } }] },
+      isLoading: false, error: null, dataUpdatedAt: Date.now(), refetch: vi.fn(),
+    });
+    useDexLiquidityMock.mockReturnValue({
+      data: {}, isLoading: false, error: null, dataUpdatedAt: Date.now(), refetch: vi.fn(),
+    });
+    render(<DistributionSection stablecoinId="usdc-circle" />);
+    const figure = screen.getByRole("figure");
+    expect(figure.getAttribute("aria-label")).toContain("2 chains");
+    expect(screen.getByText("Unattributed")).toBeTruthy();
+    expect(screen.getAllByText("50%")).toHaveLength(2);
+    expect(screen.queryByText("100%")).toBeNull();
+  },
+);
+
 it("states a single-category distribution as a figure rather than a one-color ring", () => {
   useStablecoinsMock.mockReturnValue({
     data: {

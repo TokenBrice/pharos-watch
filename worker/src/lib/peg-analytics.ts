@@ -206,6 +206,7 @@ export async function derivePegAnalyticsSnapshot(
       activeDepeg: scoreResult.activeDepeg,
       lastEventAt: scoreResult.lastEventAt,
       trackingSpanDays: scoreResult.trackingSpanDays,
+      observationStartedAt: firstSeenMap.get(meta.id) ?? null,
       historyCoverage: meta.flags.navToken ? null : historyCoverage,
       recent90d,
       methodologyVersion,

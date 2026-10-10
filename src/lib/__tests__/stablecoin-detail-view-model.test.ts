@@ -25,6 +25,25 @@ function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummary
 }
 
 describe("stablecoin detail view-model builder", () => {
+  it("keeps the retained dossier ready through a failed summary refresh and recovery", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    const params = makeReadyDetailParams({ id: coin.id, coin });
+    const failure = new Error("HTTP 502");
+    params.queries.stablecoinList.isError = true;
+    params.queries.stablecoinList.error = failure;
+    const retained = buildStablecoinDetailViewModel(params);
+    expect(retained.status).toBe("ready");
+    if (retained.status !== "ready") return;
+    const query = retained.staleQueries.find((entry) => entry.preset === "stablecoins")!;
+    expect(deriveDataHealth({ ...DATA_HEALTH_PRESETS.stablecoins, ...query }).degradationReason).toBe("refresh");
+    params.queries.stablecoinList.error = null;
+    params.queries.stablecoinList.isError = false;
+    expect(buildStablecoinDetailViewModel(params).status).toBe("ready");
+    params.queries.stablecoinList.data = undefined;
+    params.queries.stablecoinList.isError = true;
+    params.queries.stablecoinList.error = failure;
+    expect(buildStablecoinDetailViewModel(params)).toMatchObject({ status: "list-error", listError: failure });
+  });
   it("keeps current listing supply independent of unavailable previous-day and native history", () => {
     const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
     const row = {
@@ -151,7 +170,7 @@ describe("stablecoin detail view-model builder", () => {
         circulatingPrevWeek: { peggedUSD: 100 },
         circulatingPrevMonth: { peggedUSD: 0 },
       },
-      // The displayed live-list token count wins over detail current; historical anchors remain native tokens.
+      // Native trend checkpoints retain their paired native current.
       nativeSupply: { current: 150, prevWeek: 160, prevMonth: 0 },
       queries: {
         pegSummary: { data: { coins: [makePegSummaryCoin({ pegScore: 45, eventCount: 2 })] } as PegSummaryResponse },
@@ -164,12 +183,12 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.hero.market.supply).toBe(200 / 0.98);
     expect(viewModel.hero.market.prevDayTrendClass).toContain("text-red-700");
     expect(viewModel.hero.market.supplyTrend).toMatchObject({
-      current: 200 / 0.98,
+      current: 150,
       safePrevWeek: 160,
       safePrevMonth: null,
       hasPrevMonth: false,
     });
-    expect(viewModel.hero.market.supplyTrend.prevWeekTrendClass).toContain("text-green-700");
+    expect(viewModel.hero.market.supplyTrend.prevWeekTrendClass).toContain("text-red-700");
     expect(viewModel.hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")?.display)
       .toMatchObject({ value: "45", sub: "2 incidents" });
     expect(viewModel.hero.signalRailItems.find((item) => item.key === "safety"))
@@ -189,7 +208,7 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.status).toBe("ready");
     if (viewModel.status !== "ready") return;
     expect(viewModel.hero.market.supplyTrend).toMatchObject({
-      current: viewModel.hero.market.supply,
+      current: null,
       safePrevWeek: null,
       safePrevMonth: null,
       hasPrevMonth: false,

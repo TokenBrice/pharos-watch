@@ -60,7 +60,7 @@ describe("cache-only detail snapshot inputs", () => {
       id: "usdt-tether", status: "available",
       liveSummary: { price: 0.997, circulating: { peggedUSD: 100 }, circulatingPrevDay: { peggedUSD: 99 },
         circulatingPrevWeek: { peggedUSD: 80 }, circulatingPrevMonth: { peggedUSD: 70 },
-        nativeSupply: { current: 91, prevWeek: 81, prevMonth: 71 } },
+        nativeSupply: { current: 100 / 0.997, prevWeek: 81, prevMonth: 71 } },
       supplyHistory: [{ date: NOW - DAY, circulatingUsd: 90, price: 1 }],
       updatedAt: { liveSummary: (NOW - 60) * 1000, supplyHistory: (NOW - 120) * 1000 },
       sources: { detailCacheUpdatedAt: NOW - 30, publicationUpdatedAt: NOW - 60, supplySnapshotUpdatedAt: NOW - 120, supplySnapshotDate: NOW - DAY },

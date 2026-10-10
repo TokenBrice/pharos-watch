@@ -70,7 +70,7 @@ function DepegHistoryShell({ children }: { children: ReactNode }) {
 
 export function DepegHistory({
   stablecoinId,
-  earliestTrackingDate,
+  observationStartedAt = null,
   hasPriceData = true,
   depegEventCoverageLimited = false,
   historyCoverage = null,
@@ -78,7 +78,7 @@ export function DepegHistory({
   scoreWindowIncidentCount = null,
 }: {
   stablecoinId: string;
-  earliestTrackingDate?: number | null;
+  observationStartedAt?: number | null;
   hasPriceData?: boolean;
   depegEventCoverageLimited?: boolean;
   historyCoverage?: PegSummaryCoin["historyCoverage"];
@@ -110,7 +110,7 @@ export function DepegHistory({
     ? events.reduce((sum, event) => sum + (event.constituentEventCount ?? 1), 0)
     : null;
   const sorted = useMemo(() => sortEvents(events), [events]);
-  const metrics = isFullyLoaded ? computePegStability(sorted, earliestTrackingDate ?? null) : null;
+  const metrics = isFullyLoaded ? computePegStability(sorted, observationStartedAt) : null;
   const worstDeviationBps = metrics?.worstDeviationBps ?? null;
   const [showAllIncidents, setShowAllIncidents] = useState(false);
   const { effectivePage, totalPages, paginatedRows, rangeStart, rangeEnd, onPreviousPage, onNextPage } =

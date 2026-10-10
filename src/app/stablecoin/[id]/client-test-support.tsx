@@ -139,7 +139,7 @@ function makeViewModelBase(coin: StablecoinMeta) {
     isNavToken: false, pegScoreResult: null, consensusSources: [], agreeSources: [],
     dexPriceCheck: null, liquidityData: undefined, yieldRanking: null, hasYieldSection: false,
     stressSignal: null, redemptionBackstop: undefined, hasFlows: false, hasBlacklist: false,
-    supplyHistory: [], earliestTrackingDate: null, reserves: null, reserveFetchError: null,
+    supplyHistory: [], reserves: null, reserveFetchError: null,
     refetchReserves: null, isFetchingReserves: false, supplyError: null, staleQueries: [],
     featureStates: makeFeatureStates(),
     mintAuthority: { status: "not-reviewed" as const, processDiagnostics: [], processMetrics: [] },

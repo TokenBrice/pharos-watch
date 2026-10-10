@@ -37,7 +37,6 @@ export interface DetailMarketSnapshot {
   /** Token-count checkpoints for the hero Supply trend; USD market-cap history never feeds it. */
   nativeSupply: NativeSupplyCheckpoints | null;
   performanceVsUsd1y: number | null;
-  earliestTrackingDate: number | null;
 }
 
 export interface DetailPegPriceSnapshot {
@@ -112,7 +111,6 @@ export function buildDetailMarketSnapshot(
     prevDay: getPrevDayRawOrNull(coinData),
     nativeSupply,
     performanceVsUsd1y: computePerformanceVsUsd1y(coin, observedPrice, supplyHistory, nowMs),
-    earliestTrackingDate: supplyHistory.length > 0 ? supplyHistory[0].date : null,
   };
 }
 

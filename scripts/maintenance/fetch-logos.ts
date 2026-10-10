@@ -102,7 +102,7 @@ async function fetchLogos(): Promise<void> {
     // file doesn't exist yet — start fresh
   }
   for (const [id, url] of Object.entries(existing)) {
-    if (!/^\d+$/.test(id) && url.startsWith("/logos/") && !(id in logoMap)) {
+    if (!/^\d+$/.test(id) && url.startsWith("/logos/")) {
       logoMap[id] = url;
     }
   }

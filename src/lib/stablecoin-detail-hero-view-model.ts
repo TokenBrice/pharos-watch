@@ -166,10 +166,11 @@ function resolveEffectivePegScore(isNavToken: boolean, pegScoreResult: PegSummar
   return isNavToken || pegScoreResult?.pegScore == null ? null : pegScoreResult.pegScore;
 }
 
-function buildSupplyTrend(supply: number | null, nativeSupply: NativeSupplyCheckpoints | null): HeroSupplyTrendViewModel {
-  const current = supply ?? nativeSupply?.current ?? null;
-  const safePrevWeek = posOrNull(nativeSupply?.prevWeek ?? null);
-  const safePrevMonth = posOrNull(nativeSupply?.prevMonth ?? null);
+function buildSupplyTrend(nativeSupply: NativeSupplyCheckpoints | null): HeroSupplyTrendViewModel {
+  // The compact projection owns the current value and its matching checkpoint clock.
+  const current = nativeSupply?.current ?? null;
+  const safePrevWeek = current == null ? null : posOrNull(nativeSupply?.prevWeek ?? null);
+  const safePrevMonth = current == null ? null : posOrNull(nativeSupply?.prevMonth ?? null);
   return {
     current,
     safePrevWeek,
@@ -327,7 +328,7 @@ export function buildStablecoinDetailHeroViewModel({
       supply,
       safePrevDay,
       prevDayTrendClass: getTrendClass(mcap !== null && safePrevDay !== null, mcap ?? 0, safePrevDay ?? 0),
-      supplyTrend: buildSupplyTrend(supply, nativeSupply),
+      supplyTrend: buildSupplyTrend(nativeSupply),
     },
     peg: { activeDepeg: pegScoreResult?.activeDepeg === true },
     tertiaryMetrics,

@@ -48,6 +48,7 @@ function buildDonutData(
     labelForKey: (key: string) => string;
     hexForKey: (key: string) => string | undefined;
     logoForKey?: (key: string) => { path: string; darkInvert?: boolean } | null;
+    ungroupedKey?: string;
   },
 ): { data: DonutDatum[]; total: number } {
   const entries = Object.entries(raw)
@@ -62,7 +63,7 @@ function buildDonutData(
   let otherValue = 0;
 
   for (const e of entries) {
-    if (e.value / total < OTHER_THRESHOLD) {
+    if (e.key !== opts.ungroupedKey && e.value / total < OTHER_THRESHOLD) {
       otherValue += e.value;
     } else {
       const logo = opts.logoForKey?.(e.key);
@@ -297,15 +298,23 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     let unavailable = Object.values(coin.chainCirculating).some(
       (point) => typeof point?.current !== "number" || !Number.isFinite(point.current) || point.current < 0,
     );
-    for (const [chainId, info] of canonicalizeChainCirculating(coin.chainCirculating)) {
+    const diagnostics = { droppedRows: 0, droppedChainIds: [] as string[] };
+    for (const [chainId, info] of canonicalizeChainCirculating(coin.chainCirculating, diagnostics)) {
       // An unknown balance also makes the full distribution denominator unknown.
       if (info.current == null) unavailable = true;
       else if (info.current > 0) raw[chainId] = info.current;
     }
+    for (const label of diagnostics.droppedChainIds) {
+      const remainder = coin.chainCirculating[label]?.current;
+      if (typeof remainder === "number" && Number.isFinite(remainder) && remainder > 0) {
+        raw.unattributed = (raw.unattributed ?? 0) + remainder;
+      }
+    }
     if (unavailable) return { data: [], total: 0, unavailable: true };
 
     return { ...buildDonutData(raw, {
-      labelForKey: normalizeChain,
+      ungroupedKey: "unattributed",
+      labelForKey: (key) => key === "unattributed" ? "Unattributed" : normalizeChain(key),
       hexForKey: (key) => CHAIN_HEX[key],
       logoForKey: (key) => {
         const meta = CHAIN_META[key];

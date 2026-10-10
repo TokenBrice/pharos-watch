@@ -39,6 +39,41 @@ function resolveEntry(entry: unknown, key: string): FrontendAnyApiQueryDescripto
 }
 
 describe("frontend API query descriptors", () => {
+  it("anchors lagged-provider USD and native checkpoints to the current canonical observation", () => {
+    const now = 1_790_793_000;
+    const day = 86_400;
+    const summary = projectStablecoinLiveSummary({
+      price: 1, priceSource: "coingecko", priceConfidence: "high",
+      currentCirculatingUSD: { peggedUSD: 200 }, currentSupplyObservedAt: now,
+      tokens: [
+        { date: now - 33 * day, totalCirculatingUSD: { peggedUSD: 50 }, totalCirculating: { peggedUSD: 50 } },
+        { date: now - 30 * day, totalCirculatingUSD: { peggedUSD: 80 }, totalCirculating: { peggedUSD: 80 } },
+        { date: now - 10 * day, totalCirculatingUSD: { peggedUSD: 100 }, totalCirculating: { peggedUSD: 100 } },
+        { date: now - 7 * day, totalCirculatingUSD: { peggedUSD: 140 }, totalCirculating: { peggedUSD: 140 } },
+        { date: now - 3 * day, totalCirculatingUSD: { peggedUSD: 160 }, totalCirculating: { peggedUSD: 160 } },
+      ],
+    });
+    expect(summary.circulatingPrevWeek).toEqual({ peggedUSD: 140 });
+    expect(summary.circulatingPrevMonth).toEqual({ peggedUSD: 80 });
+    expect(summary.nativeSupply).toEqual({ current: 200, prevWeek: 140, prevMonth: 80 });
+  });
+
+  it.each([null, 1_790_793_000])("withholds unmatched canonical-clock checkpoints rather than extending the window (%s)", (clock) => {
+    const now = 1_790_793_000;
+    const day = 86_400;
+    const summary = projectStablecoinLiveSummary({
+      price: 1, priceSource: "coingecko",
+      currentCirculatingUSD: { peggedUSD: 200 }, ...(clock != null ? { currentSupplyObservedAt: clock } : {}),
+      tokens: [
+        { date: now - 33 * day, totalCirculatingUSD: { peggedUSD: 50 }, totalCirculating: { peggedUSD: 50 } },
+        { date: now - 10 * day, totalCirculatingUSD: { peggedUSD: 100 }, totalCirculating: { peggedUSD: 100 } },
+        { date: now - 3 * day, totalCirculatingUSD: { peggedUSD: 160 }, totalCirculating: { peggedUSD: 160 } },
+      ],
+    });
+    expect(summary.circulatingPrevWeek).toEqual({});
+    expect(summary.circulatingPrevMonth).toEqual({});
+    expect(summary.nativeSupply).toEqual({ current: 200, prevWeek: null, prevMonth: null });
+  });
   it("prefers current admitted USD supply over a new listing's native-only history", () => {
     const summary = projectStablecoinLiveSummary({
       price: 0.99985, priceSource: "coingecko", priceConfidence: "single-source",
@@ -49,7 +84,7 @@ describe("frontend API query descriptors", () => {
     expect(summary.circulating).toEqual({ peggedUSD: 477_309_888.38 });
     expect(summary.circulatingPrevDay).toEqual({});
     expect(summary.supplyObservedAt).toBe(1_790_793_000);
-    expect(summary.nativeSupply).toEqual({ current: 454_459_687.73, prevWeek: null, prevMonth: null });
+    expect(summary.nativeSupply).toEqual({ current: 477_309_888.38 / 0.99985, prevWeek: null, prevMonth: null });
   });
 
   it("retains restored supply provenance through the registered response schema", async () => {

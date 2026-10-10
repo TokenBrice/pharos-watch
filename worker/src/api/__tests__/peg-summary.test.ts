@@ -6,6 +6,7 @@ import type { StablecoinData } from "@shared/types/market";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { __pegSummaryTestHooks, handlePegSummary } from "../peg-summary";
+import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 
 const nowSec = Math.floor(Date.now() / 1000);
 
@@ -120,6 +121,7 @@ function makeCachedPegCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryC
     activeDepeg: false,
     lastEventAt: nowSec - 86_400,
     trackingSpanDays: 400,
+    observationStartedAt: nowSec - 2000 * 86_400,
     historyCoverage: {
       startedAt: nowSec - 400 * 86_400,
       source: "audited-replay",
@@ -140,6 +142,21 @@ function makeCachedPegCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryC
 }
 
 describe("handlePegSummary", () => {
+  it.each([
+    ...[99.6, 100, 100.4, -99.6, -100, -100.4].map((bps) => ({ bps, pegType: "peggedUSD", id: "usdt-tether", threshold: 100 })),
+    ...[149.6, 150, 150.4, -149.6, -150, -150.4].map((bps) => ({ bps, pegType: "peggedEUR", id: "eurc-circle", threshold: 150 })),
+  ])("classifies raw threshold deviation $bps for $pegType while displaying rounded bps", async ({ bps, pegType, id, threshold }) => {
+    const price = 1 + bps / 10_000;
+    const asset = makeAsset({ id, pegType, price });
+    const db = makePegSummaryDb([asset], pegType === "peggedEUR" ? { peggedEUR: 1 } : undefined);
+    const body = await readJsonResponse(await handlePegSummary(db), 200) as {
+      coins: PegSummaryCoin[]; summary: { coinsAtPeg: number; totalTracked: number };
+    };
+    const signal = deriveDepegSignal(price, 1)!;
+    expect(body.coins.find((coin) => coin.id === id)?.currentDeviationBps).toBe(signal.bps);
+    expect(body.summary.totalTracked).toBe(1);
+    expect(body.summary.coinsAtPeg).toBe(signalCrossesThreshold(signal, threshold) ? 0 : 1);
+  });
   it.each([
     { priceSource: "coingecko", priceObservedAtMode: "nominal_reference" as const },
     { priceSource: "protocol-par", priceObservedAtMode: "upstream" as const },
@@ -958,6 +975,7 @@ describe("handlePegSummary", () => {
       activeDepeg: false,
       lastEventAt: nowSec - 86_400,
       trackingSpanDays: 400,
+      observationStartedAt: nowSec - 2000 * 86_400,
       historyCoverage: {
         startedAt: nowSec - 400 * 86_400,
         source: "audited-replay",

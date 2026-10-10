@@ -171,7 +171,7 @@ function buildFacts(
 ): FactGridItem[] {
   const facts: FactGridItem[] = [];
 
-  if (summary) {
+  if (summary?.liquidWithinOneDayPct != null && summary.unknownHorizonPct != null) {
     const { liquidWithinOneDayPct: liquid, unknownHorizonPct: unknown } = summary;
     // Amber only on a breach no undisclosed slice could cure: below the
     // watch line even if every slice with no published exit timeline converted
@@ -202,7 +202,7 @@ function buildFacts(
   }
 
   const top = slices[0];
-  if (top && slices.length > 1) {
+  if (top && slices.length > 1 && !summary?.contextual) {
     facts.push({
       key: "top-position",
       label: "Top position",
@@ -574,7 +574,7 @@ export function ReservesSection({
           />
         </div>
       ) : hasReviewedBasis ? (
-        <ReserveTreemap slices={reviewedSlices} subject="Reviewed reserve slices" />
+        <ReserveTreemap slices={reviewedSlices} subject={qualitySummary?.contextual ? "Contextual reserve slices, not whole-token composition" : "Reviewed reserve slices"} />
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
