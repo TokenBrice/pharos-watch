@@ -17,7 +17,8 @@ export interface ProjectorOptions {
   /**
    * Override the per-class watermark. For source-row-time projectors this is
    * epoch seconds and behaves as a strict greater-than filter on the source
-   * row's timestamp column. NULL/undefined means "use the persisted watermark".
+   * row's timestamp column. NULL/undefined normally uses the persisted watermark;
+   * freeze and mint/burn instead reconcile the trailing 90 days of source identities.
    */
   since?: number | null;
   /** Inclusive upper bound on source-row timestamp (epoch seconds). */
@@ -38,6 +39,12 @@ export interface ProjectorResult {
 export type Projector = (db: D1Database, options?: ProjectorOptions) => Promise<ProjectorResult>;
 
 export const DEFAULT_BATCH_LIMIT = 500;
+/** Bounds scheduled reconciliation reads; older repairs use explicit admin since. */
+export const SOURCE_RECONCILIATION_LOOKBACK_SEC = 90 * 86400;
+
+export function sourceReconciliationSince(options?: ProjectorOptions): number {
+  return options?.since ?? Math.max(0, Math.floor(Date.now() / 1000) - SOURCE_RECONCILIATION_LOOKBACK_SEC);
+}
 
 export interface ResolvedProjectorOptions {
   /** Persisted per-class watermark for `cursorKey`. */

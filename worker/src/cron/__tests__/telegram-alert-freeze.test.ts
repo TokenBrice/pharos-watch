@@ -59,6 +59,7 @@ describe("freeze Telegram source gate", () => {
       id: 42,
       event_id: "1000-freeze.blocked-deadbeef",
       type: "freeze.blocked",
+      ts: 3_990 * 1000,
       payload_json: JSON.stringify({
         stablecoin: "USDC",
         chainName: "Ethereum",
@@ -139,6 +140,35 @@ describe("freeze Telegram source gate", () => {
 });
 
 describe("freeze dedicated outbox", () => {
+  it("advances past newly inserted year-old Tape rows without outbox work while recovering recent events", async () => {
+    const { sqlite, db, now, insertFreeze } = await createFreezeIdentityFixture();
+    try {
+      insertFreeze("reconciled-year-old", now - 365 * 86400);
+      insertFreeze("recent-outage", now - 12 * 3600);
+      const result = await dispatchFreezeAlertOutbox(db, now);
+      expect(result.queued).toBe(1);
+      expect(sqlite.prepare(
+        "SELECT event_id FROM tape_events ORDER BY id",
+      ).all()).toEqual([
+        { event_id: "baseline" },
+        { event_id: "reconciled-year-old" },
+        { event_id: "recent-outage" },
+      ]);
+      expect(sqlite.prepare(
+        "SELECT source_event_id FROM telegram_freeze_alert_events ORDER BY source_event_id",
+      ).all()).toEqual([{ source_event_id: "freeze:recent-outage" }]);
+      expect(sqlite.prepare(
+        "SELECT source_event_id FROM telegram_pending_alerts WHERE alert_type = 'freeze'",
+      ).all()).toEqual([{ source_event_id: "freeze:recent-outage" }]);
+      expect(sqlite.prepare(
+        "SELECT value FROM cache WHERE key = 'alert:freeze-tape-cursor'",
+      ).get()).toEqual({ value: "3" });
+      expect((await dispatchFreezeAlertOutbox(db, now + 1)).queued).toBe(0);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it.each(["pending", "sending", "sent", "execution_unknown"] as const)(
     "queues identical freeze text independently when the first event is %s",
     async (firstState) => {

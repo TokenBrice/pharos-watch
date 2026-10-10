@@ -18,6 +18,7 @@ import {
   finalizeProjectorBatch,
   fetchRowsWithTieExpansion,
   resolveProjectorOptions,
+  sourceReconciliationSince,
   type ProjectorOptions,
   type ProjectorResult,
 } from "./types";
@@ -55,12 +56,19 @@ async function projectFreezeVariant(
   const rows = await fetchRowsWithTieExpansion<BlacklistSourceRow>(db, {
     selectSql: `SELECT id, stablecoin, chain_id, chain_name, event_type, amount_usd_at_event,
                       timestamp, methodology_version, config_key, rowid as rowid`,
-    fromSql: "blacklist_events",
+    fromSql: "blacklist_events INDEXED BY idx_blacklist_events_public_event_page",
     timeColumn: "timestamp",
-    trailingWhereSql: " AND event_type = ? AND suppression_reason IS NULL",
-    trailingBinds: [spec.eventType],
+    // Reconcile delayed identities in a bounded event-time window; explicit
+    // admin bounds can recover historical rows outside the scheduled window.
+    trailingWhereSql: ` AND event_type = ? AND suppression_reason IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM tape_events INDEXED BY idx_tape_source_key
+        WHERE source_table = 'blacklist_events'
+          AND source_row_id = blacklist_events.id AND transition = ?
+      )`,
+    trailingBinds: [spec.eventType, spec.transition],
     orderBySql: "timestamp ASC, rowid ASC",
-    since,
+    since: sourceReconciliationSince(options),
     until,
     limit,
     getTime: (row) => row.timestamp,

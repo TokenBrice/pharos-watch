@@ -94,6 +94,12 @@ The route is a thin client over `GET /api/events` (handler `worker/src/api/event
 
 The feed is a materialized projection of existing producer tables. The `project-tape` cron job (`worker/src/cron/project-tape.ts`) runs on the DEWS/PSI `26,56 * * * *` DB-only lane and is idempotent on `(source_table, source_row_id, transition)` so re-runs are no-ops. The projector adds zero outbound connection budget — it is purely D1-bound.
 
+Freeze and large mint/burn projectors reconcile eligible source identities against the indexed immutable Tape source key, independently of the event-time watermark. Scheduled runs scan only the trailing 90 event-time days (`SOURCE_RECONCILIATION_LOOKBACK_SEC`), including on an empty cursor; delayed chain ingestion, price healing and reviewed burns within that window remain discoverable. Older repairs require explicit admin `since` / `until` bounds (`since=0` enables all-history reconciliation). Already projected identities are excluded before batch limiting; source timestamps still determine presentation and the persisted watermark remains the greatest observed event time. Historical freeze rows remain in Tape, but Telegram skips source events older than its 24-hour recovery window while advancing its insertion-id cursor.
+
+Reconciliation read cost is proportional to source rows in that 90-day window, not the lifetime ledger or the 500-result batch cap. Existing baseline indexes provide forced time-range seeks via `idx_blacklist_events_public_event_page` (unsuppressed event type/time) and `idx_mbe2_ts` (time), with an `idx_tape_source_key` existence probe per eligible candidate. Timestamp-tie expansion may perform a second bounded-window read and exceed the nominal result cap. Production D1 `rows_read` measurements are not yet recorded; observe the first post-deploy run and compare like-for-like windows. Explicit historical admin windows can read much more and should be drained separately from scheduled work.
+
+PYS-drop projection carries the last usable selected score through unavailable (`NULL`) generations. Each invocation seeds from the most recent non-null score at or before its watermark, with `created_at DESC, generation_id DESC` tie-breaking; leading unavailable generations do not invent a baseline. Splitting the same history across cron invocations or smaller batches must not change the resulting event identities or payloads.
+
 DEWS band projection requires durable publication proof. The forward sparse `stress_signals` scan and its prior-band seed join `surface_publication_generations` at `surface = "dews"` and `state = "published"`. Band changes always create a sparse-history row, while unchanged half-hourly samples may be omitted. A partially written generation that fails DEWS row-count validation therefore emits no Tape event and cannot advance either DEWS projector watermark; a later published generation diffs against the last published band rather than the failed intermediate row. The DEWS cache pointer and ledger row commit atomically, while migration `0182` plus runtime pointer reconciliation bootstrap the publication that predates this contract.
 
 Current projector roster (from `TAPE_PROJECTOR_JOBS` in `worker/src/lib/tape-projectors/registry.ts`, consumed by `worker/src/cron/project-tape.ts` and `worker/src/api/backfill-tape.ts`):
@@ -157,7 +163,7 @@ The homepage marquee in `src/components/homepage-tape.tsx` consumes the same bac
 
 ## Admin
 
-- `POST /api/backfill-tape` (`worker/src/api/backfill-tape.ts`, route key `backfill-tape` in `shared/lib/api-endpoints/definitions.ts`) — admin-only, mutating. Re-runs the projector roster with operator-supplied overrides; supports `?dryRun=true` and is exposed as a status-page action labeled "Backfill Tape".
+- `POST /api/backfill-tape` (`worker/src/api/backfill-tape.ts`, route key `backfill-tape` in `shared/lib/api-endpoints/definitions.ts`) — admin-only, mutating. Re-runs the projector roster with operator-supplied overrides; supports `?dryRun=true` and is exposed as a status-page action labeled "Backfill Tape". For freeze or large mint/burn repairs older than 90 days, provide `since` explicitly (use `since=0` for full history), preferably with `until` and a bounded `maxRows`; repeat to drain remaining unprojected identities.
 
 ---
 
