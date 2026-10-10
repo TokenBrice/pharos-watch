@@ -12,7 +12,7 @@ import {
 } from "@shared/lib/independent-assurance";
 import { MANIFEST_SOURCES } from "../../shared/data/live-reserves/independent-assurance";
 import { COMPILER_PROFILES } from "../lib/independent-assurance-profiles/registry";
-import type { CompilerProfile } from "../lib/independent-assurance-profiles/shared";
+import { prepareAssuranceExtractionText, type CompilerProfile } from "../lib/independent-assurance-profiles/shared";
 
 const MANIFEST_DIR = resolve("shared/data/live-reserves/independent-assurance");
 const PRODUCTS = Object.keys(COMPILER_PROFILES) as IndependentAssuranceProduct[];
@@ -78,23 +78,26 @@ function extractText(pdfPath: string): { text: string; parserVersion: string; pa
 function compile(pdfPath: string, config: CompilerProfile): IndependentAssuranceManifest {
   const bytes = readFileSync(pdfPath);
   const { text, parserVersion, pageCount } = extractText(pdfPath);
-  assertProfileText(text, config);
   const textSha256 = createHash("sha256").update(text).digest("hex");
   const reportSha256 = createHash("sha256").update(bytes).digest("hex");
+  const extractionText = prepareAssuranceExtractionText(config, {
+    reportSha256, reportByteLength: bytes.length, normalizedTextSha256: textSha256, pageCount, text,
+  });
+  assertProfileText(extractionText, config);
   const assets = config.assetRows.map((row) => ({
     code: row.code,
     label: row.label,
-    amount: amountFromMatch(text.match(row.pattern), row.label, config.normalizeAmount),
+    amount: amountFromMatch(extractionText.match(row.pattern), row.label, config.normalizeAmount),
   }));
   const liabilities = config.liabilityRows.map((row) => ({
     code: row.code,
     label: row.label,
-    amount: amountFromMatch(text.match(row.pattern), row.label, config.normalizeAmount),
+    amount: amountFromMatch(extractionText.match(row.pattern), row.label, config.normalizeAmount),
   }));
   const adjustments = (config.adjustments ?? []).map((row) => ({
     code: row.code,
     label: row.label,
-    amount: amountFromMatch(text.match(row.pattern), row.label, config.normalizeAmount),
+    amount: amountFromMatch(extractionText.match(row.pattern), row.label, config.normalizeAmount),
     treatment: row.treatment,
     ...("kind" in row ? { kind: row.kind } : { alreadyNettedIntoAssets: row.alreadyNettedIntoAssets }),
   }));
@@ -123,7 +126,7 @@ function compile(pdfPath: string, config: CompilerProfile): IndependentAssurance
     computedAssetTotal: config.computedAssetTotal,
     reportedLiabilityTotal: config.reportedLiabilityTotal,
     extraction: {
-      tool: "Poppler pdftotext -layout",
+      tool: config.reviewedImageExtraction?.tool ?? "Poppler pdftotext -layout",
       parserVersion,
       normalizedTextSha256: textSha256,
       pageCount,

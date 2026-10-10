@@ -316,7 +316,7 @@ describe("handleStablecoinReserves", () => {
     const composition = {
       ...reviewedCompositionRow(now),
       warning_count: 1,
-      warnings: JSON.stringify([{ code: "reserve-deficit", message: "Observed reserve deficit", effect: "degrade" }]),
+      warnings: JSON.stringify([{ code: "reserve-deficit", message: "Observed reserve deficit", severity: "warning", effect: "degraded" }]),
     };
     const db = mockD1([
       { match: "FROM reserve_composition", rows: [], first: composition },

@@ -1,4 +1,5 @@
 import { isReserveDriftThresholdExceeded } from "@shared/lib/status-thresholds";
+import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-card-policy";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
@@ -16,6 +17,7 @@ export interface CollateralDriftEntry {
 export interface CollateralDriftResult {
   driftCoins: CollateralDriftEntry[];
   fallbackCoins: string[];
+  observedIds: string[];
 }
 
 type CollateralDriftCoin = Pick<StablecoinMeta, "id" | "liveReservesConfig">
@@ -27,18 +29,20 @@ export function summarizeCollateralDriftFromLiveReserveMap(
 ): CollateralDriftResult {
   const driftCoins: CollateralDriftEntry[] = [];
   const fallbackCoins: string[] = [];
+  const observedIds: string[] = [];
 
   for (const meta of stablecoins) {
-    if (!meta.liveReservesConfig) continue;
+    const config = meta.liveReservesConfig;
+    if (!config || config.suspended || !meta.reserves?.length) continue;
+    const adapter = getLiveReserveAdapterDefinition(config.adapter);
+    if (adapter?.sourceModel !== "dynamic-mix" || adapter.evidenceClass !== "independent") continue;
 
     const liveSlices = liveReserveMap.get(meta.id);
-    if (!liveSlices) {
+    if (!liveSlices || liveSlices.length < MIN_COMPARABLE_COLLATERAL_DRIFT_SLICES) {
       fallbackCoins.push(meta.id);
       continue;
     }
-    if (liveSlices.length < MIN_COMPARABLE_COLLATERAL_DRIFT_SLICES) {
-      continue;
-    }
+    observedIds.push(meta.id);
 
     if (meta.reserves && meta.reserves.length > 0) {
       const liveScore = computeCollateralQualityFromReserves(liveSlices);
@@ -50,7 +54,7 @@ export function summarizeCollateralDriftFromLiveReserveMap(
     }
   }
 
-  return { driftCoins, fallbackCoins };
+  return { driftCoins, fallbackCoins, observedIds };
 }
 
 /**

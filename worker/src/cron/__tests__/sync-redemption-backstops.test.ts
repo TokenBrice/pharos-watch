@@ -376,6 +376,41 @@ describe("syncRedemptionBackstops", () => {
     expect(typeof metadata.v4ScoringParametersHash).toBe("string");
   });
 
+  it.each([true, false])("uses cache-present coverage while retaining cache-absent absolute capacity (active resolved=%s)", async (activeResolved) => {
+    const now = Math.floor(Date.now() / 1000);
+    loadStablecoinsCacheMock.mockResolvedValue({
+      kind: "ok", updatedAt: now,
+      payload: { peggedAssets: [makeAsset({ id: "cusd-cap", circulating: { peggedUSD: 10_000_000 } })] },
+    });
+    resolveRedemptionBackstopEntryMock.mockResolvedValue(makeResolvedSnapshot("cusd-cap", now, activeResolved ? {} : {
+      score: null, capacityScore: null, immediateCapacityUsd: null, immediateCapacityRatio: null,
+      resolutionState: "missing-capacity",
+    }));
+    buildRedemptionBackstopEntryMock.mockResolvedValue(makeResolvedSnapshot("iusd-infinifi", now, {
+      provider: "reserve-sync", sourceMode: "dynamic", capacityConfidence: "live-direct",
+      immediateCapacityUsd: 1_000_000, immediateCapacityRatio: null,
+    }));
+    // The module's mock factories need the non-hoisted functions above initialized first.
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata).toMatchObject({
+      configured: 2, activeConfigured: 1, cacheAbsentConfigured: 1,
+      resolved: activeResolved ? 2 : 1, activeResolved: activeResolved ? 1 : 0,
+      coverageRatio: activeResolved ? 1 : 0,
+    });
+    expect(metadata.coverageRatio).toBe(metadata.activeResolved / metadata.activeConfigured);
+    expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1]).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        stablecoinId: "iusd-infinifi", resolutionState: "resolved",
+        immediateCapacityUsd: 1_000_000, immediateCapacityRatio: null,
+      }),
+    ]));
+    expect(buildRedemptionBackstopEntryMock).toHaveBeenCalledWith(
+      expect.anything(), "iusd-infinifi", expect.anything(), null, expect.anything(), expect.any(Number), expect.anything(),
+    );
+  });
+
   it("records only consumed reserve inputs using the shared sealed-input schema", async () => {
     const now = Math.floor(Date.now() / 1000);
     const reserveInput = ConsumedReserveInputSchema.parse({
@@ -681,6 +716,8 @@ describe("syncRedemptionBackstops", () => {
     expect(result.status).toBe("error");
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.activeConfigured).toBe(0);
+    expect(metadata.activeResolved).toBe(0);
+    expect(metadata.coverageRatio).toBe(0);
     expect(metadata.cacheAbsentConfigured).toBe(1);
     expect(metadata.missingFromCache).toEqual(["iusd-infinifi"]);
   });

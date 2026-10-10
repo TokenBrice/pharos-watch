@@ -188,7 +188,8 @@ describe("dispatchTelegramAlerts", () => {
       safetyAlertsSuppressed: true,
       noWorkRun: false,
     });
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 6 });
+    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 7 });
+    expect(readCacheValue(harness.sqlite, "alert:reserve-observed-snapshot")).not.toBeNull();
     expect(readCacheValue(harness.sqlite, "telegram:preset-query-failure-count")).toBe("0");
     expect(mockRecordOutcome).toHaveBeenCalledTimes(1);
   });

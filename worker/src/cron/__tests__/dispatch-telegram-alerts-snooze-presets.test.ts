@@ -24,6 +24,7 @@ function sources(
     launch?: string[];
     reserve?: unknown;
     reserveDispatched?: string[];
+    reserveObserved?: Record<string, number>;
     safety?: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>;
   } = {},
 ) {
@@ -393,7 +394,7 @@ describe("dispatchTelegramAlerts", () => {
     ]);
     harness.cache(
       "alert:reserve-snapshot",
-      { generation: ALERT_RESERVE_SOURCE_GENERATION, publishedAt: now, continuous: false, driftIds: ["usdc-circle"] },
+      { generation: ALERT_RESERVE_SOURCE_GENERATION, publishedAt: now, continuous: false, driftIds: ["usdc-circle"], observedSince: { "usdc-circle": now }, unavailableIds: [] },
       now,
     );
     const cycle2 = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
@@ -417,8 +418,10 @@ describe("dispatchTelegramAlerts", () => {
         publishedAt: now - 60,
         continuous: true,
         driftIds: ["usdc-circle"],
+        observedSince: { "usdc-circle": now - 120 }, unavailableIds: [],
       },
       reserveDispatched: [],
+      reserveObserved: { "usdc-circle": now - 120 },
       safety: {},
     });
     harness.seed({

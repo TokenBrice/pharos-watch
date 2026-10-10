@@ -100,14 +100,17 @@ export async function fetchTzktBigmapKeys(
     if (!Array.isArray(payload)) {
       throw new Error(`tzkt: bigmap ${bigmapId} keys response is not an array`);
     }
-    for (const entry of payload) {
-      if (typeof entry !== "object" || entry === null) continue;
+    for (const [index, entry] of payload.entries()) {
+      const rowIndex = page * TZKT_BIGMAP_PAGE_LIMIT + index;
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+        throw new Error(`tzkt: bigmap ${bigmapId} row ${rowIndex} is not an object`);
+      }
       const record = entry as Record<string, unknown>;
       if (typeof record.key !== "string") {
-        throw new Error(`tzkt: bigmap ${bigmapId} key row has a non-string key`);
+        throw new Error(`tzkt: bigmap ${bigmapId} row ${rowIndex} has a non-string key`);
       }
-      if (typeof record.value !== "object" || record.value === null) {
-        throw new Error(`tzkt: bigmap ${bigmapId} key ${record.key} has a non-object value`);
+      if (typeof record.value !== "object" || record.value === null || Array.isArray(record.value)) {
+        throw new Error(`tzkt: bigmap ${bigmapId} row ${rowIndex} key ${record.key} has a non-object value`);
       }
       keys.push({ key: record.key, value: record.value as Record<string, unknown> });
     }

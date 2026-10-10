@@ -41,6 +41,17 @@ describe("producer-owned accepted reserve generations", () => {
   });
 
   it.each([
+    ["not-json", 1], ["{}", 0], ['[{"code":"material-unknown-exposure","effect":"degraded"}]', 1],
+    ["[]", 1], ['[{"code":"note","message":"note","severity":"info"}]', 0],
+  ])("uses the same strict warning-integrity boundary when sealing %s", async (warnings, count) => {
+    const h = await harness();
+    h.sqlite.prepare("UPDATE reserve_composition SET warnings = ?, warning_count = ?").run(warnings, count);
+    const accepted = await sealAcceptedReserveGeneration(h.db, h.identity, "test", h.ids, { status: "ok" }, CLOCK);
+    expect(accepted?.members[0].snapshot).toBeNull();
+    expect(accepted?.members).toHaveLength(2);
+  });
+
+  it.each([
     null, [], "invalid",
     { capacityUsd: 1_000_000, dailyLimitUsd: -1 },
     { capacityUsd: 1_000_000, queueDepthUsd: null },

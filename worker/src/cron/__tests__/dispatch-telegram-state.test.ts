@@ -15,7 +15,7 @@ import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
-import { buildDewsChanges, buildSafetyChanges } from "../telegram-alert-changes";
+import { buildDewsChanges, buildReserveTransitions, buildSafetyChanges } from "../telegram-alert-changes";
 import {
   buildDispatchSnapshotState,
   loadDewsRows,
@@ -45,6 +45,8 @@ function reserveSource(
     publishedAt: nowSec - 60,
     continuous: true,
     driftIds,
+    observedSince: Object.fromEntries(driftIds.map((id) => [id, nowSec - 120])),
+    unavailableIds: [],
     ...overrides,
   });
 }
@@ -154,6 +156,7 @@ describe("buildDispatchSnapshotState", () => {
       {
         nowSec,
         producerIntervalSec: CRON_INTERVALS["sync-live-reserves"],
+        observedIds: ["usdc-circle"], unavailableIds: [],
       },
     );
     const state = buildDispatchSnapshotState(
@@ -166,6 +169,45 @@ describe("buildDispatchSnapshotState", () => {
 
     expect(state.reserveSourceAssessment.state).toBe("recovering");
     expect(state.currentSnapshots.reserveDispatched).toEqual(["usdc-circle"]);
+  });
+
+  it.each([true, false])("cold-seeds per-asset recovery after prior drift=%s while peers keep alerting", (initialDrift) => {
+    const interval = CRON_INTERVALS["sync-live-reserves"];
+    const producerOptions = { producerIntervalSec: interval, observedIds: ["coin", "peer"], unavailableIds: [] };
+    const first = buildAlertReserveSourceEnvelope(initialDrift ? ["coin"] : [], null, { ...producerOptions, nowSec: nowSec - 2 * interval });
+    const baseline = buildDispatchSnapshotState(sourceData({ reserveCache: cache(first), reserveDispatchedCache: null }), nowSec - 2 * interval);
+    const gap = buildAlertReserveSourceEnvelope([], cache(first), { ...producerOptions, nowSec: nowSec - interval, observedIds: ["peer"], unavailableIds: ["coin"] });
+    const gapState = buildDispatchSnapshotState(sourceData({
+      reserveCache: cache(gap), reserveDispatchedCache: cache(baseline.currentSnapshots.reserveDispatched),
+      reserveObservedCache: cache(baseline.currentSnapshots.reserveObserved),
+    }), nowSec - interval);
+    const recovery = buildAlertReserveSourceEnvelope(["coin", "peer"], cache(gap), { ...producerOptions, nowSec });
+    const recovered = buildDispatchSnapshotState(sourceData({
+      reserveCache: cache(recovery), reserveDispatchedCache: cache(gapState.currentSnapshots.reserveDispatched),
+      reserveObservedCache: cache(gapState.currentSnapshots.reserveObserved),
+    }), nowSec);
+    const transitions = buildReserveTransitions(new Set(recovered.previousReserveDriftIds), new Set(recovered.currentReserveDriftIds),
+      new Map([["coin", { symbol: "COIN", name: "Coin" }], ["peer", { symbol: "PEER", name: "Peer" }]]));
+    expect(transitions.map((entry) => entry.stablecoinId)).toEqual(["peer"]);
+    // The continuity epoch also protects a dispatcher which missed the gap.
+    const missedGap = buildDispatchSnapshotState(sourceData({
+      reserveCache: cache(recovery), reserveDispatchedCache: cache(baseline.currentSnapshots.reserveDispatched),
+      reserveObservedCache: cache(baseline.currentSnapshots.reserveObserved),
+    }), nowSec);
+    expect(missedGap.previousReserveDriftIds).toContain("coin");
+  });
+
+  it("alerts true observed clear to new drift and accepts a complete no-drift result", () => {
+    const observedSince = { coin: nowSec - 120 };
+    const state = buildDispatchSnapshotState(sourceData({
+      reserveCache: cache({ generation: ALERT_RESERVE_SOURCE_GENERATION, publishedAt: nowSec, continuous: true, driftIds: ["coin"], observedSince, unavailableIds: [] }),
+      reserveDispatchedCache: cache([]), reserveObservedCache: cache(observedSince),
+    }), nowSec);
+    expect(state.previousReserveDriftIds).toEqual([]);
+    expect(state.currentReserveDriftIds).toEqual(["coin"]);
+    const clear = buildDispatchSnapshotState(sourceData({ reserveCache: reserveSource([]) }), nowSec);
+    expect(clear.reserveSourceAssessment.state).toBe("ok");
+    expect(clear.currentReserveDriftIds).toEqual([]);
   });
 
   it("fails closed when canonical V9 is unavailable without blocking DEWS", () => {

@@ -71,7 +71,11 @@ Frozen replay retains captured fee evidence, eligibility and request-point costs
 
 `v9RouteReviewTerms.businessDayTerms` retains the business-day count, reviewed jurisdiction calendar, local cutoff/timezone, binding-guarantee-versus-target assurance, conditional flag, start event and unresolved gates (including sequential realisation/payment stages). Safety's overlay walks the reviewed calendar over its complete rolling submission horizon; it never persists a calendar-day guess or borrows a captured scalar when a calendar fails admission. The standalone coarse `days` category remains unchanged. [EURI](https://www.eurite.com/wp-content/uploads/2024/07/EUR-TCs-Final-clean.pdf) uses Luxembourg banks, [FUSD](https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/cut-off-time.md) explicitly uses Hong Kong's 08:00 cutoff rather than a Singapore/Cayman fund domicile, and Midas' governing definition names Frankfurt banks/relevant clearing systems, not its Liechtenstein prospectus reviewer. BRLV's conditional T+1/T+2/T+3 targets retain the conservative 14-day modelled horizon. None of these normal windows, or [Bridge's US business-hours reserve windows](https://apidocs.bridge.xyz/platform/issuance/reserve-management), is promoted to an ungated final-cash guarantee.
 
+The coarse `days` label is **Multi-day**, not an elapsed completion bound. Conditional business-day terms and routes without a final-receipt SLA never inherit a seven-day maximum; exact timing claims require admitted reviewed terms and retain their conditions.
+
 `npm run audit:coverage -- --domain=redemption-backstops --report <path>` writes per-config audit rows with both the literal configured `capacityBasis` and the resolved runtime-style `resolvedCapacityBasis`. Reserve-sync rows use the tracked adapter's direct/proxy redemption-telemetry declaration when resolving that audit basis. The report also includes `capacityFallbackSource` for reserve-sync fallback ratios/USD buffers and `dailyLimitUsd` when a static model caps same-day capacity, so review queues can distinguish route-family defaults from explicit fallback or daily-limit constraints.
+
+Registry refactor parity uses `scripts/maintenance/audit-redemption-registry-parity.ts --snapshot <path>` and `--compare <before.json> <after.json>`. Snapshots retain every authored config field, including payout identities, suspension, physical routes and dated review terms. Object-key and registry-row order are immaterial; array order is retained. No synthetic static-score/capacity projection is emitted.
 
 ---
 
@@ -102,6 +106,8 @@ Status semantics:
 - `error` when zero routes resolve to a usable scored row because of route failures, blocking unresolved states, all active configured routes missing capacity, or every configured route being absent from the active runtime stablecoins cache
 
 Cron metadata includes `synced`, `resolved`, `unresolved`, `unresolvedMissingCapacity` (plus per-family/per-provider `familyMissingCapacityBy` / `providerMissingCapacityBy` breakdowns when any capacity is missing, so a single failing adapter family cannot hide inside the aggregate tolerance), `unresolvedCritical`, `availabilityDegraded`, `marketImpliedDegraded`, `marketEvidenceUncertain`, `missingCapacityOkThreshold`, `coverageRatio`, `failed`, `configured`, `activeConfigured`, `cacheAbsentConfigured`, `dynamic`, `estimated`, `static`, `liquidityStale`, `severeActiveDepegThresholdBps`, registry/run manifest fields (`registryHash`, `familyCounts`, `strongProxyCount`, `heuristicCount`, `validatorVersion`, `configMethodologyVersion`, `v4ScoringParametersHash`), and route-status producer fields (`routeStatusProducer`, `routeStatusProducerFetches`), plus capped matching ID lists or `missingFromCache` when relevant. Intentional confirmed impairment and current-evidence uncertainty do not by themselves degrade the cron run.
+
+`coverageRatio` is `activeResolved / activeConfigured` over cache-present configured IDs (zero when that cohort is empty); `resolved` still counts all resolved rows. Cache-absent rows with measured absolute capacity remain published but cannot inflate active-cache coverage.
 
 ---
 
@@ -538,6 +544,7 @@ Each row also carries:
 - Explicit issuer statements that redemption charges no fee are modeled as a fixed `0` bps schedule rather than as an opaque or variable fee. This applies to the reviewed Spiko funds, Midas mF-ONE, JTRSY, YLDS, EUROP, EUSD, and USD3 routes; the registry validates the complete reviewed ID tables so additions and removals cannot silently drift.
 - HBD conversion has no extra conversion fee, but the debt-ratio haircut and 3.5-day median-price window leave all-in USD payout cost unquantified. Its reviewed formula disposition therefore carries no numeric zero-cost bound until current payout valuation accounts for those effects.
 - Formula-based routes can also populate `feeBps` from fresh latest-success live reserve snapshot metadata when the protocol exposes a current on-chain redemption rate; the route still remains labeled as `feeModelKind = formula`
+- Admitted live fees retain fractional basis points in publication, scenario costs and exact threshold comparisons; rounding belongs only to presentation, never fee statistics.
 - Every on-chain rate probe must explicitly pin the return-value decimal scale; missing scale fails configuration validation rather than silently publishing an unknown fee
 - Reviewed fixed-fee routes may also consume fresh authoritative live fee telemetry when the protocol exposes the current active redemption fee and the static config is only a safe fallback bound
 - `feeModelKind` distinguishes fixed-fee routes from documented formulas, documented variable schedules, and reviewed-but-undisclosed fee rails

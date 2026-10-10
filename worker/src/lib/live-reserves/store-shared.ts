@@ -76,7 +76,7 @@ export interface ReserveSyncStateRow {
 
 export interface SnapshotIntegrityIssue {
   code:
-    "invalid-json" | "invalid-payload" | "empty-slices" | "invalid-slice" | "invalid-sum" | "unknown-adapter-source";
+    "invalid-json" | "invalid-payload" | "empty-slices" | "invalid-slice" | "invalid-sum" | "unknown-adapter-source" | "invalid-warnings";
   message: string;
 }
 
@@ -103,6 +103,7 @@ export interface ReserveSyncStateRecord {
   lastStatus: ReserveSyncStatus;
   warningCount: number;
   warnings: LiveReserveWarning[];
+  warningIntegrityIssue?: SnapshotIntegrityIssue | null;
   lastError: string | null;
   metadata: LiveReserveSnapshotMetadata;
   lastAttemptId?: string | null;

@@ -3,7 +3,7 @@ import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../collections";
 import { runWithOverloadRetry } from "../d1-overload-retry";
 import {
   parseSnapshotMetadata,
-  parseWarnings,
+  parseWarningsStrict,
 } from "./store-row-decoding";
 import {
   RESERVE_COMPOSITION_SELECT_COLUMNS,
@@ -14,6 +14,7 @@ import {
 } from "./store-shared";
 
 function mapReserveSyncStateRow(row: ReserveSyncStateRow): ReserveSyncStateRecord {
+  const parsedWarnings = parseWarningsStrict(row.warnings, row.warning_count);
   return {
     stablecoinId: row.stablecoin_id,
     adapterKey: row.adapter_key,
@@ -22,7 +23,8 @@ function mapReserveSyncStateRow(row: ReserveSyncStateRow): ReserveSyncStateRecor
     lastSuccessAt: row.last_success_at,
     lastStatus: row.last_status,
     warningCount: row.warning_count,
-    warnings: parseWarnings(row.warnings),
+    warnings: parsedWarnings.warnings ?? [],
+    warningIntegrityIssue: parsedWarnings.issue,
     lastError: row.last_error,
     metadata: parseSnapshotMetadata(row.metadata),
     lastAttemptId: row.last_attempt_id ?? null,

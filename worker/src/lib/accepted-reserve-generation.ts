@@ -8,7 +8,7 @@ import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserves/store-shared";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReserveSnapshotMetadataRecord } from "./live-reserves/store-shared";
 import { assessReserveSnapshotFreshness, evaluateLiveReserveAdmission, hasScoringEligibleLiveReserveFreshness } from "./live-reserves/store-snapshot-state";
-import { parseSnapshotMetadata, parseWarnings } from "./live-reserves/store-row-decoding";
+import { parseSnapshotMetadata, parseWarningsStrict } from "./live-reserves/store-row-decoding";
 import { decodeLiveReserveRedemptionTelemetry, LiveReserveDiagnosticsSchema } from "@shared/types/live-reserves";
 import type { ScheduledCheckpointIdentity } from "./scheduled-recovery-checkpoint";
 import type { CronResult } from "./cron-logger";
@@ -67,22 +67,24 @@ export async function sealAcceptedReserveGeneration(db: D1Database, identity: Sc
     members: rows.results.map((row) => {
       const legacyFallback = !row.attempt_id && !row.last_success_attempt_id && row.last_success_at === row.fetched_at && row.last_attempted_at === row.fetched_at && row.last_status !== "error" && row.last_status !== "skipped";
       const metadata = parseSnapshotMetadata(row.metadata);
-      const warnings = parseWarnings(row.warnings);
+      const parsedWarnings = parseWarningsStrict(row.warnings);
+      const warnings = parsedWarnings.warnings ?? [];
       const finalMetadata = legacyFallback && Object.keys(metadata).length === 0 ? parseSnapshotMetadata(row.state_metadata) : metadata;
-      const finalWarnings = legacyFallback && warnings.length === 0 ? parseWarnings(row.state_warnings) : warnings;
+      const selectedWarnings = legacyFallback && warnings.length === 0 && !parsedWarnings.issue
+        ? parseWarningsStrict(row.state_warnings, row.warning_count)
+        : parseWarningsStrict(row.warnings, row.warning_count);
+      const finalWarnings = selectedWarnings.warnings ?? [];
       const adapterKey = WORKER_TRACKED_META_BY_ID.get(row.stablecoin_id)?.liveReservesConfig?.adapter;
       const adapter = adapterKey ? getLiveReserveAdapterDefinition(adapterKey) : undefined;
-      let malformed = decodeLiveReserveRedemptionTelemetry(finalMetadata).status === "invalid";
+      let malformed = parsedWarnings.issue != null || selectedWarnings.issue != null ||
+        decodeLiveReserveRedemptionTelemetry(finalMetadata).status === "invalid";
       const diag = finalMetadata.diag;
       if (diag && Object.prototype.hasOwnProperty.call(diag, "rawSumDeviation") &&
         !LiveReserveDiagnosticsSchema.shape.rawSumDeviation.unwrap().safeParse(diag.rawSumDeviation).success) malformed = true;
       try {
         const selectedMetadata = finalMetadata === metadata ? row.metadata : row.state_metadata;
-        const selectedWarnings = finalWarnings === warnings ? row.warnings : row.state_warnings;
         const rawMetadata: unknown = selectedMetadata ? JSON.parse(selectedMetadata) : {};
-        const rawWarnings: unknown = selectedWarnings ? JSON.parse(selectedWarnings) : [];
         if (!rawMetadata || typeof rawMetadata !== "object" || Array.isArray(rawMetadata)) malformed = true;
-        if (!Array.isArray(rawWarnings) || rawWarnings.length !== finalWarnings.length) malformed = true;
       } catch { malformed = true; }
       const parsed = AcceptedReserveSnapshotSchema.safeParse({ stablecoinId: row.stablecoin_id, fetchedAt: row.fetched_at, attemptId: row.attempt_id ?? null,
         source: row.source, metadata: finalMetadata, warnings: finalWarnings, warningCount: row.warning_count ?? finalWarnings.length,

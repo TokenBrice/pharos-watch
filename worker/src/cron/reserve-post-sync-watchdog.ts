@@ -49,6 +49,8 @@ export async function runReservePostSyncWatchdog(
       {
         nowSec: reservePublishedAt,
         producerIntervalSec: CRON_INTERVALS["sync-live-reserves"],
+        observedIds: drift.observedIds,
+        unavailableIds: drift.fallbackCoins,
       },
     );
     await setCache(db, SNAPSHOT_KEYS.reserve, JSON.stringify(reserveSourceEnvelope), signal);

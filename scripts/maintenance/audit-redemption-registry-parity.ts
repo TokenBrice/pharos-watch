@@ -2,176 +2,34 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import {
-  REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
-  REDEMPTION_BACKSTOP_CONFIGS,
-} from "@shared/lib/redemption-backstop-configs";
-import { configsFromBackstopEntries } from "@shared/lib/redemption-backstop-configs/factory";
-import {
-  resolveCapacityConfidence,
-  resolveFeeConfidence,
-  resolveFeeModelKind,
-} from "@shared/lib/redemption-backstop-confidence";
-import {
-  computeCapacityScore,
-  computeRedemptionBackstopScore,
-  REDEMPTION_ACCESS_SCORES,
-  REDEMPTION_EXECUTION_SCORES,
-  REDEMPTION_OUTPUT_ASSET_SCORES,
-  REDEMPTION_SETTLEMENT_SCORES,
-} from "@shared/lib/redemption-backstop-scoring";
+import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
-import { resolveStaticCostScore } from "../lib/redemption-audit-helpers";
 import { readJsonFile } from "../lib/catalog-json";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ROOT = process.cwd();
-const SNAPSHOT_SUPPLY_USD = 1_000_000_000;
 
 interface ParitySnapshot {
   registry: unknown[];
-  staticScores: unknown[];
 }
 
-const SEMANTIC_REGISTRY_FIELDS = [
-  "stablecoinId",
-  "routeFamily",
-  "accessModel",
-  "settlementModel",
-  "executionModel",
-  "outputAssetType",
-  "holderEligibility",
-  "routeStatus",
-  "capacityModel",
-  "costModel",
-  "totalScoreCap",
-] as const;
-
-const SEMANTIC_STATIC_SCORE_FIELDS = [
-  "stablecoinId",
-  "routeFamily",
-  "capacityConfidence",
-  "feeConfidence",
-  "feeModelKind",
-  "immediateCapacityUsd",
-  "immediateCapacityRatio",
-  "accessScore",
-  "settlementScore",
-  "executionCertaintyScore",
-  "capacityScore",
-  "coverageRatioScore",
-  "absoluteCapacityScore",
-  "outputAssetQualityScore",
-  "costScore",
-  "score",
-  "capsApplied",
-] as const;
-
-function buildSnapshot(): ParitySnapshot {
-  const ownerById = new Map<string, string>();
-  for (const entry of REDEMPTION_BACKSTOP_CONFIG_MANIFEST) {
-    for (const id of Object.keys(configsFromBackstopEntries(entry.entries))) {
-      ownerById.set(id, entry.name);
-    }
-  }
-
-  const ids = Object.keys(REDEMPTION_BACKSTOP_CONFIGS).sort();
+export function buildSnapshot(
+  configs: Readonly<Record<string, RedemptionBackstopConfig>> = REDEMPTION_BACKSTOP_CONFIGS,
+): ParitySnapshot {
   return {
-    registry: ids.map((id) => {
-      const config = REDEMPTION_BACKSTOP_CONFIGS[id];
-      return {
-        stablecoinId: id,
-        owner: ownerById.get(id) ?? "unknown",
-        routeFamily: config.routeFamily,
-        accessModel: config.accessModel,
-        settlementModel: config.settlementModel,
-        executionModel: config.executionModel,
-        outputAssetType: config.outputAssetType,
-        holderEligibility: config.holderEligibility ?? null,
-        routeStatus: config.routeStatus ?? null,
-        capacityModel: sortObject(config.capacityModel),
-        costModel: sortObject(config.costModel),
-        totalScoreCap: config.totalScoreCap ?? null,
-        reviewedAt: config.reviewedAt ?? null,
-        docs: (config.docs ?? []).map((doc) => ({
-          label: doc.label,
-          url: doc.url,
-          supports: [...(doc.supports ?? [])].sort(),
-        })),
-        notes: [...(config.notes ?? [])],
-      };
-    }),
-    staticScores: ids.map((id) => buildStaticScoreSnapshot(id, REDEMPTION_BACKSTOP_CONFIGS[id])),
+    registry: Object.keys(configs).sort().map((stablecoinId) => sortObject({
+      ...configs[stablecoinId],
+      stablecoinId,
+    })),
   };
 }
 
-function buildStaticScoreSnapshot(stablecoinId: string, config: RedemptionBackstopConfig): object {
-  const immediateCapacityRatio = resolveStaticCapacityRatio(config);
-  const immediateCapacityUsd = immediateCapacityRatio == null ? null : SNAPSHOT_SUPPLY_USD * immediateCapacityRatio;
-  const capacity = computeCapacityScore({
-    immediateCapacityUsd,
-    immediateCapacityRatio,
-  });
-  const accessScore = REDEMPTION_ACCESS_SCORES[config.accessModel];
-  const settlementScore = REDEMPTION_SETTLEMENT_SCORES[config.settlementModel];
-  const executionCertaintyScore = REDEMPTION_EXECUTION_SCORES[config.executionModel];
-  const outputAssetQualityScore = REDEMPTION_OUTPUT_ASSET_SCORES[config.outputAssetType];
-  const costScore = resolveStaticCostScore(config);
-  const score = computeRedemptionBackstopScore({
-    routeFamily: config.routeFamily,
-    accessScore,
-    settlementScore,
-    executionCertaintyScore,
-    capacityScore: capacity.score,
-    executableCapacityUsd: immediateCapacityUsd,
-    outputAssetQualityScore,
-    costScore,
-    totalScoreCap: config.totalScoreCap,
-  });
-
-  return {
-    stablecoinId,
-    routeFamily: config.routeFamily,
-    capacityConfidence: resolveCapacityConfidence(config.capacityModel),
-    feeConfidence: resolveFeeConfidence(config.costModel),
-    feeModelKind: resolveFeeModelKind(config.costModel),
-    immediateCapacityUsd,
-    immediateCapacityRatio,
-    accessScore,
-    settlementScore,
-    executionCertaintyScore,
-    capacityScore: capacity.score,
-    coverageRatioScore: capacity.coverageRatioScore,
-    absoluteCapacityScore: capacity.absoluteCapacityScore,
-    outputAssetQualityScore,
-    costScore,
-    score: score.score,
-    capsApplied: score.capsApplied,
-    notes: [...(config.notes ?? [])],
-    sourceReferences: (config.docs ?? []).map((doc) => doc.url).sort(),
-  };
-}
-
-function resolveStaticCapacityRatio(config: RedemptionBackstopConfig): number | null {
-  switch (config.capacityModel.kind) {
-    case "supply-full":
-      return 1;
-    case "supply-ratio":
-      return config.capacityModel.ratio;
-    case "reserve-sync-metadata":
-      return config.capacityModel.fallbackRatio ?? null;
-  }
-  return null;
-}
 
 
-function compareSnapshots(beforePath: string, afterPath: string): string[] {
-  const before = toSemanticSnapshot(readJsonFile(resolve(ROOT, beforePath)));
-  const after = toSemanticSnapshot(readJsonFile(resolve(ROOT, afterPath)));
-  return [
-    ...compareSection("registry", before.registry, after.registry),
-    ...compareSection("staticScores", before.staticScores, after.staticScores),
-  ];
+export function compareSnapshots(beforePath: string, afterPath: string): string[] {
+  const before = readJsonFile(resolve(ROOT, beforePath)) as ParitySnapshot;
+  const after = readJsonFile(resolve(ROOT, afterPath)) as ParitySnapshot;
+  return compareSection("registry", before.registry, after.registry);
 }
 
 
@@ -195,23 +53,6 @@ function stableStringify(value: unknown): string {
   return JSON.stringify(sortObject(value));
 }
 
-function toSemanticSnapshot(value: unknown): ParitySnapshot {
-  const raw = value as Partial<ParitySnapshot>;
-  return {
-    registry: normalizeRows(raw.registry, SEMANTIC_REGISTRY_FIELDS),
-    staticScores: normalizeRows(raw.staticScores, SEMANTIC_STATIC_SCORE_FIELDS),
-  };
-}
-
-function normalizeRows<T extends readonly string[]>(value: unknown, fields: T): unknown[] {
-  if (!Array.isArray(value)) return [];
-  return value.map((row) => pickFields(row, fields));
-}
-
-function pickFields<T extends readonly string[]>(value: unknown, fields: T): Record<T[number], unknown> {
-  const raw = value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
-  return Object.fromEntries(fields.map((field) => [field, sortObject(raw[field])])) as Record<T[number], unknown>;
-}
 
 function compareSection(section: string, beforeRows: unknown[], afterRows: unknown[]): string[] {
   const beforeById = rowsByStablecoinId(beforeRows);

@@ -84,6 +84,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     vi.mocked(checkCollateralDrift).mockResolvedValue({
       driftCoins: [],
       fallbackCoins: [],
+      observedIds: [],
     } as never);
     vi.mocked(getMaxSyncAge).mockResolvedValue(0);
     vi.mocked(computeReserveCompositionOverview).mockResolvedValue({
@@ -397,7 +398,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     }) as never);
     vi.mocked(checkCollateralDrift).mockImplementation((async () => {
       order.push("watchdog:drift-read");
-      return { driftCoins: [], fallbackCoins: [] };
+      return { driftCoins: [], fallbackCoins: [], observedIds: [] };
     }) as never);
 
     releaseSync();
@@ -555,6 +556,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     vi.mocked(checkCollateralDrift).mockResolvedValue({
       driftCoins: [{ id: "usdc-circle" }],
       fallbackCoins: [],
+      observedIds: ["usdc-circle"],
     } as never);
     vi.mocked(getCache).mockResolvedValue(null);
 
@@ -567,6 +569,8 @@ describe("runFourHourlyReserveSyncSlot", () => {
       generation: ALERT_RESERVE_SOURCE_GENERATION,
       continuous: false,
       driftIds: ["usdc-circle"],
+      observedSince: { "usdc-circle": expect.any(Number) },
+      unavailableIds: [],
       publishedAt: expect.any(Number),
     });
   });

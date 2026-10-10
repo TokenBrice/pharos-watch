@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildRedemptionBackstopCardViewModel } from "../redemption-backstop-card-view-model";
 import type { RedemptionBackstopEntry } from "@shared/types";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { REDEMPTION_SETTLEMENT_LABELS } from "@/lib/redemption-backstop-labels";
 
 const BASE_ENTRY: RedemptionBackstopEntry = {
   stablecoinId: "test-usd",
@@ -63,6 +65,29 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     expect(viewModel.settlementLabel).toBe("Atomic");
     expect(viewModel.outputAssetLabel).toBe("Stable output");
     expect(viewModel.routeFamilyLabel).toBe("Stablecoin redeem");
+  });
+
+  it.each([
+    { stablecoinId: "mhyper-midas", businessDays: 6 },
+    { stablecoinId: "mre7yield-midas", businessDays: 10 },
+    { stablecoinId: "ousd-open-standard", businessDays: null },
+  ])("does not infer an elapsed completion maximum for $stablecoinId", ({ stablecoinId, businessDays }) => {
+    const config = getRedemptionBackstopConfig(stablecoinId)!;
+    expect(config.settlementModel).toBe("days");
+    if (businessDays != null) {
+      expect(config.v9RouteReviewTerms?.businessDayTerms).toMatchObject({ businessDays, conditional: true });
+    } else {
+      expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
+      expect(config.v9RouteReviewTerms?.businessDayTerms).toBeUndefined();
+    }
+    const viewModel = buildRedemptionBackstopCardViewModel(entry({
+      stablecoinId, settlementModel: config.settlementModel, settlementDelaySec: undefined,
+      notes: config.notes,
+    }));
+    expect(viewModel.settlementLabel).toBe(REDEMPTION_SETTLEMENT_LABELS.days);
+    expect(viewModel.settlementLabel).toBe("Multi-day");
+    expect(telemetryValue(viewModel, "Live delay")).toBeUndefined();
+    expect(viewModel.filteredNotes).toEqual(expect.arrayContaining(config.notes ?? []));
   });
 
   it("formats immediate capacity, scoring horizon, and telemetry context", () => {

@@ -109,11 +109,26 @@ describe("adaptFalconTransparency", () => {
     ]);
   });
 
+  it.each([
+    ["0", 6, true],
+    ["20", 5, false],
+    ["100", 3, false],
+  ])("uses insurance %s in the same unknown-exposure book as slices", (insurance, pct, degraded) => {
+    const result = adaptFalconTransparency(falconPayload([
+      { label: "USDC", ceffu: "94" }, { label: "FLOKI", ceffu: "6" },
+    ], { insurance }));
+    expect(result.metadata?.unknownExposurePct).toBe(pct);
+    expect(result.slices.find((slice) => slice.name === "Other crypto / tokenized assets")?.pct).toBe(pct);
+    expect(result.warnings?.[0].message).toContain(`${pct.toFixed(2)}% of reserves`);
+    const report = expectValidAdapterOutput("falcon", result, { now: FIXTURE_TIMESTAMP });
+    expect(report.warnings.some((warning) => warning.code === "material-unknown-exposure")).toBe(degraded);
+  });
+
   it("keeps the live capture's unmapped long tail informational", () => {
     const result = adaptFalconTransparency(LIVE_CAPTURE);
 
     expect(result.metadata).toMatchObject({ assetCount: 140, freshnessMode: "verified" });
-    expect(result.metadata?.unknownExposurePct).toBeCloseTo(0.897, 3);
+    expect(result.metadata?.unknownExposurePct).toBeCloseTo(0.891546, 6);
     expect(result.warnings).toEqual([
       expect.objectContaining({ code: "unknown-asset", effect: "info", message: expect.stringContaining("FLOKI") }),
     ]);

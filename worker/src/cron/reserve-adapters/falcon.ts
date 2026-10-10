@@ -141,7 +141,16 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
     getUnknownKey: (asset) => asset.label,
   });
 
-  const unknownExposurePct = computeUnknownExposurePct(unknownExposureUsd, totalAssetUsd);
+  const insuranceFundRaw = payload.usdf?.insurance_fund;
+  const insuranceFund = typeof insuranceFundRaw === "number"
+    ? insuranceFundRaw
+    : typeof insuranceFundRaw === "string" && insuranceFundRaw.trim()
+      ? Number(insuranceFundRaw)
+      : NaN;
+  if (!Number.isFinite(insuranceFund) || insuranceFund < 0) {
+    throw new Error(`Falcon invalid usdf.insurance_fund: ${String(insuranceFundRaw)}`);
+  }
+  const unknownExposurePct = computeUnknownExposurePct(unknownExposureUsd, totalAssetUsd + insuranceFund);
 
   // Unmapped assets keep their full weight inside the high-risk "other" bucket
   // and the unknown-exposure total; the shared policy cap (5% for
@@ -159,15 +168,6 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
     ));
   }
 
-  const insuranceFundRaw = payload.usdf?.insurance_fund;
-  const insuranceFund = typeof insuranceFundRaw === "number"
-    ? insuranceFundRaw
-    : typeof insuranceFundRaw === "string" && insuranceFundRaw.trim()
-      ? Number(insuranceFundRaw)
-      : NaN;
-  if (!Number.isFinite(insuranceFund) || insuranceFund < 0) {
-    throw new Error(`Falcon invalid usdf.insurance_fund: ${String(insuranceFundRaw)}`);
-  }
   const supplyUsd =
     typeof payload.usdf?.supply === "string"
       ? Number(payload.usdf.supply)

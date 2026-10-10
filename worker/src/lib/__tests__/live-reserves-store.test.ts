@@ -20,6 +20,45 @@ import { decodeLiveReserveRedemptionTelemetry } from "@shared/types/live-reserve
 
 import { RESERVE_FEED_REVIEWS } from "../reserve-feed-reviews";
 describe("live-reserves-store", () => {
+  it.each([
+    ["not-json", 1], ["{}", 0], ["null", 0], ['[{"code":"material-unknown-exposure","effect":"degraded"}]', 1],
+    ['[{"code":"gap","message":"gap","severity":"broken"}]', 1], ["[]", 1],
+    ['[{"code":"gap","message":"gap","severity":"info"}]', 0],
+  ])("quarantines corrupt warning payload %s while retaining healthy peers", async (warnings, warning_count) => {
+    const now = 1_800_000_000;
+    const compositions = ["iusd-infinifi", "fdusd-first-digital"].map((id) => reserveCompositionRow({
+      stablecoin_id: id, fetched_at: now - 60, attempt_id: "observed", metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
+      adapter_source_model: "dynamic-mix", adapter_evidence_class: "independent", warnings: id === "iusd-infinifi" ? warnings : "[]",
+      warning_count: id === "iusd-infinifi" ? warning_count : 0,
+    }));
+    const states = ["iusd-infinifi", "fdusd-first-digital"].map((id) => reserveSyncRow({
+      stablecoin_id: id, last_success_at: now - 60, last_attempted_at: now - 60,
+      last_success_attempt_id: "observed", last_attempt_id: "observed",
+    }));
+    const db = mockD1([
+      { match: "FROM reserve_composition", rows: compositions }, { match: "FROM reserve_sync_state", rows: states },
+    ]);
+    const map = await loadFreshIndependentLiveReserveMap(db, now);
+    expect([...map.keys()]).toEqual(["fdusd-first-digital"]);
+  });
+
+  it.each([null, "[]", '[{"code":"note","message":"legacy note","severity":"info"}]', "not-json"])(
+    "retains supported legacy warnings but quarantines corrupt state payload %s", async (warnings) => {
+      const now = 1_800_000_000;
+      const valid = warnings !== "not-json";
+      const count = warnings == null || warnings === "[]" ? 0 : 1;
+      const db = mockD1([
+        { match: "FROM reserve_composition", rows: [reserveCompositionRow({
+          fetched_at: now - 60, warnings: null, warning_count: null, metadata: "{}",
+        })] },
+        { match: "FROM reserve_sync_state", rows: [reserveSyncRow({
+          last_success_at: now - 60, last_attempted_at: now - 60, warnings, warning_count: count,
+          metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
+        })] },
+      ]);
+      expect((await loadFreshIndependentLiveReserveMap(db, now)).has("iusd-infinifi")).toBe(valid);
+    },
+  );
   it("conserves raw evidence and removes each acknowledged feed's actual authoritative contribution", async () => {
     const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "mtbill-midas")!;
     const now = review.reviewedAt + 1;
@@ -511,7 +550,7 @@ describe("live-reserves-store", () => {
   });
 
 
-  it("ignores malformed warning and metadata JSON in sync state rows", async () => {
+  it("quarantines legacy snapshots whose selected warning payload is malformed", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = makeReservesDb({
       composition: {
@@ -529,14 +568,14 @@ describe("live-reserves-store", () => {
     const result = await resolveReserveResult(db, "iusd-infinifi", now + 60);
 
     expect(result).toMatchObject({
-      mode: "live",
+      mode: "curated-fallback",
       sync: {
-        status: "ok",
+        status: "degraded",
         bootstrap: false,
         stale: false,
       },
     });
-    expect(result?.sync).not.toHaveProperty("warnings");
+    expect(result?.sync?.warnings).toHaveLength(1);
   });
 
   it("uses only independent ok-status live reserve snapshots for scoring passthrough", async () => {

@@ -1,4 +1,5 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { ReserveAlertObservationsSchema } from "@shared/types/status/telegram";
 import { WORKER_PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   alertSafetyIdentitiesAreComparable,
@@ -121,6 +122,7 @@ export interface DispatchSourceData {
   reserveCache: CachedValue;
   /** Dispatch-owned baseline: the drift id-set the dispatcher last acted on. */
   reserveDispatchedCache: CachedValue;
+  reserveObservedCache?: CachedValue;
 }
 
 export interface DispatchSnapshotState {
@@ -145,6 +147,7 @@ export interface DispatchSnapshotState {
      * prior baseline to preserve.
      */
     reserveDispatched: string[] | null;
+    reserveObserved?: Record<string, number> | null;
   };
   /** Drift id-set the dispatcher last acted on (prior baseline). */
   previousReserveDriftIds: string[];
@@ -182,6 +185,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     launchCache,
     reserveCache,
     reserveDispatchedCache,
+    reserveObservedCache,
   ] = await Promise.all([
     loadDewsRows(db, snoozeNowSec),
     db
@@ -204,6 +208,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     getCache(db, SNAPSHOT_KEYS.launch),
     getCache(db, SNAPSHOT_KEYS.reserve),
     getCache(db, SNAPSHOT_KEYS.reserveDispatched),
+    getCache(db, SNAPSHOT_KEYS.reserveObserved),
   ]);
 
   return {
@@ -219,6 +224,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     launchCache,
     reserveCache,
     reserveDispatchedCache,
+    reserveObservedCache,
   };
 }
 
@@ -310,6 +316,11 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
       ? (reserveSourceAssessment.envelope?.driftIds ?? null)
       : null;
   const previousReserveDispatchedIds = parseSnapshotIds(sourceData.reserveDispatchedCache);
+  const parsedObservedBaseline = ReserveAlertObservationsSchema.safeParse(
+    parseSnapshotMap<Record<string, number>>(sourceData.reserveObservedCache ?? null),
+  );
+  const previousObserved = parsedObservedBaseline.success ? parsedObservedBaseline.data : {};
+  const currentObserved = reserveSourceAssessment.envelope?.observedSince ?? {};
 
   const mustSeedSnapshots =
     isSnapshotMissingOrStale(sourceData.dewsCache, nowSec) ||
@@ -343,14 +354,21 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
         ? previousLaunchIds
         : WORKER_PRE_LAUNCH_STABLECOINS.map((coin) => coin.id),
     reserveDispatched,
+    reserveObserved: parsedCurrentReserveDriftIds == null ||
+      (mustSeedSnapshots && !reserveNeedsColdSeed && previousReserveDispatchedIds != null)
+      ? (parsedObservedBaseline.success ? previousObserved : null)
+      : currentObserved,
   };
-  const previousReserveDriftIds = reserveNeedsColdSeed
-    ? parsedCurrentReserveDriftIds
-    : parsedCurrentReserveDriftIds == null
-      ? (previousReserveDispatchedIds ?? [])
-      : (previousReserveDispatchedIds ?? parsedCurrentReserveDriftIds);
   const currentReserveDriftIds =
     parsedCurrentReserveDriftIds == null ? (previousReserveDispatchedIds ?? []) : parsedCurrentReserveDriftIds;
+  // An unavailable member has no comparable observation. Returning members are
+  // cold-seeded by their continuity epoch, including gaps dispatch never saw.
+  const previousReserveDriftIds = parsedCurrentReserveDriftIds == null
+    ? (previousReserveDispatchedIds ?? [])
+    : currentReserveDriftIds.filter((id) => reserveNeedsColdSeed ||
+      previousReserveDispatchedIds == null ||
+      previousObserved[id] !== currentObserved[id] ||
+      previousReserveDispatchedIds.includes(id));
 
   return {
     nowSec,

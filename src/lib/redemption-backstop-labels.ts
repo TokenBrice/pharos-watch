@@ -42,7 +42,7 @@ export const REDEMPTION_SETTLEMENT_LABELS: Record<RedemptionSettlementModel, str
   atomic: "Atomic",
   immediate: "Immediate",
   "same-day": "Same day",
-  days: "1-7 days",
+  days: "Multi-day",
   queued: "Queued",
 };
 
