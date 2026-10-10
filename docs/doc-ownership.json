@@ -48,8 +48,6 @@
         "shared/data/stablecoins/canonical-order.json",
         "shared/data/stablecoins/listing-decisions.json",
         "shared/data/stablecoins/domains/**",
-        "shared/data/stablecoins/compliance/**",
-        "shared/data/stablecoins/reserves/**",
         "shared/lib/stablecoins/**",
         "shared/lib/stablecoin-id-registry.ts",
         "shared/lib/classification.ts",
@@ -160,7 +158,6 @@
         "src/components/stablecoin-detail/reserve*",
         "src/components/status/reserve-sync-health.tsx",
         "src/app/stablecoin/*/detail-shared-modules.tsx",
-        "src/components/collateralization-card.tsx",
         "src/app/dependency-map/**",
         "src/components/contagion-graph*",
         "src/components/contagion-graph/**",
@@ -303,7 +300,6 @@
         "src/components/mobile-utility-dock.tsx",
         "worker/src/api/feedback.ts",
         "worker/src/api/feedback/**",
-        "shared/lib/feedback*",
         "docs/feedback-pipeline.md"
       ],
       "docs": [{ "path": "docs/feedback-pipeline.md", "anchor": "api-endpoint" }],
@@ -958,7 +954,6 @@
       "sources": [
         "worker/src/**",
         "worker/scripts/**",
-        "worker/*.ts",
         "worker/AGENTS.md",
         "worker/tsconfig.json",
         "worker/wrangler.toml",

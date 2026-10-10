@@ -9,7 +9,7 @@ Applies to `src/app/` route entrypoints, layouts, metadata, and route-local UI.
 
 ## Invariants
 
-- Preserve static export (`next.config.ts`); `npm run build` is the only full render proof.
+- Preserve static export (`next.config.ts`); full render proof requires a build/export (`npm run build`), not typechecking alone.
 - Keep server components by default; introduce a client boundary only for browser state, effects, or interaction.
 - Keep public-route membership and crawl policy aligned across `src/lib/public-route-inventory.ts`, `src/app/sitemap.ts`, `src/app/robots.ts`, and `public/_headers`.
 - Next.js 16 differs from prior versions: read the matched App Router guide in `node_modules/next/dist/docs/` before using framework APIs.

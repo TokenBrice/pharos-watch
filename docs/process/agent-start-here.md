@@ -54,7 +54,7 @@ Then:
 
 A path with no matching mapping emits a `Missing documentation owner` warning, including planned paths passed with `--new-file`; that flag suppresses only the filesystem-existence warning. A generic runtime match is context, not proof that every domain contract was found. For stale producer output, use the [symptom selector](../README.md#stale-output-diagnosis) and the routed observation background rather than treating scheduling guidance as an incident runbook.
 
-An unmapped production path makes `check:focused` fail with machine-readable `routing-incomplete`, including in plan-only mode. A zero-plan is not verification. A mapped deliberate no-check plan is reported separately as `intentional-no-check`; neither focused result is final readiness proof. Missing declared `testOwnership` tests separately fail PR executable-test validation.
+Any unmapped path makes `check:focused` fail with machine-readable `routing-incomplete`, including in plan-only mode. A zero-plan is not verification. A mapped deliberate no-check plan is reported separately as `intentional-no-check`; neither focused result is final readiness proof. Missing declared `testOwnership` tests separately fail PR executable-test validation.
 
 Search by source path or product term:
 
@@ -87,7 +87,7 @@ Use [Testing: Smallest adequate check per area](../testing.md#smallest-adequate-
 
 Before every authorized push, first or replacement, follow the canonical ordered [Pre-push readiness](../testing.md#pre-push-readiness) sequence. Use mise shims reading `.nvmrc`: first enable `mise settings add idiomatic_version_file_enable_tools node`, then `mise install`; `check:pr` enforces exact `.nvmrc` Node and npm 11.x. Refresh the target refs and finish source/integration commits, run full `npm run check:generated-artifacts` convergence, then full plain `npm run check:pr` on the final committed state with no skip/filter/plan-only flags. The proof is a fresh passing `.tmp/pr-check-receipts/<HEAD>.json`; repeat readiness after subsequent edits, commits, or integration. GitHub Actions remains the authoritative release gate.
 
-Opt into `npm run check:pr -- --ci-parity` after a remote failure the local gate did not reproduce, and for lockfile/setup/security-policy changes. If CI fails, collect every failed leaf, reproduce narrowly, fix all causal defects in one revision, rerun full readiness, and push once. Do not treat a focused rerun as replacement-push authorization.
+Opt into `npm run check:pr -- --ci-parity` after generated convergence and before final plain readiness when a remote failure was not reproduced locally, or for lockfile/setup/security-policy changes. If CI fails, collect every failed leaf, reproduce narrowly, fix all causal defects in one revision, rerun full readiness, and push once. Do not treat a focused rerun as replacement-push authorization.
 
 Passing deployment proves activation, not runtime health. Cron, scheduler, ingestion, migration, and other operationally risky changes also require the first relevant production execution or observation before being called operationally complete.
 

@@ -12,7 +12,7 @@ Applies to curated and generated Safety Score V9 evidence under `shared/data/saf
 ## Invariants
 
 - Treat evidence JSON as reviewed curation; never invent, extrapolate, or date-bump facts to satisfy schema or remove a gap.
-- Publication fails closed: missing, malformed, stale, or incompatible score-bearing input holds the last accepted ratings.
+- Global publication-gate failures hold the last accepted ratings; asset-local failures may publish as quarantined pipeline gaps within the partial-publication allowance. `worker/src/lib/safety-score-v9/publication-assessment.ts` owns that distinction.
 - Never hand-edit `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts`; artifact `safety-score-v9-evaluation-build` is registry-generated and checked.
 - Methodology version changes follow [ADR-3](../../../docs/architecture.md#architectural-decision-records) across every listed target.
 - Protocol API journals and reviewed weekly/manual automation are permanent non-publishing evidence tools, not automatic overlay importers. Direct adoption remains blocked. Strict replay requires original-byte readback: canonical raw-byte V2 or the one path/hash-pinned normalized-only V1; summary recognition and unavailable bodies are not verification success.

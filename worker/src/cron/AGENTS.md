@@ -17,7 +17,7 @@ Applies to worker/src/cron and its scheduled dispatch wiring.
 
 ## Entrypoints & Generation
 
-- `worker/wrangler.toml` owns deployed expressions; `shared/lib/cron-jobs.ts` owns logical schedules/capacity and `shared/lib/scheduled-runner-registry.ts` owns slot topology.
+- `worker/wrangler.toml` and `worker/wrangler.heavy.toml` own deployed expressions; `shared/lib/cron-jobs.ts` owns logical schedules/capacity and `shared/lib/scheduled-runner-registry.ts` owns slot topology and Worker ownership.
 - `worker/src/handlers/scheduled.ts` dispatches slots; `worker/src/lib/scheduled-slot-fence.ts` and `worker/src/lib/scheduled-slot-reconciliation.ts` own fencing and cleanup.
 
 ## Tests

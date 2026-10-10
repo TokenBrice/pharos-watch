@@ -10,7 +10,7 @@ Applies to worker/migrations and its D1 schema lineage.
 
 ## Invariants
 
-- `worker/migrations/0000_baseline.sql` is fresh-database-only; existing databases continue through the active tail recorded in the manifest.
+- `0000_baseline.sql` is fresh-database-only. Before applying the squashed tree to an existing database, verify its exact baseline filename is already in the migration ledger; otherwise stop for the adoption plan in `docs/process/d1-baseline-squash-plan.md#preconditions`.
 - Never reuse a historical sequence or filename, including entries absorbed into the baseline; `check:migrations` enforces tree/manifest inventory but review guards renumbering.
 - Migrations run before the new Worker is live, so additions stay backward-compatible; destructive cleanup requires a separate coordinated rollout.
 
