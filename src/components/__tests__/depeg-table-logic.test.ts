@@ -9,6 +9,7 @@ import type { PegSummaryCoin, StressSignalEntry } from "@shared/types";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeDews } from "./depeg.test-support";
+import { NUMERIC_INPUT_STATES } from "@shared/test-utils/boundary-contract-vectors.test-support";
 
 
 function makeRow(
@@ -25,6 +26,9 @@ const sort = (key: DepegTableSortKey, direction: "asc" | "desc" = "desc"): Table
   key,
   direction,
 });
+const observedValues = NUMERIC_INPUT_STATES.flatMap(({ state, value }) =>
+  state === "zero" || state === "positive" ? [value] : [],
+);
 
 describe("rowAccentClass", () => {
   it("returns red border for active depeg", () => {
@@ -125,11 +129,13 @@ describe("compareDepegTrackerRows — pegScore", () => {
     expect(result).toBeGreaterThan(0); // low ranks first
   });
 
-  it("treats null pegScore as -1 (worst)", () => {
-    const withScore = makeRow({ pegScore: 50 });
-    const nullScore = makeRow({ pegScore: null });
-    const result = compareDepegTrackerRows(withScore, nullScore, sort("pegScore", "desc"));
-    expect(result).toBeLessThan(0); // withScore ranks first
+  it.each(["asc", "desc"] as const)("sorts unknown peg health last in %s order, after observed zero and nonzero scores", (direction) => {
+    const unknown = makeRow({ pegScore: null });
+    for (const value of observedValues) {
+      const observed = makeRow({ pegScore: value });
+      expect(compareDepegTrackerRows(unknown, observed, sort("pegScore", direction))).toBeGreaterThan(0);
+      expect(compareDepegTrackerRows(observed, unknown, sort("pegScore", direction))).toBeLessThan(0);
+    }
   });
 });
 
@@ -141,11 +147,13 @@ describe("compareDepegTrackerRows — dewsScore", () => {
     expect(result).toBeLessThan(0);
   });
 
-  it("treats null dews as -1", () => {
-    const hasScore = makeRow({}, makeDews({ score: 50 }));
-    const noDews = makeRow({}, null);
-    const result = compareDepegTrackerRows(hasScore, noDews, sort("dewsScore", "desc"));
-    expect(result).toBeLessThan(0);
+  it.each(["asc", "desc"] as const)("sorts unknown DEWS last in %s order, after observed zero and nonzero scores", (direction) => {
+    const unknown = makeRow({}, null);
+    for (const value of observedValues) {
+      const observed = makeRow({}, makeDews({ score: value }));
+      expect(compareDepegTrackerRows(unknown, observed, sort("dewsScore", direction))).toBeGreaterThan(0);
+      expect(compareDepegTrackerRows(observed, unknown, sort("dewsScore", direction))).toBeLessThan(0);
+    }
   });
 });
 
@@ -157,11 +165,13 @@ describe("compareDepegTrackerRows — currentDeviationBps", () => {
     expect(result).toBeLessThan(0); // |big| = 200 > |small| = 50
   });
 
-  it("treats null deviation as 0", () => {
-    const hasDeviation = makeRow({ currentDeviationBps: 100 });
-    const nullDeviation = makeRow({ currentDeviationBps: null });
-    const result = compareDepegTrackerRows(hasDeviation, nullDeviation, sort("currentDeviationBps", "desc"));
-    expect(result).toBeLessThan(0);
+  it.each(["asc", "desc"] as const)("sorts unknown deviation last in %s order, after observed zero and nonzero deviations", (direction) => {
+    const unknown = makeRow({ currentDeviationBps: null });
+    for (const value of [...observedValues, -20]) {
+      const observed = makeRow({ currentDeviationBps: value });
+      expect(compareDepegTrackerRows(unknown, observed, sort("currentDeviationBps", direction))).toBeGreaterThan(0);
+      expect(compareDepegTrackerRows(observed, unknown, sort("currentDeviationBps", direction))).toBeLessThan(0);
+    }
   });
 });
 
@@ -196,6 +206,14 @@ describe("compareDepegTrackerRows — worstDeviationBps", () => {
     const mild = makeRow({ worstDeviationBps: 100 });
     const result = compareDepegTrackerRows(worst, mild, sort("worstDeviationBps", "desc"));
     expect(result).toBeLessThan(0);
+  });
+
+  it.each(["asc", "desc"] as const)("sorts unknown worst deviation last in %s order", (direction) => {
+    const unknown = makeRow({ worstDeviationBps: null });
+    for (const value of [...observedValues, -100]) {
+      const observed = makeRow({ worstDeviationBps: value });
+      expect(compareDepegTrackerRows(unknown, observed, sort("worstDeviationBps", direction))).toBeGreaterThan(0);
+    }
   });
 });
 

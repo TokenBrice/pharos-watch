@@ -32,7 +32,6 @@ export type FreezeWatchPageFilters = {
   eventTypeFilter: BlacklistEventType | "all";
   sortKey: BlacklistSortKey;
   sortDirection: BlacklistSortDirection;
-  page: number;
   searchQuery: string;
   statusBucket: BlacklistStatusBucketKey | null;
 };
@@ -44,7 +43,6 @@ export function parseFreezeWatchPageFilters(search: string): FreezeWatchPageFilt
   const rawEventType = params.get("event") ?? "all";
   const rawSortBy = params.get("sortBy") ?? "date";
   const rawSortDirection = params.get("sortDirection") ?? "desc";
-  const rawPage = params.get("page");
   const rawQuery = params.get("q") ?? "";
   const rawStatusBucket = params.get("status");
   const normalizedStablecoin = rawStablecoin === "all" ? "all" : rawStablecoin.toUpperCase();
@@ -58,8 +56,6 @@ export function parseFreezeWatchPageFilters(search: string): FreezeWatchPageFilt
   const sortDirection = (
     VALID_SORT_DIRECTIONS.has(rawSortDirection as BlacklistSortDirection) ? rawSortDirection : "desc"
   ) as BlacklistSortDirection;
-  const parsed = Number(rawPage);
-  const page = rawPage && Number.isFinite(parsed) && parsed >= 1 ? Math.max(1, Math.floor(parsed)) : 1;
   const searchQuery = rawQuery === "all" ? "" : rawQuery;
   const statusBucket = VALID_STATUS_BUCKETS.has(rawStatusBucket as BlacklistStatusBucketKey)
     ? (rawStatusBucket as BlacklistStatusBucketKey)
@@ -71,7 +67,6 @@ export function parseFreezeWatchPageFilters(search: string): FreezeWatchPageFilt
     eventTypeFilter,
     sortKey,
     sortDirection,
-    page,
     searchQuery,
     statusBucket,
   };
@@ -91,12 +86,14 @@ export function useFreezeWatchPageController() {
     isLoading: supportStablecoinsLoading,
     error: supportStablecoinsError,
     refetch: refetchStablecoins,
+    meta: stablecoinsMeta,
   } = useStablecoins();
   const {
     data: reportCardsData,
     isLoading: supportReportCardsLoading,
     error: supportReportCardsError,
     refetch: refetchReportCards,
+    meta: reportCardsMeta,
   } = useReportCardsV9();
   const { searchParams, replaceParams } = useUrlFilters();
   const parsedFilters = useMemo(() => parseFreezeWatchPageFilters(searchParams.toString()), [searchParams]);
@@ -113,7 +110,7 @@ export function useFreezeWatchPageController() {
     [stablecoinData],
   );
 
-  const { stablecoinFilter, chainFilter, eventTypeFilter, sortKey, sortDirection, page, searchQuery, statusBucket } =
+  const { stablecoinFilter, chainFilter, eventTypeFilter, sortKey, sortDirection, searchQuery, statusBucket } =
     parsedFilters;
   const drilldownRef = useRef<HTMLDivElement>(null);
   const previousStatusBucketRef = useRef<BlacklistStatusBucketKey | null>(statusBucket);
@@ -137,7 +134,20 @@ export function useFreezeWatchPageController() {
     [summary?.chains, chainFilter],
   );
   const pageSize = PAGE_SIZE;
-  const offset = (page - 1) * pageSize;
+  const ledgerKey = JSON.stringify([stablecoinFilter, selectedChainName, eventTypeFilter, searchQuery, sortKey, sortDirection]);
+  const [navigation, setNavigation] = useState<{ key: string; cursors: Array<string | undefined>; index: number }>(
+    () => ({ key: ledgerKey, cursors: [undefined], index: 0 }),
+  );
+  const activeNavigation = useMemo(
+    () => navigation.key === ledgerKey
+      ? navigation
+      : { key: ledgerKey, cursors: [undefined] as Array<string | undefined>, index: 0 },
+    [navigation, ledgerKey],
+  );
+  const page = activeNavigation.index + 1;
+  useEffect(() => {
+    if (navigation.key !== ledgerKey) setNavigation({ key: ledgerKey, cursors: [undefined], index: 0 });
+  }, [ledgerKey, navigation.key]);
   const {
     data: pageData,
     isLoading: pageQueryLoading,
@@ -153,7 +163,7 @@ export function useFreezeWatchPageController() {
     sortBy: sortKey,
     sortDirection,
     limit: pageSize,
-    offset,
+    cursor: activeNavigation.cursors[activeNavigation.index],
     includeTotal: true,
   });
   const error = summaryError ?? pageError ?? supportStablecoinsError ?? supportReportCardsError;
@@ -183,8 +193,7 @@ export function useFreezeWatchPageController() {
         if (next.sortDirection !== "desc") params.set("sortDirection", next.sortDirection);
         else params.delete("sortDirection");
 
-        if (next.page > 1) params.set("page", String(next.page));
-        else params.delete("page");
+        params.delete("page");
 
         const query = next.searchQuery.trim();
         if (query) params.set("q", query);
@@ -207,7 +216,7 @@ export function useFreezeWatchPageController() {
   const handleStablecoinChange = useCallback(
     (v: BlacklistStablecoin | "all") => {
       trackEvent("filter_applied", { page: "freezewatch", filter_type: "stablecoin", filter_value: v });
-      updateFilters({ stablecoinFilter: v, page: 1 });
+      updateFilters({ stablecoinFilter: v });
     },
     [updateFilters],
   );
@@ -215,7 +224,7 @@ export function useFreezeWatchPageController() {
   const handleChainChange = useCallback(
     (v: string) => {
       trackEvent("filter_applied", { page: "freezewatch", filter_type: "chain", filter_value: v });
-      updateFilters({ chainFilter: v, page: 1 });
+      updateFilters({ chainFilter: v });
     },
     [updateFilters],
   );
@@ -223,7 +232,7 @@ export function useFreezeWatchPageController() {
   const handleEventTypeChange = useCallback(
     (v: BlacklistEventType | "all") => {
       trackEvent("filter_applied", { page: "freezewatch", filter_type: "event_type", filter_value: v });
-      updateFilters({ eventTypeFilter: v, page: 1 });
+      updateFilters({ eventTypeFilter: v });
     },
     [updateFilters],
   );
@@ -234,7 +243,7 @@ export function useFreezeWatchPageController() {
       if (searchSyncTimer.current) clearTimeout(searchSyncTimer.current);
       searchSyncTimer.current = setTimeout(() => {
         trackSearch("freezewatch", v.length);
-        updateFilters({ searchQuery: v, page: 1 });
+        updateFilters({ searchQuery: v });
       }, 300);
     },
     [updateFilters],
@@ -246,7 +255,7 @@ export function useFreezeWatchPageController() {
         page: "freezewatch",
         sort_by: `${nextSortKey}:${nextSortDirection}`,
       });
-      updateFilters({ sortKey: nextSortKey, sortDirection: nextSortDirection, page: 1 });
+      updateFilters({ sortKey: nextSortKey, sortDirection: nextSortDirection });
     },
     [updateFilters],
   );
@@ -265,25 +274,28 @@ export function useFreezeWatchPageController() {
 
   const total = pageData?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const clampedPage = Math.min(page, totalPages);
-  const pageIsOutOfRange = pageData != null && page > totalPages;
-  const pageLoading = pageQueryLoading || pageIsOutOfRange;
-  const events = pageIsOutOfRange ? [] : (pageData?.events ?? []);
-  useEffect(() => {
-    if (pageIsOutOfRange) updateFilters({ page: clampedPage });
-  }, [clampedPage, pageIsOutOfRange, updateFilters]);
-  const rangeStart = total === 0 ? 0 : (clampedPage - 1) * PAGE_SIZE + 1;
-  const rangeEnd = total === 0 ? 0 : Math.min(clampedPage * PAGE_SIZE, total);
+  const clampedPage = page;
+  const pageLoading = pageQueryLoading;
+  const events = pageData?.events ?? [];
+  const rangeStart = events.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = events.length === 0 ? 0 : (page - 1) * PAGE_SIZE + events.length;
+  const canPreviousPage = activeNavigation.index > 0 && !pageLoading;
+  const canNextPage = !pageLoading && !!pageData?.nextCursor;
 
   const handlePreviousPage = useCallback(() => {
-    const nextPage = Math.max(1, clampedPage - 1);
-    updateFilters({ page: nextPage });
-  }, [clampedPage, updateFilters]);
+    if (!canPreviousPage) return;
+    setNavigation({ ...activeNavigation, index: activeNavigation.index - 1 });
+  }, [activeNavigation, canPreviousPage]);
 
   const handleNextPage = useCallback(() => {
-    const nextPage = Math.min(totalPages, clampedPage + 1);
-    updateFilters({ page: nextPage });
-  }, [clampedPage, totalPages, updateFilters]);
+    if (!canNextPage || !pageData?.nextCursor) return;
+    const nextIndex = activeNavigation.index + 1;
+    setNavigation({
+      key: ledgerKey,
+      cursors: [...activeNavigation.cursors.slice(0, nextIndex), pageData.nextCursor],
+      index: nextIndex,
+    });
+  }, [activeNavigation, canNextPage, ledgerKey, pageData?.nextCursor]);
 
   const refetchSupport = useCallback(() => {
     void refetchStablecoins();
@@ -297,6 +309,7 @@ export function useFreezeWatchPageController() {
     error,
     dataUpdatedAt,
     freshnessMeta,
+    sourceGenerations: { stablecoins: stablecoinsMeta?.updatedAt, reportCards: reportCardsMeta?.updatedAt },
     stablecoins: stablecoinData?.peggedAssets as StablecoinData[] | undefined,
     stablecoinFxFallbackRates: stablecoinData?.fxFallbackRates,
     stablecoinsError: supportStablecoinsError,
@@ -332,6 +345,8 @@ export function useFreezeWatchPageController() {
     clampedPage,
     total,
     totalPages,
+    canPreviousPage,
+    canNextPage,
     rangeStart,
     rangeEnd,
   };

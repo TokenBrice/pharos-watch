@@ -459,41 +459,42 @@ describe("StablecoinDepegResolverRows", () => {
     );
 
     expect(
-      screen.getByText("Resolver snapshot is stale; duration estimates are suppressed until the next refresh."),
+      screen.getByText(/live overlay is stale.*frozen forecasts.*remain unchanged/i),
     ).toBeTruthy();
     expect(screen.getByText("At Risk")).toBeTruthy();
   });
 
-  it("renders the unsuppressed duration alongside the stale-snapshot warning", () => {
-    // audit: s077-src/C1 — stale-duration suppression ownership is disputed
-    // (upstream payload invariant vs UI defect); pins the current forwarding behavior.
-    const sourceRow = makeSourceRow({
-      duration: {
-        suppressed: false,
-        suppressedReason: null,
-        stratum: "below · moderate · USD",
-        medianSec: 7200,
-        iqrSec: [3600, 10_800],
-        ageStatus: "ordinary",
-        horizons: [],
-      },
-    });
-    render(
-      <StablecoinDepegResolverRows
-        stablecoinId="lusd-liquity"
-        data={response({
-          _meta: { ...meta, degraded: true, degradedReason: "stale-cache" },
-          rows: [makePredictionRow(sourceRow)],
-        })}
-      />,
-    );
+  it.each(["resolver list", "stablecoin detail"] as const)(
+    "explains stale live facts while retaining the frozen duration on the %s surface",
+    (surface) => {
+      const sourceRow = makeSourceRow({
+        duration: {
+          suppressed: false,
+          suppressedReason: null,
+          stratum: "below · moderate · USD",
+          medianSec: 7200,
+          iqrSec: [3600, 10_800],
+          ageStatus: "ordinary",
+          horizons: [],
+        },
+      });
+      const predictionRow = makePredictionRow(sourceRow, { stale: true, degradedReason: "stale-cache" });
+      const data = response({
+        _meta: { ...meta, degraded: true, degradedReason: "stale-cache" },
+        rows: [predictionRow],
+      });
+      render(surface === "resolver list"
+        ? <DepegResolverModule data={data} />
+        : <StablecoinDepegResolverRows stablecoinId="lusd-liquity" data={data} />);
 
-    expect(
-      screen.getByText("Resolver snapshot is stale; duration estimates are suppressed until the next refresh."),
-    ).toBeTruthy();
-    expect(screen.getByText("anchored duration")).toBeTruthy();
-    expect(screen.getByText("~2h (1h-3h)")).toBeTruthy();
-  });
+      expect(
+        screen.getByText(/live overlay is stale.*frozen forecasts.*remain unchanged/i),
+      ).toBeTruthy();
+      expect(screen.getByText("anchored duration")).toBeTruthy();
+      expect(screen.getByText("~2h (1h-3h)")).toBeTruthy();
+      expect(screen.queryByText(/duration estimates are suppressed/i)).toBeNull();
+    },
+  );
 
   it("stays hidden for degraded snapshots whose reason is not stale-cache", () => {
     render(

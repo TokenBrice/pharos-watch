@@ -12,12 +12,17 @@ export interface ExportPreamble {
   sourceUrl: string;
   /** Methodology label, e.g. "safety-score v7.25". */
   methodologyLabel: string;
+  /** Participating upstream generations; null explicitly preserves unknown source time. */
+  sourceGenerations?: Record<string, string | null>;
 }
 
 const SITE_LABEL = "Pharos pharos.watch";
 
 function preambleLine(p: ExportPreamble): string {
-  return `${SITE_LABEL} | Endpoint: ${p.endpoint} | As of: ${p.asOfISO} | URL: ${p.sourceUrl} | Methodology: ${p.methodologyLabel}`;
+  const generations = p.sourceGenerations
+    ? ` | Sources: ${Object.entries(p.sourceGenerations).map(([source, generation]) => `${source}=${generation ?? "unknown"}`).join("; ")}`
+    : "";
+  return `${SITE_LABEL} | Endpoint: ${p.endpoint} | As of: ${p.asOfISO} | URL: ${p.sourceUrl} | Methodology: ${p.methodologyLabel}${generations}`;
 }
 
 /** CSV preamble: a single `# `-prefixed comment line; paste-into-Excel safe. */
@@ -33,6 +38,7 @@ export function formatPreambleNdjson(p: ExportPreamble): string {
       asOfISO: p.asOfISO,
       sourceUrl: p.sourceUrl,
       methodologyLabel: p.methodologyLabel,
+      ...(p.sourceGenerations ? { sourceGenerations: p.sourceGenerations } : {}),
     },
   });
 }

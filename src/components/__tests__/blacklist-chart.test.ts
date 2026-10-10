@@ -106,14 +106,15 @@ describe("getBlacklistTooltipSummary", () => {
     expect(screen.getByRole("alert").textContent).toContain(
       "Freeze ledger chart is temporarily unavailable. No status claim is being made.",
     );
-    expect(screen.queryByText("No freeze events recorded yet.")).toBeNull();
+    expect(screen.queryByText("No valued freeze-ledger snapshots to chart.")).toBeNull();
     expect(quarterlyChartMock).not.toHaveBeenCalled();
   });
 
-  it("keeps the empty-ledger copy for a successful empty response", () => {
+  it("scopes empty valued snapshots without claiming empty event history", () => {
     render(createElement(BlacklistChart, { chart: [], isLoading: false }));
 
-    expect(screen.getByText("No freeze events recorded yet.")).toBeTruthy();
+    expect(screen.getByText("No valued freeze-ledger snapshots to chart.")).toBeTruthy();
+    expect(screen.queryByText(/No freeze events/)).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });

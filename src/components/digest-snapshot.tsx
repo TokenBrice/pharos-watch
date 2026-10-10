@@ -259,7 +259,7 @@ export function DigestSnapshot({ date }: { date: string }) {
     return <SnapshotUnavailable />;
   }
 
-  const { inputData, prevInputData, depegEvents, blacklistEvents } = data;
+  const { inputData, prevInputData, depegEvents, blacklistEvents, blacklistSummary } = data;
   const prev = prevInputData ?? undefined;
   const totalMcapUsd = inputData.totalMcapUsd ?? null;
   const mcap7dDelta = inputData.mcap7dDelta ?? null;
@@ -409,14 +409,21 @@ export function DigestSnapshot({ date }: { date: string }) {
               icon={<ShieldBan className="h-4 w-4" aria-hidden="true" />}
             >
               <p className="text-sm text-foreground/90">
-                <span className="font-medium">{blacklistEvents.length}</span>{" "}
-                event{blacklistEvents.length !== 1 ? "s" : ""} on this day
-                {(() => {
-                  const total = blacklistEvents.reduce((sum, e) => sum + (e.amountUsdAtEvent ?? 0), 0);
-                  return total > 0 ? (
-                    <span className="text-muted-foreground"> totaling {formatCurrency(total)}</span>
-                  ) : null;
-                })()}
+                {blacklistSummary ? (
+                  <>
+                    <span className="font-medium">{blacklistSummary.totalEvents}</span>{" "}
+                    event{blacklistSummary.totalEvents !== 1 ? "s" : ""} on this day
+                    <span className="text-muted-foreground">
+                      {blacklistSummary.knownAmountUsd === null
+                        ? "; USD valuation unavailable"
+                        : blacklistSummary.unavailableAmountEvents > 0
+                          ? `; known subtotal ${formatCurrency(blacklistSummary.knownAmountUsd)} (${blacklistSummary.unavailableAmountEvents} unvalued)`
+                          : ` totaling ${formatCurrency(blacklistSummary.knownAmountUsd)}`}
+                    </span>
+                  </>
+                ) : (
+                  <span>Daily event count and valuation unavailable</span>
+                )}
               </p>
               <ul className="space-y-0.5">
                 {blacklistEvents.slice(0, 5).map((e) => (
@@ -431,11 +438,10 @@ export function DigestSnapshot({ date }: { date: string }) {
                   </li>
                 ))}
               </ul>
-              {blacklistEvents.length > 5 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  and {blacklistEvents.length - 5} more
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Showing latest {Math.min(5, blacklistEvents.length)} of{" "}
+                {blacklistSummary?.totalEvents ?? "unknown total"} events
+              </p>
             </SnapshotCard>
           </div>
         )}

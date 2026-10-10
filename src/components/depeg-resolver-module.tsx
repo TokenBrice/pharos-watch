@@ -130,7 +130,7 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
         <>
           {showStaleRows ? (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
-              Resolver snapshot is stale; duration estimates are suppressed until the next refresh.
+              Resolver live overlay is stale; frozen forecasts, including anchored duration estimates, remain unchanged.
             </p>
           ) : null}
           <div className="pharos-stagger-entrance grid grid-cols-1 items-start gap-4 lg:grid-cols-2">

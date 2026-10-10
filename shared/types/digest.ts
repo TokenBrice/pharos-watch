@@ -901,5 +901,11 @@ export const DigestSnapshotResponseSchema = z.object({
   prevInputData: DigestSnapshotInputDataSchema.nullable(),
   depegEvents: z.array(DigestSnapshotDepegEventSchema),
   blacklistEvents: z.array(DigestSnapshotBlacklistEventSchema),
+  blacklistSummary: z.object({
+    totalEvents: z.number().int().nonnegative(),
+    knownAmountUsd: z.number().nullable(),
+    valuedEvents: z.number().int().nonnegative(),
+    unavailableAmountEvents: z.number().int().nonnegative(),
+  }).optional().describe("Full unsuppressed UTC-day cohort; blacklistEvents is only the latest 50-row sample. Missing summary means legacy unknown totals/valuation."),
 });
 export type DigestSnapshotResponse = z.infer<typeof DigestSnapshotResponseSchema>;

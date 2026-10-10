@@ -335,8 +335,9 @@ The page must preserve these distinctions:
 - non-USD current-balance observations may use a fresh coin-specific price, but historical events require an event-time quote and stay unavailable without one;
 - tracked frozen totals are last-known freeze-ledger snapshots;
 - event history and local net-active state remain separate from those snapshots;
-- mobile event cards and the desktop table use the same server query state;
+- mobile cards and desktop table share server filters/sort; cursor navigation retains previous-page cursors and resets on ledger filters/sort;
 - CSV export represents only the currently loaded server page.
+- an empty chart means no valued ledger snapshots, not no recorded events; failed summary reads remain unavailable.
 
 Stablecoin detail visibility is derived by `src/lib/stablecoin-detail-view-model.ts`. A tracked symbol needs at least one real, non-suppressed event before the Activity and History blocks appear. The component entrypoints are `src/components/stablecoin-detail/blacklist-section.tsx` and `src/components/stablecoin-detail/blacklist-detail-event-feed.tsx`.
 

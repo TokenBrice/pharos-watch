@@ -25,12 +25,12 @@ export function rowAccentClass(row: DepegTrackerRow): string {
 type DepegFieldKey = Exclude<DepegTableSortKey, "__attention">;
 
 const fieldExtractors: Record<DepegFieldKey, (r: DepegTrackerRow) => number | null> = {
-  pegScore: (r) => r.coin.pegScore ?? -1,
-  dewsScore: (r) => r.dews?.score ?? -1,
-  currentDeviationBps: (r) => Math.abs(r.coin.currentDeviationBps ?? 0),
+  pegScore: (r) => r.coin.pegScore,
+  dewsScore: (r) => r.dews?.score ?? null,
+  currentDeviationBps: (r) => r.coin.currentDeviationBps == null ? null : Math.abs(r.coin.currentDeviationBps),
   pegPct: (r) => r.coin.pegPct,
   eventCount: (r) => r.coin.eventCount,
-  worstDeviationBps: (r) => Math.abs(r.coin.worstDeviationBps ?? 0),
+  worstDeviationBps: (r) => r.coin.worstDeviationBps == null ? null : Math.abs(r.coin.worstDeviationBps),
   activeDepeg: (r) => (r.coin.activeDepeg ? 1 : 0),
   dexAgrees: (r) => (r.coin.dexPriceCheck?.agrees ? 1 : 0),
   trackingSpanDays: (r) => r.coin.trackingSpanDays,

@@ -26,13 +26,15 @@ import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import type { ColumnId } from "@/hooks/use-preferences";
 import type { CsvColumn } from "@/lib/exports/csv";
 import { buildCsvBody } from "@shared/lib/csv";
+import type { ExportPreamble } from "@/lib/exports/preamble";
+import { formatPreambleCsv } from "@/lib/exports/preamble";
 
 const { downloadCsvMock } = vi.hoisted(() => ({
   downloadCsvMock: vi.fn(),
 }));
 
 vi.mock("@/lib/exports/csv", () => ({
-  downloadCsv: downloadCsvMock,
+  downloadCsvWithPreamble: downloadCsvMock,
 }));
 
 function makeCoin(id: string, name: string, overrides: Partial<StablecoinData> = {}): StablecoinData {
@@ -69,6 +71,30 @@ describe("nominal price consumers", () => {
     const priceColumn = columns.find((column) => column.header === "Price")!;
     expect(priceColumn.accessor(nominal, 1)).toBeNull();
     expect(priceColumn.accessor(market, 0)).toBe(1.1);
+  });
+});
+
+describe("stablecoin export provenance", () => {
+  it("records supplied upstream generations instead of download time and preserves unknown clocks and cells", () => {
+    downloadCsvMock.mockReset();
+    const rows = [
+      makeCoin("zero", "Zero", { circulating: { peggedUSD: 0 } }),
+      makeCoin("unknown", "Unknown", { circulating: {} }),
+    ];
+    const sourceTime = Date.parse("2026-09-01T12:00:00Z") / 1000;
+    exportStablecoinsCsv(rows, new Map(), {}, {}, { stablecoins: sourceTime, pegSummary: sourceTime - 60, reportCards: null });
+    const [exported, columns, , preamble] = downloadCsvMock.mock.calls[0] as [StablecoinData[], CsvColumn<StablecoinData>[], string, ExportPreamble];
+    expect(exported).toBe(rows);
+    expect(preamble.asOfISO).toBe("2026-09-01T12:00:00.000Z");
+    const header = formatPreambleCsv(preamble);
+    expect(header).toContain("pegSummary=2026-09-01T11:59:00.000Z");
+    expect(header).toContain("dexLiquidity=unknown");
+    expect(header).toContain("reportCards=unknown");
+    const supply = columns.find((column) => column.header === "Market Cap (USD)")!;
+    expect(supply.accessor(rows[0], 0)).toBe(0);
+    expect(supply.accessor(rows[1], 1)).toBeNull();
+    exportStablecoinsCsv(rows);
+    expect(downloadCsvMock.mock.calls[1][3].asOfISO).toBe("unknown");
   });
 });
 

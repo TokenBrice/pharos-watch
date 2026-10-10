@@ -1,3 +1,4 @@
+import { DEPEG_TRACKER_UNKNOWN_STATUS } from "@shared/lib/classification";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 
 // ---------------------------------------------------------------------------
@@ -9,6 +10,9 @@ export function statusLabel(row: DepegTrackerRow): string {
   if (row.pendingIncident) return "pending";
   if (row.coin.depegEventCoverageLimited) return "floor";
   if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") return row.dews.band.toLowerCase();
+  if (!Number.isFinite(row.coin.currentDeviationBps) || !Number.isFinite(row.dews?.score)) {
+    return DEPEG_TRACKER_UNKNOWN_STATUS.label;
+  }
   return "clear";
 }
 
@@ -18,6 +22,9 @@ export function statusClassName(row: DepegTrackerRow): string {
   if (row.coin.depegEventCoverageLimited) return "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300";
   if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") {
     return "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-300";
+  }
+  if (!Number.isFinite(row.coin.currentDeviationBps) || !Number.isFinite(row.dews?.score)) {
+    return DEPEG_TRACKER_UNKNOWN_STATUS.cls;
   }
   return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
 }

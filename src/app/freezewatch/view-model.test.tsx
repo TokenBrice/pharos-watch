@@ -65,7 +65,6 @@ describe("parseFreezeWatchPageFilters", () => {
       eventTypeFilter: "destroy",
       sortKey: "event",
       sortDirection: "asc",
-      page: 2,
       searchQuery: "abc",
       statusBucket: "yes",
     });
@@ -75,7 +74,7 @@ describe("parseFreezeWatchPageFilters", () => {
     const filters = parseFreezeWatchPageFilters("?stablecoin=bad&page=0&q=all&status=unknown");
 
     expect(filters.stablecoinFilter).toBe("all");
-    expect(filters.page).toBe(1);
+    expect(filters).not.toHaveProperty("page");
     expect(filters.searchQuery).toBe("");
     expect(filters.statusBucket).toBeNull();
   });
@@ -133,8 +132,9 @@ describe("useFreezeWatchPageController", () => {
     useBlacklistEventsPageMock.mockImplementation((params) => {
       return {
         data: {
-          events: [{ id: "evt-1" }],
+          events: Array.from({ length: 50 }, (_, index) => ({ id: `evt-${index}` })),
           total: 120,
+          nextCursor: params.cursor === "page-2" ? null : params.cursor === "page-1" ? "page-2" : "page-1",
         },
         isLoading: false,
         error: null,
@@ -152,53 +152,33 @@ describe("useFreezeWatchPageController", () => {
     HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
-  it("derives page state, updates URL filters, and preserves pagination semantics", () => {
+  it("derives cursor page state and resets navigation when URL ledger filters change", () => {
     const { result, rerender } = renderHook(() => useFreezeWatchPageController());
-
-    expect(useBlacklistEventsPageMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        stablecoin: "USDT",
-        chainName: "Tron",
-        eventType: "destroy",
-        query: "abc",
-        sortBy: "event",
-        sortDirection: "asc",
-        limit: 50,
-        offset: 50,
-      }),
-    );
-    expect(result.current.stablecoinFilter).toBe("USDT");
-    expect(result.current.chainFilter).toBe("tron");
-    expect(result.current.statusBucket).toBe("yes");
-    expect(result.current.clampedPage).toBe(2);
+    expect(useBlacklistEventsPageMock).toHaveBeenCalledWith(expect.objectContaining({
+      stablecoin: "USDT", chainName: "Tron", eventType: "destroy", query: "abc",
+      sortBy: "event", sortDirection: "asc", limit: 50, cursor: undefined, includeTotal: true,
+    }));
+    expect(result.current.clampedPage).toBe(1);
     expect(result.current.totalPages).toBe(3);
-    expect(result.current.rangeStart).toBe(51);
-    expect(result.current.rangeEnd).toBe(100);
-
-    act(() => {
-      result.current.handleStablecoinChange("all");
-    });
-
+    expect(result.current.rangeStart).toBe(1);
+    expect(result.current.rangeEnd).toBe(50);
+    act(() => result.current.handleNextPage());
+    expect(result.current.clampedPage).toBe(2);
+    expect(useBlacklistEventsPageMock).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: "page-1" }));
+    act(() => result.current.handlePreviousPage());
+    expect(result.current.clampedPage).toBe(1);
+    act(() => result.current.handleNextPage());
+    act(() => result.current.handleStablecoinChange("all"));
+    rerender();
+    expect(result.current.clampedPage).toBe(1);
+    expect(useBlacklistEventsPageMock).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: undefined }));
     const nextSearch = new URLSearchParams(currentSearch);
     expect(nextSearch.get("stablecoin")).toBeNull();
     expect(nextSearch.get("page")).toBeNull();
     expect(nextSearch.get("q")).toBe("abc");
-    expect(trackEventMock).toHaveBeenCalledWith("filter_applied", {
-      page: "freezewatch",
-      filter_type: "stablecoin",
-      filter_value: "all",
-    });
-
-    act(() => {
-      result.current.handleNextPage();
-    });
-    expect(new URLSearchParams(currentSearch).get("page")).toBe("3");
-
+    act(() => result.current.handleSortChange("date", "desc"));
     rerender();
-    act(() => {
-      result.current.handlePreviousPage();
-    });
-    expect(new URLSearchParams(currentSearch).get("page")).toBe("2");
+    expect(result.current.canPreviousPage).toBe(false);
   });
 
   it("debounces search updates and scrolls the drilldown when the status bucket changes", () => {
@@ -234,35 +214,29 @@ describe("useFreezeWatchPageController", () => {
     vi.useRealTimers();
   });
 
-  it("normalizes an out-of-range URL and fetches the clamped page before exposing ledger rows", () => {
+  it("walks beyond the former 25000 offset cap with cursors and keeps the exact total", () => {
     currentSearch = "?page=999";
-    useBlacklistEventsPageMock.mockImplementation((params) => ({
-      data: {
-        events: params.offset === 100 ? [{ id: "evt-final-page" }] : [],
-        total: 120,
-      },
-      isLoading: false,
-      error: null,
-      dataUpdatedAt: 456,
-      refetch: vi.fn(),
-      meta: { preset: "blacklist" },
-    }));
-
-    const { result, rerender } = renderHook(() => useFreezeWatchPageController());
-
-    expect(new URLSearchParams(currentSearch).get("page")).toBe("3");
-    expect(result.current.pageLoading).toBe(true);
-    expect(result.current.events).toEqual([]);
-
-    rerender();
-
-    expect(useBlacklistEventsPageMock).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 100 }));
-    expect(result.current.page).toBe(3);
-    expect(result.current.clampedPage).toBe(3);
-    expect(result.current.events).toEqual([{ id: "evt-final-page" }]);
-    expect(result.current.rangeStart).toBe(101);
-    expect(result.current.rangeEnd).toBe(120);
-    expect(result.current.pageLoading).toBe(false);
+    useBlacklistEventsPageMock.mockImplementation((params) => {
+      expect(params).not.toHaveProperty("offset");
+      const index = params.cursor ? Number(params.cursor.slice("cursor-".length)) : 0;
+      return {
+        data: {
+          events: Array.from({ length: 50 }, (_, i) => ({ id: `evt-${index * 50 + i}` })),
+          total: 30_000, totalExact: true, nextCursor: index < 599 ? `cursor-${index + 1}` : null,
+        },
+        isLoading: false, error: null, dataUpdatedAt: 456, refetch: vi.fn(),
+      };
+    });
+    const { result } = renderHook(() => useFreezeWatchPageController());
+    expect(result.current.page).toBe(1);
+    for (let i = 0; i < 501; i++) act(() => result.current.handleNextPage());
+    expect(result.current.page).toBe(502);
+    expect(result.current.events[0].id).toBe("evt-25050");
+    expect(result.current.total).toBe(30_000);
+    expect(result.current.totalPages).toBe(600);
+    expect(result.current.rangeStart).toBe(25_051);
+    act(() => result.current.handlePreviousPage());
+    expect(result.current.events[0].id).toBe("evt-25000");
   });
 
   it("returns zero range bounds when total is 0", () => {

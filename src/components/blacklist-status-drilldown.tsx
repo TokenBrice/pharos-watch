@@ -17,12 +17,14 @@ import {
 } from "@/lib/blacklist-status-buckets";
 import type { StablecoinData } from "@shared/types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
+import type { StablecoinTableSourceGenerations } from "@/components/stablecoin-table-logic";
 
 interface BlacklistStatusDrilldownProps {
   status: BlacklistStatusBucketKey;
   stablecoins: StablecoinData[] | undefined;
   fxFallbackRates?: Record<string, number>;
   reportCards: Record<string, V9SafetyTableRow> | undefined;
+  sourceGenerations?: StablecoinTableSourceGenerations;
   error?: unknown;
   isLoading?: boolean;
   onRetry?: () => void;
@@ -34,14 +36,15 @@ export function BlacklistStatusDrilldown({
   stablecoins,
   fxFallbackRates,
   reportCards,
+  sourceGenerations,
   error,
   isLoading = false,
   onRetry,
   onClear,
 }: BlacklistStatusDrilldownProps) {
   const logos = logosById;
-  const { data: pegSummaryData } = usePegSummary();
-  const { data: dexLiquidity } = useDexLiquidity();
+  const { data: pegSummaryData, meta: pegSummaryMeta } = usePegSummary();
+  const { data: dexLiquidity, meta: dexLiquidityMeta } = useDexLiquidity();
   // The table's own pending state cannot express a failed support read: without
   // this, an errored `useStablecoins` leaves the drilldown on a skeleton forever.
   const dataState = resolveQueryViewState({ hasData: stablecoins !== undefined, isLoading, error });
@@ -97,6 +100,11 @@ export function BlacklistStatusDrilldown({
           pegScores={tableInputs.pegScores}
           dexLiquidity={dexLiquidity ?? undefined}
           reportCards={reportCards}
+          sourceGenerations={{
+            ...sourceGenerations,
+            pegSummary: pegSummaryMeta?.updatedAt,
+            dexLiquidity: dexLiquidityMeta?.updatedAt,
+          }}
         />
       )}
     </section>

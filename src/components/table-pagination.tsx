@@ -10,6 +10,8 @@ export interface TablePaginationProps {
   total: number;
   onPrevious?: () => void;
   onNext?: () => void;
+  previousDisabled?: boolean;
+  nextDisabled?: boolean;
   noun?: string;
   className?: string;
   bordered?: boolean;
@@ -25,6 +27,8 @@ export function TablePagination({
   total,
   onPrevious,
   onNext,
+  previousDisabled = page === 0,
+  nextDisabled = page >= totalPages - 1,
   noun = "stablecoins",
   className,
   bordered = true,
@@ -63,9 +67,9 @@ export function TablePagination({
             size="sm"
             className="pharos-focus-ring h-10 min-w-10 sm:h-8 sm:min-w-8"
             onClick={onPrevious}
-            disabled={page === 0}
+            disabled={previousDisabled}
             aria-label="Go to previous page"
-            aria-disabled={page === 0}
+            aria-disabled={previousDisabled}
           >
             <ChevronLeft className="h-4 w-4" />
             <span>Previous</span>
@@ -75,9 +79,9 @@ export function TablePagination({
             size="sm"
             className="pharos-focus-ring h-10 min-w-10 sm:h-8 sm:min-w-8"
             onClick={onNext}
-            disabled={page >= totalPages - 1}
+            disabled={nextDisabled}
             aria-label="Go to next page"
-            aria-disabled={page >= totalPages - 1}
+            aria-disabled={nextDisabled}
           >
             <span>Next</span>
             <ChevronRight className="h-4 w-4" />

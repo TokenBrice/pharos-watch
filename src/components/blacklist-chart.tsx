@@ -151,7 +151,7 @@ export function BlacklistChart({ chart, isLoading, error, onRetry }: BlacklistCh
           <div
             className={`pharos-chart-stage flex ${CHART_HEIGHT} items-center justify-center text-muted-foreground`}
           >
-            No freeze events recorded yet.
+            No valued freeze-ledger snapshots to chart.
           </div>
         )}
       </div>

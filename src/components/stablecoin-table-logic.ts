@@ -1,4 +1,4 @@
-import { downloadCsv } from "@/lib/exports/csv";
+import { downloadCsvWithPreamble } from "@/lib/exports/csv";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { createTableComparator } from "@/lib/table-comparator";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
@@ -13,6 +13,14 @@ import {
 import type { DexLiquidityMap, FilterTag, PegSummaryCoin, StablecoinData } from "@shared/types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+
+export type StablecoinTableSourceGenerations = Partial<Record<"stablecoins" | "pegSummary" | "dexLiquidity" | "reportCards", number | null>>;
+
+function generationIso(timestamp: number | null | undefined): string | null {
+  return timestamp != null && Number.isFinite(timestamp) && timestamp > 0
+    ? new Date(timestamp * 1000).toISOString()
+    : null;
+}
 
 export type StablecoinTableSortKey =
   | "name"
@@ -218,8 +226,9 @@ export function exportStablecoinsCsv(
   pegScores?: Map<string, PegSummaryCoin>,
   dexLiquidity?: DexLiquidityMap,
   reportCards?: Record<string, V9SafetyTableRow>,
+  sourceGenerations?: StablecoinTableSourceGenerations,
 ): void {
-  downloadCsv(
+  downloadCsvWithPreamble(
     sorted,
     [
       { header: "Rank", accessor: (_row, i) => i + 1 },
@@ -269,5 +278,17 @@ export function exportStablecoinsCsv(
       { header: "Grade", accessor: (row) => reportCards?.[row.id]?.grade ?? null },
     ],
     "pharos-stablecoins",
+    {
+      endpoint: "stablecoins",
+      asOfISO: generationIso(sourceGenerations?.stablecoins) ?? "unknown",
+      sourceUrl: typeof window === "undefined" ? "https://pharos.watch/" : window.location.href,
+      methodologyLabel: "published source values",
+      sourceGenerations: {
+        stablecoins: generationIso(sourceGenerations?.stablecoins),
+        ...(pegScores ? { pegSummary: generationIso(sourceGenerations?.pegSummary) } : {}),
+        ...(dexLiquidity ? { dexLiquidity: generationIso(sourceGenerations?.dexLiquidity) } : {}),
+        ...(reportCards ? { reportCards: generationIso(sourceGenerations?.reportCards) } : {}),
+      },
+    },
   );
 }

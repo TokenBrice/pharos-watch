@@ -1,12 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
+import { useEffect, useSyncExternalStore } from "react";
+import { createBrowserStorageStore } from "@/lib/browser-storage";
 import { cn } from "@/lib/utils";
 
 type MethodologyMode = "reader" | "analyst";
 
 const STORAGE_KEY = "pharos.methodology.mode";
+const modeStorage = createBrowserStorageStore<MethodologyMode>({
+  key: STORAGE_KEY,
+  fallback: "reader",
+  decode: (stored) => (stored === "analyst" ? "analyst" : "reader"),
+});
 const DETAILS_SELECTOR = 'details[data-methodology-details="true"]';
 const WORKED_EXAMPLE_SELECTOR = 'details[data-methodology-worked-example="true"]';
 const MODE_CONTROLLED_SELECTOR = `${DETAILS_SELECTOR}, ${WORKED_EXAMPLE_SELECTOR}`;
@@ -20,18 +25,12 @@ function applyMethodologyMode(mode: MethodologyMode) {
 }
 
 export function MethodologyModeToggle({ className }: { className?: string }) {
-  const [mode, setMode] = useState<MethodologyMode>(() => {
-    return safeStorageGetItem(getWindowStorage("local"), STORAGE_KEY) === "analyst" ? "analyst" : "reader";
-  });
+  const mode = useSyncExternalStore(modeStorage.subscribe, modeStorage.read, () => "reader" as const);
 
   useEffect(() => {
     applyMethodologyMode(mode);
   }, [mode]);
 
-  const setAndApplyMode = useCallback((nextMode: MethodologyMode) => {
-    setMode(nextMode);
-    safeStorageSetItem(getWindowStorage("local"), STORAGE_KEY, nextMode);
-  }, []);
 
   return (
     <div
@@ -47,7 +46,7 @@ export function MethodologyModeToggle({ className }: { className?: string }) {
         type="button"
         aria-pressed={mode === "reader"}
         data-state={mode === "reader" ? "on" : "off"}
-        onClick={() => setAndApplyMode("reader")}
+        onClick={() => modeStorage.write("reader")}
         className="pharos-toggle-pill pharos-focus-ring min-h-11 justify-center md:min-h-9"
       >
         Reader
@@ -56,7 +55,7 @@ export function MethodologyModeToggle({ className }: { className?: string }) {
         type="button"
         aria-pressed={mode === "analyst"}
         data-state={mode === "analyst" ? "on" : "off"}
-        onClick={() => setAndApplyMode("analyst")}
+        onClick={() => modeStorage.write("analyst")}
         className="pharos-toggle-pill pharos-focus-ring min-h-11 justify-center md:min-h-9"
       >
         Analyst

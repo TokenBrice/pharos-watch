@@ -103,4 +103,24 @@ describe("DigestSnapshot", () => {
     expect(screen.queryByText(/\$0/)).toBeNull();
     expect(screen.queryByText(/\+0\.00%/)).toBeNull();
   });
+
+  it("publishes full daily count and qualified subtotal rather than capped sample statistics", () => {
+    useDigestSnapshotMock.mockReturnValue({
+      data: {
+        date: "2026-09-01", inputData: { totalMcapUsd: 100e9 }, prevInputData: null, depegEvents: [],
+        blacklistEvents: Array.from({ length: 50 }, (_, i) => ({
+          stablecoin: "USDC", chainName: "Ethereum", eventType: "blacklist", address: `address-${i}`,
+          amountNative: null, amountUsdAtEvent: i === 0 ? null : 10, amountStatus: "resolved", timestamp: i,
+        })),
+        blacklistSummary: { totalEvents: 52, knownAmountUsd: 500, valuedEvents: 50, unavailableAmountEvents: 2 },
+      },
+      isLoading: false, isError: false,
+    });
+    render(<DigestSnapshot date="2026-09-01" />);
+    expect(screen.getByText(/events on this day/).textContent).toContain("52");
+    expect(screen.getByText(/known subtotal/).textContent).toContain("$500");
+    expect(screen.getByText(/known subtotal/).textContent).toContain("2 unvalued");
+    expect(screen.getByText("Showing latest 5 of 52 events")).toBeTruthy();
+    expect(screen.queryByText(/totaling/)).toBeNull();
+  });
 });

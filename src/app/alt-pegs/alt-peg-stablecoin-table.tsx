@@ -15,6 +15,7 @@ import type {
   StablecoinData,
 } from "@shared/types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
+import type { StablecoinTableSourceGenerations } from "@/components/stablecoin-table-logic";
 
 const StablecoinTable = dynamic(
   () => import("@/components/stablecoin-table").then((mod) => mod.StablecoinTable),
@@ -42,6 +43,7 @@ interface AltPegStablecoinTableProps {
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
   reportCards?: Record<string, V9SafetyTableRow>;
+  sourceGenerations?: StablecoinTableSourceGenerations;
 }
 
 export function AltPegStablecoinTable({
@@ -51,6 +53,7 @@ export function AltPegStablecoinTable({
   pegScores,
   dexLiquidity,
   reportCards,
+  sourceGenerations,
 }: AltPegStablecoinTableProps) {
   const { searchParams, setParam } = useUrlFilters();
   const pinnedStablecoins = usePinnedStablecoins();
@@ -106,6 +109,7 @@ export function AltPegStablecoinTable({
         pegScores={pegScores}
         dexLiquidity={dexLiquidity}
         reportCards={reportCards}
+        sourceGenerations={sourceGenerations}
         pinnedStablecoinIds={pinnedStablecoins.pinnedIds}
         onTogglePinnedStablecoin={pinnedStablecoins.togglePinned}
       />

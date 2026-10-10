@@ -348,7 +348,7 @@ export function StablecoinDepegResolverRows({ stablecoinId, data, logoSrc }: Sta
     <section aria-label={`Depeg Duration Resolver for ${rows[0]?.symbol ?? stablecoinId}`} className="space-y-4">
       {showStaleRows ? (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
-          Resolver snapshot is stale; duration estimates are suppressed until the next refresh.
+          Resolver live overlay is stale; frozen forecasts, including anchored duration estimates, remain unchanged.
         </p>
       ) : null}
       <div className="space-y-4">

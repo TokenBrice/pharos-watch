@@ -14,7 +14,7 @@ import { useRowCursor } from "@/hooks/use-row-cursor";
 import { useSortColumnEvent } from "@/hooks/use-sort-column-event";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
-import type { StablecoinTableSortKey } from "@/components/stablecoin-table-logic";
+import type { StablecoinTableSortKey, StablecoinTableSourceGenerations } from "@/components/stablecoin-table-logic";
 import { ColumnFitToggle } from "@/components/stablecoin-table-columns";
 import { useStablecoinTableColumns, useStablecoinTableRows } from "@/components/stablecoin-table-model";
 import { StablecoinTableView } from "@/components/stablecoin-table-view";
@@ -34,6 +34,7 @@ interface StablecoinTableProps {
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
   reportCards?: Record<string, V9SafetyTableRow>;
+  sourceGenerations?: StablecoinTableSourceGenerations;
   initialVisibleColumns?: readonly ColumnId[];
   columnPreferenceNamespace?: string;
   showHeaderMethodologyHints?: boolean;
@@ -62,6 +63,7 @@ export function StablecoinTable({
   pegScores,
   dexLiquidity,
   reportCards,
+  sourceGenerations,
   initialVisibleColumns,
   columnPreferenceNamespace = "pharos-table",
   showHeaderMethodologyHints = true,
@@ -109,6 +111,7 @@ export function StablecoinTable({
     renderedSet: columns.renderedSet,
     pegScores,
     dexLiquidity,
+    sourceGenerations,
     pinnedStablecoinIds,
     isOverview: isFigmaOverview,
     isMobileColumns: columns.isMobileColumns,

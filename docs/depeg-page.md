@@ -142,6 +142,10 @@ behind an explicit toggle that mounts them only when opened.
 `DepegControlBoard` is the exact-value workbench: URL-backed filters, sort modes, ranked rows,
 pagination. It owns per-coin values only; page-level aggregates belong to the hero.
 
+An absent live deviation or DEWS reading yields a neutral `unknown` status, never green `clear`;
+known live, pending, floor, warning and danger states retain precedence. Nullable peg-health,
+DEWS and deviation metrics sort last in both directions, separately from observed zero.
+
 Its multi-column grid starts at `lg`, not `md`. The six minimum column tracks plus gaps need roughly
 820px, and a 768px viewport leaves rows about 734px, which clipped the last column with no horizontal
 access. Below `lg` the rows use the stacked card grammar, which preserves every field.

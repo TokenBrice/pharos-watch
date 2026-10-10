@@ -153,20 +153,23 @@ export const handleDigestSnapshot = async (
     endedAt: r.ended_at,
   }));
 
-  // Blacklist events on that date
-  const blacklistResult = await db
-    .prepare(
+  // Read the bounded sample and full-day aggregate in one D1 batch snapshot.
+  const [blacklistResult, blacklistAggregateResult] = await db.batch([
+    db.prepare(
       `SELECT stablecoin, chain_name, event_type, address, amount_native, amount_usd_at_event, amount_status, timestamp
        FROM blacklist_events
-       WHERE timestamp >= ? AND timestamp < ?
-         AND suppression_reason IS NULL
-       ORDER BY timestamp DESC
-       LIMIT 50`,
-    )
-    .bind(dayStart, dayEnd)
-    .all<BlacklistRow>();
+       WHERE timestamp >= ? AND timestamp < ? AND suppression_reason IS NULL
+       ORDER BY timestamp DESC LIMIT 50`,
+    ).bind(dayStart, dayEnd),
+    db.prepare(
+      `SELECT /* digest-snapshot:blacklist-summary */ COUNT(*) AS total_events, COUNT(amount_usd_at_event) AS valued_events,
+              SUM(amount_usd_at_event) AS known_amount_usd
+       FROM blacklist_events
+       WHERE timestamp >= ? AND timestamp < ? AND suppression_reason IS NULL`,
+    ).bind(dayStart, dayEnd),
+  ]);
 
-  const blacklistEvents = (blacklistResult.results ?? []).map((r) => ({
+  const blacklistEvents = ((blacklistResult.results ?? []) as BlacklistRow[]).map((r) => ({
     stablecoin: r.stablecoin,
     chainName: r.chain_name,
     eventType: r.event_type,
@@ -176,6 +179,16 @@ export const handleDigestSnapshot = async (
     amountStatus: r.amount_status,
     timestamp: r.timestamp,
   }));
+  const blacklistAggregate = (blacklistAggregateResult.results as Array<{
+    total_events: number; valued_events: number; known_amount_usd: number | null;
+  }>)[0];
+  if (!blacklistAggregate) return errorResponse(503, "Blacklist context is unavailable");
+  const blacklistSummary = {
+    totalEvents: blacklistAggregate.total_events,
+    knownAmountUsd: blacklistAggregate.total_events === 0 ? 0 : blacklistAggregate.known_amount_usd,
+    valuedEvents: blacklistAggregate.valued_events,
+    unavailableAmountEvents: blacklistAggregate.total_events - blacklistAggregate.valued_events,
+  };
 
   return jsonResponse({
     date,
@@ -183,5 +196,6 @@ export const handleDigestSnapshot = async (
     prevInputData,
     depegEvents,
     blacklistEvents,
+    blacklistSummary,
   }, { headers: { "Cache-Control": CACHE_PROFILES.archive } });
 };

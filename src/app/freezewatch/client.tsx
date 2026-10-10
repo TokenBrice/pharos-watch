@@ -77,6 +77,7 @@ export default function FreezeWatchClient() {
     error,
     dataUpdatedAt,
     freshnessMeta,
+    sourceGenerations,
     stablecoins,
     stablecoinFxFallbackRates,
     reportCardMap,
@@ -107,6 +108,8 @@ export default function FreezeWatchClient() {
     clampedPage,
     total,
     totalPages,
+    canPreviousPage,
+    canNextPage,
     rangeStart,
     rangeEnd,
     pageLoading,
@@ -235,6 +238,7 @@ export default function FreezeWatchClient() {
           <BlacklistStatusDrilldown
             status={statusBucket}
             stablecoins={stablecoins}
+            sourceGenerations={sourceGenerations}
             fxFallbackRates={stablecoinFxFallbackRates}
             reportCards={reportCardMap}
             error={stablecoinsError}
@@ -301,6 +305,8 @@ export default function FreezeWatchClient() {
             total={total}
             onPrevious={handlePreviousPage}
             onNext={handleNextPage}
+            previousDisabled={!canPreviousPage}
+            nextDisabled={!canNextPage}
             noun="events"
           />
         )}
