@@ -995,8 +995,8 @@ describe("syncMintBurn", () => {
     const invalidation = history.find(
       (entry) =>
         entry.sql.includes("DELETE FROM cache")
-        && entry.binds[0] === "mint-burn-flows:v3:"
-        && entry.binds[1] === "mint-burn-flows:v3:\uffff",
+        && entry.binds[0] === "mint-burn-flows:v4:"
+        && entry.binds[1] === "mint-burn-flows:v4:\uffff",
     );
     expect(invalidation).toBeDefined();
   });
@@ -1010,12 +1010,12 @@ describe("syncMintBurn", () => {
     const cacheDeletes = history.filter(({ sql }) => sql.includes("DELETE FROM cache"));
     expect(
       cacheDeletes.some(
-        (entry) => entry.binds[0] === "mint-burn-flows:v3:coin:" && entry.binds[1] === "mint-burn-flows:v3:coin:\uffff",
+        (entry) => entry.binds[0] === "mint-burn-flows:v4:coin:" && entry.binds[1] === "mint-burn-flows:v4:coin:\uffff",
       ),
     ).toBe(true);
     expect(
       cacheDeletes.some(
-        (entry) => entry.binds[0] === "mint-burn-flows:v3:" || entry.binds[0] === "mint-burn-flows:v3:aggregate:",
+        (entry) => entry.binds[0] === "mint-burn-flows:v4:" || entry.binds[0] === "mint-burn-flows:v4:aggregate:",
       ),
     ).toBe(false);
   });

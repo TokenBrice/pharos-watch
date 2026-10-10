@@ -131,7 +131,7 @@ export const MINT_AUTHORITY_STATUS_CONFIG: Record<MintAuthorityStatusKind, MintA
     tone: "slate",
     available: false,
     sortRank: 0,
-    detail: "No curated mint-authority review is available for this asset.",
+    detail: "Native issuance is unreviewed or the available evidence does not establish its mint-authority route.",
     badgeClassName: "border-border/60 bg-muted/20 text-muted-foreground",
   },
 };
@@ -255,7 +255,7 @@ function hasDirectNonMultisigMintControl(summary: MintAuthorityCoverageSummary):
 export function resolveMintAuthorityStatusKind(
   summary?: MintAuthorityCoverageSummary | null,
 ): MintAuthorityStatusKind {
-  if (!summary) {
+  if (!summary || summary.mintPath === "unknown") {
     return "unknown";
   }
 

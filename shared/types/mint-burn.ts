@@ -189,6 +189,12 @@ const MintBurnAggregateChainSchema = z.object({
   valuation: MintBurnValuationCompletenessSchema.optional(),
 });
 
+const MintBurnHourlyWindowSchema = z.object({
+  start: z.number().int().nonnegative(),
+  end: z.number().int().nonnegative(),
+  semantics: z.literal("closed-utc-hours"),
+});
+
 export const MintBurnFlowsResponseSchema = z.object({
   gauge: MintBurnGaugeSchema,
   coins: z.array(MintBurnCoinFlowSchema),
@@ -196,6 +202,8 @@ export const MintBurnFlowsResponseSchema = z.object({
   hourly: z.array(MintBurnHourlyBucketSchema),
   updatedAt: z.number(),
   windowHours: z.number().int().positive().optional(),
+  /** Exact [start,end) UTC boundaries; absent on pre-cutover historical payloads. */
+  window: MintBurnHourlyWindowSchema.optional(),
   scope: MintBurnScopeSchema.optional(),
   sync: MintBurnSyncSchema.optional(),
   _meta: ApiMetaEnvelopeSchema.optional(),
@@ -226,6 +234,7 @@ export const MintBurnPerCoinResponseSchema = z.object({
   valuation: MintBurnValuationSchema.optional(),
   updatedAt: z.number(),
   windowHours: z.number().int().positive().optional(),
+  window: MintBurnHourlyWindowSchema.optional(),
   scope: MintBurnScopeSchema.optional(),
   sync: MintBurnSyncSchema.optional(),
   _meta: ApiMetaEnvelopeSchema.optional(),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
-import { resolveMintAuthorityStatusKind, resolveMintAuthorityScoreDisplay } from "../mint-authority-display";
+import { resolveMintAuthorityStatus, resolveMintAuthorityStatusKind, resolveMintAuthorityScoreDisplay } from "../mint-authority-display";
 
 function summary(overrides: Partial<MintAuthorityCoverageSummary> = {}): MintAuthorityCoverageSummary {
   return {
@@ -12,6 +12,13 @@ function summary(overrides: Partial<MintAuthorityCoverageSummary> = {}): MintAut
 }
 
 describe("resolveMintAuthorityStatusKind", () => {
+  it.each(["manual-review", "unknown"] as const)("keeps unresolved native issuance Unknown at %s confidence", (confidence) => {
+    const unresolved = summary({ mintPath: "unknown", authorityPosture: "unknown", confidence, controls: [] });
+    expect(resolveMintAuthorityStatusKind(unresolved)).toBe("unknown");
+    expect(resolveMintAuthorityStatus(unresolved)).toMatchObject({ label: "Unknown", available: false });
+    expect(resolveMintAuthorityStatus(unresolved).detail).not.toContain("Minting is user or protocol based");
+  });
+
   it("pins every status branch and precedence edge", () => {
     expect(resolveMintAuthorityStatusKind(null)).toBe("unknown");
     expect(

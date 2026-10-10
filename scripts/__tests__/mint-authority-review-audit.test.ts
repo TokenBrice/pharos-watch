@@ -3,9 +3,10 @@ import {
   buildMintAuthorityReviewAudit,
   renderMintAuthorityReviewAuditMarkdown,
 } from "../lib/mint-authority-review-audit";
-import { parseArgs } from "../maintenance/generate-mint-authority-review-audit";
+import { parseArgs, uniqueMintAuthoritySourceUrls } from "../maintenance/generate-mint-authority-review-audit";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types";
+import { projectMintAuthorityClientSummary } from "../../src/lib/stablecoin-detail-mint-authority-client";
 
 function coin(overrides: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id" | "symbol">): StablecoinMeta {
   return {
@@ -21,6 +22,65 @@ function coin(overrides: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id" | "
 }
 
 describe("mint-authority-review-audit", () => {
+  it("uses exception and upgradeability evidence in counts, detail links and live probe selection", () => {
+    const fixture = coin({
+      id: "exception", symbol: "EXC",
+      mintAuthority: {
+        mintPath: "unknown", authorityPosture: "unknown", confidence: "manual-review",
+        summary: "Native issuance is under review.",
+        review: {
+          reviewer: "Pharos", reviewedAt: "2026-10-09", evidence: "Reviewed native issuance exception.",
+          sources: [
+            { label: "Review", url: "https://example.com/common" },
+            { label: "Duplicate review", url: "https://example.com/common" },
+          ],
+          noLocalIssuance: {
+            kind: "external-only-representation", rationale: "Reviewed external representation.",
+            reviewedAt: "2026-10-09", reviewer: "Pharos",
+            sources: [{ label: "Exception only", url: "https://example.com/exception" }],
+          },
+        },
+        upgradeability: {
+          model: "unknown", canChangeMintLogic: "unknown",
+          sources: [{ label: "Upgrade only", url: "https://example.com/upgrade" }],
+        },
+      },
+    });
+    expect(buildMintAuthorityReviewAudit({ coins: [fixture] }).summary.sourceUrls)
+      .toEqual({ totalLinks: 4, uniqueUrls: 3, duplicateUrls: 1 });
+    expect(uniqueMintAuthoritySourceUrls([fixture]))
+      .toEqual(["https://example.com/common", "https://example.com/exception", "https://example.com/upgrade"]);
+    expect(projectMintAuthorityClientSummary(fixture)?.sources?.map((source) => source.url))
+      .toEqual(["https://example.com/common", "https://example.com/exception", "https://example.com/upgrade"]);
+  });
+
+  it("renders actionable rows for all four previously summary-only queues", () => {
+    const fixture = coin({
+      id: "actionable", symbol: "ACT",
+      mintAuthority: {
+        mintPath: "unknown", authorityPosture: "unknown", confidence: "manual-review",
+        summary: "Private native issuance remains unresolved.",
+        review: {
+          reviewer: "Pharos", reviewedAt: "2026-10-09", evidence: "Private controls cannot be inspected.",
+          sourceFreeRationale: "Private chain has no public explorer.",
+          unresolvedQuestions: ["Who can authorize native issuance?"],
+        },
+        controls: [{ label: "Shared signer", role: "minter-admin", authorityType: "eoa",
+          directMintAbility: "can-authorize", chain: "ethereum", address: `0x${"1".repeat(40)}` }],
+        upgradeability: { model: "unknown", canChangeMintLogic: "unknown", controlRef: "Shared signer",
+          sources: [{ label: "Review", url: "https://example.com/review" }] },
+      },
+    });
+    const audit = buildMintAuthorityReviewAudit({ coins: [fixture] });
+    expect(audit.summary).toMatchObject({ unresolvedQuestionProfiles: 1, sourceFreeProfiles: 1,
+      unknownUpgradeabilityProfiles: 1, commonCriticalControls: 1 });
+    const markdown = renderMintAuthorityReviewAuditMarkdown(audit);
+    expect(markdown).toContain("`actionable` (ACT, manual-review): Who can authorize native issuance?");
+    expect(markdown).toContain("`actionable` (ACT): Private chain has no public explorer.");
+    expect(markdown).toContain("## Unknown Upgradeability\n\n- `actionable` (ACT, active)");
+    expect(markdown).toContain(`\`address:ethereum:0x${"1".repeat(40)}\`: Shared signer (mint, upgrade)`);
+  });
+
   it("builds static advisory queues from mint authority metadata", () => {
     const audit = buildMintAuthorityReviewAudit({
       generatedAt: "2026-06-18T00:00:00.000Z",

@@ -13,6 +13,8 @@ For current scoring and evidence, read [Current V9 scope](#current-v9-scope), th
 
 The sections from [Methodology Versioning](#methodology-versioning) through the historical formula, caps, and bands describe the retired lane only. Read them for historical interpretation, not live score changes.
 
+The advisory Mint Authority audit's default Markdown renders every queue, including open questions, source-free rationales, unknown upgrades and reused controllers. Audit counts, live probes and detail evidence links share the typed profile source collector, including no-local-issuance exceptions, upgrade reviews, incidents, controls and custody attestations; counts preserve occurrences while links/probes deduplicate URLs.
+
 ### Retired signal migration
 
 Where the signals went:

@@ -8,6 +8,7 @@ import {
   type MintBurnContractConfig,
 } from "../lib/mint-burn-contracts";
 import { loadMintBurnPriceContextBatch } from "../lib/mint-burn-pipeline/context";
+import { EVM_SAFETY_MARGIN_BLOCKS } from "../lib/mint-burn-pipeline/scan-policy";
 import type { MintBurnAffectedHour, MintBurnLane, SyncMintBurnStatus } from "../lib/mint-burn-pipeline/types";
 import {
   ensureMintBurnSyncStateRows,
@@ -36,7 +37,6 @@ import { includeActiveTrackedIds } from "./shared/exclude-frozen";
 import { throwIfAborted } from "../lib/abort";
 
 const MAX_SCAN_RANGE = 50_000;
-const EVM_SAFETY_MARGIN_BLOCKS = 75; // Math.ceil(900s indexing safety / 12s block time)
 
 const MINT_BURN_CRITICAL_JOB = "sync-mint-burn";
 const MINT_BURN_EXTENDED_JOB = "sync-mint-burn-extended";

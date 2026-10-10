@@ -23,7 +23,7 @@ export function makeValidCachedAggregateFixture(updatedAt: number, safetyScoreId
 }
 
 export function makeFlowFallbackScenario(nowSec: number, value: string, hours = 24) {
-  const flowCache = { key: `mint-burn-flows:v3:aggregate:${hours}`, value, updatedAt: nowSec };
+  const flowCache = { key: `mint-burn-flows:v4:aggregate:${hours}`, value, updatedAt: nowSec };
   const state = { cacheReads: 0, hourlyFailed: false };
   const queryFailure = new Error("simulated hourly execution failure");
   const db = mintBurnScenario({ nowSec, flowCache, overrides: [{

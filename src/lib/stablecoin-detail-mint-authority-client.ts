@@ -10,6 +10,7 @@ import {
 } from "@shared/types/core";
 import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
+import { collectMintAuthoritySources } from "@shared/lib/mint-authority-sources";
 import { dedupeStablecoinLinksByUrl, readStablecoinLinks } from "@/lib/stablecoin-detail-links-client";
 
 type MintAuthorityClientControlSummary = NonNullable<MintAuthorityClientSummary["controls"]>[number];
@@ -186,23 +187,13 @@ export function projectMintAuthorityClientSummary(coin: StablecoinMeta): MintAut
   const sources: MintAuthorityClientSourceSummary[] = [];
   const seenUrls = new Set<string>();
   const review = isRecord(profile.review) ? profile.review : null;
-  appendSources(sources, review?.sources, seenUrls);
   const reviewedAt = stringValue(review?.reviewedAt);
   if (reviewedAt) summary.reviewedAt = reviewedAt;
   const sourceFreeRationale = stringValue(review?.sourceFreeRationale);
   if (sourceFreeRationale) summary.sourceFreeRationale = sourceFreeRationale;
   const unresolvedQuestions = stringListValue(review?.unresolvedQuestions);
   if (unresolvedQuestions.length > 0) summary.unresolvedQuestions = unresolvedQuestions;
-  for (const incident of mintIncidents ?? []) {
-    appendSources(sources, incident.sources, seenUrls);
-  }
-  appendSources(sources, profile.sources, seenUrls);
-  for (const control of Array.isArray(profile.controls) ? profile.controls : []) {
-    if (!isRecord(control)) continue;
-    appendSources(sources, control.sources, seenUrls);
-    const custodyAttestation = isRecord(control.keyCustodyAttestation) ? control.keyCustodyAttestation : null;
-    appendSources(sources, custodyAttestation?.sources, seenUrls);
-  }
+  appendSources(sources, collectMintAuthoritySources(coin.mintAuthority!), seenUrls);
   if (sources.length > 0) summary.sources = sources;
 
   return summary;

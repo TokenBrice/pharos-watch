@@ -28,6 +28,12 @@ export {
   perCoinFlowCacheKey,
 } from "./mint-burn-flow-cache-keys";
 
+/** Closed UTC hours only: raw-event boundary fragments cannot be recovered after retention. */
+export function mintBurnHourlyWindow(nowSec: number, hours: number) {
+  const end = Math.floor(nowSec / 3600) * 3600;
+  return { start: end - hours * 3600, end, semantics: "closed-utc-hours" as const };
+}
+
 export interface HourlyRow {
   stablecoin_id: string;
   chain_id: string;

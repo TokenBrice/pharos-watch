@@ -45,6 +45,7 @@ import {
   finalizeMintBurnFlowResponse,
   type HourlyRow,
   MINT_BURN_CRON_JOB,
+  mintBurnHourlyWindow,
   perCoinFlowCacheKey,
   readMintBurnCronSnapshot,
   resolveFlowUpdatedAt,
@@ -207,6 +208,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     hourly,
     updatedAt,
     windowHours: hours,
+    window: mintBurnHourlyWindow(nowSec, hours),
     scope: buildAggregateScope(),
     sync: {
       ...data.sync,
@@ -384,17 +386,17 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
   return withMintBurnFlowFallback(db, "per-coin", cacheKey, async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const syncStartSec = nowSec;
-    const windowStart = nowSec - hours * 3600;
+    const window = mintBurnHourlyWindow(nowSec, hours);
 
     const [hourlyResult, latestCronSnapshot, latestSuccessfulSyncLookup] = await Promise.all([
       db
         .prepare(
           `SELECT chain_id, hour_ts, ${MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL}
            FROM mint_burn_hourly
-           WHERE chain_id IN (${chainInClause.sql}) AND stablecoin_id = ? AND hour_ts >= ?
+           WHERE chain_id IN (${chainInClause.sql}) AND stablecoin_id = ? AND hour_ts >= ? AND hour_ts < ?
            ORDER BY hour_ts ASC`,
         )
-        .bind(...chainInClause.binds, stablecoinId, windowStart)
+        .bind(...chainInClause.binds, stablecoinId, window.start, window.end)
         .all<HourlyRow>(),
       readMintBurnCronSnapshot(db),
       getLatestSuccessfulCronTimestampResult(db, MINT_BURN_CRON_JOB),
@@ -457,6 +459,7 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       valuation,
       updatedAt,
       windowHours: hours,
+      window,
       scope: {
         chainIds: trackedChainIds,
         label: buildMintBurnScope(configs).label,

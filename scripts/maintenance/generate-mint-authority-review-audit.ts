@@ -5,6 +5,8 @@ import {
   renderMintAuthorityReviewAuditMarkdown,
 } from "../lib/mint-authority-review-audit";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { collectMintAuthoritySources } from "@shared/lib/mint-authority-sources";
+import type { StablecoinMeta } from "@shared/types";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { toPositiveInt, writeOutputFile } from "../lib/coverage-audit-cli";
 
@@ -72,19 +74,12 @@ export function parseArgs(argv: string[], now = new Date()): Options {
   return options;
 }
 
-function uniqueMintAuthoritySourceUrls(): string[] {
+export function uniqueMintAuthoritySourceUrls(coins: readonly StablecoinMeta[] = TRACKED_STABLECOINS): string[] {
   const urls = new Set<string>();
-  for (const coin of TRACKED_STABLECOINS) {
+  for (const coin of coins) {
     const profile = coin.mintAuthority;
     if (!profile) continue;
-    for (const source of profile.review.sources ?? []) urls.add(source.url);
-    for (const incident of profile.mintIncidents ?? []) {
-      for (const source of incident.sources) urls.add(source.url);
-    }
-    for (const control of profile.controls ?? []) {
-      for (const source of control.sources ?? []) urls.add(source.url);
-      for (const source of control.keyCustodyAttestation?.sources ?? []) urls.add(source.url);
-    }
+    for (const source of collectMintAuthoritySources(profile)) urls.add(source.url);
   }
   return [...urls].sort();
 }

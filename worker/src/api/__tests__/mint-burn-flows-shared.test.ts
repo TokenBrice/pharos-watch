@@ -18,12 +18,12 @@ import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 describe("readCachedFlow", () => {
   it("returns only the requested cached window and rejects missing entries", async () => {
     const db = mintBurnScenario({ flowCache: [
-      { key: "mint-burn-flows:v3:aggregate:24", value: '{"windowHours":24}', updatedAt: 100 },
-      { key: "mint-burn-flows:v3:aggregate:48", value: '{"windowHours":48}', updatedAt: 200 },
+      { key: "mint-burn-flows:v4:aggregate:24", value: '{"windowHours":24}', updatedAt: 100 },
+      { key: "mint-burn-flows:v4:aggregate:48", value: '{"windowHours":48}', updatedAt: 200 },
     ] });
-    await expect(readCachedFlow(db, "mint-burn-flows:v3:aggregate:48"))
+    await expect(readCachedFlow(db, "mint-burn-flows:v4:aggregate:48"))
       .resolves.toEqual({ value: '{"windowHours":48}', updatedAt: 200 });
-    await expect(readCachedFlow(db, "mint-burn-flows:v3:aggregate:72")).resolves.toBeNull();
+    await expect(readCachedFlow(db, "mint-burn-flows:v4:aggregate:72")).resolves.toBeNull();
   });
 });
 
@@ -71,7 +71,7 @@ describe("cachedFlowFallbackResponse", () => {
     const body = { sync: { lastSuccessfulSyncAt: null, warning: "Mint/burn sync unavailable" } };
     const response = await finalizeMintBurnFlowResponse(
       mockD1([{ match: "INSERT INTO cache (key, value, updated_at)", rows: [], runMeta: { changes: 1 } }]),
-      "mint-burn-flows:v3:aggregate:24",
+      "mint-burn-flows:v4:aggregate:24",
       now,
       body,
       { timestamp: null, status: "missing" },

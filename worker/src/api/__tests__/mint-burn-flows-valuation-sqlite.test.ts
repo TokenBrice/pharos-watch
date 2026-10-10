@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { computeGaugeScore } from "../../lib/mint-burn-scoring";
-import { MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
+import { MintBurnFlowsResponseSchema, MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
 import { buildAggregateQueryParams, buildCoinSummaries, fetchAggregateData } from "../mint-burn-flows/aggregate";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
@@ -68,6 +68,47 @@ describe("mint/burn valuation completeness on real SQLite", () => {
   afterEach(() => {
     vi.useRealTimers();
     fixtures.closeAll();
+  });
+
+  it("uses closed UTC hours in aggregate and per-coin windows without dropping oldest-hour valuation debt", async () => {
+    const { db, sqlite } = fixtures.open();
+    const end = Math.floor(NOW / HOUR) * HOUR;
+    const start = end - 24 * HOUR;
+    await produce(db, [
+      event("usdt-tether", "ethereum", "mint", start - 1, 900),
+      // Both sides of the former rolling cutoff belong to the first closed hour.
+      event("usdt-tether", "ethereum", "mint", start + 60, null),
+      event("usdt-tether", "ethereum", "mint", start + 45 * 60, 10),
+      event("usdt-tether", "ethereum", "burn", end - 1, 2),
+      event("usdt-tether", "ethereum", "mint", end, 1000),
+    ]);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)")
+      .run(JSON.stringify({ peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 1000000 } }] }), NOW);
+    const aggregateResponse = await handleMintBurnFlows(db, new URL("https://api.test/api/mint-burn-flows?hours=24"));
+    expect(aggregateResponse.status).toBe(200);
+    const aggregate = MintBurnFlowsResponseSchema.parse(await aggregateResponse.json());
+    const response = await handleMintBurnFlows(db, new URL("https://api.test/api/mint-burn-flows?stablecoin=usdt-tether&hours=24"));
+    expect(response.status).toBe(200);
+    const perCoin = MintBurnPerCoinResponseSchema.parse(await response.json());
+    const window = { start, end, semantics: "closed-utc-hours" };
+    expect(aggregate.window).toEqual(window);
+    expect(perCoin.window).toEqual(window);
+    expect(perCoin).toMatchObject({ windowHours: 24, mintCount: 2, burnCount: 1, mintVolumeUsd: 10,
+      burnVolumeUsd: 2, netFlowUsd: null, valuation: { completeness: "partial", unpricedMintEventCount: 1 } });
+    const coin = aggregate.coins.find((entry) => entry.stablecoinId === "usdt-tether")!;
+    expect(coin).toMatchObject({ mintCount24h: 2, burnCount24h: 1, mintVolume24hUsd: 10,
+      netFlow24hUsd: null, largestEvent24h: { amountUsd: 10 },
+      valuation: { window24h: { completeness: "partial", unpricedMintEventCount: 1 } } });
+    expect(aggregate.hourly.map((bucket) => bucket.hourTs)).toEqual([start, end - HOUR]);
+    for (const hours of [1, 24, 168, 720]) {
+      const params = buildAggregateQueryParams(NOW, hours);
+      expect(params.windowEnd).toBe(end);
+      expect(params.windowStart).toBe(end - hours * HOUR);
+      const data = await fetchAggregateData(db, params);
+      expect(data.hourlyRows.every((row) => row.hour_ts >= params.windowStart && row.hour_ts < end)).toBe(true);
+      expect(buildCoinSummaries(data, new Map(), null).coins.find((entry) => entry.stablecoinId === "usdt-tether"))
+        .toMatchObject({ netFlow7dUsd: null, netFlow30dUsd: null, netFlow90dUsd: null });
+    }
   });
 
   it("publishes null nets and no direction or pressure for partial windows and keeps them out of the gauge", async () => {

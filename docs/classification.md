@@ -137,7 +137,7 @@ Mint Authority is a reviewed native-issuance taxonomy. It covers canonical deplo
 
 Bridge vocabulary is not valid in active Mint Authority data, and an asset with no local native issuance carries the reviewed `mintAuthority.review.noLocalIssuance` exception instead of an invented native route. [Stablecoin Data Registry](./stablecoin-data.md#mint-authority-and-bridge-risk-ownership) owns the exact authoring contract, the deployment identity, and the values that are forbidden on active records.
 
-Compact `mintAuthoritySummary` projections can appear in structural/user-facing tables, including `/coverage/`, the homepage stablecoin table, and `/screener/`. Those surfaces bucket the reviewed data into review-route labels (`No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, `Unknown`), which describe which curation route an asset is on and carry no score. The mint score and band beside them are the published V9 mint component and its posture band.
+Compact `mintAuthoritySummary` projections in coverage and market tables carry review-route labels, not scores. An `unknown` native mint path stays `Unknown` even when reviewed; it never defaults to `Governed`. The adjacent mint score and band come from the published V9 mint component.
 
 Mint path labels:
 
