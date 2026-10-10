@@ -149,15 +149,7 @@ function neutralizeFactorAndRescore(
       neutralized.apyVarianceScore = 0;
       break;
   }
-  const neutralizedScore = computePYS({
-    apy30d: neutralized.apy30d,
-    safetyScore: neutralized.safetyScore,
-    apyVarianceScore: neutralized.apyVarianceScore,
-    scalingFactor: neutralized.scalingFactor,
-    benchmarkRate: neutralized.benchmarkRate,
-    usdBenchmarkRate: neutralized.usdBenchmarkRate,
-    sourceRiskPenalty: neutralized.sourceRiskPenalty,
-  });
+  const neutralizedScore = computePYS(neutralized);
   return actualScore - neutralizedScore;
 }
 

@@ -360,7 +360,7 @@ A failed live RPC remains a circuit failure even when the cached rate rescues pu
 does not record a live success or failure. Cron metadata exposes
 `cachedRateFallbacks` and the attempt ledger records the cached source per asset.
 
-Registry-backed ERC-4626 routes bind to the reviewed canonical chain deployment and keep the vault rate denominated in
+`erc4626-nav.ts` owns the explicit ERC-4626 route allowlist and parent-trust opt-ins; `defineRegistryErc4626NavVault` derives exact addresses and share/asset decimals from canonical contract metadata on the selected chain. Routes keep the vault rate denominated in
 the tracked parent asset. In particular, sUSDS reads its canonical Ethereum vault against tracked USDS, while sUSDe reads
 its canonical Ethereum staking vault against tracked USDe. The rate becomes a USD price only after multiplication by a
 fresh trusted parent price; there is no synthetic `$1` parent or wrapper fallback, so a missing or untrusted parent leaves

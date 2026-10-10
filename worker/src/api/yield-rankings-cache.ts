@@ -14,13 +14,13 @@ import {
   type YieldSafetyReason,
   type YieldVenueRiskTier,
 } from "@shared/types/yield";
-import { computePYS, yieldStabilityToApyVarianceScore, PYS_DEFAULT_SAFETY_SCORE as DEFAULT_SAFETY_SCORE } from "@shared/lib/yield-scoring";
+import { computePYSFromComponents, computePysComponents, yieldStabilityToApyVarianceScore, PYS_DEFAULT_SAFETY_SCORE as DEFAULT_SAFETY_SCORE } from "@shared/lib/yield-scoring";
 import { assessYieldEvidence } from "@shared/lib/yield-evidence";
 import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { resolveYieldRowSafety, stripSafetyDerivedSourceRisk } from "@shared/lib/yield-opportunity-risk";
-import { classifyYieldSourceAgeTier, classifyYieldSourceFreshness, derivePysNullReason, getRankingStaleThresholdMs } from "../lib/yield-ranking-helpers";
+import { classifyYieldSourceAgeTier, classifyYieldSourceFreshness, derivePysNullReasonFromComponents, getRankingStaleThresholdMs, resolveEvidenceNullReason } from "../lib/yield-ranking-helpers";
 import {
   classifyYieldBenchmarkFreshness,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
@@ -58,27 +58,6 @@ function hasYieldPublicationContract(payload: YieldRankingsResponse): boolean {
 }
 
 
-function recomputeYieldScore(
-  row: YieldRanking,
-  safetyInputScore: number,
-  scalingFactor: number,
-  usdBenchmarkRate: number | null,
-  sourceRiskPenalty: number | null,
-  benchmarkCurrency: string | null,
-): number {
-  return computePYS({
-    apy30d: row.apy30d,
-    safetyScore: safetyInputScore,
-    apyVarianceScore: yieldStabilityToApyVarianceScore(row.yieldStability),
-    scalingFactor,
-    benchmarkRate: row.benchmarkRate ?? null,
-    // Same-currency USD benchmarks take no re-base credit (v8.43 B24); the
-    // published currency is the write path's `benchmarkMeta.currency ?? key`.
-    benchmarkCurrency,
-    usdBenchmarkRate,
-    sourceRiskPenalty,
-  });
-}
 
 function resolveHydratedEvidenceClass(row: YieldRanking): YieldEvidenceClass {
   if (row.provenance?.evidenceClass) return row.provenance.evidenceClass;
@@ -426,47 +405,34 @@ function hydrateYieldRankingsWithLiveSafety(
       if (benchmarkFreshness !== "healthy" && !warningSignals.includes(`benchmark-${benchmarkFreshness}`)) {
         warningSignals.push(`benchmark-${benchmarkFreshness}`);
       }
-      // The ladder mirrors the write path's `resolveEvidenceNullReason`, so the
-      // served reason and the published one cannot disagree.
-      const evidenceNullReason =
-        sourceFreshness === "stale" || warningSignals.includes("data-stale")
-          ? ("source-stale" as const)
-          : sourceFreshness === "unknown"
-            ? ("source-freshness-unknown" as const)
-            : benchmarkFreshness === "stale" || warningSignals.includes("benchmark-stale")
-              ? ("benchmark-stale" as const)
-              : rowReferenceBenchmarkFreshness === "stale"
-                ? ("benchmark-stale" as const)
-                : !opportunityEvidenceComplete
-                  ? ("opportunity-evidence-missing" as const)
-                  : null;
+      const evidenceNullReason = resolveEvidenceNullReason({
+        sourceFreshness,
+        benchmarkFreshness,
+        referenceBenchmarkFreshness: rowReferenceBenchmarkFreshness,
+        opportunityEvidenceComplete,
+      });
       // B6: the response emits `hydratedSafety.sourceRisk`, so the score must be
       // computed from that same penalty — a read-path score the emitted evidence
       // cannot reproduce is not auditable.
       const hydratedSourceRiskPenalty = hydratedSafety.sourceRisk?.sourceRiskPenalty ?? null;
-      const recomputedPharosYieldScore = recomputeYieldScore(
-        row,
-        safetyInputScore,
-        payload.scalingFactor,
-        usdBenchmarkRate,
-        hydratedSourceRiskPenalty,
+      const components = computePysComponents({
+        apy30d: row.apy30d,
+        safetyScore: safetyInputScore,
+        apyVarianceScore: yieldStabilityToApyVarianceScore(row.yieldStability),
+        benchmarkRate: row.benchmarkRate ?? null,
+        // Same-currency USD benchmarks take no re-base credit (v8.43 B24); the
+        // published currency is the write path's `benchmarkMeta.currency ?? key`.
         benchmarkCurrency,
-      );
+        usdBenchmarkRate,
+        sourceRiskPenalty: hydratedSourceRiskPenalty,
+      });
+      const recomputedPharosYieldScore = computePYSFromComponents(row.apy30d, payload.scalingFactor, components);
       const pysNullReason =
         evidenceNullReason ??
         (preservePublishedSafety && row.safetyScore == null ? "safety-unrated" as const : null) ??
         (recomputedPharosYieldScore > 0
           ? null
-          : derivePysNullReason({
-              apy30d: row.apy30d,
-              safetyScore: safetyInputScore,
-              apyVarianceScore: yieldStabilityToApyVarianceScore(row.yieldStability),
-              scalingFactor: payload.scalingFactor,
-              benchmarkRate: row.benchmarkRate ?? null,
-              benchmarkCurrency,
-              usdBenchmarkRate,
-              sourceRiskPenalty: hydratedSourceRiskPenalty,
-            }));
+          : derivePysNullReasonFromComponents(row.apy30d, payload.scalingFactor, components));
       // B22: the served score is null whenever a reason is published. The UI's NR
       // gate is `pharosYieldScore === null`, so a hard 0 next to a reason renders
       // as a scored row and hides the reason.

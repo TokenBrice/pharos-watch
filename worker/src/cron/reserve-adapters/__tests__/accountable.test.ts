@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/core";
 import { adaptAccountableDashboard } from "../accountable";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 import apxusd from "@shared/data/stablecoins/coins/apxusd-apyx.json";
@@ -26,12 +27,7 @@ import { adapterCoins, installAdapterNetwork, runAdapter } from "./reserve-adapt
 import { DASHBOARD_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
 
 const toriCapture = { ...toriPayload, data: { ...toriPayload.data, ts: String(toriPayload.data.ts) } };
-const toriParams = {
-  ...trusd.liveReservesConfig.params,
-  layout: "asset-breakdown" as const,
-  riskMap: trusd.liveReservesConfig.params.riskMap as Record<string, ReserveSlice["risk"]>,
-  depTypeMap: trusd.liveReservesConfig.params.depTypeMap as Record<string, ReserveSlice["depType"]>,
-};
+const toriParams = parseLiveReserveAdapterParams("accountable", trusd.liveReservesConfig.params);
 
 // Production removed NUSD's live config after its endpoint stopped resolving.
 // Keep this inline mapping fixture to exercise the reviewed historical

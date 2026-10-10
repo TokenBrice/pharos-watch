@@ -25,7 +25,6 @@ import type {
   AddressPriceProviderCollectionResult,
   AddressPriceProviderKey,
   AddressPriceProviderRuntimeConfig,
-  AddressPriceProviderRunResult,
   AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";
@@ -353,21 +352,6 @@ export function buildAddressPriceTargetsByProvider(params: {
   return result;
 }
 
-async function runAddressProvider(params: {
-  targets: AddressPriceTarget[];
-  config: AddressPriceProviderRuntimeConfig;
-  signal?: AbortSignal;
-  nowSec: number;
-  deadlineMs: number;
-}): Promise<AddressPriceProviderRunResult> {
-  return runCoingeckoOnchainAddressProvider(
-    params.targets,
-    params.config.cgApiKey ?? null,
-    params.signal,
-    params.nowSec,
-    params.deadlineMs,
-  );
-}
 
 export async function collectAddressPriceProviderQuotes(params: {
   targetsByProvider: Map<AddressPriceProviderKey, AddressPriceTarget[]>;
@@ -421,13 +405,13 @@ export async function collectAddressPriceProviderQuotes(params: {
       return { quotesByStablecoinId, diagnostics, providerOutcomes, attemptedRequests: 0, successfulRequests: 0 };
     }
 
-    const result = await runAddressProvider({
+    const result = await runCoingeckoOnchainAddressProvider(
       targets,
-      config: params.config,
-      signal: params.signal,
-      nowSec: params.nowSec,
+      params.config.cgApiKey ?? null,
+      params.signal,
+      params.nowSec,
       deadlineMs,
-    });
+    );
     diagnostics.push(...result.diagnostics);
     // A 404 is the provider's definitive "this deployment is not indexed"
     // answer, not an outage. Counting it as a failure would let a cohort made

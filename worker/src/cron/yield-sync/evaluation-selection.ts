@@ -11,10 +11,10 @@ import {
   relativeDivergence,
 } from "./evaluation-arbitration";
 import {
-  resolveEvidenceNullReason,
   resolvePenaltyDerivedFields,
   resolvePenaltyOrderingFields,
 } from "./evaluation-scoring";
+import { resolveEvidenceNullReason } from "../../lib/yield-ranking-helpers";
 import type { EvaluatedYieldSource } from "./evaluation-types";
 import type { YieldHistorySnapshotRow } from "./history";
 import type { YieldBenchmarkFreshness } from "./benchmarks";

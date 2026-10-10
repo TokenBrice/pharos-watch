@@ -4,8 +4,7 @@ import {
 } from "@shared/lib/yield-scoring";
 import type { YieldPysNullReason } from "@shared/types/yield";
 import { PYS_SCALING_FACTOR } from "../../lib/constants";
-import { derivePysNullReasonFromComponents, type YieldSourceFreshness } from "../../lib/yield-ranking-helpers";
-import type { YieldBenchmarkFreshness } from "./benchmarks";
+import { derivePysNullReasonFromComponents } from "../../lib/yield-ranking-helpers";
 import type { EvaluatedYieldSource } from "./evaluation-types";
 
 interface PenaltyFieldsInput {
@@ -31,35 +30,10 @@ type PenaltyDerivedFields = Pick<
   | "pysNullReason"
 >;
 
-export function resolveEvidenceNullReason(params: {
-  sourceFreshness: YieldSourceFreshness;
-  benchmarkFreshness: YieldBenchmarkFreshness;
-  referenceBenchmarkFreshness: YieldBenchmarkFreshness;
-  opportunityEvidenceComplete?: boolean;
-}): YieldPysNullReason | null {
-  if (params.sourceFreshness === "stale") return "source-stale";
-  if (params.sourceFreshness === "unknown") return "source-freshness-unknown";
-  if (params.benchmarkFreshness === "stale") return "benchmark-stale";
-  if (params.referenceBenchmarkFreshness === "stale") return "benchmark-stale";
-  if (params.opportunityEvidenceComplete === false) return "opportunity-evidence-missing";
-  return null;
-}
-
-function computePenaltyComponents(params: PenaltyFieldsInput) {
-  return computePysComponents({
-    apy30d: params.apy30d,
-    safetyScore: params.safetyScore,
-    apyVarianceScore: params.apyVarianceScore,
-    benchmarkRate: params.benchmarkRate,
-    benchmarkCurrency: params.benchmarkCurrency,
-    usdBenchmarkRate: params.usdBenchmarkRate,
-    sourceRiskPenalty: params.sourceRiskPenalty,
-  });
-}
 
 /** Ordering needs utility and penalty provenance, but not a PYS value. */
 export function resolvePenaltyOrderingFields(params: PenaltyFieldsInput): PenaltyDerivedFields {
-  const components = computePenaltyComponents(params);
+  const components = computePysComponents(params);
   return {
     sourceRiskPenalty: components.sourceRiskPenalty,
     sourceRiskPenaltyReason: components.sourceRiskPenaltyReason,
@@ -75,7 +49,7 @@ export function resolvePenaltyOrderingFields(params: PenaltyFieldsInput): Penalt
 
 /** Full score computation is reserved for the final published candidate shape. */
 export function resolvePenaltyDerivedFields(params: PenaltyFieldsInput): PenaltyDerivedFields {
-  const components = computePenaltyComponents(params);
+  const components = computePysComponents(params);
   const computedPharosYieldScore = computePYSFromComponents(params.apy30d, PYS_SCALING_FACTOR, components);
   // One ladder decides both fields: a published reason always means no score,
   // while a legitimately rounded-zero score keeps a null reason.

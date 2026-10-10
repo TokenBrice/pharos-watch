@@ -43,10 +43,8 @@ import {
   resolveYieldTypeLabel,
 } from "./evaluation-arbitration";
 import type { EvaluatedYieldSource } from "./evaluation-types";
-import {
-  resolveEvidenceNullReason,
-  resolvePenaltyOrderingFields,
-} from "./evaluation-scoring";
+import { resolvePenaltyOrderingFields } from "./evaluation-scoring";
+import { resolveEvidenceNullReason } from "../../lib/yield-ranking-helpers";
 import { selectYieldSourceGroup } from "./evaluation-selection";
 import { throwIfAborted, yieldToEventLoop as defaultYieldToEventLoop } from "../../lib/abort";
 import { resolveYieldBenchmarkDependencies } from "../../lib/yield-config/yield-benchmark-dependencies";

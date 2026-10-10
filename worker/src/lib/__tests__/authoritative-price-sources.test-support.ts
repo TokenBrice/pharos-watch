@@ -85,9 +85,29 @@ vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal
   // Resolve the hoisted registry mock, not the production projection, inside the factory.
   const actual = await importOriginal<typeof WorkerRuntimeRegistry>();
   const registry = await import("@shared/lib/stablecoins/registry");
+  // Hoisted mock factories run before static imports initialize; load the deployment schema here.
+  const { ContractDeploymentSchema } = await import("@shared/types/stablecoin-meta-schemas");
+  const trackedMetaById = new Map(actual.WORKER_TRACKED_META_BY_ID);
+  for (const [id, mockMeta] of registry.TRACKED_META_BY_ID) {
+    const canonicalMeta = trackedMetaById.get(id);
+    if (!canonicalMeta) throw new Error(`authoritative-price-sources fixture has no canonical metadata for ${id}`);
+    const mockContracts = (mockMeta.contracts ?? []).map((deployment) => ContractDeploymentSchema.parse(deployment));
+    const mockChains = new Set(mockContracts.map((deployment) => deployment.chain));
+    trackedMetaById.set(id, {
+      ...canonicalMeta,
+      id: mockMeta.id,
+      symbol: mockMeta.symbol,
+      ...(mockMeta.geckoId != null ? { geckoId: mockMeta.geckoId } : {}),
+      // Fixture deployments own first-contract diagnostics; canonical extras only supply NAV routes.
+      contracts: [
+        ...mockContracts,
+        ...(canonicalMeta.contracts?.filter((deployment) => !mockChains.has(deployment.chain)) ?? []),
+      ],
+    } satisfies WorkerRuntimeRegistry.WorkerRuntimeStablecoinMeta);
+  }
   return {
     ...actual,
-    WORKER_TRACKED_META_BY_ID: registry.TRACKED_META_BY_ID,
+    WORKER_TRACKED_META_BY_ID: trackedMetaById,
     WORKER_ACTIVE_IDS: registry.ACTIVE_IDS,
   };
 });
