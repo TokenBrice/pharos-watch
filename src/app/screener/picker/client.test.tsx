@@ -245,12 +245,12 @@ describe("SelectorClient — state machine", () => {
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
     render(<SelectorClient />);
 
-    expect(await screen.findByText("/subscribe dews, depeg, safety USDC, USDT, DAI")).toBeTruthy();
+    expect(await screen.findByText("/subscribe dews, depeg, safety usdc-circle, usdt-tether, dai-makerdao")).toBeTruthy();
     const botLink = screen.getByRole("link", { name: /Open PharosWatchBot/i });
     expect(botLink.getAttribute("href")).toBe("https://t.me/PharosWatchBot");
   });
 
-  it.each(["unsafe token", "all", "freeze"])("excludes unsafe command tokens and falls back to ids for %s", async (symbol) => {
+  it.each(["unsafe token", "all", "freeze"])("uses canonical ids regardless of the %s display symbol", async (symbol) => {
     runSelectorMock.mockImplementation((input: SelectorInput) =>
       mockSelectorOutput({
         input,
@@ -280,6 +280,26 @@ describe("SelectorClient — state machine", () => {
     render(<SelectorClient />);
     expect(await screen.findByText("/subscribe dews, depeg, safety safe-fallback")).toBeTruthy();
     expect(screen.queryByText(/all depeg-step 100 usd-top25/)).toBeNull();
+  });
+
+  it("copies both canonical DUSD targets without collapsing the shortlist to their shared ticker", async () => {
+    const ids = ["dusd-alto", "dusd-standx"];
+    runSelectorMock.mockImplementation((input: SelectorInput) => mockSelectorOutput({
+      input,
+      recommended: ids.map((id, index) => ({
+        ...baseRecommendation, id, symbol: "DUSD", name: id, rank: index === 0 ? 1 : 2,
+        profile: "treasury", recommendedSource: null, perInputStaleness: null,
+      })),
+    }));
+    setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
+    render(<SelectorClient />);
+    const command = await screen.findByText("/subscribe dews, depeg, safety dusd-alto, dusd-standx");
+    const targets = command.textContent!.replace("/subscribe dews, depeg, safety ", "").split(", ");
+    expect(targets).toEqual(ids);
+    const clipboard = { writeText: vi.fn().mockResolvedValue(undefined) };
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: clipboard });
+    fireEvent.click(command.parentElement!.querySelector("button")!);
+    expect(clipboard.writeText).toHaveBeenCalledWith(command.textContent);
   });
 
   it("shows near misses even when a shortlist is present", async () => {

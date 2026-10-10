@@ -3,9 +3,23 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { sortCemeteryCoins } from "@shared/lib/cemetery";
 import { buildFrozenCemeteryProjection, CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
-import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { CAUSE_META } from "@shared/lib/cause-of-death";
+import { buildCemeteryDataset } from "../maintenance/generate-cemetery-dataset";
+import { z } from "zod";
+
+const GeneratedDatasetSchema = z.object({
+  sourceChecksum: z.string(),
+  sourceData: z.array(z.object({ path: z.string(), checksum: z.string() })),
+  fields: z.record(z.string(), z.string()),
+  rows: z.array(z.object({ id: z.string(), causeLabel: z.string(), recordedAt: z.string().nullable() })),
+});
+
+function generatedDataset() {
+  return GeneratedDatasetSchema.parse(JSON.parse(buildCemeteryDataset().json));
+}
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 const DATASET = JSON.parse(
@@ -24,6 +38,35 @@ const CSV_HEADER = readFileSync(resolve(REPO_ROOT, "public/datasets/stablecoin-c
 const FROZEN_PROJECTION_PATH = "shared/lib/cemetery-merged.ts#frozenCemeteryProjection";
 
 describe("cemetery dataset provenance", () => {
+  it("pins the consumed cause-label projection and rotates both rows and checksum when a label changes", () => {
+    const before = generatedDataset();
+    const labels = Object.fromEntries(Object.entries(CAUSE_META).map(([cause, meta]) => [cause, meta.label]));
+    expect(before.sourceData.find((source) => source.path === "shared/lib/cause-of-death.ts#causeLabels")?.checksum)
+      .toBe(`sha256:${sha256Hex(stableJsonStringifyV1(labels))}`);
+    const original = CAUSE_META.abandoned.label;
+    try {
+      CAUSE_META.abandoned.label = `${original} revised`;
+      const after = generatedDataset();
+      expect(after.sourceChecksum).not.toBe(before.sourceChecksum);
+      expect(after.rows).not.toEqual(before.rows);
+      expect(after.rows.some((row) => row.causeLabel === `${original} revised`)).toBe(true);
+    } finally {
+      CAUSE_META.abandoned.label = original;
+    }
+  });
+
+  it("does not rotate the checksum for unrelated active-coin metadata", () => {
+    const coin = ACTIVE_STABLECOINS[0]!;
+    const original = coin.name;
+    const before = generatedDataset();
+    try {
+      coin.name = `${original} revised`;
+      expect(generatedDataset()).toEqual(before);
+    } finally {
+      coin.name = original;
+    }
+  });
+
   it("does not pin the whole tracked-stablecoin aggregate", () => {
     // Hashing coins.generated.json rotated this export on every live-coin
     // curation while no cemetery row moved, and published a checksum for a
@@ -54,6 +97,20 @@ describe("cemetery dataset provenance", () => {
 });
 
 describe("cemetery dataset schema 1.1", () => {
+  it("describes recordedAt overrides and retains real cemetery-entry dates distinct from freezes", () => {
+    const dataset = generatedDataset();
+    expect(dataset.fields.recordedAt).toContain("obituary.recordedAt");
+    expect(dataset.fields.recordedAt).toContain("overrides");
+    for (const [id, recordedAt, frozenAt] of [
+      ["dusd-fluid", "2026-09-04", "2024-04-22"],
+      ["ist-agoric", "2026-06-21", "2025-06-26"],
+    ]) {
+      expect(dataset.rows.find((row) => row.id === id)?.recordedAt).toBe(recordedAt);
+      expect(FROZEN_STABLECOINS.find((coin) => coin.id === id)?.frozenAt).toBe(frozenAt);
+      expect(recordedAt).not.toBe(frozenAt);
+    }
+  });
+
   it("publishes rows in the shared cemetery sort order it documents", () => {
     expect(DATASET.rows.map((row) => row.id)).toEqual(
       sortCemeteryCoins(CEMETERY_ENTRIES, "newest").map((entry) => entry.id),

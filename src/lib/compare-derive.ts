@@ -22,6 +22,7 @@ import type {
   V9ConsumerCard,
   V9ConsumerIdentity,
 } from "@/lib/safety-score-v9-consumers";
+import { hasCompleteV9RadarPillars } from "@/lib/safety-score-v9-consumers";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
 import {
   resolveCoinNetFlow,
@@ -127,7 +128,7 @@ export function buildCompareRadarCohortBaseline(
   selectedRadarCards: readonly CompareRadarCardEntry[],
   cohort: CompareRadarCohort,
 ): CompareRadarCohortBaseline {
-  const allCards = cards ?? [];
+  const allCards = (cards ?? []).filter(hasCompleteV9RadarPillars);
   if (allCards.length === 0 || selectedRadarCards.length === 0) {
     return {
       effectiveCohort: "all",

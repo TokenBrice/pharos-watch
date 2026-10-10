@@ -104,6 +104,8 @@ Supply the context needed to avoid misreading:
 - methodology link or label for coined scores
 - a short caveat where correlation, sample scope, or retained stale data could be mistaken for something stronger
 
+The global regime bar uses the `stabilityIndex` data-health preset, response producer metadata, and PSI generation time. Non-fresh or failed-refresh evidence gets a neutral bar and an explicitly retained, as-of observation in visible and accessible text, not a current market-regime claim.
+
 The non-USD share chart labels its latest sample date separately from coverage start and HTTP receipt time. Its cohort amounts and shares are non-null producer observations (an observed empty cohort is zero); absent overall history remains unavailable. Server freshness metadata feeds the existing Alt Pegs page stale-data banner even when a stalled snapshot is returned over successful HTTP.
 
 At-peg occupancy labels use `formatPegOccupancy` from `shared/lib/format.ts`: a non-perfect value that rounds to 100 at the displayed precision is `<100%`, while exactly 100 keeps the normal perfect-record label. This applies to the depeg control board, detail history and comparison table; raw statistics and exports are unchanged.

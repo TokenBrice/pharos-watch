@@ -70,7 +70,7 @@ Cemetery data is static and versioned in-repo. The curated dead-coin dataset liv
 Each entry follows `DeadStablecoinSchema` (`shared/types/market.ts`):
 
 - identity: `id`, `name`, `symbol`, optional `llamaId`, `geckoId`, `aliases` and `logo`
-- context: `pegCurrency`, `causeOfDeath`, `deathDate` (`YYYY-MM` or `YYYY-MM-DD`)
+- context: `pegCurrency`, `causeOfDeath`, `deathDate` (`YYYY-MM` or valid Gregorian `YYYY-MM-DD`). Curated and frozen authoring reuse `parseCemeteryDeathDate`; impossible days are rejected, never rolled forward.
 - narrative: optional `epitaph`, `obituary`, `sourceUrl`, `sourceLabel`
 - optional `peakMcap`: approximate peak market cap in USD; absent when no reliable figure was curated, never zero
 - optional `contracts`: an array of `{ chain, address }` for block-explorer links in the register autopsy
@@ -115,7 +115,7 @@ The JSON export is schema `1.1`. Its header carries `schemaVersion`, name, descr
 
 Each row carries `id`, `name`, `symbol`, `llamaId`, `logoUrl`, `pegCurrency`, `causeOfDeath`, `causeLabel` (from `CAUSE_META`), `deathDate`, `deathDatePrecision`, `peakMcapUsd`, `epitaph`, `obituary`, `sourceUrl`, `sourceLabel`, `archivedDataAvailable`, `contracts`, `pharosUrl`, `mechanismArchetype` and `recordedAt`. In JSON a missing optional value exports as `null` (missing contracts as an empty array), never as zero; the CSV leaves the cell empty. `pharosUrl` resolves to `/stablecoin/<id>/` when archived data is available and to the canonical `/cemetery/#<id>` anchor otherwise. The CSV export mirrors the same rows and column order, with contracts flattened as `chain:address` pairs.
 
-Both exports are deterministic. The `cemetery-dataset` unit in `GENERATED_ARTIFACT_REGISTRY` (`scripts/lib/automation-registry.mjs`) is maintenance-only and auto-staged: the pre-commit hook regenerates and stages the exports when a staged change touches their sources, which include `shared/lib/cause-of-death.ts` because rows embed `causeLabel`. `npx --no-install tsx scripts/maintenance/generate-cemetery-dataset.ts` regenerates them by hand, and `npm run check:generated-artifacts -- --only=cemetery-dataset` fails when the checked-in exports drift from either source. The case-study OG unit (`og-case-studies`) depends on this one and reads the published JSON. Provenance pins `shared/data/dead-stablecoins.json` and `shared/lib/cemetery-merged.ts#frozenCemeteryProjection` (the `buildFrozenCemeteryProjection()` output, not the whole generated catalog), so an active-coin edit leaves the published checksum unchanged.
+Both exports are deterministic. The maintenance-only, auto-staged `cemetery-dataset` unit in `GENERATED_ARTIFACT_REGISTRY` (`scripts/lib/automation-registry.mjs`) regenerates on staged source changes. `npx --no-install tsx scripts/maintenance/generate-cemetery-dataset.ts` regenerates manually; `npm run check:generated-artifacts -- --only=cemetery-dataset` guards drift. The dependent `og-case-studies` unit reads the published JSON. Provenance pins `shared/data/dead-stablecoins.json`, `shared/lib/cemetery-merged.ts#frozenCemeteryProjection` (`buildFrozenCemeteryProjection()` output), and `shared/lib/cause-of-death.ts#causeLabels` (consumed `CAUSE_META` labels). Label changes rotate the checksum; unrelated active-coin edits do not.
 
 The stable `id` field is the primary dead-coin identifier across the cemetery UI, public dataset export, report-card defunct rows, and Telegram cemetery snapshots. `llamaId` remains optional provider metadata only.
 
@@ -325,6 +325,8 @@ Compare combines multiple query sources:
 
 It also derives live peg references with `derivePegRates(...)` for commodity/non-USD normalization in displayed prices.
 
+The safety radar baseline counts only rated cards with all three plotted pillars. Peg/mechanism cohorts below three usable members fall back to all usable rated cards; the displayed count and median use this same population. NR, pipeline-gap, and incomplete-pillar cards contribute neither counts nor scores. Fewer than three usable cards suppresses the median.
+
 ### Share and export
 
 Compare includes client-side share/export rendering:
@@ -356,4 +358,4 @@ The peg-track-record row `Open recorded incident` reports `activeDepeg` as Yes/N
 - Both pages are part of static export and rely on client-side fetches where applicable.
 - Cemetery reliability depends on repository data curation (`shared/data/dead-stablecoins.json` via `shared/lib/dead-stablecoins.ts`).
 - Cemetery Telegram notifications depend on the daily Telegram digest post plus `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`; additions are detected from the repo dataset, not from a separate API feed.
-- Compare reliability depends on the eight core global datasets listed above plus the aggregate mint/burn dataset and per-coin supply-history and flow queries. The blocking global error and stale notices cover the eight core sources; aggregate flow has no dedicated global notice today. Per-coin flow panels degrade by omission unless all selected flow queries fail, in which case the page shows a flow-specific error notice.
+- Compare global error/freshness notices include aggregate mint/burn flows. Tracking coverage requires a successful aggregate read; failed or absent evidence is unavailable, not zero tracked. Any failed per-coin history gets a retry notice, preserving retained data and successful peers.

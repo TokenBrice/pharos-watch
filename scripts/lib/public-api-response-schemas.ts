@@ -1,5 +1,6 @@
 import { DependencyScenariosResponseSchema } from "@shared/types/dependency-scenarios";
 import { z } from "zod";
+import { ApiMetaEnvelopeSchema } from "@shared/types/api-meta";
 
 import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
 import { ChainsResponseSchema } from "@shared/types/chains";
@@ -36,7 +37,7 @@ import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import {
   BlacklistResponseSchema,
   BlacklistSummaryResponseSchema,
-  BluechipRatingsMapSchema,
+  BluechipRatingSchema,
   DepegEventsResponseSchema,
   DexLiquidityMapSchema,
   DexLiquidityHistoryResponseSchema,
@@ -208,6 +209,10 @@ export const PUBLIC_API_RESPONSE_COMPONENT_SCHEMAS = {
  * union would be brittle and low-value as a published schema.
  */
 
+// Frontend schemas validate the body after metadata extraction. Public schemas
+// describe the complete wire response, including the reserved map entry.
+const FreshnessEnvelopeShape = { _meta: ApiMetaEnvelopeSchema.optional() };
+
 export const PUBLIC_API_RESPONSE_SCHEMAS = {
   HealthResponse: HealthResponseSchema,
   StablecoinDetailResponse: StablecoinDetailResponseSchema,
@@ -215,15 +220,15 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   NonUsdShareResponse: NonUsdShareResponseSchema,
   SnapshotsIndexResponse: SnapshotsIndexResponseSchema,
   SnapshotCoinResponse: SnapshotCoinResponseSchema,
-  StablecoinListResponse: StablecoinListResponseSchema,
+  StablecoinListResponse: StablecoinListResponseSchema.extend(FreshnessEnvelopeShape),
   StablecoinReservesResponse: StablecoinReservesResponseSchema,
   StablecoinChartResponse: StablecoinChartResponseSchema,
   PegSummaryResponse: PegSummaryResponseSchema,
-  BluechipRatingsResponse: BluechipRatingsMapSchema,
+  BluechipRatingsResponse: z.object(FreshnessEnvelopeShape).catchall(BluechipRatingSchema),
   DexLiquidityResponse: DexLiquidityMapSchema,
   DepegEventsResponse: DepegEventsResponseSchema,
   TapeEventsResponse: TapeEventsResponseSchema,
-  UsdsStatusResponse: UsdsStatusResponseOutputSchema,
+  UsdsStatusResponse: UsdsStatusResponseOutputSchema.extend(FreshnessEnvelopeShape),
   DexLiquidityHistoryResponse: DexLiquidityHistoryResponseSchema,
   ReportCardsV9Response: ReportCardsV9ResponseSchema,
   SafetyGradesResponse: SafetyGradesResponseSchema,

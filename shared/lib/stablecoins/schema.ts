@@ -15,6 +15,7 @@ import { hasIndependentLiveCompositionDates, hasIndependentReserveObservationDat
 import { normalizeDeploymentId } from "../../types/deployment-id";
 import { resolveV10ReserveObservationDeploymentRefs } from "../safety-score-v9/reserve-scope";
 import { findSummaryBudgetViolations } from "../summary-budget";
+import { parseCemeteryDeathDate } from "../cemetery";
 import {
   CoinNoticeSchema,
   ContractDeploymentSchema,
@@ -128,12 +129,14 @@ const StablecoinIdSchema = z.string().refine(isCanonicalStablecoinId, {
   message: "Invalid stablecoin id",
 });
 
+const CemeteryAuthoredDeathDateSchema = z.string().refine((value) => {
+  const parsed = parseCemeteryDeathDate(value);
+  return parsed !== null && parsed.month !== null;
+}, { message: "Invalid cemetery death date: expected YYYY-MM or a valid YYYY-MM-DD" });
+
 const obituarySchema = z.object({
   causeOfDeath: z.enum(CAUSE_OF_DEATH_VALUES),
-  // Two fixed alternatives instead of `^\d{4}-\d{2}(-\d{2})?$`: the optional
-  // group around a counted repetition raises the star height and trips
-  // security/detect-unsafe-regex. Both branches are linear in the input.
-  deathDate: z.string().regex(/^\d{4}-\d{2}$|^\d{4}-\d{2}-\d{2}$/),
+  deathDate: CemeteryAuthoredDeathDateSchema,
   recordedAt: StrictIsoDateSchema.optional(),
   epitaph: z.string().min(1),
   obituary: z.string().min(1),
@@ -959,6 +962,7 @@ export const CanonicalOrderAssetSchema = z.array(StablecoinIdSchema);
 
 const DeadStablecoinAssetSchema: z.ZodType<DeadStablecoin> = DeadStablecoinSchema.extend({
   id: DeadStablecoinIdSchema,
+  deathDate: CemeteryAuthoredDeathDateSchema,
   recordedAt: StrictIsoDateSchema,
 });
 

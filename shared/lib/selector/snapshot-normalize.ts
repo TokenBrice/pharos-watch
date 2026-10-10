@@ -60,6 +60,7 @@ const CURRENT_GENERATION_ENGINE_VERSIONS = new Set<string>([
   "selector-v2.5",
   "selector-v2.6",
   "selector-v2.7",
+  "selector-v2.8",
   SELECTOR_VERSION,
 ]);
 
@@ -269,7 +270,11 @@ function projectRecommendation(
   if (
     isCurrentGenerationEngine(engineVersion)
     && recommendation.relaxedReason != null
-    && recommendation.relaxedReason !== "peg-score-floor"
+    && (
+      recommendation.relaxedReason !== "peg-score-floor"
+      || input.profile === "treasury"
+      || recommendation.confidence > 60
+    )
   ) {
     return null;
   }
@@ -489,10 +494,12 @@ export function normalizeSelectorSnapshot(snapshot: SelectorOutput): SelectorOut
   if (!lowerRanked || !exclusionSummary) return null;
 
   const { active, surviving } = snapshot.universe;
+  const strictRecommendations = recommended.filter((entry) => entry.relaxedReason == null);
   if (
     active > CLIENT_TRACKED_STABLECOINS.length
     || surviving > active
-    || surviving < recommended.length
+    || surviving < strictRecommendations.length
+    || active < recommended.length
     || exclusionSummary.reduce((total, entry) => total + entry.count, 0) > active
   ) {
     return null;
@@ -546,7 +553,7 @@ export function normalizeSelectorSnapshot(snapshot: SelectorOutput): SelectorOut
   const skippedFraction = active > 0 ? skippedForCoverage.length / active : 0;
   const sparse = skippedFraction > COVERAGE_SPARSE_FRACTION;
   const uneven = !sparse && skippedFraction > COVERAGE_UNEVEN_FRACTION;
-  const minimumRedistributionCount = recommended.reduce(
+  const minimumRedistributionCount = strictRecommendations.reduce(
     (total, entry) => total + entry.components.filter((component) => component.redistributed).length,
     0,
   );

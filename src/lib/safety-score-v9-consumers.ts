@@ -15,6 +15,14 @@ export type V9ConsumerResponse = ReportCardsV9CurrentResponse;
 export type V9ConsumerCard = SafetyScoreV9CurrentCard;
 export type V9ConsumerIdentity = V9ConsumerResponse["safetyScoreIdentity"];
 
+/** The usable population for every three-pillar radar count and aggregate. */
+export function hasCompleteV9RadarPillars(card: SafetyScoreV9Card): boolean {
+  return card.ratingStatus === "rated"
+    && Number.isFinite(card.pillars.backing.score)
+    && Number.isFinite(card.pillars.exit.score)
+    && Number.isFinite(card.pillars.control.score);
+}
+
 export type V9ConsumerUnavailableReason =
   | "invalid-v9-response"
   | "identity-mismatch"

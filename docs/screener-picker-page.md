@@ -39,6 +39,10 @@ Since `selector-v2.8`, source-dependent eligibility is evaluated **before** venu
 
 Yield-domain coverage still requires a published ranking PYS for the coin; that producer-coverage prerequisite is not copied into an alternate's PYS score component. APY coverage is checked on the selected rail, so a missing primary APY cannot hide a separately observed alternate.
 
+Since `selector-v2.9`, family deduplication includes the parent (`variantOf ?? id`) and chooses the highest score with the existing deterministic tie-breakers. Treasury and Trading keep one representative per family across strict and relaxed slots; Yield splits yield-bearing from non-yield-bearing family members. Stored `selector-v2.8` results retain their frozen membership and current-generation component replay.
+
+The `selector-v2.9` concentration substitute must use a protocol absent from the entire shortlist, within the existing three-point score window; without one, the original candidate remains. Zero-tolerance Slot B emphasizes each profile's actual peg component: Treasury `pegStabilityHistory`, Yield `pegStabilityLive`, Trading `pegScoreNow`.
+
 The custody rail ("regulated only" / "on-chain only", derived from the treasury venue answer in `selector-state.ts`) filters on the coin's **reviewed** `custodyModel` from `shared/data/stablecoins/coins/*.json`, projected into the client registry. Coins with no custody review fall back to the `backing × governance` inference in `shared/lib/report-card-policy.ts`. Before `selector-v2.1` the row read the inference unconditionally; that table's whole range is `onchain` and `institutional-regulated`, so exchange-custodied coins cleared the on-chain rail and unregulated institutional custody cleared the regulated rail. The exit floor and the `strong-exit` why-key read the published V9 Exit pillar directly; the duplicate `effectiveExitScore` row field they used to read was retired in the same version.
 
 `SelectorOutput` is both the result view model and replay contract. It owns shortlist and lower-ranked rows, authored explanations, coverage warnings, exclusions and near misses, relaxed constraints, confidence, methodology versions, dataset hash, engine version, and per-input staleness. UI copy must not expose internal reason/weight keys or claim a fixed result count.
@@ -55,6 +59,8 @@ Step changes are announced politely and move focus to the active question. Loadi
 
 Result actions include adjusting answers, verifying the projected filters in `/screener/`, creating a share link, and contextual compare, Telegram, Yield, or per-coin links when the output supports them. `src/lib/selector-handoff.ts` is the authority for the Screener URL and human-readable filter chips. The handoff emits only keys recognized by `SCREENER_URL_SCHEMA`, uses V9-native Backing and Exit names, and includes the recommendation IDs in `coins=`. Constraints the Screener cannot reproduce—yield/source warnings, Bluechip, inherited blacklist exposure, active-depeg, legal uncertainty, and one-hour effective TVL—remain explicit Picker-only divergence chips.
 
+Telegram subscribe commands use canonical recommendation IDs, deduplicated by ID, never display tickers; identically named assets remain distinct bot targets.
+
 ## Browser Storage
 
 | Key | Store | Purpose |
@@ -67,6 +73,8 @@ The Picker does not create a long-lived local result history. Restored session o
 ## Snapshot Sharing
 
 Share creation posts only the allowlisted selector input. `functions/lib/selector-canonical-snapshot.ts` reloads canonical sources, runs the shared adapter and engine, and writes the server-recomputed projection to `SELECTOR_SNAPSHOTS` KV. Caller-provided scores, identities, hashes, or prose are not trusted.
+
+Snapshot counts distinguish strict survivors from explicitly marked relaxed recommendations: strict shortlist members cannot exceed `surviving`, and the total cannot exceed `active`. Listing and redistribution counters describe strictly scored rows only; relaxed component gaps do not inflate those counters. Current-generation relaxed entries retain the allowed reason and confidence cap. Recommended assets do not also appear as closest near misses.
 
 | Surface | Behavior |
 | --- | --- |

@@ -2,8 +2,30 @@ import { describe, expect, it } from "vitest";
 import { buildV9RadarDataset } from "@/components/radar-chart-v9";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import type { SafetyScoreV9Card } from "@shared/types";
 
 describe("V9 radar cohorts", () => {
+  it("requires three complete rated cohort members before publishing any medians", () => {
+    const identity = makeReportCardsV9Response().safetyScoreIdentity;
+    const entry = (card: SafetyScoreV9Card) => ({ card, identity, color: "#123456" });
+    const rated = [90, 80, 30].map((score, index) => entry(makeV9Card({
+      id: `rated-${index}`, pillars: makeV9Pillars({ backing: score, exit: score, control: score }),
+    })));
+    const unusable = [
+      entry(makeReportCardsV9PipelineGapCard("control", "A")),
+      entry(makeV9Card({ pillars: makeV9Pillars({ backing: 100, exit: 100, control: null }) })),
+    ];
+    expect(buildV9RadarDataset([rated[0]!], [...rated.slice(0, 2), ...unusable])).toMatchObject({
+      status: "available", value: { cohortMedians: null },
+    });
+    expect(buildV9RadarDataset([rated[0]!], [...rated, ...unusable])).toMatchObject({
+      status: "available", value: { cohortMedians: { backing: 80, exit: 80, control: 80 } },
+    });
+    expect(buildV9RadarDataset([rated[0]!], unusable)).toMatchObject({
+      status: "available", value: { cohortMedians: null },
+    });
+  });
+
   it("does not plot excluded pillars or surviving diagnostics as zero scores", () => {
     const identity = makeReportCardsV9Response().safetyScoreIdentity;
     for (const card of [makeReportCardsV9PartialCard("exit", "B"), makeReportCardsV9PipelineGapCard("control", "A")]) {

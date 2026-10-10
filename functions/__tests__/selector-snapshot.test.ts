@@ -18,6 +18,8 @@ import {
   buildSelectorSnapshotOutput,
   buildSnapshotRecommendation,
 } from "@shared/lib/selector/__tests__/snapshot-fixture";
+import { runSelector } from "@shared/lib/selector/engine";
+import { FIXTURE_DATASET, makeInput, makeMergedRowWithIdentity } from "@shared/lib/selector/__tests__/fixture";
 
 const { recomputeVerifiedSelectorSnapshotMock } = vi.hoisted(() => ({
   recomputeVerifiedSelectorSnapshotMock: vi.fn(),
@@ -152,6 +154,34 @@ describe("selector-snapshot Pages Function", () => {
   });
 
   describe("POST storage", () => {
+    it.each([0, 1])("POST/GET shares canonical relaxed output with %i strict survivors", async (strictCount) => {
+      const input = makeInput({ profile: "trading" });
+      const strict = makeMergedRowWithIdentity({ id: "usdc-circle", symbol: "USDC", name: "USD Coin" });
+      const relaxed = makeMergedRowWithIdentity(
+        { id: "usdt-tether", symbol: "USDT", name: "Tether USD" },
+        { pegScore: 75, concentrationHhi: null, isRecentListing: true },
+      );
+      const rows = strictCount === 0 ? [relaxed] : [strict, relaxed];
+      recomputeVerifiedSelectorSnapshotMock.mockImplementationOnce(() => createVerifiedSelectorSnapshot(
+        runSelector(input, { rows: new Map(rows.map((row) => [row.id, row])) }, {
+          ...FIXTURE_DATASET, datasetHash: "a".repeat(64),
+        }),
+      ));
+      const env = makeEnv();
+      const created = await onRequest(snapshotContext(postRequest({ input }), env));
+      expect(created.status).toBe(200);
+      const { sid } = await created.json() as { sid: string };
+      const replay = await onRequest(snapshotContext(getRequest(sid), env));
+      expect(replay.status).toBe(200);
+      const body = await replay.json();
+      expect(validateVerifiedSelectorSnapshot(body).ok).toBe(true);
+      expect(body).toMatchObject({
+        universe: { active: rows.length, surviving: strictCount },
+        usedRelaxedFallback: true,
+        provenance: "pharos-verified",
+      });
+    });
+
     it("stores a server-recomputed verified payload and returns its binding", async () => {
       const env = makeEnv();
       const response = await onRequest(snapshotContext(postRequest(buildSelectorSnapshotOutput()), env));

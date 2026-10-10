@@ -28,6 +28,7 @@ import {
   rankRobustnessFor,
   rankScoredEntries,
   sortScoredEntries,
+  variantFamilyKey,
 } from "./ranking";
 import { buildRecommendation } from "./recommendation";
 import {
@@ -255,11 +256,11 @@ function relaxedFallbackReason(
 function buildRelaxedFallbackEntries(
   universe: readonly MergedRow[],
   input: SelectorInput,
-  excludedIds: ReadonlySet<string>,
+  excludedFamilies: ReadonlySet<string>,
 ): ScoredEntry[] {
   const scored: ScoredEntry[] = [];
   for (const row of universe) {
-    if (excludedIds.has(row.id)) continue;
+    if (excludedFamilies.has(variantFamilyKey(row, input.profile))) continue;
     const resolved = input.profile === "yield" ? resolveYieldSourceRail(row, input) : null;
     const selectedRow = resolved?.rail?.row ?? row;
     const reason = relaxedFallbackReason(row, input, selectedRow);
@@ -287,6 +288,7 @@ function buildRecommendationPhase(
   excluded: readonly ExclusionRecord[],
 ): RecommendationPhase {
   const recommended: SelectorRecommendation[] = [];
+  const recommendedFamilies = new Set<string>();
   const nextExcluded = [...excluded];
   for (let i = 0; i < ranked.length; i += 1) {
     const entry = ranked[i]!;
@@ -310,13 +312,14 @@ function buildRecommendationPhase(
       continue;
     }
     recommended.push(rec);
+    recommendedFamilies.add(variantFamilyKey(entry.row, input.profile));
   }
   const relaxedReasons = new Set<ExclusionReason>();
   if (recommended.length < 3) {
     const relaxed = buildRelaxedFallbackEntries(
       universe,
       input,
-      new Set(recommended.map((rec) => rec.id)),
+      recommendedFamilies,
     );
     for (let i = 0; i < relaxed.length && recommended.length < 3; i += 1) {
       const entry = relaxed[i]!;
@@ -359,12 +362,13 @@ export function runSelector(
     row.id,
     input.profile === "yield" ? resolveYieldSourceRail(row, input).rail?.row ?? row : row,
   ]));
+  const recommendedIds = new Set(recommendations.recommended.map((rec) => rec.id));
   const lowerRanked = selectLowerRanked(
     ranked,
     excluded,
     input,
     universe,
-    new Set(recommendations.recommended.map((r) => r.id)),
+    recommendedIds,
     scoreIgnoringExclusion,
     rowsById,
   );
@@ -399,7 +403,13 @@ export function runSelector(
     usedRelaxedFallback,
     relaxedReasons: Array.from(recommendations.relaxedReasons).sort(),
     exclusionSummary: buildExclusionSummary(excluded),
-    closestSurvivors: buildClosestSurvivors(excluded, universe, input, scoreIgnoringExclusion, rowsById),
+    closestSurvivors: buildClosestSurvivors(
+      excluded.filter((entry) => !recommendedIds.has(entry.id)),
+      universe,
+      input,
+      scoreIgnoringExclusion,
+      rowsById,
+    ),
     relaxableConstraints: buildRelaxableConstraints(input, excluded),
     timestamp: dataset.timestamp,
     engineVersion: ENGINE_VERSION,

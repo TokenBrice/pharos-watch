@@ -10,6 +10,9 @@ import {
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makeV9Pillars } from "@/test/fixtures/safety-score-v9";
+import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { buildV9RadarDataset } from "@/components/radar-chart-v9";
 import type { MintBurnCoinFlow, MintBurnPerCoinResponse, StablecoinData } from "@shared/types";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { PressureShiftState } from "@shared/lib/mint-burn-signals";
@@ -129,6 +132,34 @@ function makeSelectedRadarCards(
 // ---------------------------------------------------------------------------
 
 describe("buildCompareRadarCohortBaseline", () => {
+  it("falls back past NR and incomplete cohort members to all usable rated medians", () => {
+    const response = makeReportCardsV9Response({
+      cards: [
+        makeV9Card({ id: "usdc-circle", pillars: makeV9Pillars({ backing: 90, exit: 90, control: 90 }) }),
+        makeV9Card({ id: "usdt-tether", pillars: makeV9Pillars({ backing: 80, exit: 80, control: 80 }) }),
+        { ...makeReportCardsV9PipelineGapCard("control", "A"), id: "pyusd-paypal" },
+        makeV9Card({ id: "usds-sky", pillars: makeV9Pillars({ backing: 100, exit: 100, control: null }) }),
+        makeV9Card({ id: "eurc-circle", pillars: makeV9Pillars({ backing: 30, exit: 30, control: 30 }) }),
+      ],
+    });
+    const selected = makeSelectedRadarCards(response, ["usdc-circle", "usdt-tether"]);
+    const baseline = buildCompareRadarCohortBaseline(response.cards, selected, "peg");
+    expect(baseline.effectiveCohort).toBe("all");
+    expect(baseline.memberCount).toBe(3);
+    expect(baseline.series.map((entry) => entry.card.id)).toEqual(["usdc-circle", "usdt-tether", "eurc-circle"]);
+    expect(buildV9RadarDataset(selected, baseline.series)).toMatchObject({
+      status: "available", value: { cohortMedians: { backing: 80, exit: 80, control: 80 } },
+    });
+  });
+
+  it("returns no baseline members for an all-NR population", () => {
+    const response = makeReportCardsV9Response({
+      cards: [{ ...makeReportCardsV9PipelineGapCard("control", "A"), id: "usdc-circle" }],
+    });
+    expect(buildCompareRadarCohortBaseline(response.cards, makeSelectedRadarCards(response, ["usdc-circle"]), "peg"))
+      .toEqual({ effectiveCohort: "all", series: [], memberCount: 0 });
+  });
+
   it("returns an empty all-cohort baseline until cards and a selection are available", () => {
     expect(buildCompareRadarCohortBaseline(undefined, [], "peg")).toEqual({
       effectiveCohort: "all",

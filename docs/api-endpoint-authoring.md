@@ -20,6 +20,7 @@ For the public `/api/` access and `/about/api/` reference shells, see [API Acces
 | Frontend API query descriptors | `src/lib/api-query-descriptors.ts` is the single declaration table for public-frontend paths, query keys, polling/freshness policy, response mode, and cached lazy schema loaders; admin surfaces use the twin table `src/lib/admin-api-query-descriptors.ts`, which carries no `responseMode` and polls on the generic one-minute ops budget. `src/hooks/api-hooks.ts` derives plain-versus-meta execution from each descriptor's `responseMode`. |
 | Public contract | `docs/api-reference.md` affected endpoint section |
 | Public OpenAPI/Postman artifact metadata | `scripts/lib/public-api-artifact-catalog.ts` |
+| Public response wire schemas | `scripts/lib/public-api-response-schemas.ts` composes body contracts with typed freshness from `shared/types/api-meta.ts`; map responses reserve `_meta` separately from asset values. Frontend schemas validate after metadata extraction in `src/lib/api.ts`. |
 
 The root `RegimeBar` uses the registered `useStabilityIndex()` query, whose descriptor points to the small stability-domain contract that validates only the PSI fields it renders. This keeps the classic Zod stability schema out of the all-route client graph while preserving the full payload in the shared TanStack cache. The `/stability-index/` detail query retains the full lazy schema.
 

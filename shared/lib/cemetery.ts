@@ -1,5 +1,6 @@
 import type { DeadStablecoin } from "../types";
 import { compareCodeUnits } from "./compare";
+import { isValidCalendarDate } from "../types/date-primitives";
 
 export type CemeterySortMode = "newest" | "oldest";
 
@@ -22,7 +23,7 @@ function isAsciiDigits(value: string, length: number): boolean {
 
 /**
  * Parses a `deathDate` of the form `YYYY`, `YYYY-MM` or `YYYY-MM-DD` (ASCII
- * digits, month 1-12, day 1-31). Null when the value has any other shape or
+ * digits, valid Gregorian calendar dates). Null when the value has any other shape or
  * an out-of-range component; callers that require month precision reject a
  * null `month` themselves.
  */
@@ -30,6 +31,7 @@ export function parseCemeteryDeathDate(value: string): CemeteryDeathDateParts | 
   const parts = value.split("-");
   if (parts.length > 3 || !isAsciiDigits(parts[0], 4)) return null;
   const year = Number(parts[0]);
+  if (year < 1) return null;
   if (parts.length === 1) return { year, month: null, day: null };
   if (!isAsciiDigits(parts[1], 2)) return null;
   const month = Number(parts[1]);
@@ -37,7 +39,7 @@ export function parseCemeteryDeathDate(value: string): CemeteryDeathDateParts | 
   if (parts.length === 2) return { year, month, day: null };
   if (!isAsciiDigits(parts[2], 2)) return null;
   const day = Number(parts[2]);
-  if (day < 1 || day > 31) return null;
+  if (!isValidCalendarDate(year, month, day)) return null;
   return { year, month, day };
 }
 

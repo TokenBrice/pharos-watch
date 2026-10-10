@@ -113,13 +113,11 @@ describe("runSelector — Treasury happy path", () => {
     expect(resultA).toEqual(resultB);
   });
 
-  it("variant dedup: only one USDC variant in top-3", () => {
-    const out = runSelector(input, buildFixtureData(), FIXTURE_DATASET);
-    const ids = out.recommended.map((r) => r.id);
-    const usdcCount = ids.filter(
-      (id) => id === "usdc-circle" || id === "usdc-variant-bridged",
-    ).length;
-    expect(usdcCount).toBeLessThanOrEqual(1);
+  it("variant dedup: the real USDC parent and gtUSDC child share one Treasury slot", () => {
+    const root = makeMergedRowWithIdentity({ id: "usdc-circle", symbol: "USDC", name: "USD Coin" });
+    const child = { ...root, id: "gtusdc-gauntlet", symbol: "gtUSDC", variantOf: root.id, isYieldBearing: true };
+    const out = runSelector(input, { rows: new Map([[root.id, root], [child.id, child]]) }, FIXTURE_DATASET);
+    expect(out.recommended.map((rec) => rec.id)).toHaveLength(1);
   });
 
   it("emits recommendedSource=null for Treasury entries", () => {
@@ -190,6 +188,22 @@ describe("runSelector — Treasury happy path", () => {
       expect.objectContaining({ reason: "peg-score-floor", count: 1 }),
     ]);
     expect(out.usedRelaxedFallback).toBe(false);
+  });
+});
+
+describe("runSelector — shortlist family identity", () => {
+  it("does not fill a relaxed Trading slot with a child of the strict root", () => {
+    const root = makeMergedRowWithIdentity({ id: "usdc-circle", symbol: "USDC", name: "USD Coin" });
+    const child = { ...root, id: "gtusdc-gauntlet", symbol: "gtUSDC", variantOf: root.id, isYieldBearing: true, pegScore: 75 };
+    const independent = { ...child, id: "usdt-tether", symbol: "USDT", variantOf: null, isYieldBearing: false };
+    const out = runSelector(
+      makeInput({ profile: "trading" }),
+      { rows: new Map([root, child, independent].map((row) => [row.id, row])) },
+      FIXTURE_DATASET,
+    );
+    expect(out.universe.surviving).toBe(1);
+    expect(out.recommended.map((rec) => rec.id)).toEqual(["usdc-circle", "usdt-tether"]);
+    expect(out.recommended[1]?.relaxedReason).toBe("peg-score-floor");
   });
 });
 

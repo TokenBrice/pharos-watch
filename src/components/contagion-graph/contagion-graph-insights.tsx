@@ -116,9 +116,14 @@ export function ContagionGraphInsights({
             className="rounded-sm border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
             style={{ borderColor: "var(--graph-grid-line)" }}
           >
-            Grade {inspectedNode.grade}
+            {inspectedNode.grade === null ? "Pipeline gap" : `Grade ${inspectedNode.grade}`}
           </span>
         </div>
+        {inspectedNode.partialEvidence ? (
+          <p className="text-[11px] text-muted-foreground">
+            Partial evidence: pipeline gap ({inspectedNode.partialEvidence.causes.join("/")})
+          </p>
+        ) : null}
 
         <div className="flex min-w-0 items-center gap-2">
           <StablecoinLogo src={logos?.[inspectedNode.id]} name={inspectedNode.symbol} size={28} />

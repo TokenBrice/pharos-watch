@@ -11,32 +11,27 @@ import {
   getReportCardGradeRank,
 } from "../report-card-core";
 
+export function variantFamilyKey(
+  row: Pick<ScoredEntry["row"], "id" | "variantOf" | "isYieldBearing">,
+  profile: SelectorProfile,
+): string {
+  const family = row.variantOf ?? row.id;
+  return profile === "yield" ? `${family}::${row.isYieldBearing ? "y" : "n"}` : family;
+}
+
 export function dedupVariants(
   entries: ScoredEntry[],
   profile: SelectorProfile,
 ): ScoredEntry[] {
   const seen = new Map<string, ScoredEntry>();
-  const out: ScoredEntry[] = [];
   for (const entry of entries) {
-    if (entry.row.variantOf == null) {
-      out.push(entry);
-      continue;
-    }
-    const key =
-      profile === "yield"
-        ? `${entry.row.variantOf}::${entry.row.isYieldBearing ? "y" : "n"}`
-        : entry.row.variantOf;
+    const key = variantFamilyKey(entry.row, profile);
     const existing = seen.get(key);
-    if (!existing || entry.score > existing.score) {
+    if (!existing || compareScored(entry, existing) < 0) {
       seen.set(key, entry);
     }
   }
-  const kept = new Set(Array.from(seen.values()));
-  for (const entry of entries) {
-    if (entry.row.variantOf == null) continue;
-    if (kept.has(entry)) out.push(entry);
-  }
-  return out.sort((a, b) => b.score - a.score);
+  return Array.from(seen.values()).sort(compareScored);
 }
 
 const MISSING_SELECTOR_GRADE_RANK = 99;
@@ -121,7 +116,7 @@ export function applyConcentrationSafeguard(entries: ScoredEntry[]): ScoredEntry
     if (conflicts) {
       const substituteIndex = remaining.findIndex((candidate) => {
         if (candidate.row.protocolSlug == null) return false;
-        if (candidate.row.protocolSlug === primaryProtocol) return false;
+        if (selected.some((entry) => entry.row.protocolSlug === candidate.row.protocolSlug)) return false;
         return primary.score - candidate.score <= CONCENTRATION_SUBSTITUTE_WINDOW;
       });
       if (substituteIndex > 0) {

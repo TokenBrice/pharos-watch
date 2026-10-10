@@ -10,6 +10,7 @@ import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9"
 import type * as ContagionLayout from "@/lib/contagion-layout";
 import { ContagionGraphSvg } from "@/components/contagion-graph/contagion-graph-svg";
 import { installSvgCoordinateShim } from "./contagion-graph-test-support";
+import { ContagionGraphInsights } from "@/components/contagion-graph/contagion-graph-insights";
 
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("@/lib/contagion-layout", async () => {
@@ -36,6 +37,32 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("controlled exposure graph", () => {
+  it.each(["B", null] as const)("retains %s partial-evidence qualifications in edge-free roots and both inspection panels", (grade) => {
+    const partialEvidence = { causes: ["A"] as const, excludedPillars: ["exit"] };
+    const graph = renderHook(() => useContagionGraphModel({
+      cards: [{ ...cards[0], grade, partialEvidence }],
+      dependencyEdges: [], mcapMap, trackActions: false,
+      exposureOverlay: { roots: ["coin-0"], rows: new Map(), highlightedPaths: [] },
+    }));
+    const node = graph.result.current.nodes[0];
+    expect(node.partialEvidence).toEqual(partialEvidence);
+    const { container } = render(
+      <>
+        {(["overlay", "panel"] as const).map((variant) => (
+          <ContagionGraphInsights key={variant} variant={variant} inspectedNode={node}
+            visibleLinks={[]} fullLinks={[]} directExposureById={new Map()} nodeMap={new Map([[node.id, node]])}
+            onTraceNode={vi.fn()} />
+        ))}
+      </>,
+    );
+    const panels = container.querySelectorAll('[aria-label="Selected node details"]');
+    expect(panels).toHaveLength(2);
+    for (const panel of panels) {
+      expect(panel.textContent).toContain(grade === null ? "Pipeline gap" : "Grade B");
+      expect(panel.textContent).toContain("Partial evidence: pipeline gap (A)");
+      if (grade === null) expect(panel.textContent).not.toContain("Grade");
+    }
+  });
   it("keeps a selected root on the map even with no mapped relationships", () => {
     const { container } = render(<ContagionGraph cards={cards.slice(0, 1)} dependencyEdges={[]} mcapMap={mcapMap} exposureOverlay={{ roots: ["coin-0"], rows: new Map(), highlightedPaths: [] }} />);
     expect(container.querySelector('[data-exposure-halo="coin-0"]')).not.toBeNull();

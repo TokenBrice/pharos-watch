@@ -27,6 +27,13 @@ const SOURCE_DATA = [
     role: "Canonical frozen tracked-stablecoin projection merged into cemetery rows.",
     readContent: () => stableJsonStringifyV1(buildFrozenCemeteryProjection()),
   },
+  {
+    repoPath: "shared/lib/cause-of-death.ts#causeLabels",
+    role: "Canonical cause labels embedded in exported rows.",
+    readContent: () => stableJsonStringifyV1(
+      Object.fromEntries(Object.entries(CAUSE_META).map(([cause, meta]) => [cause, meta.label])),
+    ),
+  },
 ] as const;
 const OUTPUT_DIR = join(__dirname, "../../public/datasets");
 const JSON_OUTPUT = join(OUTPUT_DIR, "stablecoin-cemetery.json");
@@ -247,18 +254,21 @@ function renderJson(rows: CemeteryDatasetRow[]): string {
         `Pharos mechanism archetype: how the stablecoin was designed to hold its peg (${MECHANISM_ARCHETYPE_VALUES.join(", ")}). `
         + "Independent of causeOfDeath; null when not yet classified.",
       recordedAt:
-        "UTC date (YYYY-MM-DD) on which the record entered Pharos; for tracked-archive rows, the date the coin was frozen. "
-        + "Distinct from deathDate; null when not recorded.",
+        "UTC cemetery-entry/documentation date (YYYY-MM-DD); tracked rows default to frozenAt "
+        + "unless obituary.recordedAt explicitly overrides it. Distinct from deathDate; null when not recorded.",
     },
     rows,
   }, null, 2)}\n`;
 }
 
-function main() {
-  const rows = sortCemeteryCoins(CEMETERY_ENTRIES, "newest").map(coinToRow);
+export function buildCemeteryDataset(entries: CemeteryEntry[] = CEMETERY_ENTRIES): { json: string; csv: string } {
+  const rows = sortCemeteryCoins(entries, "newest").map(coinToRow);
   assertUniqueRowIds(rows);
-  const nextJson = renderJson(rows);
-  const nextCsv = renderCsv(rows);
+  return { json: renderJson(rows), csv: renderCsv(rows) };
+}
+
+function main() {
+  const { json: nextJson, csv: nextCsv } = buildCemeteryDataset();
 
   syncGeneratedArtifacts({
     artifacts: [
@@ -268,7 +278,7 @@ function main() {
     check: CHECK_MODE,
     staleMessage: "Cemetery dataset exports are out of date. Run `tsx scripts/maintenance/generate-cemetery-dataset.ts`.",
     currentMessage: "Cemetery dataset exports are current",
-    writtenMessage: `Generated cemetery dataset exports for ${rows.length} stablecoins`,
+    writtenMessage: `Generated cemetery dataset exports for ${CEMETERY_ENTRIES.length} stablecoins`,
   });
 }
 
