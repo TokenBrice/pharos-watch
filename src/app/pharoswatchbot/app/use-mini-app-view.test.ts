@@ -4,7 +4,7 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { initialViewFromStartParam, relaunchPayloadForView, useMiniAppView, type ViewKey } from "./use-mini-app-view";
 import type { CoinInsightTarget } from "./types";
-import { baseState } from "./mini-app-test-fixtures";
+import { baseState } from "@shared/test-utils/telegram-mini-app-state";
 
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 

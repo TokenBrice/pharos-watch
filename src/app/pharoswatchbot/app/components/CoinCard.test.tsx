@@ -3,7 +3,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { CoinCard } from "./CoinCard";
-import { makeSubscribedCoin as makeCoin } from "../mini-app-test-fixtures";
+import { makeSubscribedCoin as makeCoin } from "@shared/test-utils/telegram-mini-app-state";
 import type { FollowedPreset, SubscribedCoin, TelegramMiniAppState } from "../types";
 
 type GlobalAlerts = TelegramMiniAppState["subscriber"]["globalAlerts"];

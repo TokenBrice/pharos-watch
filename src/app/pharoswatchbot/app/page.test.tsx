@@ -9,7 +9,7 @@ import {
 } from "@shared/lib/telegram-mini-app-contract";
 import { isMiniAppErrorCode, miniAppErrorMessage, MiniAppRequestError } from "./error-messages";
 import PharosWatchBotMiniAppPage, { metadata } from "./page";
-import { baseState } from "./mini-app-test-fixtures";
+import { baseState } from "@shared/test-utils/telegram-mini-app-state";
 import type { TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
 import { installMatchMediaMock } from "@/test-utils/frontend";
 import { mockFetch } from "@shared/test-utils/mock-fetch";

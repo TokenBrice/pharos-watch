@@ -2,7 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { baseState } from "../mini-app-test-fixtures";
+import { baseState } from "@shared/test-utils/telegram-mini-app-state";
 import type { TelegramWebAppSdk } from "../telegram-sdk";
 import type { TelegramMiniAppBulkWatchlistResponse } from "../types";
 import type { WatchlistPanelProps } from "./WatchlistPanel";

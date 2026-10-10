@@ -106,8 +106,6 @@ export function PharosWatchBotMiniAppClient() {
     portabilityReadsAllowed: status === "ready",
   });
   const {
-    displayState,
-    confirmedGlobals,
     isMutating,
     pendingOperation,
     mutationRetryAfterSec,
@@ -135,7 +133,7 @@ export function PharosWatchBotMiniAppClient() {
       const nowMs = Date.now();
       const currentSec = Math.floor(nowMs / 1000);
       setNowSec(currentSec);
-      const deadlines = [displayState?.subscriber.snoozeUntilTs, ...(displayState?.subscriptions.map((coin) => coin.snoozeUntilTs) ?? [])]
+      const deadlines = [state?.subscriber.snoozeUntilTs, ...(state?.subscriptions.map((coin) => coin.snoozeUntilTs) ?? [])]
         .filter((ts): ts is number => ts != null && !isPausedSentinel(ts) && ts > currentSec);
       if (deadlines.length > 0) {
         timer = window.setTimeout(updateClock, Math.min(Math.min(...deadlines) * 1000 - nowMs, 2_147_483_647));
@@ -143,7 +141,7 @@ export function PharosWatchBotMiniAppClient() {
     };
     updateClock();
     return () => window.clearTimeout(timer);
-  }, [displayState]);
+  }, [state]);
 
   const loadSession = useCallback(async (nextInitData: string, options: { clearMessage?: boolean } = {}) => {
     if (terminalRef.current) return;
@@ -169,13 +167,13 @@ export function PharosWatchBotMiniAppClient() {
   useEffect(() => { loadSessionRef.current = loadSession; }, [loadSession]);
 
   const headline = useMemo(() => {
-    if (!displayState) return "";
-    const activeGlobalCount = (Object.keys(ALERT_LABELS) as TelegramAlertType[]).filter((type) => displayState.subscriber.globalAlerts[type]).length;
-    const presetCount = displayState.presets.length;
+    if (!state) return "";
+    const activeGlobalCount = (Object.keys(ALERT_LABELS) as TelegramAlertType[]).filter((type) => state.subscriber.globalAlerts[type]).length;
+    const presetCount = state.presets.length;
     const presetClause = presetCount > 0 ? `, ${presetCount} ${pluralizeCount(presetCount, "preset")}` : "";
-    const coinCount = displayState.subscriptions.length;
+    const coinCount = state.subscriptions.length;
     return `${activeGlobalCount} ${pluralizeCount(activeGlobalCount, "global alert family", "global alert families")}, ${coinCount} explicit ${pluralizeCount(coinCount, "coin")}${presetClause}.`;
-  }, [displayState]);
+  }, [state]);
 
   // Translate bridge resolution into our session-level status and kick off the initial fetch.
   // Runs once per bridge-status transition; downstream session reloads go through `loadSession`.
@@ -291,16 +289,16 @@ export function PharosWatchBotMiniAppClient() {
   const { text: mainButtonText, handler: mainButtonHandler } = useMemo<{ text: string | null; handler: (() => void) | null }>(() => {
     if (!canMutate || mutationControlsDisabled) return { text: null, handler: null };
     if (view === "home") {
-      if (displayState && !displayState.subscriber.exists) {
+      if (state && !state.subscriber.exists) {
         return { text: "Use recommended setup", handler: () => runMainButtonMutation(RECOMMENDED_OPERATION) };
       }
-      if (isTelegramSnoozeActive(displayState?.subscriber.snoozeUntilTs, nowSec) && displayState) {
-        const label = isPausedSentinel(displayState.subscriber.snoozeUntilTs) ? "Resume alerts" : "Clear snooze";
+      if (isTelegramSnoozeActive(state?.subscriber.snoozeUntilTs, nowSec) && state) {
+        const label = isPausedSentinel(state.subscriber.snoozeUntilTs) ? "Resume alerts" : "Clear snooze";
         return { text: label, handler: () => runMainButtonMutation({ kind: "clear-snooze" }) };
       }
     }
     return { text: null, handler: null };
-  }, [canMutate, displayState, mutationControlsDisabled, nowSec, runMainButtonMutation, view]);
+  }, [canMutate, state, mutationControlsDisabled, nowSec, runMainButtonMutation, view]);
   useTelegramMainButton({
     webApp,
     text: mainButtonText,
@@ -315,7 +313,7 @@ export function PharosWatchBotMiniAppClient() {
   const heading = state?.viewer.username
     ? `@${state.viewer.username}`
     : state?.viewer.firstName ?? "PharosWatchBot";
-  const showStaleAuthBanner = displayState?.viewer.mutationBlockReason === "stale-auth";
+  const showStaleAuthBanner = state?.viewer.mutationBlockReason === "stale-auth";
 
   const openPrivacy = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (webApp?.openLink) {
@@ -345,7 +343,7 @@ export function PharosWatchBotMiniAppClient() {
               <RefreshCw className={cn("h-4 w-4", status === "loading" && "animate-spin")} aria-hidden="true" />
             </button>
           </header>
-          {displayState ? (
+          {state ? (
             <MiniAppTabs view={view} onActivate={activateView} />
           ) : null}
         </div>
@@ -353,7 +351,7 @@ export function PharosWatchBotMiniAppClient() {
 
         <MiniAppSessionStatus
           status={status}
-          hasDisplayState={Boolean(displayState)}
+          hasDisplayState={Boolean(state)}
           confirmedMeta={confirmedMeta}
           message={message}
           mutationRetryAfterSec={mutationRetryAfterSec}
@@ -365,13 +363,13 @@ export function PharosWatchBotMiniAppClient() {
           onStaleAuthRelaunch={handleStaleAuthRelaunch}
         />
 
-        {displayState ? (
+        {state ? (
           <>
             <div className="mt-4">
               <MiniAppPanelRouter
                 view={view}
                 home={{
-                  state: displayState,
+                  state: state,
                   nowSec,
                   canMutate,
                   isMutating: mutationControlsDisabled,
@@ -383,7 +381,7 @@ export function PharosWatchBotMiniAppClient() {
                   onSendSample: handleSendSample,
                 }}
                 watchlist={{
-                  state: displayState,
+                  state: state,
                   canMutate,
                   canReadBulk: canReadPortability,
                   isMutating: mutationControlsDisabled,
@@ -404,7 +402,7 @@ export function PharosWatchBotMiniAppClient() {
                   onNavigateToCoin: navigateToCoin,
                 }}
                 presets={{
-                  state: displayState,
+                  state: state,
                   canMutate,
                   isMutating: mutationControlsDisabled,
                   pendingOperation,
@@ -412,14 +410,14 @@ export function PharosWatchBotMiniAppClient() {
                   onUnfollowPreset: handleUnfollowPreset,
                 }}
                 settings={{
-                  state: displayState,
+                  state: state,
                   canMutate,
                   canReadPortability,
                   isMutating: mutationControlsDisabled,
                   isPortabilityRequestBusy: isMutating,
                   pendingOperation,
                   onMutate: mutate,
-                  globalAlerts: confirmedGlobals,
+                  globalAlerts: state.subscriber.globalAlerts,
                   onUnsubscribeAll: handleUnsubscribeAll,
                   onForgetMe: handleForgetMe,
                   hasShowConfirm: Boolean(webApp?.showConfirm),
@@ -428,7 +426,7 @@ export function PharosWatchBotMiniAppClient() {
                   onConfirmWatchlistImport: (operation) => performMutation(operation),
                 }}
                 coinInsight={coinInsightTarget ? {
-                  state: displayState,
+                  state: state,
                   target: coinInsightTarget,
                   webApp,
                   onClose: () => setCoinInsightTarget(null),

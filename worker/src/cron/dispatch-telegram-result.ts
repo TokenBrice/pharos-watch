@@ -64,10 +64,6 @@ export interface DispatchCapacityMetadata {
     handoffPageCount: number;
     coordinatorStepCount: number;
   };
-  /** C128: chats whose multi-coin set collapsed to a single burst-summary chunk this run. */
-  burstCollapsedChats?: number;
-  /** C128: bursting chats fully suppressed this run because their coin set was already summarized. */
-  burstDeltaSuppressed?: number;
   /** True when the reserve producer source is not currently alertable. */
   reserveSourceUnavailable: boolean;
 }
@@ -202,17 +198,6 @@ function emptyPerAlertTypeTargets(): PerAlertTypeTargets {
     launch: { chats: 0, chunks: 0 },
     reserve: { chats: 0, chunks: 0 },
   };
-}
-
-export function buildPerAlertTypeTargets(
-  subscriberQueue: Array<{ alertType: TelegramAlertType; chunks: string[] }>,
-): PerAlertTypeTargets {
-  const targets = emptyPerAlertTypeTargets();
-  for (const sub of subscriberQueue) {
-    (targets[sub.alertType] ??= { chats: 0, chunks: 0 }).chats += 1;
-    targets[sub.alertType]!.chunks += sub.chunks.length;
-  }
-  return targets;
 }
 
 function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): DispatchResult {

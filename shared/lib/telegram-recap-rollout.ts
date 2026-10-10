@@ -37,9 +37,6 @@ export function resolveTelegramRecapRolloutPolicy(
 }
 
 
-export function shouldQueueTelegramRecap(policy: TelegramRecapRolloutPolicy): boolean {
-  return policy.mode === "public";
-}
 
 /** Controls share the public/off boundary with recap delivery. */
 export function isTelegramRecapAvailable(

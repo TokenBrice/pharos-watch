@@ -126,7 +126,6 @@ vi.mock("../../lib/telegram/alerts", async (importOriginal) => {
 });
 
 const { dispatchTelegramAlerts } = await import("../dispatch-telegram-alerts");
-const { pruneOverflowPlanBacklogForChat } = await import("../dispatch-telegram-overflow");
 const { TELEGRAM_MAX_MESSAGES_PER_RUN, TELEGRAM_FORMAT_BUDGET_ALLOWANCE } =
   await import("../../lib/telegram/constants");
 
@@ -264,41 +263,6 @@ function makeSafetySnapshotCache(
       ),
     }),
     updatedAt: Math.floor(Date.now() / 1000) - 60,
-  };
-}
-
-function makeDewsOverflowPlan(now: number, chatId = "chat-overflow") {
-  return {
-    chatId,
-    alertType: "dews" as const,
-    estimatedChunks: 1,
-    entry: {
-      lastActiveAt: now,
-      alerts: {
-        dews: [
-          {
-            stablecoinId: "usdc-circle",
-            symbol: "USDC",
-            oldBand: "CALM",
-            newBand: "WARNING",
-            score: 55,
-            topSignals: [],
-          },
-        ],
-        depegTriggered: [],
-        depegResolved: [],
-        depegWorsening: [],
-        safety: [],
-        launch: [],
-        reserve: [],
-      },
-      quietHoursEnabled: false,
-      quietHoursStartUtc: null,
-      quietHoursEndUtc: null,
-      timezone: null,
-      specificCount: 1,
-      globalCount: 0,
-    },
   };
 }
 
@@ -811,12 +775,10 @@ export {
   scriptTelegramDeliveriesForChat,
   formatConsolidatedMessageSpy,
   dispatchTelegramAlerts,
-  pruneOverflowPlanBacklogForChat,
   TELEGRAM_MAX_MESSAGES_PER_RUN,
   TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
   seedActiveSafetySource,
   makeSafetySnapshotCache,
-  makeDewsOverflowPlan,
   parseLogRecords,
   resetDispatchTelegramAlertsTest,
   cleanupDispatchTelegramAlertsTest,

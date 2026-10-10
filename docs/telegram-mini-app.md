@@ -224,12 +224,14 @@ For incident triage, start at the runbooks rather than DevTools:
 
 ## Test Fixtures
 
+`shared/test-utils/telegram-mini-app-state.ts` owns session-state builders for frontend and shared contract tests; mutable-state fixtures omit its catalog.
+
 - `worker/src/lib/__tests__/telegram-mini-app-auth.test.ts` — HMAC validation, freshness windows, group/supergroup read-only behavior, bot-token rotation overlap.
 - `worker/src/api/__tests__/telegram-mini-app.test.ts` — session and mutation endpoint behavior, state contract, burst-limit responses, partial-failure rollback.
 - `worker/src/api/__tests__/telegram-mini-app-rate-limit.test.ts` — real-SQLite atomic burst admission, exact retry windows, rollover, D1 failure behavior, `/forget`, and retention cleanup.
 - `shared/lib/__tests__/telegram-mini-app-contract.test.ts` — operation parse parity, compact/legacy response schemas, catalog version, and capability compatibility.
 - `src/app/pharoswatchbot/app/mini-app-api.test.ts` — compact-state hydration, new-client/old-Worker compatibility, capability parameters, and one-shot version refresh.
-- `src/app/pharoswatchbot/app/page.test.tsx` — client preview/post-launch rendering, server-confirmed mutation timing, stale-refresh recovery, stale-auth relaunch affordance, suggestion navigation, and timezone selection.
+- `src/app/pharoswatchbot/app/page.test.tsx` / `use-telegram-main-button.test.ts` — client preview/post-launch rendering, confirmed mutation timing, stale-refresh recovery, stale-auth relaunch, suggestion navigation, timezone selection, and native listener transitions/SDK replacement.
 - `src/app/pharoswatchbot/app/use-mini-app-view.test.ts` — `?startapp=` payload/view round-trip for the stale-auth relaunch payload encoder.
 - `src/app/pharoswatchbot/app/telegram-theme.test.ts` / `telegram-sdk.test.ts` — WCAG contrast normalization, hostile light/dark Telegram palettes, CSS variable publication, fallback clearing, viewport, and safe-area behavior.
 - `tests/visual/telegram-mini-app-launch.spec.ts` — standalone/signed launch behavior, 320 px control sizing, and an authenticated hostile-theme axe color-contrast fixture.

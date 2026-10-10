@@ -1,4 +1,6 @@
-import type { SubscribedCoin, TelegramMiniAppState } from "./types";
+import type { TelegramMiniAppState } from "../lib/telegram-mini-app-contract";
+
+type SubscribedCoin = TelegramMiniAppState["subscriptions"][number];
 
 export function makeSubscribedCoin(
   alertTypes: Partial<SubscribedCoin["alertTypes"]>,

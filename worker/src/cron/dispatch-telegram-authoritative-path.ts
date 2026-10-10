@@ -14,7 +14,7 @@ import {
   buildDispatchResult,
   type DispatchResult,
 } from "./dispatch-telegram-result";
-import type { buildDispatchSnapshotState } from "./dispatch-telegram-state";
+import type { buildDispatchSnapshotState, TelegramDispatchSharedState } from "./dispatch-telegram-state";
 import { reportCronProgress } from "../lib/cron-progress";
 import {
   drainPendingQueue,
@@ -55,7 +55,7 @@ export interface AuthoritativeFanoutPathContext {
   dispatchStartedAtMs: number;
   chatsWithActiveSnooze: number;
   signal?: AbortSignal;
-  sharedState?: { pendingCapacitySnapshot?: PendingCapacitySnapshot };
+  sharedState?: TelegramDispatchSharedState;
   reportProgress?: CronProgressReporter;
   markTelegramDeliveryStarted?: () => void;
 }

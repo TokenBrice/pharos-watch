@@ -1,26 +1,17 @@
-import {
-  TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
-  TELEGRAM_MAX_MESSAGES_PER_RUN,
-} from "../lib/telegram/constants";
 import type { TelegramFanoutPlanEvents } from "./dispatch-telegram-events";
-export type { TelegramFanoutPlanEvents } from "./dispatch-telegram-events";
 import {
   TELEGRAM_FANOUT_FAMILIES,
   type FanoutSubscriptionInputs,
 } from "./dispatch-telegram-alerts-fanout";
-import { buildOverflowAwareSubscriberQueue } from "./dispatch-telegram-overflow";
+import { hasEscalation } from "./dispatch-telegram-predicates";
+import { isQuietHoursActive } from "../lib/telegram/quiet-hours";
 import {
-  collapseBurstChats,
+  formatPlannedSubscribers,
+  planSubscriberQueue,
   routeAlertEvents,
-  type BurstMarkerMap,
-  type PlannedSubscriberAlert,
   type RoutedSubscriberAlert,
   type AlertsByChatEntry,
 } from "./dispatch-telegram-routing";
-import {
-  buildPerAlertTypeTargets,
-  type PerAlertTypeTargets,
-} from "./dispatch-telegram-result";
 import { mergeSubscriberMaps } from "./dispatch-telegram-subscribers";
 import { removeHandledTelegramAlertItems } from "./telegram-alert-event-lineage";
 
@@ -30,21 +21,6 @@ export interface PresetFanoutFailureSummary {
   presetFailure: boolean;
 }
 
-export interface TelegramFanoutPlan {
-  plannedQueue: PlannedSubscriberAlert[];
-  subscriberQueue: RoutedSubscriberAlert[];
-  overflowPlanned: PlannedSubscriberAlert[];
-  resolveDisableNotification: (entry: AlertsByChatEntry) => boolean;
-  perAlertTypeTargets: PerAlertTypeTargets;
-  freshCandidateChats: number;
-  freshCandidateCount: number;
-  formattedChats: number;
-  burstOutcome: ReturnType<typeof collapseBurstChats>;
-  presetQueryFailures: number;
-  presetResolutionFailures: number;
-  presetFailure: boolean;
-  handledItemsPruned: number;
-}
 
 export function summarizePresetFanoutFailures(
   inputs: Pick<FanoutSubscriptionInputs, "preset">,
@@ -77,16 +53,12 @@ export function summarizePresetFanoutFailures(
 interface TelegramFanoutRoutingArgs {
   events: TelegramFanoutPlanEvents;
   inputs: FanoutSubscriptionInputs;
-  burstMarkers: BurstMarkerMap;
-  nowSec: number;
   presetFailureSummary?: PresetFanoutFailureSummary;
   handledItemsByChat?: ReadonlyMap<string, ReadonlySet<string>>;
-  collapseBursts?: boolean;
 }
 
 export interface TelegramFanoutRoutingResult extends PresetFanoutFailureSummary {
   alertsByChat: Map<string, AlertsByChatEntry>;
-  burstOutcome: ReturnType<typeof collapseBurstChats>;
   handledItemsPruned: number;
 }
 
@@ -97,11 +69,8 @@ export function buildTelegramAlertsByChat(
   const {
     events,
     inputs,
-    burstMarkers,
-    nowSec,
     presetFailureSummary = summarizePresetFanoutFailures(inputs),
     handledItemsByChat = new Map(),
-    collapseBursts = true,
   } = args;
 
   const alertsByChat = new Map<string, AlertsByChatEntry>();
@@ -125,60 +94,35 @@ export function buildTelegramAlertsByChat(
   }
 
   const handledItemsPruned = removeHandledTelegramAlertItems(alertsByChat, handledItemsByChat);
-  const burstOutcome = collapseBursts
-    ? collapseBurstChats(alertsByChat, burstMarkers, nowSec)
-    : { markers: burstMarkers, collapsedChats: 0, deltaSuppressed: 0 };
   return {
     alertsByChat,
-    burstOutcome,
     handledItemsPruned,
     ...presetFailureSummary,
   };
 }
 
-export function buildTelegramFanoutPlan(args: {
-  events: TelegramFanoutPlanEvents;
-  inputs: FanoutSubscriptionInputs;
-  burstMarkers: BurstMarkerMap;
+/** Render the entire authoritative page, or reject it before persisting any target. */
+export function renderTelegramSubscriberPage(args: TelegramFanoutRoutingArgs & {
   nowSec: number;
-  formatBudget?: number;
-  presetFailureSummary?: PresetFanoutFailureSummary;
-  handledItemsByChat?: ReadonlyMap<string, ReadonlySet<string>>;
-  collapseBursts?: boolean;
+  formatBudget: number;
   sourceEventId?: string;
-}): TelegramFanoutPlan {
-  const {
-    nowSec,
-    formatBudget = TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
-  } = args;
-  const routing = buildTelegramAlertsByChat(args);
-  const { alertsByChat } = routing;
-  const {
-    plannedQueue,
-    subscriberQueue,
-    overflowPlanned,
-    resolveDisableNotification,
-  } = buildOverflowAwareSubscriberQueue({
-    alertsByChat,
-    nowSec,
-    formatBudget,
-    sourceEventId: args.sourceEventId,
-    safetyScoreIdentity: args.events.safetyScoreIdentity ?? null,
-  });
-
-  return {
-    plannedQueue,
-    subscriberQueue,
-    overflowPlanned,
-    resolveDisableNotification,
-    perAlertTypeTargets: buildPerAlertTypeTargets(subscriberQueue),
-    freshCandidateChats: plannedQueue.length,
-    freshCandidateCount: plannedQueue.reduce((sum, plan) => sum + plan.estimatedChunks, 0),
-    formattedChats: subscriberQueue.length,
-    burstOutcome: routing.burstOutcome,
-    handledItemsPruned: routing.handledItemsPruned,
-    presetQueryFailures: routing.presetQueryFailures,
-    presetResolutionFailures: routing.presetResolutionFailures,
-    presetFailure: routing.presetFailure,
-  };
+}): RoutedSubscriberAlert[] {
+  const { alertsByChat } = buildTelegramAlertsByChat(args);
+  const planned = planSubscriberQueue(alertsByChat, args.sourceEventId, args.events.safetyScoreIdentity);
+  let allocated = 0;
+  for (const [index, plan] of planned.entries()) {
+    // The first candidate is admitted even when its estimate exceeds the budget.
+    if (index > 0 && allocated + plan.estimatedChunks > args.formatBudget) {
+      throw new Error("Telegram subscriber page exceeded the bounded rendering budget");
+    }
+    allocated += plan.estimatedChunks;
+  }
+  return formatPlannedSubscribers(planned, (entry) =>
+    !hasEscalation(entry.alerts) || isQuietHoursActive(
+      args.nowSec,
+      entry.quietHoursEnabled,
+      entry.quietHoursStartUtc,
+      entry.quietHoursEndUtc,
+      entry.timezone,
+    ));
 }

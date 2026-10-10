@@ -17,7 +17,8 @@ import {
   buildPendingAlertEnqueueStatement,
 } from "../lib/telegram/pending-queue";
 import { emptyAlerts } from "./dispatch-telegram-routing";
-import { loadFreshFreezeAlerts, type FreezeAlert } from "./telegram-alert-freeze";
+import { loadFreshFreezeAlerts } from "./telegram-alert-freeze";
+import type { FreezeAlert } from "../lib/telegram/alerts-formatting";
 import { prepareTelegramAlertJobCounterReconciliation } from "./telegram-alert-job-target-outcomes";
 import { isQuietHoursActive } from "../lib/telegram/quiet-hours";
 

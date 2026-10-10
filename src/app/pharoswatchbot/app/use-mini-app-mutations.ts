@@ -97,10 +97,6 @@ function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state:
   }
 }
 
-function defaultGlobalAlerts(): TelegramMiniAppState["subscriber"]["globalAlerts"] {
-  return { dews: false, depeg: false, safety: false, launch: false, reserve: false, freeze: false, depegStepBps: null };
-}
-
 function confirmThenFire(
   confirmFn: TelegramWebAppSdk["showConfirm"] | undefined,
   message: string,
@@ -137,10 +133,6 @@ export interface UseMiniAppMutationsArgs {
 }
 
 export interface UseMiniAppMutationsResult {
-  /** Last server-confirmed state, or `null` before the first successful load. */
-  displayState: TelegramMiniAppState | null;
-  /** Server-confirmed global alert settings. */
-  confirmedGlobals: TelegramMiniAppState["subscriber"]["globalAlerts"];
   /** True between dispatch and either resolve or reject of `performMutation`. */
   isMutating: boolean;
   /** Mutation currently in flight, used for scoped control feedback. */
@@ -228,7 +220,6 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   const mutationLimitWasActiveRef = useRef(false);
   const terminalRef = useRef(false);
   const requestInFlightRef = useRef(false);
-  const confirmedGlobals = state?.subscriber.globalAlerts ?? defaultGlobalAlerts();
 
   // 6s message auto-dismiss while the parent reports the session is ready.
   useEffect(() => {
@@ -480,8 +471,6 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   }, []);
 
   return {
-    displayState: state,
-    confirmedGlobals,
     isMutating,
     pendingOperation,
     mutationRetryAfterSec,

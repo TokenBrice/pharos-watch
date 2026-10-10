@@ -185,7 +185,7 @@ async function openDeliveryForRoutes(
 describe("authoritative Telegram target plans on latest SQLite schema", () => {
   it("uses the strictest family TTL for a mixed consolidated target", () => {
     expect(
-      resolveTelegramTargetExpiresAt({ detectedAt: NOW }, {}, { alertType: "depeg", alertTypes: ["depeg", "launch"] }),
+      resolveTelegramTargetExpiresAt({ detectedAt: NOW }, { alertType: "depeg", alertTypes: ["depeg", "launch"] }),
     ).toBe(NOW + 90 * 60);
   });
   it("materializes every target before pending handoff and preserves job metadata", async () => {
@@ -1297,20 +1297,22 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
         subscriber,
         currentPreferenceGeneration: 1,
         currentEligible: true,
-        routed: [routed(subscriber.chatId, sourceEventId, 1, `-${index}`)],
-        targetExpiresAt: index === 0 ? NOW : index === 1 ? NOW + 100 : NOW + 1,
+        routed: [{
+          ...routed(subscriber.chatId, sourceEventId, 1, `-${index}`),
+          ...(index === 0 ? { alertType: "launch" as const, alertTypes: ["launch"] as const } : {}),
+        }],
       })),
       NOW - 1,
     );
     await finalizeTelegramTargetPlanning(db, claim, NOW - 1);
     await openTelegramTargetPlanDelivery(db, claim, NOW - 1);
 
-    const first = await enqueueTelegramAuthoritativeTargets(db, sourceEventId, 1, NOW, 1);
+    const first = await enqueueTelegramAuthoritativeTargets(db, sourceEventId, 1, NOW + 90 * 60, 1);
     expect(first.enqueued).toBe(1);
     expect(
       sqlite.prepare("SELECT final_delivery_state FROM telegram_alert_job_targets WHERE chat_id = '1'").get(),
     ).toEqual({ final_delivery_state: "expired" });
-    await expireTelegramAuthoritativeTargets(db, sourceEventId, 1, NOW + 2);
+    await expireTelegramAuthoritativeTargets(db, sourceEventId, 1, NOW + PENDING_TTL_SEC);
     expect(
       sqlite.prepare("SELECT status, final_delivery_state FROM telegram_alert_job_targets ORDER BY chat_id").all(),
     ).toEqual([

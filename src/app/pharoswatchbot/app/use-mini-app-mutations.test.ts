@@ -6,7 +6,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { RECOMMENDED_OPERATION } from "./constants";
 import { MiniAppRequestError, type MiniAppErrorCode } from "./error-messages";
-import { baseState } from "./mini-app-test-fixtures";
+import { baseState } from "@shared/test-utils/telegram-mini-app-state";
 import type { TelegramMiniAppClientSnapshot } from "./mini-app-api";
 import {
   useMiniAppMutations,

@@ -7,8 +7,6 @@ import {
 } from "../lib/telegram/alerts";
 import type { BatchMessage } from "../lib/telegram";
 import {
-  BURST_EVENT_THRESHOLD,
-  BURST_MARKER_TTL_SEC,
   TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE,
 } from "../lib/telegram/constants";
 import { TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
@@ -100,9 +98,6 @@ export interface AlertsByChatEntry {
   quietHoursEndUtc: number | null;
   timezone: string | null;
   preferenceGeneration?: number;
-  /** C128: per-run match-event counts by source, used to detect global-dominant bursts. */
-  specificCount: number;
-  globalCount: number;
 }
 
 export interface RoutedSubscriberAlert {
@@ -139,7 +134,6 @@ function addAlertToChat<T>(
   sub: SubscriberRow,
   append: AlertAppender<T>,
   event: T,
-  viaGlobal: boolean,
 ): void {
   const preferenceGeneration = Number.isFinite(sub.preference_generation)
     ? Math.max(0, Math.floor(sub.preference_generation ?? 0))
@@ -149,8 +143,6 @@ function addAlertToChat<T>(
     existing.lastActiveAt = Math.max(existing.lastActiveAt, sub.last_active_at);
     existing.preferenceGeneration = Math.min(existing.preferenceGeneration ?? 0, preferenceGeneration);
     append(existing.alerts).push(event);
-    if (viaGlobal) existing.globalCount += 1;
-    else existing.specificCount += 1;
     return;
   }
 
@@ -164,8 +156,6 @@ function addAlertToChat<T>(
     quietHoursEndUtc: sub.quiet_hours_end_utc ?? null,
     timezone: sub.timezone ?? null,
     preferenceGeneration,
-    specificCount: viaGlobal ? 0 : 1,
-    globalCount: viaGlobal ? 1 : 0,
   });
 }
 
@@ -197,7 +187,7 @@ export function routeAlertEvents<T extends { stablecoinId: string }>(
       if (disabledForEvent?.has(sub.chat_id)) continue;
       if (snoozedForEvent?.has(sub.chat_id)) continue;
       if (!shouldInclude(sub, event)) continue;
-      addAlertToChat(alertsByChat, sub, append, event, false);
+      addAlertToChat(alertsByChat, sub, append, event);
     }
 
     for (const sub of globalSubscribers) {
@@ -205,100 +195,13 @@ export function routeAlertEvents<T extends { stablecoinId: string }>(
       if (disabledForEvent?.has(sub.chat_id)) continue;
       if (snoozedForEvent?.has(sub.chat_id)) continue;
       if (!shouldInclude(sub, event)) continue;
-      addAlertToChat(alertsByChat, sub, append, event, true);
+      addAlertToChat(alertsByChat, sub, append, event);
     }
   }
-}
-
-export interface BurstMarker {
-  /** Unix seconds when the chat first entered burst mode; the TTL anchors here. */
-  enteredAt: number;
-  /** Coin ids already summarized for this chat while the marker is live. */
-  coinIds: string[];
-}
-export type BurstMarkerMap = Record<string, BurstMarker>;
-
-function collectEntryStablecoinIds(alerts: ConsolidatedAlerts): string[] {
-  const ids = new Set<string>();
-  for (const e of alerts.dews) ids.add(e.stablecoinId);
-  for (const e of alerts.depegTriggered) ids.add(e.stablecoinId);
-  for (const e of alerts.depegResolved) ids.add(e.stablecoinId);
-  for (const e of alerts.depegWorsening) ids.add(e.stablecoinId);
-  for (const e of alerts.safety) ids.add(e.stablecoinId);
-  for (const e of alerts.launch) ids.add(e.stablecoinId);
-  for (const e of alerts.reserve) ids.add(e.stablecoinId);
-  for (const e of alerts.freeze ?? []) ids.add(e.stablecoinId);
-  return [...ids];
 }
 
 /**
- * C128: collapse global-dominant burst chats into a single summary chunk BEFORE
- * the expensive formatting pass (hence the C102 dependency). Mutates
- * `alertsByChat` in place — a qualifying chat's alerts are replaced with a burst
- * summary covering only NEW (delta) coins vs its live marker; a chat whose coin
- * set is already fully summarized within the live window is removed (suppressed).
- * Returns the next marker map (expired markers pruned) plus counters. With the
- * default threshold this is a no-op, so normal delivery is unchanged until the
- * threshold is deliberately lowered.
- */
-export function collapseBurstChats(
-  alertsByChat: Map<string, AlertsByChatEntry>,
-  markers: BurstMarkerMap,
-  nowSec: number,
-  threshold: number = BURST_EVENT_THRESHOLD,
-  ttlSec: number = BURST_MARKER_TTL_SEC,
-): { markers: BurstMarkerMap; collapsedChats: number; deltaSuppressed: number } {
-  const liveMarkers: BurstMarkerMap = {};
-  for (const [chatId, marker] of Object.entries(markers)) {
-    if (
-      marker &&
-      typeof marker.enteredAt === "number" &&
-      Array.isArray(marker.coinIds) &&
-      nowSec - marker.enteredAt < ttlSec
-    ) {
-      liveMarkers[chatId] = { enteredAt: marker.enteredAt, coinIds: marker.coinIds };
-    }
-  }
-
-  const nextMarkers: BurstMarkerMap = { ...liveMarkers };
-  let collapsedChats = 0;
-  let deltaSuppressed = 0;
-
-  for (const [chatId, entry] of alertsByChat) {
-    const ids = collectEntryStablecoinIds(entry.alerts);
-    const globalDominant = entry.globalCount > entry.specificCount;
-    if (!globalDominant || ids.length < threshold) continue;
-
-    const marker = liveMarkers[chatId];
-    const alreadySeen = new Set(marker?.coinIds ?? []);
-    const deltaIds = ids.filter((id) => !alreadySeen.has(id));
-    if (deltaIds.length === 0) {
-      // Whole set already summarized within the live window: send nothing, and do
-      // NOT refresh enteredAt (the TTL is anchored to the first burst entry).
-      alertsByChat.delete(chatId);
-      deltaSuppressed += 1;
-      continue;
-    }
-
-    const dominantFamily = dominantAlertType(entry.alerts);
-    entry.alerts = {
-      ...emptyAlerts(),
-      burst: { coinCount: deltaIds.length, dominantFamily, stablecoinIds: deltaIds },
-    };
-    collapsedChats += 1;
-    nextMarkers[chatId] = {
-      enteredAt: marker?.enteredAt ?? nowSec,
-      coinIds: marker ? [...new Set([...marker.coinIds, ...deltaIds])] : ids,
-    };
-  }
-
-  return { markers: nextMarkers, collapsedChats, deltaSuppressed };
-}
-
-/**
- * A candidate chat ordered for the fresh-send plan but NOT yet formatted (C102).
- * Carries a cheap chunk estimate derived from alert counts so the budget cut can
- * happen before the expensive `formatConsolidatedMessage` pass.
+ * One page candidate with a cheap chunk estimate, before HTML formatting.
  */
 export interface PlannedSubscriberAlert {
   chatId: string;
@@ -313,7 +216,6 @@ export interface PlannedSubscriberAlert {
 
 /** Total alert lines queued for one chat (cheap; no formatting). */
 function countChatAlerts(alerts: ConsolidatedAlerts): number {
-  if (alerts.burst) return 1;
   return (
     alerts.dews.length +
     alerts.depegTriggered.length +
@@ -334,11 +236,7 @@ function estimateChatChunks(alerts: ConsolidatedAlerts): number {
   return Math.max(1, Math.ceil(countChatAlerts(alerts) / TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE));
 }
 
-/**
- * Order candidate chats newest-first and attach a cheap chunk estimate WITHOUT
- * formatting (C102 phase 1). The caller caps this ordered list against the
- * per-run fresh budget before formatting only the selected slice.
- */
+/** Order page candidates newest-first and estimate chunks before formatting. */
 export function planSubscriberQueue(
   alertsByChat: Map<string, AlertsByChatEntry>,
   sourceEventId?: string,
@@ -352,38 +250,13 @@ export function planSubscriberQueue(
       alertTypes: alertTypesForConsolidated(entry.alerts),
       sourceEventId,
       ...(
-        safetyScoreIdentity &&
-        (entry.alerts.safety.length > 0 || entry.alerts.burst?.dominantFamily === "safety")
+        safetyScoreIdentity && entry.alerts.safety.length > 0
           ? { safetyScoreIdentity }
           : {}
       ),
       estimatedChunks: estimateChatChunks(entry.alerts),
     }))
     .sort((a, b) => b.entry.lastActiveAt - a.entry.lastActiveAt);
-}
-
-/**
- * Split a newest-first plan into the chats whose cheap chunk estimates fit the
- * upper-bound format budget (`toFormat`) and the remainder (`overflow`). The
- * overflow tail can never be sent fresh this run, so it is enqueued lazily
- * instead of being formatted on the hot dispatch path.
- */
-export function selectChatsToFormat(
-  planned: readonly PlannedSubscriberAlert[],
-  formatBudget: number,
-): { toFormat: PlannedSubscriberAlert[]; overflow: PlannedSubscriberAlert[] } {
-  const toFormat: PlannedSubscriberAlert[] = [];
-  const overflow: PlannedSubscriberAlert[] = [];
-  let allocated = 0;
-  for (const plan of planned) {
-    if (toFormat.length === 0 || allocated + plan.estimatedChunks <= formatBudget) {
-      toFormat.push(plan);
-      allocated += plan.estimatedChunks;
-    } else {
-      overflow.push(plan);
-    }
-  }
-  return { toFormat, overflow };
 }
 
 /** Format a single planned chat into a deliverable, split message (C102 phase 2). */
@@ -419,37 +292,6 @@ export function formatPlannedSubscribers(
   resolveDisableNotification: (entry: AlertsByChatEntry) => boolean,
 ): RoutedSubscriberAlert[] {
   return planned.map((plan) => formatPlannedSubscriber(plan, resolveDisableNotification));
-}
-
-export function splitFreshQueue(
-  subscriberQueue: RoutedSubscriberAlert[],
-  freshBudget: number,
-  deferredChats: Pick<ReadonlyMap<string, number>, "has"> = new Map(),
-): {
-  toSend: RoutedSubscriberAlert[];
-  toEnqueue: RoutedSubscriberAlert[];
-  deferredPerChat: RoutedSubscriberAlert[];
-} {
-  const toSend: RoutedSubscriberAlert[] = [];
-  const toEnqueue: RoutedSubscriberAlert[] = [];
-  const deferredPerChat: RoutedSubscriberAlert[] = [];
-  let allocatedFreshChunks = 0;
-
-  for (const sub of subscriberQueue) {
-    if (deferredChats.has(sub.chatId)) {
-      deferredPerChat.push(sub);
-      toEnqueue.push(sub);
-      continue;
-    }
-    if (allocatedFreshChunks + sub.chunks.length <= freshBudget) {
-      toSend.push(sub);
-      allocatedFreshChunks += sub.chunks.length;
-    } else {
-      toEnqueue.push(sub);
-    }
-  }
-
-  return { toSend, toEnqueue, deferredPerChat };
 }
 
 /**

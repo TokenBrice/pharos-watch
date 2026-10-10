@@ -8,7 +8,7 @@ import {
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
 } from "@shared/lib/telegram-mini-app-contract";
 import type { TelegramMiniAppPortabilityResponse } from "../types";
-import { makeMiniAppState } from "../mini-app-test-fixtures";
+import { makeMiniAppState } from "@shared/test-utils/telegram-mini-app-state";
 import { WatchlistPortabilityPanel } from "./WatchlistPortabilityPanel";
 
 const staleState = makeMiniAppState({

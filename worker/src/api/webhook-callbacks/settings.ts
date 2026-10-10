@@ -2,7 +2,6 @@ import { answerCallbackQuery } from "../../lib/telegram";
 import { handleSettingsCallback, type SettingsWebhookEffect } from "../telegram-webhook-settings";
 import {
   requireAdminForMutatingCallback,
-  type CallbackHandler,
   type ParsedCallbackData,
   type TelegramCallbackQuery,
 } from "./_shared";
@@ -11,8 +10,7 @@ import {
  * Bespoke pre-dispatch entry for `settings:*` callbacks. Lives outside the
  * `CALLBACK_HANDLERS` map because its parsed `parts` are validated by an
  * action-specific allowlist instead of `hasExactParts(_, 2)` + a single
- * argument check. The registry's `settings` entry is a no-op kept only to make
- * the `Record<CallbackAction, CallbackHandler>` exhaustive.
+ * argument check.
  */
 export async function handleSettingsInlineCallback(
   db: D1Database,
@@ -53,9 +51,3 @@ export async function handleSettingsInlineCallback(
   }
   await handleSettingsCallback(db, botToken, cb, subAction, subArg, effect);
 }
-
-// The `settings` action runs through `handleSettingsInlineCallback` *before*
-// the registry lookup in `handleCallbackQuery`. This no-op exists only so the
-// `Record<CallbackAction, CallbackHandler>` map stays exhaustive over the
-// `CallbackAction` union, and is unreachable in practice.
-export const handleSettingsCallbackEntry: CallbackHandler = async () => undefined;

@@ -9,20 +9,13 @@ import {
   type SnoozeArg,
 } from "./_shared";
 
-export const handleSnoozeCallback: CallbackHandler = async ({
-  db, botToken, cb, chatId, parsed, answerCallback, beforeIrreversibleEffect,
-  markMutationApplied, planIntent, prepareMutationAppliedStatement, confirmAtomicMutationApplied,
-  storedIntent, wasMutationApplied,
-}) => {
+export const handleSnoozeCallback: CallbackHandler = async (context) => {
+  const { db, cb, chatId, parsed, storedIntent } = context;
   // Sequence DB write BEFORE the ack so the toast reflects actual outcome.
   // A concurrent Promise.all would leave the ack in-flight if the write
   // rejects, and the Workers runtime can cancel the pending fetch once the
   // handler throws, producing silent snooze failures from the user's POV.
-  await runCallbackMutation<{ duration: SnoozeArg; untilSec: number }>({
-    db,
-    botToken,
-    cb,
-    chatId,
+  await runCallbackMutation<{ duration: SnoozeArg; untilSec: number }>(context, {
     validate: () => {
       if (!hasExactParts(parsed.parts, 2) || !isSnoozeArg(parsed.arg)) return null;
       const untilSec = storedIntent?.kind === "callback:snooze"
@@ -42,12 +35,5 @@ export const handleSnoozeCallback: CallbackHandler = async ({
       setSubscriberSnooze(db, chatId, callbackUsername(cb), untilSec, options),
     successText: ({ duration }) => `Snoozed for ${duration}. Use /list to verify or tap a longer window.`,
     failureText: "Could not save snooze. Please try again.",
-    answerCallback,
-    beforeIrreversibleEffect,
-    markMutationApplied,
-    planIntent,
-    prepareMutationAppliedStatement,
-    confirmAtomicMutationApplied,
-    wasMutationApplied,
   });
 };

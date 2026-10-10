@@ -10,10 +10,8 @@ import {
   readPresetFailureCount,
   writePresetFailureCount,
   assignSharedDispatchState,
-  type DispatchSnapshotState,
 } from "./dispatch-telegram-state";
 import { readTelegramPendingCapacitySnapshot } from "../lib/telegram/pending-capacity";
-import type { PendingCapacitySnapshot } from "./telegram-pending";
 import {
   buildTelegramDispatchEvents,
   countSuppressedSafetyChangesAtSeed,
@@ -22,7 +20,6 @@ import {
 import {
   buildTelegramAlertSourceEvent,
   persistTelegramAlertSourceEvent,
-  type TelegramAlertSourceEvent,
 } from "./telegram-alert-source-events";
 import { getSymbol } from "./dispatch-telegram-predicates";
 import {
@@ -38,7 +35,7 @@ import {
   executeSeedPath,
   recoverIncompleteTelegramSourceEvent,
 } from "./dispatch-telegram-source-lifecycle";
-import { executeAuthoritativeFanoutPath } from "./dispatch-telegram-authoritative-path";
+import { executeAuthoritativeFanoutPath, type AuthoritativeFanoutPathContext } from "./dispatch-telegram-authoritative-path";
 import { dispatchFreezeAlertOutbox } from "./telegram-freeze-outbox";
 
 export type { TelegramDispatchSharedState } from "./dispatch-telegram-state";
@@ -75,27 +72,8 @@ function serializeTelegramDispatchResult(
   };
 }
 
-type DispatchEvents = Awaited<ReturnType<typeof buildTelegramDispatchEvents>>;
-
-interface FullFanoutPathContext {
-  db: D1Database;
-  botToken: string;
-  snapshotState: DispatchSnapshotState;
-  events: DispatchEvents;
-  sourceEvent: TelegramAlertSourceEvent;
-  suppressedSafetyChangesAtSeed: number;
-  pendingCapacityBefore: PendingCapacitySnapshot;
-  nowSec: number;
-  dispatchStartedAtMs: number;
-  chatsWithActiveSnooze: number;
-  signal?: AbortSignal;
-  sharedState?: TelegramDispatchSharedState;
-  reportProgress?: CronProgressReporter;
-  markTelegramDeliveryStarted?: () => void;
-}
-
 async function executeFullFanoutPath(
-  context: FullFanoutPathContext,
+  context: AuthoritativeFanoutPathContext,
 ): Promise<DispatchResult> {
   return executeAuthoritativeFanoutPath(context, {
     updatePresetFailureState: async (failed) => {

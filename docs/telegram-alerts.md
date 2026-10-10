@@ -437,12 +437,6 @@ The helper predicates `isDewsAlertable()` and `isDewsDeescalation()` live in `wo
 
 After [dispatch detection](#dispatch), subscription policy selects recipients and bounded message planning prepares the durable delivery manifest. Transport retries and terminal effects are owned by [Delivery Persistence](#delivery-persistence).
 
-### Burst Summary Mode (C128)
-
-During sustained market-wide storms a global-follow chat can match a large number of coins in one run. `collapseBurstChats` (in `dispatch-telegram-routing.ts`) runs after routing but BEFORE the C102 format pass: when a chat matches at least `BURST_EVENT_THRESHOLD` distinct coins with **global** as the dominant match source (`globalCount > specificCount`), its consolidated alerts are replaced with a single burst-summary chunk (`Market-wide activity — N followed coins … Open your watchlist`, with a `t.me/PharosWatchBot?startapp=watchlist` deep link and the chat-level snooze row). Running before formatting means the collapse also bounds CPU, hence the C102 dependency. Chats where explicit per-coin subscriptions dominate are never summarized.
-
-A per-chat marker is persisted as one JSON blob in `cache["telegram:burst-markers"]` (`chatId → { enteredAt, coinIds }`). While the marker is live the chat receives only coins not already summarized (delta-only); an empty delta suppresses the run entirely. The TTL (`BURST_MARKER_TTL_SEC`, default 1800s) is anchored to the first burst entry and not refreshed, so normal per-coin delivery resumes after it. Dispatch deletes the shared cache row when pruning leaves no live markers, and `/forget` removes the chat's nested marker entry. Quiet hours and snooze still apply (the summary defers/suppresses through the same path). `BURST_EVENT_THRESHOLD` ships effectively OFF (very high) and is lowered only after observing `burstCollapsedChats`/`burstDeltaSuppressed` in dispatch metadata.
-
 ### Subscriber Filtering
 
 Subscribers are selected from two sources:
@@ -500,7 +494,7 @@ If a depeg closes with a recovery reason and reopens for the same coin between t
 - The coordinator advances at most 32 durable transitions per invocation, releases its generation-fenced claim on bounded returns, and retains the 120-second lease after failure. Coordinator-only bounds are 38 transitions/two runs for 800 subscribers/800 chunks and 281/nine for 5,000/7,483. The shared end-to-end estimator also includes preset capture: 10,000 overlapping follower rows add 100 pages, giving 381 transitions/12 runs (60 minutes) before drain. Risk TTL is two hours; the load gate includes preset capture, planning, outage time and post-recovery drain with at least 20 percent modeled margin. This margin assumes the page budget fits within 20 seconds, not a guarantee under D1 degradation: the TTL permits at most 24 five-minute starts, so a 32-page cohort completing only one page per run expires before planning or transport. Query failures consume that same margin. Persistent latency or failures therefore terminate through fail-closed expiry, never partial-cohort delivery or an extended TTL.
 - Delivery opens only after capture and materialization are complete. Each bounded handoff page first validates every persisted target/plan payload, then suppresses exact prior terminal deliveries in one set-based pass and atomically inserts the remaining targets into `telegram_pending_alerts`, propagates per-chat backoff, and confirms target `queued` state with one D1 batch plus one page reconciliation read. There is no per-target D1 enqueue loop, direct risk-alert send, or cache-authoritative overflow lane. When the same global dedupe key and exact effect payload already belong to a prior source's terminal `sent` or `execution_unknown` row, the new target is terminally suppressed without replay and handoff continues to later targets; a live/pending cross-source collision or hash-only collision still fails closed. A source previously degraded by that exact terminal collision may re-enter delivery only through a generation/owner-fenced recovery after delivery had already opened and planned targets remain. New risk rows carry their immutable source event, exact coin/family group scope, current chat preference generation, and original markup/link-preview policy. Every split chunk in one message group carries the same conservative group scope, so one newly ineligible pair cancels every remaining chunk instead of delivering a partial stale group.
 - Snapshot baselines remain unchanged until the manifest is ready, delivery is open, and no planned target remains. The fixed snapshot writes and `baseline_committed` transition share one D1 batch; `complete` is later bookkeeping. Expiry first fences the plan generation and reconciles at most 90 subscriber/page/plan/target rows per invocation, persisting remaining debt in `telegram_alert_target_expiry_progress`. Only a complete expiry pass advances the exact stored baseline.
-- The retired `telegram:dispatch-overflow-plan` cache is no longer inspected. Its one-time importer ran to completion (`telegram_legacy_overflow_state` reached `absent`) and was removed; the only code that still touches the cache key is the forget path, which prunes a forgotten chat's plans if a blob ever reappears.
+- The retired `telegram:dispatch-overflow-plan` cache has no writer or consumer. Its one-time importer ran to completion (`telegram_legacy_overflow_state` reached `absent`) and was removed, along with forget-path cache pruning and the importer-only absolute-expiry override.
 
 Delivery semantics are explicit:
 
@@ -595,13 +589,12 @@ When Telegram migrates a group to a supergroup, `migrateTelegramChatId` rewrites
 Rate-limit isolation is per-chat unless the response is explicitly classified as bot-wide or the same send pass sees rate limits across several distinct chats.
 A chat-scoped 429 stamps `not_before_at` on the affected chat's pending row and
 short-circuits later same-chat rows/chunks in the current run; other chats continue to
-drain and to receive fresh alerts against the per-run budget. Ambiguous 429 responses,
+drain newly handed-off and existing alerts against the per-run budget. Ambiguous 429 responses,
 including long `Retry-After` values, stay chat-scoped unless Telegram's response body
 identifies the limit as global/bot-wide or at least three distinct chats return 429s in
 the current batch, which escalates the untouched tail to global backoff.
-At the start of each fresh-send pass, the dispatcher loads `DISTINCT chat_id` for rows
-whose `not_before_at` is still in the future and routes their fresh chunks back to the
-queue (`freshDeferredPerChat` in the dispatch metadata). The queue stores Telegram's
+Authoritative handoff propagates an existing future per-chat `not_before_at` to new
+pending chunks in the same atomic batch. The queue stores Telegram's
 `retry_after` value when available; otherwise it uses a 60-second retry floor. Explicit
 global backoff atomically raises the monotonic `telegram:global-send-backoff-until`
 cache value. If that durable write fails, the affected batch retains the same deadline in row-level `not_before_at` fields instead of sending early.
@@ -610,7 +603,7 @@ This design keeps snapshots current while overflow and retryable failures are pr
 inside bounded TTLs. Terminal failures and execution-unknown effects remain visible for
 operator review; delivery is not guaranteed.
 
-Before formatting subscriber alert HTML, the dispatcher builds a cheap newest-first fan-out plan with estimated chunk counts (`TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE = 16`). Only the prefix that fits the per-run send cap plus `TELEGRAM_FORMAT_BUDGET_ALLOWANCE = 64` is formatted on the fresh-send path. The overflow tail is formatted lazily only when it needs to be enqueued, so a market-wide burst cannot spend CPU formatting chats that could never be sent fresh in that invocation.
+Before formatting subscriber alert HTML, authoritative page rendering orders chats newest-first and estimates chunk counts (`TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE = 16`). The page budget is `max(1, captured chats * 64)`; the first candidate is admitted even when its estimate exceeds it. Any later candidate exceeding the budget rejects the whole page before formatting or persistence. No independent fresh-send/overflow plan or burst-summary mode remains; exact stored HTML and audit rows still use the shared pending drain.
 
 ### Load Simulation and Query Plans
 

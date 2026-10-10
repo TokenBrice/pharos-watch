@@ -33,7 +33,7 @@ export interface AlertStablecoinIds {
 }
 
 type RoutedEventKey = Exclude<keyof TelegramFanoutPlanEvents, "safetyScoreIdentity">;
-type RoutedAlertKey = Exclude<keyof ConsolidatedAlerts, "burst" | "freeze">;
+type RoutedAlertKey = Exclude<keyof ConsolidatedAlerts, "freeze">;
 type RoutedEvent = TelegramFanoutPlanEvents[RoutedEventKey][number];
 
 interface TelegramFanoutRoute {

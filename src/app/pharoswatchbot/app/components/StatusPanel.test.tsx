@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { baseState, makeMiniAppState, makeSubscribedCoin } from "../mini-app-test-fixtures";
+import { baseState, makeMiniAppState, makeSubscribedCoin } from "@shared/test-utils/telegram-mini-app-state";
 import type { StatusPanelProps } from "./StatusPanel";
 import { StatusPanel } from "./StatusPanel";
 

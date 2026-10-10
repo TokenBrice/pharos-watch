@@ -8,16 +8,9 @@ import {
   type CallbackHandler,
 } from "./_shared";
 
-export const handleSafetyDownCallback: CallbackHandler = async ({
-  db, botToken, cb, chatId, parsed, answerCallback, beforeIrreversibleEffect,
-  markMutationApplied, planIntent, prepareMutationAppliedStatement, confirmAtomicMutationApplied,
-  wasMutationApplied,
-}) => {
-  await runCallbackMutation<string>({
-    db,
-    botToken,
-    cb,
-    chatId,
+export const handleSafetyDownCallback: CallbackHandler = async (context) => {
+  const { db, cb, chatId, parsed } = context;
+  await runCallbackMutation<string>(context, {
     validate: () =>
       hasExactParts(parsed.parts, 2) && isSubscribableStablecoinId(parsed.arg) ? parsed.arg : null,
     requireAdmin: true,
@@ -40,12 +33,5 @@ export const handleSafetyDownCallback: CallbackHandler = async ({
     },
     successText: "Safety alerts set to downgrades only.",
     failureText: "Could not save setting. Please try again.",
-    answerCallback,
-    beforeIrreversibleEffect,
-    markMutationApplied,
-    planIntent,
-    prepareMutationAppliedStatement,
-    confirmAtomicMutationApplied,
-    wasMutationApplied,
   });
 };

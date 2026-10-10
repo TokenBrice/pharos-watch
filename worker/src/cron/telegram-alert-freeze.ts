@@ -2,6 +2,7 @@ import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtim
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import { parseJsonObject } from "../lib/json-parse";
 import { logTelegramEvent } from "../lib/telegram/log";
+import type { FreezeAlert } from "../lib/telegram/alerts-formatting";
 
 /** The tape projector runs every 30 minutes; two missed slots fail closed. */
 const TAPE_FRESHNESS_SEC = 60 * 60;
@@ -10,18 +11,6 @@ export const FREEZE_RECOVERY_WINDOW_SEC = 24 * 60 * 60;
 const TAPE_PAGE_LIMIT = 500;
 const FREEZE_ROW_HOLD_KEY = "alert:freeze-tape-row-hold";
 const FREEZE_ROW_HOLD_RETRY_LIMIT = 3;
-
-export interface FreezeAlert {
-  stablecoinId: string;
-  symbol: string;
-  eventType: "blacklist" | "unblacklist" | "destroy";
-  chainName: string;
-  amountUsdAtEvent: number | null;
-  /** Immutable tape identity, which embeds the blacklist_events source identity. */
-  tapeEventId: string;
-  /** Immutable blacklist_events.id retained by the tape projection. */
-  sourceEventId: string;
-}
 
 interface FreezeTapeRow {
   id: number;

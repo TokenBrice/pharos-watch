@@ -1,13 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ConsolidatedAlerts, DepegAlertPayload, DewsChange, SafetyChange } from "../../lib/telegram/alerts";
 import {
-  collapseBurstChats,
   expandSubscriberChunks,
   formatPlannedSubscribers,
   planSubscriberQueue,
   routeAlertEvents,
-  selectChatsToFormat,
-  splitFreshQueue,
   strictestAlertTtlSec,
   type AlertsByChatEntry,
   type RoutedSubscriberAlert,
@@ -63,8 +60,6 @@ function alertsEntry(overrides: Partial<AlertsByChatEntry>): AlertsByChatEntry {
     quietHoursStartUtc: null,
     quietHoursEndUtc: null,
     timezone: null,
-    specificCount: 0,
-    globalCount: 0,
     ...overrides,
   };
 }
@@ -201,10 +196,7 @@ describe("dispatch telegram routing helpers", () => {
         ],
       ]),
     );
-    const selected = selectChatsToFormat(planned, 10);
-    const queue = formatPlannedSubscribers(selected.toFormat, (entry) => entry.quietHoursEnabled);
-
-    expect(selected.overflow).toEqual([]);
+    const queue = formatPlannedSubscribers(planned, (entry) => entry.quietHoursEnabled);
     expect(queue.map((entry) => entry.chatId)).toEqual(["newer", "older"]);
     expect(queue[0].alertType).toBe("depeg");
     expect(queue[0].alertTypes).toEqual(["depeg", "dews"]);
@@ -214,18 +206,6 @@ describe("dispatch telegram routing helpers", () => {
     expect(queue[0].chunks.length).toBeGreaterThan(0);
     expect(queue[1].alertType).toBe("safety");
     expect(queue[1].disableNotification).toBe(false);
-  });
-
-  it("splits fresh sends by chunk budget and chat backoff", () => {
-    const first = routedAlert("first", ["a", "b"]);
-    const inBackoff = routedAlert("in-backoff", ["c"]);
-    const overflow = routedAlert("overflow", ["d", "e"]);
-
-    const result = splitFreshQueue([first, inBackoff, overflow], 3, new Map([["in-backoff", 1_800_000_300]]));
-
-    expect(result.toSend.map((entry) => entry.chatId)).toEqual(["first"]);
-    expect(result.deferredPerChat.map((entry) => entry.chatId)).toEqual(["in-backoff"]);
-    expect(result.toEnqueue.map((entry) => entry.chatId)).toEqual(["in-backoff", "overflow"]);
   });
 
   it("counts reserve alerts in the cheap pre-format chunk estimate", () => {
@@ -257,9 +237,6 @@ describe("dispatch telegram routing helpers", () => {
       ["newer-reserve", 2],
       ["older-dews", 1],
     ]);
-    const selected = selectChatsToFormat(planned, 2);
-    expect(selected.toFormat.map((entry) => entry.chatId)).toEqual(["newer-reserve"]);
-    expect(selected.overflow.map((entry) => entry.chatId)).toEqual(["older-dews"]);
   });
 
   it("counts freeze alerts in the cheap pre-format chunk estimate", () => {
@@ -298,79 +275,5 @@ describe("dispatch telegram routing helpers", () => {
       url: "https://pharos.watch/stablecoin/usdc-circle",
     });
     expect(privateSecond.linkPreviewOptions).toBeUndefined();
-  });
-});
-
-describe("collapseBurstChats (C128)", () => {
-  const burstAlerts = (ids: string[]): ConsolidatedAlerts => ({
-    dews: ids.map((id) => ({ stablecoinId: id }) as unknown as DewsChange),
-    depegTriggered: [],
-    depegResolved: [],
-    depegWorsening: [],
-    safety: [],
-    launch: [],
-    reserve: [],
-  });
-  const entry = (alerts: ConsolidatedAlerts, globalCount: number, specificCount = 0): AlertsByChatEntry =>
-    alertsEntry({ alerts, globalCount, specificCount });
-
-  it("collapses a global-dominant chat over the threshold into one burst summary", () => {
-    const map = new Map([["100", entry(burstAlerts(["a", "b", "c"]), 3)]]);
-    const out = collapseBurstChats(map, {}, 1000, 2, 1800);
-    expect(out.collapsedChats).toBe(1);
-    expect(map.get("100")?.alerts.burst?.coinCount).toBe(3);
-    expect(out.markers["100"]?.coinIds.slice().sort()).toEqual(["a", "b", "c"]);
-  });
-
-  it("does not collapse when explicit subscriptions dominate", () => {
-    const map = new Map([["100", entry(burstAlerts(["a", "b", "c"]), 0, 3)]]);
-    const out = collapseBurstChats(map, {}, 1000, 2, 1800);
-    expect(out.collapsedChats).toBe(0);
-    expect(map.get("100")?.alerts.burst).toBeUndefined();
-  });
-
-  it("sends only the delta on a later run and suppresses when nothing is new", () => {
-    const run1 = new Map([["100", entry(burstAlerts(["a", "b"]), 2)]]);
-    const out1 = collapseBurstChats(run1, {}, 1000, 2, 1800);
-    expect(run1.get("100")?.alerts.burst?.coinCount).toBe(2);
-
-    const run2 = new Map([["100", entry(burstAlerts(["a", "b", "c"]), 3)]]);
-    const out2 = collapseBurstChats(run2, out1.markers, 1100, 2, 1800);
-    expect(run2.get("100")?.alerts.burst?.coinCount).toBe(1);
-    // TTL is anchored to the first burst entry, not refreshed on the delta run.
-    expect(out2.markers["100"]?.enteredAt).toBe(out1.markers["100"]?.enteredAt);
-
-    const run3 = new Map([["100", entry(burstAlerts(["a", "b", "c"]), 3)]]);
-    const out3 = collapseBurstChats(run3, out2.markers, 1200, 2, 1800);
-    expect(run3.has("100")).toBe(false);
-    expect(out3.deltaSuppressed).toBe(1);
-  });
-
-  it("expires the marker after the TTL and treats the run as a fresh burst", () => {
-    const map = new Map([["100", entry(burstAlerts(["a", "b", "c"]), 3)]]);
-    const out = collapseBurstChats(map, { "100": { enteredAt: 1000, coinIds: ["a", "b", "c"] } }, 1000 + 1801, 2, 1800);
-    expect(map.get("100")?.alerts.burst?.coinCount).toBe(3);
-    expect(out.markers["100"]?.enteredAt).toBe(1000 + 1801);
-  });
-
-  it("is a no-op at the default (very high) threshold", () => {
-    const map = new Map([["100", entry(burstAlerts(["a", "b", "c"]), 3)]]);
-    const out = collapseBurstChats(map, {}, 1000);
-    expect(out.collapsedChats).toBe(0);
-    expect(map.get("100")?.alerts.burst).toBeUndefined();
-  });
-
-  it("includes freeze-only alerts in burst collapse identity and attribution", () => {
-    const freezeAlerts = ["frozen-a", "frozen-b"].map((stablecoinId) => ({ stablecoinId })) as NonNullable<ConsolidatedAlerts["freeze"]>;
-    const map = new Map([["100", entry(emptyAlerts({ freeze: freezeAlerts }), 2)]]);
-
-    const out = collapseBurstChats(map, {}, 1000, 2, 1800);
-
-    expect(map.get("100")?.alerts.burst).toMatchObject({
-      coinCount: 2,
-      dominantFamily: "freeze",
-      stablecoinIds: ["frozen-a", "frozen-b"],
-    });
-    expect(out.markers["100"]?.coinIds).toEqual(["frozen-a", "frozen-b"]);
   });
 });

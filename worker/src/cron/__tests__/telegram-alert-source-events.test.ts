@@ -692,8 +692,6 @@ describe("Telegram alert source-event resolution", () => {
           quietHoursStartUtc: null,
           quietHoursEndUtc: null,
           timezone: null,
-          specificCount: 2,
-          globalCount: 0,
         },
       ],
     ]);

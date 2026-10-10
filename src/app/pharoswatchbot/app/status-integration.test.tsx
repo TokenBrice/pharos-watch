@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { installMatchMediaMock } from "@/test-utils/frontend";
 import { PharosWatchBotMiniAppClient } from "./client";
-import { makeMiniAppState } from "./mini-app-test-fixtures";
+import { makeMiniAppState } from "@shared/test-utils/telegram-mini-app-state";
 import type { TelegramMiniAppState } from "./types";
 
 const emptyState = makeMiniAppState({

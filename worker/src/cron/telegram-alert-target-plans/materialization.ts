@@ -59,7 +59,7 @@ async function serializePlanningDecision(
       ) {
         throw new Error("Telegram routed plan does not match its captured subscriber decision");
       }
-      return serializeTelegramTargetPlan(routed, resolveTelegramTargetExpiresAt(claim, decision, routed));
+      return serializeTelegramTargetPlan(routed, resolveTelegramTargetExpiresAt(claim, routed));
     }),
   );
   return { outcome, plans };
@@ -67,10 +67,9 @@ async function serializePlanningDecision(
 
 export function resolveTelegramTargetExpiresAt(
   claim: Pick<TelegramTargetPlanningClaim, "detectedAt">,
-  decision: Pick<TelegramPlanningDecision, "targetExpiresAt">,
   routed: Pick<RoutedSubscriberAlert, "alertType" | "alertTypes">,
 ): number {
-  return decision.targetExpiresAt ?? claim.detectedAt + strictestAlertTtlSec(routed.alertTypes ?? [routed.alertType]);
+  return claim.detectedAt + strictestAlertTtlSec(routed.alertTypes ?? [routed.alertType]);
 }
 
 function prepareNonTargetOutcomeStatement(

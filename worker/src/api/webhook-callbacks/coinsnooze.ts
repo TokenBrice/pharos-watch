@@ -10,16 +10,9 @@ import {
   type SnoozeArg,
 } from "./_shared";
 
-export const handleCoinSnoozeCallback: CallbackHandler = async ({
-  db, botToken, cb, chatId, parsed, answerCallback, beforeIrreversibleEffect,
-  markMutationApplied, planIntent, prepareMutationAppliedStatement, confirmAtomicMutationApplied,
-  storedIntent, wasMutationApplied,
-}) => {
-  await runCallbackMutation<{ id: string; duration: SnoozeArg; untilSec: number }>({
-    db,
-    botToken,
-    cb,
-    chatId,
+export const handleCoinSnoozeCallback: CallbackHandler = async (context) => {
+  const { db, chatId, parsed, storedIntent } = context;
+  await runCallbackMutation<{ id: string; duration: SnoozeArg; untilSec: number }>(context, {
     validate: () => {
       const durationToken = parsed.parts[2];
       if (
@@ -49,12 +42,5 @@ export const handleCoinSnoozeCallback: CallbackHandler = async ({
     successText: ({ id, duration }) =>
       `Snoozed ${TRACKED_META_BY_ID.get(id)?.symbol ?? id} for ${duration}.`,
     failureText: "Could not save snooze. Please try again.",
-    answerCallback,
-    beforeIrreversibleEffect,
-    markMutationApplied,
-    planIntent,
-    prepareMutationAppliedStatement,
-    confirmAtomicMutationApplied,
-    wasMutationApplied,
   });
 };

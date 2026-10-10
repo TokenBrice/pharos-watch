@@ -20,6 +20,7 @@ import { resolveTicker } from "../lib/telegram/alerts";
 import {
   isKnownStablecoinId,
   isSubscribableStablecoinId,
+  type TelegramCallbackQuery,
 } from "./webhook-callbacks/_shared";
 import {
   buildNotFoundMessage,
@@ -51,12 +52,7 @@ import { isGroupChatType } from "./telegram-webhook-auth";
 import { createTelegramWebhookIntent } from "./telegram-webhook-effect-fence";
 import type { TelegramWebhookOperationIntent } from "./telegram-webhook-store";
 
-export interface SettingsCallbackQuery {
-  id: string;
-  data?: string;
-  from?: { id?: number; username?: string };
-  message?: { chat?: { id?: number; type?: string }; message_id?: number };
-}
+type SettingsCallbackQuery = TelegramCallbackQuery;
 
 type RenderTarget = { mode: "send" } | { mode: "edit"; messageId: number };
 interface SettingsRenderOptions {

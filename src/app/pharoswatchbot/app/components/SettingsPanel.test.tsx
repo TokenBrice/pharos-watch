@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { baseState } from "../mini-app-test-fixtures";
+import { baseState } from "@shared/test-utils/telegram-mini-app-state";
 import type { SettingsPanelProps } from "./SettingsPanel";
 import { SettingsPanel } from "./SettingsPanel";
 

@@ -198,14 +198,6 @@ describe("forgetSubscriber", () => {
     for (const key of cacheRows) {
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(key, "1", 123);
     }
-    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
-      "telegram:burst-markers",
-      JSON.stringify({
-        [chatId]: { enteredAt: 1_700_000_000, coinIds: ["usdc-circle", "dai-makerdao"] },
-        "420": { enteredAt: 1_700_000_000, coinIds: ["eurc-circle"] },
-      }),
-      123,
-    );
 
     await forgetSubscriber(db, chatId);
 
@@ -218,13 +210,7 @@ describe("forgetSubscriber", () => {
     for (const key of deletedCacheKeys) {
       expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").get(key)).toBeUndefined();
     }
-    const burstMarkers = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("telegram:burst-markers") as {
-      value: string;
-    };
-    expect(JSON.parse(burstMarkers.value)).toEqual({
-      "420": { enteredAt: 1_700_000_000, coinIds: ["eurc-circle"] },
-    });
-    expect(sqlite.prepare("SELECT key FROM cache WHERE key != ? ORDER BY key").all("telegram:burst-markers"))
+    expect(sqlite.prepare("SELECT key FROM cache ORDER BY key").all())
       .toEqual([...neighboringCacheKeys].sort().map((key) => ({ key })));
   });
 
@@ -312,21 +298,6 @@ describe("forgetSubscriber", () => {
     ).toBe(true);
   });
 
-  it("deletes the shared burst marker cache row when forgetting the only marked chat", async () => {
-    const { sqlite, db } = setupChatMigrationSqlite();
-    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
-      "telegram:burst-markers",
-      JSON.stringify({
-        "42": { enteredAt: 1_700_000_000, coinIds: ["usdc-circle"] },
-      }),
-      123,
-    );
-
-    await forgetSubscriber(db, "42");
-
-    expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").get("telegram:burst-markers"))
-      .toBeUndefined();
-  });
 });
 
 describe("migrateTelegramChatId", () => {
