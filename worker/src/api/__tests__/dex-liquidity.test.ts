@@ -12,11 +12,96 @@ function makeDexDeploymentOutcomeFallbackTable() {
 }
 
 function mockDexD1(tables: MockTableConfig[]) {
-  return mockD1([...tables, makeDexDeploymentOutcomeFallbackTable()]);
+  return mockD1([...tables, makeDexDeploymentOutcomeFallbackTable(), { match: "cron_runs", rows: [], first: null }]);
 }
 
 describe("handleDexLiquidity", () => {
   const row = makeDexLiquidityRow();
+
+  it.each([false, true])("distinguishes an empty producer advisory read from failure=%s", async (failed) => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockDexD1([
+      { match: "cron_runs", rows: [], first: null, ...(failed ? { throwError: new Error("cron-status read failed") } : {}) },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+      { match: "dex_liquidity", rows: [makeDexLiquidityRow({ updated_at: now })] },
+    ]);
+    const res = await handleDexLiquidity(db);
+    const body = DexLiquidityMapSchema.parse(await readJsonResponse(res, 200));
+    expect(body["usdt-tether"].advisoryUnavailableReason).toBe(failed ? "dex-advisory-read-failed" : null);
+    if (failed) {
+      expect(body["usdt-tether"].warning).toContain("dex-advisory-read-failed");
+      expect(res.headers.get("Warning")).toContain("dex-advisory-read-failed");
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+    } else {
+      expect(body["usdt-tether"].warning).toBeNull();
+      expect(res.headers.get("Warning")).toBeNull();
+    }
+  });
+
+  it.each([
+    { coverage_class: "primary", coverage_confidence: null },
+    { coverage_class: "invalid", coverage_confidence: 1 },
+    { coverage_class: "primary", coverage_confidence: 2 },
+  ])("quarantines invalid coverage %j without losing healthy assets", async (coverage) => {
+    const db = mockDexD1([
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+      { match: "dex_liquidity", rows: [row, makeDexLiquidityRow({ stablecoin_id: "usdc-circle", ...coverage })] },
+    ]);
+    const body = DexLiquidityMapSchema.parse(await (await handleDexLiquidity(db)).json());
+    expect(body["usdt-tether"].liquidityScore).toBe(row.liquidity_score);
+    expect(body["usdt-tether"].unavailableReason).toBeNull();
+    expect(body["usdc-circle"]).toMatchObject({
+      unavailableReason: "invalid-coverage-evidence",
+      liquidityScore: null, coverageClass: null, coverageConfidence: null,
+      liquidityEvidenceClass: null, hasMeasuredLiquidityEvidence: false, trendworthy: false,
+      tvlChange24h: null, tvlChange7d: null, scoreComponents: null, exitRouteObservations: null,
+    });
+  });
+
+  it.each([
+    ["stale", -7 * 86_400, 0, "stale-price"],
+    ["other publication", -60, 0, "publication-mismatch"],
+    ["future", 120, 0, "future-timestamp"],
+    ["fresh", -30, -30, null],
+    ["inclusive price budget", -86_400, -86_400, null],
+  ] as const)("uses the price's own clock for %s evidence", async (_label, priceOffset, liquidityOffset, reason) => {
+    const now = 1_790_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    try {
+      const db = mockDexD1([
+        { match: "dex_liquidity_history", rows: [] },
+        { match: "dex_prices", rows: [{
+          stablecoin_id: row.stablecoin_id, dex_price_usd: 0.81, deviation_from_primary_bps: -1900,
+          source_pool_count: 2, source_total_tvl: 1_000_000,
+          price_sources_json: JSON.stringify([{ protocol: "curve", chain: "Ethereum", price: 0.81, tvl: 1_000_000 }]),
+          updated_at: now + priceOffset,
+        }] },
+        { match: "dex_liquidity", rows: [makeDexLiquidityRow({ updated_at: now + liquidityOffset })] },
+      ]);
+      const res = await handleDexLiquidity(db);
+      const coin = DexLiquidityMapSchema.parse(await res.json())[row.stablecoin_id];
+      expect(coin.dexPriceUnavailableReason).toBe(reason);
+      expect(coin.dexPriceUpdatedAt).toBe(now + priceOffset);
+      expect(coin.dexPriceMaxAgeSec).toBe(86_400);
+      expect(coin.dexPriceAgeSeconds).toBe(reason === "future-timestamp" ? null : -priceOffset);
+      if (reason == null) {
+        expect(coin.dexPriceUsd).toBe(0.81);
+        expect(coin.priceSourceCount).toBe(2);
+        expect(coin.priceSources).toHaveLength(1);
+      } else {
+        expect(coin.dexPriceUsd).toBeNull();
+        expect(coin.dexDeviationBps).toBeNull();
+        expect(coin.priceSourceCount).toBeNull();
+        expect(coin.priceSourceTvl).toBeNull();
+        expect(coin.priceSources).toBeNull();
+      }
+      if (liquidityOffset === 0) expect(res.headers.get("X-Data-Age")).toBe("0");
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
 
   it("retains a quality warning across skipped runs and clears it after a successful clean run", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
@@ -369,8 +454,9 @@ describe("handleDexLiquidity", () => {
     const after = Math.floor(Date.now() / 1000);
 
     const body = (await readJsonResponse(res, 200)) as Record<string, Record<string, unknown>>;
-    expect(body["usdt-tether"]?.dexPriceUsd).toBe(0.999);
-    expect(body["usdt-tether"]?.priceSources).toEqual([{ source: "curve" }]);
+    expect(body["usdt-tether"]?.dexPriceUsd).toBeNull();
+    expect(body["usdt-tether"]?.priceSources).toBeNull();
+    expect(body["usdt-tether"]?.dexPriceUnavailableReason).toBe("stale-price");
     const age = Number(res.headers.get("X-Data-Age"));
     expect(age).toBeGreaterThanOrEqual(before - staleRow.updated_at);
     expect(age).toBeLessThanOrEqual(after - staleRow.updated_at);

@@ -1,6 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { mockWorkerRuntimeRegistry } from "../../test-helpers/cron";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { loadPegAnalyticsCache, publishPegAnalyticsCache } from "../peg-analytics-cache";
+
+const sqliteFixtures = createLatestSchemaFixtureTracker();
+afterEach(() => sqliteFixtures.closeAll());
 
 const { STABLECOINS_MOCK } = vi.hoisted(() => ({
   STABLECOINS_MOCK: [
@@ -89,6 +95,44 @@ import { coinTrackingStart, computePegScore } from "@shared/lib/peg-score";
 import { getFirstSeenDates } from "../db";
 
 describe("derivePegAnalyticsSnapshot", () => {
+  it("withholds canonical analytics on projection failure and retains the accepted incident chronology", async () => {
+    const { sqlite, db: sqliteDb } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const first = now - 86_400;
+    const current = now - 3600;
+    const incidentKey = `ddr2:${"a".repeat(32)}`;
+    const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at,
+       ended_at, start_price, peak_price, peg_reference, source)
+      VALUES (?, 'usdt-tether', 'USDT', 'peggedUSD', 'below', -300, ?, ?, 0.97, 0.97, 1, 'live')`);
+    insertEvent.run(1, first, current - 300);
+    insertEvent.run(2, current, null);
+    const link = sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
+      (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', ?)`);
+    link.run(incidentKey, 1, first);
+    link.run(incidentKey, 2, current);
+    sqlite.prepare(`INSERT INTO depeg_resolver_incidents
+      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+       first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint,
+       created_at, updated_at) VALUES (?, 'usdt-tether', 'USD', 'below', 1, 2, ?, ?, 300, ?, ?, ?)`)
+      .run(incidentKey, first, current, "a".repeat(64), first, current);
+    const options = { peggedAssets: [makeStablecoin({ id: "usdt-tether", price: 0.97 })], methodologyAsOf: now };
+    const accepted = await derivePegAnalyticsSnapshot(sqliteDb, options);
+    expect(accepted.allEvents).toHaveLength(1);
+    expect(accepted.allEvents[0]).toMatchObject({ id: 2, startedAt: first, constituentEventCount: 2 });
+    expect(await publishPegAnalyticsCache(sqliteDb, accepted)).toBe(true);
+    const acceptedCache = await loadPegAnalyticsCache(sqliteDb);
+    const prepare = sqliteDb.prepare.bind(sqliteDb);
+    vi.spyOn(sqliteDb, "prepare").mockImplementation((sql) => {
+      if (sql.includes("pharos:depeg-event-projection:active-incidents")) throw new Error("D1 projection timeout");
+      return prepare(sql);
+    });
+    await expect(derivePegAnalyticsSnapshot(sqliteDb, options)).rejects.toMatchObject({
+      reason: "incident-projection-read-failed",
+    });
+    expect(await loadPegAnalyticsCache(sqliteDb)).toEqual(acceptedCache);
+  });
+
   let db: D1Database;
 
   beforeEach(() => {
@@ -138,6 +182,7 @@ describe("derivePegAnalyticsSnapshot", () => {
 
   it("loads depeg provenance so audited false positives are excluded from scoring", async () => {
     db = mockD1([
+      { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
       {
         match: "depeg_events_with_provenance",
         rows: [

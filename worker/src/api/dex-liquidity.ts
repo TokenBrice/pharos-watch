@@ -8,6 +8,7 @@ import {
   DEX_LIQUIDITY_PUBLISHED_ROW_FILTER,
   normalizeDexLiquidityEvidence,
   type DexLiquidityRow,
+  type NormalizedDexLiquidityEvidence,
 } from "../lib/dex-liquidity";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
@@ -24,9 +25,11 @@ import {
 } from "../lib/dex-liquidity-response";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
+import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
+import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../lib/dex-cron-constants";
 
 export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
-  const [result, histResult, priceResult, deploymentResult, latestCron] = await Promise.all([
+  const [result, histResult, priceResult, deploymentResult, cronRead] = await Promise.all([
     db
       .prepare(
         `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd, total_volume_7d_measured, volume_availability_json, pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json, top_pools_json, liquidity_score, concentration_hhi, depth_stability, updated_at, effective_tvl_usd, avg_pool_stress, weighted_balance_ratio, organic_fraction, durability_score, score_components_json, locked_liquidity_pct, coverage_class, coverage_confidence, source_mix_json, balance_measured_tvl_usd, organic_measured_tvl_usd, methodology_version
@@ -81,8 +84,17 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
          LIMIT 1`,
       )
       .first<DexLiquidityCronRow>()
-      .catch(() => null),
+      .then((value) => ({ kind: "ok" as const, value }))
+      .catch((error) => {
+        logWorkerEventArgs("api", "warn", "[dex-liquidity] Producer advisory read failed:", toErrorMessage(error));
+        return { kind: "unavailable" as const, reason: "dex-advisory-read-failed" as const };
+      }),
   ]);
+  const latestCron = cronRead.kind === "ok" ? cronRead.value : null;
+  const advisoryUnavailableReason = cronRead.kind === "unavailable" ? cronRead.reason : null;
+  const advisoryUnavailableWarning = advisoryUnavailableReason
+    ? '199 - "DEX producer advisory unavailable (dex-advisory-read-failed)"'
+    : null;
 
   // Build DEX price lookup
   const dexPriceById = new Map<string, DexPriceRow>();
@@ -106,7 +118,7 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
   const rows = result.results ?? [];
   const freshnessTs = rows.length > 0 ? Math.max(...rows.map((row) => row.updated_at)) : nowSec;
   const headers = addFreshnessHeaders(
-    { "Cache-Control": CACHE_PROFILES.custom },
+    { "Cache-Control": advisoryUnavailableReason ? CACHE_PROFILES.noStore : CACHE_PROFILES.custom },
     freshnessTs,
     API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
   );
@@ -125,18 +137,22 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
       : null;
     const tvlChange7d = baseline7d ? ((currentTvl - baseline7d.total_tvl_usd) / baseline7d.total_tvl_usd) * 100 : null;
 
-    // Merge DEX price data if available
-    const dexPrice = dexPriceById.get(id);
-    const {
-      coverageClass,
-      coverageConfidence,
-      liquidityEvidenceClass,
-      hasMeasuredLiquidityEvidence,
-      trendworthy,
-      effectiveTvlUsd,
-      balanceMeasuredTvlUsd,
-      organicMeasuredTvlUsd,
-    } = normalizeDexLiquidityEvidence(row);
+    // Prices are a separate publication; liquidity's clock cannot admit them.
+    const priceRow = dexPriceById.get(id);
+    const priceMaxAgeSec = STAGED_POOL_PRICE_MAX_AGE_HOURS * 3600;
+    const priceAge = assessFreshnessTimestamp(nowSec, priceRow?.updated_at);
+    // Both writers stamp the orchestrator's syncStartSec; any drift is publication-mismatch.
+    const priceUnavailableReason = !priceRow ? "missing-price"
+      : priceAge.reason != null ? priceAge.reason
+      : priceAge.ageSeconds > priceMaxAgeSec ? "stale-price"
+      : priceRow.updated_at !== row.updated_at ? "publication-mismatch" : null;
+    const dexPrice = priceUnavailableReason == null ? priceRow : undefined;
+    let evidence: NormalizedDexLiquidityEvidence | null = null;
+    try {
+      evidence = normalizeDexLiquidityEvidence(row);
+    } catch (error) {
+      logWorkerEventArgs("api", "error", `[dex-liquidity] Quarantining malformed evidence row for ${id}:`, error);
+    }
     const scoreDetails = normalizeDexScoreDetails(
       row.score_components_json,
       `dex-liquidity:${id}:score_components_json`,
@@ -161,7 +177,9 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
     const volume7d = readStoredDexVolumeWindow(row.total_volume_7d_usd, volumeRecord, "7d", totalVolume7dMeasured);
 
     map[id] = {
-      warning: [headers.Warning, buildDexLiquidityWarning(
+      unavailableReason: evidence == null ? "invalid-coverage-evidence" : null,
+      advisoryUnavailableReason,
+      warning: [headers.Warning, advisoryUnavailableWarning, buildDexLiquidityWarning(
         latestCron,
         id === "__global__" ? { scope: "global" } : { scope: "coin", stablecoinId: id },
       )]
@@ -181,12 +199,17 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
       ),
       chainTvl: safeJsonParse<Record<string, number>>(row.chain_tvl_json, {}, `dex-liquidity:${id}:chain_tvl_json`),
       topPools,
-      liquidityScore: row.liquidity_score,
+      liquidityScore: evidence == null ? null : row.liquidity_score,
       concentrationHhi: row.concentration_hhi,
       depthStability: row.depth_stability,
-      tvlChange24h: tvlChange24h != null ? Math.round(tvlChange24h * 100) / 100 : null,
-      tvlChange7d: tvlChange7d != null ? Math.round(tvlChange7d * 100) / 100 : null,
+      tvlChange24h: evidence != null && tvlChange24h != null ? Math.round(tvlChange24h * 100) / 100 : null,
+      tvlChange7d: evidence != null && tvlChange7d != null ? Math.round(tvlChange7d * 100) / 100 : null,
       updatedAt: row.updated_at,
+      dexPriceUpdatedAt: priceRow && Number.isFinite(priceRow.updated_at) && priceRow.updated_at >= 0
+        ? priceRow.updated_at : null,
+      dexPriceAgeSeconds: priceAge.ageSeconds,
+      dexPriceMaxAgeSec: priceMaxAgeSec,
+      dexPriceUnavailableReason: priceUnavailableReason,
       dexPriceUsd: dexPrice?.dex_price_usd ?? null,
       dexDeviationBps: dexPrice?.deviation_from_primary_bps ?? null,
       priceSourceCount: dexPrice?.source_pool_count ?? null,
@@ -197,33 +220,33 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
         `dex-liquidity:${id}:price_sources_json`,
       ),
       // v2 fields
-      effectiveTvlUsd,
+      effectiveTvlUsd: evidence?.effectiveTvlUsd ?? row.effective_tvl_usd ?? 0,
       avgPoolStress: row.avg_pool_stress ?? null,
       weightedBalanceRatio: row.weighted_balance_ratio ?? null,
       organicFraction: row.organic_fraction ?? null,
       durabilityScore: row.durability_score ?? null,
-      coverageClass,
-      coverageConfidence,
-      liquidityEvidenceClass,
-      hasMeasuredLiquidityEvidence,
-      trendworthy,
+      coverageClass: evidence?.coverageClass ?? null,
+      coverageConfidence: evidence?.coverageConfidence ?? null,
+      liquidityEvidenceClass: evidence?.liquidityEvidenceClass ?? null,
+      hasMeasuredLiquidityEvidence: evidence?.hasMeasuredLiquidityEvidence ?? false,
+      trendworthy: evidence?.trendworthy ?? false,
       sourceMix: safeJsonParse<Record<string, { poolCount: number; tvlUsd: number }>>(
         row.source_mix_json,
         {},
         `dex-liquidity:${id}:source_mix_json`,
       ),
-      balanceMeasuredTvlUsd,
-      organicMeasuredTvlUsd,
-      scoreComponents: scoreDetails.scoreComponents,
+      balanceMeasuredTvlUsd: evidence?.balanceMeasuredTvlUsd ?? row.balance_measured_tvl_usd ?? 0,
+      organicMeasuredTvlUsd: evidence?.organicMeasuredTvlUsd ?? row.organic_measured_tvl_usd ?? 0,
+      scoreComponents: evidence == null ? null : scoreDetails.scoreComponents,
       lockedLiquidityPct: row.locked_liquidity_pct ?? null,
       methodologyVersion: row.methodology_version,
       deploymentCoverage: deploymentCoverageById.get(id) ?? null,
-      exitRouteObservations: scoreDetails.exitRouteObservations,
-      exitRouteObservationCoverage: scoreDetails.exitRouteObservationCoverage,
+      exitRouteObservations: evidence == null ? null : scoreDetails.exitRouteObservations,
+      ...(evidence == null ? {} : { exitRouteObservationCoverage: scoreDetails.exitRouteObservationCoverage }),
     };
   }
 
-  const degradedWarning = buildDexLiquidityWarning(latestCron, { scope: "global" });
+  const degradedWarning = advisoryUnavailableWarning ?? buildDexLiquidityWarning(latestCron, { scope: "global" });
   if (degradedWarning) {
     headers.Warning = headers.Warning ? `${headers.Warning}, ${degradedWarning}` : degradedWarning;
   }

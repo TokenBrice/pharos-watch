@@ -302,7 +302,8 @@ function CoverageAccountabilityLedger({
 }: {
   summary: DdrrSummary;
 }) {
-  const metrics = summary.headline;
+  const metrics = summary.byPredictionPolicy.find((segment) => segment.segmentKind === "all")?.metrics
+    ?? summary.headline;
   const policyUniverseCount = metrics.policyUniverseIncidentCount;
   const metricCards = [
     {

@@ -8,7 +8,7 @@
  */
 
 import type { DewsSignalKey } from "@shared/lib/dews-config";
-import type { DEWSEvidenceKind, DEWSInput, SignalResult } from "./types";
+import type { DEWSEvidenceKind, SignalResult } from "./types";
 
 const EVIDENCE_STRESS_THRESHOLD = 10;
 
@@ -36,12 +36,11 @@ function hasStressEvidence(signal: SignalResult): boolean {
 
 export function classifyEvidenceKinds(
   signals: Record<DewsSignalKey, SignalResult>,
-  input: DEWSInput,
   psiAmplifier: number,
 ): DEWSEvidenceKind[] {
   const kinds = new Set<DEWSEvidenceKind>();
 
-  if (hasStressEvidence(signals.diverg) && input.price !== null && Number.isFinite(input.price)) {
+  if (hasStressEvidence(signals.diverg)) {
     kinds.add("market-price");
   }
 

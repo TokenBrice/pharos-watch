@@ -88,6 +88,7 @@ interface PaginatedEventResponseConfig<TRow, TEvent, TExtra extends Record<strin
   mapRow: (row: TRow) => TEvent;
   searchParams: URLSearchParams;
   pagination: PaginatedEventPaginationConfig;
+  parsedPagination?: ParsedPagination;
   cursor?: PaginatedEventCursorConfig<TRow>;
   freshness: {
     producerJob: string;
@@ -299,10 +300,10 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
   return result;
 }
 
-export function parsePaginatedEventParams(
+export function parsePaginatedEventParams<TRow = unknown>(
   searchParams: URLSearchParams,
   config: PaginatedEventPaginationConfig,
-  cursor?: PaginatedEventCursorConfig<unknown>,
+  cursor?: PaginatedEventCursorConfig<TRow>,
 ): ParsedPagination | Response {
   const parsed = parseQueryParams(searchParams, {
     limit: {
@@ -349,10 +350,10 @@ export async function buildPaginatedEventResponse<
   TEvent,
   TExtra extends Record<string, unknown> = Record<string, unknown>,
 >(db: D1Database, config: PaginatedEventResponseConfig<TRow, TEvent, TExtra>): Promise<Response> {
-  const pagination = parsePaginatedEventParams(
+  const pagination = config.parsedPagination ?? parsePaginatedEventParams(
     config.searchParams,
     config.pagination,
-    config.cursor as PaginatedEventCursorConfig<unknown> | undefined,
+    config.cursor,
   );
   if (pagination instanceof Response) return pagination;
 

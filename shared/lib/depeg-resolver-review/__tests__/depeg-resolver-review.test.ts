@@ -13,6 +13,7 @@ import {
   deriveActualOutcome,
   reviewDdrrV2Rows,
   reviewDepegResolverAssessment,
+  reviewDepegResolverNoCall,
   summarizeDdrrRows,
 } from "../index";
 
@@ -545,6 +546,52 @@ describe("DDRR coverage metrics", () => {
     expect(summary.headlineScope).toBe("current_policy");
     expect(summary.headline.recoveryLikelihoodScoredCount).toBe(20);
     expect(summary.headline.recoveryLikelihoodAccuracyPct).toBe(1);
+  });
+
+  it("changes only accuracy scope at 20 current-policy outcomes, retaining all coverage debt", () => {
+    const currentRows = Array.from({ length: 20 }, (_, index) =>
+      reviewDepegResolverAssessment(
+        assessment({ eventId: index + 1, incidentKey: `ddr2:current-${index}`, publicPredictionId: index + 1 }),
+        actualEvent({ eventId: index + 1 }),
+        REVIEWED_AT,
+      ),
+    );
+    const oldRow = reviewDepegResolverAssessment(
+      assessment({ incidentKey: "ddr2:old", predictionPolicyVersion: "legacy-policy", resolutionTier: "recovery_unlikely" }),
+      actualEvent(),
+      REVIEWED_AT,
+    );
+    const debt = [
+      coverage({ incidentKey: "ddr2:missed", predictionState: "missed_lock_recovered", coverageCause: "lock_missed", operationalCoverageCause: "lock_missed" }),
+      coverage({ incidentKey: "ddr2:failed", predictionState: "publication_failed", coverageCause: "publication_failed" }),
+      coverage({ incidentKey: "ddr2:retry", predictionState: "publication_retry_pending", coverageCause: "publication_retry_pending", sourceEventState: "active", actualOutcome: "still_open", actualEndedAt: null }),
+      coverage({ incidentKey: "ddr2:pending", predictionState: "pending_lock", coverageCause: "active_pending_lock", sourceEventState: "active", actualOutcome: "still_open", actualEndedAt: null }),
+    ].map(buildDdrrCoverageRow);
+    const noCall = reviewDepegResolverNoCall(
+      assessment({ incidentKey: "ddr2:no-call", resolutionTier: "insufficient_signal" }),
+      actualEvent(),
+      REVIEWED_AT,
+    );
+    for (const currentCount of [19, 20]) {
+      const summary = summarizeDdrrRows([...currentRows.slice(0, currentCount), oldRow, noCall, ...debt]);
+      const all = summary.byPredictionPolicy.find((segment) => segment.segmentKind === "all")!.metrics;
+      expect(summary.headlineScope).toBe(currentCount === 20 ? "current_policy" : "all_ddrv2");
+      expect(summary.headline).toMatchObject({
+        policyUniverseIncidentCount: currentCount + 6,
+        lockedPredictionCount: currentCount + 1,
+        noCallCount: 1,
+        missedLockRecoveredCount: 1,
+        publicationFailedCount: 1,
+        publicationRetryPendingCount: 1,
+        pendingLockCount: 1,
+        predictionRatePct: all.predictionRatePct,
+        operationalMissRatePct: all.operationalMissRatePct,
+        stateAssignedPct: all.stateAssignedPct,
+        finalizedCoveragePct: all.finalizedCoveragePct,
+        recoveryLikelihoodScoredCount: 20,
+        recoveryLikelihoodAccuracyPct: currentCount === 20 ? 1 : 19 / 20,
+      });
+    }
   });
 
   it("accounts for missed-lock coverage debt without scoring it as accuracy", () => {

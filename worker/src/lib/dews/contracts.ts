@@ -9,6 +9,14 @@ export interface SourceFailure {
   reason: string;
 }
 
+export interface StablecoinsDependencyDiagnostics {
+  generationId: string | null;
+  updatedAt: number | null;
+  ageSeconds: number | null;
+  freshnessBudgetSec: number;
+  reason: string | null;
+}
+
 export type PersistedJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
 
 export interface MalformedPersistedInput {

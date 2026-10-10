@@ -302,6 +302,43 @@ describe("allocateDdrRunId", () => {
 });
 
 describe("loadDdrContext", () => {
+  it.each([
+    { priceSource: "coingecko", priceObservedAtMode: "nominal_reference", expected: null },
+    { priceSource: "protocol-par", priceObservedAtMode: "upstream", expected: null },
+    { priceSource: "coingecko+protocol-par", priceObservedAtMode: "upstream", expected: null },
+    { priceSource: "coingecko", priceObservedAtMode: "upstream", expected: 0 },
+  ])("uses canonical observed-price admission for $priceSource / $priceObservedAtMode", async (provenance) => {
+    const db = mockResolverD1([{
+      match: "FROM cache WHERE key = ?",
+      rows: [{
+        key: "stablecoins",
+        value: JSON.stringify({ peggedAssets: [{
+          id: "usdc-circle", symbol: "USDC", pegType: "peggedUSD", price: 1,
+          circulating: { peggedUSD: 1_000_000_000 },
+          priceSource: provenance.priceSource, priceObservedAtMode: provenance.priceObservedAtMode,
+        }] }),
+        updated_at: NOW_SEC,
+      }],
+    }]);
+    const result = await buildCurrentDeviationMap(db, NOW_SEC);
+    expect(result.healthy).toBe(true);
+    expect(result.byCoin.get("usdc-circle")).toBe(provenance.expected);
+  });
+
+  it.each([undefined, {}, { peggedUSD: 0 }])("keeps DDR positive supply admission when current supply is %j", async (circulating) => {
+    const db = mockResolverD1([{
+      match: "FROM cache WHERE key = ?",
+      rows: [{
+        key: "stablecoins",
+        value: JSON.stringify({ peggedAssets: [{
+          id: "usdc-circle", symbol: "USDC", pegType: "peggedUSD", price: 1, circulating,
+        }] }),
+        updated_at: NOW_SEC,
+      }],
+    }]);
+    expect((await buildCurrentDeviationMap(db, NOW_SEC)).byCoin.get("usdc-circle")).toBeNull();
+  });
+
   it("accepts a producer-cadence-old cache and leaves thin non-USD peg references null", async () => {
     const db = mockResolverD1([
       {
@@ -432,7 +469,7 @@ describe("loadDdrContext", () => {
     const db = mockResolverD1([
       ...publishedDewsConfigs(signalsJson),
       stablecoinsCache(NOW_SEC),
-      { match: "FROM depeg_events WHERE ended_at IS NOT NULL", rows: [] },
+      { match: "pharos:ddr-training-history", rows: [] },
       {
         match: "FROM supply_history",
         rows: supplyHistory(row.started_at).map((snapshot) => ({

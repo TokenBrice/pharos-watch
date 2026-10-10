@@ -11,6 +11,37 @@ afterEach(() => vi.useRealTimers());
 describe("handleDepegEvents", () => {
   const row = makeDepegRow();
 
+  it("returns dependency unavailability rather than raw history when incident projection fails", async () => {
+    const db = mockD1([
+      {
+        match: "pharos:depeg-event-projection:active-incidents",
+        rows: [],
+        throwError: new Error("projection read timed out"),
+      },
+      { match: "COUNT", rows: [{ total: 2 }] },
+      { match: "depeg_events", rows: [row, { ...row, id: 2 }] },
+    ]);
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
+    expect(await readJsonResponse(res, 503)).toEqual({
+      error: "Canonical incident history unavailable",
+      reason: "incident-projection-read-failed",
+    });
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(db.getHistory().some(({ sql }) => sql.includes("pharos:depeg-events"))).toBe(false);
+  });
+
+  it("keeps a successful empty incident projection readable", async () => {
+    const db = mockD1([
+      { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "depeg_events", rows: [row] },
+    ]);
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
+    const body = await readJsonResponse(res, 200) as { events: unknown[]; total: number };
+    expect(body.total).toBe(1);
+    expect(body.events).toHaveLength(1);
+  });
+
   it("returns 200 with events and total", async () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },
@@ -212,15 +243,40 @@ describe("handleDepegEvents", () => {
   });
 
   it("rejects oversized limits instead of coercing them", async () => {
-    const res = await handleDepegEvents(mockD1([]), new URL("https://x/api/depeg-events?limit=1001"));
+    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }]);
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?limit=1001"));
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error: "Invalid limit: must be between 1 and 1000" });
+    expect(db.getHistory()).toEqual([]);
   });
 
   it("rejects offsets above the endpoint cap", async () => {
-    const res = await handleDepegEvents(mockD1([]), new URL("https://x/api/depeg-events?offset=50001"));
+    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }]);
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?offset=50001"));
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error: "Invalid offset: must be between 0 and 50000" });
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it.each([
+    "active=yes",
+    "includePending=yes",
+    "includeTotal=yes",
+    "limit=1001",
+    "limit=abc",
+    "offset=50001",
+    "offset=-1",
+    "cursor=invalid",
+    `cursor=${btoa(JSON.stringify({ v: 1, values: [1_700_000_000, 1] }))}&offset=1`,
+  ])("rejects invalid query %s before reading an unavailable incident projection", async (query) => {
+    const db = mockD1([{
+      match: "pharos:depeg-event-projection:active-incidents",
+      rows: [],
+      throwError: new Error("projection read timed out"),
+    }]);
+    const res = await handleDepegEvents(db, new URL(`https://x/api/depeg-events?${query}`));
+    expect(res.status).toBe(400);
+    expect(db.getHistory()).toEqual([]);
   });
 
   it("can skip the exact total count for cursor-style callers", async () => {

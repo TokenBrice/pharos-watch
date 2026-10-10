@@ -581,6 +581,22 @@ describe("DEWS scoring boundaries", () => {
     expect(result!.dataQualityScore).toBe(100);
   });
 
+  it("retains stressed DEX-only market evidence without the sparse-evidence WATCH cap", () => {
+    const result = computeDEWS(makeDewsInput({
+      price: null,
+      priceConfidence: null,
+      dexPriceUsd: 0.9,
+      circulatingCurrent: 4e9,
+      circulatingPrevDay: 5e9,
+      circulatingPrevWeek: 5.5e9,
+    }));
+    expect(result).not.toBeNull();
+    expect(result!.signals.diverg).toMatchObject({ available: true, dexDevBps: 1000 });
+    expect(result!.evidenceKinds).toContain("market-price");
+    expect(result!.score).toBeGreaterThan(35);
+    expect(result!.insufficientEvidenceReason).toBeNull();
+  });
+
   it("allows supply contraction plus market divergence to produce elevated risk", () => {
     const result = computeDEWS(
       makeDewsInput({

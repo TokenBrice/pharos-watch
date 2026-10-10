@@ -288,6 +288,43 @@ function snapshotResolvingAt(computedAt: number, medianResolveAt: number): DdrRe
 }
 
 describe("handleDepegResolver", () => {
+  it.each([
+    ["FROM depeg_resolver_prediction_errata", "errata-overlay-read-failed"],
+    ["FROM depeg_resolver_prediction_lock_state", "lock-deferral-overlay-read-failed"],
+  ])("discloses failed secondary read %s without discarding frozen history", async (match, reason) => {
+    vi.useFakeTimers();
+    const now = 2_000_000;
+    vi.setSystemTime(now * 1000);
+    const payload = snapshotResolvingAt(now, now + 3600);
+    const db = mockD1([
+      { match, rows: [], throwError: new Error("secondary dependency read failed") },
+      ...cacheRows(payload),
+    ]);
+    const res = await handleDepegResolver(db);
+    const body = DdrResponseSchema.parse(await readJsonResponse(res, 200));
+    expect(body._meta.degraded).toBe(true);
+    expect(body._meta.degradedReason).toBe("secondary-overlay-unavailable");
+    expect(body._meta.degradedReasonDetail).toContain(reason);
+    expect(body._meta.computedAt).toBe(now);
+    expect(body.rows[0].live.degradedReason).toBe(reason);
+    expect(body.rows[0].kind).toBe("prediction");
+    if (body.rows[0].kind === "prediction") expect(body.rows[0].frozen).toEqual(payload.rows[0].kind === "prediction" ? payload.rows[0].frozen : null);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("keeps successful empty errata and deferral reads current", async () => {
+    vi.useFakeTimers();
+    const now = 2_000_000;
+    vi.setSystemTime(now * 1000);
+    const payload = snapshotResolvingAt(now, now + 3600);
+    const res = await handleDepegResolver(mockD1(cacheRows(payload)));
+    const body = DdrResponseSchema.parse(await readJsonResponse(res, 200));
+    expect(body._meta.degraded).toBe(false);
+    expect(body._meta.degradedReasonDetail ?? null).toBeNull();
+    expect(body.rows[0].kind).toBe("prediction");
+    expect(res.headers.get("Cache-Control")).not.toBe("no-store");
+  });
+
   it("serves stale v2 snapshots as degraded while preserving frozen duration", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(2_000_000 * 1000);

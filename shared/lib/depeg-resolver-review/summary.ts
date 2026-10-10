@@ -321,10 +321,23 @@ export function summarizeDdrrRows(rows: readonly DdrrResponseRow[]): DdrrSummary
       : allMetrics.recoveryLikelihoodScoredCount >= HEADLINE_MIN_SCORED_OUTCOMES
         ? "all_ddrv2"
         : "insufficient_data";
-  const headline =
-    headlineScope === "current_policy"
-      ? currentPolicyMetrics
-      : allMetrics;
+  // Accuracy may mature into a policy-specific cohort; coverage never shrinks
+  // to published rows, since unpublished opportunities have no policy identity.
+  const accuracyMetrics = headlineScope === "current_policy" ? currentPolicyMetrics : allMetrics;
+  const headline: DdrrV2SummaryMetrics = {
+    ...allMetrics,
+    recoveryLikelihoodCorrectCount: accuracyMetrics.recoveryLikelihoodCorrectCount,
+    recoveryLikelihoodScoredCount: accuracyMetrics.recoveryLikelihoodScoredCount,
+    recoveryLikelihoodAccuracyPct: accuracyMetrics.recoveryLikelihoodAccuracyPct,
+    durationScoredCount: accuracyMetrics.durationScoredCount,
+    meanSignedDurationErrorSec: accuracyMetrics.meanSignedDurationErrorSec,
+    medianSignedDurationErrorSec: accuracyMetrics.medianSignedDurationErrorSec,
+    meanAbsoluteDurationErrorSec: accuracyMetrics.meanAbsoluteDurationErrorSec,
+    medianAbsoluteDurationErrorSec: accuracyMetrics.medianAbsoluteDurationErrorSec,
+    accuracyDenominatorLabel: accuracyMetrics.accuracyDenominatorLabel,
+    horizonHitRates: accuracyMetrics.horizonHitRates,
+    horizonCalibration: accuracyMetrics.horizonCalibration,
+  };
   const headlineLabel =
     headlineScope === "current_policy"
       ? "Current DDRv2 public prediction policy"

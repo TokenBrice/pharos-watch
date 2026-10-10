@@ -94,6 +94,10 @@ export function PegScoreDewsOverview() {
             pass the same `$1M` aggregate-TVL gate. The Mint/Burn Flow signal separates 30-day baseline coverage from
             source freshness: a fresh zero-volume 24-hour row is calm, while a mature baseline with no fresh 24-hour row
             is unavailable and recorded as stale.
+            Divergence admits observed primary and trusted DEX legs independently; a stressed DEX-only observation remains
+            market evidence when the primary is missing or nominal. Neither missing leg is a measured calm zero.
+            The foundational stablecoins snapshot must fit its producer cadence plus runtime freshness budget; a stale,
+            missing-clock, or invalid-clock snapshot holds the accepted generation without refreshing its timestamp.
             Malformed core persisted inputs quarantine the affected asset before scoring and contagion, while healthy
             peers publish an exact admitted generation. Its latest row is removed without rewriting sparse or daily
             history; optional unreadable pool detail only makes that component unavailable. Whole-source failures still

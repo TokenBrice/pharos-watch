@@ -38,9 +38,16 @@ interface ActiveIncidentProjection {
   constituentEventCount: number;
 }
 
-export interface ActiveIncidentProjectionLoad {
-  projections: Map<number, ActiveIncidentProjection>;
-  available: boolean;
+export type ActiveIncidentProjectionLoad =
+  | { available: true; projections: Map<number, ActiveIncidentProjection> }
+  | { available: false; reason: "incident-projection-read-failed" };
+
+export class IncidentProjectionUnavailableError extends Error {
+  readonly reason = "incident-projection-read-failed";
+  constructor() {
+    super("incident-projection-read-failed");
+    this.name = "IncidentProjectionUnavailableError";
+  }
 }
 
 function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [number, ActiveIncidentProjection] | null {
@@ -136,7 +143,7 @@ export async function loadActiveIncidentProjections(
     if (!isMissingTableError(err)) {
       logWorkerEventArgs("lib", "error", "[depeg-event-projection] Unexpected error loading active incident projections:", msg);
     }
-    return { projections: new Map(), available: false };
+    return { available: false, reason: "incident-projection-read-failed" };
   }
 }
 

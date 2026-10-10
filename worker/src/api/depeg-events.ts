@@ -4,7 +4,8 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { type DepegRow } from "../lib/depeg-helpers";
 import { resolveOrReject, parseBooleanParam } from "../lib/api-params";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
-import { buildPaginatedEventResponse } from "../lib/api-pagination";
+import { buildPaginatedEventResponse, parsePaginatedEventParams } from "../lib/api-pagination";
+import { jsonResponse } from "../lib/api-response";
 
 import {
   normalizePendingDepegRow,
@@ -194,6 +195,17 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
     if (includePending instanceof Response) {
       return includePending;
     }
+    const pagination = { defaultLimit: 100, minLimit: 1, maxLimit: 1000, maxOffset: 50_000 };
+    const cursor = {
+      columns: [
+        { column: "started_at", type: "number" as const, direction: "DESC" as const, getValue: (row: DepegRow) => row.started_at },
+        { column: "id", type: "number" as const, direction: "DESC" as const, getValue: (row: DepegRow) => row.id },
+      ],
+    };
+    const parsedPagination = parsePaginatedEventParams(params, pagination, cursor);
+    if (parsedPagination instanceof Response) {
+      return parsedPagination;
+    }
 
     const conditions: string[] = [];
     const filterBindings: (string | number)[] = [];
@@ -212,9 +224,13 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
       conditions.push("ended_at IS NULL");
     }
     const activeIncidentProjectionLoad = await loadActiveIncidentProjections(db, stablecoinId);
-    if (activeIncidentProjectionLoad.available) {
-      conditions.push(EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL);
+    if (!activeIncidentProjectionLoad.available) {
+      return jsonResponse({
+        error: "Canonical incident history unavailable",
+        reason: activeIncidentProjectionLoad.reason,
+      }, { status: 503, headers: { "Cache-Control": CACHE_PROFILES.noStore } });
     }
+    conditions.push(EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL);
 
     return buildPaginatedEventResponse<DepegRow, ReturnType<typeof rowToPublicDepegEvent>>(db, {
       tableName: "depeg_events_with_provenance",
@@ -224,13 +240,9 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
       filterBindings,
       mapRow: (row) => rowToPublicDepegEvent(row, activeIncidentProjectionLoad.projections),
       searchParams: params,
-      pagination: { defaultLimit: 100, minLimit: 1, maxLimit: 1000, maxOffset: 50_000 },
-      cursor: {
-        columns: [
-          { column: "started_at", type: "number", direction: "DESC", getValue: (row) => row.started_at },
-          { column: "id", type: "number", direction: "DESC", getValue: (row) => row.id },
-        ],
-      },
+      pagination,
+      parsedPagination,
+      cursor,
       freshness: {
         producerJob: "sync-stablecoins",
         maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegEvents,

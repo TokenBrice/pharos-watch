@@ -9,7 +9,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinData } from "@shared/types/market";
 import type { PegSummaryCoin } from "@shared/types/peg";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
@@ -19,6 +19,8 @@ import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
 import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { classifyPrimaryDepegTrust, isTrustedDexPriceRow } from "../lib/depeg-trust-policy";
 import { deriveDepegSignal } from "../lib/depeg-signals";
+import { deriveCurrentPegObservationMap } from "../lib/current-peg-observations";
+import { IncidentProjectionUnavailableError } from "../lib/depeg-event-projection";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION,
@@ -55,18 +57,6 @@ export const __pegSummaryTestHooks = {
   normalizePegTypeFromCurrency: pegTypeFromCurrency,
 };
 
-function deriveCurrentDeviationBps(
-  asset: StablecoinData | undefined,
-  pegData: PegSummaryCoin,
-  isNavToken: boolean,
-): number | null {
-  if (isNavToken || pegData.pegReferenceUnavailable === true) return null;
-  const price = asset?.price;
-  const pegReference = pegData.pegReference?.valueUsd;
-  return price == null || pegReference == null
-    ? null
-    : deriveDepegSignal(price, pegReference)?.bps ?? null;
-}
 
 type DexPriceRow = {
   stablecoin_id: string;
@@ -118,9 +108,10 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   let depegEventsYesterday: number;
   // Historical peg fields can lag the live stablecoins cache by up to 30 min,
   // so key response freshness to the older of the two observations. Current
-  // deviation is recomputed below from the live price and snapshot reference.
+  // deviation and reference admission use the canonical live observation map.
   let freshnessAsOf = stablecoinsCache.updatedAt;
   const now = Math.floor(Date.now() / 1000);
+  let analyticsDegradedReason: string | undefined;
 
   if (pegAnalyticsCache.kind === "ok") {
     pegDataById = pegAnalyticsCache.pegDataById;
@@ -133,17 +124,35 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       fxFallbackRates,
       methodologyAsOf: stablecoinsCache.updatedAt,
       includeNavTokens: true,
+    }).catch((error) => {
+      if (!(error instanceof IncidentProjectionUnavailableError)) throw error;
+      analyticsDegradedReason = error.reason;
+      return null;
     });
-    pegDataById = pegAnalytics.pegDataById;
-    // Count depeg events started today vs yesterday (UTC day boundaries)
-    const todayStartSec = bucketUnixSecondsToUtcDay(pegAnalytics.nowSec);
-    const yesterdayStartSec = todayStartSec - DAY_SECONDS;
-    depegEventsToday = 0;
-    depegEventsYesterday = 0;
-    for (const event of pegAnalytics.allEvents) {
-      if (TRACKED_META_BY_ID.get(event.stablecoinId)?.flags.navToken === true) continue;
-      if (event.startedAt >= todayStartSec) depegEventsToday += 1;
-      else if (event.startedAt >= yesterdayStartSec) depegEventsYesterday += 1;
+    if (pegAnalytics === null) {
+      const retained = await loadPegAnalyticsCache(db, { maxAgeMs: Infinity });
+      if (retained.kind !== "ok") {
+        return jsonResponse({
+          error: "Canonical incident history unavailable",
+          reason: analyticsDegradedReason,
+        }, { status: 503, headers: { "Cache-Control": CACHE_PROFILES.noStore } });
+      }
+      pegDataById = retained.pegDataById;
+      depegEventsToday = retained.payload.depegEventsToday;
+      depegEventsYesterday = retained.payload.depegEventsYesterday;
+      freshnessAsOf = Math.min(freshnessAsOf, retained.payload.computedAtSec);
+    } else {
+      pegDataById = pegAnalytics.pegDataById;
+      // Count depeg events started today vs yesterday (UTC day boundaries)
+      const todayStartSec = bucketUnixSecondsToUtcDay(pegAnalytics.nowSec);
+      const yesterdayStartSec = todayStartSec - DAY_SECONDS;
+      depegEventsToday = 0;
+      depegEventsYesterday = 0;
+      for (const event of pegAnalytics.allEvents) {
+        if (TRACKED_META_BY_ID.get(event.stablecoinId)?.flags.navToken === true) continue;
+        if (event.startedAt >= todayStartSec) depegEventsToday += 1;
+        else if (event.startedAt >= yesterdayStartSec) depegEventsYesterday += 1;
+      }
     }
   }
 
@@ -156,6 +165,11 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   // 3. Build lookup maps
   const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
   const { rates: pegRates, sources: pegRateSources } = derivePegRates(peggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
+  const currentObservations = deriveCurrentPegObservationMap({
+    peggedAssets,
+    fxFallbackRates,
+    asOf: stablecoinsCache.updatedAt,
+  });
   const methodologyVersion = getMethodologyVersionAt("depeg-dews", stablecoinsCache.updatedAt);
 
   // 4. Compute per-coin data
@@ -174,7 +188,8 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     if (!pegData) continue;
 
     const asset = priceById.get(meta.id);
-    const currentBps = deriveCurrentDeviationBps(asset, pegData, isNavToken);
+    const observation = currentObservations.get(meta.id);
+    const currentBps = observation?.currentDeviationBps ?? null;
     // NAV score fields are normalized at the peg-analytics source via
     // NULL_PEG_SCORE_RESULT; only live deviation is withheld again here.
     const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";
@@ -186,10 +201,10 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     // "ref n/a".
     let dexPriceCheck: typeof coins[number]["dexPriceCheck"] = null;
     const dexRow = dexPrices.get(meta.id);
-    const supply = asset ? getCirculatingRaw(asset) : 0;
+    const supply = getCirculatingRawOrNull(asset);
     if (
-      pegData.pegReferenceUnavailable !== true &&
-      dexRow && supply >= DEPEG_EVENT_MIN_SUPPLY_USD && isTrustedDexPriceRow(dexRow, now, "ui")
+      observation?.pegReferenceUnavailable !== true &&
+      dexRow && supply !== null && supply >= DEPEG_EVENT_MIN_SUPPLY_USD && isTrustedDexPriceRow(dexRow, now, "ui")
     ) {
       // NAV / yield-bearing tokens accrue above their peg unit by design
       // (sUSDe trades near $1.25), so DEX-vs-peg would report thousands of bps
@@ -238,10 +253,11 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
       currentDeviationBps: currentBps,
-      pegReference: pegData.pegReference,
-      pegReferenceUnavailable: pegData.pegReferenceUnavailable,
+      pegReference: observation?.pegReference ?? null,
+      pegReferenceUnavailable: observation?.pegReferenceUnavailable ?? false,
+      currentPriceUnavailable: observation?.currentPriceUnavailable ?? !isNavToken,
       depegEventCoverageLimited: pegData.depegEventCoverageLimited,
-      ...(pegData.currentSupplyUnavailable ? { currentSupplyUnavailable: true } : {}),
+      ...(observation?.currentSupplyUnavailable ? { currentSupplyUnavailable: true } : {}),
       pegScore: pegData.pegScore,
       priceSource: asset?.priceSource ?? undefined,
       priceConfidence: asset?.priceConfidence ?? null,
@@ -294,7 +310,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     .filter(([, src]) => src === "fx")
     .map(([peg]) => peg);
 
-  const degradedReason = dexPriceResult.kind === "degraded" ? dexPriceResult.reason : undefined;
+  const degradedReason = analyticsDegradedReason ?? (dexPriceResult.kind === "degraded" ? dexPriceResult.reason : undefined);
   const headers = addFreshnessHeaders(
     {
       "Cache-Control": degradedReason ? CACHE_PROFILES.noStore : CACHE_PROFILES.producerBacked,
@@ -303,7 +319,9 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     API_FRESHNESS_MAX_AGE_SEC.pegSummary,
   );
   if (degradedReason) {
-    headers.Warning = '199 - "DEX price read failed; cross-checks unavailable"';
+    headers.Warning = analyticsDegradedReason
+      ? '199 - "Canonical incident projection unavailable; serving retained analytics"'
+      : '199 - "DEX price read failed; cross-checks unavailable"';
   }
 
   return jsonResponse({

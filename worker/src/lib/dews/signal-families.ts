@@ -294,12 +294,10 @@ export function computePriceSignal(input: DEWSInput): SignalResult {
   // (not available:false) so the 100 stress points feed the DEWS score even
   // when there is no reading — here available:true means "this signal has a
   // verdict", not "we have a live price". Note this stress does NOT add
-  // market-price evidence: classifyEvidenceKinds() in evidence-policy.ts gates
-  // the market-price kind on signals.diverg + input.price !== null, so a
-  // null-price coin can be pushed up by this 100 yet still be WATCH-capped for
-  // lack of evidence. That asymmetry is intentional (data-unavailability is not
-  // observed depeg evidence); change both call sites together if it ever needs
-  // to count as its own evidence kind.
+  // market-price evidence: classifyEvidenceKinds() requires an available stressed
+  // divergence reading from at least one observed primary or DEX leg. Without
+  // either leg a null-price coin can still be WATCH-capped for lack of evidence;
+  // data unavailability itself is not observed market stress.
   if (price === null || price === undefined || !Number.isFinite(price)) {
     return { value: 100, available: true, confidence: null };
   }
@@ -328,8 +326,8 @@ export function computePriceSignal(input: DEWSInput): SignalResult {
 export function computeDivergSignal(input: DEWSInput): SignalResult {
   const { price, dexPriceUsd, pegRef, pegType } = input;
 
-  // Need at least primary price to compute any divergence
-  if (input.pegReferenceAvailable === false || pegRef <= 0) {
+  // Admit each observed price leg independently against the same peg reference.
+  if (input.pegReferenceAvailable === false || !Number.isFinite(pegRef) || pegRef <= 0) {
     return {
       value: 0,
       available: false,
@@ -337,36 +335,18 @@ export function computeDivergSignal(input: DEWSInput): SignalResult {
     };
   }
 
-  if (price === null || !Number.isFinite(price)) {
-    return { value: 0, available: false };
-  }
-
-  // Deviations come from the canonical depeg-signal derivation so DEWS and the
-  // depeg detector answer "how far from peg is this price" with one formula.
-  // `absBps` is the canonical (rounded) basis-point reading; the derivation
-  // fail-closes on non-positive prices, and so must this call site — coercing
-  // its `null` to `0` would publish "no divergence" from a price that cannot
-  // be a price, which is the one direction this signal must never fail in.
-  const primary = deriveDepegSignal(price, pegRef);
-  if (primary === null) {
+  // Canonical derivation rejects missing, non-finite and non-positive prices.
+  const primary = price === null ? null : deriveDepegSignal(price, pegRef);
+  const dex = dexPriceUsd === null ? null : deriveDepegSignal(dexPriceUsd, pegRef);
+  if (primary === null && dex === null) {
     return { value: 0, available: false, unavailableReason: "invalid-price" };
   }
-  const primaryDevBps = primary.absBps;
-
-  // A non-null but non-positive DEX price is bad data, not a zero-divergence
-  // observation: drop the cross-source legs rather than let a coerced `0` fold
-  // into the max as source agreement.
-  const dexPrice = dexPriceUsd !== null && Number.isFinite(dexPriceUsd) && dexPriceUsd > 0
-    ? dexPriceUsd
-    : null;
-
-  // DEX deviation from peg (bps)
-  const dexDevBps = dexPrice !== null ? (deriveDepegSignal(dexPrice, pegRef)?.absBps ?? 0) : 0;
-
-  // Cross-source spread (bps)
-  const crossSpreadBps = dexPrice !== null ? (deriveDepegSignal(price, dexPrice)?.absBps ?? 0) : 0;
-
-  const worstBps = Math.max(primaryDevBps, dexDevBps, crossSpreadBps);
+  const primaryDevBps = primary?.absBps;
+  const dexDevBps = dex?.absBps;
+  const crossSpreadBps = primary !== null && dex !== null && price !== null && dexPriceUsd !== null
+    ? deriveDepegSignal(price, dexPriceUsd)?.absBps ?? 0
+    : 0;
+  const worstBps = Math.max(primaryDevBps ?? 0, dexDevBps ?? 0, crossSpreadBps);
 
   // Cross-source price divergence curve (basis points).
   //   25bps: normal bid-ask spread noise

@@ -202,6 +202,8 @@ Both calls are in `worker/src/cron/sync-stablecoins/post-enrichment.ts` (invoked
 
 The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), which builds shared `eventsByCoin` and `pegDataById` maps. The half-hourly, DEX-publication-triggered `prepare-safety-score-v9-input` job is the only writer of the producer-published `peg-analytics` D1 cache row and the exact V9 peg-provenance seed. `/api/peg-summary` accepts the analytics row for up to 30 minutes (one producer interval) and falls back to direct compute on a miss or stale/invalid row. `GET /api/report-cards/v9` reads only the separately accepted canonical V9 publication.
 
+Current peg-summary observations are rederived from the latest stablecoins snapshot through `deriveCurrentPegObservationMap`, not from a numeric price plus an older cached analytics reference. Nominal or missing primary observations publish `currentPriceUnavailable: true` and `currentDeviationBps: null`; they are excluded from observed at-peg counts. Historical analytics fields remain attached to their accepted generation. If canonical incident projections cannot be read during a fallback recompute, the endpoint retains an available accepted analytics snapshot with `incident-projection-read-failed` and `no-store`, or returns explicit `503` when none exists.
+
 ## Stage 1 -- Detection
 
 ### Initialization
@@ -395,6 +397,7 @@ Supported non-USD fiat backfills now prefer direct CoinGecko native-fiat history
 
 `POST /api/backfill-depegs?dry-run=true` also accepts `startDay` / `endDay` for bounded replay audits, plus optional `contextDays` to widen the replay pad around that UTC window. The handler compares only the overlapping stored `source='backfill'` rows, which makes long-history repairs practical without waiting for a full-coin HTTP request.
 For commodity-pegged assets, the peer-median reference fetch is bounded to the same replay pad and only fetches the needed gold or silver source family instead of rebuilding full hourly history for every tracked commodity token.
+Commodity lookup series and their current-rate fallback stay in per-ounce units until a single final `commodityOunces` conversion. Missing historical spot data therefore uses the current per-ounce rate times the token weight once, never an already per-token fallback weighted again. If neither a historical series anchor nor a current commodity reference is available, replay skips the coin as `missing-fx-reference` and preserves its existing events.
 
 When a coin has an authoritative historical provider (for example, protocol redemption quotes replayed at historical blocks), backfill uses that provider first. If the provider cannot return enough historical coverage, the handler preserves existing `source='backfill'` rows instead of rebuilding from a weaker market-data source.
 
@@ -533,10 +536,12 @@ Query params:
 | `stablecoin` | string | -- | Filter by `stablecoin_id` |
 | `active` | string | -- | If `"true"`, only events where `ended_at IS NULL` |
 | `limit` | number | 100 | Max results; out-of-range values outside `1..1000` are rejected |
-| `offset` | number | 0 | Pagination offset |
+| `offset` | number | 0 | Pagination offset; values outside `0..50000` are rejected |
 | `cursor` | string | -- | Keyset pagination cursor; advance via the response `nextCursor`. Cannot be combined with a non-zero `offset` |
 | `includePending` | string | `false` | If `"true"`, add a `pending` array of unconfirmed candidates to the response |
 | `includeTotal` | string | `true` | If `"false"`, skip the COUNT query; `total` is an observed lower bound and `totalExact` is `false`. Empty offset pages report `0`, never the requested offset. |
+
+Malformed booleans, pagination values, and cursors return `400` before any incident-projection read, including when that dependency is unavailable. Valid requests return `503` with `reason: "incident-projection-read-failed"` if canonical incident projection cannot be loaded; raw history is never substituted.
 
 Response:
 

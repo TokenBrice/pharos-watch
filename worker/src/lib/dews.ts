@@ -149,7 +149,7 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
     });
   }
 
-  const evidenceKinds = classifyEvidenceKinds(signals, input, psiAmplifier);
+  const evidenceKinds = classifyEvidenceKinds(signals, psiAmplifier);
   const hasMarketOrLiquidityEvidence =
     evidenceKinds.includes("market-price") || evidenceKinds.includes("dex-liquidity");
   const hasSevereIssuerControlEvidence =
