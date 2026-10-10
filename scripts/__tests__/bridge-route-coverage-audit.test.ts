@@ -38,6 +38,36 @@ describe("bridge-route coverage audit", () => {
     expect(audit.summary.reviewedRoutes + audit.summary.unresolvedRoutes).toBe(audit.summary.routes);
   });
 
+  it.each([
+    ["alusd-alchemix", "ethereum", "0xe9d672f89493c7286a9bafc6b763364ec0bfe4fe"],
+    ["alusd-alchemix", "base", "0x303241e2b3b4aed0bb0f8623e7442368fed8faf3"],
+    ["bold-liquity", "berachain", "0xf05a207442f14e446b0e32b12d2043bfc68cb1c9"],
+    ["mxnb-juno", "arc", "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"],
+  ])("retains an honest unresolved disposition for %s on %s (%s)", (coinId, chain, address) => {
+    const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === coinId);
+    expect(coin?.contracts).toEqual(expect.arrayContaining([expect.objectContaining({ chain, address })]));
+    const routes = coin?.bridgeRouteRisk?.routes?.filter(
+      (route) => route.destinationChain === chain && route.contractAddress === address,
+    );
+    expect(routes).toHaveLength(1);
+    const route = routes?.[0];
+    expect(route).toMatchObject({
+      id: `${chain}:${address}`,
+      reviewDisposition: "unresolved",
+      issuanceModel: "unknown",
+      routeClass: "unknown",
+      riskTier: "opaque-or-unknown",
+      semantics: "unknown",
+      scope: "unknown",
+    });
+    expect(route?.reviewNote?.trim().length).toBeGreaterThanOrEqual(12);
+    expect(route?.sources).toBeUndefined();
+    expect(route?.observedAt).toBeUndefined();
+    expect(route?.observedBlock).toBeUndefined();
+    expect(route?.controllerChain).toBeUndefined();
+    expect(route?.controllerAddress).toBeUndefined();
+  });
+
   it("rejects mechanically copied all-global profile rows", () => {
     const coin = fixture([
       {

@@ -625,6 +625,20 @@
             "url": "https://scrollscan.com/address/0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92#code"
           }
         ]
+      },
+      {
+        "id": "berachain:0xf05a207442f14e446b0e32b12d2043bfc68cb1c9",
+        "destinationChain": "berachain",
+        "contractAddress": "0xf05a207442f14e446b0e32b12d2043bfc68cb1c9",
+        "protocol": "Unreviewed BOLD deployment route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "The Berachain deployment is catalogued, but its issuance model, transfer semantics and controllers have not been reviewed. The reviewed Sonic route at the same token address is chain-specific evidence and cannot establish the Berachain route.",
+        "mappingVersion": "bridge-route-facts-v1"
       }
     ]
   }

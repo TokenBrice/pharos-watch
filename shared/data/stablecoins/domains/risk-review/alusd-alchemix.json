@@ -288,6 +288,34 @@
             "url": "https://l2beat.com/interop/protocols/layerzero"
           }
         ]
+      },
+      {
+        "id": "ethereum:0xe9d672f89493c7286a9bafc6b763364ec0bfe4fe",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xe9d672f89493c7286a9bafc6b763364ec0bfe4fe",
+        "protocol": "Unreviewed alUSD deployment route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "This additional Ethereum deployment is catalogued, but its issuance model, transfer semantics and controllers have not been reviewed. Evidence for the canonical Ethereum alUSD token does not establish this separate deployment's route.",
+        "mappingVersion": "bridge-route-facts-v1"
+      },
+      {
+        "id": "base:0x303241e2b3b4aed0bb0f8623e7442368fed8faf3",
+        "destinationChain": "base",
+        "contractAddress": "0x303241e2b3b4aed0bb0f8623e7442368fed8faf3",
+        "protocol": "Unreviewed alUSD deployment route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "This Base deployment is catalogued, but its issuance model, transfer semantics and controllers have not been reviewed. The same token address on Metis does not establish the Base deployment's route.",
+        "mappingVersion": "bridge-route-facts-v1"
       }
     ],
     "controls": [

@@ -18,7 +18,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "The five reviewed MXNB deployments are issuer-native FiatTokenV2_2 liabilities, with verified direct local-supply mint/burn implementations. The issuer also lists a live Arc deployment (pinned Arc block 25087646: MXNB, 6 decimals, 2195860.833859 tokens), now registered in contracts[] but without a reviewed Arc route row. Independent-liability eligibility is deferred until the Arc native-liability route review is complete; no eligibility or static supply shares are authored.",
+    "summary": "The five reviewed MXNB deployments are issuer-native FiatTokenV2_2 liabilities, with verified direct local-supply mint/burn implementations. The issuer also lists a live Arc deployment (pinned Arc block 25087646: MXNB, 6 decimals, 2195860.833859 tokens), now registered in contracts[] with an explicit unresolved Arc route disposition. Independent-liability eligibility is deferred until the Arc native-liability route review is complete; no eligibility or static supply shares are authored.",
     "reviewedAt": "2026-10-09",
     "reviewer": "Sol curation campaign 2026-10-09 (W4T05Infinifi)",
     "confidence": "verified",
@@ -199,6 +199,20 @@
             "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ]
+      },
+      {
+        "id": "arc:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "destinationChain": "arc",
+        "contractAddress": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "protocol": "Unreviewed MXNB deployment route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "The existing review documents the live Arc deployment's identity, decimals and supply, but explicitly defers its native-liability route review. Those identity observations do not establish issuance model, transfer semantics or controller evidence; independent-liability eligibility remains deferred.",
+        "mappingVersion": "bridge-route-facts-v1"
       }
     ]
   }
