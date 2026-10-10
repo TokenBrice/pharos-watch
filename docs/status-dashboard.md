@@ -148,7 +148,7 @@ The active frontend operator mode is now:
 - `src/components/status/telegram-bot-stats.tsx`
   - Renders delivery health, shared backlog-policy evidence, permanent failures, retries, dispatch results, and per-alert delivery before a separate audience-coverage section. Missing optional telemetry remains `Unknown`, never zero — except an absent `freshRetryQueued` on a dispatch that completed `ok` with `pendingRetryQueued` present, which reads as a legacy pre-breakdown row and counts as zero retries.
 - Cron telemetry is grouped by trigger slot and rendered as a matrix:
-  - One group per physical trigger, from the quarter-hourly core ingestion lane through the daily snapshot / digest / recap lane. Group membership, cadence, and offsets come from `shared/lib/cron-jobs.ts` and `shared/lib/cron-cadences.ts`; see [`docs/worker-infrastructure.md`](./worker-infrastructure.md#deployed-trigger-topology)
+  - One group per physical trigger, from the quarter-hourly core ingestion lane through the daily snapshot / digest / recap lane. Group membership, cadence, and offsets come from `shared/lib/cron-jobs.ts` and `shared/lib/cron-cadences.ts`; see [`docs/worker-infrastructure.md`](process/worker-infrastructure-appendix.md#deployed-trigger-topology)
   - Jobs that own a dedicated isolated trigger can render inside a shared cadence group but stay labeled as isolated triggers
   - The default attention filter does not mount healthy rows; operators can search and filter by state, impact, trigger group, and running status
   - Trigger boundaries remain visible, with severity ordering inside each group and stable registry order for ties
@@ -790,7 +790,7 @@ Delivery status is request-time evidence, but transition history is cron-sampled
 
 Source: `src/hooks/use-endpoint-probes.ts`
 
-- Probe timeout: 5s for public endpoints and 20s for browser admin probes. The Pages ops proxy upstream budget is 20s for `/api/status` and `/api/status-history`, 45s for `/api/audit-depeg-history`, and the default 10s for all other admin proxy paths (which can return `504` once that 10s upstream timeout elapses).
+- Probe timeout: 5s for public endpoints and 20s for browser admin probes. The Pages ops proxy upstream budget is 20s for `/api/status` and `/api/status-history`, and the default 10s for all other admin proxy paths (which can return `504` once that 10s upstream timeout elapses).
 - Bounded browser probing uses a worker pool capped at 6 concurrent requests (`ENDPOINT_PROBE_CONCURRENCY`), with `Promise.all` only coordinating those workers rather than fanning out every endpoint at once.
 - Admin probe paths are now same-origin `/api/admin/*` calls on the ops host
 - The dashboard labels these as **browser-origin probes** to distinguish them from the worker-origin `status-self-check` synthetic probe stored in `/api/status`
@@ -842,7 +842,7 @@ Persisted audit coverage boundary (intentional):
 - Executions that never reach the Worker (client network failure or abort before a response) can only exist as session-scoped entries; they are labeled `session` in the workbench and legitimately disappear on reload. Their idempotency key remains reusable for a safe retry that will produce the durable row.
 - The remaining non-catalog operator mutation — `POST /api/admin-telegram-broadcast` — emits a handler-level `admin_action_audit` record; credential lifecycle mutations audit into `api_key_audit_log` instead and surface through the API Management and History workspaces. The other handler-audited operator routes (cron lease/kill controls, circuit-breaker reset, Telegram pending/resend/delivery-control) were retired on 2026-08-09, and the self-serve API-key request decisions (`api_key_request_reject`, `api_key_request_release_claim`) were removed with their lane on 2026-09-29; historical rows for all of them remain.
 
-`POST /api/backfill-mint-burn` is operator-safe from the status page even without an explicit `configKey`: the worker auto-selects the most behind tracked mint/burn config with a critical-first / major-symbol-first policy and returns the selected config in the response payload.
+Historical rebuilds are no longer dashboard actions. Run the reviewed command from [One-shot historical backfills](./runbooks/one-shot-backfills.md); recurring repairs remain in the complete action catalog.
 
 Mutating admin paths are protected by method guardrails:
 

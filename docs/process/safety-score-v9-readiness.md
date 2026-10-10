@@ -133,4 +133,4 @@ No separate composite ceiling is applied today, and there is no operator-side
 A+ reachability gate. V9 uses the production smooth-bounded-headroom
 aggregation and the policy's single `compensabilityHeadroom`; evidence ceilings
 and structural caps remain the scoped constraints documented in
-[report cards](../report-cards.md#cap-limits-and-scope-gates).
+[report cards](report-cards-appendix.md#cap-limits-and-scope-gates).

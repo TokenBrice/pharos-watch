@@ -25,11 +25,11 @@ function anchors(html: string): Anchor[] {
 
 describe("DocPage", () => {
   it("opens external markdown links in a new tab with an isolated opener", async () => {
-    const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: "pricing-pipeline" }) }));
+    const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: "redemption-backstops" }) }));
     const rendered = anchors(html);
     const external = rendered.filter((anchor) => /^https?:\/\//.test(anchor.href));
 
-    expect(external.map((anchor) => anchor.href)).toContain("https://gold-api.com");
+    expect(external.map((anchor) => anchor.href)).toContain("https://tempo.xyz/developers/docs/guide/ousd");
     expect(external.length).toBeGreaterThan(0);
     for (const anchor of external) {
       expect(anchor.target).toBe("_blank");

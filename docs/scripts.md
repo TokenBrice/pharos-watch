@@ -38,6 +38,8 @@ For these scripts, `--dry-run` means no mutation: a command may read local state
 
 New scripts parse arguments with `scripts/lib/cli-args.mjs`, or with `node:util.parseArgs` directly when the strict wrapper is not required. Do not hand-roll an `process.argv` loop. The many existing hand-rolled parsers stay as they are; convert one only when that script is already being edited for another reason, so parser migration never becomes a standalone churn commit.
 
+`worker/scripts/one-shot-backfill.ts` runs historical rebuilds against Wrangler-authenticated D1 outside the Worker bundle. It defaults to remote `stablecoin-db`, accepts original job parameters through `--query`/`--body-json`, requires `--execute` unless a supported explicit preview is selected, and preserves job response bytes. Ordinary writes use commands; atomic jobs additionally require `--allow-atomic-import` to acknowledge live D1 availability impact. [One-shot backfills](./runbooks/one-shot-backfills.md#transport-safety) owns classification, transport gates and interrupted-run receipt reconciliation/cleanup.
+
 | Verification CLI | Selection contract |
 | --- | --- |
 | `lint:changed` | Repeatable `--file <path>`, `--staged`, or `--base <ref> [--head <ref>]` are exclusive selection modes. Explicit file/staged modes override PR range environment. Without flags or PR range environment, selects staged, unstaged and untracked working-tree files. Deleted paths are skipped; staged selection still reads working-tree contents. Forward ESLint options after `--`. |
@@ -172,6 +174,8 @@ Use `package.json` for artifact commands and `scripts/lib/automation-registry.mj
 
 Artifact selection matches source and output paths, then propagates dependencies; automatic check plans still filter uncheckable artifacts. Registry `requiredBrowsers` (default `[]`) drives Firefox setup in `scripts/ci/classify-deploy-changes.ts`, not generic OG paths.
 
+The V9 evaluation-build manifest pins the evaluator runtime import graph, reviewed score-input data and Worker catalog decoder, not Worker producers or build-time generators. Exact-input/fact digests bind admitted producer output; mechanism capture hash/R2 refs and native capture/build matching remain unchanged. Catalog data must be generated first; transport equality tests guard generator correctness.
+
 OpenAPI generation preserves normalized stablecoin items and discriminated reserve bounded facts through explicit output schemas, without changing runtime normalization. Empty nested array-item schemas fail generation rather than silently accepting arbitrary values.
 
 Build and release ordering is documented in [Deployment Process](./deployment-process.md#ci-deploy-sequence); failure diagnosis is documented in the [generated-artifact failure playbook](./testing.md#generated-artifact-failure-playbook); OG asset maintenance is documented in [OG Images](./og-images.md); font generation and licensing are documented in [Font Assets](./process/font-assets.md).
@@ -195,6 +199,8 @@ Useful test-only evidence belongs in recognized `*.test-support.ts` files, not p
 `check:cron-console-usage` reports missing baseline paths separately from extant zero-call files and keeps its blocking growth ratchet. Structured-log conversions must preserve console-only versus durable-event semantics; no date or stored-budget decrease authorizes strict-zero enforcement without a measured current-root zero scan and persistence parity.
 
 `check:script-entrypoints` includes `.mts` files in forward command scanning, reverse candidates and reverse references; declaration files are not runnable candidates. Markdown still receives stale-command checks but cannot retain an otherwise unreferenced script. The reverse check remains a textual-reference audit, not an executable import graph: policy-retained operator tools remain valid, and mutually referring disconnected scripts are not proven reachable.
+
+`check:editorial-content` runs inside `check:structural` (including selected PR guards and nightly structural validation). It validates authored methodology/weekly changelog and case-study JSON metadata, body shapes, registry membership, filenames and internal routes/identities, plus Dependency Map editorial JSON. The ADR-3 version factory remains the methodology authority; JSON imports do not add Zod to runtime consumers or change rendering.
 
 ### Smoke And Operations
 
@@ -220,9 +226,9 @@ The shadow-era replay summary and fixed July B1 historical DEX root-ledger entry
 - L2BEAT snapshot audits distinguish alias-only validation, saved observed input, and explicit `--live` drift checks; see [Chain Health](./chain-health.md#l2beat-snapshot). None imports live data into the authoritative static snapshot automatically.
 - Oracle coverage counts complete profiles directly among in-scope profile-bearing assets; missing profiles and out-of-scope stale dispositions cannot subtract from that census.
 
-`npm run audit:live-reserve-config-changes -- --base <ref>` compares working-tree semantic fingerprints to an explicit deployed/PR base offline, printing changed IDs and both digests as JSON; missing recovery fetchers fail. New/removed bindings and display/scoring edits are excluded. It shares runtime's pure selector; tests are git-independent. Bounds/acceptance: [config recovery](./live-reserves.md#deploy-time-configuration-recovery).
+`npm run audit:live-reserve-config-changes -- --base <ref>` compares working-tree semantic fingerprints to an explicit deployed/PR base offline, printing changed IDs and both digests as JSON; missing recovery fetchers fail. New/removed bindings and display/scoring edits are excluded. It shares runtime's pure selector; tests are git-independent. Bounds/acceptance: [config recovery](process/live-reserves-appendix.md#deploy-time-configuration-recovery).
 
-`scripts/maintenance/refresh-independent-assurance-reports.ts` registers MYRC's offline extraction via `scripts/lib/independent-assurance-profiles/myrc.ts`. [MYRC reserve verification](./live-reserves.md#fund-and-issuer-transparency-feeds) owns distinct cash/fund rows, shared reconciliation tolerances, excluded circulation, exact-PDF/extraction provenance and examined-balance clocks.
+`scripts/maintenance/refresh-independent-assurance-reports.ts` registers MYRC's offline extraction via `scripts/lib/independent-assurance-profiles/myrc.ts`. [MYRC reserve verification](process/live-reserves-appendix.md#fund-and-issuer-transparency-feeds) owns distinct cash/fund rows, shared reconciliation tolerances, excluded circulation, exact-PDF/extraction provenance and examined-balance clocks.
 
 `npm run audit:mint-burn-conservation-admission -- --ids <csv> --out <dir>` runs the production raw-token conservation audit over a frozen per-chain window (timestamp-driven by default; `--window-blocks` overrides) for every config of the requested stablecoin ids; semantics and the reviewed-identity sidecar are owned by [Mint/Burn Flows: Raw Token Conservation](./mint-burn-flows.md#raw-token-conservation). It journals every JSON-RPC exchange to `<out>/journal.jsonl` with URLs redacted to origin and chain path (never the API key), reproduces records offline with `--replay <journal.jsonl>`, and — given reviewer semantic files via `--semantic-dir` — emits `sidecar-draft.json` entries (`--emit-sidecar-draft`) that `--merge-into-sidecar` merges into the committed sidecar. The command exits 1 when any audited window is not `ok`; journals and drafts stay under `agents/`.
 
