@@ -43,7 +43,7 @@ function evaluate(profile: OracleRiskProfile, clockSec?: number) {
   const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(meta) });
   const facts = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
   const evaluated = evaluateV9FactSet(facts, V9_CANDIDATE_POLICY_V1).assets[0]!;
-  return { oracle: facts.assets[0]!.economicControlReview.oracle, control: evaluated.control, trace: evaluated.trace };
+  return { extension, facts, oracle: facts.assets[0]!.economicControlReview.oracle, control: evaluated.control, trace: evaluated.trace };
 }
 
 function lendingProfile(): OracleRiskProfile {
@@ -57,6 +57,59 @@ function lendingProfile(): OracleRiskProfile {
 const oracleReasons = (control: V9EconomicControlResult) => control.reasons.filter((reason) => reason.path.includes("oracle"));
 
 describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
+  it.each([
+    { reviewedAt: "2026-10-07", exempt: true },
+    { reviewedAt: "2020-01-01", exempt: false },
+  ])("admits aggregate oracle applicability independently at $reviewedAt", ({ reviewedAt, exempt }) => {
+    const clockSec = Date.parse("2026-10-09T12:00:00Z") / 1000;
+    const profile = internalPriceMeta().oracleRisk!;
+    profile.reviewedAt = "2026-10-08";
+    profile.tier = "single-source-or-laggy";
+    profile.branchApplicability = {
+      disposition: "not-applicable", reviewedAt, reviewer: "Applicability reviewer",
+      rationale: "The reviewed mechanism has no price-sensitive authority.",
+      sources: [{ label: "Applicability proof", url: "https://example.com/applicability" }],
+    };
+    const { extension, facts, oracle, control } = evaluate(profile, clockSec);
+    expect(extension.assets[0]!.admissionQuarantine).toBeUndefined();
+    expect(oracle.status.applicability.state === "not-applicable").toBe(exempt);
+    expect(oracle.status.observationState).toBe(exempt ? "known" : "stale");
+    const applicabilityEvidence = extension.assets[0]!.researchEvidence
+      .find((row) => row.sourceId === "stablecoin-meta.oracle-risk-applicability")!;
+    expect(applicabilityEvidence).toMatchObject({
+      observedAtSec: Date.parse(`${reviewedAt}T00:00:00Z`) / 1000,
+      url: "https://example.com/applicability",
+      maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec,
+    });
+    expect(facts.assets[0]!.evidence).toContainEqual(expect.objectContaining({
+      sourceId: applicabilityEvidence.sourceId, contentSha256: applicabilityEvidence.contentSha256,
+      sourceGenerationId: extension.sources.researchOverlays.generationId,
+      observedAtSec: applicabilityEvidence.observedAtSec,
+    }));
+    expect(control.components.filter((component) => component.kind === "oracle").length).toBe(exempt ? 0 : 1);
+  });
+
+  it("rejects a future aggregate exemption despite a current parent profile", () => {
+    const profile = internalPriceMeta().oracleRisk!;
+    profile.reviewedAt = "2026-10-08";
+    profile.branchApplicability = { ...profile.branchApplicability!, disposition: "not-applicable", reviewedAt: "2027-01-01" };
+    const { extension, oracle, control } = evaluate(profile, Date.parse("2026-10-09T12:00:00Z") / 1000);
+    expect(extension.assets[0]!.admissionQuarantine).toMatchObject({
+      code: "fact-build-failed", message: expect.stringContaining("later than the scoring clock"),
+    });
+    expect(oracle.status.applicability.state).not.toBe("not-applicable");
+    expect(control.score).toBeNull();
+  });
+
+  it("does not apply a stale aggregate exemption when explicit applicable paths are current", () => {
+    const profile = internalPriceMeta().oracleRisk!;
+    profile.tier = "standard-external";
+    profile.paths = [path("core", "top-level-only", "0x1111111111111111111111111111111111111111")];
+    profile.branchApplicability = { ...profile.branchApplicability!, disposition: "not-applicable", reviewedAt: "1960-01-01" };
+    const { oracle, control } = evaluate(profile);
+    expect(oracle.status.applicability.state).not.toBe("not-applicable");
+    expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({ posture: "standard-external", score: 70 });
+  });
   it("retains GHO's admitted lending tier without scoring its four allocation facilitators", () => {
     const { control } = evaluate(OracleRiskProfileSchema.parse(ghoRiskReview.oracleRisk), Date.parse("2026-10-01T12:00:00Z") / 1000);
     expect(control.components.filter((component) => component.kind === "oracle")).toEqual([

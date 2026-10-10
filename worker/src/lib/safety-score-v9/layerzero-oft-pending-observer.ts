@@ -175,7 +175,7 @@ export async function observeLayerZeroOftPending(input: {
         uint(await state(index, side.oappAddress, toFunctionSelector("sharedDecimals()"))) !== BigInt(source.sharedDecimals) ||
         uint(await state(index, side.oappAddress, toFunctionSelector("decimalConversionRate()"))) !== 10n ** BigInt(side.localDecimals - source.sharedDecimals)) fail("oft-identity");
     }
-    const pathStates: Array<{ outbound: bigint; inbound: bigint; lazy: bigint }> = [];
+    const pathStates: Array<{ outbound: bigint; inbound: bigint; lazy: bigint; outboundCall: string }> = [];
     for (let index = 0; index < source.pathways.length; index++) {
       const path = source.pathways[index]!, a = source.sides[path.sourceIndex]!, b = source.sides[path.destinationIndex]!, checkpoint = cp.pathways[index]!;
       const cursor = checkpoint.sent, pin = input.headers[path.sourceIndex]!, destinationPin = input.headers[path.destinationIndex]!;
@@ -200,7 +200,20 @@ export async function observeLayerZeroOftPending(input: {
       if (await state(path.sourceIndex, a.oappAddress, call("peers(uint32)", "uint32", [b.eid])) !== addressWord(b.oappAddress) ||
         await state(path.destinationIndex, b.oappAddress, call("peers(uint32)", "uint32", [a.eid])) !== addressWord(a.oappAddress)) fail("peer-identity");
       const outboundCall = call("outboundNonce(address,uint32,bytes32)", "address,uint32,bytes32", [a.oappAddress, b.eid, addressWord(b.oappAddress)]);
-      if (cursor.anchor === null) {
+      if (cursor.anchor !== null) {
+        const anchoredOutbound = uint(await rpc(a.chainId, "eth_call", [
+          { to: a.endpointAddress, data: outboundCall }, { blockHash: cursor.anchorHash, requireCanonical: true },
+        ]));
+        if (anchoredOutbound !== BigInt(checkpoint.sentNonce)) {
+          // Older checkpoints could persist a discovery omission. Rebuild this
+          // lane from its reviewed predecessor under the normal page budget;
+          // no skipped liability or prior delivery decision survives recovery.
+          checkpoint.sent = { nextBlock: a.deploymentBlock, anchor: null, anchorHash: null, digest: sha256Hex("layerzero-oft-history-v1") };
+          checkpoint.sentNonce = "0";
+          checkpoint.messages = [];
+        }
+      }
+      if (checkpoint.sent.anchor === null) {
         const before = await fetchEvmBlockHeader(a.chainId, a.deploymentBlock - 1, options);
         if (!before || uint(await rpc(a.chainId, "eth_call", [{ to: a.endpointAddress, data: outboundCall }, { blockHash: before.hash, requireCanonical: true }])) !== 0n) fail("history-start-unproved");
       }
@@ -209,7 +222,7 @@ export async function observeLayerZeroOftPending(input: {
       const inbound = uint(await state(path.destinationIndex, b.endpointAddress, call("inboundNonce(address,uint32,bytes32)", "address,uint32,bytes32", args)));
       const lazy = uint(await state(path.destinationIndex, b.endpointAddress, call("lazyInboundNonce(address,uint32,bytes32)", "address,uint32,bytes32", args)));
       if (outbound >= 2n ** 64n || inbound > outbound || lazy > inbound || BigInt(checkpoint.sentNonce) > outbound) fail("nonce-state-mismatch");
-      pathStates.push({ outbound, inbound, lazy });
+      pathStates.push({ outbound, inbound, lazy, outboundCall });
     }
     const discoverGuid = async (message: Message, path: LayerZeroOftPendingRead["pathways"][number]) => {
       const rows = (await scan(`${SCAN_ORIGIN}/messages/guid/${message.guid}`)).data.filter(row => matches(row, path.sourceIndex, path.destinationIndex) && row.guid === message.guid && row.source.tx.txHash === message.transactionHash);
@@ -337,8 +350,17 @@ export async function observeLayerZeroOftPending(input: {
           messages.push({ message: sourceMessage, discovery: row });
         }
         messages.sort((left, right) => BigInt(left.message.nonce) < BigInt(right.message.nonce) ? -1 : 1);
+        let pageSentNonce = BigInt(checkpoint.sentNonce);
+        for (const { message } of messages) {
+          if (BigInt(message.nonce) !== pageSentNonce + 1n) fail("missing-nonce");
+          pageSentNonce = BigInt(message.nonce);
+        }
+        const pageOutbound = uint(await rpc(a.chainId, "eth_call", [
+          { to: a.endpointAddress, data: pathStates[index]!.outboundCall },
+          { blockHash: endHeader.hash, requireCanonical: true },
+        ]));
+        if (pageSentNonce !== pageOutbound) fail("send-census-mismatch");
         for (const { message, discovery } of messages) {
-          if (BigInt(message.nonce) !== BigInt(checkpoint.sentNonce) + 1n) fail("missing-nonce");
           if (await isPending(index, message, discovery)) checkpoint.messages.push(message);
           checkpoint.sentNonce = message.nonce;
           if (cp.pathways.reduce((sum, lane) => sum + lane.messages.length, 0) > MAX_MESSAGES) fail("checkpoint-capacity");

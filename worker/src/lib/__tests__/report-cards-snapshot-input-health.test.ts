@@ -108,12 +108,21 @@ describe("report-card V9 publication input health", () => {
   ])("ages deployment census independently of quotes ($id, $ageSec seconds)", async ({
     id, ageSec, observedSupplyRatio, unknownChains,
   }) => {
+    const meta = ACTIVE_META_BY_ID.get(id)!;
+    const deployments = [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])];
+    const ethereumDeployment = deployments.find((deployment) => deployment.chain === "ethereum")!;
     const asset = makeStablecoin({
       id,
-      contracts: [{ chain: "ethereum", address: "0x111", decimals: 18 }],
-      chainCirculating: {
-        Ethereum: { current: 100, circulatingPrevDay: 100, circulatingPrevWeek: 100, circulatingPrevMonth: 100 },
-      },
+      circulating: { peggedUSD: 100 },
+      contracts: deployments,
+      chainCirculating: Object.fromEntries(deployments.map((deployment) => {
+        // Explicit observed zero closes each satellite without inventing a
+        // positive supply allocation; the Ethereum liability reconciles to 100.
+        const current = deployment.chain === "ethereum" ? 100 : 0;
+        return [deployment.chain, {
+          current, circulatingPrevDay: current, circulatingPrevWeek: current, circulatingPrevMonth: current,
+        }];
+      })),
     });
     mocks.loadDexLiquiditySnapshot.mockResolvedValue({
       map: { [asset.id]: {} },
@@ -124,7 +133,7 @@ describe("report-card V9 publication input health", () => {
       rows: [{
         stablecoin_id: asset.id,
         chain: "ethereum",
-        contract_address: "0x111",
+        contract_address: ethereumDeployment.address,
         outcome: "observed_pools",
         outcome_observed_at: NOW_SEC - ageSec,
         chain_tvl_json: JSON.stringify({ ethereum: 1_000 }),

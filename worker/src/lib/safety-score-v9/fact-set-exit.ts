@@ -18,6 +18,10 @@ import {
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { resolveChainId } from "@shared/types/chain-identity";
+import { hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
+import { safetyScoreV9ChainSupplyObservedAtSec, safetyScoreV9ChainSupplyMaxAgeSec } from "./supply-attribution";
 import { isV9CreditableNonAtomicRedemption, projectV9ExitEvaluationRoute, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
@@ -870,9 +874,30 @@ export function buildRoutes(context: AssetBuildContext): {
     let capturedChainSupplyUsd = 0;
     for (const chain in chainSupply) capturedChainSupplyUsd += chainSupply[chain]!.current;
     const supplyCoverage = context.fixedInput.dexDeploymentSupplyCoverageById[context.asset.assetId];
-    const supplyToleranceUsd = Math.max(0.000001, capturedChainSupplyUsd * 1e-12);
+    const aggregateSupplyUsd = getCirculatingRawOrNull(
+      context.fixedInput.aggregateCirculatingById[context.asset.assetId] ?? {},
+    );
+    const supplyToleranceUsd = Math.max(0.000001, (aggregateSupplyUsd ?? 0) * 1e-12);
+    const meta = ACTIVE_META_BY_ID.get(context.asset.assetId);
+    const capturedChains = new Set(Object.keys(chainSupply).map((chain) => resolveChainId(chain) ?? chain));
+    const deploymentCensusComplete = [...(meta?.contracts ?? []), ...(meta?.tradedContracts ?? [])]
+      .every((contract) => capturedChains.has(resolveChainId(contract.chain) ?? contract.chain));
+    const supplyObservedAtSec = safetyScoreV9ChainSupplyObservedAtSec(
+      context.fixedInput, context.asset.assetId, context.extension.sources.chainSupply.observedAtSec,
+    );
+    const supplyMaxAgeSec = safetyScoreV9ChainSupplyMaxAgeSec(
+      context.fixedInput, context.asset.assetId, context.extension.sources.chainSupply.maxAgeSec,
+    );
+    const supplyCurrent = supplyObservedAtSec <= context.fixedInput.clockSec &&
+      (supplyMaxAgeSec === null || context.fixedInput.clockSec - supplyObservedAtSec <= supplyMaxAgeSec);
+    // Economic plans need their reviewed census/accounting admission; matching
+    // raw balances alone cannot establish disjoint liabilities.
+    const economicCensusAdmitted = !REVIEWED_ECONOMIC_SUPPLY_PLANS.has(context.asset.assetId) ||
+      hasCompleteEligibleProviderSupply(context.fixedInput, context.asset.assetId);
     const fullSupplyVerifiedEmpty =
-      capturedChainSupplyUsd > 0 &&
+      aggregateSupplyUsd !== null && aggregateSupplyUsd > 0 &&
+      Math.abs(capturedChainSupplyUsd - aggregateSupplyUsd) <= supplyToleranceUsd &&
+      deploymentCensusComplete && supplyCurrent && economicCensusAdmitted &&
       supplyCoverage != null &&
       supplyCoverage.unknownChains.length === 0 &&
       supplyCoverage.unknownSupplyUsd === 0 &&
@@ -882,8 +907,8 @@ export function buildRoutes(context: AssetBuildContext): {
       supplyCoverage.observedSupplyUsd === 0 &&
       supplyCoverage.observedSupplyRatio === 0 &&
       supplyCoverage.verifiedNoPoolsSupplyRatio === 1 &&
-      Math.abs(supplyCoverage.totalSupplyUsd - capturedChainSupplyUsd) <= supplyToleranceUsd &&
-      Math.abs(supplyCoverage.verifiedNoPoolsSupplyUsd - capturedChainSupplyUsd) <= supplyToleranceUsd;
+      Math.abs(supplyCoverage.totalSupplyUsd - aggregateSupplyUsd) <= supplyToleranceUsd &&
+      Math.abs(supplyCoverage.verifiedNoPoolsSupplyUsd - aggregateSupplyUsd) <= supplyToleranceUsd;
     if (locallyEmptySurface) {
       // Known-empty negative evidence must carry the DEX producer's observation
       // time, not the scoring clock: a stale empty surface is not a current
@@ -919,7 +944,7 @@ export function buildRoutes(context: AssetBuildContext): {
             observationState: "bounded-unknown",
             evidenceRefIds: [coverageEvidenceId],
             message:
-              "The locally empty DEX census does not verify an empty market footprint for every supply-bearing chain in the captured chain distribution.",
+              "The locally empty DEX census does not establish a current exhaustive deployment census reconciled to aggregate circulating liability.",
           }).status,
           exitRoutes: [],
         };

@@ -90,7 +90,9 @@ describe("VERITAS-II finding stale known-empty DEX coverage is treated as curren
 
     expect(evidence.observedAtSec).toBe(observedAtSec);
     expect(evidence.freshness.state).toBe("stale");
-    expect(asset.exitStatus.observationState).toBe("stale");
+    // This retained provider census is not aggregate-reconciled/exhaustive;
+    // stale local emptiness cannot promote it to a global observed-empty book.
+    expect(asset.exitStatus.observationState).toBe("bounded-unknown");
     expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
   });
 });

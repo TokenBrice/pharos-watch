@@ -3,9 +3,9 @@ import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9
 import { describeDataCoverageHoldCauses } from "@/lib/safety-score-data-coverage";
 
 /**
- * Compact held-publication notice for every surface other than `/safety-scores`,
- * which renders the full data-coverage module instead. Reason codes are never
- * printed raw: they are evaluator identifiers, not reader-facing copy.
+ * Compact held-publication notice for ratings display surfaces. The detail
+ * score card uses its held-state header chip; coverage owns the full module.
+ * Reason codes are evaluator identifiers, not reader-facing copy.
  */
 export function SafetyScoreV9StatusNotice({
   response,

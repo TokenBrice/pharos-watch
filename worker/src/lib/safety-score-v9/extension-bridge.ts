@@ -1063,7 +1063,6 @@ export function adaptBridgeReview(
           scopedQuestionSubject: "key-custody-independence", keyCustody: "unknown" });
         continue;
       }
-      if (overlayFullyResolved(merged)) continue;
       const allUnresolvedNamed = entries.every(
         (entry) => controlHasFreshScopedQuestion(entry.sourceControl) || overlayFullyResolved(entry.overlay),
       );

@@ -420,8 +420,8 @@ describe("reviewed economic supply observation", () => {
   it("retains the escrow OFT history-incomplete cause after successful holding and identity reads", async () => {
     const f = oftFixture(), original = vi.mocked(evmRpc.fetchEvmRpcBatch).getMockImplementation()!;
     // Keep the source pin beyond eight 1,000,000-block discovery windows.
-    // The missing send is still outside the scanned prefix, not an omitted
-    // send in a complete history (which correctly yields send-census-mismatch).
+    // The send occurs after the eight scanned windows. Each empty page has
+    // a zero historical outbound counter, authenticating that sparse prefix.
     vi.mocked(evmRpc.fetchEvmBlockNumber).mockResolvedValue(8_001_002);
     vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => {
       const height = number === "finalized" ? 8_001_000 : number;
@@ -435,7 +435,7 @@ describe("reviewed economic supply observation", () => {
         if (call.method === "eth_call" && query && typeof query === "object" && "data" in query &&
           typeof query.data === "string" && query.data.startsWith(toFunctionSelector("outboundNonce(address,uint32,bytes32)")) &&
           block && typeof block === "object" && "blockHash" in block) {
-          return word(block.blockHash === word(99n) ? 0n : 1n);
+          return word(block.blockHash === word(8_001_000n) ? 1n : 0n);
         }
         return results[index];
       });

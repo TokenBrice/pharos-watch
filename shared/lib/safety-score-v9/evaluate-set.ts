@@ -42,7 +42,7 @@ import {
   projectV9EffectiveBackingPillarScore,
   resolveV9WrapperStrategyTier,
   upstreamExitAccessScore,
-  upstreamOracleNavScore,
+  upstreamOracleNavProjection,
   type V9EvaluatedAsset,
 } from "./evaluate-asset";
 import {
@@ -115,7 +115,10 @@ function upstreamPillarCause(result: V9EvaluatedAsset, pillar: "backing" | "exit
   const input = result.scoreInput.pillars[pillar];
   if (input.aggregationDisposition === "excluded-a-b") return input.excludedCauses?.[0] ?? "U";
   return input.limitedEvidenceCauses.find((cause) => cause === "C" || cause === "U")
-    ?? (input.reasons.some((reason) => reason.cause === "D") ? "D" : null);
+    ?? (input.reasons.some((reason) => reason.cause === "D") ||
+      (input.adverseAttribution?.length ?? 0) > 0 ||
+      input.structuralSignals.some((signal) => signal.responsibility === "measured-adverse" && signal.pricedInPillar === pillar)
+      ? "D" : null);
 }
 
 
@@ -1262,6 +1265,7 @@ function evaluateV9FactSetRead(
       ? evaluatedAsset.trace.partialEvidence?.causes[0] ?? "U"
       : evaluatedAsset.trace.limitedEvidenceCauses[0] ?? semanticNrCauses[0]
         ?? (evaluatedAsset.trace.adverseAttribution.length > 0 ? "D" : null);
+    const oracleNavProjection = upstreamOracleNavProjection(evaluatedAsset, envelope);
     const upstream: V9UpstreamResult = {
       assetId: evaluatedAsset.assetId,
       score: projectV9DependencyScore(evaluatedAsset.trace),
@@ -1278,13 +1282,13 @@ function evaluateV9FactSetRead(
         exit: upstreamPillarCause(evaluatedAsset, "exit"),
         access: upstreamPillarCause(evaluatedAsset, "exit"),
         control: upstreamPillarCause(evaluatedAsset, "control"),
-        "oracle-nav": evaluatedAsset.control.components.find((component) => component.kind === "oracle")?.cause ?? null,
+        "oracle-nav": oracleNavProjection.cause,
       },
       backingScore: projectV9EffectiveBackingPillarScore(evaluatedAsset),
       exitScore: evaluatedAsset.scoreInput.pillars.exit.score,
       accessScore: upstreamExitAccessScore(evaluatedAsset.exit),
       controlScore: evaluatedAsset.scoreInput.pillars.control.score,
-      oracleNavScore: upstreamOracleNavScore(evaluatedAsset, envelope),
+      oracleNavScore: oracleNavProjection.score,
     };
     upstreamResultsById.set(assetId, interventions?.projectUpstream?.(upstream) ?? upstream);
     unavailabilityRootsById.set(assetId, unavailabilityRoots);
