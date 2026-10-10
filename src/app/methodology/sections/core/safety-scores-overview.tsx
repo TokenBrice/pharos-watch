@@ -434,6 +434,21 @@ export function SafetyScoresOverview() {
         tier witness, and the transfer census uses bounded whole-asset admission and source-clock rotation;
         deferred deployments remain unknown. Pillar weights, grade gates and evidence freshness are unchanged.
       </p>
+      <p>
+        Methodology v10.15 corrects score-moving evidence admission: excluded dependency events no longer
+        dilute measured loss or uncertainty, and binding limits keep their measured-adverse causes through
+        subsequent dependency hops. Measured certificate costs at the exact request budget receive zero
+        cost credit. Global no-exit findings require current exhaustive deployment coverage reconciled to
+        aggregate supply, with each deployment observation independently fresh.
+      </p>
+      <p>
+        USDtb shortfalls and unreadable Reserve Protocol plugin status cannot establish clean independent
+        backing. Incomplete JupUSD holding units withhold whole-book totals, while malformed Sky group debt
+        rejects the shared DAI/USDS book. Quote-quality warnings and original reserve clocks remain admission
+        gates. Removing inactive F settings rotates policy identity but does not change active F admission,
+        pillar weights or grade gates. Fixed-clock replay, mover attribution and owner review are required
+        before release; this version does not claim completed replay or new producer observations.
+      </p>
       <p className="text-xs text-muted-foreground">
         See also:{" "}
         <Link href="/methodology/scoring-changelog/" className={METHODOLOGY_LINK_CLASS}>Safety Score changelog</Link>

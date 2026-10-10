@@ -45,14 +45,26 @@ export function PricingPipelineMethodologySection() {
         </p>
 
         <p>
+          <strong className="text-foreground">Availability and original clocks (v6.46).</strong>{" "}
+          Supply quarantine survives disappearing chain rows; fallback aggregate provenance is retained while old
+          chain balances remain unavailable. Historical chart buckets need complete peg and supplemental evidence
+          within the existing 14-day as-of budget, so prehistory, expired contributors and missing buckets remain
+          null, not zero. Observed zero is still measured zero. Historical valuations and 7D/30D checkpoints use
+          timestamp-matched supply, while joined circulation and escrow reads require canonical block evidence.
+          USDC-denominated redemption ratios use observed USDC/USD rather than assumed par. FX carry and bounded
+          cached rescues preserve source cadence and original age; partial FX publication is explicitly incomplete.
+          Price coverage and replay provenance describe admitted rows, not rejected candidates.
+        </p>
+
+        <p>
           <strong className="text-foreground">Source diversity.</strong>{" "}
           Kraken and Bitstamp extend the direct venue set. Fresh RedStone prices need timestamped multi-venue breakdowns
           and are attributed only to configured canonical stablecoin IDs.
           The primary promoted DEX bridge now spans Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca,
           Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream, with structured source-filter telemetry and DEX lane confidence
-          profiles attached when those lanes participate. Targeted exact-address augmentation can add DexScreener,
-          DexPaprika, CoinGecko Onchain, Alchemy Prices, Moralis, and Solana Birdeye quotes for assets with missing prices or
-          below-target source depth or weak confidence. DEX bridge and address-provider identity are canonical-only at runtime, so
+          profiles attached when those lanes participate. CoinGecko Onchain is the retained exact-address
+          augmentation lane for assets with missing prices or below-target source depth; the retired DexScreener,
+          DexPaprika, Alchemy, Moralis, and Birdeye address adapters no longer participate. DEX bridge and address-provider identity are canonical-only at runtime, so
           addressed unknown tokens are dropped instead of being reinterpreted by symbol. Reviewed provider-specific
           deployment narrowing applies only while the exact address remains in current metadata; stale configuration
           produces no target, and eligible exact reviewed CoinGecko Onchain overrides reserve one bounded network request

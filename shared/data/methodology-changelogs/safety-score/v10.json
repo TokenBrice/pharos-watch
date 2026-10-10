@@ -1,5 +1,33 @@
 [
   {
+    "version": "10.15",
+    "title": "Undiluted dependency losses and stricter evidence admission",
+    "date": "2026-10-10",
+    "effectiveAt": 1791676800,
+    "summary": "Safety Score v10.15 can move scores, grades and availability by correcting dependency-loss normalization, measured exit costs and reserve admission. It also removes inactive F policy settings, deliberately rotating the semantic policy digest without changing active F admission. Pillar weights and grade gates are unchanged.",
+    "impact": [
+      "Excluded evidence events no longer dilute measured dependency losses or bounded uncertainty. Binding exit, control and oracle dependency limits retain their measured-adverse attribution, evidence and causes through subsequent dependency hops.",
+      "A measured execution certificate at the exact request cost budget receives zero cost credit, not an unknown-cost midpoint. Fresh finalized DEX quotes are admitted against their source evidence rather than collection-time coincidence; Curve routes must retain physical-pool identity and the reviewed 3pool input cohort.",
+      "Locally empty DEX observations establish global no-exit evidence only with current exhaustive deployment coverage reconciled to aggregate supply. Every deployment supply observation must independently fit its inclusive 1800-second budget; unavailable aggregate supply cannot support economic attribution or monetary materiality.",
+      "Reserve admission retains Djed and Youves quote-quality warnings and rejects unqualified future valuation clocks. USDtb coverage shortfalls and unreadable Reserve Protocol collateral-plugin status cannot publish clean independent backing evidence. Makina composition uses gross-asset exposure weights with financing identified separately; Falcon unknown exposure uses the complete measured book.",
+      "JupUSD holdings with missing or invalid unit scales withhold complete-book reserve totals, coverage and unknown-exposure statistics. Malformed Sky group debt rejects the shared DAI/USDS book. Unjoined USDD history clocks cannot establish composition freshness, and corrupt stored warnings fail closed for the affected asset.",
+      "Dependency and reserve prepass failures quarantine only the affected asset. Aggregate oracle exemptions require independently current evidence. Fresh bridge semantic questions retain control and inventory uncertainty unless exact admitted closure or independently proved adverse reach takes precedence; inconsistent quorum observations are rejected.",
+      "Authenticated OFT nonce prefixes are required before checkpoints advance; poisoned prefixes rebuild within the existing bounded history budget. Chain-maturity relief waits for review-day completion and recorded supporting evidence access, including withholding when access metadata is absent. Incident resolution cannot postdate review or remediation verification.",
+      "Deleting inactive F policy knobs rotates semantic policy identity only: active scoring, D/F admission, caps and availability logic are unchanged by that deletion. Access-policy vocabularies must contain each canonical value exactly once. Evaluation-build identity now binds omitted runtime admission leaves, and asset-local common-mode reasons no longer embed peer counts or quality; neutral registry-digest consolidation preserves existing registry digests.",
+      "These are score-moving input and attribution repairs, not newly observed incidents or completed evidence promotions. Fixed-clock captured-input replay, mover attribution and owner review are required before release. Producer-dependent outcomes additionally require fresh admitted observations; no replay equivalence, mover totals or production-health result is claimed."
+    ],
+    "commits": [
+      "c3eac8bb3",
+      "768217323",
+      "c8d085f00",
+      "f56e2cce1",
+      "b225ea90b",
+      "83ecaf437",
+      "4767326e3"
+    ],
+    "reconstructed": false
+  },
+  {
     "version": "10.14",
     "title": "Scoped evidence repairs and bounded census admission",
     "date": "2026-10-09",

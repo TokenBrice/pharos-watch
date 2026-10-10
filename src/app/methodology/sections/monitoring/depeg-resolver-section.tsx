@@ -48,6 +48,13 @@ export function DepegResolverMethodologySection() {
         Wilson-bounded so thin cells show their support state instead of a fabricated number.
       </p>
       <p>
+        Duration history uses only timed onset and current-deviation observations, never a final peak backdated into
+        an earlier landmark. Sparse or missing timed evidence can suppress duration bands until recalibration.
+        These input-admission changes can move new assessments and forecast verdicts; already sealed predictions
+        keep their original values and version stamps. Nominal prices and unavailable or nonpositive supply cannot
+        manufacture an at-peg live input.
+      </p>
+      <p>
         The Depeg Duration Resolver Reviewer (DDRR) is the companion audit layer. It scores only frozen outcomes that
         reached first publication, while coverage metrics keep no-calls, pre-lock recoveries, missed locks, publication
         retries/failures, data-quality gaps, and invalidated predictions visible. Recovery-likelihood and duration
@@ -56,6 +63,12 @@ export function DepegResolverMethodologySection() {
         historical terminal evidence is not counted as live missed-lock debt, and old sticky 24h policy rows remain
         auditable with their original lock metadata. Review rows also retain repaired and regime-split lineage, with
         expected-versus-observed horizon calibration shown alongside realized outcomes.
+      </p>
+      <p>
+        Reviewer accuracy can switch to the current prediction policy without narrowing whole-universe coverage or
+        hiding missed locks and publication debt. Per-coin counts and duration errors come from producer aggregates
+        computed before the browse-row cap. Retained snapshots without those aggregates show unavailable until a
+        refresh, not a track record reconstructed from the displayed sample.
       </p>
       <p>
         DDR consumes the same confirmed depeg events as the detection pipeline; it does not run its own detection. It is

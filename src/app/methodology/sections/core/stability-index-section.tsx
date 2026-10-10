@@ -116,6 +116,15 @@ export function StabilityIndexMethodologySection() {
         snapshots. Its monetary aggregate contains active core stablecoins and cash equivalents; tracked variants and
         stable-value investment products remain browsable but do not count as independent supply.
       </p>
+      <p>
+        Methodology v3.67 can change repaired historical scores without changing formula weights or bands.
+        Audit repairs and bounded backfills share canonical daily-price, native-domain and DEWS archive inputs
+        with a twenty-one-day supply lookback. Historical trend compares paired admitted supply identities;
+        an unavailable prior denominator or required missing DEWS archive preserves the accepted day rather
+        than inventing flat growth or zero stress. Event exclusion and restoration rebuild the post-audit
+        eligible universe atomically with event provenance. Fixed-clock replay and owner review remain release
+        prerequisites, not completed historical repair claims.
+      </p>
       <p className="text-xs text-muted-foreground">
         See also:{" "}
         <a href="#pegscore-dews-methodology" className={METHODOLOGY_LINK_CLASS}>

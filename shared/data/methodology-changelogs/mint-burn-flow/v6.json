@@ -1,5 +1,25 @@
 [
   {
+    "version": "6.24",
+    "title": "Closed-hour flow windows and complete repair evidence",
+    "date": "2026-10-10",
+    "effectiveAt": 1791676800,
+    "summary": "Flow windows now consistently cover closed UTC hours, excluding the current partial hour without losing the oldest hour's valuation debt. Verified CCTP V2 destination mints no longer count as issuance, and retention and historical pricing preserve the complete evidence needed to rebuild hourly totals.",
+    "impact": [
+      "An N-hour window is [end − N hours, end), where end is the current UTC hour boundary. Aggregate and per-coin totals, pressure, largest events and 7/30/90-day nets share that boundary. Responses publish exact boundaries and closed-utc-hours semantics; the open hour is excluded and the oldest included hour retains its unpriced events",
+      "CCTP V2 destination recognition requires matching reviewed MessageTransmitterV2 and TokenMessengerV2 logs plus this token's recipient Transfer. Only receipt-log-matched recipient and nonzero-fee mints are excluded as bridge transfers; unrelated economic flow in the same transaction stays counted. Source-side detection is unchanged",
+      "Historical supply snapshots qualify only through a valid actual price observation clock, peg plausibility and the existing inclusive ±24-hour event-distance bound. Snapshot day labels cannot manufacture clocks, and inadmissible snapshots do not suppress event-day provider fallback. Already-valued events are not overwritten",
+      "Whole-hour retention keeps priced siblings whenever any sibling still needs valuation or aggregation, or a matching active enabled scan frontier has not covered its block. Cursor advancement follows successful hourly materialization, and duplicate replay rebuilds affected hours without double-counting. Inactive and disabled configurations do not indefinitely hold retention",
+      "Cached block timestamps bind to the scanned block hash; mismatched or mixed-fork evidence is withheld. Public overview direction follows the producer's proven-direction semantics, so unknown or partial valuation cannot become an unsupported minting or burning claim",
+      "Pressure formulas, activity thresholds and Bank Run Gauge weighting are unchanged. Previously pruned evidence is not reconstructed, previously overadvanced cursors are not automatically rewound, and stored destination classifications change only when those events are replayed. Activation is provisionally 2026-10-11 00:00 UTC (1791676800); re-date effectiveAt at release"
+    ],
+    "commits": [
+      "e4cdae2dc",
+      "004d75e50"
+    ],
+    "reconstructed": false
+  },
+  {
     "version": "6.23",
     "title": "Event-time pricing and published valuation gating",
     "date": "2026-09-28",

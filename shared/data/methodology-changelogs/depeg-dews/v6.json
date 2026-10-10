@@ -1,5 +1,26 @@
 [
   {
+    "version": "6.34",
+    "title": "Comparable depeg evidence and freshness-qualified stress publication",
+    "date": "2026-10-10",
+    "effectiveAt": 1791676800,
+    "summary": "Depeg confirmation and peak updates now keep native and USD quote domains comparable, exclude rejected pool evidence, and require opposing-group agreement even for the single large-pool exception. DEWS retains trusted DEX-only stress but withholds publication when foundational prices or the retained systemic-stress sample are stale or invalid. These admission changes can move event histories, PegScore inputs, and DEWS scores or bands without changing formula weights.",
+    "impact": [
+      "Native-origin events keep their structured quote identity through peak updates and recovery. Native confirmer peaks for USD-origin events are converted with the admitted peg reference; mismatched assets, currencies, or incomparable peak domains are withheld. Canonical currency spelling is accepted, and a changed peg identity resets pending onset.",
+      "Policy-rejected pools cannot supply promoted peak statistics or source attribution. A single pool above the existing $5M exception must satisfy the same opposing-group vote as multi-group confirmation; TVL alone cannot outvote contradictory evidence.",
+      "Historical event-floor and large-cap confirmation checks use USD-valued supply, including timestamp-matched FX or commodity references. Observed zero remains measured zero; unavailable supply is absent. A degraded non-empty history with no admitted supply snapshots preserves existing backfill events.",
+      "Current at-peg summaries use the detector's raw-precision trigger boundaries, not rounded display deviations. Missing or nominal primary prices do not erase independently trusted DEX divergence from DEWS market evidence.",
+      "The foundational stablecoins generation must pass its cadence-plus-runtime freshness budget. PSI amplification requires a valid sample within two producer intervals; stale or invalid retained samples hold the accepted DEWS generation rather than refreshing its clock or silently amplifying a new one.",
+      "Failed or malformed canonical incident projections withhold recomputed history and analytics instead of substituting raw events or invented counts. Retained accepted analytics keep their original observation clock.",
+      "Event archives are no longer limited to 20 pages, and Worst Depeg uses complete eligible incident history. Dated history exports identify retrospectively captured ledger state, not historical point-in-time knowledge.",
+      "Historical DEWS diagnostic detection rates exclude unevaluable events and disclose partial coverage and missing supply anchors. Signal history distinguishes unavailable measurements from explicitly inapplicable signals.",
+      "Formula weights and numeric trigger thresholds are unchanged. Owner-approved production-history replay and fixed-clock admission and band comparison remain release prerequisites; no replay or band-equivalence result is claimed.",
+      "Activation is provisionally 2026-10-11 00:00 UTC (1791676800); re-date effectiveAt at release"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.33",
     "title": "Confidence-qualified weekly DEX history for liquidity erosion",
     "date": "2026-10-08",

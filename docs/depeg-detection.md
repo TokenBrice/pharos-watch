@@ -6,10 +6,12 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.33`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.34`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
+
+The shared `v6.34` release of 2026-10-10 preserves native/USD quote domains through confirmation, peak updates and recovery; rejects mismatched asset/currency and incomparable peaks; and excludes policy-rejected pools from event statistics. The single-$5M-pool exception now obeys the opposing-group vote. Historical floor and large-cap checks use timestamp-valued USD supply, and at-peg summaries use raw detector precision. Canonical projection failures withhold recomputed analytics while retained snapshots keep their original clock; archives and Worst Depeg are no longer display-capped. These input changes can move event histories and PegScore inputs without changing numeric trigger thresholds or scoring weights. Activation is provisional at 2026-10-11 00:00 UTC, re-dated at release, with the replay prerequisites in [DEWS](./dews.md#methodology-versioning).
 
 The shared `v6.33` release of 2026-10-08 changes only DEWS weekly DEX-history admission; depeg onset, confirmation, recovery and PegScore rules are unchanged. Its release remains conditional on owner-approved production-history replay described in [DEWS](./dews.md#methodology-versioning).
 

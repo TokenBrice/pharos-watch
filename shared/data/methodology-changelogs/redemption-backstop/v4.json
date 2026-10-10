@@ -1,5 +1,27 @@
 [
   {
+    "version": "4.49",
+    "title": "Exact fractional fees and source-bound executable outputs",
+    "date": "2026-10-10",
+    "effectiveAt": 1791676800,
+    "summary": "Redemption v4.49 preserves fractional live fees at the existing cost thresholds and requires admitted payout identities, current valuation evidence and observed execution predicates before favorable route terms or capacity enter scoring. Component weights and score ladders are unchanged.",
+    "impact": [
+      "Observed fractional fees are not rounded before cost scoring or scenario evaluation. Fees just above 10, 50 or 100 basis points now receive the correct existing ladder score.",
+      "Rejected payout identities cannot provide favorable live fees, open status, holder eligibility, settlement terms or their positive scoring projections. Independently reviewed static fees and separately sourced adverse observations remain usable.",
+      "Unreadable sBOLD collateral-health evidence leaves route openness unknown rather than claiming executable access. Mento Broker capacity requires same-block execution predicates and a bounded successful quote, not virtual inventory alone.",
+      "dEURO basket-output valuation requires complete bounded member-price and FX clocks and retains the oldest observation, preventing stale or undated quotes from establishing current output-haircut evidence.",
+      "Physical commodity outputs and fiat payouts retain distinct identities. Physical valuation requires explicit source-timed USD evidence; XAU/XAG producer identities remain admitted without bypassing Safety Score's existing commodity valuation gates.",
+      "Corrected fees and newly admitted or withheld evidence can move route scores. Fixed-clock route/scenario comparison and owner review are required before release; producer-dependent capacity and status require fresh admitted observations, not rewritten historical evidence."
+    ],
+    "commits": [
+      "c3eac8bb3",
+      "c8d085f00",
+      "83ecaf437",
+      "2b4556570"
+    ],
+    "reconstructed": false
+  },
+  {
     "version": "4.48",
     "title": "Direct observer capacity and fail-closed route evidence",
     "date": "2026-10-08",

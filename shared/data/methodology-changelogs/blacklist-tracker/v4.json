@@ -1,5 +1,26 @@
 [
   {
+    "version": "4.3",
+    "title": "Canonical freeze identities and evidence-qualified totals",
+    "date": "2026-10-10",
+    "effectiveAt": 1791676800,
+    "summary": "FreezeWatch counts canonical accounts and logs once, separates caught-up coverage from bounded scan progress, and preserves unavailable USD valuations rather than reporting them as zero. Historical amount repair requires event-time quote attribution; current prices cannot value an old freeze event.",
+    "impact": [
+      "Equivalent EVM log spellings and Tron account representations no longer duplicate public events, active counts, or snapshots. Newly persisted Tron addresses use validated lowercase 0x byte identities; Base58 remains a provider-call and display representation.",
+      "Numeric transaction-local lifecycle ordering replaces lexical ordering. Cross-transaction lifecycle and amount ordering must be proven by chain evidence; missing or contradictory evidence remains ambiguous rather than manufacturing an active state or amount.",
+      "An EVM or Tron scan that makes bounded progress but has not reached its observed safe frontier is incomplete. It cannot advance success clocks or publish a fresh producer summary as if coverage were caught up.",
+      "Tron historical balance replay validates the decimal-scaled token amount rather than rejecting ordinary 18-decimal raw balances solely because they exceed JavaScript's safe integer range; genuinely excessive scaled amounts remain inadmissible.",
+      "Budget-skipped and order-withheld snapshot work is retained as durable debt for maintenance retries. Operator snapshot admission obeys execution and ambiguity evidence instead of transaction-hash order.",
+      "Unknown event-time and current USD values remain unavailable. Mixed aggregates publish known subtotals with partial valuation coverage; all canonical tracked gold cohorts, including XAUM, contribute when observed.",
+      "Historical non-USD repair recovers native amounts but keeps USD unavailable without an event-time quote. A gold zero substitution carries explicit provenance and is not treated as a failed observation or silently substituted for one.",
+      "RPC block timestamps are admitted only when the returned block hash matches the event's block evidence, preventing a different block generation from supplying event time.",
+      "Blacklistability classifications and scan cadence are unchanged. Fixed-clock identity, ordering, valuation, and coverage comparison remains a release prerequisite; no production replay or runtime-health result is claimed.",
+      "Activation is provisionally 2026-10-11 00:00 UTC (1791676800); re-date effectiveAt at release"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "4.2",
     "title": "Confirmed Tron transaction ordering",
     "date": "2026-09-29",

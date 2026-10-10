@@ -535,8 +535,8 @@ Returns normalized issuer freeze, unfreeze, blacklist, and destruction events.
 
 ```json
 {
-  "currentVersion": "4.2",
-  "currentVersionLabel": "v4.2"
+  "currentVersion": "4.3",
+  "currentVersionLabel": "v4.3"
 }
 ```
 
@@ -564,7 +564,7 @@ Asset/state/review-filtered incidents. `total`/optional `totalExact` replace `co
 
 ```json
 {
-  "currentVersion": "6.33"
+  "currentVersion": "6.34"
 }
 ```
 
@@ -602,7 +602,7 @@ Peg summary v6.31: `unknownCoverageSeconds` excludes merged blind spans from occ
 
 ```json
 {
-  "currentVersion": "6.33"
+  "currentVersion": "6.34"
 }
 ```
 
@@ -809,8 +809,8 @@ Returns the current Pharos Stability Index and optional component detail. Since 
 
 ```json
 {
-  "currentVersion": "3.66",
-  "methodologyVersion": "3.66"
+  "currentVersion": "3.67",
+  "methodologyVersion": "3.67"
 }
 ```
 
@@ -879,10 +879,10 @@ Returns reviewed redemption paths and backstop evidence.
 {
   "coins": {},
   "methodology": {
-    "version": "4.48",
-    "versionLabel": "v4.48",
-    "currentVersion": "4.48",
-    "currentVersionLabel": "v4.48",
+    "version": "4.49",
+    "versionLabel": "v4.49",
+    "currentVersion": "4.49",
+    "currentVersionLabel": "v4.49",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,
@@ -940,8 +940,8 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 
 ```json
 {
-  "currentVersion": "8.47",
-  "methodologyVersion": "10.14"
+  "currentVersion": "8.48",
+  "methodologyVersion": "10.15"
 }
 ```
 
@@ -959,7 +959,7 @@ Returns the public adapter-coverage and source-status manifest.
 
 ```json
 {
-  "methodologyVersion": "v8.47"
+  "methodologyVersion": "v8.48"
 }
 ```
 
@@ -977,8 +977,8 @@ Returns bounded yield history for one stablecoin and optional source projection.
 
 ```json
 {
-  "currentVersion": "8.47",
-  "methodologyVersion": "8.47"
+  "currentVersion": "8.48",
+  "methodologyVersion": "8.48"
 }
 ```
 
@@ -1018,8 +1018,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.33",
-  "methodologyVersion": "6.33"
+  "currentVersion": "6.34",
+  "methodologyVersion": "6.34"
 }
 ```
 

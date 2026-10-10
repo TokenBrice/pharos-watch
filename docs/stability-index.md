@@ -4,12 +4,14 @@ Composite ecosystem health score (0–100) measuring how stable the stablecoin m
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-stability-index -->`v3.66`<!-- GENERATED-END: methodology-version-stability-index -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-stability-index -->`v3.67`<!-- GENERATED-END: methodology-version-stability-index -->
 - **Public changelog page:** `/methodology/stability-index-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/registry.ts`, with shared constants in `shared/lib/methodology-versions/constants.ts` and changelog entries in `shared/data/methodology-changelogs/stability-index/`
 
 PSI versions are bumped when formula terms, caps, condition bands, or score-affecting input semantics change.
 Historical entries before formal versioning were reconstructed from git commit history and marked as such.
+
+The `v3.67` release is score-moving for historical repairs, not a formula or band change. Audit repairs and bounded backfills use canonical daily-price/native-domain/DEWS replay with a shared twenty-one-day supply lookback. Trend pairs admitted identities and holds accepted days when the prior denominator is unavailable; required missing DEWS archives cannot become zero stress. Exclusion/restoration projects the post-audit eligible event universe and commits event provenance with PSI atomically. Full-precision contributor factors and source-anchored thirty-day calendar statistics correct attribution/display without rewriting legacy factors. Fixed-clock replay, changed-day attribution and owner review are required before release; no historical rewrite or replay result is asserted by the version bump.
 
 ## Formula
 

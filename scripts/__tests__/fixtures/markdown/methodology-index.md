@@ -24,6 +24,8 @@ Pricing v6.44 makes CoinGecko discovery tickers independent price-only evidence:
 
 Pricing v6.45 stops a provider glitch from posing as a redemption. When DefiLlama reports a chain's current supply as zero, missing or at most half of a vetted per-chain baseline, Pharos repairs that chain from a reviewed issuer-native on-chain read or DefiLlama's own per-chain daily history, or publishes the chain as unavailable. If the gap is material for the asset, the asset is quarantined: its last vetted chain values are carried for at most seven days, then its supply shows as unavailable. Time alone never turns the drop into published supply; only recovery, on-chain corroboration or a dated reviewed decision can. The trigger was the 2026-10-09 DefiLlama regression that briefly cut USDG's listed supply by 47%.
 
+Pricing v6.46 preserves unavailable supply and completeness through fallbacks and historical charts. Disappearing chain rows cannot release material quarantine; copied chain current remains null. Historical buckets require complete peg and supplemental evidence within the existing 14-day as-of budget, with dated zero retained. Joined on-chain accounting and historical valuations use coherent canonical-block and timestamp evidence; 7D/30D comparisons cannot silently lengthen their windows. USDC-denominated redemption ratios use observed USDC/USD, Solayer uses canonical SPL accrual, and FX/cache carries preserve original cadence and age. Coverage and replay follow admitted publication rows.
+
 
 ## Stability Index Methodology
 
@@ -33,10 +35,14 @@ Severity captures how bad current deviations are. Breadth captures how many asse
 
 PSI is deliberately conservative: one small depeg should not move the entire market condition, but simultaneous broad stress should pull the index down even if no single coin dominates the tape.
 
+Methodology v3.67 can change repaired historical scores without changing formula weights or condition bands. Audit repairs and bounded backfills use canonical daily-price, native-domain and DEWS archive inputs with a shared twenty-one-day supply lookback. Historical trend pairs admitted supply identities; unavailable prior denominators or required missing DEWS archives preserve accepted days rather than inventing flat growth or zero stress. Exclusion/restoration rebuilds the post-audit eligible event universe atomically with event provenance. Contributor factors retain scoring precision and thirty-day statistics use source-anchored UTC coverage. Fixed-clock changed-day attribution and owner review remain release prerequisites, not completed repair claims.
+
 
 ## Safety Scores Grading Methodology
 
 Safety Score V10 evaluates Backing, Exit and Economic Control, normally weighted 40%, 35% and 25%. It allows only bounded headroom above the weakest included pillar: a strong unrelated pillar cannot erase a known weak path. v10.01 stops treating our missing measurements as asset risk. Known peg problems, structural constraints, dependency limits and track record still matter; missing-data ceilings do not.
+
+Methodology v10.15 is score-moving: excluded dependency events no longer dilute measured loss or uncertainty, and binding exit/control/oracle limits retain measured-adverse causes through subsequent hops. Measured certificate costs at the exact request budget receive zero cost credit. Global no-exit findings require current exhaustive deployment coverage reconciled to aggregate supply, with each deployment observation independently fresh. USDtb shortfalls, unreadable Reserve Protocol plugin status, incomplete JupUSD holding units and malformed shared Sky debt cannot establish clean independent backing. Quote-quality warnings and original reserve clocks remain admission gates. Removing inactive F settings deliberately rotates the semantic policy digest without changing active D/F admission, caps, availability, pillar weights or grade gates. Fixed-clock replay, mover attribution and owner review are release prerequisites; no completed replay or fresh producer observation is claimed.
 
 Exit compares every admissible route alone and every independently usable pair, then takes the best feasible portfolio. The stronger member is primary; its backup adds min(10, 100 − primary score) × backup score / 100. An improving correlated alternative cannot displace a better independent pair. Capacity, output, fees, access, settlement and shared-resource checks still apply. Cards show selected routes, backup credit and stress-request completion separately; standalone route scores are not the Safety Score Exit pillar.
 
@@ -188,6 +194,8 @@ Liquidity v6.93 evaluates whole registry observations against one clock captured
 
 CoinGecko Tickers is price-only, including legacy synthetic rows: no liquidity TVL, pools, volume, source mix, caps, coverage or orderbook diagnostics. Ticker-only becomes unobserved, not measured zero; expect first-cutover policy TVL steps rather than market withdrawals. The 2026-10-08 registry cohort found ten ticker-only identities, with usdgo-osl, ylds-figure and gusd-gate each above $1M raw ticker TVL; inventory is not a scored-TVL forecast. Version 6.93 starts a retained-TVL measurement epoch. Pricing v6.44 records observed-flow weighting separately; Safety formula is unchanged and improved Safety Score stability is unmeasured.
 
+Liquidity v6.94 uses retained, base-pool-excluded TVL throughout Curve metapool quality. Full-pool balances cannot weight that retained contribution: without matching-scope evidence, balance remains neutral and unmeasured. Remembered pools preserve measured imbalance penalties, and measured zero effective depth stays zero. Exact V2 evidence retains its original capture clock; QuoterV2, Uniswap V4 and Curve CryptoSwap quotes use validated source headers and the existing inclusive three-hour age ceiling. Malformed or incomplete censuses cannot certify deployment-wide absence or erase independent valid pools. Component weights and retained-TVL measurement basis are unchanged, so v6.94 adds no basis break.
+
 
 ## Redemption Backstop Route Score
 
@@ -205,6 +213,8 @@ Since v4.44, Noon's USN route is modeled as an issuer-processed, days-settled ra
 
 This route score is separate from Safety Score V10 Exit. The two share reviewed route-scoring primitives, but V10 re-evaluates exact same-notional evidence under its own stress request, evidence ceilings, danger interlocks, and independent-backup policy.
 
+Methodology v4.49 keeps fractional observed fees unrounded through the existing 10, 50 and 100 basis-point cost thresholds and scenario evaluation. Rejected payout identities cannot grant favorable live fees, openness, holder eligibility or settlement; independently reviewed static fees and sourced adverse status remain separate. sBOLD requires readable collateral-health evidence for open status, Mento requires same-block execution predicates plus a bounded successful quote for capacity, and dEURO basket valuation retains the oldest complete member-price/FX clock. Physical commodity outputs require explicit source-timed USD valuation distinct from fiat proceeds without bypassing Safety Score commodity admission. These repairs can move route scores; weights and ladders are unchanged, and fixed-clock comparison plus owner review remain release prerequisites.
+
 
 ## Mint/Burn Flow Scoring
 
@@ -213,6 +223,8 @@ Mint/burn flow scoring tracks issuance and redemption pressure across supported 
 The score compares recent net flow against trailing closed-day baselines, distinguishes canonical-chain activity from bridge effects, and flags pressure shifts when risky outflows and safer inflows diverge.
 
 Coverage is intentionally explicit. Unsupported chains, deferred configs, null-price repair, and stale lanes are surfaced as metadata rather than hidden behind a clean-looking aggregate. Quiet assets retain mature coverage from completed block-scan evidence even after old event rows age out.
+
+Mint/Burn v6.24 aligns N-hour windows to N closed UTC hours ending at the current hour boundary. The open hour is excluded without dropping the oldest included hour's valuation debt; pressure, largest events and longer net windows share the boundary. Verified CCTP V2 destination recipient/fee mints leave issuance, while unrelated same-transaction flow stays counted. Historical prices need actual observation clocks within the inclusive 24-hour event-distance bound, and whole-hour sibling/frontier retention plus post-materialization cursor advancement keeps complete repair evidence. Fork-bound timestamps and proven-direction semantics prevent unsupported flow claims; pressure formulas and gauge weights are unchanged.
 
 
 ## Yield Intelligence
@@ -225,6 +237,8 @@ External opportunities — lending markets, fixed-yield products, and structured
 
 Warnings explain why a venue is risky, missing, stale, modeled, or benchmark-adjusted so yield pages do not promote fragile opportunities as clean income. Calculation mode is separate from evidence class: deterministic proxy math is still estimated evidence. Expired or critically incomplete evidence remains visible as NR context but cannot carry an exact current PYS, and new history points retain the versioned formula inputs needed for exact recomputation.
 
+Yield v8.48 requires receipt-symbol ownership alongside address evidence, rejects contradictory underlying sets and prevents generic PT/LP attribution to wrappers. Royco requires critical market, reviewed-venue and measured-size evidence, and cannot replace explicit NR or missing underlying safety with a rated tranche grade; incomplete otherwise eligible rows retain APY with null PYS. Signed holder returns preserve losing constituents in weighted denominators. Midas uses oracle observation intervals, Zephyr counts each hourly observation once across publication/backfill, and Hashnote excludes reports beyond five-minute future skew. Structured benchmarks retain unknown clocks, and EFFR admission applies observation bounds before provider fallback. PYS weights and freshness budgets are unchanged.
+
 
 ## PegScore and Depeg Early Warning Score (DEWS)
 
@@ -236,6 +250,8 @@ Pending depegs require source-family-aware corroboration before promotion. Pharo
 
 Shared Depeg/DEWS v6.33 admits the nearest positive-TVL weekly DEX-history row with confidence >=0.5 inside an inclusive 36-hour tolerance, retaining its original score/TVL/date. Missing eligible evidence leaves both history anchors unavailable; weak public history and >=0.75 durability/digest gates remain unchanged. Input availability, DEWS scores and bands may change. Release requires owner-approved production-history replay; depeg and PegScore rules are unchanged and no replay result is claimed.
 
+Shared Depeg/DEWS v6.34 keeps native/USD quote domains comparable, excludes rejected pool peaks and applies the opposing-group vote even to the single-$5M-pool exception. Historical floors use USD-valued supply and at-peg classification uses raw trigger precision. Trusted DEX-only divergence remains score-bearing; stale or invalid foundational stablecoins or retained PSI evidence holds accepted publication. Canonical projection failures withhold recomputation, complete eligible history underpins Worst Depeg, and historical diagnostics disclose unevaluable events and partial coverage. Input changes can move event histories and DEWS scores/bands; weights and numeric thresholds are unchanged.
+
 
 ## Depeg Duration Resolver
 
@@ -246,6 +262,8 @@ DDRv4 uses a forecast-readiness-or-72h contract. Active confirmed incidents show
 Stage 2 runs only when Stage 1 is not terminal-leaning. It is an empirical landmark-survival estimate over the clean corpus of recovered incidents, conditioned on the depeg's structural stratum (depth, direction, structural class, and peg currency) most-dependable-first. It reports a median time-to-repeg with a typical range (15th-85th percentile) plus per-horizon resolution-likelihood cells, support-gated and Wilson-bounded so thin cells show their support state instead of a fabricated number.
 
 The Depeg Duration Resolver Reviewer (DDRR) scores frozen first-published predictions against later canonical depeg-event outcomes and reports coverage accountability for no-calls, pre-lock recoveries, terminal-before-lock outcomes, missed locks, publication retries/failures, data-quality gaps, invalidated rows, and legacy sticky 24h outcomes. Rollout-active incidents that predate the DDRv2 public contract use that boundary for fair coverage classification. Recovery-likelihood accuracy and duration error use only scoreable public predictions.
+
+DDR v4.7 uses timed onset/current-deviation evidence, not final peaks backdated into earlier duration landmarks. Sparse temporal support can suppress duration bands until recalibration and can move new assessment scores or forecast verdicts, while sealed predictions remain unchanged. Audit-ineligible histories are removed before the row cap; nominal prices and unavailable/nonpositive supply cannot manufacture live at-peg inputs. Reviewer accuracy-policy selection is independent of whole-universe coverage. Per-coin track records use producer aggregates before the browse cap; retained snapshots without them show unavailable until refreshed.
 
 DDR consumes the same confirmed depeg events as the detection pipeline; it does not run its own detection. Forecast readiness is a publication trigger, not a probability or confidence level, and DDR is not investment advice or a credit rating.
 
@@ -259,6 +277,8 @@ Events are normalized by chain, stablecoin, action type, native amount, USD amou
 Frozen-total summaries use last-known successful freeze-ledger snapshots. New snapshots are contract/config scoped so same-symbol deployments do not overwrite each other; legacy rows can fall back to older address identity until remediated.
 
 Blacklist exposure uses the four-status report-card model: Yes, Upstream, Possible, and No. Upstream applies when a token has no direct Yes/Possible freeze control and strictly more than half of reserves are exposed to Yes, Upstream, or Possible upstream assets or rails.
+
+Blacklist Tracker v4.3 counts canonical EVM logs and Tron byte identities once. Bounded progress is not caught-up coverage and cannot renew success/publication clocks; durable maintenance debt retries skipped or ambiguous snapshots. Unknown USD remains unavailable and mixed totals disclose partial valuation coverage, including all canonical tracked gold cohorts. Historical repair requires event-time quotes, ordering requires execution evidence, and RPC timestamps require matching block hashes. Failed observations and explicit gold zero substitutions retain distinct provenance.
 
 
 ## Chain Health Score

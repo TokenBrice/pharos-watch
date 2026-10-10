@@ -6,11 +6,13 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both resolve their published version and changelog through `shared/lib/methodology-versions/registry.ts`.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.33`<!-- GENERATED-END: methodology-version-depeg-dews -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.34`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical constants:** `shared/lib/methodology-versions/constants.ts`
 
 Each API response includes the shared `methodology` envelope with `version`, `versionLabel`, `currentVersion`, `currentVersionLabel`, `changelogPath`, `asOf`, and `isCurrent` fields.
+
+The 2026-10-10 `v6.34` release retains independently trusted DEX-only divergence as market evidence when primary prices are absent or nominal. Stale or invalid foundational stablecoins generations hold publication; PSI amplification requires a valid sample within two producer intervals, and stale retained PSI cannot refresh an accepted DEWS clock. Historical diagnostics exclude unevaluable events and retain partial coverage and unavailable supply anchors; signal history distinguishes missing measurements from explicit inapplicability. Admission changes can move scores and bands without changing formula weights. Activation is provisionally 2026-10-11 00:00 UTC, re-dated at release. Owner-approved production-history replay and fixed-clock admission/band comparison remain prerequisites, not completed claims.
 
 The 2026-10-08 `v6.33` release repairs Liquidity Erosion's weekly DEX-history admission: nearest positive TVL, confidence >=0.5 and inclusive 36-hour tolerance, with the selected row's original score/TVL/date retained. Missing eligible evidence leaves both historical anchors unavailable. Live DEX history reaches back 8.5 days; historical reconstruction reaches back 15.5 days from the earliest event UTC day, without changing supply-history bounds. Input availability, scores and bands may change. Release requires owner-approved U-C20-16 production-history replay; no replay result is recorded here.
 

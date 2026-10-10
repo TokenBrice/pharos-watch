@@ -1,5 +1,28 @@
 [
   {
+    "version": "6.94",
+    "title": "Scope-matched pool quality and source-timed execution evidence",
+    "date": "2026-10-10",
+    "effectiveAt": 1791676800,
+    "summary": "Curve metapool quality now uses the same base-pool-excluded TVL throughout, and balance measurements count only when they describe that retained scope. Exact EVM execution evidence must remain fresh on its original source clock. Pool admission also preserves independent valid observations instead of mistaking malformed or incomplete censuses for verified absence.",
+    "impact": [
+      "Curve metapool quality applies mechanism and balance-health multipliers to retained, base-pool-excluded TVL, not the full pool value. With a matching-scope balance ratio of 0.5, $2M retained from a $10M full pool and a 0.85 mechanism multiplier produce about $601,041 of quality-adjusted TVL and Pool Quality 23, rather than the former capped 100",
+      "A full-pool balance ratio is not evidence for a base-pool-excluded contribution. Without matching-scope balance evidence, the existing neutral unmeasured balance fallback applies and measured balance diagnostics are omitted. Effective depth, Pool Quality and pool stress can move; retained TVL itself is not redefined, so this release adds no TVL-basis break",
+      "Exact constant-product V2 capacity requires a freshness-qualified pinned block and keeps its original capture time through publication. QuoterV2, Uniswap V4 and Curve CryptoSwap quotes bind their source clock to a validated per-chain block header and enforce the existing inclusive three-hour source-age ceiling; missing, mismatched, future or older headers cannot provide current exact capacity",
+      "Remembered DeFiLlama and direct-API pools retain measured imbalance penalties and locked-liquidity evidence. Secondary and remembered pools use the same symbol parsing as primary pools, so delimiter differences cannot change pair quality, depth or stress. A measured zero effective-depth total remains zero rather than borrowing raw TVL",
+      "Malformed GeckoTerminal success envelopes cannot certify a verified-empty deployment. Isolated malformed primary identities are quarantined while independently valid pools survive; their rejected TVL participates in the unchanged $10,000 degradation gate",
+      "Staged-pool absence requires explicitly exhaustive coverage. Curve is supplemental negative evidence, incomplete native censuses cannot veto fallbacks, and Raydium/Orca retain readable physical identities independently of economic-row admission. Independently observed Balancer and native-discovery pools remain eligible; unavailable PancakeSwap hourly volume stays missing, not zero",
+      "Liquidity component weights, the inclusive 50% volume-coverage admission floor, neutral durability-history defaults and the reviewed composite target cohort are unchanged. Activation is provisionally 2026-10-11 00:00 UTC (1791676800); re-date effectiveAt at release"
+    ],
+    "commits": [
+      "10b14badc",
+      "243a9c0b9",
+      "283d53108",
+      "2b4556570"
+    ],
+    "reconstructed": false
+  },
+  {
     "version": "6.93",
     "title": "Coherent registry evaluation and price-only CoinGecko tickers",
     "date": "2026-10-08",

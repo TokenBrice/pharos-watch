@@ -17,6 +17,14 @@ export function PegScoreDewsOverview() {
         independent CoinGecko evidence when the primary does not already use CoinGecko, supported native-peg quotes, Binance tickers,
         trusted aggregate DEX prices, and large challenger pools before promoting or rejecting candidates.
       </p>
+      <p>
+        Native and USD event peaks retain comparable quote identities through confirmation, updates and recovery.
+        Rejected pool evidence cannot supply a promoted peak, and even the single-$5M-pool confirmation exception
+        must satisfy the opposing-group vote. Historical supply floors use timestamp-valued USD supply; displayed
+        at-peg status follows raw trigger precision rather than rounded deviations. Complete eligible archives
+        underpin Worst Depeg, while failed canonical projections withhold recomputation instead of replacing the
+        accepted event universe.
+      </p>
       <MethodologyDetails summary="Depeg Confirmation & Trust Gates">
         <div className="space-y-3">
           <p>
@@ -102,6 +110,12 @@ export function PegScoreDewsOverview() {
             peers publish an exact admitted generation. Its latest row is removed without rewriting sparse or daily
             history; optional unreadable pool detail only makes that component unavailable. Whole-source failures still
             withhold the generation, and an empty admitted cohort preserves the previous publication.
+          </p>
+          <p>
+            Systemic amplification requires a valid PSI sample within two producer intervals. A stale or invalid
+            retained sample holds accepted DEWS publication instead of silently amplifying a fresh generation.
+            Historical detection diagnostics exclude unevaluable events and disclose partial coverage; missing
+            signal measurements and explicitly inapplicable signals remain distinct.
           </p>
           <p>
             Historical DEWS daily snapshots do not retain the underlying DEX trust metadata needed to replay that gate

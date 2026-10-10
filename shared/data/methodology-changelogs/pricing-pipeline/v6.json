@@ -1,5 +1,26 @@
 [
   {
+    "version": "6.46",
+    "title": "Complete supply evidence and original-clock price admission",
+    "date": "2026-10-10",
+    "effectiveAt": 1791676800,
+    "summary": "Pricing and supply publication preserve unavailable values, complete accounting, and original observation clocks across fallbacks and history. Missing chain rows cannot release a material supply quarantine, USDC-denominated redemption prices use observed USDC/USD, and historical chart buckets remain nullable when their contributors cannot be evidenced.",
+    "impact": [
+      "Material chain-dropout quarantine remains sticky when a known chain disappears from the provider row. Ordinary CoinGecko fallback retains aggregate provenance but publishes old chain current as unavailable rather than fresh supply.",
+      "Supply admission rejects partially invalid bucket records. Market-cap exposures and exports distinguish known subtotals from complete totals; dated observed zero remains zero, while missing supply remains unavailable.",
+      "Historical chart cohorts require complete peg-bucket evidence and structural supplemental observations within the existing 14-day as-of budget. Prehistory, future points, expired contributions, and malformed chart bases withhold dependent buckets rather than creating zero-valued or complete-looking totals.",
+      "Generic historical on-chain fallback requires exactly one eligible EVM deployment in the complete roster. Joined circulation and escrow accounting use fresh canonical block evidence. CoinGecko historical valuation must match its supply timestamp; 7D/30D comparisons use the current observation clock and paired native supply, not a silently longer window.",
+      "Cap cUSD and infiniFi iUSD redemption ratios are valued with trusted live USDC/USD and timestamp-aligned historical USDC/USD, not assumed par. Solayer NAV uses canonical SPL accrual. Reserve-NAV inputs reject superseded semantic bindings while retaining current successful Chainlink and Superstate evidence after a failed refresh.",
+      "Jupiter V3 quotes can be admitted without optional liquidity metadata. Verified CMC continuity no longer suppresses eligible hourly collection, and definitive exact-route misses invalidate only matching hints.",
+      "Missing-only cached vault-rate rescue remains bounded when live RPC circuits are open, without manufacturing a successful live probe. Gap-fill restores retain original-clock ceilings and existing publication limits; a permitted undated carry acquires an aging clock on later cache loading.",
+      "FX carry-forward and overlays preserve explicit source cadence and original observation provenance, with legacy-only inference at hydration. Partial primary FX publication is explicitly incomplete and partial historical coverage remains recoverable. Future chart and low-volume observations fail admission without changing freshness or skew budgets.",
+      "Coverage and replay provenance follow admitted publication rows rather than rejected candidates. Consensus weights, supply gap-fill bounds, and current scoring formulas are unchanged; fixed-clock price, supply, and coverage comparison remains a release prerequisite.",
+      "Activation is provisionally 2026-10-11 00:00 UTC (1791676800); re-date effectiveAt at release"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.45",
     "title": "Sticky chain-dropout guard for DefiLlama list supply",
     "date": "2026-10-09",

@@ -5,8 +5,11 @@
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-liquidity-score -->`v6.93`<!-- GENERATED-END: methodology-version-liquidity-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-liquidity-score -->`v6.94`<!-- GENERATED-END: methodology-version-liquidity-score -->
 - **TVL-basis breaks:** a liquidity release that changes how retained TVL is measured (not just weighting or volume admission) must also append its version to `LIQUIDITY_TVL_BASIS_BREAK_VERSIONS` in `shared/lib/dex-liquidity-evidence.ts`, which is append-only. The 30-day stability series never mix epochs across a listed break (see Basis homogeneity under Durability Sub-Component Weights); current breaks are 6.91, 6.92 and 6.93.
+
+The v6.94 release records scope-matched Curve metapool quality and balance evidence, original-source-clock freshness for exact EVM execution, and pool/census admission repairs. A full-pool balance ratio cannot weight base-pool-excluded TVL: without matching-scope evidence, balance remains neutral and unmeasured. Exact V2 captures and QuoterV2, Uniswap V4 and Curve CryptoSwap evidence cannot acquire a fresh clock merely by being published again; covered EVM source headers enforce the existing inclusive three-hour ceiling. Component weights and retained-TVL measurement semantics are unchanged, so v6.94 adds no TVL-basis break.
+
 ## DEX Liquidity Score
 
 Hourly full publication admits recovered quotes at the next `:16` instead of waiting for an even hour. Source requests and the `:46` reuse path keep their existing cadence. Full generation and active-target writes run every hour; each uses the existing bounded persistence buffers and retention. Public history remains one reusable daily snapshot, not an hourly series. The reviewed DEX evidence maximum age remains four hours (`DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC`), and measured-history high confidence remains three hours; operational cadence changes do not tighten those scoring bounds.

@@ -1,5 +1,5 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { handleYieldAdapterManifest } from "../yield-adapter-manifest";
 import { getRouteMatch } from "../../routes/registry";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
@@ -19,6 +19,10 @@ import {
 } from "@shared/types/yield";
 
 describe("handleYieldAdapterManifest", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("returns 200 JSON with the typed manifest payload", async () => {
     const res = await handleYieldAdapterManifest();
     expect(res.headers.get("Content-Type")).toContain("application/json");
@@ -43,7 +47,12 @@ describe("handleYieldAdapterManifest", () => {
     );
     expect(body.updatedAt).toBeGreaterThanOrEqual(newestReviewSec);
     expect(body.updatedAt).toBeGreaterThan(1_700_000_000);
-    const newestMethodologySec = Math.max(...YIELD_METHODOLOGY_CHANGELOG.map((entry) => entry.effectiveAt));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const newestMethodologySec = Math.max(
+      ...YIELD_METHODOLOGY_CHANGELOG
+        .filter((entry) => entry.effectiveAt <= nowSec)
+        .map((entry) => entry.effectiveAt),
+    );
     expect(body.updatedAt).toBe(Math.max(newestReviewSec, newestMethodologySec));
   });
 
@@ -52,6 +61,39 @@ describe("handleYieldAdapterManifest", () => {
     expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThan(0);
     expect(res.headers.get("Warning")).toBeNull();
     expect(res.headers.get("Cache-Control")).toBe(CACHE_PROFILES.standard);
+  });
+
+  it("ignores a future methodology revision until its serve-clock activation boundary", async () => {
+    const latestEntry = YIELD_METHODOLOGY_CHANGELOG.reduce(
+      (latest, entry) => entry.effectiveAt > latest.effectiveAt ? entry : latest,
+    );
+    const priorRevisionSec = Math.max(
+      ...YIELD_METHODOLOGY_CHANGELOG
+        .filter((entry) => entry.effectiveAt < latestEntry.effectiveAt)
+        .map((entry) => entry.effectiveAt),
+    );
+    const newestReviewSec = Math.max(
+      ...YIELD_ADAPTER_MANIFEST.flatMap((entry) => entry.strategies
+        .map((strategy) => strategy.lifecycleReason?.since)
+        .filter((since): since is string => typeof since === "string")
+        .map((since) => Math.floor(Date.parse(`${since}T00:00:00Z`) / 1000))),
+    );
+    vi.useFakeTimers();
+    vi.setSystemTime((latestEntry.effectiveAt - 1) * 1000);
+
+    const before = await handleYieldAdapterManifest();
+    const beforeBody = (await before.json()) as YieldAdapterManifestResponse;
+    expect(beforeBody.updatedAt).toBe(Math.max(newestReviewSec, priorRevisionSec));
+    expect(beforeBody.updatedAt).toBeLessThan(latestEntry.effectiveAt);
+    expect(Number(before.headers.get("X-Data-Age"))).toBe(latestEntry.effectiveAt - 1 - beforeBody.updatedAt);
+    expect(before.headers.get("Warning")).toBeNull();
+    expect(before.headers.get("Cache-Control")).toBe(CACHE_PROFILES.standard);
+
+    vi.setSystemTime(latestEntry.effectiveAt * 1000);
+    const activated = await handleYieldAdapterManifest();
+    const activatedBody = (await activated.json()) as YieldAdapterManifestResponse;
+    expect(activatedBody.updatedAt).toBe(Math.max(newestReviewSec, latestEntry.effectiveAt));
+    expect(activated.headers.get("X-Data-Age")).toBe("0");
   });
 
   it("covers every adapter family declared in the static registry", async () => {

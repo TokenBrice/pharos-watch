@@ -1,5 +1,27 @@
 [
   {
+    "version": "8.48",
+    "title": "Qualified wrapper returns and observation-clock history",
+    "date": "2026-10-10",
+    "effectiveAt": 1791676800,
+    "summary": "Wrapper yield attribution now requires receipt ownership, Royco tranche scores preserve missing critical evidence and unrated underlying safety, and valid negative holder returns remain measured. NAV annualization and trailing statistics use actual source observations rather than publication timing or repeated fetches.",
+    "impact": [
+      "Wrapper matching requires the normalized receipt symbol alongside address evidence. Generic Pendle/Spectra PT or LP markets cannot borrow a savings-wrapper label, and contradictory supplied underlying-address sets cannot fall back to a symbol match; absent address evidence retains the existing eligible symbol fallback",
+      "Royco tranche judgments require critical market status, reviewed venue risk and measured size. Incomplete otherwise eligible opportunities retain observed APY but publish NR and null PYS. Complete tranche evidence cannot replace an explicitly NR or missing underlying Safety Score with a rated opportunity grade, including during API hydration",
+      "Finite signed holder returns survive DeFiLlama and NAV resolution. Weighted groups retain losing constituents and their measured TVL in the denominator rather than reporting only profitable members. Non-positive APY remains observable while PYS is withheld under the existing non-positive-yield rule",
+      "Midas annualization and 7–45-day historical anchor selection use the oracle's actual observation interval. Nullable source clocks are retained in raw and daily history; legacy unknown clocks and repeated oracle rounds cannot manufacture an elapsed interval",
+      "Zephyr hourly source observations are stored once across normal publication and backfill, and an already-stored current observation is not counted again in trailing statistics. Publication-generation fencing remains independent; legacy history is not destructively rewritten",
+      "Hashnote rejects reports beyond the existing inclusive five-minute future-skew allowance before selecting NAV endpoints. Structured benchmark records do not borrow cache timestamps for unknown observation clocks",
+      "EFFR primary selection applies the existing observation-age and future-skew bounds before acceptance, allowing a current DFF fallback when the primary record is inadmissible. Benchmark selection mode is separate from feed health, and published evidence preserves both fetch-age and record-age budgets",
+      "PYS weights, source-risk calibration and benchmark budgets are unchanged, but corrected return and evidence inputs can change scores or withhold them. Activation is provisionally 2026-10-11 00:00 UTC (1791676800); re-date effectiveAt at release"
+    ],
+    "commits": [
+      "e4cdae2dc",
+      "a8eee6194"
+    ],
+    "reconstructed": false
+  },
+  {
     "version": "8.47",
     "title": "Curated ownership for native receipt yield",
     "date": "2026-10-06",

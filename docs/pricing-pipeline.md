@@ -24,10 +24,12 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.45`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.46`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
+
+The 2026-10-10 `v6.46` release keeps material supply quarantine sticky when known chain rows disappear and publishes stale fallback chain current as unavailable. Strict buckets, joined canonical-block circulation/escrow accounting and timestamp-matched historical valuation preserve completeness rather than optimistic zero. Historical cohort and structural-supplement chart buckets remain nullable without complete evidence inside the existing 14-day as-of budget; 7D/30D checkpoints use paired native supply at the current observation clock. Cap cUSD and infiniFi iUSD use observed USDC/USD, Solayer uses canonical SPL accrual, and reserve NAV rejects superseded bindings. Jupiter optional liquidity, CMC collection continuity and bounded missing-only vault rescue keep their source contracts. FX carry preserves cadence/source age and explicitly reports partial publication; gap-fill ceilings and future-skew gates retain original clocks. Coverage/replay follow admitted rows. Consensus weights and current scoring formulas are unchanged. Activation is provisionally 2026-10-11 00:00 UTC, re-dated at release; fixed-clock price/supply/coverage comparison remains required.
 
 The 2026-10-09 `v6.45` change adds a sticky chain-dropout guard for DefiLlama list supply. A positive row whose chain current is null, zero, or at most half of a persisted vetted per-chain baseline (at least $1M) no longer publishes that collapse as supply. The chain is repaired from a reviewed issuer-native on-chain read or a fresh DefiLlama per-chain daily point; otherwise it is published as `null`. A material deficit (at least 2%) quarantines the asset with `supplyRestored`, carrying the frozen baselines for at most 7 days and then publishing unavailable supply, never accepting the collapse because time passed. The trigger was the 2026-10-09 DefiLlama list regression that understated USDG by 47% and USDC by $7.5B. Contract and thresholds: [Chain dropout guard](./supply-snapshot.md#chain-dropout-guard). The entry provisionally activates at 2026-10-10 00:00 UTC and must be re-dated at release.
 

@@ -29,9 +29,11 @@ Mint and burn events measure token creation and destruction, not investor intent
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.23`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.24`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/mint-burn-flow/`
+
+The v6.24 release aligns aggregate and per-coin windows to N closed UTC hours ending at the current hour boundary, excluding the open hour without dropping the oldest hour's valuation debt. Verified CCTP V2 destination recipient/fee mints leave issuance while unrelated same-transaction flow stays counted. Actual observation-clock admission governs historical pricing, and whole-hour retention plus post-materialization cursor advancement preserves all siblings needed for repair. Pressure formulas and gauge weights are unchanged; existing pruned evidence and overadvanced historical cursors are not automatically repaired.
 
 Earlier release history lives in `shared/data/methodology-changelogs/mint-burn-flow/`; keep this document focused on the current contract.
 

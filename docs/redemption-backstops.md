@@ -8,12 +8,12 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-redemption-backstop -->`v4.48`<!-- GENERATED-END: methodology-version-redemption-backstop -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-redemption-backstop -->`v4.49`<!-- GENERATED-END: methodology-version-redemption-backstop -->
 - **Public methodology anchor:** `/methodology/#redemption-backstop-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/exit-route-scoring.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/registry.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`
 
-Latest `v4.48` update: direct executable-observer capacity is distinct from reserve composition; supply generations, nested route evidence and immutable details fail closed. Unmeasured liquidity stays unavailable, async completion guards survive every branch, and reviewed cost/settlement terms require their actual scope rather than a minimum fee or processing target. Component weights, ladders and portfolio thresholds are unchanged.
+Latest `v4.49` update: fractional live fees remain unrounded through the existing cost thresholds and scenario evaluation. Rejected payout identities cannot supply favorable live fees, openness, holder eligibility or settlement; independently reviewed static fees and sourced adverse status remain distinct. sBOLD requires readable collateral-health evidence for open status, Mento capacity requires same-block execution predicates plus a bounded quote, and dEURO basket valuation retains complete bounded member/FX evidence at its oldest clock. Physical commodity outputs stay distinct from fiat and require source-timed USD valuation without bypassing V9 admission. These repairs can move route scores; fixed-clock scenario comparison, owner review and fresh admitted producer evidence remain release prerequisites. Component weights and ladders are unchanged.
 
 Earlier release history lives in `shared/data/methodology-changelogs/redemption-backstop/`; keep this document focused on the current contract.
 

@@ -8,13 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.47`<!-- GENERATED-END: methodology-version-yield-methodology -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.48`<!-- GENERATED-END: methodology-version-yield-methodology -->
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/registry.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
 
-The v8.47 update requires curated ownership or an explicit source type for native receipt-yield labels. Auto-discovered symbol/deployment matches remain lending opportunities; contradictory deposit-address evidence cannot fall back to symbol-only matching.
+The v8.48 release tightens receipt-symbol ownership and contradictory-address admission, preserves Royco's critical-evidence and underlying-unrating gates, and retains valid negative holder returns in weighted portfolios. Midas annualization uses actual oracle observation intervals; Zephyr counts each hourly source observation once, and Hashnote rejects future reports beyond the existing five-minute allowance. Benchmark provider selection respects source observation bounds independently of fetch age or fallback mode. These input and history corrections can move or withhold PYS without changing its weights.
 
 Detailed release history lives under `shared/data/methodology-changelogs/yield-methodology/` and is rendered at `/methodology/yield-changelog/`. Keep version deltas in that structured source rather than duplicating them in this methodology reference.
 
@@ -656,6 +656,7 @@ The methodology above owns public behavior; this section owns runtime contracts.
 - `worker/src/cron/yield-sync/publication-view.ts` builds selected-source evidence, ordered candidates, decision ledgers, and per-source provenance once. Rankings and persistence consume the same selection; both preview and final validation remain in place.
 - `yield_publication_generations` and `yield_source_decisions` record publication state and bounded source-selection evidence. Repeated unchanged anomaly evidence is 30-day audit data; source switches and anomaly-episode boundaries remain durable.
 - Public rankings expose only a validated published generation. Rankings and summary assess freshness at response time: fresh through 7,200 seconds, degraded through 14,400 seconds, then stale. Both non-fresh states emit HTTP Warning 110 and `Cache-Control: no-store`. Their `_meta` names the assessment time, freshness budgets, and nullable reason alongside publication time, age, and status. Failed validation or publication attempts leave the prior snapshot intact.
+- The static yield adapter manifest's `updatedAt` is the later of its latest lifecycle review and the methodology revision effective at the request's serve clock. `getMethodologyVersionAt("yield", nowSec)` supplies the activation choice; a provisionally future-dated release does not refresh the revision or freshness headers before its inclusive activation boundary. The deployed current-version label remains separate from that evidence timestamp.
 - One admission/quarantine boundary feeds views, rankings, current rows, history, and decision evidence. Non-finite core APYs or invalid alternate comparisons quarantine the source with `yield-publication:quarantined-source:<id>:<field>` rather than poisoning the generation; non-finite stored history APYs are excluded from trailing statistics.
 - Rejected diagnostic winners remain excluded from selected-source and benchmark health. Coverage regressions at the existing 60% cohort/count thresholds and direct-to-modeled quality substitution produce loud non-blocking quality reasons and alarms, allowing independent valid rows to publish. Empty total coverage, unavailable common safety, and total coverage below `ceil(previous * 0.4)` when the previous count is at least five still block. Blocked results retain the run's `inputDiagnostics`.
 - Applied publications return cron status `ok`; `metadata.quality.degraded` and `reasons` separately carry required-input, benchmark, expired-selected, quarantine, and coverage findings. Unapplied/deferred/blocked work returns a non-`ok` status with `metadata.reason`, not a top-level `fallbackMode`. Pendle-only supplemental failures use `metadata.quality.advisoryReasons`: they remain visible in the admin supplemental tile but do not set `quality.degraded` or flip public producer quality.

@@ -13,12 +13,14 @@ DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" 
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-resolver -->`v4.6`<!-- GENERATED-END: methodology-version-depeg-resolver -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-resolver -->`v4.7`<!-- GENERATED-END: methodology-version-depeg-resolver -->
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/depeg-resolver.ts`, with shared constants in `shared/lib/methodology-versions/constants.ts` and changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-resolver/`
 
 DDR versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. A bump is warranted when the resolution rubric, duration stratification, incident grouping, support-gate rules, or reviewer scoring/public audit contract changes.
+
+The 2026-10-10 `v4.7` release admits only timed onset/current-deviation samples into historical duration strata and applies DDR audit eligibility before the history row cap. Untimed final peaks no longer establish landmark support. This is a score- and verdict-moving input change for new assessments and forecasts: sparse retained evidence can suppress duration bands until fresh timestamp-evidenced recalibration. Live admission also rejects nominal prices and unavailable/nonpositive supply. Reviewer accuracy-policy selection is separate from whole-universe coverage; per-coin track records use producer aggregates, and retained snapshots without them show unavailable until refreshed. Sealed predictions and archived payloads are unchanged. Activation is provisionally 2026-10-11 00:00 UTC, re-dated at release; fixed-clock replay, mover attribution, owner review and fresh duration calibration remain release prerequisites.
 
 Sub-component versions are surfaced in the API `_meta` for reproducibility: `resolutionRubricVersion` (`resolution-rubric-v3`), `durationModelVersion` (`duration-landmark-v2`), `incidentGroupingVersion` (`incident-group-v3`), `supportRulesVersion` (`support-rules-v2`), reviewer version (`ddr-reviewer-v4`), snapshot generation fields, public prediction IDs, immutable lock trigger/readiness metadata, and first-publication hashes. Version stamps live in `canonicalPredictionForHash`, so bumps affect **new** row hashes only; frozen rows keep their stored stamps.
 

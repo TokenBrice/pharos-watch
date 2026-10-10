@@ -1,5 +1,26 @@
 [
   {
+    "version": "3.67",
+    "title": "Canonical historical repair and unavailable-input retention",
+    "date": "2026-10-10",
+    "effectiveAt": 1791676800,
+    "summary": "PSI v3.67 can change repaired historical scores by using one canonical replay path, paired supply identities and the post-audit eligible event universe. Missing required trend or DEWS history preserves accepted days rather than fabricating flat growth or zero stress; formula weights and condition bands are unchanged.",
+    "impact": [
+      "Audit-triggered repairs and bounded backfills share daily prices, native-domain evidence, DEWS archives and persisted input provenance. Event exclusion or restoration recomputes PSI from the post-audit eligible universe in the same atomic transaction.",
+      "Historical seven-day trend compares only paired admitted supply identities, independently of the current market-cap denominator. Observed zero remains valid, but an unavailable or unusable prior denominator holds the accepted day instead of inventing flat growth.",
+      "Missing required v3 DEWS archives remain unavailable and preserve accepted days; an observed all-CALM archive still contributes measured zero stress. Archive date and row count remain part of replay provenance.",
+      "Every historical entrypoint loads the same full twenty-one-day supply lookback, combining the seven-day trend interval and fourteen-day as-of margin, so narrow replay windows do not truncate the eligible cohort.",
+      "Contributor attribution preserves the full-precision scoring factor without rewriting legacy factors. Displayed thirty-day extrema and averages use source-anchored UTC calendar coverage rather than row count; neither changes the scoring formula.",
+      "Historical repairs are score-moving. Fixed-clock replay, attribution of changed days and owner review are release prerequisites; this entry does not claim a completed replay or rewrite of stored history."
+    ],
+    "commits": [
+      "eb605e5ca",
+      "718253076",
+      "52e5df7b2"
+    ],
+    "reconstructed": false
+  },
+  {
     "version": "3.66",
     "title": "Observed supply admission and explicit partial-input quality",
     "date": "2026-10-07",

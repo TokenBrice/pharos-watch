@@ -23,6 +23,14 @@ export function LiquidityOverview() {
         raw ticker TVL. That inventory is not a forecast of published TVL. Safety formula is unchanged, and improved
         Safety Score stability has not been measured.
       </p>
+      <p>
+        Pool quality uses the same retained TVL scope throughout. For Curve metapools that exclude base-pool TVL,
+        full-pool balances are not matching evidence: absent a retained-scope measurement, balance stays neutral
+        and unmeasured. Remembered pools keep their measured imbalance penalties, and measured zero depth is never
+        replaced by raw TVL. Exact EVM execution keeps its original capture clock; validated source headers for
+        QuoterV2, Uniswap V4 and Curve CryptoSwap enforce the existing three-hour source-age ceiling. Malformed or
+        incomplete pool censuses cannot certify deployment-wide absence or erase independently valid pools.
+      </p>
     </>
   );
 }
