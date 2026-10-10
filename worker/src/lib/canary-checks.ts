@@ -4,7 +4,7 @@ import { CANARY_INCIDENT_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { CanaryStatus, CanaryExecutionStatus, CanaryRunSeverity, CanaryRunStatus } from "@shared/types/status";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9/consumer-freshness";
 import { loadStablecoinsCache, hasUsableStablecoinsPayload } from "./stablecoins-cache";
-import { evaluateStablecoinPublicationCoverage } from "./stablecoin-publication-coverage";
+import { classifyStablecoinPublicationGap, evaluateStablecoinPublicationCoverage } from "./stablecoin-publication-coverage";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { throwIfAborted } from "./abort";
@@ -231,12 +231,11 @@ async function checkStablecoinsCacheActiveCount(db: D1Database) {
     expiredWaiverIds: coverage.expiredWaiverIds,
     cacheKind: cache.kind,
   };
-  if (!coverage.complete) {
-    return degradedResult(
-      `stablecoins cache active coverage ${activeCount}/${expectedActiveCount}; ` +
-        `missing=${coverage.missingActiveIds.join(",")}`,
-      metadata,
-    );
+  const gap = classifyStablecoinPublicationGap(coverage);
+  if (gap === "elevated" || gap === "systemic") {
+    const message = `stablecoins cache active coverage ${activeCount}/${expectedActiveCount} (${gap} gap); ` +
+      `missing=${coverage.missingActiveIds.join(",")}`;
+    return gap === "systemic" ? errorResult(message, metadata) : degradedResult(message, metadata);
   }
   return okResult(metadata);
 }
@@ -698,7 +697,7 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
   {
     checkId: "stablecoins-cache-active-count",
     label: "Stablecoins cache active count",
-    description: "The stablecoins cache contains every active registry asset or an owned unexpired waiver.",
+    description: "The stablecoins cache omits under 1% of active registry assets (waived assets count as present); up to 10% warns, beyond that is an error.",
     run: checkStablecoinsCacheActiveCount,
   },
   {

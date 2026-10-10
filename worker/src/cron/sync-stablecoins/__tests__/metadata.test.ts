@@ -521,6 +521,35 @@ describe("stablecoins pricing metadata", () => {
     });
   });
 
+  it.each([
+    ["routine", 1, "ok", true, undefined],
+    ["elevated", Math.ceil(ACTIVE_STABLECOINS.length * 0.01), "degraded", true, "stablecoin-publication-gap-elevated"],
+    ["systemic", Math.floor(ACTIVE_STABLECOINS.length * 0.1) + 1, "degraded", false, "stablecoin-publication-gap-systemic"],
+  ] as const)("bands a %s publication gap", (_band, missingCount, status, cacheSafe, reason) => {
+    const assets = ACTIVE_STABLECOINS.slice(missingCount).map((stablecoin) => ({
+      id: stablecoin.id,
+      name: stablecoin.name,
+      symbol: stablecoin.symbol,
+      price: 1,
+      priceSource: "defillama-list",
+      priceConfidence: "single-source" as const,
+      priceObservedAt: 1_776_999_900,
+      circulating: { peggedUSD: 1 },
+    })) as PeggedAsset[];
+    const result = buildStablecoinsSyncResult(syncInput(assets));
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      reason?: string;
+      activePublicationCoverage: { complete: boolean; missingActiveIds: string[] };
+      capabilities: { stablecoinsCache: boolean };
+    };
+
+    expect(result.status).toBe(status);
+    expect(metadata.reason).toBe(reason);
+    expect(metadata.capabilities.stablecoinsCache).toBe(cacheSafe);
+    expect(metadata.activePublicationCoverage).toMatchObject({ complete: false });
+    expect(metadata.activePublicationCoverage.missingActiveIds).toHaveLength(missingCount);
+  });
+
   it("compacts all-asset gap state below the cron metadata limit without losing streak state", () => {
     const assets = ACTIVE_STABLECOINS.map((stablecoin) => ({
       id: stablecoin.id,

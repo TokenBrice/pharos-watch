@@ -1,4 +1,4 @@
-import { WORKER_ACTIVE_IDS as ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { isRecord } from "@shared/lib/type-guards";
 import { ActivePriceCoverageHealthSchema } from "@shared/types/status/core";
 import type {
@@ -67,9 +67,10 @@ function stringArray(value: unknown): string[] {
 
 
 function parseStablecoinPublicationHealth(
-  metadata: unknown,
+  metadataJson: string,
   observedAt: number,
 ): StablecoinPublicationHealth {
+  const metadata = tryParseJson(metadataJson);
   const coverage = isRecord(metadata) && isRecord(metadata.activePublicationCoverage)
     ? metadata.activePublicationCoverage
     : null;
@@ -101,10 +102,11 @@ function parseStablecoinPublicationHealth(
 }
 
 function parseActivePriceCoverageHealth(
-  metadata: unknown,
+  metadataJson: string,
   observedAt: number,
   nowSec: number,
 ): ActivePriceCoverageHealth {
+  const metadata = tryParseJson(metadataJson);
   const coverage = isRecord(metadata) && isRecord(metadata.activePriceCoverage)
     ? metadata.activePriceCoverage
     : null;
@@ -205,19 +207,6 @@ export interface StablecoinCoverageHealthSnapshot {
   activePriceCoverage: ActivePriceCoverageHealth;
 }
 
-/** Decodes one `sync-stablecoins` cron metadata object into the publication and
- * active-price coverage health that `getStablecoinPublicationImpactStatus` judges. */
-export function parseStablecoinCoverageHealth(
-  metadata: unknown,
-  observedAt: number,
-  nowSec: number,
-): StablecoinCoverageHealthSnapshot {
-  return {
-    publication: parseStablecoinPublicationHealth(metadata, observedAt),
-    activePriceCoverage: parseActivePriceCoverageHealth(metadata, observedAt, nowSec),
-  };
-}
-
 export async function loadStablecoinCoverageHealth(
   db: D1Database,
   now = Math.floor(Date.now() / 1000),
@@ -240,7 +229,10 @@ export async function loadStablecoinCoverageHealth(
     .bind(now - 7 * 24 * 60 * 60)
     .first<{ started_at: number; metadata: string }>();
   return row?.metadata
-    ? parseStablecoinCoverageHealth(tryParseJson(row.metadata), row.started_at, now)
+    ? {
+        publication: parseStablecoinPublicationHealth(row.metadata, row.started_at),
+        activePriceCoverage: parseActivePriceCoverageHealth(row.metadata, row.started_at, now),
+      }
     : {
         publication: unknownStablecoinPublicationHealth(),
         activePriceCoverage: unknownActivePriceCoverageHealth(),

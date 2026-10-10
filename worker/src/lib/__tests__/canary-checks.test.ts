@@ -412,25 +412,30 @@ describe("worker data invariant canaries", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("stress_signals_latest"))).toBe(false);
   });
 
-  it("degrades and names even one missing active stablecoin", async () => {
+  it.each([
+    ["a routine single omission", 1, "ok", "info"],
+    ["an elevated 1% omission", Math.ceil(ACTIVE_IDS.size * 0.01), "degraded", "warning"],
+    ["a systemic >10% omission", Math.floor(ACTIVE_IDS.size * 0.1) + 1, "error", "error"],
+  ] as const)("bands %s of active stablecoins", async (_label, missing, status, severity) => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
-    const summary = await runCanaryChecks(healthyD1({ stablecoinsActiveCount: ACTIVE_IDS.size - 1 }), {
+    const summary = await runCanaryChecks(healthyD1({ stablecoinsActiveCount: ACTIVE_IDS.size - missing }), {
       observedAt: NOW,
       mode: "status",
     });
     const check = summary.results.find((result) => result.checkId === "stablecoins-cache-active-count");
 
     expect(check).toMatchObject({
-      status: "degraded",
-      severity: "warning",
+      status,
+      severity,
       metadata: expect.objectContaining({
-        activeCount: ACTIVE_IDS.size - 1,
+        activeCount: ACTIVE_IDS.size - missing,
         expectedActiveCount: ACTIVE_IDS.size,
       }),
     });
-    expect(check?.metadata?.missingActiveIds as string[]).toHaveLength(1);
-    expect(check?.error).toContain((check?.metadata?.missingActiveIds as string[])[0]!);
+    const missingIds = check?.metadata?.missingActiveIds as string[];
+    expect(missingIds).toHaveLength(missing);
+    if (status !== "ok") expect(check?.error).toContain(missingIds[0]!);
   });
 
   it("keeps the GBP benchmark canary degraded until two direct publications", async () => {
@@ -739,8 +744,8 @@ describe("worker data invariant canaries", () => {
     const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "shadow" });
 
     expect(summary.worstStatus).toBe("error");
-    expect(summary.errorCount).toBe(3);
-    expect(summary.degradedCount).toBe(3);
+    expect(summary.errorCount).toBe(4);
+    expect(summary.degradedCount).toBe(2);
     expect(summary.results.map((result) => [result.checkId, result.status])).toContainEqual([
       "dex-liquidity-current-publication",
       "error",

@@ -21,6 +21,7 @@ import type {
 } from "../../lib/pricing-provider-diagnostics";
 import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
 import {
+  classifyStablecoinPublicationGap,
   compactStablecoinActivePriceCoverage,
   evaluateStablecoinActivePriceCoverage,
   evaluateStablecoinPublicationCoverage,
@@ -28,6 +29,7 @@ import {
   type PreviousStablecoinActivePriceCoverage,
   type StablecoinPriceCoverageAsset,
   type StablecoinPublicationCoverage,
+  type StablecoinPublicationGapBand,
   type StablecoinActivePriceCoverage,
 } from "../../lib/stablecoin-publication-coverage";
 import { MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES } from "../../lib/cron-metadata-persistence";
@@ -510,6 +512,7 @@ export function buildStablecoinsSyncResult(input: {
     input.assets.map((asset) => String(asset.id)),
     input.syncStartSec,
   );
+  const publicationGap = classifyStablecoinPublicationGap(publicationCoverage);
   const activePriceCoverage = input.activePriceCoverage
     ?? evaluateStablecoinActivePriceCoverage(input.assets, undefined, {
       previousCoverage: input.previousActivePriceCoverage,
@@ -525,7 +528,7 @@ export function buildStablecoinsSyncResult(input: {
   const status: CronResult["status"] =
     input.depegErrorCount > 0
       || input.stalenessCheckFailed
-      || !publicationCoverage.complete
+      || publicationGapDegradesRun(publicationGap)
       ? "degraded"
       : "ok";
 
@@ -565,6 +568,7 @@ export function buildStablecoinsSyncResult(input: {
       ),
     },
     activePublicationCoverage: publicationCoverage,
+    ...(publicationGapDegradesRun(publicationGap) ? { reason: `stablecoin-publication-gap-${publicationGap}` } : {}),
     activePriceCoverage,
     priceSourceAttemptLedger,
     upstreamFetchOk: input.upstreamFetchOk ?? true,
@@ -629,8 +633,10 @@ export function buildStablecoinsSyncResult(input: {
     metadata.depegErrors = compactDiagnosticValue(input.depegErrors);
   }
 
+  // Downstream jobs treat absent assets as unavailable; only a systemic gap
+  // withholds the cache from them.
   const capabilities = {
-    stablecoinsCache: publicationCoverage.complete,
+    stablecoinsCache: publicationGap !== "systemic",
     depegPipeline: input.depegPipelineSucceeded ?? input.depegErrorCount === 0,
   };
   let serializedMetadata = buildSyncMetadata(metadata, {
@@ -679,6 +685,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
     input.assets.map((asset) => String(asset.id)),
     input.syncStartSec,
   );
+  const publicationGap = classifyStablecoinPublicationGap(publicationCoverage);
   const persistedActivePriceCoverage = input.activePriceCoverage.missingActiveAssets.length > 20
     ? compactStablecoinActivePriceCoverage(input.activePriceCoverage, 20)
     : input.activePriceCoverage;
@@ -692,7 +699,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
     status:
       input.depegErrorCount > 0
         || input.stalenessCheckFailed
-        || !publicationCoverage.complete
+        || publicationGapDegradesRun(publicationGap)
         ? "degraded"
         : "ok",
     itemCount: input.assets.length,
@@ -728,11 +735,15 @@ export function buildFallbackStablecoinsSyncResult(input: {
     }, {
       cacheWriteMode: "published",
       capabilities: {
-        stablecoinsCache: publicationCoverage.complete,
+        stablecoinsCache: publicationGap !== "systemic",
         depegPipeline: input.depegErrorCount === 0,
       },
     }),
   };
+}
+
+function publicationGapDegradesRun(gap: StablecoinPublicationGapBand): boolean {
+  return gap === "elevated" || gap === "systemic";
 }
 
 export function buildBlockedInvalidPayloadResult(input: CachePublicationMetadataBase & {
