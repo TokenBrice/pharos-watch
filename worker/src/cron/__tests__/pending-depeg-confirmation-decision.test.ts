@@ -173,7 +173,7 @@ describe("evaluatePromotionDecision", () => {
       confirmingSources: ["coingecko-confirm"],
       offchainStatus: "confirm",
       offchainSourceKey: "coingecko-confirm",
-      offchainPeakCandidate: { bps: -600, price: 0.94 },
+      offchainPeakCandidate: { bps: -600, price: 0.94, quoteDomain: "usd" },
     });
 
     await settle(db, plan, evidence);
@@ -334,7 +334,7 @@ describe("evaluatePromotionDecision", () => {
     const evidence = makeEvidence({
       offchainStatus: "confirm",
       offchainSourceKey: "coingecko-confirm",
-      offchainPeakCandidate: { bps: -500, price: 0.95 },
+      offchainPeakCandidate: { bps: -500, price: 0.95, quoteDomain: "usd" },
       confirmingSources: ["coingecko-confirm"],
     });
 
@@ -435,6 +435,33 @@ describe("evaluatePromotionDecision opposite-direction corroboration", () => {
 });
 
 describe("evaluatePromotionDecision promotion peak aggregation across channels", () => {
+  it.each([
+    { reason: "large-cap", candidateDomain: "native:peggedREAL" as const, reference: 0.2, price: 0.196 },
+    { reason: "large-cap+native-origin", candidateDomain: "usd" as const, reference: 1, price: 0.98 },
+    { reason: "large-cap+native-origin", candidateDomain: "native:peggedEUR" as const, reference: 1, price: 0.98 },
+  ])("leaves incomparable $candidateDomain peaks out of a $reason event", async ({ reason, candidateDomain, reference, price }) => {
+    const { sqlite, db } = openFixture();
+    const row = makePendingRow({
+      id: 305, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL",
+      reason, peg_reference: reference, first_seen_bps: -200, first_price: price,
+      last_seen_bps: -200, last_price: price, peak_seen_bps: -200, peak_price: price,
+    });
+    insertPending(sqlite, row);
+    const plan = makePlan({
+      row, pegReference: reference, authoritativePrice: price,
+      primaryStatus: "confirm", primarySameDirectionDepegged: true,
+      primaryConfirmationSources: ["primary:oracle:pyth", "primary:oracle:chainlink"],
+      temporalSameDirectionConfirmed: true,
+    });
+    await settle(db, plan, makeEvidence({
+      offchainStatus: "confirm", offchainSourceKey: "native:eur",
+      offchainPeakCandidate: { bps: -900, price: 0.91, quoteDomain: candidateDomain },
+    }));
+    expect(readLifecycle(sqlite, row.stablecoin_id, row.id).events[0]).toMatchObject({
+      peak_deviation_bps: -200, peak_price: price, peg_reference: reference,
+    });
+  });
+
   it.each([
     { currency: "EUR", reference: 1.1 },
     { currency: "BRL", reference: 0.193 },
@@ -603,7 +630,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
     });
     const evidence = makeEvidence({
       cexStatus: "confirm",
-      cexPeakCandidate: { bps: -700, price: 0.93 },
+      cexPeakCandidate: { bps: -700, price: 0.93, quoteDomain: "usd" },
       poolStatus: "confirm",
       poolConfirmations: [{
         key: "curve:curve",

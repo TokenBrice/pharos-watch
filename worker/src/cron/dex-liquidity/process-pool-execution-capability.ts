@@ -137,6 +137,7 @@ function buildDirectApiFactoryInput(input: {
     qualityMultiplier: 1,
     feeTierForExtra: feePips == null ? undefined : feePips / 100,
     balanceRatio: 1,
+    hasMeasuredBalance: false,
     poolMaturityDays: 30,
     organicFraction: 0.5,
     hasMeasuredOrganicFraction: false,

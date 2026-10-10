@@ -267,6 +267,7 @@ describe("accumulatePoolMetrics optimistic balance counter", () => {
       qualityMultiplier: 0.8,
       feeTierForExtra: undefined,
       balanceRatio: 1,
+      hasMeasuredBalance: false,
       poolMaturityDays: 100,
       organicFraction: 0.5,
       hasMeasuredOrganicFraction: false,
@@ -305,6 +306,7 @@ describe("accumulatePoolMetrics optimistic balance counter", () => {
         tokenPrices: {},
       },
       balanceRatio: 0.95,
+      hasMeasuredBalance: true,
     });
     accumulatePoolMetrics(metrics, makeIdentity(pool), enrichment, {}, "usdc-circle", counters);
     expect(counters.unmeasuredBalanceOptimistic).toBe(0);

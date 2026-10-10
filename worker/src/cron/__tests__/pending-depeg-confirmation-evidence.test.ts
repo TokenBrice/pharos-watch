@@ -127,7 +127,7 @@ describe("collectConfirmationEvidence DEX source grouping and freshness", () => 
   it("groups independent DEX protocol families and retains peak candidates", async () => {
     const evidence = await collect(noOffchain({ dexPriceRows: dexRows(), dexPriceSources: dexSources() }));
     expect(evidence).toMatchObject({ dexStatus: "confirm", dexConfirmationKeys: ["dex:curve", "dex:uniswap"] });
-    expect(evidence.dexPeakCandidates).toEqual([{ bps: -500, price: 0.95 }, { bps: -500, price: 0.95 }, { bps: -510, price: 0.949 }]);
+    expect(evidence.dexPeakCandidates).toEqual([{ bps: -500, price: 0.95, quoteDomain: "usd" }, { bps: -500, price: 0.95, quoteDomain: "usd" }, { bps: -510, price: 0.949, quoteDomain: "usd" }]);
     expect(evidence.confirmingSources).toEqual(["dex:curve", "dex:uniswap"]);
   });
 
@@ -199,12 +199,22 @@ describe("collectConfirmationEvidence native quote classification", () => {
     nativeSignal: deriveDepegSignal(price, 1),
   });
 
+  it("does not convert a native quote from another fiat domain into a USD event peak", async () => {
+    const evidence = await collect(noOffchain({
+      nativePegQuote: { stablecoinId: COIN_ID, geckoId: "tether", pegCurrency: "EUR", price: 0.9, updatedAt: NOW_SEC - 30 },
+      nativeSignal: deriveDepegSignal(0.9, 1),
+    }));
+    expect(evidence.offchainStatus).toBe("insufficient");
+    expect(evidence.offchainPeakCandidate).toBeNull();
+    expect(evidence.confirmingSources).toEqual([]);
+  });
+
   it("confirms off-chain status from a fresh native peg quote without querying CoinGecko", async () => {
     const fetchSpy = mockFetch([], { requireMatch: true });
     const evidence = await collect(nativeInput(0.95), fetchSpy);
     expect(evidence.offchainStatus).toBe("confirm");
     expect(evidence.offchainSourceKey).toBe("native:usd");
-    expect(evidence.offchainPeakCandidate).toEqual({ bps: -500, price: 0.95 });
+    expect(evidence.offchainPeakCandidate).toEqual({ bps: -500, price: 0.95, quoteDomain: "usd" });
     expect(evidence.confirmingSources).toContain("native:usd");
   });
 
@@ -242,7 +252,7 @@ describe("collectConfirmationEvidence recover and opposing classification", () =
   it("confirms from a fresh Binance quote beyond the secondary bar", async () => {
     const evidence = await collect(noOffchain({ cexAllowed: true, cexPrices: new Map([["USDT", 0.95]]) }));
     expect(evidence.cexStatus).toBe("confirm");
-    expect(evidence.cexPeakCandidate).toEqual({ bps: -500, price: 0.95 });
+    expect(evidence.cexPeakCandidate).toEqual({ bps: -500, price: 0.95, quoteDomain: "usd" });
     expect(evidence.confirmingSources).toContain("cex:binance");
   });
 

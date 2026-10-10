@@ -107,7 +107,7 @@ export async function derivePegAnalyticsSnapshot(
   const fourYearsAgoSec = nowSec - PEG_SCORE_LOOKBACK_SEC;
 
   const activeIncidentProjectionLoad = await loadActiveIncidentProjections(db, null);
-  if (!activeIncidentProjectionLoad.available) throw new IncidentProjectionUnavailableError();
+  if (!activeIncidentProjectionLoad.available) throw new IncidentProjectionUnavailableError(activeIncidentProjectionLoad.reason);
   const firstSeenMap = await getFirstSeenDates(
     db,
     buildPriceFirstSeenObservations(options.peggedAssets, options.methodologyAsOf),

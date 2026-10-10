@@ -19,6 +19,7 @@ function makePegSummaryDb(
 ) {
   const cacheValue = JSON.stringify({ peggedAssets: assets, ...(fxFallbackRates ? { fxFallbackRates } : {}) });
   return mockD1([
+    { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
     {
       match: "cache",
       rows: [{ key: "stablecoins", value: cacheValue, updated_at: nowSec }],
@@ -37,6 +38,7 @@ function makePegSummaryDbWithDexPrice(
 ) {
   const cacheValue = JSON.stringify({ peggedAssets: assets });
   return mockD1([
+    { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
     {
       match: "cache",
       rows: [{ key: "stablecoins", value: cacheValue, updated_at: nowSec }],
@@ -181,11 +183,13 @@ describe("handlePegSummary", () => {
     expect(body.summary.totalTracked).toBe(0);
   });
 
-  it.each([false, true])("does not substitute raw analytics on projection failure with retained cache=%s", async (retained) => {
+  it.each([false, true].flatMap((retained) => (["failed-read", "malformed-row"] as const).map((failure) => ({ retained, failure }))))(
+    "does not substitute raw analytics on $failure projection with retained cache=$retained", async ({ retained, failure }) => {
     vi.useFakeTimers();
     vi.setSystemTime(nowSec * 1000);
     const computedAtSec = nowSec - 3600;
     const pegData = [makeCachedPegCoin({ eventCount: 1 })];
+    const reason = failure === "failed-read" ? "incident-projection-read-failed" : "incident-projection-invalid";
     const db = mockD1([
       { match: "cache", matchBinds: ["stablecoins"], rows: [{
         key: "stablecoins", value: JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether" })] }), updated_at: nowSec,
@@ -194,7 +198,13 @@ describe("handlePegSummary", () => {
         key: "peg-analytics", updated_at: computedAtSec,
         value: JSON.stringify({ computedAtSec, depegEventsToday: 1, depegEventsYesterday: 0, pegData }),
       }] : [], ...(retained ? {} : { first: null }) },
-      { match: "pharos:depeg-event-projection:active-incidents", rows: [], throwError: new Error("projection unavailable") },
+      { match: "pharos:depeg-event-projection:active-incidents",
+        rows: failure === "malformed-row" ? [{
+          current_event_id: 2, first_started_at: 0, first_start_price: 0.97,
+          first_peg_reference: 1, constituent_event_count: 2,
+        }] : [],
+        ...(failure === "failed-read" ? { throwError: new Error("projection unavailable") } : {}),
+      },
       { match: "dex_prices", rows: [] },
       { match: "supply_history", rows: [] },
       { match: "depeg_events", rows: [makeDepegEventRow(), makeDepegEventRow({ id: 2 })] },
@@ -203,11 +213,11 @@ describe("handlePegSummary", () => {
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     if (retained) {
       const body = await readJsonResponse(res, 200) as { coins: PegSummaryCoin[]; degradedReason: string };
-      expect(body.degradedReason).toBe("incident-projection-read-failed");
+      expect(body.degradedReason).toBe(reason);
       expect(body.coins[0].eventCount).toBe(1);
       expect(res.headers.get("X-Data-Age")).toBe("3600");
     } else {
-      expect(await readJsonResponse(res, 503)).toMatchObject({ reason: "incident-projection-read-failed" });
+      expect(await readJsonResponse(res, 503)).toMatchObject({ reason });
     }
   });
 
@@ -869,6 +879,7 @@ describe("handlePegSummary", () => {
     const cacheValue = JSON.stringify({ peggedAssets: [asset] });
     const todayStart = Math.floor(nowSec / 86_400) * 86_400;
     const db = mockD1([
+      { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
       {
         match: "cache",
         rows: [{ key: "stablecoins", value: cacheValue, updated_at: nowSec }],

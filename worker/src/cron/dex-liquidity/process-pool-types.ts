@@ -97,6 +97,7 @@ export interface PoolProtocolEnrichment {
   qualityMultiplier: number;
   feeTierForExtra: number | undefined;
   balanceRatio: number;
+  hasMeasuredBalance: boolean;
   poolMaturityDays: number;
   organicFraction: number;
   hasMeasuredOrganicFraction: boolean;

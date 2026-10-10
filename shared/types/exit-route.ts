@@ -75,6 +75,11 @@ export const ExitRouteOutputKindSchema = z.enum([
 ]);
 export type ExitRouteOutputKind = z.infer<typeof ExitRouteOutputKindSchema>;
 
+export const PhysicalCommoditySchema = z.enum(["XAU", "XAG"]);
+const PHYSICAL_COMMODITY_ASSET_KEYS: Record<string, true> = Object.fromEntries(
+  PhysicalCommoditySchema.options.map((commodity) => [`commodity:${commodity.toLowerCase()}`, true]),
+);
+
 export const ExitRouteOutputSchema = z.object({
   kind: ExitRouteOutputKindSchema,
   currency: z.string().min(1).optional(),
@@ -91,6 +96,17 @@ export const ExitRouteOutputSchema = z.object({
       }),
     )
     .optional(),
+}).superRefine((output, ctx) => {
+  if (output.kind === "physical-commodity-delivery") {
+    if (output.sameNotionalEligible !== false || !output.assetKeys?.length ||
+        output.assetKeys.some((key) => PHYSICAL_COMMODITY_ASSET_KEYS[key] !== true) ||
+        output.currency !== undefined || output.trackedAssetIds !== undefined || output.basketWeights !== undefined) {
+      ctx.addIssue({ code: "custom", message: "Physical delivery requires commodity identity and cannot claim fiat or same-notional output" });
+    }
+  } else if (output.kind === "fiat" && (output.currency === undefined ||
+      output.assetKeys?.some((key) => key.startsWith("commodity:")))) {
+    ctx.addIssue({ code: "custom", message: "Fiat output requires currency identity and cannot represent physical commodities" });
+  }
 });
 export type ExitRouteOutput = z.infer<typeof ExitRouteOutputSchema>;
 
@@ -608,6 +624,11 @@ function enforceRedemptionExitRouteLane(
       path: ["allInCostBps"],
       message: "Score-eligible redemption all-in cost exceeds the request limit",
     });
+  }
+  if (observation.output.kind === "physical-commodity-delivery" &&
+      observation.outputUnitValueUsd !== undefined &&
+      (observation.outputUnitValueSourceId === undefined || observation.outputUnitValueObservedAt === undefined)) {
+    ctx.addIssue({ code: "custom", path: ["outputUnitValueUsd"], message: "Physical output valuation requires explicit USD source and observation time" });
   }
   if (
     observation.scoreEligible &&

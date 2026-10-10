@@ -208,7 +208,8 @@ async function checkDbHealth(
   logPrefix: string,
 ): Promise<{ dbHealthy: boolean; warning: string | null }> {
   try {
-    await db.prepare("SELECT 1").first();
+    const sentinel = await db.prepare("SELECT 1").first();
+    if (sentinel == null) throw new Error("Database health sentinel returned no row");
     return { dbHealthy: true, warning: null };
   } catch (err) {
     logWorkerEvent({

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { RedemptionBackstopEntrySchema, type RedemptionBackstopEntry, type RedemptionCapacityProfile } from "@shared/types/redemption";
 import { EXIT_ROUTE_OUTPUT_VALUATION_TIMESTAMP_TOLERANCE_SEC, ExitRouteObservationSchema } from "@shared/types/exit-route";
 import {
@@ -72,6 +72,16 @@ function build(overrides: Partial<Parameters<typeof buildRedemptionExitRouteObse
 }
 
 describe("issuer payout identity", () => {
+  it.each(getConfiguredRedemptionBackstopIds())("admits the real catalog producer output for %s", (stablecoinId) => {
+    const routeConfig = getRedemptionBackstopConfig(stablecoinId)!;
+    const observation = build({
+      stablecoinId, config: routeConfig, routeStatus: routeConfig.routeStatus ?? "open",
+      now: Date.UTC(2027, 0, 1) / 1_000,
+    });
+    expect(observation).not.toBeNull();
+    expect(() => ExitRouteObservationSchema.parse(observation)).not.toThrow();
+  });
+
   it("retains shared physical inventory identity without changing route capacity", () => {
     const key = "ethereum:reservoir-psm:0x4809010926aec940b550d34a46a52739f996d75d";
     const ordinary = build()!;

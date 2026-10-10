@@ -132,6 +132,7 @@ function compositeCapability(
     qualityMultiplier: 1,
     feeTierForExtra: undefined,
     balanceRatio: 1,
+    hasMeasuredBalance: true,
     poolMaturityDays: 1_000,
     organicFraction: 1,
     hasMeasuredOrganicFraction: true,
@@ -152,6 +153,7 @@ describe("buildCurveStableswapExecutionModel", () => {
       const curveData = entry({
         poolAddress, isMetaPool: true, registryId: "factory",
         balanceRatio: 0.5, metapoolAdjustedTvl: retainedTvl,
+        balanceTvlScope: "base-pool-excluded", contributionTvlScope: "base-pool-excluded",
       });
       const pool: LlamaPool = {
         pool: poolAddress, chain: "ethereum", project: "curve", symbol: "USDC-USDT",
@@ -187,6 +189,31 @@ describe("buildCurveStableswapExecutionModel", () => {
       expect(result.score!).toBeLessThan(inflated.score!);
     },
   );
+  it.each([undefined, "full-pool"] as const)("withholds mismatched metapool balance scope %s from retained quality and diagnostics", (balanceTvlScope) => {
+    const poolAddress = "0x1111111111111111111111111111111111111111";
+    const curveData = entry({
+      poolAddress, isMetaPool: true, registryId: "factory", balanceRatio: 0.1,
+      metapoolAdjustedTvl: 2_000_000, balanceTvlScope, contributionTvlScope: "base-pool-excluded",
+    });
+    const pool: LlamaPool = {
+      pool: poolAddress, chain: "ethereum", project: "curve", symbol: "USDC-USDT",
+      tvlUsd: 10_000_000, volumeUsd1d: 250_000, volumeUsd7d: 1_750_000,
+      stablecoin: true, underlyingTokens: [USDC, USDT],
+      apyBase: 1, apyReward: 0, apy: 1, sigma: 0, exposure: "multi", count: 100,
+    };
+    const { metrics } = processPoolMetrics({
+      pools: [pool], dexProjects: new Set(["curve"]), chainAddressToId,
+      symbolToChainScopedIds: new Map(), curvePoolMap: new Map([[`ethereum:${poolAddress}`, curveData]]),
+      uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), volumeObservedAtSec: 1_000,
+    });
+    const metric = metrics.get("usdc-circle")!;
+    applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
+    expect(metric.totalTvlUsd).toBe(2_000_000);
+    expect(metric.qualityAdjustedTvl).toBe(1_700_000);
+    expect(metric.topPools[0]?.extra?.balanceRatio).toBeUndefined();
+    expect(metric.topPools[0]?.extra?.balanceDetails).toBeUndefined();
+  });
+
 
   it("builds a schema-valid stableswap model with the tracked input token", () => {
     const model = buildCurveStableswapExecutionModel(entry(), "ethereum", "usdc-circle", chainAddressToId);

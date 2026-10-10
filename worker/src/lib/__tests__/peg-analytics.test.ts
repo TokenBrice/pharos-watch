@@ -110,7 +110,7 @@ describe("derivePegAnalyticsSnapshot", () => {
       expect(retained.pegDataById.get("usdt-tether")?.observationStartedAt).toBe(firstObservation);
     }
   });
-  it("withholds canonical analytics on projection failure and retains the accepted incident chronology", async () => {
+  it.each(["failed-read", "malformed-row"] as const)("withholds canonical analytics on %s projection and retains the accepted incident chronology", async (failure) => {
     const { sqlite, db: sqliteDb } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);
     const first = now - 86_400;
@@ -138,12 +138,16 @@ describe("derivePegAnalyticsSnapshot", () => {
     expect(await publishPegAnalyticsCache(sqliteDb, accepted)).toBe(true);
     const acceptedCache = await loadPegAnalyticsCache(sqliteDb);
     const prepare = sqliteDb.prepare.bind(sqliteDb);
-    vi.spyOn(sqliteDb, "prepare").mockImplementation((sql) => {
-      if (sql.includes("pharos:depeg-event-projection:active-incidents")) throw new Error("D1 projection timeout");
-      return prepare(sql);
-    });
+    if (failure === "malformed-row") {
+      sqlite.prepare("UPDATE depeg_events SET start_price = -1 WHERE id = 1").run();
+    } else {
+      vi.spyOn(sqliteDb, "prepare").mockImplementation((sql) => {
+        if (sql.includes("pharos:depeg-event-projection:active-incidents")) throw new Error("D1 projection timeout");
+        return prepare(sql);
+      });
+    }
     await expect(derivePegAnalyticsSnapshot(sqliteDb, options)).rejects.toMatchObject({
-      reason: "incident-projection-read-failed",
+      reason: failure === "failed-read" ? "incident-projection-read-failed" : "incident-projection-invalid",
     });
     expect(await loadPegAnalyticsCache(sqliteDb)).toEqual(acceptedCache);
   });
@@ -156,6 +160,7 @@ describe("derivePegAnalyticsSnapshot", () => {
     vi.mocked(coinTrackingStart).mockClear();
     vi.mocked(computePegScore).mockClear();
     db = mockD1([
+      { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
       {
         match: "depeg_events",
         rows: [
@@ -246,6 +251,7 @@ describe("derivePegAnalyticsSnapshot", () => {
 
   it("includes NAV tokens as peg-ineligible rows when requested", async () => {
     db = mockD1([
+      { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
       {
         match: "depeg_events",
         rows: [

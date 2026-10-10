@@ -250,6 +250,9 @@ describe("processPoolMetrics", () => {
           A: 700,
           balanceRatio: 0.8,
           registryId: "main-stableswap",
+          tvl: 900_000,
+          balanceTvlScope: "full-pool",
+          contributionTvlScope: "full-pool",
           metapoolAdjustedTvl: 900_000,
           creationTs: Math.floor(nowMs / 1000) - 200 * 86_400,
           balanceDetails: [
@@ -266,6 +269,8 @@ describe("processPoolMetrics", () => {
           registryId: "tricrypto-factory",
           isMetaPool: true,
           metapoolAdjustedTvl: 300_000,
+          balanceTvlScope: "full-pool",
+          contributionTvlScope: "base-pool-excluded",
           creationTs: Math.floor(nowMs / 1000) - 100 * 86_400,
           balanceDetails: [
             { symbol: "USDT", balancePct: 0.5, isTracked: true },

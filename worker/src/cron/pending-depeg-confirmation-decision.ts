@@ -20,6 +20,7 @@ import {
   confirmationSourceList,
   getPendingExpiryLimitSec,
   isOpposingConfirmationStatus,
+  pendingPeakQuoteDomain,
   pickPeakCandidate,
   type PromotionDecisionInput,
 } from "./pending-depeg-confirmation";
@@ -59,19 +60,21 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
       classifyDirectionalSignal(currentSignal, threshold, pendingState.direction) === "confirm"
         ? currentSignal
         : null;
+    const quoteDomain = pendingPeakQuoteDomain(row, pendingState);
     const peak = pickPeakCandidate(
       [
-        { bps: pendingState.peakSeenBps, price: pendingState.peakPrice },
-        { bps: currentDirectionalSignal?.bps, price: authoritativePrice },
+        { bps: pendingState.peakSeenBps, price: pendingState.peakPrice, quoteDomain },
+        { bps: currentDirectionalSignal?.bps, price: authoritativePrice, quoteDomain },
         ...(evidence.offchainPeakCandidate ? [evidence.offchainPeakCandidate] : []),
         ...(evidence.cexPeakCandidate ? [evidence.cexPeakCandidate] : []),
         ...evidence.dexPeakCandidates,
         ...(evidence.poolStatus === "confirm" ? evidence.poolConfirmations.map((confirmation) => ({
           bps: confirmation.signal.bps,
           price: confirmation.pool.price,
+          quoteDomain: "usd" as const,
         })) : []),
       ],
-      { bps: pendingState.peakSeenBps, price: pendingState.peakPrice },
+      { bps: pendingState.peakSeenBps, price: pendingState.peakPrice, quoteDomain },
     );
     const confirmedBy = confirmationSourceList(
       TEMPORAL_CONFIRMATION_LABEL,

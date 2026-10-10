@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { READ_INPUT_STATES } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { loadStablecoinsCache } from "../stablecoins-cache";
 
 function makePublishedAsset(overrides: Record<string, unknown> = {}) {
@@ -76,6 +77,37 @@ describe("loadStablecoinsCache", () => {
       reason: "missing-cache",
       updatedAt: null,
     });
+  });
+
+  it.each(READ_INPUT_STATES.flatMap((state) => (["strict", "lenient"] as const).map((mode) => ({ state, mode }))))(
+    "preserves $state evidence separately in $mode mode", async ({ state, mode }) => {
+      const db = mockD1([{ match: "cache", rows: [], first: null,
+        ...(state === "failed-read" ? { throwError: new Error("D1 read unavailable") } : {}),
+      }]);
+      await expect(loadStablecoinsCache(db, { mode })).resolves.toEqual({
+        kind: "error", reason: state === "failed-read" ? "cache-read-failed" : "missing-cache", updatedAt: null,
+      });
+      expect(db.getHistory().every(({ sql }) => sql.trimStart().startsWith("SELECT"))).toBe(true);
+    },
+  );
+
+  it("uses preloaded confirmed absence without issuing another read", async () => {
+    const db = mockD1([]);
+    await expect(loadStablecoinsCache(db, { preloadedCache: null })).resolves.toEqual({
+      kind: "error", reason: "missing-cache", updatedAt: null,
+    });
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it("admits observed zero supply and preserves the original observation clock", async () => {
+    const result = await loadStablecoinsCache(makeDbWithStablecoinsValue(JSON.stringify({
+      peggedAssets: [makePublishedAsset({ circulating: { peggedUSD: 0 } })],
+    })), { contract: "published" });
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") {
+      expect(result.payload.peggedAssets[0]?.circulating).toEqual({ peggedUSD: 0 });
+      expect(result.updatedAt).toBe(1_700_000_000);
+    }
   });
 
   it("returns strict error on malformed JSON", async () => {

@@ -28,6 +28,7 @@ function makeMinimalDb(
   // P2-08 bound the coverage scan at a seven-day `started_at` fence, so the
   // snapshot read now arrives through `bind()`.
   const firstFor = async <T>(sql: string) => {
+    if (sql === "SELECT 1") return { "1": 1 } as T;
     if (d1Capacity && sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
       return {
         value: JSON.stringify({ version: 1, assessment: d1Capacity }),
@@ -82,6 +83,7 @@ function makeMintBurnAssessmentDb(
     producerHistoryError?: unknown;
     blacklistError?: unknown;
     dbError?: unknown;
+    dbSentinelMissing?: boolean;
     cacheError?: unknown;
     cacheMissing?: boolean;
   } = {},
@@ -141,7 +143,7 @@ function makeMintBurnAssessmentDb(
           }),
     },
     { match: "blacklist-gap-aggregate", rows: [], first: { total: 0, missing: 0, missing_recent: 0 }, ...(options.blacklistError ? { throwError: options.blacklistError } : {}) },
-    { match: "SELECT 1", rows: [], first: { value: 1 }, ...(options.dbError ? { throwError: options.dbError } : {}) },
+    { match: "SELECT 1", rows: [], first: options.dbSentinelMissing ? null : { value: 1 }, ...(options.dbError ? { throwError: options.dbError } : {}) },
     { match: "cache WHERE key IN", rows: options.cacheMissing ? cacheRows.filter((row) => row.key !== "stablecoins") : cacheRows,
       ...(options.cacheError ? { throwError: options.cacheError } : {}) },
     {
@@ -185,6 +187,16 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       totalEvents: null, missingAmounts: null, recentMissingAmounts: null, recentWindowSec: null, missingRatio: null,
       unavailableReason: failure === "dbError" ? "db-unavailable" : "blacklist-read-failed",
     });
+  });
+
+  it("withholds healthy database authority when the sentinel read returns no row", async () => {
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(1_800_000_000, {
+      dbSentinelMissing: true,
+    }), 1_800_000_000);
+    expect(result.dbHealthy).toBe(false);
+    expect(result.overallStatus).toBe("stale");
+    expect(result.warnings).toContain("db-unhealthy");
+    expect(result.blacklist).toMatchObject({ totalEvents: null, unavailableReason: "db-unavailable" });
   });
 
   it("keeps a successfully read empty blacklist aggregate as observed zero", async () => {

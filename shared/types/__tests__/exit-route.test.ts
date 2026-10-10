@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ExitExecutionCertificateSchema, ExitExecutionModelReviewSchema, ExitRouteObservationSchema } from "../exit-route";
+import { ExitExecutionCertificateSchema, ExitExecutionModelReviewSchema, ExitRouteObservationSchema, ExitRouteOutputSchema } from "../exit-route";
 import { makeExecutionCertificate, executionClockSec, executionReview } from "../../lib/__tests__/safety-score-v9-exit-execution.test-support";
 
 function observation() {
@@ -42,5 +42,42 @@ describe("execution certificate wire invariants", () => {
     expect(ExitExecutionCertificateSchema.safeParse(wrongOutput).success).toBe(false);
     const missingReason = makeExecutionCertificate(); missingReason.gates[0]!.verdict = "unavailable";
     expect(ExitExecutionCertificateSchema.safeParse(missingReason).success).toBe(false);
+  });
+});
+
+describe("exit output quote domains", () => {
+  const physical = { kind: "physical-commodity-delivery", assetKeys: ["commodity:xau"], sameNotionalEligible: false };
+
+  it("admits distinct fiat and non-same-notional physical outputs", () => {
+    expect(ExitRouteOutputSchema.safeParse(physical).success).toBe(true);
+    expect(ExitRouteOutputSchema.safeParse({ kind: "fiat", currency: "USD" }).success).toBe(true);
+  });
+
+  it.each(["commodity:xau", "commodity:xag"])("admits canonical physical commodity identity %s", (assetKey) => {
+    expect(ExitRouteOutputSchema.safeParse({ ...physical, assetKeys: [assetKey] }).success).toBe(true);
+  });
+
+  it.each([
+    { sameNotionalEligible: undefined },
+    { assetKeys: ["usdc-circle"] },
+    { assetKeys: ["commodity:gold"] },
+    { assetKeys: ["commodity:silver"] },
+    { assetKeys: ["commodity:XAU"] },
+    { currency: "USD" },
+    { trackedAssetIds: ["usdc-circle"] },
+    { basketWeights: [] },
+  ])("rejects physical output with incompatible fields %j", (fields) => {
+    expect(ExitRouteOutputSchema.safeParse({ ...physical, ...fields }).success).toBe(false);
+  });
+
+  it("withholds a physical par valuation without explicit USD evidence", () => {
+    const value = { ...observation(), output: physical, executionModelId: undefined, executionCertificate: undefined, scoreEligible: false };
+    expect(ExitRouteObservationSchema.safeParse(value).success).toBe(true);
+    expect(ExitRouteObservationSchema.safeParse({ ...value, outputUnitValueUsd: 1 }).success).toBe(false);
+    expect(ExitRouteObservationSchema.safeParse({
+      ...value, outputUnitValueUsd: 2_500, outputUnitValueSourceId: "metal-usd-reference", outputUnitValueObservedAt: executionClockSec,
+    }).success).toBe(true);
+    expect(ExitRouteOutputSchema.safeParse({ kind: "fiat" }).success).toBe(false);
+    expect(ExitRouteOutputSchema.safeParse({ kind: "fiat", currency: "USD", assetKeys: ["commodity:xau"] }).success).toBe(false);
   });
 });

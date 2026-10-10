@@ -90,9 +90,9 @@ CREATE INDEX idx_depeg_open ON depeg_events(stablecoin_id) WHERE ended_at IS NUL
 - `superseded-direction`
 - `orphan-tracking-removed`
 
-For live non-USD events opened from a CoinGecko native-fiat quote, `peg_reference = 1` and all populated event prices remain in that native quote domain. Later USD-primary or USD-DEX observations may close the row when policy permits, but they leave `recovery_price = NULL` unless a same-domain native recovery quote is available.
+Live non-USD events opened from native-fiat quotes retain native prices and `peg_reference = 1`. Admission matches asset and canonically normalized currency identities; peak selection excludes mismatched quote domains. Native confirmers of USD-origin pending events use the admitted USD reference. USD observations may close native rows, but leave `recovery_price = NULL` without a native recovery quote.
 
-Pending upserts preserve an onset only when direction, observation continuity, and quote domain agree. Switching between USD-primary and `native-origin` observations resets the candidate's onset time, reference, and price fields, so confirmation cannot combine a native price with a retained USD reference (or vice versa). Other reason-flag changes within one quote domain preserve continuity.
+Pending onset survives only matching direction, continuity, peg identity and quote domain. USD-primary / `native-origin` transitions or peg changes reset onset, reference and prices; other reason-flag changes preserve continuity. Historical provenance remains authoritative; unknown conversions are not invented.
 
 Current deviation and reference are independent of circulating supply: any observed non-NAV price with an authoritative reference can populate `currentDeviationBps` and `pegReference`, including below $1M or when supply is unknown. The supply floor remains an event-creation/coverage gate, not a price-observation gate. Nominal par and unavailable prices remain unobserved; `depegEventCoverageLimited` still warns that no new events are created for a positive sub-floor supply.
 
@@ -541,7 +541,7 @@ Query params:
 | `includePending` | string | `false` | If `"true"`, add a `pending` array of unconfirmed candidates to the response |
 | `includeTotal` | string | `true` | If `"false"`, skip the COUNT query; `total` is an observed lower bound and `totalExact` is `false`. Empty offset pages report `0`, never the requested offset. |
 
-Malformed booleans, pagination values, and cursors return `400` before any incident-projection read, including when that dependency is unavailable. Valid requests return `503` with `reason: "incident-projection-read-failed"` if canonical incident projection cannot be loaded; raw history is never substituted.
+Malformed booleans, pagination values, and cursors return `400` before projection reads. Valid requests return `503` for unreadable (`incident-projection-read-failed`) or malformed (`incident-projection-invalid`) canonical projections; raw history is never substituted. A successfully read empty projection remains available.
 
 Response:
 
