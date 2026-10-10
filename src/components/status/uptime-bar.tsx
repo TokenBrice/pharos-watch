@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { PublicStatusTransition } from "@shared/types";
 import { cn } from "@/lib/utils";
+import { STATUS_TONE } from "@shared/lib/classification";
 
 interface UptimeBarProps {
   transitions: PublicStatusTransition[];
@@ -17,20 +18,6 @@ interface DaySegment {
   date: string; // YYYY-MM-DD
   status: "healthy" | "degraded" | "stale" | "unknown";
 }
-
-const STATUS_COLORS: Record<DaySegment["status"], string> = {
-  healthy: "bg-emerald-500",
-  degraded: "bg-amber-500",
-  stale: "bg-red-500",
-  unknown: "bg-slate-300 dark:bg-slate-600",
-};
-
-const STATUS_LABELS: Record<DaySegment["status"], string> = {
-  healthy: "Healthy",
-  degraded: "Degraded",
-  stale: "Stale",
-  unknown: "No probe.",
-};
 
 function buildDaySegments(
   transitions: PublicStatusTransition[],
@@ -157,8 +144,8 @@ export function UptimeBar({
             {segments.map((segment) => (
               <div
                 key={segment.date}
-                className={cn("h-2 flex-1 rounded-full transition-colors", STATUS_COLORS[segment.status])}
-                title={`${segment.date}: ${STATUS_LABELS[segment.status]}`}
+                className={cn("h-2 flex-1 rounded-full transition-colors", STATUS_TONE[segment.status].barClassName)}
+                title={`${segment.date}: ${STATUS_TONE[segment.status].label}`}
               />
             ))}
           </div>

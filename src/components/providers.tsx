@@ -2,7 +2,7 @@
 
 import { ThemeProvider } from "next-themes";
 import { usePathname } from "next/navigation";
-import { createContext, lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
 import { isSingleKeyShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
@@ -17,12 +17,6 @@ export const SORT_COLUMN_EVENT = "pharos-sort-column" as const;
 export interface SortColumnEventDetail {
   columnNumber: number;
 }
-
-interface ToastContextType {
-  addToast: (message: string, type?: "success" | "info" | "warning" | "error", duration?: number) => void;
-}
-
-const ToastContext = createContext<ToastContextType | null>(null);
 
 export const PHAROS_QUERY_DEFAULT_OPTIONS = {
   queries: {
@@ -167,7 +161,7 @@ const InteractiveProviders = lazy(async () => {
     }, [toggleTheme]);
 
     return (
-      <ToastContext.Provider value={{ addToast }}>
+      <>
         <routeProgress.RouteProgressBar />
         {children}
         {keyboardShortcutsLoaded && (
@@ -180,7 +174,7 @@ const InteractiveProviders = lazy(async () => {
             <ToastContainer toasts={toasts} removeToast={removeToast} />
           </Suspense>
         )}
-      </ToastContext.Provider>
+      </>
     );
   }
 

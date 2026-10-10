@@ -30,7 +30,7 @@ import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
 import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatPercent, formatScore } from "@shared/lib/format";
-import { formatYieldRatioPercent, formatYieldWarningSignal, resolveYieldScoreQualification } from "@/lib/yield-constants";
+import { formatYieldWarningSignal } from "@/lib/yield-constants";
 import { YieldCohortChip } from "@/components/yield-cohort-chip";
 import { YieldZoneChip } from "@/components/yield-zone-chip";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
@@ -45,6 +45,7 @@ import { resolveYieldDisplayRebaseReferenceRate, resolveYieldRowBenchmark } from
 import type { YieldBenchmarkRegistry } from "@shared/types";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
+import { YIELD_LEADERBOARD_CSV_COLUMNS } from "@/lib/yield-presentation";
 
 const SORT_KEY_LABELS: Record<YieldTableSortKey, string> = {
   pys: "PYS",
@@ -167,33 +168,10 @@ interface YieldExportRow {
 
 const YIELD_EXPORT_COLUMNS: CsvColumn<YieldExportRow>[] = [
   { header: "Rank", accessor: (entry) => entry.rank },
-  { header: "ID", accessor: (entry) => entry.row.id },
-  { header: "Symbol", accessor: (entry) => entry.row.symbol },
-  { header: "Name", accessor: (entry) => entry.row.name },
-  { header: "APY 30d (%)", accessor: (entry) => entry.row.apy30d },
-  { header: "PYS", accessor: (entry) => entry.row.pharosYieldScore ?? "NR" },
-  { header: "PYS qualification", accessor: (entry) => resolveYieldScoreQualification(entry.row) },
-  { header: "PYS null reason", accessor: (entry) => entry.row.pysNullReason ?? "" },
-  { header: "Safety grade", accessor: (entry) => entry.row.safetyGrade ?? "NR" },
-  { header: "Safety score", accessor: (entry) => entry.row.safetyScore ?? "NR" },
-  {
-    header: "Safety provenance",
-    accessor: (entry) => entry.row.provenance?.safetyProvenance ?? "unknown",
-  },
-  { header: "Yield source", accessor: (entry) => entry.row.yieldSource },
-  { header: "Yield type", accessor: (entry) => entry.row.yieldType },
-  { header: "Source posture", accessor: (entry) => entry.row.sourcePosture ?? "unknown" },
-  { header: "Source confidence", accessor: (entry) => entry.row.provenance?.confidenceTier ?? "unknown" },
-  { header: "Source risk penalty", accessor: (entry) => entry.row.sourceRisk?.sourceRiskPenalty ?? "unknown" },
-  { header: "Source risk score", accessor: (entry) => entry.row.sourceRisk?.sourceRiskScore ?? "unknown" },
-  { header: "Source age seconds", accessor: (entry) => entry.row.sourceRisk?.sourceAgeSeconds ?? "unknown" },
-  { header: "Venue risk tier", accessor: (entry) => entry.row.sourceRisk?.venueRiskTier ?? "unknown" },
-  { header: "Evidence completeness (%)", accessor: (entry) => formatYieldRatioPercent(entry.row.provenance?.evidenceCompleteness) },
-  { header: "Benchmark", accessor: (entry) => entry.row.benchmarkLabel ?? "unknown" },
-  { header: "TVL USD", accessor: (entry) => entry.row.sourceTvlUsd ?? "unknown" },
-  { header: "Stability (%)", accessor: (entry) => formatYieldRatioPercent(entry.row.yieldStability) },
-  { header: "Warnings", accessor: (entry) => entry.row.warningSignals.join(" | ") },
-  { header: "Provider URL", accessor: (entry) => entry.row.yieldSourceUrl ?? "" },
+  ...YIELD_LEADERBOARD_CSV_COLUMNS.map((column): CsvColumn<YieldExportRow> => ({
+    header: column.header,
+    accessor: (entry, index) => column.accessor(entry.row, index),
+  })),
 ];
 
 const MOBILE_SORT_OPTIONS: Array<{ key: YieldTableSortKey; label: string }> = [

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  SAFETY_GRADE_VALUES,
   SCREENER_FILTER_DEFAULTS,
   SCREENER_URL_SCHEMA,
   applyFilters,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/screener-filters";
 import { decodeState, encodeState } from "@/lib/url-state";
 import { parsePaletteInput } from "@/lib/command-palette-verbs";
+import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 
 function makeRow(overrides: Partial<ScreenerRow> = {}): ScreenerRow {
   return {
@@ -637,5 +639,19 @@ describe("normalizeScreenerDeepLinkAliases", () => {
     expect(params.get("mechanism")).toBeNull();
     expect(params.get("mechanisms")).toBe(mechanisms);
     expect(params.get("lifecycle")).toBe(lifecycle);
+  });
+});
+
+describe("canonical screener safety grades", () => {
+  it("uses the complete published vocabulary in canonical order", () => {
+    expect(SAFETY_GRADE_VALUES).toEqual(ReportCardGradeSchema.options);
+    const field = SCREENER_URL_SCHEMA.safetyGrades;
+    if (field.kind !== "enumList") throw new Error("Safety grade URL field must be an enum list");
+    expect(field.allowedValues).toEqual(ReportCardGradeSchema.options);
+  });
+
+  it.each(ReportCardGradeSchema.options)("round-trips the published grade %s", (grade) => {
+    const state = { ...SCREENER_FILTER_DEFAULTS, safetyGrades: [grade] };
+    expect(decodeState(encodeState(state, SCREENER_URL_SCHEMA), SCREENER_URL_SCHEMA).safetyGrades).toEqual([grade]);
   });
 });

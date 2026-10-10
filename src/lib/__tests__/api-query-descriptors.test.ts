@@ -9,6 +9,8 @@ import {
 } from "../api-query-domains/stability-light";
 import { STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR } from "../api-query-domains/stability-detail";
 import { makeReportCardsV9Response } from "@/test/fixtures/safety-score-v9";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { getPollingWindow } from "../api-query-polling";
 
 
 const PARAMETERIZED_ARGS: Record<string, unknown[]> = {
@@ -39,6 +41,20 @@ function resolveEntry(entry: unknown, key: string): FrontendAnyApiQueryDescripto
 }
 
 describe("frontend API query descriptors", () => {
+  it.each([
+    ["depegResolver", "compute-depeg-resolver"],
+    ["depegResolverReview", "compute-depeg-resolver"],
+    ["redemptionBackstops", "sync-redemption-backstops"],
+  ] as const)("binds %s polling to its own producer %s", (key, producer) => {
+    const interval = CRON_INTERVALS[producer] * 1000;
+    const descriptor = FRONTEND_API_QUERY_DESCRIPTORS[key];
+    expect(descriptor.producerIntervalMs).toBe(interval);
+    expect(getPollingWindow(descriptor.producerIntervalMs)).toEqual({
+      staleTime: interval,
+      refetchInterval: 2 * interval,
+    });
+  });
+
   it("anchors lagged-provider USD and native checkpoints to the current canonical observation", () => {
     const now = 1_790_793_000;
     const day = 86_400;

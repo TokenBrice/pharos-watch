@@ -6,7 +6,7 @@ import { useDigestSnapshot } from "@/hooks/api-hooks";
 import { useImageUnavailable } from "@/hooks/use-image-unavailable";
 import { parseDigestSafetyMapCapture, type DigestSafetyMapArchiveTier as StoredSafetyMapTier } from "@shared/types/digest-safety-map-contract";
 import { formatCurrency, formatAddress, formatPercentChange, formatScore, getNetColor } from "@shared/lib/format";
-import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
+import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
 import type { DigestSnapshotInputData, DigestSnapshotResponse } from "@shared/types";
 import { Activity, ArrowDownUp, BarChart3, CheckCircle, ImageOff, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
 import { formatDigestDateLabel } from "@/lib/digest";

@@ -10,6 +10,56 @@ import type {
   YieldScoreQualification,
 } from "@shared/types";
 import { YIELD_RANK_CHANGE_DRIVER_LABELS } from "@/lib/yield-source-presentation";
+import type { CsvColumn } from "@/lib/exports/csv";
+import type { YieldViewModelRow } from "@/lib/yield-view-model";
+import { formatYieldRatioPercent, resolveYieldScoreQualification } from "@/lib/yield-constants";
+
+const YIELD_CSV_COLUMNS = {
+  id: { header: "ID", accessor: (row) => row.id },
+  symbol: { header: "Symbol", accessor: (row) => row.symbol },
+  name: { header: "Name", accessor: (row) => row.name },
+  apy30d: { header: "APY 30d (%)", accessor: (row) => row.apy30d },
+  pys: { header: "PYS", accessor: (row) => row.pharosYieldScore ?? "NR" },
+  qualification: { header: "PYS qualification", accessor: resolveYieldScoreQualification },
+  nullReason: { header: "PYS null reason", accessor: (row) => row.pysNullReason ?? "" },
+  safetyGrade: { header: "Safety grade", accessor: (row) => row.safetyGrade ?? "NR" },
+  safetyScore: { header: "Safety score", accessor: (row) => row.safetyScore ?? "NR" },
+  safetyProvenance: { header: "Safety provenance", accessor: (row) => row.provenance?.safetyProvenance ?? "unknown" },
+  source: { header: "Yield source", accessor: (row) => row.yieldSource },
+  type: { header: "Yield type", accessor: (row) => row.yieldType },
+  posture: { header: "Source posture", accessor: (row) => row.sourcePosture ?? "unknown" },
+  confidence: { header: "Source confidence", accessor: (row) => row.provenance?.confidenceTier ?? "unknown" },
+  riskPenalty: { header: "Source risk penalty", accessor: (row) => row.sourceRisk?.sourceRiskPenalty ?? "unknown" },
+  riskScore: { header: "Source risk score", accessor: (row) => row.sourceRisk?.sourceRiskScore ?? "unknown" },
+  age: { header: "Source age seconds", accessor: (row) => row.sourceRisk?.sourceAgeSeconds ?? "unknown" },
+  venue: { header: "Venue risk tier", accessor: (row) => row.sourceRisk?.venueRiskTier ?? "unknown" },
+  completeness: { header: "Evidence completeness (%)", accessor: (row) => formatYieldRatioPercent(row.provenance?.evidenceCompleteness) },
+  benchmark: { header: "Benchmark", accessor: (row) => row.benchmarkLabel ?? "unknown" },
+  tvl: { header: "TVL USD", accessor: (row) => row.sourceTvlUsd ?? "unknown" },
+  stability: { header: "Stability (%)", accessor: (row) => formatYieldRatioPercent(row.yieldStability) },
+  warnings: { header: "Warnings", accessor: (row) => row.warningSignals.join(" | ") },
+  url: { header: "Provider URL", accessor: (row) => row.yieldSourceUrl ?? "" },
+  depth: { header: "Depth", accessor: (row) => row.sourceDepthLens },
+} satisfies Record<string, CsvColumn<YieldViewModelRow>>;
+
+export const YIELD_LEADERBOARD_CSV_COLUMNS: CsvColumn<YieldViewModelRow>[] = [
+  YIELD_CSV_COLUMNS.id, YIELD_CSV_COLUMNS.symbol, YIELD_CSV_COLUMNS.name, YIELD_CSV_COLUMNS.apy30d,
+  YIELD_CSV_COLUMNS.pys, YIELD_CSV_COLUMNS.qualification, YIELD_CSV_COLUMNS.nullReason,
+  YIELD_CSV_COLUMNS.safetyGrade, YIELD_CSV_COLUMNS.safetyScore, YIELD_CSV_COLUMNS.safetyProvenance,
+  YIELD_CSV_COLUMNS.source, YIELD_CSV_COLUMNS.type, YIELD_CSV_COLUMNS.posture, YIELD_CSV_COLUMNS.confidence,
+  YIELD_CSV_COLUMNS.riskPenalty, YIELD_CSV_COLUMNS.riskScore, YIELD_CSV_COLUMNS.age, YIELD_CSV_COLUMNS.venue,
+  YIELD_CSV_COLUMNS.completeness, YIELD_CSV_COLUMNS.benchmark, YIELD_CSV_COLUMNS.tvl,
+  YIELD_CSV_COLUMNS.stability, YIELD_CSV_COLUMNS.warnings, YIELD_CSV_COLUMNS.url,
+];
+
+export const YIELD_COMPARE_CSV_COLUMNS: CsvColumn<YieldViewModelRow>[] = [
+  YIELD_CSV_COLUMNS.id, YIELD_CSV_COLUMNS.symbol, YIELD_CSV_COLUMNS.name, YIELD_CSV_COLUMNS.apy30d,
+  YIELD_CSV_COLUMNS.pys, YIELD_CSV_COLUMNS.qualification, YIELD_CSV_COLUMNS.nullReason,
+  YIELD_CSV_COLUMNS.safetyGrade, YIELD_CSV_COLUMNS.safetyScore, YIELD_CSV_COLUMNS.safetyProvenance,
+  { ...YIELD_CSV_COLUMNS.source, header: "Source" }, YIELD_CSV_COLUMNS.posture, YIELD_CSV_COLUMNS.riskScore,
+  YIELD_CSV_COLUMNS.venue, YIELD_CSV_COLUMNS.depth, YIELD_CSV_COLUMNS.stability,
+  YIELD_CSV_COLUMNS.benchmark, YIELD_CSV_COLUMNS.tvl, YIELD_CSV_COLUMNS.warnings, YIELD_CSV_COLUMNS.url,
+];
 
 export const PYS_NULL_REASON_TEXT: Record<YieldPysNullReason, string> = {
   "apy-non-positive": "30d APY ≤ 0",

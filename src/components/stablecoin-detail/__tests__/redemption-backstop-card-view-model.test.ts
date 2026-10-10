@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildRedemptionBackstopCardViewModel } from "../redemption-backstop-card-view-model";
 import type { RedemptionBackstopEntry } from "@shared/types";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
-import { REDEMPTION_SETTLEMENT_LABELS } from "@/lib/redemption-backstop-labels";
+import { REDEMPTION_SETTLEMENT_LABELS } from "@shared/lib/classification";
 
 const BASE_ENTRY: RedemptionBackstopEntry = {
   stablecoinId: "test-usd",

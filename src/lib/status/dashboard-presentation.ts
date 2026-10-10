@@ -2,24 +2,7 @@ import type { StatusCause, StatusResponse } from "@shared/types";
 import type { StatusPageActionRisk } from "@shared/lib/api-endpoints";
 import type { DashboardIssueKind, DashboardNotice } from "@/lib/status/dashboard-types";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
-
-export const STATUS_TONE = {
-  healthy: {
-    label: "Healthy",
-    badgeClassName: SEVERITY_TONE_CLASS.ok.pill,
-    valueClassName: SEVERITY_TONE_CLASS.ok.text,
-  },
-  degraded: {
-    label: "Degraded",
-    badgeClassName: SEVERITY_TONE_CLASS.watch.pill,
-    valueClassName: SEVERITY_TONE_CLASS.watch.text,
-  },
-  stale: {
-    label: "Stale",
-    badgeClassName: SEVERITY_TONE_CLASS.alert.pill,
-    valueClassName: SEVERITY_TONE_CLASS.alert.text,
-  },
-} as const;
+import { STATUS_TONE } from "@shared/lib/classification";
 
 export const STATUS_PRIORITY = { healthy: 0, degraded: 1, stale: 2 } as const;
 export const STATUS_PAGE_RISK_LABELS: Record<StatusPageActionRisk, string> = {

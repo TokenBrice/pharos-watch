@@ -1,16 +1,14 @@
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import type { RedemptionBackstopEntry } from "@shared/types";
-import {
-  REDEMPTION_ACCESS_LABELS,
-  REDEMPTION_OUTPUT_ASSET_LABELS,
-  REDEMPTION_SETTLEMENT_LABELS,
-  formatRedemptionDocsProvenance,
-  formatRedemptionModelConfidence,
-  formatRedemptionResolutionState,
-  formatRedemptionRouteFamily,
-  formatRedemptionRouteStatus,
-} from "@/lib/redemption-backstop-labels";
+import { REDEMPTION_ACCESS_LABELS,
+REDEMPTION_OUTPUT_ASSET_LABELS,
+REDEMPTION_SETTLEMENT_LABELS,
+formatRedemptionDocsProvenance,
+formatRedemptionModelConfidence,
+formatRedemptionResolutionState,
+formatRedemptionRouteFamily,
+formatRedemptionRouteStatus, } from "@shared/lib/classification";
 import { scoreToColorClass } from "@/lib/severity-colors";
 
 type DocSource = NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["sources"]>[number];

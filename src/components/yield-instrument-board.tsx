@@ -1,6 +1,6 @@
 "use client";
 
-import { REPORT_CARD_GRADE_RANGE_METADATA } from "@shared/lib/classification";
+import { REPORT_CARD_GRADE_RANGE_METADATA, getPysBarColor } from "@shared/lib/classification";
 import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
 
 import Link from "next/link";
@@ -49,14 +49,6 @@ import { clampScore } from "@shared/lib/math";
 function safetyBarTone(score: number | null): string {
   if (score == null) return "bg-muted-foreground/40";
   return REPORT_CARD_GRADE_RANGE_METADATA[gradeRange(scoreToGrade(score))].barClassName;
-}
-
-// Map a PYS score to a bar tone matching getPysColor's 41/21 thresholds.
-function pysBarTone(score: number | null): string {
-  if (score == null) return "bg-muted-foreground/40";
-  if (score >= 41) return "bg-emerald-500";
-  if (score >= 21) return "bg-amber-500";
-  return "bg-red-500";
 }
 
 function MetricGauge({
@@ -389,7 +381,7 @@ function YieldInstrumentRowBase({
           <div className="mt-1.5">
             <MetricGauge
               value={row.pharosYieldScore}
-              tone={pysBarTone(row.pharosYieldScore)}
+              tone={getPysBarColor(row.pharosYieldScore)}
               ariaLabel={`Pharos Yield Score ${row.pharosYieldScore ?? "unavailable"} of 100`}
             />
           </div>

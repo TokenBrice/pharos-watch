@@ -106,7 +106,7 @@ describe("critical coverage changed-file detection", () => {
         "functions/lib/csp-inject.ts",
         "shared/lib/peg-score.ts",
         "shared/lib/safety-score-version.ts",
-        "shared/lib/psi-colors.ts",
+        "shared/lib/classification/psi.ts",
         "worker/src/api/safety-score-history.ts",
         "worker/src/cron/sync-stablecoins/new-price-path.ts",
         "worker/src/cron/depeg-detection/new-decision-helper.ts",

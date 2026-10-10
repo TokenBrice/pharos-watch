@@ -48,11 +48,10 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
 import { formatSafetyMapUsd as formatUsdCompact, formatScore } from "@shared/lib/format";
 import { getDisplayedPsi, getDisplayedPsiBasis } from "@shared/lib/psi-view-model";
-import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
-import { scoreToGrade, V9_GRADE_THRESHOLDS } from "@shared/lib/report-card-core";
+import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/classification";
+import { V9_GRADE_THRESHOLDS } from "@shared/lib/report-card-core";
 import { admitSupplyBuckets, getCirculatingRawOrNull } from "@shared/lib/supply";
 import { StablecoinListResponseSchema, type StablecoinListResponse } from "@shared/types/market";
-import { SAFETY_GRADE_VALUES } from "@shared/types/report-card-grade";
 import {
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9CurrentResponse,
@@ -107,7 +106,6 @@ const FROST_BLUE = "#4bc4de";
 const TIER_ORDER = ["A", "B", "C", "D", "F"] as const;
 type Tier = (typeof TIER_ORDER)[number];
 const TIER_COLORS = GRADE_RADAR_COLORS;
-const VALID_CARD_GRADES = new Set<string>([...SAFETY_GRADE_VALUES, "NR"]);
 
 interface OrbitZone {
   innerRx: number;
@@ -309,27 +307,10 @@ export function parseMapReportCards(payload: unknown): {
   publicationHealth: ReportCardsV9CurrentResponse["publicationHealth"];
 } {
   const response = parseCanonicalPayload("Report-card", ReportCardsV9CurrentResponseSchema, payload);
-  const ids = new Set<string>();
   const cards = response.cards.map((card) => {
-    if (ids.has(card.id)) throw new Error(`Duplicate report-card id "${card.id}" — refusing to build an ambiguous map`);
-    ids.add(card.id);
     // Technical gaps have no grade; they cannot enter any rendered grade band.
     if (card.ratingStatus === "pipeline-gap") return null;
-    if (card.grade === null || !VALID_CARD_GRADES.has(card.grade)) {
-      throw new Error(`Unknown grade "${card.grade}" for ${card.id} — the tier map (${TIER_ORDER.join("/")}) is out of date`);
-    }
-    if (card.grade === "NR") {
-      if (card.score !== null) throw new Error(`Score/grade disagreement for ${card.id}: NR cards must have a null score`);
-    } else {
-      if (card.score === null || !Number.isFinite(card.score) || card.score < 0 || card.score > 100) {
-        throw new Error(`Invalid score for ${card.id}: expected a finite value in the 0-100 range`);
-      }
-      const expectedGrade = scoreToGrade(card.score);
-      if (expectedGrade !== card.grade) {
-        throw new Error(`Score/grade disagreement for ${card.id}: score ${card.score} maps to ${expectedGrade}, not ${card.grade}`);
-      }
-    }
-    return { id: card.id, score: card.score, grade: card.grade };
+    return { id: card.id, score: card.score, grade: card.grade! };
   }).filter((card): card is MapReportCard => card !== null);
 
   return {

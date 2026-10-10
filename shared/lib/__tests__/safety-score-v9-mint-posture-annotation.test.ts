@@ -6,7 +6,6 @@ import {
 import { buildV9CuratedMintPostureQueue } from "../safety-score-v9/mint-posture-annotation";
 import {
   V9_MINT_POSTURE_BAND_ORDER,
-  V9_MINT_POSTURE_BANDS,
   curatedMintPostureBand,
   isFragileMintPosture,
   isNoPrivilegedMintChainPosture,
@@ -14,6 +13,7 @@ import {
   isUnboundedMintPosture,
   resolveV9MintPostureBand,
 } from "../safety-score-v9/mint-posture";
+import { V9_MINT_POSTURE_BANDS } from "../classification";
 
 describe("V9 mint posture bands", () => {
   it("bands every derived posture except the unresolved one", () => {

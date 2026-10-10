@@ -1,7 +1,7 @@
 import type { RedemptionBackstopEntry } from "@shared/types";
 import type { RedemptionRouteFamily } from "@shared/types";
 import type { CoverageStatus } from "@/lib/coverage-types";
-import { REDEMPTION_MODELED_ROUTE_DISPLAY, REDEMPTION_ROUTE_FAMILY_DISPLAY } from "@/lib/redemption-backstop-labels";
+import { REDEMPTION_MODELED_ROUTE_DISPLAY, REDEMPTION_ROUTE_FAMILY_DISPLAY } from "@shared/lib/classification";
 import {
   createDataUnavailableStatus,
   createPresetStatus,

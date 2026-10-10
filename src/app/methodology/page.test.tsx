@@ -18,12 +18,18 @@ import { PricingPipelineMethodologySection } from "./sections/core-sections-pric
 import { LiquidityPreconditions } from "./sections/core/liquidity-overview";
 import { DepegResolverMethodologySection } from "./sections/monitoring/depeg-resolver-section";
 import { PegScoreDewsTechnicalDetails } from "./sections/monitoring/pegscore-dews-technical-details";
+import { LiquidityTechnicalDetails } from "./sections/core/liquidity-technical-details";
+import { SafetyScoresScoringDetails } from "./sections/core/safety-scores-scoring-details";
+import { SafetyScoresDimensionDetails } from "./sections/core/safety-scores-dimension-details";
 import { DEX_VOLUME_COVERAGE_MIN } from "@shared/lib/dex-volume-availability";
 import {
   EVIDENCE_STRESS_THRESHOLD,
   SEVERE_ISSUER_CONTROL_THRESHOLD,
   WATCH_MAX_SCORE,
 } from "@shared/lib/dews-config";
+import { PSI_BAND_CLASSES } from "@shared/lib/classification";
+import { PSI_CONDITION_BAND_VALUES } from "@shared/types/stability";
+import { StabilityIndexMethodologySection } from "./sections/core/stability-index-section";
 
 function renderSection(element: ReactNode): HTMLDivElement {
   const root = document.createElement("div");
@@ -32,6 +38,65 @@ function renderSection(element: ReactNode): HTMLDivElement {
 }
 
 describe("MethodologyPage", () => {
+  it("uses canonical PSI band styles in the methodology table", () => {
+    const root = renderSection(<StabilityIndexMethodologySection />);
+    const table = root.querySelector('[data-table-id="methodology-stability-index-condition-bands"] table')!;
+    expect(table).not.toBeNull();
+    const cells = Array.from(table.querySelectorAll("tbody tr"), (row) => (row as HTMLTableRowElement).cells[1]);
+    expect(cells.map((cell) => cell.textContent)).toEqual([...PSI_CONDITION_BAND_VALUES]);
+    for (const [index, band] of PSI_CONDITION_BAND_VALUES.entries()) {
+      for (const className of PSI_BAND_CLASSES[band].split(" ")) {
+        expect(cells[index].classList.contains(className), `${band}: ${className}`).toBe(true);
+      }
+    }
+  });
+
+  it.each([
+    { element: <PricingPipelineMethodologySection />, id: "methodology-pricing-source-weights",
+      headers: ["Source", "Weight", "Type", "Notes"],
+      labels: ["CoinGecko", "CoinGecko ticker", "DefiLlama (list)", "Binance", "Kraken", "Bitstamp", "Coinbase", "RedStone", "Curve on-chain", "Curve oracle", "DEX pools", "Protocol DEX APIs", "GeckoTerminal", "Exact-address providers"] },
+    { element: <PricingPipelineMethodologySection />, id: "methodology-pricing-confidence-levels",
+      headers: ["Level", "Condition", "Downstream effect"], labels: ["high", "single-source", "low", "fallback"] },
+    { element: <LiquidityTechnicalDetails />, id: "methodology-liquidity-components",
+      headers: ["Component", "Weight", "How it works"], labels: ["TVL Depth", "Volume Activity", "Pool Quality", "Durability", "Diversity"] },
+    { element: <SafetyScoresScoringDetails />, id: "methodology-safety-base-dimensions",
+      headers: ["Dimension", "Weight", "Source", "Description"], labels: ["Exit Liquidity", "Resilience", "Decentralization", "Dependency Risk"] },
+    { element: <SafetyScoresDimensionDetails />, id: "methodology-safety-resilience-scoring",
+      headers: ["Sub-factor", "What it measures", "Scoring"], labels: ["Collateral Quality", "Custody Model"] },
+    { element: <SafetyScoresDimensionDetails />, id: "methodology-safety-grade-thresholds",
+      headers: ["Grade", "Score Range"], labels: ["A+", "A", "A−", "B+", "B", "B−", "C+", "C", "C−", "D", "F", "NR"] },
+  ])("preserves $id content, ids, and compact table semantics", ({ element, id, headers, labels }) => {
+    const root = renderSection(element);
+    const shell = root.querySelector(`[data-table-id="${id}"]`)!;
+    expect(shell.getAttribute("data-testid")).toBe(`${id}-table`);
+    expect(shell.classList.contains("pharos-density-compact")).toBe(true);
+    const table = shell.querySelector("table")!;
+    expect(Array.from(table.querySelectorAll("thead th"), (cell) => cell.textContent)).toEqual(headers);
+    expect(Array.from(table.querySelectorAll("thead th")).every((cell) => cell.getAttribute("scope") === "col")).toBe(true);
+    const rows = Array.from(table.querySelectorAll<HTMLTableRowElement>("tbody tr"));
+    expect(rows.map((row) => row.cells[0].textContent)).toEqual(labels);
+    expect(rows.every((row) => row.cells.length === headers.length)).toBe(true);
+    if (id === "methodology-safety-grade-thresholds") {
+      expect(table.classList.contains("w-auto")).toBe(true);
+      expect(rows.map((row) => row.cells[1].textContent)).toEqual([
+        "87–100", "83–86", "80–82", "75–79", "70–74", "65–69", "60–64", "55–59", "50–54", "40–49", "0–39", "Not enough data",
+      ]);
+      expect(rows.every((row) => row.cells[0].classList.contains("pr-8") && Array.from(row.cells).every((cell) => cell.classList.contains("py-1.5")))).toBe(true);
+    } else {
+      expect(rows.every((row) => row.cells[row.cells.length - 1].classList.contains("whitespace-normal"))).toBe(true);
+    }
+    if (id === "methodology-pricing-source-weights") {
+      expect(Array.from(table.querySelectorAll("code"), (node) => node.textContent)).toEqual(["/simple/price", "stablecoins.llama.fi", "get_dy()", "crvusd-curve"]);
+      expect(rows.map((row) => row.cells[1].textContent)).toEqual(["2", "2", "1", "2", "2", "1", "2", "1", "3", "3", "1", "2-3", "1", "1"]);
+    }
+    if (id === "methodology-pricing-confidence-levels") {
+      expect(rows.map((row) => row.cells[0].className)).toEqual([
+        expect.stringContaining("text-green-700"), expect.stringContaining("text-yellow-700"),
+        expect.stringContaining("text-orange-700"), expect.stringContaining("text-red-700"),
+      ]);
+    }
+  });
+
 
   it("renders every section anchor that methodology context deep-links to", () => {
     const html = renderToStaticMarkup(<MethodologyPage />);

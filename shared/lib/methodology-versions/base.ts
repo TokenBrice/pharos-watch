@@ -23,6 +23,8 @@ export interface MethodologyChangelogDetailTableColumn {
   readonly id: string;
   readonly label: string;
   readonly rowHeader?: boolean;
+  readonly headClassName?: string;
+  readonly cellClassName?: string;
 }
 
 export interface MethodologyChangelogDetailTableRow {

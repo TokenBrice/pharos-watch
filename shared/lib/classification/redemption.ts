@@ -7,7 +7,7 @@ import type {
   RedemptionResolutionState,
   RedemptionRouteFamily,
   RedemptionRouteStatus,
-} from "@shared/types";
+} from "../../types";
 
 const REDEMPTION_ROUTE_FAMILY_LABELS: Record<RedemptionRouteFamily, string> = {
   "stablecoin-redeem": "Stablecoin redeem",

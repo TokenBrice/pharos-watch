@@ -8,8 +8,58 @@ import {
   groupCommandPaletteResults,
   rankCommandPaletteResults,
 } from "@/components/command-palette-model";
+import { CHAIN_META } from "@shared/types/chain-identity";
+import { getActiveChainIds } from "@shared/lib/chains";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { MECHANISM_ARCHETYPE_LABELS } from "@shared/lib/classification";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
+import { PUBLIC_DOCS } from "@shared/lib/public-docs";
+import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
+import { STATIC_COMPARE_PAIRS, buildStaticComparisonSlug } from "@/lib/compare-links";
+import { CASE_STUDY_CLIENT_LIST } from "@/lib/case-study-client-index";
+import { GLOSSARY_ENTRIES } from "@/lib/glossary-content";
+import { BLOG_POSTS } from "@/data/blog";
+import depegEvents from "@/generated/depeg-event-search-data.json";
+
+const chainId = getActiveChainIds()[0];
+const chain = CHAIN_META[chainId];
+const peg = PEG_TAXONOMY_PAGES.find((entry) => entry.value === "EUR")!;
+const [leftId, rightId] = STATIC_COMPARE_PAIRS[0];
+const pairLabel = `${CLIENT_TRACKED_META_BY_ID.get(leftId)!.symbol} vs ${CLIENT_TRACKED_META_BY_ID.get(rightId)!.symbol}`;
+const study = CASE_STUDY_CLIENT_LIST[0];
+const term = GLOSSARY_ENTRIES[0];
+const mechanism = MECHANISM_ARCHETYPE_VALUES[0];
+const event = depegEvents[0];
+const date = event.startedAt ? new Date(event.startedAt * 1000).toISOString().slice(0, 10) : "";
+const doc = PUBLIC_DOCS[0];
+const post = BLOG_POSTS[0];
+
+const corpusCases = [
+  { query: chain.name, id: `chain-${chainId}`, label: chain.name, sublabel: "Chain profile", section: "Chains", kind: "chain", href: `/chains/${chainId}/`, historySublabel: "Chain profile", extra: { imagePath: chain.logoPath || undefined, imageSquare: true, imageDarkInvert: chain.darkInvert ?? false } },
+  { query: "euro", id: `peg-${peg.slug}`, label: peg.title, sublabel: `${peg.coins.length} tracked stablecoin${peg.coins.length === 1 ? "" : "s"}`, section: "Peg currencies", kind: "peg", href: peg.href, historySublabel: peg.shortLabel, extra: { lead: true } },
+  { query: pairLabel, id: `comparison-${leftId}-vs-${rightId}`, label: pairLabel, sublabel: "Static comparison page", section: "Comparisons", kind: "comparison", href: `/compare/${buildStaticComparisonSlug(leftId, rightId)}/`, historySublabel: "Comparison" },
+  { query: study.title, id: `case-study-${study.slug}`, label: study.title, sublabel: `Case study${study.year ? ` · ${study.year}` : ""}`, section: "Case studies", kind: "case-study", href: `/learn/case-studies/${study.slug}/`, historySublabel: "Case study" },
+  { query: term.term, id: `glossary-${term.id}`, label: term.term, sublabel: "Glossary term", section: "Glossary", kind: "glossary-term", href: `/learn/glossary/#${term.id}`, historySublabel: "Glossary term" },
+  { query: mechanism, id: `mechanism-${mechanism}`, label: MECHANISM_ARCHETYPE_LABELS[mechanism], sublabel: "Mechanism archetype explainer", section: "Mechanism archetypes", kind: "mechanism", href: `/learn/mechanisms/${mechanism}/`, historySublabel: "Mechanism archetype" },
+  { query: event.symbol, id: `depeg-${event.slug}`, label: `${event.symbol} ${event.direction === "below" ? "below" : "above"} ${event.pegType}`, sublabel: date ? `${date} · peak ${event.peakDeviationBps}bps` : `peak ${event.peakDeviationBps}bps`, section: "Recent depegs", kind: "depeg-event", href: `/depeg/${event.slug}/`, historySublabel: "Depeg event", historyLabel: `${event.symbol} ${date}`.trim(), extra: { logoId: event.stablecoinId } },
+  { query: doc.title, id: `doc-${doc.slug}`, label: doc.title, sublabel: doc.summary, section: "Docs", kind: "doc", href: `/docs/${doc.slug}/`, historySublabel: "Docs" },
+  { query: post.title, id: `blog-${post.slug}`, label: post.title, sublabel: post.description, section: "Blog", kind: "blog-post", href: `/blog/${post.slug}/`, historySublabel: "Blog" },
+];
 
 describe("command palette model", () => {
+  it.each(corpusCases)("preserves the complete $section corpus descriptor and history", ({ query, historyLabel, historySublabel, extra, ...descriptor }) => {
+    const result = buildCommandPaletteResultDescriptors({ query, history: [], isDark: false }).find((row) => row.id === descriptor.id);
+    expect(result).toEqual({
+      ...descriptor, ...extra,
+      history: { id: descriptor.id, type: "page", label: historyLabel ?? descriptor.label, sublabel: historySublabel, href: descriptor.href },
+    });
+  });
+
+  it.each(["", "zzzz-no-corpus-match"])("emits no corpus descriptors for %j", (query) => {
+    const results = buildCommandPaletteResultDescriptors({ query, history: [], isDark: false });
+    expect(results.filter((row) => corpusCases.some((entry) => entry.kind === row.kind))).toEqual([]);
+  });
+
   it("matches direct substrings and word prefixes", () => {
     expect(fuzzyMatch("usd", "USD Coin")).toBe(true);
     expect(fuzzyMatch("co", "USD Coin")).toBe(true);

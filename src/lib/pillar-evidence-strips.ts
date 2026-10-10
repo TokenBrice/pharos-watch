@@ -1,7 +1,7 @@
 import type { BridgeRouteRiskTier, SafetyScoreV9CurrentCard } from "@shared/types";
-import { BRIDGE_TIER_LABELS, getBridgeTierLabel, type ControlComponentRole } from "@shared/lib/classification";
+import { BRIDGE_TIER_LABELS, getBridgeTierLabel, type ControlComponentRole, type MintAuthorityScoreFilterValue } from "@shared/lib/classification";
 import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
-import { resolveMintAuthorityScoreDisplay, type MintAuthorityScoreFilterValue } from "@/lib/mint-authority-display";
+import { resolveMintAuthorityScoreDisplay } from "@/lib/mint-authority-display";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
 
 /**

@@ -47,6 +47,8 @@ describe("usePinnedStablecoins", () => {
     window.localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(savedIds));
     const pins = renderHook(() => usePinnedStablecoins());
     const workspace = renderHook(() => useWatchlist());
+    expect(pins.result.current.pinnedIds).toEqual(savedIds.slice(0, MAX_PINNED_STABLECOINS));
+    expect(workspace.result.current.ids).toEqual(savedIds);
     expect(pins.result.current.isPinned(hiddenId)).toBe(false);
     expect(workspace.result.current.has(hiddenId)).toBe(true);
 

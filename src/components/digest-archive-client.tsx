@@ -9,7 +9,7 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
+import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
 import { formatBps, formatCurrency, formatLongDate } from "@shared/lib/format";
 import type { DigestArchiveEntry, DigestRiskSignal } from "@shared/types";
 import {

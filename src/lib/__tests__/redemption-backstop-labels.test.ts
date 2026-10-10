@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
-import {
-  formatRedemptionDocsProvenance,
-  formatRedemptionModelConfidence,
-  formatRedemptionResolutionState,
-  formatRedemptionRouteFamily,
-  formatRedemptionRouteStatus,
-  REDEMPTION_ROUTE_FAMILY_DISPLAY,
-} from "../redemption-backstop-labels";
+import { formatRedemptionDocsProvenance,
+formatRedemptionModelConfidence,
+formatRedemptionResolutionState,
+formatRedemptionRouteFamily,
+formatRedemptionRouteStatus,
+REDEMPTION_ROUTE_FAMILY_DISPLAY, } from "@shared/lib/classification";
 
 describe("redemption-backstop-labels", () => {
   it("keeps route family labels and coverage labels in one map", () => {

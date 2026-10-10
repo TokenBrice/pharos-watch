@@ -16,28 +16,6 @@ import type { V9MintPosture } from "./control-primitives";
  */
 export type V9MintPostureBand = "hardened" | "governed" | "managed" | "concentrated" | "exposed";
 
-export const V9_MINT_POSTURE_BANDS: Record<V9MintPostureBand, { label: string; detail: string }> = {
-  hardened: {
-    label: "Hardened",
-    detail: "No live mint authority, or a bounded administrator that cannot expand the claim.",
-  },
-  governed: {
-    label: "Governed",
-    detail: "Partially bounded administration, delayed governance or minority-veto issuance, or reviewed operational envelopes with token-governed expansion.",
-  },
-  managed: {
-    label: "Managed",
-    detail: "Economically unbounded minting that is reconciled against reserves or prudentially supervised.",
-  },
-  concentrated: {
-    label: "Concentrated",
-    detail: "Minting depends on a concentrated or collateral-gated administrator path.",
-  },
-  exposed: {
-    label: "Exposed",
-    detail: "Known economically unbounded minting without a qualified governance, reconciliation, or supervisory process, or an active mint incident. An unanswered reconciliation question is disclosed separately.",
-  },
-};
 
 /** Band order, strongest first — the render and sort order for every surface. */
 export const V9_MINT_POSTURE_BAND_ORDER = [

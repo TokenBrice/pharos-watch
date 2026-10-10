@@ -1,6 +1,6 @@
 import * as React from "react";
 import { CardFrame, MetricLabel, Sparkline, TEXT_SECONDARY, SEMANTIC_COLORS } from "./shared";
-import { PSI_HEX_COLORS } from "@shared/lib/psi-colors";
+import { PSI_HEX_COLORS } from "@shared/lib/classification";
 
 export interface StabilityIndexCardData {
   psiScore: number;

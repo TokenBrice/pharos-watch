@@ -318,12 +318,8 @@ export function YieldClient() {
   );
 
   const sourceBoardModel = useMemo(
-    () =>
-      buildYieldSourceBoardModel(sourceBoardRows, {
-        benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
-        fallbackBenchmark: data?.provenance?.benchmark ?? null,
-      }),
-    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, sourceBoardRows],
+    () => buildYieldSourceBoardModel(sourceBoardRows),
+    [sourceBoardRows],
   );
 
   // Counts the full /yield ranking universe per peg currency (not filter-

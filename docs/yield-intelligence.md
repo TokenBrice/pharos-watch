@@ -683,13 +683,15 @@ The methodology above owns public behavior; this section owns runtime contracts.
 | Yield resolution and publication | `worker/src/cron/sync-yield-data.ts`, `worker/src/cron/yield-sync/` |
 | Optional slower source families | `worker/src/cron/sync-yield-supplemental.ts` |
 | Benchmark registry | `worker/src/cron/fetch-tbill-rate.ts` |
-| Source configuration and scoring helpers | `worker/src/lib/yield-config/yield-config.ts`, `worker/src/cron/yield-helpers.ts` |
+| Source configuration and scoring helpers | `worker/src/lib/yield-config/yield-config.ts`, `worker/src/cron/yield-helpers.ts`, `worker/src/lib/yield-ranking-helpers.ts` |
 | Rankings and history APIs | `worker/src/api/cache-handlers.ts`, `worker/src/api/yield-history.ts` |
 | Shared wire types | `shared/types/index.ts` |
 | Frontend queries and formatting | `src/hooks/api-hooks.ts`, `src/lib/yield-constants.ts` |
 | Yield workbench and per-coin analysis | `src/app/yield/`, `src/app/stablecoin/[id]/yield/` |
 
 Schedules are owned by `worker/wrangler.toml`, `shared/lib/cron-jobs.ts`, and `shared/lib/scheduled-runner-registry.ts`. Exact HTTP schemas are owned by [API Reference](./api-reference.md). Operational thresholds, queue handling, failure semantics, and recovery procedures live in [Yield Intelligence Operations](./yield-intelligence-operations.md) and its linked operator guides.
+
+`yield-ranking-helpers.ts` owns the shared producer/API evidence-to-NR priority after freshness normalization. Scoring and null-reason evaluation reuse one component calculation; weights, rounded-zero eligibility and published UI scores remain unchanged.
 
 ### Failure Semantics
 
@@ -713,6 +715,7 @@ Schedules are owned by `worker/wrangler.toml`, `shared/lib/cron-jobs.ts`, and `s
 - The workbench emits `yield_zero_results` only after ranking data has loaded without a query error. Loading, absent-data, and failed-refresh states are not counted as empty-result exposures; a loaded empty payload still is. This event measures an empty view, not a completed conversion or necessarily a failed search.
 - URL filter normalization also waits for loaded, error-free ranking data, so data-derived options cannot erase a valid incoming filter while the request is pending.
 - Rows show yield type, row-benchmark × safety-60 zone, confidence, freshness, and warning/source-risk severity; expanded/detail panels hold evidence. Scatter zones use one chart-wide reference, so non-USD chips can differ. Nullable numeric sorts keep unavailable rows last in both directions, distinct from observed zero.
+- `src/lib/yield-source-board-model.ts` derives visible lane counts, lane APY/source labels, quality filters, and switch/anomaly disclosures. It does not aggregate unused global source APYs, datasource counts, or benchmark labels; benchmark display remains with the row/reference-rate owners.
 - The stablecoin detail section is an at-a-glance summary; `/stablecoin/<id>/yield/` is the history-first workbench. The two surfaces must not duplicate whole panels.
 - Detail summaries show published identity/role, confidence/freshness, datasource, venue/chain/deployment, and qualification. Deposits are not passive holder yield. Diagnostics retain risk, access, ledger, and alternates; rejection hints use published codes, never client arbitration. External history controls cover every alternate count and return to chosen history.
 - All workbench actions share static eligibility. Unexported assets link to honestly named `/yield/?workbenchFallback=<id>` context; selected-source params apply only to real workbenches.

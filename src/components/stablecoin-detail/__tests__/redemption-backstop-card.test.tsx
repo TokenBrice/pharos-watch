@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { render, within } from "@testing-library/react";
 import { RedemptionRouteSection } from "../redemption-backstop-card";
 import { buildRedemptionBackstopCardViewModel } from "../redemption-backstop-card-view-model";
-import { formatRedemptionDocsProvenance, formatRedemptionRouteStatus } from "@/lib/redemption-backstop-labels";
+import { formatRedemptionDocsProvenance, formatRedemptionRouteStatus } from "@shared/lib/classification";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS } from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
 import type { RedemptionBackstopEntry, SafetyScoreV9CurrentCard } from "@shared/types";

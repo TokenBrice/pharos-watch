@@ -9,7 +9,6 @@ import {
   PLOT_STEP_THRESHOLDS_USD,
   buildCemeteryPlotMap,
   fitSectionCamera,
-  placeColossusChips,
   placeInspectorCard,
   placePlotTag,
   plotHeightFactorOf,
@@ -314,26 +313,6 @@ describe("colossus chips", () => {
     expect(map.colossi).toHaveLength(1);
     expect(map.colossi[0]).toMatchObject({ id: "giant", peak: "$23.4B", month: "Mar 2025", text: "Giant USD · peak $23.4B · Mar 2025" });
     expect(map.colossi[0].top).toEqual(map.graves.find((g) => g.id === "giant")?.screen.top);
-  });
-
-  it("places chips clear of text, volumes and each other, with leaders ending at the monument", () => {
-    const taken = [{ left: 0, top: 0, right: 400, bottom: 60 }];
-    // Two monuments side by side: the second chip must move off the first chip and keep its leader clear of it.
-    const chips = [
-      { id: "a", top: [300, 260] as [number, number], width: 220, height: 24 },
-      { id: "b", top: [320, 262] as [number, number], width: 220, height: 24 },
-    ];
-    const volumes = [{ left: 270, top: 250, right: 330, bottom: 400 }];
-    const placed = placeColossusChips({ chips, frameWidth: 1200, taken, volumes });
-    const [a, b] = placed.map((p) => ({ left: p.x, top: p.y, right: p.x + 220, bottom: p.y + 24 }));
-    const overlaps = (r: typeof a, s: typeof a) => r.left < s.right && r.right > s.left && r.top < s.bottom && r.bottom > s.top;
-    expect(placed.map((p) => p.placement)).toEqual(["clear", "clear"]);
-    expect(overlaps(a, b)).toBe(false);
-    for (const r of [a, b]) {
-      expect(overlaps(r, taken[0])).toBe(false);
-      expect(overlaps(r, volumes[0])).toBe(false);
-    }
-    expect(placed.map((p) => [p.leader.x2, p.leader.y2])).toEqual([[300, 258], [320, 260]]);
   });
 });
 

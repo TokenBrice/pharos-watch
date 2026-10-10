@@ -79,6 +79,15 @@ const rowRenderers = [
 ] as const;
 
 describe("YieldInstrumentBoard", () => {
+  it.each([
+    [20, "bg-red-500"], [21, "bg-amber-500"], [40, "bg-amber-500"], [41, "bg-emerald-500"],
+    [null, "bg-muted-foreground/40"],
+  ] as const)("renders the canonical PYS gauge at %s", (score, className) => {
+    renderBoard({ ...baseRow, pharosYieldScore: score });
+    const gauge = screen.getByRole("img", { name: `Pharos Yield Score ${score ?? "unavailable"} of 100` });
+    expect(gauge.firstElementChild?.className).toContain(className);
+  });
+
   it.each(rowRenderers)("routes dynamically covered USDC to the honest fallback on %s", (_name, renderRow) => {
     renderRow({ ...baseRow, id: "usdc-circle", symbol: "USDC" });
     expect(screen.getByRole("link", { name: "View yield opportunities for USDC" }).getAttribute("href"))

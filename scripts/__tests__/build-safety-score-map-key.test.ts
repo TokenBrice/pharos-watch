@@ -18,7 +18,7 @@ import {
   subgradeLaneForGrade,
   supplyMassBarWidth,
 } from "../maintenance/build-safety-score-map";
-import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
+import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/classification";
 import { validateAnnotationScene } from "../lib/map-annotations";
 import { makeSafetyMapPsiPayload } from "./build-safety-score-map.test-support";
 

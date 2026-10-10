@@ -35,10 +35,9 @@ import {
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { resolveCustodyModel } from "@shared/lib/report-card-policy";
 import {
-  MINT_AUTHORITY_SCORE_FILTER_CONFIG,
-  MINT_AUTHORITY_STATUS_CONFIG,
   resolveMintAuthorityScoreDisplay,
 } from "@/lib/mint-authority-display";
+import { MINT_AUTHORITY_SCORE_FILTER_CONFIG, MINT_AUTHORITY_STATUS_CONFIG } from "@shared/lib/classification";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 import { getCirculatingRawOrNull, getPrevMonthRawOrNull } from "@shared/lib/supply";
 import type { CsvColumn } from "@/lib/exports/csv";

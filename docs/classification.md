@@ -8,6 +8,8 @@ For catalog flags, read [Type](#type-governance-field-internally), [Backing](#ba
 
 For reviewed controls, use [Mint Authority Taxonomy](#mint-authority-taxonomy), [Implementation Age Policy](#implementation-age-policy), or [Infrastructure Tagging](#infrastructure-tagging). Price/peg work uses [Non-USD Peg Handling](#non-usd-peg-handling) and [Commodity & Non-DefiLlama Stablecoins](#commodity--non-defillama-stablecoins), not the entire taxonomy.
 
+Display taxonomies are owned by `shared/lib/classification.ts` and its typed children: PYS text/gauges share one band ladder, status badges/runway bars share labels, and mint/redemption descriptors retain their compact and coverage variants. PSI chart colors, text classes, and animation timings share one descriptor; methodology tables consume its text styles.
+
 ## Stablecoin Classification System
 
 Each tracked stablecoin is defined in the checked-in per-coin data assets under `shared/data/stablecoins/coins/*.json`, loaded through `shared/lib/stablecoins/registry.ts` from the generated `shared/data/stablecoins/coins.generated.json` aggregate, and validated by `shared/lib/stablecoins/schema.ts` at generation/test time. Import stablecoin helpers from their explicit submodules; use the registry module for the complete catalog and explicit lifecycle splits. Each entry carries these flags:

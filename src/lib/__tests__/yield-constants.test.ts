@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   formatYieldWarningSignal,
   formatYieldWarningSignalDescription,
-  getPysColor,
   formatYieldRatioPercent,
   resolveYieldScoreQualification,
   computePysBreakdown,
@@ -29,24 +28,6 @@ describe("missing-evidence warning descriptions", () => {
       expect(formatYieldWarningSignalDescription(signal)).toMatch(/evidence|unavailable/);
     },
   );
-});
-
-describe("getPysColor", () => {
-  it("returns muted for null", () => {
-    expect(getPysColor(null)).toBe("text-muted-foreground");
-  });
-
-  it("returns emerald for scores above 40", () => {
-    expect(getPysColor(41)).toContain("emerald");
-  });
-
-  it("returns amber for scores between 21 and 40", () => {
-    expect(getPysColor(30)).toContain("amber");
-  });
-
-  it("returns red for scores 20 or below", () => {
-    expect(getPysColor(10)).toContain("red");
-  });
 });
 
 describe("computePysBreakdown", () => {
