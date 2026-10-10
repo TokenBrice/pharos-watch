@@ -306,7 +306,9 @@ describe("detail response paths", () => {
     if (age === 600) {
       expect(result.headers.get("Cache-Control")).toBe("no-store");
       expect(result.headers.get("X-Data-Age")).toBe("600");
-      expect(result.headers.get("Warning")).toContain("Stablecoin detail cache is stale");
+      // Background revalidation of a 600 s row is still inside the fresh band.
+      expect(result.headers.get("X-Data-Freshness")).toBe("fresh");
+      expect(result.headers.get("Warning")).toBeNull();
     }
     await Promise.all(pending);
   });
