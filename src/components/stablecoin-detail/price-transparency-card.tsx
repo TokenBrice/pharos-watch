@@ -20,6 +20,7 @@ import { PROTOCOL_LOGOS } from "@/lib/dex-display-constants";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { PRICE_TRANSPARENCY_SOURCE_KEYS, getPricingSourceLabel } from "@shared/lib/pricing-sources";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
@@ -324,6 +325,7 @@ export function PriceTransparencyCard({
   compact?: boolean;
 }) {
   const [showAll, setShowAll] = useState(false);
+  const hydrated = useHydrated();
 
   const observed = isObservedPrice(coinData);
   const hasNoPrice = !observed || coinData.price == null;
@@ -391,7 +393,7 @@ export function PriceTransparencyCard({
   const sourceDepthLabel = `Sources ${formatSourceDepthTargetLabel(sourceDepthCount)}`;
 
   if (compact) {
-    const updatedAtLabel = !hasNoPrice ? formatCompactUpdatedAt(coinData.priceUpdatedAt) : null;
+    const updatedAtLabel = hydrated && !hasNoPrice ? formatCompactUpdatedAt(coinData.priceUpdatedAt) : null;
     const displayedSources = [
       ...(isProtocolRedeem
         ? [{ key: "protocol-redemption", label: "Protocol Redemption", status: "used" as const }]
@@ -464,7 +466,7 @@ export function PriceTransparencyCard({
             <SourcesModal
               sources={sources}
               includeProtocolRedeem={isProtocolRedeem}
-              updatedAtLabel={!hasNoPrice && coinData.priceUpdatedAt != null ? timeAgo(coinData.priceUpdatedAt) : null}
+              updatedAtLabel={hydrated && !hasNoPrice && coinData.priceUpdatedAt != null ? timeAgo(coinData.priceUpdatedAt) : null}
             />
           </div>
           <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5">
@@ -525,7 +527,7 @@ export function PriceTransparencyCard({
               </span>
             )}
             {!hasNoPrice && (
-              <span>· Updated {coinData.priceUpdatedAt == null ? "\u2014" : timeAgo(coinData.priceUpdatedAt)}</span>
+              <span>· Updated {!hydrated || coinData.priceUpdatedAt == null ? "\u2014" : timeAgo(coinData.priceUpdatedAt)}</span>
             )}
           </div>
         </div>

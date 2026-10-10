@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 
-import { render, screen, within } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, it, expect, vi } from "vitest";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { resolvePriceTransparencySourceStatus } from "@/components/stablecoin-detail/price-transparency-status";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
@@ -23,6 +25,8 @@ function makeCoinData(priceSource: string): StablecoinData {
     chains: ["ethereum"],
   });
 }
+
+afterEach(() => vi.restoreAllMocks());
 
 
 describe("resolveSourceStatus", () => {
@@ -55,6 +59,29 @@ describe("resolveSourceStatus", () => {
 });
 
 describe("PriceTransparencyCard", () => {
+  it.each([false, true])("hydrates saved price timestamps against a later clock without mismatches (compact=%s)", async (compact) => {
+    const savedAt = Date.parse("2026-10-10T12:00:00Z");
+    const now = vi.spyOn(Date, "now").mockReturnValue(savedAt);
+    const element = <PriceTransparencyCard
+      coinData={makeCoinData("coingecko")}
+      consensusSources={["coingecko"]}
+      agreeSources={["coingecko"]}
+      dexPriceCheck={null}
+      compact={compact}
+    />;
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(element);
+    now.mockReturnValue(savedAt + 3600_000);
+    const errors: unknown[] = [];
+    const root = hydrateRoot(container, element, { onRecoverableError: (error) => errors.push(error) });
+    try {
+      await waitFor(() => expect(container.textContent).toContain("1h"));
+      expect(errors).toEqual([]);
+    } finally {
+      await act(() => root.unmount());
+    }
+  });
+
   it.each([false, true])("separates nominal par from observations in compact=%s", (compact) => {
     render(
       <PriceTransparencyCard

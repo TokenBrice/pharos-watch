@@ -567,7 +567,8 @@ export function parsePersistedMissingActivePriceState(
     marketCapUsd: finiteNumberOrNull(value[10]),
     lastKnownMarketCapUsd: finiteNumberOrNull(value[7]),
     lastKnownMarketCapObservedAt: dateSecondsOrNull(value[8]),
-    lastKnownMarketCapSource: value[9] === "publication" || value[9] === "supply_history" ? value[9] : null,
+    lastKnownMarketCapSource: value[9] === "publication" ? "publication"
+      : value[9] === "supply_history" ? "supply_history" : null,
     currentPrice: null,
     currentSource: null,
     currentObservedAt: null,

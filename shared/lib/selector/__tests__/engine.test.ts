@@ -946,6 +946,8 @@ describe("runSelector — universal properties", () => {
       expect.arrayContaining(["limited-v9-evidence", "v9-binding-cap"]),
     );
     expect(out.recommended[0]?.watchText).toContain("capped at 80");
+    expect(out.recommended[0]?.watchText).toContain("Safety Score is capped");
+    expect(out.recommended[0]?.watchText).not.toContain("V9");
     expect(out.recommended[0]?.watchText).toContain("Reserve evidence is bounded.");
   });
 
@@ -965,6 +967,7 @@ describe("runSelector — universal properties", () => {
     );
 
     expect(out.recommended[0]?.watchText).toContain("Economic Control at 40");
+    expect(out.recommended[0]?.watchText).not.toContain("V9");
   });
 
   it("howey-uncertain coins are pre-excluded", () => {

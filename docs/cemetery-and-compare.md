@@ -331,6 +331,8 @@ It also derives live peg references with `derivePegRates(...)` for commodity/non
 
 The safety radar baseline counts only rated cards with all three plotted pillars. Peg/mechanism cohorts below three usable members fall back to all usable rated cards; the displayed count and median use this same population. NR, pipeline-gap, and incomplete-pillar cards contribute neither counts nor scores. Fewer than three usable cards suppresses the median.
 
+The live-flow cards and comparison table both preserve an explicitly observed zero 24-hour net as `$0.00`, including inactive windows. Unavailable or partial valuation remains unavailable; the independent 30-day pressure rating may still be `NR`.
+
 ### Share and export
 
 Compare includes client-side share/export rendering:

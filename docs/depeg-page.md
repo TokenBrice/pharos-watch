@@ -129,6 +129,10 @@ behind an explicit toggle that mounts them only when opened.
   `src/components/depeg-resolver-book-summary.ts` owns the valid frozen prediction tier split,
   past-peak count and forecast total; `rowCount` separately counts incident browsing rows.
   The hero's recovery posture excludes pending, no-call and invalidated outcomes.
+- **Availability:** the hero's recovery totals and the worklist's whole-book/visible-slice
+  claims use the same availability gate as forecast cards. Non-staleness degraded responses
+  withhold all three even if retained rows exist. Explicit `stale-cache` responses with rows
+  retain frozen forecasts and the existing stale-overlay warning; this does not refresh any clock.
 - **Header scope:** the verdict split belongs to the hero. This header shows
   forecast and incident-row counts, the visible slice, past-peak count, and
   calibration lineage/coin count. A four-card slice is not the whole book.

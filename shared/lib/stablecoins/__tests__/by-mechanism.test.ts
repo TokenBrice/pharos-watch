@@ -17,10 +17,7 @@ describe("countActiveByArchetype", () => {
     }
   });
 
-  it("excludes commodity-peg coins (GOLD/SILVER) even when they declare an archetype", () => {
-    // Fixture: a commodity coin with a non-null archetype. Real GOLD/SILVER
-    // coins currently have null archetype, so injecting one proves the filter
-    // — not the resolver — is what excludes it.
+  it("keeps commodity pegs excluded from non-commodity archetypes", () => {
     const goldCoin = makeCatalogCoin({
       id: "gold-fixture",
       name: "Gold Fixture",
@@ -69,11 +66,13 @@ describe("countActiveByArchetype", () => {
     expect(rwaCoins.map((c) => c.id)).toEqual([]);
   });
 
-  it("real GOLD/SILVER coins do not contribute to any archetype bucket", () => {
-    // Live-data invariant: regardless of resolver outcome, no commodity-peg
-    // coin id should appear in any archetype bucket returned by getActiveByArchetype.
+  it("includes the live commodity-claim family without adding commodities to other buckets", () => {
+    const commodityClaims = getActiveByArchetype("commodity-claim");
+    expect(commodityClaims.map((coin) => coin.id)).toEqual(expect.arrayContaining(["xaut-tether", "paxg-paxos", "kag-kinesis"]));
+    expect(countActiveByArchetype()["commodity-claim"]).toBe(commodityClaims.length);
     const archetypes: MechanismArchetype[] = [...MECHANISM_ARCHETYPE_VALUES];
     for (const archetype of archetypes) {
+      if (archetype === "commodity-claim") continue;
       const coins = getActiveByArchetype(archetype);
       for (const coin of coins) {
         expect(coin.flags.pegCurrency).not.toBe("GOLD");
@@ -101,6 +100,19 @@ describe("getActiveByArchetype", () => {
 });
 
 describe("getCoinsByLifecycleStatus", () => {
+  it.each(["active", "pre-launch", "frozen", "quarantined", "delisted"] as const)(
+    "includes explicitly classified commodity claims in the %s pool", (status) => {
+      const coin = makeCatalogCoin({
+        id: "gold-claim", mechanismArchetype: "commodity-claim",
+        flags: { ...NON_RWA_STABLECOIN_FLAGS, pegCurrency: "GOLD", rwa: true },
+      });
+      const registry = new Map([[coin.id, coin]]);
+      expect(getCoinsByLifecycleStatus("commodity-claim", status, { pools: { [status]: [coin] }, registry }))
+        .toEqual([coin]);
+      expect(countActiveByArchetype([coin], registry)["commodity-claim"]).toBe(1);
+    },
+  );
+
   function makeLifecycleCoin(
     id: string,
     mechanismArchetype: MechanismArchetype,

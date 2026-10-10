@@ -49,9 +49,10 @@ describe("CoinFlowCard", () => {
     expect(html).toContain("Worsening");
   });
 
-  it("renders NR for unrated pressure", () => {
+  it("preserves observed zero net flow while rendering NR for unrated pressure", () => {
     const html = renderToStaticMarkup(<CoinFlowCard {...nrProps} />);
     expect(html).toContain("NR");
+    expect(html).toContain("$0.00");
     expect(html).not.toContain("Improving");
     expect(html).not.toContain("Worsening");
   });

@@ -21,13 +21,14 @@ interface LifecycleFilterOptions {
   pools?: LifecyclePools;
 }
 
-function isNotCommodity(coin: StablecoinMeta): boolean {
-  return !isCommodityPeg(coin.flags.pegCurrency);
+function isIncludedInArchetype(coin: StablecoinMeta, archetype: MechanismArchetype | null): boolean {
+  return !isCommodityPeg(coin.flags.pegCurrency) || archetype === "commodity-claim";
 }
 
 /**
- * Count active, non-commodity stablecoins per mechanism archetype using the
- * inheritance resolver. Coins with a null effective archetype are excluded.
+ * Count active coins per mechanism archetype using the inheritance resolver.
+ * Commodity pegs participate only in their explicit commodity-claim family;
+ * coins with a null effective archetype are excluded.
  *
  * `coins` and `registry` default to the live active registry; they are exposed
  * to allow tests to verify the commodity-exclusion filter against fixtures.
@@ -41,9 +42,8 @@ export function countActiveByArchetype(
   ) as Record<MechanismArchetype, number>;
 
   for (const coin of coins) {
-    if (!isNotCommodity(coin)) continue;
     const archetype = resolveMechanismArchetype(coin, registry);
-    if (archetype !== null) {
+    if (archetype !== null && isIncludedInArchetype(coin, archetype)) {
       counts[archetype] += 1;
     }
   }
@@ -52,7 +52,8 @@ export function countActiveByArchetype(
 }
 
 /**
- * Return active, non-commodity stablecoins for a given archetype.
+ * Return active coins for a given archetype, admitting commodity pegs only
+ * into the explicit commodity-claim family.
  * When a supply map is provided, coins are sorted by supply descending;
  * otherwise they are returned in canonical order.
  *
@@ -67,7 +68,7 @@ export function getActiveByArchetype(
 ): StablecoinMeta[] {
   const filtered = coins.filter(
     (coin) =>
-      isNotCommodity(coin) &&
+      isIncludedInArchetype(coin, archetype) &&
       resolveMechanismArchetype(coin, registry) === archetype,
   );
 
@@ -105,7 +106,7 @@ export function getCoinsByLifecycleStatus(
 
   return pool.filter(
     (coin) =>
-      isNotCommodity(coin) &&
+      isIncludedInArchetype(coin, archetype) &&
       resolveMechanismArchetype(coin, registry) === archetype,
   );
 }

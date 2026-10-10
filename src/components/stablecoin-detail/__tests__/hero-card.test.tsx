@@ -388,6 +388,20 @@ describe("HeroCard", () => {
     expect(html).not.toContain("+200 BPS");
   });
 
+  it.each(["card", "cell"] as const)("withholds the %s peg deviation when its observed price is unusable", (variant) => {
+    for (const price of [null, 0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const html = renderToStaticMarkup(<HeroPriceMetric
+        coin={coin}
+        coinData={{ ...coinData, price, priceConfidence: null }}
+        price={{ pegRef: 1, deviationBps: 1, pegReferenceUnavailable: false, isNavToken: false, limitedDepegCoverageNote: null }}
+        variant={variant}
+      />);
+      expect(html).toMatch(/Observed price unavailable/i);
+      expect(html).not.toMatch(/\+1 BPS/i);
+      expect(html).toContain("N/A");
+    }
+  });
+
   it("renders website and social link destinations with accessible names", () => {
     const html = renderHero();
 

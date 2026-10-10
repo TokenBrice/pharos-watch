@@ -18,7 +18,7 @@ import { DEWSAlertFeed } from "@/components/dews-alert-feed";
 import { DepegFeed } from "@/components/depeg-feed";
 import { DepegResolverModule } from "@/components/depeg-resolver-module";
 import { DepegResolverReviewerModule } from "@/components/depeg-resolver-reviewer-module";
-import { summarizeResolverBook } from "@/components/depeg-resolver-book-summary";
+import { isResolverBookAvailable, summarizeResolverBook } from "@/components/depeg-resolver-book-summary";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { extractPendingDepegIncidents, mapPendingIncidentsByCoin } from "@/lib/depeg-incident-utils";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
@@ -195,7 +195,7 @@ export function DepegClient() {
   // One derivation of the resolver book, shared with the module's own header so
   // the hero's posture and that header can never disagree.
   const resolverBook = useMemo(
-    () => (resolverData?.rows ? summarizeResolverBook(resolverData.rows) : null),
+    () => (isResolverBookAvailable(resolverData) ? summarizeResolverBook(resolverData.rows) : null),
     [resolverData],
   );
 

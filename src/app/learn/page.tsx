@@ -290,7 +290,7 @@ export default function LearnIndexPage() {
           headingId="learn-mechanisms"
           title="Mechanisms"
           href="/learn/mechanisms/"
-          blurb={`How a peg is produced. Every active stablecoin runs one of ${MECHANISM_ARCHETYPE_VALUES.length} designs. There are ${mechanismTotal} coins in total, each defending the dollar differently and failing differently under stress.`}
+          blurb={`How a peg is produced. Explore ${MECHANISM_ARCHETYPE_VALUES.length} designs across ${mechanismTotal} classified active coins, each defending its peg differently and failing differently under stress.`}
           cta="Explore every mechanism"
         />
         <ul className="grid gap-x-10 sm:grid-cols-2">

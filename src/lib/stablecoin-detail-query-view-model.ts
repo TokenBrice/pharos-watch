@@ -167,7 +167,10 @@ export function buildDetailStaleQueries(
       : coinWarning ? { status: "degraded", warning: coinWarning } : null;
   }
   const result: StablecoinDetailStaleQuery[] = [
-    staleQueryFrom("stablecoins", queries.stablecoinList, (data) => Boolean(data?.peggedAssets?.length)),
+    {
+      ...staleQueryFrom("stablecoins", queries.stablecoinList, (data) => Boolean(data?.peggedAssets?.length)),
+      label: "Detail snapshot",
+    },
     staleQueryFrom("pegSummary", queries.pegSummary, (data) => Boolean(data?.coins?.length)),
     liquidity,
     staleQueryFrom("reportCards", queries.reportCards, (data) => Boolean(data?.cards?.length)),

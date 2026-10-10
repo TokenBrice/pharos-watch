@@ -259,6 +259,42 @@ describe("DepegResolverModule", () => {
     expect(screen.queryByText(/No active confirmed depegs/)).toBeNull();
   });
 
+  it("keeps empty stale snapshots unavailable rather than claiming no depegs", () => {
+    render(<DepegResolverModule data={response({ _meta: { ...meta, degraded: true, degradedReason: "stale-cache" } })} />);
+    expect(screen.getByText("Resolver data is temporarily unavailable.")).toBeTruthy();
+    expect(screen.queryByText(/No active confirmed depegs|Whole book/)).toBeNull();
+  });
+
+  it("preserves the observed empty state for a healthy snapshot", () => {
+    render(<DepegResolverModule data={response()} />);
+    expect(screen.getByText("No active confirmed depegs.")).toBeTruthy();
+    expect(screen.queryByText("Resolver data is temporarily unavailable.")).toBeNull();
+  });
+
+  it("retains the whole-book summary for an explicitly stale frozen forecast", () => {
+    render(<DepegResolverModule data={response({
+      _meta: { ...meta, degraded: true, degradedReason: "stale-cache" }, rows: [row],
+    })} />);
+    expect(screen.getByText(/Whole book/).textContent).toContain("1 forecast across 1 incident rows");
+    expect(screen.getByText(/live overlay is stale/)).toBeTruthy();
+    expect(screen.getByText("At Risk")).toBeTruthy();
+  });
+
+  it.each(["secondary-overlay-unavailable", "manifest-fallback:missing-cache", "unknown-failure"])(
+    "withholds whole-book claims when retained forecasts are unavailable because of %s",
+    (degradedReason) => {
+      render(<DepegResolverModule data={response({
+        _meta: { ...meta, degraded: true, degradedReason },
+        rows: [row],
+      })} />);
+
+      expect(screen.getByText("Resolver data is temporarily unavailable.")).toBeTruthy();
+      expect(screen.queryByText(/Whole book/)).toBeNull();
+      expect(screen.queryByText(/showing all|most urgent/)).toBeNull();
+      expect(screen.queryByText("At Risk")).toBeNull();
+    },
+  );
+
   it("maps suppressed duration reasons to public copy", () => {
     render(<DepegResolverModule data={response({ rows: [row] })} />);
 
