@@ -254,7 +254,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       governance: meta.flags.governance,
       currentDeviationBps: currentBps,
       pegReference: observation?.pegReference ?? null,
-      pegReferenceUnavailable: observation?.pegReferenceUnavailable ?? false,
+      pegReferenceUnavailable: observation?.pegReferenceUnavailable ?? true,
       currentPriceUnavailable: observation?.currentPriceUnavailable ?? !isNavToken,
       depegEventCoverageLimited: pegData.depegEventCoverageLimited,
       ...(observation?.currentSupplyUnavailable ? { currentSupplyUnavailable: true } : {}),

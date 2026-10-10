@@ -7,6 +7,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { __pegSummaryTestHooks, handlePegSummary } from "../peg-summary";
 import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
+import * as currentPegObservations from "../../lib/current-peg-observations";
 
 const nowSec = Math.floor(Date.now() / 1000);
 
@@ -144,6 +145,22 @@ function makeCachedPegCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryC
 }
 
 describe("handlePegSummary", () => {
+  it("marks the peg reference unavailable when the current observation is missing", async () => {
+    const observationSpy = vi.spyOn(currentPegObservations, "deriveCurrentPegObservationMap")
+      .mockReturnValue(new Map());
+    try {
+      const db = makePegSummaryDb([makeAsset({ id: "usdt-tether", price: 1 })]);
+      const body = await readJsonResponse<{ coins: PegSummaryCoin[] }>(await handlePegSummary(db), 200);
+      expect(body.coins.find((coin) => coin.id === "usdt-tether")).toMatchObject({
+        currentDeviationBps: null,
+        pegReference: null,
+        pegReferenceUnavailable: true,
+      });
+    } finally {
+      observationSpy.mockRestore();
+    }
+  });
+
   it.each([
     ...[99.6, 100, 100.4, -99.6, -100, -100.4].map((bps) => ({ bps, pegType: "peggedUSD", id: "usdt-tether", threshold: 100 })),
     ...[149.6, 150, 150.4, -149.6, -150, -150.4].map((bps) => ({ bps, pegType: "peggedEUR", id: "eurc-circle", threshold: 150 })),

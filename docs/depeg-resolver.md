@@ -244,6 +244,8 @@ During the 2026-09-06 Worker/Pages cutover, consumers tolerate generation-3 cove
 
 `GET /api/depeg-resolver-review` serves one snapshot bound to `_meta.computedAt`: headline/policy metrics and `summary.byStablecoin` counts plus median duration errors are computed before the 400-row public browse cap. Detail track records read those coin summaries even when every coin row is outside the sample; retained snapshots without them withhold aggregates. `rows` are display-only, with `_meta.publicRowLimit` / `publicRowsTruncated`; `incidentRowsTruncated` separately qualifies the producer cohort. Assessment-cap fields remain compatibility metadata (never truncated in v2; empty degraded responses zero limits). Missing/invalid snapshots return degraded `200` with empty rows; stale snapshots retain their generation and rows with `degradedReason="stale-cache"`.
 
+`summary.byStablecoin` is optional in both the runtime and OpenAPI contracts. Missing or rejected snapshots (including a methodology-version mismatch during deployment) omit it and name the failure in `_meta.degradedReason`; an empty array is reserved for a successfully reviewed empty cohort. Dossier track records show unavailable with the snapshot reason and retry control, not “no records,” when this aggregate is absent.
+
 For calibration passes, run `npm run calibrate:ddrr` to generate the advisory DDRR calibration report described in [process/ddrr-calibration.md](./process/ddrr-calibration.md). The report groups factor attribution, no-call/coverage debt, duration signed error, horizon expected-vs-observed calibration, K5 exit-collapse evidence, reserve/dependency nuance, and mint-incident timing without replaying current DDR logic over historical rows.
 
 ## Honest Limitations & Failure Modes

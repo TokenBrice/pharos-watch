@@ -7,9 +7,13 @@ import { loadDepegResolverReviewSnapshot } from "../lib/depeg-resolver-review-sn
 
 function degradedResponse(reason: string): DdrrResponse {
   const nowSec = Math.floor(Date.now() / 1000);
+  const summary = buildEmptyDdrrSummary();
+  // Snapshot failure is not an observed empty cohort. The reason is carried
+  // by _meta.degradedReason; per-coin consumers must render unavailable.
+  delete summary.byStablecoin;
   const response = buildDdrrResponseEnvelope({
     nowSec,
-    summary: buildEmptyDdrrSummary(),
+    summary,
     rows: [],
     assessedEventCount: 0,
     incidentRowLimit: 0,

@@ -197,6 +197,14 @@ Shared public-health floor: `worker/src/lib/public-health-assessment.ts`, backed
 
 Public/operator copy uses actual health warning evidence; unknown codes remain visible. Blacklist read failures expose null measurements with `unavailableReason: blacklist-read-failed|db-unavailable`; successful empty reads retain zeros. Browser probes and cards admit this unavailable branch without claiming zero gaps. Critical-duration labels use only the warning's named price-gap IDs; other missing prices stay in the separate coverage warning. Thresholds and recovery policy are unchanged.
 
+The public `HealthResponse.blacklist` contract (`shared/types/status/public-health.ts`) makes all five measurements nullable: `totalEvents`, `missingAmounts`, `recentMissingAmounts`, `recentWindowSec`, and `missingRatio`. A failed read sets these to `null` and supplies `unavailableReason: "blacklist-read-failed"`; an unavailable database supplies `"db-unavailable"`. The reason is nullable/optional for available or retained payloads. Consumers must show unavailable measurements, not zero events, zero gaps, or a healthy ratio. A successful empty observation may publish numeric zeros.
+
+Read failures use the ADR-29 `PublicHealthReadResult` boundary and cannot restore healthy diagnostics. Circuit reads publish `HealthResponse.circuits: null` with `circuitsUnavailableReason: "circuits-read-failed"` (or `"db-unavailable"`); successful reads still publish the circuit record map. Mint/burn critical read failures publish nullable `sync.freshnessStatus` / `sync.criticalLaneHealthy` and `unavailableReason: "mint-burn-read-failed"` or `"mint-burn-output-read-failed"`; DB failure uses `"db-unavailable"`. Unread major counts/symbols are nullable. The existing `queryErrors` fields carry `"mint-burn-output-read-failed"` / `"mint-burn-count-read-failed"` for their respective failed reads; a failed advisory count does not invalidate an independently observed healthy writer. Operator causes `circuit_query_failed` and `mint_burn_health_query_failed` are warning-severity and degrade availability rather than overriding unavailable evidence to healthy.
+
+When the DB sentinel fails, `/api/status` publishes `dataQuality: null` with `sectionErrors.dataQuality.code: "db-unavailable"`, nullable summary measurements with `summary.unavailableReason: "db-unavailable"`, and `reserveComposition.status: "unavailable"` / `reason: "db-unavailable"` with null coverage and counts. A successful empty reserve cohort remains distinct and may be healthy with observed zeros. `summary.transitionsLast24h` is nullable: a failed or absent aggregate carries `transitionsUnavailableReason: "status-transitions-read-failed"` plus the same `sectionErrors.statusTransitions.code`; DB failure carries `"db-unavailable"`. A successfully counted zero remains `0` with no unavailable reason. History shows unavailable count/flapping evidence instead of assuming no transitions.
+
+FX health admits its publication clock with canonical `assessFreshnessTimestamp` (60-second allowed skew): excessive future clocks publish null `ageSeconds` / `publishedAt`, `timestampReason: "future-timestamp"`, and a stale availability floor. Per-peg provenance continues to use the shared `assessFxPegAdmission` path: source clocks more than 300 seconds ahead already reject with `source-time-future`, used in `fx-source-provenance-unknown:<peg>=<reason>`; rejected clocks never create a healthy source claim. Blacklist cards also preserve partial evidence: `recentMissingAmounts: null` means recent gap evidence unavailable, not “no new gaps”.
+
 Related extracted loaders:
 
 - `worker/src/lib/status/derived-data.ts`
@@ -400,6 +408,7 @@ Heavy delivery is a separate gate, resolved from plans with `worker: "heavy"` in
 - `degraded` if any of:
   - any shared cache impact is `degraded`
   - the public mint/burn lane is `degraded` (once the lane has emitted real sync telemetry)
+  - circuit or critical mint/burn health evidence could not be read (`circuit_query_failed`, `mint_burn_health_query_failed`)
   - D1 capacity threshold state is `warning`, or the D1 capacity assessment could not be read
   - `openCircuitGroups >= 3`
   - any availability-critical cron has a single failed run

@@ -215,6 +215,26 @@ describe("DdrTrackRecordSection", () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
+  it.each(["missing-cache", "methodology-mismatch"])(
+    "shows unavailable rather than no records when the snapshot is rejected: %s",
+    (reason) => {
+      const query = mockReview([]);
+      delete query.data!.summary.byStablecoin;
+      query.data!._meta.degraded = true;
+      query.data!._meta.degradedReason = reason;
+
+      render(<DdrTrackRecordSection stablecoinId={COIN} />);
+
+      expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
+      expect(screen.getByText(`Snapshot reason: ${reason}`)).toBeTruthy();
+      expect(screen.queryByRole("group", { name: "DDR track record facts" })).toBeNull();
+      expect(screen.queryByRole("list", { name: "Reviewed depeg incidents" })).toBeNull();
+      expect(screen.queryByText(/no records/i)).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Retry ddr track record" }));
+      expect(query.refetch).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it("withholds statistics when the producer incident cohort itself is truncated", () => {
     const query = mockReview([PREDICTION_ROW]);
     query.data!._meta.incidentRowsTruncated = true;

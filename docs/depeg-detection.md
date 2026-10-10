@@ -206,6 +206,8 @@ The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts
 
 Current peg-summary observations are rederived from the latest stablecoins snapshot through `deriveCurrentPegObservationMap`, not from a numeric price plus an older cached analytics reference. Nominal or missing primary observations publish `currentPriceUnavailable: true` and `currentDeviationBps: null`; they are excluded from observed at-peg counts. Historical analytics fields remain attached to their accepted generation. If canonical incident projections cannot be read during a fallback recompute, the endpoint retains an available accepted analytics snapshot with `incident-projection-read-failed` and `no-store`, or returns explicit `503` when none exists.
 
+If a retained historical analytics row has no current observation-map entry, `/api/peg-summary` publishes `pegReference: null` with `pegReferenceUnavailable: true`; missing live evidence must not be labelled as an available reference.
+
 ## Stage 1 -- Detection
 
 ### Initialization

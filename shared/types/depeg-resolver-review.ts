@@ -462,9 +462,9 @@ export const DdrrSummarySchema = z.object({
   headlineLabel: z.string(),
   headline: DdrrV2SummaryMetricsSchema,
   byPredictionPolicy: z.array(DdrrV2SummarySegmentSchema),
-  // Retained snapshots may lack this projection; never substitute capped rows.
+  // Absent when the snapshot/projection is unavailable; never substitute capped rows.
   byStablecoin: z.array(DdrrStablecoinSummarySchema)
-    .describe("Per-coin counts and duration errors from the reviewed cohort before the public row cap; shares _meta.computedAt.")
+    .describe("Per-coin reviewed-cohort statistics before the public row cap, bound to _meta.computedAt. Omitted when unavailable; snapshot failures are named by _meta.degradedReason.")
     .optional(),
 });
 export type DdrrSummary = z.infer<typeof DdrrSummarySchema>;
@@ -499,12 +499,8 @@ export const DdrrResponseSchema = z.object({
 });
 export type DdrrResponse = z.infer<typeof DdrrResponseSchema>;
 
-/** OpenAPI documents the current generation-4 producer payload, not its transition input. */
+/** OpenAPI shares summary availability with runtime, while documenting current producer rows. */
 export const DdrrResponseOpenApiSchema = DdrrResponseSchema.extend({
-  summary: DdrrSummarySchema.extend({
-    byStablecoin: z.array(DdrrStablecoinSummarySchema)
-      .describe("Per-coin reviewed-cohort statistics computed before the public row cap, bound to _meta.computedAt."),
-  }),
   rows: z.array(DdrrRowSchema)
     .describe("Display sample bounded by _meta.publicRowLimit; population statistics belong to summary."),
 });

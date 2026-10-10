@@ -5,7 +5,7 @@ import {
   DDR_METHODOLOGY_VERSION_LABEL,
   DDRR_REVIEWER_VERSION,
 } from "@shared/lib/methodology-versions/depeg-resolver";
-import { type DdrrResponse, type DdrrRow } from "@shared/types/depeg-resolver-review";
+import { DdrrResponseSchema, DdrrResponseOpenApiSchema, type DdrrResponse, type DdrrRow } from "@shared/types/depeg-resolver-review";
 import { handleDepegResolverReview } from "../depeg-resolver-review";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { DDRR_SNAPSHOT_CACHE_GENERATION } from "../../lib/depeg-resolver-review-snapshot-cache";
@@ -209,6 +209,7 @@ describe("handleDepegResolverReview", () => {
     expect(["invalid-payload", "reviewer-version-mismatch"]).toContain(body._meta.degradedReason);
     expect(body._meta.reviewerVersion).toBe(DDRR_REVIEWER_VERSION);
     expect(body.summary.headline.recoveryLikelihoodAccuracyPct).toBeNull();
+    expect(body.summary).not.toHaveProperty("byStablecoin");
     expect(body.rows).toEqual([]);
   });
 
@@ -223,8 +224,56 @@ describe("handleDepegResolverReview", () => {
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body._meta.degraded).toBe(true);
     expect(body._meta.degradedReason).toBe("missing-cache");
+    expect(body.summary).not.toHaveProperty("byStablecoin");
+    expect(DdrrResponseSchema.safeParse(body).success).toBe(true);
+    expect(DdrrResponseOpenApiSchema.safeParse(body).success).toBe(true);
     expect(body.summary.headline.recoveryLikelihoodScoredCount).toBe(0);
     expect(body.summary.headline.meanSignedDurationErrorSec).toBeNull();
     expect(body.rows).toEqual([]);
+  });
+
+  it("withholds per-coin aggregates after a methodology cutover rejects the snapshot", async () => {
+    const payload = buildDdrrResponseEnvelope({
+      nowSec: 1_998_000, summary: buildEmptyDdrrSummary(), rows: [],
+      assessedEventCount: 0, methodologyVersions: ["4.6"],
+    });
+    const db = mockD1([{ match: "FROM cache WHERE key = ?", rows: [{
+      key: "depeg-resolver-review:snapshot", updated_at: payload._meta.computedAt,
+      value: JSON.stringify({
+        generation: DDRR_SNAPSHOT_CACHE_GENERATION,
+        methodologyVersion: "4.6",
+        reviewerVersion: DDRR_REVIEWER_VERSION,
+        payload,
+      }),
+    }] }]);
+
+    const body = await readJsonResponse<DdrrResponse>(await handleDepegResolverReview(db), 200);
+    expect(body._meta).toMatchObject({ degraded: true, degradedReason: "methodology-mismatch" });
+    expect(body.summary).not.toHaveProperty("byStablecoin");
+    expect(DdrrResponseSchema.safeParse(body).success).toBe(true);
+    expect(DdrrResponseOpenApiSchema.safeParse(body).success).toBe(true);
+    expect(DdrrResponseOpenApiSchema.shape.summary.shape.byStablecoin.isOptional()).toBe(true);
+  });
+
+  it("preserves an observed empty cohort as an available empty per-coin aggregate", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const payload = buildDdrrResponseEnvelope({
+      nowSec, summary: buildEmptyDdrrSummary(), rows: [],
+      assessedEventCount: 0, methodologyVersions: [DDR_METHODOLOGY_VERSION],
+    });
+    const db = mockD1([{ match: "FROM cache WHERE key = ?", rows: [{
+      key: "depeg-resolver-review:snapshot", updated_at: nowSec,
+      value: JSON.stringify({
+        generation: DDRR_SNAPSHOT_CACHE_GENERATION,
+        methodologyVersion: DDR_METHODOLOGY_VERSION,
+        reviewerVersion: DDRR_REVIEWER_VERSION,
+        payload,
+      }),
+    }] }]);
+
+    const body = await readJsonResponse<DdrrResponse>(await handleDepegResolverReview(db), 200);
+    expect(body._meta.degraded).toBe(false);
+    expect(body.summary.byStablecoin).toEqual([]);
+    expect(DdrrResponseOpenApiSchema.safeParse(body).success).toBe(true);
   });
 });
