@@ -53,11 +53,7 @@ export interface CurveStableSwapPoolPolicy {
   registryAddress: `0x${string}`;
   expectedRegistryCodeHash: `0x${string}`;
   lpTokenAddress: `0x${string}`;
-  poolTokens: readonly [
-    { address: `0x${string}`; symbol: "DAI"; decimals: 18 },
-    { address: `0x${string}`; symbol: "USDC"; decimals: 6 },
-    { address: `0x${string}`; symbol: "USDT"; decimals: 6 },
-  ];
+  poolTokens: typeof CURVE_STABLESWAP_DEPLOYMENT.poolTokens;
   mode: "active";
   scoreEligible: true;
 }
@@ -338,6 +334,13 @@ export function resolveCurveStableSwapTokenIndices(
   const inputIndex = policy.poolTokens.findIndex((token) => token.address === target.tokenIn.address);
   const outputIndex = policy.poolTokens.findIndex((token) => token.address === target.tokenOut.address);
   if (inputIndex < 0 || outputIndex < 0 || inputIndex === outputIndex) {
+    return { ok: false, reason: "invalid-curve-stableswap-target" };
+  }
+  if (
+    inputIndex === 0 ||
+    target.tokenIn.trackedAssetId !== policy.poolTokens[inputIndex]!.trackedAssetId ||
+    target.tokenOut.trackedAssetId !== policy.poolTokens[outputIndex]!.trackedAssetId
+  ) {
     return { ok: false, reason: "invalid-curve-stableswap-target" };
   }
   if (

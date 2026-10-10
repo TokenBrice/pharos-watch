@@ -37,6 +37,7 @@ export function buildAuthoritativeStagedPoolConfirmationIndex(
 
     const enforcedChains = enforcedChainsByProtocol.get(entry.normalizedProtocol) ?? new Set<string>();
     for (const chain of entry.supportedChains) {
+      if (entry.result.physicalPoolCensus?.incompleteChains.includes(chain)) continue;
       enforcedChains.add(chain);
     }
     enforcedChainsByProtocol.set(entry.normalizedProtocol, enforcedChains);

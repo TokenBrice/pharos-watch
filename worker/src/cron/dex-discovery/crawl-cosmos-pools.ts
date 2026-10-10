@@ -195,16 +195,20 @@ function parseOsmosisPool(value: unknown): OsmosisPool | null {
   };
 }
 
-function parseOsmosisPools(body: unknown): OsmosisPool[] | null {
+function parseOsmosisPools(body: unknown): { pools: OsmosisPool[]; rejectedRows: number } | null {
   const root = asRecord(body);
   if (!Array.isArray(root?.data)) return null;
   const pools: OsmosisPool[] = [];
+  let rejectedRows = 0;
   for (const value of root.data) {
     const parsed = parseOsmosisPool(value);
-    if (parsed == null) return null;
+    if (parsed == null) {
+      rejectedRows++;
+      continue;
+    }
     pools.push(parsed);
   }
-  return pools;
+  return { pools, rejectedRows };
 }
 
 function shortDenom(denom: string): string {
@@ -278,8 +282,8 @@ async function crawlOsmosisTargets(
     }
 
     let observedPoolCount = 0;
-    let unresolvedPoolCount = 0;
-    for (const pool of pools) {
+    let unresolvedPoolCount = pools.rejectedRows;
+    for (const pool of pools.pools) {
       // The filter is the server's claim; the pool's own denom list is the
       // evidence. A pool that cannot corroborate membership is not silently
       // dropped into a verified-empty census.
@@ -294,7 +298,7 @@ async function crawlOsmosisTargets(
 
     providerChecks.push(
       unresolvedPoolCount > 0
-        ? makeDexDeploymentProviderCheck(target, OSMOSIS_PROVIDER, "degraded")
+        ? makeDexDeploymentProviderCheck(target, OSMOSIS_PROVIDER, "degraded", { observedPoolCount: observedPoolCount || undefined })
         : makeDexDeploymentProviderCheck(target, OSMOSIS_PROVIDER, "success", { observedPoolCount }),
     );
   }
@@ -341,16 +345,20 @@ function parseNoblePool(value: unknown): NoblePool | null {
   return { poolId, algorithm, liquidity, raw: value };
 }
 
-function parseNoblePools(body: unknown): NoblePool[] | null {
+function parseNoblePools(body: unknown): { pools: NoblePool[]; rejectedRows: number } | null {
   const root = asRecord(body);
   if (!Array.isArray(root?.pools)) return null;
   const pools: NoblePool[] = [];
+  let rejectedRows = 0;
   for (const value of root.pools) {
     const parsed = parseNoblePool(value);
-    if (parsed == null) return null;
+    if (parsed == null) {
+      rejectedRows++;
+      continue;
+    }
     pools.push(parsed);
   }
-  return pools;
+  return { pools, rejectedRows };
 }
 
 /**
@@ -420,12 +428,14 @@ async function crawlNobleTargets(
   return {
     providerChecks: targets.map((target) => {
       let observedPoolCount = 0;
-      for (const pool of pools) {
+      for (const pool of pools.pools) {
         if (!pool.liquidity.some(({ denom }) => denom === target.address)) continue;
         observedPoolCount += 1;
         stageNoblePool(pool, target, context);
       }
-      return makeDexDeploymentProviderCheck(target, NOBLE_PROVIDER, "success", { observedPoolCount });
+      return makeDexDeploymentProviderCheck(target, NOBLE_PROVIDER, pools.rejectedRows > 0 ? "degraded" : "success", {
+        observedPoolCount: pools.rejectedRows > 0 && observedPoolCount === 0 ? undefined : observedPoolCount,
+      });
     }),
   };
 }

@@ -10,6 +10,7 @@ import {
   normalizeProtocol,
 } from "../pool-helpers";
 import { withCompleteVolume } from "./scoring-test-builders";
+import { rebuildMetricsFromPools } from "../scoring-helpers";
 
 describe("normalizeProtocol", () => {
   it("collapses hyphenated PancakeSwap variants", () => {
@@ -96,6 +97,22 @@ describe("computePoolPairQuality", () => {
 });
 
 describe("computeLiquidityScore", () => {
+  it.each([100_000_000, undefined])("preserves measured zero effective depth through rebuild and scoring (mcap %s)", (circulatingUsd) => {
+    const contribution = computePoolQualityContribution({
+      qualityTvlUsd: 10_000_000, effectiveTvlUsd: 10_000_000,
+      qualityMultiplier: 0.85, balanceRatio: 0, pairQuality: 1,
+    });
+    const rebuilt = rebuildMetricsFromPools([{
+      poolId: "ethereum:depleted", project: "curve", chain: "ethereum", symbol: "USDC-USDT",
+      tvlUsd: 10_000_000, volumeUsd1d: 0, source: "dl", poolType: "curve",
+      extra: { qualityAdjustedTvl: contribution.qualityAdjustedTvl, effectiveTvl: contribution.effectiveTvl },
+    }]);
+    const metrics = Object.assign(initMetrics("test", "TEST"), rebuilt);
+    expect(contribution.effectiveTvl).toBe(0);
+    expect(rebuilt.effectiveTvl).toBe(0);
+    expect(computeLiquidityScore(withCompleteVolume(metrics), 50, circulatingUsd).components.tvlDepth).toBe(0);
+  });
+
   it("happy path: score is in [0, 100] with reasonable inputs", () => {
     const m = initMetrics("test", "TEST");
     m.effectiveTvl = 5_000_000;

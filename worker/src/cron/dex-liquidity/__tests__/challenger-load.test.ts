@@ -6,6 +6,36 @@ import { loaderFixtures, loaderScenario } from "./challenger-load.test-support";
 afterEach(() => loaderFixtures.closeAll());
 
 describe("challenger load", () => {
+  it("keeps a coherent generation when publication switches pointers and cleans old payloads", async () => {
+    const { db, sqlite, payload } = loaderScenario();
+    payload(100, "old");
+    let published = false;
+    const reader = {
+      ...db,
+      prepare(sql: string) {
+        const statement = db.prepare(sql);
+        if (!sql.includes("FROM dex_price_challenger_snapshots")) return statement;
+        const all = statement.all.bind(statement);
+        statement.all = async <T>() => {
+          const result = await all<T>();
+          if (!published) {
+            payload(200, "new");
+            sqlite.exec("UPDATE dex_price_challenger_snapshots SET snapshot_at = 200, published_at = 210; DELETE FROM dex_price_challengers WHERE snapshot_at = 100");
+            published = true;
+          }
+          return result;
+        };
+        return statement;
+      },
+    } as D1Database;
+    const result = await loadPublishedDexPoolChallengers(reader, 20_000, 1_000, 220);
+    expect(published).toBe(true);
+    expect(result.challengersByStablecoin.get("coin-a")?.map((row) => row.poolId)).toEqual(["old"]);
+    expect(result.diagnostics).toMatchObject({ mode: "published", legacyFallbackCoins: [] });
+    expect((await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 220))
+      .challengersByStablecoin.get("coin-a")?.map((row) => row.poolId)).toEqual(["new"]);
+  });
+
   it("serves the exact freshness boundary but falls back one second later", async () => {
     const { db, payload } = loaderScenario();
     payload(100, "current");
@@ -73,15 +103,6 @@ describe("challenger load", () => {
               published_at: 110,
               has_rows: 1,
               source_coverage_complete: 1,
-            },
-          ],
-        },
-        {
-          match: "FROM dex_price_challengers",
-          rows: [
-            {
-              stablecoin_id: "coin-a",
-              snapshot_at: 100,
               pool_id: "coin-a:published",
               chain: "Ethereum",
               protocol: "published-protocol",
@@ -128,29 +149,6 @@ describe("challenger load", () => {
               published_at: 110,
               has_rows: 1,
               source_coverage_complete: 1,
-            },
-            {
-              stablecoin_id: "coin-b",
-              snapshot_at: 100,
-              published_at: 110,
-              has_rows: 0,
-              source_coverage_complete: 1,
-            },
-            {
-              stablecoin_id: "coin-c",
-              snapshot_at: 100,
-              published_at: 110,
-              has_rows: 1,
-              source_coverage_complete: 0,
-            },
-          ],
-        },
-        {
-          match: "FROM dex_price_challengers",
-          rows: [
-            {
-              stablecoin_id: "coin-a",
-              snapshot_at: 100,
               pool_id: "coin-a:published",
               chain: "Ethereum",
               protocol: "published-protocol",
@@ -161,16 +159,17 @@ describe("challenger load", () => {
             {
               stablecoin_id: "coin-b",
               snapshot_at: 100,
-              pool_id: "coin-b:published",
-              chain: "Base",
-              protocol: "published-protocol",
-              source_family: "published",
-              price_usd: 0.997,
-              tvl_usd: 40_000,
+              published_at: 110,
+              has_rows: 0,
+              source_coverage_complete: 1,
+              pool_id: null,
             },
             {
               stablecoin_id: "coin-c",
               snapshot_at: 100,
+              published_at: 110,
+              has_rows: 1,
+              source_coverage_complete: 0,
               pool_id: "coin-c:published",
               chain: "Solana",
               protocol: "published-protocol",
@@ -331,10 +330,6 @@ describe("challenger load", () => {
         },
         {
           match: "FROM dex_price_challenger_snapshots",
-          rows: [],
-        },
-        {
-          match: "FROM dex_price_challengers",
           rows: [],
         },
         {

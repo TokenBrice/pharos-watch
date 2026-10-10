@@ -71,6 +71,26 @@ afterEach(() => {
 });
 
 describe("Osmosis sidecar pool discovery", () => {
+  it("stages healthy Osmosis rows beside malformed rows without certifying absence", async () => {
+    mockFetch([{ match: OSMOSIS_POOLS_URL, body: { data: [
+      osmosisPool({ id: 1926, liquidityCap: "2500000" }), { chain_model: {} },
+    ] } }], { requireMatch: true });
+    const stage = context();
+    const result = await crawlCosmosPoolsStage({ coinTargets: [osmosisTarget()], context: stage.value });
+    expect(stage.pools.map((pool) => pool.poolId)).toEqual(["osmosis:1926"]);
+    expect(result.providerChecks[0]).toMatchObject({ status: "degraded", observedPoolCount: 1 });
+  });
+
+  it("stages healthy Noble rows beside unrelated malformed rows without certifying absence", async () => {
+    mockFetch([{ match: NOBLE_POOLS_URL, body: { pools: [
+      noblePool("1", ["uusdn", "uusdc"]), { id: "2", liquidity: null },
+    ] } }], { requireMatch: true });
+    const stage = context("usdn-noble");
+    const result = await crawlCosmosPoolsStage({ coinTargets: [nobleTarget()], context: stage.value });
+    expect(stage.pools.map((pool) => pool.poolId)).toEqual(["noble:1"]);
+    expect(result.providerChecks[0]).toMatchObject({ status: "degraded", observedPoolCount: 1 });
+  });
+
   it("stages only pools at or above the retained-pool floor and reports the observed count", async () => {
     const retained = osmosisPool({ id: 1926, liquidityCap: "2572405", type: 2 });
     const dust = osmosisPool({ id: 792, liquidityCap: "2" });

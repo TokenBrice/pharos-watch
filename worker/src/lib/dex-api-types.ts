@@ -79,6 +79,11 @@ export interface DexApiFetchResult {
   degraded: boolean;
   errors: string[];
   warnings?: string[];
+  /** Physical identities read before economic/token admission; unknown scopes cannot veto absence. */
+  physicalPoolCensus?: {
+    exactPoolKeys: string[];
+    incompleteChains: string[];
+  };
   /**
    * Chains whose capture failed inside an otherwise usable source, e.g. `["bsc"]`
    * for PancakeSwap when only BSC throws. Phase telemetry turns each entry into a

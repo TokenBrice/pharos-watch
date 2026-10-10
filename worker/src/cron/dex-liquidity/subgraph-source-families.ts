@@ -229,10 +229,11 @@ export async function fetchUniV3Data(
         signal: combinedSignal,
         // Messari rows normalize 1:1 (null when unreadable) so the page length
         // still drives pagination.
-        extractEntities: (data) => (messariSchema
-          ? (data as { liquidityPools?: UniV3MessariSubgraphPool[] } | undefined)?.liquidityPools
-            ?.map((pool) => normalizeMessariUniV3Pool(pool))
-          : (data as { pools?: UniV3SubgraphPool[] } | undefined)?.pools),
+        extractEntities: (data) => {
+          if (!messariSchema) return (data as { pools?: UniV3SubgraphPool[] } | undefined)?.pools;
+          const pools = (data as { liquidityPools?: unknown } | undefined)?.liquidityPools;
+          return Array.isArray(pools) ? pools.map((pool) => normalizeMessariUniV3Pool(pool)) : undefined;
+        },
         mapEntity: (pool) => {
           if (!pool) return [];
           const feeTier = parseInt(pool.feeTier, 10);

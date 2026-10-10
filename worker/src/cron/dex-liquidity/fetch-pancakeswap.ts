@@ -211,9 +211,10 @@ export async function fetchPancakeSwapPools(
         lastAttemptedSkip = skip;
         throwIfAborted(signal);
         const data = await fetchSubgraphJson<{ pools?: V3Pool[] }>(subgraphUrl, buildPoolsQuery(skip), signal);
+        if (!Array.isArray(data.pools)) throw new Error("malformed-response: pools must be an array");
         chainPagesFetched++;
         pagesFetched++;
-        const pagePools = data.pools ?? [];
+        const pagePools = data.pools;
         if (pagePools.length === 0) {
           cycleCompleted = true;
           nextCursor = PAGE_SIZE;
@@ -236,9 +237,12 @@ export async function fetchPancakeSwapPools(
               buildPoolHourDataQuery(poolIdBatch, oldestIncludedHourStart, currentHourStart),
               signal,
             );
+            if (!Array.isArray(hourData.poolHourDatas)) {
+              throw new Error("malformed-response: poolHourDatas must be an array");
+            }
 
             const malformedPoolIds = new Set<string>();
-            for (const row of hourData.poolHourDatas ?? []) {
+            for (const row of hourData.poolHourDatas) {
               const poolId = row.pool.id.toLowerCase();
               const volume = parseFloat(row.volumeUSD);
               if (!Number.isFinite(volume) || volume < 0) {

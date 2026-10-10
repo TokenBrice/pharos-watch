@@ -201,7 +201,7 @@ export function computeLiquidityScore(
   counters?: LiquidityFallbackCounters,
 ): { score: number | null; components: ScoreComponents } {
   // Component 1: TVL depth (30%) — uses effectiveTvl
-  const tvlInput = m.effectiveTvl > 0 ? m.effectiveTvl : m.totalTvlUsd;
+  const tvlInput = m.effectiveTvl;
   let tvlDepth: number;
   if (circulatingUsd != null && circulatingUsd > 0) {
     if (counters) counters.tvlDepthRelative++;

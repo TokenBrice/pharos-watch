@@ -348,6 +348,23 @@ describe("Curve legacy StableSwap 3pool policy", () => {
 });
 
 describe("Curve legacy StableSwap 3pool quoting", () => {
+  it("rejects DAI inputs and cross-wired tracked labels at the consumer token resolver", () => {
+    for (const inputIndex of [1, 2]) {
+      expect(resolveCurveStableSwapTokenIndices(target(inputIndex, 0)).ok).toBe(true);
+    }
+    const daiInput = target(0, 1);
+    expect(resolveCurveStableSwapTokenIndices(daiInput).ok).toBe(false);
+    daiInput.stablecoinId = "usdt-tether";
+    daiInput.tokenIn.trackedAssetId = "usdt-tether";
+    expect(resolveCurveStableSwapTokenIndices(daiInput).ok).toBe(false);
+    const swappedLabel = target(2, 1);
+    swappedLabel.tokenIn.trackedAssetId = "usdc-circle";
+    expect(resolveCurveStableSwapTokenIndices(swappedLabel).ok).toBe(false);
+    const wrongOutput = target(2, 0);
+    wrongOutput.tokenOut.trackedAssetId = "usdc-circle";
+    expect(resolveCurveStableSwapTokenIndices(wrongOutput).ok).toBe(false);
+  });
+
   it("encodes the legacy int128 selector and decodes the pinned USDT output", () => {
     const callData = encodeCurveStableSwapGetDy({
       inputIndex: 2,
@@ -536,6 +553,12 @@ describe("Curve legacy StableSwap 3pool quoting", () => {
     });
 
     expect(validateCurveStableSwapProfileProof(profile)).toEqual([]);
+    const mismatchedPool = { ...profile, poolId: "ethereum:0x1234567890123456789012345678901234567890" };
+    expect(validateCurveStableSwapProfileProof(mismatchedPool)).toContain("execution-pool-identity-mismatch");
+    const daiInput = { ...profile, tokenIn: { ...profile.tokenIn,
+      address: CURVE_3POOL_STABLESWAP_POLICY.poolTokens[0].address, decimals: 18,
+      trackedAssetId: "usdt-tether" } };
+    expect(validateCurveStableSwapProfileProof(daiInput)).toContain("invalid-curve-stableswap-target");
     profile.registryBindingProof!.tokenDecimalsProof[2]!.decimals = 18;
     expect(validateCurveStableSwapProfileProof(profile)).toContain("token-decimals-proof-mismatch");
   });

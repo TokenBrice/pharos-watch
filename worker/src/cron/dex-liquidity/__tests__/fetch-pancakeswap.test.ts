@@ -47,6 +47,25 @@ describe("fetchPancakeSwapPools", () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
+  it.each([undefined, null, {}, "invalid"])("keeps pools but leaves malformed hourly collections unobserved: %s", async (collection) => {
+    vi.mocked(fetchTextWithRetry)
+      .mockImplementationOnce(async () => textResult(response({ data: { pools: [makePool("0xpool")] } })))
+      .mockImplementationOnce(async () => textResult(response({ data: { poolHourDatas: collection } })))
+      .mockImplementation(async () => textResult(response({ data: { pools: [] } })));
+    const result = await fetchPancakeSwapPools("graph-key");
+    expect(result.pools[0]?.volume24hUsd).toBeNull();
+    expect(result.pools).toHaveLength(1);
+    expect(result.warnings?.some((warning) => warning.includes("volume batch failures"))).toBe(true);
+  });
+
+  it.each([undefined, null, {}])("rejects malformed pool inventories instead of certifying empty: %s", async (collection) => {
+    vi.mocked(fetchTextWithRetry).mockImplementation(async () => textResult(response({ data: { pools: collection } })));
+    const result = await fetchPancakeSwapPools("graph-key");
+    expect(result.ok).toBe(false);
+    expect(result.degraded).toBe(true);
+    expect(result.errors.every((error) => error.includes("malformed-response"))).toBe(true);
+  });
+
 
   it("normalizes v3 pools and sums hourly trailing volume across a UTC boundary", async () => {
     const now = new Date("2026-04-08T13:37:00Z");

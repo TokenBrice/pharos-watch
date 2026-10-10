@@ -10,6 +10,8 @@ import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
   buildDexMeasuredExecutionTargetId,
   getDexMeasuredExecutionFreshnessMaxSec,
+  validateDexMeasuredExecutionProfile,
+  getDexMeasuredExecutionProbeNotionals,
   type DexMeasuredExecutionStableSwapNgFactoryBindingProof,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
@@ -595,6 +597,38 @@ describe("reviewed Curve StableSwap-NG quoting", () => {
     ]);
   });
 
+  it("admits fresh finalized source quotes before target capture without refreshing their clock", () => {
+    const measuredTarget = { ...target(), capturedAt: BLOCK_TIMESTAMP + 600 };
+    const profile = buildDexMeasuredExecutionProfile({
+      target: measuredTarget, targetGenerationId: "targets-1", quoteGenerationId: "quotes-1",
+      quotedAt: BLOCK_TIMESTAMP, blockNumber: BLOCK_NUMBER,
+      endpointAddress: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.poolAddress,
+      endpointCodeHash: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.expectedPoolCodeHash,
+      stableSwapNgFactoryBindingProof: factoryProof(),
+      points: getDexMeasuredExecutionProbeNotionals(measuredTarget.retainedTvlUsd).map((inputUsd) => {
+        const amountInRaw = BigInt(inputUsd) * 1_000_000n;
+        const amountOutRaw = amountInRaw * 9_999n / 10_000n;
+        return {
+          amountInRaw: String(amountInRaw), amountOutRaw: String(amountOutRaw),
+          callData: encodeCurveStableSwapNgGetDy({ inputIndex: 0, outputIndex: 1, amountInRaw }),
+          returnData: encodeFunctionResult({ abi: POOL_ABI, functionName: "get_dy", result: amountOutRaw }),
+          inputUsd, outputUsd: inputUsd * 0.9999, costBps: 1, passesCostBound: true,
+        };
+      }),
+    });
+    const validationInput = {
+      profile, quotedTarget: measuredTarget, currentTarget: measuredTarget,
+      expectedTargetGenerationId: "targets-1", expectedQuoteGenerationId: "quotes-1",
+      nowSec: BLOCK_TIMESTAMP + 600,
+    };
+    expect(profile.quotedAt).toBe(BLOCK_TIMESTAMP);
+    expect(validateCurveStableSwapNgProfileProof(profile)).toEqual([]);
+    expect(validateDexMeasuredExecutionProfile(validationInput)).toEqual([]);
+    expect(validateDexMeasuredExecutionProfile({ ...validationInput,
+      nowSec: BLOCK_TIMESTAMP + getDexMeasuredExecutionFreshnessMaxSec(profile.adapterProfileId) + 1,
+    })).toContain("stale-observation");
+  });
+
   it("validates quote calldata and the full same-block factory proof", () => {
     const measuredTarget = target();
     const callData = encodeCurveStableSwapNgGetDy({
@@ -629,6 +663,9 @@ describe("reviewed Curve StableSwap-NG quoting", () => {
     });
 
     expect(validateCurveStableSwapNgProfileProof(profile)).toEqual([]);
+    const mismatchedPool = { ...profile,
+      poolId: `ethereum:${CURVE_DUSD_USDC_STABLESWAP_NG_POLICY.poolAddress}` };
+    expect(validateCurveStableSwapNgProfileProof(mismatchedPool)).toContain("execution-pool-identity-mismatch");
     profile.stableSwapNgFactoryBindingProof!.blockNumber = BLOCK_NUMBER - 1;
     expect(validateCurveStableSwapNgProfileProof(profile)).toContain("block-binding-mismatch");
     profile.stableSwapNgFactoryBindingProof!.blockNumber = BLOCK_NUMBER;

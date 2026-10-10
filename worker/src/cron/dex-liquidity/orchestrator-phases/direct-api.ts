@@ -280,7 +280,7 @@ function compactDirectApiProviderEntry(
   // succeeded and let the index decide whether the census may enforce.
   const authoritativeExactPoolKeys =
     entry.normalizedProtocol !== "uniswap-v3-shadow" && entry.result.ok && !entry.result.degraded
-      ? new Set<string>()
+      ? new Set<string>(entry.result.physicalPoolCensus?.exactPoolKeys)
       : undefined;
   const measuredExecutionPools: DexApiPool[] = [];
   const retainedPools: DexApiPool[] = [];

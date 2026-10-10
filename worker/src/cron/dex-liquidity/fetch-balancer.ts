@@ -4,6 +4,7 @@ import { DIRECT_API_DEFAULT_MAX_PAGES } from "./direct-api-policy";
 import { runPaginatedDirectApiFetch } from "./direct-api-paginated";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 
 const BALANCER_API = "https://api-v3.balancer.fi/";
 /**
@@ -458,6 +459,8 @@ function shapeBalancerPool(
 export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
   const pageSize = 1000;
   const malformedRowsByPage = new Map<number, number>();
+  const physicalPoolKeys = new Set<string>();
+  const incompleteCensusChains = new Set<string>();
   const fetchResult = await runPaginatedDirectApiFetch<{
     pool: DexApiPool;
     exactCandidate?: { poolId: string; joinKey: string; stableMath: boolean };
@@ -495,6 +498,16 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
         : { error: `Malformed response on page ${page}` };
     },
     mapRow: (rawPool, { page }) => {
+      const identityRow = isDexApiRecord(rawPool) ? rawPool : null;
+      const identityChain = typeof identityRow?.chain === "string" ? BALANCER_CHAIN_MAP[identityRow.chain] : undefined;
+      const identityAddress = typeof identityRow?.address === "string" ? canonicalEvmAddress(identityRow.address) : null;
+      if (identityChain && identityAddress) {
+        physicalPoolKeys.add(canonicalExitRouteScopedKey(identityChain, identityAddress));
+      } else if (identityChain) {
+        incompleteCensusChains.add(identityChain);
+      } else {
+        for (const chain of Object.values(BALANCER_CHAIN_MAP)) incompleteCensusChains.add(chain);
+      }
       if (!isBalancerPool(rawPool)) {
         malformedRowsByPage.set(page, (malformedRowsByPage.get(page) ?? 0) + 1);
         return null;
@@ -651,10 +664,16 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
       },
     });
   }
-  return makeDexApiFetchResult(results, {
-    ok: successfulPages > 0,
-    degraded: errors.length > 0,
-    errors,
-    warnings,
-  });
+  return {
+    ...makeDexApiFetchResult(results, {
+      ok: successfulPages > 0,
+      degraded: errors.length > 0,
+      errors,
+      warnings,
+    }),
+    physicalPoolCensus: {
+      exactPoolKeys: [...physicalPoolKeys],
+      incompleteChains: [...incompleteCensusChains],
+    },
+  };
 }

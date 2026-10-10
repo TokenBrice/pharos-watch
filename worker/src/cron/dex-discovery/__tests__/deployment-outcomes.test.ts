@@ -53,6 +53,16 @@ function outcomeWrite(overrides: { chain: string; address: string }) {
 }
 
 describe("DEX deployment outcomes", () => {
+  it.each([0, 1])("retains positive degraded native counts without certifying empty: %s", (count) => {
+    const deployment = { chain: "noble", address: "uusdn", decimals: 6 };
+    const [outcome] = classifyDexDeploymentOutcomes({
+      stablecoinId: "usdn-noble", deployments: [deployment], pools: [], nowSec: 100,
+      providerChecks: [{ ...deployment, provider: "noble-swap", status: "degraded", observedPoolCount: count }],
+    });
+    expect(outcome?.observedPoolCount).toBe(count);
+    expect(outcome?.outcome).toBe(count > 0 ? "observed_pools" : "provider_inaccessible");
+  });
+
 
   it("cannot certify deployment-wide absence from Curve-only empty evidence", () => {
     const providerChecks = [

@@ -143,7 +143,7 @@ export function classifyDexDeploymentOutcomes(params: {
     const key = deploymentKey(deployment.chain, deployment.address);
     const stagedPoolCount = params.pools.filter((pool) => matchesDeployment(pool, deployment)).length;
     const providerObservedPoolCount = params.providerChecks
-      .filter((check) => check.status === "success" && deploymentKey(check.chain, check.address) === key)
+      .filter((check) => check.status !== "failure" && deploymentKey(check.chain, check.address) === key)
       .reduce((max, check) => Math.max(max, check.observedPoolCount ?? 0), 0);
     const observedPoolCount = Math.max(stagedPoolCount, providerObservedPoolCount);
     const attempt = resolveDexCensusAttempt({

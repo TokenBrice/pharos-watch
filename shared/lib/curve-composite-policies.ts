@@ -304,6 +304,12 @@ export const CURVE_NXUSD_METAPOOL_POLICY: CurveMetapoolPolicy = {
 };
 
 const ETHEREUM_DAI: CurveCompositeToken = CURVE_STABLESWAP_DEPLOYMENT.poolTokens[0];
+// DAI is an intermediate base coin here, not a tracked composite route endpoint.
+const ETHEREUM_DAI_INTERMEDIATE: CurveCompositeToken = {
+  address: CURVE_STABLESWAP_DEPLOYMENT.poolTokens[0].address,
+  symbol: CURVE_STABLESWAP_DEPLOYMENT.poolTokens[0].symbol,
+  decimals: CURVE_STABLESWAP_DEPLOYMENT.poolTokens[0].decimals,
+};
 const ETHEREUM_USDC: CurveCompositeToken = {
   ...CURVE_STABLESWAP_DEPLOYMENT.poolTokens[1],
   trackedAssetId: "usdc-circle",
@@ -399,7 +405,7 @@ function ethereumLegacyFactory3CrvMetapool(input: {
     expectedImplementationCodeHash:
       "0x260a286cc14e91f4a2d4a966e2e5f5030543a7d2f090a623f5fa15ba174a50f3",
     poolTokens: [trackedToken, ETHEREUM_3CRV],
-    executionTokens: [trackedToken, ETHEREUM_DAI, ETHEREUM_USDC, ETHEREUM_USDT],
+    executionTokens: [trackedToken, ETHEREUM_DAI_INTERMEDIATE, ETHEREUM_USDC, ETHEREUM_USDT],
     inputIndex: 0,
     outputIndex: 2,
     metapool: {
@@ -529,7 +535,7 @@ export const CURVE_GUSD_3CRV_METAPOOL_POLICY = shadowMetapoolPolicy({
       decimals: 2,
       trackedAssetId: "gusd-gemini",
     },
-    ETHEREUM_DAI,
+    ETHEREUM_DAI_INTERMEDIATE,
     ETHEREUM_USDC,
     ETHEREUM_USDT,
   ],
