@@ -506,7 +506,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 2,
     reproducibility: "network-derived",
     script: "scripts/maintenance/generate-public-datasets.ts",
-    sourcePaths: ["data/depeg-events/**", "shared/lib/api-endpoints/datasets.ts", "shared/lib/stablecoins/registry.ts"],
+    sourcePaths: ["data/depeg-events/**", "scripts/lib/depeg-ledger-capture.ts", "scripts/lib/public-dataset-artifacts.ts", "shared/lib/api-endpoints/datasets.ts", "shared/lib/stablecoins/registry.ts"],
   }),
   generatedArtifact({
     id: "llms-txt",

@@ -9,9 +9,14 @@ import { mockFetch, mockFetchStrict } from "@shared/test-utils/mock-fetch";
 import { loadPublicDatasetLiveInputs, testExports } from "../maintenance/generate-public-datasets";
 import * as depegSnapshot from "../../src/lib/depeg-event-snapshot";
 import { copyDatasetWorkspace, datasetBytes } from "./generate-public-datasets.test-support";
+import * as depegCapture from "../lib/depeg-ledger-capture";
+import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 
 beforeEach(() => {
   vi.spyOn(depegSnapshot, "readDepegEventSnapshot").mockImplementation(() => [makeEvent(null), makeCoverageSentinel()]);
+  vi.spyOn(depegCapture, "readDepegLedgerCapture").mockImplementation(() => makeCapture(
+    depegSnapshot.readDepegEventSnapshot({ missing: "throw" }).length,
+  ));
 });
 
 const execFileAsync = promisify(execFile);
@@ -108,6 +113,19 @@ function makeCoverageSentinel() {
     ...makeEvent(null),
     id: 43,
     startedAt: Date.parse("2026-02-13T23:59:00Z") / 1000,
+  };
+}
+
+function makeCapture(eventCount = 2): depegCapture.DepegLedgerCapture {
+  return {
+    schemaVersion: 1,
+    captureId: `sha256:${"a".repeat(64)}`,
+    observationStartedAtISO: "2026-05-19T10:00:00.000Z",
+    observedAtISO: "2026-05-19T10:01:00.000Z",
+    sourceUrl: "https://api.example.test/api/depeg-events",
+    methodologyVersionLabel: "v7.0",
+    eventCount,
+    apiTotal: eventCount,
   };
 }
 
@@ -348,7 +366,7 @@ describe("generate-public-datasets", () => {
       coinCount: 1,
     }]);
     expect(specs.find((spec) => spec.topic === "top-stablecoins")?.methodologyLabel).toBe("safety-score v7.25");
-    expect(specs.find((spec) => spec.topic === "depeg-history")?.methodologyLabel).toBe("depeg-dews v6.0");
+    expect(specs.find((spec) => spec.topic === "depeg-history")?.methodologyLabel).toBe(`depeg-dews ${DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}`);
     expect(specs.find((spec) => spec.topic === "scores-latest")?.methodologyLabel).toBe(
       "safety-score v7.25 | dews v6.0 | liquidity v5.6",
     );
@@ -373,6 +391,66 @@ describe("generate-public-datasets", () => {
     expect(pegSpec?.metadataStatus).toBe("approximated");
     expect(pegSpec?.metadataNote).toContain("legacy snapshot 2026-05-16");
     warning.mockRestore();
+  });
+
+  it("labels later recovery and worsened peaks as retrospective ledger state rather than the dated snapshot's as-of state", async () => {
+    const snapshotClock = "2026-05-16T10:00:00.000Z";
+    const envelope = { ...makeEnvelope("2026-05-16"), generatedAt: Date.parse(snapshotClock) / 1000 };
+    const laterRecoveredEvent = {
+      ...makeEvent(null),
+      startedAt: Date.parse("2026-05-16T09:00:00Z") / 1000,
+      endedAt: Date.parse("2026-05-18T09:00:00Z") / 1000,
+      peakDeviationBps: 900,
+      peakPrice: 0.91,
+    };
+    vi.mocked(depegSnapshot.readDepegEventSnapshot).mockReturnValue([laterRecoveredEvent, makeCoverageSentinel()]);
+    mockFetchStrict([{ match: "https://api.example.test/api/snapshots/2026-05-16.json", body: envelope }]);
+    const inputs = await loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16");
+    const specs = testExports.buildTopicSpecs(inputs.envelope, inputs.depegEvents, inputs.effectiveSnapshotDate, {
+      historical: true,
+      depegCapture: inputs.depegCapture,
+    });
+    const spec = specs.find((spec) => spec.topic === "depeg-history")!;
+    const artifacts = testExports.buildTopicArtifacts(spec, inputs.asOfISO);
+    const json = JSON.parse(artifacts.json);
+    const ndjsonMeta = JSON.parse(artifacts.ndjson.split("\n")[0]!);
+
+    expect(json.rows).toEqual([expect.objectContaining({
+      id: "42",
+      endedAtISO: "2026-05-18T09:00:00.000Z",
+      durationSec: 172800,
+      recoveryPrice: 1,
+      peakDeviationBps: 900,
+      peakPrice: 0.91,
+    })]);
+    expect(json._meta).toMatchObject({
+      asOfISO: inputs.depegCapture.observedAtISO,
+      windowSnapshotAsOfISO: snapshotClock,
+      sourceGeneration: inputs.depegCapture.captureId,
+      sourceObservationStartedAtISO: inputs.depegCapture.observationStartedAtISO,
+      methodologyLabel: "depeg-dews v7.0",
+      freshnessContract: expect.stringContaining("retrospective windowed event history"),
+    });
+    expect(ndjsonMeta._meta).toMatchObject({
+      asOfISO: inputs.depegCapture.observedAtISO,
+      sourceGeneration: inputs.depegCapture.captureId,
+      windowSnapshotAsOfISO: snapshotClock,
+    });
+    expect(JSON.parse(artifacts.ndjson.split("\n")[1]!).id).toBe("42");
+    expect(artifacts.csv).toContain(`As of: ${inputs.depegCapture.observedAtISO}`);
+    expect(artifacts.csv).toContain(`Source generation: ${inputs.depegCapture.captureId}`);
+    expect(artifacts.csv).toContain("retrospective windowed event history");
+    expect(artifacts.csv).not.toContain("point-in-time sample");
+    const market = testExports.buildTopicArtifacts(specs.find((spec) => spec.topic === "top-stablecoins")!, inputs.asOfISO);
+    expect(JSON.parse(market.json)._meta.asOfISO).toBe(snapshotClock);
+  });
+
+  it("refuses to publish depeg state without ledger-capture provenance", () => {
+    const spec = testExports.buildTopicSpecs(makeEnvelope("2026-05-16"), [makeEvent(null)], "2026-05-16")
+      .find((spec) => spec.topic === "depeg-history")!;
+    expect(() => testExports.buildTopicArtifacts(spec, "2026-05-16T10:00:00.000Z")).toThrow(
+      "require captured event-ledger provenance",
+    );
   });
 
   it("loads depeg events from the full local shard corpus before projecting the rolling window", async () => {

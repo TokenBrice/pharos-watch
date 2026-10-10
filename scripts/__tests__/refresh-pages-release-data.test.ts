@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { refreshPagesReleaseData, type ReleaseRefreshDependencies } from "../maintenance/refresh-pages-release-data.ts";
+import { SnapshotIntegrityError } from "../lib/sync-from-api";
 
 const tempDirs: string[] = [];
 
@@ -96,6 +97,37 @@ describe("Pages release data refresh", () => {
 
     expect(result.digests).toMatchObject({ ok: false, refreshedCount: 1, shrinkRejected: true });
     expect(JSON.parse(readFileSync(join(paths.repoRoot, "data/digests.json"), "utf8"))).toHaveLength(2);
+  });
+
+  it("retains every committed depeg shard when pagination fails its integrity ceiling", async () => {
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const paths = fixture();
+    const shardPath = join(paths.repoRoot, "data/depeg-events/2025.json");
+    writeFileSync(shardPath, JSON.stringify([{ id: "historical" }]));
+    const indexPath = join(paths.repoRoot, "data/depeg-events/index.json");
+    const originalIndex = readFileSync(indexPath, "utf8");
+    const originalShard = readFileSync(shardPath, "utf8");
+    const result = await refreshPagesReleaseData({
+      dependencies: {
+        digests: () => ok(),
+        depegEvents: async () => {
+          throw new SnapshotIntegrityError("Depeg pagination reached its safety ceiling with an outstanding cursor");
+        },
+        publicDatasets: () => {
+          expect(readFileSync(indexPath, "utf8")).toBe(originalIndex);
+          expect(readFileSync(shardPath, "utf8")).toBe(originalShard);
+          return ok();
+        },
+      },
+      env: { NODE_ENV: "test" },
+      refreshDir: paths.refreshDir,
+      repoRoot: paths.repoRoot,
+    });
+
+    expect(result.depegEvents.ok).toBe(false);
+    expect(readFileSync(indexPath, "utf8")).toBe(originalIndex);
+    expect(readFileSync(shardPath, "utf8")).toBe(originalShard);
+    expect(readFileSync(join(paths.refreshDir, "depeg.log"), "utf8")).toContain("using committed depeg snapshot");
   });
 
   it("rolls public datasets back without undoing successful snapshot refreshes", async () => {

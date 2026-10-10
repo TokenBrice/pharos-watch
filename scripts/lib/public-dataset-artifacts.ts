@@ -12,6 +12,10 @@ export interface PublicDatasetMetadata {
   asOfISO: string;
   sourceUrl: (variant: DatasetVariant) => string;
   methodologyLabel: string;
+  freshnessContract?: string;
+  sourceGeneration?: string;
+  sourceObservationStartedAtISO?: string;
+  windowSnapshotAsOfISO?: string;
   metadataStatus?: "approximated";
   metadataNote?: string;
 }
@@ -24,14 +28,20 @@ function metadataFields(metadata: PublicDatasetMetadata, variant: DatasetVariant
     asOfISO: metadata.asOfISO,
     sourceUrl: metadata.sourceUrl(variant),
     methodologyLabel: metadata.methodologyLabel,
-    freshnessContract: FRESHNESS_CONTRACT,
+    freshnessContract: metadata.freshnessContract ?? FRESHNESS_CONTRACT,
+    ...(metadata.sourceGeneration ? { sourceGeneration: metadata.sourceGeneration } : {}),
+    ...(metadata.sourceObservationStartedAtISO ? { sourceObservationStartedAtISO: metadata.sourceObservationStartedAtISO } : {}),
+    ...(metadata.windowSnapshotAsOfISO ? { windowSnapshotAsOfISO: metadata.windowSnapshotAsOfISO } : {}),
     ...(metadata.metadataStatus ? { metadataStatus: metadata.metadataStatus, metadataNote: metadata.metadataNote } : {}),
   };
 }
 
 function preambleLine(metadata: PublicDatasetMetadata, variant: DatasetVariant): string {
   const suffix = metadata.metadataStatus ? ` | Metadata: ${metadata.metadataStatus}${metadata.metadataNote ? ` (${metadata.metadataNote})` : ""}` : "";
-  return `Pharos pharos.watch | Endpoint: ${metadata.endpoint} | As of: ${metadata.asOfISO} | URL: ${metadata.sourceUrl(variant)} | Methodology: ${metadata.methodologyLabel} | Freshness: ${FRESHNESS_CONTRACT}${suffix}`;
+  const provenance = metadata.sourceGeneration
+    ? ` | Source generation: ${metadata.sourceGeneration} | Source observation started: ${metadata.sourceObservationStartedAtISO} | Window snapshot as of: ${metadata.windowSnapshotAsOfISO}`
+    : "";
+  return `Pharos pharos.watch | Endpoint: ${metadata.endpoint} | As of: ${metadata.asOfISO} | URL: ${metadata.sourceUrl(variant)} | Methodology: ${metadata.methodologyLabel} | Freshness: ${metadata.freshnessContract ?? FRESHNESS_CONTRACT}${provenance}${suffix}`;
 }
 
 export function buildPublicDatasetArtifacts<T>({
