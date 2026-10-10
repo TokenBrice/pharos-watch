@@ -11,11 +11,8 @@ const DetailedYieldDecisionLedgerSchema = DetailedYieldRankingSchema.shape.decis
 const DetailedAltYieldSourceSchema = DetailedYieldRankingSchema.shape.altSources.unwrap().unwrap().element;
 
 /**
- * Alternate rails are published as a bounded identity projection: enough to
- * count and label what the selected source was chosen over (`sourceKey` +
- * `dataSource` + `confidenceTier`) and to compare its headline economics, but
- * not the detail-only evidence (rejection codes, venue review, access flags)
- * that only the arbitration surfaces read.
+ * Alternate rails publish bounded identity, economics, and source-lane fields.
+ * Full rejection, venue review, and access evidence remains detail-only.
  */
 export const YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT = 8;
 
@@ -25,7 +22,10 @@ export const YieldRankingSummaryAltSourceSchema = DetailedAltYieldSourceSchema.p
   confidenceTier: true,
   currentApy: true,
   sourceTvlUsd: true,
-}).strict();
+  yieldType: true,
+  yieldSource: true,
+  apy30d: true,
+}).partial({ yieldType: true, yieldSource: true, apy30d: true }).strict();
 
 export const YieldRankingSummaryProvenanceSchema = DetailedYieldRankingProvenanceSchema.pick({
   sourceKey: true,
@@ -40,7 +40,8 @@ export const YieldRankingSummaryProvenanceSchema = DetailedYieldRankingProvenanc
   usedDefaultSafety: true,
   safetyProvenance: true,
   safetyReason: true,
-}).strict();
+  anomalies: true,
+}).partial({ anomalies: true }).strict();
 
 export const YieldRankingSummarySourceRiskSchema = DetailedYieldSourceRiskSchema.pick({
   sourceRiskScore: true,

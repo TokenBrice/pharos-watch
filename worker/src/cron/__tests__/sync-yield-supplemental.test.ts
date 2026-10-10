@@ -96,6 +96,7 @@ import {
   getYieldSupplementalPendleBackoffCacheKey,
   getYieldSupplementalRunOutcomeCacheKey,
 } from "../yield-sync/cache/supplemental-cache-keys";
+import { supplementalFamilySnapshotHash } from "../yield-sync/cache/supplemental-cache-keys";
 
 async function flushMicrotasks() {
   for (let i = 0; i < 8; i += 1) {
@@ -496,6 +497,43 @@ describe("syncYieldSupplemental", () => {
       familyCacheResults: { morpho: "retained-previous", beefy: "published" },
     });
   });
+  it.each([0, 1])("retains Compound when %s RPC attempts leave fixed targets unconfigured", async (attemptedCount) => {
+    const retained = { value: buildYieldSupplementalFamilyCache([beefyCandidate()], 1_700_000_000), updatedAt: 1_700_000_000 };
+    vi.mocked(getCaches).mockResolvedValue(new Map([[getYieldSupplementalFamilyCacheKey("compoundV3"), retained]]));
+    vi.mocked(fetchCompoundV3SupplyRates).mockResolvedValue({ results: [], telemetry: {
+      ...emptyRpcTelemetry(), targetCount: 2, attemptedCount, missingTargetCount: 2,
+      missingReasonCounts: { "no-rpc-config": 2 },
+    } });
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+    expect(vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === getYieldSupplementalFamilyCacheKey("compoundV3"))).toBe(false);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.familyCacheResults.compoundV3).toBe("retained-previous");
+    expect(metadata.degradedFamilies).toContain("compoundV3");
+    expect(metadata.degradedFamilyReasons.compoundV3).toBe("no-rpc-config");
+    expect(metadata.sourceCoverage.optionalRpcTelemetry.compoundV3.missingReasonCounts).toEqual({ "no-rpc-config": 2 });
+  });
+
+  it("publishes a genuinely empty Compound inventory rather than retaining it as a failure", async () => {
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+    expect(JSON.parse(result.metadata ?? "{}").familyCacheResults.compoundV3).toBe("empty-published");
+  });
+
+  it("leaves an older bound outcome after its upsert fails following a committed newer family", async () => {
+    const oldRow = { value: buildYieldSupplementalFamilyCache([], 1_700_000_000), updatedAt: 1_700_000_000 };
+    const key = getYieldSupplementalFamilyCacheKey("morpho");
+    const rows = new Map([[key, oldRow]]);
+    vi.mocked(getCaches).mockImplementation(async () => new Map(rows));
+    vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+    vi.mocked(setCacheIfNewer).mockImplementation(async (_db, cacheKey, value, updatedAt) => {
+      rows.set(cacheKey, { value, updatedAt });
+      return { written: true, skippedBecauseNewer: false };
+    });
+    vi.mocked(setCache).mockRejectedValueOnce(new Error("outcome-upsert-failed"));
+    await expect(syncYieldSupplemental({} as D1Database, undefined, new Map())).rejects.toThrow("outcome-upsert-failed");
+    expect(rows.get(key)?.value).not.toBe(oldRow.value);
+    expect(supplementalFamilySnapshotHash(rows.get(key)!)).not.toBe(supplementalFamilySnapshotHash(oldRow));
+  });
+
 
   it("does not claim output when candidate-bearing family writes lose the newer-cache fence", async () => {
     vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));

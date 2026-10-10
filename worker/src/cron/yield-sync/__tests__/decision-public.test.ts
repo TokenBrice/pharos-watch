@@ -159,6 +159,20 @@ describe("deriveRejectionReasonCode (via buildPublicDecisionLedger alternatives)
     expect(ledger.alternatives[0]?.rejectionReasonCode).toBe("lower-confidence");
   });
 
+  it("prioritizes canonical lower-confidence over a reward-heavy alternate", () => {
+    const candidate = makeSource({
+      sourceKey: "reward-alt", confidenceTier: "discovered",
+      currentApy: 5, apyReward: 4.5, apy30d: 4.5,
+      sourceRisk: makeSourceRisk({ rewardShare: 0.9 }),
+    });
+    const ledger = ledgerFor(selected, [candidate], 1);
+    expect(ledger.selectedReasonCode).toBe("curated-over-discovered");
+    expect(ledger.alternatives[0]).toMatchObject({
+      sourceKey: "reward-alt", apy30dDelta: -0.5,
+      rejectionReasonCode: "lower-confidence",
+    });
+  });
+
   it("codes 'rewards-only' when reward share exceeds REWARDS_ONLY_SHARE (0.5)", () => {
     const candidate = makeSource({
       sourceKey: "alt",

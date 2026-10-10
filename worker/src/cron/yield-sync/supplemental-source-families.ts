@@ -309,7 +309,7 @@ function rpcFamilyFetchEndedDegraded(
   telemetry: OptionalRpcFamilyTelemetry | undefined,
 ): boolean {
   return status === "failed"
-    || (telemetry != null && telemetry.attemptedCount > 0 && telemetry.missingTargetCount > 0);
+    || (telemetry != null && telemetry.targetCount > 0 && telemetry.missingTargetCount > 0);
 }
 
 /**
@@ -582,6 +582,7 @@ async function runCompoundFamily(
     sourceFamilyCount: results.length,
     status,
     degraded: rpcFamilyFetchEndedDegraded(status, telemetry),
+    degradedReason: telemetry.missingReasonCounts["no-rpc-config"] > 0 ? "no-rpc-config" : undefined,
     telemetry,
   };
 }

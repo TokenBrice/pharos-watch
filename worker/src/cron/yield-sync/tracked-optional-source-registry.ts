@@ -54,7 +54,7 @@ interface TrackedOptionalSourceEntry {
   run: (context: TrackedOptionalSourceContext) => Promise<ResolvedYield | null>;
 }
 
-type OracleAnchorRow = { exchange_rate: number; recorded_at: number };
+type OracleAnchorRow = { exchange_rate: number; recorded_at: number; source_observed_at?: number | null };
 
 async function loadNavOracleAnchorRow(
   db: D1Database,
@@ -63,19 +63,21 @@ async function loadNavOracleAnchorRow(
   startSec: number,
   minAgeDays: number,
   maxAgeDays: number,
+  useObservationClock = false,
 ): Promise<OracleAnchorRow | null> {
   const newestAllowed = startSec - minAgeDays * DAY_SECONDS;
   const oldestAllowed = startSec - maxAgeDays * DAY_SECONDS;
+  const anchorClock = useObservationClock ? "source_observed_at" : "recorded_at";
   const rawRow = await db
     .prepare(
       `SELECT /* pharos:yield-sync:nav-oracle-prior-anchor */
-         exchange_rate, recorded_at FROM yield_history
+         exchange_rate, recorded_at, source_observed_at FROM yield_history
        WHERE stablecoin_id = ? AND source_key = ?
          AND exchange_rate IS NOT NULL
-         AND recorded_at <= ?
-         AND recorded_at >= ?
+         AND ${anchorClock} <= ?
+         AND ${anchorClock} >= ?
          AND (publication_generation_id IS NULL OR publication_state = 'published')
-       ORDER BY recorded_at DESC LIMIT 1`,
+       ORDER BY ${anchorClock} DESC LIMIT 1`,
     )
     .bind(stablecoinId, sourceKey, newestAllowed, oldestAllowed)
     .first<OracleAnchorRow>();
@@ -94,13 +96,13 @@ async function loadNavOracleAnchorRow(
   return db
     .prepare(
       `SELECT /* pharos:yield-sync:nav-oracle-prior-anchor-daily */
-         exchange_rate, recorded_at FROM yield_history_daily
+         exchange_rate, recorded_at, source_observed_at FROM yield_history_daily
        WHERE stablecoin_id = ? AND source_key = ?
          AND exchange_rate IS NOT NULL
-         AND recorded_at <= ?
-         AND recorded_at >= ?
+         AND ${anchorClock} <= ?
+         AND ${anchorClock} >= ?
          AND (publication_generation_id IS NULL OR publication_state = 'published')
-       ORDER BY recorded_at DESC LIMIT 1`,
+       ORDER BY ${anchorClock} DESC LIMIT 1`,
     )
     .bind(stablecoinId, sourceKey, newestAllowed, oldestAllowed)
     .first<OracleAnchorRow>();
@@ -127,7 +129,7 @@ async function loadMidasMmevOracleAnchorRow(
   db: D1Database,
   startSec: number,
 ): Promise<OracleAnchorRow | null> {
-  return loadNavOracleAnchorRow(db, MIDAS_MMEV_ID, MIDAS_MMEV_NAV_ORACLE_SOURCE_KEY, startSec, 7, 45);
+  return loadNavOracleAnchorRow(db, MIDAS_MMEV_ID, MIDAS_MMEV_NAV_ORACLE_SOURCE_KEY, startSec, 7, 45, true);
 }
 
 /**
@@ -201,16 +203,16 @@ export const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
     stablecoinId: MIDAS_MMEV_ID,
     sourceKey: MIDAS_MMEV_NAV_ORACLE_SOURCE_KEY,
     run: async (context) => {
-      const anchorRow = await loadMidasMmevOracleAnchorRow(context.db, context.startSec);
-      const daysDelta = anchorRow ? (context.startSec - anchorRow.recorded_at) / DAY_SECONDS : 0;
-
       const candidate = await runTimedOptionalSource(
         "Midas mMEV NAV oracle source",
         context.signal,
         (budgetSignal) => fetchMidasMmevNavOracleSource({
-          prevExchangeRate: anchorRow?.exchange_rate ?? null,
-          daysDelta,
-          comparisonAnchorObservedAt: anchorRow?.recorded_at ?? null,
+          loadAnchor: async (observedAt) => {
+            const anchor = await loadMidasMmevOracleAnchorRow(context.db, observedAt);
+            return anchor?.source_observed_at != null
+              ? { exchangeRate: anchor.exchange_rate, observedAt: anchor.source_observed_at } : null;
+          },
+          nowSec: context.startSec,
           signal: budgetSignal,
           chainRpcs: context.chainRpcs,
         }),

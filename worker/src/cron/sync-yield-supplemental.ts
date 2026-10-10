@@ -1,5 +1,6 @@
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { getCaches, setCache, setCacheIfNewer } from "../lib/db-cache";
+import { logWorkerEventArgs } from "../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { reportCronProgress } from "../lib/cron-progress";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
@@ -9,6 +10,7 @@ import {
   getYieldSupplementalFamilyCacheKey,
   getYieldSupplementalRunOutcomeCacheKey,
   type SupplementalFamilyCacheResult,
+  supplementalFamilySnapshotHash,
 } from "./yield-sync/cache/supplemental-cache-keys";
 import {
   loadSupplementalSourceFamilies,
@@ -171,6 +173,17 @@ export async function syncYieldSupplemental(
     });
   };
 
+  const retainedFamilyRows = await getCaches(db,
+    SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => getYieldSupplementalFamilyCacheKey(family))).catch((error) => {
+      if (signal?.aborted) throw error;
+      logWorkerEventArgs("handler", "warn", "[yield-supplemental] Snapshot identity unavailable; retained outcomes remain unknown", error);
+      return null;
+    });
+  const familySnapshotHashes: Partial<Record<SupplementalSourceFamilyKey, string>> = retainedFamilyRows
+    ? Object.fromEntries(SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => [
+      family, supplementalFamilySnapshotHash(retainedFamilyRows.get(getYieldSupplementalFamilyCacheKey(family)) ?? null),
+    ])) : {};
+
   await reportSupplementalProgress("source-family-fetch", "Fetching supplemental yield source families", {
     itemsDone: 0,
     metadata: {
@@ -282,10 +295,11 @@ export async function syncYieldSupplemental(
     if (discardedValues.length > 0) {
       sourceFamilySummaries[family.key].dedupeDiscardedValues = discardedValues;
     }
+    const familyCacheValue = buildYieldSupplementalFamilyCache(dedupedFamilyCandidates, startSec);
     const familyCacheResult = await setCacheIfNewer(
       db,
       getYieldSupplementalFamilyCacheKey(family.key),
-      buildYieldSupplementalFamilyCache(dedupedFamilyCandidates, startSec),
+      familyCacheValue,
       startSec,
       signal,
     );
@@ -297,14 +311,17 @@ export async function syncYieldSupplemental(
         : familyCacheResult.written
           ? "published"
           : "skipped-newer";
-    if (familyCacheResult.written) supplementalCandidatesWritten += dedupedFamilyCandidates.length;
+    if (familyCacheResult.written) {
+      supplementalCandidatesWritten += dedupedFamilyCandidates.length;
+      familySnapshotHashes[family.key] = supplementalFamilySnapshotHash({ value: familyCacheValue, updatedAt: startSec });
+    }
   }
   // B1/B16: publish the per-family outcome so the next publication can name the
   // families whose snapshot was retained.
   await setCache(
     db,
     getYieldSupplementalRunOutcomeCacheKey(),
-    buildYieldSupplementalRunOutcome(familyCacheResults, degradedFamilies, startSec, degradedFamilyReasons),
+    buildYieldSupplementalRunOutcome(familyCacheResults, degradedFamilies, startSec, degradedFamilyReasons, familySnapshotHashes),
     signal,
   );
   await reportSupplementalProgress("complete", "Published supplemental yield source caches", {

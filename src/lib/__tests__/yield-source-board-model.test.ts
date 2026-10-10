@@ -2,12 +2,51 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildYieldSourceBoardModel, inferLaneConfidenceTier } from "@/lib/yield-source-board-model";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import type { YieldBenchmarkRegistry } from "@shared/types";
+import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
+import type { YieldRanking } from "@shared/types";
+import { YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT } from "@shared/types/yield-summary";
 
+function projectRows(rankings: YieldRanking[]) {
+  return projectYieldRankingsSummary({ rankings, riskFreeRate: 4, scalingFactor: 8, medianApy: null, updatedAt: 1_800_000_000 });
+}
 afterEach(() => {
   vi.useRealTimers();
 });
 
 describe("buildYieldSourceBoardModel", () => {
+  it("preserves detailed source lanes and anomaly evidence through the summary projection", () => {
+    const rankings = [makeYieldRanking({
+      dataSource: "onchain",
+      provenance: makeYieldProvenance({ anomalies: ["low-source-tvl"] }),
+      altSources: [makeAltYieldSource({ dataSource: "defillama", apy30d: 7 })],
+    })];
+    const summary = projectRows(rankings);
+    const detailModel = buildYieldSourceBoardModel(rankings);
+    const summaryModel = buildYieldSourceBoardModel(summary.rankings);
+    expect(summaryModel.groups).toEqual(detailModel.groups);
+    expect(summaryModel.anomalyDetails).toEqual(detailModel.anomalyDetails);
+    expect(summaryModel.anomalyCount).toBe(1);
+    expect(summaryModel.anomalyUnavailableCount).toBe(0);
+    expect(summaryModel.compositionMissingSourceCount).toBe(0);
+  });
+
+  it("keeps complete totals independent of bounded alternate lane detail", () => {
+    const rankings = [makeYieldRanking({
+      altSources: Array.from({ length: YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT + 2 }, (_, index) =>
+        makeAltYieldSource({ sourceKey: `alt-${index}` })),
+    })];
+    const summary = projectRows(rankings);
+    const model = buildYieldSourceBoardModel(summary.rankings);
+    expect(model.representedSourceCount).toBe(1 + rankings[0].altSources.length);
+    expect(model.compositionMissingSourceCount).toBe(2);
+    expect(model.groups.reduce((sum, lane) => sum + lane.representedSourceCount, 0)).toBe(1 + YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT);
+    const legacy = { ...summary.rankings[0], provenance: null, altSources: undefined };
+    expect(buildYieldSourceBoardModel([legacy])).toMatchObject({
+      representedSourceCount: model.representedSourceCount,
+      compositionMissingSourceCount: rankings[0].altSources.length,
+      anomalyUnavailableCount: 1,
+    });
+  });
   it("summarizes selected rows, alternate rows, confidence, switches, anomalies, and source-row APY", () => {
     const rankings = [
       makeYieldRanking({

@@ -21,6 +21,7 @@ import {
   getYieldSupplementalRunOutcomeCacheKey,
   parseYieldSupplementalSourcesCache,
   type SupplementalFamilyCacheResult,
+  supplementalFamilySnapshotHash,
 } from "../yield-sync/cache/supplemental-cache-keys";
 import { loadYieldSyncState } from "../yield-sync/state-loading";
 import { getSupplementalFamilyStaleThresholdSec } from "../yield-sync/supplemental-source-families";
@@ -190,10 +191,14 @@ describe("supplemental family cache acceptance window", () => {
     ) as Record<SupplementalSourceFamilyKey, SupplementalFamilyCacheResult>;
     familyCacheResults.morpho = "retained-previous";
 
+    const rows = freshRequiredFamilyRows(nowSec);
+    const morphoRow = supplementalFamilyCacheRow([], nowSec);
+    rows[getYieldSupplementalFamilyCacheKey("morpho")] = morphoRow;
     installYieldCacheReader(vi.mocked(getCache), {
-      ...freshRequiredFamilyRows(nowSec),
+      ...rows,
       [getYieldSupplementalRunOutcomeCacheKey()]: cacheRow(
-        buildYieldSupplementalRunOutcome(familyCacheResults, ["morpho"], nowSec),
+        buildYieldSupplementalRunOutcome(familyCacheResults, ["morpho"], nowSec,
+          { morpho: "fetch-failed" }, { morpho: supplementalFamilySnapshotHash(morphoRow) }),
         nowSec,
       ),
     });
@@ -201,7 +206,32 @@ describe("supplemental family cache acceptance window", () => {
     const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
 
     expect(state.supplementalMeta.degradedFamilies).toEqual(["morpho"]);
+    expect(state.supplementalMeta.degradedFamilyReasons).toEqual({ morpho: "fetch-failed" });
+    expect(state.supplementalMeta.unknownOutcomeFamilies).not.toContain("morpho");
   });
+
+  it.each([0, 7 * HOUR_SEC])("does not attribute an obsolete outcome to a replacement family aged %s seconds", async (ageSec) => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const oldRow = supplementalFamilyCacheRow([], nowSec - HOUR_SEC);
+    const currentRow = supplementalFamilyCacheRow([morphoCandidate(nowSec - ageSec)], nowSec - ageSec);
+    const results = Object.fromEntries(SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) =>
+      [family, "retained-previous"])) as Record<SupplementalSourceFamilyKey, SupplementalFamilyCacheResult>;
+    installYieldCacheReader(vi.mocked(getCache), {
+      ...freshRequiredFamilyRows(nowSec),
+      [getYieldSupplementalFamilyCacheKey("morpho")]: currentRow,
+      [getYieldSupplementalRunOutcomeCacheKey()]: cacheRow(buildYieldSupplementalRunOutcome(
+        results, ["morpho"], nowSec - HOUR_SEC, { morpho: "old-fetch-failed" },
+        { morpho: supplementalFamilySnapshotHash(oldRow) }), nowSec - HOUR_SEC),
+    });
+    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+    expect(state.supplementalMeta.degradedFamilies).not.toContain("morpho");
+    expect(state.supplementalMeta.degradedFamilyReasons).not.toHaveProperty("morpho");
+    expect(state.supplementalMeta.unknownOutcomeFamilies).toContain("morpho");
+    expect(state.supplementalCandidates).toHaveLength(ageSec === 0 ? 1 : 0);
+    if (ageSec > 0) expect(state.supplementalMeta.unavailableRequiredFamilies).toContain("morpho");
+  });
+
 
   it("ignores a run-outcome row written by a different cache version", async () => {
     const db = makeDb();

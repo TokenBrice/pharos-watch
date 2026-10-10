@@ -10,6 +10,7 @@ import {
   type YieldPysInputsAtPublish,
 } from "@shared/types/yield";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 
@@ -37,6 +38,10 @@ import {
   makeYieldSourceMeta,
   mockD1,
 } from "./yield-publication.test-support";
+import { handleBackfillYieldHistory } from "../../api/backfill-yield-history";
+import { cleanupYieldSourceTest, mockYieldSourceRoutes } from "./yield-source.test-support";
+import { baseEvaluationInput } from "./yield-evaluation.test-support";
+import { evaluateYieldSources } from "../yield-sync/evaluation";
 
 // Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
 const MIGRATION_FIXTURES_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtures");
@@ -109,6 +114,74 @@ describe("publishYieldCoordinatorResults", () => {
       },
     };
   }
+
+  it("deduplicates Zephyr cron generations and backfill without weakening generation CAS or trailing statistics", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const bucket = Math.floor(FIXED_NOW.getTime() / 1000 / 3600) * 3600;
+    const sourceKey = "protocol-api:zys-zephyr-protocol";
+    const source = makeEvaluatedSource({ id: "zys-zephyr-protocol", symbol: "ZYS", sourceKey,
+      dataSource: "protocol-api", yieldType: "nav-appreciation", sourceObservedAt: bucket });
+    const publish = async (startSec: number, observedAt: number, apy = 4.8) => {
+      const evaluated = { ...source, sourceObservedAt: observedAt, currentApy: apy };
+      const benchmark = makeBenchmarkMeta({ fetchedAt: startSec });
+      const artifacts = buildPreviewYieldRankingsArtifacts({ evaluatedSources: [evaluated],
+        bestSourceKeyByCoin: new Map([[evaluated.id, sourceKey]]), riskFreeRate: benchmark.rate,
+        riskFreeRateMeta: benchmark, riskFreeRates: makeBenchmarkRegistry(benchmark),
+        dlPoolsMeta: makeYieldSourceMeta(), safetySnapshot: makeSafetySnapshotMeta(), medianApy: apy, startSec });
+      return publishYieldCoordinatorResults({ ...makePublishParams({ db }), ...artifacts,
+        evaluatedSources: artifacts.acceptedSources, startSec });
+    };
+    try {
+      expect((await publish(bucket + 10, bucket)).ok).toBe(true);
+      expect((await publish(bucket + 25, bucket)).ok).toBe(true);
+      mockYieldSourceRoutes([{ match: "zephyrprotocol.com/api/v1/historicalreturns",
+        headers: { "x-last-success-at": String((bucket + 123) * 1000) }, body: { oneDay: { effectiveApy: 4.8 } } }]);
+      const response = await handleBackfillYieldHistory({ db, url: new URL("https://api.pharos.watch/api/backfill-yield-history") });
+      expect((await response.json() as { rowsInserted: number }).rowsInserted).toBe(0);
+      expect(sqlite.prepare("SELECT recorded_at, source_observed_at FROM yield_history").all())
+        .toEqual([{ recorded_at: bucket, source_observed_at: bucket }]);
+
+      const stats = (startSec: number, useLegacyHistory = false) => {
+        const historyRows = sqlite.prepare("SELECT * FROM yield_history").all().map((row) => ({
+          stablecoin_id: String(row.stablecoin_id), source_key: String(row.source_key),
+          recorded_at: Number(row.recorded_at), is_best: Number(row.is_best), apy: Number(row.apy),
+          source_tvl_usd: null, data_source: "protocol-api", yield_source: null, yield_type: "nav-appreciation",
+        }));
+        const input = baseEvaluationInput({ startSec, sevenDaysAgoSec: startSec - 7 * DAY_SECONDS,
+          resolved: [{ id: source.id, symbol: source.symbol, yield: {
+            sourceKey, dataSource: "protocol-api", yieldType: "nav-appreciation", yieldSource: source.yieldSource,
+            currentApy: 8, apyBase: 8, apyReward: null, sourcePool: null, sourceTvlUsd: null,
+            exchangeRate: null, sourceObservedAt: bucket + 3600, comparisonAnchorObservedAt: null,
+          } }],
+          sourceHistory: new Map([[`${source.id}::${sourceKey}`, historyRows]]),
+        });
+        if (useLegacyHistory) {
+          input.sourceHistory = new Map();
+          input.legacyHistoryById = new Map([[source.id, historyRows.map((row) => ({
+            ...row, source_key: "legacy-best", apy: row.recorded_at === bucket + 3600 ? 2 : row.apy,
+          }))]]);
+        }
+        return evaluateYieldSources(input).evaluatedSources[0];
+      };
+      const before = stats(bucket + 3610);
+      expect((await publish(bucket + 3610, bucket + 3600, 8)).ok).toBe(true);
+      const after = stats(bucket + 3625);
+      expect(after.apy30d).toBeCloseTo(before.apy30d);
+      expect(after.stdDev30d).toBeCloseTo(before.stdDev30d!);
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM yield_history").get()).toEqual({ n: 2 });
+      expect(stats(bucket + 3625, true).apy30d).toBeCloseTo((4.8 + 2 + 8) / 3);
+      const loser = await publish(bucket + 3605, bucket + 7200, 99);
+      expect(loser.ok).toBe(true);
+      if (!loser.ok) throw new Error("Expected a successful losing-generation publication");
+      expect(loser.cacheWriteSkipped).toBe(true);
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM yield_history").get()).toEqual({ n: 2 });
+      expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key='yield-rankings'").get())
+        .toEqual({ updated_at: bucket + 3610 });
+    } finally {
+      cleanupYieldSourceTest();
+      sqlite.close();
+    }
+  });
 
   it("rolls back rankings, rows, and generation state when the atomic sentinel fails", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
@@ -1339,12 +1412,16 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources benchmark projection", (
     // amber-tints it without the 5-day daily bound travelling with the rate.
     expect(payload.benchmarks?.USD).toMatchObject({
       recordAgeSec: 36 * 3600,
+      maxFetchAgeSec: YIELD_BENCHMARK_SCORE_TTL_SEC,
       maxRecordAgeSec: 5 * DAY_SECONDS,
     });
     expect(payload.benchmarks?.CAD).toMatchObject({
       recordAgeSec: 25 * DAY_SECONDS + 12 * 3600,
+      maxFetchAgeSec: YIELD_BENCHMARK_SCORE_TTL_SEC,
       maxRecordAgeSec: 45 * DAY_SECONDS,
     });
     expect(payload.provenance?.benchmarks?.CAD?.maxRecordAgeSec).toBe(45 * DAY_SECONDS);
+    expect(payload.provenance?.benchmark.maxFetchAgeSec).toBe(YIELD_BENCHMARK_SCORE_TTL_SEC);
+    expect(payload.provenance?.benchmarks?.CAD?.maxFetchAgeSec).toBe(YIELD_BENCHMARK_SCORE_TTL_SEC);
   });
 });

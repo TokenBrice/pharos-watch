@@ -26,6 +26,7 @@ import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
 import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatPercent, formatScore } from "@shared/lib/format";
@@ -533,6 +534,7 @@ export function YieldMobileCard({
     [row, scalingFactor, methodologyVersion, riskFreeRate, benchmarks],
   );
   const resolvedBenchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
+  const workbenchLink = getYieldWorkbenchLink(row.id);
 
   return (
     <article
@@ -701,7 +703,7 @@ export function YieldMobileCard({
           Provider
         </TableSourceLink>
         <Link
-          href={buildStablecoinUrl(row.id, "yield/")}
+          href={workbenchLink.href}
           prefetch={false}
           onClick={() => {
             trackEvent("yield_row_action", {
@@ -710,10 +712,10 @@ export function YieldMobileCard({
               warning_count: warningCount,
             });
           }}
-          aria-label={`Open full yield analysis for ${row.symbol}`}
+          aria-label={`${workbenchLink.label} for ${row.symbol}`}
           className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium text-foreground hover:bg-accent"
         >
-          <span>Deep dive</span>
+          <span>{workbenchLink.isWorkbench ? "Deep dive" : workbenchLink.label}</span>
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
       </div>

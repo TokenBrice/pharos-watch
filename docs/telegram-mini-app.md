@@ -151,7 +151,11 @@ Version skew returns `409 contract-version-mismatch` or `409 catalog-version-mis
 
 The client renders only server-confirmed state. A mutation leaves the pressed/selected value unchanged while its request is pending, marks the initiating control busy, disables the other mutation controls, and replaces state only after a successful response. A failed mutation therefore keeps the previous confirmed value without a misleading optimistic flip or rollback animation.
 
+Successful `forget-me` is terminal for the open client: retained state and undo are cleared, signed reads/writes and refreshes are revoked, and native Back/Settings/Main buttons are hidden and detached. Captured late callbacks cannot dispatch; only Close remains.
+
 Every successful session read or mutation also records the response `stateRevision` and the local receive time. For an older Worker's full-state response, the client derives the same opaque revision with `telegramMiniAppStateRevision()` after excluding the bundled catalog. If a later session refresh fails, the last confirmed state stays visible but the shell enters an explicit stale mode: it shows the revision and refresh time, disables all mutations, and requires a successful **Retry refresh** before editing becomes available again. Stale data is never silently presented as current, and a failed refresh never discards a user's readable settings.
+
+Watcher status uses enabled global/direct/preset families, not row existence: retained empty subscribers have no enabled alerts. Indefinite pause and timed snooze suppress the active heading; timed snoozes expire at the shared client `nowSec` deadline. Delivery history remains visible independently.
 
 Suggested-coin actions remain useful when mutations are unavailable. A followed suggestion focuses and briefly highlights its existing watchlist card; an unfollowed suggestion populates and focuses search. The transient highlight uses reduced-motion-safe scrolling and clears deterministically.
 
@@ -291,6 +295,8 @@ Pulse publication reuses heavy public sections on a 15-minute cadence, but only 
 Publication is ordered so the heavy-section reuse marker can never claim work that was not durably published: the snapshot cache write commits first, and only then does the marker advance. A failed snapshot write surfaces as an `error` outcome on the `telegram-pulse-snapshot` scheduled sidecar (with `snapshotPublished: false` and the write error preserved in the cron metadata) instead of being swallowed; a failed marker write after a successful snapshot write degrades the sidecar and leaves the marker behind so the next run recomputes the heavy sections.
 
 `quality.status` is `partial` when a non-critical public telemetry loader failed. Public copy stays generic and never includes raw D1 or provider errors; Access-gated `/api/status` keeps field-level Telegram telemetry diagnostics for operators. Unavailable telemetry takes precedence over privacy suppression: if `pendingDeliveries` cannot be loaded, the response returns `pendingDeliveries: null` and lists `pendingDeliveries` in `quality.unavailableFields`, not in `privacy.suppressedFields`.
+
+The public board checks `quality.unavailableFields` before ranking/history rows. Failed `topCoins` or `watcherHistory` reads show a field-specific unavailable state; empty-ranking and not-yet-recorded-history placeholders require successful reads.
 
 Freshness is split deliberately:
 

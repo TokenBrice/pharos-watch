@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { buildStablecoinUrl } from "@shared/lib/urls";
+import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
 import { YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import type {
@@ -14,6 +14,7 @@ import type {
 } from "@/lib/yield-source-board-model";
 
 function DisclosureRowFrame({ detail, children }: { detail: YieldSourceBoardRowDetail; children: ReactNode }) {
+  const workbenchLink = getYieldWorkbenchLink(detail.id);
   return (
     <li className="flex flex-col gap-1 py-2 sm:flex-row sm:items-baseline sm:gap-3">
       <div className="flex shrink-0 items-center gap-2 sm:w-56">
@@ -21,7 +22,9 @@ function DisclosureRowFrame({ detail, children }: { detail: YieldSourceBoardRowD
           {detail.yieldTypeLabel}
         </Badge>
         <Link
-          href={buildStablecoinUrl(detail.id, "yield/")}
+          href={workbenchLink.href}
+          aria-label={`${workbenchLink.label} for ${detail.symbol}`}
+          title={workbenchLink.label}
           className="pharos-focus-ring rounded-sm text-sm font-medium text-foreground underline-offset-4 hover:underline"
         >
           {detail.symbol}

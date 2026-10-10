@@ -72,6 +72,7 @@ describe("handleBackfillYieldHistory", () => {
       "zys-zephyr-protocol",
       "protocol-api:zys-zephyr-protocol",
       1_730_000_000,
+      1_730_000_000,
       4.5,
       4.5,
       null,
@@ -112,7 +113,7 @@ describe("handleBackfillYieldHistory", () => {
     const insertStmt = db.getHistory().find((stmt) =>
       stmt.sql.includes("INSERT OR IGNORE INTO yield_history"),
     );
-    expect(insertStmt?.binds[8]).toBe(0);
+    expect(insertStmt?.binds[9]).toBe(0);
   });
 
   it("skips unavailable protocol observations without writing history", async () => {

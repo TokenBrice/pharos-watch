@@ -326,10 +326,10 @@ export function resolveYieldRowSafety(input: YieldRowSafetyInput): YieldRowSafet
             };
       return {
         ...shared,
-        safetyScore: trancheSafety.score,
-        safetyGrade: scoreToGrade(trancheSafety.score),
-        safetyProvenance: "opportunity-safety",
-        safetyReason: usedDefaultSafety ? "underlying-report-card-score-missing" : null,
+        safetyScore: safetyEvidenceObserved ? trancheSafety.score : underlyingSafetyScore,
+        safetyGrade: safetyEvidenceObserved ? scoreToGrade(trancheSafety.score) : underlyingSafetyGrade,
+        safetyProvenance: safetyEvidenceObserved ? "opportunity-safety" : usedDefaultSafety ? "default-safety" : input.ratedProvenance,
+        safetyReason: safetyEvidenceObserved ? null : baseSafetyReason({ usedDefaultSafety, underlyingSafetyGrade }),
         sourceRisk: {
           ...baseSourceRisk,
           underlyingSafetyScore,

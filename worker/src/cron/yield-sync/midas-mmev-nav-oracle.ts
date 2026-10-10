@@ -21,8 +21,8 @@ const MIDAS_NAV_ORACLE_MAX_FUTURE_SKEW_SEC = 5 * 60;
 
 interface MidasMmevNavOracleOptions {
   prevExchangeRate?: number | null;
-  daysDelta?: number;
   comparisonAnchorObservedAt?: number | null;
+  loadAnchor?: (observedAt: number) => Promise<{ exchangeRate: number; observedAt: number } | null>;
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
   nowSec?: number;
@@ -75,8 +75,8 @@ export async function fetchMidasMmevNavOracleSource(
 ): Promise<ResolvedYieldCandidate | null> {
   const {
     prevExchangeRate = null,
-    daysDelta = 0,
     comparisonAnchorObservedAt = null,
+    loadAnchor,
     signal,
     chainRpcs,
     nowSec = Math.floor(Date.now() / 1000),
@@ -116,11 +116,16 @@ export async function fetchMidasMmevNavOracleSource(
     const currentPriceFloat = finiteDecimalNumberFromBigInt(round.answer, decimals);
     if (currentPriceFloat == null || currentPriceFloat <= 0) return null;
 
-    const prevPriceFloat = typeof prevExchangeRate === "number" && Number.isFinite(prevExchangeRate) && prevExchangeRate > 0
-      ? prevExchangeRate
-      : null;
+    const anchor = loadAnchor ? await loadAnchor(round.updatedAt) : {
+      exchangeRate: prevExchangeRate, observedAt: comparisonAnchorObservedAt,
+    };
+    const prevPriceFloat = typeof anchor?.exchangeRate === "number" && Number.isFinite(anchor.exchangeRate) && anchor.exchangeRate > 0
+      ? anchor.exchangeRate : null;
+    const anchorObservedAt = anchor?.observedAt;
+    const daysDelta = typeof anchorObservedAt === "number" && Number.isFinite(anchorObservedAt)
+      ? (round.updatedAt - anchorObservedAt) / DAY_SECONDS : 0;
 
-    if (prevPriceFloat == null || daysDelta < 1) {
+    if (prevPriceFloat == null || anchorObservedAt == null) {
       return buildMidasMmevNavCandidate({
         apy: 0,
         apyBase: null,
@@ -129,6 +134,7 @@ export async function fetchMidasMmevNavOracleSource(
         comparisonAnchorObservedAt: null,
       });
     }
+    if (!Number.isFinite(daysDelta) || daysDelta < 1 || daysDelta > 45) return null;
 
     const apy = (Math.pow(currentPriceFloat / prevPriceFloat, 365.25 / daysDelta) - 1) * 100;
     // B12 — a short or mis-anchored window annualizes without bound; the shared
@@ -141,7 +147,7 @@ export async function fetchMidasMmevNavOracleSource(
       apyBase: apy,
       exchangeRate: currentPriceFloat,
       sourceObservedAt: round.updatedAt,
-      comparisonAnchorObservedAt,
+      comparisonAnchorObservedAt: anchorObservedAt ?? null,
     });
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));

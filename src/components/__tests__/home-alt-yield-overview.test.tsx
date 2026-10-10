@@ -15,6 +15,8 @@ vi.mock("@/lib/logos", () => ({ logosById: {}, getLogoSrc: () => undefined }));
 
 import { HomeAltYieldOverview } from "@/components/home-alt-yield-overview";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
+import { makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
+import { YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "@shared/lib/yield-opportunity-provenance";
 
 function makeSummaryRow(id: string, symbol: string, apy30d: number, pys: number | null) {
   return {
@@ -65,6 +67,21 @@ afterEach(() => {
 });
 
 describe("HomeAltYieldOverview", () => {
+  it("marks opportunity safety while preserving live and default safety provenance", () => {
+    const data = makeSummaryPayload(null);
+    data.rankings = [
+      { ...makeSummaryRow("usdc-circle", "USDC", 5, 60), provenance: makeYieldProvenance({ safetyProvenance: "opportunity-safety" }) },
+      { ...makeSummaryRow("usdt-tether", "USDT", 4, 50), provenance: makeYieldProvenance({ safetyProvenance: "live-report-card" }) },
+      { ...makeSummaryRow("dai-makerdao", "DAI", 3, 40), provenance: makeYieldProvenance({ safetyProvenance: "default-safety", usedDefaultSafety: true }) },
+    ];
+    useYieldRankingsSummaryMock.mockReturnValue({ data, isLoading: false });
+    render(<HomeAltYieldOverview />);
+    const opportunity = screen.getByLabelText(`Yield safety B+ — ${YIELD_OPPORTUNITY_SAFETY_DESCRIPTION}`);
+    expect(opportunity.textContent).toContain("†");
+    expect(opportunity.getAttribute("title")).toContain(YIELD_OPPORTUNITY_SAFETY_DESCRIPTION);
+    expect(screen.getByLabelText("Yield safety B+").textContent).not.toContain("†");
+    expect(screen.getByLabelText("Yield safety B+ (default safety)").textContent).not.toContain("†");
+  });
   it("reads the compact summary payload instead of the detail rankings payload", () => {
     useYieldRankingsSummaryMock.mockReturnValue({
       data: makeSummaryPayload({ coveredCount: 2, trackedCount: 3 }),

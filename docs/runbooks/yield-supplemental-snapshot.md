@@ -85,7 +85,7 @@ ORDER BY rows DESC;
 - The next `sync-yield-data` metadata shows `supplementalSourceMode: "cache"`; `supplementalSourceCount` may be zero when the current family snapshot is explicitly all-empty.
 - Public rankings/source board show expected optional family rows or alternatives.
 
-- The `yield:supplemental-source-run:v1` outcome row parses and its `familyCacheResults` / `degradedFamilies` match the per-family rows: a degraded family is expected to still hold its previous snapshot, not a fresh empty row. `skipped-not-due` / `skipped-backoff` mean the Pendle lane deliberately reused its retained row — verify that row's age is inside 48h before treating the skip as healthy.
+- Run-outcome `familySnapshotHashes` bind claims to exact family value/publication clocks. A failed outcome upsert cannot attribute old degradation to a replacement row: mismatches/legacy unbound outcomes appear under `supplementalUnknownOutcomeFamilies`, with independent age checks unchanged. Matching degraded families retain their previous snapshot, including Compound targets missing `no-rpc-config`. Pendle `skipped-not-due` / `skipped-backoff` reuse retained rows; verify their age remains within 48h.
 
 ## Rollback Notes
 

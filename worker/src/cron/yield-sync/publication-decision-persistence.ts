@@ -361,7 +361,9 @@ export async function persistEvaluatedYieldSources(
     historyRows.push({
       stablecoin_id: source.id,
       source_key: source.sourceKey,
-      recorded_at: input.startSec,
+      recorded_at: source.sourceKey === "protocol-api:zys-zephyr-protocol"
+        && source.sourceObservedAt != null ? source.sourceObservedAt : input.startSec,
+      source_observed_at: source.sourceObservedAt,
       is_best: isBest,
       apy: source.currentApy,
       apy_base: source.apyBase,

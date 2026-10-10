@@ -199,6 +199,21 @@ describe("resolveYieldRowSafety — canonical ladder (yield v8.33)", () => {
     expect(result.opportunityEvidenceComplete).toBe(true);
   });
 
+  it.each([
+    [null, "default-safety", "report-card-score-missing"],
+    [{ score: 40, grade: "NR" }, "cached-publish", "report-card-grade-not-rated"],
+  ] as const)("preserves Royco underlying unrating for %j", (underlyingSafety, provenance, reason) => {
+    const result = resolveYieldRowSafety(ladderInput({
+      underlyingSafety, yieldType: "structured-tranche",
+      sourceRisk: { trancheSide: "junior", venueProtocol: "royco-dawn", venueRiskWeighted: 3,
+        marketStatus: "normal", marketTvlUsd: 2_000_000 },
+    }));
+    expect(result).toMatchObject({ safetyScore: 40, safetyGrade: "NR", safetyProvenance: provenance,
+      safetyReason: reason, safetyEvidenceObserved: false, opportunityEvidenceComplete: true });
+    expect(result.opportunityRisk?.opportunitySafetyScore).toBeTypeOf("number");
+    expect(result.sourceRisk?.trancheSafetyScore).toBe(result.opportunityRisk?.opportunitySafetyScore);
+  });
+
   it.each(["normal", "protected", "critical"] as const)("preserves bespoke Royco penalties with complete %s evidence", (marketStatus) => {
     const result = resolveYieldRowSafety(
       ladderInput({

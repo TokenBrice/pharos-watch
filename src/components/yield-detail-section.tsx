@@ -21,8 +21,7 @@ import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { useYieldHistory } from "@/hooks/api-hooks";
-import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
-import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
 import { YieldSourceIdentity } from "@/components/yield-leaderboard-row-parts";
 import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
 import { resolveYieldScoreQualification } from "@/lib/yield-constants";
@@ -146,8 +145,8 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       {view.yieldTypeLabel}
     </span>
   );
-  const coin = CLIENT_TRACKED_META_BY_ID.get(stablecoinId);
-  const hasWorkbench = coin != null && hasStaticYieldWorkbench(coin);
+  const workbenchLink = getYieldWorkbenchLink(stablecoinId);
+  const hasWorkbench = workbenchLink.isWorkbench;
   const qualification = resolveYieldScoreQualification(ranking);
   const qualificationLabel = YIELD_SCORE_QUALIFICATION_LABELS[qualification as keyof typeof YIELD_SCORE_QUALIFICATION_LABELS];
   const rolePrefix = ranking.sourceRole === "canonical-holder"
@@ -438,10 +437,10 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
 
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border/50 pt-3 text-xs text-muted-foreground">
         <Link
-          href={hasWorkbench ? buildStablecoinUrl(stablecoinId, "yield/") : `/yield/?workbenchFallback=${encodeURIComponent(stablecoinId)}`}
+          href={workbenchLink.href}
           className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm font-medium underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
-          {hasWorkbench ? "View full yield analysis" : YIELD_SOURCE_FACT_LABELS.fallbackLink}
+          {workbenchLink.label}
           <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
         </Link>
         <EvidenceFooter topic="pys" className="border-t-0 pt-0" />

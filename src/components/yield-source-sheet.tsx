@@ -26,6 +26,7 @@ import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
 import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
 import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
 import { trackEvent } from "@/lib/analytics";
 import {
   formatEvidenceCompleteness,
@@ -92,11 +93,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
   });
   const hasAlternateSelected =
     selectedSourceKey !== null && selectedSourceKey !== sourceExplorer.selectedSource.sourceKey;
-  const deepDiveSearch = hasAlternateSelected ? new URLSearchParams({ sources: selectedSourceKey }).toString() : "";
-  const deepDiveHref = buildStablecoinUrl(
-    ranking.id,
-    `yield/${deepDiveSearch ? `?${deepDiveSearch}` : ""}`,
-  );
+  const deepDive = getYieldWorkbenchLink(ranking.id, hasAlternateSelected ? selectedSourceKey : null);
 
   const handleSourceClick = (sourceKey: string) => {
     setSelectedSourceKey(sourceKey);
@@ -359,7 +356,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
             </button>
           ) : null}
           <Link
-            href={deepDiveHref}
+            href={deepDive.href}
             className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground transition-colors"
             onClick={() => {
               trackEvent("yield_row_action", {
@@ -370,7 +367,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
               onOpenChange(false);
             }}
           >
-            Deep dive yield &rarr;
+            {deepDive.isWorkbench ? "Deep dive yield" : deepDive.label} &rarr;
           </Link>
           <Link
             href={buildStablecoinUrl(ranking.id)}

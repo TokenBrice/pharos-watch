@@ -32,8 +32,11 @@ const PRODUCTION_SAMPLE_RAW_BYTES = 237_654;
 const PRODUCTION_SAMPLE_GZIP_BYTES = 30_524;
 const PAYLOAD_BUDGET_HEADROOM = 1.1;
 
+// Source-board evidence adds alternate type/label/30d APY and selected anomalies.
+// Allow 200 raw bytes/row for that bounded projection; retain the gzip budgets.
+const SOURCE_BOARD_RAW_BYTES_PER_ROW = 200;
 const RAW_PAYLOAD_BUDGET_BYTES = Math.round(
-  (PRODUCTION_SAMPLE_RAW_BYTES / PRODUCTION_SAMPLE_ROWS) * CURRENT_SCALE_RANKING_COUNT * PAYLOAD_BUDGET_HEADROOM,
+  ((PRODUCTION_SAMPLE_RAW_BYTES / PRODUCTION_SAMPLE_ROWS) * PAYLOAD_BUDGET_HEADROOM + SOURCE_BOARD_RAW_BYTES_PER_ROW) * CURRENT_SCALE_RANKING_COUNT,
 );
 const GZIP_PAYLOAD_BUDGET_BYTES = Math.round(
   (PRODUCTION_SAMPLE_GZIP_BYTES / PRODUCTION_SAMPLE_ROWS) * CURRENT_SCALE_RANKING_COUNT * PAYLOAD_BUDGET_HEADROOM,
@@ -295,6 +298,7 @@ describe("projectYieldRankingsSummary", () => {
         evidenceCompleteness: 0.92,
         scoreQualification: "rated",
         sourceFreshness: "fresh",
+        anomalies: detailed.rankings[0].provenance?.anomalies,
       },
       sourceRisk: {
         sourceRiskScore: 18,
@@ -314,6 +318,9 @@ describe("projectYieldRankingsSummary", () => {
         confidenceTier: "discovered",
         currentApy: detailed.rankings[0].altSources[0].currentApy,
         sourceTvlUsd: 2_654_149_397,
+        yieldType: detailed.rankings[0].altSources[0].yieldType,
+        yieldSource: detailed.rankings[0].altSources[0].yieldSource,
+        apy30d: detailed.rankings[0].altSources[0].apy30d,
       },
     ]);
     expect(summary.rankings[0]).not.toHaveProperty("alternateSummary");
@@ -384,7 +391,7 @@ describe("projectYieldRankingsSummary", () => {
     expect(
       YieldRankingSummarySchema.safeParse({
         ...summary.rankings[0],
-        altSources: [{ ...(summary.rankings[0].altSources?.[0] ?? {}), yieldSource: "Detail-only label" }],
+        altSources: [{ ...(summary.rankings[0].altSources?.[0] ?? {}), yieldSourceUrl: "https://detail-only.example" }],
       }).success,
     ).toBe(false);
   });

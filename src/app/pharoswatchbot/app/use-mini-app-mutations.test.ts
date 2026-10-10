@@ -53,6 +53,7 @@ function makeArgs(overrides: Partial<UseMiniAppMutationsArgs> = {}): UseMiniAppM
     state: baseState,
     webApp: makeWebApp(),
     onSnapshotReplaced: vi.fn(),
+    onForgotten: vi.fn(),
     reloadSession: vi.fn().mockResolvedValue(undefined),
     messageAutoDismissActive: true,
     mutationsAllowed: true,
@@ -113,6 +114,23 @@ afterEach(() => {
 });
 
 describe("useMiniAppMutations", () => {
+  it("revokes captured mutation and signed-read callbacks after persisted forget-me", async () => {
+    const { sqlite } = await persistedMutations();
+    const onForgotten = vi.fn();
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ onForgotten })));
+    const capturedMutation = result.current.performMutation;
+    const capturedRead = result.current.performPortability;
+    await act(async () => { await result.current.performMutation({ kind: "forget-me" }); });
+    expect(onForgotten).toHaveBeenCalledOnce();
+    expect(result.current.forgottenView).toBe(true);
+    await act(async () => {
+      expect(await capturedMutation({ kind: "clear-snooze" })).toBeNull();
+      expect(await capturedRead({ kind: "export-watchlist" })).toBeNull();
+    });
+    expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
+    expect(apiMocks.postMiniAppPortability).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscribers").get()).toMatchObject({ count: 0 });
+  });
   it("never dispatches writes without signed data, session permission, or viewer permission", async () => {
     for (const overrides of [
       { initData: "" },

@@ -185,7 +185,6 @@ function parseRiskFreeRateRecord(
     const rate = toFiniteNumber(parsed.rate);
     const fetchedAt = toFiniteNumber(parsed.fetchedAt);
     if (rate != null) {
-      const effectiveFetchedAt = fetchedAt ?? cacheUpdatedAt;
       const isFallback = parsed.isFallback === true;
       const source = toNullableString(parsed.source) ?? "unknown";
       const parsedKey = toNullableString(parsed.key) as YieldBenchmarkKey | null;
@@ -200,8 +199,8 @@ function parseRiskFreeRateRecord(
         currency: defaults?.currency ?? toNullableString(parsed.currency) ?? staticMeta.currency,
         rate,
         recordDate: toNullableString(parsed.recordDate),
-        fetchedAt: effectiveFetchedAt,
-        ageSeconds: effectiveFetchedAt != null ? nowSec - effectiveFetchedAt : null,
+        fetchedAt,
+        ageSeconds: fetchedAt != null ? nowSec - fetchedAt : null,
         source,
         isFallback,
         fallbackMode: toNullableString(parsed.fallbackMode),
@@ -210,9 +209,7 @@ function parseRiskFreeRateRecord(
         lastMarketRecordDate:
           toNullableString(parsed.lastMarketRecordDate) ??
           (lastMarketRate != null ? toNullableString(parsed.recordDate) : null),
-        lastMarketFetchedAt:
-          toFiniteNumber(parsed.lastMarketFetchedAt) ??
-          (lastMarketRate != null ? effectiveFetchedAt : null),
+        lastMarketFetchedAt: toFiniteNumber(parsed.lastMarketFetchedAt),
         lastMarketSource:
           toNullableString(parsed.lastMarketSource) ??
           (lastMarketRate != null ? source : null),

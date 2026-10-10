@@ -80,6 +80,8 @@ const YieldBenchmarkMetaSchema = z.object({
   isFallback: z.boolean(),
   fallbackMode: z.string().nullable(),
   isProxy: z.boolean().optional(),
+  /** Canonical maximum age of fetched benchmark evidence, independent of publication age. */
+  maxFetchAgeSec: z.number().optional(),
   /**
    * Per-key bound on the age of this entry's own observation (`recordDate`).
    * Published so consumers judge a monthly series (CAD, 45d) and a daily one

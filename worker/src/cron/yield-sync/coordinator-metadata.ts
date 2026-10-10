@@ -304,6 +304,7 @@ export function buildYieldSyncMetadata(input: {
       supplementalSourceAgeSeconds: input.supplementalMeta.ageSeconds,
       supplementalSourceCount: input.supplementalMeta.sourceCount,
       supplementalFallbackMode: input.supplementalMeta.fallbackMode,
+      supplementalUnknownOutcomeFamilies: input.supplementalMeta.unknownOutcomeFamilies ?? [],
       stablecoinSupplyMapState: input.stablecoinSupplyMapState,
       optionalSourceFailures: input.optionalSourceFailures,
       optionalSourceFailureCount: input.optionalSourceFailures.length,

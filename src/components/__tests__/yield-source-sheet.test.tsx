@@ -255,26 +255,34 @@ describe("YieldSourceSheet", () => {
   });
 
   it("renders the deep-dive yield link without a sources param by default", () => {
-    renderYieldSourceSheet(makeRanking("usdc", "best-usdc", "alt-usdc"));
+    renderYieldSourceSheet(makeRanking("susde-ethena", "selected", "alternate"));
 
     const deepDive = screen.getByRole("link", { name: /Deep dive yield/i });
-    expect(deepDive.getAttribute("href")).toMatch(/^\/stablecoin\/usdc\/yield\/?$/);
+    expect(deepDive.getAttribute("href")).toBe("/stablecoin/susde-ethena/yield");
   });
 
   it("appends sources param to deep-dive link when an alternate is selected", () => {
-    renderYieldSourceSheet(makeRanking("usdc", "best-usdc", "alt-usdc"));
+    renderYieldSourceSheet(makeRanking("susde-ethena", "selected", "alternate"));
 
-    fireEvent.click(screen.getByRole("button", { name: /usdc-alt/i }));
+    fireEvent.click(screen.getByRole("button", { name: /susde-ethena-alt/i }));
     const deepDive = screen.getByRole("link", { name: /Deep dive yield/i });
-    expect(deepDive.getAttribute("href")).toMatch(/^\/stablecoin\/usdc\/yield\/?\?sources=alt-usdc$/);
+    expect(deepDive.getAttribute("href")).toBe("/stablecoin/susde-ethena/yield?sources=alternate");
   });
 
   it("normalizes malformed unicode source keys in the deep-dive link", () => {
-    renderYieldSourceSheet(makeRanking("usdc", "best-usdc", "\uD800"));
+    renderYieldSourceSheet(makeRanking("susde-ethena", "selected", "\uD800"));
 
-    fireEvent.click(screen.getByRole("button", { name: /usdc-alt/i }));
+    fireEvent.click(screen.getByRole("button", { name: /susde-ethena-alt/i }));
     const deepDive = screen.getByRole("link", { name: /Deep dive yield/i });
-    expect(deepDive.getAttribute("href")).toMatch(/^\/stablecoin\/usdc\/yield\/?\?sources=%EF%BF%BD$/);
+    expect(deepDive.getAttribute("href")).toBe("/stablecoin/susde-ethena/yield?sources=%EF%BF%BD");
+  });
+
+  it("uses an honestly named leaderboard fallback for dynamically covered USDC, without source params", () => {
+    renderYieldSourceSheet(makeRanking("usdc-circle", "selected", "alternate"));
+    fireEvent.click(screen.getByRole("button", { name: /usdc-circle-alt/i }));
+    expect(screen.getByRole("link", { name: /View yield opportunities/i }).getAttribute("href"))
+      .toBe("/yield?workbenchFallback=usdc-circle");
+    expect(screen.queryByRole("link", { name: /Deep dive yield/i })).toBeNull();
   });
 
   it("keeps the existing View full dossier link to the main detail page", () => {
@@ -314,11 +322,12 @@ describe("YieldSourceSheet", () => {
           sourceTvlUsd: 10_000_000,
           dataSource: "defillama",
           sourceRisk: { sourceDepthRatio: 0.001, sourceAgeSeconds: 60, rewardShare: 0 },
+          rejectionReasonCode: "thinner",
         }),
       ],
     });
 
-    expect(screen.getByText("thinner")).toBeTruthy();
+    expect(screen.getByText("thinner venue")).toBeTruthy();
     expect(screen.getByText("Risk n/a | 1.00x")).toBeTruthy();
     expect(screen.getByText("Moderate depth")).toBeTruthy();
   });

@@ -93,12 +93,13 @@ export async function handleBackfillYieldHistory({
       db
         .prepare(
           `INSERT OR IGNORE INTO yield_history
-           (stablecoin_id, source_key, recorded_at, apy, apy_base, apy_reward, source_tvl_usd, data_source, is_best, warning_signals)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (stablecoin_id, source_key, recorded_at, source_observed_at, apy, apy_base, apy_reward, source_tvl_usd, data_source, is_best, warning_signals)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           coin.id,
           coin.sourceKey,
+          source.sourceObservedAt,
           source.sourceObservedAt,
           source.currentApy,
           source.apyBase,

@@ -130,7 +130,6 @@ function resolveHydratedBenchmarkFreshness(
   const meta = (key ? payload.benchmarks?.[key] : null) ??
     (key != null && payload.provenance?.benchmark.key === key ? payload.provenance.benchmark : null);
   const assessed = meta ? classifyYieldBenchmarkFreshness(meta, {
-    selectionMode: row.benchmarkSelectionMode ?? row.provenance?.benchmarkSelectionMode,
     recordDate: meta.recordDate,
     maxRecordAgeSec: meta.maxRecordAgeSec ?? (key ? YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[key] : undefined),
   }) : null;
@@ -266,8 +265,8 @@ function countRowSafetyCoverage(rankings: YieldRanking[]): {
 } {
   const coveredCount = rankings.filter(
     (row) =>
-      row.provenance?.safetyProvenance === "live-report-card" ||
-      (row.provenance?.safetyProvenance === "opportunity-safety" && row.provenance.usedDefaultSafety !== true),
+      (row.safetyScore != null && row.provenance?.safetyProvenance === "live-report-card") ||
+      (row.safetyScore != null && row.provenance?.safetyProvenance === "opportunity-safety" && row.provenance.usedDefaultSafety !== true),
   ).length;
   const trackedCount = rankings.length;
   return {
@@ -322,31 +321,36 @@ function hydrateYieldRankingsWithLiveSafety(
   const hydratedRows = payload.rankings
     .map((row) => {
       const currentSafety = preservePublishedSafety ? undefined : scores.get(row.id);
-      if (currentSafety?.ratingStatus === "pipeline-gap") {
-        const reason = "safety-snapshot-unavailable" as const;
+      const pipelineGap = currentSafety?.ratingStatus === "pipeline-gap";
+      if (pipelineGap || (currentSafety?.grade === "NR" && currentSafety.score == null)) {
+        const reason = pipelineGap ? "safety-snapshot-unavailable" as const : "report-card-grade-not-rated" as const;
         return {
           originalRow: row,
           safetyChanged: false,
           row: {
             ...row,
             safetyScore: null,
-            safetyGrade: null,
+            safetyGrade: pipelineGap ? null : "NR" as const,
             safetyReason: reason,
             pharosYieldScore: null,
             pysNullReason: row.pysNullReason ?? "safety-unrated" as const,
             yieldToRisk: null,
             warningSignals: [...new Set([...row.warningSignals, "safety-unrated"])],
             rankChangeAttribution: removeSafetyDerivedRankChangeAttribution(row.rankChangeAttribution),
-            sourceRisk: row.sourceRisk ? { ...row.sourceRisk, underlyingSafetyScore: null, underlyingSafetyGrade: null } : null,
+            sourceRisk: row.sourceRisk ? {
+              ...stripSafetyDerivedSourceRisk(row.sourceRisk),
+              underlyingSafetyGrade: pipelineGap ? null : "NR",
+            } : null,
             altSources: row.altSources.map((alternate) => ({
               ...alternate,
-              sourceRisk: alternate.sourceRisk
-                ? { ...alternate.sourceRisk, underlyingSafetyScore: null, underlyingSafetyGrade: null }
-                : alternate.sourceRisk,
+              sourceRisk: alternate.sourceRisk ? {
+                ...stripSafetyDerivedSourceRisk(alternate.sourceRisk),
+                underlyingSafetyGrade: pipelineGap ? null : "NR",
+              } : alternate.sourceRisk,
             })),
             provenance: row.provenance ? {
               ...row.provenance,
-              safetyProvenance: reason,
+              safetyProvenance: pipelineGap ? "safety-snapshot-unavailable" as const : "live-report-card" as const,
               safetyReason: reason,
               safetyScoreIdentity: source.safetyScoreIdentity,
               usedDefaultSafety: false,

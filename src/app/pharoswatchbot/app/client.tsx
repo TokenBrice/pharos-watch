@@ -34,6 +34,8 @@ const VISIBILITY_REFRESH_THRESHOLD_MS = 10 * 60 * 1000;
 
 export function PharosWatchBotMiniAppClient() {
   const [state, setState] = useState<TelegramMiniAppState | null>(null);
+  const [forgotten, setForgotten] = useState(false);
+  const terminalRef = useRef(false);
   const {
     view,
     coinInsightTarget,
@@ -58,10 +60,16 @@ export function PharosWatchBotMiniAppClient() {
   // even though `loadSession` is defined later (it depends on the hook's `setMessage`).
   const loadSessionRef = useRef<((nextInitData: string, options?: { clearMessage?: boolean }) => Promise<void>) | null>(null);
 
+  const onTelegramBack = useCallback(() => {
+    if (!terminalRef.current) handleTelegramBack();
+  }, [handleTelegramBack]);
+  const onTelegramSettings = useCallback(() => {
+    if (!terminalRef.current) handleTelegramSettings();
+  }, [handleTelegramSettings]);
   const { webApp, initData, startParam, previewName, status: bridgeStatus } = useTelegramBridge({
-    onBack: handleTelegramBack,
-    backButtonVisible,
-    onSettings: handleTelegramSettings,
+    onBack: forgotten ? undefined : onTelegramBack,
+    backButtonVisible: !forgotten && backButtonVisible,
+    onSettings: forgotten ? undefined : onTelegramSettings,
   });
 
   const reloadSession = useCallback(async (options?: { clearMessage?: boolean }) => {
@@ -70,9 +78,18 @@ export function PharosWatchBotMiniAppClient() {
   }, [initData]);
 
   const applyConfirmedSnapshot = useCallback((snapshot: TelegramMiniAppClientSnapshot) => {
+    if (terminalRef.current) return;
     stateRef.current = snapshot.state;
     setState(snapshot.state);
     setConfirmedMeta({ revision: snapshot.stateRevision, refreshedAtMs: Date.now() });
+  }, []);
+
+  const enterForgottenState = useCallback(() => {
+    terminalRef.current = true;
+    stateRef.current = null;
+    setState(null);
+    setConfirmedMeta(null);
+    setForgotten(true);
   }, []);
 
   const mutations = useMiniAppMutations({
@@ -80,6 +97,7 @@ export function PharosWatchBotMiniAppClient() {
     state,
     webApp,
     onSnapshotReplaced: applyConfirmedSnapshot,
+    onForgotten: enterForgottenState,
     reloadSession,
     messageAutoDismissActive: status === "ready",
     mutationsAllowed: status === "ready",
@@ -110,12 +128,16 @@ export function PharosWatchBotMiniAppClient() {
   } = mutations;
 
   const loadSession = useCallback(async (nextInitData: string, options: { clearMessage?: boolean } = {}) => {
+    if (terminalRef.current) return;
     setStatus("loading");
     try {
-      applyConfirmedSnapshot(await postMiniAppSnapshot(SESSION_ENDPOINT, { initData: nextInitData }));
+      const snapshot = await postMiniAppSnapshot(SESSION_ENDPOINT, { initData: nextInitData });
+      if (terminalRef.current) return;
+      applyConfirmedSnapshot(snapshot);
       setStatus("ready");
       if (options.clearMessage !== false) setMessage(null);
     } catch (err) {
+      if (terminalRef.current) return;
       if (isMiniAppVersionMismatch(err) && refreshMiniAppBundleOnce({
         contractVersion: err.serverContractVersion,
         catalogVersion: err.serverCatalogVersion,
@@ -181,7 +203,7 @@ export function PharosWatchBotMiniAppClient() {
   }, []);
 
   const triggerRefresh = useCallback(() => {
-    if (!initData || status === "loading" || isMutating) return;
+    if (terminalRef.current || !initData || status === "loading" || isMutating) return;
     void loadSession(initData);
   }, [initData, isMutating, loadSession, status]);
 
@@ -237,8 +259,8 @@ export function PharosWatchBotMiniAppClient() {
   // MainButton — derive `text` and `handler` from the current view/state and
   // delegate the Telegram lifecycle (attach/detach, setParams, show/hide) to
   // the shared hook. See `use-telegram-main-button.ts` for the cleanup contract.
-  const canMutate = Boolean(initData && status === "ready" && state?.viewer.canMutate);
-  const canReadPortability = Boolean(initData && status === "ready" && state?.viewer.chatId != null);
+  const canMutate = Boolean(!forgotten && initData && status === "ready" && state?.viewer.canMutate);
+  const canReadPortability = Boolean(!forgotten && initData && status === "ready" && state?.viewer.chatId != null);
   const mutationControlsDisabled = isMutating || mutationRetryAfterSec > 0;
   const runMainButtonMutation = useCallback((operation: TelegramMiniAppOperation) => {
     if (!canMutate || mutationControlsDisabled || mainButtonInFlightRef.current) return;
@@ -333,6 +355,7 @@ export function PharosWatchBotMiniAppClient() {
                 view={view}
                 home={{
                   state: displayState,
+                  nowSec,
                   canMutate,
                   isMutating: mutationControlsDisabled,
                   pendingOperation,

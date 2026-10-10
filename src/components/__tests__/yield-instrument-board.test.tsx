@@ -78,6 +78,16 @@ const rowRenderers = [
 ] as const;
 
 describe("YieldInstrumentBoard", () => {
+  it.each(rowRenderers)("routes dynamically covered USDC to the honest fallback on %s", (_name, renderRow) => {
+    renderRow({ ...baseRow, id: "usdc-circle", symbol: "USDC" });
+    expect(screen.getByRole("link", { name: "View yield opportunities for USDC" }).getAttribute("href"))
+      .toBe("/yield?workbenchFallback=usdc-circle");
+  });
+  it.each(rowRenderers)("retains the exported workbench link on %s", (_name, renderRow) => {
+    renderRow({ ...baseRow, id: "susde-ethena", symbol: "sUSDe" });
+    expect(screen.getByRole("link", { name: "View full yield analysis for sUSDe" }).getAttribute("href"))
+      .toBe("/stablecoin/susde-ethena/yield");
+  });
   it("renders the rank-attribution chip when pys delta is material", () => {
     const row = {
       ...baseRow,
@@ -125,8 +135,8 @@ describe("YieldInstrumentBoard", () => {
   it.each(rowRenderers)("renders the deep-dive destination on %s", (_surface, renderRow) => {
     renderRow(baseRow);
 
-    const link = screen.getByRole("link", { name: "Open full yield analysis for USDT" });
-    expect(link.getAttribute("href")).toBe("/stablecoin/usdt-tether/yield");
+    const link = screen.getByRole("link", { name: "View yield opportunities for USDT" });
+    expect(link.getAttribute("href")).toBe("/yield?workbenchFallback=usdt-tether");
   });
 
   it.each(rowRenderers)("renders material source risk on %s", (_surface, renderRow) => {
@@ -244,8 +254,8 @@ describe("YieldInstrumentBoard", () => {
     expect(screen.getAllByText("Pharos Yield Score 76.0 out of 100").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByLabelText("Safety grade: B+, score 82 out of 100").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByLabelText("Add USDT to compare")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Open full yield analysis for USDT" }).getAttribute("href")).toBe(
-      "/stablecoin/usdt-tether/yield",
+    expect(screen.getByRole("link", { name: "View yield opportunities for USDT" }).getAttribute("href")).toBe(
+      "/yield?workbenchFallback=usdt-tether",
     );
     expect(desktop.container.textContent).toContain("Aave");
     // No warnings → the board surfaces no warning indicator (clean row, tint only).
@@ -261,8 +271,8 @@ describe("YieldInstrumentBoard", () => {
     expect(screen.getByText("PYS 76.0")).toBeTruthy();
     expect(screen.getByText("B+")).toBeTruthy();
     expect(screen.getByLabelText("Add USDT to compare")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Open full yield analysis for USDT" }).getAttribute("href")).toBe(
-      "/stablecoin/usdt-tether/yield",
+    expect(screen.getByRole("link", { name: "View yield opportunities for USDT" }).getAttribute("href")).toBe(
+      "/yield?workbenchFallback=usdt-tether",
     );
     expect(mobile.container.textContent).toContain("Aave");
     expect(mobile.container.textContent).toContain("No warnings");

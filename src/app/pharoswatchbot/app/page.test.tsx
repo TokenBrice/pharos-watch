@@ -134,6 +134,56 @@ afterEach(() => {
 });
 
 describe("PharosWatchBotMiniAppPage", () => {
+  it("makes forget-me terminal for retained native Back, Settings, and Main callbacks", async () => {
+    const nativeButton = () => {
+      const callbacks: Array<() => void> = [];
+      let visible = false;
+      return {
+        callbacks,
+        get isVisible() { return visible; },
+        show: vi.fn(() => { visible = true; }),
+        hide: vi.fn(() => { visible = false; }),
+        onClick: vi.fn((callback: () => void) => { callbacks.push(callback); }),
+        offClick: vi.fn(),
+        setParams: vi.fn(),
+      } satisfies NonNullable<MiniAppWebApp["MainButton"]> & { callbacks: Array<() => void> };
+    };
+    const back = nativeButton();
+    const settings = nativeButton();
+    const main = nativeButton();
+    const confirmations: Array<(confirmed: boolean) => void> = [];
+    const close = vi.fn();
+    const state = { ...baseState, subscriber: { ...baseState.subscriber, snoozeUntilTs: 2_147_483_647 } };
+    const fetchMock = await renderReadyMiniApp({
+      state,
+      launch: {
+        BackButton: back, SettingsButton: settings, MainButton: main, close,
+        showConfirm: vi.fn((_message, callback) => { confirmations.push(callback); }),
+      },
+    });
+    const retainedResume = main.callbacks.at(-1)!;
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+    const retainedBack = back.callbacks.at(-1)!;
+    const retainedSettings = settings.callbacks.at(-1)!;
+    fireEvent.click(screen.getByRole("button", { name: /Delete all my data/i }));
+    act(() => { confirmations.shift()?.(true); });
+    act(() => { confirmations.shift()?.(true); });
+    await waitFor(() => expect(screen.getByText("Your data has been deleted")).toBeTruthy());
+    expectMutationRequest(fetchMock, { kind: "forget-me" });
+    const callsAfterDeletion = fetchMock.mock.calls.length;
+    act(() => { retainedBack(); retainedSettings(); retainedResume(); });
+    await act(async () => { await Promise.resolve(); });
+    expect(fetchMock).toHaveBeenCalledTimes(callsAfterDeletion);
+    expect(back.isVisible).toBe(false);
+    expect(settings.isVisible).toBe(false);
+    expect(main.isVisible).toBe(false);
+    expect(back.offClick).toHaveBeenCalledWith(retainedBack);
+    expect(settings.offClick).toHaveBeenCalledWith(retainedSettings);
+    expect(main.offClick).toHaveBeenCalledWith(retainedResume);
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: /Close/i }));
+    expect(close).toHaveBeenCalledOnce();
+  });
   it("keeps metadata and the Mini App error-code contract", () => {
     expect(metadata.robots).toEqual({ index: false, follow: false });
     expect(isMiniAppErrorCode("empty-alert-types")).toBe(false);

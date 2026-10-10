@@ -59,7 +59,7 @@ export async function materializeYieldHistoryDaily(
          apy, apy_base, apy_reward, exchange_rate, source_tvl_usd,
          data_source, warning_signals, yield_source, yield_type,
          publication_generation_id, publication_state, pys_at_publish,
-         safety_at_publish, variance_at_publish, pys_inputs_at_publish
+         safety_at_publish, variance_at_publish, pys_inputs_at_publish, source_observed_at
        )
        WITH pending AS (
          SELECT h.stablecoin_id, h.source_key,
@@ -88,7 +88,7 @@ export async function materializeYieldHistoryDaily(
               apy, apy_base, apy_reward, exchange_rate, source_tvl_usd,
               data_source, warning_signals, yield_source, yield_type,
               publication_generation_id, publication_state, pys_at_publish,
-              safety_at_publish, variance_at_publish, pys_inputs_at_publish
+              safety_at_publish, variance_at_publish, pys_inputs_at_publish, source_observed_at
          FROM ranked
         WHERE true
        ON CONFLICT(stablecoin_id, source_key, snapshot_date) DO UPDATE SET
@@ -108,7 +108,8 @@ export async function materializeYieldHistoryDaily(
          pys_at_publish = excluded.pys_at_publish,
          safety_at_publish = excluded.safety_at_publish,
          variance_at_publish = excluded.variance_at_publish,
-         pys_inputs_at_publish = excluded.pys_inputs_at_publish
+         pys_inputs_at_publish = excluded.pys_inputs_at_publish,
+         source_observed_at = excluded.source_observed_at
        WHERE excluded.recorded_at > yield_history_daily.recorded_at
        RETURNING snapshot_date`,
     )
