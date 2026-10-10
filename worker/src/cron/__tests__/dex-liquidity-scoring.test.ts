@@ -973,6 +973,8 @@ describe("dex-liquidity scoring", () => {
   });
 
   it("keeps exact AMM evidence scoreable when its measured target rotates out", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
     const metrics = initMetrics("usdc-circle", "USDC");
     metrics.topPools = [{
@@ -991,6 +993,12 @@ describe("dex-liquidity scoring", () => {
           invariant: "constant-product",
           trackedTokenIndex: 0,
           feeRate: 0.003,
+          capture: {
+            blockNumber: 18_500_000,
+            blockHash: `0x${"ab".repeat(32)}`,
+            blockTimestamp: nowSec - 30,
+            sourceGenerationId: "rotated-target-exact-amm",
+          },
           tokens: [
             {
               address: "0x0000000000000000000000000000000000000011",

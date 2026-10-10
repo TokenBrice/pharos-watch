@@ -140,7 +140,8 @@ export async function executeBackfillForCoin(opts: {
   // Build time-varying peg reference function for this coin
   const peg = meta.flags.pegCurrency;
   const pegType = `pegged${peg}`;
-  const currentPegRef = getPegReference(pegType, pegRates, meta.commodityOunces);
+  // Commodity history and its fallback are per ounce; convert to token units once below.
+  const currentPegRef = getPegReference(pegType, pegRates);
   let getPegRef: (timestamp: number) => number;
 
   if (peg === "USD") {

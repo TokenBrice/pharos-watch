@@ -747,7 +747,7 @@ interface DexLiquiditySourceState {
   directApiPools: DexApiPool[];
   pancakeMeasuredExecutionTargets: ReturnType<typeof buildPancakeMeasuredExecutionTargets>;
   slipstreamMeasuredExecutionTargets: ReturnType<typeof buildSlipstreamMeasuredExecutionTargets>;
-  primaryPoolCounts: PrimaryPoolCompactionResult;
+  primaryPoolCounts: Pick<PrimaryPoolCompactionResult, "pools" | "rawPoolCount" | "retainedPoolCount">;
   directApiPoolCounts: DirectApiPoolCompactionCounts;
   authoritativeConfirmation: ReturnType<typeof buildAuthoritativeStagedPoolConfirmationIndex>;
   failedSources: string[];
@@ -950,11 +950,10 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     fallbackSignals.push("dl-protocols-unavailable");
   }
 
-  const primaryPoolCounts: PrimaryPoolCompactionResult = {
+  const primaryPoolCounts: DexLiquiditySourceState["primaryPoolCounts"] = {
     pools: dataSources.pools,
     rawPoolCount: dataSources.rawPoolCount,
     retainedPoolCount: dataSources.pools.length,
-    skippedUntrackedCount: dataSources.rawPoolCount - dataSources.pools.length,
   };
   const { curvePoolMap, curvePoolCandidatesByFingerprint, priceObservations } = await buildCurveLookups(
     dataSources.curvePayloads,
@@ -1241,6 +1240,8 @@ async function buildDexLiquidityPoolState(
     chainAddressToId: sourceState.lookups.chainAddressToId,
     chainRpcs: ctx.chainRpcs,
     signal: ctx.signal,
+    nowSec: Math.floor(Date.now() / 1000),
+    sourceGenerationId: `dex-liquidity-scoring-stage:${ctx.sourceSlotStartedAt ?? ctx.syncStartSec}`,
   });
   // Last of the three on-chain capture stages: it only touches Curve rows the
   // source-only join could not resolve at all, so it never competes with the
@@ -1251,6 +1252,8 @@ async function buildDexLiquidityPoolState(
     stablecoinPriceById: sourceState.stablecoinPriceById,
     chainRpcs: ctx.chainRpcs,
     signal: ctx.signal,
+    nowSec: Math.floor(Date.now() / 1000),
+    sourceGenerationId: `dex-liquidity-scoring-stage:${ctx.sourceSlotStartedAt ?? ctx.syncStartSec}`,
   });
   attachPinnedShadowExecutionTargets({
     metrics,

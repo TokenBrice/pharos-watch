@@ -37,9 +37,9 @@ describe("classifyPoolType ordering", () => {
 });
 
 describe("computePoolQualityContribution", () => {
-  it("keeps raw quality TVL separate from Curve-adjusted effective TVL", () => {
+  it("uses retained base-pool-excluded TVL for both Curve quality and effective contributions", () => {
     const contribution = computePoolQualityContribution({
-      qualityTvlUsd: 100_000_000,
+      qualityTvlUsd: 60_000_000,
       effectiveTvlUsd: 60_000_000,
       qualityMultiplier: 0.85,
       balanceRatio: 1,
@@ -49,7 +49,7 @@ describe("computePoolQualityContribution", () => {
     expect(contribution).toEqual({
       balanceHealth: 1,
       combinedQuality: 0.85,
-      qualityAdjustedTvl: 85_000_000,
+      qualityAdjustedTvl: 51_000_000,
       effectiveTvl: 51_000_000,
     });
   });

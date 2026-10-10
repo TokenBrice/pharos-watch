@@ -169,6 +169,7 @@ const chainAddressToId = new Map([[`ethereum:${FRXUSD}`, "frxusd-frax"]]);
 
 function run(pool: PoolEntry, state = dependencies(), nowSec = BLOCK_TIMESTAMP + 60) {
   return enrichCurveStableswapRateInputExecutionModels({
+    sourceGenerationId: "dex-stage:fixture",
     metrics: metrics(pool),
     chainAddressToId,
     chainRpcs: new Map([["ethereum", {} as never]]),
@@ -208,6 +209,10 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
       trackedTokenIndex: 1,
       amplification: 5_000,
       feeRate: 0.0001,
+      capture: {
+        blockNumber: BLOCK_NUMBER, blockHash: BLOCK_HASH, blockTimestamp: BLOCK_TIMESTAMP,
+        sourceGenerationId: "dex-stage:fixture",
+      },
       tokens: [
         { address: SFRXUSD, symbol: "sfrxUSD" },
         { address: FRXUSD, symbol: "frxUSD", trackedAssetId: "frxusd-frax" },

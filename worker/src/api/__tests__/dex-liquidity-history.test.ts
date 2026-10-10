@@ -10,6 +10,27 @@ import { DexLiquidityHistoryResponseSchema } from "@shared/types/market";
 describe("handleDexLiquidityHistory", () => {
   const row = makeDexLiquidityHistoryRow();
 
+  it.each([
+    { coverage_class: "primary", coverage_confidence: null },
+    { coverage_class: "invalid", coverage_confidence: 1 },
+    { coverage_class: "primary", coverage_confidence: 2 },
+  ])("isolates a malformed historical coverage point %j", async (coverage) => {
+    const badDate = row.snapshot_date + 86_400;
+    const db = mockD1([{ match: "dex_liquidity_history", rows: [
+      row, makeDexLiquidityHistoryRow({ snapshot_date: badDate, ...coverage }),
+    ] }]);
+    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"));
+    const body = DexLiquidityHistoryResponseSchema.parse(await readJsonResponse(res, 200));
+    expect(body).toHaveLength(2);
+    expect(body[0].score).toBe(row.liquidity_score);
+    expect(body[1]).toMatchObject({
+      date: badDate, score: null, unavailableReason: "invalid-coverage-evidence",
+      coverageClass: null, coverageConfidence: null, liquidityEvidenceClass: null,
+      hasMeasuredLiquidityEvidence: false, trendworthy: false,
+    });
+    expect(body[1].exitRouteObservations).toBeUndefined();
+  });
+
   it("returns 200 with history array", async () => {
     const db = mockD1([{ match: "dex_liquidity_history", rows: [row] }]);
     const res = await handleDexLiquidityHistory(

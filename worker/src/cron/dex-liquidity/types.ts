@@ -439,6 +439,8 @@ export interface GtNewPool {
   volumeDeadPoolSignature?: true;
   /** Optional measured balance ratio from richer direct/discovery APIs. */
   balanceRatio?: number | null;
+  /** Optional measured locked-liquidity percentage (0–100). */
+  lockedLiquidityPct?: number | null;
   /** Optional normalized fee tier in basis points. */
   feeTierBps?: number | null;
   /** Optional token balance composition details for richer top-pool UI. */

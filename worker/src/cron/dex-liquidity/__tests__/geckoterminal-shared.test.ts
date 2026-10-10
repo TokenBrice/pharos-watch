@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "../geckoterminal-shared";
 import type { GtPool } from "../types";
+import { classifyDexDeploymentOutcomes } from "../../dex-discovery/deployment-outcomes";
 
 const GT_POOL_FIXTURE: GtPool = {
   id: "ethereum_0xpool",
@@ -60,6 +61,54 @@ describe("geckoterminal shared helpers", () => {
     expect(result.rows).toHaveLength(20);
     expect(result.complete).toBe(false);
     expect(result.failedAfterRows).toBe(20);
+  });
+
+  it.each([{}, { data: null }, { data: {} }, { status: "upstream unavailable" }, null])(
+    "rejects a malformed first-page envelope instead of certifying an empty census: %j",
+    async (body) => {
+      mockFetch([{ match: "/pools?page=1", body }], { requireMatch: true });
+      const deployment = {
+        chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 6,
+      };
+      const reading = await fetchGtTokenPools(deployment.address, "eth").then(
+        (page) => ({ status: "success" as const, paginationComplete: page.complete }),
+        (error: unknown) => {
+          expect(error).toBeInstanceOf(Error);
+          expect((error as Error).message).toMatch(/malformed-page/);
+          return { status: "failure" as const };
+        },
+      );
+      expect(reading.status).toBe("failure");
+      const outcomes = classifyDexDeploymentOutcomes({
+        stablecoinId: "test", deployments: [deployment], pools: [], nowSec: 100,
+        providerChecks: [{ ...deployment, provider: "geckoterminal", ...reading }],
+      });
+      expect(outcomes[0]?.outcome).toBe("provider_inaccessible");
+    },
+  );
+
+  it("retains prior rows without exhaustive authority after a malformed later page", async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) => ({
+      ...GT_POOL_FIXTURE,
+      id: `ethereum_0xpool${index}`,
+    }));
+    mockFetch([
+      { match: "/pools?page=1", body: { data: firstPage } },
+      { match: "/pools?page=2", body: { data: null } },
+    ], { requireMatch: true });
+    await expect(fetchGtTokenPools("0xtoken", "eth")).resolves.toEqual({
+      rows: firstPage, complete: false, cappedAtMaxPages: false, failedAfterRows: 20,
+    });
+  });
+
+  it.each([
+    { body: { data: [] }, status: 200 },
+    { body: { error: "not found" }, status: 404 },
+  ])("preserves genuine empty and supported 404 success at status $status", async (response) => {
+    mockFetch([{ match: "/pools?page=1", ...response }], { requireMatch: true });
+    await expect(fetchGtTokenPools("0xtoken", "eth")).resolves.toEqual({
+      rows: [], complete: true, cappedAtMaxPages: false, failedAfterRows: null,
+    });
   });
 
   it("refuses an over-cap token-pool page instead of buffering it into the isolate", async () => {

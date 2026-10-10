@@ -81,6 +81,47 @@ describe("backfill replay episode skips", () => {
     vi.restoreAllMocks();
   });
 
+  it.each([
+    ["fractional current fallback", 0.03215074656862798, 3000, [], 3000],
+    ["fractional historical spot", 0.03215074656862798, 3000, [{ timestamp: 1_700_000_000, rate: 2800 }], 2800],
+    ["one ounce current fallback", 1, 3000, [], 3000],
+    ["historical spot without current rate", 0.03215074656862798, null, [{ timestamp: 1_700_000_000, rate: 2800 }], 2800],
+  ] as const)("converts commodity units once through replay and apply: %s", async (_label, ounces, currentRate, series, spot) => {
+    const meta = { ...TRACKED_META_BY_ID.get("kau-kinesis")!, commodityOunces: ounces };
+    const expected = spot * ounces;
+    vi.mocked(backfillCoin).mockImplementationOnce(async ({ getPegRef }) => ({
+      events: [episode({ pegType: "peggedGOLD", pegRef: getPegRef(1_700_000_000) })],
+      sourceKind: "market", authoritativeSource: null, marketDiagnostics: null,
+    }));
+    const applyBackfillEvents = vi.fn();
+    const result = await executeBackfillForCoin({
+      db: mockD1([{ match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at", rows: [] }]),
+      prepared: { meta, geckoId: "kinesis-gold", supplyTokens: [], currentSupplyUsd: 1_000_000_000 },
+      pegRates: currentRate == null ? {} : { peggedGOLD: currentRate },
+      fxRates: undefined, fxSeries: {}, commoditySeries: { GOLD: [...series] },
+      replayWindow: null, coingeckoApiKey: null, dryRun: false, applyBackfillEvents,
+    });
+    const calls = vi.mocked(backfillCoin).mock.calls;
+    expect(calls[calls.length - 1]![0].getPegRef(1_700_000_000)).toBeCloseTo(expected);
+    expect(result.status).toBe("applied");
+    expect(applyBackfillEvents).toHaveBeenCalledTimes(1);
+    expect(applyBackfillEvents.mock.calls[0]![1][0].pegRef).toBeCloseTo(expected);
+  });
+
+  it("skips commodity replay without a current rate or historical spot anchor", async () => {
+    const before = vi.mocked(backfillCoin).mock.calls.length;
+    const applyBackfillEvents = vi.fn();
+    const result = await executeBackfillForCoin({
+      db: mockD1(),
+      prepared: { meta: TRACKED_META_BY_ID.get("kau-kinesis")!, geckoId: "kinesis-gold", supplyTokens: [], currentSupplyUsd: 1_000_000_000 },
+      pegRates: {}, fxRates: undefined, fxSeries: {}, commoditySeries: {},
+      replayWindow: null, coingeckoApiKey: null, dryRun: false, applyBackfillEvents,
+    });
+    expect(result).toEqual({ status: "skipped", eventCount: 0, reason: "missing-fx-reference" });
+    expect(vi.mocked(backfillCoin).mock.calls).toHaveLength(before);
+    expect(applyBackfillEvents).not.toHaveBeenCalled();
+  });
+
   it("drops suppressed and live-covered recomputed episodes before applying", async () => {
     stubReplayEvents([SUPPRESSED_FEB14_EPISODE, LIVE_COVERED_EPISODE, UNCOVERED_EPISODE]);
     const applyBackfillEvents = vi.fn();

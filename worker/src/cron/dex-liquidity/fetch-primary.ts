@@ -39,6 +39,8 @@ import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { shouldRetainCurveCompositePoolIdentity } from "@shared/lib/curve-composite-policies";
 import { attachDefiLlamaV4PoolIdentities, DEFILLAMA_V4_IDENTITIES_URL } from "./defillama-v4-identity";
+import { requirePoolIdentity } from "./process-pool-admission-identity";
+import { ExpectedPoolInputError, POOL_REJECTION_POOL_ID_LIMIT } from "./process-pool-types";
 
 const PRIMARY_SOURCE_JSON_TIMEOUT_MS = 30_000;
 const CURVE_API_FETCH_CONCURRENCY = 4;
@@ -91,6 +93,8 @@ export interface PrimaryPoolCompactionResult {
   rawPoolCount: number;
   retainedPoolCount: number;
   skippedUntrackedCount: number;
+  rejectedPoolCount: number;
+  rejectedPoolIds: string[];
 }
 
 export function compactPrimaryPoolsForTrackedStablecoins(
@@ -98,7 +102,20 @@ export function compactPrimaryPoolsForTrackedStablecoins(
   lookups: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
 ): PrimaryPoolCompactionResult {
   const retainedPools: LlamaPool[] = [];
+  let rejectedPoolCount = 0;
+  const rejectedPoolIds: string[] = [];
   for (const pool of pools) {
+    try {
+      requirePoolIdentity(pool);
+    } catch (error) {
+      if (!(error instanceof ExpectedPoolInputError)) throw error;
+      rejectedPoolCount++;
+      const poolId = typeof pool?.pool === "string" ? pool.pool : "unknown";
+      if (rejectedPoolIds.length < POOL_REJECTION_POOL_ID_LIMIT && !rejectedPoolIds.includes(poolId)) {
+        rejectedPoolIds.push(poolId);
+      }
+      continue;
+    }
     if (resolveLlamaPoolStablecoinMatches(pool, lookups).matchedIds.size > 0) {
       retainedPools.push(pool);
     }
@@ -108,7 +125,9 @@ export function compactPrimaryPoolsForTrackedStablecoins(
     pools: retainedPools,
     rawPoolCount: pools.length,
     retainedPoolCount: retainedPools.length,
-    skippedUntrackedCount: pools.length - retainedPools.length,
+    skippedUntrackedCount: pools.length - retainedPools.length - rejectedPoolCount,
+    rejectedPoolCount,
+    rejectedPoolIds,
   };
 }
 
@@ -152,11 +171,11 @@ export async function fetchDataSources(
     if (llamaResult?.response.ok) {
       try {
         const llamaData = llamaResult.body;
-        if (llamaData.data && llamaData.data.length >= 1000) {
+        if (Array.isArray(llamaData?.data) && llamaData.data.length >= 1000) {
           const rawPools = llamaData.data;
           rawPoolCount = rawPools.length;
           for (const pool of rawPools) {
-            if (!pool.project || pool.exposure === "single") continue;
+            if (typeof pool?.project !== "string" || pool.exposure === "single") continue;
             fallbackDexProjects.add(pool.project);
           }
           logWorkerEvent({
@@ -170,7 +189,9 @@ export async function fetchDataSources(
 
           // Cache minimal stablecoin pool data for yield sync (avoids redundant 13MB re-fetch)
           try {
-            const minimalPools = rawPools.filter(isYieldRelevantDlPool).map((p) => ({
+            const minimalPools = rawPools.filter((pool) =>
+              pool != null && typeof pool.symbol === "string" && isYieldRelevantDlPool(pool),
+            ).map((p) => ({
               pool: p.pool,
               chain: p.chain,
               project: p.project,
@@ -201,6 +222,20 @@ export async function fetchDataSources(
           await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
           pools = compacted.pools;
           dlYieldsAvailable = true;
+          if (compacted.rejectedPoolCount > 0) {
+            logWorkerEvent({
+              scope: "lib",
+              job: "sync-dex-liquidity",
+              level: "warn",
+              event: "defillama-pools-quarantined",
+              message: "Quarantined malformed DeFiLlama pool identities",
+              metadata: {
+                reason: "invalid-pool-identity",
+                rejectedPoolCount: compacted.rejectedPoolCount,
+                poolIds: compacted.rejectedPoolIds,
+              },
+            });
+          }
           if (compacted.skippedUntrackedCount > 0) {
             logWorkerEvent({
               scope: "lib",

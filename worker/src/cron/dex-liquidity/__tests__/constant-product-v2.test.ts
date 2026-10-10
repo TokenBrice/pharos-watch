@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import { DexAmmExecutionModelSchema } from "@shared/types/market";
+import { DEX_MEASURED_FRESHNESS_MAX_SEC } from "@shared/types/measured-execution";
 import {
   buildAmmCapacityCurve,
   validateAmmExecutionModel,
@@ -140,6 +141,8 @@ async function runV2PriceLegScenario({
     extra: { evmV2ExecutionCandidate: candidate },
   });
   await enrichEvmV2ExecutionModels({
+    nowSec: 1_700_000_000,
+    sourceGenerationId: "dex-stage:fixture",
     metrics: new Map([[metric.stablecoinId, metric]]),
     chainAddressToId,
     contractMetaByChainAddress: new Map(),
@@ -215,6 +218,7 @@ async function runReplay(
     serveOnlyBlock?: number;
     mutateResults?: (results: EvmMulticall3Result[]) => void;
     reorgOnConfirmation?: boolean;
+    headerTimestamp?: number;
   } = {},
 ) {
   const candidate = replayCandidate(replay);
@@ -243,6 +247,8 @@ async function runReplay(
 
   let headerReads = 0;
   await enrichEvmV2ExecutionModels({
+    nowSec: 1_700_000_000,
+    sourceGenerationId: "dex-stage:fixture",
     metrics: new Map([[metric.stablecoinId, metric]]),
     chainAddressToId,
     contractMetaByChainAddress,
@@ -250,11 +256,16 @@ async function runReplay(
       [replay.assetId, 1],
       [replay.counterAssetId, 1],
     ]),
+    stablecoinPriceProvenanceById: new Map([
+      [replay.assetId, { referencePriceSourceId: "stablecoins-cache:fixture", referencePriceObservedAt: 1_699_999_880 }],
+      [replay.counterAssetId, { referencePriceSourceId: "stablecoins-cache:fixture", referencePriceObservedAt: 1_699_999_880 }],
+    ]),
     chainRpcs: captureRpcs("bsc", "BSC"),
     dependencies: {
       fetchBlockNumber,
       fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") => {
         const header = blockHeader(blockNumber as number);
+        if (options.headerTimestamp != null) header.timestamp = options.headerTimestamp;
         if (options.reorgOnConfirmation && headerReads++ > 0) {
           header.hash = `0x${"cd".repeat(32)}`;
         }
@@ -481,6 +492,8 @@ describe("constant-product V2 execution", () => {
     );
 
     await enrichEvmV2ExecutionModels({
+      nowSec: 1_700_000_000,
+      sourceGenerationId: "dex-stage:fixture",
       metrics: new Map([[metric.stablecoinId, metric]]),
       chainAddressToId: new Map([[canonicalExitRouteAssetKey("bsc", U), metric.stablecoinId]]),
       contractMetaByChainAddress: new Map([
@@ -561,6 +574,8 @@ describe("constant-product V2 execution", () => {
         extra: { evmV2ExecutionCandidate: candidate },
       });
       await enrichEvmV2ExecutionModels({
+        nowSec: 1_700_000_000,
+        sourceGenerationId: "dex-stage:fixture",
         metrics: new Map([[metric.stablecoinId, metric]]),
         chainAddressToId,
         contractMetaByChainAddress: new Map(),
@@ -650,6 +665,8 @@ describe("constant-product V2 execution", () => {
       extra: { evmV2ExecutionCandidate: candidate },
     });
     await enrichEvmV2ExecutionModels({
+      nowSec: 1_700_000_000,
+      sourceGenerationId: "dex-stage:fixture",
       metrics: new Map([[metric.stablecoinId, metric]]),
       chainAddressToId: new Map([
         [canonicalExitRouteAssetKey("bsc", SPUSD), "spusd-soulpeg"],
@@ -839,6 +856,8 @@ describe("constant-product V2 execution", () => {
     });
 
     await enrichEvmV2ExecutionModels({
+      nowSec: 1_700_000_000,
+      sourceGenerationId: "dex-stage:fixture",
       metrics: new Map([[metric.stablecoinId, metric]]),
       chainAddressToId: new Map([[canonicalExitRouteAssetKey("bsc", U), metric.stablecoinId]]),
       contractMetaByChainAddress: new Map(),
@@ -875,6 +894,8 @@ describe("constant-product V2 execution", () => {
     const fetchMulticall = vi.fn();
 
     await enrichEvmV2ExecutionModels({
+      nowSec: 1_700_000_000,
+      sourceGenerationId: "dex-stage:fixture",
       metrics: new Map([[metric.stablecoinId, metric]]),
       chainAddressToId: new Map(),
       contractMetaByChainAddress: new Map(),
@@ -899,6 +920,18 @@ describe("constant-product V2 execution", () => {
     expect(fetchMulticall).not.toHaveBeenCalled();
   });
 
+  it.each([
+    1_700_000_000 - DEX_MEASURED_FRESHNESS_MAX_SEC - 1,
+    1_700_000_000 + 61,
+  ])("withholds exact V2 capture at an expired or future header %s", async (headerTimestamp) => {
+    const result = await runReplay(EVM_V2_REPLAY_CASES[0]!, { headerTimestamp });
+    expect(result.pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(result.pool.extra?.executionCapabilityGate).toEqual({
+      family: "constant-product-v2", reason: "stale-observation",
+    });
+    expect(result.fetchMulticall).not.toHaveBeenCalled();
+  });
+
   for (const replay of EVM_V2_REPLAY_CASES) {
     it(`replays the exact U5 tuple and complete V2 curve for ${replay.assetId}`, async () => {
       const result = await runReplay(replay);
@@ -912,10 +945,19 @@ describe("constant-product V2 execution", () => {
       expect(retained.poolId).toBe(`bsc:${replay.poolAddress}`);
       expect(retained.extra?.executionCapabilityGate).toBeUndefined();
       expect(model).toBeDefined();
+      expect(model.capture).toEqual({
+        blockNumber: EVM_V2_REPLAY_BLOCK, blockHash: `0x${"ab".repeat(32)}`,
+        blockTimestamp: 1_700_000_000, sourceGenerationId: "dex-stage:fixture",
+      });
+      expect(model.tokens.every((token) =>
+        token.referencePriceSourceId === "stablecoins-cache:fixture" &&
+        token.referencePriceObservedAt === 1_699_999_880,
+      )).toBe(true);
       expect(validateAmmExecutionModel(model!, {
         chain: "bsc",
         stablecoinId: replay.assetId,
         retainedTvlUsd: EVM_V2_RETAINED_TVL_USD,
+        nowSec: 1_700_000_000,
       })).toEqual([]);
       expect(model!.feeRate).toBe(0.0025);
       expect(model!.trackedTokenIndex).toBe(

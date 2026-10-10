@@ -53,7 +53,7 @@ export function accumulatePoolMetrics(
     qualityAdjustedTvl: poolQualityAdjustedTvl,
     effectiveTvl: poolEffectiveTvl,
   } = computePoolQualityContribution({
-    qualityTvlUsd: pool.tvlUsd,
+    qualityTvlUsd: rawContribTvl,
     effectiveTvlUsd: enrichment.effectivePoolTvl,
     qualityMultiplier,
     balanceRatio,

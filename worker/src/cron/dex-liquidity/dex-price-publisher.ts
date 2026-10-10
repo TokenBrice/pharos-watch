@@ -3,7 +3,6 @@ import { weightedMedian } from "@shared/lib/stats";
 import { relativeBps } from "@shared/lib/depeg-signals";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { executeAtomicBatch } from "../../lib/db";
-import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
 import type { PriceValidationReferences } from "../../lib/price-validation";
@@ -389,9 +388,6 @@ export async function computeDexPrices(
         ` staged=${published?.staged_row_count ?? 0}/${observedIds.size})`,
     );
   }
-  // The sentinel tracks the live DEX publication pipeline (prices hourly), while
-  // endpoint freshness is derived from the score rows' own two-hour timestamp.
-  await writeFreshnessSentinel(db, "dex-liquidity", nowSec, signal);
 
   try {
     const cleanup = await db.prepare("DELETE FROM dex_price_run_rows WHERE generation_id = ?").bind(generationId).run();

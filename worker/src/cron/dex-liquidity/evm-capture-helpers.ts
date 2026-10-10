@@ -27,8 +27,9 @@ export async function runPinnedBlockCapture<TResult, TFailure = never>(input: {
   rpcOptions: EvmRpcOptions;
   fetchBlockNumber?: typeof fetchEvmBlockNumber;
   fetchBlockHeader?: typeof fetchEvmBlockHeader;
-  nowSec?: number;
-  maxAgeSec?: number;
+  nowSec: number;
+  maxAgeSec: number;
+  freshnessFailureReason?: TFailure;
   verifyDeployment: (
     context: PinnedBlockCaptureContext,
   ) => Promise<PinnedCaptureCheck<TFailure>>;
@@ -52,12 +53,13 @@ export async function runPinnedBlockCapture<TResult, TFailure = never>(input: {
   const header = await fetchBlockHeader(input.chain, blockNumber, input.rpcOptions);
   if (
     !header ||
-    header.number !== blockNumber ||
-    (input.nowSec != null &&
-      input.maxAgeSec != null &&
-      !isFreshEvmCaptureHeader(header, input.nowSec, input.maxAgeSec))
+    header.number !== blockNumber
   ) {
     await input.onFailure();
+    return;
+  }
+  if (!isFreshEvmCaptureHeader(header, input.nowSec, input.maxAgeSec)) {
+    await input.onFailure(input.freshnessFailureReason);
     return;
   }
   const context = { blockNumber, header };
@@ -76,9 +78,8 @@ export async function runPinnedBlockCapture<TResult, TFailure = never>(input: {
     !confirmedHeader ||
     confirmedHeader.number !== header.number ||
     confirmedHeader.hash.toLowerCase() !== header.hash.toLowerCase() ||
-    (input.nowSec != null &&
-      input.maxAgeSec != null &&
-      !isFreshEvmCaptureHeader(confirmedHeader, input.nowSec, input.maxAgeSec))
+    confirmedHeader.timestamp !== header.timestamp ||
+    !isFreshEvmCaptureHeader(confirmedHeader, input.nowSec, input.maxAgeSec)
   ) {
     await input.onFailure();
     return;
@@ -231,6 +232,10 @@ function isFreshEvmCaptureHeader(
 ): boolean {
   return (
     Number.isSafeInteger(nowSec) &&
+    Number.isSafeInteger(header.timestamp) &&
+    header.timestamp > 0 &&
+    Number.isFinite(maxAgeSec) &&
+    maxAgeSec >= 0 &&
     header.timestamp <= nowSec + 60 &&
     nowSec - header.timestamp <= maxAgeSec
   );

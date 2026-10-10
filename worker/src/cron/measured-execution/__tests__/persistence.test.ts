@@ -3,6 +3,8 @@ import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
+  DEX_MEASURED_FRESHNESS_MAX_SEC,
+  validateDexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import {
@@ -371,7 +373,8 @@ describe("measured execution last-known-good selection", () => {
       quoteGenerationId: "cutoff", resolution: "last-known-good",
     });
   });
-  it("uses a prior measured row when the latest outcome is an operational failure", async () => {
+  it.each(["request-budget-exhausted", "block-header-unavailable"])(
+    "retains original source time across a latest %s operational failure", async (failureReason) => {
     const measuredTarget = fixtureTarget("ethereum");
     const historicalProfile = fixtureProfile(measuredTarget, {
       targetGenerationId: "target-generation-lkg",
@@ -382,7 +385,7 @@ describe("measured execution last-known-good selection", () => {
       target: measuredTarget,
       latest: {
         status: "failed",
-        failureReason: "request-budget-exhausted",
+        failureReason,
         profile: null,
       },
       historical: [{ target: measuredTarget, profile: historicalProfile }],
@@ -399,11 +402,20 @@ describe("measured execution last-known-good selection", () => {
       quoteGenerationId: "quote-generation-lkg",
       targetGenerationId: "target-generation-lkg",
       resolution: "last-known-good",
-      latestFailureReason: "request-budget-exhausted",
+      latestFailureReason: failureReason,
     });
     expect(entry?.profile).toBeNull();
     expect(materializeDexMeasuredQuoteProfile(entry!)?.quotedAt).toBe(1_900);
     expect(materializeDexMeasuredQuoteProfile(entry!)?.quoteGenerationId).toBe("quote-generation-lkg");
+    const retainedProfile = materializeDexMeasuredQuoteProfile(entry!)!;
+    expect(validateDexMeasuredExecutionProfile({
+      profile: retainedProfile,
+      quotedTarget: measuredTarget,
+      currentTarget: measuredTarget,
+      expectedTargetGenerationId: "target-generation-lkg",
+      expectedQuoteGenerationId: "quote-generation-lkg",
+      nowSec: retainedProfile.quotedAt + DEX_MEASURED_FRESHNESS_MAX_SEC + 1,
+    })).toContain("stale-observation");
     expect(entry?.observationHistory).toMatchObject({
       completeProducerCycleCount: 2,
       successfulObservationCount: 1,

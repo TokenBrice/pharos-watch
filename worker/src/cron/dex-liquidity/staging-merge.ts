@@ -8,13 +8,12 @@ import {
   SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION,
   STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
   STAGED_POOL_MAX_TVL_USD,
-  STAGED_POOL_PRICE_MAX_AGE_HOURS,
   stagedPoolConfidence,
   stagedPoolMaturityDays,
 } from "../dex-discovery/types";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { DIRECT_API_POOL_MIN_TVL_USD } from "../../lib/dex-api-pool-shaping";
-import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
+import { QUALITY_MULTIPLIERS, STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../../lib/dex-cron-constants";
 import { toFiniteNumber } from "../../lib/number-utils";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { mergeCgPools, mergeGtPools } from "./fetch-crawlers";
@@ -932,6 +931,8 @@ export async function mergeStagedPools(
         ? STAGED_SOURCE_FAMILY[stagedPool.source]
         : "gecko_terminal",
       ...(crossSourcePriceProvenance ?? {}),
+      balanceRatio: stagedPool.balanceRatio,
+      lockedLiquidityPct: stagedPool.lockedLiqPct,
       ...(evmV2ExecutionCandidate ? { evmV2ExecutionCandidate } : {}),
       measurement: {
         tvlMeasured: true,

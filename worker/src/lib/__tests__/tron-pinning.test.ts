@@ -77,6 +77,7 @@ describe("TRON historical-state admission", () => {
     let failed = false;
     await runPinnedBlockCapture({
       chain: "tron", rpcOptions: {},
+      nowSec: 1_700_000_000, maxAgeSec: 10_800,
       verifyDeployment: async () => ({ ok: true }),
       buildCalls: async () => ({ ok: true, value: 1 }),
       onResults: () => { accepted = true; }, onFailure: () => { failed = true; },

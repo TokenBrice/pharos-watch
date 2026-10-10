@@ -22,6 +22,10 @@ import type {
   ResolvedPoolIdentity,
 } from "../process-pool-types";
 import type { CurvePoolEntry, LlamaPool } from "../types";
+import { processPoolMetrics } from "../process-pools";
+import { computeLiquidityScore } from "../pool-helpers";
+import { applyRebuiltMetrics, rebuildMetricsFromPools, summarizeRetainedPoolVolume } from "../scoring-helpers";
+import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 
 const buildCurveStableswapExecutionModel = (
   curveData: CurvePoolEntry | undefined,
@@ -141,6 +145,49 @@ function compositeCapability(
 }
 
 describe("buildCurveStableswapExecutionModel", () => {
+  it.each([2_000_000, 5_000_000])(
+    "keeps quality retention on the retained metapool basis of %s through scoring",
+    (retainedTvl) => {
+      const poolAddress = "0x1111111111111111111111111111111111111111";
+      const curveData = entry({
+        poolAddress, isMetaPool: true, registryId: "factory",
+        balanceRatio: 0.5, metapoolAdjustedTvl: retainedTvl,
+      });
+      const pool: LlamaPool = {
+        pool: poolAddress, chain: "ethereum", project: "curve", symbol: "USDC-USDT",
+        tvlUsd: 10_000_000, volumeUsd1d: 250_000, volumeUsd7d: 1_750_000,
+        stablecoin: true, underlyingTokens: [USDC, USDT],
+        apyBase: 1, apyReward: 0, apy: 1, sigma: 0, exposure: "multi", count: 100,
+      };
+      const { metrics, rejections } = processPoolMetrics({
+        pools: [pool], dexProjects: new Set(["curve"]), chainAddressToId,
+        symbolToChainScopedIds: new Map(), curvePoolMap: new Map([[`ethereum:${poolAddress}`, curveData]]),
+        uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), volumeObservedAtSec: 1_000,
+      });
+      expect(rejections).toEqual([]);
+      const metric = metrics.get("usdc-circle")!;
+      applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
+      metric.volumeAvailability = summarizeRetainedPoolVolume(
+        metric.topPools.map((pool) => ({ reading: pool.volumeReading, tvlUsd: pool.tvlUsd })),
+        { asOfSec: 1_000, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC },
+      ).volumeAvailability;
+      const retention = 0.85 * Math.pow(0.5, 1.5);
+      expect(metric.totalTvlUsd).toBe(retainedTvl);
+      expect(metric.qualityAdjustedTvl).toBe(Math.round(retainedTvl * retention));
+      expect(metric.effectiveTvl).toBe(Math.round(retainedTvl * retention));
+      expect(metric.qualityAdjustedTvl / metric.totalTvlUsd).toBeCloseTo(retention, 6);
+      const result = computeLiquidityScore(metric, 50, 1_000_000_000);
+      expect(result.components.poolQuality).toBe(Math.round((retention - 0.15) / 0.65 * 100));
+      expect(result.components.poolQuality).toBe(23);
+      expect(result.score).not.toBeNull();
+      const inflated = computeLiquidityScore(
+        { ...metric, qualityAdjustedTvl: Math.round(10_000_000 * retention) },
+        50, 1_000_000_000,
+      );
+      expect(result.score!).toBeLessThan(inflated.score!);
+    },
+  );
+
   it("builds a schema-valid stableswap model with the tracked input token", () => {
     const model = buildCurveStableswapExecutionModel(entry(), "ethereum", "usdc-circle", chainAddressToId);
     expect(model).not.toBeNull();
