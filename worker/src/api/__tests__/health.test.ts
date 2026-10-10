@@ -298,6 +298,10 @@ describe("handleHealth", () => {
 
   it("serves a fresh public-health projection from one snapshot read", async () => {
     // A healthy cached aggregate still reads delivery evidence on this request.
+    // Pin the clock: the handler stamps its own response time, so a real
+    // second boundary between the two handleHealth calls would flake.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now());
     const now = Math.floor(Date.now() / 1000);
     const row = makeRawStatusSnapshotRow(now, 60);
     const snapshot = JSON.parse(row.value) as Record<string, unknown>;
@@ -323,6 +327,7 @@ describe("handleHealth", () => {
     expect(body).toMatchObject({ ...publicHealth, timestamp: now });
     expect(db.getHistory()).toHaveLength(2);
     db.assertAllMatchesUsed();
+    vi.useRealTimers();
   });
   it("detects a stall from live starts despite a healthy fresh snapshot", async () => {
     const now = Math.floor(Date.now() / 1000);
