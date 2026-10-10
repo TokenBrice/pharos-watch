@@ -285,6 +285,7 @@ export async function stageDexLiquidityScoring(
       rowsRead: scoringSourceState.primaryRawPoolCount,
       failedSources: scoringSourceState.failedSources,
       degradedSources: scoringSourceState.degradedSources ?? [],
+      uniV3CandidateCarryForward: scoringSourceState.uniV3CandidateCarryForward ?? [],
       fallbackSignals: scoringSourceState.fallbackSignals,
       poolRejections: poolState.poolRejections,
       poolRejectionMateriality: {
@@ -788,6 +789,7 @@ function buildDexLiquidityScoringSourceState(
     criticalSourceFailures: sourceState.criticalSourceFailures,
     fallbackSignals: sourceState.fallbackSignals,
     degradedSources: sourceState.directApiPhase.degradedSources,
+    uniV3CandidateCarryForward: sourceState.subgraphEnrichment.uniV3CandidateCarryForward,
     directApiSourceSummary: {
       circuitEvents: sourceState.directApiPhase.circuitEvents,
       sourceWarnings: sourceState.directApiPhase.sourceWarnings,
@@ -994,6 +996,8 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     retainV4Identity(buildDirectApiPoolIdentity(pool, lookups.chainAddressToId));
   }
   const subgraphEnrichment = await fetchSubgraphEnrichmentPhase({
+    db: ctx.db,
+    nowSec: ctx.syncStartSec,
     graphApiKey: ctx.graphApiKey,
     symbolToChainScopedIds: lookups.symbolToChainScopedIds,
     chainAddressToId: lookups.chainAddressToId,
@@ -1014,6 +1018,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     metadata: {
       providerFamilies: ["uniswap-v3", "uniswap-v4"],
       failedSources: subgraphEnrichment.failedSources,
+      uniV3CandidateCarryForward: subgraphEnrichment.uniV3CandidateCarryForward,
     },
     counts: {
       uniV3PriceObservations: subgraphEnrichment.uniV3PriceObs.size, uniswapV4ExecutionCandidateKeys: subgraphEnrichment.uniswapV4ExecutionCandidates.size,
@@ -1361,6 +1366,7 @@ async function scoreDexLiquidityPoolState(
     ? { "univ3-subgraph": "missing-graph-api-key", "uniswap-v4-subgraph": "missing-graph-api-key" } : {};
   funnel.enrichment = boundTelemetryEntries(poolState.targetEnrichment ?? [], 64, 8_192);
   funnel.enrichmentGroupsOmitted = (poolState.targetEnrichment?.length ?? 0) - funnel.enrichment.length;
+  funnel.uniV3CandidateCarryForward = sourceState.uniV3CandidateCarryForward ?? [];
   for (const group of funnel.groups) {
     group.enriched = (poolState.targetEnrichment ?? []).filter((entry) => entry.adapterProfileId === group.adapterProfileId && entry.chain === group.chain)
       .reduce((sum, entry) => sum + entry.enriched, 0);

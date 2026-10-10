@@ -133,6 +133,20 @@ const DexTargetEnrichmentTelemetrySchema = z.array(z.object({
   dropReasons: z.record(z.string(), z.number()),
 })).max(64);
 
+/** Per-chain Uni V3 execution-candidate snapshot decisions made by the source stage. */
+const DexUniV3CandidateCarryForwardSchema = z.array(z.discriminatedUnion("outcome", [
+  z.object({ chain: z.string(), outcome: z.literal("persisted"), candidates: z.number() }),
+  z.object({ chain: z.string(), outcome: z.literal("persist-failed"), candidates: z.number(), error: z.string() }),
+  z.object({
+    chain: z.string(), outcome: z.literal("carried"), fetchedAt: z.number(), ageSec: z.number(),
+    candidates: z.number(), added: z.number(),
+  }),
+  z.object({
+    chain: z.string(), outcome: z.literal("unavailable"),
+    reason: z.enum(["missing", "stale", "invalid", "read-failed"]),
+  }),
+])).max(16);
+
 /** Dex liquidity cron metadata shape */
 export const DexLiquidityCronMetadataSchema = z.object({
   stagedPoolsMerged: z.number().optional(),
@@ -146,6 +160,7 @@ export const DexLiquidityCronMetadataSchema = z.object({
   targetEnrichment: DexTargetEnrichmentTelemetrySchema.optional(),
   targetEnrichmentGroupsOmitted: z.number().optional(),
   graphApiKeyConfigured: z.boolean().nullable().optional(),
+  uniV3CandidateCarryForward: DexUniV3CandidateCarryForwardSchema.optional(),
   registryEvaluation: z.object({
     evaluatedAtSec: z.number().int().nonnegative(),
     basis: z.literal("registry-read-consumed"),
@@ -336,6 +351,7 @@ export const DexLiquidityCronMetadataSchema = z.object({
     sourceFailuresOmitted: z.number(),
     enrichment: DexTargetEnrichmentTelemetrySchema.optional(),
     enrichmentGroupsOmitted: z.number().optional(),
+    uniV3CandidateCarryForward: DexUniV3CandidateCarryForwardSchema.optional(),
   }).optional(),
   exitRouteSelection: z.object({
     baselineAvailable: z.boolean(),
