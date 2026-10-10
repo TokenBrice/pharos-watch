@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../../lib/stablecoins-cache";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -73,8 +73,8 @@ export async function loadTrackedStablecoinMaps(
       } else {
         skippedWeakTrackedPrices++;
       }
-      const mcap = getCirculatingRaw(asset);
-      if (mcap > 0) {
+      const mcap = getCirculatingRawOrNull(asset);
+      if (mcap !== null && mcap > 0) {
         stablecoinMcapById.set(asset.id, mcap);
       }
     }

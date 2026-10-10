@@ -1,6 +1,6 @@
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { compareFiniteDesc } from "@shared/lib/sort";
 import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
@@ -21,8 +21,10 @@ export interface AltPegDistributionRow {
   label: string;
   href: string;
   group: AltPegGroup;
-  marketCap: number;
-  sharePct: number;
+  marketCap: number | null;
+  sharePct: number | null;
+  supplyObservedCount: number;
+  supplyUnavailableCount: number;
   coinCount: number;
   leaderSymbol: string;
   leaderName: string;
@@ -33,11 +35,15 @@ export interface AltPegDistributionRow {
 }
 
 export interface AltPegSnapshot {
-  totalMarketCap: number;
-  altMarketCap: number;
-  altSharePct: number;
-  fiatNonUsdMarketCap: number;
-  commodityMarketCap: number;
+  totalMarketCap: number | null;
+  altMarketCap: number | null;
+  altSharePct: number | null;
+  fiatNonUsdMarketCap: number | null;
+  commodityMarketCap: number | null;
+  supplyObservedCount: number;
+  supplyUnavailableCount: number;
+  altSupplyObservedCount: number;
+  altSupplyUnavailableCount: number;
   altCoinCount: number;
   altPegCount: number;
   distributionRows: AltPegDistributionRow[];
@@ -69,11 +75,15 @@ export interface AltPegLinkHubGroup {
 }
 
 const EMPTY_SNAPSHOT: AltPegSnapshot = {
-  totalMarketCap: 0,
-  altMarketCap: 0,
-  altSharePct: 0,
-  fiatNonUsdMarketCap: 0,
-  commodityMarketCap: 0,
+  totalMarketCap: null,
+  altMarketCap: null,
+  altSharePct: null,
+  fiatNonUsdMarketCap: null,
+  commodityMarketCap: null,
+  supplyObservedCount: 0,
+  supplyUnavailableCount: 0,
+  altSupplyObservedCount: 0,
+  altSupplyUnavailableCount: 0,
   altCoinCount: 0,
   altPegCount: 0,
   distributionRows: [],
@@ -143,43 +153,58 @@ export function buildAltPegSnapshot(peggedAssets?: StablecoinData[]): AltPegSnap
   let totalMarketCap = 0;
   let fiatNonUsdMarketCap = 0;
   let commodityMarketCap = 0;
-  const altPegIds = new Set<string>();
-  const altPegs = new Set<PegCurrency>();
-  const distributionMap = new Map<
-    PegCurrency,
-    {
-      marketCap: number;
-      coinCount: number;
-      leaderId: string;
-      leaderName: string;
-      leaderSymbol: string;
-      leaderMcap: number;
-    }
-  >();
+  let supplyObservedCount = 0;
+  let supplyUnavailableCount = 0;
+  let altSupplyObservedCount = 0;
+  let altSupplyUnavailableCount = 0;
+  let fiatObservedCount = 0;
+  let commodityObservedCount = 0;
+  const seenIds = new Set<string>();
+  const distributionMap = new Map<PegCurrency, {
+    marketCap: number;
+    coinCount: number;
+    supplyObservedCount: number;
+    supplyUnavailableCount: number;
+    leaderId: string;
+    leaderName: string;
+    leaderSymbol: string;
+    leaderMcap: number | null;
+  }>();
 
   for (const coin of peggedAssets) {
-    if (!CLIENT_CORE_AGGREGATE_ACTIVE_IDS.has(coin.id)) continue;
-    const marketCap = getCirculatingRaw(coin);
-    totalMarketCap += marketCap;
+    if (!CLIENT_CORE_AGGREGATE_ACTIVE_IDS.has(coin.id) || seenIds.has(coin.id)) continue;
+    seenIds.add(coin.id);
+    const marketCap = getCirculatingRawOrNull(coin);
+    if (marketCap === null) {
+      supplyUnavailableCount += 1;
+    } else {
+      supplyObservedCount += 1;
+      totalMarketCap += marketCap;
+    }
 
     const meta = ACTIVE_META_BY_ID.get(coin.id);
     if (!meta || !isAltPeg(meta.flags.pegCurrency)) continue;
-
     const peg = meta.flags.pegCurrency;
-    altPegIds.add(coin.id);
-    altPegs.add(peg);
-
-    if (isCommodityPeg(peg)) {
-      commodityMarketCap += marketCap;
+    if (marketCap === null) {
+      altSupplyUnavailableCount += 1;
     } else {
-      fiatNonUsdMarketCap += marketCap;
+      altSupplyObservedCount += 1;
+      if (isCommodityPeg(peg)) {
+        commodityObservedCount += 1;
+        commodityMarketCap += marketCap;
+      } else {
+        fiatObservedCount += 1;
+        fiatNonUsdMarketCap += marketCap;
+      }
     }
 
     const existing = distributionMap.get(peg);
     if (!existing) {
       distributionMap.set(peg, {
-        marketCap,
+        marketCap: marketCap ?? 0,
         coinCount: 1,
+        supplyObservedCount: marketCap === null ? 0 : 1,
+        supplyUnavailableCount: marketCap === null ? 1 : 0,
         leaderId: coin.id,
         leaderName: coin.name,
         leaderSymbol: coin.symbol,
@@ -187,10 +212,14 @@ export function buildAltPegSnapshot(peggedAssets?: StablecoinData[]): AltPegSnap
       });
       continue;
     }
-
-    existing.marketCap += marketCap;
     existing.coinCount += 1;
-    if (marketCap > existing.leaderMcap) {
+    if (marketCap === null) {
+      existing.supplyUnavailableCount += 1;
+      continue;
+    }
+    existing.marketCap += marketCap;
+    existing.supplyObservedCount += 1;
+    if (existing.leaderMcap === null || marketCap > existing.leaderMcap) {
       existing.leaderId = coin.id;
       existing.leaderName = coin.name;
       existing.leaderSymbol = coin.symbol;
@@ -203,14 +232,16 @@ export function buildAltPegSnapshot(peggedAssets?: StablecoinData[]): AltPegSnap
     .map(([peg, entry]) => {
       const page = PEG_TAXONOMY_BY_VALUE.get(peg);
       const pegMeta = PEG_CHART_COLORS[peg] ?? PEG_CHART_COLORS.OTHER;
-
       return {
         peg,
         label: page?.shortLabel ?? pegMeta.label ?? peg,
         href: page?.href ?? "#",
         group: getAltPegGroup(peg),
-        marketCap: entry.marketCap,
-        sharePct: altMarketCap > 0 ? (entry.marketCap / altMarketCap) * 100 : 0,
+        marketCap: entry.supplyObservedCount > 0 ? entry.marketCap : null,
+        sharePct: altSupplyUnavailableCount === 0 && entry.supplyObservedCount > 0 && altMarketCap > 0
+          ? (entry.marketCap / altMarketCap) * 100 : null,
+        supplyObservedCount: entry.supplyObservedCount,
+        supplyUnavailableCount: entry.supplyUnavailableCount,
         coinCount: entry.coinCount,
         leaderSymbol: entry.leaderSymbol,
         leaderName: entry.leaderName,
@@ -220,18 +251,23 @@ export function buildAltPegSnapshot(peggedAssets?: StablecoinData[]): AltPegSnap
         colorBgClass: pegMeta.bgColor,
       } satisfies AltPegDistributionRow;
     })
-    .sort(compareFiniteDesc<AltPegDistributionRow>((row) => row.marketCap));
+    .sort(compareFiniteDesc<AltPegDistributionRow>((row) => row.marketCap ?? Number.NaN));
 
   return {
-    totalMarketCap,
-    altMarketCap,
-    altSharePct: totalMarketCap > 0 ? (altMarketCap / totalMarketCap) * 100 : 0,
-    fiatNonUsdMarketCap,
-    commodityMarketCap,
-    altCoinCount: altPegIds.size,
-    altPegCount: altPegs.size,
+    totalMarketCap: supplyObservedCount > 0 ? totalMarketCap : null,
+    altMarketCap: altSupplyObservedCount > 0 ? altMarketCap : null,
+    altSharePct: supplyUnavailableCount === 0 && altSupplyObservedCount > 0 && totalMarketCap > 0
+      ? (altMarketCap / totalMarketCap) * 100 : null,
+    fiatNonUsdMarketCap: fiatObservedCount > 0 ? fiatNonUsdMarketCap : null,
+    commodityMarketCap: commodityObservedCount > 0 ? commodityMarketCap : null,
+    supplyObservedCount,
+    supplyUnavailableCount,
+    altSupplyObservedCount,
+    altSupplyUnavailableCount,
+    altCoinCount: [...distributionMap.values()].reduce((sum, entry) => sum + entry.coinCount, 0),
+    altPegCount: distributionMap.size,
     distributionRows,
-    topRows: distributionRows.slice(0, 3),
+    topRows: distributionRows.filter((row) => row.marketCap !== null).slice(0, 3),
   };
 }
 

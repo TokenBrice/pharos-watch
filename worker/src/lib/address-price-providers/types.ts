@@ -41,7 +41,7 @@ export interface AddressPriceTarget {
   recentlyMissingPrice: boolean;
   missingPrice: boolean;
   expiresBeforeNextGeneration: boolean;
-  circulatingUsd: number;
+  circulatingUsd: number | null;
 }
 
 export interface AddressPriceQuote {

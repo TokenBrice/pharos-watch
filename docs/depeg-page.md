@@ -70,6 +70,9 @@ One Beam metric" shape required by `design-language.md#feature-page-heroes`.
   band, and a **double-ring halo marks an elevated coin that is also in a confirmed live depeg**
   (`PegSummaryCoin.activeDepeg` intersected with the radar's elevated set — see
   [Universe scope](#universe-scope)). Every shape carries a field.
+  Unavailable supply retains a neutral, band-based size rather than the measured-small tier.
+  Tooltip and keyboard announcements name missing supply; an explicit observed zero remains a
+  measured-zero cap, and unavailable caps sort after observations within each severity band.
 - **Footer band:** conditional reliability caveats only, and nothing when the data is healthy.
 - **Calm state:** at zero active depegs the One Beam reads `0 — all pegs holding` and no halos are
   drawn, but the radar still plots precursor WATCH/ALERT coins. Zero confirmed incidents is not the

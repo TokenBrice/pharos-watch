@@ -2,7 +2,7 @@ import {
   parseLiveReserveAdapterParams,
   type LiveReserveAdapterParamsByKey,
 } from "@shared/lib/live-reserve-adapters";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { toTokenUnits } from "@shared/lib/math";
 import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
@@ -36,7 +36,7 @@ interface DjedReadState {
   shenMinted: bigint | null;
   adaPriceUsd: number | undefined;
   djedPriceUsd: number | undefined;
-  listCirculating: number | undefined;
+  listSupply: { listCirculatingUsd: number; priceUsd: number } | undefined;
 }
 
 function unitOf(unit: { policyId: string; assetNameHex: string }): [string, string] {
@@ -113,21 +113,22 @@ function adaptDjedCardanoState(
   }
 
   // ── Supply reconciliation (diagnostic; never replaces the on-chain liability) ──
-  // The bank census is a mint/burn liability; the DefiLlama list `circulating`
-  // is the market-cap denominator. They may legitimately diverge (e.g. DJED
-  // held in non-bank wallets), so drift is flagged, not reconciled.
-  const listCirculating = state.listCirculating;
-  const supplyDivergence = listCirculating != null && listCirculating > 0
+  // Value the on-chain units with the matching list generation's price. The
+  // cached circulating buckets are already USD, never token units.
+  const listSupply = state.listSupply;
+  const supplyDivergence = listSupply
     ? {
-        listCirculatingUnits: listCirculating,
-        supplyDivergencePct: (Math.abs(djedCirculating - listCirculating) / listCirculating) * 100,
-        supplyDerivation: `${ADAPTER_KEY}: on-chain liability = djedMinted − djedBankStock; list = DefiLlama list circulating via getCirculatingRaw`,
+        listCirculatingUsd: listSupply.listCirculatingUsd,
+        listPriceUsd: listSupply.priceUsd,
+        onchainCirculatingUsd: djedCirculating * listSupply.priceUsd,
+        supplyDivergencePct: (Math.abs(djedCirculating * listSupply.priceUsd - listSupply.listCirculatingUsd) / listSupply.listCirculatingUsd) * 100,
+        supplyDerivation: `${ADAPTER_KEY}: on-chain liability = djedMinted − djedBankStock, valued at the matching cached list price; list buckets are USD`,
       }
-    : undefined;
+    : null;
   if (supplyDivergence && supplyDivergence.supplyDivergencePct > 10) {
     warnings.push(reserveDegradedWarning(
       "djed-supply-divergence",
-      `${ADAPTER_KEY}: on-chain circulating ${djedCirculating.toFixed(2)} DJED diverges ${supplyDivergence.supplyDivergencePct.toFixed(2)}% from the DefiLlama list circulating ${supplyDivergence.listCirculatingUnits.toFixed(2)} DJED`,
+      `${ADAPTER_KEY}: on-chain circulating value ${supplyDivergence.onchainCirculatingUsd.toFixed(2)} USD diverges ${supplyDivergence.supplyDivergencePct.toFixed(2)}% from the DefiLlama list circulating ${supplyDivergence.listCirculatingUsd.toFixed(2)} USD`,
     ));
   }
 
@@ -220,7 +221,7 @@ function adaptDjedCardanoState(
         djedMintedUnits: decimalUnits(state.djedMinted, params.djedUnit.decimals),
         djedBankStockUnits: decimalUnits(djedBankStock, params.djedUnit.decimals),
         djedCirculatingUnits: djedCirculating,
-        ...(supplyDivergence ?? {}),
+        ...(supplyDivergence ?? { supplyReconciliationUnavailableReason: "list-supply-or-price-unavailable" }),
         ...(shenCirculating != null ? { shenCirculatingUnits: shenCirculating } : {}),
         extraneousAssets: extraneous,
       },
@@ -243,12 +244,12 @@ export async function fetchDjedCardanoReserves(
     ),
   ];
 
-  const listCirculating = await loadDjedListCirculating(coin, ctx);
+  const listSupply = await loadDjedListCirculating(coin, ctx);
 
   let lastError: unknown = null;
   for (const baseUrl of baseUrls) {
     try {
-      return await readDjedAttempt(baseUrl, params, signal, ctx, listCirculating);
+      return await readDjedAttempt(baseUrl, params, signal, ctx, listSupply);
     } catch (error) {
       lastError = error;
       if (signal.aborted) break;
@@ -260,7 +261,7 @@ export async function fetchDjedCardanoReserves(
 async function loadDjedListCirculating(
   coin: ReserveAdapterCoin,
   ctx: AdapterContext | undefined,
-): Promise<number | undefined> {
+): Promise<DjedReadState["listSupply"]> {
   if (!ctx?.db) return undefined;
   try {
     const cached = await loadStablecoinsCache(ctx.db, { mode: "lenient", contract: "critical-fields" });
@@ -269,8 +270,10 @@ async function loadDjedListCirculating(
       && (ctx.nowSec ?? Math.floor(Date.now() / 1000)) - cached.updatedAt <= 7200
       ? cached.payload.peggedAssets.find((asset) => asset.id === coin.id)
       : undefined;
-    const circulating = supplyCoin ? getCirculatingRaw(supplyCoin) : 0;
-    return Number.isFinite(circulating) && circulating > 0 ? circulating : undefined;
+    const circulatingUsd = getCirculatingRawOrNull(supplyCoin);
+    const priceUsd = supplyCoin?.price;
+    return circulatingUsd !== null && circulatingUsd > 0 && typeof priceUsd === "number" && Number.isFinite(priceUsd) && priceUsd > 0
+      ? { listCirculatingUsd: circulatingUsd, priceUsd } : undefined;
   } catch {
     return undefined;
   }
@@ -281,7 +284,7 @@ async function readDjedAttempt(
   params: DjedCardanoParams,
   signal: AbortSignal,
   ctx: AdapterContext | undefined,
-  listCirculating: number | undefined,
+  listSupply: DjedReadState["listSupply"],
 ): Promise<AdapterResult> {
   const reader = await createKoiosReader(baseUrl, signal, ctx);
   const units: Array<[string, string]> = [unitOf(params.djedUnit)];
@@ -319,7 +322,7 @@ async function readDjedAttempt(
       shenMinted: shenRow?.totalSupply ?? null,
       adaPriceUsd: priceMap.get("ADA"),
       djedPriceUsd: priceMap.get("DJED"),
-      listCirculating,
+      listSupply,
     },
     params,
   );

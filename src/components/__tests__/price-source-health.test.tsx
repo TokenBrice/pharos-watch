@@ -38,6 +38,7 @@ describe("price confidence severity calibration", () => {
       // Illustrative long-tail mix: 34% of rows high-confidence, 96.5% of value.
       confidenceMarketCapUsd: { high: 312_472_000_000, "single-source": 11_096_000_000, low: 154_000_000, fallback: 2_000_000 },
       pricedMarketCapUsd: 323_724_000_000,
+      supplyCoverage: { complete: true, observedCount: 335, unavailableCount: 0 },
     },
   };
 
@@ -57,6 +58,30 @@ describe("price confidence severity calibration", () => {
     render(<PriceSourceHealthCard health={PriceSourceHealthSchema.parse(legacy)} nowSeconds={100} />);
     expect(screen.getByText("115").className).toContain("text-muted-foreground");
     expect(screen.getByText("20.3%")).toBeTruthy();
+  });
+
+  it("keeps partial value exposure neutral instead of certifying full-cohort confidence", () => {
+    const health = PriceSourceHealthSchema.parse({
+      ...liveShape,
+      active: { ...liveShape.active, supplyCoverage: { complete: false, observedCount: 334, unavailableCount: 1 } },
+    });
+    render(<PriceSourceHealthCard health={health} nowSeconds={100} />);
+    expect(screen.getByText("115").className).toContain("text-muted-foreground");
+    expect(screen.queryByText(/% of value/)).toBeNull();
+    expect(screen.getByText(/known priced-supply subtotal/).textContent).toContain("1 unavailable");
+  });
+
+  it("does not publish a zero-dollar exposure when no supply was observed", () => {
+    const health = PriceSourceHealthSchema.parse({
+      ...liveShape,
+      active: { ...liveShape.active, pricedMarketCapUsd: 0,
+        confidenceMarketCapUsd: { high: 0, "single-source": 0, low: 0, fallback: 0 },
+        supplyCoverage: { complete: false, observedCount: 0, unavailableCount: 335 } },
+    });
+    render(<PriceSourceHealthCard health={health} nowSeconds={100} />);
+    expect(screen.getByText(/Priced supply unavailable/)).toBeTruthy();
+    expect(screen.queryByText(/\$0/)).toBeNull();
+    expect(screen.getByText("115").className).toContain("text-muted-foreground");
   });
 
   it("drives the Missing tile from unacknowledged gaps only", () => {

@@ -12,7 +12,7 @@ import {
 } from "../../lib/pricing-provider-lifecycle";
 import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
 import { applyResolvedPrice, type PeggedAsset } from "./enrich-prices-shared";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import {
   collectMissingPriceCandidates,
   type EnrichPassResult,
@@ -283,9 +283,11 @@ export async function runDexScreenerPass(
         return right.missingGenerations - left.missingGenerations;
       }
 
-      const leftCirculating = getCirculatingRaw(left.asset);
-      const rightCirculating = getCirculatingRaw(right.asset);
+      const leftCirculating = getCirculatingRawOrNull(left.asset);
+      const rightCirculating = getCirculatingRawOrNull(right.asset);
       if (rightCirculating !== leftCirculating) {
+        if (leftCirculating === null) return 1;
+        if (rightCirculating === null) return -1;
         return rightCirculating - leftCirculating;
       }
 

@@ -1,51 +1,27 @@
 import { describe, it, expect } from "vitest";
 import {
-  sumPegBuckets,
-  getCirculatingRaw,
+  sumPegBucketsOrNull,
   getCirculatingRawOrNull,
-  getPrevDayRaw,
   getPrevDayRawOrNull,
-  getPrevWeekRaw,
   getPrevWeekRawOrNull,
   getPrevMonthRawOrNull,
 } from "../supply";
 import { makeStablecoin } from "../../test-utils/stablecoin";
 
-describe("sumPegBuckets", () => {
-  it("returns 0 for undefined", () => {
-    expect(sumPegBuckets(undefined)).toBe(0);
+describe("sumPegBucketsOrNull", () => {
+  it("preserves absent and invalid records instead of publishing a known subtotal", () => {
+    const unavailableBuckets: Parameters<typeof sumPegBucketsOrNull>[0][] = [
+      undefined, null, {}, { usd: 100, eur: NaN }, { usd: 100, eur: Infinity },
+      { usd: 100, eur: -1 }, { usd: Number.MAX_VALUE, eur: Number.MAX_VALUE },
+    ];
+    for (const buckets of unavailableBuckets) {
+      expect(sumPegBucketsOrNull(buckets)).toBeNull();
+    }
   });
 
-  it("returns 0 for empty object", () => {
-    expect(sumPegBuckets({})).toBe(0);
-  });
-
-  it("sums all numeric values", () => {
-    expect(sumPegBuckets({ usd: 100, eur: 50, gbp: 25 })).toBe(175);
-  });
-
-  it("treats NaN as 0", () => {
-    expect(sumPegBuckets({ usd: 100, eur: NaN })).toBe(100);
-  });
-
-  it("treats Infinity as 0", () => {
-    expect(sumPegBuckets({ usd: 100, eur: Infinity })).toBe(100);
-  });
-
-  it("treats -Infinity as 0", () => {
-    expect(sumPegBuckets({ usd: 100, eur: -Infinity })).toBe(100);
-  });
-});
-
-describe("getCirculatingRaw", () => {
-  it("sums circulating peg buckets", () => {
-    const coin = makeStablecoin({ circulating: { usd: 1_000_000 } });
-    expect(getCirculatingRaw(coin)).toBe(1_000_000);
-  });
-
-  it("collapses absent buckets to 0 for callers that established availability", () => {
-    expect(getCirculatingRaw(makeStablecoin({ circulating: undefined }))).toBe(0);
-    expect(getCirculatingRaw(makeStablecoin({ circulating: {} }))).toBe(0);
+  it("preserves explicit zero and wholly observed sums", () => {
+    expect(sumPegBucketsOrNull({ usd: 0 })).toBe(0);
+    expect(sumPegBucketsOrNull({ usd: 100, eur: 50, gbp: 25 })).toBe(175);
   });
 });
 
@@ -93,14 +69,9 @@ describe("getCirculatingRawOrNull", () => {
     expect(getCirculatingRawOrNull(coin)).toBe(0);
   });
 
-  it("returns zero when real bucket data exists but sums to zero", () => {
-    const coin = makeStablecoin({
-      circulating: {
-        peggedUSD: 100,
-        peggedEUR: -100,
-      },
-    });
-    expect(getCirculatingRawOrNull(coin)).toBe(0);
+  it("rejects a negative bucket rather than cancelling known supply", () => {
+    const coin = makeStablecoin({ circulating: { peggedUSD: 100, peggedEUR: -100 } });
+    expect(getCirculatingRawOrNull(coin)).toBeNull();
   });
 
   it("returns the summed USD value when bucket data exists", () => {
@@ -108,19 +79,6 @@ describe("getCirculatingRawOrNull", () => {
       circulating: { peggedUSD: 1_000_000, peggedEUR: 250_000 },
     });
     expect(getCirculatingRawOrNull(coin)).toBe(1_250_000);
-  });
-});
-
-describe("getPrevDayRaw", () => {
-  it("sums circulatingPrevDay peg buckets", () => {
-    const coin = makeStablecoin({
-      circulatingPrevDay: { peggedUSD: 900_000 },
-    });
-    expect(getPrevDayRaw(coin)).toBe(900_000);
-  });
-
-  it("returns 0 when circulatingPrevDay is undefined", () => {
-    expect(getPrevDayRaw(makeStablecoin({ circulatingPrevDay: undefined }))).toBe(0);
   });
 });
 
@@ -148,27 +106,9 @@ describe("getPrevDayRawOrNull", () => {
     expect(getPrevDayRawOrNull(coin)).toBe(0);
   });
 
-  it("returns zero when real bucket data exists but sums to zero", () => {
-    const coin = makeStablecoin({
-      circulatingPrevDay: {
-        peggedUSD: 100,
-        peggedEUR: -100,
-      },
-    });
-    expect(getPrevDayRawOrNull(coin)).toBe(0);
-  });
-});
-
-describe("getPrevWeekRaw", () => {
-  it("sums circulatingPrevWeek peg buckets", () => {
-    const coin = makeStablecoin({
-      circulatingPrevWeek: { peggedUSD: 800_000, peggedEUR: 100_000 },
-    });
-    expect(getPrevWeekRaw(coin)).toBe(900_000);
-  });
-
-  it("returns 0 when circulatingPrevWeek is undefined", () => {
-    expect(getPrevWeekRaw(makeStablecoin({ circulatingPrevWeek: undefined }))).toBe(0);
+  it("rejects negative historical buckets", () => {
+    const coin = makeStablecoin({ circulatingPrevDay: { peggedUSD: 100, peggedEUR: -100 } });
+    expect(getPrevDayRawOrNull(coin)).toBeNull();
   });
 });
 

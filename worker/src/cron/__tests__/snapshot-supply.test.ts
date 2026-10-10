@@ -263,16 +263,25 @@ describe("snapshotSupply", () => {
     expect(db.getHistory().some((entry) => entry.binds.includes("usdt-tether") && entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
   });
 
-  it("skips assets with zero circulating supply", async () => {
-    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 30;
-    const cacheValue = JSON.stringify({
-      peggedAssets: [
-        makeSnapshotAsset({ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 0 } }),
-      ],
-    });
-    const db = mockD1({ stablecoins: { assets: cacheValue, updatedAt: freshUpdatedAt } });
-    const result = await snapshotSupply(db);
-    expect(result.itemCount).toBe(0);
+  it.each([{}, { peggedUSD: 0 }])("never snapshots unavailable buckets as zero (%j)", async (circulating) => {
+    const sqlite = createLatestSchemaSqlite().sqlite;
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        "stablecoins", JSON.stringify({ peggedAssets: [
+          makeSnapshotAsset({ id: "usdt-tether", symbol: "USDT", price: 1, circulating }),
+        ] }), nowSec,
+      );
+      const result = await snapshotSupply(createSqliteD1(sqlite), undefined, {
+        nowSec, requiredActiveIds: ["usdt-tether"], snapshotEligibleIds: ["usdt-tether"],
+      });
+      const observed = "peggedUSD" in circulating;
+      expect(result.itemCount).toBe(observed ? 1 : 0);
+      expect(sqlite.prepare("SELECT stablecoin_id, circulating_usd FROM supply_history").all())
+        .toEqual(observed ? [{ stablecoin_id: "usdt-tether", circulating_usd: 0 }] : []);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("skips when today's UTC snapshot is already written", async () => {

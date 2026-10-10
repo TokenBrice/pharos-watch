@@ -9,7 +9,7 @@ interface CoinFixture {
   id: string;
   symbol: string;
   pegType: string;
-  /** Current supply, USD-denominated per getCirculatingRaw (peggedUSD/peggedEUR bucket). */
+  /** Current observed supply, USD-denominated (peggedUSD/peggedEUR bucket). */
   circulating: number;
   circulatingPrevDay: number;
   circulatingPrevWeek: number;

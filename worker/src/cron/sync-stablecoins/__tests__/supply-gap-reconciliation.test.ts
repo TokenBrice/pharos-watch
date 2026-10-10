@@ -3,7 +3,7 @@ import type { PeggedAsset } from "../enrich-prices";
 import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
 import type * as OnchainSupply from "../supplemental-assets/onchain-supply";
 import type * as FetchRetry from "../../../lib/fetch-retry";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 
 const fetchTextWithRetryMock = vi.hoisted(() => vi.fn());
@@ -201,7 +201,7 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(asset.chainCirculating?.["XRP Ledger"]).toEqual({ chainId: "xrpl", current: 30, circulatingPrevDay: 5, circulatingPrevWeek: 30, circulatingPrevMonth: 5 });
     const chainCurrent = [...canonicalizeChainCirculating(asset.chainCirculating).values()]
       .reduce((sum, row) => sum + (row.current ?? 0), 0);
-    expect(chainCurrent).toBe(getCirculatingRaw(asset));
+    expect(chainCurrent).toBe(getCirculatingRawOrNull(asset));
     expect(asset.supplyGapFill).toEqual({
       method: "coingecko-single-missing-chain",
       admission: "entered",
@@ -256,12 +256,12 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
 
   it("does not flap when the ratio oscillates around the entry threshold", async () => {
     let previous: Map<string, PeggedAsset> | undefined;
-    const published: number[] = [];
+    const published: (number | null)[] = [];
     for (const current of [106, 104, 103, 104, 102, 104, 106]) {
       const asset = makeAsset();
       mockCoinGeckoAt(current);
       await reconcileTrackedSupplyGaps([asset], undefined, null, undefined, undefined, previous);
-      published.push(getCirculatingRaw(asset));
+      published.push(getCirculatingRawOrNull(asset));
       previous = new Map([[asset.id, asset]]);
     }
     // Enter at 1.06, hold through 1.03-1.04, release at 1.02, stay DL at 1.04, re-enter only above 1.05.

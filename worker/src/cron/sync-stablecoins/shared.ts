@@ -5,7 +5,6 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { CURATED_AGGREGATE_ESCROW_RESIDUALS, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import {
-  getCirculatingRaw,
   getCirculatingRawOrNull,
   SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
   SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC,
@@ -282,7 +281,8 @@ function cloneCachedAsset(asset: PeggedAsset): PeggedAsset {
 
 function stampPreviousSupplyObservedAt(asset: PeggedAsset, cacheUpdatedAt: number | null): PeggedAsset {
   const cloned = cloneCachedAsset(asset);
-  if (getCirculatingRaw(cloned) <= 0) {
+  const supply = getCirculatingRawOrNull(cloned);
+  if (supply === null || supply <= 0) {
     return cloned;
   }
   cloned.supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt) ?? cacheUpdatedAt;
@@ -375,7 +375,10 @@ export function replaceZeroSupplyPrimaryAssets(
 ): { assets: PeggedAsset[]; replacedIds: string[] } {
   const positiveSupplementalById = new Map(
     supplementalAssets
-      .filter((asset) => getCirculatingRaw(asset) > 0)
+      .filter((asset) => {
+        const supply = getCirculatingRawOrNull(asset);
+        return supply !== null && supply > 0;
+      })
       .map((asset) => [String(asset.id), asset] as const),
   );
   const replacedIds: string[] = [];
@@ -428,10 +431,10 @@ function hasReconciledCuratedAggregateSupplyPacket(
   asset: PeggedAsset,
   expectedChainLabels: readonly string[],
   expectedCirculatingBucket: string,
-  freshAggregateSupply?: number,
+  freshAggregateSupply?: number | null,
 ): boolean {
   if (asset.supplySource !== "onchain-total-supply") return false;
-  const aggregateSupply = getCirculatingRaw(asset);
+  const aggregateSupply = getCirculatingRawOrNull(asset);
   const chainCirculating = asset.chainCirculating;
   const observedChainLabels = Object.keys(chainCirculating ?? {}).sort();
   const residualLabel = CURATED_AGGREGATE_ESCROW_RESIDUALS[String(asset.id)]?.unattributedChainLabel;
@@ -439,7 +442,7 @@ function hasReconciledCuratedAggregateSupplyPacket(
     expectedChainLabels = [...expectedChainLabels, residualLabel].sort();
   }
   if (
-    !Number.isFinite(aggregateSupply) ||
+    aggregateSupply === null ||
     aggregateSupply <= 0 ||
     getSinglePositiveCirculatingBucket(asset) !== expectedCirculatingBucket ||
     !chainCirculating ||
@@ -474,7 +477,7 @@ function hasReconciledCuratedAggregateSupplyPacket(
   // aggregate, otherwise the published breakdown contradicts the published total.
   return (
     freshAggregateSupply === undefined ||
-    Math.abs(chainSupply - freshAggregateSupply) <= Math.max(0.01, freshAggregateSupply * 1e-9)
+    (freshAggregateSupply !== null && Math.abs(chainSupply - freshAggregateSupply) <= Math.max(0.01, freshAggregateSupply * 1e-9))
   );
 }
 
@@ -503,7 +506,7 @@ function restoreCuratedAggregateChainPartition(
       previous,
       expectedChainLabels,
       expectedCirculatingBucket,
-      getCirculatingRaw(current),
+      getCirculatingRawOrNull(current),
     )
   ) {
     return null;
@@ -548,12 +551,14 @@ export function mergeSupplementalLastKnownGood(
       continue;
     }
 
-    if (getCirculatingRaw(asset) > 0) {
+    const supply = getCirculatingRawOrNull(asset);
+    if (supply !== null && supply > 0) {
       resolved.set(id, asset);
       continue;
     }
 
-    if (previous && getCirculatingRaw(previous) > 0) {
+    const previousSupply = getCirculatingRawOrNull(previous);
+    if (previous && previousSupply !== null && previousSupply > 0) {
       if (!isWithinRestoreCeiling(previous, nowSec)) {
         expiredRestoreIds.push(id);
         resolved.set(id, asset);
@@ -620,7 +625,8 @@ export function restoreMissingTrackedAssets(
   for (const id of ACTIVE_TRACKED_IDS) {
     if (presentIds.has(id)) continue;
     const previous = previousAssetsById.get(id);
-    if (!previous || getCirculatingRaw(previous) <= 0 || !isWithinRestoreCeiling(previous, nowSec)) {
+    const previousSupply = getCirculatingRawOrNull(previous);
+    if (!previous || previousSupply === null || previousSupply <= 0 || !isWithinRestoreCeiling(previous, nowSec)) {
       droppedIds.push(id);
       continue;
     }

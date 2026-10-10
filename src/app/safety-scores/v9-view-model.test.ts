@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import {
+  buildSafetyMcapMap,
   buildV9GradeCounts,
   buildV9HeadlineStats,
   filterAndSortV9Cards,
@@ -117,8 +118,43 @@ describe("Safety Scores V9 view model", () => {
     expect(stats[1]).toMatchObject({ value: "30%" });
   });
 
-  it("reports zero percent rather than NaN for rated cards without supply", () => {
-    expect(buildV9HeadlineStats(cards, new Map())[1]).toMatchObject({ value: "0%" });
+  it("keeps score headlines available when the independent supply query is absent", () => {
+    const stats = buildV9HeadlineStats(cards, buildSafetyMcapMap());
+    expect(stats[0].value).toBe("77");
+    expect(stats[1]).toMatchObject({ value: "Unavailable", detail: "Supply unavailable" });
+    expect(stats[2].value).toBe("Exit");
+  });
+
+  it("distinguishes invalid and empty buckets from observed zero and sorts unavailable last", () => {
+    const map = buildSafetyMcapMap([
+      { id: "asset-a", circulating: {} },
+      { id: "asset-b", circulating: { peggedUSD: 0 } },
+      { id: "asset-c", circulating: { peggedUSD: Number.NaN } },
+    ]);
+    expect([...map.values()]).toEqual([null, 0, null]);
+    expect(filterAndSortV9Cards(cards, {
+      gradeFilter: "all", pegFilter: "all", pegTypeMap: new Map(), sortKey: "mcap", mcapMap: map,
+    }).map((card) => card.id)).toEqual(["asset-b", "asset-a", "asset-c"]);
+    expect(buildV9HeadlineStats(cards, map)[1]).toMatchObject({
+      label: "Known supply in A/B", value: "Unavailable",
+    });
+    expect(buildV9HeadlineStats(cards, map)[1].detail).toContain("1/3 rated assets observed");
+  });
+
+  it("discloses partial rated supply instead of claiming a complete A/B share", () => {
+    const stats = buildV9HeadlineStats(cards, buildSafetyMcapMap([
+      { id: "asset-a", circulating: { peggedUSD: 100 } },
+      { id: "asset-c", circulating: {} },
+    ]));
+    expect(stats[1]).toMatchObject({ label: "Known supply in A/B", value: "100%" });
+    expect(stats[1].detail).toContain("1/3 rated assets observed");
+  });
+
+  it("renders measured-zero dollars with an unavailable zero-denominator percentage", () => {
+    const map = buildSafetyMcapMap(cards.map((card) => ({ id: card.id, circulating: { peggedUSD: 0 } })));
+    expect(buildV9HeadlineStats(cards, map)[1]).toMatchObject({
+      label: "Supply in A/B", value: "Unavailable", detail: "$0.00",
+    });
   });
   it("separates Pipeline gap from NR and keeps partial ratings ranked without filling missing pillars", () => {
     const gap = makeReportCardsV9PipelineGapCard("control", "A", { id: "gap" });

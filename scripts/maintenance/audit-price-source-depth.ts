@@ -118,7 +118,7 @@ export interface PriceSourceDepthRow {
   symbol: string;
   name: string;
   status: "active";
-  marketCapUsd: number;
+  marketCapUsd: number | null;
   price: number | null;
   priceSource: string;
   priceConfidence: string | null;
@@ -152,6 +152,7 @@ export interface PriceSourceDepthAudit {
   agreeDepthDistribution: DepthDistribution;
   authoritativeAgreeDepthDistribution: DepthDistribution;
   mcapWeightedReach: {
+    supplyCoverage: { complete: boolean; observedCount: number; unavailableCount: number; shareBasis: "known-supply" };
     totalMarketCapUsd: number;
     sourceAtLeast3MarketCapUsd: number;
     sourceAtLeast3Pct: number;
@@ -564,7 +565,8 @@ function buildSourceFrequency(rows: PriceSourceDepthRow[]): PriceSourceDepthAudi
 }
 
 function sortByMarketCap(rows: PriceSourceDepthRow[]): PriceSourceDepthRow[] {
-  return [...rows].sort((a, b) => b.marketCapUsd - a.marketCapUsd || a.symbol.localeCompare(b.symbol));
+  return [...rows].sort((a, b) => (a.marketCapUsd === null ? (b.marketCapUsd === null ? 0 : 1)
+    : b.marketCapUsd === null ? -1 : b.marketCapUsd - a.marketCapUsd) || a.symbol.localeCompare(b.symbol));
 }
 
 export function buildPriceSourceDepthAudit(input: AuditInput): PriceSourceDepthAudit {
@@ -579,14 +581,15 @@ export function buildPriceSourceDepthAudit(input: AuditInput): PriceSourceDepthA
     pegById.get(meta.id),
     stablecoinById.get(meta.id),
   ));
-  const totalMarketCapUsd = rows.reduce((sum, row) => sum + row.marketCapUsd, 0);
-  const sourceAtLeast3MarketCapUsd = rows
+  const observedSupplyRows = rows.filter((row): row is PriceSourceDepthRow & { marketCapUsd: number } => row.marketCapUsd !== null);
+  const totalMarketCapUsd = observedSupplyRows.reduce((sum, row) => sum + row.marketCapUsd, 0);
+  const sourceAtLeast3MarketCapUsd = observedSupplyRows
     .filter((row) => row.candidateSourceCount >= 3)
     .reduce((sum, row) => sum + row.marketCapUsd, 0);
-  const agreeAtLeast3MarketCapUsd = rows
+  const agreeAtLeast3MarketCapUsd = observedSupplyRows
     .filter((row) => row.agreeSourceCount >= 3)
     .reduce((sum, row) => sum + row.marketCapUsd, 0);
-  const authoritativeAgreeAtLeast3MarketCapUsd = rows
+  const authoritativeAgreeAtLeast3MarketCapUsd = observedSupplyRows
     .filter((row) => row.authoritativeAgreeSourceCount >= 3)
     .reduce((sum, row) => sum + row.marketCapUsd, 0);
 
@@ -625,6 +628,7 @@ export function buildPriceSourceDepthAudit(input: AuditInput): PriceSourceDepthA
   if (pegRows.length === 0) warnings.push("Peg summary payload did not contain any rows.");
   if (stablecoinRows.length === 0) warnings.push("Stablecoin payload did not contain any pegged asset rows.");
 
+  if (observedSupplyRows.length < rows.length) warnings.push(`Market-cap reach uses known supply only; ${rows.length - observedSupplyRows.length} assets have unavailable supply.`);
   return {
     generatedAt: input.generatedAt ?? new Date().toISOString(),
     mode: input.mode ?? "input",
@@ -635,6 +639,8 @@ export function buildPriceSourceDepthAudit(input: AuditInput): PriceSourceDepthA
     agreeDepthDistribution: countDistribution(rows, (row) => row.agreeSourceCount),
     authoritativeAgreeDepthDistribution: countDistribution(rows, (row) => row.authoritativeAgreeSourceCount),
     mcapWeightedReach: {
+      supplyCoverage: { complete: observedSupplyRows.length === rows.length, observedCount: observedSupplyRows.length,
+        unavailableCount: rows.length - observedSupplyRows.length, shareBasis: "known-supply" },
       totalMarketCapUsd,
       sourceAtLeast3MarketCapUsd,
       sourceAtLeast3Pct: pct(sourceAtLeast3MarketCapUsd, totalMarketCapUsd),
@@ -704,10 +710,11 @@ export function renderPriceSourceDepthAuditMarkdown(audit: PriceSourceDepthAudit
     "",
     "## Market-Cap Weighted Reach",
     "",
-    `Total active mcap: ${formatUsd(audit.mcapWeightedReach.totalMarketCapUsd)}`,
-    `Candidate >=3: ${formatUsd(audit.mcapWeightedReach.sourceAtLeast3MarketCapUsd)} (${formatPercent(audit.mcapWeightedReach.sourceAtLeast3Pct)})`,
-    `Agreeing >=3: ${formatUsd(audit.mcapWeightedReach.agreeAtLeast3MarketCapUsd)} (${formatPercent(audit.mcapWeightedReach.agreeAtLeast3Pct)})`,
-    `Authoritative agreeing >=3: ${formatUsd(audit.mcapWeightedReach.authoritativeAgreeAtLeast3MarketCapUsd)} (${formatPercent(audit.mcapWeightedReach.authoritativeAgreeAtLeast3Pct)})`,
+    `Known active mcap subtotal: ${formatUsd(audit.mcapWeightedReach.totalMarketCapUsd)}`,
+    `Supply coverage: ${audit.mcapWeightedReach.supplyCoverage.observedCount} observed; ${audit.mcapWeightedReach.supplyCoverage.unavailableCount} unavailable. All percentages below use known supply only.`,
+    `Candidate >=3: ${formatUsd(audit.mcapWeightedReach.sourceAtLeast3MarketCapUsd)} (${formatPercent(audit.mcapWeightedReach.sourceAtLeast3Pct)} of known supply)`,
+    `Agreeing >=3: ${formatUsd(audit.mcapWeightedReach.agreeAtLeast3MarketCapUsd)} (${formatPercent(audit.mcapWeightedReach.agreeAtLeast3Pct)} of known supply)`,
+    `Authoritative agreeing >=3: ${formatUsd(audit.mcapWeightedReach.authoritativeAgreeAtLeast3MarketCapUsd)} (${formatPercent(audit.mcapWeightedReach.authoritativeAgreeAtLeast3Pct)} of known supply)`,
     "",
     "## Cohorts",
     "",

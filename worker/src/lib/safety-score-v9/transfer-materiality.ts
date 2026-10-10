@@ -3,7 +3,7 @@ import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import type { ContractDeployment } from "@shared/types/core";
 import { safetyScoreV9TransferDeploymentKey, type SafetyScoreV9ReviewedTransferFact } from "@shared/types/safety-score-v9-transfer-overlays";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { BaseInputGenerationIdSchema, Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
 import { z } from "zod";
 import { createCanonicalGenerationCodec } from "../canonical-generation-codec";
@@ -216,7 +216,7 @@ export function transferMaterialScopeFromOnchainGeneration(input: {
 export function transferMaterialScopeFromSingleDeploymentAttribution(input: {
   meta: V9ExtensionRegistryMeta;
   review: SafetyScoreV9ReviewedTransferFact | undefined;
-  aggregateCirculating: Parameters<typeof getCirculatingRaw>[0];
+  aggregateCirculating: Parameters<typeof getCirculatingRawOrNull>[0];
   baseScope: SafetyScoreV9TransferMaterialScope;
   clockSec: number;
 }): SafetyScoreV9TransferMaterialScope {
@@ -235,8 +235,8 @@ export function transferMaterialScopeFromSingleDeploymentAttribution(input: {
   if (deployments?.length !== 1 || deployments[0]!.key !== attestation.deploymentKey) return input.baseScope;
   const reviewedAtSec = Date.parse(`${attestation.reviewedAt}T00:00:00Z`) / 1_000;
   const expiresAtSec = Date.parse(`${attestation.expiresAt}T00:00:00Z`) / 1_000;
-  const aggregate = getCirculatingRaw(input.aggregateCirculating);
-  if (!Number.isFinite(aggregate) || aggregate <= 0 ||
+  const aggregate = getCirculatingRawOrNull(input.aggregateCirculating);
+  if (aggregate === null || aggregate <= 0 ||
     reviewedAtSec > input.clockSec || input.clockSec >= expiresAtSec ||
     input.clockSec - reviewedAtSec > V9_REVIEW_EVIDENCE_MAX_AGE_SEC) return input.baseScope;
   return {
@@ -257,9 +257,11 @@ export function transferMaterialScopeFromEconomicDeploymentPartition(input: {
   if (packet?.model !== "reviewed-economic-deployment-partition-v1") return input.baseScope;
   const rejected = { ...input.baseScope, materialDeploymentScopeComplete: false };
   const aggregate = input.fixedInput.aggregateCirculatingById[input.assetId];
+  const aggregateSupplyUsd = getCirculatingRawOrNull(aggregate);
+  if (aggregateSupplyUsd === null) return rejected;
   if (!packet.quantitativeCompleteness || packet.aggregate.supplyUsd <= 0 ||
     packet.unattributedSupplyUsd > 0 || reviewedEconomicDeploymentAttributionValidationError({
-      assetId: input.assetId, attribution: packet, aggregateSupplyUsd: getCirculatingRaw(aggregate ?? {}),
+      assetId: input.assetId, attribution: packet, aggregateSupplyUsd,
       clockSec: input.fixedInput.clockSec, registryFingerprint: input.fixedInput.registryFingerprint,
       baseInputGenerationId: input.fixedInput.baseInputGenerationId, sourceGeneration: input.fixedInput.sourceGeneration,
       aggregateObservedAtSec: aggregate?.observedAtSec ?? null, referencePrice: input.fixedInput.navPriceById?.[input.assetId] ?? null,

@@ -180,7 +180,7 @@ function universe(options: { count?: number; unjoined?: number; notRated?: numbe
     // Supply decays steeply, as it really does: two giants anchor the bubble
     // scale and the tail is gravel. The unjoined coins are the smallest ones,
     // which is where a real supply-join gap lands.
-    rows.push({ id, symbol: `C${i}`, circulating: { peggedUSD: i >= count - unjoined ? 0 : 1e11 * 0.4 ** i } });
+    rows.push({ id, symbol: `C${i}`, circulating: i >= count - unjoined ? {} : { peggedUSD: 1e11 * 0.4 ** i } });
   }
   for (let i = 0; i < (options.notRated ?? 0); i++) {
     built.push({ id: `nr-${i}`, score: null, grade: "NR" });
@@ -380,7 +380,7 @@ describe("safety-score map — the blank-poster cascade (§11.2b rule 8 / P0-5)"
     const { cards: c, assets: a } = universe();
     const run = await runGenerator({ cards: c, assets: a.map((row) => ({ ...row, circulating: { peggedUSD: 0 } })) });
     expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Supply join coverage 0\.0%/);
+    expect(run.stderr).not.toMatch(/Supply join coverage/);
     expect(existsSync(run.pngPath)).toBe(false);
   });
 
@@ -401,7 +401,7 @@ describe("safety-score map — join coverage guard", () => {
 
   it("warns per coin but proceeds at exactly the 95% floor", async () => {
     const run = await runGenerator(universe({ count: 20, unjoined: 1 }), { stopBeforeRender: true });
-    expect(run.stderr).toMatch(/coin-19: zero circulating supply — drawn at the size floor/);
+    expect(run.stderr).toMatch(/coin-19: unavailable circulating supply — drawn at the size floor/);
     expect(run.stderr).not.toMatch(/is below 95%/);
     expect(run.stderr).toMatch(REACHED_RENDER_GATE);
   });

@@ -348,8 +348,10 @@ function assertCaptureBindings(input: {
     if (!attribution) continue;
 
     if (attribution.model === "reviewed-economic-deployment-partition-v1") {
+      const supplyUsd = aggregateSupplyUsd(input.fixedInput, assetId);
+      if (supplyUsd === null) throw new Error(`Supply attribution for ${assetId} has unavailable aggregate supply`);
       const error = reviewedEconomicDeploymentAttributionValidationError({
-        assetId, attribution, aggregateSupplyUsd: aggregateSupplyUsd(input.fixedInput, assetId),
+        assetId, attribution, aggregateSupplyUsd: supplyUsd,
         registryFingerprint: input.fixedInput.registryFingerprint, clockSec: record.scoringClockSec,
         baseInputGenerationId: input.fixedInput.baseInputGenerationId, sourceGeneration: input.fixedInput.sourceGeneration,
         aggregateObservedAtSec: input.fixedInput.aggregateCirculatingById[assetId]?.observedAtSec ?? null,
@@ -574,10 +576,12 @@ function rederiveEconomicSupplyAttribution(
       observations.push(observation);
     }
   }
+  const supplyUsd = aggregateSupplyUsd(fixedInput, assetId);
+  if (supplyUsd === null) return null;
   const attribution = deriveReviewedEconomicDeploymentPartition({
     plan, baseInputGenerationId: fixedInput.baseInputGenerationId, sourceGeneration: fixedInput.sourceGeneration,
     registryFingerprint: fixedInput.registryFingerprint, clockSec: fixedInput.clockSec,
-    aggregate: { supplyUsd: aggregateSupplyUsd(fixedInput, assetId), observedAtSec: aggregate.observedAtSec,
+    aggregate: { supplyUsd, observedAtSec: aggregate.observedAtSec,
       sourceGeneration: fixedInput.sourceGeneration },
     referencePrice, conversions: stored.conversions, observations, inFlight: stored.inFlight,
   });
@@ -629,6 +633,10 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
     }
     const stored = generation.attributionById[assetId]!;
     const aggregate = aggregateSupplyUsd(fixedInput, assetId);
+    if (aggregate === null) {
+      invalidAssetIds.push(assetId);
+      continue;
+    }
     const attribution =
       stored.model === "reviewed-deployment-unit-partition-v1"
         ? deriveReviewedDeploymentUnitPartition({

@@ -45,6 +45,8 @@ export function HomeAltHero({
 
   const visibleSnapshot = selection.snapshot;
   const latest = visibleSnapshot?.cohort ?? null;
+  const supplyComplete = !!visibleSnapshot && visibleSnapshot.supplyObservedCount === visibleSnapshot.supplyExpectedCount;
+  const cohortTotal = supplyComplete ? latest?.total ?? null : null;
   const selectedDate = visibleSnapshot?.asOfISO
     ? formatLongDate(new Date(visibleSnapshot.asOfISO), { utc: true })
     : null;
@@ -75,12 +77,12 @@ export function HomeAltHero({
                 className="text-sm font-medium text-muted-foreground"
                 title="Excludes 2 off-catalog PSI historical assets"
               >
-                Total Market Cap
+                {visibleSnapshot && !supplyComplete ? "Known Market Cap Subtotal" : "Total Market Cap"}
               </p>
               <CardExpandButton href="/screener/" expandLabel="Open Screener" className="-mr-2" />
             </div>
             <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
-              {visibleSnapshot ? formatCurrency(visibleSnapshot.totalUsd, 1) : "—"}
+              {visibleSnapshot?.totalUsd != null ? formatCurrency(visibleSnapshot.totalUsd, 1) : "—"}
             </p>
             <p className="min-h-4 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
               {selection.source === "fallback" && selectedDate
@@ -91,9 +93,9 @@ export function HomeAltHero({
                     : "Live stablecoin data"
                   : "Live market data unavailable"}
             </p>
-            {visibleSnapshot && visibleSnapshot.supplyUnavailableCount > 0 ? (
+            {visibleSnapshot && !supplyComplete ? (
               <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                {`Partial · excludes ${visibleSnapshot.supplyUnavailableCount} ${visibleSnapshot.supplyUnavailableCount === 1 ? "asset" : "assets"} without supply data`}
+                {`Partial · ${visibleSnapshot.supplyObservedCount}/${visibleSnapshot.supplyExpectedCount} assets observed`}
               </p>
             ) : null}
           </div>
@@ -110,10 +112,10 @@ export function HomeAltHero({
           <ul className="flex min-h-[6.5rem] flex-col gap-1.5 text-xs">
             {latest ? (
               <>
-                <CohortRow color={USDT_GREEN} label="USDT" value={latest.usdt} total={latest.total} />
-                <CohortRow color={USDC_BLUE} label="USDC" value={latest.usdc} total={latest.total} />
-                <CohortRow color={CHART_ORANGE} label="USDS + DAI" value={latest.sky} total={latest.total} />
-                <CohortRow color={OTHERS_PURPLE} label="Others" value={latest.others} total={latest.total} />
+                <CohortRow color={USDT_GREEN} label="USDT" value={latest.usdt} total={cohortTotal} />
+                <CohortRow color={USDC_BLUE} label="USDC" value={latest.usdc} total={cohortTotal} />
+                <CohortRow color={CHART_ORANGE} label="USDS + DAI" value={latest.sky} total={cohortTotal} />
+                <CohortRow color={OTHERS_PURPLE} label="Others" value={latest.others} total={cohortTotal} />
                 <li className="flex items-baseline justify-between gap-3 pharos-numeric">
                   <span className="flex items-center gap-2 text-muted-foreground">
                     <span className="inline-flex h-2 w-2 items-center" aria-hidden="true">
@@ -122,11 +124,11 @@ export function HomeAltHero({
                     <span className="uppercase tracking-tight">Non-USD share</span>
                   </span>
                   <span className="flex items-baseline gap-1.5 pharos-numeric text-muted-foreground">
-                    {visibleSnapshot && visibleSnapshot.nonUsdShare !== null ? (
+                    {visibleSnapshot?.nonUsdUsd != null ? (
                       <>
                         <span className="text-foreground">{formatCurrency(visibleSnapshot.nonUsdUsd, 1)}</span>
                         <span aria-hidden="true">·</span>
-                        <span>{(visibleSnapshot.nonUsdShare * 100).toFixed(1)}%</span>
+                        <span>{visibleSnapshot.nonUsdShare !== null ? `${(visibleSnapshot.nonUsdShare * 100).toFixed(1)}%` : "share unavailable"}</span>
                       </>
                     ) : (
                       "—"
@@ -154,9 +156,9 @@ function CohortRow({
   color: string;
   label: string;
   value: number | null;
-  total: number;
+  total: number | null;
 }): React.JSX.Element {
-  const share = value != null && total > 0 ? (value / total) * 100 : null;
+  const share = value != null && total != null && total > 0 ? (value / total) * 100 : null;
   return (
     <li className="flex items-baseline justify-between gap-3 pharos-numeric">
       <span className="flex items-center gap-2 text-muted-foreground">

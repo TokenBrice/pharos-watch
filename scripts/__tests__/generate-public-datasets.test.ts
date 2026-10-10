@@ -72,7 +72,7 @@ function makeEnvelope(snapshotDate: string) {
         pegType: "peggedUSD",
         pegMechanism: "fiat-backed",
         price: 1,
-        circulating: { ethereum: 1_000_000 },
+        circulating: { ethereum: 1_000_000 } as Record<string, number>,
         chains: ["ethereum"],
         mechanismArchetype: "fiat-cash",
         pegReferenceId: "usdc-circle",
@@ -130,6 +130,29 @@ function makeCapture(eventCount = 2): depegCapture.DepegLedgerCapture {
 }
 
 describe("generate-public-datasets", () => {
+  it("exports absent supply as null and blank CSV while keeping observed zero", () => {
+    const envelope = makeEnvelope("2026-05-16");
+    const base = envelope.stablecoins[0];
+    envelope.stablecoins = [
+      { ...base, id: "unknown", circulating: {} },
+      { ...base, id: "zero", circulating: { peggedUSD: 0 } },
+      { ...base, id: "known", circulating: { peggedUSD: 100 } },
+    ];
+    const spec = testExports.buildTopicSpecs(envelope, [], "2026-05-16").find((item) => item.topic === "top-stablecoins")!;
+    expect(spec.rows).toEqual([
+      expect.objectContaining({ id: "known", circulatingUsd: 100, supplyUnavailableReason: null }),
+      expect.objectContaining({ id: "zero", circulatingUsd: 0, supplyUnavailableReason: null }),
+      expect.objectContaining({ id: "unknown", circulatingUsd: null, supplyUnavailableReason: "absent" }),
+    ]);
+    const artifacts = testExports.buildTopicArtifacts(spec, "2026-05-16T10:00:00.000Z");
+    const json = JSON.parse(artifacts.json);
+    expect(json.data ?? json.rows).toEqual(spec.rows);
+    const lines = artifacts.ndjson.trim().split("\n").map((line) => JSON.parse(line));
+    expect(lines).toContainEqual(expect.objectContaining({ id: "unknown", circulatingUsd: null, supplyUnavailableReason: "absent" }));
+    const csvRow = artifacts.csv.split("\n").find((line) => line.startsWith("unknown,"));
+    expect(csvRow).toContain(",1,,absent,1,");
+    expect(artifacts.csv.split("\n").find((line) => line.startsWith("zero,"))).toContain(",1,0,,1,");
+  });
   it("generates direct 200 rewrites for latest datasets and Sheets CSV aliases", () => {
     const block = testExports.buildPublicDatasetRedirectBlock("2026-07-08");
 

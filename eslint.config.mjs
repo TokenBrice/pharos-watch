@@ -74,8 +74,32 @@ function staticImportSpecifier(node) {
   return null;
 }
 
+const deletedSupplyHelperNames = {
+  "getCirculatingRaw": true,
+  "getPrevDayRaw": true,
+  "getPrevWeekRaw": true,
+  "sumPegBuckets": true,
+};
+
 const pharosBoundaryPlugin = {
   rules: {
+    "no-zero-coercing-supply-helpers": {
+      meta: {
+        type: "problem",
+        schema: [],
+        messages: { unavailable: "Deleted zero-coercing supply helper: use the OrNull variant and explicitly preserve unavailable supply." },
+      },
+      create(context) {
+        return {
+          Identifier(node) {
+            if (Object.hasOwn(deletedSupplyHelperNames, node.name)) context.report({ node, messageId: "unavailable" });
+          },
+          "MemberExpression[computed=true] > Literal.property"(node) {
+            if (Object.hasOwn(deletedSupplyHelperNames, node.value)) context.report({ node, messageId: "unavailable" });
+          },
+        };
+      },
+    },
     "frontend-dynamic-import-boundaries": {
       meta: { type: "problem", schema: [], messages: { worker: "ADR-2: non-Worker code must not import worker/src/**." } },
       create(context) {
@@ -133,29 +157,6 @@ const pharosBoundaryPlugin = {
     },
   },
 };
-
-// Absence-sensitive cached StablecoinData reads use `getCirculatingRawOrNull()`.
-// Raw helpers remain permitted after explicit availability proof; `sumPegBuckets`
-// belongs to ingestion/normalization of bucket records, not cached asset reads.
-const supplyHelperRestrictedImportPaths = [
-  {
-    name: "@shared/lib/supply",
-    importNames: ["sumPegBuckets"],
-    message: "Use getCirculatingRawOrNull() for absence-sensitive StablecoinData supply and preserve null + reason; getCirculatingRaw() is allowed only after explicit availability proof, not sumPegBuckets().",
-  },
-];
-
-// Raw-bucket parsers that legitimately sum peg buckets before a StablecoinData
-// object exists. Ported verbatim from the retired
-// `scripts/ci/check-supply-helper-usage.mjs` waiver list:
-//   - backfill-depegs-extraction.ts       — parses raw DefiLlama token-history bucket rows.
-//   - stablecoin-detail/cache-fallback.ts — sums a caller-provided fallback bucket map.
-//   - backfill-supply-history.ts          — normalizes raw DefiLlama detail/history bucket maps.
-const SUPPLY_HELPER_WAIVED_FILES = [
-  "worker/src/api/backfill-depegs-extraction.ts",
-  "worker/src/api/stablecoin-detail/cache-fallback.ts",
-  "worker/src/api/backfill-supply-history.ts",
-];
 
 const workerRestrictedImportPaths = [
   // Bare "viem" re-exports clients/transports; force the codec-only entry point.
@@ -262,19 +263,10 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // Worker API handlers additionally answer to the canonical-supply rule. The
-    // three raw-bucket parsers are excluded from this block, which drops them
-    // back onto the plain worker restrictions above.
-    files: ["worker/src/api/**/*.{ts,tsx}"],
-    ignores: SUPPLY_HELPER_WAIVED_FILES,
+    files: ["**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}"],
+    plugins: { pharos: pharosBoundaryPlugin },
     rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: [...workerRestrictedImportPaths, ...supplyHelperRestrictedImportPaths],
-          patterns: workerRestrictedImportPatterns,
-        },
-      ],
+      "pharos/no-zero-coercing-supply-helpers": "error",
     },
   },
   {
@@ -318,21 +310,6 @@ const eslintConfig = defineConfig([
             },
             ...frontendToWorkerRestrictedImportPatterns,
           ],
-        },
-      ],
-    },
-  },
-  {
-    // Route and component code reads cached StablecoinData supply through
-    // getCirculatingRaw(). Re-states the ADR-2 patterns because flat config
-    // replaces rule options rather than merging them.
-    files: ["src/app/**/*.{ts,tsx}", "src/components/**/*.{ts,tsx}"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: supplyHelperRestrictedImportPaths,
-          patterns: frontendToWorkerRestrictedImportPatterns,
         },
       ],
     },

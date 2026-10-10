@@ -63,7 +63,7 @@ export interface ElevatedCoin {
   symbol: string;
   name: string;
   logoUrl?: string;
-  mcap?: number;
+  mcap?: number | null;
   x: number;
   y: number;
 }
@@ -91,7 +91,7 @@ export interface DewsSummaryViewModel {
 // ---------------------------------------------------------------------------
 
 /** Map a circulating supply (USD) to a dot radius. 4 tiers, fallback = undefined (caller uses band-based default). */
-export function mcapDotRadius(mcap: number | undefined): number | undefined {
+export function mcapDotRadius(mcap: number | null | undefined): number | undefined {
   if (mcap == null) return undefined;
   if (mcap >= 5_000_000_000) return 13; // mega: >$5B
   if (mcap >= 500_000_000) return 10;   // large: >$500M
@@ -102,7 +102,7 @@ export function mcapDotRadius(mcap: number | undefined): number | undefined {
 function computePositions(
   signals: Record<string, { score: number; band: string }>,
   logos: Record<string, string> | undefined,
-  mcapById?: Map<string, number>,
+  mcapById?: ReadonlyMap<string, number | null>,
 ): ElevatedCoin[] {
   const byBand: Record<ElevatedBand, Array<{ id: string; score: number }>> = {
     WATCH: [],
@@ -192,7 +192,7 @@ export function resolveRadarClick(
 export function buildDewsSummaryViewModel(
   data: DewsAggregateFreshnessLike & { signals: Record<string, { score: number; band: string }> },
   logos: Record<string, string> | undefined,
-  mcapById?: Map<string, number>,
+  mcapById?: ReadonlyMap<string, number | null>,
 ): DewsSummaryViewModel {
   const elevated = computePositions(data.signals, logos, mcapById);
 

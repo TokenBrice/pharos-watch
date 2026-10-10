@@ -69,6 +69,35 @@ describe("ReportCardsV9Client", () => {
       "/safety-scores/map/",
     );
   });
+  it("discloses a fresh successful held publication while keeping accepted ratings visible", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const response = makeReportCardsV9Response({
+      updatedAt: nowSec,
+      cards: [makeV9Card({ id: "asset-a", grade: "A", score: 90 })],
+    });
+    response.publicationHealth = {
+      ...response.publicationHealth,
+      status: "held",
+      heldSinceSec: nowSec - 60,
+      attemptedAtSec: nowSec,
+      reasons: [{ code: "assessment-failed", detail: "internal assessment detail" }],
+    };
+    mocks.useReportCardsV9.mockReturnValue({ ...query(response), dataUpdatedAt: nowSec * 1000 });
+    render(<ReportCardsV9Client />);
+    const notice = screen.getByRole("status");
+    expect(notice.textContent).toContain("Ratings are held at the last verified snapshot");
+    expect(notice.textContent).toContain("The latest ratings update could not be verified.");
+    expect(notice.querySelector("time")?.getAttribute("datetime")).toBe(new Date((nowSec - 60) * 1000).toISOString());
+    expect(notice.textContent).not.toContain("assessment-failed");
+    expect(notice.textContent).not.toContain("internal assessment detail");
+    expect(screen.getByTestId("v9-card").textContent).toBe("asset-a");
+  });
+
+  it("does not show a held-publication notice for current ratings", () => {
+    render(<ReportCardsV9Client />);
+    expect(screen.queryByText(/Ratings are held at the last verified snapshot/)).toBeNull();
+    expect(screen.getAllByTestId("v9-card")).toHaveLength(2);
+  });
 
   it("filters the card grid by the existing grade controls", () => {
     render(<ReportCardsV9Client />);
@@ -111,5 +140,40 @@ describe("ReportCardsV9Client", () => {
     expect(screen.getByRole("alert").textContent).toContain(
       "V8 ratings are not used as a fallback",
     );
+  });
+
+  it.each(["loading", "failed"])("keeps ratings visible when the independent supply query is %s", (state) => {
+    mocks.useStablecoins.mockReturnValue({
+      ...query(undefined), isLoading: state === "loading",
+      error: state === "failed" ? new Error("Supply unavailable") : null,
+    });
+    render(<ReportCardsV9Client />);
+    expect(screen.getAllByTestId("v9-card")).toHaveLength(2);
+    expect(screen.getByText("Supply unavailable")).toBeTruthy();
+    expect(screen.queryByText("0%")).toBeNull();
+    expect(screen.queryByText("$0.00")).toBeNull();
+  });
+
+  it("labels partial supply headlines without hiding otherwise valid ratings", () => {
+    mocks.useStablecoins.mockReturnValue(query({ peggedAssets: [
+      { id: "asset-a", pegType: "peggedUSD", circulating: { peggedUSD: 100 } },
+      { id: "asset-b", pegType: "peggedEUR", circulating: {} },
+    ] }));
+    render(<ReportCardsV9Client />);
+    expect(screen.getAllByTestId("v9-card")).toHaveLength(2);
+    expect(screen.getByText("Known supply in A/B")).toBeTruthy();
+    expect(screen.getByText(/1\/2 rated assets observed/)).toBeTruthy();
+    expect(screen.queryByText("Supply in A/B")).toBeNull();
+  });
+
+  it("renders observed zero dollars with an unavailable zero-denominator percentage", () => {
+    mocks.useStablecoins.mockReturnValue(query({ peggedAssets: [
+      { id: "asset-a", circulating: { peggedUSD: 0 } },
+      { id: "asset-b", circulating: { peggedUSD: 0 } },
+    ] }));
+    render(<ReportCardsV9Client />);
+    expect(screen.getByText("$0.00")).toBeTruthy();
+    expect(screen.queryByText("0%")).toBeNull();
+    expect(screen.getAllByTestId("v9-card")).toHaveLength(2);
   });
 });

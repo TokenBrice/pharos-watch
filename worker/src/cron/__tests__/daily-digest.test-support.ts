@@ -63,9 +63,12 @@ export function mockDailyDigestRegistryModule() {
   // fixture registry: PAXG/XAUT stay tracked (mint-burn reads their contracts)
   // but are excluded from the id sets the aggregate iterates.
   const ids = new Set(["usdt-tether", "usdc-circle"]);
+  const activeStablecoins = stablecoins.filter((coin) => ids.has(coin.id));
   return {
     ...mockRegistry({ stablecoins }),
     TRACKED_IDS: ids,
+    ACTIVE_STABLECOINS: activeStablecoins,
+    ACTIVE_META_BY_ID: new Map(activeStablecoins.map((coin) => [coin.id, coin])),
     ACTIVE_IDS: ids,
     FROZEN_IDS: new Set<string>(["usr-resolv"]),
   };
@@ -432,6 +435,7 @@ export function makeCollectorCtx(db: D1Database): CollectorContext {
 
 export const BASE_DIGEST_INPUT: DigestInputData = {
   totalMcapUsd: 160_000_000,
+  supplyCoverage: { complete: true, observedCount: 2, unavailableCount: 0 },
   mcap7dDelta: 3_000_000,
   activeDepegCount: 1,
   topDepegs: [{ stablecoinId: "usdt-tether", symbol: "USDT", bps: -175, direction: "below", mcapUsd: 100_000_000 }],

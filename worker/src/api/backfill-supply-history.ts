@@ -3,7 +3,7 @@ import { SUPPLY_HISTORY_UPSERT_SQL } from "../lib/supply-history-db";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixMillisecondsToUtcDay, bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { toTokenUnits } from "@shared/lib/math";
 import type { ContractDeployment } from "@shared/types/core";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
@@ -1053,8 +1053,8 @@ async function executeBackfillSupplyHistory(
       // This is the per-coin detail history payload, not the list cache: its
       // non-USD token history is native units, so the conversion below remains
       // intentional. List-endpoint circulating values are already USD.
-      const rawSum = getCirculatingRaw(entry);
-      if (rawSum <= 0) continue;
+      const rawSum = getCirculatingRawOrNull(entry);
+      if (rawSum === null || rawSum <= 0) continue;
 
       // Floor to UTC midnight
       const snapshotDate = bucketUnixSecondsToUtcDay(entry.date);

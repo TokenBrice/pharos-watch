@@ -21,6 +21,7 @@ import {
   buildAltPegSnapshot,
   buildAltPegTrendStats,
 } from "@/lib/alt-peg-market";
+import type { AltPegDistributionRow } from "@/lib/alt-peg-market";
 import { formatCurrency, formatPercent, formatSignedPercent } from "@shared/lib/format";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
@@ -33,29 +34,42 @@ function isFocusedChart(value: string | null): value is FocusedChart {
   return value === "share" || value === "cohorts";
 }
 
+function formatMarketCap(value: number | null): string {
+  return value === null ? "Unavailable" : formatCurrency(value, 1);
+}
+
+function formatShare(value: number | null): string {
+  return value === null ? "Unavailable" : formatPercent(value);
+}
+
 // Commodities vs. all other non-USD pegs — demoted out of the hero into a flat
 // band below the workbench table.
 function AltPegMixBand({
   marketCap,
   fiatNonUsdMarketCap,
   commodityMarketCap,
+  supplyUnavailableCount,
 }: {
-  marketCap: number;
-  fiatNonUsdMarketCap: number;
-  commodityMarketCap: number;
+  marketCap: number | null;
+  fiatNonUsdMarketCap: number | null;
+  commodityMarketCap: number | null;
+  supplyUnavailableCount: number;
 }) {
-  const commodityShare = marketCap > 0 ? (commodityMarketCap / marketCap) * 100 : 0;
-  const nonCommodityShare = marketCap > 0 ? (fiatNonUsdMarketCap / marketCap) * 100 : 0;
+  const commodityShare = supplyUnavailableCount === 0 && marketCap !== null && marketCap > 0 && commodityMarketCap !== null
+    ? (commodityMarketCap / marketCap) * 100 : null;
+  const nonCommodityShare = supplyUnavailableCount === 0 && marketCap !== null && marketCap > 0 && fiatNonUsdMarketCap !== null
+    ? (fiatNonUsdMarketCap / marketCap) * 100 : null;
 
   return (
     <section aria-label="All alt-peg mix" className="pharos-card-shell space-y-4 p-5 sm:p-6">
       <div className="space-y-1">
         <p className="pharos-kicker">All Alt-Peg Mix</p>
         <p className="pharos-meta">Commodities vs. all other non-USD pegs across the tracked alt-peg market.</p>
+        {supplyUnavailableCount > 0 ? <p className="pharos-meta">Known supply subtotals · {supplyUnavailableCount} assets without supply observations; mix shares unavailable.</p> : null}
       </div>
       <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/35">
-        <div className="h-full bg-[color:var(--chart-5)]" style={{ width: `${commodityShare}%` }} />
-        <div className="h-full bg-[color:var(--brand-accent)]" style={{ width: `${nonCommodityShare}%` }} />
+        <div className="h-full bg-[color:var(--chart-5)]" style={{ width: `${commodityShare ?? 0}%` }} />
+        <div className="h-full bg-[color:var(--brand-accent)]" style={{ width: `${nonCommodityShare ?? 0}%` }} />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -64,9 +78,9 @@ function AltPegMixBand({
             Commodities
           </p>
           <p className="mt-1 pharos-numeric text-base font-semibold text-foreground">
-            {formatCurrency(commodityMarketCap, 1)}
+            {formatMarketCap(commodityMarketCap)}
           </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{formatPercent(commodityShare)} of alt-peg market</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{formatShare(commodityShare)} of alt-peg market</p>
         </div>
         <div>
           <p className="pharos-kicker flex items-center gap-2">
@@ -74,9 +88,9 @@ function AltPegMixBand({
             Non-commodity non-USD
           </p>
           <p className="mt-1 pharos-numeric text-base font-semibold text-foreground">
-            {formatCurrency(fiatNonUsdMarketCap, 1)}
+            {formatMarketCap(fiatNonUsdMarketCap)}
           </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{formatPercent(nonCommodityShare)} of alt-peg market</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{formatShare(nonCommodityShare)} of alt-peg market</p>
         </div>
       </div>
     </section>
@@ -86,9 +100,11 @@ function AltPegMixBand({
 function AltPegDistributionCard({
   rows,
   altMarketCap,
+  supplyUnavailableCount,
 }: {
-  rows: ReturnType<typeof buildAltPegSnapshot>["distributionRows"];
-  altMarketCap: number;
+  rows: AltPegDistributionRow[];
+  altMarketCap: number | null;
+  supplyUnavailableCount: number;
 }) {
   return (
     <section className="space-y-3">
@@ -97,7 +113,7 @@ function AltPegDistributionCard({
           <p className="pharos-kicker">Current Distribution</p>
           <h2 className="pharos-section-title">Which Non-USD Pegs Matter Now</h2>
           <p className="pharos-meta">
-            Ranked by current market cap, with direct links into each peg cohort page. EUR stablecoins are
+            Ranked by observed market cap; incomplete cohorts publish known subtotals, not complete ranks, with direct links into each peg cohort page. EUR stablecoins are
             reshaped by EU MiCA rules — see the{" "}
             <Link
               href="/compliance/?regime=mica"
@@ -109,7 +125,7 @@ function AltPegDistributionCard({
           </p>
         </div>
         <div className="pharos-numeric rounded-full border border-border/60 bg-muted/15 px-3 py-1.5 text-xs text-muted-foreground">
-          {formatCurrency(altMarketCap, 1)} alt-peg market cap
+          {formatMarketCap(altMarketCap)} {supplyUnavailableCount > 0 ? "known alt-peg subtotal" : "alt-peg market cap"}
         </div>
       </div>
 
@@ -118,7 +134,7 @@ function AltPegDistributionCard({
           <span className="pharos-kicker">Peg</span>
           <span className="pharos-kicker">Market Cap</span>
           <span className="pharos-kicker">Share</span>
-          <span className="pharos-kicker">Largest Coin</span>
+          <span className="pharos-kicker">Leading Observed Coin</span>
         </div>
         <div className="divide-y divide-border/40">
           {rows.map((row) => (
@@ -146,34 +162,39 @@ function AltPegDistributionCard({
                   <div className="h-2 overflow-hidden rounded-full bg-muted/30">
                     <div
                       className="h-full rounded-full"
-                      style={{ width: `${Math.max(row.sharePct, 2)}%`, backgroundColor: row.colorHex }}
+                      style={{ width: `${row.sharePct === null ? 0 : Math.max(row.sharePct, 2)}%`, backgroundColor: row.colorHex }}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {row.group} cohort · {formatPercent(row.sharePct)} of alt-peg market
+                    {row.group} cohort · {formatShare(row.sharePct)} of alt-peg market
                   </p>
                 </div>
               </div>
 
               <div className="space-y-1">
                 <p className="pharos-kicker md:hidden">Market Cap</p>
-                <p className="pharos-numeric text-sm font-semibold text-foreground">{formatCurrency(row.marketCap, 1)}</p>
+                <p className="pharos-numeric text-sm font-semibold text-foreground">{formatMarketCap(row.marketCap)}</p>
+                {row.supplyUnavailableCount > 0 ? <p className="text-xs text-muted-foreground">{row.supplyObservedCount}/{row.coinCount} assets observed · {row.marketCap !== null ? "known subtotal" : "supply unavailable"}</p> : null}
               </div>
 
               <div className="space-y-1">
                 <p className="pharos-kicker md:hidden">Share</p>
-                <p className="pharos-numeric text-sm font-semibold text-foreground">{formatPercent(row.sharePct)}</p>
+                <p className="pharos-numeric text-sm font-semibold text-foreground">{formatShare(row.sharePct)}</p>
               </div>
 
               <div className="space-y-1">
-                <p className="pharos-kicker md:hidden">Largest Coin</p>
-                <Link
-                  href={row.leaderHref}
-                  className="pharos-focus-ring rounded-sm text-sm font-medium text-foreground hover:text-primary"
-                >
-                  {row.leaderSymbol}
-                </Link>
-                <p className="text-xs text-muted-foreground">{row.leaderName}</p>
+                <p className="pharos-kicker md:hidden">Leading Observed Coin</p>
+                {row.supplyObservedCount > 0 ? (
+                  <>
+                    <Link
+                      href={row.leaderHref}
+                      className="pharos-focus-ring rounded-sm text-sm font-medium text-foreground hover:text-primary"
+                    >
+                      {row.leaderSymbol}
+                    </Link>
+                    <p className="text-xs text-muted-foreground">{row.leaderName}</p>
+                  </>
+                ) : <p className="text-xs text-muted-foreground">Supply unavailable</p>}
               </div>
             </div>
           ))}
@@ -324,6 +345,7 @@ export function AltPegsClient() {
         marketCap={snapshot.altMarketCap}
         fiatNonUsdMarketCap={snapshot.fiatNonUsdMarketCap}
         commodityMarketCap={snapshot.commodityMarketCap}
+        supplyUnavailableCount={snapshot.altSupplyUnavailableCount}
       />
 
       <SectionErrorBoundary name="non-usd-share">
@@ -348,7 +370,7 @@ export function AltPegsClient() {
                 href={snapshot.topRows[0].href}
                 className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
               >
-                Largest current cohort: {snapshot.topRows[0].label}
+                {snapshot.altSupplyUnavailableCount > 0 ? "Largest known subtotal" : "Largest current cohort"}: {snapshot.topRows[0].label}
                 <ArrowRight className="h-3 w-3" />
               </Link>
             ) : null}
@@ -385,7 +407,7 @@ export function AltPegsClient() {
         />
       </SectionErrorBoundary>
 
-      <AltPegDistributionCard rows={snapshot.distributionRows} altMarketCap={snapshot.altMarketCap} />
+      <AltPegDistributionCard rows={snapshot.distributionRows} altMarketCap={snapshot.altMarketCap} supplyUnavailableCount={snapshot.altSupplyUnavailableCount} />
     </div>
   );
 }

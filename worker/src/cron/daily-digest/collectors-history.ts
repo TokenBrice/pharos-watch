@@ -24,6 +24,7 @@ export async function collectTotalMcapAth(
          WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER})
            AND json_extract(input_data, '$.aggregateUniverse') = 'core-stablecoins-v1'
            AND json_extract(input_data, '$.totalMcapUsd') IS NOT NULL
+           AND json_extract(input_data, '$.supplyCoverage.complete') = 1
          ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC
          LIMIT 1`,
       )
@@ -220,7 +221,7 @@ export async function collectCrossDayTrends(
 
     const psiTrajectory: { date: string; score: number; band: string }[] = [];
     const mcapTrajectory: { date: string; mcapUsd: number }[] = [];
-    const legacyMcapTrajectory: { date: string; mcapUsd: number }[] = [];
+    const completeCoverageMcapTrajectory: { date: string; mcapUsd: number }[] = [];
     const gaugeTrajectory: { date: string; gaugeScore: number }[] = [];
 
     for (const row of entries) {
@@ -231,10 +232,10 @@ export async function collectCrossDayTrends(
         if (data.stabilityIndex) {
           psiTrajectory.push({ date, score: data.stabilityIndex.score, band: data.stabilityIndex.band });
         }
-        if (data.aggregateUniverse === "core-stablecoins-v1") {
+        if (data.aggregateUniverse === "core-stablecoins-v1" && data.supplyCoverage?.complete === true) {
           mcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
         }
-        legacyMcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
+        if (data.supplyCoverage?.complete === true) completeCoverageMcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
         if (data.mintBurnFlows) {
           gaugeTrajectory.push({ date, gaugeScore: data.mintBurnFlows.gaugeScore });
         }
@@ -246,7 +247,7 @@ export async function collectCrossDayTrends(
 
     psiTrajectory.reverse();
     if (mcapTrajectory.length === 0) {
-      mcapTrajectory.push(...legacyMcapTrajectory);
+      mcapTrajectory.push(...completeCoverageMcapTrajectory);
     }
     mcapTrajectory.reverse();
     gaugeTrajectory.reverse();

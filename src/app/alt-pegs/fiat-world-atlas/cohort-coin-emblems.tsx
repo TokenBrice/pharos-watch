@@ -5,14 +5,17 @@ import type { PlacedCoin } from "@/lib/alt-peg-hero";
 
 export interface CohortSummary {
   coinCount: number;
-  marketCap: number;
+  marketCap: number | null;
+  supplyUnavailableCount: number;
   symbolPreview: string;
 }
 
 export function summarizeCohort(coins: readonly PlacedCoin[]): CohortSummary {
+  const observedCoins = coins.filter((coin) => coin.marketCap !== null);
   return {
     coinCount: coins.length,
-    marketCap: coins.reduce((sum, coin) => sum + coin.marketCap, 0),
+    marketCap: observedCoins.length > 0 ? observedCoins.reduce((sum, coin) => sum + coin.marketCap!, 0) : null,
+    supplyUnavailableCount: coins.length - observedCoins.length,
     symbolPreview: coins
       .slice(0, 3)
       .map((coin) => coin.symbol)
@@ -45,6 +48,7 @@ export function CohortCoinEmblems({
       loading={typeof loading === "function" ? loading(coin, index) : loading}
       cohortCoinCount={summary.coinCount}
       cohortMarketCap={summary.marketCap}
+      cohortSupplyUnavailableCount={summary.supplyUnavailableCount}
       cohortSymbolPreview={summary.symbolPreview}
       cohortRank={cohortRank}
       hoverCardYPlacement={hoverCardYPlacement}

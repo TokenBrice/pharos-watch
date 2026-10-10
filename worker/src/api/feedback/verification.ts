@@ -3,7 +3,7 @@ import { relativeBps } from "@shared/lib/depeg-signals";
 import { formatCurrency } from "@shared/lib/format";
 import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { VerificationResult } from "./types";
 import { getDepegThresholdBps } from "../../lib/constants";
@@ -23,7 +23,7 @@ export async function verifyDataCorrection(
 
     const meta = TRACKED_META_BY_ID.get(stablecoinId);
     const price = coin.price ?? null;
-    const totalUsd = getCirculatingRaw(coin);
+    const totalUsd = getCirculatingRawOrNull(coin);
     const cacheAgeSec = Math.floor(Date.now() / 1000) - stablecoinsCache.updatedAt;
     const pegRates = derivePegRates(
       stablecoinsCache.payload.peggedAssets,
@@ -51,7 +51,7 @@ export async function verifyDataCorrection(
     const block = [
       "**--- Auto-Verification Snapshot (at time of submission) ---**",
       price != null ? `**Cached price:** $${price.toFixed(6)}` : "**Cached price:** N/A",
-      totalUsd > 0 ? `**USD circulating market cap:** ${formatCurrency(totalUsd)}` : "",
+      `**USD circulating market cap:** ${totalUsd === null ? "N/A (supply unavailable)" : formatCurrency(totalUsd)}`,
       `**Peg deviation:** ${deviationStr}`,
       `**Peg reference:** ${pegRef != null ? `$${pegRef.toFixed(6)}` : "N/A"}${pegRateSource ? ` (${pegRateSource === "fx" ? "FX" : pegRateSource})` : ""}`,
       `**Depeg threshold:** ${thresholdBps} bps`,

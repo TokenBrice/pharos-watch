@@ -1,4 +1,4 @@
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import {
   WORKER_ACTIVE_STABLECOINS,
   WORKER_TRACKED_META_BY_ID,
@@ -72,11 +72,13 @@ export function resolveTelegramPresetAlias(token: string): TelegramPresetId | nu
 function compareStablecoinIdsByMarketCap(
   a: string,
   b: string,
-  marketCapsById: ReadonlyMap<string, number>,
+  marketCapsById: ReadonlyMap<string, number | null>,
 ): number {
-  const aMcap = marketCapsById.get(a) ?? 0;
-  const bMcap = marketCapsById.get(b) ?? 0;
+  const aMcap = marketCapsById.get(a) ?? null;
+  const bMcap = marketCapsById.get(b) ?? null;
   if (bMcap !== aMcap) {
+    if (aMcap === null) return 1;
+    if (bMcap === null) return -1;
     return bMcap - aMcap;
   }
   return (CANONICAL_ORDER_INDEX.get(a) ?? Number.MAX_SAFE_INTEGER)
@@ -107,7 +109,7 @@ export async function resolveTelegramPresetTargets(
   }
 
   const marketCapsById = new Map(
-    cacheResult.payload.peggedAssets.map((asset) => [asset.id, getCirculatingRaw(asset)] as const),
+    cacheResult.payload.peggedAssets.map((asset) => [asset.id, getCirculatingRawOrNull(asset)] as const),
   );
 
   const presets: ResolvedTelegramPreset[] = presetIds.flatMap((presetId) => {
@@ -127,11 +129,15 @@ export async function resolveTelegramPresetTargets(
           return true;
         })
         .map((stablecoin) => stablecoin.id)
+        .filter((id) => marketCapsById.get(id) != null)
         .sort((a, b) => compareStablecoinIdsByMarketCap(a, b, marketCapsById))
         .slice(0, definition.topN);
     } else {
       stablecoinIds = WORKER_ACTIVE_STABLECOINS
-        .filter((stablecoin) => (marketCapsById.get(stablecoin.id) ?? 0) >= (definition.minMarketCapUsd ?? 0))
+        .filter((stablecoin) => {
+          const supply = marketCapsById.get(stablecoin.id);
+          return supply != null && supply >= (definition.minMarketCapUsd ?? 0);
+        })
         .map((stablecoin) => stablecoin.id)
         .sort((a, b) => compareStablecoinIdsByMarketCap(a, b, marketCapsById));
     }

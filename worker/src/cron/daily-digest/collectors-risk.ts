@@ -1,7 +1,7 @@
 import { projectV9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { DEWS_SIGNAL_LABELS, type DewsSignalKey } from "@shared/lib/dews-config";
 import { THREAT_BAND_ORDER, isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
@@ -102,7 +102,10 @@ export async function collectSafetyScores(
     const reportCoins = [...mentionedCoinGrades];
     const reportIds = new Set(reportCoins.map((grade) => grade.id));
     const worstGraded = allGrades
-      .filter((grade) => !reportIds.has(grade.id) && (ctx.mcapById.get(grade.id) ?? 0) > 10_000_000)
+      .filter((grade) => {
+        const mcapUsd = ctx.mcapById.get(grade.id);
+        return !reportIds.has(grade.id) && mcapUsd !== undefined && mcapUsd > 10_000_000;
+      })
       .filter((grade) => grade.score !== null)
       .sort((a, b) => (a.score ?? 0) - (b.score ?? 0))
       .slice(0, 3);
@@ -113,7 +116,10 @@ export async function collectSafetyScores(
       }
     }
     const fRated = allGrades.filter(
-      (grade) => grade.grade === "F" && !reportIds.has(grade.id) && (ctx.mcapById.get(grade.id) ?? 0) > 10_000_000,
+      (grade) => {
+        const mcapUsd = ctx.mcapById.get(grade.id);
+        return grade.grade === "F" && !reportIds.has(grade.id) && mcapUsd !== undefined && mcapUsd > 10_000_000;
+      },
     );
     for (const grade of fRated) {
       reportCoins.push(grade);
@@ -237,13 +243,14 @@ export async function collectDewsStress(
 
         const coin = ctx.trackedStablecoinAssets.find((candidate) => candidate.id === today.stablecoin_id);
         if (!coin) continue;
+        const mcapUsd = getCirculatingRawOrNull(coin);
         bandChanges.push({
           symbol: coin.symbol,
           from: yesterday.band,
           to: today.band,
           score: today.score,
           topDriver,
-          mcapUsd: getCirculatingRaw(coin),
+          ...(mcapUsd === null ? {} : { mcapUsd }),
         });
       }
 
@@ -269,7 +276,8 @@ export async function collectDewsStress(
             logCollectorParseFailure("dews-stress", "signals_json", error, { stablecoinId: row.stablecoin_id });
           }
 
-          const mcapUsd = getCirculatingRaw(coin);
+          const mcapUsd = getCirculatingRawOrNull(coin);
+          if (mcapUsd === null) return null;
           const yScore = yesterdayMap.get(row.stablecoin_id)?.score;
           const changeFromYesterday = yScore != null ? row.score - yScore : undefined;
           return {
@@ -389,7 +397,8 @@ export async function collectGradeTransitions(
       )
       .filter((row) => {
         const coin = ctx.trackedStablecoinAssets.find((candidate) => candidate.id === row.stablecoin_id);
-        return coin && getCirculatingRaw(coin) > 10_000_000;
+        const supply = getCirculatingRawOrNull(coin);
+        return supply !== null && supply > 10_000_000;
       })
       .slice(0, 5);
 
@@ -410,7 +419,7 @@ export async function collectGradeTransitions(
           toGrade: row.grade,
           fromScore: row.prev_score,
           toScore: row.score,
-          mcapUsd: getCirculatingRaw(coin),
+          mcapUsd: getCirculatingRawOrNull(coin)!, // admitted by the candidate supply filter above
         };
         return {
           ...base,
@@ -462,9 +471,12 @@ export async function collectYieldAnomalies(
 
     if (ctx.evidence) {
       ctx.evidence.yields = (rows.results ?? [])
-        .filter((row) => ctx.trackedStablecoinIds.has(row.stablecoin_id)
-          && (ctx.mcapById.get(row.stablecoin_id) ?? 0) >= 10_000_000
-          && Number.isFinite(row.current_apy) && row.current_apy < 500)
+        .filter((row) => {
+          const mcapUsd = ctx.mcapById.get(row.stablecoin_id);
+          return ctx.trackedStablecoinIds.has(row.stablecoin_id)
+            && mcapUsd !== undefined && mcapUsd >= 10_000_000
+            && Number.isFinite(row.current_apy) && row.current_apy < 500;
+        })
         .map((row) => ({ stablecoinId: row.stablecoin_id, symbol: row.symbol, currentApy: row.current_apy }));
     }
     const candidates = (rows.results ?? [])
@@ -479,8 +491,8 @@ export async function collectYieldAnomalies(
         }
         if (warnings.length === 0) return null;
 
-        const mcapUsd = ctx.mcapById.get(row.stablecoin_id) ?? 0;
-        if (mcapUsd < 10_000_000 || row.current_apy >= 500) return null;
+        const mcapUsd = ctx.mcapById.get(row.stablecoin_id);
+        if (mcapUsd === undefined || mcapUsd < 10_000_000 || row.current_apy >= 500) return null;
 
         return {
           symbol: row.symbol,

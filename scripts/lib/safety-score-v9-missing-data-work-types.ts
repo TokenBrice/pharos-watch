@@ -233,7 +233,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     instructions: "Restore a current, score-eligible circulating-USD observation for the asset. Verify provider identity, price path, contracts, and chain coverage; enrich missing deployments or repair producer mapping when needed.",
     completionCriteria: "The exact fixed input contains current chain supply, the compiled supply status is known, and the chain-supply gapId is absent.", recommendedSkill: "stablecoin-runtime-price-marketcap-gate",
     likelyRepoAreas: ["shared/data/stablecoins/coins/", "worker/src/cron/sync-stablecoins.ts", "worker/src/cron/snapshot-chain-supply.ts", "worker/src/lib/safety-score-v9/extension-supply.ts"],
-    cautions: ["Use getCirculatingRaw(); DefiLlama list circulating values are already USD-denominated.", "Do not add manual, on-chain, CMC, DEX, or other supply overrides."],
+    cautions: ["Use getCirculatingRawOrNull() and preserve unavailable supply; DefiLlama list circulating values are already USD-denominated.", "Do not add manual, on-chain, CMC, DEX, or other supply overrides."],
     ownerDomain: "evidence",
     defaultResolutionMode: "mixed-curation-and-runtime",
     ...workReasons({}),

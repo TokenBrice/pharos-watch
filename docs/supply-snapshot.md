@@ -46,8 +46,8 @@ When DefiLlama publishes a tracked zero-supply row for an asset that also has po
    - same-day repair never overwrites a non-null historical price, circulating supply, or rows outside cron ownership
 7. For each PSI-eligible cached asset:
    - Skip rows marked `supplyRestored === true`; carried-forward supply is not a fresh daily observation
-   - Sum circulating supply via `sumPegBuckets(asset.circulating)` --- already in USD
-   - Skip if sum <= 0
+   - Read admitted circulating supply via `getCirculatingRawOrNull(asset)` --- already in USD
+   - Skip unavailable supply; retain explicit observed zero
    - Extract price (must be a number > 0 and an actual observation per `isObservedPrice`, so a nominal par reference is `null`) with its observation clock `priceObservedAt` (`null` when absent or invalid)
    - Build `INSERT OR REPLACE` statement
 8. Exact-set data quality check: require every active registry ID to have positive cached supply (fresh or restored) or an owned, reasoned, unexpired publication waiver. Restored-only active IDs are deliberate exclusions, not coverage gaps: the snapshot still writes every fresh observation, skips the restored rows, and returns `ok` with `quality: { reason: "snapshot_written_restored_skipped", restoredOnlyIds }` — the atomic write already committed, so this is input quality, not work that did not happen. Genuinely missing cache IDs and invalid-supply rows still block via `partial_snapshot_blocked` metadata (`missingActiveIds`, `missingCacheActiveIds`, `invalidSupplyIds`). Non-restored PSI historical-asset rows are written when present but do not block active-universe completion. When a required ID that was restored at write time later produces a fresh observation the same UTC day, the snapshot re-writes the date atomically so its row stops missing.
@@ -180,29 +180,20 @@ JLTXX's on-chain supplemental supply admission is fail-closed on class scope: `a
 
 **Key gotcha:** The list endpoint returns `circulating` values already in USD for all peg types. Do **not** multiply by price --- that double-converts. The detail endpoint (`stablecoins.llama.fi/stablecoin/{id}`) returns native currency values for non-USD pegs, but the list endpoint is already converted.
 
-### sumPegBuckets()
+### Supply admission and nullable helpers
 
 **File:** `shared/lib/supply.ts`
 
-```typescript
-export function sumPegBuckets(obj: Record<string, number> | null | undefined): number {
-  if (!obj) return 0;
-  return Object.values(obj).reduce((s, v) => s + safeNum(v), 0);
-}
-```
-
-Safely sums across all peg types (`peggedUSD`, `peggedEUR`, etc.). Invalid values (`null`, `NaN`, `Infinity`) are coerced to 0.
-
-### Other supply helpers
-
-All in `shared/lib/supply.ts`:
+`admitSupplyBuckets()` is the current/history bucket authority: an explicit finite nonnegative record is observed (including zero), `{}`/null/undefined is absent, and a negative, nonfinite or overflowing record is invalid. No invalid bucket is discarded into a partial numeric total. `sumPegBucketsOrNull()` returns only an admitted total; otherwise it returns null.
 
 | Helper | Description |
 |--------|-------------|
-| `getCirculatingRaw(c)` | Calls `sumPegBuckets(c.circulating)` |
-| `getPrevDayRaw(c)` | Previous day's circulating (for delta calculations) |
-| `getPrevWeekRaw(c)` | Same for week |
-| `getPrevMonthRawOrNull(c)` | Same for month (returns `null` if unavailable) |
+| `getCirculatingRawOrNull(c)` | Current USD supply, null for an absent asset or unavailable buckets |
+| `getPrevDayRawOrNull(c)` | Previous-day supply, null when unavailable |
+| `getPrevWeekRawOrNull(c)` | Previous-week supply, null when unavailable |
+| `getPrevMonthRawOrNull(c)` | Previous-month supply, null when unavailable |
+
+The zero-default helper variants have been removed and ESLint rejects their identifiers, aliases and namespace property reads across all source roots. Filters admit observed members explicitly; rankings place unavailable last, exports retain null/blank values plus reasons, and aggregates publish known subtotals with completeness/member counts. Daily snapshots retain a genuine observed zero but never manufacture one from missing supply. A supply observation is not a price observation and already-USD list buckets are never multiplied by price.
 
 ---
 
@@ -243,6 +234,14 @@ ORDER BY snapshot_date ASC
 ### GET /api/stablecoin/{id} (detail --- supply_history fallback)
 
 For CoinGecko-only coins and commodity tokens (gold/silver), empty or stale external detail history falls back to the `supply_history` table and reconstructs the `DetailToken` format. DefiLlama-backed detail falls back to `supply_history` on upstream failure, circuit-open, parse-error, or exception paths; it does not currently use the empty/stale-history fallback unless the DefiLlama handler is extended. CoinGecko-derived history is treated as stale when its newest point is more than 72 hours behind wall clock time, which prevents per-coin charts from freezing on an old market-cap series when D1 already has fresher daily snapshots.
+
+Fallback availability never renews freshness: detail responses preserve the newest returned history
+point's clock in headers and `_meta`, mark the fallback stale, disable caching, and skip detail-cache
+publication. This also applies when stale upstream history survives because no D1 rescue exists.
+Supply-history responses without a completed marker use their newest served row's admitted clock;
+empty or invalid-clock responses explicitly expose unknown freshness and unavailable age with `no-store`.
+
+Detail history preserves day-specific valuations: commodity CoinGecko `market_chart` caps are not repaired with current circulating supply. For non-USD DefiLlama rows, observed historical USD buckets and native buckets are preserved independently; a missing side stays unavailable instead of being reconstructed with the current top-level quote.
 
 ### POST /api/backfill-supply-history (admin)
 
@@ -366,25 +365,31 @@ For tracked supplemental assets that are not in DefiLlama's stablecoin list, the
 
 If the supplemental CoinGecko market-cap fetch is temporarily unavailable, `syncStablecoins()` now reuses the last known good cached supply snapshot for those supplemental assets instead of emitting zero-supply rows or dropping them from the payload. That preservation rule now covers all tracked `detailProvider === "coingecko"` assets, including ones that currently rely on on-chain supply fallback without a `geckoId`. A configured curated aggregate can also retain a prior reconciled `onchain-total-supply` chain partition when that partition contains exactly the current configured deployment labels, with no derived residual label: if one live leg becomes unreadable but a fresh CoinGecko aggregate still succeeds, this narrow restore requires the current row to be an empty-partition `coingecko-fallback`, requires one finite positive circulating bucket matching the current fallback's peg bucket, requires every copied chain current/history field to be finite and nonnegative, and requires the copied partition to still sum to the fresh aggregate within `max(0.01, aggregate * 1e-9)`. Only the chain partition is carried forward: the aggregate, its `coingecko-fallback` source and its observation time stay fresh, so the row is not flagged `supplyRestored` and never republishes a stale total under a fresh label. Aggregates with residual or malformed partitions, or with a partition that no longer reconciles with today's fresh aggregate, fail closed to the fresh CoinGecko fallback with no chain partition at all. This partition restore runs after primary-ID deduplication; `zarm-mento`, the only active curated aggregate that can also be admitted as a primary-list duplicate, retains its existing fresh-aggregate fallback behavior and does not take this partition-restore path. When a fresh DefiLlama `coins.llama.fi` price is still available, that fresher price is merged onto the restored supply snapshot. Carry-forward is bounded: restores preserve the original `supplyObservedAt`, require an integer timestamp no more than 60 seconds in the future, and expire once that observation is older than 7 days (`SUPPLEMENTAL_RESTORE_MAX_AGE_SEC`) — the asset publishes with its real current fallback supply (or empty supply when no fallback exists) and the run logs the expired IDs instead of indefinitely re-publishing stale totals. Restored rows are flagged `supplyRestored` with `supplyObservedAt` provenance, and the coin detail hero renders a "Stale supply · as of {date}" note from those fields.
 
-For a DefiLlama asset with exactly one missing tracked chain, supply-gap reconciliation (`worker/src/cron/sync-stablecoins/supply-gap-reconciliation.ts`) can raise the aggregate from CoinGecko under the bounded contract below. When admitted, the `coingecko-gap-fill` row keeps the current `chainCirculating` sum equal to `getCirculatingRaw(asset)` by assigning only the nonnegative CoinGecko-minus-DefiLlama remainder to the missing chain, so the reconciled aggregate and chain packet follow the same sum-equals-aggregate contract enforced when curated aggregate packets are restored. NAV and yield-bearing assets are excluded from par-valued on-chain supply repair.
+Supply-gap reconciliation (`worker/src/cron/sync-stablecoins/supply-gap-reconciliation.ts`) may raise a DefiLlama aggregate from CoinGecko only under DEC-01 below. Exactly one tracked chain must be missing; its `coingecko-gap-fill` row receives only the nonnegative CoinGecko-minus-DefiLlama remainder, preserving chain sum = `getCirculatingRawOrNull(asset)`. Unavailable aggregate supply rejects repair. NAV/yield-bearing assets cannot use par-valued on-chain repair.
+
+Ordinary DefiLlama-outage CoinGecko fallback retains the fresh CoinGecko aggregate and its actual observation clock.
+Prior aggregate and chain historical buckets may remain available, but copied chain current values become `null`;
+they are never admitted as same-generation observations under the aggregate's fresh clock. A successful complete
+curated on-chain overlay may replace this packet; a failed overlay preserves the fresh aggregate and unavailable
+chains. The explicitly bounded `coingecko-gap-fill` carry below remains a distinct coherent restored packet.
 
 ### CoinGecko aggregate gap-fill limits (DEC-01)
 
-The 2026-09-27 owner decision retains this supplemental aggregate path as an explicit, fail-closed, double-count-safe raise. The numeric limits live only in `COINGECKO_GAP_FILL_POLICY`; **the owner reviews the chosen numbers at the implementing PR**.
+DEC-01 (2026-09-27) retains this explicit, fail-closed, double-count-safe raise. Limits live only in `COINGECKO_GAP_FILL_POLICY`; **the owner reviews the numbers at the implementing PR**.
 
 | Rule | Contract |
 |---|---|
 | Ratio | `ratio = CoinGecko market cap / DefiLlama list total`, from a fresh timestamped CoinGecko observation; the band is re-checked on the CoinGecko market-chart value actually published |
 | Entry (not gap-filled last publication) | `1.05 < ratio <= 1.45` |
 | Hysteresis retain (previous published row had `supplySource = "coingecko-gap-fill"`) | `1.02 < ratio <= 1.50`; at or below `1.02` the row returns to DefiLlama and must clear `1.05` again to re-enter |
-| No decision | CoinGecko simple-price/history unavailability (including 429s), candidate-cap deferrals and DefiLlama-outage fallback runs carry the prior coherent aggregate, chain packet and provenance for at most two consecutive publications (about 30 minutes at the normal cadence). `supplyGapFill.carryForwardRuns` counts carries, `supplyRestored = true` prevents treating them as fresh daily observations, and the observation time does not advance. A successful fill resets the count; a conclusive rejection or expiry returns to the current provider row |
+| No decision | CoinGecko simple-price/history failures (including 429s), candidate-cap deferrals and DefiLlama-outage fallback carry the prior coherent aggregate, chains and provenance for at most two publications (~30 minutes). `supplyGapFill.carryForwardRuns` counts carries; `supplyRestored = true` excludes fresh daily observations and the observation clock stays fixed. Fill resets the count; conclusive rejection or expiry returns to the current provider row |
 | Hard ceiling | `maxRatio = 1.50` at current and at every compared historical bucket DefiLlama also observed; above it the contribution never enters the aggregate |
-| Coherent history | Current, 1d, 7d and 30d must all come from the same CoinGecko market-chart series (no per-bucket `max(DL, CG)` splicing); a missing CoinGecko point fails the whole fill closed (`history-incomplete`). A bucket DefiLlama did not observe stays absent, because its supplemental contribution cannot be bounded |
-| Attribution | Exactly one metadata deployment may be missing (`multiple-missing-chains` otherwise); every attributed DL chain row must be observed (a `null` chain current is a `baseline-mismatch`) and reconcile to the DL total. The missing chain carries only the nonnegative remainder per bucket; a compared CoinGecko historical bucket below DefiLlama's rejects the whole fill with `history-below-baseline` before any supply mutation |
+| Coherent history | Current, 1d, 7d and 30d use one CoinGecko market-chart series, never per-bucket `max(DL, CG)`. Missing CG points reject the fill (`history-incomplete`); unobserved DefiLlama buckets stay absent because their contributions cannot be bounded |
+| Attribution | Exactly one missing metadata deployment (`multiple-missing-chains` otherwise); every DL chain row must be observed and reconcile to its total (`baseline-mismatch` for null current). Only the nonnegative remainder goes to the missing chain. CG history below DL rejects before mutation (`history-below-baseline`) |
 | Provenance | Every admitted row carries `supplyGapFill` (`method`, `admission: entered/retained`, `missingChainId`, the retained DefiLlama `canonicalCurrentUsd`, `supplementalCurrentUsd`, `ratio`, `maxRatio`, `observedAt`) beside `supplySource = "coingecko-gap-fill"` |
 | Rejection | Out-of-band or unproven contributions leave the DefiLlama row untouched, log `coingecko-gap-fill-rejected`, and appear in run metadata `supplyGapReconciliation.gapFillRejections` (`ratio-out-of-band`, `multiple-missing-chains`, `baseline-mismatch`, `history-incomplete`, `history-ratio-above-bound`, `history-below-baseline`) |
 
-**Calibration/replay (2026-09-27):** public DefiLlama/CoinGecko comparison showed that large ratios can reflect provider methodology, even with complete chain coverage. The `1.50` ceiling sits above p90 and the retained single-missing-chain cluster, below the first divergent cluster; entry/retain bands provide hysteresis. Council replay rejected feUSD, USDXL, scUSD and BtcUSD, rejected wCOP for `history-ratio-above-bound`, and retained reUSD by hysteresis.
+**Calibration/replay (2026-09-27):** large DefiLlama/CoinGecko ratios can reflect methodology despite complete chain coverage. The `1.50` ceiling is above p90 and the retained single-missing-chain cluster, below the first divergent cluster. Council replay rejected feUSD, USDXL, scUSD and BtcUSD; wCOP failed `history-ratio-above-bound`; reUSD retained by hysteresis.
 
 **History discontinuity and live-depeg impact:** the rejected fills return to canonical DefiLlama totals, so published supply and the next daily `supply_history` observation step down once. This is a methodology change, not a redemption; prior rows are not rewritten. USDXL and scUSD fall below the **$1M live-depeg floor**, lose live detection, and any open event closes as `coverage-lost-supply`. The bound was set under the delegated DEC-01 decision (2026-09-27) and remains subject to owner review.
 
@@ -439,6 +444,11 @@ The stablecoins response-ready schema marker advances to `StablecoinListResponse
 **Incident (2026-10-09):** DefiLlama's `/stablecoins?includePrices=true` list served `chainCirculating[chain].current = 0` (or a collapse) for about twenty chains (X Layer, Ink, Hyperliquid L1, Sei, Tempo, Berachain, Sonic, Cronos and others) while each chain's `circulatingPrevDay` and DefiLlama's own per-chain daily charts stayed correct. Every pre-existing lane missed it: intake keeps an explicit zero as observed data, the CoinGecko lane fires only for an *absent* chain, and the history/on-chain lanes fire only when the whole asset is zero. Published supply fell by about $9.6B: USDG $3.10B → $1.645B (−47%, with X Layer at 1,409M on-chain), USDC −$7.5B (Hyperliquid L1 7.27B → 0.38B), and USDY, USDT, satUSD and others. The phantom move topped the homepage Biggest Supply Moves card and polluted the first 2026-10-09 `chain_supply_history` rows. The list recovered around 05:15 UTC.
 
 `guardChainDropouts()` (`worker/src/cron/sync-stablecoins/chain-dropout-guard.ts`) runs in intake after `reconcileTrackedSupplyGaps()`. It evaluates only active tracked `detailProvider === "defillama"` rows that are not frozen, not `supplyRestored`, and not already handled by another reconciliation lane. Thresholds live only in `CHAIN_DROPOUT_POLICY`:
+
+The guard evaluates the union of present chain identities and known material/quarantined identities, including
+recoverable identities in the last accepted publication. An omitted row (even an empty current chain map) is reintroduced
+with `current: null` and passes through the same repair, attribution-ambiguity and carry-ceiling rules. Provider omission
+never releases a quarantine or advances its first-detection clock.
 
 | Rule | Contract |
 |---|---|

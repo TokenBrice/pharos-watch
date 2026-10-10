@@ -877,14 +877,14 @@ it("retains the last-good daily row when samples become unavailable", async () =
 
 **Security plugin** — `eslint-plugin-security` keeps its regex and timing rules (`detect-unsafe-regex`, `detect-non-literal-regexp`, `detect-possible-timing-attacks`) enabled; suppress them only with a scoped `eslint-disable` plus justification. `detect-object-injection` and `detect-non-literal-fs-filename` are off globally in `eslint.config.mjs` — both flag routine dynamic-property and dynamic-filesystem-path access that repo scripts and tests use intentionally. The fs rule previously required ~101 inline suppressions; an owner review replaced them (and the `scripts/**` carve-out) with the global off.
 
-**Import boundaries** — `no-restricted-imports` blocks carry the lint-shaped architectural rules so they run on every changed file through `lint:changed` instead of a separate scanner:
+**Import boundaries and supply admission** — `no-restricted-imports` blocks and the custom supply rule run on every changed file through `lint:changed`:
 
 | Scope | Restriction |
 | ----- | ----------- |
 | `worker/src/**` | No bare `viem`; among viem subpaths only `viem/utils` and `viem/siwe` are allowed (worker tests additionally allow `viem/accounts`). The ADR-2 worker→frontend half is not in this block: the custom `pharos/worker-import-boundaries` rule rejects any specifier containing `@/` or `src/` |
 | `src/**`, `shared/**`, `scripts/**`, `functions/**` | No `worker/src/**` imports (ADR-2, frontend→worker half). The sole reviewed waiver is listed in `FRONTEND_TO_WORKER_WAIVED_FILES` in `eslint.config.mjs` |
 | `shared/lib/**` (excluding its tests) | No `@shared/*` aliases — use relative imports |
-| `src/app/**`, `src/components/**`, `worker/src/api/**` | No `sumPegBuckets` from `@shared/lib/supply`; cached `StablecoinData` supply reads use `getCirculatingRaw()`. The three raw-bucket parsers under `worker/src/api/` that pre-date a `StablecoinData` object are listed as glob exceptions in the config |
+| All linted source roots | `pharos/no-zero-coercing-supply-helpers` bans the deleted `sumPegBuckets`, `getCirculatingRaw`, `getPrevDayRaw`, and `getPrevWeekRaw` identifiers, including aliased imports and computed-property reads. Use nullable helpers and preserve unavailable supply |
 
 Because flat config *replaces* a rule's options when several config objects match the same file, the blocks above compose their pattern lists from shared constants rather than relying on merging.
 

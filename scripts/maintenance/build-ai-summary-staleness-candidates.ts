@@ -28,7 +28,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { scoreToGrade } from "@shared/lib/report-card-core";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { validateAiSummaryClaimTokens } from "@shared/lib/ai-summary-claims";
 import type { AiSummaryClaimToken } from "@shared/types";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -253,7 +253,7 @@ export function buildCurrentMap(
       dewsBand: dews?.band ?? null,
       dewsScore: typeof dews?.score === "number" ? dews.score : null,
       depegCount: typeof pegRow?.eventCount === "number" ? pegRow.eventCount : null,
-      ...(stablecoin ? { circulatingUsd: getCirculatingRaw(stablecoin) } : {}),
+      circulatingUsd: getCirculatingRawOrNull(stablecoin),
       weakestPillar: card.weakestPillar?.pillar ?? null,
     });
   }

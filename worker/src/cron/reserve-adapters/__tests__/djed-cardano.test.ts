@@ -110,14 +110,14 @@ function runDjed(overrides: DjedNetworkOverrides = {}) {
 }
 
 /** Stablecoins-cache D1 fixture carrying the DefiLlama list circulating for DJED. */
-function djedCacheDb(circulating: number) {
+function djedCacheDb(circulating: number | null, price: number | null = 1) {
   return mockD1Strict([{
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
     matchBinds: ["stablecoins"],
     rows: [{
       key: "stablecoins",
       value: JSON.stringify({
-        peggedAssets: [{ id: "djed-coti", symbol: "DJED", circulating: { peggedUSD: circulating } }],
+        peggedAssets: [{ id: "djed-coti", symbol: "DJED", price, circulating: circulating === null ? {} : { peggedUSD: circulating } }],
       }),
       updated_at: TIP.block_time,
     }],
@@ -227,10 +227,28 @@ describe("djed-cardano", () => {
     expectWarningEffect(result, "djed-supply-divergence", "degraded");
     expect(result.metadata?.supplyTokens).toBeCloseTo(DJED_CIRCULATING, 6);
     expect(result.metadata?.details).toMatchObject({
-      listCirculatingUnits: 4_020_000,
+      listCirculatingUsd: 4_020_000,
       supplyDerivation: expect.stringContaining("djedMinted"),
     });
     expect(result.metadata?.details?.supplyDivergencePct as number).toBeGreaterThan(10);
+  });
+  it.each([0.8, 1.2])("compares cached USD to matched-generation valued units at price %s", async (price) => {
+    const { result } = await runAdapter("djed-cardano", "djed-coti", {
+      network: djedNetwork({ djedPrice: price }), nowSec: TIP.block_time,
+      ctx: { db: djedCacheDb(DJED_CIRCULATING * price, price) },
+    });
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata?.details?.supplyDivergencePct).toBeCloseTo(0, 6);
+    expect(result.metadata?.supplyTokens).toBeCloseTo(DJED_CIRCULATING, 6);
+  });
+
+  it.each([[null, 1], [DJED_CIRCULATING, null], [0, 1]] as const)("retains unavailable reconciliation without replacing the on-chain liability (%s,%s)", async (supply, price) => {
+    const { result } = await runAdapter("djed-cardano", "djed-coti", {
+      network: djedNetwork(), nowSec: TIP.block_time, ctx: { db: djedCacheDb(supply, price) },
+    });
+    expect(result.metadata?.details).toMatchObject({ supplyReconciliationUnavailableReason: "list-supply-or-price-unavailable" });
+    expect(result.metadata?.details?.supplyDivergencePct).toBeUndefined();
+    expect(result.metadata?.supplyTokens).toBeCloseTo(DJED_CIRCULATING, 6);
   });
 
   it("stays clean when the on-chain liability matches the list supply", async () => {
@@ -242,7 +260,7 @@ describe("djed-cardano", () => {
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata?.details).toMatchObject({
-      listCirculatingUnits: DJED_CIRCULATING,
+      listCirculatingUsd: DJED_CIRCULATING,
       supplyDivergencePct: 0,
     });
   });

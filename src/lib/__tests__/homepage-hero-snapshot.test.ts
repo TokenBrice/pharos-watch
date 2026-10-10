@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
 import {
   HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS,
   buildLiveHomepageHeroSnapshot,
@@ -14,6 +15,9 @@ function snapshot(asOfISO: string, totalUsd: number): HomepageHeroSnapshot {
     nonUsdUsd: 0,
     nonUsdShare: 0,
     supplyUnavailableCount: 0,
+    supplyObservedCount: CLIENT_CORE_AGGREGATE_ACTIVE_IDS.size,
+    supplyExpectedCount: CLIENT_CORE_AGGREGATE_ACTIVE_IDS.size,
+    supplyMissingCount: 0,
     cohort: {
       ts: Date.parse(asOfISO),
       usdt: totalUsd,
@@ -118,5 +122,47 @@ describe("buildLiveHomepageHeroSnapshot supply availability", () => {
     expect(result.supplyUnavailableCount).toBe(0);
     expect(result.cohort.usdt).toBe(100);
     expect(result.cohort.sky).toBeNull();
+    expect(result.supplyMissingCount).toBe(CLIENT_CORE_AGGREGATE_ACTIVE_IDS.size - 3);
+    expect(result.cohort.others).toBeNull();
+  });
+
+  it.each([{ peggedAssets: [] }, { peggedAssets: [asset("usdt-tether", {})] }])("never selects a no-observation live snapshot as a $0 market", ({ peggedAssets }) => {
+    const result = buildLiveHomepageHeroSnapshot({ peggedAssets });
+    expect(result.totalUsd).toBeNull();
+    expect(result.nonUsdUsd).toBeNull();
+    expect(result.cohort.total).toBeNull();
+    const nowMs = Date.parse("2026-08-22T12:00:00Z");
+    const fallback = snapshot("2026-08-22T00:00:00Z", 100);
+    expect(selectHomepageHeroSnapshot({ liveSnapshot: result, fallbackSnapshot: fallback, nowMs }).source).toBe("fallback");
+    expect(selectHomepageHeroSnapshot({ liveSnapshot: result, fallbackSnapshot: { ...fallback, totalUsd: null }, nowMs }).status).toBe("unavailable");
+  });
+
+  it("preserves a fully observed zero market and unavailable non-USD subgroup", () => {
+    const zeros = buildLiveHomepageHeroSnapshot({
+      peggedAssets: [...CLIENT_CORE_AGGREGATE_ACTIVE_IDS].map((id) => asset(id, { peggedUSD: 0 })),
+    });
+    expect(zeros.totalUsd).toBe(0);
+    expect(zeros.supplyObservedCount).toBe(zeros.supplyExpectedCount);
+    expect(selectHomepageHeroSnapshot({
+      liveSnapshot: zeros, fallbackSnapshot: snapshot("2026-08-22T00:00:00Z", 100),
+      nowMs: Date.parse("2026-08-22T12:00:00Z"),
+    }).source).toBe("live");
+    const partial = buildLiveHomepageHeroSnapshot({
+      peggedAssets: [asset("usdc-circle", { peggedUSD: 100 }), asset("eurc-circle", {}, "peggedEUR")],
+    });
+    expect(partial.nonUsdUsd).toBeNull();
+    expect(partial.nonUsdShare).toBeNull();
+  });
+
+  it("counts omitted non-named core assets in aggregate completeness", () => {
+    const rows = [...CLIENT_CORE_AGGREGATE_ACTIVE_IDS].map((id) => asset(id, { peggedUSD: 1 }));
+    const full = buildLiveHomepageHeroSnapshot({ peggedAssets: rows });
+    expect(full.supplyMissingCount).toBe(0);
+    const partial = buildLiveHomepageHeroSnapshot({ peggedAssets: rows.filter((row) => row.id !== "eurc-circle") });
+    expect(partial.supplyUnavailableCount).toBe(0);
+    expect(partial.supplyMissingCount).toBe(1);
+    expect(partial.supplyObservedCount).toBe(partial.supplyExpectedCount - 1);
+    expect(partial.cohort.others).toBeNull();
+    expect(partial.nonUsdShare).toBeNull();
   });
 });

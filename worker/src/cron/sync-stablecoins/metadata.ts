@@ -1,6 +1,6 @@
 import type { PriceObservationEffectiveness } from "./price-corroboration-observations";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
 import { buildSyncMetadata, type CronResult, type PriceSourceHealth, type TrackedCoverageRestoreResult } from "./shared";
 import type { CanonicalDeduplicationResult } from "./phase-helpers";
@@ -168,6 +168,8 @@ function buildPriceSourceHealth(assets: PeggedAsset[]): PriceSourceHealth {
     fallback: 0,
   };
   let pricedMarketCapUsd = 0;
+  let observedCount = 0;
+  let unavailableCount = 0;
 
   for (const asset of assets) {
     if (hasMissingPrice(asset)) {
@@ -205,13 +207,17 @@ function buildPriceSourceHealth(assets: PeggedAsset[]): PriceSourceHealth {
 
     // Every circulating peg bucket is already USD-valued. Missing prices do
     // not enter this denominator; unclassified priced rows still do.
-    const circulatingUsd = Math.max(0, getCirculatingRaw(asset));
-    pricedMarketCapUsd += circulatingUsd;
+    const circulatingUsd = getCirculatingRawOrNull(asset);
+    if (circulatingUsd === null) unavailableCount++;
+    else {
+      observedCount++;
+      pricedMarketCapUsd += circulatingUsd;
+    }
 
     const confidence = asset.priceConfidence;
     if (confidence && confidence in confidenceDistribution) {
       confidenceDistribution[confidence as keyof typeof confidenceDistribution]++;
-      confidenceMarketCapUsd[confidence as keyof typeof confidenceMarketCapUsd] += circulatingUsd;
+      if (circulatingUsd !== null) confidenceMarketCapUsd[confidence as keyof typeof confidenceMarketCapUsd] += circulatingUsd;
     }
   }
 
@@ -220,6 +226,7 @@ function buildPriceSourceHealth(assets: PeggedAsset[]): PriceSourceHealth {
     confidenceDistribution,
     confidenceMarketCapUsd,
     pricedMarketCapUsd,
+    supplyCoverage: { complete: unavailableCount === 0, observedCount, unavailableCount },
     totalAssets: assets.length,
     lastSync: Math.floor(Date.now() / 1000),
   };
@@ -494,6 +501,7 @@ export function buildStablecoinsSyncResult(input: {
     confidenceDistribution: activeHealth.confidenceDistribution,
     confidenceMarketCapUsd: activeHealth.confidenceMarketCapUsd,
     pricedMarketCapUsd: activeHealth.pricedMarketCapUsd,
+    supplyCoverage: activeHealth.supplyCoverage,
     acknowledgedMissingCount,
     totalAssets: ACTIVE_IDS.size,
   };

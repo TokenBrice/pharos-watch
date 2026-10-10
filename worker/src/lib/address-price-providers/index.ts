@@ -3,7 +3,7 @@ import { resolveChainId } from "@shared/types/chain-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { throwIfAborted } from "../abort";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
@@ -253,7 +253,11 @@ function compareAddressPriceTargets(
   if (left.previousMissingGenerations !== right.previousMissingGenerations) {
     return right.previousMissingGenerations - left.previousMissingGenerations;
   }
-  if (left.circulatingUsd !== right.circulatingUsd) return right.circulatingUsd - left.circulatingUsd;
+  if (left.circulatingUsd !== right.circulatingUsd) {
+    if (left.circulatingUsd === null) return 1;
+    if (right.circulatingUsd === null) return -1;
+    return right.circulatingUsd - left.circulatingUsd;
+  }
   if (left.previousSourceDepth !== right.previousSourceDepth) {
     return left.previousSourceDepth - right.previousSourceDepth;
   }
@@ -339,7 +343,7 @@ export function buildAddressPriceTargetsByProvider(params: {
         recentlyMissingPrice: targeting.recentlyMissingPrice,
         missingPrice: targeting.missingPrice,
         expiresBeforeNextGeneration: targeting.expiresBeforeNextGeneration,
-        circulatingUsd: getCirculatingRaw(asset),
+        circulatingUsd: getCirculatingRawOrNull(asset),
       });
     }
   }

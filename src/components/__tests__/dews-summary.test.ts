@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildDewsSummaryViewModel,
   computeBandCounts,
+  mcapDotRadius,
   resolveRadarClick,
 } from "@/components/dews-summary-model";
 
@@ -76,5 +77,16 @@ describe("buildDewsSummaryViewModel", () => {
     expect(viewModel.elevated.map((coin) => coin.id)).toEqual(["usdt", "frax"]);
     expect(viewModel.calmDots).toHaveLength(1);
     expect(viewModel.updatedAtLabel.length).toBeGreaterThan(0);
+  });
+
+  it("keeps unknown supply separate from observed zero when sizing radar marks", () => {
+    const viewModel = buildDewsSummaryViewModel({
+      updatedAt: 1_775_898_800,
+      signals: { unknown: { score: 30, band: "WATCH" }, zero: { score: 30, band: "WATCH" } },
+    }, undefined, new Map<string, number | null>([["unknown", null], ["zero", 0]]));
+    expect(viewModel.elevated.find((coin) => coin.id === "unknown")?.mcap).toBeNull();
+    expect(viewModel.elevated.find((coin) => coin.id === "zero")?.mcap).toBe(0);
+    expect(mcapDotRadius(null)).toBeUndefined();
+    expect(mcapDotRadius(0)).toBe(5);
   });
 });

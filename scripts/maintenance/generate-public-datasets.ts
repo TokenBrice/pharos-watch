@@ -45,7 +45,7 @@ import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-ver
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { admitSupplyBuckets, getCirculatingRawOrNull } from "@shared/lib/supply";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import {
   PublicSnapshotEnvelopeSchema,
@@ -185,7 +185,8 @@ interface TopStablecoinRow {
   pegType: string;
   pegMechanism: string;
   price: number | null;
-  circulatingUsd: number;
+  circulatingUsd: number | null;
+  supplyUnavailableReason: string | null;
   chainCount: number;
   chains: string;
 }
@@ -198,6 +199,7 @@ const TOP_STABLECOINS_COLUMNS: DatasetColumn<TopStablecoinRow>[] = [
   { header: "pegMechanism", accessor: (r) => r.pegMechanism },
   { header: "price", accessor: (r) => r.price ?? null },
   { header: "circulatingUsd", accessor: (r) => r.circulatingUsd },
+  { header: "supplyUnavailableReason", accessor: (r) => r.supplyUnavailableReason },
   { header: "chainCount", accessor: (r) => r.chainCount },
   { header: "chains", accessor: (r) => r.chains },
 ];
@@ -205,18 +207,24 @@ const TOP_STABLECOINS_COLUMNS: DatasetColumn<TopStablecoinRow>[] = [
 function projectTopStablecoins(envelope: SnapshotEnvelope | null): TopStablecoinRow[] {
   if (!envelope) return [];
   return envelope.stablecoins
-    .map((coin) => ({
+    .map((coin) => {
+      const admission = admitSupplyBuckets(coin.circulating);
+      return {
       id: coin.id,
       name: coin.name,
       symbol: coin.symbol,
       pegType: coin.pegType,
       pegMechanism: coin.pegMechanism,
       price: coin.price,
-      circulatingUsd: getCirculatingRaw(coin),
+      circulatingUsd: getCirculatingRawOrNull(coin),
+      supplyUnavailableReason: admission.status === "observed" ? null
+        : admission.status === "invalid" ? admission.reason : "absent",
       chainCount: coin.chains.length,
       chains: coin.chains.join(";"),
-    }))
-    .sort((a, b) => b.circulatingUsd - a.circulatingUsd);
+      };
+    })
+    .sort((a, b) => a.circulatingUsd === null ? (b.circulatingUsd === null ? 0 : 1)
+      : b.circulatingUsd === null ? -1 : b.circulatingUsd - a.circulatingUsd);
 }
 
 interface DepegHistoryRow {

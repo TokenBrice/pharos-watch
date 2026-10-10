@@ -11,7 +11,7 @@ import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { prepareCacheUpsert } from "../lib/db-cache";
 import { PSI_HISTORICAL_IDS } from "@shared/lib/psi-historical-assets";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { formatIsoDate } from "@shared/lib/format";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
@@ -107,8 +107,8 @@ export async function snapshotSupply(
 
         const circ = asset.circulating;
         if (!circ) continue;
-        const circulatingUsd = getCirculatingRaw(asset);
-        if (circulatingUsd <= 0) continue;
+        const circulatingUsd = getCirculatingRawOrNull(asset);
+        if (circulatingUsd === null) continue;
         validSnapshotIds.add(asset.id);
 
         // A nominal par reference (or other non-observed provenance) is not a

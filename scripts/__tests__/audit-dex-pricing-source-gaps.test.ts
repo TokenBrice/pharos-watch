@@ -43,6 +43,16 @@ function stablecoinRow(overrides: Partial<DexGapStablecoinRow>): DexGapStablecoi
   };
 }
 
+const providerSupplyCases: Array<{
+  circulating: Record<string, number> | undefined;
+  marketCapUsd: number | null;
+  rendered: string;
+}> = [
+  { circulating: undefined, marketCapUsd: null, rendered: "N/A (supply unavailable)" },
+  { circulating: {}, marketCapUsd: null, rendered: "N/A (supply unavailable)" },
+  { circulating: { peggedUSD: 0 }, marketCapUsd: 0, rendered: "$0" },
+];
+
 describe("audit-dex-pricing-source-gaps", () => {
   it.each([
     {
@@ -239,6 +249,17 @@ describe("audit-dex-pricing-source-gaps", () => {
       },
     ]);
   });
+
+  it.each(providerSupplyCases)(
+    "renders provider targeting supply without coercing absence (%j)", ({ circulating, marketCapUsd, rendered }) => {
+      const audit = buildDexPricingSourceGapAudit({
+        stablecoins: [stablecoinRow({ circulating })],
+        dexPrices: [dexPriceRow({ source_total_tvl: 6_000_000 })],
+      });
+      expect(audit.providerTargetingGaps).toMatchObject([{ marketCapUsd }]);
+      expect(renderDexPricingSourceGapMarkdown(audit)).toContain(`| ${rendered} |`);
+    },
+  );
 
   it("renders markdown sections for implementation review", () => {
     const audit = buildDexPricingSourceGapAudit({

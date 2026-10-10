@@ -418,10 +418,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         </span>
                       )}
                     </div>
-                    {typeof item.marketCap === "number" && item.marketCap > 0 ? (
+                    {typeof item.marketCap === "number" ? (
                       <span className="shrink-0 pl-3 text-right pharos-numeric text-xs text-muted-foreground">
                         {formatCommandPaletteMarketCap(item.marketCap)}
                       </span>
+                    ) : item.section === "Stablecoins" ? (
+                      <span className="shrink-0 pl-3 text-right pharos-numeric text-xs text-muted-foreground" title="Supply unavailable">—</span>
                     ) : null}
                     {item.stablecoinHealth?.kind === "peg" ? (
                       <span className="ml-2 inline-flex shrink-0 items-center" title={getStablecoinHealthLabel(item.stablecoinHealth)}>

@@ -76,13 +76,15 @@ export function buildUserPrompt(
   lines.push(
     "",
     "Supporting evidence:",
-    `Total stablecoin market cap: ${formatCurrency(data.totalMcapUsd)}`,
+    data.supplyCoverage?.complete === true
+      ? `Total stablecoin market cap: ${formatCurrency(data.totalMcapUsd)}`
+      : `Known stablecoin market-cap subtotal: ${formatCurrency(data.totalMcapUsd)}; supply coverage ${data.supplyCoverage ? `${data.supplyCoverage.observedCount} observed, ${data.supplyCoverage.unavailableCount} unavailable` : "unverified"}. Do not describe this as the complete market total.`,
     `7-day market cap change: ${data.mcap7dDelta >= 0 ? "+" : ""}${formatCurrency(data.mcap7dDelta)} (${mcap7dPct})${mcap7dCoverage}`,
     `Currently active depegs (ongoing, not yet resolved): ${data.activeDepegCount}`,
     `Depegs resolved in last 24h: ${data.resolvedDepegs?.length ?? 0}`,
   );
 
-  if (data.totalMcapAth && data.totalMcapAth.value > 0) {
+  if (data.supplyCoverage?.complete === true && data.totalMcapAth && data.totalMcapAth.value > 0) {
     const pctFromAth = (((data.totalMcapAth.value - data.totalMcapUsd) / data.totalMcapAth.value) * 100).toFixed(2);
     const relation = data.totalMcapUsd < data.totalMcapAth.value ? "below" : "above";
     lines.push(
@@ -189,7 +191,7 @@ export function buildUserPrompt(
     }
   }
 
-  if (data.blacklistActivity) {
+  if (data.blacklistActivity && data.blacklistActivity.eventCount > 0 && data.blacklistActivity.editorialEligible !== false) {
     const { eventCount, totalAmountUsd, topEvents } = data.blacklistActivity;
     const unpricedEventCount = data.blacklistActivity.unpricedEventCount ?? 0;
     const affected =
@@ -386,7 +388,7 @@ export function buildSafetyMapCensusLines(
     ? `current; depicts ${map.manifest.date} UTC`
     : `carried-forward, age ${map.ageDays} day${map.ageDays === 1 ? "" : "s"}; depicts ${map.manifest.date} UTC`;
   const lines = [
-    `  Safety Map census (${freshness}): ${formatCurrency(summary.totalMcapUsd, 1)} mapped supply across ${summary.gradedCount} graded coins; ${summary.notRatedCount} not rated.`,
+    `  Safety Map census (${freshness}): ${formatCurrency(summary.totalMcapUsd, 1)} known mapped supply subtotal across ${summary.gradedCount} graded coins; ${summary.notRatedCount} not rated. Supply coverage: ${summary.supplyCoverage ? `${summary.supplyCoverage.observedCount} observed, ${summary.supplyCoverage.unavailableCount} unavailable` : "unverified legacy census"}.`,
   ];
   for (const tierName of ["A", "B", "C", "D", "F"] as const) {
     const tier = summary.tiers.find((candidate) => candidate.tier === tierName);
@@ -395,7 +397,7 @@ export function buildSafetyMapCensusLines(
       ? tier.leaders.map((leader) => `${leader.symbol} (${leader.score})`).join(", ")
       : "none listed";
     lines.push(
-      `    ${tier.tier} tier: ${tier.count} coins, ${tier.sharePct.toFixed(1)}% of mapped supply; leaders: ${leaders}.`,
+      `    ${tier.tier} tier: ${tier.count} coins, ${tier.sharePct.toFixed(1)}% of known mapped supply; leaders: ${leaders}.`,
     );
   }
   lines.push(

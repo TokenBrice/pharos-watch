@@ -17,6 +17,7 @@ function CoinEmblemInner({
   loading = "lazy",
   cohortCoinCount = 1,
   cohortMarketCap,
+  cohortSupplyUnavailableCount = 0,
   cohortSymbolPreview,
   cohortRank,
   hoverCardYPlacement = "auto",
@@ -26,7 +27,8 @@ function CoinEmblemInner({
   variant: EmblemVariant;
   loading?: "eager" | "lazy";
   cohortCoinCount?: number;
-  cohortMarketCap?: number;
+  cohortMarketCap?: number | null;
+  cohortSupplyUnavailableCount?: number;
   cohortSymbolPreview?: string;
   cohortRank?: number;
   hoverCardYPlacement?: HoverCardYPlacement;
@@ -41,10 +43,10 @@ function CoinEmblemInner({
   const onEnter = useCallback(() => setHoveredCoin(target), [setHoveredCoin, target]);
   const onLeave = useCallback(() => setHoveredCoin(null), [setHoveredCoin]);
 
-  const mcap = coin.marketCap > 0 ? formatCompactUsd(coin.marketCap) : null;
-  const cohortCap = cohortMarketCap !== undefined && cohortMarketCap > 0 ? formatCompactUsd(cohortMarketCap) : null;
+  const mcap = coin.marketCap !== null ? formatCompactUsd(coin.marketCap) : null;
+  const cohortCap = cohortMarketCap != null ? formatCompactUsd(cohortMarketCap) : null;
   const cohortShare =
-    cohortMarketCap !== undefined && cohortMarketCap > 0 && coin.marketCap > 0
+    cohortSupplyUnavailableCount === 0 && cohortMarketCap != null && cohortMarketCap > 0 && coin.marketCap !== null
       ? formatPercentFromRatio(coin.marketCap / cohortMarketCap, 1)
       : null;
   const pegLabel = PEG_LABELS_SHORT[coin.pegCurrency] ?? coin.pegCurrency;
@@ -77,7 +79,7 @@ function CoinEmblemInner({
   const ariaLabel = [
     coin.symbol,
     coin.name,
-    mcap ? `${mcap} market cap` : null,
+    mcap ? `${mcap} market cap` : "Supply unavailable",
     cohortLabel,
     cohortRank ? `#${cohortRank} by non-USD cap` : null,
     cohortShare ? `${cohortShare} of cohort market cap` : null,
@@ -121,15 +123,15 @@ function CoinEmblemInner({
           <span className="coin-emblem__hover-card-grid">
             <span>
               <span className="coin-emblem__hover-card-label">Market cap</span>
-              <span className="coin-emblem__hover-card-value">{mcap ?? "n/a"}</span>
+              <span className="coin-emblem__hover-card-value">{mcap ?? "Unavailable"}</span>
             </span>
             <span>
               <span className="coin-emblem__hover-card-label">Cohort share</span>
               <span className="coin-emblem__hover-card-value">{cohortShare ?? "n/a"}</span>
             </span>
             <span>
-              <span className="coin-emblem__hover-card-label">Cohort cap</span>
-              <span className="coin-emblem__hover-card-value">{cohortCap ?? "n/a"}</span>
+              <span className="coin-emblem__hover-card-label">{cohortSupplyUnavailableCount > 0 ? "Known cohort subtotal" : "Cohort cap"}</span>
+              <span className="coin-emblem__hover-card-value">{cohortCap ?? "Unavailable"}{cohortSupplyUnavailableCount > 0 ? ` · ${cohortSupplyUnavailableCount} unavailable` : ""}</span>
             </span>
             <span>
               <span className="coin-emblem__hover-card-label">Cohort size</span>

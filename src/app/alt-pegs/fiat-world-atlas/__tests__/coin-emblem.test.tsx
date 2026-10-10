@@ -2,6 +2,7 @@
 import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CoinEmblem } from "@/app/alt-pegs/fiat-world-atlas/coin-emblem";
+import { summarizeCohort } from "@/app/alt-pegs/fiat-world-atlas/cohort-coin-emblems";
 import { makePlacedCoin, renderAtlas } from "./atlas.test-support";
 
 const sample = makePlacedCoin({
@@ -93,15 +94,34 @@ describe("CoinEmblem", () => {
   it.each([
     { marketCap: 432_000_000, cohortMarketCap: undefined },
     { marketCap: 432_000_000, cohortMarketCap: 0 },
-    { marketCap: 0, cohortMarketCap: 1_000_000_000 },
+    { marketCap: null, cohortMarketCap: 1_000_000_000 },
   ])("does not manufacture a share from unavailable evidence: %j", ({ marketCap, cohortMarketCap }) => {
     renderAtlas(<><CoinEmblem coin={{ ...sample, marketCap }} variant="fiat" cohortMarketCap={cohortMarketCap} /></>);
     const link = screen.getByRole("link");
     fireEvent.mouseEnter(link);
     expect(screen.getByText("Cohort share").nextElementSibling?.textContent).toBe("n/a");
     expect(link.getAttribute("aria-label")).not.toContain("%");
-    if (marketCap === 0) expect(screen.getByText("Market cap").nextElementSibling?.textContent).toBe("n/a");
-    if (!cohortMarketCap) expect(screen.getByText("Cohort cap").nextElementSibling?.textContent).toBe("n/a");
+    if (marketCap === null) expect(screen.getByText("Market cap").nextElementSibling?.textContent).toBe("Unavailable");
+    if (cohortMarketCap === undefined) expect(screen.getByText("Cohort cap").nextElementSibling?.textContent).toBe("Unavailable");
+    if (cohortMarketCap === 0) expect(screen.getByText("Cohort cap").nextElementSibling?.textContent).toContain("$0");
+  });
+
+  it("preserves measured zero market cap and cohort share", () => {
+    renderAtlas(<CoinEmblem coin={{ ...sample, marketCap: 0 }} variant="fiat" cohortMarketCap={100} />);
+    fireEvent.focus(screen.getByRole("link"));
+    expect(screen.getByText("Market cap").nextElementSibling?.textContent).toContain("$0");
+    expect(screen.getByText("Cohort share").nextElementSibling?.textContent).toContain("0");
+    expect(screen.getByRole("link").getAttribute("aria-label")).toContain("%");
+  });
+
+  it("discloses known cohort subtotals and withholds partial-denominator shares", () => {
+    const summary = summarizeCohort([sample, { ...sample, id: "missing", marketCap: null }]);
+    expect(summary).toMatchObject({ marketCap: sample.marketCap, supplyUnavailableCount: 1 });
+    expect(summarizeCohort([{ ...sample, marketCap: null }]).marketCap).toBeNull();
+    renderAtlas(<CoinEmblem coin={sample} variant="fiat" cohortMarketCap={summary.marketCap} cohortSupplyUnavailableCount={summary.supplyUnavailableCount} />);
+    fireEvent.focus(screen.getByRole("link"));
+    expect(screen.getByText("Cohort share").nextElementSibling?.textContent).toBe("n/a");
+    expect(screen.getByText("Known cohort subtotal").nextElementSibling?.textContent).toContain("1 unavailable");
   });
 
 });

@@ -65,6 +65,8 @@ Important contract:
 
 - `GET /api/stablecoins` does not expose `pegCurrency` directly on the live rows.
 - `src/lib/alt-peg-market.ts` must join live rows against tracked frontend metadata before filtering to non-USD cohorts.
+- Current supply uses `getCirculatingRawOrNull`: absent, empty, or invalid buckets remain unavailable and explicit observed zero remains zero. Snapshot and peg rows carry observed/unavailable counts beside known subtotals. A segment with no observations has no numeric cap; incomplete denominators withhold market shares. Partial cohorts remain visible, labelled with their observed-member coverage.
+- Atlas coins retain nullable market caps. Unknown supply uses a neutral marker size (not the measured-zero floor) and an explicit unavailable hover/accessible label. Cohort hover cards name known subtotals and unavailable members, withhold incomplete-denominator shares, and do not assign complete-cohort ranks while plotted supply is incomplete.
 - The route must not add a worker/API endpoint unless the current frontend joins stop being sufficient.
 - The current non-commodity historical bucket exposed by `useNonUsdShare()` is not pure fiat-only history; it includes currency-linked plus other non-commodity non-USD pegs. Route copy should stay honest about that unless the data contract changes.
 - Non-USD history points require numeric commodity and non-commodity amounts and shares. The Worker validates that wire contract before publishing; invalid cohorts fail unavailable, not zero. A genuinely measured zero remains zero; absent or empty history produces no trend or share headline.

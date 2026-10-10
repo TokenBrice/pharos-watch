@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import type { StablecoinData } from "@shared/types";
 import { buildPegDiversityHero } from "@/lib/alt-peg-hero";
+import { coinEmblemSize } from "@/lib/alt-peg-sizing";
 
 function coin(overrides: {
   id: string;
@@ -79,5 +80,20 @@ describe("buildPegDiversityHero", () => {
     ]);
     expect(hero.pegClusters).toHaveLength(0);
     for (const sc of hero.skyCohorts) expect(sc.coins).toHaveLength(0);
+  });
+
+  it("keeps unknown supply visible at neutral size and withholds unsupported ranks", () => {
+    const hero = buildPegDiversityHero([
+      { ...coin({ id: "eurc-circle" }), circulating: {} },
+      coin({ id: "eurs-stasis", circulating: 0 }),
+    ]);
+    const eur = hero.pegClusters.find((cluster) => cluster.peg === "EUR")!;
+    expect(eur.rank).toBeUndefined();
+    const missing = eur.coins.find((row) => row.id === "eurc-circle")!;
+    const zero = eur.coins.find((row) => row.id === "eurs-stasis")!;
+    expect(missing.marketCap).toBeNull();
+    expect(zero.marketCap).toBe(0);
+    expect(missing.sizePx).toBe(coinEmblemSize(null, { ceil: 30 }));
+    expect(missing.sizePx).toBeGreaterThan(zero.sizePx);
   });
 });

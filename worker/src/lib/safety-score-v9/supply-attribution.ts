@@ -1,6 +1,6 @@
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
 import {
   admissionCodeForSupplyAttributionRejection,
@@ -81,8 +81,8 @@ export interface SafetyScoreV9SupplyAttributionCaptureOptions {
 export function aggregateSupplyUsd(
   fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
   assetId: string,
-): number {
-  return getCirculatingRaw(fixedInput.aggregateCirculatingById[assetId] ?? {});
+): number | null {
+  return getCirculatingRawOrNull(fixedInput.aggregateCirculatingById[assetId]);
 }
 
 function hasUpstreamChainSupply(
@@ -353,16 +353,14 @@ async function runSupplyAttributionAssetCapture(input: {
   const attemptId = crypto.randomUUID();
   let outcome: SupplyAttributionObservationAttempt;
   try {
+    const supplyUsd = aggregateSupplyUsd(input.fixedInput, input.descriptor.assetId);
     outcome =
-      input.rejectionCode
-        ? { status: "rejected", rejectionCode: input.rejectionCode, failedRouteId: null }
+      input.rejectionCode || supplyUsd === null
+        ? { status: "rejected", rejectionCode: input.rejectionCode ?? "packet-reconciliation-failed", failedRouteId: null }
         : input.chainRpcs && input.chainRpcs.size > 0
         ? await input.descriptor.observe({
             fixedInput: input.fixedInput,
-            aggregateSupplyUsd: aggregateSupplyUsd(
-              input.fixedInput,
-              input.descriptor.assetId,
-            ),
+            aggregateSupplyUsd: supplyUsd,
             registryFingerprint: input.fixedInput.registryFingerprint,
             scoringClockSec,
             chainRpcs: input.chainRpcs,

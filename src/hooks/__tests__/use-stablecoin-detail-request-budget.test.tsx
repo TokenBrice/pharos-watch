@@ -9,6 +9,8 @@ import { useStablecoinDetailViewModel } from "../use-stablecoin-detail-view-mode
 import { DISABLED_DETAIL_QUERY_CONTROLS } from "./use-stablecoin-detail-view-model.test-support";
 import { StablecoinDetailSnapshotHydrator } from "@/app/stablecoin/[id]/client";
 import { seedStablecoinDetailQueryCache, type StablecoinDetailSnapshot } from "@/lib/api";
+import { deriveDataHealth } from "@/lib/data-health";
+import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 
 function detailSnapshot(generatedAt: number): StablecoinDetailSnapshot {
   return {
@@ -38,21 +40,29 @@ function detailSnapshot(generatedAt: number): StablecoinDetailSnapshot {
 describe("stablecoin detail request budget", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it("hydrates only coin-scoped keys and never writes partial global responses", () => {
     const queryClient = new QueryClient();
-    const snapshot = detailSnapshot(Date.now());
+    const now = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const snapshot = detailSnapshot(now - 30_000);
 
     seedStablecoinDetailQueryCache(queryClient, snapshot);
 
     expect(queryClient.getQueryState(["stablecoins"])).toBeUndefined();
     expect(queryClient.getQueryState(["peg-summary"])).toBeUndefined();
     expect(queryClient.getQueryState(["stablecoin-detail", "usdt-tether"])).toBeUndefined();
-    expect(queryClient.getQueryData(["stablecoin-live-summary", "usdt-tether"])).toEqual(
-      snapshot.lanes.liveSummary,
-    );
-    expect(queryClient.getQueryData(["supply-history", "usdt-tether", 90])).toEqual([]);
+    expect(queryClient.getQueryData(["stablecoin-live-summary", "usdt-tether"])).toMatchObject({
+      data: snapshot.lanes.liveSummary,
+      meta: { updatedAt: snapshot.updatedAt.liveSummary! / 1000, ageSeconds: 30, status: "fresh" },
+    });
+    expect(queryClient.getQueryData(["supply-history", "usdt-tether", 90])).toMatchObject({
+      data: [],
+      meta: { updatedAt: snapshot.updatedAt.supplyHistory! / 1000, ageSeconds: 30, status: "fresh" },
+    });
+    queryClient.clear();
   });
 
   it("preserves independent producer clocks and cannot replace newer live data with a later build", () => {
@@ -64,10 +74,79 @@ describe("stablecoin detail request budget", () => {
     const historyKey = ["supply-history", "usdt-tether", 90];
     expect(queryClient.getQueryState(liveKey)?.dataUpdatedAt).toBe(snapshot.updatedAt.liveSummary);
     expect(queryClient.getQueryState(historyKey)?.dataUpdatedAt).toBe(snapshot.updatedAt.supplyHistory);
-    const live = { ...snapshot.lanes.liveSummary!, price: 1.01 };
-    queryClient.setQueryData(liveKey, live, { updatedAt: 1_700_000_500_000 });
+    const live = {
+      data: { ...snapshot.lanes.liveSummary!, price: 1.01 },
+      meta: { updatedAt: 1_700_000_500, ageSeconds: 0, status: "fresh" },
+    };
+    queryClient.setQueryData(liveKey, live, { updatedAt: Date.now() });
     seedStablecoinDetailQueryCache(queryClient, snapshot);
     expect(queryClient.getQueryData(liveKey)).toEqual(live);
+    queryClient.clear();
+  });
+
+  it("hydrates missing producer clocks as unknown rather than using generatedAt", () => {
+    const queryClient = new QueryClient();
+    const snapshot = detailSnapshot(Date.now());
+    snapshot.updatedAt = {};
+    seedStablecoinDetailQueryCache(queryClient, snapshot);
+    for (const key of [["stablecoin-live-summary", snapshot.stablecoinId], ["supply-history", snapshot.stablecoinId, 90]]) {
+      expect(queryClient.getQueryState(key)?.dataUpdatedAt).toBe(0);
+      expect(queryClient.getQueryData(key)).toMatchObject({
+        meta: { updatedAt: null, ageSeconds: null, status: "unknown" },
+      });
+    }
+    queryClient.clear();
+  });
+
+  it.each(["stale", "unknown"] as const)("keeps HTTP-200 %s producer metadata through registered queries and the dossier", async (mode) => {
+    const now = Date.now();
+    const sourceUpdatedAtSec = Math.floor(now / 1000) - 7200;
+    const headers: Record<string, string> = mode === "stale" ? {
+      "X-Data-Updated-At": String(sourceUpdatedAtSec),
+      "X-Data-Age": "7200",
+      "X-Data-Freshness": "stale",
+      Warning: '110 - "Response is stale"',
+    } : {
+      "X-Data-Age": "unavailable",
+      "X-Data-Freshness": "unknown",
+    };
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/stablecoin/usdt-tether")) {
+        return Response.json(detailSnapshot(sourceUpdatedAtSec * 1000).lanes.liveSummary, { headers });
+      }
+      if (url.includes("/supply-history")) {
+        return Response.json([{ date: sourceUpdatedAtSec, circulatingUsd: 100, price: 1 }], { headers });
+      }
+      return new Promise<Response>(() => {});
+    }));
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const { result, unmount } = renderHook(() => useStablecoinDetailViewModel({
+      id: coin.id, coin, summary: null, supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
+    }), { wrapper });
+    await waitFor(() => {
+      expect(result.current.status).toBe("ready");
+      expect(queryClient.getQueryState(["supply-history", coin.id, 90])?.status).toBe("success");
+    });
+    await queryClient.refetchQueries({ queryKey: ["stablecoin-live-summary", coin.id] });
+    await queryClient.refetchQueries({ queryKey: ["supply-history", coin.id, 90] });
+    expect(queryClient.getQueryState(["stablecoin-live-summary", coin.id])?.dataUpdatedAt).toBeGreaterThan(sourceUpdatedAtSec * 1000);
+    if (result.current.status !== "ready") throw new Error("Expected a ready dossier");
+    const priceQuery = result.current.staleQueries.find((query) => query.preset === "stablecoins")!;
+    const supplyQuery = result.current.staleQueries.find((query) => query.label === "Supply History")!;
+    for (const query of [priceQuery, supplyQuery]) {
+      const health = deriveDataHealth({
+        ...(query.preset ? DATA_HEALTH_PRESETS[query.preset] : { label: query.label!, staleTime: query.staleTime! }),
+        ...query,
+      }, now);
+      expect(health.state).toBe(mode === "stale" ? "stale" : "unavailable");
+      expect(health.dataUpdatedAt).toBe(mode === "stale" ? sourceUpdatedAtSec * 1000 : 0);
+      expect(query.meta?.updatedAt).toBe(mode === "stale" ? sourceUpdatedAtSec : null);
+    }
+    expect(result.current.supplyUpdatedAt).toBe(mode === "stale" ? sourceUpdatedAtSec * 1000 : 0);
+    unmount();
     queryClient.clear();
   });
 

@@ -43,7 +43,9 @@ describe("Safety Map captured-census capacity", () => {
   });
 
   it("fits a short-axis stress case with supply leaders in every outer grade", () => {
-    const leaders = [...captured].sort((a, b) => b.mcap - a.mcap).slice(0, 8);
+    const leaders: MapCoin[] = captured.filter((coin): coin is MapCoin & { mcap: number } => coin.mcap !== null)
+      .sort((a, b) => b.mcap - a.mcap).slice(0, 8);
+    expect(leaders).toHaveLength(8);
     const tiers = ["B", "B", "C", "C", "D", "D", "F", "F"] as const;
     const moved = captured.map((coin) => {
       const index = leaders.indexOf(coin);

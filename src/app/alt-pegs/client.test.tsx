@@ -205,6 +205,33 @@ describe("AltPegsClient", () => {
     expect(screen.getByText(/cohort-chart default 1y/i)).toBeTruthy();
   });
 
+  it("retains an unknown-supply cohort without formatting its segment as $0", () => {
+    useStablecoinsMock.mockReturnValue({
+      ...useStablecoinsMock(),
+      data: { peggedAssets: [makeCoin("usdc-circle", 100), { ...makeCoin("eurs-stasis", 0), circulating: {} }] },
+    });
+    render(<AltPegsClient />);
+    const mix = screen.getByRole("region", { name: "All alt-peg mix" });
+    expect(mix.textContent).toContain("Unavailable");
+    expect(mix.textContent).not.toContain("$0");
+    expect(screen.getByTestId("alt-peg-stablecoin-table")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Which Non-USD Pegs Matter Now" })).toBeTruthy();
+    expect(screen.getByText(/0\/1 assets observed/)).toBeTruthy();
+  });
+
+  it("labels retained partial supply totals and withholds unsupported distribution shares", () => {
+    useStablecoinsMock.mockReturnValue({
+      ...useStablecoinsMock(),
+      data: { peggedAssets: [
+        makeCoin("eurc-circle", 100), { ...makeCoin("eurs-stasis", 0), circulating: {} },
+      ] },
+    });
+    render(<AltPegsClient />);
+    expect(screen.getByText(/1\/2 assets observed/)).toBeTruthy();
+    expect(screen.getByText(/known alt-peg subtotal/)).toBeTruthy();
+    expect(screen.getByRole("region", { name: "All alt-peg mix" }).textContent).toContain("mix shares unavailable");
+  });
+
   it("places the distribution table below the alt-peg chart tabs", () => {
     const { container } = render(<AltPegsClient />);
 

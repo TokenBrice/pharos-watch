@@ -231,10 +231,12 @@ freshness verdict names the budget it used and the generation it describes, with
 fields — and **R4** (ADR-31) — a non-`ok` terminal status carries a machine-readable reason, and terminal
 status separates "did the work happen" from "were the inputs perfect". Their additive publication fields live
 in `CacheStatusSchema` (`shared/types/status/schema-primitives.ts`): `healthyMaxRatio` and `healthyMaxAge` for
-the band, yield `generationId` / `publishedAt` for the served generation and Unix publication time,
-and `degraded` / `degradedReason` / `streakDegradedRuns` for input quality. Legacy generationless
-sentinels and table/cron fallbacks expose null yield identity/time rather than inventing them. The
-per-field behaviour is specified under Cron health model, Cron error escalation, and Synthetic self-check below.
+the band, sentinel-backed `generationId` / `publishedAt` for the served generation and Unix publication time,
+and `degraded` / `degradedReason` / `streakDegradedRuns` for input quality. Sentinel generation identity is
+required and compared with the served DEWS pointer, liquidity global row, or yield-ranking publication in
+the same D1 read. Missing/mismatched identities invalidate the sentinel; table/cron fallbacks expose null
+identity/time rather than inventing them.
+The per-field behaviour is specified under Cron health model, Cron error escalation, and Synthetic self-check below.
 
 ## Timestamp admission
 
@@ -246,6 +248,10 @@ oracle returns a null age and `timestampReason` (`missing-timestamp`, `invalid-t
 existing freshness bands. Captured-run consumers can supply a separate read clock or explicit
 allowance: DEWS uses wall time during hydration so an overlapping producer published after run
 start is not falsely rejected.
+
+Ordinary cache, table fallback, cron fallback and yield-health clocks use that same admission boundary.
+Rejected clocks expose null ages and the exact `timestampReason` (yield rankings use
+`rankingTimestampReason`), never a negative age or a clamped healthy future generation.
 
 Cache freshness sentinels retain strict future-clock rejection with no skew allowance.
 Their validation clock is D1 `unixepoch()` from the same cache SELECT, rather than
@@ -301,7 +307,7 @@ Successful observers report `ok` plus `metadata.quality` for semantic service de
 `CRON_INTERVALS` owns producer cadence. The staleness watchdog's one-statement fact loader in
 `worker/src/lib/status/freshness-oracle.ts` preserves latest attempt/status separately from the latest
 confirmed output clock (`lastSuccessAt`). `cron-output.ts` owns the shared evidence boundary used by the
-logger, cron health and cron-backed dataset freshness. New rows persist `metadata.outputPublishedAt`
+logger, cron health, public mint/burn health, endpoint freshness and cron-backed dataset freshness. New rows persist `metadata.outputPublishedAt`
 (the actual generation clock where available, otherwise confirmed completion) or explicit `null`; metadata
 compaction preserves this clock and quality reasons. Legacy rows require affirmative publication metadata
 or an `ok` result with a positive output count; an unannotated degraded attempt is not success.
@@ -840,13 +846,16 @@ Renders in the Admin Pipeline `Markets` tab next to `LiquidityHealthCard` and th
 
 - **Confidence tiles** — raw counts for `High`, `Single-source`, `Low`, and `Fallback`, with severity based on their share of **priced circulating USD value** across all peg buckets. `High` is green at ≥90%, amber at ≥80%, otherwise red. `Low` is neutral below 1%, amber at ≥1%, red at ≥5%. `Single` and `Fallback` remain neutral. The 90/80% coverage floors and 1/5% low-exposure ceilings are reviewed operational thresholds, not statistical estimates or changes to pricing methodology. Legacy payloads without value sums use count-share text and neutral confidence colors.
 - **Missing tile** — active assets with no usable price, including active catalog rows absent from the payload; this does not discard upstream missing-price rows. The tile number and severity count only **unacknowledged** gaps: the producer subtracts active assets covered by a valid, unexpired price-gap review (`STABLECOIN_PRICE_GAP_REVIEWS`), so an expired or malformed review automatically re-alerts on the next sync, and the sub-line shows how many gaps are acknowledged (0 green, ≤3 amber, >3 red on the unacknowledged count).
-- **Value-share sub-lines** — confidence tiles show e.g. `96.5% of value` (share of priced circulating value) with the raw count as the tile number; legacy snapshots fall back to asset-count percentages.
+- **Value-share sub-lines** — confidence tiles show e.g. `96.5% of value` only when `supplyCoverage.complete === true`. Partial or legacy coverage keeps confidence severity neutral and uses asset-count percentages instead; the card names observed/unavailable supply members and labels any supported dollar sum as a known priced-supply subtotal. No observed supply renders priced supply unavailable, never a measured $0.
 - **Source breakdown line** — which price sources contributed to the current sync, including protocol redemption quotes when they override thin market pricing
 - **Source-depth distribution** — backend-only status metadata keyed by active canonical `consensusSources.length` buckets (`0`, `1`, `2`, `3`, `4`, `5+`)
 - **Full-cache context** — original cache-wide row, missing, and confidence counts remain visible below the active tiles, including upstream assets outside the active catalog
 - **Last sync age** — how old the price-health snapshot is
 
 Distribution and confidence data is sourced from `sync-stablecoins` cron metadata stored in the most recent `cron_runs` row. The original top-level distributions keep full-cache scope; the additive `active` object uses the active catalog denominator and source membership, plus per-bucket `confidenceMarketCapUsd` sums, the `pricedMarketCapUsd` denominator, and `acknowledgedMissingCount` for the severity calibration above. The Markets tab badge uses that same active missing-price count and denominator when present, falling back to the original cache-wide fields for legacy snapshots. No prices or confidence assignments change. The source-depth distribution is added by the status supplement from the cached stablecoins payload so it reflects active canonical assets without changing the pricing cron metadata contract.
+
+Monetary exposure fields are known subtotals. `supplyCoverage` names `complete`, `observedCount`, and `unavailableCount` over priced rows in the same scope. An unavailable supply is not measured zero; incomplete or legacy-unverified coverage must not certify full-cohort value shares or value-based severity. Explicit zero counts as observed.
+
 
 **Calibration evidence (2026-09-23 review):** `high` means independent agreeing sources or a validated authoritative override; `single-source` also includes correlated two-list-aggregator agreement deliberately downgraded to avoid false corroboration. Neither source independence nor freshness is weakened by the display change. The original 85/70% row-share bands were moved into shared constants by `c71b109bf6` (2026-03-13); list-aggregator hardening predates the current incident (`49415ec28e`, 2026-04-17, already refactored that rule). Read-only production D1 history, retained for seven days, gave final daily samples September 15–22 at 34–40% high-confidence rows. September 22 intraday runs ranged from 93 to 133 high rows, with promoted-DEX availability varying alongside the count. This limited history does not establish a months-long baseline or rule out individual source regressions.
 

@@ -45,6 +45,47 @@ describe("alt-peg-market", () => {
     expect(snapshot.distributionRows[1]?.group).toBe("Commodity");
   });
 
+  it("keeps an unavailable EUR cohort visible without publishing a zero cap or share", () => {
+    const missing = { ...makeCoin("eurs-stasis", 0), circulating: {} };
+    const snapshot = buildAltPegSnapshot([makeCoin("usdc-circle", 100), missing]);
+    expect(snapshot.altCoinCount).toBe(1);
+    expect(snapshot.altMarketCap).toBeNull();
+    expect(snapshot.altSharePct).toBeNull();
+    expect(snapshot.supplyUnavailableCount).toBe(1);
+    expect(snapshot.distributionRows[0]).toMatchObject({
+      peg: "EUR", marketCap: null, sharePct: null, supplyObservedCount: 0, supplyUnavailableCount: 1,
+    });
+    expect(snapshot.topRows).toEqual([]);
+  });
+
+  it("publishes mixed coverage as a known subtotal and withholds complete shares", () => {
+    const snapshot = buildAltPegSnapshot([
+      makeCoin("eurc-circle", 100), { ...makeCoin("eurs-stasis", 0), circulating: {} },
+      makeCoin("usdc-circle", 100),
+    ]);
+    expect(snapshot.altMarketCap).toBe(100);
+    expect(snapshot.altSharePct).toBeNull();
+    expect(snapshot.distributionRows[0]).toMatchObject({
+      marketCap: 100, sharePct: null, supplyObservedCount: 1, supplyUnavailableCount: 1,
+      leaderHref: "/stablecoin/eurc-circle/",
+    });
+  });
+
+  it("distinguishes explicit zero from empty and invalid supply buckets", () => {
+    const zero = buildAltPegSnapshot([makeCoin("usdc-circle", 100), makeCoin("eurs-stasis", 0)]);
+    expect(zero.altMarketCap).toBe(0);
+    expect(zero.altSharePct).toBe(0);
+    expect(zero.distributionRows[0].marketCap).toBe(0);
+    expect(zero.supplyUnavailableCount).toBe(0);
+    const unavailableBuckets: Record<string, number>[] = [{}, { usd: Number.NaN }, { usd: -1 }];
+    for (const circulating of unavailableBuckets) {
+      const missing = buildAltPegSnapshot([{ ...makeCoin("eurs-stasis", 0), circulating }]);
+      expect(missing.totalMarketCap).toBeNull();
+      expect(missing.altMarketCap).toBeNull();
+    }
+    expect(buildAltPegSnapshot([]).totalMarketCap).toBeNull();
+  });
+
   it("builds one-year trend deltas from historical share points", () => {
     const stats = buildAltPegTrendStats([
       {

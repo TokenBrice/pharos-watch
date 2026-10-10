@@ -320,7 +320,40 @@ describe("delivery boundaries and resume", () => {
 describe("enrichment and ancillary publication", () => {
   it("stores a total-mcap ATH when the history query supplies one", async () => {
     const db = makeDailyDigestScenario({ db: { prependTables: [{ match: "ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC", first: { ath_value: 330e9, ath_date: 1_772_150_400 }, rows: [] }] } }).db;
-    const result = await invoke(db); expect(result.itemCount).toBe(1); expect(bindJson(db as MockD1Database, 3).totalMcapAth).toMatchObject({ value: 330e9 }); expect(firstRequestBody().messages[0].content).toContain("Digest-window ATH");
+    const result = await invoke(db);
+    const input = bindJson(db as MockD1Database, 3);
+    expect(result.itemCount).toBe(1);
+    expect(input.supplyCoverage).toEqual({ complete: true, observedCount: 2, unavailableCount: 0 });
+    expect(input.totalMcapAth).toMatchObject({ value: 330e9 });
+    expect(firstRequestBody().messages[0].content).toContain("Digest-window ATH");
+  });
+
+  it("withholds ATH comparisons when current supply is unavailable but retains observed zero", async () => {
+    const db = makeDailyDigestScenario({ db: { prependTables: [{ match: "ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC", first: { ath_value: 330e9, ath_date: 1_772_150_400 }, rows: [] }] } }).db;
+    const source = scenario.sourcePayload;
+    if (source.kind !== "ok") throw new Error("Expected an admitted stablecoin fixture");
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      ...source,
+      payload: { ...source.payload, peggedAssets: source.payload.peggedAssets.map((coin) => ({
+        ...coin,
+        circulating: coin.id === "usdc-circle" ? {} : coin.circulating,
+      })) },
+    });
+    await invoke(db);
+    expect(bindJson(db, 3).supplyCoverage).toEqual({ complete: false, observedCount: 1, unavailableCount: 1 });
+    expect(firstRequestBody().messages[0].content).not.toContain("Digest-window ATH");
+    vi.mocked(fetchWithRetry).mockClear();
+    const zeroDb = makeDailyDigestScenario({ db: { prependTables: [{ match: "ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC", first: { ath_value: 330e9, ath_date: 1_772_150_400 }, rows: [] }] } }).db;
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      ...source,
+      payload: { ...source.payload, peggedAssets: source.payload.peggedAssets.map((coin) => ({
+        ...coin,
+        circulating: coin.id === "usdc-circle" ? { peggedUSD: 0 } : coin.circulating,
+      })) },
+    });
+    await invoke(zeroDb);
+    expect(bindJson(zeroDb, 3).supplyCoverage).toEqual({ complete: true, observedCount: 2, unavailableCount: 0 });
+    expect(firstRequestBody().messages[0].content).toContain("Digest-window ATH");
   });
 
   it("keeps the momentum-candidate section in the model input", async () => {

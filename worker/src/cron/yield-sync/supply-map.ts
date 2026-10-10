@@ -1,4 +1,4 @@
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 
 export type StablecoinSupplyMapState = "ok" | "missing" | "malformed";
 
@@ -23,8 +23,8 @@ function buildStablecoinSupplyMapFromCacheValue(value: string): Map<string, numb
     if (!asset || typeof asset !== "object") continue;
     const id = (asset as { id?: unknown }).id;
     if (typeof id !== "string" || id.length === 0) continue;
-    const supplyUsd = getCirculatingRaw(asset as Parameters<typeof getCirculatingRaw>[0]);
-    if (supplyUsd > 0) {
+    const supplyUsd = getCirculatingRawOrNull(asset as Parameters<typeof getCirculatingRawOrNull>[0]);
+    if (supplyUsd !== null && supplyUsd > 0) {
       supplyById.set(id, supplyUsd);
     }
   }

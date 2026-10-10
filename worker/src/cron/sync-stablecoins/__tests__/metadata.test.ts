@@ -258,6 +258,26 @@ describe("stablecoins pricing metadata", () => {
     });
     expect(active.sourceDistribution.missing).toBe(1);
   });
+  it("publishes known exposure subtotal with unavailable-member coverage, keeping observed zero", () => {
+    const assets = ACTIVE_STABLECOINS.map((asset): PeggedAsset => {
+      const circulating: Record<string, number> =
+        asset.id === "usdt-tether" ? { peggedUSD: 100 }
+          : asset.id === "usdc-circle" ? {}
+            : asset.id === "dai-makerdao" ? { peggedUSD: 0 }
+              : { peggedUSD: 1 };
+      return {
+        id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
+        priceConfidence: asset.id === "usdc-circle" ? "low" : "high", circulating,
+      };
+    });
+    const knownSubtotal = 100 + ACTIVE_STABLECOINS.length - 3;
+    const health = JSON.parse(buildStablecoinsSyncResult(syncInput(assets)).metadata!).priceSourceHealth;
+    expect(health.supplyCoverage).toEqual({ complete: false, observedCount: ACTIVE_STABLECOINS.length - 1, unavailableCount: 1 });
+    expect(health.pricedMarketCapUsd).toBe(knownSubtotal);
+    expect(health.confidenceDistribution).toMatchObject({ high: ACTIVE_STABLECOINS.length - 1, low: 1 });
+    expect(health.confidenceMarketCapUsd).toMatchObject({ high: knownSubtotal, low: 0 });
+    expect(health.active.supplyCoverage).toEqual(health.supplyCoverage);
+  });
 
   it("re-alerts a reviewed price gap once its review window has expired", () => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide");

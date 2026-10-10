@@ -16,15 +16,18 @@ const COHORT_BUCKET_BY_ID = new Map<string, HomepageCohortBucketKey>(
 
 export interface HomepageHeroSnapshot {
   asOfISO: string | null;
-  totalUsd: number;
-  nonUsdUsd: number;
+  totalUsd: number | null;
+  nonUsdUsd: number | null;
   nonUsdShare: number | null;
   /**
    * Core-aggregate rows present in the source whose current supply is unavailable. They are
    * excluded from every sum (never counted as $0), so a nonzero count marks the totals partial.
    */
   supplyUnavailableCount: number;
-  cohort: TotalMcapChartRow;
+  supplyObservedCount: number;
+  supplyExpectedCount: number;
+  supplyMissingCount: number;
+  cohort: Omit<TotalMcapChartRow, "total"> & { total: number | null };
 }
 
 interface HomepageHeroMarketRow {
@@ -52,17 +55,21 @@ export function buildHomepageHeroSnapshot(
 ): HomepageHeroSnapshot {
   let totalUsd = 0;
   let nonUsdUsd = 0;
+  let nonUsdObservedCount = 0;
   let supplyUnavailableCount = 0;
   const cohortSums: Record<HomepageCohortBucketKey, number> = { usdt: 0, usdc: 0, sky: 0 };
   const observedIds = new Set<string>();
+  const presentIds = new Set<string>();
 
   for (const row of rows) {
     if (!CLIENT_CORE_AGGREGATE_ACTIVE_IDS.has(row.id)) {
       continue;
     }
+    if (presentIds.has(row.id)) continue;
+    presentIds.add(row.id);
 
     const circulatingUsd = row.circulatingUsd;
-    if (circulatingUsd == null || !Number.isFinite(circulatingUsd)) {
+    if (circulatingUsd == null || !Number.isFinite(circulatingUsd) || circulatingUsd < 0) {
       supplyUnavailableCount += 1;
       continue;
     }
@@ -70,6 +77,7 @@ export function buildHomepageHeroSnapshot(
     totalUsd += circulatingUsd;
 
     if (row.pegType !== "peggedUSD") {
+      nonUsdObservedCount += 1;
       nonUsdUsd += circulatingUsd;
     }
 
@@ -86,22 +94,30 @@ export function buildHomepageHeroSnapshot(
   const usdt = cohortValue("usdt");
   const usdc = cohortValue("usdc");
   const sky = cohortValue("sky");
+  const supplyExpectedCount = CLIENT_CORE_AGGREGATE_ACTIVE_IDS.size;
+  const supplyMissingCount = supplyExpectedCount - presentIds.size;
+  const complete = observedIds.size === supplyExpectedCount;
+  const knownTotal = observedIds.size > 0 ? totalUsd : null;
+  const knownNonUsd = nonUsdObservedCount > 0 ? nonUsdUsd : null;
 
   return {
     asOfISO,
-    totalUsd,
-    nonUsdUsd,
-    nonUsdShare: totalUsd > 0 ? nonUsdUsd / totalUsd : null,
+    totalUsd: knownTotal,
+    nonUsdUsd: knownNonUsd,
+    nonUsdShare: complete && knownNonUsd !== null && totalUsd > 0 ? nonUsdUsd / totalUsd : null,
     supplyUnavailableCount,
+    supplyObservedCount: observedIds.size,
+    supplyExpectedCount,
+    supplyMissingCount,
     cohort: {
       ts: asOfISO ? Date.parse(asOfISO) : 0,
       usdt,
       usdc,
       sky,
-      others: supplyUnavailableCount === 0 && usdt !== null && usdc !== null && sky !== null
+      others: complete && usdt !== null && usdc !== null && sky !== null
         && totalUsd >= usdt + usdc + sky ? totalUsd - usdt - usdc - sky : null,
-      nonUsd: nonUsdUsd,
-      total: totalUsd,
+      nonUsd: knownNonUsd,
+      total: knownTotal,
     },
   };
 }
@@ -133,14 +149,15 @@ export function selectHomepageHeroSnapshot({
   fallbackSnapshot: HomepageHeroSnapshot;
   nowMs: number;
 }): HomepageHeroSelection {
-  if (liveSnapshot) {
+  if (liveSnapshot?.totalUsd != null) {
     return { status: "available", source: "live", snapshot: liveSnapshot };
   }
 
   const fallbackTimestamp = fallbackSnapshot.asOfISO ? Date.parse(fallbackSnapshot.asOfISO) : Number.NaN;
   const fallbackAgeMs = nowMs - fallbackTimestamp;
   if (
-    Number.isFinite(fallbackTimestamp)
+    fallbackSnapshot.totalUsd !== null
+    && Number.isFinite(fallbackTimestamp)
     && fallbackAgeMs >= 0
     && fallbackAgeMs <= HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS
   ) {

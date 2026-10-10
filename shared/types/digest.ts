@@ -264,6 +264,13 @@ export const DigestSafetyMapSummarySchema = z
     gradedCount: z.number().int().nonnegative(),
     notRatedCount: z.number().int().nonnegative(),
     totalMcapUsd: z.number().nonnegative(),
+    supplyCoverage: z.object({
+      complete: z.boolean(),
+      observedCount: z.number().int().nonnegative(),
+      unavailableCount: z.number().int().nonnegative(),
+      unavailableById: z.record(z.string(), z.string()),
+      shareBasis: z.literal("known-mapped-supply"),
+    }).optional(),
     floorMcapByTier: z
       .object({
         a: z.number().nonnegative(),
@@ -302,6 +309,8 @@ export interface DigestInputData {
   digestVersion?: number;
   aggregateUniverse?: "core-stablecoins-v1";
   totalMcapUsd: number;
+  /** totalMcapUsd is a known subtotal, not a complete market total unless coverage is complete. */
+  supplyCoverage?: { complete: boolean; observedCount: number; unavailableCount: number };
   mcap7dDelta: number;
   /**
    * Basis of `mcap7dDelta`: core coins carrying a prior-week supply bucket and
@@ -388,6 +397,8 @@ export interface DigestInputData {
   yesterdayIndex: { score: number; band: string } | null;
   blacklistActivity?: {
     eventCount: number;
+    /** Promotion is editorial only; all observed events remain in accounting. */
+    editorialEligible?: boolean;
     /** Sum of the known amounts only: a lower bound when `unpricedEventCount > 0`. */
     totalAmountUsd: number;
     /** Events whose USD amount could not be priced; their `amountUsd` is null. */
