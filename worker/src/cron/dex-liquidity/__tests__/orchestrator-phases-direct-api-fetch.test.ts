@@ -478,6 +478,17 @@ describe("runDirectApiFetchPhase", () => {
       symbolToChainScopedIds: new Map(),
       stablecoinPriceById: new Map(),
     });
+    expect(fetchers.map(({ name, circuitKey, censusScope }) => [name, circuitKey, censusScope])).toEqual([
+      ["Fluid", "fluid-dex-api", "bounded-sample"],
+      ["Balancer", "balancer-api", "exhaustive"],
+      ["PancakeSwap", "pancakeswap-api", "bounded-sample"],
+      ["Meteora", "meteora-api", "bounded-sample"],
+      ["Raydium", "raydium-api", "exhaustive"],
+      ["Orca", "orca-api", "exhaustive"],
+      ["Aerodrome Slipstream", "aerodrome-slipstream-api", "bounded-sample"],
+      ["Uniswap V3 BSC shadow", "uniswap-v3-bsc-shadow", "bounded-sample"],
+      ["Velodrome Slipstream", "velodrome-slipstream-api", "bounded-sample"],
+    ]);
 
     // Slipstream and CLMM adapters emit a `source` that differs from their
     // normalized protocol; attempted keys must match the counts that

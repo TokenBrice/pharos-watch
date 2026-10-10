@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { DEX_EXECUTION_CAPABILITY_REGISTRY } from "@shared/lib/p4-exit-route-capability-policy";
 import { DEX_EXACT_QUOTE_ADAPTER_IDS } from "@shared/types/measured-execution";
-import { DEX_EXECUTION_TARGET_FACTORY_REGISTRY } from "../../dex-liquidity/execution-target-registry";
-import {
-  DEX_POOL_SOURCE_REGISTRY,
-} from "../../dex-liquidity/orchestrator-phases/direct-api";
+import { buildRegisteredDexExecutionTarget } from "../../dex-liquidity/execution-target-registry";
+import { makeDexExecutionTargetFactoryInput } from "../../../test-helpers/__shared/dex-execution-target";
 
-describe("Wave 0 registration fan-out", () => {
+describe("execution capability contracts", () => {
   it("gives every execution capability one unique registered profile", () => {
     const profileIds = DEX_EXECUTION_CAPABILITY_REGISTRY.map((entry) => entry.profileId);
     expect(new Set(profileIds).size).toBe(profileIds.length);
@@ -16,23 +14,18 @@ describe("Wave 0 registration fan-out", () => {
     }
   });
 
-  it("retains existing target leaves alongside native Sui and Meteora leaves", () => {
-    expect(DEX_EXECUTION_TARGET_FACTORY_REGISTRY.map((entry) => entry.slotId)).toEqual([
-      "quoter-v2",
-      "uniswap-v4",
-      "orca-whirlpool",
-      "raydium-clmm",
-      "sui-clmm",
-      "meteora-dlmm",
-      "evm-v2",
-    ]);
-  });
-
-  it("predeclares pool/source leaves needed by the fan-out", () => {
-    const slots = DEX_POOL_SOURCE_REGISTRY.map((entry) => entry.slotId);
-    expect(slots).toEqual(expect.arrayContaining([
-      "raydium-clmm",
-      "orca-clmm",
-    ]));
+  it.each([
+    ["solana", "orca", undefined, "activation-pending"],
+    ["solana", "raydium", "raydium-clmm", "activation-pending"],
+    ["solana", "raydium", "raydium-amm", undefined],
+    ["solana", "meteora", "meteora-dlmm", "activation-pending"],
+    ["solana", "meteora", "cg-amm", undefined],
+    ["ethereum", "orca", undefined, undefined],
+    ["sui", "cetus", undefined, "target-unresolved"],
+  ])("preserves native gate for %s/%s/%s", (chainNorm, protocol, poolType, reason) => {
+    const input = makeDexExecutionTargetFactoryInput(chainNorm, protocol, poolType);
+    const capability = buildRegisteredDexExecutionTarget(input);
+    expect(capability.executionCapabilityGate?.reason).toBe(reason);
+    expect(capability.measuredExecutionTarget).toBeUndefined();
   });
 });

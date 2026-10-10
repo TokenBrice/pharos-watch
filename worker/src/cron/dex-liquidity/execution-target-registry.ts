@@ -1,117 +1,3 @@
-export type DexExecutionTargetFactorySlotId =
-  | "quoter-v2"
-  | "uniswap-v4"
-  | "orca-whirlpool"
-  | "raydium-clmm"
-  | "sui-clmm"
-  | "meteora-dlmm"
-  | "evm-v2";
-
-export interface DexExecutionTargetFactoryRegistration {
-  slotId: DexExecutionTargetFactorySlotId;
-  platform: "evm" | "solana" | "sui";
-  lifecycle: "active" | "shadow" | "disabled";
-  profileIds: readonly string[];
-  implementationModule: string;
-  build(input: DexExecutionTargetFactoryInput): DexExecutionTargetFactoryOutput | null;
-}
-
-export interface DexExecutionTargetFactoryInput {
-  context: PoolProcessingContext;
-  identity: ResolvedPoolIdentity;
-  enrichment: PoolProtocolEnrichment;
-  stablecoinId: string;
-}
-
-export type DexExecutionTargetFactoryOutput = Partial<PoolExecutionCapability>;
-
-
-/**
- * Frozen target-factory slots. The paths are leaf ownership boundaries, not a
- * dynamic-import mechanism; Worker bundling remains statically analyzable.
- */
-export const DEX_EXECUTION_TARGET_FACTORY_REGISTRY: readonly DexExecutionTargetFactoryRegistration[] = [
-  {
-    slotId: "quoter-v2",
-    platform: "evm",
-    lifecycle: "active",
-    profileIds: [
-      "uniswap-v3-quoter-v2",
-      "pancakeswap-v3-quoter-v2",
-      "aerodrome-slipstream-quoter-v2",
-    ],
-    implementationModule: "./execution-targets/quoter-v2",
-    build: buildQuoterV2RegisteredExecutionTarget,
-  },
-  {
-    slotId: "uniswap-v4",
-    platform: "evm",
-    lifecycle: "active",
-    profileIds: ["uniswap-v4-hook-free-quoter-v1"],
-    implementationModule: "./execution-targets/uniswap-v4",
-    build: buildUniswapV4RegisteredExecutionTarget,
-  },
-  {
-    slotId: "orca-whirlpool",
-    platform: "solana",
-    lifecycle: "shadow",
-    profileIds: ["orca-whirlpool-exact-v1"],
-    implementationModule: "./execution-targets/orca-whirlpool",
-    build: buildOrcaWhirlpoolRegisteredExecutionTarget,
-  },
-  {
-    slotId: "raydium-clmm",
-    platform: "solana",
-    lifecycle: "shadow",
-    profileIds: ["raydium-clmm-exact-v1"],
-    implementationModule: "./execution-targets/raydium-clmm",
-    build: buildRaydiumClmmRegisteredExecutionTarget,
-  },
-  {
-    slotId: "sui-clmm",
-    platform: "sui",
-    lifecycle: "shadow",
-    profileIds: ["cetus-clmm-exact-v1", "bluefin-spot-clmm-exact-v1"],
-    implementationModule: "./execution-targets/sui-clmm",
-    build: buildSuiClmmRegisteredExecutionTarget,
-  },
-  {
-    slotId: "meteora-dlmm",
-    platform: "solana",
-    lifecycle: "shadow",
-    profileIds: ["meteora-dlmm-exact-v1"],
-    implementationModule: "./execution-targets/meteora-dlmm",
-    build: buildMeteoraDlmmRegisteredExecutionTarget,
-  },
-  {
-    slotId: "evm-v2",
-    platform: "evm",
-    lifecycle: "active",
-    profileIds: ["evm-v2-constant-product-v1"],
-    implementationModule: "./execution-targets/evm-v2",
-    build: buildEvmV2RegisteredExecutionTarget,
-  },
-] as const;
-
-export function buildRegisteredDexExecutionTarget(
-  input: DexExecutionTargetFactoryInput,
-): DexExecutionTargetFactoryOutput {
-  return DEX_EXECUTION_TARGET_FACTORY_REGISTRY.reduce<DexExecutionTargetFactoryOutput>(
-    (combined, registration) => ({ ...combined, ...(registration.build(input) ?? {}) }),
-    {},
-  );
-}
-
-/**
- * An empty reduction means no registered leaf recognized the exact pool. Keep
- * that distinct from a fail-closed leaf result such as `target-unresolved`,
- * which must be retained by every caller of the registry.
- */
-export function hasRegisteredDexExecutionTargetOutput(
-  output: DexExecutionTargetFactoryOutput,
-): boolean {
-  return Object.values(output).some((value) => value !== undefined);
-}
 import type {
   PoolExecutionCapability,
   PoolProcessingContext,
@@ -121,7 +7,54 @@ import type {
 import { buildQuoterV2RegisteredExecutionTarget } from "./execution-targets/quoter-v2";
 import { buildUniswapV4RegisteredExecutionTarget } from "./execution-targets/uniswap-v4";
 import { buildEvmV2RegisteredExecutionTarget } from "./execution-targets/evm-v2";
-import { buildOrcaWhirlpoolRegisteredExecutionTarget } from "./execution-targets/orca-whirlpool";
-import { buildRaydiumClmmRegisteredExecutionTarget } from "./execution-targets/raydium-clmm";
 import { buildSuiClmmRegisteredExecutionTarget } from "./execution-targets/sui-clmm";
-import { buildMeteoraDlmmRegisteredExecutionTarget } from "./execution-targets/meteora-dlmm";
+
+export interface DexExecutionTargetFactoryInput {
+  context: PoolProcessingContext;
+  identity: ResolvedPoolIdentity;
+  enrichment: PoolProtocolEnrichment;
+  stablecoinId: string;
+}
+export type DexExecutionTargetFactoryOutput = Partial<PoolExecutionCapability>;
+
+const SOLANA_PENDING_FAMILIES = [
+  { protocol: "orca" },
+  { protocol: "raydium", poolType: "raydium-clmm" },
+  { protocol: "meteora", poolType: "meteora-dlmm" },
+] as const;
+
+/** Native diagnostics never activate a V1 scoring target. */
+function buildPendingSolanaGate(
+  { identity }: DexExecutionTargetFactoryInput,
+): DexExecutionTargetFactoryOutput | null {
+  if (identity.chainNorm !== "solana") return null;
+  const matched = SOLANA_PENDING_FAMILIES.some((row) =>
+    row.protocol === identity.protocol &&
+    (!("poolType" in row) || row.poolType === identity.poolType));
+  return matched
+    ? { executionCapabilityGate: { family: "measured-execution", reason: "activation-pending" } }
+    : null;
+}
+
+const FACTORIES = [
+  buildQuoterV2RegisteredExecutionTarget,
+  buildUniswapV4RegisteredExecutionTarget,
+  buildPendingSolanaGate,
+  buildSuiClmmRegisteredExecutionTarget,
+  buildEvmV2RegisteredExecutionTarget,
+] as const;
+
+export function buildRegisteredDexExecutionTarget(
+  input: DexExecutionTargetFactoryInput,
+): DexExecutionTargetFactoryOutput {
+  const combined: DexExecutionTargetFactoryOutput = {};
+  for (const build of FACTORIES) Object.assign(combined, build(input));
+  return combined;
+}
+
+/** No recognized output is distinct from a fail-closed leaf gate. */
+export function hasRegisteredDexExecutionTargetOutput(
+  output: DexExecutionTargetFactoryOutput,
+): boolean {
+  return Object.values(output).some((value) => value !== undefined);
+}

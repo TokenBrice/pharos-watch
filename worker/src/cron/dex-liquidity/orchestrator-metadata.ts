@@ -1,6 +1,5 @@
 import type { HistoricalSnapshotWriteResult, PersistScoresResult } from "./persistence";
 import type { DexLiquidityPostScoreAnalysis } from "./orchestrator-analysis";
-import type { DexPaginationPersistenceSummary } from "../../lib/dex-api-common";
 import type { DeadPoolExclusionSummary, DexPricePersistenceDiagnostics } from "./scoring";
 import {
   POOL_REJECTION_MATERIAL_TVL_USD,
@@ -8,8 +7,8 @@ import {
 } from "./process-pools";
 import type { PoolProcessingRejection } from "./process-pool-types";
 import type { LiquidityFallbackCounters } from "./types";
-import type { DeadPoolUnindexedChainSkips } from "./staging-merge";
 import type { MeasuredTargetFunnel } from "./route-telemetry";
+import type { DexLiquidityScoringSourceState, DexLiquidityPoolState } from "./scoring-stage-contract";
 
 export function isDexLiquidityDegraded(params: {
   criticalSourceFailures: string[];
@@ -35,129 +34,108 @@ export function isDexLiquidityDegraded(params: {
 }
 
 export function buildDexLiquidityCronMetadata(params: {
-  rowsRead: number;
-  rowsWritten: number;
-  stagedPoolsMerged: number;
-  stagedPoolsSkipped: number;
-  stagedPoolsSkippedByExactIdentity: number;
-  stagedPoolsSkippedByUniqueDerivedIdentity: number;
-  stagedPoolsSkippedByOptionalWildcardIdentity: number;
-  stagedPoolsSkippedByAuthoritativeProtocol: number;
-  stagedWritebackRows?: number;
-  stagedWritebackSkippedUntrustedIds?: number;
-  registryEvaluatedAtSec?: number;
-  registryRowsRead?: number;
-  registryMultiSourcePools?: number;
-  registryFamilyBySource?: Record<string, number>;
-  stagedPoolSkipDimensions: Array<{
-    reason: string;
-    protocol: string;
-    chain: string;
-    count: number;
-    threshold?: number;
-    conflict?: string;
-  }>;
-  poolRejections: PoolProcessingRejection[];
-  directApiSourceSummary: {
-    acceptedByProtocolChain: Record<string, number>;
-    excludedByReason: Record<string, number>;
-    circuitEvents: Array<{ circuitKey: string; from: string; to: string; at: number | null }>;
-    sourceWarnings: string[];
-    pagination: Array<{
-      source: string;
-      state: "complete" | "partial";
-      headRefreshed: boolean;
-      pagesFetched: number;
-      cursor: string | null;
-      cycleCompleted: boolean;
-      cursorPersistence?: DexPaginationPersistenceSummary;
-    }>;
+  sourceState: Pick<DexLiquidityScoringSourceState,
+    "primaryRawPoolCount" | "failedSources" | "degradedSources" |
+    "fallbackSignals" | "directApiSourceSummary">;
+  poolState: Pick<DexLiquidityPoolState,
+    "stagedMergedCount" | "stagedSkippedCount" | "stagedSkippedByExactIdentityCount" |
+    "stagedSkippedByUniqueDerivedIdentityCount" | "stagedSkippedByOptionalWildcardIdentityCount" |
+    "stagedSkippedByAuthoritativeProtocolCount" | "stagedSkipDimensions" |
+    "registryRowsRead" | "registryMultiSourcePools" |
+    "registryFamilyBySource" | "stagedWritebackRows" | "stagedWritebackSkippedUntrustedIds" |
+    "poolRejections" | "deadPoolUnindexedChainSkips"> & {
+    registryEvaluatedAtSec?: number;
+    directApiIntegration: Pick<DexLiquidityPoolState["directApiIntegration"],
+      "acceptedByProtocolChain" | "excludedByReason">;
   };
-  sourceCoverage: DexLiquidityPostScoreAnalysis["sourceCoverage"];
-  challengerPublication: {
-    publishedStablecoins: number;
-    skippedStablecoins: number;
+  scoreState: {
+    scoreResults: Pick<ReadonlyMap<string, unknown>, "size">;
+    analysis: Pick<DexLiquidityPostScoreAnalysis, "sourceCoverage">;
+    diagnostics: {
+      fallbackCounters: LiquidityFallbackCounters;
+      deadPoolExclusions: DeadPoolExclusionSummary;
+      measuredTargetFunnel?: MeasuredTargetFunnel;
+    };
   };
-  dexPriceDiagnostics: DexPricePersistenceDiagnostics;
-  failedSources: string[];
-  degradedSources?: string[];
-  fallbackSignals: string[];
-  fallbackCounters: LiquidityFallbackCounters;
-  deadPoolExclusions: DeadPoolExclusionSummary;
-  deadPoolUnindexedChainSkips: DeadPoolUnindexedChainSkips;
-  persistence: PersistScoresResult;
-  historicalSnapshot: HistoricalSnapshotWriteResult;
-  measuredTargetFunnel?: MeasuredTargetFunnel;
+  persistenceState: {
+    persistence: PersistScoresResult;
+    challengerPublication: { publishedStablecoins: number; skippedStablecoins: number };
+    dexPriceDiagnostics: DexPricePersistenceDiagnostics;
+    historicalSnapshot: HistoricalSnapshotWriteResult;
+  };
 }): Record<string, unknown> {
-  const rejectedPoolCount = params.poolRejections.reduce(
-    (sum, rejection) => sum + rejection.count,
-    0,
-  );
-  const rejectedPoolTvlUsd = params.poolRejections.reduce(
-    (sum, rejection) => sum + rejection.tvlUsd,
-    0,
-  );
+  const { sourceState, poolState, scoreState } = params;
+  const { persistence, historicalSnapshot, challengerPublication, dexPriceDiagnostics } = params.persistenceState;
+  const rejectedPoolCount = poolState.poolRejections.reduce((sum, rejection) => sum + rejection.count, 0);
+  const rejectedPoolTvlUsd = poolState.poolRejections.reduce((sum, rejection) => sum + rejection.tvlUsd, 0);
   return {
-    rowsRead: params.rowsRead,
-    rowsWritten: params.rowsWritten,
+    rowsRead: sourceState.primaryRawPoolCount,
+    rowsWritten: persistence.skipped || persistence.skippedReason === "liquidity-cadence-reuse"
+      ? 0 : scoreState.scoreResults.size,
     rowsDropped: rejectedPoolCount,
-    stagedPoolsMerged: params.stagedPoolsMerged,
-    stagedPoolsSkipped: params.stagedPoolsSkipped,
-    stagedPoolsSkippedByExactIdentity: params.stagedPoolsSkippedByExactIdentity,
-    stagedPoolsSkippedByUniqueDerivedIdentity: params.stagedPoolsSkippedByUniqueDerivedIdentity,
-    stagedPoolsSkippedByOptionalWildcardIdentity: params.stagedPoolsSkippedByOptionalWildcardIdentity,
-    stagedPoolsSkippedByAuthoritativeProtocol: params.stagedPoolsSkippedByAuthoritativeProtocol,
-    stagedPoolSkipDimensions: params.stagedPoolSkipDimensions,
-    stagedWritebackRows: params.stagedWritebackRows,
-    stagedWritebackSkippedUntrustedIds: params.stagedWritebackSkippedUntrustedIds,
-    registryEvaluation: params.registryEvaluatedAtSec == null ? undefined : {
-      evaluatedAtSec: params.registryEvaluatedAtSec,
+    stagedPoolsMerged: poolState.stagedMergedCount,
+    stagedPoolsSkipped: poolState.stagedSkippedCount,
+    stagedPoolsSkippedByExactIdentity: poolState.stagedSkippedByExactIdentityCount,
+    stagedPoolsSkippedByUniqueDerivedIdentity: poolState.stagedSkippedByUniqueDerivedIdentityCount,
+    stagedPoolsSkippedByOptionalWildcardIdentity: poolState.stagedSkippedByOptionalWildcardIdentityCount,
+    stagedPoolsSkippedByAuthoritativeProtocol: poolState.stagedSkippedByAuthoritativeProtocolCount,
+    stagedPoolSkipDimensions: poolState.stagedSkipDimensions,
+    stagedWritebackRows: poolState.stagedWritebackRows,
+    stagedWritebackSkippedUntrustedIds: poolState.stagedWritebackSkippedUntrustedIds,
+    registryEvaluation: poolState.registryEvaluatedAtSec == null ? undefined : {
+      evaluatedAtSec: poolState.registryEvaluatedAtSec,
       basis: "registry-read-consumed",
     },
-    registryRowsRead: params.registryRowsRead,
-    registryMultiSourcePools: params.registryMultiSourcePools,
-    registryFamilyBySource: params.registryFamilyBySource,
-    poolRejections: params.poolRejections,
+    registryRowsRead: poolState.registryRowsRead,
+    registryMultiSourcePools: poolState.registryMultiSourcePools,
+    registryFamilyBySource: poolState.registryFamilyBySource,
+    poolRejections: poolState.poolRejections,
     poolRejectionMateriality: {
       thresholdTvlUsd: POOL_REJECTION_MATERIAL_TVL_USD,
       rejectedPoolCount,
       rejectedPoolTvlUsd,
-      material: hasMaterialPoolRejections(params.poolRejections),
+      material: hasMaterialPoolRejections(poolState.poolRejections),
     },
-    directApiSourceSummary: params.directApiSourceSummary,
+    directApiSourceSummary: {
+      acceptedByProtocolChain: poolState.directApiIntegration.acceptedByProtocolChain,
+      excludedByReason: poolState.directApiIntegration.excludedByReason,
+      circuitEvents: sourceState.directApiSourceSummary.circuitEvents,
+      sourceWarnings: sourceState.directApiSourceSummary.sourceWarnings,
+      pagination: sourceState.directApiSourceSummary.pagination,
+    },
     sourceCoverage: {
-      ...params.sourceCoverage,
-      challengerSnapshotsPublished: params.challengerPublication.publishedStablecoins,
-      challengerSnapshotsSkipped: params.challengerPublication.skippedStablecoins,
+      ...scoreState.analysis.sourceCoverage,
+      challengerSnapshotsPublished: challengerPublication.publishedStablecoins,
+      challengerSnapshotsSkipped: challengerPublication.skippedStablecoins,
     },
-    failedSources: [...new Set(params.failedSources)],
-    degradedSources: [...new Set(params.degradedSources ?? [])],
-    dexPriceDiagnostics: params.dexPriceDiagnostics,
-    fallbackMode: [...new Set(params.fallbackSignals)],
-    fallbackCounters: params.fallbackCounters,
-    retainedDeadPoolExclusions: params.deadPoolExclusions,
-    deadPoolUnindexedChainSkips: params.deadPoolUnindexedChainSkips,
-    measuredTargetFunnel: params.measuredTargetFunnel,
-    exitRouteSelection: params.persistence.exitRouteSelection,
-    exitRouteContinuity: params.persistence.exitRouteContinuity,
+    failedSources: [...new Set(sourceState.failedSources)],
+    degradedSources: [...new Set(sourceState.degradedSources ?? [])],
+    dexPriceDiagnostics,
+    fallbackMode: [...new Set(sourceState.fallbackSignals)],
+    fallbackCounters: scoreState.diagnostics.fallbackCounters,
+    retainedDeadPoolExclusions: scoreState.diagnostics.deadPoolExclusions,
+    deadPoolUnindexedChainSkips: poolState.deadPoolUnindexedChainSkips ?? {},
+    measuredTargetFunnel: scoreState.diagnostics.measuredTargetFunnel,
+    exitRouteSelection: persistence.exitRouteSelection,
+    exitRouteContinuity: persistence.exitRouteContinuity,
     persistence: {
-      generationId: params.persistence.generationId ?? null,
-      expectedRowCount: params.persistence.expectedRowCount ?? null,
-      candidateRowsWritten: params.persistence.candidateRowsWritten ?? null,
-      currentGenerationRows: params.persistence.currentGenerationRows ?? null,
-      placeholderRowsWritten: params.persistence.placeholderCount,
-      inactiveMetricRowsSkipped: params.persistence.inactiveMetricRowsSkipped,
-      inactiveMetricIdsSkipped: params.persistence.inactiveMetricIdsSkipped?.slice(0, 25) ?? [],
-      orphanRowsDeleted: params.persistence.orphanRowsDeleted,
-      orphanCleanupFailed: params.persistence.orphanCleanupFailed,
-      retention: params.persistence.retention ?? null,
-      skipped: params.persistence.skipped ?? false,
-      skippedReason: params.persistence.skippedReason ?? null,
-      historicalSnapshotRowsWritten: params.historicalSnapshot.snapshotRowsWritten,
-      historicalSnapshotSkipped: params.historicalSnapshot.skipped,
-      historicalSnapshotWriteFailed: params.historicalSnapshot.writeFailed,
-      historicalSnapshotRowsPruned: params.historicalSnapshot.historyRowsPruned,
-      historicalSnapshotRetentionPruneFailed: params.historicalSnapshot.retentionPruneFailed,
+      generationId: persistence.generationId ?? null,
+      expectedRowCount: persistence.expectedRowCount ?? null,
+      candidateRowsWritten: persistence.candidateRowsWritten ?? null,
+      currentGenerationRows: persistence.currentGenerationRows ?? null,
+      placeholderRowsWritten: persistence.placeholderCount,
+      inactiveMetricRowsSkipped: persistence.inactiveMetricRowsSkipped,
+      inactiveMetricIdsSkipped: persistence.inactiveMetricIdsSkipped?.slice(0, 25) ?? [],
+      orphanRowsDeleted: persistence.orphanRowsDeleted,
+      orphanCleanupFailed: persistence.orphanCleanupFailed,
+      retention: persistence.retention ?? null,
+      skipped: persistence.skipped ?? false,
+      skippedReason: persistence.skippedReason ?? null,
+      historicalSnapshotRowsWritten: historicalSnapshot.snapshotRowsWritten,
+      historicalSnapshotSkipped: historicalSnapshot.skipped,
+      historicalSnapshotWriteFailed: historicalSnapshot.writeFailed,
+      historicalSnapshotRowsPruned: historicalSnapshot.historyRowsPruned,
+      historicalSnapshotRetentionPruneFailed: historicalSnapshot.retentionPruneFailed,
     },
   };
 }

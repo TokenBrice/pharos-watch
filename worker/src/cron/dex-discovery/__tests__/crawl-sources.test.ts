@@ -2,6 +2,7 @@ import { coinGeckoPool } from "./discovery.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockCircuitOutcomeRecord } from "../../../test-helpers/cron";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import type * as DexScreener from "../../../lib/dexscreener";
 
 const fetchDsTokenPairsWithStatusMock = vi.hoisted(() => vi.fn());
 const fetchDsTokenPoolsWithStatusMock = vi.hoisted(() => vi.fn());
@@ -42,7 +43,8 @@ vi.mock("../../../lib/fetch-retry", () => ({
   fetchJsonWithRetry: vi.fn(),
 }));
 
-vi.mock("../../../lib/dexscreener", () => ({
+vi.mock("../../../lib/dexscreener", async (importOriginal) => ({
+  ...(await importOriginal<typeof DexScreener>()),
   fetchDsTokenPoolsWithStatus: fetchDsTokenPoolsWithStatusMock,
   fetchDsTokenPairsWithStatus: fetchDsTokenPairsWithStatusMock,
   dsRateLimit: vi.fn().mockResolvedValue(undefined),

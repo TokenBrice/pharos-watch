@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { buildAuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
 import {
   buildDexDirectApiFetchers,
-  DEX_POOL_SOURCE_REGISTRY,
   type DirectApiCensusScope,
   type DirectApiFetchPhaseEntry,
 } from "../orchestrator-phases/direct-api";
@@ -234,18 +233,18 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
 });
 
 describe("direct API census scope declarations", () => {
-  // One matrix enrolls every registry slot's maximum authority and stop policy.
+  // One matrix enrolls every descriptor's maximum authority and stop policy.
   // Completion must describe this run, never a resumed multi-run rotation.
-  const contracts: { slotId: string; censusScope: DirectApiCensusScope; stop: string }[] = [
-    { slotId: "fluid", censusScope: "bounded-sample", stop: "tracked-token extract" },
-    { slotId: "balancer", censusScope: "exhaustive", stop: "short page; full page at cap is partial" },
-    { slotId: "pancakeswap", censusScope: "bounded-sample", stop: "head plus two rotating tail pages" },
-    { slotId: "meteora", censusScope: "bounded-sample", stop: "three-page head sample" },
-    { slotId: "raydium-clmm", censusScope: "exhaustive", stop: "short page or below admission floor; cap is partial" },
-    { slotId: "orca-clmm", censusScope: "exhaustive", stop: "four-page budget; contiguous exhausted run only" },
-    { slotId: "aerodrome-slipstream", censusScope: "bounded-sample", stop: "tracked priceable reserve extract" },
-    { slotId: "uniswap-v3-bsc-shadow", censusScope: "bounded-sample", stop: "bounded staged exact-pool recovery" },
-    { slotId: "velodrome-slipstream", censusScope: "bounded-sample", stop: "tracked priceable reserve extract" },
+  const contracts: { name: string; censusScope: DirectApiCensusScope; stop: string }[] = [
+    { name: "Fluid", censusScope: "bounded-sample", stop: "tracked-token extract" },
+    { name: "Balancer", censusScope: "exhaustive", stop: "short page; full page at cap is partial" },
+    { name: "PancakeSwap", censusScope: "bounded-sample", stop: "head plus two rotating tail pages" },
+    { name: "Meteora", censusScope: "bounded-sample", stop: "three-page head sample" },
+    { name: "Raydium", censusScope: "exhaustive", stop: "short page or below admission floor; cap is partial" },
+    { name: "Orca", censusScope: "exhaustive", stop: "four-page budget; contiguous exhausted run only" },
+    { name: "Aerodrome Slipstream", censusScope: "bounded-sample", stop: "tracked priceable reserve extract" },
+    { name: "Uniswap V3 BSC shadow", censusScope: "bounded-sample", stop: "bounded staged exact-pool recovery" },
+    { name: "Velodrome Slipstream", censusScope: "bounded-sample", stop: "tracked priceable reserve extract" },
   ];
   const fetchers = buildDexDirectApiFetchers({
     db: makeNoopD1(),
@@ -255,15 +254,12 @@ describe("direct API census scope declarations", () => {
     stablecoinPriceById: new Map(),
   });
 
-  it("enrolls every registered adapter exactly once in the census contract matrix", () => {
-    expect(contracts.map(({ slotId }) => slotId).sort()).toEqual(
-      DEX_POOL_SOURCE_REGISTRY.map(({ slotId }) => slotId).sort(),
-    );
-    expect(fetchers.map(({ slotId }) => slotId).sort()).toEqual(contracts.map(({ slotId }) => slotId).sort());
+  it("enrolls every adapter exactly once in the census contract matrix", () => {
+    expect(fetchers.map(({ name }) => name).sort()).toEqual(contracts.map(({ name }) => name).sort());
   });
 
-  it.each(contracts)("$slotId declares its $stop census contract", ({ slotId, censusScope }) => {
-    const fetcher = fetchers.find((adapter) => adapter.slotId === slotId)!;
+  it.each(contracts)("$name declares its $stop census contract", ({ name, censusScope }) => {
+    const fetcher = fetchers.find((adapter) => adapter.name === name)!;
     expect(fetcher.censusScope).toBe(censusScope);
     for (const scan of ["exhausted", "capped", "later-page-failure", "malformed-identity", "resumed-tail"] as const) {
       const chain = fetcher.supportedChains[0];
@@ -281,7 +277,7 @@ describe("direct API census scope declarations", () => {
         },
       }]);
       expect(index.enforcedChainsByProtocol.get(fetcher.normalizedProtocol)?.has(chain) ?? false,
-        `${slotId}: ${scan}`).toBe(censusScope === "exhaustive" && scan === "exhausted");
+        `${name}: ${scan}`).toBe(censusScope === "exhaustive" && scan === "exhausted");
     }
   });
 

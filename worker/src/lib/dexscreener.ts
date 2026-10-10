@@ -148,6 +148,21 @@ async function describeNonOkResponse(
   };
 }
 
+export function getDsPriceForSide(pair: DsPair, side: DsTrackedTokenPrice["side"]): DsTrackedTokenPrice {
+  const basePriceUsd = Number.parseFloat(pair.priceUsd ?? "");
+  if (side === null) return { side, priceUsd: null };
+  if (side === "base") {
+    return { side, priceUsd: Number.isFinite(basePriceUsd) && basePriceUsd > 0 ? basePriceUsd : null };
+  }
+  const priceNative = Number.parseFloat(pair.priceNative ?? "");
+  return {
+    side,
+    priceUsd: Number.isFinite(basePriceUsd) && basePriceUsd > 0 && Number.isFinite(priceNative) && priceNative > 0
+      ? basePriceUsd / priceNative
+      : null,
+  };
+}
+
 /**
  * Resolve the tracked token side and, when possible, its USD price.
  *
@@ -162,28 +177,7 @@ export function getDsTrackedTokenPriceUsd(
   const tracked = trackedAddress.toLowerCase();
   const baseAddress = pair.baseToken.address.toLowerCase();
   const quoteAddress = pair.quoteToken.address.toLowerCase();
-  const basePriceUsd = Number.parseFloat(pair.priceUsd ?? "");
-
-  if (tracked === baseAddress) {
-    return {
-      side: "base",
-      priceUsd: Number.isFinite(basePriceUsd) && basePriceUsd > 0 ? basePriceUsd : null,
-    };
-  }
-
-  if (tracked !== quoteAddress) {
-    return { side: null, priceUsd: null };
-  }
-
-  const priceNative = Number.parseFloat(pair.priceNative ?? "");
-  if (!Number.isFinite(basePriceUsd) || basePriceUsd <= 0 || !Number.isFinite(priceNative) || priceNative <= 0) {
-    return { side: "quote", priceUsd: null };
-  }
-
-  return {
-    side: "quote",
-    priceUsd: basePriceUsd / priceNative,
-  };
+  return getDsPriceForSide(pair, tracked === baseAddress ? "base" : tracked === quoteAddress ? "quote" : null);
 }
 
 async function fetchDsPoolsWithStatus(

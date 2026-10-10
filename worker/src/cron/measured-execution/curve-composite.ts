@@ -2,10 +2,7 @@ import { encodeFunctionData, parseAbi } from "viem/utils";
 
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
-import type {
-  DexMeasuredExecutionBudgetStopReason,
-  DexMeasuredRawQuotePoint,
-} from "./profiles";
+import type { CurveGetDyQuoteFailure } from "./curve-get-dy-quote-engine";
 import { canonicalEvmAddress } from "./evm-codecs";
 import { getCurveCompositePolicy, type CurveCompositePoolPolicy } from "@shared/lib/curve-composite-policies";
 import { buildMeasuredExecutionTargetValue } from "./inventory";
@@ -155,34 +152,9 @@ export function buildCurveCompositeMeasuredExecutionTarget(input: {
 }
 
 type QuoteFailure =
-  | DexMeasuredExecutionBudgetStopReason
-  | "unsupported-chain-or-pool"
-  | "invalid-pinned-block"
-  | "invalid-quote-input"
+  | CurveGetDyQuoteFailure
   | "invalid-curve-composite-target"
-  | "runtime-evidence-missing"
-  | "rpc-failure"
-  | "pool-revert"
-  | "malformed-pool-return";
-
-export interface CurveCompositeRequest {
-  target: DexMeasuredExecutionTarget;
-  inputUsd: number;
-  blockNumber: number;
-  blockObservedAt: number;
-  endpointAddress: `0x${string}`;
-  runtimeEvidence?: CurveCompositeRuntimeEvidence;
-}
-
-
-export interface CurveCompositeBatchOutcome {
-  targetId: string;
-  inputUsd: number;
-  blockNumber: number;
-  eligibility: CurveCompositeEligibility;
-  point?: DexMeasuredRawQuotePoint;
-  failureReason?: QuoteFailure;
-}
+  | "runtime-evidence-missing";
 
 export function encodeCurveCompositeQuote(input: {
   policy: CurveCompositePoolPolicy;

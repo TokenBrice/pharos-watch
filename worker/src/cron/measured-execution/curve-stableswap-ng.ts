@@ -23,9 +23,7 @@ import {
   fetchEvmCodeStatusAtBlock,
   type EvmBlockHeader,
 } from "../../lib/evm-rpc";
-import type {
-  DexMeasuredExecutionBudgetStopReason,
-} from "./profiles";
+import type { CurveGetDyQuoteFailure } from "./curve-get-dy-quote-engine";
 import {
   canonicalEvmAddress,
   canonicalEvmHash,
@@ -359,25 +357,10 @@ export const verifyCurveStableSwapNgDeployment = createCurveStableSwapNgDeployme
 });
 
 export type CurveStableSwapNgQuoteFailure =
-  | DexMeasuredExecutionBudgetStopReason
-  | "unsupported-chain-or-pool"
-  | "invalid-pinned-block"
-  | "invalid-quote-input"
+  | CurveGetDyQuoteFailure
   | "invalid-curve-stableswap-ng-target"
   | "pool-token-order-mismatch"
-  | "runtime-evidence-missing"
-  | "rpc-failure"
-  | "pool-revert"
-  | "malformed-pool-return";
-
-export interface CurveStableSwapNgRequest {
-  target: DexMeasuredExecutionTarget;
-  inputUsd: number;
-  blockNumber: number;
-  blockObservedAt: number;
-  endpointAddress: `0x${string}`;
-  runtimeEvidence?: CurveStableSwapNgRuntimeEvidence;
-}
+  | "runtime-evidence-missing";
 
 export function resolveCurveStableSwapNgTokenIndices(
   target: DexMeasuredExecutionTarget | DexMeasuredExecutionProfile,
