@@ -100,7 +100,7 @@ export const START_HERE_GOALS: readonly StartHereGoal[] = [
     description:
       "Search for the stablecoin in your wallet — USDC, USDT, DAI, USDe, PYUSD — and open its detail page for the safety grade, what backs it, and whether it's under stress right now.",
     mobileDescription: "Search USDC, USDT, DAI, USDe or another coin and open its safety, backing, and stress detail.",
-    href: "/stablecoins/usd/",
+    href: "/stablecoins/",
     cta: "Search the directory",
     destinations: ["Directory", "Safety grade", "Live reserves"],
     icon: Search,
@@ -324,7 +324,7 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       {
         title: "Stablecoin directory",
         description: "Searchable launch point into the tracked universe and each detail page.",
-        href: "/stablecoins/usd/",
+        href: "/stablecoins/",
         icon: Search,
       },
       {
@@ -467,7 +467,7 @@ export const START_HERE_SHORTCUTS: readonly StartHereShortcut[] = [
     description:
       "Use the peg, backing, and governance landing pages when you want to scan a category instead of a ticker.",
     detail: "Good for questions like 'show me EUR stablecoins' or 'which DeFi names are crypto-backed'.",
-    href: "/stablecoins/usd/",
+    href: "/stablecoins/",
     cta: "Open the directory",
     icon: Activity,
   },

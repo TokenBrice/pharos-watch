@@ -96,8 +96,8 @@ export function buildCoverageFeatureSummary(
     : feature.headlineKinds?.length
       ? knownRows.filter((row) => feature.headlineKinds?.includes(row.statuses[feature.key].kind))
       : availableRows;
-  const coveredMcapUsd = sumKnownMarketCap(primaryRows);
-  const scopedMcapUsd = sumKnownMarketCap(knownRows);
+  const coveredCap = summarizeCoverageMarketCap(primaryRows);
+  const scopedCap = summarizeCoverageMarketCap(knownRows);
   const breakdownMap = new Map<string, number>();
   const coveragePct =
     knownRows.length > 0 ? (primaryRows.length / knownRows.length) * 100 : scopedRows.length > 0 ? null : 0;
@@ -112,20 +112,38 @@ export function buildCoverageFeatureSummary(
     availableCount: primaryRows.length,
     totalCount: knownRows.length,
     coveragePct,
-    coveredMcapUsd,
-    mcapSharePct: scopedMcapUsd > 0 ? (coveredMcapUsd / scopedMcapUsd) * 100 : null,
+    coveredMcapUsd: coveredCap.totalUsd,
+    marketCapObservedCount: scopedCap.observedCount,
+    marketCapComplete: scopedCap.complete,
+    mcapSharePct: scopedCap.totalUsd != null && scopedCap.totalUsd > 0
+      ? ((coveredCap.totalUsd ?? 0) / scopedCap.totalUsd) * 100
+      : null,
     countLabel: feature.headlineCountLabel ?? "Coin count",
     coverageLabel:
       coveragePct == null
         ? "Data n/a"
         : feature.headlineCoverageLabel?.(coveragePct) ?? `${coveragePct.toFixed(0)}% of active coins`,
-    shareLabel: feature.headlineShareLabel ?? "Active market-cap reach",
+    shareLabel: scopedCap.complete
+      ? feature.headlineShareLabel ?? "Active market-cap reach"
+      : `${feature.headlineShareLabel ?? "Market-cap reach"} (known market cap)`,
     breakdown: feature.formatBreakdown(scopedRows, breakdownMap),
   };
 }
 
-function sumKnownMarketCap(rows: readonly CoverageRow[]): number {
-  return rows.reduce((sum, row) => (row.marketCapAvailable ? sum + row.marketCapUsd : sum), 0);
+export function summarizeCoverageMarketCap(rows: readonly CoverageRow[]) {
+  let totalUsd = 0;
+  let observedCount = 0;
+  for (const row of rows) {
+    if (!row.marketCapAvailable) continue;
+    totalUsd += row.marketCapUsd;
+    observedCount++;
+  }
+  return {
+    totalUsd: observedCount > 0 ? totalUsd : null,
+    observedCount,
+    totalCount: rows.length,
+    complete: observedCount === rows.length,
+  };
 }
 
 function countAvailableFeatures(

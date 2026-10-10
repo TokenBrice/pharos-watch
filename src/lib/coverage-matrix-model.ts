@@ -177,6 +177,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
 
   let totalCount = 0;
   let sourceDepthMcapUsd = 0;
+  let sourceDepthMcapObservedCount = 0;
   let atTargetCount = 0;
   let exactTwoCount = 0;
   let belowTargetCount = 0;
@@ -185,11 +186,12 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
 
   for (const row of rows) {
     const priceStatus = row.statuses.price;
-    if (priceStatus.kind === "data-unavailable" || priceStatus.kind === "price-only") continue;
+    if (priceStatus.kind === "data-unavailable" || priceStatus.kind === "price-only" || priceStatus.sourceCount == null) continue;
 
     totalCount++;
-    const sourceCount = priceStatus.sourceCount ?? 0;
+    const sourceCount = priceStatus.sourceCount;
     if (row.marketCapAvailable) {
+      sourceDepthMcapObservedCount++;
       sourceDepthMcapUsd += row.marketCapUsd;
     }
     if (sourceCount >= 3) {
@@ -213,6 +215,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
     atTargetCount,
     exactTwoCount,
     belowTargetCount,
+    marketCapComplete: sourceDepthMcapObservedCount === totalCount,
     atTargetPct: totalCount > 0 ? (atTargetCount / totalCount) * 100 : null,
     atTargetMcapPct: sourceDepthMcapUsd > 0 ? (atTargetMcapUsd / sourceDepthMcapUsd) * 100 : null,
     exactTwoMcapPct: sourceDepthMcapUsd > 0 ? (exactTwoMcapUsd / sourceDepthMcapUsd) * 100 : null,
@@ -232,7 +235,6 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
       const coveragePct = summary.coveragePct;
       if (coveragePct == null) return acc;
       const mcapShare = summary.mcapSharePct ?? 0;
-      const concentration = mcapShare - coveragePct;
       if (
         acc.widest === null ||
         coveragePct > acc.widest.coveragePct! ||
@@ -248,8 +250,10 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
         acc.narrowest = summary;
       }
       if (
-        acc.mostConcentrated === null ||
-        concentration > (acc.mostConcentrated.mcapSharePct ?? 0) - acc.mostConcentrated.coveragePct!
+        summary.mcapSharePct != null &&
+        (acc.mostConcentrated === null ||
+          summary.mcapSharePct - coveragePct >
+            acc.mostConcentrated.mcapSharePct! - acc.mostConcentrated.coveragePct!)
       ) {
         acc.mostConcentrated = summary;
       }

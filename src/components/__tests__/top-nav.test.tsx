@@ -270,6 +270,32 @@ describe("TopNav", () => {
     expect(dot?.classList.contains("bg-[var(--severity-mild)]")).toBe(true);
   });
 
+  it("does not publish retained healthy data after a failed health refetch", () => {
+    installMatchMediaMock(true);
+    useHealthMock.mockReturnValue({ data: makeHealthyHealthResponse(), isError: true });
+    render(<TopNav />);
+    fireEvent.click(screen.getByRole("button", { name: "Resources" }));
+    expect(screen.getByText("Unavailable", { selector: "span" })).not.toBeNull();
+    expect(screen.queryByText("Healthy", { selector: "span" })).toBeNull();
+  });
+
+  it("keeps the initial health read neutral while checking", () => {
+    installMatchMediaMock(true);
+    useHealthMock.mockReturnValue({ data: undefined, isError: false });
+    render(<TopNav />);
+    fireEvent.click(screen.getByRole("button", { name: "Resources" }));
+    expect(screen.getByText("Checking", { selector: "span" })).not.toBeNull();
+    expect(screen.queryByText("Healthy", { selector: "span" })).toBeNull();
+  });
+
+  it("reports a successful stale health verdict", () => {
+    installMatchMediaMock(true);
+    useHealthMock.mockReturnValue({ data: { ...makeHealthyHealthResponse(), status: "stale" }, isError: false });
+    render(<TopNav />);
+    fireEvent.click(screen.getByRole("button", { name: "Resources" }));
+    expect(screen.getByText("Stale", { selector: "span" })).not.toBeNull();
+  });
+
   it("uses readable unavailable metadata when public health cannot be loaded", () => {
     installMatchMediaMock(true);
     useHealthMock.mockReturnValue({ data: undefined, isError: true });

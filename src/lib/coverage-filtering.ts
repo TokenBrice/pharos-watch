@@ -17,10 +17,11 @@ const FILTER_MATCHERS: Record<CoverageFilterKey, (row: CoverageRow) => boolean> 
     row.statuses.price.sourceCount < 3,
   "price-2-sources": (row) =>
     row.statuses.price.kind !== "price-only" && row.statuses.price.sourceCount === 2,
-  "missing-safety": (row) => !row.statuses.safety.available,
-  "missing-dex": (row) => !row.statuses.dex.available,
-  "missing-live-reserves": (row) => row.statuses.reserves.kind !== "live",
-  "missing-flows": (row) => !row.statuses.flows.available,
+  "missing-safety": (row) => row.statuses.safety.kind !== "data-unavailable" && !row.statuses.safety.available,
+  "missing-dex": (row) => row.statuses.dex.kind !== "data-unavailable" && !row.statuses.dex.available,
+  "missing-live-reserves": (row) =>
+    row.statuses.reserves.kind !== "data-unavailable" && row.statuses.reserves.kind !== "live",
+  "missing-flows": (row) => row.statuses.flows.kind !== "data-unavailable" && !row.statuses.flows.available,
   "missing-dependency": (row) => !row.statuses.dependency.available,
   "full-available": (row) => row.coverageCount === FULL_COVERAGE_COUNT,
   "full-headline": (row) => row.headlineCoverageCount === FULL_COVERAGE_COUNT,

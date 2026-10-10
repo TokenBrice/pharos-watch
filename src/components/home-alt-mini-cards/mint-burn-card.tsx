@@ -10,7 +10,7 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { formatSignedCompactUsd } from "@shared/lib/format";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveQueryViewState } from "@/lib/query-view-state";
-import { resolveCoinNetFlow } from "@/lib/mint-burn-coin-helpers";
+import { inferHas24hActivity, resolveCoinNetFlow } from "@/lib/mint-burn-coin-helpers";
 import { sumMintBurnSignedNets, type MintBurnSignedNetView } from "@/lib/mint-burn-valuation-display";
 import { FlowSignedNetValue } from "@/components/flow-valuation-value";
 
@@ -27,8 +27,8 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
   const logos = logosById;
   const logoMap = logos ?? {};
 
-  const { topMovers, totalNet, hasUnavailableNet } = useMemo(() => {
-    const activeCoins = (data?.coins ?? []).filter((c) => c.has24hActivity !== false);
+  const { topMovers, totalNet, hasUnavailableNet, hasActivity } = useMemo(() => {
+    const activeCoins = (data?.coins ?? []).filter(inferHas24hActivity);
     const nets = activeCoins.map((c) => ({ coin: c, net: resolveCoinNetFlow(c, "24h") }));
     // Only displayable nonzero nets rank as movers; an unavailable net is never ranked as 0.
     const movers: Mover[] = nets.flatMap(({ coin, net }) =>
@@ -40,7 +40,7 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
       .sort((a, b) => Math.abs(b.netFlow24hUsd) - Math.abs(a.netFlow24hUsd))
       .slice(0, 3);
     const totalNet = sumMintBurnSignedNets(nets.map(({ net }) => net));
-    return { topMovers, totalNet, hasUnavailableNet: totalNet.valueUsd == null };
+    return { topMovers, totalNet, hasUnavailableNet: totalNet.valueUsd == null, hasActivity: activeCoins.length > 0 };
   }, [data?.coins]);
 
   const gauge = data?.gauge;
@@ -48,8 +48,7 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
     hasData: data !== undefined,
     isLoading,
     error: query.error,
-    // Coins whose net is unavailable still count as activity: "no activity" would be a false claim.
-    isEmpty: topMovers.length === 0 && !hasUnavailableNet,
+    isEmpty: !hasActivity,
   });
 
   return (
@@ -102,7 +101,9 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
             {state === "empty" ? (
               <li className="font-mono uppercase tracking-wider text-muted-foreground">No 24h activity</li>
             ) : topMovers.length === 0 ? (
-              <li className="font-mono uppercase tracking-wider text-muted-foreground">Net flows unavailable</li>
+              <li className="font-mono uppercase tracking-wider text-muted-foreground">
+                {hasUnavailableNet ? "Net flows unavailable" : "Balanced 24h mint / burn activity"}
+              </li>
             ) : (
               topMovers.map((row) => {
                 const logoSrc = getLogoSrc(logoMap, row.id);

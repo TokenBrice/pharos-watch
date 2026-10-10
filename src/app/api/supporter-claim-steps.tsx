@@ -76,6 +76,7 @@ export function SupporterClaimSteps({
     .map((group) => ({ ...group, coins: coins.filter((coin) => coin.status === group.status) }))
     .filter((group) => group.coins.length > 0);
   const anyCounting = coins.some((coin) => coin.status === "counts");
+  const hasUnavailableGrades = coins.length === 0 || coins.some((coin) => coin.status === "unavailable");
   return (
     <section id={API_PAGE_ANCHORS.claim} aria-labelledby="claim-title" className="scroll-mt-20 space-y-6">
       <h2 id="claim-title" className="text-2xl font-semibold tracking-tight text-foreground">
@@ -88,6 +89,8 @@ export function SupporterClaimSteps({
           <p className={STEP_BODY_CLASS_NAME}>
             {anyCounting
               ? `Send $${DONOR_API_KEY_MIN_USD} or more in a stablecoin that counts now, from a wallet you can sign with.`
+              : hasUnavailableGrades
+              ? "No listed stablecoin is confirmed to count; some grades are unavailable. Check grades again before donating."
               : "No listed stablecoin counts at its current grade."}
           </p>
           <dl className="mt-3 space-y-2">

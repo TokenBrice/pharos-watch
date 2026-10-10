@@ -130,7 +130,7 @@ export function CoverageFeatureSnapshotCard({
                   <span aria-hidden="true" className="mx-1.5 text-muted-foreground/60">·</span>
                   {sourceDepthProgress.atTargetMcapPct == null
                     ? "n/a"
-                    : `${sourceDepthProgress.atTargetMcapPct.toFixed(0)}% cap`}
+                    : `${sourceDepthProgress.atTargetMcapPct.toFixed(0)}% ${sourceDepthProgress.marketCapComplete ? "cap" : "known cap"}`}
                 </>
               }
             />
@@ -178,12 +178,14 @@ export function CoverageFeatureSnapshotCard({
                         ? "n/a"
                         : `${mostConcentratedFeature.mcapSharePct.toFixed(0)}%`}
                     </span>
-                    <span className="ml-1 text-muted-foreground/80">cap</span>
+                    <span className="ml-1 text-muted-foreground/80">{mostConcentratedFeature.marketCapComplete ? "cap" : "known cap"}</span>
                     {mostConcentratedFeature.coveragePct == null ? "n/a" : `${mostConcentratedFeature.coveragePct.toFixed(0)}%`} count
                   </>
                 }
               />
-            ) : null}
+            ) : (
+              <FeatureSnapshotInsight label="Cap skew" accent="price" title="n/a" detail="No observed cap share" />
+            )}
           </div>
         </div>
       </CardHeader>

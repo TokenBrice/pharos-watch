@@ -144,7 +144,7 @@ Breakdowns are intentionally dense and should stay short:
 
 ### Unavailable versus uncovered
 
-`Data n/a` is neither covered nor uncovered. Rows in that state leave every coverage count and market-cap denominator — feature summaries, headline tiles, quick filters, and the source-depth tiles — and surface only through their own `data n/a` breakdown bucket. A feature whose scoped rows are all `Data n/a` publishes a null coverage percentage and renders `Data n/a` instead of `0%`, and it cannot win the `Widest reach`, `Tightest reach`, or `Cap skew` tiles. Price quick filters (`Weak price`, `2 sources`) likewise require a known consensus-source count; an unobserved or unavailable source depth is not a weak one.
+`Data n/a` is neither covered nor uncovered: it leaves feature count/cap denominators and ordinary gap filters, except the intentionally inclusive `No Dependency` filter. All-unavailable features render null reach and cannot win insight tiles. Source-depth counts and filters require observed `sourceCount`; omitted sources stay unknown, while an explicit empty array measures zero. Cap aggregation carries observation counts/completeness: partial ratios/subtotals name **known market cap**, no observations render `n/a`, and observed zero remains `$0` (a zero-denominator ratio is still `n/a`). Cap skew requires both count and cap shares; without a measured candidate it renders `n/a`.
 
 #### Source count enrichment
 

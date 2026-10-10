@@ -62,6 +62,15 @@ function DiagramHero({ archetype }: { archetype: MechanismArchetype }) {
     >
       <div className="w-full max-w-3xl">
         {mechanismDiagramFor(archetype, "STBL")}
+        {archetype === "algorithmic" ? (
+          <p className="mt-3 text-center text-sm text-muted-foreground">
+            Diagram: historical UST-style pure mint/burn, not the collateralized variants below.
+          </p>
+        ) : archetype === "tbill" ? (
+          <p className="mt-3 text-center text-sm text-muted-foreground">
+            Diagram: the NAV-accreting variant. Par-stable $1 tokens distribute or retain yield separately.
+          </p>
+        ) : null}
       </div>
     </section>
   );

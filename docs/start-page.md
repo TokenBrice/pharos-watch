@@ -120,7 +120,7 @@ The curated route registry is internal Pharos destinations only. The route's two
 Current primary goal routes:
 
 - `/`
-- `/stablecoins/usd/`
+- `/stablecoins/` (generic directory/category discovery, including non-USD pegs)
 - `/portfolio/`
 - `/yield/`
 - `/pharoswatchbot/`

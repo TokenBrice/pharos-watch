@@ -35,6 +35,9 @@ interface SupporterOfferProps {
 function describeCountingCoins(coins: readonly DonorKeyQualifyingCoin[], asOfDate: string): string {
   const countingTotal = coins.filter((coin) => coin.status === "counts").length;
   if (countingTotal === 0) {
+    if (coins.some((coin) => coin.status === "unavailable")) {
+      return `No listed stablecoin is confirmed to count as of ${asOfDate}; some grades are unavailable. The full list is in the claim steps below, and grades are checked again when you claim.`;
+    }
     return `No listed stablecoin has an A or B grade as of ${asOfDate}. The full list is in the claim steps below, and grades are checked again when you claim.`;
   }
   return `Counts toward the key: ${summarizeCountingCoinNames(coins)}, graded A or B as of ${asOfDate}. Grades are checked again when you claim.`;

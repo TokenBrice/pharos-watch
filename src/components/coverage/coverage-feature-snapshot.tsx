@@ -215,7 +215,7 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
             {marketCapLabel}
           </div>
           <div className="mt-1.5 pharos-kicker">
-            of cap
+            {summary.marketCapComplete ? "of cap" : "of known cap"}
           </div>
         </div>
       </div>

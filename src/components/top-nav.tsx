@@ -148,10 +148,10 @@ export function TopNav() {
   // /api/health polling to every desktop page view.
   const moreMenuOpen = openMenu === MORE_MENU_KEY;
   const { data: healthData, isError: healthError } = useHealth({ enabled: moreMenuOpen });
-  const healthMenu = healthData
-    ? HEALTH_STATUS_MENU[healthData.status]
-    : healthError
-      ? UNAVAILABLE_STATUS_MENU
+  const healthMenu = healthError
+    ? UNAVAILABLE_STATUS_MENU
+    : healthData
+      ? HEALTH_STATUS_MENU[healthData.status]
       : CHECKING_STATUS_MENU;
 
   useEffect(() => {

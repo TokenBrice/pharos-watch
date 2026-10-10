@@ -443,6 +443,49 @@ describe("buildCoverageMatrixModel", () => {
     });
   });
 
+  it.each([
+    { sources: undefined, total: 0, below: 0, exactTwo: 0, atTarget: 0, pct: null },
+    { sources: [], total: 1, below: 1, exactTwo: 0, atTarget: 0, pct: 0 },
+    { sources: ["CoinGecko", "DefiLlama"], total: 1, below: 1, exactTwo: 1, atTarget: 0, pct: 0 },
+    { sources: ["CoinGecko", "DefiLlama", "Pyth"], total: 1, below: 0, exactTwo: 0, atTarget: 1, pct: 100 },
+  ])("counts source depth only when observed: $sources", ({ sources, total, below, exactTwo, atTarget, pct }) => {
+    const model = buildCoverageMatrixModel(makeMatrixInput({
+      activeStablecoins: [trackedMeta("usdc-circle")],
+      stablecoins: { peggedAssets: [{ id: "usdc-circle", circulating: { peggedUSD: 100 } }] },
+      pegSummary: { coins: [{ id: "usdc-circle", consensusSources: sources }] },
+    }));
+    expect(model.sourceDepthProgress).toMatchObject({
+      totalCount: total, belowTargetCount: below, exactTwoCount: exactTwo,
+      atTargetCount: atTarget, atTargetPct: pct, atTargetMcapPct: pct,
+    });
+  });
+
+  it("cannot name a cap-skew winner without any observed cap shares", () => {
+    const model = buildCoverageMatrixModel(makeMatrixInput({
+      activeStablecoins: [trackedMeta("usdc-circle")],
+      pegSummary: { coins: [{ id: "usdc-circle", consensusSources: ["CoinGecko", "DefiLlama", "Pyth"] }] },
+    }));
+    expect(model.featureSummaries.every((summary) => summary.mcapSharePct == null)).toBe(true);
+    expect(model.mostConcentratedFeature).toBeNull();
+    expect(model.widestFeature).not.toBeNull();
+    expect(model.narrowestFeature).not.toBeNull();
+  });
+
+  it("selects cap skew only from measured candidates in a mixed availability universe", () => {
+    const model = buildCoverageMatrixModel(makeMatrixInput({
+      activeStablecoins: [trackedMeta("usdc-circle"), trackedMeta("dai-makerdao")],
+      stablecoins: { peggedAssets: [{ id: "usdc-circle", circulating: { peggedUSD: 100 } }] },
+      pegSummary: { coins: [{ id: "usdc-circle", consensusSources: ["CoinGecko", "DefiLlama", "Pyth"] }] },
+      errors: { dexLiquidity: new Error("DEX unavailable") },
+    }));
+    expect(model.featureSummaries.some((summary) => summary.mcapSharePct == null)).toBe(true);
+    expect(model.mostConcentratedFeature?.mcapSharePct).not.toBeNull();
+    const measured = model.featureSummaries.filter((summary) => summary.coveragePct != null && summary.mcapSharePct != null);
+    expect(model.mostConcentratedFeature!.mcapSharePct! - model.mostConcentratedFeature!.coveragePct!).toBe(
+      Math.max(...measured.map((summary) => summary.mcapSharePct! - summary.coveragePct!)),
+    );
+  });
+
   it("excludes unavailable and NAV-only prices from source-depth denominators", () => {
     const coin = trackedMeta("usdc-circle");
     const stablecoins = { peggedAssets: [{ id: coin.id, circulating: { peggedUSD: 1_000 } }] };

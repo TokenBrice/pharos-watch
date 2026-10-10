@@ -190,6 +190,32 @@ describe("LongformScrollspyNav", () => {
     expect(windowScrollToMock).toHaveBeenCalledTimes(4);
   });
 
+  it.each(["#bad%", "#%E0%A4%A"])("ignores malformed initial fragment %s and keeps navigation usable", (hash) => {
+    window.history.replaceState(null, "", hash);
+
+    expect(() => render(<Harness stickyOffsetPx={106} />)).not.toThrow();
+    expect(windowScrollToMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("link", { name: "Pipeline" }));
+    act(() => {
+      vi.runAllTimers();
+    });
+
+    expect(screen.getByRole("link", { name: "Pipeline" }).getAttribute("aria-current")).toBe("true");
+    expect(windowScrollToMock).toHaveBeenCalledWith({ top: 330, behavior: "auto" });
+  });
+
+  it("decodes a valid encoded initial fragment", () => {
+    window.history.replaceState(null, "", "#%70ipeline");
+    render(<Harness stickyOffsetPx={106} />);
+    act(() => {
+      vi.runAllTimers();
+    });
+
+    expect(screen.getByRole("link", { name: "Pipeline" }).getAttribute("aria-current")).toBe("true");
+    expect(windowScrollToMock).toHaveBeenCalledWith({ top: 330, behavior: "auto" });
+  });
+
   it("does not start hash alignment on a later refresh when the page loaded without one", () => {
     const { rerender } = render(<Harness stickyOffsetPx={106} />);
 

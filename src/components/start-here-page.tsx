@@ -558,7 +558,7 @@ function ClosingCta() {
         <p className="text-sm text-muted-foreground">
           or{" "}
           <Link
-            href="/stablecoins/usd/"
+            href="/stablecoins/"
             className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-foreground"
           >
             browse the directory

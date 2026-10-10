@@ -2,12 +2,12 @@ import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
   archetype: "tbill",
-  headline: "Hold short-duration Treasuries, accrue NAV daily",
+  headline: "Treasury-backed tokens: rising NAV or stable $1 units",
   subtitle:
-    "Regulated money-market and government-securities funds; the token is a fund share that accretes NAV instead of trading exactly at $1.",
+    "Short-duration Treasuries support two families: NAV-accreting tokens and par-stable $1 tokens with separately distributed or retained yield.",
   lead: [
-    "T-Bill / RWA fund tokens are the on-chain wrapper around a regulated short-duration government-securities fund. Subscriptions come in as USD or a permitted stablecoin; the fund deploys into U.S. T-Bills, overnight repos, and cash; the token represents a fund share whose net asset value (NAV) rises every day by roughly the prevailing short-term Treasury rate. Most of these tokens are explicitly not pegged to $1.00; they are NAV-accruing fund shares with a daily price published by the fund administrator.",
-    "Closer to a tokenized Treasury bond ETF than to a checking account. Yield is real, but redemptions run through a transfer agent (the fund's registrar of record), holdership is whitelisted, and secondary-market liquidity is thinner than in fiat-cash stablecoins.",
+    "T-Bill / RWA tokens put short-duration U.S. government-securities exposure on-chain, through fund shares or reserve-backed dollar tokens. Subscriptions arrive as USD or permitted stablecoins, and reserves hold Treasury bills, repos, and cash. The wrapper determines the price model: USDY and OUSG accrue yield in a rising per-unit net asset value (NAV), while BENJI and BUIDL target a stable $1 unit and distribute yield through additional units. Reserve-backed $1 tokens can instead route yield to a staked wrapper or retain it at the issuer.",
+    "Treasury yield is real, but the legal claim and exit rail differ by product. Fund shares generally restrict holders and transfers, with redemptions through a transfer agent; freely transferable reserve-backed dollars still have permissioned primary mint and redemption rails. Read the specific wrapper rather than assuming every Treasury-backed token trades at $1 or appreciates in price.",
   ],
   howItWorks: [
     {
@@ -18,7 +18,7 @@ export const content: ArchetypeContent = {
     {
       id: "t-bills-repos",
       title: "T-Bills + Repos",
-      body: "The fund deploys cash into short-duration U.S. T-Bills, overnight reverse-repos, and a small cash buffer. The administrator publishes a daily NAV; the on-chain token records the holder list and accretes yield.",
+      body: "The fund or reserve manager deploys cash into short-duration U.S. T-Bills, overnight reverse-repos, and a small cash buffer. Fund administrators publish NAV; the wrapper determines whether yield increases per-unit value, increases holder units, flows to a separate staked token, or stays with the issuer.",
     },
     {
       id: "token-units",

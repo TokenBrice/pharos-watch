@@ -236,6 +236,25 @@ describe("coverage filtering", () => {
     expect(matchesCoverageFilter(uncounted, "price-2-sources")).toBe(false);
   });
 
+  it.each<[CoverageFilterKey, CoverageFeatureKey]>([
+    ["missing-safety", "safety"], ["missing-dex", "dex"],
+    ["missing-live-reserves", "reserves"], ["missing-flows", "flows"],
+  ])("keeps source outages out of the %s gap filter", (filter, feature) => {
+    const row = makeRow({ id: "test", name: "Test", symbol: "TST" });
+    row.statuses[feature] = status("data-unavailable", false);
+    expect(matchesCoverageFilter(row, filter)).toBe(false);
+    row.statuses[feature] = status("none", false);
+    expect(matchesCoverageFilter(row, filter)).toBe(true);
+    row.statuses[feature] = status(feature === "reserves" ? "live" : "covered", true);
+    expect(matchesCoverageFilter(row, filter)).toBe(false);
+    if (feature === "reserves") {
+      row.statuses[feature] = status("curated", true);
+      expect(matchesCoverageFilter(row, filter)).toBe(true);
+    }
+    row.statuses.dependency = status("data-unavailable", false);
+    expect(matchesCoverageFilter(row, "missing-dependency")).toBe(true);
+  });
+
   it.each<[string, boolean]>([
     ["none", false],
     ["data-unavailable", false],

@@ -1,7 +1,7 @@
 "use client";
 
 import "./phosphor.css";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoinCrossTrackerHatnote } from "@/components/coin-cross-tracker-hatnote";
 import {
   TapeFilters,
@@ -110,12 +110,15 @@ export function TimelineClient() {
     }, [patchState, setParam],
   );
   const logos = logosById;
-  const [nowMs] = useState(() => Date.now());
+  const [queryAnchorMs] = useState(() => Date.now());
+  const [nowMs, setNowMs] = useState(queryAnchorMs);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
-  // Pass `nowMs` (frozen at mount) so the queryKey stays stable across
-  // renders — otherwise `tapeWindowSince` calls Date.now() each render and
-  // the infinite query restarts every tick.
-  const since = tapeWindowSince(filters.window, nowMs);
+  // Keep the query window stable while presentation timestamps continue aging.
+  const since = tapeWindowSince(filters.window, queryAnchorMs);
   const feedController = useMemo(
     () => buildTimelineFeedController(filters, since),
     [filters, since],
@@ -221,6 +224,8 @@ export function TimelineClient() {
         windowLabel={feedController.windowLabel}
         severityLabel={feedController.severityLabel}
         dataUpdatedAt={dataUpdatedAt}
+        meta={meta}
+        error={error}
         nowMs={nowMs}
         lastEventTs={lastEventTs}
         phosphor={phosphorActive}

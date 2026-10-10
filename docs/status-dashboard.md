@@ -95,10 +95,11 @@ The active frontend operator mode is now:
 - `src/hooks/api-hooks.ts`
   - Owns the shared low-friction query wrappers for `GET /api/health`, `GET /api/peg-summary`, `GET /api/dex-liquidity`, `GET /api/report-cards/v9`, `GET /api/yield-rankings`, and related read endpoints
   - This is the live source of truth for `useHealth()` / `usePegSummary()` and the other cache-backed read hooks used by the dashboard model
-  - The desktop `Resources` menu enables `useHealth()` only while the menu is open. Its `System Status` row reflects the live public verdict and uses neutral `Checking Status` / `Status Unavailable` labels when no verdict is available; it never defaults to a healthy claim. There is deliberately no always-on masthead health dot: it would add `/api/health` polling to every desktop page view.
+  - Desktop `Resources` enables `useHealth()` only while open. `System Status` shows the live public verdict; a failed refetch overrides retained data with neutral `Unavailable`, and an initial read shows `Checking`. No always-on masthead health dot: that would add `/api/health` polling to every desktop page.
 - `src/hooks/use-endpoint-probes.ts`
   - Probes **public + admin** endpoint probe groups with `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
   - Public `/status/` browser canaries use only `/api/health`, `/api/stablecoins`, `/api/peg-summary`, `/api/dex-liquidity`, and `/api/report-cards/v9`, with `staleTime: 900_000`, `refetchInterval: 1_800_000`, `retry: 0`
+  - The public hero keeps health/probe fetch clocks separate, each using its hook's polling interval as the overdue budget. Missing probe samples show Loading while pending, otherwise Unknown (including failed or empty results), never Healthy.
   - Public probes use the same-origin `/_site-data/*` website lane; admin probes use same-origin `/api/admin/*` on the ops host
   - Manual/admin mutation actions are listed but intentionally not auto-probed
   - `/api/health` and `/api/status` are parsed semantically, so `200` responses with `status/overallStatus = degraded|stale` count as unhealthy in the browser probe summaries
@@ -339,6 +340,7 @@ consumer publication. Subject to a successful history read, cron availability is
 - The job is a watch-tier bootstrap (`crons[*].bootstrap = true`): no required non-neutral attempt yet and at most one recorded run. Critical-tier jobs always require real availability evidence
 
 The display retains ten runs. A full window with fewer than two required attempts triggers an indexed, two-row required-attempt lookup; duplicate evidence is removed. A fresh proven-satisfied readback is recovered separately when absent, preserving error supersession behind generic admissions. Appended attempts/readbacks keep verdicts attributable in `recentRuns`. A full window without confirmed output also triggers the bounded `CONFIRMED_CRON_OUTPUT_AT_SQL` aggregate; no-op attempts never renew publication. Duration trends count only executed `ok`/`degraded`/`error` attempts, excluding admission skips from averages and sample floors; cap-hit and graceful-deferral policy is unchanged.
+Admin last-completed text is `Unknown` with the failed-read reason when telemetry is unavailable. A readable window lacking success says `No successful run in recent history`, never claims absence across all history.
 
 Otherwise the job is unhealthy, including stale history, non-fresh errors, or a generic neutral skip (no
 proven-satisfied reason) whose latest required run errored or lacks confirmed output. A required degraded run
@@ -407,6 +409,10 @@ Heavy delivery is a separate gate, resolved from plans with `worker: "heavy"` in
 `degraded` cron runs count separately in `summary.degradedCrons` and show in the cron UI, but do not by themselves degrade availability.
 
 Unmeasured cache ratios are null in `summary.worstCacheRatio`; `cache_freshness_unavailable` names missing/invalid evidence without a numeric value. Observed finite ratios, including a real 99x breach, remain measured statistics.
+
+Triage cache urgency uses key-aware `getCacheImpactStatus`, matching Reliability: default 8x/12x bands, yield 2x/4x, and cached-fallback degradation. Missing age/budget remains evidence risk, not a fabricated ratio.
+
+Storage maps published capacity to Healthy (`normal`), Watch (`watch`/`warning`), or Critical (`critical`), counting one issue for non-normal capacity. Present usage metrics without capacity remain Unknown with one evidence issue; utilization thresholds stay owned by the capacity runbook.
 
 `openCircuitGroups` here means public-impact circuit groups only, derived from `CIRCUIT_SOURCE_REGISTRY.scope`. Dynamic per-coin `live-reserves:*` and dedicated single-asset pricing-route breakers still render in the reliability tables, but they do not degrade availability on their own because reserve sync and exact active-price coverage already own those asset-scoped diagnostics. Unknown circuit keys conservatively remain source-wide.
 
@@ -822,7 +828,7 @@ The UI uses these actions in two ways:
 
 The catalog groups inspect, dry-run, recovery, communication, and destructive behavior. Shared endpoint metadata is canonical for risk, scope, prerequisites, expected duration, dry-run support, result mode, and audit ownership. Single-asset execution uses the tracked client registry picker and derives the endpoint's canonical stablecoin ID or symbol from that selection; arbitrary free-form targets are not accepted. One provider-owned execution dialog handles confirmation, readiness, direct dry run, structured results, raw debugging output, and focus restoration.
 
-Mutations use one stable `Idempotency-Key` per operator intent. Double submission coalesces, known replay reuses the same result, and an uncertain response keeps the same key available for a safe retry; starting a genuinely new intent creates a new key. The proxy preserves `Idempotency-Key`, `X-Idempotent-Replay`, and `X-Execution-Certainty`, so the browser can distinguish confirmed, replayed, and unknown outcomes.
+Mutations keep one `Idempotency-Key` per intent: double submission coalesces, replay reuses the result, uncertain retries retain the key, and new intents get new keys. The proxy preserves `Idempotency-Key`, `X-Idempotent-Replay`, and `X-Execution-Certainty`. Unknown results always say “Outcome needs reconciliation” and failed results “Action failed”, even with no structured body; absence never proves completion.
 
 Every router-dispatched status-page action is written to `admin_action_audit`, including validation failures, handler errors, execution-unknown responses, and idempotent replay. The catalog audit wrapper stores allowlisted metadata only and hashes the idempotency identity; it never stores authorization, tokens, raw request bodies, or raw responses. The active baseline contains the nullable intent identity and partial unique constraint on `(action, intent_key)` introduced by historical migration `0186_admin_action_audit_intent_keys.sql`, so replay backfills missing audit rows without duplicating authoritative executions.
 
@@ -860,7 +866,7 @@ Renders in the Admin Pipeline `Markets` tab next to `LiquidityHealthCard` and th
 - **Full-cache context** — original cache-wide row, missing, and confidence counts remain visible below the active tiles, including upstream assets outside the active catalog
 - **Last sync age** — how old the price-health snapshot is
 
-Distribution and confidence data is sourced from `sync-stablecoins` cron metadata stored in the most recent `cron_runs` row. The original top-level distributions keep full-cache scope; the additive `active` object uses the active catalog denominator and source membership, plus per-bucket `confidenceMarketCapUsd` sums, the `pricedMarketCapUsd` denominator, and `acknowledgedMissingCount` for the severity calibration above. The Markets tab badge uses that same active missing-price count and denominator when present, falling back to the original cache-wide fields for legacy snapshots. No prices or confidence assignments change. The source-depth distribution is added by the status supplement from the cached stablecoins payload so it reflects active canonical assets without changing the pricing cron metadata contract.
+Distribution and confidence data comes from the latest `sync-stablecoins` cron metadata. Top-level distributions retain full-cache scope; `active` supplies catalog membership, confidence value subtotals, priced-value denominator, and reviewed missing counts. Markets and the Missing tile share acknowledgement subtraction and canonical missing-price severity, falling back to full-cache counts for legacy snapshots. Raw/acknowledged totals remain context, not alerts. The status supplement adds source-depth counts from active canonical cached assets; prices and confidence assignments are unchanged.
 
 Monetary exposure fields are known subtotals. `supplyCoverage` names `complete`, `observedCount`, and `unavailableCount` over priced rows in the same scope. An unavailable supply is not measured zero; incomplete or legacy-unverified coverage must not certify full-cohort value shares or value-based severity. Explicit zero counts as observed.
 

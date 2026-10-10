@@ -12,6 +12,7 @@ import { PsiBandCard } from "@/components/home-alt-mini-cards/psi-band-card";
 import { RecentFreezesCard } from "@/components/home-alt-mini-cards/recent-freezes-card";
 import { SupplyMovesCard } from "@/components/home-alt-mini-cards/supply-moves-card";
 import type { ApiMeta } from "@/lib/api";
+import { makeMintBurnCoinValuation, makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 type MonitoringState = "loading" | "ready" | "empty" | "unavailable" | "stale-with-data";
 
@@ -385,5 +386,34 @@ describe.each(SURFACES.slice(0, 6))("$Component.name producer health", ({ Compon
     render(<Component />);
     expect(screen.getByRole("status")).toBeTruthy();
     expect(screen.queryAllByText(emptyText).length).toBeGreaterThan(0);
+  });
+});
+
+describe("MintBurnCard activity and valuation", () => {
+  it.each([
+    ["no events", { has24hActivity: false, mintCount24h: 0, burnCount24h: 0, mintVolume24hUsd: 0, burnVolume24hUsd: 0, netFlow24hUsd: 0 }, "No 24h activity"],
+    ["balanced events", { has24hActivity: true, mintCount24h: 1, burnCount24h: 1, mintVolume24hUsd: 100_000_000, burnVolume24hUsd: 100_000_000, netFlow24hUsd: 0 }, "Balanced 24h mint / burn activity"],
+    ["inferred balanced events", { has24hActivity: undefined, mintCount24h: 1, burnCount24h: 1, mintVolume24hUsd: 100_000_000, burnVolume24hUsd: 100_000_000, netFlow24hUsd: 0 }, "Balanced 24h mint / burn activity"],
+    ["nonzero flow", { has24hActivity: true, mintCount24h: 1, burnCount24h: 0, mintVolume24hUsd: 100_000_000, burnVolume24hUsd: 0, netFlow24hUsd: 100_000_000 }, "USDC"],
+    ["unavailable valuation", { has24hActivity: true, mintCount24h: 1, burnCount24h: 1, netFlow24hUsd: null }, "Net flows unavailable"],
+  ] as const)("distinguishes %s", (_label, activity, expected) => {
+    const data = {
+      coins: [makeMintBurnFlowCoin({
+        ...activity,
+        valuation: makeMintBurnCoinValuation({
+          completeness: activity.netFlow24hUsd == null ? "partial" : "complete",
+          unpricedMintEventCount: activity.netFlow24hUsd == null ? 1 : 0,
+        }),
+      })],
+      gauge: { band: "NEUTRAL", score: 0 },
+    };
+    useMintBurnFlowsMock.mockReturnValue(queryFor("ready", data, flowEmpty));
+
+    render(<MintBurnCard />);
+
+    expect(screen.getByText(expected)).toBeTruthy();
+    for (const other of ["No 24h activity", "Balanced 24h mint / burn activity", "Net flows unavailable"]) {
+      if (other !== expected) expect(screen.queryByText(other)).toBeNull();
+    }
   });
 });

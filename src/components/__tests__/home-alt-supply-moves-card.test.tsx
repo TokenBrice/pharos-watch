@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SupplyMovesCard } from "@/components/home-alt-mini-cards/supply-moves-card";
 import { makeStablecoin as makeStablecoinFixture } from "@shared/test-utils/stablecoin";
@@ -21,7 +21,7 @@ vi.mock("@/hooks/use-stablecoins", () => ({
 }));
 
 vi.mock("@/lib/stablecoin-static-data", () => ({
-  ACTIVE_STABLECOIN_ID_SET: new Set(["usdr-real", "usdc-circle", "eur-stasis", "usdai-usd-ai"]),
+  ACTIVE_STABLECOIN_ID_SET: new Set(["usdr-real", "usdc-circle", "eur-stasis", "usdai-usd-ai", "usdt-tether", "dai-maker", "usds-sky", "pyusd-paypal"]),
 }));
 
 vi.mock("next/image", () => ({
@@ -60,6 +60,7 @@ describe("SupplyMovesCard", () => {
         ],
       },
       isLoading: false,
+      dataUpdatedAt: Date.now(),
     });
     logosByIdMock["usdr-real"] = "/logos/usdr.png";
 
@@ -90,6 +91,7 @@ describe("SupplyMovesCard", () => {
         ],
       },
       isLoading: false,
+      dataUpdatedAt: Date.now(),
     });
 
     render(<SupplyMovesCard />);
@@ -110,6 +112,7 @@ describe("SupplyMovesCard", () => {
         ],
       },
       isLoading: false,
+      dataUpdatedAt: Date.now(),
     });
 
     render(<SupplyMovesCard />);
@@ -133,11 +136,58 @@ describe("SupplyMovesCard", () => {
         ],
       },
       isLoading: false,
+      dataUpdatedAt: Date.now(),
     });
 
     render(<SupplyMovesCard />);
 
     expect(screen.getByRole("link", { name: peakName })).toBeTruthy();
+  });
+
+  it.each([
+    ["all positive", [10, 20, 30]],
+    ["all negative", [-10, -20, -30]],
+    ["one positive mover", [10]],
+    ["one negative mover", [-10]],
+    ["thin mixed signs", [10, -20, 30]],
+    ["four on each side", [10, 20, 30, 40, -10, -20, -30, -40]],
+  ] as const)("keeps directional rows disjoint and the peak unique: %s", (_label, changes) => {
+    const ids = ["usdr-real", "usdc-circle", "eur-stasis", "usdt-tether", "dai-maker", "usds-sky", "pyusd-paypal", "usdai-usd-ai"];
+    useStablecoinsMock.mockReturnValue({
+      data: {
+        peggedAssets: changes.map((change, index) => makeStablecoin({
+          id: ids[index],
+          symbol: `COIN${index}`,
+          currentSupply: 20_000_000 * (1 + change / 100),
+          previousWeekSupply: 20_000_000,
+        })),
+      },
+      isLoading: false,
+      dataUpdatedAt: Date.parse("2026-10-10T12:00:00Z"),
+    });
+
+    render(<SupplyMovesCard />);
+
+    const peak = screen.getByRole("link", { name: /peak 7-day supply mover/ });
+    const upList = screen.getByText("Supply up").parentElement!;
+    const downList = screen.getByText("Supply down").parentElement!;
+    for (const row of within(upList).queryAllByRole("link")) {
+      expect(row.textContent).toContain("+");
+      expect(row.getAttribute("href")).not.toBe(peak.getAttribute("href"));
+    }
+    for (const row of within(downList).queryAllByRole("link")) {
+      expect(row.textContent).toContain("-");
+      expect(row.getAttribute("href")).not.toBe(peak.getAttribute("href"));
+    }
+    const rowLinks = [...within(upList).queryAllByRole("link"), ...within(downList).queryAllByRole("link")];
+    expect(rowLinks).toHaveLength(Math.min(changes.length - 1, 6));
+    expect(new Set([peak, ...rowLinks].map((row) => row.getAttribute("href"))).size).toBe(rowLinks.length + 1);
+    if (changes.every((change) => change > 0)) {
+      expect(within(downList).getByText("No other qualifying moves")).toBeTruthy();
+    }
+    if (changes.every((change) => change < 0)) {
+      expect(within(upList).getByText("No other qualifying moves")).toBeTruthy();
+    }
   });
 });
 

@@ -7,7 +7,6 @@ import type { TapeEvent } from "@shared/types/tape-event";
 import { formatUtcDayLabel } from "@shared/lib/format";
 
 export const HIGHLIGHT_DURATION_MS = 2000;
-export const TAPE_FRESH_WINDOW_MS = 10 * 60 * 1000;
 
 export function eventDomId(eventId: string): string {
   return `tape-event-card-${eventId}`;
