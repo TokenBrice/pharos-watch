@@ -455,7 +455,9 @@ export function SafetyScoresOverview() {
         Year, month, quarter and half-year dates use the inclusive period end, capped to the fixed scoring UTC
         date so an unfinished period claims zero whole months. Cycle detection stops repeated traversal.
         The whole-calendar-month age calculation and its thresholds are unchanged; corrected launch inputs
-        can still move scores, grades or availability. Fixed-clock replay and mover review remain release gates.
+        can still move scores, grades or availability. Two fixed-clock production captures from October 10
+        retained all 396 scores, grades and rating statuses. Only nonbinding age ceilings changed for sDAI
+        Gnosis and syzUSD; these replay results do not establish post-release production health.
       </p>
       <p className="text-xs text-muted-foreground">
         See also:{" "}

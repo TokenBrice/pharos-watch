@@ -8,10 +8,12 @@
     "impact": [
       "Implementation age resolves implementationLaunchDate with launchDate fallback for each visited child and parent layer, then selects the newest conservative date across the variant chain. Cycle detection bounds traversal; a repeated layer is not counted again. Missing or invalid dates retain the shared resolver's existing behavior.",
       "Year, month, quarter and half-year dates use their inclusive period-end UTC date, capped to the fixed scoring asOf date. Future fuzzy periods therefore claim zero whole months rather than becoming unavailable, and YYYY-Hn dates no longer fail parsing. Compiled launch timestamps are normalized to UTC midnight; the evaluator's whole-calendar-month calculation is unchanged.",
-      "This repairs score inputs rather than adding launch evidence or changing authored catalog dates. The evaluation-build digest must be regenerated. Fixed-clock captured-input replay, mover attribution and owner review remain required before release; the catalog impact estimate is not a replay or production-health claim.",
-      "Activation is provisionally 2026-10-11 00:00 UTC (1791676800); re-date effectiveAt at release."
+      "This repairs score inputs rather than adding launch evidence or changing authored catalog dates. Two accepted production captures from 2026-10-10, at clocks 1791650822 and 1791656320, were replayed at the same fixed clocks against v10.15 and v10.16. Each retained 396 cards with no score, grade, rating-status or pillar-score changes and no quarantines.",
+      "sDAI Gnosis implementation age falls from 36 to 11 months and adds a nonbinding 84-point track-record ceiling; it remains C+ at 62. syzUSD age falls from 12 to 1 month and its nonbinding ceiling falls from 84 to 79; it remains D at 44. Both changes follow the newer required parent implementation, while lower parent limits continue to bind. sUSDS selects its parent's one-day-later launch without changing its 24-month age or C+ score of 60. Seven fuzzy launch timestamps normalize to UTC midnight without changing whole-month age. These frozen-input results do not establish post-release production health."
     ],
-    "commits": [],
+    "commits": [
+      "da777b20b"
+    ],
     "reconstructed": false
   },
   {
