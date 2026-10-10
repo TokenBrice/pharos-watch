@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sortCemeteryCoins } from "@shared/lib/cemetery";
 import { CAUSE_META } from "@shared/lib/cause-of-death";
-import { buildFrozenCemeteryProjection, CEMETERY_ENTRIES, type CemeteryEntry } from "@shared/lib/cemetery-merged";
+import { buildFrozenCemeteryProjection, CEMETERY_ENTRIES, CEMETERY_RECORDED_AT_DESCRIPTION, type CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -253,9 +253,7 @@ function renderJson(rows: CemeteryDatasetRow[]): string {
       mechanismArchetype:
         `Pharos mechanism archetype: how the stablecoin was designed to hold its peg (${MECHANISM_ARCHETYPE_VALUES.join(", ")}). `
         + "Independent of causeOfDeath; null when not yet classified.",
-      recordedAt:
-        "UTC cemetery-entry/documentation date (YYYY-MM-DD); tracked rows default to frozenAt "
-        + "unless obituary.recordedAt explicitly overrides it. Distinct from deathDate; null when not recorded.",
+      recordedAt: CEMETERY_RECORDED_AT_DESCRIPTION,
     },
     rows,
   }, null, 2)}\n`;

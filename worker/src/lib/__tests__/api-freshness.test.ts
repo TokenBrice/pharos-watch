@@ -3,6 +3,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { freshnessDb } from "./api-freshness.test-support";
 import { fxRatesCacheRows } from "./fx-rate-state.test-support";
+import { CLOCK_INPUT_STATES, CLOCK_NOW_SEC } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import {
   buildFreshnessMeta,
   buildCacheStatuses,
@@ -166,6 +167,28 @@ describe("getLatestSuccessfulCronTimestampResult", () => {
 
 
 describe("buildCacheStatuses sentinel validation", () => {
+  it.each(CLOCK_INPUT_STATES)("preserves $state clock evidence without borrowing the request clock", async ({ state, updatedAt, generationId }) => {
+    if (state === "missing" || state === "future") {
+      const { caches } = await buildCacheStatuses(freshnessDb({
+        cacheRows: updatedAt === null ? [] : [cacheRow("stablecoins", updatedAt)],
+      }), CLOCK_NOW_SEC);
+      expect(caches.stablecoins).toMatchObject({ healthy: false, ageSeconds: null });
+      if (state === "future") expect(caches.stablecoins.timestampReason).toBe("future-timestamp");
+    } else if (state === "mismatched-generation") {
+      const row = { ...sentinelRow("yield-data", updatedAt, { generationId }), served_generation_id: "generation:current" };
+      const { caches } = await buildCacheStatuses(freshnessDb({ cacheRows: [row] }), CLOCK_NOW_SEC);
+      expect(caches["yield-data"]).toMatchObject({
+        healthy: false, generationId: null, sentinelValidationReason: "generation-mismatch",
+      });
+    } else {
+      const meta = buildFreshnessMeta(updatedAt, 60, "test-generic", {
+        assessedAt: CLOCK_NOW_SEC, freshBudgetSec: 60, degradedBudgetSec: 60,
+      });
+      expect(meta.status).toBe(state === "expired" ? "stale" : "fresh");
+      expect(meta.updatedAt).toBe(updatedAt);
+    }
+  });
+
   it.each([60, 61])("admits ordinary cache clocks only within the %s-second future boundary", async (offset) => {
     const now = 1_800_000_000;
     const { caches } = await buildCacheStatuses(freshnessDb({ cacheRows: [cacheRow("stablecoins", now + offset)] }), now);

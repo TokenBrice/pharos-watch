@@ -386,6 +386,8 @@ Helpers used across test families live in the shared homes instead:
 - `scripts/__tests__/helpers/` — script-suite helpers
 - `functions/__tests__/helpers/` — Pages Functions helpers (`mock-kv`, Pages context, `mockUpstream(origin)` strict per-origin fetch installers)
 
+Cross-runtime adversarial inputs live in `shared/test-utils/boundary-contract-vectors.test-support.ts`: numeric availability, scan frontiers, read outcomes and generation-bound clocks. Boundary suites specify their own expected public semantics; input sharing never supplies an oracle or replaces reviewed source/date fixtures. Existing import-based PR selection and critical ownership select these suites, not a separate lane.
+
 A cron unit has one test home: tests for `worker/src/cron/<lane>/<module>.ts` live in that lane's own `__tests__/` directory, not in the flat `worker/src/cron/__tests__/` tree. Behaviour asserted through an adapter that is really owned by a shared executor (for example the adaptive multicall split) belongs to the shared unit's suite, with each adapter keeping only the wiring case that is adapter-specific.
 
 A shared guard or mechanism is asserted where it is implemented, not at every route that imports it: `functions/lib/__tests__/site-data-origin.test.ts` owns the origin matrix and `functions/__tests__/upstream-proxy.test.ts` owns the response byte cap and deadline, so a proxy route suite keeps only its own wiring case.

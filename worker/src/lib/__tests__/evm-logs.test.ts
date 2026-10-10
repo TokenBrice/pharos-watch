@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { SCAN_INPUT_STATES } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import {
   decodeAddress,
   decodeAddressWord,
@@ -393,6 +394,32 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
       body: { status: message === "OK" ? "1" : "0", message, result },
     };
   }
+
+  it.each(SCAN_INPUT_STATES)("preserves the independently reviewed %s scan frontier", async (state) => {
+    const valid = logAt(1);
+    const rejected = { ...valid, topics: ["not-a-topic"] };
+    if (state === "capped") mockFetch([range(0, 0, cappedLogs)]);
+    if (state === "failed") mockFetch([range(0, 100, [], "NOTOK")]);
+    if (state === "decode-gap") mockFetch([{ match: () => true, body: { status: "1", message: "OK", result: [valid, rejected] } }]);
+    if (state === "complete-empty") mockFetch([range(0, 100, [], "No records found")]);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const result = await fetchEvmLogsForTopicWithCompleteness(
+        1, "0x123", "0xabc", null, 0, state === "capped" ? 0 : 100, 0, noopLimiter,
+        createBudget(state === "exhausted" ? 0 : 10),
+      );
+      const expectedFrontier = { exhausted: -1, capped: -1, failed: -1, "decode-gap": 0, "complete-empty": 100 };
+      expect(result.complete).toBe(state === "complete-empty");
+      expect(result.scannedToBlock).toBe(expectedFrontier[state]);
+      if (state === "decode-gap") {
+        expect(result.logs).toEqual([valid]);
+        expect(result.rejectedLogs).toEqual([rejected]);
+      }
+      if (state === "exhausted") expect(fetch).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
 
   it("recursively splits into disjoint contiguous ranges", async () => {
     const first = [logAt(1), logAt(50)];

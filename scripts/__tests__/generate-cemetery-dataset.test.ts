@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { sortCemeteryCoins } from "@shared/lib/cemetery";
-import { buildFrozenCemeteryProjection, CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
+import { buildFrozenCemeteryProjection, CEMETERY_ENTRIES, CEMETERY_RECORDED_AT_DESCRIPTION } from "@shared/lib/cemetery-merged";
 import { ACTIVE_STABLECOINS, FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -99,6 +99,7 @@ describe("cemetery dataset provenance", () => {
 describe("cemetery dataset schema 1.1", () => {
   it("describes recordedAt overrides and retains real cemetery-entry dates distinct from freezes", () => {
     const dataset = generatedDataset();
+    expect(dataset.fields.recordedAt).toBe(CEMETERY_RECORDED_AT_DESCRIPTION);
     expect(dataset.fields.recordedAt).toContain("obituary.recordedAt");
     expect(dataset.fields.recordedAt).toContain("overrides");
     for (const [id, recordedAt, frozenAt] of [

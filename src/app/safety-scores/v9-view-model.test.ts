@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { NUMERIC_INPUT_STATES } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import {
   buildSafetyMcapMap,
   buildV9GradeCounts,
@@ -123,6 +124,17 @@ describe("Safety Scores V9 view model", () => {
     expect(stats[0].value).toBe("77");
     expect(stats[1]).toMatchObject({ value: "Unavailable", detail: "Supply unavailable" });
     expect(stats[2].value).toBe("Exit");
+  });
+
+  it.each(NUMERIC_INPUT_STATES)("keeps $state supply distinct in safety headlines", ({ state, value }) => {
+    const map = buildSafetyMcapMap([{
+      id: "asset-a", circulating: value === undefined ? undefined : { peggedUSD: value as number },
+    }]);
+    const expected = { absent: null, null: null, nan: null, infinite: null, negative: null, zero: 0, positive: 100 };
+    expect(map.get("asset-a")).toBe(expected[state]);
+    const stats = buildV9HeadlineStats([cards[0]], map);
+    expect(stats[1].value).toBe(state === "positive" ? "100%" : "Unavailable");
+    if (state === "zero") expect(stats[1].detail).toBe("$0.00");
   });
 
   it("distinguishes invalid and empty buckets from observed zero and sorts unavailable last", () => {

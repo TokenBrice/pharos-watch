@@ -7,6 +7,7 @@ import {
   getPrevMonthRawOrNull,
 } from "../supply";
 import { makeStablecoin } from "../../test-utils/stablecoin";
+import { NUMERIC_INPUT_STATES } from "../../test-utils/boundary-contract-vectors.test-support";
 
 describe("sumPegBucketsOrNull", () => {
   it("preserves absent and invalid records instead of publishing a known subtotal", () => {
@@ -22,6 +23,21 @@ describe("sumPegBucketsOrNull", () => {
   it("preserves explicit zero and wholly observed sums", () => {
     expect(sumPegBucketsOrNull({ usd: 0 })).toBe(0);
     expect(sumPegBucketsOrNull({ usd: 100, eur: 50, gbp: 25 })).toBe(175);
+  });
+});
+
+describe("shared numeric input states", () => {
+  const expected = { absent: null, null: null, nan: null, infinite: null, negative: null, zero: 0, positive: 100 };
+  it.each(NUMERIC_INPUT_STATES)("preserves $state at current and historical supply boundaries", ({ state, value }) => {
+    const buckets = value === undefined ? undefined : { peggedUSD: value as number };
+    const coin = makeStablecoin({
+      circulating: buckets, circulatingPrevDay: buckets,
+      circulatingPrevWeek: buckets, circulatingPrevMonth: buckets,
+    });
+    expect(sumPegBucketsOrNull(buckets)).toBe(expected[state]);
+    for (const readSupply of [getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull]) {
+      expect(readSupply(coin)).toBe(expected[state]);
+    }
   });
 });
 

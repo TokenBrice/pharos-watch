@@ -6,6 +6,7 @@ import {
 } from "@shared/lib/ops-limits";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { THREAT_BAND_HEX } from "@shared/lib/classification";
+import { CEMETERY_RECORDED_AT_DESCRIPTION } from "@shared/lib/cemetery-merged";
 import {
   DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
   DEPEG_EXTREME_MOVE_BPS,
@@ -175,6 +176,11 @@ export const DOC_CONTRACT_BLOCKS: readonly DocContractBlock[] = [
   ...workerLimitBlocks,
   ...apiMetaBlocks,
   ...statusBlocks,
+  {
+    id: "cemetery-recorded-at-description",
+    file: "docs/cemetery-and-compare.md",
+    value: CEMETERY_RECORDED_AT_DESCRIPTION,
+  },
 ];
 
 export function findDocContractDrift(
