@@ -1,6 +1,6 @@
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import { rethrowIfAborted } from "../../lib/abort";
 import { encodeBalanceOfCallData, encodeUint256 } from "../../lib/evm-selectors";
@@ -110,15 +110,7 @@ interface MakinaBucketValue {
   sourceKey?: string;
 }
 
-interface MakinaStrategyParams {
-  allocationsUrl: string;
-  machineAddress: string;
-  asyncRedeemerAddress?: string;
-  accountingTokenSymbol?: string;
-  accountingTokenDecimals?: number;
-  otherThresholdPct?: number;
-  reconciliationTolerancePct?: number;
-}
+type MakinaStrategyParams = LiveReserveAdapterParamsByKey["makina-strategy"];
 
 export interface MakinaMachineAccounting {
   aumUsd: number;

@@ -1,10 +1,9 @@
 import { pinnedBlockPlan } from "./evm-observation-plan";
-import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
-import type { OnchainRateProbe } from "./helpers";
 import { decodeUint256Word } from "./abi-decode";
 import {
   buildRedemptionSnapshotMetadata,
@@ -35,18 +34,7 @@ const LIQUITY_V1_RATIO_DECIMALS = 18;
 const WETH_ETHEREUM_ADDRESS = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 const LIQUITY_V1_CR_DEGRADED_THRESHOLD = 1.2;
 
-interface LiquityV1Params {
-  troveManagerAddress: string;
-  slice: {
-    name: ReserveSlice["name"];
-    risk: ReserveSlice["risk"];
-    coinId?: string;
-    depType?: ReserveSlice["depType"];
-  };
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-  redemptionRateProbe?: OnchainRateProbe;
-}
+type LiquityV1Params = LiveReserveAdapterParamsByKey["liquity-v1"];
 
 function readParams(config: LiveReservesConfig): LiquityV1Params {
   return parseLiveReserveAdapterParams("liquity-v1", config.params);

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
@@ -46,10 +46,7 @@ interface DgldGoldMapperState {
   bars: z.infer<typeof DgldBarsSchema>["bars"];
 }
 
-interface DgldGoldMapperParams {
-  label: string;
-  risk: ReserveSlice["risk"];
-}
+type DgldGoldMapperParams = LiveReserveAdapterParamsByKey["dgld-gold-mapper"];
 
 function readParams(config: LiveReservesConfig): DgldGoldMapperParams {
   return parseLiveReserveAdapterParams(ADAPTER_KEY, config.params);

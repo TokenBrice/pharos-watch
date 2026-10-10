@@ -196,6 +196,36 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
 `;
     expect(() => adaptReMetrics(malformedHtml)).toThrow("parse-failed");
   });
+
+  it.each([
+    ["initialChainBreakdowns", []],
+    ["initialCards", {}],
+    ["initialTvlData", {}],
+    ["redemptionRows", {}],
+  ])("rejects a wrong container for %s", (field, value) => {
+    const payload = {
+      initialChainBreakdowns: {
+        ethereum: { asOf: "2026-04-14", rows: [{ tokenSymbol: "usdc", valueWei: "100000000000000000000", valueKnown: true }] },
+      },
+      ...(field !== "initialTvlData" ? {
+        initialCards: [{ seriesKey: "offchain_capital", stats: { current: 100 }, points: [{ date: "2026-04-14", value: 100 }] }],
+      } : {}),
+      [field as string]: value,
+    };
+    const html = `<script>self.__next_f.push([1,${JSON.stringify(JSON.stringify(payload))}]);</script>`;
+    expect(() => adaptReMetrics(html)).toThrow("parse-failed");
+  });
+
+  it("keeps absent optional redemption data absent", () => {
+    const payload = {
+      initialChainBreakdowns: {
+        ethereum: { asOf: "2026-04-14", rows: [{ tokenSymbol: "usdc", valueWei: "100000000000000000000", valueKnown: true }] },
+      },
+      initialCards: [{ seriesKey: "offchain_capital", stats: { current: 100 }, points: [{ date: "2026-04-14", value: 100 }] }],
+    };
+    const html = `<script>self.__next_f.push([1,${JSON.stringify(JSON.stringify(payload))}]);</script>`;
+    expect(adaptReMetrics(html).metadata?.redemption).toBeUndefined();
+  });
 });
 
 describe("fetchReMetricsReserves", () => {

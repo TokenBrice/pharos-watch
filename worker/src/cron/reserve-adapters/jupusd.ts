@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -46,10 +46,7 @@ const JupUsdOraclePayloadSchema = z.object({
 
 type JupUsdOraclePayload = z.output<typeof JupUsdOraclePayloadSchema>;
 
-interface JupUsdParams {
-  snapshotsUrl?: string;
-  oracleUrl?: string;
-}
+type JupUsdParams = LiveReserveAdapterParamsByKey["jupusd"];
 
 interface JupUsdHoldingValue {
   name: string;

@@ -2,9 +2,9 @@ import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } fro
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { encodeBalanceOfCallData, PAUSED_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
-import type { EvmMulticall3Result } from "../../lib/evm-rpc";
 import type { AdapterContext, AdapterResult } from "./types";
-import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
+import { decodeStrictBoolWord } from "./abi-decode";
+import { addressObservation, customObservation, executeEvmObservationPlan, uint256Observation } from "./evm-observation-plan";
 import {
   buildCoverageShortfallWarnings,
   decimalNumberFromBigInt,
@@ -25,40 +25,6 @@ const EXCHANGE_PRICE_DECIMALS = 18;
 const NAV_DIVERGENCE_TOLERANCE_BPS = 10;
 
 type AstherusEarnWrapperParams = LiveReserveAdapterParamsByKey[typeof ADAPTER_KEY];
-
-type MulticallResult = EvmMulticall3Result[] | null;
-
-function successfulResult(results: MulticallResult, label: string): `0x${string}` | null {
-  const result = results?.find((candidate) => candidate.label === label);
-  return result?.success && result.returnData !== "0x" ? result.returnData : null;
-}
-
-function requireUint256(results: MulticallResult, label: string, coinId: string): bigint {
-  const value = decodeUint256Word(successfulResult(results, label));
-  if (value == null) {
-    throw new Error(`${ADAPTER_KEY} ${label} read failed for ${coinId}`);
-  }
-  return value;
-}
-
-function requireIdentity(
-  results: MulticallResult,
-  label: string,
-  expectedAddress: string,
-  coinId: string,
-): `0x${string}` {
-  const observedAddress = decodeStrictAddressWord(successfulResult(results, label));
-  if (!observedAddress) {
-    throw new Error(`${ADAPTER_KEY} ${label} identity read failed for ${coinId}`);
-  }
-  const expected = expectedAddress.toLowerCase();
-  if (observedAddress.toLowerCase() !== expected) {
-    throw new Error(
-      `${ADAPTER_KEY} ${label} identity drifted to ${observedAddress}; expected ${expected} for ${coinId}`,
-    );
-  }
-  return observedAddress.toLowerCase() as `0x${string}`;
-}
 
 function ratioWithinTolerance(
   backingRaw: bigint,
@@ -110,44 +76,63 @@ export async function fetchAstherusEarnWrapperReserves(
   if (params.underlyingDecimals !== TOKEN_DECIMALS || params.shareDecimals !== TOKEN_DECIMALS) {
     throw new Error(`${ADAPTER_KEY} token decimals must remain pinned to ${TOKEN_DECIMALS} for ${coin.id}`);
   }
-  const calls = [
-    { label: "underlying-address", contract: params.earnAddress, data: USDF_SELECTOR },
-    { label: "share-address", contract: params.earnAddress, data: ASUSDF_SELECTOR },
-    {
-      label: "underlying-balance",
-      contract: params.expectedUnderlyingAddress,
-      data: encodeBalanceOfCallData(params.earnAddress),
+  const snapshot = await executeEvmObservationPlan({
+    adapterKey: ADAPTER_KEY,
+    fields: [
+      addressObservation({
+        label: "underlying-address", contract: params.earnAddress, data: USDF_SELECTOR,
+        verify: (value) => {
+          if (value !== params.expectedUnderlyingAddress.toLowerCase()) {
+            throw new Error(`${ADAPTER_KEY} underlying-address identity drifted to ${value}; expected ${params.expectedUnderlyingAddress.toLowerCase()} for ${coin.id}`);
+          }
+          return null;
+        },
+      }),
+      addressObservation({
+        label: "share-address", contract: params.earnAddress, data: ASUSDF_SELECTOR,
+        verify: (value) => {
+          if (value !== params.expectedShareAddress.toLowerCase()) {
+            throw new Error(`${ADAPTER_KEY} share-address identity drifted to ${value}; expected ${params.expectedShareAddress.toLowerCase()} for ${coin.id}`);
+          }
+          return null;
+        },
+      }),
+      uint256Observation({
+        label: "underlying-balance", contract: params.expectedUnderlyingAddress,
+        data: encodeBalanceOfCallData(params.earnAddress),
+      }),
+      uint256Observation({ label: "share-total-supply", contract: params.expectedShareAddress, data: TOTAL_SUPPLY_SELECTOR }),
+      uint256Observation({ label: "exchange-price", contract: params.earnAddress, data: EXCHANGE_PRICE_SELECTOR }),
+      uint256Observation({ label: "unvested-amount", contract: params.earnAddress, data: GET_UNVESTED_AMOUNT_SELECTOR }),
+      customObservation({
+        label: "paused", contract: params.earnAddress, data: PAUSED_SELECTOR,
+        allowFailure: true, optional: true, decode: decodeStrictBoolWord,
+      }),
+    ] as const,
+    onFailure: (label) => {
+      throw new Error(`${ADAPTER_KEY} ${label} ${label.endsWith("-address") ? "identity read" : "read"} failed for ${coin.id}`);
     },
-    { label: "share-total-supply", contract: params.expectedShareAddress, data: TOTAL_SUPPLY_SELECTOR },
-    { label: "exchange-price", contract: params.earnAddress, data: EXCHANGE_PRICE_SELECTOR },
-    { label: "unvested-amount", contract: params.earnAddress, data: GET_UNVESTED_AMOUNT_SELECTOR },
-    { label: "paused", contract: params.earnAddress, data: PAUSED_SELECTOR, allowFailure: true },
-  ] as const;
-
-  const results = await fetchOnchainMulticall3({
-    calls,
-    chain: input.chain,
-    signal,
-    ctx,
-    rpcUrl: params.rpcUrl,
-    fallbackRpcUrl: params.fallbackRpcUrl,
-    timeoutMs: 12_000,
+    onDecodeError: (_error, label) => {
+      throw new Error(`${ADAPTER_KEY} ${label} ${label.endsWith("-address") ? "identity read" : "read"} failed for ${coin.id}`);
+    },
+    read: async (calls) => {
+      const results = await fetchOnchainMulticall3({
+        calls, chain: input.chain, signal, ctx, rpcUrl: params.rpcUrl,
+        fallbackRpcUrl: params.fallbackRpcUrl, timeoutMs: 12_000,
+      });
+      if (!results) throw new Error(`${ADAPTER_KEY} aggregate3 call failed for ${coin.id}`);
+      return results;
+    },
   });
-  if (!results) {
-    throw new Error(`${ADAPTER_KEY} aggregate3 call failed for ${coin.id}`);
-  }
-
-  const underlyingAddress = requireIdentity(
-    results,
-    "underlying-address",
-    params.expectedUnderlyingAddress,
-    coin.id,
-  );
-  const shareAddress = requireIdentity(results, "share-address", params.expectedShareAddress, coin.id);
-  const underlyingBalanceRaw = requireUint256(results, "underlying-balance", coin.id);
-  const totalSupplyRaw = requireUint256(results, "share-total-supply", coin.id);
-  const exchangePriceRaw = requireUint256(results, "exchange-price", coin.id);
-  const unvestedAmountRaw = requireUint256(results, "unvested-amount", coin.id);
+  const {
+    "underlying-address": underlyingAddress,
+    "share-address": shareAddress,
+    "underlying-balance": underlyingBalanceRaw,
+    "share-total-supply": totalSupplyRaw,
+    "exchange-price": exchangePriceRaw,
+    "unvested-amount": unvestedAmountRaw,
+    paused,
+  } = snapshot.values;
 
   if (underlyingBalanceRaw <= 0n) {
     throw new Error(`${ADAPTER_KEY} USDF balance is zero for ${coin.id}`);
@@ -211,7 +196,6 @@ export async function fetchAstherusEarnWrapperReserves(
     thresholdRatio: 1,
   }));
 
-  const paused = decodeStrictBoolWord(successfulResult(results, "paused"));
   if (paused == null) {
     warnings.push(
       reserveInfoWarning(

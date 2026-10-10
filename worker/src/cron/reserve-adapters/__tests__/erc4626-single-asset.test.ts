@@ -8,7 +8,10 @@ import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-s
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
 import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 import type { AdapterResult } from "../types";
-import { finalizeErc4626RedemptionCapacity } from "../erc4626-redemption-capacity";
+import {
+  finalizeErc4626RedemptionCapacity, projectErc4626RedemptionMetadata, projectErc4626RedemptionTelemetry,
+  type RedemptionCapacityTelemetry,
+} from "../erc4626-redemption-capacity";
 import {
   installErc4626Network,
   runTrackedVault,
@@ -1108,6 +1111,52 @@ describe("sfrxUSD generic completion boundary", () => {
       },
     });
     expect(telemetry).toBeNull();
+  });
+});
+
+describe("ERC-4626 capacity wire projections", () => {
+  it("preserves explicit zero capacity, constraints and source diagnostics", () => {
+    const telemetry: RedemptionCapacityTelemetry = {
+      capacityUsd: 0, capacityRaw: "0", capacitySource: "morpho-vault-v2-liquidity",
+      underlyingDecimals: 6, freshnessKind: "same-run-onchain",
+      capacityRatioOfSupply: 0, settlementDelaySec: 0, blockNumber: 0, sourceTimestamp: 0,
+      feeBps: 0, sourceUrls: [], holderEligibility: "any-holder",
+      observerDiagnostics: { paused: false }, idleUnderlyingBalanceRaw: "0",
+      yearnV3WithdrawableRaw: "0", sboldSpWithdrawableRaw: "0", sfrxusdCrosschainWithdrawableRaw: "0",
+      morphoVaultV1LiquidityRaw: "0", morphoVaultV1LiquidityUsd: 0,
+      morphoVaultV2LiquidityRaw: "0", morphoVaultV2LiquidityUsd: 0,
+      morphoVaultV2ForceDeallocatableLiquidityRaw: "0", morphoVaultV2ForceDeallocatableLiquidityUsd: 0,
+    };
+    expect(JSON.stringify(projectErc4626RedemptionTelemetry(telemetry))).toBe(JSON.stringify({
+      capacityUsd: 0, capacityRatioOfSupply: 0, capacityKind: "live-direct",
+      settlementDelaySec: 0, blockNumber: 0, sourceTimestamp: 0,
+      sourceUrls: [], holderEligibility: "any-holder", feeBps: 0,
+      observerDiagnostics: { paused: false }, freshnessKind: "same-run-onchain",
+    }));
+    expect(JSON.stringify(projectErc4626RedemptionMetadata(telemetry))).toBe(JSON.stringify({
+      redemptionCapacityRaw: "0", redemptionCapacitySource: "morpho-vault-v2-liquidity",
+      idleUnderlyingBalanceRaw: "0", underlyingDecimals: 6,
+      morphoVaultV1LiquidityRaw: "0", morphoVaultV1LiquidityUsd: 0,
+      yearnV3WithdrawableRaw: "0", sboldSpWithdrawableRaw: "0", sfrxusdCrosschainWithdrawableRaw: "0",
+      morphoVaultV2LiquidityRaw: "0", morphoVaultV2LiquidityUsd: 0,
+      morphoVaultV2ForceDeallocatableLiquidityRaw: "0", morphoVaultV2ForceDeallocatableLiquidityUsd: 0,
+    }));
+  });
+
+  it("omits unavailable optional fields without publishing raw or route-only fields in nested telemetry", () => {
+    const telemetry = {
+      capacityUsd: 1, capacityRaw: "1000000", capacitySource: "erc4626-idle-underlying",
+      underlyingDecimals: 6, freshnessKind: "same-run-onchain",
+      capacityRatioOfSupply: null, feeBps: undefined, observerDiagnostics: null,
+      routeStatus: "degraded", routeStatusSource: "onchain", routeStatusReason: "restricted",
+      morphoVaultV2LiquidityUsd: null,
+    } as unknown as RedemptionCapacityTelemetry;
+    expect(projectErc4626RedemptionTelemetry(telemetry)).toEqual({
+      capacityUsd: 1, capacityKind: "live-direct", freshnessKind: "same-run-onchain",
+    });
+    expect(projectErc4626RedemptionMetadata(telemetry)).toEqual({
+      redemptionCapacityRaw: "1000000", redemptionCapacitySource: "erc4626-idle-underlying", underlyingDecimals: 6,
+    });
   });
 });
 

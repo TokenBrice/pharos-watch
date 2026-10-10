@@ -1,4 +1,5 @@
 import type { IndependentAssuranceManifest } from "@shared/lib/independent-assurance";
+import { ASSURANCE_RECONCILIATION_TOLERANCES } from "@shared/lib/independent-assurance-tolerances";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterFn, IndependentAssuranceProfile } from "./types";
 import { fetchIndependentAssuranceReserves } from "./independent-assurance";
@@ -71,7 +72,7 @@ export const MYRC_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
       liquidityHorizon: "unknown",
     },
   },
-  reconciliation: { reportedAssetTotalTolerance: { absolute: "0.03", relativePpm: 0.02 } },
+  reconciliation: ASSURANCE_RECONCILIATION_TOLERANCES.MYRC,
   isReportCandidate: () => false,
   reportDateFromCandidate: () => null,
   indexHeaders: { Accept: "application/json" },

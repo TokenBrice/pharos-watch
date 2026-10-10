@@ -1,6 +1,6 @@
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
-import type { LiveReserveInput, LiveReserveRpcMode, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import type { LiveReserveInput, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -65,35 +65,7 @@ interface PositionDetailsEntry {
 type PositionDetailsPayload = Record<string, PositionDetailsEntry>;
 type PriceMappingPayload = Record<string, { price?: { usd?: number; eur?: number }; timestamp?: number }>;
 
-interface PositionsApiParams {
-  pricesUrl: string;
-  otherThresholdPct?: number;
-  redemptionBridge?: {
-    chain: string;
-    rpcMode: LiveReserveRpcMode;
-    holder: string;
-    tokenAddress: string;
-    tokenDecimals: number;
-    priceAddress?: string;
-    rpcUrl?: string;
-    fallbackRpcUrl?: string;
-  };
-  redemptionBridgeBasket?: {
-    chain: string;
-    rpcMode: LiveReserveRpcMode;
-    dEuroAddress: string;
-    eurUsdPriceAddress: string;
-    bridges: Array<{
-      label: string;
-      bridgeAddress: string;
-      tokenAddress: string;
-      tokenDecimals: number;
-    }>;
-    rpcUrl?: string;
-    fallbackRpcUrl?: string;
-    sourceUrls: string[];
-  };
-}
+type PositionsApiParams = LiveReserveAdapterParamsByKey["collateral-positions-api"];
 
 interface ProtocolAssetConfig {
   risk: ReserveSlice["risk"];

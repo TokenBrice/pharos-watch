@@ -1,7 +1,7 @@
-import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { formatPercentFromRatio } from "@shared/lib/format";
-import { getLiveReserveAdapterMaxUnknownExposurePct, parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { getLiveReserveAdapterMaxUnknownExposurePct, parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildCoverageShortfallWarnings,
@@ -53,20 +53,7 @@ interface AccountableTimelinePoint {
   reserves?: unknown;
 }
 
-interface AccountableParams {
-  bucket?: "type" | "reserves_split" | "deployment" | "type_split" | "stablecoin_split" | "exposure_split" | "protocol_split";
-  /** Which composition source to read. `reserves-types` (default) selects a sub-bucket under
-   *  `data.reserves` via `bucket`; `asset-breakdown` reads the root-level `data.assetBreakdown`
-   *  category tree instead, for feeds whose composition is not published under `reserves`. */
-  layout?: "reserves-types" | "asset-breakdown";
-  riskMap?: Record<string, ReserveSlice["risk"]>;
-  renameMap?: Record<string, string>;
-  sourceKeyMap?: Record<string, string>;
-  coinIdMap?: Record<string, string>;
-  depTypeMap?: Record<string, ReserveSlice["depType"]>;
-  totalReservesExcludeBuckets?: string[];
-  accountingMode?: "apyx-net-external-reserves";
-}
+type AccountableParams = LiveReserveAdapterParamsByKey["accountable"];
 
 const VALID_BUCKETS = new Set(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split", "protocol_split"]);
 const TOTAL_RESERVES_RELATIVE_TOLERANCE = 0.01;

@@ -1,7 +1,7 @@
 import { pinnedBlockPlan } from "./evm-observation-plan";
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { TOTAL_SUPPLY_SELECTOR, encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -78,21 +78,7 @@ function riskForFacilitatorBucket(bucket: FacilitatorRiskBucket): ReserveSlice["
   return bucket === "aave-v3-direct" ? "medium" : "high";
 }
 
-interface GhoParams {
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-  gsmModules: GhoTrackedModuleConfig[];
-  ghoTokenAddress?: string;
-}
-
-export interface GhoTrackedModuleConfig {
-  address: string;
-  facilitatorAddress: string;
-  label: string;
-  coinId?: string;
-  depType?: ReserveSlice["depType"];
-  risk?: ReserveSlice["risk"];
-}
+export type GhoTrackedModuleConfig = LiveReserveAdapterParamsByKey["gho"]["gsmModules"][number];
 
 export interface GhoFacilitatorSnapshot {
   address: string;
@@ -177,22 +163,6 @@ function decodeCurrentBacking(raw: string): { excess: bigint; deficit: bigint } 
   };
 }
 
-function readParams(config: LiveReservesConfig): GhoParams {
-  const params = parseLiveReserveAdapterParams("gho", config.params);
-  return {
-    rpcUrl: params.rpcUrl,
-    fallbackRpcUrl: params.fallbackRpcUrl,
-    gsmModules: params.gsmModules.map((trackedModule) => ({
-      address: trackedModule.address,
-      facilitatorAddress: trackedModule.facilitatorAddress,
-      label: trackedModule.label,
-      coinId: trackedModule.coinId,
-      depType: trackedModule.depType,
-      risk: trackedModule.risk,
-    })),
-    ghoTokenAddress: params.ghoTokenAddress,
-  };
-}
 
 async function loadFacilitators(
   onchain: OnchainCallers,
@@ -583,7 +553,7 @@ export async function fetchGhoReserves(
     throw new Error(`gho adapter only supports ethereum, got "${input.chain}"`);
   }
 
-  const params = readParams(config);
+  const params = parseLiveReserveAdapterParams("gho", config.params);
   const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, ...params });
   ctx = plan.ctx;
   const ghoToken = params.ghoTokenAddress ?? GHO_TOKEN;

@@ -9,10 +9,8 @@ import {
   type CapacityResolverContext,
   type RedemptionBackstopBuildOptions,
 } from "../redemption-backstop-capacity/profile";
-import { resolveFixedUsdCapacity } from "../redemption-backstop-capacity/fixed-usd";
+import { resolveStaticCapacity } from "../redemption-backstop-capacity/static";
 import { resolveReserveSyncCapacity } from "../redemption-backstop-capacity/reserve-sync";
-import { resolveSupplyFullCapacity } from "../redemption-backstop-capacity/supply-full";
-import { resolveSupplyRatioCapacity } from "../redemption-backstop-capacity/supply-ratio";
 import { resolveExecutableObserverCapacity } from "../redemption-backstop-capacity/executable-observer";
 
 export {
@@ -59,11 +57,9 @@ export async function resolveRedemptionCapacity(
       };
     }
     case "supply-full":
-      return resolveSupplyFullCapacity(model, context);
     case "supply-ratio":
-      return resolveSupplyRatioCapacity(model, context);
     case "fixed-usd":
-      return resolveFixedUsdCapacity(model, context);
+      return resolveStaticCapacity(model, context);
     case "reserve-sync-metadata":
       return resolveReserveSyncCapacity(model, context);
     case "executable-observer":

@@ -1,4 +1,5 @@
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
+import { ASSURANCE_RECONCILIATION_TOLERANCES } from "@shared/lib/independent-assurance-tolerances";
 import type { IndependentAssuranceProfile } from "./types";
 import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./report-date";
 
@@ -67,10 +68,7 @@ export const AGORA_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
   product: "AUSD",
   profile: "ausd-v1",
   requiredAssetCodes: ["us-treasury-securities", "us-treasury-repos"],
-  reconciliation: {
-    // Reviewed August category sum is $1 below the printed reserve total.
-    reportedAssetTotalTolerance: { absolute: "1", relativePpm: 1 },
-  },
+  reconciliation: ASSURANCE_RECONCILIATION_TOLERANCES.AUSD,
   classifications: {
     "us-treasury-securities": {
       name: "Short-dated U.S. Treasury securities held in the Agora Reserve Fund",

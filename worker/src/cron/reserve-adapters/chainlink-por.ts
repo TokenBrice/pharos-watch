@@ -1,7 +1,6 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
-import type { ContractDeployment, ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
+import type { ContractDeployment, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiabilityRatioUnavailableReason, LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
-import type { LiabilityScope } from "@shared/types/live-reserve-adapter-declarations";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { resolveChainId } from "@shared/types/chain-identity";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
@@ -57,19 +56,7 @@ const SUPPLY_COMPARABLE_RESERVE_UNITS: Record<ChainlinkPorReserveUnit, boolean> 
 
 export type ChainlinkPorIssuerCirculationProbe = NonNullable<LiveReserveAdapterParamsByKey["chainlink-por"]["issuerCirculationProbe"]>;
 
-export interface ChainlinkPorParams {
-  porFeedAddress: string;
-  assetLabel: string;
-  assetRisk: ReserveSlice["risk"];
-  reserveUnit?: ChainlinkPorReserveUnit;
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-  maxOracleAgeSec?: number;
-  issuerCirculationProbe?: ChainlinkPorIssuerCirculationProbe;
-  /** Reviewed liability perimeter: an issuer-native chain classification, or
-   *  a declared not-comparable basis (Kinesis KAU) that withholds the ratio. */
-  liabilityScope?: LiabilityScope;
-}
+export type ChainlinkPorParams = LiveReserveAdapterParamsByKey["chainlink-por"];
 
 interface ChainlinkPorData {
   reserves: bigint;

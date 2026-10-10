@@ -77,18 +77,15 @@ type Erc4626CapacityRoute = Pick<
 >;
 type Erc4626CapacityDiagnostics = { capacityUnavailable?: true; collateralHealthGate?: "open" | "restricted" | "unreadable" };
 
+const SOURCE_TELEMETRY_KEYS = [
+  "morphoVaultV1LiquidityRaw", "morphoVaultV1LiquidityUsd",
+  "yearnV3WithdrawableRaw", "sboldSpWithdrawableRaw", "sfrxusdCrosschainWithdrawableRaw",
+  "morphoVaultV2LiquidityRaw", "morphoVaultV2LiquidityUsd",
+  "morphoVaultV2ForceDeallocatableLiquidityRaw", "morphoVaultV2ForceDeallocatableLiquidityUsd",
+] as const satisfies readonly (keyof RedemptionCapacityTelemetry)[];
+
 /** Per-source raw projections the observation carries for the finalize step. */
-type Erc4626CapacityTelemetry = {
-  yearnV3WithdrawableRaw?: string;
-  sboldSpWithdrawableRaw?: string;
-  sfrxusdCrosschainWithdrawableRaw?: string;
-  morphoVaultV1LiquidityRaw?: string;
-  morphoVaultV1LiquidityUsd?: number;
-  morphoVaultV2LiquidityRaw?: string;
-  morphoVaultV2LiquidityUsd?: number;
-  morphoVaultV2ForceDeallocatableLiquidityRaw?: string;
-  morphoVaultV2ForceDeallocatableLiquidityUsd?: number;
-};
+type Erc4626CapacityTelemetry = Pick<RedemptionCapacityTelemetry, (typeof SOURCE_TELEMETRY_KEYS)[number]>;
 
 export type Erc4626CapacityObservation = {
   source: Erc4626CapacitySource;
@@ -986,14 +983,30 @@ export function projectErc4626RedemptionMetadata(
     redemptionCapacitySource: telemetry.capacitySource,
     ...(telemetry.idleUnderlyingBalanceRaw != null ? { idleUnderlyingBalanceRaw: telemetry.idleUnderlyingBalanceRaw } : {}),
     underlyingDecimals: telemetry.underlyingDecimals,
-    ...(telemetry.morphoVaultV1LiquidityRaw != null ? { morphoVaultV1LiquidityRaw: telemetry.morphoVaultV1LiquidityRaw } : {}),
-    ...(telemetry.morphoVaultV1LiquidityUsd != null ? { morphoVaultV1LiquidityUsd: telemetry.morphoVaultV1LiquidityUsd } : {}),
-    ...(telemetry.yearnV3WithdrawableRaw != null ? { yearnV3WithdrawableRaw: telemetry.yearnV3WithdrawableRaw } : {}),
-    ...(telemetry.sboldSpWithdrawableRaw != null ? { sboldSpWithdrawableRaw: telemetry.sboldSpWithdrawableRaw } : {}),
-    ...(telemetry.sfrxusdCrosschainWithdrawableRaw != null ? { sfrxusdCrosschainWithdrawableRaw: telemetry.sfrxusdCrosschainWithdrawableRaw } : {}),
-    ...(telemetry.morphoVaultV2LiquidityRaw != null ? { morphoVaultV2LiquidityRaw: telemetry.morphoVaultV2LiquidityRaw } : {}),
-    ...(telemetry.morphoVaultV2LiquidityUsd != null ? { morphoVaultV2LiquidityUsd: telemetry.morphoVaultV2LiquidityUsd } : {}),
-    ...(telemetry.morphoVaultV2ForceDeallocatableLiquidityRaw != null ? { morphoVaultV2ForceDeallocatableLiquidityRaw: telemetry.morphoVaultV2ForceDeallocatableLiquidityRaw } : {}),
-    ...(telemetry.morphoVaultV2ForceDeallocatableLiquidityUsd != null ? { morphoVaultV2ForceDeallocatableLiquidityUsd: telemetry.morphoVaultV2ForceDeallocatableLiquidityUsd } : {}),
+    ...projectPresentCapacityFields(telemetry, SOURCE_TELEMETRY_KEYS),
+  };
+}
+
+function projectPresentCapacityFields<Key extends keyof RedemptionCapacityTelemetry>(
+  telemetry: RedemptionCapacityTelemetry,
+  keys: readonly Key[],
+): Pick<RedemptionCapacityTelemetry, Key> {
+  const projected = {} as Pick<RedemptionCapacityTelemetry, Key>;
+  for (const key of keys) {
+    const value = telemetry[key];
+    if (value != null) projected[key] = value;
+  }
+  return projected;
+}
+
+/** Nested public fields, without raw source diagnostics or adapter-owned route overrides. */
+export function projectErc4626RedemptionTelemetry(telemetry: RedemptionCapacityTelemetry) {
+  return {
+    ...projectPresentCapacityFields(telemetry, ["capacityUsd", "capacityRatioOfSupply"]),
+    capacityKind: telemetry.capacityKind ?? "live-direct" as const,
+    ...projectPresentCapacityFields(telemetry, [
+      "settlementBoundUnproven", "settlementDelaySec", "blockNumber", "sourceTimestamp",
+      "sourceUrls", "holderEligibility", "feeBps", "observerDiagnostics", "freshnessKind",
+    ]),
   };
 }

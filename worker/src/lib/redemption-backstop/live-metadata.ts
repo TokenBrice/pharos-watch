@@ -110,13 +110,6 @@ function parseTelemetryNumber(
   return { value: raw, invalid: false };
 }
 
-function collectTelemetryWarnings(values: readonly ParsedTelemetryNumber[]): string[] {
-  return values.flatMap((value) => (value.warning ? [value.warning] : []));
-}
-
-function hasTelemetryValue(value: ParsedTelemetryNumber): boolean {
-  return value.value != null || value.invalid;
-}
 
 
 function coerceString(value: unknown): string | null {
@@ -152,13 +145,6 @@ function hasScoreableNestedRedemptionEvidence(
   );
 }
 
-function isRedemptionFreshnessAllowed(
-  stablecoinId: string,
-  freshnessKind: RedemptionLiveFreshnessKind | null,
-  hasScoringEligibleFreshness: boolean,
-): boolean {
-  return isRedemptionFreshnessAllowedByPolicy({ stablecoinId, freshnessKind, hasScoringEligibleFreshness });
-}
 
 function hasBlockingRedemptionWarnings(
   stablecoinId: string,
@@ -315,7 +301,7 @@ function resolveCapacityReason(args: {
   if (args.freshnessKind === "verified-source-timestamp" && args.verifiedSourceTimestampIssue === "future") {
     return "Live redemption capacity claims verified source freshness with a future source timestamp";
   }
-  if (!isRedemptionFreshnessAllowed(args.stablecoinId, args.freshnessKind, args.hasScoringEligibleFreshness)) {
+  if (!isRedemptionFreshnessAllowedByPolicy({ stablecoinId: args.stablecoinId, freshnessKind: args.freshnessKind, hasScoringEligibleFreshness: args.hasScoringEligibleFreshness })) {
     return args.freshnessKind === "unverified"
       ? "Live redemption capacity has unverified freshness; route-specific approval required"
       : "Live redemption capacity lacks scoreable freshness evidence";
@@ -359,48 +345,6 @@ function resolveFeeReason(args: {
   return null;
 }
 
-interface TelemetryBundle {
-  nestedCapacityUsd: ParsedTelemetryNumber;
-  nestedCapacityRatio: ParsedTelemetryNumber;
-  nestedFeeBps: ParsedTelemetryNumber;
-  buyFeeBpsMin: ParsedTelemetryNumber;
-  buyFeeBpsMax: ParsedTelemetryNumber;
-  sourceTimestamp: ParsedTelemetryNumber;
-  settlementDelaySec: ParsedTelemetryNumber;
-  queueDepthUsd: ParsedTelemetryNumber;
-  dailyLimitUsd: ParsedTelemetryNumber;
-  minRedeemUsd: ParsedTelemetryNumber;
-  settlementBoundUnproven: boolean;
-  capacityKind: RedemptionLiveCapacityKind | null;
-  freshnessKind: RedemptionLiveFreshnessKind | null;
-}
-
-function parseTelemetryFields(
-  redemptionTelemetry: LiveReserveRedemptionTelemetryKnownFields,
-  metadata: Record<string, unknown>,
-): TelemetryBundle {
-  return {
-    nestedCapacityUsd: { value: redemptionTelemetry.capacityUsd ?? null, invalid: false },
-    nestedCapacityRatio: { value: redemptionTelemetry.capacityRatioOfSupply ?? null, invalid: false },
-    nestedFeeBps: { value: redemptionTelemetry.feeBps ?? null, invalid: false },
-    buyFeeBpsMin: parseTelemetryNumber(metadata, "buyFeeBpsMin", "Live buy-fee minimum bps", {
-      min: 0,
-      max: 10_000,
-    }),
-    buyFeeBpsMax: parseTelemetryNumber(metadata, "buyFeeBpsMax", "Live buy-fee maximum bps", {
-      min: 0,
-      max: 10_000,
-    }),
-    sourceTimestamp: { value: redemptionTelemetry.sourceTimestamp ?? null, invalid: false },
-    settlementDelaySec: { value: redemptionTelemetry.settlementDelaySec ?? null, invalid: false },
-    queueDepthUsd: { value: redemptionTelemetry.queueDepthUsd ?? null, invalid: false },
-    dailyLimitUsd: { value: redemptionTelemetry.dailyLimitUsd ?? null, invalid: false },
-    minRedeemUsd: { value: redemptionTelemetry.minRedeemUsd ?? null, invalid: false },
-    settlementBoundUnproven: redemptionTelemetry.settlementBoundUnproven === true,
-    capacityKind: redemptionTelemetry.capacityKind ?? null,
-    freshnessKind: redemptionTelemetry.freshnessKind ?? null,
-  };
-}
 
 interface ResolvedRouteStatus {
   routeStatus: RedemptionRouteStatus | null;
@@ -460,21 +404,15 @@ export function readRedemptionBackstopLiveMetadata(
   const capacityNotes = resolveCapacityNotes(stablecoinId, snapshotMetadata);
   const telemetryCapacity = adapterDefinition?.redemptionTelemetry.capacity ?? "none";
   const telemetryFee = adapterDefinition?.redemptionTelemetry.fee ?? "none";
-  const {
-    nestedCapacityUsd,
-    nestedCapacityRatio,
-    nestedFeeBps,
-    buyFeeBpsMin,
-    buyFeeBpsMax,
-    sourceTimestamp,
-    settlementDelaySec,
-    queueDepthUsd,
-    dailyLimitUsd,
-    minRedeemUsd,
-    settlementBoundUnproven,
-    capacityKind,
-    freshnessKind,
-  } = parseTelemetryFields(redemptionTelemetry, metadata);
+  const nestedCapacityUsd = redemptionTelemetry.capacityUsd ?? null;
+  const nestedCapacityRatio = redemptionTelemetry.capacityRatioOfSupply ?? null;
+  const nestedFeeBps = redemptionTelemetry.feeBps ?? null;
+  const sourceTimestamp = redemptionTelemetry.sourceTimestamp ?? null;
+  const settlementBoundUnproven = redemptionTelemetry.settlementBoundUnproven === true;
+  const capacityKind = redemptionTelemetry.capacityKind ?? null;
+  const freshnessKind = redemptionTelemetry.freshnessKind ?? null;
+  const buyFeeBpsMin = parseTelemetryNumber(metadata, "buyFeeBpsMin", "Live buy-fee minimum bps", { min: 0, max: 10_000 });
+  const buyFeeBpsMax = parseTelemetryNumber(metadata, "buyFeeBpsMax", "Live buy-fee maximum bps", { min: 0, max: 10_000 });
   const outputValuation = redemptionTelemetry.outputValuation;
   const configuredOutputKeys = new Set([
     ...(getRedemptionBackstopConfig(stablecoinId)?.outputAssets ?? []),
@@ -489,9 +427,9 @@ export function readRedemptionBackstopLiveMetadata(
     outputValuation != null &&
     outputValuation.observedAt > now + MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC;
   const sourceTimestampFuture =
-    sourceTimestamp.value != null &&
-    sourceTimestamp.value > now + MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC;
-  const validSourceTimestamp = sourceTimestampFuture ? null : sourceTimestamp.value;
+    sourceTimestamp != null &&
+    sourceTimestamp > now + MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC;
+  const validSourceTimestamp = sourceTimestampFuture ? null : sourceTimestamp;
   const sameRunFreshness = freshnessKind === "same-run-onchain" || freshnessKind === "same-run-api";
   const evidenceObservedAt = validSourceTimestamp ?? (
     sameRunFreshness && updatedAt != null && Number.isFinite(updatedAt) && updatedAt >= 0 &&
@@ -507,27 +445,12 @@ export function readRedemptionBackstopLiveMetadata(
           ? "missing"
           : null
       : null;
-  const hasNestedCapacityTelemetry =
-    redemptionTelemetryMalformed || hasTelemetryValue(nestedCapacityUsd) || hasTelemetryValue(nestedCapacityRatio);
-  const capacityTelemetryInvalid = redemptionTelemetryMalformed
-    ? true
-    : nestedCapacityUsd.invalid || nestedCapacityRatio.invalid;
-  const hasNestedFeeTelemetry = redemptionTelemetryMalformed || hasTelemetryValue(nestedFeeBps);
-  const feeTelemetryInvalid = redemptionTelemetryMalformed ? true : nestedFeeBps.invalid;
-  const telemetryWarnings = collectTelemetryWarnings([
-    ...(redemptionTelemetryMalformed
-      ? [{ value: null, invalid: true, warning: "Live redemption telemetry is malformed and was ignored" }]
-      : []),
-    ...(hasNestedCapacityTelemetry ? [nestedCapacityUsd, nestedCapacityRatio] : []),
-    ...(hasNestedFeeTelemetry ? [nestedFeeBps] : []),
-    buyFeeBpsMin,
-    buyFeeBpsMax,
-    sourceTimestamp,
-    settlementDelaySec,
-    queueDepthUsd,
-    dailyLimitUsd,
-    minRedeemUsd,
-  ]);
+  const capacityTelemetryInvalid = redemptionTelemetryMalformed;
+  const feeTelemetryInvalid = redemptionTelemetryMalformed;
+  const telemetryWarnings = [
+    ...(redemptionTelemetryMalformed ? ["Live redemption telemetry is malformed and was ignored"] : []),
+    ...[buyFeeBpsMin, buyFeeBpsMax].flatMap((value) => value.warning ? [value.warning] : []),
+  ];
   if (outputValuationUnknownAsset) {
     telemetryWarnings.push(
       "Live redemption output valuation contains an asset outside the reviewed route output set and was ignored",
@@ -538,20 +461,18 @@ export function readRedemptionBackstopLiveMetadata(
   const resolvedRouteStatus = resolveRouteStatus(redemptionTelemetry);
   if (sourceTimestampFuture) {
     telemetryWarnings.push(
-      `Live redemption source timestamp is ${sourceTimestamp.value! - now}s in the future and was ignored`,
+      `Live redemption source timestamp is ${sourceTimestamp! - now}s in the future and was ignored`,
     );
   }
-  if (verifiedSourceTimestampIssue === "missing" && !sourceTimestamp.invalid) {
+  if (verifiedSourceTimestampIssue === "missing") {
     telemetryWarnings.push("Live redemption freshness is verified-source-timestamp without sourceTimestamp");
   }
   if (resolvedRouteStatus.warning) {
     telemetryWarnings.push(resolvedRouteStatus.warning);
   }
   const fallbackCapacityTelemetryAvailable =
-    !capacityTelemetryInvalid &&
-    (hasNestedCapacityTelemetry ? nestedCapacityUsd.value != null || nestedCapacityRatio.value != null : false);
-  const fallbackFeeTelemetryAvailable =
-    !feeTelemetryInvalid && (hasNestedFeeTelemetry ? nestedFeeBps.value != null : false);
+    !capacityTelemetryInvalid && (nestedCapacityUsd != null || nestedCapacityRatio != null);
+  const fallbackFeeTelemetryAvailable = !feeTelemetryInvalid && nestedFeeBps != null;
   const admission = evaluateRedemptionCapacityEvidenceAdmission(stablecoinId, snapshotMetadata, now);
   const model = getRedemptionBackstopConfig(stablecoinId)?.capacityModel;
   const requiredOutputs = model?.kind === "reserve-sync-metadata" || model?.kind === "executable-observer"
@@ -559,7 +480,7 @@ export function readRedemptionBackstopLiveMetadata(
   const outputIdentityMissing = !!requiredOutputs?.length &&
     !requiredOutputs.every((key) => redemptionTelemetry.outputAssetKeys?.includes(key));
   const settlementBoundCapacityUnavailable = settlementBoundUnproven &&
-    !(resolvedRouteStatus.routeStatus === "paused" && (nestedCapacityUsd.value ?? nestedCapacityRatio.value) === 0);
+    !(resolvedRouteStatus.routeStatus === "paused" && (nestedCapacityUsd ?? nestedCapacityRatio) === 0);
   const capacityRejectionReason: RedemptionCapacityRejectionReason | null = admission.rejectionReason ??
     (capacityTelemetryInvalid ? "malformed-telemetry" :
       !isFresh ? "stale" :
@@ -568,7 +489,7 @@ export function readRedemptionBackstopLiveMetadata(
       capacityKind && !SCOREABLE_REDEMPTION_CAPACITY_KINDS.has(capacityKind) ? "unsupported-capacity-kind" :
       verifiedSourceTimestampIssue === "missing" ? "missing-source-timestamp" :
       verifiedSourceTimestampIssue === "future" ? "future-source-timestamp" :
-      !isRedemptionFreshnessAllowed(stablecoinId, freshnessKind, hasScoringEligibleFreshness) ? "invalid-freshness" :
+      !isRedemptionFreshnessAllowedByPolicy({ stablecoinId, freshnessKind, hasScoringEligibleFreshness }) ? "invalid-freshness" :
       outputIdentityMissing ? "route-output-identity-unobserved" :
       settlementBoundCapacityUnavailable ? "settlement-bound-unproven" :
       !fallbackCapacityTelemetryAvailable ? "redeemable-capacity-unobserved" : null);
@@ -636,29 +557,21 @@ export function readRedemptionBackstopLiveMetadata(
     capacityReason,
     capacityRejectionReason,
     feeReason,
-    immediateRedeemableUsd: !preserveEvidence || capacityTelemetryInvalid || settlementBoundCapacityUnavailable
-      ? null
-      : hasNestedCapacityTelemetry
-        ? nestedCapacityUsd.value
-        : null,
-    immediateRedeemableRatio: !preserveEvidence || capacityTelemetryInvalid || settlementBoundCapacityUnavailable
-      ? null
-      : hasNestedCapacityTelemetry
-        ? nestedCapacityRatio.value
-        : null,
+    immediateRedeemableUsd: !preserveEvidence || settlementBoundCapacityUnavailable ? null : nestedCapacityUsd,
+    immediateRedeemableRatio: !preserveEvidence || settlementBoundCapacityUnavailable ? null : nestedCapacityRatio,
     settlementBoundUnproven,
     capacityKind,
     freshnessKind,
     sourceTimestamp: validSourceTimestamp,
     evidenceObservedAt: preserveEvidence ? evidenceObservedAt : null,
     sourceUrls: redemptionTelemetry.sourceUrls ?? [],
-    settlementDelaySec: settlementDelaySec.value,
-    queueDepthUsd: queueDepthUsd.value,
-    dailyLimitUsd: dailyLimitUsd.value,
-    minRedeemUsd: minRedeemUsd.value,
+    settlementDelaySec: redemptionTelemetry.settlementDelaySec ?? null,
+    queueDepthUsd: redemptionTelemetry.queueDepthUsd ?? null,
+    dailyLimitUsd: redemptionTelemetry.dailyLimitUsd ?? null,
+    minRedeemUsd: redemptionTelemetry.minRedeemUsd ?? null,
     liveHolderEligibility: redemptionTelemetry.holderEligibility ?? null,
     sharedResourceKey: preserveEvidence ? coerceString(redemptionTelemetry.sharedResourceKey) : null,
-    redemptionFeeBps: feeTelemetryInvalid ? null : hasNestedFeeTelemetry ? nestedFeeBps.value : null,
+    redemptionFeeBps: feeTelemetryInvalid ? null : nestedFeeBps,
     buyFeeBpsMin: buyFeeBpsMin.value,
     buyFeeBpsMax: buyFeeBpsMax.value,
     routeStatus: preserveRouteStatus ? resolvedRouteStatus.routeStatus : null,

@@ -1,6 +1,7 @@
 import { pinnedBlockPlan } from "./evm-observation-plan";
 import { decodeAbiParameters } from "viem/utils";
 import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type {
   LiveReserveSnapshotMetadata,
   LiveReserveRedemptionTelemetryKnownFields,
@@ -21,13 +22,10 @@ import { ERC4626_ASSET_SELECTOR, ERC4626_TOTAL_ASSETS_SELECTOR } from "./erc4626
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
-  fetchErc20Balance,
   fetchOnchainMulticall3,
-  fetchOnchainRateBps,
   makeOnchainCallers,
   type OnchainMulticall3Call,
   type OnchainCallers,
-  probeOptionalRedemptionRateBps,
   requireOnchainInput,
   reserveDegradedWarning,
   reserveInfoWarning,
@@ -38,9 +36,7 @@ import {
   adaptBranchBalanceReserves,
   fetchBranchPriceMap,
   readBranchBalanceParams,
-  type BranchConfig,
   type BranchBalanceEntry,
-  type BranchBalanceParams,
 } from "./branch-balances";
 import {
   decodeAddressWord,
@@ -72,22 +68,7 @@ interface LiquityV2BranchSnapshot {
   redemptionFeeBps: number | null;
 }
 
-interface LiquityV2BranchParams extends BranchBalanceParams {
-  debtSelector?: string;
-  debtDecimals?: number;
-  shutdownSelector?: string;
-  mechanismMetrics?: {
-    supplyTokenAddress: string;
-    branchPriceSelector?: string;
-    stabilityPoolDepositsSelector: string;
-    maxSupplyDebtDivergencePct?: number;
-    branches: Array<{
-      name: string;
-      troveManagerAddress: string;
-      stabilityPoolAddress: string;
-    }>;
-  };
-}
+type LiquityV2BranchParams = LiveReserveAdapterParamsByKey["liquity-v2-branches"];
 
 interface LiquityV2MechanismMetricResult {
   metadata: Pick<
@@ -99,7 +80,7 @@ interface LiquityV2MechanismMetricResult {
 }
 
 function readParams(config: LiveReservesConfig): LiquityV2BranchParams {
-  return readBranchBalanceParams(config, ADAPTER_KEY) as LiquityV2BranchParams;
+  return readBranchBalanceParams(config, ADAPTER_KEY);
 }
 
 function sumBranchDebtUsd(
@@ -150,38 +131,30 @@ async function fetchLiquityV2Batch(
   );
 }
 
-async function tryAdaptErc4626ShareEntry(
+type LiquityObservationCall = OnchainMulticall3Call & { raw?: true };
+type LiquityOnchainInput = Extract<LiveReservesConfig["inputs"]["primary"], { kind: "onchain-evm" }>;
+type LiquityObservationValue = string | bigint | null | undefined;
+
+// Numeric individual reads retain their existing uint256 transport; raw guards
+// and introspection retain their own ABI validation. Both feed one assembly path.
+async function fetchLiquityV2Observations(
+  input: LiquityOnchainInput,
+  params: LiquityV2BranchParams,
+  calls: readonly LiquityObservationCall[],
+  signal: AbortSignal,
+  ctx: AdapterContext | undefined,
   onchain: OnchainCallers,
-  entry: BranchBalanceEntry,
-): Promise<BranchBalanceEntry> {
-  if (entry.balanceRaw == null || entry.balanceRaw <= 0n) return entry;
+): Promise<Map<string, LiquityObservationValue>> {
+  const batch = await fetchLiquityV2Batch(input, params, calls, signal, ctx);
+  if (batch) return batch;
+  return new Map(await Promise.all(calls.map(async (call) => [
+    call.label,
+    call.raw ? await onchain.raw(call.contract, call.data) : await onchain.uint256(call.contract, call.data),
+  ] as const)));
+}
 
-  const assetRaw = await onchain.raw(entry.branch.token.address, ERC4626_ASSET_SELECTOR);
-  const assetAddress = decodeAddressWord(assetRaw);
-  if (!assetAddress) return entry;
-
-  const [totalAssetsRaw, totalSupplyRaw, decimalsRaw] = await Promise.all([
-    onchain.uint256(entry.branch.token.address, ERC4626_TOTAL_ASSETS_SELECTOR),
-    onchain.uint256(entry.branch.token.address, TOTAL_SUPPLY_SELECTOR),
-    onchain.raw(assetAddress, DECIMALS_SELECTOR),
-  ]);
-  if (totalAssetsRaw == null || totalSupplyRaw == null || totalSupplyRaw <= 0n) {
-    return entry;
-  }
-  const assetBalanceRaw = computeErc4626AssetsFromShares(entry.balanceRaw, totalAssetsRaw, totalSupplyRaw);
-  const assetDecimals = decodeUint8Word(decimalsRaw) ?? entry.branch.token.decimals;
-  return {
-    ...entry,
-    balanceRaw: assetBalanceRaw,
-    balanceDecimals: assetDecimals,
-    branch: {
-      ...entry.branch,
-      priceToken: entry.branch.priceToken ?? {
-        chain: entry.branch.token.chain,
-        address: assetAddress,
-      },
-    },
-  };
+function decodeLiquityUint(value: LiquityObservationValue): bigint | null {
+  return typeof value === "bigint" ? value : decodeUint256Word(value);
 }
 
 async function fetchLiquityV2BranchState(
@@ -193,7 +166,7 @@ async function fetchLiquityV2BranchState(
   ctx: AdapterContext | undefined,
   onchain: OnchainCallers,
 ): Promise<LiquityV2BranchSnapshot> {
-  const calls: OnchainMulticall3Call[] = [];
+  const calls: LiquityObservationCall[] = [];
   for (const [index, branch] of params.branches.entries()) {
     calls.push(
       {
@@ -215,6 +188,7 @@ async function fetchLiquityV2BranchState(
         contract: branch.holder,
         data: shutdownSelector,
         allowFailure: true,
+        raw: true,
       },
     );
     if (!params.redemptionRateProbe) {
@@ -235,74 +209,25 @@ async function fetchLiquityV2BranchState(
     });
   }
 
-  const rawByLabel = await fetchLiquityV2Batch(input, params, calls, signal, ctx);
-  if (rawByLabel) {
-    const balances = params.branches.map((branch, index) => ({
-      branch,
-      balanceRaw: decodeUint256Word(rawByLabel.get(`branch:balance:${index}`)),
-    }));
-    const debts = balances.map((entry, index) => ({
-      entry,
-      debtRaw: decodeUint256Word(rawByLabel.get(`branch:debt:${index}`)),
-      shutDown: decodeStrictBoolWord(rawByLabel.get(`branch:shutdown:${index}`)),
-      redemptionFeeBps: params.redemptionRateProbe
-        ? null
-        : rateBpsFromRaw(
-            decodeUint256Word(rawByLabel.get(`branch:fee:${index}`)),
-            BRANCH_REDEMPTION_RATE_DECIMALS,
-          ),
-    }));
-    const redemptionFeeBps = params.redemptionRateProbe?.decimals != null
-      ? rateBpsFromRaw(
-          decodeUint256Word(rawByLabel.get("branch:fee:global")),
-          params.redemptionRateProbe.decimals,
-        )
-      : null;
-    return { balances, debts, redemptionFeeBps };
-  }
-
-  const [balances, redemptionFeeBps] = await Promise.all([
-    Promise.all(params.branches.map(async (branch) => ({
-      branch,
-      balanceRaw: branch.balanceRead
-        ? await onchain.uint256(
-            branch.balanceRead.contract,
-            branch.balanceRead.selector + (branch.balanceRead.args ?? []).map((word) => word.slice(2)).join(""),
-          )
-        : await fetchErc20Balance(
-        input,
-        branch.token.address,
-        branch.holder,
-        signal,
-        ctx,
-        params.rpcUrl,
-        params.fallbackRpcUrl,
-      ),
-    }))),
-    probeOptionalRedemptionRateBps(
-      input,
-      params.redemptionRateProbe,
-      signal,
-      ctx,
-      params.rpcUrl,
-      params.fallbackRpcUrl,
-    ),
-  ]);
-  const debts = await Promise.all(balances.map(async (entry) => {
-    const [debtRaw, shutDownRaw, branchRedemptionFeeBps] = await Promise.all([
-      onchain.uint256(entry.branch.holder, debtSelector),
-      onchain.raw(entry.branch.holder, shutdownSelector),
-      params.redemptionRateProbe
-        ? Promise.resolve(null)
-        : probeBranchRedemptionFeeBps(input, entry.branch, signal, ctx, params),
-    ]);
+  const rawByLabel = await fetchLiquityV2Observations(input, params, calls, signal, ctx, onchain);
+  const balances = params.branches.map((branch, index) => ({
+    branch,
+    balanceRaw: decodeLiquityUint(rawByLabel.get(`branch:balance:${index}`)),
+  }));
+  const debts = balances.map((entry, index) => {
+    const shutdownRaw = rawByLabel.get(`branch:shutdown:${index}`);
     return {
       entry,
-      debtRaw,
-      shutDown: decodeStrictBoolWord(shutDownRaw),
-      redemptionFeeBps: branchRedemptionFeeBps,
+      debtRaw: decodeLiquityUint(rawByLabel.get(`branch:debt:${index}`)),
+      shutDown: decodeStrictBoolWord(typeof shutdownRaw === "string" ? shutdownRaw : null),
+      redemptionFeeBps: params.redemptionRateProbe
+        ? null
+        : rateBpsFromRaw(decodeLiquityUint(rawByLabel.get(`branch:fee:${index}`)), BRANCH_REDEMPTION_RATE_DECIMALS),
     };
-  }));
+  });
+  const redemptionFeeBps = params.redemptionRateProbe?.decimals != null
+    ? rateBpsFromRaw(decodeLiquityUint(rawByLabel.get("branch:fee:global")), params.redemptionRateProbe.decimals)
+    : null;
   return { balances, debts, redemptionFeeBps };
 }
 
@@ -324,18 +249,15 @@ async function adaptErc4626ShareEntries(
     contract: entry.branch.token.address,
     data: ERC4626_ASSET_SELECTOR,
     allowFailure: true,
+    raw: true as const,
   }));
-  const assetRawByLabel = await fetchLiquityV2Batch(input, params, assetCalls, signal, ctx);
-  if (!assetRawByLabel) {
-    return Promise.all(entries.map((entry) => tryAdaptErc4626ShareEntry(onchain, entry)));
-  }
+  const assetRawByLabel = await fetchLiquityV2Observations(input, params, assetCalls, signal, ctx, onchain);
 
   const probedEntries = positiveEntries
-    .map(({ entry, index }) => ({
-      entry,
-      index,
-      assetAddress: decodeAddressWord(assetRawByLabel.get(`branch:asset:${index}`)),
-    }))
+    .map(({ entry, index }) => {
+      const assetRaw = assetRawByLabel.get(`branch:asset:${index}`);
+      return { entry, index, assetAddress: decodeAddressWord(typeof assetRaw === "string" ? assetRaw : null) };
+    })
     .filter(
       (entry): entry is typeof entry & { assetAddress: `0x${string}` } => entry.assetAddress != null,
     );
@@ -359,32 +281,23 @@ async function adaptErc4626ShareEntries(
       contract: assetAddress,
       data: DECIMALS_SELECTOR,
       allowFailure: true,
+      raw: true as const,
     },
   ]);
-  const metadataRawByLabel = await fetchLiquityV2Batch(input, params, metadataCalls, signal, ctx);
-  if (!metadataRawByLabel) {
-    const adapted = await Promise.all(probedEntries.map(({ entry }) => tryAdaptErc4626ShareEntry(onchain, entry)));
-    const adaptedByIndex = new Map(probedEntries.map(({ index }, offset) => [index, adapted[offset]]));
-    return entries.map((entry, index) => adaptedByIndex.get(index) ?? entry);
-  }
+  const metadataRawByLabel = await fetchLiquityV2Observations(input, params, metadataCalls, signal, ctx, onchain);
 
   const probedByIndex = new Map(probedEntries.map((entry) => [entry.index, entry]));
   return entries.map((entry, index) => {
     const probed = probedByIndex.get(index);
     if (!probed || entry.balanceRaw == null) return entry;
-    const totalAssetsRaw = decodeUint256Word(
-      metadataRawByLabel.get(`branch:total-assets:${index}`),
-    );
-    const totalSupplyRaw = decodeUint256Word(
-      metadataRawByLabel.get(`branch:total-supply:${index}`),
-    );
+    const totalAssetsRaw = decodeLiquityUint(metadataRawByLabel.get(`branch:total-assets:${index}`));
+    const totalSupplyRaw = decodeLiquityUint(metadataRawByLabel.get(`branch:total-supply:${index}`));
     if (totalAssetsRaw == null || totalSupplyRaw == null || totalSupplyRaw <= 0n) return entry;
+    const decimalsRaw = metadataRawByLabel.get(`branch:asset-decimals:${index}`);
     return {
       ...entry,
       balanceRaw: computeErc4626AssetsFromShares(entry.balanceRaw, totalAssetsRaw, totalSupplyRaw),
-      balanceDecimals: decodeUint8Word(
-        metadataRawByLabel.get(`branch:asset-decimals:${index}`),
-      ) ?? entry.branch.token.decimals,
+      balanceDecimals: decodeUint8Word(typeof decimalsRaw === "string" ? decimalsRaw : null) ?? entry.branch.token.decimals,
       branch: {
         ...entry.branch,
         priceToken: entry.branch.priceToken ?? {
@@ -464,28 +377,6 @@ async function fetchBranchProtocolPriceMap(
   return protocolPriceMap;
 }
 
-async function probeBranchRedemptionFeeBps(
-  input: ReturnType<typeof requireOnchainInput>,
-  branch: BranchConfig,
-  signal: AbortSignal,
-  ctx: AdapterContext | undefined,
-  params: LiquityV2BranchParams,
-): Promise<number | null> {
-  return fetchOnchainRateBps(
-    input,
-    {
-      contract: branch.holder,
-      selector: BRANCH_REDEMPTION_RATE_SELECTOR,
-      // The shared rate helper skips a probe without explicit decimals, so the
-      // individual-call fallback must scale exactly like the Multicall3 path.
-      decimals: BRANCH_REDEMPTION_RATE_DECIMALS,
-    },
-    signal,
-    ctx,
-    params.rpcUrl,
-    params.fallbackRpcUrl,
-  );
-}
 
 function chooseSnapshotRedemptionFeeBps(
   explicitFeeBps: number | null,

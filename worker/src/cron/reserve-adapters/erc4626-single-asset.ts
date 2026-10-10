@@ -37,6 +37,7 @@ import {
   finalizeErc4626RedemptionCapacity,
   observeConfiguredErc4626Capacity,
   projectErc4626RedemptionMetadata,
+  projectErc4626RedemptionTelemetry,
   type Erc4626CapacityObservation,
   type Erc4626CapacityPauseProbe,
   type Erc4626RedemptionLiquidityConfig,
@@ -475,41 +476,8 @@ export async function fetchErc4626SingleAssetReserves(
       ...(convertToAssetsRaw != null ? { convertToAssetsRaw: convertToAssetsRaw.toString() } : {}),
       redemption: {
         ...(redemptionCapacity
-          ? {
-              capacityUsd: redemptionCapacity.capacityUsd,
-              ...(redemptionCapacity.capacityRatioOfSupply != null
-                ? { capacityRatioOfSupply: redemptionCapacity.capacityRatioOfSupply }
-                : {}),
-              capacityKind: redemptionCapacity.capacityKind ?? "live-direct" as const,
-              ...(redemptionCapacity.settlementBoundUnproven
-                ? { settlementBoundUnproven: true }
-                : {}),
-              ...(redemptionCapacity.settlementDelaySec != null
-                ? { settlementDelaySec: redemptionCapacity.settlementDelaySec }
-                : {}),
-              ...(redemptionCapacity.blockNumber != null
-                ? { blockNumber: redemptionCapacity.blockNumber }
-                : {}),
-              ...(redemptionCapacity.sourceTimestamp != null
-                ? { sourceTimestamp: redemptionCapacity.sourceTimestamp }
-                : {}),
-              ...(redemptionCapacity.sourceUrls
-                ? { sourceUrls: redemptionCapacity.sourceUrls }
-                : {}),
-              ...(redemptionCapacity.holderEligibility
-                ? { holderEligibility: redemptionCapacity.holderEligibility }
-                : {}),
-              ...(redemptionCapacity.feeBps != null
-                ? { feeBps: redemptionCapacity.feeBps }
-                : {}),
-              ...(redemptionCapacity.observerDiagnostics
-                ? { observerDiagnostics: redemptionCapacity.observerDiagnostics }
-                : {}),
-            }
-          : {
-              capacityKind: unboundedCrosschainRoute ? "documented-bound" as const : "documented-eventual" as const,
-            }),
-        ...(redemptionCapacity ? { freshnessKind: redemptionCapacity.freshnessKind } : {}),
+          ? projectErc4626RedemptionTelemetry(redemptionCapacity)
+          : { capacityKind: unboundedCrosschainRoute ? "documented-bound" as const : "documented-eventual" as const }),
         ...(unboundedCrosschainRoute ? {
           settlementBoundUnproven: true,
           freshnessKind: unboundedCrosschainRoute.freshnessKind,

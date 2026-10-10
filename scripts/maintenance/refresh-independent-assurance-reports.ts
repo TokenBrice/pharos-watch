@@ -10,33 +10,13 @@ import {
   type IndependentAssuranceManifest,
   type IndependentAssuranceProduct,
 } from "@shared/lib/independent-assurance";
+import { ASSURANCE_RECONCILIATION_TOLERANCES } from "@shared/lib/independent-assurance-tolerances";
 import { MANIFEST_SOURCES } from "../../shared/data/live-reserves/independent-assurance";
 import { COMPILER_PROFILES } from "../lib/independent-assurance-profiles/registry";
 import { prepareAssuranceExtractionText, type CompilerProfile } from "../lib/independent-assurance-profiles/shared";
 
 const MANIFEST_DIR = resolve("shared/data/live-reserves/independent-assurance");
 const PRODUCTS = Object.keys(COMPILER_PROFILES) as IndependentAssuranceProduct[];
-const TOLERANCE_OVERRIDES: Partial<Record<
-  IndependentAssuranceProduct,
-  NonNullable<Parameters<typeof reconcileIndependentAssuranceManifest>[1]>
->> = {
-  AUDD: {
-    // Nine cent-rounded chain rows plus a cent-rounded total: 10 * 0.005 AUD.
-    reportedLiabilityTotalTolerance: { absolute: "0.05", relativePpm: 0.01 },
-  },
-  AUSD: {
-    // August 2026 category amounts sum to $239,090,455; the printed total is $239,090,456.
-    reportedAssetTotalTolerance: { absolute: "1", relativePpm: 1 },
-  },
-  EUROP: {
-    reportedAssetTotalTolerance: { absolute: "1", relativePpm: 1 },
-    reportedLiabilityTotalTolerance: { absolute: "1", relativePpm: 1 },
-  },
-  MYRC: {
-    // August 2026 cash/fund schedule exceeds the asserted account total by MYR 0.03.
-    reportedAssetTotalTolerance: { absolute: "0.03", relativePpm: 0.02 },
-  },
-};
 
 function amountFromMatch(
   match: RegExpMatchArray | null,
@@ -132,7 +112,7 @@ function compile(pdfPath: string, config: CompilerProfile): IndependentAssurance
       pageCount,
     },
   });
-  reconcileIndependentAssuranceManifest(manifest, TOLERANCE_OVERRIDES[config.product]);
+  reconcileIndependentAssuranceManifest(manifest, ASSURANCE_RECONCILIATION_TOLERANCES[config.product]);
   return manifest;
 }
 
@@ -193,7 +173,7 @@ if (checkOnly && !values.product && !pdfPath) {
             : { alreadyNettedIntoAssets: manifestAdjustments[index].alreadyNettedIntoAssets })))) {
       throw new Error(`Offline profile ${product} adjustment definitions differ from reviewed manifest`);
     }
-    reconcileIndependentAssuranceManifest(manifest, TOLERANCE_OVERRIDES[product]);
+    reconcileIndependentAssuranceManifest(manifest, ASSURANCE_RECONCILIATION_TOLERANCES[product]);
     console.log(`Validated ${product}: registered manifest, compiler profile, and reconciliation (no PDF re-extraction)`);
   }
 } else {

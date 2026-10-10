@@ -1,4 +1,4 @@
-import { pinnedBlockPlan } from "./evm-observation-plan";
+import { customObservation, executeEvmObservationPlan, pinnedBlockPlan } from "./evm-observation-plan";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
@@ -16,9 +16,8 @@ import {
   reserveDegradedWarning,
   slicesFromValues,
 } from "./helpers";
-import { decodeAddressWord, decodeUint256Word } from "./abi-decode";
+import { decodeAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
 import { normalizeEvmAddress } from "./evm";
-import { multicallResultByLabel } from "./onchain-identity";
 import {
   ERC4626_ASSET_SELECTOR as ASSET_SELECTOR,
   ERC4626_CONVERT_TO_ASSETS_SELECTOR as CONVERT_TO_ASSETS_SELECTOR,
@@ -106,12 +105,9 @@ function decodePairAccounting(
   return { totalBorrowAmount, totalBorrowShares, totalCollateral };
 }
 
-function decodeUint256Result(raw: string | null, context: string): bigint {
-  const decoded = decodeUint256Word(raw);
-  if (decoded == null) {
-    throw new Error(`resupply-pairs ${context} call failed`);
-  }
-  return decoded;
+function requireTelemetryValue<Value>(value: Value | null, context: string): Value {
+  if (value == null) throw new Error(`resupply-pairs ${context} call failed`);
+  return value;
 }
 
 function encodeConvertToAssetsCall(shares: bigint): `0x${string}` {
@@ -120,14 +116,6 @@ function encodeConvertToAssetsCall(shares: bigint): `0x${string}` {
 
 function encodeGetMaxRedeemableDebtCall(pairAddress: `0x${string}`): `0x${string}` {
   return encodeAddressCallData(GET_MAX_REDEEMABLE_DEBT_SELECTOR, pairAddress);
-}
-
-function decodeBooleanResult(raw: string | null, context: string): boolean {
-  const decoded = decodeUint256Word(raw);
-  if (decoded == null || (decoded !== 0n && decoded !== 1n)) {
-    throw new Error(`resupply-pairs ${context} call failed`);
-  }
-  return decoded === 1n;
 }
 
 function buildRedemptionTelemetry(
@@ -295,72 +283,80 @@ export async function fetchResupplyPairsReserves(
     };
   });
 
-  const firstStage = await fetchOnchainMulticall3({
-    ...callOptions,
-    calls: [
-      ...(redemptionHandlerAddress
-        ? [
-            { label: "guard-enabled", contract: redemptionHandlerAddress, data: GUARD_ENABLED_SELECTOR },
-            {
-              label: "permissionless-price-threshold",
-              contract: redemptionHandlerAddress,
-              data: PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR,
-            },
-            { label: "reusd-oracle-price", contract: redemptionHandlerAddress, data: REUSD_ORACLE_PRICE_SELECTOR },
-          ]
-        : []),
+  const firstStage = await executeEvmObservationPlan({
+    adapterKey: "resupply-pairs",
+    fields: [
+      ...(redemptionHandlerAddress ? [
+        customObservation({
+          label: "guard-enabled", contract: redemptionHandlerAddress, data: GUARD_ENABLED_SELECTOR,
+          optional: true, decode: decodeStrictBoolWord,
+        }),
+        customObservation({
+          label: "permissionless-price-threshold", contract: redemptionHandlerAddress, data: PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR,
+          optional: true, decode: decodeUint256Word,
+        }),
+        customObservation({
+          label: "reusd-oracle-price", contract: redemptionHandlerAddress, data: REUSD_ORACLE_PRICE_SELECTOR,
+          optional: true, decode: decodeUint256Word,
+        }),
+      ] : []),
       ...pairs.flatMap(({ index, pairAddress }) => [
-        { label: `pair:${index}:underlying`, contract: pairAddress, data: UNDERLYING_SELECTOR },
-        { label: `pair:${index}:accounting`, contract: pairAddress, data: GET_PAIR_ACCOUNTING_SELECTOR },
-        { label: `pair:${index}:collateral`, contract: pairAddress, data: COLLATERAL_SELECTOR },
-        ...(redemptionHandlerAddress
-          ? [{
-              label: `pair:${index}:max-redeemable-debt`,
-              contract: redemptionHandlerAddress,
-              data: encodeGetMaxRedeemableDebtCall(pairAddress),
-            }]
-          : []),
+        customObservation({
+          label: `pair:${index}:underlying`, contract: pairAddress, data: UNDERLYING_SELECTOR,
+          decode: (raw) => parseAddressResult(raw, `underlying() for ${pairAddress}`),
+        }),
+        customObservation({
+          label: `pair:${index}:accounting`, contract: pairAddress, data: GET_PAIR_ACCOUNTING_SELECTOR,
+          decode: (raw) => decodePairAccounting(raw, pairAddress),
+        }),
+        customObservation({
+          label: `pair:${index}:collateral`, contract: pairAddress, data: COLLATERAL_SELECTOR,
+          decode: (raw) => parseAddressResult(raw, `collateral() for ${pairAddress}`),
+        }),
+        ...(redemptionHandlerAddress ? [customObservation({
+          label: `pair:${index}:max-redeemable-debt`, contract: redemptionHandlerAddress,
+          data: encodeGetMaxRedeemableDebtCall(pairAddress), optional: true, decode: decodeUint256Word,
+        })] : []),
       ]),
     ],
+    onDecodeError: (error) => { throw error; },
+    read: async (calls) => {
+      const results = await fetchOnchainMulticall3({ ...callOptions, calls });
+      if (!results) throw new Error("resupply-pairs first-stage multicall failed");
+      return results;
+    },
   });
-  if (!firstStage) {
-    throw new Error("resupply-pairs first-stage multicall failed");
-  }
-
-
   const pairState = pairs.map(({ index, pairAddress, ...pair }) => ({
-    ...pair,
-    index,
-    pairAddress,
-    underlyingAddress: parseAddressResult(
-      multicallResultByLabel(firstStage, `pair:${index}:underlying`),
-      `underlying() for ${pairAddress}`,
-    ),
-    collateralAddress: parseAddressResult(
-      multicallResultByLabel(firstStage, `pair:${index}:collateral`),
-      `collateral() for ${pairAddress}`,
-    ),
-    accounting: decodePairAccounting(
-      multicallResultByLabel(firstStage, `pair:${index}:accounting`),
-      pairAddress,
-    ),
+    ...pair, index, pairAddress,
+    underlyingAddress: firstStage.values[`pair:${index}:underlying`],
+    collateralAddress: firstStage.values[`pair:${index}:collateral`],
+    accounting: firstStage.values[`pair:${index}:accounting`],
   }));
 
-  const secondStage = await fetchOnchainMulticall3({
-    ...callOptions,
-    calls: pairState.flatMap(({ index, collateralAddress, underlyingAddress, accounting }) => [
-      {
-        label: `pair:${index}:collateral-assets`,
-        contract: collateralAddress,
+  const secondStage = await executeEvmObservationPlan({
+    adapterKey: "resupply-pairs",
+    fields: pairState.flatMap(({ index, collateralAddress, underlyingAddress, accounting }) => [
+      customObservation({
+        label: `pair:${index}:collateral-assets`, contract: collateralAddress,
         data: encodeConvertToAssetsCall(accounting.totalCollateral),
-      },
-      { label: `pair:${index}:vault-asset`, contract: collateralAddress, data: ASSET_SELECTOR },
-      { label: `pair:${index}:underlying-decimals`, contract: underlyingAddress, data: DECIMALS_SELECTOR },
+        optional: true, decode: decodeUint256Word,
+      }),
+      customObservation({
+        label: `pair:${index}:vault-asset`, contract: collateralAddress, data: ASSET_SELECTOR,
+        decode: (raw) => parseAddressResult(raw, `asset() for ${collateralAddress}`),
+      }),
+      customObservation({
+        label: `pair:${index}:underlying-decimals`, contract: underlyingAddress, data: DECIMALS_SELECTOR,
+        optional: true, decode: decodeUint256Word,
+      }),
     ]),
+    onDecodeError: (error) => { throw error; },
+    read: async (calls) => {
+      const results = await fetchOnchainMulticall3({ ...callOptions, calls });
+      if (!results) throw new Error("resupply-pairs collateral conversion multicall failed");
+      return results;
+    },
   });
-  if (!secondStage) {
-    throw new Error("resupply-pairs collateral conversion multicall failed");
-  }
 
   const snapshots = pairState.map(({
     index,
@@ -370,22 +366,17 @@ export async function fetchResupplyPairsReserves(
     collateralAddress,
     accounting,
   }) => {
-    const totalCollateralAssets = decodeUint256Result(
-      multicallResultByLabel(secondStage, `pair:${index}:collateral-assets`),
-      `convertToAssets() for ${collateralAddress}`,
+    const totalCollateralAssets = requireTelemetryValue(
+      secondStage.values[`pair:${index}:collateral-assets`], `convertToAssets() for ${collateralAddress}`,
     );
-    const vaultAsset = parseAddressResult(
-      multicallResultByLabel(secondStage, `pair:${index}:vault-asset`),
-      `asset() for ${collateralAddress}`,
-    );
+    const vaultAsset = secondStage.values[`pair:${index}:vault-asset`];
     if (vaultAsset !== normalizeEvmAddress(underlyingAddress)) {
       throw new Error(
         `resupply-pairs collateral vault ${collateralAddress} asset() mismatch: expected ${underlyingAddress}, got ${vaultAsset}`,
       );
     }
-    const underlyingDecimalsRaw = decodeUint256Result(
-      multicallResultByLabel(secondStage, `pair:${index}:underlying-decimals`),
-      `decimals() for ${underlyingAddress}`,
+    const underlyingDecimalsRaw = requireTelemetryValue(
+      secondStage.values[`pair:${index}:underlying-decimals`], `decimals() for ${underlyingAddress}`,
     );
     if (underlyingDecimalsRaw > 36n) {
       throw new Error(`resupply-pairs underlying ${underlyingAddress} decimals() out of range`);
@@ -409,24 +400,20 @@ export async function fetchResupplyPairsReserves(
   if (redemptionHandlerAddress) {
     try {
       const guard: RedemptionGuardSnapshot = {
-        guardEnabled: decodeBooleanResult(
-          multicallResultByLabel(firstStage, "guard-enabled"),
-          `guardEnabled() for ${redemptionHandlerAddress}`,
+        guardEnabled: requireTelemetryValue(
+          firstStage.values["guard-enabled"], `guardEnabled() for ${redemptionHandlerAddress}`,
         ),
-        permissionlessPriceThreshold: decodeUint256Result(
-          multicallResultByLabel(firstStage, "permissionless-price-threshold"),
-          `permissionlessPriceThreshold() for ${redemptionHandlerAddress}`,
+        permissionlessPriceThreshold: requireTelemetryValue(
+          firstStage.values["permissionless-price-threshold"], `permissionlessPriceThreshold() for ${redemptionHandlerAddress}`,
         ),
-        reUsdOraclePrice: decodeUint256Result(
-          multicallResultByLabel(firstStage, "reusd-oracle-price"),
-          `reUsdOraclePrice() for ${redemptionHandlerAddress}`,
+        reUsdOraclePrice: requireTelemetryValue(
+          firstStage.values["reusd-oracle-price"], `reUsdOraclePrice() for ${redemptionHandlerAddress}`,
         ),
       };
       snapshotsWithRedemption = snapshots.map((snapshot, index) => ({
         ...snapshot,
-        maxRedeemableDebt: decodeUint256Result(
-          multicallResultByLabel(firstStage, `pair:${index}:max-redeemable-debt`),
-          `getMaxRedeemableDebt() for ${snapshot.pairAddress}`,
+        maxRedeemableDebt: requireTelemetryValue(
+          firstStage.values[`pair:${index}:max-redeemable-debt`], `getMaxRedeemableDebt() for ${snapshot.pairAddress}`,
         ),
       }));
       redemptionTelemetry = { redemptionHandlerAddress, guard };

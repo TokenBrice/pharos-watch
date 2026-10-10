@@ -11,7 +11,7 @@ import { adaptBtcfi } from "../btcfi";
 import { adaptCollateralPositions } from "../collateral-positions-api";
 import { adaptFraxBalanceSheet, type FraxBalanceSheetResponse } from "../frax";
 import { adaptMentoReserveComposition } from "../mento";
-import { adaptUsdtbTransparency } from "../usdtb-transparency";
+import { adaptCustodyInventory } from "../custody-inventory";
 import type { AdapterResult } from "../types";
 import {
   BTCFI_HANDLER_ROWS,
@@ -133,7 +133,7 @@ describe("reserve adapter direct-asset risk parity", () => {
   });
 
   it("classifies the recorded USDtb backing report canonically", () => {
-    const result = adaptUsdtbTransparency(USDTB_BACKING_AND_SUPPLY_PAYLOAD);
+    const result = adaptCustodyInventory("usdtb-transparency", USDTB_BACKING_AND_SUPPLY_PAYLOAD);
 
     expectDirectAssetRiskParity(result, {
       "BlackRock BUIDL (U.S. T-Bills, cash, repos)": "BUIDL",

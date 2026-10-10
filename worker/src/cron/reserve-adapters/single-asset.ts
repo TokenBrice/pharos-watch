@@ -1,7 +1,8 @@
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
-import type { LiveReservesConfig, NativeReserveQuantityBasis } from "@shared/types/live-reserves";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   parseLiveReserveAdapterParams,
+  type LiveReserveAdapterParamsByKey,
 } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -17,32 +18,8 @@ import {
   parseFiniteNumber,
 } from "./helpers";
 
-interface JsonPathProbe {
-  kind: "json-path";
-  path: string[];
-  scale?: number;
-}
-
-interface SingleAssetParams {
-  label: string;
-  risk: ReserveSlice["risk"];
-  coinId?: string;
-  depType?: ReserveSlice["depType"];
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-  reserveProbe?: JsonPathProbe;
-  supplyProbe?: JsonPathProbe;
-  timestampProbe?: JsonPathProbe;
-  reserveUnit?: "CAD";
-  liabilityTimestampComponents?: {
-    path: string[];
-    identityField: string;
-    timestampField: string;
-    quantityField: string;
-  };
-  reserveSourceLabel?: string;
-  nativeQuantityBasis?: NativeReserveQuantityBasis;
-}
+type SingleAssetParams = LiveReserveAdapterParamsByKey["single-asset"];
+type JsonPathProbe = NonNullable<SingleAssetParams["reserveProbe"]>;
 
 function readParams(config: LiveReservesConfig): SingleAssetParams {
   return parseLiveReserveAdapterParams("single-asset", config.params);

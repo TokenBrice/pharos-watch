@@ -3,7 +3,7 @@ import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import { DECIMALS_SELECTOR, encodeAddress, encodeBalanceOfCallData, TOTAL_VALUE_SELECTOR } from "../../lib/evm-selectors";
 import { buildCoverageShortfallWarnings, decimalNumberFromBigInt, slicesFromValues, validateDecimals } from "./slice-math";
@@ -15,21 +15,7 @@ import { pinnedBlockPlan } from "./evm-observation-plan";
 
 const CHECK_BALANCE_SELECTOR = "0x5f515226";
 
-interface OriginVaultAssetConfig {
-  address: string;
-  decimals: number;
-  name: ReserveSlice["name"];
-  risk: ReserveSlice["risk"];
-  coinId?: string;
-  depType?: ReserveSlice["depType"];
-}
-
-interface OriginVaultBalancesParams {
-  vaultAddress: string;
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-  assets: OriginVaultAssetConfig[];
-}
+type OriginVaultBalancesParams = LiveReserveAdapterParamsByKey["origin-vault-balances"];
 
 interface OriginVaultAssetState {
   sourceKey?: string;

@@ -50,6 +50,16 @@ describe("USDaf on-chain rebinding", () => {
     expectWarnings(result, []);
   });
 
+  it.each([false, true])("preserves complete observations across batch and fallback transports (shutdown=%s)", async (shutdown) => {
+    const batched = await runAdapter("liquity-v2-branches", "usdaf-asymmetry", {
+      network: { ...network({ shutdown }), multicall: true }, nowSec: NOW,
+    });
+    const fallback = await runAdapter("liquity-v2-branches", "usdaf-asymmetry", {
+      network: { ...network({ shutdown }), multicall: false }, nowSec: NOW,
+    });
+    expect(fallback.result).toEqual(batched.result);
+  });
+
   it("retains measured collateral while a branch shutdown degrades the route", async () => {
     const { result } = await runAdapter("liquity-v2-branches", "usdaf-asymmetry", { network: network({ shutdown: true }), nowSec: NOW });
     expect(result.metadata?.redemption?.routeStatus).toBe("degraded");

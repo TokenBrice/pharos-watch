@@ -4,6 +4,7 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import {
   MATRIXDOCK_BULLION_RESERVE_FEED_MAX_AGE_SEC,
   parseLiveReserveAdapterParams,
+  type LiveReserveAdapterParamsByKey,
 } from "@shared/lib/live-reserve-adapters";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
@@ -54,15 +55,7 @@ const SuiCoinMetadataResponseSchema = z.object({
   }).nullable(),
 });
 
-interface MatrixdockFrsParams {
-  label: string;
-  risk: ReserveSlice["risk"];
-  feedAddress: string;
-  tokenAddress: string;
-  suiCoinType: string;
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-}
+type MatrixdockFrsParams = LiveReserveAdapterParamsByKey["matrixdock-frs"];
 
 interface MatrixdockFrsState {
   reserveRaw: bigint;

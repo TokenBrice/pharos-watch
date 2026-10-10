@@ -6,6 +6,7 @@ import {
   type IndependentAssuranceProduct,
   type IndependentAssuranceReconciliation,
 } from "@shared/lib/independent-assurance";
+import { ASSURANCE_RECONCILIATION_TOLERANCES } from "@shared/lib/independent-assurance-tolerances";
 import {
   getLiveReserveAdapterDefinition,
   parseLiveReserveAdapterParams,
@@ -108,10 +109,7 @@ export const EUROP_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
     cash: { name: "Euro cash held at regulated financial institutions", risk: "very-low", assetClass: "bank-deposit", issuerOrObligor: "Societe Generale S.A. and Banking Circle S.A.", riskFactors: ["counterparty", "liquidity", "custody", "legal", "concentration"], liquidityHorizon: "immediate" },
     "cash-equivalents": { name: "Euro cash equivalents held at regulated financial institutions (instruments undisclosed)", risk: "low", assetClass: "other", issuerOrObligor: "Societe Generale S.A. and Banking Circle S.A.; underlying instruments undisclosed", riskFactors: ["credit", "duration", "liquidity", "custody", "counterparty", "concentration"], liquidityHorizon: "unknown" },
   },
-  reconciliation: {
-    reportedAssetTotalTolerance: { absolute: "1", relativePpm: 1 },
-    reportedLiabilityTotalTolerance: { absolute: "1", relativePpm: 1 },
-  },
+  reconciliation: ASSURANCE_RECONCILIATION_TOLERANCES.EUROP,
   isReportCandidate: (href) => /(?:SALVUS.*Attestation.*(?:EUROP|Letter)|Attestation.*(?:number|nombre).*EUROP)/i.test(decodeURIComponent(href)),
   reportDateFromCandidate: europReportDate,
   indexHeaders: { Accept: "application/json" },

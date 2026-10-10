@@ -1,6 +1,6 @@
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -24,9 +24,7 @@ interface BtcfiHandlerRow {
   isStable: boolean;
 }
 
-interface BtcfiParams {
-  handlersUrl: string;
-}
+type BtcfiParams = LiveReserveAdapterParamsByKey["btcfi"];
 
 function readParams(config: LiveReservesConfig): BtcfiParams {
   return parseLiveReserveAdapterParams("btcfi", config.params);
