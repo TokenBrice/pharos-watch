@@ -207,27 +207,8 @@ export interface CronStalenessObservation {
   availabilityImpacting: boolean;
 }
 
-function classifyAge(
-  job: string,
-  ageSeconds: number | null,
-  expectedIntervalSec: number,
-  thresholdSec: number,
-): ReturnType<typeof classifyFreshness> {
-  const nowSec = Math.max(0, ageSeconds ?? 0);
-  return classifyFreshness(
-    {
-      job,
-      lastSuccessAt: ageSeconds == null ? null : 0,
-      lastRunAt: ageSeconds == null ? null : 0,
-      expectedIntervalSec,
-      lastStatus: ageSeconds == null ? null : "ok",
-    },
-    {
-      watchAt: { absoluteSec: thresholdSec },
-      staleAt: { absoluteSec: thresholdSec },
-    },
-    nowSec,
-  );
+function isAgeStale(ageSeconds: number | null, thresholdSec: number): boolean {
+  return ageSeconds == null || Number.isNaN(ageSeconds) || Math.max(0, ageSeconds) > thresholdSec;
 }
 
 function buildFullObservation(
@@ -250,12 +231,7 @@ function buildFullObservation(
     producerThresholdSec: thresholdSec,
     endpointThresholdSec: lane.endpointMaxAgeSec,
     availabilityThresholdSec: lane.availabilityMaxAgeSec,
-    availabilityImpacting: classifyAge(
-      lane.producerJob,
-      ageSeconds,
-      lane.producerIntervalSec,
-      lane.availabilityMaxAgeSec,
-    ).state === "stale",
+    availabilityImpacting: isAgeStale(ageSeconds, lane.availabilityMaxAgeSec),
   };
 }
 
@@ -296,12 +272,7 @@ function buildCronObservation(
 }
 
 function isStale(observation: CronStalenessObservation): boolean {
-  return classifyAge(
-    observation.producerJob,
-    observation.ageSeconds,
-    observation.thresholdSec,
-    observation.thresholdSec,
-  ).state === "stale";
+  return isAgeStale(observation.ageSeconds, observation.thresholdSec);
 }
 
 function buildDependencyRecoveryChecks(observations: readonly CronStalenessObservation[]): Array<{

@@ -194,6 +194,10 @@ describe("cron staleness watchdog", () => {
     }).map((entry) => entry.cacheKey)).toEqual(["stablecoins", "fx-rates", "yield-data"]);
   });
 
+  it.each([-1, Number.NEGATIVE_INFINITY, 1_800])("keeps clamped or boundary cache age %s fresh", (ageSeconds) => {
+    expect(evaluateCronStaleness({ stablecoins: { ageSeconds } }, ["stablecoins"])).toEqual([]);
+  });
+
   it("reports DEX-to-DEWS dependency recovery state", async () => {
     mockCacheStatus({ "dex-liquidity": 120, dews: 4_000 });
     const result = await runCronStalenessWatchdog(fakeDb());

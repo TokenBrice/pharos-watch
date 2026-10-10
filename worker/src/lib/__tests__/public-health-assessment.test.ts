@@ -210,7 +210,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     // Missing evidence is independent of finite ratios measured for other caches.
     expect(result.worstCacheRatio).toBeNull();
   });
-  it("keeps the alert-broker status surface inert without querying broker tables", async () => {
+  it("does not query retired alert-broker tables", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       { match: "SELECT 1", rows: [], first: { value: 1 } },
@@ -225,19 +225,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
     ]);
 
-    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
-
-    expect(result.alertBroker).toEqual({
-      activeCount: 0,
-      pendingCount: 0,
-      criticalActiveCount: 0,
-      failedDeliveryCount: 0,
-      missingTargetCount: 0,
-      oldestActiveAt: null,
-      activeConditionKeys: [],
-      queryFailed: false,
-    });
-    expect(result.alertBrokerImpactStatus).toBe("healthy");
+    await assessPublicHealth(db, nowSec, { logPrefix: "test" });
     expect(db.getHistory().some((entry) => /alert_broker_/i.test(entry.sql))).toBe(false);
   });
 

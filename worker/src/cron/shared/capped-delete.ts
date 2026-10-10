@@ -1,5 +1,6 @@
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { runBoundedPrune } from "../../lib/bounded-prune";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
 export interface CappedDeleteResult {
@@ -25,23 +26,13 @@ export async function deleteCapped(
   runLimit: number,
   signal?: AbortSignal,
 ): Promise<CappedDeleteResult> {
-  let pruned = 0;
-  while (pruned < runLimit) {
-    throwIfAborted(signal);
-    const limit = Math.min(batchLimit, runLimit - pruned);
-    const result = await runWithOverloadRetry(
-      () => db.prepare(sql).bind(...bindsForLimit(limit)).run(),
-      3,
-      signal,
-    );
-    const batchPruned = Number(result.meta?.changes ?? 0);
-    pruned += batchPruned;
-    if (batchPruned < limit) break;
-  }
-  return {
-    pruned,
-    cappedAtLimit: pruned >= runLimit,
-  };
+  const result = await runBoundedPrune({
+    batchLimit,
+    runLimit,
+    signal,
+    deleteBatch: (limit) => db.prepare(sql).bind(...bindsForLimit(limit)).run(),
+  });
+  return { pruned: result.deleted, cappedAtLimit: result.truncated };
 }
 
 /** Every retention envelope publishes the same bounded failure text. */

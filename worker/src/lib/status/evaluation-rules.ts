@@ -476,7 +476,6 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
     return ruleResult(status, cause ? [cause] : []);
   },
   evaluateCircuitStatus,
-  (input) => ruleResult(input.publicHealth.alertBrokerImpactStatus),
   evaluateD1Status,
   evaluateCronDiagnosticQueries,
   (input) => {

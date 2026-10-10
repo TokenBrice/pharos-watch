@@ -12,8 +12,6 @@ import {
   type StaleSlotReconciliationSummary,
 } from "./scheduled-slot-reconciliation";
 
-export { staleSlotEventCacheKey } from "./scheduled-slot-reconciliation";
-
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import type { SlotDeadline } from "./cron-timeouts";
@@ -61,8 +59,6 @@ interface ScheduledSlotFenceMetadata {
   jobsDegraded: number;
   jobsSkipped: number;
 }
-
-export const SLOT_EXECUTION_HEARTBEAT_SEC = resolveScheduledSlotPolicy("").heartbeatSec;
 
 type SlotExecutionRow = {
   state: string;

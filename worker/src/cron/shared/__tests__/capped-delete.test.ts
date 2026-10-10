@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
-import { runCappedPruneFamily } from "../capped-delete";
+import { deleteCapped, runCappedPruneFamily } from "../capped-delete";
+import { pruneOldApiKeyRequestRateLimits } from "../../../lib/api-key-request-rate-limit-prune";
 
 interface RecordedCall {
   sql: string;
@@ -39,6 +40,47 @@ function makeScriptedD1(script: {
 
 const alpha = { sql: "DELETE FROM alpha LIMIT ?", bindsForLimit: (limit: number) => [limit], batchLimit: 2, runLimit: 4 };
 const beta = { sql: "DELETE FROM beta LIMIT ?", bindsForLimit: (limit: number) => ["b", limit], batchLimit: 5, runLimit: 5 };
+
+describe("capped batch lifecycle", () => {
+  it.each([
+    [[2, 1], 10, 3, false, [2, 2]],
+    [[2, 2], 4, 4, true, [2, 2]],
+    [[2, 1], 3, 3, true, [2, 1]],
+  ] as const)("preserves short batches and exact or partial caps (%s)", async (batches, cap, pruned, cappedAtLimit, limits) => {
+    let index = 0;
+    const { db, calls } = makeScriptedD1({ run: () => batches[index++] });
+    expect(await deleteCapped(db, alpha.sql, (limit) => [limit], 2, cap)).toEqual({ pruned, cappedAtLimit });
+    expect(calls.map((call) => call.binds[0])).toEqual(limits);
+  });
+
+  it("retries overloads without spending the row budget", async () => {
+    vi.useFakeTimers();
+    try {
+      let attempts = 0;
+      const { db, calls } = makeScriptedD1({ run: () => ++attempts === 1 ? new Error("D1 DB is overloaded") : 1 });
+      const pass = deleteCapped(db, alpha.sql, (limit) => [limit], 2, 3);
+      await vi.runAllTimersAsync();
+      expect(await pass).toEqual({ pruned: 1, cappedAtLimit: false });
+      expect(calls.map((call) => call.binds)).toEqual([[2], [2]]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not admit another batch after cancellation", async () => {
+    const controller = new AbortController();
+    const { db, calls } = makeScriptedD1({ run: () => { controller.abort(new Error("cancelled")); return 2; } });
+    await expect(deleteCapped(db, alpha.sql, (limit) => [limit], 2, 4, controller.signal)).rejects.toThrow("cancelled");
+    expect(calls).toHaveLength(1);
+  });
+
+  it("shares the retired API-key row budget across both tables", async () => {
+    const { db, calls } = makeScriptedD1({ run: (call) => call.sql.includes("api_key_request_rate_limit_v2") ? 1 : Number(call.binds[1]) });
+    expect(await pruneOldApiKeyRequestRateLimits(db, 123, 2, 4)).toEqual({ deleted: 4, truncated: true });
+    expect(calls.map((call) => call.binds)).toEqual([[123, 2], [123, 2], [123, 1]]);
+    expect(calls.map((call) => call.sql.includes("api_key_request_rate_limit_v2"))).toEqual([true, false, false]);
+  });
+});
 
 describe("runCappedPruneFamily", () => {
   it("runs every statement before its probes and reports counts, cap and probe rows", async () => {

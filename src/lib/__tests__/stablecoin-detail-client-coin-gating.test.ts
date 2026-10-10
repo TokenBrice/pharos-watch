@@ -1,6 +1,8 @@
 // src/lib/__tests__/stablecoin-detail-client-coin-gating.test.ts
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { MAX_MINT_AUTHORITY_DETAIL_CONTROLS } from "../stablecoin-detail-mint-authority-client";
 import { buildStablecoinDetailClientCoin } from "../stablecoin-detail-client-coin";
 
 const CUSTODY_PROFILE = {
@@ -91,38 +93,6 @@ describe("buildStablecoinDetailClientCoin display gating", () => {
     expect("reserveReview" in clientCoin).toBe(false);
   });
 
-  it("sanitizes malformed mint-authority fields at the client projector boundary", () => {
-    const clientCoin = buildStablecoinDetailClientCoin(coinWith({
-      mintAuthority: {
-        mintPath: "permissioned-minter",
-        authorityPosture: "bounded-admin",
-        confidence: "verified",
-        summary: "Minting is controlled by a published admin.",
-        controls: [
-          {
-            chain: { name: "ethereum" },
-            address: { value: "0x1234" },
-            label: "Malformed admin",
-            role: "minter-admin",
-            authorityType: "safe",
-            directMintAbility: "can-authorize",
-            threshold: "2",
-            signerCount: Number.NaN,
-            timelockDelaySec: { seconds: 3600 },
-            capDescription: ["cap"],
-          },
-        ],
-      },
-    }));
-
-    expect(clientCoin.mintAuthoritySummary?.controls?.[0]).toEqual({
-      label: "Malformed admin",
-      role: "minter-admin",
-      authorityType: "safe",
-      directMintAbility: "can-authorize",
-    });
-  });
-
   it("de-duplicates mint-authority review and incident sources by URL", () => {
     const clientCoin = buildStablecoinDetailClientCoin(coinWith({
       mintAuthority: {
@@ -155,5 +125,79 @@ describe("buildStablecoinDetailClientCoin display gating", () => {
     expect(clientCoin.mintAuthoritySummary?.mintIncidents?.[0]?.sources).toEqual([
       { label: "Thread", url: "https://example.com/thread" },
     ]);
+  });
+
+  it("omits empty-label mint-authority links before deduplication across summary, incident and custody sources", () => {
+    const base = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const sources = [
+      { label: "", url: "https://example.com/evidence" },
+      { label: "Evidence", url: "https://example.com/evidence" },
+      { label: "", url: "https://example.com/empty-label" },
+    ];
+    const coin: StablecoinMeta = {
+      ...base,
+      mintAuthority: {
+        mintPath: "issuer-direct-mint", authorityPosture: "concentrated-admin", confidence: "verified",
+        summary: "Issuer backend can mint through reviewed operator controls.",
+        review: {
+          evidence: "Reviewed backend signer custody documentation.", reviewer: "test", reviewedAt: "2026-10-01", sources,
+        },
+        mintIncidents: [{
+          date: "2025-02-01", status: "active", summary: "Privileged mint incident.", sources,
+        }],
+        controls: [{
+          label: "Backend signer", role: "backend-signer", authorityType: "issuer-backend", directMintAbility: "direct",
+          keyCustodyAttestation: { kind: "hsm", sources },
+        }],
+      },
+    };
+    const summary = buildStablecoinDetailClientCoin(coin).mintAuthoritySummary!;
+    const expected = [{ label: "Evidence", url: "https://example.com/evidence" }];
+
+    expect(summary.sources).toEqual(expected);
+    expect(summary.mintIncidents?.[0]?.sources).toEqual(expected);
+    expect(summary.controls?.[0]?.keyCustodyAttestation?.sources).toEqual(expected);
+  });
+
+  it("projects only allowed mint-authority fields across the validated registry and inherited parents", () => {
+    const summaryKeys = ["mintPath", "authorityPosture", "confidence", "summary", "headline", "inheritedFrom",
+      "mintIncidents", "controls", "totalControlCount", "controlCensusUrl", "sources", "reviewedAt",
+      "sourceFreeRationale", "unresolvedQuestions"];
+    const controlKeys = ["label", "role", "authorityType", "directMintAbility", "chain", "address", "threshold",
+      "signerCount", "timelockDelaySec", "capDescription", "canRaiseCap", "modulesOrGuardsStatus", "keyCustodyAttestation"];
+    const priority = ["direct", "can-authorize", "unknown", "cap-limited", "upgrade-only", "parameter-only", "none"];
+    let checked = 0;
+    for (const coin of TRACKED_META_BY_ID.values()) {
+      const client = buildStablecoinDetailClientCoin(coin, { parentById: TRACKED_META_BY_ID });
+      const profile = coin.mintAuthority;
+      if (!profile) {
+        expect(client).not.toHaveProperty("mintAuthoritySummary");
+        continue;
+      }
+      const summary = client.mintAuthoritySummary!;
+      expect(Object.keys(summary).every((key) => summaryKeys.includes(key)), coin.id).toBe(true);
+      expect(summary).toMatchObject({
+        mintPath: profile.mintPath, authorityPosture: profile.authorityPosture,
+        confidence: profile.confidence, summary: profile.summary,
+      });
+      const authored = profile.controls ?? [];
+      const selected = authored.length > MAX_MINT_AUTHORITY_DETAIL_CONTROLS
+        ? [...authored].sort((a, b) => priority.indexOf(a.directMintAbility) - priority.indexOf(b.directMintAbility))
+            .slice(0, MAX_MINT_AUTHORITY_DETAIL_CONTROLS)
+        : authored;
+      expect(summary.controls?.map((control) => control.label) ?? []).toEqual(selected.map((control) => control.label));
+      for (const control of summary.controls ?? []) {
+        expect(Object.keys(control).every((key) => controlKeys.includes(key)), coin.id).toBe(true);
+        if (control.keyCustodyAttestation) expect(Object.keys(control.keyCustodyAttestation)).toEqual(["kind", "sources"]);
+      }
+      expect(new Set(summary.sources?.map((source) => source.url)).size).toBe(summary.sources?.length ?? 0);
+      if (profile.inheritedFrom && TRACKED_META_BY_ID.get(profile.inheritedFrom)?.mintAuthority) {
+        expect(client.mintAuthorityParentSummaries?.[profile.inheritedFrom]).toEqual(
+          buildStablecoinDetailClientCoin(TRACKED_META_BY_ID.get(profile.inheritedFrom)!).mintAuthoritySummary,
+        );
+      }
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(100);
   });
 });

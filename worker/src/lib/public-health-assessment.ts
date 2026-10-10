@@ -16,7 +16,6 @@ import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safet
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import { isYieldSafetyFallbackWithinWindow } from "@shared/lib/yield-safety-fallback";
 import type {
-  AlertBrokerHealthSummary,
   ActivePriceCoverageHealth,
   CacheStatus,
   D1CapacityAssessment,
@@ -87,17 +86,6 @@ const EMPTY_MINT_BURN_HEALTH: HealthResponse["mintBurn"] = {
   },
 };
 
-const EMPTY_ALERT_BROKER_SUMMARY: AlertBrokerHealthSummary = {
-  activeCount: 0,
-  pendingCount: 0,
-  criticalActiveCount: 0,
-  failedDeliveryCount: 0,
-  missingTargetCount: 0,
-  oldestActiveAt: null,
-  activeConditionKeys: [],
-  queryFailed: false,
-};
-
 export interface PublicHealthAssessment {
   dbHealthy: boolean;
   overallStatus: HealthResponse["status"];
@@ -128,8 +116,6 @@ export interface PublicHealthAssessment {
   d1CapacityQueryFailed?: boolean;
   yieldSafetyQueryFailed?: boolean;
   d1CapacityQueryError: string | null;
-  alertBroker: AlertBrokerHealthSummary;
-  alertBrokerImpactStatus: HealthResponse["status"];
   stablecoinPublication: StablecoinPublicationHealth;
   stablecoinPublicationImpactStatus: HealthResponse["status"];
   activePriceCoverage: ActivePriceCoverageHealth;
@@ -560,8 +546,6 @@ export async function assessPublicHealth(
       d1Capacity: null,
       d1CapacityImpactStatus: "healthy",
       d1CapacityQueryError: null,
-      alertBroker: { ...EMPTY_ALERT_BROKER_SUMMARY },
-      alertBrokerImpactStatus: "stale",
       stablecoinPublication: unknownStablecoinPublicationHealth(),
       stablecoinPublicationImpactStatus: "healthy",
       activePriceCoverage: unknownActivePriceCoverageHealth(null, "coverage-read-failed"),
@@ -727,9 +711,6 @@ export async function assessPublicHealth(
     );
   }
 
-  const alertBroker = { ...EMPTY_ALERT_BROKER_SUMMARY };
-  const alertBrokerImpactStatus: HealthResponse["status"] = "healthy";
-
   const stablecoinPublicationImpactStatus = getStablecoinPublicationImpactStatus(
     stablecoinPublication, activePriceCoverage, now,
   );
@@ -792,7 +773,6 @@ export async function assessPublicHealth(
     circuitImpactStatus,
     blacklistImpactStatus,
     d1CapacityImpactStatus,
-    alertBrokerImpactStatus,
     stablecoinPublicationImpactStatus,
     activePriceCoverageImpactStatus,
     yieldSafetyAvailability.impactStatus,
@@ -828,8 +808,6 @@ export async function assessPublicHealth(
     d1CapacityQueryError: d1CapacityResult.error,
     d1CapacityQueryFailed: d1CapacityResult.reason === "query-failed",
     yieldSafetyQueryFailed: yieldSafetyAvailability.queryFailed === true,
-    alertBroker,
-    alertBrokerImpactStatus,
     stablecoinPublication,
     stablecoinPublicationImpactStatus,
     activePriceCoverage,

@@ -67,7 +67,7 @@ async function runSlot(scheduleKey: CronScheduleKey): Promise<{
     VALUES (?, ?, 'running', ?, ?, ?, ?, ?, 1)`)
     .run(scheduleKey, runtime.slotStartedAt, runtime.executionFence.owner, runtime.executionFence.generation,
       runtime.executionFence.invocationId, runtime.slotStartedAt, runtime.slotStartedAt);
-  const runner = await SLOT_RUNNER_LOADER_BY_KEY[plan.runnerKey]();
+  const runner = await SLOT_RUNNER_LOADER_BY_KEY[plan.scheduleKey]();
   const summary = (await runner(runtime)) ?? undefined;
   return { leased, summary };
 }

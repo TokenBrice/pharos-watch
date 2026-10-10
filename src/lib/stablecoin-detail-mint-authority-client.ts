@@ -1,17 +1,7 @@
-import type { StablecoinMeta } from "@shared/types";
-import {
-  MINT_AUTHORITY_CONFIDENCE_VALUES,
-  MINT_AUTHORITY_CONTROL_ROLE_VALUES,
-  MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES,
-  MINT_AUTHORITY_MINT_PATH_VALUES,
-  MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES,
-  MINT_AUTHORITY_POSTURE_VALUES,
-  MINT_AUTHORITY_TYPE_VALUES,
-} from "@shared/types/core";
+import type { StablecoinMeta, MintAuthorityControl, MintAuthorityProfile, StablecoinLink } from "@shared/types";
 import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
-import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import { collectMintAuthoritySources } from "@shared/lib/mint-authority-sources";
-import { dedupeStablecoinLinksByUrl, readStablecoinLinks } from "@/lib/stablecoin-detail-links-client";
+import { dedupeStablecoinLinksByUrl } from "@/lib/stablecoin-detail-links-client";
 
 type MintAuthorityClientControlSummary = NonNullable<MintAuthorityClientSummary["controls"]>[number];
 type MintAuthorityClientSourceSummary = NonNullable<MintAuthorityClientSummary["sources"]>[number];
@@ -38,144 +28,65 @@ export function selectMintAuthorityDetailControls(
   ).slice(0, MAX_MINT_AUTHORITY_DETAIL_CONTROLS);
 }
 
-/**
- * Validates a string against an enum's allowlist before narrowing it. The
- * source profile is Zod-validated at build time, but a future schema migration
- * or malformed static asset could otherwise let an out-of-range enum string
- * flow into MAS scoring and display without any runtime error. Returns null on
- * an unrecognized value so callers can fail safe (drop the field/projection).
- */
-function enumValue<T extends string>(value: string | null, allowed: readonly T[]): T | null {
-  return value != null && (allowed as readonly string[]).includes(value) ? (value as T) : null;
+function projectSources(sources: readonly StablecoinLink[]): MintAuthorityClientSourceSummary[] {
+  return dedupeStablecoinLinksByUrl(sources.filter(({ label, url }) => label && url).map(({ label, url }) => ({ label, url })));
 }
 
-function canRaiseCapValue(value: unknown): MintAuthorityClientControlSummary["canRaiseCap"] | null {
-  return value === true || value === false || value === "unknown" ? value : null;
+function buildMintIncidents(
+  incidents: MintAuthorityProfile["mintIncidents"],
+): MintAuthorityClientSummary["mintIncidents"] | undefined {
+  return incidents?.map(({ date, status, resolvedAt, summary, sources }) => ({
+    date,
+    status,
+    ...(resolvedAt ? { resolvedAt } : {}),
+    summary,
+    sources: projectSources(sources),
+  }));
 }
 
-function stringListValue(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.map((item) => stringValue(item)).filter((item): item is string => item != null && item.length > 0);
-}
-
-function appendSources(target: MintAuthorityClientSourceSummary[], sources: unknown, seenUrls: Set<string>) {
-  for (const source of dedupeStablecoinLinksByUrl(readStablecoinLinks(sources))) {
-    if (seenUrls.has(source.url)) continue;
-    seenUrls.add(source.url);
-    target.push(source);
-  }
-}
-
-function buildKeyCustodyAttestation(
-  value: unknown,
-): MintAuthorityClientControlSummary["keyCustodyAttestation"] | undefined {
-  if (!isRecord(value)) return undefined;
-  const kind = stringValue(value.kind);
-  if (kind !== "mpc" && kind !== "hsm") return undefined;
-  const sources: MintAuthorityClientSourceSummary[] = [];
-  appendSources(sources, value.sources, new Set());
-  if (sources.length === 0) return undefined;
-  return { kind, sources };
-}
-
-function buildMintIncidents(value: unknown): MintAuthorityClientSummary["mintIncidents"] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const incidents: NonNullable<MintAuthorityClientSummary["mintIncidents"]> = [];
-  for (const incident of value) {
-    if (!isRecord(incident)) continue;
-    const date = stringValue(incident.date);
-    const summary = stringValue(incident.summary);
-    const status = incident.status === "active" || incident.status === "resolved" ? incident.status : null;
-    const resolvedAt = stringValue(incident.resolvedAt);
-    if (!date || !summary || !status) continue;
-    const sources: MintAuthorityClientSourceSummary[] = [];
-    appendSources(sources, incident.sources, new Set());
-    if (sources.length === 0) continue;
-    incidents.push({ date, status, ...(resolvedAt ? { resolvedAt } : {}), summary, sources });
-  }
-  return incidents.length > 0 ? incidents : undefined;
-}
-
-function buildControlSummary(value: unknown): MintAuthorityClientControlSummary | null {
-  if (!isRecord(value)) return null;
-
-  const label = stringValue(value.label);
-  const role = enumValue(stringValue(value.role), MINT_AUTHORITY_CONTROL_ROLE_VALUES);
-  const authorityType = enumValue(stringValue(value.authorityType), MINT_AUTHORITY_TYPE_VALUES);
-  const directMintAbility = enumValue(stringValue(value.directMintAbility), MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES);
-  if (!label || !role || !authorityType || !directMintAbility) return null;
-
-  // Mint-authority metadata is Zod-validated during the stablecoin-data build;
-  // this client projection re-validates enum fields against their allowlists so
-  // an out-of-range value (e.g. from a future schema drift) is dropped rather
-  // than silently exposed.
+function buildControlSummary(value: MintAuthorityControl): MintAuthorityClientControlSummary {
   const summary: MintAuthorityClientControlSummary = {
-    label,
-    role,
-    authorityType,
-    directMintAbility,
+    label: value.label,
+    role: value.role,
+    authorityType: value.authorityType,
+    directMintAbility: value.directMintAbility,
   };
 
-  const chain = stringValue(value.chain);
-  const address = stringValue(value.address);
-  const threshold = numberValue(value.threshold);
-  const signerCount = numberValue(value.signerCount);
-  const timelockDelaySec = numberValue(value.timelockDelaySec);
-  const capDescription = stringValue(value.capDescription);
-  const canRaiseCap = canRaiseCapValue(value.canRaiseCap);
-  const modulesOrGuardsStatus = enumValue(
-    stringValue(value.modulesOrGuardsStatus),
-    MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES,
-  );
-  const keyCustodyAttestation = buildKeyCustodyAttestation(value.keyCustodyAttestation);
-
-  if (chain) summary.chain = chain;
-  if (address) summary.address = address;
-  if (threshold != null) summary.threshold = threshold;
-  if (signerCount != null) summary.signerCount = signerCount;
-  if (timelockDelaySec != null) summary.timelockDelaySec = timelockDelaySec;
-  if (capDescription) summary.capDescription = capDescription;
-  if (canRaiseCap != null) summary.canRaiseCap = canRaiseCap;
-  if (modulesOrGuardsStatus) {
-    summary.modulesOrGuardsStatus = modulesOrGuardsStatus;
+  if (value.chain) summary.chain = value.chain;
+  if (value.address) summary.address = value.address;
+  if (value.threshold != null) summary.threshold = value.threshold;
+  if (value.signerCount != null) summary.signerCount = value.signerCount;
+  if (value.timelockDelaySec != null) summary.timelockDelaySec = value.timelockDelaySec;
+  if (value.capDescription) summary.capDescription = value.capDescription;
+  if (value.canRaiseCap != null) summary.canRaiseCap = value.canRaiseCap;
+  if (value.modulesOrGuardsStatus) summary.modulesOrGuardsStatus = value.modulesOrGuardsStatus;
+  if (value.keyCustodyAttestation) {
+    summary.keyCustodyAttestation = {
+      kind: value.keyCustodyAttestation.kind,
+      sources: projectSources(value.keyCustodyAttestation.sources),
+    };
   }
-  if (keyCustodyAttestation) summary.keyCustodyAttestation = keyCustodyAttestation;
 
   return summary;
 }
 
 export function projectMintAuthorityClientSummary(coin: StablecoinMeta): MintAuthorityClientSummary | null {
-  const profile: Record<string, unknown> | null = isRecord(coin.mintAuthority) ? coin.mintAuthority : null;
+  const profile = coin.mintAuthority;
   if (!profile) return null;
 
-  const mintPath = enumValue(stringValue(profile.mintPath), MINT_AUTHORITY_MINT_PATH_VALUES);
-  const authorityPosture = enumValue(stringValue(profile.authorityPosture), MINT_AUTHORITY_POSTURE_VALUES);
-  const confidence = enumValue(stringValue(profile.confidence), MINT_AUTHORITY_CONFIDENCE_VALUES);
-  const summaryText = stringValue(profile.summary);
-  if (!mintPath || !authorityPosture || !confidence || !summaryText) return null;
-
-  // The source profile is build-validated; these enum fields feed the MAS score,
-  // so they are re-validated against their allowlists before narrowing — an
-  // unrecognized value drops the projection rather than flowing into scoring.
   const summary: MintAuthorityClientSummary = {
-    mintPath,
-    authorityPosture,
-    confidence,
-    summary: summaryText,
+    mintPath: profile.mintPath,
+    authorityPosture: profile.authorityPosture,
+    confidence: profile.confidence,
+    summary: profile.summary,
   };
 
-  const headline = stringValue(profile.headline);
-  if (headline) summary.headline = headline;
-  const inheritedFrom = stringValue(profile.inheritedFrom);
-  if (inheritedFrom) summary.inheritedFrom = inheritedFrom;
+  if (profile.headline) summary.headline = profile.headline;
+  if (profile.inheritedFrom) summary.inheritedFrom = profile.inheritedFrom;
   const mintIncidents = buildMintIncidents(profile.mintIncidents);
   if (mintIncidents) summary.mintIncidents = mintIncidents;
 
-  const controls = Array.isArray(profile.controls)
-    ? profile.controls
-        .map(buildControlSummary)
-        .filter((control): control is MintAuthorityClientControlSummary => control !== null)
-    : [];
+  const controls = profile.controls?.map(buildControlSummary) ?? [];
   if (controls.length > 0) {
     summary.controls = selectMintAuthorityDetailControls(controls);
     if (controls.length > summary.controls.length) {
@@ -184,16 +95,11 @@ export function projectMintAuthorityClientSummary(coin: StablecoinMeta): MintAut
     }
   }
 
-  const sources: MintAuthorityClientSourceSummary[] = [];
-  const seenUrls = new Set<string>();
-  const review = isRecord(profile.review) ? profile.review : null;
-  const reviewedAt = stringValue(review?.reviewedAt);
-  if (reviewedAt) summary.reviewedAt = reviewedAt;
-  const sourceFreeRationale = stringValue(review?.sourceFreeRationale);
-  if (sourceFreeRationale) summary.sourceFreeRationale = sourceFreeRationale;
-  const unresolvedQuestions = stringListValue(review?.unresolvedQuestions);
-  if (unresolvedQuestions.length > 0) summary.unresolvedQuestions = unresolvedQuestions;
-  appendSources(sources, collectMintAuthoritySources(coin.mintAuthority!), seenUrls);
+  const review = profile.review;
+  if (review?.reviewedAt) summary.reviewedAt = review.reviewedAt;
+  if (review?.sourceFreeRationale) summary.sourceFreeRationale = review.sourceFreeRationale;
+  if (review?.unresolvedQuestions?.length) summary.unresolvedQuestions = review.unresolvedQuestions;
+  const sources = projectSources(collectMintAuthoritySources(profile));
   if (sources.length > 0) summary.sources = sources;
 
   return summary;

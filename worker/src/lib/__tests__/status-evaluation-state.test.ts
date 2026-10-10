@@ -247,23 +247,6 @@ describe("status evaluation policy", () => {
     expect(availability).toBe("healthy");
   });
 
-  it("uses the same durable alert floor for admin availability", () => {
-    const availability = evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ publicHealth: makePublicHealth("healthy", {
-      alertBrokerImpactStatus: "degraded",
-      alertBroker: {
-        ...makePublicHealth().alertBroker,
-        activeCount: 1,
-        criticalActiveCount: 1,
-        activeConditionKeys: ["cron:sync-live-reserves"],
-      },
-    }),
-    availabilityImpactingCronErrors: 0,
-    availabilityImpactingUnhealthyCrons: 0,
-    availabilityImpactingConsecutiveCronErrors: 0, })).status;
-
-    expect(availability).toBe("degraded");
-  });
-
   it("uses the D1 capacity floor for admin availability", () => {
     const availability = evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ publicHealth: makePublicHealth("healthy", {
       d1CapacityImpactStatus: "stale",

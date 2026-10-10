@@ -1,11 +1,12 @@
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import type { MinimalD1RunResult } from "./minimal-d1";
 
 interface BoundedPruneOptions {
   batchLimit: number;
   runLimit: number;
   signal?: AbortSignal;
-  deleteBatch: (limit: number) => Promise<D1Result<unknown>>;
+  deleteBatch: (limit: number) => Promise<MinimalD1RunResult>;
 }
 
 export async function runBoundedPrune({
@@ -19,7 +20,7 @@ export async function runBoundedPrune({
     throwIfAborted(signal);
     const limit = Math.min(batchLimit, runLimit - deleted);
     const result = await runWithOverloadRetry(() => deleteBatch(limit), 3, signal);
-    const batchDeleted = result.meta?.changes ?? 0;
+    const batchDeleted = Number(result.meta?.changes ?? 0);
     deleted += batchDeleted;
     if (batchDeleted < limit) break;
   }

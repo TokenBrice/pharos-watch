@@ -96,72 +96,36 @@ export function deriveDataHealth(input: QueryHealthInput, nowMs = Date.now()): D
       ? serverFloor
       : classifiedState;
 
+  let state: DataHealthState = baseState;
+  let message = getBaseMessage(baseState);
+  let degradationReason: DataHealthInfo["degradationReason"];
   if (input.error && !hasData) {
-    if (isUnavailableError(input.error)) {
-      return {
-        label: input.label,
-        state: "unavailable",
-        message: "Data is not yet available.",
-        dataUpdatedAt: updatedAtMs,
-        ageMs,
-        staleTime: input.staleTime,
-        meta: input.meta ?? null,
-      };
-    }
-
-    return {
-      label: input.label,
-      state: "error",
-      message: "Failed to load data.",
-      dataUpdatedAt: updatedAtMs,
-      ageMs,
-      staleTime: input.staleTime,
-      meta: input.meta ?? null,
-    };
+    state = isUnavailableError(input.error) ? "unavailable" : "error";
+    message = state === "unavailable" ? "Data is not yet available." : "Failed to load data.";
+  } else if (input.error && hasData) {
+    state = baseState === "fresh" ? "degraded" : baseState;
+    message = "Using last successful data while refresh retries.";
+    degradationReason = "refresh";
+  } else if (!hasData) {
+    state = "unavailable";
+    message = "Data is not yet available.";
+  } else if (baseState === "degraded") {
+    degradationReason = classifiedState === "degraded" || input.meta?.warning?.startsWith("110 ")
+      ? "age"
+      : "source";
   }
 
-  if (input.error && hasData) {
-    const state = baseState === "fresh" ? "degraded" : baseState;
-    return {
-      label: input.label,
-      state,
-      message: "Using last successful data while refresh retries.",
-      degradationReason: "refresh",
-      dataUpdatedAt: updatedAtMs,
-      ageMs,
-      staleTime: input.staleTime,
-      meta: input.meta ?? null,
-    };
-  }
-
-  if (!hasData) {
-    return {
-      label: input.label,
-      state: "unavailable",
-      message: "Data is not yet available.",
-      dataUpdatedAt: updatedAtMs,
-      ageMs,
-      staleTime: input.staleTime,
-      meta: input.meta ?? null,
-    };
-  }
-
-  const message = getBaseMessage(baseState);
-
-  return {
+  const result: DataHealthInfo = {
     label: input.label,
-    state: baseState,
+    state,
     message,
-    ...(baseState === "degraded" ? {
-      degradationReason: classifiedState === "degraded" || input.meta?.warning?.startsWith("110 ")
-        ? "age" as const
-        : "source" as const,
-    } : {}),
     dataUpdatedAt: updatedAtMs,
     ageMs,
     staleTime: input.staleTime,
     meta: input.meta ?? null,
   };
+  if (degradationReason != null) result.degradationReason = degradationReason;
+  return result;
 }
 
 export function mergeHealthStates(entries: DataHealthInfo[]): MergedDataHealth {

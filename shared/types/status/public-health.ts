@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { StatusHealthValue } from "./core";
 import { ActivePriceCoverageHealthSchema, StablecoinPublicationHealthSchema, StatusHealthValueSchema } from "./core";
-import { AlertBrokerHealthSummarySchema } from "./operational";
 import { CacheStatusSchema } from "./schema-primitives";
 import { FreshnessStatusSchema } from "../api-meta";
 import {
@@ -133,7 +132,6 @@ export const HealthResponseSchema = z.object({
   circuits: z.record(z.string(), CircuitRecordSchema),
   stablecoinPublication: StablecoinPublicationHealthSchema.optional(),
   activePriceCoverage: ActivePriceCoverageHealthSchema.optional(),
-  alertBroker: AlertBrokerHealthSummarySchema.optional(),
   schedulerLiveness: SchedulerLivenessSchema.optional(),
   telegramSummary: TelegramHealthSummarySchema.nullable().optional(),
 });

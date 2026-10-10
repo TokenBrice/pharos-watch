@@ -1002,6 +1002,31 @@ describe("StablecoinMeta schema — mint authority", () => {
     ], "fixture")).not.toThrow();
   });
 
+  it.each([
+    ["chain", { name: "ethereum" }], ["address", { value: "0x1234" }],
+    ["threshold", "2"], ["signerCount", Number.NaN], ["timelockDelaySec", { seconds: 3600 }],
+    ["capDescription", ["cap"]], ["role", "invalid"], ["authorityType", "invalid"],
+    ["directMintAbility", "invalid"], ["canRaiseCap", "invalid"], ["modulesOrGuardsStatus", "invalid"],
+  ] as const)("rejects malformed mint-authority control %s at catalog admission", (field, value) => {
+    const result = MintAuthorityProfileSchema.safeParse(makeMintAuthority({
+      controls: [makeSafeControl({ [field]: value })],
+    }));
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(expect.objectContaining({ path: ["controls", 0, field] }));
+  });
+
+  it.each(["mintPath", "authorityPosture", "confidence"])("rejects invalid profile %s at catalog admission", (field) => {
+    const result = MintAuthorityProfileSchema.safeParse(makeMintAuthority({ [field]: "invalid" }));
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(expect.objectContaining({ path: [field] }));
+  });
+
+  it("rejects sources outside the schema-owned mint-authority evidence locations", () => {
+    const result = MintAuthorityProfileSchema.safeParse(makeMintAuthority({ sources: [mintAuthoritySource] }));
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(expect.objectContaining({ code: "unrecognized_keys", keys: ["sources"] }));
+  });
+
   it("admits a budgeted headline and rejects over-long or identifier-bearing ones", () => {
     const withHeadline = (headline: string) => [makeCoin({
       id: "fixture-mint-headline",

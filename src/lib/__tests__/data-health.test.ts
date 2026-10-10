@@ -30,6 +30,20 @@ function meta(overrides: Partial<ApiMeta> = {}): ApiMeta {
 
 describe("deriveDataHealth", () => {
   it.each([
+    [new ApiFetchError("/api/prices", 503, null), false, "unavailable", "Data is not yet available.", undefined],
+    [new Error("failed"), false, "error", "Failed to load data.", undefined],
+    [new Error("failed"), true, "degraded", "Using last successful data while refresh retries.", "refresh"],
+    [undefined, false, "unavailable", "Data is not yet available.", undefined],
+    [undefined, true, "fresh", "Data is fresh.", undefined],
+  ] as const)("preserves the complete result for error=%s and hasData=%s", (error, hasData, state, message, reason) => {
+    const health = deriveDataHealth({ label: "Prices", dataUpdatedAt: NOW, staleTime: STALE_TIME, error, hasData }, NOW);
+    expect(health).toStrictEqual({
+      label: "Prices", state, message, dataUpdatedAt: NOW, ageMs: 0, staleTime: STALE_TIME, meta: null,
+      ...(reason == null ? {} : { degradationReason: reason }),
+    });
+  });
+
+  it.each([
     ["stale", "stale"],
     ["unknown", "unavailable"],
   ] as const)("keeps %s producer authority distinct from a recent successful request", (status, state) => {

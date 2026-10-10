@@ -21,7 +21,6 @@ import {
   getWorkerVersionActivatedAt,
   getWorkerVersionFirstSeenAt,
 } from "./worker-version-first-seen";
-import { SLOT_EXECUTION_HEARTBEAT_SEC } from "./scheduled-slot-fence";
 import { buildResourcePressure } from "./cron-resource-pressure";
 import { MAX_PERSISTED_CRON_METADATA_BYTES } from "./cron-metadata-persistence";
 
@@ -320,7 +319,7 @@ async function insertSyntheticStaleCronRun(
     && progress.updated_at > 0
     && slot.updated_at <= nowSec - resolveScheduledSlotPolicy(slot.slot_key).childSilenceSec
     && slot.updated_at - progress.updated_at <= DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC
-    && progress.updated_at - slot.updated_at <= SLOT_EXECUTION_HEARTBEAT_SEC;
+    && progress.updated_at - slot.updated_at <= resolveScheduledSlotPolicy(slot.slot_key).heartbeatSec;
   // `cron_slot_executions.worker_version` is the direct drift evidence, but a
   // stale-takeover row can be NULL (older claims, transplanted rows). The
   // dying invocation stamps its own `workerVersion` into every progress write

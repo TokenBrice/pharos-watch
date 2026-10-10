@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { D1UsageSummary } from "@shared/types";
+import type { D1UsageSummary, StatusResponse } from "@shared/types";
 import {
   buildPipelineIntegrityModel,
   buildPipelineModeSummaries,
@@ -9,6 +9,7 @@ import {
 import {
   degraded,
   makeHealthyStatusResponse,
+  makeHealthyReliabilityStatusResponse,
   makeOperationalDependencyFailureStatusResponse,
   makePublicationFailureStatusResponse,
 } from "@/test-utils/status-fixtures";
@@ -198,6 +199,34 @@ describe("pipeline storage capacity", () => {
 });
 
 describe("pipeline coverage summaries", () => {
+  it.each([false, true])("preserves complete missing-evidence Integrity rows (inventory: %s)", (hasInventory) => {
+    const base = makeHealthyStatusResponse();
+    const { stablecoinPublication: _stablecoinPublication, repairDebt: _repairDebt, ...dataQuality } = base.dataQuality;
+    const dependencyHealth = hasInventory ? makeHealthyReliabilityStatusResponse(base).dependencyHealth : null;
+    const model = buildPipelineIntegrityModel(degraded(base, {
+      publicationHealth: null, dependencyHealth,
+      dataQuality: dataQuality as StatusResponse["dataQuality"],
+    }));
+    expect(model.publicationRows).toEqual([{
+      id: "publication-unavailable", label: "Publication health", rawCode: "publicationHealth",
+      state: "unknown", currentValue: "Unknown", detail: "No publication-health payload was returned.",
+    }]);
+    expect(model.dependencyRows).toEqual([{
+      id: dependencyHealth ? "dependency-empty" : "dependency-unavailable",
+      label: dependencyHealth ? "Dependency inventory" : "Dependency health",
+      rawCode: dependencyHealth ? "dependencyHealth.dependencies" : "dependencyHealth",
+      state: "unknown", currentValue: "Unknown",
+      detail: dependencyHealth ? "Dependency health returned an empty inventory." : "No dependency-health payload was returned.",
+    }]);
+    expect(model.controlRows).toEqual([
+      { id: "stablecoin-publication", label: "Stablecoin publication coverage", rawCode: "stablecoin_publication",
+        state: "unknown", currentValue: "Unknown", detail: "The status payload did not include publication coverage." },
+      { id: "repair-debt", label: "Pipeline repair debt", rawCode: "repair_debt",
+        state: "unknown", currentValue: "Unknown", detail: "The status payload did not include repair-debt evidence." },
+    ]);
+    expect({ issueCount: model.issueCount, severity: model.severity }).toEqual({ issueCount: 4, severity: "unknown" });
+  });
+
   it("maps inactive loader errors to human labels while retaining raw keys and codes", () => {
     const base = makeHealthyStatusResponse();
     const data = degraded(base, {

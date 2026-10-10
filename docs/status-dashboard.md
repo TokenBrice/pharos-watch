@@ -541,7 +541,7 @@ Additional response fields:
 - `summary`: compact availability and diagnostics rollup (`unhealthyCrons`, `availabilityImpactingUnhealthyCrons`, `watchUnhealthyCrons`, `degradedCrons`, `cronErrors`, `availabilityImpactingCronErrors`, `availabilityImpactingConsecutiveCronErrors`, `staleCronArtifacts`, `expiredCronLeases`, `orphanedCronProgressRows`, `diagnosticIssueCount`, `worstCacheRatio`, `transitionsLast24h`)
 - `producerHeads`: one row per canonical schedule/job/path/kind, including budget-only paths, with separate last invocation/completion, productive output, publication, invocation ID, Worker version, and observed/missing state
 - `workerVersions`: independently verified public/heavy activation markers; nullable evidence, not inferred current execution versions.
-- `/api/status` intentionally omits the legacy top-level `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and `alertBroker` projections. The alert-broker summary is no longer published on any surface: `assessPublicHealth` keeps an empty compatibility object (only `alertBrokerImpactStatus` still feeds status evaluation) and `buildPublicHealthResponse` does not serialize it to `/api/health`
+- `/api/status` intentionally omits the legacy top-level `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and `alertBroker` projections. The retired alert-broker summary is neither assessed nor published on any surface; DB and capacity health floors remain authoritative.
 
 ## Cron error escalation
 

@@ -1,4 +1,5 @@
-import { SCHEDULED_SLOT_PLANS, type ScheduledRunnerKey } from "@shared/lib/scheduled-runner-registry";
+import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS, SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS } from "./cron-timeouts";
 
 const LONG_RUNNERS = [
@@ -6,7 +7,7 @@ const LONG_RUNNERS = [
   "twoHourlyDexDiscovery", "halfHourlyMintBurnExtended", "fourHourlyReserveSync",
   "hourlyYieldSync", "fourHourlyYieldSupplemental", "daily0300Utc", "daily0800Utc",
   "daily0805Utc", "daily0810Utc", "monthlyYieldAudit",
-] as const satisfies readonly ScheduledRunnerKey[];
+] as const satisfies readonly CronScheduleKey[];
 const longRunners: Readonly<Record<string, true>> = Object.fromEntries(LONG_RUNNERS.map((key) => [key, true]));
 for (const key of LONG_RUNNERS) {
   if (!SCHEDULED_SLOT_PLANS[key]) throw new Error(`Unregistered scheduled slot policy: ${key}`);
