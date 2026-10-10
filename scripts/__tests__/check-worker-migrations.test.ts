@@ -14,6 +14,7 @@ import {
   parseManifestMigrationRows,
   parseRolloutSafetyPolicy,
   validateManifestMigrationParity,
+  validateDataMigrationManifestRows,
   validateNoSqliteDotCommands,
   validateDuplicatePrefixes,
   validateRolloutSafetyAnnotation,
@@ -240,6 +241,22 @@ describe("parseDataMigrationManifestRows", () => {
       },
     ]);
   });
+
+  it.each(["predicate", "oldWorkerCompatibility", "rollbackBookmark", "expectedRowBounds"] as const)(
+    "rejects empty and whitespace-only mandatory %s review cells",
+    (field) => {
+      const fields = ["predicate", "oldWorkerCompatibility", "rollbackBookmark", "expectedRowBounds"] as const;
+      for (const blank of ["", " \t "]) {
+        const cells = fields.map((name) => name === field ? blank : "reviewed");
+        const text = `## Reviewed Data Migrations\n| 0244 | \`0244_cleanup.sql\` |${cells.join("|")}|\n`;
+        const rows = parseDataMigrationManifestRows(text);
+        expect(rows).toHaveLength(1);
+        expect(() => validateDataMigrationManifestRows(rows, ["0244_cleanup.sql"],
+          new Map([["0244_cleanup.sql", "DELETE FROM cache;"]])))
+          .toThrow(`0244_cleanup.sql is missing mandatory field: ${field}`);
+      }
+    },
+  );
 });
 
 describe("schema object manifest", () => {

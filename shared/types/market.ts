@@ -198,6 +198,23 @@ const StablecoinDataRawSchema = z.object({
   frozenAt: StrictIsoDateSchema.optional(),
 });
 
+/** JSON wire shape after legacy aliases and optional observations have been normalized. */
+export const StablecoinDataOutputSchema = StablecoinDataRawSchema.omit({ gecko_id: true }).extend({
+  geckoId: z.string().nullable(),
+  priceConfidence: PriceConfidenceSchema.nullable(),
+  priceUpdatedAt: z.number().nullable(),
+  priceObservedAt: z.number().nullable(),
+  priceObservedAtMode: PriceObservedAtModeSchema.nullable(),
+  priceSyncedAt: z.number().nullable(),
+  consensusSources: z.array(z.string()),
+  agreeSources: z.array(z.string()),
+  priceSourceConfidenceProfile: PriceSourceConfidenceProfileSchema.optional(),
+  supplyObservedAt: z.number().optional(),
+  circulatingPrevDay: SupplyBucketsSchema,
+  circulatingPrevWeek: SupplyBucketsSchema,
+  circulatingPrevMonth: SupplyBucketsSchema,
+});
+
 export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
   id: asset.id,
   name: asset.name,

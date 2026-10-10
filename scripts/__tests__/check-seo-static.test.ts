@@ -188,6 +188,24 @@ const STABILITY_SNIPPET = {
 };
 
 describe("check-seo-static", () => {
+  it.each([
+    { robots: ["noindex, follow"] },
+    { robots: ["none"] },
+    { googleBotRobots: ["noindex, follow"] },
+    { googleBotRobots: ["none"] },
+  ])("rejects sitemap targets with effective HTML noindex metadata %j", async (metadata) => {
+    const root = await makeOutDir();
+    await writeBaselinePages(root, ["/private/"], {}, ["/", "/stability-index/", "/private/"]);
+    await writePage(root, "/private/", metadata);
+    const result = collectFixtureSeoResult(root);
+    expect(result.pageRecords.find((page: { route: string }) => page.route === "/private/")?.indexable).toBe(false);
+    expect(result.errors).toContain(
+      "sitemap.xml URL https://pharos.watch/private/ conflicts with non-indexable HTML metadata; drop one of the two signals",
+    );
+    await writeSitemap(root, ["/", "/stability-index/"]);
+    expect(collectFixtureSeoResult(root).errors).toEqual([]);
+  });
+
   it("rejects a previously published archive URL that disappears without a canonical redirect", () => {
     const previous = `
       <urlset>

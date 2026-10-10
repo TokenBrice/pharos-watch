@@ -16,8 +16,13 @@ const PAGES_APP_HOSTNAME = new URL(PAGES_APP_ORIGIN).hostname;
 
 /** Normalizes a string to a proper URL origin (protocol + host, no path). */
 export function normalizeOrigin(input: string): string {
-  const normalized = input.includes("://") ? input : `https://${input}`;
-  return new URL(normalized).origin;
+  const hasScheme = /^[a-z][a-z0-9+.-]*:(?!\d+(?:[/?#]|$))/i.test(input);
+  const normalized = hasScheme ? input : `https://${input}`;
+  const url = new URL(normalized);
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    throw new TypeError("Origin must use HTTP or HTTPS");
+  }
+  return url.origin;
 }
 
 /** Returns the normalized origin for `input`, or `fallbackOrigin` when input is empty/invalid. Never throws. */

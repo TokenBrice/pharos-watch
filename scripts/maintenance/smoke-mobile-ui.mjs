@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 
 import { mkdir } from "node:fs/promises";
+import { isExpectedYieldDeepRouteUrl } from "../lib/pages-asset-smoke.mjs";
 import { join } from "node:path";
 import {
   captureFailureScreenshot,
   ensureHttpUrl,
   getBoundedWorkerCount,
   isDirectRun,
+  isSameRouteUrl,
   launchChromiumBrowser,
   loadChromium,
   normalizeRouteList,
@@ -518,7 +520,7 @@ const ROUTE_CAPTURE_FN = Function(`return (${buildRouteCaptureScript()});`)();
 // table-scan logic (skeleton transition, header overlap, sr-only exclusion).
 export { ROUTE_CAPTURE_FN };
 
-async function captureRoute(page, { route, scanTableGeometry, scanTouchTargets, timeoutMs, url, viewport, waitMs }) {
+export async function captureRoute(page, { route, scanTableGeometry, scanTouchTargets, timeoutMs, url, viewport, waitMs }) {
   const routeUrl = joinUrl(url, route);
   const response = await page.goto(routeUrl, { timeout: timeoutMs, waitUntil: "domcontentloaded" });
   await waitForSettledPage(page, waitMs);
@@ -532,6 +534,7 @@ async function captureRoute(page, { route, scanTableGeometry, scanTouchTargets, 
     ...summary,
     route,
     routeUrl,
+    finalUrl: page.url(),
     status: response?.status() ?? null,
     viewport,
   };
@@ -552,6 +555,13 @@ function formatConsoleMessage(entry) {
 
 export function assertRouteSummary(summary, { strictTouchTargets }) {
   const failures = [];
+  const deepYieldId = /^\/stablecoin\/([^/]+)\/yield\/?$/.exec(new URL(summary.routeUrl).pathname)?.[1];
+  const hasExpectedDestination = deepYieldId
+    ? isExpectedYieldDeepRouteUrl(summary.finalUrl, { id: deepYieldId, route: summary.routeUrl }, summary.routeUrl)
+    : isSameRouteUrl(summary.finalUrl, summary.routeUrl);
+  if (!hasExpectedDestination) {
+    failures.push(`unexpected destination ${summary.finalUrl} (requested ${summary.routeUrl})`);
+  }
   if (summary.status != null && summary.status >= 400) {
     failures.push(`HTTP ${summary.status}`);
   }

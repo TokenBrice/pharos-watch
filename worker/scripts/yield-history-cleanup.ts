@@ -231,6 +231,7 @@ function buildTargetWhereClause(target: YieldHistoryCleanupTarget): string {
 function buildSelectSql(target: YieldHistoryCleanupTarget, tier: "hourly" | "daily"): string {
   const table = tier === "hourly" ? "yield_history" : "yield_history_daily";
   const columns = tier === "hourly" ? YIELD_HISTORY_COLUMNS : YIELD_HISTORY_DAILY_COLUMNS;
+  // SAFETY: tier selects fixed tables/columns; buildTargetWhereClause quotes values through sqlValue/sqlString.
   return `SELECT ${columns.join(", ")} FROM ${table} WHERE ${buildTargetWhereClause(target)} ORDER BY stablecoin_id ASC, recorded_at ASC, source_key ASC`;
 }
 

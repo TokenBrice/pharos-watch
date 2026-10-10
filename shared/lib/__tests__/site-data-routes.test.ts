@@ -61,6 +61,13 @@ describe("site-data route mapping", () => {
     expect(() => toSiteDataPath("/status")).toThrow("Site-data mapping requires an /api/* path");
   });
 
+  it("uses canonical host defaults for opaque or non-web UI origin overrides", () => {
+    const env = { SITE_ORIGIN: "file:///tmp/site", OPS_UI_ORIGIN: "ftp://ops.pharos.watch" };
+    expect(isSiteDataAllowedUiHostname("pharos.watch", env)).toBe(true);
+    expect(isSiteDataAllowedUiHostname("ops.pharos.watch", env)).toBe(true);
+    expect(isSiteDataAllowedUiHostname("evil.example", env)).toBe(false);
+  });
+
   it("checks site-data UI hostnames and caller headers without runtime secrets", () => {
     expect(isSiteDataAllowedUiHostname("pharos.watch")).toBe(true);
     expect(isSiteDataAllowedUiHostname("ops.pharos.watch")).toBe(true);

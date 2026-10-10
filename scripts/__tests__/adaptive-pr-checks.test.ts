@@ -180,10 +180,18 @@ describe("adaptive PR checks", () => {
       { id: "other", sourcePaths: ["other/**"] },
     ] as never;
     expect(selectChangedGeneratedArtifactIds(["data/coin.json"], registry)).toEqual(["catalog", "index"]);
+    expect(selectChangedGeneratedArtifactIds(["generated/catalog.json"], [
+      { id: "catalog", sourcePaths: ["data/**"], outputPaths: ["generated/*.json"] },
+      { id: "index", sourcePaths: ["scripts/index.ts"], dependsOn: ["catalog"] },
+    ])).toEqual(["catalog", "index"]);
   });
 
-  // No generated artifact reads internal docs Markdown, so a docs-only PR
-  // selects no artifact freshness check; freshness follows changed sources.
+  it("selects the API reference for output-only generated documentation edits", () => {
+    expect(selectChangedGeneratedArtifactIds(["docs/api-reference.md"])).toContain("api-reference");
+  });
+
+  // Ordinary internal docs do not select a checkable artifact; generated output
+  // paths such as the API reference still require their owning freshness check.
   it("keeps docs-only PRs on the small static baseline", () => {
     expect(buildPrStaticCheckPlan(["docs/testing.md"]).commands.map((command) => command.name)).toEqual([
       "lint:changed",

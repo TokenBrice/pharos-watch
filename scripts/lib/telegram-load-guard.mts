@@ -93,6 +93,12 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS: TelegramLoadGuardDependencyG
     examples: ["worker/src/handlers/scheduled/five-minute-telegram.ts"],
   },
   {
+    id: "status-readers",
+    reason: "production lifecycle, top-coin and pending status SQL plus canonical alert predicates",
+    paths: ["worker/src/lib/telegram/usage-analytics.ts", "shared/lib/telegram-alert-families.ts"],
+    examples: ["worker/src/lib/telegram/usage-analytics.ts"],
+  },
+  {
     id: "admin-broadcast",
     reason: "broadcast fan-out shares the pending queue and delivery budget",
     paths: ["worker/src/api/admin-telegram-broadcast.ts"],

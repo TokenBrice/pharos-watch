@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, writeSync } from "node:fs";
 import { access, rm, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { resolveStaticExportPort, sleep } from "../lib/smoke-runtime.mjs";
+import { resolveStaticExportPort, sleep, waitForStaticExportServer } from "../lib/smoke-runtime.mjs";
 
 const OUT_DIR = new URL("../../out", import.meta.url).pathname;
 const SERVER_LOG = join(tmpdir(), `pages-smoke-server-${process.pid}.log`);
@@ -29,10 +29,6 @@ try {
 // ------------------------------------------------------------------
 // Helpers
 // ------------------------------------------------------------------
-function pickEnv(prefix) {
-  return Object.fromEntries(Object.entries(process.env).filter(([k]) => k.startsWith(prefix)));
-}
-
 function firstNonEmpty(...values) {
   return values.map((value) => value?.trim()).find(Boolean);
 }
@@ -68,7 +64,6 @@ const serverEnv = {
   ...(siteProxySecret ? { STATIC_EXPORT_SITE_API_SHARED_SECRET: siteProxySecret } : {}),
   STATIC_EXPORT_HOST: staticExportHost,
   STATIC_EXPORT_PORT: String(staticExportPort),
-  ...pickEnv("STATIC_EXPORT_"),
 };
 
 let logFd;
@@ -81,9 +76,12 @@ try {
 
 const server = spawn("npm", ["run", "serve:static-export"], {
   env: serverEnv,
-  stdio: ["ignore", logFd?.fd ?? "ignore", logFd?.fd ?? "ignore"],
+  stdio: ["ignore", "pipe", "pipe"],
   detached: process.platform !== "win32",
 });
+const captureOutput = (chunk) => { if (logFd) writeSync(logFd.fd, chunk); };
+server.stdout.on("data", captureOutput);
+server.stderr.on("data", captureOutput);
 
 async function dumpLog() {
   try {
@@ -133,22 +131,10 @@ for (const sig of ["SIGINT", "SIGTERM"]) {
 // Wait for server readiness (30 × 1 s)
 // ------------------------------------------------------------------
 console.log(`[pages-smoke] Waiting for static export server on ${staticExportBaseUrl} ...`);
-let ready = false;
-for (let attempt = 1; attempt <= 30; attempt++) {
-  try {
-    const res = await fetch(`${staticExportBaseUrl}/`);
-    if (res.status < 400) {
-      ready = true;
-      break;
-    }
-  } catch {
-    /* not up yet */
-  }
-  await sleep(1000);
-}
-
-if (!ready) {
-  console.error("[pages-smoke] Server did not become ready after 30 s. Server log:");
+try {
+  await waitForStaticExportServer(server, staticExportBaseUrl);
+} catch (error) {
+  console.error(`[pages-smoke] ${error instanceof Error ? error.message : String(error)}. Server log:`);
   await dumpLog();
   await cleanup();
   process.exit(1);
@@ -158,7 +144,7 @@ console.log("[pages-smoke] Server ready. Running smoke ...");
 // ------------------------------------------------------------------
 // Smoke run
 // ------------------------------------------------------------------
-const smokeEnv = { ...process.env, ...pickEnv("SMOKE_UI_"), ...pickEnv("SMOKE_MOBILE_UI_") };
+const smokeEnv = { ...process.env };
 let smokeExit = 1;
 
 function runNpmScript(args) {

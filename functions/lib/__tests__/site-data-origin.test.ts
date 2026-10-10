@@ -9,6 +9,20 @@ function req(url: string, headers: Record<string, string> = {}): Request {
 }
 
 describe("rejectIfNotSiteDataUiOrigin", () => {
+  it("falls back from opaque UI origin overrides without crashing the request gate", () => {
+    const invalidEnv = { SITE_ORIGIN: "file:///tmp/site", OPS_UI_ORIGIN: "ftp://ops.pharos.watch" };
+    expect(rejectIfNotSiteDataUiOrigin(
+      req("https://pharos.watch/_site-data/peg-summary", { Origin: "https://pharos.watch" }),
+      invalidEnv,
+      notFound,
+    )).toBeNull();
+    expect(rejectIfNotSiteDataUiOrigin(
+      req("https://pharos.watch/_site-data/peg-summary", { Origin: "https://evil.example.com" }),
+      invalidEnv,
+      notFound,
+    )?.status).toBe(404);
+  });
+
   it.each<{ name: string; host?: string; headers: Record<string, string>; allowed: boolean }>([
     { name: "site Origin", headers: { Origin: "https://pharos.watch" }, allowed: true },
     { name: "ops Origin", host: "ops.pharos.watch", headers: { Origin: "https://ops.pharos.watch" }, allowed: true },

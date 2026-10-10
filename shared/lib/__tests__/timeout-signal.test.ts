@@ -43,6 +43,40 @@ describe("createTimeoutSignal", () => {
     }
   });
 
+  it.each([false, true])("keeps parent cancellation after the deadline (pre-aborted: %s)", async (preAborted) => {
+    vi.useFakeTimers();
+    const parent = new AbortController();
+    const reason = new DOMException("caller cancelled", "AbortError");
+    if (preAborted) parent.abort(reason);
+    const handle = createTimeoutSignal({ timeoutMs: 10, timeoutReason: "deadline", parentSignal: parent.signal });
+    try {
+      if (!preAborted) parent.abort(reason);
+      await vi.advanceTimersByTimeAsync(25);
+      expect(handle.signal.reason).toBe(reason);
+      expect(handle.isTimedOut()).toBe(false);
+    } finally {
+      handle.dispose();
+    }
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("keeps timeout-first classification when the parent aborts later", async () => {
+    vi.useFakeTimers();
+    const parent = new AbortController();
+    const reason = new DOMException("deadline", "TimeoutError");
+    const handle = createTimeoutSignal({ timeoutMs: 10, timeoutReason: reason, parentSignal: parent.signal });
+    try {
+      await vi.advanceTimersByTimeAsync(25);
+      expect(handle.isTimedOut()).toBe(true);
+      expect(handle.signal.reason).toBe(reason);
+      parent.abort(new Error("late cancellation"));
+      expect(handle.signal.reason).toBe(reason);
+      expect(handle.isTimedOut()).toBe(true);
+    } finally {
+      handle.dispose();
+    }
+  });
+
   it("disposes a pending deadline without aborting", async () => {
     vi.useFakeTimers();
     const handle = createTimeoutSignal({ timeoutMs: 1_000, timeoutReason: "deadline" });

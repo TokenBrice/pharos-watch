@@ -42,7 +42,24 @@ import {
   formatRelativeAgeSeconds,
   formatRelativeDurationSeconds,
   formatRelativeTimeMs,
+  formatWholeUnitDurationSeconds,
 } from "../relative-time";
+
+describe("formatWholeUnitDurationSeconds", () => {
+  it.each([
+    [0, "0d"],
+    [1, "1m"],
+    [29, "1m"],
+    [30, "1m"],
+    [59, "1m"],
+    [60, "1m"],
+    [5_400, "90m"],
+    [3_600, "1h"],
+    [86_400, "1d"],
+  ] as const)("preserves minimum-minute and natural units for %ss", (seconds, expected) => {
+    expect(formatWholeUnitDurationSeconds(seconds, { minUnit: "minute" })).toBe(expected);
+  });
+});
 
 describe("formatScore", () => {
   it("formats to one decimal", () => expect(formatScore(72.456)).toBe("72.5"));

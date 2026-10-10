@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { resolveMissingYieldWorkbenchRedirect } from "../../functions/stablecoin/[[path]]";
+import { parseRouteOverride, verifyBrowserPass, verifyDocument } from "../maintenance/smoke-pages-assets.mjs";
+import { withRedirectFixture } from "./smoke-route-identity.test-support";
+import { withEnv } from "./helpers/test-state";
 
 import {
   REPRESENTATIVE_YIELD_CANARY_IDS,
@@ -10,6 +14,7 @@ import {
   getUnsafeHtmlCacheDirectives,
   hasExpectedAssetMime,
   isFatalRuntimeMessage,
+  isExpectedYieldDeepRouteUrl,
 } from "../lib/pages-asset-smoke.mjs";
 import { chunkRoundRobin } from "../lib/smoke-runtime.mjs";
 
@@ -30,6 +35,67 @@ describe("Pages asset-coherence smoke helpers", () => {
     expect(REPRESENTATIVE_YIELD_CANARY_IDS).toEqual(
       expect.arrayContaining(["usdc-circle", "usdt-tether", "syrupusdc-maple", "apyusd-apyx"]),
     );
+  });
+
+  it("retains query overrides when parsing selected smoke routes", () => {
+    const route = "/stablecoin/usdc-circle/yield/?compare=usdt-tether&from=portfolio";
+    withEnv("SMOKE_PAGES_ASSET_ROUTES", route, () => {
+      expect(parseRouteOverride()).toEqual([{ id: "usdc-circle", route }]);
+    });
+  });
+
+  it("accepts direct workbenches and canonical producer fallbacks including query overrides", () => {
+    const baseUrl = "https://pharos.watch";
+    const id = "usdc-circle";
+    for (const query of ["", "?compare=usdt-tether&from=portfolio&workbenchFallback=usdt-tether&lens=depth"]) {
+      const routeInfo = { id, route: `/stablecoin/${id}/yield/${query}` };
+      const requested = new URL(routeInfo.route, baseUrl);
+      const fallback = resolveMissingYieldWorkbenchRedirect(requested, 404, new Set([id]));
+      expect(isExpectedYieldDeepRouteUrl(requested.toString(), routeInfo, baseUrl)).toBe(true);
+      requested.pathname = requested.pathname.replace(/\/$/, "");
+      expect(isExpectedYieldDeepRouteUrl(requested.toString(), routeInfo, baseUrl)).toBe(true);
+      expect(isExpectedYieldDeepRouteUrl(fallback, routeInfo, baseUrl)).toBe(true);
+    }
+  });
+
+  it.each([
+    "/yield/",
+    "/yield/?compare=usdc-circle",
+    "/yield/?compare=usdc-circle&workbenchFallback=usdc-circle",
+    "/yield/?compare=usdc-circle&from=detail-fallback",
+    "/yield/?compare=usdt-tether&from=detail-fallback&workbenchFallback=usdc-circle",
+    "/yield/?compare=usdc-circle&from=detail-fallback&workbenchFallback=usdt-tether",
+  ])("rejects fallback selection or marker loss: %s", (destination) => {
+    expect(isExpectedYieldDeepRouteUrl(
+      `https://pharos.watch${destination}`,
+      { id: "usdc-circle", route: "/stablecoin/usdc-circle/yield/" },
+      "https://pharos.watch",
+    )).toBe(false);
+  });
+
+  it("fails document smoke on a local redirect that drops the selected coin", async () => {
+    await withRedirectFixture("/stablecoin/usdc-circle/yield/", "/yield/", async (url) => {
+      const scriptChecks = new Map();
+      await expect(verifyDocument(
+        { id: "usdc-circle", route: "/stablecoin/usdc-circle/yield/" },
+        url, "local", scriptChecks,
+      )).rejects.toThrow("redirected to unexpected URL");
+      expect(scriptChecks.size).toBe(0);
+    });
+  });
+
+  it("rejects a healthy browser fallback that loses the coin", async () => {
+    const page = {
+      goto: async () => ({ status: () => 200 }),
+      waitForLoadState: async () => {},
+      evaluate: async () => {},
+      locator: () => ({ innerText: async () => "A healthy yield leaderboard" }),
+      url: () => "https://pharos.watch/yield/",
+    };
+    await expect(verifyBrowserPass(
+      page, { id: "usdc-circle", route: "/stablecoin/usdc-circle/yield/" }, "https://pharos.watch",
+      { assetFailures: [], pageErrors: [], consoleErrors: [] }, "cold", 1000, 0,
+    )).rejects.toThrow("landed on unexpected URL");
   });
 
   it("rejects malformed or undersized ranking payloads", () => {

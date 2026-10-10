@@ -92,6 +92,35 @@ describe("analyze-gsc-performance", () => {
     expect(rendered).toContain("usdc stablecoin");
   });
 
+  it("retains both dimensions of combined page/query exports", async () => {
+    const root = fixtureDir();
+    writeFileSync(join(root, "Combined.csv"), [
+      "Page,Query,Clicks,Impressions,CTR,Position",
+      "https://pharos.watch/stablecoin/usdc-circle/,usdc stablecoin,10,1000,1%,7.2",
+      "https://pharos.watch/stablecoin/usdc-circle/,usdc reserves,2,200,1%,8",
+    ].join("\n"));
+    const report = await analyzeGscPerformanceInputs([root], { targetCtr: 0.045, minImpressions: 100, topCount: 10 });
+    expect(report.pages[0]).toMatchObject({ impressions: 1200, clicks: 12, queryCount: 2 });
+    expect(report.queries).toHaveLength(2);
+    expect(report.queryOpportunities[0]).toMatchObject({ query: "usdc stablecoin", impressions: 1000, targetClickGap: 35 });
+  });
+
+  it("prefers separate query totals over overlapping combined rows without losing unmatched queries", async () => {
+    const root = fixtureDir();
+    writeFileSync(join(root, "Combined.csv"), [
+      "Page,Query,Clicks,Impressions,CTR,Position",
+      "https://pharos.watch/stablecoin/usdc-circle/,usdc stablecoin,10,1000,1%,7",
+      "https://pharos.watch/stablecoin/usdc-circle/,usdc reserves,2,200,1%,8",
+    ].join("\n"));
+    writeFileSync(join(root, "Queries.csv"), "Query,Clicks,Impressions,CTR,Position\nusdc stablecoin,15,1500,1%,6");
+    const report = await analyzeGscPerformanceInputs([root], { targetCtr: 0.045, minImpressions: 100, topCount: 10 });
+    expect(report.queries.find((row: { query: string }) => row.query === "usdc stablecoin"))
+      .toMatchObject({ clicks: 15, impressions: 1500 });
+    expect(report.queries.find((row: { query: string }) => row.query === "usdc reserves"))
+      .toMatchObject({ clicks: 2, impressions: 200 });
+    expect(report.pages[0]).toMatchObject({ clicks: 12, impressions: 1200, queryCount: 2 });
+  });
+
   it("accepts ZIP exports and reports unsupported spreadsheet files without live checks", async () => {
     const root = fixtureDir();
     const zipPath = join(root, "performance.zip");

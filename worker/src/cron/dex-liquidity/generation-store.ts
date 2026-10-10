@@ -186,6 +186,7 @@ export function createDexGenerationStore<ChildRowsKey extends string = "deletedC
       try {
         await runWithOverloadRetry(
           () => db.prepare(
+            // SAFETY: spec identifiers/predicates are fixed internal descriptors; failureState is escaped and values are bound.
             `UPDATE ${spec.manifestTable}
                 SET ${assignments.join(", ")}
               WHERE ${spec.columns.generationId} = ?

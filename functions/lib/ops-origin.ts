@@ -22,5 +22,9 @@ export function hasMatchingOpsUiOriginHeader(
   if (!requestOrigin) {
     return false;
   }
-  return normalizeOrigin(requestOrigin) === normalizeOrigin(resolveOpsUiOrigin(env));
+  try {
+    return normalizeOrigin(requestOrigin) === normalizeOrigin(resolveOpsUiOrigin(env));
+  } catch {
+    return false;
+  }
 }

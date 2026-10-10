@@ -42,8 +42,10 @@ export function applyBlacklistCurrentBalanceMaintenance(
   try {
     d1.executeStatements([
       `CREATE TABLE ${stage} AS SELECT ${BLACKLIST_CURRENT_BALANCE_COLUMNS} FROM blacklist_current_balances WHERE 0;`,
+      // SAFETY: stage is UUID-hex-only, columns are fixed, and values are finite numbers or sqlString literals.
       ...values.map((value) => `INSERT INTO ${stage} (${BLACKLIST_CURRENT_BALANCE_COLUMNS}) VALUES (${value});`),
     ], `${prefix}-admit`);
+    // SAFETY: stage contains only the fixed prefix and UUID hex digits.
     const admitted = d1.query<{ count: number }>(`SELECT COUNT(*) AS count FROM ${stage}`)[0]?.count;
     if (admitted !== rows.length) throw new Error(`incomplete blacklist balance admission: ${admitted}/${rows.length}`);
     beforePublish?.();
@@ -52,6 +54,7 @@ export function applyBlacklistCurrentBalanceMaintenance(
     // D1 executes that file transactionally: invalidation and the scoped upsert
     // either both commit, or neither does. No retained rows are deleted.
     d1.executeStatements([
+      // SAFETY: stage is UUID-hex-only; columns/policy are fixed and cache keys are sqlString literals.
       `DELETE FROM cache WHERE key IN (${getBlacklistDerivedCacheKeys().map(sqlString).join(", ")});
        INSERT INTO blacklist_current_balances (${BLACKLIST_CURRENT_BALANCE_COLUMNS})
        SELECT ${BLACKLIST_CURRENT_BALANCE_COLUMNS} FROM ${stage} WHERE 1

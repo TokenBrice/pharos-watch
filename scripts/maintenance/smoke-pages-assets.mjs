@@ -13,6 +13,7 @@ import {
   getUnsafeHtmlCacheDirectives,
   hasExpectedAssetMime,
   isFatalRuntimeMessage,
+  isExpectedYieldDeepRouteUrl,
 } from "../lib/pages-asset-smoke.mjs";
 import {
   assert,
@@ -98,7 +99,7 @@ async function fetchTopYieldIds(baseUrl, mode, rankingCount) {
   return getTopYieldRankingIds(payload, rankingCount);
 }
 
-function parseRouteOverride() {
+export function parseRouteOverride() {
   const raw = process.env.SMOKE_PAGES_ASSET_ROUTES?.trim();
   if (!raw) return null;
   const routes = raw
@@ -106,18 +107,14 @@ function parseRouteOverride() {
     .map((route) => route.trim())
     .filter(Boolean)
     .map((route) => {
-      const pathname = new URL(route, "https://pharos.watch").pathname;
+      const parsed = new URL(route, "https://pharos.watch");
+      const pathname = parsed.pathname;
       const match = /^\/stablecoin\/([^/]+)\/yield\/$/.exec(pathname);
       if (!match) throw new Error(`Invalid yield asset-smoke route: ${route}`);
-      return { id: match[1], route: pathname };
+      return { id: match[1], route: `${pathname}${parsed.search}${parsed.hash}` };
     });
   assert(routes.length > 0, "SMOKE_PAGES_ASSET_ROUTES did not contain any routes");
   return routes;
-}
-
-function isExpectedFinalPath(finalUrl, originalRoute) {
-  const pathname = new URL(finalUrl).pathname;
-  return pathname === originalRoute || pathname === originalRoute.slice(0, -1) || pathname === "/yield/";
 }
 
 async function cancelBody(response) {
@@ -144,7 +141,7 @@ async function verifyReferencedScript(scriptUrl, expectedOrigin) {
   );
 }
 
-async function verifyDocument(routeInfo, baseUrl, mode, scriptChecks) {
+export async function verifyDocument(routeInfo, baseUrl, mode, scriptChecks) {
   const routeUrl = new URL(routeInfo.route, baseUrl).toString();
   const response = await fetch(routeUrl, {
     headers: { Accept: "text/html,application/xhtml+xml" },
@@ -158,8 +155,8 @@ async function verifyDocument(routeInfo, baseUrl, mode, scriptChecks) {
   assert(response.ok, `${routeInfo.route} returned ${response.status}`);
   assert(contentType.toLowerCase().startsWith("text/html"), `${routeInfo.route} returned MIME ${contentType}`);
   assert(
-    isExpectedFinalPath(finalUrl, routeInfo.route),
-    `${routeInfo.route} redirected to unexpected path ${new URL(finalUrl).pathname}`,
+    isExpectedYieldDeepRouteUrl(finalUrl, routeInfo, baseUrl),
+    `${routeInfo.route} redirected to unexpected URL ${finalUrl}`,
   );
   if (mode === "live") {
     const unsafeCacheDirectives = getUnsafeHtmlCacheDirectives(cacheControl);
@@ -194,7 +191,7 @@ function createDiagnostics() {
   };
 }
 
-async function verifyBrowserPass(page, routeInfo, baseUrl, diagnostics, label, waitTimeoutMs, settleMs) {
+export async function verifyBrowserPass(page, routeInfo, baseUrl, diagnostics, label, waitTimeoutMs, settleMs) {
   const routeUrl = new URL(routeInfo.route, baseUrl).toString();
   const response = await page.goto(routeUrl, {
     timeout: waitTimeoutMs,
@@ -219,8 +216,8 @@ async function verifyBrowserPass(page, routeInfo, baseUrl, diagnostics, label, w
   const errorMarker = findFrameworkErrorMarker(bodyText);
   assert(!errorMarker, `${routeInfo.route} ${label} rendered framework error boundary: ${errorMarker}`);
   assert(
-    isExpectedFinalPath(page.url(), routeInfo.route),
-    `${routeInfo.route} ${label} landed on unexpected path ${new URL(page.url()).pathname}`,
+    isExpectedYieldDeepRouteUrl(page.url(), routeInfo, baseUrl),
+    `${routeInfo.route} ${label} landed on unexpected URL ${page.url()}`,
   );
   assert(
     diagnostics.assetFailures.length === 0,

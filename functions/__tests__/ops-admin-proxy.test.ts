@@ -260,6 +260,28 @@ describe("ops admin proxy", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it.each([
+    "file:///x",
+    "data:text/plain,ops",
+    "ftp://ops.pharos.watch",
+    "https://[",
+  ])("returns 403 without proxying an invalid Origin header: %s", async (origin) => {
+    const fetchSpy = mockFetch([], { requireMatch: true });
+
+    const response = await onRequest(
+      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/api-keys/42/update", {
+        method: "POST",
+        headers: { Origin: origin },
+      })),
+    );
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "Forbidden" });
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("allowlists shared dynamic admin routes", async () => {
     const fetchSpy = opsApi.json("/api/api-keys/42/update", { ok: true });
 

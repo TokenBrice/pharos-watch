@@ -52,6 +52,18 @@ describe("generated-artifact runner lifecycle selection", () => {
     if (file === "shared/lib/public-docs.ts") expect(expected).toContain("llms-txt");
   });
 
+  it("checks the API reference command for an output-only edit while filtering uncheckable projections", () => {
+    const ids = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds(["docs/api-reference.md"]));
+    expect(ids).toContain("api-reference");
+    expect(ids).not.toContain("docs-metadata");
+    expect(buildPrStaticCheckPlan(["docs/api-reference.md"]).commands
+      .find((command) => command.name === "check:generated-artifacts")?.args)
+      .toEqual([`--only=${ids.join(",")}`]);
+    const unit = buildGeneratedArtifactExecutionPhases({ check: true, only: ids })
+      .flatMap((phase) => phase.units).find((unit) => unit.id === "api-reference");
+    expect(unit?.commands).toEqual(["node --import tsx scripts/maintenance/generate-api-reference.ts --check"]);
+  });
+
   it("reports a legitimate empty intersection without running children", async () => {
     const log = vi.fn();
     const runCommandImpl = vi.fn(async () => 0);

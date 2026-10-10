@@ -6,6 +6,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildGitleaksMergeResolutionInput,
+  buildGitleaksWorktreeInput,
   collectGitleaksTrustedFiles,
   ensurePinnedGitleaks,
   GITLEAKS_VERSION,
@@ -169,6 +170,25 @@ describe("run-gitleaks", () => {
     expect(single).toHaveBeenCalledTimes(2);
   });
 
+  it("preserves plus-prefixed hunk payload while excluding real unified and combined file headers", () => {
+    const source = '++counter; const marker = "synthetic-review-control-value";';
+    const unified = [
+      "diff --git a/config.ts b/config.ts", "--- a/config.ts", "+++ b/config.ts",
+      "@@ -0,0 +1 @@", `+${source}`,
+      "diff --git a/other.ts b/other.ts", "--- a/other.ts", "+++ b/other.ts",
+    ].join("\n");
+    expect(buildGitleaksWorktreeInput({
+      execFile: (_file, args) => args[0] === "diff" ? unified : "",
+    }).toString()).toBe(`${source}\n`);
+    const combined = [
+      "diff --cc config.ts", "--- a/config.ts", "+++ b/config.ts",
+      "@@@ -1 -1 +1 @@@", `++${source}`,
+    ].join("\n");
+    const execFile = (_file: string, args: string[]) =>
+      args.includes("--parents") ? "head parent\n" : args.includes("--merges") ? "historical-merge\n" : combined;
+    expect(buildGitleaksMergeResolutionInput({ execFile }).toString()).toBe(`${source}\n`);
+  });
+
   it("extracts resolution-only lines introduced by historical merges inside the scan range", () => {
     const repo = mkdtempSync(join(tmpdir(), "gitleaks-merge-history-"));
     const git = (args: string[]) =>
@@ -196,7 +216,7 @@ describe("run-gitleaks", () => {
       }
       // Resolve with a line that exists in neither parent: only a merge-aware lane can see it.
       // Assembled at runtime so the repository's own scan never sees a literal credential.
-      const credentialLine = ["api", "_key = \"", "A1b2C3d4E5f6G7h8", "I9j0K1l2M3n4O5p6\""].join("");
+      const credentialLine = ["++counter; const api", "_key = \"", "A1b2C3d4E5f6G7h8", "I9j0K1l2M3n4O5p6\""].join("");
       writeFileSync(join(repo, "config.txt"), `${credentialLine}\n`);
       git(["add", "."]);
       git(["commit", "-qm", "merge with resolution-only credential"]);

@@ -444,6 +444,7 @@ function makeSimpleRetentionDeleteStep(
   }
   return {
     name,
+    // SAFETY: table and timestampColumn pass the closed tuple allowlists above; cutoff/limit are bound.
     sql: `DELETE FROM ${table} WHERE ${timestampColumn} < ? AND rowid IN (SELECT rowid FROM ${table} WHERE ${timestampColumn} < ? ORDER BY ${timestampColumn} ASC, rowid ASC LIMIT ?)`,
     cutoff,
     cutoffBindCount: 2,
@@ -467,6 +468,7 @@ function makeSourceChildRetentionDeleteStep(
   }
   return {
     name,
+    // SAFETY: table and optional childPredicate pass the closed tuple allowlists above; cutoff/limit are bound.
     sql: `DELETE FROM ${table}
       WHERE rowid IN (
         SELECT child.rowid

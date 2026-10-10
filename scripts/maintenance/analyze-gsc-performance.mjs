@@ -221,6 +221,8 @@ function aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount) {
   const queries = new Map();
   const families = new Map();
 
+  // Separate query totals are authoritative for overlapping combined rows.
+  const queryTotals = new Set(rows.filter((row) => !row.page && row.query).map((row) => row.query));
   for (const row of rows) {
     if (row.page) {
       addMetrics(siteAggregate, row);
@@ -255,7 +257,8 @@ function aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount) {
       for (const queryKey of row.page.queryKeys) pageAggregate.queryKeys.add(queryKey);
       pageAggregate.sources.add(row.sourceLabel);
       addMetrics(pageAggregate, row);
-    } else if (row.query) {
+    }
+    if (row.query && (!row.page || !queryTotals.has(row.query))) {
       if (!queries.has(row.query)) {
         queries.set(row.query, {
           query: row.query,
