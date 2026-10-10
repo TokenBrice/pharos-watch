@@ -72,17 +72,18 @@ const EMPTY_MINT_BURN_HEALTH: HealthResponse["mintBurn"] = {
   latestEventTs: null,
   latestHourlyTs: null,
   freshnessAgeSec: null,
-  majorStaleCount: 0,
-  staleMajorSymbols: [],
+  majorStaleCount: null,
+  staleMajorSymbols: null,
+  unavailableReason: "mint-burn-read-failed",
   queryErrors: {
     latestSuccessfulSyncAt: null,
     rowCount: null,
   },
   sync: {
     lastSuccessfulSyncAt: null,
-    freshnessStatus: "stale",
+    freshnessStatus: null,
     warning: "Mint/burn health data unavailable.",
-    criticalLaneHealthy: false,
+    criticalLaneHealthy: null,
   },
 };
 
@@ -107,8 +108,9 @@ export interface PublicHealthAssessment {
   mintBurnLastRunStatus: string | null;
   mintBurnBootstrap: boolean;
   repairRunnerAutoRepairCount: number | null;
-  circuits: Record<string, CircuitRecord>;
-  openCircuitCount: number;
+  circuits: HealthResponse["circuits"];
+  circuitsUnavailableReason?: HealthResponse["circuitsUnavailableReason"];
+  openCircuitCount: number | null;
   circuitImpactStatus: HealthResponse["status"];
   circuitQueryError: string | null;
   d1Capacity: D1CapacityAssessment | null;
@@ -156,18 +158,17 @@ export function buildPublicHealthResponse(
     blacklist: assessment.blacklist,
     mintBurn: assessment.mintBurn,
     circuits: assessment.circuits,
+    circuitsUnavailableReason: assessment.circuitsUnavailableReason ?? null,
     stablecoinPublication: assessment.stablecoinPublication,
     activePriceCoverage: assessment.activePriceCoverage,
     schedulerLiveness: assessment.schedulerLiveness,
   };
 }
 
-function publicHealthErrorMessage(kind: "blacklist" | "circuit" | "db" | "mint-burn"): string {
+function publicHealthErrorMessage(kind: "blacklist" | "db" | "mint-burn"): string {
   switch (kind) {
     case "blacklist":
       return "Blacklist health data unavailable.";
-    case "circuit":
-      return "Circuit breaker diagnostics unavailable.";
     case "db":
       return "Primary database unavailable.";
     case "mint-burn":
@@ -267,8 +268,8 @@ export type PublicHealthReadResult<T> =
   | { ok: true; value: T; error: null }
   | { ok: false; value: null; error: string };
 
-async function capturePublicHealthRead<T>(
-  descriptor: { event: string; source: string; message: string; job?: string },
+export async function capturePublicHealthRead<T>(
+  descriptor: { event: string; source: string; message: string; job?: string; reason?: string },
   run: () => Promise<T>,
 ): Promise<PublicHealthReadResult<T>> {
   try {
@@ -284,7 +285,7 @@ async function capturePublicHealthRead<T>(
       message: descriptor.message,
       error: err,
     });
-    return { ok: false, value: null, error: descriptor.message };
+    return { ok: false, value: null, error: descriptor.reason ?? descriptor.message };
   }
 }
 
@@ -307,6 +308,7 @@ function captureMintBurnSubquery<T>(
       source: name,
       job: MINT_BURN_CRON_JOB,
       message: mintBurnSubqueryErrorMessage(name),
+      reason: name === "latestSuccessfulSyncAt" ? "mint-burn-output-read-failed" : "mint-burn-count-read-failed",
     },
     run,
   );
@@ -324,17 +326,26 @@ async function loadMintBurnHealth(
   repairRunnerAutoRepairCount: number | null;
 }> {
   try {
-    const [latestRun, latestSuccessfulSyncResult, totalEventsResult] = await Promise.all([
-      db
-        .prepare(
-          `SELECT status
-           FROM cron_runs
-           WHERE job = ?
-           ORDER BY started_at DESC
-           LIMIT 1`,
-        )
-        .bind(MINT_BURN_CRON_JOB)
-        .first<{ status: string | null }>(),
+    const [latestRunResult, latestSuccessfulSyncResult, totalEventsResult] = await Promise.all([
+      capturePublicHealthRead(
+        {
+          event: "mint_burn_health_query_failed",
+          source: "mint-burn",
+          message: "Mint/burn health data unavailable.",
+          reason: "mint-burn-read-failed",
+          job: MINT_BURN_CRON_JOB,
+        },
+        () => db
+          .prepare(
+            `SELECT status
+             FROM cron_runs
+             WHERE job = ?
+             ORDER BY started_at DESC
+             LIMIT 1`,
+          )
+          .bind(MINT_BURN_CRON_JOB)
+          .first<{ status: string | null }>(),
+      ),
       captureMintBurnSubquery(
         "latestSuccessfulSyncAt",
         () =>
@@ -370,6 +381,15 @@ async function loadMintBurnHealth(
             .then(readDailySentinelDiagnostics),
       ),
     ]);
+    if (!latestRunResult.ok) return {
+      mintBurn: { ...EMPTY_MINT_BURN_HEALTH },
+      mintBurnImpactStatus: "degraded",
+      mintBurnQueryError: latestRunResult.error,
+      mintBurnLastRunStatus: null,
+      mintBurnBootstrap: false,
+      repairRunnerAutoRepairCount: null,
+    };
+    const latestRun = latestRunResult.value;
 
     const queryErrors: NonNullable<HealthResponse["mintBurn"]["queryErrors"]> = {
       latestSuccessfulSyncAt: latestSuccessfulSyncResult.error,
@@ -386,10 +406,13 @@ async function loadMintBurnHealth(
       latestEventTs: null,
       latestHourlyTs: null,
       freshnessAgeSec: null,
-      majorStaleCount: 0,
-      staleMajorSymbols: [],
+      majorStaleCount: latestSuccessfulSyncResult.ok ? 0 : null,
+      staleMajorSymbols: latestSuccessfulSyncResult.ok ? [] : null,
+      unavailableReason: latestSuccessfulSyncResult.ok ? null : "mint-burn-output-read-failed",
       queryErrors,
-      sync,
+      sync: latestSuccessfulSyncResult.ok ? sync : {
+        ...sync, freshnessStatus: null, criticalLaneHealthy: null, warning: "Mint/burn output evidence unavailable.",
+      },
     };
     const mintBurnQueryError = queryErrors.latestSuccessfulSyncAt
       ? publicHealthErrorMessage("mint-burn")
@@ -529,6 +552,7 @@ export async function assessPublicHealth(
       blacklistQueryError: null,
       mintBurn: {
         ...EMPTY_MINT_BURN_HEALTH,
+        unavailableReason: "db-unavailable",
         sync: {
           ...EMPTY_MINT_BURN_HEALTH.sync,
           warning: "Primary database unavailable.",
@@ -539,10 +563,11 @@ export async function assessPublicHealth(
       mintBurnLastRunStatus: null,
       mintBurnBootstrap: false,
       repairRunnerAutoRepairCount: null,
-      circuits: {},
-      openCircuitCount: 0,
-      circuitImpactStatus: "healthy",
-      circuitQueryError: null,
+      circuits: null,
+      circuitsUnavailableReason: "db-unavailable",
+      openCircuitCount: null,
+      circuitImpactStatus: "stale",
+      circuitQueryError: "db-unavailable",
       d1Capacity: null,
       d1CapacityImpactStatus: "healthy",
       d1CapacityQueryError: null,
@@ -584,20 +609,15 @@ export async function assessPublicHealth(
         return { metrics: null, error: publicHealthErrorMessage("blacklist") };
       }),
     loadMintBurnHealth(db, now),
-    getCircuitStates(db)
-      .then((circuits) => ({ circuits: completeCircuitStates(circuits), error: null as string | null }))
-      .catch((err) => {
-        logWorkerEvent({
-          scope: "status",
-          level: "error",
-          event: "circuit_states_query_failed",
-          route: logPrefix,
-          source: "circuit-breaker",
-          message: "Failed to query circuit states",
-          error: err,
-        });
-        return { circuits: {}, error: publicHealthErrorMessage("circuit") };
-      }),
+    capturePublicHealthRead(
+      {
+        event: "circuit_states_query_failed",
+        source: "circuit-breaker",
+        message: "Circuit breaker diagnostics unavailable.",
+        reason: "circuits-read-failed",
+      },
+      async () => completeCircuitStates(await getCircuitStates(db)),
+    ),
     loadCachedD1CapacityAssessment(db, now)
       .then(({ assessment, reason }) => ({
         assessment,
@@ -690,10 +710,8 @@ export async function assessPublicHealth(
     warnings.push("mint-burn-query-failed");
   }
 
-  const openCircuitCount = countPublicImpactOpenCircuits(circuitResult.circuits);
-  const circuitImpactStatus = circuitResult.error
-    ? "degraded"
-    : getCircuitImpactStatus(openCircuitCount);
+  const openCircuitCount = circuitResult.ok ? countPublicImpactOpenCircuits(circuitResult.value) : null;
+  const circuitImpactStatus = getCircuitImpactStatus(openCircuitCount);
   if (circuitResult.error) {
     warnings.push("circuit-query-failed");
   }
@@ -799,7 +817,8 @@ export async function assessPublicHealth(
     mintBurnLastRunStatus: mintBurnResult.mintBurnLastRunStatus,
     mintBurnBootstrap: mintBurnResult.mintBurnBootstrap,
     repairRunnerAutoRepairCount: mintBurnResult.repairRunnerAutoRepairCount,
-    circuits: circuitResult.circuits,
+    circuits: circuitResult.value,
+    circuitsUnavailableReason: circuitResult.ok ? null : "circuits-read-failed",
     openCircuitCount,
     circuitImpactStatus,
     circuitQueryError: circuitResult.error,

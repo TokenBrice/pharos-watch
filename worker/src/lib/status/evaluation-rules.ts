@@ -261,11 +261,11 @@ function evaluateDexDiagnostics(input: AvailabilityEvaluationInput): Partial<Sta
 }
 
 function evaluateCircuitStatus(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
-  const status = input.publicHealth.circuitQueryError == null ? input.publicHealth.circuitImpactStatus : "healthy";
+  const status = input.publicHealth.circuitQueryError == null ? input.publicHealth.circuitImpactStatus : "degraded";
   const causes: StatusCause[] = [];
   if (input.publicHealth.circuitQueryError) {
-    causes.push(makeCause("availability", "circuit_query_failed", "info", "Circuit breaker diagnostics failed; availability details may be incomplete."));
-  } else if (input.publicHealth.openCircuitCount >= 3) {
+    causes.push(makeCause("availability", "circuit_query_failed", "warning", "Circuit breaker diagnostics unavailable (circuits-read-failed); availability cannot be confirmed."));
+  } else if (input.publicHealth.openCircuitCount != null && input.publicHealth.openCircuitCount >= 3) {
     causes.push(
       makeCause(
         "availability",
@@ -452,16 +452,16 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
   evaluateCacheWarnings,
   evaluateDexDiagnostics,
   (input) => {
-    const status = !input.publicHealth.mintBurnQueryError && !input.publicHealth.mintBurnBootstrap
-      ? input.publicHealth.mintBurnImpactStatus
-      : "healthy";
+    const status = input.publicHealth.mintBurnQueryError
+      ? "degraded"
+      : input.publicHealth.mintBurnBootstrap ? "healthy" : input.publicHealth.mintBurnImpactStatus;
     let cause: StatusCause | null = null;
     if (input.publicHealth.mintBurnQueryError) {
       cause = makeCause(
         "availability",
         "mint_burn_health_query_failed",
-        "info",
-        "Mint/burn health query failed; diagnostics are temporarily unavailable. " +
+        "warning",
+        `Mint/burn health query failed (${input.publicHealth.mintBurn.unavailableReason ?? "mint-burn-read-failed"}); diagnostics are temporarily unavailable. ` +
           `Latest critical cron run status: ${input.publicHealth.mintBurnLastRunStatus ?? "unknown"}.`,
       );
     } else if (!input.publicHealth.mintBurnBootstrap && input.publicHealth.mintBurnImpactStatus !== "healthy") {

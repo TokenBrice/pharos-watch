@@ -24,7 +24,15 @@ function fixtureMockD1(
 ) {
   return buildStatusD1Scenario({
     sections: ["sentinel", "publication", "derived", "reserves", "statusState", "cronState", "telegram"],
-    overrides,
+    overrides: [
+      ...overrides,
+      // Prefer this aggregate to the sentinel's "SELECT 1" substring, which
+      // also appears inside the canonical blacklist mirror-event filter.
+      { match: "blacklist-gap-aggregate", rows: [], allowUnused: true, first: {
+        total: 0, missing: 0, missing_recent: 0, oldest_gap_age_sec: null,
+        never_attempted: 0, repeated_failures: 0, unrecoverable: 0,
+      } },
+    ],
     sectionOverrides: {
       sentinel: [{ match: "SELECT 1", rows: [], first: { "1": 1 } }],
       derived: [
@@ -1070,7 +1078,7 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("mintBurnReconciliation");
   });
 
-  it("treats cron history query failure as unknown telemetry instead of stale cron health", async () => {
+  it("keeps failed cron telemetry unknown and degrades unreadable mint/burn evidence", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
@@ -1122,12 +1130,13 @@ describe("handleStatus", () => {
       causes: { availability: Array<{ code: string }> };
     };
 
-    expect(body.availabilityStatus).toBe("healthy");
+    expect(body.availabilityStatus).toBe("degraded");
     expect(body.summary.unhealthyCrons).toBe(0);
     expect(Object.values(body.crons).some((cron) => cron.healthy === true)).toBe(false);
     expect(body.crons["sync-stablecoins"]?.healthy).toBeNull();
     expect(body.crons["sync-stablecoins"]?.telemetryUnknown).toBe(true);
     expect(body.crons["sync-stablecoins"]?.telemetryUnknownReason).toBe("cron-history-query-failed");
     expect(body.causes.availability.some((cause) => cause.code === "cron_history_query_failed")).toBe(true);
+    expect(body.causes.availability.some((cause) => cause.code === "mint_burn_health_query_failed")).toBe(true);
   });
 });

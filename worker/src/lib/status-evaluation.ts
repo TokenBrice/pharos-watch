@@ -1,8 +1,8 @@
-import { logWorkerEventArgs } from "./structured-log";
+import { unavailableReserveComposition } from "@shared/lib/status-reserve-composition";
 import type { StatusCause, StatusResponse } from "@shared/types/status";
-import { assessPublicHealth, getPublicHealthEvidenceReadFailures } from "./public-health-assessment";
-import { emptyDatasetFreshness, emptyReserveComposition } from "./status/derived-data";
-import { emptyDataQuality, getDataQuality } from "./status/data-quality";
+import { assessPublicHealth, capturePublicHealthRead, getPublicHealthEvidenceReadFailures, type PublicHealthReadResult } from "./public-health-assessment";
+import { emptyDatasetFreshness } from "./status/derived-data";
+import { getDataQuality } from "./status/data-quality";
 import {
   applyCronHealthSectionErrors,
   countStatusDiagnosticIssues,
@@ -81,34 +81,38 @@ function buildDbUnavailableRawStatus(): RawStatusComputation {
     caches: {},
     crons: {},
     budgetOnlySurfaces: [],
-    dataQuality: emptyDataQuality(),
+    dataQuality: null,
     telegramBot: null,
-    sectionErrors: {},
+    sectionErrors: {
+      dataQuality: { code: "db-unavailable", message: "Data-quality evidence unavailable because the primary database could not be read." },
+      summary: { code: "db-unavailable", message: "Status summary counts unavailable because the primary database could not be read." },
+      reserveComposition: { code: "db-unavailable", message: "Reserve composition unavailable because the primary database could not be read." },
+    },
     datasetFreshness: emptyDatasetFreshness(),
     summary: emptyStatusSummary(),
-    reserveComposition: emptyReserveComposition(),
+    reserveComposition: unavailableReserveComposition("db-unavailable"),
     freshnessDiagnostics: [],
   };
 }
 
-/**
- * Count `status_transitions` rows inserted in the last 24 hours. Used only
- * as an observability signal added during 2026-04-13 status-stability hardening.
- * A failed
- * count query logs a warning and returns 0 — this is diagnostic-only and
- * must not break the main status response.
- */
-async function countRecentStatusTransitions(db: D1Database, now: number): Promise<number> {
-  try {
-    const row = await db
-      .prepare(`SELECT COUNT(*) AS cnt FROM status_transitions WHERE scope = ? AND created_at >= ?`)
-      .bind("global", now - 86400)
-      .first<{ cnt: number | null }>();
-    return row?.cnt ?? 0;
-  } catch (err) {
-    logWorkerEventArgs("lib", "warn", "[status] transitions count query failed:", err);
-    return 0;
-  }
+/** Diagnostic counts cannot break status, but unavailable is never observed zero. */
+async function countRecentStatusTransitions(db: D1Database, now: number): Promise<PublicHealthReadResult<number>> {
+  return capturePublicHealthRead(
+    {
+      event: "status_transitions_count_query_failed",
+      source: "status-transitions",
+      message: "Status transitions count unavailable.",
+      reason: "status-transitions-read-failed",
+    },
+    async () => {
+      const row = await db
+        .prepare(`SELECT COUNT(*) AS cnt FROM status_transitions WHERE scope = ? AND created_at >= ?`)
+        .bind("global", now - 86400)
+        .first<{ cnt: number | null }>();
+      if (row?.cnt == null) throw new Error("Status transitions count returned no observation");
+      return row.cnt;
+    },
+  );
 }
 
 export async function computeRawStatus(
@@ -171,6 +175,7 @@ export async function computeRawStatus(
   });
   applyCronHealthSectionErrors(sectionErrors, cronHealth);
   const evidenceReadFailures = [
+    ...(!transitionsLast24h.ok ? [transitionsLast24h.error] : []),
     ...getPublicHealthEvidenceReadFailures(publicHealth),
     ...[
       ["cron-history", cronHistoryQueryFailed],
@@ -183,6 +188,10 @@ export async function computeRawStatus(
     ...dataQuality.sourceFailures.map((failure) => `data-quality:${failure.source}:read-failed`),
     ...Object.values(supplements.sectionErrors).flatMap((error) => error ? [error.code] : []),
   ];
+  if (!transitionsLast24h.ok) sectionErrors.statusTransitions = {
+    code: transitionsLast24h.error,
+    message: "Recent status transition count unavailable; this does not imply zero transitions.",
+  };
   if (publicHealth.schedulerLiveness.status === "unavailable") sectionErrors.schedulerLiveness = {
     code: "scheduler_liveness_unavailable",
     message: `Scheduler delivery evidence unavailable (${publicHealth.schedulerLiveness.unavailableReason}).`,
@@ -264,7 +273,8 @@ export async function computeRawStatus(
       budgetOnlySurfaces,
       diagnosticIssueCount,
       worstCacheRatio: publicHealth.worstCacheRatio,
-      transitionsLast24h,
+      transitionsLast24h: transitionsLast24h.value,
+      transitionsUnavailableReason: transitionsLast24h.ok ? null : "status-transitions-read-failed",
     }),
   };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { EndpointProbeResult, StatusCause } from "@shared/types";
+import type { EndpointProbeResult, StatusCause, StatusResponse } from "@shared/types";
 import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-model";
 import {
   makeActivePriceCoverage,
@@ -31,7 +31,7 @@ const BASE_QUERY_SYNCS = {
 };
 
 function buildModel(
-  data = makeHealthyStatusResponse(),
+  data: StatusResponse = makeHealthyStatusResponse(),
   overrides: Partial<Parameters<typeof buildStatusDashboardData>[0]> = {},
 ) {
   return buildStatusDashboardData({

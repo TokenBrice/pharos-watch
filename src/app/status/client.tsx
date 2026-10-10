@@ -123,11 +123,11 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
   } else {
     const worstCache = getPublicWorstCacheSummary(healthData.caches);
     const probeSummary = buildBrowserProbeSummary(probes, probesUpdatedAt ?? 0);
-    const publicImpactCircuits = Object.entries(healthData.circuits)
+    const publicImpactCircuits = healthData.circuits == null ? null : Object.entries(healthData.circuits)
       .filter(([key]) => isPublicImpactCircuitKey(key))
       .map(([, circuit]) => circuit);
-    const openCircuits = publicImpactCircuits.filter((circuit) => circuit.state === "open").length;
-    const halfOpenCircuits = publicImpactCircuits.filter((circuit) => circuit.state === "half-open").length;
+    const openCircuits = publicImpactCircuits == null ? null : publicImpactCircuits.filter((circuit) => circuit.state === "open").length;
+    const halfOpenCircuits = publicImpactCircuits == null ? null : publicImpactCircuits.filter((circuit) => circuit.state === "half-open").length;
     const divergence = probeSummary
       ? getPublicDivergenceNotice(healthData.status, probeSummary.status)
       : { kind: "in-sync" as const };

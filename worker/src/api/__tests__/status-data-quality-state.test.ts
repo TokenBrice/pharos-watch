@@ -505,6 +505,10 @@ describe("handleStatus", () => {
       overallStatus: "healthy" | "degraded" | "stale";
       causes: { availability: Array<{ code: string }> };
       caches: Record<string, unknown>;
+      dataQuality: unknown;
+      reserveComposition: { status: string; reason: string; configuredCoins: number | null; freshCoverageRatio: number | null };
+      summary: { unhealthyCrons: number | null; diagnosticIssueCount: number | null; unavailableReason: string };
+      sectionErrors: Record<string, { code: string }>;
     };
 
     expect(body.dbHealthy).toBe(false);
@@ -513,6 +517,12 @@ describe("handleStatus", () => {
     expect(body.overallStatus).toBe("stale");
     expect(body.caches).toEqual({});
     expect(body.causes.availability.some((cause) => cause.code === "db_unhealthy")).toBe(true);
+    expect(body.dataQuality).toBeNull();
+    expect(body.reserveComposition).toMatchObject({
+      status: "unavailable", reason: "db-unavailable", configuredCoins: null, freshCoverageRatio: null,
+    });
+    expect(body.summary).toMatchObject({ unhealthyCrons: null, diagnosticIssueCount: null, unavailableReason: "db-unavailable" });
+    expect(body.sectionErrors.dataQuality.code).toBe("db-unavailable");
   });
 
   it("surfaces cache freshness query failures as availability causes", async () => {
@@ -884,7 +894,7 @@ describe("handleStatus", () => {
       ]);
     }
 
-    type SummaryBody = { summary: { transitionsLast24h: number } };
+    type SummaryBody = { summary: { transitionsLast24h: number | null; transitionsUnavailableReason: string | null } };
 
     it("reports the number of status_transitions rows inserted in the last 24h", async () => {
       const db = buildTransitionCountDb(4);
@@ -894,12 +904,28 @@ describe("handleStatus", () => {
       expect(body.summary.transitionsLast24h).toBe(4);
     });
 
-    it("reports 0 when the transitions count query returns nothing", async () => {
+    it("reports unavailable when the transitions aggregate returns no observation", async () => {
       const db = buildTransitionCountDb(null);
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus({ db, trustedAdmin: true, request });
       const body = (await res.json()) as SummaryBody;
+      expect(body.summary.transitionsLast24h).toBeNull();
+      expect(body.summary.transitionsUnavailableReason).toBe("status-transitions-read-failed");
+    });
+    it("reports an observed zero without an unavailable reason", async () => {
+      const res = await handleStatus({ db: buildTransitionCountDb(0), trustedAdmin: true, request: fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" }) });
+      const body = await res.json() as SummaryBody;
       expect(body.summary.transitionsLast24h).toBe(0);
+      expect(body.summary.transitionsUnavailableReason).toBeNull();
+    });
+    it("keeps a rejected transition read null and carries its machine-readable error", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const raw = await computeRawStatus(fixtureMockD1([
+        { match: "FROM status_transitions WHERE scope", rows: [], throwError: new Error("transitions unavailable") },
+      ], true), now);
+      expect(raw.summary).toMatchObject({ transitionsLast24h: null, transitionsUnavailableReason: "status-transitions-read-failed" });
+      expect(raw.sectionErrors.statusTransitions?.code).toBe("status-transitions-read-failed");
+      expect(raw.evidenceReadFailures).toContain("status-transitions-read-failed");
     });
   });
 

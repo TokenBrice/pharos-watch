@@ -228,6 +228,7 @@ async function resolveRawStatusForResponse(
           diagnosticIssueCount: snapshot.raw.summary.diagnosticIssueCount,
           worstCacheRatio: snapshot.raw.summary.worstCacheRatio,
           transitionsLast24h: snapshot.raw.summary.transitionsLast24h,
+          transitionsUnavailableReason: snapshot.raw.summary.transitionsUnavailableReason,
         }),
       },
       supplements: snapshot.supplements,

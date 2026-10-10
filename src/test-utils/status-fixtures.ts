@@ -147,7 +147,7 @@ export function makeCompleteTelegramBotStatus(
  * Mutate via the {@link degraded} helper instead of editing inline so each
  * test describes its intent via a minimal patch.
  */
-export function makeHealthyStatusResponse(): StatusResponse {
+export function makeHealthyStatusResponse(): StatusResponse & { dataQuality: NonNullable<StatusResponse["dataQuality"]> } {
   return {
     timestamp: 1_700_000_000,
     dbHealthy: true,
@@ -543,7 +543,7 @@ export function makeSectionLoaderFailureStatusResponse(
   });
 }
 
-export function makeOperationalDependencyFailureStatusResponse(base = makeHealthyStatusResponse()): StatusResponse {
+export function makeOperationalDependencyFailureStatusResponse(base: StatusResponse = makeHealthyStatusResponse()): StatusResponse {
   const cause = {
     code: "fixture_operational_dependency_failure",
     layer: "system" as const,
@@ -666,7 +666,7 @@ export function makeOperationalDependencyFailureStatusResponse(base = makeHealth
       canaryDegradedCount: 0,
       canarySkippedCount: 0,
       canaryStaleCount: 0,
-      diagnosticIssueCount: base.summary.diagnosticIssueCount + 3,
+      diagnosticIssueCount: base.summary.diagnosticIssueCount == null ? null : base.summary.diagnosticIssueCount + 3,
     },
   });
 }
@@ -750,7 +750,7 @@ export function makeActionBlockedStatusResponse(base = makeActionRecommendedStat
   });
 }
 
-export function makeLongCommsStatusResponse(base = makeHealthyStatusResponse()): StatusResponse {
+export function makeLongCommsStatusResponse(base: StatusResponse = makeHealthyStatusResponse()): StatusResponse {
   const perAlertType = {
     dews: { sent: 125, enqueued: 3, failed: 1, blocked: 0, firstSendLatencyMs: 12_345 },
     depeg: { sent: 84, enqueued: 5, failed: 2, blocked: 1, firstSendLatencyMs: 23_456 },

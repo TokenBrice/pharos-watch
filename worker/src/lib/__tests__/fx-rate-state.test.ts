@@ -241,6 +241,25 @@ describe("fx-rate-state generation identity", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
+  it.each([61, 3600])("rejects future publication clocks instead of grading age zero healthy (+%ss)", (futureSec) => {
+    const rates = Object.fromEntries(EXPECTED_FX_PEG_KEYS.map((key) => [key, 1]));
+    const meta = liveMeta(NOW_SEC + futureSec);
+    for (const key of EXPECTED_FX_PEG_KEYS) {
+      meta.sourceUpdatedAtByPeg[key] = NOW_SEC - 120;
+      meta.sourceModeByPeg[key] = "live";
+      meta.sourceCadenceByPeg![key] = "intraday";
+    }
+    const rows = verifiedRows(rates, meta, NOW_SEC + futureSec);
+    const state = hydrateFxRateState(rows.rates, rows.meta);
+    expect(buildFxCacheStatus(state, 1800, NOW_SEC)).toMatchObject({
+      statusFloor: "stale", cacheStatus: { healthy: false, ageSeconds: null, timestampReason: "future-timestamp" },
+    });
+  });
+  it("retains the canonical allowed publication skew without a negative age", () => {
+    const rows = verifiedRows({ peggedEUR: 1 }, liveMeta(NOW_SEC + 60, NOW_SEC - 120), NOW_SEC + 60);
+    expect(buildFxCacheStatus(hydrateFxRateState(rows.rates, rows.meta), 1800, NOW_SEC).cacheStatus)
+      .toMatchObject({ ageSeconds: 0, timestampReason: undefined });
+  });
 
   it("admits a digest-verified pair as one generation", () => {
     const rates = Object.fromEntries(EXPECTED_FX_PEG_KEYS.map((key) => [key, key === "peggedEUR" ? 1.08 : 1]));

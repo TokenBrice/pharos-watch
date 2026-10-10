@@ -15,6 +15,13 @@ function buildSummary(cronHealth: CronHealthSnapshot) {
 }
 
 describe("status summary scheduled-slot query failures", () => {
+  it("keeps all skipped DB summary measurements unavailable", () => {
+    const summary = emptyStatusSummary();
+    expect(summary.unavailableReason).toBe("db-unavailable");
+    for (const [key, value] of Object.entries(summary)) {
+      if (key !== "unavailableReason" && key !== "transitionsUnavailableReason") expect(value, key).toBeNull();
+    }
+  });
   it.each([null, 99])("serializes freshness ratio availability without sentinel substitution (%s)", (worstCacheRatio) => {
     const summary = buildStatusSummary({ cronHealth: makeCronHealth(), budgetOnlySurfaces: [],
       diagnosticIssueCount: 0, transitionsLast24h: 0, worstCacheRatio });
@@ -49,6 +56,7 @@ describe("status summary scheduled-slot query failures", () => {
       diagnosticIssueCount: 0,
       worstCacheRatio: 0,
       transitionsLast24h: 0,
+      transitionsUnavailableReason: null,
     });
     expect(summary).not.toHaveProperty("scheduledSlotRunningQueryFailed");
     expect(summary).not.toHaveProperty("scheduledSlotEventMarkerQueryFailed");

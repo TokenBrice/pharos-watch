@@ -85,6 +85,9 @@ function makeMintBurnAssessmentDb(
     dbError?: unknown;
     dbSentinelMissing?: boolean;
     cacheError?: unknown;
+    circuitError?: unknown;
+    latestRunError?: unknown;
+    fxFutureSec?: number;
     cacheMissing?: boolean;
   } = {},
 ): D1Database {
@@ -96,7 +99,7 @@ function makeMintBurnAssessmentDb(
     { key: "stablecoins", updated_at: nowSec - 60, value: "{}" },
     { key: "stablecoin-charts", updated_at: nowSec - 60, value: "{}" },
     { key: "usds-status", updated_at: nowSec - 60, value: "{}" },
-    ...fxRatesCacheRows(nowSec - 60, Object.fromEntries(EXPECTED_FX_PEG_KEYS.map((key) => [key, 1]))),
+    ...fxRatesCacheRows(nowSec - 60 + (options.fxFutureSec ?? 0), Object.fromEntries(EXPECTED_FX_PEG_KEYS.map((key) => [key, 1]))),
     {
       key: "ops:d1-capacity:v1",
       updated_at: nowSec,
@@ -159,7 +162,7 @@ function makeMintBurnAssessmentDb(
       rows: [],
       ...(options.yieldSafetyError ? { throwError: options.yieldSafetyError } : { first: null }),
     },
-    { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [] },
+    { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [], ...(options.circuitError ? { throwError: options.circuitError } : {}) },
     { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
     {
       match: "GROUP BY job",
@@ -171,6 +174,7 @@ function makeMintBurnAssessmentDb(
       matchBinds: ["sync-mint-burn"],
       rows: [],
       first: latestRunStatus == null ? null : { status: latestRunStatus },
+      ...(options.latestRunError ? { throwError: options.latestRunError } : {}),
     },
     timestampLookup,
     rowCountLookup,
@@ -179,6 +183,33 @@ function makeMintBurnAssessmentDb(
 }
 
 describe("assessPublicHealth upstream provider enrichment", () => {
+  it("propagates rejected FX publication clocks through the public cache boundary", async () => {
+    const now = 1_800_000_000;
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, { fxFutureSec: 3600 }), now);
+    expect(result.caches["fx-rates"]).toMatchObject({
+      healthy: false, ageSeconds: null, publishedAt: null, timestampReason: "future-timestamp",
+    });
+    expect(result.cacheImpactStatus).toBe("stale");
+  });
+  it.each(["circuitError", "latestRunError", "dbError"] as const)("keeps rejected diagnostic evidence null (%s)", async (failure) => {
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(1_800_000_000, {
+      [failure]: new Error("diagnostics unavailable"),
+    }), 1_800_000_000);
+    if (failure !== "latestRunError") {
+      expect(result.circuits).toBeNull();
+      expect(result.openCircuitCount).toBeNull();
+      expect(result.circuitsUnavailableReason).toBe(failure === "dbError" ? "db-unavailable" : "circuits-read-failed");
+      expect(result.circuitImpactStatus).not.toBe("healthy");
+    }
+    if (failure !== "circuitError") {
+      expect(result.mintBurn).toMatchObject({
+        majorStaleCount: null, staleMajorSymbols: null,
+        unavailableReason: failure === "dbError" ? "db-unavailable" : "mint-burn-read-failed",
+        sync: { freshnessStatus: null, criticalLaneHealthy: null },
+      });
+      expect(result.mintBurnImpactStatus).not.toBe("healthy");
+    }
+  });
   it.each(["dbError", "blacklistError"] as const)("keeps unread blacklist measurements null with reason on %s", async (failure) => {
     const result = await assessPublicHealth(makeMintBurnAssessmentDb(1_800_000_000, {
       [failure]: new Error("unavailable"),
@@ -695,11 +726,15 @@ describe("assessPublicHealth mint/burn subquery failures", () => {
 
       expect(result.mintBurnQueryError).toBe("Mint/burn health data unavailable.");
       expect(result.mintBurn.queryErrors).toEqual({
-        latestSuccessfulSyncAt: "Latest successful mint/burn sync timestamp unavailable.",
+        latestSuccessfulSyncAt: "mint-burn-output-read-failed",
         rowCount: null,
       });
       expect(result.mintBurn.totalEvents).toBe(4321);
       expect(result.mintBurnImpactStatus).toBe("degraded");
+      expect(result.mintBurn).toMatchObject({
+        unavailableReason: "mint-burn-output-read-failed",
+        sync: { freshnessStatus: null, criticalLaneHealthy: null },
+      });
       expect(result.overallStatus).not.toBe("stale");
       expect(result.mintBurnBootstrap).toBe(false);
       expect(result.warnings).toContain("mint-burn-query-failed");
@@ -721,7 +756,7 @@ describe("assessPublicHealth mint/burn subquery failures", () => {
       expect(result.mintBurnQueryError).toBeNull();
       expect(result.mintBurn.queryErrors).toEqual({
         latestSuccessfulSyncAt: null,
-        rowCount: "Mint/burn row-count diagnostics unavailable.",
+        rowCount: "mint-burn-count-read-failed",
       });
       expect(result.mintBurn.totalEvents).toBeNull();
       expect(result.mintBurn.sync.lastSuccessfulSyncAt).toBe(nowSec - 300);

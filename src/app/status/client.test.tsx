@@ -49,6 +49,16 @@ afterEach(() => {
 });
 
 describe("public incident history availability", () => {
+  it("never presents an unavailable circuit read as all closed", () => {
+    const health = {
+      ...makeHealthyHealthResponse(), circuits: null, circuitsUnavailableReason: "circuits-read-failed",
+      status: "degraded", warnings: ["circuit-query-failed"],
+    };
+    useHealthMock.mockReturnValue({ data: health, error: null, isLoading: false, refetch: vi.fn(), dataUpdatedAt: Date.now() });
+    render(<StatusClient faqItems={[]} />);
+    expect(screen.getByText("Unavailable")).toBeTruthy();
+    expect(screen.queryByText("All closed")).toBeNull();
+  });
   it("renders heavy delivery loss while the public scheduler remains healthy", () => {
     const health = makeHealthyHealthResponse();
     health.status = "degraded";

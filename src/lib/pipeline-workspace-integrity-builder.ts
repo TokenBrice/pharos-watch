@@ -89,8 +89,8 @@ export function buildPipelineIntegrityModel(data: StatusResponse): PipelineInteg
     ));
   }
 
-  const stablecoinPublication = data.dataQuality.stablecoinPublication;
-  const repairDebt = data.dataQuality.repairDebt;
+  const stablecoinPublication = data.dataQuality?.stablecoinPublication;
+  const repairDebt = data.dataQuality?.repairDebt;
   const controlRows: PipelineIntegrityRow[] = [
     stablecoinPublication
       ? {

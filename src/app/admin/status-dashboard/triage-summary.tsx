@@ -236,9 +236,9 @@ export function TriageSummary({
           <SummaryBadge label="Watches" value={String(resolvedIssueGroups.watches.length)} />
           <SummaryBadge
             label="Cron last-run errors"
-            value={String(data.summary.cronErrors)}
+            value={data.summary.cronErrors == null ? "Unavailable" : String(data.summary.cronErrors)}
             className={
-              data.summary.availabilityImpactingCronErrors > 0
+              data.summary.availabilityImpactingCronErrors != null && data.summary.availabilityImpactingCronErrors > 0
                 ? SEVERITY_TONE_CLASS.watch.pill
                 : undefined
             }

@@ -23,7 +23,7 @@ function thresholdState(value: number, warning: number, stale: number, inclusive
 }
 
 export function buildPipelineQualityModel(data: StatusResponse): PipelineQualityModel {
-  const dq = data.dataQuality as DataQuality & Record<string, unknown>;
+  const dq: Partial<DataQuality> = data.dataQuality ?? {};
   const totalStablecoins = finiteNumber(dq.totalStablecoins);
   const missingPrices = finiteNumber(dq.missingPrices);
   const missingRatio =

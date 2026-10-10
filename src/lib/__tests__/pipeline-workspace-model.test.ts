@@ -16,7 +16,8 @@ import {
 
 function withReadyQuality() {
   const base = makeHealthyStatusResponse();
-  return degraded(base, {
+  return {
+    ...base,
     dataQuality: {
       ...base.dataQuality,
       blacklistTotal: 100,
@@ -24,10 +25,19 @@ function withReadyQuality() {
       blacklistMissingRatio: 0,
       blacklistRecentMissingAmounts: 0,
     },
-  });
+  };
 }
 
 describe("pipeline quality model", () => {
+  it("withholds zero counts and healthy quality when DB evidence is unavailable", () => {
+    const data = degraded(makeHealthyStatusResponse(), {
+      dataQuality: null, sectionErrors: { dataQuality: { code: "db-unavailable", message: "Database unavailable." } },
+    });
+    const quality = buildPipelineQualityModel(data);
+    expect(quality.rows.every((row) => row.state === "unknown" && row.currentValue === "Unknown")).toBe(true);
+    expect(quality.activeDepegs).toMatchObject({ currentValue: "Unknown", unavailable: true });
+    expect(buildPipelineIntegrityModel(data).controlRows.every((row) => row.state === "unknown")).toBe(true);
+  });
   it("distinguishes a real zero from an unknown denominator", () => {
     const unknown = buildPipelineQualityModel(makeHealthyStatusResponse());
     const knownZero = buildPipelineQualityModel(withReadyQuality());
@@ -251,6 +261,9 @@ describe("pipeline coverage summaries", () => {
   it("covers publication controls, publication failures, and dependency evidence in Integrity", () => {
     const dependencyData = makeOperationalDependencyFailureStatusResponse();
     const publicationData = makePublicationFailureStatusResponse();
+    if (dependencyData.dataQuality == null) {
+      throw new Error("Operational dependency fixture must retain observed data quality.");
+    }
     const data = degraded(dependencyData, {
       publicationHealth: publicationData.publicationHealth,
       dataQuality: {

@@ -1,9 +1,11 @@
 import type { StatusResponse } from "../types/status";
 
-export function unavailableReserveComposition(): Extract<StatusResponse["reserveComposition"], { status: "unavailable" }> {
+export function unavailableReserveComposition(
+  reason: Extract<StatusResponse["reserveComposition"], { status: "unavailable" }>["reason"] = "reserve_composition_query_failed",
+): Extract<StatusResponse["reserveComposition"], { status: "unavailable" }> {
   return {
     status: "unavailable",
-    reason: "reserve_composition_query_failed",
+    reason,
     configuredCoins: null,
     freshCoins: null,
     staleCoins: null,

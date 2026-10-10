@@ -87,6 +87,14 @@ function makeDataQualityEvaluationInput(
 }
 
 describe("status evaluation policy", () => {
+  it.each([
+    { circuitQueryError: "circuits-read-failed", circuitImpactStatus: "degraded" as const },
+    { mintBurnQueryError: "mint-burn-read-failed", mintBurnImpactStatus: "degraded" as const },
+  ])("never grades unavailable service diagnostics healthy (%j)", (overrides) => {
+    const result = evaluateAvailabilityStatus(makeAvailabilityCauseInput(makePublicHealth("healthy", overrides)));
+    expect(result.status).toBe("degraded");
+    expect(result.causes).toContainEqual(expect.objectContaining({ severity: "warning" }));
+  });
   it.each(["missing-timestamp", "invalid-timestamp"] as const)("names unavailable cache freshness without invented ratios (%s)", (timestampReason) => {
     const result = evaluateAvailabilityStatus(makeAvailabilityCauseInput(makePublicHealth("stale", {
       caches: { stablecoins: { ageSeconds: null, maxAge: 600, healthy: false, timestampReason } },
@@ -235,7 +243,7 @@ describe("status evaluation policy", () => {
     expect(assessment.status).toBe("stale");
   });
 
-  it("does not let circuit diagnostics failure degrade availability on its own", () => {
+  it("degrades availability when circuit diagnostics cannot be read", () => {
     const availability = evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ publicHealth: makePublicHealth("healthy", {
       circuitImpactStatus: "degraded",
       circuitQueryError: "Circuit breaker diagnostics unavailable.",
@@ -244,7 +252,7 @@ describe("status evaluation policy", () => {
     availabilityImpactingUnhealthyCrons: 0,
     availabilityImpactingConsecutiveCronErrors: 0, })).status;
 
-    expect(availability).toBe("healthy");
+    expect(availability).toBe("degraded");
   });
 
   it("uses the D1 capacity floor for admin availability", () => {
@@ -498,9 +506,9 @@ describe("status cause text", () => {
     expect(causes).toContainEqual(
       expect.objectContaining({
         code: "mint_burn_health_query_failed",
-        severity: "info",
+        severity: "warning",
         message:
-          "Mint/burn health query failed; diagnostics are temporarily unavailable. " +
+          "Mint/burn health query failed (mint-burn-read-failed); diagnostics are temporarily unavailable. " +
           "Latest critical cron run status: error.",
       }),
     );
@@ -1024,7 +1032,7 @@ describe("availability cron-error semantics", () => {
     ).toBe("stale");
   });
 
-  it("excludes mintBurnImpactStatus from availability when mintBurnQueryError is set", () => {
+  it("uses an unavailable degradation instead of trusting stale mint/burn classification", () => {
     expect(
       evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ ...baseInput,
       publicHealth: makePublicHealth("healthy", {
@@ -1032,7 +1040,7 @@ describe("availability cron-error semantics", () => {
         mintBurnQueryError: "Mint/burn health data unavailable.",
         mintBurnLastRunStatus: "error",
       }), })).status,
-    ).toBe("healthy");
+    ).toBe("degraded");
   });
 });
 

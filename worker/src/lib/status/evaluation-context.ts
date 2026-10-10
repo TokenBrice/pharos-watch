@@ -1,4 +1,5 @@
 import type {
+  DataQuality,
   StatusResponse,
 } from "@shared/types/status";
 import { unavailableReserveComposition } from "@shared/lib/status-reserve-composition";
@@ -100,7 +101,7 @@ export interface StatusAssessmentInputs {
   onchainAssessment: OnchainDataQualityAssessment;
 }
 
-export function deriveStatusAssessmentInputs(dataQuality: StatusResponse["dataQuality"]): StatusAssessmentInputs {
+export function deriveStatusAssessmentInputs(dataQuality: DataQuality): StatusAssessmentInputs {
   const missingPriceRatio =
     dataQuality.totalStablecoins > 0 ? dataQuality.missingPrices / dataQuality.totalStablecoins : 0;
   const hasActiveOnchainMonitor = dataQuality.onchainSupplyMonitoring === "active";
@@ -125,7 +126,7 @@ export function deriveStatusAssessmentInputs(dataQuality: StatusResponse["dataQu
 
 function countDiagnosticIssues(input: {
   publicHealth: PublicHealthAssessment;
-  dataQuality: StatusResponse["dataQuality"];
+  dataQuality: DataQuality;
   reserveCompositionQueryFailed: boolean;
   cronHistoryQueryFailed: boolean;
   cronProgressQueryFailed: boolean;
@@ -150,7 +151,7 @@ function countDiagnosticIssues(input: {
 
 export function countStatusDiagnosticIssues(input: {
   publicHealth: PublicHealthAssessment;
-  dataQuality: StatusResponse["dataQuality"];
+  dataQuality: DataQuality;
   reserveCompositionQueryFailed: boolean;
   cronHealth: CronHealthSnapshot;
   cronBudgetSurfaceTelemetryQueryFailed?: boolean;

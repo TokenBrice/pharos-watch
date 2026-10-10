@@ -21,11 +21,11 @@ export function PublicStatusReliabilitySection({
   probesLoading,
   probeSummary,
 }: PublicStatusReliabilitySectionProps) {
-  const publicImpactCircuits = Object.fromEntries(
+  const publicImpactCircuits = healthData.circuits == null ? null : Object.fromEntries(
     Object.entries(healthData.circuits).filter(([key]) => isPublicImpactCircuitKey(key)),
   );
-  const openCircuits = Object.values(publicImpactCircuits).filter((circuit) => circuit.state === "open").length;
-  const halfOpenCircuits = Object.values(publicImpactCircuits).filter((circuit) => circuit.state === "half-open").length;
+  const openCircuits = publicImpactCircuits == null ? null : Object.values(publicImpactCircuits).filter((circuit) => circuit.state === "open").length;
+  const halfOpenCircuits = publicImpactCircuits == null ? null : Object.values(publicImpactCircuits).filter((circuit) => circuit.state === "half-open").length;
 
   return (
     <StatusSection
@@ -41,10 +41,13 @@ export function PublicStatusReliabilitySection({
               status="degraded"
             />
           )}
-          {openCircuits > 0 && (
+          {publicImpactCircuits == null && (
+            <StatusSummaryBadge label="Circuit Breakers" value="Unavailable" status="degraded" />
+          )}
+          {openCircuits != null && openCircuits > 0 && (
             <StatusSummaryBadge label="Open Breakers" value={String(openCircuits)} status="stale" />
           )}
-          {halfOpenCircuits > 0 && (
+          {halfOpenCircuits != null && halfOpenCircuits > 0 && (
             <StatusSummaryBadge label="Half-open" value={String(halfOpenCircuits)} status="degraded" />
           )}
         </>
@@ -58,7 +61,7 @@ export function PublicStatusReliabilitySection({
           description="Browser-origin probe loop from this public session. It covers public canary routes; freshness Warning headers are treated as data-health signals."
           footnote="Admin and manual action paths are intentionally excluded from the public probe board."
         />
-        <CircuitBreakerTable circuits={publicImpactCircuits} />
+        <CircuitBreakerTable circuits={publicImpactCircuits} unavailableReason={healthData.circuitsUnavailableReason} />
       </div>
       <CacheFreshnessTable caches={healthData.caches} />
     </StatusSection>

@@ -12,6 +12,7 @@ import { inferFxSourceCadence, type FxSourceCadence } from "./fx-cadence";
 import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import { IsolateLocalState } from "./isolate-local-state";
 import { EXPECTED_FX_PEG_KEYS } from "./fx-config";
+import { assessFreshnessTimestamp } from "./api-freshness-age";
 
 const FX_RATES_KEY = "fx-rates";
 const FX_RATES_META_KEY = "fx-rates-meta";
@@ -627,10 +628,11 @@ export function buildFxCacheStatus(
     };
   }
 
-  const ageSeconds = Math.max(0, nowSec - state.usableSyncAt);
-  const ratio = ageSeconds / maxAgeSec;
+  const timestamp = assessFreshnessTimestamp(nowSec, state.usableSyncAt);
+  const ageSeconds = timestamp.ageSeconds;
+  const ratio = ageSeconds == null ? null : ageSeconds / maxAgeSec;
   let statusFloor: "healthy" | "degraded" | "stale" =
-    ratio > STATUS_CACHE_RATIO_THRESHOLDS.stale
+    ratio == null || ratio > STATUS_CACHE_RATIO_THRESHOLDS.stale
       ? "stale"
       : ratio > STATUS_CACHE_RATIO_THRESHOLDS.degraded
         ? "degraded"
@@ -716,8 +718,9 @@ export function buildFxCacheStatus(
 
   const cacheStatus: CacheStatus = {
     ageSeconds,
+    timestampReason: timestamp.reason ?? undefined,
     maxAge: maxAgeSec,
-    healthy: ratio <= FRESHNESS_RATIOS.DEGRADED && admissionIssues.length === 0 && missingPegKeys.length === 0,
+    healthy: ratio != null && ratio <= FRESHNESS_RATIOS.DEGRADED && admissionIssues.length === 0 && missingPegKeys.length === 0,
     degraded: admissionIssues.length > 0 || missingPegKeys.length > 0,
     degradedReason,
     mode: state.mode,

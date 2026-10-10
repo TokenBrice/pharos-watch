@@ -506,7 +506,7 @@ export async function buildCacheStatuses(
 
     if (key === "fx-rates") {
       const fx = buildFxCacheStatus(fxState, maxAge, now);
-      caches[key] = { ...fx.cacheStatus, publishedAt: fxState?.usableSyncAt ?? null };
+      caches[key] = { ...fx.cacheStatus, publishedAt: fx.cacheStatus.timestampReason == null ? fxState?.usableSyncAt ?? null : null };
       ageSeconds = fx.cacheStatus.ageSeconds;
       if (fx.warning) warnings.push(`fx-rates: ${fx.warning}`);
       if (fx.statusFloor === "stale") {

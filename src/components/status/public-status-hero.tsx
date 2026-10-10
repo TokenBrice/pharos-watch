@@ -21,8 +21,8 @@ interface PublicStatusHeroProps {
   worstCacheRatio: number | null;
   worstCacheStatus: HealthResponse["status"];
   impactedCacheLanes: number;
-  openCircuits: number;
-  halfOpenCircuits: number;
+  openCircuits: number | null;
+  halfOpenCircuits: number | null;
   onRefresh: () => void;
 }
 
@@ -116,7 +116,7 @@ export function PublicStatusHero({
   const statusTone = getStatusTone(healthData.status);
   const warningLine = getHeroLeadWarning(healthData);
   const probeValue = probeSummary ? `${probeSummary.passCount}/${probeSummary.sampleCount}` : "—";
-  const circuitValue =
+  const circuitValue = openCircuits == null || halfOpenCircuits == null ? "Unavailable" :
     openCircuits > 0 ? `${openCircuits} open` : halfOpenCircuits > 0 ? `${halfOpenCircuits} half-open` : "All closed";
   const mintBurnTone = getPublicMintBurnStatus(healthData.mintBurn.sync);
 
@@ -178,7 +178,7 @@ export function PublicStatusHero({
           <SignalTile
             label="Circuit Breakers"
             value={circuitValue}
-            tone={openCircuits > 0 ? "stale" : halfOpenCircuits > 0 ? "degraded" : "healthy"}
+            tone={openCircuits == null || halfOpenCircuits == null ? "unknown" : openCircuits > 0 ? "stale" : halfOpenCircuits > 0 ? "degraded" : "healthy"}
           />
           <SignalTile
             label="Mint/Burn Writer"

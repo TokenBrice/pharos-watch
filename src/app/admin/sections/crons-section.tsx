@@ -21,9 +21,9 @@ export function CronsSection({ data, runningCrons, cronGroups }: CronsSectionPro
       variant="workspace"
       summary={
         <>
-          <SummaryBadge label="Impacting" value={String(data.summary.availabilityImpactingUnhealthyCrons)} />
-          <SummaryBadge label="Watch" value={String(data.summary.watchUnhealthyCrons)} />
-          <SummaryBadge label="Warnings" value={String(data.summary.degradedCrons)} />
+          <SummaryBadge label="Impacting" value={data.summary.availabilityImpactingUnhealthyCrons == null ? "Unavailable" : String(data.summary.availabilityImpactingUnhealthyCrons)} />
+          <SummaryBadge label="Watch" value={data.summary.watchUnhealthyCrons == null ? "Unavailable" : String(data.summary.watchUnhealthyCrons)} />
+          <SummaryBadge label="Warnings" value={data.summary.degradedCrons == null ? "Unavailable" : String(data.summary.degradedCrons)} />
           <SummaryBadge label="Running" value={String(runningCrons)} />
         </>
       }
