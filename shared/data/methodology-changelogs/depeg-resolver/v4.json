@@ -16,7 +16,12 @@
       "Release requires fixed-clock replay, mover attribution and owner review, plus fresh timestamp-evidenced duration calibration. Archived golden histories without timed provenance are not evidence of current calibration; no successful recalibration is claimed.",
       "Activation is provisionally 2026-10-11 00:00 UTC (1791676800); re-date effectiveAt at release"
     ],
-    "commits": [],
+    "commits": [
+      "552cd6875",
+      "e48d77bd7",
+      "7031b82e5",
+      "f56e2cce1"
+    ],
     "reconstructed": false
   },
   {

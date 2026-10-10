@@ -17,7 +17,17 @@
       "Coverage and replay provenance follow admitted publication rows rather than rejected candidates. Consensus weights, supply gap-fill bounds, and current scoring formulas are unchanged; fixed-clock price, supply, and coverage comparison remains a release prerequisite.",
       "Activation is provisionally 2026-10-11 00:00 UTC (1791676800); re-date effectiveAt at release"
     ],
-    "commits": [],
+    "commits": [
+      "3a6be6e0d",
+      "e684e542b",
+      "f56e2cce1",
+      "6cc896454",
+      "3e280b982",
+      "718253076",
+      "17a2569d8",
+      "c8d085f00",
+      "6c403ce8b"
+    ],
     "reconstructed": false
   },
   {

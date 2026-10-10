@@ -11,7 +11,8 @@
       "Missing required v3 DEWS archives remain unavailable and preserve accepted days; an observed all-CALM archive still contributes measured zero stress. Archive date and row count remain part of replay provenance.",
       "Every historical entrypoint loads the same full twenty-one-day supply lookback, combining the seven-day trend interval and fourteen-day as-of margin, so narrow replay windows do not truncate the eligible cohort.",
       "Contributor attribution preserves the full-precision scoring factor without rewriting legacy factors. Displayed thirty-day extrema and averages use source-anchored UTC calendar coverage rather than row count; neither changes the scoring formula.",
-      "Historical repairs are score-moving. Fixed-clock replay, attribution of changed days and owner review are release prerequisites; this entry does not claim a completed replay or rewrite of stored history."
+      "Historical repairs are score-moving. Fixed-clock replay, attribution of changed days and owner review are release prerequisites; this entry does not claim a completed replay or rewrite of stored history.",
+      "Activation is provisionally 2026-10-11 00:00 UTC (1791676800); re-date effectiveAt at release"
     ],
     "commits": [
       "eb605e5ca",

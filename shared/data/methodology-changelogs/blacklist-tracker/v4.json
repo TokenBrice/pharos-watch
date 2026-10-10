@@ -17,7 +17,11 @@
       "Blacklistability classifications and scan cadence are unchanged. Fixed-clock identity, ordering, valuation, and coverage comparison remains a release prerequisite; no production replay or runtime-health result is claimed.",
       "Activation is provisionally 2026-10-11 00:00 UTC (1791676800); re-date effectiveAt at release"
     ],
-    "commits": [],
+    "commits": [
+      "b1d4e8abc",
+      "a8346266c",
+      "5fe757c92"
+    ],
     "reconstructed": false
   },
   {

@@ -17,7 +17,15 @@
       "Formula weights and numeric trigger thresholds are unchanged. Owner-approved production-history replay and fixed-clock admission and band comparison remain release prerequisites; no replay or band-equivalence result is claimed.",
       "Activation is provisionally 2026-10-11 00:00 UTC (1791676800); re-date effectiveAt at release"
     ],
-    "commits": [],
+    "commits": [
+      "caa791e81",
+      "552cd6875",
+      "e48d77bd7",
+      "2b4556570",
+      "0c010d130",
+      "718253076",
+      "5a962ec46"
+    ],
     "reconstructed": false
   },
   {
