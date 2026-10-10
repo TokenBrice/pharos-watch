@@ -732,6 +732,11 @@ export function adaptMakinaStrategyReserves(
     }, value);
   }
 
+  // Financing has no supported asset-level attribution. Keep the signed book
+  // for AUM reconciliation, but compose exposures from gross assets only.
+  const assetBuckets = new Map([...buckets].map(([key, bucket]) => [key, { ...bucket }]));
+  const financingBuckets = new Map<string, MakinaBucketValue>();
+
   for (const entry of asArray(allocationData.positions) as MakinaPosition[]) {
     const unsignedValue = readNonNegativeAccountingValue(entry.value, accountingDecimals, "position value");
     if (unsignedValue <= 0) continue;
@@ -762,6 +767,13 @@ export function adaptMakinaStrategyReserves(
       risk,
       kind: protocol ? "protocol" : "unknown",
     }, signedValue);
+    pushBucket(signedValue < 0 ? financingBuckets : assetBuckets, {
+      key,
+      sourceKey: protocol ? `makina:protocol:${protocol}` : "makina:unknown:unlabelled",
+      name,
+      risk,
+      kind: protocol ? "protocol" : "unknown",
+    }, unsignedValue);
 
     positionDetails.push({
       id: readString(entry.id) ?? null,
@@ -844,18 +856,18 @@ export function adaptMakinaStrategyReserves(
   }
 
   const otherThresholdPct = params.otherThresholdPct ?? DEFAULT_OTHER_THRESHOLD_PCT;
-  const positiveBuckets = [...buckets.values()].filter((bucket) => bucket.value > 0);
+  const positiveBuckets = [...assetBuckets.values()].filter((bucket) => bucket.value > 0);
   const unknownBuckets = positiveBuckets.filter((bucket) => bucket.kind === "unknown");
   const knownBuckets = positiveBuckets.filter((bucket) => bucket.kind !== "unknown");
-  const major = knownBuckets.filter((bucket) => (bucket.value / netReserveUsd) * 100 >= otherThresholdPct);
-  const minor = knownBuckets.filter((bucket) => (bucket.value / netReserveUsd) * 100 < otherThresholdPct);
+  const major = knownBuckets.filter((bucket) => (bucket.value / grossAssetsUsd) * 100 >= otherThresholdPct);
+  const minor = knownBuckets.filter((bucket) => (bucket.value / grossAssetsUsd) * 100 < otherThresholdPct);
   const displayedBuckets = [
     ...major,
     ...(minor.length > 0 ? [makeOtherBucket(minor)] : []),
     ...unknownBuckets,
   ];
   const unknownExposureUsd = unknownBuckets.reduce((sum, bucket) => sum + bucket.value, 0);
-  const unknownExposurePct = unknownExposureUsd / netReserveUsd * 100;
+  const unknownExposurePct = unknownExposureUsd / grossAssetsUsd * 100;
   if (unknownExposurePct >= otherThresholdPct) {
     warnings.push(reserveInfoWarning(
       "makina-unknown-exposure",
@@ -898,7 +910,7 @@ export function adaptMakinaStrategyReserves(
     slices: normalizeSlices(
       displayedBuckets.map((bucket) => reserveSliceFromBucket({
         ...bucket,
-        value: bucket.value / netReserveUsd * 100,
+        value: bucket.value / grossAssetsUsd * 100,
       })),
     ),
     ...(warnings.length > 0 ? { warnings } : {}),
@@ -921,6 +933,15 @@ export function adaptMakinaStrategyReserves(
       ...(redemptionState ? buildMakinaRedemptionMetadata(redemptionState) : {}),
       details: {
         proofKind: "makina-strategy-accounting-api",
+        compositionScope: "gross-assets",
+        compositionDenominatorUsd: grossAssetsUsd,
+        financingScope: "unallocated-protocol-debt",
+        netAumUsd: netReserveUsd,
+        financingBuckets: [...financingBuckets.values()].map((bucket) => ({
+          key: bucket.key,
+          name: bucket.name,
+          liabilityUsd: bucket.value,
+        })),
         reconciliationKind,
         reconciliationDiffPct,
         reconciliationAumUsd,
@@ -945,7 +966,7 @@ export function adaptMakinaStrategyReserves(
           key: bucket.key,
           name: bucket.name,
           valueUsd: bucket.value,
-          pct: bucket.value / netReserveUsd * 100,
+          pct: bucket.value / grossAssetsUsd * 100,
           kind: bucket.kind,
         })),
         positions: positionDetails,

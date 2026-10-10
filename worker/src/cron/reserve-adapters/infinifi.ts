@@ -183,6 +183,7 @@ export function resolveInfiniFiFreshness(
     ? rateHistory.data.dataPoints
     : [];
   let latest: { time: number; value: number } | null = null;
+  let conflictingLatest = false;
   for (const point of points) {
     if (
       point != null
@@ -192,13 +193,26 @@ export function resolveInfiniFiFreshness(
       && typeof point.time === "number" && Number.isFinite(point.time)
       && typeof point.value === "number" && Number.isFinite(point.value)
     ) {
-      latest = { time: point.time, value: point.value };
+      const time = parseTimestampLikeToUnixSeconds(point.time);
+      if (time == null) continue;
+      if (latest == null || time > latest.time) {
+        latest = { time, value: point.value };
+        conflictingLatest = false;
+      } else if (time === latest.time && point.value !== latest.value) {
+        conflictingLatest = true;
+      }
     }
   }
   if (latest == null) {
     return unverifiedFreshnessMetadata(
       "protocol-stats-api",
       "InfiniFi protocol stats payload does not expose a trustworthy source timestamp",
+    );
+  }
+  if (conflictingLatest) {
+    return unverifiedFreshnessMetadata(
+      "protocol-stats-api",
+      "InfiniFi siUSD rate-history newest timestamp has conflicting exchange rates",
     );
   }
 
@@ -214,14 +228,7 @@ export function resolveInfiniFiFreshness(
     );
   }
 
-  const sourceTimestamp = parseTimestampLikeToUnixSeconds(latest.time);
-  if (sourceTimestamp == null) {
-    return unverifiedFreshnessMetadata(
-      "protocol-stats-api",
-      "InfiniFi siUSD rate-history latest point carried an unreadable timestamp",
-    );
-  }
-  return verifiedFreshnessMetadata(sourceTimestamp);
+  return verifiedFreshnessMetadata(latest.time);
 }
 
 export interface AdaptInfiniFiResult {

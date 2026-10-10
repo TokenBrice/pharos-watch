@@ -162,7 +162,6 @@ function buildStateFields(chain: SupportedSupplyChain, usdz: string) {
       label: "usdz:total-supply",
       contract: usdz,
       data: TOTAL_SUPPLY_SELECTOR,
-      verify: (value) => value > 0n ? null : "total supply is not positive",
     }),
     uint256Observation({
       label: "usdz:decimals",

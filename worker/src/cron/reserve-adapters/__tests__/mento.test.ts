@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { encodeAbiParameters } from "viem/utils";
+import { encodeAbiParameters, toFunctionSelector } from "viem/utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   MENTO_BIPOOL_MANAGER_ADDRESS,
@@ -32,6 +32,7 @@ import {
   type AdapterRpcValue,
 } from "./reserve-adapter.test-support";
 import { MENTO_RESERVE_COMPOSITION_PAYLOAD as RAW_SAMPLE_PAYLOAD } from "./reserve-adapter-payloads.test-support";
+import { brokerGuardFixture, brokerInventoryCalls, BROKER_FEED, BROKER_PRICING_MODULE, BROKER, BROKER_ORACLE, BROKER_BREAKER } from "./mento-broker.test-support";
 
 const SAMPLE_PAYLOAD = {
   ...RAW_SAMPLE_PAYLOAD,
@@ -68,7 +69,6 @@ const BRLM_TOKEN_ADDRESS = "0xe8537a3d056da446677b9e9d6c5db704eaab4787";
 const EXCHANGE_ID_1 = `0x${"11".repeat(32)}`;
 const EXCHANGE_ID_2 = `0x${"22".repeat(32)}`;
 const EXCHANGE_ID_3 = `0x${"33".repeat(32)}`;
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 // The Mento fork's Liquity v2 selectors (see mento-redemption.ts).
 const LIQUITY_V2_DEBT_SELECTOR = "0x45507998"; // getBoldDebt()
 const LIQUITY_V2_SHUTDOWN_SELECTOR = "0x58569081"; // shutdownTime()
@@ -88,16 +88,16 @@ function encodePoolExchange(overrides: {
   return encodeAbiParameters(MENTO_POOL_EXCHANGE_ABI_PARAMETERS, [{
     asset0: overrides.asset0 as `0x${string}`,
     asset1: overrides.asset1 as `0x${string}`,
-    pricingModule: ZERO_ADDRESS as `0x${string}`,
+    pricingModule: BROKER_PRICING_MODULE,
     bucket0: overrides.bucket0,
     bucket1: overrides.bucket1,
     lastBucketUpdate: 0n,
     config: {
       spread: overrides.spread,
-      referenceRateFeedID: ZERO_ADDRESS as `0x${string}`,
-      referenceRateResetFrequency: 0n,
-      minimumReports: 0n,
-      stablePoolResetSize: 0n,
+      referenceRateFeedID: BROKER_FEED,
+      referenceRateResetFrequency: 360n,
+      minimumReports: 1n,
+      stablePoolResetSize: 100n * 10n ** 18n,
     },
   }]) as `0x${string}`;
 }
@@ -613,6 +613,7 @@ describe("mento redemption telemetry", () => {
       network: mentoNetwork({
         block: { number: 12345, timestamp: CURRENT_DASHBOARD_NOW_SEC - 60 },
         rpc: {
+          ...brokerGuardFixture(EXCHANGE_ID_1, BRLM_TOKEN_ADDRESS, USDM_ADDRESS, 1000, CURRENT_DASHBOARD_NOW_SEC - 60),
           [exchangeIdsKey]: encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2]),
           [poolExchangeKey(EXCHANGE_ID_1)]: encodePoolExchange({
             asset0: BRLM_TOKEN_ADDRESS,
@@ -649,10 +650,55 @@ describe("mento redemption telemetry", () => {
       sourceUrls: redemption.sourceUrls,
     });
     expectWarnings(result, []);
-    expect(network.rpcCalls.map(({ data }) => data)).toEqual([
+    expect(brokerInventoryCalls(network.rpcCalls)).toEqual([
       MENTO_GET_EXCHANGE_IDS_SELECTOR,
       `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
     ]);
+  });
+
+  it.each([
+    [BROKER_ORACLE, "medianTimestamp(address)"],
+    [BROKER, "getAmountOut(address,bytes32,address,address,uint256)"],
+  ])("omits Broker telemetry without erasing composition when %s %s fails", async (contract, signature) => {
+    const guards = brokerGuardFixture(EXCHANGE_ID_1, BRLM_TOKEN_ADDRESS, USDM_ADDRESS, 1000, CURRENT_DASHBOARD_NOW_SEC - 60);
+    guards[`celo:${contract}:${toFunctionSelector(signature)}`] = null;
+    const { result } = await runAdapter("mento", "brlm-mento", {
+      network: mentoNetwork({
+        block: { number: 12345, timestamp: CURRENT_DASHBOARD_NOW_SEC - 60 },
+        rpc: {
+          ...guards,
+          [exchangeIdsKey]: encodeExchangeIds([EXCHANGE_ID_1]),
+          [poolExchangeKey(EXCHANGE_ID_1)]: encodePoolExchange({
+            asset0: BRLM_TOKEN_ADDRESS, asset1: USDM_ADDRESS,
+            bucket0: 1000n * 10n ** 18n, bucket1: 1000n * 10n ** 18n, spread: 5n * 10n ** 20n,
+          }),
+        },
+      }),
+      nowSec: CURRENT_DASHBOARD_NOW_SEC,
+    });
+    expect(result.slices.length).toBeGreaterThan(0);
+    expect(result.metadata?.redemption).toBeUndefined();
+    expectWarningEffect(result, "mento-redemption-telemetry-failed", "degraded");
+  });
+
+  it("retains an observed closed Broker breaker despite unchanged positive buckets", async () => {
+    const guards = brokerGuardFixture(EXCHANGE_ID_1, BRLM_TOKEN_ADDRESS, USDM_ADDRESS, 1000, CURRENT_DASHBOARD_NOW_SEC - 60);
+    guards[`celo:${BROKER_BREAKER}:${toFunctionSelector("getRateFeedTradingMode(address)")}`] = 1n;
+    const { result } = await runAdapter("mento", "brlm-mento", {
+      network: mentoNetwork({
+        block: { number: 12345, timestamp: CURRENT_DASHBOARD_NOW_SEC - 60 },
+        rpc: {
+          ...guards,
+          [exchangeIdsKey]: encodeExchangeIds([EXCHANGE_ID_1]),
+          [poolExchangeKey(EXCHANGE_ID_1)]: encodePoolExchange({
+            asset0: BRLM_TOKEN_ADDRESS, asset1: USDM_ADDRESS,
+            bucket0: 1000n * 10n ** 18n, bucket1: 1000n * 10n ** 18n, spread: 5n * 10n ** 20n,
+          }),
+        },
+      }),
+      nowSec: CURRENT_DASHBOARD_NOW_SEC,
+    });
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 0, routeStatus: "degraded", routeStatusSource: "onchain" });
   });
 
   it("sums matched counter-asset buckets and takes the max spread as the fee", async () => {
@@ -660,6 +706,8 @@ describe("mento redemption telemetry", () => {
       network: mentoNetwork({
         block: { number: 12345, timestamp: CURRENT_DASHBOARD_NOW_SEC - 60 },
         rpc: {
+          ...brokerGuardFixture(EXCHANGE_ID_1, BRLM_TOKEN_ADDRESS, USDC_ADDRESS, 1000, CURRENT_DASHBOARD_NOW_SEC - 60),
+          ...brokerGuardFixture(EXCHANGE_ID_2, BRLM_TOKEN_ADDRESS, USDT_ADDRESS, 2500, CURRENT_DASHBOARD_NOW_SEC - 60),
           [exchangeIdsKey]: encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2]),
           [poolExchangeKey(EXCHANGE_ID_1)]: encodePoolExchange({
             asset0: BRLM_TOKEN_ADDRESS,
@@ -709,7 +757,10 @@ describe("mento redemption telemetry", () => {
     const network = installAdapterNetwork({
       json: { [CATALOG_RESERVE_URL]: SAMPLE_PAYLOAD },
       html: { [MENTO_DASHBOARD_URL]: MENTO_DASHBOARD_HTML_FIXTURE },
+      block: { number: 12345, timestamp: DASHBOARD_FRAGMENT_TS_SEC },
       rpc: {
+        ...brokerGuardFixture(EXCHANGE_ID_1, USDM_ADDRESS, USDC_ADDRESS, 1, DASHBOARD_FRAGMENT_TS_SEC),
+        ...brokerGuardFixture(EXCHANGE_ID_3, USDM_ADDRESS, USDT_ADDRESS, 2, DASHBOARD_FRAGMENT_TS_SEC),
         [exchangeIdsKey]: encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2, EXCHANGE_ID_3]),
         [poolExchangeKey(EXCHANGE_ID_1)]: encodePoolExchange({
           asset0: USDM_ADDRESS,
@@ -738,7 +789,7 @@ describe("mento redemption telemetry", () => {
       ctx,
     );
     expect(usdc.metadata?.redemption).toMatchObject({ capacityUsd: 1, feeBps: 5 });
-    expect(network.rpcCalls.map(({ data }) => data)).toEqual([
+    expect(brokerInventoryCalls(network.rpcCalls)).toEqual([
       MENTO_GET_EXCHANGE_IDS_SELECTOR,
       `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
     ]);
@@ -752,7 +803,7 @@ describe("mento redemption telemetry", () => {
     // The exchange-id census and the already-decoded pool survive across coins;
     // the scan resumes at the first unread pool and stops at its match.
     expect(usdt.metadata?.redemption).toMatchObject({ capacityUsd: 2, feeBps: 100 });
-    expect(network.rpcCalls.map(({ data }) => data)).toEqual([
+    expect(brokerInventoryCalls(network.rpcCalls)).toEqual([
       MENTO_GET_EXCHANGE_IDS_SELECTOR,
       `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
       `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`,
@@ -767,7 +818,9 @@ describe("mento redemption telemetry", () => {
       const network = installAdapterNetwork({
         json: { [CATALOG_RESERVE_URL]: SAMPLE_PAYLOAD },
         html: { [MENTO_DASHBOARD_URL]: MENTO_DASHBOARD_HTML_FIXTURE },
+        block: { number: 12345, timestamp: DASHBOARD_FRAGMENT_TS_SEC },
         rpc: {
+          ...brokerGuardFixture(EXCHANGE_ID_3, USDM_ADDRESS, USDC_ADDRESS, 1, DASHBOARD_FRAGMENT_TS_SEC),
           [exchangeIdsKey]: encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2, EXCHANGE_ID_3]),
           [poolExchangeKey(EXCHANGE_ID_1)]: null,
           [poolExchangeKey(EXCHANGE_ID_2)]: () => {
@@ -811,7 +864,7 @@ describe("mento redemption telemetry", () => {
       expect(firstResult.metadata?.redemption).toBeUndefined();
       expectWarnings(firstResult, ["mento-redemption-telemetry-failed"]);
       expect(secondResult.metadata?.redemption).toMatchObject({ capacityUsd: 1 });
-      expect(network.rpcCalls.map(({ data }) => data)).toEqual([
+      expect(brokerInventoryCalls(network.rpcCalls)).toEqual([
         MENTO_GET_EXCHANGE_IDS_SELECTOR,
         `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
         `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`,

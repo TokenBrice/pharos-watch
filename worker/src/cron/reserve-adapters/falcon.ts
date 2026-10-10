@@ -23,7 +23,7 @@ export interface FalconTransparencyResponse {
   snapshot_date: number;
   usdf?: {
     supply: string;
-    insurance_fund: string;
+    insurance_fund: string | number;
     breakdown?: {
       assets?: FalconBreakdownAsset[];
     };
@@ -160,13 +160,11 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
   }
 
   const insuranceFundRaw = payload.usdf?.insurance_fund;
-  const insuranceFund = insuranceFundRaw == null
-    ? 0
-    : typeof insuranceFundRaw === "number"
-      ? insuranceFundRaw
-      : typeof insuranceFundRaw === "string" && insuranceFundRaw.trim()
-        ? Number(insuranceFundRaw)
-        : NaN;
+  const insuranceFund = typeof insuranceFundRaw === "number"
+    ? insuranceFundRaw
+    : typeof insuranceFundRaw === "string" && insuranceFundRaw.trim()
+      ? Number(insuranceFundRaw)
+      : NaN;
   if (!Number.isFinite(insuranceFund) || insuranceFund < 0) {
     throw new Error(`Falcon invalid usdf.insurance_fund: ${String(insuranceFundRaw)}`);
   }

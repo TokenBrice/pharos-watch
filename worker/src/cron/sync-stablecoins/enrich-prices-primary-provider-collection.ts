@@ -6,7 +6,7 @@ import { fetchCoingeckoSimplePrices, type CoingeckoSimplePriceEntry } from "../.
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { shouldAttemptFetch, recordOutcome, recoverBreakerOnNoCandidate } from "../../lib/circuit-breaker";
 import { mapWithConcurrency } from "../../lib/concurrency";
-import { decodeReserveNavPrice, isReserveNavPriceSource, RESERVE_NAV_PRICE_SOURCES } from "../../lib/reserve-nav-price";
+import { decodeCurrentReserveNavPrice, isReserveNavPriceSource, RESERVE_NAV_PRICE_SOURCES, type ReserveNavSnapshotRow } from "../../lib/reserve-nav-price";
 import { throwIfAborted } from "../../lib/abort";
 import {
   BITSTAMP_KNOWN_SYMBOLS,
@@ -50,11 +50,8 @@ export type PrimaryDexRows = Awaited<ReturnType<typeof loadDexPriceRows>>;
 export type PrimaryDexPriceSources = Awaited<ReturnType<typeof loadDexPriceSources>>;
 
 
-interface ReserveNavRow {
+interface ReserveNavRow extends ReserveNavSnapshotRow {
   stablecoin_id: string;
-  fetched_at: number;
-  source: string;
-  metadata: string;
 }
 
 
@@ -169,7 +166,9 @@ async function loadReserveNavPriceQuotes(params: {
   try {
     const rows = await runWithOverloadRetry(() => params.db
       .prepare(
-        `SELECT c.stablecoin_id, c.fetched_at, c.source, c.metadata
+        `SELECT c.stablecoin_id, c.fetched_at, c.source, c.metadata, c.config_fingerprint, c.attempt_id,
+                s.last_success_at, s.last_success_attempt_id,
+                s.config_fingerprint AS state_config_fingerprint, s.last_attempt_id, s.pending_attempt_id
            FROM reserve_composition c
            JOIN reserve_sync_state s
              ON s.stablecoin_id = c.stablecoin_id
@@ -183,14 +182,13 @@ async function loadReserveNavPriceQuotes(params: {
     const quotes = new Map<string, NavTelemetryQuote>();
     for (const row of rows.results ?? []) {
       if (!eligibleIds.has(row.stablecoin_id)) continue;
-      // last_success_at/fetched_at agreement is enforced by the query's
-      // `s.last_success_at = c.fetched_at` equality — the only data path here.
-      if (row.source !== metaById.get(row.stablecoin_id)?.liveReservesConfig?.adapter) continue;
+      const meta = metaById.get(row.stablecoin_id);
+      if (!meta) continue;
 
       const asset = assetById.get(row.stablecoin_id);
       if (!asset) continue;
 
-      const navQuote = decodeReserveNavPrice(row);
+      const navQuote = decodeCurrentReserveNavPrice(row, meta);
       if (!navQuote) continue;
 
       const usdRate = resolveNavUsdRate({

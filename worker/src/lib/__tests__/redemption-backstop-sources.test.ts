@@ -300,25 +300,122 @@ describe("buildRedemptionBackstopEntry", () => {
 
   it.each([
     { keys: undefined, accepted: false },
+    { keys: null, accepted: false },
+    { keys: "wm-m0", accepted: false },
+    { keys: [], accepted: false },
     { keys: ["m-m0"], accepted: false },
+    { keys: ["wm-m0", "m-m0"], accepted: false },
+    { keys: ["wm-m0", "wm-m0"], accepted: false },
     { keys: ["wm-m0"], accepted: true },
-  ])("admits only exact USDR holder-output telemetry ($keys)", async ({ keys, accepted }) => {
+  ])("admits only exact USDR holder-output capacity, fee and favorable terms ($keys)", async ({ keys, accepted }) => {
     const snapshot = liveSnapshot("usdr-rise", { freshnessMode: "not-applicable", redemption: {
       capacityUsd: 2_000_000, capacityRatioOfSupply: 0.2, capacityKind: "live-direct",
       freshnessKind: "same-run-onchain", blockNumber: 26_143_056, sourceTimestamp: now,
-      feeBps: 0, outputAssetKeys: keys,
+      feeBps: 0, outputAssetKeys: keys, routeStatus: "open", routeStatusSource: "onchain",
+      holderEligibility: "any-holder", settlementDelaySec: 60,
     } });
     const metadata = readRedemptionBackstopLiveMetadata("usdr-rise", snapshot, now);
     const entry = await buildEntry("usdr-rise", getRedemptionBackstopConfig("usdr-rise")!, 10_000_000, null, {
       reserveSnapshotMetadata: snapshot, redemptionLiveMetadata: metadata,
     });
     expect(entry.immediateCapacityUsd).toBe(accepted ? 2_000_000 : null);
-    expect(entry.feeBps).toBe(0);
+    expect(entry.feeBps).toBe(accepted ? 0 : null);
+    expect(entry.costScore).toBe(accepted ? 100 : 60);
     expect(entry.resolutionState).toBe(accepted ? "resolved" : "missing-capacity");
-    if (!accepted) {
+    if (accepted) {
+      expect(entry.routeStatus).toBe("open");
+      expect(entry.routeStatusSource).toBe("onchain");
+      expect(entry.liveHolderEligibility).toBe("any-holder");
+      expect(entry.settlementDelaySec).toBe(60);
+    } else {
+      expect(entry.routeStatus).toBe("unknown");
+      expect(entry.routeStatusSource).toBe("static-config");
+      expect(entry.liveHolderEligibility).toBeUndefined();
+      expect(entry.settlementDelaySec).toBeUndefined();
       expect(entry.capacityProfile?.exitRouteObservations ?? []).toEqual([]);
-      expect(entry.capacityRejectionReason).toBe("route-output-identity-unobserved");
     }
+  });
+
+  it("withholds USDR favorable status-only telemetry without the configured wM payout", async () => {
+    const entry = await buildEntry("usdr-rise", getRedemptionBackstopConfig("usdr-rise")!, 1_000_000, null, {
+      reserveSnapshotMetadata: liveSnapshot("usdr-rise", { freshnessMode: "not-applicable", redemption: {
+        routeStatus: "open", routeStatusSource: "onchain", holderEligibility: "whitelisted-primary",
+      } }),
+    });
+    expect(entry).toMatchObject({
+      routeStatus: "unknown", routeStatusSource: "static-config", feeBps: null,
+      immediateCapacityUsd: null, capacityRejectionReason: "route-output-identity-unobserved",
+    });
+    expect(entry.liveHolderEligibility).toBeUndefined();
+  });
+
+  it.each([
+    { keys: undefined, accepted: false },
+    { keys: null, accepted: false },
+    { keys: "usdc-circle", accepted: false },
+    { keys: [], accepted: false },
+    { keys: ["usdt-tether"], accepted: false },
+    { keys: ["usdc-circle", "usdt-tether"], accepted: false },
+    { keys: ["usdc-circle", "usdc-circle"], accepted: false },
+    { keys: ["usdc-circle"], accepted: true },
+  ])("applies exact-output admission to observer favorable terms ($keys)", async ({ keys, accepted }) => {
+    const direct: ExecutableRedemptionObservation = {
+      capacityRaw: 500_000_000n, capacitySource: "forest-road-controller", capacityState: "measured",
+      outputAssetKeys: ["usdc-circle"], underlyingDecimals: 6, capacityKind: "live-direct-bounded",
+      freshnessKind: "same-run-onchain", routeStatus: "open", routeStatusSource: "onchain",
+      routeStatusReason: "Pinned controller", holderEligibility: "any-holder", feeBps: 10,
+      allInFeeBps: 10, settlementDelaySec: 0, blockNumber: 26_143_056, sourceTimestamp: now,
+      sourceUrls: ["https://www.usdfr.com/"], diagnostics: {},
+    };
+    Object.assign(direct, { outputAssetKeys: keys });
+    const entry = await buildEntry("usdfr-forest-road", getRedemptionBackstopConfig("usdfr-forest-road")!, 1_000_000, null, {
+      executableRedemptionObservation: direct,
+      executableObserverValuation: { outputAssetKey: "usdc-circle", priceUsd: 1, observedAt: now },
+    });
+    // A rejected live fee cannot replace the independently reviewed fixed fee.
+    expect(entry.feeBps).toBe(accepted ? 10 : 0);
+    if (accepted) {
+      expect(entry).toMatchObject({ immediateCapacityUsd: 500, routeStatus: "open", routeStatusSource: "onchain",
+        liveHolderEligibility: "any-holder", settlementDelaySec: 0 });
+    } else {
+      expect(entry).toMatchObject({ immediateCapacityUsd: null, routeStatus: "unknown", routeStatusSource: "static-config",
+        capacityRejectionReason: "route-output-identity-unobserved" });
+      expect(entry.liveHolderEligibility).toBeUndefined();
+      expect(entry.settlementDelaySec).toBeUndefined();
+      expect(entry.capacityProfile?.exitRouteObservations ?? []).toEqual([]);
+    }
+  });
+
+  it("retains independently source-owned adverse USDR status while rejecting payout terms", async () => {
+    const entry = await buildEntry("usdr-rise", getRedemptionBackstopConfig("usdr-rise")!, 1_000_000, null, {
+      reserveSnapshotMetadata: liveSnapshot("usdr-rise", { freshnessMode: "not-applicable", redemption: {
+        outputAssetKeys: ["m-m0"], feeBps: 0, routeStatus: "paused", routeStatusSource: "onchain",
+        routeStatusReason: "Same wrapper's redemption pause observed onchain",
+      } }),
+    });
+    expect(entry).toMatchObject({ routeStatus: "paused", routeStatusSource: "onchain", feeBps: null, immediateCapacityUsd: null });
+    expect(entry.routeStatusReason).toBe("Same wrapper's redemption pause observed onchain");
+  });
+
+  it("retains the exact observer's independently observed pause when payout terms are rejected", async () => {
+    const direct: ExecutableRedemptionObservation = {
+      capacityRaw: 0n, capacitySource: "forest-road-controller", capacityState: "closed",
+      outputAssetKeys: ["usdt-tether"], underlyingDecimals: 6, capacityKind: "live-direct-bounded",
+      freshnessKind: "same-run-onchain", routeStatus: "paused", routeStatusSource: "onchain",
+      routeStatusReason: "Pinned controller pause", holderEligibility: "any-holder", feeBps: 10,
+      allInFeeBps: 10, settlementDelaySec: 0, blockNumber: 26_143_056, sourceTimestamp: now,
+      sourceUrls: ["https://www.usdfr.com/"], diagnostics: {},
+    };
+    const entry = await buildEntry("usdfr-forest-road", getRedemptionBackstopConfig("usdfr-forest-road")!, 1_000_000, null, {
+      executableRedemptionObservation: direct,
+    });
+    expect(entry).toMatchObject({
+      routeStatus: "paused", routeStatusSource: "onchain", routeStatusReason: "Pinned controller pause",
+      immediateCapacityUsd: null, capacityRejectionReason: "route-output-identity-unobserved",
+      feeBps: 0,
+    });
+    expect(entry.liveHolderEligibility).toBeUndefined();
+    expect(entry.settlementDelaySec).toBeUndefined();
   });
 
   it.each(["stale", "wrong-output", "unvalued", "unknown-all-in"] as const)(

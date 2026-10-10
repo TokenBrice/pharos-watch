@@ -34,6 +34,7 @@ export function resolveExecutableObserverCapacity(
   const required = model.requiredOutputAssetKeys;
   const outputBound = required.length === descriptor.outputAssetKeys.length &&
     required.every((key) => descriptor.outputAssetKeys.includes(key)) &&
+    Array.isArray(observation.outputAssetKeys) &&
     required.length === observation.outputAssetKeys.length &&
     required.every((key) => observation.outputAssetKeys.includes(key));
   if (!outputBound) return { ...missing, capacityRejectionReason: "route-output-identity-unobserved", notes: ["route-output-identity-unobserved"] };

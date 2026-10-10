@@ -3,6 +3,7 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildCoverageShortfallWarnings,
   fetchJsonAdapterInput,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
@@ -129,6 +130,12 @@ export function adaptUsdtbTransparency(payload: UsdtbBackingAndSupplyPayload): A
   }
 
   const totalReserveUsd = sliceInputs.reduce((sum, slice) => sum + slice.value, 0);
+  const collateralizationRatio = totalReserveUsd / supplyUsd;
+  warnings.push(...buildCoverageShortfallWarnings({
+    code: "reserve-undercollateralized",
+    coverageRatio: collateralizationRatio,
+    message: (coveragePct) => `USDtb backing including assets in motion covers ${coveragePct}% of supply`,
+  }));
 
   return {
     slices: slicesFromValues(sliceInputs),
@@ -137,7 +144,7 @@ export function adaptUsdtbTransparency(payload: UsdtbBackingAndSupplyPayload): A
       ...verifiedFreshnessMetadata(sourceTimestamp),
       totalReserveUsd,
       supplyUsd,
-      collateralizationRatio: totalReserveUsd / supplyUsd,
+      collateralizationRatio,
       details: { lastUpdatedAt: payload.lastUpdatedAt },
     },
   };

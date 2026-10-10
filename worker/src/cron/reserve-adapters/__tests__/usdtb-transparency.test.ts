@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -18,6 +20,8 @@ import {
 import { fetchJsonAdapterInput } from "../helpers";
 import {
   expectValidAdapterOutput,
+  expectWarningEffect,
+  expectWarnings,
   mockedReserveHelper,
 } from "./reserve-adapter.test-support";
 import { USDTB_BACKING_AND_SUPPLY_PAYLOAD as USDTB_BACKING } from "./reserve-adapter-payloads.test-support";
@@ -62,6 +66,42 @@ describe("adaptUsdtbTransparency", () => {
     });
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(totalReserveUsd, 3);
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(totalReserveUsd / 775334449.6661826, 9);
+  });
+
+  it.each([
+    [50, 0, 0.5, true],
+    [99.5, 0, 0.995, false],
+    [99.49, 0, 0.9949, true],
+    [100, 0, 1, false],
+    [50, 50, 1, false],
+  ])("admits honest coverage for backing %s plus settlement float %s", (backing, assetsInMotion, ratio, degraded) => {
+    const now = Math.floor(Date.now() / 1000);
+    const result = adaptUsdtbTransparency({
+      backingAssets: { USDC: [{ amount: backing }] },
+      assetsInMotion,
+      supply: 100,
+      lastUpdatedAt: new Date(now * 1000).toISOString(),
+    });
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(ratio);
+    const report = expectValidAdapterOutput("usdtb-transparency", result);
+    expectWarnings(result, degraded ? ["reserve-undercollateralized"] : []);
+    if (degraded) expectWarningEffect(result, "reserve-undercollateralized", "degraded");
+    const warnings = [...(result.warnings ?? []), ...report.warnings];
+    const config = makeConfig();
+    const admission = evaluateLiveReserveAdmission({
+      stablecoinId: "usdtb-ethena",
+      slices: result.slices,
+      fetchedAt: now,
+      source: "usdtb-transparency",
+      metadata: result.metadata!,
+      warningCount: warnings.length,
+      warnings,
+      adapterSourceModel: "dynamic-mix",
+      adapterEvidenceClass: "independent",
+      configFingerprint: computeLiveReserveConfigFingerprint(config),
+    }, { lastSuccessAt: now, lastSuccessAttemptId: null }, { liveReservesConfig: config }, now);
+    expect(admission.eligible).toBe(!degraded);
+    expect(admission.reasons.includes("degraded-snapshot")).toBe(degraded);
   });
 
   it("emits an info warning when USDtb reports nonzero self-holdings and excludes them from backing", () => {

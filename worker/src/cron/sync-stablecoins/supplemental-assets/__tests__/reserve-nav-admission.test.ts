@@ -3,6 +3,10 @@ import { mockRegistry } from "../../../../test-helpers/cron";
 import { BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
 import type * as FetchRetry from "../../../../lib/fetch-retry";
 import type * as OnchainSupply from "../onchain-supply";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import type { ReserveNavSnapshotRow } from "../../../../lib/reserve-nav-price";
 
 const supply = vi.fn();
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({ stablecoins: [{
@@ -35,10 +39,19 @@ import * as structuredLog from "../../../../lib/structured-log";
 
 const withheldLog = vi.spyOn(structuredLog, "logWorkerEvent");
 
-function snapshotDb(metadata: unknown, source = "jpmorgan-nav"): D1Database {
+function snapshotDb(metadata: unknown, source = "jpmorgan-nav", overrides: Partial<ReserveNavSnapshotRow> = {}): D1Database {
   const now = Math.floor(Date.now() / 1000);
-  const statement = { bind: () => statement, first: async () => ({ source, fetched_at: now, metadata: JSON.stringify(metadata) }) };
-  return { prepare: () => statement } as unknown as D1Database;
+  const fingerprint = computeLiveReserveConfigFingerprint(ACTIVE_STABLECOINS[0].liveReservesConfig!);
+  const row: ReserveNavSnapshotRow = {
+    source, fetched_at: now, metadata: JSON.stringify(metadata),
+    config_fingerprint: fingerprint, state_config_fingerprint: fingerprint,
+    attempt_id: "success", last_success_attempt_id: "success", last_success_at: now,
+    last_attempt_id: "success", pending_attempt_id: null, ...overrides,
+  };
+  return mockD1([
+    { match: "FROM reserve_composition c", rows: [], first: { ...row } },
+    { match: "cache", rows: [], first: null, allowUnused: true },
+  ], { assertMatchesUsed: true });
 }
 
 function classSnapshot(classAssetsUsd: number, sourceTimestamp = Math.floor(Date.now() / 1000 / 86400) * 86400) {
@@ -131,6 +144,17 @@ describe("NAV telemetry supply admission without a previous cache row", () => {
     expect(withheldLog).toHaveBeenCalledWith(expect.objectContaining({
       metadata: expect.objectContaining({ reason: "native-class-temporal-review-unavailable" }),
     }));
+  });
+
+  it.each([
+    { config_fingerprint: null },
+    { config_fingerprint: "b".repeat(64) },
+    { last_success_attempt_id: "different" },
+    { last_attempt_id: "failed-latest" },
+    { pending_attempt_id: "pending" },
+  ])("withholds issuer-class supply without current success and latest-attempt binding: %j", async (binding) => {
+    expect(await fetchFiatCoinGeckoTokens({}, undefined, undefined, undefined,
+      snapshotDb(classSnapshot(626_712_842.29), "jpmorgan-nav", binding))).toEqual([]);
   });
 
   it("requires positive readable on-chain supply despite a valid NAV", async () => {

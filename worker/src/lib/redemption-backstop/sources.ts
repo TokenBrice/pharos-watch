@@ -203,28 +203,39 @@ export async function buildRedemptionBackstopEntry(
   const requiredOutputKeys = observerModel?.requiredOutputAssetKeys ?? (
     config.capacityModel.kind === "reserve-sync-metadata" ? config.capacityModel.requiredOutputAssetKeys : undefined
   );
-  const observedOutputKeys = observedLiveMetadata.outputAssetKeys ?? [];
+  const observedOutputKeys = observedLiveMetadata.outputAssetKeys;
   const outputBound = !requiredOutputKeys || (
+    Array.isArray(observedOutputKeys) &&
     observedOutputKeys.length === requiredOutputKeys.length &&
     requiredOutputKeys.every((key) => observedOutputKeys.includes(key))
   );
+  // Source-owned adverse route observations are separate from favorable payout
+  // terms; rejecting a positive claim must not hide an observed pause.
+  const preserveAdverseStatus = observedLiveMetadata.routeStatus != null &&
+    observedLiveMetadata.routeStatus !== "open" && observedLiveMetadata.routeStatusSource != null;
   const liveMetadata = outputBound ? observedLiveMetadata : {
     ...observedLiveMetadata,
     canUseCapacity: false,
-    canUseFee: observerModel ? false : observedLiveMetadata.canUseFee,
+    canUseFee: false,
     capacityReason: "route-output-identity-unobserved",
     capacityRejectionReason: "route-output-identity-unobserved" as const,
-    feeReason: observerModel ? "route-output-identity-unobserved" : observedLiveMetadata.feeReason,
+    feeReason: "route-output-identity-unobserved",
     immediateRedeemableUsd: null,
     immediateRedeemableRatio: null,
     settlementDelaySec: null,
     dailyLimitUsd: null,
     queueDepthUsd: null,
-    routeStatus: observerModel ? null : observedLiveMetadata.routeStatus,
-    routeStatusSource: observerModel ? null : observedLiveMetadata.routeStatusSource,
-    routeStatusReason: observerModel ? null : observedLiveMetadata.routeStatusReason,
-    routeStatusReviewedAt: observerModel ? null : observedLiveMetadata.routeStatusReviewedAt,
-    liveHolderEligibility: observerModel ? null : observedLiveMetadata.liveHolderEligibility,
+    minRedeemUsd: null,
+    redemptionFeeBps: null,
+    buyFeeBpsMin: null,
+    buyFeeBpsMax: null,
+    routeStatus: preserveAdverseStatus ? observedLiveMetadata.routeStatus : null,
+    routeStatusSource: preserveAdverseStatus ? observedLiveMetadata.routeStatusSource : null,
+    routeStatusReason: preserveAdverseStatus ? observedLiveMetadata.routeStatusReason : null,
+    routeStatusReviewedAt: preserveAdverseStatus ? observedLiveMetadata.routeStatusReviewedAt : null,
+    liveHolderEligibility: null,
+    v9FpiControllerRouteState: null,
+    v9SfrxusdCrosschainRouteState: null,
     v9OutputValuation: null,
   };
   const capacity = await resolveRedemptionCapacity(db, stablecoinId, config.capacityModel, supplyUsd, now, {
@@ -322,11 +333,11 @@ export async function buildRedemptionBackstopEntry(
     ...(routeSuspension ? { routeStatusReason: routeSuspension.reason, routeStatusReviewedAt: routeSuspension.reviewedAt } : {}),
   };
   const liveRouteStatus: RedemptionRouteStatusEvidence | null =
-    directObservation && outputBound
+    directObservation && liveMetadata.routeStatus && liveMetadata.routeStatusSource
       ? {
-          routeStatus: directObservation.routeStatus,
-          routeStatusSource: directObservation.routeStatusSource,
-          routeStatusReason: directObservation.routeStatusReason,
+          routeStatus: liveMetadata.routeStatus,
+          routeStatusSource: liveMetadata.routeStatusSource,
+          ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
         }
       : capacity.routeStatus && capacity.routeStatusSource
       ? {
@@ -400,7 +411,7 @@ export async function buildRedemptionBackstopEntry(
           : {}),
         ...(liveMetadata.v9OutputValuation ? { outputValuation: liveMetadata.v9OutputValuation } : {}),
         ...(capacity.sharedResourceKey ? { sharedResourceKey: capacity.sharedResourceKey } : {}),
-        resolvedFeeBps: observerModel ? directObservation?.allInFeeBps ?? null : staticFields.feeBps,
+        resolvedFeeBps: observerModel ? (outputBound ? directObservation?.allInFeeBps ?? null : null) : staticFields.feeBps,
         fiatReferences,
         now,
       });

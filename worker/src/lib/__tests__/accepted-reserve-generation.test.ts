@@ -1,11 +1,11 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { beginLiveReserveCheckpoint } from "../scheduled-recovery-checkpoint";
-import { acceptedReserveMetadataMap, assessConsumedRedemptionReserves, consumedReserveInput, loadAcceptedReserveGeneration, sealAcceptedReserveGeneration } from "../accepted-reserve-generation";
+import { ACCEPTED_RESERVE_GENERATION_KEY, acceptedReserveMetadataMap, assessConsumedRedemptionReserves, consumedReserveInput, loadAcceptedReserveGeneration, sealAcceptedReserveGeneration } from "../accepted-reserve-generation";
 import { assessReserveSnapshotFreshness, evaluateLiveReserveAdmission } from "../live-reserves/store-snapshot-state";
 
 const CLOCK = 1_790_000_000;
@@ -154,6 +154,74 @@ describe("producer-owned accepted reserve generations", () => {
     await expect(loadAcceptedReserveGeneration(h.db)).rejects.toThrow("accepted-reserve-view-unavailable");
     h.sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('live-reserves:accepted-generation:v2', ?, ?)").run(JSON.stringify({ ...envelope, schemaVersion: 1 }), CLOCK);
     await expect(loadAcceptedReserveGeneration(h.db)).rejects.toThrow("accepted-reserve-view-invalid");
+  });
+
+  it.each([
+    "invalid-json", "{}", '{"root":null}', '{"root":"invalid"}',
+    '{"root":{"slotStartedAt":"1790000000"}}',
+  ])("repairs malformed prior acceptance through a fenced seal: %s", async (value) => {
+    const h = await harness();
+    h.sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(ACCEPTED_RESERVE_GENERATION_KEY, value, CLOCK);
+    await expect(loadAcceptedReserveGeneration(h.db)).rejects.toThrow("accepted-reserve-view-invalid");
+    const accepted = await sealAcceptedReserveGeneration(h.db, h.identity, "test", h.ids, { status: "ok" }, CLOCK);
+    expect(accepted?.root.slotStartedAt).toBe(CLOCK);
+    expect(await loadAcceptedReserveGeneration(h.db)).toEqual(accepted);
+    expect(await sealAcceptedReserveGeneration(h.db, h.identity, "test", h.ids, { status: "ok" }, CLOCK + 1)).toEqual(accepted);
+  });
+
+  it.each(["schema", "digest"] as const)("repairs an invalid %s even when its root clock is newer", async (invalidity) => {
+    const h = await harness();
+    const first = (await sealAcceptedReserveGeneration(h.db, h.identity, "test", h.ids, { status: "ok" }, CLOCK))!;
+    const corrupt = {
+      ...first, root: { ...first.root, slotStartedAt: CLOCK + 14400 },
+      generationId: `reserve:${CLOCK + 14400}:test`,
+      ...(invalidity === "schema" ? { schemaVersion: 1 } : { contentSha256: "0".repeat(64) }),
+    };
+    h.sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(JSON.stringify(corrupt), ACCEPTED_RESERVE_GENERATION_KEY);
+    await expect(loadAcceptedReserveGeneration(h.db)).rejects.toThrow("accepted-reserve-view-invalid");
+    const repaired = await sealAcceptedReserveGeneration(h.db, h.identity, "test", h.ids, { status: "ok" }, CLOCK + 1);
+    expect(repaired?.root.slotStartedAt).toBe(CLOCK);
+    expect(await loadAcceptedReserveGeneration(h.db)).toEqual(repaired);
+  });
+
+  it.each([null, "{}"])("supersedes a concurrently published older seal while repairing %s", async (prior) => {
+    const h = await harness();
+    const older = (await sealAcceptedReserveGeneration(h.db, h.identity, "test", h.ids, { status: "ok" }, CLOCK))!;
+    if (prior === null) h.sqlite.prepare("DELETE FROM cache WHERE key = ?").run(ACCEPTED_RESERVE_GENERATION_KEY);
+    else h.sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(prior, ACCEPTED_RESERVE_GENERATION_KEY);
+    const newer = await beginLiveReserveCheckpoint(h.db, { slotStartedAt: CLOCK + 14400, invocationId: "newer", nowSec: CLOCK });
+    h.sqlite.prepare(`UPDATE worker_scheduled_checkpoints SET queue_hash = 'test', items_done = 2, items_total = 2, next_item_key = NULL, child_dispositions_json = '{"sync-live-reserves":"running"}' WHERE slot_started_at = ?`).run(newer.slotStartedAt);
+    const batch = h.db.batch.bind(h.db);
+    const concurrentPublish = vi.spyOn(h.db, "batch").mockImplementationOnce((statements) => {
+      h.sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run(ACCEPTED_RESERVE_GENERATION_KEY, JSON.stringify(older), CLOCK);
+      return batch(statements);
+    });
+    try {
+      const accepted = await sealAcceptedReserveGeneration(h.db, newer, "test", h.ids, { status: "ok" }, CLOCK + 14500);
+      expect(accepted?.root.slotStartedAt).toBe(newer.slotStartedAt);
+      expect(await loadAcceptedReserveGeneration(h.db)).toEqual(accepted);
+    } finally { concurrentPublish.mockRestore(); }
+  });
+
+  it.each([null, "{}"])("cannot replace a concurrently published newer valid seal while repairing %s", async (prior) => {
+    const h = await harness();
+    const newer = await beginLiveReserveCheckpoint(h.db, { slotStartedAt: CLOCK + 14400, invocationId: "newer", nowSec: CLOCK });
+    h.sqlite.prepare(`UPDATE worker_scheduled_checkpoints SET queue_hash = 'test', items_done = 2, items_total = 2, next_item_key = NULL, child_dispositions_json = '{"sync-live-reserves":"running"}' WHERE slot_started_at = ?`).run(newer.slotStartedAt);
+    const latest = (await sealAcceptedReserveGeneration(h.db, newer, "test", h.ids, { status: "ok" }, CLOCK + 14500))!;
+    if (prior === null) h.sqlite.prepare("DELETE FROM cache WHERE key = ?").run(ACCEPTED_RESERVE_GENERATION_KEY);
+    else h.sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(prior, ACCEPTED_RESERVE_GENERATION_KEY);
+    const batch = h.db.batch.bind(h.db);
+    const concurrentPublish = vi.spyOn(h.db, "batch").mockImplementationOnce((statements) => {
+      h.sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run(ACCEPTED_RESERVE_GENERATION_KEY, JSON.stringify(latest), CLOCK + 14500);
+      return batch(statements);
+    });
+    try {
+      expect(await sealAcceptedReserveGeneration(h.db, h.identity, "test", h.ids, { status: "ok" }, CLOCK + 15000)).toEqual(latest);
+      expect(await loadAcceptedReserveGeneration(h.db)).toEqual(latest);
+    } finally { concurrentPublish.mockRestore(); }
   });
 
   it("fails closed for absent, malformed and tampered envelopes", async () => {

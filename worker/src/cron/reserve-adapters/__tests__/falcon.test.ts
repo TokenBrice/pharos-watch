@@ -139,6 +139,28 @@ describe("adaptFalconTransparency", () => {
 });
 
 describe("falcon fetch boundary", () => {
+  it("rejects an omitted insurance measurement instead of normalizing the remaining book", async () => {
+    const payload = falconPayload([{ label: "USDC", ceffu: "100" }], { insurance: "100" });
+    Reflect.deleteProperty(payload.usdf!, "insurance_fund");
+    await expect(runAdapter("falcon", "usdf-falcon", {
+      network: { json: { [FALCON_URL]: payload } },
+      nowSec: FIXTURE_TIMESTAMP,
+    })).rejects.toThrow(/insurance_fund/);
+  });
+
+  it.each(["0", 0])("accepts explicit measured zero insurance (%s)", async (insurance) => {
+    const payload = falconPayload([{ label: "USDC", ceffu: "100" }]);
+    payload.usdf!.insurance_fund = insurance;
+    const { result } = await runAdapter("falcon", "usdf-falcon", {
+      network: { json: { [FALCON_URL]: payload } },
+      nowSec: FIXTURE_TIMESTAMP,
+    });
+    expect(result.slices).toEqual([
+      { name: "USDC cash-equivalent assets", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+    ]);
+    expect(result.metadata?.insuranceFund).toBe(insurance);
+  });
+
   it("fetches the configured transparency endpoint through the shared network harness", async () => {
     const { result, network } = await runAdapter("falcon", "usdf-falcon", {
       network: {

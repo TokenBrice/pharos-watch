@@ -1,4 +1,6 @@
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 import { encodeAbiParameters } from "viem/utils";
 import { beforeEach, describe, expect, it } from "vitest";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddress, encodeUint256 } from "../../../lib/evm-selectors";
@@ -117,6 +119,7 @@ let signal: AbortSignal;
 let activeNetwork: AdapterNetwork;
 
 interface MockReserveProtocolOnchainOptions {
+  unavailableStatus?: string | null;
   statusByAsset?: Map<string, bigint>;
   redemptionAvailable?: bigint | null;
   totalSupply?: bigint | null;
@@ -202,7 +205,9 @@ function mockReserveProtocolOnchain(options: MockReserveProtocolOnchainOptions =
           : 26_500_000n;
       },
       [`${WCUSDCV3}:${EXCHANGE_RATE_SELECTOR}`]: 1_050_000n,
-      [`${SUSDS_ASSET}:${COLLATERAL_STATUS_SELECTOR}`]: statusByAsset.get(normalizeAddress(SUSDS_ASSET)) ?? 0n,
+      [`${SUSDS_ASSET}:${COLLATERAL_STATUS_SELECTOR}`]: options.unavailableStatus !== undefined
+        ? options.unavailableStatus
+        : statusByAsset.get(normalizeAddress(SUSDS_ASSET)) ?? 0n,
       [`${WCUSDCV3_ASSET}:${COLLATERAL_STATUS_SELECTOR}`]: statusByAsset.get(normalizeAddress(WCUSDCV3_ASSET)) ?? 0n,
       [`${STATIC_AAVE_USDC_ASSET}:${COLLATERAL_STATUS_SELECTOR}`]: statusByAsset.get(normalizeAddress(STATIC_AAVE_USDC_ASSET)) ?? 0n,
       [`${STEAK_USDC_ASSET}:${COLLATERAL_STATUS_SELECTOR}`]: statusByAsset.get(normalizeAddress(STEAK_USDC_ASSET)) ?? 0n,
@@ -528,6 +533,32 @@ describe("reserve-protocol-dtf adapter", () => {
     expect(result.metadata?.redemption).toBeUndefined();
   });
 
+
+  it.each([null, `0x${"ab".repeat(33)}`])("degrades an unavailable or malformed plugin status (%s)", async (unavailableStatus) => {
+    mockReserveProtocolOnchain({ unavailableStatus });
+    const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
+    expect(result.slices).toHaveLength(4);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "reserve-protocol-dtf-collateral-status-unavailable",
+      effect: "degraded",
+    }));
+    const now = 1776154391;
+    const config = createOnchainConfig();
+    const admission = evaluateLiveReserveAdmission({
+      stablecoinId: coin.id,
+      slices: result.slices,
+      fetchedAt: now,
+      source: "reserve-protocol-dtf",
+      metadata: result.metadata!,
+      warnings: result.warnings ?? [],
+      warningCount: result.warnings?.length ?? 0,
+      adapterSourceModel: "dynamic-mix",
+      adapterEvidenceClass: "independent",
+      configFingerprint: computeLiveReserveConfigFingerprint(config),
+    }, { lastSuccessAt: now, lastSuccessAttemptId: null }, { liveReservesConfig: config }, now);
+    expect(admission.eligible).toBe(false);
+    expect(admission.reasons).toContain("degraded-snapshot");
+  });
   it("keeps IFFY collateral published with a degraded status warning", async () => {
     mockReserveProtocolOnchain({ statusByAsset: new Map([[SUSDS_ASSET, 1n]]) });
 

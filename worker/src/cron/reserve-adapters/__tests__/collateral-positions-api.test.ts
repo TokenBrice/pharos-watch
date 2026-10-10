@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { adaptCollateralPositions } from "../collateral-positions-api";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
+import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop/live-metadata";
+import { liveSnapshot } from "../../../lib/__tests__/redemption-backstop-sources.test-support";
 import {
   runAdapter,
   type AdapterNetworkSpec,
@@ -380,8 +382,8 @@ describe("adaptCollateralPositions", () => {
     ]);
   });
 
-  it("ignores provider positions with unsafe decimal scales", () => {
-    const result = adaptCollateralPositions(
+  it("rejects provider positions with unsafe decimal scales", () => {
+    expect(() => adaptCollateralPositions(
       {
         "0xusdc": {
           address: "0xUSDC",
@@ -403,15 +405,7 @@ describe("adaptCollateralPositions", () => {
         "0xunsafe": { price: { usd: 1 } },
       },
       0,
-    );
-
-    expect(result.metadata).toMatchObject({
-      assetCount: 1,
-      activePositionCount: 1,
-    });
-    expect(result.slices).toEqual([
-      { sourceKey: "collateral-positions-api:usdc", name: "USDC (USD Coin)", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" },
-    ]);
+    )).toThrow(/unparseable-collateral-balance/);
   });
 });
 
@@ -449,20 +443,21 @@ const POSITIONS_PAYLOAD = {
     name: "Wrapped BTC",
     symbol: "WBTC",
     decimals: 8,
-    positions: [{ collateralBalance: "100000000" }],
+    positions: [{ collateralBalance: "100000000", principal: "0", interest: "0", deuroDecimals: 18 }],
   },
 };
 
+const BRIDGE_NOW = 1_780_000_000;
 const BASE_PRICES = {
-  [WBTC_ADDRESS]: { price: { usd: 100_000 } },
-  [DEURO]: { price: { usd: 1.2, eur: 1 } },
+  [WBTC_ADDRESS]: { price: { usd: 100_000 }, timestamp: BRIDGE_NOW },
+  [DEURO]: { price: { usd: 1.2, eur: 1 }, timestamp: BRIDGE_NOW },
 };
 
 interface BridgeBasketOptions {
   inventories?: Record<string, bigint>;
   failedInventoryLabel?: string;
   mismatchedUnderlyingLabel?: string;
-  prices?: Record<string, { price?: { usd?: number; eur?: number } }>;
+  prices?: Record<string, { price?: { usd?: number; eur?: number }; timestamp?: number }>;
 }
 
 function bridgeBasketNetwork(options: BridgeBasketOptions = {}): AdapterNetworkSpec {
@@ -488,14 +483,14 @@ function bridgeBasketNetwork(options: BridgeBasketOptions = {}): AdapterNetworkS
 }
 
 const runBridgeBasket = (options: BridgeBasketOptions = {}) =>
-  runAdapter("collateral-positions-api", "deuro-deuro", { network: bridgeBasketNetwork(options) });
+  runAdapter("collateral-positions-api", "deuro-deuro", { network: bridgeBasketNetwork(options), nowSec: BRIDGE_NOW });
 
 /** Every bridge output token priced in the same payload, as the adapter needs
  *  before it may publish an observed basket unit value. */
 const memberPricesWith = (usd: Record<string, number> = {}) =>
   Object.fromEntries(BRIDGE_INVENTORY.map((bridge) => [
     bridge.token,
-    { price: { usd: usd[bridge.token] ?? 1.2, eur: (usd[bridge.token] ?? 1.2) / 1.2 } },
+    { price: { usd: usd[bridge.token] ?? 1.2, eur: (usd[bridge.token] ?? 1.2) / 1.2 }, timestamp: BRIDGE_NOW },
   ]));
 
 const EURA_TOKEN = BRIDGE_INVENTORY.find((bridge) => bridge.label === "EURA")!.token;
@@ -570,6 +565,56 @@ describe("fetchCollateralPositionsApiReserves bridge basket", () => {
     // Capacity follows the market value of the measured inventory rather than
     // its nominal EUR face amount.
     expect(result.metadata?.redemption?.capacityUsd).toBeCloseTo((126.26 - 5) * 1.2 + 5 * euraUsd, 6);
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["stale", BRIDGE_NOW - LIVE_RESERVE_FRESHNESS_SEC - 1],
+    ["future", BRIDGE_NOW + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC + 1],
+  ] as const)("withholds output valuation for a %s weighted member clock", async (_name, timestamp) => {
+    const prices: NonNullable<BridgeBasketOptions["prices"]> = { ...BASE_PRICES, ...memberPricesWith() };
+    prices[EURA_TOKEN] = { ...prices[EURA_TOKEN], timestamp };
+    const { result } = await runBridgeBasket({ prices });
+    expect(result.metadata?.redemption).not.toHaveProperty("outputValuation");
+    expect(result.metadata?.redemption?.outputValuationUnavailableReason).toBe("output-price-freshness");
+    const admitted = readRedemptionBackstopLiveMetadata("deuro-deuro", liveSnapshot("deuro-deuro", result.metadata, {
+      fetchedAt: BRIDGE_NOW,
+      warnings: result.warnings ?? [],
+      warningCount: result.warnings?.length ?? 0,
+    }), BRIDGE_NOW);
+    expect(admitted.v9OutputValuation).toBeNull();
+  });
+
+  it("normalizes milliseconds and dates the admitted valuation to its oldest contributor", async () => {
+    const prices: NonNullable<BridgeBasketOptions["prices"]> = { ...BASE_PRICES, ...memberPricesWith() };
+    prices[DEURO] = { ...prices[DEURO], timestamp: BRIDGE_NOW * 1000 };
+    prices[EURA_TOKEN] = { ...prices[EURA_TOKEN], timestamp: (BRIDGE_NOW - 120) * 1000 };
+    const { result } = await runBridgeBasket({ prices });
+    expect(result.metadata?.redemption?.outputValuation?.observedAt).toBe(BRIDGE_NOW - 120);
+    const admitted = readRedemptionBackstopLiveMetadata("deuro-deuro", liveSnapshot("deuro-deuro", result.metadata, {
+      fetchedAt: BRIDGE_NOW,
+      warnings: result.warnings ?? [],
+      warningCount: result.warnings?.length ?? 0,
+    }), BRIDGE_NOW);
+    expect(admitted.v9OutputValuation?.observedAt).toBe(BRIDGE_NOW - 120);
+  });
+
+  it.each([undefined, BRIDGE_NOW - LIVE_RESERVE_FRESHNESS_SEC - 1, BRIDGE_NOW + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC + 1])("requires a qualified FX reference clock (%s)", async (timestamp) => {
+    const prices: NonNullable<BridgeBasketOptions["prices"]> = { ...BASE_PRICES, ...memberPricesWith() };
+    prices[DEURO] = { ...prices[DEURO], timestamp };
+    const { result } = await runBridgeBasket({ prices });
+    expect(result.metadata?.redemption).not.toHaveProperty("outputValuation");
+    expect(result.metadata?.redemption?.outputValuationUnavailableReason).toBe("output-price-freshness");
+  });
+
+  it("does not require an unused market quote for a zero-inventory bridge", async () => {
+    const prices: NonNullable<BridgeBasketOptions["prices"]> = { ...BASE_PRICES, ...memberPricesWith() };
+    delete prices[EURA_TOKEN];
+    const { result } = await runBridgeBasket({ inventories: { [EURA_TOKEN]: 0n }, prices });
+    expect(result.metadata?.redemption?.outputValuation).toMatchObject({ observedAt: BRIDGE_NOW, unitValueUsd: expect.closeTo(1.2, 10) });
+    expect(result.metadata?.redemption?.outputValuation?.basketWeights).not.toContainEqual(
+      expect.objectContaining({ assetId: "asset:eura" }),
+    );
   });
 
   it("withholds the whole redemption block when one bridge inventory read fails", async () => {
@@ -720,5 +765,38 @@ describe("collateral positions liability admission through fetch and validation"
   it.each(["closed", "denied"] as const)("excludes %s positions from both sides", async (flag) => {
     const { result } = await runLiabilities({ collateralBalance: "1000000", [flag]: true }, now);
     expect(result.metadata).toMatchObject({ totalReserveUsd: 1.2, totalLiabilitiesUsd: 1.2, collateralizationRatio: 1 });
+  });
+});
+
+describe("collateral book completeness", () => {
+  it.each([
+    ["malformed balance", "unreadable", 8, 100_000],
+    ["unsafe decimals", "100000000", 1_000_000_000, 100_000],
+    ["overflowing value", "1" + "0".repeat(400), 8, 100_000],
+    ["nonfinite price", "100000000", 8, Infinity],
+  ] as const)("rejects a partial book with %s through registered fetch", async (_name, balance, decimals, usd) => {
+    const network = bridgeBasketNetwork();
+    network.json = {
+      [POSITIONS_URL]: {
+        ...POSITIONS_PAYLOAD,
+        wbtc: { ...POSITIONS_PAYLOAD.wbtc, decimals, positions: [{ collateralBalance: balance }] },
+        usdc: { address: "0xusdc", name: "USD Coin", symbol: "USDC", decimals: 6, positions: [{ collateralBalance: "100000000" }] },
+      },
+      [PRICES_URL]: { ...BASE_PRICES, [WBTC_ADDRESS]: { price: { usd }, timestamp: BRIDGE_NOW }, "0xusdc": { price: { usd: 1 }, timestamp: BRIDGE_NOW } },
+    };
+    await expect(runAdapter("collateral-positions-api", "deuro-deuro", { network, nowSec: BRIDGE_NOW })).rejects.toThrow();
+  });
+
+  it.each(["zero", "closed", "denied"] as const)("keeps an explicitly %s constituent out of the active book", (state) => {
+    const details = {
+      ...POSITIONS_PAYLOAD,
+      ignored: {
+        address: "0xignored", name: "Ignored", symbol: "DAI", decimals: 18,
+        positions: [{ collateralBalance: state === "zero" ? "0" : "unreadable", ...(state !== "zero" ? { [state]: true } : {}) }],
+      },
+    };
+    const result = adaptCollateralPositions(details, BASE_PRICES, 0, null, {}, BRIDGE_NOW);
+    expect(result.metadata?.totalReserveUsd).toBe(100_000);
+    expect(result.slices).toEqual([{ sourceKey: "collateral-positions-api:wbtc", name: "WBTC (Wrapped BTC)", pct: 100, risk: "medium" }]);
   });
 });

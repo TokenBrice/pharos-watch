@@ -8,6 +8,7 @@ import { logWorkerEventArgs } from "./structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { PinnedNativeShareObservationSchema, ReserveNavSupplyAdmissionReviewSchema, type PinnedNativeShareObservation, type ReserveNavSupplyScopeReason } from "@shared/types/reserve-nav-supply";
+import { hasConsistentSnapshotState } from "./live-reserves/store-snapshot-state";
 
 export const RESERVE_NAV_PRICE_SOURCES = ["chainlink-nav", "superstate-liquidity", "jpmorgan-nav"] as const satisfies readonly NavTelemetryQuote["source"][];
 export function isReserveNavPriceSource(source: string | null | undefined): source is NavTelemetryQuote["source"] {
@@ -18,6 +19,36 @@ export interface ReserveNavPriceRow {
   source: string;
   fetched_at: number;
   metadata?: string | null;
+}
+
+export interface ReserveNavSnapshotRow extends ReserveNavPriceRow {
+  config_fingerprint: string | null;
+  attempt_id: string | null;
+  last_success_at: number | null;
+  last_success_attempt_id: string | null;
+  state_config_fingerprint: string | null;
+  last_attempt_id: string | null;
+  pending_attempt_id: string | null;
+}
+
+/** Both price consensus and supplemental supply consume the same bound success. */
+export function decodeCurrentReserveNavPrice(
+  row: ReserveNavSnapshotRow,
+  meta: Pick<StablecoinMeta, "liveReservesConfig">,
+  nowSec = Math.floor(Date.now() / 1000),
+): NavTelemetryQuote | null {
+  const config = meta.liveReservesConfig;
+  if (!config || config.suspended || row.source !== config.adapter ||
+      row.config_fingerprint !== computeLiveReserveConfigFingerprint(config) ||
+      !hasConsistentSnapshotState(
+        { lastSuccessAt: row.last_success_at, lastSuccessAttemptId: row.last_success_attempt_id },
+        { fetchedAt: row.fetched_at, attemptId: row.attempt_id },
+      )) return null;
+  // JLTXX supply admission retains its stricter issuer-class latest-attempt gate.
+  if (config.adapter === "jpmorgan-nav" &&
+      (!row.attempt_id || row.state_config_fingerprint !== row.config_fingerprint ||
+       row.last_attempt_id !== row.attempt_id || row.pending_attempt_id != null)) return null;
+  return decodeReserveNavPrice(row, nowSec);
 }
 
 // Allows rounded issuer assets and modest cross-observation drift, not a missing funded leg.
@@ -85,19 +116,14 @@ export async function loadReserveNavSupplyPrice(meta: StablecoinMeta, db?: D1Dat
   const adapter = meta.liveReservesConfig?.adapter;
   if (!db || !meta.flags.navToken || !isReserveNavPriceSource(adapter)) return null;
   try {
-    const classIdentityClause = adapter === "jpmorgan-nav"
-      ? " AND c.config_fingerprint = ? AND s.config_fingerprint = c.config_fingerprint AND c.attempt_id IS NOT NULL AND c.attempt_id = s.last_success_attempt_id AND s.last_attempt_id = c.attempt_id AND s.pending_attempt_id IS NULL"
-      : "";
-    const statement = db.prepare(
-      `SELECT c.source, c.fetched_at, c.metadata
+    const row = await runWithOverloadRetry(() => db.prepare(
+      `SELECT c.source, c.fetched_at, c.metadata, c.config_fingerprint, c.attempt_id,
+              s.last_success_at, s.last_success_attempt_id,
+              s.config_fingerprint AS state_config_fingerprint, s.last_attempt_id, s.pending_attempt_id
          FROM reserve_composition c JOIN reserve_sync_state s ON s.stablecoin_id = c.stablecoin_id
-        WHERE c.stablecoin_id = ? AND c.source = ? AND s.last_success_at = c.fetched_at${classIdentityClause}`,
-    );
-    const bindings = adapter === "jpmorgan-nav"
-      ? [meta.id, adapter, computeLiveReserveConfigFingerprint(meta.liveReservesConfig!)]
-      : [meta.id, adapter];
-    const row = await runWithOverloadRetry(() => statement.bind(...bindings).first<ReserveNavPriceRow>());
-    return row ? decodeReserveNavPrice(row, nowSec) : null;
+        WHERE c.stablecoin_id = ? AND c.source = ?`,
+    ).bind(meta.id, adapter).first<ReserveNavSnapshotRow>());
+    return row ? decodeCurrentReserveNavPrice(row, meta, nowSec) : null;
   } catch (error) {
     logWorkerEventArgs("handler", "warn", `[reserve-nav] ${meta.id} NAV unavailable: ${toErrorMessage(error)}`);
     return null;

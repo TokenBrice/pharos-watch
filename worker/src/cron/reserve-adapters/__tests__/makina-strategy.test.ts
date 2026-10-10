@@ -68,23 +68,23 @@ describe("makina-strategy adapter", () => {
     expectWarningEffect(report, "stale-source-data", "degraded");
   });
 
-  it("groups protocol buckets, subtracts debts, and preserves unlabelled exposure", () => {
+  it("groups gross asset buckets, reconciles financing separately, and preserves unlabelled exposure", () => {
     const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, ALLOCATIONS_FIXTURE, PARAMS);
 
     expect(result.slices).toEqual([
-      { sourceKey: "makina:protocol:morpho", name: "Morpho lending positions", pct: 62.2, risk: "medium" },
-      { sourceKey: "makina:protocol:aave-v4", name: "Aave V4 positions", pct: 19.1, risk: "medium" },
-      { sourceKey: "makina:protocol:re", name: "Re Protocol exposure", pct: 9.1, risk: "high" },
+      { sourceKey: "makina:protocol:morpho", name: "Morpho lending positions", pct: 59.6, risk: "medium" },
+      { sourceKey: "makina:protocol:aave-v4", name: "Aave V4 positions", pct: 22.6, risk: "medium" },
+      { sourceKey: "makina:protocol:re", name: "Re Protocol exposure", pct: 8.7, risk: "high" },
       {
         sourceKey: "makina:base-token:usdc",
         name: "Unallocated USDC balances",
-        pct: 6.4,
+        pct: 6.1,
         risk: "low",
         coinId: "usdc-circle",
         depType: "collateral",
       },
-      { sourceKey: "makina:unknown:unlabelled", name: "Unknown Makina exposure", pct: 2.7, risk: "high" },
-      { name: "Other identified Makina positions", pct: 0.5, risk: "high" },
+      { sourceKey: "makina:unknown:unlabelled", name: "Unknown Makina exposure", pct: 2.6, risk: "high" },
+      { name: "Other identified Makina positions", pct: 0.4, risk: "high" },
     ]);
     expect(result.metadata?.totalReserveUsd).toBe(11000);
     expect(result.metadata?.totalDebtUsd).toBe(500);
@@ -96,7 +96,7 @@ describe("makina-strategy adapter", () => {
     expect(result.metadata?.details?.reconciliationKind).toBe("allocation-net-value-equals-current-aum");
     expect(result.metadata?.details?.reconciliationAumUsd).toBe(11000);
     expect(result.metadata?.shareSupply).toBeCloseTo(9661835.74879227);
-    expect(result.metadata?.unknownExposurePct).toBeCloseTo(2.727272727);
+    expect(result.metadata?.unknownExposurePct).toBeCloseTo(300 / 11500 * 100);
     expect(result.metadata?.details?.chainTotalsUsd).toEqual({
       "1": 10700,
       "8453": 300,
@@ -104,6 +104,41 @@ describe("makina-strategy adapter", () => {
     expect(result.metadata?.details?.oldestPositionUpdatedAt).toBe(1785265103);
     expect(result.metadata?.details?.oldestMaterialPositionUpdatedAt).toBe(1785265103);
     expect(result.warnings?.map((warning) => warning.code)).toEqual(["makina-unknown-exposure"]);
+  });
+
+  it.each([
+    { debts: [["aave-v4", 50]] as Array<[string, number]> },
+    { debts: [["aave-v4", 30], ["compound", 20]] as Array<[string, number]> },
+  ])("publishes gross composition for a solvent cross-protocol financed book $debts", ({ debts }) => {
+    const strategy = structuredClone(STRATEGY_FIXTURE);
+    strategy.data.aum = "70000000";
+    strategy.data.lastReportedAum = "70000000";
+    const allocations = structuredClone(ALLOCATIONS_FIXTURE);
+    allocations.data.base_tokens = [];
+    allocations.data.positions = [
+      { protocol: "morpho", value: "120000000", is_debt: false, updated_at: 1785310739 },
+      ...debts.map(([protocol, value]) => ({
+        protocol, value: String(Number(value) * 1e6), is_debt: true, updated_at: 1785310739,
+      })),
+    ];
+    const result = adaptMakinaStrategyReserves(strategy, allocations, PARAMS);
+    expect(result.slices).toEqual([
+      expect.objectContaining({ sourceKey: "makina:protocol:morpho", pct: 100 }),
+    ]);
+    expect(result.metadata).toMatchObject({
+      totalReserveUsd: 70, totalAssetsUsd: 120, totalLiabilitiesUsd: 50, totalDebtUsd: 50,
+      details: {
+        compositionScope: "gross-assets",
+        compositionDenominatorUsd: 120,
+        financingScope: "unallocated-protocol-debt",
+        netAumUsd: 70,
+        reconciliationAumUsd: 70,
+      },
+    });
+    const financing = result.metadata!.details!.financingBuckets as Array<{ liabilityUsd: number }>;
+    expect(financing).toHaveLength(debts.length);
+    expect(financing.reduce((sum, bucket) => sum + bucket.liabilityUsd, 0)).toBe(50);
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("makina-strategy") ?? undefined }).valid).toBe(true);
   });
 
   it("maps only the reviewed Monad PT-AUSD identity to Pendle", () => {
@@ -126,7 +161,7 @@ describe("makina-strategy adapter", () => {
     expect(result.slices).toContainEqual({
       sourceKey: "makina:protocol:pendle",
       name: "Pendle positions",
-      pct: 3.2,
+      pct: 3,
       risk: "high",
     });
     expect(result.slices.some((slice) => slice.name === "Unknown Makina exposure")).toBe(false);
@@ -146,7 +181,7 @@ describe("makina-strategy adapter", () => {
 
     const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, allocations, PARAMS);
 
-    expect(result.metadata?.unknownExposurePct).toBeCloseTo(0.0000090909);
+    expect(result.metadata?.unknownExposurePct).toBeCloseTo(0.001 / 11500 * 100);
     expect(result.warnings?.map((warning) => warning.code) ?? []).not.toContain("makina-unknown-exposure");
   });
 

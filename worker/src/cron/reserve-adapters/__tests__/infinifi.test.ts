@@ -676,6 +676,42 @@ describe("resolveInfiniFiFreshness", () => {
     });
   });
 
+  it.each([
+    [0, 1, 2],
+    [2, 1, 0],
+    [1, 2, 0],
+  ])("selects the maximum parsed history clock regardless of ordering %s", (...order) => {
+    const points = [
+      { time: 1_781_100_000_000, value: 1.05 },
+      { time: 1_781_107_200, value: 1.06 },
+      { time: 1_781_114_400_000, value: 1.0727 },
+    ];
+    const history = { code: "OK", data: { dataPoints: [
+      ...order.map((index) => points[index]),
+      { time: -1, value: 1.0727 },
+      { time: Number.NaN, value: 1.0727 },
+    ] } };
+    expect(resolveInfiniFiFreshness(payloadWithRate(1.0727), history)).toEqual({
+      freshnessMode: "verified", sourceTimestamp: 1_781_114_400,
+    });
+    expect(resolveInfiniFiFreshness(payloadWithRate(1.05), history)).toMatchObject({ freshnessMode: "unverified" });
+  });
+
+  it.each([false, true])("withholds freshness for conflicting newest rates in either order (%s)", (reverse) => {
+    const newest = [
+      { time: 1_781_114_400_000, value: 1.0727 },
+      { time: 1_781_114_400, value: 1.08 },
+    ];
+    const result = resolveInfiniFiFreshness(payloadWithRate(1.0727), {
+      code: "OK", data: { dataPoints: [
+        ...(reverse ? newest.reverse() : newest),
+        { time: 1_781_107_200_000, value: 1.0727 },
+      ] },
+    });
+    expect(result).toMatchObject({ freshnessMode: "unverified" });
+    expect(result).not.toHaveProperty("sourceTimestamp");
+  });
+
   it("stays unverified for drift beyond the tightened 6e-5 rounding envelope", () => {
     // Δ = 7e-5 is past the 4-decimal rounding envelope but was admitted by the
     // old 5e-4 tolerance (~2.45 days of yield drift); it must now fail closed.
