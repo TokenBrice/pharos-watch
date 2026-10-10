@@ -26,14 +26,14 @@ describe("stablecoin chart bucket availability", () => {
     expect(StablecoinChartResponseSchema.safeParse([{ date: 100, totalCirculatingUSD: { invalid: -1 } }]).success).toBe(false);
   });
 
-  it("makes omitted observations unavailable across the historical cohort census", () => {
+  it("preserves each point's provider census without importing buckets from another era", () => {
     expect(normalizeStablecoinChartPoints([
       { date: 100, totalCirculatingUSD: { peggedEUR: 1_000_000, peggedJPY: 1_000_000 } },
       { date: 200, totalCirculatingUSD: { peggedEUR: 1_000_000 } },
       { date: 300, totalCirculatingUSD: { peggedEUR: 1_000_000, peggedJPY: 0 } },
     ])).toEqual([
       { date: 100, totalCirculatingUSD: { peggedEUR: 1_000_000, peggedJPY: 1_000_000 } },
-      { date: 200, totalCirculatingUSD: { peggedEUR: 1_000_000, peggedJPY: null } },
+      { date: 200, totalCirculatingUSD: { peggedEUR: 1_000_000 } },
       { date: 300, totalCirculatingUSD: { peggedEUR: 1_000_000, peggedJPY: 0 } },
     ]);
   });

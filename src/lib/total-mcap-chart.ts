@@ -1,6 +1,7 @@
 import type { StablecoinChartPoint, SupplyHistoryPoint } from "@shared/types";
 import { findAsOfSnapshot, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import { admitSupplyBuckets } from "@shared/lib/supply";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
 export interface TotalMcapChartRow {
   ts: number;
@@ -29,14 +30,20 @@ export const TOTAL_MCAP_COHORT_IDS = {
 function alignHistoryAtOrBeforeDate(
   chartPoints: StablecoinChartPoint[],
   history: SupplyHistoryPoint[] | null,
+  stablecoinId: string,
 ): (number | null)[] {
   const sortedHistory = history ? [...history].sort((a, b) => a.date - b.date) : [];
-  return chartPoints.map((point) => findAsOfSnapshot(
-    sortedHistory,
-    Number(point.date),
-    (snapshot) => snapshot.date,
-    MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC,
-  )?.circulatingUsd ?? null);
+  const launchDate = CLIENT_TRACKED_META_BY_ID.get(stablecoinId)?.launchDate;
+  const launchSec = launchDate ? Date.parse(`${launchDate}T00:00:00Z`) / 1000 : null;
+  return chartPoints.map((point) => {
+    const date = Number(point.date);
+    const snapshot = findAsOfSnapshot(sortedHistory, date, (snapshot) => snapshot.date, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC);
+    if (snapshot) return snapshot.circulatingUsd;
+    // Authored launch evidence establishes nonexistence, not an archive's first
+    // row. Missing/empty reads and gaps after launch still remain unavailable.
+    return sortedHistory.length > 0 && launchSec !== null && date < launchSec && date < sortedHistory[0]!.date
+      ? 0 : null;
+  });
 }
 
 export function buildTotalMcapChartRows(
@@ -55,23 +62,19 @@ export function buildTotalMcapChartRows(
 ): TotalMcapChartRow[] {
   if (chartPoints.length === 0) return [];
 
-  const usdtSeries = alignHistoryAtOrBeforeDate(chartPoints, usdtHistory);
-  const usdcSeries = alignHistoryAtOrBeforeDate(chartPoints, usdcHistory);
-  const usdsSeries = alignHistoryAtOrBeforeDate(chartPoints, usdsHistory);
-  const daiSeries = alignHistoryAtOrBeforeDate(chartPoints, daiHistory);
-  // Older cached feeds may omit a bucket instead of publishing the newer null marker.
-  const pegTypes = [...new Set(chartPoints.flatMap((point) => Object.keys(point.totalCirculatingUSD)))];
+  const usdtSeries = alignHistoryAtOrBeforeDate(chartPoints, usdtHistory, TOTAL_MCAP_COHORT_IDS.usdt);
+  const usdcSeries = alignHistoryAtOrBeforeDate(chartPoints, usdcHistory, TOTAL_MCAP_COHORT_IDS.usdc);
+  const usdsSeries = alignHistoryAtOrBeforeDate(chartPoints, usdsHistory, TOTAL_MCAP_COHORT_IDS.usds);
+  const daiSeries = alignHistoryAtOrBeforeDate(chartPoints, daiHistory, TOTAL_MCAP_COHORT_IDS.dai);
 
   return chartPoints.map((point, index) => {
     const aggregate = admitSupplyBuckets(point.totalCirculatingUSD);
-    const total = aggregate.status === "observed" && pegTypes.every((bucket) => point.totalCirculatingUSD[bucket] != null)
-      ? aggregate.total : null;
+    const total = aggregate.status === "observed" ? aggregate.total : null;
     const nonUsdBuckets = Object.fromEntries(
       Object.entries(point.totalCirculatingUSD).filter(([bucket]) => bucket !== "peggedUSD"),
     );
     const nonUsdAdmission = admitSupplyBuckets(nonUsdBuckets);
-    const missingNonUsd = pegTypes.some((bucket) => bucket !== "peggedUSD" && point.totalCirculatingUSD[bucket] == null);
-    const nonUsd = missingNonUsd ? null : nonUsdAdmission.status === "observed" ? nonUsdAdmission.total
+    const nonUsd = nonUsdAdmission.status === "observed" ? nonUsdAdmission.total
       : nonUsdAdmission.status === "absent" && total !== null ? 0 : null;
     const usdt = usdtSeries[index] ?? null;
     const usdc = usdcSeries[index] ?? null;

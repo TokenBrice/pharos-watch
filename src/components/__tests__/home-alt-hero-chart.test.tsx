@@ -4,6 +4,9 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { HomeAltHeroChart } from "@/components/home-alt-hero-chart";
 import { CHART_SLATE_SOFT, CHART_SLATE_STRONG } from "@/lib/chart-colors";
+import { buildTotalMcapChartRows } from "@/lib/total-mcap-chart";
+import octoberFixture from "@shared/test-utils/fixtures/hero-chart-oct10.json";
+import { StablecoinChartResponseSchema } from "@shared/types/market";
 
 vi.mock("@/hooks/use-chart-shell", () => ({
   useChartShell: () => ({
@@ -118,6 +121,33 @@ describe("HomeAltHeroChart", () => {
     const topTickY = Number(topTick?.getAttribute("y"));
 
     expect(topTickY).toBeGreaterThanOrEqual(24);
+  });
+
+  it("renders every observed production cohort without an unavailable-history notice", () => {
+    const realRows = buildTotalMcapChartRows(StablecoinChartResponseSchema.parse(octoberFixture.chartPoints), octoberFixture.histories);
+    const { container } = render(<HomeAltHeroChart rows={realRows} />);
+    expect(container.textContent).not.toContain("gaps are not zero");
+    for (const title of container.querySelectorAll("path title")) {
+      expect(title.parentElement!.getAttribute("d")!.split("M ").length - 1).toBe(1);
+      expect(title.parentElement!.getAttribute("d")!.split("L ").length - 1).toBe(realRows.length - 1);
+    }
+  });
+
+  it("preserves a single-day gap in long histories and avoids isolated area slivers", () => {
+    const longRows = Array.from({ length: 300 }, (_, index) => ({
+      ...rows[0]!, ts: rows[0]!.ts + index * 86400000,
+      total: index === 297 || index === 298 ? null : 61,
+    }));
+    const { container } = render(<HomeAltHeroChart rows={longRows} />);
+    const totalPath = [...container.querySelectorAll("path title")]
+      .find((title) => title.textContent === "Total market cap")!.parentElement!;
+    expect(totalPath.getAttribute("d")!.split("M ").length - 1).toBe(2);
+    expect(container.querySelector('path[fill="url(#homeAltTotalGrad)"]')!.getAttribute("d")!.split("Z").length - 1).toBe(1);
+  });
+
+  it("does not warn about cohort gaps while initial history queries are loading", () => {
+    const { container } = render(<HomeAltHeroChart rows={rows.map((row) => ({ ...row, sky: null }))} isLoadingHistory />);
+    expect(container.textContent).not.toContain("gaps are not zero");
   });
 
   it("shows unavailable total and non-USD history as gaps rather than zero geometry", () => {
