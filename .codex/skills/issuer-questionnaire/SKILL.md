@@ -11,7 +11,7 @@ Read the coin’s base file, all domain sidecars, current report card, `shared/l
 
 ## Select Questions
 
-Inventory `scoreTrace.evidenceResponsibility.facts`, pillar evidence/reasons, binding caps, weakest pillar, unknown access fields, NR reasons, and sidecar review gaps. Use `scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs` to translate reason codes. For bounded-mechanism-review facts, inspect only this coin’s entry in `shared/data/safety-score-v9/mechanism-review-overlays-v1.json`.
+Inventory `scoreTrace.evidenceResponsibility.facts`, pillar evidence/reasons, binding caps, weakest pillar, unknown access fields, NR reasons, and sidecar review gaps. Decode public fact paths with `resolveEvidenceFactPath` in `shared/types/safety-score-v9-public-evidence-facts.ts`. For reason routing, match the current typed gap-queue/replay entry and pass its structured `path` with `reasonCode` to `descriptorForReason` in `scripts/lib/safety-score-v9-missing-data-work-types.ts`; public path strings are not that argument, and `missing-pillar-evidence` cannot be routed by code alone. The Markdown curation worklist is a replay-derived summary, not the reason-routing authority. For bounded-mechanism-review facts, inspect only this coin’s entry in `shared/data/safety-score-v9/mechanism-review-overlays-v1.json`.
 
 Ask about issuer-undisclosed facts or low-confidence facts that a document, policy, contract, or monitoring field can resolve. Ask about measured adverse exposure only as mitigation/recovery. Do not ask the issuer to solve producer failures, missing integrations, unsupported methods, or anything Pharos can verify from public sources, APIs, contracts, or explorers.
 

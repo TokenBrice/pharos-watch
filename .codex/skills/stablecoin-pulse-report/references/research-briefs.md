@@ -1,22 +1,22 @@
 # Pulse Research Briefs
 
-Research explains the Pharos numbers; it never replaces them. Dispatch all research in one parallel batch, then one independent fact-checker after the copy exists. Capability names below map to harness agents via `docs/process/agent-artifacts.md#harness-configuration`; the session's agent list wins.
+Research explains the Pharos numbers; it never replaces them. With delegation, dispatch all research in one parallel batch, then one independent fact-checker after the copy exists. Otherwise perform sequential research and skeptical review, disclosing that review was not independent. Discover available capabilities via `docs/process/agent-artifacts.md#harness-configuration`; the session's capabilities win.
 
 ## Roles
 
 | Role | Capability | Count |
 | --- | --- | --- |
 | Web researcher | General agent with web search and page reading | 5 (one per cluster) |
-| X scout | Read-only agent with live X search (in omp: the `grok` agent) | 5 (one per cluster) |
+| X scout | Read-only agent with live X search | 5 (one per cluster) |
 | Fact-checker | Read-only reviewer, different model family from the author when possible | 1 |
 | Layout fixer (optional) | General agent with image input, only for template changes | 0–1 |
 
-**Model choice.** When the user asks to avoid a model family, pick agents pinned to explicit models, not role aliases: a role's retry fallback chain can silently switch families. In omp the pinned options have included `astra` (GPT-6 Astra; web research and layout), `grok` (X), and `council-glm` (fact-check); confirm against the session's agent list. The `web_search` tool may itself run on a vendor model; mention it in the handoff when the constraint is strict.
+**Model choice.** When the user excludes a model family, verify the selected capability's model and fallback behavior in the current session, including search tools. If the exclusion cannot be guaranteed, do not use that capability; disclose the limitation in the handoff. The repository does not pin a model fleet.
 
 ## X Search Preflight
 
 1. Run a control query against a busy account over the last 7 days (for example `@circle`). Zero posts means the tool is not working; zero posts on a real query is only meaningful after a passing control.
-2. If X scouts report that `x_search` is not callable, the harness did not inject it. In omp, an operator-installed kernel bridge may exist at `~/.omp/agent/tools/x-search/kernel_bridge.py`: `%load` it in the parent's Python eval, run `x_search_selftest()`, then pass `tools: ["x_search"]` on each X scout task. Expired xAI credentials need `omp login xai-oauth`.
+2. If live X search is not callable, check the current session's available capabilities. Do not load personal tool bridges or change global credentials/configuration as part of this report workflow; use web-only research when the capability is unavailable.
 3. Budget: X search bills per post fetched. Ask each scout for 12–18 focused calls with handle and date filters. Record the spend in the handoff.
 
 If X still fails, continue web-only and state it.
@@ -27,13 +27,13 @@ Paste into every research dispatch, filling the brackets:
 
 ```text
 # Goal
-Evidence for "Stablecoin Pulse — <Month YYYY>", a 2-page monthly stablecoin report for <partner>. Window <start> → <end> (UTC). Explain WHY things moved (integrations, incentives, venue and chain flows, redemptions, issuer mints, macro, regulation), quantified where possible.
+Evidence for "Stablecoin Pulse: <Month YYYY>", a 2-page monthly stablecoin report for <partner>. Window <start> → <end> (UTC). Explain WHY things moved (integrations, incentives, venue and chain flows, redemptions, issuer mints, macro, regulation), quantified where possible.
 
 # Inputs
 Pharos data brief (supply authority): <abs path>/data/brief.md. Pharos digests for the window: <abs path>/data/digests.md.
 
 # Output contract
-Markdown only, no file edits. Per item: **Item** — 1–2 line answer naming the drivers with numbers; evidence bullets `source · UTC date · short verbatim quote or figure · URL`; confidence high/medium/low; [INFERENCE] on anything not directly sourced; "not found" when absent. End with "Other notable items" (≤6, sourced).
+Markdown only, no file edits. Per item: **Item**: 1–2 line answer naming the drivers with numbers; evidence bullets `source · UTC date · short verbatim quote or figure · URL`; confidence high/medium/low; [INFERENCE] on anything not directly sourced; "not found" when absent. End with "Other notable items" (≤6, sourced).
 Rules: never fabricate posts, quotes, numbers, dates or URLs. Prefer primary sources (issuer/protocol blogs and official accounts, governance forums, filings, regulator releases, explorers). Older events are context, never this month's catalyst. Resolve same-ticker coins by the Pharos id given. Skip builds, tests, and formatters.
 ```
 

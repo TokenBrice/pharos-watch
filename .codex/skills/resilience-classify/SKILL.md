@@ -11,7 +11,7 @@ Use this skill to review collateral quality and whole-book custody coverage, add
 
 ## Read First
 
-- Read `resolveCustodyModel()` in `shared/lib/report-card-policy.ts`: missing custody resolves to `unknown`, never an affirmative backing/governance-derived label.
+- Read `resolveCustodyModel()` in `shared/lib/report-card-policy.ts`: authored custody wins; omission resolves to `unknown` for RWA-backed assets with non-decentralized governance and to `onchain` for the remaining structural classes. When whole-book evidence cannot support that default, author the reviewed `mixed`/`unknown` label explicitly.
 - Read `shared/lib/methodology-versions/current-version.json` before describing scores; use the current Safety Score methodology and let that source file win over remembered versions.
 - This skill is only for `collateralQuality` and `custodyModel`. Leave `governanceQuality` alone unless the user explicitly asked for it.
 
@@ -31,7 +31,7 @@ Use this skill to review collateral quality and whole-book custody coverage, add
 - `collateralQuality`: what is the riskiest significant backing component?
 - `custodyModel`: does evidence cover every material backing part for the claimed tier? Use `mixed` for evidenced heterogeneous custody or `unknown` when whole-book coverage is unestablished.
 
-6. Apply sourced labels in the matching per-coin JSON file, keeping the diff minimal. Explicit `mixed`/`unknown` may record the reviewed aggregate outcome; omission also resolves to unknown. Retain partial providers, unknown shares and legal safeguards in the reserves sidecar. Then converge the aggregate and dependent projections with `npm run bootstrap:generated` and run `npm run check:stablecoin-data`; for full additions, follow the full validation sequence in Phase 7 of `docs/process/adding-a-stablecoin.md`.
+6. Apply sourced labels in the matching per-coin JSON file, keeping the diff minimal. Explicit `mixed`/`unknown` may record the reviewed aggregate outcome; omission follows `resolveCustodyModel()`, not a universal unknown fallback. Retain partial providers, unknown shares and legal safeguards in the reserves sidecar. Then converge the aggregate and dependent projections with `npm run bootstrap:generated` and run `npm run check:stablecoin-data`; for full additions, follow the full validation sequence in Phase 7 of `docs/process/adding-a-stablecoin.md`.
 
 ## Tiers
 

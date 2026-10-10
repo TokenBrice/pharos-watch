@@ -19,9 +19,9 @@ Page 1 order: KPI strip → TL;DR (the four-sentence month) → movers table (th
 
 Check every candidate story against these before researching it:
 
-1. **Issuer inventory mints.** A single large mint to an issuer treasury (see `large-mints.json` counterparty; confirm the label on the explorer) inflates supply without demand. Report the supply change, then the ex-mint change.
-2. **Price versus units.** Gold, silver, and non-USD fiat tokens move with their reference price. Split the USD delta with `unit-moves.json`; a falling metal can hide rising ounces and vice versa.
-3. **Fund AUM scope.** Tokenized funds can report book-entry (non-token) shares in issuer AUM. Pharos tracks on-chain supply; do not reconcile the two by averaging.
+1. **Issuer inventory mints.** A flagged gross mint is not causal attribution (see `large-mints.json` and the caveats in `brief.md`). Confirm the counterparty label on the explorer and whether the mint entered the tracked circulating supply before reporting an ex-mint change; a treasury destination alone does not establish demand.
+2. **Price versus units.** Gold, silver, and non-USD fiat tokens move with their reference price. Use successful splits in `unit-moves.json`; unavailable prices or baselines remain unavailable. The split uses daily historical supply, not the live mover delta, and only covers selected candidates. A falling metal can hide rising ounces and vice versa.
+3. **Fund AUM scope.** Tokenized funds can report book-entry (non-token) shares in issuer AUM. Use Pharos-published circulating supply and its provenance, not an assumed on-chain-only source; do not reconcile unlike scopes by averaging.
 4. **Same ticker, different issuer.** Resolve by Pharos id before searching (examples seen: MSUSD Main Street vs msUSD Metronome, USDA from several issuers, reUSD Re vs Resupply, USX dForce vs Solstice, EURR StablR vs Revolut). Research agents routinely conflate them.
 5. **Net hides gross.** A small net change can conceal large two-way churn or a chain rotation. Look at the chain split and daily swings before writing "flat".
 6. **Sign and baseline.** Percent moves from tiny bases are not headlines; set a floor (for example, current supply of at least $50M) for percentage-ranked mentions.

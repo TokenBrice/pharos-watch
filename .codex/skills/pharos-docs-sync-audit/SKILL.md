@@ -23,8 +23,8 @@ Use this skill from the Pharos repository root when the user asks to:
 - Do not re-verify what CI already guards: file-path citations (`check:doc-source-paths`), internal doc links (`check:verified-doc-links`), methodology/doc sync (`check:doc-sync`), the generated `AGENTS.md` mirror (`check:generated-artifacts -- --only=agents-doc`), and generated API artifacts (`check:generated-artifacts -- --only=api-reference,openapi,postman`). The rest of the API reference is hand-written and remains in semantic-audit scope.
 - `docs/api-reference.md` is far over the wholesale-read threshold. Navigate it via its top navigation block plus Grep or offset reads only.
 - Author durable top-level guidance in `CLAUDE.md`, or move it into `docs/process/*` and reference it from `CLAUDE.md`. Regenerate `AGENTS.md` with `node --import tsx scripts/maintenance/generate-agents-doc.ts`; never edit the generated mirror by hand.
-- If pricing pipeline, PSI, PegScore/DEWS, LiquidityScore, Report Cards, blacklist tracker, mint/burn flow, yield intelligence, Chain Health, or other methodology behavior changes, update `/methodology`, the owning methodology doc, and the structured entry under `shared/data/methodology-changelogs/`.
-- Methodology versions increase numerically: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10`.
+- For actual methodology behavior changes, follow every ADR-3 update target in `docs/architecture.md`, including the runtime version owner and structured changelog under `shared/data/methodology-changelogs/`. Corrections to prose describing unchanged behavior do not require a version bump or changelog.
+- Methodology versions increase numerically with at most two decimal digits: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10` or `v5.911`.
 
 ## Read First
 
@@ -32,7 +32,8 @@ Use this skill from the Pharos repository root when the user asks to:
 2. `docs/process/agent-artifacts.md`
 3. `docs/doc-ownership.json`
 4. `docs/testing.md`
-5. The task-family docs selected by the router
+5. `docs/README.md#documentation-rules`
+6. The task-family docs selected by the router
 
 For skill changes, also read the "Agent Skills" section of `docs/process/agent-artifacts.md`.
 
@@ -72,6 +73,7 @@ Prefer source-backed corrections over prose polish.
 ### 3. Edit Docs Surgically
 
 Update the smallest set of verified docs. Remove stale claims rather than adding caveats around false text.
+Preserve generated marker blocks; update their owning source/generator rather than editing literal values. Docs at or above 400 lines or 50 KB need a top `> **Agent navigation**` block; use it and matched section reads for every long doc, not only the API reference.
 
 Common doc destinations:
 
@@ -100,7 +102,7 @@ npm run check:generated-artifacts
 npm run check:generated-artifacts -- --only=api-reference,openapi,postman
 ```
 
-For broad docs work, prefer the specific failing check first, then `npm run check:pr -- --base=<ref>` after commit if the user asked for PR readiness.
+For broad docs work, start with the specific failing check. If PR readiness is requested, converge all generated artifacts after final committed history, then run full plain `npm run check:pr` and require its fresh passing HEAD receipt per `docs/testing.md#pre-push-readiness`; a base override or focused check is not readiness proof.
 
 ### 5. Broad Audit With Reviewers
 

@@ -22,12 +22,12 @@ Cite its provenance record (keyless URL, block, timestamp); never cite `latest` 
 ## Research And Routing
 
 - Gather generic base metadata from structured APIs and primary issuer material: identity, collateral, peg mechanism, jurisdiction, official links, `llamaId`, `geckoId`, `cmcSlug`, proof-of-reserves configuration, and lifecycle fields. Treat existing values as hypotheses; do not guess or replace stronger curated evidence.
-- Use `stablecoin-identity-contracts` (`verify`, then `populate` or `discover`) for CoinGecko identity and `contracts[]`.
+- Use `stablecoin-identity-contracts` for CoinGecko identity and `contracts[]`: verify proposed identities against primary deployment evidence before registry edits; the `verify` CLI accepts only already-catalogued IDs, so run it after authoring the approved entry. Use `populate` or `discover` for deployment coverage.
 - Use `reserve-research` for reserve composition/review, `resilience-classify` for explicit overrides, and `compliance-research` for `genius`, `mica`, or both.
 - Use `issuer-questionnaire` only for issuer-only unknowns, `write-ai-summaries` for editorial copy, and `pre-launch-update` for milestone/date maintenance.
 - Route reserves, mint authority, compliance, and risk-review fields to their sidecars per `docs/process/stablecoin-research-sidecars.md`. Generic scalar metadata remains in the base file.
 - Follow [Phase 5](../../../docs/process/adding-a-stablecoin.md#phase-5---evaluate-downstream-coverage-branches) for Mint Authority, blacklistability, bridge routes, yield, reserves, redemption, mint/burn, Bluechip, history, and current Safety Score coverage. Record every branch as added, not applicable, or an intentional gap.
-- Every new or promoted Mint Authority profile must author `mintAuthority.headline`: one verdict sentence of at most 25 words with no raw identifiers (addresses, block heights, second counts, gate codes, evaluator keys, version pins). Schema validation rejects anything else; the long reviewer narrative stays in `summary`.
+- Every new or promoted Mint Authority profile must author `mintAuthority.headline`: one verdict sentence of at most 25 words with no raw identifiers (addresses, block heights, second counts, gate codes, evaluator keys, version pins). The schema validates the word/identifier budget when a headline is present; the addition workflow requires its presence. The long reviewer narrative stays in `summary`.
 
 ## Apply And Finish
 

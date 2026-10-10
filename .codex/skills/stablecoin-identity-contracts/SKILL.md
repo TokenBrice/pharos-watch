@@ -13,10 +13,10 @@ Cite its provenance record (keyless URL, block, timestamp); never cite `latest` 
 ## Shared Rules
 
 - Source order is official issuer deployment material, CoinGecko structured metadata, then the relevant explorer. DefiLlama chain supply is a gap signal, never address proof.
-- Validate name, symbol, chain, address, and decimals before writing. Never guess decimals or overwrite a curated contract.
+- Validate name, symbol, chain, deployment identity, and amount encoding before writing. Verify fixed decimals for ordinary token contracts; `ContractDeploymentSchema` in `shared/types/stablecoin-meta-schemas.ts` also permits explicit native bank-denom identities with unknown (`null`) decimals and requires `null` decimals for `xrpl-issued-currency` encoding. Never invent a scale or overwrite a curated deployment.
 - Use only chain IDs accepted by `shared/types/chain-identity.ts`; report unsupported chains instead of adding chain support. Lowercase EVM addresses and preserve native non-EVM casing.
 - DefiLlama list `circulating` is already USD-denominated; never multiply it by price.
-- Research can stop with findings. Apply changes only when requested, patch the smallest permitted fields for the selected mode, then run `npm run bootstrap:generated` and `npm run check:stablecoin-data`.
+- Research can stop with findings. Apply changes only when requested and patch only the permitted fields. Adding a second deployment to an active asset also requires bridge-route rows and may require Mint Authority deployment references (`shared/lib/stablecoins/schema.ts`, `shared/lib/stablecoins/mint-bridge-ownership.ts`); coordinate the separately authorized sidecar edits before applying. If that work is outside scope, return verified candidates instead of leaving an invalid contracts-only change. After the coordinated edits, run `npm run bootstrap:generated` and `npm run check:stablecoin-data`.
 
 ## `verify`
 
@@ -28,11 +28,11 @@ npm run verify:coingecko-ids -- --scan
 npm run verify:coingecko-ids -- --all
 ```
 
-`MATCH` is verified. `MISMATCH` exits 1 and identifies the contract-resolved slug; edit only after confirming the token identity. `UNAVAILABLE` exits 2 and means the tool could not prove identity—do not infer a slug. For active additions or promotions, follow with `stablecoin-runtime-price-marketcap-gate`.
+The tool verifies only already-catalogued IDs against their Ethereum contract. Without one, even a resolving slug is `UNAVAILABLE`; use primary deployment evidence for proposed or non-Ethereum identities. `--scan` selects only DefiLlama/config slug disagreements, not a full identity audit. `MATCH` proves the configured slug matches that contract. `MISMATCH` reports a differing contract-resolved slug or a configured slug that does not resolve. Aggregate exit status is 1 if any mismatch exists, otherwise 2 if any verification is unavailable, otherwise 0. Do not infer a slug from `UNAVAILABLE`. For active additions or promotions, follow with `stablecoin-runtime-price-marketcap-gate`.
 
 ## `populate`
 
-Use when the target coin and `geckoId` are known. Fetch CoinGecko coin detail and inspect `detail_platforms`; resolve every platform through the live registries/reference, skip existing chains and empty addresses, and require independently confirmed decimals. Present additions and conflicts before writing. Write only the `contracts[]` entries that passed verification; never overwrite curated contract rows or any other base-file field.
+Use when the target coin and `geckoId` are known. Fetch CoinGecko coin detail and inspect `detail_platforms`; resolve every platform through the live registries/reference, skip existing chains and empty addresses, and independently verify the schema-appropriate amount encoding/decimals. Native bank-denom deployments need official rail evidence, not a guessed CoinGecko contract mapping. Present additions and conflicts before writing. Write only the `contracts[]` entries that passed verification; never overwrite curated contract rows or any other base-file field.
 
 ## `discover`
 

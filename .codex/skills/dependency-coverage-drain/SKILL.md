@@ -15,7 +15,7 @@ The queue is permanent research intake, not a shadow graph. Keep it separate fro
 
 Read routed docs and scoped instructions, `docs/dependency-map.md`, `docs/runbooks/dependency-network.md`, and `docs/runbooks/artifacts/dependency-coverage-reviewed-ledger.json`. Inspect the emitting queues in `scripts/maintenance/generate-dependency-coverage-audit.ts`, admission rules in `shared/lib/dependency-derivation.ts`, and reviews in `shared/data/coverage-dispositions/dependency-target-dispositions.ts`.
 
-Use `skill://reserve-research` for reserve evidence, provenance, custody, backing dependencies, and source freshness. Read the relevant adapter and authored reserves before changing a claim. Verified docs own durable policy; `/agents/` holds scratch evidence only.
+Use the `reserve-research` skill (`.codex/skills/reserve-research/SKILL.md`) for reserve evidence, provenance, custody, backing dependencies, and source freshness. Read the relevant adapter and authored reserves before changing a claim. Verified docs own durable policy; `/agents/` holds scratch evidence only.
 
 Use `npm run research:dwellir-rpc --` for supplemental pinned on-chain evidence reads; see `docs/process/agent-artifacts.md#pinned-on-chain-evidence`.
 Cite its provenance record (keyless URL, block, timestamp); never cite `latest` reads as evidence.
@@ -51,7 +51,7 @@ Handle each queue from its emitting source:
 
 ### 2. Verify and decide
 
-For each claim use dated primary issuer, contract, API, or on-chain evidence through `skill://reserve-research`. Bind observations to an access date and, for on-chain measurements, a stated block. Record the numerator, denominator, measurement time and source scope for weights. Do not fabricate weights or promote a settlement currency into a full backing claim.
+For each claim use dated primary issuer, contract, API, or on-chain evidence through the `reserve-research` skill. Bind observations to an access date and, for on-chain measurements, a stated block. Record the numerator, denominator, measurement time and source scope for weights. Do not fabricate weights or promote a settlement currency into a full backing claim.
 
 Look through a bridge or intermediary only when its escrow/claim relationship is verified, preserving the required annotation and provenance. Otherwise withhold the canonical issuer link and record the unresolved representation on the coverage list without a guessed tracked target.
 

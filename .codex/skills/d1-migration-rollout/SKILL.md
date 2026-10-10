@@ -13,6 +13,7 @@ Keep baseline and cleanup policy in the migration owners; this skill coordinates
 ## Read first
 
 - `worker/migrations/AGENTS.md`
+- [D1 Migration Authoring](../../../docs/process/d1-migrations.md), including reviewed-DML evidence and seeded replay
 - `worker/migrations/MANIFEST.md`; read [Baseline (0000)](../../../worker/migrations/MANIFEST.md#baseline-0000), [Rollout Safety](../../../worker/migrations/MANIFEST.md#rollout-safety), and [Rollback Procedure](../../../worker/migrations/MANIFEST.md#rollback-procedure)
 - [D1 Baseline Squash Policy](../../../docs/process/d1-baseline-squash-plan.md#preconditions), [Procedure](../../../docs/process/d1-baseline-squash-plan.md#procedure), and [Failure And Recovery](../../../docs/process/d1-baseline-squash-plan.md#failure-and-recovery)
 - [Shared Database Helpers](../../../docs/worker-infrastructure.md#shared-database-helpers) and [Completed D1 Schema Cleanup](../../../docs/worker-infrastructure.md#completed-d1-schema-cleanup)
@@ -23,8 +24,8 @@ Keep baseline and cleanup policy in the migration owners; this skill coordinates
 ## Procedure
 
 1. **Inventory `worker/migrations/MANIFEST.md`.** Run `npm run check:migrations`, identify the next unused sequence, and preserve every deployed filename and historical lineage.
-2. **Author the SQL under `worker/migrations/`.** Add the required `-- rollout-safety: backward-compatible` header, update the manifest in the same change, and keep the still-live Worker able to read and write during deployment.
-3. **Rehearse the [D1 baseline procedure](../../../docs/process/d1-baseline-squash-plan.md#procedure) when squashing.** Use two fresh named D1 databases, compare schema objects, indexes, triggers, and seed counts, and record only approved cleanup differences in the manifest.
+2. **Author the SQL under `worker/migrations/`.** Add `-- rollout-safety: backward-compatible`, update the manifest, and preserve old-Worker reads/writes. For row-mutating SQL detected by `scripts/ci/check-worker-migrations.ts` (the source file wins), also add `-- data-migration: reviewed` and the Reviewed Data Migrations row: predicate, old-Worker compatibility, pre-deploy bookmark/rollback, and affected-row bounds. New pre-existing DML targets need representative seeded fixtures in that checker.
+3. **Rehearse the [D1 baseline procedure](../../../docs/process/d1-baseline-squash-plan.md#procedure) when squashing.** Compare two fresh named remote D1 databases and record only approved cleanup differences. Before applying to any existing target, prove the exact `0000_baseline.sql` filename is already in its ledger and no baseline is pending; otherwise stop for a reviewed adoption plan. Absorbed filenames do not prove baseline adoption.
 4. **Order deployment from the [CI deploy sequence](../../../docs/deployment-process.md#ci-deploy-sequence).** Run `npm run check:migrations`, `npm run check:sql-safety`, and `npm run typecheck:worker`; migrations apply remotely before the new Worker is live.
 5. **Separate cleanup via [Completed D1 Schema Cleanup](../../../docs/worker-infrastructure.md#completed-d1-schema-cleanup).** Require production backup/Time Travel evidence, fresh zero-use evidence, and a dedicated operated rollout after compatible Worker code has soaked; do not hide drops in a normal migration.
 6. **Prepare rollback from the [manifest rollback procedure](../../../worker/migrations/MANIFEST.md#rollback-procedure).** Preserve the pre-window bookmark, deployed Worker version, migration ledger, and schema comparison. Restore D1 only for unexpected data/schema mutation; Worker rollback alone does not reverse D1.

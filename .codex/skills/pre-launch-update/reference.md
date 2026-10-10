@@ -6,16 +6,16 @@ Material moved verbatim from `SKILL.md`: field-level scope table, promotion rati
 
 | Field | What to update | Source priority |
 |---|---|---|
-| `launchPhase` | Advance when evidence supports (ordering: `announced` → `testnet` → `auditing` → `beta` → `launching-soon`, per `LAUNCH_PHASE_VALUES`) | Official announcements, docs, testnet/mainnet explorers |
-| `expectedLaunchDate` | Update if shifted; format: `YYYY`, `YYYY-MM`, or `YYYY-QN` | Official comms, news articles |
+| `launchPhase` | Advance only on evidence; `LAUNCH_PHASE_VALUES` in `shared/types/core.ts` owns the vocabulary (the source file wins) | Official announcements, docs, testnet/mainnet explorers |
+| `expectedLaunchDate` | Update if shifted; `FuzzyDateSchema` in `shared/types/stablecoin-meta-schemas.ts` owns the supported date formats | Official comms, news articles |
 | `announcedDate` | Backfill only when missing and a credible first-announcement date surfaces; never overwrite an existing value | Original press release, first official tweet |
 | `launchPhaseDetail` | Refresh free-text status line | Latest official communication |
 | `milestones[]` | Add new events with date, type, title, description, sourceUrl | Twitter/X, official blog, news, regulatory filings |
-| `dateHistory[]` | Auto-append old date before changing `expectedLaunchDate` — **mandatory** (see Date History Protocol) | (mechanical) |
+| `dateHistory[]` | Append an existing old date before changing `expectedLaunchDate`; do not fabricate history for an initial date (see Date History Protocol) | (mechanical) |
 | `featuredContent[]` | Add notable new tweets, articles, blog posts, videos | Twitter/X, news, official blog |
 | `contracts[]` | Add when a testnet/mainnet contract address is announced (rendered as "Target Chains" on the detail page) | Official deployment announcements, block explorers |
 | `jurisdiction.regulator` | Fill when a named regulator, charter, or licensing body is confirmed (e.g., NYDFS, Anchorage Digital Bank, OCC) | Official comms, regulatory filings |
-| AI summaries | Update in `data/ai-summaries.json` **only** on material changes (see "Material Change Definition" below) | Research + editorial judgment (follow `write-ai-summaries` voice) |
+| AI summaries | Update in `data/ai-summaries.json` only on material changes defined in [Apply Approved Changes](SKILL.md#apply-approved-changes) | Research + editorial judgment (follow `write-ai-summaries` voice) |
 
 ### Step 5 promotion — preview-listing rationale
 
@@ -33,7 +33,7 @@ For each candidate, report: name, symbol, issuer, peg currency, backing type, an
 
 ### Date History Protocol — rationale and example
 
-The `/upcoming` detail page renders a drift badge (`on-time` / `slipped` / `accelerated`) that depends entirely on this data; skipping the append silently breaks the UI feature.
+Upcoming cards and stablecoin detail pages use `getDriftStatus` in `src/lib/pre-launch.ts`. Revision history drives the pushed-date badges; an elapsed current target becomes overdue even without history. Preserve old dates so the revision count and detail-page date trail remain accurate.
 
 Example: If `expectedLaunchDate` is `"2026-Q2"` and it shifts to `"2026-Q4"`:
 ```json

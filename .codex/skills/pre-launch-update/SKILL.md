@@ -22,7 +22,7 @@ Optional discovery of untracked candidates is research-only: search recent issue
 
 Approval must cover each coin and action; an earlier explicit cohort instruction covering those coins remains valid. Ask again only for an uncovered addition, promotion, or other scope change. Preserve canonical identity, flags, and historical milestones. Add milestones oldest-first with a primary `sourceUrl`; add only notable featured content.
 
-Before every `expectedLaunchDate` change, append the old value to `dateHistory` as `{ "date": "<old>", "setOn": "<today>" }`; never reconstruct guessed history.
+When changing an existing `expectedLaunchDate`, first append its old value to `dateHistory` as `{ "date": "<old>", "setOn": "<today>" }`. An initial date has no prior value to append; never reconstruct guessed history.
 
 Refresh an AI summary only for a material change: phase advance, launch-date shift of at least a quarter, named regulator/custodian/major partner, completed reputable audit, approval/charter/license decision, or confirmed mainnet date. Use `write-ai-summaries` for the editorial contract.
 

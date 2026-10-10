@@ -44,14 +44,14 @@ Use this mode for a bounded multi-coin review. It is read-only unless the caller
 
 ### Exact per-coin researcher contract
 
-Prompt the researcher to read the base coin, the existing compliance sidecar, `shared/types/stablecoin-meta-schemas.ts`, `shared/lib/compliance-regime-state.ts`, `docs/genius-tracker.md`, and `docs/mica-tracker.md`. For every requested regime, it must:
+Prompt the researcher to read the base coin, the existing compliance sidecar, `shared/types/stablecoin-meta-compliance-schemas.ts`, `shared/lib/compliance-regime-state.ts`, `docs/genius-tracker.md`, and `docs/mica-tracker.md`. For every requested regime, it must:
 
-1. Decide whether the regime applies; use `assessed=false` for a genuine out-of-scope/unassessable coin, not for missing research.
+1. Decide whether the regime applies; a sourced exclusion is an assessment (`assessed=true`). Use `assessed=false` when the evidence cannot support a row, not as a substitute for missing research.
 2. Classify the result as `no-change`, `correct`, `add-new-row`, `remove-row`, or `unable-to-verify`; preserve good fields and explain uncertainty.
 3. Use the regime’s primary-source order in [genius.md](references/genius.md) and [mica.md](references/mica.md), map token → legal issuer → exact public posture, and record consulted URLs with what each showed.
 4. Return `id`, `mica`, `genius`, and optional `notes`. Each regime object returns `assessed`, `changeKind`, `consequential`, `confidence`, `summary`, and `proposedJson`; set `consequential=true` for a new/upgraded authorization claim, status escalation, removal, or downgrade of an existing strong claim. `proposedJson` is compact JSON for the full candidate object only for a correction or new row, otherwise `""`. A proposed GENIUS object includes reviewer `Pharos compliance research` and `reviewedAt` set to the review date; MiCA has no reviewer/date fields.
 
-Use the response envelopes in [batch-schema.md](references/batch-schema.md); the caller parses candidate JSON, merges it, and runs the real schema check before any edit.
+Use the response envelopes in [batch-schema.md](references/batch-schema.md); before any edit, parse candidate JSON with the regime schema in `shared/types/stablecoin-meta-compliance-schemas.ts`, then validate the proposed sidecar with `StablecoinComplianceSidecarSchema` and the merged coin with `StablecoinMetaAssetSchema` from `shared/lib/stablecoins/schema.ts`. The repository check validates files on disk after the approved write and regeneration; it does not accept scratch candidates.
 
 ### Adjudication contract
 

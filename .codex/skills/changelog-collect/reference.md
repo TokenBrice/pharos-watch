@@ -36,9 +36,9 @@ Look for natural themes:
 
 Reference models:
 
-- "Yield intelligence rebuilt from the ground up, API auth goes live, and a 100+ fix security audit lands."
-- "Four new DEX APIs feed pricing consensus, Safety Score hits v6.0, and live reserves double to 114 coins."
-- "Infrastructure axis launches, PSI hero gets arc gauge and event timeline, and Liquidity Score v5.0 brings size-aware scoring."
+- "Supporter API keys now use contract-keyed donation eligibility."
+- "Upcoming launch deadlines now expire on the browser clock."
+- "Reserve reviews distinguish missing disclosures from reviewed absence."
 
 ### Methodology href routes
 
