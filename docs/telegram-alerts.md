@@ -185,7 +185,7 @@ the send succeeded.
 
 Wizard state lives in `telegram_pending_disambiguation`: `action_type = "setup-step"`, `initiator_user_id`, and JSON `{ step, alertTypes, target }`, with `adoptionToken` for attributed sessions. TTL is 5 min. Fresh slash commands escape the wizard except awaiting-ticker `/TICKER` replies. Mutating `/start` and subscription links replace pending state in their own atomic mutation and single stored intent; read-only escapes clear it first.
 
-**Attribution contract (2026-09-21).** Every wizard transition carries the adoption token forward, so `first_setup_complete` and `first_follow` are recorded under the same campaign and placement dimensions as the session's `bot_start` row. A branch that rebuilds the state object without the token would silently reattribute a campaign completion to organic traffic, which is why each transition spreads the previous state rather than re-listing its fields. Only a token whose destination is `setup` is persisted; anything else resolves to `null` and the completion is genuinely organic.
+**Attribution.** Setup-destination tokens persist through pending state and stored intents into `bot_start`, `setup_complete` and `first_follow` campaign/placement dimensions. `pw1_landing_setup` opens the recommended DEWS+depeg `usd-top25` confirmation directly; `pw1_landing_hero` keeps the branch chooser. Generic `sub_*` links remain organic/unknown.
 
 ### Supported Commands
 
@@ -241,7 +241,7 @@ Supported payload schemes (lowercase, no spaces, max 64 characters, characters `
 | `setup` | Opens the standard two-branch setup wizard. |
 | `sample` | Alias entrypoint for `/sample`: in a private chat it runs the synthetic USDC DEWS preview (same message as `/sample`); in a group it falls back to the read-only start reply and does not run the preview. Surfaced by the Mini App Home "Send me a sample alert" deep link. |
 | `app` / `home` | Sends a Mini App launch nudge. Private chats receive a Web App button for the home panel; groups receive a DM link because Telegram rejects `web_app` buttons outside private chats. |
-| `pw1_landing_<placement>` (adoption/CTA campaign tokens with a `setup` destination, e.g. `pw1_landing_hero`) | Routes separately through `parseTelegramAdoptionToken`, opens the standard setup wizard, and records the aggregate adoption attribution for that landing placement. Setup-destination adoption links are classified as mutating; tokens whose destination is not `setup` are not matched here. |
+| `pw1_landing_<placement>` (allowlisted setup-destination tokens) | Records landing placement attribution; `pw1_landing_setup` preloads recommended confirmation, while `pw1_landing_hero` opens the branch chooser. Mutating, with token retained through confirmation; non-setup tokens are not matched. |
 | Unknown or malformed | Falls back to the standard `/start` reply; the user never sees an error. |
 
 Telegram only delivers `?start=` deep links in private chats, but the dispatcher still defensively checks `chat.type === "private"` before running mutating `sub_*` payloads.

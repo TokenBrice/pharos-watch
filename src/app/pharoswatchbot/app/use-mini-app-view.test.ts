@@ -1,6 +1,47 @@
-import { describe, expect, it } from "vitest";
-import { initialViewFromStartParam, relaunchPayloadForView, type ViewKey } from "./use-mini-app-view";
+// @vitest-environment jsdom
+
+import { act, cleanup, renderHook } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { initialViewFromStartParam, relaunchPayloadForView, useMiniAppView, type ViewKey } from "./use-mini-app-view";
 import type { CoinInsightTarget } from "./types";
+import { baseState } from "./mini-app-test-fixtures";
+
+afterEach(() => { cleanup(); vi.useRealTimers(); });
+
+describe("current relaunch context", () => {
+  it("relaunches the newly focused coin after the highlight expires, not the launch coin", () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useMiniAppView(baseState));
+    act(() => result.current.initializeFromStartParam("coin_usdt-tether"));
+    act(() => result.current.navigateToCoin("usdc-circle"));
+    act(() => vi.advanceTimersByTime(2_000));
+    expect(result.current.highlightedCoinId).toBeNull();
+    expect(result.current.visibleCoinTarget).toBe("usdt-tether");
+    expect(relaunchPayloadForView(result.current.view, result.current.coinInsightTarget, result.current.currentCoinTarget)).toBe("coin_usdc-circle");
+
+    act(() => result.current.activateView("presets"));
+    act(() => result.current.activateView("watchlist"));
+    expect(result.current.visibleCoinTarget).toBeNull();
+    expect(result.current.currentCoinTarget).toBeNull();
+    expect(relaunchPayloadForView(result.current.view, null, result.current.currentCoinTarget)).toBe("watchlist");
+  });
+
+  it.each(["why", "coverage"] as const)("prioritizes %s insight and clears coin context through native navigation", (kind) => {
+    const { result } = renderHook(() => useMiniAppView(baseState));
+    act(() => result.current.initializeFromStartParam("coin_usdc-circle"));
+    act(() => result.current.setCoinInsightTarget({ kind, coinId: "usdt-tether" }));
+    expect(relaunchPayloadForView(result.current.view, result.current.coinInsightTarget, result.current.currentCoinTarget)).toBe(`${kind}_usdt-tether`);
+    act(() => result.current.handleBack());
+    expect(relaunchPayloadForView(result.current.view, result.current.coinInsightTarget, result.current.currentCoinTarget)).toBe("coin_usdc-circle");
+    act(() => result.current.showSettings());
+    act(() => result.current.activateView("watchlist"));
+    expect(result.current.currentCoinTarget).toBeNull();
+    act(() => result.current.navigateToCoin("usdc-circle"));
+    act(() => result.current.handleBack());
+    expect(result.current.currentCoinTarget).toBeNull();
+  });
+});
+
 
 describe("relaunchPayloadForView", () => {
   it.each<[ViewKey, CoinInsightTarget | null, string | null, string]>([

@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { formatDecimal } from "@shared/lib/format";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 import type { TelegramWatcherHistoryPoint } from "@shared/types/status";
+import { isTelegramPulseAvailable } from "./live-watcher-count";
 
 const COMPACT_NUMBER_FORMATTER = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -164,9 +165,11 @@ function PanelLoading() {
  * no per-chat anything (privacy contract).
  */
 export function InstrumentPanel() {
-  const { data, isLoading, isError } = useTelegramPulse();
-  const watchers = useCountUp(data?.activeWatchers ?? null);
-  const follows = useCountUp(data?.coinSubscriptions ?? null);
+  const query = useTelegramPulse();
+  const { data, isLoading } = query;
+  const available = isTelegramPulseAvailable(query);
+  const watchers = useCountUp(available ? data?.activeWatchers ?? null : null);
+  const follows = useCountUp(available ? data?.coinSubscriptions ?? null : null);
   const rankingUnavailable = data?.quality?.unavailableFields.includes("topCoins") ?? false;
   const historyUnavailable = data?.quality?.unavailableFields.includes("watcherHistory") ?? false;
 
@@ -183,7 +186,7 @@ export function InstrumentPanel() {
               nothing operational, nothing individual.
             </p>
           </div>
-          {data ? (
+          {available && data ? (
             <span
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
@@ -199,7 +202,7 @@ export function InstrumentPanel() {
 
         {isLoading ? <PanelLoading /> : null}
 
-        {!isLoading && (!data || isError) ? (
+        {!isLoading && !available ? (
           <div role="status" aria-label="Telegram adoption metrics unavailable" aria-live="polite" aria-busy="false" className="mt-10">
             <p className="border-t border-border/55 pt-6 text-sm text-muted-foreground">
               Public Telegram adoption metrics are temporarily unavailable. They retry automatically; bot links and
@@ -208,7 +211,7 @@ export function InstrumentPanel() {
           </div>
         ) : null}
 
-        {!isLoading && data ? (
+        {available && data ? (
           <>
             {data.quality?.status === "partial" ? (
               <p className="mt-6 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:text-amber-200">

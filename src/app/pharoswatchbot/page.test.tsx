@@ -12,10 +12,8 @@ import {
 } from "./telegram-content";
 import {
   PHAROSWATCHBOT_BOT_URL,
-  RECOMMENDED_SETUP,
   RECOMMENDED_SETUP_COMMAND,
   RECOMMENDED_SETUP_DEEP_LINK,
-  RECOMMENDED_SETUP_START_PAYLOAD,
 } from "@/lib/telegram-route-constants";
 import {
   TELEGRAM_MINI_APP_PAYLOAD_PATTERN,
@@ -33,6 +31,7 @@ import {
 } from "@shared/lib/telegram-alert-families";
 import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
 import { PENDING_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
+import { telegramAdoptionEntryForPlacement, telegramAdoptionSource } from "@shared/lib/telegram-adoption-analytics";
 
 vi.mock("next/image", () => ({
   default: ({
@@ -133,14 +132,12 @@ describe("PharosWatchBotPage", () => {
     const startPayload = url.searchParams.get("start");
 
     expect(`${url.origin}${url.pathname}`).toBe(PHAROSWATCHBOT_BOT_URL);
-    expect(startPayload).toBe("sub_dews-depeg_usd-top25");
-    expect(startPayload).toBe(RECOMMENDED_SETUP_START_PAYLOAD);
-    expect(RECOMMENDED_SETUP_START_PAYLOAD).toBe(
-      `sub_${RECOMMENDED_SETUP.alertTypes.join("-")}_${RECOMMENDED_SETUP.presetId}`,
-    );
+    const setupEntry = telegramAdoptionEntryForPlacement("setup");
+    expect(startPayload).toBe(setupEntry.token);
+    expect(telegramAdoptionSource(startPayload)).toEqual({ campaign: "landing", placement: "setup" });
     expect(RECOMMENDED_SETUP_COMMAND).toBe("/subscribe dews,depeg usd-top25");
-    expect(RECOMMENDED_SETUP_START_PAYLOAD.length).toBeLessThanOrEqual(TELEGRAM_START_PAYLOAD_MAX_LENGTH);
-    expect(TELEGRAM_MINI_APP_PAYLOAD_PATTERN.test(RECOMMENDED_SETUP_START_PAYLOAD)).toBe(true);
+    expect(startPayload?.length).toBeLessThanOrEqual(TELEGRAM_START_PAYLOAD_MAX_LENGTH);
+    expect(TELEGRAM_MINI_APP_PAYLOAD_PATTERN.test(startPayload ?? "")).toBe(true);
   });
 
   it("renders the night-watch experience, the un-collapsed reference, and JSON-LD", () => {
@@ -165,6 +162,8 @@ describe("PharosWatchBotPage", () => {
 
     // The two-minute setup keeps its anchor and its recommended command.
     expect(screen.getByRole("heading", { name: "Start in two minutes" })).toBeTruthy();
+    const recommendedLink = screen.getByRole("link", { name: /Use recommended setup/i });
+    expect(recommendedLink.getAttribute("href")).toBe(RECOMMENDED_SETUP_DEEP_LINK);
     expect(screen.getByText(/DEWS and depeg alerts for the current top 25 USD stablecoins/i)).toBeTruthy();
     const commandStrings = screen.getAllByText(RECOMMENDED_SETUP_COMMAND).filter((node) => node.tagName === "CODE");
     expect(commandStrings.length).toBeGreaterThan(0);

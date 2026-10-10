@@ -92,6 +92,10 @@ function QuietHoursPicker({ state, canMutate, isMutating, pendingOperation, onMu
   const [draftEndOverride, setDraftEnd] = useState<number | null>(null);
   const draftStart = draftStartOverride ?? currentStart ?? 22;
   const draftEnd = draftEndOverride ?? currentEnd ?? 7;
+  if (draftStartOverride != null && draftStartOverride === currentStart) setDraftStart(null);
+  if (draftEndOverride != null && draftEndOverride === currentEnd) setDraftEnd(null);
+  const hasUnsavedDraft = (draftStartOverride != null && draftStartOverride !== currentStart)
+    || (draftEndOverride != null && draftEndOverride !== currentEnd);
   const timezoneLabel = formatQuietHoursTimezone(state.subscriber.quietHours.timezone);
 
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
@@ -105,6 +109,7 @@ function QuietHoursPicker({ state, canMutate, isMutating, pendingOperation, onMu
     <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
       <h2 className="text-sm font-semibold text-foreground">Quiet hours</h2>
       <p className="mt-1 text-xs text-muted-foreground">{summary}</p>
+      {hasUnsavedDraft ? <p className="mt-1 text-xs text-muted-foreground">Unsaved quiet-hour changes.</p> : null}
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {QUIET_HOUR_FIELDS.map((field) => (
           <QuietHourSelect
@@ -277,18 +282,19 @@ function TimezonePicker({ state, canMutate, isMutating, pendingOperation, onMuta
   pendingOperation: TelegramMiniAppOperation | null;
   onMutate: (operation: TelegramMiniAppOperation) => void;
 }) {
-  const current = state.subscriber.quietHours.timezone ?? "UTC";
+  const persistedTimezone = state.subscriber.quietHours.timezone;
+  const current = persistedTimezone ?? "UTC";
   const allTimezones = useMemo(() => availableTimezones(), []);
   const allTimezoneSet = useMemo(() => new Set(allTimezones), [allTimezones]);
   const [detectedTimezone, setDetectedTimezone] = useState<string | null>(null);
   const [timezoneUi, setTimezoneUi] = useState({
-    confirmed: current,
+    confirmed: persistedTimezone,
     recent: [] as string[],
     search: current,
   });
-  if (timezoneUi.confirmed !== current) {
+  if (timezoneUi.confirmed !== persistedTimezone) {
     setTimezoneUi({
-      confirmed: current,
+      confirmed: persistedTimezone,
       recent: [current, ...timezoneUi.recent.filter((zone) => zone !== current)].slice(0, 3),
       search: current,
     });
@@ -309,12 +315,12 @@ function TimezonePicker({ state, canMutate, isMutating, pendingOperation, onMuta
       if (!zone || (zone !== current && !allTimezoneSet.has(zone)) || options.some((option) => option.zone === zone)) return;
       options.push({ zone, context });
     };
-    add(current, "Current");
+    add(current, persistedTimezone == null ? "Fallback" : "Current");
     add(detectedTimezone, "Detected");
     for (const zone of timezoneUi.recent) add(zone, "Recent");
     for (const zone of COMMON_TIMEZONES) add(zone, "Common");
     return options;
-  }, [allTimezoneSet, current, detectedTimezone, timezoneUi.recent]);
+  }, [allTimezoneSet, current, detectedTimezone, persistedTimezone, timezoneUi.recent]);
 
   const searchedTimezone = timezoneUi.search.trim();
   const searchIsValid = searchedTimezone === current || allTimezoneSet.has(searchedTimezone);
@@ -370,7 +376,7 @@ function TimezonePicker({ state, canMutate, isMutating, pendingOperation, onMuta
           ) : null}
           <div className="mt-3">
             <MiniButton
-              disabled={controlsDisabled || !searchIsValid || searchedTimezone === current}
+              disabled={controlsDisabled || !searchIsValid || searchedTimezone === persistedTimezone}
               loading={pendingOperation?.kind === "set-timezone" && pendingOperation.timezone === searchedTimezone}
               onClick={() => onMutate({ kind: "set-timezone", timezone: searchedTimezone })}
             >
@@ -379,14 +385,25 @@ function TimezonePicker({ state, canMutate, isMutating, pendingOperation, onMuta
           </div>
         </div>
       </details>
+      {persistedTimezone == null ? (
+        <div className="mt-3">
+          <MiniButton
+            disabled={controlsDisabled}
+            loading={pendingOperation?.kind === "set-timezone" && pendingOperation.timezone === "UTC"}
+            onClick={() => onMutate({ kind: "set-timezone", timezone: "UTC" })}
+          >
+            Confirm UTC
+          </MiniButton>
+        </div>
+      ) : null}
       <div className="mt-3">
         <MiniButton
           variant="secondary"
-          disabled={controlsDisabled || current === "UTC"}
+          disabled={controlsDisabled || persistedTimezone == null}
           loading={pendingOperation?.kind === "set-timezone" && pendingOperation.timezone == null}
           onClick={() => onMutate({ kind: "set-timezone", timezone: null })}
         >
-          Use UTC (clear)
+          Clear timezone (UTC fallback)
         </MiniButton>
       </div>
     </section>

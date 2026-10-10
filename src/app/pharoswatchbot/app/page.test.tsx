@@ -412,6 +412,32 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(impactOccurred).toHaveBeenCalledWith("light");
   });
 
+  it("emits the newly focused suggestion coin in stale-auth relaunch and clears it on leaving Watchlist", async () => {
+    const openTelegramLink = vi.fn();
+    const staleState: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
+      catalog: {
+        ...baseState.catalog,
+        searchableCoins: [...baseState.catalog.searchableCoins, { stablecoinId: "usdc-circle", symbol: "USDC", name: "USD Coin", peg: "USD" }],
+      },
+    };
+    await renderReadyMiniApp({
+      state: staleState,
+      launch: { initDataUnsafe: { start_param: "coin_usdt-tether" }, openTelegramLink },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Go to followed USDC" }));
+    fireEvent.click(screen.getByRole("button", { name: "Relaunch and keep this panel" }));
+    expect(openTelegramLink).toHaveBeenLastCalledWith("https://t.me/PharosWatchBot?startapp=coin_usdc-circle");
+    fireEvent.click(screen.getByRole("button", { name: "Coverage USDC" }));
+    fireEvent.click(screen.getByRole("button", { name: "Relaunch and keep this panel" }));
+    expect(openTelegramLink).toHaveBeenLastCalledWith("https://t.me/PharosWatchBot?startapp=coverage_usdc-circle");
+    fireEvent.click(screen.getByRole("tab", { name: "home" }));
+    fireEvent.click(screen.getByRole("tab", { name: "watchlist" }));
+    fireEvent.click(screen.getByRole("button", { name: "Relaunch and keep this panel" }));
+    expect(openTelegramLink).toHaveBeenLastCalledWith("https://t.me/PharosWatchBot?startapp=watchlist");
+  });
+
   it("hides the stale-auth relaunch affordance without openTelegramLink", async () => {
     const staleState: TelegramMiniAppState = {
       ...baseState,
@@ -534,6 +560,55 @@ describe("PharosWatchBotMiniAppPage", () => {
     cleanup();
     await renderReadyMiniApp();
     expect(screen.queryByRole("button", { name: "Send me a sample alert" })).toBeNull();
+  });
+
+  it.each<[string, number | null, string | null]>([
+    ["future", 1_800_000_001, "Clear snooze"],
+    ["exactly expired", 1_800_000_000, null],
+    ["past", 1_799_999_999, null],
+    ["unset", null, null],
+    ["pause sentinel", 4_102_444_800, "Resume alerts"],
+  ])("uses the shared clock for %s snooze in Home and native MainButton", async (_scenario, snoozeUntilTs, label) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    const mainButton = { show: vi.fn(), hide: vi.fn(), setParams: vi.fn(), onClick: vi.fn(), offClick: vi.fn() };
+    const fetchMock = renderMiniApp({
+      state: { ...baseState, subscriber: { ...baseState.subscriber, snoozeUntilTs } },
+      launch: { MainButton: mainButton },
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(20); });
+    expect(screen.getByRole("tab", { name: "home" })).toBeTruthy();
+    if (label != null) {
+      expect(screen.getByRole("button", { name: label })).toBeTruthy();
+      expect(mainButton.setParams).toHaveBeenCalledWith(expect.objectContaining({ text: label }));
+      expect(mainButton.show).toHaveBeenCalled();
+    } else {
+      expect(screen.getByRole("button", { name: "Snooze alerts for 1h" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Clear snooze" })).toBeNull();
+      expect(mainButton.show).not.toHaveBeenCalled();
+      expect(mainButton.onClick).not.toHaveBeenCalled();
+    }
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("restores open-session snooze choices and detaches native MainButton exactly at expiry without a POST", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    const mainButton = { show: vi.fn(), hide: vi.fn(), setParams: vi.fn(), onClick: vi.fn(), offClick: vi.fn() };
+    const fetchMock = renderMiniApp({
+      state: { ...baseState, subscriber: { ...baseState.subscriber, snoozeUntilTs: 1_800_000_002 } },
+      launch: { MainButton: mainButton },
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(20); });
+    expect(screen.getByRole("button", { name: "Clear snooze" })).toBeTruthy();
+    const attachedHandler = mainButton.onClick.mock.calls[mainButton.onClick.mock.calls.length - 1]?.[0];
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_980); });
+    expect(screen.queryByRole("button", { name: "Clear snooze" })).toBeNull();
+    expect(screen.queryByText(/Quiet until/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Snooze alerts for 1h" })).toBeTruthy();
+    expect(mainButton.offClick).toHaveBeenCalledWith(attachedHandler);
+    expect(mainButton.hide).toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it("does not stack native MainButton listeners across panel-state transitions", async () => {

@@ -1,11 +1,16 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, act, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { useCountUp } from "@/hooks/use-count-up";
+import { installMatchMediaMock } from "@/test-utils/frontend";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InstrumentPanel } from "./instrument-panel";
 import { useTelegramPulse } from "@/hooks/api-hooks";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 import type { TelegramPulse } from "@shared/types/status";
+import { LiveWatcherCount } from "./live-watcher-count";
+import { NightShiftMetric } from "./night-shift-metric";
 
 vi.mock("@/hooks/api-hooks", () => ({
   useTelegramPulse: vi.fn(),
@@ -21,10 +26,10 @@ vi.mock("@/hooks/use-chart-container-ready", () => ({
 }));
 
 vi.mock("@/hooks/use-count-up", () => ({
-  useCountUp: (target: number | null | undefined) => ({
+  useCountUp: vi.fn((target: number | null | undefined) => ({
     value: target ?? null,
     display: target == null ? null : target.toLocaleString("en-US"),
-  }),
+  })),
 }));
 
 const mockUseTelegramPulse = vi.mocked(useTelegramPulse);
@@ -177,6 +182,59 @@ describe("InstrumentPanel", () => {
     expect(screen.getByText("5,621")).toBeTruthy();
     expect(screen.queryByText(/explicit.*preset-implied/i)).toBeNull();
     expect(screen.queryByText(/D1 unavailable/i)).toBeNull();
+  });
+
+  it("withdraws every live placement on retained-data refresh failure and recovers", () => {
+    mockPulse(pulse);
+    const { rerender } = render(<><NightShiftMetric /><LiveWatcherCount /><InstrumentPanel /></>);
+    expect(screen.getAllByText("1,842").length).toBeGreaterThan(2);
+
+    mockPulse(pulse, { isError: true });
+    rerender(<><NightShiftMetric /><LiveWatcherCount /><InstrumentPanel /></>);
+    expect(screen.getByRole("status", { name: "Telegram adoption metrics unavailable" })).toBeTruthy();
+    expect(screen.queryByText("Complete telemetry")).toBeNull();
+    expect(screen.queryByText("Partial telemetry")).toBeNull();
+    expect(screen.queryAllByText("1,842")).toHaveLength(0);
+    expect(screen.queryByText("5,621")).toBeNull();
+    expect(screen.queryByText("active watchers")).toBeNull();
+    expect(screen.queryByRole("figure", { name: /lifecycle chart/i })).toBeNull();
+
+    mockPulse({ ...pulse, activeWatchers: 2_000, watcherHistory: [] });
+    rerender(<><NightShiftMetric /><LiveWatcherCount /><InstrumentPanel /></>);
+    expect(screen.queryByRole("status", { name: "Telegram adoption metrics unavailable" })).toBeNull();
+    expect(screen.getByText("Complete telemetry")).toBeTruthy();
+    expect(screen.getAllByText("2,000")).toHaveLength(3);
+  });
+
+  it("clears retained count-up values after a real QueryClient refetch error", async () => {
+    installMatchMediaMock(true);
+    const actual = await vi.importActual<{ useCountUp: typeof useCountUp }>("@/hooks/use-count-up");
+    vi.mocked(useCountUp).mockImplementation(actual.useCountUp);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, gcTime: Infinity } } });
+    const queryKey = ["pulse-retained-error"];
+    client.setQueryData(queryKey, pulse);
+    mockUseTelegramPulse.mockImplementation(() => useQuery({ queryKey, queryFn: async () => pulse }) as ReturnType<typeof useTelegramPulse>);
+    const view = render(
+      <QueryClientProvider client={client}>
+        <NightShiftMetric /><LiveWatcherCount /><InstrumentPanel />
+      </QueryClientProvider>,
+    );
+    expect(screen.getAllByText("1,842").length).toBeGreaterThan(2);
+    await act(async () => {
+      await client.fetchQuery({ queryKey, staleTime: 0, queryFn: async () => { throw new Error("Refresh failed"); } }).catch(() => {});
+    });
+    expect(client.getQueryData(queryKey)).toEqual(pulse);
+    expect(client.getQueryState(queryKey)?.status).toBe("error");
+    await waitFor(() => expect(screen.getByRole("status", { name: "Telegram adoption metrics unavailable" })).toBeTruthy());
+    expect(screen.queryByText("Complete telemetry")).toBeNull();
+    expect(screen.queryAllByText("1,842")).toHaveLength(0);
+    await act(async () => {
+      await client.fetchQuery({ queryKey, staleTime: 0, queryFn: async () => ({ ...pulse, activeWatchers: 2_000, watcherHistory: [] }) });
+    });
+    await waitFor(() => expect(screen.getAllByText("2,000")).toHaveLength(3));
+    expect(screen.getByText("Complete telemetry")).toBeTruthy();
+    view.unmount();
+    client.clear();
   });
 
   it("renders a loading state and an honest unavailable state", () => {

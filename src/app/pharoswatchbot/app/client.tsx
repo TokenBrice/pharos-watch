@@ -17,7 +17,7 @@ import { MiniAppTabs } from "./components/MiniAppTabs";
 import { MiniAppPanelRouter } from "./components/MiniAppPanelRouter";
 import { MiniAppSessionStatus, type MiniAppSessionStatus as MiniAppSessionStatusValue } from "./components/MiniAppSessionStatus";
 import { ALERT_LABELS, RECOMMENDED_OPERATION } from "./constants";
-import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
+import { isPausedSentinel, isTelegramSnoozeActive } from "@shared/lib/telegram-delivery-policy";
 import {
   isMiniAppVersionMismatch,
   postMiniAppSnapshot,
@@ -35,19 +35,21 @@ const VISIBILITY_REFRESH_THRESHOLD_MS = 10 * 60 * 1000;
 export function PharosWatchBotMiniAppClient() {
   const [state, setState] = useState<TelegramMiniAppState | null>(null);
   const [forgotten, setForgotten] = useState(false);
+  const [nowSec, setNowSec] = useState(0);
   const terminalRef = useRef(false);
   const {
     view,
     coinInsightTarget,
     highlightedCoinId,
     visibleCoinTarget,
+    currentCoinTarget,
     backButtonVisible,
     initializeFromStartParam,
     handleBack: handleTelegramBack,
     showSettings: handleTelegramSettings,
     activateView: setActiveView,
     setCoinInsightTarget,
-    setCoinTarget,
+    navigateToCoin,
   } = useMiniAppView(state);
   // Session network status. The bridge hook owns the Telegram probe lifecycle; this state only
   // tracks the session fetch + the "missing launch data" terminal error after the bridge resolves.
@@ -126,6 +128,22 @@ export function PharosWatchBotMiniAppClient() {
     forgetMe: handleForgetMe,
     setMessage,
   } = mutations;
+
+  useEffect(() => {
+    let timer: number | undefined;
+    const updateClock = () => {
+      const nowMs = Date.now();
+      const currentSec = Math.floor(nowMs / 1000);
+      setNowSec(currentSec);
+      const deadlines = [displayState?.subscriber.snoozeUntilTs, ...(displayState?.subscriptions.map((coin) => coin.snoozeUntilTs) ?? [])]
+        .filter((ts): ts is number => ts != null && !isPausedSentinel(ts) && ts > currentSec);
+      if (deadlines.length > 0) {
+        timer = window.setTimeout(updateClock, Math.min(Math.min(...deadlines) * 1000 - nowMs, 2_147_483_647));
+      }
+    };
+    updateClock();
+    return () => window.clearTimeout(timer);
+  }, [displayState]);
 
   const loadSession = useCallback(async (nextInitData: string, options: { clearMessage?: boolean } = {}) => {
     if (terminalRef.current) return;
@@ -249,12 +267,12 @@ export function PharosWatchBotMiniAppClient() {
   // Undefined when `openTelegramLink` is unavailable so the CTA stays hidden.
   const handleStaleAuthRelaunch = useMemo(() => {
     if (!webApp?.openTelegramLink) return undefined;
-    const payload = relaunchPayloadForView(view, coinInsightTarget, visibleCoinTarget);
+    const payload = relaunchPayloadForView(view, coinInsightTarget, currentCoinTarget);
     return () => {
       webApp.HapticFeedback?.impactOccurred?.("light");
       webApp.openTelegramLink?.(`${TELEGRAM_BOT_URL}?startapp=${payload}`);
     };
-  }, [coinInsightTarget, view, visibleCoinTarget, webApp]);
+  }, [coinInsightTarget, currentCoinTarget, view, webApp]);
 
   // MainButton — derive `text` and `handler` from the current view/state and
   // delegate the Telegram lifecycle (attach/detach, setParams, show/hide) to
@@ -276,13 +294,13 @@ export function PharosWatchBotMiniAppClient() {
       if (displayState && !displayState.subscriber.exists) {
         return { text: "Use recommended setup", handler: () => runMainButtonMutation(RECOMMENDED_OPERATION) };
       }
-      if (displayState?.subscriber.snoozeUntilTs != null) {
+      if (isTelegramSnoozeActive(displayState?.subscriber.snoozeUntilTs, nowSec) && displayState) {
         const label = isPausedSentinel(displayState.subscriber.snoozeUntilTs) ? "Resume alerts" : "Clear snooze";
         return { text: label, handler: () => runMainButtonMutation({ kind: "clear-snooze" }) };
       }
     }
     return { text: null, handler: null };
-  }, [canMutate, displayState, mutationControlsDisabled, runMainButtonMutation, view]);
+  }, [canMutate, displayState, mutationControlsDisabled, nowSec, runMainButtonMutation, view]);
   useTelegramMainButton({
     webApp,
     text: mainButtonText,
@@ -298,7 +316,6 @@ export function PharosWatchBotMiniAppClient() {
     ? `@${state.viewer.username}`
     : state?.viewer.firstName ?? "PharosWatchBot";
   const showStaleAuthBanner = displayState?.viewer.mutationBlockReason === "stale-auth";
-  const nowSec = Math.floor(Date.now() / 1000);
 
   const openPrivacy = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (webApp?.openLink) {
@@ -384,7 +401,7 @@ export function PharosWatchBotMiniAppClient() {
                   nowSec,
                   highlightedCoinId,
                   targetCoinId: visibleCoinTarget,
-                  onNavigateToCoin: setCoinTarget,
+                  onNavigateToCoin: navigateToCoin,
                 }}
                 presets={{
                   state: displayState,

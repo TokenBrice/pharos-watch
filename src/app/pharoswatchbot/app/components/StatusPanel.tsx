@@ -2,7 +2,7 @@
 
 import { Check, Clock3, Home, Send, ShieldAlert } from "lucide-react";
 import { RECOMMENDED_OPERATION, SNOOZE_DURATION_TOKENS } from "../constants";
-import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
+import { isPausedSentinel, isTelegramSnoozeActive } from "@shared/lib/telegram-delivery-policy";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { formatQuietHoursRange, formatSnoozePill, formatTime } from "../format";
 import type {
@@ -62,7 +62,7 @@ function failureCopy(failureClass: string | null): { title: string; body: string
 export function StatusPanel({ state, nowSec, canMutate, isMutating, pendingOperation, onMutate, homeHeadline, homeScreenStatus, onAddToHomeScreen, onSendSample }: StatusPanelProps) {
   const snoozeUntil = state.subscriber.snoozeUntilTs;
   const paused = isPausedSentinel(snoozeUntil);
-  const snoozeActive = paused || (snoozeUntil != null && snoozeUntil > nowSec);
+  const snoozeActive = isTelegramSnoozeActive(snoozeUntil, nowSec);
   const hasCoverage = state.subscriber.exists && (
     TELEGRAM_ALERT_TYPES.some((type) => state.subscriber.globalAlerts[type])
     || state.subscriptions.some((coin) => TELEGRAM_ALERT_TYPES.some((type) => coin.alertTypes[type]))

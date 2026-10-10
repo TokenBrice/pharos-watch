@@ -157,9 +157,9 @@ Every successful session read or mutation also records the response `stateRevisi
 
 Watcher status uses enabled global/direct/preset families, not row existence: retained empty subscribers have no enabled alerts. Indefinite pause and timed snooze suppress the active heading; timed snoozes expire at the shared client `nowSec` deadline. Delivery history remains visible independently.
 
-Suggested-coin actions remain useful when mutations are unavailable. A followed suggestion focuses and briefly highlights its existing watchlist card; an unfollowed suggestion populates and focuses search. The transient highlight uses reduced-motion-safe scrolling and clears deterministically.
+Suggested-coin actions work read-only: followed suggestions focus/highlight their card; unfollowed ones focus search. Relaunch uses current coin/insight context after the transient highlight ends; leaving Watchlist clears it.
 
-The timezone control keeps the primary select short: current, browser-detected, session-recent, and common zones. An accessible **Search all timezones** disclosure retains the complete runtime-supported IANA list with exact-value validation. Recent zones live only in React session state and update after a confirmed server snapshot; they are not persisted to browser storage and a failed mutation cannot promote a draft choice.
+Timezone choices are current, detected, session-recent and common, with full IANA search. Null uses UTC without confirmation; **Confirm UTC** persists `"UTC"`, while **Clear timezone** persists null. Recents follow confirmed snapshots only. Acknowledged quiet-hour drafts clear so later snapshots own the selects; genuinely unsaved edits remain labelled.
 
 ## Effective Alert Source
 
@@ -282,7 +282,7 @@ BotFather-owned release checklist:
 - Adoption-metric loading and unavailable states are named `status` live regions, retaining polite announcements and explicit busy state.
 - Presents the bot around low-noise growth paths: the recommended `/subscribe dews,depeg usd-top25` default, preset cohorts, group-addressed commands, reasoned safety-grade alerts, the private personalized Daily Recap (`/recap`, `/recap on|off`, and `/recap time <hour>`), quiet hours, inline snooze, and the overflow delivery queue
 - Documents Daily Recap in the command reference, Mini App capability list, and FAQ, including its private-chat scope, confirmed-timezone requirement, material-change suppression, and separation from the market-wide Daily Digest
-- The recommended setup deep link preloads a Telegram confirmation for `dews,depeg usd-top25`; it does not silently subscribe the user before they confirm in Telegram.
+- The recommended `pw1_landing_setup` link preloads the `dews,depeg usd-top25` confirmation and preserves landing/setup attribution through first follow; no extra branch choice or silent subscribe.
 - Renders a visible FAQ section with matching `FAQPage` JSON-LD, plus `HowTo` and `SoftwareApplication` JSON-LD for the bot setup flow
 - The command reference is filterable client-side and fully visible (no collapsed defaults); alert examples remain the verbatim `shared/lib/telegram-alert-samples.ts` text with plain-language family framing.
 
@@ -296,7 +296,7 @@ Publication is ordered so the heavy-section reuse marker can never claim work th
 
 `quality.status` is `partial` when a non-critical public telemetry loader failed. Public copy stays generic and never includes raw D1 or provider errors; Access-gated `/api/status` keeps field-level Telegram telemetry diagnostics for operators. Unavailable telemetry takes precedence over privacy suppression: if `pendingDeliveries` cannot be loaded, the response returns `pendingDeliveries: null` and lists `pendingDeliveries` in `quality.unavailableFields`, not in `privacy.suppressedFields`.
 
-The public board checks `quality.unavailableFields` before ranking/history rows. Failed `topCoins` or `watcherHistory` reads show a field-specific unavailable state; empty-ranking and not-yet-recorded-history placeholders require successful reads.
+All live placements withdraw counts and the success badge on refresh failure, even with retained query/count-up data; a successful refresh restores them. Rankings/history check `quality.unavailableFields` before rows; empty placeholders require successful reads.
 
 Freshness is split deliberately:
 

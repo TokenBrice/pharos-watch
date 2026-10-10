@@ -270,14 +270,20 @@ export async function sendWizardIntro(
     });
     return;
   }
+  const adoptionEntry = parseTelegramAdoptionToken(options.adoptionToken);
+  const recommended = adoptionEntry?.placement === "setup";
+  const preview = recommended ? await previewPresetCoins(db, RECOMMENDED_PRESET_ID) : null;
+  if (recommended && preview == null) {
+    await options.beforeIrreversibleEffect?.("setup-reply");
+    await sendAuditedTelegramReply(db, chatId, buildPresetUnavailableMessage(), botToken, { actionDetail: "setup" });
+    return;
+  }
   const state: SetupWizardState = {
-    step: "branch",
-    alertTypes: [],
-    target: null,
+    step: recommended ? "confirm-recommended" : "branch",
+    alertTypes: recommended ? [...RECOMMENDED_ALERT_TYPES] : [],
+    target: recommended ? { kind: "preset", presetId: RECOMMENDED_PRESET_ID } : null,
     initiatorUserId,
-    adoptionToken: parseTelegramAdoptionToken(options.adoptionToken)?.destination === "setup"
-      ? options.adoptionToken
-      : null,
+    adoptionToken: adoptionEntry?.destination === "setup" ? adoptionEntry.token : null,
   };
   await options.planIntent?.(createTelegramWebhookIntent("command:start", {
     stage: "setup-intro",
@@ -295,9 +301,11 @@ export async function sendWizardIntro(
   }
   if (!options.wasMutationApplied && operationStatements) options.confirmAtomicMutationApplied?.();
   await options.beforeIrreversibleEffect?.("setup-reply");
-  await sendAuditedTelegramReply(db, chatId, WIZARD_INTRO_MESSAGE, botToken, {
+  await sendAuditedTelegramReply(db, chatId, preview
+    ? escapeHtml(`You'll get DEWS and Depeg alerts for these ${preview.count} coins:\n${preview.symbolPreview}`)
+    : WIZARD_INTRO_MESSAGE, botToken, {
     actionDetail: "setup",
-    replyMarkup: buildBranchKeyboard(options),
+    replyMarkup: recommended ? buildConfirmKeyboard() : buildBranchKeyboard(options),
   });
 }
 

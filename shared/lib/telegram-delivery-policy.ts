@@ -169,6 +169,11 @@ export function isPausedSentinel(ts: number | null | undefined): boolean {
   return ts === PAUSE_SENTINEL_TS;
 }
 
+/** Chat pause is indefinite; timed snoozes stop suppressing at their deadline. */
+export function isTelegramSnoozeActive(ts: number | null | undefined, nowSec: number): boolean {
+  return isPausedSentinel(ts) || (ts != null && ts > nowSec);
+}
+
 /**
  * Reviewed calibration inputs that exist only in the synthetic load model.
  * Production-enforced values above are imported separately by the harness.

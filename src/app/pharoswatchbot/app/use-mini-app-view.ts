@@ -62,6 +62,7 @@ export function useMiniAppView(state: TelegramMiniAppState | null) {
   const [view, setView] = useState<ViewKey>("home");
   const [coinTarget, setCoinTarget] = useState<string | null>(null);
   const [visibleCoinTarget, setVisibleCoinTarget] = useState<string | null>(null);
+  const [currentCoinTarget, setCurrentCoinTarget] = useState<string | null>(null);
   const [coinInsightTarget, setCoinInsightTarget] = useState<CoinInsightTarget | null>(null);
   const [highlightedCoinId, setHighlightedCoinId] = useState<string | null>(null);
   const initializedRef = useRef(false);
@@ -73,13 +74,10 @@ export function useMiniAppView(state: TelegramMiniAppState | null) {
     setView(initial.view);
     setCoinTarget(initial.coinId);
     setVisibleCoinTarget(initial.insight ? null : initial.coinId);
+    setCurrentCoinTarget(initial.coinId);
     setCoinInsightTarget(initial.insight);
   }, []);
 
-  const handleBack = useCallback(() => {
-    if (coinInsightTarget) setCoinInsightTarget(null);
-    else setView("home");
-  }, [coinInsightTarget]);
 
   const activateView = useCallback((key: ViewKey) => {
     setView(key);
@@ -87,7 +85,21 @@ export function useMiniAppView(state: TelegramMiniAppState | null) {
       setCoinInsightTarget(null);
       setCoinTarget(null);
       setHighlightedCoinId(null);
+      setCurrentCoinTarget(null);
+      setVisibleCoinTarget(null);
     }
+  }, []);
+
+  const handleBack = useCallback(() => {
+    if (coinInsightTarget) setCoinInsightTarget(null);
+    else activateView("home");
+  }, [activateView, coinInsightTarget]);
+
+  const navigateToCoin = useCallback((coinId: string) => {
+    setView("watchlist");
+    setCoinInsightTarget(null);
+    setCurrentCoinTarget(coinId);
+    setCoinTarget(coinId);
   }, []);
 
   useEffect(() => {
@@ -121,12 +133,13 @@ export function useMiniAppView(state: TelegramMiniAppState | null) {
     coinInsightTarget,
     highlightedCoinId,
     visibleCoinTarget,
+    currentCoinTarget,
     backButtonVisible: view !== "home" || coinInsightTarget != null,
     initializeFromStartParam,
     handleBack,
-    showSettings: useCallback(() => setView("settings"), []),
+    showSettings: useCallback(() => activateView("settings"), [activateView]),
     activateView,
     setCoinInsightTarget,
-    setCoinTarget,
+    navigateToCoin,
   };
 }
