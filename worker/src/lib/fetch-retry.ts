@@ -24,6 +24,10 @@ interface FetchWithRetryOptions {
   passthroughStatuses?: number[];
   returnFinalResponse?: boolean;
   timeoutMs?: number;
+  /** Absolute deadline for admission, response intake, and retry backoff. */
+  deadlineMs?: number;
+  /** Runs before every physical request, including retries; false denies admission. */
+  beforeRequest?: () => boolean;
   maxRetryDelayMs?: number;
   /** Applies only when this helper consumes a JSON, text, or binary response body. */
   maxResponseBytes?: number;
@@ -248,19 +252,23 @@ async function fetchWithRetryInternal<TResult>(
   const signal = opts?.signal ?? undefined;
   for (let i = 0; i <= maxRetries; i++) {
     throwIfAborted(signal);
+    const remainingMs = options?.deadlineMs == null ? timeoutMs : options.deadlineMs - Date.now();
+    if (remainingMs <= 0 || options?.beforeRequest?.() === false) return null;
+    const attemptTimeoutMs = Math.min(timeoutMs, remainingMs);
     let responseReceived = false;
     try {
       const perRequestTimeout = createTimeoutSignal({
-        timeoutMs,
-        timeoutReason: new DOMException(`fetch timed out after ${timeoutMs}ms`, "TimeoutError"),
+        timeoutMs: attemptTimeoutMs,
+        timeoutReason: new DOMException(`fetch timed out after ${attemptTimeoutMs}ms`, "TimeoutError"),
         parentSignal: signal,
       });
       const readFinalResponse = async (response: Response): Promise<Response | FetchWithRetryBodyResult<TResult>> => {
         if (!readBody) return response;
-        return {
-          response,
-          body: await readBody(response, perRequestTimeout.signal, maxResponseBytes),
-        };
+        const body = await readBody(response, perRequestTimeout.signal, maxResponseBytes);
+        if (options?.deadlineMs != null && Date.now() >= options.deadlineMs) {
+          throw new DOMException("fetch deadline exceeded", "TimeoutError");
+        }
+        return { response, body };
       };
       try {
         const res = await fetch(url, {
@@ -327,7 +335,8 @@ async function fetchWithRetryInternal<TResult>(
       if (responseReceived && options?.retryMode === "network-only") return null;
     }
     if (i < maxRetries) {
-      await sleepWithSignal(jitterDelayMs(1000 * 2 ** i), signal);
+      const delayMs = jitterDelayMs(1000 * 2 ** i);
+      await sleepWithSignal(options?.deadlineMs == null ? delayMs : Math.max(0, Math.min(delayMs, options.deadlineMs - Date.now())), signal);
     }
   }
   return null;

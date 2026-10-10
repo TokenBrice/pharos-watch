@@ -3,12 +3,12 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { fetchEvmCallHexAtBlock } from "../evm-rpc";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import type { ChainRpcConfig } from "../chain-registry";
+import { findNearestSupply } from "../../api/backfill-depegs-extraction";
 import {
   decodeUint256WordBigInt,
   encodeAddress,
   encodeUint256,
   ETHEREUM_CHAIN,
-  findNearestSupply,
   getUsdcQuotedRedeemConfig,
   ratioToNumber,
   USDC_CIRCLE_ID,
@@ -77,7 +77,7 @@ export const capCusdProvider = createProtocolRedeemProvider({
     timestamp: number,
     signal?: AbortSignal,
   ): Promise<number | null> {
-    const supplyUsd = findNearestSupply(context.supplySnapshots, timestamp);
+    const supplyUsd = context.supplySnapshots ? findNearestSupply(context.supplySnapshots, timestamp) : null;
     return fetchCapRedeemQuote(clampSampleNotionalUsd(supplyUsd), blockNumber, signal);
   },
 });

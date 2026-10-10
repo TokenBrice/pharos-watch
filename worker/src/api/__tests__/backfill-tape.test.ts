@@ -35,6 +35,18 @@ function emptyDb(): MockD1Database {
 }
 
 describe("handleBackfillTape", () => {
+  it("honors query window and cap over conflicting JSON body integers", async () => {
+    const job = TAPE_PROJECTOR_JOBS[0]!;
+    const run = vi.spyOn(job, "run").mockResolvedValue({ projected: 0, advanced: null });
+    const path = `/api/backfill-tape?class=${job.name}&since=200&until=300&maxRows=1`;
+    const res = await handleBackfillTape({
+      db: emptyDb(), url: makeApiUrl(path),
+      request: new Request(makeApiUrl(path), { method: "POST", body: JSON.stringify({ since: 100, until: 400, maxRows: 5000 }) }),
+    });
+    expect(await readJsonResponse(res, 200)).toMatchObject({ since: 200, until: 300, maxRows: 1 });
+    expect(run).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ since: 200, until: 300, maxRows: 1 }));
+  });
+
   it("rejects unknown class names with 400", async () => {
     const res = await handleBackfillTape({ db: emptyDb(), url: makeApiUrl("/api/backfill-tape?class=does.not.exist"), trustedAdmin: true, request: makeApiRequest("/api/backfill-tape?class=does.not.exist", { method: "POST", adminKey: "secret" }) });
     const body = (await readJsonResponse(res, 400)) as { error: string };

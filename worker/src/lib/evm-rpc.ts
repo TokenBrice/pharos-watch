@@ -384,13 +384,7 @@ async function fetchJsonRpcResult<T>(
       failures.push(`${rpcUrl}: request deadline exceeded`);
       break;
     }
-    if (options?.beforeRequest && !options.beforeRequest(rpcUrl)) {
-      failures.push(`${rpcUrl}: request budget exhausted`);
-      break;
-    }
-    const timeoutMs = Math.min(configuredTimeoutMs, remainingMs);
     try {
-      meterDwellirRpcRequest(rpcUrl, 1);
       const result = await fetchJsonWithRetry<JsonRpcEnvelope<unknown>>(
         rpcUrl,
         {
@@ -405,7 +399,17 @@ async function fetchJsonRpcResult<T>(
           }),
         },
         maxRetries,
-        { timeoutMs, retryMode: "network-only", ...(options?.maxResponseBytes === undefined ? {} : { maxResponseBytes: options.maxResponseBytes }) },
+        {
+          timeoutMs: Math.min(configuredTimeoutMs, remainingMs),
+          deadlineMs: options?.deadlineMs,
+          beforeRequest: () => {
+            if (options?.beforeRequest?.(rpcUrl) === false) return false;
+            meterDwellirRpcRequest(rpcUrl, 1);
+            return true;
+          },
+          retryMode: "network-only",
+          ...(options?.maxResponseBytes === undefined ? {} : { maxResponseBytes: options.maxResponseBytes }),
+        },
       );
 
       if (result == null || !result.response.ok) {
@@ -536,14 +540,11 @@ async function runEvmRpcBatch<Value>(
 
     try {
       for (let requestIndex = 0; requestIndex < requestCount; requestIndex += 1) {
-        const remainingMs = options?.deadlineMs == null
-          ? configuredTimeoutMs
-          : Math.floor(options.deadlineMs - Date.now());
-        if (remainingMs <= 0 || (options?.beforeRequest && !options.beforeRequest(rpcUrl))) return null;
+        const remainingMs = options?.deadlineMs == null ? configuredTimeoutMs : options.deadlineMs - Date.now();
+        if (remainingMs <= 0) return null;
         const payload = noBatch
           ? { jsonrpc: "2.0", id: requestIndex + 1, method: calls[requestIndex]!.method, params: calls[requestIndex]!.params }
           : calls.map((call, index) => ({ jsonrpc: "2.0", id: index + 1, method: call.method, params: call.params }));
-        meterDwellirRpcRequest(rpcUrl, noBatch ? 1 : calls.length);
         const result = await fetchJsonWithRetry<unknown>(
           rpcUrl,
           {
@@ -553,7 +554,17 @@ async function runEvmRpcBatch<Value>(
             body: JSON.stringify(payload),
           },
           maxRetries,
-          { timeoutMs: Math.min(configuredTimeoutMs, remainingMs), retryMode: "network-only", ...(options?.maxResponseBytes === undefined ? {} : { maxResponseBytes: options.maxResponseBytes }) },
+          {
+            timeoutMs: Math.min(configuredTimeoutMs, remainingMs),
+            deadlineMs: options?.deadlineMs,
+            beforeRequest: () => {
+              if (options?.beforeRequest?.(rpcUrl) === false) return false;
+              meterDwellirRpcRequest(rpcUrl, noBatch ? 1 : calls.length);
+              return true;
+            },
+            retryMode: "network-only",
+            ...(options?.maxResponseBytes === undefined ? {} : { maxResponseBytes: options.maxResponseBytes }),
+          },
         );
         if (result == null) {
           demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);

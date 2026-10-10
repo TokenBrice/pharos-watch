@@ -1,7 +1,6 @@
 import type {
   EndpointDefinition,
   StatusPageActionAuditMode,
-  StatusPageActionDryRun,
   StatusPageActionScope,
 } from "@shared/lib/api-endpoints";
 import { logAdminAction } from "./admin-action-audit";
@@ -47,19 +46,24 @@ function getSafeTarget(scope: StatusPageActionScope, url: URL): { target: string
   return { target: "invalid-target", label: scope.assetLabel };
 }
 
-function isDryRun(dryRun: StatusPageActionDryRun, url: URL): boolean {
-  if (!dryRun.supported) return false;
-  const requestedMode = url.searchParams.get(dryRun.queryParam);
-  if (requestedMode != null) return requestedMode !== "false";
-  if (!dryRun.liveSupported) return true;
-  return dryRun.default;
-}
-
-function getActionMode(endpoint: EndpointDefinition, url: URL, method: string): "dry-run" | "live" | "inspect" {
+async function getActionMode(endpoint: EndpointDefinition, url: URL, request: Request, response: Response): Promise<"dry-run" | "live" | "inspect"> {
   const action = endpoint.statusPageAction;
   if (!action) return "inspect";
-  if (isDryRun(action.dryRun, url)) return "dry-run";
-  if (endpoint.mutatingAdmin && method.toUpperCase() !== "GET") return "live";
+  if (action.dryRun.supported) {
+    // The handler's resolved mode includes body/query aliases and precedence.
+    // The catalog default is an operator-UI preview default, not execution policy.
+    try {
+      const result: unknown = await response.clone().json();
+      if (result && typeof result === "object" && "dryRun" in result && typeof result.dryRun === "boolean") {
+        return result.dryRun ? "dry-run" : "live";
+      }
+    } catch {
+      // Error/empty responses may not carry the resolved execution mode.
+    }
+    if (url.searchParams.get(action.dryRun.queryParam) === "true") return "dry-run";
+    if (!action.dryRun.liveSupported && !url.searchParams.has(action.dryRun.queryParam)) return "dry-run";
+  }
+  if (endpoint.mutatingAdmin && request.method.toUpperCase() !== "GET") return "live";
   if (action.kind === "inspect" || action.risk === "read-only") return "inspect";
   return "live";
 }
@@ -125,6 +129,8 @@ export async function auditCatalogActionResponse({
   const idempotentReplay = idempotencyReplayHeader === "true";
   const intentWriteMode = idempotencyReplayHeader === "false" ? "authoritative" : "insert-if-missing";
 
+  const mode = await getActionMode(endpoint, url, request, response);
+
   const persisted = await logAdminAction(
     db,
     {
@@ -137,7 +143,7 @@ export async function auditCatalogActionResponse({
       details: {
         path: endpoint.path,
         method: request.method.toUpperCase(),
-        mode: getActionMode(endpoint, url, request.method),
+        mode,
         outcome,
         status: outcome,
         executionCertainty,

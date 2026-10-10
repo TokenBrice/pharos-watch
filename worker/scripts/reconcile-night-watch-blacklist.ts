@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
+import { compareBlacklistEvents } from "@shared/lib/blacklist-event-order";
 import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
@@ -210,6 +211,8 @@ function sumDestroyedAmountRaw(events: readonly FrozenManifestEvent[]): bigint {
   );
 }
 
+// This presentation order is part of the immutable manifest hash, not a
+// lifecycle authority. Balance replay below uses numeric execution ordering.
 function sortEvents(events: readonly FrozenManifestEvent[]): FrozenManifestEvent[] {
   return [...events].sort(
     (left, right) =>
@@ -578,7 +581,40 @@ function buildBalanceExpectations(
   observedAt: number,
 ): { expectations: BalanceExpectation[]; unresolved: string[] } {
   const latest = new Map<string, FrozenManifestEvent>();
-  for (const event of sortEvents(events)) latest.set(event.address, event);
+  const latestGroups = new Map<string, FrozenManifestEvent[]>();
+  const ordered = events.map((event) => ({ ...event, timestamp: event.blockTimestampMs, chainId: "tron" }))
+    .sort(compareBlacklistEvents);
+  for (const event of ordered) {
+    const previous = latest.get(event.address);
+    const group = previous?.blockNumber === event.blockNumber
+      ? latestGroups.get(event.address)!
+      : [];
+    group.push(event);
+    latestGroups.set(event.address, group);
+    latest.set(event.address, event);
+  }
+  for (const group of latestGroups.values()) {
+    if (group.some((event) => group.some((other) =>
+      event.txHash !== other.txHash && event.eventType !== other.eventType
+      && (event.eventType === "blacklist" || other.eventType === "blacklist")))) {
+      throw new Error("Balance replay has ambiguous Tron cross-transaction order; confirmed transaction positions are required");
+    }
+    // A comparator tie across transactions cannot order transaction-local
+    // pairs. Fold each transaction independently before resolving its effect.
+    const finalByTransaction = new Map<string, FrozenManifestEvent>();
+    for (const event of group) {
+      const previous = finalByTransaction.get(event.txHash);
+      if (!previous || event.eventIndex > previous.eventIndex) finalByTransaction.set(event.txHash, event);
+    }
+    const finalEvents = [...finalByTransaction.values()];
+    const released = finalEvents.find((event) => event.eventType === "unblacklist");
+    if (!released && finalEvents.some((event) => event.eventType === "destroy" && event.amountRaw !== finalEvents[0]!.amountRaw)) {
+      throw new Error("Balance replay has ambiguous Tron cross-transaction destroy amounts; confirmed transaction positions are required");
+    }
+    // Releases close the state in either order with a destroy. Otherwise all
+    // cross-transaction effects and amounts agree; no hash-derived order is used.
+    latest.set(group[0]!.address, released ?? finalEvents[0]!);
+  }
   const expectations: BalanceExpectation[] = [];
   const unresolved: string[] = [];
   for (const event of latest.values()) {

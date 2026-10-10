@@ -11,7 +11,7 @@ import {
   RPC_PARITY_GATE_MIN_RUNS,
   RPC_PARITY_GATE_MIN_SUCCESS_RATE,
 } from "../report";
-import { recordRpcParityRun, RPC_PARITY_STORE_KEY } from "../store";
+import { recordRpcParityRun, RPC_PARITY_STORE_KEY, RPC_PARITY_RETENTION_SEC } from "../store";
 import { RPC_PARITY_TARGETS } from "../targets";
 import type { RpcParityChainSample } from "../types";
 import {
@@ -678,6 +678,27 @@ describe("rpc parity gate math", () => {
 });
 
 describe("rpc provider trial report", () => {
+  it("expires stored evidence at report time without requiring another run", async () => {
+    const { db } = fixtures.open();
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS);
+    for (const run of runs) await recordRpcParityRun(db, run);
+    const readAt = (nowSec: number) => loadRpcProviderTrialReport(db, {}, nowSec);
+    const initial = await readAt(PARITY_NOW_SEC);
+    expect(initial.observation?.chains.find((chain) => chain.chainId === PARITY_REGISTRY_CHAIN)?.gate.passed).toBe(true);
+    const oldest = runs[0]!.atSec;
+    const boundary = await readAt(oldest + RPC_PARITY_RETENTION_SEC);
+    expect(boundary.observation?.runsRetained).toBe(RPC_PARITY_GATE_MIN_RUNS);
+    const partial = await readAt(oldest + RPC_PARITY_RETENTION_SEC + 1);
+    expect(partial.observation?.runsRetained).toBe(RPC_PARITY_GATE_MIN_RUNS - 1);
+    expect(partial.observation?.chains.find((chain) => chain.chainId === PARITY_REGISTRY_CHAIN)?.gate.failing).toContain("runs");
+    const expired = await readAt(PARITY_NOW_SEC + RPC_PARITY_RETENTION_SEC + 1);
+    expect(expired.observation).toMatchObject({ runsRetained: 0, windowStartSec: null, lastRunAtSec: null });
+    const base = expired.observation?.chains.find((chain) => chain.chainId === PARITY_REGISTRY_CHAIN);
+    expect(base?.last).toBeNull();
+    expect(base?.gate.passed).toBe(false);
+    expect(base?.gate.failing).toContain("runs");
+  });
+
   it("reports the unconfigured provider without inventing observations", async () => {
     const { db } = fixtures.open();
     const report = await loadRpcProviderTrialReport(db, {}, PARITY_NOW_SEC);

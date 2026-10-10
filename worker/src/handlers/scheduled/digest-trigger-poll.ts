@@ -474,7 +474,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       lastError: "malformed-payload",
     };
     logWorkerEvent({ scope: "handler", level: "warn", event: "digest_force_run_payload_malformed", message: "Malformed digest force-run payload; retaining as dead letter", job: DIGEST_TRIGGER_POLL_SURFACE, metadata: { payloadPrefix: pending.value.slice(0, 200) } });
-    await setCache(runtime.db, DIGEST_FORCE_RUN_CACHE_KEY, JSON.stringify(malformedPayload));
+    await replaceForceRunRequest(runtime.db, pending.value, malformedPayload, malformedPayload.requestedAt);
     await recordBudgetSurfaceTelemetry(runtime.db, {
       surface: DIGEST_TRIGGER_POLL_SURFACE,
       durationMs: Date.now() - startedMs,

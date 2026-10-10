@@ -52,6 +52,35 @@ afterEach(() => {
 });
 
 describe("catalog action canonical audit", () => {
+  it.each([
+    ["", false, "live"],
+    ["?dryRun=1", true, "dry-run"],
+    ["?dryRun=0", false, "live"],
+    ["?dry-run=true", true, "dry-run"],
+    ["?dryRun=false", false, "live"],
+  ] as const)("audits the tape handler's resolved mode for %s", async (query, dryRun, mode) => {
+    const sqlite = fixtures.open().sqlite;
+    const response = Response.json({ dryRun, privateResult: "not-persisted" });
+    await auditCatalogActionResponse({
+      db: createSqliteD1(sqlite), endpoint: endpoint("backfill-tape"),
+      request: request(`/api/backfill-tape${query}`, "mode-intent", { body: JSON.stringify({ dryRun: !dryRun }) }),
+      response,
+    });
+    expect(JSON.parse(rows(sqlite)[0]!.details_json!)).toMatchObject({ mode });
+    expect(rows(sqlite)[0]!.details_json).not.toContain("not-persisted");
+    expect(await response.json()).toMatchObject({ dryRun });
+  });
+
+  it("does not treat the catalog preview default as the execution default", async () => {
+    const sqlite = fixtures.open().sqlite;
+    await auditCatalogActionResponse({
+      db: createSqliteD1(sqlite), endpoint: endpoint("backfill-depegs"),
+      request: request("/api/backfill-depegs", "default-live"),
+      response: Response.json({ ok: true }),
+    });
+    expect(JSON.parse(rows(sqlite)[0]!.details_json!)).toMatchObject({ mode: "live" });
+  });
+
   it("records only allowlisted scope and outcome metadata", async () => {
     const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);

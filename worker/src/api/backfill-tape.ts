@@ -87,15 +87,15 @@ export async function handleBackfillTape({
       }
     }
 
-    const since = readAdminIntegerParam(body, url.searchParams, "since");
-    const until = readAdminIntegerParam(body, url.searchParams, "until");
+    const since = readAdminIntegerParam(body, url.searchParams, "since", "query-first");
+    const until = readAdminIntegerParam(body, url.searchParams, "until", "query-first");
     if (since != null && since < 0) return errorResponse(400, "Invalid since: must be epoch seconds >= 0");
     if (until != null && until < 0) return errorResponse(400, "Invalid until: must be epoch seconds >= 0");
     if (since != null && until != null && since > until) {
       return errorResponse(400, "Invalid window: since must be <= until");
     }
 
-    const maxRowsRaw = readAdminIntegerParam(body, url.searchParams, "maxRows") ?? DEFAULT_MAX_ROWS;
+    const maxRowsRaw = readAdminIntegerParam(body, url.searchParams, "maxRows", "query-first") ?? DEFAULT_MAX_ROWS;
     if (maxRowsRaw < 1 || maxRowsRaw > MAX_MAX_ROWS) {
       return errorResponse(400, `Invalid maxRows: must be between 1 and ${MAX_MAX_ROWS}`);
     }

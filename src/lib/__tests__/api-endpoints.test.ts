@@ -248,7 +248,7 @@ describe("api endpoint registry", () => {
     ["/api/credential-lifecycle-summary", "POST", ["GET"]],
     ["/api/api-keys/1/rotate", "GET", ["POST"]],
     ["/api/unknown", "POST", ["GET"]],
-    ["/api/stablecoins", "DELETE", ["GET", "POST"]],
+    ["/api/stablecoins", "DELETE", ["GET"]],
   ] as const)("rejects %s via %s with usable allowed methods", (path, method, allowedMethods) => {
     expect(validateEndpointMethod(new URL(path, "https://api.pharos.watch"), method))
       .toMatchObject({ allowedMethods });

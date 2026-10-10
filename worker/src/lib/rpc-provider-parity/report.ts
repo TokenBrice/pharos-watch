@@ -3,7 +3,7 @@ import { getCircuitRecord } from "../circuit-breaker";
 import { CIRCUIT_SOURCE } from "../constants";
 import { loadDwellirBudgetState, type DwellirBudgetEnv } from "../rpc-provider-budget";
 import { logWorkerEvent } from "../structured-log";
-import { readRpcParityStore, type RpcParityLatestState, type RpcParityStoredRun } from "./store";
+import { readRpcParityStore, RPC_PARITY_RETENTION_SEC, type RpcParityLatestState, type RpcParityStoredRun } from "./store";
 import {
   RPC_PARITY_TARGETS,
   dwellirEntryForChain,
@@ -482,12 +482,16 @@ export async function loadRpcProviderTrialReport(
     };
   }
 
+  const cutoffSec = nowSec - RPC_PARITY_RETENTION_SEC;
+  const runs = row.runs.filter((run) => run.atSec >= cutoffSec);
+
   const chains = RPC_PARITY_TARGETS.map((target) => {
     const entry = dwellirEntryForChain(target.chainId);
+    const latest = row.latest[target.chainId];
     return buildRpcParityChainSummary({
       chainId: target.chainId,
-      runs: row.runs,
-      latest: row.latest[target.chainId] ?? null,
+      runs,
+      latest: latest && latest.atSec >= cutoffSec ? latest : null,
       dwellirHost: dwellirHostForChain(target.chainId) ?? `${target.chainId}.n.dwellir.com`,
       fallbackComparator: plannedRpcParityComparator(target),
       fallbackLogsComparator: plannedRpcParityComparator(target, "logs"),
@@ -502,9 +506,9 @@ export async function loadRpcProviderTrialReport(
     budget,
     circuit,
     observation: {
-      windowStartSec: row.runs[0]?.atSec ?? null,
-      lastRunAtSec: row.runs[row.runs.length - 1]?.atSec ?? null,
-      runsRetained: row.runs.length,
+      windowStartSec: runs[0]?.atSec ?? null,
+      lastRunAtSec: runs[runs.length - 1]?.atSec ?? null,
+      runsRetained: runs.length,
       chains,
     },
     observationError: null,

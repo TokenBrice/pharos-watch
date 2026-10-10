@@ -24,6 +24,13 @@ const makeRouteCtx = routeContextFactory({ db, execCtx });
 
 
 describe("router contract: strict frontend paths are routable", () => {
+  it.each(["PUT", "DELETE", "PATCH"])("returns Allow POST for %s on a POST-only endpoint", async (method) => {
+    const url = new URL("https://api.pharos.watch/api/feedback");
+    const response = await route(makeRouteCtx({ url, request: new Request(url, { method }) }));
+    expect(response!.status).toBe(405);
+    expect(response!.headers.get("Allow")).toBe("POST");
+  });
+
   it("registers all strict contract paths without executing their handlers", () => {
     for (const path of STRICT_CONTRACT_PATHS_LIST) {
       expect(getRouteMatch(path), `expected route for ${path}`).not.toBeNull();

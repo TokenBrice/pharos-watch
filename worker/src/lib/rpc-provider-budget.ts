@@ -37,8 +37,8 @@ export interface DwellirBudgetEnv {
   DWELLIR_MAX_CREDITS_PER_MONTH?: string;
 }
 
-/** Credits observed by this isolate since the last successful flush. */
-let pendingDwellirCredits = 0;
+/** Pending credits retain the UTC month in which their usage was observed. */
+const pendingDwellirCredits = new Map<string, number>();
 
 function getUtcMonthWindow(nowSec: number): string {
   const date = new Date(nowSec * 1000);
@@ -146,15 +146,16 @@ export async function loadDwellirBudgetState(
 }
 
 /**
- * Adds to the isolate-local pending counter (1 credit per JSON-RPC response
+ * Adds to the isolate-local pending month bucket (1 credit per JSON-RPC response
  * item, including errors). Counts are truncated to whole credits; non-finite
  * and non-positive results are ignored.
  */
-export function recordDwellirCredits(count: number): void {
+export function recordDwellirCredits(count: number, observedAtSec = Date.now() / 1000): void {
   if (!Number.isFinite(count)) return;
   const credits = Math.trunc(count);
   if (credits <= 0) return;
-  pendingDwellirCredits += credits;
+  const window = getUtcMonthWindow(observedAtSec);
+  pendingDwellirCredits.set(window, (pendingDwellirCredits.get(window) ?? 0) + credits);
 }
 
 type DwellirCreditWriteOutcome = "flushed" | "cas-lost" | "ledger-unreadable" | "failed";
@@ -208,32 +209,36 @@ async function addPendingCreditsToLedger(
 }
 
 /**
- * Drains the pending counter into the month's ledger row (compare-and-swap,
- * bounded retries). On failure the drained amount is restored to the pending
- * counter. Never throws.
+ * Drains pending month buckets into their own ledger rows (compare-and-swap,
+ * bounded retries). Failed drains are restored to the same month's bucket,
+ * preserving usage recorded during an in-flight flush. Never throws.
  */
 export async function flushDwellirCredits(
   db: D1Database,
   nowSec: number,
 ): Promise<{ flushedCredits: number; ok: boolean }> {
-  const credits = pendingDwellirCredits;
-  if (credits <= 0) return { flushedCredits: 0, ok: true };
-  pendingDwellirCredits = 0;
-  const window = getUtcMonthWindow(nowSec);
-  const result = await addPendingCreditsToLedger(db, window, credits, nowSec);
-  if (result.outcome === "flushed") {
-    return { flushedCredits: credits, ok: true };
+  const pending = [...pendingDwellirCredits];
+  pendingDwellirCredits.clear();
+  let flushedCredits = 0;
+  let ok = true;
+  for (const [window, credits] of pending) {
+    const result = await addPendingCreditsToLedger(db, window, credits, nowSec);
+    if (result.outcome === "flushed") {
+      flushedCredits += credits;
+      continue;
+    }
+    ok = false;
+    pendingDwellirCredits.set(window, (pendingDwellirCredits.get(window) ?? 0) + credits);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "dwellir_credit_flush_failed",
+      message: DWELLIR_FLUSH_FAILURE_MESSAGES[result.outcome],
+      provider: "dwellir",
+      source: "credit-ledger",
+      ...(result.outcome === "failed" ? { error: result.error } : {}),
+      metadata: { window, credits },
+    });
   }
-  pendingDwellirCredits += credits;
-  logWorkerEvent({
-    scope: "lib",
-    level: "warn",
-    event: "dwellir_credit_flush_failed",
-    message: DWELLIR_FLUSH_FAILURE_MESSAGES[result.outcome],
-    provider: "dwellir",
-    source: "credit-ledger",
-    ...(result.outcome === "failed" ? { error: result.error } : {}),
-    metadata: { window, credits },
-  });
-  return { flushedCredits: 0, ok: false };
+  return { flushedCredits, ok };
 }

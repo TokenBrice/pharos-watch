@@ -110,7 +110,7 @@ The current proxy now fails closed on its own trust boundary:
 - Allowed upstream paths are limited to admin routes and shared dynamic-admin matchers exported from `shared/lib/api-endpoints/` (for example `/api/api-keys/:id/update`).
 - HTTP method rules are enforced through the shared endpoint validators (`validateEndpointMethod()` in the proxy and `validateRouteMatchMethod()` in the Worker router, both backed by `validateAllowedEndpointMethods()`), so the proxy returns `405` with `Allow` when a caller uses the wrong verb for an otherwise valid admin route.
 - The proxy verifies the inbound UI Access token before the upstream fetch. Missing or invalid Access token evidence (`Cf-Access-Jwt-Assertion`, `cf-access-token`, or `CF_Authorization`) returns `401`.
-- Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) must include a same-origin `Origin` header matching `OPS_UI_ORIGIN`; missing or foreign origins return `403`. Only `POST` reaches that check in practice: the shared method validator runs first and rejects `PUT`, `PATCH`, and `DELETE` with `405` and `Allow: GET, POST`.
+- Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) require an `Origin` matching `OPS_UI_ORIGIN`; missing, foreign, malformed or non-HTTP(S) origins return `403`. Only `POST` reaches this check: method validation rejects `PUT`, `PATCH` and `DELETE` with `405` and the endpoint's actual `Allow` methods (typically `POST`).
 - The proxy forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request. After signature-verifying the UI Access JWT and normalizing its email claim, it injects that verified value as `Cf-Access-Authenticated-User-Email` for durable audit attribution; a browser-supplied actor header is ignored. It also adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself, so browser callers never supply server-to-server credentials.
 - The proxy reflects only `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Execution-Certainty`, and `X-Idempotent-Replay` back to the browser. This preserves replay/certainty semantics without opening arbitrary upstream headers. A final policy decorator forces `private, no-store`, both CDN-specific no-store headers, `noindex`, and response security headers on every early or upstream return. Upstream `public` cache directives cannot survive the operator boundary.
 - Request bodies are capped incrementally at 128 KiB, including when `Content-Length` is absent or understated; oversized requests return `413`. Upstream responses are buffered under the shared 16 MiB proxy cap before returning to the browser; oversized or unreadable upstream responses return `502`.
@@ -142,7 +142,7 @@ For the site-data proxy:
 - `TELEGRAM_ADOPTION_IP_HASH_SECRET`
 - `DB` for Pages-side storage: optional for durable `/_site-data/*` attribution telemetry, but required by `POST /selector-snapshot` for the atomic hashed-IP daily quota store. Plain site-data reads continue without DB telemetry; selector snapshot writes fail closed when the binding is absent.
 
-Optional active overrides (the proxy has production defaults for these already):
+Optional active overrides (invalid, opaque or non-HTTP(S) origins fall back to production defaults):
 
 - `OPS_UI_ORIGIN`
 - `SITE_ORIGIN`

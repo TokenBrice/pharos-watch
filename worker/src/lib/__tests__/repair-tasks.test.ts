@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   makeSqliteD1,
   mockRepairD1,
@@ -14,6 +14,7 @@ import {
   runWorkerRepairTaskRunner,
   syncDdrRepairDebtTasks,
 } from "../repair-tasks";
+import { runCronSentinelSources } from "../../cron/cron-sentinel-result";
 
 const NOW = 1_775_900_000;
 
@@ -470,6 +471,7 @@ describe("repair tasks", () => {
 
       const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
 
+      expect(result.status).toBe("ok");
       expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
         dueCount: 2,
         staleClaimCount: 1,
@@ -613,8 +615,10 @@ describe("repair tasks", () => {
     ]);
 
     const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+    expect(result.status).toBe("degraded");
 
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "repair-execution-failed",
       claimed: 1,
       failed: 1,
       deferred: 0,
@@ -624,6 +628,76 @@ describe("repair tasks", () => {
     expect(failure?.binds).toContain("failed");
     expect(failure?.binds).toContain(NOW + DDR_REPAIR_RUNNER_BACKOFF_SEC_V1);
   });
+
+  it.each(["candidate-read", "execution-write"] as const)(
+    "publishes %s repair exceptions as degraded sentinel evidence with fenced backoff",
+    async (failurePoint) => {
+      const db = makeSqliteD1();
+      try {
+        seedNaturalPredecessorFixture(db);
+        db.sqlite.prepare(`INSERT INTO worker_repair_tasks
+          (task_id, kind, subject_id, priority, state, payload_json, created_at, updated_at)
+          VALUES ('unsafe', 'ddr-repair-required-event', '999', 50, 'open', '{"eventId":999}', ?, ?)`)
+          .run(NOW, NOW);
+        if (failurePoint === "candidate-read") {
+          const prepare = db.prepare.bind(db);
+          let failed = false;
+          vi.spyOn(db, "prepare").mockImplementation((sql) => {
+            if (!failed && sql.includes("FROM depeg_events target")) {
+              failed = true;
+              throw new Error("D1 busy");
+            }
+            return prepare(sql);
+          });
+        } else {
+          vi.spyOn(db, "batch").mockRejectedValueOnce(new Error("D1 write unavailable"));
+        }
+
+        const daily = await runCronSentinelSources(db, "daily", [{
+          source: "repair-debt",
+          run: () => runWorkerRepairTaskRunner(db, { nowSec: NOW }),
+        }], NOW);
+        expect(daily.status).toBe("degraded");
+        expect(JSON.parse(daily.metadata!).sources["repair-debt"]).toMatchObject({
+          status: "degraded",
+          metadata: {
+            reason: "repair-execution-failed",
+            claimed: 2,
+            failed: 1,
+            deferred: 1,
+            autoRepairCount: 0,
+          },
+        });
+        expect(db.sqlite.prepare(`SELECT state, attempt_count, next_attempt_at, locked_by, locked_until,
+          last_error FROM worker_repair_tasks WHERE subject_id = '42'`).get()).toEqual({
+          state: "failed",
+          attempt_count: 1,
+          next_attempt_at: NOW + DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
+          locked_by: null,
+          locked_until: null,
+          last_error: "repair-execution-failed",
+        });
+        expect(db.sqlite.prepare("SELECT state, last_error FROM worker_repair_tasks WHERE task_id = 'unsafe'").get())
+          .toEqual({ state: "deferred", last_error: "safe-class-not-proven" });
+        const status = await runCronSentinelSources(db, "status", [{
+          source: "freshness",
+          run: async () => ({ status: "ok" }),
+        }], NOW + 1);
+        expect(status.status).toBe("degraded");
+        expect(JSON.parse(status.metadata!).sources["repair-debt"]).toMatchObject({
+          status: "degraded",
+          observedAt: NOW,
+          metadata: { reason: "repair-execution-failed" },
+        });
+        const retry = await runWorkerRepairTaskRunner(db, { nowSec: NOW + 1 });
+        expect(retry.status).toBe("ok");
+        expect(JSON.parse(retry.metadata!)).toMatchObject({ claimed: 0, failed: 0 });
+      } finally {
+        vi.restoreAllMocks();
+        db.close();
+      }
+    },
+  );
 
 
   it("repairs a safe fixture task atomically against the append-only DDR tables", async () => {

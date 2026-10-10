@@ -461,6 +461,13 @@ async function inspectRepairRunnerBacklog(
 function buildRepairRunnerResult(
   metadata: RepairRunnerMetadata,
 ): StructuredCronResult<RepairRunnerMetadata> {
+  if (metadata.failed > 0) {
+    return {
+      status: "degraded",
+      itemCount: metadata.autoRepairCount,
+      metadata: { ...metadata, reason: "repair-execution-failed" },
+    };
+  }
   return {
     status: "ok",
     itemCount: metadata.autoRepairCount,

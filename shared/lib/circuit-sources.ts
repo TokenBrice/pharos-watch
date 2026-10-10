@@ -67,7 +67,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   KINESIS_KAU: { key: "kinesis-kau-horizon", scope: "source-wide" },
   KINESIS_KAG: { key: "kinesis-kag-horizon", scope: "source-wide" },
   COINGECKO_CONFIRM: { key: "coingecko-confirm", scope: "source-wide" },
-  DEFILLAMA_CONFIRM: { key: "defillama-confirm", scope: "source-wide" },
+  DEFILLAMA_CONFIRM: { key: "defillama-confirm", scope: "retired" },
   DEXSCREENER_SEARCH: { key: "dexscreener-search", scope: "retired" },
   JUSD_CITREA_BRIDGE: { key: "jusd-citrea-bridge", scope: "retired" },
   USX_STABLE_POOLS: { key: "usx-stable-pools", scope: "retired" },

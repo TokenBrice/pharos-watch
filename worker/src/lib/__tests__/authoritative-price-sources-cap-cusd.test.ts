@@ -12,6 +12,7 @@ import {
 import { capCusdProvider } from "../authoritative-price-sources/cap-cusd";
 import { inheritedTrackedPriceProvider } from "../authoritative-price-sources/inherited-tracked";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import * as extraction from "../../api/backfill-depegs-extraction";
 
 const historicalParent = vi.hoisted(() => vi.fn());
 vi.mock("../../api/backfill-price-sources", () => ({
@@ -58,6 +59,7 @@ describe("capCusdProvider", () => {
   });
 
   it("sizes historical redemption from the nearest historical supply, not the current maximum", async () => {
+    const nearestSupply = vi.spyOn(extraction, "findNearestSupply");
     const timestamp = 1_710_000_000;
     resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValue(22_874_100);
     fetchEvmCallHexAtBlockMock.mockResolvedValue(quote(1_960_000_000n));
@@ -73,6 +75,11 @@ describe("capCusdProvider", () => {
         ],
       },
     )).resolves.toEqual([{ timestamp, price: 0.98 }]);
+    expect(nearestSupply).toHaveBeenCalledWith([
+      { ts: timestamp - 1_000, supply: 5_000_000 },
+      { ts: timestamp + 100, supply: 200_000 },
+    ], timestamp);
+    nearestSupply.mockRestore();
   });
 
   it.each([null, "0x", `0x${"0".repeat(64)}`, `0x${"z".repeat(64)}`])(

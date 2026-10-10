@@ -304,6 +304,8 @@ describe("runDigestTriggerPollSlot", () => {
   });
 
   it("dead-letters a malformed payload without running the digest", async () => {
+    fixture.sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(DIGEST_FORCE_RUN_CACHE_KEY, "not-json", 0);
     vi.mocked(getCache).mockResolvedValueOnce({ value: "not-json", updatedAt: 0 });
 
     const summary = await runDigestTriggerPollSlot(buildRuntime());
@@ -569,6 +571,8 @@ describe("runDigestTriggerPollSlot", () => {
     });
     await runDigestTriggerPollSlot(buildRuntime());
     expect(generateDailyDigest).not.toHaveBeenCalled();
+    expect(JSON.parse(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+      .get(DIGEST_FORCE_RUN_CACHE_KEY)!.value as string)).toEqual(newIntent);
 
     queueIntent(oldIntent);
     vi.mocked(generateDailyDigest).mockImplementationOnce(async () => {
@@ -580,6 +584,62 @@ describe("runDigestTriggerPollSlot", () => {
     await runDigestTriggerPollSlot(buildRuntime());
     expect(JSON.parse(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
       .get(DIGEST_FORCE_RUN_CACHE_KEY)!.value as string)).toEqual(newIntent);
+  });
+
+  it.each(["success", "failure"] as const)(
+    "preserves and subsequently executes a newer request after an older %s",
+    async (completion) => {
+      const oldIntent = buildIntent("manual-digest-old");
+      const newIntent = buildIntent("manual-digest-new");
+      queueIntent(oldIntent);
+      let release!: () => void;
+      const paused = new Promise<void>((resolve) => { release = resolve; });
+      let started!: () => void;
+      const claimed = new Promise<void>((resolve) => { started = resolve; });
+      vi.mocked(generateDailyDigest).mockImplementationOnce(async () => {
+        started();
+        await paused;
+        if (completion === "failure") throw new Error("network timeout");
+        return { status: "ok", itemCount: 1 };
+      });
+      runLeasedCron.mockImplementation(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+
+      const oldRun = runDigestTriggerPollSlot(buildRuntime());
+      await claimed;
+      expect(latestIntentWrite()).toMatchObject({ requestId: oldIntent.requestId, state: "running" });
+      queueIntent(newIntent);
+      release();
+      await oldRun;
+      expect(JSON.parse(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+        .get(DIGEST_FORCE_RUN_CACHE_KEY)!.value as string)).toEqual(newIntent);
+      expect(setCache).toHaveBeenCalledWith(expect.anything(), DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY,
+        expect.any(String));
+      const oldResult = vi.mocked(setCache).mock.calls.find(([, key]) => key === DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY);
+      expect(JSON.parse(oldResult![2])).toMatchObject({
+        requestId: oldIntent.requestId,
+        outcome: completion === "success" ? "ok" : "error",
+      });
+
+      vi.mocked(generateDailyDigest).mockResolvedValueOnce({ status: "ok", itemCount: 1 });
+      await runDigestTriggerPollSlot(buildRuntime());
+      expect(generateDailyDigest).toHaveBeenCalledTimes(2);
+      expect(latestIntentWrite()).toMatchObject({ requestId: newIntent.requestId, state: "succeeded" });
+      expect(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+        .get(DIGEST_FORCE_RUN_CACHE_KEY)).toBeUndefined();
+    },
+  );
+
+  it("does not dead-letter a newer intent after reading a replaced malformed payload", async () => {
+    const newIntent = buildIntent("manual-digest-new");
+    queueIntent(newIntent);
+    vi.mocked(getCache).mockReset().mockResolvedValueOnce({ value: "not-json", updatedAt: 0 });
+
+    await runDigestTriggerPollSlot(buildRuntime());
+
+    expect(JSON.parse(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+      .get(DIGEST_FORCE_RUN_CACHE_KEY)!.value as string)).toEqual(newIntent);
+    expect(setCache).not.toHaveBeenCalledWith(expect.anything(), DIGEST_FORCE_RUN_CACHE_KEY, expect.anything());
+    expect(runLeasedCron).not.toHaveBeenCalled();
   });
 
   it("resumes a missing weekly recap on Monday after 08:10", async () => {

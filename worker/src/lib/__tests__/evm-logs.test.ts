@@ -369,6 +369,20 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
     };
   }
 
+  it("splits a capped adjacent-block range into two complete singleton scans", async () => {
+    const first = Array.from({ length: 600 }, (_, index) => logAt(100, index));
+    const second = Array.from({ length: 600 }, (_, index) => logAt(101, index));
+    mockFetch([
+      range(100, 101, [...first, ...second].slice(0, 1000)),
+      range(100, 100, first),
+      range(101, 101, second),
+    ]);
+    const result = await fetchEvmLogsForTopicWithCompleteness(1, "0x123", "0xabc", null, 100, 101, 0, noopLimiter, createBudget(10));
+    expect(result).toMatchObject({ complete: true, scannedToBlock: 101, calls: 3 });
+    expect(result.logs).toEqual([...first, ...second]);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
   const cappedLogs = Array.from({ length: 1000 }, (_, index) => logAt(0, index));
   function range(from: number, to: number, result: typeof cappedLogs, message = "OK") {
     return {

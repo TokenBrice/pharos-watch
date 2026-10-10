@@ -2,12 +2,10 @@ import type { ChainRpcConfig } from "../chain-registry";
 import { logWorkerEventArgs } from "../structured-log";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
-import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import type { NominalPriceReference, PriceConfidence, PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
-import { binarySearchNearest } from "../binary-search";
 import { fetchEvmCallHexAtBlock, resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockSearchCache } from "../evm-rpc";
 import { encodeUint256 } from "../evm-selectors";
 export { encodeAddress, encodeUint256 } from "../evm-selectors";
@@ -635,16 +633,6 @@ export function buildCachedRateLiveOverride(
   };
 }
 
-export function findNearestSupply(
-  snapshots: HistoricalSupplySnapshot[] | undefined,
-  timestamp: number,
-  maxDistanceSec: number = MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC,
-): number | null {
-  if (!snapshots || snapshots.length === 0) return null;
-  const nearest = binarySearchNearest(snapshots, timestamp, (s) => s.ts);
-  if (!nearest || Math.abs(nearest.ts - timestamp) > maxDistanceSec) return null;
-  return nearest.supply;
-}
 
 /**
  * Resolve the Ethereum contract/decimals for a stablecoin together with the

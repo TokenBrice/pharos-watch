@@ -290,7 +290,7 @@ export async function fetchEvmLogsForTopicWithCompleteness(
 
   if (rawLogs.length >= ETHERSCAN_MAX_RESULTS) {
     const mid = Math.floor((fromBlock + toBlock) / 2);
-    if (mid === fromBlock) {
+    if (fromBlock === toBlock) {
       return {
         logs,
         complete: false,
