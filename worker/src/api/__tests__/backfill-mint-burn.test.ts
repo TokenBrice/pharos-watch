@@ -3,10 +3,12 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import type * as AlchemyLogsModule from "../../lib/alchemy-logs";
 
 stubCryptoForAuth();
 
-vi.mock("../../lib/alchemy-logs", () => ({
+vi.mock("../../lib/alchemy-logs", async (importOriginal) => ({
+  ...(await importOriginal<typeof AlchemyLogsModule>()),
   buildAlchemyUrl: vi.fn(() => "https://eth-mainnet.g.alchemy.com/v2/"),
   getAlchemyBlockNumber: vi.fn(async () => 22_000_000),
   getAlchemyTransactionContextBatchMany: vi.fn(async () => new Map()),

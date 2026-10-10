@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { type MockD1Database } from "@shared/test-utils/mock-d1";
 import { projectDepegOpened, projectDepegPeakWorsened, projectDepegResolved } from "../depeg";
@@ -7,6 +8,9 @@ import { mockTapeD1, tapeCacheWriteBinds, tapeInsertBinds } from "./test-support
 
 const SEC = 1_700_000_000;
 const MATCH_DEPEG_EVENTS = "FROM depeg_events";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(fixtures.closeAll);
 
 function depegRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -110,6 +114,36 @@ describe("depeg projector", () => {
       "1": 450,
       "2": 450,
     });
+  });
+
+  it("preserves unscanned peak baselines under maxRows and prunes closures only after a full census", async () => {
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, source)
+      VALUES (?, ?, ?, 'USD', 'below', -100, ?, 0.99, 1, 'live')`);
+    insert.run(1, "usdt-tether", "USDT", SEC);
+    insert.run(2, "usdc-circle", "USDC", SEC);
+    const readSeen = () => JSON.parse(String(sqlite.prepare(
+      "SELECT value FROM cache WHERE key = 'tape-projector:peak-worsened-seen'",
+    ).get()!.value));
+
+    expect(await projectDepegPeakWorsened(db)).toEqual({ projected: 0, advanced: null });
+    expect(readSeen()).toEqual({ "1": 100, "2": 100 });
+    expect(await projectDepegPeakWorsened(db, { maxRows: 1 })).toEqual({ projected: 0, advanced: null });
+    expect(readSeen()).toEqual({ "1": 100, "2": 100 });
+    sqlite.prepare("UPDATE depeg_events SET peak_deviation_bps = -200 WHERE id = 2").run();
+    expect(await projectDepegPeakWorsened(db)).toEqual({ projected: 1, advanced: null });
+    const event = sqlite.prepare("SELECT source_row_id, payload_json FROM tape_events").get()!;
+    expect(event.source_row_id).toBe("2:200");
+    expect(JSON.parse(String(event.payload_json))).toMatchObject({
+      depegEventId: 2, prevAbsDeviationBps: 100, absDeviationBps: 200,
+    });
+
+    sqlite.prepare("UPDATE depeg_events SET ended_at = ? WHERE id = 2").run(SEC + 900);
+    await projectDepegPeakWorsened(db, { maxRows: 1 });
+    expect(readSeen()).toEqual({ "1": 100, "2": 200 });
+    await projectDepegPeakWorsened(db);
+    expect(readSeen()).toEqual({ "1": 100 });
   });
 
   it("drains every matching open row in default-size pages when no cap is set", async () => {

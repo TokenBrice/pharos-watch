@@ -2,11 +2,12 @@ import type { MintBurnConservationRecord } from "@shared/types/status";
 import { completeMintBurnConservationAudit, conservationOnlyEventDefsFor, getMintBurnConservationEligibility, persistMintBurnConservation, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation, type ConservationBoundaryEvidence, type ConservationLogBatch } from "../../lib/mint-burn-conservation";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { AlchemyLogEntry, AlchemyTopicFilter } from "../../lib/alchemy-logs";
-import { fetchAlchemyLogs, resolveBlockTimestamps } from "../../lib/alchemy-logs";
+import { blockHashesForLogs, fetchAlchemyLogs, resolveBlockTimestamps } from "../../lib/alchemy-logs";
 import { budgetExhausted, createBudget, decodeUint256AtSlotOrNull } from "../../lib/evm-logs";
 import type { MintBurnTxContext } from "../../lib/mint-burn-bridge-classifier";
 import { classifyBridgeBurnRows } from "../../lib/mint-burn-pipeline/classification";
 import { parseMintBurnLogs } from "../../lib/mint-burn-pipeline/parse";
+import { DECODE_QUARANTINE_REASON, mintBurnSuccessfulScanFrontier, shouldQuarantineDecodeFailure } from "../../lib/mint-burn-pipeline/scan-policy";
 import { persistMintBurnRows } from "../../lib/mint-burn-pipeline/persistence";
 import type {
   MintBurnAffectedHour,
@@ -18,9 +19,6 @@ import type {
   MintBurnEventDef,
   MintBurnTier,
 } from "../../lib/mint-burn-contracts";
-
-const DECODE_RETRY_LIMIT = 3;
-const DECODE_QUARANTINE_REASON = "amount-decode-retry-exhausted" as const;
 
 export interface MintBurnConfigSummary {
   key: string;
@@ -88,7 +86,7 @@ export interface SyncMintBurnConfigInput {
   configBudgetLimit: number;
   runTimestamp: number;
   priceContext: MintBurnPriceContext;
-  chainTimestampCache: Map<number, number>;
+  chainTimestampCache: Map<string, number>;
   txContextCache: Map<string, MintBurnTxContext | null>;
   affectedHours: Map<string, MintBurnAffectedHour>;
   safetyMarginBlocks: number;
@@ -175,31 +173,6 @@ function timestampRequiredBlockForLog(
   return blockNum;
 }
 
-async function shouldQuarantineDecodeFailure(
-  db: D1Database,
-  configKey: string,
-  log: AlchemyLogEntry,
-  runTimestamp: number,
-): Promise<{ quarantined: boolean; attempts: number }> {
-  const cacheKey = `mint-burn:decode-retry:${configKey}:${log.blockNumber}:${log.transactionHash}:${log.logIndex}`;
-  try {
-    const prior = await db.prepare("SELECT value FROM cache WHERE key = ?").bind(cacheKey).first<{ value: string }>();
-    const parsed = prior ? JSON.parse(prior.value) as { attempts?: unknown } : null;
-    const attempts = (typeof parsed?.attempts === "number" ? parsed.attempts : 0) + 1;
-    const quarantined = attempts >= DECODE_RETRY_LIMIT;
-    await db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-      .bind(cacheKey, JSON.stringify({
-        attempts,
-        quarantined,
-        reason: quarantined ? DECODE_QUARANTINE_REASON : "amount-decode-retry",
-      }), runTimestamp)
-      .run();
-    return { quarantined, attempts };
-  } catch (error) {
-    logWorkerEventArgs("handler", "warn", "[sync-mint-burn] decode retry state unavailable:", error);
-    return { quarantined: false, attempts: 0 };
-  }
-}
 /**
  * Topic filters for one event def's eth_getLogs call. Shared by the config scan and the
  * conservation admission CLI so both build identical production filters.
@@ -353,6 +326,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     ? await resolveBlockTimestamps(alchemyUrl, timestampRequiredBlocks, configBudget, {
         signal,
         localCache: chainTimestampCache,
+        blockHashes: blockHashesForLogs(allConfigLogs.flatMap(({ logs }) => logs)),
         deadlineMs,
         persistentCache: {
           db,
@@ -571,18 +545,14 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     summary.missingTimestampCount === 0 &&
     summary.txContextShortfalls === 0
   ) {
+    newLastBlock = mintBurnSuccessfulScanFrontier(fromBlock, scanTo, chainHead, summary.maxBlockSeen, safetyMarginBlocks);
     if (summary.maxBlockSeen > 0) {
       // Keep event-containing scans anchored to the newest event we actually
       // parsed. A successful eth_getLogs response is not independently
       // provable as exhaustive, so advancing across later empty-looking blocks
       // could permanently skip provider-omitted events in the same window.
-      newLastBlock = summary.maxBlockSeen;
       summary.advanceReason = "full-success-events";
     } else {
-      newLastBlock = Math.max(
-        fromBlock - 1,
-        Math.min(scanTo, chainHead - safetyMarginBlocks),
-      );
       summary.advanceReason = "full-success-empty";
     }
   } else if (partialCoverageFrontier != null && partialCoverageFrontier >= fromBlock) {

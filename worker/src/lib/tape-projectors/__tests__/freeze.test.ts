@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { URL as NodeURL } from "node:url";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { type MockD1Database } from "@shared/test-utils/mock-d1";
 import { projectFreezeBlocked, projectFreezeDestroyed, projectFreezeUnblocked } from "../freeze";
@@ -9,6 +11,7 @@ import { makeBlacklistRow as makeFixtureBlacklistRow } from "../../../test-helpe
 import type { BlacklistPersistedRow } from "../../blacklist/shared";
 import { CONTRACT_CONFIGS } from "../../blacklist-contracts";
 import { SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../types";
+import { handleEvents } from "../../../api/events";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
@@ -49,6 +52,56 @@ function blacklistRow(overrides: Record<string, unknown> = {}): Record<string, u
 }
 
 describe("freeze projector", () => {
+  it("persists canonical freeze chains and idempotently repairs archived rows for canonical and alias API filters", async () => {
+    const { db, sqlite } = fixtures.open();
+    const cases = [
+      { chainId: "ethereum", chainName: "Ethereum", symbol: "USDT", eventType: "blacklist", project: projectFreezeBlocked },
+      { chainId: "bsc", chainName: "BSC", symbol: "USDC", eventType: "unblacklist", project: projectFreezeUnblocked },
+      { chainId: "tron", chainName: "Tron", symbol: "USDT", eventType: "destroy", project: projectFreezeDestroyed },
+    ] as const;
+    const insert = sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, explorer_tx_url, explorer_address_url, amount_usd_at_event)
+      VALUES (?, ?, ?, ?, ?, '0xabc', '0xdef', 1, ?, 'https://example.com', 'https://example.com', 1500000)`);
+    for (const item of cases) {
+      insert.run(item.chainId, item.symbol, item.chainId, item.chainName, item.eventType, SEC);
+      await item.project(db);
+    }
+    const select = sqlite.prepare("SELECT * FROM tape_events ORDER BY source_row_id");
+    const original = select.all();
+    expect(original.map((row) => row.chain)).toEqual(["bsc", "ethereum", "tron"]);
+    for (const item of cases) {
+      const row = original.find((row) => row.source_row_id === item.chainId)!;
+      expect(JSON.parse(String(row.payload_json))).toMatchObject({ chainName: item.chainName });
+      expect(row.title).toContain(item.chainName);
+      // Seed the exact historical display-name defect after latest-schema setup.
+      sqlite.prepare("UPDATE tape_events SET chain = ? WHERE source_row_id = ?").run(item.chainName, item.chainId);
+    }
+    const migration: string = readFileSync(
+      new NodeURL("../../../../migrations/0266_tape_freeze_chain_identity.sql", import.meta.url),
+      { encoding: "utf8" },
+    );
+    sqlite.exec(migration);
+    expect(select.all()).toEqual(original);
+    sqlite.exec(migration);
+    expect(sqlite.prepare("SELECT changes() AS count").get()).toEqual({ count: 0 });
+    expect(select.all()).toEqual(original);
+
+    const unfilteredResponse = await handleEvents(db, new URL("https://example.com/api/events"));
+    const unfiltered = await unfilteredResponse.json() as { events: { id: string; chain: string }[] };
+    expect(unfiltered.events).toHaveLength(3);
+    for (const item of cases) {
+      for (const filter of [item.chainId, item.chainName]) {
+        const response = await handleEvents(db, new URL(`https://example.com/api/events?chain=${filter}`));
+        expect(response.status).toBe(200);
+        const filtered = await response.json() as { events: { id: string; chain: string }[] };
+        expect(filtered.events.map((event) => event.id)).toEqual(
+          unfiltered.events.filter((event) => event.chain === item.chainId).map((event) => event.id),
+        );
+      }
+    }
+  });
+
   it("expands a full batch through same-timestamp freeze rows before advancing the watermark", async () => {
     const limitedRows = [
       blacklistRow({ id: "freeze-a", rowid: 1 }),
@@ -94,7 +147,7 @@ describe("freeze projector", () => {
               'https://example.com', 1500000, ?, ?, ?, ?, ?)`);
     await insertBlacklistRows(db, [makeBlacklistRow({ id: "healthy-newer", event_type: eventType, timestamp: SEC })]);
     expect(await project(db)).toEqual({ projected: 1, advanced: SEC });
-    const sourceSql = prepare.mock.calls.map(([sql]) => sql).find((sql) => sql.includes("FROM blacklist_events"));
+    const sourceSql = prepare.mock.calls.map(([sql]) => sql).find((sql) => sql.includes("FROM blacklist_events INDEXED BY"));
     expect(sourceSql).toBeDefined();
     const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${sourceSql!}`)
       .all(RECONCILIATION_SINCE, eventType, eventType === "unblacklist" ? "resolved" : "opened", 500)

@@ -55,4 +55,37 @@ describe("handleBackfillBlacklistCurrentBalances", () => {
     expect(body.configs.map(({ configKey, candidateCount }) => ({ configKey, candidateCount })))
       .toEqual([{ configKey: configs[0].configKey, candidateCount: 1 }]);
   });
+
+  it.each(["ethereum", "tron"])("uses execution order rather than hashes for %s snapshots in dry-run and execution", async (chainId) => {
+    const { db, sqlite } = fixtures.open();
+    const [config] = getBlacklistConfigsForSymbolAndChain("USDT", chainId);
+    const insert = sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, explorer_tx_url, explorer_address_url, config_key, contract_address,
+       amount_native, amount_usd_at_event, transaction_index)
+      VALUES (?, 'USDT', ?, ?, ?, ?, ?, 10, 100, '', '', ?, ?, ?, ?, ?)`);
+    const hashHigh = "0x" + "f".repeat(64);
+    const hashLow = "0x" + "a".repeat(64);
+    for (const [address, known] of [["0xaa", true], ["0xbb", false]] as const) {
+      insert.run(`${chainId}-${hashHigh}-0x2`, chainId, config.chain.chainName, "blacklist",
+        address, hashHigh, config.configKey, config.contractAddress, null, null, known ? 0 : null);
+      // Distinct array suffix also keeps both address fixtures separate.
+      sqlite.prepare("UPDATE blacklist_events SET id = id || ? WHERE address = ? AND event_type = 'blacklist'")
+        .run(address === "0xaa" ? "-0" : "-1", address);
+      insert.run(`${chainId}-${hashLow}-0xa-${address === "0xaa" ? 0 : 1}`, chainId, config.chain.chainName, "destroy",
+        address, hashLow, config.configKey, config.contractAddress, 42, 42, known ? 1 : null);
+    }
+    for (const dryRun of [true, false]) {
+      const request = makeApiRequest(`/api/backfill-blacklist-current-balances?stablecoin=USDT&chainId=${chainId}&dryRun=${dryRun}`, {
+        method: "POST", adminKey: "secret-key",
+      });
+      const response = await handleBackfillBlacklistCurrentBalances({ db, url: makeApiUrl(request.url), trustedAdmin: true, request });
+      const body = await readJsonResponse<{ totals: { candidates: number; updated: number } }>(response, 200);
+      expect(body.totals.candidates).toBe(chainId === "tron" ? 1 : 2);
+      expect(body.totals.updated).toBe(dryRun ? 0 : chainId === "tron" ? 1 : 2);
+    }
+    const balances = sqlite.prepare("SELECT address, amount_native, source FROM blacklist_current_balances ORDER BY address").all();
+    expect(balances).toEqual((chainId === "tron" ? ["0xaa"] : ["0xaa", "0xbb"])
+      .map((address) => ({ address, amount_native: 42, source: "destroy_event" })));
+  });
 });

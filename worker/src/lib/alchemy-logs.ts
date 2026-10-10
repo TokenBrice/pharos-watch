@@ -81,9 +81,23 @@ export interface PersistentBlockTimestampCache {
 
 export interface ResolveBlockTimestampOptions {
   signal?: AbortSignal;
-  localCache?: Map<number, number>;
+  localCache?: Map<string, number>;
+  blockHashes?: ReadonlyMap<number, string>;
   persistentCache?: PersistentBlockTimestampCache;
   deadlineMs?: number;
+}
+
+/** A mixed fork at one height cannot establish any log's timestamp. */
+export function blockHashesForLogs(logs: readonly Pick<AlchemyLogEntry, "blockNumber" | "blockHash">[]): Map<number, string> {
+  const hashes = new Map<number, string>();
+  for (const log of logs) {
+    const block = Number(log.blockNumber);
+    const hash = log.blockHash?.toLowerCase();
+    if (!Number.isSafeInteger(block) || !hash) continue;
+    const previous = hashes.get(block);
+    hashes.set(block, previous != null && previous !== hash ? "conflicting-block-hashes" : hash);
+  }
+  return hashes;
 }
 
 // --- URL builder ---
@@ -671,6 +685,7 @@ const TIMESTAMP_RETRY_BATCH_SIZES = [TIMESTAMP_BATCH_SIZE, 10, 1] as const;
 
 interface BlockTimestampBatchResult {
   timestamps: Map<number, number>;
+  blockHashes: Map<number, string>;
   missingBlocks: number[];
   issueCount: number;
 }
@@ -682,6 +697,7 @@ async function fetchBlockTimestampBatch(
   timeoutMs = ALCHEMY_RPC_TIMEOUT_MS,
 ): Promise<BlockTimestampBatchResult> {
   const missingAll = (issueCount = 1): BlockTimestampBatchResult => ({
+    blockHashes: new Map<number, string>(),
     timestamps: new Map<number, number>(),
     missingBlocks: batch,
     issueCount,
@@ -743,13 +759,14 @@ async function fetchBlockTimestampBatch(
     }
 
     const timestamps = new Map<number, number>();
+    const blockHashes = new Map<number, string>();
     let issueCount = 0;
     for (const response of parsed) {
       if (!response || typeof response !== "object") {
         issueCount++;
         continue;
       }
-      const rpc = response as Partial<JsonRpcResponse<{ timestamp: string }>>;
+      const rpc = response as Partial<JsonRpcResponse<{ timestamp: string; hash?: string }>>;
       const requestIndex = rpc.id;
       if (typeof requestIndex !== "number" || !Number.isInteger(requestIndex)) {
         issueCount++;
@@ -775,6 +792,9 @@ async function fetchBlockTimestampBatch(
       if (ts !== null && Number.isFinite(ts)) {
         // Duplicate IDs are deterministic: the last valid mapping wins.
         timestamps.set(batch[requestIndex]!, ts);
+        if (typeof rpc.result?.hash === "string" && /^0x[0-9a-f]{64}$/i.test(rpc.result.hash)) {
+          blockHashes.set(batch[requestIndex]!, rpc.result.hash.toLowerCase());
+        }
       } else {
         issueCount++;
       }
@@ -782,7 +802,7 @@ async function fetchBlockTimestampBatch(
 
     const missingBlocks = batch.filter((block) => !timestamps.has(block));
     if (missingBlocks.length > 0) issueCount++;
-    return { timestamps, missingBlocks, issueCount };
+    return { timestamps, blockHashes, missingBlocks, issueCount };
   } catch (e) {
     logWorkerEvent({
       scope: "lib",
@@ -810,9 +830,11 @@ export async function resolveBlockTimestamps(
   const localCache = options?.localCache;
   const persistentCache = options?.persistentCache;
   const nowSec = Math.floor(Date.now() / 1000);
+  const expectedHash = (block: number) => options?.blockHashes?.get(block)?.toLowerCase();
+  const localKey = (block: number) => `${block}:${expectedHash(block) ?? "unverified"}`;
 
   for (const block of uniqueBlocks) {
-    const cached = localCache?.get(block);
+    const cached = localCache?.get(localKey(block));
     if (cached != null) {
       timestamps.set(block, cached);
     }
@@ -829,24 +851,26 @@ export async function resolveBlockTimestamps(
       const blockInClause = buildInClause(batchBlocks);
       const rows = await persistentCache.db
         .prepare(
-          `SELECT block_number, timestamp
+          `SELECT block_number, timestamp, block_hash
            FROM block_timestamp_cache
            WHERE chain_id = ?
              AND updated_at >= ?
              AND block_number IN (${blockInClause.sql})`,
         )
         .bind(persistentCache.chainId, cutoff, ...blockInClause.binds)
-        .all<{ block_number: number; timestamp: number }>();
+        .all<{ block_number: number; timestamp: number; block_hash: string | null }>();
 
       for (const row of rows.results ?? []) {
+        if (expectedHash(row.block_number) != null && row.block_hash?.toLowerCase() !== expectedHash(row.block_number)) continue;
         timestamps.set(row.block_number, row.timestamp);
-        localCache?.set(row.block_number, row.timestamp);
+        localCache?.set(localKey(row.block_number), row.timestamp);
       }
     }
     unresolved = uniqueBlocks.filter((block) => !timestamps.has(block));
   }
 
   const freshResolvedForCache = new Map<number, number>();
+  const freshHashes = new Map<number, string>();
   let fetchIssues = 0;
   let remotePending = unresolved;
   for (const batchSize of TIMESTAMP_RETRY_BATCH_SIZES) {
@@ -871,11 +895,14 @@ export async function resolveBlockTimestamps(
       const result = await fetchBlockTimestampBatch(alchemyUrl, batch, options?.signal, timeoutMs);
       fetchIssues += result.issueCount;
       for (const [block, ts] of result.timestamps) {
+        const hash = result.blockHashes.get(block);
+        if (expectedHash(block) != null && hash !== expectedHash(block)) continue;
         timestamps.set(block, ts);
-        localCache?.set(block, ts);
+        localCache?.set(localKey(block), ts);
         freshResolvedForCache.set(block, ts);
+        if (hash) freshHashes.set(block, hash);
       }
-      stillMissing.push(...result.missingBlocks.filter((block) => !timestamps.has(block)));
+      stillMissing.push(...batch.filter((block) => !timestamps.has(block)));
     }
 
     remotePending = stillMissing;
@@ -902,10 +929,10 @@ export async function resolveBlockTimestamps(
       persistentCache.db
         .prepare(
           `INSERT OR REPLACE INTO block_timestamp_cache
-            (chain_id, block_number, timestamp, updated_at)
-           VALUES (?, ?, ?, ?)`,
+            (chain_id, block_number, timestamp, updated_at, block_hash)
+           VALUES (?, ?, ?, ?, ?)`,
         )
-        .bind(persistentCache.chainId, block, ts, nowSec),
+        .bind(persistentCache.chainId, block, ts, nowSec, freshHashes.get(block) ?? null),
     );
     await batchExecute(persistentCache.db, stmts, {
       chunkSize: TIMESTAMP_CACHE_READ_CHUNK,

@@ -3,6 +3,8 @@ import { blacklistEventOrderSql } from "@shared/lib/blacklist-event-order";
 import { CURRENT_BALANCE_DEBT_PREFIX, syncCurrentBalanceCacheForRows, type CurrentBalanceFetchContext } from "./current-balance-cache";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached } from "./run-budget";
 import type { BlacklistRow } from "./shared";
+import { canonicalBlacklistAddress } from "@shared/lib/tron-address";
+import { blacklistAddressSpellings } from "../tron-address";
 
 export async function reconcileCurrentBalanceDebt(
   db: D1Database,
@@ -16,15 +18,16 @@ export async function reconcileCurrentBalanceDebt(
   const seen = new Set<string>();
   for (const row of candidates.results ?? []) {
     if (blacklistRuntimeBudgetReached(context.runBudget) || blacklistSubrequestBudgetReached(context.runBudget)) break;
-    const identity = `${row.config_key}:${row.address}`;
+    const identity = `${row.config_key}:${canonicalBlacklistAddress(row.chain_id, row.address)}`;
     if (seen.has(identity)) continue;
     seen.add(identity);
     const config = CONTRACT_CONFIGS.find((candidate) => candidate.configKey === row.config_key);
     if (!config) continue;
     if (config.chain.type === "tron" ? !circuits.tronGridAllowed : !circuits.etherscanAllowed) continue;
     const history = await db.prepare(`SELECT * FROM blacklist_events
-      WHERE config_key = ? AND address = ? AND suppression_reason IS NULL
-      ORDER BY ${blacklistEventOrderSql("ASC")}`).bind(config.configKey, row.address).all<BlacklistRow>();
+      WHERE config_key = ? AND (LOWER(address) IN (?, ?) OR address = ?) AND suppression_reason IS NULL
+      ORDER BY ${blacklistEventOrderSql("ASC")}`)
+      .bind(config.configKey, ...await blacklistAddressSpellings(row.chain_id, row.address)).all<BlacklistRow>();
     await syncCurrentBalanceCacheForRows(db, config, history.results ?? [], context);
     // Rotate unresolved/provider-failed work behind untouched debt. No TTL.
     await db.prepare(`UPDATE cache SET updated_at = ? WHERE key = ?`)

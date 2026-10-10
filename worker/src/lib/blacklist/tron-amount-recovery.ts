@@ -11,7 +11,7 @@ import {
   getBlacklistEventByTopic,
   type ContractEventConfig,
 } from "../blacklist-contracts";
-import { tronBase58ToHex, tronHexAddressToBase58 } from "../tron-address";
+import { normalizeTronAddress, tronBase58ToHex, tronHexAddressToBase58 } from "../tron-address";
 import { batchExecute } from "../db";
 import type { RateLimitedFetch } from "../evm-logs";
 import { decimalNumberFromBigInt } from "../bigint";
@@ -165,8 +165,9 @@ export async function recoverTronFreezeAmountForRow(
 
   if (config.chain.type !== "tron") return failed("provider_unsupported");
   const tokenHex = await tronBase58ToHex(config.contractAddress);
-  const accountBase58 = await tronHexAddressToBase58(row.address);
-  if (!tokenHex || !accountBase58) return failed("provider_unsupported");
+  const accountHex = await normalizeTronAddress(row.address);
+  const accountBase58 = accountHex ? await tronHexAddressToBase58(accountHex) : null;
+  if (!tokenHex || !accountBase58 || !accountHex) return failed("provider_unsupported");
   const pagesRemaining = Math.max(1, options.pagesRemaining ?? TRON_REPLAY_MAX_PAGES_PER_HISTORY);
   // Each window read is capped by what is left of the run's page budget, so a
   // single row cannot overshoot the per-run cap with its ledger plus settle reads.
@@ -183,7 +184,7 @@ export async function recoverTronFreezeAmountForRow(
     ) {
       throw new TronReplayEvidenceError("evidence_mismatch", "freeze receipt does not match the stored event");
     }
-    if (countMatchingFreezeLogs(config, row.address, tokenHex.toLowerCase(), receipt.logs) !== 1) {
+    if (countMatchingFreezeLogs(config, accountHex, tokenHex.toLowerCase(), receipt.logs) !== 1) {
       throw new TronReplayEvidenceError("evidence_mismatch", "freeze log is not uniquely proved by the receipt");
     }
 

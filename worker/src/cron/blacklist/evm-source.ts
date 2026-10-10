@@ -2,6 +2,7 @@ import { BlacklistDecodeError, quarantineBlacklistDecodeFailure } from "../../li
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { decodeAbiParameters } from "viem/utils";
 import {
+  blockHashesForLogs,
   fetchAlchemyLogs,
   getAlchemyBlockNumber,
   resolveBlockTimestamps,
@@ -169,13 +170,13 @@ function buildEvmBlacklistRow(
   const eventType = eventTypeOverride ?? eventDef.eventType;
 
   return buildBlacklistRow({
-    id: `${config.chain.chainId}-${log.transactionHash}-${log.logIndex}${rowSuffix}`,
+    id: `${config.chain.chainId}-${log.transactionHash.toLowerCase()}-0x${Number(log.logIndex).toString(16)}${rowSuffix}`,
     stablecoin: config.stablecoin,
     chain: config.chain,
     eventType,
     address: affectedAddress,
     amount,
-    txHash: log.transactionHash,
+    txHash: log.transactionHash.toLowerCase(),
     blockNumber,
     timestamp,
     contractAddress: config.contractAddress,
@@ -355,7 +356,7 @@ export async function fetchEvmEventsIncremental(
   config: ContractEventConfig,
   apiKey: string | null,
   fromBlock: number,
-  timestampCache: Map<number, number>,
+  timestampCache: Map<string, number>,
   runBudget: BlacklistRunBudget,
   rateLimit: RateLimitedFetch,
   signal?: AbortSignal,
@@ -600,6 +601,7 @@ export async function fetchEvmEventsIncremental(
               ? await resolveBlockTimestamps(rpcTarget.rpcUrl, uniqueBlocks, runBudget.subrequestBudget, {
                   signal,
                   localCache: timestampCache,
+                  blockHashes: blockHashesForLogs(fetchedLogs.logs),
                   persistentCache: {
                     db,
                     chainId: config.chain.chainId,

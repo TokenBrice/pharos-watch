@@ -6,6 +6,7 @@
  *   - freeze.destroyed  : event_type = 'destroy'
  */
 import { formatCompactUsdShortLowerK } from "@shared/lib/format";
+import { resolveChainId } from "@shared/types/chain-identity";
 import {
   buildTapeEventId,
   severityForFreezeBlocked,
@@ -126,7 +127,7 @@ async function projectFreezeVariant(
       coinId: row.config_key ? getBlacklistConfigByKey(row.config_key)?.stablecoinId ?? null : null,
       issuerId: null,
       pegCurrency: null,
-      chain: row.chain_name,
+      chain: resolveChainId(row.chain_id) ?? resolveChainId(row.chain_name),
       title,
       summary,
       payload: {

@@ -5,6 +5,7 @@ import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-pub
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import {
   makeReportCardsV9Card,
+  makeReportCardsV9PartialCard,
   makeReportCardsV9Pillars,
   makeReportCardsV9Response,
   type ReportCardsV9ResponseFixturePreset,
@@ -67,6 +68,7 @@ interface ReportCardEdgeInput {
   materiality?: "serial" | "serial-blocked" | "basket-weighted" | "basket-bounded-unknown";
   weight: number | null;
   type?: "collateral" | "mechanism";
+  provenance?: SafetyScoreV9CurrentCard["dependencies"]["serial"][number]["provenance"];
 }
 
 function reportCardFixture(input: {
@@ -91,6 +93,7 @@ function reportCardFixture(input: {
           causeGapRefs: scoreById.get(edge.from) == null ? [localCauseGaps.indexOf(`parent:${edge.from}:unknown`)] : [],
           limitedEvidenceCauses: scoreById.get(edge.from) == null ? ["U" as const] : [],
           blocked: edge.materiality === "serial-blocked",
+          ...(edge.provenance ? { provenance: edge.provenance } : {}),
         }))
         .sort((left, right) => left.upstreamAssetId.localeCompare(right.upstreamAssetId));
       const basket = input.dependencyGraph.edges
@@ -104,6 +107,7 @@ function reportCardFixture(input: {
           causeGapRefs: scoreById.get(edge.from) == null ? [localCauseGaps.indexOf(`parent:${edge.from}:unknown`)] : [],
           limitedEvidenceCauses: scoreById.get(edge.from) == null ? ["U" as const] : [],
           boundedUnknown: edge.materiality === "basket-bounded-unknown",
+          ...(edge.provenance ? { provenance: edge.provenance } : {}),
         }))
         .sort((left, right) => left.upstreamAssetId.localeCompare(right.upstreamAssetId));
       const unrated = score === null;
@@ -191,6 +195,109 @@ const stablecoinsPayload = {
 
 
 describe("generate-dependency-coverage-audit", () => {
+  it("reconciles published dependency origins independently of live backing and retains unknown set-level facts", () => {
+    const runtimeCoins = ["parent", "variant", "manual", "live", "mixed", "legacy"].map((id) => coin({ id }));
+    const reportCards = reportCardFixture({
+      cards: runtimeCoins.map(({ id }) => ({ id, score: 80, backingFromLiveReserves: true })),
+      dependencyGraph: { edges: [
+        { from: "parent", to: "variant", kind: "serial", weight: null,
+          provenance: { source: "variant", evidenceAsOf: null, intermediary: null } },
+        { from: "parent", to: "manual", kind: "serial", weight: null,
+          provenance: { source: "manual", evidenceAsOf: null, intermediary: null } },
+        { from: "parent", to: "live", kind: "basket", weight: 0.4,
+          provenance: { source: "live-reserve", evidenceAsOf: null, intermediary: null } },
+        { from: "parent", to: "mixed", kind: "serial", weight: null,
+          provenance: { source: "variant", evidenceAsOf: null, intermediary: null } },
+        { from: "parent", to: "mixed", kind: "basket", weight: 0.2,
+          provenance: { source: "live-reserve", evidenceAsOf: null, intermediary: null } },
+        { from: "parent", to: "legacy", kind: "basket", weight: 0.3 },
+      ] },
+    });
+    const audit = buildDependencyCoverageAudit({ activeCoins: runtimeCoins, reportCards });
+    expect(audit.dependencyProvenance.map((row) => ({
+      coinId: row.coinId, source: row.source, dependencyFromLive: row.dependencyFromLive,
+      publishedSources: row.publishedSources, unknownSourceCount: row.unknownSourceCount,
+    }))).toEqual([
+      { coinId: "parent", source: null, dependencyFromLive: null, publishedSources: [], unknownSourceCount: 0 },
+      { coinId: "variant", source: "variant", dependencyFromLive: false, publishedSources: ["variant"], unknownSourceCount: 0 },
+      { coinId: "manual", source: "manual", dependencyFromLive: false, publishedSources: ["manual"], unknownSourceCount: 0 },
+      { coinId: "live", source: "live-reserve", dependencyFromLive: true, publishedSources: ["live-reserve"], unknownSourceCount: 0 },
+      { coinId: "mixed", source: "mixed", dependencyFromLive: true, publishedSources: ["live-reserve", "variant"], unknownSourceCount: 0 },
+      { coinId: "legacy", source: null, dependencyFromLive: null, publishedSources: [], unknownSourceCount: 1 },
+    ]);
+    for (const row of audit.dependencyProvenance) {
+      expect(row).toMatchObject({ baseSource: null, fallbackReason: null, backingFromLiveReserves: true,
+        availableWeight: null, unavailableWeight: null, mappedLiveReserveShare: null, unmappedLiveReserveShare: null });
+    }
+    expect(audit.dependencyEdges.find((edge) => edge.to === "variant")?.dependencySource).toBe("variant");
+    expect(audit.dependencyEdges.find((edge) => edge.to === "live")?.weight).toBe(0.4);
+  });
+
+  it("classifies the consumed parent lane and keeps dispositions while any graph or role input is unavailable", () => {
+    const parent = makeReportCardsV9PartialCard("backing", "A", { id: "parent" });
+    const partialEvidence = {
+      reasonCode: parent.partialEvidence!.reasonCode,
+      excludedPillars: parent.partialEvidence!.excludedPillars,
+      causes: parent.partialEvidence!.causes,
+    };
+    const child = makeReportCardsV9Card({
+      id: "child", localCauseGaps: ["parent-backing", "parent-oracle"],
+      dependencies: {
+        serial: [{ upstreamAssetId: "parent", score: 80, ratingStatus: "rated", partialEvidence,
+          causeGapRefs: [], limitedEvidenceCauses: [], blocked: false }],
+        basket: [{ upstreamAssetId: "parent", weight: 0.35, score: null, ratingStatus: "pipeline-gap",
+          partialEvidence: null, causeGapRefs: [0], limitedEvidenceCauses: [], boundedUnknown: true }],
+        roles: [
+          { edgeKey: "control", exposureKey: "control", riskEventKey: "control", upstreamAssetId: "parent",
+            role: "control-operator", weight: 1, targetPillar: "control",
+            propagationEventEdgeKeys: [], propagationEventExposureKey: null, propagationEventRiskEventKey: null,
+            propagationEventNominalExposureShare: null, propagationEventExposureShare: null,
+            propagationEventInheritedScore: null, propagationEventModeledLossPoints: null,
+            inheritedDimensions: ["control"], unavailableDimensions: [], score: 80, ratingStatus: "rated",
+            partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [], boundedUnknown: false,
+            cycleBlocked: false, evidenceRefIds: [], failureDomains: [] },
+          { edgeKey: "oracle", exposureKey: "oracle", riskEventKey: "oracle", upstreamAssetId: "parent",
+            role: "oracle-nav", weight: 1, targetPillar: "control",
+            propagationEventEdgeKeys: [], propagationEventExposureKey: null, propagationEventRiskEventKey: null,
+            propagationEventNominalExposureShare: null, propagationEventExposureShare: null,
+            propagationEventInheritedScore: null, propagationEventModeledLossPoints: null,
+            inheritedDimensions: ["oracle-nav"], unavailableDimensions: ["oracle-nav"], score: null, ratingStatus: "rated",
+            partialEvidence, causeGapRefs: [1], limitedEvidenceCauses: [], boundedUnknown: true,
+            cycleBlocked: false, evidenceRefIds: [], failureDomains: [] },
+        ],
+        cycleBlocked: false, reasonCodes: [],
+      },
+    });
+    const activeCoins = [coin({ id: "parent" }), coin({ id: "child" })];
+    const targetDispositions = [targetDisposition("parent", "active")];
+    const auditCards = (card: SafetyScoreV9CurrentCard) => buildDependencyCoverageAudit({
+      activeCoins, targetDispositions,
+      reportCards: makeReportCardsV9Response(REPORT_CARD_PRESET, makeReportCardsV9Card, { cards: [card, parent] }),
+    });
+    const audit = auditCards(child);
+    expect(audit.dependencyEdges.map((edge) => [edge.reportKind, edge.targetScoreability, edge.reportedWeight])).toEqual([
+      ["basket", "pipeline-gap", 0.35], ["serial", "scoreable", null],
+    ]);
+    expect(audit.summary.unavailableTargetEdgeCount).toBe(1);
+    expect(audit.summary.unavailableTargetDispositionGapCount).toBe(0);
+    expect(audit.targetDispositionValidationIssues).toEqual([]);
+
+    // A scored serial lane cannot retire a target disposition covering a role gap.
+    const roleOnlyGap = makeReportCardsV9Card({ ...child, localCauseGaps: ["parent-oracle"], dependencies: {
+      ...child.dependencies, basket: [],
+      roles: child.dependencies.roles!.map((role) => ({ ...role, causeGapRefs: role.score === null ? [0] : [] })),
+    } });
+    expect(auditCards(roleOnlyGap).targetDispositionValidationIssues).toEqual([]);
+    const rolesOnly = makeReportCardsV9Card({ ...roleOnlyGap, dependencies: { ...roleOnlyGap.dependencies, serial: [] } });
+    expect(auditCards(rolesOnly).targetDispositionValidationIssues).toEqual([]);
+    const allAvailable = makeReportCardsV9Card({ ...child, localCauseGaps: [], dependencies: {
+      ...child.dependencies, basket: [], roles: child.dependencies.roles!.filter((role) => role.score !== null),
+    } });
+    expect(auditCards(allAvailable).targetDispositionValidationIssues).toContainEqual(
+      expect.objectContaining({ targetId: "parent", reason: "target-now-scoreable" }),
+    );
+  });
+
   it("propagates older held publication provenance separately from newer capture and checkout", () => {
     const reportCards = reportCardFixture({ cards: [{ id: "usdc-circle", score: 80 }], dependencyGraph: { edges: [] } });
     reportCards.publicationHealth = {
@@ -891,7 +998,8 @@ describe("generate-dependency-coverage-audit", () => {
           { id: "mapped", score: 70, backingFromLiveReserves: true },
         ],
         dependencyGraph: {
-          edges: [{ from: "upstream", to: "mapped", weight: 1, type: "collateral" }],
+          edges: [{ from: "upstream", to: "mapped", weight: 1, type: "collateral",
+            provenance: { source: "live-reserve", evidenceAsOf: null, intermediary: null } }],
         },
       }),
     });

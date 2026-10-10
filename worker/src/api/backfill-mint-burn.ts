@@ -1,6 +1,6 @@
-import { buildAlchemyUrl, getAlchemyBlockNumber, fetchAlchemyLogs, resolveBlockTimestamps } from "../lib/alchemy-logs";
+import { blockHashesForLogs, buildAlchemyUrl, getAlchemyBlockNumber, fetchAlchemyLogs, resolveBlockTimestamps } from "../lib/alchemy-logs";
 import type { AlchemyLogEntry, AlchemyTopicFilter } from "../lib/alchemy-logs";
-import { createBudget, budgetExhausted } from "../lib/evm-logs";
+import { createBudget, budgetExhausted, decodeUint256AtSlotOrNull } from "../lib/evm-logs";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig, type MintBurnEventDef } from "../lib/mint-burn-contracts";
 import type { MintBurnTxContext } from "../lib/mint-burn-bridge-classifier";
 import { errorResponse, jsonResponse } from "../lib/api-response";
@@ -10,6 +10,7 @@ import { assertActiveStablecoin } from "../lib/frozen-guards";
 import { classifyBridgeBurnRows } from "../lib/mint-burn-pipeline/classification";
 import { loadMintBurnPriceContextBatch } from "../lib/mint-burn-pipeline/context";
 import { parseMintBurnLogs } from "../lib/mint-burn-pipeline/parse";
+import { DECODE_QUARANTINE_REASON, EVM_SAFETY_MARGIN_BLOCKS, mintBurnSuccessfulScanFrontier, shouldQuarantineDecodeFailure } from "../lib/mint-burn-pipeline/scan-policy";
 import {
   persistMintBurnRows,
   recalcAffectedHours,
@@ -192,6 +193,10 @@ export async function handleBackfillMintBurn({
         rowsIgnored: 0,
         rowsDropped: 0,
         effectiveBurns: 0,
+        rowsDroppedDecode: 0,
+        rowsQuarantinedDecode: 0,
+        earliestDecodeFailureBlock: null,
+        decodeQuarantines: [],
         bridgeBurns: 0,
         reviewBurns: 0,
         txContextShortfalls: 0,
@@ -204,7 +209,7 @@ export async function handleBackfillMintBurn({
 
     const chunkSize = Math.max(1, Math.min(chunkSizeParam, chunkMax));
     const priceContext = await loadMintBurnPriceContextBatch(db, [config.stablecoinId]);
-    const localTimestampCache = new Map<number, number>();
+    const localTimestampCache = new Map<string, number>();
 
     let cursor = fromBlock;
     let chunksProcessed = 0;
@@ -212,6 +217,11 @@ export async function handleBackfillMintBurn({
     let rowsInserted = 0;
     let rowsIgnored = 0;
     let rowsDropped = 0;
+    let rowsDroppedDecode = 0;
+    let rowsQuarantinedDecode = 0;
+    let earliestDecodeFailureBlock: number | null = null;
+    const decodeQuarantines: Array<{ blockNumber: number; transactionHash: string; logIndex: string;
+      reason: typeof DECODE_QUARANTINE_REASON; attempts: number }> = [];
     let effectiveBurns = 0;
     let bridgeBurns = 0;
     let reviewBurns = 0;
@@ -261,6 +271,7 @@ export async function handleBackfillMintBurn({
         uniqueBlocks.length > 0
           ? await resolveBlockTimestamps(alchemyUrl, uniqueBlocks, budget, {
               localCache: localTimestampCache,
+              blockHashes: blockHashesForLogs(collectedLogs.flatMap(({ logs }) => logs)),
               persistentCache: { db, chainId: config.chain.chainId },
             })
           : new Map<number, number>();
@@ -274,11 +285,34 @@ export async function handleBackfillMintBurn({
 
       const affectedHours = new Map<string, MintBurnAffectedHour>();
       const allParsedRows: MintBurnRow[] = [];
+      let chunkDecodeFailureBlock: number | null = null;
 
       for (const { eventDef, logs } of collectedLogs) {
-        const parsed = parseMintBurnLogs(config, eventDef, logs, blockTimestamps, priceContext);
+        const parseableLogs: AlchemyLogEntry[] = [];
+        for (const log of logs) {
+          const slot = eventDef.amountEncoding === "nth-data-uint256" ? (eventDef.dataSlot ?? 0) : 0;
+          if (decodeUint256AtSlotOrNull(log.data, slot, config.decimals) == null) {
+            const retry = await shouldQuarantineDecodeFailure(db, configKey(config), log, Math.floor(Date.now() / 1000));
+            if (retry.quarantined) {
+              rowsDropped++;
+              rowsDroppedDecode++;
+              rowsQuarantinedDecode++;
+              decodeQuarantines.push({ blockNumber: parseInt(log.blockNumber, 16),
+                transactionHash: log.transactionHash, logIndex: log.logIndex,
+                reason: DECODE_QUARANTINE_REASON, attempts: retry.attempts });
+              continue;
+            }
+          }
+          parseableLogs.push(log);
+        }
+        const parsed = parseMintBurnLogs(config, eventDef, parseableLogs, blockTimestamps, priceContext);
 
-        rowsDropped += parsed.dropped;
+        rowsDropped += parsed.dropped + parsed.droppedDecode;
+        rowsDroppedDecode += parsed.droppedDecode;
+        if (parsed.earliestDecodeFailureBlock != null) {
+          chunkDecodeFailureBlock = Math.min(chunkDecodeFailureBlock ?? Infinity, parsed.earliestDecodeFailureBlock);
+          earliestDecodeFailureBlock = Math.min(earliestDecodeFailureBlock ?? Infinity, parsed.earliestDecodeFailureBlock);
+        }
         rowsParsed += parsed.rows.length;
 
         allParsedRows.push(...parsed.rows);
@@ -305,10 +339,18 @@ export async function handleBackfillMintBurn({
       rowsReclassifiedUnique += persistResult.rowsUpdated;
 
       await recalcAffectedHours(db, affectedHours);
-      await upsertMintBurnSyncState(db, configKey(config), scanTo, "monotonic-max");
-
-      cursor = scanTo + 1;
+      const maxBlockSeen = allParsedRows.reduce((max, row) => Math.max(max, row.block_number), 0);
+      const historicalRange = toBlockParam >= 0 && scanTo <= chainHead - EVM_SAFETY_MARGIN_BLOCKS;
+      const advancedTo = chunkDecodeFailureBlock != null
+        ? chunkDecodeFailureBlock - 1
+        : historicalRange ? scanTo : mintBurnSuccessfulScanFrontier(cursor, scanTo, chainHead, maxBlockSeen);
+      if (advancedTo >= cursor) {
+        await upsertMintBurnSyncState(db, configKey(config), advancedTo, "monotonic-max");
+      }
+      cursor = Math.max(cursor, advancedTo + 1);
       chunksProcessed++;
+      // Retry held coverage in a subsequent observation, not repeatedly in this request.
+      if (advancedTo < scanTo) break;
     }
 
     return jsonResponse({
@@ -327,6 +369,10 @@ export async function handleBackfillMintBurn({
       rowsInserted,
       rowsIgnored,
       rowsDropped,
+      rowsDroppedDecode,
+      rowsQuarantinedDecode,
+      earliestDecodeFailureBlock,
+      decodeQuarantines,
       effectiveBurns,
       bridgeBurns,
       reviewBurns,

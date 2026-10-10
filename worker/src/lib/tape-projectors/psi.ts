@@ -159,7 +159,10 @@ export async function projectPsiBandShifts(
       previous = curr;
       continue;
     }
-    if (previous.band === curr.band) continue;
+    if (previous.band === curr.band) {
+      previous = curr;
+      continue;
+    }
     const prevRank = bandRank(previous.band);
     const newRank = bandRank(curr.band);
     if (prevRank < 0 || newRank < 0) {

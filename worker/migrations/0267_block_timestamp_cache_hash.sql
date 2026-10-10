@@ -1,0 +1,9 @@
+-- rollout-safety: backward-compatible
+-- Old Workers use named columns; unknown legacy block hashes remain NULL.
+ALTER TABLE block_timestamp_cache ADD COLUMN block_hash TEXT;
+
+-- Indexed semantic log identity; historical row IDs and repair-queue FKs stay stable.
+CREATE INDEX IF NOT EXISTS idx_blacklist_semantic_identity
+ON blacklist_events (CASE WHEN lower(substr(id, 1, length(chain_id) + length(tx_hash) + 2)) = chain_id || '-' || lower(tx_hash) || '-' THEN chain_id || ':' || lower(tx_hash) || ':' || (CASE WHEN lower(substr((CASE WHEN instr(substr(id, length(chain_id) + length(tx_hash) + 3), '-') > 0 THEN substr(substr(id, length(chain_id) + length(tx_hash) + 3), 1, instr(substr(id, length(chain_id) + length(tx_hash) + 3), '-') - 1) ELSE substr(id, length(chain_id) + length(tx_hash) + 3) END), 1, 2)) = '0x' THEN substr('0000000000000000' || lower(substr((CASE WHEN instr(substr(id, length(chain_id) + length(tx_hash) + 3), '-') > 0 THEN substr(substr(id, length(chain_id) + length(tx_hash) + 3), 1, instr(substr(id, length(chain_id) + length(tx_hash) + 3), '-') - 1) ELSE substr(id, length(chain_id) + length(tx_hash) + 3) END), 3)), -16) ELSE printf('%016x', CAST((CASE WHEN instr(substr(id, length(chain_id) + length(tx_hash) + 3), '-') > 0 THEN substr(substr(id, length(chain_id) + length(tx_hash) + 3), 1, instr(substr(id, length(chain_id) + length(tx_hash) + 3), '-') - 1) ELSE substr(id, length(chain_id) + length(tx_hash) + 3) END) AS INTEGER)) END) || ':' || (CASE WHEN instr(substr(id, length(chain_id) + length(tx_hash) + 3), '-') > 0 THEN CAST(substr(substr(id, length(chain_id) + length(tx_hash) + 3), instr(substr(id, length(chain_id) + length(tx_hash) + 3), '-') + 1) AS INTEGER) ELSE 0 END) ELSE id END);
+CREATE INDEX IF NOT EXISTS idx_blacklist_balance_identity_reconcile
+ON blacklist_current_balances (chain_id, id);

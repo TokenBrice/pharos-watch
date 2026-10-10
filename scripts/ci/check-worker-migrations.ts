@@ -202,7 +202,7 @@ export function parseDataMigrationManifestRows(manifestText: string): DataMigrat
     nextHeadingIndex === -1 ? manifestText.length : nextHeadingIndex,
   );
   const rows = [...sectionText.matchAll(
-    /^\|\s*(\d{4})\s*\|\s*`([^`]+\.sql)`\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|$/gm,
+    /^\|[ \t]*(\d{4})[ \t]*\|[ \t]*`([^`]+\.sql)`[ \t]*\|([^|\r\n]*)\|([^|\r\n]*)\|([^|\r\n]*)\|([^|\r\n]*)\|[ \t]*$/gm,
   )].map(([, sequence, filename, predicate, oldWorkerCompatibility, rollbackBookmark, expectedRowBounds]) => ({
     sequence,
     filename,
@@ -462,6 +462,11 @@ export function validateDataMigrationManifestRows(
   }
 
   for (const row of rows) {
+    for (const field of ["predicate", "oldWorkerCompatibility", "rollbackBookmark", "expectedRowBounds"] as const) {
+      if (!row[field].trim()) {
+        throw new Error(`reviewed data-migration ${row.filename} is missing mandatory field: ${field}`);
+      }
+    }
     if (!migrationFiles.includes(row.filename)) {
       throw new Error(`reviewed data-migration row has no active migration file: ${row.filename}`);
     }
@@ -733,6 +738,19 @@ function seedPreMigrationFixture(executor: MigrationExecutor, targets: readonly 
           chat_id, username, created_at, last_active_at, global_alert_dews
         ) VALUES (
           'migration-gate-fixture', 'migration_gate_fixture', 1, 1, 1
+        );
+      `);
+      continue;
+    }
+    if (target === "tape_events") {
+      executor.execute(`
+        INSERT INTO tape_events (
+          event_id, type, severity, ts, chain, title, summary, payload_json,
+          source_table, source_row_id, transition, created_at
+        ) VALUES (
+          'migration-gate-freeze', 'freeze.blocked', 'notice', 1000, 'Ethereum',
+          'USDT freeze · Ethereum', 'Fixture freeze.', '{"chainName":"Ethereum"}',
+          'blacklist_events', 'migration-gate-fixture', 'opened', 1
         );
       `);
       continue;

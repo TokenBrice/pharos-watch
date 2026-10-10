@@ -193,7 +193,7 @@ function makeChainContext() {
     ["ethereum", {
       chainHead: 22_050_000,
       alchemyUrl: "https://eth.example",
-      chainTimestampCache: new Map<number, number>(),
+      chainTimestampCache: new Map<string, number>(),
       txContextCache: new Map(),
     }],
   ]);

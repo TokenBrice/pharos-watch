@@ -250,9 +250,9 @@ export async function projectDepegPeakWorsened(
   // The cron path passes no cap and drains every matching open row.
   const maxRows = options?.maxRows ?? null;
   const seenMap = await loadPeakSeenMap(db);
-  // Keep observations outside a bounded backfill window intact. An unbounded
-  // cron scan can rebuild the map from currently open rows and prune closures.
-  const nextMap: PeakWorsenedSeenMap = since != null || until != null
+  // Keep observations outside any bounded backfill intact. Only an unbounded
+  // census can rebuild the map from currently open rows and prune closures.
+  const nextMap: PeakWorsenedSeenMap = since != null || until != null || maxRows != null
     ? { ...seenMap }
     : {};
   const events: TapeEventInsert[] = [];

@@ -6,6 +6,10 @@ import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../lib/blacklist-
 import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../lib/blacklist-summary-service";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { BlacklistSummaryResponse } from "@shared/types/market";
+import {
+  BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
+  BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
+} from "../../lib/blacklist-cache-keys";
 import { balanceRow, makeValidSummaryPayload } from "./blacklist-summary.test-support";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
@@ -16,6 +20,14 @@ afterEach(() => {
 
 function makeBlacklistSummaryFallbackTables() {
   return [
+    ...["blacklist_events", "blacklist_current_balances"].map((table) => ({
+      match: "SELECT value FROM cache WHERE key = ?",
+      matchBinds: [`blacklist:identity-reconcile:v1:${table}`],
+      rows: [],
+      first: null,
+    })),
+    { match: "SELECT id, stablecoin, chain_id, address, config_key, contract_address", rows: [] },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
     // P3-16 item 4 / BMT-23 rider: cold request materialization uses a durable D1 claim.
     {
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
@@ -70,7 +82,7 @@ describe("handleBlacklistSummary", () => {
     const now = Math.floor(Date.now() / 1000);
     await materializeBlacklistSummarySnapshot(db, now, now - 30);
     const stored = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-      .get("blacklist:summary:producer:v3") as { value: string };
+      .get(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY) as { value: string };
     const snapshot = JSON.parse(stored.value) as { payload: BlacklistSummaryResponse };
     const response = await handleBlacklistSummary(db);
     expect(await readJsonResponse(response, 200)).toEqual(snapshot.payload);
@@ -83,9 +95,9 @@ describe("handleBlacklistSummary", () => {
       {
         match: "blacklist-summary-snapshot-read",
         rows: [{
-          key: "blacklist:summary:producer:v3",
+          key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
           value: JSON.stringify({
-            version: 3,
+            version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
             materializedAt: now - 60,
             freshnessTs: now - 60,
             payload,
@@ -109,8 +121,8 @@ describe("handleBlacklistSummary", () => {
     const db = mockD1([{
       match: "blacklist-summary-snapshot-read",
       rows: [{
-        key: "blacklist:summary:producer:v3",
-        value: JSON.stringify({ version: 3, materializedAt: now, freshnessTs: null, freshnessStatus, payload }),
+        key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
+        value: JSON.stringify({ version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, materializedAt: now, freshnessTs: null, freshnessStatus, payload }),
         updated_at: now,
       }],
     }], { requireMatch: true });
@@ -127,9 +139,9 @@ describe("handleBlacklistSummary", () => {
       {
         match: "blacklist-summary-snapshot-read",
         rows: [{
-          key: "blacklist:summary:producer:v3",
+          key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
           value: JSON.stringify({
-            version: 3,
+            version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
             materializedAt: now,
             freshnessTs: now,
             payload: { stats: {} },
@@ -156,7 +168,7 @@ describe("handleBlacklistSummary", () => {
       payload.totalEvents = 99;
       const db = mockD1([
         { match: "blacklist-summary-snapshot-read", rows: [{ value: JSON.stringify({
-          version: 2, materializedAt: now, freshnessTs: now, payload,
+          version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, materializedAt: now, freshnessTs: now, payload,
         }) }] },
         ...makeBlacklistSummaryFallbackTables(),
       ]);
@@ -174,7 +186,7 @@ describe("handleBlacklistSummary", () => {
       payload.totalEvents = 99;
       const db = mockD1([
         { match: "blacklist-summary-snapshot-read", rows: [{ value: JSON.stringify({
-          version: 2, materializedAt: now, freshnessTs: now, payload,
+          version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, materializedAt: now, freshnessTs: now, payload,
         }) }] },
         ...makeBlacklistSummaryFallbackTables(),
       ]);
@@ -190,9 +202,9 @@ describe("handleBlacklistSummary", () => {
       {
         match: "blacklist-summary-snapshot-read",
         rows: [{
-          key: "blacklist:summary:producer:v3",
+          key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
           value: JSON.stringify({
-            version: 3,
+            version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
             materializedAt: staleAt,
             freshnessTs: staleAt,
             payload,
@@ -220,7 +232,7 @@ describe("handleBlacklistSummary", () => {
         match: "blacklist-summary-snapshot-read",
         rows: [{
           value: JSON.stringify({
-            version: 3,
+            version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
             materializedAt: now,
             freshnessTs: now,
             payload,
@@ -268,7 +280,7 @@ describe("handleBlacklistSummary", () => {
         {
           match: "blacklist-summary-snapshot-read",
           rows: [{
-            key: "blacklist:summary:producer:v3",
+            key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
             value: "{",
             updated_at: now,
           }],
@@ -296,14 +308,14 @@ describe("handleBlacklistSummary", () => {
 
     expect(result).toEqual({ written: true });
     const write = db.getHistory().find((entry) => entry.sql.includes("blacklist-summary-snapshot-write"));
-    expect(write?.binds[0]).toBe("blacklist:summary:producer:v3");
+    expect(write?.binds[0]).toBe(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY);
     const payload = JSON.parse(String(write?.binds[1])) as {
       version: number;
       materializedAt: number;
       freshnessTs: number;
       payload: { stats: unknown; chart: unknown[]; totalEvents: number };
     };
-    expect(payload.version).toBe(3);
+    expect(payload.version).toBe(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION);
     expect(payload.materializedAt).toBe(now);
     expect(payload.freshnessTs).toBe(now - 300);
     expect(payload.payload.totalEvents).toBe(0);

@@ -13,10 +13,13 @@ import {
   blacklistRuntimeBudgetReached,
   blacklistSubrequestBudgetReached,
 } from "../lib/blacklist/run-budget";
-import type { BlacklistRow } from "../lib/blacklist/shared";
+import { BLACKLIST_PUBLIC_EVENT_SQL, type BlacklistRow } from "../lib/blacklist/shared";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { invalidateBlacklistDerivedCaches } from "../lib/blacklist-cache-invalidation";
+import { blacklistEventOrderSql } from "@shared/lib/blacklist-event-order";
+import { buildBlacklistAddressCountKey } from "@shared/lib/blacklist";
+import { buildCurrentBalanceSnapshotRows } from "../lib/blacklist/row-preparation";
 
 const DEFAULT_LIMIT = 500;
 const MAX_LIMIT = 2000;
@@ -105,26 +108,27 @@ export async function handleBackfillBlacklistCurrentBalances({
            SELECT *
            FROM blacklist_events
            WHERE stablecoin = ? AND chain_id = ?
-             AND suppression_reason IS NULL
+             AND ${BLACKLIST_PUBLIC_EVENT_SQL}
              AND (
                config_key = ?
                OR (config_key IS NULL AND LOWER(contract_address) = LOWER(?))
                OR (? = 1 AND config_key IS NULL AND contract_address IS NULL)
              )
          ),
-         ranked AS (
-           SELECT *,
-                  ROW_NUMBER() OVER (
-                    PARTITION BY LOWER(address)
-                    ORDER BY timestamp DESC, id DESC
-                  ) AS rn
+         candidate_addresses AS (
+           SELECT LOWER(address) AS identity, MAX(timestamp) AS latest_timestamp
            FROM scoped
+           GROUP BY LOWER(address)
+           ORDER BY MAX(timestamp) DESC, identity
+           LIMIT ?
          )
-         SELECT *
-         FROM ranked
-         WHERE rn = 1
-         ORDER BY timestamp DESC, id DESC
-         LIMIT ?`,
+         SELECT scoped.*
+         FROM scoped
+         ${config.chain.type === "tron"
+           ? `ORDER BY timestamp DESC, block_number DESC`
+           : `JOIN candidate_addresses ON LOWER(scoped.address) = candidate_addresses.identity
+              ORDER BY candidate_addresses.latest_timestamp DESC, candidate_addresses.identity,
+                       ${blacklistEventOrderSql("ASC")}`}`,
       )
       .bind(
         config.stablecoin,
@@ -136,8 +140,16 @@ export async function handleBackfillBlacklistCurrentBalances({
       )
       .all<BlacklistRow>();
     const selectedRows = rows.results ?? [];
-    const configTruncated = selectedRows.length > limit;
-    const candidateRows = selectedRows.slice(0, limit);
+    const candidateKeys = new Set<string>();
+    for (const row of selectedRows) {
+      candidateKeys.add(buildBlacklistAddressCountKey(row.stablecoin, row.chain_id, row.address));
+    }
+    const configTruncated = candidateKeys.size > limit;
+    const admittedKeys = new Set([...candidateKeys].slice(0, limit));
+    const candidateRows = selectedRows.filter((row) =>
+      admittedKeys.has(buildBlacklistAddressCountKey(row.stablecoin, row.chain_id, row.address)));
+    const snapshotRows = buildCurrentBalanceSnapshotRows(candidateRows);
+    const candidateCount = snapshotRows.filter((row) => row.event_type !== "unblacklist").length;
 
     if (!candidateRows.length) {
       configResults.push({
@@ -156,21 +168,13 @@ export async function handleBackfillBlacklistCurrentBalances({
     }
 
     if (dryRun) {
-      const latestByAddress = new Map<string, BlacklistRow>();
-      const ordered = [...candidateRows].sort((a, b) =>
-        a.timestamp === b.timestamp ? a.id.localeCompare(b.id) : a.timestamp - b.timestamp,
-      );
-      for (const row of ordered) {
-        latestByAddress.set(row.address.toLowerCase(), row);
-      }
-      const activeBlacklisted = [...latestByAddress.values()].filter(
-        (r) => r.event_type === "blacklist" || r.event_type === "destroy",
-      );
+      // Use the exact execution fold, including retained release history and
+      // withholding of unconfirmed cross-transaction Tron state.
       configResults.push({
         configKey: config.configKey,
         stablecoin: config.stablecoin,
         chainId: config.chain.chainId,
-        candidateCount: activeBlacklisted.length,
+        candidateCount,
         updated: 0,
         deleted: 0,
         failed: 0,
@@ -188,6 +192,7 @@ export async function handleBackfillBlacklistCurrentBalances({
       etherscanLimiter,
       tronLimiter,
       runBudget,
+      latestRows: snapshotRows,
       signal: undefined,
       chainRpcs,
     });
@@ -198,7 +203,7 @@ export async function handleBackfillBlacklistCurrentBalances({
       configKey: config.configKey,
       stablecoin: config.stablecoin,
       chainId: config.chain.chainId,
-      candidateCount: candidateRows.length,
+      candidateCount,
       updated: result.updated,
       deleted: "deleted" in result && typeof result.deleted === "number" ? result.deleted : 0,
       failed: result.failed,

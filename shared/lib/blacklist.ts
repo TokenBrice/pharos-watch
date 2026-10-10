@@ -3,6 +3,7 @@ import {
   type BlacklistAmountStatus,
   type BlacklistStablecoin,
 } from "../types/market";
+import { canonicalBlacklistAddress } from "./tron-address";
 
 const BLACKLIST_STABLECOIN_SET: ReadonlySet<string> = new Set(BLACKLIST_STABLECOINS);
 
@@ -83,9 +84,10 @@ export function buildBlacklistAddressCountKey(
   address: string,
   mode: BlacklistAddressCountMode = "address-chain-stablecoin",
 ): string {
-  if (mode === "address") return address.toLowerCase();
-  if (mode === "address-chain") return `${chainId}:${address.toLowerCase()}`;
-  return `${stablecoin}:${chainId}:${address.toLowerCase()}`;
+  const identity = canonicalBlacklistAddress(chainId, address);
+  if (mode === "address") return identity;
+  if (mode === "address-chain") return `${chainId}:${identity}`;
+  return `${stablecoin}:${chainId}:${identity}`;
 }
 
 export function buildBlacklistContractBalanceKey(
@@ -104,6 +106,6 @@ export function buildBlacklistContractBalanceKey(
     chainId,
     normalizedContractAddress ?? "unknown-contract",
     normalizedConfigKey ?? "unknown-config",
-    address.toLowerCase(),
+    canonicalBlacklistAddress(chainId, address),
   ].join(":");
 }

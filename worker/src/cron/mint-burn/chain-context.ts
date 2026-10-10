@@ -6,7 +6,7 @@ import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 export interface MintBurnChainContext {
   chainHead: number;
   alchemyUrl: string;
-  chainTimestampCache: Map<number, number>;
+  chainTimestampCache: Map<string, number>;
   txContextCache: Map<string, MintBurnTxContext | null>;
 }
 
@@ -30,7 +30,7 @@ export async function loadMintBurnChainContexts(input: {
     chainContexts.set(chainId, {
       chainHead,
       alchemyUrl,
-      chainTimestampCache: new Map<number, number>(),
+      chainTimestampCache: new Map<string, number>(),
       txContextCache: new Map<string, MintBurnTxContext | null>(),
     });
   }

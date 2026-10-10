@@ -3,6 +3,7 @@ import { createMockD1Preset } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import type * as AlchemyLogsModule from "../../lib/alchemy-logs";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 
@@ -101,7 +102,8 @@ vi.mock("../../lib/blacklist-contracts", () => ({
   getBlacklistConfigsForSymbolAndChain: () => [],
 }));
 
-vi.mock("../../lib/alchemy-logs", () => ({
+vi.mock("../../lib/alchemy-logs", async (importOriginal) => ({
+  ...(await importOriginal<typeof AlchemyLogsModule>()),
   fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 20000000, calls: 1, maxDepth: 0 })),
   getAlchemyBlockNumber: vi.fn(async () => 20000450),
   resolveBlockTimestamps: vi.fn(async () => new Map()),
@@ -203,6 +205,7 @@ import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 
 const mockD1 = createMockD1Preset([
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: null },
   { match: "blacklist:decode-retry:", rows: [] },
   { match: "INSERT OR REPLACE INTO cache", rows: [] },
   { match: "DELETE FROM cache WHERE key = ?", rows: [] },

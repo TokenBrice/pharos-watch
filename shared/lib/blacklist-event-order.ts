@@ -40,6 +40,37 @@ export function compareBlacklistEvents(left: OrderedEvent, right: OrderedEvent):
   return a[0] - b[0] || a[1] - b[1];
 }
 
+export function blacklistEventIdentity(event: Pick<OrderedEvent, "id" | "chainId" | "chain_id" | "txHash" | "tx_hash">): string {
+  const chain = event.chainId ?? event.chain_id ?? "";
+  const tx = event.txHash ?? event.tx_hash ?? "";
+  const prefix = `${chain}-${tx}-`.toLowerCase();
+  if (!tx || !event.id.toLowerCase().startsWith(prefix)) return event.id;
+  const [index, suffix = "0"] = event.id.slice(prefix.length).split("-");
+  if (!/^(0x[0-9a-f]+|[0-9]+)$/i.test(index) || !Number.isSafeInteger(Number(index))
+    || !/^[0-9]+$/.test(suffix)) return event.id;
+  return `${chain}:${tx.toLowerCase()}:${Number(index).toString(16).padStart(16, "0")}:${Number(suffix)}`;
+}
+
+export function blacklistEventIdentitySql(alias = ""): string {
+  const prefix = alias ? `${alias}.` : "";
+  const id = `${prefix}id`;
+  const chain = `${prefix}chain_id`;
+  const tx = `${prefix}tx_hash`;
+  const tail = `substr(${id}, length(${chain}) + length(${tx}) + 3)`;
+  const index = `CASE WHEN instr(${tail}, '-') > 0 THEN substr(${tail}, 1, instr(${tail}, '-') - 1) ELSE ${tail} END`;
+  const numeric = `CASE WHEN lower(substr((${index}), 1, 2)) = '0x' THEN substr('0000000000000000' || lower(substr((${index}), 3)), -16) ELSE printf('%016x', CAST((${index}) AS INTEGER)) END`;
+  const suffix = `CASE WHEN instr(${tail}, '-') > 0 THEN CAST(substr(${tail}, instr(${tail}, '-') + 1) AS INTEGER) ELSE 0 END`;
+  return `CASE WHEN lower(substr(${id}, 1, length(${chain}) + length(${tx}) + 2)) = ${chain} || '-' || lower(${tx}) || '-' THEN ${chain} || ':' || lower(${tx}) || ':' || (${numeric}) || ':' || (${suffix}) ELSE ${id} END`;
+}
+
+export function blacklistCanonicalEventFilterSql(alias = "blacklist_events"): string {
+  return `${alias}.suppression_reason IS NULL AND NOT EXISTS (
+    SELECT 1 FROM blacklist_events AS peer
+    WHERE (${blacklistEventIdentitySql("peer")}) = (${blacklistEventIdentitySql(alias)})
+      AND peer.suppression_reason IS NULL AND peer.id < ${alias}.id
+  )`;
+}
+
 /** SQLite numeric key for EVM and transaction-local Tron order. SQL callers
  * must retain ALL Tron rows: across transactions this is only presentation
  * order, and the shared fold explicitly quarantines ambiguous state. */

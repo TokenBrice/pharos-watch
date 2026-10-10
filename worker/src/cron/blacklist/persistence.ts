@@ -1,6 +1,8 @@
 import { batchExecute } from "../../lib/db";
 import { throwIfAborted } from "../../lib/abort";
 import type { BlacklistRow } from "../../lib/blacklist/shared";
+import { blacklistEventIdentity, blacklistEventIdentitySql } from "@shared/lib/blacklist-event-order";
+import { canonicalBlacklistAddress } from "@shared/lib/tron-address";
 
 export async function insertBlacklistRows(db: D1Database, rows: BlacklistRow[], signal?: AbortSignal): Promise<number> {
   throwIfAborted(signal);
@@ -12,7 +14,10 @@ export async function insertBlacklistRows(db: D1Database, rows: BlacklistRow[], 
         `/* blacklist-persistence-insert-events */
          INSERT OR IGNORE INTO blacklist_events
          (id, stablecoin, chain_id, chain_name, event_type, address, amount_native, amount_usd_at_event, amount_source, amount_status, tx_hash, block_number, timestamp, methodology_version, contract_address, config_key, event_signature, event_topic0, suppression_reason, amount_attempt_count, amount_last_attempted_at, amount_last_error_class, amount_last_provider, explorer_tx_url, explorer_address_url)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+         WHERE NOT EXISTS (
+           SELECT 1 FROM blacklist_events WHERE (${blacklistEventIdentitySql()}) = ?
+         )`,
       )
       .bind(
         row.id,
@@ -20,7 +25,7 @@ export async function insertBlacklistRows(db: D1Database, rows: BlacklistRow[], 
         row.chain_id,
         row.chain_name,
         row.event_type,
-        row.address,
+        canonicalBlacklistAddress(row.chain_id, row.address),
         row.amount_native,
         row.amount_usd_at_event,
         row.amount_source,
@@ -40,6 +45,7 @@ export async function insertBlacklistRows(db: D1Database, rows: BlacklistRow[], 
         row.amount_last_provider,
         row.explorer_tx_url,
         row.explorer_address_url,
+        blacklistEventIdentity(row),
       ),
   );
   return batchExecute(db, stmts, { signal });

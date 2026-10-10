@@ -93,7 +93,7 @@ type ScanSingleConfigArgs = ScanBlacklistConfigsArgs & {
   attempt: BlacklistConfigAttempt;
   etherscanCircuitAllowed: boolean;
   chainHeadCache: Map<number, number>;
-  getChainTimestampCache: (chainId: string) => Map<number, number>;
+  getChainTimestampCache: (chainId: string) => Map<string, number>;
 };
 
 function buildTronScanResult(result: FetchTronEventsIncrementalResult, lastCursor: number): BlacklistScanResult {
@@ -169,7 +169,7 @@ async function scanBlacklistConfig(args: {
   signal?: AbortSignal;
   chainHeadCache: Map<number, number>;
   chainRpcs?: Map<string, ChainRpcConfig>;
-  getChainTimestampCache: (chainId: string) => Map<number, number>;
+  getChainTimestampCache: (chainId: string) => Map<string, number>;
 }): Promise<BlacklistScanResult> {
   if (args.config.chain.type === "tron") {
     const result = await fetchTronEventsIncremental(
@@ -461,11 +461,11 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
     coverageOutcomeCounts: {},
     configLag: {},
   };
-  const chainTimestampCaches = new Map<string, Map<number, number>>();
-  const getChainTimestampCache = (chainId: string): Map<number, number> => {
+  const chainTimestampCaches = new Map<string, Map<string, number>>();
+  const getChainTimestampCache = (chainId: string): Map<string, number> => {
     let cache = chainTimestampCaches.get(chainId);
     if (!cache) {
-      cache = new Map<number, number>();
+      cache = new Map<string, number>();
       chainTimestampCaches.set(chainId, cache);
     }
     return cache;

@@ -29,7 +29,7 @@ import {
   type BlacklistRecentEventTypeCounts,
   type BlacklistStablecoin,
 } from "@shared/types/market";
-import { buildBlacklistAddressCountKey, isBlacklistStablecoin } from "@shared/lib/blacklist";
+import { buildBlacklistAddressCountKey, isBlacklistStablecoin, isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
 import { mapBlacklistEventRow, type BlacklistEventRow } from "./blacklist-api";
 import {
   buildBlacklistActiveRecords,
@@ -45,6 +45,8 @@ import {
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
 } from "./blacklist-cache-keys";
 import { claimCadenceBucket, failCadenceBucket } from "./cadence-bucket";
+import { reconcileBlacklistIdentities } from "./blacklist/identity-reconciliation";
+import { BLACKLIST_PUBLIC_EVENT_SQL } from "./blacklist/shared";
 
 type BlacklistSummaryPayload = BlacklistSummaryResponse &
   Required<Pick<BlacklistSummaryResponse, "coverage" | "freezeLedgerMeta" | "dataQuality" | "methodology">> & {
@@ -218,7 +220,7 @@ async function queryLatestEventTypeHistory(db: D1Database): Promise<BlacklistEve
              ORDER BY ${blacklistEventOrderSql("DESC")}
            ) AS rn
          FROM blacklist_events
-         WHERE suppression_reason IS NULL
+         WHERE ${BLACKLIST_PUBLIC_EVENT_SQL}
            AND event_type IN ('blacklist', 'unblacklist', 'destroy')
        )
        SELECT id, stablecoin, chain_id, chain_name, event_type, address,
@@ -500,6 +502,7 @@ async function buildBlacklistSummaryPayload(
   now = Math.floor(Date.now() / 1000),
   options?: { freshnessTsOverride?: number },
 ): Promise<BuiltBlacklistSummary> {
+  await reconcileBlacklistIdentities(db);
   const sevenDayCutoffSec = now - 7 * 86400;
   const [
     perCoinResult,
@@ -517,7 +520,7 @@ async function buildBlacklistSummaryPayload(
            SELECT stablecoin, event_type, COUNT(*) AS n, SUM(amount_usd_at_event) AS usd_sum,
              COUNT(amount_usd_at_event) AS usd_known
            FROM blacklist_events
-           WHERE suppression_reason IS NULL
+           WHERE ${BLACKLIST_PUBLIC_EVENT_SQL}
            GROUP BY stablecoin, event_type`,
       )
       .all<{ stablecoin: string; event_type: string; n: number; usd_sum: number | null; usd_known: number }>(),
@@ -535,7 +538,7 @@ async function buildBlacklistSummaryPayload(
              event_type,
              COUNT(*) AS n
            FROM blacklist_events
-           WHERE suppression_reason IS NULL
+           WHERE ${BLACKLIST_PUBLIC_EVENT_SQL}
            GROUP BY stablecoin, quarter_sort_key, event_type`,
       )
       .all<{ stablecoin: string; quarter_sort_key: number; event_type: string; n: number }>(),
@@ -547,7 +550,7 @@ async function buildBlacklistSummaryPayload(
         `/* blacklist-summary-per-coin-recent-7d per_coin_recent_7d */
            SELECT stablecoin, event_type, COUNT(*) AS n
            FROM blacklist_events
-           WHERE suppression_reason IS NULL
+           WHERE ${BLACKLIST_PUBLIC_EVENT_SQL}
              AND timestamp >= ?
            GROUP BY stablecoin, event_type`,
       )
@@ -572,7 +575,7 @@ async function buildBlacklistSummaryPayload(
              SUM(CASE WHEN event_type IN ('blacklist', 'destroy') AND timestamp >= ? AND amount_usd_at_event IS NOT NULL THEN 1 ELSE 0 END) AS freeze_known_24h,
              SUM(CASE WHEN event_type IN ('blacklist', 'destroy') AND timestamp >= ? AND amount_usd_at_event IS NOT NULL THEN 1 ELSE 0 END) AS freeze_known_7d
            FROM blacklist_events
-           WHERE suppression_reason IS NULL`,
+           WHERE ${BLACKLIST_PUBLIC_EVENT_SQL}`,
       )
       .bind(now - 30 * 86400, now - 86400, now - 86400, sevenDayCutoffSec, now - 86400, sevenDayCutoffSec, now - 86400, sevenDayCutoffSec)
       .first<{
@@ -636,7 +639,9 @@ async function buildBlacklistSummaryPayload(
 
   const usdcBlacklisted = blacklistBySymbol.get("USDC") ?? 0;
   const usdtBlacklisted = blacklistBySymbol.get("USDT") ?? 0;
-  const goldBlacklisted = (blacklistBySymbol.get("PAXG") ?? 0) + (blacklistBySymbol.get("XAUT") ?? 0);
+  const goldBlacklisted = [...blacklistBySymbol].reduce(
+    (sum, [symbol, count]) => sum + (isGoldBlacklistStablecoin(symbol) ? count : 0), 0,
+  );
 
   // ---------------- Per-coin detail fields (detail-page block) ----------------
   // perCoinFrozenAddressCount is resolved alongside activeRecordEvents in

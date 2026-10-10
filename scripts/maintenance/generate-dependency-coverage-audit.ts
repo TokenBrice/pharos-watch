@@ -160,6 +160,8 @@ export interface OverweightDependencySetRow {
 export type TargetScoreability =
   | "scoreable"
   | "active-nr"
+  | "pipeline-gap"
+  | "unavailable-input"
   | "pre-launch"
   | "quarantined"
   | "delisted"
@@ -172,6 +174,7 @@ export interface DependencyEdgeCoverageRow extends DependencyGraphEdge {
   reportKind: "serial" | "basket" | null;
   reportMateriality: "serial" | "serial-blocked" | "basket-weighted" | "basket-bounded-unknown" | null;
   reportedWeight: number | null;
+  dependencySource: DependencyDerivationSource | null;
   upstreamSymbol: string | null;
   dependentSymbol: string | null;
   targetLifecycle: DependencyTargetLifecycle | "unknown";
@@ -182,10 +185,13 @@ export interface DependencyEdgeCoverageRow extends DependencyGraphEdge {
 export interface DependencySetProvenanceRow {
   coinId: string;
   symbol: string;
-  source: DependencyDerivationSource | null;
+  source: DependencyDerivationSource | "mixed" | null;
   baseSource: DependencyDerivationBaseSource | null;
   fallbackReason: DependencyFallbackReason | null;
   dependencyFromLive: boolean | null;
+  publishedSources: DependencyDerivationSource[];
+  unknownSourceCount: number;
+  backingFromLiveReserves: boolean | null;
   availableWeight: number | null;
   unavailableWeight: number | null;
   mappedLiveReserveShare: number | null;
@@ -860,6 +866,7 @@ function extractDependencyProvenance(
   activeCoins: readonly StablecoinMeta[],
   cardsById: ReadonlyMap<string, ReportCard>,
   hasReportCards: boolean,
+  edges: readonly ParsedReportCardEdge[],
 ): DependencySetProvenanceRow[] {
   return activeCoins.map((coin) => {
     if (!hasReportCards) {
@@ -871,20 +878,32 @@ function extractDependencyProvenance(
         baseSource: dependencySet.baseSource,
         fallbackReason: dependencySet.fallbackReason,
         dependencyFromLive: dependencySet.dependencyFromLive,
+        publishedSources: [],
+        unknownSourceCount: 0,
+        backingFromLiveReserves: null,
         availableWeight: null,
         unavailableWeight: null,
         mappedLiveReserveShare: null,
         unmappedLiveReserveShare: null,
       };
     }
-    const fromLiveReserves = cardsById.get(coin.id)?.backingFromLiveReserves === true;
+    const publishedEdges = edges.filter((edge) => edge.to === coin.id);
+    const publishedSources = [...new Set(publishedEdges.flatMap(
+      (edge) => edge.dependencySource == null ? [] : [edge.dependencySource],
+    ))].sort();
+    const unknownSourceCount = publishedEdges.filter((edge) => edge.dependencySource == null).length;
+    const complete = publishedEdges.length > 0 && unknownSourceCount === 0;
     return {
       coinId: coin.id,
       symbol: coin.symbol,
-      source: fromLiveReserves ? "live-reserve" : null,
-      baseSource: fromLiveReserves ? "live-reserve" : null,
+      source: !complete ? null : publishedSources.length === 1 ? publishedSources[0]! : "mixed",
+      // Edge origins cannot recover unpublished set-level reserve/fallback facts.
+      baseSource: null,
       fallbackReason: null,
-      dependencyFromLive: fromLiveReserves || null,
+      dependencyFromLive: publishedSources.includes("live-reserve") ? true : complete ? false : null,
+      publishedSources,
+      unknownSourceCount,
+      backingFromLiveReserves: cardsById.get(coin.id)?.backingFromLiveReserves ?? null,
       availableWeight: null,
       unavailableWeight: null,
       mappedLiveReserveShare: null,
@@ -893,19 +912,12 @@ function extractDependencyProvenance(
   });
 }
 
-function contributionAvailabilityByEdge(
-  _cardsById: ReadonlyMap<string, ReportCard>,
-): Map<string, boolean> {
-  return new Map();
-}
-
 function classifyTargetScoreability(input: {
-  upstreamId: string;
-  dependentId: string;
-  type: DependencyType;
+  availability: ReportCard["ratingStatus"] | undefined;
+  consumedScore: number | null | undefined;
+  limitedEvidenceCauses?: readonly string[];
   lifecycle: DependencyTargetLifecycle | "unknown";
-  cardsById: ReadonlyMap<string, ReportCard>;
-  contributionAvailability: ReadonlyMap<string, boolean>;
+  materiality?: ReportCardEdgeMateriality | null;
   hasReportCards: boolean;
 }): TargetScoreability {
   if (input.lifecycle === "unknown") return "unknown-target";
@@ -914,13 +926,12 @@ function classifyTargetScoreability(input: {
   if (input.lifecycle === "delisted") return "delisted";
   if (input.lifecycle === "frozen") return "frozen";
   if (!input.hasReportCards) return "not-evaluated";
-  const edgeAvailability = input.contributionAvailability.get(
-    `${input.dependentId}::${input.upstreamId}::${input.type}`,
-  );
-  if (edgeAvailability != null) return edgeAvailability ? "scoreable" : "active-nr";
-  const upstreamCard = input.cardsById.get(input.upstreamId);
-  if (!upstreamCard) return "not-evaluated";
-  return upstreamCard.score != null ? "scoreable" : "active-nr";
+  if (input.availability === "pipeline-gap") return "pipeline-gap";
+  if (input.availability === "not-rated") return "active-nr";
+  if (input.materiality === "serial-blocked" || input.materiality === "basket-bounded-unknown") return "active-nr";
+  if (input.availability !== "rated" || input.consumedScore === undefined) return "not-evaluated";
+  if (input.consumedScore === null) return input.limitedEvidenceCauses?.length ? "active-nr" : "unavailable-input";
+  return "scoreable";
 }
 
 function buildDependencyEdgeRows(input: {
@@ -933,29 +944,33 @@ function buildDependencyEdgeRows(input: {
 }): DependencyEdgeCoverageRow[] {
   const trackedById = new Map(input.trackedCoins.map((coin) => [coin.id, coin]));
   const dispositionByTarget = new Map(input.targetDispositions.map((entry) => [entry.targetId, entry]));
-  const contributionAvailability = contributionAvailabilityByEdge(input.cardsById);
   return input.edges.map((edge) => {
     const upstream = trackedById.get(edge.from);
     const dependent = trackedById.get(edge.to);
     const lifecycle = lifecycleForMeta(upstream);
+    const reportKind = "reportKind" in edge ? edge.reportKind as ReportCardEdgeKind | null : null;
+    const reportMateriality = "reportMateriality" in edge
+      ? edge.reportMateriality as ReportCardEdgeMateriality | null : null;
+    const parent = reportKind == null ? undefined
+      : input.cardsById.get(edge.to)?.dependencies[reportKind].find(
+          (dependency) => dependency.upstreamAssetId === edge.from,
+        );
     return {
       ...edge,
       graphSource: input.graphSource,
-      reportKind: "reportKind" in edge ? edge.reportKind as ReportCardEdgeKind | null : null,
-      reportMateriality: "reportMateriality" in edge
-        ? edge.reportMateriality as ReportCardEdgeMateriality | null
-        : null,
+      reportKind,
+      reportMateriality,
       reportedWeight: "reportedWeight" in edge ? edge.reportedWeight as number | null : edge.weight,
       upstreamSymbol: upstream?.symbol ?? null,
       dependentSymbol: dependent?.symbol ?? null,
       targetLifecycle: lifecycle,
+      dependencySource: "dependencySource" in edge ? edge.dependencySource as DependencyDerivationSource | null : null,
       targetScoreability: classifyTargetScoreability({
-        upstreamId: edge.from,
-        dependentId: edge.to,
-        type: edge.type,
+        availability: parent?.ratingStatus,
+        consumedScore: parent?.score,
+        limitedEvidenceCauses: parent?.limitedEvidenceCauses,
         lifecycle,
-        cardsById: input.cardsById,
-        contributionAvailability,
+        materiality: reportMateriality,
         hasReportCards: input.hasReportCards,
       }),
       targetDisposition: dispositionByTarget.get(edge.from) ?? null,
@@ -970,8 +985,7 @@ function buildDependencyEdgeRows(input: {
 
 function validateTargetDispositions(input: {
   trackedCoins: readonly StablecoinMeta[];
-  edges: readonly DependencyEdgeCoverageRow[];
-  referencedTargetIds: ReadonlySet<string>;
+  targetScoreabilities: ReadonlyMap<string, readonly TargetScoreability[]>;
   dispositions: readonly DependencyTargetDisposition[];
   hasReportCards: boolean;
 }): TargetDispositionValidationIssue[] {
@@ -1017,7 +1031,8 @@ function validateTargetDispositions(input: {
         detail: "Disposition requires reviewer, ISO review date, rationale, and at least one HTTPS source.",
       });
     }
-    if (!input.referencedTargetIds.has(disposition.targetId)) {
+    const scoreabilities = input.targetScoreabilities.get(disposition.targetId) ?? [];
+    if (scoreabilities.length === 0) {
       issues.push({
         targetId: disposition.targetId,
         reason: "no-current-edge",
@@ -1026,12 +1041,12 @@ function validateTargetDispositions(input: {
     }
     if (
       input.hasReportCards
-      && input.edges.some((edge) => edge.from === disposition.targetId && edge.targetScoreability === "scoreable")
+      && scoreabilities.length > 0 && scoreabilities.every((scoreability) => scoreability === "scoreable")
     ) {
       issues.push({
         targetId: disposition.targetId,
         reason: "target-now-scoreable",
-        detail: "Target is now scoreable; remove the unavailable-target disposition.",
+        detail: "Every referencing dependency lane is now scoreable; remove the unavailable-target disposition.",
       });
     }
   }
@@ -1308,19 +1323,13 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
       (dependency.type ?? "collateral") !== "collateral" && dependency.weight !== 1
     )).length
   ), 0);
-  const dependencyProvenance = extractDependencyProvenance(activeCoins, cardsById, hasReportCards);
+  const dependencyProvenance = extractDependencyProvenance(activeCoins, cardsById, hasReportCards, parsedReportCards?.edges ?? []);
   const activeById = new Map(activeCoins.map((coin) => [coin.id, coin]));
   const requiredAdapterMappings: AdapterMappingRequirement[] = dependencyProvenance.flatMap((row) => {
     const coin = activeById.get(row.coinId);
     const requiresMappingReview = hasReportCards
       ? parsedReportCards!.edges.some((edge) => (
-          edge.to === row.coinId && (
-            edge.dependencySource === "live-reserve"
-            || (edge.dependencySource == null && row.baseSource === "live-reserve"
-              && (edge.reportKind === "basket" || coin?.reserves?.some(
-                (slice) => slice.coinId === edge.from && slice.depType != null,
-              )))
-          )
+          edge.to === row.coinId && edge.dependencySource === "live-reserve"
         ))
       : coin?.liveReservesConfig != null && row.baseSource !== "none";
     if (!requiresMappingReview) return [];
@@ -1329,10 +1338,30 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
       adapter: coin?.liveReservesConfig?.adapter ?? "unknown",
     }];
   });
+  const targetScoreabilities = new Map<string, TargetScoreability[]>();
+  for (const edge of dependencyEdges) {
+    const scores = targetScoreabilities.get(edge.from) ?? [];
+    scores.push(edge.targetScoreability);
+    targetScoreabilities.set(edge.from, scores);
+  }
+  const trackedById = new Map(trackedCoins.map((coin) => [coin.id, coin]));
+  for (const card of cardsById.values()) {
+    for (const role of card.dependencies.roles ?? []) {
+      const scores = targetScoreabilities.get(role.upstreamAssetId) ?? [];
+      scores.push(classifyTargetScoreability({
+        availability: role.ratingStatus,
+        consumedScore: role.score,
+        limitedEvidenceCauses: role.limitedEvidenceCauses,
+        materiality: role.cycleBlocked ? "serial-blocked" : null,
+        lifecycle: lifecycleForMeta(trackedById.get(role.upstreamAssetId)),
+        hasReportCards,
+      }));
+      targetScoreabilities.set(role.upstreamAssetId, scores);
+    }
+  }
   const targetDispositionValidationIssues = validateTargetDispositions({
     trackedCoins,
-    edges: dependencyEdges,
-    referencedTargetIds: new Set(selectedEdges.map((edge) => edge.from)),
+    targetScoreabilities,
     dispositions: targetDispositions,
     hasReportCards,
   });
@@ -1533,12 +1562,14 @@ function renderDependencyProvenance(rows: readonly DependencySetProvenanceRow[])
     row.source !== "none" || row.fallbackReason != null || row.availableWeight != null || row.unavailableWeight != null
   ));
   return renderBoundedTable(
-    ["coin", "source", "base", "fallback", "available", "unavailable", "live mapped", "live unmapped"],
+    ["coin", "source", "published origins", "unknown origins", "live backing", "base", "fallback", "available", "unavailable", "live mapped", "live unmapped"],
     relevant,
-    (row) => [`${row.symbol} (${row.coinId})`, row.source, row.baseSource, row.fallbackReason, row.availableWeight, row.unavailableWeight, row.mappedLiveReserveShare, row.unmappedLiveReserveShare],
+    (row) => [`${row.symbol} (${row.coinId})`, row.source, row.publishedSources.join(", ") || null, row.unknownSourceCount,
+      row.backingFromLiveReserves, row.baseSource, row.fallbackReason, row.availableWeight, row.unavailableWeight,
+      row.mappedLiveReserveShare, row.unmappedLiveReserveShare],
     FINDING_LIMIT,
     true,
-    ["left", "left", "left", "left", "right", "right", "right", "right"],
+    ["left", "left", "left", "right", "left", "left", "left", "right", "right", "right", "right"],
   );
 }
 

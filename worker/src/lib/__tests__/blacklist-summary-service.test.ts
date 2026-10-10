@@ -10,6 +10,25 @@ afterEach(() => {
 });
 
 describe("blacklist summary freeze aggregates", () => {
+  it("sums every canonical gold cohort without including non-gold events", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = 2_000_000_000;
+    const insert = sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, explorer_tx_url, explorer_address_url)
+      VALUES (?, ?, 'ethereum', 'Ethereum', 'blacklist', ?, ?, 1, ?, '', '')`);
+    for (const [symbol, count] of [["PAXG", 1], ["XAUT", 2], ["XAUM", 3], ["USDC", 4]] as const) {
+      for (let index = 0; index < count; index++) {
+        const id = `${symbol}-${index}`;
+        insert.run(id, symbol, id, id, now - 10);
+      }
+    }
+    await materializeBlacklistSummarySnapshot(db, now, now);
+    const summary = await (await handleBlacklistSummary(db)).json() as BlacklistSummaryResponse;
+    expect(summary.stats.goldBlacklisted).toBe(6);
+    expect(summary.stats.perCoinBlacklistCounts).toMatchObject({ PAXG: 1, XAUT: 2, XAUM: 3, USDC: 4 });
+  });
+
   it.each([
     { name: "all unavailable", values: [null, null], total: null, known: 0, unavailable: 2 },
     { name: "partial known subtotal", values: [100, null], total: 100, known: 1, unavailable: 1 },

@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { normalizeTronAddress, tronBase58ToHex, tronHexAddressToBase58 } from "../tron-address";
+import { blacklistAddressSpellings, normalizeTronAddress, tronBase58ToHex, tronHexAddressToBase58 } from "../tron-address";
 
 describe("tron-address", () => {
+  it.each(["0x2004662f694f30fd269e4cccba222654b5f0538b", "412004662f694f30fd269e4cccba222654b5f0538b", "TCtVtrdy8sSXGMx1QYUjMrAvau1pduC2Aa"])(
+    "joins equivalent historical spellings without case-folding Base58: %s", async (address) => {
+      expect(await blacklistAddressSpellings("tron", address)).toEqual([
+        "0x2004662f694f30fd269e4cccba222654b5f0538b", "412004662f694f30fd269e4cccba222654b5f0538b", "TCtVtrdy8sSXGMx1QYUjMrAvau1pduC2Aa",
+      ]);
+    },
+  );
+
   it("encodes Tron hex addresses to base58", async () => {
     await expect(tronHexAddressToBase58("0x2004662f694f30fd269e4cccba222654b5f0538b")).resolves.toBe(
       "TCtVtrdy8sSXGMx1QYUjMrAvau1pduC2Aa",
