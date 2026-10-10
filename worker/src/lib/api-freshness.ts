@@ -307,13 +307,14 @@ async function resolveSentinelBackedFreshness(params: {
   const freshnessOutcome = (
     ageSeconds: number | null,
     freshnessSource: CacheFreshnessDiagnostic["freshnessSource"] | null,
+    publishedAt: number | null = null,
   ): SentinelBackedFreshnessResult => ({
     ageSeconds,
     timestampReason: null,
     freshnessSource,
     generationId: freshnessSource === "freshness-sentinel" ? sentinelValidation?.payload?.generationId ?? null : null,
     publishedAt: freshnessSource === "freshness-sentinel" && sentinelValidation?.payload?.generationId
-      ? sentinelValidation.payload.updatedAt : null,
+      ? sentinelValidation.payload.updatedAt : publishedAt,
     ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
     quality: buildCacheQuality({
       freshnessSource,
@@ -381,7 +382,7 @@ async function resolveSentinelBackedFreshness(params: {
     if (tableAge != null) {
       recordFreshnessOutcome("table-fallback", sentinelFailureSource, sentinelValidation?.reason);
       const assessment = assessFreshnessTimestamp(params.now, params.now - tableAge);
-      return { ...freshnessOutcome(assessment.ageSeconds, "table-fallback"), timestampReason: assessment.reason };
+      return { ...freshnessOutcome(assessment.ageSeconds, "table-fallback", assessment.reason == null ? params.now - tableAge : null), timestampReason: assessment.reason };
     }
   } catch (error) {
     failures.push({
@@ -402,7 +403,7 @@ async function resolveSentinelBackedFreshness(params: {
       sentinelValidation?.reason,
     );
     const assessment = assessFreshnessTimestamp(params.now, cronFallbackTimestamp);
-    return { ...freshnessOutcome(assessment.ageSeconds, "cron-fallback"), timestampReason: assessment.reason };
+    return { ...freshnessOutcome(assessment.ageSeconds, "cron-fallback", assessment.reason == null ? cronFallbackTimestamp : null), timestampReason: assessment.reason };
   }
 
   if (params.cronHistory.error) {
@@ -505,7 +506,7 @@ export async function buildCacheStatuses(
 
     if (key === "fx-rates") {
       const fx = buildFxCacheStatus(fxState, maxAge, now);
-      caches[key] = fx.cacheStatus;
+      caches[key] = { ...fx.cacheStatus, publishedAt: fxState?.usableSyncAt ?? null };
       ageSeconds = fx.cacheStatus.ageSeconds;
       if (fx.warning) warnings.push(`fx-rates: ${fx.warning}`);
       if (fx.statusFloor === "stale") {
@@ -540,6 +541,7 @@ export async function buildCacheStatuses(
       const assessment = assessFreshnessTimestamp(now, cacheUpdatedAtByKey.get(key));
       ageSeconds = assessment.ageSeconds;
       timestampReason = assessment.reason;
+      publishedAt = assessment.reason == null ? cacheUpdatedAtByKey.get(key) ?? null : null;
     }
 
     const ratio = ageSeconds != null ? ageSeconds / maxAge : Infinity;
@@ -565,7 +567,8 @@ export async function buildCacheStatuses(
         maxAge,
         healthyMaxRatio,
         healthyMaxAge: maxAge * healthyMaxRatio,
-        ...(sentinelBackedCacheKeySet.has(key) ? { generationId, publishedAt } : {}),
+        publishedAt,
+        ...(sentinelBackedCacheKeySet.has(key) ? { generationId } : {}),
         // Unknown quality (degraded === null) fails closed: a lane is healthy
         // only when its quality verdict is explicitly clean (rule R2).
         healthy: ratio <= healthyMaxRatio && (quality == null || quality.degraded === false),

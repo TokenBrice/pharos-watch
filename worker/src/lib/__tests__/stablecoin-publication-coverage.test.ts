@@ -88,6 +88,19 @@ describe("evaluateStablecoinPublicationCoverage", () => {
 });
 
 describe("evaluateStablecoinActivePriceCoverage", () => {
+  it.each([
+    { caps: [100, 200], total: 300 },
+    { caps: [100, null], total: null },
+    { caps: [null, null], total: null },
+    { caps: [0, 0], total: 0 },
+  ])("preserves missing-price aggregate cap availability for $caps", ({ caps, total }) => {
+    const assets = caps.map((cap, index) => ({
+      id: `asset-${index}`, price: null, ...(cap == null ? {} : { circulating: { peggedUSD: cap } }),
+    }));
+    const coverage = evaluateStablecoinActivePriceCoverage(assets, assets.map((asset) => asset.id));
+    expect(coverage.affectedMarketCapUsd).toBe(total);
+    expect(coverage.missingActiveAssets.map((asset) => asset.marketCapUsd)).toEqual(caps);
+  });
   it("keeps nominal market-cap availability distinct from zero and missing prices", () => {
     const reference = { price: 1, source: "protocol-par", mode: "nominal_reference" as const };
     const circulatingCases: Array<Record<string, number> | undefined> = [undefined, {}, { peggedUSD: 0 }, { peggedUSD: 125 }];

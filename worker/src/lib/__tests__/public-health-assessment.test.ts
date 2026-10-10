@@ -9,6 +9,7 @@ import { makePriceCoverageMetadata } from "./public-health.test-support";
 import { fxRatesCacheRows } from "./fx-rate-state.test-support";
 import { STABLECOIN_PRICE_GAP_REVIEWS, evaluateStablecoinActivePriceCoverage, evaluateStablecoinPublicationCoverage, seedAbsentActivePriceCoverageMarketCaps } from "../stablecoin-publication-coverage";
 import { assessD1Capacity } from "@shared/lib/d1-capacity";
+import { EXPECTED_FX_PEG_KEYS } from "../fx-config";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const MATERIAL_MARKET_CAP_USD = STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd;
@@ -79,6 +80,10 @@ function makeMintBurnAssessmentDb(
     publicationQueryError?: unknown;
     yieldSafetyError?: unknown;
     producerHistoryError?: unknown;
+    blacklistError?: unknown;
+    dbError?: unknown;
+    cacheError?: unknown;
+    cacheMissing?: boolean;
   } = {},
 ): D1Database {
   const latestRunStatus = options.latestRunStatus !== undefined ? options.latestRunStatus : "ok";
@@ -89,7 +94,7 @@ function makeMintBurnAssessmentDb(
     { key: "stablecoins", updated_at: nowSec - 60, value: "{}" },
     { key: "stablecoin-charts", updated_at: nowSec - 60, value: "{}" },
     { key: "usds-status", updated_at: nowSec - 60, value: "{}" },
-    ...fxRatesCacheRows(nowSec - 60),
+    ...fxRatesCacheRows(nowSec - 60, Object.fromEntries(EXPECTED_FX_PEG_KEYS.map((key) => [key, 1]))),
     {
       key: "ops:d1-capacity:v1",
       updated_at: nowSec,
@@ -135,8 +140,10 @@ function makeMintBurnAssessmentDb(
               : null,
           }),
     },
-    { match: "SELECT 1", rows: [], first: { value: 1 } },
-    { match: "cache WHERE key IN", rows: cacheRows },
+    { match: "blacklist-gap-aggregate", rows: [], first: { total: 0, missing: 0, missing_recent: 0 }, ...(options.blacklistError ? { throwError: options.blacklistError } : {}) },
+    { match: "SELECT 1", rows: [], first: { value: 1 }, ...(options.dbError ? { throwError: options.dbError } : {}) },
+    { match: "cache WHERE key IN", rows: options.cacheMissing ? cacheRows.filter((row) => row.key !== "stablecoins") : cacheRows,
+      ...(options.cacheError ? { throwError: options.cacheError } : {}) },
     {
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
       matchBinds: ["ops:d1-capacity:v1"],
@@ -157,7 +164,6 @@ function makeMintBurnAssessmentDb(
       rows: [],
       ...(options.producerHistoryError ? { throwError: options.producerHistoryError } : {}),
     },
-    { match: "blacklist-gap-aggregate", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
     {
       match: "SELECT status",
       matchBinds: ["sync-mint-burn"],
@@ -171,6 +177,27 @@ function makeMintBurnAssessmentDb(
 }
 
 describe("assessPublicHealth upstream provider enrichment", () => {
+  it.each(["dbError", "blacklistError"] as const)("keeps unread blacklist measurements null with reason on %s", async (failure) => {
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(1_800_000_000, {
+      [failure]: new Error("unavailable"),
+    }), 1_800_000_000);
+    expect(result.blacklist).toEqual({
+      totalEvents: null, missingAmounts: null, recentMissingAmounts: null, recentWindowSec: null, missingRatio: null,
+      unavailableReason: failure === "dbError" ? "db-unavailable" : "blacklist-read-failed",
+    });
+  });
+
+  it("keeps a successfully read empty blacklist aggregate as observed zero", async () => {
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(1_800_000_000), 1_800_000_000);
+    expect(result.blacklist).toMatchObject({ totalEvents: 0, missingAmounts: 0, recentMissingAmounts: 0, missingRatio: 0, unavailableReason: null });
+  });
+
+  it.each([false, true])("keeps missing or unread cache aggregate freshness unavailable (failure: %s)", async (failed) => {
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(1_800_000_000, failed
+      ? { cacheError: new Error("cache unavailable") } : { cacheMissing: true }), 1_800_000_000);
+    // Missing evidence is independent of finite ratios measured for other caches.
+    expect(result.worstCacheRatio).toBeNull();
+  });
   it("keeps the alert-broker status surface inert without querying broker tables", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([

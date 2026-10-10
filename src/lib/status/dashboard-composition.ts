@@ -109,7 +109,8 @@ function buildDashboardNotices({
       if (healthData.mintBurn.majorStaleCount > 0) reasons.push(`Impacted majors: ${healthData.mintBurn.staleMajorSymbols.join(", ")}.`);
     }
     if (getBlacklistGapStatus({ missingRatio: healthData.blacklist.missingRatio }) !== "healthy") {
-      reasons.push(`Blacklist gaps tracked by /api/health: ${healthData.blacklist.missingAmounts}.`);
+      reasons.push(healthData.blacklist.missingAmounts == null ? "Blacklist gap evidence unavailable."
+        : `Blacklist gaps tracked by /api/health: ${healthData.blacklist.missingAmounts}.`);
     }
     if (reasons.length === 0) reasons.push(...getImpactedPublicSurfaces(healthData).map((surface) => surface.detail));
     notices.push({
@@ -166,7 +167,7 @@ function buildSectionPriority({ data, healthData, browserProbeSummary, issueGrou
     STATUS_PRIORITY[data.availabilityStatus],
     healthData ? STATUS_PRIORITY[healthData.status] : 0,
     browserProbeSummary && browserProbeSummary.failCount > 0 ? 1 : 0,
-    data.summary.worstCacheRatio > 2 ? 2 : data.summary.worstCacheRatio > 1.5 ? 1 : 0,
+    data.summary.worstCacheRatio == null ? 1 : data.summary.worstCacheRatio > 2 ? 2 : data.summary.worstCacheRatio > 1.5 ? 1 : 0,
   );
   const cronStatus = data.summary.availabilityImpactingConsecutiveCronErrors > 0 ? 2
     : data.summary.availabilityImpactingCronErrors > 0 || data.summary.availabilityImpactingUnhealthyCrons > 0 ? 1
@@ -241,7 +242,7 @@ function buildDashboardSections({ data, pipelineTone, browserProbeSummary, cronG
       id: "reliability", title: "Probes, breakers, and cache pressure",
       value: browserProbeSummary ? `${browserProbeSummary.passCount}/${browserProbeSummary.sampleCount}` : "Unknown",
       valueClassName: browserProbeSummary && browserProbeSummary.failCount > 0 ? "text-amber-700 dark:text-amber-400" : "text-foreground",
-      summary: `${data.summary.availabilityImpactingCronErrors} impacting cron errors, ${browserProbeSummary ? `${browserProbeSummary.failCount} failing browser probes` : "browser probe result unknown"}, worst cache ${data.summary.worstCacheRatio.toFixed(2)}x`,
+      summary: `${data.summary.availabilityImpactingCronErrors} impacting cron errors, ${browserProbeSummary ? `${browserProbeSummary.failCount} failing browser probes` : "browser probe result unknown"}, worst cache ${data.summary.worstCacheRatio == null ? "unavailable" : `${data.summary.worstCacheRatio.toFixed(2)}x`}`,
     },
     {
       id: "crons", title: "Cron Lanes", value: `${data.summary.availabilityImpactingUnhealthyCrons} impacting`,

@@ -411,14 +411,21 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
   (input) => input.publicHealth.schedulerLiveness ? evaluateSchedulerLiveness(input.publicHealth.schedulerLiveness) : null,
   (input) => {
       const status = input.publicHealth.cacheImpactStatus;
-      const worstCacheRatio = input.publicHealth.worstCacheRatio;
+      const unavailableCauses: StatusCause[] = [];
       let worstCacheBreach:
         | { key: string; ratio: number; thresholds: ReturnType<typeof getCacheRatioThresholds>; tier: "degraded" | "stale" }
         | null = null;
       for (const [key, cache] of Object.entries(input.publicHealth.caches)) {
         const tier = getCacheFreshnessStatus(cache, key);
         if (tier === "healthy") continue;
-        const ratio = getCacheFreshnessRatio(cache) ?? worstCacheRatio;
+        const ratio = getCacheFreshnessRatio(cache);
+        if (ratio == null) {
+          unavailableCauses.push(makeCause(
+            "availability", "cache_freshness_unavailable", "critical",
+            `Cache freshness unavailable (${key}: ${cache.timestampReason ?? cache.warning ?? "missing-timestamp"}).`,
+          ));
+          continue;
+        }
         if (
           worstCacheBreach == null
           || (tier === "stale" && worstCacheBreach.tier === "degraded")
@@ -427,7 +434,7 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
           worstCacheBreach = { key, ratio, thresholds: getCacheRatioThresholds(key), tier };
         }
       }
-      if (status === "healthy" && worstCacheBreach == null) return null;
+      if (status === "healthy" && worstCacheBreach == null && unavailableCauses.length === 0) return null;
       const cause = worstCacheBreach
         ? makeCause(
             "availability",
@@ -438,7 +445,7 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
             { metric: "worstCacheRatio", value: worstCacheBreach.ratio, threshold: worstCacheBreach.thresholds[worstCacheBreach.tier] },
           )
         : null;
-      return ruleResult(status, cause ? [cause] : []);
+      return ruleResult(status, [...unavailableCauses, ...(cause ? [cause] : [])]);
   },
   evaluateCacheDiagnostics,
   evaluateFxDiagnostics,

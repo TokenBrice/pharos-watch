@@ -30,10 +30,12 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
     const { limit } = parsed;
     let transitionQueryFailed = false;
     const discrepancyIssues: StatusPersistenceIssue[] = [];
+    const stateIssues: StatusPersistenceIssue[] = [];
+    const probeIssues: StatusPersistenceIssue[] = [];
 
     const [{ state, staleness }, probe, streak, transitionRows, reserveOverviewResult] = await Promise.all([
-      getStatusStateSnapshot(db, now),
-      getLatestStatusProbe(db),
+      getStatusStateSnapshot(db, now, (issue) => stateIssues.push(issue)),
+      getLatestStatusProbe(db, (issue) => probeIssues.push(issue)),
       getDiscrepancyStreak(db, (issue) => discrepancyIssues.push(issue)),
       listRecentStatusTransitions(db, limit + 1, { from, to }, () => {
         transitionQueryFailed = true;
@@ -54,8 +56,8 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
         }),
     ]);
 
-    const overall = state?.currentStatus ?? "healthy";
-    const discrepancy = buildDiscrepancy(overall, probe, now, streak);
+    const discrepancy = buildDiscrepancy(state?.currentStatus ?? null, probe, now, streak,
+      stateIssues.length > 0 ? "status-unreadable" : "status-missing");
     const hasMore = transitionQueryFailed ? null : transitionRows.length > limit;
     const transitions = transitionRows.slice(0, limit);
     const reserveComposition = reserveOverviewResult.ok
@@ -73,6 +75,8 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
         })()
       : null;
     const discrepancyError = summarizeStatusPersistenceIssues(discrepancyIssues);
+    const stateError = summarizeStatusPersistenceIssues(stateIssues);
+    const probeError = summarizeStatusPersistenceIssues(probeIssues);
 
     const body: StatusHistoryResponse = {
       timestamp: now,
@@ -85,6 +89,8 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
       reserveComposition,
       sectionErrors: {
         ...(discrepancyError ? { discrepancy: discrepancyError } : {}),
+        ...(stateError ? { state: stateError } : {}),
+        ...(probeError ? { probe: probeError } : {}),
       },
     };
 

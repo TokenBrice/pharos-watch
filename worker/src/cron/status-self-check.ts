@@ -3,6 +3,7 @@ import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { API_ORIGIN, OPS_API_ORIGIN, SITE_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 import { STATUS_PROBE_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { median, percentileNearestRank } from "@shared/lib/stats";
 import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../lib/response-body";
 import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES } from "../lib/fetch-retry";
 
@@ -10,7 +11,7 @@ import { getProbePaths } from "@shared/lib/api-endpoints";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
 import type { StatusProbeComparison, StatusProbePlaneSummary, StatusProbeSummary } from "@shared/types/status";
 import { computeRawStatus } from "../lib/status-evaluation";
-import { assessPublicHealth, buildPublicHealthResponse } from "../lib/public-health-assessment";
+import { assessPublicHealth, buildPublicHealthResponse, getPublicHealthEvidenceReadFailures } from "../lib/public-health-assessment";
 import { writeStatusRawSnapshot } from "../lib/status/raw-snapshot";
 import { loadStatusSupplements } from "../lib/status/supplements";
 import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
@@ -167,20 +168,13 @@ export async function isBootstrapCacheMiss(db: D1Database, path: string, status:
   }
 }
 
-function percentile(latencies: number[], quantile: number): number {
-  if (latencies.length === 0) return 0;
-  const sorted = [...latencies].sort((a, b) => a - b);
-  const bounded = Math.min(1, Math.max(0, quantile));
-  const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * bounded));
-  return sorted[idx];
-}
 
 function buildLatencySummary(probes: ProbeResult[]): ProbeLatencySummary {
   const latencies = probes.map((probe) => probe.latencyMs);
   return {
     minMs: probes.length > 0 ? Math.min(...latencies) : 0,
-    medianMs: percentile(latencies, 0.5),
-    p95Ms: percentile(latencies, 0.95),
+    medianMs: median(latencies) ?? 0,
+    p95Ms: percentileNearestRank(latencies, 95) ?? 0,
     maxMs: probes.length > 0 ? Math.max(...latencies) : 0,
   };
 }
@@ -816,9 +810,13 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   if (!statusPersistenceSucceeded) failedOutputs.add("status_state");
   if (!rawSnapshotPersistenceSucceeded) failedOutputs.add("status:raw-snapshot:v1");
   if (!discrepancyState.persistenceSucceeded) failedOutputs.add("status_discrepancy_state");
-  const evidenceReadFailed = raw.dbHealthy === false
-    || Object.values({ ...raw.sectionErrors, ...supplements.sectionErrors }).some((error) =>
-      error != null && /(?:failed|failure)/.test(error.code));
+  const evidenceReadFailures = [
+    ...(raw.dbHealthy === false ? ["db-unavailable"] : []),
+    ...(raw.evidenceReadFailures ?? []),
+    ...getPublicHealthEvidenceReadFailures(publicHealthAssessment),
+    ...Object.values(supplements.sectionErrors).flatMap((error) => error ? [error.code] : []),
+  ];
+  const evidenceReadFailed = evidenceReadFailures.length > 0;
   const executionFailed = sampleCount === 0 || failCount > 0 || transportStatus !== "healthy";
   const reason = failedOutputs.size > 0 ? "status-self-check-persistence-failed"
     : evidenceReadFailed ? "status-self-check-evidence-read-failed"
@@ -830,6 +828,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     metadata: JSON.stringify({
       outputPublishedAt: failedOutputs.size === 0 ? now : null,
       failedOutputs: [...failedOutputs],
+      evidenceReadFailures,
       ...(reason ? { reason } : {}),
       ...(semanticStatus != null && semanticStatus !== "healthy" ? { quality: { reason: `probe-plane-${semanticStatus}` } } : {}),
       ...(semanticStatus == null ? { semanticStatusReason: "probe-semantic-evidence-unavailable" } : {}),

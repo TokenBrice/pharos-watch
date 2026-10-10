@@ -107,6 +107,29 @@ describe("handleStatus", () => {
     body: { error: "Unauthorized" },
   });
 
+
+  it.each([
+    { causes: {} },
+    { causes: { availability: null, dataQuality: [], overall: [] } },
+    { causes: { availability: [null], dataQuality: [], overall: [] } },
+    { caches: { stablecoins: {} } },
+    { summary: {} },
+    { dataQuality: {} },
+  ])("recomputes malformed nested evidence in a fresh healthy-scheduler snapshot %j", async (overrides) => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
+        rows: [makeRawStatusSnapshotRow(now, 60, overrides)] },
+      { match: "FROM dex_liquidity_publication_generations", rows: [], first: null },
+      { match: "FROM yield_publication_generations", rows: [], first: null },
+      ...makeMinimalLiveStatusRows(now, null, true).filter((row) => row.match !== "dex_liquidity"),
+    ]);
+    const response = await handleStatus({ db, trustedAdmin: true });
+    const body = StatusResponseSchema.parse(await readJsonResponse(response, 200));
+    expect(body.sectionErrors.statusSnapshot?.code).toBe("status_snapshot_unreadable");
+    expect(body.causes.availability).toBeInstanceOf(Array);
+    expect(db.getHistory().some((entry) => entry.sql.includes("SELECT 1"))).toBe(true);
+  });
   it.each([false, true])("recomputes an incompatible observer OOM snapshot without hiding current failure (%s)", async (currentProducerFails) => {
     const now = Math.floor(Date.now() / 1000);
     const job = "compute-safety-score-v9-workflow";
@@ -222,7 +245,7 @@ describe("handleStatus", () => {
             ...Object.fromEntries(Object.entries(CRON_INTERVALS).map(([id, expectedIntervalSec]) => [
               id, { lastRun: null, recentRuns: [], expectedIntervalSec, healthy: true },
             ])),
-            [job]: { lastRun: { startedAt: now - 1200, status: "ok" }, recentRuns: [],
+            [job]: { lastRun: { startedAt: now - 1200, durationMs: 0, status: "ok" }, recentRuns: [],
               expectedIntervalSec: 300, healthy: false, telemetryUnknown: false },
           },
           sectionErrors: { scheduledSlots: { code: "old-slot-error", message: "old snapshot error" } },

@@ -85,7 +85,7 @@ export const StatusSummarySchema = z.object({
   canarySkippedCount: z.number().optional(),
   canaryStaleCount: z.number().optional(),
   diagnosticIssueCount: z.number(),
-  worstCacheRatio: z.number(),
+  worstCacheRatio: z.number().nullable(),
   /**
    * Count of rows inserted into `status_transitions` in the last 24 hours.
    * A defensive observability signal added in Workstream 5 of

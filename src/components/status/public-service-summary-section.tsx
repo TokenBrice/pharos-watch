@@ -23,7 +23,8 @@ export function PublicServiceSummarySection({
   const blacklistStatus = getBlacklistGapStatus({
     missingRatio: healthData.blacklist.missingRatio,
   });
-  const blacklistWindowHours = Math.max(1, Math.round(healthData.blacklist.recentWindowSec / 3600));
+  const blacklistWindowHours = healthData.blacklist.recentWindowSec == null
+    ? null : Math.max(1, Math.round(healthData.blacklist.recentWindowSec / 3600));
   const telegramSummary = healthData.telegramSummary ?? null;
   const impactedPublicSurfaces = getImpactedPublicSurfaces(healthData);
   const acknowledgedPriceGapNotice = getAcknowledgedPriceGapNotice(healthData.activePriceCoverage);
@@ -39,7 +40,7 @@ export function PublicServiceSummarySection({
           {blacklistStatus !== "healthy" && (
             <StatusSummaryBadge
               label="Blacklist Gaps"
-              value={String(healthData.blacklist.missingAmounts)}
+              value={healthData.blacklist.missingAmounts == null ? "Unavailable" : String(healthData.blacklist.missingAmounts)}
               status={blacklistStatus}
             />
           )}
@@ -121,7 +122,7 @@ export function PublicServiceSummarySection({
               <div className="flex flex-wrap gap-2">
                 <StatusSummaryBadge
                   label="Missing Amounts"
-                  value={String(healthData.blacklist.missingAmounts)}
+                  value={healthData.blacklist.missingAmounts == null ? "Unavailable" : String(healthData.blacklist.missingAmounts)}
                   status={blacklistStatus}
                 />
               </div>
@@ -134,15 +135,17 @@ export function PublicServiceSummarySection({
           <div className="border-t border-border/60 pt-3">
             <div className="pharos-kicker">Public Health Interpretation</div>
             <div className="mt-1.5 leading-relaxed text-foreground">
-              {healthData.blacklist.missingAmounts > 0
+              {healthData.blacklist.missingAmounts == null
+                ? `Blacklist health evidence unavailable (${healthData.blacklist.unavailableReason ?? "unavailable"}).`
+                : healthData.blacklist.missingAmounts > 0
                 ? blacklistStatus === "healthy"
-                  ? `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts, but they are below the public warning threshold${healthData.blacklist.recentMissingAmounts > 0 ? ` (${healthData.blacklist.recentMissingAmounts} recent in the last ${blacklistWindowHours}h)` : ""}.`
-                  : healthData.blacklist.recentMissingAmounts > 0
+                  ? `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts, but they are below the public warning threshold${(healthData.blacklist.recentMissingAmounts ?? 0) > 0 ? ` (${healthData.blacklist.recentMissingAmounts} recent in the last ${blacklistWindowHours}h)` : ""}.`
+                  : (healthData.blacklist.recentMissingAmounts ?? 0) > 0
                     ? `${healthData.blacklist.recentMissingAmounts} recent blacklist event(s) in the last ${blacklistWindowHours}h are still missing amounts.`
                     : `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts, but no new gaps were recorded in the last ${blacklistWindowHours}h.`
                 : "No current blacklist amount gaps are affecting the public health signal."}
             </div>
-            {healthData.blacklist.missingAmounts > 0 ? (
+            {healthData.blacklist.missingAmounts != null && healthData.blacklist.missingAmounts > 0 && healthData.blacklist.missingRatio != null ? (
               <div className="mt-2 text-xs text-muted-foreground">
                 Missing ratio {(healthData.blacklist.missingRatio * 100).toFixed(2)}% of {healthData.blacklist.totalEvents} tracked events.
               </div>

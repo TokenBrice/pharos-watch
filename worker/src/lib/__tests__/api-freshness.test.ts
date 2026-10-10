@@ -202,14 +202,19 @@ describe("buildCacheStatuses sentinel validation", () => {
       .toBe(age <= 7200 ? "fresh" : age <= 14400 ? "degraded" : "stale");
   });
 
-  it.each(["legacy", "table", "cron"] as const)("does not invent identity for %s evidence", async (source) => {
+  it.each(["legacy", "table", "cron"] as const)("preserves the publication clock without inventing identity for %s evidence", async (source) => {
     const now = 1_800_000_000;
     const { caches } = await buildCacheStatuses(freshnessDb({
-      cacheRows: source === "legacy" ? [sentinelRow("yield-data", now - 60, { generationId: undefined })] : [],
+      cacheRows: source === "legacy" ? [sentinelRow("yield-data", now - 30, { generationId: undefined })] : [],
       tableAge: source !== "cron" ? 60 : null,
       cronRows: source === "cron" ? [{ job: "sync-yield-data", started_at: now - 60 }] : [],
     }), now);
-    expect(caches["yield-data"]).toMatchObject({ generationId: null, publishedAt: null, ageSeconds: 60 });
+    expect(caches["yield-data"]).toMatchObject({
+      generationId: null,
+      publishedAt: now - 60,
+      ageSeconds: 60,
+      freshnessSource: source === "cron" ? "cron-fallback" : "table-fallback",
+    });
   });
   it.each([0, 1])("validates concurrent DEWS publication against the cache read clock (future offset %s)", async (futureOffset) => {
     const now = 1_800_000_000;
@@ -240,12 +245,14 @@ describe("buildCacheStatuses sentinel validation", () => {
       expect(caches["yield-data"]).toMatchObject({
         ageSeconds: 600,
         freshnessSource: "table-fallback",
-        generationId: null, publishedAt: null,
+        generationId: null, publishedAt: now - 600,
       });
 
       sqlite.exec("UPDATE yield_data SET is_best = 0");
       const withoutBest = await buildCacheStatuses(db, now);
-      expect(withoutBest.caches["yield-data"].ageSeconds).toBeNull();
+      expect(withoutBest.caches["yield-data"]).toMatchObject({
+        ageSeconds: null, generationId: null, publishedAt: null,
+      });
     } finally {
       sqlite.close();
     }

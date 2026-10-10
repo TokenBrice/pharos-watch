@@ -14,6 +14,10 @@ function discrepancyReasonLabel(reason: StatusDiscrepancyReason): string {
       return "probe missing";
     case "probe-invalid-timestamp":
       return "probe timestamp invalid";
+    case "status-missing":
+      return "status authority missing";
+    case "status-unreadable":
+      return "status authority unreadable";
   }
 }
 
@@ -117,17 +121,17 @@ export function SystemDiagnostics({
         <div className="text-xs text-muted-foreground">Divergence</div>
         <div
           className={`font-mono text-sm ${
-            discrepancy.hasDivergence ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
+            discrepancy.statusSeverity == null ? "text-muted-foreground" : discrepancy.hasDivergence ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
           }`}
         >
-          {discrepancy.hasDivergence ? "detected" : "none"}
+          {discrepancy.statusSeverity == null ? "unavailable" : discrepancy.hasDivergence ? "detected" : "none"}
         </div>
         <div className="text-xs text-muted-foreground">
           reason: {discrepancyReasonLabel(discrepancy.discrepancyReason)}
         </div>
         <div className="text-xs text-muted-foreground">streak: {discrepancy.consecutiveDivergent ?? "unavailable"}</div>
         <div className="text-xs text-muted-foreground">
-          delta {discrepancy.severityDelta} • probe age{" "}
+          delta {discrepancy.severityDelta ?? "unavailable"} • probe age{" "}
           {discrepancy.probeAgeSeconds != null ? formatElapsedSeconds(discrepancy.probeAgeSeconds) : "—"}
         </div>
         {discrepancy.details && <div className="text-xs text-muted-foreground">{discrepancy.details}</div>}

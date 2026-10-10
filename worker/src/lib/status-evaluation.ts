@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "./structured-log";
 import type { StatusCause, StatusResponse } from "@shared/types/status";
-import { assessPublicHealth } from "./public-health-assessment";
+import { assessPublicHealth, getPublicHealthEvidenceReadFailures } from "./public-health-assessment";
 import { emptyDatasetFreshness, emptyReserveComposition } from "./status/derived-data";
 import { emptyDataQuality, getDataQuality } from "./status/data-quality";
 import {
@@ -29,6 +29,7 @@ import type { SchedulerLiveness } from "@shared/types/status/public-health";
 
 export interface RawStatusComputation {
   dbHealthy: boolean;
+  evidenceReadFailures?: string[];
   availabilityStatus: StatusResponse["availabilityStatus"];
   dataQualityStatus: StatusResponse["dataQualityStatus"];
   rawOverallStatus: StatusLevel;
@@ -67,6 +68,7 @@ function buildDbUnavailableRawStatus(): RawStatusComputation {
 
   return {
     dbHealthy: false,
+    evidenceReadFailures: ["db-unavailable"],
     availabilityStatus: "stale",
     dataQualityStatus: "stale",
     rawOverallStatus: "stale",
@@ -168,6 +170,19 @@ export async function computeRawStatus(
     cronBudgetSurfaceTelemetryQueryFailed: budgetOnlySurfaceResult.queryFailed,
   });
   applyCronHealthSectionErrors(sectionErrors, cronHealth);
+  const evidenceReadFailures = [
+    ...getPublicHealthEvidenceReadFailures(publicHealth),
+    ...[
+      ["cron-history", cronHistoryQueryFailed],
+      ["cron-progress", cronProgressQueryFailed],
+      ["cron-leases", cronLeaseQueryFailed],
+      ["scheduled-slots", cronHealth.scheduledSlots.queryFailed],
+      ["scheduled-slot-markers", cronHealth.scheduledSlotEventMarkerQueryFailed],
+      ["budget-surfaces", budgetOnlySurfaceResult.queryFailed],
+    ].filter(([, failed]) => failed === true).map(([source]) => `${source}:read-failed`),
+    ...dataQuality.sourceFailures.map((failure) => `data-quality:${failure.source}:read-failed`),
+    ...Object.values(supplements.sectionErrors).flatMap((error) => error ? [error.code] : []),
+  ];
   if (publicHealth.schedulerLiveness.status === "unavailable") sectionErrors.schedulerLiveness = {
     code: "scheduler_liveness_unavailable",
     message: `Scheduler delivery evidence unavailable (${publicHealth.schedulerLiveness.unavailableReason}).`,
@@ -229,6 +244,7 @@ export async function computeRawStatus(
     dataQualityStatus,
     rawOverallStatus,
     confidence,
+    evidenceReadFailures,
     causes: {
       availability: availabilityCauses,
       dataQuality: dataQualityCauses,

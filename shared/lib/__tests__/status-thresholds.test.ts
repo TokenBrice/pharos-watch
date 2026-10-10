@@ -86,6 +86,7 @@ describe("publication materiality evidence", () => {
 
 describe("getBlacklistGapStatus", () => {
   it.each([
+    [null, "degraded"],
     [0.005, "healthy"],
     [0.0099, "healthy"],
     [0.01, "degraded"],

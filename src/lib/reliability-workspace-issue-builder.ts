@@ -1,5 +1,4 @@
-import { getCacheFreshnessRatio } from "@shared/lib/cache-health";
-import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
 import type { StatusHealthValue } from "@shared/types";
 import { normalizeStatusIssues } from "@/lib/status-dashboard-model";
 import { worstSeverity as worstWorkspaceSeverity } from "@/lib/status/workspace-mode";
@@ -233,10 +232,8 @@ export function buildReliabilityWorkspaceModel(input: ReliabilityWorkspaceInput)
     if (ratio == null) {
       kind = "unknown";
       cacheUnknownCount += 1;
-    } else if (ratio > STATUS_CACHE_RATIO_THRESHOLDS.stale) {
-      kind = "critical";
-    } else if (ratio > STATUS_CACHE_RATIO_THRESHOLDS.degraded || cache.mode === "cached-fallback") {
-      kind = "warning";
+    } else {
+      kind = healthKind(getCacheImpactStatus(cache, key));
     }
     if (!kind) return;
     addIssue(issues, {

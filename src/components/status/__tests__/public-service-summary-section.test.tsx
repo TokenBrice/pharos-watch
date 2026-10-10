@@ -6,6 +6,16 @@ import { makeActivePriceCoverage, makeHealthyHealthResponse, makeMissingActiveAs
 import { PublicServiceSummarySection } from "../public-service-summary-section";
 
 describe("PublicServiceSummarySection", () => {
+  it("renders unavailable blacklist measurements without a zero-gap claim", () => {
+    render(<PublicServiceSummarySection healthData={{
+      ...makeHealthyHealthResponse(),
+      blacklist: { totalEvents: null, missingAmounts: null, recentMissingAmounts: null,
+        recentWindowSec: null, missingRatio: null, unavailableReason: "blacklist-read-failed" },
+    }} />);
+    expect(screen.getByText("Blacklist health evidence unavailable (blacklist-read-failed).")).toBeTruthy();
+    expect(screen.getAllByText("Unavailable").length).toBeGreaterThan(0);
+    expect(screen.queryByText("No current blacklist amount gaps are affecting the public health signal.")).toBeNull();
+  });
   it("keeps telegram queue warnings visible without inventing impacted surfaces", () => {
     render(
       <PublicServiceSummarySection

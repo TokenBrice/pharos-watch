@@ -23,7 +23,7 @@ export function emptyStatusSummary(): StatusSummary {
     budgetOnlySurfaceStaleTelemetry: 0,
     budgetOnlySurfaceErrors: 0,
     diagnosticIssueCount: 0,
-    worstCacheRatio: 0,
+    worstCacheRatio: null,
     transitionsLast24h: 0,
   };
 }
@@ -32,7 +32,7 @@ export function buildStatusSummary(input: {
   cronHealth: CronHealthSnapshot;
   budgetOnlySurfaces: StatusResponse["budgetOnlySurfaces"];
   diagnosticIssueCount: number;
-  worstCacheRatio: number;
+  worstCacheRatio: number | null;
   transitionsLast24h: number;
 }): StatusSummary {
   const { cronHealth } = input;

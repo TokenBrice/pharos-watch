@@ -104,6 +104,22 @@ function watchdogDb(tables: MockTableConfig[]): ReturnType<typeof mockD1> {
 }
 
 describe("runCronDurationWatchdog", () => {
+  it.each([0, 20])("excludes admission skips from workload trend samples (%s executed)", async (executed) => {
+    const { db, sqlite } = sqliteFixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES (?, ?, ?, ?, ?)`);
+    for (let i = 0; i < executed; i++) {
+      insert.run("sync-stablecoins", NOW_SEC - 3600 - i, SYNC_TIMEOUT_MS * 0.9, "ok", null);
+    }
+    for (let i = 0; i < 40; i++) {
+      insert.run("sync-stablecoins", NOW_SEC - 100 - i, 1, "skipped_neutral", JSON.stringify({ reason: "cadence_bucket_completed" }));
+    }
+    const result = await runCronDurationWatchdog(db);
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata.runtimeBreaching.includes("sync-stablecoins")).toBe(executed >= 20);
+    expect(metadata.stats.find((row: { job: string }) => row.job === "sync-stablecoins")).toMatchObject({
+      runs: executed, avgMs: executed === 0 ? 0 : SYNC_TIMEOUT_MS * 0.9,
+    });
+  });
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW);

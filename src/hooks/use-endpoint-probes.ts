@@ -159,7 +159,12 @@ function extractHealthProbeSemantics(body: unknown): Partial<EndpointProbeResult
   // An absent gap section is absent evidence, not a clean ledger: defaulting it
   // to zero would let a schema-invalid 200 publish "healthy". Fail the contract
   // instead and let the caller render the probe stale.
-  if (missingAmounts === null || missingRatio === null || recentMissingAmounts === null) return null;
+  const blacklistUnavailable = blacklist != null
+    && "unavailableReason" in blacklist
+    && (blacklist.unavailableReason === "db-unavailable" || blacklist.unavailableReason === "blacklist-read-failed")
+    && ["missingAmounts", "missingRatio", "recentMissingAmounts"].every((key) =>
+      key in blacklist && (blacklist as Record<string, unknown>)[key] === null);
+  if (!blacklistUnavailable && (missingAmounts === null || missingRatio === null || recentMissingAmounts === null)) return null;
   const mintBurnWarning =
     mintBurn &&
     "sync" in mintBurn &&
@@ -171,11 +176,12 @@ function extractHealthProbeSemantics(body: unknown): Partial<EndpointProbeResult
       : null;
 
   return {
-    semanticStatus: status,
+    semanticStatus: blacklistUnavailable && status === "healthy" ? "degraded" : status,
     semanticScope: "health",
     semanticDetail:
       warnings[0] ??
       mintBurnWarning ??
+      (blacklistUnavailable ? "Blacklist health evidence unavailable." : null) ??
       (getBlacklistGapStatus({ missingRatio }) !== "healthy"
         ? `Blacklist gaps missing amounts: ${missingAmounts}.`
         : null),

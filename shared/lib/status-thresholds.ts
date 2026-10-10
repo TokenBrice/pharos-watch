@@ -82,7 +82,8 @@ export const STATUS_BLACKLIST_THRESHOLDS = {
 } as const;
 
 /** Classify blacklist coverage gaps by missing-amount share. Stale tier wins over degraded. */
-export function getBlacklistGapStatus({ missingRatio }: { missingRatio: number }): StatusHealthValue {
+export function getBlacklistGapStatus({ missingRatio }: { missingRatio: number | null }): StatusHealthValue {
+  if (missingRatio == null) return "degraded";
   if (missingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale) return "stale";
   if (missingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded) return "degraded";
   return "healthy";

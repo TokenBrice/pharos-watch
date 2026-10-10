@@ -15,6 +15,12 @@ function buildSummary(cronHealth: CronHealthSnapshot) {
 }
 
 describe("status summary scheduled-slot query failures", () => {
+  it.each([null, 99])("serializes freshness ratio availability without sentinel substitution (%s)", (worstCacheRatio) => {
+    const summary = buildStatusSummary({ cronHealth: makeCronHealth(), budgetOnlySurfaces: [],
+      diagnosticIssueCount: 0, transitionsLast24h: 0, worstCacheRatio });
+    expect(JSON.parse(JSON.stringify(summary)).worstCacheRatio).toBe(worstCacheRatio);
+    expect(emptyStatusSummary().worstCacheRatio).toBeNull();
+  });
   it("keeps the no-failure summary shape unchanged", () => {
     const summary = buildSummary(makeCronHealth({
       unhealthyCrons: 1, watchUnhealthyCrons: 1, degradedCronRuns: 2, cronErrorCount: 3,

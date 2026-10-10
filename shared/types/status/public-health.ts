@@ -108,11 +108,12 @@ export const HealthResponseSchema = z.object({
   warnings: z.array(z.string()),
   caches: z.record(z.string(), CacheStatusSchema),
   blacklist: z.object({
-    totalEvents: z.number(),
-    missingAmounts: z.number(),
-    recentMissingAmounts: z.number(),
-    recentWindowSec: z.number(),
-    missingRatio: z.number(),
+    totalEvents: z.number().nullable(),
+    missingAmounts: z.number().nullable(),
+    recentMissingAmounts: z.number().nullable(),
+    recentWindowSec: z.number().nullable(),
+    missingRatio: z.number().nullable(),
+    unavailableReason: z.enum(["db-unavailable", "blacklist-read-failed"]).nullable().optional(),
   }),
   mintBurn: z.object({
     totalEvents: z.number().nullable(),

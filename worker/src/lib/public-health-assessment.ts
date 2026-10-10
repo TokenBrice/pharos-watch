@@ -59,12 +59,13 @@ const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
 
 const MINT_BURN_CRON_JOB = "sync-mint-burn";
 
-const EMPTY_BLACKLIST_HEALTH: HealthResponse["blacklist"] = {
-  totalEvents: 0,
-  missingAmounts: 0,
-  recentMissingAmounts: 0,
-  recentWindowSec: 0,
-  missingRatio: 0,
+const UNAVAILABLE_BLACKLIST_HEALTH: HealthResponse["blacklist"] = {
+  totalEvents: null,
+  missingAmounts: null,
+  recentMissingAmounts: null,
+  recentWindowSec: null,
+  missingRatio: null,
+  unavailableReason: "blacklist-read-failed",
 };
 
 const EMPTY_MINT_BURN_HEALTH: HealthResponse["mintBurn"] = {
@@ -105,7 +106,7 @@ export interface PublicHealthAssessment {
   cacheImpactStatus: HealthResponse["status"];
   /** Input-quality verdict for sentinel-backed caches, independent of age (rule R3). */
   cacheQualityImpactStatus: HealthResponse["status"];
-  worstCacheRatio: number;
+  worstCacheRatio: number | null;
   cacheFailures: CacheStatusFailure[];
   cacheDiagnostics: CacheFreshnessDiagnostic[];
   cacheWarnings: string[];
@@ -124,6 +125,8 @@ export interface PublicHealthAssessment {
   circuitQueryError: string | null;
   d1Capacity: D1CapacityAssessment | null;
   d1CapacityImpactStatus: HealthResponse["status"];
+  d1CapacityQueryFailed?: boolean;
+  yieldSafetyQueryFailed?: boolean;
   d1CapacityQueryError: string | null;
   alertBroker: AlertBrokerHealthSummary;
   alertBrokerImpactStatus: HealthResponse["status"];
@@ -133,6 +136,26 @@ export interface PublicHealthAssessment {
   activePriceCoverageImpactStatus: HealthResponse["status"];
   schedulerLiveness: SchedulerLiveness;
   schedulerLivenessImpactStatus: HealthResponse["status"];
+}
+
+/** Current-read completeness, independent of semantic service health. */
+export function getPublicHealthEvidenceReadFailures(assessment: PublicHealthAssessment): string[] {
+  return [
+    ...(!assessment.dbHealthy ? ["db-unavailable"] : []),
+    ...assessment.cacheFailures.map((failure) => `cache:${failure.key}:${failure.source}`),
+    ...[
+      ["blacklist", assessment.blacklistQueryError],
+      ["mint-burn", assessment.mintBurnQueryError],
+      ["circuits", assessment.circuitQueryError],
+      ["d1-capacity", assessment.d1CapacityQueryFailed ? assessment.d1CapacityQueryError : null],
+      ["yield-safety", assessment.yieldSafetyQueryFailed ? "read-failed" : null],
+      ["mint-burn-output", assessment.mintBurn.queryErrors?.latestSuccessfulSyncAt],
+      ["mint-burn-count", assessment.mintBurn.queryErrors?.rowCount],
+    ].filter(([, error]) => error != null).map(([source]) => `${source}:read-failed`),
+    ...(assessment.activePriceCoverage.unavailableReason === "coverage-read-failed" ? ["stablecoin-coverage:read-failed"] : []),
+    ...(assessment.schedulerLiveness.unavailableReason === "slot-start-query-failed" ? ["scheduler:read-failed"] : []),
+    ...(assessment.schedulerLiveness.heavy.unavailableReason === "slot-start-query-failed" ? ["heavy-scheduler:read-failed"] : []),
+  ];
 }
 
 export function buildPublicHealthResponse(
@@ -418,6 +441,7 @@ async function loadMintBurnHealth(
 interface YieldSafetyAvailability {
   impactStatus: "healthy" | "degraded";
   warning: string | null;
+  queryFailed?: boolean;
 }
 
 /**
@@ -481,7 +505,7 @@ async function assessYieldSafetyAvailability(
       error: err,
     });
     // An unreadable check cannot prove the yield surface is rated (rule R2).
-    return { impactStatus: "degraded", warning: "yield-safety-availability-unknown" };
+    return { impactStatus: "degraded", warning: "yield-safety-availability-unknown", queryFailed: true };
   }
 }
 
@@ -509,11 +533,11 @@ export async function assessPublicHealth(
       caches: {},
       cacheImpactStatus: "stale",
       cacheQualityImpactStatus: "stale",
-      worstCacheRatio: 0,
+      worstCacheRatio: null,
       cacheFailures: [],
       cacheDiagnostics: [],
       cacheWarnings: [],
-      blacklist: { ...EMPTY_BLACKLIST_HEALTH },
+      blacklist: { ...UNAVAILABLE_BLACKLIST_HEALTH, unavailableReason: "db-unavailable" },
       blacklistMetrics: null,
       blacklistQueryError: null,
       mintBurn: {
@@ -664,13 +688,14 @@ export async function assessPublicHealth(
   warnings.push(...cacheAssessment.warnings);
 
   const blacklist = blacklistResult.metrics == null
-    ? { ...EMPTY_BLACKLIST_HEALTH }
+    ? { ...UNAVAILABLE_BLACKLIST_HEALTH }
     : {
         totalEvents: blacklistResult.metrics.totalEvents,
         missingAmounts: blacklistResult.metrics.missingAmounts,
         recentMissingAmounts: blacklistResult.metrics.recentMissingAmounts,
         recentWindowSec: blacklistResult.metrics.recentWindowSec,
         missingRatio: blacklistResult.metrics.missingRatio,
+        unavailableReason: null,
       };
   if (blacklistResult.error) {
     warnings.push("blacklist-query-failed");
@@ -780,7 +805,7 @@ export async function assessPublicHealth(
     caches: cachesWithProvider,
     cacheImpactStatus,
     cacheQualityImpactStatus,
-    worstCacheRatio: Number.isFinite(cacheAssessment.worstRatio) ? cacheAssessment.worstRatio : 99,
+    worstCacheRatio: Number.isFinite(cacheAssessment.worstRatio) ? cacheAssessment.worstRatio : null,
     cacheFailures: cacheAssessment.failures,
     cacheDiagnostics: cacheAssessment.diagnostics,
     cacheWarnings: cacheAssessment.warnings,
@@ -800,6 +825,8 @@ export async function assessPublicHealth(
     d1Capacity: d1CapacityResult.assessment,
     d1CapacityImpactStatus,
     d1CapacityQueryError: d1CapacityResult.error,
+    d1CapacityQueryFailed: d1CapacityResult.reason === "query-failed",
+    yieldSafetyQueryFailed: yieldSafetyAvailability.queryFailed === true,
     alertBroker,
     alertBrokerImpactStatus,
     stablecoinPublication,

@@ -201,6 +201,7 @@ export const YieldHealthSummarySchema = z.object({
   rankingTimestampReason: z.string().nullable().optional(),
   rankingMaxAgeSec: z.number(),
   rankingStatus: StatusHealthOrUnknownSchema,
+  rankingUnavailableReason: z.string().nullable().optional(),
   safetyCoverage: z.object({
     coveredCount: z.number().nullable(),
     trackedCount: z.number().nullable(),
@@ -235,6 +236,7 @@ export const YieldHealthSummarySchema = z.object({
         timestampReason: z.string().nullable().optional(),
         sourceCount: z.number().nullable(),
         status: StatusHealthOrUnknownSchema,
+        unavailableReason: z.string().nullable().optional(),
         /** True when this row is the retained snapshot from the last degraded fetch. */
         retained: z.boolean().optional(),
         /**
@@ -253,6 +255,7 @@ export const YieldHealthSummarySchema = z.object({
     timestampReason: z.string().nullable().optional(),
     maxAgeSec: z.number(),
     status: StatusHealthOrUnknownSchema,
+    unavailableReason: z.string().nullable().optional(),
     headlineGapCount: z.number().nullable(),
     recommendationCandidateCount: z.number().nullable(),
     manifestMissingCount: z.number().nullable(),

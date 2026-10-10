@@ -13,6 +13,7 @@ import type {
   PublicationSurfaceHealth,
   PublicationSurfaceId,
 } from "@shared/types/status";
+import { assessFreshnessTimestamp } from "./api-freshness-age";
 
 type DependencySignal = {
   status: DependencyHealthStatus;
@@ -85,12 +86,14 @@ function cacheSignal(cache: CacheStatus | undefined, now: number, cacheKey: stri
   }
 
   const maxAgeSec = cache.maxAge;
-  const updatedAt = cache.ageSeconds != null ? Math.max(0, now - cache.ageSeconds) : null;
+  const updatedAt = cache.publishedAt ?? null;
+  const ageSeconds = assessFreshnessTimestamp(now, updatedAt).ageSeconds;
+  const sourceAgeSeconds = assessFreshnessTimestamp(now, cache.sourceUpdatedAt).ageSeconds;
   if (cache.sourceStatus === "stale") {
     return {
       status: "stale",
       updatedAt: cache.sourceUpdatedAt ?? updatedAt,
-      ageSeconds: cache.sourceAgeSeconds ?? cache.ageSeconds,
+      ageSeconds: sourceAgeSeconds ?? ageSeconds,
       maxAgeSec,
       reason: cache.warning ?? "Upstream source data is stale.",
     };
@@ -99,12 +102,12 @@ function cacheSignal(cache: CacheStatus | undefined, now: number, cacheKey: stri
     return {
       status: "degraded",
       updatedAt: cache.sourceUpdatedAt ?? updatedAt,
-      ageSeconds: cache.sourceAgeSeconds ?? cache.ageSeconds,
+      ageSeconds: sourceAgeSeconds ?? ageSeconds,
       maxAgeSec,
       reason: cache.warning ?? "Upstream source data is degraded.",
     };
   }
-  if (cache.ageSeconds == null) {
+  if (ageSeconds == null) {
     return {
       status: "stale",
       updatedAt: null,
@@ -113,14 +116,14 @@ function cacheSignal(cache: CacheStatus | undefined, now: number, cacheKey: stri
       reason: cache.warning ?? "Freshness timestamp unavailable.",
     };
   }
-  const freshnessStatus = getCacheFreshnessStatus(cache, cacheKey);
+  const freshnessStatus = getCacheFreshnessStatus({ ...cache, ageSeconds }, cacheKey);
   if (freshnessStatus === "stale") {
     return {
       status: "stale",
       updatedAt,
-      ageSeconds: cache.ageSeconds,
+      ageSeconds,
       maxAgeSec,
-      reason: cache.warning ?? `Freshness age ${cache.ageSeconds}s exceeds the stale availability budget.`,
+      reason: cache.warning ?? `Freshness age ${ageSeconds}s exceeds the stale availability budget.`,
     };
   }
   if (freshnessStatus === "degraded" || !cache.healthy) {
@@ -130,16 +133,16 @@ function cacheSignal(cache: CacheStatus | undefined, now: number, cacheKey: stri
     return {
       status: "degraded",
       updatedAt,
-      ageSeconds: cache.ageSeconds,
+      ageSeconds,
       maxAgeSec,
-      reason: qualityReason ?? cache.warning ?? `Freshness age ${cache.ageSeconds}s is outside the healthy budget.`,
+      reason: qualityReason ?? cache.warning ?? `Freshness age ${ageSeconds}s is outside the healthy budget.`,
     };
   }
 
   return {
     status: "healthy",
     updatedAt,
-    ageSeconds: cache.ageSeconds,
+    ageSeconds,
     maxAgeSec,
     reason: null,
   };

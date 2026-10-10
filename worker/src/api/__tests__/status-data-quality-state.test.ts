@@ -3,6 +3,7 @@ import { STATUS_ONCHAIN_FRESH_WINDOW_SEC } from "@shared/lib/status-thresholds";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
+import { computeRawStatus } from "../../lib/status-evaluation";
 
 import {
   handleStatus,
@@ -85,6 +86,16 @@ function buildCoverageRow(
 }
 
 describe("handleStatus", () => {
+  it.each([
+    { match: "UNION ALL", code: "cron-history:read-failed" },
+    { match: "AS last_any", code: "scheduler:read-failed" },
+    { match: "SELECT COUNT(*) as cnt FROM depeg_events", code: "data-quality:active-depegs:read-failed" },
+  ])("carries explicit evidence outcomes when $match fails", async ({ match, code }) => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = fixtureMockD1([{ match, rows: [], throwError: new Error("evidence unavailable") }], true);
+    const raw = await computeRawStatus(db, now);
+    expect(raw.evidenceReadFailures).toContain(code);
+  });
   beforeEach(() => {
     vi.spyOn(Date, "now").mockReturnValue(Date.now());
   });

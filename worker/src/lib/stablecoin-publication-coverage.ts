@@ -77,11 +77,12 @@ export interface StablecoinPriceGapReview {
  * can be unknown. The public reader also represents unavailable current data. */
 export type StablecoinActivePriceCoverage = {
   [Key in Exclude<keyof ActivePriceCoverageHealth,
-    "status" | "observedAt" | "unavailableReason" | "maxConsecutiveMissingGenerations" | "nominalReferenceMarketCapUsd">]-?: NonNullable<ActivePriceCoverageHealth[Key]>;
+    "status" | "observedAt" | "unavailableReason" | "maxConsecutiveMissingGenerations" | "nominalReferenceMarketCapUsd" | "affectedMarketCapUsd">]-?: NonNullable<ActivePriceCoverageHealth[Key]>;
 } & {
   complete: boolean;
   maxConsecutiveMissingGenerations: ActivePriceCoverageHealth["maxConsecutiveMissingGenerations"];
   nominalReferenceMarketCapUsd: number | null;
+  affectedMarketCapUsd: number | null;
 };
 
 export interface PreviousStablecoinActivePriceCoverage {
@@ -770,7 +771,7 @@ export function evaluateStablecoinActivePriceCoverage(
     options.priceGapReviews,
   );
   let presentActiveCount = 0;
-  let affectedMarketCapUsd = 0;
+  let affectedMarketCapUsd: number | null = 0;
   let nominalReferenceMarketCapUsd: number | null = 0;
   let maxConsecutiveMissingGenerations: number | null = 0;
 
@@ -791,9 +792,8 @@ export function evaluateStablecoinActivePriceCoverage(
         ? null : nominalReferenceMarketCapUsd + marketCapUsd;
       continue;
     }
-    if (marketCapUsd != null && marketCapUsd > 0) {
-      affectedMarketCapUsd += marketCapUsd;
-    }
+    affectedMarketCapUsd = affectedMarketCapUsd == null || marketCapUsd == null
+      ? null : affectedMarketCapUsd + marketCapUsd;
     const previousDetail = previousMissingDetailsById.get(stablecoinId);
     const previousStreak = options.previousCoverage?.unavailableReason
       ? null

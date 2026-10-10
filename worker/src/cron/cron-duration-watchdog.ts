@@ -357,6 +357,7 @@ export async function runCronDurationWatchdog(
          FROM cron_runs
          WHERE job = ?
            AND started_at > ?
+           AND status IN ('ok', 'degraded', 'error')
            AND (error IS NULL OR error <> ?)
            AND (
              metadata IS NULL
