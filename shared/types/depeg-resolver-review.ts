@@ -409,6 +409,11 @@ export const DdrrV2SummaryMetricsSchema = z.object({
   recoveryLikelihoodCorrectCount: z.number().int().nonnegative(),
   recoveryLikelihoodScoredCount: z.number().int().nonnegative(),
   recoveryLikelihoodAccuracyPct: RatioSchema.min(0).max(1).nullable(),
+  // Absent on older cached snapshots; consumers show unavailable, never row-sample totals.
+  falseTerminalCount: z.number().int().nonnegative().optional(),
+  falseRecoverableCount: z.number().int().nonnegative().optional(),
+  withinIqrCount: z.number().int().nonnegative().optional(),
+  iqrScoredCount: z.number().int().nonnegative().optional(),
   durationScoredCount: z.number().int().nonnegative(),
   meanSignedDurationErrorSec: z.number().nullable(),
   medianSignedDurationErrorSec: z.number().nullable(),

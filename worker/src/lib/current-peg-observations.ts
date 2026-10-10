@@ -6,9 +6,11 @@ import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trus
 import type { StablecoinData } from "@shared/types/market";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import { deriveDepegSignal } from "./depeg-signals";
+import type { DepegSignal } from "@shared/lib/depeg-signals";
 
 export interface CurrentPegObservation {
   currentDeviationBps: number | null;
+  currentSignal: DepegSignal | null;
   pegReference: PegSummaryCoin["pegReference"];
   pegReferenceUnavailable: boolean;
   currentPriceUnavailable: boolean;
@@ -39,6 +41,7 @@ export function deriveCurrentPegObservationMap(options: {
     const currentPriceUnavailable =
       !meta.flags.navToken && (asset === undefined || !hasUsableCurrentPrice(asset));
     let currentDeviationBps: number | null = null;
+    let currentSignal: DepegSignal | null = null;
     let pegReferenceUnavailable = false;
     let pegReference: PegSummaryCoin["pegReference"] = null;
 
@@ -67,15 +70,17 @@ export function deriveCurrentPegObservationMap(options: {
             asOf: options.asOf,
           };
         }
-        currentDeviationBps =
+        currentSignal =
           pegRef != null && Number.isFinite(pegRef) && pegRef > 0
-            ? deriveDepegSignal(asset.price, pegRef)?.bps ?? null
+            ? deriveDepegSignal(asset.price, pegRef)
             : null;
+        currentDeviationBps = currentSignal?.bps ?? null;
       }
     }
 
     result.set(meta.id, {
       currentDeviationBps,
+      currentSignal,
       pegReference,
       pegReferenceUnavailable,
       currentPriceUnavailable,

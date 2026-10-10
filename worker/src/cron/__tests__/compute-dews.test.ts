@@ -221,6 +221,7 @@ interface MakeDbOptions {
     failure_reason: string | null;
   };
   failDexPublicationDiagnostics?: boolean;
+  psiSample?: { score: number; stored_at: number } | null;
   onBind?: (sql: string, args: unknown[]) => void;
 }
 
@@ -359,7 +360,7 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
         return { cnt: opts.latestGenerationRows ?? opts.currentGenerationRows ?? 1 } as T;
       }
       if (sql.includes("stress_signal_history")) return null as T | null;
-      if (sql.includes("stability_index_samples")) return null as T | null;
+      if (sql.includes("stability_index_samples")) return (opts.psiSample ?? null) as T | null;
       return null as T | null;
     };
 
@@ -431,6 +432,30 @@ describe("computeAndStoreDEWS", () => {
     });
   });
 
+  it.each([
+    ["fresh", 0, null],
+    ["boundary", -3600, null],
+    ["stale", -3601, "stale-sample"],
+    ["future", 61, "future-timestamp"],
+    ["missing", null, "missing-sample"],
+  ] as const)("holds accepted DEWS publication for inadmissible PSI %s", async (_label, offset, reason) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const storedAt = offset == null ? null : nowSec + offset;
+    const result = await computeAndStoreDEWS(makeDb([], {
+      psiSample: storedAt == null ? null : { score: 0, stored_at: storedAt },
+    }));
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.dependencies.psi).toMatchObject({
+      updatedAt: storedAt, freshnessBudgetSec: 3600, reason,
+    });
+    expect(computeDEWS).toHaveBeenCalledWith(expect.objectContaining({ psiScore: reason == null ? 0 : null }));
+    expect(metadata.publicationPointerWritten).toBe(reason == null || reason === "missing-sample");
+    expect(metadata.freshnessSentinelPublished).toBe(reason == null || reason === "missing-sample");
+    if (reason === "stale-sample" || reason === "future-timestamp") {
+      expect(metadata.sourceFailures).toContainEqual({ source: "stability-index-samples", reason });
+      expect(metadata.degradedSources).toContain("stability-index-samples");
+    }
+  });
   it.each([
     ["fresh", 0, null],
     ["inclusive boundary", -DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC, null],

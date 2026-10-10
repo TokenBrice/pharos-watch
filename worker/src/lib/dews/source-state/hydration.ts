@@ -43,6 +43,7 @@ import type {
   LiquidityHistorySnapshot,
   MintBurnSnapshot,
   PersistedJsonDecodeReason,
+  StablecoinsDependencyDiagnostics,
 } from "../contracts";
 import {
   normalizeYieldRankChangeAttribution,
@@ -58,7 +59,8 @@ import {
 } from "../../stress-signals-current-rows";
 import { classifyFreshness } from "../../status/freshness-oracle";
 
-import { DEWS_STALE_DEX_LIQUIDITY_SEC } from "./budgets";
+import { DEWS_PSI_FRESHNESS_BUDGET_SEC, DEWS_STALE_DEX_LIQUIDITY_SEC } from "./budgets";
+import { assessFreshnessTimestamp } from "../../api-freshness-age";
 export const DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC = 2 * 3600;
 const DEWS_STALE_MINT_BURN_SEC = DAY_SECONDS;
 // DEWS can overlap the next hourly producer while it is still publishing.
@@ -734,17 +736,39 @@ export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<
   return { yieldSourceRisk, yieldRankChangeAttribution };
 }
 
-export async function hydrateLatestPsiScore(ctx: HydrationContext): Promise<number | null> {
+export async function hydrateLatestPsiScore(ctx: HydrationContext): Promise<{
+  latestPsiScore: number | null;
+  dependencyDiagnostics: StablecoinsDependencyDiagnostics;
+}> {
+  const diagnostics: StablecoinsDependencyDiagnostics = {
+    generationId: null, updatedAt: null, ageSeconds: null,
+    freshnessBudgetSec: DEWS_PSI_FRESHNESS_BUDGET_SEC, reason: "missing-sample",
+  };
   try {
     const psiRow = await ctx.db
       .prepare(
         `SELECT /* pharos:dews:latest-psi-score */
-           score FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1`,
+           score, stored_at FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1`,
       )
-      .first<{ score: number }>();
-    return psiRow ? psiRow.score : null;
+      .first<{ score: number; stored_at: number }>();
+    if (!psiRow) return { latestPsiScore: null, dependencyDiagnostics: diagnostics };
+    const age = assessFreshnessTimestamp(ctx.nowSec, psiRow.stored_at);
+    diagnostics.updatedAt = Number.isFinite(psiRow.stored_at) ? psiRow.stored_at : null;
+    diagnostics.generationId = diagnostics.updatedAt == null ? null : `stability-index-samples:${diagnostics.updatedAt}`;
+    diagnostics.ageSeconds = age.ageSeconds;
+    diagnostics.reason = age.reason != null ? age.reason
+      : age.ageSeconds > DEWS_PSI_FRESHNESS_BUDGET_SEC ? "stale-sample"
+      : !Number.isFinite(psiRow.score) ? "invalid-score" : null;
+    if (diagnostics.reason) {
+      ctx.registerSourceFailure("stability-index-samples", diagnostics.reason);
+    }
+    return {
+      latestPsiScore: diagnostics.reason ? null : psiRow.score,
+      dependencyDiagnostics: diagnostics,
+    };
   } catch (error) {
     ctx.registerSourceFailure("stability-index-samples", error);
-    return null;
+    diagnostics.reason = "read-failed";
+    return { latestPsiScore: null, dependencyDiagnostics: diagnostics };
   }
 }

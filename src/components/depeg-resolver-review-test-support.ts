@@ -1,7 +1,7 @@
-import type { DdrrRow, DdrrV2CoverageRow } from "@shared/types/depeg-resolver-review";
+import type { DdrrV2PredictionReviewRow, DdrrV2CoverageRow } from "@shared/types/depeg-resolver-review";
 import type { DdrrSummary } from "@shared/types/depeg-resolver-review";
 
-export const predictionRow: DdrrRow = {
+export const predictionRow: DdrrV2PredictionReviewRow = {
   kind: "prediction_review",
   eventId: 42,
   currentEventId: 42,

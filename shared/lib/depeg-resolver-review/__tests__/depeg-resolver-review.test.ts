@@ -546,6 +546,11 @@ describe("DDRR coverage metrics", () => {
     expect(summary.headlineScope).toBe("current_policy");
     expect(summary.headline.recoveryLikelihoodScoredCount).toBe(20);
     expect(summary.headline.recoveryLikelihoodAccuracyPct).toBe(1);
+    expect(summary.headline).toMatchObject({
+      falseTerminalCount: 0, falseRecoverableCount: 0, withinIqrCount: 20, iqrScoredCount: 20,
+    });
+    expect(summary.byPredictionPolicy.find((segment) => segment.segmentKind === "all")?.metrics)
+      .toMatchObject({ falseTerminalCount: 20, iqrScoredCount: 40 });
   });
 
   it("changes only accuracy scope at 20 current-policy outcomes, retaining all coverage debt", () => {

@@ -2,6 +2,7 @@ import {
   getLiveCurrentDeviationBps,
   getPeakDeviationBps,
   getResolution,
+  isCurrentForecast,
 } from "@/components/depeg-resolver-row-card-model";
 import {
   DDR_RESOLUTION_TIER_VALUES,
@@ -52,6 +53,7 @@ export function compareResolverUrgency(a: DdrV2ResponseRow, b: DdrV2ResponseRow)
 
 export interface ResolverBookSummary {
   total: number;
+  rowCount: number;
   tierCounts: Record<DdrResolutionTier, number>;
   pastPeakCount: number;
 }
@@ -64,9 +66,12 @@ export function summarizeResolverBook(rows: readonly DdrV2ResponseRow[]): Resolv
   const tierCounts = {} as Record<DdrResolutionTier, number>;
   for (const tier of DDR_RESOLUTION_TIER_VALUES) tierCounts[tier] = 0;
   let pastPeakCount = 0;
+  let total = 0;
   for (const row of rows) {
+    if (!isCurrentForecast(row)) continue;
+    total += 1;
     tierCounts[getResolution(row).tier] += 1;
     if (isPastEventPeak(row)) pastPeakCount += 1;
   }
-  return { total: rows.length, tierCounts, pastPeakCount };
+  return { total, rowCount: rows.length, tierCounts, pastPeakCount };
 }

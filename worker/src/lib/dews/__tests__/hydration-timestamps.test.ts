@@ -1,11 +1,35 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { hydrateDexLiquidity, hydrateDexLiquidityHistory } from "../source-state/hydration";
+import { hydrateDexLiquidity, hydrateDexLiquidityHistory, hydrateLatestPsiScore } from "../source-state/hydration";
+import { DEWS_PSI_FRESHNESS_BUDGET_SEC } from "../source-state/budgets";
+import { computeDEWS } from "../../dews";
+import { makeDewsInput } from "../../__tests__/dews.test-support";
 
 const RUN_AT = 1_800_000_000;
 afterEach(() => vi.useRealTimers());
 
 describe("DEWS hydration timestamp admission", () => {
+  it.each([
+    ["fresh", RUN_AT, null],
+    ["boundary", RUN_AT - DEWS_PSI_FRESHNESS_BUDGET_SEC, null],
+    ["stale", RUN_AT - DEWS_PSI_FRESHNESS_BUDGET_SEC - 1, "stale-sample"],
+    ["future", RUN_AT + 61, "future-timestamp"],
+    ["invalid", Number.POSITIVE_INFINITY, "invalid-timestamp"],
+    ["missing", null, "missing-sample"],
+  ] as const)("admits PSI %s with the original sample clock and budget", async (_label, storedAt, reason) => {
+    const registerSourceFailure = vi.fn();
+    const hydrated = await hydrateLatestPsiScore({
+      db: mockD1([{ match: "stability_index_samples", rows: [], first: storedAt == null ? null : { score: 0, stored_at: storedAt } }]),
+      nowSec: RUN_AT, registerSourceFailure, registerMalformedPersistedInput: vi.fn(),
+    });
+    expect(hydrated.latestPsiScore).toBe(reason == null ? 0 : null);
+    expect(hydrated.dependencyDiagnostics).toMatchObject({
+      updatedAt: storedAt != null && Number.isFinite(storedAt) ? storedAt : null, freshnessBudgetSec: DEWS_PSI_FRESHNESS_BUDGET_SEC, reason,
+    });
+    expect(registerSourceFailure).toHaveBeenCalledTimes(reason != null && storedAt != null ? 1 : 0);
+    const scored = computeDEWS(makeDewsInput({ dexPriceUsd: 0.99, psiScore: hydrated.latestPsiScore }));
+    expect(scored?.amplifiers.psi).toBe(reason == null ? 1.3 : 1);
+  });
   it("admits an overlapping publication but excludes clocks beyond read-time skew", async () => {
     vi.useFakeTimers();
     vi.setSystemTime((RUN_AT + 120) * 1000);

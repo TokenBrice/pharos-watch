@@ -5,7 +5,7 @@ export interface SafetyScoresCardData {
   gradeDistribution: Record<string, number>;
   pulseGrade: string | null;
   pulseScore: number | null;
-  coverageRatio: number; // 0-1
+  coverageRatio: number | null; // 0-1; null when the safety source is unavailable
   totalCoins: number;
   // New fields
   topPerformers: Array<{ symbol: string; grade: string; score: number }>;
@@ -160,7 +160,7 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <MetricLabel>COVERAGE</MetricLabel>
           <span style={{ fontSize: 56, fontWeight: 700 }}>
-            {(data.coverageRatio * 100).toFixed(0)}%
+            {data.coverageRatio == null ? "—" : `${(data.coverageRatio * 100).toFixed(0)}%`}
           </span>
           <span style={{ fontSize: 16, color: TEXT_SECONDARY }}>
             {data.totalCoins} active coins

@@ -202,7 +202,7 @@ export function DepegClient() {
   // Coins at ALERT+ on DEWS, scoped to the peg-catalog ids the route tracks.
   const dewsAlertCount = useMemo(() => {
     const signals = dewsData?.signals;
-    if (!signals) return 0;
+    if (!signals || !trackedIds) return null;
     let count = 0;
     for (const [id, entry] of Object.entries(signals)) {
       if (trackedIds && !trackedIds.has(id)) continue;
@@ -284,7 +284,7 @@ export function DepegClient() {
       <DepegOutlookHero
         stats={pegData?.summary}
         activeDepegIds={activeDepegIds}
-        pendingCount={pendingIncidents.length}
+        pendingCount={eventsData ? pendingIncidents.length : null}
         dewsAlertCount={dewsAlertCount}
         book={resolverEnabled ? resolverBook : null}
         lineage={resolverEnabled ? resolverData?._meta.lineage ?? null : null}

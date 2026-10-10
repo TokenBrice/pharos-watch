@@ -793,11 +793,13 @@ For commodity-pegged assets, bounded replays limit the peer-median reference fet
 | `endDay`      | `integer \| ISO date (YYYY-MM-DD)` | —       | Upper bound for bounded replay compare/mutation                       |
 | `contextDays` | `integer`                          | `7`     | Extra replay context days on each side of a bounded window (max `90`) |
 
+Epoch text requires unsigned integer digits or calendar-valid ISO date/date-time text; signed/decimal tokens and rollover dates such as February 30 are rejected before repair-window selection.
+
 ### `POST /api/backfill-supply-history`
 
 Backfills per-coin supply history snapshots. When historical market-price series are available, the endpoint also persists daily `supply_history.price` values on restored rows so historical PSI replay can use day-level deviation instead of blunt peak fallback.
 
-Commodity and CoinGecko-only total-supply fallback replays historical EVM `totalSupply()` at each UTC day close when CoinGecko market caps are missing. It does not project the current supply backward across the requested window, and it fails closed when the asset has multiple supported EVM deployments. Protocol-TVL fallback can still write market-cap rows, but stores `price: null` for days outside the returned price-chart coverage instead of extrapolating the nearest endpoint price.
+Commodity/CoinGecko history pairs prices and caps at the same timestamp, selecting the first valid pair per UTC day. Missing caps may use historical EVM `totalSupply()` at day close only for a complete roster containing exactly one canonically supported EVM deployment; mixed-family/multi-deployment rosters fail closed with `unsupported-complete-roster`. Current supply is never projected backward. Protocol-TVL fallback stores `price: null` outside returned price-chart coverage rather than extrapolating endpoints.
 
 **Query parameters**
 
@@ -936,7 +938,7 @@ Cron `sync-mint-burn` automatically heals recent NULL-price events within a 48-h
 
 ### `GET /api/backfill-dews`
 
-Runs the historical DEWS backtest path against stored depeg events. This is the default `GET` mode when no `mode` or `repair` query is supplied; it reports true-positive coverage and lead-time summary fields from the historical replay implementation.
+Default `GET` reconstructs stored-event diagnostics. `events[].evaluation` reports availability (`available`, `partial`, `unavailable`), reasons and evaluated/expected pre-event days. Missing anchors stay unavailable. With no scored pre-event day, `predicted=null`; observed misses stay `false`. Summary `evaluableEvents` excludes these cases, `excludedEvents`/`partialEvents` disclose coverage, and `tpRate` uses only evaluable events (`null` if none); lead times cover detected events.
 
 Use `GET /api/backfill-dews?mode=backtest-metrics` for the curated anchor fixture metrics described below. Use `GET /api/backfill-dews?repair=...&dry-run=true` for repair previews; mutating repair runs are `POST`-only.
 
@@ -1029,6 +1031,10 @@ If `configKey` is omitted, the worker auto-selects one tracked config using a cr
 | `toBlock`   | `integer` | chain head      | End block override (clamped to chain head)                                               |
 | `chunkSize` | `integer` | `50000`         | Block span per fetch chunk (max 50000)                                                   |
 | `maxChunks` | `integer` | `24`            | Maximum chunks to process per request                                                    |
+
+Successful chunks materialize hours before committing a safe cursor: default/live-tip scans anchor to the newest parsed event, or `min(scanTo, head-75)` when empty. Explicit historical chunks at least 75 blocks behind head may commit their full range. `done`/`nextFromBlock` reflect committed coverage, not the requested tip.
+
+Decode failures count in `rowsDropped` and `rowsDroppedDecode`; valid peers persist while the cursor holds below `earliestDecodeFailureBlock`. Shared per-log retries quarantine on observation three (`rowsQuarantinedDecode`, `decodeQuarantines[]`, reason `amount-decode-retry-exhausted`), then release the frontier. A held chunk ends the request; retry with a new observation.
 
 ### `POST /api/reclassify-atomic-roundtrips`
 
@@ -1392,6 +1398,7 @@ Samples retain `sentinelFreshness` and `tokenFreshness`, including both sub-verd
 `latency.<operator>.firstTouch` and `.warm` contain p50/p95 and sample count for every category. The first request to an origin within the run is first-touch; later requests to that origin are warm even across targets. Per-call percentiles include failed calls; `warmRunMedian` uses successful calls only, while availability gates failures separately. `latest` includes both latest-tag reads and token numeric/header checks; the initial, post-sentinel, and post-token head reads belong to `head`. The comparator has no latest-check attempts by design.
 
 The compressed v5 store retains the existing cache key and reads v1/v2/v3/v4 samples during seven-day retention. Legacy observations are never given fabricated token checks, contracts, selectors, or discrimination. V1 samples have unknown per-method attempts, warm latency and latest freshness; v2 fresh verdicts have unknown discrimination. V3's single comparator remains the reference for every legacy method, and v4's split-origin provenance remains intact. V5 stores both freshness sub-tuples with their exact `(to,data)` provenance and full latest/numeric values in every new sample, then derives the combined verdict when decoding. Rewritten legacy rows retain their previous newest-stale-example value policy. Split-origin calls use dictionary-encoded layouts; integer milliseconds are losslessly bit-packed and block heights delta encoded. The same per-operator bounds (20 Dwellir / four comparator calls) govern encoding and decoding. Unrecorded skip reasons remain unknown. Oldest-run pruning honors both the 240 KiB compressed row budget and the reader's 4 MiB decompressed wire ceiling, retaining at most 168 runs. Highly compressible token proofs cannot produce a gzip row that its own reader rejects; a newest run alone exceeding the raw ceiling fails persistence with `rpc-parity-raw-row-budget` instead of discarding its proof. Older readers reject v5 rows and their next write resets history; preserve the cache row before rollback.
+Report reads expire runs and latest evidence older than `RPC_PARITY_RETENTION_SEC` at `generatedAtSec`, even without new writes; the exact seven-day cutoff is retained. Expired windows fail sufficiency gates.
 
 `errorClasses` and `comparatorErrorClasses` count samples with provider failures (`range-cap`, `result-cap`, `rate-limited`, `capability`, `server-error`, `timeout`, `network`, `rpc-error`, `invalid-response`). `failedSteps` counts failed method categories per operator; `lastComparatorFailure` names its run clock, category, class, HTTP status and actual comparator reference. Invalid method result shapes are failures, not successes. HTTP 5xx stays `server-error` even if its body mentions an unsupported operation; HTTP range/result-cap bodies retain their specific class. Unavailable reads never count as state/log mismatches: both operators must answer for a comparison. Dwellir state/log reads are still attempted when the comparator's corresponding method fails; an unresolved logs pin skips that method without issuing either operator's log read. Astar's reviewed keyless pin is `https://evm.astar.network`, verified for historical USDC supply and recent/older logs on 2026-10-05.
 
@@ -1481,8 +1488,8 @@ Admin-only one-shot backfill endpoint for `blacklist_current_balances`, intended
 | ------------ | --------- | ------- | --------------------------------------------------------------------------------------------- |
 | `stablecoin` | `string`  | —       | Optional uppercase symbol filter; matches any configured blacklist-contract stablecoin symbol |
 | `chainId`    | `string`  | —       | Optional chain filter matching the blacklist contract config `chainId`                        |
-| `limit`      | `integer` | `500`   | Max newest latest-per-address blacklist-event rows to load per matching config (max `2000`)   |
-| `dryRun`     | `"true"`  | —       | Preview the active-blacklisted candidate count without writing cache rows                     |
+| `limit`      | `integer` | `500`   | Max newest canonical addresses per config (`2000` max); retain their transition history |
+| `dryRun`     | `"true"`  | —       | Preview the execution snapshot fold, including retained freezes after releases; unconfirmed Tron order is withheld |
 
 `400` is returned when the filters match no configured blacklist contracts.
 

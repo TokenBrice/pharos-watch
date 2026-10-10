@@ -92,6 +92,7 @@ vi.mock("../../lib/dews/source-state", () => ({
     latestPsiScore: null,
     sourceCoverage: { dexPrices: 1, dexLiquidity: 1 },
     dependencyDiagnostics: {
+      psi: { generationId: null, updatedAt: null, ageSeconds: null, freshnessBudgetSec: 3600, reason: "missing-sample" },
       dexLiquidity: {
         totalRows: 0,
         freshRows: 0,
@@ -138,6 +139,7 @@ vi.mock("../../lib/dews/service", () => ({
 }));
 
 import { computeDEWS } from "../../lib/dews";
+import type { DEWSResult } from "../../lib/dews";
 import { buildDewsScoringResult } from "../../lib/dews/scoring";
 import { computeAndStoreDEWS } from "../../lib/dews/service";
 import { handleBackfillDEWS } from "../backfill-dews";
@@ -145,6 +147,64 @@ import { handleBackfillDEWS } from "../backfill-dews";
 stubCryptoForAuth();
 
 describe("handleBackfillDEWS", () => {
+  it("separates unavailable and partial history from measured false negatives", async () => {
+    const day = 20_000 * 86_400;
+    const ids = ["missing", "partial", "missed", "predicted"];
+    const supplyRows = [
+      { stablecoin_id: "partial", snapshot_date: day - 86_400, circulating_usd: 100_000_000 },
+      ...["missed", "predicted"].flatMap((stablecoin_id) =>
+        Array.from({ length: 15 }, (_, d) => ({ stablecoin_id, snapshot_date: day - d * 86_400, circulating_usd: 100_000_000 }))),
+    ];
+    const db = mockD1([
+      { match: "FROM depeg_events", rows: ids.map((stablecoin_id) => ({
+        stablecoin_id, started_at: day, ended_at: day + 3600, peak_deviation_bps: 200,
+      })) },
+      { match: "FROM supply_history", rows: supplyRows },
+      { match: "FROM dex_liquidity_history", rows: [] },
+    ]);
+    const scorer = vi.mocked(computeDEWS);
+    scorer.mockClear();
+    scorer.mockImplementation((input) => ({
+      score: input.stablecoinId === "predicted" ? 67 : 12,
+      band: input.stablecoinId === "predicted" ? "WARNING" : "CALM",
+      signals: {},
+    }) as DEWSResult);
+    try {
+      const response = await handleBackfillDEWS({ db, url: makeApiUrl("/api/backfill-dews"), trustedAdmin: true });
+      const body = await readJsonResponse<{
+        summary: { totalEvents: number; evaluableEvents: number; excludedEvents: number; partialEvents: number; truePositives: number; tpRate: string | null };
+        events: Array<{ stablecoinId: string; predicted: boolean | null; evaluation: { availability: string; evaluatedPreDepegDays: number; reasons: string[] } }>;
+      }>(response, 200);
+      expect(body.summary).toMatchObject({ totalEvents: 4, evaluableEvents: 3, excludedEvents: 1, partialEvents: 1, truePositives: 1, tpRate: "33%" });
+      expect(body.events.find((event: { stablecoinId: string }) => event.stablecoinId === "missing")).toMatchObject({
+        predicted: null, evaluation: { availability: "unavailable", evaluatedPreDepegDays: 0, reasons: ["current-supply-unavailable"] },
+      });
+      expect(body.events.find((event: { stablecoinId: string }) => event.stablecoinId === "partial")).toMatchObject({
+        predicted: false, evaluation: { availability: "partial", evaluatedPreDepegDays: 1 },
+      });
+      expect(body.events.find((event: { stablecoinId: string }) => event.stablecoinId === "missed")).toMatchObject({
+        predicted: false, evaluation: { availability: "available", evaluatedPreDepegDays: 7, reasons: [] },
+      });
+      expect(scorer).toHaveBeenCalledWith(expect.objectContaining({
+        stablecoinId: "partial", circulatingPrevDayAvailable: false, circulatingPrevWeekAvailable: false,
+      }));
+    } finally {
+      scorer.mockImplementation(() => ({ score: 67, band: "WARNING", signals: {} }) as DEWSResult);
+    }
+  });
+
+  it("reports a nullable detection rate when no pre-event history can be evaluated", async () => {
+    const db = mockD1([
+      { match: "FROM depeg_events", rows: [{ stablecoin_id: "missing", started_at: 1_710_000_000, ended_at: 1_710_003_600, peak_deviation_bps: 200 }] },
+      { match: "FROM supply_history", rows: [] },
+      { match: "FROM dex_liquidity_history", rows: [] },
+    ]);
+    const response = await handleBackfillDEWS({ db, url: makeApiUrl("/api/backfill-dews"), trustedAdmin: true });
+    const body = await readJsonResponse<{
+      summary: { evaluableEvents: number; excludedEvents: number; tpRate: string | null };
+    }>(response, 200);
+    expect(body.summary).toMatchObject({ evaluableEvents: 0, excludedEvents: 1, tpRate: null });
+  });
   it("reconstructs inputs from circulating_usd and liquidity history schema columns", async () => {
     const startedAt = 1710000000;
     const day = Math.floor(startedAt / 86400) * 86400;

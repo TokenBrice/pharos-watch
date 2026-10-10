@@ -71,11 +71,6 @@ function defineHydration<DescriptorKey extends string, Result, StateKey extends 
   };
 }
 
-// Named (not inline) so `Result` is inferred before the state-key tuple; a
-// contextually typed arrow would defer and collapse StateKey to `never`.
-async function hydrateLatestPsiScoreState(ctx: HydrationContext) {
-  return { latestPsiScore: await hydration.hydrateLatestPsiScore(ctx) };
-}
 
 const DEWS_HYDRATION_REGISTRY = [
   defineHydration(
@@ -131,7 +126,9 @@ const DEWS_HYDRATION_REGISTRY = [
     ["yieldSourceRisk", "yieldRankChangeAttribution"],
     (result) => ({ yieldStructuredRows: result.yieldSourceRisk.size }),
   ),
-  defineHydration("latestPsiScore", hydrateLatestPsiScoreState, ["latestPsiScore"], () => ({})),
+  defineHydration("latestPsiScore", hydration.hydrateLatestPsiScore, ["latestPsiScore"], () => ({}),
+    (result) => ({ psi: result.dependencyDiagnostics }),
+  ),
 ] as const;
 
 async function hydrateSource<T>(

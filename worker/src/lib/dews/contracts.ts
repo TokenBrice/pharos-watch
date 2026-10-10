@@ -119,6 +119,7 @@ export interface DewsSourceState {
   sourceCoverage: Record<string, number>;
   dependencyDiagnostics: {
     dexLiquidity: DexLiquidityDependencyDiagnostics;
+    psi: StablecoinsDependencyDiagnostics;
   };
 }
 

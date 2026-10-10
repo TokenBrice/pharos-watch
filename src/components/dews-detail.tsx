@@ -57,7 +57,7 @@ function signalBarHex(value: number): string {
 }
 
 /* Only `available` signals reach a bar at all (unavailable ones are named in the
- * "not applicable" line instead), so every value here is a real reading. A
+ * unavailable line instead), so every value here is a real reading. A
  * measured zero therefore keeps a visible cap at the origin rather than an
  * empty track, which would read as a bar that failed to render. */
 function ProgressBar({ value }: { value: number }) {
@@ -139,7 +139,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
       };
       for (const key of Object.keys(SIGNAL_META)) {
         const sig = h.signals?.[key];
-        point[key] = sig?.available ? sig.value : 0;
+        point[key] = sig?.available ? sig.value : null;
       }
       return point;
     });
@@ -214,9 +214,13 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
     })
     .sort((a, b) => b.signal.value - a.signal.value);
 
-  const unavailableSignalNames = Object.entries(SIGNAL_META)
-    .filter(([key]) => signals[key] && !signals[key].available)
-    .map(([, meta]) => meta.name);
+  const unavailableSignals = Object.entries(SIGNAL_META)
+    .filter(([key]) => !signals[key]?.available)
+    .map(([key, meta]) => {
+      const reason = typeof signals[key]?.unavailableReason === "string" ? signals[key].unavailableReason : null;
+      const status = reason === "not-applicable" ? "not applicable" : "unavailable";
+      return `${meta.name} — ${status}${reason ? ` (${reason})` : ""}`;
+    });
 
   return (
     <Card className="pharos-card-shell animate-in gap-0 overflow-hidden py-0 fade-in duration-300">
@@ -343,8 +347,8 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
         {/* The bars render in both chart modes, so the unmeasured signals are
             named in both — otherwise a signal with no reading is indistinguishable
             from one that was never listed. */}
-        {unavailableSignalNames.length > 0 && (
-          <p className="text-[11px] text-muted-foreground">{unavailableSignalNames.join(", ")} — not applicable</p>
+        {unavailableSignals.length > 0 && (
+          <p className="text-[11px] text-muted-foreground">{unavailableSignals.join("; ")}</p>
         )}
 
         {/* History chart */}
@@ -368,7 +372,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                     <ReferenceLine y={DEWS_THREAT_BANDS[1].upper} stroke={THREAT_BAND_HEX.WATCH} strokeDasharray="4 4" strokeOpacity={0.25} />
                   )}
                   <DateTooltip
-                    formatter={(val, name) => [
+                    formatter={(val, name) => val == null ? null : [
                       `${Math.round(val as number)}/100`,
                       showBreakdown ? (SIGNAL_META[name as string]?.name ?? name) : "DEWS",
                     ]}
@@ -387,6 +391,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                         fillOpacity={0.12}
                         strokeWidth={1.5}
                         dot={false}
+                        connectNulls={false}
                         isAnimationActive={false}
                       />
                     ))

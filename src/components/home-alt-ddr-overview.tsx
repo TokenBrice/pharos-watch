@@ -15,6 +15,7 @@ import { formatPercentFromRatio } from "@shared/lib/format";
 import {
   DDR_RESOLUTION_TIER_VALUES,
   type DdrResolutionTier,
+  type DdrPublicPredictionState,
   type DdrV2ResponseRow,
 } from "@shared/types/depeg-resolver";
 import {
@@ -23,6 +24,7 @@ import {
   getLiveCurrentDeviationBps,
   getPeakDeviationBps,
   getResolution,
+  isCurrentForecast,
   NOW_DOT_TONE,
   TIER_META,
 } from "@/components/depeg-resolver-row-card-model";
@@ -62,7 +64,8 @@ interface ForecastItem {
   id: string;
   symbol: string;
   name: string;
-  tier: DdrResolutionTier;
+  state: DdrPublicPredictionState;
+  tier: DdrResolutionTier | null;
   nowBps: number | null;
   /** Benchmarked median time-to-repeg, seconds; null when no duration band. */
   medianSec: number | null;
@@ -78,14 +81,16 @@ function rowSeverity(row: DdrV2ResponseRow): number {
 }
 
 function toForecastItem(row: DdrV2ResponseRow): ForecastItem {
-  const duration = getDuration(row);
+  const currentForecast = isCurrentForecast(row);
+  const duration = currentForecast ? getDuration(row) : null;
   const nowBps = getLiveCurrentDeviationBps(row);
-  const benchmarked = !duration.suppressed && duration.medianSec != null;
+  const benchmarked = duration != null && !duration.suppressed && duration.medianSec != null;
   return {
     id: row.stablecoinId,
     symbol: row.symbol,
     name: row.name,
-    tier: getResolution(row).tier,
+    state: row.prediction.state,
+    tier: currentForecast ? getResolution(row).tier : null,
     nowBps,
     medianSec: benchmarked ? duration.medianSec : null,
     severity: rowSeverity(row),
@@ -99,6 +104,9 @@ function signedBps(bps: number | null): string {
 
 /** Expected outcome: a recovery duration band, terminal "no return", or awaiting. */
 function DurationCell({ item }: { item: ForecastItem }) {
+  if (item.tier == null) {
+    return <span className="font-mono text-[11px] text-muted-foreground">—</span>;
+  }
   if (item.tier === "recovery_unlikely") {
     return <span className="font-mono text-[11px] font-semibold text-red-700 dark:text-red-400">no return</span>;
   }
@@ -124,7 +132,7 @@ function CoinLogo({ item, logoSrc }: { item: ForecastItem; logoSrc: string | und
       aria-hidden="true"
       className={cn(
         "flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-background ring-2",
-        RING_TONE[item.tier],
+        item.tier == null ? RING_TONE.insufficient_signal : RING_TONE[item.tier],
       )}
     >
       {src ? (
@@ -162,8 +170,8 @@ function ForecastRow({ item, logoSrc }: { item: ForecastItem; logoSrc: string | 
         <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">{signedBps(item.nowBps)}</span>
       </span>
       <span className="flex shrink-0 items-center justify-end gap-2.5">
-        <span className={cn("hidden w-16 text-right text-[10px] font-semibold uppercase tracking-wide sm:inline", TIER_META[item.tier].accent)}>
-          {TIER_SHORT[item.tier]}
+        <span className={cn("w-24 text-right text-[10px] font-semibold uppercase tracking-wide", item.tier == null ? "text-muted-foreground" : TIER_META[item.tier].accent)}>
+          {item.tier == null ? item.state.replaceAll("_", " ") : TIER_SHORT[item.tier]}
         </span>
         <span className="w-16 text-right">
           <DurationCell item={item} />
@@ -209,7 +217,7 @@ function SectionHeader({ stat }: { stat: { value: number; label: string } }) {
 // --- forecast board (left) -----------------------------------------------
 
 function VerdictDistribution({ items }: { items: ForecastItem[] }) {
-  const total = items.length;
+  const total = items.filter((item) => item.tier != null).length;
   const groups = DDR_RESOLUTION_TIER_VALUES.map((tier) => ({
     tier,
     count: items.filter((i) => i.tier === tier).length,
@@ -407,7 +415,7 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
     .map((h) => ({ horizon: h.horizon, hitRate: h.hitRate as number }));
 
   const stat = ddrUsable
-    ? { value: items.length, label: "live" }
+    ? { value: items.filter((item) => item.tier != null).length, label: "live forecasts" }
     : { value: headline?.lockedPredictionCount ?? 0, label: "graded" };
 
   const forecastSpan = ddrrUsable && headline ? "lg:col-span-3" : "lg:col-span-5";

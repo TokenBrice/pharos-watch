@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { DepegResolverModule } from "@/components/depeg-resolver-module";
 import { StablecoinDepegResolverRows } from "@/components/depeg-resolver-row-card-parts";
+import { summarizeResolverBook } from "@/components/depeg-resolver-book-summary";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   DdrV2ResponseRowSchema,
@@ -150,7 +151,7 @@ function makeNoCallRow(): DdrV2ResponseRow {
 }
 
 function makeInvalidatedRow(originalKind: "prediction" | "no_call" = "prediction"): DdrV2ResponseRow {
-  const source = makeSourceRow();
+  const source = makeSourceRow({ resolution: { tier: "recovery_likely", factors: [] } });
   const original = makePredictionRow(source);
   if (original.kind !== "prediction") throw new Error("Expected prediction fixture");
   const noCall = {
@@ -210,6 +211,32 @@ function response(overrides: Partial<DdrResponse> = {}): DdrResponse {
 }
 
 describe("DepegResolverModule", () => {
+  it.each(["GOLD", "SILVER", "VAR", "USD", "EUR"] as const)(
+    "labels the %s peg-relative ratio without publishing a synthetic currency price",
+    (pegCurrency) => {
+      const ratioRow = makePredictionRow(makeSourceRow({ pegCurrency }), { currentDeviationBps: -500 });
+      render(<DepegResolverModule data={response({ rows: [ratioRow] })} />);
+      expect(screen.getByText("95.00% of peg")).toBeTruthy();
+      expect(screen.queryByText("$0.9500")).toBeNull();
+      expect(screen.queryByText("€0.9500")).toBeNull();
+    },
+  );
+
+  it("counts only valid frozen predictions in the current forecast book", () => {
+    const mixed = [row, makeInvalidatedRow(), makeNoCallRow(), makePendingRow("pending_lock"),
+      makePendingRow("lock_deferred"), makePendingRow("publication_retry_pending")];
+    const book = summarizeResolverBook(mixed);
+    expect(book.total).toBe(1);
+    expect(book.rowCount).toBe(6);
+    expect(book.tierCounts.at_risk).toBe(1);
+    expect(book.tierCounts.recovery_likely).toBe(0);
+    expect(book.tierCounts.insufficient_signal).toBe(0);
+    expect(summarizeResolverBook(mixed.slice(1)).total).toBe(0);
+    render(<DepegResolverModule data={response({ rows: mixed })} />);
+    expect(screen.getByText(/forecast.*across 6 incident rows/).textContent).toContain("1 forecast across 6 incident rows");
+    expect(screen.getByText("Prediction invalidated by erratum")).toBeTruthy();
+  });
+
   it("shows the DDR methodology version in the module header", () => {
     render(<DepegResolverModule data={response()} />);
 
@@ -342,8 +369,8 @@ describe("DepegResolverModule", () => {
     expect(screen.getByText("~2h (1h-3h)")).toBeTruthy();
     expect(screen.getByRole("img", { name: /lock deviation -250 bps/i })).toBeTruthy();
     expect(screen.getByText("From lock")).toBeTruthy();
-    expect(screen.getByText("$0.9820")).toBeTruthy();
-    expect(screen.queryByText("$0.9750")).toBeNull();
+    expect(screen.getByText("98.20% of peg")).toBeTruthy();
+    expect(screen.queryByText("97.50% of peg")).toBeNull();
     // Live overlay deviation (-180) renders in the Live incident strip, distinct from the frozen lock-side value.
     expect(screen.getByText("-180 bps")).toBeTruthy();
     expect(screen.queryByText("Projected")).toBeNull();

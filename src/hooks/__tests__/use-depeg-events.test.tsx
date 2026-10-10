@@ -57,6 +57,17 @@ const TERMINAL_PAGE: CursorPageFixture<DepegEventsPageFixtureData> = {
 };
 
 describe("useInfiniteDepegEvents", () => {
+  it("preserves unavailable first-page data after a settled error, but observes an empty success", () => {
+    useInfiniteQueryMock.mockReturnValue(makeInfiniteQueryResult([], { isError: true, error: new Error("unavailable") }));
+    const { result, rerender } = renderHook(() => useInfiniteDepegEvents({ includePending: true }));
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.error).toBeInstanceOf(Error);
+    useInfiniteQueryMock.mockReturnValue(makeInfiniteQueryResult([{
+      data: { events: [], pending: [], total: 0, totalExact: true, nextCursor: null },
+    }]));
+    rerender();
+    expect(result.current.data).toMatchObject({ events: [], pending: [], total: 0 });
+  });
   it("auto-loads the outstanding cursor page exactly once and flattens the result", async () => {
     const fetchNextPage = vi.fn(async () => undefined);
     // First render: one page with an outstanding cursor. After the fetch, the query
@@ -194,14 +205,14 @@ describe("useInfiniteDepegEvents", () => {
 
     const { result, rerender } = renderHook(() => useInfiniteDepegEvents());
     const firstData = result.current.data;
-    const firstEvents = result.current.data.events;
-    const firstPending = result.current.data.pending;
+    const firstEvents = result.current.data?.events;
+    const firstPending = result.current.data?.pending;
 
     rerender();
 
     expect(result.current.data).toBe(firstData);
-    expect(result.current.data.events).toBe(firstEvents);
-    expect(result.current.data.pending).toBe(firstPending);
+    expect(result.current.data?.events).toBe(firstEvents);
+    expect(result.current.data?.pending).toBe(firstPending);
     expect(result.current.meta).toBe(page.meta);
   });
 

@@ -99,7 +99,7 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
     rows.length > 0 ? (
       <p className="pharos-meta">
         Whole book · <span className="pharos-numeric text-foreground">{book.total}</span>{" "}
-        {book.total === 1 ? "forecast" : "forecasts"} ·{" "}
+        {book.total === 1 ? "forecast" : "forecasts"} across {book.rowCount} incident rows ·{" "}
         {hiddenCount > 0 ? `showing the ${visible.length} most urgent` : `showing all ${visible.length}`}
         {book.pastPeakCount > 0 ? (
           <span className="text-amber-700 dark:text-amber-400">

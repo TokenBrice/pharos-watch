@@ -22,7 +22,7 @@ The 2026-10-08 `v6.33` release repairs Liquidity Erosion's weekly DEX-history ad
 base  = sum(W_i * S_i) / sum(W_i)          # available signals only
 psiAmp = PSI < 75 ? 1 + ((75 - PSI) / 75) * 0.3 : 1.0
 contagionAmp = same-peg first-pass bump, currently 1.15 for DANGER or 1.08 for WARNING, clamped to 1.2
-DEWS = round(clamp(0, 100, base * psiAmp * contagionAmp))
+preliminaryScore = round(clamp(0, 100, base * psiAmp * contagionAmp))
 ```
 
 Only signals where `available = true` participate. Weights are redistributed proportionally across available signals.
@@ -30,6 +30,7 @@ Only signals where `available = true` participate. Weights are redistributed pro
 **Minimum signal requirement:** At least 2 available signal sources (total weight >= 0.30). If weight is below 0.30, `computeDEWS()` returns `null` (insufficient data) instead of emitting `0/CALM`.
 
 **Evidence-quality WATCH cap:** After the amplifier formula, `computeDEWS()` caps preliminary scores above `WATCH_MAX_SCORE = 35` back to WATCH when the evidence set has neither market-price evidence nor DEX-liquidity evidence and there is no severe issuer-control signal. Severe issuer-control evidence is a blacklist sub-signal at or above the configured severe threshold, so a real freeze/blacklist surge can exceed WATCH even without market or DEX corroboration. Capped rows carry `insufficientEvidenceReason = "data_quality_only"` when the price-confidence stress score is at least 50 and there is no other non-systemic evidence (only data quality plus systemic backdrop), or `"missing_market_or_liquidity_evidence"` when other non-market evidence exists, or the data-quality stress is below 50, while market/DEX corroboration is missing.
+The gate constants live in `shared/lib/dews-config.ts`. Market-price evidence requires available divergence stress ≥ `EVIDENCE_STRESS_THRESHOLD` (10); DEX-liquidity evidence requires available pool-balance or liquidity-erosion stress ≥ 10. Severe issuer-control evidence requires available blacklist stress ≥ `SEVERE_ISSUER_CONTROL_THRESHOLD` (55). Source availability alone never bypasses the cap. Final DEWS is the preliminary score when either bypass qualifies, otherwise `min(preliminaryScore, WATCH_MAX_SCORE)`.
 
 Known and accepted: the market-price evidence gate is `value >= 10`, which sits on the `[25, 10]` knot of the divergence curve and so behaves as `worstBps >= 25`; the non-USD `x0.7` damper moves that to a non-integer ~32.143 bps, so whole-bps rounding upstream drops market-price evidence across a ~0.36 bps window (`worstBps` in 32.143-32.5) on non-USD pegs only. It gates an evidence kind rather than a score, and USD pegs round one-directionally in the conservative direction.
 
@@ -225,6 +226,7 @@ A dependency-held run does not advance that pointer. When a whole source fails o
 **Run health semantics:** DEWS records upstream problems in `sourceFailures`, `degradedSources`, `sourceCoverage`, and `validationFailures`. A successful peer publication is `ok` with `metadata.quality` reason `dews-asset-inputs-quarantined`, `quarantinedStablecoinIds`, rejection count and named decode details. `malformedCoreInputRows` counts core rejections, not cohort failure. Dependency holds return `degraded` with `reason: "dews-cohort-dependency-unavailable"`; an empty admitted cohort returns `degraded` with `reason: "dews-no-publishable-assets"`. Both leave the accepted pointer and freshness unchanged. Stale DEX liquidity and mint/burn source freshness still withhold publication; `dependencies.dexLiquidity` retains publication diagnostics for upstream-loss versus catch-up triage.
 A stale `yield-rankings` cache past the `sync-yield-data` producer interval plus its configured runtime budget (currently 60 + 10 minutes) is recorded as the `yield-rankings-freshness` source failure; stale evidence is still consumed, because blanking it would silently zero every structured yield contribution.
 The foundational `stablecoins` snapshot is admitted before scoring against `DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC`: the canonical `sync-stablecoins` interval plus its configured runtime budget (currently 15 + 8 minutes, inclusive). Canonical timestamp admission rejects missing, invalid and excessively future clocks. `dependencies.stablecoins` records the exact cache generation ID/update time, age, freshness budget and rejection reason. A stale or invalid snapshot returns `stablecoins-cache-<reason>` as a source failure before persistence; it neither advances the accepted pointer nor publishes a freshness sentinel, leaving accepted buffered scores intact.
+PSI amplification admits `stability_index_samples.stored_at` through `DEWS_PSI_FRESHNESS_BUDGET_SEC` (two PSI producer intervals, inclusive). `dependencies.psi` retains generation, source clock, age, budget and reason. Stale/invalid retained samples register `stability-index-samples`, omit the amplifier and hold the accepted publication; no sample leaves the optional backdrop unavailable.
 
 **Off-chain confirmation resilience:** The CoinGecko confirmation fetch used by the pending-depeg pipeline (and the Binance CEX price fetch beside it) is wrapped in a circuit breaker. A sustained provider outage trips the breaker and short-circuits subsequent confirmation lookups until it resets, so a single upstream failure no longer hammers the endpoint for 45 minutes per pending row.
 
@@ -273,6 +275,8 @@ Current DEWS readers verify the exact pointer generation against `stress_signal_
 
 **Single coin:** `?stablecoin=usdt-tether&days=30` (default 30, min 1, max 365) — Returns latest + daily history.
 
+The detail breakdown charts preserve missing or unavailable per-signal history as gaps (`null`), not zero stress, and omit numeric tooltips for those points. Current missing signals say unavailable with their supplied machine reason; “not applicable” requires an explicit applicability reason. Observed zero remains a measured `0/100`.
+
 Unknown IDs return `404` with `Unknown stablecoin`; non-readable (pre-launch) tracked IDs return `404` with `Stablecoin not tracked`. Quarantined, delisted and frozen IDs stay readable on the single-coin path even though the aggregate response excludes them.
 
 ```text
@@ -292,6 +296,7 @@ Unknown IDs return `404` with `Unknown stablecoin`; non-readable (pre-launch) tr
 ### `GET /api/backfill-dews` (admin)
 
 Validates DEWS against historical depeg events. The primary calibration path uses stored `stress_signal_history` rows plus curated anchors and reports precision, recall, false-positive days, false-negative incidents, lead-time P50/P90, alert churn, band-transition stability, and cohort metrics. The older supply/liquidity reconstruction remains a diagnostic path because it cannot replay every live signal or source-trust gate.
+The reconstruction preserves missing supply anchors and discloses per-event evaluation availability/reasons. Events without a scored pre-event day have `predicted=null`, not a false negative; detection rates exclude them and report excluded/partial coverage separately.
 
 ### `GET /api/backfill-dews?repair=...&dry-run=true` / `POST /api/backfill-dews?repair=...` (admin)
 

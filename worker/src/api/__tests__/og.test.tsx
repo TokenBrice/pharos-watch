@@ -11,6 +11,7 @@ import satori from "satori";
 // tests can inspect the element it would render.
 import satoriStandalone, { init as initSatoriStandalone } from "satori/standalone";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import * as activeSafetyScoreSource from "../../lib/safety-score-index";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
@@ -400,6 +401,18 @@ describe("stablecoin OG card data", () => {
       });
     });
 
+    it.each([60, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC + 1, -1])("publishes safety freshness against its accepted generation at age %s", async (age) => {
+      vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+      const source = activeV9(nowSec - age);
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(source);
+      const response = await handleOg(makeOgDb([makeAsset({ id: "usdt-tether" })]), "/api/og/safety-scores");
+      expect(response?.headers.get("X-Safety-Score-Status")).toBe(age === 60 ? "current" : "degraded");
+      expect(response?.headers.get("X-Safety-Score-Updated-At")).toBe(String(source.snapshot.updatedAt));
+      expect(response?.headers.get("X-Safety-Score-Generation")).toBe(source.snapshot.safetyScoreIdentity.publicationGenerationId);
+      expect(response?.headers.get("X-Safety-Score-Assessed-At")).toBe(String(nowSec));
+      expect(response?.headers.get("X-Safety-Score-Freshness-Budget")).toBe(String(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC));
+    });
+
     it("renders a degraded safety aggregate as unavailable rather than 0.0", async () => {
       const db = makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
 
@@ -411,12 +424,28 @@ describe("stablecoin OG card data", () => {
         data: SafetyScoresCardData;
       }>;
       expect(element.props.data.pulseScore).toBeNull();
+      expect(element.props.data.coverageRatio).toBeNull();
       const markup = renderToStaticMarkup(element);
       expect(markup).toContain("NR");
       expect(markup).toContain("Safety score unavailable");
+      expect(markup).not.toContain(">0%");
       // Match a rendered text node, not the raw markup: the card frame inlines the brand-mark
       // SVG, whose path geometry legitimately contains "0.0" inside `d="…"` coordinates.
       expect(markup).not.toContain(">0.0");
+    });
+    it.each(["missing", "stale", "observed-zero"] as const)("preserves safety coverage availability for %s source", async (state) => {
+      if (state !== "missing") {
+        const source = activeV9(state === "stale" ? nowSec - SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC - 1 : nowSec);
+        source.snapshot.cards = [makeReportCardsV9PipelineGapCard("control", "A", { id: "usdt-tether" })];
+        vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(source);
+      }
+      await handleOg(makeOgDb([makeAsset({ id: "usdt-tether" })]), "/api/og/safety-scores");
+      const calls = vi.mocked(satoriStandalone).mock.calls;
+      const element = calls[calls.length - 1][0] as React.ReactElement<{ data: SafetyScoresCardData }>;
+      expect(element.props.data.coverageRatio).toBe(state === "observed-zero" ? 0 : null);
+      const markup = renderToStaticMarkup(element);
+      if (state === "observed-zero") expect(markup).toContain(">0%");
+      else expect(markup).not.toContain(">0%");
     });
 
     it("requires a fresh exactly adjacent snapshot pair for 24h price change", async () => {
@@ -814,17 +843,48 @@ describe("stability-index OG handler aggregation", () => {
 
   const nowSec = Math.floor(Date.now() / 1000);
 
-  it("pads a short sparkline and falls back to psiScore for avg/ATH/ATL", async () => {
+  it.each([
+    ["linear increase", 80, 100, 20],
+    ["late reversal", 100, 90, -10],
+    ["missing baseline", null, 90, null],
+  ] as const)("uses a dated 24-hour baseline, not a rolling mean, for %s", async (label, firstScore, lastScore, expected) => {
+    const sourceAt = nowSec - 300;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare("INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot) VALUES (?, ?, 'BEDROCK', '{}', '{}')");
+      if (firstScore != null) {
+        for (let step = 0; step < 48; step++) {
+          const score = label === "linear increase" ? firstScore + step * 20 / 48 : step === 0 ? firstScore : 65;
+          insert.run(sourceAt - 86400 + step * 1800, score);
+        }
+      }
+      insert.run(sourceAt, lastScore);
+      const response = await handleOg(db, "/api/og/stability-index");
+      const calls = vi.mocked(satoriStandalone).mock.calls;
+      const element = calls[calls.length - 1][0] as React.ReactElement<{ data: StabilityIndexCardData }>;
+      expect(element.type).toBe(StabilityIndexCard);
+      expect(element.props.data.delta24h).toBe(expected);
+      expect(response?.headers.get("X-Data-Updated-At")).toBe(String(sourceAt));
+      expect(response?.headers.get("X-Data-Assessed-At")).toBe(String(nowSec));
+      expect(response?.headers.get("X-Data-Freshness-Budget")).toBe(String(API_FRESHNESS_MAX_AGE_SEC.stabilityIndex));
+      const markup = renderToStaticMarkup(element);
+      expect(markup).toContain(expected == null ? "24h change unavailable" : `${expected > 0 ? "+" : ""}${expected.toFixed(2)} 24h`);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("preserves unavailable window aggregates and insufficient history without synthetic observations", async () => {
     const db = mockD1([
+      { match: "WHERE stored_at <= ?", rows: [], first: null },
       {
         match: "stored_at DESC LIMIT 1",
         rows: [],
         first: { score: 73.5, band: "STEADY", stored_at: nowSec },
       },
-      // avg24h and avg7d share SQL; both resolve to null so they exercise the
-      // psiScore fallback together — a single shared match is sufficient.
       { match: "AVG(score)", rows: [], first: { avg: null } },
-      // single history row → sparkline padded to length 2 with psiScore.
+      // One history row cannot establish a trend.
       { match: "FROM stability_index ORDER BY computed_at", rows: [{ score: 80 }] },
       { match: "MAX(score)", rows: [], first: { max: null } },
       { match: "MIN(score)", rows: [], first: { min: null } },
@@ -833,18 +893,21 @@ describe("stability-index OG handler aggregation", () => {
     const data = await captureStabilityData(db);
     expect(data.psiScore).toBe(73.5);
     expect(data.psiBand).toBe("STEADY");
-    expect(data.delta24h).toBe(0); // avg24h falls back to psiScore → delta 0
-    expect(data.avg7d).toBe(73.5); // avg7d null → psiScore
-    expect(data.allTimeHigh).toBe(73.5); // max null → psiScore
-    expect(data.allTimeLow).toBe(73.5); // min null → psiScore
-    // 1 history row reversed → [80], then padded with psiScore twice.
-    expect(data.sparklineData).toEqual([80, 73.5, 73.5]);
+    expect(data.delta24h).toBeNull();
+    expect(data.avg7d).toBeNull();
+    expect(data.allTimeHigh).toBeNull();
+    expect(data.allTimeLow).toBeNull();
+    expect(data.sparklineData).toBeNull();
+    const markup = renderToStaticMarkup(<StabilityIndexCard data={data} />);
+    expect(markup).toContain("7D AVG: —");
+    expect(markup).toContain("History unavailable");
     expect(data.bands.find((b) => b.name === "STEADY")?.active).toBe(true);
     expect(data.lastUpdated).toContain(new Date(nowSec * 1000).toISOString().slice(0, 16).replace("T", " "));
   });
 
   it("does not re-certify an old PSI sample with the render clock", async () => {
-    const sourceAt = nowSec - 86400;
+    const sourceAt = nowSec - 8 * 86400;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     const db = mockD1([
       { match: "stored_at DESC LIMIT 1", rows: [], first: { score: 73.5, band: "STEADY", stored_at: sourceAt } },
       { match: "AVG(score)", rows: [], first: { avg: null } },
@@ -852,7 +915,11 @@ describe("stability-index OG handler aggregation", () => {
       { match: "MAX(score)", rows: [], first: { max: null } },
       { match: "MIN(score)", rows: [], first: { min: null } },
     ]);
-    await handleOg(db, "/api/og/stability-index");
+    const response = await handleOg(db, "/api/og/stability-index");
+    expect(response?.headers.get("X-Data-Updated-At")).toBe(String(sourceAt));
+    expect(response?.headers.get("X-Data-Freshness")).toBe("stale");
+    expect(response?.headers.get("X-Data-Assessed-At")).toBe(String(nowSec));
+    expect(response?.headers.get("X-Data-Freshness-Budget")).toBe(String(API_FRESHNESS_MAX_AGE_SEC.stabilityIndex));
     const calls = vi.mocked(satoriStandalone).mock.calls;
     const markup = renderToStaticMarkup(calls[calls.length - 1][0]);
     expect(markup).toContain("Stability index unavailable");

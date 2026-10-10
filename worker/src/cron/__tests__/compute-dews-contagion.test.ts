@@ -192,7 +192,7 @@ function makeDb(): D1Database {
       if (sql.includes("stability_index_samples")) {
         return psiScore === null
           ? (null as T | null)
-          : ({ score: psiScore } as unknown as T);
+          : ({ score: psiScore, stored_at: nowSec } as T);
       }
       return null as T | null;
     };

@@ -41,6 +41,7 @@ function createSourceState(): DewsSourceState {
     latestPsiScore: null,
     sourceCoverage: {},
     dependencyDiagnostics: {
+      psi: { generationId: null, updatedAt: null, ageSeconds: null, freshnessBudgetSec: 3600, reason: "missing-sample" },
       dexLiquidity: {
         totalRows: 0,
         freshRows: 0,

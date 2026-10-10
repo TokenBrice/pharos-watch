@@ -13,7 +13,7 @@ export interface DepegCardData {
     alert: number;
     warning: number;
     normal: number;
-  };
+  } | null;
   // New fields
   activeDepegs: Array<{
     symbol: string;
@@ -22,7 +22,7 @@ export interface DepegCardData {
     peakBps?: number;
   }>;
   recoveredToday: number;
-  newToday: number;
+  newToday: number | null;
   lastUpdated?: string;
 }
 
@@ -68,7 +68,7 @@ export function DepegCard({ data }: { data: DepegCardData }) {
               ↑ {data.recoveredToday} recovered
             </span>
             <span style={{ color: SEMANTIC_COLORS.negative }}>
-              ↓ {data.newToday} new
+              ↓ {data.newToday ?? "—"} new
             </span>
           </div>
         </div>
@@ -137,6 +137,9 @@ export function DepegCard({ data }: { data: DepegCardData }) {
       {/* DEWS distribution */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <MetricLabel>DEWS DISTRIBUTION</MetricLabel>
+        {data.dewsDistribution == null && (
+          <span style={{ fontSize: 14, color: TEXT_SECONDARY }}>DEWS source unavailable</span>
+        )}
         <div
           style={{
             display: "flex",
@@ -146,10 +149,10 @@ export function DepegCard({ data }: { data: DepegCardData }) {
         >
           {(
             [
-              { label: "DANGER", count: data.dewsDistribution.danger, color: DANGER_HEX },
-              { label: "ALERT", count: data.dewsDistribution.alert, color: ALERT_HEX },
-              { label: "WARNING", count: data.dewsDistribution.warning, color: WARNING_HEX },
-              { label: "NORMAL", count: data.dewsDistribution.normal, color: NORMAL_HEX },
+              { label: "DANGER", count: data.dewsDistribution?.danger ?? "—", color: DANGER_HEX },
+              { label: "ALERT", count: data.dewsDistribution?.alert ?? "—", color: ALERT_HEX },
+              { label: "WARNING", count: data.dewsDistribution?.warning ?? "—", color: WARNING_HEX },
+              { label: "NORMAL", count: data.dewsDistribution?.normal ?? "—", color: NORMAL_HEX },
             ] as const
           ).map((band) => (
             <div

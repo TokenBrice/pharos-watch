@@ -37,11 +37,13 @@ import {
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import type { BackingType } from "@shared/types";
 import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
-import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9/consumer-freshness";
+import { isSafetyScoreV9SnapshotFresh, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9/consumer-freshness";
 import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
+import { addFreshnessHeaders } from "../lib/api-freshness";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import { deriveCurrentPegObservationMap, type CurrentPegObservation } from "../lib/current-peg-observations";
 import { getDepegThresholdBps } from "../lib/constants";
+import { signalCrossesThreshold } from "@shared/lib/depeg-signals";
 
 // ---------------------------------------------------------------------------
 // WASM singleton initialization (yoga for satori + resvg for SVG→PNG)
@@ -136,27 +138,38 @@ type OgSafetyScoreSource =
       model: "v9";
       methodologyVersion: string;
       asOfSec: number;
+      publishedAtSec: number;
+      publicationGenerationId: string;
+      assessedAtSec: number;
       expectedCount: number;
       scores: Record<string, OgSafetyScoreEntry>;
     }
   | {
       kind: "error";
       reason: string;
+      publishedAtSec?: number;
+      publicationGenerationId?: string;
+      assessedAtSec: number;
     };
 
 async function loadOgSafetyScoreSource(db: D1Database): Promise<OgSafetyScoreSource> {
+  const assessedAtSec = Math.floor(Date.now() / 1000);
   const active = await loadActiveSafetyScoreIndex(db);
   if (active.kind === "error") {
     return {
       kind: "error",
       reason: active.reason,
+      assessedAtSec,
     };
   }
 
-  if (!isSafetyScoreV9SnapshotFresh(active.snapshot)) {
+  if (!isSafetyScoreV9SnapshotFresh(active.snapshot, assessedAtSec)) {
     return {
       kind: "error",
-      reason: "stale-cache",
+      reason: active.kind === "held" ? active.reason : "stale-cache",
+      publishedAtSec: active.snapshot.updatedAt,
+      publicationGenerationId: active.snapshot.safetyScoreIdentity.publicationGenerationId,
+      assessedAtSec,
     };
   }
   return {
@@ -164,6 +177,9 @@ async function loadOgSafetyScoreSource(db: D1Database): Promise<OgSafetyScoreSou
     model: "v9",
     methodologyVersion: active.snapshot.safetyScoreIdentity.methodologyVersion,
     asOfSec: active.snapshot.asOfSec,
+    publishedAtSec: active.snapshot.updatedAt,
+    publicationGenerationId: active.snapshot.safetyScoreIdentity.publicationGenerationId,
+    assessedAtSec,
     expectedCount: active.snapshot.completeness.expectedCount,
     scores: Object.fromEntries(
       active.snapshot.cards.map((card) => [
@@ -177,14 +193,23 @@ async function loadOgSafetyScoreSource(db: D1Database): Promise<OgSafetyScoreSou
 function safetyScoreOgPresentation(
   safetySource: OgSafetyScoreSource,
 ): { lastUpdated: string; headers: Record<string, string> } {
+  const freshnessHeaders = {
+    "X-Safety-Score-Freshness-Budget": String(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC),
+    "X-Safety-Score-Assessed-At": String(safetySource.assessedAtSec),
+    "X-Safety-Score-Updated-At": safetySource.publishedAtSec == null ? "unknown" : String(safetySource.publishedAtSec),
+    "X-Safety-Score-Generation": safetySource.publicationGenerationId ?? "unknown",
+  };
   if (safetySource.kind === "ok") {
     return {
       lastUpdated: `${safetySource.model.toUpperCase()} ${safetySource.methodologyVersion} · ${ogSourceAsOf("as of", safetySource.asOfSec, API_FRESHNESS_MAX_AGE_SEC.reportCards, Math.floor(Date.now() / 1000))}`,
-      headers: {
+      headers: addFreshnessHeaders({
         ...CACHE_HEADERS,
+        ...freshnessHeaders,
         "X-Safety-Score-Model": safetySource.model,
         "X-Safety-Score-Status": "current",
-      },
+      }, safetySource.publishedAtSec, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC, {
+        assessedAt: safetySource.assessedAtSec, freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+      }),
     };
   }
 
@@ -196,6 +221,7 @@ function safetyScoreOgPresentation(
       // The explicit degraded headers keep consumers from treating the image as
       // current safety-score evidence while avoiding no-store render amplification.
       ...CACHE_HEADERS,
+      ...freshnessHeaders,
       "X-Safety-Score-Model": "v9",
       "X-Safety-Score-Status": "degraded",
       "X-Safety-Score-Reason": safetySource.reason,
@@ -561,7 +587,7 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
     // An average score is not an asset-level grade under either methodology.
     pulseGrade: null,
     pulseScore: avgScore,
-    coverageRatio: totalCoins > 0 ? ratedCount / totalCoins : 0,
+    coverageRatio: safetySource.kind === "ok" && totalCoins > 0 ? ratedCount / totalCoins : null,
     totalCoins,
     topPerformers,
     bottomPerformers,
@@ -623,7 +649,7 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
       observation.currentDeviationBps == null || quoteAge.reason != null ||
       quoteAge.ageSeconds > API_FRESHNESS_MAX_AGE_SEC.stablecoins) continue;
     totalCoins++;
-    if (Math.abs(observation.currentDeviationBps) < getDepegThresholdBps(asset?.pegType)) coinsAtPeg++;
+    if (observation.currentSignal && !signalCrossesThreshold(observation.currentSignal, getDepegThresholdBps(asset?.pegType))) coinsAtPeg++;
   }
   const eligibleEvents = (openEvents.results ?? []).filter((row) =>
     ACTIVE_IDS.has(row.stablecoin_id) && !FROZEN_IDS.has(row.stablecoin_id));
@@ -664,10 +690,10 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
     psiBand: psiFresh ? psiRow?.band ?? null : null,
     coinsAtPeg: totalCoins > 0 ? coinsAtPeg : null,
     totalCoins,
-    dewsDistribution,
+    dewsDistribution: stressRows.results.length > 0 ? dewsDistribution : null,
     activeDepegs,
     recoveredToday,
-    newToday: newTodayResult?.count ?? 0,
+    newToday: newTodayResult?.count ?? null,
     lastUpdated: [
       ogSourceAsOf("Live peg", stablecoins.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, now),
       ogSourceAsOf("PSI", psiRow?.stored_at, API_FRESHNESS_MAX_AGE_SEC.stabilityIndex, now),
@@ -718,7 +744,6 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
 
   const [
     latestSample, 
-    avg24hRow, 
     avg7dRow,
     historyRows,
     athRow,
@@ -727,10 +752,6 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
     db
       .prepare("SELECT score, band, stored_at FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
       .first<{ score: number; band: string; stored_at: number }>(),
-    db
-      .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
-      .bind(now - DAY_SECONDS)
-      .first<{ avg: number | null }>(),
     // New: 7-day average
     db
       .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
@@ -749,28 +770,42 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
       .first<{ min: number | null }>(),
   ]);
 
+  const latestAge = assessFreshnessTimestamp(now, latestSample?.stored_at);
+  const freshnessHeaders = {
+    ...CACHE_HEADERS,
+    "X-Data-Age": latestAge.ageSeconds == null ? "unavailable" : String(latestAge.ageSeconds),
+    "X-Data-Updated-At": latestSample == null || !Number.isFinite(latestSample.stored_at) ? "unknown" : String(latestSample.stored_at),
+    "X-Data-Freshness-Budget": String(API_FRESHNESS_MAX_AGE_SEC.stabilityIndex),
+    "X-Data-Assessed-At": String(now),
+    ...(latestAge.reason != null ? { "X-Data-Freshness": "unknown", "X-Data-Freshness-Reason": latestAge.reason } : {}),
+    ...(latestAge.ageSeconds != null && latestAge.ageSeconds > API_FRESHNESS_MAX_AGE_SEC.stabilityIndex
+      ? { "X-Data-Freshness": "stale", "X-Data-Freshness-Reason": "psi-source-stale" } : {}),
+  };
+
   if (!latestSample) {
     const png = await renderPng(<StabilityIndexUnavailableCard />);
-    return new Response(png, { headers: CACHE_HEADERS });
+    return new Response(png, { headers: freshnessHeaders });
   }
 
-  const latestAge = assessFreshnessTimestamp(now, latestSample.stored_at);
   const sourceAsOf = ogSourceAsOf("PSI", latestSample.stored_at, API_FRESHNESS_MAX_AGE_SEC.stabilityIndex, now);
   if (latestAge.reason != null || latestAge.ageSeconds > API_FRESHNESS_MAX_AGE_SEC.stabilityIndex) {
     const png = await renderPng(<StabilityIndexUnavailableCard reason="PSI source is stale or unavailable." asOf={sourceAsOf} />);
-    return new Response(png, { headers: CACHE_HEADERS });
+    return new Response(png, { headers: freshnessHeaders });
   }
   const psiScore = latestSample.score;
   const psiBand = latestSample.band;
-  const avg24h = avg24hRow?.avg ?? psiScore;
-  const delta24h = psiScore - avg24h;
-  const avg7d = avg7dRow?.avg ?? psiScore;
+  const baselineAt = latestSample.stored_at - DAY_SECONDS;
+  const priorSample = await db
+    .prepare("SELECT score, stored_at FROM stability_index_samples WHERE stored_at <= ? AND stored_at >= ? ORDER BY stored_at DESC LIMIT 1")
+    .bind(baselineAt, baselineAt - API_FRESHNESS_MAX_AGE_SEC.stabilityIndex)
+    .first<{ score: number; stored_at: number }>();
+  const delta24h = priorSample != null && Number.isFinite(priorSample.score)
+    ? psiScore - priorSample.score : null;
+  const avg7d = avg7dRow?.avg ?? null;
 
   // Build sparkline from daily history (newest first → reverse for chronological)
-  const sparklineData = (historyRows.results ?? []).map((r) => r.score).reverse();
-  if (sparklineData.length < 2) {
-    sparklineData.push(psiScore, psiScore);
-  }
+  const history = (historyRows.results ?? []).map((r) => r.score).filter(Number.isFinite).reverse();
+  const sparklineData = history.length >= 2 ? history : null;
 
   const allBands: Array<{ name: string; active: boolean }> = [
     "BEDROCK",
@@ -784,19 +819,19 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
   const data: StabilityIndexCardData = {
     psiScore,
     psiBand,
-    delta24h: Math.round(delta24h * 100) / 100,
+    delta24h: delta24h == null ? null : Math.round(delta24h * 100) / 100,
     sparklineData,
     bands: allBands,
     avg7d,
-    allTimeHigh: athRow?.max ?? psiScore,
-    allTimeLow: atlRow?.min ?? psiScore,
+    allTimeHigh: athRow?.max ?? null,
+    allTimeLow: atlRow?.min ?? null,
     flightToQuality: false,
     flightIntensity: null,
     lastUpdated: sourceAsOf,
   };
 
   const png = await renderPng(<StabilityIndexCard data={data} />);
-  return new Response(png, { headers: CACHE_HEADERS });
+  return new Response(png, { headers: addFreshnessHeaders(freshnessHeaders, latestSample.stored_at, API_FRESHNESS_MAX_AGE_SEC.stabilityIndex, { assessedAt: now, freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.stabilityIndex }) });
 }
 
 // ---------------------------------------------------------------------------

@@ -68,8 +68,8 @@ vi.mock("@/components/section-error-boundary", () => ({
 vi.mock("@/components/depeg-outlook-hero", () => ({
   DepegOutlookHero: (props: {
     activeDepegIds?: ReadonlySet<string>;
-    pendingCount?: number;
-    dewsAlertCount?: number;
+    pendingCount?: number | null;
+    dewsAlertCount?: number | null;
     footer?: ReactNode;
     alertQueue?: ReactNode;
   }) => (
@@ -145,6 +145,27 @@ function mountDepegRoute(options: {
 }
 
 describe("DepegClient", () => {
+  it.each(["events", "dews", "peg"] as const)("does not manufacture headline counts when %s query settles without data", (missing) => {
+    const peg = makePegSummaryResult({ coins: [makeCoin("coin-a", "A")] });
+    const dews = makeStressSignalsResult({ signals: { "coin-a": { band: "ALERT" } } });
+    const events = makeEventsResult();
+    const absent = { data: undefined, error: new Error("source unavailable"), isLoading: false, dataUpdatedAt: 0, meta: null, refetch: vi.fn() };
+    mocks.usePegSummary.mockReturnValue(missing === "peg" ? absent : peg);
+    mocks.useStressSignals.mockReturnValue(missing === "dews" ? absent : dews);
+    mocks.useInfiniteDepegEvents.mockReturnValue(missing === "events" ? absent : events);
+    mocks.useDepegResolverSurfaces.mockReturnValue(makeResolverSurfaces());
+    mocks.useUrlFilters.mockReturnValue(makeUrlFilters());
+    render(<DepegClient />);
+    const hero = screen.getByTestId("depeg-hero");
+    expect(hero.dataset.pending).toBe(missing === "events" ? "null" : "0");
+    expect(hero.dataset.alerts).toBe(missing === "dews" || missing === "peg" ? "null" : "1");
+  });
+
+  it("preserves observed zero pending and DEWS counts from successful empty sources", () => {
+    mountDepegRoute();
+    expect(screen.getByTestId("depeg-hero").dataset.pending).toBe("0");
+    expect(screen.getByTestId("depeg-hero").dataset.alerts).toBe("0");
+  });
   it("scopes board filters to the board while global figures stay route-wide", () => {
     mountDepegRoute({
       coins: [

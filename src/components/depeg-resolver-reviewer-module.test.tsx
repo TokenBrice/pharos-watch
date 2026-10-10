@@ -12,7 +12,7 @@ import {
   predictionRow as row,
 } from "@/components/depeg-resolver-review-test-support";
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
-import type { DdrrResponse, DdrrSummary } from "@shared/types";
+import type { DdrrResponse, DdrrResponseRow, DdrrSummary } from "@shared/types";
 import { RatioSchema } from "@shared/types/ratio";
 
 vi.mock("@/lib/feature-flags", () => ({
@@ -86,6 +86,42 @@ function response(overrides: Partial<DdrrResponse> = {}): DdrrResponse {
 }
 
 describe("DepegResolverReviewerModule", () => {
+  it("renders full-summary breakdowns when an incorrect outcome is beyond the 400-row browse cap", () => {
+    const predictions = Array.from({ length: 401 }, (_, index): DdrrResponseRow => ({
+      ...row,
+      eventId: index + 1,
+      incidentKey: `incident-${index}`,
+      publicPredictionId: index + 1,
+      verdictReview: index === 400 ? "false_terminal" : "correct_recoverable",
+      withinIqr: index !== 400,
+    }));
+    const fullSummary = summarizeDdrrRows(predictions);
+    render(<DepegResolverReviewerModule data={response({ summary: fullSummary, rows: predictions.slice(0, 400) })} />);
+
+    expect(screen.getByText("false terminal").parentElement?.textContent).toBe("1false terminal");
+    expect(screen.getByText("inside typical range").parentElement?.textContent).toBe("400/401inside typical range");
+  });
+
+  it("uses the headline policy scope rather than mixed-policy public rows for calibration breakdowns", () => {
+    const current = Array.from({ length: 20 }, (_, index): DdrrResponseRow => ({ ...row, eventId: index + 1, incidentKey: `current-${index}` }));
+    const old: DdrrResponseRow = { ...row, eventId: 500, incidentKey: "legacy", predictionPolicyVersion: "legacy-policy",
+      verdictReview: "false_recoverable", withinIqr: false };
+    const fullSummary = summarizeDdrrRows([...current, old]);
+    render(<DepegResolverReviewerModule data={response({ summary: fullSummary, rows: [...current, old] })} />);
+
+    expect(fullSummary.headlineScope).toBe("current_policy");
+    expect(screen.getByText("false recoverable").parentElement?.textContent).toBe("0false recoverable");
+    expect(screen.getByText("inside typical range").parentElement?.textContent).toBe("20/20inside typical range");
+  });
+
+  it("shows unavailable breakdowns for an older summary instead of recomputing from rows", () => {
+    const oldSummary = makeSummary({ falseTerminalCount: undefined, falseRecoverableCount: undefined,
+      withinIqrCount: undefined, iqrScoredCount: undefined });
+    render(<DepegResolverReviewerModule data={response({ summary: oldSummary })} />);
+    expect(screen.getByText("false terminal").parentElement?.textContent).toBe("—false terminal");
+    expect(screen.getByText("inside typical range").parentElement?.textContent).toBe("—inside typical range");
+  });
+
   it("shows the calibration ledger as fractions while the scored sample is thin", () => {
     render(<DepegResolverReviewerModule data={response()} />);
 
