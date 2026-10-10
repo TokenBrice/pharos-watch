@@ -15,6 +15,11 @@ export * from "./classification/risk";
 export * from "./classification/liquidity-concentration";
 export * from "./classification/control-posture";
 export * from "./classification/grades";
+export * from "./classification/yield";
+export * from "./classification/operational-status";
+export * from "./classification/mint-authority";
+export * from "./classification/redemption";
+export * from "./classification/psi";
 export * from "./classification/resolve-mechanism-archetype";
 export * from "./classification/resolve-implementation-launch-date";
 export type { BadgeStyle } from "./classification/common";
@@ -47,7 +52,7 @@ const MECHANISM_ARCHETYPE_DESCRIPTORS = {
     oneLiner: "Centralized issuers custody dollars in bank accounts and short-term Treasuries; tokens are minted and redeemed on demand.",
   },
   tbill: { label: "Tokenized Treasury", shortLabel: "Tokenized Treasury", ctaNoun: "tokenized Treasury",
-    oneLiner: "Regulated funds hold short-duration Treasuries; the token is a fund share that accretes NAV instead of trading exactly at $1.",
+    oneLiner: "Short-duration Treasuries back NAV-accreting tokens or par-stable $1 units with separately distributed or retained yield.",
   },
   cdp: { label: "Crypto-Collateralized (CDP)", shortLabel: "Crypto CDP", ctaNoun: "CDP",
     oneLiner: "Overcollateralized vaults issue stablecoin debt; positions liquidate when collateral falls below a safety ratio.",
@@ -55,8 +60,8 @@ const MECHANISM_ARCHETYPE_DESCRIPTORS = {
   "synthetic-delta-neutral": { label: "Hedged Synthetic Dollar", shortLabel: "Hedged Synthetic", ctaNoun: "delta-neutral",
     oneLiner: "Offsetting economic exposures target a stable net value; implementations range from spot-plus-perp hedges to on-chain lending with matched borrow-and-stake legs.",
   },
-  algorithmic: { label: "Reflexive / Unbacked", shortLabel: "Reflexive / Unbacked", ctaNoun: "algorithmic",
-    oneLiner: "The peg is held by protocol-level mint/burn rules and arbitrage incentives rather than by 1:1 reserves.",
+  algorithmic: { label: "Programmatic Peg Defense", shortLabel: "Programmatic", ctaNoun: "algorithmic",
+    oneLiner: "Protocol-level supply rules and arbitrage defend the peg; collateral ranges from current reserve-backed designs to historical pure mint/burn systems.",
   },
   "rwa-credit-fund": { label: "Tokenized Credit Fund", shortLabel: "Credit Fund", ctaNoun: "credit-fund",
     oneLiner: "Regulated funds hold private credit, CLO tranches, or other non-Treasury debt; the token is a fund share whose NAV reflects credit losses and quarterly redemption gates.",

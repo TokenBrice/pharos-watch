@@ -81,8 +81,16 @@ function makePublishDb(
       const batch = statements as TestStatement[];
       batches.push([...batch]);
       onBatch?.(batches.length - 1);
-      liveConstructedStatements -= batch.length;
-      return batch.map(() => ({ success: true, meta: { changes: 1 }, results: [] }));
+      const results = [];
+      for (const statement of batch) {
+        if (statement.sql.includes("INSERT INTO dex_price_challenger_snapshots")) {
+          results.push(await statement.run());
+        } else {
+          liveConstructedStatements--;
+          results.push({ success: true, meta: { changes: 1 }, results: [] });
+        }
+      }
+      return results;
     },
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
@@ -288,7 +296,7 @@ describe("challenger publish", () => {
     });
 
     expect(result.publishedStablecoins).toBe(1);
-    expect(batches.map((batch) => batch.length)).toEqual([5, 1]);
+    expect(batches.map((batch) => batch.length)).toEqual([5, 2]);
     expect(runs).toHaveLength(1);
     expect(runs[0]?.sql).toContain("FROM json_each(?)");
     expect(JSON.parse(runs[0]?.binds[3] as string)).toEqual(["usdt-tether"]);
@@ -299,17 +307,18 @@ describe("challenger publish", () => {
     expect(maxConstructedStatements()).toBeLessThanOrEqual(DEX_PRICE_CHALLENGER_BATCH_SIZE);
 
     const statements = batches.flat();
-    expect(statements).toHaveLength(6);
+    expect(statements).toHaveLength(7);
     expect(statements.slice(0, 5).every((statement) => statement.sql.includes("INSERT INTO dex_price_challengers")))
       .toBe(true);
-    expect(statements[5]?.sql).toContain("DELETE FROM dex_price_challengers");
+    expect(statements[5]?.sql).toContain("INSERT INTO dex_price_challenger_snapshots");
+    expect(statements[6]?.sql).toContain("DELETE FROM dex_price_challengers");
     expect(statements.slice(0, 5).every((statement) => statement.binds[1] === 1_700_000_000)).toBe(true);
     expect(runs[0]?.binds.slice(0, 3)).toEqual([
       1_700_000_000,
       1_700_000_000,
       1_700_000_000,
     ]);
-    expect(statements[5]?.binds[0]).toBe(1_700_000_000);
+    expect(statements[6]?.binds[0]).toBe(1_700_000_000);
     expect(
       statements.slice(0, 5).flatMap((statement) =>
         statement.binds.filter((_, bindIndex) => bindIndex % 8 === 2)
@@ -379,11 +388,11 @@ describe("challenger publish", () => {
     expect(new TextEncoder().encode(publishedIdsJson).byteLength).toBeLessThan(16 * 1024);
     expect(batches.flat().some((statement) =>
       statement.sql.includes("INSERT INTO dex_price_challenger_snapshots")
-    )).toBe(false);
+    )).toBe(true);
     expect(retainedPoolsByStablecoin.size).toBe(0);
   });
 
-  it("retries a committed pointer publication before cleanup and preserves incomplete IDs", async () => {
+  it("rolls back and retries the atomic pointer batch before cleanup and preserves incomplete IDs", async () => {
     let pointerAttempts = 0;
     const cleanupAttempts: number[] = [];
     const committedPointers: unknown[][] = [];
@@ -397,7 +406,7 @@ describe("challenger publish", () => {
           committedPointers.push(harness.sqlite.prepare(
             "SELECT stablecoin_id, snapshot_at, has_rows FROM dex_price_challenger_snapshots ORDER BY stablecoin_id",
           ).all());
-          if (pointerAttempts === 1) throw new Error("D1 DB is overloaded after committed pointer publication");
+          if (pointerAttempts === 1) throw new Error("D1 DB is overloaded during pointer batch");
         }
         return changes;
       },
@@ -463,18 +472,76 @@ describe("challenger publish", () => {
   });
 
 
-  it("fails closed on pointer count mismatch and does not run cleanup", async () => {
-    const { db, batches } = makePublishDb(undefined, () => 0);
+  it("preserves the winning generation when a newer publisher commits after stale payload staging", async () => {
+    const coinId = ACTIVE_STABLECOINS[0]!.id;
+    const oldSnapshot = 1_700_000_000;
+    const winnerSnapshot = oldSnapshot + 100;
+    const harness = createLatestSchemaSqlite();
+    let interposed = false;
+    const db = {
+      ...harness.db,
+      batch: async <T>(statements: D1PreparedStatement[]) => {
+        if (!interposed) {
+          const result = await harness.db.batch<T>(statements);
+          interposed = true;
+          await publishDexPriceChallengerSnapshots(harness.db, {
+            snapshotAt: winnerSnapshot,
+            retainedPoolsByStablecoin: new Map([[coinId, [
+              { ...challengerPools(1)[0]!, poolId: "winner-pool", price: 0.98 },
+            ]]]),
+            sourceCoverageCompleteByStablecoin: new Map([[coinId, true]]),
+            minPoolTvlUsd: 20_000,
+          });
+          return result;
+        }
+        return harness.db.batch<T>(statements);
+      },
+    };
+    try {
+      const result = await publishDexPriceChallengerSnapshots(db, {
+        snapshotAt: oldSnapshot,
+        retainedPoolsByStablecoin: new Map([[coinId, challengerPools(1)]]),
+        sourceCoverageCompleteByStablecoin: new Map([[coinId, true]]),
+        minPoolTvlUsd: 20_000,
+      });
+      expect(interposed).toBe(true);
+      expect(result.publishedStablecoins).toBe(0);
+      expect(result.skippedStablecoins).toBe(ACTIVE_STABLECOINS.length);
+      expect(harness.sqlite.prepare(
+        "SELECT snapshot_at, has_rows FROM dex_price_challenger_snapshots WHERE stablecoin_id = ?",
+      ).get(coinId)).toEqual({ snapshot_at: winnerSnapshot, has_rows: 1 });
+      expect(harness.sqlite.prepare(
+        "SELECT pool_id, snapshot_at, price_usd FROM dex_price_challengers WHERE stablecoin_id = ?",
+      ).all(coinId)).toEqual([{ pool_id: "winner-pool", snapshot_at: winnerSnapshot, price_usd: 0.98 }]);
+    } finally {
+      harness.sqlite.close();
+    }
+  });
 
-    await expect(publishDexPriceChallengerSnapshots(db, {
-      snapshotAt: 1_700_000_000,
-      retainedPoolsByStablecoin: new Map([["usdt-tether", challengerPools(1)]]),
-      sourceCoverageCompleteByStablecoin: new Map([["usdt-tether", true]]),
-      minPoolTvlUsd: 20_000,
-    })).rejects.toThrow("wrote 0/1 pointers");
-
-    expect(batches.flat().some((statement) =>
-      statement.sql.includes("DELETE FROM dex_price_challengers")
-    )).toBe(false);
+  it("rolls back pointer acceptance if its associated cleanup fails", async () => {
+    const coinId = ACTIVE_STABLECOINS[0]!.id;
+    const harness = createLatestSchemaSqlite({
+      onRun: (sql) => {
+        if (sql.includes("DELETE FROM dex_price_challengers")) throw new Error("cleanup failed");
+      },
+    });
+    try {
+      harness.sqlite.prepare(
+        `INSERT INTO dex_price_challenger_snapshots
+         (stablecoin_id, snapshot_at, published_at, has_rows, source_coverage_complete)
+         VALUES (?, 1699999000, 1699999000, 0, 1)`,
+      ).run(coinId);
+      await expect(publishDexPriceChallengerSnapshots(harness.db, {
+        snapshotAt: 1_700_000_000,
+        retainedPoolsByStablecoin: new Map([[coinId, challengerPools(1)]]),
+        sourceCoverageCompleteByStablecoin: new Map([[coinId, true]]),
+        minPoolTvlUsd: 20_000,
+      })).rejects.toThrow("cleanup failed");
+      expect(harness.sqlite.prepare(
+        "SELECT snapshot_at, has_rows FROM dex_price_challenger_snapshots WHERE stablecoin_id = ?",
+      ).get(coinId)).toEqual({ snapshot_at: 1_699_999_000, has_rows: 0 });
+    } finally {
+      harness.sqlite.close();
+    }
   });
 });

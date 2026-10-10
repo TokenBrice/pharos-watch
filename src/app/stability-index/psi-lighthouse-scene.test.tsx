@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
+import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/classification";
 import { PsiLighthouseScene } from "./psi-lighthouse-scene";
 
 const BANDS: ConditionBand[] = ["BEDROCK", "STEADY", "TREMOR", "FRACTURE", "CRISIS", "MELTDOWN"];

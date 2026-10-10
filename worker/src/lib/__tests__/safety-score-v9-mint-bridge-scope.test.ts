@@ -14,7 +14,7 @@ import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { reviewedScope, SCOPE_CLOCK, weightedQuorum } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import {
@@ -1266,6 +1266,107 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(unresolved[0]!.scopedQuestionFresh).toBe(true);
     const controlGap = asset.gaps.find((gap) => gap.gapId === unresolved[0]!.status.gapIds[0]);
     expect(controlGap?.reasonCode).toBe("scoped-control-question");
+  });
+
+  it.each([
+    { subject: undefined, accessOnly: true },
+    { subject: "authority-semantics" as const, accessOnly: true },
+    { subject: "execution-scope" as const, accessOnly: true },
+    { subject: undefined, accessOnly: false },
+    { subject: "authority-semantics" as const, accessOnly: false },
+    { subject: "execution-scope" as const, accessOnly: false },
+    { subject: "key-custody-independence" as const, accessOnly: true },
+    { subject: "key-custody-independence" as const, accessOnly: false },
+  ])("retains $subject questions on resolved bridge semantics (accessOnly=$accessOnly)", ({ subject, accessOnly }) => {
+    const metadata = meta("fixture-resolved-bridge-question", {
+      bridgeRouteRisk: BridgeRouteRiskProfileSchema.parse(bridgeProfile([accessOnly ? route(BASE_ROUTE) : representationRoute(BASE_ROUTE)], {
+        controls: [bridgeControl({ capabilities: accessOnly ? ["pause"] : ["bridge-mint"], canRaiseCap: true })],
+        scopedQuestions: [{
+          controlRef: "fixture-bridge-control", subject,
+          question: "Can this exact authority redirect the underlying funds?",
+          reviewedAt: "1970-01-01", reviewer: "Fixture reviewer", sources: [SOURCE],
+        }],
+      })),
+    });
+    const { extension, compiled } = compileFixture(metadata);
+    const asset = compiled.assets[0]!, control = asset.controls[0]!;
+    const custodyOnly = subject === "key-custody-independence";
+    expect(extension.assets[0]!.admissionQuarantine).toBeUndefined();
+    expect(control.scopedQuestionFresh).toBe(true);
+    expect(control.status.observationState).toBe(custodyOnly ? "known" : "bounded-unknown");
+    expect(asset.controlStatus.observationState).toBe(custodyOnly ? "known" : "bounded-unknown");
+    expect(control.economicLossScope).toBe(accessOnly ? "access-only" : "deployment");
+    if (custodyOnly) {
+      expect(control.keyCustody).toBe("unknown");
+      expect(control.factorStatuses?.keyCustody?.observationState).toBe("missing");
+      expect(asset.gaps.some((gap) => gap.reasonCode === "scoped-control-question")).toBe(false);
+    } else {
+      expect(asset.gaps).toContainEqual(expect.objectContaining({ reasonCode: "scoped-control-question" }));
+    }
+  });
+
+  it.each(["complete", "partial-adverse", "expired", "identity-mismatched"] as const)("applies %s closure precedence on merged bridge questions", (kind) => {
+    const assetId = "fixture-bridge-question-closure";
+    const controller = "base:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const scope = reviewedScope({
+      controllerDeployment: controller, reviewedAt: "1970-01-01", observedAt: "1970-01-01",
+      inventory: kind === "partial-adverse" ? "partial" : "complete",
+      confidence: kind === "partial-adverse" ? "partial" : "verified",
+      ...(kind === "expired" ? { expiresAt: "1970-01-01" } : {}),
+    });
+    if (kind === "identity-mismatched") {
+      scope.observedState = { ...scope.observedState, runtimeIdentity: "runtime-other" };
+    }
+    Object.assign(scope.paths[0]!, {
+      targetDeployment: BASE_ROUTE, capabilities: ["bridge-mint"],
+      affectedLiabilityIds: [assetId], affectedDeployments: [BASE_ROUTE],
+      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+    });
+    const metadata = meta(assetId, {
+      bridgeRouteRisk: BridgeRouteRiskProfileSchema.parse(bridgeProfile([representationRoute(BASE_ROUTE)], {
+        controls: [bridgeControl({ executionScope: scope, canRaiseCap: true })],
+        scopedQuestions: [{
+          controlRef: "fixture-bridge-control", subject: "execution-scope",
+          question: "Does any unenumerated residual path exist?",
+          reviewedAt: "1970-01-01", reviewer: "Fixture reviewer", sources: [SOURCE],
+        }],
+      })),
+    });
+    const { extension, compiled } = compileFixture(metadata, { clockSec: 2 * 86400 });
+    const precedence = kind === "complete" || kind === "partial-adverse";
+    expect(extension.assets[0]!.admissionQuarantine).toBeUndefined();
+    expect(compiled.assets[0]!.controls[0]).toMatchObject({
+      scopedQuestionFresh: true, status: { observationState: precedence ? "known" : "bounded-unknown" },
+    });
+    if (kind === "identity-mismatched") {
+      const controlReview = extension.assets[0]!.controlReview;
+      assert(controlReview?.state === "partially-reviewed-controls");
+      expect(controlReview.controls[0]!.scopeDiagnostics).toContain("execution-identity-changed");
+    }
+    if (precedence) expect(compiled.assets[0]!.controls[0]).toMatchObject({
+      capSemantics: { kind: "unbounded" }, claimImpairment: "unbounded",
+    });
+    expect(compiled.assets[0]!.controlStatus.observationState).toBe(precedence ? "known" : "bounded-unknown");
+    expect(compiled.assets[0]!.gaps.some((gap) => gap.reasonCode === "scoped-control-question")).toBe(!precedence);
+  });
+
+  it("does not soften an unnamed unresolved bridge sibling with a resolved contributor's question", () => {
+    const metadata = meta("fixture-bridge-question-unnamed-sibling", {
+      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
+        controls: [
+          bridgeControl({ capabilities: ["pause"] }),
+          bridgeControl({ id: "unnamed", authorityType: "unknown" }),
+        ],
+        scopedQuestions: [{
+          controlRef: "fixture-bridge-control", question: "Can this authority redirect the funds?",
+          reviewedAt: "1970-01-01", reviewer: "Fixture reviewer", sources: [SOURCE],
+        }],
+      }),
+    });
+    const asset = compileFixture(metadata).compiled.assets[0]!;
+    expect(asset.controls[0]!.scopedQuestionFresh).not.toBe(true);
+    expect(asset.controlStatus.observationState).toBe("bounded-unknown");
+    expect(asset.gaps.some((gap) => gap.reasonCode === "scoped-control-question")).toBe(false);
   });
 
   it("drops the bridge scoped-question marker once the question ages past the freshness window", () => {

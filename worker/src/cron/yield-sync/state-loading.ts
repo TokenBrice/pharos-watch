@@ -24,6 +24,7 @@ import {
   getYieldSupplementalPendleBackoffCacheKey,
   parseYieldSupplementalPendleBackoff,
   PENDLE_RATE_LIMIT_BACKOFF_REASON,
+  supplementalFamilySnapshotHash,
 } from "./cache/supplemental-cache-keys";
 import { fetchOnChainRates, loadDlStablecoinPools } from "./sources";
 import { loadRiskFreeRateRegistryWithState, type RiskFreeRateRegistryCacheState } from "./sources-riskfree";
@@ -64,6 +65,8 @@ export interface YieldSupplementalCacheMeta {
    * the field existed parse as no reasons.
    */
   degradedFamilyReasons?: Partial<Record<string, string>>;
+  /** Outcome absent or obsolete for these exact consumed family snapshots. */
+  unknownOutcomeFamilies?: string[];
 }
 
 export interface YieldSyncLoadedState {
@@ -125,8 +128,12 @@ async function loadYieldSupplementalCandidates(
   );
   const runOutcomeRow = familyCacheRows.get(runOutcomeCacheKey) ?? null;
   const runOutcome = runOutcomeRow ? parseYieldSupplementalRunOutcomeDetailed(runOutcomeRow.value) : null;
-  const degradedFamilies = runOutcome?.degradedFamilies ?? [];
-  const degradedFamilyReasons = runOutcome?.degradedFamilyReasons ?? {};
+  const unknownOutcomeFamilies = SUPPLEMENTAL_SOURCE_FAMILY_KEYS.filter((family) =>
+    runOutcome?.familySnapshotHashes[family] !== supplementalFamilySnapshotHash(
+      familyCacheRows.get(getYieldSupplementalFamilyCacheKey(family)) ?? null));
+  const degradedFamilies = (runOutcome?.degradedFamilies ?? []).filter((family) => !unknownOutcomeFamilies.includes(family));
+  const degradedFamilyReasons = Object.fromEntries(degradedFamilies.flatMap((family) =>
+    runOutcome?.degradedFamilyReasons[family] ? [[family, runOutcome.degradedFamilyReasons[family]]] : []));
   for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
     const cachedFamily = familyCacheRows.get(getYieldSupplementalFamilyCacheKey(family)) ?? null;
     if (!cachedFamily) continue;
@@ -180,6 +187,7 @@ async function loadYieldSupplementalCandidates(
         unavailableRequiredFamilies: REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS.filter((key) => !validFamilyKeys.has(key)),
         degradedFamilies,
         degradedFamilyReasons,
+        unknownOutcomeFamilies,
       },
     };
   }
@@ -200,6 +208,7 @@ async function loadYieldSupplementalCandidates(
       unavailableRequiredFamilies: [...REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS],
       degradedFamilies,
       degradedFamilyReasons,
+      unknownOutcomeFamilies,
     },
   };
 }

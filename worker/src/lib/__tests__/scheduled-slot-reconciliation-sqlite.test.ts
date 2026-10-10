@@ -3,8 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { logCronRun, cronEventCacheKey } from "../cron-logger";
 import { recordProducerOutcome } from "../producer-history";
-import { sweepStaleScheduledSlotExecutions } from "../scheduled-slot-fence";
+import { runScheduledSlotWithFence, sweepStaleScheduledSlotExecutions } from "../scheduled-slot-fence";
 import { buildResourcePressure } from "../cron-resource-pressure";
+import { createDeferredPromise } from "./deferred.test-support";
 import {
   markScheduledChildStarted,
   writeScheduledChildTerminal,
@@ -88,7 +89,64 @@ function seedStaleSlotWithDeadChild(
 describe("scheduled slot reconciliation against the current D1 schema", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
     fixtures.closeAll();
+  });
+
+  it("keeps a live slot owned when an older heartbeat commits after its replacement", async () => {
+    vi.useFakeTimers();
+    const { sqlite, db } = createMigratedDb();
+    const base = 1_800_000_000;
+    vi.setSystemTime(base * 1000);
+    const { promise: oldGate, resolve: releaseOld } = createDeferredPromise();
+    const { promise: entered, resolve: enter } = createDeferredPromise();
+    const { promise: work, resolve: finish } = createDeferredPromise();
+    const heartbeatWrites: Promise<unknown>[] = [];
+    const prepare = db.prepare.bind(db);
+    vi.spyOn(db, "prepare").mockImplementation((sql) => {
+      const statement = prepare(sql);
+      if (sql.trim().startsWith("UPDATE cron_slot_executions") && sql.includes("SET updated_at =")) {
+        const bind = statement.bind.bind(statement);
+        vi.spyOn(statement, "bind").mockImplementation((...values) => {
+          const bound = bind(...values);
+          const run = bound.run.bind(bound);
+          vi.spyOn(bound, "run").mockImplementation(() => {
+            const first = heartbeatWrites.length === 0;
+            const write = (async () => {
+              if (first) await oldGate;
+              return run();
+            })();
+            heartbeatWrites.push(write);
+            return write;
+          });
+          return bound;
+        });
+      }
+      return statement;
+    });
+    const running = runScheduledSlotWithFence(db, "depegResolverOffset", async () => {
+      enter();
+      await work;
+    }, { slotStartedAt: base, owner: "original", invocationId: "original", preSweepStale: false });
+    await entered;
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(heartbeatWrites).toHaveLength(1);
+    vi.setSystemTime((base + 360) * 1000);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await heartbeatWrites[1];
+    expect(sqlite.prepare("SELECT updated_at FROM cron_slot_executions").get()?.updated_at).toBe(base + 420);
+    releaseOld();
+    await heartbeatWrites[0];
+    expect(sqlite.prepare("SELECT updated_at FROM cron_slot_executions").get()?.updated_at).toBe(base + 420);
+
+    await expect(sweepStaleScheduledSlotExecutions(db, {
+      slotKey: "depegResolverOffset", nowSec: base + 420,
+    })).resolves.toMatchObject({ slotsReconciled: 0 });
+    finish();
+    await expect(running).resolves.toMatchObject({ status: "ok" });
+    expect(sqlite.prepare("SELECT state, execution_owner, execution_generation FROM cron_slot_executions").get())
+      .toMatchObject({ state: "finished", execution_owner: "original", execution_generation: 1 });
   });
 
   it.each([

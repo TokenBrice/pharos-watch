@@ -202,4 +202,23 @@ describe("aggregateCoinFlows24h", () => {
     expect(aggregate.net).toEqual({ valueUsd: 60, completeness: "complete", note: null });
     expect(aggregate.direction).toBe("minting");
   });
+
+  it.each([100, -100, 0])("withholds unknown-valued direction while retaining the legacy net %s and coverage note", (netFlow24hUsd) => {
+    const aggregate = aggregateCoinFlows24h([stubCoin({
+      has24hActivity: true, netFlow24hUsd, netFlowDirection24h: null,
+      valuation: valuation24h({ completeness: "unknown", mintCompleteness: "unknown", burnCompleteness: "unknown" }),
+    })]);
+    expect(aggregate.direction).toBeNull();
+    expect(aggregate.net.valueUsd).toBe(netFlow24hUsd);
+    expect(aggregate.net.completeness).toBe("unknown");
+    expect(aggregate.net.note).toMatch(/coverage unknown/i);
+  });
+
+  it("keeps the aggregate direction when missing valuation cannot overturn it", () => {
+    const aggregate = aggregateCoinFlows24h([stubCoin({
+      has24hActivity: true, netFlow24hUsd: 100, valuation: valuation24h(PARTIAL_MINT_SIDE),
+    })]);
+    expect(aggregate.direction).toBe("minting");
+    expect(aggregate.net.valueUsd).toBeNull();
+  });
 });

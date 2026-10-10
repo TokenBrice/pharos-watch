@@ -304,9 +304,15 @@ export function extractStructuredActionOutcome(
   data: unknown,
   fallbackStatus: SessionActionExecutionLike["status"],
 ): StructuredActionOutcome {
+  const fallbackHeadline =
+    fallbackStatus === "unknown"
+      ? "Outcome needs reconciliation"
+      : fallbackStatus === "failed"
+        ? "Action failed"
+        : "Action completed";
   const record = readRecord(data);
   if (!record) {
-    return { headline: fallbackStatus === "failed" ? "Action failed" : "Action completed", fields: [], followUp: null };
+    return { headline: fallbackHeadline, fields: [], followUp: null };
   }
 
   const status = readString(record, ["executionStatus", "status", "state"]);
@@ -321,13 +327,9 @@ export function extractStructuredActionOutcome(
 
   return {
     headline:
-      fallbackStatus === "failed" || fallbackStatus === "unknown"
-        ? fallbackStatus === "unknown"
-          ? "Outcome needs reconciliation"
-          : "Action failed"
-        : status
-          ? `Action ${status}`
-          : "Action completed",
+      fallbackStatus === "failed" || fallbackStatus === "unknown" || !status
+        ? fallbackHeadline
+        : `Action ${status}`,
     fields,
     followUp,
   };

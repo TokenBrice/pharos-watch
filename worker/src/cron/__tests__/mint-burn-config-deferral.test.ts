@@ -193,7 +193,7 @@ function makeChainContext() {
     ["ethereum", {
       chainHead: 22_050_000,
       alchemyUrl: "https://eth.example",
-      chainTimestampCache: new Map<number, number>(),
+      chainTimestampCache: new Map<string, number>(),
       txContextCache: new Map(),
     }],
   ]);
@@ -213,6 +213,7 @@ function makePhaseInput(opts: {
     runTimestamp: NOW_SEC,
     priceContext: { priceObservations: new Map(), priceHistory: new Map() },
     lastBlocksAfterRun: new Map([["ethereum-0xaaaa", 22_000_000]]),
+    pendingCursorUpdates: new Map(),
     maxScanRange: 50_000,
     criticalConfigBudgetLimit: 100,
     extendedConfigBudgetLimit: 50,
@@ -330,7 +331,7 @@ describe("runMintBurnConfigPhase deferral integration", () => {
     expect(readDeferrals(sqlite)).toEqual([]);
   });
 
-  it("prepares the exact loop ranges and retains completed cursors when a later config aborts", async () => {
+  it("prepares exact loop ranges and stages completed cursors until aggregation succeeds", async () => {
     const { db } = fixtures.open();
     const configs = ["gusd-gemini", "usds-sky", "usde-ethena"].map((id) => ({
       ...MINT_BURN_CONFIGS.find((config) => config.stablecoinId === id)!, startBlock: 101,
@@ -366,10 +367,9 @@ describe("runMintBurnConfigPhase deferral integration", () => {
     expect(vi.mocked(syncMintBurnConfig).mock.calls.map(([input]) =>
       ({ key: input.key, fromBlock: input.fromBlock, toBlock: input.scanTo }))).toEqual(expected);
     expect(vi.mocked(fetchConservationBoundaries).mock.calls[0][0].deadlineMs).toBe(NOW_SEC * 1000 + 45_000);
-    expect(upsertMintBurnSyncState).toHaveBeenNthCalledWith(1, db, keys[0], 135, "monotonic-max");
-    expect(upsertMintBurnSyncState).toHaveBeenNthCalledWith(2, db, keys[1], 125, "monotonic-max");
-    expect(upsertMintBurnSyncState).toHaveBeenCalledTimes(2);
-    expect(args.lastBlocksAfterRun).toEqual(new Map([[keys[0], 135], [keys[1], 125], [keys[2], 150]]));
+    expect(upsertMintBurnSyncState).not.toHaveBeenCalled();
+    expect(args.pendingCursorUpdates).toEqual(new Map([[keys[0], 135], [keys[1], 125]]));
+    expect(args.lastBlocksAfterRun).toEqual(new Map([[keys[0], 110], [keys[2], 150]]));
     expect(args.budget.count).toBe(7);
   });
 

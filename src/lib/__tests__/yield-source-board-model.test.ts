@@ -1,14 +1,49 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { buildYieldSourceBoardModel, inferLaneConfidenceTier } from "@/lib/yield-source-board-model";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
-import type { YieldBenchmarkRegistry } from "@shared/types";
+import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
+import type { YieldRanking } from "@shared/types";
+import { YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT } from "@shared/types/yield-summary";
 
-afterEach(() => {
-  vi.useRealTimers();
-});
+function projectRows(rankings: YieldRanking[]) {
+  return projectYieldRankingsSummary({ rankings, riskFreeRate: 4, scalingFactor: 8, medianApy: null, updatedAt: 1_800_000_000 });
+}
 
 describe("buildYieldSourceBoardModel", () => {
-  it("summarizes selected rows, alternate rows, confidence, switches, anomalies, and source-row APY", () => {
+  it("preserves detailed source lanes and anomaly evidence through the summary projection", () => {
+    const rankings = [makeYieldRanking({
+      dataSource: "onchain",
+      provenance: makeYieldProvenance({ anomalies: ["low-source-tvl"] }),
+      altSources: [makeAltYieldSource({ dataSource: "defillama", apy30d: 7 })],
+    })];
+    const summary = projectRows(rankings);
+    const detailModel = buildYieldSourceBoardModel(rankings);
+    const summaryModel = buildYieldSourceBoardModel(summary.rankings);
+    expect(summaryModel.groups).toEqual(detailModel.groups);
+    expect(summaryModel.anomalyDetails).toEqual(detailModel.anomalyDetails);
+    expect(summaryModel.anomalyCount).toBe(1);
+    expect(summaryModel.anomalyUnavailableCount).toBe(0);
+    expect(summaryModel.compositionMissingSourceCount).toBe(0);
+  });
+
+  it("keeps complete totals independent of bounded alternate lane detail", () => {
+    const rankings = [makeYieldRanking({
+      altSources: Array.from({ length: YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT + 2 }, (_, index) =>
+        makeAltYieldSource({ sourceKey: `alt-${index}` })),
+    })];
+    const summary = projectRows(rankings);
+    const model = buildYieldSourceBoardModel(summary.rankings);
+    expect(model.representedSourceCount).toBe(1 + rankings[0].altSources.length);
+    expect(model.compositionMissingSourceCount).toBe(2);
+    expect(model.groups.reduce((sum, lane) => sum + lane.representedSourceCount, 0)).toBe(1 + YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT);
+    const legacy = { ...summary.rankings[0], provenance: null, altSources: undefined };
+    expect(buildYieldSourceBoardModel([legacy])).toMatchObject({
+      representedSourceCount: model.representedSourceCount,
+      compositionMissingSourceCount: rankings[0].altSources.length,
+      anomalyUnavailableCount: 1,
+    });
+  });
+  it("summarizes selected rows, alternate rows, confidence, switches, anomalies, and lane APY", () => {
     const rankings = [
       makeYieldRanking({
         id: "usdc-circle",
@@ -77,7 +112,6 @@ describe("buildYieldSourceBoardModel", () => {
     expect(model.selectedCount).toBe(2);
     expect(model.alternateCount).toBe(2);
     expect(model.representedSourceCount).toBe(4);
-    expect(model.representedDataSourceCount).toBe(3);
     expect(model.selectedConfidenceCounts).toEqual({
       deterministic: 1,
       curated: 1,
@@ -104,11 +138,6 @@ describe("buildYieldSourceBoardModel", () => {
     );
     expect(model.sourceSwitchCount).toBe(1);
     expect(model.anomalyCount).toBe(1);
-    expect(model.sourceRowApy).toEqual({ min: 4, median: 5.5, max: 8 });
-    expect(model.benchmarkLabels).toEqual([
-      { label: "EUR 3M compounded ESTR", count: 1 },
-      { label: "USD 3M T-Bill", count: 1 },
-    ]);
 
     expect(model.groups[0]).toEqual(expect.objectContaining({
       key: "lending-opportunity:protocol-api",
@@ -165,70 +194,6 @@ describe("buildYieldSourceBoardModel", () => {
     expect(model.selectedConfidenceUnknownCount).toBe(1);
   });
 
-  it("uses benchmark options when row-level labels are absent", () => {
-    vi.useFakeTimers({ now: Date.UTC(2026, 3, 24) });
-    const benchmarks: YieldBenchmarkRegistry = {
-      USD: {
-        key: "USD",
-        label: "USD 3M T-Bill",
-        currency: "USD",
-        rate: 4.25,
-        recordDate: "2026-04-23",
-        fetchedAt: Date.now() / 1000 - 60,
-        ageSeconds: 60,
-        source: "fred-dgs3mo",
-        isFallback: false,
-        fallbackMode: null,
-      },
-    };
-
-    const model = buildYieldSourceBoardModel(
-      [
-        makeYieldRanking({
-          benchmarkKey: "USD",
-          benchmarkLabel: undefined,
-          benchmarkSelectionMode: undefined,
-          benchmarkIsFallback: undefined,
-        }),
-      ],
-      { benchmarks },
-    );
-
-    expect(model.benchmarkLabels).toEqual([{ label: "USD 3M T-Bill", count: 1 }]);
-  });
-
-  it("marks a benchmark label stale when its recordDate exceeds the freshness bound", () => {
-    // 142 days after the recordDate below, with a fresh fetch of the old observation.
-    vi.useFakeTimers({ now: Date.UTC(2026, 8, 12) });
-    const benchmarks: YieldBenchmarkRegistry = {
-      USD: {
-        key: "USD",
-        label: "USD 3M T-Bill",
-        currency: "USD",
-        rate: 4.25,
-        recordDate: "2026-04-23",
-        fetchedAt: Date.now() / 1000 - 60,
-        ageSeconds: 60,
-        source: "fred-dgs3mo",
-        isFallback: false,
-        fallbackMode: null,
-      },
-    };
-    const model = buildYieldSourceBoardModel(
-      [
-        makeYieldRanking({
-          benchmarkKey: "USD",
-          benchmarkLabel: undefined,
-          benchmarkSelectionMode: undefined,
-          benchmarkIsFallback: undefined,
-        }),
-      ],
-      { benchmarks },
-    );
-
-    expect(model.benchmarkLabels).toEqual([{ label: "USD 3M T-Bill (142d old)", count: 1 }]);
-  });
-
   it("formats prototype-property dataSource values as unknown labels", () => {
     const model = buildYieldSourceBoardModel([
       makeYieldRanking({
@@ -270,7 +235,6 @@ describe("buildYieldSourceBoardModel", () => {
       selectedCount: 0,
       alternateCount: 0,
       representedSourceCount: 0,
-      representedDataSourceCount: 0,
       selectedConfidenceCounts: {
         deterministic: 0,
         curated: 0,
@@ -292,8 +256,6 @@ describe("buildYieldSourceBoardModel", () => {
       topSourceRiskDrivers: [],
       sourceSwitchCount: 0,
       anomalyCount: 0,
-      sourceRowApy: null,
-      benchmarkLabels: [],
       groups: [],
     });
   });

@@ -10,7 +10,7 @@ import { ECONOMIC_SUPPLY_BODY_CAPS, observeCurveLzPending, observeEconomicSolana
 import { REVIEWED_ECONOMIC_SUPPLY_PLANS, reviewedEconomicDeploymentAttributionValidationError } from "../safety-score-v9/supply-attribution-contract";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { admissionCodeForSupplyAttributionRejection, computeSupplyAttributionJournalIdV1, createSupplyAttributionJournalV1, SupplyAttributionJournalV1Schema, withSupplyAttributionJournalDiagnosticV1, type SupplyAttributionJournalV1Payload } from "@shared/lib/safety-score-v9-supply-attribution-journal";
-import { emitSupplyAttributionDiagnostic } from "../safety-score-v9/supply-attribution-capture-budget";
+import { emitSupplyAttributionDiagnostic } from "../safety-score-v9/supply-attribution-diagnostics";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 
@@ -420,8 +420,8 @@ describe("reviewed economic supply observation", () => {
   it("retains the escrow OFT history-incomplete cause after successful holding and identity reads", async () => {
     const f = oftFixture(), original = vi.mocked(evmRpc.fetchEvmRpcBatch).getMockImplementation()!;
     // Keep the source pin beyond eight 1,000,000-block discovery windows.
-    // The missing send is still outside the scanned prefix, not an omitted
-    // send in a complete history (which correctly yields send-census-mismatch).
+    // The send occurs after the eight scanned windows. Each empty page has
+    // a zero historical outbound counter, authenticating that sparse prefix.
     vi.mocked(evmRpc.fetchEvmBlockNumber).mockResolvedValue(8_001_002);
     vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => {
       const height = number === "finalized" ? 8_001_000 : number;
@@ -435,7 +435,7 @@ describe("reviewed economic supply observation", () => {
         if (call.method === "eth_call" && query && typeof query === "object" && "data" in query &&
           typeof query.data === "string" && query.data.startsWith(toFunctionSelector("outboundNonce(address,uint32,bytes32)")) &&
           block && typeof block === "object" && "blockHash" in block) {
-          return word(block.blockHash === word(99n) ? 0n : 1n);
+          return word(block.blockHash === word(8_001_000n) ? 1n : 0n);
         }
         return results[index];
       });

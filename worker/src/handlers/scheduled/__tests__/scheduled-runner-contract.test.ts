@@ -80,7 +80,7 @@ describe("scheduled runner contract", () => {
 
     expect(sorted(runnerKeys)).toEqual(sorted(planKeys));
     for (const plan of Object.values(SCHEDULED_SLOT_PLANS)) {
-      expect(SLOT_RUNNER_LOADER_BY_KEY[plan.runnerKey]).toEqual(expect.any(Function));
+      expect(SLOT_RUNNER_LOADER_BY_KEY[plan.scheduleKey]).toEqual(expect.any(Function));
     }
 
     const plannedStatusJobs = new Set(

@@ -7,6 +7,7 @@ import type { DexApiPool } from "../../lib/dex-api-common";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronProgressReporter, CronProgressUpdate, CronResult } from "../../lib/cron-logger";
 import type { LlamaPool } from "../dex-liquidity/types";
+import type { PoolProcessingRejection } from "../dex-liquidity/process-pool-types";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import * as priceValidation from "../../lib/price-validation";
 import * as realPoolShaping from "../../lib/dex-api-pool-shaping";
@@ -34,6 +35,7 @@ const phaseFixtures = vi.hoisted(() => {
       primary: {
         pools: [],
         rawPoolCount: 0,
+        poolRejections: [] as PoolProcessingRejection[],
         dexProjects: new Set<string>(),
         protocolTvlCaps: new Map<string, number>(),
         curvePayloads: [],
@@ -410,6 +412,19 @@ describe("dex liquidity scoring stage cycle", () => {
       }
     },
   );
+  it.each([1, 10_000])("preserves compaction quarantine through stage persistence and materiality (TVL=%s)", async (tvlUsd) => {
+    const rejection = { reason: "invalid-pool-identity" as const, poolIds: ["malformed-primary"], count: 1, tvlUsd };
+    phaseFixtures.current.primary.poolRejections = [rejection];
+    const result = await stageDexLiquidityScoring(db, "graph-key");
+    expect(result.status).toBe(tvlUsd >= 10_000 ? "degraded" : "ok");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      poolRejections: [rejection],
+      poolRejectionMateriality: { rejectedPoolCount: 1, rejectedPoolTvlUsd: tvlUsd, material: tvlUsd >= 10_000 },
+    });
+    const persisted = vi.mocked(persistDexLiquidityScoringStage).mock.calls[0][1];
+    expect(persisted.poolState.poolRejections).toEqual([rejection]);
+    expect(persisted.sourceState.dlYieldsAvailable).toBe(true);
+  });
 
   it("throws on catastrophic source failure instead of silently returning", async () => {
     phaseFixtures.reset({ primary: null });
@@ -440,6 +455,7 @@ describe("dex liquidity scoring stage cycle", () => {
     phaseFixtures.reset({ primary: {
       pools: [],
       rawPoolCount: 0,
+      poolRejections: [],
       dexProjects: new Set<string>(),
       protocolTvlCaps: new Map<string, number>(),
       curvePayloads: [],
@@ -476,6 +492,7 @@ describe("dex liquidity scoring stage cycle", () => {
     vi.mocked(fetchDataSources).mockResolvedValueOnce({
       pools: [],
       rawPoolCount: 0,
+      poolRejections: [],
       dexProjects: new Set<string>(),
       protocolTvlCaps: new Map<string, number>(),
       curvePayloads: [{ data: { poolData: [] } }],
@@ -499,6 +516,7 @@ describe("dex liquidity scoring stage cycle", () => {
     vi.mocked(fetchDataSources).mockResolvedValueOnce({
       pools: [],
       rawPoolCount: 0,
+      poolRejections: [],
       dexProjects: new Set<string>(["curve"]),
       protocolTvlCaps: new Map<string, number>(),
       curvePayloads: [{ data: { poolData: [] } }],
@@ -853,6 +871,7 @@ describe("dex liquidity scoring stage cycle", () => {
     vi.mocked(fetchDataSources).mockResolvedValueOnce({
       pools: [trackedPool],
       rawPoolCount,
+      poolRejections: [],
       dexProjects: new Set(["scale-dex"]),
       protocolTvlCaps: new Map(),
       curvePayloads: [],
@@ -918,6 +937,7 @@ describe("dex liquidity scoring stage cycle", () => {
     const sourceData = {
       pools: [primaryPool],
       rawPoolCount: 1,
+      poolRejections: [],
       dexProjects: new Set(["memory-dex"]),
       protocolTvlCaps: new Map<string, number>(),
       curvePayloads: [],
@@ -1281,6 +1301,7 @@ describe("dex liquidity scoring stage cycle", () => {
     vi.mocked(fetchDataSources).mockResolvedValueOnce({
       pools: [],
       rawPoolCount: 0,
+      poolRejections: [],
       dexProjects: new Set<string>(),
       protocolTvlCaps: new Map<string, number>([["curve", 50]]),
       curvePayloads: [],
@@ -1541,6 +1562,7 @@ describe("dex liquidity stage same-hour recovery", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(scheduledAtMs);
     vi.clearAllMocks();
+    phaseFixtures.reset();
     // The producer, its persistence, its loader, and its consumption marker run
     // for real against SQLite here; only the scoring/publication stages stay mocked.
     vi.mocked(persistDexLiquidityScoringStage).mockImplementation(
@@ -1663,6 +1685,23 @@ describe("dex liquidity stage same-hour recovery", () => {
     for (const table of ["dex_liquidity_scoring_stages", "dex_liquidity_scoring_stage_chunks", "cron_leases"]) {
       expect(harness.sqlite.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get()).toEqual({ count: 0 });
     }
+  });
+
+  it.each([1, 10_000])("carries compaction quarantine across real stage serialization into consumer quality (TVL=%s)", async (tvlUsd) => {
+    phaseFixtures.reset();
+    const rejection = { reason: "invalid-pool-identity" as const, poolIds: ["malformed-primary"], count: 1, tvlUsd };
+    vi.mocked(fetchDataSources).mockResolvedValueOnce({ ...phaseFixtures.current.primary, poolRejections: [rejection] });
+    const harness = openHarness();
+    await stageHourGeneration(harness);
+    const result = await consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
+      stageReadyDeadlineMs: scheduledAtMs - 1,
+      stageRecovery: { graphApiKey: null },
+    });
+    expect(result.status).toBe(tvlUsd >= 10_000 ? "degraded" : "ok");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      poolRejections: [rejection],
+      poolRejectionMateriality: { rejectedPoolCount: 1, rejectedPoolTvlUsd: tvlUsd, material: tvlUsd >= 10_000 },
+    });
   });
 
   it("consumes a ready source stage without requiring recovery credentials", async () => {

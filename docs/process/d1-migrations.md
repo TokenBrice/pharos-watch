@@ -20,7 +20,7 @@ Additive migrations do not need data-migration metadata.
 -- data-migration: reviewed
 ```
 
-It must also add a row to the manifest's **Reviewed Data Migrations** table documenting:
+It must also add a row to the manifest's **Reviewed Data Migrations** table documenting all four fields below. Empty or whitespace-only cells fail the gate with the migration filename and missing field:
 
 - the exact predicate and rows affected;
 - why the old Worker remains compatible throughout the migration;

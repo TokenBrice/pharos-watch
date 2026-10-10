@@ -24,6 +24,7 @@ function sources(
     launch?: string[];
     reserve?: unknown;
     reserveDispatched?: string[];
+    reserveObserved?: Record<string, number>;
     safety?: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>;
   } = {},
 ) {
@@ -393,7 +394,7 @@ describe("dispatchTelegramAlerts", () => {
     ]);
     harness.cache(
       "alert:reserve-snapshot",
-      { generation: ALERT_RESERVE_SOURCE_GENERATION, publishedAt: now, continuous: false, driftIds: ["usdc-circle"] },
+      { generation: ALERT_RESERVE_SOURCE_GENERATION, publishedAt: now, continuous: false, driftIds: ["usdc-circle"], observedSince: { "usdc-circle": now }, unavailableIds: [] },
       now,
     );
     const cycle2 = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
@@ -417,8 +418,10 @@ describe("dispatchTelegramAlerts", () => {
         publishedAt: now - 60,
         continuous: true,
         driftIds: ["usdc-circle"],
+        observedSince: { "usdc-circle": now - 120 }, unavailableIds: [],
       },
       reserveDispatched: [],
+      reserveObserved: { "usdc-circle": now - 120 },
       safety: {},
     });
     harness.seed({
@@ -434,7 +437,7 @@ describe("dispatchTelegramAlerts", () => {
     ).toMatchObject({ alert_type: "reserve", status: "sent", final_delivery_state: "accepted" });
   });
 
-  it("deduplicates a close-and-reopen transition at stablecoin incident level", async () => {
+  it("delivers a new detected event when a depeg closes and reopens between snapshots", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
     sources(harness, {
@@ -461,14 +464,28 @@ describe("dispatchTelegramAlerts", () => {
           endedAt: now - 60,
           recoveryPrice: 1,
         },
-        { stablecoinId: "usdc-circle", symbol: "USDC", direction: "below", peakDeviationBps: 90, startPrice: 0.991 },
+        {
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          direction: "below",
+          peakDeviationBps: 90,
+          startPrice: 0.991,
+          startedAt: now - 30,
+        },
       ],
       subscribers: [{ chatId: "12345" }],
       subscriptions: [{ chatId: "12345", stablecoinId: "usdc-circle", alerts: { depeg: true } }],
     });
     const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
 
-    expect(metadata.eventsDetected).toMatchObject({ depegTriggered: 0, depegResolved: 0, depegWorsening: 0 });
-    expect(telegramDeliveryTranscript).toEqual([]);
+    expect(metadata).toMatchObject({
+      eventsDetected: { depegTriggered: 1, depegResolved: 0, depegWorsening: 0 },
+      subscribersNotified: 1,
+      messagesSent: 1,
+    });
+    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "12345" })]);
+    expect(
+      harness.sqlite.prepare("SELECT alert_type, status, final_delivery_state FROM telegram_alert_job_targets").get(),
+    ).toMatchObject({ alert_type: "depeg", status: "sent", final_delivery_state: "accepted" });
   });
 });

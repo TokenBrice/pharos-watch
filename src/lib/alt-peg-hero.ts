@@ -1,5 +1,5 @@
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { PegCurrency, StablecoinData } from "@shared/types";
@@ -17,7 +17,7 @@ export interface HeroCoin {
   href: string;
   logoSrc: string;
   pegCurrency: PegCurrency;
-  marketCap: number;
+  marketCap: number | null;
 }
 
 export interface PlacedCoin extends HeroCoin {
@@ -77,7 +77,7 @@ function toHeroCoin(coin: StablecoinData, peg: PegCurrency): HeroCoin | null {
     href: buildStablecoinUrl(coin.id),
     logoSrc,
     pegCurrency: peg,
-    marketCap: getCirculatingRaw(coin),
+    marketCap: getCirculatingRawOrNull(coin),
   };
 }
 
@@ -111,7 +111,7 @@ function placeSkyCohort(kind: SkyCohortKind, coins: HeroCoin[], rank?: number): 
   const template = EMPTY_SKY.find((c) => c.kind === kind)!;
   if (coins.length === 0) return template;
 
-  const sorted = [...coins].sort(compareFiniteDesc<HeroCoin>((coin) => coin.marketCap));
+  const sorted = [...coins].sort(compareFiniteDesc<HeroCoin>((coin) => coin.marketCap ?? Number.NaN));
   const layout = SKY_LAYOUT[kind];
   const placed: PlacedCoin[] = sorted.map((coin, index) => {
     const sizePx = coinEmblemSize(coin.marketCap, { ceil: SKY_COHORT_SIZE_CEIL });
@@ -175,12 +175,14 @@ export function buildPegDiversityHero(peggedAssets: readonly StablecoinData[] | 
     byPeg.set(peg, list);
   }
 
-  const cohortRankByPeg = new Map<PegCurrency, number>(
+  const cohortRankByPeg = new Map<PegCurrency, number>();
+  // No complete-cohort rank can be supported while any plotted supply is unknown.
+  if ([...byPeg.values()].every((coins) => coins.every((coin) => coin.marketCap !== null))) {
     [...byPeg.entries()]
-      .map(([peg, coins]) => [peg, coins.reduce((sum, coin) => sum + coin.marketCap, 0)] as const)
+      .map(([peg, coins]) => [peg, coins.reduce((sum, coin) => sum + coin.marketCap!, 0)] as const)
       .sort((left, right) => right[1] - left[1])
-      .map(([peg], index) => [peg, index + 1]),
-  );
+      .forEach(([peg], index) => cohortRankByPeg.set(peg, index + 1));
+  }
 
   const pegClusters: PegCluster[] = [];
   const goldCoins: HeroCoin[] = [];
@@ -205,8 +207,10 @@ export function buildPegDiversityHero(peggedAssets: readonly StablecoinData[] | 
   }
 
   pegClusters.sort((a, b) => {
-    const aMax = a.coins[0]?.marketCap ?? 0;
-    const bMax = b.coins[0]?.marketCap ?? 0;
+    const aMax = a.coins[0]?.marketCap ?? null;
+    const bMax = b.coins[0]?.marketCap ?? null;
+    if (aMax === null) return bMax === null ? 0 : -1;
+    if (bMax === null) return 1;
     return aMax - bMax;
   });
   const separatedPegClusters = separateFiatClusterLogos(pegClusters);

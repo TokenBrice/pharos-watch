@@ -16,6 +16,7 @@ export type PerAlertTypeTargets = Record<Exclude<TelegramAlertType, "freeze">, {
 
 export interface DispatchCapacityMetadata {
   freshCandidateChats: number;
+  freezeTargetCount: number;
   freshCandidateCount: number;
   freshOverflow: number;
   pendingSent: number;
@@ -63,10 +64,6 @@ export interface DispatchCapacityMetadata {
     handoffPageCount: number;
     coordinatorStepCount: number;
   };
-  /** C128: chats whose multi-coin set collapsed to a single burst-summary chunk this run. */
-  burstCollapsedChats?: number;
-  /** C128: bursting chats fully suppressed this run because their coin set was already summarized. */
-  burstDeltaSuppressed?: number;
   /** True when the reserve producer source is not currently alertable. */
   reserveSourceUnavailable: boolean;
 }
@@ -203,17 +200,6 @@ function emptyPerAlertTypeTargets(): PerAlertTypeTargets {
   };
 }
 
-export function buildPerAlertTypeTargets(
-  subscriberQueue: Array<{ alertType: TelegramAlertType; chunks: string[] }>,
-): PerAlertTypeTargets {
-  const targets = emptyPerAlertTypeTargets();
-  for (const sub of subscriberQueue) {
-    (targets[sub.alertType] ??= { chats: 0, chunks: 0 }).chats += 1;
-    targets[sub.alertType]!.chunks += sub.chunks.length;
-  }
-  return targets;
-}
-
 function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): DispatchResult {
   const emptyCapacity = emptyPendingCapacitySnapshot();
   return {
@@ -257,6 +243,7 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     freshPermanentFailures: 0,
     freshDeferredPerChat: 0,
     freshCandidateChats: 0,
+    freezeTargetCount: 0,
     freshCandidateCount: 0,
     freshOverflow: 0,
     chatsWithActiveSnooze,

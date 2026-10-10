@@ -208,7 +208,7 @@ export function buildListMessage(
     }
   }
 
-  lines.push("Precedence: per-coin > preset > all-stablecoins. A per-coin Muted overrides the rest.");
+  lines.push("Precedence: per-coin > preset > all-stablecoins. Explicit per-family off overrides inherited defaults.");
   lines.push("Tip: use /presets to browse dynamic watchlists, or /unsnooze to clear alert snooze.");
   return escapeHtml(lines.join("\n"));
 }
@@ -309,15 +309,18 @@ export function describeSubscriptionSettings(
           : "Safety",
     },
   });
-  // C74: in /list (perCoinTag) make the precedence model legible — an
-  // all-flags-0 row is a per-coin Muted that suppresses preset/global defaults
-  // (the C02 per-coin `off` precedence), and a flagged row is tagged so the
-  // active per-coin override lane is visible. Other callers keep the bare label.
-  let base: string;
-  if (!description) {
-    base = options.perCoinTag ? "Muted (overrides defaults)" : "Muted";
-  } else {
-    base = options.perCoinTag ? `${description} · per-coin` : description;
+  const suppressed = TELEGRAM_ALERT_TYPES.filter((family) => {
+    const columns = TELEGRAM_ALERT_PERSISTENCE[family];
+    return row[columns.overrideColumn] === 1 && row[columns.subscriptionColumn] !== 1;
+  });
+  const fullyMuted = suppressed.length === TELEGRAM_ALERT_TYPES.length;
+  let base = fullyMuted
+    ? options.perCoinTag ? "Muted (overrides defaults)" : "Muted"
+    : description
+      ? options.perCoinTag ? `${description} · per-coin` : description
+      : "Inherits preset/global defaults";
+  if (suppressed.length > 0 && !fullyMuted) {
+    base += `; off: ${suppressed.map((family) => TELEGRAM_ALERT_FAMILY_SHORT_LABELS[family]).join(", ")} (overrides defaults)`;
   }
 
   // Per-coin snooze countdown (P1-U10): shown alongside the alert list so
@@ -505,6 +508,14 @@ export function buildManageWatchlistMessage(subscriptions: SubscriptionRow[], pa
   );
 }
 
+/** Shared availability/evidence disclosure for compact status and coverage. */
+export function formatTelegramSafety(safety: NonNullable<StatusForCoin["safety"]>): string {
+  const rating = safety.ratingStatus === "pipeline-gap"
+    ? "Pipeline gap — Unavailable"
+    : safety.grade ?? (safety.ratingStatus === "not-rated" ? "Unrated" : "Unavailable");
+  return `${rating}${safety.score != null ? ` (${safety.score})` : ""}${safety.ratingStatus !== "pipeline-gap" && safety.partialEvidence ? " — Partial evidence: pipeline gap" : ""} [${safety.model.toUpperCase()} ${safety.methodologyVersion}]`;
+}
+
 export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
   const nowSec = Math.floor(Date.now() / 1000);
   const priceLine =
@@ -515,7 +526,7 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
     ? `DEWS: ${s.dews.band} (score ${s.dews.score}, ${formatAge(s.dews.computedAt, nowSec)})`
     : "DEWS: no recent signal";
   const safetyLine = s.safety
-    ? `Safety: ${s.safety.ratingStatus === "pipeline-gap" ? "Pipeline gap — Unavailable" : s.safety.grade ?? "Unavailable"}${s.safety.score != null ? ` (${s.safety.score})` : ""}${s.safety.ratingStatus !== "pipeline-gap" && s.safety.partialEvidence ? " — Partial evidence: pipeline gap" : ""} [${s.safety.model.toUpperCase()} ${s.safety.methodologyVersion}], ${formatAge(s.safety.publishedAt, nowSec)}`
+    ? `Safety: ${formatTelegramSafety(s.safety)}, ${formatAge(s.safety.publishedAt, nowSec)}`
     : s.safetyUnavailableReason
       ? "Safety: temporarily unavailable"
       : "Safety: UNKNOWN";
@@ -534,7 +545,9 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
   const liquidityTvl = formatTelegramCompactUsd(s.liquidity?.totalTvlUsd);
   const liquidityLine = s.liquidity
     ? `Liquidity: ${s.liquidity.score ?? "NR"}${liquidityTvl ? `, TVL ${liquidityTvl}` : ""} (${formatAge(s.liquidity.updatedAt, nowSec)}${staleSuffix(s.liquidity.current)})`
-    : null;
+    : s.liquidityUnavailableReason
+      ? `Liquidity: unavailable (${escapeHtml(s.liquidityUnavailableReason)})`
+      : null;
   const yieldLine = s.yield
     ? `Yield: ${s.yield.apy30d.toFixed(2)}% 30d at ${escapeHtml(s.yield.source)}${
         s.yield.pharosYieldScore != null
@@ -545,7 +558,7 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
       }`
     : null;
   const flowSigned = s.flow ? formatTelegramSignedCompactUsd(s.flow.netFlowUsd) : null;
-  const flowLine = s.flow && flowSigned ? `Flow 24h: ${flowSigned} (${formatAge(s.flow.updatedAt, nowSec)})` : null;
+  const flowLine = s.flow && flowSigned ? `Flow 24h: ${flowSigned} (${formatAge(s.flow.updatedAt, nowSec)}${s.flow.stale ? ", stale" : ""})` : null;
   const lines = [
     `<b>${escapeHtml(symbol)}</b>`,
     priceLine,

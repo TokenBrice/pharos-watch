@@ -13,70 +13,52 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 import { resolveQueryViewState } from "@/lib/query-view-state";
-import type { DepegEvent, PegSummaryCoin } from "@shared/types";
+import type { PegSummaryCoin } from "@shared/types";
 
 interface ActiveRow {
   id: string;
   symbol: string;
-  bps: number;
-  ageSec: number;
-  direction: "above" | "below";
+  bps: number | null;
+  ageSec: number | null;
 }
 
-function hasCurrentActiveDeviation(event: DepegEvent, pegSummaryById: Map<string, PegSummaryCoin>): boolean {
-  const pegSummary = pegSummaryById.get(event.stablecoinId);
-  return pegSummary?.activeDepeg === true && pegSummary.currentDeviationBps != null;
-}
 
 export function ActiveDepegsCard(): React.JSX.Element {
   const activeQuery = useActiveDepegEvents();
   const pegSummaryQuery = usePegSummary();
-  const { data, isLoading } = activeQuery;
+  const { data } = activeQuery;
   const { data: pegSummaryData, isLoading: isPegSummaryLoading } = pegSummaryQuery;
   const logos = logosById;
   const logoMap = logos ?? {};
 
-  const pegSummaryById = useMemo(
-    () => new Map((pegSummaryData?.coins ?? []).map((coin) => [coin.id, coin])),
+  const activeCoins = useMemo(
+    () => (pegSummaryData?.coins ?? []).filter((coin) =>
+      ACTIVE_STABLECOIN_ID_SET.has(coin.id) && coin.activeDepeg),
     [pegSummaryData?.coins],
   );
-
-  const activeEvents = useMemo(
-    () =>
-      (data?.events ?? [])
-        .filter((ev) => ACTIVE_STABLECOIN_ID_SET.has(ev.stablecoinId))
-        .flatMap((ev) => {
-          if (!hasCurrentActiveDeviation(ev, pegSummaryById)) return [];
-          const currentDeviationBps = pegSummaryById.get(ev.stablecoinId)?.currentDeviationBps;
-          return currentDeviationBps == null ? [] : [{ ...ev, currentDeviationBps }];
-        }),
-    [data, pegSummaryById],
-  );
-
+  // The complete summary owns the incident census; the event page supplies detail only.
   const activeRows = useMemo<ActiveRow[]>(() => {
-    // eslint-disable-next-line react-hooks/purity -- Date.now() used as a transient fallback before TanStack Query reports dataUpdatedAt; visible result bounded by refetchInterval.
-    const nowSec = Math.floor(Date.now() / 1000);
-    return activeEvents
-      .map((ev) => ({
-        id: ev.stablecoinId,
-        symbol: ev.symbol,
-        bps: ev.currentDeviationBps,
-        ageSec: Math.max(0, nowSec - ev.startedAt),
-        direction: ev.currentDeviationBps >= 0 ? ("above" as const) : ("below" as const),
-      }))
-      .sort((a, b) => Math.abs(b.bps) - Math.abs(a.bps));
-  }, [activeEvents]);
+    const eventsById = new Map((data?.events ?? []).map((event) => [event.stablecoinId, event]));
+    const nowSec = Math.floor(pegSummaryQuery.dataUpdatedAt / 1000);
+    return activeCoins.map((coin: PegSummaryCoin) => {
+      const event = eventsById.get(coin.id);
+      return {
+        id: coin.id,
+        symbol: coin.symbol ?? event?.symbol ?? coin.id,
+        bps: coin.currentDeviationBps,
+        ageSec: event && nowSec > 0 ? Math.max(0, nowSec - event.startedAt) : null,
+      };
+    }).sort((a, b) =>
+      (b.bps == null ? -1 : Math.abs(b.bps)) - (a.bps == null ? -1 : Math.abs(a.bps)));
+  }, [activeCoins, data?.events, pegSummaryQuery.dataUpdatedAt]);
 
-  // Flash only the lead count when the number of active depegs changes (skips mount).
-  const flashClass = useFlashOnChange(activeRows.length);
-  const error = activeQuery.error ?? pegSummaryQuery.error;
-  const hasActiveData = activeQuery.loadedCount > 0 || (!isLoading && !activeQuery.error);
-  const hasData = hasActiveData && pegSummaryData !== undefined;
+  const activeCount = activeCoins.length;
+  const flashClass = useFlashOnChange(activeCount);
   const state = resolveQueryViewState({
-    hasData,
-    isLoading: isLoading || isPegSummaryLoading,
-    error,
-    isEmpty: activeRows.length === 0,
+    hasData: pegSummaryData !== undefined,
+    isLoading: isPegSummaryLoading,
+    error: pegSummaryQuery.error,
+    isEmpty: activeCount === 0,
   });
   const retry = () => {
     void activeQuery.refetch();
@@ -95,6 +77,10 @@ export function ActiveDepegsCard(): React.JSX.Element {
       notice={{
         label: "Active depeg monitoring",
         dataUpdatedAt,
+        queries: [
+          { preset: "pegSummary", label: "Active incident count", dataUpdatedAt: pegSummaryQuery.dataUpdatedAt, meta: pegSummaryQuery.meta, error: pegSummaryQuery.error, hasData: pegSummaryData !== undefined },
+          { preset: "depegEvents", label: "Incident details", dataUpdatedAt: activeQuery.dataUpdatedAt, meta: activeQuery.meta, error: activeQuery.error, hasData: data !== undefined },
+        ],
         onRetry: retry,
         compact: true,
       }}
@@ -107,14 +93,14 @@ export function ActiveDepegsCard(): React.JSX.Element {
       emptyContent={
         <div className="flex flex-1 items-center justify-center">
           <span className="font-mono text-sm uppercase tracking-wider text-green-700 dark:text-green-400">
-            All on peg
+            No active incidents
           </span>
         </div>
       }
-      hasRenderableData={activeRows.length > 0}
+      hasRenderableData={pegSummaryData !== undefined}
     >
       <div className="flex items-baseline gap-2 pharos-numeric font-bold tracking-tight">
-        <span className={`rounded-md text-4xl text-frost-blue ${flashClass}`}>{activeRows.length}</span>
+        <span className={`rounded-md text-4xl text-frost-blue ${flashClass}`}>{activeCount}</span>
         <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">active</span>
       </div>
       {activeRows.length > 4 ? (
@@ -147,9 +133,10 @@ function DepegRow({
   logoSrc: string | undefined;
   isLead: boolean;
 }): React.JSX.Element {
-  const arrow = row.direction === "below" ? "↓" : "↑";
+  const arrow = row.bps != null && row.bps < 0 ? "↓" : "↑";
   const colorClass =
-    row.direction === "below" ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400";
+    row.bps == null ? "text-muted-foreground" : row.bps < 0
+      ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400";
   return (
     <li>
       <Link
@@ -164,13 +151,14 @@ function DepegRow({
             ·
           </span>
           <span className={`shrink-0 font-semibold pharos-numeric ${colorClass}`}>
-            <span aria-hidden="true" className="mr-0.5">
-              {arrow}
-            </span>
-            {Math.abs(row.bps).toFixed(0)}
+            {row.bps == null ? "Observation unavailable" : (
+              <><span aria-hidden="true" className="mr-0.5">{arrow}</span>{Math.abs(row.bps).toFixed(0)}</>
+            )}
           </span>
         </span>
-        <span className="uppercase pharos-numeric text-muted-foreground">{formatElapsedSeconds(row.ageSec)}</span>
+        <span className="uppercase pharos-numeric text-muted-foreground">
+          {row.ageSec != null ? formatElapsedSeconds(row.ageSec) : "Age unavailable"}
+        </span>
       </Link>
     </li>
   );

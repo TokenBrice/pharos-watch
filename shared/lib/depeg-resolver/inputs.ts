@@ -119,7 +119,7 @@ export interface DdrActiveEventInput {
   currentDeviationBps?: number | null;
 }
 
-/** A raw historical depeg event row, pre-grouping (from depeg_events). */
+/** An audit-eligible historical event with only genuinely timed severity evidence. */
 export interface DdrHistoricalEvent {
   stablecoinId: string;
   direction: DepegDirection;
@@ -128,4 +128,7 @@ export interface DdrHistoricalEvent {
   endedAt: number | null;
   recoveryPrice: number | null;
   closeReason?: string | null;
+  onsetDeviationBps?: number | null;
+  /** Observations retain their evidence clock, never the row's final untimed peak. */
+  severityObservations?: { observedAt: number; deviationBps: number }[];
 }

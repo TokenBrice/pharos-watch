@@ -47,7 +47,7 @@ Retention cohorts start on the UTC day of a chat's first successful follow, not 
 
 `on_time_snapshot` retention was measured by the first producer refresh after its UTC measurement day completed. Today is never persisted as an incomplete measurement. `catchup_current_state` means the producer missed that completed-day boundary and the bounded seven-day catch-up used current operational follow state. `pre_rollout_unavailable` applies to first-follow cohort days before 2026-07-11, the first fully instrumented UTC day; existing users were marked as historical to prevent false new milestones, but no guessed cohort aggregate was created. An empty post-rollout cohort reports zero cohort/retained counts and a `null` rate. Do not combine the three qualities as if they were equally precise.
 
-The recommended-setup CTA retains its preloaded Telegram subscription behavior and therefore has click attribution only. The hero wizard carries the allowlisted start token through the short-lived setup state and can report setup completion by placement.
+The recommended CTA's `pw1_landing_setup` preloads DEWS+depeg `usd-top25` confirmation and carries landing/setup through first follow. The hero token keeps the branch chooser. Generic `sub_*` links stay organic/unknown.
 
 ## Freshness And Failure
 

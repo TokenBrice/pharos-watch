@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { getReserveDisplayBadgeKindForAdapter } from "@shared/lib/live-reserve-display";
+import { getReserves } from "@shared/lib/reserve-templates";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { coverageFeature as reserveCoverageFeature } from "@/lib/coverage/reserves";
 
@@ -37,4 +38,22 @@ describe("coverage reserve resolution from the client registry", () => {
     // The regression collapsed every coin into this bucket.
     expect(kinds.get("curated") ?? 0).toBeLessThan(CLIENT_ACTIVE_STABLECOINS.length / 2);
   });
+
+  it.each(["bnusd-balanced", "inalpha-nest", "tgbp-tokenised", "usdxl-last"])(
+    "resolves %s through the fallback rather than its suspended reader",
+    (id) => {
+      const coin = CLIENT_ACTIVE_STABLECOINS.find((entry) => entry.id === id);
+      expect(coin).toBeDefined();
+      expect(coin).not.toHaveProperty("liveReserveAdapter");
+      const fallback = getReserves(coin!);
+      const expectedKind = !fallback ? "unavailable" : fallback.estimated ? "estimated" : "curated";
+
+      for (const liveReserveFresh of [null, false, true]) {
+        const status = reserveCoverageFeature.resolve(coin!, liveReserveFresh, true);
+        expect(status.kind).toBe(expectedKind);
+        expect(status.kind).not.toBe("proof");
+        expect(status.kind).not.toBe("live-configured");
+      }
+    },
+  );
 });

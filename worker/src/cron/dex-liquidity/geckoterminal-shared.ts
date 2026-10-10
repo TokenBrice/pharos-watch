@@ -50,7 +50,10 @@ export function fetchGtTokenPools(
           throw new Error(`GeckoTerminal ${gtChain} token-pools returned ${result.response.status}`);
         }
         const json = result.body;
-        return Array.isArray(json.data) ? (json.data as GtPool[]) : [];
+        if (!json || !Array.isArray(json.data)) {
+          throw new Error(`GeckoTerminal ${gtChain} token-pools malformed-page`);
+        }
+        return json.data as GtPool[];
       } catch (error) {
         // A later-page 429/timeout must not discard a completed page-1 200, and
         // must not read as "no more pages": the rows already read are kept and

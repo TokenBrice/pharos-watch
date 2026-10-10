@@ -28,6 +28,15 @@ export interface CompilerProfile {
   computedAssetTotal: string;
   reportedLiabilityTotal: string;
   reportIssuedAt?: string;
+  /** Image-only rows are transcribed only for the exact reviewed artifact. */
+  reviewedImageExtraction?: {
+    reportSha256: string;
+    reportByteLength: number;
+    normalizedTextSha256: string;
+    pageCount: number;
+    tool: string;
+    text: string;
+  };
   /** Normalizes a raw extracted amount (e.g. Brazilian "R$ 231.887.240,50") to a
    *  decimal string. Defaults to the compiler's US-style `$`/`,` stripping. */
   normalizeAmount?: (raw: string) => string;
@@ -41,4 +50,18 @@ export function linePattern(label: string): RegExp {
 export function scheduleAmountPattern(schedule: string, label: string): RegExp {
   // eslint-disable-next-line security/detect-non-literal-regexp -- schedule/label are fixed literals from reviewed extraction tables.
   return new RegExp(`${schedule}[\\s\\S]*?^\\s*${label}\\s+\\$?${AMOUNT}\\s*$`, "im");
+}
+
+export function prepareAssuranceExtractionText(
+  profile: CompilerProfile,
+  artifact: { reportSha256: string; reportByteLength: number; normalizedTextSha256: string; pageCount: number; text: string },
+): string {
+  const reviewed = profile.reviewedImageExtraction;
+  if (!reviewed) return artifact.text;
+  for (const key of ["reportSha256", "reportByteLength", "normalizedTextSha256", "pageCount"] as const) {
+    if (artifact[key] !== reviewed[key]) {
+      throw new Error(`offline assurance compiler: reviewed image extraction ${key} mismatch; re-review the report`);
+    }
+  }
+  return `${artifact.text}\n${reviewed.text}`;
 }

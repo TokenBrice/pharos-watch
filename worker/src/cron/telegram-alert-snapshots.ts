@@ -30,6 +30,7 @@ export const SNAPSHOT_KEYS = {
   // producer key so the producer (4-hourly) and dispatcher (frequent) never
   // race on a single key.
   reserveDispatched: "alert:reserve-dispatched-snapshot",
+  reserveObserved: "alert:reserve-observed-snapshot",
 } as const;
 
 export const SNAPSHOT_MAX_AGE_SEC = DAY_SECONDS; // 24h
@@ -37,7 +38,7 @@ export const SNAPSHOT_MAX_AGE_SEC = DAY_SECONDS; // 24h
 // ---------- Types ----------
 
 export type DewsSnapshot = Record<string, string>;
-export type DepegSnapshot = Record<string, DepegAlertPayload>;
+export type DepegSnapshot = Record<string, DepegAlertPayload & { eventId?: number }>;
 export type SafetySnapshot = AlertSafetySourceSnapshot;
 
 export interface DewsRow {
@@ -48,6 +49,8 @@ export interface DewsRow {
 }
 
 export interface ActiveDepegRow {
+  event_id?: number;
+  started_at?: number;
   stablecoin_id: string;
   symbol: string;
   direction: "above" | "below";
@@ -118,6 +121,7 @@ export function buildDepegSnapshot(rows: ActiveDepegRow[]): DepegSnapshot {
   for (const row of rows) {
     const displayPrice = row.peak_price ?? row.start_price;
     snapshot[row.stablecoin_id] = {
+      eventId: row.event_id,
       stablecoinId: row.stablecoin_id,
       symbol: row.symbol,
       direction: row.direction,
@@ -168,6 +172,7 @@ export interface TelegramAlertSnapshots {
   safety?: AlertSafetySnapshotEnvelope | null;
   launch: string[];
   reserveDispatched: string[] | null;
+  reserveObserved?: Record<string, number> | null;
 }
 
 export function buildTelegramSnapshotCacheEntries(
@@ -179,6 +184,7 @@ export function buildTelegramSnapshotCacheEntries(
     { key: SNAPSHOT_KEYS.depeg, value: JSON.stringify(snapshots.depeg) },
     { key: SNAPSHOT_KEYS.launch, value: JSON.stringify(snapshots.launch) },
     { key: SNAPSHOT_KEYS.reserveDispatched, value: JSON.stringify(snapshots.reserveDispatched) },
+    { key: SNAPSHOT_KEYS.reserveObserved, value: JSON.stringify(snapshots.reserveObserved ?? null) },
   ];
 
   if (snapshots.safety) {

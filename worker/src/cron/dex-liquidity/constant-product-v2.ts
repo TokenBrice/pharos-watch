@@ -4,6 +4,7 @@ import {
   canonicalExitRouteChain,
 } from "@shared/types/exit-route-identity";
 import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/market";
+import { DEX_MEASURED_FRESHNESS_MAX_SEC } from "@shared/types/measured-execution";
 import { decodeAbiParameters, keccak256 } from "viem/utils";
 
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
@@ -308,6 +309,7 @@ function buildExecutionModel(input: {
   chainAddressToId: SymbolLookups["chainAddressToId"];
   contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"];
   stablecoinPriceById: Map<string, number>;
+  stablecoinPriceProvenanceById?: ReadonlyMap<string, Required<Pick<DexAmmExecutionModel["tokens"][number], "referencePriceSourceId" | "referencePriceObservedAt">>>;
 }): { ok: true; model: DexAmmExecutionModel } | { ok: false; reason: V2GateReason } {
   const { reference, state } = input;
   const assetIds = state.tokenAddresses.map((address) =>
@@ -339,6 +341,9 @@ function buildExecutionModel(input: {
       tokens: state.tokenAddresses.map((address, index) => {
         const assetKey = canonicalExitRouteAssetKey(input.deployment.chain, address);
         const trackedAssetId = assetIds[index];
+        const referenceProvenance = trackedAssetId && referencePriceSources[index] === "tracked-market"
+          ? input.stablecoinPriceProvenanceById?.get(trackedAssetId)
+          : undefined;
         return {
           address,
           symbol: input.contractMetaByChainAddress.get(assetKey)?.symbol ?? symbolByAddress.get(address) ?? address,
@@ -347,6 +352,7 @@ function buildExecutionModel(input: {
           referencePriceUsd: referencePrices[index]!,
           referencePriceSource: referencePriceSources[index]!,
           ...(trackedAssetId ? { trackedAssetId } : {}),
+          ...(referenceProvenance ?? {}),
         };
       }),
     },
@@ -361,8 +367,11 @@ async function enrichDeployment(input: {
   chainAddressToId: SymbolLookups["chainAddressToId"];
   contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"];
   stablecoinPriceById: Map<string, number>;
+  stablecoinPriceProvenanceById?: ReadonlyMap<string, Required<Pick<DexAmmExecutionModel["tokens"][number], "referencePriceSourceId" | "referencePriceObservedAt">>>;
   dependencies: EvmV2ExecutionDependencies;
   deadlineMs: number;
+  nowSec: number;
+  sourceGenerationId: string;
 }): Promise<void> {
   const rpcOptions = {
     chainRpcs: input.chainRpcs,
@@ -382,6 +391,9 @@ async function enrichDeployment(input: {
   await runPinnedBlockCapture<Array<() => void>, V2GateReason>({
     chain: input.deployment.chain,
     rpcOptions,
+    nowSec: input.nowSec,
+    maxAgeSec: DEX_MEASURED_FRESHNESS_MAX_SEC,
+    freshnessFailureReason: "stale-observation",
     fetchBlockNumber: input.dependencies.fetchBlockNumber,
     fetchBlockHeader: input.dependencies.fetchBlockHeader,
     verifyDeployment: async ({ blockNumber }) => {
@@ -400,7 +412,7 @@ async function enrichDeployment(input: {
       }
       return { ok: true };
     },
-    buildCalls: async ({ blockNumber }) => {
+    buildCalls: async ({ blockNumber, header }) => {
       const actions: Array<() => void> = [];
       const gate = (references: readonly CandidateReference[], reason: V2GateReason) => {
         for (const reference of references) actions.push(() => gateReference(reference, reason));
@@ -462,12 +474,17 @@ async function enrichDeployment(input: {
               chainAddressToId: input.chainAddressToId,
               contractMetaByChainAddress: input.contractMetaByChainAddress,
               stablecoinPriceById: input.stablecoinPriceById,
+              stablecoinPriceProvenanceById: input.stablecoinPriceProvenanceById,
             });
             if (!built.ok) {
               actions.push(() => gateReference(reference, built.reason));
               continue;
             }
             actions.push(() => {
+              built.model.capture = {
+                blockNumber, blockHash: header.hash, blockTimestamp: header.timestamp,
+                sourceGenerationId: input.sourceGenerationId,
+              };
               reference.pool.poolId = canonicalExitRouteAssetKey(
                 input.deployment.chain,
                 probe.candidate.poolAddress,
@@ -537,6 +554,11 @@ export async function enrichEvmV2ExecutionModels(input: {
     for (const reference of references) gateReference(reference, "transport-unavailable");
     return;
   }
+  const { nowSec, sourceGenerationId } = input;
+  if (nowSec == null || !Number.isSafeInteger(nowSec) || !sourceGenerationId) {
+    for (const reference of references) gateReference(reference, "incomplete-exact-capture");
+    return;
+  }
 
   const deployments = new Map(
     EVM_V2_EXECUTION_DEPLOYMENTS.map((deployment) => [deploymentKey(deployment.source, deployment.chain), deployment]),
@@ -567,8 +589,11 @@ export async function enrichEvmV2ExecutionModels(input: {
         chainAddressToId: input.chainAddressToId,
         contractMetaByChainAddress: input.contractMetaByChainAddress,
         stablecoinPriceById: input.stablecoinPriceById,
+        stablecoinPriceProvenanceById: input.stablecoinPriceProvenanceById,
         dependencies,
         deadlineMs,
+        nowSec,
+        sourceGenerationId,
       });
     } catch (error) {
       rethrowIfAborted(error, input.signal);

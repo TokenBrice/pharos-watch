@@ -46,21 +46,17 @@ vi.mock("../safety-score-v9/xaut-supply-observer", async (importOriginal) => {
   };
 });
 
+import { captureSafetyScoreV9SupplyAttribution } from "../safety-score-v9/supply-attribution-capture";
 import {
-  captureSafetyScoreV9SupplyAttribution,
-  deriveLockMintSupplyPartition,
   safetyScoreV9SupplyAttributionExpectedAssetIds,
   safetyScoreV9ChainRows,
   safetyScoreV9ChainSupplyObservedAtSec,
 } from "../safety-score-v9/supply-attribution";
 import { createSafetyScoreV9SupplyAttributionGeneration } from "../safety-score-v9/supply-attribution-generation";
 import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
+import { deriveXautRepresentationGroupSupplyAttribution } from "../safety-score-v9/xaut-supply-attribution-contract";
+import { makeXautObservation } from "../../test-helpers/v9-fixed-input";
 
-const XAUT_TOTAL_SUPPLY_RAW = 707_747_089_000n;
-const XAUT_NOT_ISSUED_RAW = 94_923_429_468n;
-const XAUT_CIRCULATING_LIABILITY_RAW =
-  XAUT_TOTAL_SUPPLY_RAW - XAUT_NOT_ISSUED_RAW;
-const XAUT0_LOCKBOX_BALANCE_RAW = 29_714_544_713n;
 const XAUT_AGGREGATE_SUPPLY_USD = 2_480_000_000;
 const OBSERVED_AT_SEC = 1_774_000_000;
 
@@ -141,31 +137,28 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
     )).rejects.toBe(reason);
   });
 
-  it("rejects a lockbox share that underflows the aggregate USD allocation", () => {
-    expect(deriveLockMintSupplyPartition({
+  it("rejects a V2 group allocation that underflows aggregate USD supply", () => {
+    expect(deriveXautRepresentationGroupSupplyAttribution({
       aggregateSupplyUsd: Number.MIN_VALUE,
-      canonicalCirculatingLiabilityRaw: 100n,
-      lockboxBalancesRaw: [1n],
-      canonicalChainLabel: "Ethereum",
-      pooledRepresentationLabel: "Wrapped pool",
+      registryFingerprint: "a".repeat(64),
+      scoringClockSec: OBSERVED_AT_SEC,
+      observation: makeXautObservation({ clockSec: OBSERVED_AT_SEC }),
     })).toBeNull();
   });
-  it("partitions aggregate XAUT without double-counting its XAUt0 lockbox", () => {
-    const partition = deriveLockMintSupplyPartition({
+  it("partitions aggregate XAUT without double-counting its XAUt0 group", () => {
+    const partition = deriveXautRepresentationGroupSupplyAttribution({
       aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
-      canonicalCirculatingLiabilityRaw:
-        XAUT_CIRCULATING_LIABILITY_RAW,
-      lockboxBalancesRaw: [XAUT0_LOCKBOX_BALANCE_RAW],
-      canonicalChainLabel: "Ethereum",
-      pooledRepresentationLabel: "XAUt0 lock-mint pool",
+      registryFingerprint: "a".repeat(64),
+      scoringClockSec: OBSERVED_AT_SEC,
+      observation: makeXautObservation({ clockSec: OBSERVED_AT_SEC }),
     });
 
     expect(partition).not.toBeNull();
-    expect(partition!.canonicalSupplyUsd + partition!.pooledRepresentationSupplyUsd).toBe(
+    expect(partition!.canonical.currentSupplyUsd + partition!.representationGroup.currentSupplyUsd).toBe(
       XAUT_AGGREGATE_SUPPLY_USD,
     );
-    expect(partition!.pooledRepresentationSupplyUsd / XAUT_AGGREGATE_SUPPLY_USD).toBeCloseTo(
-      0.04848792022,
+    expect(partition!.representationGroup.currentSupplyUsd / XAUT_AGGREGATE_SUPPLY_USD).toBeCloseTo(
+      0.04849813227,
       10,
     );
   });

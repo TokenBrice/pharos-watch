@@ -83,15 +83,20 @@ const PriceSourceHealthDistributionSchema = z.object({
     fallback: z.number(),
   }),
   totalAssets: z.number(),
-  /** Sum of circulating USD value across all peg buckets per confidence bucket. Absent on snapshots produced before 2026-09-23. */
+  /** Known circulating USD subtotal per confidence bucket; completeness is supplied separately. */
   confidenceMarketCapUsd: z.object({
     high: z.number(),
     "single-source": z.number(),
     low: z.number(),
     fallback: z.number(),
   }).optional(),
-  /** Denominator for `confidenceMarketCapUsd`: circulating USD value across all peg buckets over priced rows. Absent on legacy snapshots. */
+  /** Known circulating USD subtotal over priced rows. Absent on legacy snapshots. */
   pricedMarketCapUsd: z.number().optional(),
+  supplyCoverage: z.object({
+    complete: z.boolean(),
+    observedCount: z.number().int().nonnegative(),
+    unavailableCount: z.number().int().nonnegative(),
+  }).optional(),
   /** Missing-price rows covered by a valid, unexpired price-gap acknowledgement review. Absent on legacy snapshots. */
   acknowledgedMissingCount: z.number().optional(),
 });

@@ -1,0 +1,149 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
+/**
+ * Operator CLI job: backfill-tape (no HTTP route).
+ *
+ * Trusted operator entry point that re-runs the same per-class projector
+ * code path used by the `project-tape` cron, but with operator-supplied
+ * window/limit overrides. Idempotent on `(source_table, source_row_id,
+ * transition)`; safe to re-run.
+ *
+ * Params (querystring or JSON body, querystring wins):
+ *   - class      repeatable; restricts the run to the named projector(s).
+ *                Default: all v1 projectors.
+ *   - since      epoch seconds; lower bound on source-row timestamp.
+ *   - until      epoch seconds; upper bound on source-row timestamp.
+ *   - maxRows    int; per-class scan cap (default 5000, max 50000).
+ *   - dryRun     bool; compute but do not write or advance watermarks.
+ *
+ * The first-observation projectors (`methodology.bumped`,
+ * `cemetery.entry.added`, and `lifecycle.tracked.frozen`) ignore `since`,
+ * `until`, and `maxRows` since they scan static sources keyed by ID; they
+ * still honor `dryRun`.
+ */
+import { errorResponse, jsonResponse } from "../../src/lib/api-response";
+import { runAdminJob, readAdminIntegerParam } from "../../src/lib/admin-job";
+import { TAPE_PROJECTOR_JOBS } from "../../src/lib/tape-projectors/registry";
+import type { ProjectorOptions } from "../../src/lib/tape-projectors/types";
+
+const DEFAULT_MAX_ROWS = 5_000;
+const MAX_MAX_ROWS = 50_000;
+
+const IGNORED_PARAMS_BY_CLASS: Record<string, readonly string[]> = {
+  "methodology.bumped": ["since", "until", "maxRows"],
+  "cemetery.entry.added": ["since", "until", "maxRows"],
+  "lifecycle.tracked.frozen": ["since", "until", "maxRows"],
+};
+
+function readRepeatable(url: URL, key: string): string[] {
+  return url.searchParams
+    .getAll(key)
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function readBoolean(url: URL, body: Record<string, unknown>, key: string): boolean {
+  const raw = url.searchParams.get(key);
+  if (raw != null) {
+    const lowered = raw.trim().toLowerCase();
+    return lowered === "true" || lowered === "1";
+  }
+  const bodyValue = body[key];
+  if (typeof bodyValue === "boolean") return bodyValue;
+  if (typeof bodyValue === "string") {
+    const lowered = bodyValue.trim().toLowerCase();
+    return lowered === "true" || lowered === "1";
+  }
+  return false;
+}
+
+export interface BackfillTapeRouteContext {
+  db: D1Database;
+  url: URL;
+  trustedAdmin?: boolean;
+  request?: Request;
+}
+
+export async function handleBackfillTape({
+  db,
+  url,
+  request,
+}: BackfillTapeRouteContext): Promise<Response> {
+  return runAdminJob({ request, url, parseBody: true }, async ({ body }) => {
+    const requestedClasses = readRepeatable(url, "class");
+
+    const allowedNames = new Set(TAPE_PROJECTOR_JOBS.map((job) => job.name));
+    const selectedJobs =
+      requestedClasses.length === 0
+        ? TAPE_PROJECTOR_JOBS
+        : TAPE_PROJECTOR_JOBS.filter((job) => requestedClasses.includes(job.name));
+
+    if (requestedClasses.length > 0) {
+      const unknown = requestedClasses.filter((name) => !allowedNames.has(name));
+      if (unknown.length > 0) {
+        return errorResponse(400, `Unknown class(es): ${unknown.join(", ")}`);
+      }
+      if (selectedJobs.length === 0) {
+        return errorResponse(400, "No matching tape projector classes selected");
+      }
+    }
+
+    const since = readAdminIntegerParam(body, url.searchParams, "since", "query-first");
+    const until = readAdminIntegerParam(body, url.searchParams, "until", "query-first");
+    if (since != null && since < 0) return errorResponse(400, "Invalid since: must be epoch seconds >= 0");
+    if (until != null && until < 0) return errorResponse(400, "Invalid until: must be epoch seconds >= 0");
+    if (since != null && until != null && since > until) {
+      return errorResponse(400, "Invalid window: since must be <= until");
+    }
+
+    const maxRowsRaw = readAdminIntegerParam(body, url.searchParams, "maxRows", "query-first") ?? DEFAULT_MAX_ROWS;
+    if (maxRowsRaw < 1 || maxRowsRaw > MAX_MAX_ROWS) {
+      return errorResponse(400, `Invalid maxRows: must be between 1 and ${MAX_MAX_ROWS}`);
+    }
+
+    const dryRun = readBoolean(url, body, "dryRun") || readBoolean(url, body, "dry-run");
+
+    const options: ProjectorOptions = {
+      since: since != null ? since : undefined,
+      until: until != null ? until : undefined,
+      maxRows: maxRowsRaw,
+      dryRun,
+    };
+
+    const perClass: Record<string, number> = {};
+    const ignoredParams: Record<string, readonly string[]> = {};
+    for (const job of selectedJobs) {
+      const ignored = IGNORED_PARAMS_BY_CLASS[job.name];
+      if (ignored) ignoredParams[job.name] = ignored;
+    }
+    const errors: { name: string; message: string }[] = [];
+    let total = 0;
+
+    for (const job of selectedJobs) {
+      try {
+        const result = await job.run(db, options);
+        perClass[job.name] = result.projected;
+        total += result.projected;
+      } catch (err) {
+        const message = toErrorMessage(err);
+        perClass[job.name] = -1;
+        errors.push({ name: job.name, message });
+      }
+    }
+
+    return jsonResponse(
+      {
+        ok: errors.length === 0,
+        dryRun,
+        maxRows: maxRowsRaw,
+        since: since ?? null,
+        until: until ?? null,
+        selectedClasses: selectedJobs.map((job) => job.name),
+        ignoredParams,
+        projected: total,
+        perClass,
+        errors,
+      },
+      errors.length > 0 ? { status: 500 } : undefined,
+    );
+  });
+}

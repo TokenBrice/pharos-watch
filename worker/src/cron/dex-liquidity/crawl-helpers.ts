@@ -5,7 +5,7 @@ import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-covera
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { throwIfAborted } from "../../lib/abort";
-import type { DsPair, DsTrackedTokenPrice } from "../../lib/dexscreener";
+import { getDsPriceForSide, type DsPair, type DsTrackedTokenPrice } from "../../lib/dexscreener";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { PagedTokenPoolsResult } from "../../lib/paged-token-pools";
 import type { DexPriceObs, GtNewPool } from "./types";
@@ -106,24 +106,7 @@ export function getChainAwareDsTrackedTokenPriceUsd(
   const tracked = canonicalExitRouteScopedId(chain, trackedAddress);
   const baseAddress = canonicalExitRouteScopedId(chain, pair.baseToken.address);
   const quoteAddress = canonicalExitRouteScopedId(chain, pair.quoteToken.address);
-  const basePriceUsd = Number.parseFloat(pair.priceUsd ?? "");
-
-  if (tracked === baseAddress) {
-    return {
-      side: "base",
-      priceUsd: Number.isFinite(basePriceUsd) && basePriceUsd > 0 ? basePriceUsd : null,
-    };
-  }
-  if (tracked !== quoteAddress) return { side: null, priceUsd: null };
-
-  const priceNative = Number.parseFloat(pair.priceNative ?? "");
-  return {
-    side: "quote",
-    priceUsd:
-      Number.isFinite(basePriceUsd) && basePriceUsd > 0 && Number.isFinite(priceNative) && priceNative > 0
-        ? basePriceUsd / priceNative
-        : null,
-  };
+  return getDsPriceForSide(pair, tracked === baseAddress ? "base" : tracked === quoteAddress ? "quote" : null);
 }
 
 function resolveStablecoinSide(

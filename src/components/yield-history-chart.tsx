@@ -13,6 +13,8 @@ import {
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { PysHistorySparkline, type PysHistorySparklinePoint } from "@/components/pys-history-sparkline";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
+import { QueryErrorNotice } from "@/components/query-error-notice";
+import { DataHealthBanner } from "@/components/data-health-banner";
 import { CHART_AMBER, CHART_BLUE, CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
 import { toTimestampMs } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -67,7 +69,22 @@ export function YieldHistoryChart({
     externalSourceKeys,
   });
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
-  const historyWarning = model.bodyWarning ?? model.historyQuery.meta?.warning ?? null;
+  const sourceNotices = model.sourceQueries.map((source) => (
+    <div key={source.sourceKey} className="space-y-2" aria-label={`${source.label} history status`}>
+      {source.isLoading || source.error || source.warning || source.health.state !== "fresh" ? (
+        <p className="text-xs font-medium text-muted-foreground">{source.label}</p>
+      ) : null}
+      {source.isLoading ? <p className="text-xs text-muted-foreground">Loading history</p> : null}
+      <QueryErrorNotice error={source.error} hasData={source.hasData} onRetry={source.onRetry} />
+      {source.warning ? (
+        <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+          {source.warning}
+          {!source.error ? <button type="button" onClick={source.onRetry} className="pharos-focus-ring ml-2 underline">Retry</button> : null}
+        </div>
+      ) : null}
+      {source.hasData && !source.error ? <DataHealthBanner entries={[source.health]} /> : null}
+    </div>
+  ));
 
   const spikeAnnotations = model.spikeAnnotations;
   const domainMax = model.yDomain[1];
@@ -114,7 +131,7 @@ export function YieldHistoryChart({
     ? undefined
     : { fill: "var(--color-muted-foreground)", fontSize: 10, position: "insideRight" as const };
 
-  if (model.historyQuery.isLoading) {
+  if (model.mergedChartData.length === 0 && model.sourceQueries.every((source) => source.isLoading)) {
     return (
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -129,26 +146,10 @@ export function YieldHistoryChart({
     );
   }
 
-  if (model.historyQuery.error) {
-    return (
-      <div className="space-y-3">
-        <ChartShell compact={compact}>
-          <div className={cn("flex items-center justify-center text-center", chartHeightClass)}>
-            <p className="max-w-xs text-sm text-muted-foreground">Unable to load yield history right now.</p>
-          </div>
-        </ChartShell>
-      </div>
-    );
-  }
-
   if (model.mergedChartData.length === 0) {
     return (
       <div className="space-y-3">
-        {historyWarning ? (
-          <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-            {historyWarning}
-          </div>
-        ) : null}
+        {sourceNotices}
         <Controls
           compact={compact}
           days={model.days}
@@ -164,7 +165,9 @@ export function YieldHistoryChart({
         <ChartShell compact={compact}>
           <div className={cn("flex items-center justify-center text-center", chartHeightClass)}>
             <div>
-              <p className="text-sm text-muted-foreground">No yield history available</p>
+              <p className="text-sm text-muted-foreground">
+                {model.sourceQueries.some((source) => source.error) ? "Unable to load requested yield history" : "No yield history available"}
+              </p>
               <p className="mt-1 text-xs text-muted-foreground/70">Select a different yield source or check back later.</p>
             </div>
           </div>
@@ -175,11 +178,7 @@ export function YieldHistoryChart({
 
   return (
     <div className="space-y-3">
-      {historyWarning ? (
-        <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-          {historyWarning}
-        </div>
-      ) : null}
+      {sourceNotices}
       <Controls
         compact={compact}
         days={model.days}
@@ -211,7 +210,7 @@ export function YieldHistoryChart({
           ref={chartContainerRef}
           className={cn("min-w-0 w-full", chartHeightClass)}
           role="figure"
-          aria-label={`Yield history chart showing ${model.chartData.length} APY data points`}
+          aria-label={`Yield history chart showing ${model.mergedChartData.length} observation timestamps`}
         >
           {isChartReady ? (
             <ComposedChart
@@ -248,7 +247,7 @@ export function YieldHistoryChart({
               />
               <Tooltip
                 cursor={{ stroke: "var(--color-border)", strokeWidth: 1, strokeDasharray: "3 3" }}
-                content={<YieldHistoryTooltip showBreakdown={model.effectiveShowBreakdown} compact={compact} spikesByDate={spikesByDate} />}
+                content={<YieldHistoryTooltip showBreakdown={model.effectiveShowBreakdown} compact={compact} spikesByDate={spikesByDate} primarySource={model.primarySourceLabel} overlaySources={model.overlayLabels} />}
               />
               {benchmarkRate != null ? (
                 <ReferenceLine

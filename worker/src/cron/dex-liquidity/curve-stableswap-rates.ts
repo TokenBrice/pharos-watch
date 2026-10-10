@@ -282,6 +282,7 @@ async function enrichChain(input: {
   chainRpcs: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   nowSec: number;
+  sourceGenerationId: string;
   chainAddressToId: SymbolLookups["chainAddressToId"];
   dependencies: CurveStableswapRateDependencies;
 }): Promise<void> {
@@ -291,7 +292,10 @@ async function enrichChain(input: {
     timeoutMs: 15_000,
     maxRetries: 0,
   };
-  await runPinnedBlockCapture<Map<CurveRateProbe, CurveRatePoolState | null>>({
+  await runPinnedBlockCapture<{
+    states: Map<CurveRateProbe, CurveRatePoolState | null>;
+    capture: NonNullable<DexAmmExecutionModel["capture"]>;
+  }>({
     chain: input.chain,
     rpcOptions,
     fetchBlockNumber: input.dependencies.fetchBlockNumber,
@@ -299,7 +303,7 @@ async function enrichChain(input: {
     nowSec: input.nowSec,
     maxAgeSec: CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC,
     verifyDeployment: async () => ({ ok: true }),
-    buildCalls: async ({ blockNumber }) => {
+    buildCalls: async ({ blockNumber, header }) => {
       const states = new Map<CurveRateProbe, CurveRatePoolState | null>();
       for (let start = 0; start < input.probes.length; start += MAX_PROBES_PER_MULTICALL) {
         throwIfAborted(input.signal);
@@ -322,9 +326,13 @@ async function enrichChain(input: {
           );
         }
       }
-      return { ok: true, value: states };
+      return { ok: true, value: {
+        states,
+        capture: { blockNumber, blockHash: header.hash, blockTimestamp: header.timestamp,
+          sourceGenerationId: input.sourceGenerationId },
+      } };
     },
-    onResults: (states) => {
+    onResults: ({ states, capture }) => {
       for (const probe of input.probes) {
         const state = states.get(probe);
         if (!state) {
@@ -343,6 +351,7 @@ async function enrichChain(input: {
             clearCandidate(reference);
             continue;
           }
+          model.capture = capture;
           const extra = { ...(reference.pool.extra ?? {}) };
           delete extra.curveStableswapRateInputExecutionCandidate;
           delete extra.executionCapabilityGate;
@@ -368,6 +377,7 @@ export async function enrichCurveStableswapRateInputExecutionModels(input: {
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   nowSec?: number;
+  sourceGenerationId?: string;
   dependencies?: CurveStableswapRateDependencies;
 }): Promise<void> {
   const references: CandidateReference[] = [];
@@ -381,7 +391,7 @@ export async function enrichCurveStableswapRateInputExecutionModels(input: {
     }
   }
   if (references.length === 0) return;
-  if (!input.chainRpcs) {
+  if (!input.chainRpcs || !input.sourceGenerationId) {
     for (const reference of references) clearCandidate(reference);
     return;
   }
@@ -419,6 +429,7 @@ export async function enrichCurveStableswapRateInputExecutionModels(input: {
         chainRpcs: input.chainRpcs,
         signal: input.signal,
         nowSec,
+        sourceGenerationId: input.sourceGenerationId,
         chainAddressToId: input.chainAddressToId,
         dependencies,
       });

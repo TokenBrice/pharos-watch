@@ -1,7 +1,7 @@
 export interface PackingInput {
   id: string;
   sizePx: number;
-  marketCap: number;
+  marketCap: number | null;
 }
 
 export interface PackedCoin extends PackingInput {

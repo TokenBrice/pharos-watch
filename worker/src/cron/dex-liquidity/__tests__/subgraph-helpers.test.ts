@@ -13,6 +13,23 @@ describe("subgraph helpers", () => {
     fetchJsonWithRetryMock.mockReset();
   });
 
+  it.each([null, {}, { rows: null }, { rows: {} }, { rows: [] }])(
+    "distinguishes malformed collections from a healthy empty source: %j", async (data) => {
+      fetchJsonWithRetryMock.mockResolvedValueOnce({ response: new Response(""), body: { data } });
+      const result = await fetchSubgraphEntities({
+        subgraphUrl: "https://subgraph.example", sourceLabel: "test", chain: "ethereum",
+        buildQuery: () => "{ rows { id } }",
+        extractEntities: (value) => (value as { rows?: unknown[] } | null)?.rows,
+        mapEntity: () => [],
+      });
+      const healthy = data != null && "rows" in data && Array.isArray(data.rows);
+      expect(result.failed).toBe(!healthy);
+      expect(result.shouldLogIndex).toBe(healthy);
+      expect(result.failureReason).toBe(healthy ? undefined : "malformed-response");
+      expect(result.entityCount).toBe(0);
+    },
+  );
+
   it("merges price observations without replacing existing rows", () => {
     const target = new Map([["usdc-circle", [{ price: 1, tvl: 100, chain: "ethereum", protocol: "curve" }]]]);
     const source = new Map([

@@ -23,6 +23,7 @@ import {
   fetchVaultAssetsPerShareViaSelector,
   type Erc4626NavVaultConfig,
 } from "../authoritative-price-sources/helpers";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 const IUSD_QUOTE_HEX = "0x00000000000000000000000000000000000000000000000000000000000f4240";
 const ZERO_WORD_HEX = `0x${"0".repeat(64)}` as `0x${string}`;
@@ -464,6 +465,7 @@ describe("authoritative-price-sources", () => {
     await fetchLiveOverrides([
       asset("deuro-deuro"),
       asset("cusd-cap"),
+      freshParent("usdc-circle", 1, "coingecko+pyth"),
       freshParent("eurc-circle", 1.15, "coingecko+kraken", { nowSec: Math.floor(Date.now() / 1000) }),
     ], { stats });
     expect(stats.assetAttempts.find((row) => row.assetId === "deuro-deuro")).toMatchObject({
@@ -574,6 +576,42 @@ describe("authoritative-price-sources", () => {
         source: "protocol-redeem-cached-rate",
       }),
     ]);
+  });
+
+  it.each(["fresh", "stale", "incumbent"] as const)("evaluates the bounded offline vault rate with an open circuit (%s)", async (kind) => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const circuit = JSON.stringify({
+        state: "open", consecutiveFailures: 3, openedAt: nowSec,
+        lastFailureAt: nowSec, lastSuccessAt: null,
+      });
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`, circuit, nowSec,
+      );
+      const observedAt = nowSec - (kind === "stale" ? 25 : 1) * 3600;
+      sqlite.prepare("INSERT INTO authoritative_vault_rates (stablecoin_id, rate, observed_at, updated_at) VALUES (?, ?, ?, ?)").run(
+        "gtusdc-gauntlet", 1.0221, observedAt, observedAt,
+      );
+      const child = kind === "incumbent" ? freshParent("gtusdc-gauntlet", 1.01, "coingecko+pyth") : unpricedChild("gtusdc-gauntlet");
+      const overrides = await fetchLiveOverrides([
+        child, freshParent("usdc-circle", 0.9, "coingecko+pyth"),
+      ], { db });
+      if (kind === "fresh") {
+        expect(overrides.get(child.id)).toMatchObject({
+          price: 1.0221 * 0.9, source: "protocol-redeem-cached-rate", confidence: "low",
+          observedAt, metadata: { cachedVaultRate: { rate: 1.0221, rateObservedAt: observedAt } },
+        });
+      } else {
+        expect(overrides.has(child.id)).toBe(false);
+      }
+      expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(
+        `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
+      )).toEqual({ value: circuit });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("keeps a cached-rate rescue of a candidate timeout circuit-neutral", async () => {

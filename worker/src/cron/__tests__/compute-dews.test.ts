@@ -63,6 +63,7 @@ import type { DEWSResult } from "../../lib/dews";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { computeAndStoreDEWS } from "../../lib/dews/service";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC } from "../../lib/dews/input-assembly";
 import { buildHistoryKey } from "../yield-sync/evaluation";
 import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication";
 import {
@@ -220,6 +221,7 @@ interface MakeDbOptions {
     failure_reason: string | null;
   };
   failDexPublicationDiagnostics?: boolean;
+  psiSample?: { score: number; stored_at: number } | null;
   onBind?: (sql: string, args: unknown[]) => void;
 }
 
@@ -358,7 +360,7 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
         return { cnt: opts.latestGenerationRows ?? opts.currentGenerationRows ?? 1 } as T;
       }
       if (sql.includes("stress_signal_history")) return null as T | null;
-      if (sql.includes("stability_index_samples")) return null as T | null;
+      if (sql.includes("stability_index_samples")) return (opts.psiSample ?? null) as T | null;
       return null as T | null;
     };
 
@@ -428,6 +430,93 @@ describe("computeAndStoreDEWS", () => {
       if (key === "dews:published-generation") return null;
       return dewsCache([dewsCoin()], { fxFallbackRates: { peggedEUR: 1.08 } }) as never;
     });
+  });
+
+  it.each([
+    ["fresh", 0, null],
+    ["boundary", -3600, null],
+    ["stale", -3601, "stale-sample"],
+    ["future", 61, "future-timestamp"],
+    ["missing", null, "missing-sample"],
+  ] as const)("holds accepted DEWS publication for inadmissible PSI %s", async (_label, offset, reason) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const storedAt = offset == null ? null : nowSec + offset;
+    const result = await computeAndStoreDEWS(makeDb([], {
+      psiSample: storedAt == null ? null : { score: 0, stored_at: storedAt },
+    }));
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.dependencies.psi).toMatchObject({
+      updatedAt: storedAt, freshnessBudgetSec: 3600, reason,
+    });
+    expect(computeDEWS).toHaveBeenCalledWith(expect.objectContaining({ psiScore: reason == null ? 0 : null }));
+    expect(metadata.publicationPointerWritten).toBe(reason == null || reason === "missing-sample");
+    expect(metadata.freshnessSentinelPublished).toBe(reason == null || reason === "missing-sample");
+    if (reason === "stale-sample" || reason === "future-timestamp") {
+      expect(metadata.sourceFailures).toContainEqual({ source: "stability-index-samples", reason });
+      expect(metadata.degradedSources).toContain("stability-index-samples");
+    }
+  });
+  it.each([
+    ["fresh", 0, null],
+    ["inclusive boundary", -DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC, null],
+    ["stale", -DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC - 1, "stale"],
+    ["missing clock", null, "missing-timestamp"],
+    ["future clock", 61, "future-timestamp"],
+    ["invalid clock", Number.POSITIVE_INFINITY, "invalid-timestamp"],
+  ] as const)("admits the stablecoins generation freshness for %s", async (_label, offset, reason) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const updatedAt = offset === null ? null : nowSec + offset;
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key !== "stablecoins") return null;
+      return { ...dewsCache(), updatedAt } as never;
+    });
+    const sqlSeen: string[] = [];
+    const result = await computeAndStoreDEWS(makeDb(sqlSeen));
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.dependencies.stablecoins).toEqual({
+      generationId: updatedAt !== null && Number.isFinite(updatedAt) ? `stablecoins:${updatedAt}` : null,
+      updatedAt: updatedAt !== null && Number.isFinite(updatedAt) ? updatedAt : null,
+      ageSeconds: offset === null || offset > 60 ? null : 0 - offset,
+      freshnessBudgetSec: DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC,
+      reason,
+    });
+    if (reason !== null) {
+      expect(result.status).toBe("degraded");
+      expect(metadata.sourceFailures).toContainEqual({
+        source: "stablecoins-cache", reason: `stablecoins-cache-${reason}`,
+      });
+      expect(metadata.publicationPointerWritten).toBe(false);
+      expect(metadata.freshnessSentinelPublished).toBe(false);
+      expect(vi.mocked(writeFreshnessSentinel)).not.toHaveBeenCalled();
+      expect(vi.mocked(computeDEWS)).not.toHaveBeenCalled();
+      expect(sqlSeen).toHaveLength(0);
+    } else {
+      expect(metadata.publicationPointerWritten).toBe(true);
+      expect(metadata.freshnessSentinelPublished).toBe(true);
+    }
+  });
+
+  it("retains the accepted DEWS pointer and buffered rows when stablecoins are stale", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const acceptedAt = nowSec - 1800;
+    const pointer = JSON.stringify({
+      updatedAt: acceptedAt, source: "compute-dews", publishStatus: "published",
+    });
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("dews:published-generation", pointer, acceptedAt);
+    sqlite.prepare(`INSERT INTO stress_signal_publication_rows
+      (stablecoin_id, computed_at, score, band, signals_json) VALUES (?, ?, 22, 'WATCH', '{}')`)
+      .run("usdt-tether", acceptedAt);
+    vi.mocked(getCache).mockResolvedValue({
+      ...dewsCache(), updatedAt: nowSec - DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC - 1,
+    });
+    await computeAndStoreDEWS(db);
+    expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get("dews:published-generation"))
+      .toEqual({ value: pointer, updated_at: acceptedAt });
+    expect(sqlite.prepare("SELECT computed_at, score FROM stress_signal_publication_rows").all())
+      .toEqual([{ computed_at: acceptedAt, score: 22 }]);
+    expect(vi.mocked(writeFreshnessSentinel)).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -537,7 +626,7 @@ describe("computeAndStoreDEWS", () => {
     expect(result.status).toBeUndefined();
     expect(result.itemCount).toBe(1);
     expect(writeFreshnessSentinel).toHaveBeenCalledTimes(1);
-    expect(writeFreshnessSentinel).toHaveBeenCalledWith(db, "dews", Math.floor(Date.now() / 1000), undefined);
+    expect(writeFreshnessSentinel).toHaveBeenCalledWith(db, "dews", Math.floor(Date.now() / 1000), `dews:${Math.floor(Date.now() / 1000)}`, undefined);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       freshnessSentinelPublished: boolean;
       publicationPointerWritten: boolean;

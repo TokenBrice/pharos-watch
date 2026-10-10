@@ -31,6 +31,8 @@ import {
   measureFreshnessAge,
 } from "./api-freshness-age";
 import { addFreshnessHeaders } from "./api-freshness-headers";
+import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "./cron-output";
+import { assessFreshnessTimestamp, type FreshnessTimestampReason } from "./api-freshness-age";
 
 export { addFreshnessHeaders } from "./api-freshness-headers";
 
@@ -81,10 +83,11 @@ interface CacheRow {
   updated_at: number;
   value?: string | null;
   observed_at?: number;
+  served_generation_id?: string | null;
 }
 
 interface ProducerCronObservation {
-  lastOkStartedAt: number | null;
+  lastPublishedAt: number | null;
   degradedRunsSinceOk: number | null;
   latestReason: string | null;
 }
@@ -98,6 +101,7 @@ interface SentinelBackedFreshnessResult {
   ageSeconds: number | null;
   generationId: string | null;
   publishedAt: number | null;
+  timestampReason: FreshnessTimestampReason | null;
   freshnessSource: CacheFreshnessDiagnostic["freshnessSource"] | null;
   sentinelValidationReason?: FreshnessSentinelValidationReason;
   quality: CacheQualityVerdict;
@@ -118,7 +122,7 @@ const TABLE_FRESHNESS_FALLBACK_QUERIES: Partial<Record<FreshnessSentinelBackedCa
 export function buildFreshnessMeta(
   updatedAt: number,
   maxAgeSec: number,
-  cacheKey?: string,
+  cacheKey: string,
   options: { assessedAt?: number; freshBudgetSec?: number; degradedBudgetSec?: number } = {},
 ): FreshnessMeta {
   const assessedAt = options.assessedAt ?? Math.floor(Date.now() / 1000);
@@ -127,7 +131,8 @@ export function buildFreshnessMeta(
     updatedAt,
     API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC,
   );
-  const bands = cacheKey ? getCacheRatioThresholds(cacheKey) : STATUS_CACHE_RATIO_THRESHOLDS;
+  if (!cacheKey.trim()) throw new Error("Freshness policy identity is required");
+  const bands = getCacheRatioThresholds(cacheKey);
   const freshBudgetSec = options.freshBudgetSec ?? maxAgeSec * bands.degraded;
   const degradedBudgetSec = options.degradedBudgetSec ?? maxAgeSec * bands.stale;
   return {
@@ -191,7 +196,7 @@ async function readProducerCronHistory(
     const rows = await db
       .prepare(
         `WITH producer_runs AS (
-           SELECT job, started_at, status, degraded_reason,
+           SELECT job, started_at, status, degraded_reason, ${CONFIRMED_CRON_OUTPUT_AT_SQL} AS output_at,
                   CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.quality.degraded') ELSE 0 END AS quality_degraded,
                   CASE WHEN json_valid(metadata) THEN
                     COALESCE(json_extract(metadata, '$.quality.reasons[0]'), json_extract(metadata, '$.quality.reason'))
@@ -199,7 +204,7 @@ async function readProducerCronHistory(
            FROM cron_runs WHERE job IN (${inClause.sql})
          )
          SELECT job,
-                MAX(CASE WHEN status = 'ok' THEN started_at END) as started_at,
+                MAX(output_at) as started_at,
                 SUM(CASE
                       WHEN (status IN ('degraded', 'error') OR quality_degraded = 1)
                         AND started_at > COALESCE((
@@ -225,7 +230,7 @@ async function readProducerCronHistory(
       const key = keyByJob.get(row.job);
       if (!key) continue;
       value.set(key, {
-        lastOkStartedAt: row.started_at ?? null,
+        lastPublishedAt: row.started_at ?? null,
         degradedRunsSinceOk: row.degraded_runs_since_ok ?? null,
         latestReason: row.latest_reason ?? null,
       });
@@ -291,6 +296,7 @@ async function resolveSentinelBackedFreshness(params: {
         value: sentinelRow.value,
         rowUpdatedAt: sentinelRow.updated_at,
         expectedSource: getFreshnessSentinelProducerJob(params.key),
+        expectedGenerationId: sentinelRow.served_generation_id ?? null,
         // The caller may retain its scheduled/run-start clock across probes.
         // Compare against this read's clock so concurrent publication is not
         // mislabeled as future; no future-skew allowance is introduced.
@@ -301,12 +307,14 @@ async function resolveSentinelBackedFreshness(params: {
   const freshnessOutcome = (
     ageSeconds: number | null,
     freshnessSource: CacheFreshnessDiagnostic["freshnessSource"] | null,
+    publishedAt: number | null = null,
   ): SentinelBackedFreshnessResult => ({
     ageSeconds,
+    timestampReason: null,
     freshnessSource,
     generationId: freshnessSource === "freshness-sentinel" ? sentinelValidation?.payload?.generationId ?? null : null,
     publishedAt: freshnessSource === "freshness-sentinel" && sentinelValidation?.payload?.generationId
-      ? sentinelValidation.payload.updatedAt : null,
+      ? sentinelValidation.payload.updatedAt : publishedAt,
     ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
     quality: buildCacheQuality({
       freshnessSource,
@@ -361,7 +369,7 @@ async function resolveSentinelBackedFreshness(params: {
             : "publication pointer is missing";
         throw new Error(`DEWS published generation unavailable (${published.status}): ${detail}`);
       }
-      tableAge = Math.max(0, params.now - published.computedAt);
+      tableAge = params.now - published.computedAt;
     } else {
       const query = TABLE_FRESHNESS_FALLBACK_QUERIES[params.key];
       if (!query) throw new Error(`No table freshness fallback configured for ${params.key}`);
@@ -369,11 +377,12 @@ async function resolveSentinelBackedFreshness(params: {
         .prepare(query)
         .bind(params.now)
         .first<{ age: number | null }>();
-      tableAge = row?.age != null ? Math.max(0, row.age) : null;
+      tableAge = row?.age ?? null;
     }
     if (tableAge != null) {
       recordFreshnessOutcome("table-fallback", sentinelFailureSource, sentinelValidation?.reason);
-      return freshnessOutcome(tableAge, "table-fallback");
+      const assessment = assessFreshnessTimestamp(params.now, params.now - tableAge);
+      return { ...freshnessOutcome(assessment.ageSeconds, "table-fallback", assessment.reason == null ? params.now - tableAge : null), timestampReason: assessment.reason };
     }
   } catch (error) {
     failures.push({
@@ -386,14 +395,15 @@ async function resolveSentinelBackedFreshness(params: {
     }
   }
 
-  const cronFallbackTimestamp = params.cronHistory.value?.get(params.key)?.lastOkStartedAt ?? null;
+  const cronFallbackTimestamp = params.cronHistory.value?.get(params.key)?.lastPublishedAt ?? null;
   if (cronFallbackTimestamp != null) {
     recordFreshnessOutcome(
       "cron-fallback",
       failures[0]?.source ?? sentinelFailureSource,
       sentinelValidation?.reason,
     );
-    return freshnessOutcome(Math.max(0, params.now - cronFallbackTimestamp), "cron-fallback");
+    const assessment = assessFreshnessTimestamp(params.now, cronFallbackTimestamp);
+    return { ...freshnessOutcome(assessment.ageSeconds, "cron-fallback", assessment.reason == null ? cronFallbackTimestamp : null), timestampReason: assessment.reason };
   }
 
   if (params.cronHistory.error) {
@@ -439,7 +449,18 @@ export async function buildCacheStatuses(
     try {
       const inClause = buildInClause(cacheLookupKeys);
       cacheRows = await db
-        .prepare(`SELECT key, value, updated_at, unixepoch() AS observed_at FROM cache WHERE key IN (${inClause.sql})`)
+        .prepare(`SELECT key, value, updated_at, unixepoch() AS observed_at,
+          CASE key
+            WHEN 'freshness:yield-data' THEN (
+              SELECT CASE WHEN json_valid(value) THEN json_extract(value, '$.publication.generationId') END
+              FROM cache WHERE key = 'yield-rankings')
+            WHEN 'freshness:dews' THEN (
+              SELECT 'dews:' || updated_at FROM cache WHERE key = 'dews:published-generation')
+            WHEN 'freshness:dex-liquidity' THEN (
+              SELECT publication_generation_id FROM dex_liquidity
+              WHERE stablecoin_id = '__global__' AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER})
+          END AS served_generation_id
+          FROM cache WHERE key IN (${inClause.sql})`)
         .bind(...inClause.binds)
         .all<CacheRow>();
     } catch (err) {
@@ -481,10 +502,11 @@ export async function buildCacheStatuses(
     let ageSeconds: number | null;
     let generationId: string | null = null;
     let publishedAt: number | null = null;
+    let timestampReason: FreshnessTimestampReason | null = null;
 
     if (key === "fx-rates") {
       const fx = buildFxCacheStatus(fxState, maxAge, now);
-      caches[key] = fx.cacheStatus;
+      caches[key] = { ...fx.cacheStatus, publishedAt: fx.cacheStatus.timestampReason == null ? fxState?.usableSyncAt ?? null : null };
       ageSeconds = fx.cacheStatus.ageSeconds;
       if (fx.warning) warnings.push(`fx-rates: ${fx.warning}`);
       if (fx.statusFloor === "stale") {
@@ -504,6 +526,7 @@ export async function buildCacheStatuses(
       ageSeconds = freshness.ageSeconds;
       generationId = freshness.generationId;
       publishedAt = freshness.publishedAt;
+      timestampReason = freshness.timestampReason;
       if (freshness.freshnessSource) {
         freshnessSourceByKey.set(key, freshness.freshnessSource);
       }
@@ -515,8 +538,10 @@ export async function buildCacheStatuses(
       warnings.push(...freshness.warnings);
       diagnostics.push(...freshness.diagnostics);
     } else {
-      const updatedAt = cacheUpdatedAtByKey.get(key);
-      ageSeconds = updatedAt != null ? now - updatedAt : null;
+      const assessment = assessFreshnessTimestamp(now, cacheUpdatedAtByKey.get(key));
+      ageSeconds = assessment.ageSeconds;
+      timestampReason = assessment.reason;
+      publishedAt = assessment.reason == null ? cacheUpdatedAtByKey.get(key) ?? null : null;
     }
 
     const ratio = ageSeconds != null ? ageSeconds / maxAge : Infinity;
@@ -538,10 +563,12 @@ export async function buildCacheStatuses(
       const quality = qualityByKey.get(key);
       caches[key] = {
         ageSeconds,
+        ...(timestampReason ? { timestampReason } : {}),
         maxAge,
         healthyMaxRatio,
         healthyMaxAge: maxAge * healthyMaxRatio,
-        ...(key === "yield-data" ? { generationId, publishedAt } : {}),
+        publishedAt,
+        ...(sentinelBackedCacheKeySet.has(key) ? { generationId } : {}),
         // Unknown quality (degraded === null) fails closed: a lane is healthy
         // only when its quality verdict is explicitly clean (rule R2).
         healthy: ratio <= healthyMaxRatio && (quality == null || quality.degraded === false),
@@ -591,17 +618,20 @@ export async function buildCacheStatuses(
 }
 
 export function buildCronFreshnessMeta(result: CronTimestampLookupResult, maxAgeSec: number) {
-  if (result.status === "ok" && result.timestamp != null) {
-    return buildFreshnessMeta(result.timestamp, maxAgeSec);
+  const assessedAt = Math.floor(Date.now() / 1000);
+  const assessment = assessFreshnessTimestamp(assessedAt, result.timestamp);
+  if (result.status === "ok" && result.timestamp != null && assessment.reason == null) {
+    return buildFreshnessMeta(result.timestamp, maxAgeSec, "cron-output", { assessedAt });
   }
   return {
-    assessedAt: Math.floor(Date.now() / 1000),
+    assessedAt,
     freshBudgetSec: maxAgeSec * STATUS_CACHE_RATIO_THRESHOLDS.degraded,
     degradedBudgetSec: maxAgeSec * STATUS_CACHE_RATIO_THRESHOLDS.stale,
     updatedAt: null,
     ageSeconds: null,
-    status: result.status === "lookup_failed" ? "unknown" as const : "stale" as const,
-    reason: result.status === "lookup_failed" ? "freshness-lookup-failed" : "producer-history-missing",
+    status: result.status === "lookup_failed" || result.status === "ok" ? "unknown" as const : "stale" as const,
+    reason: result.status === "lookup_failed" ? "freshness-lookup-failed"
+      : result.status === "ok" ? assessment.reason : "producer-history-missing",
   };
 }
 
@@ -610,19 +640,20 @@ export function buildCronFreshnessHeaders(
   maxAgeSec: number,
   cacheControl: string,
 ): Record<string, string> {
-  if (result.status === "ok" && result.timestamp != null) {
-    return addFreshnessHeaders({ "Cache-Control": cacheControl }, result.timestamp, maxAgeSec);
-  }
   const meta = buildCronFreshnessMeta(result, maxAgeSec);
+  if (meta.updatedAt != null) {
+    return addFreshnessHeaders({ "Cache-Control": cacheControl }, meta.updatedAt, maxAgeSec);
+  }
   return {
     "Cache-Control": "no-store",
     "X-Data-Age": "unavailable",
     "X-Data-Freshness": meta.status,
-    "X-Data-Freshness-Reason": result.status === "lookup_failed"
-      ? "freshness-lookup-failed" : "producer-history-missing",
+    "X-Data-Updated-At": "unknown",
+    "X-Data-Freshness-Reason": meta.reason ?? "producer-history-missing",
     Warning: result.status === "lookup_failed"
       ? '199 - "Producer freshness lookup failed"'
-      : '199 - "No authoritative successful producer run in retained history"',
+      : result.status === "ok" ? '199 - "Producer freshness timestamp is invalid"'
+        : '199 - "No authoritative confirmed producer output in retained history"',
   };
 }
 
@@ -632,7 +663,7 @@ export async function getLatestSuccessfulCronTimestampResult(
 ): Promise<CronTimestampLookupResult> {
   try {
     const row = await db
-      .prepare("SELECT MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'")
+      .prepare(`SELECT MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL}) as started_at FROM cron_runs WHERE job = ?`)
       .bind(job)
       .first<{ started_at: number | null }>();
     if (row?.started_at != null) {

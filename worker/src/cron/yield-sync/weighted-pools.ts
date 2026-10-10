@@ -21,8 +21,7 @@ function isUsableWeightedPool(
       normalizeDlIdentity(pool.chain) === normalizeDlIdentity(expectedChain) &&
       Number.isFinite(pool.tvlUsd) &&
       pool.tvlUsd > 0 &&
-      Number.isFinite(pool.apy) &&
-      pool.apy >= 0,
+      Number.isFinite(pool.apy),
   );
 }
 

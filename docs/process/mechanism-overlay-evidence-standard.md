@@ -66,7 +66,7 @@ non-expired sources still fail closed; financial-report overlaps retain their
 existing double-count protections. A rejected non-expired observation is diagnostic
 only when no admissible revision is available, and grants no evidence or credit.
 
-Full independent and operational financial assurance require complete applicable scope; overlays cannot bypass that gate. Exact authoring and producer contracts live in [Stablecoin Data](../stablecoin-data.md#registry-editing-entry) and [Live Reserves](../live-reserves.md#snapshot-metadata-and-warning-effects).
+Full independent and operational financial assurance require complete applicable scope; overlays cannot bypass that gate. Exact authoring and producer contracts live in [Stablecoin Data](../stablecoin-data.md#registry-editing-entry) and [Live Reserves](live-reserves-appendix.md#snapshot-metadata-and-warning-effects).
 
 
 ## Explicitly insufficient (never admit these)

@@ -71,8 +71,7 @@ import {
   routeSafetyScoreV9OperationalIncidents,
   SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST,
 } from "./extension-incidents";
-import { getSafetyScoreV9WrapperAllocationReview, SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST } from "./extension-wrapper-allocation";
-import { getSafetyScoreV9WrapperLocalReviews, SAFETY_SCORE_V9_WRAPPER_LOCAL_REVIEWS_DIGEST } from "./extension-wrapper-local-review";
+import { getSafetyScoreV9WrapperAllocationReview, getSafetyScoreV9WrapperLocalReviews, SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST, SAFETY_SCORE_V9_WRAPPER_LOCAL_REVIEWS_DIGEST } from "./extension-wrapper-reviews";
 import { allocationReviewClockSec, type V9AllocationScopeIdentityReview, type SafetyScoreV9WrapperAllocationReview } from "@shared/types/safety-score-v9-allocation";
 import {
   computeSafetyScoreV9ReviewedTransferFactsDigest,
@@ -2301,10 +2300,15 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   const clockSec = fixedInput.clockSec;
   const activeIds = new Set(fixedInput.activeAssetIds);
   const preparedById = new Map<string, PreparedDependency>();
+  const dependencyAdmissionErrors = new Map<string, unknown>();
   for (const assetId of fixedInput.activeAssetIds) {
     const meta = metaById.get(assetId);
     if (!meta) throw new Error(`Safety Score v9 baseline extension has no registry metadata for ${assetId}`);
-    preparedById.set(assetId, prepareDependency(meta, fixedInput.liveReserveMap[assetId], activeIds, clockSec, fixedInput));
+    try {
+      preparedById.set(assetId, prepareDependency(meta, fixedInput.liveReserveMap[assetId], activeIds, clockSec, fixedInput));
+    } catch (error) {
+      dependencyAdmissionErrors.set(assetId, error);
+    }
   }
   const graph = diagnoseDependencyGraph(
     [...preparedById.values()]
@@ -2411,6 +2415,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const admitted: Partial<ExtensionAsset> = {};
       let admissionPath = "dependencies";
       try {
+        if (dependencyAdmissionErrors.has(assetId)) throw dependencyAdmissionErrors.get(assetId);
         const meta = metaById.get(assetId)!;
         const prepared = preparedById.get(assetId)!;
         const cycle = cycleByAsset.get(assetId);

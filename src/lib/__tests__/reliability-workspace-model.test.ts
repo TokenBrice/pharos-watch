@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { getCacheImpactStatus } from "@shared/lib/cache-health";
 import type { HealthResponse, StatusCause, StatusResponse } from "@shared/types";
 import {
   buildReliabilityWorkspaceModel,
@@ -121,6 +122,25 @@ describe("reliability issue model", () => {
       severity: "critical",
       issueCount: 1,
     });
+  });
+
+  it.each([2, 2.01, 4, 4.01])("uses the yield-data override at %sx its availability budget", (ratio) => {
+    const cache = { ageSeconds: ratio * 3_600, maxAge: 3_600, healthy: ratio <= 2 };
+    const data = degraded(completeStatus(), { caches: { "yield-data": cache } });
+    const model = buildReliabilityWorkspaceModel(input({ data }));
+    const status = getCacheImpactStatus(cache, "yield-data");
+    expect(model.modeSummaries.find((mode) => mode.id === "cache")).toMatchObject({
+      severity: status === "stale" ? "critical" : status === "degraded" ? "watch" : "healthy",
+      issueCount: status === "healthy" ? 0 : 1,
+    });
+  });
+
+  it("keeps fresh cached-fallback rows degraded through the shared cache-impact helper", () => {
+    const data = degraded(completeStatus(), {
+      caches: { fixture: { ageSeconds: 0, maxAge: 60, healthy: true, mode: "cached-fallback" } },
+    });
+    expect(buildReliabilityWorkspaceModel(input({ data })).issues.find((issue) => issue.id === "cache:fixture"))
+      .toMatchObject({ kind: "warning" });
   });
 
   it("keeps missing cache evidence Unknown while preserving a real zero-demand response", () => {

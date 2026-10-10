@@ -165,6 +165,70 @@ describe("runTelegramInactiveCleanup", () => {
     expect(metadata.deleted).toBe(2);
     expect(metadata.cappedAtLimit).toBe(false);
   });
+  it.each(["activity", "direct", "preset", "global", "recap", "pending", "wizard"] as const)(
+    "rejects an inactive purge when %s becomes live after candidate selection",
+    async (intent) => {
+      const { sqlite, db } = setupLatestSchemaSqlite();
+      const now = Math.floor(Date.now() / 1000);
+      const staleAt = now - INACTIVE_RETENTION_SEC - ONE_DAY_SEC;
+      insertSubscriber(sqlite, "returning", staleAt);
+      insertSubscription(sqlite, "returning");
+      sqlite.prepare("INSERT INTO telegram_chat_delivery_diagnostics (chat_id, updated_at) VALUES (?, ?)")
+        .run("returning", now);
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("telegram:command-flood:returning", "keep", now);
+      const batch = db.batch.bind(db);
+      vi.spyOn(db, "batch").mockImplementationOnce(async (statements) => {
+        if (intent === "activity") {
+          sqlite.prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = 'returning'").run(now);
+        } else if (intent === "direct") {
+          sqlite.prepare("UPDATE telegram_subscriptions SET alert_depeg = 1 WHERE chat_id = 'returning'").run();
+        } else if (intent === "preset") {
+          sqlite.prepare(`INSERT INTO telegram_preset_subscriptions
+            (chat_id, preset_id, alert_dews, created_at, updated_at)
+            VALUES ('returning', 'usd-top25', 1, ?, ?)`).run(now, now);
+        } else if (intent === "global") {
+          sqlite.prepare("UPDATE telegram_subscribers SET global_alert_depeg = 1 WHERE chat_id = 'returning'").run();
+        } else if (intent === "recap") {
+          sqlite.prepare(`INSERT INTO telegram_recap_preferences (chat_id, enabled, created_at, updated_at)
+            VALUES ('returning', 1, ?, ?)`).run(now, now);
+        } else if (intent === "pending") {
+          sqlite.prepare(`INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at)
+            VALUES ('returning', 'live', ?)`).run(now);
+        } else {
+          sqlite.prepare(`INSERT INTO telegram_pending_disambiguation
+            (chat_id, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at)
+            VALUES ('returning', '[]', '[]', 'USD', '[]', '[]', ?)`).run(now + ONE_DAY_SEC);
+        }
+        return batch(statements);
+      });
+
+      const result = await runTelegramInactiveCleanup(db);
+
+      expect(result.itemCount).toBe(0);
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ deleted: 0, cappedAtLimit: false });
+      expect(listSubscriberIds(sqlite)).toEqual(["returning"]);
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions").get()).toEqual({ count: 1 });
+      expect(sqlite.prepare("SELECT chat_id FROM telegram_chat_delivery_diagnostics").get())
+        .toEqual({ chat_id: "returning" });
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'telegram:command-flood:returning'").get())
+        .toEqual({ value: "keep" });
+      if (intent === "direct") {
+        expect(sqlite.prepare("SELECT alert_depeg FROM telegram_subscriptions").get()).toEqual({ alert_depeg: 1 });
+      } else if (intent === "preset") {
+        expect(sqlite.prepare("SELECT chat_id FROM telegram_preset_subscriptions").get()).toEqual({ chat_id: "returning" });
+      } else if (intent === "global") {
+        expect(sqlite.prepare("SELECT global_alert_depeg FROM telegram_subscribers").get()).toEqual({ global_alert_depeg: 1 });
+      } else if (intent === "recap") {
+        expect(sqlite.prepare("SELECT enabled FROM telegram_recap_preferences").get()).toEqual({ enabled: 1 });
+      } else if (intent === "pending") {
+        expect(sqlite.prepare("SELECT message_html FROM telegram_pending_alerts").get()).toEqual({ message_html: "live" });
+      } else if (intent === "wizard") {
+        expect(sqlite.prepare("SELECT chat_id FROM telegram_pending_disambiguation").get()).toEqual({ chat_id: "returning" });
+      }
+    },
+  );
+
 
   it("preserves recently-active subscribers and chats with meaningful child state", async () => {
     const { sqlite, db } = setupLatestSchemaSqlite();

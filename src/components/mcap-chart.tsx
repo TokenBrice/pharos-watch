@@ -18,6 +18,8 @@ import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
 import { useMarketDataChartFrame } from "@/components/chart-primitives/use-market-data-chart-window";
+import { relativeChangeRatio, ratioToPercentage } from "@shared/lib/stats";
+import { DAY_MS } from "@shared/lib/time-constants";
 
 const MCAP_TABLE_COLUMNS: ChartDataTableColumn<{ ts: number; mcap: number }>[] = [
   { id: "date", label: "Date", format: (row) => formatChartDate(row.ts, "short-year") },
@@ -80,7 +82,7 @@ function McapChartBody({
     if (!Array.isArray(data) || data.length === 0) return [];
 
     return data
-      .filter((d) => d.circulatingUsd > 0)
+      .filter((d) => Number.isFinite(d.circulatingUsd) && d.circulatingUsd >= 0)
       .map((d) => ({
         ts: d.date * 1000,
         mcap: d.circulatingUsd,
@@ -98,7 +100,8 @@ function McapChartBody({
 
   // Log scale is allowed only on the unbrushed `all` view (multi-year, multi-OOM).
   // Linear stays the default for short ranges where log compresses the signal.
-  const logEnabled = range === "all" && !brushedRange;
+  const hasObservedZero = visibleData.some((point) => point.mcap === 0);
+  const logEnabled = range === "all" && !brushedRange && !hasObservedZero;
   const useLog = logEnabled && logScale;
 
   const yDomain = useMemo<[number, number | "auto"] | [number, number]>(() => {
@@ -121,16 +124,18 @@ function McapChartBody({
     );
   }, [range, visibleData, useLog]);
 
-  // Header readout: current mcap + 24h delta (anchor on the previous point — daily data).
+  // A daily delta needs the preceding UTC-day observation in the selected window.
   const readout = useMemo(() => {
     if (visibleData.length === 0) return null;
     const last = visibleData[visibleData.length - 1];
     const prev = visibleData.length >= 2 ? visibleData[visibleData.length - 2] : null;
-    const delta = prev && prev.mcap > 0 ? (last.mcap - prev.mcap) / prev.mcap : null;
+    const delta = prev && last.ts - prev.ts === DAY_MS
+      ? relativeChangeRatio(last.mcap, prev.mcap)
+      : null;
     return {
       mcap: last.mcap,
       ts: last.ts,
-      deltaPct: delta == null ? null : delta * 100,
+      deltaPct: delta === null ? null : ratioToPercentage(delta),
     };
   }, [visibleData]);
 
@@ -172,7 +177,9 @@ function McapChartBody({
           disabledTitle={
             brushedRange
               ? "Log scale is only available on the full range — clear the brush to enable."
-              : "Log scale is only meaningful on the full range — switch to All."
+              : hasObservedZero
+                ? "Log scale cannot represent observed zero supply."
+                : "Log scale is only meaningful on the full range — switch to All."
           }
         />
         {controlledRange && !onControlledRangeChange ? null : (

@@ -1,16 +1,17 @@
 import { logWorkerEventArgs } from "../structured-log";
-import { getCirculatingRaw } from "@shared/lib/supply";
-import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { fetchEvmCallHexAtBlock } from "../evm-rpc";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
+import type { ChainRpcConfig } from "../chain-registry";
+import { findNearestSupply } from "../historical-depeg-extraction";
 import {
   decodeUint256WordBigInt,
   encodeAddress,
   encodeUint256,
   ETHEREUM_CHAIN,
-  findNearestSupply,
   getUsdcQuotedRedeemConfig,
   ratioToNumber,
+  USDC_CIRCLE_ID,
   type HistoricalPriceContext,
 } from "./helpers";
 import { createProtocolRedeemProvider } from "./protocol-redeem-provider";
@@ -34,6 +35,7 @@ async function fetchCapRedeemQuote(
   sampleNotionalUsd: number,
   blockNumberOrTag: number | "latest",
   signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<number | null> {
   const config = getUsdcQuotedRedeemConfig(CAP_CUSD_ID);
   if (!config) return null;
@@ -45,6 +47,7 @@ async function fetchCapRedeemQuote(
   const quoteHex = await fetchEvmCallHexAtBlock(ETHEREUM_CHAIN, config.contract, calldata, blockNumberOrTag, {
     signal,
     extraRpcUrls: getPublicFallbackRpcUrls(ETHEREUM_CHAIN),
+    chainRpcs,
   });
   if (!quoteHex) {
     logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] cusd-cap: RPC returned null`);
@@ -57,15 +60,16 @@ async function fetchCapRedeemQuote(
     return null;
   }
 
-  const price = ratioToNumber(outputAmount, config.quoteDecimals, sampleInputAmount, config.contractDecimals);
-  return Number.isFinite(price) && price > 0 ? price : null;
+  const quoteUnitsPerToken = ratioToNumber(outputAmount, config.quoteDecimals, sampleInputAmount, config.contractDecimals);
+  return Number.isFinite(quoteUnitsPerToken) && quoteUnitsPerToken > 0 ? quoteUnitsPerToken : null;
 }
 
 export const capCusdProvider = createProtocolRedeemProvider({
   stablecoinId: CAP_CUSD_ID,
-  async fetchLiveQuote(asset: PeggedAsset, signal?: AbortSignal): Promise<number | null> {
-    const sampleNotionalUsd = clampSampleNotionalUsd(getCirculatingRaw(asset));
-    return fetchCapRedeemQuote(sampleNotionalUsd, "latest", signal);
+  parentId: USDC_CIRCLE_ID,
+  async fetchLiveQuote(asset, context, signal): Promise<number | null> {
+    const sampleNotionalUsd = clampSampleNotionalUsd(getCirculatingRawOrNull(asset));
+    return fetchCapRedeemQuote(sampleNotionalUsd, "latest", signal, context.chainRpcs);
   },
   async fetchHistoricalQuote(
     context: HistoricalPriceContext,
@@ -73,7 +77,7 @@ export const capCusdProvider = createProtocolRedeemProvider({
     timestamp: number,
     signal?: AbortSignal,
   ): Promise<number | null> {
-    const supplyUsd = findNearestSupply(context.supplySnapshots, timestamp);
+    const supplyUsd = context.supplySnapshots ? findNearestSupply(context.supplySnapshots, timestamp) : null;
     return fetchCapRedeemQuote(clampSampleNotionalUsd(supplyUsd), blockNumber, signal);
   },
 });

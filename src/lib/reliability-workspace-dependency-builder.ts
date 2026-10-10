@@ -72,7 +72,7 @@ export function buildDependenciesModel(input: ReliabilityWorkspaceInput): Reliab
     providerCircuits,
     providerSummary: input.data.providerCircuitHealth,
     publicCircuits,
-    publicCircuitEvidenceAvailable: input.healthData != null,
+    publicCircuitEvidenceAvailable: input.healthData?.circuits != null,
     canaryChecks,
     canarySummary: input.data.canaries,
     diagnosticText: JSON.stringify(diagnostics, null, 2),

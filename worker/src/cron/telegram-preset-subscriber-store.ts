@@ -132,13 +132,10 @@ export async function loadActivePresetFollowers(
   const chatClause = chatIds == null ? null : buildInClause(chatIds);
   const cursorPredicate = args.cursor == null
     ? ""
-    : `AND (
-         preset.chat_id > ?
-         OR (preset.chat_id = ? AND preset.preset_id > ?)
-       )`;
+    : "AND (preset.chat_id, preset.preset_id) > (?, ?)";
   const cursorBinds = args.cursor == null
     ? []
-    : [args.cursor.chatId, args.cursor.chatId, args.cursor.presetId];
+    : [args.cursor.chatId, args.cursor.presetId];
   const bounded = args.limit != null || args.cursor != null || chatClause != null;
   const followerColumnList = `preset.chat_id,
                 preset.preset_id,
@@ -150,7 +147,7 @@ export async function loadActivePresetFollowers(
                 subscriber.timezone,
                 subscriber.preference_generation`;
   const sql = `SELECT ${followerColumnList}
-           FROM telegram_preset_subscriptions preset
+           FROM telegram_preset_subscriptions preset ${bounded ? "INDEXED BY idx_telegram_preset_followers_cursor" : ""}
            JOIN telegram_subscribers subscriber ON subscriber.chat_id = preset.chat_id
           WHERE preset.${alertColumn} = 1
             AND preset.preset_id IN (${presetClause.sql})

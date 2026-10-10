@@ -173,6 +173,15 @@ describe("fetchAstherusEarnWrapperReserves", () => {
     }));
   });
 
+  it("keeps malformed optional pause data unavailable without changing net backing", async () => {
+    mockEarnState({ paused: null });
+    const unavailable = await runTracked();
+    mockEarnState({ paused: 2n });
+    const malformed = await runTracked();
+    expect(malformed).toEqual(unavailable);
+    assertSingleAggregate3Batch();
+  });
+
   it("rejects zero and negative net backing", async () => {
     for (const unvested of [UNDERLYING_BALANCE, UNDERLYING_BALANCE + 1n]) {
       mockEarnState({ unvested });

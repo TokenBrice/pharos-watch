@@ -2,7 +2,6 @@ import { DEFILLAMA_API, DEFILLAMA_COINS } from "../../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { fetchCoinGeckoMarketHistory } from "../../lib/coingecko-market-history";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
-import { resolveMarketCap } from "../../lib/resolve-market-cap";
 import {
   buildNativeSupplyBuckets,
   buildPriceMapByDate,
@@ -93,7 +92,7 @@ export async function fetchCommodityTokens(
     });
   }
 
-  // Fallback: no protocol TVL → use CoinGecko market_chart with sanity check.
+  // Fallback: no protocol TVL → preserve day-specific CoinGecko market caps.
   if (tokens.length === 0) {
     const marketHistory = await fetchCoinGeckoMarketHistory(config.geckoId, {
       apiKey: config.coingeckoApiKey ?? null,
@@ -114,7 +113,6 @@ export async function fetchCommodityTokens(
       marketHistory.marketCaps,
       config.pegType,
       priceMap,
-      (mcap, price) => (price !== null ? resolveMarketCap(mcap, marketHistory.circulatingSupply, price) : mcap),
     );
   }
 
@@ -133,7 +131,7 @@ export async function handleCommodityDetail(
         staleReason: "commodity-history-stale",
       },
     );
-    return detail.createFreshResponseFromTokens(tokens);
+    return detail.createResponseFromResolvedTokens(tokens);
   } catch (err) {
     logUpstreamException("commodity-detail", config.stablecoinId, err);
     const fallback = await detail.trySupplyHistoryFallback("commodity-upstream-failure");

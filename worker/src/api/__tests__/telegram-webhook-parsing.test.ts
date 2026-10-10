@@ -6,7 +6,7 @@ import {
   parseStartPayload,
 } from "../telegram-webhook-parsing";
 import { resolveCoinTargets } from "../telegram-webhook-resolution";
-import { resolveTicker } from "../../lib/telegram/alerts";
+import { parseSubscribeArgs, resolveTicker, validateSubscribeArgs } from "../../lib/telegram/alerts";
 import type { PendingDisambiguationRow } from "../telegram-webhook-shared";
 
 function canonicalPayload(overrides: Record<string, unknown> = {}): string {
@@ -371,6 +371,20 @@ describe("parsePendingDisambiguation", () => {
 });
 
 describe("resolveCoinTargets", () => {
+  it("resolves both canonical DUSD shortlist targets from the picker handoff without ambiguity", () => {
+    const command = parseCommand("/subscribe dews, depeg, safety dusd-alto, dusd-standx");
+    expect(command.command).toBe("/subscribe");
+    const parsed = parseSubscribeArgs(command.args);
+    expect(validateSubscribeArgs(parsed)).toBeNull();
+    expect([...parsed.alertTypes]).toEqual(["dews", "depeg", "safety"]);
+    const result = resolveCoinTargets(parsed.tickers);
+    expect(result.kind).toBe("complete");
+    if (result.kind === "complete") {
+      expect(result.coins.map((coin) => coin.id)).toEqual(["dusd-alto", "dusd-standx"]);
+      expect(result.coins.map((coin) => coin.symbol)).toEqual(["DUSD", "DUSD"]);
+    }
+  });
+
   it("resolves a single unique ticker", () => {
     const result = resolveCoinTargets(["USDC"]);
     expect(result.kind).toBe("complete");

@@ -67,12 +67,11 @@ describe("ReserveTreemap", () => {
     expect(html).toContain(`aria-label="Reviewed reserve slices: ETH 100%, ${RESERVE_RISK_PRESENTATION["very-low"].longLabel}"`);
   });
 
-  it("leaves a dashed remainder when a lone slice does not cover the whole basket", () => {
+  it("labels the uncovered share when a lone slice does not cover the whole basket", () => {
     const partial = render([SLICE("T-bills", 60, "very-low", "Treasury bills")]);
-    expect(partial).toContain("width:60%");
-    expect(partial).toContain("border-dashed");
     expect(partial).toContain("40%");
-    expect(render([SLICE("T-bills", 100, "very-low")])).not.toContain("border-dashed");
+    expect(partial).toContain("Unreviewed remainder");
+    expect(render([SLICE("T-bills", 100, "very-low")])).not.toContain("Unreviewed remainder");
   });
 
   it("draws a basket led by a slice at or above 90% as a bar and still labels every other share", () => {

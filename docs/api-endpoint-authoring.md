@@ -20,6 +20,7 @@ For the public `/api/` access and `/about/api/` reference shells, see [API Acces
 | Frontend API query descriptors | `src/lib/api-query-descriptors.ts` is the single declaration table for public-frontend paths, query keys, polling/freshness policy, response mode, and cached lazy schema loaders; admin surfaces use the twin table `src/lib/admin-api-query-descriptors.ts`, which carries no `responseMode` and polls on the generic one-minute ops budget. `src/hooks/api-hooks.ts` derives plain-versus-meta execution from each descriptor's `responseMode`. |
 | Public contract | `docs/api-reference.md` affected endpoint section |
 | Public OpenAPI/Postman artifact metadata | `scripts/lib/public-api-artifact-catalog.ts` |
+| Public response wire schemas | `scripts/lib/public-api-response-schemas.ts` composes body contracts with typed freshness from `shared/types/api-meta.ts`; map responses reserve `_meta` separately from asset values. Frontend schemas validate after metadata extraction in `src/lib/api.ts`. |
 
 The root `RegimeBar` uses the registered `useStabilityIndex()` query, whose descriptor points to the small stability-domain contract that validates only the PSI fields it renders. This keeps the classic Zod stability schema out of the all-route client graph while preserving the full payload in the shared TanStack cache. The `/stability-index/` detail query retains the full lazy schema.
 
@@ -39,7 +40,7 @@ The root `RegimeBar` uses the registered `useStabilityIndex()` query, whose desc
 
 - External integrations call `https://api.pharos.watch` and need `X-API-Key` unless the endpoint is explicitly exempt.
 - Website browser reads should go through same-origin `/_site-data/*`, backed by `site-api.pharos.watch` and `X-Pharos-Site-Proxy-Secret`.
-- Internal site-only GET transports set `publicApiAccess: "site-only"` and retain `siteDataAccess: "allowed"`; the public host returns `404` even with an API key. Use the existing credentialed site/preview gates, omit public/admin/manual probe metadata, and do not enroll these routes in public OpenAPI/Postman artifacts. See [Internal Detail Snapshot Inputs](./worker-infrastructure.md#internal-detail-snapshot-inputs).
+- Internal site-only GET transports set `publicApiAccess: "site-only"` and retain `siteDataAccess: "allowed"`; the public host returns `404` even with an API key. Use the existing credentialed site/preview gates, omit public/admin/manual probe metadata, and do not enroll these routes in public OpenAPI/Postman artifacts. See [Internal Detail Snapshot Inputs](process/worker-infrastructure-appendix.md#internal-detail-snapshot-inputs).
 - Admin routes live on `ops-api.pharos.watch` or the same-origin `ops.pharos.watch/api/admin/*` Pages proxy after Cloudflare Access authentication.
 - Mutating admin handlers must require `X-Pharos-Admin: 1`; idempotent mutations should use the existing idempotency wrappers.
 

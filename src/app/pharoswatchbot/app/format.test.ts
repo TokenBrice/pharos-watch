@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeEffectiveSource } from "./format";
-import { makeSubscribedCoin as makeCoin } from "./mini-app-test-fixtures";
+import { makeSubscribedCoin as makeCoin } from "@shared/test-utils/telegram-mini-app-state";
 import type { FollowedPreset, TelegramMiniAppState } from "./types";
 
 type GlobalAlerts = TelegramMiniAppState["subscriber"]["globalAlerts"];

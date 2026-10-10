@@ -116,8 +116,8 @@ describe("adaptUsddLatestCollateral", () => {
     expect(result.metadata).toMatchObject({
       vaultCount: 7,
       trackedVaultCount: 5,
-      sourceTimestamp: 1_774_281_600,
-      freshnessMode: "verified",
+      freshnessMode: "unverified",
+      details: { historyTimestamp: 1_774_281_600 },
       stableVaultUsd: expect.closeTo(82_982_829.02, 2),
     });
     expect(result.metadata?.redemption).toBeUndefined();
@@ -149,14 +149,24 @@ describe("adaptUsddLatestCollateral", () => {
       unknownExposurePct: 25,
       freshnessMode: "unverified",
       details: {
-        freshnessSource: "collateral-history",
-        freshnessReason: "history timestamp unavailable",
+        freshnessSource: "latest-collateral",
+        freshnessReason: "composition timestamp unavailable; collateral-history is not joined to this snapshot",
       },
     });
   });
 
   it("throws when the USDD feed reports a non-success code", () => {
     expect(() => adaptUsddLatestCollateral({ code: 500 })).toThrow("returned code");
+  });
+
+  it("does not date an undated composition using a newer unrelated history generation", () => {
+    const latest = collateralResponse([{ vaultType: "PSM-USDT-A", lockedValue: 100 }]);
+    const old = adaptUsddLatestCollateral(latest, historyResponse(HISTORY_TIMESTAMP));
+    const newer = adaptUsddLatestCollateral(latest, historyResponse(HISTORY_TIMESTAMP + 604_800_000));
+    expect(newer.slices).toEqual(old.slices);
+    expect(newer.metadata?.sourceTimestamp).toBeUndefined();
+    expect(newer.metadata?.freshnessMode).toBe("unverified");
+    expect(newer.metadata?.details?.historyTimestamp).toBe((HISTORY_TIMESTAMP + 604_800_000) / 1000);
   });
 });
 

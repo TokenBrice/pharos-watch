@@ -1,16 +1,23 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { buildRegisteredDexExecutionTarget, hasRegisteredDexExecutionTargetOutput } from "../../dex-liquidity/execution-target-registry";
 import type { DexExecutionTargetFactoryInput } from "../../dex-liquidity/execution-target-registry";
+import { makeDexExecutionTargetFactoryInput } from "../../../test-helpers/__shared/dex-execution-target";
+import { buildPoolExecutionCapability } from "../../dex-liquidity/process-pool-execution-capability";
 import { buildQuoterV2RegisteredExecutionTarget } from "../../dex-liquidity/execution-targets/quoter-v2";
 import { buildUniswapV4RegisteredExecutionTarget } from "../../dex-liquidity/execution-targets/uniswap-v4";
 import {
   buildUniswapV4ExecutionCandidateKey,
   buildUniV3ExecutionCandidateKey,
 } from "../inventory";
+import type { UniswapV4ExecutionCandidate } from "../inventory";
 import {
   UNISWAP_V4_HOOK_FREE_ADDRESS,
   computeUniswapV4PoolId,
 } from "../uniswap-v4";
+
+vi.mock("../../dex-liquidity/execution-targets/quoter-v2", { spy: true });
+vi.mock("../../dex-liquidity/execution-targets/uniswap-v4", { spy: true });
 
 const TOKEN0 = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const TOKEN1 = "0xdac17f958d2ee523a2206206994597c13d831ec7";
@@ -27,9 +34,11 @@ function factoryInput(
   protocol: "uniswap-v3" | "uniswap-v4",
   pool: string,
 ): DexExecutionTargetFactoryInput {
+  const input = makeDexExecutionTargetFactoryInput("ethereum", protocol);
   return {
-    stablecoinId: "usdc-circle",
+    ...input,
     context: {
+      ...input.context,
       uniV3ExecutionCandidates: new Map(),
       uniswapV4ExecutionCandidates: new Map(),
       chainAddressToId: new Map([
@@ -42,8 +51,9 @@ function factoryInput(
         ["usdt-tether", 1],
       ]),
       measuredTargetCapturedAt: 1_785_000_000,
-    } as unknown as DexExecutionTargetFactoryInput["context"],
+    },
     identity: {
+      ...input.identity,
       protocol,
       chainNorm: "ethereum",
       pool: {
@@ -64,14 +74,57 @@ function factoryInput(
         exposure: "single",
         count: 2,
       },
-    } as DexExecutionTargetFactoryInput["identity"],
+    },
     enrichment: {
+      ...input.enrichment,
       rawContribTvl: 1_000_000,
-    } as DexExecutionTargetFactoryInput["enrichment"],
+    },
   };
 }
 
 describe("registered concentrated execution-target factories", () => {
+  it.each([
+    ["uniswap-v3", false], ["uniswap-v3", true],
+    ["uniswap-v4", false], ["uniswap-v4", true],
+  ] as const)("resolves primary %s once with resolved=%s", (protocol, resolved) => {
+    const input = factoryInput(protocol, protocol === "uniswap-v3" ? V3_POOL : V4_POOL);
+    if (resolved) {
+      const tokens = [{ address: TOKEN0, symbol: "USDC", decimals: 6 }, { address: TOKEN1, symbol: "USDT", decimals: 6 }] as const;
+      if (protocol === "uniswap-v3") {
+        input.context.uniV3ExecutionCandidates.set(buildUniV3ExecutionCandidateKey("ethereum", [TOKEN0, TOKEN1], 100)!, [
+          { chain: "ethereum", poolAddress: V3_POOL, feePips: 100, tvlUsd: 1_000_000, token0Price: 1, token1Price: 1, tokens },
+        ]);
+      } else {
+        const candidates = new Map<string, readonly UniswapV4ExecutionCandidate[]>();
+        candidates.set(buildUniswapV4ExecutionCandidateKey("ethereum", [TOKEN0, TOKEN1], 100)!, [
+          { chain: "ethereum", poolId: V4_POOL, feePips: 100, tickSpacing: 1, hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+            activeLiquidity: "1000000", tvlUsd: 1_000_000, token0Price: 1, token1Price: 1, tokens },
+        ]);
+        input.context.uniswapV4ExecutionCandidates = candidates;
+      }
+    }
+    const leaf = protocol === "uniswap-v3" ? buildQuoterV2RegisteredExecutionTarget : buildUniswapV4RegisteredExecutionTarget;
+    const expected = leaf(input);
+    vi.mocked(buildQuoterV2RegisteredExecutionTarget).mockClear();
+    vi.mocked(buildUniswapV4RegisteredExecutionTarget).mockClear();
+    const result = buildPoolExecutionCapability(input.context, input.identity, input.enrichment, input.stablecoinId);
+    expect(result).toEqual(expected);
+    expect(result.measuredExecutionTarget != null).toBe(resolved);
+    expect(result.executionCapabilityGate?.reason).toBe(resolved ? undefined : "target-unresolved");
+    expect(buildQuoterV2RegisteredExecutionTarget).toHaveBeenCalledTimes(1);
+    expect(buildUniswapV4RegisteredExecutionTarget).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains explicit undefined overwrites in closed dispatch", () => {
+    vi.mocked(buildQuoterV2RegisteredExecutionTarget).mockReturnValueOnce({
+      executionCapabilityGate: { family: "measured-execution", reason: "target-unresolved" },
+    });
+    vi.mocked(buildUniswapV4RegisteredExecutionTarget).mockReturnValueOnce({ executionCapabilityGate: undefined });
+    const output = buildRegisteredDexExecutionTarget(factoryInput("uniswap-v4", V4_POOL));
+    expect(output).toStrictEqual({ executionCapabilityGate: undefined });
+    expect(hasRegisteredDexExecutionTargetOutput(output)).toBe(false);
+  });
+
   it.each([-222031.942086, 0, 2514.771234, 50_000_000])(
     "admits the real thUSD exact PoolId independently of indexed TVL %s",
     (tvlUsd) => {

@@ -35,6 +35,7 @@ export function projectReserveLookThroughClientSummary(
   parentById: ReadonlyMap<string, StablecoinMeta> | undefined,
 ): ReserveLookThroughClientSummary | null {
   const slices = coin.reserves ?? [];
+  if (coin.reserveReview?.scope != null && coin.reserveReview.scope !== "full-composition") return null;
   const slice = slices.length === 1 ? slices[0] : undefined;
   if (!slice || !parentById) return null;
   if (slice.depType !== "wrapper" || !slice.coinId || slice.coinId === coin.id) return null;
@@ -42,6 +43,7 @@ export function projectReserveLookThroughClientSummary(
   const parent = parentById.get(slice.coinId);
   const parentSlices = parent?.reserves ?? [];
   if (!parent || !parentSlices.some((row) => Number.isFinite(row.pct) && row.pct > 0)) return null;
+  if (parent.reserveReview?.scope != null && parent.reserveReview.scope !== "full-composition") return null;
 
   const quality = projectReserveQualityClientSummary(parent);
   const rows: ReserveLookThroughSliceClientRow[] = quality

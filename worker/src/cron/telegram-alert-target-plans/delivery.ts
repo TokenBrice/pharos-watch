@@ -144,11 +144,11 @@ export function buildSetBasedPendingHandoffStatements(
       .bind(nowSec, nowSec, sourceEventId, generation, targetKeysJson),
     db
       .prepare(
-        `UPDATE telegram_pending_alerts AS pending
+        `UPDATE telegram_pending_alerts AS pending INDEXED BY idx_tpa_dedupe_key
             SET not_before_at = CASE
               WHEN pending.not_before_at IS NULL THEN (
                 SELECT MAX(existing.not_before_at)
-                  FROM telegram_pending_alerts existing
+                  FROM telegram_pending_alerts existing INDEXED BY idx_telegram_pending_alerts_chat_id
                  WHERE existing.chat_id = pending.chat_id
                    AND existing.id <> pending.id
                    AND existing.delivery_state = 'pending'
@@ -157,7 +157,7 @@ export function buildSetBasedPendingHandoffStatements(
               )
               ELSE MAX(pending.not_before_at, COALESCE((
                 SELECT MAX(existing.not_before_at)
-                  FROM telegram_pending_alerts existing
+                  FROM telegram_pending_alerts existing INDEXED BY idx_telegram_pending_alerts_chat_id
                  WHERE existing.chat_id = pending.chat_id
                    AND existing.id <> pending.id
                    AND existing.delivery_state = 'pending'

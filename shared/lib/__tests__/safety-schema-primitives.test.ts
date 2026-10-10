@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import {
   BaseInputGenerationIdSchema,
@@ -7,11 +8,32 @@ import {
   Sha256Schema,
   StrictIsoDateSchema,
   UnixSecondsSchema,
+  issue,
 } from "@shared/types/safety-schema-primitives";
 
 const SHA256 = "a".repeat(64);
 
 describe("canonical safety schema primitives", () => {
+  it("preserves complete ordered custom issues with root and nested paths", () => {
+    const schema = z.object({
+      rows: z.array(z.object({ valid: z.boolean() }).superRefine((row, ctx) => {
+        if (row.valid) return;
+        issue(ctx, undefined, "root failure");
+        issue(ctx, ["valid"], "field failure");
+        issue(ctx, ["details", 2], "dynamic failure");
+      })),
+    });
+    expect(schema.parse({ rows: [{ valid: true }] })).toEqual({ rows: [{ valid: true }] });
+    const result = schema.safeParse({ rows: [{ valid: true }, { valid: false }] });
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error("Expected refinement rejection");
+    expect(result.error.issues).toEqual([
+      { code: "custom", path: ["rows", 1], message: "root failure" },
+      { code: "custom", path: ["rows", 1, "valid"], message: "field failure" },
+      { code: "custom", path: ["rows", 1, "details", 2], message: "dynamic failure" },
+    ]);
+  });
+
   it("rejects surrounding whitespace instead of silently normalizing it", () => {
     expect(CanonicalTextSchema.safeParse("canonical").success).toBe(true);
     expect(CanonicalTextSchema.safeParse(" canonical").success).toBe(false);

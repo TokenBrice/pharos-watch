@@ -150,76 +150,6 @@ function addDocumentedBoundSourceRefs(entries: RedemptionBackstopRegistryEntry[]
 
 export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
   ...defineBatch(
-    [
-      "usdt-tether",
-      "usdc-circle",
-      "pyusd-paypal",
-      "fdusd-first-digital",
-      "rlusd-ripple",
-      "eurc-circle",
-      "usdp-paxos",
-      "gusd-gemini",
-      "usdg-paxos",
-      "usdx-hex-trust",
-      "xusd-straitsx",
-      "xsgd-straitsx",
-      "euri-banking-circle",
-      "usdq-quantoz",
-      "eurq-quantoz",
-      "usd1-world-liberty-financial",
-      "ausd-agora",
-      "usdo-openeden",
-      "usdm-moneta",
-      "usdcv-societe-generale-forge",
-      "usdh-native-markets",
-      "fidd-fidelity",
-      "usdgo-osl",
-      "wusd-worldwide",
-      "sbc-brale",
-      "m-m0",
-      "usda-anzens",
-      "eurcv-societe-generale-forge",
-      "aeur-anchored-coins",
-      "eure-monerium",
-      "usdr-stablr",
-      "eurr-stablr",
-      "europ-schuman",
-      "eurau-allunity",
-      "chfau-allunity",
-      "tusd-trueusd",
-      "eurs-stasis",
-      "gyen-gyen",
-      "brz-transfero",
-      "tryb-bilira",
-      "idrt-rupiah-token",
-      "jpyc-jpyc",
-      "cadc-cad-coin",
-      "tgbp-tokenised",
-      "vchf-vnx",
-      "vgbp-vnx",
-      "audd-novatti",
-      "axcnh-anchorx",
-      "cash-phantom",
-      "musd-metamask",
-      "a7a5-old-vector",
-      "ylds-figure",
-      "usat-tether",
-      "usdtb-ethena",
-      "pusd-plume",
-      "gusd-gate",
-      "usyc-hashnote",
-      "usdn-noble",
-      "reur-royal-euro",
-      "kgst-kyrgyz-som",
-      "audx-aussie-dollar-token",
-      "cngn-compliant-naira",
-      "brl1-brl1",
-      "wars-argentine-peso",
-    ],
-    issuerBase,
-    { sourceFilePath: SOURCE_FILE_PATH },
-  ),
-  ...defineBatch(
     ["mxne-real-mxn"],
     {
       ...issuerBase,
@@ -300,10 +230,7 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
       ],
     },
     { sourceFilePath: SOURCE_FILE_PATH },
-  ).map((entry) => ({
-    ...entry,
-    overrideReason: "Primary-terms review downgrades unsupported documented-bound route and capacity claims.",
-  })),
+  ),
   ...addDocumentedBoundSourceRefs(
     defineBatch(
       ["zarp-zarp", "cetes-etherfuse"],
@@ -313,10 +240,7 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
       },
       { sourceFilePath: SOURCE_FILE_PATH },
     ),
-  ).map((entry) => ({
-    ...entry,
-    overrideReason: "Remediation review upgrades offchain issuer default to documented-bound capacity.",
-  })),
+  ),
   ...addDocumentedBoundSourceRefs(
     defineBatch(
       [
@@ -357,7 +281,6 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
                 ),
               }
             : entry.config,
-    overrideReason: "Non-USD review cohort upgrades issuer defaults to documented-bound capacity.",
   })),
   ...addDocumentedBoundSourceRefs(
     defineBatch(
@@ -413,6 +336,5 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
               ],
             }
         : entry.config,
-    overrideReason: "Direct-redemption review cohort upgrades issuer defaults to documented-bound capacity.",
   })),
 ];

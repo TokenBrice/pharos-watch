@@ -117,7 +117,7 @@ When `type === "data-correction"` and a valid `stablecoinId` is provided, the wo
 | Output | Source |
 |--------|--------|
 | Cached price | `coin.price` from the normalized stablecoins cache payload (`N/A` when absent) |
-| USD circulating market cap | `getCirculatingRaw(coin)` from the normalized cache payload; DefiLlama list values are already USD-denominated. Emitted only when greater than 0 |
+| USD circulating market cap | `getCirculatingRawOrNull(coin)` from the normalized cache payload; DefiLlama list values are already USD-denominated. Always emitted: null renders `N/A (supply unavailable)`; observed zero still formats |
 | Peg deviation | `((price - pegReference) / pegReference) * 100` using the tracked peg currency |
 | Peg reference | `getPegReference()` on the tracked peg type, annotated with its rate source (`FX`, `median`, or `fallback`) |
 | Depeg threshold | `getDepegThresholdBps()` for the normalized peg type, in bps |

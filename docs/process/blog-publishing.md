@@ -76,11 +76,11 @@ linked from the nav `Resources` menu's `Updates` column (`src/lib/nav-config.ts`
 It shares nothing with the blog contract — separate registry, no post bodies,
 no RSS feed.
 
-- **Registry:** one file per week at `src/data/changelogs/<dateRange.to>.ts`
-  exporting `entry`, imported into the `src/data/changelogs/index.ts` barrel,
+- **Registry:** one JSON record per week at `src/data/changelogs/<dateRange.to>.json`,
+  statically imported by the generated `src/data/changelogs/index.ts` barrel,
   which re-sorts newest-first. Shape and per-field rules live in
-  `src/data/changelogs/types.ts`; the guard is
-  `src/data/changelogs/__tests__/index.test.ts`.
+  `src/data/changelogs/types.ts`; `npm run check:editorial-content` validates
+  metadata, source registration and internal references before build.
 - **The filename is data.** It must equal `dateRange.to`, and every dated file
   must be registered in the barrel. Both dates must be `YYYY-MM-DD` — the
   barrel sort and the page's year dividers compare them lexicographically, so
@@ -90,8 +90,8 @@ no RSS feed.
   noise-filtered total for the window and may be larger. Git is the archive —
   do not re-expand the array to close the gap.
 - **Entry copy limits:** `summary[].href` is an internal absolute path only
-  (external URLs are rejected by the type and the test), and `fieldNotes` — the
-  optional editor's note — is capped at 80 words.
+  (external or unknown routes fail the editorial-content check), and `fieldNotes` —
+  the optional editor's note — is capped at 80 words.
 - **Week anchors are public API.** Each entry renders with `id="week-<to>"`,
   and the page's `ItemList` JSON-LD publishes that same fragment as every
   week's `url` and `mainEntityOfPage`. Changing the id format breaks the
@@ -99,7 +99,7 @@ no RSS feed.
 
 ## Publish a changelog week
 
-1. **Add the entry file** and its barrel import.
+1. **Add the JSON entry file** and regenerate its barrel with `node --import tsx scripts/maintenance/generate-changelog-registry.ts`; run `npm run check:editorial-content`.
 2. **Refresh the Markdown twin.** `/changelog/` serves a generated `.md`
    variant, and its *whole index* is snapshot-tested against
    `scripts/__tests__/fixtures/markdown/changelog-index.md`. Every new week —

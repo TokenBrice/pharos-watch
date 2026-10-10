@@ -4,8 +4,8 @@ export function deriveSupplyFromMarketCap(
   marketCapUsd: number | null | undefined,
   priceUsd: number | null | undefined,
 ): number | null {
-  if (typeof marketCapUsd !== "number" || marketCapUsd <= 0) return null;
-  if (typeof priceUsd !== "number" || priceUsd <= 0) return null;
+  if (typeof marketCapUsd !== "number" || !Number.isFinite(marketCapUsd) || marketCapUsd < 0) return null;
+  if (typeof priceUsd !== "number" || !Number.isFinite(priceUsd) || priceUsd <= 0) return null;
   return marketCapUsd / priceUsd;
 }
 

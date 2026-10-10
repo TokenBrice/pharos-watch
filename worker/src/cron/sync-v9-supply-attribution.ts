@@ -12,7 +12,7 @@ import {
 } from "../lib/safety-score-v9/supply-attribution-journal-store";
 import {
   captureSafetyScoreV9SupplyAttribution,
-} from "../lib/safety-score-v9/supply-attribution";
+} from "../lib/safety-score-v9/supply-attribution-capture";
 import {
   parseSafetyScoreV9SupplyAttributionSource,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,

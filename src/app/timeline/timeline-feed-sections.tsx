@@ -12,12 +12,14 @@ import type { DigestedDay } from "@/lib/tape-digest";
 import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
 import type { ActiveFilterChip } from "./timeline-controller";
 import { getLogoSrc } from "@/lib/logos";
+import type { ApiMeta } from "@/lib/api";
+import { deriveDataHealth } from "@/lib/data-health";
+import { CRON_TAPE } from "@/lib/cron-intervals";
 import {
   eventDomId,
   formatDayLabel,
   openIncidentPrefix,
   quietDayEventTokens,
-  TAPE_FRESH_WINDOW_MS,
 } from "./timeline-feed-helpers";
 
 export function EventSkeleton() {
@@ -83,6 +85,8 @@ interface SummaryBandProps {
   windowLabel: string;
   severityLabel: string;
   dataUpdatedAt: number;
+  meta: ApiMeta | null;
+  error: Error | null;
   nowMs: number;
   lastEventTs: number | null;
   phosphor: boolean;
@@ -90,7 +94,7 @@ interface SummaryBandProps {
   onTogglePhosphor: () => void;
 }
 
-export function SummaryBand({ loadedCount, totalCount, droppedRows, openCount, windowLabel, severityLabel, dataUpdatedAt, nowMs, lastEventTs, phosphor, showPhosphorToggle, onTogglePhosphor }: SummaryBandProps) {
+export function SummaryBand({ loadedCount, totalCount, droppedRows, openCount, windowLabel, severityLabel, dataUpdatedAt, meta, error, nowMs, lastEventTs, phosphor, showPhosphorToggle, onTogglePhosphor }: SummaryBandProps) {
   const showsPartial = totalCount != null && totalCount > loadedCount;
   const countNode = showsPartial ? (
     <span className="font-semibold text-foreground">
@@ -119,11 +123,11 @@ export function SummaryBand({ loadedCount, totalCount, droppedRows, openCount, w
   }
   parts.push(<span key="window">{windowLabel}</span>);
   parts.push(<span key="severity">{severityLabel}</span>);
-  const isFresh = dataUpdatedAt > 0 && nowMs - dataUpdatedAt < TAPE_FRESH_WINDOW_MS;
-  if (dataUpdatedAt > 0) {
+  const health = deriveDataHealth({ label: "Timeline", staleTime: CRON_TAPE, dataUpdatedAt, meta, error, hasData: dataUpdatedAt > 0 }, nowMs);
+  if (health.dataUpdatedAt > 0) {
     parts.push(
-      <span key="updated" className="inline-flex items-center gap-1.5">
-        {isFresh ? (
+      <span key="updated" title={health.message} className="inline-flex items-center gap-1.5">
+        {health.state === "fresh" ? (
           <span
             aria-hidden="true"
             className="font-mono leading-none text-emerald-600 motion-safe:animate-pulse motion-reduce:animate-none dark:text-emerald-400"
@@ -131,7 +135,7 @@ export function SummaryBand({ loadedCount, totalCount, droppedRows, openCount, w
             ▌
           </span>
         ) : null}
-        <span>Updated {timeAgo(Math.floor(dataUpdatedAt / 1000))}</span>
+        <span>Updated {timeAgo(Math.floor(health.dataUpdatedAt / 1000), nowMs / 1000)}</span>
       </span>,
     );
   }

@@ -84,7 +84,7 @@ function buildChainsFreshnessMeta(
   reportCards: ChainsDependencyMeta,
   safetyScoreIdentity: SafetyScorePublicationIdentity | null,
 ): { headers: Record<string, string>; meta: ChainsFreshnessMeta } {
-  const freshness = buildFreshnessMeta(updatedAt, CHAINS_FRESHNESS_MAX_AGE_SEC, undefined, {
+  const freshness = buildFreshnessMeta(updatedAt, CHAINS_FRESHNESS_MAX_AGE_SEC, "chains", {
     freshBudgetSec: CHAINS_FRESHNESS_MAX_AGE_SEC,
     degradedBudgetSec: CHAINS_STALE_THRESHOLD_SEC,
   });

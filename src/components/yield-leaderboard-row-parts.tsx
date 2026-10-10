@@ -21,14 +21,14 @@ import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { YieldAccessStructure } from "@/components/yield-access-structure";
 import { PysBreakdown } from "@/components/pys-breakdown";
-import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
+import { REPORT_CARD_GRADE_COLORS, getPysColor } from "@shared/lib/classification";
 import {
   YIELD_OPPORTUNITY_SAFETY_DESCRIPTION,
   isOpportunityDerivedSafety,
 } from "@shared/lib/yield-opportunity-provenance";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import { YIELD_BENCHMARK_KEY_CURRENCY } from "@shared/types/yield";
-import { computePysBreakdown, formatYieldWarningSignal, formatYieldWarningSignalDescription, getPysColor } from "@/lib/yield-constants";
+import { computePysBreakdown, formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
 import {
   formatYieldSourceRiskSummary,
   getYieldSourceDepthDisplay,
@@ -516,7 +516,8 @@ export function YieldExpandedDetails({
       {row.pharosYieldScore !== null ? (
         <YieldWhyPysStrip
           benchmarkSpread={breakdown.benchmarkSpread}
-          benchmarkLabel={row.benchmarkLabel}
+          benchmarkLabel={benchmark.label}
+          benchmarkRate={benchmark.rate}
           stabilityPct={stabilityPct}
           sustainabilityMult={breakdown.sustainabilityMult}
           grade={grade}

@@ -9,9 +9,9 @@ export const CURVE_STABLESWAP_DEPLOYMENT = {
   registryCodeHash: "0x13d7cfcf1cef4bf310fa544567a427771c9be2c16bbf2c6be845d3d5f4cc5f22",
   lpTokenAddress: "0x6c3f90f043a72fa612cbac8115ee7e52bde6e490",
   poolTokens: [
-    { address: "0x6b175474e89094c44da98b954eedeac495271d0f", symbol: "DAI", decimals: 18 },
-    { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6 },
-    { address: "0xdac17f958d2ee523a2206206994597c13d831ec7", symbol: "USDT", decimals: 6 },
+    { address: "0x6b175474e89094c44da98b954eedeac495271d0f", symbol: "DAI", decimals: 18, trackedAssetId: "dai-makerdao" },
+    { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6, trackedAssetId: "usdc-circle" },
+    { address: "0xdac17f958d2ee523a2206206994597c13d831ec7", symbol: "USDT", decimals: 6, trackedAssetId: "usdt-tether" },
   ],
 } as const;
 

@@ -145,27 +145,11 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
         // Sentinel-backed lanes attest their own published generation; without
         // one the reader can only fall back and must publish a degraded quality
         // verdict, so the steady-state fixture carries them.
-        {
-          key: "freshness:dex-liquidity",
-          updated_at: now - dexAge,
-          value: JSON.stringify({ updatedAt: now - dexAge, source: "sync-dex-liquidity", publishStatus: "ok" }),
-        },
+        { key: "freshness:dex-liquidity", updated_at: now - dexAge, value: JSON.stringify({ updatedAt: now - dexAge, source: "sync-dex-liquidity", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
         ...(yieldSentinelAge == null
           ? []
-          : [{
-              key: "freshness:yield-data",
-              updated_at: now - yieldSentinelAge,
-              value: JSON.stringify({
-                updatedAt: now - yieldSentinelAge,
-                source: "sync-yield-data",
-                publishStatus: "ok",
-              }),
-            }]),
-        {
-          key: "freshness:dews",
-          updated_at: now - 60,
-          value: JSON.stringify({ updatedAt: now - 60, source: "compute-dews", publishStatus: "ok" }),
-        },
+          : [{ key: "freshness:yield-data", updated_at: now - yieldSentinelAge, value: JSON.stringify({ updatedAt: now - yieldSentinelAge, source: "sync-yield-data", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" }]),
+        { key: "freshness:dews", updated_at: now - 60, value: JSON.stringify({ updatedAt: now - 60, source: "compute-dews", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
         ...extraCacheRows,
       ],
     },
@@ -314,21 +298,18 @@ describe("handleHealth", () => {
 
   it("serves a fresh public-health projection from one snapshot read", async () => {
     // A healthy cached aggregate still reads delivery evidence on this request.
+    // Pin the clock: the handler stamps its own response time, so a real
+    // second boundary between the two handleHealth calls would flake.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now());
     const now = Math.floor(Date.now() / 1000);
     const row = makeRawStatusSnapshotRow(now, 60);
     const snapshot = JSON.parse(row.value) as Record<string, unknown>;
-    snapshot.publicHealth = {
-      status: "healthy",
-      timestamp: now - 60,
-      warnings: [],
-      caches: {},
-      blacklist: {},
-      mintBurn: {},
-      circuits: {},
-      stablecoinPublication: null,
-      activePriceCoverage: null,
-    };
-    (snapshot.publicHealth as Record<string, unknown>).schedulerLiveness = (snapshot.raw as Record<string, unknown>).schedulerLiveness;
+    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    expect(publicHealth.status).toBe("healthy");
+    expect(publicHealth.caches["fx-rates"].healthy).toBe(true);
+    expect(publicHealth.activePriceCoverage).toMatchObject({ status: "complete" });
+    snapshot.publicHealth = publicHealth;
     row.value = JSON.stringify(snapshot);
     const db = buildStatusD1Scenario({
       sections: [],
@@ -341,21 +322,12 @@ describe("handleHealth", () => {
     });
 
     const response = await handleHealth(db);
-    const body = await response.json() as { status: string; timestamp: number };
+    const body = await response.json() as HealthResponse;
 
-    expect(body).toMatchObject({
-      status: "healthy",
-      timestamp: now,
-      warnings: [],
-      caches: {},
-      blacklist: {},
-      mintBurn: {},
-      circuits: {},
-      stablecoinPublication: null,
-      activePriceCoverage: null,
-    });
+    expect(body).toMatchObject({ ...publicHealth, timestamp: now });
     expect(db.getHistory()).toHaveLength(2);
     db.assertAllMatchesUsed();
+    vi.useRealTimers();
   });
   it("detects a stall from live starts despite a healthy fresh snapshot", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -461,21 +433,9 @@ describe("handleHealth", () => {
       {
         match: "cache WHERE key IN",
         rows: [
-          {
-            key: "freshness:dex-liquidity",
-            updated_at: now - 60,
-            value: JSON.stringify({ updatedAt: now - 60, source: "sync-dex-liquidity", publishStatus: "ok" }),
-          },
-          {
-            key: "freshness:yield-data",
-            updated_at: now - 60,
-            value: JSON.stringify({ updatedAt: now - 60, source: "sync-yield-data", publishStatus: "ok" }),
-          },
-          {
-            key: "freshness:dews",
-            updated_at: now - 60,
-            value: JSON.stringify({ updatedAt: now - 60, source: "compute-dews", publishStatus: "ok" }),
-          },
+          { key: "freshness:dex-liquidity", updated_at: now - 60, value: JSON.stringify({ updatedAt: now - 60, source: "sync-dex-liquidity", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
+          { key: "freshness:yield-data", updated_at: now - 60, value: JSON.stringify({ updatedAt: now - 60, source: "sync-yield-data", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
+          { key: "freshness:dews", updated_at: now - 60, value: JSON.stringify({ updatedAt: now - 60, source: "compute-dews", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
         ],
       },
       { match: "cache", rows: [] },
@@ -938,33 +898,9 @@ describe("handleHealth", () => {
     const db = makeHealthyHealthDb(now, {
       dexAge: 45,
       extraCacheRows: [
-        {
-          key: "freshness:dex-liquidity",
-          updated_at: now - 120,
-          value: JSON.stringify({
-            updatedAt: now - 120,
-            source: "sync-yield-data",
-            publishStatus: "ok",
-          }),
-        },
-        {
-          key: "freshness:yield-data",
-          updated_at: now - 180,
-          value: JSON.stringify({
-            updatedAt: now - 180,
-            source: "sync-yield-data",
-            publishStatus: "ok",
-          }),
-        },
-        {
-          key: "freshness:dews",
-          updated_at: now - 240,
-          value: JSON.stringify({
-            updatedAt: now - 240,
-            source: "compute-dews",
-            publishStatus: "ok",
-          }),
-        },
+        { key: "freshness:dex-liquidity", updated_at: now - 120, value: JSON.stringify({ updatedAt: now - 120, source: "sync-yield-data", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
+        { key: "freshness:yield-data", updated_at: now - 180, value: JSON.stringify({ updatedAt: now - 180, source: "sync-yield-data", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
+        { key: "freshness:dews", updated_at: now - 240, value: JSON.stringify({ updatedAt: now - 240, source: "compute-dews", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
       ],
     });
 

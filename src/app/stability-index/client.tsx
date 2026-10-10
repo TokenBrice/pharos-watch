@@ -48,7 +48,10 @@ export function StabilityIndexClient() {
 
   const beamDimmerLanes = useMemo(() => buildPsiBeamDimmers(componentData), [componentData]);
 
-  const historyStats = useMemo(() => buildPsiHistoryStats(history ?? []), [history]);
+  const historyStats = useMemo(
+    () => buildPsiHistoryStats(history ?? [], current?.computedAt ?? null),
+    [history, current?.computedAt],
+  );
 
   const eventTimelineRows = useMemo(() => buildPsiEventTimelineRows(chartData), [chartData]);
 

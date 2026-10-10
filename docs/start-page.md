@@ -62,6 +62,7 @@ The page consumes five exported datasets:
 - `START_HERE_SHORTCUTS`
 
 These are the canonical source of truth for the route destinations, copy, and grouping used by the guided route sections.
+Safety Score cadence derives from `SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC`: publication is half-hourly, not continuous; the grade-band explanation remains in the same row.
 
 ---
 
@@ -119,7 +120,7 @@ The curated route registry is internal Pharos destinations only. The route's two
 Current primary goal routes:
 
 - `/`
-- `/stablecoins/usd/`
+- `/stablecoins/` (generic directory/category discovery, including non-USD pegs)
 - `/portfolio/`
 - `/yield/`
 - `/pharoswatchbot/`

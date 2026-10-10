@@ -63,6 +63,26 @@ describe("remote-d1 helpers", () => {
     expect(existsSync(dirname(sqlPath))).toBe(false);
   });
 
+  it("retains a single remote import envelope without chunking an atomic statement group", () => {
+    const imported = JSON.stringify([{
+      success: true, results: [{ "Total queries executed": 2, "Rows read": 0,
+        "Rows written": 2, "Database size (MB)": "0.03" }],
+      finalBookmark: "00000000-00000001-00000002-00000003",
+      meta: { duration: 1.23, changes: 2, rows_read: 0, rows_written: 2, size_after: 32768 },
+    }]);
+    let path = "";
+    execFileSyncMock.mockImplementation((_file, args) => {
+      expect(args).toContain("--remote");
+      path = args[args.indexOf("--file") + 1]!;
+      expect(readFileSync(path, "utf8")).toBe("DELETE FROM cache;\nINSERT INTO cache VALUES ('x','x',1);");
+      return imported;
+    });
+    const client = createD1Client("stablecoin-db", { batchSize: 1 });
+    expect(client.executeStatementsRaw!(["DELETE FROM cache;", "INSERT INTO cache VALUES ('x','x',1);"], "atomic-test")).toBe(imported);
+    expect(execFileSyncMock).toHaveBeenCalledTimes(1);
+    expect(existsSync(dirname(path))).toBe(false);
+  });
+
   it("does not execute an empty statement list", () => {
     createD1Client("stablecoin-db").executeStatements([], "test-remote-d1");
     expect(execFileSyncMock).not.toHaveBeenCalled();

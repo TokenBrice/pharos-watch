@@ -30,17 +30,12 @@ live-overlap dedupe.
 
 ## Removal sequence
 
-Browser operators use `https://ops.pharos.watch/admin/` -> Actions. The machine
-calls below go to the operator API host with Cloudflare Access service-token
-headers plus `X-Pharos-Admin: 1`.
+Run the commands below from the repository root with Wrangler authentication. Historical repairs are no longer browser actions; see [one-shot backfills](./one-shot-backfills.md).
 
 1. **Preview (read-only).**
 
    ```bash
-   curl -fsS "https://ops-api.pharos.watch/api/audit-depeg-history?dry-run=true&symbol=USN" \
-     -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-     -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-     -H "X-Pharos-Admin: 1" | jq
+   npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'dry-run=true&symbol=USN' | jq
    ```
 
    Check `totalMatching`, each `auditedEvents[*].verdict`, and the stored
@@ -58,20 +53,16 @@ headers plus `X-Pharos-Admin: 1`.
    stability-index recompute with the deletes in one D1 batch commit:
 
    ```bash
-   curl -fsS -X POST \
-     "https://ops-api.pharos.watch/api/audit-depeg-history?delete=49235,49236,49237,24424,83782" \
-     -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-     -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-     -H "X-Pharos-Admin: 1" \
-     -H "Idempotency-Key: audit-depeg-history-usn-artifacts-2026-09-23" | jq
+   npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'delete=49235,49236,49237,24424,83782' --execute --allow-atomic-import | jq
    ```
 
-   `200` confirms the delete: `deletedEvents` lists the removed rows and
-   `daysRecomputed` the PSI days repaired. `409` (`DDRv2 sealed repair
+   Schedule a maintenance window: the atomic import can briefly make D1 unavailable
+   to the live Worker. A confirmed completed command's `deletedEvents` lists removed
+   rows and `daysRecomputed` the PSI days repaired. `409` (`DDRv2 sealed repair
    required`) lists sealed conflicts and the run must stop for those ids. `500`
-   means the batch commit failed and no partial mutation was left behind. Reuse
-   the same `Idempotency-Key` only to replay the same request; a different
-   request fingerprint under the same key returns `409`.
+   or interruption requires reconciliation; do not infer rollback from a missing
+   response. Follow [receipt cleanup](./one-shot-backfills.md#interruption-and-cleanup)
+   before explicitly resuming; there is no HTTP replay reservation.
 
 4. **Retire the archive.** The `/depeg/<slug>/` pages for the removed rows
    disappear only through the reviewed shrink override:

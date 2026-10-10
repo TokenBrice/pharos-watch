@@ -11,6 +11,13 @@
 export const GT_API_BASE = "https://api.geckoterminal.com/api/v2";
 
 /**
+ * Price evidence never inherits the inventory horizon: a staged row older than
+ * this contributes decayed TVL but no price observation and no retained-pool
+ * price, so dex_prices, DDR and peg-summary only ever see day-fresh prices.
+ */
+export const STAGED_POOL_PRICE_MAX_AGE_HOURS = 24;
+
+/**
  * Pool-type-adjusted TVL multipliers for liquidity score quality weighting.
  * Values are expert-judgment calibration, not measured slippage; last table
  * change 2026-09-23, last reviewed 2026-08-19 (Liquidity v6 Phase 2).

@@ -73,61 +73,36 @@ export async function loadPublishedDexPoolChallengers(
   const publishedCoins = new Set<string>();
   const legacyUsedCoins = new Set<string>();
 
-  let snapshotRows: Array<{
+  // Read the visibility pointer and its exact generation in one SQLite snapshot.
+  // LEFT JOIN preserves authoritative empty pointers during publication cleanup.
+  const joined = await db.prepare(
+    `SELECT snapshots.stablecoin_id, snapshots.snapshot_at, snapshots.published_at,
+            snapshots.has_rows, snapshots.source_coverage_complete,
+            payload.pool_id, payload.chain, payload.protocol, payload.source_family,
+            payload.price_usd, payload.tvl_usd
+       FROM dex_price_challenger_snapshots snapshots
+       LEFT JOIN dex_price_challengers payload
+         ON payload.stablecoin_id = snapshots.stablecoin_id
+        AND payload.snapshot_at = snapshots.snapshot_at
+       WHERE snapshots.stablecoin_id != '__global__'`,
+  ).all<{
     stablecoin_id: string;
     snapshot_at: number;
     published_at: number;
     has_rows: number;
     source_coverage_complete: number;
-  }> = [];
-  const snapshots = await db
-    .prepare(
-      `SELECT stablecoin_id, snapshot_at, published_at, has_rows, source_coverage_complete
-         FROM dex_price_challenger_snapshots
-         WHERE stablecoin_id != '__global__'`,
-    )
-    .all<{
-      stablecoin_id: string;
-      snapshot_at: number;
-      published_at: number;
-      has_rows: number;
-      source_coverage_complete: number;
-    }>();
-  snapshotRows = snapshots.results ?? [];
-
-  const snapshotByCoin = new Map(snapshotRows.map((row) => [row.stablecoin_id, row]));
-
-  let challengerRows: Array<{
-    stablecoin_id: string;
-    snapshot_at: number;
-    pool_id: string;
+    pool_id: string | null;
     chain: string;
     protocol: string;
     source_family: string;
     price_usd: number;
     tvl_usd: number;
-  }> = [];
-  const challengers = await db
-    .prepare(
-      `SELECT stablecoin_id, snapshot_at, pool_id, chain, protocol, source_family, price_usd, tvl_usd
-         FROM dex_price_challengers
-         WHERE stablecoin_id != '__global__'`,
-    )
-    .all<{
-      stablecoin_id: string;
-      snapshot_at: number;
-      pool_id: string;
-      chain: string;
-      protocol: string;
-      source_family: string;
-      price_usd: number;
-      tvl_usd: number;
-    }>();
-  challengerRows = challengers.results ?? [];
-
+  }>();
+  const snapshotByCoin = new Map<string, (NonNullable<typeof joined.results>)[number]>();
   const rowsByCoinAndSnapshot = new Map<string, DexPriceChallengerLoadRow[]>();
-  for (const row of challengerRows) {
-    if (row.snapshot_at == null) continue;
+  for (const row of joined.results ?? []) {
+    snapshotByCoin.set(row.stablecoin_id, row);
+    if (row.pool_id == null) continue;
     const key = `${row.stablecoin_id}:${row.snapshot_at}`;
     const existing = rowsByCoinAndSnapshot.get(key) ?? [];
     existing.push({
@@ -139,12 +114,12 @@ export async function loadPublishedDexPoolChallengers(
       priceUsd: row.price_usd,
       tvlUsd: row.tvl_usd,
       snapshotAt: row.snapshot_at,
-      publishedAt: snapshotByCoin.get(row.stablecoin_id)?.published_at ?? row.snapshot_at,
+      publishedAt: row.published_at,
     });
     rowsByCoinAndSnapshot.set(key, existing);
   }
 
-  for (const snapshot of snapshotRows) {
+  for (const snapshot of snapshotByCoin.values()) {
     const ageSec = nowSec - snapshot.snapshot_at;
     if (ageSec > maxAgeSec) {
       staleSnapshotCoins.push(snapshot.stablecoin_id);

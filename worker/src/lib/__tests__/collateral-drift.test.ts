@@ -18,7 +18,7 @@ describe("collateral score delta detection", () => {
       liveReservesConfig: { adapter: "accountable" },
     }] as unknown as StablecoinMeta[];
     expect(summarizeCollateralDriftFromLiveReserveMap(new Map([["drift-coin", live]]), stablecoins))
-      .toEqual({ driftCoins: expected, fallbackCoins: [] });
+      .toEqual({ driftCoins: expected, fallbackCoins: [], observedIds: ["drift-coin"] });
   });
 
   it("skips one-slice live snapshots in the drift watch", () => {
@@ -69,5 +69,18 @@ describe("collateral score delta detection", () => {
         delta: 37,
       },
     ]);
+    expect(result.observedIds).toEqual(["nusd-neutrl"]);
+  });
+
+  it("limits unavailable members to independent dynamic mixes with a curated comparator", () => {
+    const stablecoins = [
+      { id: "mix", reserves: [{ name: "Cash", pct: 100, risk: "low" }], liveReservesConfig: { adapter: "accountable" } },
+      { id: "single", reserves: [{ name: "Cash", pct: 100, risk: "low" }], liveReservesConfig: { adapter: "chainlink-por" } },
+      { id: "weak", reserves: [{ name: "Cash", pct: 100, risk: "low" }], liveReservesConfig: { adapter: "flying-tulip-ftusd" } },
+      { id: "no-comparator", liveReservesConfig: { adapter: "accountable" } },
+    ] as unknown as StablecoinMeta[];
+    expect(summarizeCollateralDriftFromLiveReserveMap(new Map(), stablecoins)).toEqual({
+      driftCoins: [], fallbackCoins: ["mix"], observedIds: [],
+    });
   });
 });

@@ -1,5 +1,6 @@
 import type { EndpointProbeResult, HealthResponse, StatusResponse } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
 import { buildCommsWorkbenchModel, type CommsWorkbenchModel } from "@/lib/comms-workbench-model";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
 import { STATUS_PRIORITY, getStatusTone } from "@/lib/status/dashboard-presentation";
@@ -103,13 +104,14 @@ function buildDashboardNotices({
     const divergence = healthDiffersFromStatus ? `Public /api/health differs from /api/status (${status}). ` : "";
     const reasons = healthData.warnings.map((warning) => getPublicHealthWarningPresentation(warning, healthData).detail);
     const sync = healthData.mintBurn.sync;
-    if (getPublicMintBurnStatus(sync) !== "healthy" || sync.warning != null || healthData.mintBurn.majorStaleCount > 0) {
+    if (getPublicMintBurnStatus(sync) !== "healthy" || sync.warning != null || (healthData.mintBurn.majorStaleCount != null && healthData.mintBurn.majorStaleCount > 0)) {
       if (sync.warning) reasons.push(sync.warning);
       if (sync.lastSuccessfulSyncAt != null) reasons.push(`Last successful mint/burn sync ${formatElapsedSeconds(Math.max(0, timestamp - sync.lastSuccessfulSyncAt))} ago.`);
-      if (healthData.mintBurn.majorStaleCount > 0) reasons.push(`Impacted majors: ${healthData.mintBurn.staleMajorSymbols.join(", ")}.`);
+      if (healthData.mintBurn.majorStaleCount != null && healthData.mintBurn.majorStaleCount > 0 && healthData.mintBurn.staleMajorSymbols != null) reasons.push(`Impacted majors: ${healthData.mintBurn.staleMajorSymbols.join(", ")}.`);
     }
     if (getBlacklistGapStatus({ missingRatio: healthData.blacklist.missingRatio }) !== "healthy") {
-      reasons.push(`Blacklist gaps tracked by /api/health: ${healthData.blacklist.missingAmounts}.`);
+      reasons.push(healthData.blacklist.missingAmounts == null ? "Blacklist gap evidence unavailable."
+        : `Blacklist gaps tracked by /api/health: ${healthData.blacklist.missingAmounts}.`);
     }
     if (reasons.length === 0) reasons.push(...getImpactedPublicSurfaces(healthData).map((surface) => surface.detail));
     notices.push({
@@ -149,8 +151,8 @@ interface DashboardSectionPriority {
   severity: number;
   publicImpact: number;
   evidenceRisk: number;
-  persistence: number;
-  count: number;
+  persistence: number | null;
+  count: number | null;
 }
 
 function buildSectionPriority({ data, healthData, browserProbeSummary, issueGroups, evidence, commsModel }: {
@@ -162,15 +164,31 @@ function buildSectionPriority({ data, healthData, browserProbeSummary, issueGrou
   commsModel: CommsWorkbenchModel;
 }): Record<DashboardSection["id"], DashboardSectionPriority> {
   const evidencePriority = evidence.state === "stale" || evidence.state === "unavailable" ? 2 : evidence.state === "partial" ? 1 : 0;
+  let cachePriority = 0;
+  let cacheEvidenceRisk = 0;
+  let cacheIssueCount = 0;
+  for (const [key, cache] of Object.entries(data.caches)) {
+    if (getCacheFreshnessRatio(cache) == null) {
+      cacheEvidenceRisk = 1;
+      cacheIssueCount += 1;
+    } else {
+      const priority = STATUS_PRIORITY[getCacheImpactStatus(cache, key)];
+      cachePriority = Math.max(cachePriority, priority);
+      if (priority > 0) cacheIssueCount += 1;
+    }
+  }
   const reliabilityStatus = Math.max(
     STATUS_PRIORITY[data.availabilityStatus],
     healthData ? STATUS_PRIORITY[healthData.status] : 0,
     browserProbeSummary && browserProbeSummary.failCount > 0 ? 1 : 0,
-    data.summary.worstCacheRatio > 2 ? 2 : data.summary.worstCacheRatio > 1.5 ? 1 : 0,
+    cachePriority,
   );
-  const cronStatus = data.summary.availabilityImpactingConsecutiveCronErrors > 0 ? 2
-    : data.summary.availabilityImpactingCronErrors > 0 || data.summary.availabilityImpactingUnhealthyCrons > 0 ? 1
-      : data.summary.degradedCrons > 0 || data.summary.watchUnhealthyCrons > 0 ? 1 : 0;
+  const { availabilityImpactingConsecutiveCronErrors, availabilityImpactingCronErrors, availabilityImpactingUnhealthyCrons, degradedCrons, watchUnhealthyCrons } = data.summary;
+  const cronEvidenceUnavailable = availabilityImpactingConsecutiveCronErrors == null || availabilityImpactingCronErrors == null
+    || availabilityImpactingUnhealthyCrons == null || degradedCrons == null || watchUnhealthyCrons == null;
+  const cronStatus = availabilityImpactingConsecutiveCronErrors != null && availabilityImpactingConsecutiveCronErrors > 0 ? 2
+    : (availabilityImpactingCronErrors != null && availabilityImpactingCronErrors > 0) || (availabilityImpactingUnhealthyCrons != null && availabilityImpactingUnhealthyCrons > 0) ? 1
+      : (degradedCrons != null && degradedCrons > 0) || (watchUnhealthyCrons != null && watchUnhealthyCrons > 0) ? 1 : 0;
   const commsStatus = commsModel.delivery.health === "failed" ? 2 : commsModel.delivery.health === "degraded" ? 1 : 0;
   const pipelineIssues = [...issueGroups.impacting, ...issueGroups.warnings, ...issueGroups.maintenance].filter((issue) => issue.layer === "data-quality");
   return {
@@ -183,20 +201,21 @@ function buildSectionPriority({ data, healthData, browserProbeSummary, issueGrou
       count: pipelineIssues.length,
     },
     crons: {
-      active: cronStatus > 0,
+      active: cronStatus > 0 || cronEvidenceUnavailable,
       severity: cronStatus,
-      publicImpact: data.summary.availabilityImpactingUnhealthyCrons > 0 || data.summary.availabilityImpactingCronErrors > 0 ? 1 : 0,
-      evidenceRisk: 0,
-      persistence: data.summary.availabilityImpactingConsecutiveCronErrors,
-      count: data.summary.availabilityImpactingUnhealthyCrons + data.summary.availabilityImpactingCronErrors + data.summary.degradedCrons + data.summary.watchUnhealthyCrons,
+      publicImpact: (availabilityImpactingUnhealthyCrons != null && availabilityImpactingUnhealthyCrons > 0) || (availabilityImpactingCronErrors != null && availabilityImpactingCronErrors > 0) ? 1 : 0,
+      evidenceRisk: cronEvidenceUnavailable ? 1 : 0,
+      persistence: availabilityImpactingConsecutiveCronErrors,
+      count: availabilityImpactingUnhealthyCrons == null || availabilityImpactingCronErrors == null || degradedCrons == null || watchUnhealthyCrons == null
+        ? null : availabilityImpactingUnhealthyCrons + availabilityImpactingCronErrors + degradedCrons + watchUnhealthyCrons,
     },
     reliability: {
-      active: reliabilityStatus > 0 || evidencePriority > 0,
+      active: reliabilityStatus > 0 || evidencePriority > 0 || cacheEvidenceRisk > 0,
       severity: reliabilityStatus,
-      publicImpact: data.availabilityStatus !== "healthy" || (healthData != null && healthData.status !== "healthy") || (browserProbeSummary?.failCount ?? 0) > 0 ? 1 : 0,
-      evidenceRisk: evidencePriority,
+      publicImpact: cachePriority > 0 || data.availabilityStatus !== "healthy" || (healthData != null && healthData.status !== "healthy") || (browserProbeSummary?.failCount ?? 0) > 0 ? 1 : 0,
+      evidenceRisk: Math.max(evidencePriority, cacheEvidenceRisk),
       persistence: 0,
-      count: (browserProbeSummary?.failCount ?? 0) + data.summary.availabilityImpactingCronErrors,
+      count: availabilityImpactingCronErrors == null ? null : cacheIssueCount + (browserProbeSummary?.failCount ?? 0) + availabilityImpactingCronErrors,
     },
     comms: {
       active: commsModel.delivery.health !== "healthy",
@@ -236,17 +255,17 @@ function buildDashboardSections({ data, pipelineTone, browserProbeSummary, cronG
   commsModel: CommsWorkbenchModel;
 }): DashboardSection[] {
   return [
-    { id: "pipeline", title: "Pipeline Health", value: pipelineTone.label, valueClassName: pipelineTone.valueClassName, summary: `${data.dataQuality.missingPrices} missing prices, ${data.dataQuality.staleOnchainSupply} stale on-chain feeds, ${data.dataQuality.blacklistMissingAmounts} blacklist gaps` },
+    { id: "pipeline", title: "Pipeline Health", value: pipelineTone.label, valueClassName: pipelineTone.valueClassName, summary: data.dataQuality == null ? "Data-quality evidence unavailable" : `${data.dataQuality.missingPrices} missing prices, ${data.dataQuality.staleOnchainSupply} stale on-chain feeds, ${data.dataQuality.blacklistMissingAmounts} blacklist gaps` },
     {
       id: "reliability", title: "Probes, breakers, and cache pressure",
       value: browserProbeSummary ? `${browserProbeSummary.passCount}/${browserProbeSummary.sampleCount}` : "Unknown",
       valueClassName: browserProbeSummary && browserProbeSummary.failCount > 0 ? "text-amber-700 dark:text-amber-400" : "text-foreground",
-      summary: `${data.summary.availabilityImpactingCronErrors} impacting cron errors, ${browserProbeSummary ? `${browserProbeSummary.failCount} failing browser probes` : "browser probe result unknown"}, worst cache ${data.summary.worstCacheRatio.toFixed(2)}x`,
+      summary: `${data.summary.availabilityImpactingCronErrors ?? "unavailable"} impacting cron errors, ${browserProbeSummary ? `${browserProbeSummary.failCount} failing browser probes` : "browser probe result unknown"}, worst cache ${data.summary.worstCacheRatio == null ? "unavailable" : `${data.summary.worstCacheRatio.toFixed(2)}x`}`,
     },
     {
-      id: "crons", title: "Cron Lanes", value: `${data.summary.availabilityImpactingUnhealthyCrons} impacting`,
-      valueClassName: data.summary.availabilityImpactingUnhealthyCrons > 0 ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400",
-      summary: `${cronGroups.length} groups, ${data.summary.watchUnhealthyCrons} watch unhealthy, ${data.summary.degradedCrons} degraded jobs, ${runningCrons} running now`,
+      id: "crons", title: "Cron Lanes", value: data.summary.availabilityImpactingUnhealthyCrons == null ? "Unavailable" : `${data.summary.availabilityImpactingUnhealthyCrons} impacting`,
+      valueClassName: data.summary.availabilityImpactingUnhealthyCrons == null ? "text-muted-foreground" : data.summary.availabilityImpactingUnhealthyCrons > 0 ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400",
+      summary: `${cronGroups.length} groups, ${data.summary.watchUnhealthyCrons ?? "unavailable"} watch unhealthy, ${data.summary.degradedCrons ?? "unavailable"} degraded jobs, ${runningCrons} running now`,
     },
     {
       id: "comms", title: "Comms",

@@ -4,10 +4,10 @@ import {
   SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION,
   STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
   STAGED_POOL_MAX_TVL_USD,
-  STAGED_POOL_PRICE_MAX_AGE_HOURS,
   stagedPoolConfidence,
   stagedPoolMaturityDays,
 } from "../../dex-discovery/types";
+import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../../../lib/dex-cron-constants";
 import { mergeStagedPools } from "../staging-merge";
 import {
   applyPoolVolumeEligibility,

@@ -247,20 +247,26 @@ export async function guardChainDropouts(input: {
   const { now, signal } = input;
   // The caller owns this newly loaded generation; no module-global mutable state.
   const state = input.state;
-  if (input.stateReadFailed && input.previousAssetsById) recoverStateFromPublication(state, input.previousAssetsById, now);
+  if (input.previousAssetsById) recoverStateFromPublication(state, input.previousAssetsById, now);
   const result: SupplyChainGuardResult = { flagged: 0, repaired: 0, quarantinedAssetIds: [], unavailableAssetIds: [], historyFetches: 0, stateReadFailed: input.stateReadFailed ?? false, state };
   const candidates: Candidate[] = [];
   // Per asset: same-run gains on healthy chains, and the pre-run vetted whole-asset total
   // (each chain at its persisted/seed/prev-day reference, before this run moves any baseline).
   const conservation = new Map<PeggedAsset, { gains: number; vettedTotal: number; vettedComplete: boolean }>();
+  const knownPairsByAssetId = new Map<string, PairState[]>();
+  for (const pair of Object.values(state.pairs)) {
+    if (pair.baselineUsd < CHAIN_DROPOUT_POLICY.minBaselineUsd && pair.quarantinedSince == null) continue;
+    const pairs = knownPairsByAssetId.get(pair.assetId) ?? [];
+    pairs.push(pair);
+    knownPairsByAssetId.set(pair.assetId, pairs);
+  }
   for (const asset of input.assets) {
     const meta = ACTIVE_META_BY_ID.get(String(asset.id));
     if (!meta || meta.detailProvider !== "defillama" || asset.frozen || asset.supplyRestored || input.skipAssetIds?.has(meta.id) || (asset.supplySource && asset.supplySource !== "defillama")) continue;
     const pegKey = asset.pegType ?? pegTypeFromCurrency(meta.flags.pegCurrency);
     if (!pegKey) continue;
     if (getCirculatingRawOrNull(asset) == null) continue;
-    const rows = asset.chainCirculating ?? {};
-    const canonical = canonicalizeChainCirculating(rows);
+    const rows = asset.chainCirculating ?? (asset.chainCirculating = {});
     const groups = new Map<string, { chainId?: string; labels: string[] }>();
     for (const [label, row] of Object.entries(rows)) {
       const chainId = canonicalizeChainCirculating({ [label]: row }).keys().next().value as string | undefined;
@@ -269,6 +275,16 @@ export async function guardChainDropouts(input: {
       if (group) group.labels.push(label);
       else groups.set(identity, { chainId, labels: [label] });
     }
+    // Omission is unavailable, not a release. Feed known material/quarantined
+    // identities through exactly the same repair, ambiguity and carry policies.
+    for (const pair of knownPairsByAssetId.get(meta.id) ?? []) {
+      const identity = pair.chainId ?? `label:${pair.chainLabel}`;
+      if (groups.has(identity)) continue;
+      rows[pair.chainLabel] = { current: null };
+      groups.set(identity, { chainId: pair.chainId, labels: [pair.chainLabel] });
+      if (!asset.chains?.includes(pair.chainLabel)) asset.chains = [...(asset.chains ?? []), pair.chainLabel];
+    }
+    const canonical = canonicalizeChainCirculating(rows);
     for (const [identity, group] of groups) {
       const label = group.labels[0];
       const observation = group.chainId ? canonical.get(group.chainId)! : { current: normalizeChainSupplyValue(rows[label].current), circulatingPrevDay: normalizeChainSupplyValue(rows[label].circulatingPrevDay) ?? undefined };

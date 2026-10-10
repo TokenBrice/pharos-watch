@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -11,9 +12,11 @@ import {
   DROP_INDEX_GRANDFATHER_THROUGH_SEQUENCE,
   createSchemaObjectManifest,
   parseDataMigrationManifestRows,
+  createTableFixtureQuery,
   parseManifestMigrationRows,
   parseRolloutSafetyPolicy,
   validateManifestMigrationParity,
+  validateDataMigrationManifestRows,
   validateNoSqliteDotCommands,
   validateDuplicatePrefixes,
   validateRolloutSafetyAnnotation,
@@ -21,6 +24,8 @@ import {
   validateSchemaObjectManifest,
   validateWorkerMigrations,
   findDataMigrationTargets,
+  findDestructiveDataStatements,
+  stripSqlComments,
 } from "../ci/check-worker-migrations.ts";
 
 const manifestText = `
@@ -60,6 +65,23 @@ const rows = [
     sql: "CREATE INDEX idx_example_value ON example(value)",
   },
 ];
+
+describe("createTableFixtureQuery", () => {
+  it("finds only the requested table and rejects names that could change the SQL", () => {
+    const db = new DatabaseSync(":memory:");
+    try {
+      db.exec("CREATE TABLE fixture_1 (id INTEGER);");
+      expect(db.prepare(createTableFixtureQuery("fixture_1")).get()).toBeDefined();
+      expect(db.prepare(createTableFixtureQuery("missing_table")).get()).toBeUndefined();
+      for (const name of ["", "fixture_1' OR 1=1 --", "fixture_1'; DROP TABLE fixture_1; --", "main.fixture_1", "fixture_1\n"]) {
+        expect(() => createTableFixtureQuery(name)).toThrow("Invalid table name");
+      }
+      expect(db.prepare(createTableFixtureQuery("fixture_1")).get()).toBeDefined();
+    } finally {
+      db.close();
+    }
+  });
+});
 
 describe("parseRolloutSafetyPolicy", () => {
   it("reads the rollout-safety cutoff and required header from the manifest text", () => {
@@ -238,6 +260,22 @@ describe("parseDataMigrationManifestRows", () => {
       },
     ]);
   });
+
+  it.each(["predicate", "oldWorkerCompatibility", "rollbackBookmark", "expectedRowBounds"] as const)(
+    "rejects empty and whitespace-only mandatory %s review cells",
+    (field) => {
+      const fields = ["predicate", "oldWorkerCompatibility", "rollbackBookmark", "expectedRowBounds"] as const;
+      for (const blank of ["", " \t "]) {
+        const cells = fields.map((name) => name === field ? blank : "reviewed");
+        const text = `## Reviewed Data Migrations\n| 0244 | \`0244_cleanup.sql\` |${cells.join("|")}|\n`;
+        const rows = parseDataMigrationManifestRows(text);
+        expect(rows).toHaveLength(1);
+        expect(() => validateDataMigrationManifestRows(rows, ["0244_cleanup.sql"],
+          new Map([["0244_cleanup.sql", "DELETE FROM cache;"]])))
+          .toThrow(`0244_cleanup.sql is missing mandatory field: ${field}`);
+      }
+    },
+  );
 });
 
 describe("schema object manifest", () => {
@@ -391,6 +429,54 @@ describe("validateRolloutSafetyAnnotation", () => {
         `-- rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE}\n${statement}`,
       ),
     ).toThrow(operation);
+  });
+
+  it.each([
+    "'--'",
+    "'/*'",
+    "'*/'",
+    "'it''s -- still literal'",
+    "'it''s /* still literal */'",
+    "\"marker--column\"",
+    "`marker/*column`",
+    "[marker--column]",
+  ])("requires reviewed metadata after the quoted delimiter %s", (literal) => {
+    const sql = `-- rollout-safety: backward-compatible\nINSERT INTO cache VALUES (${literal}); DELETE FROM cache;`;
+    expect(findDestructiveDataStatements(sql)).toEqual(["DELETE FROM"]);
+    expect(findDataMigrationTargets(sql)).toEqual(["cache"]);
+    expect(() => validateRolloutSafetyAnnotation("0244_literal.sql", sql)).toThrow(
+      "requires a Reviewed Data Migrations manifest row",
+    );
+  });
+
+  it("keeps actual comments inert without merging executable SQL tokens", () => {
+    const sql = [
+      "-- rollout-safety: backward-compatible",
+      "/* DELETE FROM ignored; UPDATE ignored SET value = 1; */",
+      "INSERT INTO cache VALUES ('-- /* */ it''s literal'); -- DELETE FROM ignored;",
+      "DELETE/* boundary */FROM cache;",
+    ].join("\n");
+    expect(stripSqlComments(sql)).toContain("'-- /* */ it''s literal'");
+    expect(findDestructiveDataStatements(sql)).toEqual(["DELETE FROM"]);
+    expect(findDataMigrationTargets(sql)).toEqual(["cache"]);
+    expect(() => validateRolloutSafetyAnnotation("0244_comments.sql", sql)).toThrow(
+      "requires a Reviewed Data Migrations manifest row",
+    );
+    expect(findDestructiveDataStatements("-- DELETE FROM cache;\n/* UPDATE cache SET value = 1; */")).toEqual([]);
+  });
+
+  it("requires reviewed metadata for DML between literal block-comment delimiters", () => {
+    const sql = [
+      "-- rollout-safety: backward-compatible",
+      "INSERT INTO cache (key, value, updated_at) VALUES ('start', '/*', 0);",
+      "DELETE FROM cache;",
+      "INSERT INTO cache (key, value, updated_at) VALUES ('end', '*/', 0);",
+    ].join("\n");
+    expect(findDestructiveDataStatements(sql)).toEqual(["DELETE FROM"]);
+    expect(findDataMigrationTargets(sql)).toEqual(["cache"]);
+    expect(() => validateRolloutSafetyAnnotation("0244_block_literals.sql", sql)).toThrow(
+      "requires a Reviewed Data Migrations manifest row",
+    );
   });
 
   it("keeps the reviewed 0236 data migration grandfathered", () => {

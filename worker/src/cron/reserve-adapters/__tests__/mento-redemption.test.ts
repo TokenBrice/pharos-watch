@@ -16,6 +16,7 @@ import { pinnedBlockPlan } from "../evm-observation-plan";
 import type * as HelpersModule from "../helpers";
 import type * as ObservationPlanModule from "../evm-observation-plan";
 
+import { brokerGuardFixture, brokerFixtureResponse, BROKER_FEED, BROKER_PRICING_MODULE } from "./mento-broker.test-support";
 vi.mock("../helpers", async (original) => ({
   ...await original<typeof HelpersModule>(),
   fetchOnchainMulticall3: vi.fn(),
@@ -255,40 +256,100 @@ describe("Mento Broker anchored inventory", () => {
     pools: [{ selfTokenAddress: self, counterAsset: { address: pools[0].counterAsset.address } }],
   };
   const exchangeId = `0x${"11".repeat(32)}` as const;
-  const zeroAddress = "0x0000000000000000000000000000000000000000";
   function poolExchange(capacity: bigint) {
     return encodeAbiParameters(MENTO_POOL_EXCHANGE_ABI_PARAMETERS, [{
       asset0: self as `0x${string}`, asset1: pools[0].counterAsset.address as `0x${string}`,
-      pricingModule: zeroAddress, bucket0: 100n * 10n ** 18n, bucket1: capacity, lastBucketUpdate: 0n,
+      pricingModule: BROKER_PRICING_MODULE, bucket0: 100n * 10n ** 18n, bucket1: capacity, lastBucketUpdate: BigInt(observedBlock.timestamp),
       config: {
-        spread: 5n * 10n ** 20n, referenceRateFeedID: zeroAddress,
-        referenceRateResetFrequency: 0n, minimumReports: 0n, stablePoolResetSize: 0n,
+        spread: 5n * 10n ** 20n, referenceRateFeedID: BROKER_FEED,
+        referenceRateResetFrequency: 360n, minimumReports: 1n, stablePoolResetSize: 100n * 10n ** 18n,
       },
     }]);
   }
-  function setupBroker(capacity: bigint | null) {
+  function setupBroker(capacity: bigint | null, change: Partial<Record<string, `0x${string}` | null>> = {}) {
     setupPlan();
+    const guards = brokerGuardFixture(exchangeId, self, pools[0].counterAsset.address, Number((capacity ?? 0n) / 10n ** 18n) || 100, observedBlock.timestamp);
+    vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) => Promise.all(calls.map(async ({ label, contract, data }) => {
+      const raw = label in change ? change[label] : await brokerFixtureResponse(guards, contract, data);
+      return { label, success: raw != null, returnData: raw ?? "0x" };
+    })));
+    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
+      const raw = await brokerFixtureResponse(guards, contract, data);
+      return raw == null ? null : BigInt(raw);
+    });
     vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) =>
       data === MENTO_GET_EXCHANGE_IDS_SELECTOR
         ? encodeAbiParameters([{ type: "bytes32[]" }], [[exchangeId]])
         : capacity == null ? null : poolExchange(capacity),
     );
   }
-  it.each([0n, 100n * 10n ** 18n])("retains fully matched inventory including measured zero (%s) at one pin", async (capacity) => {
+  it.each([0n, 100n * 10n ** 18n])("uses guarded quotes instead of virtual inventory (%s) at one pin", async (capacity) => {
     setupBroker(capacity);
     const result = await fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined);
     expect(result.redemption).toMatchObject({
-      capacityUsd: Number(capacity / 10n ** 18n), feeBps: 5, routeStatus: "open",
+      capacityUsd: 100, feeBps: 5, routeStatus: "open",
       blockNumber: observedBlock.number, sourceTimestamp: observedBlock.timestamp,
     });
     expect(pinnedBlockPlan).toHaveBeenCalledTimes(1);
     for (const [options] of vi.mocked(fetchOnchainRawCall).mock.calls) {
       expect(options.ctx?.observedBlock).toEqual(observedBlock);
     }
+    for (const [options] of vi.mocked(fetchOnchainMulticall3).mock.calls) expect(options.ctx?.observedBlock).toEqual(observedBlock);
+    for (const [options] of vi.mocked(fetchOnchainUint256).mock.calls) expect(options.ctx?.observedBlock).toEqual(observedBlock);
   });
   it("does not equate an unreadable matching pool with observed zero", async () => {
     setupBroker(null);
     await expect(fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined)).rejects.toThrow();
+  });
+
+  it("retains measured breaker closure despite positive virtual buckets", async () => {
+    setupBroker(100n * 10n ** 18n, { mode: uint(1n) });
+    const result = await fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined);
+    expect(result.redemption).toMatchObject({ capacityUsd: 0, routeStatus: "degraded", routeStatusSource: "onchain" });
+    expect(fetchOnchainUint256).not.toHaveBeenCalled();
+  });
+
+  it.each([{ oracleTime: null }, { oracleTime: "0x01" }, { inputConfig: null }] as const)("withholds incomplete Broker guards %s", async (change) => {
+    setupBroker(100n * 10n ** 18n, change);
+    await expect(fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined)).rejects.toThrow();
+  });
+
+  it("withholds an unsuccessful execution quote instead of using buckets", async () => {
+    setupBroker(100n * 10n ** 18n);
+    vi.mocked(fetchOnchainUint256).mockResolvedValue(null);
+    await expect(fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined)).rejects.toThrow();
+  });
+
+  it("retains a successful zero quote separately from guard closure", async () => {
+    setupBroker(100n * 10n ** 18n);
+    vi.mocked(fetchOnchainUint256).mockResolvedValue(0n);
+    const result = await fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined);
+    expect(result.redemption).toMatchObject({ capacityUsd: 0, routeStatus: "open" });
+    expect(vi.mocked(fetchOnchainUint256).mock.calls[0][0].data).not.toMatch(/0{64}$/);
+  });
+
+  it.each([0n, 40n * 10n ** 6n])("bounds collateral output by spendable inventory %s", async (inventory) => {
+    setupBroker(100n * 10n ** 18n, { outputStable: uint(0n), outputCollateral: uint(1n), inventory: uint(inventory) });
+    const result = await fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined);
+    expect(result.redemption).toMatchObject({ capacityUsd: Number(inventory) / 1e6, routeStatus: inventory === 0n ? "degraded" : "open" });
+  });
+
+  it("bounds both directional trading limits without discarding valid partial capacity", async () => {
+    setupBroker(100n * 10n ** 18n, {
+      inputState: encodeAbiParameters([{ type: "uint32" }, { type: "uint32" }, { type: "int48" }, { type: "int48" }, { type: "int48" }], [0, 0, 0, 0, 70]),
+      outputConfig: encodeAbiParameters([{ type: "uint32" }, { type: "uint32" }, { type: "int48" }, { type: "int48" }, { type: "int48" }, { type: "uint8" }], [0, 0, 0, 0, 20, 4]),
+    });
+    const result = await fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined);
+    expect(result.redemption).toMatchObject({ capacityUsd: 20, routeStatus: "open" });
+  });
+
+  it.each([0, 1])("resets rolling headroom only strictly after its pinned expiry (%s)", async (elapsed) => {
+    setupBroker(100n * 10n ** 18n, {
+      inputConfig: encodeAbiParameters([{ type: "uint32" }, { type: "uint32" }, { type: "int48" }, { type: "int48" }, { type: "int48" }, { type: "uint8" }], [60, 0, 100, 0, 0, 1]),
+      inputState: encodeAbiParameters([{ type: "uint32" }, { type: "uint32" }, { type: "int48" }, { type: "int48" }, { type: "int48" }], [observedBlock.timestamp - 60 - elapsed, 0, 100, 0, 0]),
+    });
+    const result = await fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined);
+    expect(result.redemption).toMatchObject({ capacityUsd: elapsed ? 100 : 0, routeStatus: elapsed ? "open" : "degraded" });
   });
   it("withholds a partial configured output scope instead of publishing its readable subset", async () => {
     setupBroker(100n * 10n ** 18n);
@@ -298,7 +359,7 @@ describe("Mento Broker anchored inventory", () => {
     ] };
     await expect(fetchMentoRedemptionMetadata(partial, new AbortController().signal, undefined)).rejects.toThrow();
   });
-  it("reuses identical-anchor inventory but reads a changed block rather than inheriting cached capacity", async () => {
+  it("rechecks executable guards even when inventory is cached and carries each changed block", async () => {
     setupBroker(100n * 10n ** 18n);
     const ctx: AdapterContext = { requestCache: new Map(), observedBlock };
     const signal = new AbortController().signal;
@@ -308,7 +369,7 @@ describe("Mento Broker anchored inventory", () => {
     const nextBlock = { ...observedBlock, number: observedBlock.number + 1, timestamp: observedBlock.timestamp + 1 };
     const next = await fetchMentoRedemptionMetadata(broker, signal, { ...ctx, observedBlock: nextBlock });
     expect(first.redemption?.capacityUsd).toBe(100);
-    expect(same.redemption?.capacityUsd).toBe(100);
+    expect(same.redemption?.capacityUsd).toBe(200);
     expect(next.redemption).toMatchObject({
       capacityUsd: 200, blockNumber: nextBlock.number, sourceTimestamp: nextBlock.timestamp,
     });

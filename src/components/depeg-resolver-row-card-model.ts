@@ -111,6 +111,11 @@ export const FORWARD_STOPS: ReadonlyArray<{ horizon: DdrHorizon; x: number }> = 
   { horizon: "30d", x: 88 },
 ];
 
+/** Original invalidated outcomes belong to audit cards, never live forecast aggregates. */
+export function isCurrentForecast(row: DdrV2ResponseRow): row is Extract<DdrV2ResponseRow, { kind: "prediction" }> {
+  return row.kind === "prediction" && row.prediction.state === "frozen";
+}
+
 export function getResolution(row: DdrV2ResponseRow): DdrResolution {
   if (row.kind === "prediction") return row.frozen.resolution;
   if (row.kind === "invalidated_prediction" && row.originalKind === "prediction") {

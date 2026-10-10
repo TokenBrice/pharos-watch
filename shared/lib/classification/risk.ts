@@ -85,6 +85,12 @@ export const THREAT_BAND_STYLES = projectThreatBands((descriptor) => ({
 
 export const THREAT_BAND_HEX = projectThreatBands((descriptor) => descriptor.hex);
 
+/** Missing live peg or DEWS observations are not a verified clear tracker state. */
+export const DEPEG_TRACKER_UNKNOWN_STATUS = {
+  label: "unknown",
+  cls: "border-border/60 bg-muted/30 text-muted-foreground",
+} as const;
+
 /**
  * Derive the highest DEWS risk level from an array of threat bands.
  * Returns a lowercase token suitable for UI styling: "danger" | "warning" | "alert" | "calm".

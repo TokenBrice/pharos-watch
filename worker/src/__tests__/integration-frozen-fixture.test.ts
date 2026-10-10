@@ -45,7 +45,7 @@ import { computeStressSignalPruneIds } from "../lib/dews/persistence";
 import { PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { WORKER_ACTIVE_IDS, WORKER_READABLE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { handleStablecoinReserves } from "../api/stablecoin-reserves";
-import { handleBackfillMintBurn } from "../api/backfill-mint-burn";
+import { handleBackfillMintBurn } from "../../scripts/backfills/backfill-mint-burn";
 
 describe("frozen lifecycle consumers", () => {
   it("orphan-close policy preserves frozen coins but closes missing active coins", () => {
@@ -54,7 +54,7 @@ describe("frozen lifecycle consumers", () => {
   });
 
   it("backfill handler rejects a frozen configured coin without database writes", async () => {
-    const request = makeApiRequest("/api/backfill-mint-burn", {
+    const request = makeApiRequest("https://operator.invalid/jobs/backfill-mint-burn", {
       method: "POST",
       adminKey: "operator",
       headers: { "Content-Type": "application/json" },

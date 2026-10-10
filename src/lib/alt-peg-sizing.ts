@@ -7,8 +7,10 @@ const MCAP_DIVISOR = 1_000_000;
 
 export const FIAT_MAP_SIZE_CAP_MARKET_CAP = ((FIAT_MAP_SIZE_CEIL - SIZE_FLOOR) / SIZE_SCALE) ** 2 * MCAP_DIVISOR;
 
-export function coinEmblemSize(marketCapUsd: number, options: { ceil?: number } = {}): number {
+export function coinEmblemSize(marketCapUsd: number | null, options: { ceil?: number } = {}): number {
   const ceil = options.ceil ?? SIZE_CEIL;
+  // Unknown supply uses a neutral marker, not the measured-zero floor.
+  if (marketCapUsd === null) return Math.round((SIZE_FLOOR + Math.min(ceil, FIAT_MAP_SIZE_CEIL)) / 2);
   if (!Number.isFinite(marketCapUsd) || marketCapUsd <= 0) return Math.min(SIZE_FLOOR, ceil);
   const raw = SIZE_FLOOR + Math.sqrt(marketCapUsd / MCAP_DIVISOR) * SIZE_SCALE;
   return Math.round(Math.min(ceil, Math.max(SIZE_FLOOR, raw)));

@@ -24,7 +24,7 @@ function payload(overrides: Record<string, unknown> = {}): Record<string, unknow
 function cacheTable(value: string, ageSec: number) {
   return {
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
-    matchBinds: ["mint-burn-flows:v3:aggregate:24"],
+    matchBinds: ["mint-burn-flows:v4:aggregate:24"],
     rows: [],
     first: { value, updated_at: NOW_SEC - ageSec },
   };
@@ -126,7 +126,7 @@ describe("readPublishedMintBurnGauge", () => {
     const result = await readPublishedMintBurnGauge(mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["mint-burn-flows:v3:aggregate:24"],
+        matchBinds: ["mint-burn-flows:v4:aggregate:24"],
         rows: [],
         first: null,
       },

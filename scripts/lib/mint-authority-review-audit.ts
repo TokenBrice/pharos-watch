@@ -1,5 +1,6 @@
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { findCommonCriticalControls } from "@shared/lib/control-identities";
+import { collectMintAuthoritySources } from "@shared/lib/mint-authority-sources";
 import type { MintAuthorityControl, MintAuthorityProfile, StablecoinLink, StablecoinMeta } from "@shared/types";
 
 const ROUTE_CHECK_MINT_PATHS = new Set<MintAuthorityProfile["mintPath"]>([
@@ -45,6 +46,7 @@ export interface MintAuthorityAuditControlRow extends MintAuthorityAuditCoinRow 
 export interface MintAuthorityAuditUnresolvedRow extends MintAuthorityAuditCoinRow {
   confidence: MintAuthorityProfile["confidence"];
   questionCount: number;
+  questions: string[];
   verified: boolean;
 }
 
@@ -118,25 +120,6 @@ function coinRow(coin: StablecoinMeta): MintAuthorityAuditCoinRow {
     symbol: coin.symbol,
     status: coin.status,
   };
-}
-
-function collectLinksFromSources(target: StablecoinLink[], sources: readonly StablecoinLink[] | undefined) {
-  if (!sources) return;
-  target.push(...sources);
-}
-
-function collectMintAuthoritySources(profile: MintAuthorityProfile): StablecoinLink[] {
-  const links: StablecoinLink[] = [];
-  collectLinksFromSources(links, profile.review.sources);
-  for (const incident of profile.mintIncidents ?? []) {
-    collectLinksFromSources(links, incident.sources);
-  }
-  collectLinksFromSources(links, profile.upgradeability?.sources);
-  for (const control of profile.controls ?? []) {
-    collectLinksFromSources(links, control.sources);
-    collectLinksFromSources(links, control.keyCustodyAttestation?.sources);
-  }
-  return links;
 }
 
 function appendSourceStats(
@@ -235,6 +218,7 @@ export function buildMintAuthorityReviewAudit({
         ...coinRow(coin),
         confidence: profile.confidence,
         questionCount: unresolvedQuestions.length,
+        questions: [...unresolvedQuestions],
         verified: profile.confidence === "verified",
       });
       if (profile.review.disposition === "unresolved") {
@@ -242,6 +226,7 @@ export function buildMintAuthorityReviewAudit({
           ...coinRow(coin),
           confidence: profile.confidence,
           questionCount: unresolvedQuestions.length,
+          questions: [...unresolvedQuestions],
           verified: false,
         });
       }
@@ -390,6 +375,19 @@ export function renderMintAuthorityReviewAuditMarkdown(audit: MintAuthorityRevie
     "",
     ...renderControlRows(audit.capDescriptionQueue),
     "",
+    "## Unresolved Questions",
+    "",
+    ...(audit.unresolvedQuestionQueue.length === 0
+      ? ["- None."]
+      : audit.unresolvedQuestionQueue.map((row) =>
+        `- \`${row.coinId}\` (${row.symbol}, ${row.confidence}): ${row.questions.join("; ")}`)),
+    "",
+    "## Source-Free Profiles",
+    "",
+    ...(audit.sourceFreeQueue.length === 0
+      ? ["- None."]
+      : audit.sourceFreeQueue.map((row) => `- \`${row.coinId}\` (${row.symbol}): ${row.rationale}`)),
+    "",
     "## Custody-Attestation Queue",
     "",
     ...renderControlRows(audit.custodyAttestationQueue),
@@ -407,6 +405,17 @@ export function renderMintAuthorityReviewAuditMarkdown(audit: MintAuthorityRevie
     "## Upgradeability Backfill Queue",
     "",
     ...renderCoinRows(audit.missingUpgradeabilityQueue),
+    "",
+    "## Unknown Upgradeability",
+    "",
+    ...renderCoinRows(audit.unknownUpgradeabilityQueue),
+    "",
+    "## Reused Critical Controls",
+    "",
+    ...(audit.commonControlQueue.length === 0
+      ? ["- None."]
+      : audit.commonControlQueue.map((row) =>
+        `- \`${row.coinId}\` (${row.symbol}) / \`${row.key}\`: ${row.labels.join(", ")} (${row.paths.join(", ")})`)),
     "",
     "## Control Observation Queue",
     "",

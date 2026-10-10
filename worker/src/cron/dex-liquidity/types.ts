@@ -1,3 +1,5 @@
+import type { PoolProcessingRejection } from "./process-pool-types";
+
 export interface LlamaPool {
   pool: string;
   chain: string;
@@ -290,6 +292,9 @@ export interface CurvePoolEntry {
   apiIsBroken?: boolean;
   A: number;
   balanceRatio: number;
+  /** Legacy captures measured the full coin roster; missing scope means full-pool. */
+  balanceTvlScope?: "full-pool" | "base-pool-excluded";
+  contributionTvlScope?: "full-pool" | "base-pool-excluded";
   tvl: number;
   registryId: string;
   isMetaPool: boolean;
@@ -351,6 +356,8 @@ export interface DataSources {
   pools: LlamaPool[];
   /** Count before tracked-token compaction. Retained for progress and run metadata. */
   rawPoolCount: number;
+  /** Compaction quarantine carried into the existing scoring-stage quality gate. */
+  poolRejections: PoolProcessingRejection[];
   dexProjects: Set<string>;
   /** DL protocol slug → total protocol TVL. Used to cap inflated CG/GT per-pool TVL. */
   protocolTvlCaps: Map<string, number>;
@@ -439,6 +446,8 @@ export interface GtNewPool {
   volumeDeadPoolSignature?: true;
   /** Optional measured balance ratio from richer direct/discovery APIs. */
   balanceRatio?: number | null;
+  /** Optional measured locked-liquidity percentage (0–100). */
+  lockedLiquidityPct?: number | null;
   /** Optional normalized fee tier in basis points. */
   feeTierBps?: number | null;
   /** Optional token balance composition details for richer top-pool UI. */

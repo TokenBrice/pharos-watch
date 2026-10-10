@@ -25,8 +25,24 @@ const SUPPLEMENTAL_SOURCE_FAMILIES = [
   "roycoDawn",
 ] as const;
 
+function supplementalPayload(updatedAt: number, sourceCount = 0) {
+  return {
+    version: 1, updatedAt, source: "sync-yield-supplemental", sourceCount,
+    data: Array.from({ length: sourceCount }, (_, index) => ({
+      symbol: `fixture-${index}`,
+      yield: {
+        sourceKey: `fixture-${index}`, currentApy: 1, apyBase: null, apyReward: null,
+        sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api", exchangeRate: null,
+        sourceObservedAt: updatedAt, comparisonAnchorObservedAt: updatedAt,
+      },
+    })),
+  };
+}
+
 function supplementalFamilyRows(updatedAt: number, sourceCount = 0) {
-  return SUPPLEMENTAL_SOURCE_FAMILIES.map((family) => (yieldCacheRow(`yield:supplemental-sources:v1:${family}`, updatedAt, { sourceCount })));
+  return SUPPLEMENTAL_SOURCE_FAMILIES.map((family) => yieldCacheRow(
+    `yield:supplemental-sources:v1:${family}`, updatedAt, supplementalPayload(updatedAt, sourceCount),
+  ));
 }
 
 function cron(status: CronRunStatus = "ok", ageSec = 120, metadata?: Record<string, unknown>): CronStatus {
@@ -48,6 +64,90 @@ function makeDb(rows: Record<string, unknown>[]) {
 }
 
 describe("loadYieldHealthSummary", () => {
+  it.each([60, 61])("admits yield ranking clocks only through the %s-second future boundary", async (offset) => {
+    const summary = await loadYieldHealthSummary(makeDb([
+      yieldCacheRow("yield-rankings", NOW + offset, { rankings: [] }),
+    ]), NOW, { "sync-yield-data": cron() });
+    expect(summary.rankingAgeSec).toBe(offset === 60 ? 0 : null);
+    expect(summary.rankingStatus).toBe(offset === 60 ? "healthy" : "stale");
+    expect(summary.rankingTimestampReason).toBe(offset === 60 ? null : "future-timestamp");
+  });
+
+  it.each(["{", "{}", '{"rankings":null}', '{"rankings":{}}', '{"rankings":[null]}', '{"rankings":[{}]}'])(
+    "never grades fresh malformed rankings %s from the row timestamp", async (value) => {
+      const summary = await loadYieldHealthSummary(makeDb([
+        { key: "yield-rankings", updated_at: NOW, value },
+      ]), NOW, {});
+      expect(summary).toMatchObject({
+        rankingStatus: "stale", statusImpact: "public-critical", rankingCount: null,
+        rankingUnavailableReason: "rankings-malformed",
+      });
+    },
+  );
+
+  it.each([null, "{", "{}", '{"sourceCount":0}', '{"sourceCount":"0"}'])(
+    "keeps fresh unreadable family evidence %s explicitly unknown", async (value) => {
+      const summary = await loadYieldHealthSummary(makeDb([
+        yieldCacheRow("yield-rankings", NOW, { rankings: [] }),
+        { key: "yield:supplemental-sources:v1:morpho", updated_at: NOW, value },
+      ]), NOW, {});
+      expect(summary.supplemental.families?.morpho).toMatchObject({
+        status: "unknown", sourceCount: null, unavailableReason: "supplemental-malformed", retained: false,
+      });
+      expect(summary.supplemental.status).toBe("unknown");
+      expect(summary.statusImpact).toBe("admin-watch");
+    },
+  );
+
+  it("keeps a supplemental family with a missing cache clock unavailable", async () => {
+    const summary = await loadYieldHealthSummary(makeDb([
+      yieldCacheRow("yield-rankings", NOW, { rankings: [] }),
+      { key: "yield:supplemental-sources:v1:morpho", updated_at: null, value: JSON.stringify(supplementalPayload(NOW)) },
+    ]), NOW, {});
+    expect(summary.supplemental.families?.morpho).toMatchObject({
+      status: "unknown", updatedAt: null, ageSec: null, timestampReason: "missing-timestamp",
+      sourceCount: null, unavailableReason: "supplemental-malformed", retained: false,
+    });
+  });
+
+  it.each(["{", "{}", '{"manifestMissingCount":0}', '{"manifestMissingCount":"0"}'])(
+    "keeps fresh unreadable coverage audit %s explicitly unknown", async (value) => {
+      const summary = await loadYieldHealthSummary(makeDb([
+        yieldCacheRow("yield-rankings", NOW, { rankings: [] }),
+        { key: "yield-coverage-audit", updated_at: NOW, value },
+      ]), NOW, {});
+      expect(summary.coverageAudit).toMatchObject({ status: "unknown", unavailableReason: "coverage-audit-malformed" });
+    },
+  );
+
+  it("admits valid empty ranking, family and audit evidence as healthy", async () => {
+    const summary = await loadYieldHealthSummary(makeDb([
+      yieldCacheRow("yield-rankings", NOW, { rankings: [] }),
+      ...supplementalFamilyRows(NOW),
+      yieldCacheRow("yield-coverage-audit", NOW, emptyYieldAudit()),
+    ]), NOW, {});
+    expect(summary).toMatchObject({
+      rankingStatus: "healthy", rankingCount: 0, rankingUnavailableReason: null,
+      supplemental: { status: "healthy", freshFamilyCount: 7, missingFamilyCount: 0 },
+      coverageAudit: { status: "healthy", unavailableReason: null, headlineGapCount: 0, recommendationCandidateCount: 0 },
+    });
+    expect(summary.supplemental.families?.morpho).toMatchObject({ sourceCount: 0, unavailableReason: null });
+  });
+
+  it("rejects inconsistent source counts and unusable supplemental candidates", async () => {
+    for (const payload of [
+      { ...supplementalPayload(NOW), sourceCount: 1 },
+      { ...supplementalPayload(NOW, 1), data: [null] },
+      { ...supplementalPayload(NOW), version: 99 },
+    ]) {
+      const summary = await loadYieldHealthSummary(makeDb([
+        yieldCacheRow("yield:supplemental-sources:v1:morpho", NOW, payload),
+      ]), NOW, {});
+      expect(summary.supplemental.families?.morpho).toMatchObject({
+        status: "unknown", sourceCount: null, unavailableReason: "supplemental-malformed",
+      });
+    }
+  });
   it("summarizes rankings, safety coverage, supplemental sources, benchmark registry, and audit cache state", async () => {
     const summary = await loadYieldHealthSummary(
       makeDb([
@@ -416,6 +516,7 @@ describe("loadYieldHealthSummary", () => {
               },
               altSources: [
                 {
+                  sourceKey: "fixture-alternate",
                   sourceRisk: {
                     sourceRiskPenalty: 1,
                     sourceAgeSeconds: 600,
@@ -612,7 +713,7 @@ describe("loadYieldHealthSummary", () => {
         {
           key: "yield-coverage-audit",
           updated_at: NOW - 60 * 86400,
-          value: "{}",
+          value: JSON.stringify(emptyYieldAudit()),
         },
       ]),
       NOW,
@@ -637,7 +738,7 @@ describe("loadYieldHealthSummary", () => {
           },
         }),
         yieldCacheRow("yield:supplemental-sources:v1", NOW - 20 * 3600, { sourceCount: 20 }),
-        ...["morpho", "pendle", "yearnKong", "beefy", "compoundV3", "aaveV3", "roycoDawn"].map((family) => (yieldCacheRow(`yield:supplemental-sources:v1:${family}`, NOW - 1800, { sourceCount: 2 }))),
+        ...["morpho", "pendle", "yearnKong", "beefy", "compoundV3", "aaveV3", "roycoDawn"].map((family) => (yieldCacheRow(`yield:supplemental-sources:v1:${family}`, NOW - 1800, supplementalPayload(NOW - 1800, 2)))),
         {
           key: "yield-coverage-audit",
           updated_at: NOW - 86400,
@@ -668,8 +769,8 @@ describe("loadYieldHealthSummary", () => {
             benchmark: { fetchedAt: NOW - 3600, ageSeconds: 3600, source: "tbill-cache", isFallback: false },
           },
         }),
-        yieldCacheRow("yield:supplemental-sources:v1:morpho", NOW - 1800, { sourceCount: 4 }),
-        yieldCacheRow("yield:supplemental-sources:v1:beefy", NOW - 20 * 3600, { sourceCount: 1 }),
+        yieldCacheRow("yield:supplemental-sources:v1:morpho", NOW - 1800, supplementalPayload(NOW - 1800, 4)),
+        yieldCacheRow("yield:supplemental-sources:v1:beefy", NOW - 20 * 3600, supplementalPayload(NOW - 20 * 3600, 1)),
         {
           key: "yield-coverage-audit",
           updated_at: NOW - 86400,
@@ -701,7 +802,7 @@ describe("loadYieldHealthSummary", () => {
           },
         }),
         ...supplementalFamilyRows(NOW - 1800).filter((row) => row.key !== "yield:supplemental-sources:v1:pendle"),
-        yieldCacheRow("yield:supplemental-sources:v1:pendle", NOW - 20 * 3600, { sourceCount: 3 }),
+        yieldCacheRow("yield:supplemental-sources:v1:pendle", NOW - 20 * 3600, supplementalPayload(NOW - 20 * 3600, 3)),
         yieldCacheRow("yield-coverage-audit", NOW - 86400, emptyYieldAudit()),
       ]),
       NOW,

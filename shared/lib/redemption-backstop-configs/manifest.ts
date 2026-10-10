@@ -11,7 +11,7 @@ export interface RedemptionBackstopConfigManifestEntry {
   name: string;
   filePath: string;
   /**
-   * Canonical family state, including per-id override reasons and source paths.
+   * Canonical family state, including per-id source paths.
    */
   entries: readonly RedemptionBackstopRegistryEntry[];
   allowedRouteFamilies: readonly RedemptionRouteFamily[];

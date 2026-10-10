@@ -6,6 +6,10 @@ import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../lib/blacklist-
 import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../lib/blacklist-summary-service";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { BlacklistSummaryResponse } from "@shared/types/market";
+import {
+  BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
+  BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
+} from "../../lib/blacklist-cache-keys";
 import { balanceRow, makeValidSummaryPayload } from "./blacklist-summary.test-support";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
@@ -16,6 +20,14 @@ afterEach(() => {
 
 function makeBlacklistSummaryFallbackTables() {
   return [
+    ...["blacklist_events", "blacklist_current_balances"].map((table) => ({
+      match: "SELECT value FROM cache WHERE key = ?",
+      matchBinds: [`blacklist:identity-reconcile:v1:${table}`],
+      rows: [],
+      first: null,
+    })),
+    { match: "SELECT id, stablecoin, chain_id, address, config_key, contract_address", rows: [] },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
     // P3-16 item 4 / BMT-23 rider: cold request materialization uses a durable D1 claim.
     {
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
@@ -65,12 +77,25 @@ function makeBlacklistSummaryFallbackTables() {
 
 
 describe("handleBlacklistSummary", () => {
+  it.each([
+    ["blacklist-summary-public-aggregate", "blacklist-summary-aggregate-missing"],
+    ["blacklist-gap-aggregate", "blacklist-gap-aggregate-missing"],
+  ])("returns unavailable for absent %s without persisting a summary", async (match, reason) => {
+    const db = mockD1(makeBlacklistSummaryFallbackTables().map((table) =>
+      table.match === match ? { ...table, first: null } : table));
+    const response = await handleBlacklistSummary(db);
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toEqual({ error: reason });
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
+  });
+
   it("serves an actual producer snapshot through the public cache reader", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);
     await materializeBlacklistSummarySnapshot(db, now, now - 30);
     const stored = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-      .get("blacklist:summary:producer:v2") as { value: string };
+      .get(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY) as { value: string };
     const snapshot = JSON.parse(stored.value) as { payload: BlacklistSummaryResponse };
     const response = await handleBlacklistSummary(db);
     expect(await readJsonResponse(response, 200)).toEqual(snapshot.payload);
@@ -83,9 +108,9 @@ describe("handleBlacklistSummary", () => {
       {
         match: "blacklist-summary-snapshot-read",
         rows: [{
-          key: "blacklist:summary:producer:v2",
+          key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
           value: JSON.stringify({
-            version: 2,
+            version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
             materializedAt: now - 60,
             freshnessTs: now - 60,
             payload,
@@ -109,8 +134,8 @@ describe("handleBlacklistSummary", () => {
     const db = mockD1([{
       match: "blacklist-summary-snapshot-read",
       rows: [{
-        key: "blacklist:summary:producer:v2",
-        value: JSON.stringify({ version: 2, materializedAt: now, freshnessTs: null, freshnessStatus, payload }),
+        key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
+        value: JSON.stringify({ version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, materializedAt: now, freshnessTs: null, freshnessStatus, payload }),
         updated_at: now,
       }],
     }], { requireMatch: true });
@@ -127,9 +152,9 @@ describe("handleBlacklistSummary", () => {
       {
         match: "blacklist-summary-snapshot-read",
         rows: [{
-          key: "blacklist:summary:producer:v2",
+          key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
           value: JSON.stringify({
-            version: 2,
+            version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
             materializedAt: now,
             freshnessTs: now,
             payload: { stats: {} },
@@ -156,7 +181,7 @@ describe("handleBlacklistSummary", () => {
       payload.totalEvents = 99;
       const db = mockD1([
         { match: "blacklist-summary-snapshot-read", rows: [{ value: JSON.stringify({
-          version: 2, materializedAt: now, freshnessTs: now, payload,
+          version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, materializedAt: now, freshnessTs: now, payload,
         }) }] },
         ...makeBlacklistSummaryFallbackTables(),
       ]);
@@ -174,7 +199,7 @@ describe("handleBlacklistSummary", () => {
       payload.totalEvents = 99;
       const db = mockD1([
         { match: "blacklist-summary-snapshot-read", rows: [{ value: JSON.stringify({
-          version: 2, materializedAt: now, freshnessTs: now, payload,
+          version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, materializedAt: now, freshnessTs: now, payload,
         }) }] },
         ...makeBlacklistSummaryFallbackTables(),
       ]);
@@ -190,9 +215,9 @@ describe("handleBlacklistSummary", () => {
       {
         match: "blacklist-summary-snapshot-read",
         rows: [{
-          key: "blacklist:summary:producer:v2",
+          key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
           value: JSON.stringify({
-            version: 2,
+            version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
             materializedAt: staleAt,
             freshnessTs: staleAt,
             payload,
@@ -211,7 +236,7 @@ describe("handleBlacklistSummary", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
   });
 
-  it("serves a legacy producer snapshot without the removed reconciliation compatibility read", async () => {
+  it("serves a current producer snapshot without the removed reconciliation compatibility read", async () => {
     const now = Math.floor(Date.now() / 1000);
     const payload = makeValidSummaryPayload();
     delete payload.reconciliation;
@@ -220,7 +245,7 @@ describe("handleBlacklistSummary", () => {
         match: "blacklist-summary-snapshot-read",
         rows: [{
           value: JSON.stringify({
-            version: 2,
+            version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
             materializedAt: now,
             freshnessTs: now,
             payload,
@@ -268,7 +293,7 @@ describe("handleBlacklistSummary", () => {
         {
           match: "blacklist-summary-snapshot-read",
           rows: [{
-            key: "blacklist:summary:producer:v2",
+            key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
             value: "{",
             updated_at: now,
           }],
@@ -296,14 +321,14 @@ describe("handleBlacklistSummary", () => {
 
     expect(result).toEqual({ written: true });
     const write = db.getHistory().find((entry) => entry.sql.includes("blacklist-summary-snapshot-write"));
-    expect(write?.binds[0]).toBe("blacklist:summary:producer:v2");
+    expect(write?.binds[0]).toBe(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY);
     const payload = JSON.parse(String(write?.binds[1])) as {
       version: number;
       materializedAt: number;
       freshnessTs: number;
       payload: { stats: unknown; chart: unknown[]; totalEvents: number };
     };
-    expect(payload.version).toBe(2);
+    expect(payload.version).toBe(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION);
     expect(payload.materializedAt).toBe(now);
     expect(payload.freshnessTs).toBe(now - 300);
     expect(payload.payload.totalEvents).toBe(0);
@@ -324,8 +349,8 @@ describe("handleBlacklistSummary", () => {
       {
         match: "GROUP BY stablecoin, event_type",
         rows: [
-          { stablecoin: "USDT", event_type: "blacklist", n: 1, usd_sum: 1000 },
-          { stablecoin: "USDC", event_type: "destroy", n: 1, usd_sum: 500 },
+          { stablecoin: "USDT", event_type: "blacklist", n: 1, usd_sum: 1000, usd_known: 1 },
+          { stablecoin: "USDC", event_type: "destroy", n: 1, usd_sum: 500, usd_known: 1 },
         ],
       },
       {
@@ -451,9 +476,9 @@ describe("handleBlacklistSummary", () => {
       {
         match: "GROUP BY stablecoin, event_type",
         rows: [
-          { stablecoin: "USDC", event_type: "blacklist", n: 2, usd_sum: 500 },
-          { stablecoin: "USDT", event_type: "blacklist", n: 1, usd_sum: 300 },
-          { stablecoin: "USDT", event_type: "destroy", n: 1, usd_sum: 300 },
+          { stablecoin: "USDC", event_type: "blacklist", n: 2, usd_sum: 500, usd_known: 2 },
+          { stablecoin: "USDT", event_type: "blacklist", n: 1, usd_sum: 300, usd_known: 1 },
+          { stablecoin: "USDT", event_type: "destroy", n: 1, usd_sum: 300, usd_known: 1 },
         ],
       },
       {
@@ -551,7 +576,7 @@ describe("handleBlacklistSummary", () => {
     const db = mockD1([
       {
         match: "GROUP BY stablecoin, event_type",
-        rows: [{ stablecoin: "USDC", event_type: "blacklist", n: 1, usd_sum: 100 }],
+        rows: [{ stablecoin: "USDC", event_type: "blacklist", n: 1, usd_sum: 100, usd_known: 1 }],
       },
       {
         match: "latest_event_type",
@@ -618,9 +643,9 @@ describe("handleBlacklistSummary", () => {
       {
         match: "GROUP BY stablecoin, event_type",
         rows: [
-          { stablecoin: "USDC", event_type: "blacklist", n: 1, usd_sum: 1000 },
-          { stablecoin: "USDC", event_type: "unblacklist", n: 1, usd_sum: 0 },
-          { stablecoin: "USDT", event_type: "destroy", n: 1, usd_sum: 500 },
+          { stablecoin: "USDC", event_type: "blacklist", n: 1, usd_sum: 1000, usd_known: 1 },
+          { stablecoin: "USDC", event_type: "unblacklist", n: 1, usd_sum: 0, usd_known: 1 },
+          { stablecoin: "USDT", event_type: "destroy", n: 1, usd_sum: 500, usd_known: 1 },
         ],
       },
       {
@@ -933,8 +958,8 @@ describe("handleBlacklistSummary", () => {
       {
         match: "GROUP BY stablecoin, event_type",
         rows: [
-          { stablecoin: "USDC", event_type: "blacklist", n: 2, usd_sum: 0 },
-          { stablecoin: "USDC", event_type: "unblacklist", n: 1, usd_sum: 0 },
+          { stablecoin: "USDC", event_type: "blacklist", n: 2, usd_sum: 0, usd_known: 2 },
+          { stablecoin: "USDC", event_type: "unblacklist", n: 1, usd_sum: 0, usd_known: 1 },
         ],
       },
       {
@@ -982,8 +1007,8 @@ describe("handleBlacklistSummary", () => {
       {
         match: "GROUP BY stablecoin, event_type",
         rows: [
-          { stablecoin: "USDC", event_type: "blacklist", n: 2, usd_sum: 0 },
-          { stablecoin: "USDC", event_type: "unblacklist", n: 2, usd_sum: 0 },
+          { stablecoin: "USDC", event_type: "blacklist", n: 2, usd_sum: 0, usd_known: 2 },
+          { stablecoin: "USDC", event_type: "unblacklist", n: 2, usd_sum: 0, usd_known: 2 },
         ],
       },
       {
@@ -1076,8 +1101,8 @@ describe("handleBlacklistSummary", () => {
       {
         match: "GROUP BY stablecoin, event_type",
         rows: [
-          { stablecoin: "USDT", event_type: "blacklist", n: 1, usd_sum: 100 },
-          { stablecoin: "USDT", event_type: "destroy", n: 1, usd_sum: 100 },
+          { stablecoin: "USDT", event_type: "blacklist", n: 1, usd_sum: 100, usd_known: 1 },
+          { stablecoin: "USDT", event_type: "destroy", n: 1, usd_sum: 100, usd_known: 1 },
         ],
       },
       {
@@ -1151,7 +1176,7 @@ describe("handleBlacklistSummary", () => {
       {
         match: "GROUP BY stablecoin, event_type",
         rows: [
-          { stablecoin: "USDT", event_type: "destroy", n: 2, usd_sum: 750 },
+          { stablecoin: "USDT", event_type: "destroy", n: 2, usd_sum: 750, usd_known: 2 },
         ],
       },
       {
@@ -1215,7 +1240,7 @@ describe("handleBlacklistSummary", () => {
       {
         match: "GROUP BY stablecoin, event_type",
         rows: [
-          { stablecoin: "USDC", event_type: "blacklist", n: 3, usd_sum: 0 },
+          { stablecoin: "USDC", event_type: "blacklist", n: 3, usd_sum: 0, usd_known: 3 },
         ],
       },
       { match: "latest_event_type", rows: [] },

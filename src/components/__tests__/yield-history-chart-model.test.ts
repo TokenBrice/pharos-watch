@@ -121,7 +121,7 @@ describe("yield history transformations", () => {
   });
 });
 it("uses the shared public history window for the longest chart preset", () => {
-  expect(PRESET_DAYS.at(-1)).toBe(YIELD_HISTORY_MAX_DAYS);
+  expect(PRESET_DAYS[PRESET_DAYS.length - 1]).toBe(YIELD_HISTORY_MAX_DAYS);
 });
 
 describe("yield history chart source display", () => {
@@ -188,8 +188,19 @@ describe("deriveYieldSourceSegments", () => {
     expect(segments).toHaveLength(7);
     const topKeys = segments.slice(0, 5).map((segment) => segment.sourceKey);
     expect(topKeys).toEqual(["src-a", "src-b", "src-c", "src-d", "src-e"]);
-    expect(segments[5]).toMatchObject({ sourceKey: "other", sourceLabel: "other", isOther: true });
-    expect(segments[6]).toMatchObject({ sourceKey: "other", sourceLabel: "other", isOther: true });
+    expect(segments[5]).toMatchObject({ sourceKey: "src-f", sourceLabel: "Source F", isOther: true });
+    expect(segments[6]).toMatchObject({ sourceKey: "src-g", sourceLabel: "Source G", isOther: true });
     expect(segments[5].color).toBe(segments[6].color);
+  });
+
+  it("preserves point-only switches and repeated source identity without invented intervals", () => {
+    expect(deriveYieldSourceSegments([
+      { ts: 1000, sourceKey: "a" }, { ts: 2000, sourceKey: "b" },
+      { ts: 3000, sourceKey: "b" }, { ts: 4000, sourceKey: "a" },
+    ]).map(({ startTs, endTs, sourceKey }) => ({ startTs, endTs, sourceKey }))).toEqual([
+      { startTs: 1000, endTs: 1000, sourceKey: "a" },
+      { startTs: 2000, endTs: 3000, sourceKey: "b" },
+      { startTs: 4000, endTs: 4000, sourceKey: "a" },
+    ]);
   });
 });

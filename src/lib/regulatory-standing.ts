@@ -124,7 +124,7 @@ const GENIUS_SUMMARY_CLAUSES: Record<GeniusAuthorizationStatus, string> = {
   "ppsi-approved": "is federally approved as a permitted payment stablecoin issuer under the GENIUS Act",
   "state-qualified": "is state-qualified under the GENIUS Act",
   "official-application-pending": "has a GENIUS authorization filing pending",
-  "issuer-announced-intent": "has announced intent to seek GENIUS authorization",
+  "issuer-announced-intent": "has public materials signalling a GENIUS-era issuance path",
   "no-public-authorization-found": "has no public GENIUS authorization on record",
   "not-applicable": "sits outside the GENIUS Act's scope",
   unknown: "has an unreviewed GENIUS status",

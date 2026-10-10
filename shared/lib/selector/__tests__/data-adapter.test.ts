@@ -274,7 +274,7 @@ describe("yield ingestion", () => {
     });
     expect(row.yieldSources).toMatchObject([
       { sourceKey: "Aave:ethereum:lending", venueRiskTier: "mid", deploymentPlace: "lending", isPrimary: true },
-      { sourceKey: "curve-lp", venueRiskTier: "low", deploymentPlace: "lp", isPrimary: false },
+      { sourceKey: "curve-lp", venueRiskTier: "low", deploymentPlace: "lp", isPrimary: false, pharosYieldScore: null },
     ]);
     expect(selectYieldSource(row, makeInput({ profile: "yield", venuePreferences: ["dex"] })))
       .toMatchObject({ sourceKey: "curve-lp", selectionReason: "venue-preference" });

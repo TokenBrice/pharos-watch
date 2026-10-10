@@ -4,7 +4,7 @@ import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { formatCompactUsd, formatPercent } from "@shared/lib/format";
 import { coinEmblemSize, FIAT_MAP_SIZE_CAP_MARKET_CAP, FIAT_MAP_SIZE_CEIL } from "@/lib/alt-peg-sizing";
-import { buildAltPegSnapshot } from "@/lib/alt-peg-market";
+import { buildAltPegSnapshot, type AltPegDistributionRow } from "@/lib/alt-peg-market";
 import { buildPegDiversityHero } from "@/lib/alt-peg-hero";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { HoverProvider } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
@@ -41,26 +41,27 @@ function FiatSizeKey() {
           </span>
         );
       })}
+      <span className="peg-hero__scale-item">Unknown supply: neutral size</span>
     </div>
   );
 }
 
-function TopCohortStrip({ rows }: { rows: ReturnType<typeof buildAltPegSnapshot>["topRows"] }) {
+function TopCohortStrip({ rows, partial }: { rows: AltPegDistributionRow[]; partial: boolean }) {
   if (rows.length === 0) return null;
   return (
-    <div className="peg-hero__top-cohorts" aria-label="Top cohorts by market cap">
-      <span className="peg-hero__top-label">Largest Cohorts</span>
+    <div className="peg-hero__top-cohorts" aria-label={partial ? "Largest known cohort subtotals" : "Top cohorts by market cap"}>
+      <span className="peg-hero__top-label">{partial ? "Known Cohort Subtotals · Partial" : "Largest Cohorts"}</span>
       <div className="peg-hero__top-grid">
         {rows.map((row, index) => (
           <Link key={row.peg} href={row.href} className="peg-hero__top-row pharos-focus-ring">
             <span className="peg-hero__top-head">
-              <span className="peg-hero__top-rank">#{index + 1}</span>
+              {!partial && row.marketCap !== null ? <span className="peg-hero__top-rank">#{index + 1}</span> : null}
               <span className="peg-hero__top-dot" style={{ backgroundColor: row.colorHex }} aria-hidden="true" />
               <span className="peg-hero__top-name">{row.label}</span>
             </span>
             <span className="peg-hero__top-metrics">
-              <span className="peg-hero__top-cap">{formatCompactUsd(row.marketCap)}</span>
-              <span className="peg-hero__top-share">{formatPercent(row.sharePct, 1)} share</span>
+              <span className="peg-hero__top-cap">{row.marketCap !== null ? formatCompactUsd(row.marketCap) : "Supply unavailable"}</span>
+              <span className="peg-hero__top-share">{row.sharePct !== null ? `${formatPercent(row.sharePct, 1)} share` : "Share unavailable"}</span>
             </span>
           </Link>
         ))}
@@ -99,7 +100,7 @@ export function PegDiversityHeroLive({
       >
         {variant === "default" ? (
           <div className="peg-hero__legend-stack">
-            <TopCohortStrip rows={topCohorts} />
+            <TopCohortStrip rows={topCohorts} partial={snapshot.altSupplyUnavailableCount > 0} />
           </div>
         ) : null}
         <div

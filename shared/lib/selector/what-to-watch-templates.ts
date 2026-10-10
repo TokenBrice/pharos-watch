@@ -171,9 +171,10 @@ function sourceRiskWatchText(row: MergedRow): string | null {
 }
 
 function thinTvlWatchText(row: MergedRow): string | null {
+  const sourceTvlUsd = row.yieldSourceTvlUsd === undefined ? row.effectiveTvlUsd : row.yieldSourceTvlUsd;
   if (
-    row.warningSignals.includes("thin-tvl") ||
-    (row.effectiveTvlUsd != null && row.effectiveTvlUsd < 25_000_000)
+    row.warningSignals?.includes("thin-tvl") ||
+    (sourceTvlUsd != null && sourceTvlUsd < 25_000_000)
   ) {
     return "Yield venue depth is thin; size the route against source TVL.";
   }

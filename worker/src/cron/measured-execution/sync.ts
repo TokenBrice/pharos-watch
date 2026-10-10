@@ -1,6 +1,7 @@
 import {
   getDexMeasuredExecutionProbeNotionals,
   validateDexMeasuredExecutionProfile,
+  DEX_MEASURED_FRESHNESS_MAX_SEC,
   type DexMeasuredExecutionPoolBindingProof,
   type DexMeasuredExecutionRegistryBindingProof,
   type DexMeasuredExecutionStableSwapNgFactoryBindingProof,
@@ -12,7 +13,8 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { createCronResult } from "../../lib/cron-result";
-import { fetchEvmBlockNumber } from "../../lib/evm-rpc";
+import { fetchEvmBlockHeader, fetchEvmBlockNumber } from "../../lib/evm-rpc";
+import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { readDexSourcePaginationState, writeDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
 import { mapWithConcurrency } from "../../lib/concurrency";
@@ -80,6 +82,7 @@ import {
   estimateRemainingMeasuredQuoteRpcRequests, hasCompleteDexMeasuredQuoteProgress,
   projectMeasuredExecutionPacingStop, selectExpiringScoreBearingPriorityPacket,
   loadPublishedScoreBearingDexRoutes,
+  hasAdapterOwnedDexSourceHeader,
   isDexMeasuredExecutionTargetInLane,
   resolveMeasuredExecutionCronStatus, resolveTargetDeployment, summarizeMeasuredExecutionQuoteFailures,
   type TargetDeployment,
@@ -550,7 +553,6 @@ async function syncDexMeasuredExecutionLane(
       markBudgetStop(rows, rpcBudget.stopReason);
       return;
     }
-    const blockObservedAt = Math.floor(Date.now() / 1_000);
     const blockNumber = await fetchEvmBlockNumber(chain, {
       chainRpcs,
       signal,
@@ -567,6 +569,35 @@ async function syncDexMeasuredExecutionLane(
     if (blockNumber == null) {
       for (const state of rows) state.failedReason = "block-number-unavailable";
       return;
+    }
+    // StableSwap/composite verifiers already admit their own source headers.
+    // Other adapters share one header read per chain rather than minting a
+    // collection timestamp for a responsive but stale RPC head.
+    let blockObservedAt: number | null = null;
+    if (rows.some((state) => !hasAdapterOwnedDexSourceHeader(state.deployment!.kind))) {
+      const blockHeader = await fetchEvmBlockHeader(chain, blockNumber, {
+        chainRpcs,
+        signal,
+        timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+        deadlineMs: rpcBudget.deadlineMs,
+        beforeRequest: () => rpcBudget.tryConsume(),
+        maxRetries: 0,
+      });
+      rpcBudget.recordChainResult(chain, blockHeader != null);
+      if (rpcBudget.stopReason) {
+        markBudgetStop(rows, rpcBudget.stopReason);
+        return;
+      }
+      const sourceAge = assessFreshnessTimestamp(Math.floor(Date.now() / 1000), blockHeader?.timestamp);
+      const sourceFailure = blockHeader == null ? "block-header-unavailable"
+        : blockHeader.number !== blockNumber ? "block-header-mismatch"
+        : sourceAge.reason != null ? (sourceAge.reason === "future-timestamp" ? "future-pinned-block" : "block-header-unavailable")
+        : sourceAge.ageSeconds > DEX_MEASURED_FRESHNESS_MAX_SEC ? "stale-pinned-block" : null;
+      if (sourceFailure != null || blockHeader == null) {
+        for (const state of rows) state.failedReason = sourceFailure ?? "block-header-unavailable";
+        return;
+      }
+      blockObservedAt = blockHeader.timestamp;
     }
     for (const state of rows) {
       state.blockNumber = blockNumber;

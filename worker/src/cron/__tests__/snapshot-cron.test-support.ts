@@ -192,33 +192,6 @@ export function makePsiSnapshotDb(input: MockTableConfig[] = []): MockD1Database
   ]);
 }
 
-export type PsiAverageRow = {
-  avg_score: number | null;
-  avg_severity: number | null;
-  avg_breadth: number | null;
-  avg_stress_breadth: number | null;
-  avg_trend: number | null;
-  cnt: number;
-};
-
-export type PsiMethodologyRow = {
-  methodology_version: string;
-  cnt: number;
-};
-
-export function makePsiDailyDb({
-  average,
-  methodologyRows,
-}: {
-  average: PsiAverageRow;
-  methodologyRows: readonly PsiMethodologyRow[];
-}): MockD1Database {
-  return makePsiSnapshotDb([
-    { match: "AVG(score) as avg_score", rows: [], first: average },
-    { match: "GROUP BY methodology_version", rows: [...methodologyRows] },
-  ]);
-}
-
 export function makePublicDatasetDb(tables: MockTableConfig[] = []): MockD1Database {
   return mockD1([...tables, { match: "FROM public_snapshots WHERE snapshot_date", rows: [], first: null }]);
 }

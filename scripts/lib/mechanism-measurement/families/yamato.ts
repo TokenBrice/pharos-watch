@@ -1,5 +1,4 @@
 import {
-  decodeAddressWord,
   decodeUintWord,
   normalizeAddress,
   ratioToRounded,
@@ -7,6 +6,8 @@ import {
   type EthCallJournal,
   type MeasurementCheck,
   type PinnedBlock,
+  readJournalAddress,
+  readJournalUint,
 } from "../core";
 import type { YamatoMeasurementEvidence } from "../schema";
 import type { YamatoMeasurementTarget } from "../targets";
@@ -25,16 +26,8 @@ export async function measureYamato(
   const token = normalizeAddress(target.contracts.token);
   const yamato = normalizeAddress(target.contracts.yamato);
 
-  const currencyOs = decodeAddressWord(
-    await caller.call({ name: "yamato.currencyOS", to: yamato, signature: "currencyOS()", selector: "0x19eb292c" }),
-    "currencyOS",
-  );
-  caller.recordDecoded(currencyOs);
-  const currency = decodeAddressWord(
-    await caller.call({ name: "currencyOS.currency", to: currencyOs, signature: "currency()", selector: "0xe5a6b10f" }),
-    "currencyOS.currency",
-  );
-  caller.recordDecoded(currency);
+  const currencyOs = await readJournalAddress(caller, { name: "yamato.currencyOS", to: yamato, signature: "currencyOS()", selector: "0x19eb292c" }, "currencyOS");
+  const currency = await readJournalAddress(caller, { name: "currencyOS.currency", to: currencyOs, signature: "currency()", selector: "0xe5a6b10f" }, "currencyOS.currency");
   requireCheck(checks, "graph.currency", currency === token, `CurrencyOS token ${currency} equals configured CJPY`);
 
   const statesRaw = await caller.call({
@@ -59,24 +52,11 @@ export async function measureYamato(
     `collateral ${totalCollateralRaw} and debt ${totalDebtRaw} are positive`,
   );
 
-  const priceFeed = decodeAddressWord(
-    await caller.call({ name: "yamato.priceFeed", to: yamato, signature: "priceFeed()", selector: "0x741bef1a" }),
-    "priceFeed",
-  );
-  caller.recordDecoded(priceFeed);
-  const priceRaw = decodeUintWord(
-    await caller.call({ name: "priceFeed.getPrice", to: priceFeed, signature: "getPrice()", selector: "0x98d5fdca" }),
-    0,
-    "getPrice",
-  );
-  caller.recordDecoded(priceRaw.toString());
+  const priceFeed = await readJournalAddress(caller, { name: "yamato.priceFeed", to: yamato, signature: "priceFeed()", selector: "0x741bef1a" }, "priceFeed");
+  const priceRaw = await readJournalUint(caller, { name: "priceFeed.getPrice", to: priceFeed, signature: "getPrice()", selector: "0x98d5fdca" }, 0, "getPrice");
   requireCheck(checks, "price.positive", priceRaw > 0n, `protocol ETH/JPY price ${priceRaw} is positive`);
 
-  const pool = decodeAddressWord(
-    await caller.call({ name: "yamato.pool", to: yamato, signature: "pool()", selector: "0x16f0115b" }),
-    "pool",
-  );
-  caller.recordDecoded(pool);
+  const pool = await readJournalAddress(caller, { name: "yamato.pool", to: yamato, signature: "pool()", selector: "0x16f0115b" }, "pool");
   requireCheck(
     checks,
     "graph.pool",
@@ -84,12 +64,7 @@ export async function measureYamato(
     `protocol pool ${pool} matches configured graph`,
   );
 
-  const totalSupplyRaw = decodeUintWord(
-    await caller.call({ name: "token.totalSupply", to: token, signature: "totalSupply()", selector: "0x18160ddd" }),
-    0,
-    "totalSupply",
-  );
-  caller.recordDecoded(totalSupplyRaw.toString());
+  const totalSupplyRaw = await readJournalUint(caller, { name: "token.totalSupply", to: token, signature: "totalSupply()", selector: "0x18160ddd" }, 0, "totalSupply");
   requireCheck(
     checks,
     "derivation.supply-vs-debt",
@@ -97,18 +72,13 @@ export async function measureYamato(
     `token supply ${totalSupplyRaw} exactly equals Yamato debt`,
   );
 
-  const poolBalanceRaw = decodeUintWord(
-    await caller.call({
-      name: "token.balanceOf(pool)",
-      to: token,
-      signature: "balanceOf(address)",
-      selector: "0x70a08231",
-      args: [BigInt(pool)],
-    }),
-    0,
-    "pool balance",
-  );
-  caller.recordDecoded(poolBalanceRaw.toString());
+  const poolBalanceRaw = await readJournalUint(caller, {
+    name: "token.balanceOf(pool)",
+    to: token,
+    signature: "balanceOf(address)",
+    selector: "0x70a08231",
+    args: [BigInt(pool)],
+  }, 0, "pool balance");
   requireCheck(
     checks,
     "pool.balance-positive",

@@ -45,9 +45,10 @@ export function readAdminIntegerParam(
   body: Record<string, unknown>,
   searchParams: URLSearchParams,
   key: string,
+  precedence: "body-first" | "query-first" = "body-first",
 ): number | null {
   const bodyValue = typeof body[key] === "number" ? Math.trunc(body[key] as number) : null;
-  if (bodyValue != null) return bodyValue;
+  if (bodyValue != null && (precedence === "body-first" || !searchParams.has(key))) return bodyValue;
   const raw = searchParams.get(key);
   if (raw == null || raw.trim() === "") return null;
   if (!/^-?\d+$/.test(raw.trim())) return null;

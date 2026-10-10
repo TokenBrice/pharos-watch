@@ -9,7 +9,7 @@ vi.mock("../abort", () => ({
 }));
 
 import { fetchWithRetry } from "../fetch-retry";
-import { fetchDsTokenPairsWithStatus, fetchDsTokenPoolsWithStatus } from "../dexscreener";
+import { fetchDsTokenPairsWithStatus, fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd } from "../dexscreener";
 
 function validPair(chainId = "base", dexId = "aerodrome") {
   return {
@@ -27,6 +27,20 @@ describe("dexscreener", () => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
   });
+
+  it.each([undefined, "0", "-1", "invalid", "Infinity", "2"])(
+    "derives quote USD only with a valid native ratio %s",
+    (priceNative) => {
+      const pair = { ...validPair(), priceUsd: "4", priceNative };
+      expect(getDsTrackedTokenPriceUsd(pair, "0xDEF")).toEqual({
+        side: "quote", priceUsd: priceNative === "2" ? 2 : null,
+      });
+      expect(getDsTrackedTokenPriceUsd(pair, "0xABC")).toEqual({ side: "base", priceUsd: 4 });
+      expect(getDsTrackedTokenPriceUsd(pair, "other")).toEqual({ side: null, priceUsd: null });
+      expect(getDsTrackedTokenPriceUsd({ ...pair, priceUsd: "invalid" }, "0xdef"))
+        .toEqual({ side: "quote", priceUsd: null });
+    },
+  );
 
   it("treats malformed token-pool payloads as failed fetches for breaker accounting", async () => {
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(

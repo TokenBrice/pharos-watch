@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import type { TapeEvent } from "@shared/types/tape-event";
+import { makeTapeEvent } from "@shared/test-utils/tape-event";
 
 type LatestEventsResult = {
   data: { events: TapeEvent[]; nextCursor: string | null; total: number | null; totalExact: boolean } | undefined;
@@ -29,29 +30,6 @@ beforeEach(() => {
   mockLatestEvents();
 });
 
-function makeTapeEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
-  return {
-    id: "2026-07-08-depeg-opened",
-    type: "depeg.opened",
-    severity: "warning",
-    ts: Date.parse("2026-07-08T12:00:00Z"),
-    endsAt: null,
-    coinId: "usdc-circle",
-    issuerId: null,
-    pegCurrency: "USD",
-    chain: null,
-    title: "USDC depeg opened (-500 bps)",
-    summary: "USDC drifted to -500 bps versus its USD peg.",
-    payload: {},
-    sourceTable: "depeg_events",
-    sourceRowId: "1",
-    transition: "opened",
-    sourceUrl: "/stablecoin/usdc-circle/#peg-history",
-    methodologyVersion: null,
-    ...overrides,
-  };
-}
-
 function mockLatestEvents(overrides: Partial<LatestEventsResult> = {}) {
   useLatestEventsMock.mockReturnValue({
     data: { events: [], nextCursor: null, total: null, totalExact: false },
@@ -65,7 +43,10 @@ function mockLatestEvents(overrides: Partial<LatestEventsResult> = {}) {
 
 describe("TapeForCoinTeaser", () => {
   it("refreshes date labels when polling updates event data after UTC midnight", async () => {
-    const event = makeTapeEvent();
+    const event = makeTapeEvent({
+      id: "2026-07-08-depeg-opened",
+      ts: Date.parse("2026-07-08T12:00:00Z"),
+    });
 
     mockLatestEvents({
       data: { events: [event], nextCursor: null, total: null, totalExact: false },

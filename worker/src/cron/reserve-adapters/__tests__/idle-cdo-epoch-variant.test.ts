@@ -169,12 +169,25 @@ describe("adaptIdleCdoEpochVariantSnapshot", () => {
     );
   });
 
-  it("reconciles NAVs against fee-exclusive contract value so accrued fees alone do not degrade", () => {
-    const unclaimedFeesRaw = 200_000_000_000n; // 200,000 USDC accrued between harvests
-    const result = adapt({
-      contractValueRaw: LIVE_BLOCK_25882423.navAaRaw + unclaimedFeesRaw,
-      unclaimedFeesRaw,
+  it.each([0n, 20_000_000n])("keeps fee-exclusive whole-vault coverage reproducible with junior NAV %s", (navBbRaw) => {
+    const basis = { navAaRaw: 100_000_000n - navBbRaw, navBbRaw, contractValueRaw: 100_000_000n };
+    const baseline = adapt(basis);
+    const result = adapt({ ...basis, contractValueRaw: 110_000_000n, unclaimedFeesRaw: 10_000_000n });
+    expect(result.metadata).toMatchObject({
+      totalReserveUsd: 100,
+      supplyUsd: 100,
+      collateralizationRatio: 1,
+      details: {
+        coverageScope: "whole-vault-tranche-nav",
+        compositionScope: "gross-vault-assets",
+        grossContractValueUsd: 110,
+        unclaimedFeesUsd: 10,
+      },
     });
+    expect(result.metadata?.collateralizationRatio).toBe(
+      result.metadata!.totalReserveUsd! / result.metadata!.supplyUsd!,
+    );
+    expect(result.metadata?.collateralizationRatio).toBe(baseline.metadata?.collateralizationRatio);
     expect(result.warnings ?? []).not.toContainEqual(
       expect.objectContaining({ code: "idle-cdo-nav-reconciliation-drift" }),
     );

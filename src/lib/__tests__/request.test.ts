@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RequestFailure, RequestSequence, requestJson, requestJsonWithResponse } from "@/lib/request";
+import { RequestFailure, RequestSequence, requestJson, requestJsonWithResponse, requestResponse } from "@/lib/request";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 afterEach(() => {
@@ -29,6 +29,24 @@ describe("request lifecycle", () => {
     await vi.advanceTimersByTimeAsync(51);
 
     await expect(pending).resolves.toMatchObject({ kind: "timeout" });
+  });
+
+  it("classifies parent cancellation after a delayed response callback crosses the deadline", async () => {
+    vi.useFakeTimers();
+    mockFetch([{ match: "/cancelled-callback", body: "ok" }], { requireMatch: true });
+    const parent = new AbortController();
+    const reason = new DOMException("caller cancelled", "AbortError");
+    const pending = requestResponse("/cancelled-callback", { signal: parent.signal, timeoutMs: 10 }, async () => {
+      parent.abort(reason);
+      const { promise, resolve } = Promise.withResolvers<void>();
+      setTimeout(resolve, 25);
+      await promise;
+      return "late body";
+    });
+    const assertion = expect(pending).rejects.toMatchObject({ kind: "aborted", cause: reason });
+    await vi.advanceTimersByTimeAsync(30);
+    await assertion;
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("classifies HTTP failures and preserves the consumed error body", async () => {

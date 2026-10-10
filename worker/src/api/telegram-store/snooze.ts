@@ -10,6 +10,7 @@ import {
   type TelegramOperationBatchOptions,
 } from "../../lib/telegram/operation-batch";
 import { nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
+import { prepareCancelUnstartedTelegramRecaps } from "../../lib/telegram/recap-store";
 
 /**
  * Replace the subscriber's IANA timezone (used to interpret quiet hours
@@ -58,20 +59,12 @@ export async function setSubscriberTimezone(
              SET enabled = 0, next_due_at = NULL, updated_at = ?
            WHERE chat_id = ? AND enabled = 1 AND chat_kind = 'private'
         `).bind(nowSec, chatId),
-        db.prepare(`
-          UPDATE telegram_recap_targets
-             SET status = 'cancelled', terminal_reason = 'timezone_cleared',
-                 completed_at = ?, updated_at = ?
-           WHERE chat_id = ? AND status IN ('planned', 'queued')
-        `).bind(nowSec, nowSec, chatId),
-        db.prepare(`
-          DELETE FROM telegram_pending_alerts
-           WHERE chat_id = ? AND source_type = 'personalized_recap'
-             AND source_event_id IN (
-               SELECT recap_key FROM telegram_recap_targets
-                WHERE chat_id = ? AND status = 'cancelled'
-             )
-        `).bind(chatId, chatId),
+        ...prepareCancelUnstartedTelegramRecaps(db, {
+          chatId,
+          reason: "timezone_cleared",
+          nowSec,
+          requireDisabledPreference: true,
+        }),
       );
     }
   }

@@ -68,10 +68,19 @@ function toTxContext(batch: AlchemyTransactionContextBatch): TxContextResolution
 
   const logTopics: string[] = [];
   const logAddresses: string[] = [];
+  const receiptLogs: NonNullable<MintBurnTxContext["receiptLogs"]> = [];
   for (const log of receiptRecord.logs) {
     const logRecord = log as Record<string, unknown>;
     logAddresses.push(logRecord.address as string);
     logTopics.push(...(logRecord.topics as string[]));
+    if (typeof logRecord.data === "string") {
+      receiptLogs.push({
+        address: logRecord.address as string,
+        topics: logRecord.topics as string[],
+        data: logRecord.data,
+        ...(typeof logRecord.logIndex === "string" ? { logIndex: logRecord.logIndex } : {}),
+      });
+    }
   }
   return {
     context: {
@@ -79,6 +88,7 @@ function toTxContext(batch: AlchemyTransactionContextBatch): TxContextResolution
       inputSelector: txRecord.input.slice(0, 10),
       logTopics,
       logAddresses,
+      receiptLogs,
     },
     shortfall: false,
   };

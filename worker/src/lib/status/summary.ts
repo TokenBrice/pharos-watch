@@ -5,35 +5,38 @@ type StatusSummary = StatusResponse["summary"];
 
 export function emptyStatusSummary(): StatusSummary {
   return {
-    unhealthyCrons: 0,
-    availabilityImpactingUnhealthyCrons: 0,
-    watchUnhealthyCrons: 0,
-    degradedCrons: 0,
-    cronErrors: 0,
-    availabilityImpactingCronErrors: 0,
-    availabilityImpactingConsecutiveCronErrors: 0,
-    staleCronArtifacts: 0,
-    expiredCronLeases: 0,
-    orphanedCronProgressRows: 0,
-    scheduledSlotRunning: 0,
-    scheduledSlotStaleCandidates: 0,
+    unhealthyCrons: null,
+    availabilityImpactingUnhealthyCrons: null,
+    watchUnhealthyCrons: null,
+    degradedCrons: null,
+    cronErrors: null,
+    availabilityImpactingCronErrors: null,
+    availabilityImpactingConsecutiveCronErrors: null,
+    staleCronArtifacts: null,
+    expiredCronLeases: null,
+    orphanedCronProgressRows: null,
+    scheduledSlotRunning: null,
+    scheduledSlotStaleCandidates: null,
     scheduledSlotOldestRunningAgeSec: null,
-    budgetOnlySurfaceCount: 0,
-    budgetOnlySurfaceMissingTelemetry: 0,
-    budgetOnlySurfaceStaleTelemetry: 0,
-    budgetOnlySurfaceErrors: 0,
-    diagnosticIssueCount: 0,
-    worstCacheRatio: 0,
-    transitionsLast24h: 0,
+    budgetOnlySurfaceCount: null,
+    budgetOnlySurfaceMissingTelemetry: null,
+    budgetOnlySurfaceStaleTelemetry: null,
+    budgetOnlySurfaceErrors: null,
+    diagnosticIssueCount: null,
+    worstCacheRatio: null,
+    transitionsLast24h: null,
+    transitionsUnavailableReason: "db-unavailable",
+    unavailableReason: "db-unavailable",
   };
 }
 
 export function buildStatusSummary(input: {
   cronHealth: CronHealthSnapshot;
   budgetOnlySurfaces: StatusResponse["budgetOnlySurfaces"];
-  diagnosticIssueCount: number;
-  worstCacheRatio: number;
-  transitionsLast24h: number;
+  diagnosticIssueCount: number | null;
+  worstCacheRatio: number | null;
+  transitionsLast24h: number | null;
+  transitionsUnavailableReason?: StatusSummary["transitionsUnavailableReason"];
 }): StatusSummary {
   const { cronHealth } = input;
   const scheduledSlotQueryFailures = {
@@ -62,5 +65,6 @@ export function buildStatusSummary(input: {
     diagnosticIssueCount: input.diagnosticIssueCount,
     worstCacheRatio: input.worstCacheRatio,
     transitionsLast24h: input.transitionsLast24h,
+    transitionsUnavailableReason: input.transitionsUnavailableReason ?? null,
   };
 }

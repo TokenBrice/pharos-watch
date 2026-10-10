@@ -13,7 +13,8 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import { persistActiveNativeEventQuotes, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/native-peg-quote-cache";
 import { PSI_NATIVE_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/depeg-quote-domain";
-import { DEWS_STRESS_BREADTH_SCALE } from "../../lib/stability-index";
+import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, getDepreciationFactor } from "../../lib/stability-index";
+import { computePsiDepegContribution } from "@shared/lib/psi-contribution";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -169,6 +170,50 @@ describe("computeAndStoreStabilityIndex", () => {
       updatedAt: Math.floor(Date.now() / 1000),
     });
   });
+
+  it.each([30 * 86400 + 1, 30 * 86400 + 51839, 30 * 86400 + 51841, 31 * 86400])(
+    "persists exact contributor inputs for a %s-second-old chronic depeg",
+    async (ageSec) => {
+      const now = Math.floor(Date.now() / 1000);
+      const db = makeDb({
+        depegRows: [{ stablecoin_id: "usdt-tether", peg_reference: 1, started_at: now - ageSec }],
+      });
+      vi.mocked(loadStablecoinsCache).mockResolvedValue({
+        kind: "ok", updatedAt: now,
+        payload: { peggedAssets: [
+          makeStabilityAsset({ price: 0.99, circulating: { peggedUSD: 1e9 } }),
+          makeStabilityAsset({ id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 1e9 } }),
+        ] },
+      });
+
+      await computeAndStoreStabilityIndex(db);
+      const snapshot = readInsertedInputSnapshot(db);
+      const [contributor] = snapshot.contributors as Array<{
+        bps: number; mcapUsd: number; factor: number; ageDays: number;
+      }>;
+      const exactFactor = getDepreciationFactor(ageSec / 86400);
+      expect(contributor.factor).toBe(exactFactor);
+      const reproduced = computePsiDepegContribution({
+        ...contributor, totalMcapUsd: snapshot.totalMcapUsd as number,
+      });
+      const scored = computePsiDepegContribution({
+        bps: -100, mcapUsd: 1e9, totalMcapUsd: 2e9, factor: exactFactor,
+      });
+      expect(reproduced).toEqual(scored);
+      const result = computeStabilityIndex({
+        depegs: [{ bps: -100, mcapUsd: 1e9, depegAgeDays: ageSec / 86400 }],
+        totalMcapUsd: 2e9, mcap7dChangePct: snapshot.mcap7dChangePct as number,
+        dewsStressBreadth: snapshot.dewsStressBreadth as number,
+      });
+      const row = db.sqlite.prepare("SELECT components FROM stability_index_samples")
+        .get() as { components: string };
+      expect(JSON.parse(row.components)).toEqual(result!.components);
+      if (ageSec === 31 * 86400) {
+        expect(reproduced.severity).toBeCloseTo(29.75, 12);
+        expect(reproduced.total).toBeCloseTo(32.725, 12);
+      }
+    },
+  );
 
 
   it.each([

@@ -1,13 +1,19 @@
-import { afterEach, describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
-afterEach(fixtures.closeAll);
+afterEach(() => {
+  fixtures.closeAll();
+  vi.restoreAllMocks();
+});
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { projectMintBurnLargeFlows } from "../mint-burn";
 import { mockTapeD1, tapeInsertBinds, tapeInsertBindsForType } from "./test-support";
+import { SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../types";
 
 const SEC = 1_700_000_000;
+beforeEach(() => vi.spyOn(Date, "now").mockReturnValue(SEC * 1000));
+const RECONCILIATION_SINCE = SEC - SOURCE_RECONCILIATION_LOOKBACK_SEC;
 
 const MATCH_FETCH_FLOWS = "FROM mint_burn_events";
 
@@ -110,6 +116,62 @@ describe("mint_burn projector", () => {
     expect(cursor.get()).toEqual({ value: String(SEC) });
   });
 
+  it("reconciles recent healed prices and reviewed burns while reserving year-old repairs for admin backfill", async () => {
+    const { db, sqlite } = fixtures.open();
+    const prepare = vi.spyOn(db, "prepare");
+    const oldTime = SEC - 365 * 86400;
+    const recentTime = SEC - 30 * 86400;
+    const insert = sqlite.prepare(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, timestamp,
+       flow_type, burn_type, tx_hash, block_number, explorer_tx_url)
+      VALUES (?, 'usdt-tether', 'USDT', 'ethereum', ?, 20000000, ?, ?, 'standard', ?, '0xtest', 1, 'https://example.com')`);
+    insert.run("old-unpriced", "mint", null, oldTime, null);
+    insert.run("old-review", "burn", 20_000_000, oldTime + 1, "review_required");
+    insert.run("recent-unpriced", "mint", null, recentTime, null);
+    insert.run("recent-review", "burn", 20_000_000, recentTime + 1, "review_required");
+    insert.run("newer-priced", "mint", 20_000_000, SEC, null);
+
+    expect(await projectMintBurnLargeFlows(db)).toEqual({ projected: 1, advanced: SEC });
+    const sourceSql = prepare.mock.calls.map(([sql]) => sql).find((sql) => sql.includes("FROM mint_burn_events"));
+    expect(sourceSql).toBeDefined();
+    const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${sourceSql!}`)
+      .all(RECONCILIATION_SINCE, 10_000_000, 500)
+      .map((row) => row.detail).join("\n");
+    expect(plan).toContain("idx_mbe2_ts");
+    expect(plan).toContain("timestamp>?");
+    expect(plan).not.toContain("SCAN mint_burn_events");
+    sqlite.prepare("UPDATE mint_burn_events SET amount_usd = ? WHERE amount_usd IS NULL")
+      .run(20_000_000);
+    sqlite.prepare("UPDATE mint_burn_events SET burn_type = ? WHERE burn_type = 'review_required'")
+      .run("effective_burn");
+
+    // Regular reconciliation includes late changes only inside its bounded window.
+    expect(await projectMintBurnLargeFlows(db, { since: SEC - 1 })).toEqual({ projected: 0, advanced: null });
+    expect(await projectMintBurnLargeFlows(db, { dryRun: true })).toEqual({ projected: 2, advanced: null });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM tape_events").get()).toEqual({ n: 1 });
+    expect(await projectMintBurnLargeFlows(db, { maxRows: 1 })).toEqual({ projected: 1, advanced: SEC });
+    expect(await projectMintBurnLargeFlows(db, { maxRows: 1 })).toEqual({ projected: 1, advanced: SEC });
+    expect(await projectMintBurnLargeFlows(db)).toEqual({ projected: 0, advanced: null });
+    expect(await projectMintBurnLargeFlows(db, { since: 0, dryRun: true })).toEqual({ projected: 2, advanced: null });
+    expect(await projectMintBurnLargeFlows(db, { since: 0, maxRows: 1 })).toEqual({ projected: 1, advanced: oldTime });
+    expect(await projectMintBurnLargeFlows(db, { since: 0, maxRows: 1 })).toEqual({ projected: 1, advanced: oldTime + 1 });
+
+    const events = sqlite.prepare("SELECT event_id, source_row_id, ts, type FROM tape_events ORDER BY source_row_id");
+    const projected = events.all();
+    expect(projected).toEqual([
+      { event_id: expect.any(String), source_row_id: "newer-priced", ts: SEC * 1000, type: "mint_burn.large_mint" },
+      { event_id: expect.any(String), source_row_id: "old-review", ts: (oldTime + 1) * 1000, type: "mint_burn.large_burn" },
+      { event_id: expect.any(String), source_row_id: "old-unpriced", ts: oldTime * 1000, type: "mint_burn.large_mint" },
+      { event_id: expect.any(String), source_row_id: "recent-review", ts: (recentTime + 1) * 1000, type: "mint_burn.large_burn" },
+      { event_id: expect.any(String), source_row_id: "recent-unpriced", ts: recentTime * 1000, type: "mint_burn.large_mint" },
+    ]);
+    expect(await projectMintBurnLargeFlows(db)).toEqual({ projected: 0, advanced: null });
+    expect(await projectMintBurnLargeFlows(db, { since: 0 })).toEqual({ projected: 0, advanced: null });
+    expect(events.all()).toEqual(projected);
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'tape-projector:cursor:mint_burn.large_flow'").get())
+      .toEqual({ value: String(SEC) });
+  });
+
   it("derives the same nonempty event identity independently of persistence", async () => {
     const first = mockTapeD1(withRows([makeFlow()])) as MockD1Database;
     const second = mockTapeD1(withRows([makeFlow()])) as MockD1Database;
@@ -128,8 +190,8 @@ describe("mint_burn projector", () => {
     ];
     const db = mockTapeD1([
       { match: "FROM cache WHERE key", rows: [] },
-      { match: MATCH_FETCH_FLOWS, matchBinds: [0, 10_000_000, 2], rows: rows.slice(0, 2) },
-      { match: MATCH_FETCH_FLOWS, matchBinds: [0, SEC, 10_000_000], rows },
+      { match: MATCH_FETCH_FLOWS, matchBinds: [RECONCILIATION_SINCE, 10_000_000, 2], rows: rows.slice(0, 2) },
+      { match: MATCH_FETCH_FLOWS, matchBinds: [RECONCILIATION_SINCE, SEC, 10_000_000], rows },
     ]) as MockD1Database;
 
     const result = await projectMintBurnLargeFlows(db, { maxRows: 2 });

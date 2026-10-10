@@ -9,6 +9,9 @@ import { cleanupFrontendTest, installMatchMediaMock, resetBrowserStorage } from 
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
+import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 
 const push = vi.fn();
 const { scrollToIndexMock, virtualItemsMock, virtualTotalSizeMock } = vi.hoisted(() => ({
@@ -16,6 +19,9 @@ const { scrollToIndexMock, virtualItemsMock, virtualTotalSizeMock } = vi.hoisted
   virtualItemsMock: [{ index: 0, start: 0, end: 40 }],
   virtualTotalSizeMock: { current: 40 },
 }));
+const { downloadCsvWithPreambleMock } = vi.hoisted(() => ({ downloadCsvWithPreambleMock: vi.fn() }));
+
+vi.mock("@/lib/exports/csv", () => ({ downloadCsvWithPreamble: downloadCsvWithPreambleMock }));
 
 function setMobileMedia(matches: boolean) {
   installMatchMediaMock(matches);
@@ -26,7 +32,7 @@ afterEach(() => {
 });
 
 vi.mock("@/components/table-toolbar", () => ({
-  TableToolbar: () => <div data-testid="table-toolbar" />,
+  TableToolbar: ({ onExport }: { onExport: () => void }) => <div data-testid="table-toolbar"><button onClick={onExport}>Export CSV</button></div>,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -117,6 +123,10 @@ const reportCardsProjection = buildV9SafetyTableMap(
 );
 const reportCards = reportCardsProjection.status === "available" ? reportCardsProjection.value : {};
 
+const overviewRows = CLIENT_ACTIVE_STABLECOINS.slice(0, 45).map((meta, index) => makeStablecoin({
+  id: meta.id, name: meta.name, symbol: meta.symbol, circulating: { peggedUSD: 1_000_000 - index },
+}));
+
 describe("StablecoinTable", () => {
   beforeEach(() => {
     resetBrowserStorage();
@@ -126,6 +136,24 @@ describe("StablecoinTable", () => {
     virtualItemsMock.splice(0, virtualItemsMock.length, { index: 0, start: 0, end: 40 });
     virtualTotalSizeMock.current = 40;
     HTMLElement.prototype.scrollTo = vi.fn();
+    downloadCsvWithPreambleMock.mockClear();
+  });
+
+  it("threads supplied source generations through the table model into the CSV preamble", () => {
+    render(<StablecoinTable
+      data={[coin]} isLoading={false} activeFilters={[]}
+      pegScores={new Map()} dexLiquidity={{}} reportCards={{}}
+      sourceGenerations={{ stablecoins: 1_725_192_000, pegSummary: null, dexLiquidity: 1_725_191_940, reportCards: null }}
+    />);
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+    expect(downloadCsvWithPreambleMock).toHaveBeenCalledOnce();
+    expect(downloadCsvWithPreambleMock.mock.calls[0][3]).toMatchObject({
+      asOfISO: "2024-09-01T12:00:00.000Z",
+      sourceGenerations: {
+        stablecoins: "2024-09-01T12:00:00.000Z", pegSummary: null,
+        dexLiquidity: "2024-09-01T11:59:00.000Z", reportCards: null,
+      },
+    });
   });
 
   it("normalizes persisted column visibility from localStorage", async () => {
@@ -409,6 +437,74 @@ describe("StablecoinTable", () => {
 
     expect(scrollToMock).not.toHaveBeenCalled();
   });
+
+  it("preserves vertical scroll through independently refreshed metric objects", () => {
+    const rows = [coin, usdc];
+    const { container, rerender } = render(
+      <StablecoinTable data={rows} isLoading={false} activeFilters={[]} reportCards={reportCards} />,
+    );
+    const viewport = container.querySelector<HTMLElement>("[data-slot='table-viewport']")!;
+    viewport.scrollTop = 400;
+    const scrollToMock = vi.mocked(HTMLElement.prototype.scrollTo);
+    scrollToMock.mockClear();
+    rerender(
+      <StablecoinTable
+        data={rows.map((row) => ({ ...row }))}
+        isLoading={false}
+        activeFilters={[]}
+        reportCards={{ ...reportCards }}
+        dexLiquidity={{ [coin.id]: makeDexLiquidityData({ liquidityScore: 45 }) }}
+        pegScores={new Map([[coin.id, makePegSummaryCoin({ id: coin.id, pegScore: 80 })]])}
+      />,
+    );
+    expect(scrollToMock).not.toHaveBeenCalled();
+    expect(viewport.scrollTop).toBe(400);
+  });
+
+  it("preserves the overview page through a metric refresh and clamps it when rows shrink", () => {
+    const props = { data: overviewRows, isLoading: false, activeFilters: [] as const, toolbarVariant: "figmaOverview" as const };
+    const { rerender } = render(<StablecoinTable {...props} />);
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText("21-40")).toBeTruthy();
+    const scrollToMock = vi.mocked(HTMLElement.prototype.scrollTo);
+    scrollToMock.mockClear();
+    rerender(
+      <StablecoinTable
+        {...props}
+        reportCards={{ ...reportCards }}
+        dexLiquidity={{ [overviewRows[0].id]: makeDexLiquidityData({ liquidityScore: 45 }) }}
+        pegScores={new Map([[overviewRows[0].id, makePegSummaryCoin({ id: overviewRows[0].id, pegScore: 80 })]])}
+      />,
+    );
+    expect(screen.getByText("21-40")).toBeTruthy();
+    expect(scrollToMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText("41-45")).toBeTruthy();
+    rerender(<StablecoinTable {...props} data={overviewRows.slice(0, 25)} />);
+    expect(screen.getByText("21-25")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Next" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it.each(["search", "filter", "scope", "pin", "sort"] as const)(
+    "resets overview navigation for an explicit %s change",
+    (control) => {
+      const props = {
+        data: overviewRows, isLoading: false, activeFilters: [] as const,
+        toolbarVariant: "figmaOverview" as const, initialVisibleColumns: ["name", "mcap"] as const,
+      };
+      const { rerender } = render(<StablecoinTable {...props} />);
+      fireEvent.click(screen.getByRole("button", { name: "Next" }));
+      const scrollToMock = vi.mocked(HTMLElement.prototype.scrollTo);
+      scrollToMock.mockClear();
+      if (control === "search") rerender(<StablecoinTable {...props} searchQuery={overviewRows[0].symbol} />);
+      if (control === "filter") rerender(<StablecoinTable {...props} activeFilters={["usd-peg"]} />);
+      if (control === "scope") rerender(<StablecoinTable {...props} eligibleIds={new Set(overviewRows.slice(0, 30).map((row) => row.id))} />);
+      if (control === "pin") rerender(<StablecoinTable {...props} pinnedStablecoinIds={[overviewRows[1].id]} />);
+      if (control === "sort") fireEvent.click(screen.getByRole("button", { name: "Sort by Name" }));
+      expect(scrollToMock).toHaveBeenCalledWith({ top: 0 });
+      expect((screen.getByRole("button", { name: "Previous" }) as HTMLButtonElement).disabled).toBe(true);
+    },
+  );
 
   it("derives stripe state from the stable row index instead of rendered tbody position", () => {
     virtualItemsMock.splice(0, virtualItemsMock.length, { index: 1, start: 40, end: 80 });

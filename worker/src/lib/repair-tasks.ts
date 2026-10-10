@@ -461,6 +461,13 @@ async function inspectRepairRunnerBacklog(
 function buildRepairRunnerResult(
   metadata: RepairRunnerMetadata,
 ): StructuredCronResult<RepairRunnerMetadata> {
+  if (metadata.failed > 0) {
+    return {
+      status: "degraded",
+      itemCount: metadata.autoRepairCount,
+      metadata: { ...metadata, reason: "repair-execution-failed" },
+    };
+  }
   return {
     status: "ok",
     itemCount: metadata.autoRepairCount,
@@ -513,7 +520,7 @@ async function listDueRepairRunnerTasks(
        FROM worker_repair_tasks
        WHERE ((${dueClaimableWhereSql()}) OR (${staleClaimWhereSql()}))
          AND kind = ?
-       ORDER BY priority ASC, created_at ASC, task_id ASC
+       ORDER BY priority ASC, last_attempt_at ASC, attempt_count ASC, created_at ASC, task_id ASC
        LIMIT ?`,
     )
     .bind(timestamp, timestamp, DDR_REPAIR_TASK_KIND, DDR_REPAIR_RUNNER_BATCH_LIMIT_V1)

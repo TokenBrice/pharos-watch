@@ -21,6 +21,7 @@ import type {
   WeightKey,
 } from "./types";
 import { getWeightVectorForInput } from "./weights";
+import { resolveYieldSourceRail } from "./yield-source";
 
 interface NormalizedSlot {
   key: WeightKey;
@@ -287,7 +288,7 @@ export function scoreRow(
     if (reason.startsWith("missing-critical-")) confidence -= 8;
   }
   confidence = clamp(confidence, 0, 100);
-  if (profile === "yield" && row.yieldObservationDays30d < 21) {
+  if (profile === "yield" && row.yieldObservationDays30d != null && row.yieldObservationDays30d < 21) {
     confidence = Math.min(confidence, 80);
     confidenceReasons.add("short-yield-history");
   }
@@ -321,6 +322,7 @@ export function scoreIgnoringExclusion(
   row: MergedRow,
   input: SelectorInput,
 ): number | null {
-  const result = scoreRow(row, input.profile, input);
+  const selectedRow = input.profile === "yield" ? resolveYieldSourceRail(row, input).rail?.row ?? row : row;
+  const result = scoreRow(selectedRow, input.profile, input);
   return result ? result.score : null;
 }

@@ -7,6 +7,7 @@ import {
   type YieldRowSafetyInput,
 } from "../yield-opportunity-risk";
 import type { YieldSourceRisk } from "../../types/yield";
+import { computeRoycoDawnTrancheSafetyScore } from "../royco-tranche-safety";
 
 function completeInput(overrides: Partial<YieldOpportunityRiskInput> = {}): YieldOpportunityRiskInput {
   return {
@@ -198,7 +199,22 @@ describe("resolveYieldRowSafety — canonical ladder (yield v8.33)", () => {
     expect(result.opportunityEvidenceComplete).toBe(true);
   });
 
-  it("routes Royco Dawn tranches through the bespoke engine and publishes one contract", () => {
+  it.each([
+    [null, "default-safety", "report-card-score-missing"],
+    [{ score: 40, grade: "NR" }, "cached-publish", "report-card-grade-not-rated"],
+  ] as const)("preserves Royco underlying unrating for %j", (underlyingSafety, provenance, reason) => {
+    const result = resolveYieldRowSafety(ladderInput({
+      underlyingSafety, yieldType: "structured-tranche",
+      sourceRisk: { trancheSide: "junior", venueProtocol: "royco-dawn", venueRiskWeighted: 3,
+        marketStatus: "normal", marketTvlUsd: 2_000_000 },
+    }));
+    expect(result).toMatchObject({ safetyScore: 40, safetyGrade: "NR", safetyProvenance: provenance,
+      safetyReason: reason, safetyEvidenceObserved: false, opportunityEvidenceComplete: true });
+    expect(result.opportunityRisk?.opportunitySafetyScore).toBeTypeOf("number");
+    expect(result.sourceRisk?.trancheSafetyScore).toBe(result.opportunityRisk?.opportunitySafetyScore);
+  });
+
+  it.each(["normal", "protected", "critical"] as const)("preserves bespoke Royco penalties with complete %s evidence", (marketStatus) => {
     const result = resolveYieldRowSafety(
       ladderInput({
         yieldType: "structured-tranche",
@@ -206,16 +222,47 @@ describe("resolveYieldRowSafety — canonical ladder (yield v8.33)", () => {
           trancheSide: "junior",
           venueProtocol: "royco-dawn",
           venueRiskWeighted: 3,
-          marketStatus: "normal",
+          marketStatus,
           marketTvlUsd: 2_000_000,
         },
       }),
     );
     expect(result.safetyProvenance).toBe("opportunity-safety");
+    expect(result.safetyScore).toBe(computeRoycoDawnTrancheSafetyScore({
+      underlyingSafetyScore: 80,
+      sourceRisk: result.sourceRisk!,
+      venueRiskWeighted: 3,
+    })?.score);
     expect(result.safetyScore).toBeLessThan(80);
     expect(result.sourceRisk?.trancheSafetyScore).toBe(result.safetyScore);
     expect(result.opportunityRisk?.opportunitySafetyScore).toBe(result.safetyScore);
     expect(result.opportunityRisk?.missingCriticalEvidence).toEqual([]);
+  });
+
+  it.each([
+    [{ marketStatus: null }, ["market-status"]],
+    [{ marketStatus: undefined }, ["market-status"]],
+    [{ venueRiskWeighted: null }, ["venue-review"]],
+    [{ marketTvlUsd: null }, ["market-size"]],
+  ] as const)("withholds Royco judgments when critical evidence is missing: %j", (missing, expected) => {
+    const result = resolveYieldRowSafety(ladderInput({
+      yieldType: "structured-tranche",
+      sourceTvlUsd: null,
+      sourceRisk: {
+        trancheSide: "junior", venueProtocol: "royco-dawn",
+        venueRiskWeighted: 3, marketStatus: "normal", marketTvlUsd: 2_000_000,
+        trancheSafetyScore: 47, trancheSafetyPenalty: 33,
+        ...missing,
+      },
+    }));
+    expect(result.opportunityEvidenceComplete).toBe(false);
+    expect(result.safetyProvenance).toBe("cached-publish");
+    expect(result.sourceRisk?.trancheSafetyScore).toBeNull();
+    expect(result.sourceRisk?.trancheSafetyPenalty).toBeNull();
+    expect(result.opportunityRisk).toMatchObject({
+      opportunitySafetyScore: null,
+      missingCriticalEvidence: [...expected],
+    });
   });
 
   it("an unavailable safety snapshot strips every safety-derived field", () => {

@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { StablecoinData } from "@shared/types/market";
 import { buildDewsScoringResult } from "../../../lib/dews/scoring";
 import { loadDewsSourceState } from "../../../lib/dews/source-state";
+import * as hydration from "../../../lib/dews/source-state/hydration";
+import type { DewsSourceState } from "../../../lib/dews/contracts";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC } from "../../../lib/dews/source-state/hydration";
@@ -96,6 +98,45 @@ function mockDbWithPrevRows(
 
 describe("loadDewsSourceState legacy signals_json hydration", () => {
   const nowSec = 1_700_000_000;
+
+  it("passes every hydrated collection and dependency diagnostic through by reference", async () => {
+    const ctx = {
+      db: mockDbWithPrevRows([]), nowSec,
+      registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
+    };
+    const results = await Promise.all([
+      hydration.hydrateDexLiquidity(ctx), hydration.hydrateDexPrices(ctx),
+      hydration.hydrateDexLiquidityHistory(ctx), hydration.hydrateBlacklistEvents(ctx),
+      hydration.hydratePreviousStressSignals(ctx), hydration.hydrateMintBurn(ctx),
+      hydration.hydrateYieldWarnings(ctx), hydration.hydrateYieldRankingsCache(ctx),
+      hydration.hydrateLatestPsiScore(ctx),
+    ]);
+    const spies = [
+      vi.spyOn(hydration, "hydrateDexLiquidity").mockResolvedValueOnce(results[0]),
+      vi.spyOn(hydration, "hydrateDexPrices").mockResolvedValueOnce(results[1]),
+      vi.spyOn(hydration, "hydrateDexLiquidityHistory").mockResolvedValueOnce(results[2]),
+      vi.spyOn(hydration, "hydrateBlacklistEvents").mockResolvedValueOnce(results[3]),
+      vi.spyOn(hydration, "hydratePreviousStressSignals").mockResolvedValueOnce(results[4]),
+      vi.spyOn(hydration, "hydrateMintBurn").mockResolvedValueOnce(results[5]),
+      vi.spyOn(hydration, "hydrateYieldWarnings").mockResolvedValueOnce(results[6]),
+      vi.spyOn(hydration, "hydrateYieldRankingsCache").mockResolvedValueOnce(results[7]),
+      vi.spyOn(hydration, "hydrateLatestPsiScore").mockResolvedValueOnce(results[8]),
+    ];
+    try {
+      const state = await loadDewsSourceState(ctx);
+      for (const result of results) {
+        for (const [key, value] of Object.entries(result)) {
+          if (value instanceof Map || value instanceof Set || key === "dexLiqRows") {
+            expect(state[key as keyof DewsSourceState]).toBe(value);
+          }
+        }
+      }
+      expect(state.dependencyDiagnostics.dexLiquidity).toBe(results[0].dependencyDiagnostics);
+      expect(state.dependencyDiagnostics.psi).toBe(results[8].dependencyDiagnostics);
+    } finally {
+      for (const spy of spies) spy.mockRestore();
+    }
+  });
 
   it("hydrates a legacy flat-shape signals_json row (no amplifiers wrapper)", async () => {
     const legacyPayload = {
@@ -451,7 +492,7 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       }
     }
 
-    return { state: await loadPromise, failures: new Set(failures) };
+    return { state: await loadPromise, failures };
     }
     const normal = await load(false);
     const reversed = await load(true);
@@ -460,9 +501,18 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       value: 7, available: true,
     });
     expect(reversed.state.blacklistSourceOk).toBe(false);
-    expect(reversed.failures).toEqual(new Set([
+    expect(reversed.failures).toEqual([
       "dex-liquidity", "dex-prices", "dex-liquidity-history", "blacklist-events",
       "stress-signals-latest", "mint-burn-hourly", "yield-data", "yield-rankings", "stability-index-samples",
-    ]));
+    ]);
+    expect(Object.keys(reversed.state.sourceCoverage)).toEqual([
+      "dexLiquidity", "dexLiquidityFreshRows", "dexLiquidityStaleRows", "dexPrices",
+      "dexLiquidityHistory", "blacklistEvents", "previousStressSignals",
+      "previousStressSignalsFreshRows", "previousStressSignalsStaleRows",
+      "mintBurnHourly", "mintBurnHourlyFreshRows", "mintBurnHourlyStaleRows",
+      "yieldWarnings", "yieldStructuredRows",
+    ]);
+    expect(reversed.state.sourceCoverage).not.toHaveProperty("dexPricesStaleRows");
+    expect(reversed.state.dependencyDiagnostics.psi.reason).toBe("read-failed");
   });
 });

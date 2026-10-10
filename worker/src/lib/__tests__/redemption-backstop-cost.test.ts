@@ -5,6 +5,7 @@ import {
   resolveBoundedFeeScore,
   resolveRedemptionStaticFields,
 } from "../redemption-backstop/cost";
+import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop/live-metadata";
 
 describe("resolveBoundedFeeScore", () => {
   it.each([
@@ -45,6 +46,29 @@ describe("resolveCostScenarioScores", () => {
 
     expect(scores?.activeUser).toBe(60);
     expect(scores?.institutional).toBe(60);
+  });
+});
+
+describe("fractional live fee precision", () => {
+  const scores = { accessScore: 100, settlementScore: 100, executionCertaintyScore: 100, outputAssetQualityScore: 100 };
+  const config = getRedemptionBackstopConfig("rusd-reservoir")!;
+
+  describe.each([
+    { kind: "dynamic-or-unclear", confidence: "formula" },
+    { kind: "fee-bps", feeBps: 0 },
+  ] satisfies RedemptionCostModel[])("$kind", (costModel) => {
+    it.each([0.4, 10, 10.49, 50.49, 100.49])("preserves admitted %s bps in component and scenario scores", (feeBps) => {
+      const now = 1_797_120_000;
+      const fields = resolveRedemptionStaticFields(
+        "rusd-reservoir", { ...config, costModel }, scores, null, now,
+        { ...readRedemptionBackstopLiveMetadata("rusd-reservoir", null, now), canUseFee: true, redemptionFeeBps: feeBps },
+      );
+      const score = resolveBoundedFeeScore(feeBps);
+      expect(fields.selectedLiveFee).toBe(true);
+      expect(fields.feeBps).toBe(feeBps);
+      expect(fields.costScore).toBe(score);
+      expect(fields.costScenarioScores).toEqual({ retail: score, activeUser: score, institutional: score });
+    });
   });
 });
 

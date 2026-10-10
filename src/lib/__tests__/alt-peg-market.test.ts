@@ -45,6 +45,47 @@ describe("alt-peg-market", () => {
     expect(snapshot.distributionRows[1]?.group).toBe("Commodity");
   });
 
+  it("keeps an unavailable EUR cohort visible without publishing a zero cap or share", () => {
+    const missing = { ...makeCoin("eurs-stasis", 0), circulating: {} };
+    const snapshot = buildAltPegSnapshot([makeCoin("usdc-circle", 100), missing]);
+    expect(snapshot.altCoinCount).toBe(1);
+    expect(snapshot.altMarketCap).toBeNull();
+    expect(snapshot.altSharePct).toBeNull();
+    expect(snapshot.supplyUnavailableCount).toBe(1);
+    expect(snapshot.distributionRows[0]).toMatchObject({
+      peg: "EUR", marketCap: null, sharePct: null, supplyObservedCount: 0, supplyUnavailableCount: 1,
+    });
+    expect(snapshot.topRows).toEqual([]);
+  });
+
+  it("publishes mixed coverage as a known subtotal and withholds complete shares", () => {
+    const snapshot = buildAltPegSnapshot([
+      makeCoin("eurc-circle", 100), { ...makeCoin("eurs-stasis", 0), circulating: {} },
+      makeCoin("usdc-circle", 100),
+    ]);
+    expect(snapshot.altMarketCap).toBe(100);
+    expect(snapshot.altSharePct).toBeNull();
+    expect(snapshot.distributionRows[0]).toMatchObject({
+      marketCap: 100, sharePct: null, supplyObservedCount: 1, supplyUnavailableCount: 1,
+      leaderHref: "/stablecoin/eurc-circle/",
+    });
+  });
+
+  it("distinguishes explicit zero from empty and invalid supply buckets", () => {
+    const zero = buildAltPegSnapshot([makeCoin("usdc-circle", 100), makeCoin("eurs-stasis", 0)]);
+    expect(zero.altMarketCap).toBe(0);
+    expect(zero.altSharePct).toBe(0);
+    expect(zero.distributionRows[0].marketCap).toBe(0);
+    expect(zero.supplyUnavailableCount).toBe(0);
+    const unavailableBuckets: Record<string, number>[] = [{}, { usd: Number.NaN }, { usd: -1 }];
+    for (const circulating of unavailableBuckets) {
+      const missing = buildAltPegSnapshot([{ ...makeCoin("eurs-stasis", 0), circulating }]);
+      expect(missing.totalMarketCap).toBeNull();
+      expect(missing.altMarketCap).toBeNull();
+    }
+    expect(buildAltPegSnapshot([]).totalMarketCap).toBeNull();
+  });
+
   it("builds one-year trend deltas from historical share points", () => {
     const stats = buildAltPegTrendStats([
       {
@@ -82,6 +123,7 @@ describe("alt-peg-market", () => {
     ])).toEqual({
       latestSharePct: 5, latestAltMarketCap: 50,
       yearlyShareDeltaPctPoints: 3, yearlyMarketCapChangePct: 150,
+      valueCoverageIncomplete: true,
     });
   });
 
@@ -99,8 +141,21 @@ describe("alt-peg-market", () => {
     ])).toEqual({
       latestSharePct: 2, latestAltMarketCap: 20,
       yearlyShareDeltaPctPoints: 2, yearlyMarketCapChangePct: null,
+      valueCoverageIncomplete: true,
     });
   });
+
+  it.each([undefined, null, { basis: "interior-gap-prior-value" as const, total: 0.99, commodity: 1, fiatNonUsd: 1 },
+    { basis: "interior-gap-prior-value" as const, total: 1, commodity: 0.8, fiatNonUsd: 1 }])(
+    "qualifies annual comparisons when either snapshot has partial or unknown coverage (%j)", (coverage) => {
+      const complete = { basis: "interior-gap-prior-value" as const, total: 1, commodity: 1, fiatNonUsd: 1 };
+      const old = { date: 1, commodityShare: 1, fiatNonUsdShare: 0, commodity: 10, fiatNonUsd: 0, total: 100 };
+      const latest = { ...old, date: 1 + 365 * 86400, commodity: 20, coverage: complete };
+      expect(buildAltPegTrendStats([{ ...old, coverage }, latest])?.valueCoverageIncomplete).toBe(true);
+      expect(buildAltPegTrendStats([{ ...old, coverage: complete }, { ...latest, coverage }])?.valueCoverageIncomplete).toBe(true);
+      expect(buildAltPegTrendStats([{ ...old, coverage: complete }, latest])?.valueCoverageIncomplete).toBe(false);
+    },
+  );
 
   it("returns no trend for absent or empty history", () => {
     expect(buildAltPegTrendStats()).toBeNull();

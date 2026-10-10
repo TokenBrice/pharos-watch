@@ -2,28 +2,28 @@ import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
   archetype: "algorithmic",
-  headline: "Code-defended dollars with thin collateral",
+  headline: "Programmatic peg defense, with different collateral models",
   subtitle:
-    "The peg is held by protocol-level mint/burn rules and arbitrage incentives rather than by 1:1 reserves.",
+    "Protocol-level supply rules and arbitrage defend the peg; current designs can hold real collateral, unlike historical pure mint/burn systems.",
   lead: [
-    "An algorithmic stablecoin keeps its peg through a programmatic mint/burn rule and an arbitrage loop, not through 1:1 collateral. In the canonical form (UST/LUNA), a user burns a governance token to mint a dollar's worth of the stablecoin, and the loop is reversible. The whole mechanism rests on confidence in the governance token, which is precisely what evaporates first in a crisis. \"Reflexive\" describes that feedback: the peg holds because the governance token has value, and the governance token has value partly because the peg holds.",
-    "Pharos taxonomy no longer treats `algorithmic` as a tracked backing bucket; that historical backing label remains for off-catalog PSI assets. The distinct algorithmic mechanism archetype also describes current designs with programmatic peg defense and real collateral. Pure uncollateralized algorithmic stablecoins are not a live design pattern at scale in 2026.",
+    "This mechanism family uses programmatic issuance, redemption, or market operations to defend a target value. Collateral is design-specific: FPI holds FRAX reserves and uses AMOs, USDD 2.0 combines collateralized vaults with Peg Stability Modules, and ZSD enforces a reserve-ratio floor against ZEPH collateral. An algorithmic mechanism does not itself mean an unbacked token. The current collateralized variants are described below.",
+    "Pharos taxonomy no longer treats `algorithmic` as a tracked backing bucket; that historical backing label remains for off-catalog PSI assets. The walkthrough below covers the historical pure mint/burn variant, exemplified by UST/LUNA, not the reserve mechanics of FPI, USDD 2.0, or ZSD. Pure uncollateralized algorithmic stablecoins are not a live design pattern at scale in 2026.",
   ],
   howItWorks: [
     {
       id: "burn-governance-token",
-      title: "Burn governance token",
-      body: "A user burns a governance token of value `V`, and the protocol mints `V` worth of stablecoin. There is no 1:1 reserve in a custodian: the only \"backing\" is the governance-token market float, itself partly determined by the stablecoin's success. The reverse trip exists too: redeem the stablecoin for `V` of newly minted governance token. Pharos now tracks this as mint-authority and mechanism risk rather than a FreezeWatch freeze tier.",
+      title: "Historical pure mint/burn: burn governance token",
+      body: "In the UST/LUNA-style variant, a user burns a governance token of value `V`, and the protocol mints `V` worth of stablecoin. There is no segregated 1:1 collateral: the loop relies on the governance-token market float, itself partly determined by the stablecoin's success. The reverse trip exists too: redeem the stablecoin for `V` of newly minted governance token. Pharos now tracks this as mint-authority and mechanism risk rather than a FreezeWatch freeze tier.",
     },
     {
-      id: "mint-burn-amo",
-      title: "Mint/burn AMO",
-      body: "An AMO (Algorithmic Market Operations module) is an autonomous on-chain agent that issues or retires stablecoin to nudge the price back to peg. Above $1 it lets anyone mint at $1 and sell higher; below $1 it lets anyone buy on market and redeem for $1 of governance token. The arbitrage is supposed to close the gap. There are no reserves to draw down. Every defense action expands or contracts the governance-token float.",
+      id: "historical-mint-burn-arbitrage",
+      title: "Historical pure mint/burn: arbitrage loop",
+      body: "Above $1, arbitrageurs mint at $1 of governance-token value and sell higher; below $1, they buy the stablecoin and redeem for $1 of newly minted governance token. This historical pure mint/burn loop has no segregated collateral buffer, and each defense changes the governance-token float. It is not the same as collateral-backed AMOs, which can deploy existing reserves.",
     },
     {
       id: "stablecoin-minted",
-      title: "Stablecoin minted (no 1:1 backing)",
-      body: "Peg stability now depends on governance-token liquidity, market confidence, and arbitrageur willingness. In calm markets the loop closes. In a panic the governance token sells off, the burn-to-mint arbitrage stops being profitable (the freshly minted governance token is worth less than the stablecoin being redeemed), and the peg breaks reflexively. The DEWS supply-velocity signal frequently surfaces this contraction first.",
+      title: "Historical pure mint/burn: reflexive stress",
+      body: "In this uncollateralized variant, peg stability depends on governance-token liquidity, market confidence, and arbitrageur willingness. In a panic the governance token sells off, newly minted governance tokens lose value before arbitrageurs can sell them, and the peg breaks reflexively. That UST-style dilution loop does not describe ZSD, which never mints ZEPH to defend its peg.",
     },
   ],
   riskProfile: [
@@ -32,8 +32,8 @@ export const content: ArchetypeContent = {
       body: "Terra/UST went from $1 to roughly $0.10 over four days between May 9 and May 13, 2022; LUNA went from above $80 to fractions of a cent across the same window. Roughly $40 billion of combined market value evaporated. The mechanism worked exactly as designed under normal conditions, and exactly as critics had predicted under coordinated stress. UST is retained as a Pharos shadow asset and replays through `/methodology/stability-index-changelog/` so the May 2022 event remains visible in PSI history.",
     },
     {
-      headline: "Mint/burn arbitrage breakdown",
-      body: "The peg only holds when arbitrageurs are confident the governance token can be sold for at least the value being minted. Once that confidence breaks, the under-peg trade does not close, and the protocol cannot fix it from inside the loop. Governance-token dilution as a defense (selling extra supply to top up reserves) works until holders refuse to absorb dilution, typically the moment the defense is most needed.",
+      headline: "Pure mint/burn arbitrage breakdown",
+      body: "In the historical pure mint/burn variant, the peg only holds when arbitrageurs believe newly minted governance tokens can be sold for at least the redemption value. Once that confidence breaks, the under-peg trade does not close. Collateralized variants instead depend on their actual reserves, issuance thresholds, or PSM capacity; FPI's FPIS dilution backstop is distinct from ZSD's reserve-ratio enforcement without new ZEPH issuance.",
     },
     {
       headline: "Recursive use as collateral",

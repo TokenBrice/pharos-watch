@@ -17,6 +17,7 @@ import {
   type DepegEventEntry,
 } from "@shared/types/market";
 import { formatIsoDate } from "@shared/lib/format";
+import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,6 +25,7 @@ import { hasDedicatedDepegEventPage, selectStaticDepegEventPages } from "@/lib/d
 
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { DEPEG_LEDGER_CAPTURE_RELATIVE_PATH, depegLedgerCaptureId, type DepegLedgerCapture } from "../lib/depeg-ledger-capture";
 import {
   apiFetchHeaders,
   fetchWithRetry,
@@ -50,6 +52,8 @@ interface DepegEventsResponse {
   total?: number;
   nextCursor?: string | null;
 }
+
+const MAX_DEPEG_SYNC_PAGES = 1000;
 
 export interface DepegSyncCliOptions {
   allowArchiveShrink: boolean;
@@ -261,11 +265,13 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
   console.log(`[sync-depeg-events] Source: ${apiUrl}`);
 
   try {
-    const entries = await (async () => {
+    const observationStartedAtISO = new Date().toISOString();
+    const { entries, apiTotal } = await (async () => {
       const collected: DepegEvent[] = [];
       let cursor: string | null = null;
+      let expectedTotal: number | undefined;
       const limit = 1000;
-      const maxPages = 20; // hard ceiling so we cannot loop forever
+      const maxPages = MAX_DEPEG_SYNC_PAGES; // safety ceiling, never a successful partial ledger
       for (let page = 0; page < maxPages; page++) {
         const params = new URLSearchParams();
         params.set("limit", String(limit));
@@ -282,13 +288,22 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
         );
         if (!res.ok) throw new Error(`API returned ${res.status} for ${pagedUrl}`);
         const body = (await res.json()) as DepegEventsResponse;
+        if (page === 0) expectedTotal = body.total;
         const batch = Array.isArray(body.events) ? body.events : [];
         collected.push(...batch);
         cursor = body.nextCursor ?? null;
         console.log(
           `[sync-depeg-events] page=${page} fetched=${batch.length} total=${collected.length} cursor=${cursor ?? "null"}`,
         );
-        if (!cursor || batch.length === 0) break;
+        if (!cursor) break;
+        if (batch.length === 0) {
+          throw new SnapshotIntegrityError("Depeg pagination returned an empty page with an outstanding cursor");
+        }
+      }
+      if (cursor) {
+        throw new SnapshotIntegrityError(
+          `Depeg pagination reached its ${maxPages}-page safety ceiling with an outstanding cursor; refusing an incomplete ledger`,
+        );
       }
 
       // v1: confirmed events only (pending/expired/rejected do not get permanent URLs).
@@ -304,6 +319,11 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
         if (seen.has(event.id)) continue;
         seen.add(event.id);
         unique.push(event);
+      }
+      if (expectedTotal !== undefined && unique.length !== expectedTotal) {
+        throw new SnapshotIntegrityError(
+          `Depeg pagination collected ${unique.length} unique events but the API reported ${expectedTotal}; refusing an incomplete ledger`,
+        );
       }
 
       unique.sort((a, b) => {
@@ -337,12 +357,28 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
         archivePreservedEntries,
         options.allowArchiveShrink,
       );
-      return archivePreservedEntries;
+      return { entries: archivePreservedEntries, apiTotal: expectedTotal ?? null };
     })();
     const shardCount = new Set(
       entries.map((entry) => String(new Date(entry.startedAt * 1000).getUTCFullYear())),
     ).size;
-    if (!options.dryRun) writeDepegEventLedger(entries, outputPaths);
+    if (!options.dryRun) {
+      writeDepegEventLedger(entries, outputPaths);
+      const capture: DepegLedgerCapture = {
+        schemaVersion: 1,
+        captureId: depegLedgerCaptureId(outputPaths.dataDir),
+        observationStartedAtISO,
+        observedAtISO: new Date().toISOString(),
+        sourceUrl: apiUrl,
+        methodologyVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+        eventCount: entries.length,
+        apiTotal,
+      };
+      const capturePath = `${outputPaths.dataDir}/${DEPEG_LEDGER_CAPTURE_RELATIVE_PATH}`;
+      mkdirSync(dirname(capturePath), { recursive: true });
+      writeFileSync(capturePath, `${JSON.stringify(capture, null, 2)}\n`);
+      rmSync(`${outputPaths.dataDir}/capture.json`, { force: true });
+    }
     console.log(
       options.dryRun
         ? `[sync-depeg-events] Dry run: would write ${entries.length} confirmed events to ${outputPaths.indexFile} and ${shardCount} yearly shards`

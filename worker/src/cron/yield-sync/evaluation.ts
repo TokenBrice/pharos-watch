@@ -43,10 +43,8 @@ import {
   resolveYieldTypeLabel,
 } from "./evaluation-arbitration";
 import type { EvaluatedYieldSource } from "./evaluation-types";
-import {
-  resolveEvidenceNullReason,
-  resolvePenaltyOrderingFields,
-} from "./evaluation-scoring";
+import { resolvePenaltyOrderingFields } from "./evaluation-scoring";
+import { resolveEvidenceNullReason } from "../../lib/yield-ranking-helpers";
 import { selectYieldSourceGroup } from "./evaluation-selection";
 import { throwIfAborted, yieldToEventLoop as defaultYieldToEventLoop } from "../../lib/abort";
 import { resolveYieldBenchmarkDependencies } from "../../lib/yield-config/yield-benchmark-dependencies";
@@ -295,7 +293,9 @@ function evaluateYieldSourceGroup(
     // lane and the `protocol-api` NAV oracles (Ondo, Midas) both write the
     // anchor-without-yield seed shape, so a seed row must stay out of
     // apy7d/apy30d and the variance samples regardless of which lane recorded it.
-    const historyRowsForStats = historyRows.filter((row) => !isOnChainBootstrapYieldSeed(row));
+    const historyRowsForStats = historyRows.filter((row) => !isOnChainBootstrapYieldSeed(row)
+      && !(sourceKey === "protocol-api:zys-zephyr-protocol" && !historySelection.usedLegacyHistory && y.sourceObservedAt != null
+        && row.recorded_at === y.sourceObservedAt));
     const samples: number[] = [];
     const apy7dSamples: number[] = [];
     for (const row of historyRowsForStats) {
@@ -384,7 +384,8 @@ function evaluateYieldSourceGroup(
       ? null
       : new Set([
           ...historyRowsForStats.map((row) => Math.floor(row.recorded_at / DAY_SECONDS)),
-          Math.floor(input.startSec / DAY_SECONDS),
+          Math.floor((sourceKey === "protocol-api:zys-zephyr-protocol" && y.sourceObservedAt != null
+            ? y.sourceObservedAt : input.startSec) / DAY_SECONDS),
         ]).size;
     // A9: the penalty input and the published field resolve the reward share
     // through the same helper, so a base-only payload (apyReward null while

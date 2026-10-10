@@ -59,7 +59,7 @@ async function serializePlanningDecision(
       ) {
         throw new Error("Telegram routed plan does not match its captured subscriber decision");
       }
-      return serializeTelegramTargetPlan(routed, resolveTelegramTargetExpiresAt(claim, decision, routed));
+      return serializeTelegramTargetPlan(routed, resolveTelegramTargetExpiresAt(claim, routed));
     }),
   );
   return { outcome, plans };
@@ -67,10 +67,9 @@ async function serializePlanningDecision(
 
 export function resolveTelegramTargetExpiresAt(
   claim: Pick<TelegramTargetPlanningClaim, "detectedAt">,
-  decision: Pick<TelegramPlanningDecision, "targetExpiresAt">,
   routed: Pick<RoutedSubscriberAlert, "alertType" | "alertTypes">,
 ): number {
-  return decision.targetExpiresAt ?? claim.detectedAt + strictestAlertTtlSec(routed.alertTypes ?? [routed.alertType]);
+  return claim.detectedAt + strictestAlertTtlSec(routed.alertTypes ?? [routed.alertType]);
 }
 
 function prepareNonTargetOutcomeStatement(
@@ -290,9 +289,10 @@ async function verifyMaterializedTargetPlans(
                   AND item.plan_generation = plan.plan_generation
                   AND item.plan_key = plan.plan_key) AS items
          FROM telegram_alert_target_plans plan
-        WHERE plan.source_event_id = ? AND plan.plan_generation = ? AND plan.page_index = ?`,
+        WHERE plan.source_event_id = ? AND plan.plan_generation = ? AND plan.page_index = ?
+          AND plan.plan_key IN (SELECT value FROM json_each(?))`,
     )
-    .bind(claim.sourceEventId, claim.generation, pageIndex)
+    .bind(claim.sourceEventId, claim.generation, pageIndex, JSON.stringify(plans.map((plan) => plan.planKey)))
     .all<{ plan_key: string; targets: number; items: number }>();
   const countsByPlan = new Map((rows.results ?? []).map((row) => [row.plan_key, row]));
   for (const plan of plans) {

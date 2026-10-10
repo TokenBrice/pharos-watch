@@ -183,10 +183,13 @@ function controlHasOpenSemanticQuestion(control: ExtensionControlOverlay): boole
       control.executionScopeComplete === true) return false;
   // Current independently proved adverse reach is not softened by a residual
   // partial-inventory question. Invalid or stale scope never earns precedence.
-  return !(control.executionScope && control.scopeDiagnostics &&
-    control.scopeDiagnostics.every((code) => code === "execution-inventory-incomplete") &&
-    control.executionScope.confidence !== "unknown" &&
-    control.executionScope.paths.some((path) =>
+  if (!control.scopeDiagnostics ||
+      !control.scopeDiagnostics.every((code) => code === "execution-inventory-incomplete")) return true;
+  const scopes = control.executionScopeContributors
+    ? control.executionScopeContributors.flatMap((entry) => entry.scope ? [entry.scope] : [])
+    : control.executionScope ? [control.executionScope] : [];
+  return !scopes.some((scope) => scope.confidence !== "unknown" &&
+    scope.paths.some((path) =>
       path.activation !== "unknown" && path.activation !== "disabled-final" && path.reach === "root" &&
       path.economicLossScope === "global-claim" &&
       (path.capSemantics.kind === "unbounded" || path.claimImpairment === "unbounded")));

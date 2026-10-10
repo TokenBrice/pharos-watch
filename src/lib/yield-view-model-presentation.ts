@@ -138,15 +138,14 @@ export const RISK_BUDGET_FILTER_KEYS: readonly (keyof YieldViewModelFilters)[] =
   "warnings",
 ];
 
-// The risk-budget slider merges band overrides onto the current filters when
-// clicked (see `handleApplyRiskBudget`), so like presets its counts and active
-// state must be evaluated on the same stacked base — otherwise an active
-// peg/search filter makes every stop count lie.
+// Selecting a band replaces all risk-budget axes while retaining research
+// filters such as peg/search. Counts must match `handleApplyRiskBudget`.
 function riskBudgetTargetFilters(filters: YieldViewModelFilters, spec: YieldRiskBudgetSpec): YieldViewModelFilters {
-  const riskOverrides = Object.fromEntries(
-    RISK_BUDGET_FILTER_KEYS.filter((key) => key in spec.overrides).map((key) => [key, spec.overrides[key]]),
-  ) as Partial<YieldViewModelFilters>;
-  return { ...filters, ...riskOverrides };
+  const target = { ...filters };
+  for (const key of RISK_BUDGET_FILTER_KEYS) {
+    (target as Record<keyof YieldViewModelFilters, unknown>)[key] = spec.overrides[key] ?? DEFAULT_FILTERS[key];
+  }
+  return target;
 }
 
 function filtersMatchRiskBudget(filters: YieldViewModelFilters, spec: YieldRiskBudgetSpec): boolean {

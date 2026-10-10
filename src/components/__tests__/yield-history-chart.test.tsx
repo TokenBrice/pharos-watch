@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, renderHook, screen } from "@testing-library/react";
+import { fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
-import { useYieldHistoryChartModel } from "@/components/yield-history-chart-model";
-import { WarningDot, YieldHistoryTooltip } from "@/components/yield-history-chart-ui";
+import { deriveYieldSourceSegments, getYieldHistorySourceDisplayLabel, useYieldHistoryChartModel } from "@/components/yield-history-chart-model";
+import { SourceStrip, WarningDot, YieldHistoryTooltip } from "@/components/yield-history-chart-ui";
 
 const { useYieldHistoryMock } = vi.hoisted(() => ({
   useYieldHistoryMock: vi.fn(),
@@ -28,6 +28,84 @@ afterEach(() => {
 });
 
 describe("YieldHistoryChart", () => {
+  it.each(["error", "retained-error", "warning", "loading", "stale", "primary-error"] as const)(
+    "qualifies requested source %s without hiding successful observations",
+    (state) => {
+      const retry = vi.fn();
+      const date = Date.now();
+      const point = { date, apy: 9, apyBase: null, apyReward: null, sourceTvlUsd: null, warningSignals: [] };
+      useYieldHistoryMock.mockImplementation((_id, options) => {
+        const affected = options.sourceKey === (state === "primary-error" ? "primary" : "alternate");
+        const error = affected && ["error", "retained-error", "primary-error"].includes(state) ? new Error("history refresh failed") : null;
+        return {
+          data: affected && ["error", "loading", "primary-error"].includes(state)
+            ? undefined
+            : { history: [point], ...(affected && state === "warning" ? { warning: "Source history incomplete" } : {}) },
+          meta: affected && state === "stale" ? { updatedAt: date / 1000 - 100000, status: "stale" } : null,
+          dataUpdatedAt: date, isLoading: affected && state === "loading", error, refetch: retry,
+        };
+      });
+      render(<YieldHistoryChart stablecoinId="test" benchmarkRate={null} medianApy={null}
+        externalSourceKeys={["primary", "alternate"]}
+        availableSources={[{ sourceKey: "primary", yieldSource: "Primary" }, { sourceKey: "alternate", yieldSource: "Alternate" }]} />);
+      expect(screen.getByRole("figure")).toBeTruthy();
+      const status = screen.getByLabelText(`${state === "primary-error" ? "Primary" : "Alternate"} history status`);
+      if (state === "loading") expect(within(status).getByText("Loading history")).toBeTruthy();
+      else if (state === "stale") expect(within(status).getByText("Showing an older snapshot")).toBeTruthy();
+      else {
+        if (state === "warning") expect(within(status).getByText("Source history incomplete")).toBeTruthy();
+        else expect(within(status).getByRole("status")).toBeTruthy();
+        fireEvent.click(within(status).getByRole("button", { name: "Retry" }));
+        expect(retry).toHaveBeenCalledOnce();
+      }
+    },
+  );
+
+  it.each([null, 5])("inspects alternate APY with primary APY %s and disambiguated identities", (primaryApy) => {
+    const sources = [
+      { sourceKey: "aave:ethereum:usdc", yieldSource: "Aave" },
+      { sourceKey: "aave:base:usdc", yieldSource: "Aave" },
+      { sourceKey: "other", yieldSource: "Other" },
+    ];
+    const identities = sources.map((source) => ({ sourceKey: source.sourceKey, label: getYieldHistorySourceDisplayLabel(source, sources) }));
+    const point = { date: Date.UTC(2026, 8, 1), apy: primaryApy, apy_overlay_0: 9, apy_overlay_1: null,
+      apyBase: null, apyReward: null, sourceTvlUsd: null, warningSignals: [], sourceKey: sources[0].sourceKey,
+      yieldSource: primaryApy === null ? null : "Aave", dataSource: null, isBest: false, sourceSwitch: false };
+    render(<YieldHistoryTooltip active label={point.date} payload={[{ dataKey: "apy_overlay_0", payload: point }]}
+      primarySource={identities[0]} overlaySources={identities.slice(1)} showBreakdown compact={false} />);
+    expect(screen.getByText(identities[0].label).parentElement?.textContent).toContain(primaryApy === null ? "Unavailable" : "5.00%");
+    expect(screen.getByText(identities[1].label).parentElement?.textContent).toContain("9.00%");
+    expect(screen.getByText("Other").parentElement?.textContent).toContain("Unavailable");
+    if (primaryApy === null) expect(screen.queryByText("Primary source")).toBeNull();
+  });
+
+  it("positions source intervals and point-only events at measured timestamps", () => {
+    const start = Date.UTC(2026, 8, 1);
+    const segments = deriveYieldSourceSegments([
+      { ts: start, sourceKey: "a" }, { ts: start + 1000, sourceKey: "a" },
+      { ts: start + 2000, sourceKey: "b" }, { ts: start + 3000, sourceKey: "b" },
+      { ts: start + 4000, sourceKey: "a" },
+    ]);
+    const { container } = render(<SourceStrip segments={segments} timeStart={start} timeEnd={start + 4000} />);
+    const blocks = container.querySelectorAll("[title]");
+    expect(blocks).toHaveLength(3);
+    expect((blocks[0] as HTMLElement).style.left).toBe("0%");
+    expect((blocks[0] as HTMLElement).style.width).toBe("25%");
+    expect((blocks[1] as HTMLElement).style.left).toBe("50%");
+    expect((blocks[1] as HTMLElement).style.width).toBe("25%");
+    expect((blocks[2] as HTMLElement).style.left).toBe("100%");
+    expect((blocks[2] as HTMLElement).style.width).toBe("2px");
+  });
+
+  it("counts distinct grouped sources rather than repeated segments", () => {
+    const start = Date.UTC(2026, 8, 1);
+    const segments = deriveYieldSourceSegments(["a", "b", "c", "b"].map((sourceKey, index) => ({
+      ts: start + index * 1000, sourceKey,
+    })), { maxDistinctSources: 1 });
+    render(<SourceStrip segments={segments} timeStart={start} timeEnd={start + 3000} />);
+    expect(screen.getByText("other (2)")).toBeTruthy();
+    expect(screen.getByRole("img").getAttribute("aria-label")).toContain("b from");
+  });
   it("exposes publish-time PYS snapshots on the full chart", () => {
     const history = Array.from({ length: 30 }, (_, index) => ({
       date: Date.UTC(2026, 3, index + 1),

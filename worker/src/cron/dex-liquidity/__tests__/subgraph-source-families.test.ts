@@ -49,6 +49,22 @@ describe("subgraph source families", () => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
+  it.each([null, {}, { pools: null }, { pools: {} }, { pools: [] }])(
+    "reports malformed broad inventories through family telemetry: %j", async (data) => {
+      mockFetch([{ match: "gateway.thegraph.com", body: {
+        data: data == null ? null : { ...data, liquidityPools: "pools" in data ? data.pools : undefined },
+      } }], { requireMatch: true });
+      const result = await fetchUniV3Data("graph-key", new Map(), new Map());
+      const healthy = data != null && "pools" in data && Array.isArray(data.pools);
+      if (healthy) {
+        expect(result.failedChains).toEqual([]);
+      } else {
+        expect(result.failedChains.length).toBeGreaterThan(0);
+        expect(Object.values(result.failedChainReasons).every((reason) => reason === "malformed-response")).toBe(true);
+      }
+    },
+  );
+
 
   it("returns empty Uni V3 lookups when Graph API key is missing", async () => {
     const result = await fetchUniV3Data(null, new Map(), new Map());
@@ -340,7 +356,7 @@ describe("subgraph source families", () => {
       respond: () => ({ body: { data: { pools: fullPage } } }),
     }, {
       match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
-      respond: () => ({ body: { data: { pools: [] } } }),
+      respond: () => ({ body: { data: { pools: [], liquidityPools: [] } } }),
     }], { requireMatch: true });
 
     const result = await fetchUniV3Data("graph-key", new Map(), new Map());

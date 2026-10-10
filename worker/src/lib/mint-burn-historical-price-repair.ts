@@ -8,7 +8,8 @@ import { DEFILLAMA_COINS, USER_AGENT } from "./constants";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import { buildPriceValidationContext, validatePriceCandidate } from "./price-validation";
 import { mintBurnHourlyBucketAggregatesSql, recalcAffectedHours } from "./mint-burn-pipeline/persistence";
-import type { MintBurnAffectedHour } from "./mint-burn-pipeline/types";
+import type { MintBurnAffectedHour, MintBurnPriceHistoryPoint } from "./mint-burn-pipeline/types";
+import { projectMintBurnPriceHistory, resolveMintBurnEventPrice } from "./mint-burn-pipeline/context";
 
 export const DEFAULT_HISTORICAL_MINT_PRICE_REPAIR_LIMIT = 100;
 export const MAX_HISTORICAL_MINT_PRICE_REPAIR_LIMIT = 500;
@@ -121,7 +122,7 @@ export interface HistoricalMintPriceSourceLoader {
 interface CoinRepairContext {
   meta: StablecoinMeta | null;
   events: MintBurnHistoricalRepairRow[];
-  supplyHistory: Map<number, number>;
+  supplyHistory: MintBurnPriceHistoryPoint[];
   sourceResults: HistoricalPriceSeriesResult[];
 }
 
@@ -334,15 +335,19 @@ function selectNearestEventDayPrice(
 export function resolveHistoricalMintPrice(input: {
   meta: StablecoinMeta;
   eventTimestamp: number;
-  supplyHistoryPrice?: number | null;
+  supplyHistory?: MintBurnPriceHistoryPoint[];
   sourceResults: HistoricalPriceSeriesResult[];
 }): HistoricalMintPriceResolutionOutcome {
-  const { meta, eventTimestamp, supplyHistoryPrice, sourceResults } = input;
-  if (typeof supplyHistoryPrice === "number" && isValidHistoricalPrice(meta, supplyHistoryPrice)) {
+  const { meta, eventTimestamp, supplyHistory, sourceResults } = input;
+  const snapshot = resolveMintBurnEventPrice(meta.id, eventTimestamp, {
+    priceHistory: new Map([[meta.id, supplyHistory ?? []]]),
+    priceObservations: new Map(),
+  });
+  if (snapshot) {
     return {
       resolution: {
-        price: supplyHistoryPrice,
-        priceTimestamp: eventDay(eventTimestamp),
+        price: snapshot.price,
+        priceTimestamp: snapshot.priceTimestamp,
         priceSource: SUPPLY_HISTORY_SOURCE,
       },
       disposition: "recover",
@@ -415,16 +420,16 @@ async function loadRepairRows(
 async function loadSupplyHistory(
   db: D1Database,
   rows: MintBurnHistoricalRepairRow[],
-): Promise<Map<string, Map<number, number>>> {
+  assessedAtSec?: number,
+): Promise<Map<string, MintBurnPriceHistoryPoint[]>> {
   const ids = [...new Set(rows.map((row) => row.stablecoin_id))];
-  const result = new Map<string, Map<number, number>>();
-  if (ids.length === 0) return result;
-  const minDay = Math.min(...rows.map((row) => eventDay(row.timestamp)));
-  const maxDay = Math.max(...rows.map((row) => eventDay(row.timestamp)));
+  if (ids.length === 0) return new Map();
+  const minDay = Math.min(...rows.map((row) => eventDay(row.timestamp))) - 2 * DAY_SECONDS;
+  const maxDay = Math.max(...rows.map((row) => eventDay(row.timestamp))) + 2 * DAY_SECONDS;
   const inClause = buildInClause(ids);
   const history = await db
     .prepare(
-      `SELECT stablecoin_id, snapshot_date, price
+      `SELECT stablecoin_id, snapshot_date, price, price_observed_at
        FROM supply_history
        WHERE stablecoin_id IN (${inClause.sql})
          AND snapshot_date >= ?
@@ -433,13 +438,8 @@ async function loadSupplyHistory(
        ORDER BY stablecoin_id ASC, snapshot_date ASC`,
     )
     .bind(...inClause.binds, minDay, maxDay)
-    .all<{ stablecoin_id: string; snapshot_date: number; price: number }>();
-  for (const row of history.results ?? []) {
-    const byDay = result.get(row.stablecoin_id) ?? new Map<number, number>();
-    byDay.set(row.snapshot_date, row.price);
-    result.set(row.stablecoin_id, byDay);
-  }
-  return result;
+    .all<{ stablecoin_id: string; snapshot_date: number; price: number; price_observed_at: number | null }>();
+  return projectMintBurnPriceHistory(history.results ?? [], assessedAtSec ?? Math.floor(Date.now() / 1000));
 }
 
 function contractCoinIds(meta: StablecoinMeta, chainIds: Set<string>): string[] {
@@ -458,7 +458,7 @@ async function buildCoinRepairContexts(
   rows: MintBurnHistoricalRepairRow[],
   options: HistoricalMintPriceRepairOptions,
 ): Promise<Map<string, CoinRepairContext>> {
-  const supplyHistory = await loadSupplyHistory(db, rows);
+  const supplyHistory = await loadSupplyHistory(db, rows, options.nowSec);
   const contexts = new Map<string, CoinRepairContext>();
   for (const event of rows) {
     const existing = contexts.get(event.stablecoin_id);
@@ -469,7 +469,7 @@ async function buildCoinRepairContexts(
     contexts.set(event.stablecoin_id, {
       meta: TRACKED_META_BY_ID.get(event.stablecoin_id) ?? null,
       events: [event],
-      supplyHistory: supplyHistory.get(event.stablecoin_id) ?? new Map<number, number>(),
+      supplyHistory: supplyHistory.get(event.stablecoin_id) ?? [],
       sourceResults: [],
     });
   }
@@ -477,7 +477,10 @@ async function buildCoinRepairContexts(
   const sourceLoader = options.sourceLoader ?? productionHistoricalMintPriceSourceLoader;
   for (const context of contexts.values()) {
     if (!context.meta) continue;
-    const unresolved = context.events.filter((event) => context.supplyHistory.get(eventDay(event.timestamp)) == null);
+    const unresolved = context.events.filter((event) => resolveMintBurnEventPrice(context.meta!.id, event.timestamp, {
+      priceHistory: new Map([[context.meta!.id, context.supplyHistory]]),
+      priceObservations: new Map(),
+    }) == null);
     if (unresolved.length === 0) continue;
     let remaining = unresolved;
 
@@ -713,7 +716,7 @@ export async function repairHistoricalMintBurnPrices(
     const outcome = resolveHistoricalMintPrice({
       meta: context.meta,
       eventTimestamp: row.timestamp,
-      supplyHistoryPrice: context.supplyHistory.get(eventDay(row.timestamp)),
+      supplyHistory: context.supplyHistory,
       sourceResults: context.sourceResults,
     });
     dispositions.push({

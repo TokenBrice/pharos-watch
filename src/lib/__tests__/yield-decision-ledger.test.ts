@@ -24,7 +24,7 @@ describe("buildYieldDecisionLedgerDisplay", () => {
 
     expect(display).toMatchObject({
       reasonLabel: "Curated source preferred",
-      sourceSwitchLabel: "Source changed (+1.80% APY30d)",
+      sourceSwitchLabel: "Source changed (+1.80 pp APY30d)",
       rejectedCountLabel: "1 alternate rejected",
       previousSourceKey: "defillama-auto:legacy",
     });
@@ -33,10 +33,18 @@ describe("buildYieldDecisionLedgerDisplay", () => {
         sourceKey: "defillama-auto:compound-v3:usdc",
         yieldSource: "Compound V3 USDC",
         rejectionLabel: "lower confidence",
-        apy30dDeltaLabel: "-0.51% APY30d",
+        apy30dDeltaLabel: "-0.51 pp APY30d",
       },
     ]);
   });
+
+  it.each([[1, "+1.00 pp"], [-1, "-1.00 pp"], [-0.001, "+0.00 pp"]] as const)(
+    "formats absolute APY delta %s in normalized percentage points",
+    (delta, label) => {
+      expect(buildYieldDecisionLedgerDisplay({ ...ledger, apy30dDeltaFromPrevious: delta })?.sourceSwitchLabel)
+        .toBe(`Source changed (${label} APY30d)`);
+    },
+  );
 
   it("returns null for missing ledgers instead of inventing copy", () => {
     expect(buildYieldDecisionLedgerDisplay(null)).toBeNull();
@@ -47,7 +55,7 @@ describe("buildYieldDecisionLedgerDisplay", () => {
 describe("formatYieldDecisionReasonLine", () => {
   it("returns a compact one-line reason", () => {
     expect(formatYieldDecisionReasonLine(ledger)).toBe(
-      "Curated source preferred | Source changed (+1.80% APY30d) | 1 alternate rejected",
+      "Curated source preferred | Source changed (+1.80 pp APY30d) | 1 alternate rejected",
     );
   });
 });

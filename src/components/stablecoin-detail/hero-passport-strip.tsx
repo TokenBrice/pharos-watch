@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
-import { revealAnchorId } from "@/lib/anchor-reveal";
+import { alignAnchorAfterHydration, revealAnchorId } from "@/lib/anchor-reveal";
 
 function alignSection(sectionId: string) {
   // scrollIntoView honors the targets' CSS scroll-margin-top (sticky-chrome
@@ -69,34 +69,22 @@ export function HeroPassportStrip({
   items: HeroPassportItemViewModel[];
   compactDesktop?: boolean;
 }) {
-  const pendingScrollSyncRef = useRef<number[]>([]);
+  const stopScrollSyncRef = useRef<(() => void) | null>(null);
 
   useEffect(
-    () => () => {
-      for (const timer of pendingScrollSyncRef.current) window.clearTimeout(timer);
-    },
+    () => () => stopScrollSyncRef.current?.(),
     [],
   );
 
   if (items.length < 3) return null;
 
-  // Deep targets sit below lazy-mounted sections whose final height settles
-  // after the jump starts, so a single scroll under-shoots. Re-align while the
-  // hash still matches — the same retry cadence as LongformScrollspyNav.
+  // Keep the click's CSS-controlled smooth jump, then use the shared bounded
+  // correction lifecycle so reader input always takes over navigation.
   function jumpToSection(sectionId: string) {
-    for (const timer of pendingScrollSyncRef.current) window.clearTimeout(timer);
-    pendingScrollSyncRef.current = [];
+    stopScrollSyncRef.current?.();
     window.history.pushState(null, "", `#${sectionId}`);
     alignSection(sectionId);
-    for (const delay of [160, 480, 960, 1800]) {
-      pendingScrollSyncRef.current.push(
-        window.setTimeout(() => {
-          if (decodeURIComponent(window.location.hash.replace(/^#/, "")) === sectionId) {
-            alignSection(sectionId);
-          }
-        }, delay),
-      );
-    }
+    stopScrollSyncRef.current = alignAnchorAfterHydration(sectionId, false);
   }
 
   // Dense strips distribute like a real document data page — fields spread

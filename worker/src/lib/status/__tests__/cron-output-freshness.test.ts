@@ -7,12 +7,28 @@ import { compactCronMetadataForPersistence } from "../../cron-metadata-persisten
 import { loadProducerFreshnessFacts } from "../freshness-oracle";
 import { loadCronHealth } from "../cron-health";
 import { getDatasetFreshness } from "../derived-data";
+import { getLatestSuccessfulCronTimestampResult, buildCronFreshnessHeaders } from "../../api-freshness";
+import { assessPublicHealth } from "../../public-health-assessment";
 
 const NOW = 1_800_000_000;
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("confirmed output versus attempted work", () => {
+  it("uses productive degraded output rather than a newer ok no-publication attempt in public health and headers", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW * 1000);
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO cron_runs(job,started_at,duration_ms,status,item_count,metadata) VALUES ('sync-mint-burn',?,1000,?,1,?)");
+    insert.run(NOW - 7200, "ok", JSON.stringify({ outputPublishedAt: NOW - 7200 }));
+    insert.run(NOW - 10, "degraded", JSON.stringify({ outputPublishedAt: NOW - 10, reason: "partial-coverage" }));
+    insert.run(NOW - 1, "ok", JSON.stringify({ outputPublishedAt: null }));
+    const lookup = await getLatestSuccessfulCronTimestampResult(db, "sync-mint-burn");
+    expect(lookup).toEqual({ timestamp: NOW - 10, status: "ok" });
+    expect(buildCronFreshnessHeaders(lookup, 3600, "public, max-age=60")["X-Data-Age"]).toBe("10");
+    const health = await assessPublicHealth(db, NOW);
+    expect(health.mintBurn.sync).toMatchObject({ lastSuccessfulSyncAt: NOW - 10, freshnessStatus: "fresh" });
+  });
   it.each([
     ["held", { status: "degraded", itemCount: 60, metadata: JSON.stringify({ reason: "rankings-payload-shrunk" }) }],
     ["failed write", { status: "degraded", itemCount: 60, metadata: JSON.stringify({ reason: "db_write_failed", cacheWriteSucceeded: false }) }],

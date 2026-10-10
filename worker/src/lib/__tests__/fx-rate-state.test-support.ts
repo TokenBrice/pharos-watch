@@ -1,4 +1,5 @@
 import { sha256Hex } from "@shared/lib/sha256";
+import { EXPECTED_FX_PEG_KEYS } from "../fx-config";
 
 /**
  * One published FX generation as the two `cache` rows `persistFxRateState()` writes:
@@ -7,7 +8,9 @@ import { sha256Hex } from "@shared/lib/sha256";
  */
 export function fxRatesCacheRows(
   updatedAt: number,
-  rates: Record<string, number> = { peggedEUR: 1.08 },
+  rates: Record<string, number> = Object.fromEntries(
+    EXPECTED_FX_PEG_KEYS.map((pegKey) => [pegKey, pegKey === "peggedEUR" ? 1.08 : 1]),
+  ),
   metaOverrides: Record<string, unknown> = {},
 ): Array<{ key: string; updated_at: number; value: string }> {
   const ratesValue = JSON.stringify(rates);

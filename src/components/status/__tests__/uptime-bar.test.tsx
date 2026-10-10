@@ -3,12 +3,22 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { UptimeBar } from "../uptime-bar";
+import { STATUS_TONE } from "@shared/lib/classification";
 
 function runwayDates(container: HTMLElement): string[] {
   return Array.from(container.querySelectorAll("[title]"), (node) => node.getAttribute("title")!.slice(0, 10));
 }
 
 describe("UptimeBar", () => {
+  it.each(["healthy", "degraded", "stale"] as const)("uses canonical %s label and runway color", (status) => {
+    const { container } = render(<UptimeBar days={2} transitions={[]} currentStatus={status} lastChangedAt={null} />);
+    const cells = Array.from(container.querySelectorAll("[title]"));
+    expect(cells[0].getAttribute("title")).toContain(STATUS_TONE.unknown.label);
+    expect(cells[0].className).toContain(STATUS_TONE.unknown.barClassName);
+    expect(cells[1].getAttribute("title")).toContain(STATUS_TONE[status].label);
+    expect(cells[1].className).toContain(STATUS_TONE[status].barClassName);
+  });
+
   const ORIGINAL_TZ = process.env.TZ;
 
   afterEach(() => {

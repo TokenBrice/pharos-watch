@@ -40,7 +40,7 @@ function checkMethodologyCommitProvenance(failures: Failure[]): void {
 }
 
 function checkWorkerInfrastructureIsolateStateDoc(failures: Failure[]): void {
-  const file = "docs/worker-infrastructure.md";
+  const file = "docs/process/worker-infrastructure-appendix.md";
   const doc = read(file);
   const start = doc.indexOf(ISOLATE_LOCAL_STATE_DOC_START);
   const end = doc.indexOf(ISOLATE_LOCAL_STATE_DOC_END);

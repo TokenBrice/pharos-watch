@@ -50,7 +50,7 @@ describe("selectYieldSource ordering", () => {
     const selected = selectYieldSource(
       makeRow([
         candidate("safer-low-apy", {
-          apy30d: 2.5, sourceRiskScore: 15,
+          apy30d: 4, sourceRiskScore: 15,
           freshness: { capturedAt: 1, ageSeconds: 172_800 },
         }),
         candidate("riskier-high-apy", {
@@ -147,7 +147,7 @@ describe("selectYieldSource ordering", () => {
   it("uses the complete row fallback only when all required fields exist", () => {
     const row = {
       ...makeRow([]), yieldProtocolSlug: "fallback", yieldVenueChain: "Ethereum",
-      apy30d: 4, pharosYieldScore: 70, effectiveTvlUsd: 123_000,
+      apy30d: 4, pharosYieldScore: 70, yieldSourceTvlUsd: 123_000,
       venueRiskTier: "low" as const, deploymentPlace: "lending" as const,
       yieldFreshness: { capturedAt: 123, ageSeconds: 45 },
     };

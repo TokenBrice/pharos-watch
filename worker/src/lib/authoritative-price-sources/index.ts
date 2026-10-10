@@ -438,9 +438,10 @@ export async function fetchAuthoritativeLivePriceOverrides(
     const { asset, provider } = prioritizedCandidates[index];
     const candidateAt = Math.floor(Date.now() / 1000);
     const circuitSource = provider.liveCircuitSource;
+    let liveAllowed = true;
     if (circuitSource && options?.db) {
-      const allowed = await shouldAttemptLiveFetch(options.db, circuitSource, circuitAttempts);
-      if (!allowed) {
+      liveAllowed = await shouldAttemptLiveFetch(options.db, circuitSource, circuitAttempts);
+      if (!liveAllowed && !provider.supportsCachedVaultRate) {
         if (stats) stats.skippedCircuitOpen += 1;
         recordAdapterStat(provider.source, { skippedCircuitOpen: 1 });
         recordAttempt(index, asset, provider, {
@@ -472,6 +473,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
       ...liveContext,
       lastUntrustedParent: null,
       lastRejectionReason: null,
+      vaultRateCacheOnly: !liveAllowed,
     };
     let outcome: "resolved" | "empty" | "failed" = "failed";
     try {
@@ -492,7 +494,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
           candidateAt,
           observedAt: override.observedAt,
         });
-        if (circuitSource && options?.db) {
+        if (liveAllowed && circuitSource && options?.db) {
           if (override.source !== CACHED_VAULT_RATE_SOURCE) {
             recordLiveOutcome(circuitSource, true);
           } else if (budgetSignal?.aborted || !candidateTimeout?.isTimedOut()) {
@@ -514,9 +516,10 @@ export async function fetchAuthoritativeLivePriceOverrides(
         const explicitCircuitOutcome = isValidatedLivePriceNoQuote(liveResult)
           ? liveResult.circuitOutcome
           : null;
-        if (circuitSource && options?.db && explicitCircuitOutcome === "success") {
+        if (liveAllowed && circuitSource && options?.db && explicitCircuitOutcome === "success") {
           recordLiveOutcome(circuitSource, true);
         } else if (
+          liveAllowed &&
           circuitSource &&
           options?.db &&
           provider.recordNullLiveResultAsCircuitFailure &&

@@ -44,7 +44,7 @@ import {
   OracleRiskTierSchema,
 } from "./core";
 import { HttpUrlSchema } from "./validators";
-import { StrictIsoDateSchema } from "./safety-schema-primitives";
+import { issue, StrictIsoDateSchema } from "./safety-schema-primitives";
 
 // Pure scopes let bundlers omit unused schema graphs, including nested Zod
 // constructor arguments; annotating only the outer call leaves those allocated.
@@ -192,34 +192,19 @@ export const ProofOfReservesSchema = /* @__PURE__ */ (() => z
       .strict()
       .superRefine((report, ctx) => {
         if (report.periodEnd == null && report.publishedAt == null && report.reviewReference == null) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "latestReport requires a sourced date or an explicitly uncertain review reference",
-          });
+          issue(ctx, undefined, "latestReport requires a sourced date or an explicitly uncertain review reference");
         }
         if (report.publishedAtBasis != null && report.publishedAt == null) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "latestReport publishedAtBasis requires publishedAt",
-            path: ["publishedAtBasis"],
-          });
+          issue(ctx, ["publishedAtBasis"], "latestReport publishedAtBasis requires publishedAt");
         }
         if (report.publishedAt != null && report.periodEnd != null && report.publishedAt < report.periodEnd) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "latestReport publishedAt cannot precede periodEnd",
-            path: ["publishedAt"],
-          });
+          issue(ctx, ["publishedAt"], "latestReport publishedAt cannot precede periodEnd");
         }
         if (
           report.scope === "assets-and-liabilities" &&
           (report.liabilityReconciliation === "none" || report.liabilityReconciliation === "unknown")
         ) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "assets-and-liabilities scope requires full or partial liability reconciliation",
-            path: ["liabilityReconciliation"],
-          });
+          issue(ctx, ["liabilityReconciliation"], "assets-and-liabilities scope requires full or partial liability reconciliation");
         }
       })
       .optional(),
@@ -255,10 +240,10 @@ export const ContractDeploymentSchema = /* @__PURE__ */ (() => z.union([
 ]).superRefine((deployment, ctx) => {
     const issued = deployment.amountEncoding?.kind === "xrpl-issued-currency";
     if (issued ? deployment.chain !== "xrpl" || deployment.decimals !== null : deployment.kind !== "native-denom" && deployment.decimals === null) {
-      ctx.addIssue({ code: "custom", message: "Null decimals require an explicit native bank denom or native XRPL issued amount" });
+      issue(ctx, undefined, "Null decimals require an explicit native bank denom or native XRPL issued amount");
     }
     if (deployment.chain === "xrpl" && deployment.amountEncoding?.kind === "fixed-decimal") {
-      ctx.addIssue({ code: "custom", message: "XRPL issued deployments cannot claim fixed decimals" });
+      issue(ctx, undefined, "XRPL issued deployments cannot claim fixed decimals");
     }
   }))();
 
@@ -332,18 +317,10 @@ export const CustodyProfileSchema = /* @__PURE__ */ (() => z
   .superRefine((profile, ctx) => {
     const knownShares = profile.providers.reduce((sum, provider) => sum + (provider.sharePct ?? 0), 0);
     if (knownShares > 100.5) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "custody provider shares cannot exceed 100%",
-        path: ["providers"],
-      });
+      issue(ctx, ["providers"], "custody provider shares cannot exceed 100%");
     }
     if (profile.knownUnknownExposurePct != null && knownShares + profile.knownUnknownExposurePct > 100.5) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "custody provider shares plus known unknown exposure cannot exceed 100%",
-        path: ["knownUnknownExposurePct"],
-      });
+      issue(ctx, ["knownUnknownExposurePct"], "custody provider shares plus known unknown exposure cannot exceed 100%");
     }
   }))();
 

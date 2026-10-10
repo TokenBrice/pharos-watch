@@ -81,13 +81,13 @@ export const StatusProbeComparisonSchema = z.object({
 });
 export type StatusProbeComparison = z.output<typeof StatusProbeComparisonSchema>;
 
-export const STATUS_DISCREPANCY_REASON_VALUES = ["in-sync", "probe-stale", "probe-disagrees", "probe-missing", "probe-invalid-timestamp"] as const;
+export const STATUS_DISCREPANCY_REASON_VALUES = ["in-sync", "probe-stale", "probe-disagrees", "probe-missing", "probe-invalid-timestamp", "status-missing", "status-unreadable"] as const;
 export type StatusDiscrepancyReason = (typeof STATUS_DISCREPANCY_REASON_VALUES)[number];
 
 export const StatusDiscrepancySchema = z.object({
   hasDivergence: z.boolean(),
-  severityDelta: z.number(),
-  statusSeverity: z.number(),
+  severityDelta: z.number().nullable(),
+  statusSeverity: z.number().nullable(),
   probeSeverity: z.number(),
   details: z.string().nullable(),
   probeAgeSeconds: z.number().nullable(),
@@ -296,11 +296,14 @@ export const ActivePriceCoverageHealthSchema = z.object({
   observedAt: z.number().nullable(),
 }).superRefine((coverage, ctx) => {
   const countKeys = ["expectedActiveCount", "presentActiveCount", "pricedActiveCount",
-    "missingPriceCount", "alertEligibleCount", "affectedMarketCapUsd"] as const;
+    "missingPriceCount", "alertEligibleCount"] as const;
   for (const key of countKeys) {
     if ((coverage.status === "unknown") !== (coverage[key] == null)) {
       ctx.addIssue({ code: "custom", path: [key], message: "Unknown coverage requires null measurements; observed coverage requires measurements" });
     }
+  }
+  if (coverage.status === "unknown" && coverage.affectedMarketCapUsd != null) {
+    ctx.addIssue({ code: "custom", path: ["affectedMarketCapUsd"], message: "Unknown coverage requires unavailable exposure" });
   }
   if (coverage.nominalReferenceCount !== undefined || coverage.nominalReferenceIds !== undefined
     || coverage.nominalReferenceMarketCapUsd !== undefined || coverage.nominalReferenceReason !== undefined) {

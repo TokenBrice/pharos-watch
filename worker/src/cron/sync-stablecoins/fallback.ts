@@ -61,13 +61,14 @@ export async function restoreFallbackCacheState({
         continue;
       }
       if (prev.chainCirculating) {
-        asset.chainCirculating = prev.chainCirculating;
+        asset.chainCirculating = Object.fromEntries(
+          Object.entries(prev.chainCirculating).map(([chain, row]) => [chain, { ...row, current: null }]),
+        );
         asset.chains = prev.chains ?? [];
       }
       if (prev.circulatingPrevDay) asset.circulatingPrevDay = prev.circulatingPrevDay;
       if (prev.circulatingPrevWeek) asset.circulatingPrevWeek = prev.circulatingPrevWeek;
       if (prev.circulatingPrevMonth) asset.circulatingPrevMonth = prev.circulatingPrevMonth;
-      asset.supplyObservedAt = observedAt;
     }
   } catch (error) {
     logWorkerEventArgs("handler", "warn", "[sync-stablecoins] Failed to restore stale cache data:", error);
@@ -103,9 +104,8 @@ export async function syncViaCoingeckoFallback(
   const { assets } = intake;
 
   const { previousAssetsById, previousCacheState } = await restoreFallbackCacheState({ db, assets });
-  // Curated NAV wrappers (llamaId null) get a fresh per-chain on-chain supply
-  // overlay here so the fallback lane no longer nulls their V9 chain breakdown;
-  // a failed probe leaves the restore's previous-row carry intact.
+  // A successful complete curated read replaces the fresh aggregate and unavailable
+  // chain packet. Failed probes leave the CoinGecko aggregate and its clock intact.
   await overlayFallbackCuratedAggregateSupply(assets, signal, dwellirNative);
   const { fxFallbackRates, validationReferences } = await loadFreshFxRates(
     db,

@@ -24,7 +24,15 @@ function fixtureMockD1(
 ) {
   return buildStatusD1Scenario({
     sections: ["sentinel", "publication", "derived", "reserves", "statusState", "cronState", "telegram"],
-    overrides,
+    overrides: [
+      ...overrides,
+      // Prefer this aggregate to the sentinel's "SELECT 1" substring, which
+      // also appears inside the canonical blacklist mirror-event filter.
+      { match: "blacklist-gap-aggregate", rows: [], allowUnused: true, first: {
+        total: 0, missing: 0, missing_recent: 0, oldest_gap_age_sec: null,
+        never_attempted: 0, repeated_failures: 0, unrecoverable: 0,
+      } },
+    ],
     sectionOverrides: {
       sentinel: [{ match: "SELECT 1", rows: [], first: { "1": 1 } }],
       derived: [
@@ -107,6 +115,29 @@ describe("handleStatus", () => {
     body: { error: "Unauthorized" },
   });
 
+
+  it.each([
+    { causes: {} },
+    { causes: { availability: null, dataQuality: [], overall: [] } },
+    { causes: { availability: [null], dataQuality: [], overall: [] } },
+    { caches: { stablecoins: {} } },
+    { summary: {} },
+    { dataQuality: {} },
+  ])("recomputes malformed nested evidence in a fresh healthy-scheduler snapshot %j", async (overrides) => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
+        rows: [makeRawStatusSnapshotRow(now, 60, overrides)] },
+      { match: "FROM dex_liquidity_publication_generations", rows: [], first: null },
+      { match: "FROM yield_publication_generations", rows: [], first: null },
+      ...makeMinimalLiveStatusRows(now, null, true).filter((row) => row.match !== "dex_liquidity"),
+    ]);
+    const response = await handleStatus({ db, trustedAdmin: true });
+    const body = StatusResponseSchema.parse(await readJsonResponse(response, 200));
+    expect(body.sectionErrors.statusSnapshot?.code).toBe("status_snapshot_unreadable");
+    expect(body.causes.availability).toBeInstanceOf(Array);
+    expect(db.getHistory().some((entry) => entry.sql.includes("SELECT 1"))).toBe(true);
+  });
   it.each([false, true])("recomputes an incompatible observer OOM snapshot without hiding current failure (%s)", async (currentProducerFails) => {
     const now = Math.floor(Date.now() / 1000);
     const job = "compute-safety-score-v9-workflow";
@@ -222,7 +253,7 @@ describe("handleStatus", () => {
             ...Object.fromEntries(Object.entries(CRON_INTERVALS).map(([id, expectedIntervalSec]) => [
               id, { lastRun: null, recentRuns: [], expectedIntervalSec, healthy: true },
             ])),
-            [job]: { lastRun: { startedAt: now - 1200, status: "ok" }, recentRuns: [],
+            [job]: { lastRun: { startedAt: now - 1200, durationMs: 0, status: "ok" }, recentRuns: [],
               expectedIntervalSec: 300, healthy: false, telemetryUnknown: false },
           },
           sectionErrors: { scheduledSlots: { code: "old-slot-error", message: "old snapshot error" } },
@@ -1047,7 +1078,7 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("mintBurnReconciliation");
   });
 
-  it("treats cron history query failure as unknown telemetry instead of stale cron health", async () => {
+  it("keeps failed cron telemetry unknown and degrades unreadable mint/burn evidence", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
@@ -1099,12 +1130,13 @@ describe("handleStatus", () => {
       causes: { availability: Array<{ code: string }> };
     };
 
-    expect(body.availabilityStatus).toBe("healthy");
+    expect(body.availabilityStatus).toBe("degraded");
     expect(body.summary.unhealthyCrons).toBe(0);
     expect(Object.values(body.crons).some((cron) => cron.healthy === true)).toBe(false);
     expect(body.crons["sync-stablecoins"]?.healthy).toBeNull();
     expect(body.crons["sync-stablecoins"]?.telemetryUnknown).toBe(true);
     expect(body.crons["sync-stablecoins"]?.telemetryUnknownReason).toBe("cron-history-query-failed");
     expect(body.causes.availability.some((cause) => cause.code === "cron_history_query_failed")).toBe(true);
+    expect(body.causes.availability.some((cause) => cause.code === "mint_burn_health_query_failed")).toBe(true);
   });
 });

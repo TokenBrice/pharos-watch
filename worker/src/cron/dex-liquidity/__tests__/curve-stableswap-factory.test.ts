@@ -261,6 +261,7 @@ async function run(pool: PoolEntry, deps: ReturnType<typeof dependencies>) {
     stablecoinPriceById,
     chainRpcs: new Map([[PLASMA, {} as never]]),
     nowSec: BLOCK_TIMESTAMP + 60,
+    sourceGenerationId: "dex-stage:fixture",
     dependencies: deps as never,
   });
 }
@@ -307,6 +308,10 @@ describe("Curve StableSwap-NG factory census capture", () => {
       amplification: 500,
       // 1 bp static fee scaled to its documented off-balance maximum.
       feeRate: 0.001,
+      capture: {
+        blockNumber: BLOCK_NUMBER, blockHash: BLOCK_HASH, blockTimestamp: BLOCK_TIMESTAMP,
+        sourceGenerationId: "dex-stage:fixture",
+      },
       tokens: [
         { address: YZUSD, symbol: "yzUSD", decimals: 18, trackedAssetId: "yzusd-yuzu" },
         { address: USDT0, symbol: "USDT0", decimals: 6, trackedAssetId: "usdt-tether" },

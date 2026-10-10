@@ -90,7 +90,8 @@ export async function enrichSolidlyV2ExecutionModels(input: {
   }
   if (references.length === 0) return;
   if (!input.chainRpcs) { for (const row of references) applyGate(row, "transport-unavailable"); return; }
-  if (!Number.isSafeInteger(input.nowSec) || !input.sourceGenerationId) {
+  const { nowSec, sourceGenerationId } = input;
+  if (nowSec == null || !Number.isSafeInteger(nowSec) || !sourceGenerationId) {
     for (const row of references) applyGate(row, "incomplete-exact-capture");
     return;
   }
@@ -109,7 +110,7 @@ export async function enrichSolidlyV2ExecutionModels(input: {
     try {
       await runPinnedBlockCapture<Array<() => void>, GateReason>({
         chain: deployment.chain, rpcOptions: options,
-        nowSec: input.nowSec, maxAgeSec: DEX_MEASURED_FRESHNESS_MAX_SEC,
+        nowSec, maxAgeSec: DEX_MEASURED_FRESHNESS_MAX_SEC,
         fetchBlockNumber: deps.fetchBlockNumber, fetchBlockHeader: deps.fetchBlockHeader,
         verifyDeployment: async ({ blockNumber }) => {
           const factoryCode = await deps.fetchCodeAtBlock(deployment.chain, deployment.factoryAddress, blockNumber, options);
@@ -211,9 +212,9 @@ export async function enrichSolidlyV2ExecutionModels(input: {
                 const provenance = assetIds.map((assetId) => assetId ? input.stablecoinPriceProvenanceById?.get(assetId) : undefined);
                 if (provenance.some((price) => !price?.referencePriceSourceId ||
                   !Number.isSafeInteger(price.referencePriceObservedAt) || price.referencePriceObservedAt <= 0 ||
-                  price.referencePriceObservedAt > input.nowSec! ||
+                  price.referencePriceObservedAt > nowSec ||
                   price.referencePriceObservedAt > header.timestamp + 60 ||
-                  input.nowSec! - price.referencePriceObservedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC)) {
+                  nowSec - price.referencePriceObservedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC)) {
                   gate([reference], "incomplete-exact-capture"); continue;
                 }
                 const tokenInIndex = tracked.trackedTokenIndex as 0 | 1;

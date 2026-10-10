@@ -1097,7 +1097,7 @@ export async function persistScores(
       signal,
     });
     throwIfAborted(signal);
-    await writeFreshnessSentinel(db, "dex-liquidity", nowSec, signal);
+    await writeFreshnessSentinel(db, "dex-liquidity", nowSec, generationId, signal);
   } catch (err) {
     if (!signal?.aborted) {
       try {

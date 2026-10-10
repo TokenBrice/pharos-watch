@@ -1,15 +1,29 @@
 import { runOperatorCli } from "./operator-cli.test-support";
-import { DatabaseSync } from "node:sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import type { DatabaseSync } from "node:sqlite";
+import { afterEach, describe, expect, it } from "vitest";
+import { BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY, upsertBlacklistCurrentBalance } from "../../src/lib/blacklist-current-balances";
+import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../src/lib/blacklist-summary-service";
+import type { BlacklistSummaryResponse } from "@shared/types/market";
+import {
+  balanceId, derivedCacheRows, ledgerRows, observation, seedDerivedCaches, seedLedger, sqliteRemoteD1,
+} from "./blacklist-current-balance-maintenance.test-support";
 import {
   assertBlacklistRebuildFailureRate,
   assertBlacklistRebuildWriterGuard,
-  buildCurrentBalanceMutationStatements,
+  applyCurrentBalanceRebuild,
   parseArgs,
 } from "../rebuild-blacklist-current-balances";
 
 const SCRIPT_NAME = "rebuild-blacklist-current-balances";
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
+
+function armPause(sqlite: DatabaseSync): void {
+  sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', 1)")
+    .run(BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY);
+}
 
 describe("rebuild blacklist current balances script args", () => {
   it("defaults to a local dry-run and requires the script confirmation for live mode", () => {
@@ -58,57 +72,73 @@ describe("rebuild blacklist current balances script args", () => {
     expect(() => parseArgs(["tron"])).toThrow(/Unexpected argument/);
   });
 
-  it("preserves resolved amounts when a provider failure is rebuilt", () => {
-    const db = new DatabaseSync(":memory:");
-    try {
-      db.exec(`
-        CREATE TABLE blacklist_current_balances (
-          id TEXT PRIMARY KEY,
-          stablecoin TEXT NOT NULL,
-          chain_id TEXT NOT NULL,
-          address TEXT NOT NULL,
-          amount_native REAL,
-          amount_usd REAL,
-          source TEXT NOT NULL,
-          status TEXT NOT NULL,
-          observed_at INTEGER NOT NULL,
-          attempt_count INTEGER NOT NULL,
-          last_attempted_at INTEGER,
-          last_error_class TEXT
-        );
-        INSERT INTO blacklist_current_balances VALUES
-          ('USDT:tron:TExisting', 'USDT', 'tron', 'TExisting', 12.5, 12.5, 'current_balance', 'resolved', 100, 3, 100, NULL);
-      `);
-      const statements = buildCurrentBalanceMutationStatements("USDT", "tron", [{
-        id: "USDT:tron:TExisting",
-        stablecoin: "USDT",
-        chainId: "tron",
-        address: "TExisting",
-        amountNative: null,
-        amountUsd: null,
-        source: "current_balance",
-        status: "provider_failed",
-        observedAt: 200,
-        attemptCount: 1,
-        lastAttemptedAt: 200,
-        lastErrorClass: "HTTP 500",
-      }]);
-
-      db.exec(statements.join("\n"));
-
-      expect(db.prepare(
-        "SELECT amount_native, amount_usd, source, status, observed_at, attempt_count FROM blacklist_current_balances",
-      ).get()).toEqual({
-        amount_native: 12.5,
-        amount_usd: 12.5,
-        source: "current_balance",
-        status: "provider_failed",
-        observed_at: 100,
-        attempt_count: 4,
+  it("preserves scoped last-known values and retained history with the runtime failure policy", async () => {
+    const { sqlite } = fixtures.open();
+    const runtime = fixtures.open();
+    const seeded = seedLedger(sqlite);
+    seedLedger(runtime.sqlite);
+    armPause(sqlite);
+    const retained = ledgerRows(sqlite).filter((row) => row.id !== balanceId(seeded[0]!));
+    const failed = observation({
+      amountNative: null, amountUsd: null, status: "provider_failed", source: "failed_provider",
+      observedAt: 200, lastSuccessfulObservedAt: null, attemptCount: 1,
+      lastAttemptedAt: 200, lastErrorClass: "HTTP 500", consecutiveFailures: 1,
+    });
+    const { d1 } = sqliteRemoteD1(sqlite);
+    applyCurrentBalanceRebuild(d1, [failed]);
+    await upsertBlacklistCurrentBalance(runtime.db, failed);
+    expect(ledgerRows(sqlite)).toEqual(ledgerRows(runtime.sqlite));
+    expect(sqlite.prepare("SELECT * FROM blacklist_current_balances WHERE id = ?").get(balanceId(failed)))
+      .toMatchObject({
+        amount_native: 100, amount_usd: 100, source: "current_balance",
+        observed_at: 100, last_successful_observed_at: 100, attempt_count: 4,
+        status: "provider_failed", last_attempted_at: 200, last_error_class: "HTTP 500", consecutive_failures: 1,
       });
-    } finally {
-      db.close();
-    }
+    applyCurrentBalanceRebuild(d1, [failed]);
+    expect(sqlite.prepare("SELECT attempt_count, consecutive_failures FROM blacklist_current_balances WHERE id = ?")
+      .get(balanceId(failed))).toEqual({ attempt_count: 5, consecutive_failures: 2 });
+    applyCurrentBalanceRebuild(d1, [observation({ amountNative: 125, amountUsd: 125, observedAt: 300, lastAttemptedAt: 300 })]);
+    expect(sqlite.prepare("SELECT * FROM blacklist_current_balances WHERE id = ?").get(balanceId(failed)))
+      .toMatchObject({ amount_usd: 125, observed_at: 300, last_successful_observed_at: 300, consecutive_failures: 0 });
+    expect(ledgerRows(sqlite).filter((row) => row.id !== balanceId(failed))).toEqual(retained);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM blacklist_current_balances WHERE config_key IS NULL AND contract_address IS NULL")
+      .get()).toEqual({ count: 0 });
+  });
+
+  it("keeps the full ledger intact when the second admission chunk fails beyond 200 statements", () => {
+    const { sqlite } = fixtures.open();
+    seedLedger(sqlite);
+    seedDerivedCaches(sqlite);
+    armPause(sqlite);
+    const before = ledgerRows(sqlite);
+    const cachesBefore = derivedCacheRows(sqlite);
+    const { d1, imports } = sqliteRemoteD1(sqlite, { failChunk: 2 });
+    const rows = Array.from({ length: 205 }, (_, index) => observation({
+      address: `0x${String(index + 1).padStart(40, "0")}`, amountNative: 999, amountUsd: 999,
+    }));
+    expect(() => applyCurrentBalanceRebuild(d1, rows)).toThrow("simulated import failure");
+    expect(imports[0]).toHaveLength(200);
+    expect(imports[1]).toHaveLength(6);
+    expect(ledgerRows(sqlite)).toEqual(before);
+    expect(derivedCacheRows(sqlite)).toEqual(cachesBefore);
+    expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name LIKE 'blacklist_balance_stage_%'").all()).toEqual([]);
+  });
+
+  it("invalidates derived caches and serves updated producer-backed totals after a scoped rebuild", async () => {
+    const { sqlite, db } = fixtures.open();
+    seedLedger(sqlite);
+    seedDerivedCaches(sqlite);
+    armPause(sqlite);
+    const now = Math.floor(Date.now() / 1000);
+    await materializeBlacklistSummarySnapshot(db, now, now);
+    const before = await (await handleBlacklistSummary(db)).json() as BlacklistSummaryResponse;
+    expect(before.stats.trackedFrozenTotal).toBe(300);
+    applyCurrentBalanceRebuild(sqliteRemoteD1(sqlite).d1, [observation({ amountNative: 200, amountUsd: 200 })]);
+    expect(derivedCacheRows(sqlite)).toEqual([]);
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'unrelated-cache'").get()).toEqual({ value: "{}" });
+    const after = await (await handleBlacklistSummary(db)).json() as BlacklistSummaryResponse;
+    expect(after.stats.trackedFrozenTotal).toBe(400);
+    expect(after.stats.trackedAddressCount).toBe(6);
   });
 
   it("fails closed on excessive provider failures unless force is explicit", () => {

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { toFunctionSelector } from "viem/utils";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { ExitRouteObservationSchema } from "@shared/types/exit-route";
 import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop/live-metadata";
 import { buildRedemptionBackstopEntry } from "../../../lib/redemption-backstop/sources";
 import { adaptReservoirReserves, type ReservoirReservesResponse } from "../reservoir";
@@ -429,7 +430,7 @@ describe("adaptReservoirReserves", () => {
 
   it("scores the PSM-bound route capacity as live-direct through the backstop entry", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const { result } = await runReservoir("wsrusd-reservoir", SAMPLE_RESPONSE);
+    const { result } = await runReservoir("wsrusd-reservoir", SAMPLE_RESPONSE, { blockTimestamp: now });
     const reserveSnapshot = reservoirSnapshot(result, now);
     const liveMetadata = readRedemptionBackstopLiveMetadata("wsrusd-reservoir", reserveSnapshot, now);
 
@@ -454,6 +455,7 @@ describe("adaptReservoirReserves", () => {
     expect(entry.immediateCapacityUsd).toBe(4);
     expect(entry.capacityProfile?.scoringUsd).toBe(4);
     const observation = entry.capacityProfile?.exitRouteObservations?.[0];
+    expect(ExitRouteObservationSchema.safeParse(observation).success).toBe(true);
     expect(observation?.output).toEqual({
       kind: "tracked-stablecoin",
       trackedAssetIds: ["usdc-circle"],

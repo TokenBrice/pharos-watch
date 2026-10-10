@@ -33,6 +33,23 @@ function mockEvents(events: DepegEvent[], overrides: Record<string, unknown> = {
 }
 
 describe("DepegHistory provenance badges", () => {
+  it("keeps the older worst incident after pagination regardless of the 90-day chart seed", () => {
+    const now = Math.floor(Date.now() / 1000);
+    const day = 86_400;
+    const old = makeEvent({ id: 1, startedAt: now - 300 * day, endedAt: now - 290 * day, peakDeviationBps: -1200 });
+    const recent = makeEvent({ id: 2, startedAt: now - 20 * day, endedAt: now - 19 * day, peakDeviationBps: -150 });
+    mockEvents([recent], { isFullyLoaded: false, isFetchingNextPage: true });
+    const view = render(<DepegHistory stablecoinId="usdc-circle"
+      historyCoverage={{ startedAt: now - 90 * day, source: "first-observation", status: "verified" }} />);
+    expect(screen.queryByText("Worst Depeg")).toBeNull();
+    mockEvents([recent, old]);
+    view.rerender(<DepegHistory stablecoinId="usdc-circle"
+      historyCoverage={{ startedAt: now - 90 * day, source: "first-observation", status: "verified" }} />);
+    expect(screen.getByText("Worst Depeg").parentElement?.textContent).toContain("-1200 bps");
+    view.rerender(<DepegHistory stablecoinId="usdc-circle"
+      historyCoverage={{ startedAt: now - 365 * day, source: "audited-replay", status: "verified" }} />);
+    expect(screen.getByText("Worst Depeg").parentElement?.textContent).toContain("-1200 bps");
+  });
   it("withholds partial metrics until all history has loaded", () => {
     const events = [makeEvent()];
     mockEvents(events, { data: { events, total: 2, totalExact: true }, isFullyLoaded: false, isFetchingNextPage: true });

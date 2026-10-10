@@ -156,25 +156,3 @@ export const HistoricalV9FixtureSchema = HistoricalV9FixtureBaseSchema.superRefi
     });
   }
 });
-
-
-export const HistoricalV9FixtureCorpusSchema = z
-  .object({ schemaVersion: z.literal(1), fixtures: z.array(HistoricalV9FixtureSchema).min(24) })
-  .strict()
-  .superRefine((corpus, ctx) => {
-    const ids = new Set<string>();
-    corpus.fixtures.forEach((fixture, index) => {
-      if (ids.has(fixture.id)) {
-        ctx.addIssue({ code: "custom", path: ["fixtures", index, "id"], message: "Duplicate fixture ID" });
-      }
-      ids.add(fixture.id);
-    });
-    const adverse = corpus.fixtures.filter((fixture) => fixture.outcome.classification === "adverse").length;
-    const resilient = corpus.fixtures.length - adverse;
-    if (adverse < 12) {
-      ctx.addIssue({ code: "custom", path: ["fixtures"], message: "Corpus requires at least 12 adverse fixtures" });
-    }
-    if (resilient < 12) {
-      ctx.addIssue({ code: "custom", path: ["fixtures"], message: "Corpus requires at least 12 resilient fixtures" });
-    }
-  });

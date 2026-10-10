@@ -4,8 +4,8 @@ import { assert, ensureHttpUrl, isDirectRun, retrySmokeResult, sleep } from "../
 
 const DEFAULT_OPS_UI_URL = process.env.SMOKE_OPS_UI_URL ?? "https://ops.pharos.watch/admin/";
 const DEFAULT_OPS_API_BASE = process.env.SMOKE_OPS_API_BASE ?? "https://ops-api.pharos.watch";
-const DEFAULT_BLACKLIST_BACKFILL_STABLECOIN = process.env.SMOKE_OPS_BLACKLIST_BACKFILL_STABLECOIN ?? "USDT";
-const DEFAULT_BLACKLIST_BACKFILL_CHAIN_ID = process.env.SMOKE_OPS_BLACKLIST_BACKFILL_CHAIN_ID ?? "optimism";
+const DEFAULT_BLACKLIST_REPAIR_STABLECOIN = process.env.SMOKE_OPS_BLACKLIST_REPAIR_STABLECOIN ?? "USDT";
+const DEFAULT_BLACKLIST_REPAIR_CHAIN_ID = process.env.SMOKE_OPS_BLACKLIST_REPAIR_CHAIN_ID ?? "optimism";
 const OPS_UI_PROXY_RETRY_STATUSES = new Set([502, 504]);
 const OPS_UI_PROXY_RETRY_COUNT = 2;
 const OPS_UI_PROXY_RETRY_DELAY_MS = 2_000;
@@ -284,11 +284,11 @@ export async function run() {
   const opsApiBase = ensureUrl(DEFAULT_OPS_API_BASE);
   const opsUiOrigin = new URL(opsUiUrl).origin;
   const adminApiUrl = new URL("/admin-api/", opsUiOrigin).toString();
-  const blacklistBackfillUrl = new URL("/api/backfill-blacklist-current-balances", opsApiBase);
-  blacklistBackfillUrl.searchParams.set("dryRun", "true");
-  blacklistBackfillUrl.searchParams.set("stablecoin", DEFAULT_BLACKLIST_BACKFILL_STABLECOIN);
-  blacklistBackfillUrl.searchParams.set("chainId", DEFAULT_BLACKLIST_BACKFILL_CHAIN_ID);
-  blacklistBackfillUrl.searchParams.set("limit", "1");
+  const blacklistRepairUrl = new URL("/api/remediate-blacklist-amount-gaps", opsApiBase);
+  blacklistRepairUrl.searchParams.set("dryRun", "true");
+  blacklistRepairUrl.searchParams.set("stablecoin", DEFAULT_BLACKLIST_REPAIR_STABLECOIN);
+  blacklistRepairUrl.searchParams.set("chainId", DEFAULT_BLACKLIST_REPAIR_CHAIN_ID);
+  blacklistRepairUrl.searchParams.set("limit", "1");
 
   console.log(`[smoke-ops] Running ${scope} checks against ${opsUiUrl} and ${opsApiBase}`);
 
@@ -300,9 +300,9 @@ export async function run() {
       ? Promise.all([
           fetchJson(new URL("/api/status-history?limit=5", opsApiBase).toString(), headers),
           fetchJson(new URL("/api/api-keys/audit-log?limit=1", opsApiBase).toString(), headers),
-          fetchJson(new URL("/api/audit-depeg-history?dry-run=true&limit=1", opsApiBase).toString(), headers),
+          fetchJson(new URL("/api/backfill-dews?repair=prune-history&dry-run=true&stablecoin=usdt-tether", opsApiBase).toString(), headers),
           fetchJsonWithRetry(
-            blacklistBackfillUrl.toString(),
+            blacklistRepairUrl.toString(),
             {
               ...headers,
               "Content-Type": "application/json",
@@ -312,7 +312,7 @@ export async function run() {
               requestInit: { method: "POST", body: "{}" },
               onRetry: ({ attemptNumber, retryCount, retryDelayMs, status }) => {
                 console.warn(
-                  `[smoke-ops] blacklist balance dry-run returned ${status}; retrying ${attemptNumber}/${retryCount} after ${retryDelayMs}ms to absorb post-deploy backend warmup`,
+                  `[smoke-ops] blacklist amount repair dry-run returned ${status}; retrying ${attemptNumber}/${retryCount} after ${retryDelayMs}ms to absorb post-deploy backend warmup`,
                 );
               },
             },
@@ -424,7 +424,7 @@ export async function run() {
   if (directOpsDetails.error) {
     throw directOpsDetails.error;
   }
-  const [history, apiKeyAuditLog, audit, blacklistBackfill] = directOpsDetails.value;
+  const [history, apiKeyAuditLog, audit, blacklistRepair] = directOpsDetails.value;
 
   assert(
     apiKeyAuditLog.response.status === 200,
@@ -485,25 +485,25 @@ export async function run() {
   assert(audit.body && audit.body.dryRun === true, "Dry-run audit response missing dryRun=true");
   console.log("[smoke-ops] OK ops API dry-run action");
 
-  if (blacklistBackfill.response.status !== 200) {
+  if (blacklistRepair.response.status !== 200) {
     console.error(
-      `[smoke-ops] blacklist balance dry-run returned ${blacklistBackfill.response.status}, body: ${blacklistBackfill.bodyText?.slice(0, 500)}`,
+      `[smoke-ops] blacklist amount repair dry-run returned ${blacklistRepair.response.status}, body: ${blacklistRepair.bodyText?.slice(0, 500)}`,
     );
-    console.error(`[smoke-ops] Response headers:`, Object.fromEntries(blacklistBackfill.response.headers.entries()));
+    console.error(`[smoke-ops] Response headers:`, Object.fromEntries(blacklistRepair.response.headers.entries()));
   }
   assert(
-    blacklistBackfill.response.status === 200,
-    `Expected blacklist balance dry-run 200, got ${blacklistBackfill.response.status}`,
+    blacklistRepair.response.status === 200,
+    `Expected blacklist amount repair dry-run 200, got ${blacklistRepair.response.status}`,
   );
   assert(
-    blacklistBackfill.body && blacklistBackfill.body.dryRun === true,
-    "Blacklist balance dry-run response missing dryRun=true",
+    blacklistRepair.body && blacklistRepair.body.dryRun === true,
+    "Blacklist amount repair dry-run response missing dryRun=true",
   );
   assert(
-    blacklistBackfill.body.totals && typeof blacklistBackfill.body.totals.candidates === "number",
-    "Blacklist balance dry-run response missing totals.candidates",
+    typeof blacklistRepair.body.candidateCount === "number",
+    "Blacklist amount repair dry-run response missing candidateCount",
   );
-  console.log("[smoke-ops] OK ops API blacklist balance dry-run");
+  console.log("[smoke-ops] OK ops API blacklist amount repair dry-run");
 
   console.log("[smoke-ops] All checks passed.");
 }

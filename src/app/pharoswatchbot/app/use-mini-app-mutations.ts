@@ -97,10 +97,6 @@ function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state:
   }
 }
 
-function defaultGlobalAlerts(): TelegramMiniAppState["subscriber"]["globalAlerts"] {
-  return { dews: false, depeg: false, safety: false, launch: false, reserve: false, freeze: false, depegStepBps: null };
-}
-
 function confirmThenFire(
   confirmFn: TelegramWebAppSdk["showConfirm"] | undefined,
   message: string,
@@ -124,6 +120,8 @@ export interface UseMiniAppMutationsArgs {
   webApp: TelegramWebAppSdk | null;
   /** Replace the confirmed server snapshot after a successful non-`forget-me` mutation. */
   onSnapshotReplaced: (next: TelegramMiniAppClientSnapshot) => void;
+  /** Revoke the session and clear retained data after confirmed deletion. */
+  onForgotten: () => void;
   /** Reload the session (used on 401/stale-auth recovery). */
   reloadSession: (options?: { clearMessage?: boolean }) => Promise<void>;
   /** Whether the 6s message auto-dismiss is active. Caller passes `status === "ready"`. */
@@ -135,10 +133,6 @@ export interface UseMiniAppMutationsArgs {
 }
 
 export interface UseMiniAppMutationsResult {
-  /** Last server-confirmed state, or `null` before the first successful load. */
-  displayState: TelegramMiniAppState | null;
-  /** Server-confirmed global alert settings. */
-  confirmedGlobals: TelegramMiniAppState["subscriber"]["globalAlerts"];
   /** True between dispatch and either resolve or reject of `performMutation`. */
   isMutating: boolean;
   /** Mutation currently in flight, used for scoped control feedback. */
@@ -201,6 +195,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     state,
     webApp,
     onSnapshotReplaced,
+    onForgotten,
     reloadSession,
     messageAutoDismissActive,
     mutationsAllowed,
@@ -223,7 +218,8 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   const hasMutatedThisSessionRef = useRef(false);
   const hasProbedHomeScreenRef = useRef(false);
   const mutationLimitWasActiveRef = useRef(false);
-  const confirmedGlobals = state?.subscriber.globalAlerts ?? defaultGlobalAlerts();
+  const terminalRef = useRef(false);
+  const requestInFlightRef = useRef(false);
 
   // 6s message auto-dismiss while the parent reports the session is ready.
   useEffect(() => {
@@ -260,7 +256,8 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   }, [mutationRetryAfterSec]);
 
   const performMutation = useCallback(async (operation: TelegramMiniAppOperation): Promise<TelegramMiniAppClientSnapshot | null> => {
-    if (!initData || !mutationsAllowed || state?.viewer.canMutate !== true || mutationRetryAfterSec > 0) return null;
+    if (terminalRef.current || requestInFlightRef.current || !initData || !mutationsAllowed || state?.viewer.canMutate !== true || mutationRetryAfterSec > 0) return null;
+    requestInFlightRef.current = true;
     // Capture pre-mutation snapshot for engagement gating (T-57).
     const preSubscriberExists = state?.subscriber.exists ?? false;
     const preChatType = state?.viewer.chatType ?? null;
@@ -270,7 +267,12 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     try {
       const next = await postMiniAppSnapshot(MUTATE_ENDPOINT, { initData, operation });
       if (operation.kind === "forget-me") {
-        // Render the terminal screen instead of swapping state.
+        terminalRef.current = true;
+        clearTimeout(undoTimerRef.current ?? undefined);
+        undoTimerRef.current = null;
+        undoTokenRef.current = undefined;
+        setPendingUndo(null);
+        onForgotten();
         setForgottenView(true);
         setMessage(null);
         setAnnouncement(mutationSuccessAnnouncement(operation, next.state));
@@ -336,10 +338,11 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       return null;
     } finally {
       setIsMutating(false);
+      requestInFlightRef.current = false;
       setPendingOperation(null);
       webApp?.disableClosingConfirmation?.();
     }
-  }, [initData, mutationRetryAfterSec, mutationsAllowed, onSnapshotReplaced, reloadSession, state?.subscriber.exists, state?.viewer.canMutate, state?.viewer.chatType, webApp]);
+  }, [initData, mutationRetryAfterSec, mutationsAllowed, onForgotten, onSnapshotReplaced, reloadSession, state?.subscriber.exists, state?.viewer.canMutate, state?.viewer.chatType, webApp]);
 
   const mutate = useCallback((operation: TelegramMiniAppOperation) => {
     void performMutation(operation);
@@ -350,7 +353,8 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     request: () => Promise<T>,
     successAnnouncement: string,
   ): Promise<T | null> => {
-    if (!initData || !portabilityReadsAllowed || state?.viewer.chatId == null || isMutating) return null;
+    if (terminalRef.current || requestInFlightRef.current || !initData || !portabilityReadsAllowed || state?.viewer.chatId == null || isMutating) return null;
+    requestInFlightRef.current = true;
     setIsMutating(true);
     setPendingOperation(operation);
     try {
@@ -371,6 +375,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       return null;
     } finally {
       setIsMutating(false);
+      requestInFlightRef.current = false;
       setPendingOperation(null);
     }
   }, [initData, isMutating, portabilityReadsAllowed, state?.viewer.chatId, webApp]);
@@ -466,8 +471,6 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   }, []);
 
   return {
-    displayState: state,
-    confirmedGlobals,
     isMutating,
     pendingOperation,
     mutationRetryAfterSec,

@@ -150,11 +150,11 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
   const plotLayout = usePlotLayout();
   const docked = useMediaQuery(DOCKED_QUERY);
   const reducedMotion = usePrefersReducedMotion();
-  const { registerPinGrave, revealRecord, setRecordHash } = useCemeterySelection();
+  const { heroPin, setHeroPin, registerPinGrave, revealRecord, setRecordHash } = useCemeterySelection();
 
   const [hot, setHot] = useState<{ id: string; focus: boolean } | null>(null);
   const [hotBeamId, setHotBeamId] = useState<string | null>(null);
-  const [pinnedId, setPinnedId] = useState<string | null>(null);
+  const pinnedId = heroPin?.id ?? null;
   const [tabId, setTabId] = useState(map.keyboard.initialId);
   const [hoverDim, setHoverDim] = useState<PlotDim | null>(null);
   const [zoom, setZoom] = useState<ZoomState | null>(null);
@@ -216,6 +216,13 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     [aimHot],
   );
 
+  // Synchronize the roving stop during handoff without replaying scroll/focus.
+  const [lastLivePin, setLastLivePin] = useState(heroPin);
+  if (plotLayout === "desktop" && lastLivePin !== heroPin) {
+    setLastLivePin(heroPin);
+    if (heroPin) setTabId(heroPin.id);
+  }
+
   // ------------------------------------------------------------------ pin
 
   const pin = useCallback(
@@ -224,7 +231,7 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
       const row = rowById.get(id);
       if (!grave || !row) return;
       if (zoom && zoom.cause !== grave.cause) setZoom(null);
-      setPinnedId(id);
+      setHeroPin(id, source);
       setTabId(id);
       if (source === "hash") return; // the register's reveal owns scrolling; the provider already owns the hash
       setStatus(`Pinned ${row.name}`);
@@ -239,15 +246,15 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
       };
       setPinTick((n) => n + 1);
     },
-    [nav, rowById, zoom, setRecordHash, reducedMotion, docked],
+    [nav, rowById, zoom, setHeroPin, setRecordHash, reducedMotion, docked],
   );
   const unpin = useCallback(() => {
     // closing from inside the card (× or Esc) hands focus back to the grave instead of dropping it on the page
     if (pinnedId && inspectorRef.current?.contains(document.activeElement)) document.getElementById(`grave-${pinnedId}`)?.focus({ preventScroll: true });
-    setPinnedId(null);
+    setHeroPin(null);
     setStatus("");
     setRecordHash(null);
-  }, [pinnedId, setRecordHash]);
+  }, [pinnedId, setHeroPin, setRecordHash]);
 
   const leaveFlower = useCallback((id: string) => {
     setFlowers((current) => ({ ...current, [id]: Math.min(PLOT_FLOWER_MAX, (current[id] ?? 0) + 1) }));

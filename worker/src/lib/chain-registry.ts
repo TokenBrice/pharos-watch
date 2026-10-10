@@ -47,6 +47,11 @@ export interface ChainRpcConfig {
   explorerUrl: string;
 }
 
+function rpcConfig(chainId: string, type: ChainRpcConfig["type"], endpoints: readonly RpcEndpoint[]): ChainRpcConfig {
+  const meta = CHAIN_META[chainId]!;
+  return { chainId, chainName: meta.name, type, endpoints, explorerUrl: meta.explorerUrl };
+}
+
 export interface BuildChainRpcsOptions {
   dwellirApiKey?: string | null;
 }
@@ -247,13 +252,7 @@ function appendDwellirEndpoints(configs: Map<string, ChainRpcConfig>, apiKey: st
       config.endpoints = [...config.endpoints, endpoint];
       continue;
     }
-    configs.set(entry.chainId, {
-      chainId: entry.chainId,
-      chainName: meta!.name,
-      type: "evm",
-      endpoints: [endpoint],
-      explorerUrl: meta!.explorerUrl,
-    });
+    configs.set(entry.chainId, rpcConfig(entry.chainId, "evm", [endpoint]));
   }
 }
 
@@ -267,52 +266,26 @@ export function buildChainRpcs(
   for (const [chainId, slug] of Object.entries(ALCHEMY_CHAINS)) {
     const publicRpc = getPublicRpcUrl(chainId);
     if (!publicRpc) continue;
-    const meta = CHAIN_META[chainId]!;
     if (alchemyApiKey) {
-      configs.push({
-        chainId,
-        chainName: meta.name,
-        type: "evm",
-        endpoints: [
-          registryEndpoint(buildAlchemyRpcUrl(slug, alchemyApiKey), "alchemy"),
-          registryEndpoint(publicRpc, "public"),
-        ],
-        explorerUrl: meta.explorerUrl,
-      });
+      configs.push(rpcConfig(chainId, "evm", [
+        registryEndpoint(buildAlchemyRpcUrl(slug, alchemyApiKey), "alchemy"),
+        registryEndpoint(publicRpc, "public"),
+      ]));
     } else {
-      configs.push({
-        chainId,
-        chainName: meta.name,
-        type: "evm",
-        endpoints: publicRegistryEndpoints(publicRpc, getSecondaryFallbackRpcUrl(chainId)),
-        explorerUrl: meta.explorerUrl,
-      });
+      configs.push(rpcConfig(chainId, "evm", publicRegistryEndpoints(publicRpc, getSecondaryFallbackRpcUrl(chainId))));
     }
   }
 
   for (const [chainId, slug] of Object.entries(DRPC_CHAINS)) {
     const publicRpc = getPublicRpcUrl(chainId);
     if (!publicRpc) continue;
-    const meta = CHAIN_META[chainId]!;
     if (drpcApiKey) {
-      configs.push({
-        chainId,
-        chainName: meta.name,
-        type: "evm",
-        endpoints: [
-          registryEndpoint(drpcRpcUrl(slug, drpcApiKey), "drpc"),
-          registryEndpoint(publicRpc, "public"),
-        ],
-        explorerUrl: meta.explorerUrl,
-      });
+      configs.push(rpcConfig(chainId, "evm", [
+        registryEndpoint(drpcRpcUrl(slug, drpcApiKey), "drpc"),
+        registryEndpoint(publicRpc, "public"),
+      ]));
     } else {
-      configs.push({
-        chainId,
-        chainName: meta.name,
-        type: "evm",
-        endpoints: publicRegistryEndpoints(publicRpc),
-        explorerUrl: meta.explorerUrl,
-      });
+      configs.push(rpcConfig(chainId, "evm", publicRegistryEndpoints(publicRpc)));
     }
   }
 
@@ -322,26 +295,14 @@ export function buildChainRpcs(
     const publicRpc = getPublicRpcUrl(chainId);
     if (!meta || meta.type !== "evm" || !publicRpc) continue;
 
-    configs.push({
-      chainId,
-      chainName: meta.name,
-      type: "evm",
-      endpoints: publicRegistryEndpoints(publicRpc, getSecondaryFallbackRpcUrl(chainId)),
-      explorerUrl: meta.explorerUrl,
-    });
+    configs.push(rpcConfig(chainId, "evm", publicRegistryEndpoints(publicRpc, getSecondaryFallbackRpcUrl(chainId))));
   }
 
   for (const chainId of PUBLIC_ONLY_OTHER_CHAINS) {
     const meta = CHAIN_META[chainId];
     const publicRpc = getPublicRpcUrl(chainId);
     if (!meta || !publicRpc) continue;
-    configs.push({
-      chainId,
-      chainName: meta.name,
-      type: "other",
-      endpoints: publicRegistryEndpoints(publicRpc),
-      explorerUrl: meta.explorerUrl,
-    });
+    configs.push(rpcConfig(chainId, "other", publicRegistryEndpoints(publicRpc)));
   }
 
   const keyedSolanaEndpoints = [
@@ -351,36 +312,18 @@ export function buildChainRpcs(
     drpcApiKey ? registryEndpoint(drpcRpcUrl("solana", drpcApiKey), "drpc") : undefined,
   ].filter((endpoint): endpoint is RpcEndpoint => endpoint !== undefined);
   if (keyedSolanaEndpoints.length > 0) {
-    configs.push({
-      chainId: SOLANA_PUBLIC_RPC_CHAIN_ID,
-      chainName: CHAIN_META[SOLANA_PUBLIC_RPC_CHAIN_ID].name,
-      type: "other",
-      endpoints: keyedSolanaEndpoints,
-      explorerUrl: CHAIN_META[SOLANA_PUBLIC_RPC_CHAIN_ID].explorerUrl,
-    });
+    configs.push(rpcConfig(SOLANA_PUBLIC_RPC_CHAIN_ID, "other", keyedSolanaEndpoints));
   }
 
   if (alchemyApiKey) {
-    configs.push({
-      chainId: "tron",
-      chainName: CHAIN_META.tron.name,
-      type: "tron",
-      endpoints: [
-        registryEndpoint(buildAlchemyRpcUrl("tron-mainnet", alchemyApiKey), "alchemy"),
-        ...publicRegistryEndpoints(getPublicRpcUrl("tron")),
-      ],
-      explorerUrl: CHAIN_META.tron.explorerUrl,
-    });
+    configs.push(rpcConfig("tron", "tron", [
+      registryEndpoint(buildAlchemyRpcUrl("tron-mainnet", alchemyApiKey), "alchemy"),
+      ...publicRegistryEndpoints(getPublicRpcUrl("tron")),
+    ]));
   } else {
     const tronRpc = getPublicRpcUrl("tron");
     if (!tronRpc) throw new Error("No public RPC for tron");
-    configs.push({
-      chainId: "tron",
-      chainName: CHAIN_META.tron.name,
-      type: "tron",
-      endpoints: publicRegistryEndpoints(tronRpc),
-      explorerUrl: CHAIN_META.tron.explorerUrl,
-    });
+    configs.push(rpcConfig("tron", "tron", publicRegistryEndpoints(tronRpc)));
   }
 
   const map = new Map<string, ChainRpcConfig>();
@@ -389,7 +332,6 @@ export function buildChainRpcs(
   }
   if (alchemyApiKey) {
     for (const [chainId, slug] of Object.entries(CCIP_ARCHIVE_ALCHEMY_CHAINS)) {
-      const meta = CHAIN_META[chainId]!;
       const endpoint: RpcEndpoint = {
         url: buildAlchemyRpcUrl(slug, alchemyApiKey),
         operator: "alchemy", keyed: true, position: "registry",
@@ -397,23 +339,18 @@ export function buildChainRpcs(
         maxLogBlockSpan: 1000, noBatch: false, verifiedAt: "2026-10-05",
       };
       const existing = map.get(chainId);
-      map.set(chainId, {
-        chainId, chainName: meta.name, type: "evm", explorerUrl: meta.explorerUrl,
-        endpoints: [endpoint, ...(existing?.endpoints ?? []), ...(CCIP_ARCHIVE_PUBLIC_ENDPOINTS[chainId] ?? [])],
-      });
+      map.set(chainId, rpcConfig(chainId, "evm", [
+        endpoint, ...(existing?.endpoints ?? []), ...(CCIP_ARCHIVE_PUBLIC_ENDPOINTS[chainId] ?? []),
+      ]));
     }
   }
   for (const [chainId, endpointConfigs] of Object.entries(CENSUS_STATE_PUBLIC_RPCS)) {
-    const meta = CHAIN_META[chainId]!;
     const endpoints: RpcEndpoint[] = endpointConfigs.map(endpoint => ({
       ...endpoint, operator: "public", keyed: false, position: "supplemental",
       stateHistory: "archive", logsHistory: "none", verifiedAt: "2026-10-05",
     }));
     const existing = map.get(chainId);
-    map.set(chainId, {
-      chainId, chainName: meta.name, type: "evm", explorerUrl: meta.explorerUrl,
-      endpoints: [...(existing?.endpoints ?? []), ...endpoints],
-    });
+    map.set(chainId, rpcConfig(chainId, "evm", [...(existing?.endpoints ?? []), ...endpoints]));
   }
   if (alchemyApiKey) {
     for (const [chainId, slug] of Object.entries(CENSUS_STATE_ALCHEMY_CHAINS)) {
@@ -430,11 +367,7 @@ export function buildChainRpcs(
       if (existing) {
         existing.endpoints = [...existing.endpoints, endpoint];
       } else {
-        const meta = CHAIN_META[chainId]!;
-        map.set(chainId, {
-          chainId, chainName: meta.name, type: "evm",
-          endpoints: [endpoint], explorerUrl: meta.explorerUrl,
-        });
+        map.set(chainId, rpcConfig(chainId, "evm", [endpoint]));
       }
     }
   }

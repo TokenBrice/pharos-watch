@@ -112,6 +112,16 @@ function coverageFeature(key: CoverageFeatureKey) {
 }
 
 describe("coverage helpers", () => {
+  it("keeps market-cap reach unavailable when only uncovered rows have observed cap", () => {
+    const summary = buildCoverageFeatureSummary(coverageFeature("yield"), [
+      makeCoverageRow(["covered", "COV"], { hasYieldCoverage: true, marketCapAvailable: false }),
+      makeCoverageRow(["uncovered", "UNC"], { hasYieldCoverage: false, marketCapUsd: 100 }),
+    ]);
+    expect(summary.coveredMcapUsd).toBeNull();
+    expect(summary.mcapSharePct).toBeNull();
+    expect(summary.marketCapObservedCount).toBe(1);
+  });
+
   it("marks NAV tokens as price-only instead of depeg-tracked", () => {
     const status = priceCoverageFeature.resolve(
       makeCoin({
@@ -585,13 +595,13 @@ describe("coverage helpers", () => {
     ]);
   });
 
-  it("returns zeroed summaries and a null market-cap share for empty or zero-cap inputs", () => {
+  it("preserves unavailable subtotals and explicit-zero cap observations", () => {
     const empty = buildCoverageFeatureSummary(coverageFeature("price"), []);
 
     expect(empty.availableCount).toBe(0);
     expect(empty.totalCount).toBe(0);
     expect(empty.coveragePct).toBe(0);
-    expect(empty.coveredMcapUsd).toBe(0);
+    expect(empty.coveredMcapUsd).toBeNull();
     expect(empty.mcapSharePct).toBeNull();
 
     const zeroCap = buildCoverageFeatureSummary(coverageFeature("blacklist"), [
@@ -601,6 +611,33 @@ describe("coverage helpers", () => {
 
     expect(zeroCap.coveragePct).toBe(100);
     expect(zeroCap.mcapSharePct).toBeNull();
+    expect(zeroCap.coveredMcapUsd).toBe(0);
+    expect(zeroCap.marketCapObservedCount).toBe(2);
+    expect(zeroCap.marketCapComplete).toBe(true);
+  });
+
+  it("qualifies partially observed cap reach and keeps all-unavailable caps null", () => {
+    const known = makeCoverageRow(["known", "KNW"], { hasYieldCoverage: true, marketCapUsd: 100 });
+    const unknown = makeCoverageRow(["unknown", "UNK"], { hasYieldCoverage: false, marketCapAvailable: false });
+    const partial = buildCoverageFeatureSummary(coverageFeature("yield"), [known, unknown]);
+    expect(partial).toMatchObject({
+      coveredMcapUsd: 100,
+      marketCapObservedCount: 1,
+      marketCapComplete: false,
+      mcapSharePct: 100,
+    });
+    expect(partial.shareLabel).toMatch(/known market cap/i);
+    const unavailable = buildCoverageFeatureSummary(coverageFeature("yield"), [unknown]);
+    expect(unavailable).toMatchObject({
+      coveredMcapUsd: null,
+      marketCapObservedCount: 0,
+      marketCapComplete: false,
+      mcapSharePct: null,
+    });
+    const complete = buildCoverageFeatureSummary(coverageFeature("yield"), [
+      known, { ...unknown, marketCapAvailable: true, marketCapUsd: 100 },
+    ]);
+    expect(complete).toMatchObject({ marketCapObservedCount: 2, marketCapComplete: true, mcapSharePct: 50 });
   });
 
   it("scopes count and market-cap denominators to the feature's own rows", () => {
@@ -949,7 +986,7 @@ describe("coverage helpers", () => {
     expect(summary.coveragePct).toBeNull();
     expect(summary.availableCount).toBe(0);
     expect(summary.totalCount).toBe(0);
-    expect(summary.coveredMcapUsd).toBe(0);
+    expect(summary.coveredMcapUsd).toBeNull();
     expect(summary.mcapSharePct).toBeNull();
     expect(summary.coverageLabel).toBe("Data n/a");
     expect(summary.breakdown).toContainEqual({ key: "data-unavailable", label: "data n/a", count: 2 });

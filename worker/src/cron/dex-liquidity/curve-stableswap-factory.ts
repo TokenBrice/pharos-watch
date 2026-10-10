@@ -464,6 +464,7 @@ async function enrichDeployment(input: {
   chainRpcs: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   nowSec: number;
+  sourceGenerationId: string;
   chainAddressToId: SymbolLookups["chainAddressToId"];
   stablecoinPriceById: Map<string, number>;
   dependencies: CurveStableswapFactoryDependencies;
@@ -506,7 +507,7 @@ async function enrichDeployment(input: {
       }
       return { ok: true };
     },
-    buildCalls: async ({ blockNumber }) => {
+    buildCalls: async ({ blockNumber, header }) => {
       const indexed = await readIndexedPools({
         deployment,
         blockNumber,
@@ -563,6 +564,10 @@ async function enrichDeployment(input: {
           continue;
         }
         actions.push(() => {
+          built.model.capture = {
+            blockNumber, blockHash: header.hash, blockTimestamp: header.timestamp,
+            sourceGenerationId: input.sourceGenerationId,
+          };
           const extra = { ...(reference.pool.extra ?? {}) };
           delete extra.executionCapabilityGate;
           extra.ammExecutionModel = built.model;
@@ -595,9 +600,10 @@ export async function enrichCurveStableswapFactoryExecutionModels(input: {
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   nowSec?: number;
+  sourceGenerationId?: string;
   dependencies?: CurveStableswapFactoryDependencies;
 }): Promise<void> {
-  if (!input.chainRpcs) return;
+  if (!input.chainRpcs || !input.sourceGenerationId) return;
   const deployments = new Map(
     CURVE_STABLESWAP_FACTORY_DEPLOYMENTS.map((deployment) => [deployment.chain, deployment]),
   );
@@ -623,6 +629,7 @@ export async function enrichCurveStableswapFactoryExecutionModels(input: {
         chainRpcs: input.chainRpcs,
         signal: input.signal,
         nowSec,
+        sourceGenerationId: input.sourceGenerationId,
         chainAddressToId: input.chainAddressToId,
         stablecoinPriceById: input.stablecoinPriceById,
         dependencies,

@@ -19,9 +19,13 @@ interface StablecoinFilteredTableProps {
 export function StablecoinFilteredTable({ activeFilters, renderNotice }: StablecoinFilteredTableProps) {
   const { data, isLoading, dataUpdatedAt, error, refetch, meta } = useStablecoins();
   const logos = logosById;
-  const { data: pegSummaryData } = usePegSummary();
-  const { data: dexLiquidity } = useDexLiquidity();
-  const { data: reportCardsData } = useReportCardsV9();
+  const pegSummaryQuery = usePegSummary();
+  const liquidityQuery = useDexLiquidity();
+  const reportCardsQuery = useReportCardsV9();
+  const pegSummaryData = pegSummaryQuery.data;
+  const dexLiquidity = liquidityQuery.data;
+  const reportCardsData = reportCardsQuery.data;
+  const failedQueries = [pegSummaryQuery, liquidityQuery, reportCardsQuery].filter((query) => query.error);
 
   const tableInputs = useMemo(
     () =>
@@ -37,12 +41,18 @@ export function StablecoinFilteredTable({ activeFilters, renderNotice }: Stablec
   return (
     <>
       <QueryFreshnessNotices
-        error={error}
+        error={error ?? failedQueries[0]?.error}
         hasData={!!data?.peggedAssets?.length}
         onRetry={() => {
-          void refetch();
+          if (error) void refetch();
+          for (const query of failedQueries) void query.refetch();
         }}
-        queries={[{ preset: "stablecoins", dataUpdatedAt, error, hasData: !!data?.peggedAssets?.length, meta }]}
+        queries={[
+          { preset: "stablecoins", dataUpdatedAt, error, hasData: !!data?.peggedAssets?.length, meta },
+          { preset: "pegSummary", dataUpdatedAt: pegSummaryQuery.dataUpdatedAt, error: pegSummaryQuery.error, hasData: !!pegSummaryData?.coins?.length, meta: pegSummaryQuery.meta },
+          { preset: "dexLiquidity", dataUpdatedAt: liquidityQuery.dataUpdatedAt, error: liquidityQuery.error, hasData: !!dexLiquidity, meta: liquidityQuery.meta },
+          { preset: "reportCards", dataUpdatedAt: reportCardsQuery.dataUpdatedAt, error: reportCardsQuery.error, hasData: !!reportCardsData?.cards?.length, meta: reportCardsQuery.meta },
+        ]}
       />
       <SafetyScoreV9StatusNotice response={reportCardsData} />
       {renderNotice?.({ pegRateSources: tableInputs.pegRateSources })}
@@ -54,6 +64,12 @@ export function StablecoinFilteredTable({ activeFilters, renderNotice }: Stablec
         pegScores={tableInputs.pegScores}
         dexLiquidity={dexLiquidity ?? undefined}
         reportCards={tableInputs.reportCards}
+        sourceGenerations={{
+          stablecoins: meta?.updatedAt,
+          pegSummary: pegSummaryQuery.meta?.updatedAt,
+          dexLiquidity: liquidityQuery.meta?.updatedAt,
+          reportCards: reportCardsQuery.meta?.updatedAt,
+        }}
       />
     </>
   );

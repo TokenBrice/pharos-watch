@@ -241,8 +241,12 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(response.status).toBe(200);
-    expect(historyMatches(db, "terminal_reason = 'recap_disabled'", { 0: NOW_SEC, 1: NOW_SEC, 2: "42" })).toBe(true);
-    expect(historyMatches(db, "DELETE FROM telegram_pending_alerts", { 0: "42" })).toBe(true);
+    expect(historyMatches(db, "UPDATE telegram_recap_targets", {
+      0: "recap_disabled", 1: NOW_SEC, 2: NOW_SEC, 3: "42",
+    })).toBe(true);
+    expect(historyMatches(db, "DELETE FROM telegram_pending_alerts", {
+      0: "42", 1: "recap_disabled", 2: NOW_SEC,
+    })).toBe(true);
     expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_recap",3:"recap"})).toBe(true);
   });
 

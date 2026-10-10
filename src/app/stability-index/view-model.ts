@@ -1,10 +1,13 @@
-import { formatScore } from "@shared/lib/format";
+import { formatChartDate, formatScore } from "@shared/lib/format";
 import { clampScore } from "@shared/lib/math";
 import { computePsiDepegContribution } from "@shared/lib/psi-contribution";
-import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
+import { getConditionBand, PSI_COMPONENT_LIMITS, PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
+import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/classification";
 import type { PsiChartPoint } from "@shared/lib/psi-view-model";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { StabilityContributor } from "@/hooks/api-hooks";
-import { BAND_ZONES, PSI_EVENTS } from "@/lib/psi-history-events";
+import { PSI_EVENTS } from "@/lib/psi-history-events";
 
 const HISTORY_WINDOW_DAYS = 30;
 const SCORE_DECIMAL_PLACES = 1;
@@ -60,22 +63,22 @@ export interface PsiBeamDimmerLane {
 const PSI_BEAM_DIMMER_DETAIL: Record<PsiBeamDimmerKey, { label: string; max: number; detail: string }> = {
   severity: {
     label: "Severity",
-    max: 68,
+    max: PSI_COMPONENT_LIMITS.severity,
     detail: "Current depeg depth penalty",
   },
   breadth: {
     label: "Breadth",
-    max: 17,
+    max: PSI_COMPONENT_LIMITS.breadth,
     detail: "Current active depeg spread",
   },
   stressBreadth: {
     label: "Stress breadth",
-    max: 5,
+    max: PSI_COMPONENT_LIMITS.stressBreadth,
     detail: "Current DEWS warning-band pressure",
   },
   trend: {
     label: "Trend",
-    max: 5,
+    max: PSI_COMPONENT_LIMITS.trend,
     detail: "7-day market-cap momentum",
   },
 };
@@ -147,40 +150,42 @@ export function buildPsiBeamDimmers<
   });
 }
 
-export function buildPsiHistoryStats(history: PsiHistoryPoint[]): HistoryStatItem[] {
-  if (!history.length) return [];
-  const last30 = history.slice(0, HISTORY_WINDOW_DAYS);
+export function buildPsiHistoryStats(history: PsiHistoryPoint[], evaluatedAt: number | null): HistoryStatItem[] {
+  if (!history.length || evaluatedAt === null) return [];
+  const endDay = bucketUnixSecondsToUtcDay(evaluatedAt);
+  const startDay = endDay - (HISTORY_WINDOW_DAYS - 1) * DAY_SECONDS;
+  const last30 = history.filter((point) => point.date >= startDay && point.date < endDay + DAY_SECONDS);
+  if (!last30.length) return [];
   const scores = last30.map((point) => point.score);
   const high30 = scores.reduce((max, score) => Math.max(max, score), -Infinity);
   const low30 = scores.reduce((min, score) => Math.min(min, score), Infinity);
   const factor = 10 ** SCORE_DECIMAL_PLACES;
   const avg30 = Math.round((scores.reduce((sum, score) => sum + score, 0) / scores.length) * factor) / factor;
-  const avg30Band = BAND_ZONES.find((zone) => avg30 >= zone.y1)?.label ?? "";
+  const avg30Band = avg30 >= PSI_CONDITION_BANDS[PSI_CONDITION_BANDS.length - 1].min ? getConditionBand(avg30) : "";
   const high30Band = last30.find((point) => point.score === high30)?.band ?? "";
   const low30Band = last30.find((point) => point.score === low30)?.band ?? "";
+  const observedDays = new Set(last30.map((point) => bucketUnixSecondsToUtcDay(point.date))).size;
+  const coverage = observedDays < HISTORY_WINDOW_DAYS ? `${observedDays}/30 observed days` : null;
   return [
-    { label: "30d High", value: formatScore(high30), band: high30Band, sub: null },
-    { label: "30d Low", value: formatScore(low30), band: low30Band, sub: null },
-    { label: "30d Avg", value: formatScore(avg30), band: avg30Band, sub: null },
+    { label: "30d High", value: formatScore(high30), band: high30Band, sub: coverage },
+    { label: "30d Low", value: formatScore(low30), band: low30Band, sub: coverage },
+    { label: "30d Avg", value: formatScore(avg30), band: avg30Band, sub: coverage },
   ];
 }
 
 export function buildPsiEventTimelineRows(data: PsiChartPoint[]): PsiEventTimelineRow[] {
   return [...PSI_EVENTS].reverse().map((event) => {
     const startDate = new Date(event.date);
-    const formatter: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" };
+    // Authored event dates are UTC calendar dates, not viewer-local instants.
     const dateStr = event.dateEnd
       ? (() => {
           const endDate = new Date(event.dateEnd);
-          const sameYear = startDate.getFullYear() === endDate.getFullYear();
-          const start = startDate.toLocaleDateString(
-            "en-US",
-            sameYear ? { month: "short", day: "numeric" } : formatter,
-          );
-          const end = endDate.toLocaleDateString("en-US", formatter);
+          const sameYear = startDate.getUTCFullYear() === endDate.getUTCFullYear();
+          const start = formatChartDate(event.date, sameYear ? "short" : "short-year");
+          const end = formatChartDate(event.dateEnd, "short-year");
           return `${start} – ${end}`;
         })()
-      : startDate.toLocaleDateString("en-US", formatter);
+      : formatChartDate(event.date, "short-year");
     const rangeEnd = event.dateEnd ?? event.date + THREE_DAYS_MS;
     const nearby = data.filter(
       (point) => point.ts >= event.date - THREE_DAYS_MS && point.ts <= rangeEnd + THREE_DAYS_MS,
@@ -188,7 +193,7 @@ export function buildPsiEventTimelineRows(data: PsiChartPoint[]): PsiEventTimeli
     const worst =
       nearby.length > 0 ? nearby.reduce((lowest, point) => (point.score < lowest.score ? point : lowest)) : null;
     const psi = worst ? worst.score : null;
-    const psiBand = psi !== null ? (BAND_ZONES.find((zone) => psi >= zone.y1)?.label ?? "") : "";
+    const psiBand = psi !== null && psi >= PSI_CONDITION_BANDS[PSI_CONDITION_BANDS.length - 1].min ? getConditionBand(psi) : "";
     return {
       label: event.label,
       dateStr,

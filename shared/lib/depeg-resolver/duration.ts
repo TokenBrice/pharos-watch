@@ -57,22 +57,23 @@ interface WeightedClosureStats {
   weightedNonClosures: number;
 }
 
-function incidentDepthAtAge(incident: DdrIncident, ageSec: number): DdrIncident["depth"] {
-  const fragments = incident.fragments?.filter((f) => f.offsetSec <= ageSec) ?? [];
-  if (fragments.length === 0) return incident.depth;
-  let worst = fragments[0].peakDeviationBps;
-  for (const fragment of fragments.slice(1)) {
-    if (Math.abs(fragment.peakDeviationBps) > Math.abs(worst)) {
+function incidentDepthAtAge(incident: DdrIncident, ageSec: number): DdrIncident["depth"] | null {
+  let worst: number | null = null;
+  for (const fragment of incident.fragments ?? []) {
+    if (fragment.offsetSec > ageSec) continue;
+    if (worst == null || Math.abs(fragment.peakDeviationBps) > Math.abs(worst)) {
       worst = fragment.peakDeviationBps;
     }
   }
-  return depthBucket(worst);
+  return worst == null ? null : depthBucket(worst);
 }
 
 function incidentMatchesAtAge(candidate: DdrStratumCandidate, incident: DdrIncident, ageSec: number): boolean {
+  const depth = incidentDepthAtAge(incident, ageSec);
+  if (depth == null) return false;
   return stratumMatches(candidate, {
     direction: incident.direction,
-    depth: incidentDepthAtAge(incident, ageSec),
+    depth,
     structural: incident.structural,
     currency: incident.currency,
   });

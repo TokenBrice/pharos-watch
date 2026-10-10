@@ -181,6 +181,12 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
           pegScores={pegScores}
           dexLiquidity={dexLiquidity ?? undefined}
           reportCards={reportCardMap}
+          sourceGenerations={{
+            stablecoins: stablecoinsQuery.meta?.updatedAt,
+            pegSummary: pegSummaryQuery.meta?.updatedAt,
+            dexLiquidity: dexLiquidityQuery.meta?.updatedAt,
+            reportCards: reportCardsQuery.meta?.updatedAt,
+          }}
           initialVisibleColumns={HOME_ALT_DEFAULT_COLUMNS}
           columnPreferenceNamespace={HOME_ALT_COLUMN_PREFERENCE_NAMESPACE}
           showHeaderMethodologyHints={false}

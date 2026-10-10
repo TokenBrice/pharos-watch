@@ -71,7 +71,7 @@ function buildRegistryMetadata(
   const familyCounts: Record<string, number> = {};
   let strongProxyCount = 0;
   let heuristicCount = 0;
-  const registryDigest = configuredIds.map((stablecoinId) => {
+  const registryDigest = [...configuredIds].sort().map((stablecoinId) => {
     const config = configById.get(stablecoinId);
     if (!config) return [stablecoinId, "missing"];
     familyCounts[config.routeFamily] = (familyCounts[config.routeFamily] ?? 0) + 1;
@@ -278,8 +278,10 @@ export async function syncRedemptionBackstops(
       entry.resolutionState !== "impaired" &&
       entry.resolutionState !== "missing-cache",
   ).length;
-  const coverageDenominator = activeConfiguredCount > 0 ? activeConfiguredCount : configuredIds.length;
-  const coverageRatio = coverageDenominator > 0 ? resolvedCount / coverageDenominator : 1;
+  const activeResolvedCount = snapshots.filter(
+    (entry) => entry.resolutionState === "resolved" && stablecoinAssetById.has(entry.stablecoinId),
+  ).length;
+  const coverageRatio = activeConfiguredCount > 0 ? activeResolvedCount / activeConfiguredCount : 0;
   const allowedMissingCapacityCount = getAllowedMissingCapacityCount(activeConfiguredCount);
   const missingCapacityWithinTolerance = missingCapacityCount <= allowedMissingCapacityCount;
   const hasNoActiveConfiguredRows = configuredIds.length > 0 && activeConfiguredCount === 0;
@@ -303,6 +305,7 @@ export async function syncRedemptionBackstops(
     activeConfigured: activeConfiguredCount,
     cacheAbsentConfigured: cacheAbsentConfiguredCount,
     resolved: resolvedCount,
+    activeResolved: activeResolvedCount,
     unresolved: unresolvedCount,
     unresolvedMissingCapacity: missingCapacityCount,
     ...(missingCapacityCount > 0 ? { familyMissingCapacityBy, providerMissingCapacityBy } : {}),

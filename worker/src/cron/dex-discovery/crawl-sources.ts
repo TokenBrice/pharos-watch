@@ -54,7 +54,7 @@ function completedPoolQueryKeys(
   const providerSet = new Set(providers);
   return new Set(
     providerChecks
-      .filter((check) => check.status === "success" && providerSet.has(check.provider))
+      .filter((check) => check.status === "success" && check.paginationComplete === true && providerSet.has(check.provider))
       .map((check) => canonicalExitRouteAssetKey(check.chain, check.address)),
   );
 }

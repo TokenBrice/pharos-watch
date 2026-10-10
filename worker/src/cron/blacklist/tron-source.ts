@@ -10,6 +10,7 @@ import { throwIfAborted } from "../../lib/abort";
 import { buildBlacklistRow, type BlacklistRow } from "../../lib/blacklist/shared";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "../../lib/blacklist/run-budget";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { canonicalTronAddress } from "@shared/lib/tron-address";
 
 interface TronEventResult {
   block_number: number;
@@ -99,13 +100,10 @@ export function parseTronEvent(config: ContractEventConfig, evt: TronEventResult
   }
 
   // A configured field is required; legacy Tether names may use positional "0".
-  const affectedAddress = eventDef.tronResultKey
+  const affectedAddress = canonicalTronAddress(eventDef.tronResultKey
     ? (evt.result[eventDef.tronResultKey] ?? "")
-    : (evt.result._user || evt.result._blackListedUser || evt.result["0"] || "");
-  if (!/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(affectedAddress)
-    && !/^(41|0x)[0-9a-f]{40}$/i.test(affectedAddress)) {
-    throw new BlacklistDecodeError("invalid-address");
-  }
+    : (evt.result._user || evt.result._blackListedUser || evt.result["0"] || ""));
+  if (!affectedAddress) throw new BlacklistDecodeError("invalid-address");
   const rawAmountStr = evt.result._balance || evt.result._value || evt.result["1"];
   const amount =
     eventDef.hasAmount && rawAmountStr && /^[0-9]+$/.test(rawAmountStr)
@@ -291,6 +289,11 @@ export async function fetchTronEventsIncremental(
           safeHead,
           fingerprint,
         });
+      } else if (json.data.length >= 200) {
+        // A saturated page without a continuation cannot prove the unseen tail.
+        apiError = true;
+        incomplete = true;
+        break;
       } else {
         url = null;
       }

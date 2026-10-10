@@ -32,6 +32,7 @@ import { collectCrossDayTrends, collectHistoricalContext, collectPsiContributors
 import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
 import { buildForwardLookOutcomes, buildNextTriggers } from "../daily-digest/digest-next-triggers";
 import { buildEditorialPrompt, scanEditorialText } from "@shared/lib/editorial-style";
+import { getPsiBandStreak } from "@shared/lib/psi-view-model";
 import type { DigestInputData } from "@shared/types/digest";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import { BASE_DIGEST_INPUT, BASE_SAFETY_CONTEXT, canonicalSafetySource, makeCollectorCtx, makeDigestRow, makePublishedDewsTables, missingPublishedGaugeTable, PUBLISHED_GAUGE_SCORE, publishedGaugePayload, publishedGaugeTable, VALID_CAPTURE_MAP_SUMMARY } from "./daily-digest.test-support";
@@ -150,6 +151,27 @@ describe("response and editorial contracts", () => {
     else expect(issues).toEqual([]);
     expect(hasBlockingDigestQualityIssues(issues)).toBe(severity === "hard");
   });
+
+  it.each([
+    ["above", 0.995, -50, "0.995", true],
+    ["over", 0.995, -50, "0.995", true],
+    ["below", 1.005, 50, "1.005", true],
+    ["under", 1.005, 50, "1.005", true],
+    ["below", 0.995, -50, "0.995", false],
+    ["under", 0.995, -50, "1.00", false],
+    ["above", 1.005, 50, "1.00", false],
+    ["over", 1.1055, 50, "1.106", false],
+    ["under", 1.1055, 50, "1.106", true],
+    ["below", 1.0945, -50, "1.09", false],
+    ["above", 1.0945, -50, "1.09", true],
+  ] as const)("checks signed %s peg claims at %s with rounded quote %s", (direction, price, bps, quote, blocked) => {
+    const parsed = { ...extended("USDT held its peg; watch the next print tomorrow."), digestText: `USDC trades at $${quote}, 50 bps ${direction} peg.` };
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily", depegFacts: [{ symbol: "USDC", currentPriceUsd: price, currentBps: bps }],
+    }).filter((issue) => issue.code.startsWith("price-bps-"));
+    expect(issues.some((issue) => issue.code === "price-bps-direction-mismatch" && issue.severity === "hard")).toBe(blocked);
+    expect(hasBlockingDigestQualityIssues(issues)).toBe(blocked);
+  });
 });
 
 describe("intelligence, prompt, and regime contracts", () => {
@@ -194,7 +216,7 @@ describe("intelligence, prompt, and regime contracts", () => {
     const capture = buildDigestSafetyMapCapture(data, resolution);
     expect(capture).not.toBeNull();
     expect(capture).toMatchObject({ manifest: { mapSummary: { date: "2026-08-30" } } });
-    expect(buildUserPrompt({ ...data, safetyMap: capture! })).toContain("A tier: 2 coins, 70.0% of mapped supply");
+    expect(buildUserPrompt({ ...data, safetyMap: capture! })).toContain("A tier: 2 coins, 70.0% of known mapped supply");
     expect(buildDigestSafetyMapCapture(data, { ...resolution, manifest: { ...resolution.manifest, date: "2026-08-29" } })).toBeNull();
     const unavailableSafetyData: DigestInputData = { ...data, safetyContext: { status: "unavailable", expectedModel: "v9", identity: null, publishedAt: null, reason: "held" } };
     expect(buildDigestSafetyMapCapture(unavailableSafetyData, resolution)).toBeNull();
@@ -324,7 +346,36 @@ describe("market and risk collectors", () => {
   });
   const coverage = { coverage_class: "primary", coverage_confidence: 0.9, methodology_version: "6.1" };
   const liquidityPair = (current: number, previous: number, currentTvl = 500e6, previousTvl = 480e6, extra = {}) => [{ stablecoin_id: "usdt-tether", liquidity_score: current, total_tvl_usd: currentTvl, snapshot_date: 1_772_755_200, ...coverage, ...extra }, { stablecoin_id: "usdt-tether", liquidity_score: previous, total_tvl_usd: previousTvl, snapshot_date: 1_772_668_800, ...coverage }];
+  it("skips malformed newest coverage before choosing the digest pair", async () => {
+    const pair = liquidityPair(85, 75);
+    const invalid = { ...pair[0], snapshot_date: pair[0].snapshot_date + 1, coverage_confidence: 1.1 };
+    const result = await collectLiquidityShifts(ctxFor([{ match: "FROM dex_liquidity_history", rows: [invalid, ...pair] }]));
+    expect(result.value).toHaveLength(1);
+    expect(result.degradedReasons).toContain("liquidity-invalid-coverage-evidence");
+  });
+
   it.each([["material", liquidityPair(85, 75), 0.0417, []], ["threshold", liquidityPair(80, 78), undefined, []], ["collapse", liquidityPair(75, 85, 13.72e6, 152e6), -0.9097, []], ["methodology", liquidityPair(71, 85, 480e6, 500e6, { methodology_version: "6.0" }).map((row, i) => i ? { ...row, methodology_version: "5.91" } : row), undefined, ["liquidity-shift-methodology-basis-change"]], ["fallback", liquidityPair(75, 85, 400e6, 500e6, { coverage_class: "fallback", coverage_confidence: 0.5 }), undefined, ["liquidity-shift-non-trendworthy-coverage"]]] as const)("handles %s liquidity pair", async (_label, rows, change, withheldStories) => { const result = await collectLiquidityShifts(ctxFor([{ match: "FROM dex_liquidity_history", rows }])); if (change == null) expect(result.value).toBeUndefined(); else expect(result.value?.[0].tvlChangePct).toBeCloseTo(change, 4); expect(result.degradedReasons).toEqual([]); expect(result.qualityReasons ?? []).toEqual(withheldStories); });
+  it("withholds monetary candidates for absent supply without erasing observed incident counts", async () => {
+    const activeCtx = ctxFor(depegTable([activeRows.usdc]));
+    activeCtx.mcapById.delete("usdc-circle");
+    const active = await collectActiveDepegs(activeCtx);
+    expect(active.value).toMatchObject({ activeDepegCount: 1, topDepegs: [] });
+    expect(active.qualityReasons).toContain("active-depeg-supply-unavailable");
+
+    const recoveredCtx = ctxFor([{ match: "FROM depeg_events", rows: [{
+      ...activeRows.usdc, ended_at: activeCtx.nowSec, close_reason: "recovered-primary", recovery_price: 1,
+    }] }]);
+    recoveredCtx.mcapById.delete("usdc-circle");
+    const recovered = await collectResolvedDepegs(recoveredCtx);
+    expect(recovered.value).toMatchObject({ resolvedDepegCount: 1, resolvedDepegs: undefined });
+    expect(recovered.qualityReasons).toContain("resolved-depeg-supply-unavailable");
+
+    const liquidityCtx = ctxFor([{ match: "FROM dex_liquidity_history", rows: liquidityPair(85, 75) }]);
+    liquidityCtx.mcapById.delete("usdt-tether");
+    const liquidity = await collectLiquidityShifts(liquidityCtx);
+    expect(liquidity.value).toBeUndefined();
+    expect(liquidity.qualityReasons).toContain("liquidity-shift-supply-unavailable");
+  });
 });
 
 describe("history and DEWS collectors", () => {
@@ -336,8 +387,36 @@ describe("history and DEWS collectors", () => {
     expect((await collectCrossDayTrends(ctxFor([{ match: "FROM daily_digest", rows: [makeDigestRow(now, 1, 92, "BEDROCK", 200e9), makeDigestRow(now, 2, 91, "BEDROCK", 199e9)] }]))).value).toBeUndefined();
   });
   it("collects historical PSI and market context", async () => {
-    const today = 1_772_755_200; const db = mockD1([first("SELECT COUNT(*) as cnt FROM stability_index", { cnt: 90 }), first("SELECT MIN(generated_at) as oldest FROM daily_digest", null), first("FROM daily_digest\n           WHERE json_extract(input_data", { generated_at: today - 30 * 86_400 + 8 * 3600, psi_score: 89, psi_band: "STEADY" }), { match: "ORDER BY computed_at DESC LIMIT 90", rows: [0, 1, 2].map((daysAgo) => ({ computed_at: today - daysAgo * 86_400, band: "BEDROCK" })) }, first("SELECT circulating_usd AS ath_mcap, snapshot_date FROM supply_history", { ath_mcap: 120e6, snapshot_date: today - 60 * 86_400 }), first("ABS(s1.circulating_usd - s2.circulating_usd)", { snapshot_date: today - 45 * 86_400, abs_change: 8e6 })]);
-    expect((await collectHistoricalContext(makeCollectorCtx(db), 91.2, "BEDROCK", { id: "usdt-tether", symbol: "USDT", name: "Tether", changeUsd: 5e6, currentMcap: 100e6 })).value).toMatchObject({ psiBandStreak: 3, psiPrecedent: { lastSeenDaysAgo: 30 } });
+    const today = 1_772_755_200; const db = mockD1([first("SELECT COUNT(*) as cnt FROM stability_index", { cnt: 90 }), first("SELECT MIN(generated_at) as oldest FROM daily_digest", null), first("FROM daily_digest\n           WHERE json_extract(input_data", { generated_at: today - 30 * 86_400 + 8 * 3600, psi_score: 89, psi_band: "STEADY" }), { match: "ORDER BY computed_at DESC LIMIT 90", rows: [0, 1, 2].map((daysAgo) => ({ date: today - daysAgo * 86_400, score: 91.2, band: "BEDROCK" })) }, first("SELECT circulating_usd AS ath_mcap, snapshot_date FROM supply_history", { ath_mcap: 120e6, snapshot_date: today - 60 * 86_400 }), first("ABS(s1.circulating_usd - s2.circulating_usd)", { snapshot_date: today - 45 * 86_400, abs_change: 8e6 })]);
+    expect((await collectHistoricalContext(makeCollectorCtx(db), 91.2, "BEDROCK", today, { id: "usdt-tether", symbol: "USDT", name: "Tether", changeUsd: 5e6, currentMcap: 100e6 })).value).toMatchObject({ psiBandStreak: 3, psiPrecedent: { lastSeenDaysAgo: 30 } });
+  });
+  it.each([
+    { name: "missing yesterday", days: [0, 2], changedYesterday: false, currentDayOffset: 0, expected: 1 },
+    { name: "changed yesterday band", days: [0, 1, 2], changedYesterday: true, currentDayOffset: 0, expected: 1 },
+    { name: "uninterrupted days", days: [0, 1, 2], changedYesterday: false, currentDayOffset: 0, expected: 3 },
+    { name: "daily fallback observation", days: [0, 1, 2], changedYesterday: false, currentDayOffset: 1, expected: 3 },
+  ])("uses canonical calendar PSI streaks for $name", async ({ days, changedYesterday, currentDayOffset, expected }) => {
+    const today = 1_772_755_200;
+    const computedAt = today - currentDayOffset * 86_400 + (currentDayOffset === 0 ? 8 * 3600 : 0);
+    const observationDay = today - currentDayOffset * 86_400;
+    const history = days.map((daysAgo) => ({
+      date: observationDay - daysAgo * 86_400,
+      score: 91.2,
+      band: changedYesterday && daysAgo === 1 ? "STEADY" : "BEDROCK",
+    }));
+    const db = mockD1([
+      first("SELECT COUNT(*) as cnt FROM stability_index", { cnt: 90 }),
+      first("SELECT MIN(generated_at) as oldest FROM daily_digest", null),
+      first("FROM daily_digest\n           WHERE json_extract(input_data", null),
+      { match: "ORDER BY computed_at DESC LIMIT 90", rows: history },
+    ]);
+    const ctx = makeCollectorCtx(db);
+    ctx.todayTs = today;
+    const result = await collectHistoricalContext(ctx, 91.2, "BEDROCK", computedAt, null);
+
+    expect(result.degradedReasons).toEqual([]);
+    expect(result.value?.psiBandStreak).toBe(expected);
+    expect(result.value?.psiBandStreak).toBe(getPsiBandStreak(history, computedAt, "BEDROCK"));
   });
   it("accepts flat and wrapped DEWS signals, records malformed input, and rejects partial publication", async () => {
     const at = Math.floor(Date.now() / 1000) - 600; const signals = { supply: { value: 30, available: true }, pool: { value: 80, available: true }, liq: { value: 45, available: true }, price: { value: 10, available: true } };

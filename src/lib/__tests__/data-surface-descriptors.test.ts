@@ -8,16 +8,14 @@ import {
   getCacheFreshnessLane,
   type CacheFreshnessLaneConfig,
 } from "@shared/lib/api-freshness";
-import {
-  DATA_SURFACE_DESCRIPTOR_LIST,
-  DATA_SURFACE_DESCRIPTORS,
-} from "@shared/lib/data-surface-descriptors";
+import { DATA_SURFACE_DESCRIPTORS } from "@shared/lib/data-surface-descriptors";
 import { PHAROSVILLE_API_CONTRACT, PHAROSVILLE_API_ENDPOINTS } from "@shared/lib/pharosville-api-contract";
 
 const API_FRESHNESS_BY_KEY = API_FRESHNESS_MAX_AGE_SEC as Record<string, number>;
 const CACHE_FRESHNESS_LANES_BY_KEY = CACHE_FRESHNESS_LANES as Record<string, CacheFreshnessLaneConfig>;
 const DATA_HEALTH_PRESETS_BY_KEY = DATA_HEALTH_PRESETS as Record<string, { label: string; staleTime: number }>;
 const DESCRIPTORS_BY_KEY = DATA_SURFACE_DESCRIPTORS as unknown as Record<string, Record<string, unknown>>;
+const DATA_SURFACE_DESCRIPTOR_LIST = Object.values(DATA_SURFACE_DESCRIPTORS);
 
 /**
  * Independent expectations for the externally visible route, cache and budget

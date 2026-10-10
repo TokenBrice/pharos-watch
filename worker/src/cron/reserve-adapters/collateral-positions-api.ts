@@ -1,6 +1,6 @@
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
-import type { LiveReserveInput, LiveReserveRpcMode, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import type { LiveReserveInput, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -65,35 +65,7 @@ interface PositionDetailsEntry {
 type PositionDetailsPayload = Record<string, PositionDetailsEntry>;
 type PriceMappingPayload = Record<string, { price?: { usd?: number; eur?: number }; timestamp?: number }>;
 
-interface PositionsApiParams {
-  pricesUrl: string;
-  otherThresholdPct?: number;
-  redemptionBridge?: {
-    chain: string;
-    rpcMode: LiveReserveRpcMode;
-    holder: string;
-    tokenAddress: string;
-    tokenDecimals: number;
-    priceAddress?: string;
-    rpcUrl?: string;
-    fallbackRpcUrl?: string;
-  };
-  redemptionBridgeBasket?: {
-    chain: string;
-    rpcMode: LiveReserveRpcMode;
-    dEuroAddress: string;
-    eurUsdPriceAddress: string;
-    bridges: Array<{
-      label: string;
-      bridgeAddress: string;
-      tokenAddress: string;
-      tokenDecimals: number;
-    }>;
-    rpcUrl?: string;
-    fallbackRpcUrl?: string;
-    sourceUrls: string[];
-  };
-}
+type PositionsApiParams = LiveReserveAdapterParamsByKey["collateral-positions-api"];
 
 interface ProtocolAssetConfig {
   risk: ReserveSlice["risk"];
@@ -122,7 +94,7 @@ interface BridgeBasketProbe {
    * says why, so the withheld valuation reads as a named gap rather than an
    * omission.
    */
-  outputValuationUnavailableReason: "output-tokens-unpriced" | null;
+  outputValuationUnavailableReason: "output-tokens-unpriced" | "output-price-freshness" | null;
   bridgeInventories: Array<{
     label: string;
     bridgeAddress: string;
@@ -284,11 +256,9 @@ export function adaptCollateralPositions(
       if (position.closed || position.denied) continue;
       const balance = parseCollateralBalance(position.collateralBalance, entry.decimals);
       if (balance == null) {
-        warnings.push(reserveDegradedWarning(
-          "unparseable-collateral-balance",
-          `Unparseable ${entry.symbol} collateral balance at position ${positionIndex}`,
-        ));
-        continue;
+        throw new Error(
+          `collateral-positions-api unparseable-collateral-balance: ${entry.symbol} position ${positionIndex}`,
+        );
       }
       totalBalance += balance;
       if (balance > 0n) activePositionCount += 1;
@@ -298,13 +268,15 @@ export function adaptCollateralPositions(
 
     const priceInfo = prices[entry.address.toLowerCase()];
     const usdPrice = priceInfo?.price?.usd;
-    if (typeof usdPrice !== "number" || usdPrice <= 0) {
+    if (typeof usdPrice !== "number" || !Number.isFinite(usdPrice) || usdPrice <= 0) {
       missingPriceSymbols.add(entry.symbol);
       continue;
     }
 
     const usdValue = valueUsdFromBigIntPrice(totalBalance, entry.decimals, usdPrice);
-    if (!Number.isFinite(usdValue) || usdValue <= 0) continue;
+    if (!Number.isFinite(usdValue) || usdValue <= 0) {
+      throw new Error(`collateral-positions-api invalid-collateral-valuation: ${entry.symbol}`);
+    }
     priceTimestamps.push(priceInfo?.timestamp);
 
     const risk = inferRisk(entry.symbol);
@@ -335,6 +307,7 @@ export function adaptCollateralPositions(
   }
 
   const total = values.reduce((acc, value) => acc + value.usd, 0);
+  if (!Number.isFinite(total)) throw new Error("collateral-positions-api invalid-collateral-total");
   if (total <= 0) return { slices: [] };
 
   // Liability side: each open position's outstanding ZCHF/dEURO debt, valued
@@ -571,15 +544,26 @@ async function fetchBridgeBasketImmediateRedeemableUsd(
     // impaired member is scored at par. When any member is unpriced the whole
     // valuation is withheld with a named reason instead (the priced legs alone
     // cannot value the basket).
-    const outputUsdPrices = bridgeInventories.map(
+    const weightedInventories = bridgeInventories.filter((inventory) => inventory.inventoryEur > 0);
+    const outputUsdPrices = weightedInventories.map(
       (inventory) => prices[inventory.tokenAddress.toLowerCase()]?.price?.usd,
     );
     const outputsPriced = outputUsdPrices.every(
       (usdPrice) => typeof usdPrice === "number" && Number.isFinite(usdPrice) && usdPrice > 0,
     );
+    const valuationTimestamps = summarizeSourceTimestampsRequiringCoverage([
+      prices[basket.eurUsdPriceAddress.toLowerCase()]?.timestamp,
+      ...weightedInventories.map((inventory) => prices[inventory.tokenAddress.toLowerCase()]?.timestamp),
+    ]);
+    const nowSec = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
+    const pricesFresh = valuationTimestamps.untimestampedCount === 0
+      && valuationTimestamps.sourceTimestamp != null
+      && valuationTimestamps.latestSourceTimestamp != null
+      && nowSec - valuationTimestamps.sourceTimestamp <= LIVE_RESERVE_FRESHNESS_SEC
+      && valuationTimestamps.latestSourceTimestamp <= nowSec + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC;
     const observedUnitValueUsd =
-      capacityEur > 0 && outputsPriced
-        ? bridgeInventories.reduce(
+      capacityEur > 0 && outputsPriced && pricesFresh
+        ? weightedInventories.reduce(
             (sum, inventory, index) =>
               sum + (inventory.inventoryEur / capacityEur) * outputUsdPrices[index]!,
             0,
@@ -594,14 +578,10 @@ async function fetchBridgeBasketImmediateRedeemableUsd(
       observedUnitValueUsd != null
         ? {
             sourceId: `collateral-positions-api:deuro-bridge-basket:${basket.eurUsdPriceAddress.toLowerCase()}`,
-            observedAt:
-              prices[basket.eurUsdPriceAddress.toLowerCase()]?.timestamp ??
-              ctx?.observedBlock?.timestamp ??
-              ctx?.nowSec ??
-              Math.floor(Date.now() / 1_000),
+            observedAt: valuationTimestamps.sourceTimestamp!,
             unitValueUsd: observedUnitValueUsd,
             expectedUnitValueUsd: eurUsdReference,
-            basketWeights: bridgeInventories.map((inventory) => ({
+            basketWeights: weightedInventories.map((inventory) => ({
               assetId: DEURO_OUTPUT_ASSET_KEY_BY_LABEL[inventory.label]!,
               weight: inventory.inventoryEur / capacityEur,
             })),
@@ -619,7 +599,9 @@ async function fetchBridgeBasketImmediateRedeemableUsd(
       eurUsdReference,
       outputValuation,
       outputValuationUnavailableReason:
-        capacityEur > 0 && outputValuation == null ? "output-tokens-unpriced" : null,
+        capacityEur > 0 && outputValuation == null
+          ? outputsPriced ? "output-price-freshness" : "output-tokens-unpriced"
+          : null,
       bridgeInventories,
     };
   } catch (error) {

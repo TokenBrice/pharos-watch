@@ -1,5 +1,24 @@
 import { z } from "zod";
 
+export const ReserveAlertObservationsSchema = z.record(z.string().min(1), z.number().int().positive());
+export const AlertReserveSourceEnvelopeSchema = z.object({
+  generation: z.string().min(1),
+  publishedAt: z.number().int().positive(),
+  continuous: z.boolean(),
+  driftIds: z.array(z.string().min(1)),
+  observedSince: ReserveAlertObservationsSchema,
+  unavailableIds: z.array(z.string().min(1)),
+}).superRefine((value, ctx) => {
+  if (new Set(value.driftIds).size !== value.driftIds.length ||
+    value.driftIds.some((id) => value.observedSince[id] == null) ||
+    new Set(value.unavailableIds).size !== value.unavailableIds.length ||
+    value.unavailableIds.some((id) => value.observedSince[id] != null) ||
+    Object.values(value.observedSince).some((since) => since > value.publishedAt)) {
+    ctx.addIssue({ code: "custom", message: "invalid reserve observation census" });
+  }
+});
+export type AlertReserveSourceEnvelope = z.infer<typeof AlertReserveSourceEnvelopeSchema>;
+
 export const TelegramTelemetryQualitySchema = z.object({
   status: z.enum(["complete", "partial"]),
   unavailableFields: z.array(z.string()),
@@ -459,6 +478,8 @@ export interface TelegramDispatchCronMetadata extends SafetyAlertFieldsNullable,
   freshPermanentFailures: number | null;
   freshDeferredPerChat: number | null;
   freshCandidateChats: number | null;
+  /** Durable freeze recipient work considered this run; null for legacy metadata. */
+  freezeTargetCount: number | null;
   freshCandidateCount: number | null;
   pendingAttempted: number | null;
   pendingDrained: number | null;

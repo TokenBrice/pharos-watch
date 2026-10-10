@@ -96,6 +96,84 @@ describe("EVM blacklist contiguous coverage", () => {
     vi.mocked(getChainRpc).mockReturnValue(undefined);
   });
 
+  it.each([{ data: "malformed" }, { transactionHash: "malformed" }, { topics: ["malformed"] }])(
+    "holds malformed explorer intake until durable exhaustion and recovers a transient peer: %j", async (defect) => {
+      const sqlite = new DatabaseSync(":memory:");
+      sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT, updated_at INTEGER)");
+      const db = { prepare(sql: string) {
+        let args: (string | number)[] = [];
+        return { bind(...values: (string | number)[]) { args = values; return this; },
+          async first() { return sqlite.prepare(sql).get(...args) ?? null; },
+          async run() { return sqlite.prepare(sql).run(...args); } };
+      } } as unknown as D1Database;
+      try {
+        const config = makeConfig();
+        const valid = { address: config.contractAddress, topics: [TOPIC_A, ADDRESS_WORD], data: "0x",
+          blockNumber: "0x64", timeStamp: "0x3e8", transactionHash: "0x" + "55".repeat(32), logIndex: "0x0" };
+        const repaired = { ...valid, blockNumber: "0x69", logIndex: "0x1" };
+        vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue({
+          logs: [valid], rejectedLogs: [{ ...repaired, ...defect }], validatedToBlock: 120,
+          complete: false, scannedToBlock: 104, calls: 1, maxDepth: 0,
+        });
+        const first = await fetchEvmEventsIncremental(db, config, "key", 100, new Map(), makeBudget(), limiter, undefined, undefined, 10_000);
+        expect(first.scannedToBlock).toBe(104);
+        expect(first.rows).toHaveLength(1);
+        vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue({
+          logs: [valid, repaired], complete: true, scannedToBlock: 120, calls: 1, maxDepth: 0,
+        });
+        const second = await fetchEvmEventsIncremental(db, config, "key", 105, new Map(), makeBudget(), limiter, undefined, undefined, 10_000);
+        expect(second.scannedToBlock).toBe(120);
+        expect(second.rows.map((row) => row.block_number)).toContain(105);
+        vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue({
+          logs: [valid], rejectedLogs: [{ ...repaired, ...defect }], validatedToBlock: 120,
+          complete: false, scannedToBlock: 104, calls: 1, maxDepth: 0,
+        });
+        for (let scan = 2; scan <= 3; scan++) {
+          const result = await fetchEvmEventsIncremental(db, config, "key", 100, new Map(),
+            { ...makeBudget(), deadlineMs: Date.now() + 600_000 + scan * 100 }, limiter, undefined, undefined, 10_000);
+          expect(result.scannedToBlock).toBe(scan < 3 ? 104 : 120);
+        }
+        expect(JSON.parse(String(sqlite.prepare("SELECT value FROM cache").get()!.value))).toMatchObject({
+          attempts: 3, disposition: "decode-retry-exhausted",
+        });
+      } finally { sqlite.close(); }
+    },
+  );
+
+  it("advances Avalanche fallback faster than a moving six-hour safe head without exceeding per-call caps", async () => {
+    const config = { ...makeConfig("avalanche"), chain: { ...makeConfig("avalanche").chain, evmChainId: 43114 } };
+    const rpc: ChainRpcConfig = {
+      chainId: "avalanche", chainName: "Avalanche", type: "evm", explorerUrl: "https://example.invalid",
+      endpoints: [{ url: "https://avalanche.invalid", operator: "public", keyed: false,
+        position: "registry", stateHistory: "archive", logsHistory: "full" }],
+    };
+    const chainRpcs = new Map([["avalanche", rpc]]);
+    vi.mocked(getChainRpc).mockReturnValue(rpc);
+    vi.mocked(fetchAlchemyLogs).mockImplementation(async (_rpc, _address, _topics, from, to) => {
+      expect(to - from + 1).toBeLessThanOrEqual(2_000);
+      return { logs: [], complete: true, scannedToBlock: to, calls: 1, maxDepth: 0 };
+    });
+    let cursor = 10_000;
+    let head = 100_000;
+    let previousLag = Infinity;
+    for (let cycle = 0; cycle < 3; cycle++) {
+      vi.mocked(getAlchemyBlockNumber).mockResolvedValue(head);
+      const callsBefore = vi.mocked(fetchAlchemyLogs).mock.calls.length;
+      const result = await fetchEvmEventsIncremental(
+        mockD1(), config, null, cursor + 1, new Map(), makeBudget(), limiter, undefined, chainRpcs,
+      );
+      expect(result.coverageOutcome).toBe("incomplete");
+      expect(result.failureSamples).toContain("behind-safe-head");
+      expect(vi.mocked(fetchAlchemyLogs).mock.calls.length - callsBefore).toBe(8);
+      expect(result.scannedToBlock).toBeGreaterThan(cursor);
+      const lag = result.safeHead! - result.scannedToBlock!;
+      expect(lag).toBeLessThan(previousLag);
+      previousLag = lag;
+      cursor = result.scannedToBlock!;
+      head += 10_800;
+    }
+  });
+
   it.each([null, "[]", "42"])("holds malformed state with prior %s for two scans then durably quarantines it without losing valid rows", async (priorValue) => {
     const sqlite = new DatabaseSync(":memory:");
     sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT, updated_at INTEGER)");
@@ -164,8 +242,10 @@ describe("EVM blacklist contiguous coverage", () => {
     expect(result).toMatchObject({
       scannedToBlock: expectedToBlock,
       safeHead: getEvmSafeHead(42161, chainHead),
-      coverageOutcome: "quiet",
+      coverageOutcome: "incomplete",
     });
+    expect(result.incomplete).toBe(true);
+    expect(result.failureSamples).toContain("behind-safe-head");
   });
 
   it("fails visibly instead of treating a cursor ahead of the safe head as quiet", async () => {
@@ -312,7 +392,7 @@ describe("EVM blacklist contiguous coverage", () => {
 
     expect(secondRun).toMatchObject({
       scannedToBlock: 120,
-      coverageOutcome: "complete",
+      coverageOutcome: "incomplete",
       coveredTopicCount: 2,
       maxBlock: 115,
     });
@@ -424,7 +504,7 @@ describe("EVM blacklist contiguous coverage", () => {
     );
 
     expect(vi.mocked(fetchAlchemyLogs).mock.calls[0]?.[4]).toBe(450_249_999);
-    expect(result).toMatchObject({ coverageOutcome: "quiet", usedRpcLogs: true });
+    expect(result).toMatchObject({ coverageOutcome: "incomplete", usedRpcLogs: true });
   });
 
   it("fails over to the secondary RPC when the primary proves zero log coverage", async () => {

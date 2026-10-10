@@ -1,24 +1,16 @@
 import { inferLaneConfidenceTier } from "@/lib/yield-source-board-model";
+import { YIELD_DECISION_REJECTION_REASON_LABELS } from "@/lib/yield-presentation";
 import {
-  YIELD_SOURCE_CONFIDENCE_ORDER,
   classifyYieldSourceDepth,
   getYieldSourceRiskDrivers,
   type YieldSourceConfidenceTier,
   type YieldSourceDepthLens,
   type YieldSourceRiskDriver,
 } from "@/lib/yield-source-risk";
-import { numberValue as finiteNumber } from "@shared/lib/type-guards";
-import type { AltYieldSource, YieldRanking, YieldType } from "@shared/types";
-
-export type YieldRejectionHintCode =
-  | "thinner"
-  | "stale"
-  | "rewards-only"
-  | "lower-conf"
-  | "smaller";
+import type { AltYieldSource, YieldDecisionRejectionReasonCode, YieldRanking, YieldType } from "@shared/types";
 
 export interface YieldRejectionHint {
-  code: YieldRejectionHintCode;
+  code: YieldDecisionRejectionReasonCode;
   label: string;
   description: string;
 }
@@ -105,64 +97,6 @@ function buildDisplayLabels(sources: Array<{ sourceKey: string; label: string }>
   );
 }
 
-const REJECTION_HINT_DESCRIPTIONS: Record<YieldRejectionHintCode, string> = {
-  thinner: "Lower venue depth than the chosen source.",
-  stale: "Older observation than the chosen source.",
-  "rewards-only": "Most APY comes from incentives, not base yield.",
-  "lower-conf": "Published confidence is lower than the chosen source.",
-  smaller: "Smaller venue TVL than the chosen source.",
-};
-
-function confidenceTierRank(tier: YieldSourceConfidenceTier | null): number {
-  if (!tier) return YIELD_SOURCE_CONFIDENCE_ORDER.length;
-  const index = YIELD_SOURCE_CONFIDENCE_ORDER.indexOf(tier);
-  return index === -1 ? YIELD_SOURCE_CONFIDENCE_ORDER.length : index;
-}
-
-function buildRejectionHint(
-  alternate: YieldSourceExplorerSource,
-  selected: YieldSourceExplorerSource,
-): YieldRejectionHint | null {
-  const altDepth = finiteNumber(alternate.sourceRisk?.sourceDepthRatio);
-  const selDepth = finiteNumber(selected.sourceRisk?.sourceDepthRatio);
-  if (altDepth !== null && selDepth !== null && altDepth > 0 && selDepth >= altDepth * 5) {
-    return { code: "thinner", label: "thinner", description: REJECTION_HINT_DESCRIPTIONS.thinner };
-  }
-
-  const altAge = finiteNumber(alternate.sourceRisk?.sourceAgeSeconds);
-  const selAge = finiteNumber(selected.sourceRisk?.sourceAgeSeconds);
-  if (altAge !== null && selAge !== null && selAge > 0 && altAge >= selAge * 2) {
-    return { code: "stale", label: "stale", description: REJECTION_HINT_DESCRIPTIONS.stale };
-  }
-
-  const altRewardShare = finiteNumber(alternate.sourceRisk?.rewardShare);
-  if (altRewardShare !== null && altRewardShare > 0.5) {
-    return {
-      code: "rewards-only",
-      label: "rewards-only",
-      description: REJECTION_HINT_DESCRIPTIONS["rewards-only"],
-    };
-  }
-
-  const altTier = alternate.confidenceTier;
-  const selTier = selected.confidenceTier;
-  if (altTier && selTier && confidenceTierRank(altTier) > confidenceTierRank(selTier)) {
-    return {
-      code: "lower-conf",
-      label: "lower-conf",
-      description: REJECTION_HINT_DESCRIPTIONS["lower-conf"],
-    };
-  }
-
-  const altTvl = finiteNumber(alternate.sourceTvlUsd);
-  const selTvl = finiteNumber(selected.sourceTvlUsd);
-  if (altTvl !== null && selTvl !== null && altTvl > 0 && selTvl >= altTvl * 5) {
-    return { code: "smaller", label: "smaller", description: REJECTION_HINT_DESCRIPTIONS.smaller };
-  }
-
-  return null;
-}
-
 export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourceExplorerModel {
   const selectedKey = selectedSourceKey(ranking);
   const sourceRows = [
@@ -178,6 +112,7 @@ export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourc
       confidenceTier: ranking.provenance?.confidenceTier ?? inferLaneConfidenceTier(ranking.dataSource),
       sourceRisk: ranking.sourceRisk ?? null,
       isChosen: true,
+      rejectionReasonCode: undefined,
     },
     ...ranking.altSources.map((source) => ({
       sourceKey: source.sourceKey,
@@ -191,6 +126,7 @@ export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourc
       confidenceTier: source.confidenceTier ?? inferLaneConfidenceTier(source.dataSource),
       sourceRisk: source.sourceRisk ?? null,
       isChosen: false,
+      rejectionReasonCode: source.rejectionReasonCode,
     })),
   ];
   const displayLabels = buildDisplayLabels(sourceRows);
@@ -221,7 +157,13 @@ export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourc
     .filter((source) => !source.isChosen)
     .map((source) => ({
       ...source,
-      rejectionHint: buildRejectionHint(source, selectedSource),
+      rejectionHint: source.rejectionReasonCode && source.rejectionReasonCode !== "unspecified"
+        ? {
+          code: source.rejectionReasonCode,
+          label: YIELD_DECISION_REJECTION_REASON_LABELS[source.rejectionReasonCode],
+          description: YIELD_DECISION_REJECTION_REASON_LABELS[source.rejectionReasonCode],
+        }
+        : null,
     }));
 
   return {

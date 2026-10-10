@@ -3,6 +3,8 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-registry";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap } from "../onchain-supply";
+import { CURATED_ONCHAIN_SUPPLY_EXCLUSIONS } from "../../../../lib/onchain-supply-exclusions";
+import { TOTAL_SUPPLY_SELECTOR } from "../../../../lib/evm-selectors";
 
 const DWELLIR_TEST_KEY = "supply-rpc-test-key";
 const ROBINHOOD_DWELLIR = "https://api-robinhood-mainnet-archive.n.dwellir.com";
@@ -30,6 +32,40 @@ afterEach(() => {
 });
 
 describe("supplemental on-chain supply RPC routing", () => {
+  it("keeps every joined supply/exclusion RPC on one requireCanonical hash through inventory movement", async () => {
+    const meta = TRACKED_META_BY_ID.get("usg-tangent")!;
+    const holders = CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[meta.id].holderAddresses;
+    const hash = `0x${"1".repeat(64)}`;
+    const observedAt = Math.floor(Date.now() / 1000) - 30;
+    const calls: { method: string; params: unknown[] }[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      const request = JSON.parse(String(init?.body));
+      calls.push(request);
+      let result: unknown;
+      if (request.method === "eth_blockNumber") result = "0x7b";
+      else if (request.method === "eth_getBlockByNumber") result = {
+        number: "0x7b", hash, timestamp: `0x${observedAt.toString(16)}`,
+      };
+      else if (request.method === "eth_call") {
+        const [call, pin] = request.params;
+        const pinned = pin?.blockHash === hash && pin?.requireCanonical === true;
+        // At the pin holder A has 100 and B has zero. Sequential latest
+        // reads would see the same 100 after it moves from A to B.
+        const units = call.data === TOTAL_SUPPLY_SELECTOR ? 1000n
+          : pinned && !call.data.toLowerCase().endsWith(holders[0].slice(2).toLowerCase()) ? 0n : 100n;
+        result = `0x${(units * 10n ** 18n).toString(16).padStart(64, "0")}`;
+      } else throw new Error(`unexpected supply RPC method ${request.method}`);
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: request.id, result }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }));
+    const result = await fetchOnChainMcap(meta, 1, keyedChainRpcs());
+    expect(result).toMatchObject({ mcap: 900, observedAt });
+    const stateReads = calls.filter((call) => call.method === "eth_call");
+    expect(stateReads).toHaveLength(1 + holders.length);
+    for (const call of stateReads) expect(call.params[1]).toEqual({ blockHash: hash, requireCanonical: true });
+  });
+
   it("admits a supply row from a keyed supplemental-only chain", async () => {
     const chainRpcs = keyedChainRpcs();
     vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {

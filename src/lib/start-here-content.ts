@@ -27,6 +27,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { CAUSE_LABEL_LIST } from "@shared/lib/cause-of-death";
+import { SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
 
 export interface StartHereGoal {
   title: string;
@@ -99,7 +100,7 @@ export const START_HERE_GOALS: readonly StartHereGoal[] = [
     description:
       "Search for the stablecoin in your wallet — USDC, USDT, DAI, USDe, PYUSD — and open its detail page for the safety grade, what backs it, and whether it's under stress right now.",
     mobileDescription: "Search USDC, USDT, DAI, USDe or another coin and open its safety, backing, and stress detail.",
-    href: "/stablecoins/usd/",
+    href: "/stablecoins/",
     cta: "Search the directory",
     destinations: ["Directory", "Safety grade", "Live reserves"],
     icon: Search,
@@ -172,7 +173,7 @@ export const START_HERE_SCORES: readonly StartHereScore[] = [
     question: "How risky is this stablecoin overall?",
     inputs:
       "Weighted V10 composite: Backing Quality (40%), Exit Strength (35%), and Economic Control (25%), followed by peg, deployment, and binding-cap adjustments.",
-    cadence: "Recomputed continuously from live inputs; bands A+ (87+) through F (0–39).",
+    cadence: `Published every ${SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC / 60} minutes from live inputs; bands A+ (87+) through F (0–39).`,
     methodologyHref: "/methodology/#safety-scores-methodology",
     surfacedOn: "Open the Safety Scores leaderboard",
     surfacedHref: "/safety-scores/",
@@ -323,7 +324,7 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       {
         title: "Stablecoin directory",
         description: "Searchable launch point into the tracked universe and each detail page.",
-        href: "/stablecoins/usd/",
+        href: "/stablecoins/",
         icon: Search,
       },
       {
@@ -466,7 +467,7 @@ export const START_HERE_SHORTCUTS: readonly StartHereShortcut[] = [
     description:
       "Use the peg, backing, and governance landing pages when you want to scan a category instead of a ticker.",
     detail: "Good for questions like 'show me EUR stablecoins' or 'which DeFi names are crypto-backed'.",
-    href: "/stablecoins/usd/",
+    href: "/stablecoins/",
     cta: "Open the directory",
     icon: Activity,
   },

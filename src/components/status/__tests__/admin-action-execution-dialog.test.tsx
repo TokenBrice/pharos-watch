@@ -194,6 +194,29 @@ describe("AdminActionExecutionDialog", () => {
     expect(controller.retry).not.toHaveBeenCalled();
   });
 
+  it("renders a transport-timeout execution as needing reconciliation, not completion", () => {
+    const action = makeAction();
+    const request: AdminActionExecutionRequest = {
+      action, requestPath: action.path, requestMethod: "POST",
+      scopeKey: "global|mode:execute", scopeLabel: "All records",
+    };
+    const execution: AdminActionExecution = {
+      ...makeExecution(request, "unknown"),
+      data: null,
+      output: "Request timed out",
+      error: "Request timed out",
+      httpStatus: null,
+      responseIdempotencyKey: null,
+      executionCertainty: "unknown",
+    };
+    const controller = makeController({ [`${action.path}\u0000${request.scopeKey}`]: execution });
+    renderDialog(action, controller);
+
+    expect(screen.getByText("Outcome needs reconciliation")).toBeTruthy();
+    expect(screen.queryByText("Action completed")).toBeNull();
+    expect(screen.getByRole("button", { name: "Retry same execution" })).toBeTruthy();
+  });
+
   it("clears broad-scope acknowledgement when starting a new execution", () => {
     const action = makeAction();
     const controller = makeController();

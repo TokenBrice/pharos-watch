@@ -54,8 +54,7 @@ async function buildFxResult(
     throw new Error("fx returned no positive collateral balances");
   }
 
-  const warnings: NonNullable<AdapterResult["warnings"]> = [];
-  const priceMap = await fetchDefiLlamaPrices(
+  const { prices: priceMap, warnings } = await fetchDefiLlamaPrices(
     balances.map(({ key }) => ({
       key,
       chain: TOKEN_META[key].chain,
@@ -63,7 +62,6 @@ async function buildFxResult(
     })),
     signal,
     ctx,
-    warnings,
   );
 
   const knownValues = balances.map(({ key, amountRaw }) => {

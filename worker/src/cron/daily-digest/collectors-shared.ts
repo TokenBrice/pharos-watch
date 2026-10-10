@@ -96,9 +96,10 @@ export function logCollectorParseFailure(
 export const WEEKLY_ROLLUP_EXPECTED_DAYS = 7;
 
 export interface RollupSummary {
-  mcapEnd: number;
-  psiMid: number;
-  psiDominantBand: string;
+  mcapEnd: number | null;
+  psiMid: number | null;
+  psiDominantBand: string | null;
+  psiObservationDays: number;
   /**
    * Cross-day sums. Null below full coverage: a total labelled "this week"
    * must not be the sum of however many editions happened to be readable.
@@ -107,34 +108,20 @@ export interface RollupSummary {
   uniqueDepegSignals: number | null;
   blacklistEvents: number | null;
   blacklistUsd: number | null;
+  blacklistUnpricedEvents: number | null;
+  unavailableReasons: Partial<Record<"mcapEnd" | "activeDepegObs" | "uniqueDepegSignals" | "blacklistEvents" | "blacklistUsd" | "gradeTransitions", string[]>>;
   gradeTransitions: number | null;
   gaugeMid: number | null;
   days: number;
   expectedDays: number;
 }
 
-/**
- * Build a stable key for a depeg signal so weekly aggregation can dedup the
- * same incident observed across multiple daily editions. Prefers `startedAt`
- * (server-side incident timestamp) when present and falls back to the
- * symbol/direction/bps tuple otherwise.
- */
-function depegSignalKey(
-  depeg: {
-    stablecoinId?: string;
-    symbol: string;
-    direction?: "above" | "below";
-    startedAt?: number;
-    bps?: number;
-    peakBps?: number;
-  },
+/** Stable incident identity, collected before any editorial/display filtering. */
+export function depegSignalKey(
+  depeg: { stablecoinId: string; startedAt: number },
   kind: "active" | "resolved",
 ): string {
-  if (depeg.startedAt != null) {
-    return `${depeg.stablecoinId ?? depeg.symbol}:${depeg.startedAt}:${kind}`;
-  }
-  const bps = kind === "active" ? depeg.bps : depeg.peakBps;
-  return `${depeg.symbol}:${depeg.direction ?? ""}:${bps}:${kind}`;
+  return `${depeg.stablecoinId}:${depeg.startedAt}:${kind}`;
 }
 
 /**
@@ -150,32 +137,59 @@ export function rollupDigestInputs(
 ): RollupSummary {
   const coreInputs = inputs.filter((input) => input.aggregateUniverse === "core-stablecoins-v1");
   const aggregateInputs = coreInputs.length > 0 ? coreInputs : inputs;
-  const psiScores = aggregateInputs.map((d) => d.stabilityIndex?.score).filter((s): s is number => s != null);
-  const mcaps = aggregateInputs.map((d) => d.totalMcapUsd);
-  const psiBands = aggregateInputs.map((d) => d.stabilityIndex?.band).filter((b): b is string => b != null);
+  const psiScores = inputs.map((d) => d.stabilityIndex?.score).filter((s): s is number => s != null && Number.isFinite(s));
+  const latestInput = aggregateInputs[aggregateInputs.length - 1];
+  const mcapEnd = latestInput?.supplyCoverage?.complete === true && Number.isFinite(latestInput.totalMcapUsd)
+    ? latestInput.totalMcapUsd
+    : null;
+  const psiBands = inputs.map((d) => d.stabilityIndex?.band).filter((b): b is string => b != null);
   const bandFreq = new Map<string, number>();
   for (const b of psiBands) bandFreq.set(b, (bandFreq.get(b) ?? 0) + 1);
-  const psiDominantBand = [...bandFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "BEDROCK";
+  const psiDominantBand = [...bandFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   const gauges = aggregateInputs.map((d) => d.mintBurnFlows?.gaugeScore).filter((g): g is number => g != null);
   const depegKeys = new Set<string>();
   for (const input of aggregateInputs) {
-    for (const depeg of input.topDepegs ?? []) {
-      depegKeys.add(depegSignalKey(depeg, "active"));
-    }
-    for (const depeg of input.resolvedDepegs ?? []) {
-      depegKeys.add(depegSignalKey(depeg, "resolved"));
-    }
+    for (const key of input.depegSignalKeys?.active ?? []) depegKeys.add(key);
+    for (const key of input.depegSignalKeys?.resolved ?? []) depegKeys.add(key);
   }
   const complete = aggregateInputs.length >= expectedDays;
+  const unavailableReasons: RollupSummary["unavailableReasons"] = {};
+  const observed = (metric: keyof RollupSummary["unavailableReasons"], sourceKeys: string[], missing: (input: DigestInputData) => boolean = () => false): boolean => {
+    const reasons = new Set<string>();
+    if (!complete) reasons.add("daily-editions-incomplete");
+    for (const input of aggregateInputs) {
+      for (const source of input.degradedSources ?? []) {
+        if (sourceKeys.some((key) => source === key || source.startsWith(`${key}:`))) reasons.add(source);
+      }
+      if (missing(input)) reasons.add(`${metric}-observation-missing`);
+    }
+    if (reasons.size > 0) unavailableReasons[metric] = [...reasons];
+    return reasons.size === 0;
+  };
+  const activeObserved = observed("activeDepegObs", ["active-depegs-query"], (input) => input.activeDepegCount == null);
+  const signalsObserved = observed(
+    "uniqueDepegSignals",
+    ["active-depegs-query", "resolved-depegs-query"],
+    (input) => input.depegSignalKeys?.active == null || input.depegSignalKeys?.resolved == null,
+  );
+  // Legacy editions omitted sub-threshold activity entirely. Their missing
+  // accounting cannot establish an observed zero for a weekly total.
+  const blacklistObserved = observed("blacklistEvents", ["blacklist-activity-query"], (input) => input.blacklistActivity == null);
+  const blacklistUsdObserved = observed("blacklistUsd", ["blacklist-activity-query"], (input) => input.blacklistActivity == null);
+  const gradesObserved = observed("gradeTransitions", ["grade-transitions-query", "safety-canonical-snapshot"]);
+  if (mcapEnd == null) unavailableReasons.mcapEnd = ["supply-coverage-incomplete"];
   return {
-    mcapEnd: mcaps[mcaps.length - 1] ?? 0,
-    psiMid: psiScores.length > 0 ? psiScores.reduce((s, v) => s + v, 0) / psiScores.length : 0,
+    mcapEnd,
+    psiMid: psiScores.length > 0 ? psiScores.reduce((s, v) => s + v, 0) / psiScores.length : null,
     psiDominantBand,
-    activeDepegObs: complete ? aggregateInputs.reduce((sum, d) => sum + d.activeDepegCount, 0) : null,
-    uniqueDepegSignals: complete ? depegKeys.size : null,
-    blacklistEvents: complete ? aggregateInputs.reduce((s, d) => s + (d.blacklistActivity?.eventCount ?? 0), 0) : null,
-    blacklistUsd: complete ? aggregateInputs.reduce((s, d) => s + (d.blacklistActivity?.totalAmountUsd ?? 0), 0) : null,
-    gradeTransitions: complete ? aggregateInputs.reduce((s, d) => s + (d.gradeTransitions?.length ?? 0), 0) : null,
+    psiObservationDays: psiScores.length,
+    activeDepegObs: activeObserved ? aggregateInputs.reduce((sum, d) => sum + d.activeDepegCount!, 0) : null,
+    uniqueDepegSignals: signalsObserved ? depegKeys.size : null,
+    blacklistEvents: blacklistObserved ? aggregateInputs.reduce((s, d) => s + d.blacklistActivity!.eventCount, 0) : null,
+    blacklistUsd: blacklistUsdObserved ? aggregateInputs.reduce((s, d) => s + d.blacklistActivity!.totalAmountUsd, 0) : null,
+    blacklistUnpricedEvents: blacklistObserved ? aggregateInputs.reduce((s, d) => s + (d.blacklistActivity!.unpricedEventCount ?? 0), 0) : null,
+    unavailableReasons,
+    gradeTransitions: gradesObserved ? aggregateInputs.reduce((s, d) => s + (d.gradeTransitions?.length ?? 0), 0) : null,
     gaugeMid: gauges.length >= 3 ? gauges.reduce((s, v) => s + v, 0) / gauges.length : null,
     days: aggregateInputs.length,
     expectedDays,

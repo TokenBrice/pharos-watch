@@ -7,7 +7,7 @@ import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/
 import { deviationColorClass } from "@/lib/severity-colors";
 import { formatNativePrice } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
 import type { DexLiquidityMap, PegSummaryCoin, StablecoinData } from "@shared/types";
 import type { TableDensity } from "@/hooks/use-table-density";
@@ -27,9 +27,9 @@ export function buildStablecoinTableRowModel({
   density: TableDensity;
   variant: StablecoinTableRowVariant;
 }) {
-  const circulating = getCirculatingRaw(coin);
-  const prevDay = getPrevDayRaw(coin);
-  const prevWeek = getPrevWeekRaw(coin);
+  const circulating = getCirculatingRawOrNull(coin);
+  const prevDay = getPrevDayRawOrNull(coin);
+  const prevWeek = getPrevWeekRawOrNull(coin);
   const meta = TRACKED_META_BY_ID.get(coin.id);
   const pegSummary = pegScores?.get(coin.id);
   const pegScore = pegSummary?.pegScore ?? null;

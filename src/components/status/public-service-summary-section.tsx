@@ -23,7 +23,8 @@ export function PublicServiceSummarySection({
   const blacklistStatus = getBlacklistGapStatus({
     missingRatio: healthData.blacklist.missingRatio,
   });
-  const blacklistWindowHours = Math.max(1, Math.round(healthData.blacklist.recentWindowSec / 3600));
+  const blacklistWindowHours = healthData.blacklist.recentWindowSec == null
+    ? null : Math.max(1, Math.round(healthData.blacklist.recentWindowSec / 3600));
   const telegramSummary = healthData.telegramSummary ?? null;
   const impactedPublicSurfaces = getImpactedPublicSurfaces(healthData);
   const acknowledgedPriceGapNotice = getAcknowledgedPriceGapNotice(healthData.activePriceCoverage);
@@ -39,11 +40,11 @@ export function PublicServiceSummarySection({
           {blacklistStatus !== "healthy" && (
             <StatusSummaryBadge
               label="Blacklist Gaps"
-              value={String(healthData.blacklist.missingAmounts)}
+              value={healthData.blacklist.missingAmounts == null ? "Unavailable" : String(healthData.blacklist.missingAmounts)}
               status={blacklistStatus}
             />
           )}
-          {healthData.mintBurn.majorStaleCount > 0 && (
+          {healthData.mintBurn.majorStaleCount != null && healthData.mintBurn.majorStaleCount > 0 && (
             <StatusSummaryBadge
               label="Major Mint/Burn Stale"
               value={String(healthData.mintBurn.majorStaleCount)}
@@ -71,12 +72,12 @@ export function PublicServiceSummarySection({
         <PublicSignalCard
           title="Mint/Burn Sync"
           badges={
-            mintBurnStatus !== "healthy" || healthData.mintBurn.majorStaleCount > 0 ? (
+            mintBurnStatus !== "healthy" || (healthData.mintBurn.majorStaleCount != null && healthData.mintBurn.majorStaleCount > 0) ? (
               <div className="flex flex-wrap gap-2">
                 {mintBurnStatus !== "healthy" && (
                   <StatusSummaryBadge label="Writer" value={mintBurnStatus} status={mintBurnStatus} />
                 )}
-                {healthData.mintBurn.majorStaleCount > 0 && (
+                {healthData.mintBurn.majorStaleCount != null && healthData.mintBurn.majorStaleCount > 0 && (
                   <StatusSummaryBadge
                     label="Major Stale"
                     value={String(healthData.mintBurn.majorStaleCount)}
@@ -88,8 +89,10 @@ export function PublicServiceSummarySection({
           }
         >
           <p className="text-sm leading-relaxed text-muted-foreground">
-            {healthData.mintBurn.sync.warning
-              ?? "Critical mint/burn lanes are within their expected freshness and run-health windows."}
+            {healthData.mintBurn.unavailableReason
+              ? `Mint/burn health evidence unavailable (${healthData.mintBurn.unavailableReason}).`
+              : healthData.mintBurn.sync.warning
+                ?? "Critical mint/burn lanes are within their expected freshness and run-health windows."}
           </p>
           <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
             <div className="border-t border-border/60 pt-3">
@@ -107,7 +110,7 @@ export function PublicServiceSummarySection({
               </div>
             ) : null}
           </div>
-          {healthData.mintBurn.staleMajorSymbols.length > 0 ? (
+          {healthData.mintBurn.staleMajorSymbols != null && healthData.mintBurn.staleMajorSymbols.length > 0 ? (
             <div className="rounded-[1rem] border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
               Impacted majors: {healthData.mintBurn.staleMajorSymbols.join(", ")}
             </div>
@@ -121,7 +124,7 @@ export function PublicServiceSummarySection({
               <div className="flex flex-wrap gap-2">
                 <StatusSummaryBadge
                   label="Missing Amounts"
-                  value={String(healthData.blacklist.missingAmounts)}
+                  value={healthData.blacklist.missingAmounts == null ? "Unavailable" : String(healthData.blacklist.missingAmounts)}
                   status={blacklistStatus}
                 />
               </div>
@@ -134,15 +137,19 @@ export function PublicServiceSummarySection({
           <div className="border-t border-border/60 pt-3">
             <div className="pharos-kicker">Public Health Interpretation</div>
             <div className="mt-1.5 leading-relaxed text-foreground">
-              {healthData.blacklist.missingAmounts > 0
-                ? blacklistStatus === "healthy"
+              {healthData.blacklist.missingAmounts == null
+                ? `Blacklist health evidence unavailable (${healthData.blacklist.unavailableReason ?? "unavailable"}).`
+                : healthData.blacklist.missingAmounts > 0
+                ? healthData.blacklist.recentMissingAmounts == null
+                  ? `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts. Recent gap evidence is unavailable (${healthData.blacklist.unavailableReason ?? "unavailable"}).`
+                  : blacklistStatus === "healthy"
                   ? `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts, but they are below the public warning threshold${healthData.blacklist.recentMissingAmounts > 0 ? ` (${healthData.blacklist.recentMissingAmounts} recent in the last ${blacklistWindowHours}h)` : ""}.`
                   : healthData.blacklist.recentMissingAmounts > 0
                     ? `${healthData.blacklist.recentMissingAmounts} recent blacklist event(s) in the last ${blacklistWindowHours}h are still missing amounts.`
                     : `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts, but no new gaps were recorded in the last ${blacklistWindowHours}h.`
                 : "No current blacklist amount gaps are affecting the public health signal."}
             </div>
-            {healthData.blacklist.missingAmounts > 0 ? (
+            {healthData.blacklist.missingAmounts != null && healthData.blacklist.missingAmounts > 0 && healthData.blacklist.missingRatio != null ? (
               <div className="mt-2 text-xs text-muted-foreground">
                 Missing ratio {(healthData.blacklist.missingRatio * 100).toFixed(2)}% of {healthData.blacklist.totalEvents} tracked events.
               </div>

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 
 vi.mock("next/link", async () => {
@@ -20,6 +20,28 @@ const PRE_LAUNCH_STABLECOINS = [
 ];
 
 describe("UpcomingClient", () => {
+  afterEach(() => { cleanup(); vi.useRealTimers(); });
+
+  it.each([undefined, [], [{ date: "2026-06", setOn: "2026-01-01" }], [{ date: "2026-05", setOn: "2026-01-01" }, { date: "2026-06", setOn: "2026-02-01" }]])(
+    "marks elapsed targets overdue independently of revisions (%j)",
+    (dateHistory) => {
+      window.history.replaceState(null, "", "/upcoming/");
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-07-02T00:00:00Z"));
+      render(<UpcomingClient coins={[{ ...PRE_LAUNCH_STABLECOINS[0], expectedLaunchDate: "2026-06", dateHistory }]} logos={{}} teasers={{}} />);
+      expect(screen.getByText("Overdue")).toBeTruthy();
+    },
+  );
+
+  it("expires an unrevised target only at the next UTC midnight without a rerender or refetch", () => {
+    window.history.replaceState(null, "", "/upcoming/");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-30T23:59:59.999Z"));
+    render(<UpcomingClient coins={[{ ...PRE_LAUNCH_STABLECOINS[0], expectedLaunchDate: "2026-Q2" }]} logos={{}} teasers={{}} />);
+    expect(screen.queryByText("Overdue")).toBeNull();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.getByText("Overdue")).toBeTruthy();
+  });
 
   it("renders AI-summary term markers as plain labels inside linked teaser cards", () => {
     const preLaunchId = "fixture-announced";

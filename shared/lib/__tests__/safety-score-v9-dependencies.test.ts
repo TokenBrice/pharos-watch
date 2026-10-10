@@ -18,6 +18,8 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { evaluateV9ReserveExposures } from "../safety-score-v9/backing";
 import { asset as reserveAsset, exposure } from "./safety-score-v9-backing.test-support";
 import { createV9FactGapV3 } from "../safety-score-v9/reasons";
+import { scoreV9EvaluatedAsset } from "../safety-score-v9/score";
+import { makeV9Pillar, makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
 
 const domain = (kind: "reserve-custodian" | "mint-control", key: string) => ({ kind, key }) as const;
 
@@ -422,6 +424,46 @@ describe("buildV9DependencyEvaluationPlan", () => {
       unresolvedExposureShare: 0.1,
       materialUnresolvedExposure: true,
     });
+  });
+
+  it.each(["A", "B"] as const)("does not dilute measured or C/U role losses with excluded %s exposure", (excludedCause) => {
+    for (const boundedCause of [null, "C", "U"] as const) {
+      const resolve = (includeExcluded: boolean) => {
+        const edges = [
+          roleEdge("control:adverse", "adverse", "control-operator", 1),
+          ...(boundedCause === null ? [] : [roleEdge("control:bounded", "bounded", "control-operator", 1)]),
+          ...(includeExcluded ? [roleEdge("control:excluded", "excluded", "control-operator", 1)] : []),
+        ];
+        const plan = buildV9DependencyEvaluationPlan({
+          activeAssetIds: ["child", "adverse", "bounded", "excluded"],
+          assets: [asset("child", edges), asset("adverse"), asset("bounded"), asset("excluded")],
+        });
+        const resolved = resolveV9DependencyInputs(plan, [
+          { assetId: "adverse", score: 0, backingScore: 0, controlScore: 0, dimensionCauses: { control: "D" } },
+          { assetId: "bounded", score: null, backingScore: null, controlScore: null, dimensionCauses: { control: boundedCause } },
+          { assetId: "excluded", score: null, backingScore: null, controlScore: null, dimensionCauses: { control: excludedCause } },
+        ]).find((input) => input.assetId === "child")!;
+        return projectV9RoleDependencyPillarLimits(resolved).control;
+      };
+      const baseline = resolve(false);
+      const withExcluded = resolve(true);
+      expect(withExcluded).toMatchObject({
+        limit: baseline.limit, knownLossPoints: baseline.knownLossPoints,
+        boundedUnknownLossPoints: baseline.boundedUnknownLossPoints,
+        unresolvedExposureShare: baseline.unresolvedExposureShare,
+      });
+      expect(withExcluded.events.find((event) => event.cause === excludedCause))
+        .toMatchObject({ nominalExposureShare: 1, exposureShare: 0, modeledLossPoints: null });
+      const scores = [baseline, withExcluded].map((projection) =>
+        scoreV9EvaluatedAsset(makeV9ProductionScoreInput({
+          pillars: { backing: makeV9Pillar(95), exit: makeV9Pillar(95), control: makeV9Pillar(projection.limit, {
+            adverseAttribution: [{ source: "pillar-score", path: "pillar:control:dependency:control:adverse",
+              responsibility: "measured-adverse", message: "Measured adverse control dependency." }],
+          }) },
+        }), V9_CANDIDATE_POLICY_V1),
+      );
+      expect(scores[1]).toMatchObject({ finalScore: scores[0]!.finalScore, finalGrade: scores[0]!.finalGrade });
+    }
   });
 
   it("lets serial inheritance dominate other roles once while retaining their distinct failure domains", () => {

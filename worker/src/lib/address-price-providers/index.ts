@@ -3,7 +3,7 @@ import { resolveChainId } from "@shared/types/chain-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { throwIfAborted } from "../abort";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
@@ -25,7 +25,6 @@ import type {
   AddressPriceProviderCollectionResult,
   AddressPriceProviderKey,
   AddressPriceProviderRuntimeConfig,
-  AddressPriceProviderRunResult,
   AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";
@@ -36,7 +35,6 @@ export type {
   AddressPriceProviderCollectionResult,
   AddressPriceProviderKey,
   AddressPriceProviderRuntimeConfig,
-  AddressPriceProviderRunResult,
   AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";
@@ -253,7 +251,11 @@ function compareAddressPriceTargets(
   if (left.previousMissingGenerations !== right.previousMissingGenerations) {
     return right.previousMissingGenerations - left.previousMissingGenerations;
   }
-  if (left.circulatingUsd !== right.circulatingUsd) return right.circulatingUsd - left.circulatingUsd;
+  if (left.circulatingUsd !== right.circulatingUsd) {
+    if (left.circulatingUsd === null) return 1;
+    if (right.circulatingUsd === null) return -1;
+    return right.circulatingUsd - left.circulatingUsd;
+  }
   if (left.previousSourceDepth !== right.previousSourceDepth) {
     return left.previousSourceDepth - right.previousSourceDepth;
   }
@@ -339,7 +341,7 @@ export function buildAddressPriceTargetsByProvider(params: {
         recentlyMissingPrice: targeting.recentlyMissingPrice,
         missingPrice: targeting.missingPrice,
         expiresBeforeNextGeneration: targeting.expiresBeforeNextGeneration,
-        circulatingUsd: getCirculatingRaw(asset),
+        circulatingUsd: getCirculatingRawOrNull(asset),
       });
     }
   }
@@ -349,21 +351,6 @@ export function buildAddressPriceTargetsByProvider(params: {
   return result;
 }
 
-async function runAddressProvider(params: {
-  targets: AddressPriceTarget[];
-  config: AddressPriceProviderRuntimeConfig;
-  signal?: AbortSignal;
-  nowSec: number;
-  deadlineMs: number;
-}): Promise<AddressPriceProviderRunResult> {
-  return runCoingeckoOnchainAddressProvider(
-    params.targets,
-    params.config.cgApiKey ?? null,
-    params.signal,
-    params.nowSec,
-    params.deadlineMs,
-  );
-}
 
 export async function collectAddressPriceProviderQuotes(params: {
   targetsByProvider: Map<AddressPriceProviderKey, AddressPriceTarget[]>;
@@ -417,13 +404,13 @@ export async function collectAddressPriceProviderQuotes(params: {
       return { quotesByStablecoinId, diagnostics, providerOutcomes, attemptedRequests: 0, successfulRequests: 0 };
     }
 
-    const result = await runAddressProvider({
+    const result = await runCoingeckoOnchainAddressProvider(
       targets,
-      config: params.config,
-      signal: params.signal,
-      nowSec: params.nowSec,
+      params.config.cgApiKey ?? null,
+      params.signal,
+      params.nowSec,
       deadlineMs,
-    });
+    );
     diagnostics.push(...result.diagnostics);
     // A 404 is the provider's definitive "this deployment is not indexed"
     // answer, not an outage. Counting it as a failure would let a cohort made

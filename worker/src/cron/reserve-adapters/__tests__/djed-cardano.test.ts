@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
-import { expectWarningEffect, runAdapter } from "./reserve-adapter.test-support";
+import { evaluateAdapterSnapshotAdmission, expectWarningEffect, runAdapter } from "./reserve-adapter.test-support";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 
 // ---------------------------------------------------------------------------
 // Recorded live census (probed via api.koios.rest on 2026-09-09)
@@ -39,6 +40,7 @@ interface DjedNetworkOverrides {
   omitPoolNft?: boolean;
   adaPrice?: number;
   djedPrice?: number;
+  quoteOverrides?: Partial<Record<"ada" | "djed", { timestamp?: number; confidence?: number }>>;
 }
 
 function djedNetwork(overrides: DjedNetworkOverrides = {}) {
@@ -92,8 +94,8 @@ function djedNetwork(overrides: DjedNetworkOverrides = {}) {
       ],
       "https://coins.llama.fi/prices/current/coingecko:cardano,coingecko:djed": {
         coins: {
-          "coingecko:cardano": { price: overrides.adaPrice ?? ADA_PRICE_USD, timestamp: TIP.block_time, confidence: 0.99 },
-          "coingecko:djed": { price: overrides.djedPrice ?? DJED_PRICE_USD, timestamp: TIP.block_time, confidence: 0.99 },
+          "coingecko:cardano": { price: overrides.adaPrice ?? ADA_PRICE_USD, timestamp: TIP.block_time, confidence: 0.99, ...overrides.quoteOverrides?.ada },
+          "coingecko:djed": { price: overrides.djedPrice ?? DJED_PRICE_USD, timestamp: TIP.block_time, confidence: 0.99, ...overrides.quoteOverrides?.djed },
         },
       },
     },
@@ -108,14 +110,14 @@ function runDjed(overrides: DjedNetworkOverrides = {}) {
 }
 
 /** Stablecoins-cache D1 fixture carrying the DefiLlama list circulating for DJED. */
-function djedCacheDb(circulating: number) {
+function djedCacheDb(circulating: number | null, price: number | null = 1) {
   return mockD1Strict([{
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
     matchBinds: ["stablecoins"],
     rows: [{
       key: "stablecoins",
       value: JSON.stringify({
-        peggedAssets: [{ id: "djed-coti", symbol: "DJED", circulating: { peggedUSD: circulating } }],
+        peggedAssets: [{ id: "djed-coti", symbol: "DJED", price, circulating: circulating === null ? {} : { peggedUSD: circulating } }],
       }),
       updated_at: TIP.block_time,
     }],
@@ -128,7 +130,8 @@ function djedCacheDb(circulating: number) {
 
 describe("djed-cardano", () => {
   it("publishes the recorded bank census with a market-valued collateralization ratio", async () => {
-    const { result } = await runDjed();
+    const run = await runDjed();
+    const { result } = run;
 
     expect(result.slices).toEqual([
       expect.objectContaining({
@@ -156,6 +159,7 @@ describe("djed-cardano", () => {
       tipBlockNo: TIP.block_no,
     });
     expect(result.warnings).toBeUndefined();
+    expect(evaluateAdapterSnapshotAdmission(run, TIP.block_time).eligible).toBe(true);
   });
 
   it("fails closed when the bank holds no pool-NFT identity marker", async () => {
@@ -172,6 +176,25 @@ describe("djed-cardano", () => {
 
   it("fails closed when no live DJED price is available", async () => {
     await expect(runDjed({ djedPrice: 0 })).rejects.toThrow(/DJED\/USD/);
+  });
+
+  describe.each(["ada", "djed"] as const)("%s valuation quality", (asset) => {
+    it.each([
+      { label: "stale", timestamp: TIP.block_time - 86401, confidence: 0.99 },
+      { label: "missing clock", timestamp: undefined, confidence: 0.99 },
+      { label: "low confidence", timestamp: TIP.block_time, confidence: 0.79 },
+      { label: "missing confidence", timestamp: TIP.block_time, confidence: undefined },
+      { label: "future clock", timestamp: TIP.block_time + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC + 1, confidence: 0.99 },
+    ])("retains $label quote degradation and rejects independent admission", async ({ timestamp, confidence }) => {
+      const run = await runDjed({ quoteOverrides: { [asset]: { timestamp, confidence } } });
+      expectWarningEffect(run.result, "defillama-quote-quality", "degraded");
+      expect(run.result.metadata?.totalReserveUsd).toBeCloseTo(RESERVE_USD, 2);
+      expect(run.result.metadata?.collateralizationRatio).toBeCloseTo(RATIO, 3);
+      expect(run.result.metadata?.observedBlock).toMatchObject({ timestamp: TIP.block_time });
+      const admission = evaluateAdapterSnapshotAdmission(run, TIP.block_time);
+      expect(admission.eligible).toBe(false);
+      expect(admission.reasons).toEqual(["degraded-snapshot"]);
+    });
   });
 
   it("degrades but still publishes the ratio when the bank is undercollateralized", async () => {
@@ -204,10 +227,28 @@ describe("djed-cardano", () => {
     expectWarningEffect(result, "djed-supply-divergence", "degraded");
     expect(result.metadata?.supplyTokens).toBeCloseTo(DJED_CIRCULATING, 6);
     expect(result.metadata?.details).toMatchObject({
-      listCirculatingUnits: 4_020_000,
+      listCirculatingUsd: 4_020_000,
       supplyDerivation: expect.stringContaining("djedMinted"),
     });
     expect(result.metadata?.details?.supplyDivergencePct as number).toBeGreaterThan(10);
+  });
+  it.each([0.8, 1.2])("compares cached USD to matched-generation valued units at price %s", async (price) => {
+    const { result } = await runAdapter("djed-cardano", "djed-coti", {
+      network: djedNetwork({ djedPrice: price }), nowSec: TIP.block_time,
+      ctx: { db: djedCacheDb(DJED_CIRCULATING * price, price) },
+    });
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata?.details?.supplyDivergencePct).toBeCloseTo(0, 6);
+    expect(result.metadata?.supplyTokens).toBeCloseTo(DJED_CIRCULATING, 6);
+  });
+
+  it.each([[null, 1], [DJED_CIRCULATING, null], [0, 1]] as const)("retains unavailable reconciliation without replacing the on-chain liability (%s,%s)", async (supply, price) => {
+    const { result } = await runAdapter("djed-cardano", "djed-coti", {
+      network: djedNetwork(), nowSec: TIP.block_time, ctx: { db: djedCacheDb(supply, price) },
+    });
+    expect(result.metadata?.details).toMatchObject({ supplyReconciliationUnavailableReason: "list-supply-or-price-unavailable" });
+    expect(result.metadata?.details?.supplyDivergencePct).toBeUndefined();
+    expect(result.metadata?.supplyTokens).toBeCloseTo(DJED_CIRCULATING, 6);
   });
 
   it("stays clean when the on-chain liability matches the list supply", async () => {
@@ -219,7 +260,7 @@ describe("djed-cardano", () => {
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata?.details).toMatchObject({
-      listCirculatingUnits: DJED_CIRCULATING,
+      listCirculatingUsd: DJED_CIRCULATING,
       supplyDivergencePct: 0,
     });
   });

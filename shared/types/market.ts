@@ -198,6 +198,23 @@ const StablecoinDataRawSchema = z.object({
   frozenAt: StrictIsoDateSchema.optional(),
 });
 
+/** JSON wire shape after legacy aliases and optional observations have been normalized. */
+export const StablecoinDataOutputSchema = StablecoinDataRawSchema.omit({ gecko_id: true }).extend({
+  geckoId: z.string().nullable(),
+  priceConfidence: PriceConfidenceSchema.nullable(),
+  priceUpdatedAt: z.number().nullable(),
+  priceObservedAt: z.number().nullable(),
+  priceObservedAtMode: PriceObservedAtModeSchema.nullable(),
+  priceSyncedAt: z.number().nullable(),
+  consensusSources: z.array(z.string()),
+  agreeSources: z.array(z.string()),
+  priceSourceConfidenceProfile: PriceSourceConfidenceProfileSchema.optional(),
+  supplyObservedAt: z.number().optional(),
+  circulatingPrevDay: SupplyBucketsSchema,
+  circulatingPrevWeek: SupplyBucketsSchema,
+  circulatingPrevMonth: SupplyBucketsSchema,
+});
+
 export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
   id: asset.id,
   name: asset.name,
@@ -311,6 +328,12 @@ export const DexAmmExecutionModelSchema = z
     /** StableSwap amplification coefficient A (plain paper convention, not A*n^n). */
     amplification: z.number().finite().positive().optional(),
     tokens: z.array(DexAmmExecutionTokenSchema).min(2).max(8),
+    capture: z.object({
+      blockNumber: z.number().int().positive(),
+      blockHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+      blockTimestamp: z.number().int().positive(),
+      sourceGenerationId: z.string().min(1),
+    }).optional(),
     solidlyState: z.object({
       variant: z.enum(["aerodrome", "velodrome"]),
       stable: z.literal(true),
@@ -681,6 +704,8 @@ const DexDeploymentCoverageSchema = z.object({
 const DexLiquidityDataSchema = z
   .object({
     warning: z.string().nullable().optional(),
+    advisoryUnavailableReason: z.literal("dex-advisory-read-failed").nullable().optional(),
+    unavailableReason: z.literal("invalid-coverage-evidence").nullable().optional(),
     totalTvlUsd: z.number(),
     // Full-window measured sums: null unless the matching availability is complete.
     totalVolume24hUsd: z.number().nullable(),
@@ -700,6 +725,13 @@ const DexLiquidityDataSchema = z
     tvlChange24h: z.number().nullable(),
     tvlChange7d: z.number().nullable(),
     updatedAt: z.number(),
+    dexPriceUpdatedAt: nullableEpochSec.optional(),
+    dexPriceAgeSeconds: z.number().nonnegative().nullable().optional(),
+    dexPriceMaxAgeSec: z.number().positive().optional(),
+    dexPriceUnavailableReason: z.enum([
+      "missing-price", "missing-timestamp", "invalid-timestamp", "future-timestamp",
+      "stale-price", "publication-mismatch",
+    ]).nullable().optional(),
     dexPriceUsd: z.number().nullable(),
     dexDeviationBps: z.number().nullable(),
     priceSourceCount: z.number().nullable(),
@@ -711,8 +743,8 @@ const DexLiquidityDataSchema = z
     organicFraction: z.number().nullable(),
     durabilityScore: z.number().min(0).max(100).nullable(),
     coverageClass: LiquidityCoverageClassSchema.nullable(),
-    coverageConfidence: z.number().min(0).max(1),
-    liquidityEvidenceClass: LiquidityEvidenceClassSchema,
+    coverageConfidence: z.number().min(0).max(1).nullable(),
+    liquidityEvidenceClass: LiquidityEvidenceClassSchema.nullable(),
     hasMeasuredLiquidityEvidence: z.boolean(),
     trendworthy: z.boolean(),
     sourceMix: LiquiditySourceMixSchema,
@@ -744,9 +776,10 @@ export const DexLiquidityHistoryPointSchema = z
     volume24hAvailability: DexVolumeAvailabilitySchema.optional(),
     score: z.number().nullable(),
     date: z.number(),
-    coverageClass: LiquidityCoverageClassSchema,
-    coverageConfidence: z.number(),
-    liquidityEvidenceClass: LiquidityEvidenceClassSchema,
+    unavailableReason: z.literal("invalid-coverage-evidence").nullable().optional(),
+    coverageClass: LiquidityCoverageClassSchema.nullable(),
+    coverageConfidence: z.number().nullable(),
+    liquidityEvidenceClass: LiquidityEvidenceClassSchema.nullable(),
     hasMeasuredLiquidityEvidence: z.boolean(),
     trendworthy: z.boolean(),
     methodologyVersion: z.string(),
@@ -767,12 +800,19 @@ export const SupplyHistoryResponseSchema = z.array(SupplyHistoryPointSchema);
 
 const NonUsdSharePointSchema = z.object({
   date: z.number(),
-  // SQL cohort aggregates are complete numbers; unavailable history is not a zero point.
+  // Numeric observed subtotals; historical cohort coverage is disclosed separately.
   commodityShare: z.number(),
   fiatNonUsdShare: z.number(),
   commodity: z.number(),
   fiatNonUsd: z.number(),
   total: z.number(),
+  coverage: z.object({
+    basis: z.literal("interior-gap-prior-value"),
+    total: z.number().min(0).max(1),
+    commodity: z.number().min(0).max(1),
+    fiatNonUsd: z.number().min(0).max(1),
+  }).describe("Observed value divided by observed plus prior-value estimates for interior history gaps; not a deployment census.")
+    .nullable().optional(),
 });
 export type NonUsdSharePoint = z.infer<typeof NonUsdSharePointSchema>;
 export const NonUsdShareResponseSchema = z.array(NonUsdSharePointSchema);
@@ -1033,13 +1073,19 @@ export const BlacklistRecentEventTypeCountsSchema = z.object({
   releases: z.number(),
 });
 export type BlacklistRecentEventTypeCounts = z.infer<typeof BlacklistRecentEventTypeCountsSchema>;
+export const BlacklistValuationCoverageSchema = z.object({
+  knownCount: z.number().int().nonnegative(),
+  unavailableCount: z.number().int().nonnegative(),
+});
+export type BlacklistValuationCoverage = z.infer<typeof BlacklistValuationCoverageSchema>;
+
 
 const BlacklistSummaryStatsSchema = z.object({
   usdcBlacklisted: z.number(),
   usdtBlacklisted: z.number(),
   goldBlacklisted: z.number(),
   frozenAddresses: z.number(),
-  destroyedTotal: z.number(),
+  destroyedTotal: z.number().nullable(),
   activeAddressCount: z.number(),
   activeFrozenTotal: z.number(),
   activeAmountGapCount: z.number(),
@@ -1050,14 +1096,21 @@ const BlacklistSummaryStatsSchema = z.object({
   recentCount24h: z.number(),
   recentFreezeCount24h: z.number(),
   recentFreezeCount7d: z.number(),
-  recentFreezeAmount24hUsd: z.number(),
-  recentFreezeAmount7dUsd: z.number(),
+  recentFreezeAmount24hUsd: z.number().nullable(),
+  recentFreezeAmount7dUsd: z.number().nullable(),
   recoverableGapCount: z.number(),
   perCoinBlacklistCounts: z.record(z.string(), z.number()),
   perCoinTotalEvents: z.record(z.string(), z.number()),
   perCoinFrozenAddressCount: z.record(z.string(), z.number()),
-  perCoinFrozenTotal: z.record(z.string(), z.number()),
-  perCoinDestroyedTotal: z.record(z.string(), z.number()),
+  perCoinFrozenTotal: z.record(z.string(), z.number().nullable()),
+  perCoinDestroyedTotal: z.record(z.string(), z.number().nullable()),
+  valuationCoverage: z.object({
+    destroyed: BlacklistValuationCoverageSchema,
+    recent24h: BlacklistValuationCoverageSchema,
+    recent7d: BlacklistValuationCoverageSchema,
+    perCoinFrozen: z.record(z.string(), BlacklistValuationCoverageSchema),
+    perCoinDestroyed: z.record(z.string(), BlacklistValuationCoverageSchema),
+  }).optional(),
   // Key is `z.string()` like the sibling maps above: Zod 4 enum-keyed records
   // are exhaustive, so a cache snapshot written before the next
   // BLACKLIST_STABLECOINS addition would fail the whole summary parse.
@@ -1271,7 +1324,8 @@ export const StablecoinChartAggregateUniverseSchema = z.enum([
 export const StablecoinChartResponseSchema = z.array(
   z.object({
     date: z.number(),
-    totalCirculatingUSD: z.record(z.string(), z.number()),
+    // Omitted and null buckets are unavailable; only explicit finite nonnegative values are observations.
+    totalCirculatingUSD: z.record(z.string(), z.number().finite().nonnegative().nullable()),
     aggregateUniverse: StablecoinChartAggregateUniverseSchema.optional(),
   }),
 );

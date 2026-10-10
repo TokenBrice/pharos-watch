@@ -31,9 +31,6 @@ const HIGH_TVL_THRESHOLD_USD = 5_000_000;
 const HIGH_CONFIDENCE_TVL_USD = 10_000_000;
 /** Minimum pool count for a protocol to reach the high-confidence recommendation tier. */
 const HIGH_CONFIDENCE_MIN_POOL_COUNT = 3;
-const OPERATOR_QUEUE_ITEM_LIMIT = 20;
-/** Bound on native-pool candidate groups carried in the gaps payload. */
-const NATIVE_EXACT_POOL_GROUP_LIMIT = 50;
 const ALLOWLIST_AUDIT_QUEUE_ANCHOR = "YIELD_ALLOWLIST_AUDIT_QUEUE_ANCHOR";
 const DEFILLAMA_PROTOCOLS_SOURCE_URL = "https://api.llama.fi/protocols";
 const DEFILLAMA_YIELD_POOL_CHART_URL = "https://yields.llama.fi/chart";
@@ -389,8 +386,7 @@ function aggregatePoolsByProject(
       };
       return { base, sortedPools };
     })
-    .sort((a, b) => b.base.totalTvlUsd - a.base.totalTvlUsd)
-    .slice(0, 20);
+    .sort((a, b) => b.base.totalTvlUsd - a.base.totalTvlUsd);
 }
 
 function buildProtocolRecommendations(
@@ -719,8 +715,7 @@ function buildPublishedVenueRiskConfigMissing(
       stablecoinIds: [...new Set(entry.rows.map((row) => row.stablecoinId))].sort(),
       sourceKeys: [...new Set(entry.rows.flatMap((row) => (row.sourceKey ? [row.sourceKey] : [])))].sort(),
     }))
-    .sort((a, b) => b.totalTvlUsd - a.totalTvlUsd)
-    .slice(0, OPERATOR_QUEUE_ITEM_LIMIT);
+    .sort((a, b) => b.totalTvlUsd - a.totalTvlUsd);
 }
 
 /**
@@ -808,8 +803,7 @@ export function identifyCoverageGaps(
         totalTvlUsd: sortedPools.reduce((total, pool) => total + pool.tvlUsd, 0),
       };
     })
-    .sort((a, b) => b.totalTvlUsd - a.totalTvlUsd)
-    .slice(0, NATIVE_EXACT_POOL_GROUP_LIMIT);
+    .sort((a, b) => b.totalTvlUsd - a.totalTvlUsd);
 
   // C7: one pool, one bucket. Native candidates claim their pools first; the
   // rest route on category, because a known non-lending protocol cannot be

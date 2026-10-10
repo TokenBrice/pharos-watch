@@ -584,6 +584,7 @@ describe("dex-liquidity persistence", () => {
         // A successful pool census does not resolve a same-chain liability
         // partition. Supply admission must still fail closed independently.
         const supply = computeDexDeploymentSupplyCoverage({
+          circulating: { peggedUSD: 100 },
           contracts: [
             ...(meta.contracts ?? []),
             { chain: "ethereum", address: "0x1111111111111111111111111111111111111111", decimals: 18 },

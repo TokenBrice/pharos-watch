@@ -63,6 +63,14 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
       : {};
     if (admitSupplyBuckets(circulating).status !== "observed") circulating = {};
   }
+  const supplyObservedAt = hasCurrentSupply ? detail.currentSupplyObservedAt ?? null : supplyUnavailable ? null : latestDate;
+  const observedPrice = isObservedPrice(detail) ? detail.price : null;
+  const currentUsd = sumPegBucketsOrNull(circulating);
+  const derivedNative = hasCurrentSupply && currentUsd != null && typeof observedPrice === "number" &&
+    Number.isFinite(observedPrice) && observedPrice > 0 ? currentUsd / observedPrice : null;
+  const currentNative = supplyUnavailable ? null : hasCurrentSupply
+    ? derivedNative != null && Number.isFinite(derivedNative) ? derivedNative : null
+    : sumPegBucketsOrNull(latest?.totalCirculating);
 
   return normalizeStablecoinLiveSummary(StablecoinLiveSummarySchema.parse({
     price: detail.price ?? null,
@@ -75,21 +83,21 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     ...(detail.nominalPriceReference ? { nominalPriceReference: detail.nominalPriceReference } : {}),
     consensusSources: detail.consensusSources,
     agreeSources: detail.agreeSources,
-    supplyObservedAt: hasCurrentSupply ? detail.currentSupplyObservedAt ?? null : supplyUnavailable ? null : latestDate,
+    supplyObservedAt,
     ...(supplyUnavailable || (hasCurrentSupply && detail.currentSupplyRestored === true) ? { supplyRestored: true } : {}),
     circulating,
     circulatingPrevDay: hasCurrentSupply ? detail.currentCirculatingPrevDayUSD ?? {}
       : latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400, "totalCirculatingUSD"),
-    circulatingPrevWeek: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 7 * 86_400, "totalCirculatingUSD"),
-    circulatingPrevMonth: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 30 * 86_400, "totalCirculatingUSD"),
+    circulatingPrevWeek: supplyObservedAt == null ? {} : detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculatingUSD"),
+    circulatingPrevMonth: supplyObservedAt == null ? {} : detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculatingUSD"),
     nativeSupply: {
-      current: supplyUnavailable ? null : sumPegBucketsOrNull(latest?.totalCirculating),
-      prevWeek: latestDate == null
+      current: currentNative,
+      prevWeek: currentNative == null || supplyObservedAt == null
         ? null
-        : sumPegBucketsOrNull(detailBucketsAt(detail, latestDate - 7 * 86_400, "totalCirculating")),
-      prevMonth: latestDate == null
+        : sumPegBucketsOrNull(detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculating")),
+      prevMonth: currentNative == null || supplyObservedAt == null
         ? null
-        : sumPegBucketsOrNull(detailBucketsAt(detail, latestDate - 30 * 86_400, "totalCirculating")),
+        : sumPegBucketsOrNull(detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculating")),
     },
   }));
 }

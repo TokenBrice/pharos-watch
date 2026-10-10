@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   classifyBridgeAwareBurnRows,
   type MintBurnTxContext,
@@ -12,7 +12,13 @@ import {
   type MintBurnLayerZeroOftBridgeDetectionConfig,
 } from "../mint-burn-contracts";
 import { ccipBridgeDetection, layerZeroOftBridgeDetection } from "../mint-burn-contracts-helpers";
-import { makeBridgeRow, signalContext } from "./mint-burn-bridge-classifier.test-support";
+import { makeBridgeRow, signalContext, cctpReceiveContext } from "./mint-burn-bridge-classifier.test-support";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { collectAffectedHours, persistMintBurnRows, recalcAffectedHours } from "../mint-burn-pipeline/persistence";
+import type { MintBurnRow } from "../mint-burn-pipeline/types";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 type CcipCoinCase = {
   stablecoinId: string;
@@ -344,6 +350,64 @@ describe("CCIP/CCTP classifier — bridge MINTS", () => {
     ]);
     classifyBridgeAwareBurnRows(rows, detection, ctx);
     expect(rows[0].flow_type).toBe("standard");
+  });
+});
+
+describe("CCTP V2 destination receive", () => {
+  for (const coin of CCTP_CASES) {
+    it(`[${coin.symbol}] tags a MessageReceived destination mint without DepositForBurn and excludes hourly issuance`, async () => {
+      const context = cctpReceiveContext(coin.detection);
+      const row: MintBurnRow = {
+        ...makeBridgeRow({ id: "ethereum-0xreceive-0", direction: "mint", tx_hash: "0xreceive", counterparty: "0xabcdef1234567890abcdef1234567890abcdef12" }),
+        stablecoin_id: coin.stablecoinId, symbol: coin.symbol, chain_id: "ethereum",
+        amount: 10000, amount_usd: 10000, price_used: 1, price_timestamp: 3601, price_source: "supply-history",
+        block_number: 22_000_000, timestamp: 3601, explorer_tx_url: "https://etherscan.io/tx/0xreceive",
+      };
+      classifyBridgeAwareBurnRows([row], coin.detection, new Map([[row.tx_hash, context]]));
+      expect(row.flow_type).toBe("bridge_transfer");
+      const { sqlite, db } = fixtures.open();
+      const affected = collectAffectedHours([row]);
+      await persistMintBurnRows(db, [row], affected);
+      await recalcAffectedHours(db, affected);
+      expect(sqlite.prepare("SELECT mint_count, mint_volume_usd, net_flow_usd FROM mint_burn_hourly").get())
+        .toEqual({ mint_count: 0, mint_volume_usd: 0, net_flow_usd: 0 });
+    });
+  }
+
+  it.each(["wrong-transmitter", "wrong-messenger", "other-token", "no-token-mint", "different-mint-amount", "different-recipient", "unrelated-message"] as const)(
+    "does not classify a destination mint with %s evidence",
+    (mutation) => {
+      const detection = CCTP_CASES[0].detection;
+      const context = cctpReceiveContext(detection);
+      const logs = context.receiptLogs!;
+      const otherAddress = "0x1111111111111111111111111111111111111111";
+      if (mutation === "wrong-transmitter") logs[2].address = otherAddress;
+      if (mutation === "wrong-messenger") logs[1].address = otherAddress;
+      if (mutation === "other-token") logs[1].topics[2] = `0x${"0".repeat(24)}${otherAddress.slice(2)}`;
+      if (mutation === "no-token-mint") logs[0].topics[1] = logs[0].topics[2];
+      if (mutation === "different-mint-amount") logs[0].data = `0x${"0".repeat(63)}1`;
+      if (mutation === "different-recipient") logs[0].topics[2] = `0x${"0".repeat(24)}${otherAddress.slice(2)}`;
+      if (mutation === "unrelated-message") logs.splice(1, 1);
+      // Flat topic/address sets still contain the canonical fingerprints: they
+      // cannot substitute for paired emitter and token-mint receipt evidence.
+      const row = makeBridgeRow({ id: "ethereum-0xunrelated-0", direction: "mint", tx_hash: "0xunrelated" });
+      classifyBridgeAwareBurnRows([row], detection, new Map([[row.tx_hash, context]]));
+      expect(row.flow_type).toBe("standard");
+    },
+  );
+
+  it("tags matched net and fee mints while leaving unrelated same-transaction issuance standard", () => {
+    const detection = CCTP_CASES[0].detection;
+    const context = cctpReceiveContext(detection, 1_000_000);
+    context.receiptLogs!.push({ ...context.receiptLogs![0], logIndex: "0x9" });
+    const rows = [
+      makeBridgeRow({ id: "ethereum-0xfee-0", direction: "mint", tx_hash: "0xfee" }),
+      makeBridgeRow({ id: "ethereum-0xfee-1", direction: "mint", tx_hash: "0xfee" }),
+      makeBridgeRow({ id: "ethereum-0xfee-9", direction: "mint", tx_hash: "0xfee" }),
+      makeBridgeRow({ id: "ethereum-0xfee-10", direction: "burn", tx_hash: "0xfee" }),
+    ];
+    classifyBridgeAwareBurnRows(rows, detection, new Map([["0xfee", context]]));
+    expect(rows.map((row) => row.flow_type)).toEqual(["bridge_transfer", "bridge_transfer", "standard", "standard"]);
   });
 });
 

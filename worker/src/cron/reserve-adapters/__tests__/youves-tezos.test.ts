@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { installAdapterNetwork, runAdapter, type AdapterNetwork } from "./reserve-adapter.test-support";
+import { evaluateAdapterSnapshotAdmission, expectWarningEffect, installAdapterNetwork, runAdapter, type AdapterNetwork } from "./reserve-adapter.test-support";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { adaptYouvesTezosState, type YouvesTezosState } from "../youves-tezos";
 
 const TZKT_ORIGIN = "https://api.tzkt.io";
@@ -96,6 +97,7 @@ const DEFILLAMA_ENDPOINT = `https://coins.llama.fi/prices/current/${DEFILLAMA_AS
 function installYouvesNetwork(
   payloads = buildPayloadMap(),
   prices: Partial<typeof PRICES> = PRICES,
+  quoteOverrides: Partial<Record<keyof typeof PRICES, { timestamp?: number; confidence?: number }>> = {},
 ): AdapterNetwork {
   const json: Record<string, unknown> = Object.fromEntries(payloads);
   const priceKeys: Record<keyof typeof PRICES, string> = {
@@ -112,6 +114,7 @@ function installYouvesNetwork(
           price: prices[key],
           timestamp: HEAD_TIME_SEC,
           confidence: 1,
+          ...quoteOverrides[key],
         }]),
     ),
   };
@@ -182,15 +185,18 @@ describe("fetchYouvesTezosReserves", () => {
   it("reads head, storages, bigmaps and the SIRS oracle through the shared network boundary", async () => {
     const payloads = buildPayloadMap();
     const network = installYouvesNetwork(payloads);
-    const { result } = await runAdapter("youves-tezos", "uusd-youves", {
+    const run = await runAdapter("youves-tezos", "uusd-youves", {
       network,
       nowSec: HEAD_TIME_SEC,
     });
+    const { result } = run;
 
     expect(result.metadata).toMatchObject({ freshnessMode: "not-applicable" });
     expect(result.slices).toHaveLength(4);
     expect(network.requests.filter(({ url }) => url.startsWith(TZKT_ORIGIN)).length).toBe(20);
     expect(network.requests.some(({ url }) => url.startsWith("https://coins.llama.fi/prices/current/"))).toBe(true);
+    expect((result.warnings ?? []).filter((warning) => warning.effect === "degraded")).toEqual([]);
+    expect(evaluateAdapterSnapshotAdmission(run, HEAD_TIME_SEC).eligible).toBe(true);
   });
 
   it("fails closed when an engine's token contract is not the uUSD token", async () => {
@@ -204,15 +210,35 @@ describe("fetchYouvesTezosReserves", () => {
     })).rejects.toThrow("token_contract is KT1other");
   });
 
-  it("fails closed when a material collateral price is missing", async () => {
-    await expect(runAdapter("youves-tezos", "uusd-youves", {
-      network: installYouvesNetwork(buildPayloadMap(), {
-        tzbtc: PRICES.tzbtc,
-        usdt: PRICES.usdt,
-        uusd: PRICES.uusd,
-      }),
-      nowSec: HEAD_TIME_SEC,
-    })).rejects.toThrow("no qualified DefiLlama price for xtz");
+  describe.each(["xtz", "tzbtc", "usdt", "uusd"] as const)("%s valuation quality", (asset) => {
+    it("fails closed when the quote is missing", async () => {
+      const prices: Partial<typeof PRICES> = { ...PRICES };
+      delete prices[asset];
+      await expect(runAdapter("youves-tezos", "uusd-youves", {
+        network: installYouvesNetwork(buildPayloadMap(), prices),
+        nowSec: HEAD_TIME_SEC,
+      })).rejects.toThrow(`no qualified DefiLlama price for ${asset}`);
+    });
+
+    it.each([
+      { label: "stale", timestamp: HEAD_TIME_SEC - 86401, confidence: 1 },
+      { label: "missing clock", timestamp: undefined, confidence: 1 },
+      { label: "low confidence", timestamp: HEAD_TIME_SEC, confidence: 0.79 },
+      { label: "missing confidence", timestamp: HEAD_TIME_SEC, confidence: undefined },
+      { label: "future clock", timestamp: HEAD_TIME_SEC + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC + 1, confidence: 1 },
+    ])("retains $label quote degradation and rejects independent admission", async ({ timestamp, confidence }) => {
+      const run = await runAdapter("youves-tezos", "uusd-youves", {
+        network: installYouvesNetwork(buildPayloadMap(), PRICES, { [asset]: { timestamp, confidence } }),
+        nowSec: HEAD_TIME_SEC,
+      });
+      expectWarningEffect(run.result, "defillama-quote-quality", "degraded");
+      expectWarningEffect(run.result, "xtz-vault-contract-custody", "info");
+      expect(run.result.metadata?.totalReserveUsd).toBeCloseTo(expectedValues().total, 2);
+      expect(run.result.metadata?.observedBlock).toMatchObject({ timestamp: HEAD_TIME_SEC });
+      const admission = evaluateAdapterSnapshotAdmission(run, HEAD_TIME_SEC);
+      expect(admission.eligible).toBe(false);
+      expect(admission.reasons).toEqual(["degraded-snapshot"]);
+    });
   });
 
   it("fails closed when token supply is below the engine minted sum", async () => {

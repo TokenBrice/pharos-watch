@@ -45,6 +45,42 @@ describe("LOW_VOLUME_CG_FALLBACK_IDS registry invariant", () => {
 
 describe("runCoingeckoLowVolumePass", () => {
   it.each([
+    ["future beyond fallback skew", 121, false],
+    ["exact future skew boundary", 120, true],
+    ["exact seven-day age boundary", -7 * 86400, true],
+    ["expired quote", -7 * 86400 - 1, false],
+    ["invalid zero clock", null, false],
+    ["absent upstream clock", undefined, true],
+  ] as const)("admits only valid low-volume observation clocks: %s", async (_name, offset, accepted) => {
+    const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
+      "../../../lib/coingecko-simple-price",
+    );
+    vi.mocked(fetchCoingeckoSimplePrices).mockImplementation(actual.fetchCoingeckoSimplePrices);
+    const nowSec = 1_791_299_423;
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1000);
+    const observedAt = offset === undefined ? undefined : offset === null ? 0 : nowSec + offset;
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      "smardex-usdn": { usd: 1.01, ...(observedAt === undefined ? {} : { last_updated_at: observedAt }) },
+    })));
+    const asset = makePeggedAsset({ id: "usdn-smardex", price: null });
+    expect(await runCoingeckoLowVolumePass([asset], null, undefined)).toEqual({
+      resolved: accepted ? 1 : 0, failures: [],
+    });
+    if (accepted) {
+      expect(asset).toMatchObject({
+        price: 1.01, priceSource: "coingecko-low-volume",
+        priceObservedAt: observedAt ?? nowSec,
+        priceObservedAtMode: observedAt == null ? "local_fetch" : "upstream",
+      });
+    } else {
+      expect(asset.price).toBeNull();
+      expect(asset.priceObservedAt).toBeUndefined();
+      expect(asset.priceSource).not.toBe("coingecko-low-volume");
+    }
+  });
+
+  it.each([
     ["usdkg-gold-dollar", "usdkg", 1.001, 1791222170],
     ["fusd-freedom-dollar", "freedom-dollar", 0.997906, 1790853290],
     ["chfau-allunity", "allunity-chf", 1.2, 1791267900],
@@ -104,6 +140,8 @@ describe("runCoingeckoLowVolumePass", () => {
   });
 
   it("enriches only allowlisted missing assets, preserving priced and unrelated peers", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_700_000_100 * 1000);
     const assets = [
       makePeggedAsset({ id: "usdn-smardex", price: null }),
       makePeggedAsset({ id: "dllr-sovryn", price: 0.98, priceSource: "defillama" }),

@@ -12,15 +12,14 @@ import { handleUnsubCallback } from "./unsub";
 import { handleSelectCallback } from "./select";
 import { handleHelpCallback } from "./help";
 import { handleTimezoneCallback } from "./tz";
-import { handleSettingsCallbackEntry } from "./settings";
 import { handleRecapCallback } from "./recap";
 import type { CallbackAction, CallbackHandler } from "./_shared";
 
 export type { CallbackAction, CallbackHandler, ParsedCallbackData, TelegramCallbackQuery } from "./_shared";
 
 /**
- * Dispatch table mapping each `CallbackAction` to its handler. The webhook
- * callback dispatcher looks up the handler here after pre-dispatch routing for
+ * Dispatch table mapping each registry-routed `CallbackAction` to its handler.
+ * The callback dispatcher looks up the handler here after pre-dispatch routing for
  * the bespoke `setup:*` and `settings:*` paths. Mirrors the structure of
  * `webhook-commands/index.ts`'s `COMMAND_HANDLERS`.
  *
@@ -28,11 +27,9 @@ export type { CallbackAction, CallbackHandler, ParsedCallbackData, TelegramCallb
  * one handler (`handleBulkActionCallback`) because the dispatch logic across
  * the two prefixes is identical.
  *
- * `settings` is short-circuited before the registry lookup; the entry here
- * keeps the Record exhaustive over `CallbackAction` and is unreachable in
- * practice.
+ * `settings` is handled before registry lookup by its dedicated sub-dispatcher.
  */
-export const CALLBACK_HANDLERS: Record<CallbackAction, CallbackHandler> = {
+export const CALLBACK_HANDLERS: Record<Exclude<CallbackAction, "settings">, CallbackHandler> = {
   snooze: handleSnoozeCallback,
   coinsnooze: handleCoinSnoozeCallback,
   status: handleStatusCallback,
@@ -48,6 +45,5 @@ export const CALLBACK_HANDLERS: Record<CallbackAction, CallbackHandler> = {
   select: handleSelectCallback,
   help: handleHelpCallback,
   tz: handleTimezoneCallback,
-  settings: handleSettingsCallbackEntry,
   recap: handleRecapCallback,
 };

@@ -111,6 +111,9 @@ import {
   resolveBlockTimestamps,
 } from "../../lib/alchemy-logs";
 import { createBudget, decodeUint256AtSlotOrNull } from "../../lib/evm-logs";
+import * as mintBurnConservation from "../../lib/mint-burn-conservation";
+import type * as DbModule from "../../lib/db";
+import type * as PersistenceModule from "../../lib/mint-burn-pipeline/persistence";
 
 const USDT_CONFIG_KEY = `ethereum-${USDT_CONTRACT}`;
 
@@ -203,6 +206,38 @@ describe("syncMintBurn", () => {
     const meta = JSON.parse(result.metadata);
     expect(meta.configsDisabled).toBe(1);
     expect(meta.sourceCoverage.contractsEnabled).toBe(1);
+  });
+
+  it.each([
+    { disabledSymbols: ["USDT"], disabledConfigIds: [], protectedRows: 1 },
+    { disabledSymbols: ["USDT", "USDC"], disabledConfigIds: [], protectedRows: 0 },
+    { disabledSymbols: ["USDT"], disabledConfigIds: ["usdc-circle"], protectedRows: 0 },
+    { disabledSymbols: ["USDT"], disabledConfigIds: ["ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"], protectedRows: 0 },
+  ])("applies all-lane runtime enablement to critical retention: %j", async (scenario) => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const timestamp = nowSec - 10 * 86_400;
+    sqlite.prepare(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, tx_hash, block_number, timestamp, explorer_tx_url)
+      VALUES ('extended-frontier', 'usdc-circle', 'USDC', 'ethereum', 'mint', 1, 1, '0xextended', 1, ?, 'https://etherscan.io/tx/0xextended')`)
+      .run(timestamp);
+    sqlite.prepare("INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts) VALUES ('usdc-circle', 'ethereum', ?)")
+      .run(Math.floor(timestamp / 3600) * 3600);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('tape-projector:cursor:mint_burn.large_flow', ?, ?)")
+      .run(String(nowSec), nowSec);
+
+    const result = await syncMintBurn(db, "alchemy-key", { lane: "critical", ...scenario });
+    const metadata = JSON.parse(result.metadata);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_events").get())
+      .toEqual({ count: scenario.protectedRows });
+    expect(metadata.retention.eventRows.deletedRows).toBe(1 - scenario.protectedRows);
+    expect(metadata.retention.frontierProtection.configs).toHaveLength(scenario.protectedRows);
+    if (scenario.protectedRows) {
+      expect(metadata.retention.frontierProtection.configs[0]).toMatchObject({
+        stablecoinId: "usdc-circle", lastBlock: null, lagBlocks: null,
+      });
+    }
+    expect(metadata.retention.error).toBeNull();
   });
 
   it("uses exact scan range (maxRange blocks inclusive)", async () => {
@@ -473,6 +508,59 @@ describe("syncMintBurn", () => {
     // full-success-empty stops one safety margin (75 blocks) short of the chain head
     expect(retryUsdt?.advancedTo).toBe(21_999_925);
     expect(readFrontier()).toBe(21_999_925);
+  });
+
+  it("holds a cursor after recalc failure, protects retained inputs, and rebuilds a complete bucket on duplicate replay", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const actualDb = await vi.importActual<typeof DbModule>("../../lib/db");
+    const actualPersistence = await vi.importActual<typeof PersistenceModule>(
+      "../../lib/mint-burn-pipeline/persistence",
+    );
+    vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
+    vi.spyOn(mintBurnConservation, "fetchConservationBoundaries").mockResolvedValue(new Map());
+    const timestamp = Math.floor((Date.now() / 1000 - 10 * 86_400) / 3600) * 3600 + 60;
+    const hourTs = Math.floor(timestamp / 3600) * 3600;
+    sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)")
+      .run(USDT_CONFIG_KEY, 21_950_000);
+    sqlite.prepare(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, tx_hash, block_number, timestamp, explorer_tx_url)
+      VALUES ('prior-event', 'usdt-tether', 'USDT', 'ethereum', 'mint', 50000, 50000, '0xprior', 21950000, ?, 'https://etherscan.io/tx/0xprior')`)
+      .run(timestamp);
+    const affected = new Map([["hour", { stablecoinId: "usdt-tether", chainId: "ethereum", hourTs }]]);
+    await actualPersistence.recalcAffectedHours(db, affected);
+    sqlite.prepare(`INSERT INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at)
+      VALUES ('usdt-tether', ?, 1000000, 1, ?)`).run(Math.floor(timestamp / 86_400) * 86_400, timestamp);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('tape-projector:cursor:mint_burn.large_flow', ?, ?)")
+      .run(String(Math.floor(Date.now() / 1000)), Math.floor(Date.now() / 1000));
+    const scanStarts: number[] = [];
+    vi.mocked(fetchAlchemyLogs).mockImplementation(async (_url, _contract, topics, fromBlock) => {
+      scanStarts.push(fromBlock);
+      return { logs: topics.some((topic) => topic.index === 1 && topic.value === ZERO_TOPIC) ? [makeMintLog()] : [],
+        complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 };
+    });
+    vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map([[22_000_000, timestamp + 1]]));
+    vi.mocked(recalcAffectedHours)
+      .mockRejectedValueOnce(new Error("D1 hourly rebuild failed"))
+      .mockImplementation(actualPersistence.recalcAffectedHours);
+    const frontier = sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?");
+    const bucket = sqlite.prepare("SELECT mint_count, mint_volume_usd, mint_unpriced_event_count FROM mint_burn_hourly WHERE hour_ts = ?");
+
+    const first = await syncMintBurn(db, "alchemy-key", { lane: "critical" });
+    expect(first.status).toBe("degraded");
+    expect(frontier.get(USDT_CONFIG_KEY)).toEqual({ last_block: 21_950_000 });
+    expect(bucket.get(hourTs)).toEqual({ mint_count: 1, mint_volume_usd: 50000, mint_unpriced_event_count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_events").get()).toEqual({ count: 2 });
+    expect(JSON.parse(first.metadata).retention.eventRows.deletedRows).toBe(0);
+
+    scanStarts.length = 0;
+    const retry = await syncMintBurn(db, "alchemy-key", { lane: "critical" });
+    expect(retry.status).toBe("ok");
+    expect(scanStarts[0]).toBe(21_950_001);
+    expect(frontier.get(USDT_CONFIG_KEY)).toEqual({ last_block: 22_000_000 });
+    expect(bucket.get(hourTs)).toEqual({ mint_count: 2, mint_volume_usd: 100000, mint_unpriced_event_count: 0 });
+    expect(JSON.parse(retry.metadata).rowsIgnored).toBe(1);
+    expect(JSON.parse(retry.metadata).retention.eventRows.deletedRows).toBe(2);
   });
 
   it("prioritizes critical configs even when rotation starts with extended", async () => {
@@ -907,8 +995,8 @@ describe("syncMintBurn", () => {
     const invalidation = history.find(
       (entry) =>
         entry.sql.includes("DELETE FROM cache")
-        && entry.binds[0] === "mint-burn-flows:v3:"
-        && entry.binds[1] === "mint-burn-flows:v3:\uffff",
+        && entry.binds[0] === "mint-burn-flows:v4:"
+        && entry.binds[1] === "mint-burn-flows:v4:\uffff",
     );
     expect(invalidation).toBeDefined();
   });
@@ -922,12 +1010,12 @@ describe("syncMintBurn", () => {
     const cacheDeletes = history.filter(({ sql }) => sql.includes("DELETE FROM cache"));
     expect(
       cacheDeletes.some(
-        (entry) => entry.binds[0] === "mint-burn-flows:v3:coin:" && entry.binds[1] === "mint-burn-flows:v3:coin:\uffff",
+        (entry) => entry.binds[0] === "mint-burn-flows:v4:coin:" && entry.binds[1] === "mint-burn-flows:v4:coin:\uffff",
       ),
     ).toBe(true);
     expect(
       cacheDeletes.some(
-        (entry) => entry.binds[0] === "mint-burn-flows:v3:" || entry.binds[0] === "mint-burn-flows:v3:aggregate:",
+        (entry) => entry.binds[0] === "mint-burn-flows:v4:" || entry.binds[0] === "mint-burn-flows:v4:aggregate:",
       ),
     ).toBe(false);
   });

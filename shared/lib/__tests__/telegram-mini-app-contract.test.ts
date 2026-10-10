@@ -12,57 +12,14 @@ import {
   TelegramMiniAppResponseSchema,
   createTelegramMiniAppSnapshot,
   telegramMiniAppVersionCompatibility,
-  type TelegramMiniAppMutableState,
   type TelegramMiniAppOperation,
 } from "../telegram-mini-app-contract";
+import { makeMiniAppState } from "../../test-utils/telegram-mini-app-state";
 
-const mutableState: TelegramMiniAppMutableState = {
-  viewer: {
-    userId: "42",
-    username: "watcher",
-    chatId: "42",
-    chatType: "private",
-    canMutate: true,
-    mutationBlockReason: null,
-  },
-  subscriber: {
-    exists: true,
-    globalAlerts: {
-      dews: true,
-      depeg: true,
-      safety: false,
-      launch: false,
-      reserve: false,
-      freeze: false,
-      depegStepBps: 250,
-    },
-    quietHours: {
-      enabled: false,
-      startHourUtc: null,
-      endHourUtc: null,
-      timezone: "UTC",
-    },
-    recap: {
-      available: true,
-      enabled: false,
-      deliveryHourLocal: 9,
-      timezoneConfirmed: true,
-      nextDueAt: null,
-      lastWindowEndAt: null,
-      lastDeliveredLocalDate: null,
-      lastOutcome: null,
-    },
-    snoozeUntilTs: null,
-  },
-  presets: [],
+const { catalog: _catalog, ...mutableState } = makeMiniAppState({
   subscriptions: [],
-  health: {
-    lastSuccessfulDeliveryAt: null,
-    lastSuccessfulReplyAt: null,
-    queuedAlerts: 0,
-    recentFailureClass: null,
-  },
-};
+  health: { lastSuccessfulDeliveryAt: null, lastSuccessfulReplyAt: null },
+});
 
 const operations: TelegramMiniAppOperation[] = [
   { kind: "export-watchlist" },

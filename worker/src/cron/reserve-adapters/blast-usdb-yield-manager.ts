@@ -1,6 +1,6 @@
 import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, TOTAL_VALUE_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -10,15 +10,7 @@ import {
   requireOnchainInput,
 } from "./helpers";
 
-interface BlastUsdbYieldManagerParams {
-  yieldManagerAddress: string;
-  supplyChain: string;
-  supplyTokenAddress: string;
-  supplyRpcUrl: string;
-  fallbackSupplyRpcUrl?: string;
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-}
+type BlastUsdbYieldManagerParams = LiveReserveAdapterParamsByKey["blast-usdb-yield-manager"];
 
 function readParams(config: LiveReservesConfig): BlastUsdbYieldManagerParams {
   return parseLiveReserveAdapterParams("blast-usdb-yield-manager", config.params);

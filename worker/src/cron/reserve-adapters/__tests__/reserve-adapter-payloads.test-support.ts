@@ -9,7 +9,7 @@
  */
 import type { adaptBtcfi } from "../btcfi";
 import type { adaptCollateralPositions } from "../collateral-positions-api";
-import type { UsdtbBackingAndSupplyPayload } from "../usdtb-transparency";
+import type { BackingAndSupplyPayload } from "../custody-inventory";
 
 /**
  * Mento analytics API payload: reserve collateral percentages plus the CDP
@@ -87,7 +87,7 @@ export const MENTO_RESERVE_COMPOSITION_PAYLOAD = {
 };
 
 /** Captured 2026-07-09 from GET https://usdtb.money/api/transparency/backing-and-supply/current */
-export const USDTB_BACKING_AND_SUPPLY_PAYLOAD: UsdtbBackingAndSupplyPayload = {
+export const USDTB_BACKING_AND_SUPPLY_PAYLOAD: BackingAndSupplyPayload = {
   assetsInMotion: 9115451.68,
   backingAssets: {
     BUIDL: [{ amount: 767603510.39, custodian: "0x2004F7f7B600d962170d7f28114Cc123c5e98451" }],

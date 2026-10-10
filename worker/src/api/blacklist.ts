@@ -20,6 +20,7 @@ import {
 } from "@shared/types/market";
 import { isBlacklistStablecoin } from "@shared/lib/blacklist";
 import { mapBlacklistEventRow, type BlacklistEventRow } from "../lib/blacklist-api";
+import { BLACKLIST_PUBLIC_EVENT_SQL } from "../lib/blacklist/shared";
 
 const VALID_CHAIN_NAMES = getSupportedBlacklistChainNames();
 const VALID_CHAIN_IDS = getSupportedBlacklistChainIds();
@@ -105,7 +106,7 @@ export const handleBlacklist = async (db: D1Database, url: URL): Promise<Respons
 
   const conditions: string[] = [];
   const filterBindings: (string | number)[] = [];
-  conditions.push("suppression_reason IS NULL");
+  conditions.push(BLACKLIST_PUBLIC_EVENT_SQL);
 
   if (stablecoin) {
     const normalized = stablecoin.toUpperCase();

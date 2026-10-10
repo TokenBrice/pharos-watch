@@ -137,12 +137,6 @@ export const STAGED_POOL_DEFAULTS = {
  */
 export const STAGED_POOL_FRESH_HOURS = 24;
 export const STAGED_POOL_CONFIDENCE_HORIZON_HOURS = 14 * 24;
-/**
- * Price evidence never inherits the inventory horizon: a staged row older than
- * this contributes decayed TVL but no price observation and no retained-pool
- * price, so dex_prices, DDR and peg-summary only ever see day-fresh prices.
- */
-export const STAGED_POOL_PRICE_MAX_AGE_HOURS = 24;
 
 /**
  * Confidence decay for staged pool freshness: 1.0 through the fresh window,

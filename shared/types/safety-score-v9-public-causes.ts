@@ -1,7 +1,8 @@
 import type { V9PublicCauseGapTable, V9PublicCauseGapContext } from "./safety-score-v9-public-cause-gaps";
 import { z } from "zod";
 import { canonicalTextArray } from "./safety-score-v9-fact-primitives";
-import { V9_PUBLIC_EVIDENCE_FACT_COLUMNS as FACT, resolveEvidenceFactPath, type V9PublicEvidenceFactWire, type V9EvidenceFactContext } from "./safety-score-v9-public-evidence-facts";
+import { V9_PUBLIC_EVIDENCE_FACT_COLUMNS as FACT, resolveEvidenceFactPath, type V9EvidenceFactContext } from "./safety-score-v9-public-evidence-facts";
+import type { V9PublicEvidenceFactWire } from "./safety-score-v9-public-trace";
 import {
   V9EvidenceCauseSchema, V9ScoringDispositionSchema, V9RatingStatusSchema,
   V9PillarAggregationDispositionSchema, V9CompactPartialEvidenceSchema,

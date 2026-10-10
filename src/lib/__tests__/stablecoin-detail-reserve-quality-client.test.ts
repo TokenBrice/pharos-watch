@@ -46,6 +46,51 @@ describe("formatReserveQualityPct", () => {
 });
 
 describe("projectReserveQualityClientSummary", () => {
+  it.each([
+    [89.96, 0, "Mostly liquid"],
+    [59.96, 0, "Mixed liquidity"],
+    [0, 39.96, "Mixed liquidity"],
+  ])("classifies raw liquidity %s and unknown share %s before display rounding", (liquid, unknown, chip) => {
+    const summary = projectReserveQualityClientSummary(coinWith([
+      { ...USDC_LIKE_SLICES[1], pct: liquid },
+      { name: "Unknown", pct: unknown, risk: "high", assetClass: "other", liquidityHorizon: "unknown" },
+      { name: "Locked", pct: 100 - liquid - unknown, risk: "medium", assetClass: "other", liquidityHorizon: "over-seven-days" },
+    ]))!;
+    expect(summary.chipLabel).toBe(chip);
+    expect(summary.liquidWithinOneDayPct).toBe(liquid);
+    expect(summary.unknownHorizonPct).toBe(unknown);
+  });
+
+  it("retains tiny known liquidity without asserting complete nondisclosure", () => {
+    const summary = projectReserveQualityClientSummary(coinWith([
+      { ...USDC_LIKE_SLICES[1], pct: 0.04 },
+      { name: "Unknown", pct: 99.96, risk: "high", assetClass: "other", liquidityHorizon: "unknown" },
+    ]))!;
+    expect(summary.ladder[0].pct).toBe(0.04);
+    expect(formatReserveQualityPct(summary.ladder[0].pct)).toBe("<0.1%");
+    expect(summary.lede).toContain("at least <0.1%");
+    expect(summary.lede).not.toContain("for any of the basket");
+  });
+  it.each(["selected-slices", "classification-only", "dependency-relationships"] as const)(
+    "preserves contextual 100-total slices without whole-basket quality claims (%s)",
+    (scope) => {
+      const summary = projectReserveQualityClientSummary(coinWith(USDC_LIKE_SLICES, { ...USDC_LIKE_REVIEW, scope }))!;
+      expect(summary.contextual).toBe(true);
+      expect(summary.slices).toHaveLength(2);
+      expect(summary.liquidWithinOneDayPct).toBeNull();
+      expect(summary.unknownHorizonPct).toBeNull();
+      expect(summary.unidentifiedObligorsPct).toBeNull();
+      expect(summary.ladder).toEqual([]);
+      expect(summary.lede).not.toContain("100% convertible");
+      expect(summary.chipLabel).not.toBe("Highly liquid");
+      expect(summary.compositionBasis).toBe(USDC_LIKE_REVIEW.compositionBasis);
+    },
+  );
+  it("retains the legacy reviewless curated-book quality contract", () => {
+    expect(projectReserveQualityClientSummary(coinWith(USDC_LIKE_SLICES))).toMatchObject({
+      contextual: false, liquidWithinOneDayPct: 100, chipLabel: "Highly liquid",
+    });
+  });
   it("preserves a positive sub-display-precision asset instead of publishing zero exposure", () => {
     const summary = projectReserveQualityClientSummary(coinWith([
       { ...USDC_LIKE_SLICES[0], pct: 99.99536 },
@@ -237,8 +282,8 @@ describe("projectReserveQualityClientSummary", () => {
         ],
       }),
     );
-    expect(summary!.selfExposurePct).toBe(8.8);
-    expect(summary!.unidentifiedObligorsPct).toBe(12.6);
+    expect(summary!.selfExposurePct).toBe(8.75);
+    expect(summary!.unidentifiedObligorsPct).toBe(12.56);
     expect(summary!.lede).toContain("8.8% is issuer self-exposure rather than independent collateral.");
   });
 

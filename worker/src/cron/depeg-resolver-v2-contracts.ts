@@ -1,8 +1,14 @@
-import type { DdrRow, DdrLockTrigger } from "@shared/types/depeg-resolver";
+import type { DdrRow, DdrLockTrigger, DdrPredictionErratum } from "@shared/types/depeg-resolver";
 import type {
   DdrCanonicalIncident as StoreDdrCanonicalIncident,
+  DdrCanonicalIncidentEventInput,
   DdrIncidentDirection,
 } from "../lib/depeg-resolver-incident-store";
+import type {
+  DdrLockAuditAction,
+  DdrLockHealthStatus,
+  RecordLockDeferralInput,
+} from "../lib/depeg-resolver-lock-opportunity-store";
 import type {
   DdrFirstPublicationMembership as StoreDdrFirstPublicationMembership,
   DdrPublicationManifest as StoreDdrPublicationManifest,
@@ -10,34 +16,13 @@ import type {
   DdrSealedPublicPrediction as StoreDdrSealedPublicPrediction,
 } from "../lib/depeg-resolver-publication-store";
 
-export const DDR_PUBLICATION_SNAPSHOT_KIND = "ddr_public";
-
 export type DdrDirection = DdrIncidentDirection;
 export type DdrLockTiming = DdrPublicPredictionLockTiming;
-export type DdrLockAction =
-  | "pending"
-  | "deferred"
-  | "confirmed_seen"
-  | "locked_prediction"
-  | "locked_no_call"
-  | "publication_retry_pending"
-  | "publication_failed"
-  | "published";
-
-export interface DdrCanonicalIncidentInput {
-  eventId: number;
-  stablecoinId: string;
-  pegCurrency: string;
-  direction: DdrDirection;
-  startedAt: number;
-  endedAt: number | null;
-  peakDeviationBps: number;
-  source: string | null;
-  sourceFingerprint: string | null;
-  publicTrackedAtFirstSeen: boolean;
-  psiOffCatalogAtFirstSeen: boolean;
-  registrySnapshot: Record<string, unknown>;
-}
+export type DdrLockAction = DdrLockAuditAction;
+export type DdrCanonicalIncidentInput = Required<Pick<DdrCanonicalIncidentEventInput,
+  "eventId" | "stablecoinId" | "pegCurrency" | "direction" | "startedAt" | "endedAt"
+  | "peakDeviationBps" | "source" | "sourceFingerprint" | "publicTrackedAtFirstSeen" | "psiOffCatalogAtFirstSeen"
+>> & { registrySnapshot: Record<string, unknown> };
 
 type StoreLockState = NonNullable<StoreDdrCanonicalIncident["lockState"]>;
 export type DdrPredictionLockState = Pick<StoreLockState, "eligibleAt" | "deferralCount" | "lastDeferralReason" | "lastState">
@@ -78,26 +63,14 @@ export type DdrPublicationManifest = Pick<StoreDdrPublicationManifest,
   | "publicPredictionIds"
 >;
 
-export interface DdrLockOpportunityInput {
-  incidentKey: string;
-  eventId: number;
+export type DdrLockOpportunityInput = Omit<RecordLockDeferralInput,
+  "createdAt" | "runId" | "reason" | "healthStatus" | "action"
+> & {
   runId: string;
-  runAt: number;
-  eligibleAt: number;
-  predictionPolicyVersion: string;
-  healthStatus: "healthy" | "degraded" | "skipped";
-  action: DdrLockAction;
   reason: string | null;
-  confirmationAt?: number | null;
-  outcomeAt?: number | null;
-  syncCapabilities: Record<string, unknown>;
-  lockTrigger?: DdrLockTrigger | null;
-  forecastReadinessScore?: number | null;
-  forecastReadinessVersion?: string | null;
-  readinessThreshold?: number | null;
-  backstopAt?: number | null;
-  backstopDelaySec?: number | null;
-}
+  healthStatus: DdrLockHealthStatus;
+  action: DdrLockAction;
+};
 
 export interface DdrSealInput {
   incidentKey: string;
@@ -189,5 +162,5 @@ export interface DdrV2StoreContracts {
   loadPredictionErrata?(
     db: D1Database,
     filters: { incidentKeys?: string[]; publicPredictionIds?: number[] },
-  ): Promise<Array<Record<string, unknown>>>;
+  ): Promise<DdrPredictionErratum[]>;
 }

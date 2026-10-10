@@ -38,4 +38,11 @@ describe("ExportPreamble formatters", () => {
       "> Pharos pharos.watch | Endpoint: stablecoins | As of: 2026-05-16T12:00:00.000Z | URL: https://pharos.watch/ | Methodology: safety-score v7.25",
     );
   });
+
+  it("preserves named upstream generations and explicit unknown provenance in every format", () => {
+    const provenance = { ...FIXTURE, sourceGenerations: { stablecoins: FIXTURE.asOfISO, reportCards: null } };
+    expect(formatPreambleCsv(provenance)).toContain("stablecoins=2026-05-16T12:00:00.000Z; reportCards=unknown");
+    expect(formatPreambleMarkdown(provenance)).toContain("reportCards=unknown");
+    expect(JSON.parse(formatPreambleNdjson(provenance))._meta.sourceGenerations).toEqual(provenance.sourceGenerations);
+  });
 });

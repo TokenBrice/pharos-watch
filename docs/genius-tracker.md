@@ -88,7 +88,7 @@ The headline `authorizationStatus`. **When uncertain between two statuses, pick 
 | `ppsi-approved` | An official source identifies a domestic **permitted payment stablecoin issuer** approval for this token/issuer. | Regulator or Federal Register reference (rule 1). |
 | `state-qualified` | An official source identifies a **state-qualified** payment stablecoin issuer pathway for this token/issuer. | Regulator/state-regulator or Federal Register reference (rule 1). |
 | `official-application-pending` | A public **regulator** source shows an application/registration is filed and pending. | Regulator or Federal Register reference (rule 1). |
-| `issuer-announced-intent` | Issuer/partner materials signal a GENIUS-era issuance path, but **no token-specific official approval** was found. | Issuer disclosure/filing or stronger (rule 2). |
+| `issuer-announced-intent` | Issuer/partner materials signal a GENIUS-era issuance path, but **no token-specific official approval** was found. Detail summaries describe that signal, not an announced authorization plan or filed application. | Issuer disclosure/filing or stronger (rule 2). |
 | `no-public-authorization-found` | A **dated negative-evidence review** found no qualifying public approval, application, or registration. | `negativeEvidenceReview` required (rule 3). |
 | `not-applicable` | The reviewed asset is outside the tracked GENIUS payment-stablecoin authorization posture (pairs with an excluded/`non-payment-token` applicability). | — |
 | `unknown` | Public posture not resolved from available sources. | — |

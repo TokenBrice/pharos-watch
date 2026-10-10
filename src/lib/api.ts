@@ -43,10 +43,16 @@ export function seedStablecoinDetailQueryCache(
 ): void {
   const seedIfCurrent = <T>(queryKey: readonly unknown[], data: T, sourceUpdatedAt: number | undefined): void => {
     // Old artifacts without source clocks may render, but must immediately refetch.
-    const updatedAt = sourceUpdatedAt ?? 0;
-    const existingState = queryClient.getQueryState<T>(queryKey);
-    if ((existingState?.dataUpdatedAt ?? 0) > updatedAt) return;
-    queryClient.setQueryData(queryKey, data, { updatedAt });
+    const updatedAt = sourceUpdatedAt != null && Number.isFinite(sourceUpdatedAt) && sourceUpdatedAt > 0
+      ? sourceUpdatedAt
+      : 0;
+    const existingState = queryClient.getQueryState<{ data: T; meta: ApiMeta | null }>(queryKey);
+    const existingUpdatedAt = existingState?.data?.meta?.updatedAt;
+    if (existingUpdatedAt != null && existingUpdatedAt * 1000 > updatedAt) return;
+    const meta: ApiMeta = updatedAt > 0
+      ? { updatedAt: updatedAt / 1000, ageSeconds: Math.max(0, (Date.now() - updatedAt) / 1000), status: "fresh" }
+      : { updatedAt: null, ageSeconds: null, status: "unknown", reason: "snapshot-producer-timestamp-unavailable" };
+    queryClient.setQueryData(queryKey, { data, meta }, { updatedAt });
   };
 
   if (snapshot.lanes.liveSummary) {
@@ -316,29 +322,42 @@ export async function apiFetchWithMeta<T>(
   }
   const bodyWarning = getBodyWarning(data);
 
-  if (!meta && res.headers.get("X-Data-Age") === "unavailable") {
-    meta = normalizeApiMeta({
-      updatedAt: null,
-      ageSeconds: null,
-      status: res.headers.get("X-Data-Freshness") === "stale" ? "stale" : "unknown",
-      reason: res.headers.get("X-Data-Freshness-Reason") ?? "producer-timestamp-unavailable",
-    });
-  }
+  const ageHeader = res.headers.get("X-Data-Age");
+  const updatedAtHeader = res.headers.get("X-Data-Updated-At");
+  const freshnessHeader = res.headers.get("X-Data-Freshness");
+  const headerStatus = freshnessHeader === "stale" || freshnessHeader === "degraded" ? freshnessHeader : "fresh";
+  const unknownClockMeta = (): ApiMeta => ({
+    updatedAt: null,
+    ageSeconds: null,
+    status: freshnessHeader === "stale" ? "stale" : "unknown",
+    reason: res.headers.get("X-Data-Freshness-Reason") ?? "producer-timestamp-unavailable",
+  });
 
-  // Fill a missing producer clock from headers (for array responses,
-  // warning-only body metadata, or non-cache-handler endpoints).
+  // Header-only responses name their absolute producer clock. A present but
+  // invalid clock fails closed instead of falling back to request receipt time.
   if (meta?.updatedAt === undefined) {
-    const ageHeader = res.headers.get("X-Data-Age");
-    if (ageHeader) {
+    if (ageHeader === "unavailable") {
+      meta = unknownClockMeta();
+    } else if (updatedAtHeader !== null) {
+      const updatedAt = Number(updatedAtHeader);
+      meta = updatedAtHeader.trim() !== "" && Number.isFinite(updatedAt) && updatedAt > 0
+        ? {
+            ...meta,
+            updatedAt,
+            ageSeconds: Math.max(0, Math.floor(Date.now() / 1000) - updatedAt),
+            status: meta?.status ?? headerStatus,
+          }
+        : unknownClockMeta();
+    } else if (ageHeader !== null) {
       const age = Number(ageHeader);
-      if (Number.isFinite(age) && age >= 0) {
-        meta = {
-          updatedAt: resolveResponseUpdatedAtSec(res.headers, age),
-          ageSeconds: age,
-          status: meta?.status ?? "fresh",
-          ...(meta?.warning ? { warning: meta.warning } : {}),
-        };
-      }
+      meta = ageHeader.trim() !== "" && Number.isFinite(age) && age >= 0
+        ? {
+            ...meta,
+            updatedAt: resolveResponseUpdatedAtSec(res.headers, age),
+            ageSeconds: age,
+            status: meta?.status ?? headerStatus,
+          }
+        : unknownClockMeta();
     }
   }
 

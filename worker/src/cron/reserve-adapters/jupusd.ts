@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -23,7 +23,7 @@ const ADAPTER_KEY = "jupusd";
 
 interface JupUsdHolding {
   amount?: string;
-  decimals?: number;
+  decimals?: number | null;
   name?: string;
   type?: string;
 }
@@ -46,10 +46,7 @@ const JupUsdOraclePayloadSchema = z.object({
 
 type JupUsdOraclePayload = z.output<typeof JupUsdOraclePayloadSchema>;
 
-interface JupUsdParams {
-  snapshotsUrl?: string;
-  oracleUrl?: string;
-}
+type JupUsdParams = LiveReserveAdapterParamsByKey["jupusd"];
 
 interface JupUsdHoldingValue {
   name: string;
@@ -104,9 +101,9 @@ async function fetchJupUsdJson<T>(
   }
 }
 
-function parseAmount(amount: string | undefined, decimals: number | undefined): number | null {
+function parseAmount(amount: string | undefined, decimals: number | null | undefined): number | null {
   if (typeof amount !== "string" || !/^\d+$/.test(amount)) return null;
-  const precision = decimals == null ? 0 : parseBoundedDecimals(decimals);
+  const precision = parseBoundedDecimals(decimals);
   if (precision == null) return null;
   const parsed = decimalNumberFromBigInt(BigInt(amount), precision);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
@@ -129,12 +126,14 @@ export function adaptJupUsdData(
   const unknownHoldingNames = new Set<string>();
   const warnings: LiveReserveWarning[] = [];
   let unknownValue = 0;
+  let holdingsComplete = true;
   for (const [holdingIndex, holding] of (payload.holdings ?? []).entries()) {
     const name = typeof holding.name === "string" && holding.name.trim().length > 0
       ? holding.name.trim()
       : "Unmapped reserve holding";
     const value = parseAmount(holding.amount, holding.decimals);
     if (value == null) {
+      holdingsComplete = false;
       warnings.push(reserveDegradedWarning(
         "unparseable-holding",
         `JupUSD holding ${holdingIndex} (${name}) has an unparseable amount or decimal scale`,
@@ -180,25 +179,28 @@ export function adaptJupUsdData(
   }
   // True assets ÷ liability: never clamped, so genuine overcollateralization
   // shows and a shortfall degrades per the undercollateralization policy.
-  const collateralizationRatio = totalReserveUsd / totalSupply;
+  const collateralizationRatio = holdingsComplete ? totalReserveUsd / totalSupply : undefined;
   // Redemption capacity is clamped to the supply that can actually be redeemed.
   const capacityUsd = Math.min(totalReserveUsd, totalSupply);
   const ratio = capacityUsd / totalSupply;
-  const unknownExposurePct = totalReserveUsd > 0 ? (unknownValue / totalReserveUsd) * 100 : 0;
+  const unknownExposurePct = holdingsComplete ? (unknownValue / totalReserveUsd) * 100 : undefined;
   if (unknownValue > 0) {
-    warnings.push(buildUnknownExposureWarning({ adapterKey: "jupusd", code: "unknown-holding",
-    message: `JupUSD reserve feed included unmapped holding(s): ${Array.from(unknownHoldingNames).sort().join(", ")}`,
-    unknownExposurePct, }));
+    const message = `JupUSD reserve feed included unmapped holding(s): ${Array.from(unknownHoldingNames).sort().join(", ")}`;
+    warnings.push(unknownExposurePct != null
+      ? buildUnknownExposureWarning({ adapterKey: "jupusd", code: "unknown-holding", message, unknownExposurePct })
+      : reserveDegradedWarning("unknown-holding", `${message}; complete-book exposure is unavailable`));
   }
   if (options.extraWarnings?.length) {
     warnings.push(...options.extraWarnings);
   }
-  warnings.push(...buildCoverageShortfallWarnings({
-    code: "reserve-undercollateralized",
-    message: (pct) => `JupUSD reserve holdings cover ${pct}% of reported supply`,
-    coverageRatio: collateralizationRatio,
-    thresholdRatio: 1,
-  }));
+  if (collateralizationRatio != null) {
+    warnings.push(...buildCoverageShortfallWarnings({
+      code: "reserve-undercollateralized",
+      message: (pct) => `JupUSD reserve holdings cover ${pct}% of reported supply`,
+      coverageRatio: collateralizationRatio,
+      thresholdRatio: 1,
+    }));
+  }
 
   return {
     slices: normalizeSlices(
@@ -213,10 +215,8 @@ export function adaptJupUsdData(
     ),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
-      totalReserveUsd,
+      ...(holdingsComplete ? { totalReserveUsd, collateralizationRatio, unknownExposurePct } : {}),
       supplyUsd: totalSupply,
-      collateralizationRatio,
-      unknownExposurePct,
       ...(unknownHoldingNames.size > 0 ? { unknownHoldingNames: Array.from(unknownHoldingNames).sort() } : {}),
       ...buildRedemptionSnapshotMetadata({
         capacityUsd,

@@ -1,6 +1,8 @@
+import { evaluateYieldSourceExclusions } from "./exclusions";
 import { sourceRiskInverted } from "./normalization";
 import { clamp } from "../math";
 import type {
+  ExclusionRecord,
   MergedRow,
   RecommendedSource,
   SelectorInput,
@@ -152,7 +154,7 @@ function fallbackYieldSources(row: MergedRow): YieldSourceCandidate[] {
       yieldType: null,
       apy30d: row.apy30d,
       pharosYieldScore: row.pharosYieldScore,
-      sourceTvlUsd: row.effectiveTvlUsd,
+      sourceTvlUsd: row.yieldSourceTvlUsd ?? null,
       dataSource: null,
       sourceRiskScore: row.sourceRiskScore,
       venueRiskTier: row.venueRiskTier,
@@ -166,23 +168,28 @@ function fallbackYieldSources(row: MergedRow): YieldSourceCandidate[] {
   ];
 }
 
-/**
- * The winning rail plus the engine-internal maturity reading the confidence
- * rule needs. `observationDays30d` is deliberately not part of the published
- * `RecommendedSource` contract: selection is the single place that knows
- * which rail's observation history the engine's `< 21` day rule must judge.
- */
+/** The selected destination and its single source-specific engine projection. */
 export interface SelectedYieldSourceRail {
   source: RecommendedSource;
-  /** Distinct UTC observation days behind the winning rail; null when it published none. */
-  observationDays30d: number | null;
+  row: MergedRow;
+}
+
+export interface YieldSourceResolution {
+  rail: SelectedYieldSourceRail | null;
+  exclusion: ExclusionRecord | null;
 }
 
 export function selectYieldSource(row: MergedRow, input: SelectorInput): RecommendedSource | null {
   return selectYieldSourceRail(row, input)?.source ?? null;
 }
 
-export function selectYieldSourceRail(row: MergedRow, input: SelectorInput): SelectedYieldSourceRail | null {
+function selectYieldSourceRail(row: MergedRow, input: SelectorInput): SelectedYieldSourceRail | null {
+  const resolved = resolveYieldSourceRail(row, input);
+  return resolved.exclusion == null ? resolved.rail : null;
+}
+
+/** Filter source gates before venue preference; retain the leading failed rail for exclusion evidence. */
+export function resolveYieldSourceRail(row: MergedRow, input: SelectorInput): YieldSourceResolution {
   const pool = row.yieldSources?.length ? row.yieldSources : fallbackYieldSources(row);
   // A rail whose venue chain the yield domain never resolved cannot be rendered
   // as a destination, but it is one rail — not the coin's whole yield coverage.
@@ -192,9 +199,18 @@ export function selectYieldSourceRail(row: MergedRow, input: SelectorInput): Sel
     (candidate): candidate is ResolvedYieldSourceCandidate => candidate.chain != null,
   );
   if (candidates.length === 0) {
-    return null;
+    return { rail: null, exclusion: null };
   }
-  const rankedCandidates = candidates.map((candidate) => rankYieldSourceCandidate(candidate, input));
+  const projected = candidates.map((candidate) => {
+    const sourceRow = projectYieldSourceRow(row, candidate);
+    return { candidate, row: sourceRow, exclusion: evaluateYieldSourceExclusions(sourceRow, input) };
+  });
+  const eligible = projected.filter((candidate) => candidate.exclusion == null);
+  const rankedCandidates = (eligible.length > 0 ? eligible : projected).map((projectedCandidate) => ({
+    ...rankYieldSourceCandidate(projectedCandidate.candidate, input),
+    row: projectedCandidate.row,
+    exclusion: projectedCandidate.exclusion,
+  }));
   rankedCandidates.sort((a, b) => {
     const venueDiff = b.venueMatch - a.venueMatch;
     if (venueDiff !== 0) return venueDiff;
@@ -206,8 +222,10 @@ export function selectYieldSourceRail(row: MergedRow, input: SelectorInput): Sel
     if (Math.abs(freshDiff) > 0.0001) return freshDiff;
     return a.candidate.sourceKey.localeCompare(b.candidate.sourceKey);
   });
-  const selected = rankedCandidates[0]!.candidate;
-  return {
+  const winner = rankedCandidates[0]!;
+  const selected = winner.candidate;
+  const selectedRow = winner.row;
+  return { exclusion: winner.exclusion, rail: {
     source: {
       sourceKey: selected.sourceKey,
       protocol: selected.protocol,
@@ -227,6 +245,26 @@ export function selectYieldSourceRail(row: MergedRow, input: SelectorInput): Sel
         ? "venue-preference"
         : "risk-depth-freshness",
     },
-    observationDays30d: selected.observationCount30d,
+    row: selectedRow,
+  } };
+}
+
+/** Coin/domain fields stay intact; unavailable alternate evidence never borrows from the primary. */
+function projectYieldSourceRow(row: MergedRow, candidate: YieldSourceCandidate): MergedRow {
+  return {
+    ...row,
+    apy30d: candidate.apy30d,
+    pharosYieldScore: candidate.pharosYieldScore,
+    apyVariance30d: candidate.isPrimary ? row.apyVariance30d : null,
+    sourceRiskScore: candidate.sourceRiskScore,
+    venueRiskTier: candidate.venueRiskTier,
+    warningSignals: candidate.isPrimary ? row.warningSignals : null,
+    deploymentPlace: candidate.deploymentPlace,
+    sourceSwitch: candidate.isPrimary ? row.sourceSwitch : (candidate.sourceSwitchCount30d ?? 0) > 0,
+    yieldProtocolSlug: candidate.protocol,
+    yieldVenueChain: candidate.chain,
+    yieldObservationDays30d: candidate.observationCount30d,
+    yieldFreshness: candidate.freshness,
+    yieldSourceTvlUsd: candidate.sourceTvlUsd,
   };
 }

@@ -15,8 +15,8 @@ import {
   valueUsdFromBigIntPrice,
 } from "./helpers";
 import type { AdapterContext, AdapterResult } from "./types";
-import { decodeUint256Word } from "./abi-decode";
-import { multicallResultByLabel } from "./onchain-identity";
+import { decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
+import { addressObservation, customObservation, executeEvmObservationPlan } from "./evm-observation-plan";
 
 const ADAPTER_KEY = "parallelizer-balances";
 const SELECTORS = {
@@ -47,13 +47,6 @@ interface ParallelizerBalanceObservation {
 
 function encodePauseCall(address: string): string {
   return `${encodeAddressCallData(SELECTORS.isPaused, address)}${encodeUint256(REDEEM_ACTION)}`;
-}
-
-function parseAddressWord(value: bigint | null, label: string): string {
-  if (value == null || value === 0n || value >= 1n << 160n) {
-    throw new Error(`${ADAPTER_KEY}: ${label} returned an invalid address`);
-  }
-  return `0x${value.toString(16).padStart(40, "0")}`;
 }
 
 function parseAddressArray(raw: string | null, label: string): string[] {
@@ -103,31 +96,41 @@ async function readDeployment(
     fallbackRpcUrl: deployment.fallbackRpcUrl,
   };
 
-  const identityStage = await fetchOnchainMulticall3({
-    ...callOptions,
-    calls: [
-      { label: "token-p", contract: deployment.vaultAddress, data: SELECTORS.tokenP },
-      { label: "collateral-list", contract: deployment.vaultAddress, data: SELECTORS.getCollateralList },
-    ],
+  const identityStage = await executeEvmObservationPlan({
+    adapterKey: ADAPTER_KEY,
+    fields: [
+      addressObservation({
+        label: "token-p", contract: deployment.vaultAddress, data: SELECTORS.tokenP,
+        verify: (tokenP) => {
+          if (tokenP === "0x0000000000000000000000000000000000000000") {
+            throw new Error(`${ADAPTER_KEY}: tokenP() returned an invalid address`);
+          }
+          if (tokenP !== deployment.expectedTokenP.toLowerCase()) {
+            throw new Error(`${ADAPTER_KEY}: ${deployment.chain} tokenP identity mismatch (${tokenP} != ${deployment.expectedTokenP})`);
+          }
+          return null;
+        },
+      }),
+      customObservation({
+        label: "collateral-list", contract: deployment.vaultAddress, data: SELECTORS.getCollateralList,
+        decode: (raw) => parseAddressArray(raw, `${deployment.chain} getCollateralList()`),
+      }),
+    ] as const,
+    onFailure: (label) => {
+      if (label === "collateral-list") parseAddressArray(null, `${deployment.chain} getCollateralList()`);
+      throw new Error(`${ADAPTER_KEY}: tokenP() returned an invalid address`);
+    },
+    onDecodeError: (error, label) => {
+      if (label === "token-p") throw new Error(`${ADAPTER_KEY}: tokenP() returned an invalid address`);
+      throw error;
+    },
+    read: async (calls) => {
+      const results = await fetchOnchainMulticall3({ ...callOptions, calls });
+      if (!results) throw new Error(`${ADAPTER_KEY}: ${deployment.chain} identity multicall failed`);
+      return results;
+    },
   });
-  if (!identityStage) {
-    throw new Error(`${ADAPTER_KEY}: ${deployment.chain} identity multicall failed`);
-  }
-
-  const tokenP = parseAddressWord(
-    decodeUint256Word(multicallResultByLabel(identityStage, "token-p")),
-    "tokenP()",
-  );
-  if (tokenP.toLowerCase() !== deployment.expectedTokenP.toLowerCase()) {
-    throw new Error(
-      `${ADAPTER_KEY}: ${deployment.chain} tokenP identity mismatch (${tokenP} != ${deployment.expectedTokenP})`,
-    );
-  }
-
-  const collateralAddresses = parseAddressArray(
-    multicallResultByLabel(identityStage, "collateral-list"),
-    `${deployment.chain} getCollateralList()`,
-  );
+  const collateralAddresses = identityStage.values["collateral-list"];
   const configuredByAddress = new Map(
     deployment.assets.map((asset) => [asset.address.toLowerCase(), asset]),
   );
@@ -145,55 +148,57 @@ async function readDeployment(
   // flags but Redeem to the vault-wide `isRedemptionLive`, ignoring the
   // collateral argument. One read per deployment; the flag applies to every
   // collateral held by that vault.
-  const pauseStage = await fetchOnchainMulticall3({
-    ...callOptions,
-    calls: [{
-      label: "redemption-paused",
-      contract: deployment.vaultAddress,
+  const pauseStage = await executeEvmObservationPlan({
+    adapterKey: ADAPTER_KEY,
+    fields: [customObservation({
+      label: "redemption-paused", contract: deployment.vaultAddress,
       data: encodePauseCall(collateralAddresses[0]!),
-    }],
+      optional: true, decode: decodeStrictBoolWord,
+    })] as const,
+    read: async (calls) => {
+      const results = await fetchOnchainMulticall3({ ...callOptions, calls });
+      if (!results) throw new Error(`${ADAPTER_KEY}: ${deployment.chain} redemption pause multicall failed`);
+      return results;
+    },
   });
-  if (!pauseStage) {
-    throw new Error(`${ADAPTER_KEY}: ${deployment.chain} redemption pause multicall failed`);
-  }
-  const pauseRaw = decodeUint256Word(multicallResultByLabel(pauseStage, "redemption-paused"));
-  if (pauseRaw == null || (pauseRaw !== 0n && pauseRaw !== 1n)) {
-    throw new Error(`${ADAPTER_KEY}: ${deployment.chain} redemption pause check failed`);
-  }
-  const paused = pauseRaw === 1n;
+  const paused = pauseStage.values["redemption-paused"];
+  if (paused == null) throw new Error(`${ADAPTER_KEY}: ${deployment.chain} redemption pause check failed`);
 
-  const assetStage = await fetchOnchainMulticall3({
-    ...callOptions,
-    calls: collateralAddresses.flatMap((address, index) => [
-      {
-        label: `asset:${index}:decimals`,
-        contract: deployment.vaultAddress,
+  const assetStage = await executeEvmObservationPlan({
+    adapterKey: ADAPTER_KEY,
+    fields: collateralAddresses.flatMap((address, index) => [
+      customObservation({
+        label: `asset:${index}:decimals`, contract: deployment.vaultAddress,
         data: encodeAddressCallData(SELECTORS.getCollateralDecimals, address),
-      },
-      {
-        label: `asset:${index}:balance`,
-        contract: address,
+        optional: true, decode: decodeUint256Word,
+      }),
+      customObservation({
+        label: `asset:${index}:balance`, contract: address,
         data: encodeAddressCallData(ERC20_BALANCE_OF_SELECTOR, deployment.vaultAddress),
-      },
-      {
-        label: `asset:${index}:oracle`,
-        contract: deployment.vaultAddress,
+        optional: true, decode: decodeUint256Word,
+      }),
+      customObservation({
+        label: `asset:${index}:oracle`, contract: deployment.vaultAddress,
         data: encodeAddressCallData(SELECTORS.getOracleValues, address),
-      },
+        decode: (raw) => parseOraclePrice(raw, `${deployment.chain} ${address} getOracleValues()`),
+      }),
     ]),
+    onDecodeError: (error) => { throw error; },
+    read: async (calls) => {
+      const results = await fetchOnchainMulticall3({ ...callOptions, calls });
+      if (!results) throw new Error(`${ADAPTER_KEY}: ${deployment.chain} asset multicall failed`);
+      return results;
+    },
   });
-  if (!assetStage) {
-    throw new Error(`${ADAPTER_KEY}: ${deployment.chain} asset multicall failed`);
-  }
 
   return collateralAddresses.map((address, index) => {
     const descriptor = configuredByAddress.get(address);
     // Decimals are always read from the vault (addCollateral stores the
     // token's on-chain decimals), so a configured descriptor is verified
     // against chain truth instead of being trusted.
-    const decimalsRaw = decodeUint256Word(multicallResultByLabel(assetStage, `asset:${index}:decimals`));
-    const balanceRaw = decodeUint256Word(multicallResultByLabel(assetStage, `asset:${index}:balance`));
-    const oracleRaw = multicallResultByLabel(assetStage, `asset:${index}:oracle`);
+    const decimalsRaw = assetStage.values[`asset:${index}:decimals`];
+    const balanceRaw = assetStage.values[`asset:${index}:balance`];
+    const priceUsd = assetStage.values[`asset:${index}:oracle`];
     if (decimalsRaw == null || decimalsRaw < 0n || decimalsRaw > 36n) {
       throw new Error(`${ADAPTER_KEY}: ${deployment.chain} ${address} returned invalid decimals`);
     }
@@ -206,7 +211,6 @@ async function readDeployment(
     if (balanceRaw == null) {
       throw new Error(`${ADAPTER_KEY}: ${deployment.chain} ${address} balance read failed`);
     }
-    const priceUsd = parseOraclePrice(oracleRaw, `${deployment.chain} ${address} getOracleValues()`);
     const value = valueUsdFromBigIntPrice(balanceRaw, decimals, priceUsd);
     if (!Number.isFinite(value) || value < 0) {
       throw new Error(`${ADAPTER_KEY}: ${deployment.chain} ${address} produced an invalid USD value`);

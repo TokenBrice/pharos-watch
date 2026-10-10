@@ -25,6 +25,7 @@ export function createTimeoutSignal({
   const timeoutController = new AbortController();
   let timedOut = false;
   const timeoutId = setTimeout(() => {
+    if (merged.signal?.aborted) return;
     timedOut = true;
     timeoutController.abort(normalizedReason);
   }, timeoutMs);

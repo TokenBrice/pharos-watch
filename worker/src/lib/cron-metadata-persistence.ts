@@ -54,6 +54,30 @@ function summarizeDiagnostic(value: unknown): unknown {
 function safeParseMetadata(metadata: string): Record<string, unknown> | null {
   return parseJsonObject(metadata);
 }
+function preserveFreshnessEvidence(parsed: Record<string, unknown> | null): Record<string, unknown> {
+  const sources = parsed?.sources;
+  const freshness = sources && typeof sources === "object" ? (sources as Record<string, unknown>).freshness : null;
+  const source = freshness && typeof freshness === "object" ? freshness as Record<string, unknown> : null;
+  const metadata = source?.metadata && typeof source.metadata === "object" ? source.metadata as Record<string, unknown> : parsed;
+  if (!Array.isArray(metadata?.stale)) return {};
+  const fields = ["laneKey", "cacheKey", "producerJob", "ageSeconds", "publishedAt", "generationId",
+    "assessedAt", "thresholdSec", "producerThresholdSec", "endpointThresholdSec", "availabilityThresholdSec", "availabilityImpacting"];
+  const stale = metadata.stale.slice(0, 80).map((entry: unknown) => {
+    if (!entry || typeof entry !== "object") return null;
+    return Object.fromEntries(fields.flatMap((key) => {
+      const value = boundedScalar((entry as Record<string, unknown>)[key]);
+      return value === undefined ? [] : [[key, typeof value === "string" ? value.slice(0, 128) : value]];
+    }));
+  });
+  const evidence = { stale, ...(metadata.stale.length > stale.length ? { staleOmitted: metadata.stale.length - stale.length } : {}) };
+  const preserved = source ? { sources: { freshness: { ...summarizeDiagnostic(source) as Record<string, unknown>, metadata: evidence } } } : evidence;
+  // Keep contractual evidence below half the persistence cap; never omit rows silently.
+  while (utf8Bytes(JSON.stringify(preserved)) > 32 * 1_024 && stale.length > 0) {
+    stale.pop();
+    Object.assign(evidence, { staleOmitted: metadata.stale.length - stale.length });
+  }
+  return preserved;
+}
 
 export function compactCronMetadataForPersistence(
   metadata: string | null | undefined,
@@ -89,6 +113,7 @@ export function compactCronMetadataForPersistence(
   const preservedQuality = qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {};
   const pressure = ResourcePressureSchema.safeParse(parsed?.resourcePressure);
   const preservedPressure = pressure.success ? { resourcePressure: pressure.data } : {};
+  const preservedFreshness = preserveFreshnessEvidence(parsed);
   for (const [key, value] of entries.slice(0, MAX_TOP_LEVEL_DIAGNOSTICS)) {
     const summary = summarizeDiagnostic(value);
     if (summary !== undefined) diagnostics[key] = summary;
@@ -101,6 +126,7 @@ export function compactCronMetadataForPersistence(
     ...preservedLedgerScalars,
     ...preservedQuality,
     ...preservedPressure,
+    ...preservedFreshness,
     persistenceCompaction: {
       schemaVersion: 1,
       originalBytes,
@@ -129,6 +155,7 @@ export function compactCronMetadataForPersistence(
       ...preservedLedgerScalars,
       ...preservedQuality,
       ...preservedPressure,
+      ...preservedFreshness,
       persistenceCompaction: { schemaVersion: 1, originalBytes, diagnosticsDropped: true },
     });
   }

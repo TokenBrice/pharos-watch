@@ -14,22 +14,11 @@ The website-internal read lane is separate from Cloudflare Access. `site-api.pha
 
 Many router-dispatched mutating admin endpoints also support optional `Idempotency-Key` handling. Current idempotent routes are:
 
-- `POST /api/backfill-depegs`
-- `POST /api/backfill-supply-history`
-- `POST /api/backfill-stability-index`
-- `POST /api/backfill-cg-prices`
-- `POST /api/backfill-yield-history`
-- `POST /api/backfill-mint-burn-prices` (only when `dry-run=false`)
-- `POST /api/backfill-mint-burn`
-- `POST /api/backfill-tape`
-- `POST /api/reclassify-atomic-roundtrips`
 - `POST /api/backfill-dews`
-- `POST /api/audit-depeg-history`
 - `POST /api/trigger-digest`
 - `POST /api/trigger-yield-coverage-audit`
 - `POST /api/reset-blacklist-sync`
 - `POST /api/remediate-blacklist-amount-gaps`
-- `POST /api/backfill-blacklist-current-balances`
 - `POST /api/admin-telegram-broadcast`
 - `POST /api/api-keys`
 - `POST /api/api-keys/:id/update`
@@ -63,6 +52,8 @@ Preferred operator access now splits by surface:
 
 Endpoint sections below do not repeat the CLI header pair. Unless an endpoint says otherwise, direct operator examples assume the `ops-api` host plus those two Cloudflare Access service-token headers.
 
+Historical rebuilds and staged captures run through `worker/scripts/one-shot-backfill.ts`, not HTTP or the dashboard; all twelve former routes are unregistered. Recurring `backfill-dews`, blacklist remediation/reset, digest and yield-audit triggers remain here with their existing authentication/idempotency contracts. CLI writes use Wrangler authentication and are not covered by HTTP idempotency reservations. Ordinary jobs use D1 commands; jobs requiring destructive multi-statement atomicity additionally require `--allow-atomic-import`, which acknowledges temporary live D1 unavailability. See [One-shot historical backfills](./runbooks/one-shot-backfills.md#operator-contract), [transport safety](./runbooks/one-shot-backfills.md#transport-safety) and [interruption/receipt cleanup](./runbooks/one-shot-backfills.md#interruption-and-cleanup) for the command inventory, unchanged job parameter/result contracts and reconciliation procedure.
+
 ### `GET /api/status`
 
 Full admin dashboard: cron run history, cache freshness for all keys, data quality metrics, Telegram bot subscriber stats, and operator reconciliation signals.
@@ -71,7 +62,7 @@ Since 2026-09-27 dedicated asset-scoped circuit outages no longer count as sourc
 
 **Response shape:** `StatusResponse` (exported through `shared/types/index.ts`). The JSON below is illustrative; the canonical list lives in `shared/types/status/response.ts`. Retained diagnostics include yield/publication/provider/dependency health, canaries, reserve drift and reserve composition. The duplicate static custody warning and unmatched mint/burn circulation comparison are retired without response aliases.
 
-The legacy top-level projections `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and the duplicate `alertBroker` block are intentionally omitted from `/api/status`. This is an API response-shape change: public health diagnostics, including `alertBroker`, remain on `/api/health`; producer/provider diagnostics remain in the `sync-stablecoins` cron's latest-run metadata for operator inspection. Retained status sections are validated for their required fields and malformed sections fail closed at the admin client boundary.
+The legacy top-level projections `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and the duplicate `alertBroker` block are intentionally omitted from `/api/status`. The retired alert-broker summary is also absent from `/api/health`; producer/provider diagnostics remain in the `sync-stablecoins` cron's latest-run metadata for operator inspection. Retained status sections are validated for their required fields and malformed sections fail closed at the admin client boundary.
 
 Cron terminal execution and observed quality are independent: `degradedCrons` counts fresh operational degraded attempts (including inheritance behind neutral skips), not successful-run `metadata.quality.{reason,reasons,sources}` findings. Those findings remain visible in cron summaries and Attention. Observer `ok` does not renew the observed producer's publication clock.
 
@@ -769,172 +760,9 @@ Supporter keys never rotate by self-service: re-signing the claim message return
 
 Correcting the ledger is a two-step operator action. When removing or correcting a donation row in `shared/data/funding/donations.json` leaves a wallet with less than $10 in qualifying stablecoin donations, the runtime does not revoke anything on its own, because eligibility is only read at claim time. Find the `donor` key whose name carries that address and deactivate it with `POST /api/api-keys/:id/deactivate`. Leave the `api_key_donor_claims` row in place: it keeps that address from claiming again, and a re-claim attempt against a deactivated key returns `403` rather than issuing a second key.
 
-### `POST /api/backfill-depegs`
-
-Backfills historical depeg events from stored price data.
-
-For coins with a registered authoritative historical price provider, the backfill uses that same provider family first (for example, replayed protocol redemption quotes) before falling back to market history. If the authoritative provider is configured but unavailable, existing `source='backfill'` rows for that coin are preserved instead of being rebuilt from a weaker source.
-
-Supported non-USD fiat assets now prefer direct CoinGecko native-fiat history first and compare that series to the native `1.0` peg before they fall back to USD-denominated CoinGecko/DefiLlama history plus historical FX. In that native-fiat mode, backfill uses daily points plus a two-point confirmation window across 36 hours, while still preserving extreme single-point crashes of `>= 5000 bps`.
-
-`dry-run=true` compares the freshly replayed historical events against the currently stored `source='backfill'` rows without mutating the database. The preview reports whether the replay exactly matches the stored backfill rows, how many stored backfill rows would be removed, how many replayed rows would be added, and the current live-row counts for the same asset.
-
-Bounded replay windows also support `startDay` / `endDay`, plus optional `contextDays` to widen the replay pad around that UTC window. This makes long-history audits and repairs practical over `ops-api` without waiting for a full-coin rebuild. In mutating mode, bounded replays only replace overlapping `source='backfill'` rows for that coin and preserve non-overlapping backfill rows plus all `source='live'` rows.
-For commodity-pegged assets, bounded replays limit the peer-median reference fetch to the replay pad and only fetch the needed gold or silver source family.
-
-**Query parameters**
-
-| Param         | Type                               | Default | Description                                                           |
-| ------------- | ---------------------------------- | ------- | --------------------------------------------------------------------- |
-| `stablecoin`  | `string`                           | —       | Process a single stablecoin ID                                        |
-| `batch`       | `integer`                          | `0`     | Batch offset (3 coins per batch)                                      |
-| `dry-run`     | `"true"`                           | —       | Preview replay-vs-backfill differences without writing `depeg_events` |
-| `startDay`    | `integer \| ISO date (YYYY-MM-DD)` | —       | Lower bound for bounded replay compare/mutation                       |
-| `endDay`      | `integer \| ISO date (YYYY-MM-DD)` | —       | Upper bound for bounded replay compare/mutation                       |
-| `contextDays` | `integer`                          | `7`     | Extra replay context days on each side of a bounded window (max `90`) |
-
-### `POST /api/backfill-supply-history`
-
-Backfills per-coin supply history snapshots. When historical market-price series are available, the endpoint also persists daily `supply_history.price` values on restored rows so historical PSI replay can use day-level deviation instead of blunt peak fallback.
-
-Commodity and CoinGecko-only total-supply fallback replays historical EVM `totalSupply()` at each UTC day close when CoinGecko market caps are missing. It does not project the current supply backward across the requested window, and it fails closed when the asset has multiple supported EVM deployments. Protocol-TVL fallback can still write market-cap rows, but stores `price: null` for days outside the returned price-chart coverage instead of extrapolating the nearest endpoint price.
-
-**Query parameters**
-
-| Param                           | Type                               | Default | Description                                                                               |
-| ------------------------------- | ---------------------------------- | ------- | ----------------------------------------------------------------------------------------- |
-| `stablecoin`                    | `string`                           | —       | Process a single stablecoin ID                                                            |
-| `batch`                         | `integer`                          | `0`     | Batch offset for chunked processing                                                       |
-| `batchSize`                     | `integer`                          | `10`    | Coins per batch                                                                           |
-| `allow-constant-price-fallback` | `"true"`                           | —       | Allow current-price fallback when historical non-USD prices are missing                   |
-| `startDay`                      | `integer \| ISO date (YYYY-MM-DD)` | —       | Lower bound for UTC daily rows written                                                    |
-| `endDay`                        | `integer \| ISO date (YYYY-MM-DD)` | —       | Upper bound for UTC daily rows written; future values clamp to the last completed UTC day |
-| `windowDays`                    | `integer`                          | `30`    | Initial daily-window size (`1`–`90`); explicit values override and persist through continuation cursors |
-| `cursor`                        | `string`                           | —       | Opaque continuation cursor; cursor-only requests resume the stored window size, while an explicit `windowDays` overrides and persists a new size |
-
-### `POST /api/backfill-stability-index`
-
-Backfills historical stability index scores from stored depeg events and supply data.
-
-The rebuild stops at the last completed UTC day and preserves a stored day when archival inputs are unavailable. Denominators include only core stablecoins, cash equivalents and PSI historical assets; other classes retain history without contributing. Historical replay uses overlapping events and the as-of supply/price and start-day-versus-later-day severity rules in [Stability Index](./stability-index.md). Repair available historical price coverage before rerunning, including PSI historical assets; absent source series are never manufactured. Methodology `v3.0+` derives daily stress breadth from core-universe historical warning bands. The response names evaluated `startDay`/`endDay`.
-
-**Query parameters**
-
-| Param      | Type                               | Default                | Description                                                                      |
-| ---------- | ---------------------------------- | ---------------------- | -------------------------------------------------------------------------------- |
-| `dry-run`  | `"true"`                           | —                      | Preview the rebuild window and change summary without mutating `stability_index` |
-| `startDay` | `integer \| ISO date (YYYY-MM-DD)` | earliest depeg day     | Lower bound for rebuilt UTC days                                                 |
-| `endDay`   | `integer \| ISO date (YYYY-MM-DD)` | last completed UTC day | Upper bound for rebuilt UTC days                                                 |
-
-### `POST /api/backfill-cg-prices`
-
-Backfills market prices for the PSI-eligible universe, including off-catalog historical assets such as `ust-terra`. It fills NULL `supply_history.price` gaps and inserts missing daily supply rows only when upstream market-cap history exists.
-
-**Query parameters**
-
-| Param        | Type      | Default | Description                         |
-| ------------ | --------- | ------- | ----------------------------------- |
-| `stablecoin` | `string`  | —       | Process a single stablecoin ID      |
-| `batchSize`  | `integer` | `10`    | Coins per batch                     |
-| `batch`      | `integer` | `0`     | Batch offset for chunked processing |
-
-### `POST /api/backfill-yield-history`
-
-Backfills protocol API yield-history rows for the curated target set used by yield intelligence. The current target set is limited to Zephyr ZYS (`zys-zephyr-protocol`) through the protocol API source.
-
-**Query parameters**
-
-| Param        | Type      | Default | Description                              |
-| ------------ | --------- | ------- | ---------------------------------------- |
-| `stablecoin` | `string`  | —       | Process a single supported stablecoin ID |
-| `batchSize`  | `integer` | `10`    | Coins per batch                          |
-| `batch`      | `integer` | `0`     | Batch offset for chunked processing      |
-
-### `POST /api/backfill-tape`
-
-Runs the same TAPE projectors used by the `project-tape` cron with operator-supplied window and limit overrides. Writes are idempotent on `(source_table, source_row_id, transition)`, so the endpoint is safe to re-run. `depeg.peak_worsened` honors `since` / `until` against open rows' `started_at` and pages through matches in batches of 500, stopping once `maxRows` source rows have been scanned; without `maxRows` it scans every matching open row, like the cron. The first-observation projectors `methodology.bumped`, `cemetery.entry.added`, and `lifecycle.tracked.frozen` are window- and cap-blind: they ignore `since`, `until`, and `maxRows` because they scan static sources keyed by ID.
-
-**Request body or query parameters**
-
-Query parameters win when the same field is supplied in both places.
-
-| Param     | Type      | Default | Description                                                            |
-| --------- | --------- | ------- | ---------------------------------------------------------------------- |
-| `class`   | `string`  | all     | Repeatable projector class filter, for example `class=depeg.opened`    |
-| `since`   | `integer` | none    | Lower source-row timestamp bound in Unix seconds                       |
-| `until`   | `integer` | none    | Upper source-row timestamp bound in Unix seconds                       |
-| `maxRows` | `integer` | `5000`  | Per-class scan cap, min `1`, max `50000`                               |
-| `dryRun`  | `boolean` | `false` | Compute results without writing rows or advancing projector watermarks |
-| `dry-run` | `boolean` | `false` | Query/body alias for `dryRun`                                          |
-
-Supported projector classes are `depeg.opened`, `depeg.resolved`, `depeg.peak_worsened`, `freeze.blocked`, `freeze.unblocked`, `freeze.destroyed`, `score.upgraded`, `score.downgraded`, `psi.band_changed`, `dews.band_transitions`, `mint_burn.large_flow`, `yield.warning_emitted`, `yield.pys_dropped`, `methodology.bumped`, `cemetery.entry.added`, and `lifecycle.tracked.frozen`. `dews.band_transitions` is the single DEWS projector class and emits both `dews.escalated` and `dews.deescalated` tape events. `depeg.resolved` projects only recovery-backed depeg closures, not coverage-loss, orphan, or superseded-direction terminal rows.
-
-For every selected blind class, the response `ignoredParams` map lists the ignored fields (`since`, `until`, and `maxRows`). Other classes honor all supplied window and cap parameters.
-
-**Response**
-
-```json
-{
-  "ok": true,
-  "dryRun": false,
-  "maxRows": 5000,
-  "since": null,
-  "until": null,
-  "selectedClasses": ["depeg.opened"],
-  "ignoredParams": {},
-  "projected": 12,
-  "perClass": { "depeg.opened": 12 },
-  "errors": []
-}
-```
-
-**Error responses:** `400` for unknown `class` values, invalid negative timestamps, `since > until`, or `maxRows` outside `1..50000`.
-
-### `POST /api/backfill-mint-burn-prices`
-
-Repairs bounded historical mint/burn NULL-USD debt using exact event-day evidence. The endpoint defaults to `dry-run=true`, accepts `limit=1..500` (default `100`) and optional `stablecoin=<id>`, and never uses current `price_cache` or an adjacent-day price. Source order is exact-day `supply_history`, CoinGecko historical market chart, DefiLlama CoinGecko-identity chart, then an exact configured contract chart. DefiLlama spans are loaded sequentially in up to eight 800-day windows per identity; points are merged before event-day resolution, and an over-budget range or unavailable window keeps unresolved rows retryable rather than falsely irreducible.
-
-Mutation requires `dry-run=false&confirm=historical-mint-prices&bookmark=<fresh-d1-bookmark>` plus an `Idempotency-Key` header from 1 to 128 trimmed characters. The bookmark and idempotency key are persisted on every attempted row. Rows without a valid point after definitive source responses become explicitly `irreducible`; transient provider failures remain retryable. Recovered rows are finalized only after `mint_burn_hourly` is rebuilt and verified against source events. `retry-irreducible=true` is reserved for reopening classifications after source coverage improves.
-
-Cron `sync-mint-burn` automatically heals recent NULL-price events within a 48-hour window and reports the healed count in cron metadata as `nullPricesHealed`; this endpoint is primarily for historical backfills beyond that window.
-
-**Response**
-
-```json
-{
-  "dryRun": true,
-  "limit": 100,
-  "selected": 1,
-  "recovered": 1,
-  "classifiedIrreducible": 0,
-  "deferredForRetry": 0,
-  "aggregateCoinsRebuilt": ["ustb-superstate"],
-  "aggregateVerificationPassed": null,
-  "dispositions": [
-    {
-      "eventId": "ethereum-0xabc-0",
-      "stablecoinId": "ustb-superstate",
-      "chainId": "ethereum",
-      "timestamp": 1740279479,
-      "disposition": "recover",
-      "price": 10.58,
-      "priceTimestamp": 1740272109,
-      "priceSource": "repair:defillama-gecko-chart-event-day:superstate-short-duration-us-government-securities-fund-ustb",
-      "reason": null
-    }
-  ],
-  "backlog": {
-    "unclassified": 529,
-    "irreducible": 0,
-    "pendingAggregate": 0,
-    "totalNullUsd": 529
-  }
-}
-```
-
 ### `GET /api/backfill-dews`
 
-Runs the historical DEWS backtest path against stored depeg events. This is the default `GET` mode when no `mode` or `repair` query is supplied; it reports true-positive coverage and lead-time summary fields from the historical replay implementation.
+Default `GET` reconstructs stored-event diagnostics. `events[].evaluation` reports availability (`available`, `partial`, `unavailable`), reasons and evaluated/expected pre-event days. Missing anchors stay unavailable. With no scored pre-event day, `predicted=null`; observed misses stay `false`. Summary `evaluableEvents` excludes these cases, `excludedEvents`/`partialEvents` disclose coverage, and `tpRate` uses only evaluable events (`null` if none); lead times cover detected events.
 
 Use `GET /api/backfill-dews?mode=backtest-metrics` for the curated anchor fixture metrics described below. Use `GET /api/backfill-dews?repair=...&dry-run=true` for repair previews; mutating repair runs are `POST`-only.
 
@@ -1012,121 +840,6 @@ Deletes bounded `stress_signal_history` windows that cannot be deterministically
 | `stablecoin` | `string`                               | —                   | Optional tracked stablecoin ID for `repair=prune-history`                          |
 | `startDay`   | `string`                               | `2026-03-09`        | Optional prune-window start day (`YYYY-MM-DD`, Unix seconds, or Unix milliseconds) |
 | `endDay`     | `string`                               | current UTC day     | Optional prune-window end day (`YYYY-MM-DD`, Unix seconds, or Unix milliseconds)   |
-
-### `POST /api/backfill-mint-burn`
-
-Backfills mint/burn event ingestion for a specific contract config using the same parsing/classification pipeline as the cron.
-If `configKey` is omitted, the worker auto-selects one tracked config using a critical-first / major-symbol-first / most-behind policy and returns the selected config in the response.
-
-**Request body or query parameters**
-
-| Param       | Type      | Default         | Description                                                                              |
-| ----------- | --------- | --------------- | ---------------------------------------------------------------------------------------- |
-| `configKey` | `string`  | auto-selected   | Optional config key: `{chainId}-{contractAddress}` across the tracked issuance-chain set |
-| `fromBlock` | `integer` | from sync state | Start block override                                                                     |
-| `toBlock`   | `integer` | chain head      | End block override (clamped to chain head)                                               |
-| `chunkSize` | `integer` | `50000`         | Block span per fetch chunk (max 50000)                                                   |
-| `maxChunks` | `integer` | `24`            | Maximum chunks to process per request                                                    |
-
-### `POST /api/reclassify-atomic-roundtrips`
-
-Retroactively tags same-transaction mint+burn pairs for the same stablecoin as `flow_type='atomic_roundtrip'` and recalculates the affected hourly buckets.
-
-**Query parameters**
-
-| Param          | Type      | Default         | Description                                                                                                                                 |
-| -------------- | --------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `since`        | `integer` | `now - 90 days` | Unix seconds cutoff for both forward and reverse scans; `0` requests a full-table sweep and may exceed D1 CPU limits without `stablecoinId` |
-| `stablecoinId` | `string`  | —               | Optional Pharos stablecoin ID filter applied to both scans                                                                                  |
-
-**Response**
-
-```json
-{
-  "done": false,
-  "since": 1765218367,
-  "stablecoinId": "usdt-tether",
-  "updated": 428,
-  "toRoundtrip": 420,
-  "toStandard": 8,
-  "hoursRecalculated": 31,
-  "batchSize": 1000
-}
-```
-
-The endpoint processes up to 1000 `(tx_hash, stablecoin_id)` groups per request. Repeat until `done=true`.
-
-### `GET /api/audit-depeg-history?dry-run=true`
-
-Dry-run preview for the depeg audit endpoint. This is the only supported `GET` mode for `/api/audit-depeg-history`; all mutating executions require `POST`.
-
-The same endpoint also supports dry-run historical repair previews:
-
-- `repair=synthetic-splits` surfaces adjacent same-direction events that were likely split either by the old DEX-only auto-close behavior or by a backfill-to-live handoff where historical replay expired mid-ongoing depeg
-- `repair=contradictory-recovery-price` surfaces ended events whose stored `recovery_price` is still outside the allowed depeg threshold and should be nulled
-
-The CoinGecko-backed audit (the default mode) reads CoinGecko through the configured `COINGECKO_API_KEY` binding: requests go to the pro-api host (`https://pro-api.coingecko.com/api/v3/...`) with the `x-cg-pro-api-key` header, at 200 ms start spacing and concurrency 4. When the binding is unset, no upstream request is attempted and the endpoint still returns `200` with `upstreamErrorReason: "coingecko_api_key_missing"`, `upstreamReachable: false`, every inspected event carrying `verdict: "error"`, and no provenance persisted. The delete and repair modes never contact CoinGecko and do not need the key.
-
-```json
-{
-  "totalMatching": 5,
-  "offset": 0,
-  "limit": 25,
-  "dryRun": true,
-  "auditedEvents": [
-    { "id": 49235, "symbol": "USN", "startedAt": 1759849487, "verdict": "error" }
-  ],
-  "falsePositivesFound": 0,
-  "deletedEvents": [],
-  "daysRecomputed": 0,
-  "rejectedByValidationCount": 0,
-  "upstreamErrorCount": 5,
-  "upstreamReachable": false,
-  "upstreamErrorReason": "coingecko_api_key_missing"
-}
-```
-
-The audit can only rule on episodes whose stored move CoinGecko's own history does not reproduce, so a CoinGecko-derived price-feed artifact looks `confirmed` to it by construction. Removing those artifacts is a reviewed operator decision recorded in the backfill replay-suppression registry, not an audit verdict — see [Depeg Artifact-Event Removal](./runbooks/depeg-artifact-removal.md).
-
-**Query parameters**
-
-| Param        | Type                                                   | Default  | Description                                                                                                                 |
-| ------------ | ------------------------------------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `limit`      | `integer`                                              | `25`     | Max events or repair candidates to inspect per request (`max 25`)                                                           |
-| `offset`     | `integer`                                              | `0`      | Pagination offset                                                                                                           |
-| `dry-run`    | `"true"`                                               | required | Must be exactly `"true"` for `GET`                                                                                          |
-| `min-supply` | `number`                                               | `0`      | Minimum supply (USD) to include in audit                                                                                    |
-| `symbol`     | `string`                                               | —        | Filter by symbol (case-insensitive)                                                                                         |
-| `repair`     | `"synthetic-splits" \| "contradictory-recovery-price"` | —        | Preview synthetic split consolidation or contradictory terminal-price repairs instead of the CoinGecko false-positive audit |
-
-### `POST /api/audit-depeg-history`
-
-Audits existing depeg events against CoinGecko historical price data to detect false positives. The CoinGecko pass uses the same keyed path as the dry-run (`COINGECKO_API_KEY` binding, `pro-api` host, `x-cg-pro-api-key` header); without that binding the run returns `200` with `upstreamErrorReason: "coingecko_api_key_missing"`, `upstreamReachable: false`, and per-event `verdict: "error"`, and persists no provenance. `?delete=<ids>` and both `repair=` modes skip the CoinGecko audit and do not need the key.
-
-`POST /api/audit-depeg-history?repair=synthetic-splits` instead runs a historical repair pass that consolidates adjacent same-direction events when either:
-
-- a live event was split by the retired DEX-only auto-close behavior after the earlier row closed near peg, or
-- a backfill row ended without recovery and a live row resumed the same severe move within one sync gap because the historical replay window expired mid-event.
-
-When a repair group ends in a live row, the live tail is kept as the canonical record and inherits the earlier start plus worst peak so future backfills do not recreate the split.
-
-`POST /api/audit-depeg-history?repair=contradictory-recovery-price` instead nulls ended-event `recovery_price` values that still sit outside the permitted depeg threshold. This is the bounded repair path for legacy rows closed by a native-quote recovery while the stored USD price still looked depegged.
-
-Mutating delete/repair runs and false-positive deletes stage any required PSI stability-index recompute into the same D1 batch commit. If that commit fails, the endpoint now returns `500` with a specific error and does not leave a partial delete/repair behind.
-
-`GET` is accepted only with `dry-run=true`; mutating audits require `POST`.
-
-**Query parameters**
-
-| Param        | Type                                                   | Default | Description                                                                                                            |
-| ------------ | ------------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `limit`      | `integer`                                              | `25`    | Max events or repair candidates to process per request (`max 25`)                                                      |
-| `offset`     | `integer`                                              | `0`     | Pagination offset                                                                                                      |
-| `delete`     | `string`                                               | —       | Comma-separated event IDs to delete directly (skips CG audit)                                                          |
-| `dry-run`    | `"true"`                                               | —       | When `"true"`, preview deletions without touching DB. Default behavior deletes false positives                         |
-| `min-supply` | `number`                                               | `0`     | Minimum supply (USD) to include in audit                                                                               |
-| `symbol`     | `string`                                               | —       | Filter by symbol (case-insensitive)                                                                                    |
-| `repair`     | `"synthetic-splits" \| "contradictory-recovery-price"` | —       | Run synthetic split consolidation or contradictory terminal-price repair instead of the CoinGecko false-positive audit |
 
 ### `POST /api/trigger-digest`
 
@@ -1390,6 +1103,7 @@ Samples retain `sentinelFreshness` and `tokenFreshness`, including both sub-verd
 `latency.<operator>.firstTouch` and `.warm` contain p50/p95 and sample count for every category. The first request to an origin within the run is first-touch; later requests to that origin are warm even across targets. Per-call percentiles include failed calls; `warmRunMedian` uses successful calls only, while availability gates failures separately. `latest` includes both latest-tag reads and token numeric/header checks; the initial, post-sentinel, and post-token head reads belong to `head`. The comparator has no latest-check attempts by design.
 
 The compressed v5 store retains the existing cache key and reads v1/v2/v3/v4 samples during seven-day retention. Legacy observations are never given fabricated token checks, contracts, selectors, or discrimination. V1 samples have unknown per-method attempts, warm latency and latest freshness; v2 fresh verdicts have unknown discrimination. V3's single comparator remains the reference for every legacy method, and v4's split-origin provenance remains intact. V5 stores both freshness sub-tuples with their exact `(to,data)` provenance and full latest/numeric values in every new sample, then derives the combined verdict when decoding. Rewritten legacy rows retain their previous newest-stale-example value policy. Split-origin calls use dictionary-encoded layouts; integer milliseconds are losslessly bit-packed and block heights delta encoded. The same per-operator bounds (20 Dwellir / four comparator calls) govern encoding and decoding. Unrecorded skip reasons remain unknown. Oldest-run pruning honors both the 240 KiB compressed row budget and the reader's 4 MiB decompressed wire ceiling, retaining at most 168 runs. Highly compressible token proofs cannot produce a gzip row that its own reader rejects; a newest run alone exceeding the raw ceiling fails persistence with `rpc-parity-raw-row-budget` instead of discarding its proof. Older readers reject v5 rows and their next write resets history; preserve the cache row before rollback.
+Report reads expire runs and latest evidence older than `RPC_PARITY_RETENTION_SEC` at `generatedAtSec`, even without new writes; the exact seven-day cutoff is retained. Expired windows fail sufficiency gates.
 
 `errorClasses` and `comparatorErrorClasses` count samples with provider failures (`range-cap`, `result-cap`, `rate-limited`, `capability`, `server-error`, `timeout`, `network`, `rpc-error`, `invalid-response`). `failedSteps` counts failed method categories per operator; `lastComparatorFailure` names its run clock, category, class, HTTP status and actual comparator reference. Invalid method result shapes are failures, not successes. HTTP 5xx stays `server-error` even if its body mentions an unsupported operation; HTTP range/result-cap bodies retain their specific class. Unavailable reads never count as state/log mismatches: both operators must answer for a comparison. Dwellir state/log reads are still attempted when the comparator's corresponding method fails; an unresolved logs pin skips that method without issuing either operator's log read. Astar's reviewed keyless pin is `https://evm.astar.network`, verified for historical USDC supply and recent/older logs on 2026-10-05.
 
@@ -1462,81 +1176,6 @@ Admin-only bounded remediation endpoint for recoverable **EVM** blacklist rows. 
     "budgetUsed": 26,
     "budgetLimit": 900
   }
-}
-```
-
-### `POST /api/backfill-blacklist-current-balances`
-
-Admin-only one-shot backfill endpoint for `blacklist_current_balances`, intended for blacklist configs whose historical events were ingested before the current-balance cache existed.
-
-**Authentication:** same admin auth as other ops endpoints.
-
-**Idempotency:** supported via optional `Idempotency-Key`.
-
-**Query parameters**
-
-| Param        | Type      | Default | Description                                                                                   |
-| ------------ | --------- | ------- | --------------------------------------------------------------------------------------------- |
-| `stablecoin` | `string`  | —       | Optional uppercase symbol filter; matches any configured blacklist-contract stablecoin symbol |
-| `chainId`    | `string`  | —       | Optional chain filter matching the blacklist contract config `chainId`                        |
-| `limit`      | `integer` | `500`   | Max newest latest-per-address blacklist-event rows to load per matching config (max `2000`)   |
-| `dryRun`     | `"true"`  | —       | Preview the active-blacklisted candidate count without writing cache rows                     |
-
-`400` is returned when the filters match no configured blacklist contracts.
-
-**Dry-run response**
-
-```json
-{
-  "ok": true,
-  "dryRun": true,
-  "configs": [
-    {
-      "configKey": "ethereum-pyusd",
-      "stablecoin": "PYUSD",
-      "chainId": "ethereum",
-      "candidateCount": 12,
-      "updated": 0,
-      "deleted": 0,
-      "failed": 0
-    }
-  ],
-  "totals": {
-    "candidates": 12,
-    "updated": 0,
-    "deleted": 0,
-    "failed": 0
-  },
-  "budgetUsed": 0,
-  "budgetLimit": 900
-}
-```
-
-**Write-enabled response**
-
-```json
-{
-  "ok": true,
-  "dryRun": false,
-  "configs": [
-    {
-      "configKey": "ethereum-pyusd",
-      "stablecoin": "PYUSD",
-      "chainId": "ethereum",
-      "candidateCount": 500,
-      "updated": 12,
-      "deleted": 0,
-      "failed": 1
-    }
-  ],
-  "totals": {
-    "candidates": 500,
-    "updated": 12,
-    "deleted": 0,
-    "failed": 1
-  },
-  "budgetUsed": 37,
-  "budgetLimit": 900
 }
 ```
 

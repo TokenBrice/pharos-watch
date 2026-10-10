@@ -11,5 +11,10 @@ export const REGIME_CRITICAL_DEGRADED_SOURCES: readonly string[] = [
   "dews-published-generation",
   "dews-stress-query",
   "mint-burn-gauge-read",
+  "mint-burn-gauge-unavailable",
+  "mint-burn-gauge-missing",
+  "mint-burn-gauge-malformed",
+  "mint-burn-gauge-expired",
   "mint-burn-gauge-valuation-partial",
+  "psi-unavailable",
 ];

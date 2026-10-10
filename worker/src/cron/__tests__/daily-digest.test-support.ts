@@ -63,9 +63,12 @@ export function mockDailyDigestRegistryModule() {
   // fixture registry: PAXG/XAUT stay tracked (mint-burn reads their contracts)
   // but are excluded from the id sets the aggregate iterates.
   const ids = new Set(["usdt-tether", "usdc-circle"]);
+  const activeStablecoins = stablecoins.filter((coin) => ids.has(coin.id));
   return {
     ...mockRegistry({ stablecoins }),
     TRACKED_IDS: ids,
+    ACTIVE_STABLECOINS: activeStablecoins,
+    ACTIVE_META_BY_ID: new Map(activeStablecoins.map((coin) => [coin.id, coin])),
     ACTIVE_IDS: ids,
     FROZEN_IDS: new Set<string>(["usr-resolv"]),
   };
@@ -244,7 +247,7 @@ export function publishedGaugeTable(
   const nowSec = Math.floor(Date.now() / 1000);
   return {
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
-    matchBinds: ["mint-burn-flows:v3:aggregate:24"],
+    matchBinds: ["mint-burn-flows:v4:aggregate:24"],
     rows: [],
     first: {
       value: options.value ?? JSON.stringify(publishedGaugePayload()),
@@ -256,7 +259,7 @@ export function publishedGaugeTable(
 export function missingPublishedGaugeTable(): MockTableConfig {
   return {
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
-    matchBinds: ["mint-burn-flows:v3:aggregate:24"],
+    matchBinds: ["mint-burn-flows:v4:aggregate:24"],
     rows: [],
     first: null,
   };
@@ -319,7 +322,7 @@ function makeDailyDigestTables(): MockTableConfig[] {
       ],
     },
     first("FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1", {
-      score: 91.2, band: "BEDROCK", components: JSON.stringify({ severity: 2, breadth: 1, trend: 0, stressBreadth: 0 }),
+      score: 91.2, band: "BEDROCK", stored_at: nowSec - 600, components: JSON.stringify({ severity: 2, breadth: 1, trend: 0, stressBreadth: 0 }),
     }),
     first("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?", { avg: 90.6 }),
     first("FROM stability_index WHERE computed_at = ?", { score: 89.5, band: "STEADY" }),
@@ -432,6 +435,7 @@ export function makeCollectorCtx(db: D1Database): CollectorContext {
 
 export const BASE_DIGEST_INPUT: DigestInputData = {
   totalMcapUsd: 160_000_000,
+  supplyCoverage: { complete: true, observedCount: 2, unavailableCount: 0 },
   mcap7dDelta: 3_000_000,
   activeDepegCount: 1,
   topDepegs: [{ stablecoinId: "usdt-tether", symbol: "USDT", bps: -175, direction: "below", mcapUsd: 100_000_000 }],

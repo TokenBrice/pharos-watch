@@ -6,6 +6,7 @@ import {
   scanSqlInterpolationSafety,
 } from "../ci/check-sql-interpolation-safety.ts";
 
+import { withTempRepo } from "./helpers/test-state";
 const FIXTURE_ROOT = new URL("./fixtures/sql-safety/", import.meta.url);
 
 describe("DEFAULT_SQL_SAFETY_ROOTS", () => {
@@ -15,6 +16,35 @@ describe("DEFAULT_SQL_SAFETY_ROOTS", () => {
 });
 
 describe("scanSqlInterpolationSafety", () => {
+  it.each([
+    "if (!allowedKinds.has(kind)) throw new Error('bad kind');\nreturn `SELECT id FROM records WHERE id = '${requestValue}'`;",
+    "const query = `SELECT id FROM records WHERE id = '${requestValue}'`;\nif (!allowedKinds.has(kind)) throw new Error('bad kind');\nreturn query;",
+    "throw new Error('unrelated');\nreturn `SELECT id FROM records WHERE id = '${requestValue}'`;",
+    "const query = `SELECT id FROM records WHERE id = '${requestValue}'`;\nthrow new Error('unrelated');",
+    "if (!allowedValues.has(requestValue)) { console.log('bad value'); }\nreturn `SELECT id FROM records WHERE id = '${requestValue}'`;",
+    "if (!allowedValues.has(requestValue)) throw new Error('bad value');\nrequestValue = replacement;\nreturn `SELECT id FROM records WHERE id = '${requestValue}'`;",
+    "if (!allowedValues.has(requestValue)) throw new Error('bad value');\nconst callback = (requestValue) => `SELECT id FROM records WHERE id = '${requestValue}'`;",
+  ])("does not exempt SQL because of unrelated or non-guarding validation: %s", (body) => {
+    withTempRepo("pharos-sql-safety", {
+      "worker/src/query.ts": `function query(requestValue, kind) {\n${body}\n}`,
+    }, (cwd) => {
+      expect(scanSqlInterpolationSafety(["worker/src"], cwd).violations).toHaveLength(1);
+    });
+  });
+
+  it("accepts a directly guarded value interpolation", () => {
+    withTempRepo("pharos-sql-safety", {
+      "worker/src/query.ts": [
+        "function query(requestValue) {",
+        "  if (!allowedValues.has(requestValue)) throw new Error('bad value');",
+        "  return `SELECT id FROM records WHERE id = '${requestValue}'`;",
+        "}",
+      ].join("\n"),
+    }, (cwd) => {
+      expect(scanSqlInterpolationSafety(["worker/src"], cwd).violations).toEqual([]);
+    });
+  });
+
   it("accepts safe fixtures and flags unsafe worker and root script interpolation", () => {
     const report = scanSqlInterpolationSafety([fileURLToPath(FIXTURE_ROOT)], process.cwd());
 

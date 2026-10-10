@@ -48,17 +48,17 @@ export function accumulatePoolMetrics(
   const pairQuality = computePoolPairQuality(poolSymbols, meta.symbol);
   // computePoolQualityContribution runs its optimistic balanceHealth=1 path when
   // no measured Curve balance data exists for this pool.
-  if (fallbackCounters && curveData == null) fallbackCounters.unmeasuredBalanceOptimistic++;
+  if (fallbackCounters && !enrichment.hasMeasuredBalance) fallbackCounters.unmeasuredBalanceOptimistic++;
   const {
     qualityAdjustedTvl: poolQualityAdjustedTvl,
     effectiveTvl: poolEffectiveTvl,
   } = computePoolQualityContribution({
-    qualityTvlUsd: pool.tvlUsd,
+    qualityTvlUsd: rawContribTvl,
     effectiveTvlUsd: enrichment.effectivePoolTvl,
     qualityMultiplier,
     balanceRatio,
     pairQuality,
-    hasMeasuredBalance: curveData != null,
+    hasMeasuredBalance: enrichment.hasMeasuredBalance,
   });
   const stressIndex = computePoolStress(
     balanceRatio,
@@ -96,7 +96,7 @@ export function accumulatePoolMetrics(
       ...(curveData
         ? {
             amplificationCoefficient: curveData.A,
-            balanceRatio: Math.round(balanceRatio * 100) / 100,
+            ...(enrichment.hasMeasuredBalance ? { balanceRatio: Math.round(balanceRatio * 100) / 100 } : {}),
             registryId: curveData.registryId,
             isMetaPool: curveData.isMetaPool,
             balanceDetails: enrichment.balanceDetails,

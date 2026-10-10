@@ -23,17 +23,15 @@ import {
   MULTICALL3_ADDRESS,
 } from "../../lib/evm-rpc";
 import { rethrowIfAborted } from "../../lib/abort";
-import {
-  decodeFunctionResult,
-  encodeFunctionData,
-  parseAbi,
-} from "viem/utils";
+import { parseAbi } from "viem/utils";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { normalizeEvmAddress } from "./evm";
-import { multicallResultByLabel, runtimeCodeHash } from "./onchain-identity";
-import { codeIdentityChecks } from "./evm-observation-plan";
-import type { EvmCodeIdentity } from "./evm-observation-plan";
+import { runtimeCodeHash } from "./onchain-identity";
+import {
+  abiObservation, codeIdentityChecks, customObservation, executeEvmObservationPlan,
+  type AnyEvmObservationField, type EvmCodeIdentity,
+} from "./evm-observation-plan";
 
 type Erc4626Params = LiveReserveAdapterParamsByKey["erc4626-single-asset"];
 type Hex = `0x${string}`;
@@ -168,110 +166,62 @@ function rejected(
   return { status: "rejected", attemptedAtSec, rejectionCode, ...blocks };
 }
 
-function call(
-  label: string,
-  target: string,
-  functionName: string,
+type RouteObservationValue<Function extends string> =
+  Function extends "quote" ? MessagingFee :
+  Function extends "latestRoundData" ? readonly [bigint, bigint, bigint, bigint, bigint] :
+  unknown;
+
+function routeObservation<const Label extends string, const Function extends string>(
+  label: Label,
+  contract: string,
+  functionName: Function,
   args?: readonly unknown[],
-): EvmMulticall3Call {
-  return {
-    label,
-    target,
-    callData: encodeFunctionData({
-      abi: ROUTE_ABI,
-      functionName,
-      ...(args ? { args } : {}),
-    } as Parameters<typeof encodeFunctionData>[0]),
-    allowFailure: false,
-  };
+) {
+  const field = abiObservation({ label, contract, abi: ROUTE_ABI, functionName, args, optional: true });
+  return customObservation({
+    ...field,
+    decode: (raw, observedLabel): RouteObservationValue<Function> | null => {
+      try {
+        const value = field.decode(raw, observedLabel);
+        if (functionName === "latestRoundData" &&
+          (!Array.isArray(value) || value.length !== 5 || value.some((entry) => typeof entry !== "bigint"))) {
+          return null;
+        }
+        if (functionName === "quote" &&
+          (value == null || typeof value !== "object" ||
+            !("nativeFee" in value) || !("lzTokenFee" in value) ||
+            typeof value.nativeFee !== "bigint" || typeof value.lzTokenFee !== "bigint")) {
+          return null;
+        }
+        return (typeof value === "string" && /^0x[0-9a-f]{40}$/i.test(value)
+          ? normalizeEvmAddress(value) : value) as RouteObservationValue<Function>;
+      } catch {
+        return null;
+      }
+    },
+  });
 }
 
-function decodeResult(
-  results: readonly EvmMulticall3Result[],
-  label: string,
-  functionName: string,
-): unknown {
-  const data = multicallResultByLabel(results, label);
-  if (!data) return null;
-  try {
-    return decodeFunctionResult({
-      abi: ROUTE_ABI,
-      functionName,
-      data,
-    } as Parameters<typeof decodeFunctionResult>[0]);
-  } catch {
-    return null;
-  }
-}
-
-/** Label and function name for one entry of a batch decode. */
-type DecodeSpec<K extends string> = Record<
-  K,
-  readonly [label: string, functionName: string]
->;
-
-function decodeResults<K extends string>(
-  results: readonly EvmMulticall3Result[],
-  spec: DecodeSpec<K>,
-): Record<K, unknown> {
-  const decoded = {} as Record<K, unknown>;
-  for (const key of Object.keys(spec) as K[]) {
-    decoded[key] = decodeResult(results, spec[key][0], spec[key][1]);
-  }
-  return decoded;
-}
-
-function decodeAddresses<K extends string>(
-  results: readonly EvmMulticall3Result[],
-  spec: DecodeSpec<K>,
-): Record<K, string | null> {
-  const decoded = {} as Record<K, string | null>;
-  for (const key of Object.keys(spec) as K[]) {
-    decoded[key] = decodeAddress(results, spec[key][0], spec[key][1]);
-  }
-  return decoded;
-}
-
-function decodeAddress(
-  results: readonly EvmMulticall3Result[],
-  label: string,
-  functionName: string,
-): string | null {
-  const decoded = decodeResult(results, label, functionName);
-  return normalizeEvmAddress(typeof decoded === "string" ? decoded : undefined);
-}
-
-function decodeRoundData(
-  results: readonly EvmMulticall3Result[],
-  label: string,
-): readonly [bigint, bigint, bigint, bigint, bigint] | null {
-  const decoded = decodeResult(results, label, "latestRoundData");
-  return Array.isArray(decoded) &&
-    decoded.length === 5 &&
-    decoded.every((value) => typeof value === "bigint")
-    ? (decoded as unknown as readonly [bigint, bigint, bigint, bigint, bigint])
-    : null;
-}
-
-function decodeMessagingFee(
-  results: readonly EvmMulticall3Result[],
-  label: string,
-): MessagingFee | null {
-  const decoded = decodeResult(results, label, "quote");
-  if (
-    decoded == null ||
-    typeof decoded !== "object" ||
-    !("nativeFee" in decoded) ||
-    !("lzTokenFee" in decoded) ||
-    typeof decoded.nativeFee !== "bigint" ||
-    typeof decoded.lzTokenFee !== "bigint"
-  ) {
-    return null;
-  }
-  return {
-    nativeFee: decoded.nativeFee,
-    lzTokenFee: decoded.lzTokenFee,
-  };
+async function observeRouteWave<const Fields extends readonly AnyEvmObservationField[]>(
+  client: SfrxusdCrosschainRouteReadClient,
+  chain: string,
+  fields: Fields,
+  blockNumber: number,
+  options: EvmRpcOptions,
+) {
+  const results = await client.multicall(chain, fields.map((field) => ({
+    label: field.label, target: field.contract, callData: field.data, allowFailure: field.allowFailure,
+  })), blockNumber, options);
+  if (!results) return null;
+  const snapshot = await executeEvmObservationPlan({
+    adapterKey: "sfrxusd-crosschain-redemption",
+    fields,
+    // A missing/reverted field remains nullable so protocol checks retain their
+    // specific rejection codes and priority instead of a transport-wide failure.
+    read: async () => fields.map((field) => results.find((result) => result.label === field.label)
+      ?? { label: field.label, success: false, returnData: "0x" as const }),
+  });
+  return snapshot.values;
 }
 
 function normalizeExpectedAddress(address: string): string | null {
@@ -507,128 +457,102 @@ async function verifyContractIdentities(args: {
   };
 }
 
-function ethereumBaseCalls(
+function ethereumBaseFields(
   params: SfrxusdRouteParams,
   sfrxUsdProxyAddress: string,
-): EvmMulticall3Call[] {
+) {
   const hop = params.remoteHopAddress;
   const frxOft = params.expectedEthereumFrxUsdOftAddress;
   const sfrxOft = params.expectedEthereumSfrxUsdOftAddress;
   const ethUsdFeed = params.expectedEthUsdFeedAddress;
   return [
-    call("remote-paused", hop, "paused"),
-    call("remote-fraxtal-hop", hop, "fraxtalHop"),
-    call("remote-eid", hop, "EID"),
-    call("remote-frx-oft", hop, "frxUsdOft"),
-    call("remote-sfrx-oft", hop, "sfrxUsdOft"),
-    call("remote-service-fee", hop, "quoteHop"),
-    call("frx-oft-token", frxOft, "token"),
-    call("frx-oft-conversion-rate", frxOft, "decimalConversionRate"),
-    call("sfrx-oft-token", sfrxOft, "token"),
-    call("sfrx-oft-conversion-rate", sfrxOft, "decimalConversionRate"),
-    call("ethereum-frx-decimals", params.expectedEthereumFrxUsdAddress, "decimals"),
-    call("ethereum-sfrx-decimals", sfrxUsdProxyAddress, "decimals"),
-    call("ethereum-sfrx-asset", sfrxUsdProxyAddress, "asset"),
-    call("ethereum-sfrx-total-supply", sfrxUsdProxyAddress, "totalSupply"),
-    call("eth-usd-aggregator", ethUsdFeed, "aggregator"),
-    call("eth-usd-decimals", ethUsdFeed, "decimals"),
-    call("eth-usd-round", ethUsdFeed, "latestRoundData"),
-  ];
+    routeObservation("remote-paused", hop, "paused"),
+    routeObservation("remote-fraxtal-hop", hop, "fraxtalHop"),
+    routeObservation("remote-eid", hop, "EID"),
+    routeObservation("remote-frx-oft", hop, "frxUsdOft"),
+    routeObservation("remote-sfrx-oft", hop, "sfrxUsdOft"),
+    routeObservation("remote-service-fee", hop, "quoteHop"),
+    routeObservation("frx-oft-token", frxOft, "token"),
+    routeObservation("frx-oft-conversion-rate", frxOft, "decimalConversionRate"),
+    routeObservation("sfrx-oft-token", sfrxOft, "token"),
+    routeObservation("sfrx-oft-conversion-rate", sfrxOft, "decimalConversionRate"),
+    routeObservation("ethereum-frx-decimals", params.expectedEthereumFrxUsdAddress, "decimals"),
+    routeObservation("ethereum-sfrx-decimals", sfrxUsdProxyAddress, "decimals"),
+    routeObservation("ethereum-sfrx-asset", sfrxUsdProxyAddress, "asset"),
+    routeObservation("ethereum-sfrx-total-supply", sfrxUsdProxyAddress, "totalSupply"),
+    routeObservation("eth-usd-aggregator", ethUsdFeed, "aggregator"),
+    routeObservation("eth-usd-decimals", ethUsdFeed, "decimals"),
+    routeObservation("eth-usd-round", ethUsdFeed, "latestRoundData"),
+  ] as const;
 }
 
-function fraxtalBaseCalls(
+function fraxtalBaseFields(
   params: SfrxusdRouteParams,
-): EvmMulticall3Call[] {
+) {
   const hop = params.expectedFraxtalHopAddress;
   const redeemer = params.mintRedeemerProxyAddress;
   const vaultOracle = params.expectedVaultOracleAddress;
   return [
-    call("fraxtal-hop-paused", hop, "paused"),
-    call("fraxtal-hop-redeemer", hop, "fraxtalERC4626MintRedeemer"),
-    call("fraxtal-hop-frx-lockbox", hop, "frxUsdLockbox"),
-    call("fraxtal-hop-sfrx-lockbox", hop, "sfrxUsdLockbox"),
-    call("fraxtal-hop-remote", hop, "remoteHop", [params.expectedEthereumEid]),
-    call("fraxtal-hop-native-balance", MULTICALL3_ADDRESS, "getEthBalance", [
+    routeObservation("fraxtal-hop-paused", hop, "paused"),
+    routeObservation("fraxtal-hop-redeemer", hop, "fraxtalERC4626MintRedeemer"),
+    routeObservation("fraxtal-hop-frx-lockbox", hop, "frxUsdLockbox"),
+    routeObservation("fraxtal-hop-sfrx-lockbox", hop, "sfrxUsdLockbox"),
+    routeObservation("fraxtal-hop-remote", hop, "remoteHop", [params.expectedEthereumEid]),
+    routeObservation("fraxtal-hop-native-balance", MULTICALL3_ADDRESS, "getEthBalance", [
       hop as Hex,
     ]),
-    call("fraxtal-frx-lockbox-token", params.expectedFrxUsdLockboxAddress, "token"),
-    call(
-      "fraxtal-frx-lockbox-conversion-rate",
-      params.expectedFrxUsdLockboxAddress,
-      "decimalConversionRate",
-    ),
-    call("fraxtal-sfrx-lockbox-token", params.expectedSfrxUsdLockboxAddress, "token"),
-    call(
-      "fraxtal-sfrx-lockbox-conversion-rate",
-      params.expectedSfrxUsdLockboxAddress,
-      "decimalConversionRate",
-    ),
-    call("fraxtal-frx-decimals", params.expectedFraxtalFrxUsdAddress, "decimals"),
-    call("fraxtal-sfrx-decimals", params.expectedFraxtalSfrxUsdAddress, "decimals"),
-    call("redeemer-underlying", redeemer, "underlyingTkn"),
-    call("redeemer-vault", redeemer, "vaultTkn"),
-    call("redeemer-underlying-oracle", redeemer, "priceFeedUnderlying"),
-    call("redeemer-vault-oracle", redeemer, "priceFeedVault"),
-    call("redeemer-fee", redeemer, "fee"),
-    call("redeemer-oracle-tolerance", redeemer, "oracleTimeTolerance"),
-    call("redeemer-stored-price", redeemer, "getVaultTknPriceStoredE18"),
-    call("redeemer-latest-vault-price", redeemer, "getLatestVaultTknPriceE18"),
-    call("redeemer-latest-underlying-price", redeemer, "getLatestUnderlyingPriceE18"),
-    call("redeemer-last-oracle-read", redeemer, "lastVaultTknOracleRead"),
-    call("redeemer-total-assets", redeemer, "totalAssets"),
-    call("redeemer-mdwr", redeemer, "mdwrComboView"),
-    call(
-      "redeemer-underlying-balance",
-      params.expectedFraxtalFrxUsdAddress,
-      "balanceOf",
-      [redeemer as Hex],
-    ),
-    call("vault-oracle-decimals", vaultOracle, "decimals"),
-    call("vault-oracle-round", vaultOracle, "latestRoundData"),
-  ];
+    routeObservation("fraxtal-frx-lockbox-token", params.expectedFrxUsdLockboxAddress, "token"),
+    routeObservation("fraxtal-frx-lockbox-conversion-rate", params.expectedFrxUsdLockboxAddress, "decimalConversionRate"),
+    routeObservation("fraxtal-sfrx-lockbox-token", params.expectedSfrxUsdLockboxAddress, "token"),
+    routeObservation("fraxtal-sfrx-lockbox-conversion-rate", params.expectedSfrxUsdLockboxAddress, "decimalConversionRate"),
+    routeObservation("fraxtal-frx-decimals", params.expectedFraxtalFrxUsdAddress, "decimals"),
+    routeObservation("fraxtal-sfrx-decimals", params.expectedFraxtalSfrxUsdAddress, "decimals"),
+    routeObservation("redeemer-underlying", redeemer, "underlyingTkn"),
+    routeObservation("redeemer-vault", redeemer, "vaultTkn"),
+    routeObservation("redeemer-underlying-oracle", redeemer, "priceFeedUnderlying"),
+    routeObservation("redeemer-vault-oracle", redeemer, "priceFeedVault"),
+    routeObservation("redeemer-fee", redeemer, "fee"),
+    routeObservation("redeemer-oracle-tolerance", redeemer, "oracleTimeTolerance"),
+    routeObservation("redeemer-stored-price", redeemer, "getVaultTknPriceStoredE18"),
+    routeObservation("redeemer-latest-vault-price", redeemer, "getLatestVaultTknPriceE18"),
+    routeObservation("redeemer-latest-underlying-price", redeemer, "getLatestUnderlyingPriceE18"),
+    routeObservation("redeemer-last-oracle-read", redeemer, "lastVaultTknOracleRead"),
+    routeObservation("redeemer-total-assets", redeemer, "totalAssets"),
+    routeObservation("redeemer-mdwr", redeemer, "mdwrComboView"),
+    routeObservation("redeemer-underlying-balance", params.expectedFraxtalFrxUsdAddress, "balanceOf", [redeemer as Hex]),
+    routeObservation("vault-oracle-decimals", vaultOracle, "decimals"),
+    routeObservation("vault-oracle-round", vaultOracle, "latestRoundData"),
+  ] as const;
 }
 
-function quoteCalls(args: {
+function quoteFields(args: {
   params: SfrxusdRouteParams;
   recipient: Hex;
   inputShares: bigint[];
   previewOutputs: bigint[];
   cappedShares: bigint;
-}): {
-  ethereum: EvmMulticall3Call[];
-  fraxtal: EvmMulticall3Call[];
-} {
+}) {
   const { params, recipient } = args;
   return {
     ethereum: args.inputShares.map((shares, index) =>
-      call(`ethereum-quote:${index}`, params.remoteHopAddress, "quote", [
+      routeObservation(`ethereum-quote:${index}`, params.remoteHopAddress, "quote", [
         params.expectedEthereumSfrxUsdOftAddress as Hex,
         recipient,
         shares,
       ]),
     ),
     fraxtal: [
-      call(
-        "capacity-preview",
-        params.mintRedeemerProxyAddress,
-        "previewRedeem",
-        [args.cappedShares],
-      ),
+      routeObservation("capacity-preview", params.mintRedeemerProxyAddress, "previewRedeem", [args.cappedShares]),
       ...args.inputShares.flatMap((shares, index) => [
-        call(`preview:${index}`, params.mintRedeemerProxyAddress, "previewRedeem", [
+        routeObservation(`preview:${index}`, params.mintRedeemerProxyAddress, "previewRedeem", [
           shares,
         ]),
-        call(
-          `fraxtal-return-quote:${index}`,
-          params.expectedFraxtalHopAddress,
-          "quote",
-          [
-            params.expectedFrxUsdLockboxAddress as Hex,
-            params.expectedEthereumEid,
-            recipient,
-            args.previewOutputs[index],
-          ],
-        ),
+        routeObservation(`fraxtal-return-quote:${index}`, params.expectedFraxtalHopAddress, "quote", [
+          params.expectedFrxUsdLockboxAddress as Hex,
+          params.expectedEthereumEid,
+          recipient,
+          args.previewOutputs[index],
+        ]),
       ]),
     ],
   };
@@ -726,24 +650,14 @@ async function observeWithClient(
       ctx,
       "sfrxusd-route-ethereum-state",
       () =>
-        client.multicall(
-          ETHEREUM,
-          ethereumBaseCalls(params, sfrxUsdProxyAddress),
-          ethereumBlock.blockNumber,
-          ethereumOptions,
-        ),
+        observeRouteWave(client, ETHEREUM, ethereumBaseFields(params, sfrxUsdProxyAddress), ethereumBlock.blockNumber, ethereumOptions),
       { signal },
     ),
     runAdapterIo(
       ctx,
       "sfrxusd-route-fraxtal-state",
       () =>
-        client.multicall(
-          FRAXTAL,
-          fraxtalBaseCalls(params),
-          fraxtalBlock.blockNumber,
-          fraxtalOptions,
-        ),
+        observeRouteWave(client, FRAXTAL, fraxtalBaseFields(params), fraxtalBlock.blockNumber, fraxtalOptions),
       { signal },
     ),
   ]);
@@ -752,44 +666,24 @@ async function observeWithClient(
   }
 
   const {
-    remotePaused,
-    remoteFraxtalHop,
-    ethereumEid,
-    remoteServiceFee,
-    frxOftConversionRate,
-    sfrxOftConversionRate,
-    ethereumFrxDecimals,
-    ethereumSfrxDecimals,
-    ethereumTotalSupply,
-    ethUsdDecimals,
-  } = decodeResults(ethereumState, {
-    remotePaused: ["remote-paused", "paused"],
-    remoteFraxtalHop: ["remote-fraxtal-hop", "fraxtalHop"],
-    ethereumEid: ["remote-eid", "EID"],
-    remoteServiceFee: ["remote-service-fee", "quoteHop"],
-    frxOftConversionRate: ["frx-oft-conversion-rate", "decimalConversionRate"],
-    sfrxOftConversionRate: ["sfrx-oft-conversion-rate", "decimalConversionRate"],
-    ethereumFrxDecimals: ["ethereum-frx-decimals", "decimals"],
-    ethereumSfrxDecimals: ["ethereum-sfrx-decimals", "decimals"],
-    ethereumTotalSupply: ["ethereum-sfrx-total-supply", "totalSupply"],
-    ethUsdDecimals: ["eth-usd-decimals", "decimals"],
-  });
-  const {
-    frxOft,
-    sfrxOft,
-    frxOftToken,
-    sfrxOftToken,
-    ethereumSfrxAsset,
-    ethUsdAggregator,
-  } = decodeAddresses(ethereumState, {
-    frxOft: ["remote-frx-oft", "frxUsdOft"],
-    sfrxOft: ["remote-sfrx-oft", "sfrxUsdOft"],
-    frxOftToken: ["frx-oft-token", "token"],
-    sfrxOftToken: ["sfrx-oft-token", "token"],
-    ethereumSfrxAsset: ["ethereum-sfrx-asset", "asset"],
-    ethUsdAggregator: ["eth-usd-aggregator", "aggregator"],
-  });
-  const ethUsdRound = decodeRoundData(ethereumState, "eth-usd-round");
+    "remote-paused": remotePaused,
+    "remote-fraxtal-hop": remoteFraxtalHop,
+    "remote-eid": ethereumEid,
+    "remote-service-fee": remoteServiceFee,
+    "frx-oft-conversion-rate": frxOftConversionRate,
+    "sfrx-oft-conversion-rate": sfrxOftConversionRate,
+    "ethereum-frx-decimals": ethereumFrxDecimals,
+    "ethereum-sfrx-decimals": ethereumSfrxDecimals,
+    "ethereum-sfrx-total-supply": ethereumTotalSupply,
+    "eth-usd-decimals": ethUsdDecimals,
+    "remote-frx-oft": frxOft,
+    "remote-sfrx-oft": sfrxOft,
+    "frx-oft-token": frxOftToken,
+    "sfrx-oft-token": sfrxOftToken,
+    "ethereum-sfrx-asset": ethereumSfrxAsset,
+    "eth-usd-aggregator": ethUsdAggregator,
+    "eth-usd-round": ethUsdRound,
+  } = ethereumState;
   if (
     typeof remotePaused !== "boolean" ||
     typeof remoteFraxtalHop !== "string" ||
@@ -860,36 +754,19 @@ async function observeWithClient(
   }
 
   const {
-    fraxtalHopPaused,
-    hopRemote,
-    fraxtalHopNativeBalance,
-    frxLockboxConversionRate,
-    sfrxLockboxConversionRate,
-    fraxtalFrxDecimals,
-    fraxtalSfrxDecimals,
-  } = decodeResults(fraxtalState, {
-    fraxtalHopPaused: ["fraxtal-hop-paused", "paused"],
-    hopRemote: ["fraxtal-hop-remote", "remoteHop"],
-    fraxtalHopNativeBalance: ["fraxtal-hop-native-balance", "getEthBalance"],
-    frxLockboxConversionRate: [
-      "fraxtal-frx-lockbox-conversion-rate",
-      "decimalConversionRate",
-    ],
-    sfrxLockboxConversionRate: [
-      "fraxtal-sfrx-lockbox-conversion-rate",
-      "decimalConversionRate",
-    ],
-    fraxtalFrxDecimals: ["fraxtal-frx-decimals", "decimals"],
-    fraxtalSfrxDecimals: ["fraxtal-sfrx-decimals", "decimals"],
-  });
-  const { hopRedeemer, hopFrxLockbox, hopSfrxLockbox, frxLockboxToken, sfrxLockboxToken } =
-    decodeAddresses(fraxtalState, {
-      hopRedeemer: ["fraxtal-hop-redeemer", "fraxtalERC4626MintRedeemer"],
-      hopFrxLockbox: ["fraxtal-hop-frx-lockbox", "frxUsdLockbox"],
-      hopSfrxLockbox: ["fraxtal-hop-sfrx-lockbox", "sfrxUsdLockbox"],
-      frxLockboxToken: ["fraxtal-frx-lockbox-token", "token"],
-      sfrxLockboxToken: ["fraxtal-sfrx-lockbox-token", "token"],
-    });
+    "fraxtal-hop-paused": fraxtalHopPaused,
+    "fraxtal-hop-remote": hopRemote,
+    "fraxtal-hop-native-balance": fraxtalHopNativeBalance,
+    "fraxtal-frx-lockbox-conversion-rate": frxLockboxConversionRate,
+    "fraxtal-sfrx-lockbox-conversion-rate": sfrxLockboxConversionRate,
+    "fraxtal-frx-decimals": fraxtalFrxDecimals,
+    "fraxtal-sfrx-decimals": fraxtalSfrxDecimals,
+    "fraxtal-hop-redeemer": hopRedeemer,
+    "fraxtal-hop-frx-lockbox": hopFrxLockbox,
+    "fraxtal-hop-sfrx-lockbox": hopSfrxLockbox,
+    "fraxtal-frx-lockbox-token": frxLockboxToken,
+    "fraxtal-sfrx-lockbox-token": sfrxLockboxToken,
+  } = fraxtalState;
   if (
     typeof fraxtalHopPaused !== "boolean" ||
     typeof hopRemote !== "string" ||
@@ -930,13 +807,10 @@ async function observeWithClient(
     return rejected(attemptedAtSec, "token-decimals-invalid", blocks);
   }
 
-  const { redeemerUnderlying, redeemerVault, underlyingOracle, vaultOracle } =
-    decodeAddresses(fraxtalState, {
-      redeemerUnderlying: ["redeemer-underlying", "underlyingTkn"],
-      redeemerVault: ["redeemer-vault", "vaultTkn"],
-      underlyingOracle: ["redeemer-underlying-oracle", "priceFeedUnderlying"],
-      vaultOracle: ["redeemer-vault-oracle", "priceFeedVault"],
-    });
+  const {
+    "redeemer-underlying": redeemerUnderlying, "redeemer-vault": redeemerVault,
+    "redeemer-underlying-oracle": underlyingOracle, "redeemer-vault-oracle": vaultOracle,
+  } = fraxtalState;
   if (
     redeemerUnderlying !==
       normalizeExpectedAddress(params.expectedFraxtalFrxUsdAddress) ||
@@ -950,35 +824,18 @@ async function observeWithClient(
   }
 
   const {
-    feeRaw,
-    oracleTolerance,
-    storedPrice,
-    latestVaultPrice,
-    latestUnderlyingPrice,
-    lastOracleRead,
-    totalAssets,
-    mdwr,
-    underlyingBalance,
-    vaultOracleDecimals,
-  } = decodeResults(fraxtalState, {
-    feeRaw: ["redeemer-fee", "fee"],
-    oracleTolerance: ["redeemer-oracle-tolerance", "oracleTimeTolerance"],
-    storedPrice: ["redeemer-stored-price", "getVaultTknPriceStoredE18"],
-    latestVaultPrice: ["redeemer-latest-vault-price", "getLatestVaultTknPriceE18"],
-    latestUnderlyingPrice: [
-      "redeemer-latest-underlying-price",
-      "getLatestUnderlyingPriceE18",
-    ],
-    lastOracleRead: ["redeemer-last-oracle-read", "lastVaultTknOracleRead"],
-    totalAssets: ["redeemer-total-assets", "totalAssets"],
-    mdwr: ["redeemer-mdwr", "mdwrComboView"],
-    underlyingBalance: ["redeemer-underlying-balance", "balanceOf"],
-    vaultOracleDecimals: ["vault-oracle-decimals", "decimals"],
-  });
-  const vaultOracleRound = decodeRoundData(
-    fraxtalState,
-    "vault-oracle-round",
-  );
+    "redeemer-fee": feeRaw,
+    "redeemer-oracle-tolerance": oracleTolerance,
+    "redeemer-stored-price": storedPrice,
+    "redeemer-latest-vault-price": latestVaultPrice,
+    "redeemer-latest-underlying-price": latestUnderlyingPrice,
+    "redeemer-last-oracle-read": lastOracleRead,
+    "redeemer-total-assets": totalAssets,
+    "redeemer-mdwr": mdwr,
+    "redeemer-underlying-balance": underlyingBalance,
+    "vault-oracle-decimals": vaultOracleDecimals,
+    "vault-oracle-round": vaultOracleRound,
+  } = fraxtalState;
   if (
     typeof feeRaw !== "bigint" ||
     typeof oracleTolerance !== "bigint" ||
@@ -1063,31 +920,17 @@ async function observeWithClient(
     ctx,
     "sfrxusd-route-ethereum-supply-assets",
     () =>
-      client.multicall(
+      observeRouteWave(
+        client,
         ETHEREUM,
-        [
-          {
-            label: "ethereum-supply-assets",
-            target: sfrxUsdProxyAddress,
-            callData: encodeFunctionData({
-              abi: ROUTE_ABI,
-              functionName: "convertToAssets",
-              args: [ethereumTotalSupply],
-            }),
-            allowFailure: false,
-          },
-        ],
+        [routeObservation("ethereum-supply-assets", sfrxUsdProxyAddress, "convertToAssets", [ethereumTotalSupply])],
         ethereumBlock.blockNumber,
         ethereumOptions,
       ),
     { signal },
   );
   const ethereumSupplyAssets = ethereumSupplyState
-    ? decodeResult(
-        ethereumSupplyState,
-        "ethereum-supply-assets",
-        "convertToAssets",
-      )
+    ? ethereumSupplyState["ethereum-supply-assets"]
     : null;
   if (
     typeof ethereumSupplyAssets !== "bigint" ||
@@ -1111,7 +954,7 @@ async function observeWithClient(
     const grossOutput = (shares * storedPrice) / E18;
     return ((E18 - feeRaw) * grossOutput) / E18;
   });
-  const calls = quoteCalls({
+  const fields = quoteFields({
     params,
     recipient,
     inputShares,
@@ -1123,35 +966,21 @@ async function observeWithClient(
       ctx,
       "sfrxusd-route-ethereum-quotes",
       () =>
-        client.multicall(
-          ETHEREUM,
-          calls.ethereum,
-          ethereumBlock.blockNumber,
-          ethereumOptions,
-        ),
+        observeRouteWave(client, ETHEREUM, fields.ethereum, ethereumBlock.blockNumber, ethereumOptions),
       { signal },
     ),
     runAdapterIo(
       ctx,
       "sfrxusd-route-fraxtal-quotes",
       () =>
-        client.multicall(
-          FRAXTAL,
-          calls.fraxtal,
-          fraxtalBlock.blockNumber,
-          fraxtalOptions,
-        ),
+        observeRouteWave(client, FRAXTAL, fields.fraxtal, fraxtalBlock.blockNumber, fraxtalOptions),
       { signal },
     ),
   ]);
   if (!ethereumQuotes || !fraxtalQuotes) {
     return rejected(attemptedAtSec, "quote-unavailable", blocks);
   }
-  const cappedPreviewOutput = decodeResult(
-    fraxtalQuotes,
-    "capacity-preview",
-    "previewRedeem",
-  );
+  const cappedPreviewOutput = fraxtalQuotes["capacity-preview"];
   if (
     typeof cappedPreviewOutput !== "bigint" ||
     cappedPreviewOutput <= 0n
@@ -1169,19 +998,9 @@ async function observeWithClient(
   }
 
   const protocolCostCurve = COST_REQUESTS_USD.map((request, index) => {
-    const ethereumQuote = decodeMessagingFee(
-      ethereumQuotes,
-      `ethereum-quote:${index}`,
-    );
-    const previewOutput = decodeResult(
-      fraxtalQuotes,
-      `preview:${index}`,
-      "previewRedeem",
-    );
-    const returnQuote = decodeMessagingFee(
-      fraxtalQuotes,
-      `fraxtal-return-quote:${index}`,
-    );
+    const ethereumQuote = ethereumQuotes[`ethereum-quote:${index}`];
+    const previewOutput = fraxtalQuotes[`preview:${index}`];
+    const returnQuote = fraxtalQuotes[`fraxtal-return-quote:${index}`];
     if (
       !ethereumQuote ||
       !returnQuote ||

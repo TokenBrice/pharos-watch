@@ -5,7 +5,7 @@
  * intake denomination/identity cases. Heavy downstream phases and D1 are mocked.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildFallbackAssetsFromCoinGecko } from "../fallback-intake";
@@ -132,10 +132,12 @@ function buildRealCgData(countLimit: number, usdPrice = 1, usdMarketCap = 5_000_
 
 describe("syncViaCoingeckoFallback orchestrator", () => {
   beforeEach(() => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
     for (const mock of Object.values(subPhaseMocks)) {
       mock.mockClear();
     }
   });
+  afterEach(() => { vi.restoreAllMocks(); });
 
   // -----------------------------------------------------------------------
   // (a) A successful fallback write still fails closed when CoinGecko cannot
@@ -401,7 +403,7 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       circulatingPrevMonth: null,
       chainCirculating: {},
       chains: [],
-      supplyObservedAt: undefined,
+      supplyObservedAt: NOW_SEC,
     });
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
 
@@ -413,8 +415,11 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     await restoreFallbackCacheState({ db: mockD1([]), assets: [fresh] });
     expect(fresh).toMatchObject({
       circulatingPrevDay: { peggedUSD: 90 },
-      chainCirculating: { Ethereum: { current: 100 } },
-      supplyObservedAt: freshObservedAt,
+      circulatingPrevWeek: { peggedUSD: 80 },
+      circulatingPrevMonth: { peggedUSD: 70 },
+      chainCirculating: { Ethereum: { current: null } },
+      circulating: { peggedUSD: 100 },
+      supplyObservedAt: NOW_SEC,
     });
 
     subPhaseMocks.loadPreviousStablecoinsById.mockResolvedValueOnce({
@@ -424,8 +429,10 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     const stale = current();
     await restoreFallbackCacheState({ db: mockD1([]), assets: [stale] });
     expect(stale.circulatingPrevDay).toBeNull();
+    expect(stale.circulatingPrevWeek).toBeNull();
+    expect(stale.circulatingPrevMonth).toBeNull();
     expect(stale.chainCirculating).toEqual({});
-    expect(stale.supplyObservedAt).toBeUndefined();
+    expect(stale.supplyObservedAt).toBe(NOW_SEC);
     nowSpy.mockRestore();
   });
 });

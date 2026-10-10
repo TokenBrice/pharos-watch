@@ -5,6 +5,7 @@ import {
   shouldSkipFallbackCurvePool,
 } from "../crawl-helpers";
 import type { GtNewPool } from "../types";
+import type { DsPair } from "../../../lib/dexscreener";
 
 interface RawPool {
   id: string;
@@ -300,7 +301,7 @@ describe("crawlTokenPools", () => {
       quoteToken: { address: "QuoteCase" },
       priceUsd: "1",
       priceNative: "1",
-    } as never;
+    } as DsPair;
     expect(getChainAwareDsTrackedTokenPriceUsd(pair, "mintCase", "solana")).toEqual({
       side: null,
       priceUsd: null,
@@ -309,6 +310,13 @@ describe("crawlTokenPools", () => {
       side: "base",
       priceUsd: 1,
     });
+    expect(getChainAwareDsTrackedTokenPriceUsd({ ...pair, priceUsd: "4", priceNative: "2" }, "QuoteCase", "solana"))
+      .toEqual({ side: "quote", priceUsd: 2 });
+    expect(getChainAwareDsTrackedTokenPriceUsd(pair, "quoteCase", "solana")).toEqual({ side: null, priceUsd: null });
+    for (const priceNative of [undefined, "0", "invalid"]) {
+      expect(getChainAwareDsTrackedTokenPriceUsd({ ...pair, priceNative }, "QuoteCase", "solana"))
+        .toEqual({ side: "quote", priceUsd: null });
+    }
 
     const newPools = new Map<string, GtNewPool[]>();
     await crawlTokenPools<RawPool, GtNewPool>({

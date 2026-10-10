@@ -4,6 +4,7 @@ import { invalidateBlacklistDerivedCaches } from "../blacklist-cache-invalidatio
 import { logWorkerEventArgs } from "../structured-log";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
 import { fetchTronBlockTransactionPositions, type TronReplayProviderContext } from "./tron-replay-provider";
+import { CURRENT_BALANCE_DEBT_PREFIX } from "./current-balance-cache";
 
 /** Conflicting blocks enriched per maintenance pass. */
 const TRON_ORDER_MAX_BLOCKS_PER_RUN = 8;
@@ -136,6 +137,11 @@ export async function resolveTronBlacklistOrder(
       }
       confirmedEvidenceIncomplete = statements.length < (pendingRows.results?.length ?? 0);
       if (statements.length > 0) {
+        // Retain capture work even if a later update/invalidation fails.
+        await db.prepare(`INSERT OR IGNORE INTO cache (key, value, updated_at)
+          SELECT ? || id, id, ? FROM blacklist_events
+          WHERE chain_id = 'tron' AND block_number = ? AND suppression_reason IS NULL`)
+          .bind(CURRENT_BALANCE_DEBT_PREFIX, nowSec, blockNumber).run();
         try {
           result.positionsResolved += await batchExecute(db, statements, { signal: provider.signal });
         } finally {

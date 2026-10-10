@@ -2,7 +2,10 @@ import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { throwIfAborted } from "../lib/abort";
 import { getCache, setCache } from "../lib/db-cache";
-import { forgetSubscriber } from "../lib/telegram/subscriber-lifecycle";
+import {
+  INACTIVE_TELEGRAM_SUBSCRIBER_ELIGIBILITY_SQL,
+  purgeInactiveTelegramSubscriber,
+} from "../lib/telegram/subscriber-lifecycle";
 import { mapWithConcurrency } from "../lib/concurrency";
 
 /**
@@ -45,59 +48,7 @@ async function loadCandidateChats(db: D1Database, cutoffSec: number, limit: numb
     .prepare(
       `SELECT s.chat_id AS chat_id
          FROM telegram_subscribers s
-        WHERE s.last_active_at < ?
-          AND NOT EXISTS (
-            SELECT 1
-              FROM telegram_subscriptions sub
-             WHERE sub.chat_id = s.chat_id
-               AND (
-                 sub.alert_dews <> 0
-                 OR sub.alert_depeg <> 0
-                 OR sub.alert_safety <> 0
-                 OR sub.alert_launch <> 0
-                 OR sub.alert_reserve <> 0
-                 OR sub.alert_freeze <> 0
-                 OR sub.alert_dews_override <> 0
-                 OR sub.alert_depeg_override <> 0
-                 OR sub.alert_safety_override <> 0
-                 OR sub.alert_launch_override <> 0
-                 OR sub.alert_reserve_override <> 0
-                 OR sub.alert_freeze_override <> 0
-                 OR sub.dews_min_band IS NOT NULL
-                 OR sub.safety_mode IS NOT NULL
-                 OR sub.depeg_worsening_bps_step IS NOT NULL
-                 OR sub.alert_snooze_until_ts IS NOT NULL
-               )
-          )
-          AND NOT EXISTS (
-            SELECT 1
-              FROM telegram_preset_subscriptions ps
-             WHERE ps.chat_id = s.chat_id
-          )
-          AND NOT EXISTS (
-            SELECT 1
-              FROM telegram_pending_alerts pa
-             WHERE pa.chat_id = s.chat_id
-          )
-          AND NOT EXISTS (
-            SELECT 1
-              FROM telegram_pending_disambiguation pd
-             WHERE pd.chat_id = s.chat_id
-          )
-          -- An enabled personalized recap is durable user intent even when
-          -- the subscriber has not interacted with the bot recently.
-          AND NOT EXISTS (
-            SELECT 1
-              FROM telegram_recap_preferences rp
-             WHERE rp.chat_id = s.chat_id
-               AND rp.enabled = 1
-          )
-          AND s.global_alert_dews = 0
-          AND s.global_alert_depeg = 0
-          AND s.global_alert_safety = 0
-          AND s.global_alert_launch = 0
-          AND s.global_alert_reserve = 0
-          AND s.global_alert_freeze = 0
+        WHERE ${INACTIVE_TELEGRAM_SUBSCRIBER_ELIGIBILITY_SQL}
         ORDER BY s.last_active_at ASC
         LIMIT ?`,
     )
@@ -132,12 +83,11 @@ export async function runTelegramInactiveCleanup(
     candidates,
     1,
     async (chatId) => {
-      await forgetSubscriber(db, chatId);
-      return 1;
+      return await purgeInactiveTelegramSubscriber(db, chatId, cutoffSec) ? 1 : 0;
     },
     { signal },
   );
-  const deleted = deletionResults.reduce((sum, count) => sum + count, 0);
+  const deleted = deletionResults.reduce<number>((sum, count) => sum + count, 0);
 
   await setCache(db, CACHE_LAST_RUN_KEY, String(now));
 

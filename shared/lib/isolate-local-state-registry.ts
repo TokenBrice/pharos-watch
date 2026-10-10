@@ -317,8 +317,8 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     stateNames: ["pendingDwellirCredits"],
     owner: "Dwellir supplemental EVM/native credit accounting",
     kind: "counter",
-    resetOrTtl: "Credits recorded per JSON-RPC response item or native HTTP response accumulate until the next flushDwellirCredits() drains them through a successful month-ledger compare-and-swap; a failed flush restores them, and isolate recycle drops the remainder.",
-    durableTruth: "The cache-table row rpc:dwellir:credits:v1:<YYYY-MM> is authoritative; the pending counter is a per-isolate write buffer only.",
+    resetOrTtl: "Credits accumulate by usage-observation UTC month until flushDwellirCredits() drains each bucket through a successful month-ledger compare-and-swap; failed drains restore the same bucket alongside concurrent usage. Isolate recycle drops the remainder.",
+    durableTruth: "The cache-table row rpc:dwellir:credits:v1:<YYYY-MM> is authoritative; pending month buckets are per-isolate write buffers only.",
   },
   {
     sourcePath: "worker/src/lib/telegram/mini-app-auth.ts",

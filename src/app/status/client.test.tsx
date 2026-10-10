@@ -1,25 +1,25 @@
 // @vitest-environment jsdom
 
 import type { ReactNode } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
 import type { PublicStatusHistoryResponse } from "@shared/types";
 
-const { useHealthMock, useHistoryMock } = vi.hoisted(() => ({
+const { useHealthMock, useHistoryMock, useProbesMock } = vi.hoisted(() => ({
   useHealthMock: vi.fn(),
   useHistoryMock: vi.fn(),
+  useProbesMock: vi.fn(),
 }));
 vi.mock("@/hooks/api-hooks", () => ({ useHealth: useHealthMock }));
 vi.mock("@/hooks/use-public-status-history", () => ({ usePublicStatusHistory: useHistoryMock }));
 vi.mock("@/hooks/use-endpoint-probes", () => ({
-  usePublicEndpointProbes: () => ({ data: undefined, error: null, isLoading: false, refetch: vi.fn() }),
+  usePublicEndpointProbes: useProbesMock,
 }));
 vi.mock("@/components/feature-page-shell", () => ({
   FeaturePageShell: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 vi.mock("@/components/faq-section", () => ({ FaqSection: () => null }));
-vi.mock("@/components/status/public-status-hero", () => ({ PublicStatusHero: () => null }));
 vi.mock("@/components/status/public-service-summary-section", () => ({ PublicServiceSummarySection: () => null }));
 vi.mock("@/components/status/public-status-reliability-section", () => ({ PublicStatusReliabilitySection: () => null }));
 
@@ -37,13 +37,28 @@ beforeEach(() => {
     data: makeHealthyHealthResponse(), error: null, isLoading: false,
     refetch: vi.fn(), dataUpdatedAt: Date.now(),
   });
+  useProbesMock.mockReturnValue({
+    data: undefined, error: null, isLoading: false, refetch: vi.fn(), dataUpdatedAt: 0,
+  });
+  useHistoryMock.mockReturnValue({ data: emptyHistory, isLoading: false, error: null });
 });
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.useRealTimers();
 });
 
 describe("public incident history availability", () => {
+  it("never presents an unavailable circuit read as all closed", () => {
+    const health = {
+      ...makeHealthyHealthResponse(), circuits: null, circuitsUnavailableReason: "circuits-read-failed",
+      status: "degraded", warnings: ["circuit-query-failed"],
+    };
+    useHealthMock.mockReturnValue({ data: health, error: null, isLoading: false, refetch: vi.fn(), dataUpdatedAt: Date.now() });
+    render(<StatusClient faqItems={[]} />);
+    expect(screen.getByText("Unavailable")).toBeTruthy();
+    expect(screen.queryByText("All closed")).toBeNull();
+  });
   it("renders heavy delivery loss while the public scheduler remains healthy", () => {
     const health = makeHealthyHealthResponse();
     health.status = "degraded";
@@ -96,5 +111,43 @@ describe("public incident history availability", () => {
     expect(screen.queryByRole("img", { name: /status runway/ })).toBeNull();
     expect(screen.queryByText(/healthy for \d+d/)).toBeNull();
     expect(screen.getByText(/last 30 days cannot be shown/)).toBeTruthy();
+  });
+});
+
+describe("public probe evidence", () => {
+  it.each([
+    ["pending", undefined, true, null, "Loading"],
+    ["failed", undefined, false, new Error("probe read failed"), "Unknown"],
+    ["empty", [], false, null, "Unknown"],
+  ] as const)("never labels %s browser probe evidence Healthy", (_label, data, isLoading, error, expected) => {
+    useProbesMock.mockReturnValue({ data, isLoading, error, refetch: vi.fn(), dataUpdatedAt: 0 });
+    render(<StatusClient faqItems={[]} />);
+    const tile = within(screen.getByText("Browser Probes").parentElement!);
+    expect(tile.getByText(expected)).toBeTruthy();
+    expect(tile.queryByText("Healthy")).toBeNull();
+    expect(tile.getByText("—")).toBeTruthy();
+  });
+});
+
+describe("public query freshness", () => {
+  it.each([
+    ["normal four-minute probes", 0, 240_000, "current", "current"],
+    ["overdue probes", 0, 1_800_001, "current", "stale"],
+    ["overdue health", 1_800_001, 0, "stale", "current"],
+    ["exact polling budget", 1_800_000, 1_800_000, "current", "current"],
+  ] as const)("uses independent polling budgets for %s", (_label, healthAge, probeAge, healthState, probeState) => {
+    vi.useFakeTimers();
+    const now = 1_790_000_000_000;
+    vi.setSystemTime(now);
+    useHealthMock.mockReturnValue({
+      data: makeHealthyHealthResponse(), error: null, isLoading: false, refetch: vi.fn(), dataUpdatedAt: now - healthAge,
+    });
+    useProbesMock.mockReturnValue({
+      data: [{ path: "/api/health", status: 200, latencyMs: 40 }],
+      error: null, isLoading: false, refetch: vi.fn(), dataUpdatedAt: now - probeAge,
+    });
+    render(<StatusClient faqItems={[]} />);
+    expect(screen.getByText(/^Health fetch: /).closest("time")?.getAttribute("data-state")).toBe(healthState);
+    expect(screen.getByText(/^Probe fetch: /).closest("time")?.getAttribute("data-state")).toBe(probeState);
   });
 });

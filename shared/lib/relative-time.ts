@@ -128,7 +128,7 @@ export function formatWholeUnitDurationSeconds(
 ): string {
   if (seconds % DAY_SECONDS === 0) return `${seconds / DAY_SECONDS}d`;
   if (seconds % HOUR_SECONDS === 0) return `${seconds / HOUR_SECONDS}h`;
-  if (options.minUnit === "minute") return `${Math.round(seconds / SECONDS_PER_MINUTE)}m`;
+  if (options.minUnit === "minute") return `${seconds > 0 && seconds < SECONDS_PER_MINUTE ? 1 : Math.round(seconds / SECONDS_PER_MINUTE)}m`;
   if (seconds % SECONDS_PER_MINUTE === 0) return `${seconds / SECONDS_PER_MINUTE}m`;
   return `${seconds}s`;
 }

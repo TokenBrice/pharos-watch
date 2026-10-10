@@ -17,6 +17,7 @@ import {
   type RedemptionDocSource,
 } from "../../types/redemption";
 import { HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema } from "../../types/validators";
+import { PhysicalCommoditySchema } from "../../types/exit-route";
 import { isValidIsoDateOnly } from "../../types/date-primitives";
 import { formatUtcDateOnly } from "../format";
 import { isRedemptionSettlementFaster } from "./settlement";
@@ -199,7 +200,7 @@ const RedemptionCostModelSchema = z.discriminatedUnion("kind", [
 export type RedemptionCostModel = z.infer<typeof RedemptionCostModelSchema>;
 
 export const PhysicalCommodityDeliveryTermsSchema = z.strictObject({
-  commodity: z.enum(["XAU", "XAG"]),
+  commodity: PhysicalCommoditySchema,
   deliverableOuncesPerToken: PositiveNumberSchema,
   minimumDeliveryTokens: PositiveNumberSchema,
   deliveryTermsUnbounded: z.boolean(),
@@ -244,7 +245,7 @@ const PhysicalThroughputSchema = z.strictObject({
   evidence: z.strictObject({ url: HttpUrlSchema, quote: z.string().min(1) }),
 });
 export const PhysicalToUsdRouteSchema = z.strictObject({
-  metal: z.enum(["XAU", "XAG"]),
+  metal: PhysicalCommoditySchema,
   fineTroyOuncesPerToken: PositiveNumberSchema,
   lot: PhysicalLotSchema,
   throughput: PhysicalThroughputSchema.optional(),

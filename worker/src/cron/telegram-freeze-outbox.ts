@@ -7,13 +7,18 @@ import {
   resolveAlertLinkPreviewOptions,
   splitMessage,
 } from "../lib/telegram/alerts";
-import { buildPendingAlertScope } from "../lib/telegram/pending-provenance";
+import {
+  buildPendingAlertScope,
+  serializePendingAlertScope,
+  serializePendingMarkupPolicy,
+} from "../lib/telegram/pending-provenance";
 import {
   buildDedupeKey,
   buildPendingAlertEnqueueStatement,
 } from "../lib/telegram/pending-queue";
 import { emptyAlerts } from "./dispatch-telegram-routing";
-import { loadFreshFreezeAlerts, type FreezeAlert } from "./telegram-alert-freeze";
+import { loadFreshFreezeAlerts } from "./telegram-alert-freeze";
+import type { FreezeAlert } from "../lib/telegram/alerts-formatting";
 import { prepareTelegramAlertJobCounterReconciliation } from "./telegram-alert-job-target-outcomes";
 import { isQuietHoursActive } from "../lib/telegram/quiet-hours";
 
@@ -79,6 +84,7 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
   state: "stale" | "seeded" | "queued" | "idle";
   observed: number;
   queued: number;
+  targetCount: number;
   skippedNoAudience: number;
   droppedUnparsed: number;
 }> {
@@ -86,11 +92,11 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
   const cursor = cached && /^\d+$/.test(cached.value) ? Number(cached.value) : null;
   const loaded = await loadFreshFreezeAlerts(db, cursor, nowSec);
   if (loaded.state === "stale") {
-    return { state: "stale", observed: 0, queued: 0, skippedNoAudience: 0, droppedUnparsed: 0 };
+    return { state: "stale", observed: 0, queued: 0, targetCount: 0, skippedNoAudience: 0, droppedUnparsed: 0 };
   }
   if (loaded.state === "unseeded") {
     if (loaded.cursor != null) await setCache(db, FREEZE_CURSOR_KEY, String(loaded.cursor));
-    return { state: "seeded", observed: 0, queued: 0, skippedNoAudience: 0, droppedUnparsed: 0 };
+    return { state: "seeded", observed: 0, queued: 0, targetCount: 0, skippedNoAudience: 0, droppedUnparsed: 0 };
   }
 
   const resumable = await db.prepare(
@@ -116,7 +122,12 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
     queuedByTapeId.set(event.tapeEventId, event);
   }
   let queued = 0;
-  for (const event of queuedByTapeId.values()) queued += await persistAndQueueFreezeEvent(db, event, nowSec);
+  let targetCount = 0;
+  for (const event of queuedByTapeId.values()) {
+    const result = await persistAndQueueFreezeEvent(db, event, nowSec);
+    queued += result.queued;
+    targetCount += result.targetCount;
+  }
   // New no-audience events are intentionally cursor-advanced without durable
   // outbox rows. A later subscriber should not receive historical freeze alerts
   // whose recipient cohort was empty at observation time.
@@ -125,12 +136,13 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
     state: queued > 0 ? "queued" : "idle",
     observed: loaded.alerts.length,
     queued,
+    targetCount,
     skippedNoAudience,
     droppedUnparsed: loaded.droppedUnparsed ?? 0,
   };
 }
 
-async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, nowSec: number): Promise<number> {
+async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, nowSec: number): Promise<{ queued: number; targetCount: number }> {
   const sourceEventId = `freeze:${event.tapeEventId}`;
   const expiresAt = nowSec + 2 * 60 * 60;
   await db.prepare(
@@ -154,7 +166,7 @@ async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, no
       db.prepare("UPDATE telegram_freeze_alert_events SET status = 'expired', updated_at = ? WHERE source_event_id = ?")
         .bind(nowSec, sourceEventId),
     ]);
-    return 0;
+    return { queued: 0, targetCount: 0 };
   }
 
   // Capture membership and close the cohort in one transaction. Resumes may
@@ -239,7 +251,32 @@ async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, no
         linkPreviewOptions: resolveAlertLinkPreviewOptions(alerts, chunkIndex) ?? undefined,
       };
       const targetKey = buildDedupeKey(message);
-      await executeAtomicBatch(db, [
+      const matchingPendingSql = `EXISTS (
+        SELECT 1 FROM telegram_pending_alerts pending
+         WHERE pending.dedupe_key = ?
+           AND pending.source_event_id = ?
+           AND pending.chat_id = ?
+           AND pending.chunk_index = ?
+           AND pending.message_html = ?
+           AND pending.disable_notification = ?
+           AND pending.preference_generation = ?
+           AND pending.alert_scope_json = ?
+           AND pending.markup_policy_json = ?
+           AND pending.expires_at = ?
+           AND pending.source_type = 'risk_alert'
+           AND pending.alert_type = 'freeze'
+      )`;
+      const matchingPendingBinds = [
+        targetKey, sourceEventId, chatId, chunkIndex, chunk,
+        message.disableNotification ? 1 : 0, message.preferenceGeneration,
+        serializePendingAlertScope(scope),
+        serializePendingMarkupPolicy({
+          replyMarkup: message.replyMarkup,
+          linkPreviewOptions: message.linkPreviewOptions,
+        }),
+        durableExpiresAt,
+      ];
+      const handoffResults = await executeAtomicBatch(db, [
         db.prepare(
           `INSERT INTO telegram_alert_source_events (
              source_event_id, schema_version, status, detected_at, expires_at, event_payload, baseline_payload,
@@ -266,19 +303,30 @@ async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, no
              job_id, target_key, source_event_id, item_key, created_at
            ) VALUES (?, ?, ?, ?, ?)`,
         ).bind(`telegram:${sourceEventId}:freeze`, targetKey, sourceEventId, `freeze:${event.tapeEventId}`, nowSec),
-        buildPendingAlertEnqueueStatement(db, message, nowSec, { ttlSec: durableExpiresAt - nowSec }),
+        buildPendingAlertEnqueueStatement(db, message, nowSec, { ttlSec: durableExpiresAt - nowSec }, {
+          // Freeze payload/provenance is immutable even before transport starts.
+          // A conflicting row must not be rewritten into a matching handoff.
+          sql: `NOT EXISTS (
+            SELECT 1 FROM telegram_pending_alerts WHERE dedupe_key = ?
+          ) OR ${matchingPendingSql}`,
+          binds: [targetKey, ...matchingPendingBinds],
+        }),
         db.prepare(
           `UPDATE telegram_alert_job_targets
               SET status = 'queued'
-            WHERE job_id = ? AND target_key = ? AND status = 'planned'`,
-        ).bind(`telegram:${sourceEventId}:freeze`, targetKey),
+            WHERE job_id = ? AND target_key = ? AND status = 'planned'
+              AND source_event_id = ?
+              AND ${matchingPendingSql}`,
+        ).bind(`telegram:${sourceEventId}:freeze`, targetKey, sourceEventId, ...matchingPendingBinds),
         db.prepare(
           `UPDATE telegram_freeze_alert_targets
               SET status = 'queued', queued_at = ?, pending_dedupe_key = ?
-            WHERE source_event_id = ? AND target_key = ? AND status = 'planned'`,
-        ).bind(nowSec, targetKey, sourceEventId, target.target_key),
-      ]);
-      queued += 1;
+            WHERE source_event_id = ? AND target_key = ? AND status = 'planned'
+              AND preference_generation = ?
+              AND ${matchingPendingSql}`,
+        ).bind(nowSec, targetKey, sourceEventId, target.target_key, message.preferenceGeneration, ...matchingPendingBinds),
+      ], { returnResults: true });
+      queued += Number(handoffResults[handoffResults.length - 1]?.meta?.changes ?? 0);
     }
   }
   await db.prepare(
@@ -299,5 +347,5 @@ async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, no
     `telegram:${sourceEventId}:freeze`,
     nowSec,
   ).run();
-  return queued;
+  return { queued, targetCount: targetRows.results?.length ?? 0 };
 }

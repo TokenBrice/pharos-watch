@@ -55,12 +55,15 @@ export interface WeeklyInputData {
   degradedSources?: string[];
   dailyDigests: { date: string; title: string; text: string; inputData: DigestInputData }[];
   psiRange: { min: number; max: number; start: number; end: number; dominantBand: string };
-  mcapRange: { start: number; end: number; netChange: number; pctChange: number | null };
+  mcapRange: { start: number | null; end: number | null; netChange: number | null; pctChange: number | null; unavailableReason?: string };
   /** Cross-day totals: null when the window did not observe every daily edition. */
   activeDepegObservationsThisWeek: number | null;
   uniqueDepegSignalsThisWeek: number | null;
   totalBlacklistEventsThisWeek: number | null;
   totalBlacklistAmountUsd: number | null;
+  blacklistUnpricedEventCount?: number | null;
+  metricUnavailableReasons?: Partial<Record<"mcapEnd" | "activeDepegObs" | "uniqueDepegSignals" | "blacklistEvents" | "blacklistUsd" | "gradeTransitions", string[]>>;
+  /** Null when canonical safety evidence is unavailable; zero is an observed quiet week. */
   gradeTransitionCount: number | null;
   gaugeRange: { min: number; max: number } | null;
   spikeMetrics: WeeklySpikeMetrics;
@@ -89,16 +92,17 @@ export interface WeeklyInputData {
   /** Aggregate forward-look accountability across the week's daily editions. */
   forwardLookScoreboard: Record<DigestForwardLookOutcome["status"], number> | null;
   weekOverWeekDeltas: {
-    mcap: { current: number; prior: number; deltaPct: number | null };
-    psi: { current: number; prior: number; delta: number };
-    psiDominantBand: { current: string; prior: string };
+    mcap: { current: number | null; prior: number | null; deltaPct: number | null };
+    psi: { current: number | null; prior: number | null; delta: number | null; unavailableReason?: string };
+    psiDominantBand: { current: string | null; prior: string | null };
     activeDepegObservations: { current: number | null; prior: number | null };
     uniqueDepegSignals: { current: number | null; prior: number | null };
     blacklistEvents: { current: number | null; prior: number | null };
     blacklistUsd: { current: number | null; prior: number | null };
+    /** Unavailable canonical safety evidence withholds both comparison counts. */
     gradeTransitions: { current: number | null; prior: number | null };
     gauge: { current: number | null; prior: number | null };
-    dataCoverage: { currentDays: number; priorDays: number };
+    dataCoverage: { currentDays: number; priorDays: number; currentPsiDays: number; priorPsiDays: number };
   } | null;
 }
 

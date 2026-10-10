@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DexLiquidityCard } from "@/components/dex-liquidity-card";
 import { buildLiquidityVerdictLine } from "@/components/dex-liquidity-card-model";
-import { PoolSourceLabel } from "@/components/dex-liquidity-card-parts";
+import { PoolSourceLabel, TvlTrendChart } from "@/components/dex-liquidity-card-parts";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import type { DexLiquidityHistoryPoint, DexLiquidityPool } from "@shared/types";
 import { summarizeDexVolumeWindow, type DexPoolVolumeObservationInput } from "@shared/lib/dex-volume-availability";
@@ -22,9 +22,13 @@ function openMarketBreakdown(container: HTMLElement) {
 }
 
 
-const { useDexLiquidityMock, useDexLiquidityHistoryMock } = vi.hoisted(() => ({
+const { useDexLiquidityMock, useDexLiquidityHistoryMock, chartReadyMock, areaChartMock, areaMock, tooltipMock } = vi.hoisted(() => ({
   useDexLiquidityMock: vi.fn(),
   useDexLiquidityHistoryMock: vi.fn(),
+  chartReadyMock: vi.fn(),
+  areaChartMock: vi.fn(),
+  areaMock: vi.fn(),
+  tooltipMock: vi.fn(),
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({
@@ -33,12 +37,19 @@ vi.mock("@/hooks/api-hooks", () => ({
 }));
 
 vi.mock("@/hooks/use-chart-container-ready", () => ({
-  useChartContainerReady: () => ({
-    ref: vi.fn(),
-    ready: false,
-    width: 0,
-    height: 0,
-  }),
+  useChartContainerReady: chartReadyMock,
+}));
+
+vi.mock("recharts", () => ({
+  AreaChart: (props: { data: unknown[]; children: ReactNode }) => {
+    areaChartMock(props);
+    return <div>{props.children}</div>;
+  },
+  Area: (props: unknown) => { areaMock(props); return null; },
+  Tooltip: (props: unknown) => { tooltipMock(props); return null; },
+  XAxis: () => null,
+  YAxis: () => null,
+  CartesianGrid: () => null,
 }));
 
 vi.mock("@/components/methodology-hint", () => ({
@@ -83,10 +94,81 @@ describe("PoolSourceLabel", () => {
   });
 });
 
+describe("TvlTrendChart", () => {
+  beforeEach(() => {
+    useDexLiquidityHistoryMock.mockReset();
+    areaChartMock.mockClear();
+    areaMock.mockClear();
+    tooltipMock.mockClear();
+    chartReadyMock.mockReturnValue({ ref: vi.fn(), ready: true, width: 400, height: 128 });
+  });
+
+  it("renders mixed observed history with an unavailable gap instead of a zero liquidity collapse", () => {
+    useDexLiquidityHistoryMock.mockReturnValue({
+      isLoading: false,
+      data: [
+        makeHistoryPoint({ tvl: 1_000, coverageClass: "primary", liquidityEvidenceClass: "measured", hasMeasuredLiquidityEvidence: true }),
+        makeHistoryPoint({ date: 1_775_779_200 }),
+        makeHistoryPoint({ date: 1_775_865_600, tvl: 1_200, coverageClass: "mixed", liquidityEvidenceClass: "partial_measured", hasMeasuredLiquidityEvidence: true }),
+      ],
+    });
+    render(<TvlTrendChart stablecoinId="usdc-circle" />);
+
+    expect(screen.getByRole("figure", { name: "TVL trend chart" })).toBeTruthy();
+    const points = areaChartMock.mock.calls[0][0].data;
+    expect(points.map((point: { tvl: number | null }) => point.tvl)).toEqual([1_000, null, 1_200]);
+    expect(points[1]).toMatchObject({ coverageClass: "unobserved", liquidityEvidenceClass: "unobserved" });
+    expect(areaMock.mock.calls[0][0].connectNulls).toBe(false);
+    expect(tooltipMock.mock.calls[0][0].formatter(null)).toEqual(["Unavailable", "TVL"]);
+    expect(tooltipMock.mock.calls[0][0].formatter(1_000)).toEqual([formatCurrency(1_000), "TVL"]);
+  });
+
+  it("keeps weak observed TVL visible without applying the trendworthiness floor", () => {
+    useDexLiquidityHistoryMock.mockReturnValue({
+      isLoading: false,
+      data: [
+        makeHistoryPoint({ tvl: 100, coverageClass: "fallback", liquidityEvidenceClass: "observed_unmeasured" }),
+        makeHistoryPoint({ tvl: 200, date: 1_775_779_200, coverageClass: "legacy", liquidityEvidenceClass: "observed_unmeasured" }),
+      ],
+    });
+    render(<TvlTrendChart stablecoinId="usdc-circle" />);
+    expect(areaChartMock.mock.calls[0][0].data.map((point: { tvl: number | null }) => point.tvl)).toEqual([100, 200]);
+  });
+
+  it("does not turn unknown evidence or zero placeholders into measured history", () => {
+    useDexLiquidityHistoryMock.mockReturnValue({
+      isLoading: false,
+      data: [
+        makeHistoryPoint({ tvl: 100, coverageClass: "primary", liquidityEvidenceClass: "measured" }),
+        makeHistoryPoint({ date: 1_775_779_200, coverageClass: null, liquidityEvidenceClass: null }),
+        makeHistoryPoint({ tvl: 900, date: 1_775_865_600, coverageClass: null, liquidityEvidenceClass: null }),
+      ],
+    });
+    render(<TvlTrendChart stablecoinId="usdc-circle" />);
+    expect(areaChartMock.mock.calls[0][0].data.map((point: { tvl: number | null }) => point.tvl)).toEqual([100, null, null]);
+  });
+});
+
 describe("DexLiquidityCard", () => {
   beforeEach(() => {
     useDexLiquidityMock.mockReset();
     useDexLiquidityHistoryMock.mockReset();
+    chartReadyMock.mockReturnValue({ ref: vi.fn(), ready: false, width: 0, height: 0 });
+  });
+
+  it.each([0, 100_000])("renders invalid coverage as unavailable even with TVL %s", (totalTvlUsd) => {
+    useDexLiquidityMock.mockReturnValue({
+      data: { "usdc-circle": makeDexLiquidityData({
+        totalTvlUsd, poolCount: 0, coverageClass: null, coverageConfidence: null,
+        liquidityEvidenceClass: null, liquidityScore: null,
+        unavailableReason: "invalid-coverage-evidence",
+      }) },
+      isLoading: false,
+    });
+    render(<DexLiquidityCard stablecoinId="usdc-circle" />);
+    expect(screen.getByText("Unavailable coverage")).toBeTruthy();
+    expect(screen.getByText("DEX coverage evidence is unavailable (invalid-coverage-evidence).")).toBeTruthy();
+    expect(screen.queryByText("No observed direct DEX market for this token in the current pipeline.")).toBeNull();
   });
 
 

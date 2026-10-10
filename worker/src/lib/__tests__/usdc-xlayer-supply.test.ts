@@ -10,6 +10,7 @@ describe("USDC X Layer deployment supply", () => {
   it("does not allocate or double-count aggregate X Layer supply between the deployments", () => {
     const amount = 10_000_000;
     const coverage = computeDexDeploymentSupplyCoverage({
+      circulating: { peggedUSD: amount },
       contracts: base.contracts as StablecoinMeta["contracts"],
       chainCirculating: { "X Layer": {
         current: amount, circulatingPrevDay: amount,
@@ -23,8 +24,8 @@ describe("USDC X Layer deployment supply", () => {
       totalSupplyUsd: amount,
       unknownSupplyUsd: amount,
       unknownSupplyRatio: 1,
-      unknownChains: ["xlayer"],
       observedSupplyUsd: 0,
     });
+    expect(coverage?.unknownChains).toEqual([...new Set(base.contracts.map((contract) => contract.chain))].sort());
   });
 });

@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  defineBackstopRegistry,
-  defineBatch,
   defineRecordEntries,
 } from "@shared/lib/redemption-backstop-configs/factory";
 import { buildRedemptionBackstopRegistry } from "@shared/lib/redemption-backstop-configs/manifest";
@@ -71,27 +69,6 @@ describe("validateRedemptionBackstopRegistry", () => {
       kind: "executable-observer", observerId: "lido-earnusd-queue", capacityUse: "diagnostic-only",
       requiredOutputAssetKeys: ["usdt-tether"],
     } })).toContain("observer-output-mismatch");
-  });
-  it("rejects duplicate factory entries unless the later entry carries an override reason", () => {
-    expect(() =>
-      defineBackstopRegistry([
-        ...defineBatch(["usdt-tether"], baseConfig),
-        ...defineBatch(["usdt-tether"], baseConfig),
-      ]),
-    ).toThrow(/usdt-tether/);
-  });
-
-  it("lets a later entry with an override reason win", () => {
-    const registry = defineBackstopRegistry([
-      ...defineBatch(["usdt-tether"], baseConfig),
-      {
-        id: "usdt-tether",
-        config: { ...baseConfig, settlementModel: "days" as const },
-        overrideReason: "Reviewed issuer terms document slower settlement.",
-      },
-    ]);
-
-    expect(registry["usdt-tether"].settlementModel).toBe("days");
   });
 
   it("keeps redemption policy approvals in owned shared config", () => {
@@ -272,14 +249,12 @@ describe("validateRedemptionBackstopRegistry", () => {
     );
   });
 
-  it("carries entry override and source-file metadata into the merged registry and audit", () => {
+  it("carries authored source-file metadata into the merged registry and audit", () => {
     const issuerEntries = [
-      ...defineBatch(["usdt-tether"], baseConfig, { sourceFilePath: "issuer-base.ts" }),
       {
         id: "usdt-tether",
         config: { ...baseConfig, settlementModel: "days" as const },
-        overrideReason: "Reviewed issuer terms document slower settlement.",
-        sourceFilePath: "issuer-override.ts",
+        sourceFilePath: "issuer-reviewed.ts",
       },
     ];
     const manifest: RedemptionBackstopConfigManifestEntry[] = [
@@ -304,15 +279,13 @@ describe("validateRedemptionBackstopRegistry", () => {
     expect(audit.auditRows).toContainEqual(
       expect.objectContaining({
         stablecoinId: "usdt-tether",
-        filePath: "issuer-override.ts",
-        overrideReason: "Reviewed issuer terms document slower settlement.",
+        filePath: "issuer-reviewed.ts",
       }),
     );
     expect(audit.auditRows).toContainEqual(
       expect.objectContaining({
         stablecoinId: "usdc-circle",
         filePath: "plain.ts",
-        overrideReason: null,
       }),
     );
   });

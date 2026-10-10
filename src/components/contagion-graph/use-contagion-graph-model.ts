@@ -198,7 +198,7 @@ export function useContagionGraphModel({
       const footprint = fullGraph.nodes.filter(node => roots.has(node.id) || exposureRows.has(node.id));
       for (const card of cards) {
         if (!card.isDefunct && roots.has(card.id) && !footprint.some(node => node.id === card.id)) {
-          footprint.push({ id: card.id, symbol: card.symbol, grade: card.grade, mcap: mcapMap.get(card.id) ?? null, r: MIN_RADIUS });
+          footprint.push({ id: card.id, symbol: card.symbol, grade: card.grade, partialEvidence: card.partialEvidence, mcap: mcapMap.get(card.id) ?? null, r: MIN_RADIUS });
         }
       }
       footprint.sort((a, b) => (roots.has(a.id) ? 0 : exposureRows.get(a.id)?.minHop ?? Infinity) - (roots.has(b.id) ? 0 : exposureRows.get(b.id)?.minHop ?? Infinity) || (b.mcap ?? -1) - (a.mcap ?? -1));

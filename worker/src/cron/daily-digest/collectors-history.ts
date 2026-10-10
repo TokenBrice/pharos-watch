@@ -2,6 +2,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { round1 } from "@shared/lib/math";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
+import { getPsiBandStreak, type PsiHistoryPointLike } from "@shared/lib/psi-view-model";
 import { SECONDS } from "../../lib/time-constants";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
 import {
@@ -24,6 +25,7 @@ export async function collectTotalMcapAth(
          WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER})
            AND json_extract(input_data, '$.aggregateUniverse') = 'core-stablecoins-v1'
            AND json_extract(input_data, '$.totalMcapUsd') IS NOT NULL
+           AND json_extract(input_data, '$.supplyCoverage.complete') = 1
          ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC
          LIMIT 1`,
       )
@@ -92,6 +94,7 @@ export async function collectHistoricalContext(
   ctx: CollectorContext,
   displayScore: number | null,
   displayBand: string | null,
+  currentComputedAt: number | null,
   biggestSupplyChange: DigestInputData["biggestSupplyChange"],
 ): Promise<CollectorResult<DigestInputData["historicalContext"]>> {
   const degradedReasons: string[] = [];
@@ -108,7 +111,7 @@ export async function collectHistoricalContext(
       ? Math.round((ctx.todayTs - oldestDigest.oldest) / SECONDS.ONE_DAY)
       : 0;
 
-    if (displayScore != null && displayBand && (histDepth?.cnt ?? 0) > 30) {
+    if (displayScore != null && displayBand && currentComputedAt != null && (histDepth?.cnt ?? 0) > 30) {
       const digestPrecedent = await ctx.db
         .prepare(
           `SELECT generated_at,
@@ -143,17 +146,12 @@ export async function collectHistoricalContext(
 
       const bandHistory = await ctx.db
         .prepare(
-          "SELECT computed_at, band FROM stability_index WHERE computed_at <= ? ORDER BY computed_at DESC LIMIT 90",
+          "SELECT computed_at AS date, score, band FROM stability_index WHERE computed_at <= ? ORDER BY computed_at DESC LIMIT 90",
         )
-        .bind(ctx.todayTs)
-        .all<{ computed_at: number; band: string }>();
+        .bind(currentComputedAt)
+        .all<PsiHistoryPointLike>();
 
-      let psiBandStreak = 0;
-      for (const row of bandHistory.results ?? []) {
-        if (row.band === displayBand) psiBandStreak++;
-        else break;
-      }
-      if (psiBandStreak === 0) psiBandStreak = 1;
+      const psiBandStreak = getPsiBandStreak(bandHistory.results ?? [], currentComputedAt, displayBand);
 
       let supplyMoverContext: NonNullable<DigestInputData["historicalContext"]>["supplyMoverContext"] = null;
       if (biggestSupplyChange) {
@@ -220,7 +218,7 @@ export async function collectCrossDayTrends(
 
     const psiTrajectory: { date: string; score: number; band: string }[] = [];
     const mcapTrajectory: { date: string; mcapUsd: number }[] = [];
-    const legacyMcapTrajectory: { date: string; mcapUsd: number }[] = [];
+    const completeCoverageMcapTrajectory: { date: string; mcapUsd: number }[] = [];
     const gaugeTrajectory: { date: string; gaugeScore: number }[] = [];
 
     for (const row of entries) {
@@ -231,10 +229,10 @@ export async function collectCrossDayTrends(
         if (data.stabilityIndex) {
           psiTrajectory.push({ date, score: data.stabilityIndex.score, band: data.stabilityIndex.band });
         }
-        if (data.aggregateUniverse === "core-stablecoins-v1") {
+        if (data.aggregateUniverse === "core-stablecoins-v1" && data.supplyCoverage?.complete === true) {
           mcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
         }
-        legacyMcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
+        if (data.supplyCoverage?.complete === true) completeCoverageMcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
         if (data.mintBurnFlows) {
           gaugeTrajectory.push({ date, gaugeScore: data.mintBurnFlows.gaugeScore });
         }
@@ -246,7 +244,7 @@ export async function collectCrossDayTrends(
 
     psiTrajectory.reverse();
     if (mcapTrajectory.length === 0) {
-      mcapTrajectory.push(...legacyMcapTrajectory);
+      mcapTrajectory.push(...completeCoverageMcapTrajectory);
     }
     mcapTrajectory.reverse();
     gaugeTrajectory.reverse();

@@ -1,4 +1,4 @@
-import { derivePegRates } from "@shared/lib/peg-rates";
+import { deriveCurrentPegObservationMap } from "../../lib/current-peg-observations";
 import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
 import { auditVerdictNotInSql } from "../../lib/depeg-audit";
 import {
@@ -6,6 +6,7 @@ import {
   quarantinedCoins,
   structuralClass,
   type DdrActiveEventInput,
+  type DdrHistoricalEvent,
   type DdrIncident,
   type DdrSafetyContextProvenance,
   type DdrV9ExitContext,
@@ -16,7 +17,7 @@ import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import { chunkArray } from "../../lib/collections";
 import { buildInClause } from "../../lib/d1-primitives";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { StablecoinData } from "@shared/types/market";
 import {
   getDexLiquidityTrendTolerances,
@@ -53,7 +54,6 @@ import {
   placeholders,
   toStructural,
 } from "./utils";
-import { deriveAuthoritativePegSignal } from "../authoritative-peg-signal";
 
 /** Stored hourly bucket read for DDR mint-surge evidence; `netFlowUsd` is the known-valuation net. */
 export interface DdrMintBurnHourlyRow {
@@ -247,28 +247,21 @@ export async function buildCurrentDeviationMap(
   }
 
   const assets = cache.payload.peggedAssets as StablecoinData[];
-  const assetById = new Map(assets.map((asset) => [asset.id, asset]));
-  const { rates, sources, counts } = derivePegRates(assets, TRACKED_META_BY_ID, cache.payload.fxFallbackRates);
+  const observations = deriveCurrentPegObservationMap({
+    peggedAssets: assets,
+    fxFallbackRates: cache.payload.fxFallbackRates,
+    asOf: cache.updatedAt,
+  });
   const out = new Map<string, number | null>();
 
-  for (const [id, asset] of assetById) {
-    const meta = TRACKED_META_BY_ID.get(id);
+  for (const asset of assets) {
+    const meta = TRACKED_META_BY_ID.get(asset.id);
     if (!meta || meta.flags.navToken) continue;
-    const supply = getCirculatingRaw(asset);
-    if (supply <= 0 || asset.price == null || !Number.isFinite(asset.price)) {
-      out.set(id, null);
-      continue;
-    }
-    const pegSignal = deriveAuthoritativePegSignal({
-      price: asset.price,
-      pegCurrency: meta.flags.pegCurrency,
-      pegType: asset.pegType,
-      pegRates: rates,
-      pegRateSources: sources,
-      pegRateCounts: counts,
-      commodityOunces: meta.commodityOunces,
-    });
-    out.set(id, pegSignal.kind === "signal" ? pegSignal.deviationBps : null);
+    const supply = getCirculatingRawOrNull(asset);
+    // DDR requires positive observed supply in addition to canonical live-price admission.
+    out.set(asset.id, supply === null || supply <= 0
+      ? null
+      : observations.get(asset.id)?.currentDeviationBps ?? null);
   }
 
   return { byCoin: out, healthy: true, degradedReason: null, dataAsOf: cache.updatedAt };
@@ -311,6 +304,81 @@ export async function loadActiveConfirmedEvents(db: D1Database): Promise<DdrEven
   });
 }
 
+/** The same bounded, audit-eligible temporal corpus used by loadDdrContext. */
+export async function loadDdrHistoricalEvents(
+  db: D1Database,
+  directions: readonly string[],
+  windowStart: number,
+): Promise<{ historical: DdrHistoricalEvent[]; trainingRowsTruncated: boolean }> {
+  if (directions.length === 0) return { historical: [], trainingRowsTruncated: false };
+  const auditEligible = auditVerdictNotInSql("provenance_audit_verdict", DDR_INELIGIBLE_AUDIT_VERDICTS);
+  const result = await runWithOverloadRetry(() => db.prepare(
+    "/* pharos:ddr-training-history */ WITH history AS (" +
+      "SELECT id, stablecoin_id, peg_type, direction, source, peak_deviation_bps, started_at, ended_at, recovery_price, close_reason " +
+      "FROM depeg_events_with_provenance WHERE ended_at IS NOT NULL AND started_at >= ? " +
+      `AND ${auditEligible.sql} AND direction IN (${placeholders(directions.length)}) ` +
+      `ORDER BY started_at ASC, id ASC LIMIT ${HISTORICAL_ROW_CAP}) ` +
+      "SELECT h.*, p.first_seen_bps, p.last_seen_bps, p.last_seen_at, " +
+      "(SELECT json_group_array(json_object('observedAt', a.assessed_at, 'deviationBps', " +
+      "CASE WHEN json_valid(a.row_json) THEN json_extract(a.row_json, '$.currentDeviationBps') END)) " +
+      "FROM depeg_resolver_assessments a WHERE a.event_id = h.id AND a.stablecoin_id = h.stablecoin_id " +
+      "AND a.direction = h.direction AND a.started_at = h.started_at " +
+      "AND a.assessed_at >= h.started_at AND a.assessed_at <= h.ended_at) AS severity_observations_json " +
+      "FROM history h LEFT JOIN depeg_pending_outcomes p ON h.source = 'live' AND p.outcome = 'promoted' " +
+      "AND p.stablecoin_id = h.stablecoin_id AND p.peg_type = h.peg_type AND p.direction = h.direction " +
+      "AND p.first_seen_at = h.started_at " +
+      "AND NOT EXISTS (SELECT 1 FROM depeg_pending_outcomes duplicate WHERE duplicate.outcome = 'promoted' " +
+      "AND duplicate.stablecoin_id = p.stablecoin_id AND duplicate.peg_type = p.peg_type " +
+      "AND duplicate.direction = p.direction AND duplicate.first_seen_at = p.first_seen_at AND duplicate.id != p.id) " +
+      "ORDER BY h.started_at ASC, h.id ASC",
+  ).bind(windowStart, ...auditEligible.binds, ...directions).all<{
+    stablecoin_id: string;
+    direction: string;
+    peak_deviation_bps: number;
+    started_at: number;
+    ended_at: number;
+    recovery_price: number | null;
+    close_reason: string | null;
+    first_seen_bps: number | null;
+    last_seen_bps: number | null;
+    last_seen_at: number | null;
+    severity_observations_json: string | null;
+  }>());
+  const rows = result.results ?? [];
+  const trainingRowsTruncated = rows.length === HISTORICAL_ROW_CAP;
+  const historical = rows.map((row): DdrHistoricalEvent => {
+    // The aggregate is generated by SQLite, not untrusted stored JSON. Reject
+    // nonnumeric sample values rather than coercing missing evidence to zero.
+    const samples: unknown = JSON.parse(row.severity_observations_json ?? "[]");
+    const severityObservations: NonNullable<DdrHistoricalEvent["severityObservations"]> = [];
+    if (Array.isArray(samples)) {
+      for (const sample of samples) {
+        if (sample != null && typeof sample === "object" &&
+          typeof sample.observedAt === "number" && typeof sample.deviationBps === "number" &&
+          Number.isFinite(sample.observedAt) && Number.isFinite(sample.deviationBps)) {
+          severityObservations.push({ observedAt: sample.observedAt, deviationBps: sample.deviationBps });
+        }
+      }
+    }
+    if (row.last_seen_at != null && row.last_seen_bps != null) {
+      severityObservations.push({ observedAt: row.last_seen_at, deviationBps: row.last_seen_bps });
+    }
+    return {
+      stablecoinId: row.stablecoin_id,
+      direction: row.direction === "above" ? "above" : "below",
+      peakDeviationBps: row.peak_deviation_bps,
+      startedAt: row.started_at,
+      endedAt: row.ended_at,
+      recoveryPrice: row.recovery_price,
+      closeReason: row.close_reason,
+      onsetDeviationBps: row.first_seen_bps,
+      severityObservations,
+    };
+  });
+  rows.length = 0;
+  return { historical, trainingRowsTruncated };
+}
+
 export async function loadDdrContext(
   db: D1Database,
   activeRows: DdrEventDbRow[],
@@ -347,39 +415,7 @@ export async function loadDdrContext(
   };
 
   const windowStart = nowSec - TRAINING_WINDOW_SEC;
-  const histResult = await runWithOverloadRetry(() => db
-    .prepare(
-      "SELECT stablecoin_id, direction, peak_deviation_bps, started_at, ended_at, recovery_price, close_reason " +
-        "FROM depeg_events WHERE ended_at IS NOT NULL AND started_at >= ? " +
-        `AND direction IN (${placeholders(directions.length)}) ORDER BY started_at ASC, id ASC LIMIT ${HISTORICAL_ROW_CAP}`,
-    )
-    .bind(windowStart, ...directions)
-    .all<{
-      stablecoin_id: string;
-      direction: string;
-      peak_deviation_bps: number;
-      started_at: number;
-      ended_at: number | null;
-      recovery_price: number | null;
-      close_reason: string | null;
-    }>());
-  const histRows = histResult.results ?? [];
-  const trainingRowsTruncated = histRows.length === HISTORICAL_ROW_CAP;
-  const historical = histRows.map((r) => ({
-    stablecoinId: r.stablecoin_id,
-    direction: r.direction === "above" ? "above" as const : "below" as const,
-    peakDeviationBps: r.peak_deviation_bps,
-    startedAt: r.started_at,
-    endedAt: r.ended_at,
-    recoveryPrice: r.recovery_price,
-    closeReason: r.close_reason,
-  }));
-  // The raw rows are not read again after the projection above (only
-  // `trainingRowsTruncated` was captured from their count), so release them
-  // before the rest of the context loads. Without this the invocation holds two
-  // copies of the 4-year training read — the raw rows and the projection —
-  // across the supply, mint/burn, DEX-history, and safety-snapshot reads.
-  histRows.length = 0;
+  const { historical, trainingRowsTruncated } = await loadDdrHistoricalEvents(db, directions, windowStart);
 
   const incidents: DdrIncident[] = groupIncidents(historical, currencyOf).map((inc) => ({
     ...inc,

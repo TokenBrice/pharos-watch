@@ -1,5 +1,23 @@
 [
   {
+    "slug": "vchf-2026-09-29",
+    "stablecoinId": "vchf-vnx",
+    "symbol": "VCHF",
+    "pegType": "peggedCHF",
+    "direction": "above",
+    "peakDeviationBps": 740,
+    "startedAt": 1790658132
+  },
+  {
+    "slug": "vchf-2026-09-24",
+    "stablecoinId": "vchf-vnx",
+    "symbol": "VCHF",
+    "pegType": "peggedCHF",
+    "direction": "above",
+    "peakDeviationBps": 550,
+    "startedAt": 1790258519
+  },
+  {
     "slug": "vchf-2026-09-18",
     "stablecoinId": "vchf-vnx",
     "symbol": "VCHF",

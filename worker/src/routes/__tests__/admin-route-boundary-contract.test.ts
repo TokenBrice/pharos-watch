@@ -7,27 +7,16 @@ const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
 
 const handlers = vi.hoisted(() => ({
-  auditDepegHistory: vi.fn(async () => Response.json({ ok: true })),
-  backfillDepegs: vi.fn(async () => Response.json({ ok: true })),
-  backfillMintBurn: vi.fn(async () => Response.json({ ok: true })),
-  backfillYieldHistory: vi.fn(async () => Response.json({ ok: true })),
+  dews: vi.fn(async () => Response.json({ ok: true })),
+  remediate: vi.fn(async () => Response.json({ ok: true })),
 }));
 
-vi.mock("../../api/audit-depeg-history", () => ({
-  handleAuditDepegHistoryTrusted: handlers.auditDepegHistory,
+vi.mock("../../api/backfill-dews", () => ({
+  handleBackfillDEWS: ({ request, url }: { request?: Request; url: URL }) =>
+    runAdminJob({ request, url, parseBody: true }, () => handlers.dews()),
 }));
-
-vi.mock("../../api/backfill-depegs", () => ({
-  handleBackfillDepegsTrusted: handlers.backfillDepegs,
-}));
-
-vi.mock("../../api/backfill-mint-burn", () => ({
-  handleBackfillMintBurn: ({ request, url }: { request?: Request; url: URL }) =>
-    runAdminJob({ request, url, parseBody: true }, () => handlers.backfillMintBurn()),
-}));
-
-vi.mock("../../api/backfill-yield-history", () => ({
-  handleBackfillYieldHistory: handlers.backfillYieldHistory,
+vi.mock("../../api/remediate-blacklist-amount-gaps", () => ({
+  handleRemediateBlacklistAmountGapsTrusted: handlers.remediate,
 }));
 
 import { ADMIN_STATIC_ROUTES } from "../admin-routes";
@@ -79,9 +68,9 @@ async function expectNoStoreJson(response: Response, status: number, body: unkno
 
 describe("admin route boundary contract", () => {
   it.each([
-    ["always-idempotent", "backfill-depegs", "POST"],
-    ["conditional-idempotency mutation", "audit-depeg-history", "POST"],
-    ["conditional-idempotency read", "audit-depeg-history", "GET"],
+    ["always-idempotent", "remediate-blacklist-amount-gaps", "POST"],
+    ["conditional-idempotency mutation", "backfill-dews", "POST"],
+    ["conditional-idempotency read", "backfill-dews", "GET"],
   ] as const)("preserves the exact unauthorized response for %s routes", async (_routeClass, key, method) => {
     const route = findRoute(key);
 
@@ -91,29 +80,29 @@ describe("admin route boundary contract", () => {
   });
 
   it("rejects a mutation missing the admin header before loading its handler", async () => {
-    const route = findRoute("backfill-depegs");
-    const callsBefore = handlers.backfillDepegs.mock.calls.length;
+    const route = findRoute("remediate-blacklist-amount-gaps");
+    const callsBefore = handlers.remediate.mock.calls.length;
 
     const response = await route.handler(makeContext(route, { trustedAdmin: true, adminHeader: false }));
 
     await expectNoStoreJson(response, 403, {
       error: "Missing required X-Pharos-Admin header; refusing mutation.",
     });
-    expect(handlers.backfillDepegs).toHaveBeenCalledTimes(callsBefore);
+    expect(handlers.remediate).toHaveBeenCalledTimes(callsBefore);
   });
 
   it("owns malformed-body handling and no-store headers for parsed admin jobs", async () => {
-    const route = findRoute("backfill-mint-burn");
+    const route = findRoute("backfill-dews");
 
     const response = await route.handler(makeContext(route, { trustedAdmin: true, body: "{" }));
 
     await expectNoStoreJson(response, 400, { error: "Invalid JSON body" });
-    expect(handlers.backfillMintBurn).not.toHaveBeenCalled();
+    expect(handlers.dews).not.toHaveBeenCalled();
   });
 
   it("owns the thrown-error boundary and no-store header", async () => {
-    const route = findRoute("backfill-yield-history");
-    handlers.backfillYieldHistory.mockRejectedValueOnce(new Error("sensitive database detail"));
+    const route = findRoute("remediate-blacklist-amount-gaps");
+    handlers.remediate.mockRejectedValueOnce(new Error("sensitive database detail"));
 
     const response = await route.handler(makeContext(route, { trustedAdmin: true }));
 
@@ -121,9 +110,9 @@ describe("admin route boundary contract", () => {
   });
 
   it("replays an always-idempotent route without invoking its handler twice", async () => {
-    const route = findRoute("backfill-depegs");
+    const route = findRoute("remediate-blacklist-amount-gaps");
     const { db } = fixtures.open();
-    const callsBefore = handlers.backfillDepegs.mock.calls.length;
+    const callsBefore = handlers.remediate.mock.calls.length;
     const options = { db, trustedAdmin: true, idempotencyKey: "route-replay-contract" } as const;
 
     const first = await route.handler(makeContext(route, options));
@@ -135,11 +124,11 @@ describe("admin route boundary contract", () => {
     expect(replay.status).toBe(200);
     expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
     expect(replay.headers.get("Cache-Control")).toBe("no-store");
-    expect(handlers.backfillDepegs).toHaveBeenCalledTimes(callsBefore + 1);
+    expect(handlers.remediate).toHaveBeenCalledTimes(callsBefore + 1);
   });
 
   it("applies no-store to successful conditional-idempotency reads", async () => {
-    const route = findRoute("audit-depeg-history");
+    const route = findRoute("backfill-dews");
 
     const response = await route.handler(makeContext(route, { method: "GET", trustedAdmin: true }));
 

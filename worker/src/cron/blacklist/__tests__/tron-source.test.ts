@@ -175,6 +175,23 @@ describe("fetchTronEventsIncremental cursor safety", () => {
     vi.unstubAllGlobals();
   });
 
+  it("holds a saturated page without continuation metadata before the unseen tail", async () => {
+    const base = findConfig("usdt-tether");
+    const eventDef = base.events.find((event) => event.signature.startsWith("AddedBlackList"))!;
+    const config = { ...base, events: [eventDef] };
+    const data = Array.from({ length: 200 }, (_, index) => ({
+      block_number: 100 + index, block_timestamp: 1_700_000_000_000 + index,
+      transaction_id: index.toString(16).padStart(64, "0"), event_index: 0,
+      event_name: "AddedBlackList", result: { _blackListedUser: "0xaa".padEnd(42, "a") },
+    }));
+    const fetchMock = mockFetch([{ match: "api.trongrid.io/v1/contracts/",
+      body: { success: true, data }, status: 200 }], { requireMatch: true });
+    const result = await fetchTronEventsIncremental(config, "key", 1_699_999_000_000, makeRunBudget(), noopLimiter);
+    expect(result).toMatchObject({ incomplete: true, apiError: true, coveredTopicCount: 0, scannedToTimestamp: null });
+    expect(result.rows).toHaveLength(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it.each([null, "[]", "42"])("holds malformed address evidence with prior %s then consumes only after durable third-scan quarantine", async (priorValue) => {
     const base = findConfig("usdt-tether");
     const config = { ...base, events: [base.events.find((event) => event.signature.startsWith("AddedBlackList"))!] };

@@ -7,7 +7,6 @@ import {
   isSiteDataAllowedApiPath,
   isSiteDataAllowedMethod,
   isSiteDataAllowedUiHostname,
-  isSiteDataPath,
   resolveSiteDataProxyPath,
   resolveSiteDataUpstreamPath,
   toSiteDataPath,
@@ -52,13 +51,20 @@ describe("site-data route mapping", () => {
     expect(resolveSiteDataUpstreamPath("/_site-data")).toBeNull();
     expect(resolveSiteDataUpstreamPath("/_site-data/status")).toBeNull();
     expect(resolveSiteDataUpstreamPath("/api/stablecoins")).toBeNull();
-    expect(isSiteDataPath("/_site-data/stablecoins")).toBe(true);
-    expect(isSiteDataPath("/_site-data/stablecoins", "POST")).toBe(false);
-    expect(isSiteDataPath("/_site-data/status")).toBe(false);
+    expect(resolveSiteDataUpstreamPath("/_site-data/stablecoins")).toBe("/api/stablecoins");
+    expect(resolveSiteDataUpstreamPath("/_site-data/stablecoins", "POST")).toBeNull();
+    expect(resolveSiteDataUpstreamPath("/_site-data/status")).toBeNull();
   });
 
   it("throws when mapping a non-API path into the site-data namespace", () => {
     expect(() => toSiteDataPath("/status")).toThrow("Site-data mapping requires an /api/* path");
+  });
+
+  it("uses canonical host defaults for opaque or non-web UI origin overrides", () => {
+    const env = { SITE_ORIGIN: "file:///tmp/site", OPS_UI_ORIGIN: "ftp://ops.pharos.watch" };
+    expect(isSiteDataAllowedUiHostname("pharos.watch", env)).toBe(true);
+    expect(isSiteDataAllowedUiHostname("ops.pharos.watch", env)).toBe(true);
+    expect(isSiteDataAllowedUiHostname("evil.example", env)).toBe(false);
   });
 
   it("checks site-data UI hostnames and caller headers without runtime secrets", () => {

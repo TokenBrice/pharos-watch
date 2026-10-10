@@ -166,10 +166,12 @@ function resolveEffectivePegScore(isNavToken: boolean, pegScoreResult: PegSummar
   return isNavToken || pegScoreResult?.pegScore == null ? null : pegScoreResult.pegScore;
 }
 
-function buildSupplyTrend(supply: number | null, nativeSupply: NativeSupplyCheckpoints | null): HeroSupplyTrendViewModel {
-  const current = supply ?? nativeSupply?.current ?? null;
-  const safePrevWeek = posOrNull(nativeSupply?.prevWeek ?? null);
-  const safePrevMonth = posOrNull(nativeSupply?.prevMonth ?? null);
+function buildSupplyTrend(nativeSupply: NativeSupplyCheckpoints | null, supply: number | null): HeroSupplyTrendViewModel {
+  // Positive trends keep the compact projection's paired clock/checkpoints. An observed
+  // exhausted supply is zero in either basis and must not resurrect an older positive sample.
+  const current = supply === 0 ? 0 : nativeSupply?.current ?? null;
+  const safePrevWeek = current == null ? null : posOrNull(nativeSupply?.prevWeek ?? null);
+  const safePrevMonth = current == null ? null : posOrNull(nativeSupply?.prevMonth ?? null);
   return {
     current,
     safePrevWeek,
@@ -327,7 +329,7 @@ export function buildStablecoinDetailHeroViewModel({
       supply,
       safePrevDay,
       prevDayTrendClass: getTrendClass(mcap !== null && safePrevDay !== null, mcap ?? 0, safePrevDay ?? 0),
-      supplyTrend: buildSupplyTrend(supply, nativeSupply),
+      supplyTrend: buildSupplyTrend(nativeSupply, supply),
     },
     peg: { activeDepeg: pegScoreResult?.activeDepeg === true },
     tertiaryMetrics,

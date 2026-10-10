@@ -1,8 +1,8 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import { buildNativeSupplyBuckets, type DetailResponseHelpers } from "./shared";
+import { buildNativeSupplyBuckets, getLatestDetailTokenDate, type DetailResponseHelpers } from "./shared";
 
 function buildCacheFallbackToken(
   date: number,
@@ -13,8 +13,8 @@ function buildCacheFallbackToken(
   // The cache already stores provider-native USD circulating buckets. Wrapping
   // them for the canonical accessor preserves that contract without applying
   // any price conversion.
-  const supplyUsd = getCirculatingRaw({ circulating: circulatingUsd });
-  if (!Number.isFinite(supplyUsd) || supplyUsd <= 0) return null;
+  const supplyUsd = getCirculatingRawOrNull({ circulating: circulatingUsd });
+  if (supplyUsd == null || supplyUsd <= 0) return null;
   return {
     date,
     totalCirculatingUSD: circulatingUsd,
@@ -57,5 +57,5 @@ export async function handleCacheBackedDetail(
     return detail.staleCacheOrError(404, `Stablecoin ${config.stablecoinId} has no historical detail source yet`);
   }
 
-  return detail.createFreshResponseFromTokens(tokens);
+  return detail.createFallbackResponseFromTokens(tokens, getLatestDetailTokenDate(tokens));
 }

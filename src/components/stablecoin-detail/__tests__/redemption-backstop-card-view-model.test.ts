@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildRedemptionBackstopCardViewModel } from "../redemption-backstop-card-view-model";
 import type { RedemptionBackstopEntry } from "@shared/types";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { REDEMPTION_SETTLEMENT_LABELS } from "@shared/lib/classification";
 
 const BASE_ENTRY: RedemptionBackstopEntry = {
   stablecoinId: "test-usd",
@@ -63,6 +65,29 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     expect(viewModel.settlementLabel).toBe("Atomic");
     expect(viewModel.outputAssetLabel).toBe("Stable output");
     expect(viewModel.routeFamilyLabel).toBe("Stablecoin redeem");
+  });
+
+  it.each([
+    { stablecoinId: "mhyper-midas", businessDays: 6 },
+    { stablecoinId: "mre7yield-midas", businessDays: 10 },
+    { stablecoinId: "ousd-open-standard", businessDays: null },
+  ])("does not infer an elapsed completion maximum for $stablecoinId", ({ stablecoinId, businessDays }) => {
+    const config = getRedemptionBackstopConfig(stablecoinId)!;
+    expect(config.settlementModel).toBe("days");
+    if (businessDays != null) {
+      expect(config.v9RouteReviewTerms?.businessDayTerms).toMatchObject({ businessDays, conditional: true });
+    } else {
+      expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
+      expect(config.v9RouteReviewTerms?.businessDayTerms).toBeUndefined();
+    }
+    const viewModel = buildRedemptionBackstopCardViewModel(entry({
+      stablecoinId, settlementModel: config.settlementModel, settlementDelaySec: undefined,
+      notes: config.notes,
+    }));
+    expect(viewModel.settlementLabel).toBe(REDEMPTION_SETTLEMENT_LABELS.days);
+    expect(viewModel.settlementLabel).toBe("Multi-day");
+    expect(telemetryValue(viewModel, "Live delay")).toBeUndefined();
+    expect(viewModel.filteredNotes).toEqual(expect.arrayContaining(config.notes ?? []));
   });
 
   it("formats immediate capacity, scoring horizon, and telemetry context", () => {
@@ -134,6 +159,75 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     expect(viewModel.capacitySummary.detail).toContain("Reviewed documented redemption bound.");
     expect(viewModel.capacitySummary.detail).toContain("Current modeled capacity is queue-limited.");
     expect(telemetryValue(viewModel, "Modeled exit")).toBe("$2.5M");
+  });
+
+  it.each([
+    { horizon: "immediate", immediateUsd: 0, scoringUsd: null },
+    { horizon: "immediate", immediateUsd: null, scoringUsd: 0 },
+    { horizon: "daily", immediateUsd: 5_000_000, scoringUsd: 0 },
+    { horizon: "queued", immediateUsd: null, scoringUsd: 0 },
+  ] as const)("displays observed zero $horizon capacity with an unavailable supply ratio", ({ horizon, immediateUsd, scoringUsd }) => {
+    const viewModel = buildRedemptionBackstopCardViewModel(entry({
+      immediateCapacityUsd: immediateUsd,
+      immediateCapacityRatio: null,
+      capacityProfile: { immediateUsd, scoringUsd, scoringHorizon: horizon, capacityProfileConfidence: "live-direct" },
+    }));
+    // Missing and observed-zero denominators both publish a null ratio, not a
+    // reason to erase an independently observed absolute capacity of zero.
+    expect(viewModel.capacitySummary.headline).toBe("$0.0");
+  });
+
+  it("keeps null absolute capacity unavailable instead of inventing zero", () => {
+    const viewModel = buildRedemptionBackstopCardViewModel(entry({
+      immediateCapacityUsd: null, immediateCapacityRatio: null,
+      capacityProfile: { scoringUsd: null, scoringHorizon: "unknown", capacityProfileConfidence: "heuristic" },
+    }));
+    expect(viewModel.capacitySummary.headline).toBe("Unavailable");
+  });
+
+  it.each([30_000_000, 0])("shows admitted full-supply eventual capacity of %s", (eventualUsd) => {
+    const viewModel = buildRedemptionBackstopCardViewModel(entry({
+      capacitySemantics: "eventual-only", immediateCapacityUsd: null, immediateCapacityRatio: null,
+      capacityProfile: { eventualUsd, scoringUsd: null, scoringHorizon: "eventual", capacityProfileConfidence: "documented-bound" },
+    }));
+    expect(viewModel.capacitySummary.headline).toBe(eventualUsd === 0 ? "$0.0" : "$30.0M");
+    expect(viewModel.capacitySummary.detail).toContain("eventual redeemability of current supply");
+  });
+
+  it.each([
+    { name: "unquantified", horizon: "unknown", amount: null, resolutionState: "missing-capacity", rejection: undefined },
+    { name: "missing full-supply amount", horizon: "eventual", amount: null, resolutionState: "resolved", rejection: undefined },
+    { name: "rejected bound", horizon: "eventual", amount: 30_000_000, resolutionState: "resolved", rejection: "redeemable-capacity-unobserved" },
+    { name: "failed bound", horizon: "eventual", amount: 30_000_000, resolutionState: "failed", rejection: undefined },
+  ] as const)("does not imply full-supply capacity for $name", ({ horizon, amount, resolutionState, rejection }) => {
+    const viewModel = buildRedemptionBackstopCardViewModel(entry({
+      score: resolutionState === "resolved" ? 72 : null,
+      capacitySemantics: "eventual-only", immediateCapacityUsd: null, immediateCapacityRatio: null,
+      resolutionState, capacityRejectionReason: rejection,
+      capacityProfile: {
+        immediateUsd: null, eventualUsd: amount, scoringUsd: null,
+        scoringHorizon: horizon, capacityProfileConfidence: "heuristic",
+      },
+    }));
+    expect(viewModel.capacitySummary.headline).toBe("Not separately quantified");
+    expect(viewModel.capacitySummary.detail).not.toContain("eventual redeemability of current supply");
+  });
+
+  it("does not invent supply-wide capacity for the configured XGZ physical-delivery route", () => {
+    const config = getRedemptionBackstopConfig("xgz-goldzip")!;
+    expect(config.capacityModel.kind).toBe("unquantified");
+    const viewModel = buildRedemptionBackstopCardViewModel(entry({
+      stablecoinId: "xgz-goldzip",
+      routeFamily: config.routeFamily, outputAssetType: config.outputAssetType,
+      score: null, resolutionState: "missing-capacity", capacityConfidence: "heuristic",
+      capacitySemantics: "eventual-only", immediateCapacityUsd: null, immediateCapacityRatio: null,
+      capacityProfile: {
+        immediateUsd: null, scoringUsd: null, eventualUsd: null,
+        scoringHorizon: "unknown", capacityProfileConfidence: "heuristic",
+      },
+    }));
+    expect(viewModel.capacitySummary.headline).toBe("Not separately quantified");
+    expect(viewModel.capacitySummary.detail).not.toContain("eventual redeemability of current supply");
   });
 
   it("formats fixed, zero, formula, documented-variable, and undisclosed fee summaries", () => {

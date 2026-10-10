@@ -18,7 +18,7 @@ import type {
 import { computeAndStoreDEWS } from "../lib/dews/service";
 import { getDexLiquidityTrendTolerances, selectTrendBaseline } from "../lib/dex-liquidity-response";
 import type { DexHistoryRow } from "../lib/dex-liquidity-response";
-import { parseOptionalDayWindow } from "./backfill-depegs-window";
+import { parseOptionalDayWindow } from "../lib/backfill-day-window";
 
 interface DepegEventRow {
   stablecoin_id: string;
@@ -32,7 +32,13 @@ interface EventResult {
   startedAt: number;
   peakBps: number | null;
   preDepegScores: { daysBeforeDepeg: number; score: number; band: string }[];
-  predicted: boolean;
+  predicted: boolean | null;
+  evaluation: {
+    availability: "available" | "partial" | "unavailable";
+    reasons: string[];
+    evaluatedPreDepegDays: number;
+    expectedPreDepegDays: number;
+  };
   leadTimeDays: number | null;
 }
 
@@ -348,12 +354,14 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
   const supplyIndex = new Map<string, Map<number, number>>();
   for (const row of supplyRows.results) {
     if (!supplyIndex.has(row.stablecoin_id)) supplyIndex.set(row.stablecoin_id, new Map());
-    supplyIndex.get(row.stablecoin_id)!.set(row.snapshot_date, row.circulating_usd);
+    if (Number.isFinite(row.circulating_usd) && row.circulating_usd >= 0) {
+      supplyIndex.get(row.stablecoin_id)!.set(row.snapshot_date, row.circulating_usd);
+    }
   }
 
   const liqRows = await db
     .prepare(
-      `SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, coverage_confidence
+      `SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, coverage_class, coverage_confidence
        FROM dex_liquidity_history
        WHERE snapshot_date BETWEEN ? AND ?
        ORDER BY snapshot_date ASC`,
@@ -365,6 +373,7 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
       liquidity_score: number | null;
       total_tvl_usd: number | null;
       coverage_confidence: number | null;
+      coverage_class: string | null;
     }>();
 
   const liqIndex = new Map<string, (DexHistoryRow & { liquidity_score: number | null })[]>();
@@ -373,7 +382,6 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
     liqIndex.get(row.stablecoin_id)!.push({
       ...row,
       total_tvl_usd: row.total_tvl_usd ?? 0,
-      coverage_class: null,
     });
   }
 
@@ -388,16 +396,22 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
     const preDepegScores: EventResult["preDepegScores"] = [];
     let predicted = false;
     let leadTimeDays: number | null = null;
+    let evaluatedPreDepegDays = 0;
+    const evaluationReasons = new Set<string>();
 
     for (let d = 7; d >= 0; d--) {
       const targetDay = event.started_at - d * DAY_SECONDS;
       const dayMidnight = bucketUnixSecondsToUtcDay(targetDay);
 
-      const current = coinSupply?.get(dayMidnight) ?? 0;
-      const prevDay = coinSupply?.get(dayMidnight - DAY_SECONDS) ?? current;
-      const prevWeek = coinSupply?.get(dayMidnight - 7 * DAY_SECONDS) ?? current;
+      const current = coinSupply?.get(dayMidnight) ?? null;
+      const prevDay = coinSupply?.get(dayMidnight - DAY_SECONDS) ?? null;
+      const prevWeek = coinSupply?.get(dayMidnight - 7 * DAY_SECONDS) ?? null;
 
-      if (current <= 0) continue;
+      if (current == null) {
+        if (d > 0) evaluationReasons.add("current-supply-unavailable");
+        continue;
+      }
+      if (d > 0 && (prevDay == null || prevWeek == null)) evaluationReasons.add("supply-anchor-unavailable");
 
       const liqNow = selectTrendBaseline(coinLiq, dayMidnight, liquidityTolerance);
       const liq7d = selectTrendBaseline(coinLiq, dayMidnight - 7 * DAY_SECONDS, liquidityTolerance);
@@ -407,8 +421,10 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
         mcapUsd: current,
         pegType: "peggedUSD",
         circulatingCurrent: current,
-        circulatingPrevDay: prevDay,
-        circulatingPrevWeek: prevWeek,
+        circulatingPrevDay: prevDay ?? current,
+        circulatingPrevWeek: prevWeek ?? current,
+        circulatingPrevDayAvailable: prevDay != null,
+        circulatingPrevWeekAvailable: prevWeek != null,
         weightedBalanceRatio: null,
         avgPoolStress: null,
         topPools: null,
@@ -436,8 +452,10 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
 
       const result = computeDEWS(input);
       if (!result) {
+        if (d > 0) evaluationReasons.add("insufficient-signal-evidence");
         continue;
       }
+      if (d > 0) evaluatedPreDepegDays++;
       preDepegScores.push({
         daysBeforeDepeg: d,
         score: result.score,
@@ -467,20 +485,33 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
       startedAt: event.started_at,
       peakBps: event.peak_deviation_bps,
       preDepegScores,
-      predicted,
+      predicted: evaluatedPreDepegDays > 0 ? predicted : null,
+      evaluation: {
+        availability: evaluatedPreDepegDays === 0 ? "unavailable"
+          : evaluatedPreDepegDays < 7 || evaluationReasons.size > 0 ? "partial" : "available",
+        reasons: [...evaluationReasons],
+        evaluatedPreDepegDays,
+        expectedPreDepegDays: 7,
+      },
       leadTimeDays,
     });
   }
 
   const totalEvents = results.length;
-  const tpRate = totalEvents > 0 ? Math.round((tpCount / totalEvents) * 100) : 0;
+  const evaluableEvents = results.filter((result) => result.predicted !== null).length;
+  const excludedEvents = totalEvents - evaluableEvents;
+  const partialEvents = results.filter((result) => result.evaluation.availability === "partial").length;
+  const tpRate = evaluableEvents > 0 ? Math.round((tpCount / evaluableEvents) * 100) : null;
   const avgLeadTime = leadTimeCount > 0 ? Math.round((totalLeadTimeDays / leadTimeCount) * 10) / 10 : null;
 
   return jsonResponse({
     summary: {
       totalEvents,
+      evaluableEvents,
+      excludedEvents,
+      partialEvents,
       truePositives: tpCount,
-      tpRate: `${tpRate}%`,
+      tpRate: tpRate == null ? null : `${tpRate}%`,
       avgLeadTimeDays: avgLeadTime,
       note: "Backtest uses supply_history + dex_liquidity_history only. Pool balance, price confidence, blacklist, and flow signals are unavailable for historical data.",
     },

@@ -46,6 +46,7 @@ function remote(...args: string[]): string {
 }
 const sqlString = (value: string) => `'${value.replaceAll("'", "''")}'`;
 function readRemote(key: string): string | null {
+  // SAFETY: sqlString quotes and escapes the interpolated cache key as a SQL string literal.
   const result = JSON.parse(remote("--command", `SELECT value FROM cache WHERE key = ${sqlString(key)}`));
   return result[0]?.results[0]?.value ?? null;
 }
@@ -152,6 +153,7 @@ async function main(): Promise<void> {
           writeFileSync(sqlPath, `INSERT INTO dependency_scenario_payload_chunks (payload_id,chunk_index,value,byte_length,sha256) VALUES (${sqlString(key)},${chunk.chunk_index},${sqlString(chunk.value)},${chunk.byte_length},${sqlString(chunk.sha256)}) ON CONFLICT(payload_id,chunk_index) DO NOTHING;`);
           remote("--file", sqlPath);
         }
+        // SAFETY: sqlString quotes and escapes the interpolated payload key as a SQL string literal.
         const readback = JSON.parse(remote("--command", `SELECT chunk_index,value,byte_length,sha256 FROM dependency_scenario_payload_chunks WHERE payload_id = ${sqlString(key)} ORDER BY chunk_index`));
         if (reassembleDependencyScenarioPayload(manifest, readback[0]?.results ?? [], digest) !== bytes) throw new Error(`Readback mismatch for ${key}`);
         // Reprove activation after staging; deployment may have changed meanwhile.

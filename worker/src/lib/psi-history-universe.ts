@@ -1,6 +1,15 @@
 import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { PSI_HISTORICAL_IDS } from "@shared/lib/psi-historical-assets";
 import { findAsOfSnapshot, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
+
+/** Both the target-day and prior-week as-of lookups need their full margin. */
+export function getHistoricalPsiSupplyWindow(startDay: number, endDay: number): { startSec: number; endSec: number } {
+  return {
+    startSec: Math.max(0, startDay - 7 * DAY_SECONDS - MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC),
+    endSec: endDay,
+  };
+}
 
 export interface SupplySnapshot {
   date: number;
@@ -37,6 +46,7 @@ export function buildPsiHistoricalSupplySnapshotMap(
 
   for (const row of rows) {
     if (!CORE_PSI_ELIGIBLE_IDS.has(row.stablecoin_id)) continue;
+    if (!Number.isFinite(row.circulating_usd) || row.circulating_usd < 0) continue;
     const list = supplyByCoin.get(row.stablecoin_id) ?? [];
     list.push({
       date: row.snapshot_date,

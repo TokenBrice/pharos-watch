@@ -3,6 +3,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { freshnessDb } from "./api-freshness.test-support";
 import { fxRatesCacheRows } from "./fx-rate-state.test-support";
+import { CLOCK_INPUT_STATES, CLOCK_NOW_SEC } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import {
   buildFreshnessMeta,
   buildCacheStatuses,
@@ -24,7 +25,7 @@ describe("public freshness clock skew", () => {
         ageSeconds: 0,
         futureSkewSeconds: API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC + 1,
       });
-      expect(buildFreshnessMeta(updatedAt, 60)).toMatchObject({
+      expect(buildFreshnessMeta(updatedAt, 60, "test-generic")).toMatchObject({
         updatedAt,
         ageSeconds: 0,
         status: "degraded",
@@ -45,7 +46,7 @@ describe("public freshness clock skew", () => {
     const updatedAt = nowSec + API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC;
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     try {
-      expect(buildFreshnessMeta(updatedAt, 60)).toMatchObject({ ageSeconds: 0, status: "fresh" });
+      expect(buildFreshnessMeta(updatedAt, 60, "test-generic")).toMatchObject({ ageSeconds: 0, status: "fresh" });
       expect(addFreshnessHeaders({}, updatedAt, 60)).toEqual({ "X-Data-Age": "0", "X-Data-Updated-At": String(updatedAt) });
     } finally {
       nowSpy.mockRestore();
@@ -57,7 +58,7 @@ describe("self-describing freshness bands", () => {
   it.each([
     [480, "fresh"], [481, "degraded"], [720, "degraded"], [721, "stale"],
   ] as const)("reconstructs the generic verdict at age %s", (age, expected) => {
-    const meta = buildFreshnessMeta(1_800_000_000 - age, 60, undefined, { assessedAt: 1_800_000_000 });
+    const meta = buildFreshnessMeta(1_800_000_000 - age, 60, "test-generic", { assessedAt: 1_800_000_000 });
     expect(meta.assessedAt - meta.updatedAt).toBe(meta.ageSeconds);
     expect(meta.freshBudgetSec).toBe(480);
     expect(meta.degradedBudgetSec).toBe(720);
@@ -70,7 +71,7 @@ describe("self-describing freshness bands", () => {
   it.each([
     [1800, "fresh"], [1801, "degraded"], [3600, "degraded"], [3601, "stale"],
   ] as const)("preserves explicit route bands at age %s", (age, expected) => {
-    const meta = buildFreshnessMeta(1_800_000_000 - age, 1800, undefined, {
+    const meta = buildFreshnessMeta(1_800_000_000 - age, 1800, "test-generic", {
       assessedAt: 1_800_000_000, freshBudgetSec: 1800, degradedBudgetSec: 3600,
     });
     expect(meta.status).toBe(expected);
@@ -91,18 +92,19 @@ function sentinelRow(
   key: "dex-liquidity" | "yield-data" | "dews",
   updatedAt: number,
   overrides: Record<string, unknown> = {},
-): { key: string; updated_at: number; value: string } {
+): { key: string; updated_at: number; value: string; served_generation_id: string } {
   const sourceByKey = {
     "dex-liquidity": "sync-dex-liquidity",
     "yield-data": "sync-yield-data",
     dews: "compute-dews",
   };
-  return cacheRow(`freshness:${key}`, updatedAt, {
-    updatedAt,
-    source: sourceByKey[key],
-    publishStatus: "ok",
-    ...overrides,
-  });
+  const generationId = typeof overrides.generationId === "string" ? overrides.generationId : `${key}:${updatedAt}`;
+  return {
+    ...cacheRow(`freshness:${key}`, updatedAt, {
+      updatedAt, source: sourceByKey[key], publishStatus: "ok", generationId, ...overrides,
+    }),
+    served_generation_id: generationId,
+  };
 }
 
 function dewsPublicationPointerRow(updatedAt: number) {
@@ -120,7 +122,7 @@ describe("getLatestSuccessfulCronTimestampResult", () => {
   it("returns ok when a successful cron run exists", async () => {
     const db = mockD1([
       {
-        match: "MAX(started_at) as started_at FROM cron_runs",
+        match: "as started_at FROM cron_runs",
         rows: [],
         first: { started_at: 1_700_000_000 },
       },
@@ -135,7 +137,7 @@ describe("getLatestSuccessfulCronTimestampResult", () => {
   it("returns missing when no successful cron run exists", async () => {
     const db = mockD1([
       {
-        match: "MAX(started_at) as started_at FROM cron_runs",
+        match: "as started_at FROM cron_runs",
         rows: [],
         first: { started_at: null },
       },
@@ -150,7 +152,7 @@ describe("getLatestSuccessfulCronTimestampResult", () => {
   it("returns lookup_failed when the cron query throws", async () => {
     const db = mockD1([
       {
-        match: "MAX(started_at) as started_at FROM cron_runs",
+        match: "as started_at FROM cron_runs",
         rows: [],
         throwError: new Error("boom"),
       },
@@ -165,6 +167,51 @@ describe("getLatestSuccessfulCronTimestampResult", () => {
 
 
 describe("buildCacheStatuses sentinel validation", () => {
+  it.each(CLOCK_INPUT_STATES)("preserves $state clock evidence without borrowing the request clock", async ({ state, updatedAt, generationId }) => {
+    if (state === "missing" || state === "future") {
+      const { caches } = await buildCacheStatuses(freshnessDb({
+        cacheRows: updatedAt === null ? [] : [cacheRow("stablecoins", updatedAt)],
+      }), CLOCK_NOW_SEC);
+      expect(caches.stablecoins).toMatchObject({ healthy: false, ageSeconds: null });
+      if (state === "future") expect(caches.stablecoins.timestampReason).toBe("future-timestamp");
+    } else if (state === "mismatched-generation") {
+      const row = { ...sentinelRow("yield-data", updatedAt, { generationId }), served_generation_id: "generation:current" };
+      const { caches } = await buildCacheStatuses(freshnessDb({ cacheRows: [row] }), CLOCK_NOW_SEC);
+      expect(caches["yield-data"]).toMatchObject({
+        healthy: false, generationId: null, sentinelValidationReason: "generation-mismatch",
+      });
+    } else {
+      const meta = buildFreshnessMeta(updatedAt, 60, "test-generic", {
+        assessedAt: CLOCK_NOW_SEC, freshBudgetSec: 60, degradedBudgetSec: 60,
+      });
+      expect(meta.status).toBe(state === "expired" ? "stale" : "fresh");
+      expect(meta.updatedAt).toBe(updatedAt);
+    }
+  });
+
+  it.each([60, 61])("admits ordinary cache clocks only within the %s-second future boundary", async (offset) => {
+    const now = 1_800_000_000;
+    const { caches } = await buildCacheStatuses(freshnessDb({ cacheRows: [cacheRow("stablecoins", now + offset)] }), now);
+    expect(caches.stablecoins).toMatchObject(offset === 60
+      ? { ageSeconds: 0, healthy: true }
+      : { ageSeconds: null, healthy: false, timestampReason: "future-timestamp" });
+  });
+
+  it.each(["table", "cron"] as const)("rejects future %s fallback clocks instead of clamping them fresh", async (source) => {
+    const now = 1_800_000_000;
+    const { caches } = await buildCacheStatuses(freshnessDb({
+      tableAge: source === "table" ? -61 : null,
+      cronRows: source === "cron" ? [{ job: "sync-yield-data", started_at: now + 61 }] : [],
+    }), now);
+    expect(caches["yield-data"]).toMatchObject({ ageSeconds: null, healthy: false, timestampReason: "future-timestamp" });
+  });
+
+  it("does not grade a sentinel for a different served generation as healthy", async () => {
+    const now = 1_800_000_000;
+    const row = { ...sentinelRow("yield-data", now - 60), served_generation_id: "other-winner" };
+    const { caches } = await buildCacheStatuses(freshnessDb({ cacheRows: [row], tableAge: 60 }), now);
+    expect(caches["yield-data"]).toMatchObject({ healthy: false, generationId: null, sentinelValidationReason: "generation-mismatch" });
+  });
   it.each([7200, 7201, 14400, 14401])("preserves generation and yield freshness bands at %s seconds", async (age) => {
     const now = 1_800_000_000;
     const { caches } = await buildCacheStatuses(freshnessDb({
@@ -178,14 +225,19 @@ describe("buildCacheStatuses sentinel validation", () => {
       .toBe(age <= 7200 ? "fresh" : age <= 14400 ? "degraded" : "stale");
   });
 
-  it.each(["legacy", "table", "cron"] as const)("does not invent identity for %s evidence", async (source) => {
+  it.each(["legacy", "table", "cron"] as const)("preserves the publication clock without inventing identity for %s evidence", async (source) => {
     const now = 1_800_000_000;
     const { caches } = await buildCacheStatuses(freshnessDb({
-      cacheRows: source === "legacy" ? [sentinelRow("yield-data", now - 60)] : [],
-      tableAge: source === "table" ? 60 : null,
+      cacheRows: source === "legacy" ? [sentinelRow("yield-data", now - 30, { generationId: undefined })] : [],
+      tableAge: source !== "cron" ? 60 : null,
       cronRows: source === "cron" ? [{ job: "sync-yield-data", started_at: now - 60 }] : [],
     }), now);
-    expect(caches["yield-data"]).toMatchObject({ generationId: null, publishedAt: null, ageSeconds: 60 });
+    expect(caches["yield-data"]).toMatchObject({
+      generationId: null,
+      publishedAt: now - 60,
+      ageSeconds: 60,
+      freshnessSource: source === "cron" ? "cron-fallback" : "table-fallback",
+    });
   });
   it.each([0, 1])("validates concurrent DEWS publication against the cache read clock (future offset %s)", async (futureOffset) => {
     const now = 1_800_000_000;
@@ -216,12 +268,14 @@ describe("buildCacheStatuses sentinel validation", () => {
       expect(caches["yield-data"]).toMatchObject({
         ageSeconds: 600,
         freshnessSource: "table-fallback",
-        generationId: null, publishedAt: null,
+        generationId: null, publishedAt: now - 600,
       });
 
       sqlite.exec("UPDATE yield_data SET is_best = 0");
       const withoutBest = await buildCacheStatuses(db, now);
-      expect(withoutBest.caches["yield-data"].ageSeconds).toBeNull();
+      expect(withoutBest.caches["yield-data"]).toMatchObject({
+        ageSeconds: null, generationId: null, publishedAt: null,
+      });
     } finally {
       sqlite.close();
     }
@@ -234,6 +288,9 @@ describe("buildCacheStatuses sentinel validation", () => {
       const sentinel = sentinelRow("yield-data", now - 60, { generationId: "yield-imperfect" });
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
         sentinel.key, sentinel.value, sentinel.updated_at,
+      );
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)").run(
+        JSON.stringify({ publication: { generationId: "yield-imperfect" } }), now - 60,
       );
       const insert = sqlite.prepare(
         "INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata, degraded_reason) VALUES ('sync-yield-data', ?, 1, ?, ?, ?)",
@@ -313,7 +370,7 @@ describe("buildCacheStatuses sentinel validation", () => {
     expect(diagnostics).toEqual([]);
     expect(warnings).toEqual([]);
     const history = db.getHistory().map((entry) => entry.sql);
-    expect(history.some((sql) => sql.includes("FROM dex_liquidity"))).toBe(false);
+    expect(history.some((sql) => sql.includes("SELECT (? - MAX(updated_at))"))).toBe(false);
     expect(history.some((sql) => sql.includes("FROM yield_data"))).toBe(false);
     expect(history.some((sql) => sql.includes("FROM stress_signals"))).toBe(false);
   });
@@ -762,7 +819,7 @@ describe("buildCacheStatuses", () => {
   });
 
 
-  it("clamps negative table ages to zero without accepting a future DEWS table row", async () => {
+  it("admits table clocks within allowed skew without accepting a future DEWS pointer", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = freshnessDb({ tableAge: -30 });
 

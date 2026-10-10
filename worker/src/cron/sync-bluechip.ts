@@ -7,8 +7,8 @@ import type { BluechipRating, BluechipSmidge } from "@shared/types/market";
 import { getCache, shouldSkipFreshCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
-import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, fetchWithRetry } from "../lib/fetch-retry";
-import { cancelResponseBodyQuietly, isResponseBodyTooLargeError, readResponseJsonWithinLimitWithSignal } from "../lib/response-body";
+import { fetchTextWithRetry, type FetchWithRetryBodyResult } from "../lib/fetch-retry";
+import { isResponseBodyTooLargeError } from "../lib/response-body";
 import { validatePayloadWithSchema } from "../lib/api-schema";
 import { USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
@@ -90,15 +90,10 @@ function extractSmidge(coin: Record<string, unknown>): BluechipSmidge {
   return smidge;
 }
 
-async function parseBluechipResponseJson(
-  res: Response,
-  slug: string,
-  signal?: AbortSignal,
-): Promise<unknown | null> {
+function parseBluechipResponseJson(text: string, slug: string): unknown | null {
   try {
-    return await readResponseJsonWithinLimitWithSignal(res, DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, signal);
+    return JSON.parse(text);
   } catch (error) {
-    if (isResponseBodyTooLargeError(error) || signal?.aborted) throw error;
     logWorkerEventArgs("handler", "warn", `[bluechip] Failed to parse JSON for ${slug}:`, error);
     return null;
   }
@@ -137,26 +132,25 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
     const batch = entries.slice(i, i + BATCH_SIZE);
     const batchResults = await Promise.allSettled(
       batch.map(async ([slug, pharosId]) => {
-        const res = await fetchWithRetry(
-          `${API_BASE}/${slug}`,
-          { headers: { "User-Agent": USER_AGENT }, signal },
-          2,
-          { passthrough404: true }
-        );
-        if (!res || !res.ok) {
-          failedSlugs.push({ slug, reason: res ? `http-${res.status}` : "no-response" });
-          await cancelResponseBodyQuietly(res);
-          return null;
-        }
-        let payload: unknown;
+        let fetched: FetchWithRetryBodyResult<string> | null;
         try {
-          payload = await parseBluechipResponseJson(res, slug, signal);
+          fetched = await fetchTextWithRetry(
+            `${API_BASE}/${slug}`,
+            { headers: { "User-Agent": USER_AGENT }, signal },
+            2,
+            { passthrough404: true, throwOnFinalNetworkError: true },
+          );
         } catch (error) {
-          if (!isResponseBodyTooLargeError(error)) throw error;
-          invalidPayloads++;
-          failedSlugs.push({ slug, reason: error.code });
+          if (signal?.aborted) throw error;
+          if (isResponseBodyTooLargeError(error)) invalidPayloads++;
+          failedSlugs.push({ slug, reason: isResponseBodyTooLargeError(error) ? error.code : "no-response" });
           return null;
         }
+        if (!fetched || !fetched.response.ok) {
+          failedSlugs.push({ slug, reason: fetched ? `http-${fetched.response.status}` : "no-response" });
+          return null;
+        }
+        const payload = parseBluechipResponseJson(fetched.body, slug);
         if (payload == null) {
           invalidPayloads++;
           failedSlugs.push({ slug, reason: "json-parse-failed" });

@@ -45,8 +45,6 @@ export interface TelegramPlanningDecision {
   currentPreferenceGeneration: number;
   currentEligible: boolean;
   routed: readonly RoutedSubscriberAlert[];
-  /** Preserve a legacy overflow target's original absolute TTL when importing it. */
-  targetExpiresAt?: number;
 }
 
 export function classifyTelegramPlanningOutcome(input: {

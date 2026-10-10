@@ -32,6 +32,22 @@ const wrapperOf = (parentId: string, sliceOverrides: Record<string, unknown> = {
   });
 
 describe("projectReserveLookThroughClientSummary", () => {
+  it.each(["selected-slices", "classification-only", "dependency-relationships"])(
+    "rejects explicitly contextual wrapper or parent scope even when rows total 100%% (%s)",
+    (scope) => {
+      const wrapper = wrapperOf("par");
+      expect(projectReserveLookThroughClientSummary({
+        ...wrapper, reserveReview: { scope } as never,
+      }, PARENTS)).toBeNull();
+      expect(projectReserveLookThroughClientSummary(wrapper, new Map([
+        ["par", { ...PARENT, reserveReview: { scope } as never }],
+      ]))).toBeNull();
+      expect(projectReserveLookThroughClientSummary({
+        ...wrapper, reserveReview: { scope: "full-composition" } as never,
+      }, new Map([["par", { ...PARENT, reserveReview: { scope: "full-composition" } as never }]])))
+        .toMatchObject({ parentId: "par" });
+    },
+  );
   it("joins a single wrapper slice to its parent's reviewed slices, dated by the parent's review", () => {
     const summary = projectReserveLookThroughClientSummary(wrapperOf("par"), PARENTS);
     expect(summary).toMatchObject({ parentId: "par", parentSymbol: "PAR", parentReviewedAt: "2026-09-30" });

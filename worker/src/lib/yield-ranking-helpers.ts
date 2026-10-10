@@ -1,6 +1,7 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { computePysComponents, PYS_APY_SANITY_MAX, type PysComponents } from "@shared/lib/yield-scoring";
 import type { YieldPysNullReason } from "@shared/types/yield";
+import type { YieldBenchmarkFreshness } from "@shared/lib/yield-benchmark-freshness";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -51,6 +52,20 @@ export const RATE_DERIVED_STALE_THRESHOLD_MS = 36 * HOUR_MS;
 export const COMPARISON_ANCHOR_STALE_THRESHOLD_MS = 14 * DAY_MS;
 export const LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS = 45 * DAY_MS;
 
+export function resolveEvidenceNullReason(params: {
+  sourceFreshness: YieldSourceFreshness;
+  benchmarkFreshness: YieldBenchmarkFreshness;
+  referenceBenchmarkFreshness: YieldBenchmarkFreshness;
+  opportunityEvidenceComplete?: boolean;
+}): YieldPysNullReason | null {
+  if (params.sourceFreshness === "stale") return "source-stale";
+  if (params.sourceFreshness === "unknown") return "source-freshness-unknown";
+  if (params.benchmarkFreshness === "stale") return "benchmark-stale";
+  if (params.referenceBenchmarkFreshness === "stale") return "benchmark-stale";
+  if (params.opportunityEvidenceComplete === false) return "opportunity-evidence-missing";
+  return null;
+}
+
 interface PysNullReasonInput {
   apy30d: number;
   safetyScore: number | null;
@@ -83,15 +98,7 @@ export function derivePysNullReasonFromComponents(
 }
 
 export function derivePysNullReason(input: PysNullReasonInput): YieldPysNullReason | null {
-  const components = computePysComponents({
-    apy30d: input.apy30d,
-    safetyScore: input.safetyScore,
-    apyVarianceScore: input.apyVarianceScore,
-    benchmarkRate: input.benchmarkRate,
-    benchmarkCurrency: input.benchmarkCurrency,
-    usdBenchmarkRate: input.usdBenchmarkRate,
-    sourceRiskPenalty: input.sourceRiskPenalty,
-  });
+  const components = computePysComponents(input);
   return derivePysNullReasonFromComponents(input.apy30d, input.scalingFactor, components);
 }
 

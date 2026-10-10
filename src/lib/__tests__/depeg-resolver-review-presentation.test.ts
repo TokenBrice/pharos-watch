@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
 import {
   DdrrResponseRowSchema,
+  DdrrV2BaseRowSchema,
   type DdrrRow,
+  type DdrrV2NoCallReviewRow,
+  type DdrrV2InvalidatedPredictionRow,
 } from "@shared/types/depeg-resolver-review";
+import { DdrRelatedContextSchema } from "@shared/types/depeg-resolver";
 import { RatioSchema } from "@shared/types/ratio";
 import {
   coverageRow,
@@ -37,24 +41,69 @@ import {
   summarizePredictionRows,
 } from "../depeg-resolver-review-presentation";
 
-const noCallRow = {
-  ...predictionRow,
+const publicationRow = {
+  ...DdrrV2BaseRowSchema.parse(predictionRow),
+  publicPredictionId: predictionRow.publicPredictionId,
+  assessmentId: predictionRow.assessmentId,
+  predictionMethodologyVersion: predictionRow.predictionMethodologyVersion,
+  predictionPolicyVersion: predictionRow.predictionPolicyVersion,
+  lockedAt: predictionRow.lockedAt,
+};
+
+const noCallRow: DdrrV2NoCallReviewRow = {
+  ...publicationRow,
   kind: "no_call_review",
   predictionState: "no_call",
+  publishedAt: predictionRow.publishedAt,
+  publicationSnapshotToken: predictionRow.publicationSnapshotToken,
+  actual: predictionRow.actual,
   verdictReview: "unscored_insufficient_signal",
   durationReview: "duration_unscored",
+  horizonReviews: [],
   missingReasons: ["thin signal"],
-} as DdrrRow;
+};
 
-const invalidatedRow = {
-  ...predictionRow,
+const latestErratum: DdrrV2InvalidatedPredictionRow["latestErratum"] = {
+  id: 1,
+  state: "invalidated",
+  publicPredictionId: publicationRow.publicPredictionId,
+  incidentKey: publicationRow.incidentKey,
+  eventId: publicationRow.eventId,
+  assessmentId: publicationRow.assessmentId,
+  reason: "event_identity_error",
+  createdAt: 4,
+  operatorNote: "Event identity corrected",
+  rowHashBefore: null,
+  replacementAssessmentId: null,
+  replacementRowHash: null,
+  createdBy: "fixture",
+};
+
+const invalidatedRow: DdrrV2InvalidatedPredictionRow = {
+  ...publicationRow,
   kind: "invalidated_prediction",
   predictionState: "invalidated",
+  sourceEventState: "invalidated",
   publishedAt: null,
+  publicationSnapshotToken: null,
   originalKind: "no_call",
-} as DdrrRow;
+  originalOutcome: {
+    lockedAt: noCallRow.lockedAt,
+    eventAgeAtLockSec: noCallRow.lockedAt - noCallRow.startedAt,
+    missingReasons: noCallRow.missingReasons,
+    relatedContext: DdrRelatedContextSchema.parse({}),
+  },
+  latestErratum,
+  errataCount: 1,
+  errataHistory: [latestErratum],
+};
 
 describe("DDR review presentation vocabulary", () => {
+  it("builds schema-valid no-call and invalidated review fixtures", () => {
+    expect(DdrrResponseRowSchema.parse(noCallRow)).toEqual(noCallRow);
+    expect(DdrrResponseRowSchema.parse(invalidatedRow)).toEqual(invalidatedRow);
+  });
+
   it("owns labels and scoreability for both public review surfaces", () => {
     expect(DDR_VERDICT_LABELS.correct_recoverable).toBe("Correct recoverable");
     expect(DDR_COVERAGE_LABELS.no_call).toBe("no-call");

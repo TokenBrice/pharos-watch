@@ -12,13 +12,24 @@
  * (or with the key in .env.local). Read-only; prints a Markdown-ish report.
  */
 import { existsSync } from "node:fs";
-import { computePYS, derivePysSourceRiskPenalty, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
+import { computePYS, derivePysSourceRiskPenalty, yieldStabilityToApyVarianceScore, type PysSourceRiskPenaltyInput } from "@shared/lib/yield-scoring";
 import {
   resolveDependencyConcentration,
   resolveReviewedYieldRiskConfig,
   venueRiskTierOf,
   venueRiskWeightedOf,
 } from "@shared/lib/yield-source-risk-registry";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
+
+export function getCalibrationConcentrationReason(
+  input: PysSourceRiskPenaltyInput,
+  concentration: { ecosystem: string } | null,
+): string | null {
+  if (!concentration) return null;
+  const withConcentration = derivePysSourceRiskPenalty(input);
+  const withoutConcentration = derivePysSourceRiskPenalty({ ...input, dependencyConcentrationSeverity: null });
+  return withConcentration > withoutConcentration ? `concentration:${concentration.ecosystem}` : null;
+}
 
 function loadKey(): string {
   if (process.env.PHAROS_API_KEY) return process.env.PHAROS_API_KEY;
@@ -150,7 +161,12 @@ async function main(): Promise<void> {
     if (Math.abs(delta) >= 0.5 || Math.abs(newPenalty - oldPenalty) >= 0.01) {
       const reasons: string[] = [];
       if (Math.abs(newPenalty - oldPenalty) >= 0.01) reasons.push(`venue ${sr.venueProtocol}→${newTier}`);
-      if (conc) reasons.push(`concentration:${conc.ecosystem}`);
+      const concentrationReason = getCalibrationConcentrationReason({
+        ...telemetry,
+        venueRiskWeighted: newWeighted,
+        dependencyConcentrationSeverity: conc?.severity ?? null,
+      }, conc);
+      if (concentrationReason) reasons.push(concentrationReason);
       movers.push({
         id: row.id,
         symbol: row.symbol,
@@ -212,7 +228,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

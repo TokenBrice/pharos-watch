@@ -178,6 +178,8 @@ Canonical Codex matchers include `Bash` and `apply_patch`, retaining captured `e
 
 Hook paths resolve from tool workdir (relative to session cwd), then session cwd, then repository root. Policy checks use normalized paths and symlink ancestors and include patch move destinations. Remote SQL `--file` inspection reads the exact effective cwd; Single-operand `cd` in an all-`&&` chain and Wrangler `--cwd` are supported. Ambiguous grouped, branching, semicolon-separated, or environment-dependent cwd writes must use a direct invocation with explicit workdir. Ordinary groups, `if`, and `while` commands are inspected; quoted examples and comments are inert. These hooks are bounded policy checks, not exhaustive shell enforcement.
 
+Shell pipelines into a recognized shell (including `env`, `command`, `exec`, and other supported executable wrappers) inspect literal stdin scripts from simple `echo` and `printf` producers. Guarded scripts are denied in both pre-tool and permission-request hooks; unsupported or dynamic producers carrying guarded keywords fail closed. Benign literal scripts, read-only commands, and quoted examples that remain data inside the script are allowed. This remains a bounded policy check, not a shell sandbox.
+
 Shell hook payloads accept both `command` and `cmd` fields and pass them through the same pre-tool and permission-request policy checks.
 
 Set `PHAROS_HOOK_DIAGNOSTICS=1` or pass `--diagnostics` to append one safe JSONL record per hook invocation.

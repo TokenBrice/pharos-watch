@@ -607,6 +607,12 @@ function buildScenarioResult(args: {
     : estimateTelegramTargetPlanCoordinatorBound({
         subscriberCount: args.fixture.activeWatchers,
         targetCount: messageChunks,
+        presetFollowerRowsByFamily: (["dews", "depeg", "safety"] as const).map((family) =>
+          args.fixture.watchers.reduce(
+            (total, watcher) => total + watcher.presetSubscriptions.filter((preset) => preset.flags[family]).length,
+            0,
+          ),
+        ),
       }).runs;
   const pendingSendSeconds = estimateSendSeconds(pendingEnqueued);
   const outageUnavailableSeconds = args.stormSeconds ?? 0;

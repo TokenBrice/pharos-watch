@@ -40,7 +40,7 @@ const PUBLIC_IMPACT_LABELS: Record<IncidentPublicImpact, string> = {
 interface TransitionTimelineProps {
   transitions: readonly StatusTransition[];
   nowSeconds: number;
-  transitionsLast24h: number;
+  transitionsLast24h: number | null;
   window: StatusHistoryWindow;
   filters: IncidentHistoryFilters;
   onWindowChange: (window: StatusHistoryWindow) => void;
@@ -198,6 +198,9 @@ export function TransitionTimeline({
           })}
         </div>
       </div>
+      {view.isFlapping == null && (
+        <p className="text-sm text-muted-foreground">Recent transition count unavailable; flapping cannot be assessed.</p>
+      )}
 
       {view.isFlapping ? (
         <div className="rounded-md border border-amber-500/40 bg-amber-500/[0.06] px-3 py-2.5 text-sm text-amber-950 dark:text-amber-100">

@@ -59,6 +59,7 @@ These endpoints stay after all incumbent and adapter-pinned RPCs. Etherlink reta
 `src/app/chains/client.tsx` consumes `useChains()` and renders:
 
 - hero summary: total tracked stablecoin supply (the frost-blue "One Beam" figure, `.pharos-numeric text-frost-blue`), optional global 7d trend, chain count, and a top-chain dominance breakdown bar/legend. The page keeps its existing sequential bands rather than the shared `FeatureHeroSplit`, and intentionally retains the frost-tinted "Top N chains hold X%" concentration badge
+- supply coverage: excluded global assets and chain observations are counted from `supplyCoverage`; affected totals/rows and detail supply/global share are labelled partial, never recomputed
 - explicit `Unattributed` residual in the dominance breakdown when the stablecoins cache has supply that DefiLlama does not attribute to a concrete chain. Legend percentages are always shares of `globalTotalUsd` (`dominanceShare`, never rescaled); when chain rows over-attribute supply the bar geometry normalizes to `dominanceGeometryTotalUsd` (the larger raw chain total) and a `Chain rows exceed global supply by X%` legend entry discloses `attributionDiscrepancyUsd` instead of hiding it
 - `NauticalChart`, fed directly by the chain snapshot, whose `topStablecoins` rows provide the top-stablecoin cargo/logos for each chain; the route-level harbor summary plates (`Largest port`, `Avg health`, `Fragile ports`, and health bands) render before the SVG so the chart can finish with the map itself
 - `SelectedHarborPanel`, synchronized from the harbor chart and leaderboard hover/focus, showing the selected chain's compact supply, tracked share, health band, stablecoin count, dominant cargo, top cargo marks, and 7-day wake directly after the harbor map; the panel reads existing chain snapshot fields and does not change Chain Health semantics
@@ -105,6 +106,7 @@ Default sort is `totalUsd desc`.
 8. skeleton loading states inside the hero card only (market metrics + the Chain Health zone); detail rows remain empty until the chain-scoped response supplies them
 
 `useChainProfileData()` reads one chain-scoped response, `GET /api/chains?chain=<id>`. The summary and detail rows therefore share one `updatedAt` and freshness identity; there is no second stablecoins query or cross-snapshot consistency gate. The Worker includes `chainDetail` only when the requested chain is known, and its `totalUsd` plus each coin's `chainShare` use that chain's local denominator.
+Coverage-listed chains with no numerical row render unavailable supply with retry, not the untracked/removed fallback. Detail metrics disclose the excluded chain observations and global assets independently.
 
 `useChainDetail(chainId)` is the parameterized query hook for that response. Profile rows are not recomputed in the browser from `/api/stablecoins`; the removed `useChainStablecoins()` path must not be reintroduced.
 
@@ -127,6 +129,8 @@ The page contract is limited to presentation: the leaderboard exposes the compos
 Every positive-supply chain in the response carries exactly `min(stablecoinCount, 5)` `topStablecoins` rows. The shared response schema rejects older or partial payloads that do not meet this contract, so the leaderboard does not merge a second stablecoins snapshot into the chain snapshot.
 
 When `chain` is supplied, `chainDetail` contains the active aggregate coins for that canonical chain, sorted by descending chain-local supply. Each row includes canonical `chainShare` and 24h/7d/30d change ratios; the detail total is the denominator for those shares. The unclassified backing bucket remains `other`, distinct from worker health or data-quality buckets.
+
+Chain, coin-detail and global 24h/7d/30d ratios retain `null` for positive supply grown from an observed zero baseline; absolute chain/coin deltas remain valid. Observed zero-to-zero is no change (`0`), not missing history.
 
 `worker/src/api/chains.ts`:
 

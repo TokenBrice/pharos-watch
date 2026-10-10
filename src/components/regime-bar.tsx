@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 import { useStabilityIndex } from "@/hooks/api-hooks";
-import { PSI_HEX_COLORS, PSI_UNKNOWN_BAND_HEX, isConditionBand } from "@shared/lib/psi-colors";
+import { PSI_HEX_COLORS, PSI_UNKNOWN_BAND_HEX, isConditionBand } from "@shared/lib/classification";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getDisplayedPsi, getDisplayedPsiBasis, getPsiBandStreak } from "@shared/lib/psi-view-model";
 import { cn } from "@/lib/utils";
+import { deriveDataHealth, formatDataHealthTimestamp } from "@/lib/data-health";
+import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
+import { useHydrated } from "@/hooks/use-hydrated";
+import type { ApiMeta } from "@/lib/api";
 
 const BAND_STRIP_WINDOW_DAYS = 30;
 type StabilityIndexLightData = {
@@ -19,23 +23,26 @@ export function buildBandStripCells(
 ): Array<{ date: number; band: string } | null> {
   if (!history?.length) return Array.from({ length: BAND_STRIP_WINDOW_DAYS }, () => null);
   const todayMidnight = bucketUnixSecondsToUtcDay(computedAt);
-  const completedOldestFirst = history
-    .filter((p) => p.date < todayMidnight)
-    .slice(0, BAND_STRIP_WINDOW_DAYS)
-    .reverse();
-  const out: Array<{ date: number; band: string } | null> = [];
-  for (let i = 0; i < BAND_STRIP_WINDOW_DAYS; i++) {
-    const point = completedOldestFirst[i];
-    out.push(point ? { date: point.date, band: point.band } : null);
-  }
-  return out;
+  const oldestDay = todayMidnight - BAND_STRIP_WINDOW_DAYS * 86_400;
+  const byDay = new Map(
+    history
+      .filter((point) => point.date >= oldestDay && point.date < todayMidnight)
+      .map((point) => [point.date, point]),
+  );
+  return Array.from({ length: BAND_STRIP_WINDOW_DAYS }, (_, index) => {
+    const date = oldestDay + index * 86_400;
+    const point = byDay.get(date);
+    return point ? { date, band: point.band } : null;
+  });
 }
 
 /** Persistent 3px bar at the top of every page, colored by current PSI band. */
 export function RegimeBar() {
-  const { data: psiData } = useStabilityIndex();
+  const psiQuery = useStabilityIndex();
+  const psiData = psiQuery.data;
   const lightData = psiData as StabilityIndexLightData | undefined;
   const [expanded, setExpanded] = useState(false);
+  const hydrated = useHydrated();
 
   const current = lightData?.current;
   if (!current) return <div className="fixed left-0 right-0 top-0 z-[60] h-[3px] max-w-[100vw]" />;
@@ -44,13 +51,30 @@ export function RegimeBar() {
   const displayBasis = getDisplayedPsiBasis(current);
   const band = displayedPsi.band;
   const score = displayedPsi.score;
+  const meta = psiQuery.meta;
+  const generationUpdatedAt = Math.min(meta?.updatedAt ?? current.computedAt, current.computedAt);
+  const generationMeta: ApiMeta = meta?.updatedAt === null ? meta : {
+    ...meta,
+    updatedAt: generationUpdatedAt,
+    ageSeconds: meta?.ageSeconds ?? Math.max(0, psiQuery.dataUpdatedAt / 1000 - generationUpdatedAt),
+    status: meta?.status ?? "fresh",
+  };
+  const health = deriveDataHealth({
+    ...DATA_HEALTH_PRESETS.stabilityIndex,
+    dataUpdatedAt: psiQuery.dataUpdatedAt,
+    error: psiQuery.error,
+    hasData: true,
+    meta: generationMeta,
+  }, hydrated ? undefined : psiQuery.dataUpdatedAt);
+  const isCurrent = health.state === "fresh";
+  const retainedLabel = `Retained observation as of ${formatDataHealthTimestamp(current.computedAt * 1000, "en-US", "UTC")}`;
   // Legacy rows and unvalidated caches can carry a band outside the closed vocabulary.
-  const color = isConditionBand(band) ? PSI_HEX_COLORS[band] : PSI_UNKNOWN_BAND_HEX;
-  const isElevated = band === "FRACTURE" || band === "CRISIS" || band === "MELTDOWN";
+  const color = isCurrent && isConditionBand(band) ? PSI_HEX_COLORS[band] : PSI_UNKNOWN_BAND_HEX;
+  const isElevated = isCurrent && (band === "FRACTURE" || band === "CRISIS" || band === "MELTDOWN");
   const components = current.components;
 
-  // Dark text for BEDROCK/STEADY (green/teal bg + white fails WCAG contrast)
-  const useDarkText = band === "BEDROCK" || band === "STEADY";
+  // Dark text on the neutral fallback and green/teal bands (white fails contrast).
+  const useDarkText = !isCurrent || band === "BEDROCK" || band === "STEADY";
 
   // Walk history to compute days in current band
   const daysInBand = lightData?.history?.length
@@ -71,7 +95,9 @@ export function RegimeBar() {
       style={{ backgroundColor: color }}
       onClick={() => setExpanded((prev) => !prev)}
       aria-expanded={expanded}
-      aria-label={`Market regime: ${band}, PSI ${Math.round(score)}, ${displayBasis}`}
+      aria-label={isCurrent
+        ? `Market regime: ${band}, PSI ${Math.round(score)}, ${displayBasis}`
+        : `Current market regime unavailable. ${health.message} ${retainedLabel}: ${band}, PSI ${Math.round(score)}, ${displayBasis}`}
     >
       {/* Use grid-template-rows for smooth expand/collapse (height:auto can't transition) */}
       <div
@@ -83,8 +109,9 @@ export function RegimeBar() {
             "flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-1 text-[11px] leading-none font-mono tabular-nums",
             useDarkText ? "text-gray-900/90" : "text-white/90",
           )}>
+            {!isCurrent && <span>Current regime unavailable · {retainedLabel}</span>}
             <span className="font-semibold tracking-wide">{band}</span>
-            {daysInBand && <span>for {daysInBand}d</span>}
+            {isCurrent && daysInBand && <span>for {daysInBand}d</span>}
             <span className={useDarkText ? "text-gray-900/70" : "text-white/80"} aria-hidden="true">·</span>
             <span>PSI {Math.round(score)} · {displayBasis}</span>
             <span className={useDarkText ? "text-gray-900/70" : "text-white/80"} aria-hidden="true">·</span>

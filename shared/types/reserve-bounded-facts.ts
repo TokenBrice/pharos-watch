@@ -28,7 +28,8 @@ const base = {
 };
 const assetClass = z.enum(Object.keys(rawPolicy.semantic.backing.reserve.assetClassQuality) as ["cash", "bank-deposit", "treasury-bill", "government-security", "repo", "money-market-fund", "stablecoin", "cryptoasset", "hedged-crypto", "private-credit", "public-credit", "tokenized-security", "fund-share", "protocol-position", "commodity-allocated", "other"]);
 const grossCoverage = { coveredGrossValue: z.number().finite().nonnegative().nullable(), totalGrossValue: z.number().finite().positive().nullable(), coverageAsOfSec: seconds };
-export const ReserveBoundedFactSchema = z.discriminatedUnion("kind", [
+/** Shape-preserving wire contract; runtime refinements and ordering follow below. */
+export const ReserveBoundedFactOutputSchema = z.discriminatedUnion("kind", [
   z.object({ ...base, kind: z.literal("contractual-maturity-maximum"), claimId: text, legallyBinding: z.boolean(), allInScope: z.boolean(), maximumTerm: term }).strict(),
   z.object({ ...base, kind: z.literal("observed-portfolio-maturity"), ...grossCoverage, denomination: text, observedMaximumDays: z.number().int().nonnegative().nullable(), instruments: z.array(z.object({ instrumentId: text, maturityAtSec: seconds.nullable(), grossMarkedValue: z.number().finite().nonnegative(), denomination: text }).strict()) }).strict(),
   z.object({ ...base, kind: z.literal("eligibility-envelope"), legallyBinding: z.boolean(), exhaustive: z.boolean(), allocations: z.array(z.object({ assetClass, minShare: fraction, maxShare: fraction, maximumTerm: term.nullable() }).strict()).min(1) }).strict(),
@@ -36,7 +37,8 @@ export const ReserveBoundedFactSchema = z.discriminatedUnion("kind", [
   z.object({ ...base, kind: z.literal("maturity-applicability"), claimId: text, conclusion: z.enum(["not-applicable", "open-ended"]), governingInstrument: text, allInScope: z.boolean() }).strict(),
   z.object({ ...base, kind: z.literal("stressed-realization-bound"), ...grossCoverage, collateralId: text, scenario: text, haircutBudgetBps: z.number().finite().min(0).max(10000), settlementAsset: text, executionConditions: text, realizationStage: z.enum(["collateral-transfer", "final-cash-settlement"]), elapsedTimeSec: seconds }).strict(),
   z.object({ ...base, kind: z.literal("business-calendar-liquidity"), settlementAsset: text, allInScope: z.boolean(), availableDuring: z.enum(["business-day", "banking-hours"]), businessDayTerms: RedemptionBusinessDayTermsSchema }).strict(),
-]).superRefine((fact, ctx) => {
+]);
+export const ReserveBoundedFactSchema = ReserveBoundedFactOutputSchema.superRefine((fact, ctx) => {
   const reject = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });
   if (fact.scope.kind === "sub-instrument" && fact.scope.coverageAsOfSec !== fact.asOfSec) reject("scope", "Coverage must use the fact snapshot");
   if (fact.provenance.kind === "producer-observation" && fact.provenance.observedAtSec !== fact.asOfSec) reject("provenance", "Observation must use the fact snapshot");

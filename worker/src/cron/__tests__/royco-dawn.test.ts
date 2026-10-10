@@ -25,6 +25,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
 });
 
 import { fetchRoycoDawnSources } from "../yield-sync/royco-dawn";
+import { resolveYieldRowSafety } from "@shared/lib/yield-opportunity-risk";
 
 describe("fetchRoycoDawnSources", () => {
   beforeEach(() => {
@@ -132,6 +133,25 @@ describe("fetchRoycoDawnSources", () => {
       },
     });
     expect(candidates[1]?.yield.sourceRisk?.trancheSide).toBe("junior");
+  });
+
+  it.each([null, undefined])("retains observed tranche APY with unavailable API status (%s) without scoring market health", async (status) => {
+    mockFetch([{ match: "ecosystem/explore", body: {
+      count: 1, data: [makeMarket({ status })],
+    } }]);
+    const { candidates } = await fetchRoycoDawnSources();
+    expect(candidates).toHaveLength(1);
+    const candidate = candidates[0];
+    expect(candidate.yield).toMatchObject({ currentApy: 5, sourceRisk: { marketStatus: null } });
+    const safety = resolveYieldRowSafety({
+      yieldType: "structured-tranche", underlyingSafety: { score: 80, grade: "B+" },
+      defaultSafetyScore: 40, ratedProvenance: "cached-publish",
+      sourceTvlUsd: candidate.yield.sourceTvlUsd,
+      sourceRisk: { ...candidate.yield.sourceRisk, venueRiskWeighted: 3 },
+    });
+    expect(safety.opportunityEvidenceComplete).toBe(false);
+    expect(safety.opportunityRisk?.missingCriticalEvidence).toEqual(["market-status"]);
+    expect(safety.sourceRisk?.trancheSafetyScore).toBeNull();
   });
 
   it("maps Royco sNUSD deposit tokens to the tracked Neutrl USD parent", async () => {

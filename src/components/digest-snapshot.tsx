@@ -6,7 +6,7 @@ import { useDigestSnapshot } from "@/hooks/api-hooks";
 import { useImageUnavailable } from "@/hooks/use-image-unavailable";
 import { parseDigestSafetyMapCapture, type DigestSafetyMapArchiveTier as StoredSafetyMapTier } from "@shared/types/digest-safety-map-contract";
 import { formatCurrency, formatAddress, formatPercentChange, formatScore, getNetColor } from "@shared/lib/format";
-import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
+import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
 import type { DigestSnapshotInputData, DigestSnapshotResponse } from "@shared/types";
 import { Activity, ArrowDownUp, BarChart3, CheckCircle, ImageOff, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
 import { formatDigestDateLabel } from "@/lib/digest";
@@ -145,21 +145,27 @@ interface VisibleDepeg {
   bps: number;
   direction: string | null;
   mcapUsd: number | null;
+  peakBps: number;
+  currentAvailable: boolean;
 }
 
 /**
  * The edition's own capture. Day-overlap episodes from the archive API describe the UTC day,
  * not what this edition published, so they never replace `activeDepegCount`/`topDepegs`.
  */
-function getCapturedDepegs(inputData: DigestSnapshotInputData): { count: number; rows: VisibleDepeg[] } {
+function getCapturedDepegs(inputData: DigestSnapshotInputData): { count: number | null; rows: VisibleDepeg[] } {
   const inputTopDepegs = inputData.topDepegs ?? [];
   return {
-    count: inputData.activeDepegCount ?? inputTopDepegs.length,
+    count: inputData.degradedSources?.includes("active-depegs-query") ? null : inputData.activeDepegCount ?? null,
     rows: inputTopDepegs.slice(0, 5).map((depeg) => ({
       key: `${depeg.stablecoinId ?? depeg.symbol}-${depeg.startedAt ?? depeg.bps}`,
       symbol: depeg.symbol,
-      bps: depeg.bps,
-      direction: depeg.direction ?? (depeg.bps >= 0 ? "above" : "below"),
+      bps: depeg.severityBasis === "current" && depeg.currentBps != null ? depeg.currentBps : depeg.bps,
+      direction: depeg.severityBasis === "current" && depeg.currentBps != null
+        ? (depeg.currentBps >= 0 ? "above" : "below")
+        : depeg.direction ?? (depeg.bps >= 0 ? "above" : "below"),
+      peakBps: depeg.bps,
+      currentAvailable: depeg.severityBasis === "current" && depeg.currentBps != null,
       mcapUsd: depeg.mcapUsd,
     })),
   };
@@ -173,6 +179,7 @@ function DepegRowList({ rows }: { rows: VisibleDepeg[] }) {
           {d.symbol}: {d.bps > 0 ? "+" : ""}
           {d.bps} bps {d.direction ? `${d.direction} peg` : "off peg"}
           {d.mcapUsd != null ? ` (${formatCurrency(d.mcapUsd)})` : ""}
+          {d.currentAvailable ? ` (historical peak ${d.peakBps} bps)` : " (historical peak; current unavailable)"}
         </li>
       ))}
     </ul>
@@ -193,14 +200,18 @@ function ActiveDepegsCard({
     bps: depeg.peakDeviationBps,
     direction: depeg.direction,
     mcapUsd: null,
+    peakBps: depeg.peakDeviationBps,
+    currentAvailable: false,
   }));
-  if (count <= 0 && dayRows.length === 0) return null;
+  if (count === 0 && dayRows.length === 0) return null;
   return (
     <SnapshotCard
       title="Active Depegs"
       icon={<TriangleAlert className="h-4 w-4" aria-hidden="true" />}
     >
-      {count > 0 ? (
+      {count == null ? (
+        <p className="text-sm text-muted-foreground">Active depeg count unavailable for this edition</p>
+      ) : count > 0 ? (
         <>
           <p className="text-sm text-foreground/90">
             <span className="font-medium">{count}</span>{" "}
@@ -250,7 +261,7 @@ export function DigestSnapshot({ date }: { date: string }) {
     return <SnapshotUnavailable />;
   }
 
-  const { inputData, prevInputData, depegEvents, blacklistEvents } = data;
+  const { inputData, prevInputData, depegEvents, blacklistEvents, blacklistSummary } = data;
   const prev = prevInputData ?? undefined;
   const totalMcapUsd = inputData.totalMcapUsd ?? null;
   const mcap7dDelta = inputData.mcap7dDelta ?? null;
@@ -400,14 +411,21 @@ export function DigestSnapshot({ date }: { date: string }) {
               icon={<ShieldBan className="h-4 w-4" aria-hidden="true" />}
             >
               <p className="text-sm text-foreground/90">
-                <span className="font-medium">{blacklistEvents.length}</span>{" "}
-                event{blacklistEvents.length !== 1 ? "s" : ""} on this day
-                {(() => {
-                  const total = blacklistEvents.reduce((sum, e) => sum + (e.amountUsdAtEvent ?? 0), 0);
-                  return total > 0 ? (
-                    <span className="text-muted-foreground"> totaling {formatCurrency(total)}</span>
-                  ) : null;
-                })()}
+                {blacklistSummary ? (
+                  <>
+                    <span className="font-medium">{blacklistSummary.totalEvents}</span>{" "}
+                    event{blacklistSummary.totalEvents !== 1 ? "s" : ""} on this day
+                    <span className="text-muted-foreground">
+                      {blacklistSummary.knownAmountUsd === null
+                        ? "; USD valuation unavailable"
+                        : blacklistSummary.unavailableAmountEvents > 0
+                          ? `; known subtotal ${formatCurrency(blacklistSummary.knownAmountUsd)} (${blacklistSummary.unavailableAmountEvents} unvalued)`
+                          : ` totaling ${formatCurrency(blacklistSummary.knownAmountUsd)}`}
+                    </span>
+                  </>
+                ) : (
+                  <span>Daily event count and valuation unavailable</span>
+                )}
               </p>
               <ul className="space-y-0.5">
                 {blacklistEvents.slice(0, 5).map((e) => (
@@ -422,11 +440,10 @@ export function DigestSnapshot({ date }: { date: string }) {
                   </li>
                 ))}
               </ul>
-              {blacklistEvents.length > 5 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  and {blacklistEvents.length - 5} more
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Showing latest {Math.min(5, blacklistEvents.length)} of{" "}
+                {blacklistSummary?.totalEvents ?? "unknown total"} events
+              </p>
             </SnapshotCard>
           </div>
         )}

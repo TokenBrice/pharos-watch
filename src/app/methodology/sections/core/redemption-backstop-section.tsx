@@ -29,6 +29,14 @@ export function RedemptionBackstopMethodologySection() {
         execution, capacity, output, and cost primitives; V10 re-evaluates exact same-notional evidence under its own
         stress request, evidence ceilings, danger interlocks, and redundancy policy.
       </p>
+      <p>
+        Methodology v4.49 keeps fractional observed fees unrounded through the existing 10, 50 and 100 basis-point
+        cost thresholds. Rejected payout identities cannot grant favorable live fees, openness, holder access
+        or settlement. sBOLD needs readable collateral-health evidence for open status; Mento capacity needs
+        same-block execution predicates and a successful bounded quote. dEURO basket valuations retain the oldest
+        complete member-price/FX clock, and physical commodity outputs require source-timed USD valuation distinct
+        from fiat proceeds. These corrections can move route scores; weights and ladders are unchanged.
+      </p>
       <MethodologyFacts
         facts={[
           { label: "Version", value: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL },

@@ -71,6 +71,15 @@ describe("streamed stable JSON", () => {
     expect(sha256HexFromUtf8Chunks(stableJsonStringifyChunksV1(value))).toBe(nodeSha256(canonical));
   });
 
+  it.each(["root", "nested"] as const)("rejects sparse %s arrays before string or chunk encoding", (location) => {
+    const sparse = Array<string>(2);
+    sparse[1] = "x";
+    const value = location === "root" ? sparse : { values: sparse };
+    const path = location === "root" ? "$[0]" : "$.values[0]";
+    expect(() => stableJsonStringifyV1(value)).toThrow(`Cannot serialize undefined array entry at ${path}`);
+    expect(() => stableJsonStringifyChunksV1(value)).toThrow(`Cannot serialize undefined array entry at ${path}`);
+  });
+
   it("preserves stable JSON validation errors", () => {
     const invalid = { values: [1, undefined] };
     expect(() => stableJsonStringifyV1(invalid)).toThrow(

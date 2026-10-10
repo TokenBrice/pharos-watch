@@ -77,16 +77,10 @@ describe("hasV9DangerSignal", () => {
     expect(hasV9DangerSignal({ ...base, unresolvedCodes: ["no-viable-exit-path"] }, POLICY)).toBe(true);
   });
 
-  it("gate split (D1): mint:high and peg [0.8,0.9) are withhold-danger but NOT f-gate-danger", () => {
-    const mintHigh = { ...base, structuralSignals: [signal("centralized-mint", "high")] };
-    expect(hasV9DangerSignal(mintHigh, POLICY, "withhold")).toBe(true);
-    expect(hasV9DangerSignal(mintHigh, POLICY, "f-gate")).toBe(false);
-    const mintCritical = { ...base, structuralSignals: [signal("centralized-mint", "critical")] };
-    expect(hasV9DangerSignal(mintCritical, POLICY, "withhold")).toBe(true);
-    expect(hasV9DangerSignal(mintCritical, POLICY, "f-gate")).toBe(true);
-    expect(hasV9DangerSignal({ ...base, pegMultiplier: 0.85 }, POLICY, "withhold")).toBe(true);
-    expect(hasV9DangerSignal({ ...base, pegMultiplier: 0.85 }, POLICY, "f-gate")).toBe(false);
-    expect(hasV9DangerSignal({ ...base, pegMultiplier: 0.79 }, POLICY, "f-gate")).toBe(true);
+  it("keeps centralized mint and sub-0.9 peg history as withhold danger", () => {
+    expect(hasV9DangerSignal({ ...base, structuralSignals: [signal("centralized-mint", "high")] }, POLICY)).toBe(true);
+    expect(hasV9DangerSignal({ ...base, structuralSignals: [signal("centralized-mint", "critical")] }, POLICY)).toBe(true);
+    expect(hasV9DangerSignal({ ...base, pegMultiplier: 0.85 }, POLICY)).toBe(true);
   });
 
   it("reads the danger floor from a counterfactual policy", () => {
@@ -94,8 +88,8 @@ describe("hasV9DangerSignal", () => {
     changedPolicy.semantic.formula.danger.withholdPegMultiplierFloor = 0.84;
     const counterfactual = loadV9MethodologyPolicy(changedPolicy);
 
-    expect(hasV9DangerSignal({ ...base, pegMultiplier: 0.85 }, POLICY, "withhold")).toBe(true);
-    expect(hasV9DangerSignal({ ...base, pegMultiplier: 0.85 }, counterfactual, "withhold")).toBe(false);
+    expect(hasV9DangerSignal({ ...base, pegMultiplier: 0.85 }, POLICY)).toBe(true);
+    expect(hasV9DangerSignal({ ...base, pegMultiplier: 0.85 }, counterfactual)).toBe(false);
   });
 });
 
@@ -267,7 +261,7 @@ describe("Lever 1 — insufficient-evidence withhold", () => {
     expect(trace.caps.some((cap) => cap.kind === "evidence-floor:d")).toBe(false);
   });
 
-  it("keeps measured sub-floor backing at F under both gates (u-united analog: backing < 35)", () => {
+  it("keeps measured sub-floor backing at F with causal attribution (u-united analog: backing < 35)", () => {
     const trace = scoreV9EvaluatedAsset(
       assetInput({
         pillars: {

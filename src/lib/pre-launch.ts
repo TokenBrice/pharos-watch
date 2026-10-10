@@ -93,14 +93,15 @@ export const DRIFT_STATUS_LABEL: Record<DriftStatus, string> = {
 };
 
 export function getDriftStatus(
-  dateHistory?: DateHistoryEntry[],
-  expectedLaunchDate?: string,
+  dateHistory: DateHistoryEntry[] | undefined,
+  expectedLaunchDate: string | undefined,
+  nowMs: number,
 ): DriftStatus {
-  if (!dateHistory || dateHistory.length === 0) return "on-track";
   if (expectedLaunchDate) {
-    const end = parseFuzzyDate(expectedLaunchDate);
-    if (end && end < new Date()) return "overdue";
+    const deadline = parseFuzzyDeadline(expectedLaunchDate);
+    if (deadline && nowMs >= deadline.getTime()) return "overdue";
   }
+  if (!dateHistory || dateHistory.length === 0) return "on-track";
   if (dateHistory.length >= 2) return "pushed-multiple";
   return "pushed-once";
 }
@@ -122,7 +123,7 @@ function lastDayOfMonth(year: number, month: number): Date {
   return utcDate(year, month, 0);
 }
 
-/** Convert a fuzzy date string to a representative end-of-period Date for calculations. */
+/** Representative final UTC calendar date for sorting/display, not an expiry boundary. */
 export function parseFuzzyDate(raw: string): Date | null {
   const dMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (dMatch) {
@@ -152,6 +153,13 @@ export function parseFuzzyDate(raw: string): Date | null {
     return utcDate(Number(yMatch[1]), 11, 31);
   }
   return null;
+}
+
+/** Inclusive calendar targets expire at the exclusive start of the following UTC day/period. */
+export function parseFuzzyDeadline(raw: string): Date | null {
+  const end = parseFuzzyDate(raw);
+  if (!end) return null;
+  return utcDate(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() + 1);
 }
 
 /** Format a fuzzy date string for display (e.g. "Q2 2026", "Mar 2026"). */

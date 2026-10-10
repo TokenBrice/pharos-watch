@@ -1,11 +1,9 @@
 import {
   SETUP_PENDING_ACTION_TYPE,
+  canActOnPendingOwner,
   type TelegramWebhookUpdate,
 } from "./telegram-webhook-shared";
-import {
-  parseCommand,
-  parseStartPayload,
-} from "./telegram-webhook-parsing";
+import { parseCommand } from "./telegram-webhook-parsing";
 import {
   handlePendingActionBeforeDispatch,
   handleSetupPendingBeforeDispatch,
@@ -19,6 +17,7 @@ import {
 } from "./telegram-webhook-store";
 import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram/log";
 import { handleCallbackQuery } from "./telegram-webhook-callbacks";
+import { resumeStoredSetupCallback } from "./telegram-webhook-setup";
 import { COMMAND_HANDLERS, type WebhookCommandContext } from "./webhook-commands";
 import {
   isChannelChatType,
@@ -47,6 +46,7 @@ import {
   enforceIngressFlood,
   isAddressedToPharosBot,
   isRecapMutationArgs,
+  isMutatingTelegramStartPayload,
   logTelegramWebhookWarning,
   maybeGateNonAdminGroupActor,
   recordCommandUsage,
@@ -73,6 +73,7 @@ export type FinishOk = (errorClass?: string | null) => Promise<Response>;
 export type ReplyWithMarkupFn = (message: string, options: { replyMarkup?: unknown }) => Promise<void>;
 
 const RESUMABLE_NORMALIZED_COMMANDS = new Set([
+  "/start",
   "/mute",
   "/pause",
   "/set",
@@ -294,6 +295,27 @@ export async function handleTelegramMessageUpdate(args: {
     }
 
     const storedSelection = parseStoredCommandSelectionIntent(effectFence?.storedIntent);
+    if (storedSelection && !canActOnPendingOwner(storedSelection.initiatorUserId, actorUserId)) {
+      await reply("Only the user who started this pending selection can complete it.");
+      return finishOk();
+    }
+    if (storedSelection && !parsedCommand) {
+      // A recovered numeric reply has no command text. Route the immutable
+      // selection through the same fresh authorization gate as its command.
+      await dispatchParsedTelegramCommand({
+        db,
+        botToken,
+        chatId,
+        chatType,
+        actorUserId,
+        parsedCommand: { command: `/${storedSelection.actionType}`, args: "", botMention: null },
+        commandContext,
+        reply,
+        replyWithMarkup,
+        storedSelection,
+      });
+      return finishOk();
+    }
     const resumeStoredCommand = Boolean(
       parsedCommand
       && effectFence?.storedIntent
@@ -322,6 +344,18 @@ export async function handleTelegramMessageUpdate(args: {
         replyWithMarkup,
         storedSelection,
       });
+      return finishOk();
+    }
+
+    if (effectFence?.storedIntent?.kind === "callback:setup") {
+      await resumeStoredSetupCallback({
+        db,
+        botToken,
+        chatId,
+        actorUserId,
+        username,
+        ...buildMutationOperations(effectFence, { beforeIrreversibleEffect }),
+      }, "");
       return finishOk();
     }
 
@@ -359,6 +393,9 @@ export async function handleTelegramMessageUpdate(args: {
         operation: buildPendingOperationContext(effectFence, beforeIrreversibleEffect, operationNowSec),
       });
       if (setupResult === "finished") return finishOk();
+      if (setupResult === "continue-clear-pending") {
+        commandContext.clearPendingOnMutation = true;
+      }
     }
 
     if (!isSetupPending) {
@@ -467,7 +504,7 @@ async function dispatchParsedTelegramCommand(args: {
 
   if (
     isChannelChatType(chatType) &&
-    commandRequiresGroupAdmin(parsedCommand.command, parsedCommand.args)
+    (storedSelection || commandRequiresGroupAdmin(parsedCommand.command, parsedCommand.args))
   ) {
     await reply("Channel-originated mutations are not supported. Manage alerts from a private chat or group.");
     await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "denied", "channel_mutation");
@@ -476,14 +513,14 @@ async function dispatchParsedTelegramCommand(args: {
 
   if (
     isGroupChatType(chatType) &&
-    commandRequiresGroupAdmin(parsedCommand.command, parsedCommand.args)
+    (storedSelection || commandRequiresGroupAdmin(parsedCommand.command, parsedCommand.args))
   ) {
     const proceed = await maybeGateNonAdminGroupActor(
       db,
       botToken,
       chatId,
       actorUserId,
-      parsedCommand.command,
+      storedSelection ? `/${storedSelection.actionType}` : parsedCommand.command,
       reply,
     );
     if (!proceed) {
@@ -568,13 +605,9 @@ async function digestWebhookIntentInput(value: string): Promise<string> {
 
 
 function commandMutatesLocalState(command: string, args: string): boolean {
-  const startPayloadKind = command === "/start" ? parseStartPayload(args).kind : null;
   return commandRequiresGroupAdmin(command, args)
     || command === "/forget"
     || command === "/cancel"
     || (command === "/recap" && isRecapMutationArgs(args))
-    || startPayloadKind === "setup"
-    || startPayloadKind === "none"
-    || startPayloadKind === "subscribe"
-    || startPayloadKind === "adoption";
+    || (command === "/start" && isMutatingTelegramStartPayload(args));
 }

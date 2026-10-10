@@ -1,17 +1,13 @@
+import { AlertReserveSourceEnvelopeSchema, type AlertReserveSourceEnvelope } from "@shared/types/status/telegram";
 import type { ReserveAlertSourceState } from "@shared/types/status";
 import { tryParseJson } from "./json-parse";
 
-export const ALERT_RESERVE_SOURCE_GENERATION = "reserve-alert-source-v1";
+export const ALERT_RESERVE_SOURCE_GENERATION = "reserve-alert-source-v2";
 const ALERT_RESERVE_SOURCE_STALE_PRODUCER_INTERVALS = 2;
 
 type CachedValue = { value: string; updatedAt: number } | null;
 
-export interface AlertReserveSourceEnvelope {
-  generation: string;
-  publishedAt: number;
-  continuous: boolean;
-  driftIds: string[];
-}
+export type { AlertReserveSourceEnvelope } from "@shared/types/status";
 
 export interface AlertReserveSourceAssessment {
   state: ReserveAlertSourceState;
@@ -20,35 +16,10 @@ export interface AlertReserveSourceAssessment {
   envelope: AlertReserveSourceEnvelope | null;
 }
 
-function parseEnvelope(cached: CachedValue): AlertReserveSourceEnvelope | null {
+function parseAlertReserveSourceEnvelope(cached: CachedValue): AlertReserveSourceEnvelope | null {
   if (!cached) return null;
-
-  const parsed = tryParseJson(cached.value);
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-
-  const record = parsed as Record<string, unknown>;
-  if (
-    typeof record.generation !== "string" ||
-    record.generation.length === 0 ||
-    typeof record.publishedAt !== "number" ||
-    !Number.isInteger(record.publishedAt) ||
-    record.publishedAt <= 0 ||
-    typeof record.continuous !== "boolean" ||
-    !Array.isArray(record.driftIds) ||
-    !record.driftIds.every((id) => typeof id === "string" && id.length > 0)
-  ) {
-    return null;
-  }
-
-  const driftIds = record.driftIds as string[];
-  if (new Set(driftIds).size !== driftIds.length) return null;
-
-  return {
-    generation: record.generation,
-    publishedAt: record.publishedAt,
-    continuous: record.continuous,
-    driftIds,
-  };
+  const parsed = AlertReserveSourceEnvelopeSchema.safeParse(tryParseJson(cached.value));
+  return parsed.success ? parsed.data : null;
 }
 
 export function assessAlertReserveSourceCache(
@@ -63,7 +34,7 @@ export function assessAlertReserveSourceCache(
     return { state: "missing", ageSeconds: null, generation: null, envelope: null };
   }
 
-  const envelope = parseEnvelope(cached);
+  const envelope = parseAlertReserveSourceEnvelope(cached);
   if (!envelope) {
     return { state: "corrupt", ageSeconds: null, generation: null, envelope: null };
   }
@@ -121,10 +92,12 @@ export function buildAlertReserveSourceEnvelope(
     nowSec: number;
     producerIntervalSec: number;
     generation?: string;
+    observedIds: readonly string[];
+    unavailableIds: readonly string[];
   },
 ): AlertReserveSourceEnvelope {
   const generation = options.generation ?? ALERT_RESERVE_SOURCE_GENERATION;
-  const previousEnvelope = parseEnvelope(previous);
+  const previousEnvelope = parseAlertReserveSourceEnvelope(previous);
   const previousAgeSec = previousEnvelope == null
     ? Number.POSITIVE_INFINITY
     : options.nowSec - previousEnvelope.publishedAt;
@@ -132,11 +105,17 @@ export function buildAlertReserveSourceEnvelope(
     previousEnvelope?.generation === generation &&
     previousAgeSec >= 0 &&
     previousAgeSec <= options.producerIntervalSec * ALERT_RESERVE_SOURCE_STALE_PRODUCER_INTERVALS;
+  const observedSince: Record<string, number> = {};
+  for (const id of options.observedIds) {
+    observedSince[id] = continuous ? previousEnvelope!.observedSince[id] ?? options.nowSec : options.nowSec;
+  }
 
   return {
     generation,
     publishedAt: options.nowSec,
     continuous,
     driftIds: [...new Set(driftIds)].sort(),
+    observedSince,
+    unavailableIds: [...new Set(options.unavailableIds)].sort(),
   };
 }

@@ -103,7 +103,8 @@ export async function handleCallbackQuery(
   }
 
   const knownParsed: ParsedCallbackData<CallbackAction> = { ...parsed, action };
-  const handler = CALLBACK_HANDLERS[knownParsed.action];
+  // The bespoke settings route returned before the action allowlist check.
+  const handler = CALLBACK_HANDLERS[action as Exclude<CallbackAction, "settings">];
   await handler({
     db,
     botToken,

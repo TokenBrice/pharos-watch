@@ -24,12 +24,13 @@ function assertPlainStableJsonValue(value: unknown, path: string): void {
     throw new TypeError(`Cannot serialize binary data at ${path}; convert it first`);
   }
   if (Array.isArray(value)) {
-    value.forEach((entry, index) => {
+    for (let index = 0; index < value.length; index += 1) {
+      const entry = value[index];
       if (entry === undefined) {
         throw new TypeError(`Cannot serialize undefined array entry at ${path}[${index}]`);
       }
       assertPlainStableJsonValue(entry, `${path}[${index}]`);
-    });
+    }
     return;
   }
   if (Object.getPrototypeOf(value) !== Object.prototype) {

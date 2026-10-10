@@ -476,6 +476,7 @@ function client(args: {
   codeDriftAddress?: string;
   implementationDriftAddress?: string;
   stateUnavailable?: boolean;
+  resultFault?: { label: string; kind: "malformed" | "missing" | "reverted" };
 } = {}): SfrxusdCrosschainRouteReadClient {
   const valueForLabel = createValueReader(args.state ?? {});
   const inputShares = [100_000n, 1_000_000n, 5_000_000n, 25_000_000n].map(
@@ -530,7 +531,17 @@ function client(args: {
             unexpectedCalls.push(`${chain} ${blockNumber}`);
             throw new Error("Unexpected chain or block");
           }
-          return Promise.resolve(args.stateUnavailable ? null : encodedResults(calls, expected[chain], valueForLabel));
+          if (args.stateUnavailable) return Promise.resolve(null);
+          const results = encodedResults(calls, expected[chain], valueForLabel);
+          const fault = args.resultFault;
+          const resultIndex = fault ? results.findIndex((result) => result.label === fault.label) : -1;
+          if (fault && resultIndex >= 0) {
+            if (fault.kind === "missing") results.splice(resultIndex, 1);
+            else results[resultIndex] = {
+              label: fault.label, success: fault.kind !== "reverted", returnData: "0x01",
+            };
+          }
+          return Promise.resolve(results);
         },
       ),
   };
@@ -772,6 +783,24 @@ describe("observeSfrxusdCrosschainRedemptionRoute", () => {
       status: "rejected",
       rejectionCode,
     });
+  });
+
+  it.each([
+    ["remote-paused", "state-unavailable"],
+    ["remote-frx-oft", "identity-mismatch"],
+    ["frx-oft-token", "token-identity-invalid"],
+    ["eth-usd-round", "state-unavailable"],
+    ["vault-oracle-round", "state-unavailable"],
+    ["ethereum-supply-assets", "capacity-invalid"],
+    ["capacity-preview", "capacity-invalid"],
+    ["ethereum-quote:0", "quote-invalid"],
+    ["fraxtal-return-quote:0", "quote-invalid"],
+  ] as const)("retains %s rejection semantics for malformed, missing and reverted reads", async (label, rejectionCode) => {
+    for (const kind of ["malformed", "missing", "reverted"] as const) {
+      expect(await observe(client({ resultFault: { label, kind } }))).toMatchObject({
+        status: "rejected", rejectionCode,
+      });
+    }
   });
 
   it("preserves a rejected onchain pause without laundering idle into measured zero or open capacity", async () => {

@@ -130,14 +130,18 @@ function parseKavaSwapPool(value: unknown): KavaSwapPool | null {
   };
 }
 
-function parseKavaSwapPools(body: unknown): KavaSwapPool[] | null {
+function parseKavaSwapPools(body: unknown): { pools: KavaSwapPool[]; degraded: boolean } | null {
   const root = asRecord(body);
   if (!Array.isArray(root?.pools)) return null;
 
   const pools: KavaSwapPool[] = [];
+  let degraded = false;
   for (const value of root.pools) {
     const parsed = parseKavaSwapPool(value);
-    if (parsed == null) return null;
+    if (parsed == null) {
+      degraded = true;
+      continue;
+    }
     pools.push(parsed);
   }
 
@@ -147,14 +151,14 @@ function parseKavaSwapPools(body: unknown): KavaSwapPool[] | null {
   // pool array itself remains the complete response contract.
   if (root.pagination !== undefined) {
     const pagination = asRecord(root.pagination);
-    if (pagination == null || pagination.next_key !== null) return null;
-    if (pagination.total !== undefined) {
+    if (pagination == null || pagination.next_key !== null) degraded = true;
+    if (pagination?.total !== undefined) {
       const total = parseNonNegativeInteger(pagination.total);
-      if (total == null || Number(total) !== pools.length) return null;
+      if (total == null || Number(total) !== root.pools.length) degraded = true;
     }
   }
 
-  return pools;
+  return { pools, degraded };
 }
 
 function fetchKavaSwapEndpoint(path: string, signal: AbortSignal) {
@@ -258,7 +262,7 @@ export async function crawlKavaSwapPoolsStage(input: {
   }
 
   let observedPoolCount = 0;
-  for (const pool of pools) {
+  for (const pool of pools.pools) {
     if (!pool.denoms.includes(KAVA_SWAP_USDX_DENOM)) continue;
     if (!params.allowedPairs.has(pairKey(pool.denoms[0], pool.denoms[1]))) continue;
     observedPoolCount += 1;
@@ -267,7 +271,9 @@ export async function crawlKavaSwapPoolsStage(input: {
 
   return {
     providerChecks: targets.map((target) =>
-      makeDexDeploymentProviderCheck(target, KAVA_SWAP_PROVIDER, "success", { observedPoolCount }),
+      makeDexDeploymentProviderCheck(target, KAVA_SWAP_PROVIDER, pools.degraded ? "degraded" : "success", {
+        observedPoolCount: pools.degraded && observedPoolCount === 0 ? undefined : observedPoolCount,
+      }),
     ),
   };
 }

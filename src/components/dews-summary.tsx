@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
 import { THREAT_BAND_HEX, THREAT_BAND_LABELS } from "@shared/lib/classification";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { ThreatBand } from "@shared/lib/classification";
 import { sweepDuration, pulseDuration } from "@/lib/dews-radar-utils";
 import {
@@ -230,7 +230,7 @@ function DEWSDot({
 function DEWSTooltip({ coin }: { coin: ElevatedCoin }) {
   const hex = THREAT_BAND_HEX[coin.band];
   const W = 124;
-  const H = 46;
+  const H = 60;
   // Clamp so tooltip stays within viewBox; flip below the dot when near the top edge
   const tx = Math.min(Math.max(coin.x + 14, 4), VB_W - W - 4);
   const preferAbove = coin.y - H - 10 >= 4;
@@ -270,6 +270,9 @@ function DEWSTooltip({ coin }: { coin: ElevatedCoin }) {
         textAnchor="end"
       >
         {coin.score}/100
+      </text>
+      <text x={tx + 10} y={ty + 48} fill="var(--color-muted-foreground)" fontSize={9} fontFamily="var(--font-mono)">
+        {coin.mcap == null ? "Supply unavailable" : `${formatCompactUsd(coin.mcap)} cap`}
       </text>
     </g>
   );
@@ -334,9 +337,9 @@ function buildRovingOrder(elevated: ElevatedCoin[]): ElevatedCoin[] {
   return [...elevated].sort((a, b) => {
     const rank = ROVING_BAND_RANK[b.band] - ROVING_BAND_RANK[a.band];
     if (rank !== 0) return rank;
-    const mcapA = a.mcap ?? 0;
-    const mcapB = b.mcap ?? 0;
-    return mcapB - mcapA;
+    if (a.mcap == null) return b.mcap == null ? a.id.localeCompare(b.id) : 1;
+    if (b.mcap == null) return -1;
+    return b.mcap - a.mcap;
   });
 }
 
@@ -413,7 +416,7 @@ function DEWSRadar({
     (coin: ElevatedCoin): string => {
       const idx = rovingOrder.findIndex((c) => c.id === coin.id);
       const position = idx >= 0 ? `${idx + 1} of ${rovingOrder.length}` : `${rovingOrder.length}`;
-      const mcap = coin.mcap && coin.mcap > 0 ? `, ${formatCompactUsd(coin.mcap)} market cap` : "";
+      const mcap = coin.mcap != null ? `, ${formatCompactUsd(coin.mcap)} market cap` : ", supply unavailable";
       const depeg = activeDepegIds?.has(coin.id) ? ", in confirmed depeg" : "";
       return `${position}: ${coin.symbol}, ${THREAT_BAND_LABELS[coin.band]} band${depeg}${mcap}`;
     },
@@ -640,7 +643,7 @@ export function DEWSRadarPanel({ logos, className, activeDepegIds, maxHeight = 4
 
   const mcapById = useMemo(() => {
     if (!peggedAssets) return undefined;
-    return new Map(peggedAssets.map((c) => [c.id, getCirculatingRaw(c)]));
+    return new Map(peggedAssets.map((c) => [c.id, getCirculatingRawOrNull(c)]));
   }, [peggedAssets]);
 
   const viewModel = useMemo(() => {

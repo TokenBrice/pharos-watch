@@ -3,7 +3,8 @@ import { encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector,
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { CcipPendingReadSchema, type CcipPendingCheckpoint, type CcipPendingRead, type EconomicSupplyObservation, type ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
-import { observeCcipPending, authenticateCcipPendingObservation } from "../safety-score-v9/ccip-pending-observer";
+import { observeCcipPending } from "../safety-score-v9/ccip-pending-observer";
+import { authenticateCcipPendingObservation } from "../safety-score-v9/supply-attribution-ccip-proof";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch } from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import { getCache, setCache } from "../db-cache";

@@ -13,6 +13,10 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { selectRotatedCmcCandidates } from "../sync-stablecoins/enrich-prices-cmc-pass";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { validateCompositePricingSourceFreshness } from "../../lib/pricing-source-freshness";
+
+const sqliteFixtures = createLatestSchemaFixtureTracker();
 
 function emptyCmcLastFetchCache() {
   return {
@@ -25,6 +29,91 @@ function emptyCmcLastFetchCache() {
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
   afterEach(() => vi.useRealTimers());
+  afterEach(() => sqliteFixtures.closeAll());
+
+  it("refreshes verified CMC quotes every available UTC hour from 00:09 through 03:15", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const { db } = sqliteFixtures.open();
+    const makeAsset = () => makePeggedAsset({
+      id: "test-dollar", symbol: "TUSD", price: 0, cmcSlug: "test-dollar",
+      contracts: [{ chain: "ethereum", address: "0x1111111111111111111111111111111111111111", decimals: 18 }],
+    });
+    for (let hour = 0; hour <= 3; hour++) {
+      const observedAt = Date.parse(`2026-10-08T0${hour}:08:00Z`) / 1000;
+      vi.setSystemTime(new Date(`2026-10-08T0${hour}:09:00Z`));
+      const fetchSpy = mockFetch([
+        { match: "/v1/cryptocurrency/category", body: cmcCategory([], 301) },
+        { match: "/v3/cryptocurrency/quotes/latest", body: { data: [{
+          id: 123, slug: "test-dollar", symbol: "TUSD", is_active: 1,
+          platform: { slug: "ethereum", token_address: "0x1111111111111111111111111111111111111111" },
+          quote: { USD: { price: 1 + hour / 10_000, volume_24h: 50_000, last_updated: new Date(observedAt * 1000).toISOString() } },
+        }] } },
+      ]);
+      const assets = [makeAsset()];
+      expect((await runCmcPass(assets, "test-key", undefined, db)).resolved).toBe(1);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(assets[0].priceObservedAt).toBe(observedAt);
+      expect(assets[0].price).toBe(1 + hour / 10_000);
+      // Intervening publications stay inside the canonical source budget.
+      for (const minute of [15, 30, 45, 60]) {
+        expect(validateCompositePricingSourceFreshness({
+          source: "coinmarketcap", observedAt, observedAtMode: "upstream",
+          nowSec: observedAt + (minute - 8) * 60, requireObservedAt: true,
+        }).accepted).toBe(true);
+      }
+      vi.setSystemTime(new Date(`2026-10-08T0${hour}:15:00Z`));
+      const replayAssets = [makeAsset()];
+      await runCmcPass(replayAssets, "test-key", undefined, db);
+      expect(replayAssets[0].priceObservedAt).toBe(observedAt);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    }
+  });
+
+  it.each(["cooldown", "rate-limited", "circuit-open", "failed", "empty", "capped"] as const)(
+    "retains an admissible verified quote without renewing its clock after %s refresh",
+    async (scenario) => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const observedAt = Date.parse("2026-10-08T00:08:00Z") / 1000;
+      const nowSec = Date.parse("2026-10-08T01:09:00Z") / 1000;
+      vi.setSystemTime(nowSec * 1000);
+      const { db, sqlite } = sqliteFixtures.open();
+      const put = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      put.run("cmc_verified_targeted_quotes:v1", JSON.stringify([{
+        assetId: "test-dollar", slug: "test-dollar", symbol: "TUSD", price: 1.0002,
+        volume24h: 50_000, observedAt, providerAddress: null, chain: null, active: true,
+      }]), observedAt + 60);
+      if (scenario === "cooldown" || scenario === "rate-limited") {
+        put.run("cmc_last_fetch", JSON.stringify({
+          version: 1, kind: scenario === "cooldown" ? "success" : "rate-limited",
+        }), nowSec - 60);
+      }
+      if (scenario === "circuit-open") {
+        put.run(`circuit:${CIRCUIT_SOURCE.CMC_PRICES}`, JSON.stringify({
+          state: "open", consecutiveFailures: 3, lastFailureAt: nowSec,
+          lastSuccessAt: null, openedAt: nowSec,
+        }), nowSec);
+      }
+      const fetchSpy = mockFetch([
+        { match: "/v1/cryptocurrency/category", status: scenario === "failed" ? 503 : 200,
+          body: scenario === "failed" ? "unavailable" : cmcCategory([], 301) },
+        { match: "/v3/cryptocurrency/quotes/latest", body: { data: [] } },
+      ]);
+      const target = makePeggedAsset({ id: "test-dollar", symbol: "TUSD", price: 0, cmcSlug: "test-dollar" });
+      const peers = scenario === "capped" ? Array.from({ length: 25 }, (_, i) => makePeggedAsset({
+        id: `peer-${i}`, symbol: `P${i}`, price: 0, cmcSlug: `peer-${i}`,
+      })) : [];
+      const result = await runCmcPass([target, ...peers], "test-key", undefined, db, undefined,
+        new Set(peers.map((asset) => asset.id)));
+      expect(result.resolved).toBe(1);
+      expect(target.priceObservedAt).toBe(observedAt);
+      expect(target.price).toBe(1.0002);
+      expect(fetchSpy.mock.calls.length).toBe(
+        ["cooldown", "rate-limited", "circuit-open"].includes(scenario) ? 0 : scenario === "failed" ? 1 : 2,
+      );
+      const cacheRow = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("cmc_verified_targeted_quotes:v1");
+      expect(JSON.parse(String(cacheRow?.value))[0].observedAt).toBe(observedAt);
+    },
+  );
   it.each([
     ["next success hour despite completion jitter", { version: 1, kind: "success" }, "2026-09-22T20:10:18Z", "2026-09-22T21:09:30Z", true],
     ["same success hour", { version: 1, kind: "success" }, "2026-09-22T21:10:18Z", "2026-09-22T21:59:59Z", false],

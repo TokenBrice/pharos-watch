@@ -184,6 +184,32 @@ describe("aggregateChains", () => {
     expect(result.globalChange30dPct).toBe(0.25);
   });
 
+  it.each([true, false])("keeps growth ratios unknown from observed zero baselines (aggregate supply: %s)", (aggregateSupply) => {
+    const result = aggregateChains(makeInput({
+      detailChainId: "ethereum",
+      peggedAssets: [{
+        id: "usdc-circle", symbol: "USDC", price: 1,
+        ...(aggregateSupply ? {
+          circulating: { peggedUSD: 100 },
+          circulatingPrevDay: { peggedUSD: 0 }, circulatingPrevWeek: { peggedUSD: 0 },
+          circulatingPrevMonth: { peggedUSD: 0 },
+        } : {}),
+        chainCirculating: { ethereum: {
+          current: 100, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0,
+        } },
+      }],
+    }));
+    const changes = {
+      change24h: 100, change24hPct: null, change7d: 100, change7dPct: null,
+      change30d: 100, change30dPct: null,
+    };
+    expect(result.chains[0]).toMatchObject(changes);
+    expect(result.chainDetail?.coins[0]).toMatchObject(changes);
+    expect(result).toMatchObject({
+      globalChange24hPct: null, globalChange7dPct: null, globalChange30dPct: null,
+    });
+  });
+
   it.each([true, false])("retains fully redeemed rows in paired history (aggregate supply: %s)", (aggregateSupply) => {
     const input = makeInput({ peggedAssets: [
       { id: "usdt-tether", symbol: "USDT", price: 1,

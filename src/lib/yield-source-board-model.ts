@@ -1,4 +1,3 @@
-import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { getYieldDataSourceLabel } from "@/lib/yield-data-source";
 import {
   classifyYieldSourceDepth,
@@ -13,18 +12,11 @@ import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { median } from "@shared/lib/stats";
 import {
   getYieldAlternateSourceCount,
-  getYieldBenchmarkSelectionMode,
   getYieldWorkbenchDataSource,
   isYieldRankingSummary,
   type YieldWorkbenchRanking,
 } from "@/lib/yield-workbench-row";
-import type {
-  AltYieldSource,
-  YieldBenchmarkKey,
-  YieldBenchmarkMeta,
-  YieldBenchmarkRegistry,
-  YieldType,
-} from "@shared/types";
+import type { YieldType } from "@shared/types";
 
 export type YieldSourceConfidenceCounts = Record<YieldSourceConfidenceTier, number>;
 export type YieldSourceDepthCounts = Record<YieldSourceDepthLens, number>;
@@ -99,7 +91,7 @@ export interface YieldSourceBoardModel {
   selectedCount: number;
   alternateCount: number;
   representedSourceCount: number;
-  representedDataSourceCount: number;
+  compositionMissingSourceCount: number;
   selectedConfidenceCounts: YieldSourceConfidenceCounts;
   selectedConfidenceUnknownCount: number;
   depthCounts: YieldSourceDepthCounts;
@@ -107,16 +99,10 @@ export interface YieldSourceBoardModel {
   topSourceRiskDrivers: YieldSourceBoardRiskDriverCount[];
   sourceSwitchCount: number;
   anomalyCount: number;
+  anomalyUnavailableCount: number;
   sourceSwitchDetails: YieldSourceBoardSourceSwitchDetail[];
   anomalyDetails: YieldSourceBoardAnomalyDetail[];
-  sourceRowApy: YieldSourceBoardApySummary | null;
-  benchmarkLabels: YieldSourceBoardLabelCount[];
   groups: YieldSourceBoardGroup[];
-}
-
-export interface BuildYieldSourceBoardModelOptions {
-  benchmarks?: YieldBenchmarkRegistry | null;
-  fallbackBenchmark?: YieldBenchmarkMeta | null;
 }
 
 interface SourceRow {
@@ -195,36 +181,6 @@ function sortedRiskDriverCounts(
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
-function getBenchmarkForKey(
-  benchmarks: YieldBenchmarkRegistry | null | undefined,
-  key: YieldBenchmarkKey,
-): YieldBenchmarkMeta | null {
-  return benchmarks?.[key] ?? null;
-}
-
-function getRankingBenchmarkLabel(
-  ranking: YieldWorkbenchRanking,
-  options: BuildYieldSourceBoardModelOptions,
-): string | null {
-  if (ranking.benchmarkLabel) {
-    return getYieldBenchmarkDisplayLabel(ranking);
-  }
-
-  const key = ranking.benchmarkKey ?? "USD";
-  const registryBenchmark = getBenchmarkForKey(options.benchmarks, key);
-  if (registryBenchmark) return getYieldBenchmarkDisplayLabel(registryBenchmark);
-
-  if (ranking.benchmarkKey || getYieldBenchmarkSelectionMode(ranking) || ranking.benchmarkIsFallback) {
-    return getYieldBenchmarkDisplayLabel(ranking);
-  }
-
-  if (key === "USD" && options.fallbackBenchmark) {
-    return getYieldBenchmarkDisplayLabel(options.fallbackBenchmark);
-  }
-
-  return null;
-}
-
 function getSourceRows(ranking: YieldWorkbenchRanking): SourceRow[] {
   const dataSource = getYieldWorkbenchDataSource(ranking);
   return [
@@ -235,24 +191,26 @@ function getSourceRows(ranking: YieldWorkbenchRanking): SourceRow[] {
       yieldSource: ranking.yieldSource,
       apy30d: ranking.apy30d,
     },
-    ...(isYieldRankingSummary(ranking) ? [] : ranking.altSources).map((source: AltYieldSource) => ({
-      kind: "alternate" as const,
-      yieldType: source.yieldType,
-      dataSource: source.dataSource,
-      yieldSource: source.yieldSource,
-      apy30d: source.apy30d,
-    })),
+    ...(ranking.altSources ?? []).flatMap((source) =>
+      source.yieldType != null && source.yieldSource != null && source.apy30d != null
+        ? [{
+          kind: "alternate" as const,
+          yieldType: source.yieldType,
+          dataSource: source.dataSource,
+          yieldSource: source.yieldSource,
+          apy30d: source.apy30d,
+        }]
+        : [],
+    ),
   ];
 }
 
 export function buildYieldSourceBoardModel(
   rankings: readonly YieldWorkbenchRanking[],
-  options: BuildYieldSourceBoardModelOptions = {},
 ): YieldSourceBoardModel {
   const selectedConfidenceCounts = emptyConfidenceCounts();
   const depthCounts = emptyDepthCounts();
   const postureCounts = emptyPostureCounts();
-  const benchmarkLabelCounts = new Map<string, number>();
   const sourceRiskDriverCounts = new Map<
     YieldSourceRiskDriver["key"],
     {
@@ -262,8 +220,6 @@ export function buildYieldSourceBoardModel(
     }
   >();
   const groupMap = new Map<string, MutableGroup>();
-  const sourceRowApyValues: number[] = [];
-  const representedDataSources = new Set<string>();
   const sourceSwitchDetails: YieldSourceBoardSourceSwitchDetail[] = [];
   const anomalyDetails: YieldSourceBoardAnomalyDetail[] = [];
 
@@ -271,9 +227,13 @@ export function buildYieldSourceBoardModel(
   let selectedConfidenceUnknownCount = 0;
   let sourceSwitchCount = 0;
   let anomalyCount = 0;
+  let compositionMissingSourceCount = 0;
+  let anomalyUnavailableCount = 0;
 
   for (const ranking of rankings) {
     alternateCount += getYieldAlternateSourceCount(ranking);
+    const sourceRows = getSourceRows(ranking);
+    compositionMissingSourceCount += Math.max(0, getYieldAlternateSourceCount(ranking) - (sourceRows.length - 1));
 
     const confidenceTier = ranking.provenance?.confidenceTier;
     if (confidenceTier) selectedConfidenceCounts[confidenceTier] += 1;
@@ -327,8 +287,9 @@ export function buildYieldSourceBoardModel(
         currentYieldSource: ranking.yieldSource,
       });
     }
-    const anomalies = isYieldRankingSummary(ranking) ? [] : (ranking.provenance?.anomalies ?? []);
-    if (anomalies.length > 0) {
+    const anomalies = ranking.provenance?.anomalies;
+    if (anomalies == null) anomalyUnavailableCount += 1;
+    if (anomalies && anomalies.length > 0) {
       anomalyCount += 1;
       anomalyDetails.push({
         id: ranking.id,
@@ -341,13 +302,7 @@ export function buildYieldSourceBoardModel(
       });
     }
 
-    const benchmarkLabel = getRankingBenchmarkLabel(ranking, options);
-    if (benchmarkLabel) addCount(benchmarkLabelCounts, benchmarkLabel);
-
-    for (const sourceRow of getSourceRows(ranking)) {
-      representedDataSources.add(sourceRow.dataSource);
-      sourceRowApyValues.push(sourceRow.apy30d);
-
+    for (const sourceRow of sourceRows) {
       const groupKey = `${sourceRow.yieldType}:${sourceRow.dataSource}`;
       let group = groupMap.get(groupKey);
       if (!group) {
@@ -398,7 +353,7 @@ export function buildYieldSourceBoardModel(
     selectedCount: rankings.length,
     alternateCount,
     representedSourceCount: rankings.length + alternateCount,
-    representedDataSourceCount: representedDataSources.size,
+    compositionMissingSourceCount,
     selectedConfidenceCounts,
     selectedConfidenceUnknownCount,
     depthCounts,
@@ -406,10 +361,9 @@ export function buildYieldSourceBoardModel(
     topSourceRiskDrivers: sortedRiskDriverCounts(sourceRiskDriverCounts).slice(0, 4),
     sourceSwitchCount,
     anomalyCount,
+    anomalyUnavailableCount,
     sourceSwitchDetails,
     anomalyDetails,
-    sourceRowApy: summarizeApy(sourceRowApyValues),
-    benchmarkLabels: sortedLabelCounts(benchmarkLabelCounts),
     groups,
   };
 }

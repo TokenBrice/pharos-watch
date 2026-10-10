@@ -5,7 +5,7 @@
 // through these keys instead of recomputing flow aggregates themselves.
 // `worker/src/lib/mint-burn-flows-service.ts` re-exports them for both delivery paths.
 
-export const FLOW_CACHE_PREFIX = "mint-burn-flows:v3";
+export const FLOW_CACHE_PREFIX = "mint-burn-flows:v4";
 
 export function aggregateFlowCacheKey(hours: number): string {
   return `${FLOW_CACHE_PREFIX}:aggregate:${hours}`;

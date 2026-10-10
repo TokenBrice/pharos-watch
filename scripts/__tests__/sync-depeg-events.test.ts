@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { DepegEvent, DepegEventEntry } from "@shared/types/market";
 import {
@@ -10,10 +10,13 @@ import {
   runDepegSync,
 } from "../maintenance/sync-depeg-events";
 import { createTempRepoTracker } from "./helpers/test-state";
+import { SnapshotIntegrityError } from "../lib/sync-from-api";
+import { readDepegLedgerCapture } from "../lib/depeg-ledger-capture";
 
 const { cleanup, makeRoot } = createTempRepoTracker("depeg-event-shards-test");
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   cleanup();
 });
@@ -102,6 +105,110 @@ describe("sync-depeg-events", () => {
     expect(() => assertStaticDepegArchivePreserved([published], merged)).not.toThrow();
     const deleted = preserveStaticDepegArchiveEntries([published], [replacement]);
     expect(() => assertStaticDepegArchivePreserved([published], deleted)).toThrow("lost 1 published slug");
+  });
+
+  it("exhausts more than 20 full pages and writes the API's complete event total", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const root = makeRoot();
+    const indexPath = join(root, "data/depeg-events/index.json");
+    const total = 21_001;
+    const fetchMock = vi.fn((input: string) => {
+      const url = new URL(input);
+      const offset = Number(url.searchParams.get("cursor") ?? 0);
+      const length = Math.min(1000, total - offset);
+      const events = Array.from({ length }, (_, index) => event({
+        id: offset + index + 1,
+        symbol: `T${offset + index + 1}`,
+        startedAt: Date.UTC(2026, 4, 15) / 1000 - offset - index,
+      }));
+      return Promise.resolve(new Response(JSON.stringify({
+        events,
+        total,
+        nextCursor: offset + length < total ? String(offset + length) : null,
+      })));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await runDepegSync(["--api-url", "https://api.example.test", "--output", indexPath]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(22);
+    const shard = JSON.parse(readFileSync(join(root, "data/depeg-events/2026.json"), "utf8")) as DepegEvent[];
+    expect(shard).toHaveLength(total);
+    expect(new Set(shard.map((entry) => entry.id)).size).toBe(total);
+    expect(shard.some((entry) => entry.id === total)).toBe(true);
+    expect(readDepegLedgerCapture(join(root, "data/depeg-events"))).toMatchObject({
+      schemaVersion: 1,
+      eventCount: total,
+      apiTotal: total,
+      captureId: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+      sourceUrl: "https://api.example.test/api/depeg-events",
+    });
+  });
+
+  it("throws at the safety ceiling with an outstanding cursor without replacing existing outputs or using fetch fallback", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const root = makeRoot();
+    const indexPath = join(root, "data/depeg-events/index.json");
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({ events: [event()] })))));
+    await runDepegSync(["--api-url", "https://api.example.test", "--output", indexPath]);
+    const shardPath = join(root, "data/depeg-events/2026.json");
+    const originalIndex = readFileSync(indexPath, "utf8");
+    const originalShard = readFileSync(shardPath, "utf8");
+    const originalCapture = readFileSync(join(root, "data/depeg-events/metadata/capture.json"), "utf8");
+    const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({
+      events: [event()],
+      nextCursor: "outstanding",
+    }))));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(runDepegSync([
+      "--api-url", "https://api.example.test", "--output", indexPath,
+      "--allow-existing-on-fetch-failure",
+    ])).rejects.toThrow(SnapshotIntegrityError);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1000);
+    expect(readFileSync(indexPath, "utf8")).toBe(originalIndex);
+    expect(readFileSync(shardPath, "utf8")).toBe(originalShard);
+    expect(readFileSync(join(root, "data/depeg-events/metadata/capture.json"), "utf8")).toBe(originalCapture);
+  });
+
+  it("rejects a cursor-exhausted response whose unique event count disagrees with the API total", async () => {
+    const root = makeRoot();
+    const indexPath = join(root, "data/depeg-events/index.json");
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({
+      events: [event()], total: 2, nextCursor: null,
+    })))));
+
+    await expect(runDepegSync([
+      "--api-url", "https://api.example.test", "--output", indexPath,
+    ])).rejects.toThrow("collected 1 unique events but the API reported 2");
+    expect(existsSync(indexPath)).toBe(false);
+  });
+
+  it("keeps capture metadata out of archive JSON entries and removes the superseded manifest", async () => {
+    const root = makeRoot();
+    const dataDir = join(root, "data/depeg-events");
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(join(dataDir, "capture.json"), "{}\n");
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({ events: [event()] })))));
+
+    await runDepegSync(["--api-url", "https://api.example.test", "--output", join(dataDir, "index.json")]);
+
+    expect(readdirSync(dataDir).filter((name) => name.endsWith(".json")).sort()).toEqual(["2026.json", "index.json"]);
+    expect(existsSync(join(dataDir, "metadata/capture.json"))).toBe(true);
+    expect(existsSync(join(dataDir, "capture.json"))).toBe(false);
+    expect(readDepegLedgerCapture(dataDir).eventCount).toBe(1);
+  });
+
+  it("rejects a ledger capture when a yearly shard has changed since observation", async () => {
+    const root = makeRoot();
+    const dataDir = join(root, "data/depeg-events");
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({ events: [event()] })))));
+    await runDepegSync(["--api-url", "https://api.example.test", "--output", join(dataDir, "index.json")]);
+    expect(readDepegLedgerCapture(dataDir).eventCount).toBe(1);
+    writeFileSync(join(dataDir, "2026.json"), `${JSON.stringify(assignSlugs([event({ peakPrice: 0.8 })]))}\n`);
+
+    expect(() => readDepegLedgerCapture(dataDir)).toThrow("shards do not match their capture identity");
   });
 
   it("writes full UTC-year shards and changes only the affected shard for a new event", async () => {

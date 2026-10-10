@@ -37,6 +37,9 @@ export type StatusSectionKey =
   | "statusSnapshot"
   | "telegramBot"
   | "reserveComposition"
+  | "dataQuality"
+  | "summary"
+  | "statusTransitions"
   | "schedulerLiveness"
   | "workerVersions"
   | "d1Usage"
@@ -59,33 +62,33 @@ export type StatusSectionError = z.output<typeof StatusSectionErrorSchema>;
 export type StatusSectionErrors = Partial<Record<StatusSectionKey, StatusSectionError>>;
 
 export const StatusSummarySchema = z.object({
-  unhealthyCrons: z.number(),
-  availabilityImpactingUnhealthyCrons: z.number(),
-  watchUnhealthyCrons: z.number(),
-  degradedCrons: z.number(),
-  cronErrors: z.number(),
-  availabilityImpactingCronErrors: z.number(),
+  unhealthyCrons: z.number().nullable(),
+  availabilityImpactingUnhealthyCrons: z.number().nullable(),
+  watchUnhealthyCrons: z.number().nullable(),
+  degradedCrons: z.number().nullable(),
+  cronErrors: z.number().nullable(),
+  availabilityImpactingCronErrors: z.number().nullable(),
   /** Count of availability-critical crons with 2+ consecutive failed runs (sustained outage). */
-  availabilityImpactingConsecutiveCronErrors: z.number(),
-  staleCronArtifacts: z.number().optional(),
-  expiredCronLeases: z.number().optional(),
-  orphanedCronProgressRows: z.number().optional(),
-  scheduledSlotRunning: z.number().optional(),
-  scheduledSlotStaleCandidates: z.number().optional(),
+  availabilityImpactingConsecutiveCronErrors: z.number().nullable(),
+  staleCronArtifacts: z.number().nullable().optional(),
+  expiredCronLeases: z.number().nullable().optional(),
+  orphanedCronProgressRows: z.number().nullable().optional(),
+  scheduledSlotRunning: z.number().nullable().optional(),
+  scheduledSlotStaleCandidates: z.number().nullable().optional(),
   scheduledSlotOldestRunningAgeSec: z.number().nullable().optional(),
   scheduledSlotRunningQueryFailed: z.boolean().optional(),
   scheduledSlotEventMarkerQueryFailed: z.boolean().optional(),
-  budgetOnlySurfaceCount: z.number().optional(),
-  budgetOnlySurfaceMissingTelemetry: z.number().optional(),
-  budgetOnlySurfaceStaleTelemetry: z.number().optional(),
-  budgetOnlySurfaceErrors: z.number().optional(),
+  budgetOnlySurfaceCount: z.number().nullable().optional(),
+  budgetOnlySurfaceMissingTelemetry: z.number().nullable().optional(),
+  budgetOnlySurfaceStaleTelemetry: z.number().nullable().optional(),
+  budgetOnlySurfaceErrors: z.number().nullable().optional(),
   canaryTotalChecks: z.number().optional(),
   canaryErrorCount: z.number().optional(),
   canaryDegradedCount: z.number().optional(),
   canarySkippedCount: z.number().optional(),
   canaryStaleCount: z.number().optional(),
-  diagnosticIssueCount: z.number(),
-  worstCacheRatio: z.number(),
+  diagnosticIssueCount: z.number().nullable(),
+  worstCacheRatio: z.number().nullable(),
   /**
    * Count of rows inserted into `status_transitions` in the last 24 hours.
    * A defensive observability signal added in Workstream 5 of
@@ -93,7 +96,9 @@ export const StatusSummarySchema = z.object({
    * can spot new flapping lanes as thresholds drift without spelunking
    * the transitions table. Under normal operation this should be ≤ 2.
    */
-  transitionsLast24h: z.number(),
+  transitionsLast24h: z.number().nullable(),
+  transitionsUnavailableReason: z.enum(["db-unavailable", "status-transitions-read-failed"]).nullable().optional(),
+  unavailableReason: z.literal("db-unavailable").nullable().optional(),
 });
 
 const StatusReserveCompositionSchema = z.union([
@@ -104,7 +109,7 @@ const StatusReserveCompositionSchema = z.union([
   }),
   z.object({
     status: z.literal("unavailable"),
-    reason: z.literal("reserve_composition_query_failed"),
+    reason: z.enum(["reserve_composition_query_failed", "db-unavailable"]),
     configuredCoins: z.null(),
     freshCoins: z.null(),
     staleCoins: z.null(),
@@ -174,7 +179,7 @@ const StatusResponseObjectSchema = z
     caches: z.record(z.string(), CacheStatusSchema),
     crons: z.record(z.string(), CronStatusSchema),
     budgetOnlySurfaces: z.array(BudgetOnlySurfaceStatusSchema),
-    dataQuality: DataQualitySchema,
+    dataQuality: DataQualitySchema.nullable(),
     telegramBot: TelegramBotStatsSchema.nullable(),
     sectionErrors: z.record(z.string(), StatusSectionErrorSchema),
     datasetFreshness: DatasetFreshnessSchema,

@@ -9,7 +9,7 @@ import {
   type MintBurnValuationTally,
 } from "@shared/lib/mint-burn-valuation";
 import type { MintBurnValuation, MintBurnValuationCompleteness } from "@shared/types/mint-burn";
-import { getLatestSuccessfulCronTimestampResult } from "../../lib/api-freshness";
+import { getLatestSuccessfulCronTimestampResult, type CronTimestampLookupResult } from "../../lib/api-freshness";
 import type { FlightToQualityClassification } from "../../lib/flight-to-quality-classification";
 import {
   buildMintBurnSyncHealth,
@@ -48,8 +48,8 @@ import {
   type HourlyRow,
   MINT_BURN_CRON_JOB,
   mintBurnPairKey,
+  mintBurnHourlyWindow,
   readMintBurnCronSnapshotResult,
-  resolveFlowUpdatedAt,
   selectLargestEvents,
 } from "../../lib/mint-burn-flows-service";
 
@@ -117,6 +117,7 @@ export interface AggregateQueryParams {
   nowSec: number;
   windowStart: number;
   window24h: number;
+  windowEnd: number;
   window7d: number;
   window30d: number;
   window90d: number;
@@ -135,6 +136,7 @@ export interface AggregateData {
   coverageMap: ReturnType<typeof buildCoinCoverageMap>;
   sync: ReturnType<typeof buildMintBurnSyncHealth>;
   latestSuccessfulSyncAt: number | null;
+  freshnessLookup: CronTimestampLookupResult;
   freshnessLookupWarning: string | null;
 }
 
@@ -175,19 +177,21 @@ function buildGroupedNetFlowMap(
   return netMap;
 }
 
-function filterRowsByWindow(rows: HourlyRow[], windowStart: number): HourlyRow[] {
-  return rows.filter((row) => row.hour_ts >= windowStart);
+function filterRowsByWindow(rows: HourlyRow[], windowStart: number, windowEnd: number): HourlyRow[] {
+  return rows.filter((row) => row.hour_ts >= windowStart && row.hour_ts < windowEnd);
 }
 
 export function buildAggregateQueryParams(nowSec: number, hours: number): AggregateQueryParams {
   const nowDayTs = bucketDay(nowSec);
+  const window = mintBurnHourlyWindow(nowSec, hours);
   return {
     nowSec,
-    windowStart: nowSec - hours * 3600,
-    window24h: nowSec - FLOW_DEFAULT_WINDOW_HOURS * 3600,
-    window7d: nowSec - 7 * 24 * 3600,
-    window30d: nowSec - 30 * 24 * 3600,
-    window90d: nowSec - 90 * 24 * 3600,
+    windowStart: window.start,
+    windowEnd: window.end,
+    window24h: mintBurnHourlyWindow(nowSec, FLOW_DEFAULT_WINDOW_HOURS).start,
+    window7d: mintBurnHourlyWindow(nowSec, 7 * 24).start,
+    window30d: mintBurnHourlyWindow(nowSec, 30 * 24).start,
+    window90d: mintBurnHourlyWindow(nowSec, 90 * 24).start,
     nowDayTs,
     baselineWindowStart: nowDayTs - BASELINE_WINDOW_DAYS * DAY_SECONDS,
   };
@@ -233,10 +237,10 @@ export async function fetchAggregateData(
                    ${MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL}
             FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
            WHERE ${hourlyPairFilter}
-             AND hour_ts >= ?
+             AND hour_ts >= ? AND hour_ts < ?
             ORDER BY hour_ts ASC`,
         )
-        .bind(trackedPairsJson, hourlyScanStart),
+        .bind(trackedPairsJson, hourlyScanStart, params.windowEnd),
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
@@ -245,10 +249,10 @@ export async function fetchAggregateData(
                   ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
            FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
            WHERE ${hourlyPairFilter}
-             AND hour_ts >= ?
+             AND hour_ts >= ? AND hour_ts < ?
            GROUP BY stablecoin_id, chain_id`,
         )
-        .bind(trackedPairsJson, params.window7d),
+        .bind(trackedPairsJson, params.window7d, params.windowEnd),
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
@@ -257,10 +261,10 @@ export async function fetchAggregateData(
                   ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
            FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
            WHERE ${hourlyPairFilter}
-             AND hour_ts >= ?
+             AND hour_ts >= ? AND hour_ts < ?
            GROUP BY stablecoin_id, chain_id`,
         )
-        .bind(trackedPairsJson, params.window30d),
+        .bind(trackedPairsJson, params.window30d, params.windowEnd),
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
@@ -269,10 +273,10 @@ export async function fetchAggregateData(
                   ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
            FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
            WHERE ${hourlyPairFilter}
-             AND hour_ts >= ?
+             AND hour_ts >= ? AND hour_ts < ?
            GROUP BY stablecoin_id, chain_id`,
         )
-        .bind(trackedPairsJson, params.window90d),
+        .bind(trackedPairsJson, params.window90d, params.windowEnd),
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
@@ -299,7 +303,7 @@ export async function fetchAggregateData(
                     ) AS row_num
              FROM mint_burn_events AS e INDEXED BY idx_mbe_coin_chain_ts
              WHERE ${eventPairFilter}
-               AND e.timestamp >= ?
+               AND e.timestamp >= ? AND e.timestamp < ?
                AND (e.direction = 'mint' OR e.burn_type = 'effective_burn')
                AND e.flow_type = 'standard'
                AND e.amount_usd IS NOT NULL
@@ -309,7 +313,7 @@ export async function fetchAggregateData(
            FROM ranked_events
            WHERE row_num = 1`,
         )
-        .bind(trackedPairsJson, params.window24h),
+        .bind(trackedPairsJson, params.window24h, params.windowEnd),
     ]),
     Promise.all([
       readMintBurnSyncStateBatch(db, ACTIVE_MINT_BURN_CONFIGS),
@@ -318,8 +322,8 @@ export async function fetchAggregateData(
   ]);
 
   const scannedHourlyRows = filterRowsToTrackedPairs((batchResults[0].results ?? []) as HourlyRow[], trackedPairs);
-  const hourlyRows = filterRowsByWindow(scannedHourlyRows, params.windowStart);
-  const hourly24hRows = filterRowsByWindow(scannedHourlyRows, params.window24h);
+  const hourlyRows = filterRowsByWindow(scannedHourlyRows, params.windowStart, params.windowEnd);
+  const hourly24hRows = filterRowsByWindow(scannedHourlyRows, params.window24h, params.windowEnd);
   const baselineRows = filterRowsToTrackedPairs((batchResults[4].results ?? []) as DailyBaselineRow[], trackedPairs);
   const firstSeenRows = filterRowsToTrackedPairs(
     batchResults
@@ -334,12 +338,9 @@ export async function fetchAggregateData(
   );
   const latestCronSnapshot = latestCronSnapshotResult.value;
   const latestSuccessfulSyncLookup = await getLatestSuccessfulCronTimestampResult(db, MINT_BURN_CRON_JOB);
-  const fallbackSyncAt =
-    latestCronSnapshot.startedAt
-    ?? (hourlyRows.length > 0 ? resolveFlowUpdatedAt(hourlyRows, 0) : null);
-  const latestSuccessfulSyncAt = latestSuccessfulSyncLookup.timestamp ?? fallbackSyncAt;
+  const latestSuccessfulSyncAt = latestSuccessfulSyncLookup.timestamp;
   const freshnessLookupWarning = latestSuccessfulSyncLookup.status === "lookup_failed"
-    ? "Mint/burn freshness lookup failed; falling back to cached row timestamps."
+    ? "Mint/burn freshness lookup failed; producer observation is unavailable."
     : null;
 
   return {
@@ -359,6 +360,7 @@ export async function fetchAggregateData(
     ),
     sync: buildMintBurnSyncHealth(params.nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status),
     latestSuccessfulSyncAt,
+    freshnessLookup: latestSuccessfulSyncLookup,
     freshnessLookupWarning,
   };
 }

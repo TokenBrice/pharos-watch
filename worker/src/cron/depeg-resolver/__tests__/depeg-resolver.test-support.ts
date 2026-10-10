@@ -11,7 +11,7 @@ export const DAY = 86_400;
 
 export const DEFAULT_DDR_D1_TABLES: MockTableConfig[] = [
   {
-    match: "SELECT stablecoin_id, direction, peak_deviation_bps, started_at, ended_at, recovery_price, close_reason FROM depeg_events WHERE ended_at IS NOT NULL",
+    match: "pharos:ddr-training-history",
     rows: [],
     allowUnused: true,
   },

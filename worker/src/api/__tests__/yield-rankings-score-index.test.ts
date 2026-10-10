@@ -5,6 +5,7 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeYieldRanking, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import type { YieldRankingsResponse } from "@shared/types/yield";
+import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication, SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-store";
@@ -74,6 +75,22 @@ describe("rankings score-index hydration", () => {
       provenance: { usedDefaultSafety: false, safetyProvenance: "safety-snapshot-unavailable" },
     });
     expect(body.provenance?.liveSafetyHydration?.coveredCount).toBe(0);
+  });
+
+  it.each(["detailed", "summary"])("preserves an explicit NR null score without default substitution in %s", async projection => {
+    const { db } = await fixture();
+    const url = new URL(`https://api.pharos.watch/api/yield-rankings${projection === "summary" ? "?projection=summary" : ""}`);
+    const response = await handleYieldRankings(db, url);
+    expect(response.status).toBe(200);
+    const body = await response.json() as YieldRankingsResponse | YieldRankingsSummaryResponse;
+    expect(body.rankings.find(row => row.id === "usdt-tether")).toMatchObject({
+      safetyScore: null, safetyGrade: "NR", pharosYieldScore: null,
+      provenance: {
+        usedDefaultSafety: false, safetyProvenance: "live-report-card",
+        safetyReason: "report-card-grade-not-rated", scoreQualification: "NR",
+      },
+    });
+    expect(body.provenance?.liveSafetyHydration?.coveredCount).toBe(1);
   });
   it.each([false, true])("is byte-identical to full-publication hydration (held=%s)", async held => {
     const { db } = await fixture(held);

@@ -1,9 +1,9 @@
 import {
   STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
   STAGED_POOL_FRESH_HOURS,
-  STAGED_POOL_PRICE_MAX_AGE_HOURS,
   type StagedPool,
 } from "../dex-discovery/types";
+import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../../lib/dex-cron-constants";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { DEX_VOLUME_ZERO_PROVENANCE_EXEMPT_SOURCES, DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC } from "./constants";
 

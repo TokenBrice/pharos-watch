@@ -250,6 +250,9 @@ describe("processPoolMetrics", () => {
           A: 700,
           balanceRatio: 0.8,
           registryId: "main-stableswap",
+          tvl: 900_000,
+          balanceTvlScope: "full-pool",
+          contributionTvlScope: "full-pool",
           metapoolAdjustedTvl: 900_000,
           creationTs: Math.floor(nowMs / 1000) - 200 * 86_400,
           balanceDetails: [
@@ -266,6 +269,8 @@ describe("processPoolMetrics", () => {
           registryId: "tricrypto-factory",
           isMetaPool: true,
           metapoolAdjustedTvl: 300_000,
+          balanceTvlScope: "full-pool",
+          contributionTvlScope: "base-pool-excluded",
           creationTs: Math.floor(nowMs / 1000) - 100 * 86_400,
           balanceDetails: [
             { symbol: "USDT", balancePct: 0.5, isTracked: true },
@@ -686,11 +691,11 @@ describe("processPoolMetrics", () => {
     expect(rebuiltUsdc.protocolTvl.curve).toBe(60_000_000);
     // Top-pool row mirrors the metapool-adjusted TVL — not the raw $100M DL number
     expect(usdc?.topPools[0]?.tvlUsd).toBe(60_000_000);
-    // Score parity guard: pool quality intentionally keeps the raw DL TVL
-    // base, while effective TVL uses Curve's base-pool-adjusted row value.
-    expect(rebuiltUsdc.qualityAdjustedTvl).toBe(85_000_000);
+    // Quality and effective TVL both use Curve's base-pool-excluded value,
+    // keeping the quality numerator on the retained TVL denominator's basis.
+    expect(rebuiltUsdc.qualityAdjustedTvl).toBe(51_000_000);
     expect(rebuiltUsdc.effectiveTvl).toBe(51_000_000);
-    expect(usdc?.topPools[0]?.extra?.qualityAdjustedTvl).toBe(85_000_000);
+    expect(usdc?.topPools[0]?.extra?.qualityAdjustedTvl).toBe(51_000_000);
     expect(usdc?.topPools[0]?.extra?.effectiveTvl).toBe(51_000_000);
   });
 

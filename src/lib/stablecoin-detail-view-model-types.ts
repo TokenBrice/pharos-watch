@@ -38,11 +38,8 @@ export interface DetailQueryResource<TData> {
   enabled?: boolean;
 }
 
-export interface DetailSupplyHistoryInput {
-  data?: SupplyHistoryPoint[];
+export interface DetailSupplyHistoryInput extends DetailQueryResource<SupplyHistoryPoint[]> {
   isLoading: boolean;
-  error: unknown | null;
-  dataUpdatedAt: number;
 }
 
 /**
@@ -60,6 +57,8 @@ export interface DetailStablecoinListInput extends DetailQueryResource<DetailSta
 
 export interface StablecoinDetailViewModelQueryInputs {
   supplyHistory: DetailSupplyHistoryInput;
+  /** Eligible assets only; independent of the initial chart's 90-day window. */
+  annualPriceHistory?: DetailSupplyHistoryInput;
   stablecoinList: DetailStablecoinListInput;
   pegSummary: DetailQueryResource<PegSummaryResponse>;
   dexLiquidity: DetailQueryResource<DexLiquidityMap>;
@@ -185,7 +184,6 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   supplyHistory: SupplyHistoryPoint[];
   /** Supply query freshness (ms) for the Market Data header chip. */
   supplyUpdatedAt: number;
-  earliestTrackingDate: number | null;
   reserves: ReserveResult | null;
   reserveFetchError: unknown | null;
   supplyError: unknown | null;

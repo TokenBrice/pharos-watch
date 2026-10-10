@@ -27,11 +27,15 @@ describe("P0-18 daily digest data correctness", () => {
       ])),
     );
 
-    expect(result).toEqual({ value: undefined, degradedReasons: [] });
+    expect(result).toEqual({
+      value: { eventCount: 0, totalAmountUsd: 0, unpricedEventCount: 0, editorialEligible: false, topEvents: [] },
+      degradedReasons: [],
+    });
   });
   it("marks a blocked tape event when its amount is unknown", async () => {
     const db = mockTapeD1([
       { match: "FROM cache WHERE key = ?", rows: [] },
+      { match: "FROM tape_events INDEXED BY idx_tape_type_ts", rows: [] },
       {
         match: "FROM blacklist_events",
         rows: [{
@@ -86,12 +90,13 @@ describe("P0-18 daily digest data correctness", () => {
           psi_band: "STEADY",
         },
       },
-      { match: "ORDER BY computed_at DESC LIMIT 90", rows: [{ computed_at: NOW, band: "BEDROCK" }] },
+      { match: "ORDER BY computed_at DESC LIMIT 90", rows: [{ date: NOW, score: 91, band: "BEDROCK" }] },
     ];
     const result = await collectHistoricalContext(
       makeCollectorCtx(mockD1(baseTables)),
       91,
       "BEDROCK",
+      NOW,
       null,
     );
 
@@ -104,6 +109,7 @@ describe("P0-18 daily digest data correctness", () => {
       ))),
       91,
       "BEDROCK",
+      NOW,
       null,
     );
     expect(noPrecedent.value?.psiPrecedent).toBeNull();

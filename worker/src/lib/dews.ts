@@ -18,7 +18,13 @@
 
 import type { ThreatBand } from "@shared/lib/classification";
 import { clamp } from "@shared/lib/math";
-import { DEWS_SIGNAL_LABELS, DEWS_SIGNAL_WEIGHTS, type DewsSignalKey } from "@shared/lib/dews-config";
+import {
+  DEWS_SIGNAL_LABELS,
+  DEWS_SIGNAL_WEIGHTS,
+  SEVERE_ISSUER_CONTROL_THRESHOLD,
+  WATCH_MAX_SCORE,
+  type DewsSignalKey,
+} from "@shared/lib/dews-config";
 import { CONTAGION_AMPLIFIER_CAP } from "./constants";
 import { getThreatBand, piecewiseLinear } from "./dews/compatibility";
 import { classifyEvidenceKinds } from "./dews/evidence-policy";
@@ -82,8 +88,6 @@ export interface DEWSResult {
 // ---------------------------------------------------------------------------
 
 const MIN_AVAILABLE_WEIGHT = 0.3;
-const SEVERE_ISSUER_CONTROL_THRESHOLD = 55;
-const WATCH_MAX_SCORE = 35;
 
 // ---------------------------------------------------------------------------
 // Utilities
@@ -149,7 +153,7 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
     });
   }
 
-  const evidenceKinds = classifyEvidenceKinds(signals, input, psiAmplifier);
+  const evidenceKinds = classifyEvidenceKinds(signals, psiAmplifier);
   const hasMarketOrLiquidityEvidence =
     evidenceKinds.includes("market-price") || evidenceKinds.includes("dex-liquidity");
   const hasSevereIssuerControlEvidence =

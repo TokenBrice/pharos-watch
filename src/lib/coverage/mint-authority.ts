@@ -10,13 +10,11 @@ import {
   type CoverageLegendItem,
 } from "./shared";
 import {
-  MINT_AUTHORITY_SCORE_FILTER_CONFIG,
-  MINT_AUTHORITY_SCORE_FILTER_VALUES,
-  MINT_AUTHORITY_STATUS_CONFIG,
   resolveMintAuthorityScoreDisplay,
   resolveMintAuthorityStatus,
   type PublishedMintComponent,
 } from "@/lib/mint-authority-display";
+import { MINT_AUTHORITY_SCORE_FILTER_CONFIG, MINT_AUTHORITY_SCORE_FILTER_VALUES, MINT_AUTHORITY_STATUS_CONFIG } from "@shared/lib/classification";
 
 /**
  * The curation-route buckets stay curated (they describe *which* review path an

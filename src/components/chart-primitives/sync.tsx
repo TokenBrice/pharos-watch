@@ -278,8 +278,8 @@ export function ChartBrush({ domain, value, onChange, height = 28, className }: 
           width={width}
           height={height}
           fill="transparent"
-          cursor={value ? "default" : "crosshair"}
-          onPointerDown={(e) => !value && handlePointerDown(e, "new")}
+          cursor="crosshair"
+          onPointerDown={(e) => handlePointerDown(e, "new")}
         />
         {value ? (
           <>

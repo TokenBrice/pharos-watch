@@ -8,6 +8,7 @@ import { runDirectCli } from "../lib/cli-args.mjs";
 interface GeneratedArtifactDefinition {
   id: string;
   sourcePaths: readonly string[];
+  outputPaths?: readonly string[];
   dependsOn?: readonly string[];
 }
 
@@ -21,7 +22,8 @@ export function selectChangedGeneratedArtifactIds(
 ): string[] {
   const selected = new Set(
     registry
-      .filter((artifact) => changedFiles.some((file) => artifact.sourcePaths.some((pattern) => matchesPath(file, pattern))))
+      .filter((artifact) => changedFiles.some((file) =>
+        [...artifact.sourcePaths, ...(artifact.outputPaths ?? [])].some((pattern) => matchesPath(file, pattern))))
       .map((artifact) => artifact.id),
   );
 

@@ -16,6 +16,8 @@ export interface MintBurnTxContext {
   inputSelector: string | null;
   logTopics: string[];
   logAddresses: string[];
+  /** Paired emitter/topic/data evidence; absent context cannot certify a receive. */
+  receiptLogs?: Array<{ address: string; topics: string[]; data: string; logIndex?: string }>;
 }
 
 export interface MintBurnBridgeClassifiableRow {

@@ -25,13 +25,16 @@ import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-pub
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import type { ColumnId } from "@/hooks/use-preferences";
 import type { CsvColumn } from "@/lib/exports/csv";
+import { buildCsvBody } from "@shared/lib/csv";
+import type { ExportPreamble } from "@/lib/exports/preamble";
+import { formatPreambleCsv } from "@/lib/exports/preamble";
 
 const { downloadCsvMock } = vi.hoisted(() => ({
   downloadCsvMock: vi.fn(),
 }));
 
 vi.mock("@/lib/exports/csv", () => ({
-  downloadCsv: downloadCsvMock,
+  downloadCsvWithPreamble: downloadCsvMock,
 }));
 
 function makeCoin(id: string, name: string, overrides: Partial<StablecoinData> = {}): StablecoinData {
@@ -68,6 +71,75 @@ describe("nominal price consumers", () => {
     const priceColumn = columns.find((column) => column.header === "Price")!;
     expect(priceColumn.accessor(nominal, 1)).toBeNull();
     expect(priceColumn.accessor(market, 0)).toBe(1.1);
+  });
+});
+
+describe("stablecoin export provenance", () => {
+  it("records supplied upstream generations instead of download time and preserves unknown clocks and cells", () => {
+    downloadCsvMock.mockReset();
+    const rows = [
+      makeCoin("zero", "Zero", { circulating: { peggedUSD: 0 } }),
+      makeCoin("unknown", "Unknown", { circulating: {} }),
+    ];
+    const sourceTime = Date.parse("2026-09-01T12:00:00Z") / 1000;
+    exportStablecoinsCsv(rows, new Map(), {}, {}, { stablecoins: sourceTime, pegSummary: sourceTime - 60, reportCards: null });
+    const [exported, columns, , preamble] = downloadCsvMock.mock.calls[0] as [StablecoinData[], CsvColumn<StablecoinData>[], string, ExportPreamble];
+    expect(exported).toBe(rows);
+    expect(preamble.asOfISO).toBe("2026-09-01T12:00:00.000Z");
+    const header = formatPreambleCsv(preamble);
+    expect(header).toContain("pegSummary=2026-09-01T11:59:00.000Z");
+    expect(header).toContain("dexLiquidity=unknown");
+    expect(header).toContain("reportCards=unknown");
+    const supply = columns.find((column) => column.header === "Market Cap (USD)")!;
+    expect(supply.accessor(rows[0], 0)).toBe(0);
+    expect(supply.accessor(rows[1], 1)).toBeNull();
+    exportStablecoinsCsv(rows);
+    expect(downloadCsvMock.mock.calls[1][3].asOfISO).toBe("unknown");
+  });
+});
+
+describe("supply availability consumers", () => {
+  const unavailable = makeCoin("unavailable", "Unavailable", { circulating: {} });
+  const observed = makeCoin("observed", "Observed", { circulating: { peggedUSD: 50 } });
+  const zero = makeCoin("zero", "Zero", { circulating: { peggedUSD: 0 } });
+  const missingDay = makeCoin("missing-day", "Missing Day", {
+    circulating: { peggedUSD: 50 },
+    circulatingPrevDay: {},
+    circulatingPrevWeek: { peggedUSD: 40 },
+  });
+
+  it.each(["mcap", "change24h", "change7d"] as const)(
+    "sorts unavailable %s last in either direction and retains observed zero",
+    (key) => {
+      const rows = [unavailable, observed, zero];
+      expect(sortStablecoins({ filtered: rows, sort: sortAsc(key), effectiveSortKey: key }).map((coin) => coin.id))
+        .toEqual(["zero", "observed", "unavailable"]);
+      expect(sortStablecoins({ filtered: rows, sort: sortDesc(key), effectiveSortKey: key }).map((coin) => coin.id))
+        .toEqual(["observed", "zero", "unavailable"]);
+    },
+  );
+
+  it("sorts missing day history last without discarding its weekly observation", () => {
+    expect(sortStablecoins({
+      filtered: [missingDay, observed], sort: sortAsc("change24h"), effectiveSortKey: "change24h",
+    }).map((coin) => coin.id)).toEqual(["observed", "missing-day"]);
+    expect(sortStablecoins({
+      filtered: [missingDay, observed], sort: sortDesc("change7d"), effectiveSortKey: "change7d",
+    }).map((coin) => coin.id)).toEqual(["missing-day", "observed"]);
+  });
+
+  it("exports absent supply and deltas as empty cells but explicit zero as zero and -100", () => {
+    downloadCsvMock.mockReset();
+    exportStablecoinsCsv([unavailable, missingDay, zero]);
+    const [rows, columns] = downloadCsvMock.mock.calls[0]! as [StablecoinData[], CsvColumn<StablecoinData>[], string];
+    const supplyColumns = columns.filter((column) =>
+      ["Market Cap (USD)", "24h Change (%)", "7d Change (%)"].includes(column.header));
+    expect(buildCsvBody(rows, supplyColumns)).toEqual([
+      "Market Cap (USD),24h Change (%),7d Change (%)",
+      ",,",
+      "50,,25",
+      "0,-100,-100",
+    ]);
   });
 });
 

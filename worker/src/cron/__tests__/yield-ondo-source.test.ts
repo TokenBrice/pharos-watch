@@ -24,6 +24,15 @@ describe("fetchOndoUsdyOracleSource", () => {
     expect(result!.currentApy).toBeCloseTo(7.4855, 4);
   });
 
+  it("retains a finite negative USDY NAV return and its next history anchor", async () => {
+    mockEvmCall.mockResolvedValue(990_000_000_000_000_000n);
+    const anchor = 1_771_000_000;
+    const result = await fetchOndoUsdyOracleSource(1, 7, anchor);
+    expect(result?.currentApy).toBeCloseTo((Math.pow(0.99, 365.25 / 7) - 1) * 100);
+    expect(result?.apyBase).toBe(result?.currentApy);
+    expect(result).toMatchObject({ exchangeRate: 0.99, comparisonAnchorObservedAt: anchor });
+  });
+
   it("returns seed row when no prior price exists", async () => {
     mockEvmCall.mockResolvedValue(1_085_000_000_000_000_000n);
     const result = await fetchOndoUsdyOracleSource(null, 0, null);

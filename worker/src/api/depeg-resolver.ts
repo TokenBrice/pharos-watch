@@ -157,19 +157,40 @@ function errataByPredictionId(rows: readonly DdrPredictionErratum[]): Map<number
   return out;
 }
 
+type SecondaryRead<T> =
+  | { kind: "ok"; value: T }
+  | { kind: "unavailable"; reason: "errata-overlay-read-failed" | "lock-deferral-overlay-read-failed" };
+
+function unavailableOverlay(response: DdrResponse, reason: string): DdrResponse {
+  return {
+    ...response,
+    _meta: {
+      ...response._meta,
+      degraded: true,
+      degradedReason: "secondary-overlay-unavailable",
+      degradedReasonDetail: [response._meta.degradedReasonDetail, reason].filter(Boolean).join(","),
+    },
+    rows: response.rows.map((row) => ({
+      ...row,
+      live: { ...row.live, degradedReason: reason },
+    })),
+  };
+}
+
 async function applyErrataOverlay(db: D1Database, response: DdrResponse): Promise<DdrResponse> {
   const publicPredictionIds = response.rows
     .map((row) => row.prediction.publicPredictionId)
     .filter((id): id is number => id != null);
   if (publicPredictionIds.length === 0) return response;
 
-  let errata: Map<number, DdrPredictionErratum[]>;
-  try {
-    errata = errataByPredictionId(await loadPredictionErrata(db, { publicPredictionIds }));
-  } catch (error) {
-    logWorkerEventArgs("api", "warn", `[depeg-resolver] errata overlay unavailable: ${toErrorMessage(error)}`);
-    return response;
-  }
+  const read = await loadPredictionErrata(db, { publicPredictionIds })
+    .then((value): SecondaryRead<DdrPredictionErratum[]> => ({ kind: "ok", value }))
+    .catch((error): SecondaryRead<DdrPredictionErratum[]> => {
+      logWorkerEventArgs("api", "warn", `[depeg-resolver] errata overlay unavailable: ${toErrorMessage(error)}`);
+      return { kind: "unavailable", reason: "errata-overlay-read-failed" };
+    });
+  if (read.kind === "unavailable") return unavailableOverlay(response, read.reason);
+  const errata = errataByPredictionId(read.value);
   if (errata.size === 0) return response;
 
   let changed = false;
@@ -219,7 +240,7 @@ async function applyErrataOverlay(db: D1Database, response: DdrResponse): Promis
   return changed ? withOverlayBaseHashCleared({ ...response, rows }) : response;
 }
 
-async function loadApiLockDeferrals(db: D1Database): Promise<DdrApiLockDeferralRow[]> {
+async function loadApiLockDeferrals(db: D1Database): Promise<SecondaryRead<DdrApiLockDeferralRow[]>> {
   try {
     const result = await db
       .prepare(
@@ -263,10 +284,10 @@ async function loadApiLockDeferrals(db: D1Database): Promise<DdrApiLockDeferralR
       )
       .bind(DDR_PREDICTION_POLICY_VERSION)
       .all<DdrApiLockDeferralRow>();
-    return result.results ?? [];
+    return { kind: "ok", value: result.results ?? [] };
   } catch (error) {
     logWorkerEventArgs("api", "warn", `[depeg-resolver] lock deferral overlay unavailable: ${toErrorMessage(error)}`);
-    return [];
+    return { kind: "unavailable", reason: "lock-deferral-overlay-read-failed" };
   }
 }
 
@@ -346,7 +367,9 @@ function buildLockDeferralRow(row: DdrApiLockDeferralRow, nowSec: number): DdrV2
 }
 
 async function applyLockDeferralOverlay(db: D1Database, response: DdrResponse): Promise<DdrResponse> {
-  const deferrals = await loadApiLockDeferrals(db);
+  const read = await loadApiLockDeferrals(db);
+  if (read.kind === "unavailable") return unavailableOverlay(response, read.reason);
+  const deferrals = read.value;
   if (deferrals.length === 0) return response;
 
   const nowSec = Math.floor(Date.now() / 1000);

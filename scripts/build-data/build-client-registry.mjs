@@ -20,9 +20,14 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import ts from "typescript";
+import {
+  GENIUS_CLIENT_PROFILE_FIELDS,
+  GENIUS_COMPLIANCE_PROFILE_FIELDS,
+  GENIUS_COMPLIANCE_SUMMARY_FIELDS,
+  STABLECOIN_CLIENT_DETAIL_FIELDS,
+  STABLECOIN_CLIENT_LIST_FIELDS,
+} from "../../shared/types/stablecoin-client-meta.ts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
-import { parseSourceFile } from "../lib/ts-ast.mts";
 
 /** @typedef {import("../../shared/types/stablecoin-client-meta").StablecoinClientMeta} StablecoinClientMeta */
 
@@ -36,7 +41,6 @@ const DETAIL_OUTPUT_DIR_REL = "shared/data/stablecoins/coins.client.detail";
 const COMPLIANCE_OUTPUT_JSON_REL = "shared/data/stablecoins/coins.compliance.generated.json";
 const TELEGRAM_MINI_APP_OUTPUT_JSON_REL = "shared/data/stablecoins/coins.telegram-mini-app.generated.json";
 const WORKER_RUNTIME_OUTPUT_JSON_REL = "shared/data/stablecoins/coins.worker-runtime.generated.json";
-const CLIENT_META_TS_REL = "shared/types/stablecoin-client-meta.ts";
 const SOURCE_JSON_ABS = resolve(REPO_ROOT, SOURCE_JSON_REL);
 const CANONICAL_ORDER_JSON_ABS = resolve(REPO_ROOT, CANONICAL_ORDER_JSON_REL);
 const LISTING_DECISIONS_JSON_ABS = resolve(REPO_ROOT, LISTING_DECISIONS_JSON_REL);
@@ -45,12 +49,6 @@ const DETAIL_OUTPUT_DIR_ABS = resolve(REPO_ROOT, DETAIL_OUTPUT_DIR_REL);
 const COMPLIANCE_OUTPUT_JSON_ABS = resolve(REPO_ROOT, COMPLIANCE_OUTPUT_JSON_REL);
 const TELEGRAM_MINI_APP_OUTPUT_JSON_ABS = resolve(REPO_ROOT, TELEGRAM_MINI_APP_OUTPUT_JSON_REL);
 const WORKER_RUNTIME_OUTPUT_JSON_ABS = resolve(REPO_ROOT, WORKER_RUNTIME_OUTPUT_JSON_REL);
-const CLIENT_META_TS_ABS = resolve(REPO_ROOT, CLIENT_META_TS_REL);
-const CLIENT_LIST_FIELDS_EXPORT = "STABLECOIN_CLIENT_LIST_FIELDS";
-const CLIENT_DETAIL_FIELDS_EXPORT = "STABLECOIN_CLIENT_DETAIL_FIELDS";
-const GENIUS_CLIENT_FIELDS_EXPORT = "GENIUS_CLIENT_PROFILE_FIELDS";
-const GENIUS_COMPLIANCE_FIELDS_EXPORT = "GENIUS_COMPLIANCE_PROFILE_FIELDS";
-const GENIUS_COMPLIANCE_SUMMARY_FIELDS_EXPORT = "GENIUS_COMPLIANCE_SUMMARY_FIELDS";
 const BLACKLIST_STATUS_FIELD = "blacklistStatus";
 const MINT_AUTHORITY_SUMMARY_FIELD = "mintAuthoritySummary";
 const MINT_AUTHORITY_STATUS_FIELD = "mintAuthorityStatus";
@@ -97,86 +95,8 @@ function readSourceCoins(sourceJsonPath = SOURCE_JSON_ABS) {
   return JSON.parse(readFileSync(sourceJsonPath, "utf8"));
 }
 
-/**
- * Read the canonical field allowlist from `shared/types/stablecoin-client-meta.ts`.
- * Order there defines the key order in the emitted JSON so re-runs are
- * byte-identical while keeping TypeScript consumers and this generator on one
- * contract.
- */
-function readStringLiteralArrayExport(exportName, sourcePath = CLIENT_META_TS_ABS) {
-  const { sourceFile } = parseSourceFile(sourcePath);
-  let fields = null;
-
-  function unwrapExpression(expression) {
-    let current = expression;
-    while (ts.isAsExpression(current) || ts.isSatisfiesExpression(current) || ts.isParenthesizedExpression(current)) {
-      current = current.expression;
-    }
-    return current;
-  }
-
-  function visit(node) {
-    if (fields) {
-      return;
-    }
-    if (ts.isVariableStatement(node)) {
-      for (const declaration of node.declarationList.declarations) {
-        if (!ts.isIdentifier(declaration.name) || declaration.name.text !== exportName) {
-          continue;
-        }
-        if (!declaration.initializer) {
-          throw new Error(`[client-registry] ${exportName} has no initializer`);
-        }
-        const initializer = unwrapExpression(declaration.initializer);
-        if (!ts.isArrayLiteralExpression(initializer)) {
-          throw new Error(`[client-registry] ${exportName} must be an array literal`);
-        }
-        fields = initializer.elements.map((element, index) => {
-          if (!ts.isStringLiteralLike(element)) {
-            throw new Error(`[client-registry] ${exportName}[${index}] must be a string literal`);
-          }
-          return element.text;
-        });
-        return;
-      }
-    }
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sourceFile);
-
-  if (!fields || fields.length === 0) {
-    throw new Error(`[client-registry] Could not find ${exportName} in ${CLIENT_META_TS_REL}`);
-  }
-
-  return fields;
-}
-
-export function readCanonicalClientFields(sourcePath = CLIENT_META_TS_ABS) {
-  return readStringLiteralArrayExport(CLIENT_LIST_FIELDS_EXPORT, sourcePath);
-}
-
-export function readCanonicalClientDetailFields(sourcePath = CLIENT_META_TS_ABS) {
-  return readStringLiteralArrayExport(CLIENT_DETAIL_FIELDS_EXPORT, sourcePath);
-}
-
-export function readGeniusClientFields(sourcePath = CLIENT_META_TS_ABS) {
-  return readStringLiteralArrayExport(GENIUS_CLIENT_FIELDS_EXPORT, sourcePath);
-}
-
-export function readGeniusComplianceFields(sourcePath = CLIENT_META_TS_ABS) {
-  return readStringLiteralArrayExport(GENIUS_COMPLIANCE_FIELDS_EXPORT, sourcePath);
-}
-
-export function readGeniusComplianceSummaryFields(sourcePath = CLIENT_META_TS_ABS) {
-  return readStringLiteralArrayExport(GENIUS_COMPLIANCE_SUMMARY_FIELDS_EXPORT, sourcePath);
-}
-
-const DEFAULT_GENIUS_CLIENT_FIELDS = readGeniusClientFields();
-const DEFAULT_GENIUS_COMPLIANCE_FIELDS = readGeniusComplianceFields();
-const DEFAULT_GENIUS_COMPLIANCE_SUMMARY_FIELDS = readGeniusComplianceSummaryFields();
-
-function projectRawCoin(coin, clientFields, geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS) {
+/** @param {readonly string[]} [geniusClientFields] */
+function projectRawCoin(coin, clientFields, geniusClientFields = GENIUS_CLIENT_PROFILE_FIELDS) {
   const projected = {};
   for (const field of clientFields) {
     if (Object.prototype.hasOwnProperty.call(coin, field)) {
@@ -186,8 +106,11 @@ function projectRawCoin(coin, clientFields, geniusClientFields = DEFAULT_GENIUS_
   return projected;
 }
 
-/** @returns {Partial<StablecoinClientMeta>} */
-export function projectCoin(coin, clientFields, geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS) {
+/**
+ * @param {readonly string[]} [geniusClientFields]
+ * @returns {Partial<StablecoinClientMeta>}
+ */
+export function projectCoin(coin, clientFields, geniusClientFields = GENIUS_CLIENT_PROFILE_FIELDS) {
   const projected = projectRawCoin(coin, clientFields, geniusClientFields);
   const blacklistStatus = projectBlacklistStatus(coin);
   if (blacklistStatus !== undefined) projected[BLACKLIST_STATUS_FIELD] = blacklistStatus;
@@ -249,7 +172,8 @@ export function projectListCoin(coin, listFields, listingClass, sourceById) {
   return projected;
 }
 
-export function projectDetailCoin(coin, detailFields, geniusComplianceFields = DEFAULT_GENIUS_COMPLIANCE_FIELDS) {
+/** @param {readonly string[]} [geniusComplianceFields] */
+export function projectDetailCoin(coin, detailFields, geniusComplianceFields = GENIUS_COMPLIANCE_PROFILE_FIELDS) {
   return {
     id: coin.id,
     ...projectCoin(coin, detailFields, geniusComplianceFields),
@@ -257,6 +181,8 @@ export function projectDetailCoin(coin, detailFields, geniusComplianceFields = D
 }
 
 export function projectLiveReserveAdapter(coin) {
+  // Match the full registry's operator kill switch before publishing reader provenance.
+  if (coin?.liveReservesConfig?.suspended) return undefined;
   const adapter = coin?.liveReservesConfig?.adapter;
   return typeof adapter === "string" && adapter.length > 0 ? adapter : undefined;
 }
@@ -270,7 +196,8 @@ export function projectBlacklistStatus(coin) {
   return undefined;
 }
 
-export function projectGeniusProfile(profile, geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS) {
+/** @param {readonly string[]} [geniusClientFields] */
+export function projectGeniusProfile(profile, geniusClientFields = GENIUS_CLIENT_PROFILE_FIELDS) {
   if (profile === null) {
     return null;
   }
@@ -534,12 +461,13 @@ export function projectMintAuthorityStatus(coin) {
   return "governed-mint";
 }
 
+/** @param {readonly string[]} [geniusClientFields] */
 export function validateProjection(
   slim,
   sourceCoin,
   index,
   clientFields,
-  geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS,
+  geniusClientFields = GENIUS_CLIENT_PROFILE_FIELDS,
 ) {
   if (typeof slim.id !== "string" || slim.id.length === 0) {
     throw new Error(`[client-registry] entry ${index}: invalid or missing id`);
@@ -580,7 +508,7 @@ export function validateGeniusComplianceProjection(
   entry,
   sourceCoin,
   index,
-  geniusComplianceFields = DEFAULT_GENIUS_COMPLIANCE_SUMMARY_FIELDS,
+  geniusComplianceFields = GENIUS_COMPLIANCE_SUMMARY_FIELDS,
 ) {
   if (typeof entry.id !== "string" || entry.id.length === 0) {
     throw new Error(`[client-registry] compliance entry ${index}: invalid or missing id`);
@@ -684,8 +612,8 @@ export function buildClientRegistryOutput({
   sourceCoins = readSourceCoins(sourceJsonPath),
   canonicalOrderJsonPath = CANONICAL_ORDER_JSON_ABS,
   listingDecisionsJsonPath = LISTING_DECISIONS_JSON_ABS,
-  clientFields = readCanonicalClientFields(),
-  detailFields = readCanonicalClientDetailFields(),
+  clientFields = STABLECOIN_CLIENT_LIST_FIELDS,
+  detailFields = STABLECOIN_CLIENT_DETAIL_FIELDS,
 } = {}) {
   const parsed = sourceCoins;
   const canonicalOrder = readCanonicalOrder(canonicalOrderJsonPath);
@@ -719,7 +647,7 @@ export function buildClientRegistryOutput({
 export function buildComplianceRegistryOutput({
   sourceJsonPath = SOURCE_JSON_ABS,
   sourceCoins = readSourceCoins(sourceJsonPath),
-  geniusComplianceFields = DEFAULT_GENIUS_COMPLIANCE_SUMMARY_FIELDS,
+  geniusComplianceFields = GENIUS_COMPLIANCE_SUMMARY_FIELDS,
 } = {}) {
   const parsed = sourceCoins;
 

@@ -7,6 +7,11 @@ import { CircuitBreakerTable } from "../circuit-breaker-table";
 
 
 describe("CircuitBreakerTable", () => {
+  it("does not treat a failed circuit read as an empty registered set", () => {
+    render(<CircuitBreakerTable circuits={null} unavailableReason="circuits-read-failed" />);
+    expect(screen.getByText("Circuit breaker evidence unavailable (circuits-read-failed).")).toBeTruthy();
+    expect(screen.queryByText("No circuit breakers registered")).toBeNull();
+  });
   it("keeps tripped breakers visible and nests healthy breakers in a shared table", async () => {
     const circuits: Record<string, CircuitRecord> = {
       "dex-liquidity": {

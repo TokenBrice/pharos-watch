@@ -11,13 +11,13 @@ import { suggestClosestToken } from "../lib/telegram/alerts";
 import { TOP_VIEW_NAMES } from "../lib/telegram/constants";
 import { formatTelegramCompactUsd } from "./telegram-format";
 import type { StatusForCoin } from "./telegram-webhook-status";
-import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
+import { formatTelegramSafety } from "./telegram-webhook-messages";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER, normalizeDexLiquidityEvidence } from "../lib/dex-liquidity";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
-import {
-  loadActiveSafetyScoreIndex,
-  type ActiveSafetyScoreIndex,
-} from "../lib/safety-score-index";
+import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
+import { YieldRankingsResponseSchema } from "@shared/types/yield";
+import { handleYieldRankings } from "./yield-rankings-cache";
 
 const TOP_LIMIT = 5;
 const TOP_VIEWS = TOP_VIEW_NAMES;
@@ -32,13 +32,6 @@ function truncate(text: string, max = 220): string {
   return `${text.slice(0, max - 1).trim()}...`;
 }
 
-function expectedV9UnavailableText(
-  activeSource: ActiveSafetyScoreIndex,
-): string {
-  return activeSource.kind === "error"
-    ? `expected model V9, ${activeSource.reason.replace(/-/g, " ")}`
-    : "expected model V9";
-}
 
 /** D1/JSON rows are compile-time assertions only; renderers must check. */
 function hasStrings(value: unknown, ...keys: readonly string[]): boolean {
@@ -184,68 +177,59 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
     }
     case "yield":
     case "yields": {
-      const activeSource = await loadActiveSafetyScoreIndex(db);
-      const pysAvailable = false;
-      const orderBy = pysAvailable
-        ? "pharos_yield_score DESC, apy_30d DESC"
-        : "apy_30d DESC";
-      const result = await db
-        .prepare(
-          `SELECT stablecoin_id, symbol, current_apy, apy_30d, yield_source, pharos_yield_score, source_tvl_usd
-             FROM yield_data
-            WHERE is_best = 1
-              AND (publication_generation_id IS NULL OR publication_state = 'published')
-            ORDER BY ${orderBy}
-            LIMIT ?`,
-        )
-        .bind(TOP_LIMIT)
-        .all<{
-          stablecoin_id: string;
-          symbol: string;
-          current_apy: number;
-          apy_30d: number;
-          yield_source: string;
-          pharos_yield_score: number | null;
-          source_tvl_usd: number | null;
-        }>();
+      const response = await handleYieldRankings(db);
+      if (!response.ok) return "Yield rankings are temporarily unavailable.";
+      const parsed = YieldRankingsResponseSchema.safeParse(await response.json());
+      if (!parsed.success) return "Yield rankings are temporarily unavailable.";
+      const rankings = parsed.data.rankings;
+      const pysAvailable = rankings.some((row) => row.pharosYieldScore != null);
       return formatTopRows(
-        pysAvailable
-          ? "Top risk-adjusted yields"
-          : `Top yields (PYS unavailable; ${expectedV9UnavailableText(activeSource)})`,
-        (result.results ?? []).filter((row) => typeof row.symbol === "string" && Number.isFinite(row.apy_30d)),
+        pysAvailable ? "Top risk-adjusted yields" : "Top yields (PYS unavailable)",
+        rankings.slice(0, TOP_LIMIT),
         (row, i) =>
-          `${i}. ${row.symbol} — ${row.apy_30d.toFixed(2)}% 30d, PYS ${
-            pysAvailable
-              ? row.pharos_yield_score != null
-                ? Math.round(row.pharos_yield_score)
-                : "NR"
-              : "unavailable"
-          }, TVL ${formatTelegramCompactUsd(row.source_tvl_usd) ?? "n/a"} (${row.yield_source})`,
+          `${i}. ${row.symbol} — ${row.apy30d.toFixed(2)}% 30d, PYS ${
+            row.pharosYieldScore != null
+              ? Math.round(row.pharosYieldScore)
+              : `unavailable (${row.pysNullReason ?? "safety-unrated"})`
+          }, TVL ${formatTelegramCompactUsd(row.sourceTvlUsd) ?? "n/a"} (${row.yieldSource})`,
       );
     }
     case "liquidity": {
       const result = await db
         .prepare(
-          `SELECT stablecoin_id, symbol, liquidity_score, total_tvl_usd, pool_count
+          `SELECT stablecoin_id, symbol, liquidity_score, total_tvl_usd, pool_count, coverage_class, coverage_confidence
              FROM dex_liquidity
             WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
-            ORDER BY liquidity_score DESC, total_tvl_usd DESC
-            LIMIT ?`,
+            ORDER BY liquidity_score DESC, total_tvl_usd DESC`,
         )
-        .bind(TOP_LIMIT)
         .all<{
           stablecoin_id: string;
           symbol: string;
           liquidity_score: number | null;
           total_tvl_usd: number;
           pool_count: number;
+          coverage_class: string | null;
+          coverage_confidence: number | null;
         }>();
-      return formatTopRows(
+      let invalidCoverageCount = 0;
+      const admitted = (result.results ?? []).filter((row) => {
+        try {
+          normalizeDexLiquidityEvidence(row);
+          return true;
+        } catch {
+          invalidCoverageCount++;
+          return false;
+        }
+      });
+      const message = formatTopRows(
         "Top DEX liquidity",
-        result.results ?? [],
+        admitted.slice(0, TOP_LIMIT),
         (row, i) =>
           `${i}. ${row.symbol} — score ${row.liquidity_score ?? "NR"}, TVL ${formatTelegramCompactUsd(row.total_tvl_usd) ?? "n/a"}, ${row.pool_count} pools`,
       );
+      return invalidCoverageCount > 0
+        ? `${message}\nCoverage unavailable for ${invalidCoverageCount} token(s) (invalid-coverage-evidence).`
+        : message;
     }
     case "chains": {
       const activeSource = await loadActiveSafetyScoreIndex(db);
@@ -276,7 +260,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
       );
       return activeSource.kind !== "error"
         ? message
-        : `${message}\n${escapeHtml(`Chain health unavailable; ${expectedV9UnavailableText(activeSource)}.`)}`;
+        : `${message}\n${escapeHtml(`Chain health unavailable; expected model V9, ${activeSource.reason.replace(/-/g, " ")}.`)}`;
     }
     case "safety": {
       const source = await loadActiveSafetyScoreIndex(db);
@@ -373,7 +357,7 @@ export function buildCoverageMessage(symbol: string, status: StatusForCoin): str
     `DEWS: ${status.dews ? `${status.dews.band} (${formatAge(status.dews.computedAt)})` : "missing"}`,
     `Safety: ${
       status.safety
-        ? `${status.safety.grade}${status.safety.score != null ? ` (${status.safety.score})` : ""} [${status.safety.model.toUpperCase()} ${status.safety.methodologyVersion}]`
+        ? formatTelegramSafety(status.safety)
         : status.safetyUnavailableReason
           ? "unavailable"
           : "missing"

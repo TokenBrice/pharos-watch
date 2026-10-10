@@ -1,4 +1,5 @@
-import { PSI_HEX_COLORS } from "@shared/lib/psi-colors";
+import { PSI_HEX_COLORS } from "@shared/lib/classification";
+import { PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 
 export interface PsiEventLink {
   title: string;
@@ -12,14 +13,12 @@ export interface PsiEvent {
   links: readonly PsiEventLink[];
 }
 
-export const BAND_ZONES = [
-  { y1: 90, y2: 100, color: PSI_HEX_COLORS.BEDROCK, label: "BEDROCK" },
-  { y1: 75, y2: 90, color: PSI_HEX_COLORS.STEADY, label: "STEADY" },
-  { y1: 60, y2: 75, color: PSI_HEX_COLORS.TREMOR, label: "TREMOR" },
-  { y1: 40, y2: 60, color: PSI_HEX_COLORS.FRACTURE, label: "FRACTURE" },
-  { y1: 20, y2: 40, color: PSI_HEX_COLORS.CRISIS, label: "CRISIS" },
-  { y1: 0, y2: 20, color: PSI_HEX_COLORS.MELTDOWN, label: "MELTDOWN" },
-] as const;
+export const BAND_ZONES = PSI_CONDITION_BANDS.map(({ min, band }, index) => ({
+  y1: min,
+  y2: index === 0 ? 100 : PSI_CONDITION_BANDS[index - 1].min,
+  color: PSI_HEX_COLORS[band],
+  label: band,
+}));
 
 export const PSI_EVENTS: readonly PsiEvent[] = [
   {

@@ -28,6 +28,10 @@ export interface MintBurnCctpBridgeDetectionConfig {
   knownBridgeRouterAddresses: string[];
   bridgeSignalTopics: string[];
   bridgeSignalSelectors: string[];
+  messageTransmitterAddress: string;
+  mintTokenAddress: string;
+  messageReceivedTopic: string;
+  mintAndWithdrawTopic: string;
 }
 
 export type MintBurnBridgeDetectionConfig =

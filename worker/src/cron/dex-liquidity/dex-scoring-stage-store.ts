@@ -6,6 +6,7 @@ import { throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { runCappedPruneFamily } from "../shared/capped-delete";
 import { logWorkerEventArgs } from "../../lib/structured-log";
+import { normalizeDexLiquidityEvidence } from "../../lib/dex-liquidity";
 
 /** Limit the lifetime of prepared statements carrying serialized price/depth data. */
 export const DEX_LIQUIDITY_SCORING_BATCH_SIZE = 25;
@@ -246,7 +247,7 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
   while (true) {
     const historyResult = await db
       .prepare(
-        `SELECT stablecoin_id, snapshot_date, total_tvl_usd, total_volume_24h_usd, coverage_confidence,
+        `SELECT stablecoin_id, snapshot_date, total_tvl_usd, total_volume_24h_usd, coverage_class, coverage_confidence,
                 volume_availability_json, methodology_version
          FROM dex_liquidity_history
          WHERE snapshot_date >= ?
@@ -267,6 +268,7 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
         total_tvl_usd: number;
         total_volume_24h_usd: number;
         coverage_confidence: number | null;
+        coverage_class: string | null;
         volume_availability_json?: string | null;
         methodology_version?: string | null;
       }>();
@@ -277,6 +279,7 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
           total_tvl_usd: number;
           total_volume_24h_usd: number;
           coverage_confidence: number | null;
+          coverage_class: string | null;
           volume_availability_json?: string | null;
           methodology_version?: string | null;
         }
@@ -292,8 +295,11 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
       cursorStablecoinId = row.stablecoin_id;
       cursorSnapshotDate = row.snapshot_date;
 
-      const confidence = row.coverage_confidence ?? 0;
-      if (confidence < HISTORY_CONFIDENCE_MIN) continue;
+      try {
+        if (normalizeDexLiquidityEvidence(row).coverageConfidence < HISTORY_CONFIDENCE_MIN) continue;
+      } catch {
+        continue;
+      }
 
       const epoch = liquidityTvlBasisEpoch(row.methodology_version);
       pushSample(tvlByCoin, row.stablecoin_id, { epoch, value: row.total_tvl_usd });

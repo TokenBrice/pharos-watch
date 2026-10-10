@@ -2,6 +2,7 @@ import { logWorkerEventArgs } from "./structured-log";
 import { normalizeLegacyPegType } from "@shared/lib/peg-price-bounds";
 import { pegTypeFromCurrency as canonicalPegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
+import { findAsOfSnapshot, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import type { StablecoinChartPoint } from "@shared/types";
 
 interface StructuralSupplementalChartConfig {
@@ -48,9 +49,10 @@ export const STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS: StructuralSupplementalChartC
       return [{ id: meta.id, pegType }];
     });
 
-function addBucketValue(target: Record<string, number>, pegType: string, value: number): void {
+function addBucketValue(target: Record<string, number | null>, pegType: string, value: number): void {
   if (!Number.isFinite(value) || value < 0) return;
   const normalized = normalizeLegacyPegType(pegType);
+  if (target[normalized] === null) return;
   target[normalized] = (target[normalized] ?? 0) + value;
 }
 
@@ -59,7 +61,7 @@ export function mergeStructuralSupplementalHistoryIntoCharts(
   rows: SupplyHistoryChartRow[],
   configs: readonly StructuralSupplementalChartConfig[] = STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS,
 ): StablecoinChartPoint[] {
-  if (basePoints.length === 0 || rows.length === 0 || configs.length === 0) {
+  if (basePoints.length === 0 || configs.length === 0) {
     return basePoints;
   }
 
@@ -80,35 +82,24 @@ export function mergeStructuralSupplementalHistoryIntoCharts(
     rowsById.set(row.stablecoin_id, series);
   }
 
-  const state = configs
-    .map((config) => {
-      const series = rowsById.get(config.id);
-      if (!series || series.length === 0) return null;
-      series.sort((left, right) => left.date - right.date);
-      return {
-        pegType: config.pegType,
-        series,
-        index: 0,
-        lastValue: 0,
-      };
-    })
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
-
-  if (state.length === 0) return basePoints;
+  const state = configs.map((config) => ({
+    pegType: config.pegType,
+    series: (rowsById.get(config.id) ?? []).sort((left, right) => left.date - right.date),
+  }));
 
   const orderedBase = [...basePoints].sort((left, right) => left.date - right.date);
   return orderedBase.map((point) => {
     const totals = { ...point.totalCirculatingUSD };
 
     for (const overlay of state) {
-      while (
-        overlay.index < overlay.series.length &&
-        overlay.series[overlay.index]!.date <= point.date
-      ) {
-        overlay.lastValue = overlay.series[overlay.index]!.circulatingUsd;
-        overlay.index += 1;
-      }
-      addBucketValue(totals, overlay.pegType, overlay.lastValue);
+      const snapshot = findAsOfSnapshot(
+        overlay.series,
+        point.date,
+        (row) => row.date,
+        MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC,
+      );
+      if (snapshot) addBucketValue(totals, overlay.pegType, snapshot.circulatingUsd);
+      else totals[normalizeLegacyPegType(overlay.pegType)] = null;
     }
 
     return {

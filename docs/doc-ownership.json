@@ -20,7 +20,8 @@
         "scripts/lib/daily-social-capture.ts",
         "scripts/maintenance/build-daily-social.ts",
         "scripts/maintenance/publish-daily-social.ts",
-        "functions/social-posts/**"
+        "functions/social-posts/**",
+        "docs/daily-social.md"
       ],
       "docs": ["docs/daily-social.md"],
       "background": [
@@ -63,7 +64,15 @@
         "scripts/ci/check-failure-scenarios.ts",
         "scripts/maintenance/approve-failure-scenario.ts",
         "scripts/maintenance/verify-failure-scenarios.ts",
-        ".codex/skills/scenario-verification/**"
+        ".codex/skills/scenario-verification/**",
+        "docs/classification.md",
+        "docs/freezing-stablecoins.md",
+        "docs/listing-policy.md",
+        "docs/process/adding-a-stablecoin.md",
+        "docs/process/failure-scenarios.md",
+        "docs/process/stablecoin-research-sidecars.md",
+        "docs/shadow-stablecoins.md",
+        "docs/stablecoin-data.md"
       ],
       "docs": [
         { "path": "docs/stablecoin-data.md", "anchor": "registry-editing-entry" },
@@ -72,7 +81,7 @@
         "docs/process/stablecoin-research-sidecars.md",
         "docs/process/failure-scenarios.md"
       ],
-      "background": ["docs/listing-policy.md", "docs/about-page.md", "docs/shadow-stablecoins.md"],
+      "background": ["docs/listing-policy.md", "docs/about-page.md", "docs/shadow-stablecoins.md", "docs/freezing-stablecoins.md"],
       "alsoRead": ["shared/data/stablecoins/AGENTS.md"],
       "checks": [
         "npm run lint:changed",
@@ -108,13 +117,23 @@
         "shared/lib/pricing-*.ts",
         "shared/lib/pricing-provider-config.ts",
         "shared/lib/supply.ts",
-        "shared/lib/onchain-supply-probe.ts"
+        "shared/lib/onchain-supply-probe.ts",
+        "docs/data-flow-map.md",
+        "docs/pricing-pipeline.md",
+        "docs/process/pricing-pipeline-appendix.md",
+        "docs/runbooks/stablecoins-cache.md",
+        "docs/supply-snapshot.md"
       ],
       "docs": [
         { "path": "docs/pricing-pipeline.md", "anchor": "primary-consensus" },
         { "path": "docs/supply-snapshot.md", "anchor": "supply-pipeline" }
       ],
-      "background": ["docs/about-page.md", { "path": "docs/data-flow-map.md", "anchor": "market-and-supply-flows" }],
+      "background": [
+        "docs/about-page.md",
+        {"path": "docs/data-flow-map.md", "anchor": "market-and-supply-flows"},
+        {"path": "docs/process/pricing-pipeline-appendix.md", "anchor": "active-price-coverage-health"},
+        "docs/runbooks/stablecoins-cache.md"
+      ],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run audit:pricing-providers", "npx vitest run worker/src/lib"],
       "rules": [
         "Consume or cancel failed fetch bodies before opening more Worker fetches.",
@@ -127,7 +146,21 @@
       "label": "Live reserve evidence and consumers",
       "risk": "high",
       "sources": [
-        "worker/src/cron/reserve-adapters/**", "worker/src/cron/sync-live-reserves*", "worker/src/cron/reserve-post-sync-watchdog.ts", "shared/types/live-reserve*.ts", "shared/lib/live-reserve*.ts", "worker/src/lib/live-reserves/**", "worker/src/lib/safety-score-v9/extension-reserves.ts", "worker/src/api/stablecoin-reserves.ts", "src/hooks/use-stablecoin-reserves.ts", "src/lib/*reserve*.ts", "src/components/*reserve*.tsx", "src/components/stablecoin-detail/reserve*", "src/components/status/reserve-sync-health.tsx", "src/app/stablecoin/*/detail-shared-modules.tsx", "src/components/collateralization-card.tsx",
+        "worker/src/cron/reserve-adapters/**",
+        "worker/src/cron/sync-live-reserves*",
+        "worker/src/cron/reserve-post-sync-watchdog.ts",
+        "shared/types/live-reserve*.ts",
+        "shared/lib/live-reserve*.ts",
+        "worker/src/lib/live-reserves/**",
+        "worker/src/lib/safety-score-v9/extension-reserves.ts",
+        "worker/src/api/stablecoin-reserves.ts",
+        "src/hooks/use-stablecoin-reserves.ts",
+        "src/lib/*reserve*.ts",
+        "src/components/*reserve*.tsx",
+        "src/components/stablecoin-detail/reserve*",
+        "src/components/status/reserve-sync-health.tsx",
+        "src/app/stablecoin/*/detail-shared-modules.tsx",
+        "src/components/collateralization-card.tsx",
         "src/app/dependency-map/**",
         "src/components/contagion-graph*",
         "src/components/contagion-graph/**",
@@ -157,23 +190,32 @@
         ".codex/skills/dependency-coverage-drain/**",
         ".claude/skills/dependency-coverage-drain/**",
         "docs/runbooks/dependency-network.md",
-        "docs/runbooks/artifacts/dependency-coverage-reviewed-ledger.json"
+        "docs/runbooks/artifacts/dependency-coverage-reviewed-ledger.json",
+        "docs/access-lookthrough.md",
+        "docs/dependency-map.md",
+        "docs/live-reserves.md",
+        "docs/process/live-reserves-appendix.md",
+        "docs/process/protocol-api-mechanism-refresh.md",
+        "docs/redemption-backstops.md"
       ],
       "docs": [
-        { "path": "docs/dependency-map.md", "anchor": "dependency-coverage-audit" },
-        { "path": "docs/runbooks/dependency-network.md", "anchor": "scope-and-commands" },
-        { "path": "docs/live-reserves.md", "anchor": "adding-a-new-adapter" },
-        { "path": "docs/live-reserves.md", "anchor": "registry-defined-adapter-classes" },
-        { "path": "docs/live-reserves.md", "anchor": "adapter-specific-evidence-boundaries" },
-        { "path": "docs/live-reserves.md", "anchor": "snapshot-admission-gates" }
+        {"path": "docs/dependency-map.md", "anchor": "dependency-coverage-audit"},
+        {"path": "docs/runbooks/dependency-network.md", "anchor": "scope-and-commands"},
+        {"path": "docs/live-reserves.md", "anchor": "adding-a-new-adapter"},
+        {"path": "docs/live-reserves.md", "anchor": "registry-defined-adapter-classes"},
+        {"path": "docs/process/live-reserves-appendix.md", "anchor": "adapter-specific-evidence-boundaries"},
+        {"path": "docs/live-reserves.md", "anchor": "snapshot-admission-gates"}
       ],
       "background": [
-        { "path": "docs/architecture.md", "anchor": "adr-36" },
-        { "path": "docs/dependency-map.md", "anchor": "offline-modeled-scenarios" },
-        { "path": "docs/dependency-map.md", "anchor": "shared-failure-domains-board" },
-        { "path": "docs/runbooks/dependency-network.md", "anchor": "offline-scenario-workflow" },
-        { "path": "docs/live-reserves.md", "anchor": "api-contract" },
-        { "path": "docs/live-reserves.md", "anchor": "frontend-consumers" }
+        {"path": "docs/architecture.md", "anchor": "adr-36"},
+        {"path": "docs/dependency-map.md", "anchor": "offline-modeled-scenarios"},
+        {"path": "docs/dependency-map.md", "anchor": "shared-failure-domains-board"},
+        {"path": "docs/runbooks/dependency-network.md", "anchor": "offline-scenario-workflow"},
+        {"path": "docs/live-reserves.md", "anchor": "api-contract"},
+        {"path": "docs/live-reserves.md", "anchor": "frontend-consumers"},
+        "docs/access-lookthrough.md",
+        {"path": "docs/redemption-backstops.md", "anchor": "methodology-versioning"},
+        "docs/process/protocol-api-mechanism-refresh.md"
       ],
       "rules": ["Reserve provenance describes evidence actually read, not merely the configured feed; preserve snapshot admission and retained-attempt distinctions.", "Published serial/basket edges own the map; review leads never create edges without current claim identity and measured weight or reviewed serial/mechanism semantics."]
     },
@@ -181,16 +223,42 @@
       "id": "yield-intelligence",
       "label": "Domain yield producers and consumers",
       "risk": "high",
-      "sources": ["worker/src/cron/sync-yield-data*", "worker/src/cron/yield-*", "worker/src/cron/yield-sync/**", "worker/src/lib/yield*", "worker/src/lib/yield-config/**", "worker/src/api/yield*", "shared/lib/yield*.ts", "shared/types/yield*.ts", "src/app/yield/**", "src/components/yield*", "src/components/yield/**", "src/hooks/use-yield*.ts", "src/lib/yield*.ts"],
+      "sources": [
+        "worker/src/cron/sync-yield-data*",
+        "worker/src/cron/yield-*",
+        "worker/src/cron/yield-sync/**",
+        "worker/src/lib/yield*",
+        "worker/src/lib/yield-config/**",
+        "worker/src/api/yield*",
+        "shared/lib/yield*.ts",
+        "shared/types/yield*.ts",
+        "src/app/yield/**",
+        "src/components/yield*",
+        "src/components/yield/**",
+        "src/hooks/use-yield*.ts",
+        "src/lib/yield*.ts",
+        "docs/yield-intelligence-operations.md",
+        "docs/yield-intelligence.md",
+        "docs/runbooks/yield-*.md"
+      ],
       "docs": [{ "path": "docs/yield-intelligence.md", "anchor": "engineering-contract" }],
-      "background": [{ "path": "docs/yield-intelligence.md", "anchor": "methodology-versioning" }],
+      "background": [
+        {"path": "docs/yield-intelligence.md", "anchor": "methodology-versioning"},
+        "docs/runbooks/yield-benchmark-fallback-stale.md",
+        "docs/runbooks/yield-deterministic-cooldown.md",
+        "docs/runbooks/yield-health.md",
+        "docs/runbooks/yield-history-cleanup-writer-pause.md",
+        "docs/runbooks/yield-rankings-stale-or-missing.md",
+        "docs/runbooks/yield-supplemental-snapshot.md",
+        "docs/yield-intelligence-operations.md"
+      ],
       "rules": ["Keep source observation, publication, and read-time freshness distinct; missing yield evidence is not a measured zero."]
     },
     {
       "id": "homepage",
       "label": "Homepage contract",
       "risk": "medium",
-      "sources": ["src/app/page.tsx", "src/components/home-*", "src/components/homepage-*", "src/lib/homepage-*"],
+      "sources": ["src/app/page.tsx", "src/components/home-*", "src/components/homepage-*", "src/lib/homepage-*", "docs/homepage.md"],
       "docs": [{ "path": "docs/homepage.md", "anchor": "top-fold-contract" }, { "path": "docs/homepage.md", "anchor": "query-and-state-model" }],
       "rules": ["Preserve the homepage cohort, availability, and server-to-live handoff contracts."]
     },
@@ -198,7 +266,7 @@
       "id": "about-page",
       "label": "About page contract",
       "risk": "medium",
-      "sources": ["src/app/about/**", "src/components/about/**"],
+      "sources": ["src/app/about/**", "src/components/about/**", "docs/about-page.md"],
       "docs": [{ "path": "docs/about-page.md", "anchor": "section-contract" }],
       "rules": ["Keep public data-source descriptions aligned with the implemented sources."]
     },
@@ -206,7 +274,15 @@
       "id": "coverage-page",
       "label": "Coverage page contract",
       "risk": "medium",
-      "sources": ["src/app/coverage/**", "src/components/coverage*", "src/components/coverage/**", "src/hooks/use-coverage-page-model.ts", "src/lib/coverage/**", "src/lib/coverage-matrix*"],
+      "sources": [
+        "src/app/coverage/**",
+        "src/components/coverage*",
+        "src/components/coverage/**",
+        "src/hooks/use-coverage-page-model.ts",
+        "src/lib/coverage/**",
+        "src/lib/coverage-matrix*",
+        "docs/coverage-page.md"
+      ],
       "docs": [{ "path": "docs/coverage-page.md", "anchor": "source-of-truth-per-column" }, { "path": "docs/coverage-page.md", "anchor": "unavailable-versus-uncovered" }],
       "rules": ["Unavailable data is neither covered nor uncovered and must not enter coverage denominators."]
     },
@@ -214,7 +290,7 @@
       "id": "start-page",
       "label": "Start page contract",
       "risk": "medium",
-      "sources": ["src/app/start/**", "src/components/start-here*", "src/lib/start-here*"],
+      "sources": ["src/app/start/**", "src/components/start-here*", "src/lib/start-here*", "docs/start-page.md"],
       "docs": [{ "path": "docs/start-page.md", "anchor": "content-registry-contract" }],
       "rules": ["Preserve shared onboarding-retirement state and the internal route registry boundary."]
     },
@@ -222,7 +298,14 @@
       "id": "feedback-pipeline",
       "label": "Feedback pipeline contract",
       "risk": "high",
-      "sources": ["src/components/feedback*", "src/components/mobile-utility-dock.tsx", "worker/src/api/feedback.ts", "worker/src/api/feedback/**", "shared/lib/feedback*"],
+      "sources": [
+        "src/components/feedback*",
+        "src/components/mobile-utility-dock.tsx",
+        "worker/src/api/feedback.ts",
+        "worker/src/api/feedback/**",
+        "shared/lib/feedback*",
+        "docs/feedback-pipeline.md"
+      ],
       "docs": [{ "path": "docs/feedback-pipeline.md", "anchor": "api-endpoint" }],
       "background": [{ "path": "docs/feedback-pipeline.md", "anchor": "frontend-components" }],
       "rules": ["Preserve idempotency and unknown execution outcomes; do not retry ambiguous GitHub submissions as new issues."]
@@ -231,7 +314,18 @@
       "id": "compliance",
       "label": "Compliance evidence and workbench",
       "risk": "high",
-      "sources": ["src/app/compliance/**", "src/components/compliance/**", "shared/data/stablecoins/domains/compliance/**", "shared/lib/compliance*.ts", "shared/lib/mica.ts", "shared/lib/genius.ts", "shared/types/stablecoin-meta-compliance-schemas.ts"],
+      "sources": [
+        "src/app/compliance/**",
+        "src/components/compliance/**",
+        "shared/data/stablecoins/domains/compliance/**",
+        "shared/lib/compliance*.ts",
+        "shared/lib/mica.ts",
+        "shared/lib/genius.ts",
+        "shared/types/stablecoin-meta-compliance-schemas.ts",
+        "docs/compliance-page.md",
+        "docs/genius-tracker.md",
+        "docs/mica-tracker.md"
+      ],
       "docs": [
         { "path": "docs/compliance-page.md", "anchor": "data-projection" },
         { "path": "docs/mica-tracker.md", "anchor": "status-criteria" },
@@ -243,8 +337,36 @@
       "id": "worker-admin-api",
       "label": "Admin API bindings and handlers",
       "risk": "high",
-      "sources": ["worker/src/routes/admin-routes.ts", "worker/src/routes/ops-routes.ts", "worker/src/routes/dynamic-routes.ts", "worker/src/routes/shared.ts", "worker/src/router.ts", "shared/lib/api-endpoints/**", "worker/src/lib/auth.ts", "worker/src/lib/idempotency.ts", "worker/src/lib/route-wrappers.ts", "worker/src/handlers/http/**", "worker/src/handlers/scheduled/yield-coverage-audit-manual.ts", "worker/src/api/admin*", "worker/src/api/backfill-*", "worker/src/api/audit-depeg-history*", "worker/src/api/reclassify-atomic-roundtrips*", "worker/src/api/remediate-blacklist-amount-gaps*", "worker/src/api/rpc-provider-trial*", "worker/src/api/status*", "worker/src/api/reserve-attempt-history*", "worker/src/api/request-source-stats*", "worker/src/api/api-keys*", "worker/src/api/api-key-audit-log*", "functions/admin/**", "functions/admin-api/**"],
+      "sources": [
+        "worker/src/routes/admin-routes.ts",
+        "worker/src/routes/ops-routes.ts",
+        "worker/src/routes/dynamic-routes.ts",
+        "worker/src/routes/shared.ts",
+        "worker/src/router.ts",
+        "shared/lib/api-endpoints/**",
+        "worker/src/lib/auth.ts",
+        "worker/src/lib/idempotency.ts",
+        "worker/src/lib/route-wrappers.ts",
+        "worker/src/handlers/http/**",
+        "worker/src/handlers/scheduled/yield-coverage-audit-manual.ts",
+        "worker/src/api/admin*",
+        "worker/src/api/backfill-dews.ts",
+        "worker/src/api/remediate-blacklist-amount-gaps*",
+        "worker/src/api/rpc-provider-trial*",
+        "worker/src/api/status*",
+        "worker/src/api/reserve-attempt-history*",
+        "worker/src/api/request-source-stats*",
+        "worker/src/api/api-keys*",
+        "worker/src/api/api-key-audit-log*",
+        "functions/admin/**",
+        "functions/admin-api/**",
+        "docs/api-reference-admin.md",
+        "worker/scripts/one-shot-backfill.ts",
+        "worker/scripts/backfills/**",
+        "docs/runbooks/one-shot-backfills.md"
+      ],
       "docs": [{ "path": "docs/api-reference-admin.md", "anchor": "admin-auth-and-idempotency" }],
+      "background": [{ "path": "docs/runbooks/one-shot-backfills.md", "anchor": "operator-contract" }],
       "rules": ["Admin endpoints retain Access authentication, no-store responses, and mutation idempotency; locate the endpoint-specific contract in the admin reference."]
     },
     {
@@ -266,7 +388,13 @@
         "shared/lib/runtime-origins.ts",
         "shared/lib/site-csp.ts",
         "public/_headers",
-        "public/_routes.json"
+        "public/_routes.json",
+        "docs/api-endpoint-authoring.md",
+        "docs/api-reference.md",
+        "docs/incident-response/safe-browsing-flag.md",
+        "docs/operator-origin-access.md",
+        "docs/security-governance.md",
+        "docs/worker-infrastructure.md"
       ],
       "docs": [
         "docs/api-endpoint-authoring.md",
@@ -275,7 +403,7 @@
         { "path": "docs/operator-origin-access.md", "anchor": "repo-side-changes" },
         { "path": "docs/api-reference.md", "anchor": "public-endpoints" }
       ],
-      "background": [{ "path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows" }],
+      "background": [{"path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows"}, "docs/incident-response/safe-browsing-flag.md"],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run test:critical-contracts", "npm run check:site-csp-sync", "npm run check:frozen-invariants"],
       "rules": ["Route flags, auth lane behavior, cache metadata, and site-data allowlists are centralized."]
     },
@@ -298,16 +426,33 @@
         "worker/src/lib/rpc-provider-budget.ts",
         "worker/src/lib/rpc-provider-parity/**",
         "worker/src/cron/**",
-        "worker/src/cron/rpc-provider-parity/**"
+        "worker/src/cron/rpc-provider-parity/**",
+        "docs/README.md",
+        "docs/process/adr-26-workflows-measurements.md",
+        "docs/process/cron-trigger-policy.md",
+        "docs/process/worker-runtime-experiments.md",
+        "docs/runbooks/blocked-digest-edition.md",
+        "docs/runbooks/cron-delivery-stall.md",
+        "docs/runbooks/cron-slot-abandonment.md",
+        "docs/runbooks/d1-capacity-and-runtime-experiments.md",
+        "docs/runbooks/lease-and-breaker-recovery.md",
+        "docs/worker-and-api-limits.md"
       ],
       "docs": ["docs/process/cron-trigger-policy.md"],
       "background": [
-        { "path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption" },
-        { "path": "docs/data-flow-map.md", "anchor": "risk-and-reserve-flows" },
-        { "path": "docs/worker-infrastructure.md", "anchor": "cron-scheduling" },
-        { "path": "docs/README.md", "anchor": "stale-output-diagnosis" },
-        { "path": "docs/deployment-process.md", "anchor": "monitoring-without-model-polling" },
-        { "path": "docs/worker-infrastructure.md", "anchor": "remote-d1-inspection" }
+        {"path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption"},
+        {"path": "docs/data-flow-map.md", "anchor": "risk-and-reserve-flows"},
+        {"path": "docs/worker-infrastructure.md", "anchor": "cron-scheduling"},
+        {"path": "docs/README.md", "anchor": "stale-output-diagnosis"},
+        {"path": "docs/deployment-process.md", "anchor": "monitoring-without-model-polling"},
+        {"path": "docs/worker-infrastructure.md", "anchor": "remote-d1-inspection"},
+        "docs/process/adr-26-workflows-measurements.md",
+        "docs/process/worker-runtime-experiments.md",
+        "docs/runbooks/cron-delivery-stall.md",
+        "docs/runbooks/cron-slot-abandonment.md",
+        "docs/runbooks/lease-and-breaker-recovery.md",
+        "docs/runbooks/d1-capacity-and-runtime-experiments.md",
+        "docs/runbooks/blocked-digest-edition.md"
       ],
       "alsoRead": ["worker/AGENTS.md"],
       "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:cron-sync", "npm run check:cron-connections", "npx vitest run worker/src/cron worker/src/handlers/scheduled", "npx vitest run worker/src/lib/__tests__/cron-leases.test.ts worker/src/lib/__tests__/cron-leases-scheduled-slot.test.ts worker/src/lib/__tests__/scheduled-slot-reconciliation-sqlite.test.ts worker/src/lib/__tests__/cron-timeouts.test.ts worker/src/lib/__tests__/v9-slot-window.test.ts"],
@@ -332,7 +477,11 @@
         "worker/src/lib/telegram/**",
         "shared/lib/telegram-*.ts",
         "shared/lib/telegram-delivery-policy.ts",
-        "src/app/pharoswatchbot/**"
+        "src/app/pharoswatchbot/**",
+        "docs/telegram-alerts.md",
+        "docs/telegram-architecture.md",
+        "docs/telegram-mini-app.md",
+        "docs/runbooks/telegram-*.md"
       ],
       "docs": [
         { "path": "docs/telegram-architecture.md", "anchor": "1-ingress" },
@@ -341,7 +490,25 @@
         { "path": "docs/telegram-alerts.md", "anchor": "dispatch-routing-and-formatting" },
         { "path": "docs/telegram-mini-app.md", "anchor": "overview" }
       ],
-      "background": ["docs/runbooks/telegram-no-delivery.md", "docs/runbooks/telegram-rate-limit-storm.md"],
+      "background": [
+        "docs/runbooks/telegram-no-delivery.md",
+        "docs/runbooks/telegram-rate-limit-storm.md",
+        "docs/runbooks/telegram-admin-broadcast-safety.md",
+        "docs/runbooks/telegram-adoption-report.md",
+        "docs/runbooks/telegram-backlog-expiration.md",
+        "docs/runbooks/telegram-bot-wide-outage.md",
+        "docs/runbooks/telegram-digest-outbox.md",
+        "docs/runbooks/telegram-group-admin-gating-rollback.md",
+        "docs/runbooks/telegram-ingress-abuse-controls.md",
+        "docs/runbooks/telegram-mini-app-auth-failures.md",
+        "docs/runbooks/telegram-mini-app-botfather.md",
+        "docs/runbooks/telegram-operator-queries.md",
+        "docs/runbooks/telegram-preset-resolution-failure.md",
+        "docs/runbooks/telegram-secret-rotation.md",
+        "docs/runbooks/telegram-setup-wizard-stuck.md",
+        "docs/runbooks/telegram-webhook-ingress.md",
+        "docs/runbooks/telegram-webhook-retry-dedupe.md"
+      ],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run check:telegram-load", "npm run check:cron-sync", "npx vitest run worker/src/api worker/src/cron"],
       "rules": [
         "Preserve webhook authentication, signed initData validation, and idempotent update handling.",
@@ -356,14 +523,25 @@
         "worker/migrations/**",
         "worker/src/lib/db*.ts",
         "worker/src/lib/*store*.ts",
-        "worker/src/api/backfill-*.ts"
+        "worker/src/api/backfill-dews.ts",
+        "worker/scripts/backfills/**",
+        "docs/deployment-process.md",
+        "docs/process/d1-baseline-squash-plan.md",
+        "docs/process/d1-migrations.md",
+        "docs/runbooks/d1-telemetry-kill-switch.md",
+        "docs/runbooks/db-connectivity.md"
       ],
       "docs": [
         { "path": "docs/deployment-process.md", "anchor": "concurrency-and-rollback-scope" },
         { "path": "docs/worker-infrastructure.md", "anchor": "shared-database-helpers" },
         "docs/process/d1-migrations.md"
       ],
-      "background": [{ "path": "worker/migrations/MANIFEST.md", "anchor": "individual-migrations-current-active-files" }, "docs/process/d1-baseline-squash-plan.md"],
+      "background": [
+        {"path": "worker/migrations/MANIFEST.md", "anchor": "individual-migrations-current-active-files"},
+        "docs/process/d1-baseline-squash-plan.md",
+        "docs/runbooks/db-connectivity.md",
+        "docs/runbooks/d1-telemetry-kill-switch.md"
+      ],
       "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:migrations", "npx vitest run worker/src"],
       "rules": [
         "Migrations must be backward-compatible because CI applies D1 migrations before the new Worker is live.",
@@ -389,19 +567,39 @@
         "worker/src/api/depeg-resolver.ts",
         "src/app/methodology/**",
         "docs/process/ddrr-calibration.md",
-        "docs/process/mechanism-overlay-evidence-standard.md"
+        "docs/process/mechanism-overlay-evidence-standard.md",
+        "docs/bluechip-ratings.md",
+        "docs/chain-health.md",
+        "docs/depeg-detection.md",
+        "docs/depeg-resolver.md",
+        "docs/dews.md",
+        "docs/dex-liquidity.md",
+        "docs/methodology-page.md",
+        "docs/mint-burn-flows.md",
+        "docs/process/dex-liquidity-appendix.md",
+        "docs/report-cards.md",
+        "docs/runbooks/depeg-artifact-removal.md",
+        "docs/runbooks/depeg-lifecycle-review.md",
+        "docs/runbooks/mint-burn-integrity.md",
+        "docs/stability-index.md"
       ],
       "docs": [{ "path": "docs/methodology-page.md", "anchor": "methodology-editing-entry" }, { "path": "docs/report-cards.md", "anchor": "methodology-identity" }],
       "background": [
-        { "path": "docs/depeg-detection.md", "anchor": "thresholds--constants" },
+        {"path": "docs/depeg-detection.md", "anchor": "thresholds--constants"},
         "docs/dews.md",
-        { "path": "docs/depeg-resolver.md", "anchor": "methodology-versioning" },
-        { "path": "docs/dex-liquidity.md", "anchor": "dex-liquidity-score" },
-        { "path": "docs/mint-authority-scoring.md", "anchor": "mint-authority-entry" },
+        {"path": "docs/depeg-resolver.md", "anchor": "methodology-versioning"},
+        {"path": "docs/dex-liquidity.md", "anchor": "dex-liquidity-score"},
+        {"path": "docs/mint-authority-scoring.md", "anchor": "mint-authority-entry"},
         "docs/stability-index.md",
-        { "path": "docs/mint-burn-flows.md", "anchor": "scoring" },
+        {"path": "docs/mint-burn-flows.md", "anchor": "scoring"},
         "docs/process/ddrr-calibration.md",
-        "docs/process/mechanism-overlay-evidence-standard.md"
+        "docs/process/mechanism-overlay-evidence-standard.md",
+        {"path": "docs/process/dex-liquidity-appendix.md", "anchor": "methodology-versioning"},
+        "docs/chain-health.md",
+        "docs/bluechip-ratings.md",
+        "docs/runbooks/depeg-artifact-removal.md",
+        "docs/runbooks/depeg-lifecycle-review.md",
+        "docs/runbooks/mint-burn-integrity.md"
       ],
       "checks": ["npm run check:doc-sync", "npx vitest run shared/lib worker/src/lib"],
       "rules": ["Methodology versions increase numerically: after v5.9 use v5.91 or v6.0, not v5.10."],
@@ -436,32 +634,43 @@
         "scripts/maintenance/build-safety-score-map.ts",
         "scripts/maintenance/publish-safety-score-map.ts",
         ".github/workflows/safety-map-refresh.yml",
-        "functions/__tests__/safety-map-png.test.ts"
+        "functions/__tests__/safety-map-png.test.ts",
+        "docs/digest-pipeline.md",
+        "docs/mint-authority-scoring.md",
+        "docs/process/report-cards-appendix.md",
+        "docs/process/safety-score-curation-expiry-sweep.md",
+        "docs/process/safety-score-equivalence-harness.md",
+        "docs/process/safety-score-v9-readiness.md",
+        "docs/process/shock-coverage-refresh.md",
+        "docs/safety-score-map.md",
+        "docs/tape-page.md"
       ],
       "docs": [
-        { "path": "docs/report-cards.md", "anchor": "v10-model" },
-        { "path": "docs/report-cards.md", "anchor": "supply-attribution-and-in-flight-accounting" },
-        { "path": "docs/report-cards.md", "anchor": "bridge-in-flight-accounting" },
-        { "path": "docs/report-cards.md", "anchor": "scoped-evidence-and-exit-evaluation" },
+        {"path": "docs/report-cards.md", "anchor": "v10-model"},
+        {"path": "docs/process/report-cards-appendix.md", "anchor": "supply-attribution-and-in-flight-accounting"},
+        {"path": "docs/process/report-cards-appendix.md", "anchor": "bridge-in-flight-accounting"},
+        {"path": "docs/process/report-cards-appendix.md", "anchor": "scoped-evidence-and-exit-evaluation"},
         "docs/safety-score-map.md",
-        { "path": "docs/digest-pipeline.md", "anchor": "generation" },
-        { "path": "docs/report-cards.md", "anchor": "dependency-coverage" },
-        { "path": "docs/report-cards.md", "anchor": "canonical-publication" },
-        { "path": "docs/report-cards.md", "anchor": "publication-journal-and-movement-attribution" },
-        { "path": "docs/report-cards.md", "anchor": "accepted-capture-archive-and-historical-replay" },
-        { "path": "docs/mint-authority-scoring.md", "anchor": "mint-authority-entry" },
-        { "path": "docs/digest-pipeline.md", "anchor": "distribution" }
+        {"path": "docs/digest-pipeline.md", "anchor": "generation"},
+        {"path": "docs/process/report-cards-appendix.md", "anchor": "dependency-coverage"},
+        {"path": "docs/process/report-cards-appendix.md", "anchor": "canonical-publication"},
+        {"path": "docs/report-cards.md", "anchor": "publication-journal-and-movement-attribution"},
+        {"path": "docs/report-cards.md", "anchor": "accepted-capture-archive-and-historical-replay"},
+        {"path": "docs/mint-authority-scoring.md", "anchor": "mint-authority-entry"},
+        {"path": "docs/digest-pipeline.md", "anchor": "distribution"}
       ],
       "background": [
         "docs/tape-page.md",
-        { "path": "docs/process/safety-score-equivalence-harness.md", "anchor": "when-to-use-it" },
-        "docs/process/safety-score-curation-expiry-sweep.md"
+        {"path": "docs/process/safety-score-equivalence-harness.md", "anchor": "when-to-use-it"},
+        "docs/process/safety-score-curation-expiry-sweep.md",
+        "docs/process/safety-score-v9-readiness.md",
+        "docs/process/shock-coverage-refresh.md"
       ],
       "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:generated-artifacts -- --only=safety-score-v9-evaluation-build", "npm run check:doc-sync", "npm run audit:mint-authority-review", "npx vitest run shared/lib/safety-score-v9 worker/src/lib"],
       "testOwnership": [
         {
           "sources": ["shared/**", "worker/src/lib/**", "worker/wrangler*.toml", "package.json", "scripts/lib/safety-score-v9-evaluation-inputs.mts", "scripts/lib/package-imports.mts", "scripts/lib/automation-registry.mjs", "scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts"],
-          "tests": ["scripts/__tests__/veritas-ver-010-v9-evaluation-build-identity.test.ts", "scripts/__tests__/generate-safety-score-v9-evaluation-build-manifest.test.ts"]
+          "tests": ["scripts/__tests__/generate-safety-score-v9-evaluation-build-manifest.test.ts"]
         },
         {
           "sources": ["shared/lib/safety-score-v9/**", "worker/src/lib/safety-score-v9/**", "worker/src/cron/compute-safety-score-v9.ts"],
@@ -495,14 +704,16 @@
         "worker/src/lib/env.ts",
         "worker/wrangler.toml",
         "worker/wrangler.heavy.toml",
-        "scripts/ci/check-env-contract.ts"
+        "scripts/ci/check-env-contract.ts",
+        "README.md",
+        "docs/scripts.md"
       ],
       "docs": [
-        { "path": "docs/worker-infrastructure.md", "anchor": "env-interface" },
-        { "path": "docs/worker-infrastructure.md", "anchor": "binding-inventory" },
-        { "path": "docs/operator-origin-access.md", "anchor": "runtime-origin-bindings" },
-        { "path": "docs/deployment-process.md", "anchor": "github-deploy-inputs" },
-        { "path": "docs/scripts.md", "anchor": "operational-notes" },
+        {"path": "docs/worker-infrastructure.md", "anchor": "env-interface"},
+        {"path": "docs/process/worker-infrastructure-appendix.md", "anchor": "binding-inventory"},
+        {"path": "docs/operator-origin-access.md", "anchor": "runtime-origin-bindings"},
+        {"path": "docs/deployment-process.md", "anchor": "github-deploy-inputs"},
+        {"path": "docs/scripts.md", "anchor": "operational-notes"},
         "README.md"
       ],
       "background": [{ "path": "docs/worker-infrastructure.md", "anchor": "runtime-feature-contracts" }],
@@ -519,14 +730,19 @@
         "worker/src/lib/public-health-assessment.ts",
         "src/lib/status/**",
         "src/lib/status-dashboard-model.ts",
-        "docs/runbooks/**"
+        "docs/runbooks/**",
+        "docs/runbooks/blacklist-sync.md",
+        "docs/runbooks/dated-source-age-caps.md",
+        "docs/runbooks/review-renewal.md",
+        "docs/status-dashboard.md"
       ],
       "docs": [
-        { "path": "docs/status-dashboard.md", "anchor": "backend-contract-get-apistatus" },
-        { "path": "docs/status-dashboard.md", "anchor": "cron-health-model" },
-        { "path": "docs/worker-infrastructure.md", "anchor": "health--status-endpoints" },
-        { "path": "docs/runbooks/dated-source-age-caps.md", "anchor": "scheduled-boundaries" }
+        {"path": "docs/status-dashboard.md", "anchor": "backend-contract-get-apistatus"},
+        {"path": "docs/status-dashboard.md", "anchor": "cron-health-model"},
+        {"path": "docs/process/worker-infrastructure-appendix.md", "anchor": "health--status-endpoints"},
+        {"path": "docs/runbooks/dated-source-age-caps.md", "anchor": "scheduled-boundaries"}
       ],
+      "background": ["docs/runbooks/blacklist-sync.md", "docs/runbooks/review-renewal.md"],
       "checks": ["npx vitest run src/lib/status worker/src/lib/status"],
       "rules": ["Status causes, recommended actions, public-health floors, and runbooks must remain aligned."]
     },
@@ -570,14 +786,18 @@
         "playwright.ops.config.ts",
         "postcss.config.mjs",
         "tsconfig*.json",
-        "vitest.config.ts"
+        "vitest.config.ts",
+        "docs/process/boundary-waivers.md",
+        "docs/process/feature-flags.md",
+        "docs/runbooks/workflow-incidents.md",
+        "docs/testing.md"
       ],
       "docs": [
         { "path": "docs/testing.md", "anchor": "ci-pipeline" },
         { "path": "docs/deployment-process.md", "anchor": "ci-deploy-sequence" },
         { "path": "docs/scripts.md", "anchor": "pr-and-release-gates" }
       ],
-      "background": [{ "path": "docs/architecture.md", "anchor": "file-tree-guide" }, "docs/process/feature-flags.md"],
+      "background": [{"path": "docs/architecture.md", "anchor": "file-tree-guide"}, "docs/process/feature-flags.md", "docs/process/boundary-waivers.md", "docs/runbooks/workflow-incidents.md"],
       "checks": ["npx vitest run scripts/__tests__", "npm run check:generated-artifacts"],
       "rules": [
         "Keep deploy-surface classification aligned with GitHub deploy behavior.",
@@ -640,7 +860,9 @@
         "src/components/depeg-resolver-reviewer-module.tsx",
         "src/components/dews-summary.tsx",
         "src/components/dews-alert-feed.tsx",
-        "src/hooks/use-depeg-resolver-surfaces.ts"
+        "src/hooks/use-depeg-resolver-surfaces.ts",
+        "docs/depeg-page.md",
+        "docs/design-language.md"
       ],
       "docs": ["docs/depeg-page.md"],
       "background": [{ "path": "docs/design-language.md", "anchor": "context" }],
@@ -656,12 +878,7 @@
       "id": "table-exports",
       "label": "Interactive table export contracts",
       "risk": "medium",
-      "sources": [
-        "src/lib/exports/**",
-        "src/components/table-export-menu.tsx",
-        "src/app/screener/client.tsx",
-        "src/components/yield-leaderboard.tsx"
-      ],
+      "sources": ["src/lib/exports/**", "src/components/table-export-menu.tsx", "src/app/screener/client.tsx", "src/components/yield-leaderboard.tsx", "docs/exports.md"],
       "docs": [{ "path": "docs/exports.md", "anchor": "export-contract" }],
       "checks": [
         "npx vitest run src/components/__tests__/table-export-menu.test.tsx src/components/__tests__/yield-leaderboard-export.test.tsx src/app/screener/client.test.tsx"
@@ -675,9 +892,60 @@
       "id": "frontend-routes",
       "label": "Frontend page or route behavior",
       "risk": "medium",
-      "sources": ["src/**", "shared/lib/public-docs.ts", "next.config.ts"],
+      "sources": [
+        "src/**",
+        "shared/lib/public-docs.ts",
+        "next.config.ts",
+        "docs/alt-pegs-page.md",
+        "docs/api-page.md",
+        "docs/architecture.md",
+        "docs/cemetery-and-compare.md",
+        "docs/chains-page.md",
+        "docs/data-visualization.md",
+        "docs/design-tokens.md",
+        "docs/editorial-style.md",
+        "docs/funding-page.md",
+        "docs/learn-mechanisms-page.md",
+        "docs/learn-page.md",
+        "docs/og-images.md",
+        "docs/pharos-urn.md",
+        "docs/portfolio-page.md",
+        "docs/privacy-page.md",
+        "docs/process/blog-publishing.md",
+        "docs/process/font-assets.md",
+        "docs/screener-page.md",
+        "docs/screener-picker-page.md",
+        "docs/sitemap-tree-page.md",
+        "docs/stablecoin-detail-page.md",
+        "docs/stablecoin-taxonomy-pages.md",
+        "docs/upcoming-page.md"
+      ],
       "docs": [{ "path": "docs/architecture.md", "anchor": "frontend-runtime-and-seo-surface" }],
-      "background": [{ "path": "docs/design-language.md", "anchor": "context" }],
+      "background": [
+        {"path": "docs/design-language.md", "anchor": "context"},
+        "docs/alt-pegs-page.md",
+        "docs/api-page.md",
+        "docs/cemetery-and-compare.md",
+        "docs/chains-page.md",
+        "docs/data-visualization.md",
+        "docs/design-tokens.md",
+        {"path": "docs/editorial-style.md", "anchor": "voice"},
+        "docs/funding-page.md",
+        "docs/learn-mechanisms-page.md",
+        "docs/learn-page.md",
+        "docs/og-images.md",
+        "docs/pharos-urn.md",
+        "docs/portfolio-page.md",
+        "docs/privacy-page.md",
+        "docs/process/blog-publishing.md",
+        "docs/process/font-assets.md",
+        "docs/screener-page.md",
+        "docs/screener-picker-page.md",
+        "docs/sitemap-tree-page.md",
+        {"path": "docs/stablecoin-detail-page.md", "anchor": "route-shape"},
+        "docs/stablecoin-taxonomy-pages.md",
+        "docs/upcoming-page.md"
+      ],
       "alsoRead": ["src/AGENTS.md"],
       "rules": ["Static export means route metadata, sitemap, and crawlability can matter even for simple UI changes."],
       "hints": ["Use check:focused -- --file <path> for related tests on frontend modules; non-module changes retain directory coverage."],
@@ -687,12 +955,25 @@
       "id": "worker-runtime",
       "label": "Worker runtime implementation",
       "risk": "medium",
-      "sources": ["worker/src/**", "worker/scripts/**", "worker/*.ts", "worker/AGENTS.md", "worker/tsconfig.json", "worker/wrangler.toml"],
+      "sources": [
+        "worker/src/**",
+        "worker/scripts/**",
+        "worker/*.ts",
+        "worker/AGENTS.md",
+        "worker/tsconfig.json",
+        "worker/wrangler.toml",
+        "docs/blacklist-tracker.md",
+        "docs/process/worker-infrastructure-appendix.md"
+      ],
       "docs": [
         { "path": "docs/worker-infrastructure.md", "anchor": "module-initialization" },
         { "path": "docs/worker-infrastructure.md", "anchor": "runtime-feature-contracts" }
       ],
-      "background": [{ "path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption" }],
+      "background": [
+        {"path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption"},
+        {"path": "docs/process/worker-infrastructure-appendix.md", "anchor": "binding-inventory"},
+        "docs/blacklist-tracker.md"
+      ],
       "alsoRead": ["worker/AGENTS.md"],
       "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:generated-artifacts"],
       "testOwnership": [

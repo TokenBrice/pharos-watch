@@ -126,19 +126,77 @@ describe("adaptJupUsdData", () => {
     ]);
   });
 
-  it("ignores provider amounts with unsafe decimal scales", () => {
+  it.each([
+    ["missing", undefined],
+    ["null", null],
+    ["negative", -1],
+    ["fractional", 1.5],
+    ["out of bounds", 1_000_000_000],
+  ] as const)("withholds complete-book totals when a holding decimal scale is %s", (_label, decimals) => {
     const result = adaptJupUsdData({
-      totalSupply: "1000000",
+      totalSupply: "1000000000",
       holdings: [
-        { name: "USDC", amount: "1000000", decimals: 6 },
-        { name: "USDtb", amount: "1", decimals: 1_000_000_000 },
+        { name: "USDtb", amount: "1000000000", decimals: 6 },
+        { name: "USDC", amount: "1000000000", ...(decimals !== undefined ? { decimals } : {}) },
       ],
     });
 
-    expect(result.metadata?.totalReserveUsd).toBe(1);
+    expect(result.metadata).not.toHaveProperty("totalReserveUsd");
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.metadata).not.toHaveProperty("unknownExposurePct");
+    expect(result.metadata?.supplyUsd).toBe(1000);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "unparseable-holding",
+      effect: "degraded",
+    }));
+    expect(result.warnings?.some((warning) => warning.code === "reserve-undercollateralized")).toBe(false);
     expect(result.slices).toEqual([
-      { sourceKey: "jupusd:usdc", name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "jupusd:usdtb", name: "USDtb", pct: 100, risk: "low", coinId: "usdtb-ethena", depType: "collateral" },
     ]);
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 1000 });
+  });
+
+  it.each([0, 6])("preserves an explicitly supplied %s decimal scale", (decimals) => {
+    const result = adaptJupUsdData({
+      totalSupply: "1000000000",
+      holdings: [{ name: "USDC", amount: decimals === 0 ? "1000" : "1000000000", decimals }],
+    });
+
+    expect(result.metadata).toMatchObject({
+      totalReserveUsd: 1000,
+      supplyUsd: 1000,
+      collateralizationRatio: 1,
+      unknownExposurePct: 0,
+    });
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("rejects a sole unscaled USDC holding instead of publishing its raw integer as USD", () => {
+    expect(() => adaptJupUsdData({
+      totalSupply: "1000000000",
+      holdings: [{ name: "USDC", amount: "1000000000" }],
+    })).toThrow();
+  });
+
+  it("keeps unknown holdings degraded without inventing a complete-book exposure share", () => {
+    const result = adaptJupUsdData({
+      totalSupply: "1000000000",
+      holdings: [
+        { name: "USDC", amount: "1000000000" },
+        { name: "MYSTERY", amount: "1000000000", decimals: 6 },
+      ],
+    });
+
+    expect(result.metadata).not.toHaveProperty("unknownExposurePct");
+    expect(result.metadata).not.toHaveProperty("totalReserveUsd");
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "unknown-holding",
+      effect: "degraded",
+    }));
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "unparseable-holding",
+      effect: "degraded",
+    }));
   });
 
   it("passes through extra warnings from the fetch layer", () => {
@@ -198,6 +256,29 @@ describe("fetchJupUsdReserves", () => {
       },
     };
   }
+
+  it("degrades an unscaled holding at the HTTP boundary without publishing complete coverage", async () => {
+    const { result } = await runAdapter("jupusd", makeCoin(), {
+      network: network({
+        data: {
+          totalSupply: "1000000000",
+          holdings: [
+            { name: "USDC", amount: "1000000000" },
+            { name: "USDtb", amount: "1000000000", decimals: 6 },
+          ],
+        },
+      }),
+      nowSec: 1_776_003_600,
+    });
+
+    expect(result.metadata).not.toHaveProperty("totalReserveUsd");
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "unparseable-holding",
+      effect: "degraded",
+    }));
+    expect(result.slices.some((slice) => slice.coinId === "usdc-circle")).toBe(false);
+  });
 
   it("emits jupusd-snapshots-unavailable info warning when snapshots feed fails", async () => {
     const { result } = await runAdapter("jupusd", makeCoin(), {

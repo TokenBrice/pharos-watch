@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { D1UsageSummary, StatusResponse } from "@shared/types";
 import {
   buildPipelineIntegrityModel,
   buildPipelineModeSummaries,
@@ -8,13 +9,15 @@ import {
 import {
   degraded,
   makeHealthyStatusResponse,
+  makeHealthyReliabilityStatusResponse,
   makeOperationalDependencyFailureStatusResponse,
   makePublicationFailureStatusResponse,
 } from "@/test-utils/status-fixtures";
 
 function withReadyQuality() {
   const base = makeHealthyStatusResponse();
-  return degraded(base, {
+  return {
+    ...base,
     dataQuality: {
       ...base.dataQuality,
       blacklistTotal: 100,
@@ -22,10 +25,19 @@ function withReadyQuality() {
       blacklistMissingRatio: 0,
       blacklistRecentMissingAmounts: 0,
     },
-  });
+  };
 }
 
 describe("pipeline quality model", () => {
+  it("withholds zero counts and healthy quality when DB evidence is unavailable", () => {
+    const data = degraded(makeHealthyStatusResponse(), {
+      dataQuality: null, sectionErrors: { dataQuality: { code: "db-unavailable", message: "Database unavailable." } },
+    });
+    const quality = buildPipelineQualityModel(data);
+    expect(quality.rows.every((row) => row.state === "unknown" && row.currentValue === "Unknown")).toBe(true);
+    expect(quality.activeDepegs).toMatchObject({ currentValue: "Unknown", unavailable: true });
+    expect(buildPipelineIntegrityModel(data).controlRows.every((row) => row.state === "unknown")).toBe(true);
+  });
   it("distinguishes a real zero from an unknown denominator", () => {
     const unknown = buildPipelineQualityModel(makeHealthyStatusResponse());
     const knownZero = buildPipelineQualityModel(withReadyQuality());
@@ -158,7 +170,73 @@ describe("pipeline market price scope", () => {
   });
 });
 
+describe("pipeline storage capacity", () => {
+  const telemetry: D1UsageSummary = {
+    checkedAt: 100, windowStart: 0, windowEnd: 100, databaseId: "fixture",
+    databaseName: null, databaseSizeBytes: 95, numTables: 10, region: null,
+    readReplicationMode: null, readQueries24h: 1, writeQueries24h: 1,
+    rowsRead24h: 1, rowsWritten24h: 1,
+  };
+  it.each([
+    ["normal", "healthy", 0],
+    ["watch", "watch", 1],
+    ["warning", "watch", 1],
+    ["critical", "critical", 1],
+  ] as const)("uses published %s capacity rather than telemetry presence", (thresholdState, severity, issueCount) => {
+    const data = degraded(makeHealthyStatusResponse(), { d1Usage: {
+      ...telemetry,
+      capacity: {
+        observedAt: 100, databaseSizeBytes: 95, maximumSizeBytes: 100,
+        utilizationRatio: 0.95, utilizationPercent: 95, thresholdState,
+        crossedThresholdPercent: 90, nextThresholdPercent: 100, sampleCount: 1,
+        forecastBasis: "insufficient-history", forecastSpanHours: 0,
+        growthBytesPerDay: null, nextThresholdAt: null, exhaustionAt: null, daysUntilExhaustion: null,
+      },
+    } });
+    expect(buildPipelineModeSummaries(data).find((mode) => mode.id === "storage"))
+      .toMatchObject({ severity, issueCount });
+  });
+
+  it.each([
+    ["absent capacity", telemetry, {}],
+    ["null capacity", { ...telemetry, capacity: null }, {}],
+    ["failed telemetry", null, { d1Usage: { code: "d1_usage_failed", message: "Telemetry failed" } }],
+  ] as const)("keeps %s Unknown with an evidence issue", (_label, d1Usage, sectionErrors) => {
+    const data = degraded(makeHealthyStatusResponse(), { d1Usage, sectionErrors });
+    expect(buildPipelineModeSummaries(data).find((mode) => mode.id === "storage"))
+      .toMatchObject({ severity: "unknown", issueCount: 1 });
+  });
+});
+
 describe("pipeline coverage summaries", () => {
+  it.each([false, true])("preserves complete missing-evidence Integrity rows (inventory: %s)", (hasInventory) => {
+    const base = makeHealthyStatusResponse();
+    const { stablecoinPublication: _stablecoinPublication, repairDebt: _repairDebt, ...dataQuality } = base.dataQuality;
+    const dependencyHealth = hasInventory ? makeHealthyReliabilityStatusResponse(base).dependencyHealth : null;
+    const model = buildPipelineIntegrityModel(degraded(base, {
+      publicationHealth: null, dependencyHealth,
+      dataQuality: dataQuality as StatusResponse["dataQuality"],
+    }));
+    expect(model.publicationRows).toEqual([{
+      id: "publication-unavailable", label: "Publication health", rawCode: "publicationHealth",
+      state: "unknown", currentValue: "Unknown", detail: "No publication-health payload was returned.",
+    }]);
+    expect(model.dependencyRows).toEqual([{
+      id: dependencyHealth ? "dependency-empty" : "dependency-unavailable",
+      label: dependencyHealth ? "Dependency inventory" : "Dependency health",
+      rawCode: dependencyHealth ? "dependencyHealth.dependencies" : "dependencyHealth",
+      state: "unknown", currentValue: "Unknown",
+      detail: dependencyHealth ? "Dependency health returned an empty inventory." : "No dependency-health payload was returned.",
+    }]);
+    expect(model.controlRows).toEqual([
+      { id: "stablecoin-publication", label: "Stablecoin publication coverage", rawCode: "stablecoin_publication",
+        state: "unknown", currentValue: "Unknown", detail: "The status payload did not include publication coverage." },
+      { id: "repair-debt", label: "Pipeline repair debt", rawCode: "repair_debt",
+        state: "unknown", currentValue: "Unknown", detail: "The status payload did not include repair-debt evidence." },
+    ]);
+    expect({ issueCount: model.issueCount, severity: model.severity }).toEqual({ issueCount: 4, severity: "unknown" });
+  });
+
   it("maps inactive loader errors to human labels while retaining raw keys and codes", () => {
     const base = makeHealthyStatusResponse();
     const data = degraded(base, {
@@ -183,6 +261,9 @@ describe("pipeline coverage summaries", () => {
   it("covers publication controls, publication failures, and dependency evidence in Integrity", () => {
     const dependencyData = makeOperationalDependencyFailureStatusResponse();
     const publicationData = makePublicationFailureStatusResponse();
+    if (dependencyData.dataQuality == null) {
+      throw new Error("Operational dependency fixture must retain observed data quality.");
+    }
     const data = degraded(dependencyData, {
       publicationHealth: publicationData.publicationHealth,
       dataQuality: {

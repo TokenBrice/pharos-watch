@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
-import { YIELD_FILTER_AXIS_REGISTRY, YIELD_RISK_BUDGET_MIN_SAFETY, YIELD_RISK_BUDGET_SPECS, buildYieldViewModel, prepareYieldUniverse } from "@/lib/yield-view-model";
+import { RISK_BUDGET_FILTER_KEYS, YIELD_FILTER_AXIS_REGISTRY, YIELD_LANDING_RISK_BUDGET, YIELD_RISK_BUDGET_MIN_SAFETY, YIELD_RISK_BUDGET_SPECS, buildYieldViewModel, prepareYieldUniverse, riskBudgetUrlValue } from "@/lib/yield-view-model";
+import type { YieldViewModelUrlParams } from "@/lib/yield-view-config";
 
 const rows = [
   makeYieldRanking({
@@ -669,21 +670,33 @@ describe("buildYieldViewModel", () => {
     ).toBe(true);
   });
 
-  it("counts risk-budget stops on the stacked base of active filters", () => {
-    // peg=non-usd leaves only EURC as a candidate, and the landing band's
-    // safety floor and warnings filter block it — so every stop, including
-    // "All", must count the empty intersection rather than the unfiltered
-    // universe.
-    const blocked = buildYieldViewModel(prepareYieldUniverse(rows, null), { peg: "non-usd" });
-    expect(blocked.visibleRows).toEqual([]);
-    expect(blocked.riskBudget.stops.map((stop) => stop.count)).toEqual([0, 0, 0, 0]);
-
-    // With peg=USD stacked on the neutral band, the "All" stop counts only
-    // USD rows, and the opportunistic band additionally drops warned USDT.
-    const usd = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any", peg: "USD" });
-    expect(usd.riskBudget.stops.find((stop) => stop.key === "all")?.count).toBe(2);
-    expect(usd.riskBudget.stops.find((stop) => stop.key === "opportunistic")?.count).toBe(1);
-  });
+  it.each([
+    { name: "landing band", params: {} },
+    { name: "non-USD research filter", params: { peg: "non-usd" } },
+    { name: "USD search with custom risk axes", params: {
+      risk: "any", peg: "USD", q: "US", sourceConfidence: "deterministic",
+      depth: "hide-thin", minSafety: "80", sourcePosture: "clean", warnings: "only",
+    } },
+  ] satisfies Array<{ name: string; params: YieldViewModelUrlParams }>)(
+    "counts every risk-budget stop after replacing risk axes from $name",
+    ({ params }) => {
+      const universe = prepareYieldUniverse(rows, null);
+      const before = buildYieldViewModel(universe, params);
+      for (const stop of before.riskBudget.stops) {
+        // Mirror the URL replacement applied by the slider's click handler.
+        const target = { ...params } as YieldViewModelUrlParams;
+        for (const key of RISK_BUDGET_FILTER_KEYS) delete target[key];
+        if (stop.key === YIELD_LANDING_RISK_BUDGET) delete target.risk;
+        else target.risk = riskBudgetUrlValue(stop.key);
+        const after = buildYieldViewModel(universe, target);
+        expect(stop.count, stop.key).toBe(after.visibleRows.length);
+        expect(after.filters.peg).toBe(before.filters.peg);
+        expect(after.filters.q).toBe(before.filters.q);
+      }
+      const allCount = before.riskBudget.stops.find((stop) => stop.key === "all")?.count;
+      expect(allCount).toBe(params.peg === "non-usd" ? 1 : 2 + (params.peg ? 0 : 1));
+    },
+  );
 
   it("round-trips explicit risk-band params instead of flagging them", () => {
     const opportunistic = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "opportunistic" });

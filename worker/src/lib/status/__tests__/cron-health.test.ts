@@ -56,6 +56,23 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
   // drift with wall-clock time. Matches the production `now` argument shape
   // (Math.floor(Date.now() / 1000)).
   const NOW = 1_775_890_000;
+  it.each([
+    { older: "error", latest: "error", proven: false, expected: 1 },
+    { older: "error", latest: "ok", proven: false, expected: 0 },
+    { older: "error", latest: "error", proven: true, expected: 0 },
+  ])("retains required-attempt streak behind neutral display eviction ($older/$latest, proven=$proven)", async ({ older, latest, proven, expected }) => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES (?, ?, 100, ?, ?)`);
+      insert.run("sync-stablecoins", NOW - 300, older, null);
+      insert.run("sync-stablecoins", NOW - 200, latest, null);
+      if (proven) insert.run("sync-stablecoins", NOW - 150, "skipped_neutral", JSON.stringify({ reason: "same_day_snapshot_exists" }));
+      for (let i = 0; i < 12; i++) insert.run("sync-stablecoins", NOW - 100 + i, "skipped_neutral", JSON.stringify({ reason: "cadence_bucket_completed" }));
+      const snapshot = await loadCronHealth(db, NOW);
+      expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(expected);
+      expect(snapshot.crons["sync-stablecoins"].recentRuns.filter((run) => run.status !== "skipped_neutral")).toHaveLength(2);
+    } finally { sqlite.close(); }
+  });
 
   it("excludes retired Workflow history from current health", async () => {
     const job = "compute-safety-score-v9-workflow";

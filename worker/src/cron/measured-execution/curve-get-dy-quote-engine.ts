@@ -6,6 +6,15 @@ import type {
   DexMeasuredExecutionRpcBudget,
 } from "./profiles";
 
+export type CurveGetDyQuoteFailure =
+  | DexMeasuredExecutionBudgetStopReason
+  | "unsupported-chain-or-pool"
+  | "invalid-pinned-block"
+  | "invalid-quote-input"
+  | "rpc-failure"
+  | "pool-revert"
+  | "malformed-pool-return";
+
 interface CurveGetDyQuoteEngineInput<TRequest> {
   requests: readonly TRequest[];
   chainRpcs: Map<string, ChainRpcConfig>;

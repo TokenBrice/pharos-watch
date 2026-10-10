@@ -59,7 +59,7 @@ async function devRewrites() {
     {
       source: "/api/:path+",
       destination: proxyPort
-        ? `http://localhost:${proxyPort}/api/:path*`
+        ? `http://127.0.0.1:${proxyPort}/api/:path*`
         : "https://api.pharos.watch/api/:path*",
     },
   ];

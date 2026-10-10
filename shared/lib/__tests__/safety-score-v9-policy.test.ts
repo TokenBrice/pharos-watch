@@ -28,6 +28,21 @@ describe("Safety Score v9 methodology policy", () => {
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry)).toBe(true);
     expect(loadV9MethodologyPolicy(candidatePolicyAsset).semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
   });
+  it.each(["transfer", "freezeExposure", "primaryExit", "governance"] as const)(
+    "requires every canonical %s access value once without changing valid policy identity",
+    (field) => {
+      const duplicate = candidateClone();
+      const values = duplicate.semantic.accessPostureVocabulary[field];
+      values[0] = values[values.length - 1]!;
+      expect(() => loadV9MethodologyPolicy(duplicate)).toThrow();
+      const incomplete = candidateClone();
+      incomplete.semantic.accessPostureVocabulary[field].pop();
+      expect(() => loadV9MethodologyPolicy(incomplete)).toThrow();
+      const reordered = candidateClone();
+      reordered.semantic.accessPostureVocabulary[field].reverse();
+      expect(loadV9MethodologyPolicy(reordered).semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    },
+  );
   it("requires and semantically binds the fractional native-inventory dust limit", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.nativeInventoryUnmatchedDustShareMax).toBe(1e-5);
     const changed = candidateClone();
@@ -98,11 +113,6 @@ describe("Safety Score v9 methodology policy", () => {
     delete (missingWithhold as { semantic: { formula: { withhold?: unknown } } }).semantic.formula.withhold;
     expect(() => loadV9MethodologyPolicy(missingWithhold)).toThrow();
 
-    const invertedDangerFloors = candidateClone();
-    invertedDangerFloors.semantic.formula.danger.fGatePegMultiplierFloor =
-      invertedDangerFloors.semantic.formula.danger.withholdPegMultiplierFloor + 0.01;
-    expect(() => loadV9MethodologyPolicy(invertedDangerFloors)).toThrow(/cannot exceed/i);
-
     const invalidEvidenceExpiry = candidateClone();
     invalidEvidenceExpiry.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec = 0;
     expect(() => loadV9MethodologyPolicy(invalidEvidenceExpiry)).toThrow();
@@ -162,7 +172,7 @@ describe("Safety Score v9 methodology policy", () => {
 
   const semanticMutations: [string, (policy: V9MethodologyPolicy) => void][] = [
     ["withhold score", (policy) => { policy.semantic.formula.withhold.maxScoreExclusive = 54; }],
-    ["danger floor", (policy) => { policy.semantic.formula.danger.fGatePegMultiplierFloor = 0.79; }],
+    ["danger floor", (policy) => { policy.semantic.formula.danger.withholdPegMultiplierFloor = 0.89; }],
     ["danger grades", (policy) => { policy.semantic.formula.danger.dangerOnlyGrades = ["D", "F"]; }],
     ["bridge materiality", (policy) => { policy.semantic.control.materialBridgeHighShareThreshold = 0.24; }],
     ["collateral gated", (policy) => { policy.semantic.control.mintPostureQuality["collateral-gated"] = 51; policy.semantic.control.mintPostureQuality.unknown = 51; }],

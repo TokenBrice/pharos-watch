@@ -24,6 +24,7 @@ import {
   finalizeProjectorBatch,
   fetchRowsWithTieExpansion,
   resolveProjectorOptions,
+  sourceReconciliationSince,
   type ProjectorOptions,
   type ProjectorResult,
 } from "./types";
@@ -70,13 +71,19 @@ async function fetchLargeFlows(
   return fetchRowsWithTieExpansion<MintBurnSourceRow>(db, {
     selectSql: `SELECT id, stablecoin_id, symbol, chain_id, direction, amount_usd,
                       counterparty, timestamp, flow_type, burn_type`,
-    fromSql: "mint_burn_events",
+    fromSql: "mint_burn_events INDEXED BY idx_mbe2_ts",
     timeColumn: "timestamp",
     trailingWhereSql: `
                    AND amount_usd IS NOT NULL
                    AND amount_usd >= ?
                    AND (flow_type IS NULL OR flow_type NOT IN ('bridge_transfer', 'protocol_internal'))
-                   AND (direction = 'mint' OR burn_type IS NULL OR burn_type != 'review_required')`,
+                   AND (direction = 'mint' OR burn_type IS NULL OR burn_type != 'review_required')
+                   AND direction IN ('mint', 'burn')
+                   AND NOT EXISTS (
+                     SELECT 1 FROM tape_events INDEXED BY idx_tape_source_key
+                     WHERE source_table = 'mint_burn_events'
+                       AND source_row_id = mint_burn_events.id AND transition = 'updated'
+                   )`,
     trailingBinds: [NOTICE_USD],
     orderBySql: "timestamp ASC, id ASC",
     since,
@@ -143,7 +150,10 @@ async function projectLargeFlows(
 ): Promise<ProjectorResult> {
   const { since, until, limit } = await resolveProjectorOptions(db, CURSOR_KEY, options);
 
-  const rows = await fetchLargeFlows(db, since, until, limit);
+  // Eligibility can change in place after price healing or burn review. Reconcile
+  // recent source identities independently of the watermark; older repairs use
+  // explicit operator bounds instead of a full-history scan on every cron.
+  const rows = await fetchLargeFlows(db, sourceReconciliationSince(options), until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
 
   const events: TapeEventInsert[] = [];

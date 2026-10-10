@@ -105,6 +105,8 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
   const results: DexApiPool[] = [];
   const errors: string[] = [];
   const warnings: string[] = [];
+  const physicalPoolKeys = new Set<string>();
+  let censusIncomplete = false;
   let successfulPages = 0;
   let degraded = false;
   let url: string | null = buildOrcaPoolsUrl();
@@ -199,7 +201,10 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
     let pageHasEligiblePool = false;
     let malformedRows = 0;
     for (const rawPool of json.data) {
-      if (!isOrcaPool(rawPool)) {
+      const address = isDexApiRecord(rawPool) && typeof rawPool.address === "string" ? rawPool.address.trim() : "";
+      if (address) physicalPoolKeys.add(`solana:${address}`);
+      else censusIncomplete = true;
+      if (!address || !isOrcaPool(rawPool)) {
         malformedRows++;
         continue;
       }
@@ -276,7 +281,7 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
     url = nextCursor ? buildOrcaPoolsUrl(nextCursor) : null;
   }
 
-  if (successfulPages > 0 && paginationState.revision) {
+  if (successfulPages > 0 && paginationState.revision && !censusIncomplete) {
     pendingPaginationUpdates.push({
       sourceKey: ORCA_SOURCE_KEY,
       cursor: resumeCursor,
@@ -290,7 +295,7 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
     });
   }
   // Finishing a rotating tail is not a census of the skipped middle pages.
-  const exhaustive = cycleCompleted && !degraded && errors.length === 0 &&
+  const exhaustive = cycleCompleted && !censusIncomplete && !degraded && errors.length === 0 &&
     (storedTailCursor == null || storedTailCursor === refreshedHeadCursor);
 
   if (results.length > 0) {
@@ -311,5 +316,6 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
       cursor: resumeCursor,
       cycleCompleted,
     },
-  }), pendingPaginationUpdates, censusScope: exhaustive ? "exhaustive" : "bounded-sample" };
+  }), physicalPoolCensus: { exactPoolKeys: [...physicalPoolKeys], incompleteChains: censusIncomplete ? ["solana"] : [] },
+  pendingPaginationUpdates, censusScope: exhaustive ? "exhaustive" : "bounded-sample" };
 }

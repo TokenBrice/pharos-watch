@@ -299,7 +299,7 @@ export function getImpactedPublicSurfaces(
     });
   }
 
-  if (mintBurnStatus !== "healthy" || healthData.mintBurn.majorStaleCount > 0) {
+  if (mintBurnStatus !== "healthy" || (healthData.mintBurn.majorStaleCount != null && healthData.mintBurn.majorStaleCount > 0)) {
     items.push({
       id: "mint-burn",
       title: "Mint and burn flow surfaces",
@@ -313,8 +313,9 @@ export function getImpactedPublicSurfaces(
     items.push({
       id: "blacklist",
       title: "Blacklist risk context",
-      detail:
-        "Blacklist event totals and amount-aware risk context are incomplete until missing blacklist amounts are backfilled.",
+      detail: healthData.blacklist.missingRatio == null
+        ? "Blacklist event totals and amount-gap evidence are unavailable until telemetry recovers."
+        : "Blacklist event totals and amount-aware risk context are incomplete until missing blacklist amounts are backfilled.",
       tone: blacklistStatus,
     });
   }

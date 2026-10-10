@@ -5,7 +5,7 @@ import {
 
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
-import { getCirculatingRaw, getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevMonthRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevMonthRawOrNull, getPrevWeekRawOrNull, SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC } from "@shared/lib/supply";
 import type { SupplyGapFillProvenance } from "@shared/types/market";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -19,6 +19,7 @@ import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshne
 import type { PeggedAsset } from "./enrich-prices";
 import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
 import { toPositiveFiniteNumber } from "./supplemental-assets/shared";
+import { isSupplyObservationWithinRestoreCeiling } from "./shared";
 
 /**
  * DEC-01 CoinGecko aggregate gap-fill limits (ratio = CoinGecko market cap / DefiLlama list total).
@@ -50,9 +51,14 @@ const MAX_LOOKBACK_POINT_DISTANCE_MS = 3 * 24 * 60 * 60 * 1000;
 const MAX_GAP_FILL_CARRY_RUNS = 2;
 
 /** Carry one coherent previous observation, never a fresh-price/old-chain synthetic supply. */
-export function carryForwardSupplyGapFill(asset: PeggedAsset, previous: PeggedAsset | undefined): boolean {
+export function carryForwardSupplyGapFill(
+  asset: PeggedAsset,
+  previous: PeggedAsset | undefined,
+  nowSec = Math.floor(Date.now() / 1000),
+): boolean {
   const provenance = previous?.supplyGapFill;
   if (previous?.supplySource !== "coingecko-gap-fill" || !provenance) return false;
+  if (previous.supplyObservedAt != null && !isSupplyObservationWithinRestoreCeiling(previous.supplyObservedAt, nowSec)) return false;
   const runs = provenance.carryForwardRuns ?? 0;
   if (runs >= MAX_GAP_FILL_CARRY_RUNS) return false;
   asset.circulating = previous.circulating;
@@ -102,7 +108,8 @@ export type CoinGeckoGapFillRejectionReason =
   | "baseline-mismatch"
   | "history-incomplete"
   | "history-ratio-above-bound"
-  | "history-below-baseline";
+  | "history-below-baseline"
+  | "current-observation-future";
 
 export interface CoinGeckoGapFillRejection {
   id: string;
@@ -460,7 +467,8 @@ function buildSupplyGapCandidates(
     const pegKey = pegTypeFromCurrency(meta.flags.pegCurrency);
     if (!pegKey) continue;
 
-    const dlMarketCap = getCirculatingRaw(asset);
+    const dlMarketCap = getCirculatingRawOrNull(asset);
+    if (dlMarketCap === null) continue;
     const metadataChainIds = buildMetadataChainIds(assetId);
     const knownChainIds = new Set<string>();
     for (const [chainId] of canonicalizeChainCirculating(asset.chainCirculating)) {
@@ -710,7 +718,8 @@ export async function reconcileTrackedSupplyGaps(
       const meta = ACTIVE_META_BY_ID.get(assetId);
       if (!meta || meta.detailProvider !== "defillama" || !meta.geckoId) return [];
 
-      if (getCirculatingRaw(asset) <= 0) return [];
+      const supply = getCirculatingRawOrNull(asset);
+      if (supply === null || supply <= 0) return [];
 
       const metadataChainIds = buildMetadataChainIds(assetId);
       if (metadataChainIds.length === 0) return [];
@@ -781,6 +790,11 @@ export async function reconcileTrackedSupplyGaps(
     const day = findNearestMarketCap(marketCaps, nowMs - (24 * 60 * 60 * 1000), MAX_LOOKBACK_POINT_DISTANCE_MS);
     const week = findNearestMarketCap(marketCaps, nowMs - (7 * 24 * 60 * 60 * 1000), MAX_LOOKBACK_POINT_DISTANCE_MS);
     const month = findNearestMarketCap(marketCaps, nowMs - (30 * 24 * 60 * 60 * 1000), MAX_LOOKBACK_POINT_DISTANCE_MS);
+    // Historical nearest-point matching is not current-generation admission.
+    if (currentFromHistory && currentFromHistory.observedAt > nowSec + SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC) {
+      gapFillRejections.push({ id: candidate.asset.id, reason: "current-observation-future", ratio: null });
+      continue;
+    }
 
     if (
       candidate.kind === "zero-supply-collapse" &&
@@ -858,7 +872,7 @@ export async function reconcileTrackedSupplyGaps(
         fromSource,
         toValue: application.reconciledCurrent,
         observedAt,
-        observedAgeSec: Math.max(0, nowSec - observedAt),
+        observedAgeSec: nowSec - observedAt,
       });
       byReason["coingecko-gap-fill"] += 1;
       continue;
@@ -872,7 +886,7 @@ export async function reconcileTrackedSupplyGaps(
       month: month.value,
     };
     const observedAt = currentFromHistory.observedAt;
-    const observedAgeSec = Math.max(0, nowSec - observedAt);
+    const observedAgeSec = nowSec - observedAt;
 
     const fromSource = candidate.asset.supplySource ?? null;
     const reason: SupplyGapReconciliationReason = "defillama-history-gap-fill";

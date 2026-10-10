@@ -12,7 +12,10 @@ import type {
 import type { DexLiquidityRow } from "../../lib/dex-liquidity";
 import type { ApiKeyRow } from "../../lib/api-key-core";
 import type { ReconciliationRunRow as BlacklistReconciliationStatusRow } from "../../lib/blacklist-reconciliation-status";
+import type { MintBurnRow } from "../../lib/mint-burn-pipeline/types";
 import { makeStablecoin, TEST_STABLECOIN_TIMESTAMP_SEC } from "@shared/test-utils/stablecoin";
+
+type MintBurnRowFixture = MintBurnRow & Record<string, string | number | null>;
 
 type BlacklistRow = {
   id: string;
@@ -65,27 +68,6 @@ type SupplyRow = {
   snapshot_date: number;
   circulating_usd: number;
   price: number | null;
-};
-
-type MintBurnRow = {
-  id: string;
-  stablecoin_id: string;
-  symbol: string;
-  chain_id: string;
-  direction: "mint" | "burn";
-  amount: number;
-  amount_usd: number | null;
-  price_used: number | null;
-  price_timestamp: number | null;
-  price_source: string | null;
-  burn_type: "effective_burn" | "bridge_burn" | "review_required" | null;
-  burn_review_reason: string | null;
-  flow_type: "standard" | "atomic_roundtrip" | "bridge_transfer" | "protocol_internal";
-  counterparty: string | null;
-  tx_hash: string;
-  block_number: number;
-  timestamp: number;
-  explorer_tx_url: string;
 };
 
 type YieldHistoryRow = {
@@ -285,7 +267,7 @@ export function makeSupplyRow(overrides: Partial<SupplyRow> = {}): SupplyRow {
   return { ...defaults, ...overrides };
 }
 
-export function makeMintBurnRow(overrides: Partial<MintBurnRow> = {}): MintBurnRow {
+export function makeMintBurnRow(overrides: Partial<MintBurnRow> = {}): MintBurnRowFixture {
   const direction = overrides.direction ?? "mint";
   const defaults: MintBurnRow = {
     id: "mb-1",

@@ -9,10 +9,10 @@ import {
   resolveYieldRowBenchmark,
 } from "@/lib/yield-benchmark";
 import { getYieldDataSourceMeta } from "@/lib/yield-data-source";
-import { computePysBreakdown, getPysColor } from "@/lib/yield-constants";
+import { computePysBreakdown } from "@/lib/yield-constants";
 import { buildYieldSourceExplorerModel, type YieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
 import type { YieldSourceDepthLens, YieldSourceRiskDriver } from "@/lib/yield-source-risk";
-import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
+import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES, getPysColor } from "@shared/lib/classification";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { YIELD_BENCHMARK_KEY_CURRENCY } from "@shared/types/yield";
@@ -158,6 +158,7 @@ export interface YieldDetailSectionReadyModel extends YieldDetailReadyModel {
   setShowAllSources: Dispatch<SetStateAction<boolean>>;
   selectedSourceKeys: Set<string>;
   toggleSource: (sourceKey: string) => void;
+  showChosenSource: () => void;
 }
 
 export interface YieldDetailSectionLoadingModel {
@@ -247,5 +248,8 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
     setShowAllSources,
     selectedSourceKeys,
     toggleSource,
+    showChosenSource: () => replaceParams((params) => {
+      params.set("sources", model.sourceExplorer.selectedSource.sourceKey);
+    }),
   };
 }

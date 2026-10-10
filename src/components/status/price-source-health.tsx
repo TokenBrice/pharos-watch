@@ -8,10 +8,11 @@ import {
 import {
   PRICE_SOURCE_HEALTH_BUCKET_KEYS,
   getPriceSourceHealthBucketShortLabel,
+  getPriceSourceHealthMissingCounts,
 } from "@shared/lib/pricing-sources";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PriceSourceHealth, StatusSectionError } from "@shared/types";
-import { formatElapsedSeconds } from "@shared/lib/format";
+import { formatCurrency, formatElapsedSeconds } from "@shared/lib/format";
 import { StatusCardEmptyState } from "@/components/status/page-primitives";
 
 function MetricCard({ label, value, pct, severity }: { label: string; value: number; pct: string; severity: string }) {
@@ -54,12 +55,13 @@ export function PriceSourceHealthCard({
     confidenceMarketCapUsd: cdValue,
     pricedMarketCapUsd: pricedValue,
     acknowledgedMissingCount,
+    supplyCoverage,
   } = health.active ?? health;
   const pct = (n: number) => totalAssets > 0 ? `${((n / totalAssets) * 100).toFixed(1)}%` : "—";
   // Accepted single-source prices are not failed consensus. Confidence colors
   // measure priced-value exposure; legacy snapshots remain explicitly neutral.
   const valueShare = (n: number | undefined) =>
-    typeof n === "number" && typeof pricedValue === "number" && pricedValue > 0 ? (n / pricedValue) * 100 : null;
+    supplyCoverage?.complete === true && typeof n === "number" && typeof pricedValue === "number" && pricedValue > 0 ? (n / pricedValue) * 100 : null;
   const valuePct = (n: number | undefined) => {
     const share = valueShare(n);
     return share == null ? null : `${share.toFixed(1)}% of value`;
@@ -93,12 +95,8 @@ export function PriceSourceHealthCard({
     },
   ];
 
-  // Acknowledged price-gap reviews stay visible as raw missing rows but do not
-  // drive the Missing tile; an expired review counts again on the next sync.
-  const acknowledged = typeof acknowledgedMissingCount === "number"
-    ? Math.max(0, Math.min(acknowledgedMissingCount, sd.missing))
-    : 0;
-  const unacknowledgedMissing = sd.missing - acknowledged;
+  const { acknowledged, unacknowledged: unacknowledgedMissing } =
+    getPriceSourceHealthMissingCounts(sd.missing, acknowledgedMissingCount);
 
   return (
     <Card>
@@ -111,6 +109,13 @@ export function PriceSourceHealthCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {supplyCoverage?.complete !== true ? (
+          <p className="text-xs text-muted-foreground">
+            {supplyCoverage
+              ? `Supply coverage partial · ${supplyCoverage.observedCount} observed · ${supplyCoverage.unavailableCount} unavailable. ${supplyCoverage.observedCount > 0 && typeof pricedValue === "number" ? `${formatCurrency(pricedValue)} known priced-supply subtotal.` : "Priced supply unavailable."} Confidence percentages use asset counts; value severity unavailable.`
+              : "Supply coverage unavailable. Confidence percentages use asset counts; value severity unavailable."}
+          </p>
+        ) : null}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {metrics.map((m) => (
             <MetricCard

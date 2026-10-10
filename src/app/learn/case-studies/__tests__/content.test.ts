@@ -49,12 +49,6 @@ const KNOWN_INTERNAL_ROUTES = new Set([
   "/stability-index/",
   "/timeline/",
 ]);
-const NON_STUDY_CONTENT_FILES = new Set([
-  "client-index.ts",
-  "event-window-resolver.ts",
-  "index.ts",
-  "types.ts",
-]);
 
 const TRACKED_COIN_IDS = new Set(
   readdirSync(COINS_DIR)
@@ -71,8 +65,8 @@ const CEMETERY_IDS = new Set(
 const VALID_ARCHETYPES = new Set<string>(MECHANISM_ARCHETYPE_VALUES);
 const VALID_OUTCOMES = new Set(["survived", "wounded", "died"]);
 const CONTENT_MODULE_SLUGS = readdirSync(CONTENT_DIR)
-  .filter((file) => file.endsWith(".ts") && !NON_STUDY_CONTENT_FILES.has(file))
-  .map((file) => file.replace(/\.ts$/, ""));
+  .filter((file) => file.endsWith(".json"))
+  .map((file) => file.replace(/\.json$/, ""));
 
 const CASE_STUDY_SLUGS = new Set(CONTENT_MODULE_SLUGS);
 

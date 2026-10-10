@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION, type StagedPool } from "../../dex-discovery/types";
-import { initMetrics } from "../pool-helpers";
+import { computeLiquidityScore, computePoolQualityContribution, initMetrics } from "../pool-helpers";
 import { buildPoolFingerprint } from "../pool-normalization";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
 import { mergeStagedPools, type StagedPoolRow } from "../staging-merge";
 import { buildStagedPoolWriteback } from "../staged-pool-writeback";
+import { applyRebuiltMetrics, rebuildMetricsFromPools, summarizeRetainedPoolVolume } from "../scoring-helpers";
+import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import type { LiquidityMetrics, PoolEntry } from "../types";
 import { makeStagedPoolRow } from "./staging-merge.test-support";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
@@ -237,6 +239,66 @@ describe("buildStagedPoolWriteback", () => {
       extra: { measurement: { decayed: false } },
     });
   });
+
+  it.each(["dl", "direct_api"] as const)(
+    "preserves measured balance, locks, and canonical pair quality when remembering %s pools",
+    async (source) => {
+      vi.spyOn(Date, "now").mockReturnValue((NOW + 3_600) * 1000);
+      const results: LiquidityMetrics[] = [];
+      for (const symbol of ["USDC / USDT", "USDC-USDT", "3pool"]) {
+        const writeback = buildStagedPoolWriteback(
+          new Map([["usdc-circle", makeMetrics("usdc-circle", [makePoolEntry({
+            source,
+            symbol,
+            poolType: "curve-stableswap",
+            extra: { balanceRatio: 0.2, lockedLiquidityPct: 80 },
+          })])]]),
+          NOW,
+        );
+        const metrics = new Map<string, LiquidityMetrics>();
+        const merged = await mergeStagedPools(
+          createMockDb(writeback.pools.map(toStagedPoolRow)),
+          metrics, createKnownPoolIdentityIndex(), NOW + 3_600, new Map(),
+        );
+        expect(merged.mergedCount).toBe(1);
+        const metric = metrics.get("usdc-circle")!;
+        const qualityMultiplier = writeback.pools[0]!.qualityMultiplier;
+        expect(qualityMultiplier).not.toBeNull();
+        const expected = computePoolQualityContribution({
+          qualityTvlUsd: 1_000_000, effectiveTvlUsd: 1_000_000,
+          qualityMultiplier: qualityMultiplier!,
+          balanceRatio: 0.2, pairQuality: 1, hasMeasuredBalance: true,
+        });
+        expect(metric.topPools[0]).toMatchObject({
+          source, symbol,
+          extra: {
+            balanceRatio: 0.2, lockedLiquidityPct: 80, pairQuality: 1,
+            qualityAdjustedTvl: Math.round(expected.qualityAdjustedTvl),
+            effectiveTvl: Math.round(expected.effectiveTvl),
+            measurement: { balanceMeasured: true, decayed: false },
+          },
+        });
+        applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
+        metric.volumeAvailability = summarizeRetainedPoolVolume(
+          metric.topPools.map((pool) => ({ reading: pool.volumeReading, tvlUsd: pool.tvlUsd })),
+          { asOfSec: NOW + 3_600, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC },
+        ).volumeAvailability;
+        expect(metric.qualityAdjustedTvl).toBe(Math.round(expected.qualityAdjustedTvl));
+        expect(metric.effectiveTvl).toBe(Math.round(expected.effectiveTvl));
+        expect(metric.totalTvlForBalance).toBe(1_000_000);
+        expect(metric.lockedLiqWeightedSum / metric.totalTvlForLocked).toBe(0.8);
+        results.push(metric);
+      }
+      const baseline = results[0]!;
+      expect(computeLiquidityScore(baseline, 50, 1_000_000_000).score).not.toBeNull();
+      for (const metric of results.slice(1)) {
+        expect(metric.stressWeightedSum).toBe(baseline.stressWeightedSum);
+        expect(computeLiquidityScore(metric, 50, 1_000_000_000)).toEqual(
+          computeLiquidityScore(baseline, 50, 1_000_000_000),
+        );
+      }
+    },
+  );
 
   it("never writes back a row the merge itself backfilled", async () => {
     vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);

@@ -1,5 +1,6 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/data-surface-descriptors";
 import type { ChainsResponse } from "@shared/types/chains";
 import { normalizeStablecoinLiveSummary, projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
@@ -56,7 +57,6 @@ import {
   CRON_CHARTS,
   CRON_DAILY_DIGEST,
   CRON_MINT_BURN,
-  CRON_RESERVE_SYNC,
   CRON_SAFETY_GRADE_HISTORY,
   CRON_SUPPLY_SNAPSHOT,
   CRON_TELEGRAM_PULSE,
@@ -154,7 +154,7 @@ const DATA_SURFACE_PRODUCER_INTERVAL_MS = {
  */
 export const FRONTEND_API_QUERY_DESCRIPTORS = {
   stablecoinLiveSummary: defineParameterizedApiQuery(
-    "plain",
+    "meta",
     createLazySchema<StablecoinLiveSummary>(async () => StablecoinLiveSummaryResponseSchema),
     (stablecoinId: string) => ({
       queryKey: ["stablecoin-live-summary", stablecoinId] as const,
@@ -397,7 +397,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     {
       queryKey: ["depeg-resolver"] as const,
       path: API_PATHS.depegResolver(),
-      producerIntervalMs: CRON_15MIN,
+      producerIntervalMs: CRON_INTERVALS["compute-depeg-resolver"] * 1000,
     },
     "meta",
     createLazySchema<DdrResponse>(async () => (await import("@shared/types/depeg-resolver")).DdrResponseSchema),
@@ -406,7 +406,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     {
       queryKey: ["depeg-resolver-review"] as const,
       path: API_PATHS.depegResolverReview(),
-      producerIntervalMs: CRON_15MIN,
+      producerIntervalMs: CRON_INTERVALS["compute-depeg-resolver"] * 1000,
     },
     "meta",
     createLazySchema<DdrrResponse>(
@@ -417,7 +417,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     {
       queryKey: ["redemption-backstops"] as const,
       path: API_PATHS.redemptionBackstops(),
-      producerIntervalMs: CRON_RESERVE_SYNC,
+      producerIntervalMs: CRON_INTERVALS["sync-redemption-backstops"] * 1000,
     },
     "meta",
     createLazySchema<RedemptionBackstopsResponse>(
@@ -452,7 +452,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       path: API_PATHS.stablecoinCharts(),
       producerIntervalMs: CRON_CHARTS,
     },
-    "plain",
+    "meta",
     createLazySchema<StablecoinChartPoint[]>(
       async () => (await import("@shared/types/market")).StablecoinChartResponseSchema,
     ),
@@ -557,7 +557,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     }),
   ),
   supplyHistory: defineParameterizedApiQuery(
-    "plain",
+    "meta",
     createLazySchema<SupplyHistoryPoint[]>(
       async () => (await import("@shared/types/market")).SupplyHistoryResponseSchema,
     ),

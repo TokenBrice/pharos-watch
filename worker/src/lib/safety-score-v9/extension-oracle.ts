@@ -184,13 +184,34 @@ export function adaptOracleReview(
       paths,
     };
   }
-  if (!paths && profile.branchApplicability?.disposition === "not-applicable") {
-    return {
-      status: notApplicableStatus("v9.control.oracle-review", profile.branchApplicability.rationale, evidenceKeys),
-      tier: null,
-      liquidationBranchesApplicable: false,
-      branches: [],
-    };
+  const aggregateApplicability = !paths ? profile.branchApplicability : undefined;
+  if (aggregateApplicability) {
+    const applicabilityEvidenceKeys = evidence.add({
+      componentKeys: ["economic-control:oracle"],
+      sourceId: "stablecoin-meta.oracle-risk-applicability",
+      reviewedAt: aggregateApplicability.reviewedAt,
+      publishedBy: "unknown",
+      confidence,
+      sources: aggregateApplicability.sources,
+      payload: aggregateApplicability,
+      maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
+    });
+    if (researchReviewObservationState(aggregateApplicability.reviewedAt, clockSec) === "stale") {
+      return {
+        status: requiredStatus("v9.control.oracle-review", "stale", `oracle:${meta.id}`, applicabilityEvidenceKeys),
+        tier: null,
+        liquidationBranchesApplicable: true,
+        branches: [],
+      };
+    }
+    if (aggregateApplicability.disposition === "not-applicable" && profile.confidence === "verified") {
+      return {
+        status: notApplicableStatus("v9.control.oracle-review", aggregateApplicability.rationale, applicabilityEvidenceKeys),
+        tier: null,
+        liquidationBranchesApplicable: false,
+        branches: [],
+      };
+    }
   }
   const unresolvedPaths = paths?.some((path) => path.observationState !== "known");
   const applicableBranches = paths

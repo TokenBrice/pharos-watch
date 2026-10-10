@@ -241,9 +241,10 @@ export async function evaluateAccessGate(
     );
   }
 
-  // Donor keys never degrade to the isolate-local limiter: their small quota
-  // is meant to be global, so a limiter outage fails closed for them.
-  const canUseIsolateFallbackRateLimit = isCacheableGetRequest(request, url) && apiKeyAuth.key.tier !== "donor";
+  // Donor quotas are global and self-serve revocation requires D1, so neither
+  // tier may degrade to the isolate-local limiter during a dependency outage.
+  const canUseIsolateFallbackRateLimit = isCacheableGetRequest(request, url)
+    && apiKeyAuth.key.tier !== "donor" && apiKeyAuth.key.tier !== "self-serve";
   const isolateFallbackRateLimit = resolveIsolateFallbackApiKeyRateLimit(apiKeyAuth.key.rateLimitPerMinute);
   let rateLimitResponse: Response | null;
   if (isApiKeyRateLimitDependencyCircuitOpen()) {

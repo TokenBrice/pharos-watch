@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { NET_FLOW_DIRECTION_24H_VALUES, PRESSURE_SHIFT_STATE_VALUES } from "./mint-burn-signals";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
-import { FreshnessStatusSchema } from "./api-meta";
+import { ApiMetaEnvelopeSchema, FreshnessStatusSchema } from "./api-meta";
 
 export {
   NET_FLOW_DIRECTION_24H_VALUES,
@@ -189,6 +189,12 @@ const MintBurnAggregateChainSchema = z.object({
   valuation: MintBurnValuationCompletenessSchema.optional(),
 });
 
+const MintBurnHourlyWindowSchema = z.object({
+  start: z.number().int().nonnegative(),
+  end: z.number().int().nonnegative(),
+  semantics: z.literal("closed-utc-hours"),
+});
+
 export const MintBurnFlowsResponseSchema = z.object({
   gauge: MintBurnGaugeSchema,
   coins: z.array(MintBurnCoinFlowSchema),
@@ -196,8 +202,11 @@ export const MintBurnFlowsResponseSchema = z.object({
   hourly: z.array(MintBurnHourlyBucketSchema),
   updatedAt: z.number(),
   windowHours: z.number().int().positive().optional(),
+  /** Exact [start,end) UTC boundaries; absent on pre-cutover historical payloads. */
+  window: MintBurnHourlyWindowSchema.optional(),
   scope: MintBurnScopeSchema.optional(),
   sync: MintBurnSyncSchema.optional(),
+  _meta: ApiMetaEnvelopeSchema.optional(),
 });
 export type MintBurnFlowsResponse = z.infer<typeof MintBurnFlowsResponseSchema>;
 
@@ -225,8 +234,10 @@ export const MintBurnPerCoinResponseSchema = z.object({
   valuation: MintBurnValuationSchema.optional(),
   updatedAt: z.number(),
   windowHours: z.number().int().positive().optional(),
+  window: MintBurnHourlyWindowSchema.optional(),
   scope: MintBurnScopeSchema.optional(),
   sync: MintBurnSyncSchema.optional(),
+  _meta: ApiMetaEnvelopeSchema.optional(),
 });
 export type MintBurnPerCoinResponse = z.infer<typeof MintBurnPerCoinResponseSchema>;
 

@@ -85,10 +85,8 @@ export function buildSafetyChanges(
 /**
  * Reserve-drift transitions (C123). Fires only on the not-drifting → drifting
  * edge: a coin present in the current drift id-set but absent from the prior
- * one. Entering-drift only (v1) — a coin leaving the drift set produces no
- * event, so a transient live-fetch failure (which drops a coin from the
- * producer's drift set) can never read as a false "drift cleared". Mirrors
- * `buildLaunchPromotions`.
+ * one. Dispatch supplies comparable observed baselines and cold-seeds returning
+ * assets after observation gaps; leaving the drift set produces no event.
  */
 export function buildReserveTransitions(
   previousDriftIds: ReadonlySet<string>,

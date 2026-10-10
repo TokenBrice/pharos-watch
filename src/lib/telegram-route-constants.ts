@@ -10,17 +10,13 @@ import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 
 export const PHAROSWATCHBOT_BOT_URL = TELEGRAM_BOT_URL;
 
-export const RECOMMENDED_SETUP = {
+const RECOMMENDED_SETUP = {
   alertTypes: ["dews", "depeg"],
   presetId: "usd-top25",
 } as const;
 
 export const RECOMMENDED_SETUP_COMMAND = `/subscribe ${RECOMMENDED_SETUP.alertTypes.join(",")} ${RECOMMENDED_SETUP.presetId}`;
 
-type SubscribeStartPayloadInput = {
-  alertTypes: readonly string[];
-  presetId: string;
-};
 
 function assertTelegramStartPayload(payload: string): string {
   if (payload.length > TELEGRAM_START_PAYLOAD_MAX_LENGTH || !TELEGRAM_MINI_APP_PAYLOAD_PATTERN.test(payload)) {
@@ -51,13 +47,9 @@ function buildTelegramAdoptionDeepLink(placement: TelegramAdoptionCatalogPlaceme
     : buildTelegramMiniAppDeepLink(entry.token);
 }
 
-function buildSubscribeStartPayload(setup: SubscribeStartPayloadInput): string {
-  return assertTelegramStartPayload(`sub_${setup.alertTypes.join("-")}_${setup.presetId}`);
-}
 
 export const SETUP_DEEP_LINK = buildTelegramAdoptionDeepLink("hero");
-export const RECOMMENDED_SETUP_START_PAYLOAD = buildSubscribeStartPayload(RECOMMENDED_SETUP);
-export const RECOMMENDED_SETUP_DEEP_LINK = buildTelegramBotStartDeepLink(RECOMMENDED_SETUP_START_PAYLOAD);
+export const RECOMMENDED_SETUP_DEEP_LINK = buildTelegramAdoptionDeepLink("setup");
 export const MINI_APP_SETUP_DEEP_LINK = buildTelegramAdoptionDeepLink("miniapp_setup");
 export const MINI_APP_HOME_DEEP_LINK = buildTelegramAdoptionDeepLink("miniapp_home");
 export const MINI_APP_WATCHLIST_DEEP_LINK = buildTelegramAdoptionDeepLink("miniapp_watchlist");

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { adaptHliquityHederaState, type HliquityHederaState } from "../hliquity-hedera";
 import { runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 
 const MIRROR_BASE = "https://mainnet-public.mirrornode.hedera.com/api/v1";
 const BLOCK_URL = `${MIRROR_BASE}/blocks?limit=1&order=desc`;
@@ -29,6 +30,7 @@ function hederaNetwork(options: {
   fxDate?: string;
   fxRate?: number | null;
   hbarPrice?: number | null;
+  quoteOverrides?: { timestamp?: number; confidence?: number };
 } = {}): AdapterNetworkSpec {
   const fx = options.fxRate === undefined
     ? { base: "CHF", date: options.fxDate ?? "2026-09-09", rates: { USD: CHF_USD_RATE } }
@@ -57,6 +59,7 @@ function hederaNetwork(options: {
             price: hbarPrice,
             timestamp: 1_788_980_926,
             confidence: 1,
+            ...options.quoteOverrides,
           },
         },
       },
@@ -204,6 +207,18 @@ describe("fetchHliquityHederaReserves", () => {
     })).rejects.toThrow(/freshness window/);
   });
 
+  it.each([
+    { timestamp: NOW_SEC - 86401, confidence: 1 },
+    { timestamp: undefined, confidence: 1 },
+    { timestamp: NOW_SEC, confidence: 0.79 },
+    { timestamp: NOW_SEC + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC + 1, confidence: 1 },
+  ])("preserves strict HBAR quote-quality rejection (case $#)", async (quoteOverrides) => {
+    await expect(runAdapter("hliquity-hedera", "hchf-hedera-swiss-franc", {
+      network: hederaNetwork({ quoteOverrides }),
+      nowSec: NOW_SEC,
+    })).rejects.toThrow();
+  });
+
   it("degrades when DefiLlama returns no HBAR quote", async () => {
     const { result } = await runAdapter("hliquity-hedera", "hchf-hedera-swiss-franc", {
       network: hederaNetwork({ hbarPrice: null }),
@@ -212,6 +227,7 @@ describe("fetchHliquityHederaReserves", () => {
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "hbar-price-unavailable", effect: "degraded" }),
+      expect.objectContaining({ code: "defillama-quote-missing", effect: "degraded" }),
     ]));
   });
 });

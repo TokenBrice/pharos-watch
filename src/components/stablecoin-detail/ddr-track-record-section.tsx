@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { QueryStateNotice } from "@/components/query-state-notice";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { FactGrid, type FactGridItem } from "@/components/stablecoin-detail/fact-grid";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
@@ -50,14 +51,32 @@ function IncidentRow({ incident }: { incident: DdrTrackRecordIncidentRow }) {
  *
  * Deliberately a ledger, not a forecast timeline — the detail page's DDR card
  * owns the forward-looking language; this module is the track record behind it.
- * Renders nothing while the review query is in flight and for coins the feed
- * carries no reviewed publication for.
+ * Healthy empty feeds and in-flight reads are omitted; unavailable or retained
+ * stale evidence remains visibly qualified.
  */
 export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }) {
   const enabled = isDepegResolverEnabled() && isDepegResolverReviewerEnabled();
-  const { data } = useDepegResolverReview({ enabled });
+  const query = useDepegResolverReview({ enabled });
+  const { data } = query;
   const record = enabled ? projectDdrTrackRecordSummary(data, stablecoinId) : null;
-  if (!record) return null;
+  if (!enabled) return null;
+  const degraded = data?._meta?.degraded === true;
+  const summaryUnavailable = data != null && data.summary.byStablecoin == null;
+  const unavailable = query.error != null || degraded || summaryUnavailable;
+  if (!record) {
+    if (!unavailable) return null;
+    return (
+      <section id="ddr-track-record" aria-label="DDR track record" className={SECTION_SCROLL_MT}>
+        <QueryStateNotice state="unavailable" label="DDR track record" onRetry={() => void query.refetch()} />
+        {degraded || summaryUnavailable ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Snapshot reason: {data?._meta?.degradedReason ?? "coin-summary-unavailable"}
+          </p>
+        ) : null}
+      </section>
+    );
+  }
+  const limitedPopulation = data?._meta?.incidentRowsTruncated === true;
 
   const facts: FactGridItem[] = [
     { key: "forecasts", label: "Forecasts", value: String(record.reviewedForecastCount) },
@@ -92,13 +111,31 @@ export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }
     <Card id="ddr-track-record" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
         <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>DDR track record</StablecoinModuleTitle>
-        <Badge variant="outline" className={cn("text-[11px] font-medium", record.chipToneClass)}>
-          {record.chipLabel}
+        <Badge variant="outline" className={cn("text-[11px] font-medium", limitedPopulation ? "text-muted-foreground" : record.chipToneClass)}>
+          {limitedPopulation ? "Partial coverage" : record.chipLabel}
         </Badge>
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
-        <p className="text-sm leading-relaxed text-muted-foreground">{record.lede}</p>
-        <FactGrid aria-label="DDR track record facts" items={facts} />
+        {unavailable ? (
+          <QueryStateNotice
+            state="stale-with-data"
+            label="DDR track record"
+            dataUpdatedAt={(data?._meta?.computedAt ?? 0) * 1000}
+            onRetry={() => void query.refetch()}
+          />
+        ) : null}
+        {degraded ? (
+          <p className="text-xs text-muted-foreground">Snapshot reason: {data?._meta?.degradedReason ?? "degraded"}</p>
+        ) : null}
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {limitedPopulation ? "The reviewed incident cohort is incomplete; track-record aggregates are withheld." : record.lede}
+        </p>
+        {!limitedPopulation ? <FactGrid aria-label="DDR track record facts" items={facts} /> : null}
+        {record.incidentSampleIncomplete ? (
+          <p className="text-xs text-muted-foreground">
+            The public incident sample is incomplete; forecast statistics use the producer&apos;s full reviewed cohort.
+          </p>
+        ) : null}
         <ul aria-label="Reviewed depeg incidents" className="space-y-2">
           {record.incidents.map((incident) => (
             <IncidentRow key={incident.key} incident={incident} />

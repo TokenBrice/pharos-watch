@@ -23,7 +23,7 @@
 {"mechanismArchetype":"protocol-position","mechanismLabel":"Protocol Position Liability","pegReferenceId":"usdt-tether","jurisdiction":"unknown","coinCount":4}
 {"mechanismArchetype":"protocol-position","mechanismLabel":"Protocol Position Liability","pegReferenceId":"pyusd-paypal","jurisdiction":"unknown","coinCount":4}
 {"mechanismArchetype":"fiat-cash","mechanismLabel":"Custodial Cash and Cash-Equivalents","pegReferenceId":"unknown","jurisdiction":"France","coinCount":4}
-{"mechanismArchetype":"algorithmic","mechanismLabel":"Reflexive / Unbacked","pegReferenceId":"unknown","jurisdiction":"unknown","coinCount":4}
+{"mechanismArchetype":"algorithmic","mechanismLabel":"Programmatic Peg Defense","pegReferenceId":"unknown","jurisdiction":"unknown","coinCount":4}
 {"mechanismArchetype":"fiat-cash","mechanismLabel":"Custodial Cash and Cash-Equivalents","pegReferenceId":"unknown","jurisdiction":"Malta","coinCount":4}
 {"mechanismArchetype":"synthetic-delta-neutral","mechanismLabel":"Hedged Synthetic Dollar","pegReferenceId":"unknown","jurisdiction":"Germany","coinCount":4}
 {"mechanismArchetype":"fiat-cash","mechanismLabel":"Custodial Cash and Cash-Equivalents","pegReferenceId":"unknown","jurisdiction":"Australia","coinCount":4}
@@ -93,7 +93,7 @@
 {"mechanismArchetype":"rwa-credit-fund","mechanismLabel":"Tokenized Credit Fund","pegReferenceId":"unknown","jurisdiction":"UAE","coinCount":1}
 {"mechanismArchetype":"synthetic-delta-neutral","mechanismLabel":"Hedged Synthetic Dollar","pegReferenceId":"avusd-avant","jurisdiction":"British Virgin Islands","coinCount":1}
 {"mechanismArchetype":"rwa-credit-fund","mechanismLabel":"Tokenized Credit Fund","pegReferenceId":"unknown","jurisdiction":"Kyrgyz Republic","coinCount":1}
-{"mechanismArchetype":"algorithmic","mechanismLabel":"Reflexive / Unbacked","pegReferenceId":"unknown","jurisdiction":"United States","coinCount":1}
+{"mechanismArchetype":"algorithmic","mechanismLabel":"Programmatic Peg Defense","pegReferenceId":"unknown","jurisdiction":"United States","coinCount":1}
 {"mechanismArchetype":"synthetic-delta-neutral","mechanismLabel":"Hedged Synthetic Dollar","pegReferenceId":"unknown","jurisdiction":"Singapore","coinCount":1}
 {"mechanismArchetype":"protocol-position","mechanismLabel":"Protocol Position Liability","pegReferenceId":"xdai-gnosis","jurisdiction":"unknown","coinCount":1}
 {"mechanismArchetype":"tbill","mechanismLabel":"Tokenized Treasury","pegReferenceId":"usdo-openeden","jurisdiction":"Bermuda","coinCount":1}

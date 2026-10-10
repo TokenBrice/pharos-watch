@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { resolveEvidenceNullReason, resolvePenaltyDerivedFields } from "../evaluation-scoring";
+import { resolvePenaltyDerivedFields } from "../evaluation-scoring";
+import { resolveEvidenceNullReason } from "../../../lib/yield-ranking-helpers";
 
 const base = {
   apy30d: 5,
@@ -53,5 +54,18 @@ describe("resolveEvidenceNullReason", () => {
     expect(resolveEvidenceNullReason({ ...healthy, benchmarkFreshness: "stale", opportunityEvidenceComplete: false }))
       .toBe("benchmark-stale");
     expect(resolveEvidenceNullReason({ ...healthy, opportunityEvidenceComplete: true })).toBeNull();
+  });
+
+  it("keeps source and benchmark priorities independent of opportunity evidence", () => {
+    for (const opportunityEvidenceComplete of [true, false, undefined]) {
+      expect(resolveEvidenceNullReason({ ...healthy, referenceBenchmarkFreshness: "stale", opportunityEvidenceComplete }))
+        .toBe("benchmark-stale");
+      expect(resolveEvidenceNullReason({ ...healthy, sourceFreshness: "unknown", benchmarkFreshness: "stale", opportunityEvidenceComplete }))
+        .toBe("source-freshness-unknown");
+      expect(resolveEvidenceNullReason({ ...healthy, sourceFreshness: "stale", referenceBenchmarkFreshness: "stale", opportunityEvidenceComplete }))
+        .toBe("source-stale");
+      expect(resolveEvidenceNullReason({ ...healthy, benchmarkFreshness: "degraded", referenceBenchmarkFreshness: "degraded", opportunityEvidenceComplete }))
+        .toBe(opportunityEvidenceComplete === false ? "opportunity-evidence-missing" : null);
+    }
   });
 });

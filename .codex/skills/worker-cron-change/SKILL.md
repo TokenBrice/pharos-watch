@@ -15,7 +15,7 @@ Keep policy and incident detail in the owner docs; this skill coordinates the ch
 - `worker/src/cron/AGENTS.md`
 - [Cron policy: Source Of Truth](../../../docs/process/cron-trigger-policy.md#source-of-truth) and [new scheduled work](../../../docs/process/cron-trigger-policy.md#process-for-new-scheduled-work)
 - [Connection-budget operating assumption](../../../docs/worker-and-api-limits.md#connection-budget-operating-assumption)
-- [Cron Scheduling](../../../docs/worker-infrastructure.md#cron-scheduling), [slot capacity](../../../docs/worker-infrastructure.md#cron-slot-capacity-and-connection-pool-budget), and [Health & Status Endpoints](../../../docs/worker-infrastructure.md#health-status-endpoints)
+- [Cron Scheduling](../../../docs/worker-infrastructure.md#cron-scheduling), [slot capacity](../../../docs/process/worker-infrastructure-appendix.md#cron-slot-capacity-and-connection-pool-budget), and [Health & Status Endpoints](../../../docs/process/worker-infrastructure-appendix.md#health--status-endpoints)
 - `worker/wrangler.toml`, `shared/lib/cron-jobs.ts`, and `shared/lib/scheduled-runner-registry.ts`
 - `worker/src/handlers/scheduled.ts`, `worker/src/lib/scheduled-slot-fence.ts`, `worker/src/lib/scheduled-slot-reconciliation.ts`, and `worker/src/lib/cron-lease-primitives.ts`
 - [Cron Slot Abandonment](../../../docs/runbooks/cron-slot-abandonment.md) and [Lease And Breaker Recovery](../../../docs/runbooks/lease-and-breaker-recovery.md)

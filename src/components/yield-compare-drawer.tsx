@@ -8,7 +8,6 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import {
-  formatYieldRatioPercent,
   formatYieldWarningSignal,
   resolveYieldScoreQualification,
 } from "@/lib/yield-constants";
@@ -23,9 +22,10 @@ import { formatYieldSafetySrLabel, YieldSafetyBadge } from "@/components/yield-l
 import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
 import { trackEvent } from "@/lib/analytics";
 import { copyText } from "@/lib/clipboard";
-import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
+import { downloadCsvWithPreamble } from "@/lib/exports/csv";
 import { getLogoSrc, type LogoMap } from "@/lib/logos";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
+import { YIELD_COMPARE_CSV_COLUMNS } from "@/lib/yield-presentation";
 
 interface YieldCompareDrawerProps {
   open: boolean;
@@ -178,32 +178,6 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
 
 const PLACEHOLDER = "Coin not in current view";
 
-const COMPARE_EXPORT_COLUMNS: CsvColumn<YieldViewModelRow>[] = [
-  { header: "ID", accessor: (row) => row.id },
-  { header: "Symbol", accessor: (row) => row.symbol },
-  { header: "Name", accessor: (row) => row.name },
-  { header: "APY 30d (%)", accessor: (row) => row.apy30d },
-  { header: "PYS", accessor: (row) => row.pharosYieldScore ?? "NR" },
-  { header: "PYS qualification", accessor: (row) => resolveYieldScoreQualification(row) },
-  { header: "PYS null reason", accessor: (row) => row.pysNullReason ?? "" },
-  { header: "Safety grade", accessor: (row) => row.safetyGrade ?? "NR" },
-  { header: "Safety score", accessor: (row) => row.safetyScore ?? "NR" },
-  {
-    header: "Safety provenance",
-    accessor: (row) => row.provenance?.safetyProvenance ?? "unknown",
-  },
-  { header: "Source", accessor: (row) => row.yieldSource },
-  { header: "Source posture", accessor: (row) => row.sourcePosture ?? "unknown" },
-  { header: "Source risk score", accessor: (row) => row.sourceRisk?.sourceRiskScore ?? "unknown" },
-  { header: "Venue risk tier", accessor: (row) => row.sourceRisk?.venueRiskTier ?? "unknown" },
-  { header: "Depth", accessor: (row) => row.sourceDepthLens },
-  { header: "Stability (%)", accessor: (row) => formatYieldRatioPercent(row.yieldStability) },
-  { header: "Benchmark", accessor: (row) => row.benchmarkLabel ?? "unknown" },
-  { header: "TVL USD", accessor: (row) => row.sourceTvlUsd ?? "unknown" },
-  { header: "Warnings", accessor: (row) => row.warningSignals.join(" | ") },
-  { header: "Provider URL", accessor: (row) => row.yieldSourceUrl ?? "" },
-];
-
 export function YieldCompareDrawer({
   open,
   onOpenChange,
@@ -278,7 +252,7 @@ export function YieldCompareDrawer({
   const handleExport = useCallback(() => {
     const selectedRows = columns.flatMap((column) => (column.row ? [column.row] : []));
     if (selectedRows.length === 0) return;
-    downloadCsvWithPreamble(selectedRows, COMPARE_EXPORT_COLUMNS, "pharos-yield-comparison", {
+    downloadCsvWithPreamble(selectedRows, YIELD_COMPARE_CSV_COLUMNS, "pharos-yield-comparison", {
       endpoint: "yield-rankings comparison",
       asOfISO: new Date(updatedAt * 1000).toISOString(),
       sourceUrl: new URL(shareHref, window.location.origin).href,

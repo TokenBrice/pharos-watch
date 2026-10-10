@@ -5,7 +5,8 @@ import { deriveStatusActionRecommendations } from "@/lib/status/action-recommend
 import { STATUS_CAUSE_SEVERITY_RANK } from "@/lib/status/cause-severity";
 import { getAcknowledgedPriceGapNotice, getActivePriceCoverageImpactDetail, getPublicHealthWarningPresentation } from "@/lib/status/public-status";
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
-import { STATUS_PRIORITY, STATUS_TONE } from "@/lib/status/dashboard-presentation";
+import { STATUS_PRIORITY } from "@/lib/status/dashboard-presentation";
+import { STATUS_TONE } from "@shared/lib/classification";
 import type {
   DashboardDecision,
   DashboardEvidence,

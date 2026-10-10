@@ -1,9 +1,10 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { collectMarkdownReferences, requiresDocNavigation } from "../lib/doc-markdown.mts";
+import { getVerifiedDocFiles } from "../lib/doc-files.mts";
 import { createOwnershipGlobMatcher } from "../lib/doc-ownership-registry.mts";
 import { assertExecutableTestFiles } from "../lib/critical-ownership.mts";
 
@@ -110,8 +111,8 @@ describe("doc-ownership registry integrity", () => {
       .filter((mapping) => matchesAny(file, mapping.sources))
       .flatMap((mapping) => mapping.docs.map(normalizeDoc));
     expect(primaryDocs).toEqual(expect.arrayContaining([
-      { path: "docs/report-cards.md", anchor: "supply-attribution-and-in-flight-accounting" },
-      { path: "docs/report-cards.md", anchor: "bridge-in-flight-accounting" },
+      { path: "docs/process/report-cards-appendix.md", anchor: "supply-attribution-and-in-flight-accounting" },
+      { path: "docs/process/report-cards-appendix.md", anchor: "bridge-in-flight-accounting" },
     ]));
   });
 
@@ -147,8 +148,6 @@ describe("doc-ownership registry integrity", () => {
       // identity, PSI omission arrays, and scheduler liveness. Retain its ratchet.
       "docs/api-reference.md#public-endpoints": 47_460,
       "docs/telegram-alerts.md#commands": 33_389,
-      "docs/worker-infrastructure.md#shared-database-helpers": 25_871,
-      "docs/report-cards.md#v10-model": 45_115,
       "docs/digest-pipeline.md#generation": 43_892,
       // Main's env-interface, scripts, and status backend exceptions no longer
       // apply after bounded routing/restructuring; retain the default 25KB cap.
@@ -264,6 +263,29 @@ describe("doc-ownership registry integrity", () => {
         .map((doc) => doc.path)),
     );
     expect(required.filter((path) => !ownedDocs.has(path))).toEqual([]);
+  });
+
+  it("declares a source-bound owner for every verified document", () => {
+    const ownedDocs = new Set(mappings.flatMap((mapping) =>
+      [...mapping.docs, ...(mapping.background ?? [])].map(normalizeDoc).map((doc) => doc.path)));
+    const verifiedDocs = getVerifiedDocFiles(REPO_ROOT).map((path) => relative(REPO_ROOT, path));
+    expect(verifiedDocs.filter((path) => !ownedDocs.has(path))).toEqual([]);
+    for (const path of verifiedDocs) {
+      const owners = mappings.filter((mapping) =>
+        [...mapping.docs, ...(mapping.background ?? [])].map(normalizeDoc).some((doc) => doc.path === path));
+      expect(owners.some((mapping) => matchesAny(path, mapping.sources)), path).toBe(true);
+    }
+  });
+
+  it.each([
+    "live-reserves", "dex-liquidity", "worker-infrastructure", "report-cards", "pricing-pipeline",
+  ])("keeps the current %s contract below 40KB with a navigable appendix", (name) => {
+    const contract = readFileSync(resolve(REPO_ROOT, `docs/${name}.md`), "utf8");
+    const appendixPath = `docs/process/${name}-appendix.md`;
+    const appendix = readFileSync(resolve(REPO_ROOT, appendixPath), "utf8");
+    expect(Buffer.byteLength(contract, "utf8")).toBeLessThan(40_000);
+    expect(collectMarkdownReferences(contract).links.some((link) => link.includes(appendixPath.slice(5)))).toBe(true);
+    expect(appendix).toMatch(/^> \*\*Agent navigation\*\*/m);
   });
 
   it("covers every tracked depth-two directory with a mapping or exclusion", () => {

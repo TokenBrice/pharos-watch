@@ -1,9 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-registry";
 import { createDwellirNativeCapability } from "../../../../lib/dwellir-native";
+import * as evmRpc from "../../../../lib/evm-rpc";
+import { TOTAL_SUPPLY_SELECTOR } from "../../../../lib/evm-selectors";
+import { CURATED_ONCHAIN_SUPPLY_EXCLUSIONS } from "../../../../lib/onchain-supply-exclusions";
 
 const fetchEearnSuiSupplyMock = vi.hoisted(() => vi.fn());
 vi.mock("../sui-vault-supply", () => ({ fetchEearnSuiSupply: fetchEearnSuiSupplyMock }));
@@ -26,6 +29,60 @@ vi.mock("../../../reserve-adapters/helpers", () => ({
 }));
 
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap } from "../onchain-supply";
+const BLOCK_HASH = `0x${"1".repeat(64)}` as const;
+beforeEach(() => {
+  const nowMs = Date.now();
+  vi.spyOn(Date, "now").mockReturnValue(nowMs);
+  vi.spyOn(evmRpc, "fetchEvmBlockNumber").mockResolvedValue(123);
+  vi.spyOn(evmRpc, "fetchEvmBlockHeader").mockImplementation(async () => ({
+    number: 123, hash: BLOCK_HASH, timestamp: Math.floor(Date.now() / 1000) - 30,
+  }));
+  vi.spyOn(evmRpc, "fetchEvmUint256AtBlock").mockImplementation(async (chain, contract, data) =>
+    data === TOTAL_SUPPLY_SELECTOR
+      ? probeTrackedTokenSupplyMock(undefined, { chain })
+      : fetchOnchainUint256Mock({ chain, contract, data }),
+  );
+});
+afterEach(() => vi.restoreAllMocks());
+
+describe("joined EVM supply observations", () => {
+  it("pins inventory movement between excluded holders to one canonical hash and observation clock", async () => {
+    const meta = TRACKED_META_BY_ID.get("usg-tangent")!;
+    const contract = meta.contracts![0];
+    if (!isFixedDecimalDeployment(contract)) throw new Error("USG needs fixed decimals");
+    const scale = 10n ** BigInt(contract.decimals);
+    const holders = CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[meta.id].holderAddresses;
+    probeTrackedTokenSupplyMock.mockResolvedValue(1000n * scale);
+    // Unpinned serial reads would see 100 at both holders during a transfer.
+    fetchOnchainUint256Mock.mockResolvedValue(100n * scale);
+    vi.mocked(evmRpc.fetchEvmUint256AtBlock).mockImplementation(async (_chain, _contract, data) =>
+      data === TOTAL_SUPPLY_SELECTOR ? 1000n * scale
+        : data.toLowerCase().endsWith(holders[0].slice(2).toLowerCase()) ? 100n * scale : 0n,
+    );
+    const result = await fetchOnChainMcap(meta, 1);
+    expect(result?.mcap).toBe(900);
+    expect(result?.observedAt).toBe(Math.floor(Date.now() / 1000) - 30);
+    const calls = vi.mocked(evmRpc.fetchEvmUint256AtBlock).mock.calls;
+    expect(calls).toHaveLength(1 + holders.length);
+    for (const call of calls) {
+      expect(call[3]).toBe(123);
+      expect(call[4]?.stateBlockHash).toBe(BLOCK_HASH);
+    }
+  });
+
+  it.each(["changed-hash", "stale", "future"] as const)("withholds joined circulation for a %s observation header", async (fault) => {
+    const meta = TRACKED_META_BY_ID.get("usg-tangent")!;
+    vi.mocked(evmRpc.fetchEvmUint256AtBlock).mockImplementation(async (_chain, _contract, data) =>
+      data === TOTAL_SUPPLY_SELECTOR ? 1000n * 10n ** 18n : 0n);
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, _block) => ({
+      number: 123, hash: fault === "changed-hash" && vi.mocked(evmRpc.fetchEvmBlockHeader).mock.calls.length > 1
+        ? `0x${"2".repeat(64)}` : BLOCK_HASH,
+      timestamp: Math.floor(Date.now() / 1000) + (fault === "stale" ? -301 : fault === "future" ? 1 : -30),
+    }));
+    await expect(fetchOnChainMcap(meta, 1)).resolves.toBeNull();
+  });
+});
+
 
 function makeMeta(
   input: Pick<StablecoinMeta, "id" | "name" | "symbol" | "contracts"> & {
@@ -400,12 +457,29 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     expect(result?.chainCirculating?.["sUSDe unattributed OFT escrow"]?.current).toBe(70);
     const published = Object.values(result?.chainCirculating ?? {}).reduce((sum, value) => sum + value.current, 0);
     expect(published).toBeCloseTo(1_000, 6);
+    const joinedCalls = vi.mocked(evmRpc.fetchEvmUint256AtBlock).mock.calls;
+    expect(joinedCalls).toHaveLength(2);
+    for (const call of joinedCalls) {
+      expect(call[3]).toBe(123);
+      expect(call[4]?.stateBlockHash).toBe(BLOCK_HASH);
+    }
+    expect(result?.observedAt).toBe(Math.floor(Date.now() / 1000) - 30);
     // balanceOf(0x211cc4dd…) on the canonical Ethereum sUSDe contract.
     expect(fetchOnchainUint256Mock.mock.calls[0]?.[0]).toMatchObject({
       chain: "ethereum",
       contract: "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
       data: `0x70a08231${SUSDE_OFT.slice(2).padStart(64, "0")}`,
     });
+  });
+
+  it("withholds an escrow partition when its canonical header changes after the escrow read", async () => {
+    mockSusdeLegs();
+    fetchOnchainUint256Mock.mockResolvedValue(300n * 10n ** 18n);
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async () => ({
+      number: 123, timestamp: Math.floor(Date.now() / 1000) - 30,
+      hash: vi.mocked(evmRpc.fetchEvmBlockHeader).mock.calls.length >= 3 ? `0x${"2".repeat(64)}` : BLOCK_HASH,
+    }));
+    await expect(fetchCuratedAggregateOnChainMcap(makeSusdeMeta(), 1)).resolves.toBeNull();
   });
 
   it("conserves savUSD canonical supply with unprobed CCIP destinations and rejects insufficient escrow", async () => {

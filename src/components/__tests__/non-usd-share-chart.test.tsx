@@ -91,6 +91,28 @@ describe("NonUsdShareChart", () => {
     expect(screen.queryByText(/As of/)).toBeNull();
   });
 
+  it("qualifies a partial latest value cohort in the headline, accessible label and table", () => {
+    const saved = useNonUsdShareMock();
+    useNonUsdShareMock.mockReturnValue({
+      ...saved,
+      data: saved.data.map((point: object) => ({ ...point,
+        coverage: { basis: "interior-gap-prior-value", total: 0.99, commodity: 0.8, fiatNonUsd: 0.6 },
+      })),
+    });
+    render(<NonUsdShareChart />);
+    const latestDate = formatChartDate(saved.data[1].date * 1000, "long");
+    const headline = screen.getByText(`As of ${latestDate}:`, { exact: false });
+    expect(headline.textContent).toContain("Partial value coverage: total 99.0%, commodities 80.0%, non-commodity 60.0%");
+    expect(screen.getByRole("figure").getAttribute("aria-label")).toContain("Partial value coverage");
+    expect(screen.getByRole("table").textContent).toContain("Partial value coverage");
+  });
+
+  it("marks legacy history without value coverage as unknown rather than complete", () => {
+    render(<NonUsdShareChart />);
+    expect(screen.getByRole("table").textContent).toContain("Value coverage unavailable");
+    expect(screen.getByRole("figure").getAttribute("aria-label")).toContain("Value coverage unavailable");
+  });
+
   it("supports focused mode and reports range changes", () => {
     const onCloseFocus = vi.fn();
     const onRangeChange = vi.fn();

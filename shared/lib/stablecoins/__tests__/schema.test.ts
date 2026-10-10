@@ -2,16 +2,18 @@ import { describe, expect, it } from "vitest";
 import {
   parseStablecoinMetaAssets,
   StablecoinComplianceSidecarSchema,
+  StablecoinMetaAssetSchema,
   StablecoinMintAuthoritySidecarSchema,
   StablecoinRiskReviewSidecarSchema,
 } from "../schema";
-import { MintAuthorityProfileSchema, OracleRiskProfileSchema } from "../../../types/stablecoin-meta-control-schemas";
+import { BridgeRouteRiskProfileSchema, MintAuthorityProfileSchema, OracleRiskProfileSchema } from "../../../types/stablecoin-meta-control-schemas";
 import { V9DeploymentControlFactBaseSchema } from "../../../types/safety-score-v9-facts";
 import { STABLECOIN_STATUS_VALUES } from "../../../types/core";
-import { reviewedScope, SCOPE_CONTROLLER } from "../../__tests__/safety-score-v9-control-scope.test-support";
+import { reviewedScope, weightedQuorum, SCOPE_CONTROLLER } from "../../__tests__/safety-score-v9-control-scope.test-support";
 import { CANONICAL_STABLECOIN_FLAGS, makeRawStablecoinMeta as makeCoin } from "./test-support";
-import { makeSafeControl } from "./schema.test-support";
+import { makeBridgeAuthority, makeSafeControl } from "./schema.test-support";
 import { makeCompiledVotingControl } from "../../__tests__/safety-score-v9-fixtures.test-support";
+import { TRACKED_SOURCE_COINS } from "../registry";
 
 const baseFlags = CANONICAL_STABLECOIN_FLAGS;
 
@@ -1000,6 +1002,31 @@ describe("StablecoinMeta schema — mint authority", () => {
     ], "fixture")).not.toThrow();
   });
 
+  it.each([
+    ["chain", { name: "ethereum" }], ["address", { value: "0x1234" }],
+    ["threshold", "2"], ["signerCount", Number.NaN], ["timelockDelaySec", { seconds: 3600 }],
+    ["capDescription", ["cap"]], ["role", "invalid"], ["authorityType", "invalid"],
+    ["directMintAbility", "invalid"], ["canRaiseCap", "invalid"], ["modulesOrGuardsStatus", "invalid"],
+  ] as const)("rejects malformed mint-authority control %s at catalog admission", (field, value) => {
+    const result = MintAuthorityProfileSchema.safeParse(makeMintAuthority({
+      controls: [makeSafeControl({ [field]: value })],
+    }));
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(expect.objectContaining({ path: ["controls", 0, field] }));
+  });
+
+  it.each(["mintPath", "authorityPosture", "confidence"])("rejects invalid profile %s at catalog admission", (field) => {
+    const result = MintAuthorityProfileSchema.safeParse(makeMintAuthority({ [field]: "invalid" }));
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(expect.objectContaining({ path: [field] }));
+  });
+
+  it("rejects sources outside the schema-owned mint-authority evidence locations", () => {
+    const result = MintAuthorityProfileSchema.safeParse(makeMintAuthority({ sources: [mintAuthoritySource] }));
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(expect.objectContaining({ code: "unrecognized_keys", keys: ["sources"] }));
+  });
+
   it("admits a budgeted headline and rejects over-long or identifier-bearing ones", () => {
     const withHeadline = (headline: string) => [makeCoin({
       id: "fixture-mint-headline",
@@ -1070,6 +1097,72 @@ describe("StablecoinMeta schema — mint authority", () => {
         }),
       }),
     ], "fixture")).toThrow(/threshold/);
+  });
+
+  it.each([
+    ["impossible uniform quorum", { threshold: 4, safe: undefined }, {}, ["threshold"]],
+    ["contradictory Safe threshold", {}, { threshold: 1 }, ["safe", "threshold"]],
+    ["contradictory Safe owner count", { signerCount: 4 }, {}, ["safe", "owners"]],
+    ["inappropriate Safe authority type", { authorityType: "eoa" }, {}, ["safe"]],
+  ] as const)("rejects %s in both mint and bridge admission", (_label, overrides, safeOverrides, path) => {
+    const control = makeSafeControl(overrides, safeOverrides);
+    for (const result of [
+      MintAuthorityProfileSchema.safeParse(makeMintAuthority({ controls: [control] })),
+      BridgeRouteRiskProfileSchema.safeParse(makeBridgeAuthority(control)),
+    ]) {
+      expect(result.success).toBe(false);
+      expect(result.error?.issues).toContainEqual(expect.objectContaining({ path: ["controls", 0, ...path] }));
+    }
+  });
+
+  it("keeps consistent Safe and weighted quorums admissible in mint and bridge profiles", () => {
+    const weighted = weightedQuorum();
+    const separator = weighted.deployment.indexOf(":");
+    for (const control of [
+      makeSafeControl(),
+      makeSafeControl({
+        authorityType: "multisig", chain: weighted.deployment.slice(0, separator),
+        address: weighted.deployment.slice(separator + 1),
+        threshold: undefined, signerCount: undefined, safe: undefined, weightedQuorum: weighted,
+      }),
+    ]) {
+      expect(MintAuthorityProfileSchema.safeParse(makeMintAuthority({ controls: [control] })).success).toBe(true);
+      expect(BridgeRouteRiskProfileSchema.safeParse(makeBridgeAuthority(control)).success).toBe(true);
+    }
+  });
+
+  it.each(["timelock", "multisig"])("preserves bridge %s Safe facts without admitting them as native Safe authority", (authorityType) => {
+    const control = makeSafeControl({ authorityType, timelockDelaySec: 86400 });
+    expect(BridgeRouteRiskProfileSchema.safeParse(makeBridgeAuthority(control)).success).toBe(true);
+    expect(MintAuthorityProfileSchema.safeParse(makeMintAuthority({ controls: [control] })).success).toBe(false);
+  });
+
+  it("admits current corpus authority profiles, including weighted and same-chain system transport controls", () => {
+    for (const coin of TRACKED_SOURCE_COINS) {
+      if (coin.mintAuthority) {
+        expect(MintAuthorityProfileSchema.safeParse(coin.mintAuthority).success, `${coin.id} mint`).toBe(true);
+      }
+      if (coin.bridgeRouteRisk) {
+        expect(BridgeRouteRiskProfileSchema.safeParse(coin.bridgeRouteRisk).success, `${coin.id} bridge`).toBe(true);
+      }
+    }
+    expect(TRACKED_SOURCE_COINS.some((coin) =>
+      coin.bridgeRouteRisk?.controls?.some((control) => control.sameChainSystemTransport != null),
+    )).toBe(true);
+  });
+
+  it("rejects a contradictory observed acrdx Safe threshold before full-catalog authority projection", () => {
+    const coin = structuredClone(TRACKED_SOURCE_COINS.find((entry) => entry.id === "acrdx-anemoy-apollo")!);
+    expect(StablecoinMetaAssetSchema.safeParse(coin).success).toBe(true);
+    const controlIndex = coin.bridgeRouteRisk!.controls!.findIndex((control) => control.id === "acrdx-ethereum-protocolguardian-safe");
+    const control = coin.bridgeRouteRisk!.controls![controlIndex]!;
+    expect(control.threshold).toBe(4);
+    control.safe!.threshold = 1;
+    const result = StablecoinMetaAssetSchema.safeParse(coin);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(expect.objectContaining({
+      path: ["bridgeRouteRisk", "controls", controlIndex, "safe", "threshold"],
+    }));
   });
 
   it("requires verified Safe controls to include modules or guards status", () => {

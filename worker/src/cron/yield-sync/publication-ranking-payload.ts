@@ -42,6 +42,7 @@ import {
   benchmarkRecordAgeSeconds,
   classifyYieldBenchmarkFreshness,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
+  YIELD_BENCHMARK_SCORE_TTL_SEC,
 } from "./benchmarks";
 
 /**
@@ -413,6 +414,7 @@ function publishBenchmarkRecordBounds(
           ? meta
           : {
             ...meta,
+            maxFetchAgeSec: YIELD_BENCHMARK_SCORE_TTL_SEC,
             maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[key],
             recordAgeSec: benchmarkRecordAgeSeconds(meta.recordDate, publishedAtSec),
           },
@@ -587,7 +589,12 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     ...(input.publication ? { publication: input.publication } : {}),
     provenance: {
       selectionMethod: "confidence-weighted" as const,
-      benchmark: input.riskFreeRateMeta,
+      benchmark: {
+        ...input.riskFreeRateMeta,
+        maxFetchAgeSec: YIELD_BENCHMARK_SCORE_TTL_SEC,
+        maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[input.riskFreeRateMeta.key ?? "USD"],
+        recordAgeSec: benchmarkRecordAgeSeconds(input.riskFreeRateMeta.recordDate, input.startSec),
+      },
       benchmarks,
       dlPools: input.dlPoolsMeta,
       safetySnapshot: input.safetySnapshot,

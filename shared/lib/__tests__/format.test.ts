@@ -42,7 +42,24 @@ import {
   formatRelativeAgeSeconds,
   formatRelativeDurationSeconds,
   formatRelativeTimeMs,
+  formatWholeUnitDurationSeconds,
 } from "../relative-time";
+
+describe("formatWholeUnitDurationSeconds", () => {
+  it.each([
+    [0, "0d"],
+    [1, "1m"],
+    [29, "1m"],
+    [30, "1m"],
+    [59, "1m"],
+    [60, "1m"],
+    [5_400, "90m"],
+    [3_600, "1h"],
+    [86_400, "1d"],
+  ] as const)("preserves minimum-minute and natural units for %ss", (seconds, expected) => {
+    expect(formatWholeUnitDurationSeconds(seconds, { minUnit: "minute" })).toBe(expected);
+  });
+});
 
 describe("formatScore", () => {
   it("formats to one decimal", () => expect(formatScore(72.456)).toBe("72.5"));
@@ -511,6 +528,16 @@ describe("formatTrackingSpanDays", () => {
     expect(formatTrackingSpanDays(15)).toBe("15d");
   });
 
+  it.each([
+    [29, "29d"],
+    [30, "30d"],
+    [30.439, "30.439d"],
+    [30.44, "1mo"],
+    [31, "1mo"],
+  ])("keeps %s days below a full rollup month in day units", (days, expected) => {
+    expect(formatTrackingSpanDays(days)).toBe(expected);
+  });
+
   it("formats month spans using the shared 30.44-day rollup", () => {
     expect(formatTrackingSpanDays(90)).toBe("2mo");
   });
@@ -529,6 +556,18 @@ describe("formatTrackingSpanDays", () => {
 describe("formatTrackingSpanSeconds", () => {
   it("delegates to the shared day formatter", () => {
     expect(formatTrackingSpanSeconds(90 * 86400)).toBe("2mo");
+  });
+
+  it.each([
+    [29 * 86400, "29d"],
+    [30 * 86400, "30d"],
+    [30.44 * 86400, "30d"],
+    [31 * 86400 - 1, "30d"],
+    [31 * 86400, "1mo"],
+    [731 * 86400, "2y"],
+    [820 * 86400, "2y 2mo"],
+  ])("floors %s seconds to full days before the month transition", (seconds, expected) => {
+    expect(formatTrackingSpanSeconds(seconds)).toBe(expected);
   });
 
   it("returns N/A for non-finite seconds", () => {

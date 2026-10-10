@@ -158,10 +158,26 @@ describe("Safety Score v9 reviewed incident schema", () => {
     }
   });
 
+  it("requires resolution no later than review and remediation verification", () => {
+    for (const resolvedAt of ["2026-01-11", "2026-02-02", "2027-01-01"]) {
+      const result = V9ReviewedIncidentSchema.safeParse({ ...BASE_INCIDENT, resolvedAt });
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error.issues).toContainEqual(expect.objectContaining({ path: ["resolvedAt"] }));
+    }
+    expect(V9ReviewedIncidentSchema.safeParse({
+      ...BASE_INCIDENT, resolvedAt: BASE_INCIDENT.reviewedAt,
+      remediation: { ...BASE_INCIDENT.remediation, lastVerifiedAt: BASE_INCIDENT.reviewedAt },
+    }).success).toBe(true);
+    expect(V9ReviewedIncidentSchema.safeParse({
+      ...BASE_INCIDENT, status: "mitigated", resolvedAt: null,
+      remediation: { ...BASE_INCIDENT.remediation, state: "in-progress" },
+    }).success).toBe(true);
+  });
+
   it("bounds remediation verification inclusively by occurrence and review", () => {
     for (const lastVerifiedAt of [BASE_INCIDENT.occurredAt, BASE_INCIDENT.reviewedAt]) {
       expect(V9ReviewedIncidentSchema.safeParse({
-        ...BASE_INCIDENT, remediation: { ...BASE_INCIDENT.remediation, lastVerifiedAt },
+        ...BASE_INCIDENT, resolvedAt: lastVerifiedAt, remediation: { ...BASE_INCIDENT.remediation, lastVerifiedAt },
       }).success).toBe(true);
     }
     for (const lastVerifiedAt of ["2025-12-31", "2026-02-02"]) {

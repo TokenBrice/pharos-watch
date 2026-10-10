@@ -8,7 +8,7 @@ import type { BlacklistRow } from "./shared";
 
 const BLACKLIST_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
 
-function unambiguousRows(rows: readonly BlacklistRow[]): BlacklistRow[] {
+export function unambiguousRows(rows: readonly BlacklistRow[]): BlacklistRow[] {
   const effects = new Map<string, BlacklistRow[]>();
   const ambiguousBlocks = new Map<string, number>();
   for (const row of rows) {

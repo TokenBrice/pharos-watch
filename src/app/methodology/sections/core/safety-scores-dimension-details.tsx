@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { ContentTable } from "@/components/table";
 import { METHODOLOGY_LINK_CLASS } from "../../methodology-shared";
 import { CollateralQualityMethodologyCopy } from "../core-sections-fragments";
 
@@ -13,46 +13,25 @@ export function SafetyScoresDimensionDetails() {
           infrastructure is scored exclusively in the Decentralization dimension. Blacklist capability is reported
           descriptively but does not affect the Resilience score.
         </p>
-        <TableFrame
-          chrome="content"
-          density="compact"
+        <ContentTable
           tableId="methodology-safety-resilience-scoring"
           testId="methodology-safety-resilience-scoring-table"
-          viewportProps={{ mobileScrollHint: false }}
-        >
-          <TableHeader>
-            <TableRow className="text-left">
-              <TableHead scope="col" className="py-2 pr-4 text-foreground">
-                Sub-factor
-              </TableHead>
-              <TableHead scope="col" className="py-2 pr-4 text-foreground">
-                What it measures
-              </TableHead>
-              <TableHead scope="col" className="py-2 text-foreground">
-                Scoring
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow>
-              <TableCell className="py-2 pr-4 text-foreground">Collateral Quality</TableCell>
-              <TableCell className="py-2 pr-4 whitespace-normal">Reserve composition risk</TableCell>
-              <TableCell className="py-2 whitespace-normal">
-                Weighted avg of curated reserve slices: Very&nbsp;Low&nbsp;(100), Low&nbsp;(75), Medium&nbsp;(50),
-                High&nbsp;(25), Very&nbsp;High&nbsp;(5). Falls back to enum scoring for coins without curated reserves.
-              </TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="py-2 pr-4 text-foreground">Custody Model</TableCell>
-              <TableCell className="py-2 pr-4 whitespace-normal">Who controls the economic backing?</TableCell>
-              <TableCell className="py-2 whitespace-normal">
-                Fully&nbsp;on&#8209;chain&nbsp;(100), Top&#8209;tier&nbsp;custodian&nbsp;(80),
-                Regulated&nbsp;custodian&nbsp;(55), Unregulated&nbsp;custodian&nbsp;(30),
-                Sanctioned&nbsp;custodian&nbsp;(5), CEX&nbsp;/&nbsp;off&#8209;exchange&nbsp;custody&nbsp;(0)
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </TableFrame>
+          columns={[
+            { id: "factor", header: "Sub-factor", cellClassName: "text-foreground" },
+            { id: "measure", header: "What it measures", cellClassName: "whitespace-normal" },
+            { id: "scoring", header: "Scoring", cellClassName: "whitespace-normal" },
+          ]}
+          rows={[
+            { id: "collateral", cells: {
+              factor: "Collateral Quality", measure: "Reserve composition risk",
+              scoring: <>Weighted avg of curated reserve slices: Very&nbsp;Low&nbsp;(100), Low&nbsp;(75), Medium&nbsp;(50), High&nbsp;(25), Very&nbsp;High&nbsp;(5). Falls back to enum scoring for coins without curated reserves.</>,
+            } },
+            { id: "custody", cells: {
+              factor: "Custody Model", measure: "Who controls the economic backing?",
+              scoring: <>Fully&nbsp;on&#8209;chain&nbsp;(100), Top&#8209;tier&nbsp;custodian&nbsp;(80), Regulated&nbsp;custodian&nbsp;(55), Unregulated&nbsp;custodian&nbsp;(30), Sanctioned&nbsp;custodian&nbsp;(5), CEX&nbsp;/&nbsp;off&#8209;exchange&nbsp;custody&nbsp;(0)</>,
+            } },
+          ]}
+        />
         <p>
           Tokenized RWA collateral is scored by the ultimate reserve or legal custody layer, not only by the
           smart-contract location of a wrapper token.
@@ -209,75 +188,21 @@ export function SafetyScoresDimensionDetails() {
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Grade Thresholds</h3>
-        <TableFrame
-          chrome="content"
-          density="compact"
+        <ContentTable
           tableId="methodology-safety-grade-thresholds"
           testId="methodology-safety-grade-thresholds-table"
           tableClassName="w-auto"
-          viewportProps={{ mobileScrollHint: false }}
-        >
-          <TableHeader>
-            <TableRow className="text-left">
-              <TableHead scope="col" className="py-2 pr-8 text-foreground">
-                Grade
-              </TableHead>
-              <TableHead scope="col" className="py-2 text-foreground">
-                Score Range
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow>
-              <TableCell className="py-1.5 pr-8 text-foreground">A+</TableCell>
-              <TableCell className="py-1.5">87&ndash;100</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="py-1.5 pr-8 text-foreground">A</TableCell>
-              <TableCell className="py-1.5">83&ndash;86</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="py-1.5 pr-8 text-foreground">A&minus;</TableCell>
-              <TableCell className="py-1.5">80&ndash;82</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="py-1.5 pr-8 text-foreground">B+</TableCell>
-              <TableCell className="py-1.5">75&ndash;79</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="py-1.5 pr-8 text-foreground">B</TableCell>
-              <TableCell className="py-1.5">70&ndash;74</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="py-1.5 pr-8 text-foreground">B&minus;</TableCell>
-              <TableCell className="py-1.5">65&ndash;69</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="py-1.5 pr-8 text-foreground">C+</TableCell>
-              <TableCell className="py-1.5">60&ndash;64</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="py-1.5 pr-8 text-foreground">C</TableCell>
-              <TableCell className="py-1.5">55&ndash;59</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="py-1.5 pr-8 text-foreground">C&minus;</TableCell>
-              <TableCell className="py-1.5">50&ndash;54</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="py-1.5 pr-8 text-foreground">D</TableCell>
-              <TableCell className="py-1.5">40&ndash;49</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="py-1.5 pr-8 text-foreground">F</TableCell>
-              <TableCell className="py-1.5">0&ndash;39</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="py-1.5 pr-8 text-foreground">NR</TableCell>
-              <TableCell className="py-1.5">Not enough data</TableCell>
-            </TableRow>
-          </TableBody>
-        </TableFrame>
+          columns={[
+            { id: "grade", header: "Grade", headerClassName: "pr-8", cellClassName: "py-1.5 pr-8 text-foreground" },
+            { id: "range", header: "Score Range", cellClassName: "py-1.5" },
+          ]}
+          rows={[
+            ["A+", "87–100"], ["A", "83–86"], ["A−", "80–82"],
+            ["B+", "75–79"], ["B", "70–74"], ["B−", "65–69"],
+            ["C+", "60–64"], ["C", "55–59"], ["C−", "50–54"],
+            ["D", "40–49"], ["F", "0–39"], ["NR", "Not enough data"],
+          ].map(([grade, range]) => ({ id: grade, cells: { grade, range } }))}
+        />
       </div>
 
       <div className="space-y-2">

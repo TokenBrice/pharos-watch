@@ -4,14 +4,7 @@ import {
   DEX_VOLUME_OBSERVATION_MAX_AGE_SEC,
 } from "@shared/lib/dex-volume-availability";
 import { LIQUIDITY_SCORE_WEIGHTS, type LiquidityScoreComponentKey } from "@shared/lib/liquidity-score-weights";
-import {
-  TableBody,
-  TableCell,
-  TableFrame,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/table";
+import { ContentTable } from "@/components/table";
 import { MethodologyDetails } from "../../methodology-shared";
 
 const LIQUIDITY_COMPONENT_DETAILS: Record<LiquidityScoreComponentKey, { label: string; shortLabel: string; description: string }> = {
@@ -83,39 +76,23 @@ export function LiquidityTechnicalDetails() {
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Components</h3>
-        <TableFrame
-          chrome="content"
-          density="compact"
+        <ContentTable
           tableId="methodology-liquidity-components"
           testId="methodology-liquidity-components-table"
-          viewportProps={{ mobileScrollHint: false }}
-        >
-          <TableHeader>
-            <TableRow className="text-left">
-              <TableHead scope="col" className="py-2 pr-4 text-foreground">
-                Component
-              </TableHead>
-              <TableHead scope="col" className="py-2 pr-4 text-foreground">
-                Weight
-              </TableHead>
-              <TableHead scope="col" className="py-2 text-foreground">
-                How it works
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {LIQUIDITY_SCORE_WEIGHTS.map((component) => {
-              const detail = LIQUIDITY_COMPONENT_DETAILS[component.key];
-              return (
-                <TableRow key={component.key}>
-                  <TableCell className="py-2 pr-4 text-foreground">{detail.label}</TableCell>
-                  <TableCell className="py-2 pr-4">{component.displayWeight}</TableCell>
-                  <TableCell className="py-2 whitespace-normal">{detail.description}</TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </TableFrame>
+          columns={[
+            { id: "component", header: "Component", cellClassName: "text-foreground" },
+            { id: "weight", header: "Weight" },
+            { id: "description", header: "How it works", cellClassName: "whitespace-normal" },
+          ]}
+          rows={LIQUIDITY_SCORE_WEIGHTS.map((component) => ({
+            id: component.key,
+            cells: {
+              component: LIQUIDITY_COMPONENT_DETAILS[component.key].label,
+              weight: component.displayWeight,
+              description: LIQUIDITY_COMPONENT_DETAILS[component.key].description,
+            },
+          }))}
+        />
       </div>
 
       <div className="space-y-2">

@@ -1,7 +1,7 @@
-import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { ReserveSliceSchema } from "@shared/types/reserves";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   collectPdfAnchors,
@@ -62,16 +62,7 @@ async function fetchAttestationIndexHtml(
   );
 }
 
-export interface AttestationPdfIndexParams {
-  slices: ReserveSlice[];
-  /** Bind a reviewed balance observation to its exact report, independently of
-   *  the publication date in the filename. New reports require a new review. */
-  reviewedReport?: { url: string; balanceDate: string };
-  /** Optional regex source (validated to compile) that the newest-dated PDF link
-   *  must match against its href + anchor text, so a shared index page cannot
-   *  resolve one currency to a sibling currency's certificate. */
-  linkMatch?: string;
-}
+export type AttestationPdfIndexParams = LiveReserveAdapterParamsByKey["attestation-pdf-index"];
 
 interface AttestationPdfIndexAdaptOptions {
   indexUrl?: string;

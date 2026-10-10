@@ -8,9 +8,8 @@ import fixture from "./fixtures/whirlpool-slot-449058549.json";
 import raydiumFixture from "./fixtures/raydium-slot-449058549.json";
 import pinned from "./fixtures/solana-clmm-wave4-pinned.json";
 import { collectWhirlpoolShadowQuotes, collectRaydiumShadowQuotes } from "../solana/whirlpool-shadow";
-import { buildOrcaWhirlpoolRegisteredExecutionTarget } from "../execution-targets/orca-whirlpool";
-import { buildRaydiumClmmRegisteredExecutionTarget } from "../execution-targets/raydium-clmm";
-import type { DexExecutionTargetFactoryInput } from "../execution-target-registry";
+import { buildRegisteredDexExecutionTarget } from "../execution-target-registry";
+import { makeDexExecutionTargetFactoryInput } from "../../../test-helpers/__shared/dex-execution-target";
 import { fetchSolanaAccountBatch, type SolanaAccount } from "../../reserve-adapters/solana";
 import { decodeWhirlpool } from "../solana/whirlpool-quote";
 import * as WhirlpoolQuote from "../solana/whirlpool-quote";
@@ -280,18 +279,18 @@ describe("Orca native shadow producer", () => {
   });
 
   it("marks Orca activation pending and never admits its registered capability for scoring", () => {
-    const input = { identity: { chainNorm: "solana", protocol: "orca" } } as DexExecutionTargetFactoryInput;
-    expect(buildOrcaWhirlpoolRegisteredExecutionTarget(input)).toEqual({ executionCapabilityGate: { family: "measured-execution", reason: "activation-pending" } });
+    const input = makeDexExecutionTargetFactoryInput("solana", "orca");
+    expect(buildRegisteredDexExecutionTarget(input)).toEqual({ executionCapabilityGate: { family: "measured-execution", reason: "activation-pending" } });
     const registration = getDexExecutionCapabilityRegistration("orca-whirlpool-exact-v1")!;
     expect(registration.capabilityId).toBe("measured-adapter-shadow");
     expect(isDexExecutionProfileAdmittedForScoring({ adapterProfileId: registration.profileId, chain: "solana" }, registration)).toBe(false);
   });
 
   it("registers only Solana Raydium CLMM as activation-pending, never standard AMM", () => {
-    const input = { identity: { chainNorm: "solana", protocol: "raydium", poolType: "raydium-clmm" } } as DexExecutionTargetFactoryInput;
-    expect(buildRaydiumClmmRegisteredExecutionTarget(input)?.executionCapabilityGate?.reason).toBe("activation-pending");
+    const input = makeDexExecutionTargetFactoryInput("solana", "raydium", "raydium-clmm");
+    expect(buildRegisteredDexExecutionTarget(input)?.executionCapabilityGate?.reason).toBe("activation-pending");
     input.identity.poolType = "raydium-amm";
-    expect(buildRaydiumClmmRegisteredExecutionTarget(input)).toBeNull();
+    expect(buildRegisteredDexExecutionTarget(input)).toEqual({});
     const registration = getDexExecutionCapabilityRegistration("raydium-clmm-exact-v1")!;
     expect(isDexExecutionProfileAdmittedForScoring({ adapterProfileId: registration.profileId, chain: "solana" }, registration)).toBe(false);
   });

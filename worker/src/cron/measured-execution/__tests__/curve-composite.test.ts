@@ -148,7 +148,10 @@ function nxusdTarget(
   });
 }
 
-function reviewedMetapoolTarget(policy: CurveMetapoolPolicy) {
+function reviewedMetapoolTarget(
+  policy: CurveMetapoolPolicy,
+  references = makeCurveCompositeReferenceMaps(),
+) {
   return buildCurveCompositeMeasuredExecutionTarget({
     curveData: {
       poolAddress: policy.poolAddress,
@@ -171,7 +174,7 @@ function reviewedMetapoolTarget(policy: CurveMetapoolPolicy) {
     },
     chain: policy.chain,
     stablecoinId: policy.stablecoinId,
-    ...makeCurveCompositeReferenceMaps(),
+    ...references,
     retainedTvlUsd: 1_000_000,
     capturedAt: BLOCK_TIMESTAMP - 60,
   });
@@ -613,6 +616,28 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
         validateCurveCompositeProfileProof(compositeProfile(target!, policy, evidence)),
       ).toEqual([]);
     }
+  });
+
+  it("keeps reviewed metapool routes independent of intermediate DAI catalog identity", () => {
+    const policy = CURVE_R3_METAPOOL_POLICIES.find((entry) => entry.stablecoinId === "alusd-alchemix")!;
+    const references = makeCurveCompositeReferenceMaps();
+    const daiAddress = "0x6b175474e89094c44da98b954eedeac495271d0f";
+    references.chainAddressToId.delete(`ethereum:${daiAddress}`);
+    const target = reviewedMetapoolTarget(policy, references);
+
+    expect(DexMeasuredExecutionTargetSchema.safeParse(target).success).toBe(true);
+    expect(target).toMatchObject({
+      poolId: `ethereum:${policy.poolAddress}`,
+      tokenIn: { trackedAssetId: "alusd-alchemix" },
+      tokenOut: { trackedAssetId: "usdc-circle" },
+    });
+    expect(target!.poolTokenAddresses).toContain(daiAddress);
+    expect(validateCurveCompositeProfileProof(
+      compositeProfile(target!, policy, metapoolEvidence(policy)),
+    )).toEqual([]);
+
+    references.chainAddressToId.delete(`ethereum:${target!.tokenOut.address}`);
+    expect(reviewedMetapoolTarget(policy, references)).toBeNull();
   });
 
   it("fails every reviewed metapool target closed on registry, base, order, or decimals drift", () => {

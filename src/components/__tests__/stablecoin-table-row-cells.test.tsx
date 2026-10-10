@@ -9,6 +9,8 @@ import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 import { makeReportCardsV9Response } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
+import { getScoreColor } from "@/lib/severity-colors";
 
 function buildRow(): StablecoinTableRowCellProps {
   const coin = makeStablecoin({
@@ -86,5 +88,66 @@ describe("StablecoinTableRowCells peg deviation", () => {
 
     expect(html).toContain("-50 bps");
     expect(html).not.toContain("+200 bps");
+  });
+});
+
+describe("StablecoinTableRowCells supply availability", () => {
+  function renderSupply(circulating: Record<string, number>, prevDay: Record<string, number> = { peggedUSD: 100 }) {
+    const row = buildRow();
+    row.coin.circulating = circulating;
+    row.coin.circulatingPrevDay = prevDay;
+    row.coin.circulatingPrevWeek = { peggedUSD: 100 };
+    row.isVisible = (column) => ["mcap", "change24h", "change7d"].includes(column);
+    const model = buildStablecoinTableRowModel({
+      coin: row.coin, density: row.density, variant: "default",
+    });
+    return renderToStaticMarkup(
+      <table><tbody><tr><StablecoinTableRowCells row={row} model={model} /></tr></tbody></table>,
+    );
+  }
+
+  it("renders unavailable supply without a numeric market cap, contraction, or sparkline", () => {
+    const html = renderSupply({});
+    expect(html).toContain("Supply unavailable");
+    expect(html).not.toContain("$0");
+    expect(html).not.toContain("-100");
+    expect(html).not.toContain("<svg");
+  });
+
+  it("renders explicit zero as $0 and a real -100% contraction", () => {
+    const html = renderSupply({ peggedUSD: 0 });
+    expect(html).toContain("$0");
+    expect(html).toContain("-100.00%");
+    expect(html).not.toContain("Supply unavailable");
+  });
+
+  it("does not connect a supply sparkline across absent middle history", () => {
+    const html = renderSupply({ peggedUSD: 150 }, {});
+    expect(html).toContain("+50.00%");
+    expect(html).not.toContain("<polyline");
+    expect(html).not.toContain("<path");
+  });
+});
+
+describe("StablecoinTableRowCells liquidity availability", () => {
+  it.each([0, null, 75])("preserves liquidity score %s in mobile and desktop cells", (liquidityScore) => {
+    const row = buildRow();
+    row.isVisible = (column) => column === "name" || column === "liquidity";
+    row.dexLiquidity = { [row.coin.id]: makeDexLiquidityData({ liquidityScore }) };
+    const model = buildStablecoinTableRowModel({
+      coin: row.coin, dexLiquidity: row.dexLiquidity, density: row.density, variant: "default",
+    });
+    const html = renderToStaticMarkup(
+      <table><tbody><tr><StablecoinTableRowCells row={row} model={model} /></tr></tbody></table>,
+    );
+    const spans = [...html.matchAll(/<span class="([^"]+)">([^<]*)<\/span>/g)];
+    const expectedValue = liquidityScore === null ? "—" : String(liquidityScore);
+    const expectedClass = liquidityScore === null ? "text-muted-foreground" : getScoreColor(liquidityScore);
+    // Mobile's compact Liq badge and the standalone desktop liquidity cell.
+    const liquiditySpans = spans.filter(([, className, value]) =>
+      value === expectedValue && className.includes(expectedClass),
+    );
+    expect(liquiditySpans.length).toBeGreaterThanOrEqual(2);
+    expect(model.liquidityScore).toBe(liquidityScore);
   });
 });

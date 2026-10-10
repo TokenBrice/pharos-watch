@@ -9,6 +9,9 @@ export type CemeterySelectionHandler = (id: string, source: CemeterySelectionSou
 export interface CemeterySelectionContextValue {
   /** The record currently addressed by a pin, a reveal, the hash or `setRecordHash`. */
   selectedId: string | null;
+  /** Active hero pin and its origin survive layout handoff, independently of register reveals. */
+  heroPin: { id: string; source: CemeterySelectionSource } | null;
+  setHeroPin: (id: string | null, source?: CemeterySelectionSource) => void;
   /** Pins the grave in the hero; queued until the hero registers its handler. */
   pinGrave: (id: string, source: CemeterySelectionSource) => void;
   /** Reveals the record in the register; queued until the register registers its handler. */
@@ -53,6 +56,7 @@ function createChannel() {
 function createSelectionStore(initialKnownIds: ReadonlySet<string>) {
   let knownIds = initialKnownIds;
   let selectedId: string | null = null;
+  let heroPin: CemeterySelectionContextValue["heroPin"] = null;
   /** Hash last written by the provider; a hashchange carrying it is our own echo. */
   let writtenHash: string | null = null;
   const listeners = new Set<() => void>();
@@ -65,6 +69,13 @@ function createSelectionStore(initialKnownIds: ReadonlySet<string>) {
     for (const listener of listeners) listener();
   };
 
+  const setHeroPin = (id: string | null, source: CemeterySelectionSource = "hero") => {
+    if (id !== null && !knownIds.has(id)) return;
+    if (heroPin?.id === id && heroPin?.source === source) return;
+    heroPin = id === null ? null : { id, source };
+    for (const listener of listeners) listener();
+  };
+
   const replaceHash = (fragment: string) => {
     if (window.location.hash === fragment) return;
     writtenHash = fragment;
@@ -74,6 +85,7 @@ function createSelectionStore(initialKnownIds: ReadonlySet<string>) {
   const pinGrave = (id: string, source: CemeterySelectionSource) => {
     if (!knownIds.has(id)) return;
     select(id);
+    setHeroPin(id, source);
     pinChannel.dispatch(id, source);
   };
 
@@ -102,6 +114,7 @@ function createSelectionStore(initialKnownIds: ReadonlySet<string>) {
       };
     },
     getSelectedId: () => selectedId,
+    getHeroPin: () => heroPin,
     /** Parses the hash now and on every `hashchange`; returns the unsubscribe. */
     watchLocationHash(): () => void {
       const handleHashChange = () => {
@@ -115,12 +128,14 @@ function createSelectionStore(initialKnownIds: ReadonlySet<string>) {
     },
     actions: {
       pinGrave,
+      setHeroPin,
       revealRecord,
       registerPinGrave: pinChannel.register,
       registerRevealRecord: revealChannel.register,
       setRecordHash(id: string | null) {
         if (id === null) {
           select(null);
+          setHeroPin(null);
           replaceHash("");
           return;
         }
@@ -150,6 +165,7 @@ export function CemeterySelectionProvider({
   const knownIdSet = useMemo(() => new Set(knownIds), [knownIds]);
   const [store] = useState(() => createSelectionStore(knownIdSet));
   const selectedId = useSyncExternalStore(store.subscribe, store.getSelectedId, getServerSelectedId);
+  const heroPin = useSyncExternalStore(store.subscribe, store.getHeroPin, getServerSelectedId);
 
   useEffect(() => {
     store.setKnownIds(knownIdSet);
@@ -158,8 +174,8 @@ export function CemeterySelectionProvider({
   useEffect(() => store.watchLocationHash(), [store]);
 
   const value = useMemo<CemeterySelectionContextValue>(
-    () => ({ selectedId, ...store.actions }),
-    [selectedId, store],
+    () => ({ selectedId, heroPin, ...store.actions }),
+    [selectedId, heroPin, store],
   );
 
   return <CemeterySelectionContext.Provider value={value}>{children}</CemeterySelectionContext.Provider>;

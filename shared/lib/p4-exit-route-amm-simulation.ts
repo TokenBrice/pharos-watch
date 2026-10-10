@@ -56,6 +56,18 @@ export function validateAmmExecutionModel(
     if (modeledTvlRatio < P4_AMM_MODELED_TVL_MIN_RATIO) issues.push("modeled-tvl-below-retained-bound");
     if (modeledTvlRatio > P4_AMM_MODELED_TVL_MAX_RATIO) issues.push("modeled-tvl-above-retained-bound");
   }
+  if (model.source === "uniswap-v2" || model.source === "pancakeswap-v2" || model.capture) {
+    const capture = model.capture;
+    if (!capture || !Number.isSafeInteger(capture.blockNumber) || capture.blockNumber <= 0 ||
+      !/^0x[0-9a-fA-F]{64}$/.test(capture.blockHash) || !capture.sourceGenerationId?.trim() ||
+      !Number.isSafeInteger(capture.blockTimestamp) || capture.blockTimestamp <= 0 ||
+      !Number.isSafeInteger(context.nowSec)) {
+      issues.push("missing-exact-capture-identity");
+    } else if (capture.blockTimestamp > context.nowSec! + 60 ||
+      context.nowSec! - capture.blockTimestamp > DEX_MEASURED_FRESHNESS_MAX_SEC) {
+      issues.push("stale-exact-capture");
+    }
+  }
   if (model.source === "solidly-v2") {
     const state = model.solidlyState;
     const deployment = SOLIDLY_V2_DEPLOYMENTS.find((row) => row.chain === context.chain && row.variant === state?.variant);

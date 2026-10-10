@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { DailySocialSnapshotSchema, formatDailySocialValue, type DailySocialSnapshot, type DailySocialTopic } from "@shared/lib/daily-social";
-import { getCirculatingRaw, getPrevWeekRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { isFreshnessWarningHeader } from "@shared/lib/api-freshness";
 import { StablecoinListResponseSchema, DexLiquidityMapSchema, DexLiquidityHistoryResponseSchema, DepegEventsResponseSchema,
   type StablecoinData, type DexLiquidityMap, type DexLiquidityHistoryPoint, type DepegEvent } from "@shared/types/market";
@@ -8,6 +8,7 @@ import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared
 import { ReportCardsV9ResponseSchema, type ReportCardsV9Response } from "@shared/types/report-cards-v9";
 import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 import { buildMaintenanceApiRequest } from "./maintenance-api";
+import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 
 const DAY = 86400;
 const WEEK = 7 * DAY;
@@ -21,28 +22,34 @@ function finish(base: Base, content: Content): DailySocialSnapshot {
 function fresh(timestamp: number, now: number, maxAge = 7200): boolean {
   return Number.isInteger(timestamp) && timestamp > 0 && timestamp <= now + 60 && now - timestamp <= maxAge;
 }
-function bucketValid(bucket: Record<string, number> | null | undefined): boolean {
-  return !!bucket && Object.keys(bucket).length > 0 && Object.values(bucket).every((value) => Number.isFinite(value) && value >= 0);
-}
 export function eligibleSocialAssets(assets: readonly StablecoinData[], now: number): StablecoinData[] {
-  return assets.filter((asset) => !asset.frozen && !asset.supplyRestored && bucketValid(asset.circulating)
-    && (asset.supplyObservedAt == null || fresh(asset.supplyObservedAt, now, 3600)) && getCirculatingRaw(asset) > 0);
+  return assets.filter((asset) => {
+    const supply = getCirculatingRawOrNull(asset);
+    return !asset.frozen && !asset.supplyRestored && supply !== null && supply > 0
+      && (asset.supplyObservedAt == null || fresh(asset.supplyObservedAt, now, 3600));
+  });
 }
 
 export function buildMarketSocial(topic: "market-growth" | "market-share" | "market-overview", assets: readonly StablecoinData[], base: Base): DailySocialSnapshot {
-  const eligible = eligibleSocialAssets(assets, base.capturedAt);
-  const cohort = eligible.filter((asset) => bucketValid(asset.circulatingPrevWeek) && (getPrevWeekRawOrNull(asset) ?? 0) > 0);
-  const total = cohort.reduce((sum, asset) => sum + getCirculatingRaw(asset), 0);
-  const previousTotal = cohort.reduce((sum, asset) => sum + getPrevWeekRawOrNull(asset)!, 0);
+  const eligible = eligibleSocialAssets(assets, base.capturedAt).flatMap((asset) => {
+    const current = getCirculatingRawOrNull(asset);
+    return current === null ? [] : [{ ...asset, current }];
+  });
+  const cohort = eligible.flatMap((asset) => {
+    const previous = getPrevWeekRawOrNull(asset);
+    return previous === null || previous <= 0 ? [] : [{ ...asset, previous }];
+  });
+  const total = cohort.reduce((sum, asset) => sum + asset.current, 0);
+  const previousTotal = cohort.reduce((sum, asset) => sum + asset.previous, 0);
   if (!eligible.length || (topic !== "market-overview" && (!total || !previousTotal))) throw new Error("No comparable market data");
   if (topic === "market-overview") {
     return finish(base, { topic, title: "The stablecoin market, today", subtitle: "Largest tracked assets by circulating market cap", unit: "usd",
-      rows: [...eligible].sort((a, b) => getCirculatingRaw(b) - getCirculatingRaw(a) || a.id.localeCompare(b.id)).slice(0, 5).map((asset) => ({ id: asset.id, name: asset.name, symbol: asset.symbol, value: getCirculatingRaw(asset), context: "Circulating market cap" })),
+      rows: [...eligible].sort((a, b) => b.current - a.current || a.id.localeCompare(b.id)).slice(0, 5).map((asset) => ({ id: asset.id, name: asset.name, symbol: asset.symbol, value: asset.current, context: "Circulating market cap" })),
       highlights: [{ label: "Eligible tracked assets", value: String(eligible.length) }],
       methodology: "Current circulating market caps as published by Pharos. Frozen, restored and stale observed supplies excluded. Asset caps are not a deduplicated ecosystem total.", source: "Pharos · circulating supply" });
   }
-  const changes = cohort.filter((asset) => getCirculatingRaw(asset) >= 10_000_000).map((asset) => {
-    const current = getCirculatingRaw(asset), previous = getPrevWeekRawOrNull(asset)!;
+  const changes = cohort.filter((asset) => asset.current >= 10_000_000).map((asset) => {
+    const { current, previous } = asset;
     return { id: asset.id, name: asset.name, symbol: asset.symbol,
       value: topic === "market-growth" ? current - previous : 100 * (current / total - previous / previousTotal),
       ...(topic === "market-share" ? { shareBeforePct: 100 * previous / previousTotal, shareAfterPct: 100 * current / total } : {}),
@@ -105,7 +112,11 @@ export function buildYieldSocial(data: YieldRankingsResponse, assets: readonly S
 export function buildStabilitySocial(events: readonly DepegEvent[], base: Base): DailySocialSnapshot {
   const start = base.asOf - WEEK;
   const started = events.filter((event) => event.startedAt >= start && event.startedAt <= base.asOf);
-  const recovered = events.filter((event) => event.endedAt != null && event.endedAt >= start && event.endedAt <= base.asOf && (!event.closeReason || event.closeReason.startsWith("recovered-")));
+  const recovered = events.filter((event) => {
+    if (event.endedAt == null || event.endedAt < start || event.endedAt > base.asOf) return false;
+    const closure = classifyDepegClosure(event);
+    return closure === "recovered" || closure === "legacy_recovered";
+  });
   const ongoing = events.filter((event) => event.startedAt <= base.asOf && event.endedAt == null);
   return finish(base, { topic: "stability", title: "The weekly stability report", subtitle: "Confirmed incidents · trailing 7 days · all tracked assets", unit: "count",
     rows: [{ id: "started", name: "New incidents", value: started.length, context: "Confirmed incidents that began in the last seven days" },
@@ -117,7 +128,10 @@ export function buildStabilitySocial(events: readonly DepegEvent[], base: Base):
 
 export function buildSafetySocial(data: ReportCardsV9Response, assets: readonly StablecoinData[], base: Base): DailySocialSnapshot {
   if (data.publicationHealth.status !== "current" || !fresh(data.asOfSec, base.capturedAt)) throw new Error("Safety publication is held or stale");
-  const eligible = new Map(eligibleSocialAssets(assets, base.capturedAt).filter((asset) => getCirculatingRaw(asset) >= 10_000_000).map((asset) => [asset.id, asset]));
+  const eligible = new Map(eligibleSocialAssets(assets, base.capturedAt).filter((asset) => {
+    const supply = getCirculatingRawOrNull(asset);
+    return supply !== null && supply >= 10_000_000;
+  }).map((asset) => [asset.id, asset]));
   const cards = data.cards.filter((card): card is typeof card & { score: number; grade: NonNullable<typeof card.grade> } =>
     eligible.has(card.id) && card.ratingStatus === "rated" && card.score !== null && card.grade !== null && card.grade !== "NR")
     .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id)).slice(0, 5);

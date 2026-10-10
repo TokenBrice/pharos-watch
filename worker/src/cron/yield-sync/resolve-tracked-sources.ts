@@ -255,8 +255,7 @@ export async function resolveTrackedYieldSources(params: {
       if (
         weightedPoolGroupMemberIds.has(dlPool.pool) ||
         alreadyResolvedKeys.has(dlPool.pool) ||
-        dlPool.apy == null ||
-        dlPool.apy < 0
+        !Number.isFinite(dlPool.apy)
       ) {
         continue;
       }

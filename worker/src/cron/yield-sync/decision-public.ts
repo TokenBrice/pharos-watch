@@ -83,8 +83,7 @@ export function deriveRejectionReasonCode(
     return "thinner";
   }
 
-  // sourceRisk.sourceAgeSeconds carries the canonical source-age value; the
-  // client σ3 ladder uses it too. Fall back to no-stale-rejection if absent.
+  // Missing canonical source age cannot justify a stale rejection.
   const altAgeSeconds = finiteNumber(candidate.sourceRisk?.sourceAgeSeconds);
   const selAgeSeconds = finiteNumber(selected.sourceRisk?.sourceAgeSeconds);
   if (

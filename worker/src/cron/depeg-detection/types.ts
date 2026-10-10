@@ -1,4 +1,5 @@
 import type { PegRateSource } from "@shared/lib/peg-rates";
+import type { DepegQuoteDomain } from "@shared/lib/depeg-quote-domain";
 import type { PegAssetBase, StablecoinMeta } from "@shared/types/core";
 import type { DepegEventCloseReason } from "@shared/types/market";
 import type { DepegPriceCoverage } from "@shared/types/peg";
@@ -33,6 +34,7 @@ export interface HydratedDepegDetection {
 }
 
 export interface DepegDetectionRow extends DepegRow {
+  quote_mode?: DepegQuoteDomain["quote_mode"];
   recovery_last_seen_at?: number | null;
 }
 

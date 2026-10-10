@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   type DdrDiagnosticAssessmentRow,
   type DdrDiagnosticAssessmentSnapshot,
@@ -97,27 +98,62 @@ function snapshot(
   };
 }
 
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => {
+  fixtures.closeAll();
+  vi.restoreAllMocks();
+});
+
 describe("writeDepegResolverAssessments", () => {
-  it("persists first, threshold, and latest checkpoints for a fresh DDR row", async () => {
-    const db = mockD1([{ match: "depeg_resolver_assessments", rows: [] }]);
+  it("persists threshold checkpoints immutably while updating latest median and IQR values", async () => {
+    const { db, sqlite } = fixtures.open();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(2_000_000_000);
+    const rowsForEvent = sqlite.prepare(
+      "SELECT * FROM depeg_resolver_assessments WHERE event_id = ? AND methodology_version = ? ORDER BY checkpoint",
+    );
 
-    const changes = await writeDepegResolverAssessments(db, snapshot([baseRow]));
-    const writes = db.getHistory().filter((entry) => entry.sql.includes("depeg_resolver_assessments"));
-
-    expect(changes).toBe(5);
-    expect(writes).toHaveLength(5);
-    expect(writes.map((entry) => entry.binds[10]).sort()).toEqual([
-      "age_1h",
-      "age_24h",
-      "age_6h",
-      "first",
-      "latest",
+    expect(await writeDepegResolverAssessments(db, snapshot([baseRow]))).toBe(5);
+    const firstRows = rowsForEvent.all(baseRow.eventId, DDR_METHODOLOGY_VERSION);
+    expect(firstRows.map((row) => row.checkpoint)).toEqual([
+      "age_1h", "age_24h", "age_6h", "first", "latest",
     ]);
-    const latest = writes.find((entry) => entry.binds[10] === "latest");
-    expect(latest?.sql).toContain("ON CONFLICT(event_id, checkpoint, methodology_version) DO UPDATE");
-    expect(latest?.binds[20]).toBe(7200);
-    expect(latest?.binds[21]).toBe(3600);
-    expect(latest?.binds[22]).toBe(14_400);
+    for (const row of firstRows) {
+      expect(row).toMatchObject({
+        stablecoin_id: baseRow.stablecoinId,
+        assessed_at: 2_000_000,
+        event_age_sec: 25 * 3600,
+        median_remaining_sec: 7200,
+        iqr_low_remaining_sec: 3600,
+        iqr_high_remaining_sec: 14_400,
+        row_json: JSON.stringify(baseRow),
+        created_at: 2_000_000,
+        updated_at: 2_000_000,
+      });
+    }
+
+    const updatedRow: DdrDiagnosticAssessmentRow = {
+      ...baseRow,
+      ageSec: 26 * 3600,
+      duration: { ...baseRow.duration, medianSec: 1111, iqrSec: [333, 2222] },
+    };
+    clock.mockReturnValue(2_003_600_000);
+    expect(await writeDepegResolverAssessments(
+      db, snapshot([updatedRow], { computedAt: 2_003_600 }),
+    )).toBe(1);
+
+    const secondRows = rowsForEvent.all(baseRow.eventId, DDR_METHODOLOGY_VERSION);
+    expect(secondRows.filter((row) => row.checkpoint !== "latest"))
+      .toEqual(firstRows.filter((row) => row.checkpoint !== "latest"));
+    expect(secondRows.find((row) => row.checkpoint === "latest")).toMatchObject({
+      assessed_at: 2_003_600,
+      event_age_sec: 26 * 3600,
+      median_remaining_sec: 1111,
+      iqr_low_remaining_sec: 333,
+      iqr_high_remaining_sec: 2222,
+      row_json: JSON.stringify(updatedRow),
+      created_at: 2_000_000,
+      updated_at: 2_003_600,
+    });
   });
 
   it("skips degraded and empty snapshots", async () => {
@@ -128,36 +164,21 @@ describe("writeDepegResolverAssessments", () => {
     expect(db.getHistory()).toHaveLength(0);
   });
 
-  describe("non-conforming rows", () => {
-    afterEach(() => {
-      vi.restoreAllMocks();
-    });
+  it.each([
+    ["malformed", { stablecoinId: "bad", symbol: "BAD" }],
+    ["unserializable", { stablecoinId: "bad", symbol: "BAD", value: 1n }],
+  ])("quarantines %s rows without aborting conforming checkpoint writes", async (_kind, malformedRow) => {
+    const { db, sqlite } = fixtures.open();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    it("warns about dropped rows but still persists conforming ones", async () => {
-      const db = mockD1([{ match: "depeg_resolver_assessments", rows: [] }]);
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      const malformedRow = { stablecoinId: "bad", symbol: "BAD" } as unknown as DdrDiagnosticAssessmentRow;
-
-      const changes = await writeDepegResolverAssessments(db, snapshot([baseRow, malformedRow]));
-
-      expect(changes).toBe(5);
-      expect(warnSpy).toHaveBeenCalledTimes(1);
-      expect(warnSpy.mock.calls[0][0]).toContain("Dropped 1/2 non-conforming assessment rows");
-    });
-
-    it("does not let unserializable dropped row samples abort valid writes", async () => {
-      const db = mockD1([{ match: "depeg_resolver_assessments", rows: [] }]);
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      const malformedRow = { stablecoinId: "bad", symbol: "BAD", value: 1n };
-
-      const changes = await writeDepegResolverAssessments(db, snapshot([malformedRow, baseRow]));
-      const writes = db.getHistory().filter((entry) => entry.sql.includes("depeg_resolver_assessments"));
-
-      expect(changes).toBe(5);
-      expect(writes).toHaveLength(5);
-      expect(warnSpy).toHaveBeenCalledTimes(1);
-      expect(warnSpy.mock.calls[0][0]).toContain("Dropped 1/2 non-conforming assessment rows");
-      expect(warnSpy.mock.calls[0][0]).toContain("[unserializable [object Object] keys=stablecoinId,symbol,value;");
-    });
+    expect(await writeDepegResolverAssessments(db, snapshot([malformedRow, baseRow]))).toBe(5);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(sqlite.prepare(
+      "SELECT checkpoint, event_id, stablecoin_id FROM depeg_resolver_assessments ORDER BY checkpoint",
+    ).all()).toEqual(
+      ["age_1h", "age_24h", "age_6h", "first", "latest"].map((checkpoint) => ({
+        checkpoint, event_id: baseRow.eventId, stablecoin_id: baseRow.stablecoinId,
+      })),
+    );
   });
 });

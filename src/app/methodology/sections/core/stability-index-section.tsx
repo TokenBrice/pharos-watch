@@ -13,6 +13,7 @@ import {
   WorkedExample,
 } from "../../methodology-shared";
 import { STABILITY_INDEX_SECTION_CONTENT } from "@/lib/methodology-content";
+import { PSI_BAND_CLASSES } from "@shared/lib/classification";
 
 const STABILITY_COMPONENT_COLUMNS = [
   { id: "component", header: "Component", cellClassName: "text-foreground" },
@@ -70,32 +71,32 @@ const STABILITY_BAND_ROWS = [
   {
     id: "bedrock",
     cells: { range: "90–100", band: "BEDROCK", meaning: "Near-ideal market stability" },
-    cellClassNames: { band: "text-green-700 dark:text-green-400" },
+    cellClassNames: { band: PSI_BAND_CLASSES.BEDROCK },
   },
   {
     id: "steady",
     cells: { range: "75–89", band: "STEADY", meaning: "Normal conditions with minor stress" },
-    cellClassNames: { band: "text-teal-700 dark:text-teal-400" },
+    cellClassNames: { band: PSI_BAND_CLASSES.STEADY },
   },
   {
     id: "tremor",
     cells: { range: "60–74", band: "TREMOR", meaning: "Meaningful instability emerging" },
-    cellClassNames: { band: "text-yellow-700 dark:text-yellow-400" },
+    cellClassNames: { band: PSI_BAND_CLASSES.TREMOR },
   },
   {
     id: "fracture",
     cells: { range: "40–59", band: "FRACTURE", meaning: "Broad, significant market stress" },
-    cellClassNames: { band: "text-orange-700 dark:text-orange-400" },
+    cellClassNames: { band: PSI_BAND_CLASSES.FRACTURE },
   },
   {
     id: "crisis",
     cells: { range: "20–39", band: "CRISIS", meaning: "Contagion-level instability" },
-    cellClassNames: { band: "text-red-700 dark:text-red-400" },
+    cellClassNames: { band: PSI_BAND_CLASSES.CRISIS },
   },
   {
     id: "meltdown",
     cells: { range: "0–19", band: "MELTDOWN", meaning: "Systemic peg failure conditions" },
-    cellClassNames: { band: "text-red-800" },
+    cellClassNames: { band: PSI_BAND_CLASSES.MELTDOWN },
   },
 ];
 
@@ -114,6 +115,15 @@ export function StabilityIndexMethodologySection() {
         recomputed every 30 minutes from live depeg conditions and stress signals, then aggregated into daily history
         snapshots. Its monetary aggregate contains active core stablecoins and cash equivalents; tracked variants and
         stable-value investment products remain browsable but do not count as independent supply.
+      </p>
+      <p>
+        Methodology v3.67 can change repaired historical scores without changing formula weights or bands.
+        Audit repairs and bounded backfills share canonical daily-price, native-domain and DEWS archive inputs
+        with a twenty-one-day supply lookback. Historical trend compares paired admitted supply identities;
+        an unavailable prior denominator or required missing DEWS archive preserves the accepted day rather
+        than inventing flat growth or zero stress. Event exclusion and restoration rebuild the post-audit
+        eligible universe atomically with event provenance. Fixed-clock replay and owner review remain release
+        prerequisites, not completed historical repair claims.
       </p>
       <p className="text-xs text-muted-foreground">
         See also:{" "}
@@ -239,6 +249,8 @@ export function StabilityIndexMethodologySection() {
             <li>
               <span className="text-foreground font-medium">Age-aware depreciation:</span> fresh depegs get full weight
               for 30 days, then decay linearly to a 25% floor by asset age 120 days.
+              Contributor costs use the full-precision scoring factor; rounding applies only to visible age,
+              percentage and cost text.
             </li>
           </ul>
           <code className="block rounded-lg border border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">

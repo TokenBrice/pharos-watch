@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { YieldSourceBoard } from "@/components/yield/yield-source-board";
 import { buildYieldSourceBoardModel } from "@/lib/yield-source-board-model";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
+import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
 
 function makeBoardRanking(overrides = {}) {
   return makeYieldRanking({
@@ -36,6 +37,24 @@ describe("YieldSourceBoard", () => {
     cleanup();
   });
 
+  it("discloses bounded composition and unavailable anomalies on the summary path", () => {
+    const rankings = [makeBoardRanking({
+      provenance: null,
+      altSources: Array.from({ length: 10 }, (_, i) => makeAltYieldSource({ sourceKey: `alt-${i}` })),
+    })];
+    const summary = projectYieldRankingsSummary({ rankings, riskFreeRate: 4, scalingFactor: 8, medianApy: null, updatedAt: 1_800_000_000 });
+    render(<YieldSourceBoard model={buildYieldSourceBoardModel(summary.rankings)} />);
+    expect(screen.getByText(/Lanes show 9 of 11 sources/)).toBeTruthy();
+    expect(screen.getByText(/Anomaly evidence unavailable for 1 chosen source/)).toBeTruthy();
+    expect(screen.queryByText(/Counts every chosen source plus retained alternates/)).toBeNull();
+  });
+
+  it("routes anomaly disclosure navigation to an honest USDC fallback", () => {
+    render(<YieldSourceBoard model={buildYieldSourceBoardModel([makeBoardRanking({ id: "usdc-circle" })])} />);
+    fireEvent.click(screen.getByRole("button", { name: /1 chosen source with anomalies/i }));
+    expect(screen.getByRole("link", { name: "View yield opportunities for USDC" }).getAttribute("href"))
+      .toBe("/yield?workbenchFallback=usdc-circle");
+  });
   it("renders the source-mix heading, disclosure toggles, and per-lane observation counts", () => {
     const model = buildYieldSourceBoardModel([
       makeBoardRanking(),
@@ -212,7 +231,7 @@ describe("YieldSourceBoard", () => {
     fireEvent.click(trigger);
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
     expect(screen.getByText("Low source TVL")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "USDe" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "View yield opportunities for USDe" })).toBeTruthy();
 
     fireEvent.click(trigger);
     expect(trigger.getAttribute("aria-expanded")).toBe("false");

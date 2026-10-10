@@ -69,11 +69,13 @@ Derived helpers:
 
 Live homepage modules resolve query state through the shared `loading`, `ready`, `empty`, `unavailable`, and `stale-with-data` contract. A failed source without retained data renders an explicit unavailable state and retry action rather than a healthy or empty message. Retained data stays visible with its age and a stale notice, while a successful zero-row response can use the module's normal empty copy. The rankings workbench identifies failed source families instead of replacing them with the generic empty table.
 
+The DDR overview separates resolver/reviewer generations and reasons, with freshness/error notices and retries. When `computedAt` exists it anchors a dated envelope; unavailable/absent transport status becomes fresh unless stale/degraded evidence applies. Retained rows are not “live”; empty copy claims only no published active forecasts in that snapshot. Only valid frozen predictions count as verdicts; pending/no-call/invalidated rows stay visible without calls. Durations are locked as-of estimates; the live overlay marks elapsed deadlines overdue without rewriting frozen evidence.
+
 Starred stablecoin state is local to the browser:
 
 - localStorage key: `pharos-watchlist-v1` (the shared watchlist store; the legacy `pharos-pinned-stablecoins` and `pharos:yield-watchlist:v1` keys are read once, merged into the canonical key, then deleted)
 - value: normalized stablecoin ID array
-- invalid, inactive, duplicate, or over-limit IDs are ignored on read
+- the homepage pin projection ignores invalid/inactive IDs and reads the first 12 unique active IDs without truncating canonical storage; starring a saved ID below that cap promotes it to the front, while unstarring a visible pin removes it from the shared watchlist
 
 Saved shortcuts are also browser-local:
 
@@ -85,6 +87,16 @@ Saved shortcuts are also browser-local:
 ### `HomeAltHero`
 
 `HomeAltHero` receives the server fallback from `getHomepageHeroSnapshot()` in `src/app/page.tsx`, preserves that exact selection through hydration, and then reconciles the headline and cohort rows from `useStablecoins()`. It renders the `Market Pulse` page heading, the total market-cap summary, cohort rows, and the viewport-gated live chart.
+
+The current supply snapshot records observed versus expected core-aggregate IDs, plus separate present-but-unavailable and omitted-row counts. No observed supply means a nullable headline, not a live $0; the selector then uses a dated, eligible fallback or renders unavailable. Explicit observed zeros remain zero. Mixed coverage stays visible as a **Known Market Cap Subtotal** with an observed/expected census; the present-row `supplyUnavailableCount` keeps its original meaning. A subgroup with no observations is unavailable, named cohorts require all their members, and full-market percentages and the Others residual require complete core coverage.
+
+Only successful data with a producer `updatedAt` classified fresh by `deriveDataHealth` is **Live**. Without producer time, retained figures say **Freshness unavailable · generation unavailable** and carry the shared unavailable-freshness notice; query `dataUpdatedAt` is receipt time and supplies neither freshness authority nor a displayed as-of date. Stale, degraded, or failed-refresh figures keep their available producer dates and shared notices. A minute clock rechecks producer age and the fallback's 72-hour expiry.
+
+### Market Pulse cards
+
+`PulseCard` receives each contributing query's producer metadata, canonical freshness preset, and error/availability state. Successful stale/degraded responses (including empty results and non-fresh dependencies) carry shared data-health warnings; useful retained values remain visible. The active-depeg headline counts the complete peg-summary incident flags in `ACTIVE_STABLECOIN_ID_SET`, independently of event pagination or current-deviation availability. Only the top four rows are displayed; missing observations and unloaded incident ages are explicitly unavailable, and zero incidents does not claim every price is on peg.
+
+Supply movers partition positive/negative observed changes before ranking, promote the peak once, and never fill an empty side with opposite-sign rows. Mint/burn inactivity uses the canonical activity signal: offsetting mints and burns show balanced activity, while unvalued active nets remain unavailable.
 
 ### `HomepageTape`
 
@@ -138,7 +150,7 @@ The directory table is the product's workbench, so it sits directly after shortc
 
 The Biggest Supply Moves signal card (`src/components/home-alt-mini-cards/supply-moves-card.tsx`) ranks active coins above $10M by current supply against `circulatingPrevWeek`. Both sides are read through the absence-aware `getCirculatingRawOrNull` / `getPrevWeekRawOrNull` helpers: a coin whose current or previous-week supply is unavailable (for example `circulating: {}` on a supply-chain-dropout quarantine past its carry ceiling) is skipped rather than ranked against a zero, while an explicit observed zero still counts. A coin with a reviewed protocol-internal mint or burn (`shared/lib/reviewed-protocol-internal-flows.ts`, the registry mint/burn flow methodology v6.21 excludes from counted flow) stays out of the ranking while the event is inside the comparison. The window reaches back eight days because the previous-week value is a daily point. The measured supply change itself is not netted or rewritten, so tables and detail pages still show it. USDai, excluded for its 2026-09-23 loan-deployment burn, returns to the card after 2026-10-01 20:48 UTC. The daily digest's biggest supply mover ranks by absolute USD change, where such events rarely compete with the largest coins, and does not apply this exclusion.
 
-`HomeAltYieldOverview` keeps the homepage yield teaser risk-adjusted-first: the headline stat is the best Pharos Yield Score row with APY and PYS, while the raw APY maximum is demoted to a muted `Highest raw APY (unadjusted)` note.
+`HomeAltYieldOverview` leads with the best Pharos Yield Score row's APY/PYS; raw APY is a muted `Highest raw APY (unadjusted)` note. Retained figures keep shared producer-generation freshness notices, failed-refresh retry, and the workbench's API quality warnings.
 
 ### Stablecoin Overview
 
@@ -147,9 +159,10 @@ This section contains:
 - `StablecoinTable`
 - `PegBrowseStrip`
 
-The homepage table seeds a curated default column set (`HOME_ALT_DEFAULT_COLUMNS`, which omits Mint Authority and Flags), paginates at `OVERVIEW_PAGE_SIZE` (20) rows per page behind a prev/next footer inside its own capped vertical scroll viewport, and lets users persist column changes through Table settings.
+The homepage table seeds `HOME_ALT_DEFAULT_COLUMNS` (omitting Mint Authority and Flags), pages by `OVERVIEW_PAGE_SIZE` (20) in a capped scroll viewport, and persists Table settings. Background metric refreshes preserve page and scroll; filter/search/sort/pinning changes reset both. A shrinking result count clamps the page.
 
 Peg-deviation text and severity in the shared table both use the published `peg-summary.currentDeviationBps`; the independently refreshed raw price remains the price display and is not recomputed into a second deviation label.
+Liquidity cells retain measured zero with its canonical score colour in both layouts; only unavailable scores render `—`.
 
 When pinning is enabled from the homepage, each table row shows a locked star column to the left of the rank column. Starred rows are shown at the top of the table, ahead of unstarred rows; filters and search still decide which rows are eligible to appear in the table.
 

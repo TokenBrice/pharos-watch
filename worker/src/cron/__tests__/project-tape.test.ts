@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -8,10 +8,16 @@ import { mockTapeD1, tapeInsertBinds, tapeInsertBindsForType } from "../../lib/t
 import { projectCemeteryEntries } from "../../lib/tape-projectors/cemetery";
 import { projectLifecycleFrozen } from "../../lib/tape-projectors/lifecycle";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../../lib/tape-projectors/types";
 const fixtures = createLatestSchemaFixtureTracker();
-afterEach(fixtures.closeAll);
+afterEach(() => {
+  fixtures.closeAll();
+  vi.restoreAllMocks();
+});
 
 const SEC = 1_700_000_000;
+beforeEach(() => vi.spyOn(Date, "now").mockReturnValue(SEC * 1000));
+const RECONCILIATION_SINCE = SEC - SOURCE_RECONCILIATION_LOOKBACK_SEC;
 
 /**
  * Pull only the inserts emitted for one event-type slug. The static
@@ -30,6 +36,7 @@ function baseTables(): MockTableConfig[] {
   return [
     { match: "FROM cache WHERE key", rows: [] },
     { match: "FROM tape_events INDEXED BY idx_tape_source_key", rows: [] },
+    { match: "FROM tape_events INDEXED BY idx_tape_type_ts", rows: [] },
     { match: MATCH_DEPEG_OPEN_PEAK, rows: [] },
     { match: MATCH_DEPEG_OPENED, rows: [] },
     { match: MATCH_DEPEG_RESOLVED, rows: [] },
@@ -245,7 +252,7 @@ describe("projectTape", () => {
   it("projects freeze.destroyed with severity scaled by USD amount", async () => {
     const db = dbWithOverride({
       match: "AND event_type = ?",
-      matchBinds: [0, "destroy", 500],
+      matchBinds: [RECONCILIATION_SINCE, "destroy", "opened", 500],
       rows: [
         {
           id: "be-1",
@@ -269,7 +276,7 @@ describe("projectTape", () => {
   it("projects freeze.unblocked as severity=info", async () => {
     const db = dbWithOverride({
       match: "AND event_type = ?",
-      matchBinds: [0, "unblacklist", 500],
+      matchBinds: [RECONCILIATION_SINCE, "unblacklist", "resolved", 500],
       rows: [
         {
           id: "be-2",

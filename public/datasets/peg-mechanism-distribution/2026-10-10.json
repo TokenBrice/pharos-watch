@@ -180,7 +180,7 @@
     },
     {
       "mechanismArchetype": "algorithmic",
-      "mechanismLabel": "Reflexive / Unbacked",
+      "mechanismLabel": "Programmatic Peg Defense",
       "pegReferenceId": "unknown",
       "jurisdiction": "unknown",
       "coinCount": 4
@@ -670,7 +670,7 @@
     },
     {
       "mechanismArchetype": "algorithmic",
-      "mechanismLabel": "Reflexive / Unbacked",
+      "mechanismLabel": "Programmatic Peg Defense",
       "pegReferenceId": "unknown",
       "jurisdiction": "United States",
       "coinCount": 1

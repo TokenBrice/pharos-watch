@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DatabaseSync } from "node:sqlite";
-import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import * as shared from "../shared";
@@ -27,14 +26,12 @@ const observation = (observedAt: number, price = 0.99) => ({ ...target, source: 
 const published = () => makePeggedAsset({ id, symbol: "USDaf", price: null });
 const allUnpriced = () =>
   new Map([...ACTIVE_META_BY_ID.values()].map((meta) => [meta.id, makePeggedAsset({ id: meta.id, symbol: meta.symbol, price: null })]))
-let sql: DatabaseSync;
+const fixtures = createLatestSchemaFixtureTracker();
 let db: D1Database;
 beforeEach(() => {
-  sql = new DatabaseSync(":memory:");
-  sql.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
-  db = createSqliteD1(sql);
+  ({ db } = fixtures.open());
 });
-afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); sql.close(); });
+afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); fixtures.closeAll(); });
 
 function prepareRefresh() {
   vi.spyOn(shared, "loadPreviousStablecoinsById").mockResolvedValue({ previousAssetsById: new Map([[id, published()]]), cacheState: { state: "ok" } });
@@ -54,6 +51,53 @@ describe("DEX refresh continuity", () => {
     expect(plan.batches[0][0].target).toEqual(secondary);
     expect(planDexRefresh([asset], [{ id: asset.id, chain: "ethereum", target: "0xwrong" }], 0).batches[0][0].target).toEqual(reviewed[0]);
   });
+  it.each(["empty", "under-liquidity", "404"] as const)("invalidates an answered %s secondary hint and rediscovers the canonical route", async (response) => {
+    prepareRefresh().mockRestore();
+    const asset = makePeggedAsset({ id: "usdc-circle", symbol: "USDC", price: null });
+    vi.mocked(shared.loadPreviousStablecoinsById).mockResolvedValue({ previousAssetsById: new Map([[asset.id, asset]]), cacheState: { state: "ok" } });
+    const reviewed = dex.buildDexScreenerTargets(asset);
+    const secondary = reviewed.find((row) => row.chain !== reviewed[0].chain)!;
+    await setCacheIfNewer(db, DEX_REFRESH_CACHE_KEY, JSON.stringify({
+      targets: [{ id: asset.id, chain: secondary.chain, target: secondary.address }], observations: [], cursor: 0,
+    }), now - 900);
+    const pairs = response === "under-liquidity" ? [{
+      chainId: secondary.chain, dexId: "test", pairAddress: "0xpool",
+      baseToken: { address: secondary.address, symbol: "USDC", name: "USDC" },
+      quoteToken: { address: "0xquote", symbol: "USD", name: "USD" }, priceUsd: "1",
+      liquidity: { usd: 1, base: 1, quote: 1 }, volume: null, pairCreatedAt: null,
+    }] : [];
+    vi.spyOn(dexscreener, "fetchDsTokenPoolsWithStatus").mockResolvedValue({
+      ok: response !== "404", status: response === "404" ? 404 : 200, pairs,
+    });
+    const summary = await runPriceDexRefresh({ db, syncStartSec: now });
+    expect(summary).toMatchObject({ resolved: 0, attemptedBatches: 1, errorClasses: [] });
+    const state = JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value);
+    expect(state.targets).toEqual([]);
+    expect(planDexRefresh([asset], state.targets, 0).batches[0][0].target).toEqual(reviewed[0]);
+  });
+
+  it("invalidates only answered missed targets in a mixed successful batch", async () => {
+    const fetch = prepareRefresh();
+    const peer = makePeggedAsset({ id: "usdc-circle", symbol: "USDC", price: null });
+    vi.mocked(shared.loadPreviousStablecoinsById).mockResolvedValue({ previousAssetsById: new Map([[id, published()], [peer.id, peer]]), cacheState: { state: "ok" } });
+    const peerTarget = dex.buildDexScreenerTargets(peer)[0];
+    const hints = [target, { id: peer.id, chain: peerTarget.chain, target: peerTarget.address }];
+    await setCacheIfNewer(db, DEX_REFRESH_CACHE_KEY, JSON.stringify({ targets: hints, observations: [], cursor: 0 }), now - 900);
+    fetch.mockImplementation(async (assets, _fx, _db, _signal, _history, _now, _missing, batch) => {
+      const resolved = assets.find((row) => row.id === peer.id)!;
+      Object.assign(resolved, { price: 1, priceSource: "dexscreener-exact", priceConfidence: "fallback", priceObservedAt: now, priceObservedAtMode: "local_fetch" });
+      return { resolved: 1, failures: [], diagnostics: [{ source: "dexscreener-exact", stage: "fallback", endpoint: "test", status: 200, ok: true, success: true,
+        assetAttempts: batch!.map(({ entry, target: attempted }) => ({
+          assetId: entry.asset.id, adapter: "dexscreener-exact", source: "dexscreener-exact",
+          chain: attempted.chain, target: attempted.address, state: "attempted",
+          result: entry.asset.id === peer.id ? "resolved" : "empty", replaySafe: false,
+        })) }] };
+    });
+    await runPriceDexRefresh({ db, syncStartSec: now });
+    const state = JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value);
+    expect(state.targets).toEqual([{ ...hints[1], observedAt: now }]);
+  });
+
 
   it("retains validated secondary hints through a healthy primary-price interlude", () => {
     const asset = makePeggedAsset({ id: "usdc-circle", symbol: "USDC", price: 1, priceSource: "coingecko", priceConfidence: "single-source", priceObservedAt: now, priceObservedAtMode: "upstream" });

@@ -31,14 +31,27 @@ export function BlacklistTrackerMethodologySection() {
                 Methodology revisions document changes to event coverage, cross-chain decoding behavior, cursor safety
                 policies, event-time amount attribution rules, and the separate freeze-ledger snapshot used for the public
                 summary and quarterly chart, including the reconciled `kyc.rip` / `stables.rip` bootstrap for ETH USDC,
-                ETH USDT, and TRON USDT. Non-USD or commodity-denominated assets use coin-specific price-cache entries
-                when Pharos reports USD frozen value.
+                ETH USDT, and TRON USDT. Current non-USD or commodity snapshot valuations use coin-specific quotes;
+                historical event-time USD valuation requires a quote attributed to the event, never today&apos;s price.
               </p>
               <p>
                 Public frozen totals are last-known successful freeze-ledger snapshots rather than live balance guarantees.
                 Provider refresh failures preserve the previous successful value and surface data-quality context. New
                 snapshot identities are contract/config scoped, while older rows can use legacy symbol/chain/address
                 fallback until remediation catches them up.
+              </p>
+              <p>
+                Canonical EVM log and Tron account identities count once across events, active state and snapshots.
+                Tron storage uses validated lowercase byte addresses, with Base58 reserved for provider calls and
+                display. Unknown USD amounts remain unavailable; mixed totals disclose partial valuation coverage,
+                and all canonical tracked gold cohorts, including XAUM, contribute when observed. Explicit gold
+                zero-substitution provenance remains distinct from an observation failure.
+              </p>
+              <p>
+                Bounded cursor progress is not caught-up chain coverage: an incomplete scan cannot renew success
+                clocks or publish a fresh summary. Budget-skipped and order-withheld snapshots are retried from
+                durable maintenance debt. Lifecycle and amount ordering require numeric local positions and proven
+                cross-transaction order; RPC event timestamps require matching block hashes.
               </p>
               <p>
                 Blacklistability uses the report-card four-status model: Yes, Upstream, Possible, and No. The sourced

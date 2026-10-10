@@ -3,6 +3,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import type { PegAssetBase } from "@shared/types/core";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getPegReference, normalizePegType, type PegRateSource } from "@shared/lib/peg-rates";
+import { normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
 import { getDepegThresholdBps } from "../lib/constants";
 import {
   dexPoolIndependentGroupKey,
@@ -42,8 +43,12 @@ export type DexPriceRowsByCoin = Awaited<ReturnType<typeof loadDexPriceRows>>;
 export type DexPriceSourcesByCoin = Awaited<ReturnType<typeof loadDexPriceSources>>;
 export type DexPoolChallengersByCoin = Awaited<ReturnType<typeof loadDexPoolChallengers>>;
 
+export type PeakQuoteDomain = "usd" | `native:${string}`;
+
 export interface PeakCandidate {
   bps: number | null | undefined;
+  /** Canonical quote identity; native fiat prices cannot enter a USD peak. */
+  quoteDomain: PeakQuoteDomain;
   price: number | null | undefined;
 }
 
@@ -158,9 +163,19 @@ export function classifyConfirmationTimestamp(timestamp: number | null | undefin
   return "fresh";
 }
 
+export function pendingPeakQuoteDomain(row: PendingDepegRow, state: PendingDepegState): PeakQuoteDomain {
+  return isNativeOriginPending(state.reason) ? `native:${normalizePegType(row.peg_type)}` : "usd";
+}
+
+export function isNativeQuoteForPending(row: PendingDepegRow, quote: NativePegQuote | undefined): boolean {
+  return quote != null && quote.stablecoinId === row.stablecoin_id &&
+    normalizePegTypeFromCurrency(quote.pegCurrency) === normalizePegType(row.peg_type);
+}
+
 export function pickPeakCandidate(candidates: PeakCandidate[], fallback: PeakCandidate): { bps: number; price: number | null } {
-  const peakBps = pickMoreSevereBps(...candidates.map((candidate) => candidate.bps)) ?? fallback.bps ?? 0;
-  const matching = candidates.find((candidate) => candidate.bps === peakBps && candidate.price != null);
+  const comparable = candidates.filter((candidate) => candidate.quoteDomain === fallback.quoteDomain);
+  const peakBps = pickMoreSevereBps(...comparable.map((candidate) => candidate.bps)) ?? fallback.bps ?? 0;
+  const matching = comparable.find((candidate) => candidate.bps === peakBps && candidate.price != null);
   return {
     bps: peakBps,
     price: matching?.price ?? fallback.price ?? null,
@@ -328,11 +343,12 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     pegRates,
     pegRateSources,
     pegRateCounts,
-    nativePegQuote,
+    nativePegQuote: suppliedNativePegQuote,
     openSet,
     now,
   } = input;
   const pegType = normalizePegType(asset?.pegType);
+  const nativePegQuote = isNativeQuoteForPending(row, suppliedNativePegQuote) ? suppliedNativePegQuote : undefined;
   const refreshedPegReferenceIsAuthoritative =
     asset && meta
       ? isAuthoritativeDepegPegReference({

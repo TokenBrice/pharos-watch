@@ -1,11 +1,31 @@
 import { describe, expect, it } from "vitest";
 import { buildAuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
-import { buildDexDirectApiFetchers } from "../orchestrator-phases/direct-api";
+import {
+  buildDexDirectApiFetchers,
+  type DirectApiCensusScope,
+  type DirectApiFetchPhaseEntry,
+} from "../orchestrator-phases/direct-api";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const ETHEREUM_POOL_KEY = "ethereum:0x4ba45fb7de134bcb24a6053bbe21c3a4be9f85ea";
 
 describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
+  it("requires positive exhaustive authority even when raw identities and a healthy result exist", () => {
+    const entry: DirectApiFetchPhaseEntry = {
+      name: "Undeclared",
+      circuitKey: "undeclared-api",
+      normalizedProtocol: "undeclared",
+      supportedChains: ["ethereum"],
+      censusScope: "exhaustive",
+      authoritativeExactPoolKeys: new Set([ETHEREUM_POOL_KEY]),
+      result: { pools: [], ok: true, degraded: false, errors: [] },
+    };
+    Reflect.deleteProperty(entry, "censusScope");
+    const index = buildAuthoritativeStagedPoolConfirmationIndex([entry]);
+    expect(index.enforcedChainsByProtocol.size).toBe(0);
+    expect(index.confirmedExactKeysByProtocol.size).toBe(0);
+  });
+
   it("enforces confirmation on a chain where an exhaustive census legitimately found no pools", () => {
     const index = buildAuthoritativeStagedPoolConfirmationIndex([
       {
@@ -13,6 +33,7 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
         circuitKey: "balancer-api",
         normalizedProtocol: "balancer",
         supportedChains: ["ethereum", "plasma"],
+        censusScope: "exhaustive",
         authoritativeExactPoolKeys: new Set([ETHEREUM_POOL_KEY]),
         result: {
           pools: [],
@@ -34,6 +55,7 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
         circuitKey: "balancer-api",
         normalizedProtocol: "balancer",
         supportedChains: ["ethereum"],
+        censusScope: "exhaustive",
         authoritativeExactPoolKeys: new Set([ETHEREUM_POOL_KEY]),
         result: {
           pools: [],
@@ -56,6 +78,7 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
         circuitKey: "balancer-api",
         normalizedProtocol: "balancer",
         supportedChains: ["plasma"],
+        censusScope: "exhaustive",
         authoritativeExactPoolKeys: new Set([ETHEREUM_POOL_KEY]),
         result: {
           pools: [],
@@ -77,6 +100,7 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
         circuitKey: "balancer-api",
         normalizedProtocol: "balancer",
         supportedChains: ["ethereum"],
+        censusScope: "exhaustive",
         authoritativeExactPoolKeys: new Set([ETHEREUM_POOL_KEY]),
         result: {
           pools: [],
@@ -99,6 +123,7 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
         circuitKey: "pancakeswap-api",
         normalizedProtocol: "pancakeswap",
         supportedChains: ["bsc"],
+        censusScope: "exhaustive",
         authoritativeExactPoolKeys: new Set([ETHEREUM_POOL_KEY]),
         result: {
           pools: [],
@@ -151,6 +176,7 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
         circuitKey: "aerodrome-slipstream-api",
         normalizedProtocol: "aerodrome",
         supportedChains: ["base"],
+        censusScope: "exhaustive",
         authoritativeExactPoolKeys: new Set<string>(),
         result: {
           pools: [],
@@ -175,6 +201,7 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
         circuitKey: "orca-api",
         normalizedProtocol: "orca",
         supportedChains: ["solana"],
+        censusScope: "exhaustive",
         result: {
           pools: [
             {
@@ -206,6 +233,54 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
 });
 
 describe("direct API census scope declarations", () => {
+  // One matrix enrolls every descriptor's maximum authority and stop policy.
+  // Completion must describe this run, never a resumed multi-run rotation.
+  const contracts: { name: string; censusScope: DirectApiCensusScope; stop: string }[] = [
+    { name: "Fluid", censusScope: "bounded-sample", stop: "tracked-token extract" },
+    { name: "Balancer", censusScope: "exhaustive", stop: "short page; full page at cap is partial" },
+    { name: "PancakeSwap", censusScope: "bounded-sample", stop: "head plus two rotating tail pages" },
+    { name: "Meteora", censusScope: "bounded-sample", stop: "three-page head sample" },
+    { name: "Raydium", censusScope: "exhaustive", stop: "short page or below admission floor; cap is partial" },
+    { name: "Orca", censusScope: "exhaustive", stop: "four-page budget; contiguous exhausted run only" },
+    { name: "Aerodrome Slipstream", censusScope: "bounded-sample", stop: "tracked priceable reserve extract" },
+    { name: "Uniswap V3 BSC shadow", censusScope: "bounded-sample", stop: "bounded staged exact-pool recovery" },
+    { name: "Velodrome Slipstream", censusScope: "bounded-sample", stop: "tracked priceable reserve extract" },
+  ];
+  const fetchers = buildDexDirectApiFetchers({
+    db: makeNoopD1(),
+    graphApiKey: null,
+    chainAddressToId: new Map(),
+    symbolToChainScopedIds: new Map(),
+    stablecoinPriceById: new Map(),
+  });
+
+  it("enrolls every adapter exactly once in the census contract matrix", () => {
+    expect(fetchers.map(({ name }) => name).sort()).toEqual(contracts.map(({ name }) => name).sort());
+  });
+
+  it.each(contracts)("$name declares its $stop census contract", ({ name, censusScope }) => {
+    const fetcher = fetchers.find((adapter) => adapter.name === name)!;
+    expect(fetcher.censusScope).toBe(censusScope);
+    for (const scan of ["exhausted", "capped", "later-page-failure", "malformed-identity", "resumed-tail"] as const) {
+      const chain = fetcher.supportedChains[0];
+      const index = buildAuthoritativeStagedPoolConfirmationIndex([{
+        ...fetcher,
+        authoritativeExactPoolKeys: new Set([`${chain}:pool`]),
+        result: {
+          pools: [], ok: true, degraded: scan === "later-page-failure", errors: [],
+          physicalPoolCensus: { exactPoolKeys: [`${chain}:pool`], incompleteChains: scan === "malformed-identity" ? [chain] : [] },
+          pagination: {
+            state: scan === "exhausted" || scan === "malformed-identity" ? "complete" : "partial",
+            headRefreshed: true, pagesFetched: 1, cursor: scan === "exhausted" ? null : "tail",
+            cycleCompleted: scan === "exhausted" || scan === "malformed-identity" || scan === "resumed-tail",
+          },
+        },
+      }]);
+      expect(index.enforcedChainsByProtocol.get(fetcher.normalizedProtocol)?.has(chain) ?? false,
+        `${name}: ${scan}`).toBe(censusScope === "exhaustive" && scan === "exhausted");
+    }
+  });
+
   it("withholds veto authority from every provider that returns a filtered extract", () => {
     const fetchers = buildDexDirectApiFetchers({
       db: makeNoopD1(),

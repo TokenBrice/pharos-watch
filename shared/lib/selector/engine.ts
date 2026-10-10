@@ -28,6 +28,7 @@ import {
   rankRobustnessFor,
   rankScoredEntries,
   sortScoredEntries,
+  variantFamilyKey,
 } from "./ranking";
 import { buildRecommendation } from "./recommendation";
 import {
@@ -48,7 +49,7 @@ import type {
   SkippedCoin,
 } from "./types";
 import { SELECTOR_VERSION } from "./version";
-import { selectYieldSourceRail, type SelectedYieldSourceRail } from "./yield-source";
+import { resolveYieldSourceRail, type SelectedYieldSourceRail } from "./yield-source";
 
 export const ENGINE_VERSION = SELECTOR_VERSION;
 export { scoreIgnoringExclusion };
@@ -57,10 +58,15 @@ const RELAXED_FALLBACK_ALLOWED_REASONS: ReadonlySet<ExclusionReason> = new Set([
   "peg-score-floor",
 ]);
 
+interface SelectedRow {
+  row: MergedRow;
+  rail: SelectedYieldSourceRail | null;
+}
+
 interface EligibilityPhase {
   excluded: ExclusionRecord[];
   skippedForCoverage: SkippedCoin[];
-  survivors: MergedRow[];
+  survivors: SelectedRow[];
 }
 
 interface ScoringPhase {
@@ -78,16 +84,6 @@ interface RecommendationPhase {
   excluded: ExclusionRecord[];
   recommended: SelectorRecommendation[];
   relaxedReasons: Set<ExclusionReason>;
-}
-
-/**
- * Look up a merged row from the data bag. Exported so tests and the
- * template-coverage gate can call it directly.
- *
- * @internal
- */
-export function mergeRow(id: string, data: SelectorData): MergedRow | null {
-  return data.rows.get(id) ?? null;
 }
 
 function selectUniverse(
@@ -109,14 +105,16 @@ function runEligibilityPhase(
 ): EligibilityPhase {
   const excluded: ExclusionRecord[] = [];
   const skippedForCoverage: SkippedCoin[] = [];
-  const survivors: MergedRow[] = [];
+  const survivors: SelectedRow[] = [];
   for (const row of universe) {
-    const exclusion = evaluateExclusions(row, input);
+    const resolved = input.profile === "yield" ? resolveYieldSourceRail(row, input) : null;
+    const selectedRow = resolved?.rail?.row ?? row;
+    const exclusion = evaluateExclusions(row, input, selectedRow);
     if (exclusion) {
       excluded.push(exclusion);
       continue;
     }
-    const coverage = hasRequiredSignals(row, input.profile);
+    const coverage = hasRequiredSignals(row, input.profile, selectedRow);
     if (!coverage.ok) {
       excluded.push({ id: row.id, reason: "coverage-too-thin", severity: "info" });
       skippedForCoverage.push({
@@ -126,7 +124,7 @@ function runEligibilityPhase(
       });
       continue;
     }
-    survivors.push(row);
+    survivors.push({ row: selectedRow, rail: resolved?.rail ?? null });
   }
   return { excluded, skippedForCoverage, survivors };
 }
@@ -150,9 +148,8 @@ interface ScoredEntryResult {
  * trading staleness map used to be three passes that each rebuilt the entry,
  * so a new field had to be added in every one of them.
  */
-function toScoredEntry(row: MergedRow, input: SelectorInput): ScoredEntryResult {
-  const rail = input.profile === "yield" ? selectYieldSourceRail(row, input) : null;
-  const result = scoreRow(rowForRailHistory(row, rail), input.profile, input);
+function toScoredEntry({ row, rail }: SelectedRow, input: SelectorInput): ScoredEntryResult {
+  const result = scoreRow(row, input.profile, input);
   if (result == null || result.degenerate) {
     return { entry: null, missingSignal: "every-signal-null" };
   }
@@ -175,21 +172,8 @@ function toScoredEntry(row: MergedRow, input: SelectorInput): ScoredEntryResult 
   };
 }
 
-/**
- * The yield profile's `< 21` observation-day confidence rule must judge the
- * rail the run actually recommends: a mature primary can no longer lend its
- * history to a venue-preferred alternate that published only a few
- * observation days. Rows without a selected rail, or rails without a
- * published count, keep the row-level primary reading.
- */
-function rowForRailHistory(row: MergedRow, rail: SelectedYieldSourceRail | null): MergedRow {
-  if (rail?.observationDays30d == null) return row;
-  if (rail.observationDays30d === row.yieldObservationDays30d) return row;
-  return { ...row, yieldObservationDays30d: rail.observationDays30d };
-}
-
 function runScoringPhase(
-  survivors: readonly MergedRow[],
+  survivors: readonly SelectedRow[],
   input: SelectorInput,
 ): ScoringPhase {
   const excluded: ExclusionRecord[] = [];
@@ -197,8 +181,9 @@ function runScoringPhase(
   const railExcluded: ExclusionRecord[] = [];
   const railSkipped: SkippedCoin[] = [];
   const scored: ScoredEntry[] = [];
-  for (const row of survivors) {
-    const result = toScoredEntry(row, input);
+  for (const selected of survivors) {
+    const row = selected.row;
+    const result = toScoredEntry(selected, input);
     if (result.entry != null) {
       scored.push(result.entry);
       continue;
@@ -246,28 +231,31 @@ function computeCoverageState(
 function relaxedFallbackReason(
   row: MergedRow,
   input: SelectorInput,
+  sourceRow: MergedRow = row,
 ): ExclusionReason | null {
-  const coverage = hasRequiredSignals(row, input.profile);
+  const coverage = hasRequiredSignals(row, input.profile, sourceRow);
   if (!coverage.ok) return null;
-  const exclusion = evaluateExclusions(row, input);
+  const exclusion = evaluateExclusions(row, input, sourceRow);
   if (exclusion == null) return null;
   if (!RELAXED_FALLBACK_ALLOWED_REASONS.has(exclusion.reason)) return null;
   if (input.profile === "treasury") return null;
-  if (applyInputDrivenExclusions(row, input) != null) return null;
+  if (applyInputDrivenExclusions(sourceRow, input) != null) return null;
   return exclusion.reason;
 }
 
 function buildRelaxedFallbackEntries(
   universe: readonly MergedRow[],
   input: SelectorInput,
-  excludedIds: ReadonlySet<string>,
+  excludedFamilies: ReadonlySet<string>,
 ): ScoredEntry[] {
   const scored: ScoredEntry[] = [];
   for (const row of universe) {
-    if (excludedIds.has(row.id)) continue;
-    const reason = relaxedFallbackReason(row, input);
+    if (excludedFamilies.has(variantFamilyKey(row, input.profile))) continue;
+    const resolved = input.profile === "yield" ? resolveYieldSourceRail(row, input) : null;
+    const selectedRow = resolved?.rail?.row ?? row;
+    const reason = relaxedFallbackReason(row, input, selectedRow);
     if (reason == null) continue;
-    const { entry } = toScoredEntry(row, input);
+    const { entry } = toScoredEntry({ row: selectedRow, rail: resolved?.rail ?? null }, input);
     if (entry != null) {
       scored.push({
         ...entry,
@@ -290,6 +278,7 @@ function buildRecommendationPhase(
   excluded: readonly ExclusionRecord[],
 ): RecommendationPhase {
   const recommended: SelectorRecommendation[] = [];
+  const recommendedFamilies = new Set<string>();
   const nextExcluded = [...excluded];
   for (let i = 0; i < ranked.length; i += 1) {
     const entry = ranked[i]!;
@@ -313,13 +302,14 @@ function buildRecommendationPhase(
       continue;
     }
     recommended.push(rec);
+    recommendedFamilies.add(variantFamilyKey(entry.row, input.profile));
   }
   const relaxedReasons = new Set<ExclusionReason>();
   if (recommended.length < 3) {
     const relaxed = buildRelaxedFallbackEntries(
       universe,
       input,
-      new Set(recommended.map((rec) => rec.id)),
+      recommendedFamilies,
     );
     for (let i = 0; i < relaxed.length && recommended.length < 3; i += 1) {
       const entry = relaxed[i]!;
@@ -358,13 +348,17 @@ export function runSelector(
   const recommendations = buildRecommendationPhase(ranked, universe, input, excluded);
   excluded = recommendations.excluded;
   const usedRelaxedFallback = recommendations.relaxedReasons.size > 0;
-  const rowsById = new Map(universe.map((row) => [row.id, row]));
+  const rowsById = new Map(universe.map((row) => [
+    row.id,
+    input.profile === "yield" ? resolveYieldSourceRail(row, input).rail?.row ?? row : row,
+  ]));
+  const recommendedIds = new Set(recommendations.recommended.map((rec) => rec.id));
   const lowerRanked = selectLowerRanked(
     ranked,
     excluded,
     input,
     universe,
-    new Set(recommendations.recommended.map((r) => r.id)),
+    recommendedIds,
     scoreIgnoringExclusion,
     rowsById,
   );
@@ -399,7 +393,13 @@ export function runSelector(
     usedRelaxedFallback,
     relaxedReasons: Array.from(recommendations.relaxedReasons).sort(),
     exclusionSummary: buildExclusionSummary(excluded),
-    closestSurvivors: buildClosestSurvivors(excluded, universe, input, scoreIgnoringExclusion, rowsById),
+    closestSurvivors: buildClosestSurvivors(
+      excluded.filter((entry) => !recommendedIds.has(entry.id)),
+      universe,
+      input,
+      scoreIgnoringExclusion,
+      rowsById,
+    ),
     relaxableConstraints: buildRelaxableConstraints(input, excluded),
     timestamp: dataset.timestamp,
     engineVersion: ENGINE_VERSION,

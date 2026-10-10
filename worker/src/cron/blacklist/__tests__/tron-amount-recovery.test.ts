@@ -237,6 +237,27 @@ describe("resolveQueueOutcomeForFailure", () => {
 });
 
 describe("recoverTronFreezeAmountForRow", () => {
+  it.each(["0x", "41", "base58"])("proves the same historical freeze through the accepted %s address form", async (format) => {
+    await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: 2_000_000n, direction: "in" }]);
+    const address = format === "base58" ? await tronHexAddressToBase58(FREEZE_ADDRESS)
+      : format === "41" ? `41${FREEZE_ADDRESS.slice(2)}` : FREEZE_ADDRESS;
+    expect(address).not.toBeNull();
+    expect(await recoverTronFreezeAmountForRow(await makeRow({ address: address! }), config, provider()))
+      .toMatchObject({ amount: 2, lastErrorClass: null });
+  });
+
+  it("scales an ordinary 18-decimal USD1 balance before enforcing output range", async () => {
+    await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: 10n ** 18n, direction: "in" }]);
+    expect(await recoverTronFreezeAmountForRow(await makeRow(), { ...config, decimals: 18, stablecoin: "USD1" }, provider()))
+      .toMatchObject({ amount: 1, lastErrorClass: null });
+  });
+
+  it("rejects excessive decimal-scaled output rather than excessive raw units", async () => {
+    await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: (BigInt(Number.MAX_SAFE_INTEGER) + 100n) * 10n ** 18n, direction: "in" }]);
+    expect(await recoverTronFreezeAmountForRow(await makeRow(), { ...config, decimals: 18 }, provider()))
+      .toMatchObject({ amount: null, lastErrorClass: "evidence_mismatch" });
+  });
+
   it.each([0n, 2_000_000n])("defers stale complete history with reconciled net %s", async (net) => {
     // Old positive activity returns to zero. A stale index can omit a newer
     // inflow before freeze and equal outflow after unfreeze without changing

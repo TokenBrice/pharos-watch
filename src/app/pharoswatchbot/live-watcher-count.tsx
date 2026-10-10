@@ -2,12 +2,17 @@
 
 import { useCountUp } from "@/hooks/use-count-up";
 import { useTelegramPulse } from "@/hooks/api-hooks";
-import { TELEGRAM_PULSE_STATIC } from "@/lib/telegram-pulse-static";
+
+export function isTelegramPulseAvailable(query: { data?: unknown; isLoading: boolean; isError: boolean }): boolean {
+  return !query.isLoading && !query.isError && query.data != null;
+}
 
 export function useLiveWatcherCountDisplay(): string | null {
-  const { data } = useTelegramPulse();
-  const target = data?.activeWatchers ?? TELEGRAM_PULSE_STATIC.activeWatchers;
-  return useCountUp(target).display;
+  const query = useTelegramPulse();
+  const available = isTelegramPulseAvailable(query);
+  const count = useCountUp(available ? query.data?.activeWatchers ?? null : null);
+  // useCountUp preserves its last display on null; availability must gate the output too.
+  return available && query.data?.activeWatchers != null ? count.display : null;
 }
 
 export function LiveWatcherCount() {

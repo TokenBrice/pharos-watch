@@ -1,3 +1,4 @@
+import { DEX_VOLUME_COVERAGE_MIN } from "@shared/lib/dex-volume-availability";
 import { MethodologyFacts, MethodologyPreconditions } from "../../methodology-shared";
 
 export function LiquidityOverview() {
@@ -22,6 +23,14 @@ export function LiquidityOverview() {
         raw ticker TVL. That inventory is not a forecast of published TVL. Safety formula is unchanged, and improved
         Safety Score stability has not been measured.
       </p>
+      <p>
+        Pool quality uses the same retained TVL scope throughout. For Curve metapools that exclude base-pool TVL,
+        full-pool balances are not matching evidence: absent a retained-scope measurement, balance stays neutral
+        and unmeasured. Remembered pools keep their measured imbalance penalties, and measured zero depth is never
+        replaced by raw TVL. Exact EVM execution keeps its original capture clock; validated source headers for
+        QuoterV2, Uniswap V4 and Curve CryptoSwap enforce the existing three-hour source-age ceiling. Malformed or
+        incomplete pool censuses cannot certify deployment-wide absence or erase independently valid pools.
+      </p>
     </>
   );
 }
@@ -40,7 +49,11 @@ export function LiquidityPreconditions() {
         facts={[
           {
             label: "Minimum data",
-            value: "No hard minimum in scorer; missing stability history defaults to neutral 50 sub-scores",
+            value: `Volume Activity requires a complete 24h window or at least ${DEX_VOLUME_COVERAGE_MIN * 100}% retained-TVL coverage (inclusive); otherwise the composite is not rated`,
+          },
+          {
+            label: "Durability history",
+            value: "Missing stability history defaults to neutral 50 sub-scores; this does not bypass the volume-coverage requirement",
           },
           {
             label: "Required sources",

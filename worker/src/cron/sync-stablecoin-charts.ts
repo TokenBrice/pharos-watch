@@ -6,7 +6,11 @@ import { DEFILLAMA_BASE } from "../lib/constants";
 import { getFxReferenceTypeFromState, loadFxRateState } from "../lib/fx-rate-state";
 import { buildInClause } from "../lib/db";
 import { chunkArray } from "../lib/collections";
-import { normalizeStablecoinChartDateSeconds } from "../lib/stablecoin-charts-payload";
+import {
+  normalizeStablecoinChartBuckets,
+  normalizeStablecoinChartDateSeconds,
+  normalizeStablecoinChartPoints,
+} from "../lib/stablecoin-charts-payload";
 import {
   mergeStructuralSupplementalHistoryIntoCharts,
   STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS,
@@ -36,12 +40,12 @@ interface RawChartPoint {
 interface NormalizedRawChartPoint {
   date: number;
   totalCirculating?: Record<string, number>;
-  totalCirculatingUSD?: Record<string, number>;
+  totalCirculatingUSD?: Record<string, number | null>;
 }
 
 interface DownsampledPoint {
   date: number;
-  totalCirculatingUSD: Record<string, number>;
+  totalCirculatingUSD: Record<string, number | null>;
 }
 
 
@@ -174,12 +178,21 @@ async function runStablecoinChartsPublication(
     });
   }
 
+  let invalidDateCount = 0;
+  let invalidBucketCount = 0;
   let normalizedRaw: NormalizedRawChartPoint[] = raw.flatMap((point) => {
-    const date = normalizeStablecoinChartDateSeconds(point.date);
-    if (date == null) return [];
-    return [{ ...point, date }];
+    const date = normalizeStablecoinChartDateSeconds(point?.date);
+    if (date == null) {
+      invalidDateCount++;
+      return [];
+    }
+    const totalCirculatingUSD = normalizeStablecoinChartBuckets(point.totalCirculatingUSD);
+    if (totalCirculatingUSD == null) {
+      invalidBucketCount++;
+      return [];
+    }
+    return [{ ...point, date, totalCirculatingUSD }];
   });
-  const invalidDateCount = raw.length - normalizedRaw.length;
   if (invalidDateCount > 0) {
     logWorkerEvent({
       scope: "lib",
@@ -188,6 +201,16 @@ async function runStablecoinChartsPublication(
       event: "invalid-chart-dates-dropped",
       message: "Dropped chart points with invalid dates",
       metadata: { invalidDateCount },
+    });
+  }
+  if (invalidBucketCount > 0) {
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoin-charts",
+      level: "warn",
+      event: "invalid-chart-base-buckets-dropped",
+      message: "Quarantined chart points without an observed base aggregate",
+      metadata: { invalidBucketCount },
     });
   }
 
@@ -213,7 +236,9 @@ async function runStablecoinChartsPublication(
         if (referenceType !== "fresh") continue;
         const fxRate = fxState.rates[key];
         if (!fxRate || fxRate <= 0) continue;
-        const impliedRate = usd[key] / rawVal;
+        const usdVal = usd[key];
+        if (usdVal == null) continue;
+        const impliedRate = usdVal / rawVal;
         if (impliedRate < fxRate / RATE_TOLERANCE || impliedRate > fxRate * RATE_TOLERANCE) {
           usd[key] = rawVal * fxRate;
           fixes++;
@@ -278,11 +303,19 @@ async function runStablecoinChartsPublication(
       metadata: { reason: "downsampled-payload-too-small", rawPoints: normalizedRaw.length, downsampledPoints: downsampled.length },
     });
   }
+  const payload = normalizeStablecoinChartPoints(downsampled);
+  if (payload == null) {
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: { reason: "invalid-chart-publication-payload" },
+    });
+  }
 
   const cacheResult = await setCacheIfNewer(
     db,
     "stablecoin-charts",
-    JSON.stringify(downsampled),
+    JSON.stringify(payload),
     syncStartSec,
     signal,
   );
@@ -326,6 +359,8 @@ async function runStablecoinChartsPublication(
     metadata: {
       rawPoints: normalizedRaw.length,
       downsampledPoints: downsampled.length,
+      invalidDateCount,
+      invalidBucketCount,
       fxFixes: fixes,
       supplementalHistoryChunks,
       supplementalHistoryMaxBindCount,

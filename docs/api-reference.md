@@ -20,6 +20,10 @@ Static dataset exports are served from the public website, not from the Worker A
 
 The same static lane also serves the rolling public dataset mirrors at `https://pharos.watch/datasets/<topic>/latest.{csv,json,ndjson}`, plus one dated artifact per refresh run at `https://pharos.watch/datasets/<topic>/<YYYY-MM-DD>.{csv,json,ndjson}`. Topic identifiers are a never-break external contract and are enumerated by `PUBLIC_DATASET_TOPICS` in `shared/lib/api-endpoints/datasets.ts`; `scripts/maintenance/generate-public-datasets.ts` writes the dated files and prunes copies older than 90 days. Current-date generation maintains the generated `public/_redirects` block and frontend current-dataset module. Historical generation through `PUBLIC_DATASETS_DATE=<past>` writes only dated artifacts unless the operator explicitly passes `--repoint-current`, preventing a backfill from moving the public `latest` aliases backward. Each `latest` URL is a Cloudflare Pages `200` rewrite to its current same-extension dated artifact, preserving the direct-fetch URL and response bytes without committing a duplicate file. The artifact check rejects aliases more than two UTC dates behind the daily producer cadence, and the production frontend build rejects the same stale `scores-latest` mirror. A date with no refresh run has no file; consumers should treat a missing dated URL as "no run", not as "no data". `https://pharos.watch/sheets/<topic>.csv` also rewrites directly to the dated CSV rather than chaining through `latest.csv`, because Pages does not follow chained redirects. These URLs are unauthenticated, are advertised to crawlers as JSON-LD `DataDownload` targets (`src/lib/analytics-dataset-json-ld.ts`), and are served with the extension-compatible content types, `Access-Control-Allow-Origin: *`, and cache policies from `public/_headers`.
 
+The `depeg-history` topic is **retrospective windowed history**, not a historical point-in-time event-state sample. The dated filename selects the 90-day UTC event-start window ending on that date; peaks, recovery and closure fields come unchanged from the captured event ledger and may describe observations after the market snapshot. Its JSON/NDJSON metadata and CSV preamble report the ledger observation-end clock as `asOfISO`, the exact shard capture identity as `sourceGeneration`, the observation-start clock as `sourceObservationStartedAtISO`, and the separate market snapshot clock as `windowSnapshotAsOfISO`. Other topics retain the immutable market-envelope clock. A historical regeneration may change retrospective event rows and their capture provenance; it must not relabel later state as information known at the older market clock. Missing or mismatched ledger-capture provenance fails generation rather than inventing historical peaks or masking later recoveries.
+
+The static `depeg-history` dataset publishes each event's `id` as a string in JSON and NDJSON (and as text in CSV), preserving the established export contract. This differs from the numeric event IDs in the runtime depeg-events API and internal archive rows.
+
 Machine-readable integration artifacts are also served from the public website for onboarding. The OpenAPI endpoint catalogue is available at `https://pharos.watch/openapi.json`, and Postman artifacts are available at `https://pharos.watch/postman/pharos-api.postman_collection.json` plus `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both Postman files, then replace the environment `apiKey` placeholder with a real `X-API-Key`. The generated OpenAPI artifact includes named schemas for the richer Yield Intelligence ranking and history payloads, and the Postman collection includes both best-source and source-key yield-history examples. These are public integration/read onboarding artifacts, not a complete dump of every no-key route; they intentionally exclude Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, Telegram Mini App endpoints, and dynamic OG image routes. Request keys through `https://pharos.watch/api/`.
 
 Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. In production, that Pages proxy targets `https://site-api.pharos.watch` through `SITE_API_ORIGIN`. Direct integrations and CI smoke should target `https://api.pharos.watch` and send `X-API-Key` for protected public reads, including `/api/telegram-pulse`; production Pages build-input syncs instead read allowlisted `GET` endpoints through `https://stablecoin-dashboard.pages.dev/_site-data/*` with an allowed site caller header. Each sync command rejects missing or invalid input. A Pages release may retain one failed producer's committed snapshot, but it fails before build when all three producers fail or when a failed public-dataset refresh cannot be rolled back cleanly.
@@ -106,14 +110,18 @@ Endpoints backed by the cron cache include these additional headers:
 | Header       | Description                                                                                                                                                             |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `X-Data-Age` | Seconds elapsed since the authoritative producer observation; `unavailable` when that clock cannot be established |
-| `X-Data-Updated-At` | Absolute source update time in Unix seconds, when known; unaffected by edge residence or rewritten HTTP `Date`. Detail enrichment retains the older detail/publication clock. |
+| `X-Data-Updated-At` | Absolute source update time in Unix seconds, when known; `unknown` when authority is unavailable. Unaffected by edge residence or rewritten HTTP `Date`. Detail enrichment retains the older detail/publication clock. |
 | `Warning`    | Freshness warning (`110`) when cached data is older than the generic freshness runway, plus endpoint-specific advisory warnings (`199`) on a few compute-on-read routes |
-| `X-Data-Freshness` | `stale` when retained successful producer history is absent, or `unknown` when its lookup failed |
-| `X-Data-Freshness-Reason` | Machine-readable unavailable-authority reason: `producer-history-missing` or `freshness-lookup-failed` |
+| `X-Data-Freshness` | `stale` when retained confirmed producer history is absent, or `unknown` when its lookup or timestamp admission failed |
+| `X-Data-Freshness-Reason` | Machine-readable reason, including `producer-history-missing`, `freshness-lookup-failed`, and timestamp-admission reasons |
 
 Generic freshness status is `fresh` through `8x maxAge`, `degraded` through `12x maxAge`, then `stale`. Generic freshness headers emit `Warning` and downgrade `Cache-Control` to `no-store` after `age > 8x maxAge` so edge/browser caches do not keep serving an old payload after the underlying cron data recovers. Some routes also use `Warning` for dependency or quality advisories even when the age is still inside that runway; clients should treat body `_meta.status` as authoritative when it exists.
 
 DEX liquidity keeps its dataset-wide advisory in `Warning` and also emits a nullable `warning` on each coin row. Coin-specific TVL cliffs or pool-count drops from an otherwise successful run apply only to affected coins and are omitted from the `Warning` header and from the `__global__` row entirely; provider failures, near-guard proximity, and unscoped findings remain global. The advisory comes from the latest liquidity producer outcome, excluding neutral or locked skips. Coin detail consumers use the row advisory while retaining the producer timestamp for independent freshness checks; older responses without the field retain their global warning.
+
+A failed liquidity producer-status read is not an empty advisory: each row carries `advisoryUnavailableReason: "dex-advisory-read-failed"` and a non-null warning, the response emits a `199` advisory, and cache policy is `no-store`. Successful zero-row status reads retain a nullable advisory with no failure reason.
+
+DDR secondary errata/lock-deferral read failures retain immutable forecasts with `_meta.degradedReason: "secondary-overlay-unavailable"` and `errata-overlay-read-failed` / `lock-deferral-overlay-read-failed` details; responses are `no-store`. Canonical projection failures return `503` for `/api/depeg-events`, naming `incident-projection-read-failed` or `incident-projection-invalid`; see [projection admission](./depeg-detection.md#api). `/api/peg-summary` retains accepted history as degraded/no-store with that reason and its original clock, or returns `503`. Missing/nominal primary prices expose `currentPriceUnavailable: true` and null deviation, excluded from observed at-peg counts.
 
 ---
 
@@ -151,7 +159,7 @@ Generic, chains, and yield producers publish assessment time and effective budge
 
 `GET /api/stress-signals` publishes `assessedAt`, `freshBudgetSec`, `degradedBudgetSec`, and `newestReturnedComputedAt` beside each row's `computedAt` and `ageClassification`. The newest-returned clock is the aggregate comparison basis for `retainedLastValid`; single-coin responses have no peer-generation comparison (`null`). These are row-generation verdicts, not a claim that every source used by DEWS was observed at that time.
 
-Event feeds (`events`, `depeg-events`, `blacklist`, `mint-burn-events`) derive freshness only from a successful producer run, never request time or the newest matching event. An empty filtered page is fresh only with a fresh producer observation, including a successful zero-event run. No successful run in the retained seven-day cron history means stale/no authoritative recent run; a failed lookup means unknown. Both use `Cache-Control: no-store`, `Warning: 199`, and `X-Data-Age: unavailable`, with the reason headers above. `/api/events` also publishes null `updatedAt` / `ageSeconds` and `status: "stale" | "unknown"` plus `reason` in `_meta`; normal observed metadata is unchanged. Safety-score history uses the same producer-authority headers. Blacklist-summary retains the producing snapshot's clock and lookup state, not its materialization/request time.
+Event feeds (`events`, `depeg-events`, `blacklist`, `mint-burn-events`) derive freshness from confirmed producer output through `cron-output.ts`, never request time, the newest matching event, or an `ok` attempt without output. Productive degraded runs may advance the output clock; explicit `outputPublishedAt: null` cannot. An empty filtered page is fresh only with a fresh confirmed observation, including a persisted quiet scan. No confirmed output in retained cron history means stale/no authoritative recent output; a failed lookup means unknown. Both use `Cache-Control: no-store`, `Warning: 199`, and `X-Data-Age: unavailable`, with the reason headers above. `/api/events` also publishes null `updatedAt` / `ageSeconds` and `status: "stale" | "unknown"` plus `reason` in `_meta`; admitted observed clocks omit the optional `reason`, even when their age is stale. Safety-score history uses the same producer-authority headers. Blacklist-summary retains the producing snapshot's clock and lookup state, not its materialization/request time.
 
 For uncounted offset pages, `total` is a conservative observed lower bound and `totalExact` is false. A nonempty offset page establishes the offset plus its observed rows (and any lookahead row); an empty page establishes only zero, even at offset 50,000. Cursor continuations report only their observed page/lookahead bound. Blacklist defaults to uncounted pages; use `includeTotal=true` for an exact filtered count.
 
@@ -206,7 +214,7 @@ All rows below are members of the centralized `API_CACHE_PROFILES` map (`shared/
 | reserve-live       | `public, s-maxage=3600, max-age=300`                           | stablecoin-reserves live mode                                                                                                                                                                                                                                                                                                                                                                       |
 | reserve-live-stale | `public, s-maxage=1800, max-age=120`                           | stablecoin-reserves live-stale mode                                                                                                                                                                                                                                                                                                                                                                 |
 | reserve-fallback   | `public, s-maxage=300, max-age=60`                             | stablecoin-reserves curated/template/unavailable fallback modes                                                                                                                                                                                                                                                                                                                                     |
-| no-store           | `no-store`                                                     | admin GET routes via the router override or admin route wrapper (`status`, `status-history`, `request-source-stats`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `rpc-provider-trial`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`) |
+| no-store           | `no-store`                                                     | admin GET routes via the router override or admin route wrapper (`status`, `status-history`, `request-source-stats`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `rpc-provider-trial`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`) |
 
 `POST /api/feedback`, `POST /api/donor-key-claims`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, `POST /api/telegram-mini-app/mutate`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The donor key claim and Telegram Mini App endpoints explicitly return no-store responses so plaintext API keys and per-chat alert state are never cacheable.
 
@@ -287,7 +295,7 @@ JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` retu
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                                                                                                                                                                                                                             |
 | 502    | Bad Gateway           | Upstream fetch failed (external data provider or Pages proxy upstream), or the ops proxy received a Cloudflare Access login redirect from `ops-api`                                                                                                                                                                                            |
 | 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, cached payload is corrupt / rejected by validation, a protected public API request cannot be authenticated from D1 or the recent verified-key cache, the feedback limiter/storage dependency fails, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |
-| 504    | Gateway Timeout       | Pages `/_site-data/*` or `/api/admin/*` proxy timed out waiting for its Worker upstream (10 s default; 20 s for ops `/api/status` and `/api/status-history`; 45 s for ops `/api/audit-depeg-history`)                                                                                                                                          |
+| 504    | Gateway Timeout       | Pages `/_site-data/*` or `/api/admin/*` proxy timed out waiting for its Worker upstream (10 s default; 20 s for ops `/api/status` and `/api/status-history`)                                                                                                                                          |
 
 **Rule:** Cache-passthrough handlers return **503** when data hasn't been populated yet or when the stored cache payload is malformed and rejected at read time. Query handlers that find no matching rows return **200** with empty results (e.g., `{ events: [], total: 0 }`). When `MAINTENANCE_MODE` is set to `"true"`, all non-`OPTIONS` requests immediately return `503` with `{ "error": "maintenance", "message": "..." }` — used during DB migrations. `OPTIONS` CORS preflights are handled before the maintenance gate. The gate is on the Worker `fetch` path only (`worker/src/handlers/http/gates.ts`, called from `worker/src/handlers/http/request-dispatch.ts`); the `scheduled()` entrypoint in `worker/src/index.ts` never consults it, so cron jobs keep executing and keep writing D1 while maintenance mode is armed. Arming it sheds HTTP traffic, not scheduled writes: a migration or D1-pressure incident that needs quiet writes must disable the affected cron triggers as a separate step.
 
@@ -305,7 +313,6 @@ HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and en
 - `GET, POST` is accepted on `/api/api-keys` so operators can list keys and create a new key through the same route.
 - `GET` is accepted on `/api/api-keys/lifecycle-summary` for counts-only Triage credential monitoring.
 - `POST` is accepted on `/api/api-keys/:id/update`, `/api/api-keys/:id/deactivate`, and `/api/api-keys/:id/rotate`.
-- `/api/audit-depeg-history` allows `GET` only with `?dry-run=true`; otherwise it is `POST`-only.
 - `/api/backfill-dews` allows `GET` for the historical backtest and for `repair=...&dry-run=true` previews; mutating repair runs are `POST`-only.
 - Unknown public `/api/*` requests can return `401` first when the API key is missing or invalid. After lane auth succeeds, unregistered paths return `404` because no route dependencies can be hydrated. Once a static or dynamic route family is registered, known paths with disallowed methods return `405` with `Allow`; unsupported verbs on known endpoint families return `405` with `Allow: GET, POST`.
 
@@ -349,12 +356,23 @@ The standalone redemption contract is described in [Redemption Backstops](./rede
 
 For `GET /api/stablecoin-reserves/{stablecoinId}`, optional `sync.collectionEligibility` is `{ scheduled, reason }` with successful-response reasons `active`, `quarantined`, `frozen`, or `delisted`; only active is scheduled. Suspended, unconfigured and pre-launch assets return `404`, not additional eligibility values. Readable inactive configurations may serve retained historical evidence without refreshing its clocks or admitting it to active collection. See the [reserve API contract](./live-reserves.md#api-contract).
 
+## Blacklist Valuation Availability
+
+`GET /api/blacklist-summary` publishes `stats.destroyedTotal`, `recentFreezeAmount24hUsd`, `recentFreezeAmount7dUsd`, and values in `perCoinFrozenTotal` / `perCoinDestroyedTotal` as `number | null`. Null means valuation unavailable, not zero. Mixed cohorts publish only the known subtotal: optional `stats.valuationCoverage` qualifies `destroyed`, `recent24h`, `recent7d`, `perCoinFrozen`, and `perCoinDestroyed` with `{ knownCount, unavailableCount }`. A positive unavailable count makes that subtotal partial; absent coverage means unknown completeness. Fully priced cohorts and observed zero remain numeric, including zero for an empty cohort.
+
 ## Public Endpoints
 
-Unless an endpoint section explicitly says `Authentication: exempt`, routes in this section require `X-API-Key` when called on `https://api.pharos.watch`. OpenAPI schemas are published at [`/openapi.json`](https://pharos.watch/openapi.json); endpoint auth and cache flags come from `shared/lib/api-endpoints/definitions.ts`.
-For `GET /api/stablecoin-summary/{stablecoinId}`, `supplyUsd.current`, `supplyUsd.prevDay`, `supplyUsd.prevWeek`, and `supplyUsd.prevMonth` — plus `supplyUsd.change1d`, `supplyUsd.change7d`, and `supplyUsd.change30d` — are `number | null`. `current` is `null` (with `supplyUsd.currentUnavailableReason: "supply-buckets-missing"`) when the coin is present but its current peg buckets are absent, empty or wholly invalid; the reason is `null` whenever current supply was observed. Each change is `null` unless both current and its historical value are observed, so missing current supply never produces a negative delta. An observed zero bucket remains numeric `0`. `supplyByPegUsd` publishes only finite buckets (`{}` when none). A coin absent from the stablecoins publication still returns `404`.
-For `GET /api/dex-liquidity` and `GET /api/dex-liquidity-history`, `totalVolume24hUsd`, `totalVolume7dUsd`, history `volume24h`, pool `volumeUsd1d` and `scoreComponents.volumeActivity` are `number | null`. Since liquidity v6.9 (2026-09-28) a pool reading counts only when observed at most 72h ago, never decayed or zero-filled. A total is a number only when every retained pool was admitted (a measured zero stays `0`); otherwise it is `null` beside `volume24hAvailability` / `volume7dAvailability`: `completeness`, `reason`, pool counts, window clock, `partialGrossUsd` (observed admitted-pool volume, a lower bound) and `admittedTvlUsd` / `retainedTvlUsd` / `volumeCoverage`. Activity is admitted volume over admitted TVL; below 50% coverage it and `liquidityScore` are `null` (NR). `__global__` publishes its observed volume and coverage the same way. Rows without a record are legacy (`unknown` completeness). See [DEX liquidity § Measured volume availability](./dex-liquidity.md#measured-volume-availability-dec-19-active-since-v69).
-For `GET /api/mint-burn-flows`, aggregate `coins[].netFlow24hUsd`, `netFlow7dUsd`, `netFlow30dUsd`, `netFlow90dUsd`, `coins[].netFlowDirection24h`, `chains[].netFlow24hUsd`, `hourly[].netFlowUsd`, `gauge.flightToQuality` and `gauge.flightIntensity`, and per-coin `netFlowUsd` / `chains[].netFlowUsd`, are nullable for valuation gating. Since 2026-09-28 (mint-burn-flow v6.23) the producer publishes `null` for a signed net whose window is `partial`, for a direction or flight-to-quality decision that missing valuation could change, and for pressure unless the 24h window is `complete` and the baseline is not `partial`. Additive `valuation` records qualify them: per coin `{ window24h, baseline, netFlow7d, netFlow30d, netFlow90d }`, per chain/bucket a completeness label, per-coin totals and chains a full record `{ completeness, mintCompleteness, burnCompleteness, unpricedMintEventCount, unpricedBurnEventCount }`, and `gauge.partialValuationInputs` counts weighted coins whose valuation can alter `gauge.score` (from v6.23: coins with at least seven days of baseline history whose pressure was withheld for incomplete valuation, with their weight in the additive `gauge.partialValuationMcapUsd` beside the scored weight `gauge.scoredMcapUsd`; the score re-weights over the scored coins). `complete` means exact (an empty window is complete); `partial` means unpriced events exist, so mint/burn volumes are lower bounds and a signed net is not a bound; `unknown` marks data aggregated before completeness was recorded, whose nets stay published with that label until the legacy buckets age out. An absent record (older payload) is `unknown`, never complete.
+On `https://api.pharos.watch`, these routes require `X-API-Key` unless marked `Authentication: exempt`. [OpenAPI schemas](https://pharos.watch/openapi.json) describe bodies; `shared/lib/api-endpoints/definitions.ts` owns auth/cache flags.
+
+`GET /api/stablecoin/{stablecoinId}` supply-history/stablecoins-cache fallbacks publish `_meta`: newest served token source time, response assessment time, 72-hour history budgets and stale floor `detail-history-fallback`. They emit `Warning: 110`, `Cache-Control: no-store`, and neither enqueue detail-cache publication nor renew old rows. Invalid/missing history clocks stay null/unknown with the timestamp-admission reason. Stale external history without fresher D1 rescue uses this same contract.
+
+`GET /api/mint-burn-flows` aggregate/per-coin `_meta` preserves the confirmed-output lookup verdict through cached fallbacks. Missing/failed lookup cannot substitute attempt/event-hour clocks for `sync.lastSuccessfulSyncAt`; unavailable metadata and headers retain their machine-readable reason.
+
+`GET /api/stablecoin-summary/{stablecoinId}`: `supplyUsd` fields `current`, `prevDay`, `prevWeek`, `prevMonth`, `change1d`, `change7d`, `change30d` are `number | null`. Absent/empty/wholly invalid current peg buckets yield null `current` and `currentUnavailableReason: "supply-buckets-missing"`; observed supply, including `0`, clears the reason to null. Changes require observed current and historical values; missing current never implies a negative delta. `supplyByPegUsd` contains only finite buckets (`{}` if none). Assets absent from the stablecoins publication return `404`.
+`GET /api/dex-liquidity` and history publish nullable `totalVolume24hUsd`, `totalVolume7dUsd`, history `volume24h`, pool `volumeUsd1d` and `scoreComponents.volumeActivity`. [Measured volume availability (v6.9)](./dex-liquidity.md#measured-volume-availability-dec-19-active-since-v69) owns 72h admission, complete-only totals, availability-record fields, measured zero, global/legacy rows and the 50% activity/score coverage gate.
+DEX [price/coverage contract](./dex-liquidity.md#dex-price-cross-validation): malformed coverage is quarantined per asset/point, retaining independent measurements. Price admission, nullable fields and the separate 24h clock do not alter liquidity `X-Data-Age`.
+`GET /api/mint-burn-flows` valuation-gated nullable fields: aggregate `coins[]`: `netFlow24hUsd`, `netFlow7dUsd`, `netFlow30dUsd`, `netFlow90dUsd`, `netFlowDirection24h`; `chains[].netFlow24hUsd`, `hourly[].netFlowUsd`, `gauge.flightToQuality`, `gauge.flightIntensity`; per-coin `netFlowUsd`, `chains[].netFlowUsd`. [Valuation completeness (v6.23)](./mint-burn-flows.md#valuation-completeness) owns gates, exact/partial/legacy semantics and gauge weight eligibility/reweighting (fields below). `valuation` shapes: coin `{ window24h, baseline, netFlow7d, netFlow30d, netFlow90d }`; aggregate chain/hourly completeness labels; per-coin totals/chains `{ completeness, mintCompleteness, burnCompleteness, unpricedMintEventCount, unpricedBurnEventCount }`. Absent records are `unknown`, never complete.
+`GET /api/stablecoin-charts` retains invalid/omitted buckets as null, explicit zero as zero; see [chart publication](./supply-snapshot.md#supply-pipeline).
 
 <!-- GENERATED-START: public-endpoints -->
 <!-- Generated by scripts/maintenance/generate-api-reference.ts from public/openapi.json and shared/lib/api-endpoints/definitions.ts. -->
@@ -517,8 +535,8 @@ Returns normalized issuer freeze, unfreeze, blacklist, and destruction events.
 
 ```json
 {
-  "currentVersion": "4.2",
-  "currentVersionLabel": "v4.2"
+  "currentVersion": "4.3",
+  "currentVersionLabel": "v4.3"
 }
 ```
 
@@ -546,7 +564,7 @@ Asset/state/review-filtered incidents. `total`/optional `totalExact` replace `co
 
 ```json
 {
-  "currentVersion": "6.33"
+  "currentVersion": "6.34"
 }
 ```
 
@@ -572,7 +590,7 @@ Returns the reviewer-oriented projection of depeg-duration decisions.
 
 ### `GET /api/peg-summary`
 
-Cross-market peg summary. v6.31: optional `coins[].unknownCoverageSeconds` removes merged blind spans from occupancy and duration penalties; `pegPct`/`recent90d.pegPct` are null if wholly blind (not 0%/100%). Recent `observedDays` excludes blind spans; `coverageLimited` flags them. Observed `currentDeviationBps`/`pegReference` ignore the $1M new-incident floor.
+Peg summary v6.31: `unknownCoverageSeconds` excludes merged blind spans from occupancy/penalties; wholly blind `pegPct`/`recent90d.pegPct` stay null. Recent `observedDays` excludes blind spans (`coverageLimited`). `currentDeviationBps`/`pegReference` ignore the $1M floor. `coinsAtPeg` uses raw canonical thresholds; row deviations stay rounded. Optional nullable `observationStartedAt`: earliest observed history, without PegScore age/audit/four-year clamps.
 
 - **Operation ID:** `pegSummary`
 - **Path:** `/api/peg-summary`
@@ -584,7 +602,7 @@ Cross-market peg summary. v6.31: optional `coins[].unknownCoverageSeconds` remov
 
 ```json
 {
-  "currentVersion": "6.33"
+  "currentVersion": "6.34"
 }
 ```
 
@@ -610,7 +628,7 @@ Returns imported Bluechip ratings joined to Pharos stablecoin identities.
 
 ### `GET /api/dex-liquidity`
 
-Returns current DEX liquidity scores and pool-level evidence. Volume, activity and NR follow the liquidity v6.9 volume contract above.
+Returns current DEX liquidity scores and pool-level evidence. Volume, activity and NR follow the liquidity v6.9 volume contract above. Empty datasets retain the confirmed producer output clock; absent authority publishes unavailable freshness, never request time.
 
 - **Operation ID:** `dexLiquidity`
 - **Path:** `/api/dex-liquidity`
@@ -640,7 +658,7 @@ Returns bounded circulating-supply history for one stablecoin.
 
 ### `GET /api/daily-digest`
 
-Returns the latest generated market digest.
+Returns the latest generated market digest. With no eligible edition, all eleven response fields are explicitly null.
 
 - **Operation ID:** `dailyDigest`
 - **Path:** `/api/daily-digest`
@@ -791,14 +809,14 @@ Returns the current Pharos Stability Index and optional component detail. Since 
 
 ```json
 {
-  "currentVersion": "3.66",
-  "methodologyVersion": "3.66"
+  "currentVersion": "3.67",
+  "methodologyVersion": "3.67"
 }
 ```
 
 ### `GET /api/og/*`
 
-Dynamic social-card image routes are served by the Worker and intentionally omitted from OpenAPI.
+Dynamic social-card PNGs are omitted from OpenAPI. Missing DEWS counts, safety coverage and window averages stay unavailable; fewer than two PSI history observations yield no sparkline. PSI 24h change uses a sample within one hour before source-minus-24h, else unavailable. Labels retain source time; PSI/safety freshness headers name assessment clock, budget and generation where available.
 
 - **Path:** `/api/og/*`
 - **Parameters:** Route-specific path segments select the supported image family.
@@ -861,10 +879,10 @@ Returns reviewed redemption paths and backstop evidence.
 {
   "coins": {},
   "methodology": {
-    "version": "4.48",
-    "versionLabel": "v4.48",
-    "currentVersion": "4.48",
-    "currentVersionLabel": "v4.48",
+    "version": "4.49",
+    "versionLabel": "v4.49",
+    "currentVersion": "4.49",
+    "currentVersionLabel": "v4.49",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,
@@ -922,8 +940,8 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 
 ```json
 {
-  "currentVersion": "8.47",
-  "methodologyVersion": "10.14"
+  "currentVersion": "8.48",
+  "methodologyVersion": "10.15"
 }
 ```
 
@@ -941,7 +959,7 @@ Returns the public adapter-coverage and source-status manifest.
 
 ```json
 {
-  "methodologyVersion": "v8.47"
+  "methodologyVersion": "v8.48"
 }
 ```
 
@@ -959,14 +977,14 @@ Returns bounded yield history for one stablecoin and optional source projection.
 
 ```json
 {
-  "currentVersion": "8.47",
-  "methodologyVersion": "8.47"
+  "currentVersion": "8.48",
+  "methodologyVersion": "8.48"
 }
 ```
 
 ### `GET /api/mint-burn-flows`
 
-Returns aggregate mint and burn pressure over the requested window. Since 2026-09-28 (mint-burn-flow v6.23) signed nets (`netFlow24hUsd`, `netFlow7dUsd`, `netFlow30dUsd`, `netFlow90dUsd`, chain `netFlow24hUsd`, per-coin and hourly `netFlowUsd`) are `null` when the matching `valuation` is `partial`; gross mint/burn volumes remain known-valuation lower bounds. `netFlowDirection24h` is `null` unless missing valuation cannot change it, `pressureShiftScore` is `null` (state `nr`) unless the 24h window is `complete` and the baseline is not `partial`, and `gauge.flightToQuality` / `gauge.flightIntensity` are `null` unless exact or provably inactive. `gauge.score` re-weights over coins whose pressure is published; `gauge.partialValuationInputs` counts weighted coins with at least seven days of baseline history whose pressure was withheld for incomplete valuation, the additive `gauge.partialValuationMcapUsd` their weight and `gauge.scoredMcapUsd` the weight actually scored, so the full-cohort score lies within `(scoredMcapUsd·score ± 100·partialValuationMcapUsd) / (scoredMcapUsd + partialValuationMcapUsd)`. Windows with legacy `unknown` coverage keep their nets, labelled by `valuation`, until those buckets age out.
+Returns mint/burn pressure for closed UTC hours, not a rolling partial-hour window. `window` publishes `[start,end)` boundaries and `semantics: closed-utc-hours`; `end` is the current UTC hour boundary, excluding the open hour. Requested `hours` controls the aggregate series or per-coin totals; aggregate coin interpretation stays 24h, and 7d/30d/90d nets share that end. Signed nets are `null` when matching `valuation` is `partial`; gross volumes remain known-valuation lower bounds. Direction is withheld unless missing valuation cannot change it; pressure requires a complete 24h window and non-partial baseline. `gauge.score` re-weights over published pressures; `partialValuationInputs`, `partialValuationMcapUsd` and `scoredMcapUsd` disclose withheld weighted inputs and bound the full-cohort score by `(scoredMcapUsd·score ± 100·partialValuationMcapUsd) / (scoredMcapUsd + partialValuationMcapUsd)`. Flight-to-quality is withheld unless exact or provably inactive. Legacy `unknown` valuation keeps labelled nets until those buckets age out.
 
 - **Operation ID:** `mintBurnFlows`
 - **Path:** `/api/mint-burn-flows`
@@ -1000,8 +1018,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.33",
-  "methodologyVersion": "6.33"
+  "currentVersion": "6.34",
+  "methodologyVersion": "6.34"
 }
 ```
 

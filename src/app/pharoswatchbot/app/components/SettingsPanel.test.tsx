@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { baseState } from "../mini-app-test-fixtures";
+import { baseState } from "@shared/test-utils/telegram-mini-app-state";
 import type { SettingsPanelProps } from "./SettingsPanel";
 import { SettingsPanel } from "./SettingsPanel";
 
@@ -134,6 +134,61 @@ describe("SettingsPanel", () => {
     renderSettings({ state: unconfirmed });
     expect(screen.getByRole("switch", { name: "Daily recap" })).toHaveProperty("disabled", true);
     expect(screen.getByText("Confirm a timezone below before enabling your recap.")).toBeTruthy();
+  });
+
+  it("confirms UTC directly from an unconfirmed fallback and keeps clearing distinct", () => {
+    const state = {
+      ...baseState,
+      subscriber: {
+        ...baseState.subscriber,
+        quietHours: { ...baseState.subscriber.quietHours, timezone: null },
+        recap: { ...baseState.subscriber.recap, timezoneConfirmed: false },
+      },
+    };
+    const { props, rerender } = renderSettings({ state });
+    expect(screen.getByRole("button", { name: "Apply timezone" })).toHaveProperty("disabled", false);
+    fireEvent.click(screen.getByRole("button", { name: "Confirm UTC" }));
+    expect(props.onMutate).toHaveBeenCalledWith({ kind: "set-timezone", timezone: "UTC" });
+    expect(screen.getByRole("switch", { name: "Daily recap" })).toHaveProperty("disabled", true);
+
+    rerender({ state: baseState });
+    expect(screen.getByRole("switch", { name: "Daily recap" })).toHaveProperty("disabled", false);
+    expect(screen.getByRole("button", { name: "Apply timezone" })).toHaveProperty("disabled", true);
+    fireEvent.click(screen.getByRole("button", { name: "Clear timezone (UTC fallback)" }));
+    expect(props.onMutate).toHaveBeenLastCalledWith({ kind: "set-timezone", timezone: null });
+    rerender({ state });
+    expect(screen.getByRole("switch", { name: "Daily recap" })).toHaveProperty("disabled", true);
+  });
+
+  it("releases acknowledged quiet-hour drafts before a later confirmed refresh", () => {
+    const quietState = (startHourUtc: number, endHourUtc: number) => ({
+      ...baseState,
+      subscriber: {
+        ...baseState.subscriber,
+        quietHours: { enabled: true, startHourUtc, endHourUtc, timezone: "UTC" },
+      },
+    });
+    const { props, rerender } = renderSettings({ state: quietState(22, 7) });
+    fireEvent.change(screen.getByLabelText("Start"), { target: { value: "23" } });
+    expect(screen.getByText("Unsaved quiet-hour changes.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Save quiet hours" }));
+    expect(props.onMutate).toHaveBeenCalledWith({ kind: "set-quiet-hours", enabled: true, startHourUtc: 23, endHourUtc: 7 });
+    rerender({ state: quietState(23, 7) });
+    expect(screen.queryByText("Unsaved quiet-hour changes.")).toBeNull();
+    rerender({ state: quietState(20, 6) });
+    expect(screen.getByLabelText("Start")).toHaveProperty("value", "20");
+    expect(screen.getByLabelText("End")).toHaveProperty("value", "6");
+    expect(screen.getByText("Quiet hours: 20:00–06:00 UTC")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Save quiet hours" }));
+    expect(props.onMutate).toHaveBeenLastCalledWith({ kind: "set-quiet-hours", enabled: true, startHourUtc: 20, endHourUtc: 6 });
+  });
+
+  it("retains and labels genuinely unsaved quiet-hour edits across refresh", () => {
+    const { rerender } = renderSettings();
+    fireEvent.change(screen.getByLabelText("Start"), { target: { value: "23" } });
+    rerender({ state: { ...baseState, subscriber: { ...baseState.subscriber } } });
+    expect(screen.getByLabelText("Start")).toHaveProperty("value", "23");
+    expect(screen.getByText("Unsaved quiet-hour changes.")).toBeTruthy();
   });
 
   it("uses an explicit Arm/Confirm/Cancel fallback when showConfirm is absent", () => {

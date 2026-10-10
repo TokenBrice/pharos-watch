@@ -1,7 +1,7 @@
 import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
-import { parsePositiveNumber } from "../../lib/number-utils";
+import { parseFiniteNumber } from "./strict-amount";
 import { rethrowIfAborted } from "../../lib/abort";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../../lib/public-rpc-registry";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -95,8 +95,18 @@ const MODULE_MAP: Record<string, ModuleSpec> = {
 
 const KNOWN_GROUPS = new Set(Object.keys(MODULE_MAP));
 
-function parseNumericString(raw: string): number {
-  return parsePositiveNumber(raw) ?? 0;
+interface ParsedSkyGroup extends SkyGroupResult {
+  debtValue: number;
+}
+
+function parseSkyGroupDebts(groups: SkyGroupResult[]): ParsedSkyGroup[] {
+  return groups.map((group) => ({
+    ...group,
+    debtValue: parseFiniteNumber(group.debt, {
+      label: `sky-makercore: ${group.group}.debt`,
+      min: 0,
+    }),
+  }));
 }
 
 function parseSkyCollateral(group: SkyGroupResult): number {
@@ -109,19 +119,14 @@ function parseSkyCollateral(group: SkyGroupResult): number {
   return value;
 }
 
-function hasMalformedDebt(raw: string): boolean {
-  if (raw.trim() === "") return true;
-  const debt = Number(raw);
-  return !Number.isFinite(debt) || debt < 0;
-}
 
 // ---------------------------------------------------------------------------
 // Pure helpers (exported for tests)
 // ---------------------------------------------------------------------------
-function reconcileSkyPsm(groups: SkyGroupResult[], measuredUsdcUsd: number | null) {
-  const totalDebt = groups.reduce((sum, group) => sum + parseNumericString(group.debt), 0);
+function reconcileSkyPsm(groups: ParsedSkyGroup[], measuredUsdcUsd: number | null) {
+  const totalDebt = groups.reduce((sum, group) => sum + group.debtValue, 0);
   const groupDebt = groups.filter((group) => group.group === "stablecoins")
-    .reduce((sum, group) => sum + parseNumericString(group.debt), 0);
+    .reduce((sum, group) => sum + group.debtValue, 0);
   const excessUsd = measuredUsdcUsd == null ? 0 : Math.max(0, measuredUsdcUsd - groupDebt);
   const excessShare = totalDebt > 0 ? excessUsd / totalDebt : 0;
   const blocked = excessShare * 100 > SKY_PSM_RECONCILIATION_TOLERANCE_PCT;
@@ -139,6 +144,13 @@ export function adaptSkyModules(
   groups: SkyGroupResult[],
   measuredUsdcUsd: number | null = null,
 ): AdapterResult["slices"] {
+  return adaptParsedSkyModules(parseSkyGroupDebts(groups), measuredUsdcUsd);
+}
+
+function adaptParsedSkyModules(
+  groups: ParsedSkyGroup[],
+  measuredUsdcUsd: number | null,
+): AdapterResult["slices"] {
   const knownValues: Array<{
     value: number;
     sourceKey: string;
@@ -155,7 +167,7 @@ export function adaptSkyModules(
   const attributedUsd = reconciliation.attributedUsd;
 
   for (const g of groups) {
-    const debt = parseNumericString(g.debt);
+    const debt = g.debtValue;
     if (debt <= 0) continue;
 
     const spec = MODULE_MAP[g.group];
@@ -231,11 +243,15 @@ export function listUnknownGroups(groups: SkyGroupResult[]): string[] {
 }
 
 export function resolveSkyTimestampSummary(groups: SkyGroupResult[]) {
+  return resolveParsedSkyTimestampSummary(parseSkyGroupDebts(groups));
+}
+
+function resolveParsedSkyTimestampSummary(groups: ParsedSkyGroup[]) {
   // Reviewed Block Analitica `datetime` samples omit a zone (including microseconds).
   // Preserve their prior Worker-UTC interpretation explicitly; this is an assumed
   // UTC source policy, not a claim that the publisher supplies timezone evidence.
   return summarizeSourceTimestampsRequiringCoverage(
-    groups.filter((group) => parseNumericString(group.debt) > 0).map((group) => group.datetime),
+    groups.filter((group) => group.debtValue > 0).map((group) => group.datetime),
     "assumed-utc",
   );
 }
@@ -316,14 +332,16 @@ export async function fetchSkyMakercoreReserves(
 ): Promise<AdapterResult> {
   const payload = await fetchJsonAdapterInput<BlockAnaliticaGroupsResponse>(config, "sky-makercore", signal, 15_000, ctx);
 
-  const groups = payload.results;
-  if (!Array.isArray(groups) || groups.length === 0) {
+  if (!Array.isArray(payload.results) || payload.results.length === 0) {
     throw new Error("sky-makercore: groups results array is empty or missing");
   }
+  // An incomplete debt census cannot support any normalized shared-book mix.
+  // Fail the attempt before on-chain attribution and retain the last good book.
+  const groups = parseSkyGroupDebts(payload.results);
 
   const litePsmCapacity = await fetchSkyLitePsmUsdcCapacity(signal, ctx);
   const psmReconciliation = reconcileSkyPsm(groups, litePsmCapacity?.capacityUsd ?? null);
-  const slices = adaptSkyModules(groups, litePsmCapacity?.capacityUsd ?? null);
+  const slices = adaptParsedSkyModules(groups, litePsmCapacity?.capacityUsd ?? null);
   if (slices.length === 0) {
     throw new Error("sky-makercore: all module debt values are zero or invalid");
   }
@@ -331,17 +349,17 @@ export async function fetchSkyMakercoreReserves(
   const totalCollateralUsd = groups.reduce((sum, g) => sum + parseSkyCollateral(g), 0);
   const immediateRedeemableUsd = resolveSkyImmediateRedeemableUsd(groups);
 
-  const timestampSummary = resolveSkyTimestampSummary(groups);
+  const timestampSummary = resolveParsedSkyTimestampSummary(groups);
   const sourceTimestamp = timestampSummary.sourceTimestamp;
   const hasCompleteTimestamps = sourceTimestamp != null && timestampSummary.untimestampedCount === 0;
 
-  const totalDebt = groups.reduce((sum, g) => sum + parseNumericString(g.debt), 0);
+  const totalDebt = psmReconciliation.totalDebt;
   const unknownDebt = groups
     .filter((g) => !KNOWN_GROUPS.has(g.group))
-    .reduce((sum, g) => sum + parseNumericString(g.debt), 0);
+    .reduce((sum, g) => sum + g.debtValue, 0);
   const unknownExposurePct = totalDebt > 0 ? (unknownDebt / totalDebt) * 100 : 0;
   const unknownGroups = groups.filter((group) => !KNOWN_GROUPS.has(group.group));
-  const unknown = listUnknownGroups(unknownGroups.filter((group) => parseNumericString(group.debt) > 0));
+  const unknown = listUnknownGroups(unknownGroups.filter((group) => group.debtValue > 0));
   const warnings: LiveReserveWarning[] = unknown.map((group) =>
     reserveInfoWarning("unknown-asset", `Sky module bucketed into other: ${group}`),
   );
@@ -355,15 +373,6 @@ export async function fetchSkyMakercoreReserves(
       "litepsm-reconciliation-excess",
       "Sky LitePSM measured USDC exceeds group debt beyond the 0.25 percentage-point timing/rounding band; the PSM group remains unlinked",
     ));
-  }
-  for (const group of groups.filter((group) => hasMalformedDebt(group.debt))) {
-    const knownGroup = KNOWN_GROUPS.has(group.group);
-    warnings.push(
-      reserveDegradedWarning(
-        knownGroup ? "malformed-debt" : "unknown-asset",
-        `Sky module has malformed debt and cannot be classified: ${group.group}`,
-      ),
-    );
   }
   if (!hasCompleteTimestamps) {
     warnings.push(reserveDegradedWarning(

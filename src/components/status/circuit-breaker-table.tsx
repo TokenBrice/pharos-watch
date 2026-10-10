@@ -7,7 +7,8 @@ import { PrioritySplitTable } from "./priority-split-table";
 import { defineStatusColumns } from "./page-primitives";
 
 interface CircuitBreakerTableProps {
-  circuits: Record<string, CircuitRecord> | undefined;
+  circuits: Record<string, CircuitRecord> | null | undefined;
+  unavailableReason?: string | null;
 }
 
 const CIRCUIT_BREAKER_COLUMNS = defineStatusColumns([
@@ -15,11 +16,13 @@ const CIRCUIT_BREAKER_COLUMNS = defineStatusColumns([
   ["last-failure", "Last Failure"], ["last-success", "Last Success"],
 ]);
 
-export function CircuitBreakerTable({ circuits }: CircuitBreakerTableProps) {
+export function CircuitBreakerTable({ circuits, unavailableReason }: CircuitBreakerTableProps) {
   if (!circuits || Object.keys(circuits).length === 0) {
     return (
       <PublicSignalCard title="Circuit Breakers" contentClassName="mt-3">
-        <p className="text-sm text-muted-foreground">No circuit breakers registered</p>
+        <p className="text-sm text-muted-foreground">{circuits == null
+          ? `Circuit breaker evidence unavailable${unavailableReason ? ` (${unavailableReason})` : ""}.`
+          : "No circuit breakers registered"}</p>
       </PublicSignalCard>
     );
   }

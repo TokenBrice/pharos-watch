@@ -16,6 +16,7 @@ import type { PegSummaryCoin } from "@shared/types/peg";
 import { type DepegRow } from "./depeg-helpers";
 import {
   EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL,
+  IncidentProjectionUnavailableError,
   loadActiveIncidentProjections,
   rowToPublicDepegEvent,
 } from "./depeg-event-projection";
@@ -105,17 +106,13 @@ export async function derivePegAnalyticsSnapshot(
   const nowSec = Math.floor(Date.now() / 1000);
   const fourYearsAgoSec = nowSec - PEG_SCORE_LOOKBACK_SEC;
 
-  const [activeIncidentProjectionLoad, firstSeenMap] = await Promise.all([
-    loadActiveIncidentProjections(db, null),
-    getFirstSeenDates(
-      db,
-      buildPriceFirstSeenObservations(options.peggedAssets, options.methodologyAsOf),
-    ),
-  ]);
-
-  const activeIncidentCondition = activeIncidentProjectionLoad.available
-    ? ` AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL}`
-    : "";
+  const activeIncidentProjectionLoad = await loadActiveIncidentProjections(db, null);
+  if (!activeIncidentProjectionLoad.available) throw new IncidentProjectionUnavailableError(activeIncidentProjectionLoad.reason);
+  const firstSeenMap = await getFirstSeenDates(
+    db,
+    buildPriceFirstSeenObservations(options.peggedAssets, options.methodologyAsOf),
+  );
+  const activeIncidentCondition = ` AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL}`;
   const eventsResult = await db.prepare(
     `SELECT /* pharos:peg-analytics:recent-depeg-events */
        * FROM depeg_events_with_provenance WHERE (ended_at IS NULL OR ended_at > ?)${activeIncidentCondition} ORDER BY started_at DESC`,
@@ -209,6 +206,7 @@ export async function derivePegAnalyticsSnapshot(
       activeDepeg: scoreResult.activeDepeg,
       lastEventAt: scoreResult.lastEventAt,
       trackingSpanDays: scoreResult.trackingSpanDays,
+      observationStartedAt: firstSeenMap.get(meta.id) ?? null,
       historyCoverage: meta.flags.navToken ? null : historyCoverage,
       recent90d,
       methodologyVersion,

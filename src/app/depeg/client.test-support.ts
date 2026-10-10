@@ -1,4 +1,5 @@
 import { vi, type Mock } from "vitest";
+import type { DepegPendingIncident } from "@shared/types";
 
 /**
  * Fresh query envelopes and resolver surfaces for the depeg route client.
@@ -122,16 +123,9 @@ export interface DepegEventFixture {
   endedAt: number | null;
 }
 
-export interface PendingIncidentFixture {
-  stablecoinId: string;
-  symbol: string;
-  direction: string;
-  firstSeenAt: number;
-}
-
 export function makeEventsResult(options: {
   events?: DepegEventFixture[];
-  pending?: PendingIncidentFixture[];
+  pending?: DepegPendingIncident[];
 } = {}) {
   return {
     data: { events: options.events ?? [], pending: options.pending ?? [] },

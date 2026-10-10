@@ -106,8 +106,8 @@ export function useInfiniteDepegEvents({
   const totalExact = useMemo(() => pages?.[0]?.data.totalExact ?? true, [pages]);
   const pending = useMemo(() => pages?.[0]?.data.pending ?? [], [pages]);
   const data = useMemo(
-    () => ({ events, total, totalExact, nextCursor, pending }),
-    [events, nextCursor, pending, total, totalExact],
+    () => pages?.[0] ? ({ events, total, totalExact, nextCursor, pending }) : undefined,
+    [pages, events, nextCursor, pending, total, totalExact],
   );
 
   return {

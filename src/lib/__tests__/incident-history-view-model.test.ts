@@ -85,6 +85,10 @@ function transitions(): StatusTransition[] {
 }
 
 describe("incident history view model", () => {
+  it("cannot assess flapping from an unavailable transition count", () => {
+    expect(buildIncidentHistoryView(transitions(), NOW_SECONDS, null, DEFAULT_INCIDENT_HISTORY_QUERY))
+      .toMatchObject({ transitionsLast24h: null, isFlapping: null });
+  });
   it("sorts transitions before deriving state duration and resolution context", () => {
     const view = buildIncidentHistoryView(transitions(), NOW_SECONDS, 4, DEFAULT_INCIDENT_HISTORY_QUERY);
 

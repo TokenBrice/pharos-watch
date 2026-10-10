@@ -1,7 +1,7 @@
 import { LEGACY_SOLOMON_USDV_ID } from "../../lib/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { admitSupplyBuckets, getCirculatingRaw, type SupplyBucketInvalidReason } from "@shared/lib/supply";
+import { admitSupplyBuckets, getCirculatingRawOrNull, type SupplyBucketInvalidReason } from "@shared/lib/supply";
 import { CHAIN_CIRCULATING_KEYS, normalizeChainSupplyValue } from "@shared/lib/chains/circulating";
 import { isRecord } from "@shared/lib/type-guards";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
@@ -70,7 +70,7 @@ function countChainEntries(chainCirculating: unknown): number {
 
 function buildQualityVector(asset: PeggedAsset): number[] {
   return [
-    getCirculatingRaw(asset),
+    getCirculatingRawOrNull(asset) ?? -1, // unavailable ranks below observed zero, not as a measured zero
     countChainEntries(asset.chainCirculating),
     Array.isArray(asset.chains) ? asset.chains.length : 0,
     countFiniteBuckets(asset.circulatingPrevDay ?? undefined) +

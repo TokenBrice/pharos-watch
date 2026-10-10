@@ -1,8 +1,6 @@
 import incidentReviewsAsset from "@shared/data/safety-score-v9/incident-reviews-v1.json";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
-import { sha256Hex } from "@shared/lib/sha256";
-import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
 import {
   V9ReviewedIncidentRegistryEnvelopeSchema,
@@ -29,7 +27,7 @@ import {
   ReviewEvidenceBuilder,
   type ControlOverlay,
 } from "./extension-shared";
-import { canonicalizeReviewedRegistryDigest, createReviewedAssetRegistry, reviewedRegistryDigestKey } from "./extension-reviewed-registry";
+import { canonicalizeReviewedRegistryDigest, createReviewedAssetRegistry, reviewedRegistryDigestKey, reviewedRegistryEnvelopeDigest } from "./extension-reviewed-registry";
 
 const incidentEnvelope = V9ReviewedIncidentRegistryEnvelopeSchema.parse(incidentReviewsAsset);
 const INCIDENT_REVIEW_REGISTRY = canonicalizeReviewedRegistryDigest(incidentEnvelope, {
@@ -42,12 +40,7 @@ const INCIDENT_REVIEW_REGISTRY = canonicalizeReviewedRegistryDigest(incidentEnve
   "negativeReviews.*.scope.controlKinds": (value) => typeof value === "string" ? value : "",
 });
 
-export const SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST = sha256Hex(
-  stableJsonStringifyV1({
-    domain: "safety-score-v9.incident-reviews.v1",
-    payload: INCIDENT_REVIEW_REGISTRY,
-  }),
-);
+export const SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST = reviewedRegistryEnvelopeDigest("safety-score-v9.incident-reviews.v1", "payload", INCIDENT_REVIEW_REGISTRY);
 
 const INCIDENTS_BY_ASSET_ID = createReviewedAssetRegistry({
   rows: incidentEnvelope.incidents,

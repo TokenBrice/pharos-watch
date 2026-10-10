@@ -61,6 +61,8 @@ const YIELD_HISTORY_COLUMNS = [
   "pys_inputs_at_publish",
 ] as const;
 
+const YIELD_HISTORY_DAILY_COLUMNS = [...YIELD_HISTORY_COLUMNS, "snapshot_date"] as const;
+
 interface YieldHistoryCleanupTarget {
   stablecoinId: string;
   sourceKeys: string[];
@@ -88,12 +90,23 @@ export interface YieldHistoryCleanupRow {
   pys_inputs_at_publish: string | null;
 }
 
-export interface YieldHistoryCleanupArtifact {
+export interface YieldHistoryCleanupDailyRow extends YieldHistoryCleanupRow {
+  source_key: string;
+  snapshot_date: number;
+}
+
+export interface YieldHistoryCleanupRows {
+  hourlyRows: YieldHistoryCleanupRow[];
+  dailyRows: YieldHistoryCleanupDailyRow[];
+}
+
+export interface YieldHistoryCleanupArtifact extends YieldHistoryCleanupRows {
+  version: 2;
   generatedAt: number;
   operator: string | null;
   targets: YieldHistoryCleanupTarget[];
-  rowCount: number;
-  rows: YieldHistoryCleanupRow[];
+  hourlyRowCount: number;
+  dailyRowCount: number;
 }
 
 const nullableFiniteNumber = z.number().finite().nullable();
@@ -118,15 +131,22 @@ const yieldHistoryCleanupRowSchema = z.object({
   variance_at_publish: nullableFiniteNumber,
   pys_inputs_at_publish: z.string().nullable(),
 }).strict();
+const yieldHistoryCleanupDailyRowSchema = yieldHistoryCleanupRowSchema.extend({
+  source_key: z.string(),
+  snapshot_date: z.number().int().nonnegative(),
+});
 const yieldHistoryCleanupArtifactSchema = z.object({
+  version: z.literal(2),
   generatedAt: z.number().finite(),
   operator: z.string().nullable(),
   targets: z.array(z.object({
     stablecoinId: z.string(),
     sourceKeys: z.array(z.string()),
   }).strict()),
-  rowCount: z.number().int().nonnegative(),
-  rows: z.array(yieldHistoryCleanupRowSchema),
+  hourlyRowCount: z.number().int().nonnegative(),
+  dailyRowCount: z.number().int().nonnegative(),
+  hourlyRows: z.array(yieldHistoryCleanupRowSchema),
+  dailyRows: z.array(yieldHistoryCleanupDailyRowSchema),
 }).strict();
 
 export interface YieldHistoryCleanupSummary {
@@ -167,10 +187,12 @@ export function parseYieldHistoryCleanupArtifact(value: unknown): YieldHistoryCl
   if (JSON.stringify(artifact.targets) !== JSON.stringify(expectedTargets)) {
     throw new Error("Cleanup artifact targets do not match current yield-history ownership handoffs");
   }
-  if (artifact.rowCount !== artifact.rows.length) {
-    throw new Error(
-      `Cleanup artifact rowCount ${artifact.rowCount} does not match rows length ${artifact.rows.length}`,
-    );
+  for (const tier of ["hourly", "daily"] as const) {
+    const count = artifact[`${tier}RowCount`];
+    const rows = artifact[`${tier}Rows`];
+    if (count !== rows.length) {
+      throw new Error(`Cleanup artifact ${tier}RowCount ${count} does not match rows length ${rows.length}`);
+    }
   }
   return artifact;
 }
@@ -206,8 +228,11 @@ function buildTargetWhereClause(target: YieldHistoryCleanupTarget): string {
   return `stablecoin_id = ${sqlValue(target.stablecoinId)} AND (${sourceClauses.join(" OR ")})`;
 }
 
-function buildSelectSql(target: YieldHistoryCleanupTarget): string {
-  return `SELECT ${YIELD_HISTORY_COLUMNS.join(", ")} FROM yield_history WHERE ${buildTargetWhereClause(target)} ORDER BY stablecoin_id ASC, recorded_at ASC, source_key ASC`;
+function buildSelectSql(target: YieldHistoryCleanupTarget, tier: "hourly" | "daily"): string {
+  const table = tier === "hourly" ? "yield_history" : "yield_history_daily";
+  const columns = tier === "hourly" ? YIELD_HISTORY_COLUMNS : YIELD_HISTORY_DAILY_COLUMNS;
+  // SAFETY: tier selects fixed tables/columns; buildTargetWhereClause quotes values through sqlValue/sqlString.
+  return `SELECT ${columns.join(", ")} FROM ${table} WHERE ${buildTargetWhereClause(target)} ORDER BY stablecoin_id ASC, recorded_at ASC, source_key ASC`;
 }
 
 function buildDeleteSql(target: YieldHistoryCleanupTarget): string[] {
@@ -240,30 +265,30 @@ export function summarizeYieldHistoryCleanupRows(rows: readonly YieldHistoryClea
 }
 
 export function createYieldHistoryCleanupArtifact(
-  rows: YieldHistoryCleanupRow[],
+  rows: YieldHistoryCleanupRows,
   operator: string | null,
 ): YieldHistoryCleanupArtifact {
-  return {
+  return parseYieldHistoryCleanupArtifact({
+    version: 2,
     generatedAt: Math.floor(Date.now() / 1000),
     operator,
     targets: listYieldHistoryCleanupTargets(),
-    rowCount: rows.length,
-    rows,
-  };
+    hourlyRowCount: rows.hourlyRows.length,
+    dailyRowCount: rows.dailyRows.length,
+    ...rows,
+  });
 }
 
-export function loadCleanupRowsFromSqlite(dbPath: string): YieldHistoryCleanupRow[] {
+export function loadCleanupRowsFromSqlite(dbPath: string): YieldHistoryCleanupRows {
   const db = new DatabaseSync(dbPath);
   try {
-    const rows: YieldHistoryCleanupRow[] = [];
+    const hourlyRows: YieldHistoryCleanupRow[] = [];
+    const dailyRows: YieldHistoryCleanupDailyRow[] = [];
     for (const target of listYieldHistoryCleanupTargets()) {
-      const statement = db.prepare(buildSelectSql(target));
-      const targetRows = statement.all() as unknown as YieldHistoryCleanupRow[];
-      for (const row of targetRows) {
-        rows.push(row);
-      }
+      hourlyRows.push(...db.prepare(buildSelectSql(target, "hourly")).all() as unknown as YieldHistoryCleanupRow[]);
+      dailyRows.push(...db.prepare(buildSelectSql(target, "daily")).all() as unknown as YieldHistoryCleanupDailyRow[]);
     }
-    return rows;
+    return { hourlyRows, dailyRows };
   } finally {
     db.close();
   }
@@ -296,35 +321,32 @@ export function deleteCleanupRowsFromSqlite(dbPath: string): void {
   }
 }
 
-export function restoreCleanupRowsToSqlite(dbPath: string, rows: readonly YieldHistoryCleanupRow[]): void {
+export function restoreCleanupRowsToSqlite(dbPath: string, value: YieldHistoryCleanupArtifact): void {
+  const artifact = parseYieldHistoryCleanupArtifact(value);
   const db = new DatabaseSync(dbPath);
+  let transactionStarted = false;
   try {
-    const placeholders = YIELD_HISTORY_COLUMNS.map(() => "?").join(", ");
-    const insertSql = `INSERT OR REPLACE INTO yield_history (${YIELD_HISTORY_COLUMNS.join(", ")}) VALUES (${placeholders})`;
-    const statement = db.prepare(insertSql);
-    for (const row of rows) {
-      statement.run(
-        row.stablecoin_id,
-        row.source_key,
-        row.recorded_at,
-        row.is_best,
-        row.apy,
-        row.apy_base,
-        row.apy_reward,
-        row.exchange_rate,
-        row.source_tvl_usd,
-        row.data_source,
-        row.warning_signals,
-        row.yield_source,
-        row.yield_type,
-        row.publication_generation_id,
-        row.publication_state,
-        row.pys_at_publish,
-        row.safety_at_publish,
-        row.variance_at_publish,
-        row.pys_inputs_at_publish,
-      );
+    db.exec("BEGIN TRANSACTION;");
+    transactionStarted = true;
+    const hourly = db.prepare(`INSERT OR REPLACE INTO yield_history (${YIELD_HISTORY_COLUMNS.join(", ")}) VALUES (${YIELD_HISTORY_COLUMNS.map(() => "?").join(", ")})`);
+    const daily = db.prepare(`INSERT OR REPLACE INTO yield_history_daily (${YIELD_HISTORY_DAILY_COLUMNS.join(", ")}) VALUES (${YIELD_HISTORY_DAILY_COLUMNS.map(() => "?").join(", ")})`);
+    for (const row of artifact.hourlyRows) {
+      hourly.run(...YIELD_HISTORY_COLUMNS.map((column) => row[column]));
     }
+    for (const row of artifact.dailyRows) {
+      daily.run(...YIELD_HISTORY_DAILY_COLUMNS.map((column) => row[column]));
+    }
+    db.exec("COMMIT;");
+    transactionStarted = false;
+  } catch (error) {
+    if (transactionStarted) {
+      try {
+        db.exec("ROLLBACK;");
+      } catch {
+        // Preserve the original restore error when rollback also fails.
+      }
+    }
+    throw error;
   } finally {
     db.close();
   }
@@ -341,15 +363,14 @@ function execRemoteStatements(statements: string[], remote: boolean): void {
   );
 }
 
-function loadCleanupRowsFromWrangler(remote: boolean): YieldHistoryCleanupRow[] {
-  const rows: YieldHistoryCleanupRow[] = [];
+function loadCleanupRowsFromWrangler(remote: boolean): YieldHistoryCleanupRows {
+  const hourlyRows: YieldHistoryCleanupRow[] = [];
+  const dailyRows: YieldHistoryCleanupDailyRow[] = [];
   for (const target of listYieldHistoryCleanupTargets()) {
-    const targetRows = queryRemoteRows<YieldHistoryCleanupRow>(buildSelectSql(target), remote);
-    for (const row of targetRows) {
-      rows.push(row);
-    }
+    hourlyRows.push(...queryRemoteRows<YieldHistoryCleanupRow>(buildSelectSql(target, "hourly"), remote));
+    dailyRows.push(...queryRemoteRows<YieldHistoryCleanupDailyRow>(buildSelectSql(target, "daily"), remote));
   }
-  return rows;
+  return { hourlyRows, dailyRows };
 }
 
 function deleteCleanupRowsFromWrangler(remote: boolean): void {
@@ -359,11 +380,18 @@ function deleteCleanupRowsFromWrangler(remote: boolean): void {
   );
 }
 
-function restoreCleanupRowsToWrangler(rows: readonly YieldHistoryCleanupRow[], remote: boolean): void {
-  const statements = rows.map((row) => {
-    const values = YIELD_HISTORY_COLUMNS.map((column) => sqlValue(row[column]));
-    return `INSERT OR REPLACE INTO yield_history (${YIELD_HISTORY_COLUMNS.join(", ")}) VALUES (${values.join(", ")})`;
-  });
+function restoreCleanupRowsToWrangler(value: YieldHistoryCleanupArtifact, remote: boolean): void {
+  const artifact = parseYieldHistoryCleanupArtifact(value);
+  const statements = [
+    ...artifact.hourlyRows.map((row) => {
+      const values = YIELD_HISTORY_COLUMNS.map((column) => sqlValue(row[column]));
+      return `INSERT OR REPLACE INTO yield_history (${YIELD_HISTORY_COLUMNS.join(", ")}) VALUES (${values.join(", ")})`;
+    }),
+    ...artifact.dailyRows.map((row) => {
+      const values = YIELD_HISTORY_DAILY_COLUMNS.map((column) => sqlValue(row[column]));
+      return `INSERT OR REPLACE INTO yield_history_daily (${YIELD_HISTORY_DAILY_COLUMNS.join(", ")}) VALUES (${values.join(", ")})`;
+    }),
+  ];
   execRemoteStatements(statements, remote);
 }
 
@@ -535,29 +563,32 @@ export async function runYieldHistoryCleanupCli(
     }
 
     if (sqlitePath) {
-      restoreCleanupRowsToSqlite(sqlitePath, artifact.rows);
+      restoreCleanupRowsToSqlite(sqlitePath, artifact);
       writeJson({
-        restored: artifact.rows.length,
+        restored: { hourly: artifact.hourlyRowCount, daily: artifact.dailyRowCount },
         mode: "sqlite",
         sqlitePath,
       });
       return;
     }
 
-    restoreCleanupRowsToWrangler(artifact.rows, remote);
+    restoreCleanupRowsToWrangler(artifact, remote);
     writeJson({
-      restored: artifact.rows.length,
+      restored: { hourly: artifact.hourlyRowCount, daily: artifact.dailyRowCount },
       mode: remote ? "wrangler-remote" : "wrangler-local",
     });
     return;
   }
 
   const beforeRows = sqlitePath ? loadCleanupRowsFromSqlite(sqlitePath) : loadCleanupRowsFromWrangler(remote);
-  const beforeSummary = summarizeYieldHistoryCleanupRows(beforeRows);
+  const beforeArtifact = createYieldHistoryCleanupArtifact(beforeRows, operator);
+  const beforeSummary = {
+    hourly: summarizeYieldHistoryCleanupRows(beforeRows.hourlyRows),
+    daily: summarizeYieldHistoryCleanupRows(beforeRows.dailyRows),
+  };
 
   if (exportPath) {
-    const artifact = createYieldHistoryCleanupArtifact(beforeRows, operator);
-    writeFileSync(exportPath, JSON.stringify(artifact, null, 2));
+    writeFileSync(exportPath, JSON.stringify(beforeArtifact, null, 2));
   }
 
   if (!execute) {
@@ -587,7 +618,10 @@ export async function runYieldHistoryCleanupCli(
   }
 
   const afterRows = sqlitePath ? loadCleanupRowsFromSqlite(sqlitePath) : loadCleanupRowsFromWrangler(remote);
-  const afterSummary = summarizeYieldHistoryCleanupRows(afterRows);
+  const afterSummary = {
+    hourly: summarizeYieldHistoryCleanupRows(afterRows.hourlyRows),
+    daily: summarizeYieldHistoryCleanupRows(afterRows.dailyRows),
+  };
 
   writeJson({
     mode: sqlitePath ? "sqlite" : remote ? "wrangler-remote" : "wrangler-local",

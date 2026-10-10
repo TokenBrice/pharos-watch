@@ -395,7 +395,12 @@ export async function fetchReserveProtocolDtfReserves(
       collateralStatus: rawStatus?.toString(),
     });
 
-    if (rawStatus === COLLATERAL_STATUS_IFFY) {
+    if (rawStatus == null) {
+      warnings.push(reserveDegradedWarning(
+        "reserve-protocol-dtf-collateral-status-unavailable",
+        `Reserve Protocol collateral status is unavailable for ${entry.address}`,
+      ));
+    } else if (rawStatus === COLLATERAL_STATUS_IFFY) {
       warnings.push(
         reserveDegradedWarning(
           "reserve-protocol-dtf-collateral-status",

@@ -47,7 +47,8 @@ export function loadSafetyScoreV9RegistryRef(ref: string): SafetyScoreV9Registry
   mkdirSync(scratch, { recursive: true });
   const directory = mkdtempSync(resolve(scratch, "registry-"));
   try {
-    const archive = execFileSync("git", ["archive", commit, "shared", "scripts"], { maxBuffer: 64 * 1024 * 1024 });
+    // Preserve the archived package scope so catalog imports cannot escape to the caller's checkout.
+    const archive = execFileSync("git", ["archive", commit, "package.json", "shared", "scripts"], { maxBuffer: 64 * 1024 * 1024 });
     execFileSync("tar", ["-x", "-C", directory], { input: archive });
     symlinkSync(resolve(root, "node_modules"), resolve(directory, "node_modules"));
     writeFileSync(resolve(directory, "tsconfig.json"), JSON.stringify({

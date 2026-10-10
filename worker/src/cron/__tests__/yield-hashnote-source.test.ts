@@ -64,6 +64,49 @@ describe("fetchHashnoteUsycSource", () => {
     expect(result!.comparisonAnchorObservedAt).toBe(sevenDaysAgoSec);
   });
 
+  it("retains a finite negative holder return from declining USYC NAV reports", async () => {
+    const nowSec = 1_780_000_000;
+    const anchor = nowSec - 7 * 86400;
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1000);
+    mockYieldSourceRoutes([{
+      match: "usyc.hashnote.com/api/price-reports",
+      body: { data: [
+        { price: "0.99", timestamp: String(nowSec) },
+        { price: "1", timestamp: String(anchor) },
+      ] },
+    }]);
+    const result = await fetchHashnoteUsycSource();
+    expect(result?.currentApy).toBeCloseTo((Math.pow(0.99, 365.25 / 7) - 1) * 100);
+    expect(result?.apyBase).toBe(result?.currentApy);
+    expect(result).toMatchObject({ sourceObservedAt: nowSec, comparisonAnchorObservedAt: anchor });
+  });
+
+  it.each([301, 6 * 86400])("quarantines a newest USYC report %s seconds beyond now", async (futureSec) => {
+    const nowSec = 1_780_000_000;
+    vi.useFakeTimers().setSystemTime(nowSec * 1000);
+    mockYieldSourceRoutes([{ match: "usyc.hashnote.com/api/price-reports", body: { data: [
+      { price: "1.002", timestamp: String(nowSec + futureSec) },
+      { price: "1", timestamp: String(nowSec - 86400) },
+    ] } }]);
+    await expect(fetchHashnoteUsycSource()).resolves.toBeNull();
+  });
+
+  it("never uses a future anchor and admits the inclusive five-minute latest boundary", async () => {
+    const nowSec = 1_780_000_000;
+    const latest = nowSec + 300;
+    const anchor = latest - 7 * 86400;
+    vi.useFakeTimers().setSystemTime(nowSec * 1000);
+    mockYieldSourceRoutes([{ match: "usyc.hashnote.com/api/price-reports", body: { data: [
+      { price: "1.9", timestamp: String(nowSec + 6 * 86400) },
+      { price: "1.002", timestamp: String(latest) },
+      { price: "1", timestamp: String(anchor) },
+    ] } }]);
+    const result = await fetchHashnoteUsycSource();
+    expect(result).toMatchObject({ sourceObservedAt: latest, comparisonAnchorObservedAt: anchor });
+    expect(result?.currentApy).toBeCloseTo((Math.pow(1.002, 365.25 / 7) - 1) * 100);
+  });
+
   it("returns null on HTTP error", async () => {
     mockYieldSourceRoutes([{ match: "usyc.hashnote.com", status: 500, body: "" }]);
     await expect(fetchHashnoteUsycSource()).resolves.toBeNull();

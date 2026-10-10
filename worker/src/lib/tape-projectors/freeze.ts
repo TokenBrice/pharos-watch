@@ -6,18 +6,25 @@
  *   - freeze.destroyed  : event_type = 'destroy'
  */
 import { formatCompactUsdShortLowerK } from "@shared/lib/format";
+import { resolveChainId } from "@shared/types/chain-identity";
 import {
   buildTapeEventId,
   severityForFreezeBlocked,
   severityForFreezeDestroyed,
 } from "../tape-event-helpers";
-import { getBlacklistConfigByKey } from "../blacklist-contracts";
+import { CONTRACT_CONFIGS, getBlacklistConfigByKey } from "../blacklist-contracts";
+import { deleteCache, getCache, setCache } from "../db-cache";
+import { batchExecute, buildInClause, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../d1-primitives";
+import { parseJsonObject } from "../json-parse";
+import { logWorkerEvent } from "../structured-log";
 import type { BlacklistPersistedRow } from "../blacklist/shared";
 import type { TapeEventInsert } from "../tape-event-types";
 import {
+  DEFAULT_BATCH_LIMIT,
   finalizeProjectorBatch,
   fetchRowsWithTieExpansion,
   resolveProjectorOptions,
+  sourceReconciliationSince,
   type ProjectorOptions,
   type ProjectorResult,
 } from "./types";
@@ -44,6 +51,72 @@ const BLACKLIST_VARIANTS = [
 
 type BlacklistVariant = (typeof BLACKLIST_VARIANTS)[number];
 
+// 0266 lowercases these registry display names. Derive the compatibility
+// mapping from the same contract/CHAIN_META authority as the old writer,
+// rather than maintaining a second chain-name list.
+const LEGACY_FREEZE_CHAINS: Record<string, string> = Object.fromEntries(CONTRACT_CONFIGS
+  .filter(({ chain }) => chain.chainName !== chain.chainId && chain.chainName.toLowerCase() === chain.chainId)
+  .map(({ chain }) => [chain.chainName, chain.chainId]));
+
+interface FreezeChainRepairRow {
+  id: number;
+  ts: number;
+  chain: string | null;
+  source_table: string;
+}
+
+async function repairFreezeChains(db: D1Database, type: BlacklistVariant["slug"]): Promise<void> {
+  const key = `tape-projector:freeze-chain-repair:${type}`;
+  const cached = await getCache(db, key);
+  const cursor = parseJsonObject(cached?.value, "freeze chain repair cursor");
+  const hasCursor = cursor != null && Number.isSafeInteger(cursor.ts) && Number.isSafeInteger(cursor.id);
+  // Bound reads, not just writes: filtering legacy names before LIMIT would
+  // repeatedly scan the entire clean archive. Cycle over the type/time index
+  // so old-writer inserts behind this cursor are revisited after the wrap.
+  const rows = (await db.prepare(
+    `SELECT id, ts, chain, source_table FROM tape_events INDEXED BY idx_tape_type_ts
+     WHERE type = ?${hasCursor ? " AND (ts, id) < (?, ?)" : ""}
+     ORDER BY ts DESC, id DESC LIMIT ?`,
+  ).bind(type, ...(hasCursor ? [cursor.ts, cursor.id] : []), DEFAULT_BATCH_LIMIT)
+    .all<FreezeChainRepairRow>()).results ?? [];
+  const idsByChain = new Map<string, number[]>();
+  for (const row of rows) {
+    if (row.source_table !== "blacklist_events" || row.chain == null ||
+      !Object.prototype.hasOwnProperty.call(LEGACY_FREEZE_CHAINS, row.chain)) continue;
+    const ids = idsByChain.get(row.chain) ?? [];
+    ids.push(row.id);
+    idsByChain.set(row.chain, ids);
+  }
+  const statements: D1PreparedStatement[] = [];
+  for (const [name, ids] of idsByChain) {
+    for (let i = 0; i < ids.length; i += D1_SAFE_IN_CLAUSE_BIND_LIMIT) {
+      const clause = buildInClause(ids.slice(i, i + D1_SAFE_IN_CLAUSE_BIND_LIMIT));
+      // Only chain changes: never replace the identity/payload or bump the
+      // insertion-id Telegram cursor. Guard against already repaired rows.
+      statements.push(db.prepare(
+        `UPDATE tape_events SET chain = ?
+         WHERE id IN (${clause.sql}) AND chain = ?
+           AND source_table = 'blacklist_events' AND type = ?`,
+      ).bind(LEGACY_FREEZE_CHAINS[name], ...clause.binds, name, type));
+    }
+  }
+  const repaired = await batchExecute(db, statements);
+  const last = rows[rows.length - 1];
+  const continuing = rows.length === DEFAULT_BATCH_LIMIT && last != null;
+  // Save progress only after successful updates. A failed write replays the
+  // same idempotent page, while reaching the end starts the next sweep.
+  if (continuing) await setCache(db, key, JSON.stringify({ ts: last.ts, id: last.id }));
+  else if (cached) await deleteCache(db, key);
+  logWorkerEvent({
+    scope: "lib",
+    level: "info",
+    event: "freeze-chain-repair",
+    job: "project-tape",
+    message: "Reconciled freeze Tape chain identities",
+    metadata: { type, scanned: rows.length, repaired, continuing },
+  });
+}
+
 async function projectFreezeVariant(
   db: D1Database,
   spec: BlacklistVariant,
@@ -51,16 +124,42 @@ async function projectFreezeVariant(
 ): Promise<ProjectorResult> {
   const cursorKey = spec.slug;
   const { since, until, limit } = await resolveProjectorOptions(db, cursorKey, options);
+  // Run even when every source identity was already projected, and outside
+  // source-time bounds: migration overlap/rollback rows can be any age.
+  if (options?.dryRun !== true) {
+    try {
+      await repairFreezeChains(db, spec.slug);
+    } catch (error) {
+      // Compatibility maintenance must not block fresh freeze projections.
+      // Failed pages retain their cursor and are retried on a later run.
+      logWorkerEvent({
+        scope: "lib",
+        level: "error",
+        event: "freeze-chain-repair-failed",
+        job: "project-tape",
+        message: "Freeze Tape chain repair failed; continuing source projection",
+        error,
+        metadata: { type: spec.slug, reason: "freeze-chain-repair-failed" },
+      });
+    }
+  }
 
   const rows = await fetchRowsWithTieExpansion<BlacklistSourceRow>(db, {
     selectSql: `SELECT id, stablecoin, chain_id, chain_name, event_type, amount_usd_at_event,
                       timestamp, methodology_version, config_key, rowid as rowid`,
-    fromSql: "blacklist_events",
+    fromSql: "blacklist_events INDEXED BY idx_blacklist_events_public_event_page",
     timeColumn: "timestamp",
-    trailingWhereSql: " AND event_type = ? AND suppression_reason IS NULL",
-    trailingBinds: [spec.eventType],
+    // Reconcile delayed identities in a bounded event-time window; explicit
+    // admin bounds can recover historical rows outside the scheduled window.
+    trailingWhereSql: ` AND event_type = ? AND suppression_reason IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM tape_events INDEXED BY idx_tape_source_key
+        WHERE source_table = 'blacklist_events'
+          AND source_row_id = blacklist_events.id AND transition = ?
+      )`,
+    trailingBinds: [spec.eventType, spec.transition],
     orderBySql: "timestamp ASC, rowid ASC",
-    since,
+    since: sourceReconciliationSince(options),
     until,
     limit,
     getTime: (row) => row.timestamp,
@@ -118,7 +217,7 @@ async function projectFreezeVariant(
       coinId: row.config_key ? getBlacklistConfigByKey(row.config_key)?.stablecoinId ?? null : null,
       issuerId: null,
       pegCurrency: null,
-      chain: row.chain_name,
+      chain: resolveChainId(row.chain_id) ?? resolveChainId(row.chain_name),
       title,
       summary,
       payload: {

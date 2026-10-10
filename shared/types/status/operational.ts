@@ -2,18 +2,6 @@ import { z } from "zod";
 import { StatusHealthOrUnknownSchema } from "./schema-primitives";
 import { D1CapacityAssessmentSchema } from "./d1-capacity";
 
-export const AlertBrokerHealthSummarySchema = z.object({
-  activeCount: z.number(),
-  pendingCount: z.number(),
-  criticalActiveCount: z.number(),
-  failedDeliveryCount: z.number(),
-  missingTargetCount: z.number(),
-  oldestActiveAt: z.number().nullable(),
-  activeConditionKeys: z.array(z.string()),
-  queryFailed: z.boolean(),
-});
-export type AlertBrokerHealthSummary = z.output<typeof AlertBrokerHealthSummarySchema>;
-
 export const ProducerHeadStatusSchema = z.object({
   scheduleKey: z.string(),
   job: z.string(),

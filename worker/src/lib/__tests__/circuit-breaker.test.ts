@@ -14,6 +14,7 @@ import {
 } from "../circuit-breaker";
 import { CIRCUIT_SOURCE } from "../constants";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { countPublicImpactOpenCircuits, getCircuitImpactStatus } from "@shared/lib/public-health";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -456,6 +457,22 @@ describe("circuit-breaker", () => {
 
   it("does not list the retired Pyth provider circuit", () => {
     expect(listActiveCircuitSources()).not.toContain("pyth-prices");
+  });
+
+  it("excludes retained DefiLlama confirmation state from active public outages", () => {
+    const legacy = "defillama-confirm";
+    const circuits = {
+      [legacy]: makeRecord({ state: "open", consecutiveFailures: 30 }),
+      [CIRCUIT_SOURCE.DL_STABLECOINS]: makeRecord({ state: "open", consecutiveFailures: 3 }),
+      [CIRCUIT_SOURCE.CG_PRICES]: makeRecord({ state: "open", consecutiveFailures: 3 }),
+    };
+    expect(listActiveCircuitSources()).not.toContain(legacy);
+    expect(filterInactiveCircuitStates(circuits)).toEqual({
+      [CIRCUIT_SOURCE.DL_STABLECOINS]: circuits[CIRCUIT_SOURCE.DL_STABLECOINS],
+      [CIRCUIT_SOURCE.CG_PRICES]: circuits[CIRCUIT_SOURCE.CG_PRICES],
+    });
+    expect(countPublicImpactOpenCircuits(circuits)).toBe(2);
+    expect(getCircuitImpactStatus(countPublicImpactOpenCircuits(circuits))).toBe("healthy");
   });
 
   // --- Etherscan circuit source ---

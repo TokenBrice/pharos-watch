@@ -8,8 +8,9 @@ import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import type { ChainConfig } from "../blacklist-contracts";
+import { blacklistCanonicalEventFilterSql } from "@shared/lib/blacklist-event-order";
 
-export const BLACKLIST_PUBLIC_EVENT_SQL = "suppression_reason IS NULL";
+export const BLACKLIST_PUBLIC_EVENT_SQL = blacklistCanonicalEventFilterSql();
 
 export function shouldSuppressAsMirrorZero(
   stablecoin: string,

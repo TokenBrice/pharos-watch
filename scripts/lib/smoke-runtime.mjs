@@ -107,6 +107,22 @@ export function joinRouteUrl(baseUrl, route) {
   return normalized === "/" ? parsed.toString() : new URL(normalized, parsed).toString();
 }
 
+export function isSameRouteUrl(finalUrl, requestedUrl) {
+  try {
+    const final = new URL(finalUrl);
+    const requested = new URL(requestedUrl);
+    const normalizePath = (pathname) => pathname.replace(/\/$/, "") || "/";
+    final.searchParams.sort();
+    requested.searchParams.sort();
+    return final.origin === requested.origin
+      && normalizePath(final.pathname) === normalizePath(requested.pathname)
+      && final.searchParams.toString() === requested.searchParams.toString()
+      && final.hash === requested.hash;
+  } catch {
+    return false;
+  }
+}
+
 export function normalizeRouteList(input, fallback = []) {
   const routes = (input ?? "")
     .split(",")
@@ -306,13 +322,73 @@ export async function resolveStaticExportPort(
   } = {},
 ) {
   const explicitPort = env.STATIC_EXPORT_PORT?.trim();
-  if (explicitPort) return Number.parseInt(explicitPort, 10);
+  if (explicitPort) {
+    const port = Number(explicitPort);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invalid STATIC_EXPORT_PORT");
+    if (!await canListenImpl(host, port)) throw new Error(`Configured static-export port is already in use: ${host}:${port}`);
+    return port;
+  }
 
   if (await canListenImpl(host, preferredPort)) return preferredPort;
 
   const fallbackPort = await allocatePortImpl(host, { errorMessage: allocationErrorMessage });
   onFallback?.({ host, preferredPort, fallbackPort });
   return fallbackPort;
+}
+
+export async function waitForStaticExportServer(
+  server,
+  baseUrl,
+  { fetchImpl = fetch, sleepImpl = sleep, attempts = 30 } = {},
+) {
+  let startupConfirmed = false;
+  let stdout = "";
+  let failure;
+  let rejectFailure;
+  const failed = new Promise((_, reject) => { rejectFailure = reject; });
+  const fail = (error) => {
+    failure = error;
+    rejectFailure(error);
+  };
+  const onError = (error) => fail(error);
+  const onExit = (code, signal) => fail(new Error(`Static-export server exited before readiness (${signal ?? code})`));
+  const onStdout = (chunk) => {
+    stdout += chunk.toString();
+    const lines = stdout.split("\n");
+    stdout = lines.pop() ?? "";
+    startupConfirmed ||= lines.some((line) => line.startsWith("[serve-static-export] Serving ")
+      && line.includes(` on ${baseUrl} with `));
+  };
+  server.on("error", onError);
+  server.on("exit", onExit);
+  server.stdout?.on("data", onStdout);
+  try {
+    await Promise.race([
+      failed,
+      (async () => {
+        for (let attempt = 0; attempt < attempts; attempt += 1) {
+          if (failure) throw failure;
+          if (server.exitCode != null || server.signalCode != null) throw new Error("Static-export server is not running");
+          if (startupConfirmed) {
+            try {
+              const response = await fetchImpl(`${baseUrl}/`, { signal: AbortSignal.timeout(1000) });
+              await response.body?.cancel();
+              if (failure) throw failure;
+              if (response.status < 400) return;
+            } catch {
+              if (failure) throw failure;
+            }
+          }
+          await sleepImpl(1000);
+        }
+        throw new Error("Static-export server did not become ready after 30 s");
+      })(),
+    ]);
+  } finally {
+    server.off("error", onError);
+    server.off("exit", onExit);
+    server.stdout?.off("data", onStdout);
+  }
 }
 
 export function formatError(error) {

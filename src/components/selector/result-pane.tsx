@@ -425,12 +425,8 @@ function TelegramSubscribeCommand({ command }: { command: string }) {
 const TELEGRAM_TARGET_TOKEN_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 function buildTelegramSubscribeCommand(recommendations: readonly SelectorRecommendation[]): string {
-  const targets = Array.from(new Set(recommendations.map((rec) => telegramTargetToken(rec)).filter(Boolean)));
+  const targets = Array.from(new Set(recommendations.map((rec) => safeTelegramTargetToken(rec.id)).filter(Boolean)));
   return `/subscribe dews, depeg, safety ${targets.join(", ")}`.trim();
-}
-
-function telegramTargetToken(rec: SelectorRecommendation): string | null {
-  return safeTelegramTargetToken(rec.symbol) ?? safeTelegramTargetToken(rec.id);
 }
 
 function safeTelegramTargetToken(value: string): string | null {

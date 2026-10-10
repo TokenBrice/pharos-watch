@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatYieldWarningSignal,
-  getPysColor,
+  formatYieldWarningSignalDescription,
   formatYieldRatioPercent,
   resolveYieldScoreQualification,
   computePysBreakdown,
@@ -20,22 +20,14 @@ describe("formatYieldWarningSignal", () => {
   });
 });
 
-describe("getPysColor", () => {
-  it("returns muted for null", () => {
-    expect(getPysColor(null)).toBe("text-muted-foreground");
-  });
-
-  it("returns emerald for scores above 40", () => {
-    expect(getPysColor(41)).toContain("emerald");
-  });
-
-  it("returns amber for scores between 21 and 40", () => {
-    expect(getPysColor(30)).toContain("amber");
-  });
-
-  it("returns red for scores 20 or below", () => {
-    expect(getPysColor(10)).toContain("red");
-  });
+describe("missing-evidence warning descriptions", () => {
+  it.each(["safety-unrated", "opportunity-evidence-missing"])(
+    "does not assert an estimated PYS or historical fallback from %s alone",
+    (signal) => {
+      expect(formatYieldWarningSignalDescription(signal)).not.toMatch(/This estimated PYS|uses the conservative 40-point/);
+      expect(formatYieldWarningSignalDescription(signal)).toMatch(/evidence|unavailable/);
+    },
+  );
 });
 
 describe("computePysBreakdown", () => {

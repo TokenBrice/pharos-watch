@@ -23,8 +23,8 @@ import { RowSparkline } from "@/components/row-sparkline";
 import { SafetyScoreTopDriver } from "@/components/safety-score-top-driver";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
-import { MINT_AUTHORITY_STATUS_CONFIG } from "@/lib/mint-authority-display";
 import {
+  MINT_AUTHORITY_STATUS_CONFIG,
   PEG_METADATA,
   getMechanismArchetypeLabel,
   SAFETY_EVIDENCE_BADGE_CLASSES,

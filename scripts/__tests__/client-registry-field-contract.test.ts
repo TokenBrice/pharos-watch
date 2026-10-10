@@ -15,18 +15,13 @@ import {
   projectBlacklistStatus,
   projectGeniusProfile,
   projectMintAuthoritySummary,
-  readCanonicalClientFields,
-  readCanonicalClientDetailFields,
-  readGeniusComplianceFields,
-  readGeniusClientFields,
-  readGeniusComplianceSummaryFields,
   validateGeniusComplianceProjection,
 } from "../build-data/build-client-registry.mjs";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { TRACKED_SOURCE_COINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
-  GENIUS_CLIENT_PROFILE_FIELDS,
   GENIUS_COMPLIANCE_PROFILE_FIELDS,
   GENIUS_COMPLIANCE_SUMMARY_FIELDS,
+  STABLECOIN_CLIENT_DETAIL_FIELDS,
   STABLECOIN_CLIENT_LIST_FIELDS,
 } from "@shared/types/stablecoin-client-meta";
 import type { StablecoinClientDetailMeta, StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
@@ -62,6 +57,61 @@ describe("client registry field contract", () => {
       expect(unconfigured).not.toHaveProperty("reserveReview");
       expect(unconfigured.flags).toEqual({ pegCurrency: "USD", governance: "centralized", navToken: true });
       expect(unconfigured.reserves).toEqual([{ risk: "low", pct: 100, coinId: "usdc-circle" }]);
+    }
+  });
+
+  it.each(["sodax-sonic", "nest-vault-positions", "single-asset", "evm-branch-balances"])(
+    "omits suspended %s reader provenance from list and detail projections",
+    (adapter) => {
+      const liveReservesConfig = { adapter, version: 1 };
+      const coin = {
+        id: "bnusd-balanced",
+        liveReservesConfig: {
+          ...liveReservesConfig,
+          suspended: {
+            reason: "The reader measures a different liability from the tracked asset.",
+            since: "2026-10-08",
+          },
+        },
+        reserves: [{ name: "Reviewed collateral", pct: 100, risk: "high" }],
+      };
+      for (const projected of [
+        projectListCoin(coin, STABLECOIN_CLIENT_LIST_FIELDS, "core-stablecoin"),
+        projectDetailCoin(coin, STABLECOIN_CLIENT_DETAIL_FIELDS),
+      ]) {
+        expect(projected).not.toHaveProperty("liveReserveAdapter");
+        expect(projected).not.toHaveProperty("liveReservesConfig");
+      }
+      expect(projectDetailCoin(coin, STABLECOIN_CLIENT_DETAIL_FIELDS).reserves).toEqual(coin.reserves);
+      const enabledCoin = { ...coin, liveReservesConfig };
+      for (const projected of [
+        projectListCoin(enabledCoin, STABLECOIN_CLIENT_LIST_FIELDS, "core-stablecoin") as StablecoinClientListMeta,
+        projectDetailCoin(enabledCoin, STABLECOIN_CLIENT_DETAIL_FIELDS) as StablecoinClientDetailMeta,
+      ]) {
+        expect(projected.liveReserveAdapter).toBe(adapter);
+      }
+      expect(coin.liveReservesConfig.suspended).toBeDefined();
+    },
+  );
+
+  it("omits every authored suspended reader from both generated client outputs", () => {
+    const suspendedCoins = TRACKED_SOURCE_COINS.filter((coin) => coin.liveReservesConfig?.suspended);
+    expect(suspendedCoins.map((coin) => coin.id)).toEqual(expect.arrayContaining([
+      "bnusd-balanced", "inalpha-nest", "tgbp-tokenised", "usdxl-last",
+    ]));
+    const { output, detailOutputs } = buildClientRegistryOutput();
+    const listCoins = JSON.parse(output) as StablecoinClientListMeta[];
+    for (const sourceCoin of suspendedCoins) {
+      const list = listCoins.find((coin) => coin.id === sourceCoin.id);
+      const detailOutput = detailOutputs.find((entry: { id: string; output: string }) => entry.id === sourceCoin.id);
+      expect(list).toBeDefined();
+      expect(detailOutput).toBeDefined();
+      const detail = JSON.parse(detailOutput!.output) as StablecoinClientDetailMeta;
+      for (const projected of [list!, detail]) {
+        expect(projected).not.toHaveProperty("liveReserveAdapter");
+        expect(projected).not.toHaveProperty("liveReservesConfig");
+      }
+      expect(detail.reserves).toEqual(sourceCoin.reserves);
     }
   });
 
@@ -127,28 +177,12 @@ describe("client registry field contract", () => {
   ])("projects authored dependency evidence without shipping heavy inputs (%j)", (evidence, expected) => {
     const projected = projectListCoin(
       { id: "fixture", ...evidence },
-      readCanonicalClientFields(),
+      STABLECOIN_CLIENT_LIST_FIELDS,
       "core-stablecoin",
     ) as { hasAuthoredDependencyEvidence?: unknown };
     expect(projected.hasAuthoredDependencyEvidence).toBe(expected);
     expect(projected).not.toHaveProperty("dependencies");
     expect(projected).not.toHaveProperty("reserves");
-  });
-
-  it("reads the canonical ordered field list from the shared TypeScript contract", () => {
-    expect(readCanonicalClientFields()).toEqual([...STABLECOIN_CLIENT_LIST_FIELDS]);
-  });
-
-  it("reads the GENIUS client field list from the shared TypeScript contract", () => {
-    expect(readGeniusClientFields()).toEqual([...GENIUS_CLIENT_PROFILE_FIELDS]);
-  });
-
-  it("reads the GENIUS compliance field list from the shared TypeScript contract", () => {
-    expect(readGeniusComplianceFields()).toEqual([...GENIUS_COMPLIANCE_PROFILE_FIELDS]);
-  });
-
-  it("reads the GENIUS compliance summary list from the shared TypeScript contract", () => {
-    expect(readGeniusComplianceSummaryFields()).toEqual([...GENIUS_COMPLIANCE_SUMMARY_FIELDS]);
   });
 
   it("projects client registry fields in canonical order", () => {
@@ -208,7 +242,7 @@ describe("client registry field contract", () => {
       custodyModel: "institutional-top",
     };
 
-    expect(Object.keys(projectCoin(coin, readCanonicalClientFields()))).toEqual([...STABLECOIN_CLIENT_LIST_FIELDS]);
+    expect(Object.keys(projectCoin(coin, STABLECOIN_CLIENT_LIST_FIELDS))).toEqual([...STABLECOIN_CLIENT_LIST_FIELDS]);
   });
 
   it("projects only the mint-authority coverage summary and excludes detail evidence", () => {
@@ -258,7 +292,7 @@ describe("client registry field contract", () => {
       },
     };
 
-    const projected = projectCoin(coin, readCanonicalClientFields());
+    const projected = projectCoin(coin, STABLECOIN_CLIENT_LIST_FIELDS);
 
     expect(projected.mintAuthoritySummary).toEqual({
       mintPath: "issuer-direct-mint",
@@ -297,7 +331,7 @@ describe("client registry field contract", () => {
         review: { evidence: "Private evidence" },
         controls: [{ authorityType: "safe", directMintAbility: "direct", threshold: 2, signerCount: 3 }],
       },
-    }, readCanonicalClientFields(), "stablecoin") as StablecoinClientListMeta;
+    }, STABLECOIN_CLIENT_LIST_FIELDS, "stablecoin") as StablecoinClientListMeta;
     expect(projected.mintAuthorityStatus).toBe(status);
     expect(projected.mintAuthoritySummary).toEqual({
       mintPath, authorityPosture: "bounded-admin", confidence: "verified",
@@ -315,7 +349,7 @@ describe("client registry field contract", () => {
       id: "child", variantOf: "parent", variantKind: "savings-passthrough",
       ...(archetypeOverride ? { mechanismArchetype: "synthetic-delta-neutral" } : {}), archetypeOverride,
     };
-    const projected = projectListCoin(child, readCanonicalClientFields(), "stablecoin-variant",
+    const projected = projectListCoin(child, STABLECOIN_CLIENT_LIST_FIELDS, "stablecoin-variant",
       new Map<string, typeof parent | typeof child>([[parent.id, parent], [child.id, child]])) as StablecoinClientListMeta;
     expect(projected.mechanismArchetype).toBe(expected);
     expect(projected.variantOf).toBe("parent");
@@ -340,7 +374,7 @@ describe("client registry field contract", () => {
       },
     };
 
-    const projected = projectCoin(coin, readCanonicalClientFields());
+    const projected = projectCoin(coin, STABLECOIN_CLIENT_LIST_FIELDS);
 
     expect(projectBlacklistStatus(coin)).toBe("inherited");
     expect(projected.blacklistStatus).toBe("inherited");
@@ -401,11 +435,11 @@ describe("client registry field contract", () => {
       },
     };
 
-    const projected = projectDetailCoin(coin, readCanonicalClientDetailFields());
-    const complianceProfile = projectGeniusProfile(coin.genius, readGeniusComplianceFields());
+    const projected = projectDetailCoin(coin, STABLECOIN_CLIENT_DETAIL_FIELDS);
+    const complianceProfile = projectGeniusProfile(coin.genius, GENIUS_COMPLIANCE_PROFILE_FIELDS);
     const { complianceEntries } = buildComplianceRegistryOutput({ sourceCoins: [coin] });
     const summary = complianceEntries[0].genius;
-    expect(summary).toEqual(projectGeniusProfile(coin.genius, readGeniusComplianceSummaryFields()));
+    expect(summary).toEqual(projectGeniusProfile(coin.genius, GENIUS_COMPLIANCE_SUMMARY_FIELDS));
     expect(summary.authorizationStatus).toBe("no-public-authorization-found");
     for (const field of ["references", "negativeEvidenceReview", "applicabilityBasis", "notes"]) {
       expect(summary).not.toHaveProperty(field);

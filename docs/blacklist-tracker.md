@@ -4,10 +4,12 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the
 
 ## Methodology And Ownership
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.2`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.3`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
 - **Version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/blacklist-tracker/`
+
+The 2026-10-10 `v4.3` release counts canonical account/log identities once and persists Tron accounts as validated lowercase `0x` bytes rather than provider Base58. Numeric local ordering and proven cross-transaction evidence govern lifecycle and amount state; matching block hashes govern RPC event timestamps. Bounded scan progress is not caught-up coverage and cannot renew success/publication clocks. Durable snapshot debt retries budget-skipped or ambiguous work. Unknown USD valuations remain unavailable, mixed totals disclose partial coverage, and gold totals include every canonical tracked cohort, including XAUM, with explicit provenance for zero substitution. Historical repair cannot use current quotes as event-time USD evidence. Classification thresholds and cadence are unchanged. Activation is provisionally 2026-10-11 00:00 UTC, re-dated at release; fixed-clock identity/ordering/valuation/coverage comparison remains required.
 
 Three registries have deliberately different jobs:
 
@@ -109,6 +111,7 @@ applicability basis. Every leg is fail-closed: one supported-chain deployment, o
 review, and the asset keeps gapping as `missing-access-review`.
 
 Observed tracker history is evidence, not policy probability. Event counts describe supported observed history and are symbol-level in the current summary payload; the UI must not label them as contract-level totals.
+The published `goldBlacklisted` counter sums per-symbol blacklist counts through `isGoldBlacklistStablecoin()`, the same gold-cohort authority used by amount handling.
 
 The tracker has two amount layers:
 
@@ -141,6 +144,8 @@ Current-balance cache telemetry preserves the canonical `skippedDueBudget` count
 - Historical EVM balance lookup prefers dRPC when configured, then the shared chain RPC path, then best-effort Etherscan.
 - The lane never reaches the supplemental Dwellir operator: log-scan target resolution and historical balance reads select registry endpoints only (`logScanRpcEndpoints` / `registryRpcUrls` in `worker/src/lib/chain-registry.ts`), because a blacklist scan needs provable history and Dwellir's `eth_getLogs` plan cap is 500 blocks per request.
 - Tron event scans and current-balance reads use TronGrid. Pagination URLs are origin/path validated before credentials are forwarded.
+
+A full 200-row TronGrid page without a validated continuation is incomplete, not a terminal page. It retains parsed rows but cannot certify the safe timestamp frontier.
 
 All credentials in `worker/src/lib/env.ts` are optional at the type boundary:
 
@@ -176,6 +181,10 @@ Since the 2026-09-29 zero-replay correction, a zero event amount is resolved onl
 Destroy-event proof requires at least one configured family and uses each family's configured victim result key. It follows only same-origin, same-contract pagination preserving confirmation, event-name, and timestamp filters, capped at 40 destroy pages total and the lane's remaining page allowance. Transfer and destroy pages both count toward the 120-page run budget, including failed or rejected pages. Stale destroy watermarks are `state_raced` and run-window stops are `runtime_budget` (neither counts as a repair attempt); invalid payloads or pagination are `provider_null` and feed provider health, while a matching destroy or exceeded cap is `evidence_mismatch`. Operator zero repair also reads this window live using `TRONGRID_API_KEY`; its audit preserves request URLs, watermark, page count, and outcome alongside the capture hash.
 
 `shared/lib/blacklist-event-order.ts` owns state execution ordering: timestamp, block number, numeric block-global EVM log index parsed from the event ID, then numeric batch-array suffix. Tron cross-transaction order instead uses the nullable `transaction_index` / API `transactionIndex`, observed from the confirmed block's transaction array; within a transaction, event index and array suffix still apply. Transaction hashes never define execution order. Summary SQL and repair lookups retain all relevant Tron rows for the shared fold rather than selecting a transaction by hash or transaction-local index. Same-address/block events with conflicting effects remain `orderAmbiguityReason=tron-cross-transaction-order`, with unknown amounts and excluded from confirmed active counts and snapshot/rebuild candidates, if either transaction position is missing or contradictory. Same-direction repetitions remain unambiguous. A subsequent ordered freeze/release can resolve that state; snapshot repair never falls back to a pre-conflict event.
+Night Watch reconciliation preserves lexical presentation only for the immutable manifest hash. Balance replay orders same-transaction indexes numerically and refuses unresolved conflicting same-address/block cross-transaction effects before mutation.
+Admin current-balance backfills retain address histories and use the same ambiguity-aware snapshot fold in dry-run and execution, including a freeze preceding a release. Limits count canonical addresses, not individual transitions.
+
+RPC timestamps are tied to scanned block hashes in local and persistent caches. Migration `0267` adds nullable `block_hash`; unknown or mismatching hashes are refetched, and a returned block inconsistent with the logs (including mixed forks at one height) leaves the timestamp/frontier unresolved.
 
 After migration `0254`, `worker/src/lib/blacklist/tron-order-recovery.ts` automatically enriches up to eight unresolved conflicting blocks per `sync-blacklist` maintenance pass, including pre-deploy rows. It uses `walletsolidity/getblockbynum`, verifies the block number, timestamp, unique transaction hashes, and exact stored transaction membership before persisting zero-based positions. Requests are serial on the existing TronGrid 3/s limiter and circuit gate, inside the shared maintenance deadline and subrequest budget. Unavailable evidence leaves NULL and invalidates no state optimistically. Attempted blocks that remain unresolved record durable per-block attempt state under `blacklist:order-retry:<block>` in the existing `cache` table — no additional migration: provider failures back off exponentially from five minutes to at most six hours, while a clean confirmed read that still cannot fill its rows (a stored timestamp or transaction membership disagreeing with the confirmed block) parks for a week; candidates not yet due are skipped, so a permanently unprovable block cannot starve later conflicting blocks, and a block that fills drops its state and leaves the lane. Run metadata reports `tronOrderBlocksAttempted`, `tronOrderPositionsResolved`, and `tronOrderBlocksDeferred` beside the Tron amount-repair counters. Updated rows invalidate derived summaries; the next successful producer publication folds them again. No production backfill command or cursor rewind is needed. Apply the additive migration before deploying the Worker; verify positions and then a freshly published summary, allowing existing edge-cache TTLs to expire. A freeze followed by destroy remains a confirmed blacklisted address with destroyed funds, not an active frozen amount. This repair does not infer historical amounts or rewrite retained current-balance snapshots.
 
@@ -185,7 +194,7 @@ For a bounded operator repair, `npx tsx worker/scripts/repair-tron-blacklist-amo
 
 Live repair requires `--execute --confirm repair-tron-blacklist-amounts`. The command captures a fresh Time Travel bookmark and uses one atomic D1 SQL import for the row-count guard, audit, exact-null event updates, and canonical derived-cache invalidation. Reconstructed values are marked `amount_source=derived`, with the immutable evidence SHA-256 in provenance and `admin_action_audit`. It does not overwrite existing amounts or change current balances, cursors, thresholds, or health checks. Re-running against resolved rows refuses mutation; preserve the evidence file with the audit/bookmark for review. Use this path for rows the scheduled replay refuses — a ledger that never reconciles, a history longer than the replay page cap, or a shared-millisecond transfer — and never as a substitute for the scheduled lane.
 
-8. Non-USD assets require a fresh coin-specific price-cache conversion before Pharos publishes a USD event or snapshot value.
+8. Non-USD event valuation requires a historically attributed quote for that event, not the repair-time `price_cache` quote. The ingestion and automated/manual recovery lanes currently have no such historical quote source: they recover native amounts but retain null event-time USD. Fresh coin-specific quotes remain valid for current-balance observations only.
 9. Circle mirror actions can produce auditable zero-balance EURC rows. `circle_mirror_zero_balance` rows remain stored but are excluded from public events, active records, and frozen-value aggregates.
 10. Seize-only BUIDL coverage records destroy events; it does not create an active blacklist/freeze state.
 
@@ -220,7 +229,11 @@ The 2026-10-08 canonical-tool cutover removes the TRON repair's legacy-null pred
 
 Before any column drop, reconcile/export legacy-only identity/value tuples, obtain external SQL/schema-owner signoff, retain a durable R2 export indefinitely and record a pre-window Time Travel bookmark. The compatible tool/Worker release must establish the rollback floor and pass its first six-hourly sync/API soak. DROP or a rehearsed identity/default/index/FK/repair-queue-preserving rebuild is a separate destructive release, not part of this cutover. Post-drop rollback requires compatible tools or verified schema/data restoration; Worker rollback alone cannot restore the column.
 
-Normal EVM row identity is `{chainId}-{txHash}-{logIndex}`; expanded arrays add their element index so every affected address remains distinct and idempotent.
+Normal EVM row identity is `{chainId}-{lowercaseTxHash}-{minimalHexLogIndex}`; expanded arrays retain numeric element suffixes. An indexed semantic identity also admits retained decimal/padded-hex spellings without inserting another event generation. The shared public-event predicate excludes equivalent duplicates immediately; reconciliation retains redundant history as `duplicate_log_identity` audit rows without changing event IDs or repair-queue references.
+
+Tron ingestion, existing-row folds and snapshot keys use validated lowercase `0x` byte identities for Base58/`41`/`0x` inputs. Base58 is never case-folded for account identity; it is derived only for provider calls and exact historical spelling lookups. SQL retains relevant Tron rows for the canonical fold. Snapshot consolidation atomically preserves the newest successful value and removes representation-only aliases, respecting the writer pause.
+
+`identity-reconciliation.ts` runs before summary materialization, paging at most 100 events and 100 Tron snapshots with durable keyset cursors. Each call reads two cursors, two indexed pages and at most 100 bounded alias sets; `0267` indexes avoid inventory rescans. Only changed addresses, newly suppressed duplicates or unconsolidated snapshots write rows; cursors still wrap to catch operator imports. Public folds remain canonical during cutover.
 
 Active ingestion uses these amount-source meanings:
 
@@ -244,9 +257,15 @@ The one-time legacy identity repair was completed and verified in production on 
 
 Provider refresh failures preserve the last successful value and update quality/provenance fields. They do not turn the public total into zero.
 
+Gold zero-read substitution applies only after an actual observed zero and a positive event-native amount; the ledger records `source=gold_event_zero_balance`. A null gold provider read is still `provider_failed` and preserves the previous value and successful-observation timestamp.
+
+Before cursor finalization, capture work (including budget-skipped and order-withheld rows) is retained without TTL in D1 `cache` under `blacklist:current-balance-debt:`. The maintenance tail admits at most 24 debt rows, respecting the same runtime, subrequest budget, serial limiters and provider circuit gates. Quiet scans can reconcile missing snapshots without rewinding cursors. Successful Tron block-order recovery also enqueues affected rows, including pre-deploy conflicts; release markers preserve prior ledger captures and destroy snapshots use the emitted historical value.
+
 The summary loader reads the complete retained ledger — released addresses, destroy snapshots, and legacy rows whose successful-observation timestamp is NULL or old — so historical rows keep feeding the tracked totals and the quarterly chart. Their age surfaces through `freezeLedgerMeta` freshness distributions and provider-failure counts rather than rows silently disappearing from totals.
 
 Unblacklist events do not delete historical snapshot rows. Destroy events may replace a stored amount with a better emitted seizure/burn amount. When a blacklist and release arrive in the same batch, the blacklist snapshot is still captured before the release marker is treated as non-deleting.
+
+Operator rebuilds and KYC current-balance admission also preserve this complete ledger. They use runtime contract/config identities and the same last-known-value upsert policy, stage every observation before any authoritative write, and publish scoped upserts with canonical summary/gap-cache invalidation in one file transaction. A failed admission cannot remove or partially replace retained rows; rows absent from the active/provider set are not deletion candidates. The [balance-maintenance procedure](./deployment-process.md#blacklist-current-balance-rebuild) owns staging, failure recovery, and writer-pause handling.
 
 Legacy `activeAddressCount`, `activeFrozenTotal`, and `activeAmountGapCount` remain in `/api/blacklist-summary` for wire compatibility. They represent the local net-active event state, not the public historical freeze-ledger total.
 
@@ -257,6 +276,8 @@ Legacy `activeAddressCount`, `activeFrozenTotal`, and `activeAmountGapCount` rem
 A config attempt claims its starting cursor and increments `attempt_generation`. Finalization succeeds only when the generation and starting cursor still match, preventing a late writer from overwriting newer progress. EVM config keys canonicalize the contract address to lowercase while reads retain compatibility with legacy mixed-case rows.
 
 EVM cursors advance only through the minimum contiguous block proven across every required topic. Missing-topic or partial coverage pins the unproven tail. Tron cursors advance only after every configured event family completes through the safe timestamp frontier.
+
+A fully scanned bounded EVM subrange is contiguous progress, not current coverage: until its frontier reaches the observed safe head, the outcome is incomplete, the success clock is retained, and producer publication is withheld. Cron metadata reports `configLag` with the frontier, observed safe head, cursor kind and remaining lag (blocks or milliseconds). Avalanche fallback scans admit up to eight serial 2,000-block provider windows per config (16,000 blocks per run), exceeding the assumed 10,800-block six-hour chain growth without increasing any individual request range.
 
 ## Producer Flow
 
@@ -271,6 +292,8 @@ Each run performs these phases under one scan deadline, one separately capped ma
 7. **Publication and telemetry:** publish gap/summary snapshots only after every required config has a successful complete or quiet scan and enough tail budget remains. Freshness uses the oldest required config success, not cron completion time.
 
 Provider telemetry retains bounded config-level mode, coverage, frontier, count, call-depth, and failure-sample evidence. The operational response is documented in [Runbook: Blacklist Sync](./runbooks/blacklist-sync.md).
+
+RPC failover samples preserve the provider's failure reason (for example, `primary-failover:split-limit`); `primary-failover:no-coverage` is used only when the primary proves no contiguous coverage without a specific reason. Serial catch-up windows retain that diagnostic while merging their covered frontier.
 
 ## Telegram Freeze Alerts
 
@@ -289,7 +312,7 @@ The API reference is authoritative for parameters, schemas, cache/freshness head
 - [`POST /api/reset-blacklist-sync`](./api-reference-admin.md#post-apireset-blacklist-sync)
 - [`GET /api/debug-sync-state`](./api-reference-admin.md#get-apidebug-sync-state)
 - [`POST /api/remediate-blacklist-amount-gaps`](./api-reference-admin.md#post-apiremediate-blacklist-amount-gaps)
-- [`POST /api/backfill-blacklist-current-balances`](./api-reference-admin.md#post-apibackfill-blacklist-current-balances)
+- [Historical current-balance operator CLI](./runbooks/one-shot-backfills.md#backfill-blacklist-current-balances)
 
 Public event queries exclude rows with a suppression reason. Accepted filter symbols come from `BLACKLIST_STABLECOINS`; supported/deferred deployment coverage comes from the runtime coverage manifest. Summary coverage fields are contract/config-level and must not be relabeled as symbol-level coverage.
 
@@ -304,16 +327,21 @@ Use the admin actions and decision order in [Runbook: Blacklist Sync](./runbooks
 
 The summary query supplies aggregate cards, exposure drilldowns, chart data, and filter metadata. The event query supplies the current server-filtered, sorted, searched, and paginated ledger slice. Both endpoints use the same six-hour producer freshness source.
 
+A missing ungrouped aggregate row is a failed read, not a measured empty cohort. Gap metrics and summary materialization reject it with `blacklist-gap-aggregate-missing` or `blacklist-summary-aggregate-missing`; no fabricated summary snapshot is written. On a cold request the summary API responds 503/no-store with that reason. Successful aggregates with an observed zero count retain empty-cohort semantics.
+
 `dataQuality.ambiguousOrderCount` counts unresolved contract-scoped active-state records excluded from confirmed counts. `dataQuality.ambiguousOrderReason` is `tron-cross-transaction-order` when that count is positive, otherwise `null`; the same reason appears in `warnings` and degrades quality. Both fields are additive/optional for retained old summaries; missing fields mean legacy unknown coverage, not a measured zero. Tracked ledger totals remain retained snapshots, not a claim that ambiguous current state is resolved.
+
+Summary USD aggregates (`destroyedTotal`, recent freeze amounts, and per-coin frozen/destroyed totals) are nullable and carry `stats.valuationCoverage` known/unavailable observation counts. All-unpriced cohorts publish null; mixed cohorts publish the known subtotal explicitly labelled partial; observed zero remains zero. An empty cohort publishes zero with zero observations. Producer summary cache version 3 requires valuation coverage; optional coverage on legacy public payloads means unknown coverage, not complete valuation. The same qualification is used by FreezeWatch cards, the coverage lattice, homepage recent freezes, and coin detail cards, even when unresolved values are permanently unavailable and general quality otherwise reads healthy.
 
 The page must preserve these distinctions:
 
 - missing or unresolved amounts display their status/source instead of a confirmed zero;
-- non-USD native amounts are converted only with a fresh coin-specific price;
+- non-USD current-balance observations may use a fresh coin-specific price, but historical events require an event-time quote and stay unavailable without one;
 - tracked frozen totals are last-known freeze-ledger snapshots;
 - event history and local net-active state remain separate from those snapshots;
-- mobile event cards and the desktop table use the same server query state;
+- mobile cards and desktop table share server filters/sort; cursor navigation retains previous-page cursors and resets on ledger filters/sort;
 - CSV export represents only the currently loaded server page.
+- an empty chart means no valued ledger snapshots, not no recorded events; failed summary reads remain unavailable.
 
 Stablecoin detail visibility is derived by `src/lib/stablecoin-detail-view-model.ts`. A tracked symbol needs at least one real, non-suppressed event before the Activity and History blocks appear. The component entrypoints are `src/components/stablecoin-detail/blacklist-section.tsx` and `src/components/stablecoin-detail/blacklist-detail-event-feed.tsx`.
 

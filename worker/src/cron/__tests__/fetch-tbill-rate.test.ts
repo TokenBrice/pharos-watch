@@ -60,15 +60,17 @@ import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 // ALFRED graph CSV uses the same observation shape with a date-stamped series column.
 const ALFRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "observation_date,IUDZOS2_20260625\n2026-01-01,100\n2026-04-01,101\n";
 
-// The FRED CSV loaders guard the latest DGS3MO/DFF observation against the real
-// clock (YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD, five days). The shared routes
-// ship static 2026-03 rows, so override them with rows inside that window
+// FRED and NY Fed observations enforce the shared per-key five-day budget.
+// The shared routes ship static 2026-03 rows, so override them with fresh rows
 // relative to FROZEN_NOW; tests that exercise a stale or future-dated feed pass
 // their own override on top.
 const FRESH_FRED_OBSERVATION_DATE = "2026-06-24";
 const FRESH_FRED_ROUTES: BenchmarkFetchRoutes = {
   "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},3.72\n`, { status: 200 }),
   "id=DFF": new Response(`DATE,DFF\n${FRESH_FRED_OBSERVATION_DATE},4.33\n`, { status: 200 }),
+  "markets.newyorkfed.org": Response.json({
+    refRates: [{ type: "EFFR", effectiveDate: FRESH_FRED_OBSERVATION_DATE, percentRate: 4.33 }],
+  }),
 };
 
 function mockTbillByUrl(overrides: BenchmarkFetchRoutes = {}, calls?: string[]) {
@@ -636,6 +638,23 @@ describe("fetchTbillRate", () => {
       fallbackMode: null,
     });
   });
+
+  it.each(["2026-03-01", "2099-01-01"])("falls through an out-of-budget NY Fed observation (%s) to current DFF", async (recordDate) => {
+    const calls: string[] = [];
+    mockTbillByUrl({
+      "markets.newyorkfed.org": Response.json({
+        refRates: [{ type: "EFFR", effectiveDate: recordDate, percentRate: 9.99 }],
+      }),
+    }, calls);
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ usdEffrSource: "fred-dff", usdEffrRate: 4.33 });
+    expect(calls.some((url) => url.includes("id=DFF"))).toBe(true);
+    expect(latestStructuredCachePayload().benchmarks.USD_EFFR).toMatchObject({
+      rate: 4.33, source: "fred-dff", isFallback: false, fallbackMode: null,
+      recordDate: FRESH_FRED_OBSERVATION_DATE,
+    });
+  });
+
 
   it("falls back to Treasury XML when FRED returns invalid data", async () => {
     mockTbillByUrl({
@@ -1211,8 +1230,10 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
       }, retainedEpochSec),
     });
     mockTbillByUrl({
-      "markets.newyorkfed.org": null,
-      "id=DFF": new Response("DATE,DFF\n2099-01-01,9.99\n", { status: 200 }),
+      "markets.newyorkfed.org": Response.json({
+        refRates: [{ type: "EFFR", effectiveDate: "2026-03-01", percentRate: 9.99 }],
+      }),
+      "id=DFF": new Response("DATE,DFF\n2026-03-01,9.99\n", { status: 200 }),
     });
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
@@ -1224,6 +1245,8 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
       rate: 4.31,
       isFallback: true,
       fallbackMode: "usd-effr-sources-failed-retained",
+      recordDate: "2026-03-01",
+      lastMarketFetchedAt: retainedEpochSec,
     });
   });
 

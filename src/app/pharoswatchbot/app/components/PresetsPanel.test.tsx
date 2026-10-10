@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { makeMiniAppState } from "../mini-app-test-fixtures";
+import { makeMiniAppState } from "@shared/test-utils/telegram-mini-app-state";
 import { PresetsPanel } from "./PresetsPanel";
 
 const state = makeMiniAppState({

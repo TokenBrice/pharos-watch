@@ -44,6 +44,20 @@ describe("handleSupplyHistory", () => {
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
     const body = await readJsonResponse(res, 200);
     expect(body).toEqual([]);
+    expect(res.headers.get("X-Data-Age")).toBe("unavailable");
+    expect(res.headers.get("X-Data-Updated-At")).toBe("unknown");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(res.headers.get("X-Data-Freshness-Reason")).toBe("missing-timestamp");
+  });
+
+  it("rejects a future served-row fallback clock instead of minting freshness", async () => {
+    const now = 1_800_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const db = mockD1([{ match: "supply_history", rows: [{ ...row, snapshot_date: now + 61 }] }]);
+    const response = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"), null);
+    expect(response.headers.get("X-Data-Age")).toBe("unavailable");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Data-Freshness-Reason")).toBe("future-timestamp");
   });
 
   it("rejects out-of-range day windows instead of clamping them", async () => {
@@ -188,7 +202,10 @@ describe("handleSupplyHistory", () => {
     const url = new URL("https://x/api/supply-history?stablecoin=usdt-tether");
     const empty = await handleSupplyHistory(db, url);
     expect(await readJsonResponse(empty, 200)).toEqual([]);
-    expect(empty.headers.get("X-Data-Age")).toBeNull();
+    expect(empty.headers.get("X-Data-Age")).toBe("unavailable");
+    expect(empty.headers.get("X-Data-Updated-At")).toBe("unknown");
+    expect(empty.headers.get("Cache-Control")).toBe("no-store");
+    expect(empty.headers.get("X-Data-Freshness-Reason")).toBe("missing-timestamp");
     sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES ('usdt-tether', ?, 10, 1), ('usdt-tether', ?, 20, 1)").run(now - 30, now - 300);
     const populated = await handleSupplyHistory(db, url);
     expect(populated.headers.get("X-Data-Age")).toBe("30");

@@ -73,12 +73,14 @@ interface AnzenNetworkOptions {
   overrides?: Partial<Record<number, `0x${string}`>>;
   codeDrift?: boolean;
   dropSelector?: string;
+  chainSupplies?: readonly bigint[];
 }
 
 function installAnzenNetwork({
   overrides = {},
   codeDrift = false,
   dropSelector,
+  chainSupplies = supplies,
 }: AnzenNetworkOptions = {}) {
   const chains = ["ethereum", "base", "arbitrum", "blast", "manta"] as const;
   const contracts = [ETHEREUM, BASE, ARBITRUM, BLAST, MANTA];
@@ -129,7 +131,7 @@ function installAnzenNetwork({
     if (overrides[index] !== undefined) return overrides[index]!;
     if (index === 3 && chainIndex !== 0 && chainIndex !== 1) return null;
     const values: AdapterRpcWord[] = [
-      supplies[chainIndex] ?? 0n,
+      chainSupplies[chainIndex] ?? 0n,
       18n,
       encodeSymbol(),
       chainIndex === 0 || chainIndex === 1 ? ENDPOINT : null,
@@ -217,6 +219,29 @@ describe("fetchAnzenUsdzReserves", () => {
     expect(network.rpcCalls.map((call) => call.chain)).toEqual(
       expect.arrayContaining(["ethereum", "base", "arbitrum", "blast", "manta"]),
     );
+    expectValidAdapterOutput("anzen-usdz", result);
+  });
+
+  it.each(["ethereum", "base", "arbitrum", "blast", "manta"])("accepts measured zero supply on %s while aggregating funded deployments", async (chain) => {
+    const chains = ["ethereum", "base", "arbitrum", "blast", "manta"];
+    const chainSupplies: readonly bigint[] = supplies.map((supply, index) => chains[index] === chain ? 0n : supply);
+    const { result } = await runAnzen({ chainSupplies });
+    const expectedLiability = chainSupplies.reduce((sum, supply) => sum + supply, 0n);
+    expect(result.metadata?.supplyUsd).toBeCloseTo(Number(expectedLiability) / 1e18, 7);
+    expect(result.metadata?.details).toMatchObject({
+      liabilityRaw: expectedLiability.toString(),
+      supplyByChainUsd: { [chain]: 0 },
+    });
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(Number(pooled) / 1e18, 7);
+    expectValidAdapterOutput("anzen-usdz", result);
+  });
+
+  it("retains measured backing and degrades all-zero liabilities without a quotient", async () => {
+    const { result } = await runAnzen({ chainSupplies: supplies.map(() => 0n) });
+    expect(result.metadata?.supplyUsd).toBe(0);
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(Number(pooled) / 1e18, 7);
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
     expectValidAdapterOutput("anzen-usdz", result);
   });
 

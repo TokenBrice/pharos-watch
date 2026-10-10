@@ -253,6 +253,7 @@ export async function sendWizardIntro(
   options: Omit<TelegramMutationContext, "storedIntent"> & {
     adoptionToken?: string | null;
     includeMiniAppButton?: boolean;
+    clearPending?: boolean;
   } = {},
 ): Promise<void> {
   const existingPending = await loadPendingDisambiguation(db, chatId);
@@ -269,21 +270,28 @@ export async function sendWizardIntro(
     });
     return;
   }
+  const adoptionEntry = parseTelegramAdoptionToken(options.adoptionToken);
+  const recommended = adoptionEntry?.placement === "setup";
+  const preview = recommended ? await previewPresetCoins(db, RECOMMENDED_PRESET_ID) : null;
+  if (recommended && preview == null) {
+    await options.beforeIrreversibleEffect?.("setup-reply");
+    await sendAuditedTelegramReply(db, chatId, buildPresetUnavailableMessage(), botToken, { actionDetail: "setup" });
+    return;
+  }
   const state: SetupWizardState = {
-    step: "branch",
-    alertTypes: [],
-    target: null,
+    step: recommended ? "confirm-recommended" : "branch",
+    alertTypes: recommended ? [...RECOMMENDED_ALERT_TYPES] : [],
+    target: recommended ? { kind: "preset", presetId: RECOMMENDED_PRESET_ID } : null,
     initiatorUserId,
-    adoptionToken: parseTelegramAdoptionToken(options.adoptionToken)?.destination === "setup"
-      ? options.adoptionToken
-      : null,
+    adoptionToken: adoptionEntry?.destination === "setup" ? adoptionEntry.token : null,
   };
   await options.planIntent?.(createTelegramWebhookIntent("command:start", {
     stage: "setup-intro",
     nextState: setupIntentState(state),
+    clearPending: Boolean(options.clearPending),
   }, "required"));
   const operationStatements = options.prepareMutationAppliedStatement
-    ? [options.prepareMutationAppliedStatement()]
+    ? [options.prepareMutationAppliedStatement({ requirePreviousChange: true })]
     : undefined;
   const persisted = options.wasMutationApplied
     ? true
@@ -293,9 +301,11 @@ export async function sendWizardIntro(
   }
   if (!options.wasMutationApplied && operationStatements) options.confirmAtomicMutationApplied?.();
   await options.beforeIrreversibleEffect?.("setup-reply");
-  await sendAuditedTelegramReply(db, chatId, WIZARD_INTRO_MESSAGE, botToken, {
+  await sendAuditedTelegramReply(db, chatId, preview
+    ? escapeHtml(`You'll get DEWS and Depeg alerts for these ${preview.count} coins:\n${preview.symbolPreview}`)
+    : WIZARD_INTRO_MESSAGE, botToken, {
     actionDetail: "setup",
-    replyMarkup: buildBranchKeyboard(options),
+    replyMarkup: recommended ? buildConfirmKeyboard() : buildBranchKeyboard(options),
   });
 }
 
@@ -305,6 +315,7 @@ interface CallbackContext extends TelegramMutationContext {
   chatId: string;
   actorUserId: string | null;
   username: string | null;
+  resumedSetup?: { action: string; state: SetupWizardState };
 }
 
 async function recordSetupAdoptionMilestones(
@@ -337,21 +348,54 @@ function setupIntentState(state: SetupWizardState): Record<string, unknown> {
   };
 }
 
+/** Planned takeovers resume normalized state, including transitions that deleted the pending row. */
+export async function resumeStoredSetupCallback(
+  context: CallbackContext,
+  toggleArg: string,
+): Promise<{ text: string } | null> {
+  const intent = context.storedIntent;
+  if (intent?.kind !== "callback:setup") return null;
+  const action = intent.payload.action;
+  const savedState = intent.payload.nextState ?? intent.payload.previousState ?? intent.payload.state;
+  const state = parseSetupState(JSON.stringify(savedState), context.actorUserId);
+  if (typeof action !== "string" || !state) throw new Error("Invalid stored setup transition");
+  const resumedContext = { ...context, resumedSetup: { action, state } };
+  switch (action) {
+    case "branch-custom": return handleSetupBranch(resumedContext, "custom", state);
+    case "branch-recommended": return handleSetupBranch(resumedContext, "recommended", state);
+    case "branch-skip": return handleSetupBranch(resumedContext, "skip", state);
+    case "type-toggle": return handleSetupTypeToggle(resumedContext, toggleArg, state);
+    case "next": return handleSetupNext(resumedContext, state);
+    case "target-type": return handleSetupTarget(resumedContext, "type", state);
+    case "target-confirm":
+      if (!state.target) throw new Error("Invalid stored setup target");
+      return advanceToCustomConfirm(resumedContext, state, state.target);
+    case "confirm": return handleSetupConfirm(resumedContext, state);
+    case "cancel": return handleSetupCancel(resumedContext, state);
+    default: throw new Error("Invalid stored setup action");
+  }
+}
+
+function resumedNextState(context: CallbackContext, action: string): SetupWizardState | null {
+  return context.resumedSetup?.action === action ? context.resumedSetup.state : null;
+}
+
 async function persistSetupTransition(
   context: CallbackContext,
   action: string,
   nextState: SetupWizardState,
-): Promise<void> {
+): Promise<boolean> {
   await context.planIntent?.(createTelegramWebhookIntent("callback:setup", {
     action,
     nextState: setupIntentState(nextState),
   }, "required"));
-  if (context.wasMutationApplied) return;
+  if (context.wasMutationApplied) return true;
   const operationStatements = context.prepareMutationAppliedStatement
-    ? [context.prepareMutationAppliedStatement()]
+    ? [context.prepareMutationAppliedStatement({ requirePreviousChange: true })]
     : undefined;
-  await persistSetupState(context.db, context.chatId, nextState, operationStatements);
-  if (operationStatements) context.confirmAtomicMutationApplied?.();
+  const persisted = await persistSetupState(context.db, context.chatId, nextState, operationStatements);
+  if (persisted && operationStatements) context.confirmAtomicMutationApplied?.();
+  return persisted;
 }
 
 async function clearSetupTransition(
@@ -399,12 +443,14 @@ export async function handleSetupBranch(
       actionDetail: "custom",
       outcome: "selected",
     });
-    const nextState: SetupWizardState = {
+    const nextState: SetupWizardState = resumedNextState(context, "branch-custom") ?? {
       ...state,
       step: "custom-types",
       alertTypes: [...RECOMMENDED_ALERT_TYPES],
     };
-    await persistSetupTransition(context, "branch-custom", nextState);
+    if (!await persistSetupTransition(context, "branch-custom", nextState)) {
+      return { text: "Setup changed. Send /start to begin again." };
+    }
     await sendSetupReply(
       context,
       "Pick alert types, then tap Next.\n\n" +
@@ -442,13 +488,15 @@ async function openRecommendedConfirm(
     return { text: "Preset data unavailable. Try again in a moment." };
   }
 
-  const nextState: SetupWizardState = {
+  const nextState: SetupWizardState = resumedNextState(context, "branch-recommended") ?? {
     ...state,
     step: "confirm-recommended",
     alertTypes: [...RECOMMENDED_ALERT_TYPES],
     target: { kind: "preset", presetId: RECOMMENDED_PRESET_ID },
   };
-  await persistSetupTransition(context, "branch-recommended", nextState);
+  if (!await persistSetupTransition(context, "branch-recommended", nextState)) {
+    return { text: "Setup changed. Send /start to begin again." };
+  }
 
   const head = `You'll get DEWS and Depeg alerts for these ${preview.count} coins:`;
   const body = preview.symbolPreview;
@@ -482,31 +530,34 @@ export async function handleSetupTypeToggle(
   if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
     return { text: "Only the user who started this setup can continue." };
   }
-  if (!isAllowedAlertType(arg)) {
+  const resumed = resumedNextState(context, "type-toggle");
+  if (!resumed && !isAllowedAlertType(arg)) {
     return { text: "Action not recognized." };
   }
-  const selected = new Set(state.alertTypes);
-  if (selected.has(arg)) {
-    selected.delete(arg);
-  } else {
-    selected.add(arg);
+  const selected = new Set((resumed ?? state).alertTypes);
+  if (!resumed) {
+    if (selected.has(arg)) selected.delete(arg);
+    else selected.add(arg);
   }
-  const nextAlertTypes = ALERT_TYPE_ORDER.filter((type) => selected.has(type));
-  const nextState: SetupWizardState = { ...state, alertTypes: nextAlertTypes };
-  await persistSetupTransition(context, "type-toggle", nextState);
+  const nextAlertTypes = resumed?.alertTypes ?? ALERT_TYPE_ORDER.filter((type) => selected.has(type));
+  const nextState: SetupWizardState = resumed ?? { ...state, alertTypes: nextAlertTypes };
+  if (!await persistSetupTransition(context, "type-toggle", nextState)) {
+    return { text: "Setup changed. Send /start to begin again." };
+  }
   await sendSetupReply(
     context,
     `Selected: ${alertTypesSummary(nextAlertTypes)}`,
     { replyMarkup: buildTypeToggleKeyboard(selected) },
   );
-  return { text: ALERT_TYPE_LABELS[arg] };
+  return { text: isAllowedAlertType(arg) ? ALERT_TYPE_LABELS[arg] : "Alert types updated." };
 }
 
 export async function handleSetupNext(
   context: CallbackContext,
   state: SetupWizardState | null,
 ): Promise<{ text: string }> {
-  if (!state || state.step !== "custom-types") {
+  const resumed = resumedNextState(context, "next");
+  if (!state || (!resumed && state.step !== "custom-types")) {
     return { text: "Setup expired. Send /start to begin again." };
   }
   if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
@@ -515,8 +566,10 @@ export async function handleSetupNext(
   if (state.alertTypes.length === 0) {
     return { text: "Pick at least one alert type first." };
   }
-  const nextState: SetupWizardState = { ...state, step: "custom-target" };
-  await persistSetupTransition(context, "next", nextState);
+  const nextState: SetupWizardState = resumed ?? { ...state, step: "custom-target" };
+  if (!await persistSetupTransition(context, "next", nextState)) {
+    return { text: "Setup changed. Send /start to begin again." };
+  }
   await sendSetupReply(
     context,
     `Selected alerts: ${alertTypesSummary(state.alertTypes)}\nPick a target watchlist:`,
@@ -530,7 +583,8 @@ export async function handleSetupTarget(
   arg: string,
   state: SetupWizardState | null,
 ): Promise<{ text: string }> {
-  if (!state || state.step !== "custom-target") {
+  const resumed = resumedNextState(context, "target-type");
+  if (!state || (!resumed && state.step !== "custom-target")) {
     return { text: "Setup expired. Send /start to begin again." };
   }
   if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
@@ -538,8 +592,10 @@ export async function handleSetupTarget(
   }
 
   if (arg === "type") {
-    const nextState: SetupWizardState = { ...state, step: "awaiting-ticker" };
-    await persistSetupTransition(context, "target-type", nextState);
+    const nextState: SetupWizardState = resumed ?? { ...state, step: "awaiting-ticker" };
+    if (!await persistSetupTransition(context, "target-type", nextState)) {
+      return { text: "Setup changed. Send /start to begin again." };
+    }
     await sendSetupReply(
       context,
       "Reply with a ticker (e.g. USDC) or send /cancel to abort.",
@@ -577,8 +633,10 @@ async function advanceToCustomConfirm(
     summary = `You'll get ${alertTypesSummary(state.alertTypes)} alerts for ${target.symbol}.`;
   }
 
-  const nextState: SetupWizardState = { ...state, step: "confirm-custom", target };
-  await persistSetupTransition(context, "target-confirm", nextState);
+  const nextState: SetupWizardState = resumedNextState(context, "target-confirm") ?? { ...state, step: "confirm-custom", target };
+  if (!await persistSetupTransition(context, "target-confirm", nextState)) {
+    return { text: "Setup changed. Send /start to begin again." };
+  }
   await sendSetupReply(context, escapeHtml(summary), {
     replyMarkup: buildConfirmKeyboard(),
   });

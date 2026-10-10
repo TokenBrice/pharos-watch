@@ -123,6 +123,7 @@ describe("AI summary V9 current-value projection", () => {
       dewsBand: "WATCH",
       dewsScore: 23,
       depegCount: 8,
+      circulatingUsd: null,
       weakestPillar: "control",
     });
   });
@@ -170,7 +171,21 @@ describe("AI summary V9 current-value projection", () => {
       name: "audit-missing", symbol: "", overallGrade: "F", overallScore: 0,
       backingGrade: "F", backingScore: 0, exitGrade: "F", exitScore: 0,
       controlGrade: "F", controlScore: 0,
+      circulatingUsd: null,
     }));
+  });
+  it("keeps unavailable circulation out of numeric drift but preserves observed-zero drift", () => {
+    const cards = [{ id: "audit-supply", grade: "F", score: 0,
+      pillars: { backing: { score: 0 }, exit: { score: 0 }, control: { score: 0 } },
+    }] as unknown as ReportCardsV9CurrentResponse["cards"];
+    for (const circulating of [{}, { peggedUSD: 0 }]) {
+      const supply = [{ id: "audit-supply", circulating }] as unknown as StablecoinListResponse["peggedAssets"];
+      const current = buildCurrentMap(cards, {}, [], supply).get("audit-supply")!;
+      expect(current.circulatingUsd).toBe("peggedUSD" in circulating ? 0 : null);
+      const findings = extractFindings("$20M in circulation", current);
+      expect(findings.some((finding) => finding.kind === "volatile-dollar-claim")).toBe(true);
+      expect(findings.some((finding) => finding.kind === "cross-chain-circulation-drift")).toBe("peggedUSD" in circulating);
+    }
   });
 
   it("prioritizes base-letter and modifier grade changes differently for overall and pillars", () => {

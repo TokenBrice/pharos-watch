@@ -14,6 +14,7 @@ describe("report-card DEX deployment supply join", () => {
   it.each([null, 0])("distinguishes unavailable chain supply from observed zero (%s)", (current) => {
     const coverage = computeDexDeploymentSupplyCoverage(
       {
+        circulating: { peggedUSD: 100 },
         chainCirculating: { Ethereum: supplyPoint(100), Base: { current } },
         contracts: [{ chain: "ethereum", address: "0x111", decimals: 18 }],
       },
@@ -27,6 +28,7 @@ describe("report-card DEX deployment supply join", () => {
   it("weights exact deployment outcomes by current chain supply", () => {
     const coverage = computeDexDeploymentSupplyCoverage(
       {
+        circulating: { peggedUSD: 100_000_000 },
         chainCirculating: {
           Ethereum: supplyPoint(80_000_000),
           Base: supplyPoint(20_000_000),
@@ -59,6 +61,7 @@ describe("report-card DEX deployment supply join", () => {
   it("keeps same-chain multi-contract supply unknown", () => {
     const coverage = computeDexDeploymentSupplyCoverage(
       {
+        circulating: { peggedUSD: 10_000_000 },
         chainCirculating: { Ethereum: supplyPoint(10_000_000) },
         contracts: [
           { chain: "ethereum", address: "0x111", decimals: 18 },
@@ -82,6 +85,7 @@ describe("report-card DEX deployment supply join", () => {
   it("treats contradictory observed-pool and chain-TVL evidence as unknown", () => {
     const coverage = computeDexDeploymentSupplyCoverage(
       {
+        circulating: { peggedUSD: 10_000_000 },
         chainCirculating: { Ethereum: supplyPoint(10_000_000) },
         contracts: [{ chain: "ethereum", address: "0x111", decimals: 18 }],
       },
@@ -99,6 +103,7 @@ describe("report-card DEX deployment supply join", () => {
   it("keeps stale deployment outcomes unknown at a fixed scoring clock", () => {
     const coverage = computeDexDeploymentSupplyCoverage(
       {
+        circulating: { peggedUSD: 10_000_000 },
         chainCirculating: { Ethereum: supplyPoint(10_000_000) },
         contracts: [{ chain: "ethereum", address: "0x111", decimals: 18 }],
       },
@@ -124,6 +129,7 @@ describe("report-card DEX deployment supply join", () => {
   it("keeps future-dated deployment outcomes unknown at a fixed scoring clock", () => {
     const coverage = computeDexDeploymentSupplyCoverage(
       {
+        circulating: { peggedUSD: 10_000_000 },
         chainCirculating: { Ethereum: supplyPoint(10_000_000) },
         contracts: [{ chain: "ethereum", address: "0x111", decimals: 18 }],
       },
@@ -150,6 +156,7 @@ describe("report-card DEX deployment supply join", () => {
     const solanaMint = "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1";
     const coverage = computeDexDeploymentSupplyCoverage(
       {
+        circulating: { peggedUSD: 10_000_000 },
         chainCirculating: { Solana: supplyPoint(10_000_000) },
         contracts: [{ chain: "solana", address: solanaMint, decimals: 6 }],
       },
@@ -181,6 +188,7 @@ describe("report-card DEX deployment supply join", () => {
   it("distinguishes verified empty supply from provider-inaccessible supply", () => {
     const coverage = computeDexDeploymentSupplyCoverage(
       {
+        circulating: { peggedUSD: 100 },
         chainCirculating: {
           Ethereum: supplyPoint(60),
           Base: supplyPoint(40),
@@ -208,6 +216,7 @@ describe("report-card DEX deployment supply join", () => {
   it("clamps floating-point ratio noise at the serialized contract boundary", () => {
     const coverage = computeDexDeploymentSupplyCoverage(
       {
+        circulating: { peggedUSD: 0.3 },
         chainCirculating: {
           Ethereum: supplyPoint(0.1),
           Base: supplyPoint(0.2),

@@ -922,7 +922,8 @@ export function projectV9RoleDependencyPillarLimits(
   const normalizationByPillar = new Map<V9RoleDependencyTargetPillar, number>();
   for (const targetPillar of ["exit", "control"] as const) {
     const maximumNominalShareByExposure = new Map<string, number>();
-    for (const event of eventCandidates.filter((candidate) => candidate.targetPillar === targetPillar)) {
+    for (const event of eventCandidates.filter((candidate) =>
+      candidate.targetPillar === targetPillar && candidate.cause !== "A" && candidate.cause !== "B")) {
       maximumNominalShareByExposure.set(
         event.exposureKey,
         Math.max(maximumNominalShareByExposure.get(event.exposureKey) ?? 0, event.nominalExposureShare),
@@ -936,7 +937,9 @@ export function projectV9RoleDependencyPillarLimits(
   }
   const events = selectedEvents
     .map((event): V9RoleDependencyPropagationEvent => {
-      const exposureShare = event.nominalExposureShare * normalizationByPillar.get(event.targetPillar)!;
+      const exposureShare = event.cause === "A" || event.cause === "B"
+        ? 0
+        : event.nominalExposureShare * normalizationByPillar.get(event.targetPillar)!;
       return {
         ...event,
         exposureShare,

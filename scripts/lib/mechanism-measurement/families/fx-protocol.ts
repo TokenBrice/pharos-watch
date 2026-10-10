@@ -1,5 +1,4 @@
 import {
-  decodeAddressWord,
   decodeBoolWord,
   decodeUintWord,
   normalizeAddress,
@@ -9,6 +8,8 @@ import {
   type EthCallJournal,
   type MeasurementCheck,
   type PinnedBlock,
+  readJournalAddress,
+  readJournalUint,
 } from "../core";
 import type { FxProtocolMeasurementEvidence } from "../schema";
 import type { FxProtocolMeasurementTarget } from "../targets";
@@ -57,41 +58,23 @@ export async function measureFxProtocol(
     `add-only RegisterPool history contains exactly the ${configuredPools.size} configured pools`,
   );
 
-  const poolManager = decodeAddressWord(
-    await caller.call({ name: "token.poolManager", to: token, signature: "poolManager()", selector: "0xdc4c90d3" }),
-    "poolManager",
-  );
-  caller.recordDecoded(poolManager);
+  const poolManager = await readJournalAddress(caller, { name: "token.poolManager", to: token, signature: "poolManager()", selector: "0xdc4c90d3" }, "poolManager");
   requireCheck(
     checks,
     "graph.pool-manager",
     poolManager === configuredManager,
     `token manager ${poolManager} matches config`,
   );
-  const fxBase = decodeAddressWord(
-    await caller.call({ name: "poolManager.fxBASE", to: poolManager, signature: "fxBASE()", selector: "0x9d8c2910" }),
-    "fxBASE",
-  );
-  caller.recordDecoded(fxBase);
+  const fxBase = await readJournalAddress(caller, { name: "poolManager.fxBASE", to: poolManager, signature: "fxBASE()", selector: "0x9d8c2910" }, "fxBASE");
   requireCheck(checks, "graph.fx-base", fxBase === configuredFxBase, `manager fxBASE ${fxBase} matches config`);
 
-  const totalSupplyRaw = decodeUintWord(
-    await caller.call({ name: "token.totalSupply", to: token, signature: "totalSupply()", selector: "0x18160ddd" }),
-    0,
-    "totalSupply",
-  );
-  caller.recordDecoded(totalSupplyRaw.toString());
-  const legacySupplyRaw = decodeUintWord(
-    await caller.call({
-      name: "token.legacyTotalSupply",
-      to: token,
-      signature: "legacyTotalSupply()",
-      selector: "0x80b17407",
-    }),
-    0,
-    "legacyTotalSupply",
-  );
-  caller.recordDecoded(legacySupplyRaw.toString());
+  const totalSupplyRaw = await readJournalUint(caller, { name: "token.totalSupply", to: token, signature: "totalSupply()", selector: "0x18160ddd" }, 0, "totalSupply");
+  const legacySupplyRaw = await readJournalUint(caller, {
+    name: "token.legacyTotalSupply",
+    to: token,
+    signature: "legacyTotalSupply()",
+    selector: "0x80b17407",
+  }, 0, "legacyTotalSupply");
   requireCheck(checks, "supply.positive", totalSupplyRaw > 0n, `fxUSD supply ${totalSupplyRaw} is positive`);
 
   const pools: FxProtocolMeasurementEvidence["derived"]["pools"] = [];
@@ -115,32 +98,24 @@ export async function measureFxProtocol(
     const managedDebt = decodeUintWord(managerInfo, 4, `pool ${index} managed debt`);
     caller.recordDecoded(`rawCollateral=${managedRawCollateral} debt=${managedDebt}`);
 
-    const collateralToken = decodeAddressWord(
-      await caller.call({
-        name: `pool[${index}].collateralToken`,
-        to: address,
-        signature: "collateralToken()",
-        selector: "0xb2016bd4",
-      }),
-      `pool ${index} collateral token`,
-    );
-    caller.recordDecoded(collateralToken);
+    const collateralToken = await readJournalAddress(caller, {
+      name: `pool[${index}].collateralToken`,
+      to: address,
+      signature: "collateralToken()",
+      selector: "0xb2016bd4",
+    }, `pool ${index} collateral token`);
     requireCheck(
       checks,
       `pool[${index}].collateral-token`,
       collateralToken === normalizeAddress(configured.collateralToken),
       `collateral token ${collateralToken} matches config`,
     );
-    const priceOracle = decodeAddressWord(
-      await caller.call({
-        name: `pool[${index}].priceOracle`,
-        to: address,
-        signature: "priceOracle()",
-        selector: "0x2630c12f",
-      }),
-      `pool ${index} price oracle`,
-    );
-    caller.recordDecoded(priceOracle);
+    const priceOracle = await readJournalAddress(caller, {
+      name: `pool[${index}].priceOracle`,
+      to: address,
+      signature: "priceOracle()",
+      selector: "0x2630c12f",
+    }, `pool ${index} price oracle`);
     requireCheck(
       checks,
       `pool[${index}].price-oracle`,
@@ -148,28 +123,18 @@ export async function measureFxProtocol(
       `price oracle ${priceOracle} matches config`,
     );
 
-    const collateralRaw = decodeUintWord(
-      await caller.call({
-        name: `pool[${index}].getTotalRawCollaterals`,
-        to: address,
-        signature: "getTotalRawCollaterals()",
-        selector: "0xee65a03c",
-      }),
-      0,
-      `pool ${index} collateral`,
-    );
-    caller.recordDecoded(collateralRaw.toString());
-    const debtRaw = decodeUintWord(
-      await caller.call({
-        name: `pool[${index}].getTotalRawDebts`,
-        to: address,
-        signature: "getTotalRawDebts()",
-        selector: "0xf9d45fd2",
-      }),
-      0,
-      `pool ${index} debt`,
-    );
-    caller.recordDecoded(debtRaw.toString());
+    const collateralRaw = await readJournalUint(caller, {
+      name: `pool[${index}].getTotalRawCollaterals`,
+      to: address,
+      signature: "getTotalRawCollaterals()",
+      selector: "0xee65a03c",
+    }, 0, `pool ${index} collateral`);
+    const debtRaw = await readJournalUint(caller, {
+      name: `pool[${index}].getTotalRawDebts`,
+      to: address,
+      signature: "getTotalRawDebts()",
+      selector: "0xf9d45fd2",
+    }, 0, `pool ${index} debt`);
     requireCheck(
       checks,
       `pool[${index}].positive-state`,
@@ -248,40 +213,20 @@ export async function measureFxProtocol(
     `configured pool debt plus legacy supply diverges ${supplyDebtDivergencePct.toFixed(6)}% from total supply`,
   );
 
-  const fxBaseStableRaw = decodeUintWord(
-    await caller.call({
-      name: "fxBase.totalStableToken",
-      to: fxBase,
-      signature: "totalStableToken()",
-      selector: "0x9ff39038",
-    }),
-    0,
-    "fxBASE stable token",
-  );
-  caller.recordDecoded(fxBaseStableRaw.toString());
-  const fxBaseYieldRaw = decodeUintWord(
-    await caller.call({
-      name: "fxBase.totalYieldToken",
-      to: fxBase,
-      signature: "totalYieldToken()",
-      selector: "0x65d2cb08",
-    }),
-    0,
-    "fxBASE yield token",
-  );
-  caller.recordDecoded(fxBaseYieldRaw.toString());
-  const fxBaseShareSupplyRaw = decodeUintWord(
-    await caller.call({ name: "fxBase.totalSupply", to: fxBase, signature: "totalSupply()", selector: "0x18160ddd" }),
-    0,
-    "fxBASE share supply",
-  );
-  caller.recordDecoded(fxBaseShareSupplyRaw.toString());
-  const fxBaseNavRaw = decodeUintWord(
-    await caller.call({ name: "fxBase.nav", to: fxBase, signature: "nav()", selector: "0xc1590cd7" }),
-    0,
-    "fxBASE nav",
-  );
-  caller.recordDecoded(fxBaseNavRaw.toString());
+  const fxBaseStableRaw = await readJournalUint(caller, {
+    name: "fxBase.totalStableToken",
+    to: fxBase,
+    signature: "totalStableToken()",
+    selector: "0x9ff39038",
+  }, 0, "fxBASE stable token");
+  const fxBaseYieldRaw = await readJournalUint(caller, {
+    name: "fxBase.totalYieldToken",
+    to: fxBase,
+    signature: "totalYieldToken()",
+    selector: "0x65d2cb08",
+  }, 0, "fxBASE yield token");
+  const fxBaseShareSupplyRaw = await readJournalUint(caller, { name: "fxBase.totalSupply", to: fxBase, signature: "totalSupply()", selector: "0x18160ddd" }, 0, "fxBASE share supply");
+  const fxBaseNavRaw = await readJournalUint(caller, { name: "fxBase.nav", to: fxBase, signature: "nav()", selector: "0xc1590cd7" }, 0, "fxBASE nav");
 
   const committedCapacityRaw = fxBaseYieldRaw + fxBaseStableRaw * 10n ** 12n;
   const navCapacityRaw = (fxBaseShareSupplyRaw * fxBaseNavRaw) / 10n ** 18n;

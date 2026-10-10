@@ -22,9 +22,9 @@ export interface StackedAreaSeries {
   handleAnimationEnd?: boolean;
 }
 
-interface FocusedStackedAreaCardProps<T extends Record<keyof T, number>> {
+interface FocusedStackedAreaCardProps<T extends Record<K, number>, K extends keyof T> {
   data: T[];
-  tsKey: keyof T;
+  tsKey: K;
   isLoading: boolean;
   title: ReactNode;
   loadingTitle: ReactNode;
@@ -54,7 +54,7 @@ interface FocusedStackedAreaCardProps<T extends Record<keyof T, number>> {
   legendClassName: string;
 }
 
-export function FocusedStackedAreaCard<T extends Record<keyof T, number>>({
+export function FocusedStackedAreaCard<T extends Record<K, number>, K extends keyof T>({
   data,
   tsKey,
   isLoading,
@@ -84,7 +84,7 @@ export function FocusedStackedAreaCard<T extends Record<keyof T, number>>({
   cardClassName,
   contentClassName,
   legendClassName,
-}: FocusedStackedAreaCardProps<T>) {
+}: FocusedStackedAreaCardProps<T, K>) {
   const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } =
     useChartShell<HTMLDivElement>();
   const { range, setRange, filteredData, options } = useTimeRangeFilter(data, tsKey, rangeOptions, {

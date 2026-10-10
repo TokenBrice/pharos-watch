@@ -29,7 +29,7 @@ Then verify the next scheduled run of that job completes and publishes.
 
 ## Clear An Open Circuit Breaker
 
-Breaker state lives in the D1 `cache` table under `circuit:<source>`; scoped live-reserve breakers use the same convention as `circuit:live-reserves:<scope>`. The state model and health impact are documented in [`docs/worker-infrastructure.md`](../worker-infrastructure.md#circuit-breakers).
+Breaker state lives in the D1 `cache` table under `circuit:<source>`; scoped live-reserve breakers use the same convention as `circuit:live-reserves:<scope>`. The state model and health impact are documented in [`docs/worker-infrastructure.md`](../process/worker-infrastructure-appendix.md#circuit-breakers).
 
 ```bash
 npx --no-install wrangler d1 execute stablecoin-db --remote --command \

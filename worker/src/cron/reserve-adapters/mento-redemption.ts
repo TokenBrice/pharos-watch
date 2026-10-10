@@ -1,6 +1,7 @@
-import { decodeAbiParameters } from "viem/utils";
+import { decodeAbiParameters, encodeFunctionData, parseAbi, parseAbiParameters, type ParseAbi } from "viem/utils";
 import {
   addressObservation,
+  boolObservation,
   customObservation,
   executeEvmObservationPlan,
   pinnedBlockPlan,
@@ -52,6 +53,164 @@ const CELO_CHAIN = "celo";
 const CELO_ONCHAIN_INPUT: EvmOnchainInput = { kind: "onchain-evm", chain: CELO_CHAIN, rpcMode: "public-rpc" };
 
 const MENTO_BROKER_POOL_MAX_EXCHANGE_IDS = 64;
+const MENTO_BROKER = "0x777a8255ca72412f0d706dc03c9d1987306b4cad";
+const BROKER_LIMIT_CONFIG = parseAbiParameters("uint32,uint32,int48,int48,int48,uint8");
+const BROKER_LIMIT_STATE = parseAbiParameters("uint32,uint32,int48,int48,int48");
+type BrokerLimitConfig = readonly [number, number, number, number, number, number];
+type BrokerLimitState = readonly [number, number, number, number, number];
+
+function brokerCall(signature: string, args: readonly unknown[] = []): `0x${string}` {
+  return encodeFunctionData({
+    abi: parseAbi([signature]) as ParseAbi<readonly string[]>,
+    functionName: signature.match(/function (\w+)/)![1],
+    args,
+  });
+}
+
+function brokerLimitHeadroom(
+  config: BrokerLimitConfig,
+  state: BrokerLimitState,
+  now: number,
+  direction: 1n | -1n,
+  decimals: number,
+): bigint | null {
+  const flags = config[5];
+  if (flags > 7 || ((flags & 2) !== 0 && (flags & 1) === 0)) {
+    throw new Error("mento broker-pool: invalid trading-limit flags");
+  }
+  let headroom: bigint | null = null;
+  for (const [flag, limit, flow, updated, timestep] of [
+    [1, config[2], state[2], state[0], config[0]],
+    [2, config[3], state[3], state[1], config[1]],
+    [4, config[4], state[4], 0, 0],
+  ] as const) {
+    if ((flags & flag) === 0) continue;
+    if (limit <= 0 || (flag !== 4 && timestep <= 0)) throw new Error("mento broker-pool: invalid trading limit");
+    const effectiveFlow = flag !== 4 && now > updated + timestep ? 0n : BigInt(flow);
+    const remaining = BigInt(limit) - direction * effectiveFlow;
+    const arithmeticRemaining = ((1n << 47n) - 1n) - direction * effectiveFlow;
+    const flowBounded = remaining < arithmeticRemaining ? remaining : arithmeticRemaining;
+    const bounded = flowBounded < (1n << 47n) - 1n ? flowBounded : (1n << 47n) - 1n;
+    const raw = (bounded > 0n ? bounded : 0n) * 10n ** BigInt(decimals);
+    headroom = headroom == null || raw < headroom ? raw : headroom;
+  }
+  return headroom;
+}
+
+function decodeBrokerLimitConfig(raw: `0x${string}`) {
+  if (!/^0x[0-9a-fA-F]{384}$/.test(raw)) throw new Error("malformed Broker limit config");
+  return decodeAbiParameters(BROKER_LIMIT_CONFIG, raw);
+}
+
+function decodeBrokerLimitState(raw: `0x${string}`) {
+  if (!/^0x[0-9a-fA-F]{320}$/.test(raw)) throw new Error("malformed Broker limit state");
+  return decodeAbiParameters(BROKER_LIMIT_STATE, raw);
+}
+
+async function observeBrokerCapacity(
+  exchangeId: `0x${string}`,
+  pool: MentoPoolExchange,
+  self: string,
+  output: string,
+  options: MentoPoolCallOptions,
+): Promise<{ capacityUsd: number; closedReason?: string }> {
+  if (BigInt(pool.pricingModule) === 0n || BigInt(pool.config.referenceRateFeedID) === 0n
+    || pool.config.referenceRateResetFrequency <= 0n || pool.config.minimumReports <= 0n) {
+    throw new Error("mento broker-pool: invalid pricing/oracle configuration");
+  }
+  const read = (calls: Parameters<typeof fetchOnchainMulticall3>[0]["calls"]) =>
+    fetchOnchainMulticall3({ ...options, calls });
+  const pointers = await executeEvmObservationPlan({
+    adapterKey: "mento broker-pool",
+    fields: [
+      addressObservation({ label: "managerBroker", contract: MENTO_BIPOOL_MANAGER_ADDRESS, data: brokerCall("function broker() view returns(address)") }),
+      addressObservation({ label: "reserve", contract: MENTO_BROKER, data: brokerCall("function exchangeReserve(address) view returns(address)", [MENTO_BIPOOL_MANAGER_ADDRESS]) }),
+      addressObservation({ label: "oracle", contract: MENTO_BIPOOL_MANAGER_ADDRESS, data: brokerCall("function sortedOracles() view returns(address)") }),
+      addressObservation({ label: "breaker", contract: MENTO_BIPOOL_MANAGER_ADDRESS, data: brokerCall("function breakerBox() view returns(address)") }),
+      boolObservation({ label: "provider", contract: MENTO_BROKER, data: brokerCall("function isExchangeProvider(address) view returns(bool)", [MENTO_BIPOOL_MANAGER_ADDRESS]) }),
+      uint256Observation({ label: "inputDecimals", contract: self, data: "0x313ce567" }),
+      uint256Observation({ label: "outputDecimals", contract: output, data: "0x313ce567" }),
+      addressObservation({ label: "inputBroker", contract: self, data: brokerCall("function broker() view returns(address)") }),
+    ],
+    read,
+  });
+  const { reserve, oracle, breaker, provider, managerBroker, inputBroker } = pointers.values;
+  const inputDecimals = Number(pointers.values.inputDecimals);
+  const outputDecimals = Number(pointers.values.outputDecimals);
+  if (managerBroker !== MENTO_BROKER || inputBroker !== MENTO_BROKER
+    || BigInt(reserve) === 0n || BigInt(oracle) === 0n || BigInt(breaker) === 0n
+    || inputDecimals > 36 || outputDecimals > 36) {
+    throw new Error("mento broker-pool: execution identity mismatch");
+  }
+  const limitId = (token: string) => `0x${(BigInt(exchangeId) ^ BigInt(token)).toString(16).padStart(64, "0")}`;
+  const feed = pool.config.referenceRateFeedID;
+  const guards = await executeEvmObservationPlan({
+    adapterKey: "mento broker-pool",
+    fields: [
+      uint256Observation({ label: "mode", contract: breaker, data: brokerCall("function getRateFeedTradingMode(address) view returns(uint8)", [feed]) }),
+      uint256Observation({ label: "oracleTime", contract: oracle, data: brokerCall("function medianTimestamp(address) view returns(uint256)", [feed]) }),
+      uint256Observation({ label: "oracleCount", contract: oracle, data: brokerCall("function numRates(address) view returns(uint256)", [feed]) }),
+      customObservation({ label: "expired", contract: oracle, data: brokerCall("function isOldestReportExpired(address) view returns(bool,address)", [feed]),
+        decode: (raw) => decodeAbiParameters(parseAbiParameters("bool,address"), raw)[0] }),
+      boolObservation({ label: "inputStable", contract: reserve, data: brokerCall("function isStableAsset(address) view returns(bool)", [self]) }),
+      boolObservation({ label: "outputStable", contract: reserve, data: brokerCall("function isStableAsset(address) view returns(bool)", [output]) }),
+      boolObservation({ label: "outputCollateral", contract: reserve, data: brokerCall("function isCollateralAsset(address) view returns(bool)", [output]) }),
+      customObservation({ label: "inputConfig", contract: MENTO_BROKER, data: brokerCall("function tradingLimitsConfig(bytes32) view returns(uint32,uint32,int48,int48,int48,uint8)", [limitId(self)]), decode: decodeBrokerLimitConfig }),
+      customObservation({ label: "outputConfig", contract: MENTO_BROKER, data: brokerCall("function tradingLimitsConfig(bytes32) view returns(uint32,uint32,int48,int48,int48,uint8)", [limitId(output)]), decode: decodeBrokerLimitConfig }),
+      customObservation({ label: "inputState", contract: MENTO_BROKER, data: brokerCall("function tradingLimitsState(bytes32) view returns(uint32,uint32,int48,int48,int48)", [limitId(self)]), decode: decodeBrokerLimitState }),
+      customObservation({ label: "outputState", contract: MENTO_BROKER, data: brokerCall("function tradingLimitsState(bytes32) view returns(uint32,uint32,int48,int48,int48)", [limitId(output)]), decode: decodeBrokerLimitState }),
+    ],
+    read,
+  });
+  const g = guards.values;
+  if (!g.inputStable || (!g.outputStable && !g.outputCollateral)) throw new Error("mento broker-pool: unsupported transfer class");
+  const permissions = await executeEvmObservationPlan({
+    adapterKey: "mento broker-pool",
+    fields: [
+      boolObservation({ label: "allowed", contract: g.outputStable ? output : reserve,
+        data: brokerCall(g.outputStable ? "function isMinter(address) view returns(bool)" : "function isExchangeSpender(address) view returns(bool)", [MENTO_BROKER]) }),
+      ...(g.outputCollateral ? [uint256Observation({ label: "inventory", contract: output, data: brokerCall("function balanceOf(address) view returns(uint256)", [reserve]) })] : []),
+    ],
+    read,
+  });
+  if (!provider || !permissions.values.allowed || g.mode !== 0n) {
+    return { capacityUsd: 0, closedReason: "Broker provider, transfer permission or breaker closes execution" };
+  }
+  if (g.expired || g.oracleCount < pool.config.minimumReports
+    || g.oracleTime > BigInt(options.observedBlock.timestamp)
+    || g.oracleTime <= BigInt(options.observedBlock.timestamp) - pool.config.referenceRateResetFrequency) {
+    return { capacityUsd: 0, closedReason: "Broker reference rate is not executable" };
+  }
+  let inputBound = brokerLimitHeadroom(g.inputConfig, g.inputState, options.observedBlock.timestamp, 1n, inputDecimals);
+  let outputBound = brokerLimitHeadroom(g.outputConfig, g.outputState, options.observedBlock.timestamp, -1n, outputDecimals);
+  if (g.outputCollateral) {
+    const inventory = permissions.values.inventory;
+    if (inventory == null) throw new Error("mento broker-pool: missing spendable output");
+    outputBound = outputBound == null || inventory < outputBound ? inventory : outputBound;
+  }
+  // A virtual bucket is not a spendable cap, especially for mintable USDm.
+  if (inputBound == null && outputBound == null) throw new Error("mento broker-pool: no finite executable bound");
+  if (inputBound === 0n || outputBound === 0n) {
+    return { capacityUsd: 0, closedReason: "Broker trading headroom or spendable output is exhausted" };
+  }
+  const quote = async (method: "getAmountIn" | "getAmountOut", amount: bigint) => {
+    const result = await fetchOnchainUint256({
+      ...options, contract: MENTO_BROKER,
+      data: brokerCall(`function ${method}(address,bytes32,address,address,uint256) view returns(uint256)`,
+        [MENTO_BIPOOL_MANAGER_ADDRESS, exchangeId, self, output, amount]),
+    });
+    if (result == null) throw new Error("mento broker-pool: execution quote unavailable");
+    return result;
+  };
+  if (outputBound != null) {
+    const quotedInput = await quote("getAmountIn", outputBound);
+    inputBound = inputBound == null || quotedInput < inputBound ? quotedInput : inputBound;
+  }
+  if (inputBound == null || inputBound <= 0n) throw new Error("mento broker-pool: nonpositive bounded quote input");
+  const amountOut = await quote("getAmountOut", inputBound);
+  if (outputBound != null && amountOut > outputBound) throw new Error("mento broker-pool: quote exceeds execution headroom");
+  return { capacityUsd: decimalNumberFromBigInt(amountOut, outputDecimals) };
+}
 
 // mento-protocol/bold (GBPm) is a Liquity v2 fork sharing the ActivePool debt
 // and redemption-rate selectors already verified in liquity-v2-branches.ts.
@@ -198,7 +357,7 @@ async function fetchMentoBrokerPoolRedemption(
   };
 
   const exchangeIds = await loadMentoExchangeIds(params, callOptions);
-  const poolExchanges: MentoPoolExchange[] = [];
+  const poolExchanges: Array<{ exchangeId: `0x${string}`; pool: MentoPoolExchange }> = [];
   const matchedPoolIndexes = new Set<number>();
   for (const exchangeId of exchangeIds) {
     throwIfAborted(signal);
@@ -220,16 +379,17 @@ async function fetchMentoBrokerPoolRedemption(
         matchedExchange = true;
       }
     }
-    if (matchedExchange) poolExchanges.push(poolExchange);
+    if (matchedExchange) poolExchanges.push({ exchangeId, pool: poolExchange });
     if (matchedPoolIndexes.size === params.pools.length) break;
   }
 
   let capacityUsd = 0;
   let maxFeeBps: number | null = null;
+  let closedReason: string | undefined;
   for (const poolConfig of params.pools) {
     const selfAddress = poolConfig.selfTokenAddress.toLowerCase();
     const counterAddress = poolConfig.counterAsset.address.toLowerCase();
-    const match = poolExchanges.find((pool) => {
+    const match = poolExchanges.find(({ pool }) => {
       const asset0 = pool.asset0.toLowerCase();
       const asset1 = pool.asset1.toLowerCase();
       return (
@@ -242,17 +402,13 @@ async function fetchMentoBrokerPoolRedemption(
         `mento broker-pool: no matching BiPoolManager exchange for ${poolConfig.selfTokenAddress}/${poolConfig.counterAsset.address}`,
       );
     }
-    // BiPoolManager tracks virtual bucket depths at 18-decimal precision
-    // regardless of the counter asset's native token decimals (e.g.
-    // USDC/USDT); the counter bucket is the sellable redemption capacity,
-    // valued 1:1 USD since every configured counter asset is USD- or
-    // USDm-pegged.
-    const counterBucketRaw = match.asset0.toLowerCase() === counterAddress ? match.bucket0 : match.bucket1;
-    if (match.config.spread >= MENTO_POOL_SPREAD_FIXIDITY_SCALE) {
+    if (match.pool.config.spread >= MENTO_POOL_SPREAD_FIXIDITY_SCALE) {
       throw new Error("mento broker-pool: invalid spread");
     }
-    capacityUsd += decimalNumberFromBigInt(counterBucketRaw, 18);
-    const feeBps = mentoSpreadToFeeBps(match.config.spread);
+    const observation = await observeBrokerCapacity(match.exchangeId, match.pool, selfAddress, counterAddress, callOptions);
+    capacityUsd += observation.capacityUsd;
+    closedReason ??= observation.closedReason;
+    const feeBps = mentoSpreadToFeeBps(match.pool.config.spread);
     maxFeeBps = maxFeeBps == null ? feeBps : Math.max(maxFeeBps, feeBps);
   }
 
@@ -266,7 +422,8 @@ async function fetchMentoBrokerPoolRedemption(
     freshnessKind: "same-run-onchain",
     blockNumber: plan.observedBlock.number,
     sourceTimestamp: plan.observedBlock.timestamp,
-    routeStatus: "open",
+    routeStatus: closedReason ? "degraded" : "open",
+    ...(closedReason ? { routeStatusReason: closedReason } : {}),
     routeStatusSource: "onchain",
     routeObserved: true,
     holderEligibility: "any-holder",

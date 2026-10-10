@@ -1,7 +1,7 @@
+import { chunkArray } from "@shared/lib/collections";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../../lib/abort";
-import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { batchExecute } from "../../lib/db";
+import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { requireFiniteNumber } from "../../lib/number-utils";
 import type { PoolEntry } from "./types";
@@ -38,7 +38,6 @@ const CHALLENGER_HARD_CAP = 50;
 export const DEX_PRICE_CHALLENGER_BATCH_SIZE = 25;
 const CHALLENGER_D1_MAX_BOUND_PARAMETERS = 100;
 const CHALLENGER_PAYLOAD_COLUMN_COUNT = 8;
-const CHALLENGER_CLEANUP_ID_BATCH_SIZE = CHALLENGER_D1_MAX_BOUND_PARAMETERS - 1;
 const CHALLENGER_VALUES_TOKEN = "__CHALLENGER_VALUES__";
 export const DEX_PRICE_CHALLENGER_PAYLOAD_INSERT_SQL =
   `INSERT INTO dex_price_challengers
@@ -50,14 +49,6 @@ export const DEX_PRICE_CHALLENGER_PAYLOAD_INSERT_SQL =
      source_family = excluded.source_family,
      price_usd = excluded.price_usd,
      tvl_usd = excluded.tvl_usd`;
-
-function chunkRows<T>(rows: readonly T[], chunkSize: number): T[][] {
-  const chunks: T[][] = [];
-  for (let index = 0; index < rows.length; index += chunkSize) {
-    chunks.push(rows.slice(index, index + chunkSize));
-  }
-  return chunks;
-}
 
 function prepareMultiRowStatements(
   db: D1Database,
@@ -73,7 +64,7 @@ function prepareMultiRowStatements(
   const rowsPerStatement = Math.floor(
     CHALLENGER_D1_MAX_BOUND_PARAMETERS / CHALLENGER_PAYLOAD_COLUMN_COUNT,
   );
-  return chunkRows(rows, rowsPerStatement).map((rowChunk) => {
+  return chunkArray(rows, rowsPerStatement).map((rowChunk) => {
     const placeholders = `(${new Array(CHALLENGER_PAYLOAD_COLUMN_COUNT).fill("?").join(", ")})`;
     const valuesSql = new Array(rowChunk.length).fill(placeholders).join(", ");
     return db
@@ -273,7 +264,7 @@ export async function publishDexPriceChallengerSnapshots(
       continue;
     }
 
-    publishedStablecoins++;
+    // Count only pointers accepted at the final store boundary.
     const payloadStatements = prepareMultiRowStatements(db, plan.payloadRows);
     for (const statement of payloadStatements) {
       await queuePayloadStatement(statement);
@@ -284,15 +275,12 @@ export async function publishDexPriceChallengerSnapshots(
   if (input.consumeRetainedPools) input.retainedPoolsByStablecoin.clear();
   await flushPendingPayloadStatements();
 
-  // Snapshot pointers are the public visibility boundary. Publish every
-  // complete asset together only after all payload rows have landed. One
-  // set-based statement avoids retaining hundreds of binds and prepared
-  // statements at this all-or-none boundary.
+  // Stage payloads privately, then accept monotonic pointers and clean only
+  // their superseded payloads in the same bounded atomic batch.
   if (publishedStablecoinIds.length > 0) {
     const publishedIdsJson = JSON.stringify(publishedStablecoinIds);
-    const snapshotResult = await runWithOverloadRetry(
-      () =>
-        db.prepare(
+    const results = await executeAtomicBatch(db, [
+      db.prepare(
           `INSERT INTO dex_price_challenger_snapshots (
              stablecoin_id, snapshot_at, published_at, has_rows, source_coverage_complete
            )
@@ -312,32 +300,23 @@ export async function publishDexPriceChallengerSnapshots(
              snapshot_at = excluded.snapshot_at,
              published_at = excluded.published_at,
              has_rows = excluded.has_rows,
-             source_coverage_complete = excluded.source_coverage_complete`,
-        ).bind(snapshotAt, snapshotAt, snapshotAt, publishedIdsJson).run(),
-      3,
-      signal,
-    );
-    const snapshotChanges = Number(snapshotResult.meta?.changes ?? 0);
-    if (snapshotChanges !== publishedStablecoinIds.length) {
-      throw new Error(
-        `DEX challenger snapshot publication wrote ${snapshotChanges}/${publishedStablecoinIds.length} pointers`,
-      );
-    }
-  }
-
-  const cleanupBatch = chunkRows(publishedStablecoinIds, CHALLENGER_CLEANUP_ID_BATCH_SIZE).map((idChunk) =>
-    db
-      .prepare(
+             source_coverage_complete = excluded.source_coverage_complete
+           WHERE dex_price_challenger_snapshots.snapshot_at <= excluded.snapshot_at`,
+      ).bind(snapshotAt, snapshotAt, snapshotAt, publishedIdsJson),
+      db.prepare(
         `DELETE FROM dex_price_challengers
-         WHERE snapshot_at < ?
-           AND stablecoin_id IN (${new Array(idChunk.length).fill("?").join(", ")})`,
-      )
-      .bind(snapshotAt, ...idChunk)
-  );
-  await batchExecute(db, cleanupBatch, {
-    chunkSize: DEX_PRICE_CHALLENGER_BATCH_SIZE,
-    signal,
-  });
+          WHERE snapshot_at < ?
+            AND stablecoin_id IN (SELECT value FROM json_each(?) WHERE type = 'text')
+            AND EXISTS (
+              SELECT 1 FROM dex_price_challenger_snapshots snapshots
+               WHERE snapshots.stablecoin_id = dex_price_challengers.stablecoin_id
+                 AND snapshots.snapshot_at = ?
+            )`,
+      ).bind(snapshotAt, publishedIdsJson, snapshotAt),
+    ], { signal, returnResults: true });
+    publishedStablecoins = Number(results[0]?.meta?.changes ?? 0);
+    skippedStablecoins += publishedStablecoinIds.length - publishedStablecoins;
+  }
 
   return {
     publishedStablecoins,

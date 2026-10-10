@@ -11,6 +11,7 @@ import satori from "satori";
 // tests can inspect the element it would render.
 import satoriStandalone, { init as initSatoriStandalone } from "satori/standalone";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import * as activeSafetyScoreSource from "../../lib/safety-score-index";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
@@ -339,7 +340,7 @@ describe("stablecoin OG card data", () => {
       const element = calls[calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
       expect(element.props.data).toMatchObject({
         grade: "Unavailable",
-        lastUpdated: "DEGRADED: V9 safety score unavailable",
+        lastUpdated: expect.stringContaining("Safety DEGRADED: V9 safety score unavailable"),
       });
     });
 
@@ -400,6 +401,18 @@ describe("stablecoin OG card data", () => {
       });
     });
 
+    it.each([60, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC + 1, -1])("publishes safety freshness against its accepted generation at age %s", async (age) => {
+      vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+      const source = activeV9(nowSec - age);
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(source);
+      const response = await handleOg(makeOgDb([makeAsset({ id: "usdt-tether" })]), "/api/og/safety-scores");
+      expect(response?.headers.get("X-Safety-Score-Status")).toBe(age === 60 ? "current" : "degraded");
+      expect(response?.headers.get("X-Safety-Score-Updated-At")).toBe(String(source.snapshot.updatedAt));
+      expect(response?.headers.get("X-Safety-Score-Generation")).toBe(source.snapshot.safetyScoreIdentity.publicationGenerationId);
+      expect(response?.headers.get("X-Safety-Score-Assessed-At")).toBe(String(nowSec));
+      expect(response?.headers.get("X-Safety-Score-Freshness-Budget")).toBe(String(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC));
+    });
+
     it("renders a degraded safety aggregate as unavailable rather than 0.0", async () => {
       const db = makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
 
@@ -411,15 +424,31 @@ describe("stablecoin OG card data", () => {
         data: SafetyScoresCardData;
       }>;
       expect(element.props.data.pulseScore).toBeNull();
+      expect(element.props.data.coverageRatio).toBeNull();
       const markup = renderToStaticMarkup(element);
       expect(markup).toContain("NR");
       expect(markup).toContain("Safety score unavailable");
+      expect(markup).not.toContain(">0%");
       // Match a rendered text node, not the raw markup: the card frame inlines the brand-mark
       // SVG, whose path geometry legitimately contains "0.0" inside `d="…"` coordinates.
       expect(markup).not.toContain(">0.0");
     });
+    it.each(["missing", "stale", "observed-zero"] as const)("preserves safety coverage availability for %s source", async (state) => {
+      if (state !== "missing") {
+        const source = activeV9(state === "stale" ? nowSec - SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC - 1 : nowSec);
+        source.snapshot.cards = [makeReportCardsV9PipelineGapCard("control", "A", { id: "usdt-tether" })];
+        vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(source);
+      }
+      await handleOg(makeOgDb([makeAsset({ id: "usdt-tether" })]), "/api/og/safety-scores");
+      const calls = vi.mocked(satoriStandalone).mock.calls;
+      const element = calls[calls.length - 1][0] as React.ReactElement<{ data: SafetyScoresCardData }>;
+      expect(element.props.data.coverageRatio).toBe(state === "observed-zero" ? 0 : null);
+      const markup = renderToStaticMarkup(element);
+      if (state === "observed-zero") expect(markup).toContain(">0%");
+      else expect(markup).not.toContain(">0%");
+    });
 
-    it("anchors 24h price change to the latest snapshot instead of wall-clock time", async () => {
+    it("requires a fresh exactly adjacent snapshot pair for 24h price change", async () => {
       const db = mockD1([
         {
           match: "cache",
@@ -438,7 +467,7 @@ describe("stablecoin OG card data", () => {
         },
         { match: "dex_liquidity", rows: [] },
         { match: "stress_signals", rows: [] },
-        { match: "current_snapshot", rows: [], first: { current_price: 1.02, prev_day_price: 0.99 } },
+        { match: "current_snapshot", rows: [], first: { current_price: 1.02, current_date: nowSec - 3600, prev_day_price: 0.99, prev_day_date: nowSec - 3600 - 86400 } },
         { match: "supply_history", rows: [{ price: 1.02 }, { price: 0.99 }] },
         { match: "depeg_events", rows: [] },
         { match: "mint_burn_hourly", rows: [] },
@@ -447,9 +476,30 @@ describe("stablecoin OG card data", () => {
       const data = await renderedCardData(db, "/api/og/stablecoin/usdt-tether");
 
       expect(data.change24h).toBeCloseTo(3.0303, 4);
-      const priceQuery = db.getHistory().find((entry) => entry.sql.includes("current_snapshot"));
-      expect(priceQuery?.binds).toEqual(["usdt-tether", "usdt-tether", 86_400]);
-      expect(priceQuery?.sql).toContain("snapshot_date <= current_snapshot.snapshot_date - ?");
+    });
+
+    it.each([
+      ["stale", nowSec - 2 * 86400, nowSec - 3 * 86400, 0.99],
+      ["missing yesterday", nowSec - 3600, null, null],
+      ["older baseline", nowSec - 3600, nowSec - 3600 - 2 * 86400, 0.99],
+    ] as const)("omits a %s market price pair despite fresh safety publication", async (_label, current_date, prev_day_date, prev_day_price) => {
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
+      const marketAt = nowSec - 2 * 86400;
+      const db = mockD1([
+        { match: "cache", rows: [
+          { key: "stablecoins", value: JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether", priceObservedAt: marketAt })] }), updated_at: marketAt },
+          { key: "peg-analytics", value: JSON.stringify({ computedAtSec: nowSec, pegData: [{ id: "usdt-tether", pegScore: 99 }] }), updated_at: nowSec },
+        ] },
+        { match: "dex_liquidity", rows: [] }, { match: "stress_signals", rows: [] },
+        { match: "current_snapshot", rows: [], first: { current_price: 1.02, current_date, prev_day_date, prev_day_price } },
+        { match: "supply_history", rows: [] }, { match: "depeg_events", rows: [] }, { match: "mint_burn_hourly", rows: [] },
+      ]);
+      const data = await renderedCardData(db, "/api/og/stablecoin/usdt-tether");
+      expect(data.change24h).toBeNull();
+      expect(data.lastUpdated).toContain("24h price pair unavailable");
+      expect(data.lastUpdated).toContain("(stale; budget");
+      expect(data.lastUpdated).toContain(new Date(marketAt * 1000).toISOString().slice(0, 16).replace("T", " "));
+      expect(data.grade).toBe("A+");
     });
   });
 
@@ -687,61 +737,92 @@ describe("depeg OG handler aggregation", () => {
     expect(element.props.data.dewsBand).toBe("WARNING");
   });
 
-  it("maps stress bands to the DEWS distribution and counts daily flux", async () => {
+  it("uses fresh live peg observations independently of the DEWS and incident cohorts", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const assets = [
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1, priceObservedAt: now - 30 }),
+      makeAsset({ id: "usdc-circle", symbol: "USDC", price: 0.99, priceObservedAt: now - 30 }),
+      makeAsset({ id: "dai-makerdao", symbol: "DAI", price: null, priceObservedAt: now - 30 }),
+      makeAsset({ id: "usds-sky", symbol: "USDS", price: 1, circulating: {}, priceObservedAt: now - 30 }),
+    ];
     const db = mockD1([
-      { match: "FROM cache WHERE key = ?", rows: [], first: null },
-      // active-depeg COUNT(*) (ended_at IS NULL)
-      { match: "COUNT(*) as count FROM depeg_events WHERE ended_at IS NULL", rows: [], first: { count: 1 } },
-      { match: "stability_index_samples", rows: [], first: { score: 88.2, band: "BEDROCK" } },
-      {
-        match: "stress_signals",
-        rows: [
-          { band: "DANGER" },
-          { band: "ALERT" },
-          { band: "WARNING" },
-          { band: "CALM" }, // default branch → normal
-          { band: "WATCH" }, // default branch → normal
-        ],
-      },
-      // active-depeg details (peak_deviation_bps)
-      {
-        match: "peak_deviation_bps",
-        rows: [{ stablecoin_id: "usdt-tether", symbol: "USDT", peak_deviation_bps: -150 }],
-      },
-      // recovered today (ended_at IS NOT NULL)
-      { match: "ended_at IS NOT NULL", rows: [], first: { count: 3 } },
-      // new today (started_at > ?)
+      { match: "FROM cache WHERE key = ?", rows: [{ key: "stablecoins", value: JSON.stringify({ peggedAssets: assets }), updated_at: now - 30 }] },
+      { match: "stability_index_samples", first: { score: 88.2, band: "BEDROCK", stored_at: now - 60 }, rows: [] },
+      { match: "stress_signals", rows: [{ stablecoin_id: "usdt-tether", band: "WATCH", computed_at: now - 60 }] },
+      { match: "peak_deviation_bps", rows: [
+        { stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: 5000, peg_reference: 1 },
+        { stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: 4000, peg_reference: 1 },
+        { stablecoin_id: "usds-sky", symbol: "USDS", direction: "below", peak_deviation_bps: 6000, peg_reference: 1 },
+        { stablecoin_id: "removed", symbol: "REMOVED", direction: "below", peak_deviation_bps: 9000, peg_reference: 1 },
+        { stablecoin_id: "usr-resolv", symbol: "USR", direction: "below", peak_deviation_bps: 9000, peg_reference: 1 },
+      ] },
+      { match: "ended_at IS NOT NULL", rows: [] },
       { match: "started_at >", rows: [], first: { count: 4 } },
     ]);
-
     const data = await captureDepegData(db);
-    expect(data.dewsDistribution).toEqual({ danger: 1, alert: 1, warning: 1, normal: 2 });
-    expect(data.totalCoins).toBe(5);
-    expect(data.activeDepegCount).toBe(1);
-    expect(data.coinsAtPeg).toBe(4); // 5 - 1
-    expect(data.recoveredToday).toBe(3);
-    expect(data.newToday).toBe(4);
-    expect(data.psiScore).toBe(88.2);
-    expect(data.activeDepegs).toEqual([{ symbol: "USDT", name: "Tether", deviationBps: -150 }]);
+    expect(data).toMatchObject({ coinsAtPeg: 1, totalCoins: 2, activeDepegCount: 2, psiScore: 88.2, newToday: 4 });
+    expect(data.activeDepegs[0]).toMatchObject({ symbol: "USDC", deviationBps: -100, peakBps: -5000 });
+    const markup = renderToStaticMarkup(<DepegCard data={data} />);
+    expect(markup).toContain("-100 bps (peak -5000)");
+    expect(markup).not.toContain("-5000 bps</span>");
   });
 
-  it("clamps coinsAtPeg to zero when active depegs exceed tracked coins", async () => {
+  it("withholds the at-peg statistic and PSI when observations are absent instead of clamping cohorts", async () => {
     const db = mockD1([
       { match: "FROM cache WHERE key = ?", rows: [], first: null },
-      { match: "COUNT(*) as count FROM depeg_events WHERE ended_at IS NULL", rows: [], first: { count: 5 } },
-      { match: "stability_index_samples", rows: [], first: null }, // psi fallbacks
+      { match: "stability_index_samples", rows: [], first: null },
       { match: "stress_signals", rows: [{ band: "DANGER" }, { band: "ALERT" }] },
       { match: "peak_deviation_bps", rows: [] },
-      { match: "ended_at IS NOT NULL", rows: [], first: { count: 0 } },
+      { match: "ended_at IS NOT NULL", rows: [] },
       { match: "started_at >", rows: [], first: { count: 0 } },
     ]);
-
     const data = await captureDepegData(db);
-    expect(data.totalCoins).toBe(2);
-    expect(data.activeDepegCount).toBe(5);
-    expect(data.coinsAtPeg).toBe(0); // max(0, 2 - 5)
-    expect(data.psiScore).toBe(0); // psiRow null → 0
-    expect(data.psiBand).toBe("BEDROCK"); // psiRow null → default band
+    expect(data).toMatchObject({ totalCoins: 0, coinsAtPeg: null, psiScore: null, psiBand: null });
+    expect(renderToStaticMarkup(<DepegCard data={data} />)).toContain("Unavailable");
+  });
+
+  it.each([
+    ["recovered-primary", null, 1], ["recovered-dex", null, 1], ["recovered-native", null, 1],
+    [null, 1, 1], [null, null, 0], ["coverage-lost-supply", null, 0],
+    ["superseded-direction", 1, 0], ["orphan-tracking-removed", 1, 0], ["unknown", 1, 0],
+  ] as const)("counts only classified OG recoveries %s with price %s", async (close_reason, recovery_price, expected) => {
+    const now = Math.floor(Date.now() / 1000);
+    const data = await captureDepegData(mockD1([
+      { match: "FROM cache WHERE key = ?", rows: [], first: null },
+      { match: "ended_at IS NOT NULL", rows: [{ ended_at: now - 60, close_reason, recovery_price }] },
+      { match: "stability_index_samples", rows: [], first: null },
+      { match: "stress_signals", rows: [] },
+      { match: "peak_deviation_bps", rows: [] },
+      { match: "started_at >", rows: [], first: { count: 0 } },
+    ]));
+    expect(data.recoveredToday).toBe(expected);
+  });
+
+  it("ranks current deviations rather than lifetime peaks and labels stale quotes historical", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const assets = [
+      makeAsset({ id: "usdt-tether", price: 0.98, priceObservedAt: now - 30 }),
+      makeAsset({ id: "usdc-circle", price: 0.99, priceObservedAt: now - 30 }),
+      makeAsset({ id: "dai-makerdao", price: 0.5, priceObservedAt: now - 86400 }),
+    ];
+    const data = await captureDepegData(mockD1([
+      { match: "FROM cache WHERE key = ?", rows: [{ key: "stablecoins", value: JSON.stringify({ peggedAssets: assets }), updated_at: now - 30 }] },
+      { match: "peak_deviation_bps", rows: [
+        { stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: 5000, peg_reference: 1 },
+        { stablecoin_id: "usdt-tether", symbol: "USDT", direction: "below", peak_deviation_bps: 300, peg_reference: 1 },
+        { stablecoin_id: "dai-makerdao", symbol: "DAI", direction: "below", peak_deviation_bps: 9000, peg_reference: 1 },
+      ] },
+      { match: "stability_index_samples", first: { score: 80, band: "STEADY", stored_at: now - 86400 }, rows: [] },
+      { match: "stress_signals", rows: [] },
+      { match: "ended_at IS NOT NULL", rows: [] },
+      { match: "started_at >", rows: [], first: { count: 0 } },
+    ]));
+    expect(data.activeDepegs.map((row) => row.symbol)).toEqual(["USDT", "USDC", "DAI"]);
+    expect(data.activeDepegs[2]).toMatchObject({ deviationBps: null, peakBps: -9000 });
+    expect(data.psiScore).toBeNull();
+    expect(data.psiBand).toBeNull();
+    expect(data.lastUpdated).toContain("(stale; budget");
+    expect(renderToStaticMarkup(<DepegCard data={data} />)).toContain("Current unavailable; peak -9000 bps");
   });
 });
 
@@ -762,17 +843,48 @@ describe("stability-index OG handler aggregation", () => {
 
   const nowSec = Math.floor(Date.now() / 1000);
 
-  it("pads a short sparkline and falls back to psiScore for avg/ATH/ATL", async () => {
+  it.each([
+    ["linear increase", 80, 100, 20],
+    ["late reversal", 100, 90, -10],
+    ["missing baseline", null, 90, null],
+  ] as const)("uses a dated 24-hour baseline, not a rolling mean, for %s", async (label, firstScore, lastScore, expected) => {
+    const sourceAt = nowSec - 300;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare("INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot) VALUES (?, ?, 'BEDROCK', '{}', '{}')");
+      if (firstScore != null) {
+        for (let step = 0; step < 48; step++) {
+          const score = label === "linear increase" ? firstScore + step * 20 / 48 : step === 0 ? firstScore : 65;
+          insert.run(sourceAt - 86400 + step * 1800, score);
+        }
+      }
+      insert.run(sourceAt, lastScore);
+      const response = await handleOg(db, "/api/og/stability-index");
+      const calls = vi.mocked(satoriStandalone).mock.calls;
+      const element = calls[calls.length - 1][0] as React.ReactElement<{ data: StabilityIndexCardData }>;
+      expect(element.type).toBe(StabilityIndexCard);
+      expect(element.props.data.delta24h).toBe(expected);
+      expect(response?.headers.get("X-Data-Updated-At")).toBe(String(sourceAt));
+      expect(response?.headers.get("X-Data-Assessed-At")).toBe(String(nowSec));
+      expect(response?.headers.get("X-Data-Freshness-Budget")).toBe(String(API_FRESHNESS_MAX_AGE_SEC.stabilityIndex));
+      const markup = renderToStaticMarkup(element);
+      expect(markup).toContain(expected == null ? "24h change unavailable" : `${expected > 0 ? "+" : ""}${expected.toFixed(2)} 24h`);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("preserves unavailable window aggregates and insufficient history without synthetic observations", async () => {
     const db = mockD1([
+      { match: "WHERE stored_at <= ?", rows: [], first: null },
       {
         match: "stored_at DESC LIMIT 1",
         rows: [],
         first: { score: 73.5, band: "STEADY", stored_at: nowSec },
       },
-      // avg24h and avg7d share SQL; both resolve to null so they exercise the
-      // psiScore fallback together — a single shared match is sufficient.
       { match: "AVG(score)", rows: [], first: { avg: null } },
-      // single history row → sparkline padded to length 2 with psiScore.
+      // One history row cannot establish a trend.
       { match: "FROM stability_index ORDER BY computed_at", rows: [{ score: 80 }] },
       { match: "MAX(score)", rows: [], first: { max: null } },
       { match: "MIN(score)", rows: [], first: { min: null } },
@@ -781,13 +893,39 @@ describe("stability-index OG handler aggregation", () => {
     const data = await captureStabilityData(db);
     expect(data.psiScore).toBe(73.5);
     expect(data.psiBand).toBe("STEADY");
-    expect(data.delta24h).toBe(0); // avg24h falls back to psiScore → delta 0
-    expect(data.avg7d).toBe(73.5); // avg7d null → psiScore
-    expect(data.allTimeHigh).toBe(73.5); // max null → psiScore
-    expect(data.allTimeLow).toBe(73.5); // min null → psiScore
-    // 1 history row reversed → [80], then padded with psiScore twice.
-    expect(data.sparklineData).toEqual([80, 73.5, 73.5]);
+    expect(data.delta24h).toBeNull();
+    expect(data.avg7d).toBeNull();
+    expect(data.allTimeHigh).toBeNull();
+    expect(data.allTimeLow).toBeNull();
+    expect(data.sparklineData).toBeNull();
+    const markup = renderToStaticMarkup(<StabilityIndexCard data={data} />);
+    expect(markup).toContain("7D AVG: —");
+    expect(markup).toContain("History unavailable");
     expect(data.bands.find((b) => b.name === "STEADY")?.active).toBe(true);
+    expect(data.lastUpdated).toContain(new Date(nowSec * 1000).toISOString().slice(0, 16).replace("T", " "));
+  });
+
+  it("does not re-certify an old PSI sample with the render clock", async () => {
+    const sourceAt = nowSec - 8 * 86400;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const db = mockD1([
+      { match: "stored_at DESC LIMIT 1", rows: [], first: { score: 73.5, band: "STEADY", stored_at: sourceAt } },
+      { match: "AVG(score)", rows: [], first: { avg: null } },
+      { match: "FROM stability_index ORDER BY computed_at", rows: [] },
+      { match: "MAX(score)", rows: [], first: { max: null } },
+      { match: "MIN(score)", rows: [], first: { min: null } },
+    ]);
+    const response = await handleOg(db, "/api/og/stability-index");
+    expect(response?.headers.get("X-Data-Updated-At")).toBe(String(sourceAt));
+    expect(response?.headers.get("X-Data-Freshness")).toBe("stale");
+    expect(response?.headers.get("X-Data-Assessed-At")).toBe(String(nowSec));
+    expect(response?.headers.get("X-Data-Freshness-Budget")).toBe(String(API_FRESHNESS_MAX_AGE_SEC.stabilityIndex));
+    const calls = vi.mocked(satoriStandalone).mock.calls;
+    const markup = renderToStaticMarkup(calls[calls.length - 1][0]);
+    expect(markup).toContain("Stability index unavailable");
+    expect(markup).toContain("(stale; budget");
+    expect(markup).toContain(new Date(sourceAt * 1000).toISOString().slice(0, 16).replace("T", " "));
+    expect(markup).not.toContain(">73.5<");
   });
 
   it("renders unavailable without inventing a zero score or MELTDOWN band when no sample exists", async () => {

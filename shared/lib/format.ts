@@ -240,7 +240,7 @@ export function slugifyId(value: string, options: { stripPunctuation?: boolean }
 
 export function formatTrackingSpanDays(days: number): string {
   if (!Number.isFinite(days)) return "N/A";
-  if (days < 30) return `${days}d`;
+  if (days < 30.44) return `${days}d`;
   const months = Math.floor(days / 30.44);
   if (months < 12) return `${months}mo`;
   const years = Math.floor(months / 12);

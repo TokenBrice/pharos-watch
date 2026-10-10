@@ -14,6 +14,7 @@ import {
   type EthCallJournal,
   type MeasurementCheck,
   type PinnedBlock,
+  readJournalUint,
 } from "../core";
 import type { MentoConversionMeasurementEvidence } from "../schema";
 import type { MentoConversionMeasurementTarget } from "../targets";
@@ -33,12 +34,7 @@ export async function measureMentoConversion(
   const checks: MeasurementCheck[] = [];
   const selfToken = normalizeAddress(target.contracts.token);
   const counterToken = normalizeAddress(target.contracts.counterToken);
-  const totalSupplyRaw = decodeUintWord(
-    await caller.call({ name: "token.totalSupply", to: selfToken, signature: "totalSupply()", selector: "0x18160ddd" }),
-    0,
-    "totalSupply",
-  );
-  caller.recordDecoded(totalSupplyRaw.toString());
+  const totalSupplyRaw = await readJournalUint(caller, { name: "token.totalSupply", to: selfToken, signature: "totalSupply()", selector: "0x18160ddd" }, 0, "totalSupply");
   requireCheck(checks, "supply.positive", totalSupplyRaw > 0n, `token supply ${totalSupplyRaw} is positive`);
 
   let derived: MentoConversionMeasurementEvidence["derived"];

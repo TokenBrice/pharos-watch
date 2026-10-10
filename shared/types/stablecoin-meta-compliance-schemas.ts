@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { issue } from "./safety-schema-primitives";
 import {
   GENIUS_APPLICABILITY_VALUES,
   GENIUS_AUTHORIZATION_STATUS_VALUES,
@@ -34,11 +35,7 @@ export const BlacklistabilityReviewSchema = z
       return;
     }
 
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "blacklistabilityReview requires sources or sourceFreeRationale",
-      path: ["sources"],
-    });
+    issue(ctx, ["sources"], "blacklistabilityReview requires sources or sourceFreeRationale");
   });
 
 export const JurisdictionSchema = z
@@ -64,21 +61,13 @@ export const MicaProfileSchema = z
     if (mica.status === "out-of-scope") {
       for (const field of ["tokenType", "authorizationType", "competentAuthority", "authorizedEntity"] as const) {
         if (mica[field] != null) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "mica.out-of-scope rows cannot carry in-scope classification fields",
-            path: [field],
-          });
+          issue(ctx, [field], "mica.out-of-scope rows cannot carry in-scope classification fields");
         }
       }
     }
 
     if (mica.status !== "out-of-scope" && (mica.references?.length ?? 0) === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "mica.status requires at least one source reference unless it is 'out-of-scope'",
-        path: ["references"],
-      });
+      issue(ctx, ["references"], "mica.status requires at least one source reference unless it is 'out-of-scope'");
     }
   });
 
@@ -162,11 +151,7 @@ export const GeniusProfileSchema = z
         genius.authorizationStatus === "official-application-pending") &&
       !hasGeniusReferenceKind(genius.references, GENIUS_REGULATOR_SOURCE_KINDS)
     ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "GENIUS official authorization statuses require a federal, state, or Federal Register reference",
-        path: ["references"],
-      });
+      issue(ctx, ["references"], "GENIUS official authorization statuses require a federal, state, or Federal Register reference");
     }
 
     if (
@@ -176,27 +161,15 @@ export const GeniusProfileSchema = z
         new Set(["issuer-disclosure", "issuer-filing", ...GENIUS_REGULATOR_SOURCE_KINDS]),
       )
     ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "GENIUS issuer-announced-intent requires an issuer, regulator, or filing reference",
-        path: ["references"],
-      });
+      issue(ctx, ["references"], "GENIUS issuer-announced-intent requires an issuer, regulator, or filing reference");
     }
 
     if (genius.authorizationStatus === "no-public-authorization-found" && genius.negativeEvidenceReview == null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "GENIUS no-public-authorization-found requires a negative evidence review",
-        path: ["negativeEvidenceReview"],
-      });
+      issue(ctx, ["negativeEvidenceReview"], "GENIUS no-public-authorization-found requires a negative evidence review");
     }
 
     if (genius.reserveDisclosurePresent === true && !genius.reserveDisclosureUrl) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "GENIUS reserve disclosure presence requires a reserve disclosure URL",
-        path: ["reserveDisclosureUrl"],
-      });
+      issue(ctx, ["reserveDisclosureUrl"], "GENIUS reserve disclosure presence requires a reserve disclosure URL");
     }
 
     if (
@@ -204,23 +177,14 @@ export const GeniusProfileSchema = z
       (genius.foreignExceptionEvidence == null ||
         !hasGeniusReferenceKind(genius.foreignExceptionEvidence.references, GENIUS_FEDERAL_SOURCE_KINDS))
     ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message:
-          "GENIUS registered foreign exception requires evidence with a federal regulator or Federal Register reference",
-        path: ["foreignExceptionEvidence"],
-      });
+      issue(ctx, ["foreignExceptionEvidence"], "GENIUS registered foreign exception requires evidence with a federal regulator or Federal Register reference");
     }
 
     if (
       (genius.enforcementStatus === "warning-or-notice" || genius.enforcementStatus === "prohibited-or-revoked") &&
       !hasGeniusReferenceKind(genius.references, GENIUS_REGULATOR_SOURCE_KINDS)
     ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "GENIUS enforcement actions require a federal, state, or Federal Register reference",
-        path: ["references"],
-      });
+      issue(ctx, ["references"], "GENIUS enforcement actions require a federal, state, or Federal Register reference");
     }
   });
 

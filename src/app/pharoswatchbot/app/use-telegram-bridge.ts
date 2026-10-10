@@ -127,7 +127,11 @@ export function useTelegramBridge(opts: UseTelegramBridgeOptions = {}): Telegram
   // SettingsButton lifecycle: show + attach while a handler is provided.
   useEffect(() => {
     const sb = webApp?.SettingsButton;
-    if (!sb || !onSettings) return;
+    if (!sb) return;
+    if (!onSettings) {
+      sb.hide?.();
+      return;
+    }
     const handler = onSettings;
     sb.onClick?.(handler);
     sb.show?.();

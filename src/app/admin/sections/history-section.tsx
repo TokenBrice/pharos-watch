@@ -22,7 +22,7 @@ export interface HistorySectionProps {
   adminActionLog: OperationalActivityProps["adminActions"];
   credentialAudit: OperationalActivityProps["credentialAudit"];
   nowSeconds: number;
-  transitionsLast24h: number;
+  transitionsLast24h: number | null;
   historyWindow: StatusHistoryWindow;
   historyFilters: IncidentHistoryFilters;
   setHistoryWindow: (window: StatusHistoryWindow) => void;
@@ -221,7 +221,7 @@ export function HistorySection({
   historyLoading,
   historyEvidence,
 }: HistorySectionProps) {
-  const isFlapping = transitionsLast24h > INCIDENT_FLAPPING_TRANSITION_THRESHOLD;
+  const isFlapping = transitionsLast24h == null ? null : transitionsLast24h > INCIDENT_FLAPPING_TRANSITION_THRESHOLD;
   const historyComplete = historyEvidence.source === "history" && historyEvidence.completeness === "complete";
   const historyCoverage =
     historyEvidence.source === "status-fallback" ? "status-fallback" : historyEvidence.completeness;
@@ -261,7 +261,7 @@ export function HistorySection({
           />
           <SummaryBadge
             label="Transitions 24h"
-            value={String(transitionsLast24h)}
+            value={transitionsLast24h == null ? "Unavailable" : String(transitionsLast24h)}
             className={
               isFlapping ? SEVERITY_TONE_CLASS.watch.pill : undefined
             }

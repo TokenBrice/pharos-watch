@@ -282,6 +282,7 @@ export function CompareClient() {
     detailErrors,
     detailLoading,
     flowCardData,
+    flowCoverageCount,
     flowErrorNotice,
     flowScopeLabel,
     flowSeries,
@@ -488,11 +489,15 @@ export function CompareClient() {
               )}
 
               {/* Coverage note */}
-              {selectedIds.length > flowCardData.length && (
+              {flowCoverageCount === null ? (
                 <p className="text-xs text-muted-foreground">
-                  {flowCardData.length} of {selectedIds.length} selected coins have tracked issuance flows.
+                  Issuance-flow tracking coverage is unavailable.
                 </p>
-              )}
+              ) : selectedIds.length > flowCoverageCount ? (
+                <p className="text-xs text-muted-foreground">
+                  {flowCoverageCount} of {selectedIds.length} selected coins have tracked issuance flows.
+                </p>
+              ) : null}
             </div>
           )}
 

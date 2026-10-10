@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   makeSqliteD1,
   mockRepairD1,
@@ -14,6 +14,7 @@ import {
   runWorkerRepairTaskRunner,
   syncDdrRepairDebtTasks,
 } from "../repair-tasks";
+import { runCronSentinelSources } from "../../cron/cron-sentinel-result";
 
 const NOW = 1_775_900_000;
 
@@ -470,6 +471,7 @@ describe("repair tasks", () => {
 
       const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
 
+      expect(result.status).toBe("ok");
       expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
         dueCount: 2,
         staleClaimCount: 1,
@@ -508,6 +510,53 @@ describe("repair tasks", () => {
           last_error: "safe-class-not-proven",
         },
       ]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("rotates deferred debt fairly so a newer safe repair is not starved by the oldest five", async () => {
+    const db = makeSqliteD1();
+    try {
+      seedNaturalPredecessorFixture(db);
+      const insert = db.sqlite.prepare(`INSERT INTO worker_repair_tasks
+        (task_id, kind, subject_id, priority, state, payload_json, created_at, updated_at)
+        VALUES (?, 'ddr-repair-required-event', ?, 50, 'open', ?, ?, ?)`);
+      for (let id = 1; id <= 5; id++) {
+        insert.run(`blocked:${id}`, String(id), JSON.stringify({ eventId: id }), NOW - 1000 + id, NOW - 1000 + id);
+      }
+      // A live claim and a not-yet-due task remain outside both daily batches.
+      insert.run("protected", "98", '{"eventId":98}', NOW - 2000, NOW - 2000);
+      insert.run("not-due", "99", '{"eventId":99}', NOW - 2000, NOW - 2000);
+      db.sqlite.prepare(`UPDATE worker_repair_tasks SET state = 'claimed',
+        locked_by = 'other-owner', locked_until = ? WHERE task_id = 'protected'`).run(NOW + 2 * 86400);
+      db.sqlite.prepare("UPDATE worker_repair_tasks SET next_attempt_at = ? WHERE task_id = 'not-due'")
+        .run(NOW + 2 * 86400);
+
+      const first = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      expect(JSON.parse(first.metadata ?? "{}")).toMatchObject({
+        claimed: 5, deferred: 5, closed: 0, batchLimit: DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
+      });
+      expect(db.sqlite.prepare("SELECT attempt_count FROM worker_repair_tasks WHERE subject_id = '42'").get())
+        .toMatchObject({ attempt_count: 0 });
+
+      const second = await runWorkerRepairTaskRunner(db, { nowSec: NOW + 86400 });
+      expect(JSON.parse(second.metadata ?? "{}")).toMatchObject({
+        claimed: 5, closed: 1, deferred: 4, autoRepairCount: 1, batchLimit: DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
+      });
+      expect(db.sqlite.prepare("SELECT state, attempt_count FROM worker_repair_tasks WHERE subject_id = '42'").get())
+        .toMatchObject({ state: "closed", attempt_count: 1 });
+      expect(db.sqlite.prepare("SELECT current_event_id FROM depeg_resolver_incidents").get())
+        .toMatchObject({ current_event_id: 42 });
+      const third = await runWorkerRepairTaskRunner(db, { nowSec: NOW + 86400 + 1 });
+      expect(JSON.parse(third.metadata ?? "{}")).toMatchObject({ claimed: 1, deferred: 1, closed: 0 });
+      expect(db.sqlite.prepare("SELECT state, attempt_count FROM worker_repair_tasks WHERE task_id LIKE 'blocked:%'").all())
+        .toEqual(Array.from({ length: 5 }, () => ({ state: "deferred", attempt_count: 2 })));
+      expect(db.sqlite.prepare("SELECT task_id, state, attempt_count FROM worker_repair_tasks WHERE task_id IN ('protected', 'not-due') ORDER BY task_id").all())
+        .toEqual([
+          { task_id: "not-due", state: "open", attempt_count: 0 },
+          { task_id: "protected", state: "claimed", attempt_count: 0 },
+        ]);
     } finally {
       db.close();
     }
@@ -566,8 +615,10 @@ describe("repair tasks", () => {
     ]);
 
     const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+    expect(result.status).toBe("degraded");
 
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "repair-execution-failed",
       claimed: 1,
       failed: 1,
       deferred: 0,
@@ -577,6 +628,76 @@ describe("repair tasks", () => {
     expect(failure?.binds).toContain("failed");
     expect(failure?.binds).toContain(NOW + DDR_REPAIR_RUNNER_BACKOFF_SEC_V1);
   });
+
+  it.each(["candidate-read", "execution-write"] as const)(
+    "publishes %s repair exceptions as degraded sentinel evidence with fenced backoff",
+    async (failurePoint) => {
+      const db = makeSqliteD1();
+      try {
+        seedNaturalPredecessorFixture(db);
+        db.sqlite.prepare(`INSERT INTO worker_repair_tasks
+          (task_id, kind, subject_id, priority, state, payload_json, created_at, updated_at)
+          VALUES ('unsafe', 'ddr-repair-required-event', '999', 50, 'open', '{"eventId":999}', ?, ?)`)
+          .run(NOW, NOW);
+        if (failurePoint === "candidate-read") {
+          const prepare = db.prepare.bind(db);
+          let failed = false;
+          vi.spyOn(db, "prepare").mockImplementation((sql) => {
+            if (!failed && sql.includes("FROM depeg_events target")) {
+              failed = true;
+              throw new Error("D1 busy");
+            }
+            return prepare(sql);
+          });
+        } else {
+          vi.spyOn(db, "batch").mockRejectedValueOnce(new Error("D1 write unavailable"));
+        }
+
+        const daily = await runCronSentinelSources(db, "daily", [{
+          source: "repair-debt",
+          run: () => runWorkerRepairTaskRunner(db, { nowSec: NOW }),
+        }], NOW);
+        expect(daily.status).toBe("degraded");
+        expect(JSON.parse(daily.metadata!).sources["repair-debt"]).toMatchObject({
+          status: "degraded",
+          metadata: {
+            reason: "repair-execution-failed",
+            claimed: 2,
+            failed: 1,
+            deferred: 1,
+            autoRepairCount: 0,
+          },
+        });
+        expect(db.sqlite.prepare(`SELECT state, attempt_count, next_attempt_at, locked_by, locked_until,
+          last_error FROM worker_repair_tasks WHERE subject_id = '42'`).get()).toEqual({
+          state: "failed",
+          attempt_count: 1,
+          next_attempt_at: NOW + DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
+          locked_by: null,
+          locked_until: null,
+          last_error: "repair-execution-failed",
+        });
+        expect(db.sqlite.prepare("SELECT state, last_error FROM worker_repair_tasks WHERE task_id = 'unsafe'").get())
+          .toEqual({ state: "deferred", last_error: "safe-class-not-proven" });
+        const status = await runCronSentinelSources(db, "status", [{
+          source: "freshness",
+          run: async () => ({ status: "ok" }),
+        }], NOW + 1);
+        expect(status.status).toBe("degraded");
+        expect(JSON.parse(status.metadata!).sources["repair-debt"]).toMatchObject({
+          status: "degraded",
+          observedAt: NOW,
+          metadata: { reason: "repair-execution-failed" },
+        });
+        const retry = await runWorkerRepairTaskRunner(db, { nowSec: NOW + 1 });
+        expect(retry.status).toBe("ok");
+        expect(JSON.parse(retry.metadata!)).toMatchObject({ claimed: 0, failed: 0 });
+      } finally {
+        vi.restoreAllMocks();
+        db.close();
+      }
+    },
+  );
 
 
   it("repairs a safe fixture task atomically against the append-only DDR tables", async () => {

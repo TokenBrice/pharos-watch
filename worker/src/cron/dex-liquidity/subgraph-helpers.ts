@@ -48,7 +48,9 @@ export type SubgraphFailureReason =
   /** The provider never answered: transport failure or exhausted HTTP retries. */
   | "http"
   /** The provider answered with GraphQL errors and no entities. */
-  | "graphql";
+  | "graphql"
+  /** The requested entity collection is absent or not an array. */
+  | "malformed-response";
 
 export type FetchSubgraphEntitiesResult = {
   entityCount: number;
@@ -110,7 +112,13 @@ export async function fetchSubgraphEntities<TEntity>(
       }
 
       const json = result.body;
-      const entities = config.extractEntities(json.data) ?? [];
+      const entities = config.extractEntities(json.data);
+      if (!Array.isArray(entities)) {
+        shouldLogIndex = false;
+        failed = true;
+        failureReason = json.errors?.length ? "graphql" : "malformed-response";
+        break;
+      }
       shouldLogIndex = true;
 
       if (json.errors?.length) {

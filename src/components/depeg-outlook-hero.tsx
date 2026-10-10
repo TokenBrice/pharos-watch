@@ -17,9 +17,9 @@ interface DepegOutlookHeroProps {
   /** Coins in a confirmed live depeg. Drives the radar halos. */
   activeDepegIds: ReadonlySet<string>;
   /** Threshold crossings still awaiting confirmation. */
-  pendingCount: number;
+  pendingCount: number | null;
   /** DEWS ALERT-or-worse coins, restricted to the peg catalog. */
-  dewsAlertCount: number;
+  dewsAlertCount: number | null;
   /** Whole-book recovery posture from DDR; omitted when the flag is off. */
   book?: ResolverBookSummary | null;
   /** DDR calibration lineage, shown as the posture's provenance. */
@@ -128,19 +128,19 @@ export function DepegOutlookHero({
           <div className="grid grid-cols-2 gap-x-5 gap-y-2.5 border-t border-border/60 pt-3">
             <StatCell
               label="Pending"
-              value={String(pendingCount)}
-              detail={pendingCount === 1 ? "crossing" : "crossings"}
+              value={pendingCount == null ? "—" : String(pendingCount)}
+              detail={pendingCount == null ? "event data unavailable" : pendingCount === 1 ? "crossing" : "crossings"}
             />
-            <StatCell label="DEWS alert+" value={String(dewsAlertCount)} detail="of the peg catalog" />
+            <StatCell label="DEWS alert+" value={dewsAlertCount == null ? "—" : String(dewsAlertCount)} detail={dewsAlertCount == null ? "DEWS or peg catalog unavailable" : "of the peg catalog"} />
             <StatCell
               label={<MethodologyLabel topic="coinsAtPeg">Holding peg</MethodologyLabel>}
-              value={`${stats?.coinsAtPeg ?? 0} / ${stats?.totalTracked ?? 0}`}
-              detail="live peg status"
+              value={stats ? `${stats.coinsAtPeg} / ${stats.totalTracked}` : "—"}
+              detail={stats ? "live peg status" : "peg summary unavailable"}
             />
             <StatCell
               label="Median deviation"
-              value={`${stats?.medianDeviationBps ?? 0} bps`}
-              detail="live peg status"
+              value={stats ? `${stats.medianDeviationBps} bps` : "—"}
+              detail={stats ? "live peg status" : "peg summary unavailable"}
             />
           </div>
 

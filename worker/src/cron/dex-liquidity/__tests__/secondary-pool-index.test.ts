@@ -3,24 +3,7 @@ import { describe, expect, it } from "vitest";
 import { mergeGtPools } from "../fetch-crawlers";
 import { initMetrics } from "../pool-helpers";
 import type { GtNewPool, LiquidityMetrics, PoolEntry } from "../types";
-
-function makePool(address: string, overrides: Partial<GtNewPool> = {}): GtNewPool {
-  return {
-    address,
-    chain: "ethereum",
-    dexId: "uniswap-v3",
-    name: "USDC / USDT",
-    tvlUsd: 100_000,
-    volume24hUsd: 10_000,
-    qualityMultiplier: 0.8,
-    maturityDays: 30,
-    price: 1,
-    symbol: "USDC / USDT",
-    poolType: "uniswap-v3-5bp",
-    sourceFamily: "direct_api",
-    ...overrides,
-  };
-}
+import { makeGtPool } from "./scoring-test-builders";
 
 function makePoolEntry(poolId: string): PoolEntry {
   return {
@@ -39,7 +22,7 @@ describe("secondary DEX pool merges", () => {
   it("retains duplicate execution evidence through the indexed merge path", async () => {
     const metrics = new Map<string, LiquidityMetrics>();
     const address = `0x${"1".repeat(40)}`;
-    const basePool = makePool(address);
+    const basePool = makeGtPool(address);
     const executionModel: NonNullable<GtNewPool["ammExecutionModel"]> = {
       source: "raydium",
       invariant: "constant-product",
@@ -93,7 +76,7 @@ describe("secondary DEX pool merges", () => {
     }
 
     const incoming = Array.from({ length: existingCount }, (_, index) =>
-      makePool(`0x${(index + existingCount).toString(16).padStart(40, "0")}`),
+      makeGtPool(`0x${(index + existingCount).toString(16).padStart(40, "0")}`),
     );
 
     await mergeGtPools(new Map([["usdc-circle", metrics]]), new Map([["usdc-circle", incoming]]));

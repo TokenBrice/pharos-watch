@@ -20,6 +20,7 @@ const PUBLIC_IMPACT_CODES: ReadonlySet<string> = new Set([
   "cache_ratio_stale",
   "cache_ratio_degraded",
   "cache_freshness_query_failed",
+  "cache_freshness_unavailable",
   "cache_warning",
   "fx_cached_fallback",
   "mint_burn_public_stale",

@@ -34,10 +34,6 @@ export function makeDlResponse(assetCount: number): { peggedAssets: PeggedAsset[
   };
 }
 
-export const DEFAULT_SYNC_D1_TABLES: MockTableConfig[] = [
-  { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-];
-
 export function makeSyncDb(extra: MockTableConfig[] = []) {
   return mockD1([
     ...extra,

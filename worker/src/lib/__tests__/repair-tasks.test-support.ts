@@ -1,6 +1,4 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC } from "@shared/lib/methodology-versions/depeg-resolver";
 import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
@@ -10,16 +8,13 @@ import {
   type MockD1Database,
   type MockTableConfig,
 } from "@shared/test-utils/mock-d1";
-import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   DDR_FLAP_TOLERANT_MAX_INCIDENT_SPAN_SEC_V1,
   DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1,
   DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC,
 } from "../depeg-resolver-incident-store";
 
-const REPAIR_SCHEMA_SQL = ["0000_baseline.sql", "0228_depeg_resolver_incident_closed_pre_lock.sql"]
-  .map((file) => readFileSync(join(process.cwd(), "worker/migrations", file), "utf8"))
-  .join("\n");
 
 const sql = (...parts: string[]): string => parts.join(" ");
 
@@ -71,7 +66,7 @@ const LIST_DUE_SQL = `SELECT task_id, subject_id, payload_json
 FROM worker_repair_tasks
 WHERE ((state IN ('open', 'deferred', 'failed') AND (next_attempt_at IS NULL OR next_attempt_at <= ?)) OR (state = 'claimed' AND (locked_until IS NULL OR locked_until <= ?)))
   AND kind = ?
-ORDER BY priority ASC, created_at ASC, task_id ASC
+ORDER BY priority ASC, last_attempt_at ASC, attempt_count ASC, created_at ASC, task_id ASC
 LIMIT ?`;
 
 const CLAIM_TASK_SQL = `UPDATE worker_repair_tasks
@@ -191,10 +186,9 @@ export function mockRepairD1(
 }
 
 export function makeSqliteD1() {
-  const sqlite = new DatabaseSync(":memory:");
+  const { sqlite, db } = createLatestSchemaSqlite();
   try {
-    sqlite.exec(REPAIR_SCHEMA_SQL);
-    return Object.assign(createSqliteD1(sqlite), { sqlite, close: () => sqlite.close() });
+    return Object.assign(db, { sqlite, close: () => sqlite.close() });
   } catch (error) {
     sqlite.close();
     throw error;

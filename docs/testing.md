@@ -41,7 +41,7 @@ When CI fails, collect **every failed leaf**, fix all failures in one causal rev
 
 ## Commands
 
-Use the [validation command index](./scripts.md#validation-command-index) for the discoverable command roster; this section owns what those validation lanes do.
+Use the [validation command index](./scripts.md#validation-command-index) for command entrypoints and their canonical owners; this section owns what those validation lanes do.
 
 `check:pr` is the adaptive local PR contract, implemented by [`scripts/maintenance/run-pr-checks.ts`](../scripts/maintenance/run-pr-checks.ts). After the pinned runtime guard it refreshes `origin/main` by default, resolves frozen base/head identities, and rejects `--head` unless it resolves to checked-out HEAD; `--staged` is rejected because checks inspect the checkout, not the index. Plain mode permits authoring checks on dirty tracked or untracked state (respecting `.gitignore`), but successful leaves yield an incomplete receipt with reason `dirty-worktree`, never passing readiness proof; commit final edits before readiness. `--no-fetch` or `PHAROS_PR_NO_FETCH=1` skips fetching; a failed refresh or a stale base with fetching disabled weakens the receipt. The runner warns when the base commit is over 24 hours old.
 
@@ -92,7 +92,7 @@ For generic frontend modules, the focused runner uses `vitest related --run --pa
 | Stablecoin JSON (`shared/data/stablecoins/**`) | `npm run lint:changed`; `npm run check:stablecoin-data`; `npm run check:generated-artifacts -- --only=stablecoin-client-projections`; `npm run typecheck`; `npm run typecheck:worker`; `npx vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts` | Add the focused catalog/registry test and `npm run check:dependency-review-gaps` when dependency or reserve mappings change; `check:pr:static` also selects page and Worker checks because stablecoin data is a deploy-impact shared path. |
 | Safety Score V9 | Focused routing retains lint, Worker typing, `check:generated-artifacts -- --only=safety-score-v9-evaluation-build`, `check:doc-sync`, `audit:mint-authority-review`, and `npx vitest run shared/lib/safety-score-v9 worker/src/lib` | PR `testOwnership` adds source-selected evaluation-build identity, resource-budget, native-input/capture, and publication archive/replay invariants even when import discovery cannot find them. |
 | Dependency coverage | `npm run audit:coverage -- --domain=dependency-coverage` (report); `npm run check:dependency-review-gaps` (gate, included in `check:structural`) | Add `--prod` to the report command for current published graph and live-reserve comparison. The weekly production gate fails and alerts on structural findings but never blocks releases; see [Dependency network runbook](./runbooks/dependency-network.md). |
-| Docs-only change | `npm run check:verified-doc-links`; `npm run check:doc-source-paths`; `npm run check:doc-sync`; `npx vitest run scripts/__tests__/doc-ownership-registry.test.ts`; `npm run check:generated-artifacts -- --only=agents-doc` | This is the manifest docs lane, not full generated convergence before readiness. No generated artifact reads internal docs Markdown, so docs-only edits select no other artifact check. |
+| Docs-only change | `npm run check:verified-doc-links`; `npm run check:doc-source-paths`; `npm run check:doc-sync`; `npx vitest run scripts/__tests__/doc-ownership-registry.test.ts`; `npm run check:generated-artifacts -- --only=agents-doc` | The manifest docs lane is not full convergence. Generated output edits, including `docs/api-reference.md`, additionally select their owning artifact freshness check. |
 
 ### Generated-artifact failure playbook
 
@@ -194,7 +194,7 @@ The static selector adds full-lockfile `check:dependency-audit -- --new-since=<b
 
 Main/scheduled incident jobs use the shared [report-workflow-failure action](../.github/actions/report-workflow-failure/action.yml); nightly excludes advisory Node 26. See [Workflow incidents](./runbooks/workflow-incidents.md) for keys, issue lifecycle, and evidence. **Open alerting prerequisite:** Actions secrets `TELEGRAM_BOT_TOKEN`/`TELEGRAM_OPERATOR_CHAT_ID` are not provisioned; issue reporting does not prove Telegram delivery.
 
-Gitleaks config self-tests batch controls into three report-validated passes: public false positives must remain clean, while AWS and generic API-key controls must produce the expected rules at every asserted path/line. Recurring fixture false positives belong in narrow rules pairing the owning path with the exact reviewed value; `.gitleaksignore` retains only findings not covered by such a rule. `--tree` feeds combined-diff `++` resolution lines from the checkout and every merge commit in the PR range through stdin, closing the `--no-merges` range scan's gap. Resolution lines are new by construction and any finding fails closed; a non-merge checkout with no in-range merges scans nothing.
+Gitleaks self-tests use three report-validated passes: public false positives stay clean; AWS and generic API-key controls must match their expected rule/path/line. Exceptions pair reviewed paths and exact values; `.gitleaksignore` retains uncovered findings. Hunk-aware extraction preserves added source starting with `+`, excluding file headers only outside hunks. `--tree` scans combined-diff resolution additions from HEAD and every in-range merge, closing the `--no-merges` gap; any finding fails closed. Non-merge checkouts without in-range merges scan nothing.
 
 Plain and coverage shards publish `pr-test-timings-<shard>` and `pr-coverage-timings-<shard>` artifacts (seven-day retention), plus wall time and slowest-first file rows in the step summary. `PR_SHARD_TIMINGS_FILE` enables `scripts/lib/shard-timing-reporter.mts`, whose per-file measurements include preparation, environment/setup, import/collection, tests, and hooks. Those aggregate costs are scheduling estimates, not wall time: compare shard wall times to spot imbalance. Missing uploads warn rather than gating. Future plans use the committed `scripts/data/pr-test-timings.json` via deterministic longest-processing-time-first partitioning in `scripts/lib/pr-test-plan.mts`; both plain and coverage shards use their own duration maps. Unknown files use the map's median, or one second without measurements.
 
@@ -214,14 +214,14 @@ Broad UI, accessibility, ops, analytics, asset-coherence, and transport checks r
 
 The [generated-artifact registry mechanics](./scripts.md#build-and-generated-artifacts) own lifecycle and automatic-staging facts; the failure playbook above owns checkability and history-input behavior, while the [CI deploy sequence](./deployment-process.md#ci-deploy-sequence) owns build and release ordering.
 
-Telegram load protection is selected into `check:pr:static` by `scripts/lib/telegram-load-guard.mts` and also runs weekly/manual. Its subscriber fan-out query plans are extracted from the production SQL templates with reviewed alert columns supplied by the canonical family metadata, so a production predicate change cannot leave a hand-copied plan green. Its readiness scenarios classify the full planning-plus-delivery completion time (SLO enforced at the 1,000-watcher tier; CPU, TTL and status-path budgets at 5,000) and compare the higher of planner CPU and pending-drain send CPU against the budget, so pending-only production delivery cannot report zero send cost. `npm run test:critical-contracts` remains a focused local runner; the PR runner always includes those files. It also always includes the real workerd OG-rendering contract so dependency upgrades cannot bypass it through Vitest's import graph.
+Telegram load protection runs in selected `check:pr:static` plans and weekly/manual via `scripts/lib/telegram-load-guard.mts`. Fan-out and all six status-reader SQL templates come from production: full lifecycle aggregate, preset followers, pending count, lifecycle events, explicit top coins, and bounded snapshot history; there is no subscriber-history fallback. Canonical family metadata supplies alert predicates. Completion scenarios include planning and delivery (SLO at 1,000 watchers; CPU, TTL and status budgets at 5,000), comparing the higher of planner and pending-drain CPU. PR tests always include the critical contracts and real workerd OG-rendering contract; `test:critical-contracts` remains a focused local runner.
 
 Selected specialized checks:
 
 - Cron schedule/connection changes: `npm run check:cron-sync`, `npm run check:cron-connections`, and `npm run validate:worker-scheduled-smoke`. The sync gate compares raw trigger inventories before set membership, so duplicate Wrangler or slot-plan expressions fail; the connection gate requires each job's budget row to carry the exact scheduled-slot identity.
 - Shock coverage: the refresh matrix and `check-shock-coverage-freshness` both enumerate `SHOCK_COVERAGE_TARGETS`; the scheduled freshness-only check runs independently of regeneration, so adding an unmeasured canonical target fails rather than disappearing behind a copied list.
 - Worker deployment configuration: `npm run check:worker-config` verifies that production custom domains remain root-owned and asset rules fall through.
-- Structural guardrails: `npm run check:structural` runs the Worker raw-console usage, clone-ratchet, provider resilience, fetch-body timeouts, runtime reachability, script entrypoints, CLI argument policy, stale feature-flag, hook polling-window, dependency review-gap, unused-code, sensitive-page-copy, and agent-skills checks. It is enforced for affected production and validation paths in PR static validation and for every nightly/manual validation run. The runtime reachability checker owns the bundle-graph policies, including the memory-sensitive mint/burn and Telegram lanes whose entrypoints it bundles so the evidence-rich full stablecoin registry cannot re-enter their runtime module graphs. Configured roots and sources must exist and resolve a nonempty entrypoint graph; the scheduled policy includes `worker/src/handlers/scheduled.ts` itself beside its dynamic runners. The individual commands remain available for focused local diagnosis.
+- Structural guardrails: `npm run check:structural` runs Worker raw-console usage, clone-ratchet, provider resilience, fetch-body timeouts, runtime reachability, script entrypoints, CLI argument policy, stale feature-flag, hook polling-window, dependency review-gap, unused-code, sensitive-page-copy, and agent-skills checks in affected PR static lanes and every nightly/manual run. Raw-response body tracking follows symbols/reassignment without a source-line cutoff. SQL interpolation needs a directly preceding allowlist guard on that expression or a reviewed `SAFETY` comment, not unrelated `.has()`/throws. Runtime reachability bundles memory-sensitive mint/burn and Telegram entrypoints to exclude the full stablecoin registry. Configured roots/sources must exist and resolve a nonempty graph; scheduled policy includes `worker/src/handlers/scheduled.ts` alongside dynamic runners. Individual commands remain available for diagnosis.
 
 - Deletion evidence is commit-scoped for `check:unused-code` artifacts:
   no deletion may cite an unused-code artifact older than the commit it is
@@ -230,6 +230,7 @@ Selected specialized checks:
   superseded and cannot support a deletion.
   Useful test-only corpora are preserved in recognized `*.test-support.ts` files beside their owning tests, not deleted or reclassified as external-consumer blind spots. The matched Safety Score invariant corpus remains test evidence outside the evaluation-build manifest; empty unused-code DEBT maps do not prove a clean current detector scan.
 - Secret-scan exceptions: `.gitleaksignore` contains reviewed commit/path/rule/source-line fingerprints, not path-wide exemptions. The 2026-10-07 snapshot had 316 active fingerprints across 345 physical lines (38,874 bytes); comments and blanks are not exceptions. A fingerprint's line number identifies the finding's source line, not its row in the ignore file, so rearranging ignore rows does not invalidate fingerprints. Historical findings survive current-source cleanup. Delete an entry only after the trusted scanner proves its candidate removal clean with `GITLEAKS_FULL_HISTORY=1`; preserve the review evidence and real-secret positive controls.
+  For reviewed non-secret findings that move between files or must survive rebases, `.gitleaks.toml` exceptions combine the specific rule, owner path and exact finding span; scanner self-tests must retain real-key positive controls on those same paths. The trusted local scan freezes base policy before checking candidate policy, so candidate exceptions alone cannot clear findings rejected by that base.
 - Architecture boundaries: `npm run check:architecture-boundaries`, also in `check:structural`, resolves executable TypeScript dependencies using the repository tsconfig (including aliases), static imports, re-exports, literal dynamic imports, CommonJS requires/import-equals, and relative template-import expansions. Erased types and comments do not create edges. Missing modules, unresolved imports, unconstrained dynamic dependencies, and escaped require loaders fail closed. Like runtime reachability, resolved npm packages are terminal public-module boundaries, not a scan of dependency internals; aliases to packages retain canonical package identities. Local dependency chains are reported on failure.
   - Path identity: the repository root and local modules are canonicalized through filesystem real paths before applying root-relative policies or reporting dependency chains. A symlinked checkout or temporary root (including macOS `/var` → `/private/var`) must enforce the same boundaries and report the same repository-relative paths as its physical root.
   - `reserve-network`: all nested reserve-adapter modules must reach network transport through the existing `request.ts`, `defillama.ts`, or Worker `evm-rpc.ts` gateways, never bypass them to import `fetch-retry.ts` or acquire network globals. Gateway implementation safety remains owned by provider-resilience and fetch-body-timeout checks.
@@ -243,11 +244,11 @@ For test-only changes, structural validation runs only `check:clone-ratchet` and
 - Table primitives: `npm run check:table-primitives` rejects raw `<table>` markup and direct shadcn table imports under `src/`, allowing them only in the shared primitives under `src/components/table/`, the chart data table, and test fixtures. It is listed unconditionally in `check:pr:static` rather than inside `check:structural`, so a table change is gated even when no structural path moved. `npm run check:table-primitives -- --inventory` reports every table call site with its chrome, density, accessible name, and mobile-hint state and never fails; [design-language.md](./design-language.md) owns the rule itself.
 - Generated public artifacts: `npm run check:generated-artifacts`, with individual checks in `scripts/lib/automation-registry.mjs`.
 - Release-data and provider boundaries fail closed: detail snapshots tolerate only explicit 404/410 lane absence and require at least one lane for each live asset; public depeg-history generation applies the same 60-row completeness floor as artifact checks and requires the requested year's source shard before writing; operator-pinned mechanism captures reject a mismatched RPC block header. The scheduled Safe Browsing monitor bounds provider time and validates successful payloads, while retaining Google's documented empty-object clean response.
-- Static export SEO: `npm run seo:check`; this includes unique sitemap-location enforcement, built-anchor rejection for reviewed legacy aliases, and one-hop/permanent checks for internal `_redirects` rules. Its per-page HTML extraction uses bounded worker threads while all global graph, sitemap, header, and continuity assertions remain consolidated in the parent process. Releases additionally set `SEO_PREVIOUS_SITEMAP_URL` so the same command rejects disappearance of deployed digest/depeg URLs unless an explicit direct 301 preserves the route. Live SEO smoke is `npm run seo:live-smoke -- --url https://pharos.watch` and enforces sitemap uniqueness, direct HTTP 200 responses, indexability through both robots/googlebot metadata and `X-Robots-Tag`, and self-canonical HTML URLs against production. Each request has a 30-second deadline, including body reads. Use the submitted-page Search Console cohort to distinguish public-page recovery from intentional query, workbench, Markdown, and operator exclusions; historical exclusions need a new Google crawl before they describe current production behavior.
+- Static export SEO: `npm run seo:check` enforces unique sitemap locations, indexability against robots/googlebot `noindex`/`none` and headers, built-anchor rejection for reviewed legacy aliases, and one-hop permanent internal `_redirects`. Noindex HTML remains allowed outside the sitemap. Bounded worker threads extract pages; the parent owns global graph, sitemap, header and continuity assertions. Releases set `SEO_PREVIOUS_SITEMAP_URL` to reject lost digest/depeg URLs unless a direct 301 preserves them. Live `npm run seo:live-smoke -- --url https://pharos.watch` requires sitemap uniqueness, direct HTTP 200, robots/googlebot and `X-Robots-Tag` indexability, and self-canonical HTML; each request's 30-second deadline includes body reads. Search Console's submitted-page cohort distinguishes public recovery from intentional query, workbench, Markdown and operator exclusions; historical exclusions need a new crawl to reflect production.
 - Static export accessibility: `npm run test:a11y` scans the bare static export, while `npm run test:a11y:hydrated` reuses the API-backed static-export smoke server so axe sees hydrated product data. Both block Google Analytics collection before navigation while retaining analytics script loading; the intentional GA smoke acceptance is unchanged. Both run route-per-test with 3 Playwright workers (`fullyParallel: true` in `playwright.config.ts`); the scans are independent per route, so parallelism changes no coverage.
 - Public visual browser checks: `npm run test:visual` runs every top-level spec matching `tests/visual/*.spec.ts` (currently 10 files / 35 tests); the a11y specs under `tests/visual/a11y` and operator specs under `tests/visual/ops` use their own scripts and Playwright configuration.
 - Operator workspace browser checks: `npm run test:ops-browser` runs all five specs under `tests/visual/ops` — `ops-routes.spec.ts`, `api-inventory-geometry.spec.ts`, `status-card-containment.spec.ts`, `ops-crons-altpegs-geometry.spec.ts`, and `stablecoin-gate-incident.spec.ts` — under the second Playwright config, `playwright.ops.config.ts`. It serves the static export on `OPS_PLAYWRIGHT_PORT` (default `4174`) and resolves `ops.pharos.watch` to `127.0.0.1` inside Chromium, so no hosts-file entry is needed; set `PLAYWRIGHT_REUSE_OPS_SERVER=1` to attach to an already-running `npm run serve:static-export`. The suite runs a six-viewport matrix from 320px to 1440px, but `@phase6`-tagged tests (200% text zoom, `prefers-color-scheme`, forced colors, reduced motion) are excluded from every project except 390px, so those assertions are proven at one viewport only. Workspace routes are driven by fixture API responses and a fixed clock, which means it covers operator route, layout, and a11y behavior and proves nothing about live operator data or the Cloudflare Access posture in [Operator Origin Access Setup](./operator-origin-access.md).
-- GSC exports: `npm run analyze:gsc-coverage -- <path>` and `npm run analyze:gsc-performance -- <path>` are offline triage helpers.
+- GSC offline triage: `analyze:gsc-coverage` and `analyze:gsc-performance` accept exports. Combined page/query rows populate both dimensions; separate query totals override overlapping combined queries, while unmatched combined queries remain.
 - Optional render-budget probe: `node scripts/maintenance/audit-seo-render-budget.mjs --url https://pharos.watch`.
 
 ## Vitest Runtime Profiling
@@ -272,104 +273,17 @@ CRITICAL_COVERAGE_RATCHET_ALL=1 npm run coverage:critical -- --pool=threads
 
 ## Test Setup
 
-**Config:** `vitest.config.ts`
+[`vitest.config.ts`](../vitest.config.ts) owns projects, aliases, environments, transforms and exclusions; [`scripts/lib/critical-ownership.mts`](../scripts/lib/critical-ownership.mts) owns executable test discovery. Read those definitions before choosing a runner, rather than copying configuration into prose. Prefer the established `*.test.ts` / `*.test.tsx` convention and lane-local `__tests__/` homes; runtime discovery does not imply test-typecheck coverage.
 
-Vitest bootstraps the catalog and client projections through `scripts/test/ensure-fresh-stablecoin-artifacts.ts`, using registry-owned input and output paths. Successful builds cache recursive filename, size, modification-time, and change-time fingerprints under ignored `.cache/vitest-stablecoin-artifacts/`. Unchanged runs skip regeneration; source additions/deletions and missing or edited outputs invalidate the cache. This is a local metadata shortcut: content checks and clean CI generation remain authoritative for changes that preserve all recorded metadata. Removing this cache safely forces a rebuild.
+[`scripts/test/ensure-fresh-stablecoin-artifacts.ts`](../scripts/test/ensure-fresh-stablecoin-artifacts.ts) owns catalog bootstrap. Its ignored `.cache/vitest-stablecoin-artifacts/` metadata cache is a local shortcut, not content proof: changed or missing inputs/outputs invalidate it, and deleting it forces regeneration. Clean CI generation and content checks remain authoritative.
 
-```ts
-const isWorktreeCheckout = normalizedRoot.includes("/.worktrees/") || normalizedRoot.includes("/worktrees/");
-const worktreeExcludes = isWorktreeCheckout ? [] : [".worktrees/**", "worktrees/**"];
-const nodeMajor = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
-const nodeExecArgv = nodeMajor >= 25 ? ["--no-experimental-webstorage"] : [];
+The required release runtime is the exact `.nvmrc` Node and npm 11.x runtime. The future-major nightly typecheck is advisory, not build/test/release qualification. Keep JavaScript/TypeScript source maps and Worker per-file isolation enabled; the catalog JSON transform deliberately omits synthetic named exports and unnecessary maps to avoid retaining an oversized transform graph.
 
-export default defineConfig({
-  plugins: [wasmStubPlugin()],
-  test: {
-    execArgv: nodeExecArgv,
-    exclude: [
-      ...configDefaults.exclude,
-      ...worktreeExcludes,
-      ".claude/**",
-      "agents/**",
-      ".next/**",
-      "out/**",
-      "coverage/**",
-      "tests/visual/**",
-    ],
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "lcov"],
-      exclude: [/* mirrors test.exclude */],
-    },
-  },
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "src"),
-      "@shared": path.resolve(__dirname, "shared"),
-      // Stub WASM-dependent packages (satori, resvg) for Node-based vitest runs
-      "satori/standalone": path.resolve(__dirname, "worker/src/__mocks__/satori-stub.ts"),
-      // ... additional WASM alias stubs
-    },
-  },
-});
-```
+Pure Node suites may reuse processes; stateful exceptions require isolation. Worker and frontend suites retain isolation because they own module-level state; the native full-registry Safety pipeline uses its reviewed thread worker. jsdom is a per-file opt-in. If a Node suite fails only in a full run, fix module-state leakage or enroll it in the existing isolated project. Nested worktrees must not enter the parent checkout's corpus.
 
-The config also includes a `wasmStubPlugin()` Vite plugin that stubs `.wasm` imports for Node compatibility and resolve aliases for `@data`, `cloudflare:workers`, `satori/standalone`, `satori/yoga.wasm`, `@cf-wasm/resvg/workerd`, and `@resvg/resvg-wasm`. The supported test baseline is Node 24 LTS; the `nodeMajor >= 25` branch keeps jsdom as the source of `localStorage` / `sessionStorage` under the wider engine range, and nightly validation runs a non-blocking Node 26 typecheck proof.
+Optional Poppler (`pdftotext` and `pdfinfo` on `PATH`) enables RLUSD assurance PDF extraction cases; compiler/manifest parity remains unconditional without it.
 
-The required CI/release runtime remains Node **24.16.0**. `node26-proof` is permanent future-major early warning: job-level `continue-on-error` covers only root and Worker typechecks, not a Node 26 build, test, or release certification and not a queued runtime upgrade. Wider local engines, Node type declarations, and jsdom WebStorage handling are independent compatibility contracts; retaining this advisory job changes none of them.
-
-JSON imports use `json: { stringify: true, namedExports: false }` so Vite takes its JSON-specific SSR transform instead of generating JavaScript source maps for the evidence-rich catalog. The default `stringify: "auto"` path produced a 112 MB source map for a 29 MB catalog, inflating the coordinator's retained transform graph and every importing fork. Tests still receive the complete parsed JSON data; only synthetic named exports and unnecessary JSON source maps are omitted. Keep JavaScript/TypeScript source maps and per-file Worker isolation enabled.
-
-The suite is split into five `test.projects` (all `extends: true` from the root config):
-
-- `node` — `functions/`, `scripts/`, `shared/` suites with `isolate: false` (pure-node tests reuse worker processes instead of paying a fork per file).
-- `node-isolated` — the few node-root suites that depend on per-file process isolation (module-level registry/env state); listed explicitly in `vitest.config.ts`. If a `node`-project test starts failing only in full runs, module-state leakage is the first suspect — fix the leak or move the file here.
-- `worker` — `worker/` suites with default per-file isolation (they lean on module-level state: circuit breakers, caches, D1 stubs; verified to fail without isolation).
-- `worker-threads` — the full-registry native Safety Score pipeline regression, isolated in a thread worker because V8 coverage can leave its otherwise-passing fork waiting during teardown.
-- `src` — `src/` suites with default isolation and the `src/test/setup.ts` cleanup setup file. No project sets a Vitest `environment`, so all five run the default node environment; jsdom is a per-file opt-in via `// @vitest-environment jsdom`.
-
-`npm run test:all` is the full Vitest runner used by nightly/manual validation.
-
-When the checkout itself lives under `/.worktrees/`, Vitest now drops those glob exclusions so coverage still includes the active repository files; nested worktree directories remain excluded in a normal top-level checkout.
-
-**Locations:**
-
-- `src/lib/__tests__/` — frontend library tests (pure functions)
-- `src/components/__tests__/` — component-level pure/helper logic tests
-- `src/hooks/__tests__/` — hook utility/state tests
-- `src/__tests__/` — frontend component/integration tests
-- `src/app/**/__tests__/` — route-level UI/page tests
-- `functions/__tests__/` — Pages Functions and ops-host proxy tests
-- `worker/src/__tests__/` — worker entrypoint tests (`fetch` request policy + `scheduled` cron dispatch wiring)
-- `worker/src/lib/__tests__/` — worker library tests (scoring, parsing)
-- `worker/src/api/__tests__/` — API handler contract tests
-- `worker/src/cron/__tests__/` — cron job tests (with degraded-mode scenarios)
-- `worker/src/cron/blacklist/__tests__/` — blacklist source-module tests
-- `shared/lib/__tests__/` — shared library tests (format, classification invariants, peg rates, stablecoin registry, timeout helpers)
-- `scripts/__tests__/` — repo policy / guardrail tests for CI and developer tooling
-- `src/components/stablecoin-detail/__tests__/` — stablecoin detail component tests
-- `worker/src/cron/reserve-adapters/__tests__/` — reserve adapter tests
-- `worker/src/cron/dex-discovery/__tests__/` — DEX discovery module tests
-- `worker/src/cron/dex-liquidity/__tests__/` — DEX liquidity scoring module tests
-
-Recent cron reliability coverage explicitly exercises slot-fencing and no-write guardrails as well: stablecoins stale-publication blocking, PSI fail-closed dependency loss, DEWS bootstrap/freshness degradation, digest Telegram replay safety, bluechip partial-cache merge, and yield deterministic-source outage handling all live in the worker cron suites above.
-
-Scheduled-slot dispatch is asserted once, not per slot: `worker/src/handlers/scheduled/__tests__/slot-registry.test.ts`
-drives every entry of `SCHEDULED_SLOT_PLANS` through `SLOT_RUNNER_LOADER_BY_KEY` against a real-schema SQLite
-fixture and a recording `runLeasedCron` that never invokes a job body, then asserts each chain is leased in plan
-order and that no planned job reports an `error` outcome. Slots whose member set is decided from stored state
-(`fiveMinuteTelegramAlerts`, `digestTriggerPoll`, `fourHourlyReserveSync`) are listed in that suite's
-`RUN_TIME_GATED_SLOTS` with the semantics suite that owns their gating; they still may not lease an unplanned job.
-Per-slot suites are reserved for slot semantics — a suite that only re-asserts `flattenScheduledSlotPlanJobs(plan)`
-is redundant with this table and should not be added.
-
-PSI now also has dedicated replay/regression coverage beyond the pure formula tests:
-
-- `worker/src/lib/__tests__/psi-recompute.test.ts` covers historical input reconstruction, PSI-universe filtering, and replay denominator rules
-- `worker/src/lib/__tests__/psi-replay.test.ts` covers methodology-aware historical replay behavior, including `v3.x` DEWS stress-breadth inclusion
-- `worker/src/lib/__tests__/psi-benchmark-scenarios.test.ts` holds bounded benchmark scenarios for major stable-market trauma patterns so future PSI work does not accidentally flatten crisis signatures
-
-**Discovery:** `EXECUTABLE_TEST_PROJECTS` in `scripts/lib/critical-ownership.mts`, consumed by `vitest.config.ts`, includes both `*.test.*` and `*.spec.*` under the configured `functions/`, `scripts/`, `shared/`, `worker/`, and `src/` projects. Prefer the established `*.test.ts` / `*.test.tsx` authoring convention and lane-local `__tests__/` homes; do not infer test-typecheck coverage from runtime discovery alone.
+Scheduled-slot topology is asserted once by [`worker/src/handlers/scheduled/__tests__/slot-registry.test.ts`](../worker/src/handlers/scheduled/__tests__/slot-registry.test.ts). Per-slot suites exercise gating/order semantics, not duplicate registry membership; state-dependent slots must still never lease an unplanned job. PSI recompute, replay and benchmark suites remain separate evidence for historical inputs, methodology-aware replay and crisis signatures.
 
 ## Test Infrastructure
 
@@ -384,250 +298,81 @@ Helpers used across test families live in the shared homes instead:
 - `scripts/__tests__/helpers/` — script-suite helpers
 - `functions/__tests__/helpers/` — Pages Functions helpers (`mock-kv`, Pages context, `mockUpstream(origin)` strict per-origin fetch installers)
 
+Cross-runtime adversarial inputs live in `shared/test-utils/boundary-contract-vectors.test-support.ts`: numeric availability, scan frontiers, read outcomes and generation-bound clocks. Boundary suites specify their own expected public semantics; input sharing never supplies an oracle or replaces reviewed source/date fixtures. Existing import-based PR selection and critical ownership select these suites, not a separate lane.
+
 A cron unit has one test home: tests for `worker/src/cron/<lane>/<module>.ts` live in that lane's own `__tests__/` directory, not in the flat `worker/src/cron/__tests__/` tree. Behaviour asserted through an adapter that is really owned by a shared executor (for example the adaptive multicall split) belongs to the shared unit's suite, with each adapter keeping only the wiring case that is adapter-specific.
 
 A shared guard or mechanism is asserted where it is implemented, not at every route that imports it: `functions/lib/__tests__/site-data-origin.test.ts` owns the origin matrix and `functions/__tests__/upstream-proxy.test.ts` owns the response byte cap and deadline, so a proxy route suite keeps only its own wiring case.
 
 **One unit, one home.** A production module has exactly one test file that owns its contract. Suites named after a ticket, ruling, or review wave (`R3`, `D2`, `VER-010`) are not units: fold their cases into the module's name-matched suite and delete the satellite, keeping every distinct assertion. A satellite that exercises a *different* module reachable from the same fixture belongs to that module's owner, not to whichever suite happened to build the fixture.
 
+Timeline and homepage tape tests share only input construction in `shared/test-utils/tape-event.ts`; secondary DEX pool inputs use `scoring-test-builders.ts` in the owning cron test family. `depeg-trust-policy.test.ts` owns the trust/reference matrix, while `depeg-helpers.test.ts` keeps provenance and DEX corroboration. `generate-safety-score-v9-evaluation-build-manifest.test.ts` owns source mutations, runtime import closure, and Worker catalog transport identity. Supply replacement ownership is proved by the persisted-row SQLite case in `snapshot-supply.test.ts`, not duplicate SQL-bind assertions.
+
+`src/components/__tests__/table-primitives.test.tsx` owns matrix semantics, surface/viewport props and caller-class forwarding; internal CSS tokens are not layout evidence. `src/lib/__tests__/design-invariants.test.ts` checks runtime font imports and styling expressions through TypeScript ASTs, excluding comments, display text and test-only files. `worker/src/lib/__tests__/depeg-resolver-assessment-store.test.ts` reads SQLite checkpoints to prove immutable thresholds, latest median/IQR updates and malformed-row quarantine.
+
 Plan the target tree before moving a file. `assertExecutableTestFiles` in `scripts/lib/critical-ownership.mts` requires each selected test file to exist and to be selected by exactly one Vitest project, and `scripts/lib/critical-coverage.mjs` derives ownership from the surviving file's import specifiers. A `worker/` → `shared/` move therefore changes both the selecting project and the ownership edge, and can fail `npm run check:critical-coverage-completeness` even when every assertion was preserved. Merge within a tree, and run the gate after each merge.
 
 ### Frontend Test Setup Helpers (`src/test-utils/frontend.ts`)
 
-Frontend jsdom tests should use `installMatchMediaMock()`, `cleanupFrontendTest()`, `resetBrowserStorage()`, and `createNextLinkMock()` from `src/test-utils/frontend.ts` instead of hand-rolling `matchMedia`, browser-storage cleanup, or `next/link` mocks. Keep test-local mocks only when the test needs behavior that differs from the shared helper.
-
-`vi.mock` factories are hoisted above imports, so `createNextLinkMock` must be pulled in from inside the factory:
-
-```ts
-vi.mock("next/link", async () => {
-  const { createNextLinkMock } = await import("@/test-utils/frontend");
-  return createNextLinkMock();
-});
-```
-
-The mock renders a plain `<a>` with a forwarded ref and passes every other prop through, so tests that assert on `className`, `target`, or `data-*` attributes work unchanged.
-
-`installMatchMediaMock(matches)` takes either a boolean or a `(query: string) => boolean` predicate, which covers query-dependent suites (simulated viewport widths, `(prefers-reduced-motion: reduce)`) without rebuilding the `MediaQueryList` shape.
+Use [`src/test-utils/frontend.ts`](../src/test-utils/frontend.ts) for matchMedia, storage cleanup and Next Link mocks; keep a local mock only when its behavior genuinely differs. Import the Link mock inside a hoisted `vi.mock` factory. It forwards refs and ordinary anchor props; matchMedia accepts a boolean or query predicate.
 
 ### Mock D1 (`shared/test-utils/mock-d1.ts`)
 
-Lightweight D1 mock. It resolves a statement to the first configured table whose `match` is found in the SQL. Prefer a statement marker over a SQL substring so a reworded query fails loudly instead of silently missing its fixture, and opt into match accounting so a fixture the run never selected fails the test.
+Use [`shared/test-utils/mock-d1.ts`](../shared/test-utils/mock-d1.ts); unmatched SQL always throws. Prefer statement markers to broad substrings, and strict normalized matching for exact SQL contracts. A supplied `first: null` is an explicit empty result, not fallback inference.
 
-```ts
-import { matchMarker, mockD1 } from "@shared/test-utils/mock-d1";
+Enable fixture match accounting: unused scenario fixtures invalidate the scenario. An `allowUnused` shared fallback must not exempt the scenario's own evidence; accounting counts selected entries, not only recorded SQL text. Telegram mocks always account for matches; use strict writes when the scenario must declare its own mutations.
 
-const db = mockD1([
-  matchMarker("stress-signals:latest-all", [row1, row2]),
-  { match: "COUNT", rows: [{ total: 5 }] },
-]);
-```
-
-- `match` — substring to look for in the SQL query; `matchMarker(marker, rows, overrides?)` builds one from the statement's `/* pharos:<marker> */` comment (`sqlMarker(marker)` renders the comment alone)
-- `rows` — array of row objects for `.all()` results
-- `first` — explicit `.first()` result, object or `null`; a provided value wins over first-row and cache-key inference, so `{ first: null }` is an explicit empty result, not a request to infer one
-- `batch()` — executes each statement and returns an array of results (SELECT statements use `.all()`; writes use `.run()`, falling back to `.all()`/`.first()`)
-- Unmatched SQL always throws — there is no permissive mode. Add a `{ match, rows }` entry (or `allowUnused: true` on a shared fallback entry you do not expect to fire) instead. The `requireMatch` option is deprecated and no longer changes behavior.
-- `mockD1(tables, { strictSql: true })` — matches normalized SQL exactly instead of substring search
-- `mockD1(tables, { strict: true })` — exact normalized SQL matching (`mockD1Strict(tables)` is the shorthand). Matching is always required, so unlike the deprecated `requireMatch` this only tightens how SQL is compared.
-- `db.assertAllMatchesUsed()` — asserts that every configured match was actually selected at least once. `mockD1(tables, { assertMatchesUsed: true })` (implied by `mockD1Strict`) registers it as an `onTestFinished` hook, so an unused fixture fails its own test. Accounting counts selections, not SQL history: a fallback entry shadowed by a `matchBinds` entry stays unused. `allowUnused: true` exempts one shared fallback entry. Neither is a licence to blanket-exempt scenario fixtures — an unused scenario match means the test is not exercising the statement it claims to.
-
-`mockTelegramD1()` (`worker/src/test-helpers/__shared/telegram.ts`) layers typed Telegram reads on top of `mockD1` and always accounts its matches. Pass `{ strictWrites: true }` to drop its broad `INSERT/UPDATE/DELETE telegram_*` defaults so a write the scenario did not declare is rejected rather than silently accepted; declare the scenario's own writes through `tables` or `writeResults`.
-
-The cron suites that drive a whole sync entrypoint share one harness per module: `worker/src/cron/__tests__/mint-burn.test-support.ts` (Alchemy/EVM/pipeline mocks, `makeMintBurnDb`, `resetMintBurnMocks`), `live-reserves.test-support.ts` and `sync-yield-data.test-support.ts`. A harness module owns the `vi.mock` declarations; consumers import the mocked symbols from their real modules (`import { fetchAlchemyLogs } from "../../lib/alchemy-logs"`) after the harness import, never through re-exported `fixture*` aliases — re-exporting a mocked binding resolves to `undefined` under Vitest 4. The always-issued reads a sync performs are declared once as `allowUnused` fallbacks (`yieldFallbackTableMatches()`), so `assertMatchesUsed` holds each test to its own fixtures.
-
-Cross-runtime tests outside `worker/src` should use `createRemoteD1Mock()` from `scripts/test-utils/d1.ts` for worker maintenance scripts that accept a `RemoteD1Client` dependency. Pages Functions that need `prepare()`, `batch()`, and `getHistory()` use `makeTestD1Database()` from `@shared/test-utils/mock-d1`.
+Cron entrypoint suites share their existing module-specific harness. Import mocked real-module bindings after the harness, never re-exported fixture aliases (which resolve to `undefined` under Vitest 4). Cross-runtime maintenance clients use [`scripts/test-utils/d1.ts`](../scripts/test-utils/d1.ts); Pages Functions use the existing D1 harness with prepare/batch/history support.
 
 ### Reserve Adapter Harness (`worker/src/cron/reserve-adapters/__tests__/reserve-adapter.test-support.ts`)
 
-Reserve adapters reach the network through exactly one boundary — `globalThis.fetch`, underneath `request.ts`, `onchain.ts`, `evm-observation-plan.ts` and `worker/src/lib/evm-rpc.ts` — and resolve chain endpoints from `ctx.chainRpcs`. Adapter tests install a routing table at that boundary instead of module-mocking `../helpers`, `../request` or `lib/evm-rpc`, so URL building, headers, retry policy, body limits, JSON/HTML parsing, Multicall3 encoding and ABI decoding are all exercised for real.
+The colocated [`reserve-adapter.test-support.ts`](../worker/src/cron/reserve-adapters/__tests__/reserve-adapter.test-support.ts) owns transport fixtures and adapter setup. Route at `globalThis.fetch`, not mocked transport implementation modules, to exercise URL/header construction, retries, body limits, parsing and ABI handling. Use the registered fetcher and real catalog config so config/registry drift is observable; run descriptor output validation, disabling it only when explicitly asserting rejection.
 
-```ts
-import { runAdapter, expectWarnings } from "./reserve-adapter.test-support";
+Unlisted network routes fail with their exact URL; a routed null RPC is a real revert, not an unmatched request. Block reads never become semantic contract calls; the harness owns request matching. Assert warning codes/effects rather than message wording. Preserve admission, failure, provenance and redemption assertions when sharing fixtures; a generic success response is not adapter evidence. Pure parser tests still call their parser directly.
 
-const { result, report, network } = await runAdapter("tether-transparency", "usdt-tether", {
-  network: { json: { "https://app.tether.to/transparency.json": TRANSPARENCY_FIXTURE } },
-  nowSec: FIXTURE_NOW_SEC,
-});
-expectWarnings(result, ["quarantined-balance"]);
-```
-
-- `runAdapter(key, coinId?, options?)` resolves the adapter's registered fetcher **and the coin's real catalog `liveReservesConfig`**, so a mis-wired URL or a renamed param fails the test instead of being papered over by a hand-written config literal. It always runs `validateAdapterOutput` against the adapter's own descriptor policy and fails the test on a `fatal` warning; pass `validate: false` only when asserting a rejection. It returns `{ result, report, coin, config, network }`.
-- `options`: `network` (spec or an already-installed network), `coin` / `config` / `params` shallow overrides on the catalog values, `ctx`, `nowSec` (also the validation clock), `signal`, `maxSourceAgeSec`, `allowUnmatched`.
-- `installAdapterNetwork(spec)` can be called directly when a test drives an adapter helper rather than a registered fetcher. It returns `{ fetchSpy, chainRpcs, requests, rpcCalls, unmatched }`.
-  - `json` / `html`: URL → payload, a `{ status, body, json, headers }` envelope, or a `(request) => …` responder. Unlisted URLs answer HTTP 404 and are recorded; `runAdapter` then fails with the exact URL the table is missing.
-  - `rpc`: `eth_call` answers keyed by selector (`"0x18160ddd"`), function signature (`"totalSupply()"`), full calldata, or any of those prefixed with a contract address and/or chain id in any order (`"ethereum:0xabc…:balanceOf(address)"`). More specific keys win. Values are `bigint` / `number` / `boolean` / hex / `null` (a routed `null` answers a real `execution reverted`, not an unmatched request) or a function of the decoded call. Multicall3 `aggregate3` batches are decoded and answered from the same table. Block methods route here too — `"eth_blockNumber"` overrides the head, `"eth_getBlockByNumber:0x3d0"` answers that tag with a block header whose gaps fall back to `block` — unlisted block reads are answered from `block`, and block reads never appear in `network.rpcCalls`.
-  - `code`: `eth_getCode` answers for code-identity checks; `chains`: extra or overriding chain endpoints.
-- `expectWarnings(result, codes)` asserts the emitted warning **codes**, never message wording; `expectWarningEffect(result, code, effect)` pins one code's effect. Message text is not a contract and copy edits must not fail a suite.
-- Pure `adapt*` unit tests keep calling the parser directly — the harness is for fetch-level and adapter-level cases.
-
-Independent-assurance adapters share their redirect, allowed-host, reviewed-report, and newer-report fence through `__tests__/independent-assurance.test-support.ts`. Agora, Anchorage, AUDD, CADD, FDUSD, RLUSD and SBC dispatch through the real generic engine with profile-only publisher modules; `IndependentAssuranceProfile` belongs to `types.ts`, not a driver re-export. Issuer suites keep only publisher-specific discovery/rewrite behavior. Add each product to `independent-assurance.test.ts` and exercise registered dispatch through index/PDF/hash/reconciliation/result validation so registry/profile drift fails the common fence; a forwarder mock is not verification.
+Independent-assurance suites use their existing sibling test-support module and exercise registered real-engine dispatch through discovery/PDF/hash/reconciliation/output validation, not forwarder mocks. Issuer suites retain publisher-specific discovery and rewrite behavior.
 
 #### Corpus replay gate (`__tests__/adapter-corpus.test.ts`)
 
-Every registered adapter key must appear in `CORPUS_CASES` or one of the two exemption maps — `CORPUS_BACKLOG` or `CORPUS_NOT_REPLAYABLE` — in `__tests__/adapter-corpus.test-support.ts`; the gate fails on a key in neither map, a key double-booked across maps, a stale key, or a reason under 20 characters. A corpus case carries the coin id, the captured happy-path payload and one `drift` mutation:
+[`adapter-corpus.test.ts`](../worker/src/cron/reserve-adapters/__tests__/adapter-corpus.test.ts) and its sibling test-support module own corpus enrollment. Every registered adapter needs exactly one case or a reviewed structural/backlog exemption; stale, duplicate, missing or insufficiently justified entries fail. Happy-path captures must validate, including the descriptor's allowed freshness modes; upstream drift must fail or degrade explicitly, never silently publish a fallback.
 
-- the happy path must produce a snapshot `validateAdapterOutput` accepts, with a `metadata.freshnessMode` inside the descriptor's `allowedFreshnessModes`;
-- the drift mutation (a renamed, retyped or dropped upstream field) must produce an adapter error or a `degraded` warning. A mutation that publishes silently is the "no silent constant fallback" defect class and fails the gate.
-
-When adding an adapter, add its corpus case in the same change. `CORPUS_NOT_REPLAYABLE` is structural: hash-pinned issuer reports plus the adapters with no bound catalog coin, where no wire capture could ever replay. `CORPUS_BACKLOG` is a debt ledger: adapters that are bound and testable but still owe a committed wire capture. Each entry states which test file owns the behaviour instead.
-
-**Corpus backlog:** adapter tests that still owe a committed wire capture are tracked as **corpus-backlog** in the `CORPUS_BACKLOG` map of `__tests__/adapter-corpus.test-support.ts`; the map is the authoritative list, and every green `adapter-corpus.test.ts` run prints "corpus backlog: N adapter(s)…" with the full list. Clearing a backlog entry means landing a captured happy-path-plus-drift corpus case, not deleting the key.
+Add a captured happy-path-plus-drift case with each replayable adapter. Structural exemptions explain why replay cannot work; backlog entries name the existing behavioral owner and still owe a capture. Clearing backlog means adding that evidence, not deleting keys.
 
 ### Latest-Schema SQLite Harness (`shared/test-utils/latest-schema-sqlite.ts`)
 
-When correctness depends on transactions, constraints, migrations, or SQL semantics, use real SQLite instead of treating substring-matched mocks as persistence proof. `createLatestSchemaFixtureTracker()` opens in-memory databases with every migration in `worker/migrations` applied and wrapped by `createSqliteD1` (`shared/test-utils/sqlite-d1.ts`), registers each handle immediately on open, and closes every tracked handle on `closeAll()` — reporting aggregate errors rather than stopping at the first failure. The required lifecycle is:
+Use [`shared/test-utils/latest-schema-sqlite.ts`](../shared/test-utils/latest-schema-sqlite.ts) for transactions, constraints, migrations and SQL publication contracts; substring mocks are not persistence proof. Apply the current migration sequence rather than hand-copying production schema. Keep migration, crash-resume, rollback and external-effect failure cases executable.
 
-```ts
-import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-
-const fixtures = createLatestSchemaFixtureTracker();
-afterEach(() => fixtures.closeAll());
-
-// inside a test:
-const { sqlite, db } = fixtures.open();
-```
-
-Initialization failure closes the failed handle; `createLatestSchemaSqlite()` remains for a single untracked open.
-
-Replaying the migration inventory costs ~40ms per database, so the harness builds the migrated schema once per process and serializes it; each fixture restores those template bytes into its own fresh `:memory:` database (~0.06ms per open). A restored fixture owns resizeable storage: it is byte-identical to a fresh migration replay, holds no handle on the template, and shares nothing with any other fixture — a rolled-back transaction, a destroyed schema or an exclusive lock in one fixture cannot reach another, and a failed schema build is never cached. `worker/src/test-helpers/__tests__/latest-schema-sqlite-equivalence.test.ts` owns those guarantees, including cross-thread independence, by comparing fixtures against an independent `worker/migrations` replay. Tests that put the migration inventory itself under test must use `createLatestSchemaSqliteUncached()` or `createLatestSchemaFixtureTracker({ uncached: true })`, which re-read and replay the migrations on every open.
+Register handles immediately through the fixture tracker and close all in `afterEach`, including initialization-failure paths. Template-restored databases remain byte-equivalent to migration replay and independent across fixtures/threads; never cache a failed template build. [`latest-schema-sqlite-equivalence.test.ts`](../worker/src/test-helpers/__tests__/latest-schema-sqlite-equivalence.test.ts) owns those guarantees. Migration-inventory tests use the uncached creator or tracker mode so every open re-reads and replays migrations.
 
 ### Mock Fetch (`shared/test-utils/mock-fetch.ts`)
 
-Stubs global `fetch` for testing cron jobs that make HTTP requests.
-
-```ts
-import { mockFetch } from "@shared/test-utils/mock-fetch";
-
-const spy = mockFetch([
-  { match: "frankfurter.dev", body: { rates: { EUR: 0.925 } } },
-  { match: "gold-api.com", body: { price: 2900 }, status: 200 },
-]);
-```
-
-- `match` — substring to match against the request URL
-- `body` — response body (auto-serialized to JSON)
-- `status` — HTTP status code (default: 200)
-- `headers` — additional response headers
-- Each matching call resolves its outcome into a freshly constructed `Response`, so consuming one call's body never affects the next call; scripted `outcomes` replay one entry per call, and a `{ response }` outcome is returned as given.
-- Abort signals are honoured: the effective request's signal (an `init.signal` overrides a passed `Request`'s own signal) is checked before routing, after each responder/predicate await, and around delays and stalls; a request aborted before its outcome resolves fails without consuming a scripted outcome.
-- Unmatched URLs return 404
-- `mockFetch(routes, { requireMatch: true })` — throws on unexpected outbound URLs
-- `mockFetch(routes, { strictUrl: true })` — matches the full request URL exactly instead of substring search
-- `spy.assertAllRoutesUsed()` — optional assertion that every configured route was exercised during the test
-- Call `vi.unstubAllGlobals()` (typically alongside `vi.restoreAllMocks()`) in `afterEach` to remove the installed spy
+Use [`shared/test-utils/mock-fetch.ts`](../shared/test-utils/mock-fetch.ts) for ordered transport fixtures; declare the exact source/response consumed by the scenario. Keep unsuccessful bodies, aborts and deadlines as distinct evidence. Outcomes construct fresh responses (explicit response objects are returned as supplied), honor abort before consuming scripted outcomes, and give `init.signal` precedence over a Request's signal. Restore installed globals after each test.
 
 ### Shared Fixtures (`worker/src/test-helpers/__shared/fixtures.ts`)
 
-Factory functions that return complete DB rows with sensible defaults. Pass `overrides` for specific values.
-
-| Factory                        | Returns                                                                                                                |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `makeAsset()`                  | DL pegged asset (id, symbol, price, pegType, circulating, chainCirculating)                                            |
-| `makeApiKeyRow()`              | api_keys row                                                                                                           |
-| `makeBlacklistRow()`           | blacklist_events row                                                                                                   |
-| `makeBlacklistReconciliationStatusRow()` | blacklist_reconciliation_status row                                                                                  |
-| `makeDepegRow()`               | depeg_events row                                                                                                       |
-| `makeSupplyRow()`              | supply_history row                                                                                                     |
-| `makeMintBurnRow()`            | mint_burn_events row                                                                                                   |
-| `makeDexLiquidityRow()`        | dex_liquidity row (with v2 fields)                                                                                     |
-| `makeYieldHistoryRow()`        | yield_history row                                                                                                      |
-| `makeDexLiquidityHistoryRow()` | dex_liquidity_history row                                                                                              |
-| `makeDigestRow()`              | daily_digest row                                                                                                       |
-
-Example:
-
-```ts
-import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
-
-const row = makeBlacklistRow({ stablecoin: "USDC", event_type: "freeze" });
-```
+[`worker/src/test-helpers/__shared/fixtures.ts`](../worker/src/test-helpers/__shared/fixtures.ts) owns typed row builders. Read signatures/defaults there instead of maintaining a second factory table; specify scenario-specific overrides explicitly.
 
 ### Reserve HTML Fixtures (`worker/src/cron/reserve-adapters/__tests__/fixtures/*.html`)
 
-Issuer dashboard refresh targets are owned by `HTML_FIXTURE_REFRESH_TARGETS` in `scripts/maintenance/refresh-reserve-html-fixtures.ts`. Refresh current layouts to keep parser tests anchored to supported markup. The USDH scraper and its archived HTML fixture were removed on October 8, 2026 after Native Markets' sunset; the frozen USDH profile and reserve/history evidence remain, without executable scraper compatibility.
+Use the reviewed refresh-target inventory and canonical capture stamps owned by [`scripts/maintenance/refresh-reserve-html-fixtures.ts`](../scripts/maintenance/refresh-reserve-html-fixtures.ts). Refresh locally before changing parsers, never in CI; partial refresh warnings do not certify all fixtures. Archived fixtures retain their provenance obligations; removed legacy scrapers do not require executable compatibility.
 
-Run:
-
-```bash
-npm run refresh:html-fixtures
-```
-
-The script fetches each source live, prepends a `<!-- captured-at: ISO -->` provenance header, and writes the file back under `worker/src/cron/reserve-adapters/__tests__/fixtures/`. Sources that respond with <200 bytes or an HTTP error are left untouched and a warning is printed; the script exits non-zero only when zero fixtures refreshed. Run locally before updating adapter parsers — do not run in CI.
-
-The capture bound is enforced by `scripts/ci/check-html-fixture-age.ts` (`npm run check:html-fixture-age`), which runs from the `html-fixture-age` job of `.github/workflows/weekly-validation.yml` — never from the PR gate, because the verdict moves with the calendar and would otherwise fail an unrelated branch on the day a fixture crossed 90 days. Every non-archived fixture must carry a `captured-at` header in the exact shape the refresh script writes (`YYYY-MM-DDTHH:MM:SSZ`), at most 90 whole days old and not in the future; a looser stamp such as a bare date is rejected rather than aged from a guessed midnight. Archived fixtures (`<!-- archived: reason -->`) skip the staleness bound — their frozen provenance lives in the archived reason — but still reject future-dated metadata. The gate also reads the refresh inventory the script exports as `HTML_FIXTURE_REFRESH_TARGETS`, so a target that was deleted, archived, or hand-trimmed fails as an unowned fixture instead of quietly dropping out of the directory scan.
+[`scripts/ci/check-html-fixture-age.ts`](../scripts/ci/check-html-fixture-age.ts) separates PR metadata validation from weekly calendar-age/future-clock validation. Missing or malformed capture stamps must not become affirmative freshness. Non-archived fixtures require the canonical timestamp and bounded age; archived fixtures skip age but still reject future metadata. Deleted, archived or hand-trimmed refresh targets must not quietly escape inventory validation.
 
 ### Markdown Export Fixtures (`scripts/__tests__/fixtures/markdown/`)
 
-`scripts/__tests__/generate-markdown-exports.test.ts` asserts these snapshots against the live renderers, so a covered source edit — a new weekly changelog entry, a methodology changelog record, or USDT registry metadata — fails that test on the next PR even when no renderer changed. `scripts/maintenance/refresh-markdown-export-fixtures.ts` owns which fixture is produced by which renderer.
-
-Run:
-
-```bash
-npm run refresh:markdown-fixtures
-```
-
-Each fixture is re-rendered through the exact renderer the test calls, so a refresh always reconciles the snapshot with current renderer behavior: read the resulting diff, because an unintended renderer change is absorbed as silently as a data change. Commit the refreshed fixtures with the change that caused the drift — do not run this in CI.
+[`scripts/__tests__/generate-markdown-exports.test.ts`](../scripts/__tests__/generate-markdown-exports.test.ts) compares fixtures to live renderers. Use [`scripts/maintenance/refresh-markdown-export-fixtures.ts`](../scripts/maintenance/refresh-markdown-export-fixtures.ts) locally, never in CI. A refresh can absorb an unintended renderer change: inspect the output diff and commit snapshots with their generating source rather than hand-editing them.
 
 ### Shared Auth Helpers (`worker/src/test-helpers/__shared/auth.ts`)
 
-Use these helpers in worker API contract tests that exercise admin auth and URL/request plumbing.
-
-```ts
-import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
-
-stubCryptoForAuth();
-
-const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-const url = makeApiUrl("/api/status?limit=5");
-```
-
-- `stubCryptoForAuth()` — shared `crypto.subtle` stub for `requireAdmin`-based handlers.
-- `makeApiRequest(path, options)` — creates requests with optional `method`, `adminKey`, `headers`, and `body`.
-- `makeApiUrl(path)` — normalizes relative API paths into `https://x/...` URLs.
-
-Use these helpers instead of duplicating per-file `vi.stubGlobal("crypto", ...)` or repetitive request builders.
+Use [`worker/src/test-helpers/__shared/auth.ts`](../worker/src/test-helpers/__shared/auth.ts) for auth and request builders rather than duplicating crypto stubs or URL plumbing. Keep success, rejection and unavailable evidence distinct; never weaken authenticated fixtures to bypass changed policy.
 
 ## Test Inventory
 
-The source of truth for the current test inventory is the filesystem, not this document. Use these commands when you need the live set:
+The Git index owns tracked corpus volume; ignored worktrees and generated copies must not be counted. Record the producing command and commit with any volume measurement. Use executable project discovery for runnable tests, not a second per-file roster.
 
-```bash
-rg --files src shared worker/src functions scripts | rg '(^|/)__tests__/|\.(test|spec)\.' | sort
-npm run test:critical-contracts
-npm run coverage:critical
-```
+[`scripts/lib/critical-coverage.mjs`](../scripts/lib/critical-coverage.mjs) discovers high-stakes candidates; [`scripts/lib/critical-ownership.mts`](../scripts/lib/critical-ownership.mts) derives importing owners. Mock-only and type-only imports do not establish behavioral ownership. Completeness, measured coverage thresholds and baseline ratchets are separate obligations: closing a waiver requires a real behavioral import and full-owner coverage measurement.
 
-Tracked test volume is measured from the Git index, never from a filesystem walk: on-disk worktrees (`.worktrees/`, `agents/*/worktree/`) are gitignored and each carries a full copy of the test tree, so a walk that admits them doubles the corpus. That is what produced the 2026-09-21 review brief's erroneous "4,336 files / ~990k LOC" premise (~2× reality). Never record a test-volume number without its producing command and commit:
-
-```bash
-git ls-files '*.test.*' | wc -l
-git ls-files '*.test.*' | xargs cat | wc -l                    # includes a *.test.ts.snap artifact when one exists
-git ls-files | awk '/\.test\.[cm]?[jt]sx?$/' | xargs cat | wc -l # source test files only
-```
-
-At the review pin `be1b7e5b2` (2026-09-21) these returned 2,029 files — 2,028 source files plus one 525-line `__snapshots__/*.test.ts.snap` artifact — totaling 486,086 LOC with the artifact and 485,561 source LOC without it. At `f56ee57ff` (2026-09-22, after the Wave-5 test-lane consolidation deleted the snapshot artifact) both pipelines agree: 2,027 files / 486,824 LOC.
-
-Keep this section focused on how the suite is organized and which surfaces are gate-critical. Do not add a full per-file table; stale path tables were a recurring documentation drift source.
-
-| Area                            | Location                                                             | Purpose                                                                                         |
-| ------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Frontend library and page tests | `src/**/__tests__/`, colocated `*.test.ts(x)` files                  | Pure derivations, route view models, hooks, UI state, and page contracts                        |
-| Shared runtime tests            | `shared/lib/__tests__/`                                              | Runtime-neutral scoring, classification, chain, dependency, reserve, and formatting contracts   |
-| Worker API tests                | `worker/src/api/__tests__/`                                          | Handler contracts, response shapes, auth/method behavior, and admin backfill surfaces           |
-| Worker library tests            | `worker/src/lib/__tests__/`                                          | Auth, cache, rate limit, pricing, status, mint/burn, reserves, report cards, and helper modules |
-| Cron tests                      | `worker/src/cron/**/__tests__/` and colocated cron `*.test.ts` files | Scheduled ingestion, scoring, persistence, degradation, and adapter behavior                    |
-Critical gate coverage is intentionally smaller than the full suite:
-
-- `scripts/lib/critical-coverage.mjs` discovers high-stakes source candidates from the repository roots and path rules. It does not contain a second source-path enrollment list.
-- `scripts/lib/critical-ownership.mts` scans every test file's executable static imports and quoted dynamic `import(...)` calls, resolves relative and repository aliases, and derives a sorted `source → importing tests` map. Mock-only `vi.mock` specifiers and type-only imports do not establish ownership. A candidate is enrolled only when that map has an owner, while the 35 no-owner candidates known at the 2026-09-03 cutover began as dated ownership waivers. New unowned candidates fail `check:critical-coverage-completeness`; closing an existing waiver requires a real importing behavioral contract, not a renewed date.
-- `npm run test:critical-contracts` remains the explicit runner for the 19 existing contract entries (including the 2 global invariant paths). `test:pr` adds 12 additional unique user-facing response, auth, scheduled-dispatch, supply, freshness, cron-sync, and Worker image-rendering contracts for an exact 31-file always-on set.
-- `npm run test:pr` runs that always-on set, Vitest's changed tests, and every test that owns a changed enrolled source. A source change therefore pays only for its importing contracts instead of all 232 formerly hand-maintained critical tests.
-- `npm run coverage:critical` runs the full derived owner set for the weekly/manual ratchet. PR coverage shards also execute that full owner set, partitioned across shards; their changed paths narrow only `buildCriticalCoverageArgs`' V8 source includes and the merge ratchet, not test ownership. Local `coverage:critical` applies the same include narrowing when `CRITICAL_COVERAGE_COMPARE_REF` is set without `CRITICAL_COVERAGE_RATCHET_ALL=1` (as `check:pr` does), using `CRITICAL_COVERAGE_CHANGED_FILES` or the compare-ref diff; the checker then enforces only those touched sources. Outside CI it raises the file-worker cap from 4 to half the available cores, bounded to 4–8; CI keeps 4. Critical-coverage plumbing changes use the full derived source and test set.
-- Real-SQL migration, crash-resume, rollback, and external-effect failure suites remain preferred wherever the runtime owns durable state; authenticated axe coverage and broad UI checks stay outside this gate.
-
-The baseline must also enroll newly covered sources when ownership waivers or coverage exclusions are drained. Measure them with the full derived critical-owner suite; an importing test alone is not a coverage measurement.
-
-When adding tests, prefer colocating them near the module under test unless an existing `__tests__/` directory is already the local pattern. If the new test protects a production gate, add it to the relevant npm script rather than only documenting it here.
+[`scripts/lib/pr-test-plan.mts`](../scripts/lib/pr-test-plan.mts) owns the always-on contracts and changed-owner union. Retain real-SQL and failure-path suites even when pure helper tests are available. Colocate new tests with the owning module or established lane-local directory, and enroll production-gate contracts in the executable planner rather than documenting them only here.
 
 ## Conventions
 
@@ -698,7 +443,7 @@ No gate threshold, waiver, or enumerated path is relaxed to accommodate a deleti
 ### Test style
 
 - Use `describe` per function, `it` per behavior.
-- Test names describe the behavior, not the implementation: `"returns 0 for undefined input"` not `"calls sumPegBuckets with undefined"`.
+- Test names describe the behavior, not the implementation: `"returns null for undefined input"` not `"calls sumPegBucketsOrNull with undefined"`.
 - Use `makeStablecoin()` / `makeStablecoinMeta()` from `shared/test-utils/stablecoin.ts` (see `shared/lib/__tests__/supply.test.ts`) for partial `StablecoinData` mocks — avoids `as any` casts.
 - Use shared fixtures from `worker/src/test-helpers/__shared/fixtures.ts` for DB row mocks.
 - Keep tests focused: one assertion per `it` block when possible.
@@ -773,122 +518,23 @@ Selected files have explicit threshold overrides in `scripts/ci/check-critical-c
 - `npm run test:smoke-api` checks `/api/health` plus either the strict endpoint contract set or its deploy-canary subset.
 - `npm run test:smoke-ops` checks the Access-protected operator UI/API surfaces and their same-origin proxy where an authenticated session is available.
 - `npm run test:smoke-transport` verifies that public HTTP API origins upgrade to the exact HTTPS host, path, and query.
-- `npm run test:smoke-ui` covers the main hydrated browser path, analytics, first-party data availability, and responsive overflow checks; `npm run test:smoke-ui:mobile` applies the stricter tracked mobile-route geometry and control-size assertions. Production scope, retries, environment, and publish ordering remain canonical in [Deployment Process](./deployment-process.md#ci-deploy-sequence).
-- `npm run test:smoke-pages-assets` checks Yield deep routes (the top live rankings plus the source-family canaries in `scripts/lib/pages-asset-smoke.mjs`) for HTML/script MIME coherence, unexpected redirect targets, first-party asset delivery, and fatal runtime or framework error markers; the warm-cache canaries are navigated twice so a cached repeat visit is covered, and `--mode live` additionally rejects HTML cache directives that would let a stale deployment keep being served.
-- `npm run validate:pages-smoke` composes three smokes — `test:smoke-ui`, `test:smoke-ui:mobile`, and `test:smoke-pages-assets` — against one already-built `out/`, and fails fast if `out/` is missing. `PAGES_SMOKE_INCLUDE_MOBILE=0` drops only the mobile smoke; the desktop and asset smokes still run, and the flag has no effect on any smoke invoked directly.
+- `npm run test:smoke-ui` covers hydrated browser paths, analytics, first-party data, and responsive overflow; `npm run test:smoke-ui:mobile` checks tracked route identity, geometry, and control size. Canonical slashes are equivalent; only coin-preserving Yield fallbacks are intentional redirects. [Deployment Process](./deployment-process.md#ci-deploy-sequence) owns production scope and ordering.
+- `npm run test:smoke-pages-assets` checks top-ranked Yield routes and source-family canaries (`scripts/lib/pages-asset-smoke.mjs`) for HTML/script MIME, first-party assets, and fatal errors. Both fetch and browser passes require the requested route or `/yield/` with preserved query overrides and coin-specific `compare`, `from`, and `workbenchFallback` defaults. Warm-cache canaries repeat navigation; `--mode live` rejects stale-serving HTML cache directives.
+- `npm run validate:pages-smoke` runs desktop, mobile and Pages-assets smokes against one built `out/`; missing output, occupied explicit ports, and early child error/exit fail. Readiness requires the owned export server's startup marker before HTTP probing, never an unrelated listener. `PAGES_SMOKE_INCLUDE_MOBILE=0` omits only this wrapper's mobile smoke.
 
 ## Adding a New Test
-When scaffolding is shared by multiple suites, follow the [sibling test-support module convention](#sibling-test-support-modules).
 
-**Frontend library test:**
+Colocate with the owning module or established lane-local test directory. Frontend imports use canonical frontend/shared boundaries; Worker imports stay relative. Shared scaffolding follows the [sibling test-support module convention](#sibling-test-support-modules).
 
-1. Create `src/lib/__tests__/<module>.test.ts`.
-2. Import from the module under test using the canonical boundary:
-   - `@shared/*` for runtime-shared modules
-   - `@/lib/*` for frontend-only modules
-3. Write `describe`/`it` blocks following the conventions above.
-4. Run the owning test file with `npx vitest run <test-file>` and use `npm run check:focused -- --file <source-file> --file <test-file>` for the smallest adequate verification; do not default to the full suite and all lint.
+API contracts validate response schemas and use existing typed row fixtures. Cron contracts assert normal/degraded reasons, unavailable inputs, no optimistic publication and retained last-good state. No-throw or defined-return assertions are not degraded-mode evidence; SQL publication tests assert retained rows and absence of new writes in real SQLite.
 
-**Worker library test:** Same as above but in `worker/src/lib/__tests__/`. Import via relative paths (no `@/` alias).
-
-**API contract test:** Create in `worker/src/api/__tests__/`. Import the handler and use `mockD1()` from `@shared/test-utils/mock-d1`. Use shared fixtures from `../../test-helpers/__shared/fixtures.ts` for row data. Validate response shape against Zod schemas from `shared/types/index.ts`.
-
-**Cron test:** Use the owning lane's `worker/src/cron/<lane>/__tests__/` for lane modules; only flat cron modules belong in `worker/src/cron/__tests__/`. Mock external dependencies with `vi.mock()` and HTTP calls with `mockFetch()`. Exercise both normal and degraded outcomes: assert the machine-readable reason, no optimistic publication, and retained last-good state where applicable. A defined return value or no-throw check does not prove degradation.
-
-Example API contract test:
-
-```ts
-import { describe, it, expect } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
-import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
-import { handleBlacklist } from "../blacklist";
-
-describe("handleBlacklist", () => {
-  const row = makeBlacklistRow();
-  const db = mockD1([
-    { match: "COUNT", rows: [{ total: 1 }] },
-    { match: "blacklist_events", rows: [row] },
-  ]);
-
-  it("returns 200 with events array", async () => {
-    const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { events: unknown[]; total: number };
-    expect(body.events).toHaveLength(1);
-    expect(body.total).toBe(1);
-  });
-});
-```
-
-Example cron degradation contract (in the existing `snapshot-psi.test.ts` owner): no samples must not replace an already published daily row. The SQLite outcome proves both no new publication and retention, rather than pinning SQL text or mock calls.
-
-```ts
-import { afterEach, expect, it, vi } from "vitest";
-import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { snapshotPsiDaily } from "../snapshot-psi";
-
-const fixtures = createLatestSchemaFixtureTracker();
-afterEach(() => {
-  fixtures.closeAll();
-  vi.useRealTimers();
-});
-
-it("retains the last-good daily row when samples become unavailable", async () => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
-  const { sqlite, db } = fixtures.open();
-  const day = Date.parse("2026-03-05T00:00:00Z") / 1000;
-  sqlite.prepare(`INSERT INTO stability_index_samples
-    (stored_at, score, band, components, input_snapshot, methodology_version)
-    VALUES (?, ?, ?, ?, ?, ?)`)
-    .run(day, 87.4, "STEADY", JSON.stringify({
-      severity: 5, breadth: 2, stressBreadth: 1, trend: 0.5,
-    }), "{}", "psi-v3");
-  await snapshotPsiDaily(db);
-  const before = sqlite.prepare("SELECT * FROM stability_index").all();
-  expect(before).toEqual([expect.objectContaining({ computed_at: day, score: 87.4 })]);
-  sqlite.prepare("DELETE FROM stability_index_samples").run();
-
-  const result = await snapshotPsiDaily(db);
-
-  expect(result.status).toBe("degraded");
-  expect(JSON.parse(result.metadata ?? "{}").reason).toBe("no-samples-for-yesterday");
-  expect(result.itemCount).toBe(0);
-  expect(sqlite.prepare("SELECT * FROM stability_index").all()).toEqual(before);
-});
-```
+Use the actual [`blacklist.test.ts`](../worker/src/api/__tests__/blacklist.test.ts) and [`snapshot-psi.test.ts`](../worker/src/cron/__tests__/snapshot-psi.test.ts) behavioral owners as examples, not copied tutorial tests. Run the owning file and [focused feedback](#smallest-adequate-check-per-area) during authoring; [readiness](#pre-push-readiness) remains a separate contract.
 
 ## ESLint Configuration
 
-**Config:** `eslint.config.mjs` (flat config format)
+[`eslint.config.mjs`](../eslint.config.mjs) and [`eslint.typed.config.mjs`](../eslint.typed.config.mjs) own scopes, rules and exclusions; do not duplicate their rule tables, allowlists or ignored-path arrays. Typed unsafe-value and promise rules remain blocking in configured scopes. Decode external data as `unknown` and validate it at the typed boundary.
 
-**Extends:** `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript`
-
-**Type-aware lane:** `npm run lint:typed` keeps the promise rules blocking across Worker, Pages Functions, and shared runtime code. Its boundary overrides also reject unsafe `any` assignment, member access, calls, arguments, and returns under `worker/src/lib`, `worker/src/api`, `functions`, `shared/lib`, `src/lib`, and `src/hooks`; decode external values as `unknown` and validate them before use.
-
-**Custom rules** — React Compiler rules are set to `error`. They flag patterns that are merely suboptimal for the compiler, but `lint` runs with `--max-warnings=0`, so `error` and `warn` fail the gate identically; configuring them as `error` keeps the declared severity aligned with enforcement. Use a scoped `eslint-disable` with justification for the rare legitimate exception:
-
-| Rule                                      | Level | Reason                                                                                       |
-| ----------------------------------------- | ----- | -------------------------------------------------------------------------------------------- |
-| `react-hooks/preserve-manual-memoization` | error | Compiler can't optimize `useMemo([data])` when body accesses `data.current.*` sub-properties |
-| `react-hooks/set-state-in-effect`         | error | Standard pattern for reading localStorage/sessionStorage on mount                            |
-| `react-hooks/purity`                      | error | `Date.now()` in render is intentional for timestamp-based UIs                                |
-| `react-hooks/incompatible-library`        | error | TanStack Virtual `useVirtualizer()` — known library limitation                               |
-
-**Security plugin** — `eslint-plugin-security` keeps its regex and timing rules (`detect-unsafe-regex`, `detect-non-literal-regexp`, `detect-possible-timing-attacks`) enabled; suppress them only with a scoped `eslint-disable` plus justification. `detect-object-injection` and `detect-non-literal-fs-filename` are off globally in `eslint.config.mjs` — both flag routine dynamic-property and dynamic-filesystem-path access that repo scripts and tests use intentionally. The fs rule previously required ~101 inline suppressions; an owner review replaced them (and the `scripts/**` carve-out) with the global off.
-
-**Import boundaries** — `no-restricted-imports` blocks carry the lint-shaped architectural rules so they run on every changed file through `lint:changed` instead of a separate scanner:
-
-| Scope | Restriction |
-| ----- | ----------- |
-| `worker/src/**` | No bare `viem`; among viem subpaths only `viem/utils` and `viem/siwe` are allowed (worker tests additionally allow `viem/accounts`). The ADR-2 worker→frontend half is not in this block: the custom `pharos/worker-import-boundaries` rule rejects any specifier containing `@/` or `src/` |
-| `src/**`, `shared/**`, `scripts/**`, `functions/**` | No `worker/src/**` imports (ADR-2, frontend→worker half). The sole reviewed waiver is listed in `FRONTEND_TO_WORKER_WAIVED_FILES` in `eslint.config.mjs` |
-| `shared/lib/**` (excluding its tests) | No `@shared/*` aliases — use relative imports |
-| `src/app/**`, `src/components/**`, `worker/src/api/**` | No `sumPegBuckets` from `@shared/lib/supply`; cached `StablecoinData` supply reads use `getCirculatingRaw()`. The three raw-bucket parsers under `worker/src/api/` that pre-date a `StablecoinData` object are listed as glob exceptions in the config |
-
-Because flat config *replaces* a rule's options when several config objects match the same file, the blocks above compose their pattern lists from shared constants rather than relying on merging.
-
-**Ignored paths:** `.next/`, `out/`, `build/`, `coverage/`, `.cache/`, `.claude/`, `.codex-autorunner/`, `agents/**`, `worker/.wrangler/`, `.worktrees/`, `worktrees/`, and `next-env.d.ts` (auto-generated build artifacts, gate/tooling caches, agent scratch areas, and worktree directories). The conditional worktree behavior described earlier applies to Vitest coverage globs, not ESLint.
+Suppressions require a scoped justification, never a blanket subsystem exemption. Flat-config rule options replace rather than merge; use existing composed constants when extending restrictions. Import boundaries, nullable supply admission and React purity remain governed by the root rules and their executable lint authorities.
 
 ### Zod Runtime Validation
 

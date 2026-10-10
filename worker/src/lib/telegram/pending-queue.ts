@@ -39,8 +39,13 @@ export function hashDedupePart(value: string): string {
  * legacy or test paths), tagged with {@link TELEGRAM_SPLIT_VERSION} so any
  * future change to the chunking algorithm cleanly invalidates old rows rather
  * than orphaning them. The chunk index keeps split parts distinct.
+ * Freeze chunks additionally bind the immutable Tape source identity: separate
+ * events can render identical HTML and must still have independent deliveries.
  */
 export function buildDedupeKey(message: BatchMessage, splitVersion: number = TELEGRAM_SPLIT_VERSION): string {
+  if (message.alertType === "freeze" && message.sourceEventId) {
+    return `${message.chatId}:v${splitVersion}:${message.chunkIndex ?? 0}:${message.sourceEventId}`;
+  }
   const canonical = message.canonicalHtml ?? message.html;
   return `${message.chatId}:v${splitVersion}:${message.chunkIndex ?? 0}:${hashDedupePart(canonical)}`;
 }

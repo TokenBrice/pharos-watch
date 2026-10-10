@@ -18,14 +18,12 @@ import {
   notApplicableFreshnessMetadata,
 } from "./helpers";
 import { runAdapterIo } from "./concurrency";
-import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
 import {
   addressObservation,
   customObservation,
   executeEvmObservationPlan,
-  rawObservation,
+  boolObservation,
   uint256Observation,
-  type AnyEvmObservationField,
 } from "./evm-observation-plan";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 
@@ -112,6 +110,15 @@ interface AnzenRedemptionProbe {
   feeBps: number | null;
 }
 
+type AnzenStateValues =
+  Record<"usdz:total-supply" | "usdz:decimals" | "usdz:total-pooled-spct" |
+    "usdz:collateral-rate" | "usdz:mode" | "usdz:redeem-fee-rate" | "usdz:fee-coefficient" |
+    "spct:balance-of-usdz" | "spct:reserve-usd" | "spct:redeem-fee-rate" | "spct:fee-coefficient" |
+    "usdc:spct-balance" | "usdc:usdz-balance" | "oracle:price" | "spct:decimals", bigint> &
+  Record<"usdz:spct" | "usdz:usdc" | "usdz:oracle" | "usdz:symbol", string> &
+  Record<"usdz:paused" | "spct:paused" | "spct:usdz-whitelisted", boolean> &
+  { "usdz:endpoint": string | null };
+
 interface ChainObservation {
   chain: SupportedSupplyChain;
   address: string;
@@ -120,7 +127,7 @@ interface ChainObservation {
   decimals: number;
   endpoint: string | null;
   codeHash: string;
-  values: ReadonlyMap<string, `0x${string}`>;
+  values: AnzenStateValues;
 }
 
 interface LayerZeroMetadata {
@@ -157,12 +164,11 @@ function getAdapterRpcUrls(chain: SupportedSupplyChain): string[] {
 }
 
 function buildStateFields(chain: SupportedSupplyChain, usdz: string) {
-  const fields: AnyEvmObservationField[] = [
+  const fields = [
     uint256Observation({
       label: "usdz:total-supply",
       contract: usdz,
       data: TOTAL_SUPPLY_SELECTOR,
-      verify: (value) => value > 0n ? null : "total supply is not positive",
     }),
     uint256Observation({
       label: "usdz:decimals",
@@ -189,36 +195,36 @@ function buildStateFields(chain: SupportedSupplyChain, usdz: string) {
         ? null
         : "LayerZero endpoint drifted",
     }),
-  ];
+  ] as const;
   if (chain !== "ethereum") return fields;
 
-  fields.push(
-    rawObservation({ label: "usdz:total-pooled-spct", contract: usdz, data: "0x8abb1eb4" }),
-    rawObservation({ label: "usdz:spct", contract: usdz, data: USDZ_SPCT_SELECTOR }),
-    rawObservation({ label: "usdz:usdc", contract: usdz, data: USDZ_USDC_SELECTOR }),
-    rawObservation({ label: "usdz:oracle", contract: usdz, data: USDZ_ORACLE_SELECTOR }),
-    rawObservation({ label: "usdz:paused", contract: usdz, data: PAUSED_SELECTOR }),
-    rawObservation({ label: "usdz:collateral-rate", contract: usdz, data: USDZ_COLLATERAL_RATE_SELECTOR }),
-    rawObservation({ label: "usdz:mode", contract: usdz, data: USDZ_MODE_SELECTOR }),
-    rawObservation({ label: "usdz:redeem-fee-rate", contract: usdz, data: REDEEM_FEE_RATE_SELECTOR }),
-    rawObservation({ label: "usdz:fee-coefficient", contract: usdz, data: FEE_COEFFICIENT_SELECTOR }),
-    rawObservation({ label: "spct:balance-of-usdz", contract: SPCT_POOL_CONTRACT, data: encodeAddressCallData(BALANCE_OF_SELECTOR, usdz) }),
-    rawObservation({ label: "spct:reserve-usd", contract: SPCT_POOL_CONTRACT, data: SPCT_RESERVE_USD_SELECTOR }),
-    rawObservation({ label: "spct:paused", contract: SPCT_POOL_CONTRACT, data: PAUSED_SELECTOR }),
-    rawObservation({ label: "spct:redeem-fee-rate", contract: SPCT_POOL_CONTRACT, data: REDEEM_FEE_RATE_SELECTOR }),
-    rawObservation({ label: "spct:fee-coefficient", contract: SPCT_POOL_CONTRACT, data: FEE_COEFFICIENT_SELECTOR }),
-    rawObservation({ label: "spct:usdz-whitelisted", contract: SPCT_POOL_CONTRACT, data: encodeAddressCallData(SPCT_IS_WHITELIST_SELECTOR, usdz) }),
-    rawObservation({ label: "usdc:spct-balance", contract: USDC_CONTRACT, data: encodeAddressCallData(BALANCE_OF_SELECTOR, SPCT_POOL_CONTRACT) }),
-    rawObservation({ label: "usdc:usdz-balance", contract: USDC_CONTRACT, data: encodeAddressCallData(BALANCE_OF_SELECTOR, usdz) }),
-    rawObservation({ label: "oracle:price", contract: SPCT_PRICE_ORACLE_CONTRACT, data: ORACLE_GET_PRICE_SELECTOR }),
+  return [
+    ...fields,
+    uint256Observation({ label: "usdz:total-pooled-spct", contract: usdz, data: "0x8abb1eb4" }),
+    addressObservation({ label: "usdz:spct", contract: usdz, data: USDZ_SPCT_SELECTOR }),
+    addressObservation({ label: "usdz:usdc", contract: usdz, data: USDZ_USDC_SELECTOR }),
+    addressObservation({ label: "usdz:oracle", contract: usdz, data: USDZ_ORACLE_SELECTOR }),
+    boolObservation({ label: "usdz:paused", contract: usdz, data: PAUSED_SELECTOR }),
+    uint256Observation({ label: "usdz:collateral-rate", contract: usdz, data: USDZ_COLLATERAL_RATE_SELECTOR }),
+    uint256Observation({ label: "usdz:mode", contract: usdz, data: USDZ_MODE_SELECTOR }),
+    uint256Observation({ label: "usdz:redeem-fee-rate", contract: usdz, data: REDEEM_FEE_RATE_SELECTOR }),
+    uint256Observation({ label: "usdz:fee-coefficient", contract: usdz, data: FEE_COEFFICIENT_SELECTOR }),
+    uint256Observation({ label: "spct:balance-of-usdz", contract: SPCT_POOL_CONTRACT, data: encodeAddressCallData(BALANCE_OF_SELECTOR, usdz) }),
+    uint256Observation({ label: "spct:reserve-usd", contract: SPCT_POOL_CONTRACT, data: SPCT_RESERVE_USD_SELECTOR }),
+    boolObservation({ label: "spct:paused", contract: SPCT_POOL_CONTRACT, data: PAUSED_SELECTOR }),
+    uint256Observation({ label: "spct:redeem-fee-rate", contract: SPCT_POOL_CONTRACT, data: REDEEM_FEE_RATE_SELECTOR }),
+    uint256Observation({ label: "spct:fee-coefficient", contract: SPCT_POOL_CONTRACT, data: FEE_COEFFICIENT_SELECTOR }),
+    boolObservation({ label: "spct:usdz-whitelisted", contract: SPCT_POOL_CONTRACT, data: encodeAddressCallData(SPCT_IS_WHITELIST_SELECTOR, usdz) }),
+    uint256Observation({ label: "usdc:spct-balance", contract: USDC_CONTRACT, data: encodeAddressCallData(BALANCE_OF_SELECTOR, SPCT_POOL_CONTRACT) }),
+    uint256Observation({ label: "usdc:usdz-balance", contract: USDC_CONTRACT, data: encodeAddressCallData(BALANCE_OF_SELECTOR, usdz) }),
+    uint256Observation({ label: "oracle:price", contract: SPCT_PRICE_ORACLE_CONTRACT, data: ORACLE_GET_PRICE_SELECTOR }),
     uint256Observation({
       label: "spct:decimals",
       contract: SPCT_POOL_CONTRACT,
       data: DECIMALS_SELECTOR,
       verify: (value) => value === BigInt(EXPECTED_SPCT_DECIMALS) ? null : "SPCT decimals drifted",
     }),
-  );
-  return fields;
+  ] as const;
 }
 
 function decodeString(raw: `0x${string}` | undefined, label: string): string {
@@ -230,30 +236,6 @@ function decodeString(raw: `0x${string}` | undefined, label: string): string {
   } catch {
     throw new Error(`${ADAPTER_KEY} ${label} returned malformed data`);
   }
-}
-
-function requireWord(values: ReadonlyMap<string, `0x${string}`>, label: string): `0x${string}` {
-  const value = values.get(label);
-  if (!value) throw new Error(`${ADAPTER_KEY} ${label} read failed`);
-  return value;
-}
-
-function requireUint(values: ReadonlyMap<string, `0x${string}`>, label: string): bigint {
-  const value = decodeUint256Word(requireWord(values, label));
-  if (value == null) throw new Error(`${ADAPTER_KEY} ${label} returned malformed data`);
-  return value;
-}
-
-function requireBool(values: ReadonlyMap<string, `0x${string}`>, label: string): boolean {
-  const value = decodeStrictBoolWord(requireWord(values, label));
-  if (value == null) throw new Error(`${ADAPTER_KEY} ${label} returned malformed bool`);
-  return value;
-}
-
-function requireAddress(values: ReadonlyMap<string, `0x${string}`>, label: string): string {
-  const value = decodeStrictAddressWord(requireWord(values, label));
-  if (!value) throw new Error(`${ADAPTER_KEY} ${label} returned malformed address`);
-  return value.toLowerCase();
 }
 
 function combinedRedeemFeeBps(
@@ -348,10 +330,10 @@ async function readChain(
     }],
     read: async () => decoded,
   });
-  const rawSupply = snapshot.values["usdz:total-supply"] as bigint;
-  const decimalsRaw = snapshot.values["usdz:decimals"] as bigint;
-  const symbol = snapshot.values["usdz:symbol"] as string;
-  const endpoint = snapshot.values["usdz:endpoint"] as string | null;
+  const rawSupply = snapshot.values["usdz:total-supply"];
+  const decimalsRaw = snapshot.values["usdz:decimals"];
+  const symbol = snapshot.values["usdz:symbol"];
+  const endpoint = snapshot.values["usdz:endpoint"];
   return {
     chain,
     address: contract.address.toLowerCase(),
@@ -360,7 +342,7 @@ async function readChain(
     decimals: Number(decimalsRaw),
     endpoint,
     codeHash: snapshot.metadata.runtimeCodeHash as string,
-    values: snapshot.rawByLabel,
+    values: snapshot.values,
   };
 }
 
@@ -395,20 +377,20 @@ async function fetchLayerZeroMetadata(signal: AbortSignal, ctx?: AdapterContext)
   return response;
 }
 
-function observeAnzenRedemption(values: ReadonlyMap<string, `0x${string}`>): AnzenRedemptionProbe {
-  if (requireAddress(values, "usdz:usdc") !== USDC_CONTRACT) throw new Error(`${ADAPTER_KEY} usdc() identity drifted`);
-  if (requireAddress(values, "usdz:spct") !== SPCT_POOL_CONTRACT.toLowerCase()) throw new Error(`${ADAPTER_KEY} spct() identity drifted`);
-  if (requireAddress(values, "usdz:oracle") !== SPCT_PRICE_ORACLE_CONTRACT) throw new Error(`${ADAPTER_KEY} oracle() identity drifted`);
-  const usdzPaused = requireBool(values, "usdz:paused");
-  const spctPaused = requireBool(values, "spct:paused");
-  const whitelisted = requireBool(values, "spct:usdz-whitelisted");
-  const reserveUsdRaw = requireUint(values, "spct:reserve-usd");
-  const spctUsdcRaw = requireUint(values, "usdc:spct-balance");
-  const usdzUsdcRaw = requireUint(values, "usdc:usdz-balance");
-  const collateralRate = requireUint(values, "usdz:collateral-rate");
-  const oraclePriceRaw = requireUint(values, "oracle:price");
-  const mode = requireUint(values, "usdz:mode");
-  const pooledSpctRaw = requireUint(values, "usdz:total-pooled-spct");
+function observeAnzenRedemption(values: ChainObservation["values"]): AnzenRedemptionProbe {
+  if (values["usdz:usdc"] !== USDC_CONTRACT) throw new Error(`${ADAPTER_KEY} usdc() identity drifted`);
+  if (values["usdz:spct"] !== SPCT_POOL_CONTRACT.toLowerCase()) throw new Error(`${ADAPTER_KEY} spct() identity drifted`);
+  if (values["usdz:oracle"] !== SPCT_PRICE_ORACLE_CONTRACT) throw new Error(`${ADAPTER_KEY} oracle() identity drifted`);
+  const usdzPaused = values["usdz:paused"];
+  const spctPaused = values["spct:paused"];
+  const whitelisted = values["spct:usdz-whitelisted"];
+  const reserveUsdRaw = values["spct:reserve-usd"];
+  const spctUsdcRaw = values["usdc:spct-balance"];
+  const usdzUsdcRaw = values["usdc:usdz-balance"];
+  const collateralRate = values["usdz:collateral-rate"];
+  const oraclePriceRaw = values["oracle:price"];
+  const mode = values["usdz:mode"];
+  const pooledSpctRaw = values["usdz:total-pooled-spct"];
   const routePaused = usdzPaused || spctPaused || !whitelisted || mode !== 0n ||
     pooledSpctRaw === 0n || oraclePriceRaw < collateralRate;
   const settleableRaw = spctUsdcRaw + usdzUsdcRaw;
@@ -425,10 +407,10 @@ function observeAnzenRedemption(values: ReadonlyMap<string, `0x${string}`>): Anz
     routeOpen: !routePaused && capacityUsd > 0,
     routePaused,
     feeBps: combinedRedeemFeeBps(
-      requireUint(values, "usdz:redeem-fee-rate"),
-      requireUint(values, "usdz:fee-coefficient"),
-      requireUint(values, "spct:redeem-fee-rate"),
-      requireUint(values, "spct:fee-coefficient"),
+      values["usdz:redeem-fee-rate"],
+      values["usdz:fee-coefficient"],
+      values["spct:redeem-fee-rate"],
+      values["spct:fee-coefficient"],
     ),
   };
 }
@@ -450,10 +432,10 @@ export async function fetchAnzenUsdzReserves(
   const ethereum = chainObservations.find((observation) => observation.chain === "ethereum");
   if (!ethereum) throw new Error(`${ADAPTER_KEY} Ethereum observation missing`);
   const redemption = observeAnzenRedemption(ethereum.values);
-  const pooledSpctRaw = requireUint(ethereum.values, "usdz:total-pooled-spct");
-  const heldSpctRaw = requireUint(ethereum.values, "spct:balance-of-usdz");
+  const pooledSpctRaw = ethereum.values["usdz:total-pooled-spct"];
+  const heldSpctRaw = ethereum.values["spct:balance-of-usdz"];
   const liabilityRaw = chainObservations.reduce((sum, observation) => sum + observation.rawSupply, 0n);
-  const oraclePriceRaw = requireUint(ethereum.values, "oracle:price");
+  const oraclePriceRaw = ethereum.values["oracle:price"];
   const backedSpctRaw = heldSpctRaw < pooledSpctRaw ? heldSpctRaw : pooledSpctRaw;
   // getPrice() is USD per SPCT at 18 decimals, matching collateralRate().
   const reserveValueRaw = backedSpctRaw * oraclePriceRaw / 10n ** 18n;

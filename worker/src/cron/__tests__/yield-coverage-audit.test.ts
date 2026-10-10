@@ -42,6 +42,7 @@ import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import type { PublishedSafetyScoresResultMap } from "../../lib/safety-scores";
 import { findStaleVenueRiskScores, type StaleVenueRiskScore } from "@shared/lib/yield-source-risk-registry";
+import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 
 const mockLoadDlStablecoinPools = vi.mocked(loadDlStablecoinPools);
 const mockGetCache = vi.mocked(getCache);
@@ -123,6 +124,81 @@ describe("buildProtocolCategoryLookupFromCachePayload", () => {
   });
 });
 
+describe("coverage detector pre-cap cohorts", () => {
+  it("keeps all 25 lending and venue candidates until durable review and publication", async () => {
+    const projects = Array.from({ length: 25 }, (_, i) => `uncurated-lender-${i}`);
+    const pools = projects.map((project, i) => lendingPool({ pool: `uncurated-pool-${i}`,
+      project, symbol: "USDC", tvlUsd: 10_000_000 }));
+    const publishedRows = projects.map((project, i) => ({
+      stablecoinId: `coin-${i}`, venueProtocol: `unreviewed-${project}`, sourceKey: `protocol-api:${project}`,
+      sourceTvlUsd: 10_000_000,
+    }));
+    const gaps = identifyCoverageGaps(pools, new Set(), undefined,
+      new Map(projects.map((project) => [project, "Lending"])), { publishedVenueRows: publishedRows });
+    expect(gaps.lendingAllowlistRecommendations).toHaveLength(25);
+    expect(gaps.venueRiskConfigMissing).toHaveLength(25);
+    const candidates = buildCoverageAuditOperatorQueue({ gaps, manifestMissingIds: [],
+      yieldBearingMissingFromRankings: [], staleVenueRiskScores: [] });
+    expect(candidates.recommendationCandidates.filter((item) => item.kind === "lending-allowlist")).toHaveLength(25);
+    expect(candidates.recommendationCandidates.filter((item) => item.kind === "venue-risk-config-missing")).toHaveLength(25);
+
+    mockLoadDlStablecoinPools.mockResolvedValue({ pools,
+      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: pools.length, fallbackMode: null } });
+    mockGetCache.mockImplementation(async (_db, key) => {
+      if (key === "stablecoins") return { value: "[]", updatedAt: 1_774_526_300 };
+      if (key === "yield-rankings") return { value: JSON.stringify({ rankings: publishedRows.map((row) => ({
+        id: row.stablecoinId, sourceTvlUsd: row.sourceTvlUsd,
+        sourceRisk: { venueProtocol: row.venueProtocol }, provenance: { sourceKey: row.sourceKey },
+      })) }), updatedAt: 1_774_526_300 };
+      if (key === "defillama-protocols") return { value: JSON.stringify({ protocols:
+        projects.map((slug) => ({ slug, category: "Lending" })) }), updatedAt: 1_774_526_300 };
+      return null;
+    });
+    mockComputeSafetyScoresSnapshot.mockResolvedValue(successfulSafetySnapshot());
+    const db = mockD1([{ match: "yield_coverage_review_dispositions", rows: [] }]);
+    await runYieldCoverageAudit(db);
+    const report = JSON.parse(String(mockSetCache.mock.calls[0]?.[2]));
+    expect(report.lendingAllowlistRecommendationCount).toBe(25);
+    expect(report.venueRiskConfigMissingCount).toBe(25);
+    expect(report.lendingAllowlistRecommendations).toHaveLength(20);
+    expect(report.venueRiskConfigMissing).toHaveLength(20);
+    expect(report.queueTotals.totalItemCount).toBe(report.queueTotals.publishedItemCount + report.queueTotals.truncatedItemCount);
+    expect(report.queueTotals.byKind["lending-allowlist"]).toBe(25);
+    expect(report.queueTotals.byKind["venue-risk-config-missing"]).toBe(25);
+    const dispositionReads = db.getHistory().filter((entry) => entry.sql.includes("yield_coverage_review_dispositions"));
+    const allReadIds = dispositionReads.flatMap((entry) => entry.binds);
+    for (const candidate of candidates.recommendationCandidates) expect(allReadIds).toContain(candidate.id);
+    const suppressed = candidates.recommendationCandidates.find((item) => item.kind === "lending-allowlist")!;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const reviewedDb = mockD1([{ match: "yield_coverage_review_dispositions", rows: [{
+      queue_item_id: suppressed.id, queue_item_kind: suppressed.kind,
+      evidence_fingerprint: buildYieldCoverageEvidenceFingerprint(suppressed), disposition: "watch",
+      evidence: "Reviewed matching source evidence", review_owner: "yield-review",
+      reviewed_at: nowSec - 60, next_review_at: nowSec + 3600, expires_at: nowSec + 7200,
+    }] }]);
+    await runYieldCoverageAudit(reviewedDb);
+    const reviewWrites = mockSetCache.mock.calls.filter((call) => call[1] === "yield-coverage-audit");
+    const reviewed = JSON.parse(String(reviewWrites[reviewWrites.length - 1]?.[2]));
+    expect(reviewed.queueTotals.suppressedItemCount).toBe(1);
+    expect(reviewed.queueTotals.byKind["lending-allowlist"]).toBe(24);
+    expect(reviewed.queueTotals.totalItemCount).toBe(report.queueTotals.totalItemCount - 1);
+    expect(reviewed.queueTotals.totalItemCount).toBe(reviewed.queueTotals.publishedItemCount + reviewed.queueTotals.truncatedItemCount);
+  });
+
+  it("retains native groups beyond the former 50-group detector limit", () => {
+    const symbols = [...new Set(ACTIVE_YIELD_BEARING_STABLECOINS.map((coin) => coin.symbol))].slice(0, 55);
+    expect(symbols.length).toBeGreaterThan(50);
+    const pools = symbols.map((symbol, i) => lendingPool({ pool: `native-${i}`,
+      project: "native-unreviewed", symbol, tvlUsd: 10_000_000 }));
+    const gaps = identifyCoverageGaps(pools, new Set());
+    expect(gaps.nativeExactPoolRecommendations.length).toBeGreaterThan(50);
+    const queue = buildCoverageAuditOperatorQueue({ gaps, manifestMissingIds: [],
+      yieldBearingMissingFromRankings: [], staleVenueRiskScores: [] });
+    expect(queue.recommendationCandidates.filter((item) => item.kind === "native-exact-pool"))
+      .toHaveLength(gaps.nativeExactPoolRecommendations.length);
+  });
+});
+
 describe("runYieldCoverageAudit", () => {
   it.each([
     ["missing", null],
@@ -185,18 +261,32 @@ describe("runYieldCoverageAudit", () => {
     expect(mockSetCache).not.toHaveBeenCalled();
   });
 
-  it("defers when the published rankings cache is malformed", async () => {
+  it.each([
+    "{",
+    "{}",
+    JSON.stringify({ rankings: null }),
+    JSON.stringify({ rankings: {} }),
+    JSON.stringify({ rankings: [null] }),
+    JSON.stringify({ rankings: [{ id: 42 }] }),
+    JSON.stringify({ rankings: [{ id: "coin", sourceTvlUsd: "unknown" }] }),
+    JSON.stringify({ rankings: [{ id: "coin", altSources: {} }] }),
+    JSON.stringify({ rankings: [{ id: "coin", altSources: [null] }] }),
+    JSON.stringify({ rankings: [{ id: "coin", altSources: [{}] }] }),
+    JSON.stringify({ rankings: [{ id: "coin", altSources: [{ sourceKey: "alternate", sourceRisk: { venueProtocol: 42 } }] }] }),
+    JSON.stringify({ rankings: [{ id: "coin", provenance: { sourceKey: 42 } }] }),
+  ])("defers without report or durable candidate writes for malformed rankings: %s", async (value) => {
     mockLoadDlStablecoinPools.mockResolvedValue({
       pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
       meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
     });
     mockGetCache.mockImplementation(async (_db, key) =>
       key === "yield-rankings"
-        ? { value: "{", updatedAt: 1_774_526_300 }
+        ? { value, updatedAt: 1_774_526_300 }
         : null
     );
 
-    const result = await runYieldCoverageAudit(mockD1());
+    const db = mockD1();
+    const result = await runYieldCoverageAudit(db);
 
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
@@ -205,6 +295,26 @@ describe("runYieldCoverageAudit", () => {
     });
     expect(mockComputeSafetyScoresSnapshot).not.toHaveBeenCalled();
     expect(mockSetCache).not.toHaveBeenCalled();
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it("treats a validated empty rankings array as available coverage", async () => {
+    mockLoadDlStablecoinPools.mockResolvedValue({
+      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
+      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
+    });
+    mockComputeSafetyScoresSnapshot.mockResolvedValue(successfulSafetySnapshot());
+    mockGetCache.mockImplementation(async (_db, key) => {
+      if (key === "yield-rankings") return { value: JSON.stringify({ rankings: [] }), updatedAt: 1_774_526_300 };
+      if (key === "stablecoins") return { value: "[]", updatedAt: 1_774_526_300 };
+      if (key === "defillama-protocols") {
+        return { value: JSON.stringify({ protocols: [] }), updatedAt: 1_774_526_300 };
+      }
+      return null;
+    });
+    const result = await runYieldCoverageAudit(mockD1([{ match: "yield_coverage_review_dispositions", rows: [] }]));
+    expect(result.status).toBe("ok");
+    expect(mockSetCache).toHaveBeenCalledWith(expect.anything(), "yield-coverage-audit", expect.any(String));
   });
 
   it.each([

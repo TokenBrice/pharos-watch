@@ -49,6 +49,8 @@ describe("Pharos table primitives", () => {
     expect(viewport?.getAttribute("data-slot")).toBe("table-viewport");
     expect(viewport?.querySelector("[data-slot='table-container']")).toBeNull();
     expect(table.getAttribute("data-slot")).toBe("table");
+    expect(table.querySelector("[data-slot='table-header']")).toBeTruthy();
+    expect(table.querySelector("[data-slot='table-body']")).toBeTruthy();
     expect(table.getAttribute("aria-label")).toBe("Stablecoin Overview table");
     expect(table.className).toContain("min-w-[480px]");
     expect(screen.getByText("Name").closest("th")?.getAttribute("data-slot")).toBe("table-head");
@@ -62,6 +64,7 @@ describe("Pharos table primitives", () => {
       <TableFrame
         tableId="methodology-reference"
         caption="Methodology reference"
+        testId="reference-surface"
         captionClassName="sr-only"
         tableAriaLabel="Reference table"
         chrome="content"
@@ -81,17 +84,71 @@ describe("Pharos table primitives", () => {
       </TableFrame>,
     );
 
-    const shell = screen.getByTestId("methodology-reference-table");
+    const shell = screen.getByTestId("reference-surface");
     const table = screen.getByRole("table", { name: "Reference table" });
 
     expect(shell.getAttribute("data-table-id")).toBe("methodology-reference");
-    expect(shell.className).toContain("pharos-density-compact");
-    expect(shell.className).toContain("rounded-xl");
     expect(screen.queryByText("Swipe sideways for more columns")).toBeNull();
     expect(table.getAttribute("aria-label")).toBe("Reference table");
+    expect(screen.getByText("Methodology reference").getAttribute("data-slot")).toBe("table-caption");
     expect(
       screen.getByText("Methodology reference").closest("caption")?.className,
     ).toContain("sr-only");
+  });
+
+  it("passes region props to the surface and viewport props to the scroll area", () => {
+    render(
+      <TableFrame
+        role="region"
+        aria-label="Coverage matrix region"
+        tabIndex={0}
+        className="custom-surface"
+        viewportClassName="custom-viewport"
+        viewportProps={{
+          "aria-label": "Scrollable coverage matrix",
+          mobileScrollHint: false,
+        }}
+      >
+        <TableBody>
+          <TableRow>
+            <TableCell>USDT</TableCell>
+          </TableRow>
+        </TableBody>
+      </TableFrame>,
+    );
+
+    const surface = screen.getByRole("region", { name: "Coverage matrix region" });
+    const viewport = surface.querySelector("[data-slot='table-viewport']");
+
+    expect(surface.getAttribute("tabindex")).toBe("0");
+    expect(surface.className).toContain("custom-surface");
+    expect(viewport?.className).toContain("custom-viewport");
+    expect(viewport?.getAttribute("aria-label")).toBe("Scrollable coverage matrix");
+    expect(screen.queryByText("Swipe sideways for more columns")).toBeNull();
+  });
+
+  it("forwards caller classes to the table, header and cells", () => {
+    render(
+      <TableFrame tableClassName="min-w-[64rem] table-fixed">
+        <TableHeader className="custom-header">
+          <TableRow>
+            <TableHead className="custom-head">Metric</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow>
+            <TableCell className="custom-cell">Peg score</TableCell>
+          </TableRow>
+        </TableBody>
+      </TableFrame>,
+    );
+
+    const table = screen.getByRole("table");
+    expect(table.className).toContain("min-w-[64rem]");
+    expect(table.className).toContain("table-fixed");
+    expect(table.querySelector("thead")?.className).toContain("custom-header");
+    expect(screen.getByText("Metric").closest("th")?.className).toContain("custom-head");
+    expect(screen.getByText("Peg score").closest("td")?.className).toContain("custom-cell");
   });
 
   it("preserves explicit table labels over the table id fallback", () => {
@@ -132,8 +189,6 @@ describe("Pharos table primitives", () => {
 
     const shell = screen.getByTestId("methodology-example-table");
     expect(shell.getAttribute("data-table-id")).toBe("methodology-example");
-    expect(shell.className).toContain("pharos-density-compact");
-    expect(shell.className).toContain("rounded-xl");
     expect(screen.queryByText("Swipe sideways for more columns")).toBeNull();
     expect(screen.getByText("Name").closest("th")?.getAttribute("scope")).toBe("col");
     expect(

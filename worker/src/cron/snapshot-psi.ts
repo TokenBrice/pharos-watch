@@ -4,7 +4,7 @@ import { createCronResult } from "../lib/cron-result";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import { getConditionBand } from "../lib/stability-index";
+import { getConditionBand } from "@shared/lib/psi-policy";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { round1 } from "@shared/lib/math";
 

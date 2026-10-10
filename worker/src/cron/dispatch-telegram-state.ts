@@ -1,4 +1,5 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { ReserveAlertObservationsSchema } from "@shared/types/status/telegram";
 import { WORKER_PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   alertSafetyIdentitiesAreComparable,
@@ -121,6 +122,7 @@ export interface DispatchSourceData {
   reserveCache: CachedValue;
   /** Dispatch-owned baseline: the drift id-set the dispatcher last acted on. */
   reserveDispatchedCache: CachedValue;
+  reserveObservedCache?: CachedValue;
 }
 
 export interface DispatchSnapshotState {
@@ -145,6 +147,7 @@ export interface DispatchSnapshotState {
      * prior baseline to preserve.
      */
     reserveDispatched: string[] | null;
+    reserveObserved?: Record<string, number> | null;
   };
   /** Drift id-set the dispatcher last acted on (prior baseline). */
   previousReserveDriftIds: string[];
@@ -182,12 +185,13 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     launchCache,
     reserveCache,
     reserveDispatchedCache,
+    reserveObservedCache,
   ] = await Promise.all([
     loadDewsRows(db, snoozeNowSec),
     db
       .prepare(
         `SELECT /* pharos:telegram-dispatch:active-depegs */
-           id AS event_id, stablecoin_id, symbol, direction, peak_deviation_bps, start_price, peak_price, peg_reference
+           id AS event_id, stablecoin_id, symbol, direction, peak_deviation_bps, start_price, peak_price, peg_reference, started_at
          FROM depeg_events WHERE ended_at IS NULL`,
       )
       .all<ActiveDepegRowWithEventId>()
@@ -204,6 +208,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     getCache(db, SNAPSHOT_KEYS.launch),
     getCache(db, SNAPSHOT_KEYS.reserve),
     getCache(db, SNAPSHOT_KEYS.reserveDispatched),
+    getCache(db, SNAPSHOT_KEYS.reserveObserved),
   ]);
 
   return {
@@ -219,6 +224,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     launchCache,
     reserveCache,
     reserveDispatchedCache,
+    reserveObservedCache,
   };
 }
 
@@ -282,17 +288,9 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
         safetySourceAssessment.envelope.safetyScoreIdentity,
       ));
 
-  // Augment the current depeg snapshot with the active event id per coin so the
-  // close-then-reopen-within-one-window diff in dispatch-telegram-events can tell
-  // event #1 (now ended) and event #2 (now active) apart. Legacy snapshots
-  // without `eventId` still diff on stablecoin_id alone (backward compatible).
+  // The canonical builder persists event identity. Legacy snapshots without
+  // eventId retain the stablecoin-only diff until the next baseline write.
   const currentDepegSnapshot = buildDepegSnapshot(sourceData.activeDepegRows);
-  for (const row of sourceData.activeDepegRows) {
-    const entry = currentDepegSnapshot[row.stablecoin_id];
-    if (entry) {
-      (entry as DepegSnapshot[string] & { eventId?: number }).eventId = row.event_id;
-    }
-  }
 
   // P1.7: when dews/depeg snapshots are stale we enter the seed branch and skip
   // fan-out. If we ALSO overwrite the launch snapshot here, any pre-launch coin
@@ -318,6 +316,11 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
       ? (reserveSourceAssessment.envelope?.driftIds ?? null)
       : null;
   const previousReserveDispatchedIds = parseSnapshotIds(sourceData.reserveDispatchedCache);
+  const parsedObservedBaseline = ReserveAlertObservationsSchema.safeParse(
+    parseSnapshotMap<Record<string, number>>(sourceData.reserveObservedCache ?? null),
+  );
+  const previousObserved = parsedObservedBaseline.success ? parsedObservedBaseline.data : {};
+  const currentObserved = reserveSourceAssessment.envelope?.observedSince ?? {};
 
   const mustSeedSnapshots =
     isSnapshotMissingOrStale(sourceData.dewsCache, nowSec) ||
@@ -351,14 +354,21 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
         ? previousLaunchIds
         : WORKER_PRE_LAUNCH_STABLECOINS.map((coin) => coin.id),
     reserveDispatched,
+    reserveObserved: parsedCurrentReserveDriftIds == null ||
+      (mustSeedSnapshots && !reserveNeedsColdSeed && previousReserveDispatchedIds != null)
+      ? (parsedObservedBaseline.success ? previousObserved : null)
+      : currentObserved,
   };
-  const previousReserveDriftIds = reserveNeedsColdSeed
-    ? parsedCurrentReserveDriftIds
-    : parsedCurrentReserveDriftIds == null
-      ? (previousReserveDispatchedIds ?? [])
-      : (previousReserveDispatchedIds ?? parsedCurrentReserveDriftIds);
   const currentReserveDriftIds =
     parsedCurrentReserveDriftIds == null ? (previousReserveDispatchedIds ?? []) : parsedCurrentReserveDriftIds;
+  // An unavailable member has no comparable observation. Returning members are
+  // cold-seeded by their continuity epoch, including gaps dispatch never saw.
+  const previousReserveDriftIds = parsedCurrentReserveDriftIds == null
+    ? (previousReserveDispatchedIds ?? [])
+    : currentReserveDriftIds.filter((id) => reserveNeedsColdSeed ||
+      previousReserveDispatchedIds == null ||
+      previousObserved[id] !== currentObserved[id] ||
+      previousReserveDispatchedIds.includes(id));
 
   return {
     nowSec,

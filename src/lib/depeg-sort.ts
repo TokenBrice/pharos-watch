@@ -1,11 +1,10 @@
-import type { PegSummaryCoin, StressSignalEntry } from "@shared/types";
+import type { DepegPendingIncident, PegSummaryCoin, StressSignalEntry } from "@shared/types";
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
-import type { PendingDepegIncident } from "@/lib/depeg-incident-utils";
 
 export interface DepegTrackerRow {
   coin: PegSummaryCoin;
   dews: StressSignalEntry | null;
-  pendingIncident?: PendingDepegIncident | null;
+  pendingIncident?: DepegPendingIncident | null;
 }
 
 /** Composite sort for default "needs attention" ordering */

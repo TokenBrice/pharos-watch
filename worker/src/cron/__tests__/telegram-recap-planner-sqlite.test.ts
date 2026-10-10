@@ -4,7 +4,11 @@ import { mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
 import { planTelegramPersonalizedRecaps } from "../telegram-recap-planner";
-import { buildTelegramRecapDedupeKey } from "../../lib/telegram/recap-store";
+import {
+  applyRecapPreference,
+  buildTelegramRecapDedupeKey,
+  projectTelegramRecapTerminalOutcome,
+} from "../../lib/telegram/recap-store";
 import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
 
 const NOW = 1_800_000_000;
@@ -89,6 +93,36 @@ describe("telegram personalized recap planner", () => {
       { chat_id: "global", source_type: "personalized_recap", priority: 100 },
     ]);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets WHERE status = 'queued'").get()).toEqual({ count: 2 });
+  });
+
+  it.each([
+    { source: "global", direct: false, snoozeOffset: 3600 },
+    { source: "global", direct: true, snoozeOffset: 3600 },
+    { source: "preset", direct: false, snoozeOffset: 3600 },
+    { source: "preset", direct: true, snoozeOffset: 3600 },
+    { source: "global", direct: false, snoozeOffset: 0 },
+    { source: "preset", direct: true, snoozeOffset: 0 },
+  ])("vetoes coin snoozes before $source membership (direct=$direct, expiry=$snoozeOffset)", async ({ source, direct, snoozeOffset }) => {
+    const { sqlite, db } = setup();
+    insertSubscriber(sqlite, "snoozed", { globalDepeg: source === "global" });
+    insertStablecoinsCache(sqlite);
+    if (source === "preset") {
+      sqlite.prepare(`INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_depeg, created_at, updated_at)
+        VALUES ('snoozed', 'usd-top25', 1, ?, ?)`).run(NOW, NOW);
+    }
+    sqlite.prepare(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg, alert_snooze_until_ts)
+      VALUES ('snoozed', 'usdc-circle', ?, ?)`).run(direct ? 1 : 0, NOW + snoozeOffset);
+    markTapeFresh(sqlite);
+    insertTape(sqlite, "snoozed-usdc", NOW - 60);
+    insertTape(sqlite, "unsnoozed-usdt", NOW - 30, "usdt-tether");
+
+    await planTelegramPersonalizedRecaps(db, undefined, { nowSec: NOW });
+    const messages = sqlite.prepare("SELECT message_html FROM telegram_pending_alerts").all();
+    expect(messages).toHaveLength(1);
+    expect(String(messages[0]?.message_html)).toContain("USDT");
+    expect(String(messages[0]?.message_html).includes("USDC")).toBe(snoozeOffset === 0);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets WHERE status = 'queued'").get())
+      .toEqual({ count: 1 });
   });
 
   it("does not plan, queue, or advance schedules when recap availability is off", async () => {
@@ -225,6 +259,58 @@ describe("telegram personalized recap planner", () => {
     ]);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
   });
+  it.each([
+    ["sent", false, false], ["sent", true, false],
+    ["cancelled", false, false], ["cancelled", true, false],
+    ["queued", false, false], ["queued", true, false],
+    ["sent", false, true], ["sent", true, true],
+    ["queued", false, true], ["queued", true, true],
+  ] as const)("advances a changed same-day preference past a %s target (stale: %s, re-enable: %s)", async (status, late, reenable) => {
+    const { sqlite, db } = setup();
+    const oldDue = Math.floor(Date.parse("2027-01-15T09:00:00Z") / 1_000);
+    const changedAt = oldDue + 3600;
+    const newDue = Math.floor(Date.parse("2027-01-15T15:00:00Z") / 1_000);
+    const runAt = newDue + (late ? 5 * 3600 : 0);
+    const nextDue = Math.floor(Date.parse("2027-01-16T15:00:00Z") / 1_000);
+    const chatId = `changed-${status}-${late}`;
+    insertSubscriber(sqlite, chatId);
+    sqlite.prepare("UPDATE telegram_subscribers SET timezone = 'UTC' WHERE chat_id = ?").run(chatId);
+    sqlite.prepare("UPDATE telegram_recap_preferences SET next_due_at = ? WHERE chat_id = ?").run(oldDue, chatId);
+    sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg) VALUES (?, 'usdc-circle', 1)").run(chatId);
+    markTapeFresh(sqlite, oldDue - 1);
+    insertTape(sqlite, "old-fact", oldDue - 60);
+    await planTelegramPersonalizedRecaps(db, undefined, { nowSec: oldDue });
+    const recapKey = buildTelegramRecapDedupeKey(chatId, "2027-01-15");
+    if (status !== "queued") {
+      await projectTelegramRecapTerminalOutcome(db, recapKey, status === "sent" ? "accepted" : "cancelled", oldDue + 1);
+    }
+    if (reenable) {
+      await expect(applyRecapPreference(db, {
+        chatId, subscriber: { timezone: "UTC", preference_generation: 0 },
+        enabled: false, deliveryHourLocal: 9, nowSec: changedAt - 1,
+      })).resolves.toEqual({ kind: "applied", nextDueAt: null });
+    }
+    const evidence = sqlite.prepare("SELECT * FROM telegram_recap_targets WHERE chat_id = ?").get(chatId);
+    const window = sqlite.prepare("SELECT last_window_end_at, last_delivered_local_date FROM telegram_recap_preferences WHERE chat_id = ?").get(chatId);
+    await expect(applyRecapPreference(db, {
+      chatId,
+      subscriber: { timezone: "UTC", preference_generation: reenable ? 1 : 0 },
+      enabled: true, deliveryHourLocal: 15, nowSec: changedAt,
+    })).resolves.toEqual({ kind: "applied", nextDueAt: newDue });
+    markTapeFresh(sqlite, runAt - 1);
+    insertTape(sqlite, "new-fact", newDue - 60);
+
+    await planTelegramPersonalizedRecaps(db, undefined, { nowSec: runAt });
+
+    expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = ?").get(chatId))
+      .toEqual({ next_due_at: nextDue });
+    expect(sqlite.prepare("SELECT last_window_end_at, last_delivered_local_date FROM telegram_recap_preferences WHERE chat_id = ?").get(chatId))
+      .toEqual(window);
+    expect(sqlite.prepare("SELECT * FROM telegram_recap_targets WHERE chat_id = ?").all(chatId)).toEqual([evidence]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE chat_id = ?").get(chatId))
+      .toEqual({ count: reenable && status === "queued" ? 0 : 1 });
+  });
+
 
   it("plans through the observed public-launch Tape volume without permanently deferring due work", async () => {
     const { sqlite, db } = setup();

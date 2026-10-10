@@ -11,6 +11,10 @@ import { FROZEN_STABLECOINS } from "./stablecoins/registry";
 export type CemeteryEntry = DeadStablecoin & { archivedDataAvailable?: boolean };
 
 type FrozenStablecoin = (typeof FROZEN_STABLECOINS)[number];
+export const CEMETERY_RECORDED_AT_DESCRIPTION =
+  "UTC cemetery-entry/documentation date (YYYY-MM-DD); tracked rows default to frozenAt "
+  + "unless obituary.recordedAt explicitly overrides it. Distinct from deathDate; null when not recorded.";
+
 
 /** The cemetery UI's logo rule: absolute paths as-is, bare names under /logos/cemetery/. */
 export function resolveCemeteryLogoUrl(logo?: string): string | undefined {

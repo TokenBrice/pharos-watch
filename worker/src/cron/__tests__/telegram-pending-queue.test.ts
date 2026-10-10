@@ -631,6 +631,28 @@ describe("readTelegramPendingCapacitySnapshot", () => {
 
 describe("buildDedupeKey", () => {
   const canonicalHtml = "<b>Pharos Alerts</b>\n\nDEWS\nUSDC: ALERT → WATCH";
+  it("binds freeze keys to the immutable source event rather than display text", () => {
+    const message = {
+      chatId: "42",
+      html: "<b>USDC</b> — blacklist on Ethereum",
+      disableNotification: false,
+      alertType: "freeze" as const,
+      sourceEventId: "freeze:tape-event-1",
+    };
+    const key = buildDedupeKey(message);
+    expect(buildDedupeKey({ ...message, sourceEventId: "freeze:tape-event-2" })).not.toBe(key);
+    expect(buildDedupeKey({ ...message, html: "updated display" })).toBe(key);
+    expect(buildDedupeKey({ ...message, chunkIndex: 1 })).not.toBe(key);
+    expect(buildDedupeKey(message, TELEGRAM_SPLIT_VERSION + 1)).not.toBe(key);
+  });
+
+  it("preserves intentional content dedupe for non-freeze source events", () => {
+    const message = {
+      chatId: "42", html: canonicalHtml, disableNotification: false,
+      alertType: "depeg" as const, sourceEventId: "source-event-1",
+    };
+    expect(buildDedupeKey({ ...message, sourceEventId: "source-event-2" })).toBe(buildDedupeKey(message));
+  });
 
   it("produces the same key across runs for the same canonical body", () => {
     const a = buildDedupeKey({ chatId: "100", html: "post-split-chunk-A", canonicalHtml, disableNotification: false, chunkIndex: 0 });

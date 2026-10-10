@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { getBlacklistPriceAssetId } from "@shared/lib/blacklist";
+import { buildBlacklistContractBalanceKey, getBlacklistPriceAssetId } from "@shared/lib/blacklist";
 import { blacklistEventOrderSql } from "@shared/lib/blacklist-event-order";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { D1_BATCH_SIZE } from "../../lib/constants";
@@ -16,6 +16,7 @@ import { insertBlacklistRows } from "./persistence";
 import { type BlacklistRunBudget } from "../../lib/blacklist/run-budget";
 import { throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { blacklistAddressSpellings } from "../../lib/tron-address";
 import {
   buildCurrentBalanceSnapshotRows,
   buildLatestBlacklistRows,
@@ -93,7 +94,7 @@ async function fetchLatestKnownRepairRows(
   const seenKeys = new Set<string>();
   const statements: D1PreparedStatement[] = [];
   for (const row of rows) {
-    const key = `${row.stablecoin}:${row.chain_id}:${row.config_key}:${(row.contract_address ?? "").toLowerCase()}:${row.address.toLowerCase()}`;
+    const key = buildBlacklistContractBalanceKey(row.stablecoin, row.chain_id, row.address, row.config_key, row.contract_address);
     if (seenKeys.has(key)) continue;
     seenKeys.add(key);
     statements.push(
@@ -103,7 +104,7 @@ async function fetchLatestKnownRepairRows(
           AND chain_id = ?
           AND config_key = ?
           AND lower(contract_address) = lower(?)
-          AND lower(address) = lower(?)
+          AND (lower(address) IN (?, ?) OR address = ?)
         )
         SELECT * FROM matching
         ${row.chain_id === "tron"
@@ -116,7 +117,7 @@ async function fetchLatestKnownRepairRows(
         row.chain_id,
         row.config_key,
         row.contract_address,
-        row.address,
+        ...await blacklistAddressSpellings(row.chain_id, row.address),
       ),
     );
   }
@@ -208,7 +209,6 @@ export async function processFetchedBlacklistRows(
     runBudget: options.runBudget,
     signal: options.signal,
     chainRpcs: options.chainRpcs,
-    assetPriceUsd,
   });
 
   for (const row of newRows) {

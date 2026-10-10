@@ -23,6 +23,8 @@ vi.mock("@/lib/fonts/digest", () => ({ digestDisplay: { className: "digest-font"
 
 const selection = vi.hoisted(() => ({
   selectedId: null,
+  heroPin: null,
+  setHeroPin: vi.fn(),
   pinGrave: vi.fn(),
   revealRecord: vi.fn(),
   registerPinGrave: vi.fn(),

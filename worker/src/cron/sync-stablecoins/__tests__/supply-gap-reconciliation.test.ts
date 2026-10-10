@@ -3,7 +3,7 @@ import type { PeggedAsset } from "../enrich-prices";
 import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
 import type * as OnchainSupply from "../supplemental-assets/onchain-supply";
 import type * as FetchRetry from "../../../lib/fetch-retry";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 
 const fetchTextWithRetryMock = vi.hoisted(() => vi.fn());
@@ -34,6 +34,7 @@ vi.mock("../supplemental-assets/onchain-supply", async (importOriginal) => ({
 
 import {
   COINGECKO_GAP_FILL_POLICY,
+  carryForwardSupplyGapFill,
   prioritizeSupplyGapCandidateOrder,
   reconcileTrackedSupplyGaps,
 } from "../supply-gap-reconciliation";
@@ -119,6 +120,20 @@ describe("supply-gap reconciliation ordering", () => {
 });
 
 describe("CoinGecko missing-chain remainder reconciliation", () => {
+  it.each([undefined, null])("admits an undated prior gap-fill (%s) within the publication carry limit", async (observedAt) => {
+    const original = makeAsset();
+    mockCoinGeckoAt(130);
+    await reconcileTrackedSupplyGaps([original]);
+    original.supplyObservedAt = observedAt;
+    const current = makeAsset();
+    expect(carryForwardSupplyGapFill(current, original)).toBe(true);
+    expect(current.circulating).toEqual(original.circulating);
+    expect(current.chainCirculating).toEqual(original.chainCirculating);
+    expect(current.supplyObservedAt).toBe(observedAt);
+    expect(current.supplyRestored).toBe(true);
+    expect(current.supplyGapFill).toEqual({ ...original.supplyGapFill, carryForwardRuns: 1 });
+  });
+
   it("carries previously filled candidates deferred by the per-run request cap", async () => {
     const first = makeAsset();
     mockCoinGeckoAt(130);
@@ -162,6 +177,67 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     }
   });
 
+  it.each(["simple-price", "market-chart", "candidate-cap"] as const)(
+    "keeps fresh DefiLlama supply when %s would carry expired or future evidence",
+    async (failure) => {
+      const original = makeAsset();
+      mockCoinGeckoAt(130);
+      await reconcileTrackedSupplyGaps([original]);
+      for (const observedAt of [Math.floor(Date.now() / 1000) - 8 * 86400, Math.floor(Date.now() / 1000) + 3600]) {
+        const assets = failure === "candidate-cap"
+          ? Array.from({ length: 16 }, (_, index) => ({ ...makeAsset(), id: `gap-cap-fixture-${index}` }))
+          : [makeAsset()];
+        const current = assets[assets.length - 1]!;
+        const before = structuredClone(current);
+        const previous = { ...original, id: current.id, supplyObservedAt: observedAt,
+          supplyGapFill: { ...original.supplyGapFill!, observedAt } };
+        mockCoinGeckoAt(130);
+        const successfulFetch = fetchTextWithRetryMock.getMockImplementation()!;
+        if (failure !== "candidate-cap") {
+          fetchTextWithRetryMock.mockImplementation((url: string) =>
+            url.includes(failure === "simple-price" ? "/simple/price" : "/market_chart")
+              ? { response: { ok: false, status: 429 }, body: "" } : successfulFetch(url));
+        }
+        await reconcileTrackedSupplyGaps(assets, undefined, null, undefined, undefined, new Map([[current.id, previous]]));
+        expect(current).toEqual(before);
+      }
+    },
+  );
+
+  it.each(["missing-chain", "zero-supply"] as const)("rejects future current chart evidence for %s without masking its age", async (kind) => {
+    const nowMs = Date.now();
+    const asset = kind === "missing-chain" ? makeAsset() : {
+      ...makeAsset(), id: "tryb-bilira", symbol: "TRYB", pegType: "peggedTRY",
+      circulating: { peggedTRY: 0 }, chainCirculating: {},
+    };
+    const before = structuredClone(asset);
+    const points: [number, number][] = [
+      [nowMs - 30 * DAY_MS, 70], [nowMs - 7 * DAY_MS, 80], [nowMs - DAY_MS, 90], [nowMs + 3600_000, 130],
+    ];
+    if (kind === "missing-chain") mockCoinGeckoHistory(points);
+    else fetchTextWithRetryMock.mockResolvedValue({
+      response: { ok: true },
+      body: JSON.stringify(points.map(([date, cap]) => ({ date, totalCirculatingUSD: { peggedTRY: cap * 100_000 } }))),
+    });
+    const result = await reconcileTrackedSupplyGaps([asset]);
+    expect(result.totalReconciled).toBe(0);
+    expect(result.assets).toEqual([]);
+    expect(result.gapFillRejections).toEqual([{ id: asset.id, reason: "current-observation-future", ratio: null }]);
+    expect(asset).toEqual(before);
+    expect(fetchCuratedAggregateOnChainMcap).not.toHaveBeenCalled();
+  });
+
+  it.each([60, 61])("admits only approved current chart future skew at %s seconds", async (skew) => {
+    const nowMs = Math.floor(Date.now() / 1000) * 1000;
+    const asset = makeAsset();
+    mockCoinGeckoHistory([
+      [nowMs - 30 * DAY_MS, 70], [nowMs - 7 * DAY_MS, 80], [nowMs - DAY_MS, 90], [nowMs + skew * 1000, 130],
+    ]);
+    const result = await reconcileTrackedSupplyGaps([asset]);
+    expect(result.totalReconciled).toBe(skew === 60 ? 1 : 0);
+    if (skew === 60) expect(result.assets[0]?.observedAgeSec).toBe(-60);
+  });
+
   it("retains the hysteresis band on recovery after a failed run", async () => {
     const first = makeAsset();
     mockCoinGeckoAt(106);
@@ -201,7 +277,7 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(asset.chainCirculating?.["XRP Ledger"]).toEqual({ chainId: "xrpl", current: 30, circulatingPrevDay: 5, circulatingPrevWeek: 30, circulatingPrevMonth: 5 });
     const chainCurrent = [...canonicalizeChainCirculating(asset.chainCirculating).values()]
       .reduce((sum, row) => sum + (row.current ?? 0), 0);
-    expect(chainCurrent).toBe(getCirculatingRaw(asset));
+    expect(chainCurrent).toBe(getCirculatingRawOrNull(asset));
     expect(asset.supplyGapFill).toEqual({
       method: "coingecko-single-missing-chain",
       admission: "entered",
@@ -256,12 +332,12 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
 
   it("does not flap when the ratio oscillates around the entry threshold", async () => {
     let previous: Map<string, PeggedAsset> | undefined;
-    const published: number[] = [];
+    const published: (number | null)[] = [];
     for (const current of [106, 104, 103, 104, 102, 104, 106]) {
       const asset = makeAsset();
       mockCoinGeckoAt(current);
       await reconcileTrackedSupplyGaps([asset], undefined, null, undefined, undefined, previous);
-      published.push(getCirculatingRaw(asset));
+      published.push(getCirculatingRawOrNull(asset));
       previous = new Map([[asset.id, asset]]);
     }
     // Enter at 1.06, hold through 1.03-1.04, release at 1.02, stay DL at 1.04, re-enter only above 1.05.

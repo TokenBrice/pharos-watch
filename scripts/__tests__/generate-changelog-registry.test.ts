@@ -16,9 +16,9 @@ const ENTRY_FILES = collectChangelogEntryFiles(
 
 describe("changelog registry generator", () => {
   it("includes every dated entry in the current ascending order with byte parity", () => {
-    const dates = ENTRY_FILES.map((fileName) => fileName.slice(0, -3));
+    const dates = ENTRY_FILES.map((fileName) => fileName.slice(0, -5));
     const current = readFileSync(INDEX_PATH, "utf8");
-    const imports = [...current.matchAll(/^import \{ entry as (e\d{8}) \} from "\.\/(\d{4}-\d{2}-\d{2})";$/gm)];
+    const imports = [...current.matchAll(/^import (e\d{8}) from "\.\/(\d{4}-\d{2}-\d{2})\.json";$/gm)];
     const registryEntries = [...current.matchAll(/^  (e\d{8}),$/gm)].map((match) => match[1]);
 
     expect(imports).toHaveLength(ENTRY_FILES.length);
@@ -28,21 +28,22 @@ describe("changelog registry generator", () => {
   });
 
   it("rejects duplicate and malformed entry filenames", () => {
-    expect(() => collectChangelogEntryFiles(["2026-08-23.ts", "2026-08-23.ts"])).toThrow(/duplicate/i);
-    expect(() => collectChangelogEntryFiles(["2026-08-23.ts", "2026-8-24.ts"])).toThrow(/malformed/i);
-    expect(() => collectChangelogEntryFiles(["2026-02-30.ts"])).toThrow(/malformed/i);
+    expect(() => collectChangelogEntryFiles(["2026-08-23.json", "2026-08-23.json"])).toThrow(/duplicate/i);
+    expect(() => collectChangelogEntryFiles(["2026-08-23.json", "2026-8-24.json"])).toThrow(/malformed/i);
+    expect(() => collectChangelogEntryFiles(["2026-02-30.json"])).toThrow(/malformed/i);
+    expect(() => collectChangelogEntryFiles(["2026-08-23.ts"])).toThrow(/malformed/i);
   });
 
   it("sorts entry filenames in the existing ascending barrel order", () => {
-    expect(collectChangelogEntryFiles(["2026-08-23.ts", "2026-03-08.ts", "2026-07-05.ts"])).toEqual([
-      "2026-03-08.ts",
-      "2026-07-05.ts",
-      "2026-08-23.ts",
+    expect(collectChangelogEntryFiles(["2026-08-23.json", "2026-03-08.json", "2026-07-05.json"])).toEqual([
+      "2026-03-08.json",
+      "2026-07-05.json",
+      "2026-08-23.json",
     ]);
   });
 
   it("selects dated additions and deletions but not unrelated paths", () => {
-    for (const path of ["src/data/changelogs/2027-01-03.ts", "src/data/changelogs/2026-03-08.ts"]) {
+    for (const path of ["src/data/changelogs/2027-01-03.json", "src/data/changelogs/2026-03-08.json", "src/data/changelogs/2026-03-08.ts"]) {
       expect(selectChangedGeneratedArtifactIds([path])).toContain("changelog-registry");
     }
     expect(selectChangedGeneratedArtifactIds(["public/logos/coin.png"])).not.toContain("changelog-registry");

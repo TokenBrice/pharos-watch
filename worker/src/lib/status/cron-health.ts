@@ -1,3 +1,4 @@
+import { chunkArray } from "@shared/lib/collections";
 import {
   CRON_INTERVALS,
   getCronJobMeta,
@@ -10,7 +11,7 @@ import { CronRunStatusSchema } from "@shared/types/status";
 import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
 import { cronEventCacheKey } from "../cron-logger";
 import { confirmedCronOutputAt, CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
-import { staleSlotEventCacheKey } from "../scheduled-slot-fence";
+import { staleSlotEventCacheKey } from "../scheduled-slot-reconciliation";
 import { buildInClause } from "../db";
 import { logWorkerEvent } from "../structured-log";
 import { classifyFreshness } from "./freshness-oracle";
@@ -183,7 +184,7 @@ function buildCronHistoryQuery(jobCount: number, mode: CronHistoryQueryMode = "d
             AND ${LEGACY_IDLE_DIGEST_RECONCILIATION_SQL_FILTER}
             ${CRON_HISTORY_MODE_SQL_FILTER[mode]}
           ORDER BY started_at DESC
-          LIMIT ${mode === "display" ? CRON_HISTORY_ROWS_PER_JOB : 1}
+          LIMIT ${mode === "display" ? CRON_HISTORY_ROWS_PER_JOB : mode === "latest-required" ? 2 : 1}
        )`
   ));
 
@@ -192,14 +193,6 @@ function buildCronHistoryQuery(jobCount: number, mode: CronHistoryQueryMode = "d
             ${perJobQueries.join("\n            UNION ALL\n            ")}
           )
           ORDER BY started_at DESC`;
-}
-
-function chunkCronJobs(jobs: string[]): string[][] {
-  const chunks: string[][] = [];
-  for (let i = 0; i < jobs.length; i += CRON_HISTORY_QUERY_JOB_BATCH_SIZE) {
-    chunks.push(jobs.slice(i, i + CRON_HISTORY_QUERY_JOB_BATCH_SIZE));
-  }
-  return chunks;
 }
 
 interface CronHistoryRow {
@@ -261,7 +254,7 @@ async function fetchCronHistoryRows(
     // Each batch is an independent SELECT, so fire all batches concurrently
     // rather than awaiting them in sequence; D1's HTTP/2 connection is
     // multiplexed and this avoids serialising N batch round-trips.
-    const batches = chunkCronJobs(cronJobs);
+    const batches = chunkArray(cronJobs, CRON_HISTORY_QUERY_JOB_BATCH_SIZE);
     const batchResults = await Promise.all(
       batches.map(async (jobBatch) => {
         const batchJobSet = new Set(jobBatch);
@@ -273,26 +266,29 @@ async function fetchCronHistoryRows(
       }),
     );
     const rows = batchResults.flat();
-    const jobsWithRequiredRun = new Set(rows
-      .filter((row) => parseCronRunStatus(row.status) !== NEUTRAL_CRON_RUN_STATUS)
-      .map((row) => row.job));
+    const requiredCounts = new Map<string, number>();
+    for (const row of rows) {
+      if (parseCronRunStatus(row.status) !== NEUTRAL_CRON_RUN_STATUS) {
+        requiredCounts.set(row.job, (requiredCounts.get(row.job) ?? 0) + 1);
+      }
+    }
     const jobsWithProvenSatisfiedSkip = new Set(rows
       .filter((row) => parseCronRunStatus(row.status) === NEUTRAL_CRON_RUN_STATUS
         && isProvenSatisfiedNeutralSkipReason(parseMetadataObject(row.metadata)?.reason))
       .map((row) => row.job));
     const historyCounts = new Map<string, number>();
     for (const row of rows) historyCounts.set(row.job, (historyCounts.get(row.job) ?? 0) + 1);
-    const jobsMissingRequiredRun = cronJobs.filter((job) => !jobsWithRequiredRun.has(job)
+    const jobsMissingRequiredRun = cronJobs.filter((job) => (requiredCounts.get(job) ?? 0) < 2
       && (historyCounts.get(job) ?? 0) >= CRON_HISTORY_ROWS_PER_JOB);
     const jobsMissingProvenSkip = jobsMissingRequiredRun.filter((job) => !jobsWithProvenSatisfiedSkip.has(job));
-    // A daily producer's hourly admission skips can fill its display window.
-    // Only those jobs need one older required attempt and, when the window
+    // Admission skips must not evict the two attempts needed for error streaks.
+    // Only those jobs need older required attempts and, when the window
     // holds no proven readback either, the latest fresh proven-satisfied skip:
     // generic admissions after a period boundary must not evict the readback
     // that superseded an earlier error. Both lookups preserve the indexed
     // per-job LIMIT and compound-query batch bound of the display-history read.
     const [requiredBatches, provenBatches] = await Promise.all([
-      Promise.all(chunkCronJobs(jobsMissingRequiredRun).map(async (jobBatch) => {
+      Promise.all(chunkArray(jobsMissingRequiredRun, CRON_HISTORY_QUERY_JOB_BATCH_SIZE).map(async (jobBatch) => {
         const jobSet = new Set(jobBatch);
         const result = await db
           .prepare(buildCronHistoryQuery(jobBatch.length, "latest-required"))
@@ -301,7 +297,7 @@ async function fetchCronHistoryRows(
         return (result.results ?? []).filter((row) => jobSet.has(row.job)
           && parseCronRunStatus(row.status) !== NEUTRAL_CRON_RUN_STATUS);
       })),
-      Promise.all(chunkCronJobs(jobsMissingProvenSkip).map(async (jobBatch) => {
+      Promise.all(chunkArray(jobsMissingProvenSkip, CRON_HISTORY_QUERY_JOB_BATCH_SIZE).map(async (jobBatch) => {
         const jobSet = new Set(jobBatch);
         const result = await db
           .prepare(buildCronHistoryQuery(jobBatch.length, "latest-proven-satisfied"))
@@ -312,7 +308,14 @@ async function fetchCronHistoryRows(
           && isProvenSatisfiedNeutralSkipReason(parseMetadataObject(row.metadata)?.reason));
       })),
     ]);
-    rows.push(...requiredBatches.flat(), ...provenBatches.flat());
+    const seenRuns = new Set(rows.map((row) => `${row.job}:${row.started_at}`));
+    for (const row of [...requiredBatches.flat(), ...provenBatches.flat()]) {
+      const key = `${row.job}:${row.started_at}`;
+      if (!seenRuns.has(key)) {
+        seenRuns.add(key);
+        rows.push(row);
+      }
+    }
     const freshOutputJobs = new Set<string>();
     for (const row of rows) {
       if (row.status !== "ok" && row.status !== "degraded") continue;
@@ -654,15 +657,14 @@ export async function loadCronHealth(
     }
     const runs = cronByJob.get(row.job) ?? [];
     const parsedStatus = parseCronRunStatus(row.status);
-    // Beyond the display window, keep only the inheritance evidence appended
-    // behind an all-neutral window: the latest required attempt and a proven
-    // readback newer than it. Rows arrive newest first, so a readback older
-    // than the required attempt is dropped.
+    // Keep the two required attempts independently of the display bound.
+    // Fresh proven readback remains attributable when newer than the attempt.
+    const requiredRunCount = runs.reduce((count, run) => count + Number(run.status !== NEUTRAL_CRON_RUN_STATUS), 0);
     if (runs.length < CRON_HISTORY_ROWS_PER_JOB
-      || (runs.every((run) => run.status === NEUTRAL_CRON_RUN_STATUS)
-        && (parsedStatus !== NEUTRAL_CRON_RUN_STATUS
-          || (isProvenSatisfiedNeutralSkipReason(parsedMeta?.reason)
-            && !runs.some((run) => isProvenSatisfiedNeutralSkipReason(run.metadata?.reason)))))) {
+      || (parsedStatus !== NEUTRAL_CRON_RUN_STATUS && requiredRunCount < 2)
+      || (parsedStatus === NEUTRAL_CRON_RUN_STATUS && requiredRunCount === 0
+        && isProvenSatisfiedNeutralSkipReason(parsedMeta?.reason)
+        && !runs.some((run) => isProvenSatisfiedNeutralSkipReason(run.metadata?.reason)))) {
       runs.push({
         startedAt: row.started_at,
         durationMs: row.duration_ms,

@@ -1,3 +1,5 @@
+import { isValidCalendarDate } from "../types/date-primitives";
+
 export type EpochNumericTextPolicy = "any" | "digits-only";
 
 export interface EpochParserOptions {
@@ -35,6 +37,20 @@ export function parseEpoch(value: unknown, options: EpochParserOptions): EpochPa
       return numericValueToSeconds(numeric, options);
     }
     if (options.numericTextPolicy === "digits-only") return { kind: "invalid" };
+  }
+
+  // Only ISO date/date-time grammar may follow a failed numeric parse.
+  // Date.parse alone accepts signed/decimal tokens and rolls impossible days.
+  const iso = /^(\d{4})-(\d{2})-(\d{2})(.*)$/.exec(trimmed);
+  // Separate fractional seconds from optional time components so quantifiers
+  // never nest; both forms retain the same ISO grammar.
+  const validTime = iso != null && (
+    iso[4] === ""
+    || /^T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)?$/.test(iso[4])
+    || /^T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d+(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)?$/.test(iso[4])
+  );
+  if (!iso || !validTime || !isValidCalendarDate(Number(iso[1]), Number(iso[2]), Number(iso[3]))) {
+    return { kind: "invalid" };
   }
 
   const parsedMs = Date.parse(trimmed);

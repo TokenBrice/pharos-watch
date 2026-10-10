@@ -256,7 +256,7 @@ export async function fetchBranchPriceMap(
     .filter(({ branch, balanceRaw }) => balanceRaw != null && balanceRaw > 0n && branch.priceUsd == null);
   if (branchesNeedingPrices.length === 0) return new Map();
 
-  const wrapperPriceMap = await fetchDefiLlamaPrices(
+  const { prices: wrapperPriceMap, warnings: wrapperWarnings } = await fetchDefiLlamaPrices(
     branchesNeedingPrices.map(({ branch }) => ({
       key: branch.name,
       chain: branch.priceToken?.chain ?? branch.token.chain,
@@ -264,9 +264,9 @@ export async function fetchBranchPriceMap(
     })),
     signal,
     ctx,
-    warnings,
     observations,
   );
+  warnings.push(...wrapperWarnings);
 
   // For branches the wrapper-address lookup didn't resolve, fall back to the
   // underlying coin's canonical contract price (no silent $1 clamp).
@@ -282,7 +282,7 @@ export async function fetchBranchPriceMap(
     );
 
   if (underlyingLookups.length > 0) {
-    const underlyingPriceMap = await fetchDefiLlamaPrices(
+    const { prices: underlyingPriceMap, warnings: underlyingWarnings } = await fetchDefiLlamaPrices(
       underlyingLookups.map(({ branch, underlying }) => ({
         key: branch.name,
         chain: underlying.chain,
@@ -290,9 +290,9 @@ export async function fetchBranchPriceMap(
       })),
       signal,
       ctx,
-      warnings,
       observations,
     );
+    warnings.push(...underlyingWarnings);
     for (const [name, price] of underlyingPriceMap) {
       if (!wrapperPriceMap.has(name)) {
         wrapperPriceMap.set(name, price);

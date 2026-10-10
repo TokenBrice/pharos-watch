@@ -12,6 +12,7 @@ function cache(overrides: Partial<CacheStatus> = {}): CacheStatus {
     producerJob: "sync-stablecoins",
     producerIntervalSec: 900,
     ...overrides,
+    publishedAt: overrides.publishedAt !== undefined ? overrides.publishedAt : NOW - (overrides.ageSeconds ?? 120),
   };
 }
 
@@ -72,6 +73,18 @@ function failedDexPublication(): PublicationHealth {
 }
 
 describe("buildDependencyHealth", () => {
+  it.each(["ordinary", "sentinel"] as const)("keeps immutable publication clocks across cached %s assessments", (kind) => {
+    const publishedAt = NOW - 420;
+    const caches = { stablecoins: cache({
+      publishedAt, ageSeconds: 120,
+      ...(kind === "sentinel" ? { generationId: "generation", freshnessSource: "freshness-sentinel" as const } : {}),
+    }) };
+    const crons = { "sync-stablecoins": cron({ lastRun: { startedAt: NOW - 1_000, durationMs: 1, status: "ok" } }) };
+    const first = buildDependencyHealth({ now: NOW, caches, crons, publicationHealth: null }).dependencies.stablecoins;
+    const later = buildDependencyHealth({ now: NOW + 60, caches, crons, publicationHealth: null }).dependencies.stablecoins;
+    expect(first).toMatchObject({ updatedAt: publishedAt, ageSeconds: 420 });
+    expect(later).toMatchObject({ updatedAt: publishedAt, ageSeconds: 480 });
+  });
   it.each([
     { ageSeconds: 700, healthy: true, expectedStatus: "healthy" },
     { ageSeconds: 8 * 600 + 1, healthy: true, expectedStatus: "degraded" },

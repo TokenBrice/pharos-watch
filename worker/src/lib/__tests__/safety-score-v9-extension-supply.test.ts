@@ -16,8 +16,9 @@ import {
   diagnoseSafetyScoreV9NullSupplyReviewOutcome,
   safetyScoreV9RouteSupplyShare,
 } from "../safety-score-v9/extension-supply";
-import { deriveLockMintSupplyPartition, safetyScoreV9ChainRows } from "../safety-score-v9/supply-attribution";
-import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
+import { safetyScoreV9ChainRows } from "../safety-score-v9/supply-attribution";
+import { deriveXautRepresentationGroupSupplyAttribution } from "../safety-score-v9/xaut-supply-attribution-contract";
+import { makeXautObservation, v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 import { CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION } from "../safety-score-v9/curated-single-route-supply";
 
 function fixedInputStub(chainCirculating: Record<string, { current: number }>): ReportCardsFixedInput {
@@ -635,16 +636,14 @@ describe("buildSafetyScoreV9SupplyReview", () => {
 
   it("conserves aggregate-only XAUT across free canonical supply and the XAUt0 lock/mint pool", () => {
     const aggregateSupplyUsd = 2_480_000_000;
-    const partition = deriveLockMintSupplyPartition({
+    const partition = deriveXautRepresentationGroupSupplyAttribution({
       aggregateSupplyUsd,
-      canonicalCirculatingLiabilityRaw:
-        707_747_089_000n - 94_923_429_468n,
-      lockboxBalancesRaw: [29_714_544_713n],
-      canonicalChainLabel: "Ethereum",
-      pooledRepresentationLabel: "XAUt0 lock-mint pool",
+      registryFingerprint: "a".repeat(64),
+      scoringClockSec: 1_774_000_000,
+      observation: makeXautObservation({ clockSec: 1_774_000_000 }),
     });
     expect(partition).not.toBeNull();
-    expect(partition!.canonicalSupplyUsd + partition!.pooledRepresentationSupplyUsd).toBe(aggregateSupplyUsd);
+    expect(partition!.canonical.currentSupplyUsd + partition!.representationGroup.currentSupplyUsd).toBe(aggregateSupplyUsd);
 
     const fixedInput = {
       chainCirculatingById: {
@@ -657,40 +656,7 @@ describe("buildSafetyScoreV9SupplyReview", () => {
         },
       },
       safetyScoreV9SupplyAttributionById: {
-        "xaut-tether": {
-          model: "canonical-lock-mint-group-partition-v2",
-          assetId: "xaut-tether",
-          observedAtSec: 1_774_000_000,
-          registryFingerprint: "a".repeat(64),
-          routeInventoryDigest: "b".repeat(64),
-          canonical: {
-            routeId:
-              "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
-            chainId: "ethereum",
-            currentSupplyUsd: partition!.canonicalSupplyUsd,
-          },
-          representationGroup: {
-            deploymentRouteKey:
-              "representation-group:xaut-tether:xaut0-omnichain",
-            representationId: "xaut0-omnichain",
-            routeIds: (
-              xautRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile
-            ).routes!
-              .filter(
-                (route) =>
-                  route.representationId === "xaut0-omnichain",
-              )
-              .map((route) => route.id)
-              .sort(),
-            riskTier: "external-lock-mint",
-            failureDomainKeys: [
-              "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
-              "protocol:xaut0-omnichain",
-            ],
-            currentSupplyUsd:
-              partition!.pooledRepresentationSupplyUsd,
-          },
-        },
+        "xaut-tether": partition!,
       },
     } as unknown as ReportCardsFixedInput;
     const review = buildSafetyScoreV9SupplyReview(

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getCirculatingRaw, getPrevDayRawOrNull, getPrevWeekRawOrNull, sumPegBucketsOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -126,8 +126,8 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     // "No supply buckets at all" is not "redeemed to zero": only an explicitly
     // present zero may retire the coin's current and 7-day rows, which are
     // never resurrected. An absent record skips the coin without writing.
-    if (sumPegBucketsOrNull(asset.circulating) === null) continue;
-    const current = getCirculatingRaw(asset);
+    const current = getCirculatingRawOrNull(asset);
+    if (current === null) continue;
     if (current <= 0) {
       noCurrentSupplyIds.push(meta.id);
       continue;

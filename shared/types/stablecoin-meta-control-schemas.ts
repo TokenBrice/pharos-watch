@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { issue } from "./safety-schema-primitives";
 import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema, V9SameChainSystemTransportSchema, V1005ExecutionClassRefSchema, V1005ExecutionCertificatesSchema, V1005AuthorityGraphSchema, V1005VotingControlSchema, V1005OperationalIssuanceSchema, V9ControlQuestionSubjectSchema } from "./safety-score-v9-control-scope";
 import { normalizeDeploymentId } from "./deployment-id";
 import { V9AllocationDeploymentIdentitySchema } from "./safety-score-v9-allocation";
@@ -104,36 +105,20 @@ export const OracleRiskBranchSchema = /* @__PURE__ */ (() => z
     for (let index = 0; index < (branch.feeds ?? []).length; index += 1) {
       const feed = branch.feeds![index];
       if (feed.heartbeatSec != null && feed.stalenessBoundSec != null && feed.stalenessBoundSec < feed.heartbeatSec) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "oracle feed staleness bound cannot be shorter than its heartbeat",
-          path: ["feeds", index, "stalenessBoundSec"],
-        });
+        issue(ctx, ["feeds", index, "stalenessBoundSec"], "oracle feed staleness bound cannot be shorter than its heartbeat");
       }
     }
     if (branch.observedBlock != null && branch.observedAt == null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "observedBlock requires observedAt",
-        path: ["observedAt"],
-      });
+      issue(ctx, ["observedAt"], "observedBlock requires observedAt");
     }
     if (branch.liquidationState === "uncallable" && branch.liquidationDelaySec != null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "an uncallable liquidation path cannot claim a liquidation delay",
-        path: ["liquidationDelaySec"],
-      });
+      issue(ctx, ["liquidationDelaySec"], "an uncallable liquidation path cannot claim a liquidation delay");
     }
     if (branch.collateralAssets && branch.collateralParameters) {
       const parameterAssets = new Set(branch.collateralParameters.map((parameter) => parameter.asset));
       for (const asset of branch.collateralAssets) {
         if (parameterAssets.has(asset)) continue;
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `missing collateral parameters for ${asset}`,
-          path: ["collateralParameters"],
-        });
+        issue(ctx, ["collateralParameters"], `missing collateral parameters for ${asset}`);
       }
     }
   }))();
@@ -164,16 +149,16 @@ const OracleRiskPathSchema = /* @__PURE__ */ (() => z
   .superRefine((path, ctx) => {
     const disposition = path.applicability?.disposition;
     if (disposition === "not-applicable" && (path.pricingAuthority !== "none" || path.branchId != null)) {
-      ctx.addIssue({ code: "custom", message: "Not-applicable paths cannot have pricing authority or borrower branches" });
+      issue(ctx, undefined, "Not-applicable paths cannot have pricing authority or borrower branches");
     }
     if (
       (disposition === "branches-required" || disposition === "top-level-only") &&
       path.pricingAuthority !== "external-price" && path.pricingAuthority !== "internal-price"
     ) {
-      ctx.addIssue({ code: "custom", message: "Applicable paths require external or internal pricing authority" });
+      issue(ctx, undefined, "Applicable paths require external or internal pricing authority");
     }
     if (disposition === "top-level-only" && path.branchId != null) {
-      ctx.addIssue({ code: "custom", message: "Top-level pricing paths cannot declare borrower branches" });
+      issue(ctx, undefined, "Top-level pricing paths cannot declare borrower branches");
     }
   }))();
 
@@ -210,7 +195,7 @@ export const OracleRiskProfileSchema = /* @__PURE__ */ (() => z
       for (const [index, path] of profile.paths.entries()) {
         const identity = `${path.chain}:${path.address.toLowerCase()}`;
         if (pathIds.has(path.id) || identities.has(identity)) {
-          ctx.addIssue({ code: "custom", path: ["paths", index], message: "Oracle paths require unique ids and deployment identities" });
+          issue(ctx, ["paths", index], "Oracle paths require unique ids and deployment identities");
         }
         pathIds.add(path.id);
         identities.add(identity);
@@ -218,16 +203,12 @@ export const OracleRiskProfileSchema = /* @__PURE__ */ (() => z
       }
       for (const [index, branch] of (profile.branches ?? []).entries()) {
         if (!referencedBranches.has(branch.id)) {
-          ctx.addIssue({ code: "custom", path: ["branches", index], message: "Every oracle branch requires an explicit path identity" });
+          issue(ctx, ["branches", index], "Every oracle branch requires an explicit path identity");
         }
       }
     }
     if (profile.branchModel === "multi-branch" && !profile.branches?.length) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "multi-branch oracleRisk profiles require branches",
-        path: ["branches"],
-      });
+      issue(ctx, ["branches"], "multi-branch oracleRisk profiles require branches");
     }
     // Materiality shares are measured facts; a profile claiming more than the
     // whole debt is self-contradictory (unmeasured branches stay fail-closed,
@@ -237,46 +218,22 @@ export const OracleRiskProfileSchema = /* @__PURE__ */ (() => z
       0,
     );
     if (declaredShareTotal > 100.5) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `oracleRisk branch debtSharePct total ${declaredShareTotal} exceeds 100`,
-        path: ["branches"],
-      });
+      issue(ctx, ["branches"], `oracleRisk branch debtSharePct total ${declaredShareTotal} exceeds 100`);
     }
     if (profile.branchModel === "single-path" && profile.branches?.length) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "single-path oracleRisk profiles cannot declare branches",
-        path: ["branches"],
-      });
+      issue(ctx, ["branches"], "single-path oracleRisk profiles cannot declare branches");
     }
     if (profile.branches?.length && profile.branchModel !== "multi-branch") {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "oracleRisk branches require branchModel multi-branch",
-        path: ["branchModel"],
-      });
+      issue(ctx, ["branchModel"], "oracleRisk branches require branchModel multi-branch");
     }
     if (profile.branchApplicability?.disposition === "branches-required" && profile.branchModel !== "multi-branch") {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "branches-required oracle applicability requires branchModel multi-branch",
-        path: ["branchModel"],
-      });
+      issue(ctx, ["branchModel"], "branches-required oracle applicability requires branchModel multi-branch");
     }
     if (profile.branchApplicability?.disposition === "not-applicable" && profile.branchModel === "multi-branch") {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "not-applicable oracle applicability cannot declare a multi-branch model",
-        path: ["branchApplicability", "disposition"],
-      });
+      issue(ctx, ["branchApplicability", "disposition"], "not-applicable oracle applicability cannot declare a multi-branch model");
     }
     if (profile.branchApplicability?.disposition === "top-level-only" && profile.branchModel !== "single-path") {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "top-level-only oracle applicability requires a single-path model",
-        path: ["branchModel"],
-      });
+      issue(ctx, ["branchModel"], "top-level-only oracle applicability requires a single-path model");
     }
   }))();
 
@@ -319,26 +276,14 @@ const BridgeRouteDeploymentSchema = /* @__PURE__ */ (() => z
   .strict()
   .superRefine((route, ctx) => {
     if ((route.controllerChain == null) !== (route.controllerAddress == null)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "bridge route controllerChain and controllerAddress must be authored together",
-        path: [route.controllerChain == null ? "controllerChain" : "controllerAddress"],
-      });
+      issue(ctx, [route.controllerChain == null ? "controllerChain" : "controllerAddress"], "bridge route controllerChain and controllerAddress must be authored together");
     }
     if (route.reviewDisposition === "reviewed") {
       if (!hasSourceLinks(route.sources)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "reviewed bridge route requires route-level sources",
-          path: ["sources"],
-        });
+        issue(ctx, ["sources"], "reviewed bridge route requires route-level sources");
       }
       if (route.observedAt == null && route.observedBlock == null) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "reviewed bridge route requires observedAt or observedBlock",
-          path: ["observedAt"],
-        });
+        issue(ctx, ["observedAt"], "reviewed bridge route requires observedAt or observedBlock");
       }
       if (
         route.scope === "unknown" ||
@@ -346,19 +291,11 @@ const BridgeRouteDeploymentSchema = /* @__PURE__ */ (() => z
         route.issuanceModel === "unknown" ||
         route.semantics === "unknown"
       ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "reviewed bridge route cannot retain unknown classification facts",
-          path: ["reviewDisposition"],
-        });
+        issue(ctx, ["reviewDisposition"], "reviewed bridge route cannot retain unknown classification facts");
       }
     } else {
       if (!hasText(route.reviewNote)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "unresolved bridge route requires an explicit reviewNote",
-          path: ["reviewNote"],
-        });
+        issue(ctx, ["reviewNote"], "unresolved bridge route requires an explicit reviewNote");
       }
       if (
         route.scope !== "unknown" ||
@@ -367,19 +304,11 @@ const BridgeRouteDeploymentSchema = /* @__PURE__ */ (() => z
         route.semantics !== "unknown" ||
         route.riskTier !== "opaque-or-unknown"
       ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "unresolved bridge route must keep classification facts unknown",
-          path: ["reviewDisposition"],
-        });
+        issue(ctx, ["reviewDisposition"], "unresolved bridge route must keep classification facts unknown");
       }
     }
     if (route.routeClass === "native" && route.issuanceModel !== "native-issuance") {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "native bridge route cannot be labeled as a bridge representation",
-        path: ["issuanceModel"],
-      });
+      issue(ctx, ["issuanceModel"], "native bridge route cannot be labeled as a bridge representation");
     }
   }))();
 
@@ -396,7 +325,7 @@ const NativeInventoryReviewSchema = /* @__PURE__ */ (() => z
   .strict()
   .superRefine((review, ctx) => {
     if (new Set(review.routeIds).size !== review.routeIds.length) {
-      ctx.addIssue({ code: "custom", path: ["routeIds"], message: "Native census route identities must be unique" });
+      issue(ctx, ["routeIds"], "Native census route identities must be unique");
     }
   }))();
 
@@ -427,11 +356,7 @@ export const BridgeRouteRiskProfileSchema = /* @__PURE__ */ (() => z
           route.routeClass !== "native" ||
           route.issuanceModel !== "native-issuance")
       ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["nativeInventoryReview", "routeIds"],
-          message: "Exhaustive native census must match every reviewed native route, with no representation routes",
-        });
+        issue(ctx, ["nativeInventoryReview", "routeIds"], "Exhaustive native census must match every reviewed native route, with no representation routes");
       }
     }
     for (const [index, question] of (profile.scopedQuestions ?? []).entries()) {
@@ -445,33 +370,20 @@ export const BridgeRouteRiskProfileSchema = /* @__PURE__ */ (() => z
             `${control.controllerChain}:${control.controllerAddress.toLowerCase()}` === ref),
       );
       if (!matched) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message:
-            "scoped question controlRef must name a structured bridge control's id, label, or controllerChain:controllerAddress",
-          path: ["scopedQuestions", index, "controlRef"],
-        });
+        issue(ctx, ["scopedQuestions", index, "controlRef"], "scoped question controlRef must name a structured bridge control's id, label, or controllerChain:controllerAddress");
       }
     }
     if ((profile.sources?.length ?? 0) > 0 || profile.sourceFreeRationale || (profile.protocols?.length ?? 0) > 0) {
       // Continue validating route identity below.
     } else {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "bridgeRouteRisk requires sources, protocols, or sourceFreeRationale",
-        path: ["sources"],
-      });
+      issue(ctx, ["sources"], "bridgeRouteRisk requires sources, protocols, or sourceFreeRationale");
     }
 
     const routeIds = new Set<string>();
     for (let index = 0; index < (profile.routes ?? []).length; index += 1) {
       const route = profile.routes![index]!;
       if (routeIds.has(route.id)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `duplicate bridge route id ${route.id}`,
-          path: ["routes", index, "id"],
-        });
+        issue(ctx, ["routes", index, "id"], `duplicate bridge route id ${route.id}`);
       }
       routeIds.add(route.id);
     }
@@ -480,11 +392,7 @@ export const BridgeRouteRiskProfileSchema = /* @__PURE__ */ (() => z
     for (let index = 0; index < (profile.controls ?? []).length; index += 1) {
       const control = profile.controls![index]!;
       if (controlIds.has(control.id)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `duplicate bridge control id ${control.id}`,
-          path: ["controls", index, "id"],
-        });
+        issue(ctx, ["controls", index, "id"], `duplicate bridge control id ${control.id}`);
       }
       controlIds.add(control.id);
       if (control.sameChainSystemTransport) {
@@ -494,7 +402,7 @@ export const BridgeRouteRiskProfileSchema = /* @__PURE__ */ (() => z
         if (!coreRoute || coreRoute.sourceChain !== "hyperevm" || coreRoute.destinationChain !== "hyperliquid" ||
             coreRoute.riskTier !== "single-chain-or-native" || coreRoute.reviewDisposition !== "reviewed" ||
             !evmRoute || evmRoute.issuanceModel !== "native-issuance") {
-          ctx.addIssue({ code: "custom", path: ["controls", index, "sameChainSystemTransport"], message: "System transport must join a reviewed same-chain Core route and its native EVM token" });
+          issue(ctx, ["controls", index, "sameChainSystemTransport"], "System transport must join a reviewed same-chain Core route and its native EVM token");
         }
       }
     }
@@ -516,11 +424,7 @@ const MintAuthoritySafeStateSchema = /* @__PURE__ */ (() => z
   .strict()
   .superRefine((safe, ctx) => {
     if (safe.threshold != null && safe.owners != null && safe.threshold > safe.owners.length) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "safe.threshold cannot exceed safe.owners length",
-        path: ["threshold"],
-      });
+      issue(ctx, ["threshold"], "safe.threshold cannot exceed safe.owners length");
     }
   }))();
 
@@ -577,36 +481,57 @@ const AuthorityControlFields = {
   evidence: z.string().min(12).optional(),
 };
 
-function validateExactAuthority(control: z.output<z.ZodObject<typeof AuthorityControlFields>>, chain: string | undefined, address: string | undefined, ctx: z.RefinementCtx): void {
+function validateExactAuthority(control: z.output<z.ZodObject<typeof AuthorityControlFields>>, chain: string | undefined, address: string | undefined, ctx: z.RefinementCtx, domain: "mint" | "bridge"): void {
+  if (control.threshold != null && control.signerCount != null && control.threshold > control.signerCount) {
+    issue(ctx, ["threshold"], "threshold cannot exceed signerCount");
+  }
+
+  // Bridge reviews may describe a Safe as a multisig or record it upstream of a timelock.
+  if (control.safe != null && control.authorityType !== "safe" &&
+      !(domain === "bridge" && (control.authorityType === "timelock" || control.authorityType === "multisig"))) {
+    issue(ctx, ["safe"], "safe details require a Safe authority or a bridge multisig/Safe-governed timelock");
+  }
+
+  if (control.safe?.threshold != null && control.threshold != null && control.safe.threshold !== control.threshold) {
+    issue(ctx, ["safe", "threshold"], "safe.threshold must match threshold when both are present");
+  }
+
+  if (
+    control.safe?.owners != null &&
+    control.signerCount != null &&
+    control.safe.owners.length !== control.signerCount
+  ) {
+    issue(ctx, ["safe", "owners"], "safe.owners length must match signerCount when both are present");
+  }
   const deployment = chain && address ? normalizeDeploymentId(`${chain}:${address}`) : null;
   if (control.weightedQuorum && (control.threshold != null || control.signerCount != null || control.authorityType !== "multisig")) {
-    ctx.addIssue({ code: "custom", message: "Weighted multisig excludes uniform threshold and signerCount", path: ["weightedQuorum"] });
+    issue(ctx, ["weightedQuorum"], "Weighted multisig excludes uniform threshold and signerCount");
   }
   if (control.weightedQuorum && deployment !== control.weightedQuorum.deployment) {
-    ctx.addIssue({ code: "custom", message: "Weighted quorum must match exact controller deployment", path: ["weightedQuorum"] });
+    issue(ctx, ["weightedQuorum"], "Weighted quorum must match exact controller deployment");
   }
   if (control.executionScope && deployment !== control.executionScope.controllerDeployment) {
-    ctx.addIssue({ code: "custom", message: "Execution scope must match exact controller deployment", path: ["executionScope"] });
+    issue(ctx, ["executionScope"], "Execution scope must match exact controller deployment");
   }
   if (control.executionScope && control.safe?.observedBlock != null && String(control.safe.observedBlock) !== control.executionScope.pin.position) {
-    ctx.addIssue({ code: "custom", message: "Safe and execution scope must share observation pin", path: ["executionScope"] });
+    issue(ctx, ["executionScope"], "Safe and execution scope must share observation pin");
   }
   for (const path of control.executionScope?.paths ?? []) {
     if (path.downstreamCallDomain && control.timelockDelaySec != null &&
         path.downstreamCallDomain.minimumDelaySec > control.timelockDelaySec) {
-      ctx.addIssue({ code: "custom", message: "Maximal execution cannot claim more delay than the controller's fastest enforced path", path: ["executionScope"] });
+      issue(ctx, ["executionScope"], "Maximal execution cannot claim more delay than the controller's fastest enforced path");
     }
     if (path.activation === "counterfactual" && path.counterfactual &&
         (control.authorityType !== "safe" && control.authorityType !== "multisig" ||
           control.weightedQuorum != null || control.threshold !== path.counterfactual.threshold ||
           control.signerCount !== path.counterfactual.owners.length)) {
-      ctx.addIssue({ code: "custom", message: "Counterfactual initialized quorum must match the exact uniform authority", path: ["executionScope"] });
+      issue(ctx, ["executionScope"], "Counterfactual initialized quorum must match the exact uniform authority");
     }
   }
   if (control.weightedQuorum && control.executionScope &&
       (control.weightedQuorum.pin.runtimeIdentity !== control.executionScope.pin.runtimeIdentity ||
         control.weightedQuorum.pin.signerIdentity !== control.executionScope.pin.signerIdentity)) {
-    ctx.addIssue({ code: "custom", message: "Weighted signing and execution certificates must bind the same identities", path: ["executionScope"] });
+    issue(ctx, ["executionScope"], "Weighted signing and execution certificates must bind the same identities");
   }
 }
 
@@ -635,23 +560,23 @@ const BridgeRouteControlSchema = /* @__PURE__ */ (() => z
   })
   .strict()
   .superRefine((control, ctx) => {
-    validateExactAuthority(control, control.controllerChain, control.controllerAddress, ctx);
+    validateExactAuthority(control, control.controllerChain, control.controllerAddress, ctx, "bridge");
     const transport = control.sameChainSystemTransport;
     if ((control.authorityType === "chain-consensus") !== (transport != null)) {
-      ctx.addIssue({ code: "custom", message: "Chain consensus authority requires the typed same-chain transport family" });
+      issue(ctx, undefined, "Chain consensus authority requires the typed same-chain transport family");
     }
     if (transport) {
       if (control.controllerChain !== "hyperevm" || control.controllerAddress?.toLowerCase() !== transport.systemAddress ||
           control.routeRefs.length !== 1 || normalizeDeploymentId(control.routeRefs[0]!) !== `hyperliquid:${transport.coreTokenId}`) {
-        ctx.addIssue({ code: "custom", message: "System transport must bind the exact system controller and Core token route" });
+        issue(ctx, undefined, "System transport must bind the exact system controller and Core token route");
       }
       if (control.capabilities.length !== 1 || control.capabilities[0] !== "escrow" ||
           control.threshold != null || control.signerCount != null || control.weightedQuorum != null || control.safe != null ||
           control.keyCustodyAttestation != null || control.executionScope != null || control.canRaiseCap != null) {
-        ctx.addIssue({ code: "custom", message: "Spot system transport is escrow transfer, not privileged minting or an independent signing quorum" });
+        issue(ctx, undefined, "Spot system transport is escrow transfer, not privileged minting or an independent signing quorum");
       }
       if (!control.sources?.length || !control.evidence || !control.observedAt || control.observedBlock == null) {
-        ctx.addIssue({ code: "custom", message: "System transport requires sourced, dated and pinned asset-link evidence" });
+        issue(ctx, undefined, "System transport requires sourced, dated and pinned asset-link evidence");
       }
     }
   }))();
@@ -680,45 +605,10 @@ const MintAuthorityControlSchema = /* @__PURE__ */ (() => z
   })
   .strict()
   .superRefine((control, ctx) => {
-    validateExactAuthority(control, control.chain, control.address, ctx);
-    if (control.authorityType === "chain-consensus") ctx.addIssue({ code: "custom", message: "Same-chain transport belongs to route controls, not native mint authority" });
-    if (control.executionScope && control.executionClassRef) ctx.addIssue({ code: "custom", path: ["executionClassRef"], message: "Individual scope and class reference are mutually exclusive" });
-    if (control.executionClassRef && normalizeDeploymentId(`${control.chain ?? ""}:${control.address ?? ""}`) !== control.executionClassRef.memberRef) ctx.addIssue({ code: "custom", path: ["executionClassRef", "memberRef"], message: "Execution class must bind the exact controller" });
-    if (control.threshold != null && control.signerCount != null && control.threshold > control.signerCount) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "threshold cannot exceed signerCount",
-        path: ["threshold"],
-      });
-    }
-
-    if (control.safe != null && control.authorityType !== "safe") {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "safe details are only allowed when authorityType is safe",
-        path: ["safe"],
-      });
-    }
-
-    if (control.safe?.threshold != null && control.threshold != null && control.safe.threshold !== control.threshold) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "safe.threshold must match threshold when both are present",
-        path: ["safe", "threshold"],
-      });
-    }
-
-    if (
-      control.safe?.owners != null &&
-      control.signerCount != null &&
-      control.safe.owners.length !== control.signerCount
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "safe.owners length must match signerCount when both are present",
-        path: ["safe", "owners"],
-      });
-    }
+    validateExactAuthority(control, control.chain, control.address, ctx, "mint");
+    if (control.authorityType === "chain-consensus") issue(ctx, undefined, "Same-chain transport belongs to route controls, not native mint authority");
+    if (control.executionScope && control.executionClassRef) issue(ctx, ["executionClassRef"], "Individual scope and class reference are mutually exclusive");
+    if (control.executionClassRef && normalizeDeploymentId(`${control.chain ?? ""}:${control.address ?? ""}`) !== control.executionClassRef.memberRef) issue(ctx, ["executionClassRef", "memberRef"], "Execution class must bind the exact controller");
   }))();
 
 const MintAuthorityReviewSchema = /* @__PURE__ */ (() => z
@@ -738,18 +628,10 @@ const MintAuthorityReviewSchema = /* @__PURE__ */ (() => z
     if (hasSourceLinks(review.sources) || review.sourceFreeRationale) {
       // Continue validating the explicit unresolved disposition below.
     } else {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "mintAuthority.review requires sources or sourceFreeRationale",
-        path: ["sources"],
-      });
+      issue(ctx, ["sources"], "mintAuthority.review requires sources or sourceFreeRationale");
     }
     if (review.disposition === "unresolved" && (review.unresolvedQuestions?.length ?? 0) === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "unresolved mint-authority disposition requires unresolvedQuestions",
-        path: ["unresolvedQuestions"],
-      });
+      issue(ctx, ["unresolvedQuestions"], "unresolved mint-authority disposition requires unresolvedQuestions");
     }
   }))();
 
@@ -764,18 +646,10 @@ const MintAuthorityIncidentSchema = /* @__PURE__ */ (() => z
   .strict()
   .superRefine((incident, ctx) => {
     if (incident.status === "active" && incident.resolvedAt != null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "active mint incidents cannot carry resolvedAt",
-        path: ["resolvedAt"],
-      });
+      issue(ctx, ["resolvedAt"], "active mint incidents cannot carry resolvedAt");
     }
     if (incident.resolvedAt != null && incident.resolvedAt < incident.date) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "mint incident resolvedAt cannot precede its incident date",
-        path: ["resolvedAt"],
-      });
+      issue(ctx, ["resolvedAt"], "mint incident resolvedAt cannot precede its incident date");
     }
   }))();
 
@@ -844,10 +718,7 @@ const MintAuthorityProfileObjectSchema = /* @__PURE__ */ (() => z
           .strict()
           .superRefine((veto, ctx) => {
             if ((veto.override === "insolvency-gated-restructure") !== (veto.restructure !== undefined)) {
-              ctx.addIssue({
-                code: "custom", path: ["restructure"],
-                message: "restructure must be present if and only if override is insolvency-gated-restructure",
-              });
+              issue(ctx, ["restructure"], "restructure must be present if and only if override is insolvency-gated-restructure");
             }
           })
           .optional(),

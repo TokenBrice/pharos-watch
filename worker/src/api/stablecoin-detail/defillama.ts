@@ -38,6 +38,18 @@ export function resetDefiLlamaDetailStateForTests(): void {
   detailMaterializationBudget = new ScheduledFetchBudget(1);
 }
 
+export async function acquireDefiLlamaDetailMaterialization(): Promise<() => void> {
+  const admissionTimeout = createTimeoutSignal({
+    timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS,
+    timeoutReason: new DOMException("DefiLlama detail materialization queue timed out", "TimeoutError"),
+  });
+  try {
+    return await detailMaterializationBudget.acquire(1, admissionTimeout.signal);
+  } finally {
+    admissionTimeout.dispose();
+  }
+}
+
 interface DefiLlamaDetailConfig {
   db: D1Database;
   stablecoinId: string;
@@ -207,16 +219,11 @@ export function normalizeDefiLlamaDetailBody(
       const nativeBuckets = rawTotalCirculating ?? rawCirculating;
       if (nativeBuckets) {
         entry.totalCirculating = nativeBuckets;
-        if (price != null) {
-          entry.totalCirculatingUSD = scalePegBuckets(nativeBuckets, price);
-        } else if (rawTotalCirculatingUsd) {
-          entry.totalCirculatingUSD = rawTotalCirculatingUsd;
-        }
-      } else if (rawTotalCirculatingUsd) {
+      }
+      // Historical observations must not be revalued with the current quote,
+      // in either direction. Missing day-specific conversions stay unavailable.
+      if (rawTotalCirculatingUsd) {
         entry.totalCirculatingUSD = rawTotalCirculatingUsd;
-        if (price != null) {
-          entry.totalCirculating = scalePegBuckets(rawTotalCirculatingUsd, 1 / price);
-        }
       }
       continue;
     }
@@ -242,13 +249,9 @@ export async function handleDefiLlamaDetail(
   config: DefiLlamaDetailConfig,
   detail: DetailResponseHelpers,
 ): Promise<Response> {
-  const admissionTimeout = createTimeoutSignal({
-    timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS,
-    timeoutReason: new DOMException("DefiLlama detail materialization queue timed out", "TimeoutError"),
-  });
   let release: () => void;
   try {
-    release = await detailMaterializationBudget.acquire(1, admissionTimeout.signal);
+    release = await acquireDefiLlamaDetailMaterialization();
   } catch (err) {
     // Local contention is not an upstream failure and must not trip the source
     // circuit or admit a half-open probe that never reaches the provider.
@@ -256,8 +259,6 @@ export async function handleDefiLlamaDetail(
     const fallback = await detail.trySupplyHistoryFallback("defillama-detail-admission-timeout");
     if (fallback) return fallback;
     return detail.staleCacheOrError(503, "DefiLlama detail refresh capacity unavailable");
-  } finally {
-    admissionTimeout.dispose();
   }
 
   try {

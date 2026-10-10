@@ -27,6 +27,8 @@ import type { TelegramWebhookOperationIntent } from "./telegram-webhook-store";
 import {
   commandRequiresGroupAdmin,
   isRecapMutationArgs,
+  isMutatingTelegramStartPayload,
+  maybeGateNonAdminGroupActor,
 } from "./telegram-webhook-ingress-policy";
 
 export type ParsedTelegramCommand = NonNullable<ReturnType<typeof parseCommand>>;
@@ -38,7 +40,8 @@ type PendingFlowResult = "continue" | "continue-clear-pending" | "finished";
 
 function mutatesAfterPendingClear(command: ParsedTelegramCommand): boolean {
   return commandRequiresGroupAdmin(command.command, command.args)
-    || (command.command === "/recap" && isRecapMutationArgs(command.args));
+    || (command.command === "/recap" && isRecapMutationArgs(command.args))
+    || (command.command === "/start" && isMutatingTelegramStartPayload(command.args));
 }
 
 function normalizedPendingActionType(value: string | null | undefined): string {
@@ -297,7 +300,9 @@ export async function handlePendingActionBeforeDispatch(args: {
       await reply("Only the user who started this pending selection can complete it.");
       return "finished";
     }
-    await handleDisambiguationReply(db, chatId, text, pendingAction, botToken, username, operation);
+    await handleDisambiguationReply(
+      db, chatId, text, pendingAction, botToken, username, chatType, actorUserId, reply, operation,
+    );
     return "finished";
   }
 
@@ -312,6 +317,13 @@ export async function handlePendingActionBeforeDispatch(args: {
     return "finished";
   }
 
+  if (command === "/start" && isMutatingTelegramStartPayload(parsedCommand.args)) {
+    if (!canActOnPending(pendingAction, actorUserId)) {
+      await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
+      return "finished";
+    }
+    return "continue-clear-pending";
+  }
   if (PENDING_PASSTHROUGH_COMMANDS.has(command) || (command === "/recap" && parsedCommand.args.trim().length === 0)) {
     return "continue";
   }
@@ -368,6 +380,9 @@ async function handleDisambiguationReply(
   pending: PendingAction,
   botToken: string,
   username: string | null,
+  chatType: string,
+  actorUserId: string | null,
+  reply: ReplyFn,
   operation?: PendingSelectionOperationContext,
 ): Promise<void> {
   if (pending.actionType === "confirm-bulk" || pending.actionType === "forget-confirm") {
@@ -387,6 +402,12 @@ async function handleDisambiguationReply(
     await sendAuditedTelegramReply(db, chatId, escapeHtml(reminder), botToken);
     return;
   }
+  if (
+    isGroupChatType(chatType)
+    && !(await maybeGateNonAdminGroupActor(
+      db, botToken, chatId, actorUserId, `/${pending.actionType}`, reply,
+    ))
+  ) return;
   await executePendingDisambiguationSelection(
     db,
     botToken,

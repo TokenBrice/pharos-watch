@@ -29,7 +29,7 @@ const ONE_DAY_SEC = 86_400;
  * worker/src/cron/dex-liquidity/orchestrator-analysis.ts). Those guards are
  * aggregate-only, so this applies the same bound per coin. It also clears the
  * largest documented methodology recompute: v6.0's Raydium de-duplication moved
- * individual coins 2-35% (shared/data/methodology-changelogs/liquidity-score/v6.ts).
+ * individual coins 2-35% (shared/data/methodology-changelogs/liquidity-score/v6.json).
  *
  * This is an *editorial* threshold, not an admission rule. Magnitude alone
  * cannot distinguish an artifact from a real drain, and only the candidate

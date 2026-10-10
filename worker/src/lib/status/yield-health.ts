@@ -16,6 +16,7 @@ import {
 import {
   YIELD_BENCHMARK_KEY_VALUES,
   type YieldBenchmarkKey,
+  YieldCoverageAuditRankingsSchema,
 } from "@shared/types/yield";
 import type {
   CronStatus,
@@ -31,6 +32,7 @@ import {
   getYieldSupplementalFamilyCacheKey,
   getYieldSupplementalRunOutcomeCacheKey,
   parseYieldSupplementalRunOutcome,
+  parseYieldSupplementalSourcesCache,
 } from "../../cron/yield-sync/cache";
 import { getSupplementalFamilyStaleThresholdSec } from "../../cron/yield-sync/supplemental-source-families";
 import {
@@ -44,6 +46,7 @@ import {
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
   YIELD_BENCHMARK_SCORE_TTL_SEC,
 } from "../../cron/yield-sync/benchmarks";
+import { assessFreshnessTimestamp } from "../api-freshness-age";
 
 const YIELD_RUNBOOK_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/yield-health.md";
 const YIELD_RANKINGS_CACHE_KEY = "yield-rankings";
@@ -146,15 +149,13 @@ function safeJsonObjectParse(json: string | null | undefined, context: string): 
 }
 
 function ageSeconds(now: number, updatedAt: number | null | undefined): number | null {
-  return typeof updatedAt === "number" && Number.isFinite(updatedAt)
-    ? Math.max(0, now - updatedAt)
-    : null;
+  return assessFreshnessTimestamp(now, updatedAt).ageSeconds;
 }
 
 function recordAgeSeconds(now: number, recordDate: string | null): number | null {
   if (!recordDate) return null;
   const parsed = Date.parse(`${recordDate}T00:00:00Z`);
-  return Number.isFinite(parsed) ? Math.max(0, now - Math.trunc(parsed / 1000)) : null;
+  return Number.isFinite(parsed) ? ageSeconds(now, Math.trunc(parsed / 1000)) : null;
 }
 
 function freshnessStatus(
@@ -595,6 +596,17 @@ function buildCoverageAuditCounts(payload: Record<string, unknown> | null): Cove
   ) as CoverageAuditCounts;
 }
 
+function hasCoverageAuditEvidence(payload: Record<string, unknown> | null): boolean {
+  if (payload == null) return false;
+  return COVERAGE_AUDIT_COUNT_FIELDS.every(([countKey, arrayKey]) => {
+    const count = payload[countKey];
+    const rows = payload[arrayKey];
+    return (count == null || (typeof count === "number" && Number.isSafeInteger(count) && count >= 0))
+      && (rows == null || Array.isArray(rows))
+      && (count != null || Array.isArray(rows));
+  });
+}
+
 function sanitizeQueueItem(value: unknown): YieldCoverageAuditQueueItem | null {
   const row = getObject(value);
   const kind = getQueueKind(row?.kind);
@@ -723,12 +735,21 @@ function buildSupplementalHealth(
   const degradedFamilySet = new Set<string>(degradedFamilies);
   const familyRows = SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => {
     const row = byKey.get(getYieldSupplementalFamilyCacheKey(family)) ?? null;
+    const value = row?.value ?? null;
     const ageSec = ageSeconds(now, row?.updated_at);
     const payload = safeJsonObjectParse(
-      row?.value ?? null,
+      value,
       `yield-health:supplemental:${family}`,
     );
-    const sourceCount = getNumber(payload?.sourceCount);
+    const parsed = row && typeof row.updated_at === "number" && value != null && payload?.source === "sync-yield-supplemental"
+      && typeof payload.updatedAt === "number" && Number.isFinite(payload.updatedAt)
+      && typeof payload.sourceCount === "number" && Number.isSafeInteger(payload.sourceCount) && payload.sourceCount >= 0
+      && Array.isArray(payload.data) && payload.sourceCount === payload.data.length
+      ? parseYieldSupplementalSourcesCache(value, row.updated_at, now)
+      : null;
+    const payloadValid = parsed != null && parsed.candidates.length === payload?.sourceCount;
+    const sourceCount = payloadValid ? parsed.sourceCount : null;
+    const unavailableReason = !row ? "supplemental-missing" : !payloadValid ? "supplemental-malformed" : null;
     const degraded = degradedFamilySet.has(family);
     // Share the producer's per-family budget; retained reuse never advances its marker.
     const familyMaxAgeSec = getSupplementalFamilyStaleThresholdSec(family);
@@ -739,17 +760,21 @@ function buildSupplementalHealth(
     );
     // A degraded family can only read worse than its marker age: the retained
     // snapshot is stale once its marker ages out, but it is never healthy.
-    const status: YieldHealthFieldStatus = degraded
-      ? freshness === "stale" ? "stale" : "degraded"
-      : freshness;
+    const status: YieldHealthFieldStatus = !payloadValid
+      ? "unknown"
+      : degraded
+        ? freshness === "stale" ? "stale" : "degraded"
+        : freshness;
     return {
       family,
       updatedAt: row?.updated_at ?? null,
       ageSec,
+      timestampReason: assessFreshnessTimestamp(now, row?.updated_at).reason,
       sourceCount,
+      unavailableReason,
       maxAgeSec: familyMaxAgeSec,
       // Only a family that still holds a previous snapshot has one to retain.
-      retained: degraded && row != null,
+      retained: degraded && payloadValid,
       status,
     };
   });
@@ -761,7 +786,9 @@ function buildSupplementalHealth(
       {
         updatedAt: row.updatedAt,
         ageSec: row.ageSec,
+        timestampReason: row.timestampReason,
         sourceCount: row.sourceCount,
+        unavailableReason: row.unavailableReason,
         maxAgeSec: row.maxAgeSec,
         status: row.status,
         retained: row.retained,
@@ -792,8 +819,9 @@ function buildSupplementalHealth(
   return {
     updatedAt: latestFamilyUpdatedAt,
     ageSec: ageSeconds(now, latestFamilyUpdatedAt),
+    timestampReason: assessFreshnessTimestamp(now, latestFamilyUpdatedAt).reason,
     maxAgeSec: STATUS_YIELD_HEALTH_THRESHOLDS.supplementalMaxAgeSec,
-    status: worstStatus(familyStatuses),
+    status: familyStatuses.every((status) => status === "unknown") ? "unknown" : worstStatus(familyStatuses),
     familyCount: requiredFamilyRows.length,
     freshFamilyCount: requiredFamilyRows.filter((row) => row.status === "healthy").length,
     degradedFamilyCount: requiredFamilyRows.filter((row) => row.status === "degraded").length,
@@ -900,15 +928,17 @@ export async function loadYieldHealthSummary(
     rankingsRow?.value ?? null,
     `yield-health:cache:${YIELD_RANKINGS_CACHE_KEY}`,
   );
+  const rankings = rankingsPayload && YieldCoverageAuditRankingsSchema.safeParse(rankingsPayload).success
+    && Array.isArray(rankingsPayload.rankings) ? rankingsPayload.rankings : null;
+  const rankingUnavailableReason = !rankingsRow ? "rankings-missing" : rankings == null ? "rankings-malformed" : null;
   const rankingUpdatedAt = rankingsRow?.updated_at ?? getNumber(rankingsPayload?.updatedAt);
   const rankingAgeSec = ageSeconds(now, rankingUpdatedAt);
-  const rankingStatus = rankingsPayload == null
+  const rankingStatus = rankings == null
     ? "stale"
     : freshnessStatus(rankingAgeSec, YIELD_RANKING_MAX_AGE_SEC, {
         missingIs: "stale",
         thresholds: YIELD_RANKING_RATIO_THRESHOLDS,
       });
-  const rankings = Array.isArray(rankingsPayload?.rankings) ? rankingsPayload.rankings : null;
   const sourceRiskCoverage = buildSourceRiskCoverage(rankings);
   const { previousRankingCount, rankingCountDelta } = getSyncYieldRankingDeltaMetadata(crons);
 
@@ -936,7 +966,10 @@ export async function loadYieldHealthSummary(
     `yield-health:cache:${YIELD_COVERAGE_AUDIT_CACHE_KEY}`,
   );
   const coverageAuditAgeSec = ageSeconds(now, coverageAuditUpdatedAt);
-  const coverageAuditFreshness = freshnessStatus(
+  const coverageAuditUnavailableReason = !byKey.has(YIELD_COVERAGE_AUDIT_CACHE_KEY)
+    ? "coverage-audit-missing"
+    : !hasCoverageAuditEvidence(coverageAuditPayload) ? "coverage-audit-malformed" : null;
+  const coverageAuditFreshness = coverageAuditUnavailableReason != null ? "unknown" : freshnessStatus(
     coverageAuditAgeSec,
     STATUS_YIELD_HEALTH_THRESHOLDS.coverageAuditMaxAgeSec,
     { missingIs: "unknown", degradedAfterOne: true },
@@ -998,8 +1031,10 @@ export async function loadYieldHealthSummary(
     previousRankingCount,
     rankingUpdatedAt,
     rankingAgeSec,
+    rankingTimestampReason: assessFreshnessTimestamp(now, rankingUpdatedAt).reason,
     rankingMaxAgeSec: YIELD_RANKING_MAX_AGE_SEC,
     rankingStatus,
+    rankingUnavailableReason,
     safetyCoverage: {
       coveredCount: getNumber(safetySnapshot?.coveredCount),
       trackedCount: getNumber(safetySnapshot?.trackedCount),
@@ -1013,8 +1048,10 @@ export async function loadYieldHealthSummary(
     coverageAudit: {
       updatedAt: coverageAuditUpdatedAt,
       ageSec: coverageAuditAgeSec,
+      timestampReason: assessFreshnessTimestamp(now, coverageAuditUpdatedAt).reason,
       maxAgeSec: STATUS_YIELD_HEALTH_THRESHOLDS.coverageAuditMaxAgeSec,
       status: coverageAuditStatus,
+      unavailableReason: coverageAuditUnavailableReason,
       headlineGapCount,
       recommendationCandidateCount,
       queueBudget: COVERAGE_AUDIT_QUEUE_BUDGET,

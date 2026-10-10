@@ -27,11 +27,24 @@ export function hasDivergence(
 }
 
 export function buildDiscrepancy(
-  overallStatus: StatusLevel,
+  overallStatus: StatusLevel | null,
   probe: StatusProbeSummary,
   now: number,
   consecutiveDivergent: number | null,
+  statusUnavailableReason: "status-missing" | "status-unreadable" = "status-missing",
 ): StatusDiscrepancy {
+  if (overallStatus == null) {
+    return {
+      hasDivergence: false,
+      severityDelta: null,
+      statusSeverity: null,
+      probeSeverity: probe.status === "unknown" ? -1 : SEVERITY[probe.status],
+      details: "Status comparison authority unavailable.",
+      probeAgeSeconds: assessFreshnessTimestamp(now, probe.timestamp).ageSeconds,
+      consecutiveDivergent,
+      discrepancyReason: statusUnavailableReason,
+    };
+  }
   if (probe.status === "unknown" || probe.timestamp == null) {
     return {
       hasDivergence: false,

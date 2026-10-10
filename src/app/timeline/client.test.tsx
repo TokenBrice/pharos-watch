@@ -3,13 +3,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { TapeEvent } from "@shared/types/tape-event";
+import { renderToString } from "react-dom/server";
+import { makeTapeEvent } from "@shared/test-utils/tape-event";
+import type { ApiMeta } from "@/lib/api";
 
 type UseEventsResult = {
   data: { events: TapeEvent[]; nextCursor: string | null };
   pages: Array<{ data: { events: TapeEvent[]; nextCursor: string | null; droppedRows: number; total: number | null }; meta: null }> | undefined;
   isLoading: boolean;
   error: Error | null;
-  meta: null;
+  meta: ApiMeta | null;
   dataUpdatedAt: number;
   refetch: () => Promise<unknown>;
   fetchNextPage: () => Promise<unknown>;
@@ -69,29 +72,6 @@ beforeEach(() => {
   });
 });
 
-function makeTapeEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
-  return {
-    id: "1747200000000-depeg-abc12345",
-    type: "depeg.opened",
-    severity: "warning",
-    ts: Date.now() - 120_000,
-    endsAt: null,
-    coinId: "usdc-circle",
-    issuerId: null,
-    pegCurrency: "USD",
-    chain: null,
-    title: "USDC depeg opened (-500 bps)",
-    summary: "USDC drifted to -500 bps versus its USD peg.",
-    payload: {},
-    sourceTable: "depeg_events",
-    sourceRowId: "1",
-    transition: "opened",
-    sourceUrl: "/stablecoin/usdc-circle/#peg-history",
-    methodologyVersion: null,
-    ...overrides,
-  };
-}
-
 function mockEvents(events: TapeEvent[], overrides: Partial<UseEventsResult> = {}) {
   const nextCursor = overrides.data?.nextCursor ?? null;
   const total = overrides.total ?? events.length;
@@ -113,6 +93,17 @@ function mockEvents(events: TapeEvent[], overrides: Partial<UseEventsResult> = {
 }
 
 describe("TimelineClient", () => {
+  it("does not read the browser clock or query during server rendering", () => {
+    const clock = vi.spyOn(Date, "now");
+    try {
+      expect(renderToString(<TimelineClient />)).toBe("");
+      expect(clock).not.toHaveBeenCalled();
+      expect(useEventsMock).not.toHaveBeenCalled();
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it("keeps timeline pagination manual on initial page load", () => {
     mockEvents([]);
 
@@ -320,6 +311,65 @@ describe("TimelineClient", () => {
     expect(screen.getByText("Incomplete (3 rows rejected)")).toBeTruthy();
   });
 
+  it("ages producer freshness and UTC labels without moving the query anchor", () => {
+    vi.useFakeTimers();
+    const mountedAt = Date.parse("2026-10-09T23:59:30Z");
+    vi.setSystemTime(mountedAt);
+    mockEvents([], { dataUpdatedAt: 0 });
+    const { rerender } = render(<TimelineClient />);
+    const querySince = useEventsMock.mock.calls[0][0]?.since;
+
+    vi.advanceTimersByTime(1_000);
+    const receivedAt = Date.now();
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened", ts: mountedAt - 120_000 })], {
+      dataUpdatedAt: receivedAt,
+      meta: { updatedAt: receivedAt / 1000, ageSeconds: 0, status: "fresh", freshBudgetSec: 600, degradedBudgetSec: 1200 },
+    });
+    rerender(<TimelineClient />);
+    expect(screen.getByText("▌")).toBeTruthy();
+    expect(screen.getByText("Today")).toBeTruthy();
+    const lastEventBefore = screen.getByText(/Last event:/).textContent;
+
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(screen.queryByText("Today")).toBeNull();
+    expect(screen.getByText("Yesterday")).toBeTruthy();
+    expect(screen.getByText(/Last event:/).textContent).not.toBe(lastEventBefore);
+
+    act(() => {
+      vi.advanceTimersByTime(10 * 60_000);
+    });
+    expect(screen.queryByText("▌")).toBeNull();
+    expect(screen.getByText(/Updated/).textContent).not.toContain("just now");
+    for (const [params] of useEventsMock.mock.calls) {
+      expect(params?.since).toBe(querySince);
+    }
+  });
+
+  it.each<[string, ApiMeta]>([
+    ["old producer", { updatedAt: 1_700_000_000 - 3600, ageSeconds: 3600, status: "fresh", freshBudgetSec: 600, degradedBudgetSec: 1200 }],
+    ["degraded producer", { updatedAt: 1_700_000_000, ageSeconds: 0, status: "degraded" }],
+    ["unknown producer", { updatedAt: null, ageSeconds: null, status: "unknown", reason: "snapshot-producer-timestamp-unavailable" }],
+  ])("does not publish a fresh indicator for %s with a new receipt", (_label, meta) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_700_000_000_000);
+    mockEvents([makeTapeEvent()], { meta });
+    render(<TimelineClient />);
+    expect(screen.queryByText("▌")).toBeNull();
+  });
+
+  it("removes the fresh indicator on a failed refresh while retaining events", () => {
+    const event = makeTapeEvent({ type: "depeg.peak_worsened" });
+    mockEvents([event]);
+    const { rerender } = render(<TimelineClient />);
+    expect(screen.getByText("▌")).toBeTruthy();
+    mockEvents([event], { error: new Error("refresh failed") });
+    rerender(<TimelineClient />);
+    expect(screen.queryByText("▌")).toBeNull();
+    expect(document.querySelector(`[data-event-id="${event.id}"]`)).toBeTruthy();
+  });
+
   it("collapses a dense yesterday class into a digest row", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-22T12:00:00.000Z"));
@@ -430,7 +480,8 @@ describe("TimelineClient", () => {
     expect(summaryText.toLowerCase()).toContain("score");
   });
 
-  it("renders linked-event as a PINNED inline row instead of a separate section", () => {
+  it.each([false, true])("renders and focuses a PINNED permalink when the filtered feed is empty: %s", (emptyFeed) => {
+    vi.useFakeTimers();
     const pinned: TapeEvent = makeTapeEvent({
       id: "evt-pinned",
       title: "Linked event title",
@@ -442,14 +493,28 @@ describe("TimelineClient", () => {
       error: null,
       meta: null,
     });
-    mockEvents([makeTapeEvent({ id: "evt-other", title: "Other event" })]);
+    mockEvents(emptyFeed ? [] : [makeTapeEvent({ id: "evt-other", title: "Other event" })]);
     // Force the permalink lookup branch by setting ?event= in the URL.
-    window.history.replaceState(null, "", `/timeline?event=${encodeURIComponent("evt-pinned")}`);
+    window.history.replaceState(null, "", `/timeline?event=${encodeURIComponent("evt-pinned")}&coin=usdt-tether`);
 
     render(<TimelineClient />);
 
     expect(screen.queryByText(/You followed a link/i)).toBeNull();
     expect(screen.getAllByText(/PINNED/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/linked event isn't in this view/i)).toBeNull();
+    if (emptyFeed) expect(screen.getByText(/No events match these filters/i)).toBeTruthy();
+    const target = document.getElementById("tape-event-card-evt-pinned");
+    expect(target).not.toBeNull();
+    expect(document.getElementById("tape-feed")?.contains(target)).toBe(true);
+    act(() => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(document.activeElement).toBe(target);
+    expect(target?.className).toContain("bg-amber-500/5");
+    act(() => {
+      vi.advanceTimersByTime(2_000);
+    });
+    expect(target?.className).not.toContain("bg-amber-500/5");
     window.history.replaceState(null, "", "/timeline");
   });
 

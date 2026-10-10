@@ -12,8 +12,6 @@ import {
   type StaleSlotReconciliationSummary,
 } from "./scheduled-slot-reconciliation";
 
-export { staleSlotEventCacheKey } from "./scheduled-slot-reconciliation";
-
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import type { SlotDeadline } from "./cron-timeouts";
@@ -61,8 +59,6 @@ interface ScheduledSlotFenceMetadata {
   jobsDegraded: number;
   jobsSkipped: number;
 }
-
-export const SLOT_EXECUTION_HEARTBEAT_SEC = resolveScheduledSlotPolicy("").heartbeatSec;
 
 type SlotExecutionRow = {
   state: string;
@@ -531,7 +527,7 @@ async function touchScheduledSlotExecution(
     db
       .prepare(
         `UPDATE cron_slot_executions
-         SET updated_at = ?
+         SET updated_at = MAX(updated_at, ?)
          WHERE slot_key = ?
            AND slot_started_at = ?
            AND execution_owner = ?
@@ -699,10 +695,9 @@ export async function runScheduledSlotWithFence(
     // while the isolate is alive, and the slot is then falsely reconciled as
     // abandoned (2026-09-23 depegResolverOffset: one queued child read plus
     // one queued heartbeat produced a platform-abandoned error). The write is
-    // an idempotent CAS on owner/generation/state, so overlapping attempts
-    // are safe; each attempt stamps its own wall clock, and a late attempt
-    // can stamp at most one heartbeat period in the past — always absorbed by
-    // the stale window (>= 2x heartbeatSec).
+    // an idempotent CAS on owner/generation/state with a monotonic timestamp,
+    // so overlapping attempts are safe even if an older queued write commits
+    // after a replacement heartbeat.
     if (heartbeatLatestStartedAtMs > 0 && Date.now() - heartbeatLatestStartedAtMs < heartbeatSec * 1000) return;
     if (heartbeatLatestStartedAtMs > 0) {
       logWorkerEventArgs("lib", "warn", `[cron-slot] Slot ${slotKey}@${opts.slotStartedAt} heartbeat still in flight after ${heartbeatSec}s; starting a replacement attempt`);

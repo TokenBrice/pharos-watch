@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { StatusHealthValue } from "./core";
 import { ActivePriceCoverageHealthSchema, StablecoinPublicationHealthSchema, StatusHealthValueSchema } from "./core";
-import { AlertBrokerHealthSummarySchema } from "./operational";
 import { CacheStatusSchema } from "./schema-primitives";
 import { FreshnessStatusSchema } from "../api-meta";
 import {
@@ -108,31 +107,33 @@ export const HealthResponseSchema = z.object({
   warnings: z.array(z.string()),
   caches: z.record(z.string(), CacheStatusSchema),
   blacklist: z.object({
-    totalEvents: z.number(),
-    missingAmounts: z.number(),
-    recentMissingAmounts: z.number(),
-    recentWindowSec: z.number(),
-    missingRatio: z.number(),
+    totalEvents: z.number().nullable(),
+    missingAmounts: z.number().nullable(),
+    recentMissingAmounts: z.number().nullable(),
+    recentWindowSec: z.number().nullable(),
+    missingRatio: z.number().nullable(),
+    unavailableReason: z.enum(["db-unavailable", "blacklist-read-failed"]).nullable().optional(),
   }),
   mintBurn: z.object({
     totalEvents: z.number().nullable(),
     latestEventTs: z.number().nullable(),
     latestHourlyTs: z.number().nullable(),
     freshnessAgeSec: z.number().nullable(),
-    majorStaleCount: z.number(),
-    staleMajorSymbols: z.array(z.string()),
+    majorStaleCount: z.number().nullable(),
+    staleMajorSymbols: z.array(z.string()).nullable(),
+    unavailableReason: z.enum(["db-unavailable", "mint-burn-read-failed", "mint-burn-output-read-failed"]).nullable().optional(),
     queryErrors: MintBurnHealthQueryErrorsSchema.optional(),
     sync: z.object({
       lastSuccessfulSyncAt: z.number().nullable(),
-      freshnessStatus: FreshnessStatusSchema,
+      freshnessStatus: FreshnessStatusSchema.nullable(),
       warning: z.string().nullable(),
-      criticalLaneHealthy: z.boolean(),
+      criticalLaneHealthy: z.boolean().nullable(),
     }),
   }),
-  circuits: z.record(z.string(), CircuitRecordSchema),
+  circuits: z.record(z.string(), CircuitRecordSchema).nullable(),
+  circuitsUnavailableReason: z.enum(["db-unavailable", "circuits-read-failed"]).nullable().optional(),
   stablecoinPublication: StablecoinPublicationHealthSchema.optional(),
   activePriceCoverage: ActivePriceCoverageHealthSchema.optional(),
-  alertBroker: AlertBrokerHealthSummarySchema.optional(),
   schedulerLiveness: SchedulerLivenessSchema.optional(),
   telegramSummary: TelegramHealthSummarySchema.nullable().optional(),
 });

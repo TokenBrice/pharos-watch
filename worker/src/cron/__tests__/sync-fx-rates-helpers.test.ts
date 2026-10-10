@@ -114,3 +114,30 @@ describe("FxSyncRunState realtime overlays", () => {
     expect(state.sourceUpdatedAtByPeg.peggedEUR).toBe(oxrObservedAt);
   });
 });
+
+describe("FxSyncRunState partial Frankfurter coverage", () => {
+  it("recovers an omitted primary peg with its original cadence-valid provenance", () => {
+    const state = createState({ peggedEUR: 1.08, peggedMYR: 0.22 });
+    state.applyFrankfurterRates({ MYR: 1 / 0.22 }, "2025-06-13", { EUR: "peggedEUR", MYR: "peggedMYR" });
+    expect(state.usableRates.peggedEUR).toBe(1.08);
+    expect(state.usableRates.peggedMYR).toBeCloseTo(0.22);
+    expect(state.sourceUpdatedAtByPeg.peggedEUR).toBe(syncStartSec - 3600);
+    expect(state.sourceModeByPeg.peggedEUR).toBe("live");
+    expect(state.sourceCadenceByPeg.peggedEUR).toBe("intraday");
+    expect(state.sourceModeByPeg.peggedMYR).toBe("live");
+  });
+
+  it.each([false, true])("leaves an omitted primary unavailable with stale previous state=%s", (stalePrevious) => {
+    const previous = stalePrevious ? buildPrevState({ peggedEUR: 1.08 }) : null;
+    if (previous) previous.sourceUpdatedAtByPeg.peggedEUR = syncStartSec - 24 * 3600;
+    const state = new FxSyncRunState({
+      prevState: previous, syncStartSec, expectedPegKeys: ["peggedEUR", "peggedMYR"],
+      initialSources: {}, validateRate: () => true,
+    });
+    state.applyFrankfurterRates({ MYR: 1 / 0.22 }, "2025-06-13", { EUR: "peggedEUR", MYR: "peggedMYR" });
+    expect(Object.keys(state.usableRates)).toEqual(["peggedMYR"]);
+    expect(state.usableRates.peggedMYR).toBeCloseTo(0.22);
+    expect(state.getMissingPegKeys()).toEqual(["peggedEUR"]);
+    expect(state.sourceUpdatedAtByPeg.peggedEUR).toBeUndefined();
+  });
+});

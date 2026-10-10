@@ -48,6 +48,12 @@ describe("buildCoverageDatasetJsonLd", () => {
 });
 
 describe("buildPublicDatasetMirrorJsonLd", () => {
+  it("documents the appended supply reason in the top-stablecoins description", () => {
+    const jsonLd = buildPublicDatasetMirrorJsonLd("top-stablecoins");
+    expect(jsonLd.description).toContain("The final CSV column, supplyUnavailableReason");
+    expect(jsonLd.description).toContain("without shifting existing columns");
+  });
+
   it("describes public mirrored datasets with downloadable distributions", () => {
     const jsonLd = buildPublicDatasetMirrorJsonLd("scores-latest");
     const serialized = JSON.stringify(jsonLd);

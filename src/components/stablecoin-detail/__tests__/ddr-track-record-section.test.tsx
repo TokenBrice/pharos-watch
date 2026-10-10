@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DdrTrackRecordSection } from "@/components/stablecoin-detail/ddr-track-record-section";
 import { DDRR_PUBLIC_WARNING, type DdrrResponse, type DdrrRow } from "@shared/types/depeg-resolver-review";
+import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
 
 const { useDepegResolverReviewMock, resolverEnabledMock, reviewerEnabledMock } = vi.hoisted(() => ({
   useDepegResolverReviewMock: vi.fn(),
@@ -111,17 +112,21 @@ const COVERAGE_ROW = {
 } as unknown as DdrrRow;
 
 function mockReview(rows: DdrrRow[] | undefined) {
-  useDepegResolverReviewMock.mockReturnValue({
+  const query = {
     data:
       rows == null
         ? undefined
         : ({
             _meta: { computedAt: 1_700_100_000, publicWarning: DDRR_PUBLIC_WARNING },
-            summary: {},
+            summary: summarizeDdrrRows(rows),
             rows,
             methodology: {},
           } as unknown as DdrrResponse),
-  });
+    error: null,
+    refetch: vi.fn(),
+  };
+  useDepegResolverReviewMock.mockReturnValue(query);
+  return query;
 }
 
 describe("DdrTrackRecordSection", () => {
@@ -170,5 +175,80 @@ describe("DdrTrackRecordSection", () => {
     expect(screen.getByText(DDRR_PUBLIC_WARNING)).toBeTruthy();
     expect(screen.getByRole("link", { name: "Full DDRR review" }).getAttribute("href")).toBe("/depeg");
     expect(screen.getByText("Reviewed 2023-11-16")).toBeTruthy();
+  });
+
+  it("keeps producer statistics when this coin is entirely outside a capped public sample", () => {
+    const full = Array.from({ length: 401 }, (_, index) => ({
+      ...PREDICTION_ROW, eventId: index + 1, stablecoinId: index === 400 ? COIN : "usdt-tether",
+    })) as DdrrRow[];
+    useDepegResolverReviewMock.mockReturnValue({
+      data: {
+        _meta: { computedAt: 1_700_100_000, publicRowsTruncated: true },
+        summary: summarizeDdrrRows(full), rows: full.slice(0, 400),
+      }, error: null, refetch: vi.fn(),
+    });
+    render(<DdrTrackRecordSection stablecoinId={COIN} />);
+    expect(screen.getByText("1/1 correct")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "DDR track record facts" })).toBeTruthy();
+    expect(screen.getByRole("list", { name: "Reviewed depeg incidents" }).querySelectorAll("li")).toHaveLength(0);
+    expect(screen.getByText(/public incident sample is incomplete/)).toBeTruthy();
+    expect(screen.getByText("+1 more reviewed incidents")).toBeTruthy();
+  });
+
+  it("retains stale-cache review evidence behind a status and retry notice", () => {
+    const query = mockReview([PREDICTION_ROW]);
+    query.data!._meta.degraded = true;
+    query.data!._meta.degradedReason = "stale-cache";
+    render(<DdrTrackRecordSection stablecoinId={COIN} />);
+    expect(screen.getByText("Snapshot reason: stale-cache")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "DDR track record facts" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Retry ddr track record" }));
+    expect(query.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("distinguishes request failure without data from a healthy empty review", () => {
+    const refetch = vi.fn();
+    useDepegResolverReviewMock.mockReturnValue({ data: undefined, error: new Error("HTTP 502"), refetch });
+    render(<DdrTrackRecordSection stablecoinId={COIN} />);
+    expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
+    fireEvent.click(screen.getByRole("button", { name: "Retry ddr track record" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["missing-cache", "methodology-mismatch"])(
+    "shows unavailable rather than no records when the snapshot is rejected: %s",
+    (reason) => {
+      const query = mockReview([]);
+      delete query.data!.summary.byStablecoin;
+      query.data!._meta.degraded = true;
+      query.data!._meta.degradedReason = reason;
+
+      render(<DdrTrackRecordSection stablecoinId={COIN} />);
+
+      expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
+      expect(screen.getByText(`Snapshot reason: ${reason}`)).toBeTruthy();
+      expect(screen.queryByRole("group", { name: "DDR track record facts" })).toBeNull();
+      expect(screen.queryByRole("list", { name: "Reviewed depeg incidents" })).toBeNull();
+      expect(screen.queryByText(/no records/i)).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Retry ddr track record" }));
+      expect(query.refetch).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("withholds statistics when the producer incident cohort itself is truncated", () => {
+    const query = mockReview([PREDICTION_ROW]);
+    query.data!._meta.incidentRowsTruncated = true;
+    render(<DdrTrackRecordSection stablecoinId={COIN} />);
+    expect(screen.getByText("Partial coverage")).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "DDR track record facts" })).toBeNull();
+    expect(screen.getByText(/aggregates are withheld/)).toBeTruthy();
+  });
+
+  it("marks retained pre-summary snapshots unavailable rather than deriving sampled statistics", () => {
+    const query = mockReview([PREDICTION_ROW]);
+    delete query.data!.summary.byStablecoin;
+    render(<DdrTrackRecordSection stablecoinId={COIN} />);
+    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "DDR track record facts" })).toBeNull();
   });
 });

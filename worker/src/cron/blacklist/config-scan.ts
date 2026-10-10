@@ -65,6 +65,7 @@ type ScanState = {
   blacklistProviderCalls: number;
   maxProviderSplitDepth: number;
   coverageOutcomeCounts: Record<string, number>;
+  configLag: Record<string, { cursorKind: string; frontier: number | null; safeHead: number | null; lag: number | null }>;
 };
 
 export type BlacklistConfigScanSummary = ScanState & {
@@ -92,7 +93,7 @@ type ScanSingleConfigArgs = ScanBlacklistConfigsArgs & {
   attempt: BlacklistConfigAttempt;
   etherscanCircuitAllowed: boolean;
   chainHeadCache: Map<number, number>;
-  getChainTimestampCache: (chainId: string) => Map<number, number>;
+  getChainTimestampCache: (chainId: string) => Map<string, number>;
 };
 
 function buildTronScanResult(result: FetchTronEventsIncrementalResult, lastCursor: number): BlacklistScanResult {
@@ -168,7 +169,7 @@ async function scanBlacklistConfig(args: {
   signal?: AbortSignal;
   chainHeadCache: Map<number, number>;
   chainRpcs?: Map<string, ChainRpcConfig>;
-  getChainTimestampCache: (chainId: string) => Map<number, number>;
+  getChainTimestampCache: (chainId: string) => Map<string, number>;
 }): Promise<BlacklistScanResult> {
   if (args.config.chain.type === "tron") {
     const result = await fetchTronEventsIncremental(
@@ -276,8 +277,9 @@ function recordIncompleteConfigScan(
   result: BlacklistScanResult,
   state: ScanState,
 ): void {
-  state.runtimeBudgetHit ||= !result.apiError;
-  if (!result.apiError) state.incompleteRuntimeConfigs++;
+  const behindHead = result.failureSamples.includes("behind-safe-head");
+  state.runtimeBudgetHit ||= !result.apiError && !behindHead;
+  if (!result.apiError && !behindHead) state.incompleteRuntimeConfigs++;
   if (configState.config.chain.type === "evm" && result.apiError) {
     state.apiErrors++;
     recordApiErrorConfig(
@@ -365,6 +367,10 @@ async function processConfigScan(args: ScanSingleConfigArgs): Promise<void> {
     if (config.chain.type === "evm") recordEvmApiError(configState, result, state);
 
     recordProviderTelemetry(state, result);
+    state.configLag[configState.configKey] = {
+      cursorKind: configState.cursorKind, frontier: result.scannedToCursor, safeHead: result.safeHead,
+      lag: result.safeHead == null || result.scannedToCursor == null ? null : Math.max(0, result.safeHead - result.scannedToCursor),
+    };
     await finalizeSuccessfulConfigScan(args.db, configState, args.attempt, result, state, args.signal);
     state.totalFetchedEvents += result.rows.length;
     const syncLabel = config.chain.type === "tron" ? "ts" : "block";
@@ -453,12 +459,13 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
     blacklistProviderCalls: 0,
     maxProviderSplitDepth: 0,
     coverageOutcomeCounts: {},
+    configLag: {},
   };
-  const chainTimestampCaches = new Map<string, Map<number, number>>();
-  const getChainTimestampCache = (chainId: string): Map<number, number> => {
+  const chainTimestampCaches = new Map<string, Map<string, number>>();
+  const getChainTimestampCache = (chainId: string): Map<string, number> => {
     let cache = chainTimestampCaches.get(chainId);
     if (!cache) {
-      cache = new Map<number, number>();
+      cache = new Map<string, number>();
       chainTimestampCaches.set(chainId, cache);
     }
     return cache;

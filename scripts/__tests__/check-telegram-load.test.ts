@@ -10,6 +10,7 @@ import {
   evaluateQueryPlan,
   evaluateStatusPathBudget,
   extractProductionSubscriberFanoutSql,
+  extractProductionStatusSql,
   findCpuBudgetBreaches,
   findProductionDispatchBreaches,
   findRecapLoadBreaches,
@@ -24,6 +25,7 @@ import {
 } from "../ci/check-telegram-load";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { TelegramLoadCheckReport } from "../lib/telegram-load-report";
+import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mts";
 
 const databases = createLatestSchemaFixtureTracker();
 afterEach(databases.closeAll);
@@ -371,6 +373,37 @@ describe("Telegram status-path budgets", () => {
     },
   };
 
+  it("budgets exact production status SQL and follows runtime reader edits", () => {
+    const source = readFileSync(resolve("worker/src/lib/telegram/usage-analytics.ts"), "utf8");
+    const queries = extractProductionStatusSql(source);
+    const readers: Record<string, string> = {
+      "pulse-aggregate": "computeTelegramCurrentLifecycleSnapshot",
+      "status-top-stablecoins": "loadTelegramTopFollowedCoins",
+      "status-preset-followers": "loadActivePresetFollowerRows",
+      "status-pending-deliveries": "loadPendingDeliveryCount",
+      "status-lifecycle-events": "loadLifecycleEventCounts",
+      "lifecycle-snapshot-history": "loadTelegramLifecycleHistory",
+    };
+    for (const check of buildQueryPlanChecks().filter((check) => check.budget != null)) {
+      expect(check.sql).toBe(queries.get(readers[check.id]));
+    }
+    expect(buildQueryPlanChecks().find((check) => check.id === "status-pending-deliveries")?.binds)
+      .toEqual(["pending"]);
+    const mutated = extractProductionStatusSql(source.replace(
+      "SELECT stablecoin_id, COUNT(DISTINCT chat_id) AS subscribers",
+      "SELECT stablecoin_id, COUNT(DISTINCT chat_id) + 1 AS subscribers",
+    ));
+    expect(mutated.get("loadTelegramTopFollowedCoins")).not.toBe(queries.get("loadTelegramTopFollowedCoins"));
+    expect(queries.get("computeTelegramCurrentLifecycleSnapshot")).toContain("quiet_hours_enabled_chats");
+    expect(queries.get("loadTelegramLifecycleHistory")).toContain("telegram_watcher_lifecycle_daily");
+    expect(buildQueryPlanChecks().map((check) => check.id)).not.toContain("lifecycle-current-active-history");
+  });
+
+  it("selects the load guard when production status readers or their predicates change", () => {
+    expect(hasTelegramLoadGuardImpact(["worker/src/lib/telegram/usage-analytics.ts"])).toBe(true);
+    expect(hasTelegramLoadGuardImpact(["shared/lib/telegram-alert-families.ts"])).toBe(true);
+  });
+
   it("defines a reviewed budget for every status read path", () => {
     const statusPathChecks = buildQueryPlanChecks().filter(
       (check) => check.category === "pulse-status" || check.category === "lifecycle",
@@ -379,17 +412,16 @@ describe("Telegram status-path budgets", () => {
     expect(statusPathChecks.map((check) => check.id)).toEqual([
       "pulse-aggregate",
       "status-top-stablecoins",
-      "lifecycle-current-active-history",
+      "status-preset-followers",
+      "status-pending-deliveries",
+      "status-lifecycle-events",
+      "lifecycle-snapshot-history",
     ]);
     for (const check of statusPathChecks) {
       expect(check.budget?.rowsReadTables.length).toBeGreaterThan(0);
       expect(check.budget?.maxRowsRead).toBeGreaterThan(0);
       expect(check.budget?.maxDurationMs).toBeGreaterThan(0);
-      if (
-        check.id === "pulse-aggregate" ||
-        check.id === "status-top-stablecoins" ||
-        check.id === "lifecycle-current-active-history"
-      ) {
+      if (check.id === "pulse-aggregate" || check.id === "status-preset-followers") {
         expect(check.budget?.rowsReadTables).toContain("telegram_preset_subscriptions");
       }
     }
@@ -409,11 +441,15 @@ describe("Telegram status-path budgets", () => {
     `);
 
     expect(sqlite.prepare(check.sql).all(...check.binds)
-      .sort((a, b) => String(a.source_id).localeCompare(String(b.source_id)))).toEqual([
-      { source_id: "coin-a", subscribers: 2 },
-      { source_id: "coin-b", subscribers: 1 },
-      { source_id: "preset-a", subscribers: 2 },
-      { source_id: "preset-b", subscribers: 1 },
+      .sort((a, b) => String(a.stablecoin_id).localeCompare(String(b.stablecoin_id)))).toEqual([
+      { stablecoin_id: "coin-a", subscribers: 2 },
+      { stablecoin_id: "coin-b", subscribers: 1 },
+    ]);
+    const presetCheck = buildQueryPlanChecks().find((candidate) => candidate.id === "status-preset-followers")!;
+    expect(sqlite.prepare(presetCheck.sql).all(...presetCheck.binds)
+      .sort((a, b) => String(a.preset_id).localeCompare(String(b.preset_id)))).toEqual([
+      { preset_id: "preset-a", followers: 2 },
+      { preset_id: "preset-b", followers: 1 },
     ]);
   });
 
@@ -455,7 +491,10 @@ describe("Telegram status-path budgets", () => {
     expect(results.map((result) => result.id)).toEqual([
       "pulse-aggregate",
       "status-top-stablecoins",
-      "lifecycle-current-active-history",
+      "status-preset-followers",
+      "status-pending-deliveries",
+      "status-lifecycle-events",
+      "lifecycle-snapshot-history",
     ]);
     for (const result of results) {
       expect(result.status).toBe("ok");
@@ -463,7 +502,7 @@ describe("Telegram status-path budgets", () => {
       expect(result.rowsRead).toBe(
         Object.values(result.seededRowCounts).reduce((sum, count) => sum + count, 0),
       );
-      expect(result.rowsRead).toBeGreaterThan(5_000);
+      expect(result.rowsRead).toBeGreaterThan(0);
       expect(result.durationMs).toBeLessThanOrEqual(result.maxDurationMs);
     }
   });

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
@@ -172,10 +172,45 @@ describe("loadDwellirBudgetState", () => {
 });
 
 describe("recordDwellirCredits and flushDwellirCredits", () => {
+  beforeEach(() => {
+    vi.spyOn(Date, "now").mockReturnValue(SEPTEMBER_NOW_SEC * 1000);
+  });
+
   afterEach(async () => {
     vi.restoreAllMocks();
     // The pending counter is module-level; leave nothing behind for the next test.
     await flushDwellirCredits(makeCreditLedgerDb(), SEPTEMBER_NOW_SEC);
+  });
+
+  it("attributes a cross-midnight flush to the observed usage month", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      recordDwellirCredits(100);
+      recordDwellirCredits(7, OCTOBER_NOW_SEC);
+      expect(await flushDwellirCredits(db, OCTOBER_NOW_SEC)).toEqual({ flushedCredits: 107, ok: true });
+      expect(readLedgerValue(sqlite, SEPTEMBER_LEDGER_KEY)).toEqual({ window: "2026-09", usedCredits: 100 });
+      expect(readLedgerValue(sqlite, OCTOBER_LEDGER_KEY)).toEqual({ window: "2026-10", usedCredits: 7 });
+      expect(await flushDwellirCredits(db, OCTOBER_NOW_SEC)).toEqual({ flushedCredits: 0, ok: true });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each(["write-failure", "cas-loss"] as const)("restores September buckets across October and concurrent usage after %s", async (failure) => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const db = makeCreditLedgerDb({ [SEPTEMBER_LEDGER_KEY]: septemberRow(1) });
+    if (failure === "write-failure") db.failWrites(new Error("D1 write failed"));
+    else db.loseWrites(Number.POSITIVE_INFINITY);
+    recordDwellirCredits(100);
+    const pending = flushDwellirCredits(db, SEPTEMBER_NOW_SEC);
+    recordDwellirCredits(7, OCTOBER_NOW_SEC);
+    expect(await pending).toEqual({ flushedCredits: 0, ok: false });
+    db.failWrites(null);
+    db.loseWrites(0);
+    expect(await flushDwellirCredits(db, OCTOBER_NOW_SEC)).toEqual({ flushedCredits: 107, ok: true });
+    expect(db.values[SEPTEMBER_LEDGER_KEY]).toBe(septemberRow(101));
+    expect(JSON.parse(db.values[OCTOBER_LEDGER_KEY])).toEqual({ window: "2026-10", usedCredits: 7 });
+    expect(await flushDwellirCredits(db, OCTOBER_NOW_SEC)).toEqual({ flushedCredits: 0, ok: true });
   });
 
   it("ignores non-finite, non-positive, and sub-credit counts", async () => {
@@ -207,7 +242,7 @@ describe("recordDwellirCredits and flushDwellirCredits", () => {
         flushedCredits: 4,
         ok: true,
       });
-      recordDwellirCredits(5);
+      recordDwellirCredits(5, OCTOBER_NOW_SEC);
       await expect(flushDwellirCredits(db, OCTOBER_NOW_SEC)).resolves.toEqual({ flushedCredits: 5, ok: true });
 
       expect(readLedgerValue(sqlite, SEPTEMBER_LEDGER_KEY)).toEqual({ window: "2026-09", usedCredits: 7 });

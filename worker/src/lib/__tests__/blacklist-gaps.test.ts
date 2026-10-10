@@ -3,6 +3,18 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { materializeBlacklistGapMetrics, queryBlacklistGapMetrics } from "../blacklist-gaps";
 
 describe("queryBlacklistGapMetrics", () => {
+  it("rejects an absent aggregate without writing fabricated metrics", async () => {
+    const db = mockD1([
+      { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
+      { match: "blacklist-gap-aggregate", rows: [], first: null },
+    ], { requireMatch: true });
+    await expect(queryBlacklistGapMetrics(db, 1_700_000_000, {
+      includeDistributions: false,
+      cacheTtlSec: 300,
+    })).rejects.toThrow("blacklist-gap-aggregate-missing");
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT"))).toBe(false);
+  });
+
   it("returns extended recoverable-gap telemetry", async () => {
     const db = mockD1([
       {
@@ -105,9 +117,9 @@ describe("queryBlacklistGapMetrics", () => {
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         rows: [{
-          key: "blacklist:gap-metrics:v1:86400:core",
+          key: "blacklist:gap-metrics:v2:86400:core",
           value: JSON.stringify({
-            version: 1,
+            version: 2,
             includeDistributions: false,
             recentWindowSec: 86_400,
             metrics,
@@ -148,9 +160,9 @@ describe("queryBlacklistGapMetrics", () => {
       {
         match: "blacklist-gap-metrics-cache-read",
         rows: [{
-          key: "blacklist:gap-metrics:producer:v1:86400:core",
+          key: "blacklist:gap-metrics:producer:v2:86400:core",
           value: JSON.stringify({
-            version: 1,
+            version: 2,
             includeDistributions: false,
             recentWindowSec: 86_400,
             metrics,
@@ -169,7 +181,7 @@ describe("queryBlacklistGapMetrics", () => {
 
     expect(result.oldestRecoverableAgeSec).toBe(3720);
     expect(db.getHistory()).toHaveLength(1);
-    expect(db.getHistory()[0]?.binds).toEqual(["blacklist:gap-metrics:producer:v1:86400:core"]);
+    expect(db.getHistory()[0]?.binds).toEqual(["blacklist:gap-metrics:producer:v2:86400:core"]);
   });
 
   it("materializes full and core producer snapshots from one live full query", async () => {
@@ -210,8 +222,8 @@ describe("queryBlacklistGapMetrics", () => {
     expect(result).toEqual({ written: 2 });
     const writes = db.getHistory().filter((entry) => entry.sql.includes("blacklist-gap-metrics-cache-write"));
     expect(writes.map((entry) => entry.binds[0]).sort()).toEqual([
-      "blacklist:gap-metrics:producer:v1:86400:core",
-      "blacklist:gap-metrics:producer:v1:86400:full",
+      "blacklist:gap-metrics:producer:v2:86400:core",
+      "blacklist:gap-metrics:producer:v2:86400:full",
     ]);
     expect(writes.every((entry) => entry.binds[2] === 1_699_999_000)).toBe(true);
     expect(writes.every((entry) => {

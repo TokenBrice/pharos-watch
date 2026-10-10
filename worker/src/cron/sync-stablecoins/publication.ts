@@ -14,6 +14,7 @@ import {
   loadPreviousStablecoinActivePriceCoverage,
   seedAbsentActivePriceCoverageMarketCaps,
   type PreviousStablecoinActivePriceCoverage,
+  type StablecoinPriceCoverageAsset,
 } from "../../lib/stablecoin-publication-coverage";
 import { fillMissingSupplyHistory } from "./phase-helpers";
 import {
@@ -357,11 +358,16 @@ export async function runStablecoinsPostIntakePublication(
     return staleness.blockedResult;
   }
 
-  const activePriceCoverage = evaluateStablecoinActivePriceCoverage(input.assets, undefined, {
-    previousCoverage: input.previousActivePriceCoverage,
-    previousAcceptedAssetsById: input.previousAssetsById,
-  });
-  await seedAbsentActivePriceCoverageMarketCaps(input.db, activePriceCoverage, Math.floor(Date.now() / 1000));
+  // Retain only continuity evidence across the schema/serialization heap peak.
+  const previousPriceEvidence = new Map<string, StablecoinPriceCoverageAsset>();
+  for (const [id, asset] of input.previousAssetsById) {
+    previousPriceEvidence.set(id, {
+      id, price: asset.price, priceSource: asset.priceSource, priceConfidence: asset.priceConfidence,
+      priceObservedAt: asset.priceObservedAt, priceObservedAtMode: asset.priceObservedAtMode,
+      priceUpdatedAt: asset.priceUpdatedAt, supplyObservedAt: asset.supplyObservedAt,
+      circulating: asset.circulating,
+    });
+  }
   const previousAssetIds = new Set(input.previousAssetsById.keys());
   input.previousAssetsById.clear();
 
@@ -409,6 +415,13 @@ export async function runStablecoinsPostIntakePublication(
       upstreamFetchOk: input.metadata.path === "main",
     });
   }
+  const activePriceCoverage = evaluateStablecoinActivePriceCoverage(input.assets, undefined, {
+    previousCoverage: input.previousActivePriceCoverage,
+    previousAcceptedAssetsById: previousPriceEvidence,
+  });
+  previousPriceEvidence.clear();
+  await seedAbsentActivePriceCoverageMarketCaps(input.db, activePriceCoverage, Math.floor(Date.now() / 1000));
+  const admittedAssetIds = new Set(input.assets.map((asset) => asset.id));
 
   if (input.supplyChainGuard) {
     await persistChainDropoutState(input.db, input.supplyChainGuard, input.syncStartSec, input.signal);
@@ -422,7 +435,7 @@ export async function runStablecoinsPostIntakePublication(
   );
   const priceCacheCommit = await commitReplayPriceCache({
     db: input.db,
-    entries: input.priceCacheEntries,
+    entries: input.priceCacheEntries.filter((entry) => admittedAssetIds.has(entry.id)),
     signal: input.signal,
     returnIfAborted: input.returnIfAborted,
     stagePrefix: labels.priceCacheStagePrefix,

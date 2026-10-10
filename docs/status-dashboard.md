@@ -95,10 +95,11 @@ The active frontend operator mode is now:
 - `src/hooks/api-hooks.ts`
   - Owns the shared low-friction query wrappers for `GET /api/health`, `GET /api/peg-summary`, `GET /api/dex-liquidity`, `GET /api/report-cards/v9`, `GET /api/yield-rankings`, and related read endpoints
   - This is the live source of truth for `useHealth()` / `usePegSummary()` and the other cache-backed read hooks used by the dashboard model
-  - The desktop `Resources` menu enables `useHealth()` only while the menu is open. Its `System Status` row reflects the live public verdict and uses neutral `Checking Status` / `Status Unavailable` labels when no verdict is available; it never defaults to a healthy claim. There is deliberately no always-on masthead health dot: it would add `/api/health` polling to every desktop page view.
+  - Desktop `Resources` enables `useHealth()` only while open. `System Status` shows the live public verdict; a failed refetch overrides retained data with neutral `Unavailable`, and an initial read shows `Checking`. No always-on masthead health dot: that would add `/api/health` polling to every desktop page.
 - `src/hooks/use-endpoint-probes.ts`
   - Probes **public + admin** endpoint probe groups with `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
   - Public `/status/` browser canaries use only `/api/health`, `/api/stablecoins`, `/api/peg-summary`, `/api/dex-liquidity`, and `/api/report-cards/v9`, with `staleTime: 900_000`, `refetchInterval: 1_800_000`, `retry: 0`
+  - The public hero keeps health/probe fetch clocks separate, each using its hook's polling interval as the overdue budget. Missing probe samples show Loading while pending, otherwise Unknown (including failed or empty results), never Healthy.
   - Public probes use the same-origin `/_site-data/*` website lane; admin probes use same-origin `/api/admin/*` on the ops host
   - Manual/admin mutation actions are listed but intentionally not auto-probed
   - `/api/health` and `/api/status` are parsed semantically, so `200` responses with `status/overallStatus = degraded|stale` count as unhealthy in the browser probe summaries
@@ -147,7 +148,7 @@ The active frontend operator mode is now:
 - `src/components/status/telegram-bot-stats.tsx`
   - Renders delivery health, shared backlog-policy evidence, permanent failures, retries, dispatch results, and per-alert delivery before a separate audience-coverage section. Missing optional telemetry remains `Unknown`, never zero — except an absent `freshRetryQueued` on a dispatch that completed `ok` with `pendingRetryQueued` present, which reads as a legacy pre-breakdown row and counts as zero retries.
 - Cron telemetry is grouped by trigger slot and rendered as a matrix:
-  - One group per physical trigger, from the quarter-hourly core ingestion lane through the daily snapshot / digest / recap lane. Group membership, cadence, and offsets come from `shared/lib/cron-jobs.ts` and `shared/lib/cron-cadences.ts`; see [`docs/worker-infrastructure.md`](./worker-infrastructure.md#deployed-trigger-topology)
+  - One group per physical trigger, from the quarter-hourly core ingestion lane through the daily snapshot / digest / recap lane. Group membership, cadence, and offsets come from `shared/lib/cron-jobs.ts` and `shared/lib/cron-cadences.ts`; see [`docs/worker-infrastructure.md`](process/worker-infrastructure-appendix.md#deployed-trigger-topology)
   - Jobs that own a dedicated isolated trigger can render inside a shared cadence group but stay labeled as isolated triggers
   - The default attention filter does not mount healthy rows; operators can search and filter by state, impact, trigger group, and running status
   - Trigger boundaries remain visible, with severity ordering inside each group and stable registry order for ties
@@ -194,7 +195,15 @@ Shared raw-status evaluator: `worker/src/lib/status-evaluation.ts`
 
 Shared public-health floor: `worker/src/lib/public-health-assessment.ts`, backed by the pure helpers in `shared/lib/cache-health.ts` and `shared/lib/public-health.ts`
 
-Public and operator warning copy uses the health endpoint's actual warning evidence. The operator health callout shows those reasons rather than presenting a healthy mint/burn sync age and zero blacklist gaps as an explanation for degradation. Long-running price-gap counts and labels come only from the IDs in the critical-duration warning; other currently missing prices remain in the separate coverage warning. Degraded yield-producer evidence has readable copy, while unknown warning codes remain visible. These presentation rules do not change health thresholds, warning eligibility or recovery requirements.
+Public/operator copy uses actual health warning evidence; unknown codes remain visible. Blacklist read failures expose null measurements with `unavailableReason: blacklist-read-failed|db-unavailable`; successful empty reads retain zeros. Browser probes and cards admit this unavailable branch without claiming zero gaps. Critical-duration labels use only the warning's named price-gap IDs; other missing prices stay in the separate coverage warning. Thresholds and recovery policy are unchanged.
+
+The public `HealthResponse.blacklist` contract (`shared/types/status/public-health.ts`) makes all five measurements nullable: `totalEvents`, `missingAmounts`, `recentMissingAmounts`, `recentWindowSec`, and `missingRatio`. A failed read sets these to `null` and supplies `unavailableReason: "blacklist-read-failed"`; an unavailable database supplies `"db-unavailable"`. The reason is nullable/optional for available or retained payloads. Consumers must show unavailable measurements, not zero events, zero gaps, or a healthy ratio. A successful empty observation may publish numeric zeros.
+
+Read failures use the ADR-29 `PublicHealthReadResult` boundary and cannot restore healthy diagnostics. Circuit reads publish `HealthResponse.circuits: null` with `circuitsUnavailableReason: "circuits-read-failed"` (or `"db-unavailable"`); successful reads still publish the circuit record map. Mint/burn critical read failures publish nullable `sync.freshnessStatus` / `sync.criticalLaneHealthy` and `unavailableReason: "mint-burn-read-failed"` or `"mint-burn-output-read-failed"`; DB failure uses `"db-unavailable"`. Unread major counts/symbols are nullable. The existing `queryErrors` fields carry `"mint-burn-output-read-failed"` / `"mint-burn-count-read-failed"` for their respective failed reads; a failed advisory count does not invalidate an independently observed healthy writer. Operator causes `circuit_query_failed` and `mint_burn_health_query_failed` are warning-severity and degrade availability rather than overriding unavailable evidence to healthy.
+
+When the DB sentinel fails, `/api/status` publishes `dataQuality: null` with `sectionErrors.dataQuality.code: "db-unavailable"`, nullable summary measurements with `summary.unavailableReason: "db-unavailable"`, and `reserveComposition.status: "unavailable"` / `reason: "db-unavailable"` with null coverage and counts. A successful empty reserve cohort remains distinct and may be healthy with observed zeros. `summary.transitionsLast24h` is nullable: a failed or absent aggregate carries `transitionsUnavailableReason: "status-transitions-read-failed"` plus the same `sectionErrors.statusTransitions.code`; DB failure carries `"db-unavailable"`. A successfully counted zero remains `0` with no unavailable reason. History shows unavailable count/flapping evidence instead of assuming no transitions.
+
+FX health admits its publication clock with canonical `assessFreshnessTimestamp` (60-second allowed skew): excessive future clocks publish null `ageSeconds` / `publishedAt`, `timestampReason: "future-timestamp"`, and a stale availability floor. Per-peg provenance continues to use the shared `assessFxPegAdmission` path: source clocks more than 300 seconds ahead already reject with `source-time-future`, used in `fx-source-provenance-unknown:<peg>=<reason>`; rejected clocks never create a healthy source claim. Blacklist cards also preserve partial evidence: `recentMissingAmounts: null` means recent gap evidence unavailable, not “no new gaps”.
 
 Related extracted loaders:
 
@@ -221,7 +230,7 @@ The backend contract is split into bounded sections. Select the evidence family 
 - Even when the 15-minute assessment snapshot is fresh, `/api/status` reads current cron history, progress, leases, and scheduled slots through `loadCronHealth()`. Per-job availability, cron/slot summary counts, and the informational cron availability causes (`degraded_cron_warning`, `watch_cron_error_runs`, `watch_unhealthy_crons_present`, and the `cron_*_query_failed` notices) all describe that one live read at the response `timestamp`, so a cause count never disagrees with its `summary` counterpart in the same response; the aggregate assessment, caches, and expensive supplements retain the persisted assessment generation. A failed live cron read remains unknown rather than replaying a cached success.
 - Every health/status request live-reads `schedulerLiveness` from actual D1 slot starts, including fresh-snapshot paths. The public aggregate and its three lanes remain unchanged; `schedulerLiveness.heavy` adds independent registry-owned heavy delivery evidence (`scheduleKey`, `lastStartedAt`, `ageSeconds`, `warningAfterSec`, `staleAfterSec`, `status`, `unavailableReason`). Cached unhealthy scheduler floors for either role force live recomputation to clear only obsolete scheduler causes; independent blockers remain. Admin snapshots are bypassed when reserve review applicability changes, and pre-feature reserve projections are rejected.
 
-`StatusResponseSchema` validates required fields for each retained nested section; malformed section payloads fail closed at the admin query boundary instead of being treated as typed-but-unchecked objects. Optional additive top-level fields remain passthrough-compatible, while the four retired projections listed above are not emitted.
+`StatusResponseSchema` validates retained nested sections at the query boundary. Raw snapshot admission reuses those schemas before any dereference: malformed causes, caches, crons or other required sections return `unreadable` and trigger live recomputation. Only absent optional `budgetOnlySurfaces` defaults to `[]`; additive top-level fields remain passthrough-compatible.
 
 `computeRawStatus()` now performs the DB sentinel first and returns an explicit stale fallback snapshot when that sentinel fails, instead of throwing before the dashboard can show operator-visible degraded state.
 
@@ -231,10 +240,12 @@ freshness verdict names the budget it used and the generation it describes, with
 fields — and **R4** (ADR-31) — a non-`ok` terminal status carries a machine-readable reason, and terminal
 status separates "did the work happen" from "were the inputs perfect". Their additive publication fields live
 in `CacheStatusSchema` (`shared/types/status/schema-primitives.ts`): `healthyMaxRatio` and `healthyMaxAge` for
-the band, yield `generationId` / `publishedAt` for the served generation and Unix publication time,
-and `degraded` / `degradedReason` / `streakDegradedRuns` for input quality. Legacy generationless
-sentinels and table/cron fallbacks expose null yield identity/time rather than inventing them. The
-per-field behaviour is specified under Cron health model, Cron error escalation, and Synthetic self-check below.
+the band, `publishedAt` for the immutable cache/fallback evidence clock and sentinel-backed `generationId`,
+and `degraded` / `degradedReason` / `streakDegradedRuns` for input quality. Sentinel generation identity is
+required and compared with the served DEWS pointer, liquidity global row, or yield-ranking publication in
+the same D1 read. Missing/mismatched identities invalidate the sentinel; fallbacks retain their observed
+table/confirmed-output clock but no generation ID. Dependency ages advance from these immutable clocks.
+The per-field behaviour is specified under Cron health model, Cron error escalation, and Synthetic self-check below.
 
 ## Timestamp admission
 
@@ -246,6 +257,10 @@ oracle returns a null age and `timestampReason` (`missing-timestamp`, `invalid-t
 existing freshness bands. Captured-run consumers can supply a separate read clock or explicit
 allowance: DEWS uses wall time during hydration so an overlapping producer published after run
 start is not falsely rejected.
+
+Ordinary cache, table fallback, cron fallback and yield-health clocks use that same admission boundary.
+Rejected clocks expose null ages and the exact `timestampReason` (yield rankings use
+`rankingTimestampReason`), never a negative age or a clamped healthy future generation.
 
 Cache freshness sentinels retain strict future-clock rejection with no skew allowance.
 Their validation clock is D1 `unixepoch()` from the same cache SELECT, rather than
@@ -301,7 +316,7 @@ Successful observers report `ok` plus `metadata.quality` for semantic service de
 `CRON_INTERVALS` owns producer cadence. The staleness watchdog's one-statement fact loader in
 `worker/src/lib/status/freshness-oracle.ts` preserves latest attempt/status separately from the latest
 confirmed output clock (`lastSuccessAt`). `cron-output.ts` owns the shared evidence boundary used by the
-logger, cron health and cron-backed dataset freshness. New rows persist `metadata.outputPublishedAt`
+logger, cron health, public mint/burn health, endpoint freshness and cron-backed dataset freshness. New rows persist `metadata.outputPublishedAt`
 (the actual generation clock where available, otherwise confirmed completion) or explicit `null`; metadata
 compaction preserves this clock and quality reasons. Legacy rows require affirmative publication metadata
 or an `ok` result with a positive output count; an unannotated degraded attempt is not success.
@@ -309,7 +324,7 @@ A legacy blacklist scan with positive, equal attempted/succeeded/quiet configura
 coverage failures is a confirmed quiet observation even when it inserts no events. Explicit no-output
 markers still override this legacy evidence.
 Canary and DEWS budgets remain separate named policies; they do not call this producer fact loader.
-Status uses a `2x` window; the staleness watchdog retains its `2x`/`3x` policy.
+Status uses a `2x` window; the watchdog retains its `2x`/`3x` policy. Watchdog stale observations preserve `publishedAt`, nullable `generationId`, `assessedAt`, and all budgets in cron metadata through status projections.
 Canonical control-plane jobs with `freshnessSurface: "none"` require a completed observation rather than a
 consumer publication. Subject to a successful history read, cron availability is healthy when:
 
@@ -332,7 +347,8 @@ consumer publication. Subject to a successful history read, cron availability is
 - The job is **not** reported healthy when the cron-history query itself failed: `crons[*].healthy` is `null` with `crons[*].telemetryUnknown = true` and `crons[*].telemetryUnknownReason` naming the failed read, and the job is excluded from unhealthy/error counters rather than reported falsely unhealthy or falsely healthy, or
 - The job is a watch-tier bootstrap (`crons[*].bootstrap = true`): no required non-neutral attempt yet and at most one recorded run. Critical-tier jobs always require real availability evidence
 
-The display retains the latest ten runs. When all ten are neutral skips, the loader looks up the latest non-neutral run so admission skips cannot evict required-attempt evidence; when the window also lacks a proven-satisfied skip, a second lookup within the job's `2 * expectedIntervalSec` freshness window fetches the latest one, so post-boundary admissions (such as post-midnight `before_daily_slot` catch-ups) cannot evict the readback that superseded an earlier error. Appended evidence follows the ten-run window in `recentRuns` (the required attempt, preceded by the proven readback only when newer), keeping inherited warning/error counts and superseded errors attributable. Separately, a full display window without fresh confirmed output triggers a latest-confirmed-output aggregate over the job's retained history using `CONFIRMED_CRON_OUTPUT_AT_SQL`, covering daily producers whose publication has fallen behind dozens of successful no-op attempts without expanding display history, extending freshness budgets, or treating skipped work as publication.
+The display retains ten runs. A full window with fewer than two required attempts triggers an indexed, two-row required-attempt lookup; duplicate evidence is removed. A fresh proven-satisfied readback is recovered separately when absent, preserving error supersession behind generic admissions. Appended attempts/readbacks keep verdicts attributable in `recentRuns`. A full window without confirmed output also triggers the bounded `CONFIRMED_CRON_OUTPUT_AT_SQL` aggregate; no-op attempts never renew publication. Duration trends count only executed `ok`/`degraded`/`error` attempts, excluding admission skips from averages and sample floors; cap-hit and graceful-deferral policy is unchanged.
+Admin last-completed text is `Unknown` with the failed-read reason when telemetry is unavailable. A readable window lacking success says `No successful run in recent history`, never claims absence across all history.
 
 Otherwise the job is unhealthy, including stale history, non-fresh errors, or a generic neutral skip (no
 proven-satisfied reason) whose latest required run errored or lacks confirmed output. A required degraded run
@@ -392,6 +408,7 @@ Heavy delivery is a separate gate, resolved from plans with `worker: "heavy"` in
 - `degraded` if any of:
   - any shared cache impact is `degraded`
   - the public mint/burn lane is `degraded` (once the lane has emitted real sync telemetry)
+  - circuit or critical mint/burn health evidence could not be read (`circuit_query_failed`, `mint_burn_health_query_failed`)
   - D1 capacity threshold state is `warning`, or the D1 capacity assessment could not be read
   - `openCircuitGroups >= 3`
   - any availability-critical cron has a single failed run
@@ -399,6 +416,12 @@ Heavy delivery is a separate gate, resolved from plans with `worker: "heavy"` in
 - else `healthy`
 
 `degraded` cron runs count separately in `summary.degradedCrons` and show in the cron UI, but do not by themselves degrade availability.
+
+Unmeasured cache ratios are null in `summary.worstCacheRatio`; `cache_freshness_unavailable` names missing/invalid evidence without a numeric value. Observed finite ratios, including a real 99x breach, remain measured statistics.
+
+Triage cache urgency uses key-aware `getCacheImpactStatus`, matching Reliability: default 8x/12x bands, yield 2x/4x, and cached-fallback degradation. Missing age/budget remains evidence risk, not a fabricated ratio.
+
+Storage maps published capacity to Healthy (`normal`), Watch (`watch`/`warning`), or Critical (`critical`), counting one issue for non-normal capacity. Present usage metrics without capacity remain Unknown with one evidence issue; utilization thresholds stay owned by the capacity runbook.
 
 `openCircuitGroups` here means public-impact circuit groups only, derived from `CIRCUIT_SOURCE_REGISTRY.scope`. Dynamic per-coin `live-reserves:*` and dedicated single-asset pricing-route breakers still render in the reliability tables, but they do not degrade availability on their own because reserve sync and exact active-price coverage already own those asset-scoped diagnostics. Unknown circuit keys conservatively remain source-wide.
 
@@ -461,6 +484,8 @@ The `missing_prices_elevated` info cause exists to preserve operator observabili
 | unknown continuity | prior coverage read failed or was malformed; streak is null with `streakUnavailableReason` | `degraded` for material unacknowledged gaps | `active-price-coverage-incomplete:<ids>`; no invented critical duration |
 
 All three thresholds live in `STATUS_MISSING_PRICE_THRESHOLDS` (`generationsElevated`, `generationsCritical`, `durationMaterialMarketCapUsd`), and the shared verdict helper `assessActivePriceGapDuration` (`shared/lib/status-thresholds.ts`) derives both the public-health impact status and the evaluator's cause from the same evidence. The ratio bands above are unchanged and still drive the `missing_prices_*` causes. The duration dimension is a data-quality verdict, not an availability one. A material gap degrades `/api/health` and names the asset but never reports the surface stale (a 2026-09-22 release briefly did, turning the status page, browser probes and deploy acceptance stale over seven minor assets). Since 2026-09-23 a long-running gap on a sub-$100M asset is a named warning only, so one thin unpriced asset cannot degrade the whole application. When a material gap does degrade public health, the state machine records it under the dedicated public-impacting `active_price_coverage_duration_degraded` cause (`worker/src/lib/status/evaluation-rules.ts`), so the incident and its recovery stay in `/api/public-status-history`; the ordinary `active_price_coverage_incomplete` warning stays admin-only. A gap past the critical band is a catalog decision — re-source the price, add a reviewed price-gap acknowledgement, or retire the asset — rather than a fetch gap to wait out. See [Adding a Stablecoin](./process/adding-a-stablecoin.md).
+
+Missing-price `affectedMarketCapUsd` is null if any affected asset lacks admitted current circulating supply; price counts remain observed independently. Explicit zero supply contributes zero, not unavailable.
 
 Publication omissions and price-gap duration share `STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd` ($100M). Current-generation caps are unscaled. An absent row retains `lastKnownMarketCapUsd`, `lastKnownMarketCapObservedAt`, and `lastKnownMarketCapSource` (`publication` or `supply_history`) in verbose and compact continuity; the payload's current `marketCapUsd` stays null. Materiality tests retained cap × `STATUS_LAST_KNOWN_MARKET_CAP_GROWTH_FACTOR` (2), never publishes that scaled value as a measured cap, and accepts evidence only through `STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC` (30 days inclusive). The month accommodates intermittent daily snapshots; doubling bounds growth risk. Missing, malformed, future-dated, or older evidence fails closed. `/api/health` adds no read: the producer seeds from its previous cache/supply clock, prior gap/publication clock, then one absent-ID-only `supply_history` read when needed; carried evidence never renews its date.
 
@@ -525,7 +550,7 @@ Additional response fields:
 - `summary`: compact availability and diagnostics rollup (`unhealthyCrons`, `availabilityImpactingUnhealthyCrons`, `watchUnhealthyCrons`, `degradedCrons`, `cronErrors`, `availabilityImpactingCronErrors`, `availabilityImpactingConsecutiveCronErrors`, `staleCronArtifacts`, `expiredCronLeases`, `orphanedCronProgressRows`, `diagnosticIssueCount`, `worstCacheRatio`, `transitionsLast24h`)
 - `producerHeads`: one row per canonical schedule/job/path/kind, including budget-only paths, with separate last invocation/completion, productive output, publication, invocation ID, Worker version, and observed/missing state
 - `workerVersions`: independently verified public/heavy activation markers; nullable evidence, not inferred current execution versions.
-- `/api/status` intentionally omits the legacy top-level `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and `alertBroker` projections. The alert-broker summary is no longer published on any surface: `assessPublicHealth` keeps an empty compatibility object (only `alertBrokerImpactStatus` still feeds status evaluation) and `buildPublicHealthResponse` does not serialize it to `/api/health`
+- `/api/status` intentionally omits the legacy top-level `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and `alertBroker` projections. The retired alert-broker summary is neither assessed nor published on any surface; DB and capacity health floors remain authoritative.
 
 ## Cron error escalation
 
@@ -581,7 +606,7 @@ Cache freshness for `dex-liquidity`, `yield-data`, and `dews` now prefers produc
 `sync-yield-data` writes its sentinel inside every applied rankings publication batch, regardless of input quality. The sentinel's `generationId` and `updatedAt` match the winning rankings generation; CAS losers and failed batches cannot advance it. Coverage below 0.75 still gates quality via `safety-snapshot-coverage`; a held safety snapshot uses the nongating `safety-snapshot-held` advisory without renewing the safety clock or permitting destructive cleanup.
 
 **Per-cache availability overrides.** Availability ratio bands are the global `>8x` degraded / `>12x` stale by default, except where `STATUS_CACHE_RATIO_OVERRIDES` in `shared/lib/status-thresholds.ts` tightens a specific cache. `yield-data` overrides to `>2x` degraded / `>4x` stale against its post-V9 `sync-yield-data` budget: two missed publishes flip the cache entry to `healthy:false` and degrade both public cache impact and the availability `statusFloor`, while a single missed publish stays healthy. This closes the honesty gap where the global bands let multi-hour-stale yield rankings still read publicly `healthy` even though the admin endpoint-budget lane already flags the lane at 1x. The override is threaded through `getCacheFreshnessStatus`/`getCacheImpactStatus` (public rollup in `shared/lib/public-health.ts`), the worker `buildCacheStatuses` `healthy` and `statusFloor` computation, and the status-page recompute in `src/lib/status/public-status.ts`; all other caches keep the global bands. See `docs/architecture.md` ADR-9.
-The public Cache Freshness table preserves each cache key through classification and labels overridden rows with their resolved degraded/stale ratios, so `yield-data` shows `>2x` / `>4x` rather than the global bands.
+Public Cache Freshness and admin Reliability cache mode preserve each key through `getCacheImpactStatus`: `yield-data` uses `>2x` / `>4x`, fresh cached fallback is degraded, and unavailable age/budget remains Unknown in Reliability.
 
 **Every published cache verdict names its band (R3).** Each `caches[*]` object carries the ceiling its `healthy` boolean was computed against: `healthyMaxRatio` (the resolved `getCacheHealthyMaxRatio` — `12` by default, `2` for `yield-data`) and `healthyMaxAge` (`maxAge × healthyMaxRatio`). For every cache in `/api/health` and `/api/status`, `healthy` is exactly `ageSeconds ≤ healthyMaxAge`, so a row may sit above `maxAge` and still be `healthy`, but never above `healthyMaxAge`.
 
@@ -623,14 +648,16 @@ Behavior:
 
 | Field | Source | Threshold | Failure mode | Status impact | Runbook |
 | --- | --- | --- | --- | --- | --- |
-| `rankingCount`, `rankingUpdatedAt`, `rankingAgeSec`, `rankingStatus` | `cache["yield-rankings"]` payload + row `updated_at` | post-V9 producer; `>8x` degraded, `>12x` stale | missing/malformed rankings become `stale` | public-critical when stale/missing because public yield reads depend on it | `docs/runbooks/yield-health.md` |
+| `rankingCount`, `rankingUpdatedAt`, `rankingAgeSec`, `rankingStatus` | `cache["yield-rankings"]` payload + row clock | `yield-data` bands: `>2x` degraded, `>4x` stale | missing/malformed ranking arrays or rows are `stale`, with `rankingUnavailableReason`; valid empty arrays count as zero | stale rankings are public-critical | `docs/runbooks/yield-health.md` |
 | `safetyCoverage` | `yield-rankings.provenance.safetySnapshot` | degraded below `0.75` coverage | missing provenance is `unknown` | admin-watch only; sparse safety hydration does not change public status by itself | `docs/runbooks/yield-health.md` |
-| `supplemental` | per-family `cache["yield:supplemental-sources:v1:*"]` rows | degraded above each family's own budget (6h lane default; the Pendle daily lane uses 48h) | missing per-family rows increment `missingFamilyCount`; a fresh empty family row is valid; stale supplemental coverage only reduces optional source breadth | admin-watch unless a future PR explicitly promotes a source family to critical | `docs/runbooks/yield-health.md` |
+| `supplemental` | per-family `cache["yield:supplemental-sources:v1:*"]` rows | family budget: 6h default, 48h Pendle | missing/malformed envelopes are `unknown`, with family `unavailableReason`; validated empty families remain healthy; unknown families increment `missingFamilyCount` | admin-watch; optional source breadth only | `docs/runbooks/yield-health.md` |
 | `benchmarkRegistry` | published ranking benchmark keys plus `yield-rankings.provenance.benchmarks` | degraded or stale per used key's fetch and observation-age limits | missing/unknown used keys remain explicit; unused fetched keys are diagnostic only | admin-watch; benchmark fallback is already visible in yield provenance and cron status | `docs/runbooks/yield-health.md` |
-| `coverageAudit` | `cache["yield-coverage-audit"].updated_at` | degraded above 45d | missing cache is `unknown` | admin-watch; monthly audit gaps do not affect public yield availability | `docs/runbooks/yield-health.md` |
+| `coverageAudit` | `cache["yield-coverage-audit"]` payload + row clock | degraded above 45d | missing/malformed detector evidence is `unknown`, with `unavailableReason`; complete zero counts/empty arrays remain valid | admin-watch, not public availability | `docs/runbooks/yield-health.md` |
 | `sourceRiskCoverage` | selected and retained alternate `sourceRisk.*` rows in `cache["yield-rankings"]` | degraded when any core field is below `0.75` coverage: `sourceRiskPenalty`, `rewardShare`, `sourceAgeSeconds`, `sourceDepthRatio`, `venueRiskTier`, or `sourceRiskScore` | missing `venueRiskTier` and `venueRiskTier="unknown"` count as missing evidence, not high risk; no separate stale tier | admin-watch; neutral-fallback evidence gaps do not make public rankings stale | `docs/runbooks/yield-health.md` |
 | `comparisonAnchorFreshness` | `crons["sync-yield-data"].lastRun.metadata.sourceCoverage.comparisonAnchorFreshness` | degraded when `staleAnchorCount > 0` | missing sync metadata is `unknown`; stale examples are bounded and may be truncated | admin-watch; does not change source arbitration, scoring, or publication eligibility | `docs/runbooks/yield-health.md` |
 | `latestCronStatus`, `latestCronStartedAt` | `crons["sync-yield-data"].lastRun` | existing cron health rules | absent cron metadata is `null` | inherited from cron health; no separate escalation | `docs/runbooks/yield-health.md` |
+
+A supplemental family without a cache-row timestamp is not admitted from its payload timestamp alone. Its status remains `unknown`, with null `ageSec` and `sourceCount`, `timestampReason: "missing-timestamp"`, and `unavailableReason: "supplemental-malformed"`; a missing clock never becomes an observed zero.
 
 ## Telegram bot metrics
 
@@ -689,7 +716,7 @@ Stale-slot cleanup no longer has a status-tracked sweeper job. Every fenced sche
 5. Exposes the sustained-divergence and sustained-probe-failure streaks as `discrepancyStreak` / `probeFailureStreak` in the cron metadata, alongside the internal/external comparison so operators can separate app/router regressions from custom-domain, Access, routing, cache, and edge-path regressions. There is no outbound alert transport; escalation is operator-driven from the status surfaces.
    - A failed discrepancy SELECT stops before UPSERT and exposes both counters as unavailable (`null`); a successfully read absent row may initialize counters. The UI prints an unavailable streak explicitly. Probe-failure streak means transport/contract failure **or internal/external divergence**, not transport failures alone; effective/probe divergence is a distinct diagnostic. Neither changes status authority or emits a condition-specific push notification.
 
-All four required stores (`status_probe_runs`, `status_state`, `status:raw-snapshot:v1`, `status_discrepancy_state`) must succeed, including their required-read callbacks. A failed store returns `status-self-check-persistence-failed`, lists `failedOutputs`, and sets `outputPublishedAt: null`; this reason takes precedence. Current DB/section evidence failures return `status-self-check-evidence-read-failed`, not a semantic service finding. Existing status hysteresis and probe thresholds remain unchanged.
+All four required stores (`status_probe_runs`, `status_state`, `status:raw-snapshot:v1`, `status_discrepancy_state`) must succeed, including required reads. Failure returns `status-self-check-persistence-failed`, lists `failedOutputs`, and sets `outputPublishedAt: null`; this takes precedence. Explicit `evidenceReadFailures` collect current DB, cron, scheduler, public-health, data-quality and supplement outcomes, independently of presentation error wording; failures return `status-self-check-evidence-read-failed`, not a semantic service finding. Hysteresis and probe thresholds are unchanged.
 
 The cron metadata now includes:
 
@@ -698,7 +725,7 @@ The cron metadata now includes:
 - `internalExternalDiscrepancy`, with `reason` values such as `in-sync`, `external-worse`, and `internal-worse`
 - Bootstrap misses are persisted in `status_probe_runs.details.bootstrapMisses`; they are not returned as a top-level cron metadata field.
 - `freshnessDiagnostics` when raw status had to fall back from a freshness sentinel to table or cron evidence
-- `latencySummary` (`minMs`, `medianMs`, `p95Ms`, `maxMs`)
+- `latencySummary` (`minMs`, `medianMs`, `p95Ms`, `maxMs`): shared conventional median averages even middle pairs; p95 uses shared nearest-rank (95), including classification. Empty connectivity populations remain stale, not healthy zero-latency observations.
 - `slowestProbes` (top slow endpoints for the run)
 
 A freshness sentinel records **which generation is served** (R3), never whether
@@ -762,6 +789,8 @@ Response includes:
 
 The incident-history workspace only makes negative deployment-correlation statements for a fresh response with `hasMore === false`. Row-limited, retained, fallback, and indeterminate results remain visibly partial and keep correlation Unknown.
 
+Absent state authority yields `status-missing`; unreadable authority yields `status-unreadable` plus `sectionErrors.state`. Both discrepancy comparisons have null status severity/delta, never an invented healthy/in-sync verdict. Probe read issues are separately exposed in `sectionErrors.probe`.
+
 Delivery status is request-time evidence, but transition history is cron-sampled. A stall and recovery entirely between status observations cannot create invented historical transitions; the external monitor's issue/run is separate incident evidence.
 
 ---
@@ -770,7 +799,7 @@ Delivery status is request-time evidence, but transition history is cron-sampled
 
 Source: `src/hooks/use-endpoint-probes.ts`
 
-- Probe timeout: 5s for public endpoints and 20s for browser admin probes. The Pages ops proxy upstream budget is 20s for `/api/status` and `/api/status-history`, 45s for `/api/audit-depeg-history`, and the default 10s for all other admin proxy paths (which can return `504` once that 10s upstream timeout elapses).
+- Probe timeout: 5s for public endpoints and 20s for browser admin probes. The Pages ops proxy upstream budget is 20s for `/api/status` and `/api/status-history`, and the default 10s for all other admin proxy paths (which can return `504` once that 10s upstream timeout elapses).
 - Bounded browser probing uses a worker pool capped at 6 concurrent requests (`ENDPOINT_PROBE_CONCURRENCY`), with `Promise.all` only coordinating those workers rather than fanning out every endpoint at once.
 - Admin probe paths are now same-origin `/api/admin/*` calls on the ops host
 - The dashboard labels these as **browser-origin probes** to distinguish them from the worker-origin `status-self-check` synthetic probe stored in `/api/status`
@@ -808,7 +837,7 @@ The UI uses these actions in two ways:
 
 The catalog groups inspect, dry-run, recovery, communication, and destructive behavior. Shared endpoint metadata is canonical for risk, scope, prerequisites, expected duration, dry-run support, result mode, and audit ownership. Single-asset execution uses the tracked client registry picker and derives the endpoint's canonical stablecoin ID or symbol from that selection; arbitrary free-form targets are not accepted. One provider-owned execution dialog handles confirmation, readiness, direct dry run, structured results, raw debugging output, and focus restoration.
 
-Mutations use one stable `Idempotency-Key` per operator intent. Double submission coalesces, known replay reuses the same result, and an uncertain response keeps the same key available for a safe retry; starting a genuinely new intent creates a new key. The proxy preserves `Idempotency-Key`, `X-Idempotent-Replay`, and `X-Execution-Certainty`, so the browser can distinguish confirmed, replayed, and unknown outcomes.
+Mutations keep one `Idempotency-Key` per intent: double submission coalesces, replay reuses the result, uncertain retries retain the key, and new intents get new keys. The proxy preserves `Idempotency-Key`, `X-Idempotent-Replay`, and `X-Execution-Certainty`. Unknown results always say “Outcome needs reconciliation” and failed results “Action failed”, even with no structured body; absence never proves completion.
 
 Every router-dispatched status-page action is written to `admin_action_audit`, including validation failures, handler errors, execution-unknown responses, and idempotent replay. The catalog audit wrapper stores allowlisted metadata only and hashes the idempotency identity; it never stores authorization, tokens, raw request bodies, or raw responses. The active baseline contains the nullable intent identity and partial unique constraint on `(action, intent_key)` introduced by historical migration `0186_admin_action_audit_intent_keys.sql`, so replay backfills missing audit rows without duplicating authoritative executions.
 
@@ -822,7 +851,7 @@ Persisted audit coverage boundary (intentional):
 - Executions that never reach the Worker (client network failure or abort before a response) can only exist as session-scoped entries; they are labeled `session` in the workbench and legitimately disappear on reload. Their idempotency key remains reusable for a safe retry that will produce the durable row.
 - The remaining non-catalog operator mutation — `POST /api/admin-telegram-broadcast` — emits a handler-level `admin_action_audit` record; credential lifecycle mutations audit into `api_key_audit_log` instead and surface through the API Management and History workspaces. The other handler-audited operator routes (cron lease/kill controls, circuit-breaker reset, Telegram pending/resend/delivery-control) were retired on 2026-08-09, and the self-serve API-key request decisions (`api_key_request_reject`, `api_key_request_release_claim`) were removed with their lane on 2026-09-29; historical rows for all of them remain.
 
-`POST /api/backfill-mint-burn` is operator-safe from the status page even without an explicit `configKey`: the worker auto-selects the most behind tracked mint/burn config with a critical-first / major-symbol-first policy and returns the selected config in the response payload.
+Historical rebuilds are no longer dashboard actions. Run the reviewed command from [One-shot historical backfills](./runbooks/one-shot-backfills.md); recurring repairs remain in the complete action catalog.
 
 Mutating admin paths are protected by method guardrails:
 
@@ -840,13 +869,16 @@ Renders in the Admin Pipeline `Markets` tab next to `LiquidityHealthCard` and th
 
 - **Confidence tiles** — raw counts for `High`, `Single-source`, `Low`, and `Fallback`, with severity based on their share of **priced circulating USD value** across all peg buckets. `High` is green at ≥90%, amber at ≥80%, otherwise red. `Low` is neutral below 1%, amber at ≥1%, red at ≥5%. `Single` and `Fallback` remain neutral. The 90/80% coverage floors and 1/5% low-exposure ceilings are reviewed operational thresholds, not statistical estimates or changes to pricing methodology. Legacy payloads without value sums use count-share text and neutral confidence colors.
 - **Missing tile** — active assets with no usable price, including active catalog rows absent from the payload; this does not discard upstream missing-price rows. The tile number and severity count only **unacknowledged** gaps: the producer subtracts active assets covered by a valid, unexpired price-gap review (`STABLECOIN_PRICE_GAP_REVIEWS`), so an expired or malformed review automatically re-alerts on the next sync, and the sub-line shows how many gaps are acknowledged (0 green, ≤3 amber, >3 red on the unacknowledged count).
-- **Value-share sub-lines** — confidence tiles show e.g. `96.5% of value` (share of priced circulating value) with the raw count as the tile number; legacy snapshots fall back to asset-count percentages.
+- **Value-share sub-lines** — confidence tiles show e.g. `96.5% of value` only when `supplyCoverage.complete === true`. Partial or legacy coverage keeps confidence severity neutral and uses asset-count percentages instead; the card names observed/unavailable supply members and labels any supported dollar sum as a known priced-supply subtotal. No observed supply renders priced supply unavailable, never a measured $0.
 - **Source breakdown line** — which price sources contributed to the current sync, including protocol redemption quotes when they override thin market pricing
 - **Source-depth distribution** — backend-only status metadata keyed by active canonical `consensusSources.length` buckets (`0`, `1`, `2`, `3`, `4`, `5+`)
 - **Full-cache context** — original cache-wide row, missing, and confidence counts remain visible below the active tiles, including upstream assets outside the active catalog
 - **Last sync age** — how old the price-health snapshot is
 
-Distribution and confidence data is sourced from `sync-stablecoins` cron metadata stored in the most recent `cron_runs` row. The original top-level distributions keep full-cache scope; the additive `active` object uses the active catalog denominator and source membership, plus per-bucket `confidenceMarketCapUsd` sums, the `pricedMarketCapUsd` denominator, and `acknowledgedMissingCount` for the severity calibration above. The Markets tab badge uses that same active missing-price count and denominator when present, falling back to the original cache-wide fields for legacy snapshots. No prices or confidence assignments change. The source-depth distribution is added by the status supplement from the cached stablecoins payload so it reflects active canonical assets without changing the pricing cron metadata contract.
+Distribution and confidence data comes from the latest `sync-stablecoins` cron metadata. Top-level distributions retain full-cache scope; `active` supplies catalog membership, confidence value subtotals, priced-value denominator, and reviewed missing counts. Markets and the Missing tile share acknowledgement subtraction and canonical missing-price severity, falling back to full-cache counts for legacy snapshots. Raw/acknowledged totals remain context, not alerts. The status supplement adds source-depth counts from active canonical cached assets; prices and confidence assignments are unchanged.
+
+Monetary exposure fields are known subtotals. `supplyCoverage` names `complete`, `observedCount`, and `unavailableCount` over priced rows in the same scope. An unavailable supply is not measured zero; incomplete or legacy-unverified coverage must not certify full-cohort value shares or value-based severity. Explicit zero counts as observed.
+
 
 **Calibration evidence (2026-09-23 review):** `high` means independent agreeing sources or a validated authoritative override; `single-source` also includes correlated two-list-aggregator agreement deliberately downgraded to avoid false corroboration. Neither source independence nor freshness is weakened by the display change. The original 85/70% row-share bands were moved into shared constants by `c71b109bf6` (2026-03-13); list-aggregator hardening predates the current incident (`49415ec28e`, 2026-04-17, already refactored that rule). Read-only production D1 history, retained for seven days, gave final daily samples September 15–22 at 34–40% high-confidence rows. September 22 intraday runs ranged from 93 to 133 high rows, with promoted-DEX availability varying alongside the count. This limited history does not establish a months-long baseline or rule out individual source regressions.
 

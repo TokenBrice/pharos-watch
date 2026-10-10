@@ -5,7 +5,7 @@ import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
 import { ReserveSliceSchema } from "@shared/types/reserves";
 import { LiveReserveSnapshotProvenanceSchema } from "@shared/lib/safety-score-v9/reserve-provenance";
 import { sortedRecord } from "@shared/lib/compare";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { ReportCardEvidenceJournalByIdV1Schema } from "@shared/lib/report-card-evidence-journal";
@@ -149,7 +149,7 @@ export function createFixedInputPayloadFields<
     ),
     chainCirculatingById: options.chainCirculatingByIdSchema,
     // DefiLlama list buckets are already USD-denominated. Consumers must use
-    // getCirculatingRaw() and must never multiply these values by price.
+    // getCirculatingRawOrNull() and must never multiply these values by price.
     aggregateCirculatingById: z
       .record(
         z.string(),
@@ -265,10 +265,12 @@ export function assertCommonFixedInputConsistency(
       if (attribution.model !== "reviewed-deployment-unit-partition-v1" && attribution.observedAtSec > input.clockSec) {
         throw new Error(`V9 supply attribution for ${assetId} is later than the scoring clock`);
       }
+      const aggregateSupplyUsd = getCirculatingRawOrNull(input.aggregateCirculatingById[assetId]);
+      if (aggregateSupplyUsd === null) throw new Error(`V9 supply attribution for ${assetId} has unavailable aggregate supply`);
       if (attribution.model === "reviewed-economic-deployment-partition-v1") {
         const price = NavPriceObservationSchema.safeParse(input.navPriceById?.[assetId]);
         const validationError = reviewedEconomicDeploymentAttributionValidationError({
-          assetId, attribution, aggregateSupplyUsd: getCirculatingRaw(input.aggregateCirculatingById[assetId] ?? {}),
+          assetId, attribution, aggregateSupplyUsd,
           registryFingerprint: input.registryFingerprint, clockSec: input.clockSec,
           baseInputGenerationId: input.baseInputGenerationId, sourceGeneration: input.sourceGeneration,
           aggregateObservedAtSec: input.aggregateCirculatingById[assetId]?.observedAtSec ?? null,
@@ -281,7 +283,6 @@ export function assertCommonFixedInputConsistency(
       if (assetId === XAUT_ASSET_ID && attribution.model === "canonical-lock-mint-partition-v1") {
         throw new Error("Legacy XAUT lock/mint attribution is no longer admissible; a reconciled V2 packet is required");
       }
-      const aggregateSupplyUsd = getCirculatingRaw(input.aggregateCirculatingById[assetId] ?? {});
       const attributedSupplyUsd =
         attribution.model === "canonical-lock-mint-partition-v1"
           ? Object.values(attribution.currentSupplyUsdByChain).reduce((sum, value) => sum + value, 0)

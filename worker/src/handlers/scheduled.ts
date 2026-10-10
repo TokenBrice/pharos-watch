@@ -1,6 +1,6 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
-import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
-import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledRunnerKey, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
+import { getCronSlotStartedAtForSchedule, type CronScheduleKey } from "@shared/lib/cron-jobs";
+import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 import type { ScheduledEnv } from "../lib/env";
 import { runScheduledSlotWithFence } from "../lib/scheduled-slot-fence";
 import { waitForV9MemoryLaneRelease } from "../lib/v9-slot-window";
@@ -50,7 +50,7 @@ export const SLOT_RUNNER_LOADER_BY_KEY = {
   daily0805Utc: () => import("./scheduled/daily-0805").then((mod) => mod.runDaily0805Slot),
   daily0810Utc: () => import("./scheduled/daily-0810").then((mod) => mod.runDaily0810Slot),
   monthlyYieldAudit: () => import("./scheduled/monthly-yield-audit").then((mod) => mod.runMonthlyYieldAuditSlot),
-} satisfies Record<ScheduledRunnerKey, SlotRunnerLoader>;
+} satisfies Record<CronScheduleKey, SlotRunnerLoader>;
 
 function buildUnknownScheduleError(cron: string): Error {
   return new Error(`[cron-slot] Unknown scheduled trigger: ${cron}`);
@@ -79,7 +79,7 @@ export async function handleScheduledEvent(
 ): Promise<void> {
   const slotBudgetStartedAtMs = Date.now();
   const slotPlan = SCHEDULED_SLOT_PLANS_BY_SCHEDULE[event.cron];
-  const loadRunner = slotPlan ? SLOT_RUNNER_LOADER_BY_KEY[slotPlan.runnerKey] : undefined;
+  const loadRunner = slotPlan ? SLOT_RUNNER_LOADER_BY_KEY[slotPlan.scheduleKey] : undefined;
   if (!loadRunner || !slotPlan) {
     const error = buildUnknownScheduleError(event.cron);
     logWorkerEventArgs("handler", "error", error.message);
@@ -128,8 +128,8 @@ export async function handleScheduledEvent(
         runtime.executionFence = executionFence;
         if (
           workerRole === "heavy" &&
-          slotPlan.runnerKey !== "v9SupplyAttributionOffset" &&
-          slotPlan.runnerKey !== "v9PublicationOffset"
+          slotPlan.scheduleKey !== "v9SupplyAttributionOffset" &&
+          slotPlan.scheduleKey !== "v9PublicationOffset"
         ) {
           await waitForV9MemoryLaneRelease(env.DB, slotSignal);
         }

@@ -365,6 +365,37 @@ describe("resupply-pairs adapter", () => {
   });
 
   it.each([
+    [GUARD_ENABLED_SELECTOR, 2n],
+    [PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR, `0x${"01".repeat(64)}`],
+    [REUSD_ORACLE_PRICE_SELECTOR, null],
+    [GET_MAX_REDEEMABLE_DEBT_SELECTOR, `0x${"01".repeat(64)}`],
+  ] as const)("withholds only redemption telemetry when handler read %s is unavailable or malformed", async (selector, value) => {
+    const networkSpec = resupplyNetwork({
+      [CURVE_PAIR]: pairAnswers({
+        underlying: CRVUSD, collateral: CURVE_COLLATERAL,
+        totalBorrowAmount: 60n * ONE, totalCollateralShares: 60n * ONE, collateralAssets: 60n * ONE,
+      }),
+      [FRAX_PAIR]: pairAnswers({
+        underlying: FRXUSD, collateral: FRAX_COLLATERAL,
+        totalBorrowAmount: 40n * ONE, totalCollateralShares: 40n * ONE, collateralAssets: 40n * ONE,
+      }),
+    });
+    const { result, network } = await runResupply({
+      network: { ...networkSpec, rpc: { ...networkSpec.rpc, [`${REDEMPTION_HANDLER}:${selector}`]: value } },
+    });
+    expect(result.slices.map(({ pct, coinId }) => ({ pct, coinId }))).toEqual([
+      { pct: 60, coinId: "crvusd-curve" }, { pct: 40, coinId: "frxusd-frax" },
+    ]);
+    expect(result.metadata?.totalCollateralAssetsUsd).toBe(100);
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "resupply-redemption-telemetry-failed", effect: "degraded",
+    }));
+    expect(network.rpcCalls).toHaveLength(17);
+    expect(network.rpcCalls.every((call) => call.viaMulticall)).toBe(true);
+  });
+
+  it.each([
     { name: "the wrapper underlying reports 8 decimals", frxUsdDecimals: 8n, expectedFraxUsd: 40 },
     { name: "the wrapper underlying reports 18 decimals", frxUsdDecimals: 18n, expectedFraxUsd: 40 },
   ])("values each pair at its verified underlying decimals when $name", async ({ frxUsdDecimals, expectedFraxUsd }) => {

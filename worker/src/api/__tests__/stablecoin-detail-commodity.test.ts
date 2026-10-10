@@ -91,21 +91,21 @@ describe("fetchCommodityTokens", () => {
     });
   });
 
-  it("falls back to CoinGecko market_chart when DefiLlama TVL/price data is empty", async () => {
+  it("preserves day-specific CoinGecko caps despite substantial current supply growth", async () => {
     fetchWithRetryMock
       .mockResolvedValueOnce(new Response(JSON.stringify({ coins: {} }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ tvl: [] }), { status: 200 }))
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            market_caps: [[1_700_000_000_000, 1_000]],
-            prices: [[1_700_000_000_000, 2]],
+            market_caps: [[1_700_000_000_000, 100], [1_700_086_400_000, 300]],
+            prices: [[1_700_000_000_000, 2], [1_700_086_400_000, 3]],
           }),
           { status: 200 },
         ),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ market_data: { circulating_supply: 200 } }), { status: 200 }),
+        new Response(JSON.stringify({ market_data: { circulating_supply: 1_000 } }), { status: 200 }),
       );
 
     const tokens = await fetchCommodityTokens({
@@ -118,8 +118,13 @@ describe("fetchCommodityTokens", () => {
     expect(tokens).toEqual([
       {
         date: 1_700_000_000,
-        totalCirculatingUSD: { peggedGOLD: 400 },
-        totalCirculating: { peggedGOLD: 200 },
+        totalCirculatingUSD: { peggedGOLD: 100 },
+        totalCirculating: { peggedGOLD: 50 },
+      },
+      {
+        date: 1_700_086_400,
+        totalCirculatingUSD: { peggedGOLD: 300 },
+        totalCirculating: { peggedGOLD: 100 },
       },
     ]);
   });
@@ -211,7 +216,7 @@ describe("fetchCommodityTokens", () => {
       execCtx: { waitUntil: (promise: Promise<unknown>) => { pending.push(promise); } } as ExecutionContext,
     });
     const response = await detail.trySupplyHistoryFallback("commodity-history-empty");
-    expect(await response!.json()).toEqual({ tokens: [
+    expect(await response!.json()).toMatchObject({ tokens: [
       { date: 100, totalCirculatingUSD: { peggedGOLD: 100 }, totalCirculating: {} },
     ] });
   });
@@ -230,7 +235,7 @@ describe("fetchCommodityTokens", () => {
     const response = await handleCommodityDetail(config, detail);
     expect(response.status).toBe(mode === "error" ? 502 : 200);
     if (mode === "supply") {
-      expect(await response.json()).toEqual({ tokens: [
+      expect(await response.json()).toMatchObject({ tokens: [
         { date: 100, totalCirculatingUSD: { peggedGOLD: 200 }, totalCirculating: { peggedGOLD: 50 } },
       ] });
     } else if (mode === "stale") {

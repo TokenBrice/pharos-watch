@@ -327,7 +327,7 @@ export function analyzeOracleRiskCoverage(
       )
       .map((finding) => finding.id),
   );
-  const completeProfiles = withOracleRisk - incompleteIds.size;
+  const completeProfiles = inScope.filter((coin) => coin.oracleRisk != null && !incompleteIds.has(coin.id)).length;
   const branchProfiles = inScope.filter((coin) => (coin.oracleRisk?.branches?.length ?? 0) > 0).length;
   const branches = inScope.reduce((sum, coin) => sum + (coin.oracleRisk?.branches?.length ?? 0), 0);
   const incompleteBranchKeys = new Set(

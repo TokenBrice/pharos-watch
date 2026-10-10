@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import activeStablecoinsFixture from "./fixtures/audit-price-source-depth/active-stablecoins.json";
 import pegSummaryFixture from "./fixtures/audit-price-source-depth/peg-summary.json";
 import stablecoinsFixture from "./fixtures/audit-price-source-depth/stablecoins.json";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { circulatingForStablecoinRow } from "../lib/coverage-audit-cli";
 import {
   bucketSourceDepth,
@@ -95,8 +95,8 @@ describe("audit-price-source-depth", () => {
         invalid: Number.NaN,
       },
     };
-    expect(circulatingForStablecoinRow(row)).toBe(getCirculatingRaw(row));
-    expect(circulatingForStablecoinRow(undefined)).toBe(0);
+    expect(circulatingForStablecoinRow(row)).toBe(getCirculatingRawOrNull(row));
+    expect(circulatingForStablecoinRow(undefined)).toBeNull();
   });
 
   it("buckets source depths with a 5+ overflow bucket", () => {

@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import YieldDetailSection from "@/components/yield-detail-section";
+import YieldDetailSection, { YieldChangeAttributionCard } from "@/components/yield-detail-section";
 import {
   buildSourceRiskGoldenFixture,
   mergeSourceRiskGoldenFixtures,
@@ -383,6 +383,49 @@ describe("YieldDetailSection", () => {
     expect(rewardChip.getAttribute("aria-label")).toMatch(/Most APY comes from incentives/i);
   });
 
+  it.each([1, 2])("selects alternate history and returns to chosen history with %i alternates", (count) => {
+    const alternates = [altSource("alt-source", "Alt Source", 6, 6, 750_000)];
+    if (count === 2) alternates.push(altSource("second-alt-source", "Second Alt Source", 4, 4, 600_000));
+    mockRankings([makeRanking({ apy30d: 5, altSources: alternates })]);
+    const { rerender } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    fireEvent.click(screen.getByRole("button", { name: "Show Alt Source on chart" }));
+    expect(sourcesParam).toBe("alt-source");
+    rerender(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe("alt-source");
+    expect(screen.getAllByText("+1.00 pp").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Show chosen source history" }));
+    expect(sourcesParam).toBe("primary-source");
+    rerender(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe("primary-source");
+  });
+
+  it.each(["opportunity-evidence-missing", "safety-unrated"] as const)(
+    "does not claim an estimated score for withheld %s evidence",
+    (reason) => {
+      mockRankings([makeRanking({
+        pharosYieldScore: null, pysNullReason: reason, warningSignals: [reason],
+        safetyScore: null, safetyGrade: "NR",
+        provenance: makeYieldProvenance({ scoreQualification: "NR" }),
+      })]);
+      const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+      expect(screen.getAllByText("Not rated").length).toBeGreaterThan(0);
+      expect(container.textContent).not.toMatch(/This estimated PYS|uses the conservative 40-point/);
+      expect(screen.getByLabelText(/Pharos Yield Score unavailable/)).toBeTruthy();
+    },
+  );
+
+  it.each([[1, "+1.00 pp"], [-1, "-1.00 pp"], [-0.001, "+0.00 pp"]] as const)(
+    "uses percentage points for source-change impact %s",
+    (delta, label) => {
+      const { container } = render(<YieldChangeAttributionCard attribution={{
+        attribution: "source-switch", confidence: "high", headline: "Observed source switch",
+        largestDelta: { value: delta, ts: Date.UTC(2026, 8, 1) },
+        sourceSwitchDetail: { previousSourceKey: "previous", apy30dDelta: delta },
+      }} />);
+      expect(screen.getAllByText(label)).toHaveLength(2);
+      expect(container.textContent).not.toContain(`${delta.toFixed(2)}%`);
+    },
+  );
   it("persists selected alternative sources in the URL state and forwards them to the chart", () => {
     mockRankings(
       [makeRanking({ altSources: [altSource("alt-source", "Alt Source", 0.049, 0.048, 750_000), altSource("second-alt-source", "Second Alt Source", 0.047, 0.046, 600_000)] })],
@@ -500,7 +543,7 @@ describe("YieldDetailSection", () => {
     expect(screen.getByText("1 alternate rejected")).toBeTruthy();
     expect(screen.getByText("Alt Source")).toBeTruthy();
     expect(screen.getByText("lower confidence")).toBeTruthy();
-    expect(screen.getByText("+0.01% APY30d")).toBeTruthy();
+    expect(screen.getByText("+0.01 pp APY30d")).toBeTruthy();
     expect(screen.queryByText("legacy freeform selection reason")).toBeNull();
   });
 

@@ -19,13 +19,11 @@ describe("normalizeComputeOptions", () => {
 
     expect(first).toMatchObject({
       db, signal, runAt: 1_780_358_400, slot: "quarter-hour",
-      stablecoinsCacheSafe: true, depegPipelineHealthy: true, syncCapabilities: {},
+      stablecoinsCacheSafe: true, depegPipelineHealthy: true,
     });
     expect(first.storeContracts).toBe(DEFAULT_DDR_V2_STORE_CONTRACTS);
     expect(first.ddrRunId).toMatch(/^ddr:quarter-hour:1780358400:[0-9a-f]{12}$/);
     expect(second.ddrRunId).not.toBe(first.ddrRunId);
-    first.syncCapabilities.changed = true;
-    expect(second.syncCapabilities).toEqual({});
   });
 
   it("preserves explicit false health, zero run time and caller identity without dropping cancellation", () => {
@@ -34,11 +32,10 @@ describe("normalizeComputeOptions", () => {
     const controller = new AbortController();
     controller.abort(new Error("cancel this run"));
     const contracts = { ...DEFAULT_DDR_V2_STORE_CONTRACTS };
-    const capabilities = { nativeQuotes: false };
     const normalized = normalizeComputeOptions({
       db, signal: controller.signal, runAt: 0, slot: "manual", ddrRunId: "operator-run",
       stablecoinsCacheSafe: false, depegPipelineHealthy: false,
-      syncCapabilities: capabilities, storeContracts: contracts,
+      storeContracts: contracts,
     }, fallback);
 
     expect(normalized).toMatchObject({
@@ -47,7 +44,6 @@ describe("normalizeComputeOptions", () => {
     });
     expect(normalized.signal).toBe(controller.signal);
     expect(normalized.signal?.aborted).toBe(true);
-    expect(normalized.syncCapabilities).toBe(capabilities);
     expect(normalized.storeContracts).toBe(contracts);
     expect(normalizeComputeOptions({ db }, fallback).signal).toBe(fallback);
     expect(normalizeComputeOptions({ db, slot: "manual", runAt: 12 }).ddrRunId)

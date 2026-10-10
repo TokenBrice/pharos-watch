@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { DatabaseSync } from "node:sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   buildAlchemyUrl,
   getAlchemyBlockNumber,
   getAlchemyTransactionContextBatchMany,
   fetchAlchemyLogs,
   resolveBlockTimestamps,
+  blockHashesForLogs,
 } from "../alchemy-logs";
 import { createBudget } from "../evm-logs";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
@@ -27,26 +28,20 @@ function makeLog(txHash: string, blockNumber = 0x176f050) {
   };
 }
 
-const timestampDatabases: DatabaseSync[] = [];
-afterEach(() => {
-  for (const sqlite of timestampDatabases.splice(0)) sqlite.close();
-});
+const timestampFixtures = createLatestSchemaFixtureTracker();
+afterEach(() => timestampFixtures.closeAll());
 
 function makeDbForTimestampCache(
   opts: {
-    cachedRows?: Array<{ block_number: number; timestamp: number; chain_id?: string; updated_at?: number }>;
+    cachedRows?: Array<{ block_number: number; timestamp: number; chain_id?: string; updated_at?: number; block_hash?: string | null }>;
     onCacheReadBindCount?: (count: number) => void;
   } = {},
 ): D1Database {
-  const sqlite = new DatabaseSync(":memory:");
-  timestampDatabases.push(sqlite);
-  sqlite.exec(`CREATE TABLE block_timestamp_cache (
-    chain_id TEXT NOT NULL, block_number INTEGER NOT NULL, timestamp INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL, PRIMARY KEY (chain_id, block_number)
-  )`);
-  const insert = sqlite.prepare("INSERT INTO block_timestamp_cache VALUES (?, ?, ?, ?)");
+  const { sqlite } = timestampFixtures.open();
+  const insert = sqlite.prepare(`INSERT INTO block_timestamp_cache
+    (chain_id, block_number, timestamp, updated_at, block_hash) VALUES (?, ?, ?, ?, ?)`);
   for (const row of opts.cachedRows ?? []) {
-    insert.run(row.chain_id ?? "ethereum", row.block_number, row.timestamp, row.updated_at ?? Math.floor(Date.now() / 1000));
+    insert.run(row.chain_id ?? "ethereum", row.block_number, row.timestamp, row.updated_at ?? Math.floor(Date.now() / 1000), row.block_hash ?? null);
   }
   return createSqliteD1(sqlite, {
     onAll: (sql) => opts.onCacheReadBindCount?.((sql.match(/\?/g) ?? []).length),
@@ -586,7 +581,7 @@ describe("resolveBlockTimestamps", () => {
 
   it("uses local cache before fetching", async () => {
     const budget = createBudget(100);
-    const local = new Map<number, number>([[0x176f050, 0x6651a2c0]]);
+    const local = new Map<string, number>([[`${0x176f050}:unverified`, 0x6651a2c0]]);
 
     const result = await resolveBlockTimestamps("https://eth-mainnet.g.alchemy.com/v2/key", [0x176f050], budget, {
       localCache: local,
@@ -646,6 +641,42 @@ describe("resolveBlockTimestamps", () => {
     });
     expect([...cached]).toEqual([[0x176f050, 0x6651a2c0]]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("refetches replacement-block timestamps and never accepts orphan or unknown hashes", async () => {
+    const orphan = "0x" + "a".repeat(64);
+    const replacement = "0x" + "b".repeat(64);
+    const db = makeDbForTimestampCache({
+      cachedRows: [{ block_number: 100, timestamp: 1, block_hash: orphan }, { block_number: 101, timestamp: 2 }],
+    });
+    const local = new Map<string, number>([[`100:${orphan}`, 1]]);
+    const hashes = new Map([[100, replacement], [101, replacement]]);
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify([
+      { jsonrpc: "2.0", id: 0, result: { timestamp: "0x64", hash: replacement } },
+      { jsonrpc: "2.0", id: 1, result: { timestamp: "0x65", hash: replacement } },
+    ])));
+    const options = { localCache: local, blockHashes: hashes, persistentCache: { db, chainId: "ethereum" } };
+    expect([...await resolveBlockTimestamps("https://rpc.invalid", [100, 101], createBudget(1), options)])
+      .toEqual([[100, 100], [101, 101]]);
+    expect([...await resolveBlockTimestamps("https://rpc.invalid", [100, 101], createBudget(0), {
+      ...options, localCache: new Map(),
+    })]).toEqual([[100, 100], [101, 101]]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("withholds timestamps when returned blocks disagree with the scanned hash or logs mix forks", async () => {
+    const hash = "0x" + "a".repeat(64);
+    const replacement = "0x" + "b".repeat(64);
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify([
+      { jsonrpc: "2.0", id: 0, result: { timestamp: "0x64", hash: replacement } },
+    ])));
+    expect(await resolveBlockTimestamps("https://rpc.invalid", [100], createBudget(1), {
+      blockHashes: new Map([[100, hash]]),
+    })).toEqual(new Map());
+    const hashes = blockHashesForLogs([
+      { blockNumber: "0x64", blockHash: hash }, { blockNumber: "0x64", blockHash: replacement },
+    ]);
+    expect(await resolveBlockTimestamps("https://rpc.invalid", [100], createBudget(1), { blockHashes: hashes })).toEqual(new Map());
   });
 
   it("returns partial map when budget exhausted mid-batch", async () => {

@@ -11,6 +11,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { isSiteDataAllowedApiPath, isSiteDataAllowedMethod } from "@shared/lib/site-data-lane";
 
 const envFile = resolve(".env.local");
 
@@ -21,6 +22,7 @@ if (existsSync(envFile)) {
 const SECRET = process.env.SITE_API_SHARED_SECRET?.trim();
 const DEFAULT_UPSTREAM_ORIGIN = "https://site-api.pharos.watch";
 const PORT = parseInt(process.env.DEV_PROXY_PORT || "3001", 10);
+const HOST = "127.0.0.1";
 const ALLOWED_UPSTREAM_HOSTS = new Set(["site-api.pharos.watch", "localhost", "127.0.0.1", "[::1]"]);
 const ALLOWED_PATH_PREFIX = "/api/";
 
@@ -53,6 +55,9 @@ function resolveProxyPath(rawUrl?: string): string {
   }
 
   const pathname = `/${decodedSegments.map((segment) => encodeURIComponent(segment)).join("/")}`;
+  if (!isSiteDataAllowedApiPath(pathname)) {
+    throw new Error("Dev proxy only forwards allowlisted site-data paths");
+  }
   const query = [...local.searchParams.entries()]
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join("&");
@@ -91,9 +96,14 @@ if (!SECRET) {
 }
 
 const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+  if (!isSiteDataAllowedMethod(req.method)) {
+    res.writeHead(405, { "Content-Type": "application/json", Allow: "GET" });
+    res.end(JSON.stringify({ error: "Unsupported dev proxy method" }));
+    return;
+  }
   try {
     const upstream = new URL(resolveProxyPath(req.url), UPSTREAM_ORIGIN);
-    // codeql[js/request-forgery] UPSTREAM_ORIGIN is allowlisted above, and resolveProxyPath only permits normalized /api/* paths.
+    // codeql[js/request-forgery] UPSTREAM_ORIGIN is allowlisted and resolveProxyPath applies the shared site-data path policy.
     const upstreamRes = await fetch(upstream.toString(), {
       method: "GET",
       redirect: "error",
@@ -154,6 +164,6 @@ server.on("error", (err) => {
   process.exit(1);
 });
 
-server.listen(PORT, () => {
-  console.log(`[dev-proxy] localhost:${PORT} → ${UPSTREAM_ORIGIN}`);
+server.listen(PORT, HOST, () => {
+  console.log(`[dev-proxy] ${HOST}:${PORT} → ${UPSTREAM_ORIGIN}`);
 });

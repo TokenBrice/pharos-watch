@@ -18,7 +18,7 @@ import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 function action(overrides: Partial<StatusPageAction> = {}): StatusPageAction {
   return {
     label: "Backfill Supply",
-    path: "/api/backfill-supply-history",
+    path: "/api/remediate-blacklist-amount-gaps",
     confirm: "Run it?",
     destructive: false,
     method: "POST",
@@ -47,7 +47,7 @@ const auditEntry: AdminActionAuditEntry = {
   id: 7,
   at: 100,
   actor: "operator@example.com",
-  action: "backfill-supply-history",
+  action: "remediate-blacklist-amount-gaps",
   target: "usdc-circle",
   result: "ok",
   httpStatus: 200,
@@ -88,7 +88,7 @@ describe("actions workbench model", () => {
     expect(auditEntryMatchesAction({ ...auditEntry, action: "backfill-supply" }, action())).toBe(false);
     expect(
       auditEntryMatchesAction(
-        { ...auditEntry, action: "wrapper", details: { actionPath: "/api/backfill-supply-history" } },
+        { ...auditEntry, action: "wrapper", details: { actionPath: "/api/remediate-blacklist-amount-gaps" } },
         action(),
       ),
     ).toBe(true);
@@ -181,6 +181,23 @@ describe("actions workbench model", () => {
       ],
       followUp: "/admin/crons",
     });
+  });
+
+  it.each([null, undefined, "response", 0, false])(
+    "keeps certainty-based headlines for a non-record body %s",
+    (body) => {
+      expect(extractStructuredActionOutcome(body, "unknown")).toEqual({
+        headline: "Outcome needs reconciliation", fields: [], followUp: null,
+      });
+      expect(extractStructuredActionOutcome(body, "failed").headline).toBe("Action failed");
+      expect(extractStructuredActionOutcome(body, "succeeded").headline).toBe("Action completed");
+    },
+  );
+
+  it("does not let structured response status override unknown or failed certainty", () => {
+    expect(extractStructuredActionOutcome({ status: "completed" }, "unknown").headline)
+      .toBe("Outcome needs reconciliation");
+    expect(extractStructuredActionOutcome({ status: "completed" }, "failed").headline).toBe("Action failed");
   });
 
   it("allows only single-slash internal or explicit HTTP(S) follow-up links", () => {

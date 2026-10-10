@@ -9,32 +9,18 @@ const ACTION_BY_PATH = new Map<string, StatusPageAction>(
 );
 
 const CAUSE_ACTION_PATHS: Partial<Record<string, readonly string[]>> = {
-  stablecoins_cache_unavailable: ["/api/backfill-cg-prices"],
-  stablecoins_cache_degraded: ["/api/backfill-cg-prices"],
-  missing_prices_degraded: ["/api/backfill-cg-prices"],
-  missing_prices_stale: ["/api/backfill-cg-prices"],
   blacklist_gaps_degraded: [
-    "/api/backfill-blacklist-current-balances",
     "/api/debug-sync-state",
     "/api/remediate-blacklist-amount-gaps",
   ],
   blacklist_gaps_stale: [
-    "/api/backfill-blacklist-current-balances",
     "/api/debug-sync-state",
     "/api/remediate-blacklist-amount-gaps",
   ],
-  onchain_integrity_degraded: ["/api/backfill-mint-burn", "/api/backfill-mint-burn-prices"],
-  onchain_integrity_stale: ["/api/backfill-mint-burn", "/api/backfill-mint-burn-prices"],
-  onchain_monitor_unavailable: ["/api/backfill-mint-burn"],
 } as const;
 
 const CRON_ACTION_PATHS: Partial<Record<string, readonly string[]>> = {
   "sync-blacklist": ["/api/reset-blacklist-sync"],
-  "sync-mint-burn": ["/api/backfill-mint-burn", "/api/backfill-mint-burn-prices"],
-  "sync-mint-burn-extended": ["/api/backfill-mint-burn"],
-  "snapshot-supply": ["/api/backfill-supply-history"],
-  "stability-index": ["/api/backfill-stability-index"],
-  "snapshot-psi": ["/api/backfill-stability-index"],
   "compute-dews": ["/api/backfill-dews"],
   "daily-digest": ["/api/trigger-digest"],
 } as const;

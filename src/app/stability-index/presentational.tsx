@@ -19,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCurrency, formatScore } from "@shared/lib/format";
-import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
+import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
 import { PsiBeamDimmers } from "./psi-beam-dimmers";
 import { PsiLighthouseScene } from "./psi-lighthouse-scene";
 import type {

@@ -27,6 +27,10 @@ export interface DigestSafetyMapSummary {
   gradedCount: number;
   notRatedCount: number;
   totalMcapUsd: number;
+  supplyCoverage?: {
+    complete: boolean; observedCount: number; unavailableCount: number;
+    unavailableById: Record<string, string>; shareBasis: "known-mapped-supply";
+  };
   floorMcapByTier: { a: number; other: number };
   tiers: DigestSafetyMapTierSummary[];
 }
@@ -54,7 +58,7 @@ export interface DigestSafetyMapArchiveCapture {
   ageDays: number | null;
   manifest: {
     date: string;
-    mapSummary: Pick<DigestSafetyMapSummary, "date" | "asOfSec" | "methodologyVersion" | "gradedCount" | "notRatedCount" | "totalMcapUsd"> & {
+    mapSummary: Pick<DigestSafetyMapSummary, "date" | "asOfSec" | "methodologyVersion" | "gradedCount" | "notRatedCount" | "totalMcapUsd" | "supplyCoverage"> & {
       tiers: DigestSafetyMapArchiveTier[];
     };
   };
@@ -145,6 +149,21 @@ export function parseDigestSafetyMapSummary(value: unknown, profile: DigestSafet
     || !Array.isArray(rawTiers) || rawTiers.length !== DIGEST_SAFETY_MAP_TIERS.length
     || (profile === "canonical" && (!isRecord(floor) || !isNonNegativeFinite(floor.a) || !isNonNegativeFinite(floor.other)))
   ) return null;
+  const coverage = value.supplyCoverage;
+  let supplyCoverage: DigestSafetyMapSummary["supplyCoverage"];
+  if (coverage !== undefined) {
+    if (!isRecord(coverage) || typeof coverage.complete !== "boolean"
+      || !isNonNegativeInteger(coverage.observedCount) || !isNonNegativeInteger(coverage.unavailableCount)
+      || coverage.observedCount + coverage.unavailableCount !== gradedCount
+      || coverage.complete !== (coverage.unavailableCount === 0)
+      || coverage.shareBasis !== "known-mapped-supply" || !isRecord(coverage.unavailableById)
+      || Object.values(coverage.unavailableById).some((reason) => typeof reason !== "string")
+      || Object.keys(coverage.unavailableById).length !== coverage.unavailableCount) return null;
+    supplyCoverage = {
+      complete: coverage.complete, observedCount: coverage.observedCount, unavailableCount: coverage.unavailableCount,
+      unavailableById: coverage.unavailableById as Record<string, string>, shareBasis: "known-mapped-supply",
+    };
+  }
 
   const seen = new Set<DigestSafetyMapTier>();
   const tiers: Array<DigestSafetyMapTierSummary | DigestSafetyMapArchiveTier> = [];
@@ -170,7 +189,7 @@ export function parseDigestSafetyMapSummary(value: unknown, profile: DigestSafet
     }
     tiers.push({ tier: tier as DigestSafetyMapTier, range: rawTier.range, count, mcapUsd, sharePct, leaders });
   }
-  const common = { date, asOfSec, methodologyVersion, gradedCount, notRatedCount, totalMcapUsd, tiers };
+  const common = { date, asOfSec, methodologyVersion, gradedCount, notRatedCount, totalMcapUsd, ...(supplyCoverage ? { supplyCoverage } : {}), tiers };
   if (!DIGEST_SAFETY_MAP_TIERS.every((tier) => seen.has(tier)) || getDigestSafetyMapSummaryIssues(common as DigestSafetyMapSummary).length > 0) return null;
   return profile === "canonical"
     ? {
@@ -180,6 +199,7 @@ export function parseDigestSafetyMapSummary(value: unknown, profile: DigestSafet
         gradedCount,
         notRatedCount,
         totalMcapUsd,
+        ...(supplyCoverage ? { supplyCoverage } : {}),
         floorMcapByTier: { a: (floor as { a: number }).a, other: (floor as { other: number }).other },
         tiers,
       }

@@ -211,6 +211,20 @@ describe("DEWS signal family curves", () => {
     expect(afterUnavailableCycle.value).toBeCloseTo(50, 5);
   });
 
+  it.each([
+    [null, 1, true, 0],
+    [null, 0.9, true, 100],
+    [0.9, null, true, 100],
+    [null, null, false, 0],
+    [0, -1, false, 0],
+    [Number.NaN, Number.POSITIVE_INFINITY, false, 0],
+    [0, 0.9, true, 100],
+  ])("admits primary %s and independent DEX %s legs separately", (price, dexPriceUsd, available, value) => {
+    const result = computeDivergSignal(makeDewsInput({ price, dexPriceUsd }));
+    expect(result.available).toBe(available);
+    expect(result.value).toBe(value);
+  });
+
   it("fails closed on a non-positive price instead of publishing zero divergence", () => {
     // A zero/negative price is not "no divergence": the canonical derivation
     // returns null for it, and coercing that to 0 would report calm on a price
@@ -231,7 +245,7 @@ describe("DEWS signal family curves", () => {
     const badDex = computeDivergSignal(makeDewsInput({ price: 0.9925, dexPriceUsd: 0 }));
     expect(badDex.available).toBe(true);
     expect(badDex.primaryDevBps).toBe(75);
-    expect(badDex.dexDevBps).toBe(0);
+    expect(badDex.dexDevBps).toBeUndefined();
     expect(badDex.spreadBps).toBe(75);
   });
 

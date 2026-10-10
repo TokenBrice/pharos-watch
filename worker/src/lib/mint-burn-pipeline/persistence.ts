@@ -215,7 +215,9 @@ export async function persistMintBurnRows(
 
   const insertResult = await insertMintBurnRows(db, rows, options);
   const { flowTypeChanges, burnTypeChanges, rowsUpdated } = await updateEventClassifications(db, rows, options);
-  if (affectedHours && (insertResult.inserted > 0 || rowsUpdated > 0)) {
+  // A held cursor replays already-persisted rows after a failed hourly rebuild.
+  // Their buckets still need materialization even when every insert is ignored.
+  if (affectedHours) {
     throwIfAborted(options.signal);
     collectAffectedHours(rows, affectedHours);
   }

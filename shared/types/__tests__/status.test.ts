@@ -1,10 +1,43 @@
 import { describe, expect, it } from "vitest";
 import { PublicStatusHistoryResponseSchema, StatusHistoryResponseSchema, StatusResponseSchema } from "../status";
 import { CronRunSchema, CronInFlightSchema, ResourcePressureSchema } from "../status/cron";
+import { HealthResponseSchema } from "../status";
+import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
 
 import { makeReserveComposition, reserveComposition, statusResponse } from "./status.test-support";
 
 describe("StatusResponseSchema reserve composition contract", () => {
+  it("admits nullable public diagnostic observations without breaking retained payloads", () => {
+    const healthy = makeHealthyHealthResponse();
+    expect(HealthResponseSchema.safeParse(healthy).success).toBe(true);
+    const parsed = HealthResponseSchema.parse({
+      ...healthy, circuits: null, circuitsUnavailableReason: "circuits-read-failed",
+      mintBurn: {
+        ...healthy.mintBurn, majorStaleCount: null, staleMajorSymbols: null,
+        unavailableReason: "mint-burn-read-failed",
+        sync: { ...healthy.mintBurn.sync, freshnessStatus: null, criticalLaneHealthy: null },
+      },
+    });
+    expect(parsed.circuits).toBeNull();
+    expect(parsed.mintBurn.sync).toMatchObject({ freshnessStatus: null, criticalLaneHealthy: null });
+  });
+  it("admits nullable DB evidence and additive unavailable reason codes", () => {
+    const fixture = statusResponse();
+    const reserve = { ...makeReserveComposition({ status: "unavailable" }), reason: "db-unavailable" };
+    const parsed = StatusResponseSchema.parse({
+      ...fixture, dataQuality: null, reserveComposition: reserve,
+      summary: {
+        ...fixture.summary, unhealthyCrons: null, availabilityImpactingUnhealthyCrons: null,
+        watchUnhealthyCrons: null, degradedCrons: null, cronErrors: null,
+        availabilityImpactingCronErrors: null, availabilityImpactingConsecutiveCronErrors: null,
+        diagnosticIssueCount: null, transitionsLast24h: null, unavailableReason: "db-unavailable",
+        transitionsUnavailableReason: "db-unavailable",
+      },
+    });
+    expect(parsed.dataQuality).toBeNull();
+    expect(parsed.reserveComposition).toMatchObject({ status: "unavailable", reason: "db-unavailable", configuredCoins: null });
+    expect(parsed.summary).toMatchObject({ transitionsLast24h: null, unavailableReason: "db-unavailable" });
+  });
   it("preserves both verified Worker markers and defaults pre-upgrade payloads to unavailable", () => {
     const workerVersions = {
       public: { scriptName: "stablecoin-api", workerVersion: "public-v1", activatedAt: 100 },

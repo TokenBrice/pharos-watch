@@ -562,17 +562,33 @@ export function buildCommandPaletteResultDescriptors({
       });
     }
 
-    // Chains
-    const chainMatches: PaletteChain[] = [];
-    for (const chain of PALETTE_CHAINS) {
-      if (chainMatches.length >= SECTION_RESULT_CAP) break;
-      if (fuzzyMatch(searchQuery, chain.name) || fuzzyMatch(searchQuery, chain.id)) {
-        chainMatches.push(chain);
+    function appendMatches<T>(
+      corpus: readonly T[],
+      matches: (entry: T) => boolean,
+      describe: (entry: T) => CommandPaletteResultDescriptor & { href: string },
+      historySublabel: string | ((entry: T) => string),
+    ) {
+      let count = 0;
+      for (const entry of corpus) {
+        if (count >= SECTION_RESULT_CAP) break;
+        if (!matches(entry)) continue;
+        const result = describe(entry);
+        result.history ??= {
+          id: result.id,
+          type: "page",
+          label: result.label,
+          sublabel: typeof historySublabel === "string" ? historySublabel : historySublabel(entry),
+          href: result.href,
+        };
+        items.push(result);
+        count += 1;
       }
     }
-    for (const chain of chainMatches) {
-      const href = `/chains/${chain.id}/`;
-      items.push({
+
+    // Chains
+    appendMatches(PALETTE_CHAINS,
+      (chain) => fuzzyMatch(searchQuery, chain.name) || fuzzyMatch(searchQuery, chain.id),
+      (chain) => ({
         id: `chain-${chain.id}`,
         label: chain.name,
         sublabel: "Chain profile",
@@ -581,271 +597,130 @@ export function buildCommandPaletteResultDescriptors({
         imagePath: chain.logoPath || undefined,
         imageSquare: true,
         imageDarkInvert: chain.darkInvert,
-        href,
-        history: {
-          id: `chain-${chain.id}`,
-          type: "page",
-          label: chain.name,
-          sublabel: "Chain profile",
-          href,
-        },
-      });
-    }
+        href: `/chains/${chain.id}/`,
+      }), "Chain profile");
 
-    // Peg currencies. "euro" should open the EUR peg page above any coin whose
-    // name merely contains the word, so an exact/word-prefix peg-name hit
-    // leads (unless a coin matched its exact symbol).
-    const pegMatches: (typeof PEG_TAXONOMY_PAGES)[number][] = [];
-    for (const peg of PEG_TAXONOMY_PAGES) {
-      if (pegMatches.length >= SECTION_RESULT_CAP) break;
-      if (
-        fuzzyMatch(searchQuery, peg.shortLabel) ||
-        fuzzyMatch(searchQuery, peg.value) ||
-        fuzzyMatch(searchQuery, peg.slug)
-      ) {
-        pegMatches.push(peg);
-      }
-    }
-    for (const peg of pegMatches) {
-      const lead = !hasExactSymbolCoin && [peg.shortLabel, peg.value, peg.slug].some((field) => {
-        const target = field.toLowerCase();
-        const queryLower = searchQuery.toLowerCase();
-        return target === queryLower || target.split(/\s+/).some((word) => word.startsWith(queryLower));
-      });
-      items.push({
+    // Exact/word-prefix peg hits lead unless a coin matched its exact symbol.
+    appendMatches(PEG_TAXONOMY_PAGES,
+      (peg) => fuzzyMatch(searchQuery, peg.shortLabel) || fuzzyMatch(searchQuery, peg.value) || fuzzyMatch(searchQuery, peg.slug),
+      (peg) => ({
         id: `peg-${peg.slug}`,
         label: peg.title,
         sublabel: `${peg.coins.length} tracked stablecoin${peg.coins.length === 1 ? "" : "s"}`,
         section: "Peg currencies",
         kind: "peg",
-        lead,
+        lead: !hasExactSymbolCoin && [peg.shortLabel, peg.value, peg.slug].some((field) => {
+          const target = field.toLowerCase();
+          const queryLower = searchQuery.toLowerCase();
+          return target === queryLower || target.split(/\s+/).some((word) => word.startsWith(queryLower));
+        }),
         href: peg.href,
-        history: {
-          id: `peg-${peg.slug}`,
-          type: "page",
-          label: peg.title,
-          sublabel: peg.shortLabel,
-          href: peg.href,
-        },
-      });
-    }
+      }), (peg) => peg.shortLabel);
 
-    // Static comparison pages: match when the query names both symbols in any
-    // order, or an explicit "vs"/"versus" plus one side.
+    // Both symbols in any order, or an explicit "vs"/"versus" plus one side.
     const queryLower = searchQuery.toLowerCase();
     const hasVsToken = queryTokens.includes("vs") || queryTokens.includes("versus") || queryTokens.includes("vs.");
-    const comparisonMatches: PaletteComparison[] = [];
-    for (const pair of PALETTE_COMPARISONS) {
-      if (comparisonMatches.length >= SECTION_RESULT_CAP) break;
-      const leftHit = queryLower.includes(pair.leftSymbolLower);
-      const rightHit = queryLower.includes(pair.rightSymbolLower);
-      if ((leftHit && rightHit) || (hasVsToken && (leftHit || rightHit))) {
-        comparisonMatches.push(pair);
-      }
-    }
-    for (const pair of comparisonMatches) {
-      items.push({
+    appendMatches(PALETTE_COMPARISONS,
+      (pair) => {
+        const leftHit = queryLower.includes(pair.leftSymbolLower);
+        const rightHit = queryLower.includes(pair.rightSymbolLower);
+        return (leftHit && rightHit) || (hasVsToken && (leftHit || rightHit));
+      },
+      (pair) => ({
         id: `comparison-${pair.id}`,
         label: pair.label,
         sublabel: "Static comparison page",
         section: "Comparisons",
         kind: "comparison",
         href: pair.href,
-        history: {
-          id: `comparison-${pair.id}`,
-          type: "page",
-          label: pair.label,
-          sublabel: "Comparison",
-          href: pair.href,
-        },
-      });
-    }
+      }), "Comparison");
 
-    // Case studies (generated client index: title, slug words, symbols, keywords)
-    const caseStudyMatches: (typeof CASE_STUDY_CLIENT_LIST)[number][] = [];
-    for (const study of CASE_STUDY_CLIENT_LIST) {
-      if (caseStudyMatches.length >= SECTION_RESULT_CAP) break;
-      const titleScore = scorePageSearchMatch(searchQuery, { label: study.title, keywords: study.keywords });
-      const symbolScore = study.coinSymbols.reduce(
-        (best, symbol) => Math.max(best, scoreKeywordTokenMatch(searchQuery, symbol)),
-        0,
-      );
-      if (titleScore + symbolScore > 0) {
-        caseStudyMatches.push(study);
-      }
-    }
-    for (const study of caseStudyMatches) {
-      const href = `/learn/case-studies/${study.slug}/`;
-      items.push({
+    // Case studies (generated title, slug words, symbols and keywords)
+    appendMatches(CASE_STUDY_CLIENT_LIST,
+      (study) => {
+        const titleScore = scorePageSearchMatch(searchQuery, { label: study.title, keywords: study.keywords });
+        const symbolScore = study.coinSymbols.reduce(
+          (best, symbol) => Math.max(best, scoreKeywordTokenMatch(searchQuery, symbol)), 0,
+        );
+        return titleScore + symbolScore > 0;
+      },
+      (study) => ({
         id: `case-study-${study.slug}`,
         label: study.title,
         sublabel: `Case study${study.year ? ` · ${study.year}` : ""}`,
         section: "Case studies",
         kind: "case-study",
-        href,
-        history: {
-          id: `case-study-${study.slug}`,
-          type: "page",
-          label: study.title,
-          sublabel: "Case study",
-          href,
-        },
-      });
-    }
+        href: `/learn/case-studies/${study.slug}/`,
+      }), "Case study");
 
-    // Glossary terms, deep-linked to the entry anchor on /learn/glossary/
-    const glossaryMatches: (typeof GLOSSARY_ENTRIES)[number][] = [];
-    for (const entry of GLOSSARY_ENTRIES) {
-      if (glossaryMatches.length >= SECTION_RESULT_CAP) break;
-      // Term exact/prefix/word-prefix via the label tiers; definition hits via
-      // the weak description tiers.
-      if (scorePageSearchMatch(searchQuery, { label: entry.term, description: entry.definition }) > 0) {
-        glossaryMatches.push(entry);
-      }
-    }
-    for (const entry of glossaryMatches) {
-      const href = `/learn/glossary/#${entry.id}`;
-      items.push({
+    // Glossary label tiers and weaker definition hits, deep-linked to the term.
+    appendMatches(GLOSSARY_ENTRIES,
+      (entry) => scorePageSearchMatch(searchQuery, { label: entry.term, description: entry.definition }) > 0,
+      (entry) => ({
         id: `glossary-${entry.id}`,
         label: entry.term,
         sublabel: "Glossary term",
         section: "Glossary",
         kind: "glossary-term",
-        href,
-        history: {
-          id: `glossary-${entry.id}`,
-          type: "page",
-          label: entry.term,
-          sublabel: "Glossary term",
-          href,
-        },
-      });
-    }
+        href: `/learn/glossary/#${entry.id}`,
+      }), "Glossary term");
 
     // Mechanism archetypes
-    const mechMatches: PaletteMechanism[] = [];
-    for (const mech of PALETTE_MECHANISMS) {
-      if (mechMatches.length >= SECTION_RESULT_CAP) break;
-      if (
-        fuzzyMatch(searchQuery, mech.label) ||
-        fuzzyMatch(searchQuery, mech.id) ||
-        fuzzyMatch(searchQuery, mech.oneLiner)
-      ) {
-        mechMatches.push(mech);
-      }
-    }
-    for (const mech of mechMatches) {
-      const href = `/learn/mechanisms/${mech.id}/`;
-      items.push({
+    appendMatches(PALETTE_MECHANISMS,
+      (mech) => fuzzyMatch(searchQuery, mech.label) || fuzzyMatch(searchQuery, mech.id) || fuzzyMatch(searchQuery, mech.oneLiner),
+      (mech) => ({
         id: `mechanism-${mech.id}`,
         label: mech.label,
         sublabel: "Mechanism archetype explainer",
         section: "Mechanism archetypes",
         kind: "mechanism",
-        href,
-        history: {
-          id: `mechanism-${mech.id}`,
-          type: "page",
-          label: mech.label,
-          sublabel: "Mechanism archetype",
-          href,
-        },
-      });
-    }
+        href: `/learn/mechanisms/${mech.id}/`,
+      }), "Mechanism archetype");
 
-    // Recent depeg events (generated top 10 by startedAt)
-    if (depegEventSearchData.length > 0) {
-      const depegMatches: Array<(typeof depegEventSearchData)[number]> = [];
-      for (const event of depegEventSearchData) {
-        if (depegMatches.length >= SECTION_RESULT_CAP) break;
-        if (
-          fuzzyMatch(searchQuery, event.symbol) ||
-          fuzzyMatch(searchQuery, event.stablecoinId) ||
-          fuzzyMatch(searchQuery, event.slug)
-        ) {
-          depegMatches.push(event);
-        }
-      }
-      for (const event of depegMatches) {
+    // Recent depegs retain their distinct dated history label.
+    appendMatches(depegEventSearchData,
+      (event) => fuzzyMatch(searchQuery, event.symbol) || fuzzyMatch(searchQuery, event.stablecoinId) || fuzzyMatch(searchQuery, event.slug),
+      (event) => {
         const href = `/depeg/${event.slug}/`;
-        const dateLabel = event.startedAt
-          ? new Date(event.startedAt * 1000).toISOString().slice(0, 10)
-          : "";
-        const directionLabel = event.direction === "below" ? "below" : "above";
-        items.push({
+        const dateLabel = event.startedAt ? new Date(event.startedAt * 1000).toISOString().slice(0, 10) : "";
+        return {
           id: `depeg-${event.slug}`,
-          label: `${event.symbol} ${directionLabel} ${event.pegType}`,
-          sublabel: dateLabel
-            ? `${dateLabel} · peak ${event.peakDeviationBps}bps`
-            : `peak ${event.peakDeviationBps}bps`,
+          label: `${event.symbol} ${event.direction === "below" ? "below" : "above"} ${event.pegType}`,
+          sublabel: dateLabel ? `${dateLabel} · peak ${event.peakDeviationBps}bps` : `peak ${event.peakDeviationBps}bps`,
           section: "Recent depegs",
           kind: "depeg-event",
           logoId: event.stablecoinId,
           href,
           history: {
-            id: `depeg-${event.slug}`,
-            type: "page",
-            label: `${event.symbol} ${dateLabel}`.trim(),
-            sublabel: "Depeg event",
-            href,
+            id: `depeg-${event.slug}`, type: "page",
+            label: `${event.symbol} ${dateLabel}`.trim(), sublabel: "Depeg event", href,
           },
-        });
-      }
-    }
+        };
+      }, "Depeg event");
 
-    // Public docs (title + summary; the markdown bodies stay out of the bundle)
-    const docMatches: (typeof PUBLIC_DOCS)[number][] = [];
-    for (const doc of PUBLIC_DOCS) {
-      if (docMatches.length >= SECTION_RESULT_CAP) break;
-      if (scorePageSearchMatch(searchQuery, { label: doc.title, description: doc.summary }) > 0) {
-        docMatches.push(doc);
-      }
-    }
-    for (const doc of docMatches) {
-      const href = `/docs/${doc.slug}/`;
-      items.push({
+    // Public docs (the markdown bodies stay out of the bundle)
+    appendMatches(PUBLIC_DOCS,
+      (doc) => scorePageSearchMatch(searchQuery, { label: doc.title, description: doc.summary }) > 0,
+      (doc) => ({
         id: `doc-${doc.slug}`,
         label: doc.title,
         sublabel: doc.summary,
         section: "Docs",
         kind: "doc",
-        href,
-        history: {
-          id: `doc-${doc.slug}`,
-          type: "page",
-          label: doc.title,
-          sublabel: "Docs",
-          href,
-        },
-      });
-    }
+        href: `/docs/${doc.slug}/`,
+      }), "Docs");
 
-    // Blog posts (metadata-only registry: title, description, slug)
-    const blogMatches: (typeof BLOG_POSTS)[number][] = [];
-    for (const post of BLOG_POSTS) {
-      if (blogMatches.length >= SECTION_RESULT_CAP) break;
-      if (scorePageSearchMatch(searchQuery, { label: post.title, description: post.description }) > 0) {
-        blogMatches.push(post);
-      }
-    }
-    for (const post of blogMatches) {
-      const href = `/blog/${post.slug}/`;
-      items.push({
+    // Blog metadata
+    appendMatches(BLOG_POSTS,
+      (post) => scorePageSearchMatch(searchQuery, { label: post.title, description: post.description }) > 0,
+      (post) => ({
         id: `blog-${post.slug}`,
         label: post.title,
         sublabel: post.description,
         section: "Blog",
         kind: "blog-post",
-        href,
-        history: {
-          id: `blog-${post.slug}`,
-          type: "page",
-          label: post.title,
-          sublabel: "Blog",
-          href,
-        },
-      });
-    }
+        href: `/blog/${post.slug}/`,
+      }), "Blog");
   }
 
   let actionRowsEmitted = 0;

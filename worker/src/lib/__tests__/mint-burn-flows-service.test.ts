@@ -37,7 +37,7 @@ describe("invalidateMintBurnFlowCaches", () => {
 
     expect(db.getHistory()).toContainEqual({
       sql: "DELETE FROM cache WHERE key >= ? AND key < ?",
-      binds: ["mint-burn-flows:v3:", "mint-burn-flows:v3:\uffff"],
+      binds: ["mint-burn-flows:v4:", "mint-burn-flows:v4:\uffff"],
     });
   });
 
@@ -48,6 +48,6 @@ describe("invalidateMintBurnFlowCaches", () => {
 
     const deletes = db.getHistory().filter(({ sql }) => sql.includes("DELETE FROM cache"));
     expect(deletes).toHaveLength(1);
-    expect(deletes[0].binds).toEqual(["mint-burn-flows:v3:coin:", "mint-burn-flows:v3:coin:\uffff"]);
+    expect(deletes[0].binds).toEqual(["mint-burn-flows:v4:coin:", "mint-burn-flows:v4:coin:\uffff"]);
   });
 });

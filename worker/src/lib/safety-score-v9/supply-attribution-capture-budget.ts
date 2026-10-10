@@ -2,15 +2,7 @@ import { SUPPLY_ATTRIBUTION_CAPTURE_BUDGET, SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INP
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { throwIfAborted } from "../abort";
 import type { V9ExecutionWindow } from "../v9-slot-window";
-import type { SupplyAttributionAttemptDiagnostic, SupplyAttributionCaptureFailureReason } from "@shared/types/safety-score-v9-supply-attribution";
-
-export function emitSupplyAttributionDiagnostic(
-  callback: ((diagnostic: SupplyAttributionAttemptDiagnostic) => void) | undefined,
-  detail: Pick<SupplyAttributionAttemptDiagnostic, "observer" | "sourceId"> & Partial<SupplyAttributionAttemptDiagnostic>,
-): void {
-  callback?.({ laneId: null, chainId: null, providerOrigin: null, method: "unknown", phase: "observation", beforeCursor: null, afterCursor: null, targetCursor: null, pinObservedAtSec: null, finalizedLagBlocks: null, persisted: false, authenticatedCursorAdvanced: false, incompleteBootstrap: false, hardEvidenceFailure: false, failurePredicate: null, ...detail });
-}
-
+import type { SupplyAttributionCaptureFailureReason } from "@shared/types/safety-score-v9-supply-attribution";
 
 export type BudgetedSupplyAttributionResult<T> =
   | { status: "completed"; value: T }

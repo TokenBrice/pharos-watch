@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { attentionScore } from "@/lib/depeg-sort";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
+import { makePendingIncident } from "@/components/__tests__/depeg.test-support";
 
 /** Helper to build a minimal DepegTrackerRow for testing */
 function mockRow(opts: {
@@ -44,9 +45,7 @@ describe("depeg tracker attention sort", () => {
   it("ranks pending confirmation between active incidents and ordinary danger", () => {
     const active = mockRow({ activeDepeg: true, band: "CALM", absDev: 10 });
     const pending = mockRow({ activeDepeg: false, band: "CALM", absDev: 20 });
-    pending.pendingIncident = {
-      stablecoinId: "usdc-circle", symbol: "USDC", direction: "above", firstSeenAt: 1_700_000_000,
-    };
+    pending.pendingIncident = makePendingIncident({ direction: "above" });
     const danger = mockRow({ activeDepeg: false, band: "DANGER", absDev: 999 });
     expect(attentionScore(active)).toBeGreaterThan(attentionScore(pending));
     expect(attentionScore(pending)).toBeGreaterThan(attentionScore(danger));

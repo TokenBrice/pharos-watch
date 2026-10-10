@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { formatDecimal } from "@shared/lib/format";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 import type { TelegramWatcherHistoryPoint } from "@shared/types/status";
+import { isTelegramPulseAvailable } from "./live-watcher-count";
 
 const COMPACT_NUMBER_FORMATTER = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -164,9 +165,13 @@ function PanelLoading() {
  * no per-chat anything (privacy contract).
  */
 export function InstrumentPanel() {
-  const { data, isLoading, isError } = useTelegramPulse();
-  const watchers = useCountUp(data?.activeWatchers ?? null);
-  const follows = useCountUp(data?.coinSubscriptions ?? null);
+  const query = useTelegramPulse();
+  const { data, isLoading } = query;
+  const available = isTelegramPulseAvailable(query);
+  const watchers = useCountUp(available ? data?.activeWatchers ?? null : null);
+  const follows = useCountUp(available ? data?.coinSubscriptions ?? null : null);
+  const rankingUnavailable = data?.quality?.unavailableFields.includes("topCoins") ?? false;
+  const historyUnavailable = data?.quality?.unavailableFields.includes("watcherHistory") ?? false;
 
   return (
     <section id="panel" className="pharos-night-slate scroll-mt-20" aria-labelledby="panel-title">
@@ -181,7 +186,7 @@ export function InstrumentPanel() {
               nothing operational, nothing individual.
             </p>
           </div>
-          {data ? (
+          {available && data ? (
             <span
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
@@ -197,7 +202,7 @@ export function InstrumentPanel() {
 
         {isLoading ? <PanelLoading /> : null}
 
-        {!isLoading && (!data || isError) ? (
+        {!isLoading && !available ? (
           <div role="status" aria-label="Telegram adoption metrics unavailable" aria-live="polite" aria-busy="false" className="mt-10">
             <p className="border-t border-border/55 pt-6 text-sm text-muted-foreground">
               Public Telegram adoption metrics are temporarily unavailable. They retry automatically; bot links and
@@ -206,7 +211,7 @@ export function InstrumentPanel() {
           </div>
         ) : null}
 
-        {!isLoading && data ? (
+        {available && data ? (
           <>
             {data.quality?.status === "partial" ? (
               <p className="mt-6 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
@@ -274,7 +279,9 @@ export function InstrumentPanel() {
               <div className="border-t border-border/55 pt-5">
                 <dt className="pharos-kicker !tracking-normal">Most followed</dt>
                 <dd className="mt-3">
-                  {data.topCoins.length > 0 ? (
+                  {rankingUnavailable ? (
+                    <p className="text-xs text-muted-foreground">Follow rankings are temporarily unavailable.</p>
+                  ) : data.topCoins.length > 0 ? (
                     <ol className="flex flex-wrap items-center gap-1.5">
                       {data.topCoins.slice(0, 5).map((coin, index) => (
                         <li
@@ -309,7 +316,7 @@ export function InstrumentPanel() {
             <div className="mt-12 border-t border-border/55 pt-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <p className="pharos-kicker !tracking-normal">Telegram chat lifecycle</p>
-                {data.watcherHistory.length > 0 ? (
+                {!historyUnavailable && data.watcherHistory.length > 0 ? (
                   <p className="font-mono text-xs text-muted-foreground">
                     latest daily snapshot{" "}
                     <span className="font-semibold text-foreground">
@@ -321,7 +328,11 @@ export function InstrumentPanel() {
                   </p>
                 ) : null}
               </div>
-              {data.watcherHistory.length > 0 ? (
+              {historyUnavailable ? (
+                <div className="mt-4 flex h-[120px] items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground">
+                  Watcher history is temporarily unavailable.
+                </div>
+              ) : data.watcherHistory.length > 0 ? (
                 <WatcherGrowthChart data={data.watcherHistory} />
               ) : (
                 <div className="mt-4 flex h-[120px] items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground">

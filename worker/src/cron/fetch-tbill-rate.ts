@@ -587,7 +587,12 @@ interface ResolvedBenchmarkProvider {
 
 async function tryUsdEffrBenchmark(signal?: AbortSignal): Promise<BenchmarkFetchResult | null> {
   const nyFed = await tryNyFedEffr(signal);
-  if (nyFed) return nyFed;
+  if (nyFed) {
+    const recordAgeSec = benchmarkRecordAgeSeconds(nyFed.recordDate, Math.floor(Date.now() / 1000));
+    if (recordAgeSec != null && recordAgeSec >= 0 && recordAgeSec <= YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD_EFFR) {
+      return nyFed;
+    }
+  }
 
   const fred = await tryFredCsv(FRED_EFFR_CSV_URL, signal, USD_EFFR_FRED_MAX_OBSERVATION_AGE_DAYS);
   return fred ? { ...fred, source: "fred-dff" } : null;

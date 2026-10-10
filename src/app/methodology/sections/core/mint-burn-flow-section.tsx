@@ -88,6 +88,14 @@ export function MintBurnFlowMethodologySection() {
                 flow excludes bridge transfers, review-required burns, atomic roundtrips, and individually reviewed
                 protocol-internal movements such as an issuer deploying reserves into its own loan book.
               </p>
+              <p>
+                An N-hour flow window covers N closed UTC hours ending at the current hour boundary, not a rolling
+                window ending now. The open hour is excluded; the oldest included hour retains all valuation gaps.
+                The same boundary governs pressure, largest events and longer net-flow windows. Verified CCTP V2
+                destination recipient and fee mints are bridge transfers, while unrelated issuance in that transaction
+                stays counted. Historical valuation requires an actual observation within the inclusive 24-hour
+                distance from the event; retention preserves all hourly siblings until repair and aggregation settle.
+              </p>
               <MethodologyFacts
                 facts={[
                   { label: "Data source", value: "On-chain mint + burn events" },
@@ -129,8 +137,8 @@ export function MintBurnFlowMethodologySection() {
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">Net Flow 24h</h3>
                   <p>
-                    Net Flow answers the first question directly: is a coin minting or burning right now? It is the raw
-                    24-hour mint volume minus burn volume.
+                    Net Flow answers whether a coin minted or burned over the last 24 closed UTC hours. It is the
+                    mint volume minus burn volume over that window, not the still-open current hour.
                   </p>
                   <ul className="list-disc list-inside space-y-1">
                     <li>

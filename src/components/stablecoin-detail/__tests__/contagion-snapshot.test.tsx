@@ -30,15 +30,18 @@ vi.mock("next/dynamic", () => ({
     function ContagionGraphStub({
       focusCoinId,
       dependencyEdges,
+      cards,
     }: {
       focusCoinId?: string;
       dependencyEdges?: readonly { from: string; to: string }[];
+      cards?: readonly { id: string; grade: string | null; partialEvidence?: unknown }[];
     }) {
       return (
         <div
           data-testid="contagion-graph"
           data-focus={focusCoinId}
           data-edges={(dependencyEdges ?? []).map((edge) => `${edge.from}>${edge.to}`).join(",")}
+          data-cards={JSON.stringify(cards)}
         />
       );
     },
@@ -130,6 +133,21 @@ describe("ContagionSnapshot", () => {
     expect(graph.getAttribute("data-focus")).toBe("usde-ethena");
     expect(graph.getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
     expect(screen.getByTestId("variant-card").textContent).toBe("VARIANT");
+  });
+
+  it.each(["B", null] as const)("preserves %s partial evidence in the detail graph projection", (grade) => {
+    const data = makeDependencyResponse();
+    const partialEvidence: NonNullable<(typeof data.cards)[number]["partialEvidence"]> = {
+      reasonCode: "partial-evidence-pipeline-gap", causes: ["A"], excludedPillars: ["exit"],
+      excludedComponentKeys: ["dex-liquidity"], causeGapRefs: [0],
+    };
+    data.cards[0] = { ...data.cards[0], grade, partialEvidence };
+    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    render(<ContagionSnapshot stablecoinId="usdc-circle" />);
+    const cards = JSON.parse(screen.getByTestId("contagion-graph").getAttribute("data-cards") ?? "[]");
+    expect(cards.find((card: { id: string }) => card.id === "usdc-circle")).toMatchObject({
+      grade, partialEvidence,
+    });
   });
 
   it("renders the published dependent beside the dependency map with a focused deep link", () => {

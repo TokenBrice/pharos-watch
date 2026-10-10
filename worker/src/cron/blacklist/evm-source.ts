@@ -2,6 +2,7 @@ import { BlacklistDecodeError, quarantineBlacklistDecodeFailure } from "../../li
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { decodeAbiParameters } from "viem/utils";
 import {
+  blockHashesForLogs,
   fetchAlchemyLogs,
   getAlchemyBlockNumber,
   resolveBlockTimestamps,
@@ -169,13 +170,13 @@ function buildEvmBlacklistRow(
   const eventType = eventTypeOverride ?? eventDef.eventType;
 
   return buildBlacklistRow({
-    id: `${config.chain.chainId}-${log.transactionHash}-${log.logIndex}${rowSuffix}`,
+    id: `${config.chain.chainId}-${log.transactionHash.toLowerCase()}-0x${Number(log.logIndex).toString(16)}${rowSuffix}`,
     stablecoin: config.stablecoin,
     chain: config.chain,
     eventType,
     address: affectedAddress,
     amount,
-    txHash: log.transactionHash,
+    txHash: log.transactionHash.toLowerCase(),
     blockNumber,
     timestamp,
     contractAddress: config.contractAddress,
@@ -355,7 +356,7 @@ export async function fetchEvmEventsIncremental(
   config: ContractEventConfig,
   apiKey: string | null,
   fromBlock: number,
-  timestampCache: Map<number, number>,
+  timestampCache: Map<string, number>,
   runBudget: BlacklistRunBudget,
   rateLimit: RateLimitedFetch,
   signal?: AbortSignal,
@@ -411,19 +412,33 @@ export async function fetchEvmEventsIncremental(
     const scanToBlock = target.scanWindowBlocks != null
       ? Math.min(targetSafeHead, fromBlock + target.scanWindowBlocks - 1)
       : targetSafeHead;
-    const logs = fromBlock > scanToBlock
-      ? { logs: [], complete: true, scannedToBlock: scanToBlock, calls: 0, maxDepth: 0 }
-      : await fetchAlchemyLogs(
-          target.rpcUrl,
-          config.contractAddress,
-          [{ index: 0, value: topics.length === 1 ? topics[0]! : topics }],
-          fromBlock,
-          scanToBlock,
-          runBudget.subrequestBudget,
-          signal,
-          { deadlineMs: runBudget.deadlineMs },
-        );
-    return { safeHead: targetSafeHead, scanToBlock, logs };
+    const batches: AlchemyLogsFetchResult[] = [];
+    // Respect Avalanche's 2,000-block provider cap per request, but admit enough
+    // serial windows to exceed its normal six-hour chain growth.
+    const finalBlock = config.chain.chainId === "avalanche" && target.scanWindowBlocks === 2_000
+      ? Math.min(targetSafeHead, fromBlock + 16_000 - 1) : scanToBlock;
+    let start = fromBlock;
+    do {
+      const end = Math.min(finalBlock, start + (target.scanWindowBlocks ?? finalBlock - start + 1) - 1);
+      const batch = start > end
+        ? { logs: [], complete: true, scannedToBlock: end, calls: 0, maxDepth: 0 }
+        : await fetchAlchemyLogs(target.rpcUrl, config.contractAddress,
+          [{ index: 0, value: topics.length === 1 ? topics[0]! : topics }], start, end,
+          runBudget.subrequestBudget, signal, { deadlineMs: runBudget.deadlineMs });
+      if (!batch) return { safeHead: targetSafeHead, scanToBlock: finalBlock, logs: null };
+      batches.push(batch);
+      if (!batch.complete || blacklistRuntimeBudgetReached(runBudget) || blacklistSubrequestBudgetReached(runBudget)) break;
+      start = end + 1;
+    } while (start <= finalBlock);
+    const last = batches[batches.length - 1]!;
+    return {
+      safeHead: targetSafeHead, scanToBlock: finalBlock,
+      logs: { logs: batches.flatMap((batch) => batch.logs),
+        complete: last.complete && last.scannedToBlock >= finalBlock,
+        scannedToBlock: last.scannedToBlock, calls: batches.reduce((n, batch) => n + batch.calls, 0),
+        maxDepth: Math.max(...batches.map((batch) => batch.maxDepth)),
+        failureReason: last.failureReason },
+    };
   };
 
 
@@ -490,7 +505,17 @@ export async function fetchEvmEventsIncremental(
         );
         providerCalls += fetchedLogs.calls;
         maxSplitDepth = Math.max(maxSplitDepth, fetchedLogs.maxDepth);
-        const providerScannedToBlock = Math.min(fetchedLogs.scannedToBlock, scanToBlock);
+        let providerScannedToBlock = Math.min(fetchedLogs.scannedToBlock, scanToBlock);
+        let malformedHeld = false;
+        for (const [index, rejected] of (fetchedLogs.rejectedLogs ?? []).entries()) {
+          const raw = rejected != null && typeof rejected === "object" ? rejected as Record<string, unknown> : {};
+          const retained = await quarantineBlacklistDecodeFailure(db, config.configKey,
+            `${String(raw.blockNumber)}:${String(raw.transactionHash)}:${String(raw.logIndex)}:${index}`,
+            "invalid-log-identity", raw, runBudget.deadlineMs);
+          malformedHeld ||= !retained;
+        }
+        const intakeComplete = fetchedLogs.complete || (fetchedLogs.validatedToBlock != null && !malformedHeld);
+        if (intakeComplete && fetchedLogs.validatedToBlock != null) providerScannedToBlock = Math.min(fetchedLogs.validatedToBlock, scanToBlock);
         if (providerScannedToBlock >= fromBlock) {
           const contiguousLogs = fetchedLogs.logs.filter((log) => {
             const block = parseInt(log.blockNumber, 16);
@@ -503,7 +528,7 @@ export async function fetchEvmEventsIncremental(
             parsed.coverageCeiling == null
               ? providerScannedToBlock
               : Math.min(providerScannedToBlock, Math.max(fromBlock - 1, parsed.coverageCeiling));
-          sourceHadGap = !fetchedLogs.complete || parsed.coverageCeiling != null;
+          sourceHadGap = !intakeComplete || parsed.coverageCeiling != null;
         } else if (!fetchedLogs.complete) {
           sourceHadGap = true;
           explorerUnavailable = true;
@@ -576,6 +601,7 @@ export async function fetchEvmEventsIncremental(
               ? await resolveBlockTimestamps(rpcTarget.rpcUrl, uniqueBlocks, runBudget.subrequestBudget, {
                   signal,
                   localCache: timestampCache,
+                  blockHashes: blockHashesForLogs(fetchedLogs.logs),
                   persistentCache: {
                     db,
                     chainId: config.chain.chainId,
@@ -632,6 +658,11 @@ export async function fetchEvmEventsIncremental(
       ? []
       : allRows.filter((row) => row.block_number <= minCoveredScannedToBlock);
   const coveredMaxBlock = coveredRows.reduce((max, row) => Math.max(max, row.block_number), fromBlock - 1);
+  if (!incomplete && !apiError && coveredTopicCount === topicHashes.length
+    && (safeHead == null || minCoveredScannedToBlock == null || minCoveredScannedToBlock < safeHead)) {
+    incomplete = true;
+    failureSamples.push("behind-safe-head");
+  }
   const coverageOutcome: BlacklistScanCoverageOutcome = incomplete
     ? "incomplete"
     : coveredTopicCount < topicHashes.length

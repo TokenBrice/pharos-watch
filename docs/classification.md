@@ -8,6 +8,8 @@ For catalog flags, read [Type](#type-governance-field-internally), [Backing](#ba
 
 For reviewed controls, use [Mint Authority Taxonomy](#mint-authority-taxonomy), [Implementation Age Policy](#implementation-age-policy), or [Infrastructure Tagging](#infrastructure-tagging). Price/peg work uses [Non-USD Peg Handling](#non-usd-peg-handling) and [Commodity & Non-DefiLlama Stablecoins](#commodity--non-defillama-stablecoins), not the entire taxonomy.
 
+Display taxonomies are owned by `shared/lib/classification.ts` and its typed children: PYS text/gauges share one band ladder, status badges/runway bars share labels, and mint/redemption descriptors retain their compact and coverage variants. PSI chart colors, text classes, and animation timings share one descriptor; methodology tables consume its text styles.
+
 ## Stablecoin Classification System
 
 Each tracked stablecoin is defined in the checked-in per-coin data assets under `shared/data/stablecoins/coins/*.json`, loaded through `shared/lib/stablecoins/registry.ts` from the generated `shared/data/stablecoins/coins.generated.json` aggregate, and validated by `shared/lib/stablecoins/schema.ts` at generation/test time. Import stablecoin helpers from their explicit submodules; use the registry module for the complete catalog and explicit lifecycle splits. Each entry carries these flags:
@@ -137,7 +139,7 @@ Mint Authority is a reviewed native-issuance taxonomy. It covers canonical deplo
 
 Bridge vocabulary is not valid in active Mint Authority data, and an asset with no local native issuance carries the reviewed `mintAuthority.review.noLocalIssuance` exception instead of an invented native route. [Stablecoin Data Registry](./stablecoin-data.md#mint-authority-and-bridge-risk-ownership) owns the exact authoring contract, the deployment identity, and the values that are forbidden on active records.
 
-Compact `mintAuthoritySummary` projections can appear in structural/user-facing tables, including `/coverage/`, the homepage stablecoin table, and `/screener/`. Those surfaces bucket the reviewed data into review-route labels (`No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, `Unknown`), which describe which curation route an asset is on and carry no score. The mint score and band beside them are the published V9 mint component and its posture band.
+Compact `mintAuthoritySummary` projections in coverage and market tables carry review-route labels, not scores. An `unknown` native mint path stays `Unknown` even when reviewed; it never defaults to `Governed`. The adjacent mint score and band come from the published V9 mint component.
 
 Mint path labels:
 

@@ -11,11 +11,10 @@ import {
   getBlacklistEventByTopic,
   type ContractEventConfig,
 } from "../blacklist-contracts";
-import { tronBase58ToHex, tronHexAddressToBase58 } from "../tron-address";
+import { normalizeTronAddress, tronBase58ToHex, tronHexAddressToBase58 } from "../tron-address";
 import { batchExecute } from "../db";
 import type { RateLimitedFetch } from "../evm-logs";
 import { decimalNumberFromBigInt } from "../bigint";
-import { fetchBlacklistAssetPriceFromCache } from "./row-preparation";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
 import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue } from "./amount-repair-queue";
 import { buildBlacklistAmountAttemptUpdate, buildRecoveredBlacklistAmountPersistence } from "./amount-persistence";
@@ -51,7 +50,6 @@ const TRON_REPLAY_MAX_PAGES_PER_RUN = 120;
 // The freeze must be old enough that the explorer index has had a runway past
 // its block; a fresher freeze is simply retried on the next run.
 const TRON_REPLAY_MIN_FREEZE_AGE_MS = 15 * 60_000;
-const MAX_SAFE_RAW_AMOUNT = BigInt(Number.MAX_SAFE_INTEGER);
 const TRON_REPLAY_PROVENANCE_SOURCE = "trongrid-transfer-replay";
 
 export interface TronReplayRow {
@@ -167,8 +165,9 @@ export async function recoverTronFreezeAmountForRow(
 
   if (config.chain.type !== "tron") return failed("provider_unsupported");
   const tokenHex = await tronBase58ToHex(config.contractAddress);
-  const accountBase58 = await tronHexAddressToBase58(row.address);
-  if (!tokenHex || !accountBase58) return failed("provider_unsupported");
+  const accountHex = await normalizeTronAddress(row.address);
+  const accountBase58 = accountHex ? await tronHexAddressToBase58(accountHex) : null;
+  if (!tokenHex || !accountBase58 || !accountHex) return failed("provider_unsupported");
   const pagesRemaining = Math.max(1, options.pagesRemaining ?? TRON_REPLAY_MAX_PAGES_PER_HISTORY);
   // Each window read is capped by what is left of the run's page budget, so a
   // single row cannot overshoot the per-run cap with its ledger plus settle reads.
@@ -185,7 +184,7 @@ export async function recoverTronFreezeAmountForRow(
     ) {
       throw new TronReplayEvidenceError("evidence_mismatch", "freeze receipt does not match the stored event");
     }
-    if (countMatchingFreezeLogs(config, row.address, tokenHex.toLowerCase(), receipt.logs) !== 1) {
+    if (countMatchingFreezeLogs(config, accountHex, tokenHex.toLowerCase(), receipt.logs) !== 1) {
       throw new TronReplayEvidenceError("evidence_mismatch", "freeze log is not uniquely proved by the receipt");
     }
 
@@ -267,7 +266,8 @@ export async function recoverTronFreezeAmountForRow(
       throw new TronReplayEvidenceError("ambiguous", "transfers share the freeze millisecond");
     }
     const rawAmount = atFreeze.net;
-    if (rawAmount < BigInt(0) || rawAmount > MAX_SAFE_RAW_AMOUNT) {
+    const amount = decimalNumberFromBigInt(rawAmount, config.decimals);
+    if (rawAmount < BigInt(0) || !Number.isFinite(amount) || amount > Number.MAX_SAFE_INTEGER) {
       throw new TronReplayEvidenceError("evidence_mismatch", "derived frozen balance is not representable");
     }
     if (rawAmount === BigInt(0)) {
@@ -312,7 +312,7 @@ export async function recoverTronFreezeAmountForRow(
       }
     }
     return {
-      amount: decimalNumberFromBigInt(rawAmount, config.decimals),
+      amount,
       lastErrorClass: null,
       evidenceObservedAt: observedAt,
       pagesUsed: provider.pagesFetched.count - pagesAtStart,
@@ -407,7 +407,6 @@ export async function backfillTronBlacklistAmounts(
   if (candidates.length === 0) return result;
 
   const statements: D1PreparedStatement[] = [];
-  const assetPriceUsdBySymbol: Partial<Record<BlacklistStablecoin, number | null>> = {};
   const provider: TronReplayProviderContext = {
     apiKey: options.trongridApiKey,
     limiter: options.limiter,
@@ -494,12 +493,6 @@ export async function backfillTronBlacklistAmounts(
       continue;
     }
 
-    const symbol = config.stablecoin as BlacklistStablecoin;
-    let assetPriceUsd = assetPriceUsdBySymbol[symbol];
-    if (assetPriceUsd === undefined) {
-      assetPriceUsd = await fetchBlacklistAssetPriceFromCache(db, symbol);
-      assetPriceUsdBySymbol[symbol] = assetPriceUsd ?? null;
-    }
     const persistence = buildRecoveredBlacklistAmountPersistence(
       db,
       {
@@ -507,7 +500,7 @@ export async function backfillTronBlacklistAmounts(
         eventType: row.event_type,
         config,
         amount: recovery.amount,
-        amountUsd: computeBlacklistAmountUsdAtEvent(config.stablecoin, recovery.amount, assetPriceUsd),
+        amountUsd: computeBlacklistAmountUsdAtEvent(config.stablecoin, recovery.amount),
         amountSource: "derived",
         amountStatus: "resolved",
         attemptedAt: attemptAt,

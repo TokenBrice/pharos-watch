@@ -39,7 +39,8 @@ import {
   makeXautObservation,
   patchXautObservation,
 } from "../../test-helpers/v9-fixed-input";
-import { captureSafetyScoreV9SupplyAttribution, safetyScoreV9SupplyAttributionExpectedAssetIds } from "../safety-score-v9/supply-attribution";
+import { captureSafetyScoreV9SupplyAttribution } from "../safety-score-v9/supply-attribution-capture";
+import { safetyScoreV9SupplyAttributionExpectedAssetIds } from "../safety-score-v9/supply-attribution";
 import { runBudgetedSupplyAttributionAssets } from "../safety-score-v9/supply-attribution-capture-budget";
 import { sleepWithSignal } from "../abort";
 import { SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
@@ -171,8 +172,8 @@ const WM_BLOCK_TIME_OFFSET_BY_CHAIN: Record<string, number> = {
   solana: -29,
 };
 
-/** wM's attribution observes at its latest route block time. */
-const WM_OBSERVED_OFFSET_SEC = Math.max(
+/** Every deployment must remain current; the oldest block owns admission age. */
+const WM_FRESHNESS_OFFSET_SEC = Math.min(
   ...Object.values(WM_BLOCK_TIME_OFFSET_BY_CHAIN),
 );
 const REVIEWED_DEPLOYMENT_MAX_AGE_SEC = 1_800;
@@ -354,7 +355,7 @@ function buildFixtureCache(): FixtureCache {
   const wmBoundaryClockSec =
     SOURCE_CLOCK_SEC +
     REVIEWED_DEPLOYMENT_MAX_AGE_SEC +
-    WM_OBSERVED_OFFSET_SEC;
+    WM_FRESHNESS_OFFSET_SEC;
   const coTenantTarget = (
     clockSec: number,
   ): ReportCardsFixedInput =>
@@ -788,7 +789,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     ).toEqual(["wm-m0"]);
   });
 
-  it("keeps XAUT past 1800s while co-tenants stay on the 1800s bound", () => {
+  it("re-applies generations using every wM leg's 1800s bound while retaining XAUT's override", () => {
     // Owner ruling 2026-07-29: xaut-tether is the only per-asset override.
     expect(XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC).toBe(3_600);
 
@@ -796,7 +797,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     const wmBoundaryClockSec =
       SOURCE_CLOCK_SEC +
       REVIEWED_DEPLOYMENT_MAX_AGE_SEC +
-      WM_OBSERVED_OFFSET_SEC;
+      WM_FRESHNESS_OFFSET_SEC;
     const xautAgeSec =
       wmBoundaryClockSec + 1 - (SOURCE_CLOCK_SEC - XAUT_OBSERVATION_LAG_SEC);
     expect(xautAgeSec).toBeGreaterThan(REVIEWED_DEPLOYMENT_MAX_AGE_SEC);
@@ -814,8 +815,8 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       invalidAssetIds: [],
     });
 
-    // One second later wM's own 1800s bound expires while XAUT, whose
-    // production-shaped observation is already older, survives on its override.
+    // The oldest wM leg is now 1801s old even though its sibling is younger
+    // and within the cross-chain skew budget. A new source clock cannot renew it.
     const pastWmBound = applySafetyScoreV9SupplyAttributionGeneration(
       fixtures.coTenantPastWmBoundary,
       generation,

@@ -1,5 +1,4 @@
 import { formatElapsedSeconds, formatIsoDate } from "@shared/lib/format";
-import { median } from "@shared/lib/stats";
 import {
   DDRR_PUBLIC_WARNING,
   type DdrrResponse,
@@ -19,8 +18,6 @@ import {
   SKY_TONE,
   formatDdrSignedDuration,
   getActualOutcome,
-  isDdrScoredVerdict,
-  summarizePredictionRows,
 } from "@/lib/depeg-resolver-review-presentation";
 
 /**
@@ -64,6 +61,10 @@ export interface DdrTrackRecordSummary {
   medianAbsoluteDurationErrorLabel: string | null;
   incidents: DdrTrackRecordIncidentRow[];
   hiddenIncidentCount: number;
+  /** The public browse cap omitted rows for this coin; aggregates remain producer-owned. */
+  incidentSampleIncomplete: boolean;
+  /** The producer itself reviewed a bounded/degraded incident cohort. */
+  incidentSourceLimited: boolean;
   reviewedAt: string | null;
   publicWarning: string;
 }
@@ -159,30 +160,19 @@ export function projectDdrTrackRecordSummary(
 ): DdrTrackRecordSummary | null {
   if (!data || !Array.isArray(data.rows) || !stablecoinId) return null;
 
+  const authoritative = data.summary.byStablecoin?.find((coin) => coin.stablecoinId === stablecoinId);
+  if (!authoritative || authoritative.reviewedRowCount <= authoritative.notCalledCount) return null;
   const rows = data.rows.filter(
     (row): row is DdrrResponseRow =>
       row != null && row.stablecoinId === stablecoinId && Number.isFinite(row.startedAt),
   );
-  if (!rows.some((row) => row.kind !== "coverage")) return null;
-
-  const predictionRows = rows.filter((row) => row.kind === "prediction_review");
-  const scoredRows = predictionRows.filter((row) => isDdrScoredVerdict(row.verdictReview));
-  const predictionBreakdown = summarizePredictionRows(predictionRows);
-  const durationErrors = predictionRows
-    .map((row) => row.absoluteDurationErrorSec)
-    .filter((value): value is number => value != null && Number.isFinite(value));
-  const medianAbsoluteDurationErrorSec = median(durationErrors);
-
-  const counts = {
-    reviewedForecastCount: predictionRows.length,
-    scoredCount: scoredRows.length,
-    correctCount: predictionBreakdown.correctRecoverable + predictionBreakdown.correctTerminal,
-    missCount: predictionBreakdown.falseTerminal + predictionBreakdown.falseRecoverable,
-    pendingCount: predictionRows.filter((row) => row.verdictReview === "pending").length,
-    noCallCount: rows.filter((row) => row.kind === "no_call_review").length,
-    notCalledCount: rows.filter((row) => row.kind === "coverage").length,
-    invalidatedCount: rows.filter((row) => row.kind === "invalidated_prediction").length,
-  };
+  const {
+    stablecoinId: _stablecoinId,
+    reviewedRowCount,
+    medianAbsoluteDurationErrorSec,
+    durationScoredCount,
+    ...counts
+  } = authoritative;
 
   const medianAbsoluteDurationErrorLabel =
     medianAbsoluteDurationErrorSec != null ? formatElapsedSeconds(Math.round(medianAbsoluteDurationErrorSec)) : null;
@@ -211,10 +201,12 @@ export function projectDdrTrackRecordSummary(
     chipToneClass: chip.toneClass,
     lede: buildLede({ ...counts, medianAbsoluteDurationErrorLabel }),
     ...counts,
-    durationScoredCount: durationErrors.length,
+    durationScoredCount,
     medianAbsoluteDurationErrorLabel,
     incidents,
-    hiddenIncidentCount: ordered.length - incidents.length,
+    hiddenIncidentCount: reviewedRowCount - incidents.length,
+    incidentSampleIncomplete: reviewedRowCount > rows.length,
+    incidentSourceLimited: data._meta?.incidentRowsTruncated === true || data._meta?.degraded === true,
     reviewedAt: computedAt != null && Number.isFinite(computedAt) ? formatIsoDate(computedAt) : null,
     publicWarning: data._meta?.publicWarning ?? DDRR_PUBLIC_WARNING,
   };

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 
 import { ContractDeployments } from "@/components/stablecoin-detail/contract-deployments";
 import type { StablecoinMeta } from "@shared/types";
@@ -46,7 +46,7 @@ afterEach(() => {
 });
 
 describe("ContractDeployments interactions", () => {
-  it("selects a contract chain, opens the explorer, and copies the selected address", () => {
+  it("selects a contract chain, opens the explorer, and copies the selected address", async () => {
     vi.useFakeTimers();
     const writeText = vi.fn();
     Object.defineProperty(navigator, "clipboard", {
@@ -71,16 +71,19 @@ describe("ContractDeployments interactions", () => {
     );
 
     // Two matches: the mobile quick row and the desktop labeled row.
-    fireEvent.click(screen.getAllByRole("button", { name: "Copy Base contract address" })[0]);
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole("button", { name: "Copy Base contract address" })[0]);
+    });
 
     expect(writeText).toHaveBeenCalledWith("0x3333333333333333333333333333333333333333");
     expect(window.gtag).toHaveBeenCalledWith("event", "contract_copied", {
       coin_id: "test-usd",
       chain: "base",
     });
+    expect(container.querySelector(".pharos-copy-ring")).not.toBeNull();
   });
 
-  it("selects the exact deployment when one chain has multiple contracts", () => {
+  it("selects the exact deployment when one chain has multiple contracts", async () => {
     vi.useFakeTimers();
     const writeText = vi.fn();
     Object.defineProperty(navigator, "clipboard", {
@@ -106,12 +109,14 @@ describe("ContractDeployments interactions", () => {
     expect(selectedContract).not.toBeNull();
     expect(within(selectedContract as HTMLElement).getByText("0xbbbb...bbbb")).toBeTruthy();
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Copy Base contract address" })[0]);
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole("button", { name: "Copy Base contract address" })[0]);
+    });
 
     expect(writeText).toHaveBeenCalledWith("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
   });
 
-  it("clears the contract-copy feedback timer on unmount", () => {
+  it("clears the contract-copy feedback timer on unmount", async () => {
     vi.useFakeTimers();
     const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
     Object.defineProperty(navigator, "clipboard", {
@@ -120,13 +125,42 @@ describe("ContractDeployments interactions", () => {
     });
 
     const { unmount } = render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "Copy Ethereum contract address" })[0]);
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole("button", { name: "Copy Ethereum contract address" })[0]);
+    });
 
     unmount();
 
     expect(clearTimeoutSpy).toHaveBeenCalled();
     clearTimeoutSpy.mockRestore();
   });
+
+  it.each(["unavailable", "failing"] as const)(
+    "does not report copy success when writeText rejects and legacy copy is %s",
+    async (legacyCopy) => {
+      const writeText = vi.fn().mockRejectedValue(new Error("Permission denied"));
+      Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+      const execCommand = vi.fn().mockReturnValue(false);
+      const previousExecCommand = document.execCommand;
+      Object.defineProperty(document, "execCommand", {
+        configurable: true, value: legacyCopy === "failing" ? execCommand : undefined,
+      });
+      window.gtag = vi.fn();
+      try {
+        const { container } = render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />);
+        await act(async () => {
+          fireEvent.click(screen.getAllByRole("button", { name: "Copy Ethereum contract address" })[0]);
+        });
+        expect(writeText).toHaveBeenCalledWith(contracts[0][1]);
+        if (legacyCopy === "failing") expect(execCommand).toHaveBeenCalledWith("copy");
+        expect(container.querySelector(".pharos-copy-ring")).toBeNull();
+        expect(container.querySelector(".lucide-check.opacity-100")).toBeNull();
+        expect(window.gtag).not.toHaveBeenCalledWith("event", "contract_copied", expect.anything());
+      } finally {
+        Object.defineProperty(document, "execCommand", { configurable: true, value: previousExecCommand });
+      }
+    },
+  );
 
   it("hides overflow mobile contracts again and clears a hidden selected chain", () => {
     const { container } = render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />);

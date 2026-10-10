@@ -60,6 +60,10 @@ function canonicalizeJson(value: unknown): unknown {
   );
 }
 
+export function canonicalTelegramWebhookIntentBytes(intent: TelegramWebhookOperationIntent): string {
+  return JSON.stringify(canonicalizeJson(intent));
+}
+
 function isBoundedIntentValue(value: unknown, depth = 0): boolean {
   if (depth > 6) return false;
   if (value == null || typeof value === "boolean") return true;
@@ -241,7 +245,7 @@ function serializeIntent(intent: TelegramWebhookOperationIntent): string {
     throw new Error("Unsupported Telegram webhook intent version");
   }
   if (!isKnownIntentSchema(intent)) throw new Error("Invalid Telegram webhook intent schema");
-  const serialized = JSON.stringify(canonicalizeJson(intent));
+  const serialized = canonicalTelegramWebhookIntentBytes(intent);
   if (new TextEncoder().encode(serialized).byteLength > TELEGRAM_WEBHOOK_INTENT_MAX_BYTES) {
     throw new Error("Telegram webhook intent exceeds the storage limit");
   }
@@ -470,6 +474,8 @@ export function prepareTelegramProcessedUpdateMutationApplied(
     nowSec: number;
     claimOwner: string;
     claimGeneration: number;
+    /** The marker follows a conditional domain write in the same atomic batch. */
+    requirePreviousChange?: boolean;
   },
 ): D1PreparedStatement {
   return db
@@ -479,7 +485,7 @@ export function prepareTelegramProcessedUpdateMutationApplied(
          claim_generation,
          applied_at
        )
-       VALUES (
+       SELECT
          (
            SELECT update_id
              FROM telegram_processed_updates
@@ -492,7 +498,7 @@ export function prepareTelegramProcessedUpdateMutationApplied(
          ),
          ?,
          ?
-       )`,
+       ${input.requirePreviousChange ? "WHERE changes() > 0" : ""}`,
     )
     .bind(
       input.updateId,

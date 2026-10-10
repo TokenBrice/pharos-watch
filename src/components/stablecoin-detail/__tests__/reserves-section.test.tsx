@@ -8,6 +8,8 @@ import type { ReserveResult } from "@shared/lib/reserve-templates";
 import type { ReserveQualityClientSummary } from "@/lib/stablecoin-detail-reserve-quality-client";
 import type { ReserveLookThroughClientSummary } from "@/lib/stablecoin-detail-reserve-look-through-client";
 import { ReservesSection, type ReservesSectionProps } from "../reserves-section";
+import { projectReserveQualityClientSummary } from "@/lib/stablecoin-detail-reserve-quality-client";
+import { projectReserveLookThroughClientSummary } from "@/lib/stablecoin-detail-reserve-look-through-client";
 
 // Without this mock `next/link` strips the canonical trailing slash: it only
 // keeps it under next.config's `trailingSlash: true`, which vitest does not load.
@@ -115,6 +117,23 @@ afterEach(() => {
 });
 
 describe("ReservesSection", () => {
+  it.each(["alusd-alchemix", "stusd-stoneyield"])(
+    "keeps selected historical slices contextual rather than whole-basket quality or look-through (%s)",
+    (id) => {
+      const coin = TRACKED_META_BY_ID.get(id)!;
+      const qualitySummary = projectReserveQualityClientSummary(coin);
+      const lookThrough = projectReserveLookThroughClientSummary(coin, TRACKED_META_BY_ID);
+      expect(lookThrough).toBeNull();
+      const { container } = renderSection({ coin, qualitySummary, lookThrough });
+      expect(screen.queryByText("Highly liquid")).toBeNull();
+      expect(screen.queryByText("Liquid ≤ 1 day")).toBeNull();
+      expect(screen.queryByLabelText("Liquidity horizon ladder")).toBeNull();
+      expect(container.textContent).not.toContain("100% convertible within one day");
+      expect(screen.getByRole("figure").getAttribute("aria-label")).toContain("Contextual reserve slices");
+      expect(container.textContent).toContain(coin.reserves![0]!.name);
+      expect(container.textContent).toContain(coin.reserveReview!.compositionBasis);
+    },
+  );
   it("renders nothing without reserves, a fetch error or a reviewed summary, and a skeleton while loading", () => {
     const { container, rerender } = renderSection({ coin: NO_REVIEW_COIN, qualitySummary: null });
     expect(container.innerHTML).toBe("");

@@ -1,4 +1,5 @@
 import { compareCodeUnits } from "@shared/lib/compare";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { logWorkerEventArgs } from "./structured-log";
 import {
   dexLiquidityPublishedRowFilter,
@@ -203,7 +204,7 @@ async function loadDexDeploymentSupplyJoin(db: D1Database): Promise<{
 }
 
 export function computeDexDeploymentSupplyCoverage(
-  asset: Pick<StablecoinData, "chainCirculating" | "contracts">,
+  asset: Pick<StablecoinData, "chainCirculating" | "contracts"> & Partial<Pick<StablecoinData, "circulating">>,
   deploymentRows: readonly DexDeploymentSupplyJoinRow[],
   chainTvl: ReadonlyMap<string, number>,
   options?: { asOfSec: number; maxOutcomeAgeSec: number },
@@ -215,8 +216,13 @@ export function computeDexDeploymentSupplyCoverage(
     const canonical = canonicalChain(chain);
     supplyByChain.set(canonical, addFiniteSupply(supplyByChain.get(canonical) ?? 0, point?.current));
   }
-  const totalSupplyUsd = [...supplyByChain.values()].reduce((sum, value) => sum + value, 0);
-  if (!Number.isFinite(totalSupplyUsd) || totalSupplyUsd <= 0) return null;
+  const capturedSupplyUsd = [...supplyByChain.values()].reduce((sum, value) => sum + value, 0);
+  const totalSupplyUsd = getCirculatingRawOrNull(asset);
+  if (totalSupplyUsd === null || totalSupplyUsd <= 0 || !Number.isFinite(capturedSupplyUsd)) return null;
+  const toleranceUsd = Math.max(0.000001, totalSupplyUsd * 1e-12);
+  // Raw multichain balances are not necessarily a disjoint liability partition.
+  // A reviewed economic partition must be admitted separately by the compiler.
+  if (capturedSupplyUsd - totalSupplyUsd > toleranceUsd) return null;
 
   const contractsByChain = new Map<string, string[]>();
   for (const contract of asset.contracts ?? []) {
@@ -232,8 +238,8 @@ export function computeDexDeploymentSupplyCoverage(
   let observedSupplyUsd = 0;
   let verifiedNoPoolsSupplyUsd = 0;
   let providerInaccessibleSupplyUsd = 0;
-  let unknownSupplyUsd = 0;
-  const unknownChains: string[] = [];
+  let unknownSupplyUsd = totalSupplyUsd - capturedSupplyUsd > toleranceUsd ? totalSupplyUsd - capturedSupplyUsd : 0;
+  const unknownChains: string[] = [...contractsByChain.keys()].filter((chain) => !supplyByChain.has(chain));
 
   for (const [chain, supplyUsd] of [...supplyByChain.entries()].sort(([left], [right]) => compareCodeUnits(left, right))) {
     if (supplyUsd <= 0) continue;
@@ -294,7 +300,7 @@ export function computeDexDeploymentSupplyCoverage(
     verifiedNoPoolsSupplyRatio: ratio(verifiedNoPoolsSupplyUsd),
     providerInaccessibleSupplyRatio: ratio(providerInaccessibleSupplyUsd),
     unknownSupplyRatio: ratio(unknownSupplyUsd),
-    unknownChains,
+    unknownChains: unknownChains.sort(compareCodeUnits),
   };
 }
 
@@ -313,7 +319,8 @@ function attachDexDeploymentSupplyCoverage(
     // Match the classifier's registry footprint, including traded deployments.
     const deployments = [...(meta?.contracts ?? []), ...(meta?.tradedContracts ?? [])];
     const coverage = computeDexDeploymentSupplyCoverage(
-      asset,
+      { circulating: asset.circulating, chainCirculating: asset.chainCirculating,
+        contracts: deployments.length > 0 ? deployments : asset.contracts },
       join.rowsById.get(stablecoinId) ?? [],
       join.chainTvlById.get(stablecoinId) ?? new Map(),
       { asOfSec, maxOutcomeAgeSec: resolveDexDeploymentCensusMaxAgeSec(deployments) },

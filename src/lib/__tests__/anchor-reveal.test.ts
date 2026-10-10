@@ -76,6 +76,26 @@ describe("alignAnchorAfterHydration", () => {
     cleanup();
   });
 
+  it("leaves an explicit smooth click jump alone until the first correction", () => {
+    const cleanup = alignAnchorAfterHydration("depeg-history", false);
+    vi.advanceTimersByTime(159);
+    expect(scroll).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(scroll).toHaveBeenCalledTimes(1);
+    cleanup();
+  });
+
+  it("cancels on hashchange even when the original hash is restored before a retry", () => {
+    const cleanup = alignAnchorAfterHydration("depeg-history");
+    vi.advanceTimersByTime(0);
+    window.history.pushState(null, "", "#overview");
+    window.dispatchEvent(new Event("hashchange"));
+    window.history.pushState(null, "", "#depeg-history");
+    vi.runAllTimers();
+    expect(scroll).toHaveBeenCalledTimes(1);
+    cleanup();
+  });
+
   it("stops scrolling once navigation changes the hash", () => {
     const cleanup = alignAnchorAfterHydration("depeg-history");
     vi.advanceTimersByTime(0);

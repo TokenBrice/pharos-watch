@@ -48,11 +48,10 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
 import { formatSafetyMapUsd as formatUsdCompact, formatScore } from "@shared/lib/format";
 import { getDisplayedPsi, getDisplayedPsiBasis } from "@shared/lib/psi-view-model";
-import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
-import { scoreToGrade, V9_GRADE_THRESHOLDS } from "@shared/lib/report-card-core";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/classification";
+import { V9_GRADE_THRESHOLDS } from "@shared/lib/report-card-core";
+import { admitSupplyBuckets, getCirculatingRawOrNull } from "@shared/lib/supply";
 import { StablecoinListResponseSchema, type StablecoinListResponse } from "@shared/types/market";
-import { SAFETY_GRADE_VALUES } from "@shared/types/report-card-grade";
 import {
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9CurrentResponse,
@@ -107,7 +106,6 @@ const FROST_BLUE = "#4bc4de";
 const TIER_ORDER = ["A", "B", "C", "D", "F"] as const;
 type Tier = (typeof TIER_ORDER)[number];
 const TIER_COLORS = GRADE_RADAR_COLORS;
-const VALID_CARD_GRADES = new Set<string>([...SAFETY_GRADE_VALUES, "NR"]);
 
 interface OrbitZone {
   innerRx: number;
@@ -219,8 +217,21 @@ interface MapCoin {
   grade: string;
   score: number;
   tier: Tier;
-  mcap: number;
+  mcap: number | null;
+  supplyUnavailableReason?: string | null;
 }
+export function projectSafetyMapCoin(
+  card: { id: string; grade: string; score: number },
+  row: { symbol: string; circulating?: Record<string, number> } | undefined,
+): MapCoin {
+  const admission = admitSupplyBuckets(row?.circulating);
+  const mcap = getCirculatingRawOrNull(row);
+  const supplyUnavailableReason = mcap !== null ? null : !row ? "missing-list-row"
+    : admission.status === "invalid" ? admission.reason : "absent";
+  return { ...card, symbol: row?.symbol ?? card.id.toUpperCase(), tier: card.grade.charAt(0) as Tier,
+    mcap, supplyUnavailableReason };
+}
+
 
 export type LogoPlate = "none" | "light" | "dark";
 
@@ -296,27 +307,10 @@ export function parseMapReportCards(payload: unknown): {
   publicationHealth: ReportCardsV9CurrentResponse["publicationHealth"];
 } {
   const response = parseCanonicalPayload("Report-card", ReportCardsV9CurrentResponseSchema, payload);
-  const ids = new Set<string>();
   const cards = response.cards.map((card) => {
-    if (ids.has(card.id)) throw new Error(`Duplicate report-card id "${card.id}" — refusing to build an ambiguous map`);
-    ids.add(card.id);
     // Technical gaps have no grade; they cannot enter any rendered grade band.
     if (card.ratingStatus === "pipeline-gap") return null;
-    if (card.grade === null || !VALID_CARD_GRADES.has(card.grade)) {
-      throw new Error(`Unknown grade "${card.grade}" for ${card.id} — the tier map (${TIER_ORDER.join("/")}) is out of date`);
-    }
-    if (card.grade === "NR") {
-      if (card.score !== null) throw new Error(`Score/grade disagreement for ${card.id}: NR cards must have a null score`);
-    } else {
-      if (card.score === null || !Number.isFinite(card.score) || card.score < 0 || card.score > 100) {
-        throw new Error(`Invalid score for ${card.id}: expected a finite value in the 0-100 range`);
-      }
-      const expectedGrade = scoreToGrade(card.score);
-      if (expectedGrade !== card.grade) {
-        throw new Error(`Score/grade disagreement for ${card.id}: score ${card.score} maps to ${expectedGrade}, not ${card.grade}`);
-      }
-    }
-    return { id: card.id, score: card.score, grade: card.grade };
+    return { id: card.id, score: card.score, grade: card.grade! };
   }).filter((card): card is MapReportCard => card !== null);
 
   return {
@@ -540,9 +534,9 @@ function approximateEllipsePerimeter(rx: number, ry: number): number {
   return Math.PI * (rx + ry) * (1 + (3 * h) / (10 + Math.sqrt(4 - 3 * h)));
 }
 
-export function radiusForMcap(tier: Tier, mcap: number, k: number, gravelFloor: number): number {
+export function radiusForMcap(tier: Tier, mcap: number | null, k: number, gravelFloor: number): number {
   const floor = tier === "A" ? R_MIN_A : gravelFloor;
-  return Math.max(floor, k * Math.sqrt(Math.max(mcap, 0)));
+  return mcap === null ? floor : Math.max(floor, k * Math.sqrt(Math.max(mcap, 0)));
 }
 
 export type DemandOrbitZoneResult =
@@ -1077,7 +1071,7 @@ function layoutBands(
   diag?: FitDiagnostic[],
   maxPerRing = Number.POSITIVE_INFINITY,
 ): { bands: BandLayout[]; k: number; gravelFloor: number } | null {
-  const maxMcap = Math.max(...graded.map((coin) => coin.mcap));
+  const maxMcap = Math.max(...graded.flatMap((coin) => coin.mcap === null ? [] : [coin.mcap]));
   const k = (R_MAX_TARGET * scale) / Math.sqrt(maxMcap);
   // maxMcap = 0 (an empty or unjoined list endpoint) yields k = Infinity and
   // NaN radii; every NaN comparison downstream is false, so the layout would
@@ -1108,7 +1102,7 @@ function layoutBands(
   const ringPopulations = TIER_ORDER.flatMap((tier) => {
     const supplySorted = graded
       .filter((coin) => coin.tier === tier)
-      .sort((a, b) => b.mcap - a.mcap || b.score - a.score || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+      .sort(compareMapCoinSupply);
     return splitPopulation(supplySorted, ringCounts[tier]).map((population, ringIndex) => ({
       tier, population, zone: zoneResult.ringZones[tier][ringIndex],
     }));
@@ -1187,7 +1181,7 @@ function layoutBands(
       bubbles,
       laneOffsetY,
       totalCount: coins.length,
-      totalMcap: coins.reduce((sum, coin) => sum + coin.mcap, 0),
+      totalMcap: knownMapSupply(coins),
     });
   }
   return { bands, k, gravelFloor };
@@ -1553,7 +1547,7 @@ function renderChartKey(annotations: readonly PlacedAnnotation[], data: ChartKey
   if (!aTier) throw new Error("Chart key is missing its A tier");
   const trackX = railX + 218;
   const trackWidth = 494;
-  railParts.push(svgText({ x: railX, y: railY + 11, size: 10.5, text: `A: ${aTier.count} COINS / ${aTier.share.toFixed(1)}% OF SUPPLY`, weight: 700, fill: INK_SECONDARY, spacing: "0.2" }));
+  railParts.push(svgText({ x: railX, y: railY + 11, size: 10.5, text: `A: ${aTier.count} / ${aTier.share.toFixed(1)}% KNOWN SUPPLY`, weight: 700, fill: INK_SECONDARY, spacing: "0.2" }));
   railParts.push(`<rect x="${trackX}" y="${railY + 3}" width="${trackWidth}" height="7" rx="3.5" fill="#202a3b"/>`);
   let segmentX = trackX;
   for (const tier of data.tiers) {
@@ -1801,21 +1795,31 @@ interface TierSummary {
   share: number;
   leaders: Array<{ id: string; symbol: string; score: number; mcap: number }>;
 }
+function knownMapSupply(coins: readonly MapCoin[]): number {
+  return coins.reduce((sum, coin) => coin.mcap === null ? sum : sum + coin.mcap, 0);
+}
 
-function summarizeMapCoins(coins: readonly MapCoin[]): TierSummary[] {
-  const totalMcap = coins.reduce((sum, coin) => sum + coin.mcap, 0);
+function compareMapCoinSupply(a: MapCoin, b: MapCoin): number {
+  const supplyOrder = a.mcap === null ? (b.mcap === null ? 0 : 1)
+    : b.mcap === null ? -1 : b.mcap - a.mcap;
+  return supplyOrder || b.score - a.score || a.id.localeCompare(b.id);
+}
+
+
+export function summarizeMapCoins(coins: readonly MapCoin[]): TierSummary[] {
+  const totalMcap = knownMapSupply(coins);
   const byTier = new Map<Tier, MapCoin[]>(TIER_ORDER.map((tier) => [tier, coins.filter((coin) => coin.tier === tier)]));
   return TIER_ORDER.map((tier) => {
     const tierCoins = byTier.get(tier) ?? [];
-    const tierMcap = tierCoins.reduce((sum, coin) => sum + coin.mcap, 0);
+    const tierMcap = knownMapSupply(tierCoins);
     return {
       tier,
       range: tierRange(tier),
       count: tierCoins.length,
       mcap: tierMcap,
       share: totalMcap > 0 ? (tierMcap / totalMcap) * 100 : 0,
-      leaders: [...tierCoins]
-        .sort((a, b) => b.mcap - a.mcap || b.score - a.score || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+      leaders: tierCoins.filter((coin): coin is MapCoin & { mcap: number } => coin.mcap !== null)
+        .sort(compareMapCoinSupply)
         .slice(0, 3)
         .map((coin) => ({ id: coin.id, symbol: mapLabel(coin.symbol), score: coin.score, mcap: coin.mcap })),
     };
@@ -1843,6 +1847,7 @@ interface MapSummary {
   gradedCount: number;
   notRatedCount: number;
   totalMcapUsd: number;
+  supplyCoverage: { complete: boolean; observedCount: number; unavailableCount: number; unavailableById: Record<string, string>; shareBasis: "known-mapped-supply" };
   floorMcapByTier: FloorMcapByTier;
   tiers: Array<{
     tier: Tier;
@@ -1854,13 +1859,14 @@ interface MapSummary {
   }>;
 }
 
-function buildMapSummary({
+export function buildMapSummary({
   date,
   asOfSec,
   methodologyVersion,
   gradedCount,
   notRatedCount,
   totalMcap,
+  graded,
   floorMcapByTier,
   tiers,
 }: {
@@ -1870,6 +1876,7 @@ function buildMapSummary({
   gradedCount: number;
   notRatedCount: number;
   totalMcap: number;
+  graded: readonly MapCoin[];
   floorMcapByTier: FloorMcapByTier;
   tiers: readonly TierSummary[];
 }): MapSummary {
@@ -1880,6 +1887,13 @@ function buildMapSummary({
     gradedCount,
     notRatedCount,
     totalMcapUsd: totalMcap,
+    supplyCoverage: {
+      complete: graded.every((coin) => coin.mcap !== null),
+      observedCount: graded.filter((coin) => coin.mcap !== null).length,
+      unavailableCount: graded.filter((coin) => coin.mcap === null).length,
+      unavailableById: Object.fromEntries(graded.filter((coin) => coin.mcap === null).map((coin) => [coin.id, coin.supplyUnavailableReason ?? "absent"])),
+      shareBasis: "known-mapped-supply",
+    },
     floorMcapByTier,
     tiers: tiers.map((tier) => ({
       tier: tier.tier,
@@ -1922,14 +1936,14 @@ function buildAltText({
   const sentences = [
     `The Stablecoin Safety Map, ${stampLabel}, by Pharos.`,
     `${buildPsiSubtitle(psi)} at render time.`,
-    `All ${gradedCount} graded stablecoins in five discrete grade bands: A at the centre, then B, C, D, and F outward; orbit = grade band, not a continuous score; bubble area tracks circulating supply above a per-tier minimum marker (A below ~${formatUsdCompact(floorMcapByTier.a)}, B-F below ~${formatUsdCompact(floorMcapByTier.other)}); assets below those thresholds share a fixed presence marker; ${formatUsdCompact(totalMcap)} mapped.`,
+    `All ${gradedCount} graded stablecoins in five discrete grade bands: A at the centre, then B, C, D, and F outward; orbit = grade band, not a continuous score; bubble area tracks circulating supply above a per-tier minimum marker (A below ~${formatUsdCompact(floorMcapByTier.a)}, B-F below ~${formatUsdCompact(floorMcapByTier.other)}); assets below those thresholds or with unavailable supply share a fixed presence marker; ${formatUsdCompact(totalMcap)} known mapped supply subtotal.`,
     `Published sub-grades set bounded radial lanes${lanes.splitTiers.length > 0 ? ` in ${lanes.splitTiers.join(" and ")}` : ""}: plus grades sit slightly inward, unmodified grades sit on the guide, and minus grades sit slightly outward${lanes.baseOnlyTiers.length > 0 ? `; ${lanes.baseOnlyTiers.join(" and ")} contain only unmodified grades and remain on the guide` : ""}.`,
     `Methodology v${methodologyVersion}, data as of ${dateLabel}.`,
   ];
   for (const tier of tiers) {
     const leaders = tier.leaders.map((l) => `${l.symbol} ${l.score} (${formatUsdCompact(l.mcap)})`).join(", ");
     sentences.push(
-      `${tier.tier} tier (score ${tier.range}): ${tier.count} coins, ${formatUsdCompact(tier.mcap)}, ${tier.share.toFixed(1)}% of all graded supply — led by ${leaders}.`,
+      `${tier.tier} tier (score ${tier.range}): ${tier.count} coins, ${formatUsdCompact(tier.mcap)} known subtotal, ${tier.share.toFixed(1)}% of known mapped supply — led by ${leaders}.`,
     );
   }
   if (notRatedCount > 0) sentences.push(`${notRatedCount} coins in scoring, not yet rated.`);
@@ -1944,7 +1958,7 @@ function buildTierTable(tiers: readonly TierSummary[]): string {
         .map((l) => `${l.symbol} ${l.score}`)
         .join(", ")} |`,
   );
-  return ["| Tier | Score | Coins | Supply | Share | Largest |", "| --- | --- | --- | --- | --- | --- |", ...rows].join("\n");
+  return ["| Tier | Score | Coins | Known supply subtotal | Share of known supply | Largest |", "| --- | --- | --- | --- | --- | --- |", ...rows].join("\n");
 }
 
 // --- Main -----------------------------------------------------------------
@@ -1996,12 +2010,12 @@ async function fetchAndValidateMapData(
     }
     if (!TIER_ORDER.includes(tier)) throw new Error(`Unknown grade "${card.grade}" for ${card.id} — the tier map (${TIER_ORDER.join("/")}) is out of date`);
     const row = listById.get(card.id);
-    const mcap = row ? getCirculatingRaw(row) : 0;
-    if (!row || !(mcap > 0)) {
+    const coin = projectSafetyMapCoin({ id: card.id, grade: card.grade, score: card.score as number }, row);
+    if (coin.mcap === null) {
       unjoined.push(card.id);
-      io.warn(`[safety-score-map] ${card.id}: ${row ? "zero circulating supply" : "no list row"} — drawn at the size floor`);
+      io.warn(`[safety-score-map] ${card.id}: ${!row ? "no list row" : "unavailable circulating supply"} — drawn at the size floor`);
     }
-    graded.push({ id: card.id, symbol: row?.symbol ?? card.id.toUpperCase(), grade: card.grade, score: card.score as number, tier, mcap });
+    graded.push(coin);
   }
   if (graded.length === 0) throw new Error("No graded coins returned — refusing to render an empty map");
   const joinCoverage = 1 - unjoined.length / graded.length;
@@ -2095,7 +2109,7 @@ async function buildMap(options: {
 
   const prepared = await fetchAndValidateMapData(apiKey, baseUrl, io);
   const { reportCardsResult, reportCards, psi, graded, unjoined, notRatedCount, tiers, lanes, bands, k, gravelFloor, logos, missingLogos } = prepared;
-  const totalMcap = graded.reduce((sum, coin) => sum + coin.mcap, 0);
+  const totalMcap = knownMapSupply(graded);
   const floorMcapByTier: FloorMcapByTier = {
     a: (R_MIN_A / k) ** 2,
     other: (gravelFloor / k) ** 2,
@@ -2242,6 +2256,7 @@ async function buildMap(options: {
     gradedCount: graded.length,
     notRatedCount,
     totalMcap,
+    graded,
     floorMcapByTier,
     tiers,
   });

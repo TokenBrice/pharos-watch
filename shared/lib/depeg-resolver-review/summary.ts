@@ -295,6 +295,10 @@ export function summarizeDdrrMetrics(rows: readonly DdrrResponseRow[]): DdrrV2Su
     recoveryLikelihoodCorrectCount,
     recoveryLikelihoodScoredCount,
     recoveryLikelihoodAccuracyPct: ratio(recoveryLikelihoodCorrectCount, recoveryLikelihoodScoredCount),
+    falseTerminalCount: verdicts.false_terminal,
+    falseRecoverableCount: verdicts.false_recoverable,
+    withinIqrCount: predictionRows.filter((row) => row.withinIqr === true).length,
+    iqrScoredCount: predictionRows.filter((row) => row.withinIqr != null).length,
     durationScoredCount: durationRows.length,
     meanSignedDurationErrorSec: mean(signedErrors),
     medianSignedDurationErrorSec: median(signedErrors),
@@ -321,10 +325,27 @@ export function summarizeDdrrRows(rows: readonly DdrrResponseRow[]): DdrrSummary
       : allMetrics.recoveryLikelihoodScoredCount >= HEADLINE_MIN_SCORED_OUTCOMES
         ? "all_ddrv2"
         : "insufficient_data";
-  const headline =
-    headlineScope === "current_policy"
-      ? currentPolicyMetrics
-      : allMetrics;
+  // Accuracy may mature into a policy-specific cohort; coverage never shrinks
+  // to published rows, since unpublished opportunities have no policy identity.
+  const accuracyMetrics = headlineScope === "current_policy" ? currentPolicyMetrics : allMetrics;
+  const headline: DdrrV2SummaryMetrics = {
+    ...allMetrics,
+    recoveryLikelihoodCorrectCount: accuracyMetrics.recoveryLikelihoodCorrectCount,
+    recoveryLikelihoodScoredCount: accuracyMetrics.recoveryLikelihoodScoredCount,
+    recoveryLikelihoodAccuracyPct: accuracyMetrics.recoveryLikelihoodAccuracyPct,
+    falseTerminalCount: accuracyMetrics.falseTerminalCount,
+    falseRecoverableCount: accuracyMetrics.falseRecoverableCount,
+    withinIqrCount: accuracyMetrics.withinIqrCount,
+    iqrScoredCount: accuracyMetrics.iqrScoredCount,
+    durationScoredCount: accuracyMetrics.durationScoredCount,
+    meanSignedDurationErrorSec: accuracyMetrics.meanSignedDurationErrorSec,
+    medianSignedDurationErrorSec: accuracyMetrics.medianSignedDurationErrorSec,
+    meanAbsoluteDurationErrorSec: accuracyMetrics.meanAbsoluteDurationErrorSec,
+    medianAbsoluteDurationErrorSec: accuracyMetrics.medianAbsoluteDurationErrorSec,
+    accuracyDenominatorLabel: accuracyMetrics.accuracyDenominatorLabel,
+    horizonHitRates: accuracyMetrics.horizonHitRates,
+    horizonCalibration: accuracyMetrics.horizonCalibration,
+  };
   const headlineLabel =
     headlineScope === "current_policy"
       ? "Current DDRv2 public prediction policy"
@@ -341,11 +362,34 @@ export function summarizeDdrrRows(rows: readonly DdrrResponseRow[]): DdrrSummary
     if (existing == null) segments.set(key, [row]);
     else existing.push(row);
   }
+  const coinRows = new Map<string, DdrrResponseRow[]>();
+  for (const row of rows) {
+    const existing = coinRows.get(row.stablecoinId);
+    if (existing == null) coinRows.set(row.stablecoinId, [row]);
+    else existing.push(row);
+  }
 
   return {
     headlineScope,
     headlineLabel,
     headline,
+    byStablecoin: [...coinRows.entries()].map(([stablecoinId, cohort]) => {
+      const metrics = summarizeDdrrMetrics(cohort);
+      return {
+        stablecoinId,
+        reviewedRowCount: cohort.length,
+        reviewedForecastCount: metrics.lockedPredictionCount,
+        scoredCount: metrics.recoveryLikelihoodScoredCount,
+        correctCount: metrics.recoveryLikelihoodCorrectCount,
+        missCount: (metrics.falseTerminalCount ?? 0) + (metrics.falseRecoverableCount ?? 0),
+        pendingCount: cohort.filter((row) => row.kind === "prediction_review" && row.verdictReview === "pending").length,
+        noCallCount: metrics.noCallCount,
+        notCalledCount: cohort.filter((row) => row.kind === "coverage").length,
+        invalidatedCount: metrics.invalidatedPredictionCount,
+        durationScoredCount: metrics.durationScoredCount,
+        medianAbsoluteDurationErrorSec: metrics.medianAbsoluteDurationErrorSec,
+      };
+    }),
     // Public segmentation keeps prediction-policy rows separate from coverage
     // debt so accuracy and accountability can be inspected independently.
     byPredictionPolicy: [

@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../structured-log";
-import { PENDING_DELIVERY_STATES } from "../../cron/telegram-pending/types";
+import { PENDING_DELIVERY_STATES } from "./constants";
 import type { TelegramAlertTypeChats, TelegramWatcherHistoryPoint } from "@shared/types/status";
 import { TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS } from "@shared/lib/status-thresholds";
 import { formatIsoDate } from "@shared/lib/format";

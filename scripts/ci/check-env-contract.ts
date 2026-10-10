@@ -32,7 +32,7 @@ const GENERATED_DOC_BLOCKS = [
     render: renderOperatorOriginAccessEnvBlock,
   },
   {
-    filePath: resolve(repoRoot, "docs/worker-infrastructure.md"),
+    filePath: resolve(repoRoot, "docs/process/worker-infrastructure-appendix.md"),
     marker: "ENV-CONTRACT:WORKER-INFRASTRUCTURE",
     render: renderWorkerInfrastructureEnvBlock,
   },

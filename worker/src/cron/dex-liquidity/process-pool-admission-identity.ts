@@ -17,8 +17,10 @@ import {
   type ResolvedPoolIdentity,
 } from "./process-pool-types";
 
-function requirePoolIdentity(pool: LlamaPool): void {
+export function requirePoolIdentity(pool: LlamaPool): void {
   if (
+    pool == null ||
+    typeof pool !== "object" ||
     typeof pool.pool !== "string" ||
     pool.pool.trim().length === 0 ||
     typeof pool.chain !== "string" ||

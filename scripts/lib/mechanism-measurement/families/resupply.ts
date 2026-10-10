@@ -1,6 +1,5 @@
 import { decodeAbiParameters } from "viem/utils";
 import {
-  decodeAddressWord,
   decodeUintWord,
   normalizeAddress,
   ratioToRounded,
@@ -9,6 +8,8 @@ import {
   type EthCallJournal,
   type MeasurementCheck,
   type PinnedBlock,
+  readJournalAddress,
+  readJournalUint,
 } from "../core";
 import type { ResupplyMeasurementEvidence } from "../schema";
 import type { ResupplyMeasurementTarget } from "../targets";
@@ -24,30 +25,13 @@ export async function measureResupply(
   const token = normalizeAddress(target.contracts.token);
   const registry = normalizeAddress(target.contracts.registry);
 
-  const tokenCore = decodeAddressWord(
-    await caller.call({ name: "token.core", to: token, signature: "core()", selector: "0xf2f4eb26" }),
-    "token core",
-  );
-  caller.recordDecoded(tokenCore);
-  const registryCore = decodeAddressWord(
-    await caller.call({ name: "registry.core", to: registry, signature: "core()", selector: "0xf2f4eb26" }),
-    "registry core",
-  );
-  caller.recordDecoded(registryCore);
+  const tokenCore = await readJournalAddress(caller, { name: "token.core", to: token, signature: "core()", selector: "0xf2f4eb26" }, "token core");
+  const registryCore = await readJournalAddress(caller, { name: "registry.core", to: registry, signature: "core()", selector: "0xf2f4eb26" }, "registry core");
   requireCheck(checks, "graph.core", registryCore === tokenCore, `registry and token share core ${tokenCore}`);
-  const registryToken = decodeAddressWord(
-    await caller.call({ name: "registry.token", to: registry, signature: "token()", selector: "0xfc0c546a" }),
-    "registry token",
-  );
-  caller.recordDecoded(registryToken);
+  const registryToken = await readJournalAddress(caller, { name: "registry.token", to: registry, signature: "token()", selector: "0xfc0c546a" }, "registry token");
   requireCheck(checks, "graph.token", registryToken === token, `registry token ${registryToken} matches reUSD`);
 
-  const totalSupplyRaw = decodeUintWord(
-    await caller.call({ name: "token.totalSupply", to: token, signature: "totalSupply()", selector: "0x18160ddd" }),
-    0,
-    "totalSupply",
-  );
-  caller.recordDecoded(totalSupplyRaw.toString());
+  const totalSupplyRaw = await readJournalUint(caller, { name: "token.totalSupply", to: token, signature: "totalSupply()", selector: "0x18160ddd" }, 0, "totalSupply");
   requireCheck(checks, "supply.positive", totalSupplyRaw > 0n, `reUSD supply ${totalSupplyRaw} is positive`);
 
   const rawPairs = await caller.call({
@@ -85,64 +69,48 @@ export async function measureResupply(
     "every registered pair address is unique",
   );
 
-  const insurancePool = decodeAddressWord(
-    await caller.call({
-      name: "registry.insurancePool",
-      to: registry,
-      signature: "insurancePool()",
-      selector: "0xab2adc00",
-    }),
-    "insurancePool",
-  );
-  caller.recordDecoded(insurancePool);
+  const insurancePool = await readJournalAddress(caller, {
+    name: "registry.insurancePool",
+    to: registry,
+    signature: "insurancePool()",
+    selector: "0xab2adc00",
+  }, "insurancePool");
   requireCheck(
     checks,
     "graph.insurance-pool",
     insurancePool === normalizeAddress(target.contracts.expectedInsurancePool),
     `registry insurance pool ${insurancePool} matches config`,
   );
-  const liquidationHandler = decodeAddressWord(
-    await caller.call({
-      name: "registry.liquidationHandler",
-      to: registry,
-      signature: "liquidationHandler()",
-      selector: "0xd25adeb3",
-    }),
-    "liquidationHandler",
-  );
-  caller.recordDecoded(liquidationHandler);
+  const liquidationHandler = await readJournalAddress(caller, {
+    name: "registry.liquidationHandler",
+    to: registry,
+    signature: "liquidationHandler()",
+    selector: "0xd25adeb3",
+  }, "liquidationHandler");
   requireCheck(
     checks,
     "graph.liquidation-handler",
     liquidationHandler === normalizeAddress(target.contracts.expectedLiquidationHandler),
     `registry liquidation handler ${liquidationHandler} matches config`,
   );
-  const handlerInsurancePool = decodeAddressWord(
-    await caller.call({
-      name: "liquidationHandler.insurancePool",
-      to: liquidationHandler,
-      signature: "insurancePool()",
-      selector: "0xab2adc00",
-    }),
-    "handler insurancePool",
-  );
-  caller.recordDecoded(handlerInsurancePool);
+  const handlerInsurancePool = await readJournalAddress(caller, {
+    name: "liquidationHandler.insurancePool",
+    to: liquidationHandler,
+    signature: "insurancePool()",
+    selector: "0xab2adc00",
+  }, "handler insurancePool");
   requireCheck(
     checks,
     "graph.handler-insurance-pool",
     handlerInsurancePool === insurancePool,
     "liquidation handler points to the registered InsurancePool",
   );
-  const handlerRegistry = decodeAddressWord(
-    await caller.call({
-      name: "liquidationHandler.registry",
-      to: liquidationHandler,
-      signature: "registry()",
-      selector: "0x7b103999",
-    }),
-    "handler registry",
-  );
-  caller.recordDecoded(handlerRegistry);
+  const handlerRegistry = await readJournalAddress(caller, {
+    name: "liquidationHandler.registry",
+    to: liquidationHandler,
+    signature: "registry()",
+    selector: "0x7b103999",
+  }, "handler registry");
   requireCheck(
     checks,
     "graph.handler-registry",
@@ -159,16 +127,12 @@ export async function measureResupply(
   let totalCollateralAssetsRaw = 0n;
   for (let index = 0; index < pairAddresses.length; index += 1) {
     const address = pairAddresses[index]!;
-    const underlying = decodeAddressWord(
-      await caller.call({
-        name: `pair[${index}].underlying`,
-        to: address,
-        signature: "underlying()",
-        selector: "0x6f307dc3",
-      }),
-      `pair ${index} underlying`,
-    );
-    caller.recordDecoded(underlying);
+    const underlying = await readJournalAddress(caller, {
+      name: `pair[${index}].underlying`,
+      to: address,
+      signature: "underlying()",
+      selector: "0x6f307dc3",
+    }, `pair ${index} underlying`);
     requireCheck(
       checks,
       `pair[${index}].underlying`,
@@ -192,28 +156,19 @@ export async function measureResupply(
       totalBorrowRaw === 0n || totalCollateralSharesRaw > 0n,
       `positive debt ${totalBorrowRaw} has positive collateral shares ${totalCollateralSharesRaw}`,
     );
-    const collateral = decodeAddressWord(
-      await caller.call({
-        name: `pair[${index}].collateral`,
-        to: address,
-        signature: "collateral()",
-        selector: "0xd8dfeb45",
-      }),
-      `pair ${index} collateral`,
-    );
-    caller.recordDecoded(collateral);
-    const convertedRaw = decodeUintWord(
-      await caller.call({
-        name: `collateral[${index}].convertToAssets`,
-        to: collateral,
-        signature: "convertToAssets(uint256)",
-        selector: "0x07a2d13a",
-        args: [totalCollateralSharesRaw],
-      }),
-      0,
-      `pair ${index} converted collateral`,
-    );
-    caller.recordDecoded(convertedRaw.toString());
+    const collateral = await readJournalAddress(caller, {
+      name: `pair[${index}].collateral`,
+      to: address,
+      signature: "collateral()",
+      selector: "0xd8dfeb45",
+    }, `pair ${index} collateral`);
+    const convertedRaw = await readJournalUint(caller, {
+      name: `collateral[${index}].convertToAssets`,
+      to: collateral,
+      signature: "convertToAssets(uint256)",
+      selector: "0x07a2d13a",
+      args: [totalCollateralSharesRaw],
+    }, 0, `pair ${index} converted collateral`);
     if (totalBorrowRaw > 0n) {
       requireCheck(
         checks,
@@ -246,57 +201,37 @@ export async function measureResupply(
     supplyDebtDivergencePct <= target.maxSupplyDebtDivergencePct,
     `registered pair debt diverges ${supplyDebtDivergencePct.toFixed(6)}% from token supply`,
   );
-  const insuranceAssetsRaw = decodeUintWord(
-    await caller.call({
-      name: "insurancePool.totalAssets",
-      to: insurancePool,
-      signature: "totalAssets()",
-      selector: "0x01e1d114",
-    }),
-    0,
-    "insurancePool totalAssets",
-  );
-  caller.recordDecoded(insuranceAssetsRaw.toString());
-  const insuranceBalanceRaw = decodeUintWord(
-    await caller.call({
-      name: "token.balanceOf(insurancePool)",
-      to: token,
-      signature: "balanceOf(address)",
-      selector: "0x70a08231",
-      args: [BigInt(insurancePool)],
-    }),
-    0,
-    "insurance pool token balance",
-  );
-  caller.recordDecoded(insuranceBalanceRaw.toString());
+  const insuranceAssetsRaw = await readJournalUint(caller, {
+    name: "insurancePool.totalAssets",
+    to: insurancePool,
+    signature: "totalAssets()",
+    selector: "0x01e1d114",
+  }, 0, "insurancePool totalAssets");
+  const insuranceBalanceRaw = await readJournalUint(caller, {
+    name: "token.balanceOf(insurancePool)",
+    to: token,
+    signature: "balanceOf(address)",
+    selector: "0x70a08231",
+    args: [BigInt(insurancePool)],
+  }, 0, "insurance pool token balance");
   requireCheck(
     checks,
     "insurance.assets-vs-balance",
     insuranceAssetsRaw > 0n && insuranceAssetsRaw === insuranceBalanceRaw,
     `InsurancePool assets exactly equal held reUSD (${insuranceAssetsRaw})`,
   );
-  const withdrawTime = decodeUintWord(
-    await caller.call({
-      name: "insurancePool.withdrawTime",
-      to: insurancePool,
-      signature: "withdrawTime()",
-      selector: "0x45cb3dde",
-    }),
-    0,
-    "withdrawTime",
-  );
-  caller.recordDecoded(withdrawTime.toString());
-  const withdrawTimeLimit = decodeUintWord(
-    await caller.call({
-      name: "insurancePool.withdrawTimeLimit",
-      to: insurancePool,
-      signature: "withdrawTimeLimit()",
-      selector: "0x4f04a86b",
-    }),
-    0,
-    "withdrawTimeLimit",
-  );
-  caller.recordDecoded(withdrawTimeLimit.toString());
+  const withdrawTime = await readJournalUint(caller, {
+    name: "insurancePool.withdrawTime",
+    to: insurancePool,
+    signature: "withdrawTime()",
+    selector: "0x45cb3dde",
+  }, 0, "withdrawTime");
+  const withdrawTimeLimit = await readJournalUint(caller, {
+    name: "insurancePool.withdrawTimeLimit",
+    to: insurancePool,
+    signature: "withdrawTimeLimit()",
+    selector: "0x4f04a86b",
+  }, 0, "withdrawTimeLimit");
   requireCheck(
     checks,
     "insurance.withdrawal-lock",

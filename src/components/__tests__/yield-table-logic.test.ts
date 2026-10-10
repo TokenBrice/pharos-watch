@@ -58,15 +58,17 @@ describe("compareYieldRows — numeric keys", () => {
 
   it.each(
     [
-      ["pys", makeYield({ pharosYieldScore: 10 }), makeYield({ pharosYieldScore: null })],
-      ["safetyScore", makeYield({ safetyScore: 1 }), makeYield({ safetyScore: null })],
-      ["tvl", makeYield({ sourceTvlUsd: 100 }), makeYield({ sourceTvlUsd: null })],
-      ["yieldStability", makeYield({ yieldStability: 0.01 }), makeYield({ yieldStability: null })],
+      ["pys", makeYield({ pharosYieldScore: 0 }), makeYield({ pharosYieldScore: null })],
+      ["safetyScore", makeYield({ safetyScore: 0 }), makeYield({ safetyScore: null })],
+      ["tvl", makeYield({ sourceTvlUsd: 0 }), makeYield({ sourceTvlUsd: null })],
+      ["yieldStability", makeYield({ yieldStability: 0 }), makeYield({ yieldStability: null })],
     ] as const,
-  )("treats null %s as worst rank and null/null as equal", (key, valued, nullRow) => {
-    expect(compareYieldRows(valued, nullRow, sort(key, "desc"))).toBeLessThan(0);
-    expect(compareYieldRows(nullRow, valued, sort(key, "desc"))).toBeGreaterThan(0);
-    expect(compareYieldRows(nullRow, nullRow, sort(key, "desc"))).toBe(0);
+  )("keeps null %s last in both directions, distinct from observed zero", (key, valued, nullRow) => {
+    for (const direction of ["asc", "desc"] as const) {
+      expect(compareYieldRows(valued, nullRow, sort(key, direction))).toBeLessThan(0);
+      expect(compareYieldRows(nullRow, valued, sort(key, direction))).toBeGreaterThan(0);
+      expect(compareYieldRows(nullRow, nullRow, sort(key, direction))).toBe(0);
+    }
   });
 });
 

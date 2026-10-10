@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 
-import { beforeAll, describe, expect, it, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render } from "@testing-library/react";
 import { DEWSRadarPanel } from "@/components/dews-summary";
-import { installMatchMediaMock } from "@/test-utils/frontend";
+import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
 
+const useStablecoinsMock = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
@@ -26,12 +28,14 @@ vi.mock("@/hooks/api-hooks", () => ({
 }));
 
 vi.mock("@/hooks/use-stablecoins", () => ({
-  useStablecoins: () => ({ data: undefined }),
+  useStablecoins: useStablecoinsMock,
 }));
 
-beforeAll(() => {
+beforeEach(() => {
   installMatchMediaMock(true);
+  useStablecoinsMock.mockReturnValue({ data: undefined });
 });
+afterEach(cleanupFrontendTest);
 
 
 describe("DEWSRadarPanel radar logos", () => {
@@ -81,5 +85,19 @@ describe("DEWSRadarPanel radar logos", () => {
     expect(alertWidth).toBeCloseTo(27, 1);
     expect(warningWidth / alertWidth).toBeCloseTo(1.2, 1);
     expect(dangerWidth / warningWidth).toBeCloseTo(1.2, 1);
+  });
+
+  it("announces unavailable supply without turning it into the observed-zero size tier", () => {
+    useStablecoinsMock.mockReturnValue({ data: { peggedAssets: [
+      makeStablecoin({ id: "usdc-circle", circulating: {} }),
+      makeStablecoin({ id: "usdt-tether", circulating: { peggedUSD: 0 } }),
+    ] } });
+    const { getByRole, getByText } = render(<DEWSRadarPanel />);
+    const missing = getByRole("button", { name: /USDC.*supply unavailable/ });
+    const zero = getByRole("button", { name: /USDT.*\$0.*market cap/ });
+    expect(missing.getAttribute("aria-label")).not.toContain("$0");
+    expect(zero.getAttribute("aria-label")).not.toContain("supply unavailable");
+    fireEvent.focus(missing);
+    expect(getByText("Supply unavailable")).toBeTruthy();
   });
 });

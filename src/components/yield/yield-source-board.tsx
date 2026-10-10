@@ -101,8 +101,15 @@ export function YieldSourceBoard({ model, activeFilters, onFilterChange }: Yield
               Source mix in the current view
             </h2>
             <p className="max-w-3xl text-sm text-muted-foreground">
-              Data families behind the visible rows. Counts every chosen source plus retained alternates.
+              Data families behind the visible rows. {model.compositionMissingSourceCount > 0
+                ? `Lanes show ${model.representedSourceCount - model.compositionMissingSourceCount} of ${model.representedSourceCount} sources; ${model.compositionMissingSourceCount} retained alternates lack lane detail in this summary.`
+                : "Counts every chosen source plus retained alternates."}
             </p>
+            {model.anomalyUnavailableCount > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Anomaly evidence unavailable for {pluralize(model.anomalyUnavailableCount, "chosen source")}.
+              </p>
+            ) : null}
           </div>
           <SourceQualityBars model={model} activeFilters={activeFilters} onFilterChange={onFilterChange} />
           <div className="border-t border-border/50 pt-5">

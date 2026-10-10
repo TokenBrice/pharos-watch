@@ -143,32 +143,39 @@ export function parseSnapshotMetadata(value: string | null | undefined): LiveRes
   return normalizeSnapshotMetadata(parseJsonObject(value));
 }
 
-export function parseWarnings(value: string | null): LiveReserveWarning[] {
-  if (!value) return [];
-  const decoded = decodeJsonString<LiveReserveWarning[], "json-parse-failed">(value, {
-    parseErrorReason: "json-parse-failed",
-    normalize: (parsed) => ({
-      ok: true,
-      payload: Array.isArray(parsed)
-        ? parsed.flatMap((item: unknown) => {
-            if (!item || typeof item !== "object" || !("code" in item) || !("message" in item)) return [];
-            const code = typeof item.code === "string" ? item.code : null;
-            const message = typeof item.message === "string" ? item.message : null;
-            if (!code || !message) return [];
-            const severity = "severity" in item && item.severity === "info" ? "info" : "warning";
-            const effect =
-              "effect" in item && typeof item.effect === "string" && LIVE_RESERVE_WARNING_EFFECT_VALUES.includes(item.effect as LiveReserveWarning["effect"])
-                ? (item.effect as LiveReserveWarning["effect"])
-                : severity === "info"
-                  ? "info"
-                  : "degraded";
-            return [{ code, message, severity, effect }];
-          })
-        : [],
-    }),
+export function parseWarningsStrict(
+  value: string | null | undefined,
+  warningCount?: number | null,
+): { warnings: LiveReserveWarning[]; issue: null } | { warnings: null; issue: SnapshotIntegrityIssue } {
+  const invalid = (message: string) => ({
+    warnings: null,
+    issue: { code: "invalid-warnings" as const, message },
   });
-  return decoded.payload ?? [];
+  let parsed: unknown = [];
+  if (value != null) {
+    try { parsed = JSON.parse(value); }
+    catch { return invalid("stored reserve warnings contain invalid JSON"); }
+  }
+  if (!Array.isArray(parsed)) return invalid("stored reserve warnings are not an array");
+  const warnings: LiveReserveWarning[] = [];
+  for (const item of parsed) {
+    if (!item || typeof item !== "object" || Array.isArray(item) ||
+      typeof item.code !== "string" || !item.code.trim() ||
+      typeof item.message !== "string" || !item.message.trim() ||
+      ("severity" in item && item.severity !== "info" && item.severity !== "warning") ||
+      ("effect" in item && !LIVE_RESERVE_WARNING_EFFECT_VALUES.includes(item.effect))) {
+      return invalid("stored reserve warnings contain an invalid member");
+    }
+    const severity = item.severity === "info" ? "info" : "warning";
+    const effect = item.effect ?? (severity === "info" ? "info" : "degraded");
+    warnings.push({ code: item.code, message: item.message, severity, effect });
+  }
+  if (warningCount != null && (!Number.isSafeInteger(warningCount) || warningCount !== warnings.length)) {
+    return invalid("stored reserve warning count does not match its payload");
+  }
+  return { warnings, issue: null };
 }
+
 
 function isValidSlice(item: unknown, subjectId: string): item is ReserveSlice {
   const parsed = ReserveSliceSchema.safeParse(item);
@@ -276,7 +283,9 @@ export function parseReserveCompositionRow(
   const fallbackAdapterKey =
     syncState?.adapterKey ?? WORKER_TRACKED_META_BY_ID.get(row.stablecoin_id)?.liveReservesConfig?.adapter ?? row.source;
   const metadata = parseSnapshotMetadata(row.metadata);
-  const warnings = parseWarnings(row.warnings ?? null);
+  const parsedWarnings = parseWarningsStrict(row.warnings);
+  if (parsedWarnings.issue) return { record: null, issue: parsedWarnings.issue };
+  const warnings = parsedWarnings.warnings;
   const allowLegacyRecovery = shouldUseLegacySnapshotFallback(syncState, {
     fetchedAt: row.fetched_at,
     attemptId: row.attempt_id ?? null,
@@ -285,10 +294,12 @@ export function parseReserveCompositionRow(
   const finalMetadata =
     Object.keys(metadata).length === 0 && Object.keys(legacyMetadata).length > 0 ? legacyMetadata : metadata;
   const finalWarnings = warnings.length === 0 && allowLegacyRecovery ? (syncState?.warnings ?? []) : warnings;
-  const warningCount =
-    typeof row.warning_count === "number" && Number.isFinite(row.warning_count)
-      ? row.warning_count
-      : finalWarnings.length;
+  if (warnings.length === 0 && allowLegacyRecovery && syncState?.warningIntegrityIssue) {
+    return { record: null, issue: syncState.warningIntegrityIssue };
+  }
+  const warningIntegrity = parseWarningsStrict(JSON.stringify(finalWarnings), row.warning_count);
+  if (warningIntegrity.issue) return { record: null, issue: warningIntegrity.issue };
+  const warningCount = finalWarnings.length;
 
   const diagnostics = LiveReserveDiagnosticsSchema.safeParse(finalMetadata.diag);
   if (hasOwnMetadataKey(finalMetadata, "diag") && (

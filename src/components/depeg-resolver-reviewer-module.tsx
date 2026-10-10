@@ -37,7 +37,6 @@ import {
   isScored,
   nodeKind,
   summarizeAccuracyByMajor,
-  summarizePredictionRows,
   type NodeKind,
 } from "@/lib/depeg-resolver-review-presentation";
 
@@ -218,9 +217,8 @@ function VersionAccuracyStrip({ summary }: { summary: DdrrSummary }) {
   );
 }
 
-function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: readonly DdrrResponseRow[] }) {
+function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
   const metrics = summary.headline;
-  const rowBreakdown = summarizePredictionRows(rows);
   const correct = metrics.recoveryLikelihoodCorrectCount;
   const scored = metrics.recoveryLikelihoodScoredCount;
   const pct = metrics.recoveryLikelihoodAccuracyPct;
@@ -280,17 +278,18 @@ function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: read
       <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-border/50 pt-3">
         <BreakdownStat
           label="false terminal"
-          value={rowBreakdown.falseTerminal}
-          tone={rowBreakdown.falseTerminal > 0 ? "red" : "muted"}
+          value={metrics.falseTerminalCount ?? "—"}
+          tone={(metrics.falseTerminalCount ?? 0) > 0 ? "red" : "muted"}
         />
         <BreakdownStat
           label="false recoverable"
-          value={rowBreakdown.falseRecoverable}
-          tone={rowBreakdown.falseRecoverable > 0 ? "red" : "muted"}
+          value={metrics.falseRecoverableCount ?? "—"}
+          tone={(metrics.falseRecoverableCount ?? 0) > 0 ? "red" : "muted"}
         />
         <BreakdownStat
           label="inside typical range"
-          value={`${rowBreakdown.withinIqrCount}/${rowBreakdown.iqrScoredCount}`}
+          value={metrics.withinIqrCount != null && metrics.iqrScoredCount != null
+            ? `${metrics.withinIqrCount}/${metrics.iqrScoredCount}` : "—"}
         />
       </div>
     </div>
@@ -302,7 +301,8 @@ function CoverageAccountabilityLedger({
 }: {
   summary: DdrrSummary;
 }) {
-  const metrics = summary.headline;
+  const metrics = summary.byPredictionPolicy.find((segment) => segment.segmentKind === "all")?.metrics
+    ?? summary.headline;
   const policyUniverseCount = metrics.policyUniverseIncidentCount;
   const metricCards = [
     {
@@ -552,7 +552,7 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
         </div>
       ) : (
         <>
-          <CalibrationLedger summary={summary} rows={rows} />
+          <CalibrationLedger summary={summary} />
           <CoverageAccountabilityLedger summary={summary} />
           <ReviewerNote text={data._meta.publicWarning ?? DDRR_PUBLIC_WARNING} />
 

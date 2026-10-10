@@ -179,9 +179,12 @@ export async function loadStablecoinsCache(
 ): Promise<StablecoinsCacheLoadResult> {
   const mode = options.mode ?? "strict";
   const contract = options.contract ?? "critical-fields";
-  const cacheRow = options.preloadedCache !== undefined
-    ? options.preloadedCache
-    : await getCache(db, "stablecoins");
+  let cacheRow = options.preloadedCache;
+  try {
+    if (cacheRow === undefined) cacheRow = await getCache(db, "stablecoins");
+  } catch {
+    return toFailure("cache-read-failed", null);
+  }
   const decoded = decodeCachedJson<StablecoinsCacheDecodePayload, StablecoinsCacheFailureReason>(
     cacheRow,
     {

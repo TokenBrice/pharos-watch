@@ -45,7 +45,7 @@ import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-ver
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { admitSupplyBuckets, getCirculatingRawOrNull } from "@shared/lib/supply";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import {
   PublicSnapshotEnvelopeSchema,
@@ -55,6 +55,7 @@ import {
 import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
 import { isDirectRun, parseCheckMode } from "../lib/smoke-runtime.mjs";
 import { buildPublicDatasetArtifacts, type DatasetColumn } from "../lib/public-dataset-artifacts";
+import { readDepegLedgerCapture, type DepegLedgerCapture } from "../lib/depeg-ledger-capture";
 import {
   RELEASE_DATA_FALLBACK_ENV_NAME,
   generatorFetchHeaders,
@@ -184,7 +185,8 @@ interface TopStablecoinRow {
   pegType: string;
   pegMechanism: string;
   price: number | null;
-  circulatingUsd: number;
+  circulatingUsd: number | null;
+  supplyUnavailableReason: string | null;
   chainCount: number;
   chains: string;
 }
@@ -199,23 +201,30 @@ const TOP_STABLECOINS_COLUMNS: DatasetColumn<TopStablecoinRow>[] = [
   { header: "circulatingUsd", accessor: (r) => r.circulatingUsd },
   { header: "chainCount", accessor: (r) => r.chainCount },
   { header: "chains", accessor: (r) => r.chains },
+  { header: "supplyUnavailableReason", accessor: (r) => r.supplyUnavailableReason },
 ];
 
 function projectTopStablecoins(envelope: SnapshotEnvelope | null): TopStablecoinRow[] {
   if (!envelope) return [];
   return envelope.stablecoins
-    .map((coin) => ({
+    .map((coin) => {
+      const admission = admitSupplyBuckets(coin.circulating);
+      return {
       id: coin.id,
       name: coin.name,
       symbol: coin.symbol,
       pegType: coin.pegType,
       pegMechanism: coin.pegMechanism,
       price: coin.price,
-      circulatingUsd: getCirculatingRaw(coin),
+      circulatingUsd: getCirculatingRawOrNull(coin),
+      supplyUnavailableReason: admission.status === "observed" ? null
+        : admission.status === "invalid" ? admission.reason : "absent",
       chainCount: coin.chains.length,
       chains: coin.chains.join(";"),
-    }))
-    .sort((a, b) => b.circulatingUsd - a.circulatingUsd);
+      };
+    })
+    .sort((a, b) => a.circulatingUsd === null ? (b.circulatingUsd === null ? 0 : 1)
+      : b.circulatingUsd === null ? -1 : b.circulatingUsd - a.circulatingUsd);
 }
 
 interface DepegHistoryRow {
@@ -454,6 +463,7 @@ interface TopicSpec<T> {
   methodologyLabel: string;
   metadataStatus?: "approximated";
   metadataNote?: string;
+  depegCapture?: DepegLedgerCapture;
 }
 
 function ensureDir(path: string): void {
@@ -547,24 +557,37 @@ function pruneOldSnapshots(topicDir: string, snapshotDate: string): number {
   return removed;
 }
 
+function buildTopicArtifacts<T>(spec: TopicSpec<T>, asOfISO: string) {
+  if (spec.topic === "depeg-history" && spec.rows.length > 0 && !spec.depegCapture) {
+    throw new Error("Depeg-history exports require captured event-ledger provenance");
+  }
+  return buildPublicDatasetArtifacts({
+    rows: spec.rows,
+    columns: spec.columns,
+    metadata: {
+      endpoint: spec.topic,
+      asOfISO: spec.depegCapture?.observedAtISO ?? asOfISO,
+      sourceUrl: (variant) => `${SITE_ORIGIN}/datasets/${spec.topic}/latest.${variant}`,
+      methodologyLabel: spec.methodologyLabel,
+      metadataStatus: spec.metadataStatus,
+      metadataNote: spec.metadataNote,
+      ...(spec.depegCapture ? {
+        freshnessContract: "retrospective windowed event history; event state observed during the ledger capture, not at the market snapshot clock",
+        sourceGeneration: spec.depegCapture.captureId,
+        sourceObservationStartedAtISO: spec.depegCapture.observationStartedAtISO,
+        windowSnapshotAsOfISO: asOfISO,
+      } : {}),
+    },
+  });
+}
+
 function writeTopic<T>(
   spec: TopicSpec<T>,
   snapshotDate: string,
   asOfISO: string,
 ): { dated: string[]; written: number } {
   const topicDir = join(DATASETS_DIR, spec.topic);
-  const artifacts = buildPublicDatasetArtifacts({
-    rows: spec.rows,
-    columns: spec.columns,
-    metadata: {
-      endpoint: spec.topic,
-      asOfISO,
-      sourceUrl: (variant) => `${SITE_ORIGIN}/datasets/${spec.topic}/latest.${variant}`,
-      methodologyLabel: spec.methodologyLabel,
-      metadataStatus: spec.metadataStatus,
-      metadataNote: spec.metadataNote,
-    },
-  });
+  const artifacts = buildTopicArtifacts(spec, asOfISO);
 
   const targets = [
     { path: join(topicDir, `${snapshotDate}.csv`), contents: artifacts.csv },
@@ -719,6 +742,7 @@ interface PublicDatasetLiveInputs {
   depegEvents: DepegEvent[];
   effectiveSnapshotDate: string;
   asOfISO: string;
+  depegCapture: DepegLedgerCapture;
 }
 
 function cutoffSecForSnapshotDate(snapshotDate: string): number {
@@ -798,14 +822,18 @@ export async function loadPublicDatasetLiveInputs(
   const depegEvents = readDepegEventsFromShards();
   validateDepegHistorySourceShard(effectiveSnapshotDate);
   validateDepegHistoryCoverage(depegEvents, effectiveSnapshotDate);
-  return { envelope, depegEvents, effectiveSnapshotDate, asOfISO };
+  const depegCapture = readDepegLedgerCapture(DEPEG_EVENT_DATA_DIR);
+  if (depegCapture.eventCount !== depegEvents.length) {
+    throw new Error("Depeg ledger capture event count does not match the source shards");
+  }
+  return { envelope, depegEvents, depegCapture, effectiveSnapshotDate, asOfISO };
 }
 
 function buildTopicSpecs(
   envelope: SnapshotEnvelope | null,
   depegEvents: DepegEvent[],
   snapshotDate: string,
-  options: { historical?: boolean } = {},
+  options: { historical?: boolean; depegCapture?: DepegLedgerCapture } = {},
 ): TopicSpec<unknown>[] {
   const historical = options.historical ?? isHistoricalSnapshotDate(snapshotDate);
   const envelopeSnapshotDate = envelope?.snapshotDate || snapshotDate;
@@ -833,7 +861,8 @@ function buildTopicSpecs(
       topic: "depeg-history",
       rows: projectDepegHistory(depegEvents, envelopeSnapshotDate),
       columns: DEPEG_HISTORY_COLUMNS,
-      methodologyLabel: `depeg-dews ${methodologyVersion(["dews"], DEPEG_DEWS_METHODOLOGY_VERSION_LABEL)}`,
+      methodologyLabel: `depeg-dews ${options.depegCapture?.methodologyVersionLabel ?? DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}`,
+      depegCapture: options.depegCapture,
     } as TopicSpec<DepegHistoryRow> as TopicSpec<unknown>,
     {
       topic: "scores-latest",
@@ -864,6 +893,7 @@ export const testExports = {
   buildPublicDatasetCurrentModule,
   buildPublicDatasetRedirectBlock,
   buildTopicSpecs,
+  buildTopicArtifacts,
   checkTopic,
   checkCurrentDatasetModule,
   cutoffSecForSnapshotDate,
@@ -928,6 +958,7 @@ async function main(): Promise<void> {
   const apiBase = resolveGeneratorApiBase();
   let envelope: SnapshotEnvelope | null = null;
   let depegEvents: DepegEvent[] = [];
+  let depegCapture: DepegLedgerCapture | undefined;
   let asOfISO = `${snapshotDate}T00:00:00.000Z`;
 
   if (apiBase) {
@@ -935,6 +966,7 @@ async function main(): Promise<void> {
       const liveInputs = await loadPublicDatasetLiveInputs(apiBase, requestedSnapshotDate);
       envelope = liveInputs.envelope;
       depegEvents = liveInputs.depegEvents;
+      depegCapture = liveInputs.depegCapture;
       snapshotDate = liveInputs.effectiveSnapshotDate;
       asOfISO = liveInputs.asOfISO;
       if (snapshotDate !== requestedSnapshotDate) {
@@ -973,6 +1005,7 @@ async function main(): Promise<void> {
 
   const specs = buildTopicSpecs(envelope, depegEvents, snapshotDate, {
     historical: isHistoricalSnapshotDate(requestedSnapshotDate),
+    depegCapture,
   });
   if (apiBase) {
     for (const spec of specs) {

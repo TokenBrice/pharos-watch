@@ -2,6 +2,7 @@ import { coinGeckoPool } from "./discovery.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockCircuitOutcomeRecord } from "../../../test-helpers/cron";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import type * as DexScreener from "../../../lib/dexscreener";
 
 const fetchDsTokenPairsWithStatusMock = vi.hoisted(() => vi.fn());
 const fetchDsTokenPoolsWithStatusMock = vi.hoisted(() => vi.fn());
@@ -42,7 +43,8 @@ vi.mock("../../../lib/fetch-retry", () => ({
   fetchJsonWithRetry: vi.fn(),
 }));
 
-vi.mock("../../../lib/dexscreener", () => ({
+vi.mock("../../../lib/dexscreener", async (importOriginal) => ({
+  ...(await importOriginal<typeof DexScreener>()),
   fetchDsTokenPoolsWithStatus: fetchDsTokenPoolsWithStatusMock,
   fetchDsTokenPairsWithStatus: fetchDsTokenPairsWithStatusMock,
   dsRateLimit: vi.fn().mockResolvedValue(undefined),
@@ -969,6 +971,23 @@ describe("crawlCoin DexScreener hardening", () => {
     });
   });
 
+  it.each([false, true])("allows fallback after a capped CG census and only complete GT suppresses DexScreener: %s", async (gtComplete) => {
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
+      transportOk: true, schemaDegraded: false, complete: false, pools: [],
+    });
+    vi.mocked(crawlTokenPools).mockImplementationOnce(async (config) => {
+      for (const token of config.tokens) config.onRequestResult?.(token, "success", {
+        complete: gtComplete, cappedAtMaxPages: !gtComplete, failedAfterRows: null,
+      });
+      return { stoppedEarly: false };
+    });
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
+    await crawlCoin(createMockDb(), "usdc-circle", [{ chain: "ethereum", address: "0xAbC", decimals: 6 }], "test-key", new Set());
+    expect(crawlTokenPools).toHaveBeenCalledTimes(1);
+    if (gtComplete) expect(fetchDsTokenPairsWithStatus).not.toHaveBeenCalled();
+    else expect(fetchDsTokenPairsWithStatus).toHaveBeenCalledTimes(1);
+  });
+
   it("does not use a CoinGecko price observation as a separate completion signal", async () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: true,
@@ -1027,7 +1046,9 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(crawlTokenPools).mockImplementation(async (config) => {
       events.push("gt");
       for (const token of config.tokens) {
-        config.onRequestResult?.(token, token.ourChain === "ethereum" ? "failure" : "success");
+        config.onRequestResult?.(token, token.ourChain === "ethereum" ? "failure" : "success", {
+          complete: token.ourChain !== "ethereum", cappedAtMaxPages: false, failedAfterRows: token.ourChain === "ethereum" ? 0 : null,
+        });
       }
       return { stoppedEarly: false };
     });

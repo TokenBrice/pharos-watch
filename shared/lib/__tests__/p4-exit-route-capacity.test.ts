@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ExitRouteObservationCoverageSchema } from "@shared/types/market";
 import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
+  DEX_MEASURED_FRESHNESS_MAX_SEC,
   type DexMeasuredExecutionPublicProfile,
 } from "@shared/types/measured-execution";
 import {
@@ -1499,6 +1500,10 @@ describe("P4 DEX exit route observations", () => {
             invariant: "constant-product",
             trackedTokenIndex: 0,
             feeRate: 0.0025,
+            capture: {
+              blockNumber: 21_000_000, blockHash: `0x${"ab".repeat(32)}`,
+              blockTimestamp: 1_719_999_640, sourceGenerationId: "dex-stage:fixture",
+            },
             tokens: [
               {
                 address: "0xce24439f2d9c6a2289f741120fe202248b666666",
@@ -1533,6 +1538,45 @@ describe("P4 DEX exit route observations", () => {
       scope: { contractOrPoolId: "bsc:0x108752b2a22c731ede3edac2205c63ae553e221a" },
       output: { kind: "collateral" },
       scoreEligible: true,
+      observedAt: 1_719_999_640,
+      freshnessSeconds: 360,
+    });
+  });
+
+  it("ages original V2 capture across source-stage consumption instead of restamping it", () => {
+    const capturedAt = 1_720_000_000;
+    const model = twoTokenReserveModel(
+      { address: "0x0000000000000000000000000000000000000011", balance: 5_000_000 },
+      { address: "0x0000000000000000000000000000000000000012", balance: 5_000_000 },
+      { source: "uniswap-v2", feeRate: 0.003 },
+    );
+    model.capture = {
+      blockNumber: 21_000_000, blockHash: `0x${"ab".repeat(32)}`,
+      blockTimestamp: capturedAt, sourceGenerationId: "dex-stage:fixture",
+    };
+    const build = (observedAt: number) => buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle", observedAt,
+      retainedPools: [retainedPool(
+        "ethereum:0x0000000000000000000000000000000000000001",
+        "uniswap-v2", "ethereum", 10_000_000, "USDC / USDT", "uniswap-v2", "dl",
+        { ammExecutionModel: model },
+      )],
+    });
+    for (const age of [360, 1_800, DEX_MEASURED_FRESHNESS_MAX_SEC]) {
+      expect(build(capturedAt + age).observations[0]).toMatchObject({
+        observedAt: capturedAt, freshnessSeconds: age, scoreEligible: true,
+        outputUnitValueObservedAt: capturedAt,
+      });
+    }
+    const expired = build(capturedAt + DEX_MEASURED_FRESHNESS_MAX_SEC + 1);
+    expect(expired.observations).toEqual([]);
+    expect(expired.coverage.unsupportedReasons).toMatchObject({
+      "invalidExecutionModel:stale-exact-capture": 1,
+    });
+    expect(build(capturedAt - 61).observations).toEqual([]);
+    delete model.capture;
+    expect(build(capturedAt).coverage.unsupportedReasons).toMatchObject({
+      "invalidExecutionModel:missing-exact-capture-identity": 1,
     });
   });
 
@@ -1547,6 +1591,10 @@ describe("P4 DEX exit route observations", () => {
             invariant: "constant-product",
             trackedTokenIndex: 0,
             feeRate: 0.003,
+            capture: {
+              blockNumber: 21_000_000, blockHash: `0x${"ab".repeat(32)}`,
+              blockTimestamp: 1_720_000_000, sourceGenerationId: "dex-stage:fixture",
+            },
             tokens: [
               {
                 address: "0x0000000000000000000000000000000000000011",

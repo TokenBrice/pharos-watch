@@ -107,7 +107,7 @@ export interface ProviderTargetingGapRow {
   symbol: string;
   currentSources: string[];
   sourceDepth: number;
-  marketCapUsd: number;
+  marketCapUsd: number | null;
   dexTvlUsd: number;
   deploymentCount: number;
   reason: "low-depth-exact-address-material-dex" | "missing-price-exact-address-material-dex";
@@ -188,7 +188,7 @@ function sourceDepth(row: DexGapStablecoinRow): number {
   return row.consensusSources?.length ?? expandedSources(row).length;
 }
 
-function marketCapUsd(row: DexGapStablecoinRow): number {
+function marketCapUsd(row: DexGapStablecoinRow): number | null {
   if (typeof row.marketCapUsd === "number" && Number.isFinite(row.marketCapUsd)) return row.marketCapUsd;
   return circulatingForStablecoinRow(row);
 }
@@ -304,7 +304,7 @@ export function buildDexPricingSourceGapAudit(input: BuildAuditInput): DexPricin
         deployments > 0 &&
         !hasDexPrimarySource(currentSources, protocols) &&
         (missingPrice || depth <= LOW_SOURCE_DEPTH) &&
-        (dexTvlUsd >= HIGH_PRIORITY_DEX_TVL_USD || mcap >= HIGH_PRIORITY_MCAP_USD)
+        (dexTvlUsd >= HIGH_PRIORITY_DEX_TVL_USD || (mcap !== null && mcap >= HIGH_PRIORITY_MCAP_USD))
       ) {
         providerTargetingGaps.push({
           stablecoinId: stable.id,
@@ -333,7 +333,8 @@ export function buildDexPricingSourceGapAudit(input: BuildAuditInput): DexPricin
   dexAdmissionGaps.sort((left, right) => right.dexTvlUsd - left.dexTvlUsd);
   providerTargetingGaps.sort((left, right) => {
     if (right.dexTvlUsd !== left.dexTvlUsd) return right.dexTvlUsd - left.dexTvlUsd;
-    return right.marketCapUsd - left.marketCapUsd;
+    return left.marketCapUsd === null ? (right.marketCapUsd === null ? 0 : 1)
+      : right.marketCapUsd === null ? -1 : right.marketCapUsd - left.marketCapUsd;
   });
 
   const materialDexRows = input.dexPrices.filter((row) => (row.source_total_tvl ?? 0) >= MATERIAL_DEX_TVL_USD).length;
@@ -532,7 +533,7 @@ export function renderDexPricingSourceGapMarkdown(audit: DexPricingSourceGapAudi
   } else {
     lines.push("| Asset | Reason | Source depth | Market cap | DEX TVL | Deployments |", "| --- | --- | --- | --- | --- | --- |");
     for (const row of audit.providerTargetingGaps.slice(0, 50)) {
-      lines.push(`| \`${row.stablecoinId}\` / ${row.symbol} | ${row.reason} | ${row.sourceDepth} | ${formatUsd(row.marketCapUsd)} | ${formatUsd(row.dexTvlUsd)} | ${row.deploymentCount} |`);
+      lines.push(`| \`${row.stablecoinId}\` / ${row.symbol} | ${row.reason} | ${row.sourceDepth} | ${row.marketCapUsd === null ? "N/A (supply unavailable)" : formatUsd(row.marketCapUsd)} | ${formatUsd(row.dexTvlUsd)} | ${row.deploymentCount} |`);
     }
     lines.push("");
   }

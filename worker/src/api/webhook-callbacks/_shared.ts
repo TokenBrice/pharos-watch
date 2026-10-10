@@ -141,11 +141,7 @@ export async function requireAdminForMutatingCallback(
  * post-success follow-up messages, callbacks with their own state machine)
  * stay as bespoke handlers.
  */
-export async function runCallbackMutation<TValid>(params: {
-  db: D1Database;
-  botToken: string;
-  cb: TelegramCallbackQuery;
-  chatId: string;
+export async function runCallbackMutation<TValid>(context: CallbackContext, params: {
   /** Return the parsed/validated payload, or `null` to short-circuit with `invalidText`. */
   validate: () => TValid | null;
   /** If true, gate the write on `requireAdminForMutatingCallback`. */
@@ -170,13 +166,12 @@ export async function runCallbackMutation<TValid>(params: {
   invalidText?: string;
   /** Toast text when the D1 write throws. */
   failureText: string;
-  answerCallback: (options?: { text?: string }) => Promise<void>;
   intentKind: string;
   intentPayload: (validated: TValid) => Record<string, unknown>;
-} & TelegramCallbackMutationContext): Promise<void> {
+}): Promise<void> {
   const validated = params.validate();
   if (validated == null) {
-    await params.answerCallback({
+    await context.answerCallback({
       text: params.invalidText ?? "Action not recognized.",
     });
     return;
@@ -184,47 +179,47 @@ export async function runCallbackMutation<TValid>(params: {
   if (
     params.requireAdmin &&
     !(await requireAdminForMutatingCallback(
-      params.db,
-      params.botToken,
-      params.cb,
-      params.chatId,
+      context.db,
+      context.botToken,
+      context.cb,
+      context.chatId,
       undefined,
-      params.beforeIrreversibleEffect,
+      context.beforeIrreversibleEffect,
     ))
   ) {
     return;
   }
   try {
-    await params.planIntent?.(createTelegramWebhookIntent(
+    await context.planIntent?.(createTelegramWebhookIntent(
       params.intentKind,
       params.intentPayload(validated),
       "required",
     ));
-    if (!params.wasMutationApplied) {
-      const operationStatements = params.prepareMutationAppliedStatement
-        ? [params.prepareMutationAppliedStatement()]
+    if (!context.wasMutationApplied) {
+      const operationStatements = context.prepareMutationAppliedStatement
+        ? [context.prepareMutationAppliedStatement()]
         : undefined;
       await params.write(validated, { operationStatements });
-      if (operationStatements) params.confirmAtomicMutationApplied?.();
+      if (operationStatements) context.confirmAtomicMutationApplied?.();
       // Direct callback unit invocations have no processed-update claim.
       // Production webhook dispatch always supplies the prepared atomic marker.
-      else await params.markMutationApplied();
+      else await context.markMutationApplied();
     }
   } catch {
     logTelegramEvent({
       message: params.logMessage,
       action: params.logAction,
     });
-    await recordTelegramUsageEvent(params.db, {
+    await recordTelegramUsageEvent(context.db, {
       eventType: params.eventType,
       actionDetail: params.actionDetail,
       outcome: "failure",
       failureClass: "d1_write_failed",
     });
-    await params.answerCallback({ text: params.failureText });
+    await context.answerCallback({ text: params.failureText });
     return;
   }
-  await recordTelegramUsageEvent(params.db, {
+  await recordTelegramUsageEvent(context.db, {
     eventType: params.eventType,
     actionDetail: params.actionDetail,
     outcome: params.successOutcome ?? "success",
@@ -233,7 +228,7 @@ export async function runCallbackMutation<TValid>(params: {
     typeof params.successText === "function"
       ? params.successText(validated)
       : params.successText;
-  await params.answerCallback({ text });
+  await context.answerCallback({ text });
 }
 
 /**

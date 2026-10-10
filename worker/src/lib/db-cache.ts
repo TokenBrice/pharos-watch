@@ -254,9 +254,11 @@ export async function writeFreshnessSentinel(
   db: D1Database,
   key: FreshnessSentinelBackedCacheKey,
   syncStartSec: number,
+  generationId: string,
   signal?: AbortSignal,
 ): Promise<void> {
   throwIfAborted(signal);
+  if (!generationId.trim()) throw new Error("Freshness sentinel generation identity is required");
   await setCacheIfNewer(
     db,
     getFreshnessSentinelCacheKey(key),
@@ -264,6 +266,7 @@ export async function writeFreshnessSentinel(
       updatedAt: syncStartSec,
       source: getFreshnessSentinelProducerJob(key),
       publishStatus: "ok",
+      generationId,
     }),
     syncStartSec,
     signal,

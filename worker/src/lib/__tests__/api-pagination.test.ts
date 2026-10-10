@@ -364,7 +364,7 @@ describe("buildPaginatedEventResponse", () => {
     const db = mockD1([
       { match: "COUNT(*) as total FROM depeg_events", rows: [{ total: 1 }] },
       { match: "FROM depeg_events", rows: [{ id: 1, started_at: 100, stablecoin: "usdc" }] },
-      { match: "MAX(started_at) as started_at FROM cron_runs", rows: [{ started_at: 1_700_000_000 }] },
+      { match: "as started_at FROM cron_runs", rows: [{ started_at: 1_700_000_000 }] },
     ], { requireMatch: true });
     const response = await buildPaginatedEventResponse<Row, Row>(db, {
       ...baseConfig,
@@ -382,7 +382,7 @@ describe("buildPaginatedEventResponse", () => {
     const db = mockD1([
       { match: "COUNT(*) as total FROM depeg_events", rows: [{ total: 2 }] },
       { match: "FROM depeg_events", rows: [{ id: 2, started_at: 200, stablecoin: "usdc" }] },
-      { match: "MAX(started_at) as started_at FROM cron_runs", rows: [] },
+      { match: "as started_at FROM cron_runs", rows: [] },
     ], { requireMatch: true });
     const cursor = encodeJsonCursor({ v: 1, values: [300, 3] });
     const response = await buildPaginatedEventResponse<Row, Row, { symbols: string[] }>(db, {

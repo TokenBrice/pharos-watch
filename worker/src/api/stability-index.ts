@@ -8,7 +8,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { decodeJsonString } from "../lib/cache-json";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
-import { getConditionBand } from "../lib/stability-index";
+import { getConditionBand } from "@shared/lib/psi-policy";
 import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION,

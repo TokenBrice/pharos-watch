@@ -22,6 +22,7 @@ const write = (root: string, path: string, value: string) => {
 function dataFixture(root: string): void {
   write(root, "data/digests.json", '{"release":true}');
   write(root, "data/depeg-events/index.json", '{"release":true}');
+  write(root, "data/depeg-events/metadata/capture.json", '{"release":true}');
   write(root, "public/datasets/topic/2026-10-07.json", '{"release":true}');
   write(root, "public/_redirects", `${aliases("2026-10-07")}\n/release-only /target 301\n`);
   write(root, "src/lib/datasets/public-dataset-current.ts", 'export const date = "2026-10-07";');
@@ -106,6 +107,14 @@ describe("Pages release data archive", () => {
     expect(isPagesReleaseDataMember(path)).toBe(false);
   });
 
+  it.each(["data/depeg-events/metadata", "data/depeg-events/metadata/", "data/depeg-events/metadata/capture.json"])("permits the exact depeg capture archive member %s", (path) => {
+    expect(isPagesReleaseDataMember(path)).toBe(true);
+  });
+
+  it.each(["data/depeg-events/capture.json", "data/depeg-events/metadata/.env", "data/depeg-events/metadata/extra.json", "data/depeg-events/metadata/capture.json/extra"])("rejects unexpected depeg metadata member %s", (path) => {
+    expect(isPagesReleaseDataMember(path)).toBe(false);
+  });
+
   it("replays release inputs without replacing candidate redirects or resurrecting removed coins", () => {
     const root = mkdtempSync(join(tmpdir(), "pharos-release-data-test-"));
     try {
@@ -123,6 +132,7 @@ describe("Pages release data archive", () => {
       expect(readFileSync(join(candidate, "src/generated/stablecoin-detail-snapshots/new.json"), "utf8")).toBe('{"lanes":{}}');
       expect(() => readFileSync(join(candidate, "src/generated/stablecoin-detail-snapshots/removed.json"))).toThrow();
       expect(readFileSync(join(candidate, "data/digests.json"), "utf8")).toBe('{"release":true}');
+      expect(readFileSync(join(candidate, "data/depeg-events/metadata/capture.json"), "utf8")).toBe('{"release":true}');
     } finally { rmSync(root, { recursive: true, force: true }); }
   });
 

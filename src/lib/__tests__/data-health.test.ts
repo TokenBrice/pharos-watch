@@ -30,6 +30,20 @@ function meta(overrides: Partial<ApiMeta> = {}): ApiMeta {
 
 describe("deriveDataHealth", () => {
   it.each([
+    [new ApiFetchError("/api/prices", 503, null), false, "unavailable", "Data is not yet available.", undefined],
+    [new Error("failed"), false, "error", "Failed to load data.", undefined],
+    [new Error("failed"), true, "degraded", "Using last successful data while refresh retries.", "refresh"],
+    [undefined, false, "unavailable", "Data is not yet available.", undefined],
+    [undefined, true, "fresh", "Data is fresh.", undefined],
+  ] as const)("preserves the complete result for error=%s and hasData=%s", (error, hasData, state, message, reason) => {
+    const health = deriveDataHealth({ label: "Prices", dataUpdatedAt: NOW, staleTime: STALE_TIME, error, hasData }, NOW);
+    expect(health).toStrictEqual({
+      label: "Prices", state, message, dataUpdatedAt: NOW, ageMs: 0, staleTime: STALE_TIME, meta: null,
+      ...(reason == null ? {} : { degradationReason: reason }),
+    });
+  });
+
+  it.each([
     ["stale", "stale"],
     ["unknown", "unavailable"],
   ] as const)("keeps %s producer authority distinct from a recent successful request", (status, state) => {
@@ -62,6 +76,78 @@ describe("deriveDataHealth", () => {
     expect(stateAtAge(8 * STALE_TIME + 1)).toBe("degraded");
     expect(stateAtAge(12 * STALE_TIME)).toBe("degraded");
     expect(stateAtAge(12 * STALE_TIME + 1)).toBe("stale");
+  });
+
+  it.each([
+    [1800, "fresh"],
+    [1800.001, "degraded"],
+    [3600, "degraded"],
+    [3600.001, "stale"],
+    [4000, "stale"],
+  ] as const)("uses served chains budgets at age %ss", (ageSeconds, state) => {
+    const health = deriveDataHealth({
+      label: "Chain Data",
+      dataUpdatedAt: NOW,
+      staleTime: 1_800_000,
+      hasData: true,
+      meta: meta({ updatedAt: (NOW - ageSeconds * 1000) / 1000, freshBudgetSec: 1800, degradedBudgetSec: 3600 }),
+    }, NOW);
+    expect(health.state).toBe(state);
+  });
+
+  it("keeps stale yield publications stale and ages hydrated generations under served budgets", () => {
+    const intervalSec = 3600;
+    const input = {
+      label: "Yield Rankings",
+      dataUpdatedAt: NOW,
+      staleTime: intervalSec * 1000,
+      hasData: true,
+      meta: meta({
+        updatedAt: NOW / 1000 - 2 * intervalSec,
+        freshBudgetSec: 2 * intervalSec,
+        degradedBudgetSec: 4 * intervalSec,
+      }),
+    };
+    expect(deriveDataHealth(input, NOW).state).toBe("fresh");
+    expect(deriveDataHealth(input, NOW + 1).state).toBe("degraded");
+    expect(deriveDataHealth(input, NOW + 2 * intervalSec * 1000).state).toBe("degraded");
+    expect(deriveDataHealth(input, NOW + 2 * intervalSec * 1000 + 1).state).toBe("stale");
+    expect(deriveDataHealth({
+      ...input,
+      meta: meta({
+        updatedAt: NOW / 1000 - 5 * intervalSec,
+        ageSeconds: 5 * intervalSec,
+        freshBudgetSec: 2 * intervalSec,
+        degradedBudgetSec: 4 * intervalSec,
+        status: "stale",
+        warning: '110 - "Response is stale"',
+      }),
+    }, NOW).state).toBe("stale");
+  });
+
+  it.each(["stale", "degraded"] as const)("preserves the server %s floor independently of producer age", (status) => {
+    const input = { label: "Chains", dataUpdatedAt: NOW, staleTime: STALE_TIME, hasData: true, meta: meta({ status }) };
+    expect(deriveDataHealth(input, NOW).state).toBe(status);
+    expect(deriveDataHealth(input, NOW + 13 * STALE_TIME).state).toBe("stale");
+  });
+
+  it("falls back to legacy age bands only when served budgets are absent", () => {
+    const input = { label: "Chains", dataUpdatedAt: NOW, staleTime: STALE_TIME, hasData: true, meta: meta() };
+    expect(deriveDataHealth(input, NOW + 8 * STALE_TIME).state).toBe("fresh");
+    expect(deriveDataHealth(input, NOW + 12 * STALE_TIME).state).toBe("degraded");
+    expect(deriveDataHealth(input, NOW + 12 * STALE_TIME + 1).state).toBe("stale");
+  });
+
+  it("keeps dependency warnings separate from served age bands", () => {
+    const input = {
+      label: "Chains", dataUpdatedAt: NOW, staleTime: STALE_TIME, hasData: true,
+      meta: meta({
+        freshBudgetSec: 1800, degradedBudgetSec: 3600,
+        dependencies: { reportCards: { status: "stale" as const, ageSeconds: 0 } },
+      }),
+    };
+    expect(deriveDataHealth(input, NOW).state).toBe("degraded");
+    expect(deriveDataHealth(input, NOW + 4_000_000).state).toBe("stale");
   });
 
   it("uses server warnings as a degradation floor", () => {
@@ -178,7 +264,7 @@ describe("deriveDataHealth", () => {
     expect(health.dataUpdatedAt).toBe(producerUpdatedAtSec * 1000);
   });
 
-  it("does not use backend freshness status as a second clock", () => {
+  it("preserves backend stale status as a floor without using it as a second clock", () => {
     const health = deriveDataHealth(
       {
         label: "Prices",
@@ -190,7 +276,7 @@ describe("deriveDataHealth", () => {
       NOW,
     );
 
-    expect(health.state).toBe("fresh");
+    expect(health.state).toBe("stale");
     expect(health.ageMs).toBe(60_000);
   });
 

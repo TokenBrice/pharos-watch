@@ -1,4 +1,4 @@
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
@@ -406,8 +406,8 @@ export async function fetchDolaInverseReserves(
     && cached.updatedAt != null && (ctx?.nowSec ?? Math.floor(Date.now() / 1000)) - cached.updatedAt <= 7200
     ? cached.payload.peggedAssets.find((asset) => asset.id === coin.id)
     : undefined;
-  const circulatingUsd = supplyCoin ? getCirculatingRaw(supplyCoin) : 0;
-  const supplyUsd = Number.isFinite(circulatingUsd) && circulatingUsd > 0 ? circulatingUsd : undefined;
+  const circulatingUsd = getCirculatingRawOrNull(supplyCoin);
+  const supplyUsd = circulatingUsd !== null && circulatingUsd > 0 ? circulatingUsd : undefined;
   const adapted = adaptFirmMarkets(payload, supplyUsd, frontierBadDebtBalance);
   const warnings: LiveReserveWarning[] = listUnexpectedDolaAssets(payload).map((asset) => reserveDegradedWarning(
     "unknown-asset",

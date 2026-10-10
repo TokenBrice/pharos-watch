@@ -109,78 +109,27 @@ function parseValueUsdFromWei(raw: unknown): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-function parseInitialChainBreakdowns(html: string): Record<string, ReMetricsChainBreakdown> {
+function parseEmbeddedContainer(
+  html: string,
+  key: string,
+  field: string,
+  container: "object" | "array",
+): unknown {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(
-      extractEscapedJsonValueAfterKey(html, ESCAPED_INITIAL_BREAKDOWNS_KEY, "re-metrics"),
-    ) as unknown;
+    parsed = JSON.parse(extractEscapedJsonValueAfterKey(html, key, "re-metrics")) as unknown;
   } catch (error) {
-    throw htmlParseError(
-      "re-metrics",
-      `initialChainBreakdowns JSON is malformed: ${toErrorMessage(error)}`,
-    );
+    throw htmlParseError("re-metrics", `${field} JSON is malformed: ${toErrorMessage(error)}`);
   }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw htmlParseError("re-metrics", "initialChainBreakdowns was not an object");
+  const valid = container === "array"
+    ? Array.isArray(parsed)
+    : parsed != null && typeof parsed === "object" && !Array.isArray(parsed);
+  if (!valid) {
+    throw htmlParseError("re-metrics", `${field} was not an ${container}`);
   }
-  return parsed as Record<string, ReMetricsChainBreakdown>;
+  return parsed;
 }
 
-function parseInitialCards(html: string): ReMetricsCard[] {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(
-      extractEscapedJsonValueAfterKey(html, ESCAPED_INITIAL_CARDS_KEY, "re-metrics"),
-    ) as unknown;
-  } catch (error) {
-    throw htmlParseError(
-      "re-metrics",
-      `initialCards JSON is malformed: ${toErrorMessage(error)}`,
-    );
-  }
-  if (!Array.isArray(parsed)) {
-    throw htmlParseError("re-metrics", "initialCards was not an array");
-  }
-  return parsed as ReMetricsCard[];
-}
-
-function parseInitialTvlData(html: string): ReMetricsTvlPoint[] {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(
-      extractEscapedJsonValueAfterKey(html, ESCAPED_INITIAL_TVL_DATA_KEY, "re-metrics"),
-    ) as unknown;
-  } catch (error) {
-    throw htmlParseError(
-      "re-metrics",
-      `initialTvlData JSON is malformed: ${toErrorMessage(error)}`,
-    );
-  }
-  if (!Array.isArray(parsed)) {
-    throw htmlParseError("re-metrics", "initialTvlData was not an array");
-  }
-  return parsed as ReMetricsTvlPoint[];
-}
-
-function parseRedemptionRows(html: string): ReMetricsRedemptionRow[] | null {
-  if (!html.includes(ESCAPED_REDEMPTION_ROWS_KEY)) return null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(
-      extractEscapedJsonValueAfterKey(html, ESCAPED_REDEMPTION_ROWS_KEY, "re-metrics"),
-    ) as unknown;
-  } catch (error) {
-    throw htmlParseError(
-      "re-metrics",
-      `redemptionRows JSON is malformed: ${toErrorMessage(error)}`,
-    );
-  }
-  if (!Array.isArray(parsed)) {
-    throw htmlParseError("re-metrics", "redemptionRows was not an array");
-  }
-  return parsed as ReMetricsRedemptionRow[];
-}
 
 function normalizeTokenSymbol(symbol: string): string {
   return symbol.trim().toLowerCase();
@@ -198,7 +147,7 @@ function extractOffchainCapitalContext(
   offchainTimestamp: number | null;
 } {
   if (html.includes(ESCAPED_INITIAL_CARDS_KEY)) {
-    const cards = parseInitialCards(html);
+    const cards = parseEmbeddedContainer(html, ESCAPED_INITIAL_CARDS_KEY, "initialCards", "array") as ReMetricsCard[];
     const offchainCard = cards.find((entry) => entry.seriesKey === "offchain_capital");
     warnings.push(reserveInfoWarning(
       "re-metrics-offchain-capital-branch",
@@ -213,7 +162,7 @@ function extractOffchainCapitalContext(
   }
 
   if (html.includes(ESCAPED_INITIAL_TVL_DATA_KEY)) {
-    const tvlData = parseInitialTvlData(html);
+    const tvlData = parseEmbeddedContainer(html, ESCAPED_INITIAL_TVL_DATA_KEY, "initialTvlData", "array") as ReMetricsTvlPoint[];
     const latestPoint = lastItem(tvlData);
     warnings.push(reserveInfoWarning(
       "re-metrics-offchain-capital-branch",
@@ -243,8 +192,9 @@ function extractInstantRedemptionCapacity(html: string, warnings: LiveReserveWar
     capacityUsd: number;
   }>;
 } | null {
-  const rows = parseRedemptionRows(html);
-  if (!rows || rows.length === 0) return null;
+  if (!html.includes(ESCAPED_REDEMPTION_ROWS_KEY)) return null;
+  const rows = parseEmbeddedContainer(html, ESCAPED_REDEMPTION_ROWS_KEY, "redemptionRows", "array") as ReMetricsRedemptionRow[];
+  if (rows.length === 0) return null;
   const parsedRows = [];
   let capacityUsd = 0;
   for (const [index, row] of rows.entries()) {
@@ -269,7 +219,9 @@ function extractInstantRedemptionCapacity(html: string, warnings: LiveReserveWar
 
 export function adaptReMetrics(html: string): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
-  const breakdowns = parseInitialChainBreakdowns(html);
+  const breakdowns = parseEmbeddedContainer(
+    html, ESCAPED_INITIAL_BREAKDOWNS_KEY, "initialChainBreakdowns", "object",
+  ) as Record<string, ReMetricsChainBreakdown>;
   const { offchainCapitalUsd, offchainTimestamp } = extractOffchainCapitalContext(html, warnings);
   const instantRedemptionCapacity = extractInstantRedemptionCapacity(html, warnings);
   // byAsset token numerators do not allocate pooled off-chain capital or

@@ -134,7 +134,7 @@ export async function publishYieldRowsAtomically(
         `INSERT INTO yield_history (
               stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd,
               data_source, warning_signals, yield_source, yield_type, publication_generation_id, publication_state,
-              pys_at_publish, safety_at_publish, variance_at_publish, pys_inputs_at_publish
+              pys_at_publish, safety_at_publish, variance_at_publish, pys_inputs_at_publish, source_observed_at
             )
             SELECT
               json_extract(value, '$.stablecoin_id'),
@@ -155,7 +155,8 @@ export async function publishYieldRowsAtomically(
               json_extract(value, '$.pys_at_publish'),
               json_extract(value, '$.safety_at_publish'),
               json_extract(value, '$.variance_at_publish'),
-              json_extract(value, '$.pys_inputs_at_publish')
+              json_extract(value, '$.pys_inputs_at_publish'),
+              json_extract(value, '$.source_observed_at')
             FROM json_each(?)
             WHERE ${cacheFreshGuard}
             ON CONFLICT(stablecoin_id, source_key, recorded_at) DO NOTHING`,

@@ -57,6 +57,9 @@ export async function fetchCoingeckoSimplePrices(
       const data = parsed.data;
       for (const [gId, val] of Object.entries(data)) {
         if (val?.usd == null || !(val.usd > 0)) continue;
+        if (val.last_updated_at != null && (
+          !Number.isFinite(val.last_updated_at) || val.last_updated_at <= 0
+        )) continue;
         const upstreamObservedAt =
           typeof val.last_updated_at === "number" &&
           Number.isFinite(val.last_updated_at) &&

@@ -77,6 +77,8 @@ function makeEnrichment(options: {
   const run = (extra: { deadline?: SlotDeadline } = {}) =>
     enrichEvmV2ExecutionModels({
       metrics: new Map([[metric.stablecoinId, metric]]),
+      nowSec: blockHeader(EVM_V2_REPLAY_BLOCK).timestamp,
+      sourceGenerationId: "v2-transport-replay",
       chainAddressToId,
       contractMetaByChainAddress,
       stablecoinPriceById: new Map([

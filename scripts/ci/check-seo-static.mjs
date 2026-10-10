@@ -327,7 +327,8 @@ function getRobotsDirectives(robotsTags) {
 }
 
 function isIndexable(robotsTags) {
-  return !getRobotsDirectives(robotsTags).has("noindex");
+  const directives = getRobotsDirectives(robotsTags);
+  return !directives.has("noindex") && !directives.has("none");
 }
 
 function getRobotsConflicts(robotsTags) {
@@ -817,7 +818,10 @@ export function buildSeoPageRecord(
   structuredDataRouteMatrix = STRUCTURED_DATA_ROUTE_MATRIX,
 ) {
   const html = fs.readFileSync(filePath, "utf8");
-  const robotsTags = getMetaContents(html, "name", "robots");
+  const robotsTags = [
+    ...getMetaContents(html, "name", "robots"),
+    ...getMetaContents(html, "name", "googlebot"),
+  ];
   const route = routeFromFile(filePath, outDir);
   const retired = isRetiredInternalRoute(route);
   const indexable = !retired && isIndexable(robotsTags);
@@ -865,6 +869,7 @@ export function buildSeoPageRecord(
     twitterImage: getMetaContents(html, "name", "twitter:image")[0] ?? "",
     robotsTags,
     retired,
+    indexable,
     googleBotTags: getMetaContents(html, "name", "googlebot"),
     h1Count: (html.match(/<h1\b/gi) ?? []).length,
     hasFatalCsrBailout: hasFatalCsrBailoutMarker(html),
@@ -1105,7 +1110,7 @@ export function collectSeoStaticCheckResult({
 
     const pageUrlSet = new Set(
       pageRecords
-        .filter((p) => !p.retired && isIndexable(p.robotsTags))
+        .filter((p) => p.indexable)
         .map((p) => `https://pharos.watch${p.route === "/" ? "/" : p.route}`),
     );
 
@@ -1116,6 +1121,7 @@ export function collectSeoStaticCheckResult({
       );
     }
 
+    const pageByRoute = new Map(pageRecords.map((page) => [page.route, page]));
     for (const loc of locs) {
       const sitemapRoute = sitemapRouteFromPharosUrl(loc);
       if (!sitemapRoute) continue;
@@ -1125,6 +1131,10 @@ export function collectSeoStaticCheckResult({
       }
       if (!routeSet.has(sitemapRoute.route)) {
         errors.push(`sitemap.xml URL has no local static HTML artifact: ${loc} (expected ${sitemapRoute.route})`);
+      }
+      const page = pageByRoute.get(sitemapRoute.route);
+      if (page && !page.indexable) {
+        errors.push(`sitemap.xml URL ${loc} conflicts with non-indexable HTML metadata; drop one of the two signals`);
       }
     }
 

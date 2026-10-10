@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getSafetyScoreV9WrapperLocalReviews } from "../safety-score-v9/extension-wrapper-local-review";
+import { getSafetyScoreV9WrapperLocalReviews } from "../safety-score-v9/extension-wrapper-reviews";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { createAssetBuildContext } from "../safety-score-v9/fact-set-context";
 import { buildWrapperLocalFacts } from "../safety-score-v9/fact-set-wrapper";

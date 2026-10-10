@@ -1,7 +1,8 @@
-import { DEPEG_RESOLVER_V1 } from "../../data/methodology-changelogs/depeg-resolver/v1";
-import { DEPEG_RESOLVER_V2 } from "../../data/methodology-changelogs/depeg-resolver/v2";
-import { DEPEG_RESOLVER_V3 } from "../../data/methodology-changelogs/depeg-resolver/v3";
-import { DEPEG_RESOLVER_V4 } from "../../data/methodology-changelogs/depeg-resolver/v4";
+import DEPEG_RESOLVER_V1 from "../../data/methodology-changelogs/depeg-resolver/v1.json";
+import DEPEG_RESOLVER_V2 from "../../data/methodology-changelogs/depeg-resolver/v2.json";
+import DEPEG_RESOLVER_V3 from "../../data/methodology-changelogs/depeg-resolver/v3.json";
+import DEPEG_RESOLVER_V4 from "../../data/methodology-changelogs/depeg-resolver/v4.json";
+import type { MethodologyChangelogEntry } from "./base";
 import { createMethodologyVersion } from "./base";
 import {
   DDR_METHODOLOGY_CHANGELOG_PATH,
@@ -12,7 +13,7 @@ import {
 const ddr = createMethodologyVersion({
   currentVersion: DDR_METHODOLOGY_VERSION,
   changelogPath: DDR_METHODOLOGY_CHANGELOG_PATH,
-  changelog: [...DEPEG_RESOLVER_V4, ...DEPEG_RESOLVER_V3, ...DEPEG_RESOLVER_V2, ...DEPEG_RESOLVER_V1],
+  changelog: [...DEPEG_RESOLVER_V4, ...DEPEG_RESOLVER_V3, ...DEPEG_RESOLVER_V2, ...DEPEG_RESOLVER_V1] as MethodologyChangelogEntry[],
 });
 const ddrV2ChangelogEntry = ddr.changelog.find((entry) => entry.version === "2.0");
 

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { computeDEWS, piecewiseLinear, getThreatBand } from "../dews";
 import { clamp } from "@shared/lib/math";
+import { WATCH_MAX_SCORE } from "@shared/lib/dews-config";
 import type { DEWSInput } from "../dews";
 import { makeDewsInput } from "./dews.test-support";
 
@@ -98,6 +99,21 @@ function computeDews(input: DEWSInput) {
 }
 
 describe("computeDEWS", () => {
+  it.each([
+    ["uncorroborated", {}, false],
+    ["market-price", { dexPriceUsd: 0.9 }, true],
+    ["issuer-control", { hasBlacklistTracking: true, blacklistEvents24h: 20, blacklistEvents7d: 20 }, true],
+  ] as const)("applies the methodology WATCH ceiling and evidence overrides for %s evidence", (_kind, overrides, bypass) => {
+    const result = computeDews(makeDewsInput({
+      circulatingCurrent: 4e9, circulatingPrevDay: 5e9, circulatingPrevWeek: 5.5e9,
+      price: null, priceConfidence: null, ...overrides,
+    }));
+
+    expect(result.baseScore * result.amplifiers.psi * result.amplifiers.contagion).toBeGreaterThan(WATCH_MAX_SCORE);
+    expect(result.finalScore > WATCH_MAX_SCORE).toBe(bypass);
+    if (!bypass) expect(result.finalScore).toBe(WATCH_MAX_SCORE);
+  });
+
   it("returns CALM for a healthy large-cap coin with all signals available", () => {
     const result = computeDews(
       makeDewsInput({
@@ -579,6 +595,22 @@ describe("DEWS scoring boundaries", () => {
     expect(result!.evidenceKinds).not.toContain("market-price");
     expect(result!.evidenceKinds).not.toContain("dex-liquidity");
     expect(result!.dataQualityScore).toBe(100);
+  });
+
+  it("retains stressed DEX-only market evidence without the sparse-evidence WATCH cap", () => {
+    const result = computeDEWS(makeDewsInput({
+      price: null,
+      priceConfidence: null,
+      dexPriceUsd: 0.9,
+      circulatingCurrent: 4e9,
+      circulatingPrevDay: 5e9,
+      circulatingPrevWeek: 5.5e9,
+    }));
+    expect(result).not.toBeNull();
+    expect(result!.signals.diverg).toMatchObject({ available: true, dexDevBps: 1000 });
+    expect(result!.evidenceKinds).toContain("market-price");
+    expect(result!.score).toBeGreaterThan(35);
+    expect(result!.insufficientEvidenceReason).toBeNull();
   });
 
   it("allows supply contraction plus market divergence to produce elevated risk", () => {

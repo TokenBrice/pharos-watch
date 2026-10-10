@@ -490,7 +490,6 @@ export type DexMeasuredExecutionValidationReason =
   | "tracked-input-mismatch"
   | "stale-observation"
   | "future-observation"
-  | "observation-before-target"
   | "retained-price-mismatch"
   | "retained-tvl-mismatch"
   | "token-reference-price-mismatch"
@@ -665,7 +664,9 @@ export function validateDexMeasuredExecutionProfile(input: {
   if (profile.quoteGenerationId !== input.expectedQuoteGenerationId) issues.add("quote-generation-mismatch");
   if (profile.tokenIn.trackedAssetId !== currentTarget.stablecoinId) issues.add("tracked-input-mismatch");
   if (profile.quotedAt > input.nowSec + 60) issues.add("future-observation");
-  if (profile.quotedAt < quotedTarget.capturedAt) issues.add("observation-before-target");
+  // quotedAt is the pinned source-block clock, not target collection time.
+  // Finalized state can predate capture; generation and exact-snapshot checks
+  // bind it to this target, while the adapter budget below governs freshness.
   if (
     input.nowSec - profile.quotedAt >
     getDexMeasuredExecutionFreshnessMaxSec(profile.adapterProfileId)

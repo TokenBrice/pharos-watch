@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchBalancerPools } from "../fetch-balancer";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { compactDirectApiFetchPhasePools } from "../orchestrator-phases/direct-api";
+import { buildAuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
 
 function cleanPool() {
   return {
@@ -40,6 +42,30 @@ function fantomJunkPool() {
 describe("fetchBalancerPools sanity cap and pool.price footgun", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it.each([true, false])("keeps raw physical census independent of malformed economic rows (identity %s)", async (hasIdentity) => {
+    const rejectedAddress = "0x1234567890123456789012345678901234567890";
+    mockFetch([{ match: "api-v3.balancer.fi", outcomes: [
+      { body: { data: { poolGetPools: [
+        cleanPool(), { chain: "MAINNET", address: hasIdentity ? rejectedAddress : "invalid", poolTokens: null },
+      ] } } },
+      { body: { data: { aggregatorPools: [] } } },
+    ] }], { requireMatch: true });
+    const result = await fetchBalancerPools();
+    expect(result.pools).toHaveLength(1);
+    expect(result.pools.some((pool) => pool.poolAddress === rejectedAddress)).toBe(false);
+    const compacted = compactDirectApiFetchPhasePools({
+      results: [{ name: "Balancer", circuitKey: "balancer-api", normalizedProtocol: "balancer",
+        supportedChains: ["ethereum", "base"], censusScope: "exhaustive", result }],
+      failedSources: [], degradedSources: [], attemptedProtocolChains: [], fallbackSignals: [],
+      sourceWarnings: [], circuitEvents: [],
+    }, { chainAddressToId: new Map(), symbolToChainScopedIds: new Map(), contractMetaByChainAddress: new Map() });
+    const index = buildAuthoritativeStagedPoolConfirmationIndex(compacted.phase.results);
+    // Independent staged observation has this exact physical key, despite rejected metadata.
+    expect(index.confirmedExactKeysByProtocol.get("balancer")?.has(`ethereum:${rejectedAddress}`)).toBe(hasIdentity);
+    expect(index.enforcedChainsByProtocol.get("balancer")?.has("ethereum")).toBe(hasIdentity);
+    expect(index.enforcedChainsByProtocol.get("balancer")?.has("base")).toBe(true);
   });
 
   it("rejects pools with totalLiquidity above the per-source sanity cap", async () => {

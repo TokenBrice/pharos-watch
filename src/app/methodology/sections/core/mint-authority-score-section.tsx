@@ -1,6 +1,6 @@
 import { ContentTable } from "@/components/table";
 import { MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
-import { V9_MINT_POSTURE_BANDS } from "@shared/lib/safety-score-v9/mint-posture";
+import { V9_MINT_POSTURE_BANDS } from "@shared/lib/classification";
 import {
   MethodologyDetails,
   MethodologyFacts,

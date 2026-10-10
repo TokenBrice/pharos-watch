@@ -1,5 +1,5 @@
 import { formatCurrency } from "@shared/lib/format";
-import type { LiquidityCoverageClass, LiquiditySourceMix } from "@shared/types";
+import type { DexLiquidityData, LiquidityCoverageClass, LiquiditySourceMix } from "@shared/types";
 
 const COVERAGE_BADGES: Record<LiquidityCoverageClass, { label: string; className: string }> = {
   primary: {
@@ -34,8 +34,14 @@ const SOURCE_LABELS: Record<string, string> = {
   horizon: "Stellar Horizon",
 };
 
-export function getLiquidityCoverageBadge(coverageClass: LiquidityCoverageClass) {
-  return COVERAGE_BADGES[coverageClass];
+export function getLiquidityCoverageBadge(
+  coverageClass: LiquidityCoverageClass | null | undefined,
+  unavailableReason?: DexLiquidityData["unavailableReason"],
+) {
+  if (unavailableReason) {
+    return { label: "Unavailable", className: COVERAGE_BADGES.unobserved.className };
+  }
+  return COVERAGE_BADGES[coverageClass ?? "unobserved"];
 }
 
 export function formatLiquiditySourceMix(sourceMix: LiquiditySourceMix): string {

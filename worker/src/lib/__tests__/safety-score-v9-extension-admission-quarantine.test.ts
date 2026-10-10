@@ -5,7 +5,7 @@ import {
   buildSafetyScoreV9Candidate,
   type SafetyScoreV9CandidatePipelineResult,
 } from "../safety-score-v9/candidate";
-import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
+import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
 import type { SafetyScoreV9FactSetExtensionV2 } from "../safety-score-v9/fact-set";
 import {
   assessV9Publication,
@@ -15,6 +15,7 @@ import {
   V9_EVALUATION_TEST_TIMEOUT_MS,
   makeV9CohortFixedInput,
   makeV9RoleExtension,
+  makeV9TwoAssetFixedInput,
 } from "../../test-helpers/v9-fixed-input";
 import { alphaMeta } from "./safety-score-v9-fact-set.test-support";
 
@@ -177,6 +178,43 @@ describe("Safety Score v9 extension admission quarantine", { timeout: V9_EVALUAT
     expect(assess(isolated)).toEqual({ decision: "publish", reasons: [], affectedAssetIds: ["alpha"] });
   });
 
+  it("quarantines reserve normalization failure in the dependency prepass while preserving a healthy peer", () => {
+    const fixed = makeV9TwoAssetFixedInput({ omitAlphaReserve: true, clockSec: Date.parse("2026-10-09T12:00:00Z") / 1000 });
+    const healthy = alphaMeta({ id: "beta" });
+    const broken = alphaMeta({
+      reserves: Array.from({ length: 335 }, (_, index) => ({
+        name: `holding-${index}`, pct: 0.3, risk: "very-low", assetClass: "stablecoin",
+        coinId: "beta", depType: "collateral", issuerOrObligor: "issuer:beta",
+        riskFactors: ["counterparty"], liquidityHorizon: "immediate",
+      })),
+      reserveReview: {
+        scope: "full-composition", confidence: "verified", reviewedAt: "2026-10-08",
+        compositionAsOf: "2026-10-07", reviewer: "Fixture reviewer",
+        rationale: "The signed report enumerates the complete reserve book.",
+        compositionBasis: "Signed reserve report", knownUnknownExposure: "None",
+        sources: [{ label: "Reserve report", url: "https://example.com/reserves" }], knownUnknownExposurePct: 0,
+      },
+    });
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: new Map([["alpha", broken], ["beta", healthy]]) });
+    expect(extension.assets[0]!.admissionQuarantine).toMatchObject({
+      code: "fact-build-failed", path: "dependencies",
+      message: "Reviewed reserve rounding has no nonnegative reconciliation row",
+    });
+    expect(extension.assets[1]!.admissionQuarantine).toBeUndefined();
+    const isolated = buildSafetyScoreV9Candidate({ fixedInput: fixed, extension, publishedAtSec: fixed.clockSec });
+    const clean = buildSafetyScoreV9Candidate({
+      fixedInput: fixed, publishedAtSec: fixed.clockSec,
+      registry: { registryFingerprint: fixed.registryFingerprint, metaById: new Map([["alpha", alphaMeta()], ["beta", healthy]]) },
+    });
+    expect(isolated.quarantines.map((entry) => entry.assetId)).toEqual(["alpha"]);
+    expect(isolated.quarantineAffectedAssetIds).toEqual(["alpha"]);
+    expect(isolated.candidate.cards.find((card) => card.id === "alpha")).toMatchObject({ ratingStatus: "pipeline-gap", score: null });
+    const beta = isolated.candidate.cards.find((card) => card.id === "beta")!;
+    expect(beta.ratingStatus).not.toBe("pipeline-gap");
+    expect(cardFinancialState(beta)).toEqual(cardFinancialState(clean.candidate.cards.find((card) => card.id === "beta")!));
+    expect(() => buildSafetyScoreV9BaselineExtension(fixed, { metaById: new Map([["alpha", broken]]) }))
+      .toThrow(/no registry metadata for beta/);
+  });
   it("still fails the whole cohort on global registry, envelope, or asset-identity invalidity", () => {
     expect(() => candidateFor({ ...reviewedExtension(), registryFingerprint: "f".repeat(64) })).toThrow(
       /registry fingerprint/,

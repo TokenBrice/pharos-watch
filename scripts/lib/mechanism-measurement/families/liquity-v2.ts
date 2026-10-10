@@ -1,5 +1,4 @@
 import {
-  decodeAddressWord,
   decodeBoolWord,
   decodeUintWord,
   relativeDeltaPct,
@@ -8,6 +7,8 @@ import {
   type EthCallJournal,
   type MeasurementCheck,
   type PinnedBlock,
+  readJournalUint,
+  readJournalAddress,
 } from "../core";
 import type { LiquityV2MeasurementTarget } from "../targets";
 import type { LiquityV2MeasurementEvidence } from "../schema";
@@ -75,30 +76,11 @@ export async function readLiquityV2Branch({
   labels,
   names,
 }: ReadLiquityV2BranchOptions): Promise<LiquityV2BranchState> {
-  const collateral = decodeUintWord(
-    await caller.call({ name: names.collateral, to: controller, ...LIQUITY_V2_CALLS.getEntireBranchColl }),
-    0,
-    labels.collateral,
-  );
-  caller.recordDecoded(collateral.toString());
-  const debt = decodeUintWord(
-    await caller.call({ name: names.debt, to: controller, ...LIQUITY_V2_CALLS.getEntireBranchDebt }),
-    0,
-    labels.debt,
-  );
-  caller.recordDecoded(debt.toString());
+  const collateral = await readJournalUint(caller, { name: names.collateral, to: controller, ...LIQUITY_V2_CALLS.getEntireBranchColl }, 0, labels.collateral);
+  const debt = await readJournalUint(caller, { name: names.debt, to: controller, ...LIQUITY_V2_CALLS.getEntireBranchDebt }, 0, labels.debt);
   await afterDebt?.(debt);
-  const stabilityPool = decodeAddressWord(
-    await caller.call({ name: names.stabilityPool, to: controller, ...LIQUITY_V2_CALLS.stabilityPool }),
-    labels.stabilityPool,
-  );
-  caller.recordDecoded(stabilityPool);
-  const spDeposits = decodeUintWord(
-    await caller.call({ name: names.deposits, to: stabilityPool, ...depositsCall }),
-    0,
-    labels.deposits,
-  );
-  caller.recordDecoded(spDeposits.toString());
+  const stabilityPool = await readJournalAddress(caller, { name: names.stabilityPool, to: controller, ...LIQUITY_V2_CALLS.stabilityPool }, labels.stabilityPool);
+  const spDeposits = await readJournalUint(caller, { name: names.deposits, to: stabilityPool, ...depositsCall }, 0, labels.deposits);
   const shutdownTime = Number(
     decodeUintWord(
       await caller.call({ name: names.shutdownTime, to: controller, ...LIQUITY_V2_CALLS.shutdownTime }),
@@ -150,15 +132,11 @@ export async function measureLiquityV2(
   const checks: MeasurementCheck[] = [];
   const { token, collateralRegistry } = target.contracts;
 
-  const derivedRegistry = decodeAddressWord(
-    await caller.call({
-      name: "token.collateralRegistryAddress",
-      to: token,
-      ...LIQUITY_V2_CALLS.collateralRegistryAddress,
-    }),
-    "collateralRegistryAddress",
-  );
-  caller.recordDecoded(derivedRegistry);
+  const derivedRegistry = await readJournalAddress(caller, {
+    name: "token.collateralRegistryAddress",
+    to: token,
+    ...LIQUITY_V2_CALLS.collateralRegistryAddress,
+  }, "collateralRegistryAddress");
   requireCheck(
     checks,
     "graph.collateralRegistry",
@@ -166,12 +144,7 @@ export async function measureLiquityV2(
     `token.collateralRegistryAddress() ${derivedRegistry} matches pinned config`,
   );
 
-  const totalSupply = decodeUintWord(
-    await caller.call({ name: "token.totalSupply", to: token, ...LIQUITY_V2_CALLS.totalSupply }),
-    0,
-    "totalSupply",
-  );
-  caller.recordDecoded(totalSupply.toString());
+  const totalSupply = await readJournalUint(caller, { name: "token.totalSupply", to: token, ...LIQUITY_V2_CALLS.totalSupply }, 0, "totalSupply");
   requireCheck(checks, "supply.positive", totalSupply > 0n, `token totalSupply ${totalSupply} is positive`);
 
   const branchCount = Number(
@@ -195,26 +168,18 @@ export async function measureLiquityV2(
 
   const branches: BranchReading[] = [];
   for (let index = 0; index < branchCount; index++) {
-    const troveManager = decodeAddressWord(
-      await caller.call({
-        name: `registry.getTroveManager(${index})`,
-        to: collateralRegistry,
-        ...LIQUITY_V2_CALLS.getTroveManager,
-        args: [BigInt(index)],
-      }),
-      "getTroveManager",
-    );
-    caller.recordDecoded(troveManager);
-    const collateralToken = decodeAddressWord(
-      await caller.call({
-        name: `registry.getToken(${index})`,
-        to: collateralRegistry,
-        ...LIQUITY_V2_CALLS.getToken,
-        args: [BigInt(index)],
-      }),
-      "getToken",
-    );
-    caller.recordDecoded(collateralToken);
+    const troveManager = await readJournalAddress(caller, {
+      name: `registry.getTroveManager(${index})`,
+      to: collateralRegistry,
+      ...LIQUITY_V2_CALLS.getTroveManager,
+      args: [BigInt(index)],
+    }, "getTroveManager");
+    const collateralToken = await readJournalAddress(caller, {
+      name: `registry.getToken(${index})`,
+      to: collateralRegistry,
+      ...LIQUITY_V2_CALLS.getToken,
+      args: [BigInt(index)],
+    }, "getToken");
 
     const {
       collateral,

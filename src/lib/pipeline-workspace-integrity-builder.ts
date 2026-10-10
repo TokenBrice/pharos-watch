@@ -8,6 +8,16 @@ import type {
   PipelineSeverity,
 } from "@/lib/pipeline-workspace-model";
 
+function unknownIntegrityRow(
+  id: string,
+  label: string,
+  rawCode: string,
+  detail: string,
+  currentValue = "Unknown",
+): PipelineIntegrityRow {
+  return { id, label, rawCode, state: "unknown", currentValue, detail };
+}
+
 export function buildPipelineIntegrityModel(data: StatusResponse): PipelineIntegrityModel {
   const publicationRows: PipelineIntegrityRow[] = [];
   const publication = data.publicationHealth;
@@ -32,24 +42,16 @@ export function buildPipelineIntegrityModel(data: StatusResponse): PipelineInteg
       failures.delete(surface.surface);
     });
     failures.forEach((failure, surface) => {
-      publicationRows.push({
-        id: `publication-${surface}`,
-        label: surface,
-        rawCode: surface,
-        state: "unknown",
-        currentValue: "Unavailable",
-        detail: `${failure.message} (${failure.code})`,
-      });
+      publicationRows.push(unknownIntegrityRow(
+        `publication-${surface}`, surface, surface,
+        `${failure.message} (${failure.code})`, "Unavailable",
+      ));
     });
   } else {
-    publicationRows.push({
-      id: "publication-unavailable",
-      label: "Publication health",
-      rawCode: "publicationHealth",
-      state: "unknown",
-      currentValue: "Unknown",
-      detail: "No publication-health payload was returned.",
-    });
+    publicationRows.push(unknownIntegrityRow(
+      "publication-unavailable", "Publication health", "publicationHealth",
+      "No publication-health payload was returned.",
+    ));
   }
 
   const dependencyRows: PipelineIntegrityRow[] = [];
@@ -75,28 +77,20 @@ export function buildPipelineIntegrityModel(data: StatusResponse): PipelineInteg
         });
       });
     if (dependencyRows.length === 0) {
-      dependencyRows.push({
-        id: "dependency-empty",
-        label: "Dependency inventory",
-        rawCode: "dependencyHealth.dependencies",
-        state: "unknown",
-        currentValue: "Unknown",
-        detail: "Dependency health returned an empty inventory.",
-      });
+      dependencyRows.push(unknownIntegrityRow(
+        "dependency-empty", "Dependency inventory", "dependencyHealth.dependencies",
+        "Dependency health returned an empty inventory.",
+      ));
     }
   } else {
-    dependencyRows.push({
-      id: "dependency-unavailable",
-      label: "Dependency health",
-      rawCode: "dependencyHealth",
-      state: "unknown",
-      currentValue: "Unknown",
-      detail: "No dependency-health payload was returned.",
-    });
+    dependencyRows.push(unknownIntegrityRow(
+      "dependency-unavailable", "Dependency health", "dependencyHealth",
+      "No dependency-health payload was returned.",
+    ));
   }
 
-  const stablecoinPublication = data.dataQuality.stablecoinPublication;
-  const repairDebt = data.dataQuality.repairDebt;
+  const stablecoinPublication = data.dataQuality?.stablecoinPublication;
+  const repairDebt = data.dataQuality?.repairDebt;
   const controlRows: PipelineIntegrityRow[] = [
     stablecoinPublication
       ? {
@@ -115,14 +109,10 @@ export function buildPipelineIntegrityModel(data: StatusResponse): PipelineInteg
               : `${stablecoinPublication.presentActiveCount + stablecoinPublication.waivedActiveCount}/${stablecoinPublication.expectedActiveCount}`,
           detail: `${stablecoinPublication.missingActiveIds.length} missing; ${stablecoinPublication.waivedActiveCount} waived; ${stablecoinPublication.expiredWaiverIds.length} expired waivers.`,
         }
-      : {
-          id: "stablecoin-publication",
-          label: "Stablecoin publication coverage",
-          rawCode: "stablecoin_publication",
-          state: "unknown",
-          currentValue: "Unknown",
-          detail: "The status payload did not include publication coverage.",
-        },
+      : unknownIntegrityRow(
+          "stablecoin-publication", "Stablecoin publication coverage", "stablecoin_publication",
+          "The status payload did not include publication coverage.",
+        ),
     repairDebt
       ? {
           id: "repair-debt",
@@ -132,14 +122,10 @@ export function buildPipelineIntegrityModel(data: StatusResponse): PipelineInteg
           currentValue: repairDebt.status === "unknown" ? "Unknown" : String(repairDebt.openCount),
           detail: `Source ${repairDebt.source}; oldest ${repairDebt.oldestAgeSec == null ? "unknown" : formatAge(repairDebt.oldestAgeSec, "old")}.`,
         }
-      : {
-          id: "repair-debt",
-          label: "Pipeline repair debt",
-          rawCode: "repair_debt",
-          state: "unknown",
-          currentValue: "Unknown",
-          detail: "The status payload did not include repair-debt evidence.",
-        },
+      : unknownIntegrityRow(
+          "repair-debt", "Pipeline repair debt", "repair_debt",
+          "The status payload did not include repair-debt evidence.",
+        ),
   ];
 
   const rows = [...publicationRows, ...dependencyRows, ...controlRows];

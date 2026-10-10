@@ -1,6 +1,4 @@
 import {
-  decodeAddressWord,
-  decodeUintWord,
   normalizeAddress,
   ratioToRounded,
   relativeDeltaPct,
@@ -8,6 +6,8 @@ import {
   type EthCallJournal,
   type MeasurementCheck,
   type PinnedBlock,
+  readJournalAddress,
+  readJournalUint,
 } from "../core";
 import type { WrapperMechanismMeasurementEvidence } from "../schema";
 import type { WrapperMechanismMeasurementTarget } from "../targets";
@@ -25,47 +25,28 @@ export async function measureWrapperMechanism(
 ): Promise<WrapperMechanismMeasurementEvidence> {
   const checks: MeasurementCheck[] = [];
   const wrapper = normalizeAddress(target.contracts.wrapper);
-  const asset = decodeAddressWord(
-    await caller.call({ name: "wrapper.asset", to: wrapper, signature: "asset()", selector: "0x38d52e0f" }),
-    "wrapper asset",
-  );
-  caller.recordDecoded(asset);
+  const asset = await readJournalAddress(caller, { name: "wrapper.asset", to: wrapper, signature: "asset()", selector: "0x38d52e0f" }, "wrapper asset");
   requireCheck(
     checks,
     "graph.asset",
     asset === normalizeAddress(target.contracts.expectedAsset),
     `wrapper asset ${asset} matches configured parent token`,
   );
-  const totalSupplyRaw = decodeUintWord(
-    await caller.call({ name: "wrapper.totalSupply", to: wrapper, signature: "totalSupply()", selector: "0x18160ddd" }),
-    0,
-    "wrapper supply",
-  );
-  caller.recordDecoded(totalSupplyRaw.toString());
-  const totalAssetsRaw = decodeUintWord(
-    await caller.call({ name: "wrapper.totalAssets", to: wrapper, signature: "totalAssets()", selector: "0x01e1d114" }),
-    0,
-    "wrapper total assets",
-  );
-  caller.recordDecoded(totalAssetsRaw.toString());
+  const totalSupplyRaw = await readJournalUint(caller, { name: "wrapper.totalSupply", to: wrapper, signature: "totalSupply()", selector: "0x18160ddd" }, 0, "wrapper supply");
+  const totalAssetsRaw = await readJournalUint(caller, { name: "wrapper.totalAssets", to: wrapper, signature: "totalAssets()", selector: "0x01e1d114" }, 0, "wrapper total assets");
   requireCheck(
     checks,
     "wrapper.positive-state",
     totalSupplyRaw > 0n && totalAssetsRaw > 0n,
     `wrapper supply ${totalSupplyRaw} and assets ${totalAssetsRaw} are positive`,
   );
-  const convertedAssetsRaw = decodeUintWord(
-    await caller.call({
-      name: "wrapper.convertToAssets(totalSupply)",
-      to: wrapper,
-      signature: "convertToAssets(uint256)",
-      selector: "0x07a2d13a",
-      args: [totalSupplyRaw],
-    }),
-    0,
-    "wrapper converted assets",
-  );
-  caller.recordDecoded(convertedAssetsRaw.toString());
+  const convertedAssetsRaw = await readJournalUint(caller, {
+    name: "wrapper.convertToAssets(totalSupply)",
+    to: wrapper,
+    signature: "convertToAssets(uint256)",
+    selector: "0x07a2d13a",
+    args: [totalSupplyRaw],
+  }, 0, "wrapper converted assets");
   const accountingDeltaPct = Math.abs(relativeDeltaPct(convertedAssetsRaw, totalAssetsRaw));
   requireCheck(
     checks,

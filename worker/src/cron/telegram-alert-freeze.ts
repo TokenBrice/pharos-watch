@@ -2,29 +2,21 @@ import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtim
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import { parseJsonObject } from "../lib/json-parse";
 import { logTelegramEvent } from "../lib/telegram/log";
+import type { FreezeAlert } from "../lib/telegram/alerts-formatting";
 
 /** The tape projector runs every 30 minutes; two missed slots fail closed. */
 const TAPE_FRESHNESS_SEC = 60 * 60;
+/** Four six-hour blacklist scan slots, including short outage recovery. */
+export const FREEZE_RECOVERY_WINDOW_SEC = 24 * 60 * 60;
 const TAPE_PAGE_LIMIT = 500;
 const FREEZE_ROW_HOLD_KEY = "alert:freeze-tape-row-hold";
 const FREEZE_ROW_HOLD_RETRY_LIMIT = 3;
-
-export interface FreezeAlert {
-  stablecoinId: string;
-  symbol: string;
-  eventType: "blacklist" | "unblacklist" | "destroy";
-  chainName: string;
-  amountUsdAtEvent: number | null;
-  /** Immutable tape identity, which embeds the blacklist_events source identity. */
-  tapeEventId: string;
-  /** Immutable blacklist_events.id retained by the tape projection. */
-  sourceEventId: string;
-}
 
 interface FreezeTapeRow {
   id: number;
   event_id: string;
   type: "freeze.blocked" | "freeze.unblocked" | "freeze.destroyed";
+  ts: number;
   payload_json: string;
 }
 
@@ -137,7 +129,7 @@ export async function loadFreshFreezeAlerts(
     return { state: "unseeded", alerts: [], cursor: latest?.id == null ? null : Number(latest.id) };
   }
   const rows = await db.prepare(
-    `SELECT id, event_id, type, payload_json
+    `SELECT id, event_id, type, ts, payload_json
        FROM tape_events
       WHERE id > ?
         AND type IN ('freeze.blocked', 'freeze.unblocked', 'freeze.destroyed')
@@ -148,6 +140,9 @@ export async function loadFreshFreezeAlerts(
   const alerts: FreezeAlert[] = [];
   let unparseable: { id: number; reason: FreezeRowDropReason } | null = null;
   for (const row of results) {
+    // Historical backfills remain visible on Tape, but must not become new alerts.
+    // Keep them in the insertion-id page so their ids still advance the cursor.
+    if (Number(row.ts) < (nowSec - FREEZE_RECOVERY_WINDOW_SEC) * 1000) continue;
     const parsed = parseFreezeRow(row);
     if ("alert" in parsed) {
       alerts.push(parsed.alert);

@@ -139,6 +139,11 @@ export type TargetDeployment =
       config: CurveCompositePoolPolicy & { endpointAddress: `0x${string}` };
     };
 
+/** These adapters admit their own pinned header and supply its source clock. */
+export function hasAdapterOwnedDexSourceHeader(kind: TargetDeployment["kind"]): boolean {
+  return kind === "curve-stableswap" || kind === "curve-stableswap-ng" || kind === "curve-composite";
+}
+
 export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): TargetDeployment | null {
   const registration = getDexExecutionCapabilityRegistration(target.adapterProfileId);
   if (!registration) return null;
@@ -339,7 +344,10 @@ export function estimateAdmissionCohortRpcRequestBreakdown(
   });
   const chainSetupRpcRequests = new Set(
     executable.map((row) => row.target.chain.trim().toLowerCase()),
-  ).size;
+  ).size + new Set(
+    executable.filter((row) => !hasAdapterOwnedDexSourceHeader(row.deployment.kind))
+      .map((row) => row.target.chain.trim().toLowerCase()),
+  ).size; // One shared pinned-header read only where adapters do not already own it.
   const deployments = new Map<string, TargetDeployment>();
   for (const row of executable) {
     const deploymentKey = [

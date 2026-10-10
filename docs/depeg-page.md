@@ -70,10 +70,14 @@ One Beam metric" shape required by `design-language.md#feature-page-heroes`.
   band, and a **double-ring halo marks an elevated coin that is also in a confirmed live depeg**
   (`PegSummaryCoin.activeDepeg` intersected with the radar's elevated set — see
   [Universe scope](#universe-scope)). Every shape carries a field.
+  Unavailable supply retains a neutral, band-based size rather than the measured-small tier.
+  Tooltip and keyboard announcements name missing supply; an explicit observed zero remains a
+  measured-zero cap, and unavailable caps sort after observations within each severity band.
 - **Footer band:** conditional reliability caveats only, and nothing when the data is healthy.
 - **Calm state:** at zero active depegs the One Beam reads `0 — all pegs holding` and no halos are
   drawn, but the radar still plots precursor WATCH/ALERT coins. Zero confirmed incidents is not the
   same claim as zero stress.
+- **Independent availability:** missing peg summary, DEWS snapshot/catalog or first event page yields `—` and a source-specific reason for its headline figures. Successful empty responses retain observed zeroes; a query error never manufactures an empty observation.
 
 ### Metric ownership
 
@@ -94,7 +98,7 @@ the same response, which is the easiest mistake to make here:
 | Live-peg-status assets | `usePegSummary()` `summary.*`, counted only where `currentBps !== null` | hero holding-peg split, median deviation, worst live move, active count |
 | Peg-catalog assets | `usePegSummary()` `coins[]`, every returned row | control board rows and pagination, `trackedIds`, alert-queue scope, tracked ALERT+ count |
 | DEWS-covered assets | `useStressSignals()` | radar marks, radar centre caption, legend band counts |
-| Open resolver rows | `useDepegResolver()` | forecast worklist and its tier summary |
+| Resolver incidents / valid frozen forecasts | `useDepegResolver()` | worklist includes all explicit states; tier summary counts only valid frozen predictions |
 
 They are near each other and never equal — the first two differ by every row without a live
 deviation. Copy must therefore say "with live peg status" or "of the peg catalog" explicitly; the
@@ -123,9 +127,9 @@ behind an explicit toggle that mounts them only when opened.
   margin cannot be satisfied by a couple of basis points of jitter. DDR rows are not control-board
   rows, so the board's `__attention` comparator does not apply; this is the route's own policy.
 - **Shared derivation:** `summarizeResolverBook()` in
-  `src/components/depeg-resolver-book-summary.ts` is the single source for the book's tier split,
-  past-peak count and total. The hero's recovery posture and this module's header both read it, so
-  they cannot disagree.
+  `src/components/depeg-resolver-book-summary.ts` owns the valid frozen prediction tier split,
+  past-peak count and forecast total; `rowCount` separately counts incident browsing rows.
+  The hero's recovery posture excludes pending, no-call and invalidated outcomes.
 - **Header scope:** the recovery-verdict split belongs to the hero (see
   [Metric ownership](#metric-ownership)). This module's header states only its book size and which
   slice is on screen, so four cards are never mistaken for the whole book. The retired "Outlook
@@ -137,6 +141,10 @@ behind an explicit toggle that mounts them only when opened.
 
 `DepegControlBoard` is the exact-value workbench: URL-backed filters, sort modes, ranked rows,
 pagination. It owns per-coin values only; page-level aggregates belong to the hero.
+
+An absent live deviation or DEWS reading yields a neutral `unknown` status, never green `clear`;
+known live, pending, floor, warning and danger states retain precedence. Nullable peg-health,
+DEWS and deviation metrics sort last in both directions, separately from observed zero.
 
 Its multi-column grid starts at `lg`, not `md`. The six minimum column tracks plus gaps need roughly
 820px, and a 768px viewport leaves rows about 734px, which clipped the last column with no horizontal

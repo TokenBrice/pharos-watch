@@ -41,6 +41,31 @@ describe("adaptSolsticeAttestation", () => {
     expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-04-15") / 1000);
   });
 
+  it.each(["ascending", "descending", "mixed"] as const)("selects the latest supported date/ts clock in a %s timeline", (order) => {
+    const older = { date: "2026-10-07", reserves: 200, supply: 100 };
+    const newer = order === "mixed"
+      ? { ts: Date.parse("2026-10-08"), reserves: 50, supply: 100 }
+      : { date: "2026-10-08", reserves: 50, supply: 100 };
+    const timeline = order === "descending" ? [newer, older] : [older, newer];
+    const result = adaptSolsticeAttestation({ res: "ok", data: { reserves: { timeline } } });
+    expect(result.metadata).toMatchObject({
+      totalReserveUsd: 50,
+      supplyUsd: 100,
+      collateralizationRatio: 0.5,
+      sourceTimestamp: Date.parse("2026-10-08") / 1000,
+    });
+  });
+
+  it("fails closed on malformed amounts in the newest date-only point", () => {
+    expect(() => adaptSolsticeAttestation({
+      res: "ok",
+      data: { reserves: { timeline: [
+        { date: "2026-10-07", reserves: 200, supply: 100 },
+        { date: "2026-10-08", supply: 100 },
+      ] } },
+    })).toThrow(/missing reserve\/supply/);
+  });
+
   it("binds aggregate freshness to the older selected point timestamp", () => {
     const result = adaptSolsticeAttestation({
       res: "ok",

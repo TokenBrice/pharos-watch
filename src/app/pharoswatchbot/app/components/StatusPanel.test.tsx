@@ -2,13 +2,14 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { baseState } from "../mini-app-test-fixtures";
+import { baseState, makeMiniAppState, makeSubscribedCoin } from "@shared/test-utils/telegram-mini-app-state";
 import type { StatusPanelProps } from "./StatusPanel";
 import { StatusPanel } from "./StatusPanel";
 
 function renderStatus(overrides: Partial<StatusPanelProps> = {}): StatusPanelProps {
   const props: StatusPanelProps = {
     state: baseState,
+    nowSec: 1_700_000_000,
     canMutate: true,
     isMutating: false,
     pendingOperation: null,
@@ -25,6 +26,30 @@ function renderStatus(overrides: Partial<StatusPanelProps> = {}): StatusPanelPro
 afterEach(cleanup);
 
 describe("StatusPanel", () => {
+  const disabledGlobals = { dews: false, depeg: false, safety: false, launch: false, reserve: false, freeze: false };
+
+  it.each([
+    ["retained empty subscriber", makeMiniAppState({ subscriber: { globalAlerts: disabledGlobals }, subscriptions: [], presets: [] }), "No enabled alerts"],
+    ["explicit-off row", makeMiniAppState({ subscriber: { globalAlerts: disabledGlobals }, subscriptions: [makeSubscribedCoin({})] }), "No enabled alerts"],
+    ["indefinite pause", makeMiniAppState({ subscriber: { snoozeUntilTs: 4_102_444_800 } }), "Alerts are paused indefinitely"],
+    ["future snooze", makeMiniAppState({ subscriber: { snoozeUntilTs: 9_000_000_000 } }), "Alerts are temporarily snoozed"],
+  ])("does not claim active delivery for %s", (_scenario, state, heading) => {
+    renderStatus({ state });
+    expect(screen.getByRole("heading", { name: heading })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Alerts are active" })).toBeNull();
+    expect(screen.getByText("Last delivery")).toBeTruthy();
+  });
+
+  it.each([
+    ["global", makeMiniAppState({ subscriptions: [] })],
+    ["direct", makeMiniAppState({ subscriber: { globalAlerts: disabledGlobals }, subscriptions: [makeSubscribedCoin({ freeze: true })] })],
+    ["preset", makeMiniAppState({ subscriber: { globalAlerts: disabledGlobals }, subscriptions: [], presets: [{ id: "usd-top25", label: "USD Top 25", alertTypes: { dews: true, depeg: false, safety: false }, depegStepBps: null }] })],
+    ["expired snooze", makeMiniAppState({ subscriber: { snoozeUntilTs: 1 } })],
+  ])("claims active alerts for enabled %s coverage", (_scenario, state) => {
+    renderStatus({ state });
+    expect(screen.getByRole("heading", { name: "Alerts are active" })).toBeTruthy();
+  });
+
   it("selects recommended setup, snooze, and pause operations", () => {
     const onMutate = vi.fn();
     renderStatus({ onMutate });
@@ -52,6 +77,24 @@ describe("StatusPanel", () => {
     expect(screen.getByText(/Quiet until/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Clear snooze" }));
     expect(onMutate).toHaveBeenLastCalledWith({ kind: "clear-snooze" });
+  });
+
+  it("expires a timed snooze exactly when the supplied client clock reaches its deadline", () => {
+    const deadline = 1_800_000_000;
+    const props = renderStatus({
+      state: makeMiniAppState({ subscriber: { snoozeUntilTs: deadline } }),
+      nowSec: deadline - 1,
+    });
+    expect(screen.getByRole("heading", { name: "Alerts are temporarily snoozed" })).toBeTruthy();
+    expect(screen.getByText(/Quiet until/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Clear snooze" })).toBeTruthy();
+
+    cleanup();
+    render(<StatusPanel {...props} nowSec={deadline} />);
+    expect(screen.getByRole("heading", { name: "Alerts are active" })).toBeTruthy();
+    expect(screen.queryByText(/Quiet until/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear snooze" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Snooze alerts for 4h" })).toBeTruthy();
   });
 
   it("shows group-only and recent-delivery failure guidance without enabling writes", () => {

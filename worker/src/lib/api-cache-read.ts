@@ -226,7 +226,7 @@ export function createCacheHandler(
       if (canonicalUpdatedAt != null) {
         const responseReady = await getResponseReadyCache(db, cacheKey);
         if (responseReady?.updatedAt === canonicalUpdatedAt) {
-          const freshness = buildFreshnessMeta(canonicalUpdatedAt, maxAgeSec);
+          const freshness = buildFreshnessMeta(canonicalUpdatedAt, maxAgeSec, cacheKey);
           const trustedBody = options.responseReadySchemaId
             ? decodeResponseReadyCacheBody(cacheKey, responseReady, options.responseReadySchemaId)
             : null;
@@ -272,7 +272,7 @@ export function createCacheHandler(
       }
     }
 
-    const freshness = buildFreshnessMeta(cached.updatedAt, maxAgeSec);
+    const freshness = buildFreshnessMeta(cached.updatedAt, maxAgeSec, cacheKey);
     const headers = addFreshnessHeaders({
       "Content-Type": "application/json",
       "Cache-Control": cacheControl,

@@ -274,7 +274,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       bps: worstBps,
       mcapUsd,
       ageDays: round1(ageDays),
-      factor: Math.round(getDepreciationFactor(ageDays) * 100) / 100,
+      factor: getDepreciationFactor(ageDays),
     });
   }
 

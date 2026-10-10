@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HomeAltRankingsSection } from "@/components/home-alt-rankings-section";
 import { ActiveDepegsCard } from "@/components/home-alt-mini-cards/active-depegs-card";
@@ -11,6 +11,8 @@ import { PegHealthCard } from "@/components/home-alt-mini-cards/peg-health-card"
 import { PsiBandCard } from "@/components/home-alt-mini-cards/psi-band-card";
 import { RecentFreezesCard } from "@/components/home-alt-mini-cards/recent-freezes-card";
 import { SupplyMovesCard } from "@/components/home-alt-mini-cards/supply-moves-card";
+import type { ApiMeta } from "@/lib/api";
+import { makeMintBurnCoinValuation, makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 type MonitoringState = "loading" | "ready" | "empty" | "unavailable" | "stale-with-data";
 
@@ -161,6 +163,7 @@ const freezeSummaryReady = {
     recentFreezeCount7d: 1,
     recentFreezeAmount24hUsd: 1_000,
     recentFreezeAmount7dUsd: 1_000,
+    valuationCoverage: { recent24h: { knownCount: 1, unavailableCount: 0 }, recent7d: { knownCount: 1, unavailableCount: 0 } },
   },
 };
 const freezeSummaryEmpty = {
@@ -169,6 +172,7 @@ const freezeSummaryEmpty = {
     recentFreezeCount7d: 0,
     recentFreezeAmount24hUsd: 0,
     recentFreezeAmount7dUsd: 0,
+    valuationCoverage: { recent24h: { knownCount: 0, unavailableCount: 0 }, recent7d: { knownCount: 0, unavailableCount: 0 } },
   },
 };
 
@@ -191,7 +195,7 @@ const SURFACES: SurfaceCase[] = [
       });
       usePegSummaryMock.mockReturnValue(queryFor(state, pegReady, pegEmpty));
     },
-    emptyText: "All on peg",
+    emptyText: "No active incidents",
     readyText: "USDC",
   },
   {
@@ -252,8 +256,14 @@ const SURFACES: SurfaceCase[] = [
   },
 ];
 
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(UPDATED_AT);
+});
+
 afterEach(() => {
   vi.clearAllMocks();
+  vi.useRealTimers();
 });
 
 describe.each(SURFACES)(
@@ -296,7 +306,7 @@ describe.each(SURFACES)(
 
     it("keeps retained data visible with a stale warning", () => {
       renderState("stale-with-data");
-      expect(screen.getByRole("status").textContent).toContain("showing the last available data");
+      expect(screen.getByRole("status").textContent).toMatch(/saved data|older snapshot|last available data/);
       expect(screen.queryAllByText(readyText).length).toBeGreaterThan(0);
     });
   },
@@ -332,6 +342,7 @@ describe("RecentFreezesCard authoritative totals", () => {
             recentFreezeCount7d: 350,
             recentFreezeAmount24hUsd: 123_456,
             recentFreezeAmount7dUsd: 456_789,
+            valuationCoverage: { recent24h: { knownCount: 200, unavailableCount: 0 }, recent7d: { knownCount: 350, unavailableCount: 0 } },
           },
         },
         freezeSummaryEmpty,
@@ -348,5 +359,61 @@ describe("RecentFreezesCard authoritative totals", () => {
     fireEvent.click(screen.getByRole("button", { name: "7d" }));
     expect(screen.getByText("350X")).toBeTruthy();
     expect(screen.getByText("$457K")).toBeTruthy();
+  });
+});
+
+describe.each(SURFACES.slice(0, 6))("$Component.name producer health", ({ Component, configure, emptyText }) => {
+  it.each([
+    ["old generation", { updatedAt: UPDATED_AT / 1000 - 7 * 86400, ageSeconds: 7 * 86400, status: "fresh" }, /older snapshot/],
+    ["quality warning", { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "fresh", warning: "199 pharos source degraded" }, /quality warning/],
+    ["non-fresh dependency", { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "fresh", dependencies: { source: { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "stale" } } }, /quality warning/],
+  ] as const)("warns for a successful response with %s despite a fresh receipt", (_case, meta, warning) => {
+    configure("ready");
+    for (const hook of [useActiveDepegEventsMock, usePegSummaryMock, useMintBurnFlowsMock, useStabilityIndexMock, useStablecoinsMock, useBlacklistEventsPageMock, useBlacklistSummaryMock]) {
+      const result = hook.getMockImplementation()?.();
+      if (result) hook.mockReturnValue({ ...result, dataUpdatedAt: UPDATED_AT, meta });
+    }
+    render(<Component />);
+    expect(screen.getByRole("status").textContent).toMatch(warning);
+  });
+
+  it("does not discard producer warnings on an observed empty result", () => {
+    configure("empty");
+    for (const hook of [useActiveDepegEventsMock, usePegSummaryMock, useMintBurnFlowsMock, useStabilityIndexMock, useStablecoinsMock, useBlacklistEventsPageMock, useBlacklistSummaryMock]) {
+      const result = hook.getMockImplementation()?.();
+      if (result) hook.mockReturnValue({ ...result, meta: { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "degraded" } satisfies ApiMeta });
+    }
+    render(<Component />);
+    expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.queryAllByText(emptyText).length).toBeGreaterThan(0);
+  });
+});
+
+describe("MintBurnCard activity and valuation", () => {
+  it.each([
+    ["no events", { has24hActivity: false, mintCount24h: 0, burnCount24h: 0, mintVolume24hUsd: 0, burnVolume24hUsd: 0, netFlow24hUsd: 0 }, "No 24h activity"],
+    ["balanced events", { has24hActivity: true, mintCount24h: 1, burnCount24h: 1, mintVolume24hUsd: 100_000_000, burnVolume24hUsd: 100_000_000, netFlow24hUsd: 0 }, "Balanced 24h mint / burn activity"],
+    ["inferred balanced events", { has24hActivity: undefined, mintCount24h: 1, burnCount24h: 1, mintVolume24hUsd: 100_000_000, burnVolume24hUsd: 100_000_000, netFlow24hUsd: 0 }, "Balanced 24h mint / burn activity"],
+    ["nonzero flow", { has24hActivity: true, mintCount24h: 1, burnCount24h: 0, mintVolume24hUsd: 100_000_000, burnVolume24hUsd: 0, netFlow24hUsd: 100_000_000 }, "USDC"],
+    ["unavailable valuation", { has24hActivity: true, mintCount24h: 1, burnCount24h: 1, netFlow24hUsd: null }, "Net flows unavailable"],
+  ] as const)("distinguishes %s", (_label, activity, expected) => {
+    const data = {
+      coins: [makeMintBurnFlowCoin({
+        ...activity,
+        valuation: makeMintBurnCoinValuation({
+          completeness: activity.netFlow24hUsd == null ? "partial" : "complete",
+          unpricedMintEventCount: activity.netFlow24hUsd == null ? 1 : 0,
+        }),
+      })],
+      gauge: { band: "NEUTRAL", score: 0 },
+    };
+    useMintBurnFlowsMock.mockReturnValue(queryFor("ready", data, flowEmpty));
+
+    render(<MintBurnCard />);
+
+    expect(screen.getByText(expected)).toBeTruthy();
+    for (const other of ["No 24h activity", "Balanced 24h mint / burn activity", "Net flows unavailable"]) {
+      if (other !== expected) expect(screen.queryByText(other)).toBeNull();
+    }
   });
 });

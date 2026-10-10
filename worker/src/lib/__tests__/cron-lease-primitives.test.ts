@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { acquireCronLease, releaseCronLease, renewCronLease } from "../cron-lease-primitives";
-import { handleBackfillStabilityIndex } from "../../api/backfill-stability-index";
+import { handleBackfillStabilityIndex } from "../../../scripts/backfills/backfill-stability-index";
 
 const OVERLOAD = new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
 
@@ -10,7 +10,7 @@ describe("standalone cron lease primitives", () => {
     vi.restoreAllMocks();
   });
 
-  it("retries the acquire, renew, and release lifecycle used by the backfill route", async () => {
+  it("retries the acquire, renew, and release lifecycle used by the backfill CLI", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-17T12:00:00Z"));
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -45,7 +45,7 @@ describe("standalone cron lease primitives", () => {
     expect(Object.fromEntries(calls)).toEqual({ acquire: 2, renew: 2, release: 2 });
   });
 
-  it("lets the backfill route complete after a forced acquire overload", async () => {
+  it("lets the backfill job complete after a forced acquire overload", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-17T12:00:00Z"));
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -92,7 +92,7 @@ describe("standalone cron lease primitives", () => {
 
     const pending = handleBackfillStabilityIndex({
       db,
-      url: new URL("https://api.pharos.watch/api/backfill-stability-index"),
+      url: new URL("https://operator.invalid/jobs/backfill-stability-index"),
     });
     await vi.advanceTimersByTimeAsync(1_000);
     const response = await pending;

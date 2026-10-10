@@ -16,7 +16,11 @@ describe("cors helpers", () => {
     expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://ops.pharos.watch");
     expect(response.headers.get("Vary")).toBe("Origin");
     const exposed = response.headers.get("Access-Control-Expose-Headers")?.split(", ");
-    expect(exposed).toEqual(expect.arrayContaining(["X-Data-Updated-At", "X-Data-Freshness", "X-Data-Freshness-Reason", "X-Safety-Score-Status"]));
+    expect(exposed).toEqual(expect.arrayContaining([
+      "X-Data-Updated-At", "X-Data-Freshness", "X-Data-Freshness-Reason", "X-Safety-Score-Status",
+      "X-Data-Assessed-At", "X-Data-Freshness-Budget", "X-Safety-Score-Updated-At",
+      "X-Safety-Score-Generation", "X-Safety-Score-Assessed-At", "X-Safety-Score-Freshness-Budget",
+    ]));
   });
 
   it("returns 403 without ACAO for a disallowed OPTIONS preflight", () => {

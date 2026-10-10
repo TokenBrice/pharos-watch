@@ -25,10 +25,10 @@ Public mint/burn availability causes (`mint_burn_public_degraded`, `mint_burn_pu
 
 ### Historical price debt
 
-The request contract is canonical in [API Reference: `POST /api/backfill-mint-burn-prices`](../api-reference-admin.md#post-apibackfill-mint-burn-prices). Operationally:
+The command contract is canonical in [Operator runbook: historical mint/burn prices](./one-shot-backfills.md#backfill-mint-burn-prices). Operationally:
 
 1. Preview a bounded batch and review every disposition, especially `irreducible` and provider-retry outcomes.
-2. Before mutation, take a fresh D1 Time Travel bookmark. Execute the same scope with the required confirmation, bookmark, and a unique `Idempotency-Key`.
+2. Before mutation, take a fresh D1 Time Travel bookmark and coordinate a maintenance window for the [atomic import availability impact](./one-shot-backfills.md#transport-safety). Execute the same scope with `--execute --allow-atomic-import`, the required confirmation, bookmark, and a unique `--idempotency-key`.
 3. Repeat until both `backlog.unclassified` and `backlog.pendingAggregate` are zero. A pending aggregate rebuild must finish before more price rows are attempted.
 4. Reopen `irreducible` rows only after adding or repairing a named event-day historical source. Current spot, peg-par, and adjacent-day prices are not substitutes.
 5. No lane values an event with a current quote. Since mint-burn-flow v6.23, live ingestion and the 48-hour auto-heal admit only evidence whose actual observation time is within ±24 hours of the event (a `supply_history` snapshot price through its recorded `price_observed_at`, or an in-window replay-safe `price_cache` observation); anything else stays NULL and enters this backlog. Expect this for NAV tokens over weekends/holidays (observation older than 24h) and for nominal-par assets. Heal skips coins with no admissible evidence in its 48-hour window, so their rows age into this historical backlog instead of blocking the auto-heal budget. The operator path is stricter still: exact UTC event-day evidence only.

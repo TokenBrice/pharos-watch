@@ -1,20 +1,23 @@
 import { pathToFileURL } from "node:url";
 import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
-import { buildBlacklistAddressCountKey } from "../../shared/lib/blacklist";
-import { computeBlacklistAmountUsdAtEvent } from "../../shared/lib/blacklist";
-import { buildBlacklistActiveRecords } from "../../shared/lib/blacklist-active-records";
-import { getBlacklistConfigsForSymbolAndChain } from "../src/lib/blacklist-contracts";
+import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
+import { buildBlacklistActiveRecords } from "@shared/lib/blacklist-active-records";
+import { getBlacklistConfigsForSymbolAndChain, type ContractEventConfig } from "../src/lib/blacklist-contracts";
 import { buildChainRpcs } from "../src/lib/chain-registry";
 import { decimalNumberFromBigInt } from "../src/lib/bigint";
 import { encodeBalanceOfCallData } from "../src/lib/evm-selectors";
 import { createBudget, createRateLimiter } from "../src/lib/evm-logs";
 import { fetchEvmTokenCurrentBalance } from "../src/lib/blacklist/balance-providers";
 import { tronBase58ToHex } from "../src/lib/tron-address";
-import type { BlacklistStablecoin } from "../../shared/types/market";
+import type { BlacklistStablecoin } from "@shared/types/market";
 import { BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY } from "../src/lib/blacklist-current-balances";
 import { describeDestructiveOperationMode, parseDestructiveOperationArgs } from "./lib/destructive-operation-guard";
 import { parsePositiveInteger } from "./lib/kyc-rip";
 import { createWorkerD1Client, sqlString, type RemoteD1Client } from "./lib/remote-d1";
+import {
+  applyBlacklistCurrentBalanceMaintenance,
+  type CurrentBalanceMaintenanceRow,
+} from "./lib/blacklist-current-balance-maintenance";
 
 type BlacklistEventRow = {
   id: string;
@@ -75,30 +78,10 @@ Options:
   --stablecoin <symbol>        Stablecoin symbol (default: USDT)
   -h, --help                   Show this help`;
 
-type CurrentBalanceWriteRow = {
-  id: string;
-  stablecoin: string;
-  chainId: string;
-  address: string;
-  amountNative: number | null;
-  amountUsd: number | null;
-  source: string;
-  status: "resolved" | "provider_failed";
-  observedAt: number;
-  attemptCount: number;
-  lastAttemptedAt: number;
-  lastErrorClass: string | null;
-};
+type CurrentBalanceWriteRow = CurrentBalanceMaintenanceRow;
 
 type BlacklistRebuildD1Client = Pick<RemoteD1Client, "query">;
 
-function buildCurrentBalanceId(stablecoin: string, chainId: string, address: string): string {
-  return buildBlacklistAddressCountKey(
-    stablecoin as Parameters<typeof buildBlacklistAddressCountKey>[0],
-    chainId,
-    address,
-  );
-}
 
 export function parseArgs(argv: string[]): ScriptOptions {
   const { mode: operationMode, values } = parseDestructiveOperationArgs({
@@ -136,15 +119,17 @@ export function parseArgs(argv: string[]): ScriptOptions {
 }
 
 function buildCurrentBalanceWriteRow(
-  stablecoin: string,
+  stablecoin: BlacklistStablecoin,
   chainId: string,
   address: string,
+  identity: Pick<ContractEventConfig, "configKey" | "contractAddress">,
   observedAt: number,
   amount: number | null,
   errorClass: string | null = null,
 ): CurrentBalanceWriteRow {
   return {
-    id: buildCurrentBalanceId(stablecoin as Parameters<typeof buildCurrentBalanceId>[0], chainId, address),
+    configKey: identity.configKey,
+    contractAddress: identity.contractAddress,
     stablecoin,
     chainId,
     address,
@@ -156,6 +141,8 @@ function buildCurrentBalanceWriteRow(
     source: "current_balance",
     status: amount == null ? "provider_failed" : "resolved",
     observedAt,
+    lastSuccessfulObservedAt: amount == null ? null : observedAt,
+    consecutiveFailures: amount == null ? 1 : 0,
     attemptCount: 1,
     lastAttemptedAt: observedAt,
     lastErrorClass: amount == null ? (errorClass ?? "provider_null") : null,
@@ -192,56 +179,24 @@ export function assertBlacklistRebuildWriterGuard(d1: BlacklistRebuildD1Client, 
   }
 }
 
-export function buildCurrentBalanceMutationStatements(
-  stablecoin: string,
-  chainId: string,
+export function applyCurrentBalanceRebuild(
+  d1: RemoteD1Client,
   rowsToWrite: readonly CurrentBalanceWriteRow[],
-): string[] {
-  const activeIds = rowsToWrite.map((row) => sqlString(row.id));
-  const staleRowPredicate = activeIds.length > 0 ? ` AND id NOT IN (${activeIds.join(", ")})` : "";
-  // SAFETY: identifiers are fixed; every interpolated value is SQL-quoted by sqlString.
-  return [
-    // Keep active rows in place so provider_failed upserts can retain their last resolved values.
-    // SAFETY: stablecoin/chainId/ids are escaped via sqlString; predicate is built from escaped literals only.
-    `DELETE FROM blacklist_current_balances WHERE stablecoin = ${sqlString(stablecoin)} AND chain_id = ${sqlString(chainId)}${staleRowPredicate};`,
-    ...rowsToWrite.map(
-      (row) =>
-        `INSERT INTO blacklist_current_balances (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at, attempt_count, last_attempted_at, last_error_class)
-       VALUES (${sqlString(row.id)}, ${sqlString(row.stablecoin)}, ${sqlString(row.chainId)}, ${sqlString(row.address)}, ${row.amountNative ?? "NULL"}, ${row.amountUsd ?? "NULL"}, ${sqlString(row.source)}, ${sqlString(row.status)}, ${row.observedAt}, ${row.attemptCount}, ${row.lastAttemptedAt}, ${sqlString(row.lastErrorClass)})
-       ON CONFLICT(id) DO UPDATE SET
-         amount_native = CASE
-           WHEN excluded.status = 'provider_failed'
-             THEN COALESCE(blacklist_current_balances.amount_native, excluded.amount_native)
-           ELSE excluded.amount_native
-         END,
-         amount_usd = CASE
-           WHEN excluded.status = 'provider_failed'
-             THEN COALESCE(blacklist_current_balances.amount_usd, excluded.amount_usd)
-           ELSE excluded.amount_usd
-         END,
-         source = CASE
-           WHEN excluded.status = 'provider_failed'
-             THEN COALESCE(blacklist_current_balances.source, excluded.source)
-           ELSE excluded.source
-         END,
-         status = excluded.status,
-         observed_at = CASE
-           WHEN excluded.status = 'provider_failed'
-             AND (blacklist_current_balances.amount_native IS NOT NULL OR blacklist_current_balances.amount_usd IS NOT NULL)
-             THEN blacklist_current_balances.observed_at
-           ELSE excluded.observed_at
-         END,
-         attempt_count = blacklist_current_balances.attempt_count + 1,
-         last_attempted_at = excluded.last_attempted_at,
-         last_error_class = excluded.last_error_class;`,
-    ),
-  ];
+): void {
+  assertBlacklistRebuildWriterGuard(d1);
+  applyBlacklistCurrentBalanceMaintenance(
+    d1,
+    rowsToWrite,
+    "blacklist-current-balances",
+    () => assertBlacklistRebuildWriterGuard(d1),
+  );
 }
 
 async function fetchTronCurrentBalanceRowsInBatches(
-  active: Array<{ stablecoin: string; chainId: string; address: string }>,
+  active: Array<{ stablecoin: BlacklistStablecoin; chainId: string; address: string }>,
   contractAddress: string,
   decimals: number,
+  identity: Pick<ContractEventConfig, "configKey" | "contractAddress">,
   apiKey: string | null,
   limiter: ReturnType<typeof createRateLimiter>,
 ): Promise<CurrentBalanceWriteRow[]> {
@@ -296,6 +251,7 @@ async function fetchTronCurrentBalanceRowsInBatches(
             record.stablecoin,
             record.chainId,
             record.address,
+            identity,
             observedAt,
             amount,
             item?.error?.message?.slice(0, 200) ?? null,
@@ -306,7 +262,7 @@ async function fetchTronCurrentBalanceRowsInBatches(
       const errorClass = error instanceof Error ? error.message.slice(0, 200) : "provider_error";
       for (const record of batch) {
         rowsToWrite.push(
-          buildCurrentBalanceWriteRow(record.stablecoin, record.chainId, record.address, observedAt, null, errorClass),
+          buildCurrentBalanceWriteRow(record.stablecoin, record.chainId, record.address, identity, observedAt, null, errorClass),
         );
       }
     }
@@ -416,7 +372,12 @@ async function main(argv = process.argv.slice(2)) {
     explorerAddressUrl: row.explorer_address_url,
   }));
 
-  const active = buildBlacklistActiveRecords(events).filter(
+  // Only query this configured contract; other contracts' scoped histories remain untouched.
+  const scopedEvents = events.filter((event) =>
+    (!event.configKey || event.configKey.toLowerCase() === config.configKey.toLowerCase())
+    && (!event.contractAddress || event.contractAddress.toLowerCase() === config.contractAddress.toLowerCase()),
+  );
+  const active = buildBlacklistActiveRecords(scopedEvents).filter(
     (record) => record.chainId === options.chainId && record.destroyedAt == null && !record.orderAmbiguityReason,
   );
 
@@ -449,6 +410,7 @@ async function main(argv = process.argv.slice(2)) {
         })),
         config.contractAddress,
         config.decimals,
+        config,
         trongridApiKey,
         limiter,
       )),
@@ -474,7 +436,7 @@ async function main(argv = process.argv.slice(2)) {
             chainRpcs,
           );
           rowsToWrite.push(
-            buildCurrentBalanceWriteRow(next.stablecoin, next.chainId, next.address, observedAt, amount),
+            buildCurrentBalanceWriteRow(next.stablecoin, next.chainId, next.address, config, observedAt, amount),
           );
         } catch (error) {
           rowsToWrite.push(
@@ -482,6 +444,7 @@ async function main(argv = process.argv.slice(2)) {
               next.stablecoin,
               next.chainId,
               next.address,
+              config,
               observedAt,
               null,
               error instanceof Error ? error.message.slice(0, 200) : "provider_error",
@@ -500,7 +463,7 @@ async function main(argv = process.argv.slice(2)) {
 
   if (active.length > 0 && rowsToWrite.length === 0) {
     throw new Error(
-      `Refusing to delete ${options.stablecoin}:${options.chainId} current balances: ${active.length} active rows produced no replacement rows`,
+      `Refusing to refresh ${options.stablecoin}:${options.chainId} current balances: ${active.length} active rows produced no observations`,
     );
   }
 
@@ -509,11 +472,7 @@ async function main(argv = process.argv.slice(2)) {
 
   if (!options.dryRun) {
     assertBlacklistRebuildFailureRate(failedCount, active.length, options.force);
-    assertBlacklistRebuildWriterGuard(d1);
-    d1.executeStatements(
-      buildCurrentBalanceMutationStatements(options.stablecoin, options.chainId, rowsToWrite),
-      "blacklist-current-balances",
-    );
+    applyCurrentBalanceRebuild(d1, rowsToWrite);
   }
 
   console.log(

@@ -1,10 +1,10 @@
-import { downloadCsv } from "@/lib/exports/csv";
+import { downloadCsvWithPreamble } from "@/lib/exports/csv";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { createTableComparator } from "@/lib/table-comparator";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import type { ColumnId } from "@/hooks/use-preferences";
 import { GRADE_FILTER_TAGS, getFilterTags, gradeMatchesFilter, OTHER_PEG_TAGS } from "@shared/lib/filter-tags";
-import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import {
   CLIENT_ACTIVE_IDS as ACTIVE_IDS,
   CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
@@ -13,6 +13,14 @@ import {
 import type { DexLiquidityMap, FilterTag, PegSummaryCoin, StablecoinData } from "@shared/types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+
+export type StablecoinTableSourceGenerations = Partial<Record<"stablecoins" | "pegSummary" | "dexLiquidity" | "reportCards", number | null>>;
+
+function generationIso(timestamp: number | null | undefined): string | null {
+  return timestamp != null && Number.isFinite(timestamp) && timestamp > 0
+    ? new Date(timestamp * 1000).toISOString()
+    : null;
+}
 
 export type StablecoinTableSortKey =
   | "name"
@@ -33,9 +41,9 @@ interface SortState {
 }
 
 export type StablecoinTableRowRiskLevel = "depeg" | "poor" | "warning" | "normal";
-/** Return a supply change in percentage points, or null without a positive previous value. */
-export function getSupplyChangePercent(current: number, previous: number): number | null {
-  if (previous <= 0) return null;
+/** Return a supply change in percentage points only with both observations and a positive previous value. */
+export function getSupplyChangePercent(current: number | null, previous: number | null): number | null {
+  if (current == null || previous == null || previous <= 0) return null;
   return ((current - previous) / previous) * 100;
 }
 
@@ -177,9 +185,9 @@ export function sortStablecoins({
   const extractors: Record<StablecoinTableSortKey, (row: StablecoinData) => StablecoinSortValue> = {
     name: (r) => r.name.toLowerCase(),
     price: (r) => isObservedPrice(r) ? r.price ?? null : null,
-    mcap: (r) => getCirculatingRaw(r),
-    change24h: (r) => getSupplyChangePercent(getCirculatingRaw(r), getPrevDayRaw(r)),
-    change7d: (r) => getSupplyChangePercent(getCirculatingRaw(r), getPrevWeekRaw(r)),
+    mcap: (r) => getCirculatingRawOrNull(r),
+    change24h: (r) => getSupplyChangePercent(getCirculatingRawOrNull(r), getPrevDayRawOrNull(r)),
+    change7d: (r) => getSupplyChangePercent(getCirculatingRawOrNull(r), getPrevWeekRawOrNull(r)),
     stability: (r) => pegScores?.get(r.id)?.pegScore ?? null,
     liquidity: (r) => dexLiquidity?.[r.id]?.liquidityScore ?? null,
     grade: (r) => reportCards?.[r.id]?.score ?? null,
@@ -218,26 +226,27 @@ export function exportStablecoinsCsv(
   pegScores?: Map<string, PegSummaryCoin>,
   dexLiquidity?: DexLiquidityMap,
   reportCards?: Record<string, V9SafetyTableRow>,
+  sourceGenerations?: StablecoinTableSourceGenerations,
 ): void {
-  downloadCsv(
+  downloadCsvWithPreamble(
     sorted,
     [
       { header: "Rank", accessor: (_row, i) => i + 1 },
       { header: "Name", accessor: (row) => row.name },
       { header: "Symbol", accessor: (row) => row.symbol },
       { header: "Price", accessor: (row) => isObservedPrice(row) ? row.price ?? null : null },
-      { header: "Market Cap (USD)", accessor: (row) => getCirculatingRaw(row) },
+      { header: "Market Cap (USD)", accessor: (row) => getCirculatingRawOrNull(row) },
       {
         header: "24h Change (%)",
         accessor: (row) => {
-          const change = getSupplyChangePercent(getCirculatingRaw(row), getPrevDayRaw(row));
+          const change = getSupplyChangePercent(getCirculatingRawOrNull(row), getPrevDayRawOrNull(row));
           return change == null ? null : Number(change.toFixed(2));
         },
       },
       {
         header: "7d Change (%)",
         accessor: (row) => {
-          const change = getSupplyChangePercent(getCirculatingRaw(row), getPrevWeekRaw(row));
+          const change = getSupplyChangePercent(getCirculatingRawOrNull(row), getPrevWeekRawOrNull(row));
           return change == null ? null : Number(change.toFixed(2));
         },
       },
@@ -269,5 +278,17 @@ export function exportStablecoinsCsv(
       { header: "Grade", accessor: (row) => reportCards?.[row.id]?.grade ?? null },
     ],
     "pharos-stablecoins",
+    {
+      endpoint: "stablecoins",
+      asOfISO: generationIso(sourceGenerations?.stablecoins) ?? "unknown",
+      sourceUrl: typeof window === "undefined" ? "https://pharos.watch/" : window.location.href,
+      methodologyLabel: "published source values",
+      sourceGenerations: {
+        stablecoins: generationIso(sourceGenerations?.stablecoins),
+        ...(pegScores ? { pegSummary: generationIso(sourceGenerations?.pegSummary) } : {}),
+        ...(dexLiquidity ? { dexLiquidity: generationIso(sourceGenerations?.dexLiquidity) } : {}),
+        ...(reportCards ? { reportCards: generationIso(sourceGenerations?.reportCards) } : {}),
+      },
+    },
   );
 }

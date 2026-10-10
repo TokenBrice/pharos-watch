@@ -10,7 +10,7 @@ const FreshnessSentinelPayloadSchema = z.object({
   updatedAt: z.number().int().nonnegative(),
   source: z.string().min(1),
   publishStatus: z.literal("ok"),
-  generationId: z.string().min(1).optional(),
+  generationId: z.string().trim().min(1),
   rowsWritten: z.number().int().nonnegative().optional(),
   coverageRatio: z.number().min(0).max(1).optional(),
 });
@@ -22,7 +22,9 @@ export type FreshnessSentinelValidationReason =
   | "invalid-payload"
   | "wrong-source"
   | "stale-payload"
-  | "future-updated-at";
+  | "future-updated-at"
+  | "missing-served-generation"
+  | "generation-mismatch";
 
 export interface FreshnessSentinelValidationResult {
   ok: boolean;
@@ -88,6 +90,7 @@ export function validateFreshnessSentinelPayload(params: {
   value: string | null | undefined;
   rowUpdatedAt: number;
   expectedSource: string;
+  expectedGenerationId: string | null;
   now: number;
 }): FreshnessSentinelValidationResult {
   let parsed: unknown;
@@ -112,6 +115,13 @@ export function validateFreshnessSentinelPayload(params: {
 
   if (result.data.updatedAt > params.now) {
     return { ok: false, reason: "future-updated-at" };
+  }
+
+  if (!params.expectedGenerationId?.trim()) {
+    return { ok: false, reason: "missing-served-generation" };
+  }
+  if (result.data.generationId !== params.expectedGenerationId) {
+    return { ok: false, reason: "generation-mismatch" };
   }
 
   return { ok: true, payload: result.data };

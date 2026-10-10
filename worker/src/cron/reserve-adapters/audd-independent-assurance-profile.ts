@@ -1,3 +1,4 @@
+import { ASSURANCE_RECONCILIATION_TOLERANCES } from "@shared/lib/independent-assurance-tolerances";
 import type { IndependentAssuranceProfile } from "./types";
 import { formatValidIsoDate, lastDayOfMonth } from "./report-date";
 
@@ -29,9 +30,7 @@ export const AUDD_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
       liquidityHorizon: "immediate",
     },
   },
-  // Nine chain rows and their total are rounded to cents: 10 * 0.005 AUD.
-  // Keep the independently printed values and expose any reconciliation difference.
-  reconciliation: { reportedLiabilityTotalTolerance: { absolute: "0.05", relativePpm: 0.01 } },
+  reconciliation: ASSURANCE_RECONCILIATION_TOLERANCES.AUDD,
   isReportCandidate: (href) =>
     /Agreed[+_-]upon[+_-]procedures[+_-]report/i.test(decodeURIComponent(href)),
   reportDateFromCandidate: auddReportDate,

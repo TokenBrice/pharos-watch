@@ -117,7 +117,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
           const volume24h = describeDexVolume(liq.totalVolume24hUsd, liq.volume24hAvailability);
           const volume7d = describeDexVolume(liq.totalVolume7dUsd, liq.volume7dAvailability);
           const topProtocol = Object.entries(liq.protocolTvl).sort((a, b) => b[1] - a[1])[0];
-          const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass ?? "unobserved");
+          const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass, liq.unavailableReason);
 
           return (
             <InteractiveTableRow
@@ -145,7 +145,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
                     <Badge
                       variant="outline"
                       className={`text-[10px] ${coverageBadge.className}`}
-                      title={formatLiquiditySourceMix(liq.sourceMix)}
+                      title={liq.unavailableReason ?? formatLiquiditySourceMix(liq.sourceMix)}
                     >
                       {coverageBadge.label}
                     </Badge>

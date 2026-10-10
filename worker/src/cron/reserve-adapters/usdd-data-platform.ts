@@ -194,7 +194,9 @@ export function adaptUsddLatestCollateral(
     ? [createUnknownVaultWarning(unknownVaultTypes, unknownExposurePct)]
     : [];
   const stableRedeemableUsd = bucketValues.psmUsdtUsd + bucketValues.directUsdtUsd;
-  const sourceTimestamp = parseTimestampLikeToUnixSeconds(statisticTimeRaw);
+  // The independently fetched history clock has no snapshot/value join to this
+  // undated composition. Retain it as a diagnostic, never as evidence freshness.
+  const historyTimestamp = parseTimestampLikeToUnixSeconds(statisticTimeRaw);
 
   return {
     slices: slicesFromValues(bucketSlices.sort((left, right) => right.value - left.value)),
@@ -205,18 +207,12 @@ export function adaptUsddLatestCollateral(
       ...(unknownVaultCount > 0 ? { unknownVaultCount } : {}),
       ...(unknownVaultTypes.size > 0 ? { unknownVaultTypes: Array.from(unknownVaultTypes).sort() } : {}),
       ...(unknownExposurePct > 0 ? { unknownExposurePct } : {}),
-      ...(sourceTimestamp != null
-        ? {
-            sourceTimestamp,
-            freshnessMode: "verified" as const,
-          }
-        : {
-            freshnessMode: "unverified" as const,
-            details: {
-              freshnessSource: "collateral-history",
-              freshnessReason: "history timestamp unavailable",
-            },
-          }),
+      freshnessMode: "unverified" as const,
+      details: {
+        freshnessSource: "latest-collateral",
+        freshnessReason: "composition timestamp unavailable; collateral-history is not joined to this snapshot",
+        ...(historyTimestamp != null ? { historyTimestamp } : {}),
+      },
       stableVaultUsd: stableRedeemableUsd,
     },
   };

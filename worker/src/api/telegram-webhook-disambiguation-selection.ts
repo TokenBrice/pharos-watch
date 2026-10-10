@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isTelegramAlertType } from "@shared/types/status";
 import type { ResolvedCoin } from "../lib/telegram/alerts";
 import type {
   TelegramPendingWriteContext,
@@ -100,15 +101,11 @@ function isStoredSetCommand(value: unknown): value is Omit<ParsedSetCommand, "ti
       return setting.minBand === null || setting.minBand === "WARNING" || setting.minBand === "DANGER";
     case "safety":
       return setting.mode === null || setting.mode === "downgrade-only" || setting.mode === "upgrade-only";
-    case "launch":
-    case "reserve":
-    case "depeg":
-      return true;
     case "depeg-step":
       return setting.enabled === true
         && (setting.step === null || setting.step === 100 || setting.step === 250 || setting.step === 500);
     default:
-      return false;
+      return isTelegramAlertType(setting.setting);
   }
 }
 
@@ -143,9 +140,7 @@ export function parseStoredCommandSelectionIntent(
   if (intent.kind === "command:subscribe") {
     if (
       !Array.isArray(payload.alertTypes)
-      || !payload.alertTypes.every((entry: unknown): entry is string => (
-        entry === "dews" || entry === "depeg" || entry === "safety" || entry === "launch"
-      ))
+      || !payload.alertTypes.every(isTelegramAlertType)
       || !Array.isArray(payload.presetIds)
       || !payload.presetIds.every((entry) => typeof entry === "string")
       || !(

@@ -4,7 +4,7 @@ import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-prof
 import { YIELD_ADAPTER_MANIFEST } from "../lib/yield-config/yield-config";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
-import { YIELD_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
+import { getMethodologyVersionAt, YIELD_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type {
   YieldAdapterManifestFamily,
@@ -34,8 +34,9 @@ const MANIFEST_REVIEW_BUDGET_SEC = 90 * DAY_SECONDS;
  * The manifest is derived from the static adapter registry, so the honest stamp
  * is the newest registry evidence this module can see: the most recent adapter
  * lifecycle review (`lifecycleReason.since`, when a strategy entered its current
- * `quarantined` / `intentional-gap` state) or the methodology revision that
- * re-derived the registry, whichever is newer.
+ * `quarantined` / `intentional-gap` state) or the latest methodology revision
+ * effective at the serve clock, whichever is newer. Future release activations
+ * are not registry revisions until their activation boundary is reached.
  *
  * The previous implementation published the *current* methodology entry's date
  * alone: a registry whose adapter set changed without a version bump kept
@@ -43,7 +44,7 @@ const MANIFEST_REVIEW_BUDGET_SEC = 90 * DAY_SECONDS;
  * published `updatedAt: 0` (epoch 1970) — with freshness headers attached that
  * would have served a permanent stale warning plus `no-store`.
  */
-const MANIFEST_UPDATED_AT_SEC = (() => {
+const MANIFEST_LIFECYCLE_REVIEW_AT_SEC = (() => {
   const lifecycleReviews = YIELD_ADAPTER_MANIFEST.flatMap((entry) =>
     entry.strategies
       .map((strategy) => strategy.lifecycleReason?.since)
@@ -51,14 +52,20 @@ const MANIFEST_UPDATED_AT_SEC = (() => {
       .map((since) => Math.floor(Date.parse(`${since}T00:00:00Z`) / 1000))
       .filter((seconds) => Number.isFinite(seconds)),
   );
-  const methodologyRevisions = YIELD_METHODOLOGY_CHANGELOG
-    .map((entry) => entry.effectiveAt)
-    .filter((effectiveAt) => Number.isFinite(effectiveAt) && effectiveAt > 0);
-  if (lifecycleReviews.length === 0 && methodologyRevisions.length === 0) {
+  return Math.max(0, ...lifecycleReviews);
+})();
+
+function manifestUpdatedAtSec(nowSec: number): number {
+  const effectiveVersion = getMethodologyVersionAt("yield", nowSec);
+  const methodologyRevision = YIELD_METHODOLOGY_CHANGELOG.find(
+    (entry) => entry.version === effectiveVersion && entry.effectiveAt <= nowSec,
+  );
+  const updatedAtSec = Math.max(MANIFEST_LIFECYCLE_REVIEW_AT_SEC, methodologyRevision?.effectiveAt ?? 0);
+  if (updatedAtSec <= 0) {
     throw new Error("Yield adapter manifest has no registry revision date to publish");
   }
-  return Math.max(...lifecycleReviews, ...methodologyRevisions);
-})();
+  return updatedAtSec;
+}
 
 interface FamilyMapping {
   family: YieldAdapterManifestFamily;
@@ -163,7 +170,7 @@ function buildPublicEntries(
 }
 
 export const handleYieldAdapterManifest = async (): Promise<Response> => {
-  const updatedAtSec = MANIFEST_UPDATED_AT_SEC;
+  const updatedAtSec = manifestUpdatedAtSec(Math.floor(Date.now() / 1000));
   // Plain version, matching `/api/yield-rankings`' `methodology.version`; the
   // `v`-prefixed label is a display string and made the two endpoints disagree.
   const methodologyVersion = YIELD_METHODOLOGY_VERSION;

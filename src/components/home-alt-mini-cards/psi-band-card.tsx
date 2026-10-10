@@ -7,7 +7,7 @@ import { RowSparkline } from "@/components/row-sparkline";
 import { useStabilityIndex } from "@/hooks/api-hooks";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { resolveQueryViewState } from "@/lib/query-view-state";
-import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
+import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
 import { buildPsiChartData, getDisplayedPsi, getDisplayedPsiBasis } from "@shared/lib/psi-view-model";
 
 function StabilityAreaChart({ values, color }: { values: number[]; color: string }): React.JSX.Element | null {
@@ -81,6 +81,7 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
       notice={{
         label: "Stability Index",
         dataUpdatedAt: query.dataUpdatedAt,
+        queries: [{ preset: "stabilityIndex", dataUpdatedAt: query.dataUpdatedAt, meta: query.meta, error: query.error, hasData: data !== undefined }],
         onRetry: () => void query.refetch(),
         compact: true,
       }}

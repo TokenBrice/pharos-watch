@@ -8,7 +8,10 @@ import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-s
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
 import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 import type { AdapterResult } from "../types";
-import { finalizeErc4626RedemptionCapacity } from "../erc4626-redemption-capacity";
+import {
+  finalizeErc4626RedemptionCapacity, projectErc4626RedemptionMetadata, projectErc4626RedemptionTelemetry,
+  type RedemptionCapacityTelemetry,
+} from "../erc4626-redemption-capacity";
 import {
   installErc4626Network,
   runTrackedVault,
@@ -569,25 +572,50 @@ describe("fetchErc4626SingleAssetReserves", () => {
     });
   });
 
-  it("keeps the existing documented-bound sBOLD telemetry when maxCollInBold is unreadable", async () => {
+  it.each(["maxCollInBold", "collInBold"] as const)("withholds sBOLD route openness when %s is unreadable", async (unreadable) => {
     installErc4626Network({ idleBalance: 1_000_000n, paused: 0, extraHandlers: [({ call }) => {
-      if (call?.data === "0x160b71df") return jsonResponse({ result: calcFragmentsResult(85_000_000n) });
-      if (call?.data === "0xbf2428e6") return null;
+      if (call?.data === "0x160b71df") {
+        const result = calcFragmentsResult(85_000_000n);
+        return jsonResponse({ result: unreadable === "collInBold" ? result.slice(0, 2 + 3 * 64) : result });
+      }
+      if (call?.data === "0xbf2428e6") {
+        return unreadable === "maxCollInBold" ? null : jsonResponse({ result: uint256Result(7_500_000n) });
+      }
+      return undefined;
+    }] });
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "sbold-sp-withdrawable" }));
+
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "sbold-collateral-health-unavailable",
+      effect: "info",
+    }));
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 85,
+      capacityRatioOfSupply: 0.85,
+      capacityKind: "documented-bound",
+      freshnessKind: "same-run-onchain",
+      routeStatus: "unknown",
+    });
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusSource");
+  });
+
+  it.each(["open", "restricted", "unreadable"] as const)("preserves an observed sBOLD pause with a %s collateral-health gate", async (gate) => {
+    installErc4626Network({ idleBalance: 1_000_000n, paused: 1, extraHandlers: [({ call }) => {
+      if (call?.data === "0x160b71df") return jsonResponse({ result: calcFragmentsResult(85_000_000n, gate === "restricted" ? 7_500_001n : 0n) });
+      if (call?.data === "0xbf2428e6") return gate === "unreadable" ? null : jsonResponse({ result: uint256Result(7_500_000n) });
       return undefined;
     }] });
 
     const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "sbold-sp-withdrawable" }));
 
-    expect(nonInfoWarnings(result.warnings)).toEqual([]);
-    expect(result.metadata?.redemption).toEqual({
-      capacityUsd: 85,
-      capacityRatioOfSupply: 0.85,
-      capacityKind: "documented-bound",
-      routeStatusReason: "sBOLD Stability Pool withdrawable BOLD positive via calcFragments() this run",
-      freshnessKind: "same-run-onchain",
-      routeStatus: "open",
+    expect(result.metadata?.redemption).toMatchObject({
+      routeStatus: "paused",
       routeStatusSource: "onchain",
     });
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "erc4626-redemption-paused",
+      effect: "degraded",
+    }));
   });
 
   it("withholds sBOLD route openness when the vault pause probe is unreadable", async () => {
@@ -1083,6 +1111,52 @@ describe("sfrxUSD generic completion boundary", () => {
       },
     });
     expect(telemetry).toBeNull();
+  });
+});
+
+describe("ERC-4626 capacity wire projections", () => {
+  it("preserves explicit zero capacity, constraints and source diagnostics", () => {
+    const telemetry: RedemptionCapacityTelemetry = {
+      capacityUsd: 0, capacityRaw: "0", capacitySource: "morpho-vault-v2-liquidity",
+      underlyingDecimals: 6, freshnessKind: "same-run-onchain",
+      capacityRatioOfSupply: 0, settlementDelaySec: 0, blockNumber: 0, sourceTimestamp: 0,
+      feeBps: 0, sourceUrls: [], holderEligibility: "any-holder",
+      observerDiagnostics: { paused: false }, idleUnderlyingBalanceRaw: "0",
+      yearnV3WithdrawableRaw: "0", sboldSpWithdrawableRaw: "0", sfrxusdCrosschainWithdrawableRaw: "0",
+      morphoVaultV1LiquidityRaw: "0", morphoVaultV1LiquidityUsd: 0,
+      morphoVaultV2LiquidityRaw: "0", morphoVaultV2LiquidityUsd: 0,
+      morphoVaultV2ForceDeallocatableLiquidityRaw: "0", morphoVaultV2ForceDeallocatableLiquidityUsd: 0,
+    };
+    expect(JSON.stringify(projectErc4626RedemptionTelemetry(telemetry))).toBe(JSON.stringify({
+      capacityUsd: 0, capacityRatioOfSupply: 0, capacityKind: "live-direct",
+      settlementDelaySec: 0, blockNumber: 0, sourceTimestamp: 0,
+      sourceUrls: [], holderEligibility: "any-holder", feeBps: 0,
+      observerDiagnostics: { paused: false }, freshnessKind: "same-run-onchain",
+    }));
+    expect(JSON.stringify(projectErc4626RedemptionMetadata(telemetry))).toBe(JSON.stringify({
+      redemptionCapacityRaw: "0", redemptionCapacitySource: "morpho-vault-v2-liquidity",
+      idleUnderlyingBalanceRaw: "0", underlyingDecimals: 6,
+      morphoVaultV1LiquidityRaw: "0", morphoVaultV1LiquidityUsd: 0,
+      yearnV3WithdrawableRaw: "0", sboldSpWithdrawableRaw: "0", sfrxusdCrosschainWithdrawableRaw: "0",
+      morphoVaultV2LiquidityRaw: "0", morphoVaultV2LiquidityUsd: 0,
+      morphoVaultV2ForceDeallocatableLiquidityRaw: "0", morphoVaultV2ForceDeallocatableLiquidityUsd: 0,
+    }));
+  });
+
+  it("omits unavailable optional fields without publishing raw or route-only fields in nested telemetry", () => {
+    const telemetry = {
+      capacityUsd: 1, capacityRaw: "1000000", capacitySource: "erc4626-idle-underlying",
+      underlyingDecimals: 6, freshnessKind: "same-run-onchain",
+      capacityRatioOfSupply: null, feeBps: undefined, observerDiagnostics: null,
+      routeStatus: "degraded", routeStatusSource: "onchain", routeStatusReason: "restricted",
+      morphoVaultV2LiquidityUsd: null,
+    } as unknown as RedemptionCapacityTelemetry;
+    expect(projectErc4626RedemptionTelemetry(telemetry)).toEqual({
+      capacityUsd: 1, capacityKind: "live-direct", freshnessKind: "same-run-onchain",
+    });
+    expect(projectErc4626RedemptionMetadata(telemetry)).toEqual({
+      redemptionCapacityRaw: "1000000", redemptionCapacitySource: "erc4626-idle-underlying", underlyingDecimals: 6,
+    });
   });
 });
 

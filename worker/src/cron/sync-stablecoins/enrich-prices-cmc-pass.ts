@@ -558,6 +558,20 @@ export async function runCmcPass(
 ): Promise<EnrichPassResult> {
   let resolved = 0;
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
+  const cachedVerifiedQuotes = await loadVerifiedCmcQuotes(db);
+  const finishWithVerifiedContinuity = (): EnrichPassResult => {
+    // Replay only after the producer opportunity. An admissible cache bridge
+    // must not remove a missing asset from fresh hourly collection.
+    const replay = replayVerifiedCmcQuotes({
+      assets,
+      candidates: collectMissingPriceCandidates(assets).filter((entry) => entry.asset.cmcSlug != null),
+      cachedQuotes: cachedVerifiedQuotes,
+      fxRates,
+    });
+    resolved += replay.resolved;
+    if (replay.diagnostic) diagnostics.push(replay.diagnostic);
+    return { resolved, failures: [], diagnostics };
+  };
   const recordFailureAndReturn = async (): Promise<EnrichPassResult> => {
     await recordProviderOutcomeSafe({
       db,
@@ -565,20 +579,8 @@ export async function runCmcPass(
       attempted: 1,
       successful: 0,
     });
-    return { resolved, failures: [], diagnostics };
+    return finishWithVerifiedContinuity();
   };
-
-  const replayCandidates = collectMissingPriceCandidates(assets)
-    .filter((entry) => entry.asset.cmcSlug != null);
-  const cachedVerifiedQuotes = await loadVerifiedCmcQuotes(db);
-  const replay = replayVerifiedCmcQuotes({
-    assets,
-    candidates: replayCandidates,
-    cachedQuotes: cachedVerifiedQuotes,
-    fxRates,
-  });
-  resolved += replay.resolved;
-  if (replay.diagnostic) diagnostics.push(replay.diagnostic);
 
   const missingAfterPass1b = collectMissingPriceCandidates(assets);
   if (missingAfterPass1b.length === 0) {
@@ -838,5 +840,5 @@ export async function runCmcPass(
     logWorkerEventArgs("handler", "warn", "[enrich] CoinMarketCap circuit open — skipping pass 2");
   }
 
-  return { resolved, failures: [], diagnostics };
+  return finishWithVerifiedContinuity();
 }

@@ -1,4 +1,4 @@
-import { MINT_AUTHORITY_V1 } from "../../data/methodology-changelogs/mint-authority/v1";
+import MINT_AUTHORITY_V1 from "../../data/methodology-changelogs/mint-authority/v1.json";
 import { createMethodologyVersion } from "./base";
 import {
   MINT_AUTHORITY_METHODOLOGY_PATH,

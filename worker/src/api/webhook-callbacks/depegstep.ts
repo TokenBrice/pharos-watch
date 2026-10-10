@@ -9,16 +9,9 @@ import {
   type CallbackHandler,
 } from "./_shared";
 
-export const handleDepegStepCallback: CallbackHandler = async ({
-  db, botToken, cb, chatId, parsed, answerCallback, beforeIrreversibleEffect,
-  markMutationApplied, planIntent, prepareMutationAppliedStatement, confirmAtomicMutationApplied,
-  wasMutationApplied,
-}) => {
-  await runCallbackMutation<{ id: string; step: number }>({
-    db,
-    botToken,
-    cb,
-    chatId,
+export const handleDepegStepCallback: CallbackHandler = async (context) => {
+  const { db, cb, chatId, parsed } = context;
+  await runCallbackMutation<{ id: string; step: number }>(context, {
     validate: () => {
       const step = Number(parsed.parts[2]);
       if (
@@ -50,12 +43,5 @@ export const handleDepegStepCallback: CallbackHandler = async ({
     },
     successText: ({ step }) => `Depeg worsening alerts set to ${step} bps.`,
     failureText: "Could not save setting. Please try again.",
-    answerCallback,
-    beforeIrreversibleEffect,
-    markMutationApplied,
-    planIntent,
-    prepareMutationAppliedStatement,
-    confirmAtomicMutationApplied,
-    wasMutationApplied,
   });
 };

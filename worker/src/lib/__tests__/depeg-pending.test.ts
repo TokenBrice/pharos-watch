@@ -233,4 +233,22 @@ describe("buildUpsertPendingDepegStmt", () => {
       sqlite.close();
     }
   });
+  it("resets native candidates when their fiat currency identity changes", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const initial = {
+        stablecoinId: "changing-peg", symbol: "PEG", pegType: "peggedREAL",
+        direction: "below" as const, bps: -500, seenAt: 1_700_000_000,
+        price: 0.95, pegReference: 1, reason: "confirmation-window+native-origin",
+      };
+      await buildUpsertPendingDepegStmt(db, initial).run();
+      await buildUpsertPendingDepegStmt(db, {
+        ...initial, pegType: "peggedEUR", bps: -200, price: 0.98, seenAt: initial.seenAt + 900,
+      }).run();
+      expect(sqlite.prepare("SELECT peg_type, first_seen_at, first_price, peak_seen_bps, peak_price FROM depeg_pending").get())
+        .toEqual({ peg_type: "peggedEUR", first_seen_at: initial.seenAt + 900, first_price: 0.98, peak_seen_bps: -200, peak_price: 0.98 });
+    } finally {
+      sqlite.close();
+    }
+  });
 });

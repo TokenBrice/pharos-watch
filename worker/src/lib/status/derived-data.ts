@@ -94,6 +94,7 @@ async function getLastTableUpdate(
   const where = target.where ? ` WHERE ${target.where}` : "";
   try {
     const row = await db
+      // SAFETY: target table/column/where each pass the registry-derived allowlists above.
       .prepare(`SELECT MAX(${target.column}) as latest FROM ${target.table}${where}`)
       .first<{ latest: number | null }>();
     return row?.latest ?? null;

@@ -13,7 +13,6 @@ import {
   DETAIL_MODULE_SHELL_CLASS,
   DETAIL_MODULE_TITLE_CLASS,
 } from "@/components/stablecoin-detail/section-title-class";
-import { TableSourceLink } from "@/components/table/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,8 +20,7 @@ import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { useYieldHistory } from "@/hooks/api-hooks";
-import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
-import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
 import { YieldSourceIdentity } from "@/components/yield-leaderboard-row-parts";
 import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
 import { resolveYieldScoreQualification } from "@/lib/yield-constants";
@@ -31,10 +29,8 @@ import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@
 import {
   YIELD_RANK_CHANGE_DRIVER_LABELS,
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
-  YIELD_SOURCE_DEPTH_DEFINITIONS,
-  formatYieldSourceRiskCompact,
 } from "@/lib/yield-source-risk";
-import { formatPercent, formatSignedPercent } from "@shared/lib/format";
+import { formatPercent } from "@shared/lib/format";
 import type { YieldRankChangeAttribution } from "@shared/types";
 import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
@@ -47,7 +43,7 @@ import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
 import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
 import { classifyApyChange, type YieldChangeAttributionResult } from "@/lib/yield-change-attribution";
 import {
-  formatSignedPysDelta, formatYieldBenchmarkSpread, formatYieldBenchmarkSpreadChip,
+  formatSignedPysDelta, formatYieldApyDelta, formatYieldBenchmarkSpread, formatYieldBenchmarkSpreadChip,
   formatYieldDepositExplanation, formatYieldDriverContext,
   YIELD_SOURCE_FACT_LABELS, YIELD_CALCULATION_MODE_LABELS, YIELD_SCORE_QUALIFICATION_LABELS,
 } from "@/lib/yield-presentation";
@@ -146,8 +142,8 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       {view.yieldTypeLabel}
     </span>
   );
-  const coin = CLIENT_TRACKED_META_BY_ID.get(stablecoinId);
-  const hasWorkbench = coin != null && hasStaticYieldWorkbench(coin);
+  const workbenchLink = getYieldWorkbenchLink(stablecoinId);
+  const hasWorkbench = workbenchLink.isWorkbench;
   const qualification = resolveYieldScoreQualification(ranking);
   const qualificationLabel = YIELD_SCORE_QUALIFICATION_LABELS[qualification as keyof typeof YIELD_SCORE_QUALIFICATION_LABELS];
   const rolePrefix = ranking.sourceRole === "canonical-holder"
@@ -352,9 +348,15 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       />
 
       <YieldDecisionLedgerCard ledger={ranking.decisionLedger} />
+      {view.historySources.length > 1 ? (
+        <button type="button" onClick={view.showChosenSource}
+          className="pharos-focus-ring rounded-md border border-border/60 px-2 py-1 text-xs text-muted-foreground hover:text-foreground">
+          Show chosen source history
+        </button>
+      ) : null}
 
 
-      {view.sourceExplorer.retainedAlternates.length >= 2 ? (
+      {view.sourceExplorer.retainedAlternates.length > 0 ? (
         <YieldDetailSectionAltSources
           altSources={view.sourceExplorer.retainedAlternates}
           bestApy={view.ranking.apy30d}
@@ -368,36 +370,6 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           showAll={view.showAllSources}
           onShowAll={() => view.setShowAllSources(true)}
         />
-      ) : view.sourceExplorer.retainedAlternates.length === 1 ? (
-        <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Retained alternates</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {view.sourceExplorer.retainedAlternates.map((source) => (
-              <div key={source.sourceKey} className="rounded-lg border border-border/60 bg-background/55 px-3 py-2">
-                <div className="flex items-center justify-between gap-3">
-                  <TableSourceLink href={source.url} className="max-w-full text-sm text-foreground">
-                    {source.displayLabel}
-                  </TableSourceLink>
-                  <span className="font-mono text-sm tabular-nums text-muted-foreground">
-                    {formatPercent(source.currentApy)}
-                  </span>
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
-                  {source.confidenceTier ? (
-                    <span>{YIELD_SOURCE_CONFIDENCE_DEFINITIONS[source.confidenceTier]?.label}</span>
-                  ) : null}
-                  <span title={YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].description}>
-                    {YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].label} depth
-                  </span>
-                  <span className="font-mono tabular-nums">Risk {formatYieldSourceRiskCompact(source.sourceRisk)}</span>
-                  {source.rejectionHint ? (
-                    <span title={source.rejectionHint.description}>Reason {source.rejectionHint.label}</span>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       ) : null}
       </div>
       </ModuleDisclosure>
@@ -438,10 +410,10 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
 
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border/50 pt-3 text-xs text-muted-foreground">
         <Link
-          href={hasWorkbench ? buildStablecoinUrl(stablecoinId, "yield/") : `/yield/?workbenchFallback=${encodeURIComponent(stablecoinId)}`}
+          href={workbenchLink.href}
           className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm font-medium underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
-          {hasWorkbench ? "View full yield analysis" : YIELD_SOURCE_FACT_LABELS.fallbackLink}
+          {workbenchLink.label}
           <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
         </Link>
         <EvidenceFooter topic="pys" className="border-t-0 pt-0" />
@@ -495,7 +467,7 @@ export function YieldChangeAttributionCard({ attribution }: { attribution: Yield
               <li>
                 Largest 30d move:{" "}
                 <span className="font-mono tabular-nums text-foreground">
-                  {formatSignedPercent(attribution.largestDelta.value, 2)}
+                  {formatYieldApyDelta(attribution.largestDelta.value)}
                 </span>{" "}
                 on{" "}
                 <span className="font-mono tabular-nums text-foreground">
@@ -513,7 +485,7 @@ export function YieldChangeAttributionCard({ attribution }: { attribution: Yield
                 </span>{" "}
                 with{" "}
                 <span className="font-mono tabular-nums text-foreground">
-                  {formatSignedPercent(attribution.sourceSwitchDetail.apy30dDelta, 2)}
+                  {formatYieldApyDelta(attribution.sourceSwitchDetail.apy30dDelta)}
                 </span>{" "}
                 impact on 30d APY.
               </li>

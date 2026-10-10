@@ -132,6 +132,29 @@ describe("handleStatusHistoryRoute", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO status_discrepancy_state"))).toBe(false);
   });
 
+  it.each([false, true])("keeps status comparison unavailable when authority is absent (read failure: %s)", async (failed) => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "FROM status_state", rows: [], first: null, ...(failed ? { throwError: new Error("state unavailable") } : {}) },
+      { match: "FROM status_probe_runs", rows: [], first: {
+        created_at: now - 1, status: "healthy", sample_count: 1, pass_count: 1, fail_count: 0, p95_latency_ms: 1,
+      } },
+      { match: "FROM status_discrepancy_state", rows: [], first: null },
+      { match: "FROM status_transitions", rows: [] },
+    ]);
+    const res = await handleStatusHistoryRoute({
+      db, trustedAdmin: true, request: makeApiRequest("/api/status-history", { adminKey: "secret-key" }),
+    });
+    const body = await readJsonResponse(res, 200) as {
+      discrepancy: { discrepancyReason: string; statusSeverity: number | null; severityDelta: number | null };
+      sectionErrors: Record<string, { code: string }>;
+    };
+    expect(body.discrepancy).toMatchObject({
+      discrepancyReason: failed ? "status-unreadable" : "status-missing", statusSeverity: null, severityDelta: null,
+    });
+    expect(body.sectionErrors.state?.code).toBe(failed ? "status_state_snapshot_failed" : undefined);
+  });
+
   it("returns one page plus truthful hasMore evidence", async () => {
     const now = Math.floor(Date.now() / 1000);
     const rows = Array.from({ length: 201 }, (_, index) => ({

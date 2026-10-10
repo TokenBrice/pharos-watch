@@ -5,6 +5,7 @@ import { CohortCoinEmblems, summarizeCohort } from "@/app/alt-pegs/fiat-world-at
 import { CohortThreads } from "@/app/alt-pegs/fiat-world-atlas/cohort-threads";
 import { useHoverDispatch } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
 import type { PegCluster, PlacedCoin } from "@/lib/alt-peg-hero";
+import { compareFiniteDesc } from "@shared/lib/sort";
 
 type HitTargetStyle = CSSProperties & { "--hit-z": number; "--hit-size": string };
 
@@ -47,7 +48,7 @@ export function FiatEmblems({ clusters }: { clusters: readonly PegCluster[] }) {
     <div className="fiat-emblems">
       <CohortThreads coins={allCoins} colorHex="#60a5fa" />
       {clusters.map((cluster) => {
-        const rankedCoins = [...cluster.coins].sort((left, right) => right.marketCap - left.marketCap);
+        const rankedCoins = [...cluster.coins].sort(compareFiniteDesc<PlacedCoin>((coin) => coin.marketCap ?? Number.NaN));
         return (
           <CohortCoinEmblems
             key={cluster.peg}

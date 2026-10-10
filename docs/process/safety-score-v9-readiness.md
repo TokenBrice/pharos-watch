@@ -65,6 +65,11 @@ git show ade03b84b^:shared/data/safety-score-v9/mechanism-measurements/<assetId>
 SHA-256 and byte count against the committed `<date>.summary.json` before
 replaying it through the configured family pipeline, so a hand-edited or
 regenerated fixture fails rather than becoming new evidence.
+The internal scalar journal helpers in `core.ts` preserve raw addresses, decoder
+labels and call→decode→record order; family producers retain compound decodes and
+protocol checks. Ordinary and mutated fixtures use the same ordered `ReplayEthCaller`;
+returndata overrides are applied after call validation and recorded in the journal.
+This is an implementation-only consolidation, not a methodology or evidence change.
 `scripts/__tests__/fixtures/usde-ethena-frozen-legacy-protocol-api-v1.json` is
 the frozen legacy V1 protocol-API body recovered the same way; the protocol-API
 refresh pins its SHA-256, so the test replays it at the designated path and
@@ -128,4 +133,4 @@ No separate composite ceiling is applied today, and there is no operator-side
 A+ reachability gate. V9 uses the production smooth-bounded-headroom
 aggregation and the policy's single `compensabilityHeadroom`; evidence ceilings
 and structural caps remain the scoped constraints documented in
-[report cards](../report-cards.md#cap-limits-and-scope-gates).
+[report cards](report-cards-appendix.md#cap-limits-and-scope-gates).

@@ -1,0 +1,135 @@
+{
+  "dateRange": {
+    "from": "2026-03-09",
+    "to": "2026-03-16"
+  },
+  "headline": "Chain analytics and multi-source pricing launch alongside a major live-reserve and audit push.",
+  "summary": [
+    {
+      "label": "Chain analytics launch",
+      "tag": "feature",
+      "description": "New /chains/ leaderboard and per-chain profile pages with health scores, supply snapshots, and cross-linked stablecoin detail"
+    },
+    {
+      "label": "Multi-source pricing",
+      "tag": "feature",
+      "description": "N-source consensus module integrating Pyth, RedStone, Binance, Coinbase, Curve on-chain prices, and real-time FX rates"
+    },
+    {
+      "label": "Live reserve expansion",
+      "tag": "coverage",
+      "description": "Five batches of reserve adapters (USDT, OUSD, Circle, GHO, Sky, Mento, crvUSD), live collateral scoring in report cards, and drift alerting"
+    },
+    {
+      "label": "Deeper digest intelligence",
+      "tag": "feature",
+      "description": "Weekly recap format, yield anomaly signals, DEX liquidity shifts, PSI trajectories, and Telegram pending queue for reliable delivery"
+    },
+    {
+      "label": "Broader stablecoin coverage",
+      "tag": "coverage",
+      "description": "dUSD, CETES, Parallel USDp, thBILL added to tracking; CNHT, EURA, USDA moved to cemetery"
+    },
+    {
+      "label": "Codebase hardening",
+      "tag": "security",
+      "description": "Two major audit remediation campaigns (38 tasks), Zod validation at system boundaries, timing-safe auth, and shared contract consolidation"
+    },
+    {
+      "label": "Liquidity Score v4",
+      "tag": "feature",
+      "description": "Log-scale volume, reworked durability formula, DexScreener and CG ticker fallback crawlers for broader pool coverage",
+      "href": "/methodology/liquidity-score-changelog/"
+    },
+    {
+      "label": "Start Here onboarding",
+      "tag": "design",
+      "description": "New onboarding page, compare flow signals, stablecoin coverage matrix, and Telegram global alert subscriptions"
+    }
+  ],
+  "stats": {
+    "totalCommits": 626
+  },
+  "commits": [
+    {
+      "hash": "a7f0d33",
+      "message": "fix(pricing): add pool challenge to downgrade soft-only consensus when highest-TVL pool diverges"
+    },
+    {
+      "hash": "63572f2",
+      "message": "Update chain health docs and copy"
+    },
+    {
+      "hash": "2fdf2da",
+      "message": "chore: move pricing consensus honesty plan to historical"
+    },
+    {
+      "hash": "b79d38f",
+      "message": "fix(test): update coverage test for headlineFilter behavior"
+    },
+    {
+      "hash": "1a9d71b",
+      "message": "Merge branch 'feat/pricing-consensus-honesty'"
+    },
+    {
+      "hash": "36c38b2",
+      "message": "docs(pricing): update documentation for consensus honesty changes"
+    },
+    {
+      "hash": "89f7609",
+      "message": "feat(pricing): make pricing confidence honest — drop illusory DL consensus, add independent sources"
+    },
+    {
+      "hash": "eb4c014",
+      "message": "feat(coverage): use ≥3 sources as main KPI for Price & Depeg row"
+    },
+    {
+      "hash": "fed29fe",
+      "message": "feat(cemetery): add contract addresses and DYAD v1 entry"
+    },
+    {
+      "hash": "96511f7",
+      "message": "docs(agents): add pricing consensus honesty design spec"
+    },
+    {
+      "hash": "f08e74c",
+      "message": "feat(methodology): add Chain Health Score changelog page"
+    },
+    {
+      "hash": "39db95e",
+      "message": "docs(methodology): add Chain Health Score section"
+    },
+    {
+      "hash": "7c54a24",
+      "message": "fix(chains): add DL name aliases for OP Mainnet, zkSync Era, XRPL, Plume, Bsquared, Kaia"
+    },
+    {
+      "hash": "f6978ec",
+      "message": "fix(chains): add chain environment factor, fix detail pages, harmonize table"
+    },
+    {
+      "hash": "5bd86fc",
+      "message": "fix(nav): rename \"Chains\" menu entry to \"Stable per Chain\""
+    },
+    {
+      "hash": "07584c9",
+      "message": "docs(agents): add chain analytics design spec and implementation plan"
+    },
+    {
+      "hash": "13420d3",
+      "message": "fix(chains): resolve DL chain names to CHAIN_META IDs and add SEO support"
+    },
+    {
+      "hash": "8639098",
+      "message": "fix(chains): add chain pages to sitemap and server-rendered link index for SEO"
+    },
+    {
+      "hash": "2783c76",
+      "message": "fix(chains): remove erroneous chains cache freshness threshold and fix lint/test"
+    },
+    {
+      "hash": "aaf897d",
+      "message": "docs: add chain analytics documentation"
+    }
+  ]
+}

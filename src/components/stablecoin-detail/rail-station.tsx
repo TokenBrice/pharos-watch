@@ -39,6 +39,21 @@ function VerticalArrowHead() {
 
 export type RailArrowOrientation = "horizontal" | "responsive" | "container";
 
+const RESPONSIVE_ARROW_CLASSES = {
+  container: {
+    unlabelled: "@xl/rail:mt-1 @xl/rail:min-w-6 @xl/rail:flex-1",
+    labelled: "flex items-center gap-2 @xl/rail:min-w-6 @xl/rail:flex-1 @xl/rail:flex-col @xl/rail:items-center @xl/rail:gap-0.5",
+    horizontal: "@xl/rail:flex",
+    vertical: "@xl/rail:hidden",
+  },
+  responsive: {
+    unlabelled: "sm:min-w-6 sm:flex-1",
+    labelled: "flex items-center gap-2 sm:min-w-6 sm:flex-1 sm:flex-col sm:items-center sm:gap-0.5",
+    horizontal: "sm:flex",
+    vertical: "sm:hidden",
+  },
+} as const;
+
 /**
  * Mono caps are reserved for pure figures: a label with no letters ("≤ 24",
  * "1-7") keeps the mono treatment. Any label containing a letter ("1-7 days",
@@ -82,52 +97,27 @@ export function RailArrow({
     </span>
   ) : null;
 
-  if (orientation === "container") {
+  if (orientation !== "horizontal") {
+    const classes = RESPONSIVE_ARROW_CLASSES[orientation];
     if (labelNode == null) {
       return (
-        <div aria-hidden="true" className="@xl/rail:mt-1 @xl/rail:min-w-6 @xl/rail:flex-1">
-          <div className="hidden items-center @xl/rail:flex">
+        <div aria-hidden="true" className={classes.unlabelled}>
+          <div className={cn("hidden items-center", classes.horizontal)}>
             <HorizontalArrowHead />
           </div>
-          <div className="ml-4 flex h-4 flex-col items-center @xl/rail:hidden">
+          <div className={cn("ml-4 flex h-4 flex-col items-center", classes.vertical)}>
             <VerticalArrowHead />
           </div>
         </div>
       );
     }
     return (
-      <div className="flex items-center gap-2 @xl/rail:min-w-6 @xl/rail:flex-1 @xl/rail:flex-col @xl/rail:items-center @xl/rail:gap-0.5">
-        <div aria-hidden="true" className="ml-4 flex h-4 flex-col items-center @xl/rail:hidden">
+      <div className={classes.labelled}>
+        <div aria-hidden="true" className={cn("ml-4 flex h-4 flex-col items-center", classes.vertical)}>
           <VerticalArrowHead />
         </div>
         {labelNode}
-        <div aria-hidden="true" className="hidden w-full items-center @xl/rail:flex">
-          <HorizontalArrowHead />
-        </div>
-      </div>
-    );
-  }
-
-  if (orientation === "responsive") {
-    if (labelNode == null) {
-      return (
-        <div aria-hidden="true" className="sm:min-w-6 sm:flex-1">
-          <div className="hidden items-center sm:flex">
-            <HorizontalArrowHead />
-          </div>
-          <div className="ml-4 flex h-4 flex-col items-center sm:hidden">
-            <VerticalArrowHead />
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div className="flex items-center gap-2 sm:min-w-6 sm:flex-1 sm:flex-col sm:items-center sm:gap-0.5">
-        <div aria-hidden="true" className="ml-4 flex h-4 flex-col items-center sm:hidden">
-          <VerticalArrowHead />
-        </div>
-        {labelNode}
-        <div aria-hidden="true" className="hidden w-full items-center sm:flex">
+        <div aria-hidden="true" className={cn("hidden w-full items-center", classes.horizontal)}>
           <HorizontalArrowHead />
         </div>
       </div>

@@ -2,16 +2,13 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { EthCallJournal, EthCallSpec } from "../lib/mechanism-measurement/core";
-import { encodeWord, fetchBlockByNumber, ReplayEthCaller } from "../lib/mechanism-measurement/core";
+import { encodeWord, fetchBlockByNumber, readJournalAddress, readJournalUint, ReplayEthCaller } from "../lib/mechanism-measurement/core";
 import { measureConfiguredTarget } from "../lib/mechanism-measurement/measure";
 import { measureLiquityV1 } from "../lib/mechanism-measurement/families/liquity-v1";
 import { measureLiquityV2 } from "../lib/mechanism-measurement/families/liquity-v2";
 import {
   MechanismMeasurementEvidenceV1Schema,
   type MeasurementCall,
-  type MeasurementLog,
-  type MeasurementLogQuery,
   type MechanismMeasurementEvidenceV1,
 } from "../lib/mechanism-measurement/schema";
 import { redactRpcUrlForEvidence } from "../lib/mechanism-measurement/rpc-provenance";
@@ -38,62 +35,53 @@ const FIXTURE = loadFixture("lusd-liquity-mechanism-measurement-block-25533257.j
   derived: { priceWei: string; lastGoodPrice: { deltaPct: number } };
 };
 
-interface RecordedCalls {
-  calls: readonly MeasurementCall[];
-  logQueries?: readonly MeasurementLogQuery[];
-}
-
-/**
- * Keyed replay with per-call returndata overrides, for mutating one recorded
- * observation while the rest of the journal stays authentic. Log queries are
- * served in recorded order, as the pipelines issue them once each.
- */
-function callerFromFixture(fixture: RecordedCalls, overrides: Map<string, string> = new Map()): EthCallJournal {
-  const byCallData = new Map(fixture.calls.map((call) => [`${call.to}:${call.callData}`, call.returnData]));
-  const calls: MeasurementCall[] = [];
-  const logQueries: MeasurementLogQuery[] = [];
-  return {
-    calls,
-    logQueries,
-    async call(spec: EthCallSpec): Promise<string> {
-      const callData = `${spec.selector}${(spec.args ?? []).map(encodeWord).join("")}`;
-      const key = `${spec.to.toLowerCase()}:${callData}`;
-      const returnData = overrides.get(key) ?? byCallData.get(key);
-      if (!returnData) throw new Error(`No recorded returndata for ${spec.name} (${key})`);
-      calls.push({
-        name: spec.name,
-        to: spec.to.toLowerCase(),
-        signature: spec.signature,
-        selector: spec.selector,
-        callData,
-        returnData,
-        decoded: "",
-      });
-      return returnData;
-    },
-    recordDecoded(decoded: string): void {
-      calls[calls.length - 1]!.decoded = decoded;
-    },
-    async queryLogs(): Promise<readonly MeasurementLog[]> {
-      const recorded = fixture.logQueries?.[logQueries.length];
-      if (!recorded) throw new Error("Fixture has no further recorded log queries");
-      logQueries.push({ ...recorded, logs: recorded.logs.map((log) => ({ ...log })), decoded: "" });
-      return recorded.logs;
-    },
-    recordLogsDecoded(decoded: string): void {
-      logQueries[logQueries.length - 1]!.decoded = decoded;
-    },
-  };
-}
-
 const CANDIDATE = CDP_MEASUREMENT_TARGETS.find((target) => target.assetId === "lusd-liquity")!;
 if (CANDIDATE.family !== "liquity-v1") throw new Error("lusd-liquity must be a liquity-v1 target");
 const TARGET = CANDIDATE;
 const BLOCK = { ...FIXTURE.block, selection: "operator-pinned" as const };
 
-function recordedCaller(overrides: Map<string, string> = new Map()): EthCallJournal {
-  return callerFromFixture(FIXTURE, overrides);
-}
+describe("journaled scalar reads and ordered overrides", () => {
+  it("preserves raw zero addresses and journals only after successful decoding", async () => {
+    const events: string[] = [];
+    const spec = { name: "scalar" };
+    let returnData = `0x${encodeWord(0n)}${encodeWord(123n)}`;
+    const caller = {
+      async call() { events.push("call"); return returnData; },
+      recordDecoded(decoded: string) { events.push(decoded); },
+    };
+    expect(await readJournalAddress(caller, spec)).toBe(`0x${"0".repeat(40)}`);
+    expect(await readJournalUint(caller, spec, 1, "second word")).toBe(123n);
+    expect(events).toEqual(["call", `0x${"0".repeat(40)}`, "call", "123"]);
+    returnData = "0x";
+    await expect(readJournalUint(caller, spec, 1, "second word")).rejects.toThrow(
+      "second word: return data too short for word 1",
+    );
+    await expect(readJournalAddress(caller, spec)).rejects.toThrow("call: return data too short for word 0");
+    expect(events.slice(4)).toEqual(["call", "call"]);
+  });
+
+  it("records overridden bytes without weakening call, log or exhaustion checks", async () => {
+    const [first, second] = FIXTURE.calls;
+    const override = `0x${encodeWord(0n)}`;
+    const logQuery = { name: "logs", address: first!.to, fromBlock: 1, toBlock: 2, topics: [], logs: [], decoded: "" };
+    const caller = new ReplayEthCaller([first!, second!], [logQuery], new Map([[`${first!.to}:${first!.callData}`, override]]));
+    const callSpec = (call: MeasurementCall) => ({
+      name: call.name, to: call.to.toUpperCase(), signature: call.signature, selector: call.selector,
+    });
+    await expect(caller.call({ ...callSpec(first!), name: "wrong" })).rejects.toThrow("Replay call 0 mismatch");
+    await expect(caller.call(callSpec(second!))).rejects.toThrow("Replay call 0 mismatch");
+    expect(await caller.call(callSpec(first!))).toBe(override);
+    expect(caller.calls[0]!.returnData).toBe(override);
+    caller.recordDecoded("0");
+    expect(caller.calls[0]!.decoded).toBe("0");
+    expect(() => caller.assertExhausted()).toThrow("Replay consumed 1/2 journaled calls");
+    expect(await caller.call(callSpec(second!))).toBe(second!.returnData);
+    expect(() => caller.assertExhausted()).toThrow("Replay consumed 0/1 journaled log queries");
+    await expect(caller.queryLogs({ ...logQuery, name: "wrong" })).rejects.toThrow("Replay log query 0 mismatch");
+    expect(await caller.queryLogs(logQuery)).toEqual([]);
+    caller.assertExhausted();
+  });
+});
 
 describe("redactRpcUrlForEvidence", () => {
   it("keeps only the RPC origin for evidence and logs", () => {
@@ -129,6 +117,7 @@ describe("measureLiquityV1", () => {
       await measureConfiguredTarget(caller, TARGET, BLOCK, "https://example.invalid/rpc"),
     );
     caller.assertExhausted();
+    expect(caller.calls).toEqual(FIXTURE.calls);
     if (evidence.family !== "liquity-v1") throw new Error("Expected Liquity V1 evidence");
     expect(evidence.metrics).toEqual(FIXTURE.metrics);
     expect(evidence.derived.priceWei).toBe(FIXTURE.derived.priceWei);
@@ -145,7 +134,7 @@ describe("measureLiquityV1", () => {
       ],
     ]);
     await expect(
-      measureLiquityV1(recordedCaller(overrides), TARGET, BLOCK, "https://example.invalid/rpc"),
+      measureLiquityV1(new ReplayEthCaller(FIXTURE.calls, [], overrides), TARGET, BLOCK, "https://example.invalid/rpc"),
     ).rejects.toThrow(/graph\.troveManager/);
   });
 
@@ -157,7 +146,7 @@ describe("measureLiquityV1", () => {
       // recorded returndata would not match; the run must abort before them.
     ]);
     await expect(
-      measureLiquityV1(recordedCaller(overrides), TARGET, BLOCK, "https://example.invalid/rpc"),
+      measureLiquityV1(new ReplayEthCaller(FIXTURE.calls, [], overrides), TARGET, BLOCK, "https://example.invalid/rpc"),
     ).rejects.toThrow(/price\.chainlink-agree/);
   });
 });
@@ -175,6 +164,7 @@ describe("measureLiquityV2", () => {
       await measureConfiguredTarget(caller, V2_TARGET, V2_BLOCK, "https://example.invalid/rpc"),
     );
     caller.assertExhausted();
+    expect(caller.calls).toEqual(V2_FIXTURE.calls);
     if (evidence.family !== "liquity-v2") throw new Error("Expected Liquity V2 evidence");
     expect(evidence.metrics).toEqual(V2_FIXTURE.metrics);
     expect(evidence.derived.branches).toHaveLength(3);
@@ -190,7 +180,7 @@ describe("measureLiquityV2", () => {
       .troveManager;
     const shutDown = new Map([[`${branch0TroveManager}:0x58569081`, `0x${encodeWord(1_750_000_000n)}`]]);
     await expect(
-      measureLiquityV2(callerFromFixture(V2_FIXTURE, shutDown), V2_TARGET, V2_BLOCK, "https://example.invalid/rpc"),
+      measureLiquityV2(new ReplayEthCaller(V2_FIXTURE.calls, [], shutDown), V2_TARGET, V2_BLOCK, "https://example.invalid/rpc"),
     ).rejects.toThrow(/not-shut-down/);
 
     // redeemable=false with an otherwise valid price must abort
@@ -202,7 +192,7 @@ describe("measureLiquityV2", () => {
     ]);
     await expect(
       measureLiquityV2(
-        callerFromFixture(V2_FIXTURE, notRedeemable),
+        new ReplayEthCaller(V2_FIXTURE.calls, [], notRedeemable),
         V2_TARGET,
         V2_BLOCK,
         "https://example.invalid/rpc",
@@ -262,21 +252,18 @@ function configuredTarget(assetId: string) {
 
 /**
  * Recompute evidence from a recorded journal through the configured target.
- * Without overrides the strict ordered replayer is used, so a pipeline that
- * skips, reorders or invents a call fails instead of silently agreeing.
+ * Ordinary and mutated observations share strict call/log order verification.
  */
 async function recomputeFromJournal(
   recorded: MechanismMeasurementEvidenceV1,
   overrides?: Map<string, string>,
 ): Promise<MechanismMeasurementEvidenceV1> {
   const target = configuredTarget(recorded.assetId);
-  const caller = overrides
-    ? callerFromFixture(recorded, overrides)
-    : new ReplayEthCaller(recorded.calls, recorded.logQueries ?? []);
+  const caller = new ReplayEthCaller(recorded.calls, recorded.logQueries ?? [], overrides);
   const evidence = MechanismMeasurementEvidenceV1Schema.parse(
     await measureConfiguredTarget(caller, target, recorded.block, recorded.rpcUrl),
   );
-  if (caller instanceof ReplayEthCaller) caller.assertExhausted();
+  caller.assertExhausted();
   return evidence;
 }
 

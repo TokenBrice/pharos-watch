@@ -15,6 +15,10 @@ function normalizeFiatCarryForwardMetadata(
   sourceDate: string | null | undefined,
 ): { cadence: FxSourceCadence; sourceDate: string | null } {
 
+  if (cadence != null) {
+    return { cadence, sourceDate: sourceDate ?? null };
+  }
+
   const naturalCadence = getNaturalFxCadence(pegKey);
   if (!naturalCadence) {
     return { cadence: cadence ?? "intraday", sourceDate: sourceDate ?? null };
@@ -94,7 +98,7 @@ function shouldPreserveDailyOverlayProvenance(
     sourceDateByPeg[pegKey] ?? null,
   );
 
-  if (normalized.sourceDate == null || getNaturalFxCadence(pegKey) == null) {
+  if (normalized.cadence === "intraday" || normalized.sourceDate == null || getNaturalFxCadence(pegKey) == null) {
     return null;
   }
 

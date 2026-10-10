@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { makeExecutionContext } from "../../test-helpers/__shared/auth";
+import { makePublicHealth } from "../../lib/__tests__/public-health.test-support";
+import type * as PublicHealthModule from "../../lib/public-health-assessment";
 
 type HealthProbeStatus = "healthy" | "degraded" | "stale";
 
@@ -44,17 +46,20 @@ function buildProbeResponse(
 }
 
 let fetchMock: ReturnType<typeof mockFetch>;
+const publicProbePaths = vi.hoisted(() => ["/api/health"]);
+const adminProbePaths = vi.hoisted(() => ["/api/status", "/api/status-history?limit=10"]);
 const routeMock = vi.fn();
 const writeStatusProbeRunMock = vi.fn(async () => true);
 const writeStatusRawSnapshotMock = vi.fn(async () => true);
 const loadStatusSupplementsMock = vi.fn(async () => ({ sectionErrors: {} }));
+const assessPublicHealthMock = vi.fn(async () => makePublicHealth());
 const updateDiscrepancyObservationMock = vi.fn(async () => ({
   consecutiveDivergent: 2 as number | null,
   consecutiveProbeFailures: 0 as number | null,
   persistenceSucceeded: true,
 }));
 function buildRawStatus(rawOverallStatus = "healthy", freshnessDiagnostics: Array<Record<string, unknown>> = []) {
-  return { rawOverallStatus, dbHealthy: true, sectionErrors: {}, confidence: 1, causes: { overall: [] }, freshnessDiagnostics };
+  return { rawOverallStatus, dbHealthy: true, evidenceReadFailures: [] as string[], sectionErrors: {}, confidence: 1, causes: { overall: [] }, freshnessDiagnostics };
 }
 const computeRawStatusMock = vi.fn(async () => buildRawStatus());
 const reconcileStatusStateMock = vi.fn(async () => ({
@@ -91,10 +96,14 @@ vi.mock("../../lib/status-reliability", () => ({
   updateDiscrepancyObservation: updateDiscrepancyObservationMock,
   writeStatusProbeRun: writeStatusProbeRunMock,
 }));
+vi.mock("../../lib/public-health-assessment", async (importOriginal) => ({
+  ...(await importOriginal<typeof PublicHealthModule>()),
+  assessPublicHealth: assessPublicHealthMock,
+}));
 vi.mock("@shared/lib/api-endpoints", () => ({
   getProbePaths: (group: "public" | "admin" | "manual") => {
-    if (group === "public") return ["/api/health"];
-    if (group === "admin") return ["/api/status", "/api/status-history?limit=10"];
+    if (group === "public") return publicProbePaths;
+    if (group === "admin") return adminProbePaths;
     return [];
   },
 }));
@@ -111,13 +120,17 @@ const { STATUS_PROBE_THRESHOLDS } = await import("@shared/lib/status-thresholds"
 describe("runStatusSelfCheck", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   beforeEach(() => {
     vi.clearAllMocks();
+    publicProbePaths.splice(0, publicProbePaths.length, "/api/health");
+    adminProbePaths.splice(0, adminProbePaths.length, "/api/status", "/api/status-history?limit=10");
     writeStatusProbeRunMock.mockResolvedValue(true);
     writeStatusRawSnapshotMock.mockResolvedValue(true);
     loadStatusSupplementsMock.mockResolvedValue({ sectionErrors: {} });
+    assessPublicHealthMock.mockResolvedValue(makePublicHealth());
     fetchMock = mockFetch([], { requireMatch: true });
     fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) =>
       buildProbeResponse(input, "healthy", init),
@@ -183,6 +196,55 @@ describe("runStatusSelfCheck", () => {
     expect(metadata.internalExternalDiscrepancy?.reason).toBe("in-sync");
     expect(metadata.probeRotation?.fullSweepWindowSec).toBe(900);
     expect(metadata.probeRotation?.selectedDeepProbeCount).toBe(1);
+  });
+
+  it("publishes the averaged middle pair for four deterministic probe durations", async () => {
+    adminProbePaths.splice(0);
+    vi.resetModules();
+    // Re-import to rebuild the module's cached probe cohort for this population.
+    const { runStatusSelfCheck: run } = await import("../status-self-check");
+    vi.useFakeTimers();
+    vi.setSystemTime(1_777_000_000_000);
+    const durations = [10, 20, 30, 40];
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
+      vi.setSystemTime(Date.now() + durations.shift()!);
+      return buildProbeResponse(input, "healthy", init);
+    });
+    const result = await run({} as D1Database);
+    expect(durations).toHaveLength(0);
+    expect(JSON.parse(result.metadata!).latencySummary).toEqual({
+      minMs: 10, medianMs: 25, p95Ms: 40, maxMs: 40,
+    });
+    expect(writeStatusProbeRunMock).toHaveBeenCalledWith(
+      expect.anything(), expect.any(Number), expect.objectContaining({ details: expect.objectContaining({
+        latencySummary: { minMs: 10, medianMs: 25, p95Ms: 40, maxMs: 40 },
+      }) }), expect.any(Function),
+    );
+  });
+
+  it.each([
+    ["healthy", STATUS_PROBE_THRESHOLDS.healthyP95MaxMs],
+    ["degraded", STATUS_PROBE_THRESHOLDS.healthyP95MaxMs + 1],
+    ["degraded", STATUS_PROBE_THRESHOLDS.degradedP95MaxMs],
+    ["stale", STATUS_PROBE_THRESHOLDS.degradedP95MaxMs + 1],
+  ] as const)("classifies twenty-sample nearest-rank p95 as %s at %sms", async (status, p95Ms) => {
+    adminProbePaths.splice(0);
+    publicProbePaths.splice(0, publicProbePaths.length, "/api/health", ...Array.from({ length: 48 }, (_, i) => `/api/fixture-${i}`));
+    vi.resetModules();
+    // Re-import to rebuild the module's cached probe cohort for this population.
+    const { runStatusSelfCheck: run } = await import("../status-self-check");
+    vi.useFakeTimers();
+    vi.setSystemTime(1_777_000_000_000);
+    const durations = [...Array<number>(18).fill(10), p95Ms, STATUS_PROBE_THRESHOLDS.degradedP95MaxMs + 100];
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
+      vi.setSystemTime(Date.now() + durations.shift()!);
+      return buildProbeResponse(input, "healthy", init);
+    });
+    const result = await run({} as D1Database);
+    const metadata = JSON.parse(result.metadata!);
+    expect(durations).toHaveLength(0);
+    expect(metadata).toMatchObject({ sampleCount: 20, p95LatencyMs: p95Ms, transportStatus: status });
+    expect(metadata.latencySummary.p95Ms).toBe(p95Ms);
   });
 
   it("persists each probe boundary before entering the route", async () => {
@@ -358,6 +420,18 @@ describe("runStatusSelfCheck", () => {
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata ?? "{}").reason).toBe("status-self-check-evidence-read-failed");
   });
+
+  it.each(["cron-history:read-failed", "scheduler:read-failed", "data-quality:active-depegs:read-failed"])(
+    "fails execution on explicit current evidence outcome %s despite successful probes and stores",
+    async (failure) => {
+      computeRawStatusMock.mockResolvedValueOnce({ ...buildRawStatus(), evidenceReadFailures: [failure] });
+      const result = await runStatusSelfCheck({} as D1Database);
+      expect(result.status).toBe("degraded");
+      expect(JSON.parse(result.metadata!)).toMatchObject({
+        reason: "status-self-check-evidence-read-failed", evidenceReadFailures: [failure], failedOutputs: [],
+      });
+    },
+  );
 
   it("includes freshness diagnostics in cron metadata when status evaluation provides them", async () => {
     computeRawStatusMock.mockResolvedValueOnce(

@@ -20,6 +20,10 @@ vi.mock("../../../lib/db-cache", () => ({
   getCache: vi.fn(async () => null),
 }));
 
+vi.mock("../../../lib/structured-log", () => ({
+  logWorkerEvent: vi.fn(),
+}));
+
 // Mock yield cache builder
 vi.mock("../../yield-sync/cache", () => ({
   buildDlStablecoinPoolsCache: vi.fn(() => ({})),
@@ -31,6 +35,7 @@ import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { buildDlStablecoinPoolsCache } from "../../yield-sync/cache";
 import type { CurveApiPayload, CurvePool, LlamaPool } from "../types";
 import { buildKnownPoolAddresses, buildCurveLookups, fetchDataSources } from "../fetch-primary";
+import { logWorkerEvent } from "../../../lib/structured-log";
 import { buildPoolFingerprint } from "../pool-helpers";
 import { buildPoolIdentity, getIdentityDedupReason } from "../pool-identity";
 import { CURVE_CHAINS } from "../constants";
@@ -304,11 +309,22 @@ describe("fetchDataSources", () => {
     );
   });
 
-  it("fails the yields source closed when a malformed row prevents compaction", async () => {
-    const malformedPool = {
+  it.each([null, { data: null }, { data: {} }])("keeps malformed transport envelopes source-wide (%j)", async (body) => {
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
+      const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
+      if (urlStr.includes("yields.llama.fi")) return { response: new Response("", { status: 200 }), body };
+      if (urlStr.includes("api.llama.fi/protocols")) return { response: new Response("", { status: 200 }), body: [] };
+      return null;
+    });
+    expect(await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS)).toBeNull();
+    expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DL_YIELDS, false);
+  });
+
+  it.each(["symbol", "underlyingTokens", "null-row"] as const)("quarantines malformed %s while retaining healthy tracked pools and attributed quality deficits", async (field) => {
+    const malformedPool = (field === "null-row" ? null : {
       ...FAKE_DL_POOLS[0],
-      symbol: null,
-    } as unknown as LlamaPool;
+      ...(field === "symbol" ? { symbol: null } : { underlyingTokens: [42] }),
+    }) as unknown as LlamaPool;
 
     vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
@@ -331,11 +347,25 @@ describe("fetchDataSources", () => {
 
     expect(result).not.toBeNull();
     expect(result).toMatchObject({
-      pools: [],
-      rawPoolCount: 0,
-      dlYieldsAvailable: false,
+      pools: FAKE_DL_POOLS.slice(1),
+      rawPoolCount: FAKE_DL_POOLS.length,
+      dlYieldsAvailable: true,
+      poolRejections: [{
+        reason: "invalid-pool-identity",
+        count: 1,
+        poolIds: [field === "null-row" ? "unknown" : "pool-0"],
+        tvlUsd: field === "null-row" ? 0 : FAKE_DL_POOLS[0].tvlUsd,
+      }],
     });
-    expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DL_YIELDS, false);
+    expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DL_YIELDS, true);
+    expect(vi.mocked(logWorkerEvent)).toHaveBeenCalledWith(expect.objectContaining({
+      event: "defillama-pools-quarantined",
+      metadata: {
+        reason: "invalid-pool-identity",
+        rejectedPoolCount: 1,
+        poolIds: [field === "null-row" ? "unknown" : "pool-0"],
+      },
+    }));
   });
 });
 
@@ -653,6 +683,8 @@ describe("buildCurveLookups", () => {
       curvePoolMap.get(`avalanche:${CURVE_NXUSD_COMPOSITE_POOL_ADDRESS}`),
     ).toMatchObject({
       basePoolAddress,
+      balanceTvlScope: "full-pool",
+      contributionTvlScope: "base-pool-excluded",
       poolCoins: [
         { symbol: "NXUSD", decimals: 18, isBasePoolLpToken: false },
         { symbol: "av3CRV", decimals: 18, isBasePoolLpToken: true },

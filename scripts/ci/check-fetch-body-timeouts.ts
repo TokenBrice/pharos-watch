@@ -116,7 +116,7 @@ export function findFetchBodyTimeoutViolations(
       const symbol = checker.getSymbolAtLocation(node.expression.expression);
       const candidate = symbol && tracked.get(symbol);
       const bodyLine = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
-      if (candidate && bodyLine - candidate.line <= 80) {
+      if (candidate) {
         violations.push({
           file,
           fetchLine: candidate.line,

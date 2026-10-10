@@ -173,6 +173,7 @@ function buildDailyRows() {
     digest_extended: null,
     input_data: JSON.stringify({
       totalMcapUsd: 100_000_000 + index * 1_000_000,
+      supplyCoverage: { complete: true, observedCount: 2, unavailableCount: 0 },
       activeDepegCount: index,
       stabilityIndex: {
         score: 90 - index,
@@ -219,7 +220,7 @@ function makeTables(overrides: Partial<{
       first: null,
     },
     {
-      match: "WHERE generated_at >= ? AND (digest_meta IS NULL OR json_extract(digest_meta, '$.type') IS NULL OR json_extract(digest_meta, '$.type') != 'weekly')",
+      match: "WITH latest_daily AS",
       rows: overrides.dailyRows ?? buildDailyRows(),
     },
     {
@@ -779,6 +780,45 @@ describe("generateWeeklyRecap", () => {
     });
   });
 
+  it.each([true, false])("persists truthful weekly transition availability when canonical safety is available=%s", async (safetyAvailable) => {
+    const reason = "safety-canonical-snapshot:v9-snapshot-unavailable";
+    if (!safetyAvailable) {
+      vi.mocked(loadDigestSafetyContext).mockResolvedValueOnce({
+        status: "unavailable", expectedModel: "v9", identity: null,
+        publishedAt: null, reason: "v9-snapshot-unavailable",
+      });
+    }
+    const template = buildDailyRows()[0]!;
+    const dailyRows = Array.from({ length: 7 }, (_, index) => ({
+      ...template,
+      generated_at: Math.floor(Date.UTC(2026, 2, 24 + index) / 1000),
+      input_data: JSON.stringify({ ...JSON.parse(template.input_data), gradeTransitions: [] }),
+    }));
+    const db = mockD1(makeTables({ dailyRows }), { requireMatch: true });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({
+      extended: VALID_WEEKLY_EXTENDED.replace("grade transitions", "risk transitions"),
+    }));
+
+    const result = await generateWeeklyRecap(db, "anthropic-key", null, null);
+
+    expect(result.itemCount).toBe(1);
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    expect(insert).toBeDefined();
+    const persisted = JSON.parse(String(insert!.binds[3]));
+    expect(persisted.gradeTransitionCount).toBe(safetyAvailable ? 0 : null);
+    if (safetyAvailable) {
+      expect(persisted.metricUnavailableReasons.gradeTransitions).toBeUndefined();
+      expect(persisted.degradedSources).toBeUndefined();
+    } else {
+      expect(persisted.metricUnavailableReasons.gradeTransitions).toEqual([reason]);
+      expect(persisted.degradedSources).toContain(reason);
+    }
+    const firstRequest = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body));
+    expect(firstRequest.messages[0].content).toContain(
+      safetyAvailable ? "Grade transitions: 0" : `Risk transitions: N/A (${reason})`,
+    );
+  });
+
   it("repairs unbound weekly copy during the standard corrective retry", async () => {
     vi.mocked(loadDigestSafetyContext).mockResolvedValueOnce({
       status: "unavailable",
@@ -938,6 +978,36 @@ describe("generateWeeklyRecap", () => {
       expect(input.dailyDigests.map((day: { inputData: { totalMcapUsd: number } }) => day.inputData.totalMcapUsd))
         .toEqual([200_000_000, 202_000_000, 204_000_000, 206_000_000, 208_000_000]);
       expect(input.mcapRange).toEqual({ start: 200_000_000, end: 208_000_000, netChange: 8_000_000, pctChange: 4 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("bounds current and prior recap windows to seven UTC edition dates in SQLite", async () => {
+    vi.setSystemTime(new Date("2026-03-30T08:10:00Z"));
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_title, digest_text, input_data) VALUES (?, ?, ?, ?)");
+      const template = buildDailyRows()[0]!;
+      const base = Math.floor(Date.parse("2026-03-16T08:05:00Z") / 1000);
+      for (let index = 0; index < 15; index++) {
+        const input = JSON.parse(template.input_data);
+        input.stabilityIndex.score = 80 + index;
+        input.activeDepegCount = index;
+        insert.run(base + index * 86400, `Day ${index}`, template.digest_text, JSON.stringify(input));
+      }
+      vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+      await generateWeeklyRecap(db, "anthropic-key", null, null);
+      const persisted = sqlite.prepare("SELECT input_data FROM daily_digest WHERE json_extract(digest_meta, '$.type') = 'weekly'").get();
+      const input = JSON.parse(String(persisted!.input_data));
+      expect(input.dailyDigests.map((day: { date: string }) => day.date)).toEqual([
+        "2026-03-24", "2026-03-25", "2026-03-26", "2026-03-27", "2026-03-28", "2026-03-29", "2026-03-30",
+      ]);
+      expect(input.weekOverWeekDeltas).toMatchObject({
+        dataCoverage: { currentDays: 7, priorDays: 7 },
+        psi: { current: 91, prior: 84, delta: 7 },
+        activeDepegObservations: { current: 77, prior: 28 },
+      });
     } finally {
       sqlite.close();
     }

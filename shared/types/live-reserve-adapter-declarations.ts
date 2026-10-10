@@ -362,6 +362,9 @@ const accountableParamsSchema = z
         "protocol_split",
       ])
       .optional(),
+    /** Which composition source to read. `reserves-types` (default) selects a sub-bucket under
+     *  `data.reserves` via `bucket`; `asset-breakdown` reads the root-level `data.assetBreakdown`
+     *  category tree instead, for feeds whose composition is not published under `reserves`. */
     layout: z.enum(["reserves-types", "asset-breakdown"]).optional(),
     riskMap: riskRecordSchema.optional(),
     renameMap: stringRecordSchema.optional(),
@@ -376,10 +379,15 @@ const accountableParamsSchema = z
 const attestationPdfIndexParamsSchema = z
   .object({
     slices: z.array(ReserveSliceSchema).min(1),
+    /** Bind a reviewed balance observation to its exact report, independently of
+     *  the publication date in the filename. New reports require a new review. */
     reviewedReport: z.object({
       url: AbsoluteUrlSchema,
       balanceDate: StrictIsoDateSchema,
     }).strict().optional(),
+    /** Optional regex source (validated to compile) that the newest-dated PDF link
+     *  must match against its href + anchor text, so a shared index page cannot
+     *  resolve one currency to a sibling currency's certificate. */
     linkMatch: z
       .string()
       .trim()
@@ -867,6 +875,8 @@ const chainlinkPorParamsSchema = z
     ...OptionalEvmRpcFields,
     ...OptionalOracleFreshnessFields,
     issuerCirculationProbe: chainlinkPorIssuerCirculationProbeSchema.optional(),
+    /** Reviewed liability perimeter: an issuer-native chain classification, or
+     *  a declared not-comparable basis (Kinesis KAU) that withholds the ratio. */
     liabilityScope: liabilityScopeSchema.optional(),
   })
   .strict();

@@ -1,5 +1,7 @@
 import { pathToFileURL } from "node:url";
-import { buildBlacklistAddressCountKey } from "../../shared/lib/blacklist";
+import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
+import { getBlacklistConfigsForSymbolAndChain } from "../src/lib/blacklist-contracts";
+import { applyBlacklistCurrentBalanceMaintenance } from "./lib/blacklist-current-balance-maintenance";
 import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { tronBase58ToHex } from "../src/lib/tron-address";
 import {
@@ -10,13 +12,15 @@ import {
   type KycRipCurrentBalanceRow,
   type KycRipValidationStats,
 } from "./lib/kyc-rip";
-import { createRemoteD1Client, sqlString, type RemoteD1Client } from "./lib/remote-d1";
+import { createRemoteD1Client, type RemoteD1Client } from "./lib/remote-d1";
 
 type SnapshotRow = {
   id: string;
   stablecoin: "USDT" | "USDC";
   chainId: "ethereum" | "tron";
   address: string;
+  configKey: string;
+  contractAddress: string;
   amountUsd: number;
 };
 
@@ -28,8 +32,8 @@ export type CurrentBalanceCliOptions = KycRipCliOptions;
 
 const CURRENT_BALANCE_CLI_HELP = {
   scriptName: "worker/scripts/reconcile-blacklist-current-balances-from-kyc-rip.ts",
-  applyDescription: "Execute the remote D1 replacement",
-  minRowsDescription: "Minimum accepted rows before replacement",
+  applyDescription: "Admit and upsert remote D1 scoped observations",
+  minRowsDescription: "Minimum accepted rows before admission",
 } as const;
 const CURRENT_BALANCE_CLI_USAGE = formatKycRipCliUsage(CURRENT_BALANCE_CLI_HELP);
 
@@ -40,8 +44,24 @@ export type CurrentBalanceReconcileDependencies = {
   log?: (message: string) => void;
 };
 
-function buildCurrentBalanceId(stablecoin: "USDT" | "USDC", chainId: "ethereum" | "tron", address: string): string {
-  return buildBlacklistAddressCountKey(stablecoin, chainId, address);
+function buildSnapshotRow(
+  stablecoin: "USDT" | "USDC",
+  chainId: "ethereum" | "tron",
+  address: string,
+  amountUsd: number,
+): SnapshotRow {
+  const configs = getBlacklistConfigsForSymbolAndChain(stablecoin, chainId);
+  if (configs.length !== 1) throw new Error(`Expected exactly one blacklist config for ${stablecoin}:${chainId}`);
+  const config = configs[0]!;
+  return {
+    id: buildBlacklistContractBalanceKey(stablecoin, chainId, address, config.configKey, config.contractAddress),
+    stablecoin,
+    chainId,
+    address,
+    configKey: config.configKey,
+    contractAddress: config.contractAddress,
+    amountUsd,
+  };
 }
 
 export function parseCurrentBalanceArgs(argv: string[]): CurrentBalanceCliOptions {
@@ -53,59 +73,44 @@ export async function normalizeCurrentBalanceRows(rows: KycRipCurrentBalanceRow[
   for (const row of rows) {
     if (row.chain === "ETH" && row.asset === "USDT") {
       const address = row.address.toLowerCase();
-      snapshots.push({
-        id: buildCurrentBalanceId("USDT", "ethereum", address),
-        stablecoin: "USDT",
-        chainId: "ethereum",
-        address,
-        amountUsd: Number(row.frozen_balance),
-      });
+      snapshots.push(buildSnapshotRow("USDT", "ethereum", address, Number(row.frozen_balance)));
       continue;
     }
 
     if (row.chain === "ETH" && row.asset === "USDC") {
       const address = row.address.toLowerCase();
-      snapshots.push({
-        id: buildCurrentBalanceId("USDC", "ethereum", address),
-        stablecoin: "USDC",
-        chainId: "ethereum",
-        address,
-        amountUsd: Number(row.frozen_balance),
-      });
+      snapshots.push(buildSnapshotRow("USDC", "ethereum", address, Number(row.frozen_balance)));
       continue;
     }
 
     if (row.chain === "TRON" && row.asset === "USDT") {
       const address = await tronBase58ToHex(row.address);
       if (!address) continue;
-      snapshots.push({
-        id: buildCurrentBalanceId("USDT", "tron", address),
-        stablecoin: "USDT",
-        chainId: "tron",
-        address,
-        amountUsd: Number(row.frozen_balance),
-      });
+      snapshots.push(buildSnapshotRow("USDT", "tron", address, Number(row.frozen_balance)));
     }
   }
 
   return snapshots;
 }
 
-function buildReplacementStatements(rows: SnapshotRow[], observedAt: number): string[] {
-  validateReplacementRows(rows);
-  return [
-    "DELETE FROM blacklist_current_balances WHERE (stablecoin = 'USDT' AND chain_id = 'ethereum') OR (stablecoin = 'USDC' AND chain_id = 'ethereum') OR (stablecoin = 'USDT' AND chain_id = 'tron');",
-    ...rows.map(
-      (row) =>
-        `INSERT OR REPLACE INTO blacklist_current_balances (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at, attempt_count, last_attempted_at, last_error_class)
-       VALUES (${sqlString(row.id)}, ${sqlString(row.stablecoin)}, ${sqlString(row.chainId)}, ${sqlString(row.address)}, ${row.amountUsd}, ${row.amountUsd}, 'kyc_rip_bootstrap', 'resolved', ${observedAt}, 1, ${observedAt}, NULL);`,
-    ),
-  ];
+function applyObservations(d1: RemoteD1Client, rows: SnapshotRow[], observedAt: number): void {
+  applyBlacklistCurrentBalanceMaintenance(d1, rows.map((row) => ({
+    ...row,
+    amountNative: row.amountUsd,
+    source: "kyc_rip_bootstrap",
+    status: "resolved" as const,
+    observedAt,
+    lastSuccessfulObservedAt: observedAt,
+    attemptCount: 1,
+    lastAttemptedAt: observedAt,
+    lastErrorClass: null,
+    consecutiveFailures: 0,
+  })), "blacklist-kyc-rip-reconcile");
 }
 
-function validateReplacementRows(rows: SnapshotRow[]): void {
+function validateObservationRows(rows: SnapshotRow[]): void {
   if (rows.length === 0) {
-    throw new Error("refusing to replace blacklist_current_balances with zero normalized rows");
+    throw new Error("refusing to admit blacklist_current_balances with zero normalized rows");
   }
 
   const ids = new Set<string>();
@@ -163,12 +168,9 @@ function buildSummary(
     malformedRows: stats.malformedRows,
     malformedExamples: stats.malformedExamples,
     affectedAssetsChains: summarizeByScope(snapshots),
-    targetRowsToDelete: existingTargetRows,
-    targetRowsToDeleteNote:
-      existingTargetRows == null
-        ? "not queried in dry-run; all target-scope rows are replaced only in live mode"
-        : undefined,
-    rowsToInsert: snapshots.length,
+    existingTargetRows,
+    retainedLedgerRows: "All existing identities remain; only admitted scoped observations are upserted.",
+    rowsToUpsert: snapshots.length,
   };
 }
 
@@ -187,7 +189,7 @@ export async function runCurrentBalanceReconciliation(
   if (snapshots.length < options.minRows) {
     throw new Error(`normalized ${snapshots.length} rows, below minimum ${options.minRows}`);
   }
-  validateReplacementRows(snapshots);
+  validateObservationRows(snapshots);
 
   if (!options.apply) {
     const summary = buildSummary(options, providerUrl, stats, snapshots, null);
@@ -199,7 +201,7 @@ export async function runCurrentBalanceReconciliation(
   const summary = buildSummary(options, providerUrl, stats, snapshots, loadExistingTargetCount(d1));
   dependencies.log?.(JSON.stringify(summary, null, 2));
   const observedAt = Math.floor((dependencies.now?.() ?? Date.now()) / 1000);
-  d1.executeStatements(buildReplacementStatements(snapshots, observedAt), "blacklist-kyc-rip-reconcile");
+  applyObservations(d1, snapshots, observedAt);
   return summary;
 }
 

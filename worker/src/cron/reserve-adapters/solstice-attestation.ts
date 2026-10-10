@@ -133,13 +133,23 @@ function timelineTotalMismatchWarning(
   );
 }
 
+function timelinePointTimestamp(point: SolsticeTimelinePoint | null): number | null {
+  return parseTimestampLikeToUnixSeconds(point?.ts) ?? parseTimestampLikeToUnixSeconds(point?.date);
+}
+
 function latestTimelinePoint(points: SolsticeTimelinePoint[] | undefined): SolsticeTimelinePoint | null {
   if (!Array.isArray(points) || points.length === 0) return null;
-  return points
-    .slice()
-    .sort((left, right) => (
-      (parseTimestampLikeToUnixSeconds(right.ts) ?? 0) - (parseTimestampLikeToUnixSeconds(left.ts) ?? 0)
-    ))[0] ?? null;
+  let latest = points[0]!;
+  let latestTimestamp = timelinePointTimestamp(latest) ?? 0;
+  for (let index = 1; index < points.length; index++) {
+    const point = points[index]!;
+    const timestamp = timelinePointTimestamp(point) ?? 0;
+    if (timestamp > latestTimestamp) {
+      latest = point;
+      latestTimestamp = timestamp;
+    }
+  }
+  return latest;
 }
 
 export function adaptSolsticeAttestation(payload: SolsticeDashboardPayload): AdapterResult {
@@ -158,9 +168,7 @@ export function adaptSolsticeAttestation(payload: SolsticeDashboardPayload): Ada
   }
 
   const envelopeTimestamp = parseTimestampLikeToUnixSeconds(payload.data.ts);
-  const pointTimestamp =
-    parseTimestampLikeToUnixSeconds(point?.ts)
-    ?? parseTimestampLikeToUnixSeconds(point?.date);
+  const pointTimestamp = timelinePointTimestamp(point);
   const sourceTimestamp = envelopeTimestamp != null && pointTimestamp != null
     ? Math.min(envelopeTimestamp, pointTimestamp)
     : envelopeTimestamp ?? pointTimestamp;

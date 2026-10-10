@@ -1,6 +1,6 @@
 "use client";
 
-import { REPORT_CARD_GRADE_RANGE_METADATA } from "@shared/lib/classification";
+import { REPORT_CARD_GRADE_RANGE_METADATA, getPysBarColor } from "@shared/lib/classification";
 import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
 
 import Link from "next/link";
@@ -24,7 +24,7 @@ import {
   deriveYieldRowDisplay,
 } from "@/components/yield-leaderboard-row-parts";
 import { cn } from "@/lib/utils";
-import { buildStablecoinUrl } from "@shared/lib/urls";
+import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
 import type { YieldBenchmarkRegistry } from "@shared/types";
 import { trackEvent } from "@/lib/analytics";
 import { resolveYieldDisplayRebaseReferenceRate, resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
@@ -49,14 +49,6 @@ import { clampScore } from "@shared/lib/math";
 function safetyBarTone(score: number | null): string {
   if (score == null) return "bg-muted-foreground/40";
   return REPORT_CARD_GRADE_RANGE_METADATA[gradeRange(scoreToGrade(score))].barClassName;
-}
-
-// Map a PYS score to a bar tone matching getPysColor's 41/21 thresholds.
-function pysBarTone(score: number | null): string {
-  if (score == null) return "bg-muted-foreground/40";
-  if (score >= 41) return "bg-emerald-500";
-  if (score >= 21) return "bg-amber-500";
-  return "bg-red-500";
 }
 
 function MetricGauge({
@@ -256,6 +248,7 @@ function YieldInstrumentRowBase({
     [row, scalingFactor, methodologyVersion, riskFreeRate, benchmarks],
   );
   const totalSourceCount = 1 + altSourceCount;
+  const workbenchLink = getYieldWorkbenchLink(row.id);
   const resolvedBenchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
   const benchmarkRate = resolvedBenchmark.rate;
   const excess = benchmarkRate != null ? row.apy30d - benchmarkRate : null;
@@ -388,7 +381,7 @@ function YieldInstrumentRowBase({
           <div className="mt-1.5">
             <MetricGauge
               value={row.pharosYieldScore}
-              tone={pysBarTone(row.pharosYieldScore)}
+              tone={getPysBarColor(row.pharosYieldScore)}
               ariaLabel={`Pharos Yield Score ${row.pharosYieldScore ?? "unavailable"} of 100`}
             />
           </div>
@@ -452,7 +445,7 @@ function YieldInstrumentRowBase({
         {/* Actions: deep dive + expand */}
         <div className="flex items-center justify-end gap-1 md:pt-0.5">
           <Link
-            href={buildStablecoinUrl(row.id, "yield/")}
+            href={workbenchLink.href}
             prefetch={false}
             onClick={(event) => {
               event.stopPropagation();
@@ -466,10 +459,10 @@ function YieldInstrumentRowBase({
               if (event.key === "Enter" || event.key === " ") event.stopPropagation();
             }}
             className="pharos-focus-ring hidden items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground xl:inline-flex"
-            aria-label={`Open full yield analysis for ${row.symbol}`}
-            title="Open full yield analysis"
+            aria-label={`${workbenchLink.label} for ${row.symbol}`}
+            title={workbenchLink.label}
           >
-            <span>Deep dive</span>
+            <span>{workbenchLink.isWorkbench ? "Deep dive" : workbenchLink.label}</span>
             <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
           </Link>
           <button

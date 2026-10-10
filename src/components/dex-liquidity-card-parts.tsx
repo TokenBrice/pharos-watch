@@ -323,7 +323,12 @@ export function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
     if (!history || history.length < 2) return [];
     return history.map((p) => ({
       date: formatChartDate(p.date * 1000, "short"),
-      tvl: p.tvl,
+      // History has no positively known-empty TVL marker: zero placeholders
+      // and unknown evidence are gaps, while weak observed liquidity stays visible.
+      tvl: p.tvl > 0 && p.coverageClass != null && p.coverageClass !== "unobserved" &&
+        p.liquidityEvidenceClass != null && p.liquidityEvidenceClass !== "unobserved" ? p.tvl : null,
+      coverageClass: p.coverageClass,
+      liquidityEvidenceClass: p.liquidityEvidenceClass,
     }));
   }, [history]);
 
@@ -380,11 +385,11 @@ export function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
             <Tooltip
               {...RECHARTS_TOOLTIP_STYLES}
               formatter={(value) => [
-                formatCurrency(typeof value === "number" ? value : Number(value ?? 0) || 0),
+                typeof value === "number" ? formatCurrency(value) : "Unavailable",
                 "TVL",
               ]}
             />
-            <Area type="monotone" dataKey="tvl" stroke={CHART_BLUE} fill={`url(#${gradientId})`} strokeWidth={1.5} />
+            <Area type="monotone" dataKey="tvl" connectNulls={false} stroke={CHART_BLUE} fill={`url(#${gradientId})`} strokeWidth={1.5} />
           </AreaChart>
         ) : (
           <ChartSkeleton className="h-full w-full" />

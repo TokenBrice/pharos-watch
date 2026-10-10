@@ -11,7 +11,7 @@ import {
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { GENIUS_STATUS_SHORT_LABELS, GENIUS_STATUS_TEXT_CLS } from "@shared/lib/genius";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
-import { REDEMPTION_ACCESS_LABELS, REDEMPTION_ACCESS_PASSPORT_LABELS } from "@/lib/redemption-backstop-labels";
+import { REDEMPTION_ACCESS_LABELS, REDEMPTION_ACCESS_PASSPORT_LABELS } from "@shared/lib/classification";
 import { buildCoinTrackerLink } from "@/lib/coin-tracker-links";
 import { buildRegulatoryStandingView } from "@/lib/regulatory-standing";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";

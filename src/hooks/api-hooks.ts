@@ -51,7 +51,7 @@ type RegisteredApiQueryResult<T, TMode extends FrontendApiQueryDescriptor<T>["re
  * mode type argument is the proof; TypeScript cannot carry it through the
  * runtime branch inside the builder.
  */
-export function asPlainQueryOptions<T>(options: RegisteredApiQueryOptions<T>): PlainApiQueryOptions<T> {
+function asPlainQueryOptions<T>(options: RegisteredApiQueryOptions<T>): PlainApiQueryOptions<T> {
   return options as PlainApiQueryOptions<T>;
 }
 

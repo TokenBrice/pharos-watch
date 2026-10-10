@@ -9,6 +9,8 @@ The dependency map route (`/dependency-map`) presents the canonical Safety Score
 Primary files:
 
 - `src/app/dependency-map/page.tsx`
+- `src/app/dependency-map/content.json` — authored metadata, FAQ, lens and Exposure-control copy; consumers use the JSON default export, consistent with the test bundler's disabled named JSON exports
+- `src/lib/dependency-exposure-content.json` — shared visible/Markdown methodology prose; `check:editorial-content` validates both JSON sources and internal links
 - `src/app/dependency-map/client.tsx`
 - `src/app/dependency-map/dependency-hero.tsx` — summary strip plus the full-width graph
 - `src/lib/dependency-hubs-model.ts`
@@ -55,6 +57,8 @@ The report separates graph invariants from curation queues. Self-edges, duplicat
 This permanent evidence queue is distinct from two existing controls: the static `check:dependency-review-gaps` merge gate and the weekly production structural audit (which fails/alerts its job, not releases). Static-versus-published reconciliation is advisory; a difference is not proof of a missing edge or permission to restore stale weights. Preserve reviewed registries, deliberate non-links, withheld claims, and append-only review history.
 
 Audit `provenance.publication` retains the upstream-validated Safety Score identity, original evaluation/publication clocks, source generations/digests, and publication health; it is `null` when unavailable. `generatedAt` is the audit capture clock and `provenance.checkoutRevision` identifies the capturing checkout. Reconciliation separately records the audit checkout and current comparison checkout plus publication comparison status. Never renew held publication evidence using a newer capture/checkout clock. Legacy missing provenance is unknown; malformed supplied provenance is rejected.
+
+Runtime audit origins come from published edge provenance (`publishedSources`), with `mixed` for multiple known origins and a count of absent origins; unpublished set-level fallback and reserve-share facts stay null. `backingFromLiveReserves` is a separate backing fact and never proves a live dependency mapping. Scoreability follows the consumed serial, basket or role input: technical gaps are `pipeline-gap`, distinct from economic `active-nr`. Known exposure weights remain unchanged. An unavailable-target disposition becomes obsolete only when every referencing graph and role lane is scoreable.
 
 When live inputs are supplied, compare three layers before calling a link missing:
 
@@ -194,6 +198,7 @@ The graph header exposes a single wrapping control row — Focus, Type, Limit, a
 - **Node limit toggle**: `50`, `100`, `200` (default), or `All`, using connectivity-aware admission in market-cap order.
 - **Trace coin picker**: always visible. The standalone map includes tracked registry coins even when they have no published graph links. Selecting a coin sets the neighborhood root and switches to `Neighborhood`. Clicking a node selects the same trace target without changing the active focus mode. Trace selection is not position pinning: dragging pins a node's coordinates; double-click releases that position, and the header's `Pinned position` control releases all positions without clearing the trace.
 - **Selection overlay**: renders when a node is hovered or selected as the trace target, in the top-right of the SVG stage with HUD chrome. It reports full-graph direct dependent exposure in USD, full dependent/upstream counts with visible counts in parentheses, visible examples, and a "Trace neighborhood" action. Unavailable supply and unknown shares are disclosed separately. Focus, Type, Limit, and the small-link toggle do not change its full-graph exposure total.
+  Desktop/mobile inspection panels, edge-free exposure roots, and detail snapshots retain partial-evidence qualifications. A null grade reads `Pipeline gap`, never NR; partial grades disclose `Partial evidence: pipeline gap (A/B)` as the tooltip does.
 
 Below `sm`, a neighborhood picker and linked-coin list provide the first inline inspection surface. **Fullscreen graph** opens a dialog with **Graph** and **List** tabs and named **Fit**, **Zoom in**, and **Zoom out** controls. Drag the background to pan, tap a coin to select, and mouse-drag a coin to pin; touch coin gestures do not pin positions. The list, pickers, and named controls provide 44 CSS px minimum alternatives to small canvas targets. The opener is hidden at `sm` and above, and crossing the 640px breakpoint closes the dialog. Only one live graph stage renders at a time, with the shared model retaining interaction state.
 

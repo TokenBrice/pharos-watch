@@ -121,8 +121,9 @@ describe("filterAlertableBands", () => {
 });
 
 describe("buildDepegSnapshot", () => {
-  it("maps active depeg rows to structured payloads", () => {
+  it("maps active depeg rows to structured payloads with persisted event identity", () => {
     const rows: ActiveDepegRow[] = [{
+      event_id: 42,
       stablecoin_id: "usdc-circle",
       symbol: "USDC",
       direction: "below",
@@ -133,6 +134,7 @@ describe("buildDepegSnapshot", () => {
     }];
     const result = buildDepegSnapshot(rows);
     expect(result["usdc-circle"]).toEqual({
+      eventId: 42,
       stablecoinId: "usdc-circle",
       symbol: "USDC",
       direction: "below",
@@ -258,7 +260,7 @@ describe("writeSnapshots", () => {
       reserveDispatched: null,
     });
 
-    expect(batchSizes).toEqual([5]);
+    expect(batchSizes).toEqual([6]);
     const writes = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
     expect(writes.map((entry) => entry.binds[0])).toEqual([
       SNAPSHOT_KEYS.dews,
@@ -266,6 +268,7 @@ describe("writeSnapshots", () => {
       SNAPSHOT_KEYS.depeg,
       SNAPSHOT_KEYS.launch,
       SNAPSHOT_KEYS.reserveDispatched,
+      SNAPSHOT_KEYS.reserveObserved,
     ]);
     expect(new Set(writes.map((entry) => entry.binds[2]))).toEqual(new Set([1776945600]));
     expect(writes.find((entry) => entry.binds[0] === SNAPSHOT_KEYS.reserveDispatched)?.binds[1]).toBe("null");
@@ -289,7 +292,7 @@ describe("writeSnapshots", () => {
       reserveDispatched: [],
     });
 
-    expect(batchSizes).toEqual([6]);
+    expect(batchSizes).toEqual([7]);
     const keys = db
       .getHistory()
       .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))

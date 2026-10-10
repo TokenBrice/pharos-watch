@@ -4,12 +4,14 @@ Composite ecosystem health score (0–100) measuring how stable the stablecoin m
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-stability-index -->`v3.66`<!-- GENERATED-END: methodology-version-stability-index -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-stability-index -->`v3.67`<!-- GENERATED-END: methodology-version-stability-index -->
 - **Public changelog page:** `/methodology/stability-index-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/registry.ts`, with shared constants in `shared/lib/methodology-versions/constants.ts` and changelog entries in `shared/data/methodology-changelogs/stability-index/`
 
 PSI versions are bumped when formula terms, caps, condition bands, or score-affecting input semantics change.
 Historical entries before formal versioning were reconstructed from git commit history and marked as such.
+
+The `v3.67` release is score-moving for historical repairs, not a formula or band change. Audit repairs and bounded backfills use canonical daily-price/native-domain/DEWS replay with a shared twenty-one-day supply lookback. Trend pairs admitted identities and holds accepted days when the prior denominator is unavailable; required missing DEWS archives cannot become zero stress. Exclusion/restoration projects the post-audit eligible event universe and commits event provenance with PSI atomically. Full-precision contributor factors and source-anchored thirty-day calendar statistics correct attribution/display without rewriting legacy factors. Fixed-clock replay, changed-day attribution and owner review are required before release; no historical rewrite or replay result is asserted by the version bump.
 
 ## Formula
 
@@ -17,7 +19,7 @@ Historical entries before formal versioning were reconstructed from git commit h
 Score = 100 − severity − breadth − stressBreadth + trend
 ```
 
-Clamped to [0, 100], rounded to 1 decimal place.
+Clamped to [0, 100], rounded to 1 decimal place. `shared/lib/psi-policy.ts` owns component limits and inclusive band boundaries; Worker scoring, frontend chart zones, average/event labels, and beam maxima consume that policy.
 
 ## Components
 
@@ -94,7 +96,7 @@ The cron captures a per-coin breakdown in `input_snapshot.contributors`:
 [{ "id": "a7a5-old-vector", "symbol": "A7A5", "bps": -9871, "mcapUsd": 507000000, "ageDays": 61.2, "factor": 0.74 }]
 ```
 
-The API surfaces this array in `current.contributors` (not in history). The frontend renders it as a "Top Contributors" table showing each coin's deviation, market cap, age, depreciation factor, and severity/breadth cost.
+The API surfaces this array in `current.contributors` (not in history). The frontend renders it as a "Top Contributors" table showing each coin's deviation, market cap, age, depreciation factor, and severity/breadth cost. `factor` retains the full-precision scoring value, so `computePsiDepegContribution()` reproduces the uncapped costs; only visible ages, percentages and costs are rounded. Legacy samples may retain their originally rounded factors.
 
 ## Condition Bands
 
@@ -135,6 +137,7 @@ Strict stablecoins-cache failure, active-depeg read failure, or unavailable acce
   After admission, a successful sample write and prune reports `psi-sample-published`; omissions remain visible in the persisted snapshot and cron quality findings. Invalid aggregate market-cap or paired trend input preserves the prior sample without changing its age or methodology. Asset quarantine in an accepted DEWS generation is not a whole-source hold: PSI uses exactly its admitted rows within the unchanged 3,600-second budget.
 - **Daily aggregation**: `snapshotPsiDaily()` in `worker/src/cron/snapshot-psi.ts` — runs first at **08:00 UTC**, then the cache-safe quarter-hourly lane checks for the previous day's midnight-keyed row and retries only while it is absent. Averages all 30-minute samples from the previous UTC day and stores one row in the `stability_index` table by deleting any existing row for the midnight-keyed `computed_at` and inserting the new one in a single atomic `db.batch()`. The table is keyed by a surrogate `id` with no UNIQUE constraint on `computed_at`, so `INSERT OR REPLACE` would append a second row for the day rather than replace it; the delete-then-insert is idempotent across re-runs and collapses any duplicate rows left by earlier runs. A successful retry records `reason: "same_day_catch_up"`; an existing row records the neutral `same_day_snapshot_exists` reason. If the prior UTC day has zero samples, the cron returns `status: "degraded"` with `reason: "no-samples-for-yesterday"` and skips the write.
 - **Historical admin backfill**: `handleBackfillStabilityIndex()` replays completed UTC days only, using the core PSI denominator, canonical aliases, overlapping events and the as-of price/severity rules above. Repair supply and available historical prices for PSI historical assets before rebuilding, without fabricating missing series. Methodology `v3.0+` derives historical `stressBreadth` from same-day core-universe `stress_signal_history` warning bands. Missing archival inputs preserve the existing day instead of deleting it. New diagnostic snapshots name cohort coverage `historicalAssetCoverageCount`; retained older JSON uses its original field name without retrospective rewriting.
+  Backfill and audit-triggered repairs share `worker/src/lib/psi-replay-inputs.ts` and `replayHistoricalPsiForDay()`, including daily prices, native quote-domain/start/recovery evidence and same-day DEWS archive rows. Supply reads start **21 days before** the first replay day (7-day trend plus the canonical 14-day as-of margin), so narrowing an operator window does not truncate admissible evidence. Historical trend pairs only identities observed on both target dates, independently of the current severity denominator; unpaired identities are named in `trendUnavailableIds`. Missing/nonpositive paired prior totals hold with `trend-inputs-unavailable`. For v3, absent DEWS rows hold with `dews-archive-unavailable`, while an observed all-CALM day measures zero; snapshots retain `dewsArchiveRowCount` and `dewsArchiveSnapshotDate`. Held days keep their existing score, components and provenance unchanged. Audit verdict changes project the **post-mutation** eligible event universe in both directions before scoring, and commit provenance plus available PSI repairs atomically.
 - **Pure compute**: `computeStabilityIndex()` in `worker/src/lib/stability-index.ts` — stateless, deterministic
 - **Tables**: `stability_index_samples` (defined in `worker/migrations/0000_baseline.sql` after the D1 squash) — per-sample: `stored_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON), `methodology_version`. `stability_index` (defined in `worker/migrations/0000_baseline.sql` after the D1 squash) — daily averages: `computed_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON), `methodology_version`
 
@@ -157,6 +160,8 @@ See [API Reference](./api-reference.md) for the full response shape.
 - **Homepage PSI mini-card**: `src/components/home-alt-mini-cards/psi-band-card.tsx` — shows `current.score` (raw instant, unlabeled) alongside a last-90-days score sparkline and a `90D … vs avg` delta caption, so the headline number matches its raw-sample sparkline.
 - **Dedicated page**: `src/app/stability-index/client.tsx` — hero KPI bar focused on the lighthouse/current PSI signal and historical PSI measurements, score history chart with band-colored zones, Beam Dimmers for the current formula component pressure (one independently scaled sparkline per component, with their own time range filter), methodology section, and contextual methodology hints on PSI plus the four component labels (`Severity`, `Breadth`, `Stress Breadth`, `Trend`). The headline score explicitly labels whether it is the rolling 24h average or raw instant sample. Beam Dimmers use the current PSI component values and prior-sample deltas only; they are not a causal event timeline and do not change scoring.
 - **Hook**: `src/hooks/api-hooks.ts` — `useStabilityIndex()` (homepage), `useStabilityIndexDetail()` (page)
+- **30d stats:** observed history within the source evaluation's UTC day and preceding 29 days; gaps never extend the window to obtain 30 rows.
+- **Event dates:** timeline labels preserve authored UTC calendar dates, including cross-year ranges; viewer timezone never changes labels or event-window matching.
 - **Route strategy (2026-03-05):** legacy `/stability-index-alt` was retired after Tier 3A review (no nav/sitemap/internal product usage) and now redirects to `/stability-index` via `public/_redirects`
 
 ## Digest Integration

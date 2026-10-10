@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { formatCurrency, formatDecimal } from "@shared/lib/format";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
 
 interface SovereigntyLatticeProps {
   coverage: BlacklistSummaryResponse["coverage"] | undefined;
@@ -18,7 +19,7 @@ interface LatticeRow {
   stablecoin: BlacklistStablecoin;
   supportedChains: Set<string>;
   eventCount: number;
-  frozenTotal: number;
+  frozenValuation: string;
 }
 
 const MOBILE_CHAIN_COLUMN_LIMIT = 4;
@@ -38,7 +39,8 @@ function buildRows(
       stablecoin: item.symbol,
       supportedChains: new Set<string>(),
       eventCount: stats?.perCoinTotalEvents[item.symbol] ?? 0,
-      frozenTotal: stats?.perCoinFrozenTotal[item.symbol] ?? 0,
+      frozenValuation: formatBlacklistValuation(stats?.perCoinFrozenTotal[item.symbol],
+        stats?.valuationCoverage?.perCoinFrozen[item.symbol], (value) => formatCurrency(value, 0)),
     };
     row.supportedChains.add(item.chainId);
     rowsByStablecoin.set(item.symbol, row);
@@ -210,7 +212,7 @@ function LatticeRowCells({
         {formatCount(row.eventCount)}
       </div>
       <div className="flex h-11 items-center justify-end rounded-r-lg border border-border/60 bg-background/70 px-2 pharos-numeric text-xs text-muted-foreground sm:h-9">
-        {row.frozenTotal > 0 ? formatCurrency(row.frozenTotal, 0) : "—"}
+        <span className="break-words text-right">{row.frozenValuation}</span>
       </div>
     </>
   );

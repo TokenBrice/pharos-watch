@@ -19,7 +19,7 @@ import {
   missingTwitterCredentialNames,
 } from "../../lib/runtime-credentials";
 import { drainTelegramDigestOutbox } from "../../lib/telegram/digest-outbox";
-import { deleteCache, getCache, setCache } from "../../lib/db-cache";
+import { getCache, setCache } from "../../lib/db-cache";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../api/admin-actions";
 import { resolveDigestSafetyMap } from "../../lib/digest-safety-map";
 import { formatIsoDate } from "@shared/lib/format";
@@ -52,9 +52,9 @@ const DIGEST_TRIGGER_POLL_BUDGET_ONLY_JOBS = SCHEDULED_SLOT_PLANS.digestTriggerP
 export const MAX_ATTEMPTS = 3;
 export const DIGEST_TRIGGER_POLL_INTERVAL_SECONDS = 5 * 60;
 /**
- * A `running` state is only reclaimable after one `daily-digest` lease TTL: an
- * isolate kill between the `running` write and the post-run handler leaves
- * `attempts` untouched, so without a deadline every poll restarts the run.
+ * A `running` state is only reclaimable after one `daily-digest` lease TTL.
+ * Each start consumes its attempt durably before work, including starts whose
+ * isolate terminates before the post-run handler.
  */
 const DIGEST_FORCE_RUN_RUNNING_DEADLINE_SEC = 15 * 60;
 /**
@@ -240,6 +240,19 @@ function parseForceRunPayload(value: string): DigestForceRunRequest | null {
   } catch {
     return null;
   }
+}
+
+async function replaceForceRunRequest(
+  db: D1Database,
+  expectedValue: string,
+  request: DigestForceRunRequest,
+  timestamp: number,
+): Promise<boolean> {
+  const result = await db
+    .prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ? AND value = ?")
+    .bind(JSON.stringify(request), timestamp, DIGEST_FORCE_RUN_CACHE_KEY, expectedValue)
+    .run();
+  return (result.meta.changes ?? 0) === 1;
 }
 
 function boundedErrorMessage(value: string): string {
@@ -461,7 +474,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       lastError: "malformed-payload",
     };
     logWorkerEvent({ scope: "handler", level: "warn", event: "digest_force_run_payload_malformed", message: "Malformed digest force-run payload; retaining as dead letter", job: DIGEST_TRIGGER_POLL_SURFACE, metadata: { payloadPrefix: pending.value.slice(0, 200) } });
-    await setCache(runtime.db, DIGEST_FORCE_RUN_CACHE_KEY, JSON.stringify(malformedPayload));
+    await replaceForceRunRequest(runtime.db, pending.value, malformedPayload, malformedPayload.requestedAt);
     await recordBudgetSurfaceTelemetry(runtime.db, {
       surface: DIGEST_TRIGGER_POLL_SURFACE,
       durationMs: Date.now() - startedMs,
@@ -499,27 +512,47 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
 
   let result: CronResult | null = null;
   let caught: unknown = null;
+  let claimedPayload: DigestForceRunRequest | null = null;
+  let noStartReason: string | null = null;
 
   try {
     result = (await runtime.runLeasedCron("daily-digest", async (signal, reportProgress) => {
-      try {
-        await setCache(
-          runtime.db,
-          DIGEST_FORCE_RUN_CACHE_KEY,
-          JSON.stringify({
-            ...payload,
-            state: "running",
-            nextAttemptAt: Math.floor(Date.now() / 1_000) + DIGEST_FORCE_RUN_RUNNING_DEADLINE_SEC,
-          }),
-        );
-      } catch (err) {
-        logWorkerEvent({ scope: "handler", level: "warn", event: "digest_force_run_running_state_persistence_failed", message: "Failed to persist running digest force-run state", job: DIGEST_TRIGGER_POLL_SURFACE, error: err, metadata: { requestId: payload.requestId } });
+      const claimedAt = Math.floor(Date.now() / 1_000);
+      if (payload.attempts >= MAX_ATTEMPTS) {
+        const exhausted = await replaceForceRunRequest(runtime.db, pending.value, {
+          ...payload,
+          state: "dead_letter",
+          nextAttemptAt: claimedAt,
+          lastError: payload.lastError ?? "attempts-exhausted",
+        }, claimedAt);
+        noStartReason = exhausted ? "attempts-exhausted" : "intent-changed";
+        return { status: "skipped_neutral", metadata: noStartReason };
       }
+      const claim: DigestForceRunRequest = {
+        ...payload,
+        attempts: payload.attempts + 1,
+        state: "running",
+        nextAttemptAt: claimedAt + DIGEST_FORCE_RUN_RUNNING_DEADLINE_SEC,
+      };
+      if (!(await replaceForceRunRequest(runtime.db, pending.value, claim, claimedAt))) {
+        noStartReason = "intent-changed";
+        return { status: "skipped_neutral", metadata: noStartReason };
+      }
+      claimedPayload = claim;
       return runDailyDigestWithResume(runtime, true, signal, reportProgress);
     })) ?? null;
   } catch (err) {
     caught = err;
     logWorkerEvent({ scope: "handler", level: "error", event: "digest_force_run_failed", message: "Forced daily digest failed", job: DIGEST_TRIGGER_POLL_SURFACE, error: err, metadata: { requestId: payload.requestId } });
+  }
+
+  if (noStartReason) {
+    return finishSkippedDigestTriggerPoll(runtime, startedMs, noStartReason, {
+      pending: true,
+      requestId: payload.requestId,
+      attempts: payload.attempts,
+      deadLettered: noStartReason === "attempts-exhausted",
+    });
   }
 
   const leaseLocked = result?.status === "skipped_locked";
@@ -563,28 +596,33 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
   const failureClass = failed
     ? classifyFailure(errorMessage ?? resultFailureMessage(result))
     : null;
-  const nextAttempts = failed ? Math.min(payload.attempts + 1, MAX_ATTEMPTS) : payload.attempts;
-  const deadLettered = failed && (failureClass === "permanent" || nextAttempts >= MAX_ATTEMPTS);
-  if (!leaseLocked) {
+  const attemptPayload = claimedPayload ?? payload;
+  const nextAttempts = attemptPayload.attempts;
+  const deadLettered = claimedPayload !== null && failed && (failureClass === "permanent" || nextAttempts >= MAX_ATTEMPTS);
+  const finalState = claimedPayload === null
+    ? payload.state
+    : failed
+      ? deadLettered ? "dead_letter" : "failed_transient"
+      : "succeeded";
+  let intentCleared = false;
+  if (claimedPayload !== null) {
     if (!failed) {
       try {
-        await setCache(
-          runtime.db,
-          DIGEST_FORCE_RUN_CACHE_KEY,
-          JSON.stringify({
-            ...payload,
-            state: "succeeded",
-            nextAttemptAt: finishedAt,
-            lastError: null,
-          }),
-        );
+        const succeeded: DigestForceRunRequest = {
+          ...attemptPayload,
+          state: "succeeded",
+          nextAttemptAt: finishedAt,
+          lastError: null,
+        };
+        if (await replaceForceRunRequest(runtime.db, JSON.stringify(attemptPayload), succeeded, finishedAt)) {
+          const cleared = await runtime.db
+            .prepare("DELETE FROM cache WHERE key = ? AND value = ?")
+            .bind(DIGEST_FORCE_RUN_CACHE_KEY, JSON.stringify(succeeded))
+            .run();
+          intentCleared = (cleared.meta.changes ?? 0) === 1;
+        }
       } catch (err) {
         logWorkerEvent({ scope: "handler", level: "warn", event: "digest_trigger_state_persistence_failed", message: "Failed to persist succeeded digest trigger state", job: DIGEST_TRIGGER_POLL_SURFACE, error: err, metadata: { requestId: payload.requestId } });
-      }
-      try {
-        await deleteCache(runtime.db, DIGEST_FORCE_RUN_CACHE_KEY);
-      } catch (err) {
-        logWorkerEvent({ scope: "handler", level: "warn", event: "digest_trigger_state_clear_failed", message: "Failed to clear succeeded digest trigger state", job: DIGEST_TRIGGER_POLL_SURFACE, error: err, metadata: { requestId: payload.requestId } });
       }
     } else {
       const lastError = boundedErrorMessage(errorMessage ?? resultFailureMessage(result));
@@ -592,17 +630,12 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
         ? finishedAt
         : finishedAt + 2 * DIGEST_TRIGGER_POLL_INTERVAL_SECONDS * nextAttempts;
       try {
-        await setCache(
-          runtime.db,
-          DIGEST_FORCE_RUN_CACHE_KEY,
-          JSON.stringify({
-            ...payload,
-            attempts: nextAttempts,
-            nextAttemptAt,
-            state: deadLettered ? "dead_letter" : "failed_transient",
-            lastError,
-          }),
-        );
+        await replaceForceRunRequest(runtime.db, JSON.stringify(attemptPayload), {
+          ...attemptPayload,
+          nextAttemptAt,
+          state: deadLettered ? "dead_letter" : "failed_transient",
+          lastError,
+        }, finishedAt);
       } catch (err) {
         logWorkerEvent({ scope: "handler", level: "warn", event: "digest_trigger_state_persistence_failed", message: "Failed to persist failed digest trigger state", job: DIGEST_TRIGGER_POLL_SURFACE, error: err, metadata: { requestId: payload.requestId, attempts: nextAttempts } });
       }
@@ -618,11 +651,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
         finishedAt,
         outcome,
         error: errorMessage ? errorMessage.slice(0, 500) : null,
-        state: leaseLocked
-          ? payload.state
-          : failed
-            ? deadLettered ? "dead_letter" : "failed_transient"
-            : "succeeded",
+        state: finalState,
         attempts: nextAttempts,
       }),
     );
@@ -636,7 +665,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
     surface: DIGEST_TRIGGER_POLL_SURFACE,
     durationMs: Date.now() - startedMs,
     dueCount: 1,
-    processedCount: leaseLocked ? 0 : 1,
+    processedCount: claimedPayload === null ? 0 : 1,
     outcome: telemetryOutcome,
     skippedReason: outcome === "skipped_locked"
       ? "daily-digest-lease-locked"
@@ -649,16 +678,12 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       requestId: payload.requestId,
       requestedAt: payload.requestedAt,
       dailyDigestOutcome: outcome,
-      state: leaseLocked
-        ? payload.state
-        : failed
-          ? deadLettered ? "dead_letter" : "failed_transient"
-          : "succeeded",
+      state: finalState,
       attempts: nextAttempts,
-      nextAttemptAt: failed && !deadLettered
+      nextAttemptAt: claimedPayload !== null && failed && !deadLettered
         ? finishedAt + 2 * DIGEST_TRIGGER_POLL_INTERVAL_SECONDS * nextAttempts
         : null,
-      intentCleared: !leaseLocked && !failed,
+      intentCleared,
       deadLettered,
     },
     producer: getRuntimeProducerIdentity(runtime, DIGEST_TRIGGER_POLL_SURFACE),

@@ -40,6 +40,8 @@ export function isPagesReleaseDataMember(member: string): boolean {
       && /^\d{4}-\d{2}-\d{2}\.(?:json|csv|ndjson)$/.test(parts[3]);
   }
   return /^data\/depeg-events\/(?:index|\d{4})\.json$/.test(path)
+    || path === "data/depeg-events/metadata"
+    || path === "data/depeg-events/metadata/capture.json"
     || /^src\/generated\/stablecoin-detail-snapshots\/[a-z0-9-]+\.json$/.test(path);
 }
 

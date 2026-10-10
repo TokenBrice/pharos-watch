@@ -1,6 +1,6 @@
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildCoverageShortfallWarnings,
@@ -12,10 +12,7 @@ import {
   verifiedFreshnessMetadata,
 } from "./helpers";
 
-interface NestVaultPositionsParams {
-  priceUrl: string;
-  lastPriceUpdateUrl: string;
-}
+type NestVaultPositionsParams = LiveReserveAdapterParamsByKey["nest-vault-positions"];
 
 interface NestPositionToken {
   symbol?: unknown;

@@ -208,5 +208,3 @@ export function formatEditorialFindings(findings: readonly EditorialFinding[]): 
 export function hasBlockingEditorialFindings(findings: readonly EditorialFinding[]): boolean {
   return findings.some((finding) => finding.severity === "hard");
 }
-
-export const EDITORIAL_REGISTER_IDS: readonly string[] = EDITORIAL_POLICY.registers.map((register) => register.id);

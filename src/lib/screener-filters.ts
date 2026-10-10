@@ -16,10 +16,10 @@ import { createTableComparator } from "@/lib/table-comparator";
 import {
   MINT_AUTHORITY_FILTER_VALUES,
   MINT_AUTHORITY_SCORE_FILTER_VALUES,
-  resolveMintAuthorityStatusKind,
   type MintAuthorityScoreFilterValue,
   type MintAuthorityStatusKind,
-} from "@/lib/mint-authority-display";
+} from "@shared/lib/classification";
+import { resolveMintAuthorityStatusKind } from "@/lib/mint-authority-display";
 import type { UrlStateSchema } from "@/lib/url-state";
 import {
   GOVERNANCE_TYPE_VALUES,
@@ -30,6 +30,7 @@ import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-regis
 import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { CUSTODY_MODEL_VALUES } from "@shared/types/core";
+import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 import {
   type CustodyModel,
   type PegCurrency,
@@ -43,7 +44,7 @@ import type {
 } from "@shared/types/stablecoin-taxonomy";
 
 export const PEG_VALUES = Object.keys(PEG_METADATA) as readonly PegCurrency[];
-export const SAFETY_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"] as const satisfies readonly ReportCardGrade[];
+export const SAFETY_GRADE_VALUES = ReportCardGradeSchema.options;
 const SCREENER_COIN_VALUES = CLIENT_TRACKED_STABLECOINS.map((coin) => coin.id);
 export const SAFETY_EVIDENCE_VALUES = ["strong", "adequate", "limited", "nr"] as const;
 export type SafetyEvidenceValue = (typeof SAFETY_EVIDENCE_VALUES)[number];

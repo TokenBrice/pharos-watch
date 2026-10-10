@@ -227,6 +227,7 @@ describe("handleEvents", () => {
     expect(body.events[0]!.type).toBe("depeg.opened");
     expect(body.events[0]!.severity).toBe("warning");
     expect(body._meta.status).toBeDefined();
+    expect(body._meta).not.toHaveProperty("reason");
     expect(body.totalExact).toBe(false);
   });
 

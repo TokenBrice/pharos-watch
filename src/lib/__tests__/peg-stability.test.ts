@@ -10,6 +10,15 @@ function computeStability(events: TestPegEvent[], earliestDate: number | null, n
 }
 
 describe("computePegStability", () => {
+  it("includes all historical incidents even when producer coverage starts after the oldest incident", () => {
+    const events = [
+      makeEvent({ startedAt: NOW - 300 * DAY_SECONDS, endedAt: NOW - 290 * DAY_SECONDS, peakDeviationBps: -1200 }),
+      makeEvent({ startedAt: NOW - 20 * DAY_SECONDS, endedAt: NOW - 19 * DAY_SECONDS, peakDeviationBps: -150 }),
+    ];
+    expect(computeStability(events, NOW - 90 * DAY_SECONDS)).toMatchObject({
+      worstDeviationBps: -1200, eventCount: 2, trackingSpan: "9mo",
+    });
+  });
   it("returns null when no earliestDate and no events", () => {
     const result = computeStability([], null);
     expect(result).toBeNull();

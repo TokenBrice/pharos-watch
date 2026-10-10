@@ -85,6 +85,7 @@ function incident(
     endedAt: durationSec == null ? null : startedAt + durationSec,
     durationSec,
     recovered: durationSec != null,
+    fragments: [{ offsetSec: 0, peakDeviationBps: over.peakDeviationBps ?? -500 }],
     ...over,
   };
 }
@@ -1065,9 +1066,9 @@ describe("incident grouping + quarantine", () => {
 
   it.each([null, "superseded-direction"] as const)("uses the final fragment's closure (%s) and rebases depth history", (closeReason) => {
     const raw: DdrHistoricalEvent[] = [
-      { stablecoinId: "a", direction: "below", startedAt: 100, endedAt: 3700, peakDeviationBps: -300, recoveryPrice: null, closeReason: "recovered-native" },
-      { stablecoinId: "a", direction: "below", startedAt: 43300, endedAt: 46900, peakDeviationBps: -500, recoveryPrice: null, closeReason: "recovered-native" },
-      { stablecoinId: "a", direction: "below", startedAt: 47000, endedAt: closeReason == null ? null : 48000, peakDeviationBps: -700, recoveryPrice: null, closeReason },
+      { stablecoinId: "a", direction: "below", startedAt: 100, endedAt: 3700, peakDeviationBps: -300, onsetDeviationBps: -300, recoveryPrice: null, closeReason: "recovered-native" },
+      { stablecoinId: "a", direction: "below", startedAt: 43300, endedAt: 46900, peakDeviationBps: -500, onsetDeviationBps: -500, recoveryPrice: null, closeReason: "recovered-native" },
+      { stablecoinId: "a", direction: "below", startedAt: 47000, endedAt: closeReason == null ? null : 48000, peakDeviationBps: -700, onsetDeviationBps: -700, recoveryPrice: null, closeReason },
     ];
     const live = groupIncidents(raw, usd);
     expect(live.map(({ recovered }) => recovered)).toEqual([true, false]);
@@ -1300,18 +1301,38 @@ describe("computeDuration", () => {
     expect(d.stratum).toContain("severe");
   });
 
-  it("matches historical depth as observed at landmark age, not final peak", () => {
-    const incidents = Array.from({ length: 12 }, (_, i) =>
-      incident(`coin-${i}`, i * 100000, 12 * 3600, {
-        peakDeviationBps: -2000, depth: "severe",
-        fragments: [
-          { offsetSec: 0, peakDeviationBps: -500 },
-          { offsetSec: 8 * 3600, peakDeviationBps: -2000 },
-        ],
-      }));
-    const d = computeDuration({ ...key, depth: "severe" }, 2 * 3600, incidents, new Set());
-    expect(d.stratum).not.toBe("below · severe · robust · USD");
-    expect(d.stratum).toContain("moderate+severe+catastrophic");
+  it("carries late catastrophic observations through production grouping without landmark leakage", () => {
+    const events: DdrHistoricalEvent[] = Array.from({ length: 12 }, (_, i) => ({
+      stablecoinId: `coin-${i}`,
+      direction: "below",
+      startedAt: i * 100000,
+      endedAt: i * 100000 + 72 * 3600,
+      peakDeviationBps: -9000,
+      onsetDeviationBps: -500,
+      severityObservations: [{ observedAt: i * 100000 + 48 * 3600, deviationBps: -9000 }],
+      recoveryPrice: 1,
+    }));
+    const incidents = groupIncidents(events, () => "USD").map((group) => ({ ...group, structural: "robust" as const }));
+    expect(incidents[0].fragments).toEqual([
+      { offsetSec: 0, peakDeviationBps: -500 },
+      { offsetSec: 48 * 3600, peakDeviationBps: -9000 },
+    ]);
+    const early = computeDuration({ ...key, depth: "catastrophic" }, 3600, incidents, new Set());
+    const late = computeDuration({ ...key, depth: "catastrophic" }, 49 * 3600, incidents, new Set());
+    expect(early.stratum).toContain("moderate+severe+catastrophic");
+    expect(late.stratum).toBe("below · catastrophic · robust · USD");
+  });
+
+  it("never promotes an untimed legacy final peak into landmark depth", () => {
+    const events: DdrHistoricalEvent[] = Array.from({ length: 12 }, (_, i) => ({
+      stablecoinId: `legacy-${i}`, direction: "below", startedAt: 0, endedAt: 72 * 3600,
+      peakDeviationBps: -9000, recoveryPrice: 1,
+    }));
+    const grouped = groupIncidents(events, () => "USD");
+    expect(groupDurationLabelIncidents(grouped).every((group) => group.fragments?.length === 0)).toBe(true);
+    const duration = computeDuration({ ...key, depth: "catastrophic" }, 3600, grouped, new Set());
+    expect(duration.suppressed).toBe(true);
+    expect(duration.horizons.every((cell) => cell.rawAtRisk === 0)).toBe(true);
   });
 
   it("selects the structural-preserving broad stratum before dropping structure", () => {

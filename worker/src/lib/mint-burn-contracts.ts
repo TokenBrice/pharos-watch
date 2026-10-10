@@ -17,8 +17,9 @@ const SELECTOR_RE = /^0x[0-9a-fA-F]{8}$/;
 function bridgeAddressFields(d: MintBurnBridgeDetectionConfig): string[][] {
   switch (d.protocol) {
     case "ccip":
-    case "cctp":
       return [d.knownBridgePoolAddresses, d.knownBridgeRouterAddresses];
+    case "cctp":
+      return [d.knownBridgePoolAddresses, d.knownBridgeRouterAddresses, [d.messageTransmitterAddress, d.mintTokenAddress]];
     case "layerzero-oft":
       return [d.knownBridgeContractAddresses, d.bridgeSignalEmitterAddresses];
   }
@@ -33,6 +34,7 @@ export function validateMintBurnBridgeDetection(d: MintBurnBridgeDetectionConfig
     ...bridgeAddressFields(d).map((values) => ({ kind: "address" as const, values })),
     { kind: "topic", values: d.bridgeSignalTopics ?? [] },
     { kind: "selector", values: d.bridgeSignalSelectors ?? [] },
+    ...(d.protocol === "cctp" ? [{ kind: "topic" as const, values: [d.messageReceivedTopic, d.mintAndWithdrawTopic] }] : []),
   ];
   for (const { kind, values } of all) {
     for (const v of values) {

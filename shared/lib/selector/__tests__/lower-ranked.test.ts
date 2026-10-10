@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { selectLowerRanked, userEmphasizedDimension } from "../lower-ranked";
+import { scoreRow } from "../scoring";
 import type {
   ExclusionRecord,
   MergedRow,
@@ -31,17 +32,27 @@ function comp(key: SelectorComponent["key"], normalized: number): SelectorCompon
 }
 
 describe("userEmphasizedDimension", () => {
-  it("zero tolerance + treasury → pegStabilityHistory", () => {
-    expect(userEmphasizedDimension(makeInput({ depegTolerance: "zero" }))).toBe(
-      "pegStabilityHistory",
+  it.each([
+    ["treasury", "pegStabilityHistory"],
+    ["yield", "pegStabilityLive"],
+    ["trading", "pegScoreNow"],
+  ] as const)("zero-tolerance %s reaches Slot B using its actual %s scoring component", (profile, dimension) => {
+    const input = makeInput({ profile, depegTolerance: "zero" });
+    const rows = [99, 98, 97, 96, 95, 94].map((pegScore, index) =>
+      makeRow(`protocol-${index}`, { pegScore }),
     );
-  });
-  it("zero tolerance + trading → pegStabilityLive", () => {
-    expect(
-      userEmphasizedDimension(
-        makeInput({ profile: "trading", depegTolerance: "zero" }),
-      ),
-    ).toBe("pegStabilityLive");
+    const scored = rows.map((row) => {
+      const result = scoreRow(row, profile, input);
+      expect(result).not.toBeNull();
+      return { row, ...result! };
+    }).sort((left, right) => right.score - left.score);
+    const shortlist = new Set(scored.slice(0, 3).map((entry) => entry.row.id));
+    expect(userEmphasizedDimension(input)).toBe(dimension);
+    expect(scored.every((entry) => entry.components.some((component) => component.key === dimension))).toBe(true);
+    const lowerRanked = selectLowerRanked(scored, [], input, rows, shortlist, (row) =>
+      scoreRow(row, profile, input)?.score ?? null,
+    );
+    expect(lowerRanked).toMatchObject([{ slot: "B", id: "protocol-5", failedComponent: dimension }]);
   });
   it("composability=high → liquidity", () => {
     expect(userEmphasizedDimension(makeInput({ composability: "high" }))).toBe("liquidity");

@@ -24,6 +24,7 @@ import { CIRCUIT_SOURCE } from "../lib/constants";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { getOldestBlacklistSuccessAt } from "./blacklist/state";
 import { scanBlacklistConfigs } from "./blacklist/config-scan";
+import { reconcileCurrentBalanceDebt } from "../lib/blacklist/current-balance-debt";
 
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 10 * 60_000;
 const SYNC_BLACKLIST_MAINTENANCE_BUDGET_MS = 10 * 60_000 + 45_000;
@@ -184,6 +185,12 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     tronGridCircuitSkips++;
     logWorkerEventArgs("handler", "warn", "[sync-blacklist] TronGrid circuit open, skipping Tron amount replay");
   }
+  if (!blacklistRuntimeBudgetReached(maintenanceRunBudget) && !blacklistSubrequestBudgetReached(maintenanceRunBudget)) {
+    await reconcileCurrentBalanceDebt(db, {
+      etherscanApiKey, drpcApiKey, trongridApiKey, etherscanLimiter, tronLimiter,
+      runBudget: maintenanceRunBudget, signal, chainRpcs,
+    }, { etherscanAllowed: etherscanCircuitAllowed, tronGridAllowed: tronGridCircuitAllowed });
+  }
   const subrequestBudgetReached = blacklistSubrequestBudgetReached(runBudget);
   runtimeBudgetHit ||= counters.currentBalanceCacheCounters.budgetExhausted;
   const derivedStatus = deriveSyncBlacklistStatus(apiErrors, runtimeBudgetHit, {
@@ -302,6 +309,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         tronGridCircuitSkips,
         apiErrorClasses,
         coverageOutcomeCounts,
+        configLag: scan.configLag,
         blacklistProviderCalls,
         maxProviderSplitDepth,
         providerLimiterLiveConcurrency: BLACKLIST_PROVIDER_LIVE_CONCURRENCY,

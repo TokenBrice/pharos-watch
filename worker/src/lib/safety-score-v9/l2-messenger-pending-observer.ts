@@ -7,7 +7,7 @@ import { getCache, setCache } from "../db-cache";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader, type EvmRpcBatchCall } from "../evm-rpc";
 import type { ChainRpcConfig } from "../chain-registry";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
-import { emitSupplyAttributionDiagnostic } from "./supply-attribution-capture-budget";
+import { emitSupplyAttributionDiagnostic } from "./supply-attribution-diagnostics";
 
 const PAGES_PER_ATTEMPT = 8;
 const LOGS_PER_PAGE = 2048;

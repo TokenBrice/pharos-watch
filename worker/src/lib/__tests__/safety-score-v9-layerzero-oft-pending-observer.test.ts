@@ -3,6 +3,7 @@ import { encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector,
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ReviewedEconomicSupplyPlanSchema, type LayerZeroOftPendingRead, type ReviewedEconomicSupplyPlan, type EconomicSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { ChainRpcConfig } from "../chain-registry";
 import { USER_AGENT } from "../constants";
@@ -80,7 +81,11 @@ function fixture(sends: Send[] = [{ nonce: 1n, amountSD: 1234567n, state: "unver
     if (selector === toFunctionSelector("sharedDecimals()")) return word(6n);
     if (selector === toFunctionSelector("decimalConversionRate()")) return word(10n ** BigInt(which.localDecimals - 6));
     if (selector === toFunctionSelector("peers(uint32)")) return addressWord(remote.oappAddress);
-    if (selector === toFunctionSelector("outboundNonce(address,uint32,bytes32)")) return word(block.blockHash === header(99).hash ? 0n : outbound);
+    if (selector === toFunctionSelector("outboundNonce(address,uint32,bytes32)")) {
+      const height = Number(BigInt(block.blockHash));
+      return word(height === pin ? outbound : messages.filter(message => message.height <= height)
+        .reduce((max, message) => message.nonce > max ? message.nonce : max, 0n));
+    }
     if (selector === toFunctionSelector("inboundNonce(address,uint32,bytes32)")) return word(inbound);
     if (selector === toFunctionSelector("lazyInboundNonce(address,uint32,bytes32)")) return word(lazy);
     if (selector === toFunctionSelector("inboundPayloadHash(address,uint32,bytes32,uint64)")) {
@@ -101,7 +106,8 @@ function fixture(sends: Send[] = [{ nonce: 1n, amountSD: 1234567n, state: "unver
     run(checkpoint?: Parameters<typeof observeLayerZeroOftPending>[0]["checkpoint"]) { return observeLayerZeroOftPending({ source, headers: [header(pin), header(pin)], chainRpcs: new Map<string, ChainRpcConfig>(), checkpoint }); },
   };
 }
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+const sqliteFixtures = createLatestSchemaFixtureTracker();
+afterEach(() => { sqliteFixtures.closeAll(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 it("persists an authenticated prefix before a later discovery timeout", async () => {
   const f = fixture([
@@ -237,6 +243,57 @@ describe("authenticated LayerZero V2 OFT pending census", () => {
   it("rejects an indexer omission through the pinned outbound nonce", async () => {
     const f = fixture(); f.discoveries.splice(0);
     expect(await f.run()).toEqual({ status: "rejected", reason: "send-census-mismatch" });
+  });
+  it("retries a transient discovery omission without persisting an unauthenticated cursor", async () => {
+    const f = fixture(), { db } = sqliteFixtures.open();
+    const run = () => observeLayerZeroOftPending({ source: f.source, headers: [header(100), header(100)], chainRpcs: new Map(), db });
+    const original = f.fetcher.getMockImplementation()!;
+    f.fetcher.mockImplementationOnce(async () => new Response(JSON.stringify({ data: [] })));
+    expect(await run()).toEqual({ status: "rejected", reason: "send-census-mismatch" });
+    const key = `safety-score-v9:layerzero-oft-pending:v2:${sha256Hex(stableJsonStringifyV1(f.source))}`;
+    expect(await dbCache.getCache(db, key)).toBeNull();
+    f.fetcher.mockImplementation(original);
+    expect(await run()).toMatchObject({ status: "accepted", amount: "1234567000000000000" });
+    expect(f.fetcher.mock.calls.filter(([url]) => String(url).includes("/pathway/"))).toHaveLength(2);
+    const stored = await dbCache.getCache(db, key);
+    expect(JSON.parse(stored!.value).pathways[0]).toMatchObject({ sentNonce: "1", sent: { nextBlock: 101, anchor: 100 } });
+  });
+  it("retains the prior authenticated prefix when discovery omits a later interval send", async () => {
+    const f = fixture([
+      { nonce: 1n, amountSD: 3n, state: "unverified", height: 100 },
+      { nonce: 2n, amountSD: 7n, state: "unverified", height: 1_500_100 },
+    ]), { db } = sqliteFixtures.open();
+    f.setPin(2_000_099);
+    const original = f.fetcher.getMockImplementation()!;
+    let windows = 0;
+    f.fetcher.mockImplementation(async (raw, init) => {
+      if (String(raw).includes("/pathway/") && ++windows === 2) return new Response(JSON.stringify({ data: [] }));
+      return original(raw, init);
+    });
+    expect(await observeLayerZeroOftPending({ source: f.source, headers: [header(2_000_099), header(2_000_099)], chainRpcs: new Map(), db }))
+      .toMatchObject({ status: "rejected", reason: "send-census-mismatch" });
+    const key = `safety-score-v9:layerzero-oft-pending:v2:${sha256Hex(stableJsonStringifyV1(f.source))}`;
+    expect(JSON.parse((await dbCache.getCache(db, key))!.value).pathways[0])
+      .toMatchObject({ sentNonce: "1", sent: { nextBlock: 1_000_100, anchor: 1_000_099 } });
+    expect(await observeLayerZeroOftPending({ source: f.source, headers: [header(2_000_099), header(2_000_099)], chainRpcs: new Map(), db }))
+      .toMatchObject({ status: "accepted", amount: "10000000000000" });
+    expect(windows).toBe(3);
+  });
+  it("rebuilds an already-poisoned durable prefix through bounded authenticated discovery", async () => {
+    const f = fixture(), { db } = sqliteFixtures.open();
+    const sourceDigest = sha256Hex(stableJsonStringifyV1(f.source));
+    const key = `safety-score-v9:layerzero-oft-pending:v2:${sourceDigest}`;
+    await dbCache.setCache(db, key, stableJsonStringifyV1({
+      schemaVersion: 1, sourceDigest, pathways: [{
+        sent: { nextBlock: 101, anchor: 100, anchorHash: header(100).hash, digest: sha256Hex("poisoned-prefix") },
+        sentNonce: "0", destinationAnchor: 100, destinationAnchorHash: header(100).hash, messages: [],
+      }],
+    }));
+    expect(await observeLayerZeroOftPending({ source: f.source, headers: [header(100), header(100)], chainRpcs: new Map(), db }))
+      .toMatchObject({ status: "accepted", amount: "1234567000000000000" });
+    expect(f.fetcher).toHaveBeenCalledTimes(1);
+    expect(JSON.parse((await dbCache.getCache(db, key))!.value).pathways[0])
+      .toMatchObject({ sentNonce: "1", sent: { nextBlock: 101, anchor: 100 }, messages: [expect.objectContaining({ nonce: "1" })] });
   });
   it("rejects an unfinalized holding pin", async () => {
     const f = fixture(); f.setFinalized(99);

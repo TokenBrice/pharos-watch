@@ -23,14 +23,8 @@ import {
   fetchEvmCodeStatusAtBlock,
   type EvmBlockHeader,
 } from "../../lib/evm-rpc";
-import type {
-  DexMeasuredExecutionBudgetStopReason,
-} from "./profiles";
-import {
-  canonicalEvmAddress,
-  canonicalEvmHash,
-  decodeAddressResult as decodeEvmAddressResult,
-} from "./evm-codecs";
+import type { CurveGetDyQuoteFailure } from "./curve-get-dy-quote-engine";
+import { canonicalEvmAddress, canonicalEvmHash } from "./evm-codecs";
 import {
   createCurveFamilyDeploymentVerifier,
   createCurveStableSwapExecutionPipeline,
@@ -359,25 +353,10 @@ export const verifyCurveStableSwapNgDeployment = createCurveStableSwapNgDeployme
 });
 
 export type CurveStableSwapNgQuoteFailure =
-  | DexMeasuredExecutionBudgetStopReason
-  | "unsupported-chain-or-pool"
-  | "invalid-pinned-block"
-  | "invalid-quote-input"
+  | CurveGetDyQuoteFailure
   | "invalid-curve-stableswap-ng-target"
   | "pool-token-order-mismatch"
-  | "runtime-evidence-missing"
-  | "rpc-failure"
-  | "pool-revert"
-  | "malformed-pool-return";
-
-export interface CurveStableSwapNgRequest {
-  target: DexMeasuredExecutionTarget;
-  inputUsd: number;
-  blockNumber: number;
-  blockObservedAt: number;
-  endpointAddress: `0x${string}`;
-  runtimeEvidence?: CurveStableSwapNgRuntimeEvidence;
-}
+  | "runtime-evidence-missing";
 
 export function resolveCurveStableSwapNgTokenIndices(
   target: DexMeasuredExecutionTarget | DexMeasuredExecutionProfile,
@@ -494,13 +473,11 @@ export function validateCurveStableSwapNgProfileProof(
         if (
           decodedCall.functionName !== "pool_list" ||
           decodedCall.args[0] !== BigInt(policy.factoryPoolIndex) ||
-          decodeEvmAddressResult({
-            decode: () => decodeFunctionResult({
-              abi: CURVE_STABLESWAP_NG_FACTORY_ABI,
-              functionName: "pool_list",
-              data: proof.poolListReturnData as `0x${string}`,
-            } as never),
-          }) !== policy.poolAddress
+          canonicalEvmAddress(decodeFunctionResult({
+            abi: CURVE_STABLESWAP_NG_FACTORY_ABI,
+            functionName: "pool_list",
+            data: proof.poolListReturnData as `0x${string}`,
+          } as never)) !== policy.poolAddress
         ) issues.add("factory-pool-list-proof-mismatch");
       } catch {
         issues.add("factory-pool-list-proof-mismatch");

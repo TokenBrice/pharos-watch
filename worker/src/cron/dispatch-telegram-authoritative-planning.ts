@@ -8,9 +8,10 @@ import {
 } from "./dispatch-telegram-alerts-fanout";
 import {
   buildTelegramAlertsByChat,
-  buildTelegramFanoutPlan,
-  type TelegramFanoutPlanEvents,
+  renderTelegramSubscriberPage,
 } from "./dispatch-telegram-fanout-plan";
+import type { TelegramFanoutPlanEvents } from "./dispatch-telegram-events";
+import type { RoutedSubscriberAlert } from "./dispatch-telegram-routing";
 import {
   loadGlobalSubscriberRows,
   loadPerCoinExplicitlyOffMap,
@@ -113,9 +114,6 @@ async function buildPageEligibleChatIds(
   const routing = buildTelegramAlertsByChat({
     events: context.events,
     inputs,
-    burstMarkers: {},
-    nowSec: context.nowSec,
-    collapseBursts: false,
   });
   telemetry.routingEvaluationMs += Math.max(0, Date.now() - startedAtMs);
   return new Set(routing.alertsByChat.keys());
@@ -126,25 +124,20 @@ async function buildPageRoutedByChat(
   subscribers: readonly Pick<TelegramPlanningSubscriber, "chatId">[],
   inputs: FanoutSubscriptionInputs,
   telemetry: TelegramAuthoritativePlanningTelemetry,
-): Promise<Map<string, ReturnType<typeof buildTelegramFanoutPlan>["subscriberQueue"][number]>> {
+): Promise<Map<string, RoutedSubscriberAlert>> {
   const chatIds = subscribers.map((subscriber) => subscriber.chatId);
   if (chatIds.length === 0) return new Map();
   const startedAtMs = Date.now();
-  const plan = buildTelegramFanoutPlan({
+  const subscriberQueue = renderTelegramSubscriberPage({
     sourceEventId: context.sourceEventId,
     events: context.events,
     inputs,
-    burstMarkers: {},
     nowSec: context.nowSec,
     formatBudget: Math.max(1, chatIds.length * 64),
-    collapseBursts: false,
   });
   telemetry.routingEvaluationMs += Math.max(0, Date.now() - startedAtMs);
-  if (plan.overflowPlanned.length > 0 || plan.subscriberQueue.length !== plan.plannedQueue.length) {
-    throw new Error("Telegram subscriber page exceeded the bounded rendering budget");
-  }
-  const routedByChat = new Map<string, (typeof plan.subscriberQueue)[number]>();
-  for (const routed of plan.subscriberQueue) {
+  const routedByChat = new Map<string, RoutedSubscriberAlert>();
+  for (const routed of subscriberQueue) {
     if (routedByChat.has(routed.chatId)) {
       throw new Error("Telegram subscriber page produced multiple consolidated target plans for one chat");
     }

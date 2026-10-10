@@ -1,11 +1,10 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 /**
- * Per-handler shape contracts for the mutation-heaviest admin handlers.
+ * Shape contracts for retained admin handlers and migrated operator algorithms.
  *
  * Scope: each handler gets a focused (happy-path 200 shape + bad-input 400)
- * assertion. The no-admin-signal (401/403) case is covered globally by the
- * parameterized contract test in `admin-auth-contract.test.ts` (added in
- * commit 8ba5ae71c) — do NOT duplicate it here.
+ * assertion. HTTP authentication for retained handlers is covered globally by
+ * `admin-auth-contract.test.ts`; migrated algorithms run in the trusted CLI lane.
  *
  * Skipped: `worker/src/lib/backfill-fx.ts` has no `handle*` HTTP entrypoint; it
  * is utility code (fx series helpers) consumed by other handlers, so there is no
@@ -27,9 +26,9 @@ vi.mock("../../lib/mint-burn-pipeline/persistence", async (importOriginal) => {
   return { ...actual, recalcAffectedHours: vi.fn().mockResolvedValue(undefined) };
 });
 
-import { handleReclassifyAtomicRoundtripsTrusted } from "../reclassify-atomic-roundtrips";
+import { handleReclassifyAtomicRoundtripsTrusted } from "../../../scripts/backfills/reclassify-atomic-roundtrips";
 import { handleRemediateBlacklistAmountGapsTrusted } from "../remediate-blacklist-amount-gaps";
-import { handleBackfillSupplyHistoryTrusted } from "../backfill-supply-history";
+import { handleBackfillSupplyHistoryTrusted } from "../../../scripts/backfills/backfill-supply-history";
 
 describe("handleReclassifyAtomicRoundtrips shape", () => {
   it("returns 200 with the documented top-level reclassify shape", async () => {
@@ -37,7 +36,7 @@ describe("handleReclassifyAtomicRoundtrips shape", () => {
       { match: "WHERE flow_type = 'standard'", rows: [] },
       { match: "WHERE flow_type = 'atomic_roundtrip'", rows: [] },
     ]);
-    const url = makeApiUrl("/api/reclassify-atomic-roundtrips");
+    const url = makeApiUrl("https://operator.invalid/jobs/reclassify-atomic-roundtrips");
 
     const res = await handleReclassifyAtomicRoundtripsTrusted({ db, url });
 
@@ -56,7 +55,7 @@ describe("handleReclassifyAtomicRoundtrips shape", () => {
 
   it("returns 400 with { error } for a malformed `since` query param", async () => {
     const db = mockD1([]);
-    const url = makeApiUrl("/api/reclassify-atomic-roundtrips?since=0foo");
+    const url = makeApiUrl("https://operator.invalid/jobs/reclassify-atomic-roundtrips?since=0foo");
 
     const res = await handleReclassifyAtomicRoundtripsTrusted({ db, url });
 
@@ -109,7 +108,7 @@ describe("handleRemediateBlacklistAmountGaps shape", () => {
 describe("handleBackfillSupplyHistory shape", () => {
   it("returns 200 with the no-targets message shape for an out-of-range batch", async () => {
     const db = mockD1([]);
-    const req = makeApiRequest("/api/backfill-supply-history?batch=999999&batchSize=100", {
+    const req = makeApiRequest("https://operator.invalid/jobs/backfill-supply-history?batch=999999&batchSize=100", {
       adminKey: "secret",
     });
 
@@ -121,7 +120,7 @@ describe("handleBackfillSupplyHistory shape", () => {
 
   it("returns 400 with { error } for a malformed startDay query param", async () => {
     const db = mockD1([]);
-    const req = makeApiRequest("/api/backfill-supply-history?startDay=not-a-date", {
+    const req = makeApiRequest("https://operator.invalid/jobs/backfill-supply-history?startDay=not-a-date", {
       adminKey: "secret",
     });
 

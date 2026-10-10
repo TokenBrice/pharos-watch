@@ -10,7 +10,12 @@ import { completeMintBurnConservationAudit, conservationOnlyEventDefsFor, persis
   type ConservationEventDef } from "../../lib/mint-burn-conservation";
 import type { MintBurnRow } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnConservationRecord } from "@shared/types/status";
-vi.mock("../../lib/alchemy-logs", () => ({ fetchAlchemyLogs: vi.fn(), resolveBlockTimestamps: vi.fn() }));
+import type * as AlchemyLogsModule from "../../lib/alchemy-logs";
+vi.mock("../../lib/alchemy-logs", async (importOriginal) => ({
+  ...(await importOriginal<typeof AlchemyLogsModule>()),
+  fetchAlchemyLogs: vi.fn(),
+  resolveBlockTimestamps: vi.fn(),
+}));
 vi.mock("../../lib/mint-burn-pipeline/parse", () => ({ parseMintBurnLogs: vi.fn() }));
 vi.mock("../../lib/mint-burn-pipeline/classification", () => ({ classifyBridgeBurnRows: vi.fn() }));
 vi.mock("../../lib/mint-burn-pipeline/persistence", () => ({ persistMintBurnRows: vi.fn() }));

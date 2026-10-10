@@ -70,17 +70,6 @@ export function makePublicHealth(
     d1Capacity: null,
     d1CapacityImpactStatus: "healthy",
     d1CapacityQueryError: null,
-    alertBroker: {
-      activeCount: 0,
-      pendingCount: 0,
-      criticalActiveCount: 0,
-      failedDeliveryCount: 0,
-      missingTargetCount: 0,
-      oldestActiveAt: null,
-      activeConditionKeys: [],
-      queryFailed: false,
-    },
-    alertBrokerImpactStatus: "healthy",
     stablecoinPublication: {
       status: "complete",
       expectedActiveCount: 0,

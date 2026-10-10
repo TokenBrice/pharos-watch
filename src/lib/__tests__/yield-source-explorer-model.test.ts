@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { buildYieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
+import { YIELD_DECISION_REJECTION_REASON_LABELS } from "@/lib/yield-presentation";
+import { buildYieldDecisionLedgerDisplay } from "@/lib/yield-decision-ledger";
 import {
   SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS,
   mergeSourceRiskGoldenFixtures,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
-import type { AltYieldSource, YieldRanking, YieldSourceRisk } from "@shared/types";
+import type { AltYieldSource, YieldDecisionRejectionReasonCode, YieldRanking } from "@shared/types";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 
 function ranking(overrides: Partial<YieldRanking> = {}): YieldRanking {
@@ -148,89 +150,51 @@ function altSource(overrides: Partial<AltYieldSource> & Pick<AltYieldSource, "so
   });
 }
 
-function selectedRisk(overrides: Partial<YieldSourceRisk> = {}): YieldSourceRisk {
-  return {
-    sourceDepthRatio: 0.05,
-    sourceAgeSeconds: 60,
-    rewardShare: 0,
-    ...overrides,
-  };
-}
+describe("buildYieldSourceExplorerModel — published rejection reasons", () => {
+  it.each(["thinner", "stale", "rewards-only", "lower-confidence", "smaller"] as YieldDecisionRejectionReasonCode[])(
+    "maps published %s without reconstructing arbitration",
+    (code) => {
+      const model = buildYieldSourceExplorerModel(ranking({
+        altSources: [altSource({ sourceKey: "alt", rejectionReasonCode: code })],
+      }));
+      expect(model.retainedAlternates[0]?.rejectionHint).toMatchObject({
+        code,
+        label: YIELD_DECISION_REJECTION_REASON_LABELS[code],
+      });
+    },
+  );
 
-describe("buildYieldSourceExplorerModel — rejection hints", () => {
-  it("fires 'thinner' when alternate depth is at least 5x smaller than selected", () => {
+  it.each([undefined, "unspecified"] as const)("keeps %s reasons unavailable even with stale reward-heavy evidence", (code) => {
     const model = buildYieldSourceExplorerModel(ranking({
-      dataSource: "defillama",
-      sourceTvlUsd: 10_000_000,
-      sourceRisk: selectedRisk({ sourceDepthRatio: 0.05 }),
-      altSources: [
-        altSource({
-          sourceKey: "thin-alt",
-          dataSource: "defillama",
-          sourceTvlUsd: 10_000_000,
-          sourceRisk: { sourceDepthRatio: 0.01, sourceAgeSeconds: 60, rewardShare: 0 },
-        }),
-      ],
+      altSources: [altSource({
+        sourceKey: "alt",
+        rejectionReasonCode: code,
+        confidenceTier: "discovered",
+        sourceRisk: { sourceAgeSeconds: 999999, rewardShare: 0.9 },
+      })],
     }));
-
-    expect(model.retainedAlternates[0]?.rejectionHint?.code).toBe("thinner");
-    expect(model.retainedAlternates[0]?.rejectionHint?.description).toBe(
-      "Lower venue depth than the chosen source.",
-    );
+    expect(model.retainedAlternates[0]?.rejectionHint).toBeNull();
   });
 
-  it("fires 'stale' when alternate age is at least 2x older than selected", () => {
+  it("preserves published lower-confidence over a reward-heavy alternate and agrees with the ledger", () => {
+    const code: YieldDecisionRejectionReasonCode = "lower-confidence";
+    const alternate = altSource({
+      sourceKey: "reward-alt",
+      confidenceTier: "discovered",
+      rejectionReasonCode: code,
+      sourceRisk: { rewardShare: 0.9 },
+    });
+    const ledger = buildYieldDecisionLedgerDisplay({
+      selectedReasonCode: "curated-over-discovered", previousBestSourceKey: null,
+      sourceSwitch: false, apy30dDeltaFromPrevious: null, rejectedCount: 1,
+      alternatives: [{ sourceKey: alternate.sourceKey, yieldSource: alternate.yieldSource, apy30dDelta: -0.5, rejectionReasonCode: code }],
+    });
     const model = buildYieldSourceExplorerModel(ranking({
-      dataSource: "defillama",
-      sourceTvlUsd: 10_000_000,
-      sourceRisk: selectedRisk({ sourceAgeSeconds: 60 }),
-      altSources: [
-        altSource({
-          sourceKey: "stale-alt",
-          dataSource: "defillama",
-          sourceTvlUsd: 10_000_000,
-          sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 200, rewardShare: 0 },
-        }),
-      ],
+      provenance: makeYieldProvenance({ confidenceTier: "curated" }),
+      altSources: [alternate],
     }));
-
-    expect(model.retainedAlternates[0]?.rejectionHint?.code).toBe("stale");
-  });
-
-  it("fires 'rewards-only' when alternate rewardShare exceeds 0.5", () => {
-    const model = buildYieldSourceExplorerModel(ranking({
-      dataSource: "defillama",
-      sourceTvlUsd: 10_000_000,
-      sourceRisk: selectedRisk(),
-      altSources: [
-        altSource({
-          sourceKey: "reward-alt",
-          dataSource: "defillama",
-          sourceTvlUsd: 10_000_000,
-          sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0.7 },
-        }),
-      ],
-    }));
-
-    expect(model.retainedAlternates[0]?.rejectionHint?.code).toBe("rewards-only");
-  });
-
-  it("fires 'lower-conf' when alternate confidence tier is weaker than selected", () => {
-    const model = buildYieldSourceExplorerModel(ranking({
-      dataSource: "onchain",
-      sourceTvlUsd: 10_000_000,
-      sourceRisk: selectedRisk(),
-      altSources: [
-        altSource({
-          sourceKey: "discovered-alt",
-          dataSource: "defillama-auto",
-          sourceTvlUsd: 10_000_000,
-          sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
-        }),
-      ],
-    }));
-
-    expect(model.retainedAlternates[0]?.rejectionHint?.code).toBe("lower-conf");
+    expect(model.retainedAlternates[0]?.rejectionHint?.code).toBe(code);
+    expect(model.retainedAlternates[0]?.rejectionHint?.label).toBe(ledger?.alternatives[0]?.rejectionLabel);
   });
 
   it("renders the published confidence tier on alternates even when lane inference disagrees (B33)", () => {
@@ -241,12 +205,13 @@ describe("buildYieldSourceExplorerModel — rejection hints", () => {
         confidenceTier: "curated",
         selectionReason: "Higher confidence than retained alternates.", benchmarkRecordDate: null,
       }),
-      sourceRisk: selectedRisk(),
+      sourceRisk: null,
       altSources: [
         altSource({
           sourceKey: "onchain-alt",
           dataSource: "onchain", // lane inference says "deterministic"
           confidenceTier: "discovered", // API publishes a lower tier
+          rejectionReasonCode: "lower-confidence",
           sourceTvlUsd: 10_000_000,
           sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
         }),
@@ -255,60 +220,7 @@ describe("buildYieldSourceExplorerModel — rejection hints", () => {
 
     // Fails pre-fix (B33): the tier was fabricated from dataSource.
     expect(model.retainedAlternates[0]?.confidenceTier).toBe("discovered");
-    expect(model.retainedAlternates[0]?.rejectionHint?.code).toBe("lower-conf");
+    expect(model.retainedAlternates[0]?.rejectionHint?.code).toBe("lower-confidence");
   });
 
-  it("fires 'smaller' when alternate TVL is at least 5x smaller than selected", () => {
-    const model = buildYieldSourceExplorerModel(ranking({
-      dataSource: "defillama",
-      sourceTvlUsd: 10_000_000,
-      sourceRisk: selectedRisk(),
-      altSources: [
-        altSource({
-          sourceKey: "small-alt",
-          dataSource: "defillama",
-          sourceTvlUsd: 1_000_000,
-          sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
-        }),
-      ],
-    }));
-
-    expect(model.retainedAlternates[0]?.rejectionHint?.code).toBe("smaller");
-  });
-
-  it("returns null when no hint condition fires", () => {
-    const model = buildYieldSourceExplorerModel(ranking({
-      dataSource: "defillama",
-      sourceTvlUsd: 10_000_000,
-      sourceRisk: selectedRisk(),
-      altSources: [
-        altSource({
-          sourceKey: "neutral-alt",
-          dataSource: "defillama",
-          sourceTvlUsd: 10_000_000,
-          sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
-        }),
-      ],
-    }));
-
-    expect(model.retainedAlternates[0]?.rejectionHint).toBeNull();
-  });
-
-  it("respects priority order: 'thinner' beats 'rewards-only' when both fire", () => {
-    const model = buildYieldSourceExplorerModel(ranking({
-      dataSource: "defillama",
-      sourceTvlUsd: 10_000_000,
-      sourceRisk: selectedRisk({ sourceDepthRatio: 0.05 }),
-      altSources: [
-        altSource({
-          sourceKey: "double-alt",
-          dataSource: "defillama",
-          sourceTvlUsd: 10_000_000,
-          sourceRisk: { sourceDepthRatio: 0.005, sourceAgeSeconds: 60, rewardShare: 0.8 },
-        }),
-      ],
-    }));
-
-    expect(model.retainedAlternates[0]?.rejectionHint?.code).toBe("thinner");
-  });
 });

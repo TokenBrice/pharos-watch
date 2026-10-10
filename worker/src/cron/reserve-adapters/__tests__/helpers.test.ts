@@ -918,7 +918,7 @@ describe("fetchDefiLlamaPrices", () => {
       }),
     );
 
-    const prices = await fetchDefiLlamaPrices([
+    const { prices, warnings } = await fetchDefiLlamaPrices([
       {
         key: "WHYPE",
         chain: "hyperevm",
@@ -927,6 +927,7 @@ describe("fetchDefiLlamaPrices", () => {
     ], signal);
 
     expect(prices.get("WHYPE")).toBe(37.27);
+    expect(warnings).toEqual([]);
     expect(fetchWithRetry).toHaveBeenCalledWith(
       "https://coins.llama.fi/prices/current/hyperliquid:0x5555555555555555555555555555555555555555",
       { signal },

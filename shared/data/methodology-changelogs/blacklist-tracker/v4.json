@@ -1,0 +1,72 @@
+[
+  {
+    "version": "4.3",
+    "title": "Canonical freeze identities and evidence-qualified totals",
+    "date": "2026-10-10",
+    "effectiveAt": 1791676800,
+    "summary": "FreezeWatch counts canonical accounts and logs once, separates caught-up coverage from bounded scan progress, and preserves unavailable USD valuations rather than reporting them as zero. Historical amount repair requires event-time quote attribution; current prices cannot value an old freeze event.",
+    "impact": [
+      "Equivalent EVM log spellings and Tron account representations no longer duplicate public events, active counts, or snapshots. Newly persisted Tron addresses use validated lowercase 0x byte identities; Base58 remains a provider-call and display representation.",
+      "Numeric transaction-local lifecycle ordering replaces lexical ordering. Cross-transaction lifecycle and amount ordering must be proven by chain evidence; missing or contradictory evidence remains ambiguous rather than manufacturing an active state or amount.",
+      "An EVM or Tron scan that makes bounded progress but has not reached its observed safe frontier is incomplete. It cannot advance success clocks or publish a fresh producer summary as if coverage were caught up.",
+      "Tron historical balance replay validates the decimal-scaled token amount rather than rejecting ordinary 18-decimal raw balances solely because they exceed JavaScript's safe integer range; genuinely excessive scaled amounts remain inadmissible.",
+      "Budget-skipped and order-withheld snapshot work is retained as durable debt for maintenance retries. Operator snapshot admission obeys execution and ambiguity evidence instead of transaction-hash order.",
+      "Unknown event-time and current USD values remain unavailable. Mixed aggregates publish known subtotals with partial valuation coverage; all canonical tracked gold cohorts, including XAUM, contribute when observed.",
+      "Historical non-USD repair recovers native amounts but keeps USD unavailable without an event-time quote. A gold zero substitution carries explicit provenance and is not treated as a failed observation or silently substituted for one.",
+      "RPC block timestamps are admitted only when the returned block hash matches the event's block evidence, preventing a different block generation from supplying event time.",
+      "Blacklistability classifications and scan cadence are unchanged. Fixed-clock identity, ordering, valuation, and coverage comparison remains a release prerequisite; no production replay or runtime-health result is claimed.",
+      "Activation is provisionally 2026-10-11 00:00 UTC (1791676800); re-date effectiveAt at release"
+    ],
+    "commits": [
+      "b1d4e8abc",
+      "a8346266c",
+      "5fe757c92"
+    ],
+    "reconstructed": false
+  },
+  {
+    "version": "4.2",
+    "title": "Confirmed Tron transaction ordering",
+    "date": "2026-09-29",
+    "effectiveAt": 1790640000,
+    "summary": "Resolves same-block Tron state transitions using confirmed block transaction positions, while retaining explicit uncertainty when chain evidence is unavailable.",
+    "impact": [
+      "Confirmed Tron block-array positions are persisted separately from transaction-local event indices; neither transaction hashes nor provider event order imply execution order.",
+      "A bounded, serial maintenance pass repairs both retained and newly ingested conflicting events without rewinding scan cursors.",
+      "Missing positions keep tron-cross-transaction-order and remain excluded from confirmed active counts. Proved freeze-then-destroy records remain blacklisted but contribute no active frozen amount.",
+      "Historical event-time amounts and retained freeze-ledger balances keep their existing independent evidence requirements."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "4.1",
+    "title": "Execution-order state and durable malformed-log quarantine",
+    "date": "2026-09-27",
+    "effectiveAt": 1790467200,
+    "summary": "Orders EVM state transitions by block-global log position and explicitly withholds ambiguous Tron state. Malformed required fields receive three scan observations before durable quarantine.",
+    "impact": [
+      "Timestamp, block number, numeric log index, and array suffix replace lexical transaction-hash ordering across state folds, SQL history selection, and ledger rebuilds.",
+      "Same-block Tron events across transactions do not imply a known order; affected records are excluded from confirmed active counts and reported as tron-cross-transaction-order.",
+      "Missing or invalid direction bools, address arrays, addresses, and log identities hold the frontier for up to three distinct scans, then retain source evidence and a named decode-retry-exhausted disposition in durable storage.",
+      "A valid empty address array remains a complete observation; unknown event-time amounts remain separate from required state evidence."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "4.0",
+    "title": "Canonical reviewed exposure status",
+    "date": "2026-08-11",
+    "effectiveAt": 1786406400,
+    "summary": "Makes the sourced blacklistability review the sole product-level FreezeWatch status authority, removing the parallel authored override and runtime inference path without changing current classifications.",
+    "impact": [
+      "`blacklistabilityReview.reviewedStatus` is now the only authored Yes, Upstream, Possible, or No verdict",
+      "The generated client-registry `blacklistStatus` is a direct projection of that verdict for FreezeWatch, Report Cards, coverage views, and Selector data",
+      "Safety Score V9 continues to consume the same review for evidence and scoring, but its access projection is no longer a fallback product-status source",
+      "All 404 tracked stablecoin classifications are unchanged by the migration"
+    ],
+    "commits": [],
+    "reconstructed": false
+  }
+]

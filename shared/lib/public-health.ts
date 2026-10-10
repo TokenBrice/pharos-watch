@@ -25,6 +25,7 @@ export function maxPublicStatus(...statuses: PublicStatusTone[]): PublicStatusTo
 }
 
 export function getPublicMintBurnStatus(sync: HealthResponse["mintBurn"]["sync"]): PublicStatusTone {
+  if (sync.freshnessStatus == null || sync.criticalLaneHealthy == null) return "degraded";
   if (sync.freshnessStatus === "stale") return "stale";
   if (sync.freshnessStatus === "degraded" || !sync.criticalLaneHealthy || sync.warning != null) {
     return "degraded";
@@ -45,8 +46,8 @@ export function getOverallCacheImpactStatus(caches: Record<string, CacheStatus>)
   return worstStatus;
 }
 
-export function getCircuitImpactStatus(openCircuitCount: number): PublicStatusTone {
-  return openCircuitCount >= 3 ? "degraded" : "healthy";
+export function getCircuitImpactStatus(openCircuitCount: number | null): PublicStatusTone {
+  return openCircuitCount == null || openCircuitCount >= 3 ? "degraded" : "healthy";
 }
 
 export function isPublicImpactCircuitKey(key: string): boolean {

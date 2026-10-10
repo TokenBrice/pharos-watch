@@ -9,7 +9,7 @@ import { cleanupFrontendTest } from "@/test-utils/frontend";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import type { PegSummaryCoin, StressSignalEntry } from "@shared/types";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
-import { makeDews } from "./depeg.test-support";
+import { makeDews, makePendingIncident } from "./depeg.test-support";
 
 vi.mock("@/hooks/use-prefetch-stablecoin", () => ({
   usePrefetchStablecoin: () => vi.fn(),
@@ -82,6 +82,46 @@ describe("getDeviationBarWidthPercent", () => {
 });
 
 describe("DepegControlBoard", () => {
+  it.each([
+    { currentDeviationBps: null, dews: null },
+    { currentDeviationBps: null, dews: makeDews({ score: 0, band: "CALM" }) },
+    { currentDeviationBps: 0, dews: null },
+  ])("does not claim clear health with incomplete live observations: %j", ({ currentDeviationBps, dews }) => {
+    renderBoard([makeRow({ activeDepeg: false, currentDeviationBps, pegScore: null }, dews)]);
+    const row = screen.getByRole("button", { name: /open susd depeg detail/i });
+    const status = within(row).getByText("unknown");
+    expect(status.className).toContain("text-muted-foreground");
+    expect(within(row).queryByText("clear")).toBeNull();
+  });
+
+  it("distinguishes observed zero readings from unknown health", () => {
+    renderBoard([makeRow({ activeDepeg: false, currentDeviationBps: 0 }, makeDews({ score: 0, band: "CALM" }))]);
+    const row = screen.getByRole("button", { name: /open susd depeg detail/i });
+    expect(within(row).getByText("clear")).toBeTruthy();
+    expect(within(row).queryByText("unknown")).toBeNull();
+  });
+
+  it.each(["live", "pending", "floor", "warning", "danger"] as const)(
+    "preserves the known %s status ahead of unknown observations",
+    (status) => {
+      const row = makeRow({
+        activeDepeg: status === "live",
+        depegEventCoverageLimited: status === "floor",
+        currentDeviationBps: null,
+        pegScore: null,
+      }, status === "warning" || status === "danger"
+        ? makeDews({ band: status === "warning" ? "WARNING" : "DANGER" })
+        : null);
+      if (status === "pending") {
+        row.pendingIncident = makePendingIncident({ stablecoinId: row.coin.id, symbol: row.coin.symbol });
+      }
+      renderBoard([row]);
+      const renderedRow = screen.getByRole("button", { name: /open susd depeg detail/i });
+      expect(within(renderedRow).getByText(status)).toBeTruthy();
+      expect(within(renderedRow).queryByText("unknown")).toBeNull();
+    },
+  );
+
   it.each([1, 2])("labels %s DEX check observations as price sources", (sourcePools) => {
     renderBoard([makeRow({
       dexPriceCheck: { agrees: true, dexPrice: 1, dexDeviationBps: 0, sourcePools, sourceTvl: 1_740_000 },

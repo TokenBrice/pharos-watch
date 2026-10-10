@@ -282,6 +282,7 @@ async function fetchPriorPysScores(
                    FROM yield_source_decisions d
                   WHERE d.stablecoin_id = c.stablecoin_id
                     AND d.created_at <= ?
+                    AND d.selected_score IS NOT NULL
                   ORDER BY d.created_at DESC, d.generation_id DESC
                   LIMIT 1) AS selected_score
            FROM (SELECT DISTINCT stablecoin_id FROM yield_source_decisions WHERE stablecoin_id IN (${inClause.sql})) c`,

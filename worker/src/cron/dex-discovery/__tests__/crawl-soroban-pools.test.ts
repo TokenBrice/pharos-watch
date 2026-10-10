@@ -45,6 +45,28 @@ afterEach(() => {
 });
 
 describe("Soroban Aquarius pool discovery", () => {
+  it("stages healthy Aquarius rows beside malformed rows without certifying absence", async () => {
+    mockFetch([{ match: AQUARIUS_TICKERS_URL, body: [ticker(), { pool_id: "bad" }] }], { requireMatch: true });
+    const stage = makeContext();
+    const result = await crawlSorobanPoolsStage({ coinTargets: [target(EUTBL_IDENTITY)], context: stage.value });
+    expect(stage.pools.map((pool) => pool.poolId)).toEqual([`stellar:${POOL_ID}`]);
+    expect(result.providerChecks[0]).toMatchObject({ status: "degraded", observedPoolCount: 1 });
+  });
+
+  it.each([false, true])("deduplicates safe ticker rows and quarantines conflicting duplicates: %s", async (conflicting) => {
+    mockFetch([{ match: AQUARIUS_TICKERS_URL, body: [
+      ticker(), ticker(conflicting ? { liquidity_in_usd: 99 } : {}),
+      ticker({ pool_id: EURSAFO_TOKEN }),
+    ] }], { requireMatch: true });
+    const stage = makeContext();
+    const result = await crawlSorobanPoolsStage({ coinTargets: [target(EUTBL_IDENTITY)], context: stage.value });
+    expect(stage.pools.map((pool) => pool.poolId)).toEqual(conflicting
+      ? [`stellar:${EURSAFO_TOKEN}`] : [`stellar:${POOL_ID}`, `stellar:${EURSAFO_TOKEN}`]);
+    expect(result.providerChecks[0]).toMatchObject({
+      status: conflicting ? "degraded" : "success", observedPoolCount: conflicting ? 1 : 2,
+    });
+  });
+
   it("canonicalizes raw and code-prefixed contract identities without accepting classic assets", () => {
     expect(canonicalSorobanTokenId(` ${EURSAFO_TOKEN} `)).toBe(EURSAFO_TOKEN);
     expect(canonicalSorobanTokenId(EUTBL_IDENTITY)).toBe(EUTBL_TOKEN);

@@ -333,9 +333,15 @@ describe("stablecoin detail snapshot generator", () => {
     for (const name of ["DIGEST_API_URL", "PUBLIC_DATASETS_API_URL", "SMOKE_API_BASE", "API_BASE_URL"]) vi.stubEnv(name, "");
     const now = 1_800_000_000_000;
     const sourceClock = 1_799_999_900;
-    const detail = { price: 1, priceSource: "coingecko", tokens: [
-      { date: sourceClock, totalCirculatingUSD: { peggedUSD: 100 }, totalCirculating: { peggedUSD: 100 } },
-    ] };
+    const day = 86_400;
+    const detail = { price: 1, priceSource: "coingecko",
+      currentSupplyObservedAt: sourceClock, currentCirculatingUSD: { peggedUSD: 200 }, tokens: [
+        { date: sourceClock - 33 * day, totalCirculatingUSD: { peggedUSD: 50 }, totalCirculating: { peggedUSD: 50 } },
+        { date: sourceClock - 30 * day, totalCirculatingUSD: { peggedUSD: 80 }, totalCirculating: { peggedUSD: 80 } },
+        { date: sourceClock - 10 * day, totalCirculatingUSD: { peggedUSD: 100 }, totalCirculating: { peggedUSD: 100 } },
+        { date: sourceClock - 7 * day, totalCirculatingUSD: { peggedUSD: 140 }, totalCirculating: { peggedUSD: 140 } },
+        { date: sourceClock - 3 * day, totalCirculatingUSD: { peggedUSD: 160 }, totalCirculating: { peggedUSD: 160 } },
+      ] };
     const history = [{ date: sourceClock, circulatingUsd: 100, price: 1 }];
     // Origin provenance also survives the one-second loss in legacy Date/age arithmetic.
     const headers = new Headers({ Date: new Date((sourceClock + 1200 + Number(originClock)) * 1000).toUTCString(), Age: "1200" });
@@ -387,6 +393,12 @@ describe("stablecoin detail snapshot generator", () => {
     const bulk = await generateSnapshots(false, { generatedAt: now });
     expect(bulk.map((snapshot) => `${JSON.stringify(snapshot)}\n`))
       .toEqual(baseline.map((snapshot) => `${JSON.stringify(snapshot)}\n`));
+    for (const snapshots of [baseline, bulk]) {
+      expect(snapshots.find((snapshot) => snapshot.stablecoinId === "usdc-circle")?.lanes.liveSummary).toMatchObject({
+        circulatingPrevWeek: { peggedUSD: 140 }, circulatingPrevMonth: { peggedUSD: 80 },
+        nativeSupply: { current: 200, prevWeek: 140, prevMonth: 80 },
+      });
+    }
     expect(perCoinIds).toEqual([unavailableId, unavailableId]);
     expect(peakBulkBodies).toBe(6);
     expect(pendingBulkBodies).toBe(0);

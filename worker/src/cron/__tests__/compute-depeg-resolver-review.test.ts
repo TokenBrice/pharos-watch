@@ -1365,6 +1365,43 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot.summary.headline.dataQualityGapCount).toBe(1);
   });
 
+  it.each([
+    { missingReasons: [null, 17, "supply_history_missing", "dex_history_missing"], reason: "supply_history_missing" },
+    { missingReasons: [], reason: "insufficient_signal" },
+  ])("reviews a published no-call without manufacturing scored predictions: $reason", async ({ missingReasons, reason }) => {
+    const incident = makeReviewIncident();
+    const stores = durableStores({
+      loadCanonicalIncidents: vi.fn(async () => [incident]),
+      loadSealedPublicPredictions: vi.fn(async () => [sealedPrediction({
+        outcomeKind: "no_call",
+        sealedPayload: { noCall: { missingReasons } },
+      })]),
+      loadFirstPublicationMembership: vi.fn(async () => [firstPublication()]),
+    });
+    const snapshot = await buildDepegResolverReviewSnapshot(
+      reviewDb([eventRow()]), ELIGIBLE_AT + 3600, undefined, { storeContracts: stores },
+    );
+
+    expect(snapshot.rows).toHaveLength(1);
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "no_call_review",
+      predictionState: "no_call",
+      publicPredictionId: 55,
+      assessmentId: 90,
+      lockedAt: ELIGIBLE_AT,
+      publishedAt: ELIGIBLE_AT + 60,
+      publicationSnapshotToken: "ddr-public-55",
+      missingReasons: [reason],
+      verdictReview: "unscored_insufficient_signal",
+      durationReview: "duration_unscored",
+    });
+    expect(snapshot.summary.headline).toMatchObject({
+      noCallCount: 1, lockedPredictionCount: 0, invalidatedPredictionCount: 0,
+      recoveryLikelihoodScoredCount: 0, durationScoredCount: 0,
+    });
+    expect(DdrrResponseSchema.safeParse(snapshot)).toMatchObject({ success: true });
+  });
+
   it("emits invalidated prediction rows when sealed public rows have errata", async () => {
     const incident = makeReviewIncident({ incidentKey: "ddr2:invalidated-public-prediction", eventId: 43 });
     const originalNoCall = {
@@ -1376,7 +1413,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const otherIncident = makeReviewIncident({ incidentKey: "ddr2:unrelated-prediction", eventId: 44 });
     const erratum = {
       publicPredictionId: 10, incidentKey: incident.incidentKey, eventId: 43, assessmentId: 91,
-      reason: "event_identity_error", operatorNote: "Fixture invalidation",
+      state: "invalidated" as const, reason: "event_identity_error" as const, operatorNote: "Fixture invalidation",
       replacementAssessmentId: null, replacementRowHash: null, rowHashBefore: "d".repeat(64),
       createdBy: "test",
     };
@@ -1426,7 +1463,6 @@ describe("buildDepegResolverReviewSnapshot", () => {
         { ...erratum, id: 2, createdAt: ELIGIBLE_AT + 120 },
         { ...erratum, id: 99, createdAt: ELIGIBLE_AT + 60 },
         { ...erratum, id: 3, createdAt: ELIGIBLE_AT + 120 },
-        { ...erratum, id: 100, createdAt: ELIGIBLE_AT + 180, reason: "malformed-reason" },
         { ...erratum, id: 101, publicPredictionId: 999, createdAt: ELIGIBLE_AT + 240 },
         { ...erratum, id: 1, createdAt: ELIGIBLE_AT + 120 },
       ]),

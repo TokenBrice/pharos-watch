@@ -7,6 +7,8 @@ import { binarySearchNearest } from "../../lib/binary-search";
 import { errorResponse } from "../../lib/api-response";
 import { claimDetailCacheGeneration, publishDetailCacheGeneration } from "../../lib/detail-cache-generation";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
+import { buildFreshnessMeta } from "../../lib/api-freshness";
 
 export const CACHE_TTL_SECONDS = PER_COIN_CACHE_TTL_SECONDS;
 export const DETAIL_UPSTREAM_TIMEOUT_MS = 12_000;
@@ -19,6 +21,7 @@ const DETAIL_CACHE_MAX_VALUE_BYTES = 1_900_000;
 
 type DetailCacheEntry = { value: string; updatedAt: number } | null;
 type DetailTokens = Record<string, unknown>[];
+type ResolvedDetailHistory = { tokens: DetailTokens; observedAt: number | null; fallback: boolean };
 type DefiLlamaCoinChartPricePoint = { timestamp: number; price: number };
 
 interface DefiLlamaCoinChartEntry {
@@ -33,10 +36,12 @@ export interface DetailResponseHelpers {
   cached: DetailCacheEntry;
   createFreshResponseFromBody(body: string): Response;
   createFreshResponseFromTokens(tokens: DetailTokens): Response;
+  createFallbackResponseFromTokens(tokens: DetailTokens, observedAt: number | null): Response;
+  createResponseFromResolvedTokens(history: ResolvedDetailHistory): Response;
   resolveTokensWithSupplyHistoryFallback(
     tokens: DetailTokens,
     reasons: { emptyReason: string; staleReason: string },
-  ): Promise<DetailTokens>;
+  ): Promise<ResolvedDetailHistory>;
   staleCacheOrError(status: number, message: string): Response;
   trySupplyHistoryFallback(reason: string, latestTokenDate?: number | null): Promise<Response | null>;
 }
@@ -86,6 +91,7 @@ export function createStaleCacheHitResponse(cachedValue: string, ageSeconds: num
       "X-Data-Age": String(Math.max(0, ageSeconds)),
       "X-Data-Updated-At": String(updatedAt),
       "Warning": "110 - \"Stablecoin detail cache is stale; refresh scheduled\"",
+      "X-Data-Freshness": "stale",
     },
   });
 }
@@ -106,6 +112,7 @@ function createStaleCacheResponse(cached: DetailCacheEntry): Response | null {
       "X-Data-Age": String(ageSeconds),
       "X-Data-Updated-At": String(cached.updatedAt),
       "Warning": "110 - \"Stablecoin detail cache is stale; refresh failed\"",
+      "X-Data-Freshness": "stale",
     },
   });
 }
@@ -199,7 +206,7 @@ export function createDetailResponseHelpers(config: {
   ): Promise<Response | null> => {
     const tokens = await loadSupplyHistoryFallback(reason, latestTokenDate);
     if (tokens.length === 0) return null;
-    return createFreshResponseFromTokens(tokens);
+    return createFallbackResponseFromTokens(tokens, getLatestDetailTokenDate(tokens));
   };
 
   const createFreshResponseFromBody = (body: string): Response => {
@@ -210,13 +217,39 @@ export function createDetailResponseHelpers(config: {
   const createFreshResponseFromTokens = (tokens: DetailTokens): Response =>
     createFreshResponseFromBody(JSON.stringify({ tokens }));
 
+  const createFallbackResponseFromTokens = (tokens: DetailTokens, observedAt: number | null): Response => {
+    const now = Math.floor(Date.now() / 1000);
+    const assessment = assessFreshnessTimestamp(now, observedAt);
+    const meta = assessment.reason == null && observedAt != null
+      ? { ...buildFreshnessMeta(observedAt, DETAIL_HISTORY_MAX_AGE_SECONDS, "stablecoin-detail", {
+          assessedAt: now, freshBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS,
+          degradedBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS,
+        }), status: "stale" as const, reason: "detail-history-fallback" }
+      : { updatedAt: null, ageSeconds: null, assessedAt: now, status: "unknown" as const,
+          freshBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS, degradedBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS,
+          reason: assessment.reason };
+    const response = createJsonResponse(JSON.stringify({ tokens, _meta: meta }), CACHE_PROFILES.noStore);
+    response.headers.set("X-Data-Updated-At", meta.updatedAt == null ? "unknown" : String(meta.updatedAt));
+    response.headers.set("X-Data-Age", meta.ageSeconds == null ? "unavailable" : String(meta.ageSeconds));
+    response.headers.set("X-Data-Freshness", meta.status);
+    response.headers.set("X-Data-Freshness-Reason", meta.reason ?? "detail-history-fallback");
+    response.headers.set("Warning", '110 - "Stablecoin detail history is retained fallback data"');
+    return response;
+  };
+
+  const createResponseFromResolvedTokens = (history: ResolvedDetailHistory): Response =>
+    history.fallback || !isDetailHistoryFresh(history.tokens)
+      ? createFallbackResponseFromTokens(history.tokens, history.observedAt)
+      : createFreshResponseFromTokens(history.tokens);
+
   const resolveTokensWithSupplyHistoryFallback = async (
     tokens: DetailTokens,
     reasons: { emptyReason: string; staleReason: string },
-  ): Promise<DetailTokens> => {
+  ): Promise<ResolvedDetailHistory> => {
     if (tokens.length === 0) {
       const fallbackTokens = await loadSupplyHistoryFallback(reasons.emptyReason);
-      return fallbackTokens.length > 0 ? fallbackTokens : tokens;
+      const resolved = fallbackTokens.length > 0 ? fallbackTokens : tokens;
+      return { tokens: resolved, observedAt: getLatestDetailTokenDate(resolved), fallback: true };
     }
 
     if (!isDetailHistoryFresh(tokens)) {
@@ -224,16 +257,19 @@ export function createDetailResponseHelpers(config: {
         reasons.staleReason,
         getLatestDetailTokenDate(tokens),
       );
-      return fallbackTokens.length > 0 ? fallbackTokens : tokens;
+      const resolved = fallbackTokens.length > 0 ? fallbackTokens : tokens;
+      return { tokens: resolved, observedAt: getLatestDetailTokenDate(resolved), fallback: true };
     }
 
-    return tokens;
+    return { tokens, observedAt: getLatestDetailTokenDate(tokens), fallback: false };
   };
 
   return {
     cached: config.cached,
     createFreshResponseFromBody,
     createFreshResponseFromTokens,
+    createFallbackResponseFromTokens,
+    createResponseFromResolvedTokens,
     resolveTokensWithSupplyHistoryFallback,
     staleCacheOrError: (status, message) => staleCacheOrError(config.cached, status, message),
     trySupplyHistoryFallback,
@@ -324,7 +360,7 @@ export function extractDefiLlamaCoinChartPrices(
     .sort((left, right) => left.timestamp - right.timestamp);
 }
 
-function getLatestDetailTokenDate(tokens: ReadonlyArray<Record<string, unknown>>): number | null {
+export function getLatestDetailTokenDate(tokens: ReadonlyArray<Record<string, unknown>>): number | null {
   let latestDate: number | null = null;
 
   for (const token of tokens) {
@@ -340,8 +376,8 @@ function isDetailHistoryFresh(
   tokens: ReadonlyArray<Record<string, unknown>>,
   nowSec = Math.floor(Date.now() / 1000),
 ): boolean {
-  const latestDate = getLatestDetailTokenDate(tokens);
-  return latestDate != null && nowSec - latestDate <= DETAIL_HISTORY_MAX_AGE_SECONDS;
+  const assessment = assessFreshnessTimestamp(nowSec, getLatestDetailTokenDate(tokens));
+  return assessment.ageSeconds != null && assessment.ageSeconds <= DETAIL_HISTORY_MAX_AGE_SECONDS;
 }
 
 export function buildTokenRowsFromMarketCaps(

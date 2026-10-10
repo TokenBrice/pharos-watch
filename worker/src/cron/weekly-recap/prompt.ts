@@ -67,17 +67,29 @@ export function buildWeeklyPrompt(
   const safetyContextAvailable = safetyIdentity != null;
   // A total the window could not fully observe is published as unavailable,
   // never as the sum of however many editions happened to be readable.
+  // Canonical safety failure uses its named reason; observed quiet weeks keep zero.
   const partialCoverage = `N/A (${data.dailyDigests.length} of ${WEEKLY_ROLLUP_EXPECTED_DAYS} daily editions)`;
+  const unavailable = (metric: keyof NonNullable<WeeklyInputData["metricUnavailableReasons"]>) => {
+    const reasons = data.metricUnavailableReasons?.[metric];
+    return reasons?.length ? `N/A (${reasons.join(", ")})` : partialCoverage;
+  };
+  const blacklistValue = data.totalBlacklistAmountUsd == null
+    ? unavailable("blacklistUsd")
+    : (data.blacklistUnpricedEventCount ?? 0) > 0
+      ? `at least ${formatCurrency(data.totalBlacklistAmountUsd)} known subtotal (${data.blacklistUnpricedEventCount} unpriced events)`
+      : formatCurrency(data.totalBlacklistAmountUsd);
   const lines: string[] = [
     `Weekly recap: trailing daily editions from ${data.weekStartDate} to ${data.weekEndDate}`,
     "",
     `PSI range: ${data.psiRange.min} to ${data.psiRange.max} (start: ${data.psiRange.start}, end: ${data.psiRange.end})`,
     `Dominant band: ${data.psiRange.dominantBand}`,
-    `Market cap: ${formatCurrency(data.mcapRange.start)} -> ${formatCurrency(data.mcapRange.end)} (${data.mcapRange.pctChange == null ? "N/A" : `${data.mcapRange.pctChange >= 0 ? "+" : ""}${data.mcapRange.pctChange.toFixed(2)}%`})`,
-    `Active depeg observations across daily editions: ${data.activeDepegObservationsThisWeek ?? partialCoverage}`,
-    `Unique depeg signals reconstructed from daily inputs: ${data.uniqueDepegSignalsThisWeek ?? partialCoverage}`,
-    `Total blacklist events: ${data.totalBlacklistEventsThisWeek ?? partialCoverage}, ${data.totalBlacklistAmountUsd == null ? partialCoverage : formatCurrency(data.totalBlacklistAmountUsd)} affected`,
-    `${safetyContextAvailable ? "Grade transitions" : "Risk transitions"}: ${data.gradeTransitionCount ?? partialCoverage}`,
+    data.mcapRange.start == null || data.mcapRange.end == null
+      ? `Market cap: N/A (${data.mcapRange.unavailableReason ?? "supply-coverage-incomplete"})`
+      : `Market cap: ${formatCurrency(data.mcapRange.start)} -> ${formatCurrency(data.mcapRange.end)} (${data.mcapRange.pctChange == null ? "N/A" : `${data.mcapRange.pctChange >= 0 ? "+" : ""}${data.mcapRange.pctChange.toFixed(2)}%`})`,
+    `Active depeg observations across daily editions: ${data.activeDepegObservationsThisWeek ?? unavailable("activeDepegObs")}`,
+    `Unique depeg signals reconstructed from daily inputs: ${data.uniqueDepegSignalsThisWeek ?? unavailable("uniqueDepegSignals")}`,
+    `Total blacklist events: ${data.totalBlacklistEventsThisWeek ?? unavailable("blacklistEvents")}, ${blacklistValue} affected`,
+    `${safetyContextAvailable ? "Grade transitions" : "Risk transitions"}: ${data.gradeTransitionCount ?? unavailable("gradeTransitions")}`,
   ];
 
   if (safetyContextAvailable) {
@@ -144,12 +156,12 @@ export function buildWeeklyPrompt(
     const d = data.weekOverWeekDeltas;
     lines.push("", "Week-over-week deltas (this week vs prior week):");
     lines.push(
-      `  mcap: current ${formatCurrency(d.mcap.current)} / prior ${formatCurrency(d.mcap.prior)} / delta ${d.mcap.deltaPct == null ? "n/a" : `${d.mcap.deltaPct >= 0 ? "+" : ""}${d.mcap.deltaPct.toFixed(2)}%`}`,
+      `  mcap: current ${d.mcap.current == null ? "n/a" : formatCurrency(d.mcap.current)} / prior ${d.mcap.prior == null ? "n/a" : formatCurrency(d.mcap.prior)} / delta ${d.mcap.deltaPct == null ? "n/a" : `${d.mcap.deltaPct >= 0 ? "+" : ""}${d.mcap.deltaPct.toFixed(2)}%`}`,
     );
     lines.push(
-      `  PSI midpoint: current ${d.psi.current.toFixed(1)} / prior ${d.psi.prior.toFixed(1)} / delta ${d.psi.delta >= 0 ? "+" : ""}${d.psi.delta.toFixed(1)}`,
+      `  PSI midpoint: current ${d.psi.current?.toFixed(1) ?? "unavailable"} / prior ${d.psi.prior?.toFixed(1) ?? "unavailable"} / delta ${d.psi.delta == null ? `unavailable (${d.psi.unavailableReason ?? "psi-observations-missing"})` : `${d.psi.delta >= 0 ? "+" : ""}${d.psi.delta.toFixed(1)}`}`,
     );
-    lines.push(`  PSI dominant band: current ${d.psiDominantBand.current} / prior ${d.psiDominantBand.prior}`);
+    lines.push(`  PSI dominant band: current ${d.psiDominantBand.current ?? "unavailable"} / prior ${d.psiDominantBand.prior ?? "unavailable"}`);
     lines.push(
       `  Active depeg observations: current ${d.activeDepegObservations.current ?? "n/a"} / prior ${d.activeDepegObservations.prior ?? "n/a"}`,
     );
@@ -158,7 +170,7 @@ export function buildWeeklyPrompt(
     );
     lines.push(`  Blacklist events: current ${d.blacklistEvents.current ?? "n/a"} / prior ${d.blacklistEvents.prior ?? "n/a"}`);
     lines.push(
-      `  Blacklist USD: current ${d.blacklistUsd.current == null ? "n/a" : formatCurrency(d.blacklistUsd.current)} / prior ${d.blacklistUsd.prior == null ? "n/a" : formatCurrency(d.blacklistUsd.prior)}`,
+      `  Blacklist known USD subtotal: current ${d.blacklistUsd.current == null ? "n/a" : formatCurrency(d.blacklistUsd.current)} / prior ${d.blacklistUsd.prior == null ? "n/a" : formatCurrency(d.blacklistUsd.prior)} (valuation may be partial; not an exact affected total)`,
     );
     lines.push(
       `  ${safetyContextAvailable ? "Grade transitions" : "Risk transitions"}: current ${d.gradeTransitions.current ?? "n/a"} / prior ${d.gradeTransitions.prior ?? "n/a"}`,
@@ -169,6 +181,7 @@ export function buildWeeklyPrompt(
       );
     }
     lines.push(`  Data coverage: ${d.dataCoverage.currentDays}d current, ${d.dataCoverage.priorDays}d prior`);
+    lines.push(`  PSI observation coverage: ${d.dataCoverage.currentPsiDays}d current, ${d.dataCoverage.priorPsiDays}d prior`);
   } else {
     lines.push("", "Week-over-week deltas: unavailable (insufficient prior-week history).");
   }

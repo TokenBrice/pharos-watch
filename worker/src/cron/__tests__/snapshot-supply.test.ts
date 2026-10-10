@@ -263,16 +263,25 @@ describe("snapshotSupply", () => {
     expect(db.getHistory().some((entry) => entry.binds.includes("usdt-tether") && entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
   });
 
-  it("skips assets with zero circulating supply", async () => {
-    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 30;
-    const cacheValue = JSON.stringify({
-      peggedAssets: [
-        makeSnapshotAsset({ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 0 } }),
-      ],
-    });
-    const db = mockD1({ stablecoins: { assets: cacheValue, updatedAt: freshUpdatedAt } });
-    const result = await snapshotSupply(db);
-    expect(result.itemCount).toBe(0);
+  it.each([{}, { peggedUSD: 0 }])("never snapshots unavailable buckets as zero (%j)", async (circulating) => {
+    const sqlite = createLatestSchemaSqlite().sqlite;
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        "stablecoins", JSON.stringify({ peggedAssets: [
+          makeSnapshotAsset({ id: "usdt-tether", symbol: "USDT", price: 1, circulating }),
+        ] }), nowSec,
+      );
+      const result = await snapshotSupply(createSqliteD1(sqlite), undefined, {
+        nowSec, requiredActiveIds: ["usdt-tether"], snapshotEligibleIds: ["usdt-tether"],
+      });
+      const observed = "peggedUSD" in circulating;
+      expect(result.itemCount).toBe(observed ? 1 : 0);
+      expect(sqlite.prepare("SELECT stablecoin_id, circulating_usd FROM supply_history").all())
+        .toEqual(observed ? [{ stablecoin_id: "usdt-tether", circulating_usd: 0 }] : []);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("skips when today's UTC snapshot is already written", async () => {
@@ -364,42 +373,6 @@ describe("snapshotSupply", () => {
     });
 
     expect(result.itemCount).toBe(3);
-  });
-
-  it("replaces a removed asset without deleting rows outside snapshot ownership", async () => {
-    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
-    const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
-    const previousIds = [...DEFAULT_REQUIRED_IDS, "eurt-test"];
-    const db = mockD1({
-      stablecoins: {
-        assets: { peggedAssets: [
-          makeSnapshotAsset({ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100 } }),
-          makeSnapshotAsset({ id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 50 } }),
-          makeSnapshotAsset({ id: "eurt-test", symbol: "EURT", circulating: { peggedEUR: 25 } }),
-          makeSnapshotAsset({ id: "admin-backfill-only", symbol: "ADMIN", circulating: { peggedUSD: 10 } }),
-        ] },
-        updatedAt: freshUpdatedAt,
-        first: false,
-      },
-      cacheRows: [{
-        key: "snapshot-supply:last-write",
-        value: completionMarker({ snapshotDate, requiredIds: previousIds, ownedRowIds: previousIds }),
-        updatedAt: freshUpdatedAt,
-        first: false,
-      }],
-    });
-
-    const result = await snapshotSupply(db, undefined, {
-      requiredActiveIds: DEFAULT_REQUIRED_IDS,
-      snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
-    });
-
-    expect(result.itemCount).toBe(2);
-    const deleteBinds = db.getHistory()
-      .filter((entry) => entry.sql.includes("DELETE FROM supply_history"))
-      .flatMap((entry) => entry.binds);
-    expect(deleteBinds).toContain("eurt-test");
-    expect(deleteBinds).not.toContain("admin-backfill-only");
   });
 
   it("replaces owned rows exactly while preserving an outside admin row in SQLite", async () => {

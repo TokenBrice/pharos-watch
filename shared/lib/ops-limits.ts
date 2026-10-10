@@ -17,4 +17,3 @@ export const DONOR_API_KEY_MIN_USD = 10;
 export const DONOR_API_KEY_RATE_LIMIT_PER_MINUTE = 10;
 /** Signed claim messages older or newer than this are rejected. */
 export const DONOR_KEY_CLAIM_MAX_AGE_SEC = 5 * 60;
-export const DONOR_KEY_CLAIM_RATE_LIMIT_PER_IP_PER_MINUTE = 10;

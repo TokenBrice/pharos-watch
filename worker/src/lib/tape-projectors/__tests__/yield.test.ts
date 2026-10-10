@@ -468,6 +468,82 @@ describe("yield.pys_dropped projector", () => {
   });
 });
 
+describe("yield PYS null-baseline continuity", () => {
+  it.each([
+    { name: "one null generation", scores: [80, null, 50], delta: 30 },
+    { name: "multiple null generations", scores: [80, null, null, 50], delta: 30 },
+    { name: "no usable prior score", scores: [null, null, 50], delta: null },
+    { name: "initial and intervening null generations", scores: [null, 80, null, null, 50], delta: 30 },
+  ])("keeps identical event identities and payloads across every split and small batch: $name", async ({ scores, delta }) => {
+    function openHistory() {
+      const fixture = fixtures.open();
+      const insert = fixture.sqlite.prepare(`INSERT INTO yield_source_decisions
+        (generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
+         selected_data_source, selected_apy_30d, selected_score, selected_reason, alternatives_json, created_at)
+        VALUES (?, 'usdt-tether', 'aave-v3:test', 'high', 'defillama', 5, ?, 'best', '[]', ?)`);
+      const seed = (start: number, end: number) => {
+        for (let i = start; i < end; i++) {
+          insert.run(`generation-${i}`, scores[i]!, SEC + i * 900);
+        }
+      };
+      const events = fixture.sqlite.prepare(
+        "SELECT event_id, source_row_id, ts, severity, payload_json FROM tape_events WHERE type = 'yield.pys_dropped' ORDER BY id",
+      );
+      return { ...fixture, seed, events };
+    }
+
+    const reference = openHistory();
+    reference.seed(0, scores.length);
+    await projectYieldPysDropped(reference.db);
+    const expected = reference.events.all();
+    if (delta == null) {
+      expect(expected).toEqual([]);
+    } else {
+      expect(expected).toEqual([{
+        event_id: expect.any(String),
+        source_row_id: `usdt-tether:${SEC + (scores.length - 1) * 900}:pys`,
+        ts: (SEC + (scores.length - 1) * 900) * 1000,
+        severity: "warning",
+        payload_json: JSON.stringify({ prevScore: 80, newScore: 50, delta, sourceKey: "aave-v3:test" }),
+      }]);
+    }
+
+    for (let split = 0; split <= scores.length; split++) {
+      for (const maxRows of [1, 2, 500]) {
+        const replay = openHistory();
+        replay.seed(0, split);
+        // Zero-event generations still advance the cursor; drain by source
+        // generation count rather than stopping on a zero projected count.
+        for (let i = 0; i < split; i++) await projectYieldPysDropped(replay.db, { maxRows });
+        replay.seed(split, scores.length);
+        for (let i = split; i < scores.length; i++) await projectYieldPysDropped(replay.db, { maxRows });
+        expect(replay.events.all()).toEqual(expected);
+        expect(await projectYieldPysDropped(replay.db)).toEqual({ projected: 0, advanced: null });
+        expect(replay.events.all()).toEqual(expected);
+      }
+    }
+  });
+
+  it("seeds from the latest usable generation at the cursor timestamp, skipping newer null generations", async () => {
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO yield_source_decisions
+      (generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
+       selected_data_source, selected_apy_30d, selected_score, selected_reason, alternatives_json, created_at)
+      VALUES (?, 'usdt-tether', 'aave-v3:test', 'high', 'defillama', 5, ?, 'best', '[]', ?)`);
+    insert.run("generation-1", 80, SEC);
+    insert.run("generation-2", 95, SEC);
+    insert.run("generation-3", null, SEC);
+    insert.run("generation-4", null, SEC + 900);
+    insert.run("generation-5", 50, SEC + 1800);
+    expect(await projectYieldPysDropped(db, { since: SEC + 900 })).toMatchObject({ projected: 1 });
+    const event = sqlite.prepare("SELECT severity, payload_json FROM tape_events").get();
+    expect(event).toEqual({
+      severity: "severe",
+      payload_json: JSON.stringify({ prevScore: 95, newScore: 50, delta: 45, sourceKey: "aave-v3:test" }),
+    });
+  });
+});
+
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
 

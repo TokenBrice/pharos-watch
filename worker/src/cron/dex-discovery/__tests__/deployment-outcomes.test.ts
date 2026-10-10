@@ -53,6 +53,33 @@ function outcomeWrite(overrides: { chain: string; address: string }) {
 }
 
 describe("DEX deployment outcomes", () => {
+  it.each([0, 1])("retains positive degraded native counts without certifying empty: %s", (count) => {
+    const deployment = { chain: "noble", address: "uusdn", decimals: 6 };
+    const [outcome] = classifyDexDeploymentOutcomes({
+      stablecoinId: "usdn-noble", deployments: [deployment], pools: [], nowSec: 100,
+      providerChecks: [{ ...deployment, provider: "noble-swap", status: "degraded", observedPoolCount: count }],
+    });
+    expect(outcome?.observedPoolCount).toBe(count);
+    expect(outcome?.outcome).toBe(count > 0 ? "observed_pools" : "provider_inaccessible");
+  });
+
+
+  it("cannot certify deployment-wide absence from Curve-only empty evidence", () => {
+    const providerChecks = [
+      { ...DEPLOYMENT, provider: "coingecko" as const, status: "failure" as const },
+      { ...DEPLOYMENT, provider: "geckoterminal" as const, status: "failure" as const },
+      { ...DEPLOYMENT, provider: "dexscreener" as const, status: "failure" as const },
+      { ...DEPLOYMENT, provider: "curve" as const, status: "success" as const, observedPoolCount: 0 },
+    ];
+    for (const [count, outcome] of [[0, "provider_inaccessible"], [2, "observed_pools"]] as const) {
+      const result = classifyDexDeploymentOutcomes({
+        stablecoinId: "test", deployments: [DEPLOYMENT], pools: [], nowSec: 100,
+        providerChecks: providerChecks.map((check) => check.provider === "curve"
+          ? { ...check, observedPoolCount: count } : check),
+      })[0];
+      expect(result).toMatchObject({ outcome, observedPoolCount: count });
+    }
+  });
 
   it("separates observed, verified empty, and inaccessible outcomes", () => {
     const observed = classifyDexDeploymentOutcomes({

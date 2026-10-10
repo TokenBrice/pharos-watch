@@ -2,6 +2,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { API_PARTNER_ACCESS_URL } from "@shared/lib/public-api-contract";
+import { StablecoinDataOutputSchema, StablecoinDataSchema } from "@shared/types/market";
+import { ReserveBoundedFactOutputSchema, ReserveBoundedFactSchema } from "@shared/types/reserve-bounded-facts";
 
 import {
   OPENAPI_JSON_VALUE_ENDPOINT_KEYS,
@@ -14,7 +16,7 @@ import {
   PUBLIC_API_RESPONSE_SCHEMAS,
 } from "../lib/public-api-response-schemas";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
-import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = join(__dirname, "../../public/openapi.json");
@@ -123,6 +125,22 @@ function assertResponseSchemaIsDocumented(
   }
 }
 
+function assertArrayItemsAreDocumented(name: string, value: unknown, path = name): void {
+  if (!value || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    value.forEach((child, index) => assertArrayItemsAreDocumented(name, child, `${path}[${index}]`));
+    return;
+  }
+  for (const [key, child] of Object.entries(value)) {
+    if (key === "items" && child && typeof child === "object" && !Array.isArray(child)
+      && !["type", "properties", "oneOf", "anyOf", "allOf", "$ref", "const", "enum", "not"]
+        .some((shapeKey) => shapeKey in child)) {
+      throw new Error(`Public API response schema "${name}" has empty array items at ${path}.items`);
+    }
+    assertArrayItemsAreDocumented(name, child, `${path}.${key}`);
+  }
+}
+
 const SHARED_COMPONENT_NAME = "SharedComponents";
 
 function normalizeComponentRefs(
@@ -195,6 +213,14 @@ export function buildOpenApiResponseSchemas(
   responseSchemas: Record<string, z.ZodType> = PUBLIC_API_RESPONSE_SCHEMAS,
 ) {
   const registry = registerResponseSchemas(responseSchemas);
+  const normalizedOutputSchemas = new Map<unknown, z.ZodType>([
+    [StablecoinDataSchema, StablecoinDataOutputSchema],
+    [ReserveBoundedFactSchema, ReserveBoundedFactOutputSchema],
+  ]);
+  const outputJsonSchemas = new Map([...normalizedOutputSchemas].map(([runtime, output]) => {
+    const { $schema: _dialect, ...schema } = z.toJSONSchema(output, { target: "draft-2020-12", io: "output" });
+    return [runtime, schema] as const;
+  }));
 
   const { schemas } = z.toJSONSchema(registry, {
     target: "draft-2020-12",
@@ -204,6 +230,8 @@ export function buildOpenApiResponseSchemas(
     metadata: registry,
     uri: (id) => `${OPENAPI_SCHEMA_PREFIX}${id}`,
     override: ({ zodSchema, jsonSchema }) => {
+      const outputSchema = outputJsonSchemas.get(zodSchema);
+      if (outputSchema) Object.assign(jsonSchema, outputSchema);
       const description = z.globalRegistry.get(zodSchema)?.description;
       if (description !== undefined) jsonSchema.description = description;
     },
@@ -230,6 +258,7 @@ export function buildOpenApiResponseSchemas(
         } else {
           assertResponseSchemaIsDocumented(name, openApiSchema);
         }
+        assertArrayItemsAreDocumented(name, openApiSchema);
         return [name === "__shared" ? SHARED_COMPONENT_NAME : name, openApiSchema];
       }),
   ) as Record<string, Record<string, unknown>>;
@@ -290,7 +319,7 @@ function render() {
   return `${JSON.stringify(buildOpenApiDocument(), null, 2)}\n`;
 }
 
-if (isDirectRun(import.meta.url, process.argv[1])) {
+runDirectCli(import.meta.url, () => {
   syncGeneratedArtifacts({
     artifacts: [{ path: OUTPUT_PATH, contents: render() }],
     check: CHECK_MODE,
@@ -298,4 +327,4 @@ if (isDirectRun(import.meta.url, process.argv[1])) {
     currentMessage: "OpenAPI spec is current",
     writtenMessage: "Generated OpenAPI spec",
   });
-}
+});

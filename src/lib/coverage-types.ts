@@ -72,7 +72,9 @@ export interface CoverageFeatureSummary {
    * published as "Data n/a", never as 0% coverage.
    */
   coveragePct: number | null;
-  coveredMcapUsd: number;
+  coveredMcapUsd: number | null;
+  marketCapObservedCount: number;
+  marketCapComplete: boolean;
   mcapSharePct: number | null;
   countLabel: string;
   coverageLabel: string;

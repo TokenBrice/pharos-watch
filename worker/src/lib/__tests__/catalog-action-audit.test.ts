@@ -52,6 +52,35 @@ afterEach(() => {
 });
 
 describe("catalog action canonical audit", () => {
+  it.each([
+    ["", false, "live"],
+    ["?dryRun=1", true, "dry-run"],
+    ["?dryRun=0", false, "live"],
+    ["?dryRun=true", true, "dry-run"],
+    ["?dryRun=false", false, "live"],
+  ] as const)("audits the repair handler's resolved mode for %s", async (query, dryRun, mode) => {
+    const sqlite = fixtures.open().sqlite;
+    const response = Response.json({ dryRun, privateResult: "not-persisted" });
+    await auditCatalogActionResponse({
+      db: createSqliteD1(sqlite), endpoint: endpoint("remediate-blacklist-amount-gaps"),
+      request: request(`/api/remediate-blacklist-amount-gaps${query}`, "mode-intent", { body: JSON.stringify({ dryRun: !dryRun }) }),
+      response,
+    });
+    expect(JSON.parse(rows(sqlite)[0]!.details_json!)).toMatchObject({ mode });
+    expect(rows(sqlite)[0]!.details_json).not.toContain("not-persisted");
+    expect(await response.json()).toMatchObject({ dryRun });
+  });
+
+  it("does not treat the catalog preview default as the execution default", async () => {
+    const sqlite = fixtures.open().sqlite;
+    await auditCatalogActionResponse({
+      db: createSqliteD1(sqlite), endpoint: endpoint("remediate-blacklist-amount-gaps"),
+      request: request("/api/remediate-blacklist-amount-gaps", "default-live"),
+      response: Response.json({ ok: true }),
+    });
+    expect(JSON.parse(rows(sqlite)[0]!.details_json!)).toMatchObject({ mode: "live" });
+  });
+
   it("records only allowlisted scope and outcome metadata", async () => {
     const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
@@ -60,7 +89,7 @@ describe("catalog action canonical audit", () => {
     const querySecret = "query-secret";
     const responseSecret = "response-secret";
     const req = request(
-      `/api/backfill-depegs?stablecoin=usdt-tether&dry-run=false&apiKey=${querySecret}`,
+      `/api/remediate-blacklist-amount-gaps?stablecoin=USDT&dryRun=false&apiKey=${querySecret}`,
       "repair-intent-1",
       {
         body: JSON.stringify({ token: plaintextBodySecret }),
@@ -70,28 +99,28 @@ describe("catalog action canonical audit", () => {
 
     await auditCatalogActionResponse({
       db,
-      endpoint: endpoint("backfill-depegs"),
+      endpoint: endpoint("remediate-blacklist-amount-gaps"),
       request: req,
       response: Response.json({ ok: true, token: responseSecret }),
     });
 
     const [row] = rows(sqlite);
     expect(row).toMatchObject({
-      action: "backfill-depegs",
-      target: "usdt-tether",
+      action: "remediate-blacklist-amount-gaps",
+      target: "USDT",
       result: "ok",
       http_status: 200,
     });
     expect(row.intent_key).toMatch(/^catalog:v1:[a-f0-9]{64}$/u);
     const details = JSON.parse(row.details_json ?? "null") as Record<string, unknown>;
     expect(details).toMatchObject({
-      path: "/api/backfill-depegs",
+      path: "/api/remediate-blacklist-amount-gaps",
       method: "POST",
       mode: "live",
       outcome: "succeeded",
       executionCertainty: "confirmed",
       idempotentReplay: false,
-      scope: { type: "asset-or-batch", label: "Stablecoin ID" },
+      scope: { type: "asset-or-batch", label: "Stablecoin symbol" },
     });
     const persisted = JSON.stringify(row);
     expect(persisted).not.toContain("repair-intent-1");
@@ -104,24 +133,24 @@ describe("catalog action canonical audit", () => {
   it("keeps one row for a same-key replay and adds a row for an explicit new intent", async () => {
     const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
-    const definition = endpoint("backfill-depegs");
+    const definition = endpoint("remediate-blacklist-amount-gaps");
 
     await auditCatalogActionResponse({
       db,
       endpoint: definition,
-      request: request("/api/backfill-depegs?dry-run=true", "same-intent"),
+      request: request("/api/remediate-blacklist-amount-gaps?dryRun=true", "same-intent"),
       response: Response.json({ ok: true }, { headers: { "X-Idempotent-Replay": "false" } }),
     });
     await auditCatalogActionResponse({
       db,
       endpoint: definition,
-      request: request("/api/backfill-depegs?dry-run=true", "same-intent"),
+      request: request("/api/remediate-blacklist-amount-gaps?dryRun=true", "same-intent"),
       response: Response.json({ ok: true }, { headers: { "X-Idempotent-Replay": "true" } }),
     });
     await auditCatalogActionResponse({
       db,
       endpoint: definition,
-      request: request("/api/backfill-depegs?dry-run=true", "new-intent"),
+      request: request("/api/remediate-blacklist-amount-gaps?dryRun=true", "new-intent"),
       response: Response.json({ ok: true }),
     });
 
@@ -142,8 +171,8 @@ describe("catalog action canonical audit", () => {
       .join("\n");
     sqlite.exec("DROP TABLE admin_action_audit");
     const db = createSqliteD1(sqlite);
-    const definition = endpoint("backfill-depegs");
-    const req = request("/api/backfill-depegs?dry-run=true", "reconcile-intent");
+    const definition = endpoint("remediate-blacklist-amount-gaps");
+    const req = request("/api/remediate-blacklist-amount-gaps?dryRun=true", "reconcile-intent");
 
     const firstAudited = await auditCatalogActionResponseSafely({
       db,
@@ -165,14 +194,14 @@ describe("catalog action canonical audit", () => {
     expect(warning).toHaveBeenCalled();
   });
 
-  it("records an explicit mint/burn live request as live despite preview-only catalog metadata", async () => {
+  it("records an explicit repair live request as live despite the preview default", async () => {
     const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
 
     await auditCatalogActionResponse({
       db,
-      endpoint: endpoint("backfill-mint-burn-prices"),
-      request: request("/api/backfill-mint-burn-prices?dry-run=false", "mint-price-live"),
+      endpoint: endpoint("remediate-blacklist-amount-gaps"),
+      request: request("/api/remediate-blacklist-amount-gaps?dryRun=false", "repair-live"),
       response: Response.json({ ok: true }),
     });
 
@@ -182,19 +211,19 @@ describe("catalog action canonical audit", () => {
   it("does not let a pre-idempotency failure replace the original intent outcome", async () => {
     const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
-    const definition = endpoint("backfill-depegs");
+    const definition = endpoint("remediate-blacklist-amount-gaps");
     const intentKey = "operator-known-idempotency-key";
 
     await auditCatalogActionResponse({
       db,
       endpoint: definition,
-      request: request("/api/backfill-depegs?stablecoin=usdt-tether&dry-run=false", intentKey),
+      request: request("/api/remediate-blacklist-amount-gaps?stablecoin=USDT&dryRun=false", intentKey),
       response: Response.json({ ok: true }, { status: 200, headers: { "X-Idempotent-Replay": "false" } }),
     });
     await auditCatalogActionResponse({
       db,
       endpoint: definition,
-      request: request("/api/backfill-depegs?stablecoin=attacker-target&dry-run=false", intentKey, {
+      request: request("/api/remediate-blacklist-amount-gaps?stablecoin=attacker-target&dryRun=false", intentKey, {
         headers: {
           "X-Pharos-Admin": "",
           "Cf-Access-Authenticated-User-Email": "attacker@pharos.watch",
@@ -209,7 +238,7 @@ describe("catalog action canonical audit", () => {
     const auditRows = rows(sqlite);
     expect(auditRows).toHaveLength(1);
     expect(auditRows[0]).toMatchObject({
-      target: "usdt-tether",
+      target: "USDT",
       result: "ok",
       http_status: 200,
     });
@@ -222,8 +251,8 @@ describe("catalog action canonical audit", () => {
   it("lets the original success replace an earlier replay-unknown placeholder", async () => {
     const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
-    const definition = endpoint("backfill-depegs");
-    const req = request("/api/backfill-depegs?dry-run=false", "racing-intent");
+    const definition = endpoint("remediate-blacklist-amount-gaps");
+    const req = request("/api/remediate-blacklist-amount-gaps?dryRun=false", "racing-intent");
 
     await auditCatalogActionResponse({
       db,
@@ -260,20 +289,20 @@ describe("catalog action canonical audit", () => {
   it("distinguishes an absent batch target from an unsafe configured target", async () => {
     const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
-    const definition = endpoint("backfill-depegs");
+    const definition = endpoint("remediate-blacklist-amount-gaps");
     const unsafeTarget = "../../secret-token";
 
     await auditCatalogActionResponse({
       db,
       endpoint: definition,
-      request: request("/api/backfill-depegs?dry-run=true", "batch-intent"),
+      request: request("/api/remediate-blacklist-amount-gaps?dryRun=true", "batch-intent"),
       response: Response.json({ ok: true }),
     });
     await auditCatalogActionResponse({
       db,
       endpoint: definition,
       request: request(
-        `/api/backfill-depegs?dry-run=true&stablecoin=${encodeURIComponent(unsafeTarget)}`,
+        `/api/remediate-blacklist-amount-gaps?dryRun=true&stablecoin=${encodeURIComponent(unsafeTarget)}`,
         "invalid-target-intent",
       ),
       response: Response.json({ error: "invalid_target" }, { status: 400 }),
@@ -287,18 +316,18 @@ describe("catalog action canonical audit", () => {
   it("does not let a request-mismatch conflict replace the original intent outcome", async () => {
     const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
-    const definition = endpoint("backfill-depegs");
+    const definition = endpoint("remediate-blacklist-amount-gaps");
 
     await auditCatalogActionResponse({
       db,
       endpoint: definition,
-      request: request("/api/backfill-depegs?dry-run=false", "conflict-intent"),
+      request: request("/api/remediate-blacklist-amount-gaps?dryRun=false", "conflict-intent"),
       response: Response.json({ ok: true }),
     });
     await auditCatalogActionResponse({
       db,
       endpoint: definition,
-      request: request("/api/backfill-depegs?dry-run=false&stablecoin=other", "conflict-intent"),
+      request: request("/api/remediate-blacklist-amount-gaps?dryRun=false&stablecoin=other", "conflict-intent"),
       response: Response.json(
         { error: "Idempotency key reuse with different request payload" },
         {
@@ -321,8 +350,8 @@ describe("catalog action canonical audit", () => {
     const db = createSqliteD1(sqlite);
     const cases = [
       {
-        endpoint: endpoint("backfill-depegs"),
-        request: request("/api/backfill-depegs", "accepted-intent"),
+        endpoint: endpoint("remediate-blacklist-amount-gaps"),
+        request: request("/api/remediate-blacklist-amount-gaps", "accepted-intent"),
         response: Response.json({ accepted: true }, { status: 202 }),
         outcome: "accepted",
         result: "ok",
@@ -335,15 +364,15 @@ describe("catalog action canonical audit", () => {
         result: "ok",
       },
       {
-        endpoint: endpoint("backfill-depegs"),
-        request: request("/api/backfill-depegs", "failed-intent"),
+        endpoint: endpoint("remediate-blacklist-amount-gaps"),
+        request: request("/api/remediate-blacklist-amount-gaps", "failed-intent"),
         response: Response.json({ error: "invalid_scope" }, { status: 422 }),
         outcome: "failed",
         result: "error",
       },
       {
-        endpoint: endpoint("backfill-depegs"),
-        request: request("/api/backfill-depegs", "unknown-intent"),
+        endpoint: endpoint("remediate-blacklist-amount-gaps"),
+        request: request("/api/remediate-blacklist-amount-gaps", "unknown-intent"),
         response: Response.json(
           { error: "execution_unknown" },
           { status: 503, headers: { "X-Execution-Certainty": "unknown" } },
@@ -377,8 +406,8 @@ describe("catalog action canonical audit", () => {
 
     await auditCatalogActionResponse({
       db,
-      endpoint: endpoint("backfill-depegs"),
-      request: request("/api/backfill-depegs?dry-run=false", "thrown-intent"),
+      endpoint: endpoint("remediate-blacklist-amount-gaps"),
+      request: request("/api/remediate-blacklist-amount-gaps?dryRun=false", "thrown-intent"),
       response: Response.json({ error: "InternalError" }, { status: 500 }),
     });
 

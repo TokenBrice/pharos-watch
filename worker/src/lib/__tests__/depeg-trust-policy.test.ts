@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { PegReferenceTrustInput } from "@shared/lib/peg-reference-trust";
 import { makePythDepegPrice, makeSoftAgreementDepegPrice } from "./depeg-price.test-support";
 import {
   chooseIndependentOffchainDepegConfirmer,
@@ -45,21 +46,22 @@ describe("classifyPrimaryDepegTrust", () => {
     },
   );
 
-  it("requires confirmation for fresh soft single-source prices", () => {
+  it.each([
+    { name: "soft single-source", priceSource: "coingecko", priceConfidence: "single-source", agreeSources: ["coingecko"], expected: "confirm_required" },
+    { name: "upstream hard single-source", priceSource: "pyth", priceConfidence: "single-source", priceObservedAtMode: "upstream", agreeSources: ["pyth"], expected: "authoritative" },
+    { name: "local-fetch hard single-source", priceSource: "kraken", priceConfidence: "single-source", priceObservedAtMode: "local_fetch", agreeSources: ["kraken"], expected: "confirm_required" },
+    { name: "soft-only agreement", priceSource: "coingecko+defillama-list", priceConfidence: "high", agreeSources: ["coingecko", "defillama-list"], expected: "confirm_required" },
+    { name: "upstream hard source with soft corroboration", priceSource: "coingecko+pyth", priceConfidence: "high", agreeSources: ["coingecko", "pyth"], expected: "authoritative" },
+    { name: "lone local-fetch hard source with soft corroboration", priceSource: "coingecko+kraken", priceConfidence: "high", agreeSources: ["coingecko", "kraken"], expected: "confirm_required" },
+    { name: "two local-fetch hard sources", priceSource: "binance+kraken", priceConfidence: "high", agreeSources: ["binance", "kraken"], expected: "authoritative" },
+    { name: "legacy upstream-capable hard source", priceSource: "pyth", priceConfidence: "single-source", agreeSources: ["pyth"], expected: "authoritative" },
+  ] as const)("classifies fresh $name evidence", ({ name: _name, expected, ...provenance }) => {
     expect(classifyPrimaryDepegTrust({
-      price: 1.01,
-      priceSource: "coingecko",
-      priceConfidence: "single-source",
-      priceObservedAt: nowSec - 60,
-      agreeSources: ["coingecko"],
-    }, nowSec)).toBe("confirm_required");
-  });
-
-  it("allows fresh hard single-source prices to remain authoritative", () => {
-    expect(classifyPrimaryDepegTrust(makePythDepegPrice(nowSec, {
       price: 0.998,
-      priceObservedAtMode: "upstream",
-    }), nowSec)).toBe("authoritative");
+      priceObservedAt: nowSec - 60,
+      ...provenance,
+      agreeSources: [...provenance.agreeSources],
+    }, nowSec)).toBe(expected);
   });
 
   it("requires confirmation for future-dated primary observations", () => {
@@ -120,7 +122,7 @@ describe("hasFreshMultiSourcePrimaryAgreement", () => {
     }), nowSec)).toBe(false);
   });
 
-  it.each([[1800, true], [1801, false]] as const)("checks corroborated agreement age at %s seconds", (age, accepted) => {
+  it.each([[1800, true], [1801, false], [1860, false]] as const)("checks corroborated agreement age at %s seconds", (age, accepted) => {
     expect(hasFreshMultiSourcePrimaryAgreement(makeSoftAgreementDepegPrice(nowSec, {
       priceObservedAt: nowSec - age,
     }), nowSec)).toBe(accepted);
@@ -128,29 +130,14 @@ describe("hasFreshMultiSourcePrimaryAgreement", () => {
 });
 
 describe("isAuthoritativeDepegPegReference", () => {
-  it("rejects thin fiat peer medians without fallback", () => {
-    expect(isAuthoritativeDepegPegReference({
-      pegCurrency: "BRL",
-      pegType: "peggedREAL",
-      pegRateSource: "median",
-      pegRateContributorCount: 2,
-    })).toBe(false);
-  });
-
-  it("accepts fallback-backed thin fiat references and robust medians", () => {
-    expect(isAuthoritativeDepegPegReference({
-      pegCurrency: "BRL",
-      pegType: "peggedREAL",
-      pegRateSource: "fallback",
-      pegRateContributorCount: 2,
-    })).toBe(true);
-
-    expect(isAuthoritativeDepegPegReference({
-      pegCurrency: "EUR",
-      pegType: "peggedEUR",
-      pegRateSource: "median",
-      pegRateContributorCount: 4,
-    })).toBe(true);
+  it.each([
+    { name: "thin fiat median", pegCurrency: "BRL", pegType: "peggedREAL", pegRateSource: "median", pegRateContributorCount: 2, expected: false },
+    { name: "fallback-backed thin fiat", pegCurrency: "BRL", pegType: "peggedREAL", pegRateSource: "fallback", pegRateContributorCount: 2, expected: true },
+    { name: "robust fiat median", pegCurrency: "EUR", pegType: "peggedEUR", pegRateSource: "median", pegRateContributorCount: 4, expected: true },
+    { name: "USD reference", pegCurrency: "USD", pegType: "peggedUSD", pegRateSource: "median", pegRateContributorCount: 1, expected: true },
+    { name: "commodity reference", pegCurrency: "GOLD", pegType: "peggedGOLD", pegRateSource: "median", pegRateContributorCount: 1, expected: true },
+  ] as const satisfies ReadonlyArray<PegReferenceTrustInput & { name: string; expected: boolean }>)("checks $name authority", ({ name: _name, expected, ...reference }) => {
+    expect(isAuthoritativeDepegPegReference(reference)).toBe(expected);
   });
 });
 

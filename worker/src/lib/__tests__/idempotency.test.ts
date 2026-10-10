@@ -270,7 +270,7 @@ function makeIdempotencyDb(options: TestDbOptions = {}): D1Database & {
 }
 
 function request(key: string, query = "batch=1"): Request {
-  return new Request(`https://x/api/backfill-depegs?${query}`, {
+  return new Request(`https://x/api/backfill-dews?${query}`, {
     method: "POST",
     headers: { "Idempotency-Key": key },
     body: JSON.stringify({ batch: 1 }),
@@ -279,7 +279,7 @@ function request(key: string, query = "batch=1"): Request {
 
 function streamedRequest(key: string, chunks: string[]): Request {
   const encoder = new TextEncoder();
-  return new Request("https://x/api/backfill-depegs?batch=1", {
+  return new Request("https://x/api/backfill-dews?batch=1", {
     method: "POST",
     headers: { "Idempotency-Key": key },
     body: new ReadableStream<Uint8Array>({
@@ -802,8 +802,8 @@ describe("runIdempotentAction", () => {
   });
 
   it.each([
-    ["body", "POST", "/api/backfill-depegs", '{"batch":2}'],
-    ["method", "PUT", "/api/backfill-depegs", '{"batch":1}'],
+    ["body", "POST", "/api/backfill-dews", '{"batch":2}'],
+    ["method", "PUT", "/api/backfill-dews", '{"batch":1}'],
     ["pathname", "POST", "/api/other-action", '{"batch":1}'],
   ])("rejects reuse after changing only the %s", async (_component, method, pathname, body) => {
     const db = makeIdempotencyDb();

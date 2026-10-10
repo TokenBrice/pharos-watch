@@ -9,7 +9,7 @@ import {
 } from "../methodology-versions/base";
 import { DDR_METHODOLOGY_CHANGELOG, DDR_V2_EFFECTIVE_AT } from "../methodology-versions/depeg-resolver";
 import { LIQUIDITY_METHODOLOGY_VERSION, SAFETY_SCORE_METHODOLOGY_VERSION } from "../methodology-versions/constants";
-import { LIQUIDITY_SCORE_V6 } from "../../data/methodology-changelogs/liquidity-score/v6";
+import LIQUIDITY_SCORE_V6 from "../../data/methodology-changelogs/liquidity-score/v6.json";
 import { liquidityTvlBasisEpoch } from "../dex-liquidity-evidence";
 import {
   getMethodologyVersionAt,
@@ -179,6 +179,30 @@ describe("methodology registry", () => {
     }
   });
 
+  it.each([
+    ["safety-score", "10.14", "10.15"],
+    ["stability-index", "3.66", "3.67"],
+    ["redemption-backstop", "4.48", "4.49"],
+    ["depeg-dews", "6.33", "6.34"],
+    ["depeg-resolver", "4.6", "4.7"],
+    ["pricing-pipeline", "6.45", "6.46"],
+    ["blacklist-tracker", "4.2", "4.3"],
+    ["liquidity-score", "6.93", "6.94"],
+    ["mint-burn-flow", "6.23", "6.24"],
+    ["yield", "8.47", "8.48"],
+  ] as const)("retains the coordinated October 10 %s release boundary", (key, previousVersion, version) => {
+    const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === key)!;
+    const release = methodology.entries.find((candidate) => candidate.version === version)!;
+    expect(release).toMatchObject({
+      version,
+      date: "2026-10-10",
+      effectiveAt: 1_791_676_800,
+      reconstructed: false,
+    });
+    expect(getMethodologyVersionAt(key, release.effectiveAt - 1)).toBe(previousVersion);
+    expect(getMethodologyVersionAt(key, release.effectiveAt)).toBe(version);
+  });
+
   it("provides an LLM-facing description for every changelog", () => {
     expect(METHODOLOGY_CHANGELOG_REGISTRY).toHaveLength(11);
     for (const methodology of METHODOLOGY_CHANGELOG_REGISTRY) {
@@ -222,5 +246,6 @@ describe("liquidity TVL-basis break list", () => {
     expect(liquidityTvlBasisEpoch("6.9")).toBeLessThan(liquidityTvlBasisEpoch("6.91"));
     expect(liquidityTvlBasisEpoch("6.91")).toBeLessThan(liquidityTvlBasisEpoch("6.92"));
     expect(liquidityTvlBasisEpoch("6.92")).toBeLessThan(liquidityTvlBasisEpoch("6.93"));
+    expect(liquidityTvlBasisEpoch("6.94")).toBe(liquidityTvlBasisEpoch("6.93"));
   });
 });

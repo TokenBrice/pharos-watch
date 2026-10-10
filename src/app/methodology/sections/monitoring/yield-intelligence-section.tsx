@@ -74,6 +74,20 @@ export function YieldIntelligenceMethodologySection() {
                 used by a published row is evaluated independently so a healthy USD lane cannot mask a stale local-currency
                 benchmark.
               </p>
+              <p>
+                A deposit-address match alone does not establish wrapper receipt ownership: the receipt symbol must
+                match too, PT/LP markets cannot borrow the wrapper label, and contradictory underlying addresses
+                fail closed. Royco needs critical market, venue-review and measured-size evidence to publish a
+                tranche score, and cannot turn an unrated underlying asset into a rated one. Missing critical
+                evidence leaves observed APY visible with NR and no PYS.
+              </p>
+              <p>
+                Valid negative holder returns stay measured, including losing constituents in a TVL-weighted group.
+                Midas annualization uses oracle observation intervals rather than publication delays; Zephyr counts
+                each hourly source observation once across publication and backfill. Unknown legacy clocks cannot
+                manufacture history, and Hashnote reports beyond the five-minute future-skew allowance are excluded.
+                Benchmark fallback selection is separate from feed health and never renews an old observation.
+              </p>
               <YieldMethodologyRelatedLinks />
               <MethodologyFacts
                 facts={[

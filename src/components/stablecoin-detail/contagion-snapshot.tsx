@@ -59,6 +59,7 @@ export function ContagionSnapshot({
         id: card.id,
         symbol: CLIENT_TRACKED_META_BY_ID.get(card.id)?.symbol ?? card.id,
         grade: card.grade,
+        partialEvidence: card.partialEvidence,
         sharedBookId: card.sharedBookId,
       })),
     [rc?.cards],

@@ -6,12 +6,14 @@ import { useMemo } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { HomeAltTrackerLink } from "@/components/home-alt-tracker-link";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
+import { YieldApiWarnings } from "@/components/yield/yield-data-health";
+import { YieldSafetyBadge } from "@/components/yield-leaderboard-row-parts";
+import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
 import { useYieldRankingsSummary } from "@/hooks/api-hooks";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatPercent, formatScore } from "@shared/lib/format";
-import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
-import type { ReportCardGrade } from "@shared/types";
 import type { YieldRankingSummary } from "@shared/types/yield-summary";
 
 const LEADERBOARD_SIZE = 5;
@@ -20,10 +22,6 @@ const LEADERBOARD_SIZE = 5;
 // align: rank · coin · APY · PYS · grade. Fixed metric widths keep the columns
 // flush across the independent grid containers.
 const ROW_GRID = "grid grid-cols-[1.5rem_minmax(0,1fr)_4.5rem_3.5rem_2.75rem] items-center gap-x-2";
-
-function gradeChipClass(grade: ReportCardGrade): string {
-  return REPORT_CARD_GRADE_COLORS[grade];
-}
 
 interface OverviewData {
   /** `null` when the payload carries no safety-snapshot coverage: "unknown", never "N/N". */
@@ -151,7 +149,6 @@ function LeaderRow({
   rank: number;
   logoSrc: string | undefined;
 }): React.JSX.Element {
-  const grade = row.safetyGrade;
   return (
     <li>
       <Link
@@ -171,15 +168,13 @@ function LeaderRow({
           {formatScore(row.pharosYieldScore)}
         </span>
         <span className="justify-self-end">
-          {grade ? (
-            <span
-              className={`inline-flex items-center rounded border px-1 py-0 font-mono text-[11px] font-semibold ${gradeChipClass(grade)}`}
-            >
-              {grade}
-            </span>
-          ) : (
-            <span className="font-mono text-[11px] text-muted-foreground/50">—</span>
-          )}
+          <YieldSafetyBadge
+            grade={row.safetyGrade}
+            safetyScore={row.safetyScore}
+            safetySrLabel={`Yield safety ${row.safetyGrade ?? "unrated"}${row.provenance?.usedDefaultSafety ? " (default safety)" : ""}`}
+            opportunityDerived={isOpportunityDerivedSafety(row.provenance?.safetyProvenance)}
+            compact
+          />
         </span>
       </Link>
     </li>
@@ -187,7 +182,7 @@ function LeaderRow({
 }
 
 export function HomeAltYieldOverview(): React.JSX.Element | null {
-  const { data, isLoading } = useYieldRankingsSummary();
+  const { data, isLoading, error, meta, dataUpdatedAt, refetch } = useYieldRankingsSummary();
   const logos = logosById;
   const logoMap = logos ?? {};
 
@@ -196,6 +191,17 @@ export function HomeAltYieldOverview(): React.JSX.Element | null {
     const built = buildOverview(data.rankings, data.provenance?.safetySnapshot ?? null);
     return { ...built, medianApy: data.medianApy };
   }, [data]);
+  const healthNotices = (
+    <>
+      <QueryFreshnessNotices
+        queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData: !!data, meta }]}
+        error={error}
+        hasData={!!data}
+        onRetry={() => { void refetch(); }}
+      />
+      <YieldApiWarnings warnings={data?.warnings} />
+    </>
+  );
 
   if (isLoading) return <HomeAltYieldOverviewFallback />;
 
@@ -206,6 +212,7 @@ export function HomeAltYieldOverview(): React.JSX.Element | null {
           Yield Intelligence overview
         </h2>
         <OverviewHeader coveredCount={null} />
+        {healthNotices}
         <div className="pharos-card-shell flex items-center justify-center p-6">
           <span className="font-mono text-sm text-muted-foreground">Yield rankings unavailable</span>
         </div>
@@ -220,6 +227,7 @@ export function HomeAltYieldOverview(): React.JSX.Element | null {
       </h2>
 
       <OverviewHeader coveredCount={overview.coveredCount} />
+      {healthNotices}
 
       <div className="pharos-card-shell overflow-hidden p-4">
         <StatStrip

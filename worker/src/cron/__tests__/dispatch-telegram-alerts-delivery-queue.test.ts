@@ -6,10 +6,8 @@ import {
   defaultDispatchCaches,
   dispatchTelegramAlerts,
   formatConsolidatedMessageSpy,
-  makeDewsOverflowPlan,
   mockRecordOutcome,
   mockShouldAttemptFetch,
-  pruneOverflowPlanBacklogForChat,
   readCacheValue,
   resetDispatchTelegramAlertsTest,
   telegramDeliveryTranscript,
@@ -188,7 +186,8 @@ describe("dispatchTelegramAlerts", () => {
       safetyAlertsSuppressed: true,
       noWorkRun: false,
     });
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 6 });
+    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 7 });
+    expect(readCacheValue(harness.sqlite, "alert:reserve-observed-snapshot")).not.toBeNull();
     expect(readCacheValue(harness.sqlite, "telegram:preset-query-failure-count")).toBe("0");
     expect(mockRecordOutcome).toHaveBeenCalledTimes(1);
   });
@@ -244,30 +243,6 @@ describe("dispatchTelegramAlerts", () => {
     expect(formatConsolidatedMessageSpy).not.toHaveBeenCalled();
     expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "chat-imported" })]);
     expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
-  });
-
-  it("prunes forgotten chats from the stored overflow plan backlog", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const forgottenPlan = makeDewsOverflowPlan(now, "chat-forgotten");
-    const keptPlan = makeDewsOverflowPlan(now, "chat-kept");
-    const harness = createDispatchHarness();
-    harness.cache(
-      "telegram:dispatch-overflow-plan",
-      {
-        version: 1,
-        writtenAt: now - 60,
-        plans: [
-          { ...forgottenPlan, expiresAt: now + 3_600 },
-          { ...keptPlan, expiresAt: now + 3_600 },
-        ],
-      },
-      now - 60,
-    );
-
-    await pruneOverflowPlanBacklogForChat(harness.db, "chat-forgotten", now);
-    expect(JSON.parse(readCacheValue(harness.sqlite, "telegram:dispatch-overflow-plan") ?? "{}")).toMatchObject({
-      plans: [{ chatId: "chat-kept" }],
-    });
   });
 
   it("still drains due pending rows during an otherwise eventless run", async () => {

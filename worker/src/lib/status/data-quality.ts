@@ -11,10 +11,10 @@ import {
   STATUS_ONCHAIN_FRESH_WINDOW_SEC,
   STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC,
 } from "@shared/lib/status-thresholds";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import type { ActivePriceCoverageHealth, DataQuality, StablecoinPublicationHealth, StatusResponse } from "@shared/types/status";
+import type { ActivePriceCoverageHealth, DataQuality, StablecoinPublicationHealth } from "@shared/types/status";
 import { NominalPriceReferenceSchema } from "@shared/types/core";
 import { logWorkerEvent } from "../structured-log";
 import { getSourceFailureMessage } from "./section-errors";
@@ -40,10 +40,10 @@ function emptyRepairDebt(source: DataQuality["repairDebt"]["source"] = "unavaila
   };
 }
 
-type DataQualitySourceKey = StatusResponse["dataQuality"]["sourceFailures"][number]["source"];
+type DataQualitySourceKey = DataQuality["sourceFailures"][number]["source"];
 
 function recordDataQualityFailure(
-  bucket: StatusResponse["dataQuality"]["sourceFailures"],
+  bucket: DataQuality["sourceFailures"],
   source: DataQualitySourceKey,
   _err: unknown,
 ): void {
@@ -56,46 +56,6 @@ function recordDataQualityFailure(
   });
 }
 
-export function emptyDataQuality(): DataQuality {
-  return {
-    stablecoinsCacheStatus: "error",
-    stablecoinsCacheReason: "db-unavailable",
-    blacklistGapStatus: "failed",
-    activeDepegStatus: "failed",
-    onchainSupplyQueryStatus: "failed",
-    repairDebt: emptyRepairDebt(),
-    ddrRepairDebtStatus: "unknown",
-    ddrRepairDebtCount: 0,
-    ddrRepairDebtCheckedAt: null,
-    ddrRepairDebtEvents: [],
-    ddrRepairDebtEventsTruncated: false,
-    sourceFailures: [],
-    totalStablecoins: 0,
-    missingPrices: 0,
-    stablecoinPublication: unknownStablecoinPublicationHealth(),
-    blacklistMissingAmounts: 0,
-    blacklistRecentMissingAmounts: 0,
-    blacklistRecentWindowSec: BLACKLIST_RECENT_WINDOW_SEC,
-    blacklistMissingRatio: 0,
-    blacklistTotal: 0,
-    blacklistOldestRecoverableAgeSec: null,
-    blacklistNeverAttemptedCount: 0,
-    blacklistRepeatedFailureCount: 0,
-    blacklistReconciliation: {
-      ...EMPTY_BLACKLIST_RECONCILIATION_STATUS,
-      status: "unknown",
-    },
-    onchainSupplyDivergences: 0,
-    onchainDivergenceRatio: 0,
-    onchainSupplyMonitoring: "unavailable",
-    onchainSupplyLatestAt: null,
-    onchainSupplyTrackedCoins: 0,
-    activeDepegs: 0,
-    staleOnchainSupply: 0,
-    onchainStaleRatio: 0,
-  };
-}
-
 export async function getDataQuality(
   db: D1Database,
   now: number,
@@ -106,7 +66,7 @@ export async function getDataQuality(
   },
 ): Promise<DataQuality> {
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
-  const sourceFailures: StatusResponse["dataQuality"]["sourceFailures"] = [];
+  const sourceFailures: DataQuality["sourceFailures"] = [];
   if (stablecoinsCacheResult.kind !== "ok") {
     logWorkerEvent({
       scope: "status",
@@ -381,7 +341,9 @@ export async function getDataQuality(
         for (const row of onchainRows.results) {
           const asset = stablecoinAssetMap.get(row.stablecoin_id);
           if (!asset?.price || asset.price <= 0 || !asset.circulating) continue;
-          const llamaSupply = getCirculatingRaw(asset) / asset.price;
+          const circulatingUsd = getCirculatingRawOrNull(asset);
+          if (circulatingUsd === null) continue;
+          const llamaSupply = circulatingUsd / asset.price;
           if (llamaSupply > 0) {
             const divergence = Math.abs(row.total_supply - llamaSupply) / llamaSupply;
             if (divergence > STATUS_ONCHAIN_DIVERGENCE_PER_COIN_THRESHOLD) onchainSupplyDivergences++;

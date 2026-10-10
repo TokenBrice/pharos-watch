@@ -409,6 +409,11 @@ export const DdrrV2SummaryMetricsSchema = z.object({
   recoveryLikelihoodCorrectCount: z.number().int().nonnegative(),
   recoveryLikelihoodScoredCount: z.number().int().nonnegative(),
   recoveryLikelihoodAccuracyPct: RatioSchema.min(0).max(1).nullable(),
+  // Absent on older cached snapshots; consumers show unavailable, never row-sample totals.
+  falseTerminalCount: z.number().int().nonnegative().optional(),
+  falseRecoverableCount: z.number().int().nonnegative().optional(),
+  withinIqrCount: z.number().int().nonnegative().optional(),
+  iqrScoredCount: z.number().int().nonnegative().optional(),
   durationScoredCount: z.number().int().nonnegative(),
   meanSignedDurationErrorSec: z.number().nullable(),
   medianSignedDurationErrorSec: z.number().nullable(),
@@ -429,6 +434,22 @@ export const DdrrV2SummarySegmentSchema = z.object({
   metrics: DdrrV2SummaryMetricsSchema,
 });
 
+/** Full reviewed coin cohort, computed before the public browse-row cap. */
+export const DdrrStablecoinSummarySchema = z.object({
+  stablecoinId: z.string(),
+  reviewedRowCount: z.number().int().nonnegative(),
+  reviewedForecastCount: z.number().int().nonnegative(),
+  scoredCount: z.number().int().nonnegative(),
+  correctCount: z.number().int().nonnegative(),
+  missCount: z.number().int().nonnegative(),
+  pendingCount: z.number().int().nonnegative(),
+  noCallCount: z.number().int().nonnegative(),
+  notCalledCount: z.number().int().nonnegative(),
+  invalidatedCount: z.number().int().nonnegative(),
+  durationScoredCount: z.number().int().nonnegative(),
+  medianAbsoluteDurationErrorSec: z.number().nullable(),
+});
+
 /**
  * Public DDRR summary contract.
  *
@@ -441,6 +462,10 @@ export const DdrrSummarySchema = z.object({
   headlineLabel: z.string(),
   headline: DdrrV2SummaryMetricsSchema,
   byPredictionPolicy: z.array(DdrrV2SummarySegmentSchema),
+  // Absent when the snapshot/projection is unavailable; never substitute capped rows.
+  byStablecoin: z.array(DdrrStablecoinSummarySchema)
+    .describe("Per-coin reviewed-cohort statistics before the public row cap, bound to _meta.computedAt. Omitted when unavailable; snapshot failures are named by _meta.degradedReason.")
+    .optional(),
 });
 export type DdrrSummary = z.infer<typeof DdrrSummarySchema>;
 
@@ -468,12 +493,14 @@ export const DdrrMetaSchema = z.object({
 export const DdrrResponseSchema = z.object({
   _meta: DdrrMetaSchema,
   summary: DdrrSummarySchema,
-  rows: z.array(DdrrResponseRowSchema),
+  rows: z.array(DdrrResponseRowSchema)
+    .describe("Display sample bounded by _meta.publicRowLimit; never an input for population statistics."),
   methodology: MethodologyEnvelopeSchema,
 });
 export type DdrrResponse = z.infer<typeof DdrrResponseSchema>;
 
-/** OpenAPI documents the current generation-4 producer payload, not its transition input. */
+/** OpenAPI shares summary availability with runtime, while documenting current producer rows. */
 export const DdrrResponseOpenApiSchema = DdrrResponseSchema.extend({
-  rows: z.array(DdrrRowSchema),
+  rows: z.array(DdrrRowSchema)
+    .describe("Display sample bounded by _meta.publicRowLimit; population statistics belong to summary."),
 });

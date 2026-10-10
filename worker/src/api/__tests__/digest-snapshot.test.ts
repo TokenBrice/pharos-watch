@@ -37,6 +37,7 @@ describe("handleDigestSnapshot", () => {
     const db = mockD1([
       { match: "daily_digest", rows: [digestRow] },
       { match: "depeg_events", rows: [] },
+      { match: "digest-snapshot:blacklist-summary", rows: [{ total_events: 0, valued_events: 0, known_amount_usd: null }] },
       { match: "blacklist_events", rows: [] },
     ]);
     const res = await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`));
@@ -70,6 +71,7 @@ describe("handleDigestSnapshot", () => {
     const db = mockD1([
       { match: "daily_digest", rows: [digestRow] },
       { match: "depeg_events", rows: [] },
+      { match: "digest-snapshot:blacklist-summary", rows: [{ total_events: 0, valued_events: 0, known_amount_usd: null }] },
       { match: "blacklist_events", rows: [] },
     ]);
     const res = await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`));
@@ -103,6 +105,7 @@ describe("handleDigestSnapshot", () => {
       { match: "json_extract(digest_meta, '$.type') = 'weekly'", rows: [], first: weeklyRow },
       { match: "digest_meta IS NULL OR json_extract", rows: [], first: dailyRow },
       { match: "depeg_events", rows: [] },
+      { match: "digest-snapshot:blacklist-summary", rows: [{ total_events: 0, valued_events: 0, known_amount_usd: null }] },
       { match: "blacklist_events", rows: [] },
     ]);
 
@@ -127,6 +130,7 @@ describe("handleDigestSnapshot", () => {
         }],
       },
       { match: "depeg_events", rows: [] },
+      { match: "digest-snapshot:blacklist-summary", rows: [{ total_events: 0, valued_events: 0, known_amount_usd: null }] },
       { match: "blacklist_events", rows: [] },
     ]);
     const res = await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`));
@@ -152,6 +156,31 @@ describe("handleDigestSnapshot", () => {
         await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`)), 200);
       expect(body.depegEvents.map((event) => [event.stablecoinId, event.peakDeviationBps]))
         .toEqual([["negative", -900], ["positive", 500], ["small", 100]]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("counts the full daily blacklist cohort beyond the 50-row sample with partial valuation", async () => {
+    const day = Date.parse("2026-10-01T00:00:00Z") / 1000;
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, '', ?)")
+        .run(day + 3600, JSON.stringify({ totalMcapUsd: 100e9 }));
+      const insert = sqlite.prepare(`INSERT INTO blacklist_events
+        (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+         timestamp, amount_usd_at_event, amount_status, explorer_tx_url, explorer_address_url, suppression_reason)
+        VALUES (?, 'USDC', 'ethereum', 'Ethereum', 'blacklist', ?, ?, 1, ?, ?, 'resolved', '', '', ?)`);
+      for (let i = 0; i < 52; i++) insert.run(`event-${i}`, `address-${i}`, `tx-${i}`, day + i, i < 50 ? 10 : null, null);
+      insert.run("suppressed", "other", "other", day + 60, 1000, "duplicate");
+      insert.run("outside", "outside", "outside", day + 86400, 1000, null);
+      const body = await readJsonResponse<{
+        blacklistEvents: Array<{ address: string }>;
+        blacklistSummary: { totalEvents: number; knownAmountUsd: number | null; valuedEvents: number; unavailableAmountEvents: number };
+      }>(await handleDigestSnapshot(db, new URL("https://x/api/digest-snapshot?date=2026-10-01")), 200);
+      expect(body.blacklistEvents).toHaveLength(50);
+      expect(body.blacklistEvents[0].address).toBe("address-51");
+      expect(body.blacklistSummary).toEqual({ totalEvents: 52, knownAmountUsd: 500, valuedEvents: 50, unavailableAmountEvents: 2 });
     } finally {
       sqlite.close();
     }

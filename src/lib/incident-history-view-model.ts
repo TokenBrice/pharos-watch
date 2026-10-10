@@ -42,8 +42,8 @@ export interface IncidentHistoryView {
   totalTransitions: number;
   visibleTransitions: number;
   causeCodeOptions: string[];
-  transitionsLast24h: number;
-  isFlapping: boolean;
+  transitionsLast24h: number | null;
+  isFlapping: boolean | null;
 }
 
 export const DEFAULT_INCIDENT_HISTORY_QUERY: IncidentHistoryQuery = {
@@ -177,7 +177,7 @@ function rowMatchesFilters(row: IncidentTransitionView, filters: IncidentHistory
 export function buildIncidentHistoryView(
   transitions: readonly StatusTransition[],
   nowSeconds: number,
-  transitionsLast24h: number,
+  transitionsLast24h: number | null,
   filters: IncidentHistoryFilters,
 ): IncidentHistoryView {
   const allRows = buildTransitionRows(transitions, nowSeconds);
@@ -192,7 +192,7 @@ export function buildIncidentHistoryView(
     visibleTransitions: rows.length,
     causeCodeOptions,
     transitionsLast24h,
-    isFlapping: transitionsLast24h > INCIDENT_FLAPPING_TRANSITION_THRESHOLD,
+    isFlapping: transitionsLast24h == null ? null : transitionsLast24h > INCIDENT_FLAPPING_TRANSITION_THRESHOLD,
   };
 }
 

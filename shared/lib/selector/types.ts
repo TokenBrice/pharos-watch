@@ -630,14 +630,17 @@ export interface MergedRow {
   benchmarkRate: number | null;
   sourceRiskScore: number | null;
   venueRiskTier: "low" | "mid" | "high" | null;
-  warningSignals: string[];
+  /** Null when the selected alternate publishes no warning evidence. */
+  warningSignals: string[] | null;
   deploymentPlace: "native-wrapper" | "issuer-savings" | "lp" | "lending" | null;
   sourceSwitch: boolean;
   yieldProtocolSlug: string | null;
   yieldVenueChain: string | null;
   /** Distinct UTC observation days represented in the trailing 30-day window. */
-  yieldObservationDays30d: number;
+  yieldObservationDays30d: number | null;
   yieldFreshness: { capturedAt: number; ageSeconds: number } | null;
+  /** Selected venue depth, kept separate from coin-level DEX liquidity. */
+  yieldSourceTvlUsd?: number | null;
   yieldSources?: readonly YieldSourceCandidate[];
 
   trackingSpanDays: number;

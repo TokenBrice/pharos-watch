@@ -2,6 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { collectEndpointProbes, ENDPOINT_GROUPS, ENDPOINT_PROBE_CONCURRENCY } from "../use-endpoint-probes";
 
 describe("collectEndpointProbes", () => {
+  it("admits explicit unavailable blacklist evidence as a degraded observation, not invalid JSON", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
+      status: "degraded", warnings: [], blacklist: { missingAmounts: null, missingRatio: null,
+        recentMissingAmounts: null, unavailableReason: "blacklist-read-failed" },
+    })));
+    const [probe] = await collectEndpointProbes(["/api/health"]);
+    expect(probe).toMatchObject({ semanticStatus: "degraded", semanticDetail: "Blacklist health evidence unavailable." });
+    expect(probe.error).toBeUndefined();
+  });
   beforeEach(() => {
     vi.restoreAllMocks();
   });

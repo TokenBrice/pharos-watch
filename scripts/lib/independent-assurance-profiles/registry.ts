@@ -16,6 +16,7 @@ import { PROFILE as FIDD } from "./fidd"; COMPILER_PROFILES.FIDD = FIDD;
 import { PROFILE as GUSD } from "./gusd"; COMPILER_PROFILES.GUSD = GUSD;
 import { PROFILE as MYRC } from "./myrc"; COMPILER_PROFILES.MYRC = MYRC;
 import { PROFILE as PYUSD } from "./pyusd"; COMPILER_PROFILES.PYUSD = PYUSD;
+import { PROFILE as RLUSD } from "./rlusd"; COMPILER_PROFILES.RLUSD = RLUSD;
 import { PROFILE as SBC } from "./sbc"; COMPILER_PROFILES.SBC = SBC;
 import { PROFILE as USDG } from "./usdg"; COMPILER_PROFILES.USDG = USDG;
 import { PROFILE as USDGO } from "./usdgo"; COMPILER_PROFILES.USDGO = USDGO;

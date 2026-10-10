@@ -354,16 +354,18 @@ export function buildP4DexExitRouteObservations(params: {
           output,
           ...trackedExactAmmOutputValuationFields(
             outputToken,
-            state ? outputToken.referencePriceSourceId! : `dex-amm-output-reference:${ammModel.source}:${outputToken.referencePriceSource}`,
-            state ? outputToken.referencePriceObservedAt! : params.observedAt,
+            state ? outputToken.referencePriceSourceId! : outputToken.referencePriceSourceId ??
+              `dex-amm-output-reference:${ammModel.source}:${outputToken.referencePriceSource}`,
+            state ? outputToken.referencePriceObservedAt! : outputToken.referencePriceObservedAt ??
+              ammModel.capture?.blockTimestamp ?? params.observedAt,
           ),
           evidenceKind: capability.outputEvidenceKind,
           confidence: capability.confidence,
           scoreEligible: capability.scoreEligible,
-          observedAt: state ? state.blockTimestamp! : params.observedAt,
+          observedAt: state ? state.blockTimestamp! : ammModel.capture?.blockTimestamp ?? params.observedAt,
           freshnessSeconds: state ? Math.max(0, params.observedAt - Math.min(
             state.blockTimestamp!, inputToken.referencePriceObservedAt!, outputToken.referencePriceObservedAt!,
-          )) : 0,
+          )) : ammModel.capture ? Math.max(0, params.observedAt - ammModel.capture.blockTimestamp) : 0,
           ...(state ? {
             ammExecutionEvidence: {
               sourceGenerationId: state.sourceGenerationId!, blockNumber: state.blockNumber,

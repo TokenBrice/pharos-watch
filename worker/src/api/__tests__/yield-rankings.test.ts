@@ -658,7 +658,7 @@ describe("handleYieldRankings", () => {
     });
   });
 
-  it("hydrates Royco tranche rows with opportunity-level safety instead of raw underlying safety", async () => {
+  it("keeps unreviewed Royco tranche rows NR during live safety hydration", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     const payload = {
       ...v748RankingsPayload,
@@ -734,31 +734,118 @@ describe("handleYieldRankings", () => {
     const body = await res.json() as YieldRankingsResponse;
     const row = body.rankings[0];
 
-    expect(row?.safetyScore).toBe(61);
-    expect(row?.safetyGrade).toBe("C+");
-    expect(row?.provenance?.safetyProvenance).toBe("opportunity-safety");
+    expect(row?.safetyScore).toBe(66);
+    expect(row?.safetyGrade).toBe("B-");
+    expect(row?.provenance?.safetyProvenance).toBe("live-report-card");
     expect(row?.provenance?.usedDefaultSafety).toBe(false);
     expect(row?.sourceRisk).toMatchObject({
       underlyingSafetyScore: 66,
-      trancheSafetyScore: 61,
-      trancheSafetyPenalty: 5,
+      trancheSafetyScore: null,
+      trancheSafetyPenalty: null,
       trancheSide: "senior",
     });
     expect(row?.altSources[0]?.sourceRisk).toMatchObject({
       underlyingSafetyScore: 66,
-      trancheSafetyScore: 37,
-      trancheSafetyPenalty: 29,
+      trancheSafetyScore: null,
+      trancheSafetyPenalty: null,
       trancheSide: "junior",
     });
-    expect(row?.pharosYieldScore).toBe(computePYS({
-      apy30d: payload.rankings[0].apy30d,
-      safetyScore: 61,
-      apyVarianceScore: yieldStabilityToApyVarianceScore(payload.rankings[0].yieldStability),
-      scalingFactor: payload.scalingFactor,
-      benchmarkRate: payload.rankings[0].benchmarkRate ?? null,
-      sourceRiskPenalty: 1.2,
-    }));
+    expect(row?.pharosYieldScore).toBeNull();
+    expect(row?.pysNullReason).toBe("opportunity-evidence-missing");
+    expect(row?.provenance?.scoreQualification).toBe("NR");
+    expect(row?.sourceRisk?.opportunityRisk?.missingCriticalEvidence).toEqual(["venue-review"]);
+    expect(row?.altSources[0]?.sourceRisk?.opportunityRisk?.missingCriticalEvidence).toEqual(["venue-review"]);
   });
+
+  it.each([null, undefined])("withholds Royco PYS on hydration when market status is %s", async (marketStatus) => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const originalRow = v748RankingsPayload.rankings[0];
+    const risk = {
+      venueProtocol: "royco-dawn", venueRiskWeighted: 3,
+      trancheSide: "junior" as const, marketStatus,
+      marketTvlUsd: 2_000_000, trancheTvlUsd: 1_000_000,
+      trancheSafetyScore: 47, trancheSafetyPenalty: 33,
+    };
+    const payload: YieldRankingsResponse = {
+      ...v748RankingsPayload, updatedAt,
+      rankings: [{
+        ...originalRow, id: "rated-coin", yieldType: "structured-tranche",
+        sourceRisk: risk,
+        provenance: { ...originalRow.provenance, sourceKey: "royco-dawn:1:market:junior" },
+        altSources: [{
+          ...originalRow.altSources[0], yieldType: "structured-tranche",
+          sourceKey: "royco-dawn:1:other:junior", sourceRisk: risk,
+        }],
+      }],
+    };
+    const res = await handleYieldRankings(makeCacheDb(payload, updatedAt));
+    expect(res.status).toBe(200);
+    const body = await res.json() as YieldRankingsResponse;
+    expect(body.rankings[0]).toMatchObject({
+      currentApy: originalRow.currentApy, pharosYieldScore: null,
+      pysNullReason: "opportunity-evidence-missing",
+      provenance: { scoreQualification: "NR" },
+      sourceRisk: {
+        trancheSafetyScore: null, trancheSafetyPenalty: null,
+        opportunityRisk: { opportunitySafetyScore: null, missingCriticalEvidence: ["market-status"] },
+      },
+    });
+    expect(body.rankings[0].warningSignals).toContain("opportunity-evidence-missing");
+    expect(body.rankings[0].altSources[0].sourceRisk?.opportunityRisk?.missingCriticalEvidence).toEqual(["market-status"]);
+  });
+  it.each([null, { score: 40, grade: "NR" }])("preserves complete Royco underlying unrating on hydration for %j", async (underlying) => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const originalRow = v748RankingsPayload.rankings[0];
+    const payload: YieldRankingsResponse = {
+      ...v748RankingsPayload,
+      rankings: [{
+        ...originalRow, id: "rated-coin", yieldType: "structured-tranche",
+        sourceTvlUsd: 2_000_000,
+        sourceRisk: { venueProtocol: "royco-dawn", venueRiskWeighted: 3, trancheSide: "junior",
+          marketStatus: "normal", marketTvlUsd: 2_000_000 },
+        provenance: { ...originalRow.provenance, sourceKey: "royco-dawn:1:market:junior" },
+      }],
+    };
+    const db = makeCacheDb(payload, updatedAt);
+    loadActiveSafetyScoreIndexMock.mockResolvedValue(makeIndexSource(
+      new Map(underlying ? [["rated-coin", underlying]] : []), currentSafetyIdentity, updatedAt));
+    const body = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
+    expect(body.rankings[0]).toMatchObject({
+      safetyGrade: "NR",
+      provenance: { safetyReason: underlying ? "report-card-grade-not-rated" : "report-card-score-missing" },
+    });
+    if (underlying) {
+      expect(body.rankings[0]).toMatchObject({
+        safetyScore: null, pharosYieldScore: null, pysNullReason: "safety-unrated",
+        provenance: { usedDefaultSafety: false, scoreQualification: "NR" },
+        sourceRisk: { underlyingSafetyScore: null, trancheSafetyScore: null, trancheSafetyPenalty: null },
+      });
+      expect(body.rankings[0].sourceRisk?.opportunityRisk).toBeUndefined();
+    } else {
+      expect(body.rankings[0].sourceRisk?.opportunityRisk?.opportunitySafetyScore).toBeTypeOf("number");
+    }
+  });
+
+  it.each(["detailed", "summary"])("keeps healthy fallback-usd selection separate from feed health in %s", async (projection) => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const originalRow = v748RankingsPayload.rankings[0];
+    const payload: YieldRankingsResponse = {
+      ...v748RankingsPayload,
+      rankings: [{ ...originalRow, id: "rated-coin", benchmarkSelectionMode: "fallback-usd",
+        provenance: { ...originalRow.provenance, sourceObservedAt: updatedAt,
+          benchmarkSelectionMode: "fallback-usd", benchmarkFreshness: "healthy" } }],
+      benchmarks: { USD: { ...v748RankingsPayload.benchmarks.USD, fetchedAt: updatedAt,
+        maxFetchAgeSec: 172800, maxRecordAgeSec: 432000 } },
+    };
+    const url = new URL(`https://api.pharos.watch/api/yield-rankings${projection === "summary" ? "?projection=summary" : ""}`);
+    const body = await readJsonResponse(await handleYieldRankings(makeCacheDb(payload, updatedAt), url), 200) as YieldRankingsResponse;
+    expect(body.rankings[0].benchmarkSelectionMode).toBe("fallback-usd");
+    expect(body.rankings[0].warningSignals).not.toContain("benchmark-degraded");
+    expect(body.rankings[0].provenance?.scoreQualification).not.toBe("estimated");
+    if (projection === "detailed") expect(body.rankings[0].provenance?.benchmarkFreshness).toBe("healthy");
+    expect(body.benchmarks?.USD).toMatchObject({ maxFetchAgeSec: 172800, maxRecordAgeSec: 432000 });
+  });
+
 
   it("rehydrates generic external opportunities with market-level safety", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;

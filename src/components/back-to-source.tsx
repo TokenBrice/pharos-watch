@@ -1,15 +1,12 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
+import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { usePathname } from "next/navigation";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 
-/**
- * Map of first-segment paths to the human-readable label shown in the
- * "Back to <surface>" link. Only same-origin referrers whose first path
- * segment appears here render an affordance — anything else (search engines,
- * sidebar nav, deeplinks, no referrer) gracefully renders nothing.
- */
+/** Only a preceding in-document tracker route exposes a contextual return link. */
 const TRACKER_LABELS: Record<string, string> = {
   "/screener": "Screener results",
   "/compare": "Compare",
@@ -23,43 +20,58 @@ const TRACKER_LABELS: Record<string, string> = {
   "/flows": "Mint/Burn Flows",
 };
 
-/**
- * Small `← Back to <prior surface>` link rendered above the breadcrumb on
- * detail pages. Reads `document.referrer` once on mount and surfaces a link
- * only when the referrer is same-origin and matches a known tracker; that
- * preserves the user's filter query-string by linking back to the original
- * URL. When the referrer is empty, cross-origin, or unrecognized, the
- * component renders nothing — the breadcrumb is the only fallback.
- */
-function subscribeReferrer(): () => void {
-  return () => {};
+interface SourceStore {
+  visit: (url: string) => void;
+  subscribe: (listener: () => void) => () => void;
+  getSnapshot: () => string | null;
 }
 
-function getReferrerSnapshot(): string {
-  if (typeof document === "undefined") return "";
-  return document.referrer;
+function createSourceStore(): SourceStore {
+  let currentUrl: string | null = null;
+  let previousUrl: string | null = null;
+  const listeners = new Set<() => void>();
+  return {
+    visit(url) {
+      if (currentUrl && currentUrl.split("?")[0] !== url.split("?")[0]) {
+        previousUrl = currentUrl;
+        currentUrl = url;
+        for (const listener of listeners) listener();
+      } else currentUrl = url;
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => { listeners.delete(listener); };
+    },
+    getSnapshot: () => previousUrl,
+  };
 }
 
-function getServerReferrerSnapshot(): string {
-  return "";
+const PreviousSourceContext = createContext<SourceStore | null>(null);
+const getServerSnapshot = () => null;
+const subscribeNothing = () => () => {};
+
+/** Mounted once in the shell; filter-only writes update the URL before departure. */
+export function SourceNavigationProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const { searchParams, isReady } = useUrlFilters();
+  const search = searchParams.toString();
+  const [store] = useState(createSourceStore);
+
+  useEffect(() => {
+    if (!isReady || !pathname) return;
+    store.visit(`${window.location.pathname}${window.location.search}`);
+  }, [pathname, search, isReady, store]);
+
+  return <PreviousSourceContext.Provider value={store}>{children}</PreviousSourceContext.Provider>;
 }
 
+/** Direct document entries have no invented client-route provenance. */
 export function BackToSource({ className }: { className?: string }) {
-  const referrer = useSyncExternalStore(subscribeReferrer, getReferrerSnapshot, getServerReferrerSnapshot);
-
-  const backLink = useMemo<{ href: string; label: string } | null>(() => {
-    if (!referrer) return null;
-    try {
-      const url = new URL(referrer);
-      if (typeof window === "undefined" || url.origin !== window.location.origin) return null;
-      const segment = "/" + url.pathname.split("/").filter(Boolean)[0];
-      const label = TRACKER_LABELS[segment];
-      if (!label) return null;
-      return { href: referrer, label };
-    } catch {
-      return null;
-    }
-  }, [referrer]);
+  const store = useContext(PreviousSourceContext);
+  const sourceUrl = useSyncExternalStore(store?.subscribe ?? subscribeNothing, store?.getSnapshot ?? getServerSnapshot, getServerSnapshot);
+  const segment = sourceUrl ? "/" + sourceUrl.split("?")[0].split("/").filter(Boolean)[0] : null;
+  const label = segment ? TRACKER_LABELS[segment] : null;
+  const backLink = sourceUrl && label ? { href: sourceUrl, label } : null;
 
   if (!backLink) return null;
   return (

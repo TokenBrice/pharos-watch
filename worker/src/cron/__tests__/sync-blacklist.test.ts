@@ -3,6 +3,7 @@ import { createMockD1Preset } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import type * as AlchemyLogsModule from "../../lib/alchemy-logs";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 
@@ -101,9 +102,10 @@ vi.mock("../../lib/blacklist-contracts", () => ({
   getBlacklistConfigsForSymbolAndChain: () => [],
 }));
 
-vi.mock("../../lib/alchemy-logs", () => ({
+vi.mock("../../lib/alchemy-logs", async (importOriginal) => ({
+  ...(await importOriginal<typeof AlchemyLogsModule>()),
   fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 20000000, calls: 1, maxDepth: 0 })),
-  getAlchemyBlockNumber: vi.fn(async () => 20010000),
+  getAlchemyBlockNumber: vi.fn(async () => 20000450),
   resolveBlockTimestamps: vi.fn(async () => new Map()),
 }));
 
@@ -203,8 +205,10 @@ import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 
 const mockD1 = createMockD1Preset([
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: null },
   { match: "blacklist:decode-retry:", rows: [] },
   { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  { match: "DELETE FROM cache WHERE key = ?", rows: [] },
   { match: "FROM blacklist_current_balances", rows: [] },
   { match: "INSERT INTO blacklist_current_balances", rows: [] },
   { match: "UPDATE blacklist_current_balances", rows: [] },
@@ -235,8 +239,23 @@ function buildTestOpts(overrides: Partial<SyncBlacklistOptions> = {}): SyncBlack
   };
 }
 
+function emptyBlacklistAggregateTables() {
+  return [
+    { match: "blacklist-gap-aggregate", rows: [], first: {
+      total: 0, missing: null, missing_recent: null, oldest_gap_age_sec: null,
+      never_attempted: null, repeated_failures: null, unrecoverable: null,
+    } },
+    { match: "blacklist-summary-public-aggregate", rows: [], first: {
+      total: 0, max_ts: null, recent_30d: null, recent_24h: null,
+      freeze_24h: null, freeze_7d: null, freeze_usd_24h: null, freeze_usd_7d: null,
+      freeze_known_24h: null, freeze_known_7d: null,
+    } },
+  ];
+}
+
 function makeDb(syncStateRows: Record<string, unknown>[] = []) {
   return mockD1([
+    ...emptyBlacklistAggregateTables(),
     { match: "blacklist_sync_state", rows: syncStateRows },
     { match: "blacklist_events", rows: [] },
   ]);
@@ -279,7 +298,7 @@ describe("syncBlacklist", () => {
       calls: 1,
       maxDepth: 0,
     });
-    vi.mocked(getAlchemyBlockNumber).mockResolvedValue(20010000);
+    vi.mocked(getAlchemyBlockNumber).mockResolvedValue(20000450);
     vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map());
     vi.mocked(getChainRpc).mockImplementation((_chainRpcs: Map<string, unknown>, chainId: string) =>
       chainId === "base" ? baseChainRpcConfig() : undefined,
@@ -871,6 +890,7 @@ describe("syncBlacklist", () => {
 
   it("records producer snapshot materialization errors without failing an otherwise healthy run", async () => {
     const db = mockD1([
+      ...emptyBlacklistAggregateTables(),
       { match: "blacklist_sync_state", rows: [] },
       { match: "blacklist_events", rows: [] },
       { match: "blacklist-gap-metrics-cache-write", rows: [], throwError: new Error("snapshot write failed") },
@@ -1152,6 +1172,8 @@ describe("syncBlacklist", () => {
     ];
 
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
+    // A complete OR scan must reach the observed safe head, even if it consumes the budget.
+    vi.mocked(getAlchemyBlockNumber).mockResolvedValue(19_960_450);
     vi.mocked(fetchAlchemyLogs).mockImplementationOnce(
       async (_rpcUrl, _contractAddress, _topics, _fromBlock, _toBlock, budget) => {
         budget.count = budget.limit;
@@ -1218,7 +1240,14 @@ describe("syncBlacklist", () => {
     }));
 
     try {
-      await syncBlacklist(buildTestOpts({ db }));
+      const result = await syncBlacklist(buildTestOpts({ db }));
+      const metadata = JSON.parse(result.metadata);
+      expect(result.status).toBe("degraded");
+      expect(metadata.producerSnapshotSkipped).toBe(true);
+      expect(metadata.producerSummarySnapshot).toBe(false);
+      expect(metadata.configLag[baseConfig.configKey]).toMatchObject({
+        frontier: 1_049_999, safeHead: 20_000_000, lag: 18_950_001,
+      });
 
       const baseCalls = vi
         .mocked(fetchAlchemyLogs)

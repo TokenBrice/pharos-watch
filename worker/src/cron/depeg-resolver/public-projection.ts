@@ -1,5 +1,4 @@
 import {
-  DDR_ERRATUM_REASON_VALUES,
   DDR_DURATION_BAND_META,
   DDR_PUBLIC_WARNING,
   type DdrPredictionErratum,
@@ -186,8 +185,6 @@ function buildLiveOverlay(
   };
 }
 
-const DDR_ERRATUM_REASONS = new Set<string>(DDR_ERRATUM_REASON_VALUES);
-
 type DdrPublicPredictionRowHash = readonly [number, string];
 
 function buildDdrMeta(input: {
@@ -226,53 +223,6 @@ function buildDdrMeta(input: {
     incidentGroupingVersion: DDR_VERSION_STAMP.incidentGroupingVersion,
     supportRulesVersion: DDR_VERSION_STAMP.supportRulesVersion,
     lineage: input.lineage,
-  };
-}
-
-export function normalizeErratumRecord(row: Record<string, unknown>): DdrPredictionErratum | null {
-  const id = payloadNullableNumber(row.id);
-  const publicPredictionId = payloadNullableNumber(row.publicPredictionId ?? row.public_prediction_id);
-  const eventId = payloadNullableNumber(row.eventId ?? row.event_id);
-  const assessmentId = payloadNullableNumber(row.assessmentId ?? row.assessment_id);
-  const createdAt = payloadNullableNumber(row.createdAt ?? row.created_at);
-  const reason = row.reason;
-  const incidentKey = row.incidentKey ?? row.incident_key;
-  const operatorNote = row.operatorNote ?? row.operator_note;
-  const createdBy = row.createdBy ?? row.created_by;
-  if (
-    id == null ||
-    id <= 0 ||
-    publicPredictionId == null ||
-    publicPredictionId <= 0 ||
-    eventId == null ||
-    eventId <= 0 ||
-    assessmentId == null ||
-    assessmentId <= 0 ||
-    createdAt == null ||
-    createdAt <= 0 ||
-    typeof reason !== "string" ||
-    !DDR_ERRATUM_REASONS.has(reason) ||
-    typeof incidentKey !== "string" ||
-    typeof operatorNote !== "string" ||
-    typeof createdBy !== "string"
-  ) {
-    return null;
-  }
-
-  return {
-    id,
-    state: "invalidated",
-    publicPredictionId,
-    incidentKey,
-    eventId,
-    assessmentId,
-    reason: reason as DdrPredictionErratum["reason"],
-    createdAt,
-    operatorNote,
-    rowHashBefore: payloadNullableString(row.rowHashBefore ?? row.row_hash_before, null),
-    replacementAssessmentId: payloadNullableNumber(row.replacementAssessmentId ?? row.replacement_assessment_id),
-    replacementRowHash: payloadNullableString(row.replacementRowHash ?? row.replacement_row_hash, null),
-    createdBy,
   };
 }
 

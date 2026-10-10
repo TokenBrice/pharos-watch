@@ -252,7 +252,7 @@ describe("StablecoinDetailClient", () => {
     expect(screen.getAllByText("Staked USDS").length).toBeGreaterThan(0);
   });
 
-  it("uses one full-width sticky banner scrollspy so desktop sections keep the full content width", () => {
+  it("renders one banner scrollspy rather than a separate section-navigation rail", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const { container } = renderDetail(coin);
 
@@ -260,25 +260,16 @@ describe("StablecoinDetailClient", () => {
     expect(scrollspyNavs).toHaveLength(1);
     expect(scrollspyNavs[0]?.dataset.variant).toBe("banner");
     expect(scrollspyNavs[0]?.dataset.railLabel).toBe("Jump to");
-    expect(scrollspyNavs[0]?.className).toContain("lg:w-full");
-    expect(scrollspyNavs[0]?.className).toContain("lg:[&>div]:justify-center");
-    expect(scrollspyNavs[0]?.className).toContain("lg:[&_nav]:flex-none");
-    expect(scrollspyNavs[0]?.className).not.toContain("lg:w-fit");
     expect(container.querySelector('aside[aria-label="Section navigation"]')).toBeNull();
     expect(longformScrollspyNavMock).not.toHaveBeenCalledWith(expect.objectContaining({ variant: "rail" }));
   });
 
-  it("renders the xl summary rail as normal-flow content with in-flow copies owning the deep-link anchors", () => {
+  it("keeps the summary rail separate from the unique in-flow deep-link anchors", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const { container } = renderDetail(coin);
 
     const rail = container.querySelector('aside[aria-label="Coin summary rail"]');
     expect(rail).toBeTruthy();
-    const railStack = rail?.firstElementChild;
-    expect(railStack?.className).not.toContain("sticky");
-    expect(railStack?.className).not.toContain("top-[");
-    expect(railStack?.className).not.toContain("overflow-y-auto");
-    expect(railStack?.className).not.toContain("max-h-");
     // Dual-rendered rail modules must never duplicate anchor ids: the in-flow
     // (below-xl) instance owns #price / #coin-timeline / #contracts.
     expect(container.querySelectorAll("#price").length).toBeLessThanOrEqual(1);

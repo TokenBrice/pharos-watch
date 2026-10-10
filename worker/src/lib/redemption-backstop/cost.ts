@@ -141,7 +141,7 @@ function resolveRedemptionCost(
     costModel.kind === "dynamic-or-unclear" &&
     feeConfidence === "formula"
   ) {
-    const feeBps = Math.max(0, Math.round(resolvedLiveMetadata.redemptionFeeBps));
+    const feeBps = resolvedLiveMetadata.redemptionFeeBps;
     return buildCost({
       selectedLiveFee: true,
       score: resolveBoundedFeeScore(feeBps),
@@ -153,7 +153,7 @@ function resolveRedemptionCost(
   }
 
   if (resolvedLiveMetadata.canUseFee && resolvedLiveMetadata.redemptionFeeBps != null && costModel.kind === "fee-bps") {
-    const feeBps = Math.max(0, Math.round(resolvedLiveMetadata.redemptionFeeBps));
+    const feeBps = resolvedLiveMetadata.redemptionFeeBps;
     return buildCost({
       selectedLiveFee: true,
       score: resolveBoundedFeeScore(feeBps),

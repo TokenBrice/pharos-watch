@@ -16,6 +16,9 @@ import {
 } from "./snapshot-fixture";
 import { BluechipGradeSchema } from "../../../types/core";
 import { SELECTOR_VERSION } from "../version";
+import { runSelector } from "../engine";
+import { FIXTURE_DATASET, makeInput, makeMergedRowWithIdentity } from "./fixture";
+import { makeYieldRailRow } from "./engine.test-support";
 
 function expectValid(value: unknown) {
   const result = validateSelectorSnapshot(value);
@@ -118,6 +121,55 @@ function buildCurrentTradingSnapshot(): Record<string, unknown> {
 }
 
 describe("selector snapshot contract", () => {
+  it.each([0, 1])("round-trips engine output with %i strict survivors and a relaxed recommendation", (strictCount) => {
+    const relaxed = makeMergedRowWithIdentity(
+      { id: "usdt-tether", symbol: "USDT", name: "Tether USD" },
+      { pegScore: 75, concentrationHhi: null, isRecentListing: true },
+    );
+    const strict = makeMergedRowWithIdentity({ id: "usdc-circle", symbol: "USDC", name: "USD Coin" });
+    const rows = strictCount === 0 ? [relaxed] : [strict, relaxed];
+    const output = runSelector(
+      makeInput({ profile: "trading" }),
+      { rows: new Map(rows.map((row) => [row.id, row])) },
+      { ...FIXTURE_DATASET, datasetHash: "a".repeat(64) },
+    );
+    expect(output.universe).toEqual({ active: rows.length, surviving: strictCount });
+    expect(output.recommended).toHaveLength(rows.length);
+    expect(output.recommended.at(-1)).toMatchObject({ relaxedReason: "peg-score-floor", isRecentListing: true });
+    expect(output.recommended.at(-1)?.components.some((component) => component.redistributed)).toBe(true);
+    expect(output.coverageWarnings).toMatchObject({ newListingCount: 0, redistributionCount: 0 });
+    expect(output.closestSurvivors).toEqual([]);
+    expect(validateSelectorSnapshot(output).ok).toBe(true);
+    const verified = createVerifiedSelectorSnapshot(output);
+    expect(validateVerifiedSelectorSnapshot(verified)).toMatchObject({
+      ok: true, snapshot: { universe: { active: rows.length, surviving: strictCount } },
+    });
+    expectInvalid({
+      ...output,
+      recommended: output.recommended.map((rec) => ({ ...rec, relaxedReason: null })),
+    });
+    expectInvalid({ ...output, universe: { active: strictCount, surviving: strictCount } });
+    expectInvalid({
+      ...output,
+      recommended: output.recommended.map((rec) => rec.relaxedReason ? { ...rec, confidence: 61 } : rec),
+    });
+    expectInvalid({
+      ...output,
+      recommended: output.recommended.map((rec) => rec.relaxedReason ? { ...rec, relaxedReason: "coverage-too-thin" } : rec),
+    });
+  });
+
+  it("keeps stored selector-v2.8 snapshots on the current component generation", () => {
+    const output = runSelector(
+      makeInput({ profile: "trading" }),
+      { rows: new Map([["usdc-circle", makeMergedRowWithIdentity({ id: "usdc-circle", symbol: "USDC", name: "USD Coin" })]]) },
+      { ...FIXTURE_DATASET, datasetHash: "a".repeat(64) },
+    );
+    output.engineVersion = "selector-v2.8";
+    output.methodologyVersions = { ...output.methodologyVersions, exclusionFilters: "selector-v2.8" };
+    expect(validateVerifiedSelectorSnapshot(createVerifiedSelectorSnapshot(output)).ok).toBe(true);
+  });
+
   it("accepts a complete selector snapshot and computes a 32-hex sid", () => {
     const snapshot = expectValid(buildSelectorSnapshotOutput());
     expect(snapshot.profile).toBe("treasury");
@@ -680,5 +732,45 @@ describe("selector snapshot contract", () => {
         ],
       }),
     );
+  });
+});
+
+describe("verified selected-rail snapshot projection", () => {
+  const dataset = { ...FIXTURE_DATASET, datasetHash: "a".repeat(64) };
+  it("round-trips selected alternate components and chain hints without primary evidence", () => {
+    const row = makeYieldRailRow();
+    const input = makeInput({ profile: "yield", venuePreferences: ["lend"], minApy: 5 });
+    const output = runSelector(input, { rows: new Map([[row.id, row]]) }, dataset);
+    const snapshot = createVerifiedSelectorSnapshot(output);
+    const roundTrip = validateVerifiedSelectorSnapshot(JSON.parse(JSON.stringify(snapshot)));
+    expect(roundTrip.ok).toBe(true);
+    if (!roundTrip.ok) throw new Error(`Expected verified snapshot: ${roundTrip.error}`);
+    expect(roundTrip.snapshot).toEqual(snapshot);
+    expect(computeSelectorSnapshotSid(roundTrip.snapshot)).toEqual(computeSelectorSnapshotSid(snapshot));
+    const rec = roundTrip.snapshot.recommended[0]!;
+    expect(rec.recommendedSource).toMatchObject({ sourceKey: "alternate-lending", apy30d: 5, pharosYieldScore: null });
+    expect(rec.components).toEqual(output.recommended[0]!.components);
+    expect(rec.components.find((component) => component.key === "sourceRiskInverted")?.rawValue).toBe(70);
+    expect(rec.components.find((component) => component.key === "pharosYieldScore")?.rawValue).toBeNull();
+    expect(rec.components.find((component) => component.key === "yieldVariance")?.rawValue).toBeNull();
+    expect(rec.chainHints).toEqual(output.recommended[0]!.chainHints);
+    expect(rec.whyKeys).toEqual(output.recommended[0]!.whyKeys);
+    expect(rec.score).toBe(output.recommended[0]!.score);
+    expect(roundTrip.snapshot.engineVersion).toBe(SELECTOR_VERSION);
+  });
+
+  it("keeps selector-v2.7 snapshots on the current component replay path", () => {
+    const row = makeYieldRailRow();
+    const output = runSelector(makeInput({ profile: "yield", venuePreferences: ["wrap"] }), {
+      rows: new Map([[row.id, row]]),
+    }, dataset);
+    const snapshot = createVerifiedSelectorSnapshot({
+      ...output,
+      engineVersion: "selector-v2.7",
+      methodologyVersions: { ...output.methodologyVersions, exclusionFilters: "selector-v2.7" },
+    });
+    expect(validateVerifiedSelectorSnapshot(snapshot).ok).toBe(true);
+    expect(snapshot.recommended[0]!.components).toEqual(output.recommended[0]!.components);
+    expect(snapshot.recommended[0]!.score).toBe(output.recommended[0]!.score);
   });
 });

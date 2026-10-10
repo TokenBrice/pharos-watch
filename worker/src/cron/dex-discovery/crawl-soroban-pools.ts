@@ -114,17 +114,36 @@ function parseAquariusTicker(value: unknown): AquariusTicker | null {
   };
 }
 
-function parseAquariusTickers(value: unknown): AquariusTicker[] | null {
+function parseAquariusTickers(value: unknown): { tickers: AquariusTicker[]; degraded: boolean } | null {
   if (!Array.isArray(value)) return null;
-  const seenPoolIds = new Set<string>();
-  const tickers: AquariusTicker[] = [];
+  const byPoolId = new Map<string, AquariusTicker>();
+  const ambiguousPoolIds = new Set<string>();
+  let degraded = false;
   for (const row of value) {
     const ticker = parseAquariusTicker(row);
-    if (!ticker || seenPoolIds.has(ticker.poolId)) return null;
-    seenPoolIds.add(ticker.poolId);
-    tickers.push(ticker);
+    if (!ticker) {
+      degraded = true;
+      continue;
+    }
+    if (ambiguousPoolIds.has(ticker.poolId)) continue;
+    const previous = byPoolId.get(ticker.poolId);
+    if (previous) {
+      if (
+        previous.baseCurrency === ticker.baseCurrency &&
+        previous.targetCurrency === ticker.targetCurrency &&
+        previous.lastPrice === ticker.lastPrice &&
+        previous.baseVolume === ticker.baseVolume &&
+        previous.targetVolume === ticker.targetVolume &&
+        previous.liquidityInUsd === ticker.liquidityInUsd
+      ) continue;
+      byPoolId.delete(ticker.poolId);
+      ambiguousPoolIds.add(ticker.poolId);
+      degraded = true;
+      continue;
+    }
+    byPoolId.set(ticker.poolId, ticker);
   }
-  return tickers;
+  return { tickers: [...byPoolId.values()], degraded };
 }
 
 function isTickerForToken(ticker: AquariusTicker, tokenId: string): boolean {
@@ -219,10 +238,10 @@ export async function crawlSorobanPoolsStage(input: {
     const providerChecks: DexDeploymentProviderCheck[] = [];
     for (const target of targets) {
       const tokenId = canonicalSorobanTokenId(target.address)!;
-      const matchingTickers = tickers.filter((ticker) => isTickerForToken(ticker, tokenId));
+      const matchingTickers = tickers.tickers.filter((ticker) => isTickerForToken(ticker, tokenId));
       for (const ticker of matchingTickers) addTickerPool(input.context, target, tokenId, ticker);
       providerChecks.push(
-        makeDexDeploymentProviderCheck(target, AQUARIUS_PROVIDER, "success", {
+        makeDexDeploymentProviderCheck(target, AQUARIUS_PROVIDER, tickers.degraded ? "degraded" : "success", {
           observedPoolCount: matchingTickers.length,
         }),
       );

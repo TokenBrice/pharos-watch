@@ -27,6 +27,18 @@ describe("fetch body timeout guardrail", () => {
     });
   });
 
+  it.each(["json", "text"])("detects %s body reads beyond 80 source lines", (method) => {
+    const violations = findFetchBodyTimeoutViolations([
+      "async function run() {",
+      "  const res = await fetchWithRetry(url);",
+      ...Array.from({ length: 81 }, () => "  // unrelated processing"),
+      `  return res.${method}();`,
+      "}",
+    ].join("\n"));
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toMatchObject({ variable: "res", method, fetchLine: 2, bodyLine: 84 });
+  });
+
   it("detects qualified and aliased fetchWithRetry calls", () => {
     const violations = findFetchBodyTimeoutViolations(`
       export async function run(dependencies) {

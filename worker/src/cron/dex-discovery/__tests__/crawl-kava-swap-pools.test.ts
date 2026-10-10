@@ -43,6 +43,19 @@ afterEach(() => {
 });
 
 describe("Kava swap pool discovery", () => {
+  it("stages healthy Kava rows beside unrelated malformed rows without certifying absence", async () => {
+    mockFetch([
+      { match: KAVA_SWAP_PARAMS_URL, body: params() },
+      { match: KAVA_SWAP_POOLS_URL, body: { pools: [
+        pool("ukava:usdx", "ukava", "100", "usdx", "200"), { name: "bad", coins: [] },
+      ], pagination: { next_key: null, total: "2" } } },
+    ], { requireMatch: true });
+    const stage = context();
+    const result = await crawlKavaSwapPoolsStage({ coinTargets: [target()], context: stage.value });
+    expect(stage.pools.map((pool) => pool.poolId)).toEqual(["kava:ukava:usdx"]);
+    expect(result.providerChecks[0]).toMatchObject({ status: "degraded", observedPoolCount: 1 });
+  });
+
   it("queries active module params and stages USDX pool reserves", async () => {
     const ukavaUsdx = pool("ukava:usdx", "ukava", "532718097661", "usdx", "33684838465");
     const unrelatedPool = pool("uabc:ukava", "uabc", "1000", "ukava", "2000");

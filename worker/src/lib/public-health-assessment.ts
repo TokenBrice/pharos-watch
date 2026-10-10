@@ -16,7 +16,6 @@ import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safet
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import { isYieldSafetyFallbackWithinWindow } from "@shared/lib/yield-safety-fallback";
 import type {
-  AlertBrokerHealthSummary,
   ActivePriceCoverageHealth,
   CacheStatus,
   D1CapacityAssessment,
@@ -47,6 +46,7 @@ import {
 } from "./stablecoin-publication-health";
 import type { SchedulerLiveness } from "@shared/types/status/public-health";
 import { loadSchedulerLiveness, schedulerLivenessImpactStatus as getSchedulerLivenessImpactStatus, schedulerLivenessWarnings } from "./status/scheduler-liveness";
+import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "./cron-output";
 
 const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
   state: "closed",
@@ -58,12 +58,13 @@ const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
 
 const MINT_BURN_CRON_JOB = "sync-mint-burn";
 
-const EMPTY_BLACKLIST_HEALTH: HealthResponse["blacklist"] = {
-  totalEvents: 0,
-  missingAmounts: 0,
-  recentMissingAmounts: 0,
-  recentWindowSec: 0,
-  missingRatio: 0,
+const UNAVAILABLE_BLACKLIST_HEALTH: HealthResponse["blacklist"] = {
+  totalEvents: null,
+  missingAmounts: null,
+  recentMissingAmounts: null,
+  recentWindowSec: null,
+  missingRatio: null,
+  unavailableReason: "blacklist-read-failed",
 };
 
 const EMPTY_MINT_BURN_HEALTH: HealthResponse["mintBurn"] = {
@@ -71,29 +72,19 @@ const EMPTY_MINT_BURN_HEALTH: HealthResponse["mintBurn"] = {
   latestEventTs: null,
   latestHourlyTs: null,
   freshnessAgeSec: null,
-  majorStaleCount: 0,
-  staleMajorSymbols: [],
+  majorStaleCount: null,
+  staleMajorSymbols: null,
+  unavailableReason: "mint-burn-read-failed",
   queryErrors: {
     latestSuccessfulSyncAt: null,
     rowCount: null,
   },
   sync: {
     lastSuccessfulSyncAt: null,
-    freshnessStatus: "stale",
+    freshnessStatus: null,
     warning: "Mint/burn health data unavailable.",
-    criticalLaneHealthy: false,
+    criticalLaneHealthy: null,
   },
-};
-
-const EMPTY_ALERT_BROKER_SUMMARY: AlertBrokerHealthSummary = {
-  activeCount: 0,
-  pendingCount: 0,
-  criticalActiveCount: 0,
-  failedDeliveryCount: 0,
-  missingTargetCount: 0,
-  oldestActiveAt: null,
-  activeConditionKeys: [],
-  queryFailed: false,
 };
 
 export interface PublicHealthAssessment {
@@ -104,7 +95,7 @@ export interface PublicHealthAssessment {
   cacheImpactStatus: HealthResponse["status"];
   /** Input-quality verdict for sentinel-backed caches, independent of age (rule R3). */
   cacheQualityImpactStatus: HealthResponse["status"];
-  worstCacheRatio: number;
+  worstCacheRatio: number | null;
   cacheFailures: CacheStatusFailure[];
   cacheDiagnostics: CacheFreshnessDiagnostic[];
   cacheWarnings: string[];
@@ -117,21 +108,42 @@ export interface PublicHealthAssessment {
   mintBurnLastRunStatus: string | null;
   mintBurnBootstrap: boolean;
   repairRunnerAutoRepairCount: number | null;
-  circuits: Record<string, CircuitRecord>;
-  openCircuitCount: number;
+  circuits: HealthResponse["circuits"];
+  circuitsUnavailableReason?: HealthResponse["circuitsUnavailableReason"];
+  openCircuitCount: number | null;
   circuitImpactStatus: HealthResponse["status"];
   circuitQueryError: string | null;
   d1Capacity: D1CapacityAssessment | null;
   d1CapacityImpactStatus: HealthResponse["status"];
+  d1CapacityQueryFailed?: boolean;
+  yieldSafetyQueryFailed?: boolean;
   d1CapacityQueryError: string | null;
-  alertBroker: AlertBrokerHealthSummary;
-  alertBrokerImpactStatus: HealthResponse["status"];
   stablecoinPublication: StablecoinPublicationHealth;
   stablecoinPublicationImpactStatus: HealthResponse["status"];
   activePriceCoverage: ActivePriceCoverageHealth;
   activePriceCoverageImpactStatus: HealthResponse["status"];
   schedulerLiveness: SchedulerLiveness;
   schedulerLivenessImpactStatus: HealthResponse["status"];
+}
+
+/** Current-read completeness, independent of semantic service health. */
+export function getPublicHealthEvidenceReadFailures(assessment: PublicHealthAssessment): string[] {
+  return [
+    ...(!assessment.dbHealthy ? ["db-unavailable"] : []),
+    ...assessment.cacheFailures.map((failure) => `cache:${failure.key}:${failure.source}`),
+    ...[
+      ["blacklist", assessment.blacklistQueryError],
+      ["mint-burn", assessment.mintBurnQueryError],
+      ["circuits", assessment.circuitQueryError],
+      ["d1-capacity", assessment.d1CapacityQueryFailed ? assessment.d1CapacityQueryError : null],
+      ["yield-safety", assessment.yieldSafetyQueryFailed ? "read-failed" : null],
+      ["mint-burn-output", assessment.mintBurn.queryErrors?.latestSuccessfulSyncAt],
+      ["mint-burn-count", assessment.mintBurn.queryErrors?.rowCount],
+    ].filter(([, error]) => error != null).map(([source]) => `${source}:read-failed`),
+    ...(assessment.activePriceCoverage.unavailableReason === "coverage-read-failed" ? ["stablecoin-coverage:read-failed"] : []),
+    ...(assessment.schedulerLiveness.unavailableReason === "slot-start-query-failed" ? ["scheduler:read-failed"] : []),
+    ...(assessment.schedulerLiveness.heavy.unavailableReason === "slot-start-query-failed" ? ["heavy-scheduler:read-failed"] : []),
+  ];
 }
 
 export function buildPublicHealthResponse(
@@ -146,18 +158,17 @@ export function buildPublicHealthResponse(
     blacklist: assessment.blacklist,
     mintBurn: assessment.mintBurn,
     circuits: assessment.circuits,
+    circuitsUnavailableReason: assessment.circuitsUnavailableReason ?? null,
     stablecoinPublication: assessment.stablecoinPublication,
     activePriceCoverage: assessment.activePriceCoverage,
     schedulerLiveness: assessment.schedulerLiveness,
   };
 }
 
-function publicHealthErrorMessage(kind: "blacklist" | "circuit" | "db" | "mint-burn"): string {
+function publicHealthErrorMessage(kind: "blacklist" | "db" | "mint-burn"): string {
   switch (kind) {
     case "blacklist":
       return "Blacklist health data unavailable.";
-    case "circuit":
-      return "Circuit breaker diagnostics unavailable.";
     case "db":
       return "Primary database unavailable.";
     case "mint-burn":
@@ -184,7 +195,8 @@ async function checkDbHealth(
   logPrefix: string,
 ): Promise<{ dbHealthy: boolean; warning: string | null }> {
   try {
-    await db.prepare("SELECT 1").first();
+    const sentinel = await db.prepare("SELECT 1").first();
+    if (sentinel == null) throw new Error("Database health sentinel returned no row");
     return { dbHealthy: true, warning: null };
   } catch (err) {
     logWorkerEvent({
@@ -256,8 +268,8 @@ export type PublicHealthReadResult<T> =
   | { ok: true; value: T; error: null }
   | { ok: false; value: null; error: string };
 
-async function capturePublicHealthRead<T>(
-  descriptor: { event: string; source: string; message: string; job?: string },
+export async function capturePublicHealthRead<T>(
+  descriptor: { event: string; source: string; message: string; job?: string; reason?: string },
   run: () => Promise<T>,
 ): Promise<PublicHealthReadResult<T>> {
   try {
@@ -273,7 +285,7 @@ async function capturePublicHealthRead<T>(
       message: descriptor.message,
       error: err,
     });
-    return { ok: false, value: null, error: descriptor.message };
+    return { ok: false, value: null, error: descriptor.reason ?? descriptor.message };
   }
 }
 
@@ -296,6 +308,7 @@ function captureMintBurnSubquery<T>(
       source: name,
       job: MINT_BURN_CRON_JOB,
       message: mintBurnSubqueryErrorMessage(name),
+      reason: name === "latestSuccessfulSyncAt" ? "mint-burn-output-read-failed" : "mint-burn-count-read-failed",
     },
     run,
   );
@@ -313,23 +326,32 @@ async function loadMintBurnHealth(
   repairRunnerAutoRepairCount: number | null;
 }> {
   try {
-    const [latestRun, latestSuccessfulSyncResult, totalEventsResult] = await Promise.all([
-      db
-        .prepare(
-          `SELECT status
-           FROM cron_runs
-           WHERE job = ?
-           ORDER BY started_at DESC
-           LIMIT 1`,
-        )
-        .bind(MINT_BURN_CRON_JOB)
-        .first<{ status: string | null }>(),
+    const [latestRunResult, latestSuccessfulSyncResult, totalEventsResult] = await Promise.all([
+      capturePublicHealthRead(
+        {
+          event: "mint_burn_health_query_failed",
+          source: "mint-burn",
+          message: "Mint/burn health data unavailable.",
+          reason: "mint-burn-read-failed",
+          job: MINT_BURN_CRON_JOB,
+        },
+        () => db
+          .prepare(
+            `SELECT status
+             FROM cron_runs
+             WHERE job = ?
+             ORDER BY started_at DESC
+             LIMIT 1`,
+          )
+          .bind(MINT_BURN_CRON_JOB)
+          .first<{ status: string | null }>(),
+      ),
       captureMintBurnSubquery(
         "latestSuccessfulSyncAt",
         () =>
           db
             .prepare(
-              "SELECT MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'",
+              `SELECT MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL}) as started_at FROM cron_runs WHERE job = ?`,
             )
             .bind(MINT_BURN_CRON_JOB)
             .first<{ started_at: number | null }>()
@@ -359,6 +381,15 @@ async function loadMintBurnHealth(
             .then(readDailySentinelDiagnostics),
       ),
     ]);
+    if (!latestRunResult.ok) return {
+      mintBurn: { ...EMPTY_MINT_BURN_HEALTH },
+      mintBurnImpactStatus: "degraded",
+      mintBurnQueryError: latestRunResult.error,
+      mintBurnLastRunStatus: null,
+      mintBurnBootstrap: false,
+      repairRunnerAutoRepairCount: null,
+    };
+    const latestRun = latestRunResult.value;
 
     const queryErrors: NonNullable<HealthResponse["mintBurn"]["queryErrors"]> = {
       latestSuccessfulSyncAt: latestSuccessfulSyncResult.error,
@@ -375,10 +406,13 @@ async function loadMintBurnHealth(
       latestEventTs: null,
       latestHourlyTs: null,
       freshnessAgeSec: null,
-      majorStaleCount: 0,
-      staleMajorSymbols: [],
+      majorStaleCount: latestSuccessfulSyncResult.ok ? 0 : null,
+      staleMajorSymbols: latestSuccessfulSyncResult.ok ? [] : null,
+      unavailableReason: latestSuccessfulSyncResult.ok ? null : "mint-burn-output-read-failed",
       queryErrors,
-      sync,
+      sync: latestSuccessfulSyncResult.ok ? sync : {
+        ...sync, freshnessStatus: null, criticalLaneHealthy: null, warning: "Mint/burn output evidence unavailable.",
+      },
     };
     const mintBurnQueryError = queryErrors.latestSuccessfulSyncAt
       ? publicHealthErrorMessage("mint-burn")
@@ -417,6 +451,7 @@ async function loadMintBurnHealth(
 interface YieldSafetyAvailability {
   impactStatus: "healthy" | "degraded";
   warning: string | null;
+  queryFailed?: boolean;
 }
 
 /**
@@ -480,7 +515,7 @@ async function assessYieldSafetyAvailability(
       error: err,
     });
     // An unreadable check cannot prove the yield surface is rated (rule R2).
-    return { impactStatus: "degraded", warning: "yield-safety-availability-unknown" };
+    return { impactStatus: "degraded", warning: "yield-safety-availability-unknown", queryFailed: true };
   }
 }
 
@@ -508,15 +543,16 @@ export async function assessPublicHealth(
       caches: {},
       cacheImpactStatus: "stale",
       cacheQualityImpactStatus: "stale",
-      worstCacheRatio: 0,
+      worstCacheRatio: null,
       cacheFailures: [],
       cacheDiagnostics: [],
       cacheWarnings: [],
-      blacklist: { ...EMPTY_BLACKLIST_HEALTH },
+      blacklist: { ...UNAVAILABLE_BLACKLIST_HEALTH, unavailableReason: "db-unavailable" },
       blacklistMetrics: null,
       blacklistQueryError: null,
       mintBurn: {
         ...EMPTY_MINT_BURN_HEALTH,
+        unavailableReason: "db-unavailable",
         sync: {
           ...EMPTY_MINT_BURN_HEALTH.sync,
           warning: "Primary database unavailable.",
@@ -527,15 +563,14 @@ export async function assessPublicHealth(
       mintBurnLastRunStatus: null,
       mintBurnBootstrap: false,
       repairRunnerAutoRepairCount: null,
-      circuits: {},
-      openCircuitCount: 0,
-      circuitImpactStatus: "healthy",
-      circuitQueryError: null,
+      circuits: null,
+      circuitsUnavailableReason: "db-unavailable",
+      openCircuitCount: null,
+      circuitImpactStatus: "stale",
+      circuitQueryError: "db-unavailable",
       d1Capacity: null,
       d1CapacityImpactStatus: "healthy",
       d1CapacityQueryError: null,
-      alertBroker: { ...EMPTY_ALERT_BROKER_SUMMARY },
-      alertBrokerImpactStatus: "stale",
       stablecoinPublication: unknownStablecoinPublicationHealth(),
       stablecoinPublicationImpactStatus: "healthy",
       activePriceCoverage: unknownActivePriceCoverageHealth(null, "coverage-read-failed"),
@@ -574,20 +609,15 @@ export async function assessPublicHealth(
         return { metrics: null, error: publicHealthErrorMessage("blacklist") };
       }),
     loadMintBurnHealth(db, now),
-    getCircuitStates(db)
-      .then((circuits) => ({ circuits: completeCircuitStates(circuits), error: null as string | null }))
-      .catch((err) => {
-        logWorkerEvent({
-          scope: "status",
-          level: "error",
-          event: "circuit_states_query_failed",
-          route: logPrefix,
-          source: "circuit-breaker",
-          message: "Failed to query circuit states",
-          error: err,
-        });
-        return { circuits: {}, error: publicHealthErrorMessage("circuit") };
-      }),
+    capturePublicHealthRead(
+      {
+        event: "circuit_states_query_failed",
+        source: "circuit-breaker",
+        message: "Circuit breaker diagnostics unavailable.",
+        reason: "circuits-read-failed",
+      },
+      async () => completeCircuitStates(await getCircuitStates(db)),
+    ),
     loadCachedD1CapacityAssessment(db, now)
       .then(({ assessment, reason }) => ({
         assessment,
@@ -663,13 +693,14 @@ export async function assessPublicHealth(
   warnings.push(...cacheAssessment.warnings);
 
   const blacklist = blacklistResult.metrics == null
-    ? { ...EMPTY_BLACKLIST_HEALTH }
+    ? { ...UNAVAILABLE_BLACKLIST_HEALTH }
     : {
         totalEvents: blacklistResult.metrics.totalEvents,
         missingAmounts: blacklistResult.metrics.missingAmounts,
         recentMissingAmounts: blacklistResult.metrics.recentMissingAmounts,
         recentWindowSec: blacklistResult.metrics.recentWindowSec,
         missingRatio: blacklistResult.metrics.missingRatio,
+        unavailableReason: null,
       };
   if (blacklistResult.error) {
     warnings.push("blacklist-query-failed");
@@ -679,10 +710,8 @@ export async function assessPublicHealth(
     warnings.push("mint-burn-query-failed");
   }
 
-  const openCircuitCount = countPublicImpactOpenCircuits(circuitResult.circuits);
-  const circuitImpactStatus = circuitResult.error
-    ? "degraded"
-    : getCircuitImpactStatus(openCircuitCount);
+  const openCircuitCount = circuitResult.ok ? countPublicImpactOpenCircuits(circuitResult.value) : null;
+  const circuitImpactStatus = getCircuitImpactStatus(openCircuitCount);
   if (circuitResult.error) {
     warnings.push("circuit-query-failed");
   }
@@ -699,9 +728,6 @@ export async function assessPublicHealth(
       `d1-capacity-${d1CapacityResult.assessment.thresholdState}`,
     );
   }
-
-  const alertBroker = { ...EMPTY_ALERT_BROKER_SUMMARY };
-  const alertBrokerImpactStatus: HealthResponse["status"] = "healthy";
 
   const stablecoinPublicationImpactStatus = getStablecoinPublicationImpactStatus(
     stablecoinPublication, activePriceCoverage, now,
@@ -765,7 +791,6 @@ export async function assessPublicHealth(
     circuitImpactStatus,
     blacklistImpactStatus,
     d1CapacityImpactStatus,
-    alertBrokerImpactStatus,
     stablecoinPublicationImpactStatus,
     activePriceCoverageImpactStatus,
     yieldSafetyAvailability.impactStatus,
@@ -779,7 +804,7 @@ export async function assessPublicHealth(
     caches: cachesWithProvider,
     cacheImpactStatus,
     cacheQualityImpactStatus,
-    worstCacheRatio: Number.isFinite(cacheAssessment.worstRatio) ? cacheAssessment.worstRatio : 99,
+    worstCacheRatio: Number.isFinite(cacheAssessment.worstRatio) ? cacheAssessment.worstRatio : null,
     cacheFailures: cacheAssessment.failures,
     cacheDiagnostics: cacheAssessment.diagnostics,
     cacheWarnings: cacheAssessment.warnings,
@@ -792,15 +817,16 @@ export async function assessPublicHealth(
     mintBurnLastRunStatus: mintBurnResult.mintBurnLastRunStatus,
     mintBurnBootstrap: mintBurnResult.mintBurnBootstrap,
     repairRunnerAutoRepairCount: mintBurnResult.repairRunnerAutoRepairCount,
-    circuits: circuitResult.circuits,
+    circuits: circuitResult.value,
+    circuitsUnavailableReason: circuitResult.ok ? null : "circuits-read-failed",
     openCircuitCount,
     circuitImpactStatus,
     circuitQueryError: circuitResult.error,
     d1Capacity: d1CapacityResult.assessment,
     d1CapacityImpactStatus,
     d1CapacityQueryError: d1CapacityResult.error,
-    alertBroker,
-    alertBrokerImpactStatus,
+    d1CapacityQueryFailed: d1CapacityResult.reason === "query-failed",
+    yieldSafetyQueryFailed: yieldSafetyAvailability.queryFailed === true,
     stablecoinPublication,
     stablecoinPublicationImpactStatus,
     activePriceCoverage,

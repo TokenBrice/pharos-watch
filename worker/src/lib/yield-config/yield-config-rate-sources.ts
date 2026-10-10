@@ -5,421 +5,86 @@ import {
   type YieldAdapterLifecycleEntry,
 } from "./yield-config-registry";
 import { buildOnChainSourceKey } from "../yield-utils";
+import { encodeUint256 } from "../evm-selectors";
+
+const ONE_SHARE_INPUT = {
+  6: `0x${encodeUint256(1_000_000n)}`,
+  18: `0x${encodeUint256(1_000_000_000_000_000_000n)}`,
+};
+
+function erc4626Rate(
+  stablecoinId: string,
+  chain: string,
+  contract: string,
+  shareDecimals: 6 | 18,
+  assetDecimals: number,
+  tvlDecimals: number | null,
+): OnChainRateConfig {
+  const config: OnChainRateConfig = {
+    stablecoinId,
+    chain,
+    contract,
+    selector: "0x07a2d13a",
+    decimals: assetDecimals,
+    inputAmount: ONE_SHARE_INPUT[shareDecimals],
+  };
+  if (tvlDecimals != null) config.tvlRead = { kind: "erc4626-total-assets", decimals: tvlDecimals };
+  return config;
+}
 
 /**
  * Tier 1: On-chain exchange rate sources.
  * These produce the highest-fidelity APY by reading vault exchange rates directly.
  */
 export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
-  {
-    stablecoinId: "susde-ethena",
-    chain: "ethereum",
-    contract: "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
-    stablecoinId: "iusd-infinifi",
-    chain: "ethereum",
-    contract: "0xDBDC1Ef57537E34680B898E1FEBD3D68c7389bCB",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
-    stablecoinId: "susds-sky",
-    chain: "ethereum",
-    contract: "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
-    stablecoinId: "stusds-sky",
-    chain: "ethereum",
-    contract: "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    // ERC-4626 over USDS; no pinned DL pool — measure totalAssets as venue TVL.
-    tvlRead: { kind: "erc4626-total-assets", decimals: 18 },
-  },
-  {
-    stablecoinId: "sdai-sky",
-    chain: "ethereum",
-    contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
-    stablecoinId: "sfrxusd-frax",
-    chain: "ethereum",
-    contract: "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
-    stablecoinId: "susdf-falcon",
-    chain: "ethereum",
-    contract: "0xc8cf6d7991f15525488b2a83df53468d682ba4b0",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 18 },
-  },
-  {
-    stablecoinId: "susn-noon",
-    chain: "ethereum",
-    contract: "0xE24a3DC889621612422A64E6388927901608B91D",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    // ERC-4626 over USN (USD-pegged); no dedicated native DL pool pin.
-    tvlRead: { kind: "erc4626-total-assets", decimals: 18 },
-  },
-  {
-    stablecoinId: "thbill-theo",
-    chain: "ethereum",
-    contract: "0x5FA487BCa6158c64046B2813623e20755091DA0b",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x00000000000000000000000000000000000000000000000000000000000f4240",
-    // ERC-4626 over USD T-bill exposure; no pinned DL pool.
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "thusd-theo",
-    chain: "ethereum",
-    contract: "0xa808bc9775cb41c52c7842f8b50427fe7a770326",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x00000000000000000000000000000000000000000000000000000000000f4240",
-    // sthUSD ERC-4626 vault over thUSD (convertToAssets(1e6) = 1017821 at block 26088438); no pinned DL pool.
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "susdc-spark",
-    chain: "ethereum",
-    contract: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x00000000000000000000000000000000000000000000000000000000000f4240",
-  },
-  {
-    stablecoinId: "susdt-spark",
-    chain: "ethereum",
-    contract: "0xe2e7a17dff93280dec073c995595155283e3c372",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x00000000000000000000000000000000000000000000000000000000000f4240",
-  },
-  {
-    stablecoinId: "syrupusdc-maple",
-    chain: "ethereum",
-    contract: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x00000000000000000000000000000000000000000000000000000000000f4240",
-  },
-  {
-    stablecoinId: "syrupusdt-maple",
-    chain: "ethereum",
-    contract: "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x00000000000000000000000000000000000000000000000000000000000f4240",
-  },
-  {
-    stablecoinId: "yvusdc-yearn",
-    chain: "ethereum",
-    contract: "0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x00000000000000000000000000000000000000000000000000000000000f4240",
-  },
-  {
-    stablecoinId: "gtusdc-gauntlet",
-    chain: "ethereum",
-    contract: "0xdd0f28e19c1780eb6396170735d45153d261490d",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
-    stablecoinId: "bbqusdc-steakhouse",
-    chain: "ethereum",
-    contract: "0xbeefff209270748ddd194831b3fa287a5386f5bc",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
-    stablecoinId: "sgho-aave",
-    chain: "ethereum",
-    contract: "0xe1753f2e00940cc31213dd92013cf019dfe4ca1d",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
-    stablecoinId: "wsrusd-reservoir",
-    chain: "ethereum",
-    contract: "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
-    stablecoinId: "stcusd-cap",
-    chain: "ethereum",
-    contract: "0x88887be419578051ff9f4eb6c858a951921d8888",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
-    stablecoinId: "savusd-avant",
-    chain: "avalanche",
-    contract: "0x06d47f3fb376649c3a9dafe069b3d6e35572219e",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
-    stablecoinId: "yousd-yield-optimizer",
-    chain: "base",
-    contract: "0x0000000f2eb9f69274678c76222b35eec7588a65",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x00000000000000000000000000000000000000000000000000000000000f4240",
-  },
+  erc4626Rate("susde-ethena", "ethereum", "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497", 18, 18, null),
+  erc4626Rate("iusd-infinifi", "ethereum", "0xDBDC1Ef57537E34680B898E1FEBD3D68c7389bCB", 18, 18, null),
+  erc4626Rate("susds-sky", "ethereum", "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD", 18, 18, null),
+  // ERC-4626 over USDS; no pinned DL pool — measure totalAssets as venue TVL.
+  erc4626Rate("stusds-sky", "ethereum", "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9", 18, 18, 18),
+  erc4626Rate("sdai-sky", "ethereum", "0x83F20F44975D03b1b09e64809B757c47f942BEeA", 18, 18, null),
+  erc4626Rate("sfrxusd-frax", "ethereum", "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6", 18, 18, null),
+  erc4626Rate("susdf-falcon", "ethereum", "0xc8cf6d7991f15525488b2a83df53468d682ba4b0", 18, 18, 18),
+  // ERC-4626 over USN (USD-pegged); no dedicated native DL pool pin.
+  erc4626Rate("susn-noon", "ethereum", "0xE24a3DC889621612422A64E6388927901608B91D", 18, 18, 18),
+  // ERC-4626 over USD T-bill exposure; no pinned DL pool.
+  erc4626Rate("thbill-theo", "ethereum", "0x5FA487BCa6158c64046B2813623e20755091DA0b", 6, 6, 6),
+  // sthUSD ERC-4626 vault over thUSD (convertToAssets(1e6) = 1017821 at block 26088438); no pinned DL pool.
+  erc4626Rate("thusd-theo", "ethereum", "0xa808bc9775cb41c52c7842f8b50427fe7a770326", 6, 6, 6),
+  erc4626Rate("susdc-spark", "ethereum", "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d", 6, 6, null),
+  erc4626Rate("susdt-spark", "ethereum", "0xe2e7a17dff93280dec073c995595155283e3c372", 6, 6, null),
+  erc4626Rate("syrupusdc-maple", "ethereum", "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", 6, 6, null),
+  erc4626Rate("syrupusdt-maple", "ethereum", "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d", 6, 6, null),
+  erc4626Rate("yvusdc-yearn", "ethereum", "0xbe53a109b494e5c9f97b9cd39fe969be68bf6204", 6, 6, null),
+  erc4626Rate("gtusdc-gauntlet", "ethereum", "0xdd0f28e19c1780eb6396170735d45153d261490d", 18, 6, null),
+  erc4626Rate("bbqusdc-steakhouse", "ethereum", "0xbeefff209270748ddd194831b3fa287a5386f5bc", 18, 6, null),
+  erc4626Rate("sgho-aave", "ethereum", "0xe1753f2e00940cc31213dd92013cf019dfe4ca1d", 18, 18, null),
+  erc4626Rate("wsrusd-reservoir", "ethereum", "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094", 18, 18, null),
+  erc4626Rate("stcusd-cap", "ethereum", "0x88887be419578051ff9f4eb6c858a951921d8888", 18, 18, null),
+  erc4626Rate("savusd-avant", "avalanche", "0x06d47f3fb376649c3a9dafe069b3d6e35572219e", 18, 18, null),
+  erc4626Rate("yousd-yield-optimizer", "base", "0x0000000f2eb9f69274678c76222b35eec7588a65", 6, 6, null),
   // Reviewed 2026-10-03 against exact tracked deployments and live rate reads.
   // ERC-4626 calldata uses share decimals; decoded rates and TVL use asset decimals.
-  {
-    stablecoinId: "senpyusdmwin-sentora",
-    chain: "ethereum",
-    contract: "0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "strusd-tori",
-    chain: "ethereum",
-    contract: "0x280839980a7ed0d7717f64125fe241012e5f5815",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 18 },
-  },
-  {
-    stablecoinId: "syrupusdg-maple",
-    chain: "ethereum",
-    contract: "0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x00000000000000000000000000000000000000000000000000000000000f4240",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "sfrax-frax",
-    chain: "ethereum",
-    contract: "0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 18 },
-  },
-  {
-    stablecoinId: "sirloinusdc-steakhouse",
-    chain: "base",
-    contract: "0xbeeff2490feffa212fac2f6553682c219e6a8845",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "sreusd-resupply",
-    chain: "ethereum",
-    contract: "0x557ab1e003951a73c12d16f0fea8490e39c33c35",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 18 },
-  },
-  {
-    stablecoinId: "gusdtq-galaxy",
-    chain: "ethereum",
-    contract: "0x71ffb6a81786ec285d429d531cf655107b9d878d",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "senpathusd-sentora",
-    chain: "tempo",
-    contract: "0x9a044ae05e5e6290dcf56afd69548565e957a626",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "senrlusdv2-sentora",
-    chain: "ethereum",
-    contract: "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 18 },
-  },
-  {
-    stablecoinId: "krusdc-keyrock",
-    chain: "arc",
-    contract: "0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "kpkusdcprime-kpk",
-    chain: "ethereum",
-    contract: "0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "skymoneyusdtsavings-sky",
-    chain: "ethereum",
-    contract: "0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "steakcusdc-steakhouse",
-    chain: "ethereum",
-    contract: "0xbeef00a59b577423653a1526c7009bde103f542b",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "senpyusdpst-sentora",
-    chain: "ethereum",
-    contract: "0x8381a156958711e230f325428b5eb4b6555c75d9",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "cscbusdc-clearstar",
-    chain: "base",
-    contract: "0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "sparkusdtbc-spark",
-    chain: "ethereum",
-    contract: "0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "pendleusdc-pendle",
-    chain: "ethereum",
-    contract: "0x55c1b6e461a6334b567baf0feb5d728715446f05",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "senpyusdprimev2-sentora",
-    chain: "ethereum",
-    contract: "0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "sdai-gnosis",
-    chain: "gnosis",
-    contract: "0xaf204776c7245bf4147c2612bf6e5972ee483701",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 18 },
-  },
-  {
-    stablecoinId: "senpyusdmain-sentora",
-    chain: "ethereum",
-    contract: "0xb576765fb15505433af24fee2c0325895c559fb2",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
+  erc4626Rate("senpyusdmwin-sentora", "ethereum", "0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57", 18, 6, 6),
+  erc4626Rate("strusd-tori", "ethereum", "0x280839980a7ed0d7717f64125fe241012e5f5815", 18, 18, 18),
+  erc4626Rate("syrupusdg-maple", "ethereum", "0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a", 6, 6, 6),
+  erc4626Rate("sfrax-frax", "ethereum", "0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32", 18, 18, 18),
+  erc4626Rate("sirloinusdc-steakhouse", "base", "0xbeeff2490feffa212fac2f6553682c219e6a8845", 18, 6, 6),
+  erc4626Rate("sreusd-resupply", "ethereum", "0x557ab1e003951a73c12d16f0fea8490e39c33c35", 18, 18, 18),
+  erc4626Rate("gusdtq-galaxy", "ethereum", "0x71ffb6a81786ec285d429d531cf655107b9d878d", 18, 6, 6),
+  erc4626Rate("senpathusd-sentora", "tempo", "0x9a044ae05e5e6290dcf56afd69548565e957a626", 18, 6, 6),
+  erc4626Rate("senrlusdv2-sentora", "ethereum", "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf", 18, 18, 18),
+  erc4626Rate("krusdc-keyrock", "arc", "0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123", 18, 6, 6),
+  erc4626Rate("kpkusdcprime-kpk", "ethereum", "0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6", 18, 6, 6),
+  erc4626Rate("skymoneyusdtsavings-sky", "ethereum", "0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11", 18, 6, 6),
+  erc4626Rate("steakcusdc-steakhouse", "ethereum", "0xbeef00a59b577423653a1526c7009bde103f542b", 18, 6, 6),
+  erc4626Rate("senpyusdpst-sentora", "ethereum", "0x8381a156958711e230f325428b5eb4b6555c75d9", 18, 6, 6),
+  erc4626Rate("cscbusdc-clearstar", "base", "0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c", 18, 6, 6),
+  erc4626Rate("sparkusdtbc-spark", "ethereum", "0xb0c424116172b55cbb6dd3136f5989f7959e5b91", 18, 6, 6),
+  erc4626Rate("pendleusdc-pendle", "ethereum", "0x55c1b6e461a6334b567baf0feb5d728715446f05", 18, 6, 6),
+  erc4626Rate("senpyusdprimev2-sentora", "ethereum", "0xc21b08c16458202593d4d9b26b9984ee67b38bbd", 18, 6, 6),
+  erc4626Rate("sdai-gnosis", "gnosis", "0xaf204776c7245bf4147c2612bf6e5972ee483701", 18, 18, 18),
+  erc4626Rate("senpyusdmain-sentora", "ethereum", "0xb576765fb15505433af24fee2c0325895c559fb2", 18, 6, 6),
   {
     stablecoinId: "susdx-axis",
     chain: "ethereum",
@@ -431,147 +96,22 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
     inputAmount:
       "0x0000000000000000000000000000000000000000000000000000000000000000",
   },
-  {
-    stablecoinId: "hyperusdca-hyperithm",
-    chain: "monad",
-    contract: "0x78999cc96d2ba0341588c60ccb0e91c6c33cf371",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "gusdcq-galaxy",
-    chain: "ethereum",
-    contract: "0x91600e31fbedc72433d4a57f16639cfe661be7d8",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "susdc-spark-v1",
-    chain: "ethereum",
-    contract: "0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "steakeurcv-steakhouse",
-    chain: "ethereum",
-    contract: "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    // EURCV-denominated totalAssets is not USD TVL.
-  },
-  {
-    stablecoinId: "bbqusdc-steakhouse-v2",
-    chain: "ethereum",
-    contract: "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "skymoneyusdsflagship-sky",
-    chain: "ethereum",
-    contract: "0xe15fcc81118895b67b6647bbd393182df44e11e0",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 18 },
-  },
-  {
-    stablecoinId: "arcusdc-galaxy",
-    chain: "arc",
-    contract: "0x8e357432cc12ff425c36432f312968aeb16112af",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "gtusdtp-gauntlet",
-    chain: "ethereum",
-    contract: "0xf3557ad5e984211ac8a0874a670344f2c3376471",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "sxsrlusd-sentora",
-    chain: "ethereum",
-    contract: "0xfc8c624b6080a0a780583799f2a862de936f6e22",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 18 },
-  },
-  {
-    stablecoinId: "ethenausdc-steakhouse",
-    chain: "base",
-    contract: "0xbeeff0be997cca5b1c13a7433c2004637975739e",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "armusdcs-wintermute",
-    chain: "ethereum",
-    contract: "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "sparkusdc-spark",
-    chain: "base",
-    contract: "0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "kpkusdcyield-kpk",
-    chain: "ethereum",
-    contract: "0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
-  {
-    stablecoinId: "susdat-saturn",
-    chain: "ethereum",
-    contract: "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    // USDat-denominated credit-vault NAV includes preferred-note gains and losses.
-    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
-  },
+  erc4626Rate("hyperusdca-hyperithm", "monad", "0x78999cc96d2ba0341588c60ccb0e91c6c33cf371", 18, 6, 6),
+  erc4626Rate("gusdcq-galaxy", "ethereum", "0x91600e31fbedc72433d4a57f16639cfe661be7d8", 18, 6, 6),
+  erc4626Rate("susdc-spark-v1", "ethereum", "0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe", 18, 6, 6),
+  // EURCV-denominated totalAssets is not USD TVL.
+  erc4626Rate("steakeurcv-steakhouse", "ethereum", "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f", 18, 18, null),
+  erc4626Rate("bbqusdc-steakhouse-v2", "ethereum", "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757", 18, 6, 6),
+  erc4626Rate("skymoneyusdsflagship-sky", "ethereum", "0xe15fcc81118895b67b6647bbd393182df44e11e0", 18, 18, 18),
+  erc4626Rate("arcusdc-galaxy", "arc", "0x8e357432cc12ff425c36432f312968aeb16112af", 18, 6, 6),
+  erc4626Rate("gtusdtp-gauntlet", "ethereum", "0xf3557ad5e984211ac8a0874a670344f2c3376471", 18, 6, 6),
+  erc4626Rate("sxsrlusd-sentora", "ethereum", "0xfc8c624b6080a0a780583799f2a862de936f6e22", 18, 18, 18),
+  erc4626Rate("ethenausdc-steakhouse", "base", "0xbeeff0be997cca5b1c13a7433c2004637975739e", 18, 6, 6),
+  erc4626Rate("armusdcs-wintermute", "ethereum", "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd", 18, 6, 6),
+  erc4626Rate("sparkusdc-spark", "base", "0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a", 18, 6, 6),
+  erc4626Rate("kpkusdcyield-kpk", "ethereum", "0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13", 18, 6, 6),
+  // USDat-denominated credit-vault NAV includes preferred-note gains and losses.
+  erc4626Rate("susdat-saturn", "ethereum", "0xd166337499e176bbc38a1fbd113ab144e5bd2df7", 18, 6, 6),
 ];
 
 export const PRICE_DERIVED_FALLBACK_IDS = new Set([

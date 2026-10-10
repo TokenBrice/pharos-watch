@@ -24,7 +24,7 @@ export interface OnchainDataQualityAssessment {
 }
 
 export function assessOnchainDataQuality(input: {
-  monitoring: StatusResponse["dataQuality"]["onchainSupplyMonitoring"];
+  monitoring: NonNullable<StatusResponse["dataQuality"]>["onchainSupplyMonitoring"];
   trackedCoins: number;
   staleSupply: number;
   staleRatio: number;

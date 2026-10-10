@@ -1,5 +1,5 @@
 import type { ReserveAdapterCoin, ReserveSlice } from "@shared/types/core";
-import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import { fetchSolanaAccounts, solanaPublicKey, type SolanaAccount } from "./solana";
@@ -76,13 +76,12 @@ export async function fetchHyloSolanaReserves(_coin: ReserveAdapterCoin, config:
   const state = anchor(accounts, p.state, p.program, "hylo");
   if (key(state, 72) !== p.registry || key(state, 104) !== p.hyusdMint || key(state, 392) !== p.solOracle) throw new Error("Hylo state identity mismatch");
   for (const address of p.inactiveExoPairs) if (accounts.get(address) !== null) throw new Error("Hylo unreviewed exogenous pair activated");
-  const warnings: LiveReserveWarning[] = [];
   let isPaused = paused(state, 478) || paused(state, 479);
-  const prices = await fetchDefiLlamaPrices([
+  const { prices, warnings } = await fetchDefiLlamaPrices([
     ...lsts.map((lst) => ({ key: lst.mint, chain: lst.priceChain, address: lst.priceAddress })),
     ...p.exoPairs.map((pair) => ({ key: pair.mint, chain: "coingecko", address: pair.priceAddress })),
     { key: p.usdcMint, chain: "coingecko", address: "usd-coin" },
-  ], signal, ctx, warnings);
+  ], signal, ctx);
   const price = (mint: string) => { const value = prices.get(mint); if (value === undefined || !Number.isFinite(value) || value <= 0) throw new Error(`Hylo missing collateral price: ${mint}`); return value; };
   const lstBreakdown = lsts.map((lst) => {
     const header = anchor(accounts, lst.header, p.program, "lst");

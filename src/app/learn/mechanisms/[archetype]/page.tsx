@@ -20,13 +20,13 @@ const DESCRIPTION_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
   "fiat-cash":
     "Fiat-backed stablecoins hold cash, Treasury bills, and short-term debt off-chain and mint 1:1 against deposits. See how the model works and which coins use it.",
   tbill:
-    "Tokenized T-bill stablecoins put short-dated US government debt onchain, earning a market rate while tracking $1. Learn the structure, risks, and tracked examples.",
+    "Treasury-backed tokens use rising-NAV shares or stable $1 units with separate yield distribution. Learn both price models, redemption rails, and tracked examples.",
   cdp:
     "CDP stablecoins are minted as debt against onchain collateral, then kept on peg through liquidations and rate fees. Read how the design works and where it breaks.",
   "synthetic-delta-neutral":
     "Delta-neutral stablecoins offset economic exposures through perp-short or on-chain borrow-and-stake strategies. Read how each variant works and where its risks differ.",
   algorithmic:
-    "Algorithmic stablecoins use supply controls or reflexive incentives instead of full reserves. Read why the design keeps failing and what's still being attempted.",
+    "Algorithmic mechanisms use programmatic peg defense with design-specific collateral. Compare current collateralized variants with historical UST-style mint/burn.",
   "rwa-credit-fund":
     "Tokenized credit funds wrap private credit and CLO portfolios in an on-chain fund share. Learn the NAV mechanics, redemption gates, and credit risks.",
   "commodity-claim":

@@ -420,14 +420,31 @@ export function resolveGitleaksPin(platformKey: string): (typeof GITLEAKS_PINS)[
   return GITLEAKS_PINS[platformKey as keyof typeof GITLEAKS_PINS];
 }
 
+function addedHunkLines(diff: string, combined: boolean): string[] {
+  const added: string[] = [];
+  let prefixLength = 0;
+  for (const line of diff.split(/\r?\n/g)) {
+    if (line.startsWith("diff ")) {
+      prefixLength = 0;
+      continue;
+    }
+    const hunk = /^(@{2,}) /.exec(line);
+    if (hunk) {
+      prefixLength = combined ? hunk[1].length - 1 : 1;
+      continue;
+    }
+    if (prefixLength > 0 && line.startsWith("+".repeat(prefixLength))) {
+      added.push(line.slice(prefixLength));
+    }
+  }
+  return added;
+}
+
 export function buildGitleaksWorktreeInput({
   execFile = execFileSync,
 }: { execFile?: (file: string, args: string[], options: { encoding: "utf8" }) => string } = {}): Buffer {
   const diff = execFile("git", ["diff", "--no-ext-diff", "--unified=0", "HEAD", "--"], { encoding: "utf8" });
-  const addedLines = diff
-    .split(/\r?\n/g)
-    .filter((line) => line.startsWith("+") && !line.startsWith("+++"))
-    .map((line) => line.slice(1));
+  const addedLines = addedHunkLines(diff, false);
   const untracked = execFile("git", ["ls-files", "--others", "--exclude-standard"], { encoding: "utf8" })
     .split(/\r?\n/g)
     .map((line) => line.trim())
@@ -477,10 +494,7 @@ function combinedDiffResolutionLines(
   commit: string,
 ): string[] {
   const combined = execFile("git", ["diff-tree", "--cc", "--no-color", "-r", commit], { encoding: "utf8" });
-  return combined
-    .split(/\r?\n/g)
-    .filter((line) => line.startsWith("++") && !line.startsWith("+++"))
-    .map((line) => line.slice(2));
+  return addedHunkLines(combined, true);
 }
 
 export async function ensurePinnedGitleaks({

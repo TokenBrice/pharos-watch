@@ -26,7 +26,8 @@ export interface TelegramAdoptionReport {
   adoption: {
     subscriberCount: number;
     activeWatchers7d: number;
-    dailyActive: number;
+    configuredWatchersDaily: number | null;
+    configuredWatchersSnapshotAt: string | null;
     alertsSent7d: number;
     alertsSent30d: number;
   };
@@ -40,6 +41,7 @@ type SubscriberCountRow = {
 
 type LifecycleRow = {
   day?: string | null;
+  snapshot_at?: number | string | null;
   active_watchers?: number | string | null;
 };
 
@@ -70,13 +72,17 @@ function utcDay(sec: number): string {
 }
 
 
-function latestLifecycleValue(rows: LifecycleRow[]): number | null {
-  const values = rows
-    .filter((row) => typeof row.day === "string")
+function latestLifecycleSnapshot(rows: LifecycleRow[]): { count: number; observedAt: string | null } | null {
+  const latest = rows
+    .filter((row) => typeof row.day === "string" && numberValue(row.active_watchers) != null)
     .sort((left, right) => String(left.day).localeCompare(String(right.day)))
-    .map((row) => numberValue(row.active_watchers))
-    .filter((value): value is number => value != null);
-  return values.at(-1) ?? null;
+    .at(-1);
+  if (!latest) return null;
+  const snapshotAt = numberValue(latest.snapshot_at);
+  return {
+    count: Math.max(0, numberValue(latest.active_watchers)!),
+    observedAt: snapshotAt != null && snapshotAt > 0 ? new Date(snapshotAt * 1000).toISOString() : null,
+  };
 }
 
 
@@ -117,7 +123,7 @@ export function collectTelegramAdoptionReport(client: D1Client, nowSec: number):
        FROM telegram_subscribers`,
   )[0] ?? {};
   const lifecycleRows = client.query<LifecycleRow>(
-    `SELECT day, active_watchers
+    `SELECT day, snapshot_at, active_watchers
        FROM telegram_watcher_lifecycle_daily
       WHERE day >= ${sqlString(utcDay(activeWatcherStartSec))}
       ORDER BY day ASC`,
@@ -135,8 +141,7 @@ export function collectTelegramAdoptionReport(client: D1Client, nowSec: number):
         AND final_delivery_at >= ${adoptionStartSec}`,
   );
 
-  const lifecycleActive = latestLifecycleValue(lifecycleRows);
-  const dailyActive = lifecycleActive ?? nonnegative(subscriberRow.active_watchers_7d);
+  const lifecycleSnapshot = latestLifecycleSnapshot(lifecycleRows);
   const usageAlerts = usageAlertsSent(usageRows);
   const alertsSent30d = deliveryRows.length > 0 ? deliveryRows.length : usageAlerts;
   const alertsSent7d = deliveryRows.length > 0
@@ -147,8 +152,9 @@ export function collectTelegramAdoptionReport(client: D1Client, nowSec: number):
     generatedAt: new Date(nowSec * 1000).toISOString(),
     adoption: {
       subscriberCount: nonnegative(subscriberRow.subscriber_count),
-      activeWatchers7d: lifecycleActive ?? nonnegative(subscriberRow.active_watchers_7d),
-      dailyActive,
+      activeWatchers7d: nonnegative(subscriberRow.active_watchers_7d),
+      configuredWatchersDaily: lifecycleSnapshot?.count ?? null,
+      configuredWatchersSnapshotAt: lifecycleSnapshot?.observedAt ?? null,
       alertsSent7d,
       alertsSent30d,
     },
@@ -172,7 +178,8 @@ export function renderTelegramAdoptionBlock(report: TelegramAdoptionReport): str
     "| --- | ---: |",
     `| Subscribers | ${displayNumber(report.adoption.subscriberCount)} |`,
     `| Active watchers (7d) | ${displayNumber(report.adoption.activeWatchers7d)} |`,
-    `| Daily active watchers | ${displayNumber(report.adoption.dailyActive)} |`,
+    `| Configured watchers (daily snapshot) | ${displayNumber(report.adoption.configuredWatchersDaily)} |`,
+    `| Configured watchers snapshot observed at | ${report.adoption.configuredWatchersSnapshotAt ?? "not measured"} |`,
     `| Alerts sent (7d / 30d) | ${displayNumber(report.adoption.alertsSent7d)} / ${displayNumber(report.adoption.alertsSent30d)} |`,
     END_MARKER,
   ].join("\n");

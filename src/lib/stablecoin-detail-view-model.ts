@@ -35,9 +35,6 @@ export function buildStablecoinDetailViewModel({
 }: BuildStablecoinDetailViewModelParams): StablecoinDetailViewModel {
   const { supplyHistory, stablecoinList, pegSummary, dexLiquidity, reportCards, redemptionBackstops } = queries;
   if (supplyHistory.isLoading || stablecoinList.isLoading) return { status: "loading", handleRetryAll };
-  if (stablecoinList.isError) {
-    return { status: "list-error", listError: stablecoinList.error, handleRetryAll };
-  }
   const listData = stablecoinList.data;
   if (!listData) {
     return {
@@ -47,7 +44,11 @@ export function buildStablecoinDetailViewModel({
     };
   }
   const coinData = listData.peggedAssets?.find((candidate) => candidate.id === id);
-  if (!coinData) return { status: "not-found", handleRetryAll };
+  if (!coinData) {
+    return stablecoinList.isError
+      ? { status: "list-error", listError: stablecoinList.error, handleRetryAll }
+      : { status: "not-found", handleRetryAll };
+  }
 
   const isNavToken = coin.flags.navToken ?? false;
   const resolvedSupplyHistory = supplyHistory.data ?? [];
@@ -55,7 +56,7 @@ export function buildStablecoinDetailViewModel({
     coin,
     coinData,
     listData.nativeSupply ?? null,
-    resolvedSupplyHistory,
+    queries.annualPriceHistory?.data ?? resolvedSupplyHistory,
     supplemental.nowMs ?? Date.now(),
   );
   const pegPrice = buildDetailPegPriceSnapshot(id, coin, pegSummary.data);
@@ -158,7 +159,9 @@ export function buildStablecoinDetailViewModel({
     hasBlacklist: featureAvailability.hasBlacklist,
     blacklistSymbol: featureAvailability.blacklistSymbol,
     supplyHistory: resolvedSupplyHistory,
-    supplyUpdatedAt: supplyHistory.dataUpdatedAt,
+    supplyUpdatedAt: supplyHistory.meta
+      ? (supplyHistory.meta.updatedAt ?? 0) * 1000
+      : supplyHistory.dataUpdatedAt,
     reserves: supplemental.reserves.live ?? getReserves(coin),
     reserveFetchError: supplemental.reserves.error ?? null,
     supplyError: supplyHistory.error,

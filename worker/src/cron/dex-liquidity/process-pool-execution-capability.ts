@@ -1,6 +1,4 @@
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
-import { buildUniswapV4RegisteredExecutionTarget } from "./execution-targets/uniswap-v4";
-import { buildQuoterV2RegisteredExecutionTarget } from "./execution-targets/quoter-v2";
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
@@ -137,6 +135,7 @@ function buildDirectApiFactoryInput(input: {
     qualityMultiplier: 1,
     feeTierForExtra: feePips == null ? undefined : feePips / 100,
     balanceRatio: 1,
+    hasMeasuredBalance: false,
     poolMaturityDays: 30,
     organicFraction: 0.5,
     hasMeasuredOrganicFraction: false,
@@ -777,37 +776,20 @@ export function buildPoolExecutionCapability(
         })
       : null;
 
-  const uniV3MeasuredTarget = buildQuoterV2RegisteredExecutionTarget({
-    context,
-    identity,
-    enrichment,
-    stablecoinId,
-  })?.measuredExecutionTarget ?? null;
-
-  const uniswapV4MeasuredTarget = buildUniswapV4RegisteredExecutionTarget({
-    context,
-    identity,
-    enrichment,
-    stablecoinId,
-  })?.measuredExecutionTarget ?? null;
-
-  const measuredExecutionTarget =
+  const curveMeasuredTarget =
     curveCryptoSwapMeasuredTarget ??
     curveStableSwapNgMeasuredTarget ??
-    curveCompositeMeasuredTarget ??
-    uniV3MeasuredTarget ??
-    uniswapV4MeasuredTarget;
+    curveCompositeMeasuredTarget;
+  const registeredTarget = curveMeasuredTarget == null
+    ? buildRegisteredDexExecutionTarget({ context, identity, enrichment, stablecoinId })
+    : {};
+  const measuredExecutionTarget = curveMeasuredTarget ?? registeredTarget.measuredExecutionTarget;
   const curveStableswapRateInputExecutionCandidate =
     curveExecutionCapability.rateInputCandidate &&
     measuredExecutionTarget == null &&
     curveStableSwapMeasuredTargets.length === 0
       ? curveExecutionCapability.rateInputCandidate
       : undefined;
-  const measuredExecutionGate: DexExecutionCapabilityGate | null =
-    (protocol === "uniswap-v3" && !uniV3MeasuredTarget) ||
-    (protocol === "uniswap-v4" && !uniswapV4MeasuredTarget)
-      ? { family: "measured-execution", reason: "target-unresolved" }
-      : null;
   const evmV2ExecutionCandidate = buildEvmV2ExecutionCandidate({
     chain: chainNorm,
     protocol: pool.project,
@@ -822,16 +804,7 @@ export function buildPoolExecutionCapability(
     !curveStableSwapNgMeasuredTarget &&
     !curveCompositeMeasuredTarget
       ? curveExecutionCapability.gate
-      : measuredExecutionGate;
-  const registeredTarget =
-    measuredExecutionTarget == null
-      ? buildRegisteredDexExecutionTarget({
-          context,
-          identity,
-          enrichment,
-          stablecoinId,
-        })
-      : {};
+      : registeredTarget.executionCapabilityGate;
 
   return {
     ...(curveExecutionCapability.executionModel

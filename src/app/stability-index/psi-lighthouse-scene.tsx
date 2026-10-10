@@ -4,7 +4,7 @@ import { useId } from "react";
 import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 import { clampScore } from "@shared/lib/math";
-import { PSI_HEX_COLORS, PSI_PULSE_DURATION, type ConditionBand } from "@shared/lib/psi-colors";
+import { PSI_HEX_COLORS, PSI_PULSE_DURATION, type ConditionBand } from "@shared/lib/classification";
 import "./psi-lighthouse-scene.css";
 
 const WIDTH = 280;

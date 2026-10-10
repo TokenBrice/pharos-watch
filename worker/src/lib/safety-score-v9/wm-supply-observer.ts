@@ -251,16 +251,8 @@ export async function observeWmReviewedDeploymentUnitPartitionAttempt(
 }
 
 export async function observeWmReviewedDeploymentUnitPartition(
-  input: {
-    aggregateSupplyUsd: number;
-    registryFingerprint: string;
-    scoringClockSec: number;
-    chainRpcs: Map<string, ChainRpcConfig>;
-    signal?: AbortSignal;
-    executionWindow?: V9ExecutionWindow;
-    assetDeadlineMs?: number;
-  },
-  dependencyOverrides: Partial<WmObserverDependencies> = {},
+  input: Parameters<typeof observeWmReviewedDeploymentUnitPartitionAttempt>[0],
+  dependencyOverrides: Parameters<typeof observeWmReviewedDeploymentUnitPartitionAttempt>[1] = {},
 ): Promise<ReviewedDeploymentUnitPartitionV1 | null> {
   const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt(
     input,

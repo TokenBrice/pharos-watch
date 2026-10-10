@@ -1,6 +1,6 @@
 import { formatCurrency } from "@shared/lib/format";
 import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
 export type V9SortKey = "overall" | "backing" | "exit" | "control" | "mcap";
@@ -49,10 +49,10 @@ export function buildV9GradeCounts(
 function getSortScore(
   card: V9ConsumerCard,
   key: V9SortKey,
-  mcapMap: ReadonlyMap<string, number>,
+  mcapMap: ReadonlyMap<string, number | null>,
 ): number | null {
   if (key === "overall") return card.score;
-  if (key === "mcap") return mcapMap.get(card.id) ?? 0;
+  if (key === "mcap") return mcapMap.get(card.id) ?? null;
   if (card.ratingStatus !== "rated") return null;
   return card.pillars[key].score;
 }
@@ -70,7 +70,7 @@ export function filterAndSortV9Cards(
     pegFilter: PegFilter;
     pegTypeMap: ReadonlyMap<string, string>;
     sortKey: V9SortKey;
-    mcapMap: ReadonlyMap<string, number>;
+    mcapMap: ReadonlyMap<string, number | null>;
   },
 ): V9ConsumerCard[] {
   const gradeFiltered = gradeFilter === "all"
@@ -121,7 +121,7 @@ export function groupV9CardsByGrade(
 
 export function buildV9HeadlineStats(
   cards: readonly V9ConsumerCard[],
-  mcapMap: ReadonlyMap<string, number>,
+  mcapMap: ReadonlyMap<string, number | null>,
 ): Array<{ label: string; value: string; detail: string }> {
   const ratedCards = cards.filter((card): card is V9ConsumerCard & { score: number } => card.ratingStatus === "rated" && card.score !== null);
   if (ratedCards.length === 0) return [];
@@ -129,14 +129,15 @@ export function buildV9HeadlineStats(
   const averageScore = Math.round(
     ratedCards.reduce((sum, card) => sum + card.score, 0) / ratedCards.length,
   );
-  const totalSupply = ratedCards.reduce((sum, card) => sum + (mcapMap.get(card.id) ?? 0), 0);
-  const abSupply = ratedCards
-    .filter((card) => {
-      const grade = cardGroup(card);
-      return grade === "A" || grade === "B";
-    })
-    .reduce((sum, card) => sum + (mcapMap.get(card.id) ?? 0), 0);
-  const abPercent = totalSupply > 0 ? Math.round((abSupply / totalSupply) * 100) : 0;
+  const observedCards = ratedCards.filter((card) => mcapMap.get(card.id) != null);
+  const unavailableCount = ratedCards.length - observedCards.length;
+  const totalSupply = observedCards.reduce((sum, card) => sum + mcapMap.get(card.id)!, 0);
+  const abCards = observedCards.filter((card) => {
+    const grade = cardGroup(card);
+    return grade === "A" || grade === "B";
+  });
+  const abSupply = abCards.reduce((sum, card) => sum + mcapMap.get(card.id)!, 0);
+  const abPercent = totalSupply > 0 ? Math.round((abSupply / totalSupply) * 100) : null;
 
   const weakestPillar = (["backing", "exit", "control"] as const)
     .map((pillar) => {
@@ -161,9 +162,11 @@ export function buildV9HeadlineStats(
       detail: scoreToGrade(averageScore),
     },
     {
-      label: "Supply in A/B",
-      value: `${abPercent}%`,
-      detail: formatCurrency(abSupply),
+      label: unavailableCount > 0 && observedCards.length > 0 ? "Known supply in A/B" : "Supply in A/B",
+      value: abPercent === null ? "Unavailable" : `${abPercent}%`,
+      detail: observedCards.length === 0
+        ? "Supply unavailable"
+        : `${formatCurrency(abSupply)}${unavailableCount > 0 ? ` · ${observedCards.length}/${ratedCards.length} rated assets observed` : ""}`,
     },
     {
       label: "Weakest pillar",
@@ -178,9 +181,9 @@ export function buildSafetyMcapMap(
     id: string;
     circulating?: Record<string, number> | null;
   }>,
-): Map<string, number> {
+): Map<string, number | null> {
   if (!peggedAssets) return new Map();
   return new Map(
-    peggedAssets.map((asset) => [asset.id, getCirculatingRaw(asset)]),
+    peggedAssets.map((asset) => [asset.id, getCirculatingRawOrNull(asset)]),
   );
 }

@@ -3,6 +3,7 @@ import { BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isBlacklistAmountGapStatus } from "@shared/lib/blacklist";
 import { BLACKLIST_AMOUNT_STATUS_VALUES } from "@shared/types/market";
+import { BLACKLIST_PUBLIC_EVENT_SQL } from "./blacklist/shared";
 import {
   BLACKLIST_GAP_METRICS_CACHE_VERSION,
   getBlacklistGapMetricsCacheKey,
@@ -233,7 +234,7 @@ async function queryLiveBlacklistGapMetrics(
            ) as unrecoverable
          FROM blacklist_events
          WHERE event_type IN ('blacklist', 'destroy')
-           AND suppression_reason IS NULL`,
+           AND ${BLACKLIST_PUBLIC_EVENT_SQL}`,
     )
     .bind(now - options.recentWindowSec, now)
     .first<{
@@ -253,7 +254,7 @@ async function queryLiveBlacklistGapMetrics(
          SELECT amount_status, COUNT(*) AS n
          FROM blacklist_events
          WHERE event_type IN ('blacklist', 'destroy')
-           AND suppression_reason IS NULL
+           AND ${BLACKLIST_PUBLIC_EVENT_SQL}
          GROUP BY amount_status`,
       )
       .all<{ amount_status: string | null; n: number }>()
@@ -266,7 +267,7 @@ async function queryLiveBlacklistGapMetrics(
          SELECT amount_source, COUNT(*) AS n
          FROM blacklist_events
          WHERE event_type IN ('blacklist', 'destroy')
-           AND suppression_reason IS NULL
+           AND ${BLACKLIST_PUBLIC_EVENT_SQL}
          GROUP BY amount_source`,
       )
       .all<{ amount_source: string | null; n: number }>()
@@ -278,9 +279,10 @@ async function queryLiveBlacklistGapMetrics(
     sourceRowsPromise,
   ]);
 
-  const totalEvents = row?.total ?? 0;
-  const missingAmounts = row?.missing ?? 0;
-  const recentMissingAmounts = row?.missing_recent ?? 0;
+  if (row == null) throw new Error("blacklist-gap-aggregate-missing");
+  const totalEvents = row.total;
+  const missingAmounts = row.missing ?? 0;
+  const recentMissingAmounts = row.missing_recent ?? 0;
   const statusDistribution = Object.fromEntries(
     (statusRows.results ?? []).map((statusRow) => [statusRow.amount_status ?? "unknown", statusRow.n]),
   );
@@ -294,10 +296,10 @@ async function queryLiveBlacklistGapMetrics(
     recentMissingAmounts,
     recentWindowSec: options.recentWindowSec,
     missingRatio: totalEvents > 0 ? missingAmounts / totalEvents : 0,
-    unrecoverableMissingAmounts: row?.unrecoverable ?? 0,
-    oldestRecoverableAgeSec: row?.oldest_gap_age_sec ?? null,
-    neverAttemptedCount: row?.never_attempted ?? 0,
-    repeatedFailureCount: row?.repeated_failures ?? 0,
+    unrecoverableMissingAmounts: row.unrecoverable ?? 0,
+    oldestRecoverableAgeSec: row.oldest_gap_age_sec ?? null,
+    neverAttemptedCount: row.never_attempted ?? 0,
+    repeatedFailureCount: row.repeated_failures ?? 0,
     statusDistribution,
     sourceDistribution,
   };

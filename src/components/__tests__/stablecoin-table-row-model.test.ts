@@ -154,4 +154,51 @@ describe("buildStablecoinTableRowModel supply changes", () => {
     expect(model.change24h).toBeNull();
     expect(model.change7d).toBeNull();
   });
+
+  it("preserves absent current supply without a contraction or invented sparkline zero", () => {
+    const model = buildStablecoinTableRowModel({
+      coin: makeStablecoin({
+        circulating: {},
+        circulatingPrevDay: { peggedUSD: 100 },
+        circulatingPrevWeek: { peggedUSD: 100 },
+      }),
+      density: "spacious",
+      variant: "default",
+    });
+    expect(model.circulating).toBeNull();
+    expect(model.change24h).toBeNull();
+    expect(model.change7d).toBeNull();
+    expect(model.supplySparklineValues).toEqual([100, 100, null]);
+  });
+
+  it("keeps a gap for absent middle history while retaining the weekly change", () => {
+    const model = buildStablecoinTableRowModel({
+      coin: makeStablecoin({
+        circulating: { peggedUSD: 50 },
+        circulatingPrevDay: {},
+        circulatingPrevWeek: { peggedUSD: 40 },
+      }),
+      density: "spacious",
+      variant: "default",
+    });
+    expect(model.change24h).toBeNull();
+    expect(model.change7d).toBe(25);
+    expect(model.supplySparklineValues).toEqual([40, null, 50]);
+  });
+
+  it("retains observed zero supply and a real full contraction", () => {
+    const model = buildStablecoinTableRowModel({
+      coin: makeStablecoin({
+        circulating: { peggedUSD: 0 },
+        circulatingPrevDay: { peggedUSD: 100 },
+        circulatingPrevWeek: { peggedUSD: 100 },
+      }),
+      density: "spacious",
+      variant: "default",
+    });
+    expect(model.circulating).toBe(0);
+    expect(model.change24h).toBe(-100);
+    expect(model.change7d).toBe(-100);
+    expect(model.supplySparklineValues).toEqual([100, 100, 0]);
+  });
 });

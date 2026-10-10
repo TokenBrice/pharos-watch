@@ -1,6 +1,7 @@
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { parseCsvEnv } from "./env";
+import { assessFreshnessTimestamp } from "./api-freshness-age";
 
 const DEFAULT_MINT_BURN_MAJOR_SYMBOLS = [
   "USDT",
@@ -67,8 +68,8 @@ export function computeMintBurnSyncFreshnessStatus(
   nowSec: number,
   lastSuccessfulSyncAt: number | null,
 ): FreshnessStatus {
-  if (lastSuccessfulSyncAt == null) return "stale";
-  const ageSec = Math.max(0, nowSec - lastSuccessfulSyncAt);
+  const { ageSeconds: ageSec } = assessFreshnessTimestamp(nowSec, lastSuccessfulSyncAt);
+  if (ageSec == null) return "stale";
   const ratio = ageSec / MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC;
   if (ratio <= 1) return "fresh";
   if (ratio <= MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO) return "degraded";
@@ -96,7 +97,7 @@ export function buildMintBurnSyncHealth(
   }
 
   return {
-    lastSuccessfulSyncAt,
+    lastSuccessfulSyncAt: assessFreshnessTimestamp(nowSec, lastSuccessfulSyncAt).reason == null ? lastSuccessfulSyncAt : null,
     freshnessStatus,
     warning,
     criticalLaneHealthy,

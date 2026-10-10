@@ -264,6 +264,13 @@ export const DigestSafetyMapSummarySchema = z
     gradedCount: z.number().int().nonnegative(),
     notRatedCount: z.number().int().nonnegative(),
     totalMcapUsd: z.number().nonnegative(),
+    supplyCoverage: z.object({
+      complete: z.boolean(),
+      observedCount: z.number().int().nonnegative(),
+      unavailableCount: z.number().int().nonnegative(),
+      unavailableById: z.record(z.string(), z.string()),
+      shareBasis: z.literal("known-mapped-supply"),
+    }).optional(),
     floorMcapByTier: z
       .object({
         a: z.number().nonnegative(),
@@ -302,6 +309,8 @@ export interface DigestInputData {
   digestVersion?: number;
   aggregateUniverse?: "core-stablecoins-v1";
   totalMcapUsd: number;
+  /** totalMcapUsd is a known subtotal, not a complete market total unless coverage is complete. */
+  supplyCoverage?: { complete: boolean; observedCount: number; unavailableCount: number };
   mcap7dDelta: number;
   /**
    * Basis of `mcap7dDelta`: core coins carrying a prior-week supply bucket and
@@ -345,7 +354,12 @@ export interface DigestInputData {
     peakBps?: number;
     mcapUsd?: number;
   }[];
-  activeDepegCount: number;
+  /** Uncapped tracked open-event count; null when the query is unavailable. */
+  activeDepegCount: number | null;
+  /** Uncapped recovered-event count, before market-cap/severity/display filters. */
+  resolvedDepegCount?: number | null;
+  /** Full incident identities for weekly deduplication; absent on legacy editions. */
+  depegSignalKeys?: { active: string[] | null; resolved: string[] | null };
   topDepegs: {
     stablecoinId?: string;
     symbol: string;
@@ -388,6 +402,8 @@ export interface DigestInputData {
   yesterdayIndex: { score: number; band: string } | null;
   blacklistActivity?: {
     eventCount: number;
+    /** Promotion is editorial only; all observed events remain in accounting. */
+    editorialEligible?: boolean;
     /** Sum of the known amounts only: a lower bound when `unpricedEventCount > 0`. */
     totalAmountUsd: number;
     /** Events whose USD amount could not be priced; their `amountUsd` is null. */
@@ -605,7 +621,7 @@ const DigestRiskSignalSchema = z.object({
   bps: z.number(),
   mcapUsd: z.number().nullable(),
   severity: z.enum(["critical", "watch"]),
-  activeCount: z.number().optional(),
+  activeCount: z.number().nullable().optional(),
   date: z.string().nullable().optional(),
 });
 export type DigestRiskSignal = z.infer<typeof DigestRiskSignalSchema>;
@@ -746,7 +762,13 @@ const DigestSnapshotInputDataSchema = z
     aggregateUniverse: z.literal("core-stablecoins-v1").optional(),
     totalMcapUsd: z.number().optional(),
     mcap7dDelta: z.number().optional(),
-    activeDepegCount: z.number().optional(),
+    activeDepegCount: z.number().nullable().optional(),
+    resolvedDepegCount: z.number().nullable().optional(),
+    depegSignalKeys: z.object({
+      active: z.array(z.string()).nullable(),
+      resolved: z.array(z.string()).nullable(),
+    }).optional(),
+    degradedSources: z.array(z.string()).optional(),
     changeSummary: DigestChangeSummarySchema.optional(),
     nextTriggers: z.array(DigestNextTriggerSchema).optional(),
     forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).optional(),
@@ -890,5 +912,11 @@ export const DigestSnapshotResponseSchema = z.object({
   prevInputData: DigestSnapshotInputDataSchema.nullable(),
   depegEvents: z.array(DigestSnapshotDepegEventSchema),
   blacklistEvents: z.array(DigestSnapshotBlacklistEventSchema),
+  blacklistSummary: z.object({
+    totalEvents: z.number().int().nonnegative(),
+    knownAmountUsd: z.number().nullable(),
+    valuedEvents: z.number().int().nonnegative(),
+    unavailableAmountEvents: z.number().int().nonnegative(),
+  }).optional().describe("Full unsuppressed UTC-day cohort; blacklistEvents is only the latest 50-row sample. Missing summary means legacy unknown totals/valuation."),
 });
 export type DigestSnapshotResponse = z.infer<typeof DigestSnapshotResponseSchema>;

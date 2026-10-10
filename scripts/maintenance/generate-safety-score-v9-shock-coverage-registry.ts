@@ -11,7 +11,6 @@ import {
   capturePathFromSummary,
   parseMechanismCaptureSummary,
 } from "../lib/mechanism-measurement/capture-summary";
-import type { MechanismCaptureSummary } from "../lib/mechanism-measurement/capture-summary";
 import {
   ShockMeasuredFactsSchema,
   type ShockCoverageEvidenceV1,
@@ -172,12 +171,12 @@ export interface ShockCoverageCaptureSource {
   summary: ReturnType<typeof parseMechanismCaptureSummary>;
 }
 
-export function collectShockCoverageSummaryPaths(root = REPO_ROOT): string[] {
+export function collectShockCoverageCaptureSources(root = REPO_ROOT): ShockCoverageCaptureSource[] {
   const measurementRoot = resolve(root, MECHANISM_MEASUREMENT_ROOT);
   if (!existsSync(measurementRoot)) {
     throw new Error(`Missing shock-coverage measurement root: ${SHOCK_COVERAGE_JOURNAL_ROOT}`);
   }
-  const paths = readdirSync(measurementRoot, { withFileTypes: true })
+  const sources = readdirSync(measurementRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .flatMap((assetDirectory) => {
       const assetPath = resolve(measurementRoot, assetDirectory.name);
@@ -185,58 +184,30 @@ export function collectShockCoverageSummaryPaths(root = REPO_ROOT): string[] {
         .filter((entry) => entry.isFile() && entry.name.endsWith(CAPTURE_SUMMARY_SUFFIX))
         .map((entry) => resolve(assetPath, entry.name));
     })
-    .filter((path) => {
-      const summary = parseMechanismCaptureSummary(JSON.parse(readFileSync(path, "utf8")), toRepoPath(root, path));
-      return summary.summary.kind === "cdp-shock-coverage-measurement";
+    .map((summaryPath) => {
+      const relativeSummaryPath = toRepoPath(root, summaryPath);
+      const summary = parseMechanismCaptureSummary(JSON.parse(readFileSync(summaryPath, "utf8")), relativeSummaryPath);
+      return { summaryPath, capturePath: resolve(root, capturePathFromSummary(relativeSummaryPath)), summary };
     })
-    .sort(compareText);
-  if (paths.length === 0) {
+    .filter((source) => source.summary.summary.kind === "cdp-shock-coverage-measurement")
+    .sort((left, right) => compareText(left.summaryPath, right.summaryPath));
+  if (sources.length === 0) {
     throw new Error(`No shock-coverage summaries found under ${SHOCK_COVERAGE_JOURNAL_ROOT}`);
   }
-  return paths;
+  return sources;
 }
 
-export function collectShockCoverageCaptureSources(root = REPO_ROOT): ShockCoverageCaptureSource[] {
-  return collectShockCoverageSummaryPaths(root).map((summaryPath) => {
-    const relativeSummaryPath = toRepoPath(root, summaryPath);
-    const summary = parseMechanismCaptureSummary(JSON.parse(readFileSync(summaryPath, "utf8")), relativeSummaryPath);
-    return {
-      summaryPath,
-      capturePath: resolve(root, capturePathFromSummary(relativeSummaryPath)),
-      summary,
-    };
-  });
-}
-
-/** Backward-compatible citation paths, now sourced from compact summaries. */
-export function collectShockCoverageJournalPaths(root = REPO_ROOT): string[] {
-  return collectShockCoverageCaptureSources(root).map((source) => String(source.summary.summary.journalPath));
-}
-
-function loadShockSummary(root: string, summaryPath: string): {
-  summary: MechanismCaptureSummary;
-  journalPath: string;
-  journalSha256: string;
-} {
-  const relativeSummaryPath = toRepoPath(root, summaryPath);
-  const summary = parseMechanismCaptureSummary(JSON.parse(readFileSync(summaryPath, "utf8")), relativeSummaryPath);
-  const compact = ShockSummarySchema.parse(summary.summary);
-  if (compact.assetId !== summary.mechanism) {
-    throw new Error(`Shock-coverage summary mechanism mismatch: ${relativeSummaryPath}`);
-  }
-  return { summary, journalPath: compact.journalPath, journalSha256: summary.sha256 };
-}
-
-export function projectShockCoverageJournal(
+function projectShockCoverageSource(
   root: string,
-  absolutePath: string,
-  replayAttestations = loadReplayAttestations(root),
+  source: ShockCoverageCaptureSource,
+  replayAttestations: ReplayAttestations | null,
 ): ShockCoverageRegistryEntry {
-  const summaryPath = absolutePath.endsWith(CAPTURE_SUMMARY_SUFFIX)
-    ? absolutePath
-    : resolve(root, `${toRepoPath(root, absolutePath)}${CAPTURE_SUMMARY_SUFFIX}`);
-  const { summary: captureSummary, journalPath, journalSha256 } = loadShockSummary(root, summaryPath);
-  const journal = ShockSummarySchema.parse(captureSummary.summary);
+  const journal = ShockSummarySchema.parse(source.summary.summary);
+  if (journal.assetId !== source.summary.mechanism) {
+    throw new Error(`Shock-coverage summary mechanism mismatch: ${toRepoPath(root, source.summaryPath)}`);
+  }
+  const journalPath = journal.journalPath;
+  const journalSha256 = source.summary.sha256;
   const assetDirectory = journalPath.split("/").at(-2);
   if (assetDirectory !== journal.assetId) {
     throw new Error(`Shock-coverage journal asset mismatch: ${journalPath} contains ${journal.assetId}`);
@@ -290,8 +261,8 @@ export function projectShockCoverageJournal(
 
 export function buildShockCoverageMeasurementRegistry(root = REPO_ROOT): ShockCoverageMeasurementRegistryV1 {
   const replayAttestations = loadReplayAttestations(root);
-  const measurements = collectShockCoverageSummaryPaths(root)
-    .map((path) => projectShockCoverageJournal(root, path, replayAttestations))
+  const measurements = collectShockCoverageCaptureSources(root)
+    .map((source) => projectShockCoverageSource(root, source, replayAttestations))
     .sort(
       (left, right) =>
         compareText(left.assetId, right.assetId) ||

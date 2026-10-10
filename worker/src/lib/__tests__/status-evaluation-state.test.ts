@@ -87,6 +87,32 @@ function makeDataQualityEvaluationInput(
 }
 
 describe("status evaluation policy", () => {
+  it.each([
+    { circuitQueryError: "circuits-read-failed", circuitImpactStatus: "degraded" as const },
+    { mintBurnQueryError: "mint-burn-read-failed", mintBurnImpactStatus: "degraded" as const },
+  ])("never grades unavailable service diagnostics healthy (%j)", (overrides) => {
+    const result = evaluateAvailabilityStatus(makeAvailabilityCauseInput(makePublicHealth("healthy", overrides)));
+    expect(result.status).toBe("degraded");
+    expect(result.causes).toContainEqual(expect.objectContaining({ severity: "warning" }));
+  });
+  it.each(["missing-timestamp", "invalid-timestamp"] as const)("names unavailable cache freshness without invented ratios (%s)", (timestampReason) => {
+    const result = evaluateAvailabilityStatus(makeAvailabilityCauseInput(makePublicHealth("stale", {
+      caches: { stablecoins: { ageSeconds: null, maxAge: 600, healthy: false, timestampReason } },
+      worstCacheRatio: null,
+    })));
+    const cause = result.causes.find((entry) => entry.code === "cache_freshness_unavailable");
+    expect(cause).toBeDefined();
+    expect(cause).not.toHaveProperty("value");
+    expect(cause?.message).toContain(timestampReason);
+    expect(result.causes.some((entry) => entry.code === "cache_ratio_stale")).toBe(false);
+  });
+
+  it("preserves an actually measured 99x cache breach", () => {
+    const result = evaluateAvailabilityStatus(makeAvailabilityCauseInput(makePublicHealth("stale", {
+      caches: { stablecoins: { ageSeconds: 99 * 600, maxAge: 600, healthy: false } }, worstCacheRatio: 99,
+    })));
+    expect(result.causes.find((entry) => entry.code === "cache_ratio_stale")).toMatchObject({ value: 99 });
+  });
   it("does not recover to healthy when stale reserve evidence becomes unreadable", () => {
     const stale = makeReserveComposition({ status: "stale", freshCoins: 0, freshCoverageRatio: 0 });
     const before = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
@@ -217,27 +243,10 @@ describe("status evaluation policy", () => {
     expect(assessment.status).toBe("stale");
   });
 
-  it("does not let circuit diagnostics failure degrade availability on its own", () => {
+  it("degrades availability when circuit diagnostics cannot be read", () => {
     const availability = evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ publicHealth: makePublicHealth("healthy", {
       circuitImpactStatus: "degraded",
       circuitQueryError: "Circuit breaker diagnostics unavailable.",
-    }),
-    availabilityImpactingCronErrors: 0,
-    availabilityImpactingUnhealthyCrons: 0,
-    availabilityImpactingConsecutiveCronErrors: 0, })).status;
-
-    expect(availability).toBe("healthy");
-  });
-
-  it("uses the same durable alert floor for admin availability", () => {
-    const availability = evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ publicHealth: makePublicHealth("healthy", {
-      alertBrokerImpactStatus: "degraded",
-      alertBroker: {
-        ...makePublicHealth().alertBroker,
-        activeCount: 1,
-        criticalActiveCount: 1,
-        activeConditionKeys: ["cron:sync-live-reserves"],
-      },
     }),
     availabilityImpactingCronErrors: 0,
     availabilityImpactingUnhealthyCrons: 0,
@@ -497,9 +506,9 @@ describe("status cause text", () => {
     expect(causes).toContainEqual(
       expect.objectContaining({
         code: "mint_burn_health_query_failed",
-        severity: "info",
+        severity: "warning",
         message:
-          "Mint/burn health query failed; diagnostics are temporarily unavailable. " +
+          "Mint/burn health query failed (mint-burn-read-failed); diagnostics are temporarily unavailable. " +
           "Latest critical cron run status: error.",
       }),
     );
@@ -1023,7 +1032,7 @@ describe("availability cron-error semantics", () => {
     ).toBe("stale");
   });
 
-  it("excludes mintBurnImpactStatus from availability when mintBurnQueryError is set", () => {
+  it("uses an unavailable degradation instead of trusting stale mint/burn classification", () => {
     expect(
       evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ ...baseInput,
       publicHealth: makePublicHealth("healthy", {
@@ -1031,7 +1040,7 @@ describe("availability cron-error semantics", () => {
         mintBurnQueryError: "Mint/burn health data unavailable.",
         mintBurnLastRunStatus: "error",
       }), })).status,
-    ).toBe("healthy");
+    ).toBe("degraded");
   });
 });
 

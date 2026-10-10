@@ -52,8 +52,8 @@ function computeSupplyMovers(coins: readonly StablecoinData[], nowSec: number): 
     if (!Number.isFinite(pctChange) || pctChange === 0) continue;
     movers.push({ id: c.id, symbol: c.symbol, pctChange });
   }
-  const ups = [...movers].sort((a, b) => b.pctChange - a.pctChange).slice(0, 4);
-  const downs = [...movers].sort((a, b) => a.pctChange - b.pctChange).slice(0, 4);
+  const ups = movers.filter((mover) => mover.pctChange > 0).sort((a, b) => b.pctChange - a.pctChange).slice(0, 4);
+  const downs = movers.filter((mover) => mover.pctChange < 0).sort((a, b) => a.pctChange - b.pctChange).slice(0, 4);
   return { ups, downs };
 }
 
@@ -70,10 +70,7 @@ export function SupplyMovesCard(): React.JSX.Element {
   const logoMap = logos ?? {};
 
   const { ups, downs } = useMemo(() => {
-    const nowSec = query.dataUpdatedAt > 0
-      ? Math.floor(query.dataUpdatedAt / 1000)
-      : // eslint-disable-next-line react-hooks/purity -- Date.now() only used as a transient fallback before TanStack Query reports dataUpdatedAt; visible result is bounded by the query's refetchInterval.
-        Math.floor(Date.now() / 1000);
+    const nowSec = Math.floor(query.dataUpdatedAt / 1000);
     return computeSupplyMovers(data?.peggedAssets ?? [], nowSec);
   }, [data, query.dataUpdatedAt]);
   const peak = useMemo<Mover | null>(() => {
@@ -112,6 +109,7 @@ export function SupplyMovesCard(): React.JSX.Element {
       notice={{
         label: "Supply move data",
         dataUpdatedAt: query.dataUpdatedAt,
+        queries: [{ preset: "stablecoins", dataUpdatedAt: query.dataUpdatedAt, meta: query.meta, error: query.error, hasData: data !== undefined }],
         onRetry: () => void query.refetch(),
       }}
       loadingContent={<Skeleton className="h-32 w-full" />}
@@ -177,6 +175,9 @@ function MoverList({
   return (
     <div className="space-y-1.5">
       <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      {rows.length === 0 ? (
+        <p className="font-mono text-xs text-muted-foreground">No other qualifying moves</p>
+      ) : null}
       <ul className="flex flex-col font-mono text-xs">
         {rows.map((row) => {
           const logoSrc = getLogoSrc(logoMap, row.id);

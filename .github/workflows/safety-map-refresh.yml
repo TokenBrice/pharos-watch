@@ -49,6 +49,7 @@ concurrency:
 jobs:
   plan:
     name: Plan publication
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -103,7 +104,7 @@ jobs:
 
   render:
     needs: plan
-    if: ${{ needs.plan.outputs.should_render == 'true' }}
+    if: ${{ github.ref == 'refs/heads/main' && needs.plan.outputs.should_render == 'true' }}
     name: Render and publish
     runs-on: ubuntu-latest
     timeout-minutes: 15

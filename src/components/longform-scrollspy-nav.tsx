@@ -73,7 +73,11 @@ function getScrollOffset(railNode: HTMLDivElement | null, stickyOffsetPx?: numbe
 }
 
 function getHashSectionId() {
-  return decodeURIComponent(window.location.hash.replace(/^#/, ""));
+  try {
+    return decodeURIComponent(window.location.hash.replace(/^#/, ""));
+  } catch {
+    return "";
+  }
 }
 
 function scrollToSection(sectionId: string, railNode: HTMLDivElement | null, stickyOffsetPx?: number) {

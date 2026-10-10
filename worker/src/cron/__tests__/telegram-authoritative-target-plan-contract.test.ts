@@ -11,6 +11,7 @@ import {
 } from "../telegram-alert-target-plans";
 import { emptyAlerts, type RoutedSubscriberAlert } from "../dispatch-telegram-routing";
 import { parsePendingAlertProvenance } from "../../lib/telegram/pending-provenance";
+import { PENDING_TTL_SEC, TELEGRAM_DISPATCH_INTERVAL_SEC } from "@shared/lib/telegram-delivery-policy";
 
 function routed(): RoutedSubscriberAlert {
   const alerts = emptyAlerts();
@@ -48,6 +49,14 @@ describe("authoritative Telegram target plan contract", () => {
       targetCount: 7_483,
       maxSteps: 32,
     })).toEqual({ steps: 281, runs: 9 });
+    const withPresets = estimateTelegramTargetPlanCoordinatorBound({
+      subscriberCount: 5_000,
+      targetCount: 7_483,
+      maxSteps: 32,
+      presetFollowerRowsByFamily: [10_000],
+    });
+    expect(withPresets).toEqual({ steps: 381, runs: 12 });
+    expect(withPresets.runs * TELEGRAM_DISPATCH_INTERVAL_SEC).toBeLessThan(PENDING_TTL_SEC * 0.8);
   });
 
   it("round-trips a rendered plan and rejects digest corruption", async () => {

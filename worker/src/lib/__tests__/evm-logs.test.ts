@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { SCAN_INPUT_STATES } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import {
   decodeAddress,
   decodeAddressWord,
@@ -265,7 +266,7 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
     expect(budget.count).toBe(1);
   });
 
-  it("drops malformed provider peers while retaining valid logs", async () => {
+  it("retains malformed provider evidence and fences its block while keeping valid peers", async () => {
     const valid = {
       address: "0x" + "11".repeat(20),
       topics: ["0x" + "22".repeat(32)],
@@ -297,7 +298,10 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
         noopLimiter,
         createBudget(10),
       );
-      expect(result).toMatchObject({ complete: true, logs: [valid], scannedToBlock: 100 });
+      expect(result).toMatchObject({
+        complete: false, logs: [valid], scannedToBlock: 0, validatedToBlock: 100,
+        rejectedLogs: [{ ...valid, topics: ["not-a-topic"] }],
+      });
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining("etherscan_logs_malformed_entries_dropped"),
       );
@@ -366,6 +370,20 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
     };
   }
 
+  it("splits a capped adjacent-block range into two complete singleton scans", async () => {
+    const first = Array.from({ length: 600 }, (_, index) => logAt(100, index));
+    const second = Array.from({ length: 600 }, (_, index) => logAt(101, index));
+    mockFetch([
+      range(100, 101, [...first, ...second].slice(0, 1000)),
+      range(100, 100, first),
+      range(101, 101, second),
+    ]);
+    const result = await fetchEvmLogsForTopicWithCompleteness(1, "0x123", "0xabc", null, 100, 101, 0, noopLimiter, createBudget(10));
+    expect(result).toMatchObject({ complete: true, scannedToBlock: 101, calls: 3 });
+    expect(result.logs).toEqual([...first, ...second]);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
   const cappedLogs = Array.from({ length: 1000 }, (_, index) => logAt(0, index));
   function range(from: number, to: number, result: typeof cappedLogs, message = "OK") {
     return {
@@ -376,6 +394,32 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
       body: { status: message === "OK" ? "1" : "0", message, result },
     };
   }
+
+  it.each(SCAN_INPUT_STATES)("preserves the independently reviewed %s scan frontier", async (state) => {
+    const valid = logAt(1);
+    const rejected = { ...valid, topics: ["not-a-topic"] };
+    if (state === "capped") mockFetch([range(0, 0, cappedLogs)]);
+    if (state === "failed") mockFetch([range(0, 100, [], "NOTOK")]);
+    if (state === "decode-gap") mockFetch([{ match: () => true, body: { status: "1", message: "OK", result: [valid, rejected] } }]);
+    if (state === "complete-empty") mockFetch([range(0, 100, [], "No records found")]);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const result = await fetchEvmLogsForTopicWithCompleteness(
+        1, "0x123", "0xabc", null, 0, state === "capped" ? 0 : 100, 0, noopLimiter,
+        createBudget(state === "exhausted" ? 0 : 10),
+      );
+      const expectedFrontier = { exhausted: -1, capped: -1, failed: -1, "decode-gap": 0, "complete-empty": 100 };
+      expect(result.complete).toBe(state === "complete-empty");
+      expect(result.scannedToBlock).toBe(expectedFrontier[state]);
+      if (state === "decode-gap") {
+        expect(result.logs).toEqual([valid]);
+        expect(result.rejectedLogs).toEqual([rejected]);
+      }
+      if (state === "exhausted") expect(fetch).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
 
   it("recursively splits into disjoint contiguous ranges", async () => {
     const first = [logAt(1), logAt(50)];
@@ -390,6 +434,7 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
     expect(result).toEqual({
       logs: [...first, ...second], complete: true, scannedToBlock: 100,
       calls: 3, maxDepth: 1, failureReason: undefined,
+      rejectedLogs: [], validatedToBlock: undefined,
     });
     expect(fetchSpy).toHaveBeenCalledTimes(3);
     expect(budget.count).toBe(3);
@@ -424,6 +469,7 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
     const budget = createBudget(2);
     expect(await fetchEvmLogsForTopicWithCompleteness(1, "0x123", "0xabc", null, 0, 100, 0, noopLimiter, budget)).toEqual({
       logs: first, complete: false, scannedToBlock: 50, calls: 2, maxDepth: 1, failureReason: "budget-exhausted",
+      rejectedLogs: [], validatedToBlock: undefined,
     });
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(budget.count).toBe(2);

@@ -1,9 +1,15 @@
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates } from "@shared/lib/peg-rates";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { assessFreshnessTimestamp } from "../api-freshness-age";
+import { CRON_TIMEOUT_MS } from "../cron-timeouts";
 import { throwIfAborted } from "../abort";
 import { loadStablecoinsCache } from "../stablecoins-cache";
 import type { PersistedJsonDecodeReason } from "./contracts";
 import { loadDewsSourceState } from "./source-state";
+
+export const DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC =
+  CRON_INTERVALS["sync-stablecoins"] + CRON_TIMEOUT_MS["sync-stablecoins"] / 1000;
 
 
 export interface DewsInputAssemblyOptions {
@@ -37,8 +43,26 @@ export async function assembleDewsScoringInput(options: DewsInputAssemblyOptions
   throwIfAborted(options.signal);
   const stablecoinsCache = await loadStablecoinsCache(options.db, { mode: "strict" });
   throwIfAborted(options.signal);
+  const updatedAt = stablecoinsCache.updatedAt === 0 ? null : stablecoinsCache.updatedAt;
+  const timestamp = assessFreshnessTimestamp(nowSec, updatedAt);
+  const stablecoinsDependency = {
+    generationId: updatedAt != null && Number.isFinite(updatedAt) ? `stablecoins:${updatedAt}` : null,
+    updatedAt,
+    ageSeconds: timestamp.ageSeconds,
+    freshnessBudgetSec: DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC,
+    reason: timestamp.reason === null
+      ? timestamp.ageSeconds > DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC ? "stale" : null
+      : timestamp.reason,
+  };
   if (stablecoinsCache.kind !== "ok") {
-    return { kind: "unavailable" as const, reason: stablecoinsCache.reason };
+    return { kind: "unavailable" as const, reason: stablecoinsCache.reason, stablecoinsDependency };
+  }
+  if (stablecoinsDependency.reason !== null) {
+    return {
+      kind: "unavailable" as const,
+      reason: `stablecoins-cache-${stablecoinsDependency.reason}`,
+      stablecoinsDependency,
+    };
   }
 
   const { peggedAssets: assets, fxFallbackRates } = stablecoinsCache.payload;
@@ -67,6 +91,7 @@ export async function assembleDewsScoringInput(options: DewsInputAssemblyOptions
   return {
     kind: "ok" as const,
     nowSec,
+    stablecoinsDependency,
     assets,
     eligibleAssets,
     assetById,

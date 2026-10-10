@@ -397,9 +397,11 @@ export async function fetchYamatoReserves(
   const warnings: LiveReserveWarning[] = [];
   let ethPriceUsd: number | undefined;
   if (redemption != null && redemption.redeemableCapJpyRaw > 0n) {
-    ethPriceUsd = (
-      await fetchDefiLlamaPrices([{ key: "ETH", chain: "ethereum", address: WETH_ETHEREUM_ADDRESS }], signal, ctx, warnings)
-    ).get("ETH");
+    const result = await fetchDefiLlamaPrices(
+      [{ key: "ETH", chain: "ethereum", address: WETH_ETHEREUM_ADDRESS }], signal, ctx,
+    );
+    ethPriceUsd = result.prices.get("ETH");
+    warnings.push(...result.warnings);
   }
 
   if (redemption == null) {

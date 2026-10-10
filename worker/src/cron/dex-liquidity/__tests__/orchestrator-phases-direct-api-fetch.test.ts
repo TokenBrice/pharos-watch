@@ -81,6 +81,7 @@ function makeFetcher(name: string, fn: DirectApiFetcher["fn"]): DirectApiFetcher
     circuitKey: `${name.toLowerCase()}-circuit`,
     normalizedProtocol: name.toLowerCase(),
     supportedChains: ["testnet"],
+    censusScope: "exhaustive",
     fn,
   };
 }
@@ -101,6 +102,29 @@ describe("runDirectApiFetchPhase", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    { declared: "bounded-sample" as const, reported: "exhaustive" as const },
+    { declared: "exhaustive" as const, reported: "bounded-sample" as const },
+  ])("cannot upgrade a bounded census ($declared declaration, $reported result)", async ({ declared, reported }) => {
+    const fetcher = makeFetcher("census", async () => ({
+      ...makeDexApiFetchResult([], { ok: true, degraded: false, errors: [] }),
+      censusScope: reported,
+    }));
+    fetcher.censusScope = declared;
+    const phase = await runDirectApiFetchPhase({} as D1Database, [fetcher]);
+    expect(phase.results[0].censusScope).toBe("bounded-sample");
+  });
+
+  it("withholds authority from an untyped adapter with an omitted census declaration", async () => {
+    const fetcher = makeFetcher("undeclared", async () => ({
+      ...makeDexApiFetchResult([], { ok: true, degraded: false, errors: [] }),
+      censusScope: "exhaustive",
+    }));
+    Reflect.deleteProperty(fetcher, "censusScope");
+    const phase = await runDirectApiFetchPhase({} as D1Database, [fetcher]);
+    expect(phase.results[0].censusScope).toBe("bounded-sample");
   });
 
   it("runs providers serially and completes each before starting the next", async () => {
@@ -407,6 +431,7 @@ describe("runDirectApiFetchPhase", () => {
         circuitKey: "pancakeswap-api",
         normalizedProtocol: "pancakeswap",
         supportedChains: ["bsc", "ethereum", "base"],
+        censusScope: "bounded-sample",
         fn: async () =>
           makeDexApiFetchResult([], {
             ok: true,
@@ -453,6 +478,17 @@ describe("runDirectApiFetchPhase", () => {
       symbolToChainScopedIds: new Map(),
       stablecoinPriceById: new Map(),
     });
+    expect(fetchers.map(({ name, circuitKey, censusScope }) => [name, circuitKey, censusScope])).toEqual([
+      ["Fluid", "fluid-dex-api", "bounded-sample"],
+      ["Balancer", "balancer-api", "exhaustive"],
+      ["PancakeSwap", "pancakeswap-api", "bounded-sample"],
+      ["Meteora", "meteora-api", "bounded-sample"],
+      ["Raydium", "raydium-api", "exhaustive"],
+      ["Orca", "orca-api", "exhaustive"],
+      ["Aerodrome Slipstream", "aerodrome-slipstream-api", "bounded-sample"],
+      ["Uniswap V3 BSC shadow", "uniswap-v3-bsc-shadow", "bounded-sample"],
+      ["Velodrome Slipstream", "velodrome-slipstream-api", "bounded-sample"],
+    ]);
 
     // Slipstream and CLMM adapters emit a `source` that differs from their
     // normalized protocol; attempted keys must match the counts that

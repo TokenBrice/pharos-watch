@@ -380,7 +380,7 @@ export const DEX_DISCOVERY_PROVIDER_REGISTRY: readonly DexDiscoveryProviderAdapt
   },
   {
     providerId: "curve", lifecycle: "active", supports: (chain) => CURVE_NATIVE_DISCOVERY_CHAINS.has(chain),
-    scope: "exhaustive", requestCostMs: 1_200, executionOrder: 40, timeoutMs: 15_000, crawlerLeaf: "curve",
+    scope: "supplemental", requestCostMs: 1_200, executionOrder: 40, timeoutMs: 15_000, crawlerLeaf: "curve",
   },
   {
     providerId: "horizon", lifecycle: "active", supports: isHorizonDiscoveryDeployment,

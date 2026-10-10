@@ -2,7 +2,7 @@ import type { PegAssetBase, StablecoinMeta } from "../types";
 import { normalizeLegacyPegType } from "./peg-price-bounds";
 import { PEG_TAXONOMY } from "./peg-taxonomy";
 import { median } from "./stats";
-import { getCirculatingRaw } from "./supply";
+import { getCirculatingRawOrNull } from "./supply";
 import { isObservedPrice } from "./pricing-source-policy";
 
 /**
@@ -80,8 +80,8 @@ export function derivePegRates(
     if (!peg || price == null || typeof price !== "number" || !Number.isFinite(price) || price <= 0) continue;
 
     // Only use coins with meaningful supply to avoid garbage data
-    const supply = getCirculatingRaw(a);
-    if (supply < 1_000_000) continue;
+    const supply = getCirculatingRawOrNull(a);
+    if (supply === null || supply < 1_000_000) continue;
 
     // For gold/silver tokens, normalize price to "per troy ounce"
     if ((peg === "peggedGOLD" || peg === "peggedSILVER") && metaById) {

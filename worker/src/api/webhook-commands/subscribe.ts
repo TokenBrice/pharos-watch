@@ -58,6 +58,7 @@ export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
     };
     const persisted = await persistBulkConfirmPrompt(actionContext, payload, {
       requireMatchingStoredIntent: true,
+      clearPending: ctx.clearPendingOnMutation,
     });
     if (!persisted) {
       await ctx.replyToChat(PENDING_OWNERSHIP_CONFLICT_MESSAGE);

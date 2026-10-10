@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { formatCompactUsdWithOptions } from "@shared/lib/format";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import { markdownValue, renderMarkdownRows } from "./markdown-report";
@@ -31,12 +31,11 @@ export function extractStablecoinRows(
 
 export function circulatingForStablecoinRow(
   row: { circulating?: Record<string, number> | null | undefined } | undefined,
-): number {
-  if (!row) return 0;
-  return getCirculatingRaw(row);
+): number | null {
+  return getCirculatingRawOrNull(row);
 }
 
-function marketCapForStablecoinRow(row: UnknownRecord): number {
+function marketCapForStablecoinRow(row: UnknownRecord): number | null {
   const direct = numberValue(row.marketCapUsd ?? row.marketCap ?? row.mcapUsd);
   if (direct != null) return direct;
   return circulatingForStablecoinRow(row as { circulating?: Record<string, number> | null | undefined });
@@ -469,7 +468,8 @@ export function buildMarketCapMapFromStablecoins(
   for (const row of extractStablecoinRows(stablecoinsPayload)) {
     const id = stringValue(row.id, { trim: trimId });
     if (!id) continue;
-    map.set(id, marketCapForStablecoinRow(row));
+    const supplyUsd = marketCapForStablecoinRow(row);
+    if (supplyUsd !== null) map.set(id, supplyUsd);
   }
   return map;
 }

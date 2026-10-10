@@ -3,8 +3,8 @@ import { logWorkerEventArgs } from "../structured-log";
  * Dynamic Early Warning Score (DEWS) — composite risk metric cron job.
  *
  * DEWS aggregates multiple real-time signals into a single 0-100 risk score
- * per stablecoin (higher = more risk). Runs every 30 minutes, chained after
- * syncStablecoins so fresh supply data is always available.
+ * per stablecoin (higher = more risk). Its independent 30-minute lane admits
+ * the stablecoins snapshot against the upstream producer's freshness budget.
  *
  * Signal sources (read from D1):
  * - Peg deviation: oracle/DEX price vs. expected peg reference
@@ -20,8 +20,7 @@ import { logWorkerEventArgs } from "../structured-log";
  * daily snapshots → `stress_signal_history` (365-day rolling).
  *
  */
-// DEWS cron job — runs every 30 minutes, chained after syncStablecoins
-// (same pattern as stability-index).
+// DEWS cron job — independent 30-minute DB-only lane.
 // Reads existing D1 tables, computes DEWS per eligible coin,
 // writes to stress_signals + stress_signal_history.
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
@@ -150,7 +149,7 @@ export async function computeAndStoreDEWS(
     },
   });
   if (assembled.kind !== "ok") {
-    return buildStablecoinsCacheFailureResult(assembled.reason);
+    return buildStablecoinsCacheFailureResult(assembled.reason, assembled.stablecoinsDependency);
   }
   const {
     assets,
@@ -259,7 +258,7 @@ export async function computeAndStoreDEWS(
       currentGenerationRows,
       latestGenerationRows,
       sourceCoverage,
-      dependencies: sourceState.dependencyDiagnostics,
+      dependencies: { stablecoins: assembled.stablecoinsDependency, ...sourceState.dependencyDiagnostics },
       sourceFailures,
       fallbackMode:
         sourceFailures.length > 0

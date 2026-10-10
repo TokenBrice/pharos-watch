@@ -1,6 +1,6 @@
 import { handleStablecoinHistoryRequest } from "../lib/api-history";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { normalizeDexLiquidityEvidence, type DexLiquidityRow } from "../lib/dex-liquidity";
+import { normalizeDexLiquidityEvidence, type DexLiquidityRow, type NormalizedDexLiquidityEvidence } from "../lib/dex-liquidity";
 import { safeJsonParse } from "../lib/api-cache-read";
 import {
   DexExitRouteObservationsSchema,
@@ -8,6 +8,7 @@ import {
 } from "@shared/types/market";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
+import { logWorkerEventArgs } from "../lib/structured-log";
 
 type LiquidityHistoryRow = Pick<
   DexLiquidityRow,
@@ -55,13 +56,12 @@ export const handleDexLiquidityHistory = async (db: D1Database, url: URL): Promi
         return result.results ?? [];
       },
       mapRow: (row) => {
-        const {
-          coverageClass,
-          coverageConfidence,
-          liquidityEvidenceClass,
-          hasMeasuredLiquidityEvidence,
-          trendworthy,
-        } = normalizeDexLiquidityEvidence(row);
+        let evidence: NormalizedDexLiquidityEvidence | null = null;
+        try {
+          evidence = normalizeDexLiquidityEvidence(row);
+        } catch (error) {
+          logWorkerEventArgs("api", "error", `[dex-liquidity-history] Quarantining malformed evidence at ${row.snapshot_date}:`, error);
+        }
         // Legacy snapshots keep their historical number with unknown
         // completeness (no availability emitted); recorded non-complete days
         // publish null beside their availability record.
@@ -74,15 +74,16 @@ export const handleDexLiquidityHistory = async (db: D1Database, url: URL): Promi
           tvl: row.total_tvl_usd,
           volume24h: volume24h.measuredUsd,
           ...(volume24h.availability ? { volume24hAvailability: volume24h.availability } : {}),
-          score: row.liquidity_score,
+          score: evidence == null ? null : row.liquidity_score,
           date: row.snapshot_date,
-          coverageClass,
-          coverageConfidence,
-          liquidityEvidenceClass,
-          hasMeasuredLiquidityEvidence,
-          trendworthy,
+          unavailableReason: evidence == null ? "invalid-coverage-evidence" : null,
+          coverageClass: evidence?.coverageClass ?? null,
+          coverageConfidence: evidence?.coverageConfidence ?? null,
+          liquidityEvidenceClass: evidence?.liquidityEvidenceClass ?? null,
+          hasMeasuredLiquidityEvidence: evidence?.hasMeasuredLiquidityEvidence ?? false,
+          trendworthy: evidence?.trendworthy ?? false,
           methodologyVersion: row.methodology_version,
-          ...parseRouteSummary(row.exit_route_summary_json ?? null),
+          ...(evidence == null ? {} : parseRouteSummary(row.exit_route_summary_json ?? null)),
         };
       },
     });

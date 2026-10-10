@@ -103,7 +103,7 @@ export function useCompareDataModel({
   const redemptionQuery = useRedemptionBackstops();
   const yieldQuery = useYieldRankings();
   const stressQuery = useStressSignals();
-  const { data: flowData, refetch: refetchFlows } = useMintBurnFlows();
+  const flowQuery = useMintBurnFlows();
 
   const list = useQuerySlice(listQuery);
   const peg = useQuerySlice(pegQuery);
@@ -113,13 +113,15 @@ export function useCompareDataModel({
   const redemption = useQuerySlice(redemptionQuery);
   const yieldRankings = useQuerySlice(yieldQuery);
   const stress = useQuerySlice(stressQuery);
+  const flow = useQuerySlice(flowQuery);
+  const flowData = flow.data;
   const listData = list.data;
   const pegSummary = peg.data;
   const dexData = dex.data;
   const reportCardsData = reportCards.data;
 
   const globalError = list.error ?? peg.error ?? bluechip.error ?? dex.error ?? reportCards.error
-    ?? redemption.error ?? yieldRankings.error ?? stress.error;
+    ?? redemption.error ?? yieldRankings.error ?? stress.error ?? flow.error;
   const hasPrimaryData = !!listData?.peggedAssets?.length;
 
   const freshnessQueries = useMemo<StaleQuery[]>(() => [
@@ -131,7 +133,8 @@ export function useCompareDataModel({
     toFreshnessQuery("redemptionBackstops", redemption, !!redemption.data?.coins),
     toFreshnessQuery("yieldRankings", yieldRankings, !!yieldRankings.data?.rankings?.length),
     toFreshnessQuery("stressSignals", stress, !!stress.data?.signals),
-  ], [bluechip, dex, dexData, hasPrimaryData, list, peg, pegSummary, redemption, reportCards, reportCardsData, stress, yieldRankings]);
+    toFreshnessQuery("mintBurnFlows", flow, flowData !== undefined),
+  ], [bluechip, dex, dexData, flow, flowData, hasPrimaryData, list, peg, pegSummary, redemption, reportCards, reportCardsData, stress, yieldRankings]);
 
   const cardMap = useMemo(() => {
     if (!reportCardsData?.cards) return new Map<string, V9ConsumerCard>();
@@ -236,7 +239,7 @@ export function useCompareDataModel({
   const supplySeries = useMemo(() => {
     return deriveSupplySeries({
       selectedIds,
-      histories: selectedIds.map((_, index) => detailQueries[index]?.data ?? []),
+      histories: selectedIds.map((_, index) => detailQueries[index]?.data?.data ?? []),
       metaMap: TRACKED_META_BY_ID,
     });
   }, [detailQueries, selectedIds]);
@@ -267,10 +270,11 @@ export function useCompareDataModel({
     flowCoinQueries.forEach((query) => void query.refetch());
   }, [flowCoinQueries]);
 
-  const flowErrorNotice = flowCoinQueries.length > 0 && flowCoinQueries.every((query) => query.isError)
+  const failedFlowCoinQuery = flowCoinQueries.find((query) => query.isError);
+  const flowErrorNotice = failedFlowCoinQuery
     ? {
-        error: flowCoinQueries[0]?.error as Error | null,
-        hasData: false,
+        error: failedFlowCoinQuery.error as Error | null,
+        hasData: flowCoinQueries.some((query) => query.data !== undefined),
         onRetry: retryFlowCoins,
       }
     : null;
@@ -285,7 +289,7 @@ export function useCompareDataModel({
       redemptionQuery.refetch,
       yieldQuery.refetch,
       stressQuery.refetch,
-      refetchFlows,
+      flowQuery.refetch,
       ...detailQueries.map((query) => query.refetch),
       ...flowCoinQueries.map((query) => query.refetch),
     ], {
@@ -295,7 +299,7 @@ export function useCompareDataModel({
     detailQueries,
     flowCoinQueries,
     bluechipQuery.refetch,
-    refetchFlows,
+    flowQuery.refetch,
     dexQuery.refetch,
     listQuery.refetch,
     pegQuery.refetch,
@@ -311,6 +315,7 @@ export function useCompareDataModel({
     detailErrors,
     detailLoading,
     flowCardData,
+    flowCoverageCount: flowData !== undefined && !flow.error && !flow.isError ? flowCardData.length : null,
     flowErrorNotice,
     flowScopeLabel: flowData?.scope?.label ?? "Configured issuance chains",
     flowSeries,

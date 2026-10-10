@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sortCemeteryCoins } from "@shared/lib/cemetery";
 import { CAUSE_META } from "@shared/lib/cause-of-death";
-import { buildFrozenCemeteryProjection, CEMETERY_ENTRIES, type CemeteryEntry } from "@shared/lib/cemetery-merged";
+import { buildFrozenCemeteryProjection, CEMETERY_ENTRIES, CEMETERY_RECORDED_AT_DESCRIPTION, type CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -26,6 +26,13 @@ const SOURCE_DATA = [
     repoPath: "shared/lib/cemetery-merged.ts#frozenCemeteryProjection",
     role: "Canonical frozen tracked-stablecoin projection merged into cemetery rows.",
     readContent: () => stableJsonStringifyV1(buildFrozenCemeteryProjection()),
+  },
+  {
+    repoPath: "shared/lib/cause-of-death.ts#causeLabels",
+    role: "Canonical cause labels embedded in exported rows.",
+    readContent: () => stableJsonStringifyV1(
+      Object.fromEntries(Object.entries(CAUSE_META).map(([cause, meta]) => [cause, meta.label])),
+    ),
   },
 ] as const;
 const OUTPUT_DIR = join(__dirname, "../../public/datasets");
@@ -246,19 +253,20 @@ function renderJson(rows: CemeteryDatasetRow[]): string {
       mechanismArchetype:
         `Pharos mechanism archetype: how the stablecoin was designed to hold its peg (${MECHANISM_ARCHETYPE_VALUES.join(", ")}). `
         + "Independent of causeOfDeath; null when not yet classified.",
-      recordedAt:
-        "UTC date (YYYY-MM-DD) on which the record entered Pharos; for tracked-archive rows, the date the coin was frozen. "
-        + "Distinct from deathDate; null when not recorded.",
+      recordedAt: CEMETERY_RECORDED_AT_DESCRIPTION,
     },
     rows,
   }, null, 2)}\n`;
 }
 
-function main() {
-  const rows = sortCemeteryCoins(CEMETERY_ENTRIES, "newest").map(coinToRow);
+export function buildCemeteryDataset(entries: CemeteryEntry[] = CEMETERY_ENTRIES): { json: string; csv: string } {
+  const rows = sortCemeteryCoins(entries, "newest").map(coinToRow);
   assertUniqueRowIds(rows);
-  const nextJson = renderJson(rows);
-  const nextCsv = renderCsv(rows);
+  return { json: renderJson(rows), csv: renderCsv(rows) };
+}
+
+function main() {
+  const { json: nextJson, csv: nextCsv } = buildCemeteryDataset();
 
   syncGeneratedArtifacts({
     artifacts: [
@@ -268,7 +276,7 @@ function main() {
     check: CHECK_MODE,
     staleMessage: "Cemetery dataset exports are out of date. Run `tsx scripts/maintenance/generate-cemetery-dataset.ts`.",
     currentMessage: "Cemetery dataset exports are current",
-    writtenMessage: `Generated cemetery dataset exports for ${rows.length} stablecoins`,
+    writtenMessage: `Generated cemetery dataset exports for ${CEMETERY_ENTRIES.length} stablecoins`,
   });
 }
 

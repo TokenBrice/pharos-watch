@@ -1076,18 +1076,27 @@ export function upstreamExitAccessScore(result: V9ExitEvaluationResult): number 
   return result.routes.find((route) => route.routeKey === result.primaryRouteKey)?.components?.access ?? null;
 }
 
-export function upstreamOracleNavScore(
+export function upstreamOracleNavProjection(
   result: V9EvaluatedAsset,
   envelope: V9ValidatedPolicyEnvelope,
-): number | null {
-  const localComponentScore = result.control.components.find((component) => component.kind === "oracle")?.score;
+): { score: number | null; cause: V9EvidenceCause | null } {
+  const localComponent = result.control.components.find((component) => component.kind === "oracle");
+  const localComponentScore = localComponent?.score;
   const localScore =
     localComponentScore ??
     (result.control.oracleApplicability === "not-applicable" ? V9_NEUTRAL_CONTROL_SCORE : null);
+  // Known adverse topology is admitted as an oracle structural signal, while
+  // component causes primarily describe unresolved factor evidence.
+  const localCause = localComponent?.cause ??
+    (localComponent?.posture === "single-source-or-laggy" &&
+      result.scoreInput.pillars.control.structuralSignals.some((signal) =>
+        signal.kind === "weak-oracle-branch" && signal.pricedInPillar === "control" &&
+        signal.responsibility === "measured-adverse")
+      ? "D" : null);
   const oracleRoleInputs = (result.dependencyInputs.roleInputs ?? []).filter(
     (input) => input.role === "oracle-nav",
   );
-  if (oracleRoleInputs.length === 0) return localScore;
+  if (oracleRoleInputs.length === 0) return { score: localScore, cause: localCause };
   const projection = projectV9RoleDependencyPillarLimits(
     { ...result.dependencyInputs, roleInputs: oracleRoleInputs },
     {
@@ -1096,8 +1105,16 @@ export function upstreamOracleNavScore(
       boundedUnknownQuality: { exit: envelope.policy.semantic.exit.boundedUnknownScore, control: envelope.policy.semantic.control.boundedUnknownQuality },
     },
   ).control;
-  if (projection.limit === null) return null;
-  return localScore === null ? projection.limit : Math.min(localScore, projection.limit);
+  const score = projection.limit === null || localScore === null
+    ? localScore ?? projection.limit
+    : Math.min(localScore, projection.limit);
+  const binding = localScore !== null && projection.limit !== null && projection.limit < localScore;
+  const cause = binding
+    ? projection.events.find((event) => event.exposureShare > 0 && (event.cause === "C" || event.cause === "U"))?.cause
+      ?? (projection.events.some((event) => event.cause === "D" && (event.modeledLossPoints ?? 0) > 0)
+        ? "D" : localCause)
+    : localCause;
+  return { score, cause };
 }
 
 function applyRoleDependencyProjection(
@@ -1108,6 +1125,10 @@ function applyRoleDependencyProjection(
   if (projection.events.length === 0) return pillar;
   const excludedEvents = projection.events.filter((event) => event.cause === "A" || event.cause === "B");
   const boundedEvents = projection.events.filter((event) => event.cause === "C" || event.cause === "U");
+  const adverseEvents = pillar.score !== null && projection.limit !== null &&
+    projection.limit < pillar.score && pillar.aggregationDisposition === "included"
+    ? projection.events.filter((event) => event.cause === "D" && (event.modeledLossPoints ?? 0) > 0)
+    : [];
   return {
     ...pillar,
     score: pillar.score === null || projection.limit === null ? pillar.score : Math.min(pillar.score, projection.limit),
@@ -1115,6 +1136,15 @@ function applyRoleDependencyProjection(
     excludedComponentKeys: uniqueSorted([...(pillar.excludedComponentKeys ?? []), ...excludedEvents.map((event) => event.exposureKey)]),
     excludedCauseGapIds: uniqueSorted([...(pillar.excludedCauseGapIds ?? []), ...excludedEvents.flatMap((event) => event.causeGapIds ?? [])]),
     excludedCauses: uniqueSorted([...(pillar.excludedCauses ?? []), ...excludedEvents.flatMap((event) => event.cause === "A" || event.cause === "B" ? [event.cause] : [])]),
+    adverseAttribution: [
+      ...(pillar.adverseAttribution ?? []),
+      ...adverseEvents.map((event): V9PillarAdverseAttribution => ({
+        source: "pillar-score",
+        path: `pillar:${projection.targetPillar}:dependency:${event.exposureKey}:${event.riskEventKey}`,
+        message: `Measured adverse ${event.roles.join("/")} dependency on ${event.upstreamAssetIds.join(", ")} contributes to the combined measured and bounded-loss limit of ${projection.limit} on ${projection.targetPillar}; event ${event.riskEventKey} on exposure ${event.exposureKey} carries ${(event.exposureShare * 100).toFixed(2)}% admitted exposure and ${event.modeledLossPoints} loss points (evidence: ${event.evidenceRefIds.join(", ")}; gaps: ${(event.causeGapIds ?? []).join(", ")}).`,
+        responsibility: "measured-adverse",
+      })),
+    ],
     reasons: canonicalReasons([
       ...pillar.reasons,
       ...boundedEvents.map((event) => pillarReason(

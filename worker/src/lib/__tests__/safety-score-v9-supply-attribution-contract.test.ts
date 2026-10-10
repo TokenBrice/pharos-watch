@@ -244,6 +244,29 @@ describe("reviewed deployment supply attribution contract", () => {
     })).toEqual({ code: "cross-chain-skew", failedRouteId: "lagging" });
   });
 
+  it("ages every deployment independently and retains the oldest route on re-admission", () => {
+    const rowsAtAge = (ageSec: number) => observations().map((row, index) => ({
+      ...row, blockTimeSec: CLOCK_SEC - ageSec + (index === 0 ? 0 : 120),
+    }));
+    const accepted = derive(rowsAtAge(1800))!;
+    expect(accepted).not.toBeNull();
+    const expiredRows = rowsAtAge(1801);
+    expect(derive(expiredRows)).toBeNull();
+    expect(reviewedDeploymentObservationTimingIssue({
+      clockSec: CLOCK_SEC, captureStartedAtSec: CLOCK_SEC - 1801,
+      captureEndedAtSec: CLOCK_SEC - 1681, observedAtSec: CLOCK_SEC - 1681,
+      deployments: expiredRows,
+    })).toEqual({ code: "stale", failedRouteId: expiredRows[0]!.routeId });
+    expect(reviewedDeploymentAttributionValidationError({
+      assetId: "wm-m0", attribution: accepted, aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
+      registryFingerprint: REGISTRY_FINGERPRINT, clockSec: CLOCK_SEC,
+    })).toBeNull();
+    expect(reviewedDeploymentAttributionValidationError({
+      assetId: "wm-m0", attribution: accepted, aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
+      registryFingerprint: REGISTRY_FINGERPRINT, clockSec: CLOCK_SEC + 1,
+    })).toContain("stale");
+  });
+
   it("invalidates a packet when registry or route-inventory identity drifts", () => {
     const attribution = derive()!;
     expect(

@@ -22,8 +22,13 @@ import {
 } from "@/lib/status/public-status";
 import type { FaqItem } from "@/lib/faq";
 import { SchedulerLivenessCard } from "@/components/status/scheduler-liveness";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
+import { getPollingWindow } from "@/lib/api-query-polling";
+import { CRON_15MIN } from "@/lib/cron-intervals";
 
 const RUNWAY_WINDOW: PublicStatusHistoryWindow = "30d";
+const HEALTH_FETCH_BUDGET_MS = getPollingWindow(FRONTEND_API_QUERY_DESCRIPTORS.health.producerIntervalMs).refetchInterval;
+const PROBE_FETCH_BUDGET_MS = getPollingWindow(CRON_15MIN).refetchInterval;
 const STATUS_SHELL_PROPS = {
   breadcrumbName: "System Status",
   path: "/status/",
@@ -60,8 +65,6 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
     void refetchProbes();
   };
 
-  const syncFloorCandidates = [healthUpdatedAt ?? 0, probesUpdatedAt ?? 0].filter((value) => value > 0);
-  const lastUpdated = syncFloorCandidates.length > 0 ? Math.min(...syncFloorCandidates) : 0;
   const notices = useMemo(() => {
     if (!healthData) return [];
 
@@ -120,11 +123,11 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
   } else {
     const worstCache = getPublicWorstCacheSummary(healthData.caches);
     const probeSummary = buildBrowserProbeSummary(probes, probesUpdatedAt ?? 0);
-    const publicImpactCircuits = Object.entries(healthData.circuits)
+    const publicImpactCircuits = healthData.circuits == null ? null : Object.entries(healthData.circuits)
       .filter(([key]) => isPublicImpactCircuitKey(key))
       .map(([, circuit]) => circuit);
-    const openCircuits = publicImpactCircuits.filter((circuit) => circuit.state === "open").length;
-    const halfOpenCircuits = publicImpactCircuits.filter((circuit) => circuit.state === "half-open").length;
+    const openCircuits = publicImpactCircuits == null ? null : publicImpactCircuits.filter((circuit) => circuit.state === "open").length;
+    const halfOpenCircuits = publicImpactCircuits == null ? null : publicImpactCircuits.filter((circuit) => circuit.state === "half-open").length;
     const divergence = probeSummary
       ? getPublicDivergenceNotice(healthData.status, probeSummary.status)
       : { kind: "in-sync" as const };
@@ -134,8 +137,13 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
         <SchedulerLivenessCard observation={healthData.schedulerLiveness} />
         <PublicStatusHero
           healthData={healthData}
-          lastUpdated={lastUpdated}
+          healthUpdatedAt={healthUpdatedAt ?? 0}
+          healthStaleAfterMs={HEALTH_FETCH_BUDGET_MS}
+          probesUpdatedAt={probesUpdatedAt ?? 0}
+          probesStaleAfterMs={PROBE_FETCH_BUDGET_MS}
           probeSummary={probeSummary}
+          probesLoading={probesLoading}
+          probesFailed={probesError != null}
           worstCacheRatio={worstCache.ratio}
           worstCacheStatus={worstCache.status}
           impactedCacheLanes={worstCache.impactedCount}

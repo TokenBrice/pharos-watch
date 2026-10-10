@@ -113,13 +113,13 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   }
 
   const liq = liquidityMap?.[stablecoinId];
-  if (!hasMeaningfulDexData(liq)) {
+  if (!liq || (!liq.unavailableReason && !hasMeaningfulDexData(liq))) {
     return null;
   }
 
   const score = liq.liquidityScore ?? 0;
   const tier = getScoreTier(score);
-  const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass ?? "unobserved");
+  const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass, liq.unavailableReason);
   const isRated = liq.liquidityScore != null;
   const evidenceLabel = getLiquidityEvidenceLabel(liq);
   const verdictLine = isRated ? buildLiquidityVerdictLine(liq.scoreComponents) : null;
@@ -137,7 +137,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
             <Badge
               variant="outline"
               className={`text-[11px] ${coverageBadge.className}`}
-              title={formatLiquiditySourceMix(liq.sourceMix)}
+              title={liq.unavailableReason ?? formatLiquiditySourceMix(liq.sourceMix)}
             >
               {coverageBadge.label} coverage
             </Badge>
@@ -189,7 +189,12 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
         ) : null}
         {!isRated && (
           <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-            {isLiquidityActivityNotRated(liq) ? (
+            {liq.unavailableReason ? (
+              <>
+                <p>DEX coverage evidence is unavailable ({liq.unavailableReason}).</p>
+                <p className="mt-1">Liquidity Score stays unrated until Pharos can validate the coverage evidence.</p>
+              </>
+            ) : isLiquidityActivityNotRated(liq) ? (
               <>
                 <p>
                   Liquidity Score is not rated: pools with a 24h DEX volume reading from the last {DEX_VOLUME_OBSERVATION_MAX_AGE_SEC / 3600} hours cover less

@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { CEMETERY_RECORDED_AT_DESCRIPTION } from "@shared/lib/cemetery-merged";
+import { buildCemeteryDataset } from "../maintenance/generate-cemetery-dataset";
 
 import {
   DOC_CONTRACT_BLOCKS,
@@ -27,6 +29,13 @@ const documents: ReadonlyMap<string, string> = new Map(
 );
 
 describe("generated documentation contract blocks", () => {
+  it("shares the cemetery entry-date description with the exported field contract", () => {
+    const block = DOC_CONTRACT_BLOCKS.find((entry) => entry.id === "cemetery-recorded-at-description");
+    const dataset = JSON.parse(buildCemeteryDataset().json) as { fields: { recordedAt: string } };
+    expect(block?.value).toBe(CEMETERY_RECORDED_AT_DESCRIPTION);
+    expect(dataset.fields.recordedAt).toBe(block?.value);
+  });
+
   it("uses one unique inline marker pair per source-backed value", () => {
     const ids = DOC_CONTRACT_BLOCKS.map((block) => block.id);
     expect(new Set(ids).size).toBe(ids.length);

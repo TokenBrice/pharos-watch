@@ -13,7 +13,6 @@ import {
 } from "../../lib/evm-rpc";
 import {
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-  type DexMeasuredExecutionBudgetStopReason,
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
@@ -24,6 +23,7 @@ import {
   createCurveGetDyQuoteAdapter,
   makeCurveGetDyPlan,
   type CurveGetDyPlan,
+  type CurveGetDyQuoteFailure,
 } from "./curve-get-dy-quote-engine";
 import {
   CURVE_STABLESWAP_MULTICALL_BATCH_SIZE,
@@ -494,19 +494,13 @@ export async function verifyCurveCryptoSwapDeployment(input: {
 }
 
 export type CurveCryptoSwapQuoteFailure =
-  | DexMeasuredExecutionBudgetStopReason
-  | "unsupported-chain-or-pool"
-  | "invalid-pinned-block"
-  | "invalid-quote-input"
+  | CurveGetDyQuoteFailure
   | "invalid-curve-cryptoswap-target"
   | "missing-pool-token-order"
   | "invalid-pool-token-order"
   | "ambiguous-token-index"
   | "token-index-mismatch"
-  | "pool-token-order-mismatch"
-  | "rpc-failure"
-  | "pool-revert"
-  | "malformed-pool-return";
+  | "pool-token-order-mismatch";
 
 export interface CurveCryptoSwapRequest {
   target: DexMeasuredExecutionTarget;

@@ -18,12 +18,9 @@ import {
   fetchEvmCallHexAtBlock,
   fetchEvmCodeStatusAtBlock,
 } from "../../lib/evm-rpc";
-import type { DexMeasuredExecutionBudgetStopReason, DexMeasuredExecutionRpcBudget } from "./profiles";
-import {
-  canonicalEvmAddress,
-  canonicalEvmHash,
-  decodeAddressResult as decodeEvmAddressResult,
-} from "./evm-codecs";
+import type { DexMeasuredExecutionRpcBudget } from "./profiles";
+import type { CurveGetDyQuoteFailure } from "./curve-get-dy-quote-engine";
+import { canonicalEvmAddress, canonicalEvmHash } from "./evm-codecs";
 import {
   createCurveFamilyDeploymentVerifier,
   createCurveStableSwapExecutionPipeline,
@@ -53,11 +50,7 @@ export interface CurveStableSwapPoolPolicy {
   registryAddress: `0x${string}`;
   expectedRegistryCodeHash: `0x${string}`;
   lpTokenAddress: `0x${string}`;
-  poolTokens: readonly [
-    { address: `0x${string}`; symbol: "DAI"; decimals: 18 },
-    { address: `0x${string}`; symbol: "USDC"; decimals: 6 },
-    { address: `0x${string}`; symbol: "USDT"; decimals: 6 },
-  ];
+  poolTokens: typeof CURVE_STABLESWAP_DEPLOYMENT.poolTokens;
   mode: "active";
   scoreEligible: true;
 }
@@ -297,25 +290,10 @@ export const verifyCurveStableSwapDeployment = createCurveStableSwapDeploymentVe
 });
 
 export type CurveStableSwapQuoteFailure =
-  | DexMeasuredExecutionBudgetStopReason
-  | "unsupported-chain-or-pool"
-  | "invalid-pinned-block"
-  | "invalid-quote-input"
+  | CurveGetDyQuoteFailure
   | "invalid-curve-stableswap-target"
   | "pool-token-order-mismatch"
-  | "runtime-evidence-missing"
-  | "rpc-failure"
-  | "pool-revert"
-  | "malformed-pool-return";
-
-export interface CurveStableSwapRequest {
-  target: DexMeasuredExecutionTarget;
-  inputUsd: number;
-  blockNumber: number;
-  blockObservedAt: number;
-  endpointAddress: `0x${string}`;
-  runtimeEvidence?: CurveStableSwapRuntimeEvidence;
-}
+  | "runtime-evidence-missing";
 
 export function resolveCurveStableSwapTokenIndices(
   target: DexMeasuredExecutionTarget | DexMeasuredExecutionProfile,
@@ -338,6 +316,13 @@ export function resolveCurveStableSwapTokenIndices(
   const inputIndex = policy.poolTokens.findIndex((token) => token.address === target.tokenIn.address);
   const outputIndex = policy.poolTokens.findIndex((token) => token.address === target.tokenOut.address);
   if (inputIndex < 0 || outputIndex < 0 || inputIndex === outputIndex) {
+    return { ok: false, reason: "invalid-curve-stableswap-target" };
+  }
+  if (
+    inputIndex === 0 ||
+    target.tokenIn.trackedAssetId !== policy.poolTokens[inputIndex]!.trackedAssetId ||
+    target.tokenOut.trackedAssetId !== policy.poolTokens[outputIndex]!.trackedAssetId
+  ) {
     return { ok: false, reason: "invalid-curve-stableswap-target" };
   }
   if (
@@ -432,13 +417,11 @@ export function validateCurveStableSwapProfileProof(profile: DexMeasuredExecutio
         if (
           decodedCall.functionName !== "get_lp_token" ||
           canonicalEvmAddress(decodedCall.args[0]) !== policy.poolAddress ||
-          decodeEvmAddressResult({
-            decode: () => decodeFunctionResult({
-              abi: CURVE_MAIN_REGISTRY_ABI,
-              functionName: "get_lp_token",
-              data: proof.lpTokenReturnData as `0x${string}`,
-            } as never),
-          }) !== policy.lpTokenAddress
+          canonicalEvmAddress(decodeFunctionResult({
+            abi: CURVE_MAIN_REGISTRY_ABI,
+            functionName: "get_lp_token",
+            data: proof.lpTokenReturnData as `0x${string}`,
+          } as never)) !== policy.lpTokenAddress
         ) issues.add("lp-token-proof-mismatch");
       } catch {
         issues.add("lp-token-proof-mismatch");

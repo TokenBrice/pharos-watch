@@ -763,6 +763,9 @@ export function validateCurveStableSwapExecutionProfile<
   if (profile.adapterProfileId !== input.adapterProfileId) issues.add("wrong-adapter-profile");
   const policy = input.getPolicy(profile.chain, profile.executionEndpoint.address);
   if (!policy) issues.add("execution-pool-not-reviewed");
+  if (policy && canonicalEvmAddress(profile.poolId.slice(profile.poolId.lastIndexOf(":") + 1)) !== policy.poolAddress) {
+    issues.add("execution-pool-identity-mismatch");
+  }
   if (profile.executionEndpoint.codeHash !== policy?.expectedPoolCodeHash) {
     issues.add("endpoint-code-hash-mismatch");
   }

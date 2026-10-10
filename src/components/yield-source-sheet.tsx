@@ -8,7 +8,7 @@ import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { YieldSourceIdentity } from "@/components/yield-leaderboard-row-parts";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { YIELD_SOURCE_FACT_LABELS } from "@/lib/yield-presentation";
+import { formatYieldApyDelta, YIELD_SOURCE_FACT_LABELS } from "@/lib/yield-presentation";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Badge } from "@/components/ui/badge";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
@@ -26,6 +26,7 @@ import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
 import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
 import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
 import { trackEvent } from "@/lib/analytics";
 import {
   formatEvidenceCompleteness,
@@ -60,9 +61,11 @@ interface YieldSourceSheetBodyProps {
   medianApy: number | null;
   benchmarks?: YieldBenchmarkRegistry | null;
   onOpenChange: (open: boolean) => void;
+  error?: unknown;
+  onRetry?: () => void;
 }
 
-function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmarks, onOpenChange }: YieldSourceSheetBodyProps) {
+function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmarks, onOpenChange, error, onRetry }: YieldSourceSheetBodyProps) {
   const [selectedSourceKey, setSelectedSourceKey] = useState<string | null>(null);
   const [showAllSheetSources, setShowAllSheetSources] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -92,11 +95,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
   });
   const hasAlternateSelected =
     selectedSourceKey !== null && selectedSourceKey !== sourceExplorer.selectedSource.sourceKey;
-  const deepDiveSearch = hasAlternateSelected ? new URLSearchParams({ sources: selectedSourceKey }).toString() : "";
-  const deepDiveHref = buildStablecoinUrl(
-    ranking.id,
-    `yield/${deepDiveSearch ? `?${deepDiveSearch}` : ""}`,
-  );
+  const deepDive = getYieldWorkbenchLink(ranking.id, hasAlternateSelected ? selectedSourceKey : null);
 
   const handleSourceClick = (sourceKey: string) => {
     setSelectedSourceKey(sourceKey);
@@ -119,10 +118,21 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
         </SheetHeader>
 
         <div className="space-y-4 px-4">
+          <QueryErrorNotice error={error} hasData onRetry={onRetry} />
           <div className={cn("rounded-xl border px-3 py-2.5", SEVERITY_TONE_CLASS.ok.banner)}>
             <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Chosen Yield Source
             </p>
+            {totalSources > 1 ? (
+              <button
+                type="button"
+                onClick={() => handleSourceClick(selectedSource.sourceKey)}
+                aria-pressed={effectiveSourceKey === selectedSource.sourceKey}
+                className="pharos-focus-ring mt-2 rounded-md border border-border/60 px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                Show chosen source history
+              </button>
+            ) : null}
             <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-2">
               <div className="flex items-center gap-2">
                 <YieldSourceIdentity
@@ -242,7 +252,6 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                   .map((source) => {
                     const isSelected = effectiveSourceKey === source.sourceKey;
                     const delta = source.apy30d - ranking.apy30d;
-                    const deltaSign = delta >= 0 ? "+" : "";
                     const confidence = source.confidenceTier
                       ? (YIELD_SOURCE_CONFIDENCE_DEFINITIONS[source.confidenceTier]?.label ?? null)
                       : null;
@@ -288,8 +297,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                               delta >= 0 ? "text-emerald-500" : "text-muted-foreground",
                             )}
                           >
-                            {deltaSign}
-                            {formatPercent(delta)}
+                            {formatYieldApyDelta(delta)}
                           </span>
                           {source.sourceTvlUsd !== null && (
                             <span className="text-muted-foreground">{formatCurrency(source.sourceTvlUsd)}</span>
@@ -359,7 +367,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
             </button>
           ) : null}
           <Link
-            href={deepDiveHref}
+            href={deepDive.href}
             className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground transition-colors"
             onClick={() => {
               trackEvent("yield_row_action", {
@@ -370,7 +378,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
               onOpenChange(false);
             }}
           >
-            Deep dive yield &rarr;
+            {deepDive.isWorkbench ? "Deep dive yield" : deepDive.label} &rarr;
           </Link>
           <Link
             href={buildStablecoinUrl(ranking.id)}
@@ -408,6 +416,8 @@ export function YieldSourceSheet({
         medianApy={medianApy}
         benchmarks={benchmarks}
         onOpenChange={onOpenChange}
+        error={error}
+        onRetry={onRetry}
       /> : (
         <SheetContent side="right" className="sm:max-w-md">
           <SheetHeader>

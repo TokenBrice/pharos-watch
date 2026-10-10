@@ -1318,56 +1318,6 @@ export function placePlotTag(input: {
   return { x: chosen[0], y: chosen[1], collisions: bestHits === Infinity ? -1 : bestHits };
 }
 
-export interface PlotChipPlacement {
-  id: string;
-  x: number;
-  y: number;
-  /** Hairline leader from the chip edge to just above the monument top. */
-  leader: { x1: number; y1: number; x2: number; y2: number };
-  placement: "clear" | "fallback";
-}
-
-/**
- * Colossus chips (fix D): each chip goes to the first candidate (stacked above the monument top, then beside it)
- * that stays inside the frame, clear of text (`taken`, 4 px), of drawn volumes (`volumes`, 2 px), and whose leader
- * crosses no text. Chips are placed in order and each placed chip joins `taken`. All rects in frame px.
- */
-export function placeColossusChips(input: {
-  chips: readonly { id: string; top: PlotPoint; width: number; height: number }[];
-  frameWidth: number;
-  taken: readonly PlotRect[];
-  volumes: readonly PlotRect[];
-}): PlotChipPlacement[] {
-  const taken = [...input.taken];
-  const out: PlotChipPlacement[] = [];
-  for (const chip of input.chips) {
-    const [tx, ty] = chip.top;
-    const w = chip.width;
-    const h = chip.height;
-    const cands: PlotPoint[] = [];
-    for (const dy of [-26, -46, -66, -86, -106]) for (const dx of [-w / 2, -w + 24, -24, -w / 2 - 70, -w / 2 + 70]) cands.push([tx + dx, ty + dy - h]);
-    for (const dy of [0, 30, -30, 60]) cands.push([tx + 26, ty + dy - h / 2], [tx - 26 - w, ty + dy - h / 2]);
-    let best: { x: number; y: number; lx: number; ly: number } | null = null;
-    for (const [x, y] of cands) {
-      if (x < 2 || x + w > input.frameWidth - 2 || y < -120) continue;
-      const r = { left: x, top: y, right: x + w, bottom: y + h };
-      if (taken.some((t) => rectsHit(r, t, 4))) continue;
-      if (input.volumes.some((v) => rectsHit(r, v, 2))) continue;
-      const lx = Math.min(Math.max(tx, x + 10), x + w - 10);
-      const ly = y + h <= ty ? y + h : y + h / 2;
-      const lr = { left: Math.min(lx, tx), right: Math.max(lx, tx), top: Math.min(ly, ty), bottom: Math.max(ly, ty) };
-      if (taken.some((t) => rectsHit(lr, t, 1))) continue;
-      best = { x, y, lx, ly };
-      break;
-    }
-    const placement = best ? "clear" : "fallback";
-    const at = best ?? { x: Math.max(2, tx - w / 2), y: ty - 26 - h, lx: tx, ly: ty - 26 };
-    out.push({ id: chip.id, x: at.x, y: at.y, leader: { x1: at.lx, y1: at.ly, x2: tx, y2: ty - 2 }, placement });
-    taken.push({ left: at.x, top: at.y, right: at.x + w, bottom: at.y + h });
-  }
-  return out;
-}
-
 /** Top-most drawn y (SVG units) at or left of `x`: how far the header may overlap the plan's empty sky. */
 export function skyTopLeftOf(map: DesktopPlotMap, x: number): number {
   let top = Infinity;

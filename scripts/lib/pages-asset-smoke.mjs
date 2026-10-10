@@ -1,5 +1,6 @@
 import { parseAttributes } from "./seo-html-parse.mjs";
 import { tsImport } from "tsx/esm/api";
+import { isSameRouteUrl } from "./smoke-runtime.mjs";
 
 const { buildStablecoinUrl } = await tsImport("../../shared/lib/urls.ts", import.meta.url);
 
@@ -61,6 +62,17 @@ export function buildYieldDeepRoutes(rankingIds, representativeIds = REPRESENTAT
     ids.push(id);
   }
   return ids.map((id) => ({ id, route: buildStablecoinUrl(id, "yield/") }));
+}
+
+export function isExpectedYieldDeepRouteUrl(finalUrl, routeInfo, baseUrl) {
+  const requested = new URL(routeInfo.route, baseUrl);
+  if (isSameRouteUrl(finalUrl, requested)) return true;
+  const fallback = new URL("/yield/", requested);
+  fallback.search = requested.search;
+  if (!fallback.searchParams.has("compare")) fallback.searchParams.set("compare", routeInfo.id);
+  if (!fallback.searchParams.has("from")) fallback.searchParams.set("from", "detail-fallback");
+  fallback.searchParams.set("workbenchFallback", routeInfo.id);
+  return isSameRouteUrl(finalUrl, fallback);
 }
 
 export function extractScriptUrls(html, documentUrl) {

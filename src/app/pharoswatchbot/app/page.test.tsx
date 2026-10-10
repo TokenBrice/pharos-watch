@@ -9,7 +9,7 @@ import {
 } from "@shared/lib/telegram-mini-app-contract";
 import { isMiniAppErrorCode, miniAppErrorMessage, MiniAppRequestError } from "./error-messages";
 import PharosWatchBotMiniAppPage, { metadata } from "./page";
-import { baseState } from "./mini-app-test-fixtures";
+import { baseState } from "@shared/test-utils/telegram-mini-app-state";
 import type { TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
 import { installMatchMediaMock } from "@/test-utils/frontend";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
@@ -134,6 +134,56 @@ afterEach(() => {
 });
 
 describe("PharosWatchBotMiniAppPage", () => {
+  it("makes forget-me terminal for retained native Back, Settings, and Main callbacks", async () => {
+    const nativeButton = () => {
+      const callbacks: Array<() => void> = [];
+      let visible = false;
+      return {
+        callbacks,
+        get isVisible() { return visible; },
+        show: vi.fn(() => { visible = true; }),
+        hide: vi.fn(() => { visible = false; }),
+        onClick: vi.fn((callback: () => void) => { callbacks.push(callback); }),
+        offClick: vi.fn(),
+        setParams: vi.fn(),
+      } satisfies NonNullable<MiniAppWebApp["MainButton"]> & { callbacks: Array<() => void> };
+    };
+    const back = nativeButton();
+    const settings = nativeButton();
+    const main = nativeButton();
+    const confirmations: Array<(confirmed: boolean) => void> = [];
+    const close = vi.fn();
+    const state = { ...baseState, subscriber: { ...baseState.subscriber, snoozeUntilTs: 2_147_483_647 } };
+    const fetchMock = await renderReadyMiniApp({
+      state,
+      launch: {
+        BackButton: back, SettingsButton: settings, MainButton: main, close,
+        showConfirm: vi.fn((_message, callback) => { confirmations.push(callback); }),
+      },
+    });
+    const retainedResume = main.callbacks.at(-1)!;
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+    const retainedBack = back.callbacks.at(-1)!;
+    const retainedSettings = settings.callbacks.at(-1)!;
+    fireEvent.click(screen.getByRole("button", { name: /Delete all my data/i }));
+    act(() => { confirmations.shift()?.(true); });
+    act(() => { confirmations.shift()?.(true); });
+    await waitFor(() => expect(screen.getByText("Your data has been deleted")).toBeTruthy());
+    expectMutationRequest(fetchMock, { kind: "forget-me" });
+    const callsAfterDeletion = fetchMock.mock.calls.length;
+    act(() => { retainedBack(); retainedSettings(); retainedResume(); });
+    await act(async () => { await Promise.resolve(); });
+    expect(fetchMock).toHaveBeenCalledTimes(callsAfterDeletion);
+    expect(back.isVisible).toBe(false);
+    expect(settings.isVisible).toBe(false);
+    expect(main.isVisible).toBe(false);
+    expect(back.offClick).toHaveBeenCalledWith(retainedBack);
+    expect(settings.offClick).toHaveBeenCalledWith(retainedSettings);
+    expect(main.offClick).toHaveBeenCalledWith(retainedResume);
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: /Close/i }));
+    expect(close).toHaveBeenCalledOnce();
+  });
   it("keeps metadata and the Mini App error-code contract", () => {
     expect(metadata.robots).toEqual({ index: false, follow: false });
     expect(isMiniAppErrorCode("empty-alert-types")).toBe(false);
@@ -362,6 +412,32 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(impactOccurred).toHaveBeenCalledWith("light");
   });
 
+  it("emits the newly focused suggestion coin in stale-auth relaunch and clears it on leaving Watchlist", async () => {
+    const openTelegramLink = vi.fn();
+    const staleState: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
+      catalog: {
+        ...baseState.catalog,
+        searchableCoins: [...baseState.catalog.searchableCoins, { stablecoinId: "usdc-circle", symbol: "USDC", name: "USD Coin", peg: "USD" }],
+      },
+    };
+    await renderReadyMiniApp({
+      state: staleState,
+      launch: { initDataUnsafe: { start_param: "coin_usdt-tether" }, openTelegramLink },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Go to followed USDC" }));
+    fireEvent.click(screen.getByRole("button", { name: "Relaunch and keep this panel" }));
+    expect(openTelegramLink).toHaveBeenLastCalledWith("https://t.me/PharosWatchBot?startapp=coin_usdc-circle");
+    fireEvent.click(screen.getByRole("button", { name: "Coverage USDC" }));
+    fireEvent.click(screen.getByRole("button", { name: "Relaunch and keep this panel" }));
+    expect(openTelegramLink).toHaveBeenLastCalledWith("https://t.me/PharosWatchBot?startapp=coverage_usdc-circle");
+    fireEvent.click(screen.getByRole("tab", { name: "home" }));
+    fireEvent.click(screen.getByRole("tab", { name: "watchlist" }));
+    fireEvent.click(screen.getByRole("button", { name: "Relaunch and keep this panel" }));
+    expect(openTelegramLink).toHaveBeenLastCalledWith("https://t.me/PharosWatchBot?startapp=watchlist");
+  });
+
   it("hides the stale-auth relaunch affordance without openTelegramLink", async () => {
     const staleState: TelegramMiniAppState = {
       ...baseState,
@@ -484,6 +560,55 @@ describe("PharosWatchBotMiniAppPage", () => {
     cleanup();
     await renderReadyMiniApp();
     expect(screen.queryByRole("button", { name: "Send me a sample alert" })).toBeNull();
+  });
+
+  it.each<[string, number | null, string | null]>([
+    ["future", 1_800_000_001, "Clear snooze"],
+    ["exactly expired", 1_800_000_000, null],
+    ["past", 1_799_999_999, null],
+    ["unset", null, null],
+    ["pause sentinel", 4_102_444_800, "Resume alerts"],
+  ])("uses the shared clock for %s snooze in Home and native MainButton", async (_scenario, snoozeUntilTs, label) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    const mainButton = { show: vi.fn(), hide: vi.fn(), setParams: vi.fn(), onClick: vi.fn(), offClick: vi.fn() };
+    const fetchMock = renderMiniApp({
+      state: { ...baseState, subscriber: { ...baseState.subscriber, snoozeUntilTs } },
+      launch: { MainButton: mainButton },
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(20); });
+    expect(screen.getByRole("tab", { name: "home" })).toBeTruthy();
+    if (label != null) {
+      expect(screen.getByRole("button", { name: label })).toBeTruthy();
+      expect(mainButton.setParams).toHaveBeenCalledWith(expect.objectContaining({ text: label }));
+      expect(mainButton.show).toHaveBeenCalled();
+    } else {
+      expect(screen.getByRole("button", { name: "Snooze alerts for 1h" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Clear snooze" })).toBeNull();
+      expect(mainButton.show).not.toHaveBeenCalled();
+      expect(mainButton.onClick).not.toHaveBeenCalled();
+    }
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("restores open-session snooze choices and detaches native MainButton exactly at expiry without a POST", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    const mainButton = { show: vi.fn(), hide: vi.fn(), setParams: vi.fn(), onClick: vi.fn(), offClick: vi.fn() };
+    const fetchMock = renderMiniApp({
+      state: { ...baseState, subscriber: { ...baseState.subscriber, snoozeUntilTs: 1_800_000_002 } },
+      launch: { MainButton: mainButton },
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(20); });
+    expect(screen.getByRole("button", { name: "Clear snooze" })).toBeTruthy();
+    const attachedHandler = mainButton.onClick.mock.calls[mainButton.onClick.mock.calls.length - 1]?.[0];
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_980); });
+    expect(screen.queryByRole("button", { name: "Clear snooze" })).toBeNull();
+    expect(screen.queryByText(/Quiet until/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Snooze alerts for 1h" })).toBeTruthy();
+    expect(mainButton.offClick).toHaveBeenCalledWith(attachedHandler);
+    expect(mainButton.hide).toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it("does not stack native MainButton listeners across panel-state transitions", async () => {

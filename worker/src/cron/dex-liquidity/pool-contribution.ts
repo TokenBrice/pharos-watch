@@ -6,6 +6,7 @@ import {
   computePoolStress,
   initMetrics,
   normalizeProtocol,
+  parsePoolSymbols,
 } from "./pool-helpers";
 import { STAGED_POOL_DEFAULTS } from "../dex-discovery/types";
 
@@ -63,7 +64,7 @@ export function addSecondaryPoolContribution(
     pool.pairQualityOverride != null && Number.isFinite(pool.pairQualityOverride)
       ? pool.pairQualityOverride
       : computePoolPairQuality(
-          (pool.symbol ?? "").split(/\s*\/\s*/).map((s) => s.trim()),
+          parsePoolSymbols(pool.symbol ?? ""),
           stablecoinSymbol,
         );
   const { qualityAdjustedTvl, effectiveTvl } = computePoolQualityContribution({

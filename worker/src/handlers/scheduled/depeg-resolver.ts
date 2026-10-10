@@ -31,12 +31,6 @@ async function loadLatestStablecoinsCapabilities(
   return {
     stablecoinsCacheSafe: !stale && capabilities.stablecoinsCache,
     depegPipelineHealthy: !stale && capabilities.depegPipeline,
-    syncCapabilities: {
-      ...capabilities,
-      source: "latest-sync-stablecoins-cron-run",
-      latestSyncStartedAt: row?.started_at ?? null,
-      stale,
-    },
   };
 }
 
@@ -72,7 +66,6 @@ export function buildDepegResolverSlotGroups(runtime: ScheduledRuntimeContext) {
               slot: "scheduled-quarter-hour",
               stablecoinsCacheSafe: capabilities.stablecoinsCacheSafe,
               depegPipelineHealthy: capabilities.depegPipelineHealthy,
-              syncCapabilities: capabilities.syncCapabilities,
             });
           },
         ),

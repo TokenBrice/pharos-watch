@@ -30,12 +30,14 @@ describe("alert reserve source cache", () => {
       publishedAt: nowSec + 1,
       continuous: true,
       driftIds: [],
+      observedSince: {}, unavailableIds: [],
     }).state).toBe("corrupt");
     expect(assess({
       generation: "reserve-alert-source-v0",
       publishedAt: nowSec,
       continuous: true,
       driftIds: [],
+      observedSince: {}, unavailableIds: [],
     })).toMatchObject({ state: "wrong-generation", generation: "reserve-alert-source-v0" });
   });
 
@@ -45,6 +47,7 @@ describe("alert reserve source cache", () => {
       publishedAt: nowSec - producerIntervalSec * 2,
       continuous: true,
       driftIds: [],
+      observedSince: {}, unavailableIds: [],
     };
 
     expect(assess(atBoundary).state).toBe("ok");
@@ -55,6 +58,7 @@ describe("alert reserve source cache", () => {
     const first = buildAlertReserveSourceEnvelope(["usdc-circle"], null, {
       nowSec,
       producerIntervalSec,
+      observedIds: ["usdc-circle"], unavailableIds: [],
     });
     expect(first).toMatchObject({ continuous: false, driftIds: ["usdc-circle"] });
     expect(assess(first).state).toBe("recovering");
@@ -66,6 +70,7 @@ describe("alert reserve source cache", () => {
     const recovered = buildAlertReserveSourceEnvelope(["usdc-circle"], stalePrevious, {
       nowSec,
       producerIntervalSec,
+      observedIds: ["usdc-circle"], unavailableIds: [],
     });
     expect(recovered.continuous).toBe(false);
     expect(assess(recovered).state).toBe("recovering");
@@ -75,10 +80,12 @@ describe("alert reserve source cache", () => {
     const first = buildAlertReserveSourceEnvelope(["usdc-circle"], null, {
       nowSec: nowSec - producerIntervalSec,
       producerIntervalSec,
+      observedIds: ["usdc-circle"], unavailableIds: [],
     });
     const next = buildAlertReserveSourceEnvelope(["usdc-circle"], cached(first), {
       nowSec,
       producerIntervalSec,
+      observedIds: ["usdc-circle"], unavailableIds: [],
     });
 
     expect(next.continuous).toBe(true);
@@ -87,5 +94,24 @@ describe("alert reserve source cache", () => {
       generation: ALERT_RESERVE_SOURCE_GENERATION,
       ageSeconds: 0,
     });
+  });
+
+  it("resets only a returning asset's observation epoch while preserving observed peers", () => {
+    const first = buildAlertReserveSourceEnvelope(["coin"], null, {
+      nowSec: nowSec - 2 * producerIntervalSec, producerIntervalSec,
+      observedIds: ["coin", "peer"], unavailableIds: [],
+    });
+    const gap = buildAlertReserveSourceEnvelope([], cached(first), {
+      nowSec: nowSec - producerIntervalSec, producerIntervalSec,
+      observedIds: ["peer"], unavailableIds: ["coin"],
+    });
+    const recovery = buildAlertReserveSourceEnvelope(["coin", "peer"], cached(gap), {
+      nowSec, producerIntervalSec, observedIds: ["coin", "peer"], unavailableIds: [],
+    });
+    expect(gap.unavailableIds).toEqual(["coin"]);
+    expect(gap.observedSince.coin).toBeUndefined();
+    expect(recovery.observedSince.coin).toBe(nowSec);
+    expect(recovery.observedSince.peer).toBe(first.observedSince.peer);
+    expect(assess(recovery).state).toBe("ok");
   });
 });

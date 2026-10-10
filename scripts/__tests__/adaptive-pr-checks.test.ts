@@ -180,10 +180,18 @@ describe("adaptive PR checks", () => {
       { id: "other", sourcePaths: ["other/**"] },
     ] as never;
     expect(selectChangedGeneratedArtifactIds(["data/coin.json"], registry)).toEqual(["catalog", "index"]);
+    expect(selectChangedGeneratedArtifactIds(["generated/catalog.json"], [
+      { id: "catalog", sourcePaths: ["data/**"], outputPaths: ["generated/*.json"] },
+      { id: "index", sourcePaths: ["scripts/index.ts"], dependsOn: ["catalog"] },
+    ])).toEqual(["catalog", "index"]);
   });
 
-  // No generated artifact reads internal docs Markdown, so a docs-only PR
-  // selects no artifact freshness check; freshness follows changed sources.
+  it("selects the API reference for output-only generated documentation edits", () => {
+    expect(selectChangedGeneratedArtifactIds(["docs/api-reference.md"])).toContain("api-reference");
+  });
+
+  // Ordinary internal docs do not select a checkable artifact; generated output
+  // paths such as the API reference still require their owning freshness check.
   it("keeps docs-only PRs on the small static baseline", () => {
     expect(buildPrStaticCheckPlan(["docs/testing.md"]).commands.map((command) => command.name)).toEqual([
       "lint:changed",
@@ -380,10 +388,15 @@ describe("adaptive PR checks", () => {
     );
   });
 
-  it("checks a changed generated artifact even when no Pages surface moved", () => {
+  it.each([
+    "worker/src/lib/full-stablecoin-catalog.ts",
+    "worker/src/lib/safety-score-v9/candidate.ts",
+    "worker/src/lib/safety-score-v9/extension.ts",
+    "worker/src/lib/safety-score-v9/fact-set.ts",
+  ])("checks the evaluation manifest for offline runtime input %s even without Pages changes", (path) => {
     // The Wave-1 near-miss: a worker-only commit touching a manifest-pinned V9
     // source left the evaluation-build manifest stale and passed the PR gate.
-    const plan = buildPrStaticCheckPlan(["worker/src/lib/safety-score-v9/extension.ts"]);
+    const plan = buildPrStaticCheckPlan([path]);
     const artifactCommand = plan.commands.find(
       (command): command is { name: string; args: string[] } =>
         command.name === "check:generated-artifacts" && "args" in command,

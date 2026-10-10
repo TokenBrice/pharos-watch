@@ -111,7 +111,7 @@ export type CacheFreshnessLaneKey = keyof typeof CACHE_FRESHNESS_LANES;
  * strings are lane documentation and are deliberately not carried onto the
  * descriptor, which is why this is a projection rather than a bare spread.
  */
-export type SurfaceFreshnessLaneFields<K extends CacheFreshnessLaneKey> = Omit<
+type SurfaceFreshnessLaneFields<K extends CacheFreshnessLaneKey> = Omit<
   (typeof CACHE_FRESHNESS_LANES)[K],
   "endpointBudgetReason" | "availabilityBudgetReason"
 >;
@@ -124,7 +124,7 @@ function surfaceFreshnessLaneFields<K extends CacheFreshnessLaneKey>(
   return fields;
 }
 
-export type DataSurfaceDescriptorKey =
+type DataSurfaceDescriptorKey =
   "stablecoins" | "dexLiquidity" | "yieldRankings" | "yieldHistory" | "stressSignals" | "reportCards" | "publicHealth";
 
 export type YieldHistoryMode = "best" | "source";
@@ -260,5 +260,3 @@ export const DATA_SURFACE_DESCRIPTORS = {
     frontendQueryBaseKey: "health",
   },
 } as const satisfies Record<DataSurfaceDescriptorKey, DataSurfaceDescriptor>;
-
-export const DATA_SURFACE_DESCRIPTOR_LIST = Object.values(DATA_SURFACE_DESCRIPTORS);

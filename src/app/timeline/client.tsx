@@ -1,7 +1,7 @@
 "use client";
 
 import "./phosphor.css";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import { CoinCrossTrackerHatnote } from "@/components/coin-cross-tracker-hatnote";
 import {
   TapeFilters,
@@ -97,6 +97,27 @@ function decodeTimelineFilters(urlState: TimelineUrlState): TapeFilterState {
 }
 
 export function TimelineClient() {
+  const clockRef = useRef<{ queryAnchorMs: number; nowMs: number } | null>(null);
+  const subscribe = useCallback((notify: () => void) => {
+    // React subscribes after mounting, never during the server/hydration render.
+    const mountedAt = Date.now();
+    const queryAnchorMs = clockRef.current?.queryAnchorMs ?? mountedAt;
+    clockRef.current = { queryAnchorMs, nowMs: mountedAt };
+    notify();
+    const timer = window.setInterval(() => {
+      clockRef.current = { queryAnchorMs, nowMs: Date.now() };
+      notify();
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const getSnapshot = useCallback(() => clockRef.current, []);
+  const clock = useSyncExternalStore(subscribe, getSnapshot, () => null);
+
+  if (clock == null) return null;
+  return <MountedTimelineClient queryAnchorMs={clock.queryAnchorMs} nowMs={clock.nowMs} />;
+}
+
+function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number; nowMs: number }) {
   const { setParam, setParams } = useUrlFilters();
   const { state: urlState, patchState } = useUrlState(TIMELINE_URL_SCHEMA);
   const filters = useMemo(() => decodeTimelineFilters(urlState), [urlState]);
@@ -110,12 +131,9 @@ export function TimelineClient() {
     }, [patchState, setParam],
   );
   const logos = logosById;
-  const [nowMs] = useState(() => Date.now());
 
-  // Pass `nowMs` (frozen at mount) so the queryKey stays stable across
-  // renders — otherwise `tapeWindowSince` calls Date.now() each render and
-  // the infinite query restarts every tick.
-  const since = tapeWindowSince(filters.window, nowMs);
+  // Keep the query window stable while presentation timestamps continue aging.
+  const since = tapeWindowSince(filters.window, queryAnchorMs);
   const feedController = useMemo(
     () => buildTimelineFeedController(filters, since),
     [filters, since],
@@ -221,6 +239,8 @@ export function TimelineClient() {
         windowLabel={feedController.windowLabel}
         severityLabel={feedController.severityLabel}
         dataUpdatedAt={dataUpdatedAt}
+        meta={meta}
+        error={error}
         nowMs={nowMs}
         lastEventTs={lastEventTs}
         phosphor={phosphorActive}

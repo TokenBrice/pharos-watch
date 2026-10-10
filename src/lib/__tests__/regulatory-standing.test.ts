@@ -49,6 +49,20 @@ describe("buildRegulatoryStandingView", () => {
     expect(buildRegulatoryStandingView({ symbol: "XXX" })).toBeNull();
   });
 
+  it("keeps a CASH-like issuance-path signal distinct from an announced authorization plan", () => {
+    const view = buildRegulatoryStandingView({
+      symbol: "CASH",
+      genius: {
+        ...GENIUS,
+        authorizationStatus: "issuer-announced-intent",
+        issuerPathway: "unknown",
+        references: [{ label: "Open issuance", url: "https://example.com/issuance", sourceKind: "issuer-disclosure" }],
+      },
+    })!;
+    expect(view.summary).toMatch(/public materials signalling a GENIUS-era issuance path/);
+    expect(view.summary).not.toMatch(/announced intent|seek GENIUS authorization|filing pending|approved/);
+  });
+
   it("builds both regimes as status rows, issuer disclosures apart from them, fold facts, merged sources, and review date", () => {
     const view = buildRegulatoryStandingView({
       symbol: "USDC", genius: GENIUS, mica: MICA,

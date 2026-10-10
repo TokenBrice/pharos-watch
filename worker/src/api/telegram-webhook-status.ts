@@ -5,7 +5,7 @@ import {
   projectTelegramSupplyContext,
 } from "../lib/telegram/context-freshness";
 import { YieldRankingsResponseSchema } from "@shared/types/yield";
-import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER, normalizeDexLiquidityEvidence } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
 import { perCoinFlowCacheKey } from "../lib/mint-burn-flows-service";
@@ -64,6 +64,7 @@ export interface StatusForCoin {
     /** True only when `updatedAt` is within the DEWS DEX-liquidity budget. */
     current: boolean;
   } | null;
+  liquidityUnavailableReason?: "invalid-coverage-evidence" | null;
   yield: {
     currentApy: number;
     apy30d: number;
@@ -158,13 +159,14 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
         .first<{ price: number; updated_at: number }>(),
       db
         .prepare(
-          `SELECT liquidity_score, total_tvl_usd, updated_at
+          `SELECT liquidity_score, total_tvl_usd, updated_at, coverage_class, coverage_confidence
          FROM dex_liquidity
          WHERE stablecoin_id = ?
            AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
         )
         .bind(stablecoinId)
-        .first<{ liquidity_score: number | null; total_tvl_usd: number; updated_at: number }>(),
+        .first<{ liquidity_score: number | null; total_tvl_usd: number; updated_at: number;
+          coverage_class: string | null; coverage_confidence: number | null }>(),
       db
         .prepare(
           `SELECT current_apy, apy_30d, yield_source, updated_at
@@ -221,6 +223,14 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
       : null;
 
   const pysState = yieldRow ? await loadTelegramPysState(db, stablecoinId) : null;
+  let liquidityUnavailableReason: StatusForCoin["liquidityUnavailableReason"] = null;
+  if (liquidityRow) {
+    try {
+      normalizeDexLiquidityEvidence({ ...liquidityRow, stablecoin_id: stablecoinId });
+    } catch {
+      liquidityUnavailableReason = "invalid-coverage-evidence";
+    }
+  }
 
   return {
     stablecoinId,
@@ -246,7 +256,8 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
           }
         : null,
     safetyUnavailableReason: safetyState.source === null ? safetyState.unavailableReason : null,
-    liquidity: liquidityRow
+    liquidityUnavailableReason,
+    liquidity: liquidityRow && !liquidityUnavailableReason
       ? {
           score: liquidityRow.liquidity_score,
           totalTvlUsd: liquidityRow.total_tvl_usd,

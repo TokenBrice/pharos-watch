@@ -25,13 +25,14 @@ git log --no-merges --abbrev=8 --since="<from> 00:00:00 +0000" --until="<to> 23:
 
 ## Write And Verify
 
-Create `src/data/changelogs/<to>.ts` as `ChangelogEntry`. Before writing, confirm range ordering/non-overlap, field-note length, summary tags/descriptions, headline length, commit hashes, manifest cap, source-backed numbers, and existing methodology routes.
+Create `src/data/changelogs/<to>.json` with the `ChangelogEntry` shape. Before writing, confirm range ordering/non-overlap, field-note length, summary tags/descriptions, headline length, commit hashes, manifest cap, source-backed numbers, and existing methodology routes.
 
 Regenerate rather than hand-edit the barrel and refresh the Markdown fixture:
 
 ```bash
-npm run prebuild -- --only=changelog-registry
+node --import tsx scripts/maintenance/generate-changelog-registry.ts
 npm run check:generated-artifacts -- --only=changelog-registry
+npm run check:editorial-content
 npm run refresh:markdown-fixtures
 npm run typecheck
 npm test -- src/data/changelogs/

@@ -11,14 +11,6 @@ export type ExecutionUnit = {
   commands: CommandPlanItem[];
 };
 
-export type CommandRunResult = number | { status: number; aborted: boolean };
-export type CommandRunnerOptions = { signal?: AbortSignal };
-export type TestCommandRunner = (
-  cmd: string,
-  extraEnv?: TestEnv,
-  options?: CommandRunnerOptions,
-) => CommandRunResult | Promise<CommandRunResult>;
-
 export type TestExecFileSync = (
   cmd: string,
   args: readonly string[],
@@ -34,10 +26,6 @@ export function testEnv(values: TestEnv = {}): NodeJS.ProcessEnv {
 
 export function mockExecFileSync(impl: TestExecFileSync): typeof execFileSync {
   return impl as unknown as typeof execFileSync;
-}
-
-export function mockCommandRunner(impl: TestCommandRunner): typeof import("../lib/command-runner.mts").runShellCommand {
-  return impl as unknown as typeof import("../lib/command-runner.mts").runShellCommand;
 }
 
 export function mockConsole(impl: Partial<Pick<Console, "error" | "log" | "warn">>): Console {
@@ -64,8 +52,4 @@ export function commandTexts(plan: readonly CommandPlanItem[]): string[] {
 
 export function executionUnitCommandTexts(units: readonly ExecutionUnit[]): string[][] {
   return units.map((unit) => commandTexts(unit.commands));
-}
-
-export function executionBatchCommandTexts(batches: readonly (readonly ExecutionUnit[])[]): string[][][] {
-  return batches.map((batch) => executionUnitCommandTexts(batch));
 }

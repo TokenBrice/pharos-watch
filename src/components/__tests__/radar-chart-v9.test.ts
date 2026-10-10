@@ -1,9 +1,52 @@
-import { describe, expect, it } from "vitest";
-import { buildV9RadarDataset } from "@/components/radar-chart-v9";
+// @vitest-environment jsdom
+
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createElement } from "react";
+import { cleanup, render } from "@testing-library/react";
+import { CompareRadarV9, buildV9RadarDataset } from "@/components/radar-chart-v9";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import type { SafetyScoreV9Card } from "@shared/types";
+import type * as Recharts from "recharts";
+
+const radiusAxis = vi.hoisted(() => vi.fn());
+vi.mock("@/hooks/use-chart-container-ready", () => ({
+  useChartContainerReady: () => ({ ref: vi.fn(), ready: true, width: 300, height: 300 }),
+}));
+vi.mock("recharts", async (importOriginal) => {
+  const actual = await importOriginal<typeof Recharts>();
+  return {
+    ...actual,
+    PolarRadiusAxis: (props: Parameters<typeof actual.PolarRadiusAxis>[0]) => {
+      radiusAxis(props);
+      return createElement(actual.PolarRadiusAxis, props);
+    },
+  };
+});
+afterEach(() => { cleanup(); radiusAxis.mockClear(); });
 
 describe("V9 radar cohorts", () => {
+  it("requires three complete rated cohort members before publishing any medians", () => {
+    const identity = makeReportCardsV9Response().safetyScoreIdentity;
+    const entry = (card: SafetyScoreV9Card) => ({ card, identity, color: "#123456" });
+    const rated = [90, 80, 30].map((score, index) => entry(makeV9Card({
+      id: `rated-${index}`, pillars: makeV9Pillars({ backing: score, exit: score, control: score }),
+    })));
+    const unusable = [
+      entry(makeReportCardsV9PipelineGapCard("control", "A")),
+      entry(makeV9Card({ pillars: makeV9Pillars({ backing: 100, exit: 100, control: null }) })),
+    ];
+    expect(buildV9RadarDataset([rated[0]!], [...rated.slice(0, 2), ...unusable])).toMatchObject({
+      status: "available", value: { cohortMedians: null },
+    });
+    expect(buildV9RadarDataset([rated[0]!], [...rated, ...unusable])).toMatchObject({
+      status: "available", value: { cohortMedians: { backing: 80, exit: 80, control: 80 } },
+    });
+    expect(buildV9RadarDataset([rated[0]!], unusable)).toMatchObject({
+      status: "available", value: { cohortMedians: null },
+    });
+  });
+
   it("does not plot excluded pillars or surviving diagnostics as zero scores", () => {
     const identity = makeReportCardsV9Response().safetyScoreIdentity;
     for (const card of [makeReportCardsV9PartialCard("exit", "B"), makeReportCardsV9PipelineGapCard("control", "A")]) {
@@ -24,9 +67,9 @@ describe("V9 radar cohorts", () => {
     expect(result.value.rows.map((row) => row.pillar)).toEqual(["Backing", "Exit", "Control"]);
     expect(result.value.cohortMedians).toEqual({ backing: 50, exit: 40, control: 60 });
     expect(result.value.rows).toEqual([
-      { pillar: "Backing", fullMark: 100, "asset-a": 90, "asset-b": 20, "asset-c": 50, __cohortMedian: 50 },
-      { pillar: "Exit", fullMark: 100, "asset-a": 10, "asset-b": 80, "asset-c": 40, __cohortMedian: 40 },
-      { pillar: "Control", fullMark: 100, "asset-a": 60, "asset-b": 30, "asset-c": 90, __cohortMedian: 60 },
+      { pillar: "Backing", "asset-a": 90, "asset-b": 20, "asset-c": 50, __cohortMedian: 50 },
+      { pillar: "Exit", "asset-a": 10, "asset-b": 80, "asset-c": 40, __cohortMedian: 40 },
+      { pillar: "Control", "asset-a": 60, "asset-b": 30, "asset-c": 90, __cohortMedian: 60 },
     ]);
     expect(buildV9RadarDataset(series, series.slice(0, 2))).toMatchObject({
       status: "available", value: { cohortMedians: null },
@@ -77,5 +120,23 @@ describe("V9 radar cohorts", () => {
       ...displayed, identity: { ...identity, policyId: "different" },
     }])).toEqual({ status: "unavailable", reason: "identity-mismatch" });
     expect(buildV9RadarDataset([], [displayed])).toEqual({ status: "unavailable", reason: "invalid-v9-response" });
+  });
+
+  it("renders a fixed absolute radial domain for low and high scores with or without a cohort", () => {
+    const identity = makeReportCardsV9Response().safetyScoreIdentity;
+    const entry = (score: number, index: number) => ({
+      card: makeV9Card({ id: `asset-${index}`, pillars: makeV9Pillars({ backing: score, exit: score, control: score }) }),
+      identity, color: "#123456",
+    });
+    const low = entry(20, 0);
+    const high = entry(100, 1);
+    const { rerender } = render(createElement(CompareRadarV9, { series: [low] }));
+    expect(radiusAxis).toHaveBeenLastCalledWith(expect.objectContaining({ type: "number", domain: [0, 100] }));
+    rerender(createElement(CompareRadarV9, { series: [high] }));
+    expect(radiusAxis).toHaveBeenLastCalledWith(expect.objectContaining({ domain: [0, 100] }));
+    rerender(createElement(CompareRadarV9, { series: [low], cohortSeries: [low, high, entry(80, 2)] }));
+    expect(radiusAxis).toHaveBeenLastCalledWith(expect.objectContaining({ domain: [0, 100] }));
+    rerender(createElement(CompareRadarV9, { series: [low], cohortSeries: [] }));
+    expect(radiusAxis).toHaveBeenLastCalledWith(expect.objectContaining({ domain: [0, 100] }));
   });
 });

@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { ActivePriceCoverageHealthSchema } from "@shared/types/status/core";
 import { NominalPriceReferenceSchema, type NominalPriceReference } from "@shared/types/core";
@@ -77,11 +77,12 @@ export interface StablecoinPriceGapReview {
  * can be unknown. The public reader also represents unavailable current data. */
 export type StablecoinActivePriceCoverage = {
   [Key in Exclude<keyof ActivePriceCoverageHealth,
-    "status" | "observedAt" | "unavailableReason" | "maxConsecutiveMissingGenerations" | "nominalReferenceMarketCapUsd">]-?: NonNullable<ActivePriceCoverageHealth[Key]>;
+    "status" | "observedAt" | "unavailableReason" | "maxConsecutiveMissingGenerations" | "nominalReferenceMarketCapUsd" | "affectedMarketCapUsd">]-?: NonNullable<ActivePriceCoverageHealth[Key]>;
 } & {
   complete: boolean;
   maxConsecutiveMissingGenerations: ActivePriceCoverageHealth["maxConsecutiveMissingGenerations"];
   nominalReferenceMarketCapUsd: number | null;
+  affectedMarketCapUsd: number | null;
 };
 
 export interface PreviousStablecoinActivePriceCoverage {
@@ -740,14 +741,6 @@ export async function seedAbsentActivePriceCoverageMarketCaps(
   }
 }
 
-function marketCapOrNull(asset: StablecoinPriceCoverageAsset | undefined): number | null {
-  if (!asset?.circulating) return null;
-  const hasFiniteBucket = Object.values(asset.circulating).some(
-    (value) => typeof value === "number" && Number.isFinite(value),
-  );
-  return hasFiniteBucket ? getCirculatingRaw(asset) : null;
-}
-
 /** Price coverage is intentionally independent of row publication coverage.
  * A published active row with a null, zero, negative, or non-finite price is
  * still a public data-quality failure, but it must not block cache publication. */
@@ -778,7 +771,7 @@ export function evaluateStablecoinActivePriceCoverage(
     options.priceGapReviews,
   );
   let presentActiveCount = 0;
-  let affectedMarketCapUsd = 0;
+  let affectedMarketCapUsd: number | null = 0;
   let nominalReferenceMarketCapUsd: number | null = 0;
   let maxConsecutiveMissingGenerations: number | null = 0;
 
@@ -792,16 +785,15 @@ export function evaluateStablecoinActivePriceCoverage(
       continue;
     }
 
-    const marketCapUsd = marketCapOrNull(asset);
+    const marketCapUsd = getCirculatingRawOrNull(asset);
     if (NominalPriceReferenceSchema.safeParse(asset?.nominalPriceReference).success) {
       nominalReferenceIds.push(stablecoinId);
       nominalReferenceMarketCapUsd = nominalReferenceMarketCapUsd == null || marketCapUsd == null
         ? null : nominalReferenceMarketCapUsd + marketCapUsd;
       continue;
     }
-    if (marketCapUsd != null && marketCapUsd > 0) {
-      affectedMarketCapUsd += marketCapUsd;
-    }
+    affectedMarketCapUsd = affectedMarketCapUsd == null || marketCapUsd == null
+      ? null : affectedMarketCapUsd + marketCapUsd;
     const previousDetail = previousMissingDetailsById.get(stablecoinId);
     const previousStreak = options.previousCoverage?.unavailableReason
       ? null
@@ -811,7 +803,7 @@ export function evaluateStablecoinActivePriceCoverage(
     const consecutiveMissingGenerations = previousStreak == null ? null : previousStreak + 1;
     const previousAccepted = acceptedObservation(options.previousAcceptedAssetsById?.get(stablecoinId));
     const previousAsset = options.previousAcceptedAssetsById?.get(stablecoinId);
-    const previousCap = marketCapOrNull(previousAsset);
+    const previousCap = getCirculatingRawOrNull(previousAsset);
     const lastKnownMarketCapUsd = marketCapUsd ?? previousCap
       ?? previousDetail?.lastKnownMarketCapUsd ?? previousDetail?.marketCapUsd ?? null;
     const lastKnownMarketCapObservedAt = marketCapUsd != null

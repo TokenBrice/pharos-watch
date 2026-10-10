@@ -51,6 +51,32 @@ export function decodeAddressWord(returnData: string, callName = "call"): string
   return `0x${word.toString(16).padStart(40, "0")}`;
 }
 
+type ScalarJournal<S> = {
+  call(spec: S): Promise<string>;
+  recordDecoded(decoded: string): void;
+};
+
+export async function readJournalUint<S extends { name: string }>(
+  caller: ScalarJournal<S>,
+  spec: S,
+  wordIndex = 0,
+  label = "call",
+): Promise<bigint> {
+  const value = decodeUintWord(await caller.call(spec), wordIndex, label);
+  caller.recordDecoded(value.toString());
+  return value;
+}
+
+export async function readJournalAddress<S extends { name: string }>(
+  caller: ScalarJournal<S>,
+  spec: S,
+  label = "call",
+): Promise<string> {
+  const value = decodeAddressWord(await caller.call(spec), label);
+  caller.recordDecoded(value);
+  return value;
+}
+
 export function decodeBoolWord(returnData: string, wordIndex = 0, callName = "call"): boolean {
   const word = decodeUintWord(returnData, wordIndex, callName);
   if (word !== 0n && word !== 1n) throw new Error(`${callName}: expected boolean word, received ${word}`);
@@ -243,6 +269,7 @@ export class ReplayEthCaller implements EthCallJournal {
   constructor(
     private readonly recorded: readonly MeasurementCall[],
     private readonly recordedLogQueries: readonly MeasurementLogQuery[] = [],
+    private readonly overrides?: ReadonlyMap<string, string>,
   ) {}
 
   async call(spec: EthCallSpec): Promise<string> {
@@ -260,9 +287,10 @@ export class ReplayEthCaller implements EthCallJournal {
         `Replay call ${this.index} mismatch: expected ${expected.name} ${expected.to}:${expected.callData}, got ${spec.name} ${spec.to.toLowerCase()}:${callData}`,
       );
     }
-    this.calls.push({ ...expected, decoded: "" });
+    const returnData = this.overrides?.get(`${spec.to.toLowerCase()}:${callData}`) ?? expected.returnData;
+    this.calls.push({ ...expected, returnData, decoded: "" });
     this.index += 1;
-    return expected.returnData;
+    return returnData;
   }
 
   recordDecoded(decoded: string): void {

@@ -190,7 +190,6 @@ export async function recordSystemHealthDeferrals(input: {
   nowSec: number;
   ddrRunId: string;
   runAt: number;
-  syncCapabilities: Record<string, unknown>;
   reason: string;
 }): Promise<number> {
   let count = 0;
@@ -213,7 +212,6 @@ export async function recordSystemHealthDeferrals(input: {
       healthStatus: "degraded",
       action: "deferred",
       reason: input.reason,
-      syncCapabilities: input.syncCapabilities,
       lockTrigger: "readiness_backstop",
       backstopAt: incident.eligibleAt,
       backstopDelaySec,
@@ -231,7 +229,6 @@ export async function recordConfirmedSeenOpportunities(input: {
   confirmedAtByEventId: Map<number, number>;
   ddrRunId: string;
   runAt: number;
-  syncCapabilities: Record<string, unknown>;
 }): Promise<number> {
   if (input.confirmedAtByEventId.size === 0) return 0;
 
@@ -258,7 +255,6 @@ export async function recordConfirmedSeenOpportunities(input: {
       reason: "pending-outcome-promoted",
       confirmationAt: confirmedAt,
       outcomeAt: confirmedAt,
-      syncCapabilities: input.syncCapabilities,
       lockTrigger: "readiness_backstop",
       backstopAt: incident.eligibleAt,
       backstopDelaySec,

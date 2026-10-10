@@ -3,7 +3,7 @@ import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { formatCompactUsd } from "@shared/lib/format";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { StablecoinListResponse } from "@shared/types";
 import type {
   CommandPalettePegStatus,
@@ -11,6 +11,7 @@ import type {
   CommandPaletteStablecoinLiveMetadata,
 } from "@/components/command-palette-model";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { compareFiniteDesc } from "@shared/lib/sort";
 
 const POPULAR_STABLECOIN_COUNT = 6;
 
@@ -44,7 +45,7 @@ export function buildStablecoinLiveMetadata(
 
   const { rates } = derivePegRates(peggedAssets, TRACKED_META_BY_ID, stablecoinsData.fxFallbackRates);
   for (const asset of peggedAssets) {
-    const marketCapUsd = getCirculatingRaw(asset);
+    const marketCapUsd = getCirculatingRawOrNull(asset);
     const meta = TRACKED_META_BY_ID.get(asset.id);
     const peg = asset.pegType;
     let health: CommandPaletteStablecoinHealth | undefined;
@@ -59,9 +60,9 @@ export function buildStablecoinLiveMetadata(
         health = { kind: "peg", status: bps >= threshold ? "alert" : bps >= threshold / 2 ? "watch" : "calm" };
       }
     }
-    if (marketCapUsd > 0 || health) {
+    if (marketCapUsd !== null || health) {
       map.set(asset.id, {
-        ...(marketCapUsd > 0 ? { marketCapUsd } : {}),
+        ...(marketCapUsd !== null ? { marketCapUsd } : {}),
         ...(health ? { health } : {}),
       });
     }
@@ -78,11 +79,7 @@ export function buildPopularStablecoinIds(
 
   return [...peggedAssets]
     .filter((asset) => !asset.frozen)
-    .sort((a, b) => {
-      const aMarketCap = liveMetadata.get(a.id)?.marketCapUsd ?? 0;
-      const bMarketCap = liveMetadata.get(b.id)?.marketCapUsd ?? 0;
-      return bMarketCap - aMarketCap;
-    })
+    .sort(compareFiniteDesc((asset) => liveMetadata.get(asset.id)?.marketCapUsd ?? Number.NaN))
     .slice(0, POPULAR_STABLECOIN_COUNT)
     .map((asset) => asset.id);
 }

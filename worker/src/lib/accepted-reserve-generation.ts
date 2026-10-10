@@ -8,7 +8,7 @@ import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserves/store-shared";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReserveSnapshotMetadataRecord } from "./live-reserves/store-shared";
 import { assessReserveSnapshotFreshness, evaluateLiveReserveAdmission, hasScoringEligibleLiveReserveFreshness } from "./live-reserves/store-snapshot-state";
-import { parseSnapshotMetadata, parseWarnings } from "./live-reserves/store-row-decoding";
+import { parseSnapshotMetadata, parseWarningsStrict } from "./live-reserves/store-row-decoding";
 import { decodeLiveReserveRedemptionTelemetry, LiveReserveDiagnosticsSchema } from "@shared/types/live-reserves";
 import type { ScheduledCheckpointIdentity } from "./scheduled-recovery-checkpoint";
 import type { CronResult } from "./cron-logger";
@@ -22,17 +22,21 @@ async function contentDigest(value: Omit<AcceptedReserveGeneration, "contentSha2
   return sha256Hex(stableJsonStringifyV1(value));
 }
 
+async function decodeAcceptedReserveGeneration(value: string): Promise<AcceptedReserveGeneration> {
+  try {
+    const envelope = AcceptedReserveGenerationSchema.parse(JSON.parse(value));
+    const { contentSha256, ...content } = envelope;
+    if (await contentDigest(content) !== contentSha256) throw new Error("digest mismatch");
+    return envelope;
+  } catch { throw new AcceptedReserveViewError("accepted-reserve-view-invalid"); }
+}
+
 export async function loadAcceptedReserveGeneration(db: D1Database): Promise<AcceptedReserveGeneration> {
   let row: { value: string } | null;
   try { row = await db.prepare("SELECT value FROM cache WHERE key = ?").bind(ACCEPTED_RESERVE_GENERATION_KEY).first<{ value: string }>(); }
   catch { throw new AcceptedReserveViewError("accepted-reserve-view-unavailable"); }
   if (!row) throw new AcceptedReserveViewError("accepted-reserve-view-unavailable");
-  try {
-    const envelope = AcceptedReserveGenerationSchema.parse(JSON.parse(row.value));
-    const { contentSha256, ...content } = envelope;
-    if (await contentDigest(content) !== contentSha256) throw new Error("digest mismatch");
-    return envelope;
-  } catch { throw new AcceptedReserveViewError("accepted-reserve-view-invalid"); }
+  return decodeAcceptedReserveGeneration(row.value);
 }
 
 interface ProjectedMemberRow {
@@ -63,22 +67,24 @@ export async function sealAcceptedReserveGeneration(db: D1Database, identity: Sc
     members: rows.results.map((row) => {
       const legacyFallback = !row.attempt_id && !row.last_success_attempt_id && row.last_success_at === row.fetched_at && row.last_attempted_at === row.fetched_at && row.last_status !== "error" && row.last_status !== "skipped";
       const metadata = parseSnapshotMetadata(row.metadata);
-      const warnings = parseWarnings(row.warnings);
+      const parsedWarnings = parseWarningsStrict(row.warnings);
+      const warnings = parsedWarnings.warnings ?? [];
       const finalMetadata = legacyFallback && Object.keys(metadata).length === 0 ? parseSnapshotMetadata(row.state_metadata) : metadata;
-      const finalWarnings = legacyFallback && warnings.length === 0 ? parseWarnings(row.state_warnings) : warnings;
+      const selectedWarnings = legacyFallback && warnings.length === 0 && !parsedWarnings.issue
+        ? parseWarningsStrict(row.state_warnings, row.warning_count)
+        : parseWarningsStrict(row.warnings, row.warning_count);
+      const finalWarnings = selectedWarnings.warnings ?? [];
       const adapterKey = WORKER_TRACKED_META_BY_ID.get(row.stablecoin_id)?.liveReservesConfig?.adapter;
       const adapter = adapterKey ? getLiveReserveAdapterDefinition(adapterKey) : undefined;
-      let malformed = decodeLiveReserveRedemptionTelemetry(finalMetadata).status === "invalid";
+      let malformed = parsedWarnings.issue != null || selectedWarnings.issue != null ||
+        decodeLiveReserveRedemptionTelemetry(finalMetadata).status === "invalid";
       const diag = finalMetadata.diag;
       if (diag && Object.prototype.hasOwnProperty.call(diag, "rawSumDeviation") &&
         !LiveReserveDiagnosticsSchema.shape.rawSumDeviation.unwrap().safeParse(diag.rawSumDeviation).success) malformed = true;
       try {
         const selectedMetadata = finalMetadata === metadata ? row.metadata : row.state_metadata;
-        const selectedWarnings = finalWarnings === warnings ? row.warnings : row.state_warnings;
         const rawMetadata: unknown = selectedMetadata ? JSON.parse(selectedMetadata) : {};
-        const rawWarnings: unknown = selectedWarnings ? JSON.parse(selectedWarnings) : [];
         if (!rawMetadata || typeof rawMetadata !== "object" || Array.isArray(rawMetadata)) malformed = true;
-        if (!Array.isArray(rawWarnings) || rawWarnings.length !== finalWarnings.length) malformed = true;
       } catch { malformed = true; }
       const parsed = AcceptedReserveSnapshotSchema.safeParse({ stablecoinId: row.stablecoin_id, fetchedAt: row.fetched_at, attemptId: row.attempt_id ?? null,
         source: row.source, metadata: finalMetadata, warnings: finalWarnings, warningCount: row.warning_count ?? finalWarnings.length,
@@ -93,11 +99,25 @@ export async function sealAcceptedReserveGeneration(db: D1Database, identity: Sc
     AND state IN ('running', 'recovering') AND queue_hash = ? AND items_total = ? AND items_done = items_total
     AND next_item_key IS NULL AND current_item_key IS NULL AND current_domain_attempt_id IS NULL`;
   const binds = [identity.scheduleKey, identity.slotStartedAt, identity.job, identity.attemptNo, identity.executionGeneration, identity.invocationId, queueHash, memberIds.length];
+  // Validate the entire prior envelope, not just its root clock. Exact-value CAS
+  // repairs invalid acceptance; a concurrent older root may still be superseded.
+  const prior = await db.prepare("SELECT value FROM cache WHERE key = ?")
+    .bind(ACCEPTED_RESERVE_GENERATION_KEY).first<{ value: string }>();
+  let replacePrior = true;
+  if (prior) {
+    try {
+      const accepted = await decodeAcceptedReserveGeneration(prior.value);
+      replacePrior = accepted.root.slotStartedAt < envelope.root.slotStartedAt;
+    } catch (error) {
+      if (!(error instanceof AcceptedReserveViewError)) throw error;
+    }
+  }
   const results = await executeAtomicBatch(db, [
     db.prepare(`UPDATE worker_scheduled_checkpoints SET child_dispositions_json = json_set(child_dispositions_json, '$."sync-live-reserves"', 'completed'), updated_at = ? WHERE ${fence} AND json_extract(child_dispositions_json, '$."sync-live-reserves"') IN ('running', 'completed')`).bind(completedAtSec, ...binds),
     db.prepare(`INSERT INTO cache (key, value, updated_at) SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM worker_scheduled_checkpoints WHERE ${fence} AND json_extract(child_dispositions_json, '$."sync-live-reserves"') = 'completed')
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-      WHERE json_valid(cache.value) AND json_extract(cache.value, '$.root.slotStartedAt') < json_extract(excluded.value, '$.root.slotStartedAt')`).bind(ACCEPTED_RESERVE_GENERATION_KEY, JSON.stringify(envelope), completedAtSec, ...binds),
+      WHERE (cache.value = ? AND ? = 1)
+        OR CASE WHEN json_valid(cache.value) THEN json_extract(cache.value, '$.root.slotStartedAt') < json_extract(excluded.value, '$.root.slotStartedAt') ELSE 0 END`).bind(ACCEPTED_RESERVE_GENERATION_KEY, JSON.stringify(envelope), completedAtSec, ...binds, prior?.value ?? null, replacePrior ? 1 : 0),
   ], { returnResults: true });
   if (results[0].meta.changes !== 1) return null;
   // Single-root idempotency and delayed replays deliberately retain the newer seal.

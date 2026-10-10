@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { safeJsonParse } from "./api-cache-read";
-import { CURRENT_DEPLOYMENT_KEYS, deploymentKey } from "./dex-liquidity";
+import { CURRENT_DEPLOYMENT_KEYS, deploymentKey, normalizeDexLiquidityEvidence } from "./dex-liquidity";
 import { DexLiquidityCronMetadataSchema } from "./schemas";
 import {
   DexExitRouteObservationsSchema,
@@ -302,8 +302,11 @@ export function selectTrendBaseline<T extends DexHistoryRow>(
   let bestDistance = Number.POSITIVE_INFINITY;
 
   for (const row of history) {
-    const confidence = row.coverage_confidence ?? 0;
-    if (confidence < TREND_BASELINE_CONFIDENCE_MIN) continue;
+    try {
+      if (normalizeDexLiquidityEvidence(row).coverageConfidence < TREND_BASELINE_CONFIDENCE_MIN) continue;
+    } catch {
+      continue;
+    }
     if (row.total_tvl_usd <= 0) continue;
 
     const distance = Math.abs(row.snapshot_date - targetSec);

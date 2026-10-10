@@ -49,8 +49,28 @@ export interface DdrIncident {
   durationSec: number | null;
   /** true when the final fragment has an explicit or legacy-compatible recovery close */
   recovered: boolean;
-  /** Fragment peak severities relative to incident start; used to avoid depth leakage at landmark age. */
+  /** Timed onset/severity observations relative to incident start; empty means legacy depth is unsupported. */
   fragments?: DdrIncidentFragment[];
+}
+
+function timedSeverityFragments(event: DdrHistoricalEvent, incidentStartedAt: number): DdrIncidentFragment[] {
+  const fragments: DdrIncidentFragment[] = [];
+  if (event.onsetDeviationBps != null && Number.isFinite(event.onsetDeviationBps)) {
+    fragments.push({ offsetSec: event.startedAt - incidentStartedAt, peakDeviationBps: event.onsetDeviationBps });
+  }
+  for (const observation of event.severityObservations ?? []) {
+    if (
+      !Number.isFinite(observation.observedAt) ||
+      !Number.isFinite(observation.deviationBps) ||
+      observation.observedAt < event.startedAt ||
+      (event.endedAt != null && observation.observedAt > event.endedAt)
+    ) continue;
+    fragments.push({
+      offsetSec: observation.observedAt - incidentStartedAt,
+      peakDeviationBps: observation.deviationBps,
+    });
+  }
+  return fragments;
 }
 
 /**
@@ -108,7 +128,7 @@ export function groupIncidents(
           endedAt: ev.endedAt,
           worstBps: ev.peakDeviationBps,
           lastClosure: classifyDepegClosure(ev),
-          fragments: [{ offsetSec: 0, peakDeviationBps: ev.peakDeviationBps }],
+          fragments: timedSeverityFragments(ev, ev.startedAt),
         };
         continue;
       }
@@ -119,10 +139,7 @@ export function groupIncidents(
         if (Math.abs(ev.peakDeviationBps) > Math.abs(cur.worstBps)) cur.worstBps = ev.peakDeviationBps;
         cur.endedAt = ev.endedAt; // null if this fragment is open
         cur.lastClosure = classifyDepegClosure(ev);
-        cur.fragments.push({
-          offsetSec: Math.max(0, ev.startedAt - cur.startedAt),
-          peakDeviationBps: ev.peakDeviationBps,
-        });
+        cur.fragments.push(...timedSeverityFragments(ev, cur.startedAt));
       } else {
         flush();
         cur = {
@@ -130,7 +147,7 @@ export function groupIncidents(
           endedAt: ev.endedAt,
           worstBps: ev.peakDeviationBps,
           lastClosure: classifyDepegClosure(ev),
-          fragments: [{ offsetSec: 0, peakDeviationBps: ev.peakDeviationBps }],
+          fragments: timedSeverityFragments(ev, ev.startedAt),
         };
       }
     }
@@ -162,9 +179,7 @@ export function groupDurationLabelIncidents(incidents: DdrIncident[]): DdrIncide
       endedAt: incident.endedAt,
       durationSec: incident.endedAt == null ? null : Math.max(0, incident.endedAt - incident.startedAt),
       recovered: incident.endedAt != null && incident.recovered,
-      fragments: incident.fragments?.length
-        ? incident.fragments.map((fragment) => ({ ...fragment }))
-        : [{ offsetSec: 0, peakDeviationBps: incident.peakDeviationBps }],
+      fragments: incident.fragments?.map((fragment) => ({ ...fragment })) ?? [],
     });
 
     for (const incident of list) {
@@ -192,12 +207,10 @@ export function groupDurationLabelIncidents(incidents: DdrIncident[]): DdrIncide
       current.recovered = incident.endedAt != null && incident.recovered;
       const offsetSec = Math.max(0, incident.startedAt - current.startedAt);
       current.fragments!.push(
-        ...(incident.fragments?.length
-          ? incident.fragments.map((fragment) => ({
-              offsetSec: offsetSec + fragment.offsetSec,
-              peakDeviationBps: fragment.peakDeviationBps,
-            }))
-          : [{ offsetSec, peakDeviationBps: incident.peakDeviationBps }]),
+        ...(incident.fragments ?? []).map((fragment) => ({
+          offsetSec: offsetSec + fragment.offsetSec,
+          peakDeviationBps: fragment.peakDeviationBps,
+        })),
       );
     }
 

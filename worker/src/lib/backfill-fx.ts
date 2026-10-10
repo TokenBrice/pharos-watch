@@ -24,7 +24,7 @@ import {
   SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS,
 } from "./fx-config";
 import type { D1Database } from "@cloudflare/workers-types";
-import { fetchCgPriceHistoryHourly, type HistoricalMarketBackfillRange } from "../api/backfill-price-sources";
+import { fetchCgPriceHistoryHourly, type HistoricalMarketBackfillRange } from "./historical-market-prices";
 
 function isValidSecondaryFxCacheDate(date: string, year: number): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !date.startsWith(`${year}-`)) return false;
@@ -175,6 +175,7 @@ async function fetchHistoricalSecondaryFxDay(
     2,
     { passthrough404: true, timeoutMs: 20_000 },
   );
+  const primaryMissing = result?.response.status === 404;
   if (!result?.response.ok) {
     result = await fetchTextWithRetry(
       fallbackUrl,
@@ -185,7 +186,7 @@ async function fetchHistoricalSecondaryFxDay(
   }
   if (!result?.response.ok) {
     logWorkerEventArgs("lib", "warn", `[backfill-depegs] secondary FX API returned ${result?.response.status ?? "no response"} for ${date}`);
-    return result?.response.status === 404 ? { kind: "unavailable" } : { kind: "transient" };
+    return primaryMissing && result?.response.status === 404 ? { kind: "unavailable" } : { kind: "transient" };
   }
 
   let raw: unknown;
@@ -254,7 +255,14 @@ export async function fetchHistoricalSecondaryFxRates(
       }
     }
 
-    const missingDates = wantedDates.filter((date) => !yearCache[date]);
+    const missingDates = wantedDates.filter((date) => {
+      const cachedRates = yearCache[date];
+      // Empty maps are confirmed no-data; successful partial maps are not complete.
+      return !cachedRates || (
+        Object.keys(cachedRates).length > 0 &&
+        normalized.some((currency) => cachedRates[currency.toLowerCase()] == null)
+      );
+    });
     for (let i = 0; i < missingDates.length; i += SECONDARY_FX_FETCH_CONCURRENCY) {
       const chunk = missingDates.slice(i, i + SECONDARY_FX_FETCH_CONCURRENCY);
       const fetched = await Promise.all(
@@ -265,8 +273,11 @@ export async function fetchHistoricalSecondaryFxRates(
           mergeDateRates(yearCache, date, outcome.rates);
           cacheChanged = true;
         } else if (outcome.kind === "unavailable") {
-          yearCache[date] = {};
-          cacheChanged = true;
+          // A later unavailable response must not erase dated evidence already read.
+          if (!yearCache[date]) {
+            yearCache[date] = {};
+            cacheChanged = true;
+          }
         }
       }
     }

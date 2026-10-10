@@ -19,6 +19,7 @@ vi.mock("../../lib/telegram", async (importOriginal) => ({
 }));
 
 import { CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
+import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import {
   CRON_STALENESS_ALERT_COOLDOWN_SEC,
   deriveCronFreshnessProducers,
@@ -33,7 +34,7 @@ interface FakeFailureRow {
   updated_at: number;
 }
 
-function fakeDb(failureRows: FakeFailureRow[] = []): D1Database {
+function fakeDb(failureRows: FakeFailureRow[] = [], producerPublishedAt?: number): D1Database {
   const cacheRows = new Map<string, { value: string; updated_at: number }>();
   return {
     prepare: (sql: string) => ({
@@ -62,7 +63,7 @@ function fakeDb(failureRows: FakeFailureRow[] = []): D1Database {
             const started_at = Math.floor(Date.now() / 1000);
             return { results: (args as string[]).map((job) => ({
               job,
-              last_success_at: started_at,
+              last_success_at: producerPublishedAt ?? started_at,
               last_run_at: started_at,
               last_status: "ok",
             })) };
@@ -122,6 +123,29 @@ describe("cron staleness watchdog", () => {
     expect(metadata.checkedProducers).toContain("compute-safety-score-v9");
   });
 
+  it("retains assessed cache and cron generation clocks with the watchdog budgets", async () => {
+    const now = 1_790_000_000;
+    vi.useFakeTimers();
+    vi.setSystemTime(now * 1000);
+    const publishedAt = now - 7 * 86400;
+    buildCacheStatusesMock.mockResolvedValue({
+      caches: { "dex-liquidity": { ageSeconds: now - publishedAt, publishedAt, generationId: "dex-generation:42" } },
+      warnings: [], failures: [], diagnostics: [],
+    });
+    const result = await runCronStalenessWatchdog(fakeDb([], publishedAt));
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata.stale.find((observation: { cacheKey: string }) => observation.cacheKey === "dex-liquidity")).toMatchObject({
+      publishedAt, generationId: "dex-generation:42", assessedAt: now,
+      ageSeconds: now - publishedAt, thresholdSec: 2 * CACHE_FRESHNESS_LANES.dexLiquidity.producerIntervalSec,
+    });
+    const cron = metadata.stale.find((observation: { laneKey: string | null; publishedAt: number }) =>
+      observation.laneKey === null && observation.publishedAt === publishedAt);
+    expect(cron).toMatchObject({ publishedAt, generationId: null, assessedAt: now, ageSeconds: now - publishedAt });
+    expect(cron.thresholdSec).toBeGreaterThan(0);
+    expect(evaluateCronStaleness({ "dex-liquidity": { ageSeconds: now - publishedAt, publishedAt, generationId: "dex-generation:42" } }, ["dexLiquidity"], now)[0])
+      .toMatchObject({ publishedAt, generationId: "dex-generation:42", assessedAt: now });
+  });
+
   it("derives consumer freshness coverage from the canonical producer registry", () => {
     const added = {
       ...CRON_JOB_DEFINITIONS[0],
@@ -168,6 +192,10 @@ describe("cron staleness watchdog", () => {
       stablecoins: { ageSeconds: Number.NaN }, "fx-rates": { ageSeconds: Number.POSITIVE_INFINITY }, "dex-liquidity": { ageSeconds: 0 }, dews: { ageSeconds: 0 },
       "stablecoin-charts": { ageSeconds: 0 }, "usds-status": { ageSeconds: 0 }, "bluechip-ratings": { ageSeconds: 0 },
     }).map((entry) => entry.cacheKey)).toEqual(["stablecoins", "fx-rates", "yield-data"]);
+  });
+
+  it.each([-1, Number.NEGATIVE_INFINITY, 1_800])("keeps clamped or boundary cache age %s fresh", (ageSeconds) => {
+    expect(evaluateCronStaleness({ stablecoins: { ageSeconds } }, ["stablecoins"])).toEqual([]);
   });
 
   it("reports DEX-to-DEWS dependency recovery state", async () => {

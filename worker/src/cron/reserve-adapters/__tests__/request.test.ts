@@ -2,6 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { installAdapterNetwork } from "./reserve-adapter.test-support";
 import { createAdapterIoLimiter } from "../concurrency";
+import { createReserveAdapterRunner } from "../../reserve-adapter-runner";
+import { createAdapterLatencyCollector } from "../../sync-live-reserves-core";
+import { CONFIGURED_COINS } from "../../sync-live-reserves-shared";
+import { getReserveAdapter } from "../index";
 import {
   ADAPTER_USER_AGENT,
   buildBrowserHeaders,
@@ -171,6 +175,86 @@ describe("adapter request cache", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it.each([
+    ["GET", "https://issuer.example/current?token=PRIVATE-EXAMPLE"],
+    ["POST", "https://issuer.example/current?token=PRIVATE-EXAMPLE"],
+    ["text", "https://issuer.example/current?token=PRIVATE-EXAMPLE"],
+    ["GET", "https://eth-mainnet.g.alchemy.com/v2/PRIVATE-EXAMPLE"],
+    ["POST", "https://eth-mainnet.g.alchemy.com/v2/PRIVATE-EXAMPLE"],
+    ["text", "https://eth-mainnet.g.alchemy.com/v2/PRIVATE-EXAMPLE"],
+  ] as const)("redacts %s failure URLs and I/O labels (%s)", async (method, url) => {
+    const signal = new AbortController().signal;
+    const labels: string[] = [];
+    const limiter = createAdapterIoLimiter();
+    const ctx = {
+      ioLimiter: {
+        run<T>(label: string, factory: () => Promise<T>, options?: { signal?: AbortSignal }) {
+          labels.push(label);
+          return limiter.run(label, factory, options);
+        },
+      },
+    };
+    for (const outcome of ["http", "network"] as const) {
+      vi.stubGlobal("fetch", vi.fn(async () => {
+        if (outcome === "network") throw new Error("transport failed");
+        return new Response("unavailable", { status: 503 });
+      }));
+      const options = { maxRetries: 0 };
+      const request = method === "POST"
+        ? fetchJsonPostWithRetry(url, {}, signal, 1000, ctx, options)
+        : method === "text"
+          ? fetchTextWithRetry(url, signal, 1000, ctx, options)
+          : fetchJsonWithRetry(url, signal, 1000, ctx, options);
+      const error = await request.catch((reason: unknown) => reason);
+      expect(error).toBeInstanceOf(Error);
+      const message = (error as Error).message;
+      expect(message).not.toContain("PRIVATE-EXAMPLE");
+      expect(message).not.toContain(url);
+      if (outcome === "http") {
+        expect(message).toContain(new URL(url).hostname);
+        expect(message).toContain("[redacted]");
+        expect(message).toContain("503");
+      }
+    }
+    expect(labels).toHaveLength(2);
+    for (const label of labels) {
+      expect(label).not.toContain("PRIVATE-EXAMPLE");
+      expect(label).toContain("[redacted]");
+    }
+  });
+
+  it("keeps the published primary fallback warning redacted", async () => {
+    const coin = CONFIGURED_COINS.find((candidate) => candidate.liveReservesConfig.adapter === "falcon")!;
+    const adapter = getReserveAdapter("falcon")!;
+    const primaryUrl = "https://issuer.example/current?token=PRIVATE-EXAMPLE";
+    const fallbackUrl = "https://issuer.example/fallback";
+    const network = installAdapterNetwork({ json: {
+      [primaryUrl]: { status: 404, body: "unavailable" },
+      [fallbackUrl]: {
+        snapshot_date: 1_780_000_000,
+        usdf: { supply: "100", insurance_fund: "0", breakdown: { assets: [{ label: "USDC", cash: "100" }] } },
+      },
+    } });
+    const config = {
+      ...coin.liveReservesConfig!,
+      inputs: {
+        primary: { kind: "http-json" as const, url: primaryUrl },
+        fallbacks: [{ kind: "http-json" as const, url: fallbackUrl }],
+      },
+    };
+    const runner = createReserveAdapterRunner({
+      signal: new AbortController().signal,
+      adapterCtx: { chainRpcs: network.chainRpcs },
+      adapterTimeoutMs: 1000,
+      telemetry: createAdapterLatencyCollector(),
+    });
+    const result = await runner({ ...coin, liveReservesConfig: config }, config, adapter);
+    const warning = result.warnings?.find((item) => item.code === "primary-fallback-used");
+    expect(warning).toMatchObject({ effect: "info" });
+    expect(warning?.message).not.toContain("PRIVATE-EXAMPLE");
+    expect(warning?.message).toContain("[redacted]");
   });
 
   it("dedupes identical JSON GETs within an adapter context", async () => {

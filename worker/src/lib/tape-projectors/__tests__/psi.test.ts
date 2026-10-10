@@ -80,6 +80,27 @@ describe("psi projector", () => {
     expect(tapeInsertBinds(db)).toHaveLength(0);
   });
 
+  it("uses the immediately preceding same-band score and keeps payloads identical across split scans", async () => {
+    const scan = async (split: boolean) => {
+      const { db, sqlite } = fixtures.open();
+      const insert = sqlite.prepare("INSERT INTO stability_index_samples (stored_at, score, band, methodology_version, components, input_snapshot) VALUES (?, ?, ?, '3.3', '{}', '{}')");
+      insert.run(SEC, 99, "BEDROCK");
+      insert.run(SEC + 900, 95, "BEDROCK");
+      insert.run(SEC + 1800, 90, "STEADY");
+      if (split) {
+        expect(await projectPsiBandShifts(db, { maxRows: 2 })).toEqual({ projected: 0, advanced: SEC + 900 });
+      }
+      expect(await projectPsiBandShifts(db)).toEqual({ projected: 1, advanced: SEC + 1800 });
+      return sqlite.prepare("SELECT event_id, source_row_id, payload_json FROM tape_events").get()!;
+    };
+
+    const oneShot = await scan(false);
+    expect(JSON.parse(String(oneShot.payload_json))).toEqual({
+      prevBand: "BEDROCK", newBand: "STEADY", prevScore: 95, newScore: 90, sampleAt: SEC + 1800,
+    });
+    expect(await scan(true)).toEqual(oneShot);
+  });
+
   it("uses prior-batch band when only one sample appears in the new batch", async () => {
     const db = mockTapeD1([
       { match: "FROM cache WHERE key", rows: [{ key: "tape-projector:cursor:psi.band_changed", value: String(SEC - 1) }] },

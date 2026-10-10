@@ -75,6 +75,20 @@ afterEach(cleanup);
 describe("RegulatoryStandingCard", () => {
   const [attestation, redemptionPolicy, reserveDisclosure] = ISSUER_DISCLOSURES;
 
+  it.each(["main", "rail"] as const)("renders signal-only GENIUS posture conservatively in %s density", (density) => {
+    const view = buildView({
+      genius: {
+        ...GENIUS,
+        authorizationStatus: "issuer-announced-intent",
+        issuerPathway: "unknown",
+        references: [{ label: "Open issuance", url: "https://example.com/issuance", sourceKind: "issuer-disclosure" }],
+      },
+    });
+    render(<RegulatoryStandingCard view={view} density={density} />);
+    const summary = screen.getByText(/public materials signalling a GENIUS-era issuance path/);
+    expect(summary.textContent).not.toMatch(/announced intent|seek GENIUS authorization|filing pending|approved/);
+  });
+
   it("keeps regime rows to status and pathway, with issuer disclosures in their own labelled row", () => {
     const view = buildView({ genius: GENIUS, mica: MICA });
     render(<RegulatoryStandingCard view={view} />);

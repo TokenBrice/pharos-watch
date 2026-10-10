@@ -261,11 +261,11 @@ function evaluateDexDiagnostics(input: AvailabilityEvaluationInput): Partial<Sta
 }
 
 function evaluateCircuitStatus(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
-  const status = input.publicHealth.circuitQueryError == null ? input.publicHealth.circuitImpactStatus : "healthy";
+  const status = input.publicHealth.circuitQueryError == null ? input.publicHealth.circuitImpactStatus : "degraded";
   const causes: StatusCause[] = [];
   if (input.publicHealth.circuitQueryError) {
-    causes.push(makeCause("availability", "circuit_query_failed", "info", "Circuit breaker diagnostics failed; availability details may be incomplete."));
-  } else if (input.publicHealth.openCircuitCount >= 3) {
+    causes.push(makeCause("availability", "circuit_query_failed", "warning", "Circuit breaker diagnostics unavailable (circuits-read-failed); availability cannot be confirmed."));
+  } else if (input.publicHealth.openCircuitCount != null && input.publicHealth.openCircuitCount >= 3) {
     causes.push(
       makeCause(
         "availability",
@@ -411,14 +411,21 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
   (input) => input.publicHealth.schedulerLiveness ? evaluateSchedulerLiveness(input.publicHealth.schedulerLiveness) : null,
   (input) => {
       const status = input.publicHealth.cacheImpactStatus;
-      const worstCacheRatio = input.publicHealth.worstCacheRatio;
+      const unavailableCauses: StatusCause[] = [];
       let worstCacheBreach:
         | { key: string; ratio: number; thresholds: ReturnType<typeof getCacheRatioThresholds>; tier: "degraded" | "stale" }
         | null = null;
       for (const [key, cache] of Object.entries(input.publicHealth.caches)) {
         const tier = getCacheFreshnessStatus(cache, key);
         if (tier === "healthy") continue;
-        const ratio = getCacheFreshnessRatio(cache) ?? worstCacheRatio;
+        const ratio = getCacheFreshnessRatio(cache);
+        if (ratio == null) {
+          unavailableCauses.push(makeCause(
+            "availability", "cache_freshness_unavailable", "critical",
+            `Cache freshness unavailable (${key}: ${cache.timestampReason ?? cache.warning ?? "missing-timestamp"}).`,
+          ));
+          continue;
+        }
         if (
           worstCacheBreach == null
           || (tier === "stale" && worstCacheBreach.tier === "degraded")
@@ -427,7 +434,7 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
           worstCacheBreach = { key, ratio, thresholds: getCacheRatioThresholds(key), tier };
         }
       }
-      if (status === "healthy" && worstCacheBreach == null) return null;
+      if (status === "healthy" && worstCacheBreach == null && unavailableCauses.length === 0) return null;
       const cause = worstCacheBreach
         ? makeCause(
             "availability",
@@ -438,23 +445,23 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
             { metric: "worstCacheRatio", value: worstCacheBreach.ratio, threshold: worstCacheBreach.thresholds[worstCacheBreach.tier] },
           )
         : null;
-      return ruleResult(status, cause ? [cause] : []);
+      return ruleResult(status, [...unavailableCauses, ...(cause ? [cause] : [])]);
   },
   evaluateCacheDiagnostics,
   evaluateFxDiagnostics,
   evaluateCacheWarnings,
   evaluateDexDiagnostics,
   (input) => {
-    const status = !input.publicHealth.mintBurnQueryError && !input.publicHealth.mintBurnBootstrap
-      ? input.publicHealth.mintBurnImpactStatus
-      : "healthy";
+    const status = input.publicHealth.mintBurnQueryError
+      ? "degraded"
+      : input.publicHealth.mintBurnBootstrap ? "healthy" : input.publicHealth.mintBurnImpactStatus;
     let cause: StatusCause | null = null;
     if (input.publicHealth.mintBurnQueryError) {
       cause = makeCause(
         "availability",
         "mint_burn_health_query_failed",
-        "info",
-        "Mint/burn health query failed; diagnostics are temporarily unavailable. " +
+        "warning",
+        `Mint/burn health query failed (${input.publicHealth.mintBurn.unavailableReason ?? "mint-burn-read-failed"}); diagnostics are temporarily unavailable. ` +
           `Latest critical cron run status: ${input.publicHealth.mintBurnLastRunStatus ?? "unknown"}.`,
       );
     } else if (!input.publicHealth.mintBurnBootstrap && input.publicHealth.mintBurnImpactStatus !== "healthy") {
@@ -469,7 +476,6 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
     return ruleResult(status, cause ? [cause] : []);
   },
   evaluateCircuitStatus,
-  (input) => ruleResult(input.publicHealth.alertBrokerImpactStatus),
   evaluateD1Status,
   evaluateCronDiagnosticQueries,
   (input) => {

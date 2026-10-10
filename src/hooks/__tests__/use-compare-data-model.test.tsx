@@ -112,10 +112,7 @@ describe("useCompareDataModel", () => {
     useYieldRankingsMock.mockReturnValue(makeQueryResult({
       data: { rankings: [] },
     }));
-    useMintBurnFlowsMock.mockReturnValue({
-      data: { coins: [] },
-      refetch: vi.fn().mockResolvedValue({ status: "success", error: null }),
-    });
+    useMintBurnFlowsMock.mockReturnValue(makeQueryResult({ data: { coins: [] } }));
     supplyHistoryQueryOptionsMock.mockReturnValue({});
     mintBurnFlowsCoinQueryOptionsMock.mockReturnValue({});
   });
@@ -158,6 +155,7 @@ describe("useCompareDataModel", () => {
       "redemptionBackstops",
       "yieldRankings",
       "stressSignals",
+      "mintBurnFlows",
     ]);
     expect(result.current.freshnessQueries[0]).toMatchObject({
       dataUpdatedAt: 101,
@@ -187,6 +185,23 @@ describe("useCompareDataModel", () => {
     ]);
   });
 
+  it("unwraps metadata-aware supply history before deriving comparison chart series", () => {
+    useQueriesMock
+      .mockReturnValueOnce([makeQueryResult({
+        data: {
+          data: [{ date: 1_700_000_000, circulatingUsd: 123 }],
+          meta: { updatedAt: 1_700_000_000, ageSeconds: 0, status: "fresh" },
+        },
+      })])
+      .mockReturnValueOnce([]);
+    const { result } = renderHook(() => useCompareDataModel({
+      selectedIds: ["usdc-circle"], flowHours: 24, radarCohort: "peg",
+    }));
+    expect(result.current.supplySeries).toEqual([
+      expect.objectContaining({ id: "usdc-circle", data: [{ ts: 1_700_000_000_000, value: 123 }] }),
+    ]);
+  });
+
   it("returns only the flow-error retry controls needed by the client", () => {
     const flowError = new Error("flow unavailable");
     const refetchFlowCoin = vi.fn().mockResolvedValue({ status: "success", error: null });
@@ -211,6 +226,58 @@ describe("useCompareDataModel", () => {
     });
     act(() => result.current.flowErrorNotice?.onRetry());
     expect(refetchFlowCoin).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps aggregate flow failure unavailable despite successful per-coin histories", () => {
+    const error = new Error("aggregate unavailable");
+    useMintBurnFlowsMock.mockReturnValue(makeQueryResult({ error, isError: true }));
+    const histories = ["usdc-circle", "usdt-tether"].map(() => makeQueryResult({
+      data: { data: { hourly: [{ hourTs: 1_700_000_000, netFlowUsd: 100, valuation: "complete" }] } },
+    }));
+    useQueriesMock.mockImplementation(({ queries }: { queries: unknown[] }) =>
+      queries[0] === "flow" ? histories : []);
+    mintBurnFlowsCoinQueryOptionsMock.mockReturnValue("flow");
+    const { result } = renderHook(() => useCompareDataModel({
+      selectedIds: ["usdc-circle", "usdt-tether"], flowHours: 24, radarCohort: "peg",
+    }));
+    expect(result.current.flowSeries).toHaveLength(2);
+    expect(result.current.globalError).toBe(error);
+    expect(result.current.flowCoverageCount).toBeNull();
+    expect(result.current.freshnessQueries.find((query) => query.preset === "mintBurnFlows"))
+      .toMatchObject({ error, hasData: false, dataUpdatedAt: 0 });
+  });
+
+  it("discloses a failed aggregate refresh with retained flow data and its producer metadata", () => {
+    const error = new Error("aggregate refresh failed");
+    const meta = { updatedAt: 1_700_000_000, status: "fresh" };
+    useMintBurnFlowsMock.mockReturnValue(makeQueryResult({
+      data: { coins: [] }, dataUpdatedAt: 1_700_000_010_000, meta, error, isError: true,
+    }));
+    const { result } = renderHook(() => useCompareDataModel({
+      selectedIds: ["usdc-circle", "usdt-tether"], flowHours: 24, radarCohort: "peg",
+    }));
+    expect(result.current.globalError).toBe(error);
+    expect(result.current.flowCoverageCount).toBeNull();
+    expect(result.current.freshnessQueries.find((query) => query.preset === "mintBurnFlows"))
+      .toMatchObject({ error, hasData: true, dataUpdatedAt: 1_700_000_010_000, meta });
+  });
+
+  it("reports one failed flow history while preserving another history and retrying both", () => {
+    const error = new Error("USDC history failed");
+    const histories = [
+      makeQueryResult({ error, isError: true }),
+      makeQueryResult({ data: { data: { hourly: [{ hourTs: 1_700_000_000, netFlowUsd: 100 }] } } }),
+    ];
+    useQueriesMock.mockImplementation(({ queries }: { queries: unknown[] }) =>
+      queries[0] === "flow" ? histories : []);
+    mintBurnFlowsCoinQueryOptionsMock.mockReturnValue("flow");
+    const { result } = renderHook(() => useCompareDataModel({
+      selectedIds: ["usdc-circle", "usdt-tether"], flowHours: 24, radarCohort: "peg",
+    }));
+    expect(result.current.flowSeries).toHaveLength(1);
+    expect(result.current.flowErrorNotice).toMatchObject({ error, hasData: true });
+    act(() => result.current.flowErrorNotice?.onRetry());
+    for (const history of histories) expect(history.refetch).toHaveBeenCalledTimes(1);
   });
 
   it("includes aggregate flow refetches in handleRetry", async () => {

@@ -10,6 +10,10 @@ import {
   type FrozenManifestEvent,
 } from "../reconcile-night-watch-blacklist";
 import type { RemoteD1Client } from "../lib/remote-d1";
+import type { BlacklistSummaryResponse } from "@shared/types/market";
+import { CONTRACT_CONFIGS } from "../../src/lib/blacklist-contracts";
+import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../src/lib/blacklist-summary-service";
+import { derivedCacheRows, seedDerivedCaches, sqliteRemoteD1 } from "./blacklist-current-balance-maintenance.test-support";
 
 const SCRIPT_NAME = "worker/scripts/reconcile-night-watch-blacklist.ts";
 const frozenManifest = frozenManifestJson as FrozenManifest;
@@ -157,6 +161,74 @@ function dependencies(d1: RemoteD1Client) {
 }
 
 describe("Night Watch blacklist reconciliation", () => {
+  it.each([
+    ["unblacklist", false], ["unblacklist", true], ["destroy", false], ["destroy", true],
+  ] as const)("uses numeric transaction-local indexes for blacklist then %s (reversed=%s)", async (eventType, reversed) => {
+    const { d1 } = makeD1();
+    const txHash = "e".repeat(64);
+    const address = "0x" + "ee".repeat(20);
+    const base = {
+      txHash, address, blockNumber: frozenManifest.events[frozenManifest.events.length - 1]!.blockNumber + 1,
+      blockTimestampMs: frozenManifest.cutoffInclusive, eventSignature: "test",
+    };
+    const pair: FrozenManifestEvent[] = [
+      { ...base, id: `tron-${txHash}-2`, eventIndex: 2, eventType: "blacklist", amountRaw: null },
+      { ...base, id: `tron-${txHash}-10`, eventIndex: 10, eventType, amountRaw: eventType === "destroy" ? "2000000" : null },
+    ];
+    const summary = await runNightWatchBlacklistReconciliation(options(false), {
+      ...dependencies(d1),
+      loadTailEvents: async () => [...frozenManifest.events, ...(reversed ? pair.reverse() : pair)],
+    });
+    expect(summary.status).toBe("ready");
+  });
+
+  it.each([false, true])("refuses conflicting cross-transaction state without confirmed positions (reversed=%s)", async (reversed) => {
+    const { d1 } = makeD1();
+    const address = "0x" + "ee".repeat(20);
+    const pair: FrozenManifestEvent[] = ["blacklist", "unblacklist"].map((eventType, index) => ({
+      id: `tron-${String(index).repeat(64)}-${index}`, txHash: String(index).repeat(64),
+      eventIndex: index, eventType: eventType as FrozenManifestEvent["eventType"],
+      eventSignature: "test", address, amountRaw: null,
+      blockNumber: frozenManifest.events[frozenManifest.events.length - 1]!.blockNumber + 1,
+      blockTimestampMs: frozenManifest.cutoffInclusive,
+    }));
+    await expect(runNightWatchBlacklistReconciliation(options(false), {
+      ...dependencies(d1),
+      loadTailEvents: async () => [...frozenManifest.events, ...(reversed ? pair.reverse() : pair)],
+      loadBalanceAmounts: async () => new Map([...frozenManifest.events.map((event) => [event.address, 1] as const), [address, 1]]),
+    })).rejects.toThrow(/ambiguous Tron cross-transaction order/);
+  });
+
+  it.each([false, true])("folds transaction-local destroy amounts before comparing mixed transactions (reversed=%s)", async (reversed) => {
+    const { d1 } = makeD1(true);
+    const address = "0x" + "ee".repeat(20);
+    const query = d1.query;
+    d1.query = <T>(sql: string): T[] => [
+      ...query<T>(sql),
+      ...(sql.includes("FROM blacklist_current_balances") && sql.includes(address) ? [{
+        address, amount_native: 2, amount_usd: 2, source: "destroy_event",
+        config_key: frozenManifest.configKey, contract_address: frozenManifest.contractAddress,
+      } as T] : []),
+    ];
+    const events: FrozenManifestEvent[] = [
+      ["e", 2, "1000000"], ["a", 5, "2000000"], ["e", 10, "2000000"],
+    ].map(([hash, index, amount]) => ({
+      id: `tron-${String(hash).repeat(64)}-${index}`, txHash: String(hash).repeat(64),
+      eventIndex: Number(index), amountRaw: String(amount), address, eventType: "destroy",
+      eventSignature: "test", blockNumber: frozenManifest.events[frozenManifest.events.length - 1]!.blockNumber + 1,
+      blockTimestampMs: frozenManifest.cutoffInclusive,
+    }));
+    const deps = {
+      ...dependencies(d1),
+      loadTailEvents: async () => [...frozenManifest.events, ...(reversed ? [...events].reverse() : events)],
+    };
+    const summary = await runNightWatchBlacklistReconciliation(options(false), deps);
+    expect(summary.samples.balanceMismatches.some((message) => message.includes(address))).toBe(false);
+    events[1]!.amountRaw = "3000000";
+    await expect(runNightWatchBlacklistReconciliation(options(false), deps))
+      .rejects.toThrow(/ambiguous Tron cross-transaction destroy amounts/);
+  });
+
   it("pins the exact audited manifest contract", () => {
     expect(() => validateFrozenManifest()).not.toThrow();
     expect(frozenManifest.expected).toEqual({
@@ -265,6 +337,42 @@ describe("Night Watch blacklist reconciliation", () => {
       reconciliation_run_id: expectedApplyRunId,
     });
   });
+
+  it.each([false, true])(
+    "invalidates producer caches before authoritative writes, including partial import failure=%s",
+    async (failSecondImport) => {
+      const { sqlite, db } = databases.open();
+      const insertCursor = sqlite.prepare(`INSERT INTO blacklist_sync_state
+        (config_key, last_block, cursor_value, last_observed_safe_head) VALUES (?, ?, ?, ?)`);
+      insertCursor.run(frozenManifest.configKey, frozenManifest.cursorExclusive, frozenManifest.cursorExclusive, frozenManifest.cutoffInclusive);
+      for (const config of CONTRACT_CONFIGS.filter((item) => item.chain.chainId === "arbitrum")) {
+        insertCursor.run(config.configKey, 500_000_000, 500_000_000, 500_000_000);
+      }
+      seedDerivedCaches(sqlite);
+      const now = Math.floor(nowMs / 1000);
+      await materializeBlacklistSummarySnapshot(db, now, now);
+      const before = await (await handleBlacklistSummary(db)).json() as BlacklistSummaryResponse;
+      expect(before.totalEvents).toBe(0);
+      const { d1 } = sqliteRemoteD1(sqlite, failSecondImport ? { failChunk: 2, batchSize: 5 } : {});
+      const run = runNightWatchBlacklistReconciliation(options(true), dependencies(d1));
+      if (failSecondImport) {
+        await expect(run).rejects.toThrow("simulated import failure");
+      } else {
+        expect((await run).status).toBe("verified");
+      }
+      expect(derivedCacheRows(sqlite)).toEqual([]);
+      const persisted = sqlite.prepare("SELECT COUNT(*) AS count FROM blacklist_events").get() as { count: number };
+      expect(persisted.count).toBe(failSecondImport ? 3 : 86);
+      const after = await (await handleBlacklistSummary(db)).json() as BlacklistSummaryResponse;
+      expect(after.totalEvents).toBe(persisted.count);
+      if (!failSecondImport) {
+        const balances = sqlite.prepare("SELECT SUM(amount_usd) AS total, COUNT(*) AS count FROM blacklist_current_balances")
+          .get() as { total: number; count: number };
+        expect(after.stats.trackedFrozenTotal).toBeCloseTo(balances.total);
+        expect(after.stats.trackedAddressCount).toBe(balances.count);
+      }
+    },
+  );
 
   it.each(["amount_native", "observed_at", "last_attempted_at"] as const)(
     "preserves a concurrent change to %s without overwriting it",

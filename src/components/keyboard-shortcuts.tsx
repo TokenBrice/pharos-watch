@@ -92,7 +92,9 @@ export function KeyboardShortcuts({
           <span>
             Enable single-key shortcuts (
             <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">?</kbd>,{" "}
-            <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">1-9</kbd>)
+            <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">1-9</kbd>,{" "}
+            <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">T</kbd>,{" "}
+            <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">/</kbd>)
           </span>
           <input
             type="checkbox"

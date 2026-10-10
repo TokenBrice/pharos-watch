@@ -17,7 +17,7 @@ const OUTPUT_PATH = "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts
 // Re-export the authored identity boundary for existing research/test consumers.
 export {
   V9_SCORE_EVALUATOR_SOURCE_PATHS,
-  V9_FACT_PRODUCER_SOURCE_PATHS,
+  V9_SCORE_INPUT_DATA_PATHS,
   V9_EVALUATION_BUILD_SOURCE_PATHS,
 } from "../lib/safety-score-v9-evaluation-inputs.mts";
 import { V9_EVALUATION_BUILD_SOURCE_PATHS } from "../lib/safety-score-v9-evaluation-inputs.mts";

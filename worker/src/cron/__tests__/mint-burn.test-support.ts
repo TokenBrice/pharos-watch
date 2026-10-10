@@ -1,5 +1,6 @@
 import { vi } from "vitest";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import type * as AlchemyLogsModule from "../../lib/alchemy-logs";
 
 export const MINT_BURN_ZERO_TOPIC = "0x0000000000000000000000000000000000000000000000000000000000000000";
 export const MINT_BURN_TRANSFER_TOPIC =
@@ -12,7 +13,8 @@ export const mintBurnEventInsertBinds: unknown[][] = [];
 // --- Module-level mocks shared by every syncMintBurn suite ---
 // `MINT_BURN_CONFIGS` stays per-suite: each suite pins its own config fixture.
 
-vi.mock("../../lib/alchemy-logs", () => ({
+vi.mock("../../lib/alchemy-logs", async (importOriginal) => ({
+  ...(await importOriginal<typeof AlchemyLogsModule>()),
   buildAlchemyUrl: vi.fn((chainId: string) => `https://${chainId}.g.alchemy.example/v2/`),
   getAlchemyBlockNumber: vi.fn(async (url: string) => (url.includes("ethereum") ? 22_000_000 : 250_000_000)),
   getAlchemyTransactionContextBatchMany: vi.fn(async (_url: string, txHashes: string[]) =>

@@ -4,6 +4,29 @@ import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-s
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
 import { fetchMidasMmevNavOracleSource } from "../yield-sync/midas-mmev-nav-oracle";
 import { cleanupYieldSourceTest, mockYieldSourceRoutes } from "./yield-source.test-support";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID } from "../yield-sync/tracked-optional-source-registry";
+import { buildPreviewYieldRankingsArtifacts, publishYieldCoordinatorResults } from "../yield-sync/coordinator-persist";
+import { materializeYieldHistoryDaily } from "../yield-sync/publication";
+import { makeBenchmarkMeta, makeBenchmarkRegistry, makeEvaluatedSource, makeSafetySnapshotMeta,
+  makeYieldSourceMeta } from "./yield-publication.test-support";
+
+const sqliteFixtures = createLatestSchemaFixtureTracker();
+
+async function publishNav(db: D1Database, startSec: number, exchangeRate: number, sourceObservedAt: number) {
+  const source = makeEvaluatedSource({ id: "mmev-midas", symbol: "mMEV",
+    sourceKey: "protocol-api:midas-mmev-nav-oracle", dataSource: "protocol-api",
+    yieldType: "nav-appreciation", exchangeRate, sourceObservedAt });
+  const benchmark = makeBenchmarkMeta({ fetchedAt: startSec,
+    recordDate: new Date(startSec * 1000).toISOString().slice(0, 10) });
+  const artifacts = buildPreviewYieldRankingsArtifacts({ evaluatedSources: [source],
+    bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]), riskFreeRate: benchmark.rate,
+    riskFreeRateMeta: benchmark, riskFreeRates: makeBenchmarkRegistry(benchmark),
+    dlPoolsMeta: makeYieldSourceMeta(), safetySnapshot: makeSafetySnapshotMeta(), medianApy: 4.8, startSec });
+  return publishYieldCoordinatorResults({ db, ...artifacts, evaluatedSources: artifacts.acceptedSources,
+    startSec, degradationReasons: [], safetySnapshotHeld: false, resolvedCount: 1, rowsRejected: 0, divergenceFlags: 0,
+    sourceSwitches: 0, previousYieldPublicationSnapshot: { status: "missing", rankings: [], malformed: false } });
+}
 
 const MIDAS_MMEV_NAV_ORACLE = "0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61";
 const NOW_SEC = 1_780_000_000;
@@ -72,7 +95,7 @@ function mockMidasRpc(params: {
 }
 
 describe("fetchMidasMmevNavOracleSource", () => {
-  afterEach(cleanupYieldSourceTest);
+  afterEach(() => { cleanupYieldSourceTest(); sqliteFixtures.closeAll(); });
 
   it("emits a deterministic NAV-appreciation candidate from a fresh mMEV oracle round", async () => {
     const updatedAt = NOW_SEC - 60 * 60;
@@ -80,7 +103,6 @@ describe("fetchMidasMmevNavOracleSource", () => {
 
     const result = await fetchMidasMmevNavOracleSource({
       prevExchangeRate: 1.03,
-      daysDelta: 7,
       comparisonAnchorObservedAt: NOW_SEC - 7 * 86_400,
       chainRpcs: makeChainRpcs(),
       nowSec: NOW_SEC,
@@ -110,6 +132,60 @@ describe("fetchMidasMmevNavOracleSource", () => {
       return body.params?.[0]?.data;
     });
     expect(requestDatas).toEqual(expect.arrayContaining([DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR]));
+  });
+
+  it("retains a finite negative NAV return and its next history anchor", async () => {
+    const updatedAt = NOW_SEC - 60;
+    const anchor = NOW_SEC - 7 * 86_400;
+    mockMidasRpc({ answer: 99_000_000n, updatedAt });
+    const result = await fetchMidasMmevNavOracleSource({
+      prevExchangeRate: 1, comparisonAnchorObservedAt: anchor,
+      chainRpcs: makeChainRpcs(), nowSec: NOW_SEC,
+    });
+    expect(result?.yield.currentApy).toBeCloseTo((Math.pow(0.99, 365.25 / ((updatedAt - anchor) / 86_400)) - 1) * 100);
+    expect(result?.yield).toMatchObject({
+      exchangeRate: 0.99, sourceObservedAt: updatedAt, comparisonAnchorObservedAt: anchor,
+    });
+    expect(result?.yield.apyBase).toBe(result?.yield.currentApy);
+  });
+
+  it.each([3600, 2 * 86400])("annualizes two persisted oracle rounds independently of %s-second publication delays", async (delaySec) => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const currentObservedAt = NOW_SEC;
+    const priorObservedAt = currentObservedAt - 7 * 86400;
+    expect((await publishNav(db, priorObservedAt + delaySec, 1, priorObservedAt)).ok).toBe(true);
+    expect(sqlite.prepare("SELECT recorded_at, source_observed_at FROM yield_history").get())
+      .toEqual({ recorded_at: priorObservedAt + delaySec, source_observed_at: priorObservedAt });
+    mockMidasRpc({ answer: 100_200_000n, updatedAt: currentObservedAt });
+    const result = await TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID.get("mmev-midas")![0].run({
+      db, startSec: currentObservedAt + delaySec, chainRpcs: makeChainRpcs(),
+    });
+    expect(result?.currentApy).toBeCloseTo((Math.pow(1.002, 365.25 / 7) - 1) * 100);
+    expect(result).toMatchObject({ sourceObservedAt: currentObservedAt, comparisonAnchorObservedAt: priorObservedAt });
+  });
+
+  it("preserves a daily oracle anchor clock and refuses legacy publication-clock inference", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const priorObservedAt = NOW_SEC - 35 * 86400;
+    expect((await publishNav(db, priorObservedAt + 2 * 86400, 1, priorObservedAt)).ok).toBe(true);
+    await materializeYieldHistoryDaily(db, NOW_SEC);
+    expect(sqlite.prepare("SELECT source_observed_at FROM yield_history_daily").get())
+      .toEqual({ source_observed_at: priorObservedAt });
+    sqlite.exec("DELETE FROM yield_history");
+    mockMidasRpc({ answer: 100_200_000n, updatedAt: NOW_SEC });
+    const entry = TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID.get("mmev-midas")![0];
+    const daily = await entry.run({ db, startSec: NOW_SEC, chainRpcs: makeChainRpcs() });
+    expect(daily?.currentApy).toBeCloseTo((Math.pow(1.002, 365.25 / 35) - 1) * 100);
+    expect(daily?.comparisonAnchorObservedAt).toBe(priorObservedAt);
+    sqlite.exec("UPDATE yield_history_daily SET source_observed_at = NULL");
+    const legacy = await entry.run({ db, startSec: NOW_SEC, chainRpcs: makeChainRpcs() });
+    expect(legacy).toMatchObject({ currentApy: 0, apyBase: null, comparisonAnchorObservedAt: null });
+  });
+
+  it("rejects repeated rounds rather than annualizing a zero observation interval", async () => {
+    mockMidasRpc({ answer: 100_200_000n, updatedAt: NOW_SEC });
+    await expect(fetchMidasMmevNavOracleSource({ prevExchangeRate: 1.002,
+      comparisonAnchorObservedAt: NOW_SEC, nowSec: NOW_SEC, chainRpcs: makeChainRpcs() })).resolves.toBeNull();
   });
 
   it("returns a seed candidate when no prior NAV anchor is available", async () => {

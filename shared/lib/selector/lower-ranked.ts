@@ -39,7 +39,8 @@ interface ScoredEntryLike {
  */
 export function userEmphasizedDimension(input: SelectorInput): WeightKey | null {
   if (input.depegTolerance === "zero") {
-    return input.profile === "treasury" ? "pegStabilityHistory" : "pegStabilityLive";
+    if (input.profile === "treasury") return "pegStabilityHistory";
+    return input.profile === "trading" ? "pegScoreNow" : "pegStabilityLive";
   }
   if (input.composability === "high") return "liquidity";
   if (input.exitSpeed === "1h") return "liquidity";

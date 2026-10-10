@@ -325,6 +325,7 @@ const SafetyScoreV9EvidenceResponsibilityFactSchema = z.tuple([
     ctx.addIssue({ code: "custom", message: "Evidence fact cause, responsibility and causal gap identity must agree" });
   }
 });
+export type V9PublicEvidenceFactWire = z.infer<typeof SafetyScoreV9EvidenceResponsibilityFactSchema>;
 
 const SafetyScoreV9EvidenceResponsibilityTraceBaseSchema = z.object({
   semantics: z.literal("limiting-fact-cause-v2"),

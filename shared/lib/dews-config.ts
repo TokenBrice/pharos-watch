@@ -45,6 +45,11 @@ export const DEWS_THREAT_BANDS = [
   { upper: 75, band: "WARNING" },
   { upper: 100, band: "DANGER" },
 ] as const;
+
+/** Evidence-quality gate shared by scoring and the public methodology. */
+export const WATCH_MAX_SCORE = DEWS_THREAT_BANDS[1].upper;
+export const SEVERE_ISSUER_CONTROL_THRESHOLD = 55;
+export const EVIDENCE_STRESS_THRESHOLD = 10;
 export type DewsBandRange = readonly [lower: number, upper: number];
 
 /**

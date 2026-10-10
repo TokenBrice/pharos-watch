@@ -8,17 +8,17 @@ const moduleLoads = vi.hoisted(() => ({
   backfillDepegs: vi.fn(),
 }));
 
-vi.mock("../../api/audit-depeg-history", () => {
+vi.mock("../../api/backfill-dews", () => {
   moduleLoads.auditDepegHistory();
   return {
-    handleAuditDepegHistoryTrusted: vi.fn(async () => new Response("ok")),
+    handleBackfillDEWS: vi.fn(async () => new Response("ok")),
   };
 });
 
-vi.mock("../../api/backfill-depegs", () => {
+vi.mock("../../api/remediate-blacklist-amount-gaps", () => {
   moduleLoads.backfillDepegs();
   return {
-    handleBackfillDepegsTrusted: vi.fn(async () => new Response("ok")),
+    handleRemediateBlacklistAmountGapsTrusted: vi.fn(async () => new Response("ok")),
   };
 });
 
@@ -50,7 +50,7 @@ function makeContext(path: string, method: "GET" | "POST"): FullRouteContext {
 
 describe("lazy admin route authentication", () => {
   it("rejects an idempotent route before importing its endpoint module", async () => {
-    const route = findRoute(ADMIN_STATIC_ROUTES, "backfill-depegs");
+    const route = findRoute(ADMIN_STATIC_ROUTES, "remediate-blacklist-amount-gaps");
 
     const response = await route.handler(makeContext(route.endpoint.path, "POST"));
 
@@ -59,7 +59,7 @@ describe("lazy admin route authentication", () => {
   });
 
   it("rejects a conditional-idempotency route before importing its endpoint module", async () => {
-    const route = findRoute(ADMIN_STATIC_ROUTES, "audit-depeg-history");
+    const route = findRoute(ADMIN_STATIC_ROUTES, "backfill-dews");
 
     const response = await route.handler(makeContext(route.endpoint.path, "POST"));
 

@@ -1,11 +1,12 @@
 "use client";
 
-import { PolarAngleAxis, PolarGrid, Radar, RadarChart as RechartsRadarChart } from "recharts";
+import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart as RechartsRadarChart } from "recharts";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import type { SafetyScorePublicationIdentity, SafetyScoreV9Card } from "@shared/types";
 import { median } from "@shared/lib/stats";
 import {
+  hasCompleteV9RadarPillars,
   safetyScoreV9IdentitiesMatch,
   type V9ConsumerIdentity,
   type V9ConsumerResult,
@@ -47,22 +48,18 @@ export function buildV9RadarDataset(
     return { status: "unavailable", reason: "identity-mismatch" };
   }
   if (
-    series.some((entry) => entry.card.ratingStatus !== "rated" || V9_PILLARS.some((pillar) => entry.card.pillars[pillar].score === null))
+    series.some((entry) => !hasCompleteV9RadarPillars(entry.card))
   ) {
     return { status: "unavailable", reason: "card-unavailable" };
   }
 
-  const cohortMedians = cohortSeries.length < 3
+  const usableCohort = cohortSeries.filter((entry) => hasCompleteV9RadarPillars(entry.card));
+  const cohortMedians = usableCohort.length < 3
     ? null
     : Object.fromEntries(
         V9_PILLARS.map((pillar) => [
           pillar,
-          median(
-            cohortSeries.flatMap((entry) => {
-              const score = entry.card.ratingStatus === "rated" ? entry.card.pillars[pillar].score : null;
-              return score === null ? [] : [score];
-            }),
-          ),
+          median(usableCohort.map((entry) => entry.card.pillars[pillar].score!)),
         ]),
       ) as Record<V9Pillar, number | null>;
 
@@ -77,7 +74,6 @@ export function buildV9RadarDataset(
       identity: anchor,
       rows: V9_PILLARS.map((pillar) => ({
         pillar: V9_PILLAR_LABELS[pillar],
-        fullMark: 100,
         ...Object.fromEntries(series.map((entry) => [entry.card.id, entry.card.pillars[pillar].score!])),
         ...(completeMedians ? { __cohortMedian: completeMedians[pillar] } : {}),
       })),
@@ -133,6 +129,7 @@ export function CompareRadarV9({
           outerRadius={compact ? compactOuterRadius : "75%"}
         >
           <PolarGrid stroke="currentColor" className="text-border" />
+          <PolarRadiusAxis type="number" domain={[0, 100]} tick={false} axisLine={false} />
           <PolarAngleAxis
             dataKey="pillar"
             tickSize={narrow ? 4 : compact ? 5 : 8}

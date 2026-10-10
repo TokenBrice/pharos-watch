@@ -1,0 +1,134 @@
+[
+  {
+    "version": "4.7",
+    "title": "Timed-only duration history and independent reviewer coverage",
+    "date": "2026-10-10",
+    "effectiveAt": 1791676800,
+    "summary": "DDR duration training now uses only genuinely timed onset and current-deviation evidence rather than backdating final peaks into earlier landmarks. This is a score- and verdict-moving input change for future assessments and forecasts: reduced support can suppress duration bands until timestamp-evidenced recalibration. Sealed and first-published predictions are not rewritten.",
+    "impact": [
+      "Unique promoted pending outcomes contribute first-seen and last-seen deviation at their recorded times; matching assessments contribute current deviation at assessment time. Untimed final event peaks, pending peaks, and assessment aggregate peaks cannot establish earlier landmark depth.",
+      "Retained samples are sparse evidence, not a reconstructed price tape. Historical incidents without timed support remain unsupported through grouping and duration estimation instead of manufacturing comparable observations.",
+      "Historical training filters false-positive, disputed, no-data, and unknown non-null audit verdicts before the row cap. Confirmed, repaired, and legacy null-verdict events retain eligibility.",
+      "Live-price admission rejects nominal references and unavailable or nonpositive supply instead of fabricating an at-peg deviation. Resolution weights, duration landmarks, and support thresholds are unchanged, but changed input admission can move assessments and future verdicts.",
+      "The current-policy accuracy gate changes accuracy, duration error, and horizon calibration only. Whole-universe accountability, missed locks, publication debt, and scoreable-coverage reporting remain independent of that accuracy cohort.",
+      "Calibration breakdowns use full-universe counts within the headline policy. Live forecast totals include valid predictions only; pending, deferred, no-call, and invalidated audit states do not contribute verdicts or durations.",
+      "Per-coin track records use producer-computed counts and median duration errors from before the public row cap. Retained snapshots without those aggregates show unavailable until refreshed, never a statistic reconstructed from the browse sample.",
+      "Release requires fixed-clock replay, mover attribution and owner review, plus fresh timestamp-evidenced duration calibration. Archived golden histories without timed provenance are not evidence of current calibration; no successful recalibration is claimed.",
+      "Activation is provisionally 2026-10-11 00:00 UTC (1791676800); re-date effectiveAt at release"
+    ],
+    "commits": [
+      "552cd6875",
+      "e48d77bd7",
+      "7031b82e5",
+      "f56e2cce1"
+    ],
+    "reconstructed": false
+  },
+  {
+    "version": "4.6",
+    "title": "Unknown audit provenance fails closed",
+    "date": "2026-09-28",
+    "effectiveAt": 1790553600,
+    "summary": "DDR eligibility and repair admission now reject unknown non-null audit verdicts rather than admitting them through a negative exclusion list.",
+    "impact": [
+      "DDR continues to exclude false_positive, disputed, and no_data while retaining confirmed, repaired, and legacy null verdicts",
+      "Bound SQL eligibility is derived from the shared audit vocabulary and the DDR-specific exclusion policy",
+      "Migration 0252 rejects new unknown verdict writes without rewriting archives or changing sealed prediction history",
+      "Resolution weights, duration landmarks, and existing invalidation authorization requirements are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "4.5",
+    "title": "Derived mint posture drives structural recovery inputs",
+    "date": "2026-09-12",
+    "effectiveAt": 1789171200,
+    "summary": "DDR now uses the published V9 mint posture for structural fragility and recovery signals, with curated posture fallback when the derived posture is unavailable.",
+    "impact": [
+      "A curated optimistic label no longer overrides an adverse published mint posture in duration strata or mint-risk signals",
+      "V9's mint-scoped none-resolved posture maps to none-resolved-mint unless the curated review independently establishes whole-chain absence, preserving the distinction between weak and strong recovery anchors",
+      "Published unknown posture remains authoritative; an absent derived posture retains the curated fallback",
+      "Factor weights, duration landmarks, and sealed prediction history are unchanged; new structural classifications can move where derived and curated postures differ"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "4.4",
+    "title": "DDRR coverage accounting counts each incident once",
+    "date": "2026-09-09",
+    "effectiveAt": 1788912000,
+    "summary": "DDRR state-assignment and finalized-coverage shares are now counted per incident instead of summed across state and operational-cause buckets, so an incident whose assigned state also carries an operational cause is counted once. No prediction, verdict, duration, or accuracy figure changes; only the two coverage-completeness shares move.",
+    "impact": [
+      "`stateAssignedPct` and `finalizedCoveragePct` group review rows by `incidentKey` and give each incident exactly one unit, however many review rows it carries, assigned from the rows' single `predictionState`; an operational cause is an overlay on that state, not a second assignment, and neither share is weighted by row count or depeg duration",
+      "Both shares are at most one by construction rather than by clamping: a data-quality gap or orphan closure attributed to a cron gap, system deferral or missed lock previously counted in both its state bucket and the missed-lock bucket, publishing an assigned share above one",
+      "An incident whose rows disagree about its state is reported as unassigned, so the shortfall stays visible instead of inflating the assigned share",
+      "Published values fall wherever the old double count applied: `finalizedCoveragePct` drops for any window where an operational cause overlapped a data-quality or orphan-closed state, and `stateAssignedPct` no longer exceeds one — it still reads below one when policy-universe incidents have no review rows or disagree about their state",
+      "Per-state counts, `missedNoPredictionCount`, `operationalMissRatePct`, prediction/no-call rates and all accuracy metrics are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "4.3",
+    "title": "Continuous depeg windows and reason-authoritative recovery labels",
+    "date": "2026-08-23",
+    "effectiveAt": 1787443200,
+    "summary": "Depeg onset and recovery windows now require consecutive observations, with a 1200-second continuity tolerance deliberately set above the 900-second producer cadence so ordinary scheduler jitter does not read as a coverage break, while DDR training and DDRR review classify recovery from explicit closure reasons with a legacy price fallback only for null-reason rows.",
+    "impact": [
+      "Same-direction pending episodes reset after an observation gap greater than 1200 seconds, so a blind interval cannot backdate a confirmed onset",
+      "Recovery confirmation stores both first and last qualified observations, resets after a gap greater than 1200 seconds or contradictory evidence, and keeps events open through missing data",
+      "Explicit recovered-primary, recovered-dex, and recovered-native reasons define recovered labels even when native quote-domain policy stores no recovery price",
+      "Direction supersession, coverage loss, orphan cleanup, and unknown explicit closures cannot enter the recovered duration corpus or DDRR recovered outcomes through a stray recovery price",
+      "Legacy rows with null close reasons retain recovery-price compatibility so historical recovered labels are not erased"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "4.2",
+    "title": "Mint-posture predicates unified; mint-scoped non-inflatability recognised",
+    "date": "2026-08-10",
+    "effectiveAt": 1786314551,
+    "summary": "DDR's mint-posture tests now read shared predicates instead of per-engine literal sets, and the mint-scoped `none-resolved-mint` posture earns the weak R1 non-inflatable-supply anchor it previously fell through entirely. No resolution tier, factor weight, duration landmark, or stratum assignment changes.",
+    "impact": [
+      "Posture set membership moved to `isFragileMintPosture` / `isUnboundedMintPosture` / `isNoPrivilegedMintPosture` / `isNoPrivilegedMintChainPosture` in shared/lib/safety-score-v9/mint-posture.ts; K1's risky-minter leg, K1's severe-surge rung and the structural-class legs all read the same source, so a future posture value is classified once instead of at each site",
+      "14 wrapper assets annotated `none-resolved-mint` (sUSDe, sDAI, sGHO, scrvUSD, stUSDS, sBOLD, sDOLA, srUSD, sdUSD, said, steakUSDC, steakUSDT, yvUSDC, eEARN) now publish the R1 recovery anchor at the weak rung during an event, labelled `No privileged mint authority on this token (wrapped supply can still expand)`",
+      "The strong R1 rung remains whole-of-chain only: a wrapper's parent can still print, so `none-resolved-mint` cannot satisfy the strong-anchor leg of the tier rule. Only strong anchors enter that rule, so no verdict, sealed prediction or duration stratum moves",
+      "Structural-class stratification is unchanged: `none-resolved-mint` still confers no robustness of its own, matching the whole-of-chain definition in shared/types/core.ts"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "4.1",
+    "title": "Structural inputs read published Safety Score outputs",
+    "date": "2026-08-08",
+    "effectiveAt": 1786147201,
+    "summary": "DDR's mint-authority structural input now reads the published Safety Score V9 mint posture band instead of the retired standalone Mint Authority band. Prediction weights, factor rules, and exit thresholds are unchanged.",
+    "impact": [
+      "K1's risky-minter test reads the published V9 mint posture band; the concentrated and exposed bands stay the risky set, so the rule is unchanged and only its input moved engines",
+      "A run with no installed V9 publication derives the band from the curated authority posture instead, so a degraded or held publication cannot silently drop K1's band leg; an installed publication is authoritative, including when it publishes no band for an asset",
+      "K5 inputs are unchanged: it already read published Safety Score outputs and continues to do so",
+      "No factor weights, severity bands, duration landmarks, or incident-lifecycle rules change"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "4.0",
+    "title": "DDR v4 Methodology Contract",
+    "date": "2026-07-30",
+    "effectiveAt": 1785427200,
+    "summary": "DDR v4 updates terminality signals, duration landmarks, incident lifecycle grouping, support rules, and reviewer audit metadata for new predictions.",
+    "impact": [
+      "Issuer wind-down evidence and measured exit or supply stress provide earlier terminality context, while backing concentration is gated by mechanism and observed impairment",
+      "Duration labels follow canonical incident grouping, typical ranges use the 15th-85th percentiles, and comparable histories are deduplicated by coin",
+      "Recovered pre-lock incidents can close and resurrect within the merge window, while regime-escalating tails begin a separate incident and prediction",
+      "DDRR review rows expose repaired and split lineage and publish expected-versus-observed horizon calibration alongside realized outcomes"
+    ],
+    "commits": [],
+    "reconstructed": false
+  }
+]

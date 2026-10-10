@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { formatCurrency } from "@shared/lib/format";
-import type { CoverageRow } from "@/lib/coverage";
+import { summarizeCoverageMarketCap, type CoverageRow } from "@/lib/coverage";
 import { FILTER_OPTIONS, type CoverageFilterKey } from "@/lib/coverage-page-config";
 
 interface CoverageLensSummaryProps {
@@ -13,10 +13,13 @@ interface CoverageLensSummaryProps {
 }
 
 export function CoverageLensSummary({ rows, filteredRows, search, filter }: CoverageLensSummaryProps) {
-  const { filteredTrackedMcap, filteredMcapSharePct, lensSummary } = useMemo(() => {
-    const totalTrackedMcap = rows.reduce((sum, row) => sum + row.marketCapUsd, 0);
-    const filteredTrackedMcap = filteredRows.reduce((sum, row) => sum + row.marketCapUsd, 0);
-    const filteredMcapSharePct = totalTrackedMcap > 0 ? (filteredTrackedMcap / totalTrackedMcap) * 100 : 0;
+  const { filteredCap, totalCap, filteredMcapSharePct, lensSummary } = useMemo(() => {
+    const totalCap = summarizeCoverageMarketCap(rows);
+    const filteredCap = summarizeCoverageMarketCap(filteredRows);
+    const filteredMcapSharePct = totalCap.totalUsd != null && totalCap.totalUsd > 0 &&
+      (filteredCap.totalUsd != null || filteredRows.length === 0)
+      ? ((filteredCap.totalUsd ?? 0) / totalCap.totalUsd) * 100
+      : null;
     const activeFilterLabel = FILTER_OPTIONS.find((option) => option.key === filter)?.label ?? "All";
     const trimmedSearch = search.trim();
     const lensSummary = trimmedSearch
@@ -25,7 +28,7 @@ export function CoverageLensSummary({ rows, filteredRows, search, filter }: Cove
         ? `Filter lens: ${activeFilterLabel}`
         : "Full active universe";
 
-    return { filteredTrackedMcap, filteredMcapSharePct, lensSummary };
+    return { filteredCap, totalCap, filteredMcapSharePct, lensSummary };
   }, [filter, filteredRows, rows, search]);
 
   return (
@@ -41,10 +44,11 @@ export function CoverageLensSummary({ rows, filteredRows, search, filter }: Cove
       <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3">
         <p className="pharos-kicker">Market Share In View</p>
         <p className="mt-1 text-sm text-foreground">
-          <span className="pharos-numeric">{filteredMcapSharePct.toFixed(0)}%</span> of active market cap
+          <span className="pharos-numeric">{filteredMcapSharePct == null ? "n/a" : `${filteredMcapSharePct.toFixed(0)}%`}</span>{" "}
+          of {totalCap.complete ? "active" : "known"} market cap
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          {formatCurrency(filteredTrackedMcap)} in the current result set.
+          {filteredCap.totalUsd == null ? "n/a" : formatCurrency(filteredCap.totalUsd)}{filteredCap.complete ? "" : " known market cap"} in the current result set.
         </p>
       </div>
     </div>

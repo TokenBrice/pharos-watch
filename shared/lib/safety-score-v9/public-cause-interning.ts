@@ -1,5 +1,6 @@
 import type { SafetyScoreV9CurrentCard } from "../../types/safety-score-v9-public";
-import type { V9PublicEvidenceFact, V9PublicEvidenceFactWire, V9PublicEvidencePath } from "../../types/safety-score-v9-public-evidence-facts";
+import type { V9PublicEvidenceFact, V9PublicEvidencePath } from "../../types/safety-score-v9-public-evidence-facts";
+import type { V9PublicEvidenceFactWire } from "../../types/safety-score-v9-public-trace";
 import { publicCauseScoringDisposition } from "../../types/safety-score-v9-public-evidence-facts";
 import type { V9EvidenceCause, V9ScoringDisposition } from "../../types/safety-score-v9-causes";
 import { internEvidenceFactPathPrefixes } from "./public-evidence-path-interning";

@@ -1,11 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { registerRpcAuth, type ChainRpcConfig, type RpcEndpoint } from "../chain-registry";
+import { FetchRequestNotStartedError } from "../abort";
 
 const fetchWithRetryMock = vi.fn();
 const { recordDwellirCreditsMock } = vi.hoisted(() => ({ recordDwellirCreditsMock: vi.fn() }));
 
 vi.mock("../fetch-retry", () => ({
   fetchJsonWithRetry: async (...args: unknown[]) => {
+    const options = args[3] as { beforeRequest?: () => boolean; deadlineMs?: number } | undefined;
+    if (options?.beforeRequest?.() === false) {
+      throw new FetchRequestNotStartedError("admission-denied", 0);
+    }
     const result = await fetchWithRetryMock(...args);
     if (result instanceof Response) {
       return { response: result, body: await result.clone().json() };
@@ -288,7 +293,7 @@ describe("evm-rpc helpers", () => {
       "https://rpc.example",
       expect.objectContaining({ method: "POST", signal: controller.signal }),
       0,
-      { timeoutMs: 1_234, retryMode: "network-only" },
+      expect.objectContaining({ timeoutMs: 1_234, retryMode: "network-only", beforeRequest: expect.any(Function) }),
     );
     const body = JSON.parse(String(fetchWithRetryMock.mock.calls[0]?.[1]?.body));
     expect(body).toEqual([
@@ -400,7 +405,7 @@ describe("evm-rpc helpers", () => {
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
     expect(fetchWithRetryMock.mock.calls[0][0]).toBe("https://rpc.example");
     expect(fetchWithRetryMock.mock.calls[0][1]?.signal).toBe(controller.signal);
-    expect(fetchWithRetryMock.mock.calls[0][3]).toEqual({ timeoutMs: 1234, retryMode: "network-only" });
+    expect(fetchWithRetryMock.mock.calls[0][3]).toEqual(expect.objectContaining({ timeoutMs: 1234, retryMode: "network-only", beforeRequest: expect.any(Function) }));
 
     const body = JSON.parse(fetchWithRetryMock.mock.calls[0][1]?.body) as {
       method: string;
@@ -1325,7 +1330,8 @@ describe("evm-rpc helpers", () => {
       { method: "eth_blockNumber", params: [] }, { method: "eth_chainId", params: [] }, { method: "eth_gasPrice", params: [] },
     ], { chainRpcs, maxRetries: 0, deadlineMs: 2000, timeoutMs: 10_000 })).resolves.toBeNull();
     expect(fetchWithRetryMock.mock.calls.map(call => call[3])).toEqual([
-      { timeoutMs: 1000, retryMode: "network-only" }, { timeoutMs: 400, retryMode: "network-only" },
+      expect.objectContaining({ timeoutMs: 1000, retryMode: "network-only" }),
+      expect.objectContaining({ timeoutMs: 400, retryMode: "network-only" }),
     ]);
   });
 
@@ -1370,8 +1376,8 @@ describe("evm-rpc helpers", () => {
       maxRetries: 0,
     });
     expect(fetchWithRetryMock.mock.calls.map((call) => call[3])).toEqual([
-      { timeoutMs: 1_000, retryMode: "network-only" },
-      { timeoutMs: 400, retryMode: "network-only" },
+      expect.objectContaining({ timeoutMs: 1_000, retryMode: "network-only", deadlineMs: 2_000 }),
+      expect.objectContaining({ timeoutMs: 400, retryMode: "network-only", deadlineMs: 2_000 }),
     ]);
 
     fetchWithRetryMock.mockClear();

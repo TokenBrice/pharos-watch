@@ -23,6 +23,7 @@ export interface ShellCommandAnalysis {
   readonly hasNestedCommands: boolean;
   readonly hasOpaqueSyntax: boolean;
   readonly hasPipedShell: boolean;
+  readonly pipedShellInputs: readonly { readonly text: string; readonly script: string | null }[];
   readonly hasXargsShell: boolean;
   readonly isRawPatchPayload: boolean;
 }
@@ -658,11 +659,43 @@ function getInvocationNestedShellCommands(invocation: ShellInvocation): string[]
   return nestedCommands;
 }
 
+function getStaticStdinScript(tokens: readonly string[]): string | null {
+  const executableIndex = resolveExecutableIndex(tokens, 0);
+  if (executableIndex === null) return null;
+  const name = shellCommandName(tokens[executableIndex]);
+  const args = tokens.slice(executableIndex + 1).map(shellValue);
+  // Expansion and option-dependent producers are opaque, not literal scripts.
+  if (args.some((arg) => /[$`]/.test(arg))) return null;
+  if (name === "echo") {
+    if (args[0]?.startsWith("-") || args.some((arg) => arg.includes("\\"))) return null;
+    return `${args.join(" ")}\n`;
+  }
+  if (name !== "printf" || args.length === 0) return null;
+  const format = args[0]!;
+  const values = args.slice(1);
+  if (format.startsWith("-") || format.replace(/%%|%s/g, "").includes("%") ||
+      format.replace(/\\[ntr\\]/g, "").includes("\\")) return null;
+  const conversions = [...format.matchAll(/%%|%s/g)].filter(([match]) => match === "%s").length;
+  if (conversions === 0 && values.length > 0) return null;
+  const decodedFormat = format.replace(/\\([ntr\\])/g, (_match, char: string) =>
+    ({ n: "\n", t: "\t", r: "\r", "\\": "\\" })[char]!);
+  let script = "";
+  let cursor = 0;
+  do {
+    script += decodedFormat.replace(/%%|%s/g, (match) =>
+      match === "%%" ? "%" : values[cursor++] ?? "");
+  } while (conversions > 0 && cursor < values.length);
+  return script;
+}
+
 function getShellCommandInvocations(
   command: unknown,
   depth = 0,
   pretokenized?: readonly string[],
-  state: { hasNestedCommands: boolean } = { hasNestedCommands: false },
+  state: {
+    hasNestedCommands: boolean;
+    pipedShellInputs: Array<{ text: string; script: string | null }>;
+  } = { hasNestedCommands: false, pipedShellInputs: [] },
 ): ShellInvocation[] {
   const executableText = pretokenized === undefined
     ? getExecutableShellText(command)
@@ -670,17 +703,30 @@ function getShellCommandInvocations(
   const tokens = pretokenized ?? tokenizeShell(executableText);
   const invocations: ShellInvocation[] = [];
   let atCommandStart = true;
+  let pipelineStart = 0;
 
   for (let index = 0; index < tokens.length; index += 1) {
-    const token = tokens[index];
-    if (isShellControlToken(token)) {
+    const shellToken = tokens[index];
+    if (isShellControlToken(shellToken)) {
+      if (shellToken === "|") {
+        const consumerIndex = resolveExecutableIndex(tokens, index + 1);
+        if (consumerIndex !== null && SHELL_EVAL_COMMANDS.has(shellCommandName(tokens[consumerIndex]))) {
+          const producerTokens = tokens.slice(pipelineStart, index);
+          state.pipedShellInputs.push({
+            text: producerTokens.map(shellValue).join(" "),
+            script: producerTokens.some(isShellControlToken) ? null : getStaticStdinScript(producerTokens),
+          });
+        }
+      } else {
+        pipelineStart = index + 1;
+      }
       atCommandStart = true;
       continue;
     }
 
     if (!atCommandStart) continue;
-    if (isEnvAssignment(token)) continue;
-    if (SHELL_PREFIX_TOKENS.has(token)) continue;
+    if (isEnvAssignment(shellToken)) continue;
+    if (SHELL_PREFIX_TOKENS.has(shellToken)) continue;
 
     const resolvedIndex = resolveExecutableIndex(tokens, index);
     if (resolvedIndex !== null) {
@@ -760,7 +806,7 @@ export function analyzeShellCommand(command: string, cwd: string): ShellCommandA
   const isRawPatchPayload = commandIsRawPatchPayload(commandText);
   const executableText = isRawPatchPayload ? "" : hereDocs.executableText;
   const tokens = tokenizeShell(executableText);
-  const traversalState = { hasNestedCommands: false };
+  const traversalState = { hasNestedCommands: false, pipedShellInputs: [] as Array<{ text: string; script: string | null }> };
   const invocations = getShellCommandInvocations(executableText, 0, tokens, traversalState);
   const hasNestedCommands = traversalState.hasNestedCommands;
   const directories = invocationWorkingDirectories(invocations, tokens, cwd, hasNestedCommands);
@@ -782,9 +828,8 @@ export function analyzeShellCommand(command: string, cwd: string): ShellCommandA
     ),
     hasNestedCommands,
     hasOpaqueSyntax: OPAQUE_SHELL_CONSTRUCT_RE.some((construct) => construct.test(executableText)),
-    hasPipedShell: tokens.some(
-      (token, index) => token === "|" && ["sh", "bash", "zsh"].includes(shellCommandName(tokens[index + 1])),
-    ),
+    hasPipedShell: traversalState.pipedShellInputs.length > 0,
+    pipedShellInputs: Object.freeze(traversalState.pipedShellInputs.map((input) => Object.freeze(input))),
     hasXargsShell: tokens.some((token, index) => {
       if (shellCommandName(token) !== "xargs") return false;
       for (let nextIndex = index + 1; nextIndex < tokens.length; nextIndex += 1) {

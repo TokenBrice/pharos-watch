@@ -8,15 +8,16 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isRecord } from "@shared/lib/type-guards";
 import { round1 } from "@shared/lib/math";
 import type { StablecoinData } from "@shared/types/market";
-import { getCirculatingRaw, getPrevWeekRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { getDisplayedPsi } from "@shared/lib/psi-view-model";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import { getConditionBand } from "../../lib/stability-index";
+import { getConditionBand } from "@shared/lib/psi-policy";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { SECONDS } from "../../lib/time-constants";
+import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
 import {
   collectActiveDepegs,
   collectBlacklistActivity,
@@ -81,7 +82,7 @@ export interface DailyDigestInputBuildResult {
   recentTitles: string[];
   stablecoinsCacheReason: string | null;
   llmSignals: {
-    activeDepegCount: number;
+    activeDepegCount: number | null;
     topDepegs: NonNullable<DigestInputData["topDepegs"]>;
     resolvedDepegs: NonNullable<DigestInputData["resolvedDepegs"]>;
     yieldAnomalies: NonNullable<DigestInputData["yieldAnomalies"]>;
@@ -169,9 +170,12 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
         digestVersion: 2,
         aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
         totalMcapUsd: 0,
+        supplyCoverage: { complete: false, observedCount: 0, unavailableCount: CORE_AGGREGATE_ACTIVE_IDS.size },
         mcap7dDelta: 0,
         degradedSources: [stablecoinsCacheResult.reason],
-        activeDepegCount: 0,
+        activeDepegCount: null,
+        resolvedDepegCount: null,
+        depegSignalKeys: { active: null, resolved: null },
         topDepegs: [],
         biggestSupplyChange: null,
         stabilityIndex: null,
@@ -185,7 +189,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       recentTitles,
       stablecoinsCacheReason: stablecoinsCacheResult.reason,
       llmSignals: {
-        activeDepegCount: 0,
+        activeDepegCount: null,
         topDepegs: [],
         resolvedDepegs: [],
         yieldAnomalies: [],
@@ -203,8 +207,8 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const mcapById = new Map<string, number>();
   for (const coin of trackedStablecoinAssets) {
     stablecoinAssetById.set(coin.id, coin);
-    const raw = getCirculatingRaw(coin);
-    if (raw > 0) mcapById.set(coin.id, raw);
+    const raw = getCirculatingRawOrNull(coin);
+    if (raw !== null) mcapById.set(coin.id, raw);
   }
 
   let totalMcapUsd = 0;
@@ -217,9 +221,9 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   let biggestAbsChange = 0;
 
   for (const coin of coreAggregateStablecoinAssets) {
-    const mcap = getCirculatingRaw(coin);
+    const mcap = getCirculatingRawOrNull(coin);
     const prevWeek = getPrevWeekRawOrNull(coin);
-    if (mcap <= 0) continue;
+    if (mcap === null) continue;
     totalMcapUsd += mcap;
     coreCoinCount += 1;
     // A coin with no prior-week bucket has no measurable 7-day change. Counting
@@ -277,13 +281,16 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   if (!ctx.stablecoinsCacheIsFresh) {
     collectorResults.push(collectorDegraded(undefined, "stablecoins-cache-stale"));
   }
+  if (coreCoinCount < CORE_AGGREGATE_ACTIVE_IDS.size) {
+    collectorResults.push(collectorResult(undefined, [], ["supply-current-unavailable"]));
+  }
   if (baselineCoinCount < coreCoinCount) {
     collectorResults.push(collectorResult(undefined, [], ["supply-prev-week-baseline"]));
   }
 
   const activeDepegsResult = await collectActiveDepegs(ctx);
   collectorResults.push(activeDepegsResult);
-  const { activeDepegCount, topDepegs, lifecycleFlags } = activeDepegsResult.value;
+  const { activeDepegCount, activeDepegSignalKeys, topDepegs, lifecycleFlags } = activeDepegsResult.value;
 
   const [latestSample, latestDaily, avg24hRow, yesterdayRow] = await Promise.all([
     db
@@ -295,18 +302,24 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       )
       .first<{ score: number; band: string; components: string; stored_at: number }>(),
     db
-      .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
-      .bind(nowSec - SECONDS.ONE_DAY)
+      .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ? AND stored_at <= ?")
+      .bind(nowSec - SECONDS.ONE_DAY, nowSec)
       .first<{ avg: number | null }>(),
     db
       .prepare("SELECT score, band FROM stability_index WHERE computed_at = ?")
       .bind(yesterdayTs)
       .first<{ score: number; band: string }>(),
   ]);
-  if (latestSample && nowSec - latestSample.stored_at > 2 * SECONDS.ONE_HOUR) {
-    collectorResults.push(collectorDegraded(undefined, "psi-sample-stale"));
+  const sampleAge = assessFreshnessTimestamp(nowSec, latestSample?.stored_at, 0);
+  // Daily rows key the completed UTC observation day, not their publication instant.
+  const dailyWindowEnd = latestDaily == null ? undefined : latestDaily.stored_at + SECONDS.ONE_DAY;
+  const dailyAge = assessFreshnessTimestamp(nowSec, dailyWindowEnd, 0);
+  const sampleFresh = sampleAge.reason == null && sampleAge.ageSeconds <= 2 * SECONDS.ONE_HOUR;
+  const dailyFresh = dailyAge.reason == null && dailyAge.ageSeconds <= SECONDS.ONE_DAY;
+  if (latestSample && !sampleFresh) {
+    collectorResults.push(collectorDegraded(undefined, sampleAge.reason == null ? "psi-sample-stale" : `psi-sample-${sampleAge.reason}`));
   }
-  const currentPsiSource = latestSample ?? latestDaily;
+  const currentPsiSource = sampleFresh ? latestSample : dailyFresh ? latestDaily : null;
 
   const avg24h = avg24hRow?.avg != null ? round1(avg24hRow.avg) : null;
 
@@ -316,7 +329,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
         band: currentPsiSource.band,
         avg24h: avg24h ?? undefined,
         avg24hBand: avg24h != null ? getConditionBand(avg24h) : undefined,
-        computedAt: nowSec,
+        computedAt: currentPsiSource.stored_at,
       })
     : null;
   const displayScore = displayPsi?.score ?? null;
@@ -334,6 +347,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     currentPsiSource && displayScore != null && displayBand && parsedComponents != null
       ? { score: displayScore, band: displayBand, components: parsedComponents }
       : null;
+  if (!stabilityIndex) collectorResults.push(collectorDegraded(undefined, "psi-unavailable"));
 
   const yesterdayIndex = yesterdayRow ? { score: yesterdayRow.score, band: yesterdayRow.band } : null;
 
@@ -385,7 +399,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     crossDayTrendsResult,
     totalMcapAthResult,
   );
-  const historicalContextResult = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange);
+  const historicalContextResult = await collectHistoricalContext(ctx, displayScore, displayBand, currentPsiSource?.stored_at ?? null, biggestSupplyChange);
   collectorResults.push(historicalContextResult);
   const gradeTransitionsResult = await collectGradeTransitions(ctx, safetyGrades, safetyIdentity);
   collectorResults.push(gradeTransitionsResult);
@@ -398,7 +412,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     ...degradedReasons,
     ...aggregateCollectorReasons(collectorResults, "qualityReasons"),
   ];
-  const resolvedDepegs = resolvedDepegsResult.value;
+  const { resolvedDepegs, resolvedDepegCount, resolvedDepegSignalKeys } = resolvedDepegsResult.value;
   const mintBurnFlows = mintBurnFlowsResult.value;
   const dewsStress = dewsStressResult.value;
   const psiContributors = psiContributorsResult.value;
@@ -413,10 +427,12 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     digestVersion: 2,
     aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
     totalMcapUsd,
+    supplyCoverage: { complete: coreCoinCount === CORE_AGGREGATE_ACTIVE_IDS.size,
+      observedCount: coreCoinCount, unavailableCount: CORE_AGGREGATE_ACTIVE_IDS.size - coreCoinCount },
     mcap7dDelta: baselineMcapUsd - totalPrevWeek,
     mcap7dDeltaCoverage: {
       coveredCoins: baselineCoinCount,
-      totalCoins: coreCoinCount,
+      totalCoins: CORE_AGGREGATE_ACTIVE_IDS.size,
       coveredMcapUsd: baselineMcapUsd,
     },
     totalMcapAth,
@@ -463,6 +479,8 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     ...(missingSources.length > 0 ? { degradedSources: [...missingSources] } : {}),
     safetyContext,
     activeDepegCount,
+    resolvedDepegCount,
+    depegSignalKeys: { active: activeDepegSignalKeys, resolved: resolvedDepegSignalKeys },
     topDepegs,
     biggestSupplyChange,
     stabilityIndex,

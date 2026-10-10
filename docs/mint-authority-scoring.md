@@ -13,6 +13,8 @@ For current scoring and evidence, read [Current V9 scope](#current-v9-scope), th
 
 The sections from [Methodology Versioning](#methodology-versioning) through the historical formula, caps, and bands describe the retired lane only. Read them for historical interpretation, not live score changes.
 
+The advisory Mint Authority audit's default Markdown renders every queue, including open questions, source-free rationales, unknown upgrades and reused controllers. Audit counts, live probes and detail evidence links share the typed profile source collector, including no-local-issuance exceptions, upgrade reviews, incidents, controls and custody attestations; counts preserve occurrences while links/probes deduplicate URLs.
+
 ### Retired signal migration
 
 Where the signals went:
@@ -34,6 +36,8 @@ See [report-cards.md](./report-cards.md) for the live methodology. DDR uses the 
 Since Safety methodology `9.23`, the live V9 mint component assesses native issuance on the canonical deployment(s) and controls that can expand, relax, or replace that issuance. Bridge Risk separately assesses representations and cross-chain machinery, including bridge mint/burn, adapters, lockboxes or escrow, messaging, limits, upgrades, and administrators. The same controller can appear in both domains for different powers, but a bridge capability never compiles as global Mint Authority risk.
 
 Mint controls and mutable mint-logic upgrade paths on active multi-deployment assets are bound to reviewed native deployments. Structured bridge controls compile once per referenced route; when structured evidence is absent, conservative route-derived controls remain. This corrects the USDai scope bug in which satellite OToken administration had classified canonical Arbitrum issuance as `unbounded-or-compromised`; separating the evidence moved USDai from D to B. [Classification](./classification.md#mint-authority-taxonomy) owns the taxonomy boundary, and [Stablecoin Data Registry](./stablecoin-data.md#mint-authority-and-bridge-risk-ownership) owns the exact authoring and enforcement contract.
+
+Published issuance diagnostics distinguish known adverse facts from missing proof: `active-incident` renders **Failed gate / Active incident**, not Missing evidence. Reader reason labels and statuses share `src/lib/mint-issuance-diagnostics.ts`; scoring and the published reason code are unchanged.
 
 FUSD's exSat deployment is reviewed native issuance, with the same issuer EOA and immediate ProxyAdmin failure domains as its EVM siblings. Its gateway's fresh-message-ID minter can issue without authenticated bridge proof, while the runtime-matched TokenBridgeSender currently only burns/transfers supplied tokens and remains Bridge Risk machinery with a separate upgrade contingency. The exSat contract pauser's signing topology is unresolved; neither a new deployment nor runtime correspondence establishes independent signers, complete execution scope, or incident absence. The separately retained Solana FUSD/FUSDLP liability-identity conflict stays unknown.
 

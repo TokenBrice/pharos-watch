@@ -42,7 +42,7 @@ import {
   projectV9EffectiveBackingPillarScore,
   resolveV9WrapperStrategyTier,
   upstreamExitAccessScore,
-  upstreamOracleNavScore,
+  upstreamOracleNavProjection,
   type V9EvaluatedAsset,
 } from "./evaluate-asset";
 import {
@@ -115,7 +115,10 @@ function upstreamPillarCause(result: V9EvaluatedAsset, pillar: "backing" | "exit
   const input = result.scoreInput.pillars[pillar];
   if (input.aggregationDisposition === "excluded-a-b") return input.excludedCauses?.[0] ?? "U";
   return input.limitedEvidenceCauses.find((cause) => cause === "C" || cause === "U")
-    ?? (input.reasons.some((reason) => reason.cause === "D") ? "D" : null);
+    ?? (input.reasons.some((reason) => reason.cause === "D") ||
+      (input.adverseAttribution?.length ?? 0) > 0 ||
+      input.structuralSignals.some((signal) => signal.responsibility === "measured-adverse" && signal.pricedInPillar === pillar)
+      ? "D" : null);
 }
 
 
@@ -1029,13 +1032,8 @@ function commonModeSignalsByAsset(
           : localControlShare !== null
             ? commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, false)
             : commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, shareUnavailable);
-      const groupClause = controlCensus
-        ? `${effectiveMembers.length} reviewed paths across ${censusAssetIds.length} independent root liabilities share ${key}`
-        : `${effectiveMembers.length} reviewed paths across ${censusAssetIds.length} assets share ${key}`;
-      // Where the coin's own measured share drives the severity (moderate, or
-      // high with a measured — not unavailable — share), lead the reason with
-      // that share and demote the cross-asset group trigger to secondary
-      // context; readers otherwise misread the group count as the driver.
+      // A measured asset-local exposure owns its reason. Cohort counts and
+      // peer evidence quality must not alter it when another asset is quarantined.
       const ownShare = severity !== "low" && shareInfo !== null ? shareInfo.share : null;
       // Evidence ownership is local to the receiving asset. A reviewed
       // bounded-unknown member is still adverse — an unverified critical
@@ -1050,13 +1048,18 @@ function commonModeSignalsByAsset(
               (mintControlAssessment === null || mintControlAssessment.identitiesKnown)
             ? "measured-adverse"
             : "integration-missing";
-      const memberQualityClause = groupHasBoundedUnknownMember
-        ? `; ${boundedUnknownMemberCount} shared member${boundedUnknownMemberCount === 1 ? " is" : "s are"} bounded-unknown and remains adverse`
-        : "";
-      const reason =
-        ownShare !== null
-          ? `This asset's own reviewed share is ${formatCommonModeSharePct(ownShare)} at ${key}, ${qualifier} (also ${groupClause}${memberQualityClause}).`
-          : `${groupClause}${memberQualityClause}, ${qualifier}.`;
+      let reason: string;
+      if (ownShare !== null) {
+        reason = `This asset's own reviewed share is ${formatCommonModeSharePct(ownShare)} at ${key}, ${qualifier}.`;
+      } else {
+        const groupClause = controlCensus
+          ? `${effectiveMembers.length} reviewed paths across ${censusAssetIds.length} independent root liabilities share ${key}`
+          : `${effectiveMembers.length} reviewed paths across ${censusAssetIds.length} assets share ${key}`;
+        const memberQualityClause = groupHasBoundedUnknownMember
+          ? `; ${boundedUnknownMemberCount} shared member${boundedUnknownMemberCount === 1 ? " is" : "s are"} bounded-unknown and remains adverse`
+          : "";
+        reason = `${groupClause}${memberQualityClause}, ${qualifier}.`;
+      }
       const defaultEconomicLossScope = commonModeEconomicScope(group.failureDomain.kind);
       const economicLossScope =
         controlDomainScope.economicLossScope === "deployment"
@@ -1262,6 +1265,7 @@ function evaluateV9FactSetRead(
       ? evaluatedAsset.trace.partialEvidence?.causes[0] ?? "U"
       : evaluatedAsset.trace.limitedEvidenceCauses[0] ?? semanticNrCauses[0]
         ?? (evaluatedAsset.trace.adverseAttribution.length > 0 ? "D" : null);
+    const oracleNavProjection = upstreamOracleNavProjection(evaluatedAsset, envelope);
     const upstream: V9UpstreamResult = {
       assetId: evaluatedAsset.assetId,
       score: projectV9DependencyScore(evaluatedAsset.trace),
@@ -1278,13 +1282,13 @@ function evaluateV9FactSetRead(
         exit: upstreamPillarCause(evaluatedAsset, "exit"),
         access: upstreamPillarCause(evaluatedAsset, "exit"),
         control: upstreamPillarCause(evaluatedAsset, "control"),
-        "oracle-nav": evaluatedAsset.control.components.find((component) => component.kind === "oracle")?.cause ?? null,
+        "oracle-nav": oracleNavProjection.cause,
       },
       backingScore: projectV9EffectiveBackingPillarScore(evaluatedAsset),
       exitScore: evaluatedAsset.scoreInput.pillars.exit.score,
       accessScore: upstreamExitAccessScore(evaluatedAsset.exit),
       controlScore: evaluatedAsset.scoreInput.pillars.control.score,
-      oracleNavScore: upstreamOracleNavScore(evaluatedAsset, envelope),
+      oracleNavScore: oracleNavProjection.score,
     };
     upstreamResultsById.set(assetId, interventions?.projectUpstream?.(upstream) ?? upstream);
     unavailabilityRootsById.set(assetId, unavailabilityRoots);

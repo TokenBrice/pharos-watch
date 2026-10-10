@@ -389,6 +389,7 @@ async function runFxRatePublication(
       throw new Error("sync-fx-rates produced zero usable rates");
     }
     if (missing.length > 0) {
+      syncState.degrade("incomplete-expected-fx-coverage");
       logWorkerEventArgs("handler", "warn", `[sync-fx-rates] Missing rates for: ${missing.join(", ")}`);
     }
 

@@ -8,7 +8,7 @@ vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({
 
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
 import { fetchDefiLlamaPrices } from "../defillama";
-import type { LiveReserveWarning } from "@shared/types/live-reserves";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 
 describe("fetchDefiLlamaPrices", () => {
   beforeEach(() => {
@@ -25,12 +25,13 @@ describe("fetchDefiLlamaPrices", () => {
       }),
     });
 
-    const prices = await fetchDefiLlamaPrices(
+    const { prices, warnings } = await fetchDefiLlamaPrices(
       [{ key: "branch", chain: "hyperevm", address: "0xABC" }],
       new AbortController().signal,
     );
 
     expect(prices.get("branch")).toBe(1.23);
+    expect(warnings).toEqual([]);
     expect(vi.mocked(fetchTextWithRetry).mock.calls[0]?.[0]).toContain("hyperliquid:0xabc");
   });
 
@@ -46,8 +47,8 @@ describe("fetchDefiLlamaPrices", () => {
     )).rejects.toThrow("DefiLlama price fetch failed (503)");
   });
 
-  it("returns an empty map without network I/O for no assets", async () => {
-    expect(await fetchDefiLlamaPrices([], new AbortController().signal)).toEqual(new Map());
+  it("returns empty prices and warnings without network I/O for no assets", async () => {
+    expect(await fetchDefiLlamaPrices([], new AbortController().signal)).toEqual({ prices: new Map(), warnings: [] });
     expect(fetchTextWithRetry).not.toHaveBeenCalled();
   });
 
@@ -60,13 +61,15 @@ describe("fetchDefiLlamaPrices", () => {
         "ethereum:0xnegative": { price: -1, timestamp: Math.floor(Date.now() / 1000), confidence: 1 },
       } }),
     });
-    const prices = await fetchDefiLlamaPrices(
+    const { prices, warnings } = await fetchDefiLlamaPrices(
       ["first", "second", "zero", "negative", "missing"].map((key) => ({
         key, chain: "ethereum", address: key === "first" || key === "second" ? "0xABC" : `0x${key}`,
       })),
       new AbortController().signal,
     );
     expect(prices).toEqual(new Map([["first", 2], ["second", 2]]));
+    expect(warnings).toHaveLength(3);
+    expect(warnings.every((warning) => warning.code === "defillama-quote-missing" && warning.effect === "degraded")).toBe(true);
   });
 
   it("returns each caller's logical keys while sharing one upstream fetch for the same asset", async () => {
@@ -80,11 +83,11 @@ describe("fetchDefiLlamaPrices", () => {
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
     const signal = new AbortController().signal;
     expect(await fetchDefiLlamaPrices([{ key: "first", chain: "ethereum", address: "0xABC" }], signal, ctx))
-      .toEqual(new Map([["first", 2]]));
+      .toEqual({ prices: new Map([["first", 2]]), warnings: [] });
     expect(await fetchDefiLlamaPrices([{ key: "second", chain: "ethereum", address: "0xabc" }], signal, ctx))
-      .toEqual(new Map([["second", 2]]));
+      .toEqual({ prices: new Map([["second", 2]]), warnings: [] });
     expect(await fetchDefiLlamaPrices([{ key: "second", chain: "ethereum", address: "0xabc" }], signal, ctx))
-      .toEqual(new Map([["second", 2]]));
+      .toEqual({ prices: new Map([["second", 2]]), warnings: [] });
     expect(fetchTextWithRetry).toHaveBeenCalledTimes(1);
   });
 
@@ -104,13 +107,16 @@ describe("fetchDefiLlamaPrices", () => {
     ];
 
     const first = await fetchDefiLlamaPrices(assets, signal, ctx);
-    first.set("unpriced", 99);
+    first.prices.set("unpriced", 99);
+    first.warnings.length = 0;
 
-    expect(await fetchDefiLlamaPrices(assets, signal, ctx)).toEqual(new Map([["priced", 2]]));
+    const second = await fetchDefiLlamaPrices(assets, signal, ctx);
+    expect(second.prices).toEqual(new Map([["priced", 2]]));
+    expect(second.warnings).toEqual([expect.objectContaining({ code: "defillama-quote-missing", effect: "degraded" })]);
     expect(fetchTextWithRetry).toHaveBeenCalledTimes(1);
   });
 
-  it("rejects low-quality quote admission while retaining warned values for every cached caller", async () => {
+  it("returns low-quality warnings with retained values for every cached caller", async () => {
     vi.mocked(fetchTextWithRetry).mockResolvedValue({
       response: new Response(),
       body: JSON.stringify({ coins: {
@@ -122,11 +128,34 @@ describe("fetchDefiLlamaPrices", () => {
     const ctx = { nowSec: 200000, requestCache: new Map<string, Promise<unknown>>() };
     const assets = ["old", "weak", "edge"].map((key) => ({ key, chain: "ethereum", address: `0x${key}` }));
     for (let attempt = 0; attempt < 2; attempt++) {
-      const warnings: LiveReserveWarning[] = [];
-      expect(await fetchDefiLlamaPrices(assets, new AbortController().signal, ctx, warnings))
-        .toEqual(new Map([["old", 2], ["weak", 3], ["edge", 4]]));
+      const { prices, warnings } = await fetchDefiLlamaPrices(assets, new AbortController().signal, ctx);
+      expect(prices).toEqual(new Map([["old", 2], ["weak", 3], ["edge", 4]]));
       expect(warnings.map((warning) => warning.effect)).toEqual(["degraded", "degraded"]);
+      warnings.length = 0;
     }
-    await expect(fetchDefiLlamaPrices(assets, new AbortController().signal, ctx)).rejects.toThrow(/policy/);
+  });
+
+  it.each([
+    { label: "one-day boundary", timestamp: 200000 - 86400, degraded: false },
+    { label: "one second too old", timestamp: 200000 - 86401, degraded: true },
+    { label: "allowed future skew", timestamp: 200000 + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, degraded: false },
+    { label: "one second beyond future skew", timestamp: 200001 + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, degraded: true },
+    { label: "millisecond timestamp", timestamp: 200000 * 1000, degraded: true },
+    { label: "missing timestamp", timestamp: undefined, degraded: true },
+    { label: "zero timestamp", timestamp: 0, degraded: true },
+  ])("classifies $label at the quote boundary", async ({ timestamp, degraded }) => {
+    vi.mocked(fetchTextWithRetry).mockResolvedValue({
+      response: new Response(),
+      body: JSON.stringify({ coins: { "ethereum:0xabc": { price: 2, timestamp, confidence: 0.8 } } }),
+    });
+    const { prices, warnings } = await fetchDefiLlamaPrices(
+      [{ key: "branch", chain: "ethereum", address: "0xabc" }],
+      new AbortController().signal,
+      { nowSec: 200000 },
+    );
+    expect(prices.get("branch")).toBe(2);
+    expect(warnings).toEqual(degraded
+      ? [expect.objectContaining({ code: "defillama-quote-quality", effect: "degraded" })]
+      : []);
   });
 });

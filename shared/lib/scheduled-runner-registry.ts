@@ -9,7 +9,6 @@ import {
 } from "./cron-jobs";
 import { isDexLiquidityPublicationSlot } from "./cron-cadences";
 
-export type ScheduledRunnerKey = CronScheduleKey;
 export type ScheduledWorkerRole = "public" | "heavy";
 
 /** Recovery must not load producer graphs beside a live heavy scheduled slot. */
@@ -30,7 +29,6 @@ export interface ScheduledSlotPlan extends ScheduledSlotPlanInput {
   scheduleKey: CronScheduleKey;
   schedule: CronScheduleExpression;
   triggerSchedules: readonly string[];
-  runnerKey: ScheduledRunnerKey;
 }
 
 const SCHEDULED_SLOT_PLAN_INPUTS = {
@@ -214,7 +212,6 @@ export const SCHEDULED_SLOT_PLANS: Readonly<Record<CronScheduleKey, ScheduledSlo
         {
           worker: planInput.worker,
           scheduleKey: scheduleKey as CronScheduleKey,
-          runnerKey: scheduleKey as ScheduledRunnerKey,
           schedule: CRON_SCHEDULES[scheduleKey as CronScheduleKey],
           triggerSchedules: CRON_TRIGGER_SCHEDULES[scheduleKey as CronScheduleKey],
           jobChains: planInput.jobChains,
@@ -286,7 +283,6 @@ export type ScheduledCalendarIdentity = "utc-month";
 export interface ScheduledTaskDescriptor {
   scheduleKey: CronScheduleKey;
   schedule: CronScheduleExpression;
-  runnerKey: ScheduledRunnerKey;
   job: string;
   producerPath: string;
   producerKind: ScheduledProducerKind;
@@ -361,7 +357,6 @@ function buildScheduledTaskDescriptors(): ScheduledTaskDescriptor[] {
         descriptors.push({
           scheduleKey: plan.scheduleKey,
           schedule: plan.schedule,
-          runnerKey: plan.runnerKey,
           job,
           producerPath: plan.scheduleKey,
           producerKind: "scheduled-job",
@@ -387,7 +382,6 @@ function buildScheduledTaskDescriptors(): ScheduledTaskDescriptor[] {
       descriptors.push({
         scheduleKey: plan.scheduleKey,
         schedule: plan.schedule,
-        runnerKey: plan.runnerKey,
         job,
         producerPath: plan.scheduleKey,
         producerKind: "budget-only",

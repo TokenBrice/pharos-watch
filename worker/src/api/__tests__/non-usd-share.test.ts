@@ -8,6 +8,7 @@ import { NonUsdShareResponseSchema, type NonUsdSharePoint } from "@shared/types/
 
 const fixtures = createLatestSchemaFixtureTracker();
 const COIN_HISTORY_GAPS = { match: "LAG(snapshot_date)", rows: [] };
+const COMPLETE_COVERAGE = { basis: "interior-gap-prior-value", total: 1, commodity: 1, fiatNonUsd: 1 };
 
 
 function unix(iso: string): number {
@@ -65,8 +66,29 @@ describe("handleNonUsdShare", () => {
     ]);
     const response = await handleNonUsdShare(db, new URL("https://example.com/api/non-usd-share"));
     expect(NonUsdShareResponseSchema.parse(await response.json())).toEqual([
-      { date, total: 100, commodity: 0, fiatNonUsd: 0, commodityShare: 0, fiatNonUsdShare: 0 },
+      { date, total: 100, commodity: 0, fiatNonUsd: 0, commodityShare: 0, fiatNonUsdShare: 0, coverage: COMPLETE_COVERAGE },
     ]);
+  });
+
+  it("carries admitted partial cohort value coverage without changing the suppression floors", async () => {
+    const date = Math.floor(Date.now() / 1000) - 86400;
+    const db = mockD1([
+      { match: "FROM cache", rows: [] },
+      { match: "LAG(snapshot_date)", rows: [
+        { stablecoin_id: COMMODITY_IDS[0], previous_date: date - 86400, next_date: date + 86400, previous_usd: 10 },
+        { stablecoin_id: FIAT_NON_USD_IDS[0], previous_date: date - 86400, next_date: date + 86400, previous_usd: 15 },
+      ] },
+      { match: "FROM supply_history", rows: [
+        { snapshot_date: date, total: 990, commodity: 10, fiat_non_usd: 15 },
+      ] },
+    ]);
+    const response = await handleNonUsdShare(db, new URL("https://example.com/api/non-usd-share"));
+    const body = NonUsdShareResponseSchema.parse(await response.json());
+    expect(body).toHaveLength(1);
+    expect(body[0].coverage).toEqual({
+      basis: "interior-gap-prior-value", total: 990 / 1015, commodity: 0.5, fiatNonUsd: 0.5,
+    });
+    expect(body[0].commodityShare).toBe(1.0101);
   });
 
   it("requests the default long-range window and returns split non-USD shares within D1 bind limits", async () => {
@@ -149,6 +171,7 @@ describe("handleNonUsdShare", () => {
         commodity: 1_873_999_608.17,
         fiatNonUsd: 132_274_790.42,
         total: 64_785_915_681.46,
+        coverage: COMPLETE_COVERAGE,
       },
       {
         date: unix("2024-06-04T00:00:00Z"),
@@ -157,6 +180,7 @@ describe("handleNonUsdShare", () => {
         commodity: 2_812_795_250.77,
         fiatNonUsd: 352_546_495.83,
         total: 162_264_669_603.31,
+        coverage: COMPLETE_COVERAGE,
       },
       {
         date: unix("2026-04-07T00:00:00Z"),
@@ -165,6 +189,7 @@ describe("handleNonUsdShare", () => {
         commodity: 5_936_875_143.74,
         fiatNonUsd: 1_826_608_786.57,
         total: 327_905_730_184.74,
+        coverage: COMPLETE_COVERAGE,
       },
     ]);
     db.assertAllMatchesUsed();
@@ -282,6 +307,9 @@ describe("handleNonUsdShare", () => {
       const body = NonUsdShareResponseSchema.parse(await response.json());
 
       expect(body.map((point) => point.date)).toEqual(published ? [before, partial, after] : [before, after]);
+      if (published) expect(body.find((point) => point.date === partial)?.coverage).toEqual({
+        basis: "interior-gap-prior-value", total: 0.99, commodity: 1, fiatNonUsd: 1,
+      });
       expect(body.find((point) => point.date === before)).toEqual({
         date: before,
         total: 1000,
@@ -289,6 +317,7 @@ describe("handleNonUsdShare", () => {
         fiatNonUsd: 30,
         commodityShare: 2,
         fiatNonUsdShare: 3,
+        coverage: COMPLETE_COVERAGE,
       });
     });
   });

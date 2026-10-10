@@ -76,13 +76,11 @@ describe("stored live reserve slice integrity", () => {
     expect(parseReserveCompositionRow(unknown, null).issue?.code).toBe("unknown-adapter-source");
   });
 
-  it("decodes warnings with severity and effect defaults and drops malformed entries", () => {
+  it("decodes supported legacy warning severity and effect defaults without dropping members", () => {
     const parsed = parseReserveCompositionRow(
       { ...row([{ name: "Cash", pct: 100, risk: "low" }]), warnings: JSON.stringify([
         { code: "stale", message: "source lagging", effect: "fatal" },
         { code: "note", message: "fyi", severity: "info" },
-        { code: "missing-message" },
-        "not an object",
       ]), warning_count: null },
       null,
     );
@@ -91,6 +89,20 @@ describe("stored live reserve slice integrity", () => {
       { code: "note", message: "fyi", severity: "info", effect: "info" },
     ]);
     expect(parsed.record?.warningCount).toBe(2);
+  });
+
+  it.each([
+    ["not-json", 1], ["{}", 0], ["null", 0], ['[{"code":"material-unknown-exposure","effect":"degraded"}]', 1],
+    ['[{"code":"gap","message":"gap","effect":"bogus"}]', 1], ["[]", 1],
+    ['[{"code":"gap","message":"gap"}]', 0],
+  ])("rejects warning corruption %s with a named integrity reason", (warnings, warning_count) => {
+    const parsed = parseReserveCompositionRow({ ...row([{ name: "Cash", pct: 100, risk: "low" }]), warnings, warning_count }, null);
+    expect(parsed.record).toBeNull();
+    expect(parsed.issue?.code).toBe("invalid-warnings");
+  });
+
+  it.each([null, "[]"])("accepts legitimate empty warnings %s", (warnings) => {
+    expect(parseReserveCompositionRow({ ...row([{ name: "Cash", pct: 100, risk: "low" }]), warnings }, null).issue).toBeNull();
   });
 });
 
@@ -251,7 +263,7 @@ describe("stored live reserve snapshot metadata normalization", () => {
     }
     for (const effect of LIVE_RESERVE_WARNING_EFFECT_VALUES) {
       const decoded = parseReserveCompositionRow({ ...row([{ name: "Cash", pct: 100, risk: "low" }]),
-        warnings: JSON.stringify([{ code: "source", message: "source issue", effect }]) }, null);
+        warning_count: 1, warnings: JSON.stringify([{ code: "source", message: "source issue", effect }]) }, null);
       expect(decoded.record?.warnings[0].effect).toBe(effect);
     }
     for (const freshnessMode of LIVE_RESERVE_FRESHNESS_MODE_VALUES) {

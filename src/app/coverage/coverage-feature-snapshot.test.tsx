@@ -2,9 +2,11 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { COVERAGE_FEATURES } from "@/lib/coverage";
+import { buildCoverageFeatureSummary, buildCoverageRow, COVERAGE_FEATURES } from "@/lib/coverage";
 import type { CoverageFeatureSummary } from "@/lib/coverage";
 import { CoverageFeatureSnapshotRow } from "@/components/coverage/coverage-feature-snapshot";
+import { CoverageFeatureSnapshotCard } from "@/components/coverage/coverage-page-sections";
+import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 
 afterEach(cleanup);
 
@@ -16,6 +18,8 @@ describe("CoverageFeatureSnapshotRow", () => {
       totalCount: 2,
       coveragePct: 50,
       coveredMcapUsd: 800,
+      marketCapObservedCount: 2,
+      marketCapComplete: true,
       mcapSharePct: 80,
       countLabel: "Reviewed authority",
       coverageLabel: "50% with reviewed mint authority",
@@ -47,6 +51,8 @@ describe("CoverageFeatureSnapshotRow", () => {
       totalCount: 4,
       coveragePct: 75,
       coveredMcapUsd: 0,
+      marketCapObservedCount: 4,
+      marketCapComplete: true,
       mcapSharePct: null,
       countLabel: "Coin count",
       coverageLabel: "75% of active coins",
@@ -75,6 +81,8 @@ describe("CoverageFeatureSnapshotRow", () => {
       totalCount: 0,
       coveragePct: null,
       coveredMcapUsd: 0,
+      marketCapObservedCount: 0,
+      marketCapComplete: true,
       mcapSharePct: null,
       countLabel: "Coin count",
       coverageLabel: "Data n/a",
@@ -86,5 +94,32 @@ describe("CoverageFeatureSnapshotRow", () => {
 
     expect(screen.getAllByText("Data n/a").length).toBeGreaterThan(0);
     expect(screen.queryByText("0%")).toBeNull();
+  });
+
+  it("labels observed-only snapshot ratios as known cap", () => {
+    const feature = COVERAGE_FEATURES.find((entry) => entry.key === "yield")!;
+    const base = buildCoverageRow({
+      coin: makeStablecoinMeta(), marketCapUsd: 100, hasPegCoverage: true,
+      safetyScore: null, dexCoverageClass: null, hasYieldCoverage: true, flowCoverageStatus: null,
+    });
+    const summary = buildCoverageFeatureSummary(feature, [
+      base, { ...base, id: "unknown", marketCapAvailable: false },
+    ]);
+    render(<CoverageFeatureSnapshotRow summary={summary} />);
+    expect(screen.getByText("of known cap")).toBeTruthy();
+  });
+
+  it("renders cap skew unavailable without naming a feature when no share is observed", () => {
+    render(<CoverageFeatureSnapshotCard
+      featureSummaries={[]}
+      sourceDepthProgress={{
+        totalCount: 0, atTargetCount: 0, exactTwoCount: 0, belowTargetCount: 0,
+        marketCapComplete: false, atTargetPct: null, atTargetMcapPct: null, exactTwoMcapPct: null,
+      }}
+      widestFeature={null} narrowestFeature={null} mostConcentratedFeature={null}
+    />);
+    const tile = screen.getByText("Cap skew").parentElement!;
+    expect(tile.textContent).toMatch(/n\/a/);
+    expect(tile.textContent).not.toContain("Price");
   });
 });

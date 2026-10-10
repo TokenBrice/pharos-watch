@@ -1,142 +1,39 @@
 import { describe, expect, it } from "vitest";
-import {
-  extractPendingDepegIncidents,
-  mapPendingIncidentsByCoin,
-  type PendingDepegIncident,
-} from "../depeg-incident-utils";
-
-function pending(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
-  return {
-    stablecoinId: "coin-a",
-    symbol: "A",
-    direction: "below",
-    firstSeenAt: 1_700_000_000,
-    peakSeenBps: -120,
-    confirmationCategories: ["cex", 12, "dex"],
-    missingConfirmationCategories: ["llama", null, "native"],
-    ...overrides,
-  };
-}
+import { DepegPendingIncidentSchema } from "@shared/types/market";
+import { makePendingIncident } from "@/components/__tests__/depeg.test-support";
+import { extractPendingDepegIncidents, mapPendingIncidentsByCoin } from "../depeg-incident-utils";
 
 describe("extractPendingDepegIncidents", () => {
-  it.each(["pendingIncidents", "pendingDepegs", "pending"] as const)(
-    "reads pending incidents from %s",
-    (key) => {
-      const incidents = extractPendingDepegIncidents({ [key]: [pending()] });
-
-      expect(incidents).toHaveLength(1);
-      expect(incidents[0]).toMatchObject({
-        stablecoinId: "coin-a",
-        symbol: "A",
-        direction: "below",
-        firstSeenAt: 1_700_000_000,
-        peakSeenBps: -120,
-        confirmationCategories: ["cex", "dex"],
-        missingConfirmationCategories: ["llama", "native"],
-      });
-    },
-  );
-
-  it("drops malformed pending incidents", () => {
-    const incidents = extractPendingDepegIncidents({
-      pendingIncidents: [
-        pending({ stablecoinId: undefined }),
-        pending({ firstSeenAt: null }),
-        pending({ direction: "sideways" }),
-        pending({ stablecoinId: "valid", symbol: undefined }),
-      ],
-    });
-
-    expect(incidents.map((incident) => incident.stablecoinId)).toEqual(["valid"]);
-    expect(incidents[0]?.symbol).toBe("valid");
+  it("returns no incidents before data arrives or when pending is absent", () => {
+    expect(extractPendingDepegIncidents(undefined)).toEqual([]);
+    expect(extractPendingDepegIncidents({})).toEqual([]);
+    expect(extractPendingDepegIncidents({ pending: [] })).toEqual([]);
   });
 
-  it("sorts by largest absolute peak, then most recent firstSeenAt", () => {
-    const incidents = extractPendingDepegIncidents({
-      pending: [
-        pending({ stablecoinId: "older-tie", firstSeenAt: 10, peakSeenBps: 200 }),
-        pending({ stablecoinId: "largest", firstSeenAt: 20, peakSeenBps: -250 }),
-        pending({ stablecoinId: "newer-tie", firstSeenAt: 30, peakSeenBps: -200 }),
-        pending({ stablecoinId: "fallback-last", firstSeenAt: 40, peakSeenBps: null, lastSeenBps: 50 }),
-      ],
-    });
+  it("sorts validated incidents by largest absolute peak, then most recent firstSeenAt without mutating data", () => {
+    const pending = [
+      makePendingIncident({ stablecoinId: "older-tie", firstSeenAt: 10, peakSeenBps: 200 }),
+      makePendingIncident({ stablecoinId: "largest", firstSeenAt: 20, peakSeenBps: -250 }),
+      makePendingIncident({ stablecoinId: "newer-tie", firstSeenAt: 30, peakSeenBps: -200 }),
+      makePendingIncident({ stablecoinId: "smallest", firstSeenAt: 40, peakSeenBps: -120 }),
+    ].map((incident) => DepegPendingIncidentSchema.parse(incident));
+    const original = [...pending];
+    const incidents = extractPendingDepegIncidents({ pending });
 
     expect(incidents.map((incident) => incident.stablecoinId)).toEqual([
-      "largest",
-      "newer-tie",
-      "older-tie",
-      "fallback-last",
+      "largest", "newer-tie", "older-tie", "smallest",
     ]);
-  });
-
-  it("prefers an authoritative empty carrier over a populated later alias", () => {
-    expect(extractPendingDepegIncidents({ pendingIncidents: [], pendingDepegs: [pending()] })).toEqual([]);
-    expect(
-      extractPendingDepegIncidents({ pendingDepegs: [], pending: [pending()] }),
-    ).toEqual([]);
-  });
-
-  it("falls through nullish carriers to the next alias", () => {
-    const fromDepegs = extractPendingDepegIncidents({
-      pendingIncidents: null,
-      pendingDepegs: [pending({ stablecoinId: "from-depegs" })],
-    });
-    const fromPending = extractPendingDepegIncidents({
-      pendingIncidents: undefined,
-      pendingDepegs: null,
-      pending: [pending({ stablecoinId: "from-pending" })],
-    });
-
-    expect(fromDepegs.map((incident) => incident.stablecoinId)).toEqual(["from-depegs"]);
-    expect(fromPending.map((incident) => incident.stablecoinId)).toEqual(["from-pending"]);
-  });
-
-  it("reads availableConfirmationCategories only when confirmationCategories is absent", () => {
-    const [fallback] = extractPendingDepegIncidents({
-      pendingIncidents: [
-        pending({ confirmationCategories: undefined, availableConfirmationCategories: ["cex", "native"] }),
-      ],
-    });
-    const [primaryEmpty] = extractPendingDepegIncidents({
-      pendingIncidents: [pending({ confirmationCategories: [], availableConfirmationCategories: ["cex"] })],
-    });
-
-    expect(fallback?.confirmationCategories).toEqual(["cex", "native"]);
-    expect(primaryEmpty?.confirmationCategories).toEqual([]);
-  });
-
-  it("ranks by the oldest available deviation when peak and last are missing", () => {
-    const incidents = extractPendingDepegIncidents({
-      pendingIncidents: [
-        pending({ stablecoinId: "no-deviation", firstSeenAt: 50, peakSeenBps: null, lastSeenBps: null, firstSeenBps: null }),
-        pending({ stablecoinId: "first-seen-only", firstSeenAt: 40, peakSeenBps: null, lastSeenBps: null, firstSeenBps: -75 }),
-        pending({ stablecoinId: "last-seen-wins", firstSeenAt: 30, peakSeenBps: null, lastSeenBps: 90, firstSeenBps: -400 }),
-      ],
-    });
-
-    expect(incidents.map((incident) => incident.stablecoinId)).toEqual([
-      "last-seen-wins",
-      "first-seen-only",
-      "no-deviation",
-    ]);
+    expect(pending).toEqual(original);
+    expect(incidents[0]).toBe(pending[1]);
+    expect(incidents[0]?.availableConfirmationCategories).toEqual(["cex", "dex"]);
+    expect(incidents[0]?.missingConfirmationCategories).toEqual(["native"]);
   });
 });
 
 describe("mapPendingIncidentsByCoin", () => {
   it("uses last-write-wins behavior for duplicate stablecoin ids", () => {
-    const first: PendingDepegIncident = {
-      stablecoinId: "coin-a",
-      symbol: "A1",
-      direction: "below",
-      firstSeenAt: 1,
-    };
-    const second: PendingDepegIncident = {
-      stablecoinId: "coin-a",
-      symbol: "A2",
-      direction: "above",
-      firstSeenAt: 2,
-    };
-
+    const first = makePendingIncident({ stablecoinId: "coin-a", symbol: "A1", firstSeenAt: 1 });
+    const second = makePendingIncident({ stablecoinId: "coin-a", symbol: "A2", direction: "above", firstSeenAt: 2 });
     const mapped = mapPendingIncidentsByCoin([first, second]);
 
     expect(mapped.get("coin-a")).toBe(second);

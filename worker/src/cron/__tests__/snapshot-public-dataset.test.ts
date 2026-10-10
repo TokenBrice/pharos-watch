@@ -112,7 +112,8 @@ const DEX_ROWS = [
     pool_count: 124,
     liquidity_score: 9.2,
     durability_score: 8.6,
-    coverage_class: "deep",
+    coverage_class: "primary",
+    coverage_confidence: 0.9,
     methodology_version: "6.91",
     updated_at: 1779105600,
   },
@@ -177,6 +178,19 @@ function activeV9(updatedAt = NOW_SEC) {
 }
 
 describe("snapshotPublicDataset", () => {
+  it("quarantines invalid DEX coverage per row without discarding valid snapshot rows", async () => {
+    const db = buildDb([
+      ...DEX_ROWS,
+      { ...DEX_ROWS[0], stablecoin_id: "usdt-tether", coverage_confidence: 1.1 },
+    ]);
+    expect((await snapshotPublicDataset(db)).itemCount).toBe(1);
+    const binds = getInsertBinds(db)!;
+    const envelope = JSON.parse(await gunzipToText(binds[1] as Uint8Array));
+    expect(envelope.liquidity[0]).toMatchObject({ liquidityScore: 9.2, coverageClass: "primary", unavailableReason: null });
+    expect(envelope.liquidity[1]).toMatchObject({ liquidityScore: null, durabilityScore: null,
+      coverageClass: null, unavailableReason: "invalid-coverage-evidence", totalTvlUsd: 1_500_000_000 });
+  });
+
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW_MS));

@@ -71,7 +71,7 @@ const PLAN_CASES: Spec[] = [
   { label: "returns a ready plan for an aged pending row", row: { id: 10 }, kind: "ready", peg: 1 },
 ];
 
-function makeInput(db: D1Database, spec: Spec): ConfirmationPlanInput {
+function makeInput(db: D1Database, spec: Omit<Spec, "label">): ConfirmationPlanInput {
   const value = row(spec.row);
   const pendingState = normalizePendingDepegRow(value);
   const asset = spec.asset ? makeAsset({ id: value.stablecoin_id, symbol: value.symbol, ...spec.asset }) : undefined;
@@ -81,6 +81,42 @@ function makeInput(db: D1Database, spec: Spec): ConfirmationPlanInput {
 afterEach(() => { for (const sqlite of openDbs.splice(0)) sqlite.close(); });
 
 describe("buildConfirmationPlan", () => {
+  it.each([
+    { stablecoinId: "another-coin", pegCurrency: "BRL" },
+    { stablecoinId: "brz-transfero", pegCurrency: "EUR" },
+  ])("keeps a pending episode when a recovered quote has mismatched identity $stablecoinId/$pegCurrency", ({ stablecoinId, pegCurrency }) => {
+    const { db } = fixture();
+    const input = makeInput(db, {
+      row: { stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", peg_reference: 1, reason: "large-cap+native-origin" },
+      asset: brz, meta: brlMeta, rates: { peggedREAL: 0.193 }, rateSources: { peggedREAL: "fx" },
+      kind: "ready",
+    });
+    input.nativePegQuote = { stablecoinId, pegCurrency, geckoId: "brz", price: 1, updatedAt: NOW_SEC - 30 };
+    const plan = buildConfirmationPlan(input);
+    expect(plan.kind).toBe("ready");
+    if (plan.kind !== "ready") throw new Error(`unexpected plan kind: ${plan.kind}`);
+    expect(plan.nativeSignal).toBeNull();
+    expect(plan.authoritativePrice).toBeNull();
+    expect(plan.nativePegQuote).toBeUndefined();
+    expect(plan.evidence.unavailableSources).toContain("native:brl");
+  });
+
+  it.each(["BRL", "brl", " bRl "])("admits recovered native quotes through canonical currency mapping %j", async (pegCurrency) => {
+    const { sqlite, db } = fixture();
+    const input = makeInput(db, {
+      row: { stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", peg_reference: 1, reason: "large-cap+native-origin" },
+      asset: brz, meta: brlMeta, nativePrice: 1, kind: "mutate",
+    });
+    input.nativePegQuote = { ...input.nativePegQuote!, pegCurrency };
+    seed(sqlite, input.row);
+    const plan = buildConfirmationPlan(input);
+    expect(plan.kind).toBe("mutate");
+    if (plan.kind !== "mutate") throw new Error(`unexpected plan kind: ${plan.kind}`);
+    await db.batch(plan.statements);
+    expect(sqlite.prepare("SELECT outcome, final_decision_reason FROM depeg_pending_outcomes WHERE pending_id = ?").get(input.row.id))
+      .toEqual({ outcome: "recovered", final_decision_reason: "native-peg-recovered" });
+  });
+
   it.each(PLAN_CASES)("$label", async (spec) => {
     const { sqlite, db } = fixture();
     const input = makeInput(db, spec);

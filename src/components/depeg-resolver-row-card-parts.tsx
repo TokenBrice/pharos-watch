@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { LockKeyhole } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatPrice, pegCurrencySymbol } from "@shared/lib/format";
 import type { DdrFactor, DdrV2ResponseRow } from "@shared/types/depeg-resolver";
 import {
   formatDurationSec,
@@ -124,9 +123,9 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
   const chronic = duration.ageStatus === "chronic_tail";
   const dirGlyph = row.direction === "below" ? "▼" : "▲";
   const currentDeviationBps = getLiveCurrentDeviationBps(row);
-  const priceLabel =
+  const pegRatioLabel =
     currentDeviationBps != null
-      ? formatPrice(1 + currentDeviationBps / 10_000, pegCurrencySymbol(row.pegCurrency))
+      ? `${((1 + currentDeviationBps / 10_000) * 100).toFixed(2)}% of peg`
       : null;
 
   const showBand = !duration.suppressed && !terminal && !insufficient && (Boolean(duration.iqrSec) || Boolean(duration.stratum));
@@ -137,8 +136,8 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
         {/* Identity + verdict + direction — one inline row, direction aligned right */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <CoinLockup row={row} logos={logos} logoSize={52} />
-          {priceLabel ? (
-            <span className="pharos-numeric shrink-0 text-sm font-semibold text-foreground">{priceLabel}</span>
+          {pegRatioLabel ? (
+            <span className="pharos-numeric shrink-0 text-sm font-semibold text-foreground">{pegRatioLabel}</span>
           ) : null}
           <span className="inline-flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1">
             <span className={cn("h-2 w-2 shrink-0 rounded-full", NOW_DOT_TONE[tier])} aria-hidden="true" />
@@ -349,7 +348,7 @@ export function StablecoinDepegResolverRows({ stablecoinId, data, logoSrc }: Sta
     <section aria-label={`Depeg Duration Resolver for ${rows[0]?.symbol ?? stablecoinId}`} className="space-y-4">
       {showStaleRows ? (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
-          Resolver snapshot is stale; duration estimates are suppressed until the next refresh.
+          Resolver live overlay is stale; frozen forecasts, including anchored duration estimates, remain unchanged.
         </p>
       ) : null}
       <div className="space-y-4">

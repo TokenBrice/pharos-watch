@@ -32,6 +32,8 @@ Routing rejects unknown options, missing values, invalid hook modes, and failed 
 
 Single-path `Read first` is capped at six entries; overflow remains in `Also relevant`. Domain mappings for reserves, yield, route contracts, and compliance add ownership and rules without adding broad test trees. The reviewed mapping cap is 29 (DEC-14); maintain the one registry rather than introducing another source inventory. Primary Markdown sections must remain at most 25 KB, measured in UTF-8 bytes from their heading through the next heading of the same or higher level (or the entire file for unanchored references). The registry test retains explicit byte ceilings for legacy oversized sections: these exceptions must shrink, never grow, and must be removed when a section fits the budget or is no longer routed as primary. New domain owners cannot use legacy exceptions.
 
+Every verified document, including process pages and runbooks, must appear in an existing mapping's `docs` or `background` references; the generic `docs/**` fallback alone is not a source owner. Widen the existing source families instead of adding mappings. The live-reserves, DEX-liquidity, Worker-infrastructure, Safety Score, and pricing guides keep their current contracts below 40 KB, with detailed implementation and historical decisions in linked `docs/process/*-appendix.md` pages. Preserve the original content and migrate moved anchors, routing references, and generated-block consumers together; appendices are background detail, not a second behavioral authority.
+
 Use `--staged` when the intended change is staged but not committed. The command reports:
 
 - matched ownership mappings and risk;

@@ -39,6 +39,7 @@ export function PegHealthCard(): React.JSX.Element {
       notice={{
         label: "Peg health data",
         dataUpdatedAt: query.dataUpdatedAt,
+        queries: [{ preset: "pegSummary", dataUpdatedAt: query.dataUpdatedAt, meta: query.meta, error: query.error, hasData: data !== undefined }],
         onRetry: () => void query.refetch(),
       }}
       loadingContent={

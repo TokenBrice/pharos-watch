@@ -72,7 +72,7 @@ describe("handleMintBurnFlows contract tests", () => {
           {
             stablecoin_id: "usdai-usd-ai",
             chain_id: "arbitrum",
-            hour_ts: now - 1800,
+            hour_ts: Math.floor(now / 3600) * 3600 - 3600,
             mint_count: 1,
             burn_count: 0,
             mint_volume_usd: 7_000_000,
@@ -356,9 +356,9 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(windowScans).toHaveLength(1);
     expect(typeof windowScans[0]?.binds[0]).toBe("string");
     expect((windowScans[0]?.binds[0] as string).includes('["usdt-tether","ethereum"]')).toBe(true);
-    // binds are just the tracked-pair JSON plus the window start: no per-chain binds.
-    expect(windowScans[0]?.binds).toHaveLength(2);
-    expect(windowScans[0]?.binds[windowScans[0].binds.length - 1]).toBe(sevenDayStart);
+    // Pair JSON plus closed-hour start and exclusive end: no per-chain binds.
+    expect(windowScans[0]?.binds).toHaveLength(3);
+    expect(windowScans[0]?.binds.slice(1)).toEqual([sevenDayStart, now]);
     expect(history.some((entry) => entry.sql.includes("pharos:mint-burn-flows:window-24h-rows"))).toBe(false);
   });
 
@@ -441,9 +441,9 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(windowScans).toHaveLength(1);
     expect(typeof windowScans[0]?.binds[0]).toBe("string");
     expect((windowScans[0]?.binds[0] as string).includes('["usdt-tether","ethereum"]')).toBe(true);
-    // binds are just the tracked-pair JSON plus the window start: no per-chain binds.
-    expect(windowScans[0]?.binds).toHaveLength(2);
-    expect(windowScans[0]?.binds[windowScans[0].binds.length - 1]).toBe(twentyFourHourStart);
+    // Pair JSON plus closed-hour start and exclusive end: no per-chain binds.
+    expect(windowScans[0]?.binds).toHaveLength(3);
+    expect(windowScans[0]?.binds.slice(1)).toEqual([twentyFourHourStart, now]);
     expect(history.some((entry) => entry.sql.includes("pharos:mint-burn-flows:window-24h-rows"))).toBe(false);
   });
 
@@ -467,7 +467,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const cachedDb = mintBurnScenario({
       nowSec: now,
       flowCache: {
-        key: "mint-burn-flows:v3:aggregate:24",
+        key: "mint-burn-flows:v4:aggregate:24",
         value: JSON.stringify(cachedBody),
         updatedAt: now,
       },
@@ -548,7 +548,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const db = mintBurnScenario({
       nowSec: now,
       flowCache: {
-        key: "mint-burn-flows:v3:aggregate:24",
+        key: "mint-burn-flows:v4:aggregate:24",
         value: JSON.stringify(cachedBody),
         updatedAt: now,
       },
@@ -646,7 +646,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const db = mintBurnScenario({
       nowSec: now,
       flowCache: {
-        key: `mint-burn-flows:v3:aggregate:${hours}`,
+        key: `mint-burn-flows:v4:aggregate:${hours}`,
         value: JSON.stringify(cachedBody),
         updatedAt: now,
       },
@@ -708,7 +708,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const db = mintBurnScenario({
       nowSec: now,
       flowCache: {
-        key: "mint-burn-flows:v3:aggregate:24",
+        key: "mint-burn-flows:v4:aggregate:24",
         value: JSON.stringify(cachedBody),
         updatedAt: now,
       },
@@ -942,7 +942,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(res.headers.get("X-Data-Age")).toBe(String(75 * 60));
   });
 
-  it("combines degraded freshness with the lookup fallback warning when cron freshness lookup fails", async () => {
+  it("preserves unavailable freshness when producer lookup fails instead of borrowing an attempt clock", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-11T12:00:00Z"));
 
@@ -973,7 +973,7 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       stablecoinsCache: { value: cache, updatedAt: now },
       overrides: [{
-        match: "MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'",
+        match: "as started_at FROM cron_runs WHERE job = ?",
         rows: [],
         throwError: new Error("cron lookup failed"),
       }],
@@ -983,6 +983,29 @@ describe("handleMintBurnFlows contract tests", () => {
 
     const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.sync?.warning).toContain("freshness lookup failed");
-    expect(res.headers.get("X-Data-Age")).toBe(String(75 * 60));
+    expect(res.headers.get("X-Data-Age")).toBe("unavailable");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(res.headers.get("X-Data-Freshness-Reason")).toBe("freshness-lookup-failed");
+    expect(body.sync?.lastSuccessfulSyncAt).toBeNull();
+  });
+
+  it.each(["aggregate", "per-coin"] as const)("does not use an errored attempt as %s producer freshness", async (scope) => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mintBurnScenario({
+      nowSec: now,
+      rows: {
+        hourly: [makeFlowHourlyRow(now)],
+        cronSnapshot: [{ started_at: now, status: "error", metadata: "{}" }],
+        latestSuccessfulSync: [{ started_at: null }],
+      },
+    });
+    const url = new URL("https://x/api/mint-burn-flows");
+    if (scope === "per-coin") url.searchParams.set("stablecoin", "usdt-tether");
+    const response = await handleMintBurnFlows(db, url);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-Data-Age")).toBe("unavailable");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Data-Freshness-Reason")).toBe("producer-history-missing");
+    expect(await response.json()).toMatchObject({ sync: { lastSuccessfulSyncAt: null }, _meta: { updatedAt: null } });
   });
 });

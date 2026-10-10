@@ -15,6 +15,13 @@
  */
 export const DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC = 1_200;
 
+/** Recovery vocabulary shared by classification and absence-sensitive source queries. */
+export const DEPEG_RECOVERY_CLOSE_REASONS: readonly string[] = [
+  "recovered-primary",
+  "recovered-dex",
+  "recovered-native",
+];
+
 export type DepegClosureClassification =
   | "open"
   | "recovered"
@@ -32,12 +39,9 @@ export interface DepegClosureInput {
 
 export function classifyDepegClosure(input: DepegClosureInput): DepegClosureClassification {
   if (input.endedAt == null) return "open";
+  if (input.closeReason != null && DEPEG_RECOVERY_CLOSE_REASONS.includes(input.closeReason)) return "recovered";
 
   switch (input.closeReason) {
-    case "recovered-primary":
-    case "recovered-dex":
-    case "recovered-native":
-      return "recovered";
     case "superseded-direction":
       return "superseded";
     case "coverage-lost-supply":

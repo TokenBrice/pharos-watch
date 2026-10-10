@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { isRecord } from "@shared/lib/type-guards";
 import { PYS_APY_SANITY_MAX } from "@shared/lib/yield-scoring";
+import { sha256Hex } from "@shared/lib/sha256";
 import type { ResolvedYieldCandidate } from "../types";
 import type { SupplementalSourceFamilyKey } from "../supplemental-source-family-keys";
 import {
@@ -55,6 +56,7 @@ export interface YieldSupplementalRunOutcome {
   version: number;
   checkedAt: number;
   familyCacheResults: Record<SupplementalSourceFamilyKey, SupplementalFamilyCacheResult>;
+  familySnapshotHashes?: Partial<Record<SupplementalSourceFamilyKey, string>>;
   degradedFamilies: SupplementalSourceFamilyKey[];
   /**
    * PENDLE-RL: machine-readable cause per degraded family (R4). Additive:
@@ -68,11 +70,13 @@ export function buildYieldSupplementalRunOutcome(
   degradedFamilies: SupplementalSourceFamilyKey[],
   checkedAt = Math.floor(Date.now() / 1000),
   degradedFamilyReasons?: Record<string, string>,
+  familySnapshotHashes?: Partial<Record<SupplementalSourceFamilyKey, string>>,
 ): string {
   const payload: YieldSupplementalRunOutcome = {
     version: YIELD_SUPPLEMENTAL_SOURCES_CACHE_VERSION,
     checkedAt,
     familyCacheResults,
+    familySnapshotHashes,
     degradedFamilies,
     ...(degradedFamilyReasons && Object.keys(degradedFamilyReasons).length > 0
       ? { degradedFamilyReasons }
@@ -84,6 +88,7 @@ export function buildYieldSupplementalRunOutcome(
 export interface ParsedYieldSupplementalRunOutcome {
   degradedFamilies: SupplementalSourceFamilyKey[];
   degradedFamilyReasons: Record<string, string>;
+  familySnapshotHashes: Partial<Record<SupplementalSourceFamilyKey, string>>;
 }
 
 
@@ -103,12 +108,12 @@ export function parseYieldSupplementalRunOutcomeDetailed(
 ): ParsedYieldSupplementalRunOutcome {
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!isRecord(parsed)) return { degradedFamilies: [], degradedFamilyReasons: {} };
+    if (!isRecord(parsed)) return { degradedFamilies: [], degradedFamilyReasons: {}, familySnapshotHashes: {} };
     if (parsed.version !== YIELD_SUPPLEMENTAL_SOURCES_CACHE_VERSION) {
       logWorkerEventArgs("handler", "warn",
         `[yield-sync] Ignored supplemental run outcome written by cache version ${String(parsed.version)}`,
       );
-      return { degradedFamilies: [], degradedFamilyReasons: {} };
+      return { degradedFamilies: [], degradedFamilyReasons: {}, familySnapshotHashes: {} };
     }
     const degradedFamilies = Array.isArray(parsed.degradedFamilies)
       ? parsed.degradedFamilies.filter(isSupplementalSourceFamilyKey)
@@ -122,13 +127,25 @@ export function parseYieldSupplementalRunOutcomeDetailed(
         }
       }
     }
-    return { degradedFamilies, degradedFamilyReasons };
+    const familySnapshotHashes: Partial<Record<SupplementalSourceFamilyKey, string>> = {};
+    if (isRecord(parsed.familySnapshotHashes)) {
+      for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
+        const hash = parsed.familySnapshotHashes[family];
+        if (typeof hash === "string" && /^[a-f0-9]{64}$/.test(hash)) familySnapshotHashes[family] = hash;
+      }
+    }
+    return { degradedFamilies, degradedFamilyReasons, familySnapshotHashes };
   } catch (err) {
     logWorkerEventArgs("handler", "warn",
       `[yield-sync] Failed to parse supplemental run outcome: ${toErrorMessage(err)}`,
     );
-    return { degradedFamilies: [], degradedFamilyReasons: {} };
+    return { degradedFamilies: [], degradedFamilyReasons: {}, familySnapshotHashes: {} };
   }
+}
+
+/** Bind outcome evidence to exactly the family value and cache publication it consumed. */
+export function supplementalFamilySnapshotHash(row: { value: string; updatedAt: number } | null): string {
+  return sha256Hex(row == null ? "missing" : JSON.stringify([row.updatedAt, row.value]));
 }
 
 /** PENDLE-RL: machine-readable cause recorded when the unkeyed quota backoff degrades the family. */

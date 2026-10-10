@@ -56,14 +56,14 @@ function availableLoader(price: number, timestamp: number): HistoricalMintPriceS
 }
 
 describe("historical mint/burn price repair", () => {
-  it("prefers an exact event-day supply snapshot over external event-day series", () => {
+  it("prefers admitted supply history and persists its actual observation clock", () => {
     const meta = TRACKED_META_BY_ID.get("usdt-tether");
     expect(meta).toBeDefined();
     const eventTimestamp = 1_800_000_000;
     const outcome = resolveHistoricalMintPrice({
       meta: meta!,
       eventTimestamp,
-      supplyHistoryPrice: 0.998,
+      supplyHistory: [{ snapshotDate: Math.floor(eventTimestamp / DAY) * DAY, price: 0.998, observedAt: eventTimestamp - 30 }],
       sourceResults: [
         {
           source: "repair:coingecko-market-chart-event-day",
@@ -75,9 +75,64 @@ describe("historical mint/burn price repair", () => {
 
     expect(outcome.resolution).toEqual({
       price: 0.998,
-      priceTimestamp: Math.floor(eventTimestamp / DAY) * DAY,
+      priceTimestamp: eventTimestamp - 30,
       priceSource: "repair:supply-history-event-day",
     });
+  });
+
+  it.each([
+    { name: "NULL clock", price: 1, clock: null },
+    { name: "out-of-window clock", price: 1, clock: 1_800_000_000 - DAY - 1 },
+    { name: "future clock", price: 1, clock: 1_800_000_060, assessedAtSec: 1_800_000_030 },
+    { name: "invalid price", price: 100, clock: 1_800_000_000 },
+  ])("falls back to providers for a supply snapshot with $name without overwriting valued peers", async ({ price, clock, assessedAtSec }) => {
+    const db = makeSqliteD1();
+    const timestamp = 1_800_000_000;
+    try {
+      insertEvent(db, { id: "needs-repair", stablecoinId: "usdc-circle", timestamp, amount: 20 });
+      insertEvent(db, { id: "already-valued", stablecoinId: "usdc-circle", timestamp, amount: 100 });
+      db.sqlite.prepare("UPDATE mint_burn_events SET amount_usd = 99, price_timestamp = ? WHERE id = 'already-valued'")
+        .run(timestamp - 100);
+      db.sqlite.prepare(`INSERT INTO supply_history
+        (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at) VALUES ('usdc-circle', ?, 1000, ?, ?)`)
+        .run(Math.floor(timestamp / DAY) * DAY, price, clock);
+      const loader = availableLoader(1, timestamp - 60);
+      const sourceLoader = { ...loader, loadCoinGecko: vi.fn(loader.loadCoinGecko) };
+      const result = await repairHistoricalMintBurnPrices(db, {
+        dryRun: false, operatorRunId: "clock-repair", timeTravelBookmark: "clock-bookmark",
+        sourceLoader, nowSec: assessedAtSec ?? timestamp + DAY,
+      });
+      expect(sourceLoader.loadCoinGecko).toHaveBeenCalledOnce();
+      expect(result).toMatchObject({ recovered: 1, classifiedIrreducible: 0, aggregateVerificationPassed: true });
+      expect(db.sqlite.prepare("SELECT amount_usd, price_timestamp FROM mint_burn_events WHERE id = 'needs-repair'").get())
+        .toEqual({ amount_usd: 20, price_timestamp: timestamp - 60 });
+      expect(db.sqlite.prepare("SELECT amount_usd, price_timestamp FROM mint_burn_events WHERE id = 'already-valued'").get())
+        .toEqual({ amount_usd: 99, price_timestamp: timestamp - 100 });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("uses an adjacent snapshot only through its admitted actual clock, including the 24h boundary", async () => {
+    const db = makeSqliteD1();
+    const timestamp = 1_800_000_000;
+    try {
+      insertEvent(db, { id: "clocked-snapshot", stablecoinId: "usdc-circle", timestamp });
+      db.sqlite.prepare(`INSERT INTO supply_history
+        (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at) VALUES ('usdc-circle', ?, 1000, 1, ?)`)
+        .run(Math.floor(timestamp / DAY) * DAY - DAY, timestamp - DAY);
+      const sourceLoader: HistoricalMintPriceSourceLoader = { loadCoinGecko: vi.fn(), loadDefiLlama: vi.fn() };
+      await repairHistoricalMintBurnPrices(db, {
+        dryRun: false, operatorRunId: "valid-clock", timeTravelBookmark: "valid-clock-bookmark",
+        sourceLoader, nowSec: timestamp + DAY,
+      });
+      expect(sourceLoader.loadCoinGecko).not.toHaveBeenCalled();
+      expect(sourceLoader.loadDefiLlama).not.toHaveBeenCalled();
+      expect(db.sqlite.prepare("SELECT amount_usd, price_timestamp, price_source FROM mint_burn_events").get())
+        .toEqual({ amount_usd: 100, price_timestamp: timestamp - DAY, price_source: "repair:supply-history-event-day" });
+    } finally {
+      db.close();
+    }
   });
 
   it("chooses the nearest valid point on the event day and never uses an adjacent-day spot", () => {

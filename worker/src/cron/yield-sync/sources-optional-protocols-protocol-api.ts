@@ -46,6 +46,7 @@ const HASHNOTE_PRICE_REPORTS_URL = "https://usyc.hashnote.com/api/price-reports"
 const HASHNOTE_TARGET_LOOKBACK_SEC = 7 * DAY_SECONDS;
 const HASHNOTE_MIN_LOOKBACK_SEC = 5 * DAY_SECONDS;
 const HASHNOTE_MAX_FRESHNESS_SEC = 3 * DAY_SECONDS;
+const HASHNOTE_MAX_FUTURE_SKEW_SEC = 5 * 60;
 const ONDO_USDY_SOURCE_KEY = "protocol-api:ondo-usdy-oracle";
 const ONDO_USDY_SOURCE_LABEL = "Ondo USDY Oracle";
 const ONDO_USDY_SOURCE_TYPE = "nav-appreciation";
@@ -160,12 +161,15 @@ export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<Res
     const reports = body.data;
     if (!Array.isArray(reports) || reports.length < 2) return null;
 
+    const nowSec = Math.floor(Date.now() / 1000);
     const sortedReports = [...reports]
       .map((report) => ({
         ...report,
-        parsedTimestamp: parseInt(report.timestamp, 10),
+        parsedTimestamp: Number(report.timestamp),
       }))
-      .filter((report) => Number.isFinite(report.parsedTimestamp))
+      .filter((report) => Number.isFinite(report.parsedTimestamp)
+        && report.parsedTimestamp > 0
+        && report.parsedTimestamp <= nowSec + HASHNOTE_MAX_FUTURE_SKEW_SEC)
       .sort((a, b) => b.parsedTimestamp - a.parsedTimestamp);
     if (sortedReports.length < 2) return null;
 
@@ -174,7 +178,7 @@ export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<Res
     const latestTimeSec = latest.parsedTimestamp;
     if (!Number.isFinite(latestPrice) || latestPrice <= 0) return null;
     if (!Number.isFinite(latestTimeSec)) return null;
-    if (Math.floor(Date.now() / 1000) - latestTimeSec > HASHNOTE_MAX_FRESHNESS_SEC) return null;
+    if (nowSec - latestTimeSec > HASHNOTE_MAX_FRESHNESS_SEC) return null;
 
     const targetAnchorSec = latestTimeSec - HASHNOTE_TARGET_LOOKBACK_SEC;
     let anchor = sortedReports[sortedReports.length - 1];
@@ -195,7 +199,7 @@ export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<Res
     const apy = (Math.pow(latestPrice / anchorPrice, 365.25 / daysDelta) - 1) * 100;
     // B12 — the NAV-oracle annualization is unbounded on a short anchor window; the
     // shared deterministic envelope keeps an absurd print out of PYS.
-    if (!isDeterministicApyWithinSanityBounds(apy) || apy < 0) return null;
+    if (!isDeterministicApyWithinSanityBounds(apy)) return null;
 
     return {
       currentApy: apy, apyBase: apy, apyReward: null,
@@ -245,7 +249,7 @@ export async function fetchOndoUsdyOracleSource(
     if (!Number.isFinite(prevExchangeRate) || prevExchangeRate <= 0) return null;
     const apy = (Math.pow(currentPriceFloat / prevExchangeRate, 365.25 / daysDelta) - 1) * 100;
     // B12 — same deterministic envelope as the other NAV oracles.
-    if (!isDeterministicApyWithinSanityBounds(apy) || apy < 0) return null;
+    if (!isDeterministicApyWithinSanityBounds(apy)) return null;
 
     return {
       currentApy: apy, apyBase: apy, apyReward: null,

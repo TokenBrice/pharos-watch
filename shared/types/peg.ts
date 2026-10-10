@@ -113,6 +113,8 @@ export const PegSummaryCoinSchema = z.object({
   activeDepeg: z.boolean(),
   lastEventAt: z.number().nullable(),
   trackingSpanDays: z.number(),
+  /** Earliest observed history, without the PegScore age/audit/4-year clamp. */
+  observationStartedAt: z.number().int().nonnegative().nullable().optional(),
   /** Blind time within scored events, excluded from both off-peg time and the known-time denominator. */
   unknownCoverageSeconds: z.number().finite().nonnegative().optional(),
   historyCoverage: z

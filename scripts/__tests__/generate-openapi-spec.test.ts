@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import { DigestSafetyMapSummarySchema } from "@shared/types/digest";
 import { ApiRequestAttributionResponseSchema } from "@shared/types/request-source";
+import { StablecoinDataSchema, StablecoinDataOutputSchema } from "@shared/types/market";
+import { ReserveBoundedFactKindSchema, ReserveBoundedFactSchema } from "@shared/types/reserve-bounded-facts";
 import {
   YIELD_ADAPTER_LIFECYCLE_VALUES,
   YieldHistoryResponseSchema,
@@ -251,6 +253,81 @@ describe("OpenAPI runtime response contracts", () => {
     expect(() => buildOpenApiResponseSchemas({ BrokenResponse: z.any() })).toThrow(
       'Public API response schema "BrokenResponse" converted to an empty JSON Schema',
     );
+  });
+
+  it.each([
+    z.array(z.any()),
+    z.array(z.object({ value: z.string() }).transform((value) => value)),
+  ])("rejects nested erased array items instead of publishing an opaque item", (rows) => {
+    expect(() => buildOpenApiResponseSchemas({ BrokenItemsResponse: z.object({ rows }) }))
+      .toThrow(/BrokenItemsResponse.*empty array items/);
+  });
+
+  it("preserves normalized stablecoin item fields, provenance and nullability in generated JSON Schema", () => {
+    const schemas = document.components.schemas as Record<string, unknown>;
+    const response = resolveSchemaTree(schemas.StablecoinListResponse, schemas) as {
+      properties: { peggedAssets: { items: JsonSchemaObject } };
+    };
+    const items = response.properties.peggedAssets.items;
+    const properties = items.properties as Record<string, unknown>;
+    expect(Object.keys(properties)).toEqual(Object.keys(StablecoinDataOutputSchema.shape));
+    expect(properties).not.toHaveProperty("gecko_id");
+    expect(items.required).toEqual(expect.arrayContaining([
+      "geckoId", "priceConfidence", "priceObservedAt", "circulatingPrevDay", "consensusSources",
+    ]));
+    const output = StablecoinDataSchema.parse({
+      id: "usdc-circle", name: "USD Coin", symbol: "USDC", gecko_id: "usd-coin",
+      pegType: "peggedUSD", pegMechanism: "fiat-backed", price: null, priceSource: null,
+      priceUpdatedAt: 1700000000, circulating: { peggedUSD: 0 }, chains: ["Ethereum"],
+      chainCirculating: { Ethereum: { current: null, circulatingPrevDay: 0 } },
+      supplySource: "defillama", supplyObservedAt: 1700000000, supplyRestored: true,
+      supplyGapFill: {
+        method: "coingecko-single-missing-chain", admission: "entered", missingChainId: "1",
+        canonicalSource: "defillama", canonicalCurrentUsd: 100,
+        supplementalSource: "coingecko", supplementalCurrentUsd: 110,
+        ratio: 1.1, maxRatio: 1.2, observedAt: 1700000000,
+      },
+    });
+    expect(output.geckoId).toBe("usd-coin");
+    expect(output.priceObservedAt).toBe(1700000000);
+    const validator = z.fromJSONSchema(response as Parameters<typeof z.fromJSONSchema>[0]);
+    expect(validator.safeParse({ peggedAssets: [output] }).success).toBe(true);
+    expect(validator.safeParse({ peggedAssets: [42] }).success).toBe(false);
+    expect(validator.safeParse({ peggedAssets: [{ ...output, price: "unavailable" }] }).success).toBe(false);
+    expect(validator.safeParse({ peggedAssets: [{
+      ...output, chainCirculating: { Ethereum: { current: -1 } },
+    }] }).success).toBe(false);
+  });
+
+  it("preserves bounded-fact discriminants and evidence fields in generated JSON Schema", () => {
+    const schemas = document.components.schemas as Record<string, unknown>;
+    const reserves = resolveSchemaTree(schemas.StablecoinReservesResponse, schemas);
+    const boundedFacts = collectPropertySchemas(reserves, "boundedFacts");
+    expect(boundedFacts.length).toBeGreaterThan(0);
+    for (const array of boundedFacts) {
+      const items = array.items as { oneOf?: JsonSchemaObject[]; anyOf?: JsonSchemaObject[] };
+      const variants = items.oneOf ?? items.anyOf ?? [];
+      expect(variants.map((variant) => (variant.properties as Record<string, { const: string }>).kind.const).sort())
+        .toEqual([...ReserveBoundedFactKindSchema.options].sort());
+      const output = ReserveBoundedFactSchema.parse({
+        factKey: "cash-liquidity", kind: "currently-liquid-fraction", scope: { kind: "reserve-envelope" },
+        asOfSec: 1700000000, publisher: "issuer", sourceUrls: ["https://example.com/reserves"],
+        assertion: "Available native cash", contentDigest: "a".repeat(64),
+        provenance: {
+          kind: "producer-observation", observer: "issuer-api", sourceId: "reserves",
+          sourceGenerationId: "generation-1", observedAtSec: 1700000000, maxAgeSec: 3600, confidence: "high",
+        },
+        assetId: "cash", unit: "USD", chain: "offchain",
+        currentlyWithdrawable: 50, totalHeld: 100, snapshotAtSec: 1700000000,
+        availabilityMeaning: "currently-withdrawable-native-asset",
+      });
+      const validator = z.fromJSONSchema(array as Parameters<typeof z.fromJSONSchema>[0]);
+      expect(validator.safeParse([output]).success).toBe(true);
+      expect(validator.safeParse([42]).success).toBe(false);
+      expect(validator.safeParse([{ ...output, kind: "unknown" }]).success).toBe(false);
+      const { provenance: _provenance, ...withoutEvidence } = output;
+      expect(validator.safeParse([withoutEvidence]).success).toBe(false);
+    }
   });
 
   it("publishes properties for transform-bearing response output shapes", () => {

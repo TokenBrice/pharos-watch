@@ -9,6 +9,7 @@ import { getPriceDerivedApy } from "../sources-riskfree";
 import { buildHardcodedUsdBenchmark, type ParsedYieldBenchmarkMeta } from "../benchmarks";
 import { baseEvaluationInput, freshUsdBenchmark } from "../../__tests__/yield-evaluation.test-support";
 import { evaluateYieldSources } from "../evaluation";
+import { parseRiskFreeRateCache } from "../cache";
 
 vi.mock("../tracked-optional-source-registry", () => ({
   TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID: new Map(),
@@ -61,13 +62,24 @@ describe("derived source admission", () => {
     expect(rateDerived[0].yield?.currentApy).toBeCloseTo(3.6 - 0.38);
   });
 
-  it("never substitutes run time for missing product observation timestamps", async () => {
+  it.each([null, undefined, "invalid", Number.NaN])("never substitutes cache time for structured product timestamps %s", async (timestamp) => {
     vi.useFakeTimers().setSystemTime(now * 1000);
-    const result = await resolve({ ...benchmarks().USD, fetchedAt: null, lastMarketFetchedAt: null });
+    const product = parseRiskFreeRateCache(JSON.stringify({
+      ...benchmarks().USD, fetchedAt: timestamp, lastMarketFetchedAt: timestamp,
+    }), now, now)!;
+    expect(product).toMatchObject({ fetchedAt: null, lastMarketFetchedAt: null, ageSeconds: null });
+    const result = await resolve(product);
     const entry = result.resolved.find((row) => row.id === "ustbl-spiko" && row.yield?.dataSource === "rate-derived");
     expect(entry?.yield?.sourceObservedAt).toBeNull();
     const evaluated = evaluateYieldSources(baseEvaluationInput({ startSec: now, resolved: entry ? [entry] : [], riskFreeRates: result.riskFreeRates }));
-    expect(evaluated.evaluatedSources[0]).toMatchObject({ sourceFreshness: "unknown", pharosYieldScore: null });
+    expect(evaluated.evaluatedSources[0]).toMatchObject({ sourceFreshness: "stale", pharosYieldScore: null });
+  });
+
+  it("retains valid structured observation clocks and isolates legacy scalar cache-time policy", () => {
+    const valid = parseRiskFreeRateCache(JSON.stringify(benchmarks().USD), now + 60, now + 60)!;
+    expect(valid).toMatchObject({ fetchedAt: now, lastMarketFetchedAt: now, ageSeconds: 60 });
+    const legacy = parseRiskFreeRateCache("3.7", now, now + 60)!;
+    expect(legacy).toMatchObject({ source: "legacy-scalar", fetchedAt: now, lastMarketFetchedAt: now, ageSeconds: 60 });
   });
 
   it.each(["healthy", "degraded", "stale"] as const)("preserves %s product evidence independently of EFFR", async (freshness) => {

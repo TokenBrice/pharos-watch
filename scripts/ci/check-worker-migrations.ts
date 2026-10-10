@@ -202,7 +202,7 @@ export function parseDataMigrationManifestRows(manifestText: string): DataMigrat
     nextHeadingIndex === -1 ? manifestText.length : nextHeadingIndex,
   );
   const rows = [...sectionText.matchAll(
-    /^\|\s*(\d{4})\s*\|\s*`([^`]+\.sql)`\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|$/gm,
+    /^\|[ \t]*(\d{4})[ \t]*\|[ \t]*`([^`]+\.sql)`[ \t]*\|([^|\r\n]*)\|([^|\r\n]*)\|([^|\r\n]*)\|([^|\r\n]*)\|[ \t]*$/gm,
   )].map(([, sequence, filename, predicate, oldWorkerCompatibility, rollbackBookmark, expectedRowBounds]) => ({
     sequence,
     filename,
@@ -363,7 +363,45 @@ export function parseDataMigrationMode(sql: string): string | null {
 }
 
 export function stripSqlComments(sql: string): string {
-  return sql.replace(/\/\*[\s\S]*?\*\//g, "").replace(/--.*$/gm, "");
+  let result = "";
+  let quote = "";
+  for (let index = 0; index < sql.length; index += 1) {
+    const char = sql[index];
+    if (quote) {
+      result += char;
+      if (char === quote) {
+        // SQL strings and quoted identifiers escape their delimiter by doubling it.
+        if (quote !== "]" && sql[index + 1] === quote) {
+          result += sql[index + 1];
+          index += 1;
+        } else {
+          quote = "";
+        }
+      }
+      continue;
+    }
+    if (char === "'" || char === '"' || char === "`" || char === "[") {
+      quote = char === "[" ? "]" : char;
+      result += char;
+    } else if (char === "-" && sql[index + 1] === "-") {
+      result += " ";
+      index += 2;
+      while (index < sql.length && sql[index] !== "\n" && sql[index] !== "\r") index += 1;
+      if (index < sql.length) result += sql[index];
+    } else if (char === "/" && sql[index + 1] === "*") {
+      // Keep token boundaries and newlines; DELETE/* note */FROM is still DML.
+      result += " ";
+      index += 2;
+      while (index < sql.length && !(sql[index] === "*" && sql[index + 1] === "/")) {
+        if (sql[index] === "\n" || sql[index] === "\r") result += sql[index];
+        index += 1;
+      }
+      if (index < sql.length) index += 1;
+    } else {
+      result += char;
+    }
+  }
+  return result;
 }
 
 export function findUnsafeRolloutStatements(sql: string): string[] {
@@ -424,6 +462,11 @@ export function validateDataMigrationManifestRows(
   }
 
   for (const row of rows) {
+    for (const field of ["predicate", "oldWorkerCompatibility", "rollbackBookmark", "expectedRowBounds"] as const) {
+      if (!row[field].trim()) {
+        throw new Error(`reviewed data-migration ${row.filename} is missing mandatory field: ${field}`);
+      }
+    }
     if (!migrationFiles.includes(row.filename)) {
       throw new Error(`reviewed data-migration row has no active migration file: ${row.filename}`);
     }
@@ -549,6 +592,14 @@ export function validateSchemaObjectManifest(actual: string, expected: string): 
   throw new Error(`Fresh-replay schema object manifest drifted:\n- ${details.join("\n- ")}`);
 }
 
+export function createTableFixtureQuery(name: string): string {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+    throw new Error("Invalid table name for sqlite3 fixture query");
+  }
+  // SAFETY: name is rejected above unless it is an unquoted SQL identifier; no quotes, delimiters or input SQL can reach this literal.
+  return `SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = '${name}';`;
+}
+
 async function createExecutor(dbPath: string): Promise<MigrationExecutor> {
   try {
     const { DatabaseSync } = await import("node:sqlite");
@@ -607,7 +658,7 @@ async function createExecutor(dbPath: string): Promise<MigrationExecutor> {
         hasTable(name: string) {
           const result = spawnSync(
             "sqlite3",
-            ["-bail", dbPath, `SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = '${name}';`],
+            ["-bail", dbPath, createTableFixtureQuery(name)],
             { encoding: "utf8" },
           );
           if (result.error || result.status !== 0) {
@@ -695,6 +746,19 @@ function seedPreMigrationFixture(executor: MigrationExecutor, targets: readonly 
           chat_id, username, created_at, last_active_at, global_alert_dews
         ) VALUES (
           'migration-gate-fixture', 'migration_gate_fixture', 1, 1, 1
+        );
+      `);
+      continue;
+    }
+    if (target === "tape_events") {
+      executor.execute(`
+        INSERT INTO tape_events (
+          event_id, type, severity, ts, chain, title, summary, payload_json,
+          source_table, source_row_id, transition, created_at
+        ) VALUES (
+          'migration-gate-freeze', 'freeze.blocked', 'notice', 1000, 'Ethereum',
+          'USDT freeze · Ethereum', 'Fixture freeze.', '{"chainName":"Ethereum"}',
+          'blacklist_events', 'migration-gate-fixture', 'opened', 1
         );
       `);
       continue;

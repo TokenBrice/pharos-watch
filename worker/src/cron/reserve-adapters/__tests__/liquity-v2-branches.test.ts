@@ -759,6 +759,7 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
 
     expect(batched.result.metadata?.redemption).toMatchObject({ feeBps: 50 });
     expect(fallback.result.metadata?.redemption).toMatchObject({ feeBps: 50 });
+    expect(fallback.result).toEqual(batched.result);
   });
 });
 

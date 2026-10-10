@@ -5,6 +5,8 @@ import {
 import type { BlacklistStablecoin } from "@shared/types/market";
 import type { D1Database } from "@cloudflare/workers-types";
 import { recordRuntimeFallbackUsage } from "./runtime-fallback-telemetry";
+import { canonicalBlacklistAddress, canonicalTronAddress } from "@shared/lib/tron-address";
+import { tronHexAddressToBase58 } from "./tron-address";
 
 export const BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY =
   "blacklist-current-balances-rebuild:writer-pause";
@@ -28,6 +30,83 @@ export interface BlacklistCurrentBalanceRow {
   consecutiveFailures: number;
 }
 
+function successfulObservation(row: BlacklistCurrentBalanceRow): number {
+  return row.lastSuccessfulObservedAt ?? (row.amountNative != null || row.amountUsd != null ? row.observedAt : -1);
+}
+
+export const BLACKLIST_CURRENT_BALANCE_COLUMNS = `id, stablecoin, chain_id, address, config_key, contract_address,
+          amount_native, amount_usd, source, status, observed_at,
+          last_successful_observed_at, attempt_count, last_attempted_at,
+          last_error_class, consecutive_failures`;
+
+export const BLACKLIST_CURRENT_BALANCE_UPSERT_POLICY = `ON CONFLICT(id) DO UPDATE SET
+         config_key = COALESCE(excluded.config_key, blacklist_current_balances.config_key),
+         contract_address = COALESCE(excluded.contract_address, blacklist_current_balances.contract_address),
+         amount_native = CASE
+           WHEN excluded.status = 'provider_failed'
+             THEN COALESCE(blacklist_current_balances.amount_native, excluded.amount_native)
+           ELSE excluded.amount_native
+         END,
+         amount_usd = CASE
+           WHEN excluded.status = 'provider_failed'
+             THEN COALESCE(blacklist_current_balances.amount_usd, excluded.amount_usd)
+           ELSE excluded.amount_usd
+         END,
+         source = CASE
+           WHEN excluded.status = 'provider_failed'
+             THEN COALESCE(blacklist_current_balances.source, excluded.source)
+           ELSE excluded.source
+         END,
+         status = excluded.status,
+         observed_at = CASE
+           WHEN excluded.status = 'provider_failed'
+             AND (blacklist_current_balances.amount_native IS NOT NULL OR blacklist_current_balances.amount_usd IS NOT NULL)
+             THEN blacklist_current_balances.observed_at
+           ELSE excluded.observed_at
+         END,
+         last_successful_observed_at = CASE
+           WHEN excluded.status = 'provider_failed'
+             THEN COALESCE(
+               blacklist_current_balances.last_successful_observed_at,
+               CASE
+                 WHEN blacklist_current_balances.status = 'resolved' THEN blacklist_current_balances.observed_at
+                 ELSE NULL
+               END
+             )
+           ELSE excluded.observed_at
+         END,
+         attempt_count = blacklist_current_balances.attempt_count + 1,
+         last_attempted_at = excluded.last_attempted_at,
+         last_error_class = excluded.last_error_class,
+         consecutive_failures = CASE
+           WHEN excluded.status = 'provider_failed'
+             THEN COALESCE(blacklist_current_balances.consecutive_failures, 0) + 1
+           ELSE 0
+         END`;
+
+export function buildBlacklistCurrentBalanceValues(
+  row: Omit<BlacklistCurrentBalanceRow, "id">,
+): (string | number | null)[] {
+  return [
+    buildBlacklistContractBalanceKey(row.stablecoin, row.chainId, row.address, row.configKey, row.contractAddress),
+    row.stablecoin,
+    row.chainId,
+    canonicalBlacklistAddress(row.chainId, row.address),
+    row.configKey,
+    row.contractAddress,
+    row.amountNative,
+    row.amountUsd,
+    row.source,
+    row.status,
+    row.observedAt,
+    row.status === "resolved" ? row.observedAt : row.lastSuccessfulObservedAt,
+    row.attemptCount,
+    row.lastAttemptedAt,
+    row.lastErrorClass,
+    row.status === "provider_failed" ? row.consecutiveFailures || 1 : 0,
+  ];
+}
+
 function buildBlacklistCurrentBalanceId(
   stablecoin: BlacklistStablecoin,
   chainId: string,
@@ -43,6 +122,12 @@ class BlacklistCurrentBalanceMap extends Map<string, BlacklistCurrentBalanceRow>
   private readonly loggedLegacyFallbackKeys = new Set<string>();
 
   addLegacyFallback(key: string, row: BlacklistCurrentBalanceRow): void {
+    const previous = this.legacyFallbacks.get(key);
+    if (previous && buildBlacklistContractBalanceKey(previous.stablecoin, previous.chainId, previous.address, previous.configKey, previous.contractAddress)
+      === buildBlacklistContractBalanceKey(row.stablecoin, row.chainId, row.address, row.configKey, row.contractAddress)) {
+      if (successfulObservation(previous) < successfulObservation(row)) this.legacyFallbacks.set(key, row);
+      return;
+    }
     this.legacyFallbacks.set(key, this.legacyFallbacks.has(key) ? null : row);
   }
 
@@ -138,7 +223,7 @@ export async function loadBlacklistCurrentBalanceMap(
       id: row.id,
       stablecoin: row.stablecoin,
       chainId: row.chain_id,
-      address: row.address,
+      address: canonicalBlacklistAddress(row.chain_id, row.address),
       configKey: row.config_key ?? null,
       contractAddress: row.contract_address ?? null,
       amountNative: row.amount_native,
@@ -172,6 +257,10 @@ export async function loadBlacklistCurrentBalanceMap(
     } else {
       map.addLegacyFallback(legacyKey, row);
     }
+    const identity = buildBlacklistCurrentBalanceId(row.stablecoin, row.chainId, row.address, row.configKey, row.contractAddress);
+    const existing = map.get(identity);
+    if (existing && successfulObservation(existing) >= successfulObservation(row)) continue;
+    if (row.chainId === "tron") row.id = identity;
     map.set(
       buildBlacklistCurrentBalanceId(row.stablecoin, row.chainId, row.address, row.configKey, row.contractAddress),
       row,
@@ -181,10 +270,48 @@ export async function loadBlacklistCurrentBalanceMap(
   return map;
 }
 
+/** Atomically consolidate legacy spellings while preserving the newest successful observation. */
+export async function reconcileBlacklistTronBalance(
+  db: D1Database,
+  row: Pick<BlacklistCurrentBalanceRow, "stablecoin" | "chainId" | "address" | "configKey" | "contractAddress"> & { id?: string },
+): Promise<void> {
+  if (row.chainId !== "tron") return;
+  const address = canonicalTronAddress(row.address);
+  if (!address) return;
+  const id = buildBlacklistCurrentBalanceId(row.stablecoin, row.chainId, address, row.configKey, row.contractAddress);
+  const base58 = await tronHexAddressToBase58(address);
+  const prefix = id.slice(0, -address.length);
+  const ids = [...new Set([id, row.id ?? id, `${prefix}41${address.slice(2)}`, `${prefix}${base58?.toLowerCase() ?? address}`])];
+  const retained = await db.prepare(
+    `SELECT ${BLACKLIST_CURRENT_BALANCE_COLUMNS}, COUNT(*) OVER () AS alias_count FROM blacklist_current_balances
+     WHERE id IN (${ids.map(() => "?").join(", ")})
+     ORDER BY COALESCE(last_successful_observed_at,
+       CASE WHEN status = 'resolved' OR amount_native IS NOT NULL OR amount_usd IS NOT NULL THEN observed_at END) DESC,
+       observed_at DESC, id
+     LIMIT 1`,
+  ).bind(...ids).first<Record<string, string | number | null>>();
+  if (!retained) return;
+  if (retained.alias_count === 1 && retained.id === id && retained.address === address) return;
+  const columns = BLACKLIST_CURRENT_BALANCE_COLUMNS.split(",").map((column) => column.trim());
+  await db.batch([
+    db.prepare(`INSERT OR REPLACE INTO blacklist_current_balances (${BLACKLIST_CURRENT_BALANCE_COLUMNS})
+      SELECT ${columns.map(() => "?").join(", ")}
+      WHERE NOT EXISTS (SELECT 1 FROM cache WHERE key = ?)`)
+      .bind(...columns.map((column) => column === "id" ? id : column === "address" ? address : retained[column]), BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY),
+    db.prepare(`DELETE FROM blacklist_current_balances WHERE id IN (${ids.map(() => "?").join(", ")})
+      AND id != ? AND NOT EXISTS (SELECT 1 FROM cache WHERE key = ?)`)
+      .bind(...ids, id, BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY),
+  ]);
+}
+
 export async function upsertBlacklistCurrentBalance(
   db: D1Database,
   row: Omit<BlacklistCurrentBalanceRow, "id">,
 ): Promise<void> {
+  if (row.chainId === "tron") {
+    await reconcileBlacklistTronBalance(db, row);
+    row = { ...row, address: canonicalBlacklistAddress(row.chainId, row.address) };
+  }
   const id = buildBlacklistCurrentBalanceId(
     row.stablecoin,
     row.chainId,
@@ -211,75 +338,11 @@ export async function upsertBlacklistCurrentBalance(
   await db
     .prepare(
       `INSERT INTO blacklist_current_balances
-         (id, stablecoin, chain_id, address, config_key, contract_address,
-          amount_native, amount_usd, source, status, observed_at,
-          last_successful_observed_at, attempt_count, last_attempted_at,
-          last_error_class, consecutive_failures)
+         (${BLACKLIST_CURRENT_BALANCE_COLUMNS})
        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE NOT EXISTS (SELECT 1 FROM cache WHERE key = ?)
-       ON CONFLICT(id) DO UPDATE SET
-         config_key = COALESCE(excluded.config_key, blacklist_current_balances.config_key),
-         contract_address = COALESCE(excluded.contract_address, blacklist_current_balances.contract_address),
-         amount_native = CASE
-           WHEN excluded.status = 'provider_failed'
-             THEN COALESCE(blacklist_current_balances.amount_native, excluded.amount_native)
-           ELSE excluded.amount_native
-         END,
-         amount_usd = CASE
-           WHEN excluded.status = 'provider_failed'
-             THEN COALESCE(blacklist_current_balances.amount_usd, excluded.amount_usd)
-           ELSE excluded.amount_usd
-         END,
-         source = CASE
-           WHEN excluded.status = 'provider_failed'
-             THEN COALESCE(blacklist_current_balances.source, excluded.source)
-           ELSE excluded.source
-         END,
-         status = excluded.status,
-         observed_at = CASE
-           WHEN excluded.status = 'provider_failed'
-             AND (blacklist_current_balances.amount_native IS NOT NULL OR blacklist_current_balances.amount_usd IS NOT NULL)
-             THEN blacklist_current_balances.observed_at
-           ELSE excluded.observed_at
-         END,
-         last_successful_observed_at = CASE
-           WHEN excluded.status = 'provider_failed'
-             THEN COALESCE(
-               blacklist_current_balances.last_successful_observed_at,
-               CASE
-                 WHEN blacklist_current_balances.status = 'resolved' THEN blacklist_current_balances.observed_at
-                 ELSE NULL
-               END
-             )
-           ELSE excluded.observed_at
-         END,
-         attempt_count = blacklist_current_balances.attempt_count + 1,
-         last_attempted_at = excluded.last_attempted_at,
-         last_error_class = excluded.last_error_class,
-         consecutive_failures = CASE
-           WHEN excluded.status = 'provider_failed'
-             THEN COALESCE(blacklist_current_balances.consecutive_failures, 0) + 1
-           ELSE 0
-         END`,
+       ${BLACKLIST_CURRENT_BALANCE_UPSERT_POLICY}`,
     )
-    .bind(
-      id,
-      row.stablecoin,
-      row.chainId,
-      row.address,
-      row.configKey,
-      row.contractAddress,
-      row.amountNative,
-      row.amountUsd,
-      row.source,
-      row.status,
-      row.observedAt,
-      row.status === "resolved" ? row.observedAt : row.lastSuccessfulObservedAt,
-      row.attemptCount,
-      row.lastAttemptedAt,
-      row.lastErrorClass,
-      row.status === "provider_failed" ? row.consecutiveFailures || 1 : 0,
-      BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY,
-    )
+    .bind(...buildBlacklistCurrentBalanceValues(row), BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY)
     .run();
 }

@@ -115,6 +115,23 @@ export function TimelineFeed({
       </div>
 
       <section id="data" aria-label="Event tape" tabIndex={-1}>
+        <div id="tape-feed" className="space-y-4">
+          {bufferEvent ? (
+            <div className="border-y border-border/60 bg-amber-500/5">
+              <p className="px-3 pt-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                <span aria-hidden="true">► </span>
+                <span className="font-semibold text-foreground">PINNED</span>
+                <span aria-hidden="true"> · </span>
+                <span>Linked from URL</span>
+              </p>
+              <EventCard
+                event={bufferEvent}
+                logoSrc={bufferEvent.coinId ? getLogoSrc(logos, bufferEvent.coinId) : undefined}
+                highlighted={highlightedId === bufferEvent.id}
+                domId={eventDomId(bufferEvent.id)}
+              />
+            </div>
+          ) : null}
         {isLoading ? (
           <div>
             <EventSkeleton />
@@ -132,23 +149,7 @@ export function TimelineFeed({
             <p className="text-right font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               All times UTC
             </p>
-            <div id="tape-feed" className="space-y-4">
-              {bufferEvent ? (
-                <div className="border-y border-border/60 bg-amber-500/5">
-                  <p className="px-3 pt-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                    <span aria-hidden="true">► </span>
-                    <span className="font-semibold text-foreground">PINNED</span>
-                    <span aria-hidden="true"> · </span>
-                    <span>Linked from URL</span>
-                  </p>
-                  <EventCard
-                    event={bufferEvent}
-                    logoSrc={bufferEvent.coinId ? getLogoSrc(logos, bufferEvent.coinId) : undefined}
-                    highlighted={highlightedId === bufferEvent.id}
-                    domId={eventDomId(bufferEvent.id)}
-                  />
-                </div>
-              ) : null}
+            <div className="space-y-4">
               {digestedDays.map((day) => (
                 <DayDigestSection
                   key={day.dayKey}
@@ -195,6 +196,7 @@ export function TimelineFeed({
             </div>
           </div>
         )}
+        </div>
       </section>
     </>
   );

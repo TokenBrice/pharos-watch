@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { changelogs } from "../index";
 
 const CHANGELOG_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
-const CHANGELOG_ENTRY_FILE_RE = /^\d{4}-\d{2}-\d{2}\.ts$/;
+const CHANGELOG_ENTRY_FILE_RE = /^\d{4}-\d{2}-\d{2}\.json$/;
 
 describe("changelogs barrel", () => {
   it("exports a non-empty array sorted newest-first", () => {
@@ -57,7 +57,7 @@ describe("changelogs barrel", () => {
     const datesWithEntry = new Set(changelogs.map((entry) => entry.dateRange.to));
 
     for (const fileName of datedFiles) {
-      const fileDate = fileName.replace(/\.ts$/, "");
+      const fileDate = fileName.replace(/\.json$/, "");
       expect(datesWithEntry.has(fileDate)).toBe(true);
     }
   });

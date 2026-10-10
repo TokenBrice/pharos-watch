@@ -80,6 +80,8 @@ const YieldBenchmarkMetaSchema = z.object({
   isFallback: z.boolean(),
   fallbackMode: z.string().nullable(),
   isProxy: z.boolean().optional(),
+  /** Canonical maximum age of fetched benchmark evidence, independent of publication age. */
+  maxFetchAgeSec: z.number().optional(),
   /**
    * Per-key bound on the age of this entry's own observation (`recordDate`).
    * Published so consumers judge a monthly series (CAD, 45d) and a daily one
@@ -253,6 +255,26 @@ const YieldRankingSchema = z.object({
   decisionLedger: YieldPublicDecisionLedgerSchema.nullable().optional(),
 });
 export type YieldRanking = z.infer<typeof YieldRankingSchema>;
+
+// The coverage audit consumes only identity and venue evidence, including older
+// rankings generations. Compose this projection from the public field schemas;
+// missing rankings are never a validated empty cohort.
+const YieldCoverageAuditVenueRiskSchema = YieldSourceRiskSchema.pick({ venueProtocol: true });
+const YieldCoverageAuditSourceSchema = AltYieldSourceSchema.pick({
+  sourceKey: true,
+  sourceTvlUsd: true,
+}).extend({
+  sourceTvlUsd: AltYieldSourceSchema.shape.sourceTvlUsd.optional(),
+  sourceRisk: YieldCoverageAuditVenueRiskSchema.nullable().optional(),
+});
+export const YieldCoverageAuditRankingsSchema = z.object({
+  rankings: z.array(YieldRankingSchema.pick({ id: true, sourceTvlUsd: true }).extend({
+    sourceTvlUsd: YieldRankingSchema.shape.sourceTvlUsd.optional(),
+    sourceRisk: YieldCoverageAuditVenueRiskSchema.nullable().optional(),
+    provenance: YieldRankingProvenanceSchema.pick({ sourceKey: true }).nullable().optional(),
+    altSources: z.array(YieldCoverageAuditSourceSchema).optional(),
+  })),
+});
 
 const YieldResponseWarningSchema = z.object({
   code: z.string(),

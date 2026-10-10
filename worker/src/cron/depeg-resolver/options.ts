@@ -19,7 +19,6 @@ export function normalizeComputeOptions(
     slot,
     stablecoinsCacheSafe: options.stablecoinsCacheSafe ?? true,
     depegPipelineHealthy: options.depegPipelineHealthy ?? true,
-    syncCapabilities: options.syncCapabilities ?? {},
     storeContracts: options.storeContracts ?? DEFAULT_DDR_V2_STORE_CONTRACTS,
   };
 }

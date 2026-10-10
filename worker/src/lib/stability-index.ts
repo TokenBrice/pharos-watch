@@ -22,8 +22,9 @@
 
 import type { PsiConditionBand } from "@shared/types/stability";
 export type ConditionBand = PsiConditionBand;
-import { bandFromThresholds, clampScore, round1, roundTo } from "@shared/lib/math";
+import { clampScore, round1, roundTo } from "@shared/lib/math";
 import { computePsiDepegContribution } from "@shared/lib/psi-contribution";
+import { getConditionBand, PSI_COMPONENT_LIMITS } from "@shared/lib/psi-policy";
 
 export interface StabilityInput {
   depegs: { bps: number; mcapUsd: number; depegAgeDays?: number }[];
@@ -76,15 +77,15 @@ export function computeStabilityIndex(input: StabilityInput): StabilityResult | 
     totals.breadth += contribution.breadth;
     return totals;
   }, { severity: 0, breadth: 0 });
-  const severity = Math.min(68, contributionTotals.severity);
-  const breadth = Math.min(17, contributionTotals.breadth);
+  const severity = Math.min(PSI_COMPONENT_LIMITS.severity, contributionTotals.severity);
+  const breadth = Math.min(PSI_COMPONENT_LIMITS.breadth, contributionTotals.breadth);
 
   const safePct = Number.isFinite(mcap7dChangePct) ? mcap7dChangePct : 0;
-  const trend = Math.max(-5, Math.min(5, safePct));
+  const trend = Math.max(-PSI_COMPONENT_LIMITS.trend, Math.min(PSI_COMPONENT_LIMITS.trend, safePct));
 
   // Add stress breadth from DEWS (coins under stress but not yet depegged)
   const stressBreadthRaw = input.dewsStressBreadth ?? 0;
-  const stressBreadth = Math.min(5, stressBreadthRaw); // Cap at 5 additional points
+  const stressBreadth = Math.min(PSI_COMPONENT_LIMITS.stressBreadth, stressBreadthRaw);
 
   const raw = 100 - severity - breadth - stressBreadth + trend;
   const score = round1(clampScore(raw));
@@ -101,29 +102,3 @@ export function computeStabilityIndex(input: StabilityInput): StabilityResult | 
   };
 }
 
-/**
- * Maps a PSI score to its named condition band.
- *
- * Thresholds (inclusive lower bound):
- * - 90–100 → BEDROCK   (exceptional stability)
- * - 75–89  → STEADY    (normal operating conditions)
- * - 60–74  → TREMOR    (mild stress, monitor closely)
- * - 40–59  → FRACTURE  (significant stress, active depegs)
- * - 20–39  → CRISIS    (severe ecosystem distress)
- * -  0–19  → MELTDOWN  (systemic failure)
- *
- * @param score - PSI score in [0, 100].
- * @returns The corresponding {@link ConditionBand} label.
- */
-const CONDITION_BANDS: readonly { min: number; band: ConditionBand }[] = [
-  { min: 90, band: "BEDROCK" },
-  { min: 75, band: "STEADY" },
-  { min: 60, band: "TREMOR" },
-  { min: 40, band: "FRACTURE" },
-  { min: 20, band: "CRISIS" },
-  { min: 0, band: "MELTDOWN" },
-];
-
-export function getConditionBand(score: number): ConditionBand {
-  return bandFromThresholds(score, CONDITION_BANDS, { min: 0, band: "MELTDOWN" as const }).band;
-}

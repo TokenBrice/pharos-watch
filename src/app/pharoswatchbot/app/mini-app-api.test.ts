@@ -19,7 +19,7 @@ import {
   postMiniAppSnapshot,
   refreshMiniAppBundleOnce,
 } from "./mini-app-api";
-import { makeMiniAppState } from "./mini-app-test-fixtures";
+import { makeMiniAppState } from "@shared/test-utils/telegram-mini-app-state";
 
 const { catalog: _catalog, ...mutableState } = makeMiniAppState({
   subscriber: { recap: { available: false } },

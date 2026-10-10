@@ -151,11 +151,15 @@ Version skew returns `409 contract-version-mismatch` or `409 catalog-version-mis
 
 The client renders only server-confirmed state. A mutation leaves the pressed/selected value unchanged while its request is pending, marks the initiating control busy, disables the other mutation controls, and replaces state only after a successful response. A failed mutation therefore keeps the previous confirmed value without a misleading optimistic flip or rollback animation.
 
+Successful `forget-me` is terminal for the open client: retained state and undo are cleared, signed reads/writes and refreshes are revoked, and native Back/Settings/Main buttons are hidden and detached. Captured late callbacks cannot dispatch; only Close remains.
+
 Every successful session read or mutation also records the response `stateRevision` and the local receive time. For an older Worker's full-state response, the client derives the same opaque revision with `telegramMiniAppStateRevision()` after excluding the bundled catalog. If a later session refresh fails, the last confirmed state stays visible but the shell enters an explicit stale mode: it shows the revision and refresh time, disables all mutations, and requires a successful **Retry refresh** before editing becomes available again. Stale data is never silently presented as current, and a failed refresh never discards a user's readable settings.
 
-Suggested-coin actions remain useful when mutations are unavailable. A followed suggestion focuses and briefly highlights its existing watchlist card; an unfollowed suggestion populates and focuses search. The transient highlight uses reduced-motion-safe scrolling and clears deterministically.
+Watcher status uses enabled global/direct/preset families, not row existence: retained empty subscribers have no enabled alerts. Indefinite pause and timed snooze suppress the active heading; timed snoozes expire at the shared client `nowSec` deadline. Delivery history remains visible independently.
 
-The timezone control keeps the primary select short: current, browser-detected, session-recent, and common zones. An accessible **Search all timezones** disclosure retains the complete runtime-supported IANA list with exact-value validation. Recent zones live only in React session state and update after a confirmed server snapshot; they are not persisted to browser storage and a failed mutation cannot promote a draft choice.
+Suggested-coin actions work read-only: followed suggestions focus/highlight their card; unfollowed ones focus search. Relaunch uses current coin/insight context after the transient highlight ends; leaving Watchlist clears it.
+
+Timezone choices are current, detected, session-recent and common, with full IANA search. Null uses UTC without confirmation; **Confirm UTC** persists `"UTC"`, while **Clear timezone** persists null. Recents follow confirmed snapshots only. Acknowledged quiet-hour drafts clear so later snapshots own the selects; genuinely unsaved edits remain labelled.
 
 ## Effective Alert Source
 
@@ -220,12 +224,14 @@ For incident triage, start at the runbooks rather than DevTools:
 
 ## Test Fixtures
 
+`shared/test-utils/telegram-mini-app-state.ts` owns session-state builders for frontend and shared contract tests; mutable-state fixtures omit its catalog.
+
 - `worker/src/lib/__tests__/telegram-mini-app-auth.test.ts` — HMAC validation, freshness windows, group/supergroup read-only behavior, bot-token rotation overlap.
 - `worker/src/api/__tests__/telegram-mini-app.test.ts` — session and mutation endpoint behavior, state contract, burst-limit responses, partial-failure rollback.
 - `worker/src/api/__tests__/telegram-mini-app-rate-limit.test.ts` — real-SQLite atomic burst admission, exact retry windows, rollover, D1 failure behavior, `/forget`, and retention cleanup.
 - `shared/lib/__tests__/telegram-mini-app-contract.test.ts` — operation parse parity, compact/legacy response schemas, catalog version, and capability compatibility.
 - `src/app/pharoswatchbot/app/mini-app-api.test.ts` — compact-state hydration, new-client/old-Worker compatibility, capability parameters, and one-shot version refresh.
-- `src/app/pharoswatchbot/app/page.test.tsx` — client preview/post-launch rendering, server-confirmed mutation timing, stale-refresh recovery, stale-auth relaunch affordance, suggestion navigation, and timezone selection.
+- `src/app/pharoswatchbot/app/page.test.tsx` / `use-telegram-main-button.test.ts` — client preview/post-launch rendering, confirmed mutation timing, stale-refresh recovery, stale-auth relaunch, suggestion navigation, timezone selection, and native listener transitions/SDK replacement.
 - `src/app/pharoswatchbot/app/use-mini-app-view.test.ts` — `?startapp=` payload/view round-trip for the stale-auth relaunch payload encoder.
 - `src/app/pharoswatchbot/app/telegram-theme.test.ts` / `telegram-sdk.test.ts` — WCAG contrast normalization, hostile light/dark Telegram palettes, CSS variable publication, fallback clearing, viewport, and safe-area behavior.
 - `tests/visual/telegram-mini-app-launch.spec.ts` — standalone/signed launch behavior, 320 px control sizing, and an authenticated hostile-theme axe color-contrast fixture.
@@ -278,7 +284,7 @@ BotFather-owned release checklist:
 - Adoption-metric loading and unavailable states are named `status` live regions, retaining polite announcements and explicit busy state.
 - Presents the bot around low-noise growth paths: the recommended `/subscribe dews,depeg usd-top25` default, preset cohorts, group-addressed commands, reasoned safety-grade alerts, the private personalized Daily Recap (`/recap`, `/recap on|off`, and `/recap time <hour>`), quiet hours, inline snooze, and the overflow delivery queue
 - Documents Daily Recap in the command reference, Mini App capability list, and FAQ, including its private-chat scope, confirmed-timezone requirement, material-change suppression, and separation from the market-wide Daily Digest
-- The recommended setup deep link preloads a Telegram confirmation for `dews,depeg usd-top25`; it does not silently subscribe the user before they confirm in Telegram.
+- The recommended `pw1_landing_setup` link preloads the `dews,depeg usd-top25` confirmation and preserves landing/setup attribution through first follow; no extra branch choice or silent subscribe.
 - Renders a visible FAQ section with matching `FAQPage` JSON-LD, plus `HowTo` and `SoftwareApplication` JSON-LD for the bot setup flow
 - The command reference is filterable client-side and fully visible (no collapsed defaults); alert examples remain the verbatim `shared/lib/telegram-alert-samples.ts` text with plain-language family framing.
 
@@ -291,6 +297,8 @@ Pulse publication reuses heavy public sections on a 15-minute cadence, but only 
 Publication is ordered so the heavy-section reuse marker can never claim work that was not durably published: the snapshot cache write commits first, and only then does the marker advance. A failed snapshot write surfaces as an `error` outcome on the `telegram-pulse-snapshot` scheduled sidecar (with `snapshotPublished: false` and the write error preserved in the cron metadata) instead of being swallowed; a failed marker write after a successful snapshot write degrades the sidecar and leaves the marker behind so the next run recomputes the heavy sections.
 
 `quality.status` is `partial` when a non-critical public telemetry loader failed. Public copy stays generic and never includes raw D1 or provider errors; Access-gated `/api/status` keeps field-level Telegram telemetry diagnostics for operators. Unavailable telemetry takes precedence over privacy suppression: if `pendingDeliveries` cannot be loaded, the response returns `pendingDeliveries: null` and lists `pendingDeliveries` in `quality.unavailableFields`, not in `privacy.suppressedFields`.
+
+All live placements withdraw counts and the success badge on refresh failure, even with retained query/count-up data; a successful refresh restores them. Rankings/history check `quality.unavailableFields` before rows; empty placeholders require successful reads.
 
 Freshness is split deliberately:
 

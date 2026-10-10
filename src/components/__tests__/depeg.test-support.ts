@@ -1,4 +1,4 @@
-import type { DepegEvent, StressSignalEntry } from "@shared/types";
+import type { DepegEvent, DepegPendingIncident, StressSignalEntry } from "@shared/types";
 
 export function makeEvent(overrides: Partial<DepegEvent> = {}): DepegEvent {
   return {
@@ -19,6 +19,26 @@ export function makeEvent(overrides: Partial<DepegEvent> = {}): DepegEvent {
     pendingReason: null,
     closeReason: null,
     provenance: null,
+    ...overrides,
+  };
+}
+
+export function makePendingIncident(overrides: Partial<DepegPendingIncident> = {}): DepegPendingIncident {
+  const firstSeenAt = overrides.firstSeenAt ?? 1_700_000_000;
+  return {
+    stablecoinId: "usdc-circle",
+    symbol: "USDC",
+    direction: "below",
+    firstSeenAt,
+    lastSeenAt: firstSeenAt + 900,
+    firstSeenBps: -120,
+    lastSeenBps: -120,
+    peakSeenBps: -120,
+    reason: "confirmation-required",
+    ageSec: 900,
+    expiresAt: firstSeenAt + 2700,
+    availableConfirmationCategories: ["cex", "dex"],
+    missingConfirmationCategories: ["native"],
     ...overrides,
   };
 }

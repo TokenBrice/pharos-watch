@@ -1,3 +1,4 @@
+import { chunkArray } from "@shared/lib/collections";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
@@ -109,14 +110,6 @@ function buildPoolHourDataQuery(poolIds: string[], oldestIncludedHourStart: numb
   }`;
 }
 
-function chunkPoolIds(poolIds: string[], chunkSize: number): string[][] {
-  const chunks: string[][] = [];
-  for (let index = 0; index < poolIds.length; index += chunkSize) {
-    chunks.push(poolIds.slice(index, index + chunkSize));
-  }
-  return chunks;
-}
-
 function summarizeBodySnippet(body: string): string {
   return body
     .replace(/\s+/g, " ")
@@ -211,9 +204,10 @@ export async function fetchPancakeSwapPools(
         lastAttemptedSkip = skip;
         throwIfAborted(signal);
         const data = await fetchSubgraphJson<{ pools?: V3Pool[] }>(subgraphUrl, buildPoolsQuery(skip), signal);
+        if (!Array.isArray(data.pools)) throw new Error("malformed-response: pools must be an array");
         chainPagesFetched++;
         pagesFetched++;
-        const pagePools = data.pools ?? [];
+        const pagePools = data.pools;
         if (pagePools.length === 0) {
           cycleCompleted = true;
           nextCursor = PAGE_SIZE;
@@ -225,7 +219,7 @@ export async function fetchPancakeSwapPools(
         // these carry a measured 24h volume; a failed batch or a malformed row
         // leaves the pool's volume unobserved (null), never a measured zero.
         const volumeObservedPoolIds = new Set<string>();
-        const hourDataPoolIdBatches = chunkPoolIds(pagePools.map((pool) => pool.id), HOUR_DATA_BATCH_SIZE);
+        const hourDataPoolIdBatches = chunkArray(pagePools.map((pool) => pool.id), HOUR_DATA_BATCH_SIZE);
         let failedHourDataBatches = 0;
         for (let batchIndex = 0; batchIndex < hourDataPoolIdBatches.length; batchIndex++) {
           throwIfAborted(signal);
@@ -236,9 +230,12 @@ export async function fetchPancakeSwapPools(
               buildPoolHourDataQuery(poolIdBatch, oldestIncludedHourStart, currentHourStart),
               signal,
             );
+            if (!Array.isArray(hourData.poolHourDatas)) {
+              throw new Error("malformed-response: poolHourDatas must be an array");
+            }
 
             const malformedPoolIds = new Set<string>();
-            for (const row of hourData.poolHourDatas ?? []) {
+            for (const row of hourData.poolHourDatas) {
               const poolId = row.pool.id.toLowerCase();
               const volume = parseFloat(row.volumeUSD);
               if (!Number.isFinite(volume) || volume < 0) {

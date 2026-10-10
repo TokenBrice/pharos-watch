@@ -12,8 +12,6 @@ import { API_PATHS } from "./paths";
 
 const GET_ONLY_METHODS = ["GET"] as const satisfies readonly EndpointMethod[];
 const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
-const GET_AND_POST_METHODS = ["GET", "POST"] as const satisfies readonly EndpointMethod[];
-const AUDIT_DEPEG_HISTORY_PATH = API_PATHS.auditDepegHistoryBase();
 const BACKFILL_DEWS_PATH = API_PATHS.backfillDews();
 const ADMIN_DYNAMIC_PATH_ROOTS = ["/api/api-keys"] as const;
 const ADMIN_STATIC_PATH_ROOTS = ENDPOINT_DEFINITIONS
@@ -90,9 +88,6 @@ export function isAdminLikePath(path: string): boolean {
 }
 
 export function isMutatingAdminGetAllowed(url: URL): boolean {
-  if (url.pathname === AUDIT_DEPEG_HISTORY_PATH) {
-    return url.searchParams.get("dry-run") === "true";
-  }
   if (url.pathname === BACKFILL_DEWS_PATH) {
     return !url.searchParams.has("repair") || url.searchParams.get("dry-run") === "true";
   }
@@ -140,7 +135,7 @@ export function validateAllowedEndpointMethods(
   allowedMethods: readonly EndpointMethod[],
 ): EndpointMethodValidationError | null {
   if (method !== "GET" && method !== "HEAD" && method !== "POST") {
-    return { message: "Method not allowed", allowedMethods: GET_AND_POST_METHODS };
+    return { message: "Method not allowed", allowedMethods };
   }
 
   if (allowedMethods.includes(method as EndpointMethod)) {

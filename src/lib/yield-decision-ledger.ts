@@ -1,6 +1,5 @@
-import { formatSignedPercent } from "@shared/lib/format";
 import type { YieldPublicDecisionLedger } from "@shared/types";
-import { YIELD_DECISION_REASON_LABELS, YIELD_DECISION_REJECTION_REASON_LABELS } from "@/lib/yield-presentation";
+import { formatYieldApyDelta, YIELD_DECISION_REASON_LABELS, YIELD_DECISION_REJECTION_REASON_LABELS } from "@/lib/yield-presentation";
 
 export interface YieldDecisionAlternativeDisplay {
   sourceKey: string;
@@ -24,7 +23,7 @@ function pluralize(count: number, singular: string, plural = `${singular}s`): st
 
 function formatApy30dDelta(delta: number | null | undefined): string | null {
   if (typeof delta !== "number" || !Number.isFinite(delta)) return null;
-  return `${formatSignedPercent(delta, 2)} APY30d`;
+  return `${formatYieldApyDelta(delta)} APY30d`;
 }
 
 function buildSourceSwitchLabel(ledger: YieldPublicDecisionLedger): string | null {

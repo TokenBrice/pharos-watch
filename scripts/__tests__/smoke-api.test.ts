@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
+import { spawnSync } from "node:child_process";
 import {
   assertOgImageResult,
   assertPathCoverage,
@@ -176,6 +178,80 @@ describe("smoke-api redemption backstop assertion", () => {
         }),
       }),
     ).toThrow("http(s)");
+  });
+
+  it("rejects a failed route carrying an aggregate score through both smoke and the canonical schema", () => {
+    const body = makeRedemptionBody({ resolutionState: "failed", score: 80 });
+    expect(RedemptionBackstopsResponseSchema.safeParse(body).success).toBe(false);
+    expect(() => ENDPOINT_ASSERTIONS["/api/redemption-backstops"]({ status: 200, body }))
+      .toThrow("/api/redemption-backstops.coins.cusd-cap.score");
+  });
+
+  it("accepts a failed route with a null aggregate score", () => {
+    expect(ENDPOINT_ASSERTIONS["/api/redemption-backstops"]({
+      status: 200, body: makeRedemptionBody({ resolutionState: "failed", score: null }),
+    })).toBe("1 redemption entries");
+  });
+
+  it.each(["routeStatus", "routeStatusSource", "holderEligibility"])(
+    "requires %s on the wire even when the canonical schema supplies a default",
+    (field) => {
+      const body = makeRedemptionBody({ [field]: undefined });
+      expect(RedemptionBackstopsResponseSchema.safeParse(body).success).toBe(true);
+      expect(() => ENDPOINT_ASSERTIONS["/api/redemption-backstops"]({ status: 200, body })).toThrow(field);
+    },
+  );
+
+  it.each(["provider", "methodologyVersion"])("rejects an empty %s", (field) => {
+    expect(() => ENDPOINT_ASSERTIONS["/api/redemption-backstops"]({
+      status: 200, body: makeRedemptionBody({ [field]: "" }),
+    })).toThrow(field);
+  });
+
+  it("rejects an empty docs source label", () => {
+    expect(() => ENDPOINT_ASSERTIONS["/api/redemption-backstops"]({
+      status: 200,
+      body: makeRedemptionBody({ docs: { sources: [{ label: "", url: "https://example.com/docs" }] } }),
+    })).toThrow("docs.sources[0].label");
+  });
+
+  it("checks map-key identity beyond the former ten-entry sample", () => {
+    const entry = makeRedemptionBody().coins["cusd-cap"];
+    const body = {
+      ...makeRedemptionBody(),
+      coins: Object.fromEntries(Array.from({ length: 11 }, (_, index) => {
+        const id = `coin-${index}`;
+        return [id, { ...entry, stablecoinId: index === 10 ? "mismatched-id" : id }];
+      })),
+    };
+    expect(() => ENDPOINT_ASSERTIONS["/api/redemption-backstops"]({ status: 200, body }))
+      .toThrow("coins.coin-10.stablecoinId does not match map key");
+  });
+
+  it("rejects an empty coins map and methodology version", () => {
+    const body = makeRedemptionBody();
+    expect(() => ENDPOINT_ASSERTIONS["/api/redemption-backstops"]({
+      status: 200, body: { ...body, coins: {} },
+    })).toThrow("empty coins map");
+    expect(() => ENDPOINT_ASSERTIONS["/api/redemption-backstops"]({
+      status: 200, body: { ...body, methodology: { ...body.methodology, version: "" } },
+    })).toThrow("methodology.version");
+  });
+
+  it.each([
+    { label: "valid", overrides: {}, status: 0 },
+    { label: "failed positive score", overrides: { resolutionState: "failed", score: 80 }, status: 1 },
+  ])("validates a $label response with the smoke command's actual tsx loader", ({ overrides, status }) => {
+    const result = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", `
+      import { readFileSync } from "node:fs";
+      import { ENDPOINT_ASSERTIONS } from "./scripts/maintenance/smoke-api.mjs";
+      console.log(ENDPOINT_ASSERTIONS["/api/redemption-backstops"]({
+        status: 200, body: JSON.parse(readFileSync(0, "utf8")),
+      }));
+    `], { cwd: process.cwd(), input: JSON.stringify(makeRedemptionBody(overrides)), encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(status);
+    if (status === 0) expect(result.stdout).toContain("1 redemption entries");
+    else expect(result.stderr).toContain("Only resolved redemption routes can carry an aggregate score");
   });
 });
 

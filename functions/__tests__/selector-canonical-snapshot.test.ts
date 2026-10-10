@@ -6,6 +6,8 @@ import { makeReportCardsV9Response, makeV9Card } from "../../src/test/fixtures/s
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { recomputeVerifiedSelectorSnapshot } from "../lib/selector-canonical-snapshot";
+import { makeAltYieldSource, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
+import { computeSelectorSnapshotSid, validateVerifiedSelectorSnapshot } from "@shared/lib/selector/snapshot";
 
 const input = {
   profile: "treasury",
@@ -119,6 +121,62 @@ describe("canonical selector snapshot recomputation", () => {
       method: "GET",
     });
     expect(reportCardsFetch?.headers[SITE_DATA_PROXY_SECRET_HEADER.toLowerCase()]).toBe("test-secret");
+  });
+
+  it.each([
+    [1, false, "selected-source", "ethereum", 6],
+    [5, true, "selected-source", "ethereum", 6],
+    [5, false, "alternate-lending", "arbitrum", 1],
+  ] as const)("keeps canonical APY/native gates and verified evidence on the selected rail (%s, %s)", async (
+    alternateApy, yieldNativeOnly, expectedSource, expectedChain, expectedExcess,
+  ) => {
+    const payloads = canonicalPayloads();
+    payloads.set(API_PATHS.yieldRankings(), {
+      rankings: [makeYieldRanking({
+        apy30d: 10, benchmarkRate: 4, pharosYieldScore: 80,
+        yieldType: "nav-appreciation",
+        sourceRisk: {
+          venueProtocol: "Issuer savings", venueChain: "ethereum", venueRiskTier: "low",
+          deploymentPlace: "issuer-savings", sourceRiskScore: 10, observationCount30d: 30,
+        },
+        altSources: [makeAltYieldSource({
+          sourceKey: "alternate-lending", apy30d: alternateApy,
+          sourceRisk: {
+            venueProtocol: "Lending venue", venueChain: "arbitrum", venueRiskTier: "high",
+            deploymentPlace: "lending-market", sourceRiskScore: 70, observationCount30d: 2,
+          },
+        })],
+      })],
+      riskFreeRate: 4, scalingFactor: 1, medianApy: 10, updatedAt: 1_700_000_000,
+      methodology: methodology("yield-v8"),
+    });
+    mockFetch([...payloads].map(([path, body]) => ({
+      match: `https://site-api.pharos.watch${path}`, body,
+    })), { requireMatch: true, strictUrl: true });
+    const output = await recomputeVerifiedSelectorSnapshot(
+      { ...input, profile: "yield", venuePreferences: ["lend"], minApy: 5, yieldNativeOnly },
+      new Request("https://pharos.watch/selector-snapshot"),
+      { SITE_API_ORIGIN: "https://site-api.pharos.watch", SITE_API_SHARED_SECRET: "test-secret" },
+      1_700_000_000_000,
+    );
+    const rec = output.recommended[0]!;
+    expect(rec.recommendedSource).toMatchObject({ sourceKey: expectedSource, chain: expectedChain });
+    expect(rec.chainHints).toMatchObject({ topByYield: [expectedChain], primary: expectedChain });
+    expect(rec.components.find((component) => component.key === "excessApy")?.rawValue).toBe(expectedExcess);
+    expect(rec.components.find((component) => component.key === "sourceRiskInverted")?.rawValue)
+      .toBe(expectedSource === "alternate-lending" ? 70 : 10);
+    if (expectedSource === "alternate-lending") {
+      expect(rec.recommendedSource?.pharosYieldScore).toBeNull();
+      expect(rec.components.find((component) => component.key === "pharosYieldScore")?.rawValue).toBeNull();
+      expect(rec.components.find((component) => component.key === "yieldVariance")?.rawValue).toBeNull();
+      expect(rec.whyKeys).not.toContain("native-wrapper-rail");
+      expect(rec.whyKeys).not.toContain("low-variance");
+    }
+    const replay = validateVerifiedSelectorSnapshot(JSON.parse(JSON.stringify(output)));
+    expect(replay.ok).toBe(true);
+    if (!replay.ok) throw new Error(`Expected verified replay: ${replay.error}`);
+    expect(replay.snapshot).toEqual(output);
+    expect(computeSelectorSnapshotSid(replay.snapshot)).toBe(computeSelectorSnapshotSid(output));
   });
 
   it("changes selection when canonical supply falls below eligibility and accepts source metadata", async () => {

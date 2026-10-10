@@ -9,7 +9,6 @@ export interface ComputeDepegResolverV2Options {
   slot?: string;
   stablecoinsCacheSafe?: boolean;
   depegPipelineHealthy?: boolean;
-  syncCapabilities?: Record<string, unknown>;
   storeContracts?: DdrV2StoreContracts;
 }
 
@@ -17,7 +16,7 @@ export type NormalizedComputeDepegResolverOptions =
   Required<
     Pick<
       ComputeDepegResolverV2Options,
-      "db" | "ddrRunId" | "runAt" | "slot" | "stablecoinsCacheSafe" | "depegPipelineHealthy" | "syncCapabilities"
+      "db" | "ddrRunId" | "runAt" | "slot" | "stablecoinsCacheSafe" | "depegPipelineHealthy"
     >
   > &
   Pick<ComputeDepegResolverV2Options, "signal"> & { storeContracts: DdrV2StoreContracts };

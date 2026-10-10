@@ -14,9 +14,9 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "./extension-reviewed-registry";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
-import { authenticateCcipPendingObservation } from "./ccip-pending-observer";
+import { authenticateCcipPendingObservation } from "./supply-attribution-ccip-proof";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
-import { emitSupplyAttributionDiagnostic } from "./supply-attribution-capture-budget";
+import { emitSupplyAttributionDiagnostic } from "./supply-attribution-diagnostics";
 
 const REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
 const REVIEWED_DEPLOYMENT_SUPPLY_MAX_SKEW_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxSkewSec;
@@ -733,10 +733,10 @@ export function reviewedDeploymentObservationTimingIssue(input: {
       failedRouteId: futureUnsupportedBySource.routeId,
     };
   }
-  if (input.clockSec - input.observedAtSec > REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC) {
+  if (input.clockSec - earliestBlockTimeSec > REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC) {
     return {
       code: "stale",
-      failedRouteId: boundaryRouteId(input.deployments, "latest"),
+      failedRouteId: boundaryRouteId(input.deployments, "earliest"),
     };
   }
   return null;

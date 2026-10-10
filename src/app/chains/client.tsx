@@ -130,6 +130,8 @@ export function ChainsLeaderboardClient() {
 
   const change7dPct = data.globalChange7dPct == null ? null : data.globalChange7dPct * 100;
   const show7dTrend = change7dPct != null && Math.abs(change7dPct) >= 0.05;
+  const coverage = data.supplyCoverage;
+  const partialGlobalSupply = (coverage?.aggregateUnavailableAssetCount ?? 0) > 0;
 
   return (
     <SectionErrorBoundary name="Chains">
@@ -147,7 +149,7 @@ export function ChainsLeaderboardClient() {
         <div className="pharos-subtle-band space-y-3 py-4">
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
             <div>
-              <p className="pharos-kicker">Total Stablecoin Supply</p>
+              <p className="pharos-kicker">{partialGlobalSupply ? "Partial Stablecoin Supply" : "Total Stablecoin Supply"}</p>
               <p className="pharos-numeric mt-1 text-3xl font-extrabold tracking-tight text-frost-blue">
                 {formatCompactUsd(data.globalTotalUsd)}
               </p>
@@ -167,6 +169,13 @@ export function ChainsLeaderboardClient() {
               </span>
             </div>
           </div>
+          {coverage && (coverage.aggregateUnavailableAssetCount > 0 || coverage.chainUnavailableObservationCount > 0) ? (
+            <p className="text-sm text-muted-foreground">
+              Partial supply coverage: {coverage.aggregateUnavailableAssetCount} assets excluded from global supply;{" "}
+              {coverage.chainUnavailableObservationCount} unavailable chain observations excluded from chain totals.
+              {" "}Shares use observed global supply.
+            </p>
+          ) : null}
 
           {/* Dominance breakdown */}
           {topBySupply.length > 0 && (
@@ -242,7 +251,14 @@ export function ChainsLeaderboardClient() {
                 <TableCell>
                   <HealthBadge score={chain.healthScore} band={chain.healthBand} />
                 </TableCell>
-                <TableCell className="text-right pharos-numeric">{formatCompactUsd(chain.totalUsd)}</TableCell>
+                <TableCell className="text-right pharos-numeric">
+                  {formatCompactUsd(chain.totalUsd)}
+                  {(chain.unavailableSupplyObservationCount ?? 0) > 0 ? (
+                    <span className="block text-[10px] text-muted-foreground">
+                      Partial · {chain.unavailableSupplyObservationCount} unavailable
+                    </span>
+                  ) : null}
+                </TableCell>
                 <TableCell className={cn("text-right pharos-numeric", trendColor(chain.change7dPct))}>
                   {chain.change7dPct == null ? "—" : formatSignedPercent(chain.change7dPct * 100, 2)}
                 </TableCell>

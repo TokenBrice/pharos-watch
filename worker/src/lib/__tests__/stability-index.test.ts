@@ -2,9 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   computeStabilityIndex,
   getDepreciationFactor,
-  getConditionBand,
 } from "../stability-index";
 import type { StabilityInput } from "../stability-index";
+import { getConditionBand, PSI_COMPONENT_LIMITS } from "@shared/lib/psi-policy";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -71,36 +71,20 @@ describe("getDepreciationFactor", () => {
 });
 
 // ---------------------------------------------------------------------------
-// getConditionBand
-// ---------------------------------------------------------------------------
-
-describe("getConditionBand", () => {
-  it.each([
-    [100, "BEDROCK"],
-    [95, "BEDROCK"],
-    [90, "BEDROCK"],
-    [89.9, "STEADY"],
-    [89, "STEADY"],
-    [75, "STEADY"],
-    [74.9, "TREMOR"],
-    [60, "TREMOR"],
-    [59.9, "FRACTURE"],
-    [40, "FRACTURE"],
-    [39.9, "CRISIS"],
-    [20, "CRISIS"],
-    [19.9, "MELTDOWN"],
-    [10, "MELTDOWN"],
-    [0, "MELTDOWN"],
-  ] as const)("score %s => %s", (score, band) => {
-    expect(getConditionBand(score)).toBe(band);
-  });
-});
-
-// ---------------------------------------------------------------------------
 // computeStabilityIndex — healthy market
 // ---------------------------------------------------------------------------
 
 describe("computeStabilityIndex", () => {
+  it("uses canonical component ceilings and the shared band lookup when saturated", () => {
+    const result = computeIndex(baseInput({
+      depegs: [{ bps: 10_000, mcapUsd: 200e9 }],
+      dewsStressBreadth: 100,
+      mcap7dChangePct: 100,
+    }));
+    expect(result.components).toEqual(PSI_COMPONENT_LIMITS);
+    expect(result.band).toBe(getConditionBand(result.score));
+  });
+
   it("returns 100 BEDROCK when no depegs and neutral trend", () => {
     const result = computeIndex(baseInput());
     expect(result.score).toBe(100);

@@ -1,4 +1,5 @@
 import { expect } from "vitest";
+import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   type MockD1Database,
   type MockTableConfig,
@@ -171,19 +172,18 @@ function makeSetupPendingRow(
 
 function makeStablecoinsCacheValue(overrides: Record<string, number>): string {
   return JSON.stringify({
-    peggedAssets: [
-      { id: "usdt-tether", symbol: "USDT", circulating: { usd: overrides["usdt-tether"] ?? 0 } },
-      { id: "usdc-circle", symbol: "USDC", circulating: { usd: overrides["usdc-circle"] ?? 0 } },
-      { id: "dai-makerdao", symbol: "DAI", circulating: { usd: overrides["dai-makerdao"] ?? 0 } },
-      { id: "pyusd-paypal", symbol: "PYUSD", circulating: { usd: overrides["pyusd-paypal"] ?? 0 } },
-      { id: "eurc-circle", symbol: "EURC", circulating: { usd: overrides["eurc-circle"] ?? 0 } },
-      { id: "xaut-tether", symbol: "XAUT", circulating: { usd: overrides["xaut-tether"] ?? 0 } },
-      { id: "paxg-paxos", symbol: "PAXG", circulating: { usd: overrides["paxg-paxos"] ?? 0 } },
-    ],
+    peggedAssets: WORKER_ACTIVE_STABLECOINS.map((asset) => ({
+      id: asset.id,
+      symbol: asset.symbol,
+      circulating: { peggedUSD: overrides[asset.id] ?? 1_000_000_000 },
+    })),
   });
 }
 
-export function makeStablecoinsCacheTable(overrides: Record<string, number>, updatedAt: number): MockTableConfig {
+export function makeStablecoinsCacheTable(
+  overrides: Record<string, number>,
+  updatedAt = Math.floor(Date.now() / 1000),
+): MockTableConfig {
   return {
     match: "FROM cache WHERE key = ?",
     matchBinds: ["stablecoins"],

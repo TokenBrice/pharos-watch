@@ -236,6 +236,21 @@ describe("dex-liquidity scoring", () => {
     vi.clearAllMocks();
   });
 
+  it("quarantines invalid durability history without losing valid samples", async () => {
+    const rows = Array.from({ length: 8 }, (_, index) => ({
+      stablecoin_id: "usdc-circle", snapshot_date: index + 1,
+      total_tvl_usd: index === 7 ? 1_000_000_000 : 1_000_000,
+      total_volume_24h_usd: 100_000, coverage_class: "primary",
+      coverage_confidence: index === 7 ? 1.1 : 1,
+    }));
+    const db = makeNoopD1({
+      prepare: () => ({
+        bind: () => ({ all: async () => ({ results: rows, success: true, meta: {} }) }),
+      }),
+    });
+    expect((await loadConfidentHistoryStability(db)).tvlStabilityMap).toEqual(new Map([["usdc-circle", 1]]));
+  });
+
   it("loads confidence history in bounded keyset pages without changing stability", async () => {
     const historyRows = Array.from({ length: 1_025 }, (_, index) => ({
       stablecoin_id: index < 700 ? "usdc-circle" : "usdt-tether",
@@ -243,6 +258,7 @@ describe("dex-liquidity scoring", () => {
       total_tvl_usd: index < 700 ? 1_000_000 : 2_000_000,
       total_volume_24h_usd: index < 700 ? 100_000 : 200_000,
       coverage_confidence: 1,
+      coverage_class: "primary",
     }));
     let queryCount = 0;
     const db = makeNoopD1({
@@ -310,6 +326,7 @@ describe("dex-liquidity scoring", () => {
       total_tvl_usd: 1_000_000,
       total_volume_24h_usd: volume,
       coverage_confidence: 1,
+      coverage_class: "primary",
       volume_availability_json: json,
     });
     const historyRows = [
@@ -345,6 +362,7 @@ describe("dex-liquidity scoring", () => {
       total_tvl_usd: tvl,
       total_volume_24h_usd: tvl / 10,
       coverage_confidence: 1,
+      coverage_class: "primary",
       volume_availability_json: null,
       methodology_version: methodologyVersion,
     });
@@ -973,6 +991,8 @@ describe("dex-liquidity scoring", () => {
   });
 
   it("keeps exact AMM evidence scoreable when its measured target rotates out", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
     const metrics = initMetrics("usdc-circle", "USDC");
     metrics.topPools = [{
@@ -991,6 +1011,12 @@ describe("dex-liquidity scoring", () => {
           invariant: "constant-product",
           trackedTokenIndex: 0,
           feeRate: 0.003,
+          capture: {
+            blockNumber: 18_500_000,
+            blockHash: `0x${"ab".repeat(32)}`,
+            blockTimestamp: nowSec - 30,
+            sourceGenerationId: "rotated-target-exact-amm",
+          },
           tokens: [
             {
               address: "0x0000000000000000000000000000000000000011",

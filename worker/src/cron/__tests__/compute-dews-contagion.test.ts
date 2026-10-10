@@ -9,7 +9,7 @@ interface CoinFixture {
   id: string;
   symbol: string;
   pegType: string;
-  /** Current supply, USD-denominated per getCirculatingRaw (peggedUSD/peggedEUR bucket). */
+  /** Current observed supply, USD-denominated (peggedUSD/peggedEUR bucket). */
   circulating: number;
   circulatingPrevDay: number;
   circulatingPrevWeek: number;
@@ -192,7 +192,7 @@ function makeDb(): D1Database {
       if (sql.includes("stability_index_samples")) {
         return psiScore === null
           ? (null as T | null)
-          : ({ score: psiScore } as unknown as T);
+          : ({ score: psiScore, stored_at: nowSec } as T);
       }
       return null as T | null;
     };

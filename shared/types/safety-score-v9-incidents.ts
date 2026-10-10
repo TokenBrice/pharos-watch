@@ -240,6 +240,20 @@ export const V9ReviewedIncidentSchema = z
         message: "An incident cannot resolve before it occurred",
       });
     }
+    if (resolvedAt !== null && resolvedAt > incident.reviewedAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["resolvedAt"],
+        message: "Resolution cannot postdate the incident review",
+      });
+    }
+    if (resolvedAt !== null && resolvedAt > incident.remediation.lastVerifiedAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["resolvedAt"],
+        message: "Resolution requires remediation verification on or after resolution",
+      });
+    }
     if (incident.remediation.lastVerifiedAt < incident.occurredAt) {
       ctx.addIssue({
         code: "custom",

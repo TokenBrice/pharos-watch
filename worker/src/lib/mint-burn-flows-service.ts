@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { getCache, setCacheIfNewer } from "./db-cache";
-import { addFreshnessHeaders } from "./api-freshness";
+import { buildCronFreshnessHeaders, buildCronFreshnessMeta, type CronTimestampLookupResult } from "./api-freshness";
 import { jsonResponseWithHeaders } from "./api-response";
 import { readCachedJsonOr503 } from "./api-cache-read";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
@@ -27,6 +27,12 @@ export {
   aggregateFlowCacheKey,
   perCoinFlowCacheKey,
 } from "./mint-burn-flow-cache-keys";
+
+/** Closed UTC hours only: raw-event boundary fragments cannot be recovered after retention. */
+export function mintBurnHourlyWindow(nowSec: number, hours: number) {
+  const end = Math.floor(nowSec / 3600) * 3600;
+  return { start: end - hours * 3600, end, semantics: "closed-utc-hours" as const };
+}
 
 export interface HourlyRow {
   stablecoin_id: string;
@@ -347,34 +353,26 @@ function parseMintBurnCronMetadata(
   };
 }
 
-function buildFlowFreshnessHeaders(freshnessTs: number | null): Record<string, string> {
-  if (freshnessTs == null) {
-    return {
-      "Cache-Control": "no-store",
-      "X-Data-Age": "unavailable",
-      Warning: '199 - "Mint/burn sync timestamp unavailable"',
-    };
-  }
-  return addFreshnessHeaders(
-    { "Cache-Control": CACHE_PROFILES.standard },
-    freshnessTs,
-    MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC,
-  );
-}
 
 export function cachedFlowFallbackResponse(cached: { value: string; updatedAt: number }): Response {
   const parsed = readCachedJsonOr503<{
     sync?: { lastSuccessfulSyncAt?: number | null };
+    _meta?: { reason?: string | null };
     updatedAt?: number;
   }>("mint-burn-flows", "mint-burn-flows", cached);
   if (!parsed.ok) {
     return parsed.response;
   }
-  const freshnessTs = resolveCachedFlowFreshnessTimestamp(parsed.data, cached.updatedAt);
+  const timestamp = resolveCachedFlowFreshnessTimestamp(parsed.data, cached.updatedAt);
+  const freshness: CronTimestampLookupResult = {
+    timestamp,
+    status: parsed.data._meta?.reason === "freshness-lookup-failed"
+      ? "lookup_failed" : timestamp == null ? "missing" : "ok",
+  };
 
   const headers = {
     "Content-Type": "application/json",
-    ...buildFlowFreshnessHeaders(freshnessTs),
+    ...buildCronFreshnessHeaders(freshness, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC, CACHE_PROFILES.standard),
   };
   return new Response(cached.value, { headers });
 }
@@ -383,13 +381,14 @@ export async function finalizeMintBurnFlowResponse(
   db: D1Database,
   cacheKey: string,
   syncStartSec: number,
-  body: unknown,
-  freshnessTs: number | null,
+  body: Record<string, unknown>,
+  freshness: CronTimestampLookupResult,
 ): Promise<Response> {
-  await setCacheIfNewer(db, cacheKey, JSON.stringify(body), syncStartSec);
+  const responseBody = { ...body, _meta: buildCronFreshnessMeta(freshness, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC) };
+  await setCacheIfNewer(db, cacheKey, JSON.stringify(responseBody), syncStartSec);
   return jsonResponseWithHeaders(
-    body,
-    buildFlowFreshnessHeaders(freshnessTs),
+    responseBody,
+    buildCronFreshnessHeaders(freshness, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC, CACHE_PROFILES.standard),
   );
 }
 

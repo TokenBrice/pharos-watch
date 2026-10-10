@@ -3,13 +3,23 @@ import {
   ENDPOINT_DEFINITIONS,
   type EndpointDefinitionByKey,
 } from "@shared/lib/api-endpoints/definitions";
+import { validateAllowedEndpointMethods } from "@shared/lib/api-endpoints/validation";
 
 describe("endpoint definition factory parity", () => {
+  it.each(["PUT", "DELETE", "PATCH"])("advertises only actual endpoint methods for %s", (method) => {
+    expect(validateAllowedEndpointMethods(method, ["POST"])).toEqual({
+      message: "Method not allowed", allowedMethods: ["POST"],
+    });
+    expect(validateAllowedEndpointMethods(method, ["GET"])).toEqual({
+      message: "Method not allowed", allowedMethods: ["GET"],
+    });
+  });
+
   it("preserves inferred literal keys and method tuples", () => {
     expectTypeOf<EndpointDefinitionByKey<"stablecoins">["key"]>().toEqualTypeOf<"stablecoins">();
     expectTypeOf<EndpointDefinitionByKey<"stablecoins">["methods"]>().toEqualTypeOf<readonly ["GET"]>();
     expectTypeOf<EndpointDefinitionByKey<"feedback">["methods"]>().toEqualTypeOf<readonly ["POST"]>();
-    expectTypeOf<EndpointDefinitionByKey<"audit-depeg-history">["methods"]>()
+    expectTypeOf<EndpointDefinitionByKey<"backfill-dews">["methods"]>()
       .toEqualTypeOf<readonly ["GET", "POST"]>();
   });
 

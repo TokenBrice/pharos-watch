@@ -226,7 +226,7 @@ export function makeLeaseDb(seed?: {
       bind: (...args: unknown[]) => stmt(sql, args),
       run: async () => {
         const isSlotUpdate = sql.includes("UPDATE cron_slot_executions");
-        if (isSlotUpdate && sql.includes("SET updated_at = ?") && failSlotHeartbeatRuns > 0) {
+        if (isSlotUpdate && sql.includes("SET updated_at = MAX(updated_at, ?)") && failSlotHeartbeatRuns > 0) {
           failSlotHeartbeatRuns--;
           throw new Error("slot heartbeat write failed");
         }

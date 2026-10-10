@@ -38,18 +38,37 @@ interface ActiveIncidentProjection {
   constituentEventCount: number;
 }
 
-export interface ActiveIncidentProjectionLoad {
-  projections: Map<number, ActiveIncidentProjection>;
-  available: boolean;
+export type IncidentProjectionUnavailableReason =
+  | "incident-projection-read-failed"
+  | "incident-projection-invalid";
+
+export type ActiveIncidentProjectionLoad =
+  | { available: true; projections: Map<number, ActiveIncidentProjection> }
+  | { available: false; reason: IncidentProjectionUnavailableReason };
+
+export class IncidentProjectionUnavailableError extends Error {
+  constructor(readonly reason: IncidentProjectionUnavailableReason = "incident-projection-read-failed") {
+    super(reason);
+    this.name = "IncidentProjectionUnavailableError";
+  }
 }
 
 function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [number, ActiveIncidentProjection] | null {
   if (
+    !row || typeof row !== "object" ||
     typeof row.current_event_id !== "number" ||
-    !Number.isFinite(row.current_event_id) ||
+    !Number.isSafeInteger(row.current_event_id) ||
+    row.current_event_id <= 0 ||
     typeof row.first_started_at !== "number" ||
-    !Number.isFinite(row.first_started_at) ||
-    row.first_started_at <= 0
+    !Number.isSafeInteger(row.first_started_at) ||
+    row.first_started_at <= 0 ||
+    !(row.first_start_price === null ||
+      (typeof row.first_start_price === "number" && Number.isFinite(row.first_start_price) && row.first_start_price >= 0)) ||
+    !(row.first_peg_reference === null ||
+      (typeof row.first_peg_reference === "number" && Number.isFinite(row.first_peg_reference) && row.first_peg_reference > 0)) ||
+    typeof row.constituent_event_count !== "number" ||
+    !Number.isSafeInteger(row.constituent_event_count) ||
+    row.constituent_event_count <= 0
   ) {
     return null;
   }
@@ -58,18 +77,9 @@ function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [n
     row.current_event_id,
     {
       startedAt: row.first_started_at,
-      startPrice:
-        typeof row.first_start_price === "number" && Number.isFinite(row.first_start_price)
-          ? row.first_start_price
-          : null,
-      pegReference:
-        typeof row.first_peg_reference === "number" && Number.isFinite(row.first_peg_reference)
-          ? row.first_peg_reference
-          : null,
-      constituentEventCount:
-        typeof row.constituent_event_count === "number" && Number.isFinite(row.constituent_event_count)
-          ? Math.max(1, Math.floor(row.constituent_event_count))
-          : 1,
+      startPrice: row.first_start_price,
+      pegReference: row.first_peg_reference,
+      constituentEventCount: row.constituent_event_count,
     },
   ];
 }
@@ -122,13 +132,20 @@ export async function loadActiveIncidentProjections(
         GROUP BY alias.current_event_id, canonical.first_started_at,
                  first_event.start_price, first_event.peg_reference`,
     );
-    const result = stablecoinId
+    const result: { success?: boolean; results?: ActiveIncidentProjectionRow[] } = stablecoinId
       ? await stmt.bind(stablecoinId, stablecoinId).all<ActiveIncidentProjectionRow>()
       : await stmt.all<ActiveIncidentProjectionRow>();
+    if (result.success === false) {
+      return { available: false, reason: "incident-projection-read-failed" };
+    }
+    if (!Array.isArray(result.results)) {
+      return { available: false, reason: "incident-projection-invalid" };
+    }
     const projections = new Map<number, ActiveIncidentProjection>();
-    for (const row of result.results ?? []) {
+    for (const row of result.results) {
       const normalized = normalizeActiveIncidentProjection(row);
-      if (normalized) projections.set(normalized[0], normalized[1]);
+      if (!normalized) return { available: false, reason: "incident-projection-invalid" };
+      projections.set(normalized[0], normalized[1]);
     }
     return { projections, available: true };
   } catch (err) {
@@ -136,7 +153,7 @@ export async function loadActiveIncidentProjections(
     if (!isMissingTableError(err)) {
       logWorkerEventArgs("lib", "error", "[depeg-event-projection] Unexpected error loading active incident projections:", msg);
     }
-    return { projections: new Map(), available: false };
+    return { available: false, reason: "incident-projection-read-failed" };
   }
 }
 

@@ -302,7 +302,10 @@ describe("handleStablecoinDetail", () => {
     const body = (await readJsonResponse(res, 200)) as { tokens: Array<{ totalCirculatingUSD?: Record<string, number> }> };
     expect(body.tokens).toHaveLength(1);
     expect(body.tokens[0]?.totalCirculatingUSD?.peggedUSD).toBe(123_000_000);
-    expect(ctx.waitUntil).toHaveBeenCalled();
+    expect(ctx.waitUntil).not.toHaveBeenCalled();
+    expect(res.headers.get("X-Data-Updated-At")).toBe("1700000000");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(res.headers.get("Warning")).toMatch(/^110 /);
   });
 
   it("serves stale cache immediately and refreshes in the background", async () => {
@@ -591,12 +594,12 @@ describe("handleStablecoinDetail", () => {
 
     const body = await readJsonResponse(res, 200) as { tokens: Array<{ totalCirculating: unknown; totalCirculatingUSD: unknown }> };
     expect(body.tokens).toEqual([expect.objectContaining({
-      totalCirculating: { peggedGOLD: 200 },
-      totalCirculatingUSD: { peggedGOLD: 400 },
+      totalCirculating: { peggedGOLD: 500 },
+      totalCirculatingUSD: { peggedGOLD: 1000 },
     })]);
   });
 
-  it("normalizes non-USD DefiLlama detail responses into explicit native and USD token fields", async () => {
+  it("preserves non-USD DefiLlama native history without inventing USD from today's quote", async () => {
     const db = mockD1([{ match: "cache", rows: [] }]);
     const dlBody = JSON.stringify({
       price: 1.25,
@@ -624,7 +627,6 @@ describe("handleStablecoinDetail", () => {
       date: 1700000000,
       circulating: { peggedEUR: 80 },
       totalCirculating: { peggedEUR: 80 },
-      totalCirculatingUSD: { peggedEUR: 100 },
     });
   });
 

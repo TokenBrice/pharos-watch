@@ -116,6 +116,7 @@ export const handleStart: WebhookCommandHandler = async (ctx, args) => {
         prepareMutationAppliedStatement: ctx.prepareMutationAppliedStatement,
         confirmAtomicMutationApplied: ctx.confirmAtomicMutationApplied,
         wasMutationApplied: ctx.wasMutationApplied,
+        clearPending: ctx.clearPendingOnMutation,
       });
       return;
   }

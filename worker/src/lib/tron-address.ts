@@ -1,11 +1,9 @@
-import { bytesToHex } from "./hash";
+import { canonicalTronAddress } from "@shared/lib/tron-address";
 
 const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-const BASE58_INDEX = new Map(BASE58_ALPHABET.split("").map((char, index) => [char, index]));
 const BIGINT_ZERO = BigInt(0);
 const BIGINT_BYTE_SHIFT = BigInt(8);
 const BIGINT_BASE58 = BigInt(58);
-const BIGINT_BYTE_MASK = BigInt(0xff);
 
 async function sha256(bytes: Uint8Array): Promise<Uint8Array> {
   const digestInput = new Uint8Array(bytes);
@@ -43,27 +41,6 @@ function encodeBase58(bytes: Uint8Array): string {
   return encoded || "1";
 }
 
-function decodeBase58(value: string): Uint8Array | null {
-  let decoded = BIGINT_ZERO;
-  for (const char of value) {
-    const index = BASE58_INDEX.get(char);
-    if (index == null) return null;
-    decoded = decoded * BIGINT_BASE58 + BigInt(index);
-  }
-
-  const bytes: number[] = [];
-  while (decoded > BIGINT_ZERO) {
-    bytes.unshift(Number(decoded & BIGINT_BYTE_MASK));
-    decoded >>= BIGINT_BYTE_SHIFT;
-  }
-
-  for (const char of value) {
-    if (char !== "1") break;
-    bytes.unshift(0);
-  }
-
-  return Uint8Array.from(bytes);
-}
 
 function normalizeTronHexAddress(address: string): string | null {
   const normalized = address.trim().toLowerCase();
@@ -84,18 +61,17 @@ export async function tronHexAddressToBase58(address: string): Promise<string | 
 }
 
 export async function tronBase58ToHex(address: string): Promise<string | null> {
-  const decoded = decodeBase58(address.trim());
-  if (!decoded || decoded.length < 5) return null;
-  const payload = decoded.slice(0, -4);
-  const checksum = decoded.slice(-4);
-  const expected = (await doubleSha256(payload)).slice(0, 4);
-  if (checksum.length !== expected.length || checksum.some((byte, index) => byte !== expected[index])) {
-    return null;
-  }
-  if (payload[0] !== 0x41 || payload.length !== 21) return null;
-  return `0x${bytesToHex(payload.slice(1)).toLowerCase()}`;
+  return /^T/.test(address.trim()) ? canonicalTronAddress(address) : null;
 }
 
 export async function normalizeTronAddress(address: string): Promise<string | null> {
-  return normalizeTronHexAddress(address) ?? tronBase58ToHex(address);
+  return canonicalTronAddress(address);
+}
+
+/** SQL compares hex case-insensitively, but the provider's Base58 spelling exactly. */
+export async function blacklistAddressSpellings(chainId: string, address: string): Promise<[string, string, string]> {
+  if (chainId !== "tron") return [address.toLowerCase(), address.toLowerCase(), address];
+  const hex = canonicalTronAddress(address);
+  if (!hex) return [address, address, address];
+  return [hex, `41${hex.slice(2)}`, await tronHexAddressToBase58(hex) ?? address];
 }

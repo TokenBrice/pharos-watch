@@ -23,7 +23,7 @@ import {
   MINT_AUTHORITY_STATUS_CONFIG,
   type MintAuthorityScoreFilterValue,
   type MintAuthorityStatusKind,
-} from "@/lib/mint-authority-display";
+} from "@shared/lib/classification";
 import {
   CUSTODY_MODEL_LABELS,
   GOVERNANCE_LABELS_SHORT,

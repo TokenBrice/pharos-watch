@@ -1,17 +1,17 @@
 import * as React from "react";
 import { CardFrame, MetricLabel, Sparkline, TEXT_SECONDARY, SEMANTIC_COLORS } from "./shared";
-import { PSI_HEX_COLORS } from "@shared/lib/psi-colors";
+import { PSI_HEX_COLORS } from "@shared/lib/classification";
 
 export interface StabilityIndexCardData {
   psiScore: number;
   psiBand: string;
-  delta24h: number;
-  sparklineData: number[];
+  delta24h: number | null;
+  sparklineData: number[] | null;
   bands: Array<{ name: string; active: boolean }>;
   // New fields
-  avg7d: number;
-  allTimeHigh: number;
-  allTimeLow: number;
+  avg7d: number | null;
+  allTimeHigh: number | null;
+  allTimeLow: number | null;
   flightToQuality: boolean;
   flightIntensity: number | null;
   lastUpdated?: string;
@@ -35,9 +35,9 @@ export function StabilityIndexCard({
 }) {
   const bandColor = getBandColor(data.psiBand);
   const deltaColor =
-    data.delta24h > 0 ? "#22c55e" : data.delta24h < 0 ? "#ef4444" : "#8b8fa3";
+    data.delta24h != null && data.delta24h > 0 ? "#22c55e" : data.delta24h != null && data.delta24h < 0 ? "#ef4444" : "#8b8fa3";
   // Higher PSI = healthier conditions, so positive delta = green (improving), negative = red (worsening)
-  const deltaSign = data.delta24h > 0 ? "+" : "";
+  const deltaSign = data.delta24h != null && data.delta24h > 0 ? "+" : "";
   
   // Calculate position for thermometer
   const thermoPosition = getThermometerPosition(data.psiScore);
@@ -72,15 +72,17 @@ export function StabilityIndexCard({
         {/* 24h delta */}
         <div style={{ display: "flex", gap: 24, marginBottom: 16 }}>
           <span style={{ fontSize: 20, color: deltaColor, fontFamily: "Geist Mono" }}>
-            {deltaSign}{data.delta24h.toFixed(2)} 24h
+            {data.delta24h == null ? "24h change unavailable" : `${deltaSign}${data.delta24h.toFixed(2)} 24h`}
           </span>
           <span style={{ fontSize: 20, color: TEXT_SECONDARY, fontFamily: "Geist Mono" }}>
-            7D AVG: {data.avg7d.toFixed(1)}
+            7D AVG: {data.avg7d == null ? "—" : data.avg7d.toFixed(1)}
           </span>
         </div>
 
         {/* Larger Sparkline */}
-        <Sparkline data={data.sparklineData} color={bandColor} />
+        {data.sparklineData ? <Sparkline data={data.sparklineData} color={bandColor} /> : (
+          <span style={{ fontSize: 16, color: TEXT_SECONDARY }}>History unavailable · fewer than two observations</span>
+        )}
       </div>
 
       {/* Context row: ATH/ATL + Flight to Quality */}
@@ -94,10 +96,10 @@ export function StabilityIndexCard({
       >
         <div style={{ display: "flex", gap: 16 }}>
           <span style={{ color: TEXT_SECONDARY }}>
-            ATH: <span style={{ color: SEMANTIC_COLORS.positive, fontWeight: 600 }}>{data.allTimeHigh.toFixed(1)}</span>
+            ATH: <span style={{ color: SEMANTIC_COLORS.positive, fontWeight: 600 }}>{data.allTimeHigh == null ? "—" : data.allTimeHigh.toFixed(1)}</span>
           </span>
           <span style={{ color: TEXT_SECONDARY }}>
-            ATL: <span style={{ color: SEMANTIC_COLORS.negative, fontWeight: 600 }}>{data.allTimeLow.toFixed(1)}</span>
+            ATL: <span style={{ color: SEMANTIC_COLORS.negative, fontWeight: 600 }}>{data.allTimeLow == null ? "—" : data.allTimeLow.toFixed(1)}</span>
           </span>
         </div>
         {data.flightToQuality && (

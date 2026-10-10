@@ -45,6 +45,7 @@ export function enrichPoolProtocol(
   let resolvedPoolType = poolType;
   let feeTierForExtra: number | undefined;
   let balanceRatio = 1;
+  let hasMeasuredBalance = false;
   let poolMaturityDays = 0;
   let organicFraction = 0.5;
   let hasMeasuredOrganicFraction = false;
@@ -54,8 +55,13 @@ export function enrichPoolProtocol(
     | undefined;
 
   if (curveData) {
-    balanceRatio = curveData.balanceRatio;
-    balanceDetails = curveData.balanceDetails;
+    const contributionScope = curveAddressMatch
+      ? curveData.contributionTvlScope ?? (curveData.metapoolAdjustedTvl !== curveData.tvl ? "base-pool-excluded" : "full-pool")
+      : "full-pool";
+    hasMeasuredBalance = (curveData.balanceTvlScope ?? "full-pool") === contributionScope;
+    // Do not apply a full-pool measurement to a base-pool-excluded notional.
+    balanceRatio = hasMeasuredBalance ? curveData.balanceRatio : 1;
+    balanceDetails = hasMeasuredBalance ? curveData.balanceDetails : undefined;
     if (isCryptoSwap(curveData.registryId)) {
       resolvedPoolType = "curve-cryptoswap";
       qualityMultiplier = QUALITY_MULTIPLIERS["curve-cryptoswap"]!;
@@ -118,6 +124,7 @@ export function enrichPoolProtocol(
     qualityMultiplier,
     feeTierForExtra,
     balanceRatio,
+    hasMeasuredBalance,
     poolMaturityDays,
     organicFraction,
     hasMeasuredOrganicFraction,

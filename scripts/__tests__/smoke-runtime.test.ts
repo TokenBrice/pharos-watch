@@ -1,4 +1,7 @@
 import { resolve } from "node:path";
+import { EventEmitter } from "node:events";
+import { createServer } from "node:http";
+import { PassThrough } from "node:stream";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
@@ -15,6 +18,7 @@ import {
   retrySmokeOperation,
   runBoundedWorkerPool,
   withBrowserContext,
+  waitForStaticExportServer,
 } from "../lib/smoke-runtime.mjs";
 
 describe("smoke-runtime CLI helpers", () => {
@@ -82,6 +86,7 @@ describe("smoke-runtime CLI helpers", () => {
     expect(
       await resolveStaticExportPort("127.0.0.1", {
         env: { STATIC_EXPORT_PORT: "49231" },
+        canListenImpl: async () => true,
       }),
     ).toBe(49231);
 
@@ -98,6 +103,51 @@ describe("smoke-runtime CLI helpers", () => {
 
     expect(fallbackPort).toBe(49232);
     expect(fallbackCalls).toEqual([{ host: "127.0.0.1", preferredPort, fallbackPort }]);
+  });
+
+  it("rejects an explicitly occupied port even when its unrelated listener serves successful HTTP", async () => {
+    const listener = createServer((_req, res) => { res.end("unrelated artifact"); });
+    await new Promise<void>((resolve) => listener.listen(0, "127.0.0.1", resolve));
+    const address = listener.address();
+    if (!address || typeof address === "string") throw new Error("Missing listener address");
+    try {
+      expect((await fetch(`http://127.0.0.1:${address.port}/`)).status).toBe(200);
+      await expect(resolveStaticExportPort("127.0.0.1", {
+        env: { STATIC_EXPORT_PORT: String(address.port) },
+      })).rejects.toThrow("already in use");
+    } finally {
+      await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+    }
+  });
+
+  it.each(["error", "exit"])("fails owned-server readiness on early child %s without probing another listener", async (event) => {
+    const server = Object.assign(new EventEmitter(), {
+      stdout: new PassThrough(), stderr: new PassThrough(), exitCode: null, signalCode: null,
+    });
+    const fetchImpl = vi.fn(async () => new Response("unrelated", { status: 200 }));
+    const waiting = waitForStaticExportServer(server, "http://127.0.0.1:4173", {
+      fetchImpl, sleepImpl: async () => {
+        if (event === "error") server.emit("error", new Error("bind failed"));
+        else server.emit("exit", 1, null);
+      },
+    });
+    await expect(waiting).rejects.toThrow(event === "error" ? "bind failed" : "exited before readiness");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("requires the owned server startup marker before HTTP readiness", async () => {
+    const server = Object.assign(new EventEmitter(), {
+      stdout: new PassThrough(), stderr: new PassThrough(), exitCode: null, signalCode: null,
+    });
+    const fetchImpl = vi.fn(async () => new Response("current artifact", { status: 200 }));
+    const baseUrl = "http://127.0.0.1:4173";
+    const sleepImpl = vi.fn(async () => {
+      expect(fetchImpl).not.toHaveBeenCalled();
+      server.stdout.write(`[serve-static-export] Serving /current/out on ${baseUrl} with /api proxy local\n`);
+    });
+    await expect(waitForStaticExportServer(server, baseUrl, { fetchImpl, sleepImpl })).resolves.toBeUndefined();
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    expect(sleepImpl).toHaveBeenCalledOnce();
   });
 
   it("owns Chromium fallback and browser/context lifecycle through adapters", async () => {

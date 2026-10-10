@@ -2,7 +2,7 @@
 
 import { MetricStatCard } from "@/components/metric-stat-card";
 import { BlacklistMetricCardSkeletonGrid } from "@/components/blacklist-metric-card-skeleton-grid";
-import { formatCurrency } from "@shared/lib/format";
+import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 
 interface BlacklistDetailStatsProps {
@@ -22,8 +22,8 @@ export function BlacklistDetailStats({ symbol, stats, isLoading }: BlacklistDeta
   }
 
   const frozenAddresses = stats.perCoinFrozenAddressCount[symbol] ?? 0;
-  const frozenTotal = stats.perCoinFrozenTotal[symbol] ?? 0;
-  const destroyedTotal = stats.perCoinDestroyedTotal[symbol] ?? 0;
+  const frozenTotal = stats.perCoinFrozenTotal[symbol];
+  const destroyedTotal = stats.perCoinDestroyedTotal[symbol];
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5 animate-in fade-in duration-[220ms] motion-reduce:animate-none">
@@ -34,12 +34,12 @@ export function BlacklistDetailStats({ symbol, stats, isLoading }: BlacklistDeta
       />
       <MetricStatCard
         title="Frozen total"
-        value={formatCurrency(frozenTotal)}
+        value={formatBlacklistValuation(frozenTotal, stats.valuationCoverage?.perCoinFrozen[symbol])}
         subtext="persistent freeze-ledger balance"
       />
       <MetricStatCard
         title="Destroyed"
-        value={formatCurrency(destroyedTotal)}
+        value={formatBlacklistValuation(destroyedTotal, stats.valuationCoverage?.perCoinDestroyed[symbol])}
         subtext="seized &amp; burned (USD value)"
       />
     </div>

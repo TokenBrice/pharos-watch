@@ -24,7 +24,7 @@ fiat-cash,Custodial Cash and Cash-Equivalents,unknown,South Korea,5
 protocol-position,Protocol Position Liability,usdt-tether,unknown,4
 protocol-position,Protocol Position Liability,pyusd-paypal,unknown,4
 fiat-cash,Custodial Cash and Cash-Equivalents,unknown,France,4
-algorithmic,Reflexive / Unbacked,unknown,unknown,4
+algorithmic,Programmatic Peg Defense,unknown,unknown,4
 fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Malta,4
 synthetic-delta-neutral,Hedged Synthetic Dollar,unknown,Germany,4
 fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Australia,4
@@ -94,7 +94,7 @@ fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Bahamas,1
 rwa-credit-fund,Tokenized Credit Fund,unknown,UAE,1
 synthetic-delta-neutral,Hedged Synthetic Dollar,avusd-avant,British Virgin Islands,1
 rwa-credit-fund,Tokenized Credit Fund,unknown,Kyrgyz Republic,1
-algorithmic,Reflexive / Unbacked,unknown,United States,1
+algorithmic,Programmatic Peg Defense,unknown,United States,1
 synthetic-delta-neutral,Hedged Synthetic Dollar,unknown,Singapore,1
 protocol-position,Protocol Position Liability,xdai-gnosis,unknown,1
 tbill,Tokenized Treasury,usdo-openeden,Bermuda,1
