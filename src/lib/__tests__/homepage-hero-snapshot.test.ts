@@ -92,6 +92,18 @@ describe("selectHomepageHeroSnapshot", () => {
       status: "available", source: "retained", snapshot: liveSnapshot,
     });
   });
+
+  it("retains figures without inventing an as-of date when producer time is absent", () => {
+    const liveSnapshot = buildLiveHomepageHeroSnapshot({
+      peggedAssets: [makeStablecoin({ id: "usdt-tether", circulating: { peggedUSD: 200 } })],
+    });
+    expect(liveSnapshot.asOfISO).toBeNull();
+    expect(liveSnapshot.cohort.ts).toBe(0);
+    expect(liveSnapshot.totalUsd).toBe(200);
+    expect(selectHomepageHeroSnapshot({ liveSnapshot, fallbackSnapshot, nowMs })).toEqual({
+      status: "available", source: "retained", snapshot: liveSnapshot,
+    });
+  });
 });
 
 describe("buildLiveHomepageHeroSnapshot supply availability", () => {

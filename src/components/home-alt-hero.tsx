@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { HomepageHeroSnapshot } from "@/lib/homepage-static-snapshot";
+import type { ApiMeta } from "@/lib/api";
 import { CHART_ORANGE, CHART_PALETTE, CHART_SLATE_STRONG, USDT_GREEN, USDC_BLUE } from "@/lib/chart-colors";
 import { HomeAltHeroChartGate } from "@/components/home-alt-hero-chart-gate";
 import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-header";
@@ -26,13 +27,16 @@ export function HomeAltHero({
   fallbackSelectedAtMs: number;
 }): React.JSX.Element {
   const stablecoinsQuery = useStablecoins();
+  // Receipt time is not a producer observation; keep unknown generations
+  // available with the shared unavailable-freshness notices.
+  const meta: ApiMeta = stablecoinsQuery.meta?.updatedAt === undefined
+    ? { updatedAt: null, ageSeconds: null, status: "unknown", reason: "missing-generation" }
+    : stablecoinsQuery.meta;
   const liveSnapshot = useMemo(
     () => stablecoinsQuery.data
-      ? buildLiveHomepageHeroSnapshot(stablecoinsQuery.data, stablecoinsQuery.meta?.updatedAt ?? (
-        stablecoinsQuery.dataUpdatedAt > 0 ? stablecoinsQuery.dataUpdatedAt / 1000 : undefined
-      ))
+      ? buildLiveHomepageHeroSnapshot(stablecoinsQuery.data, meta.updatedAt ?? undefined)
       : null,
-    [stablecoinsQuery.data, stablecoinsQuery.meta?.updatedAt, stablecoinsQuery.dataUpdatedAt],
+    [stablecoinsQuery.data, meta.updatedAt],
   );
   // Hydration-stable first render: the build-time clock keeps server and
   // client output identical, then a deferred tick re-evaluates fallback
@@ -47,7 +51,6 @@ export function HomeAltHero({
       clearInterval(interval);
     };
   }, []);
-  const meta = stablecoinsQuery.meta ?? null;
   const liveHealth = deriveDataHealth({
     ...DATA_HEALTH_PRESETS.stablecoins,
     dataUpdatedAt: stablecoinsQuery.dataUpdatedAt,

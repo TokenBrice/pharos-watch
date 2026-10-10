@@ -51,11 +51,18 @@ describe("HomeAltHero producer freshness", () => {
     expect(screen.getAllByText(/^\$100(?:\.0)?$/).length).toBeGreaterThan(0);
   });
 
-  it("uses the query update timestamp when producer metadata is absent", () => {
-    useStablecoinsMock.mockReturnValue({ data, dataUpdatedAt: NOW, error: null, refetch: vi.fn() });
+  it.each([
+    ["absent", undefined],
+    ["explicitly unavailable", { updatedAt: null, ageSeconds: null, status: "unknown", reason: "missing-generation" }],
+    ["warning-only", { status: "degraded", warning: "source warning" }],
+  ] satisfies [string, ApiMeta | undefined][])("does not treat a recent receipt as producer time with %s metadata", (_case, meta) => {
+    useStablecoinsMock.mockReturnValue({ data, dataUpdatedAt: NOW, meta, error: null, refetch: vi.fn() });
     render(<HomeAltHero snapshot={fallback} fallbackSelectedAtMs={NOW} />);
-    expect(screen.getByText("Live · as of October 10, 2026")).toBeTruthy();
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByText(/^Live ·/)).toBeNull();
+    expect(screen.getByText("Freshness unavailable · generation unavailable")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toMatch(/initial data/);
+    expect(screen.queryByText(/as of October 10, 2026/)).toBeNull();
+    expect(screen.getAllByText(/^\$100(?:\.0)?$/).length).toBeGreaterThan(0);
   });
 
   it("labels retained figures after a failed refresh and exposes their producer update", () => {

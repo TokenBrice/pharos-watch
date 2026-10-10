@@ -90,7 +90,7 @@ Saved shortcuts are also browser-local:
 
 The current supply snapshot records observed versus expected core-aggregate IDs, plus separate present-but-unavailable and omitted-row counts. No observed supply means a nullable headline, not a live $0; the selector then uses a dated, eligible fallback or renders unavailable. Explicit observed zeros remain zero. Mixed coverage stays visible as a **Known Market Cap Subtotal** with an observed/expected census; the present-row `supplyUnavailableCount` keeps its original meaning. A subgroup with no observations is unavailable, named cohorts require all their members, and full-market percentages and the Others residual require complete core coverage.
 
-Only successful data classified fresh by `deriveDataHealth` is **Live**. Without producer metadata, query `dataUpdatedAt` supplies health and the displayed date; with neither timestamp, retained figures say **Freshness unavailable**. Stale, degraded, or failed-refresh figures keep dated values and shared notices. A minute clock rechecks query age and the fallback's 72-hour expiry.
+Only successful data with a producer `updatedAt` classified fresh by `deriveDataHealth` is **Live**. Without producer time, retained figures say **Freshness unavailable · generation unavailable** and carry the shared unavailable-freshness notice; query `dataUpdatedAt` is receipt time and supplies neither freshness authority nor a displayed as-of date. Stale, degraded, or failed-refresh figures keep their available producer dates and shared notices. A minute clock rechecks producer age and the fallback's 72-hour expiry.
 
 ### Market Pulse cards
 
