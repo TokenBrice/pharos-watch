@@ -1,0 +1,503 @@
+[
+  {
+    "version": "6.33",
+    "title": "Confidence-qualified weekly DEX history for liquidity erosion",
+    "date": "2026-10-08",
+    "effectiveAt": 1791417600,
+    "summary": "DEWS Liquidity Erosion admits the nearest positive-TVL history observation with confidence at least 0.5 inside an inclusive 36-hour weekly tolerance, retaining the selected observation's score, TVL and date.",
+    "impact": [
+      "Without an eligible weekly baseline, both historical score and TVL anchors remain null/unavailable rather than using weak or out-of-window observations. This changes input availability and can change DEWS scores and bands.",
+      "The live DEX history lower bound is now minus 8.5 days. Historical reconstruction reads DEX history from the earliest event UTC day minus 15.5 days; supply history bounds are unchanged.",
+      "Weak public DEX history remains visible, and the existing confidence >=0.75 durability and digest gates remain unchanged. No collector, Liquidity, PSI, DDR or Safety scoring admission is promoted; depeg detection rules are unchanged.",
+      "Release requires owner-approved production-history replay under U-C20-16. No production replay, mover, band-equivalence or runtime-health result is claimed by this entry."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.32",
+    "title": "Quarantine malformed asset inputs without withholding healthy DEWS peers",
+    "date": "2026-10-07",
+    "effectiveAt": 1791331200,
+    "summary": "Malformed core persisted inputs reject only their eligible asset before scoring and contagion; healthy peers publish an exact admitted generation.",
+    "impact": [
+      "Per-asset decode diagnostics retain source, context, identity and reason; scoped rejections do not enter global degradedSources",
+      "Quarantined latest rows are removed without rewriting sparse history, daily evidence or retained accepted publication buffers; healed assets rejoin normally",
+      "Whole-source failures and unscopable cohort-invalidating inputs still withhold publication; an empty admitted cohort preserves the previous pointer",
+      "Optional unreadable pool detail retains component-only unavailability; formula weights, trust floors and freshness budgets are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.31",
+    "title": "Trusted-price coverage bounds depeg time; thin-supply deviations are observed",
+    "date": "2026-10-03",
+    "effectiveAt": 1791040052,
+    "summary": "Open incidents accrue off-peg time only between recorded continuous trusted observations. Blind and unrecorded legacy-open spans are unknown, not off peg or verified stability; observed current deviations no longer depend on the $1M event-creation floor.",
+    "impact": [
+      "Additive migration 0255 preserves old-Worker queries and records trusted off-peg and at-par intervals, the latest trusted price clock, and three-state observation metadata without a historical backfill",
+      "Blind/missed observations, state transitions, or gaps over 1200 seconds break interval continuity; consecutive trusted at-par observations retain known at-par time instead of being labeled blind",
+      "PegScore and its recent 90-day companion exclude unknown event spans from the time denominator and duration severity; historical measured peaks remain evidence, but stale open lifecycle alone no longer activates a current-depeg penalty",
+      "Uninstrumented open events have unknown duration until new trusted observations arrive; closed legacy/replay events retain recorded durations",
+      "Sub-$1M assets with observed prices receive currentDeviationBps and pegReference; event creation still requires $1M supply and all existing trust/confirmation gates"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.30",
+    "title": "Unknown audit verdicts cannot become scoreable evidence",
+    "date": "2026-09-28",
+    "effectiveAt": 1790553600,
+    "summary": "PegScore and audit recomputation now fail closed on unknown non-null audit verdicts; archived and V9 provenance reject unknown vocabulary instead of interpreting it as unaudited evidence.",
+    "impact": [
+      "The five known verdicts share one schema and separate PegScore/DDR eligibility policies",
+      "PegScore still excludes false_positive and disputed, includes no_data, and retains legacy null-verdict evidence",
+      "Unknown verdicts are excluded from direct scoring and SQL recomputation; strict archived parsing rejects them without coercion to null",
+      "DEWS excludes nominal par references from price inputs; absent observed primary and DEX prices leave divergence unavailable rather than measured calm",
+      "No detection threshold, DEWS formula, known-verdict weight, or stored historical row changes"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.29",
+    "title": "Unreadable pool detail is an unavailable DEWS component, not measured calm",
+    "date": "2026-09-27",
+    "effectiveAt": 1790467200,
+    "summary": "The DEWS pool signal now carries explicit availability for its worst-single-pool component. When an asset's top-pool detail is missing, unparseable, not an array, has an unreadable entry, or its eligible (>= $100K) pools carry no balance measurement, that 25% component is unavailable and the pool blend renormalizes over the readable balance (40%) and average-stress (35%) components instead of adding a measured-looking zero. A readable list with no eligible pool stays an observed empty set scored as a measured zero.",
+    "impact": [
+      "`computePoolSignal` in `worker/src/lib/dews/signal-families.ts` divides the readable weighted sum by the readable weight (`componentCoverage` 0.75 or 1) and publishes `worstPool: null`, `worstPoolStatus` (`observed` / `empty` / `unavailable`), `worstPoolUnavailableReason` and `componentCoverage` on the pool signal; with every component readable the formula is numerically unchanged",
+      "Top-pool parsing in `worker/src/lib/dews/scoring.ts` no longer defaults a missing `extra.balanceRatio` to perfect balance (1.0) or turns an unreadable entry into a zero-TVL balanced pool; pools without a balance measurement are excluded from the worst-pool max, and an unreadable list or entry records a per-asset `dex_liquidity.top_pools_json` diagnostic (`degradesRun: false`) that degrades only that asset's pool signal, never the whole generation",
+      "Pool smoothing now also requires the previous reading's `componentCoverage` to match the current one; a previous reading with different or unrecorded coverage (every pre-6.29 row) is not averaged in, and the outcome is published as `smoothing`. The first post-deploy cycle therefore publishes unsmoothed pool values",
+      "Reproduction: balance ratio 0.5 and average stress 50 with absent pool detail previously scored 37.5 with `worstPool: 0`; it now scores 50 with `worstPool: null` over 75% component coverage, matching the same data with an observed $1M pool at ratio 0.5",
+      "Captured-data sizing: 18 of 378 DEX assets have a raw pool-signal increase of one third, including USDT 29.5 -> 39.3, USD1 29.3 -> 39.0, XAUT 30.3 -> 40.4 and CADC 54.2 -> 72.3. These are pool sub-signals, not composite DEWS scores; the original DEX capture did not retain the other DEWS signals or prior smoothing state",
+      "A separate current-time estimate uses the 2026-09-27 22:56:35 UTC published cohort (237 assets), its 22:26:35 predecessor and concurrently captured pool inputs. Replaying the old composite reproduces all 237 published scores; applying the new unsmoothed pool signal to those same inputs changes SBC CALM 14 -> WATCH 17, XSGD CALM 15 -> WATCH 16 and KRWQ WATCH 35 -> ALERT 37. Other signals and PSI are held fixed, with the evidence cap and both contagion passes recomputed; this is not a forecast of changing market inputs",
+      "For a frozen-input next-cycle comparison using the latest published row as smoothing history, only SBC and XSGD change band between methodologies: old KRWQ already reaches ALERT 36, versus new ALERT 37. Neither SBC nor XSGD is Telegram-alertable. KRWQ is alertable, but the captured Telegram last-alertable baseline is already ALERT, so none of these transitions produces a new DEWS dispatch candidate under the existing rules; no suppression machinery is added"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.28",
+    "title": "Unavailable supply no longer closes a live depeg event",
+    "date": "2026-09-27",
+    "effectiveAt": 1790467200,
+    "summary": "The live-event supply floor now distinguishes an observed supply from a missing one. Only an observed circulating supply below $1M, including an explicit zero, closes an open event as `coverage-lost-supply`; when an asset's current circulating buckets are absent, empty or wholly invalid, the open event stays open and unchanged and no new event opens.",
+    "impact": [
+      "`deriveDecisionContext` in `worker/src/cron/depeg-detection/decision-engine.ts` reads supply through `getCirculatingRawOrNull()` instead of the zero-defaulting `getCirculatingRaw()`; a `null` reading marks the open event seen, emits a per-asset `Kept live event ... current supply is unavailable` warning, and issues no persistence command, so recovery timers, peaks and `ended_at` are untouched",
+      "Previously an empty supply record read as $0 and closed the open row with `close_reason = 'coverage-lost-supply'` and `recovery_price = NULL`, removing it from PSI's open-event set and the resolver's live board although no supply observation had fallen below the floor",
+      "Observed sub-floor supply, the $1M threshold, recovery windows, trust gates and every DEWS formula are unchanged; previously stored coverage closures are not rewritten by this change"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.27",
+    "title": "Challenger-pool majority can carry a recovery when the aggregate DEX row is withheld",
+    "date": "2026-09-24",
+    "effectiveAt": 1790232000,
+    "summary": "The published pool-challenger snapshot now feeds the recovery decision in both directions. When the primary lane is ambiguous and no fresh trusted aggregate `dex_prices` row is available, at least two independent challenger groups inside the recovery band that strictly outvote the groups still crossing the trigger threshold close the event, using the same shared majority authority as the veto.",
+    "impact": [
+      "`decideRecovery` in `worker/src/cron/depeg-detection/decision-engine.ts` gains a recovery lane for assets with no fresh trusted aggregate DEX row, alongside the authoritative/fresh-multi-source primary and the corroborated aggregate-DEX row: `derivePoolChallengerEvidence` reports `recoverySupported` when the fresh published challenger snapshot holds at least `POOL_CHALLENGE_CONFIRM_MIN` independent protocol/source-family groups inside the recovery band (50 bps USD, 75 bps non-USD) that strictly outvote the groups still crossing the trigger in the event direction (`corroboratingProtocolGroupsOutvote` in `worker/src/lib/constants.ts`); the `>= $5M` single-pool carve-out still vetoes, and while a fresh trusted aggregate row is available it remains the only DEX recovery lane while the snapshot only vetoes",
+      "The lane persists the TVL-weighted median of the corroborating pools as `recovery_price` with `close_reason = 'recovered-dex'`, and logs a `Pool-challenger majority recovery` diagnostic naming the group counts; the 15-minute continuous recovery window, the 1200-second continuity tolerance, and the deadband rule are unchanged",
+      "Root cause: `computeDexPrices` only publishes an aggregate `dex_prices` row for an asset whose primary price already clears the primary trust gates (`loadTrackedStablecoinMaps` feeds the publisher a trust-filtered price map and the row is withheld as `primary-missing` otherwise), so the aggregate-DEX recovery lane was structurally unreachable for exactly the `confirm_required` primaries that need independent corroboration",
+      "Reproduction from live D1: event 90781 (`usdb-blast`, CoinGecko single-source, open since 2026-08-20 at +129 bps peak) sat at -1 bps with five published challenger pools (thruster-v3, monoswap-v3-blast, blasterswap; three independent groups) inside the band and no aggregate row; event 90760 (`vnxau-vnx`, gold peg, open since 2026-08-05) sat at +3 bps with raydium and aerodrome inside the band",
+      "Guard evidence: event 90786 (`hollar-hydrated`) stays open on the single $11.9M hydration-dex pool still printing -526 bps, and event 90777 (`audf-forte`) stays open with one corroborating curve group below the two-group bar; a 2-vs-2 tie resolves to no recovery and clears any partial timer",
+      "Onset behavior is unchanged: opening or refreshing a depeg still requires the primary to cross the trigger threshold, and the challenger snapshot is not consulted for onsets"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.26",
+    "title": "Pool challenger majority rule for depeg recovery and confirmation",
+    "date": "2026-09-24",
+    "effectiveAt": 1790208000,
+    "summary": "A minority of diverging pool-challenger protocol groups can no longer veto a corroborated primary recovery or confirm a pending depeg. Both pool-challenger decisions now require the diverging groups to be at least as numerous as the groups that corroborate the recovered (inside-threshold) price, matching the pricing pool challenge rule in v6.32.",
+    "impact": [
+      "The primary-recovery pool veto (`derivePoolRecoveryVeto` in `worker/src/cron/depeg-detection/decision-engine.ts`) fires only when the diverging challenger groups reach `POOL_CHALLENGE_CONFIRM_MIN` and are at least as numerous as the challenger groups inside the trigger threshold that corroborate the recovered price; the single-pool `>= $5M` TVL carve-out is unchanged",
+      "Pool-only pending-depeg confirmation applies the same majority test against the groups contradicting the pending direction (opposite-direction or back inside the bar), so two diverging groups no longer confirm while four independent protocols sit at the reference rate",
+      "The rule is one exported authority, `divergingProtocolGroupsOutvote` plus its complement `corroboratingProtocolGroupsOutvote` in `worker/src/lib/constants.ts`, shared with the pricing pool challenge (`selectReplacementProtocolGroups` and its confidence downgrade, pricing v6.32) so the pricing and depeg lanes cannot drift; it keeps the shared `POOL_CHALLENGE_CONFIRM_MIN` = 2 independent-group bar",
+      "Reproduction: live event 90792 (`vchf-vnx`) opened 2026-09-18 from a +640 bps print that two dormant venues carried — the Celo Uniswap v3 VCHF/USD₮ pool (last trade 2026-03-15, provider-reported $4.7M reserve against ~$141 on-chain, 24h volume 0) and the ICP kongswap VCHF/ICP pool (24h volume 0) — against four live protocols at the ECB CHF rate; the veto had blocked the primary recovery on every subsequent detection run",
+      "Trigger thresholds, recovery window timing, pool TVL minimums, the aggregate-DEX corroboration rule, and every DEWS formula are unchanged; only protocol-group precedence in the two pool-challenger decisions moves"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.25",
+    "title": "Backfill replay honors reviewed suppressions and live-overlap dedupe",
+    "date": "2026-09-23",
+    "effectiveAt": 1790121600,
+    "summary": "A recomputed backfill episode is no longer persisted when a reviewed suppression window covers it or when an existing live row already covers the same coin and direction, so reviewed artifact removals survive future admin replays and one market episode is never counted twice.",
+    "impact": [
+      "Replay skips a recomputed `source='backfill'` episode when its inclusive `[startedAt, endedAt]` interval overlaps a reviewed entry for the same coin and direction in `shared/data/depegs/backfill-replay-suppressions.ts`; that registry is validated at module load and guarded by the registry-integrity suite in `shared/data/depegs/__tests__/`",
+      "Replay also skips an episode when an existing `source='live'` row for the same coin and direction overlaps it (`episodeStart <= liveEnd && liveStart <= episodeEnd`, inclusive; open rows collapse to their start second) — the two detectors read the same price series at minutes and hourly granularity, so same-side overlapping windows are one episode counted twice, while one second apart stays disjoint",
+      "Both skips run in `executeBackfillForCoin` before the dry-run/apply split, so the preview, the run fingerprint (`expectedEventCount`/`expectedFingerprint`), and the inserted rows stay mutually consistent; each skip is ledgered as `backfill-depegs-episode-skipped` with `skipReason: reviewed-suppression` or `live-overlap`",
+      "The four seeded suppression windows cover the Noon USN upside artifacts for 2025-10-07, 2025-12-27/28, 2026-02-14, and 2026-03-02, whose on-chain forensics found no economic-size USN trade above 1.0011; the ledgered 14 Feb live/backfill pair is caught by both rules",
+      "Live detection, thresholds, confirmation policy, price extraction, and the PegScore/DEWS formulas are unchanged; a one-off read-only production dry-run found 85 overlapping live/backfill pairs across 52 distinct backfill rows on 21 coins, and each affected coin drops at most its distinct backfill-row count at its next window replay"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.24",
+    "title": "Degraded DEWS runs withhold the published generation",
+    "date": "2026-09-21",
+    "effectiveAt": 1790024016,
+    "summary": "A cycle whose weighted inputs failed no longer becomes the served generation. The publication pointer stays on the last clean generation, so a lost input can no longer move a coin's published score or band.",
+    "impact": [
+      "When any non-bootstrap source fails or a core persisted input row is malformed, the run computes and stores rows but does not advance `dews:published-generation`; `/api/stress-signals`, the `/depeg` panel, PSI and Telegram keep serving the previous proven generation and its scores",
+      "Renormalisation over the surviving signals is unchanged; it simply no longer reaches the published surface, so an outage in the 0.35-weight liquidity block cannot publish a lower score as a calmer market",
+      "The withheld cycle is ledgered on `surface_publication_generations` as `rejected` with its degraded sources, and the freshness sentinel keeps its existing healthy-run-only gate, so publication recency and input quality now agree",
+      "The score formula, weights, amplifiers and band ladder are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.23",
+    "title": "Unavailable DEWS evidence no longer scores as measured calm",
+    "date": "2026-09-21",
+    "effectiveAt": 1789948800,
+    "summary": "Four places where DEWS read absent evidence as an optimistic observation now fail closed: unavailable previous readings are no longer smoothed in, a missing price-confidence tier scores as the worst known tier, warnings that carry no scored stress publish no yield verdict, and a coin with no circulating buckets is skipped instead of having its stress rows retired.",
+    "impact": [
+      "Pool and divergence smoothing now requires the previous generation's signal to have been available; after a cycle without pool or DEX-price evidence the next fresh reading is published un-dampened instead of halved",
+      "An absent, blank or unrecognised `priceConfidence` scores as the worst known tier (80) rather than the best (0), and the signal carries a `price-confidence-unmapped` marker",
+      "Yield warnings that sum to no scored stress — an unrecognised key, or the recognised non-stress `zero-yield` flag — mark the yield signal unavailable instead of publishing a clean zero",
+      "A tracked coin whose cache row carries no circulating buckets at all is skipped for the cycle; only an explicitly present zero supply retires its current and 7-day stress rows",
+      "Signal weights and the CALM/WATCH/WARNING/DANGER band ladder are unchanged; every effect moves scores in the conservative direction or removes a signal from the weighted average"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.22",
+    "title": "Public-event eligibility for blacklist stress",
+    "date": "2026-09-06",
+    "effectiveAt": 1788652800,
+    "summary": "DEWS blacklist windows and daily digest activity now exclude suppressed tracker events, aligning their inputs with the public blacklist history.",
+    "impact": [
+      "Suppressed EURC mirror-zero rows no longer contribute to DEWS 24-hour or 7-day event counts or create digest blacklist candidates",
+      "Unsuppressed rows retain their existing time windows, event-type eligibility, and canonical stablecoin attribution",
+      "Both recent counts and the historical spike baseline change; lower event counts do not guarantee a lower stress score"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.21",
+    "title": "Independent confirmation for native-fiat onsets",
+    "date": "2026-08-12",
+    "effectiveAt": 1786492800,
+    "summary": "A CoinGecko native-fiat quote may still initiate a pending non-USD depeg, but it can no longer promote that event without agreement from fresh canonical pricing outside the CoinGecko source family.",
+    "impact": [
+      "Native-origin candidates still use their direct native quote and the universal 15-minute persistence window, preserving detection of moves that USD peer references can mask",
+      "At promotion, the fresh canonical USD price is normalized through the authoritative FX reference and must cross the full threshold in the same direction",
+      "An independent normalized canonical price at peg or in the opposite direction rejects the candidate; stale, cached, fallback, or CoinGecko-only canonical evidence cannot promote it",
+      "Repeated observations from one CoinGecko native feed now prove temporal persistence only, not independent source confirmation"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.2",
+    "title": "Hourly DEX-price trust window",
+    "date": "2026-08-10",
+    "effectiveAt": 1786320000,
+    "summary": "DEX-implied prices now refresh hourly, with a 75-minute trust window that preserves one bounded delivery delay without admitting older market evidence.",
+    "impact": [
+      "Depeg suppression, pending confirmation, challenger-pool checks, and promoted DEX pricing now share the 75-minute maximum trusted age",
+      "The $1M aggregate DEX depth gate, protocol corroboration rules, $250K public Price Check gate, direction logic, and temporal confirmation windows are unchanged",
+      "Rows older than 75 minutes remain excluded rather than being carried forward as current confirmation evidence"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.1",
+    "title": "One deviation formula for DEWS and the depeg detector",
+    "date": "2026-08-08",
+    "effectiveAt": 1786190400,
+    "summary": "The DEWS divergence sub-signal now measures distance from peg with the same canonical derivation the depeg detector uses, instead of its own inline basis-point arithmetic.",
+    "impact": [
+      "Primary deviation, DEX deviation, and cross-source spread are read from the canonical depeg signal, so DEWS and the detector can no longer drift apart on the same price pair",
+      "The three sub-signal readings are now canonical whole basis points rather than unrounded values truncated to two decimals; sub-bps differences no longer move the divergence curve",
+      "A non-positive price or DEX price now yields no deviation instead of a nonsense magnitude from the inline arithmetic",
+      "The divergence curve, the non-USD dampening, the previous-reading smoothing, and every other sub-signal family are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.098",
+    "title": "Depeg onset and recovery require persistent confirmation",
+    "date": "2026-07-20",
+    "effectiveAt": 1784529544,
+    "summary": "Every live depeg onset now waits beyond the full trigger threshold for 15 minutes, while recovery requires a separate 15-minute stay inside a tighter half-threshold band before an incident closes.",
+    "impact": [
+      "Small-cap, multi-source, extreme, direction-change, and native-currency onsets all enter `depeg_pending`; no source combination bypasses the 15-minute temporal window",
+      "Secondary confirmation uses the full trigger threshold, and DefiLlama's `coingecko:{id}` mirror no longer counts as independent evidence for a CoinGecko-family primary",
+      "Live recovery begins only within 50% of the trigger threshold and persists `recovery_first_seen_at`; deadband or renewed-depeg observations reset the timer before closure",
+      "Trigger comparisons use unrounded basis-point deviation while persisted and displayed values remain rounded",
+      "Telegram depeg dispatch deduplicates at stablecoin incident level and formats native-domain EUR, GBP, and JPY prices in their stored currency"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.097",
+    "title": "Fiat FX references and PegScore coverage become explicit",
+    "date": "2026-07-18",
+    "effectiveAt": 1784395800,
+    "summary": "Fiat peg monitoring now anchors current deviation to live FX instead of same-peg peer drift, while PegScore and detail surfaces expose the observed coverage and distinguish public incidents from raw threshold crossings.",
+    "impact": [
+      "Live fiat FX references take precedence over peer medians for detector, peg-summary, detail, and feedback-verification paths; peer medians remain a fail-closed fallback requiring at least three contributors",
+      "Feedback verification uses the same 100 bps USD and 150 bps non-USD threshold policy as live depeg detection",
+      "Reviewed replay coverage can explicitly set a coin's PegScore denominator; BRLA coverage begins at the audited 2026-06-28 replay window instead of implying stable history before Pharos observation",
+      "Peg summary publishes current reference evidence, coverage provenance, and a coverage-aware recent 90-day view",
+      "Stablecoin history and API responses distinguish public incidents from their constituent threshold-crossing rows"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.096",
+    "title": "Native-peg events preserve one quote domain",
+    "date": "2026-07-11",
+    "effectiveAt": 1783728000,
+    "summary": "Live events opened from direct native-fiat quotes now keep native prices throughout peak and recovery persistence instead of mixing later USD-domain observations into the row.",
+    "impact": [
+      "Native-quote events update peaks only from subsequent native quotes against the stored `1.0` peg reference",
+      "A recovered native quote closes the event with `recovered-native` and the same-domain native recovery price",
+      "When only a USD primary or DEX recovery is available, the event can still close but persists `recovery_price = NULL` rather than mixing quote units",
+      "The known BRLA event 90509 mixed-unit recovery value is cleared through a guarded data migration"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.095",
+    "title": "Native-fiat quotes can initiate live non-USD depegs",
+    "date": "2026-07-08",
+    "effectiveAt": 1783468800,
+    "summary": "Supported non-USD fiat assets can now open live depeg state from a fresh direct native-fiat quote when the USD price against a peer-median peg reference remains inside threshold.",
+    "impact": [
+      "Direct native CoinGecko quotes remain able to veto, sustain, and resolve non-USD depeg rows; they can now also initiate the row when they are the clearest fresh signal",
+      "Small and mid-cap native-quote events open immediately with the native quote stored against a `1.0` peg reference, matching the historical native-fiat replay model",
+      "Large-cap or extreme native-quote triggers still route through `depeg_pending` before public event creation",
+      "This prevents BRL peer medians from masking true BRLA/BRL discounts while preserving the existing 150 bps non-USD threshold"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.094",
+    "title": "Mint/burn flow freshness fails closed",
+    "date": "2026-06-23",
+    "effectiveAt": 1782172800,
+    "summary": "DEWS now separates mint/burn baseline coverage from true source freshness, so the Flow sub-signal requires a fresh 24-hour mint_burn_hourly row plus at least 7 baseline days.",
+    "impact": [
+      "A mature 30-day baseline no longer produces available zero flow stress when the mint/burn pipeline has no fresh 24-hour row",
+      "Fresh zero-volume 24-hour rows still contribute zero flow stress when the source is current",
+      "Stale mint/burn hourly input is recorded as a `mint-burn-hourly-freshness` source failure and surfaced through `sourceAges.mintBurn` and `staleFlags.mintBurn`",
+      "`flowBaselineDays` remains the baseline coverage diagnostic, while `flowDataAgeDays` now reports true mint/burn source freshness age in days"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.093",
+    "title": "Independent primary-family severe moves can open immediately",
+    "date": "2026-06-21",
+    "effectiveAt": 1782000000,
+    "summary": "Non-large-cap extreme depeg moves no longer have to wait in pending confirmation when the current primary price is fresh and already spans independent source families.",
+    "impact": [
+      "Single-source or same-family extreme prints still route through `depeg_pending` before public event creation",
+      "Fresh severe moves with at least two independent primary depeg source families, such as CoinGecko plus DefiLlama, can open a live event immediately below the $1B large-cap floor",
+      "Large-cap assets still require the existing pending-confirmation path even when the severe move is multi-source",
+      "The change prevents confirmed small- and mid-cap crashes from being hidden until DEX confirmation catches up"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.092",
+    "title": "Pool-challenged recoveries keep active depegs open",
+    "date": "2026-06-19",
+    "effectiveAt": 1781827200,
+    "summary": "Live depeg detection now rejects an in-band primary recovery print when qualifying individual DEX pool challengers still show the existing depeg direction.",
+    "impact": [
+      "A single high-TVL pool (>= $5M) or at least two independent protocol/source-family pool groups can veto primary-price recovery closure",
+      "This covers cases where aggregate off-chain prices briefly print near peg while a large venue remains materially depegged",
+      "Small single-pool disagreements remain advisory and do not block authoritative primary recovery by themselves",
+      "The change hardens long-running incidents such as the APXUSD June 2026 underpeg against transient near-$1 blips"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.091",
+    "title": "DEX-contradicted recoveries keep active depegs open",
+    "date": "2026-06-16",
+    "effectiveAt": 1781568000,
+    "summary": "Live depeg detection no longer closes an existing event from an authoritative near-peg primary print when fresh trusted DEX evidence with multiple independent protocol groups still shows the event's original depeg direction.",
+    "impact": [
+      "Authoritative primary recovery still closes an event when there is no qualifying DEX contradiction",
+      "When trusted aggregate DEX price and at least two protocol groups still cross the threshold in the existing event direction, the event remains open and the contradictory recovery is logged",
+      "This prevents brief off-chain or consensus near-peg prints from splitting unresolved long-running incidents such as the APXUSD June 2026 underpeg",
+      "DEX-confirmed recoveries remain supported: ambiguous primary recoveries can still close when aggregate DEX and enough protocol groups are back inside threshold with no challenger contradiction"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.09",
+    "title": "Wider venue-risk coverage feeds the structured-venue branch",
+    "date": "2026-06-15",
+    "effectiveAt": 1781481600,
+    "summary": "Yield Intelligence v8.292 expands the reviewed venue-risk registry from 12 to 61 venues, so DEWS's existing structured-venue Yield Anomaly branch now fires for the previously-unscored long tail without any DEWS threshold change.",
+    "impact": [
+      "The `structured-high-risk-venue` (+25) and `structured-medium-risk-venue` (+10) branches are unchanged, but `sourceRisk.venueRiskTier` is now derived from a 5-category Yearn-style score across 61 venues instead of 12 hand-set tiers",
+      "Newly-scored high-risk venues (e.g. Clearpool, Goldfinch, 3Jane, Aries Markets, Curvance, Avantis) now contribute `structured-high-risk-venue` to the Yield Anomaly sub-signal for coins routing yield through them",
+      "Newly-scored medium-risk venues (e.g. Fluid, Dolomite, Fraxlend v2, Felix, Centrifuge, Jupiter Lend, Sovryn) now contribute `structured-medium-risk-venue`",
+      "Reviewer-set cross-venue dependency concentration raises the source-risk penalty, which can cross the existing +20 `structured-source-risk-penalty` threshold for affected rows",
+      "No DEWS code, weight, threshold, or cap changed; unknown/low venues remain a no-op"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.08",
+    "title": "Display surfaces share the peg-reference authority gate",
+    "date": "2026-06-10",
+    "effectiveAt": 1781049600,
+    "summary": "Displayed peg deviation now uses the same peg-reference authority gate as the depeg detection engine: thin non-USD peer groups without a live FX fallback show 'reference unavailable' instead of a self-referential ~0 deviation.",
+    "impact": [
+      "A lone non-USD coin's peer-median reference equals its own price (deviation always ~0) and a 2-coin group mirrors half of any real move onto the healthy peer; detection has always failed closed on these, but peg-summary, the depeg tracker, and the coin-detail hero kept publishing the masked number",
+      "When the gate fails, currentDeviationBps is withheld (null) and the new pegReferenceUnavailable flag drives an explicit 'reference unavailable' readout in the tracker table and detail hero",
+      "USD, commodity, VAR/OTHER pegs and groups with a live FX fallback or at least 3 peer contributors are unaffected",
+      "Depeg detection, PegScore, and event history are unchanged; this aligns the displayed numbers with the detection engine's existing trust policy"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.07",
+    "title": "Medium venue-risk yield anomaly branch",
+    "date": "2026-06-09",
+    "effectiveAt": 1780966800,
+    "summary": "DEWS now treats reviewed medium-risk yield venues as a bounded structured Yield Anomaly input while preserving the stronger high-risk venue branch.",
+    "impact": [
+      "Structured Yield Intelligence evidence with `sourceRisk.venueRiskTier = \"medium\"` now adds +10 to the Yield Anomaly sub-signal",
+      "Medium venue-risk rows emit the `structured-medium-risk-venue` warning",
+      "The existing high-risk venue branch remains +25 with `structured-high-risk-venue`",
+      "The final Yield Anomaly sub-signal still caps at 100 after adding warning-string, source-risk, and rank-attribution evidence",
+      "Missing, malformed, unknown, low, or otherwise neutral venue-risk evidence remains a no-op and does not create an available zero-stress yield signal"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.06",
+    "title": "Confirmation peg-reference parity and directional duplicate repair",
+    "date": "2026-06-06",
+    "effectiveAt": 1780758000,
+    "summary": "Pending depeg confirmation now reuses the live detection peg-reference authority gate, and duplicate open-event repair no longer folds opposite-direction peaks into a surviving row.",
+    "impact": [
+      "Thin non-USD fiat peg references without FX fallback use the stored pending `peg_reference` when valid instead of recomputing confirmation against a 1-2 coin peer median",
+      "Pending rows with neither an authoritative refreshed reference nor a valid stored reference wait for a safer reference instead of being deleted or promoted",
+      "Duplicate open-event repair merges only same-direction rows and closes older opposite-direction rows at the newer direction boundary with `recovery_price = NULL`"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.05",
+    "title": "Missing supply anchors fail closed",
+    "date": "2026-06-06",
+    "effectiveAt": 1780755099,
+    "summary": "DEWS now marks the Supply Velocity sub-signal unavailable when both previous-day and previous-week supply-history anchors are absent.",
+    "impact": [
+      "Coins with no prior supply-history anchors no longer receive an available zero-stress supply signal by default",
+      "When only one prior anchor is present, DEWS still computes the available side and treats the missing side as zero velocity contribution",
+      "Explicit finite zero anchors remain available and continue to produce zero velocity stress instead of divide-by-zero behavior"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.04",
+    "title": "Below-floor live event closure",
+    "date": "2026-06-06",
+    "effectiveAt": 1780755098,
+    "summary": "Live depeg detection now closes an already-open event when the tracked asset remains in the cache but falls below the $1M live-event supply floor.",
+    "impact": [
+      "A coin that depegged above the live-event floor no longer stays LIVE forever after supply shrinks below $1M",
+      "Below-floor closures keep `recovery_price = NULL`, matching other coverage-lost closures where Pharos cannot assert a price recovery",
+      "New below-floor coins still cannot open fresh live depeg rows; the change only resolves existing open rows whose coverage leaves the live-event universe"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.03",
+    "title": "Blacklist activity stablecoin-id attribution",
+    "date": "2026-06-06",
+    "effectiveAt": 1780753058,
+    "summary": "DEWS blacklist activity now resolves recent blacklist events to the tracker config's canonical stablecoin id before scoring.",
+    "impact": [
+      "Blacklist counts are hydrated from event provenance (`config_key` / `contract_address`) instead of being grouped by bare symbol",
+      "Same-symbol siblings that do not have direct blacklist-tracker coverage now keep the blacklist sub-signal unavailable",
+      "Legacy event rows without provenance fall back only to a single tracker-owned stablecoin id for that symbol, avoiding fan-out across same-symbol PSI assets"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.02",
+    "title": "Explicit zero supply-history anchors",
+    "date": "2026-06-05",
+    "effectiveAt": 1780617600,
+    "summary": "DEWS now preserves explicit zero previous-day and previous-week supply-history anchors instead of treating them as missing current-supply fallbacks.",
+    "impact": [
+      "Absent previous-day or previous-week supply history still defaults to the current supply so new or incomplete rows do not create false contraction",
+      "Finite zero buckets in the stablecoins cache now remain zero when the supply-velocity input is assembled",
+      "The supply sub-signal continues to treat zero baselines as zero velocity stress, avoiding divide-by-zero while keeping the input provenance explicit"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.01",
+    "title": "Priced-observation PegScore anchors",
+    "date": "2026-06-03",
+    "effectiveAt": 1780444800,
+    "summary": "PegScore tracking windows can now anchor from the first durable Pharos price observation when supply-history coverage is absent, so priced non-NAV assets no longer remain unrated solely because they have not written a supply snapshot.",
+    "impact": [
+      "Curated launch dates remain the preferred tracking anchor, followed by the earliest supply_history snapshot",
+      "For priced assets without either anchor, the stablecoins cache now contributes a durable first-observed valid-price timestamp through the same first-seen cache used by PegScore",
+      "Newly observed priced assets still need at least 7 days of tracking before PegScore is rated; missing-price assets and pure NAV tokens remain NR",
+      "Low-cap assets below the live depeg-event floor can receive a PegScore anchor, while the existing coverage-limited flag continues to warn that empty event history is not full depeg coverage"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.0",
+    "title": "Historical provenance, quality-aware PegScore, and calibration metrics",
+    "date": "2026-05-14",
+    "effectiveAt": 1778716800,
+    "summary": "Depeg history now records durable replay/audit provenance, PegScore discounts weak or disputed historical rows, and DEWS backtests report calibration metrics from stored stress-signal history.",
+    "impact": [
+      "Backfill runs persist replay status, counts, fingerprints, source providers, quote mode, peg-reference/supply source, confidence tier, and public provenance projections",
+      "Audit verdicts are direction-aware and persist confirmed, disputed, false_positive, no_data, and repaired-style outcomes without deleting rows solely because audit data is weak or absent",
+      "PegScore excludes false-positive/disputed events and downweights low-confidence rows while surfacing quality-adjustment counters to callers",
+      "DEWS calibration metrics now use stored stress_signal_history as the primary source and report precision, recall, false-positive days, false-negative incidents, lead-time percentiles, churn, and cohorts"
+    ],
+    "commits": [],
+    "reconstructed": false
+  }
+]

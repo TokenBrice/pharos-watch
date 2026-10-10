@@ -1,0 +1,36 @@
+{
+  "description": "Interactive graph of collateral and wrapper dependencies between stablecoins. Node size reflects market cap; lines show direct dependency links.",
+  "metadataTitle": "Dependency Map: Stablecoin Collateral Graph",
+  "title": "Dependency Map",
+  "lead": "See hidden systemic risk: the live graph of who backs whom.",
+  "headerSupplement": "This graph maps direct collateral and wrapper dependencies between stablecoins. Select a coin to inspect its upstream assets and direct dependents, or use it as an Exposure root to trace linked coins.",
+  "lens": {
+    "kicker": "Dependency Lens",
+    "graph": "The graph shows direct collateral and wrapper links between stablecoins. The shared failure domains board lists published shared control or custody identities without drawing them as separate graph nodes.",
+    "start": "Start with the graph, then open",
+    "scores": { "href": "/safety-scores/", "label": "Safety Scores" },
+    "between": "for each coin's grade and dependency inputs and",
+    "coverage": { "href": "/coverage/", "label": "Coverage Matrix" },
+    "end": "for per-coin data availability.",
+    "scope": "Node size reflects market cap, not a forecast of losses. Exposure mode finds mapped downstream dependents using supply at publication evaluation. A dependency link identifies a relationship, not an outcome."
+  },
+  "faq": [
+    { "question": "What does the Dependency Map show?", "answer": "The Dependency Map shows direct collateral and wrapper dependencies between stablecoins with published Safety Scores. Bridges, custodians, and other shared infrastructure are not drawn as separate nodes." },
+    { "question": "Why can dependency risk matter even when a coin holds its peg?", "answer": "An upstream collateral asset, bridge, issuer, or shared contract can transmit changes to a dependent coin before a price depeg appears. Exposure mode traces mapped relationships, not the outcome of a failure." },
+    { "question": "How should I combine this with Safety Scores?", "answer": "Use the map to trace collateral and wrapper relationships, then read each coin's grade and dependency inputs on Safety Scores." }
+  ],
+  "exposure": {
+    "description": "Find coins linked to these upstream assets through mapped collateral and wrapper relationships. This does not estimate losses or changes in Safety Scores.",
+    "roots": "Upstream roots",
+    "empty": "Choose an upstream coin on the map or add one below.",
+    "add": "Add upstream coin",
+    "choose": "Choose coin",
+    "trace": "Trace exposure",
+    "share": "Share",
+    "reset": "Reset",
+    "remove": "Remove",
+    "history": "History examples",
+    "historyDescription": "Case studies describe historical events. They do not run an exposure lookup.",
+    "historyLink": { "href": "/learn/case-studies/usdc-svb-2023/", "label": "USDC and the Silicon Valley Bank weekend" }
+  }
+}

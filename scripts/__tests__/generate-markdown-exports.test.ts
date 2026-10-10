@@ -185,3 +185,13 @@ describe("docs markdown", () => {
     for (const route of routes) expect(route.body).toContain(`canonical: "https://pharos.watch${route.path}"`);
   });
 });
+
+describe("authored Markdown export fixtures", () => {
+  it.each([
+    ["changelog-index.md", () => renderChangelogIndex(changelogs)],
+    ["methodology-index.md", () => buildMethodologyIndexMarkdown()],
+    ["stablecoin-usdt-tether.md", () => renderStablecoinDetail("usdt-tether")],
+  ] as const)("preserves exported bytes for %s", (name, render) => {
+    expect(render()).toBe(readFileSync(new URL(`./fixtures/markdown/${name}`, import.meta.url), "utf8"));
+  });
+});

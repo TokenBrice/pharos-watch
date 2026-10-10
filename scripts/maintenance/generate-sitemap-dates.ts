@@ -182,7 +182,7 @@ function addCaseStudyDates(dates: Record<string, string>): void {
   const sharedLastModified = latestIso(...CASE_STUDY_DETAIL_SHARED_SOURCES.map(getLastModified));
 
   for (const study of CASE_STUDY_LIST) {
-    const contentPath = join(CASE_STUDY_CONTENT_DIR, `${study.slug}.ts`);
+    const contentPath = join(CASE_STUDY_CONTENT_DIR, `${study.slug}.json`);
     dates[`/learn/case-studies/${study.slug}/`] = latestIso(getLastModified(contentPath), sharedLastModified);
   }
 

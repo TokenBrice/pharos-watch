@@ -9,6 +9,8 @@ The dependency map route (`/dependency-map`) presents the canonical Safety Score
 Primary files:
 
 - `src/app/dependency-map/page.tsx`
+- `src/app/dependency-map/content.json` — authored metadata, FAQ, lens and Exposure-control copy; consumers use the JSON default export, consistent with the test bundler's disabled named JSON exports
+- `src/lib/dependency-exposure-content.json` — shared visible/Markdown methodology prose; `check:editorial-content` validates both JSON sources and internal links
 - `src/app/dependency-map/client.tsx`
 - `src/app/dependency-map/dependency-hero.tsx` — summary strip plus the full-width graph
 - `src/lib/dependency-hubs-model.ts`

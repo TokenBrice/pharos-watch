@@ -1,0 +1,800 @@
+[
+  {
+    "version": "8.47",
+    "title": "Curated ownership for native receipt yield",
+    "date": "2026-10-06",
+    "effectiveAt": 1791295690,
+    "summary": "Auto-discovered pools remain lending opportunities unless an explicit source type is supplied; symbol and deployment matches alone do not establish native receipt ownership.",
+    "impact": [
+      "Curated receipt sources retain holder-yield identity. Auto-discovered pools use lending-opportunity typing before eligibility and arbitration, preserving deposit requirements and source-risk treatment.",
+      "Contradictory supplied deposit addresses prevent symbol fallback; absent addresses retain the existing unambiguous-symbol discovery path. No APY provider or PYS weight changes."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.46",
+    "title": "Independent Yield Dependencies and Complete Weighted Components",
+    "date": "2026-09-27",
+    "effectiveAt": 1790542271,
+    "summary": "Configured product inputs, comparison hurdles, and USD normalization references now remain independent across publication and both API safety branches. Weighted pool decomposition uses the same complete TVL universe as total APY, after normalizing proven base-only rewards to zero.",
+    "impact": [
+      "USDGO depends on EFFR for its product and hurdle, not on USD T-bills. Treasury-product rows still require their configured product evidence independently of EFFR. Non-USD rows also require USD normalization evidence; its expiry withholds PYS as benchmark-stale without falsely marking the product source stale",
+      "Each weighted pool first applies the existing A9 proven-zero rule when a missing reward accompanies base APY at least equal to total APY. Any still-unresolved aggregate component remains null; known total APY and the full TVL remain available",
+      "Reward share and its existing penalty consume the corrected aggregate, so rewards from a small constituent are not attributed to the entire TVL. Healthy benchmark arithmetic, source identity, scoring weights, and penalty calibration are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.45",
+    "title": "Yield Identity, Holder Returns, and Unavailable Evidence Fail Closed",
+    "date": "2026-09-27",
+    "effectiveAt": 1790467200,
+    "summary": "Yield sources now have to identify the right asset and the return a holder or depositor can actually earn. Contradictory addresses no longer fall back to a ticker, USD price appreciation is restricted to eligible appreciation mechanisms, and rate-derived products carry their own input freshness independently of the comparison hurdle. Missing consistency or critical opportunity evidence now withholds PYS rather than awarding an estimated or best-case score. The same release hardens publication ownership, retained history, read-time freshness, and source explanations without changing the PYS weights.",
+    "impact": [
+      "Supplied address evidence fails closed when it cannot resolve the tracked asset; DeFiLlama fallback requires exact instrument identity as well as any underlying-address corroboration. A matching deposit asset alone cannot establish receipt ownership: differently named tranches stay supplemental, and Royco's senior tranche is no longer promoted into apyUSD native yield. Axis USDx Pendle markets are no longer attributed to Hex Trust USDX",
+      "Price-derived APY requires an explicit `nav-appreciation` or `lending-vault` mechanism, a USD or unmapped benchmark denomination, and no intentional holder-return gap. bC3M, stkGHO, and USDB no longer receive fabricated price-return coverage; VBILL uses its pinned BSC DeFiLlama native fund pool for distributed holder yield",
+      "Rate-derived APY classifies its product benchmark independently of the PYS comparison hurdle. Retained market inputs remain degraded, stale product inputs prevent scoring even beside fresh EFFR, missing observation times stay missing, and hardcoded fallback rates cannot produce product APY candidates",
+      "Holder-versus-deposit typing is resolved when a source is constructed, so the final measured-TVL and supply gate covers every deposit row. Own-symbol tracked NAV receipts keep their holder labels; parent projections remain deposit opportunities. Same-chain same-symbol ambiguity requires curated pool identity, including steakUSDT, steakUSDC, and sDOLA pins; frozen msY has no native pin, and the unused catalog `defiLlamaPoolId` field is removed",
+      "Ethereum Frankencoin Savings becomes an explicit ZCHF lending opportunity without marking plain ZCHF holdings yield-bearing. Non-rejected curated explicit pools take precedence over auto-discovered same-type candidates, including incumbents: Ethereum savings wins while Gnosis remains an alternative. Missing native DeFiLlama pins no longer borrow generic venue APY under the native label; USYC's pin is refreshed to Ethereum Circle, with new native pins for srUSDe Strata (843be062-d836-43ef-9670-c78d6ecb60bf) and Ethereum USTB (1910847a-f8b5-40ce-a1ab-1dafdded5fbb)",
+      "K3 sBOLD's explicit raw Liquity Stability Pool mapping is quarantined: matched holder exchange-rate returns diverged materially from pool APY over both 7 days (9.82% versus 4.11%) and 30 days (4.86% versus 2.92%). Its K3-specific Yearn/Kong supplemental holder source and eligible price-derived fallback remain; this is a source correction, not a coverage removal. HedgeCore sUSD's earlier keep decision is reversed: the Venus pin is quarantined as an intentional source gap after on-chain rate interfaces reverted; documented 93% pass-through is not measured holder-return equivalence",
+      "Rejected canonical candidates cannot veto fresh discovered or price-derived candidates through the greater-than-35% divergence rule; eligible canonical sources still can. Invalid or overflowed annualization is unavailable with a rejection reason, never a fabricated 0% observation or history anchor",
+      "Missing or non-finite trailing variance is unavailable, not best-case consistency or the maximum-variance floor. PYS is NR with `missing-inputs` while the source remains publishable; measured zero variance retains full consistency credit. The global TVL-weighted `medianApy` is persisted as null without finite positive APY and TVL observations, so no divergence warning or median reference line is manufactured; Phase A retains legacy zero only on the wire",
+      "Missing critical opportunity evidence publishes null PYS, NR, and `opportunity-evidence-missing` without rejecting the row solely for that gap. APY above the 300% envelope or non-finite effective yield publishes NR with `missing-inputs`; every published null reason means a null score, while a legitimately rounded-zero score remains 0 with no null reason",
+      "`sourceRisk.rewardShare` persists the raw reward/current-APY ratio, including values above 1; Phase A serializes ratios above 1 as null until Phase B exposes the expanded wire contract. The reward-heavy penalty still caps internally. PYS weights, safety curve, and source-risk calibration are unchanged",
+      "One admission boundary quarantines invalid sources across rankings, current rows, history, and decision evidence. Coverage regressions alarm without withholding independent valid rows, while empty publication, unavailable common safety, and the existing 40% total floor still block. UUID-owned attempts and strict timestamp publication prevent losing writers from modifying a winner; bounded source/day compaction preserves raw observations until a corresponding daily close exists",
+      "Rankings, summary, and history assess freshness against shared 2-hour/4-hour yield-data bands. Selected `sourceRisk` ages follow authoritative provenance, alternate ages advance with elapsed publication time, and source, anchor, and benchmark ages advance at read time. Public health and rankings share the dual 24-hour yield/safety publication fallback bound. Non-fresh history names `yield-publication-age` and sends Warning 110 plus no-store. Completed publications return `ok` with separate input-quality reasons; Pendle-only outages remain operator-visible advisory reasons without setting `quality.degraded`",
+      "Wire rollout is two-phase: current Phase A rankings retain the three-field `_meta`, summary withholds selection mode and source maximum age and keeps legacy `benchmarkIsFallback` meaning, unavailable detailed observation evidence becomes `provenance: null`, and stored evidence is unchanged. History metadata is already expanded. The follow-up Phase B release exposes expanded rankings assessment fields, summary selection semantics, nullable median/observation evidence, and raw reward shares after legacy frontend readers are retired",
+      "Detail summaries expose selected source identity, holder/deposit role, freshness, and score qualification without opening diagnostics. Instrument-aware source links, explicit percentage-point benchmark spreads, Published selected source history captions, unreadable-warning markers, and previous-publication attribution distinguish unavailable evidence from a clean or unchanged measurement"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.44",
+    "title": "Pendle PT Markets Stop Posing as Native Wrapper Yield",
+    "date": "2026-09-25",
+    "effectiveAt": 1790294400,
+    "summary": "Noon reported that USN showed $1.18M of TVL. The USN row was publishing a Pendle PT-sUSN market — its fixed implied rate and its market TVL — under the \"Noon staking (sUSN)\" label, because the DeFiLlama base-symbol fallback adopted the PT market as sUSN's own pool and linked-variant projection carried it to USN. The fallback no longer adopts yield-tokenization PT/LP markets, and it no longer runs for coins whose yield is already read on-chain, so USN now publishes sUSN's on-chain staking yield and vault TVL (~$36.2M).",
+    "impact": [
+      "Layer-3 DeFiLlama fallback excludes `pendle-v2` and `spectra-v2` pools. DeFiLlama lists their \"For buying PT\" and \"For LP\" markets under the wrapper's own symbol and underlying address, flagged stablecoin and single exposure, so address corroboration alone accepted them as the wrapper's intrinsic source. The same markets still publish as `fixed-yield` Pendle protocol-API alternatives, which never project onto a parent",
+      "Layer-3 fallback is skipped for any coin with a Tier-1 on-chain rate config, whether or not this run's read succeeded, so the coin cannot flip to a symbol-matched third-party venue on a failed read. With PT markets excluded, the fallback would otherwise pick a zero-APY lending market holding the token as collateral for sUSN (Vesu on Starknet) and stUSDS (Morpho on Ethereum)",
+      "Rows that changed on the 2026-09-25 publication inputs: USN's headline moves from the PT-sUSN market (8.69%, $1.18M) to linked-variant `onchain:susn-noon` (7.47%, $36.2M). K3 sBOLD moves from PT-sBOLD (6.22%, $259K) to its K3 Stability Pool vault (4.35%, $8.44M). Strata srUSDe moves from PT-srUSDe (5.21%, $4.23M) to Strata's native pool (3.93%, $18.8M). sUSDD and USDD, and apxUSD, lose their PT-market headlines (5.36%/$5.13M and 14.59%/$19.5M) and resolve through the NAV price-derived fallback where one exists. stUSDS and USDS drop a 0% Morpho collateral alternative ($12.5M). apyUSD has no on-chain rate config, so its fallback now lands on a 0% Morpho collateral market ($16.1M) that ranks below every positive-APY source",
+      "PYS formula, benchmarks, source-risk calibration, confidence tiers, arbitration order, and publication guards are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.43",
+    "title": "PYS Re-Bases Non-USD Hurdles onto the USD Risk-Free Rate",
+    "date": "2026-09-11",
+    "effectiveAt": 1789084800,
+    "summary": "Pharos Yield Score credited high-rate pegs for paying their own central-bank rate: Wrapped iTRY at 38% APY, only +1.3 points over the BIST TLREF overnight rate, ranked beside USDC at +0.8 over T-bills. Effective yield now adds the USD risk-free rate minus the row's own benchmark, so a peg's policy-rate compensation is no longer scored as excess yield; the re-base term itself is zero for USD-currency rows. The same release hardens the scoring inputs it depends on: the USD reference is gated on benchmark health, arbitration can no longer be won by the churn it creates, variance and APY-envelope failures fail closed, and reward share and venue resolution are re-derived from one payload so published and scored values agree — five USD wrapper rows pick up their first venue penalty from that resolution.",
+    "impact": [
+      "`effectiveYield` becomes `max(0, apy30d + 0.25 * benchmarkSpread + (usdBenchmarkRate - benchmarkRate))`, equivalently `max(0, usdBenchmarkRate + 1.25 * benchmarkSpread)`. The 25% spread slice is retained; the new `hurdleRebase` term is zero for every row benchmarked at a USD-currency rate. Re-scoring the final v8.42 publication generation (156 scored rows) through the released scorer alone — the re-base plus this release's venue-registry, rewardShare and switch-count (churn-term) rules, with switch counts as published — leaves 140 rows identical; the first publication under the release moved more, because a payload replay cannot see the release's source-adapter fixes — a row whose adapter previously could not qualify now wins arbitration and republishes from its own source (BOLD, below). The finalized publication therefore stands as the record: 86 of 155 scored rows unchanged, four rows down at least 10 points and two up (below), with the top of the board otherwise unchanged (DUSD 85, USDC 59)",
+      "Under the finalized publication, rows moving at least 10 PYS points are BOLD 70 → 28 (−42), wiTRY 44 → 6 (−38), sDOLA 18 → 6 (−12) and CUSD 32 → 22 (−10) down, and ZCHF 26 → 51 (+25) and EURC 20 → 34 (+14) up. CHF and EUR rows rise because their local hurdles sit below the USD rate — the covered-interest-parity reading of excess yield on a USD footing, which assumes a frictionless hedge and ignores FX basis; PYS does not model FX carry or hedging cost. BOLD's fall is neither the re-base nor a history rewrite: it is the v8.42 source fix completing. Its row previously resolved through `linked-variant:ybold-yearn:protocol-api:yearn:ybold` and so published the tracked yBOLD wrapper's 7.78% APY; with this release's adapter fix the direct `onchain:bold-liquity` Stability Pool reader finally carries a valid observation time, wins arbitration, and BOLD publishes its own 3.34% Stability Pool yield — a correctness improvement, at `partial` qualification because the deterministic row's evidence is not yet complete. The `yield.pys_dropped` tape event fires for the four drops (wiTRY at warning severity, BOLD severe). Five USD-benchmarked wrapper rows also pick up their first venue penalty from the child-id venue map (gtUSDC 39 → 34, bbqUSDC 28 → 25, stcUSD 19 → 17, syrupUSDC 14 → 13, syrupUSDT 10 → 9)",
+      "Only the 14 rows whose selected benchmark is not a USD-currency benchmark (7 EUR, 3 GBP, 2 CHF, 1 TRY, 1 RUB) carry a non-zero re-base. The 6 USD rows benchmarked against `USD_EFFR` take no re-base (same USD currency), so they score identically to v8.42",
+      "The hourly write path (`worker/src/cron/yield-sync/evaluation.ts`), the API live-safety recompute (`worker/src/api/yield-rankings-cache.ts`), `derivePysNullReason`, the frontend breakdown and per-factor attribution (`src/lib/yield-constants.ts`, `src/components/pys-breakdown.tsx`), and the venue-risk calibration script all pass the payload `riskFreeRate`, so publish-time, read-time, and displayed scores stay in lockstep. The breakdown shows a `+ USD hurdle re-base` line only when the term is non-zero",
+      "When the reference rate is unavailable the term is zero and the row scores exactly as under v8.42; rows without benchmark metadata are unchanged",
+      "`usdBenchmarkRate` is populated only while the USD benchmark entry classifies healthy on its own feed evidence; otherwise it is null (rebase 0, row scores as under v8.42) and affected non-USD rows publish `estimated` (degraded) or NR / `benchmark-stale` (stale) with the `reference-benchmark-degraded` warning instead of a silently mis-based score",
+      "Scoring guards fail closed: a nominal `apy30d` above the new `PYS_APY_SANITY_MAX = 300` envelope scores 0 instead of clamping toward 100, a non-finite APY variance resolves to maximum variance (sustainability multiplier at its 0.3 floor) while a missing variance keeps the documented neutral 0, `apyVarianceScore` is derived from the published two-decimal `yieldStability` so served and published scores agree, and the persisted `pys_inputs_at_publish` snapshot (schemaVersion 2) now carries `usdBenchmarkRate`/`hurdleRebase` so history replays the published score exactly (`pysReproducibility`: exact / not-scored / legacy-partial / invalid)",
+      "Arbitration charges every candidate whose selection would be a real switch a flat 0.1 margin on the pre-run switch count, with a deterministic source-key tie-break; a switch is counted only when the previous winner is a live non-rejected candidate (otherwise `previous-source-transiently-missing`); the churn term is published on the chosen row only, so alternate rows publish no switch count and their stored penalty excludes the term",
+      "`sourceRisk.rewardShare` is re-derived every publication from the same payload the penalty uses: base-only rows publish 0 instead of null, and the never-expiring stored-value fallback is gone",
+      "`sourceRisk.venueProtocol` never records the derivation method (former `price-derived`/`rate-derived` venues publish null); wrapper rows resolve their venue through a child-id map (e.g. `susds-sky`/`stusds-sky` → `spark-savings`, `stcusd-cap` → `cap`, `scrvusd-curve` → `curve-llamalend`) plus the `pendle-v2` → `pendle` and `sdai` → `spark-savings` aliases, lifting known venue-tier coverage on wrapper rows",
+      "A non-finite `benchmarkRate` on one measurement now omits that row-level field and degrades only that row instead of failing the whole publication generation",
+      "The CAD benchmark entry is relabelled 'CAD Bank rate (policy, monthly)' — series `V122530` is the monthly administered Bank of Canada policy rate, not CORRA; user-visible on benchmark chips"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.42",
+    "title": "BOLD and yBOLD Stop Sharing One Yield Row",
+    "date": "2026-08-31",
+    "effectiveAt": 1788134400,
+    "summary": "Base BOLD and the tracked Yearn yBOLD wrapper published identical APY and TVL because BOLD inherited the wrapper's DeFiLlama pool. BOLD now publishes a deterministic Liquity V2 Stability Pool aggregate across its three Ethereum branches, and yBOLD publishes Yearn's own ydaemon numbers.",
+    "impact": [
+      "`bold-liquity` gains the deterministic `onchain:bold-liquity` reader, reusing the Base Dollar branch source family across the wstETH, WETH, and rETH Stability Pools: 75% of aggregate accrued borrower interest over total Stability Pool BOLD deposits, with shut-down branches contributing no interest but keeping their deposits, and a fail-closed CollateralRegistry branch-count guard",
+      "BOLD's curated DeFiLlama pool pin and yBOLD variant-map entry are removed. Both resolved to the wrapper's own Yearn pool, so BOLD's headline row was the wrapper's APY and TVL rather than the Stability Pool aggregate a BOLD holder can actually earn",
+      "BOLD's generic Tier-1 exchange-rate config is removed too. It read `convertToAssets` on the yBOLD vault under BOLD's identity, spending an RPC call on every sync and reserving the same `onchain:bold-liquity` key the branch aggregate now owns",
+      "`ybold-yearn` gains the first-party `protocol-api:yearn:ybold` reader: yBOLD vault TVL and the staked ysyBOLD net APR from Yearn's ydaemon endpoint, fail-closed unless the staked vault still wraps the tracked yBOLD vault. The DeFiLlama yBOLD pool stays pinned as a lower-evidence corroborating alternative",
+      "The Yearn venue still reaches BOLD through linked-variant projection, but as a `lending-opportunity` alternative that loses arbitration to the direct on-chain row instead of replacing it"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.41",
+    "title": "Base Dollar Liquity V2 Stability Pool Source",
+    "date": "2026-08-21",
+    "effectiveAt": 1787270400,
+    "summary": "The first multi-branch Liquity V2 Stability Pool on-chain source now covers Base Dollar through a deterministic interest-only APR: 75% of aggregate accrued borrower interest across its five Base branches divided by total Stability Pool BD deposits. Direct eth_call reads fail closed unless every branch is readable, and the deliberately conservative estimate excludes upfront borrowing fees and liquidation collateral gains; this replaces the 2026-08-21 `source-family-adapter-unimplemented` intentional gap for `bd-basedollar`.",
+    "impact": [
+      "`bd-basedollar` moves from intentional-gap to covered through the deterministic `onchain:bd-basedollar` reader, publishing the Base Dollar Stability Pools (interest-only) lending-vault row with total Stability Pool deposits as `sourceTvlUsd`; Base Dollar itself remains non-yield-bearing, with yield attributed to the deposit venue",
+      "The reader aggregates `aggWeightedDebtSum` across WETH, wstETH, rETH, cbBTC, and cbETH Stability Pool branches, treats shut-down branches as zero, and requires complete branch coverage before publishing",
+      "The Liquity V2 Stability Pool source family is reusable for other Liquity V2 forks while preserving the same conservative interest-only undercount and fail-closed branch-read contract"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.40",
+    "title": "Measured Venue TVL Eligibility and Native Depth Semantics",
+    "date": "2026-08-20",
+    "effectiveAt": 1787184000,
+    "summary": "External opportunity rows now fail closed unless measured venue TVL clears the higher of the chain floor ($100K by default, $25K on configured smaller/pre-mainnet ecosystems) and 0.1% of current tracked supply, while native rows without venue TVL present honest depth-not-available semantics.",
+    "impact": [
+      "A final resolve-stage pass removes `lending-opportunity`, `fixed-yield`, and `structured-tranche` candidates before evaluation and arbitration when measured `sourceTvlUsd` is null/non-finite, thin, or the coin's tracked supply is unavailable (`tvl-null` / `tvl-thin` / `supply-unavailable`), across tracked, explicit, auto-discovered, supplemental, and linked-variant paths; Royco's bespoke market/vault floors remain and the universal gate augments them",
+      "The GOLD/SILVER supply-relative bypass is removed because tracked supply values are USD-denominated for every peg type. The existing 0.1% share rule from v7.0 now applies universally to deposit-venue classes, closing the case where a roughly $2B-market-cap coin was featurable on a $366K venue",
+      "Tier-1 on-chain rate sources inherit measured TVL from their pinned DeFiLlama pool through a zero-fetch join; audited ERC-4626 `totalAssets` reads cover verified residual vaults. Only measured venue TVL populates `sourceTvlUsd`, never coin supply, and unavailable measurements remain null",
+      "Native rows without measured venue TVL now render `Native · depth n/a` and a muted `Native` TVL-cell marker instead of `Unknown depth` and a dash; no AUM or coin-supply figure is displayed or substituted, and depth gating and penalties continue to use measured venue TVL only"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.39",
+    "title": "Publish-time safety snapshot fallback",
+    "date": "2026-08-19",
+    "effectiveAt": 1787140800,
+    "summary": "When the live Safety Score publication is missing, held, or evaluator-incompatible with the hourly yield snapshot, the API now serves the snapshot's own coherent publish-time safety values (explicitly labeled stale) instead of clearing every safety field to NR, bounded by a 24-hour window.",
+    "impact": [
+      "An evaluation-build or methodology rollout no longer blanks public yield safety for up to an hour: `/api/yield-rankings` keeps the cached payload's publish-time scores, grades, PYS, and ordering unchanged and emits `yield-safety-hydration-stale` with `liveSafetyHydration.fallback: \"publish-time-snapshot\"`",
+      "Safety fields clear to explicit NR only when the cached payload carries no stamped safety identity or the fallback ages past the 24-hour stale-coherent window; that state now degrades `/api/health` (`yield-safety-unrated-serving:*`) so it is alerted rather than discovered visually",
+      "The hourly publisher no longer withholds its publish when the safety identity changes mid-run; it publishes the coherent loaded-identity results and records `safetyIdentityChangedBeforePublish` in run metadata",
+      "No score, grade, PYS weight, or ranking rule changes: live hydration under a compatible identity is byte-for-byte the prior behavior; only the degraded-mode presentation and its bound changed"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.38",
+    "title": "One safety-resolution ladder and one venue-risk derivation",
+    "date": "2026-08-10",
+    "effectiveAt": 1786314613,
+    "summary": "The hourly yield publisher and the API's live-safety hydration now resolve a row's published safety score, grade, provenance, and reason through one shared engine, and both yield engines price venue risk from the continuous weighted score with the coarse tier derived from it, closing four drifted guards without moving any live grade.",
+    "impact": [
+      "Both write and read paths call `resolveYieldRowSafety(...)`; the stricter guard won at each prior divergence: opportunity scores substitute only over an observed AND rated Report Card (an NR grade keeps its own unrating), the reviewed-venue registry fallback applies on both paths, and every external opportunity row is assessed even when it already carries a published contract",
+      "Rows hydrated from legacy cached payloads gain an explicitly unrated opportunity contract plus the `opportunity-evidence-missing` warning instead of silently carrying no contract; Royco tranche rows no longer republish a stale opportunity contract beside a refreshed tranche score; a source whose entire history is same-day now stays NR",
+      "Venue risk is canonical on the weighted 1..5 score for both engines; a stored coarse tier that disagrees with (or lacks) its weighted score can no longer be priced: it derives, or prices as `unknown` (an evidence gap), never a guessed penalty",
+      "The shared penalty-term kit (access, withdrawal, utilization, TVL, venue) carries per-engine magnitude profiles; Royco-only terms remain bespoke and every magnitude is unchanged",
+      "Measured movement: none. 108,000 generic-engine differential cases and 4,000 production-shaped Royco cases are byte-identical, and all 61 reviewed venue registry entries already derive the tier they store"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.37",
+    "title": "Re Protocol Product Identity Correction",
+    "date": "2026-07-28",
+    "effectiveAt": 1785196800,
+    "summary": "Re Protocol yield now follows reUSD's own Basis-Plus APY and NAV series instead of attaching the separate junior reUSDe Insurance Alpha product to the reUSD page.",
+    "impact": [
+      "`reusd-re-protocol` now reads the official `reUSD` series and publishes it as `protocol-api:re-protocol-reusd` with the Ethereum reUSD contract",
+      "reUSDe is removed from the reUSD yield-variant map because the two tokens are distinct products with separate contracts, return profiles, and loss positions",
+      "Misattributed `protocol-api:re-protocol-reusde` history is suppressed immediately and included in the guarded ownership-handoff purge path",
+      "The three-day protocol-observation freshness window, PYS weights, source-risk penalties, benchmark rules, and source arbitration order are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.36",
+    "title": "Re Protocol Insurance Alpha Source",
+    "date": "2026-07-16",
+    "effectiveAt": 1784160000,
+    "summary": "Re Protocol yield now follows the official daily reUSDe Insurance Alpha feed instead of an unrelated Resolv stUSR pool mapping.",
+    "impact": [
+      "`reusd-re-protocol` gains the curated `protocol-api:re-protocol-reusde` source using the latest valid reUSDe APY and NAV published by Re Protocol",
+      "The yield variant now identifies the Ethereum reUSDe Insurance Alpha contract; the unrelated stUSR variant, DeFiLlama pool UUID, and failed generic ERC-4626 quarantine probe are removed",
+      "Daily reUSDe observations use the existing 72-hour slow-NAV freshness window and fail closed on stale, malformed, non-positive NAV, or out-of-envelope APY data",
+      "PYS weights, source-risk penalties, benchmark rules, and source arbitration order are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.35",
+    "title": "Source-Cadence and Wrapper Corrections",
+    "date": "2026-07-16",
+    "effectiveAt": 1784160000,
+    "summary": "Yield freshness now follows the accepted cadence of two slow protocol-native NAV sources, AZND yield stays attached to its loAZND wrapper instead of base-token prices, and the incompatible generic USTB reader is quarantined.",
+    "impact": [
+      "Hashnote USYC and Midas mMEV observations remain score-eligible through the same 72-hour source-age limit enforced by their adapters; every other protocol-API row keeps the existing six-hour threshold",
+      "Base AZND is no longer treated as a NAV-appreciating token, so supply-history market prices cannot be annualized as holder yield; its exact Monad loAZND wrapper pool remains the configured lending-vault source",
+      "USTB leaves the generic ERC-4626 reader because the tracked token does not implement `convertToAssets`; its valid DeFiLlama source remains available and deterministic replacement requires a dedicated Superstate NAV-oracle adapter",
+      "PYS formula weights, source-risk penalties, comparison-anchor windows, benchmark rules, and source arbitration order are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.34",
+    "title": "Estimated Scores for Incomplete Evidence",
+    "date": "2026-07-11",
+    "effectiveAt": 1783728000,
+    "summary": "Fresh yield rows retain a numeric PYS as an estimate when the conservative 40 / NR safety fallback or external-opportunity market evidence is incomplete. Stale source and benchmark evidence remains PYS-ineligible.",
+    "impact": [
+      "Rows without a live Report Card score keep the conservative 40-point safety input and publish an estimated PYS with the explicit `safety-unrated` warning instead of disappearing from the ranking",
+      "External opportunities missing a venue review, market-size input, or required tranche status keep an estimated PYS with `opportunity-evidence-missing`; the warning does not claim the underlying stablecoin is unrated",
+      "`scoreQualification` is `estimated` for these rows, preserving the distinction from rated and partial evidence without treating incomplete inputs as an exact opportunity-risk assessment",
+      "Unknown or stale source freshness and stale benchmarks remain NR with a null PYS; the formula weights, safety fallback value, benchmark rates, and source-risk calibration are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.33",
+    "title": "Distinct-Day History Maturity",
+    "date": "2026-07-11",
+    "effectiveAt": 1783728000,
+    "summary": "Yield history maturity now counts distinct UTC observation days instead of raw hourly samples, preventing a few hours of data from receiving mature-history treatment. PYS weights and the existing limited-history penalty are unchanged.",
+    "impact": [
+      "`sourceRisk.observationCount30d` now means distinct UTC days represented by source-specific history plus the current publication day",
+      "The existing limited-history penalty remains active until seven distinct observation days are available; multiple samples within one UTC day no longer advance maturity",
+      "APY7d, APY30d, variance, source-specific history ownership, and the limited-history penalty magnitude are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.32",
+    "title": "Opportunity-Level Risk for External Opportunities",
+    "date": "2026-07-11",
+    "effectiveAt": 1783728000,
+    "summary": "External yield opportunities (lending markets, fixed-yield products, structured tranches) are scored at the market level through a source-keyed OpportunityRisk contract. The underlying stablecoin's Safety Score becomes one input rather than the opportunity's score, and missing critical market evidence produces NR instead of a neutral exact score. Report Card scores, PYS formula weights, and source-risk calibration are unchanged.",
+    "impact": [
+      "Every external opportunity row publishes `sourceRisk.opportunityRisk` with its opportunity class, the underlying Safety Score used as input, the derived opportunity safety score and penalty, venue review status, and any missing critical evidence",
+      "External opportunities with a reviewed venue and observable market size score safety at the opportunity level: reviewed venue risk above the blue-chip threshold, thin market size, observed high utilization, KYC/access restrictions, and withdrawal constraints deduct safety points from the underlying input",
+      "Missing critical market evidence (unreviewed venue, unknown market size, or unknown market status for structured tranches) withholds the exact PYS with pysNullReason opportunity-evidence-missing and an NR score qualification instead of inheriting the underlying stablecoin's safety with a neutral penalty",
+      "Royco Dawn tranches keep their bespoke market-health safety model and now publish the same OpportunityRisk contract for uniform completeness auditing",
+      "Blue-chip venues at or below the existing 2.0 weighted venue-risk threshold deduct no venue points, so well-reviewed Aave, Compound, Morpho, Yearn, and Pendle markets are unaffected by the venue component",
+      "The underlying stablecoin's own Report Card score and grade are never modified; holder yield on the coin itself is scored exactly as before"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.31",
+    "title": "Evidence Qualification and Reproducible History",
+    "date": "2026-07-10",
+    "effectiveAt": 1783641600,
+    "summary": "Yield Intelligence separates deterministic calculation from evidence quality, qualifies incomplete scores, and persists the exact versioned PYS inputs needed to reproduce every new history point. PYS formula weights and source-risk calibration are unchanged.",
+    "impact": [
+      "Ranking provenance distinguishes calculation mode, evidence class, evidence completeness, and score qualification instead of treating deterministic math as direct evidence",
+      "Rate-derived benchmark products are modeled proxies, so a fresh direct first-party, on-chain, or curated observation cannot lose solely to the proxy's deterministic calculation path",
+      "Missing or stale source freshness, stale benchmark evidence, and missing or NR safety produce an NR row with a null PYS; modeled/fallback evidence is estimated and noncritical evidence gaps are partial",
+      "Each new yield-history point stores a versioned snapshot of APY30d, safety, variance, benchmark, source-risk, scaling, qualification, benchmark key, evidence class, and methodology version",
+      "The history API marks post-migration points as exactly reproducible and legacy rows as partial rather than implying inputs that were never stored",
+      "PYS formula weights, benchmark rates, source-risk calibration, and stablecoin Report Card scores are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.3",
+    "title": "Registry-Wide Freshness Eligibility",
+    "date": "2026-07-10",
+    "effectiveAt": 1783641600,
+    "summary": "Yield Intelligence applies source-family and benchmark TTLs before arbitration, withholds exact PYS from expired rows, and rolls health up across every benchmark used by published rankings. PYS formula weights and benchmark derivation are unchanged.",
+    "impact": [
+      "Source-family freshness is evaluated before confidence arbitration, so a fresh curated observation outranks an expired deterministic or rate-derived candidate",
+      "Expired candidates remain auditable as retained alternatives; a stale-only winner remains visible as last-known context with `pharosYieldScore: null` and `pysNullReason: source-stale` or `benchmark-stale`",
+      "Ranking provenance publishes source freshness, benchmark freshness, and score qualification, while row warnings distinguish degraded and stale benchmark evidence",
+      "The benchmark scoring TTL is 48 hours; fallback or retained benchmarks degrade health, while benchmarks beyond the TTL cannot support an exact current PYS",
+      "Yield Health aggregates every benchmark key used by published rows, so a fresh USD benchmark cannot mask a stale GBP, EUR, or other row-bearing benchmark",
+      "PYS formula weights, source-risk calibration, benchmark provider order, and benchmark rate derivation are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.299",
+    "title": "Source Identity and Freshness Correctness",
+    "date": "2026-07-10",
+    "effectiveAt": 1783641600,
+    "summary": "Yield Intelligence preserves modern source identities, aligns freshness warnings with each source's real production and anchor cadence, makes safety fallbacks explainable, and adds verifiable GBP benchmark response diagnostics. PYS math, venue-risk calibration, benchmark derivation, and source arbitration order are unchanged.",
+    "impact": [
+      "Source-aware history aliases only pre-source-key rows (`null` / `legacy-best`) and the explicit LUSD `bprotocol-lqty-only` legacy identity; linked-variant, protocol-specific, and other modern on-chain keys remain distinct so they cannot generate false parent-source switches",
+      "Historical linked-variant false-switch decisions are reclassified from trend to audit only after two consecutive published generations preserve the linked identity with no switch; ordinary 30-day audit retention can then remove the corrected noise",
+      "Read-time freshness now gives daily rate-derived observations 48 hours, keeps price-derived source observations at 36 hours, expires price-derived and Midas/Ondo NAV comparison anchors after their configured 45-day window, and retains the 14-day anchor threshold for ordinary exchange-rate sources",
+      "Ranking rows and provenance expose a stable nullable `safetyReason`: `report-card-score-missing`, `report-card-grade-not-rated`, or `underlying-report-card-score-missing`, so every default/NR safety input is attributable",
+      "vaults.fyi telemetry classifies disabled, probe-only, and rankable consumption explicitly; an enabled source with an empty rankable allowlist is a bounded audit probe and cannot be mistaken for a consumable ranking source",
+      "GBP SONIA attempts record bounded status/content-type/body-size/parse diagnostics for FRED, ALFRED, and BoE without response bodies or URLs; a Worker canary remains degraded until a direct, current GBP benchmark has published in two consecutive daily generations",
+      "PYS formula shape, source-risk and venue-risk penalties, benchmark source order and rate derivation, APY sanity limits, and confidence-weighted source arbitration are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.298",
+    "title": "Yearn-Report Venue-Risk Recalibration",
+    "date": "2026-07-01",
+    "effectiveAt": 1782864000,
+    "summary": "Reviewed venue sub-scores are recalibrated against Yearn's newly-published per-protocol risk reports: five direct-match RWA/credit venues that scored harsher than Yearn are lowered, the shared Sky/Spark funds-management leg is raised, `3jane-lending` is upgraded to verified confidence, and two proxy-only reports are held. The PYS formula, tier thresholds, penalty curve, and dependency-concentration registry are unchanged.",
+    "impact": [
+      "Five direct-match venues that scored harsher than Yearn's published reports are lowered: `3jane-lending` (audits/centralization/funds 5→4, liquidity/operational 4→3), `cap` (centralization 4→3, funds 4→3, operational 3→2), `maple` (funds 4→3, liquidity 4→3), `centrifuge` (funds 4→3, liquidity 4→3), and `fluid-lending` (centralization 3→2, funds 3→2)",
+      "The continuous PYS venue penalty falls accordingly `(weighted − 2.0) × 0.15`: 3jane-lending 0.42→0.27, cap 0.21→0.11, maple 0.18→0.11, centrifuge 0.15→0.08, fluid-lending 0.09→0; `fluid-lending`'s derived tier moves medium→low, so it also leaves the DEWS structured-medium-risk-venue branch (DEWS thresholds unchanged)",
+      "`3jane-lending` confidence is upgraded partial→verified against Yearn's USD3 report (four dedicated audits plus a Morpho Blue base and Certora coverage); its metadata rationale and evidence are updated to match the new scores",
+      "The Sky/Spark legs `sparklend` and `spark-savings` move funds management 1→2 to reflect the shared MCD_VAT backing (~26% off-chain RWA custody plus Circle USDC concentration) that Yearn scores at 1.8; both legs stay below the 2.0 penalty knee, so the blue-chip no-op is preserved and no penalty changes",
+      "`yearn`/`yearn-finance` operational moves 2→1 (org-level maturity: BORG legal entity, named multisig signers, active monitoring); funds management is held at 2 to hedge the generic venue's leveraged-vault coverage, and the weighted score stays below 2.0 so the no-op is preserved",
+      "Adds two low-severity (informational, zero-penalty) dependency-concentration entries, `syrupusdc-maple` and `syrupusdt-maple` = Maple (Pool Delegate), surfacing the single off-chain Pool-Delegate EOA that originates ~97% of syrupUSDC/USDT AUM; severity is low because the `maple` venue tier already prices the credit/delegate risk (no double-count), matching the existing single-curator Morpho chips",
+      "`aave-v3` (assessed against Yearn's sGHO savings-vault report) and `morpho`/`morpho-v1`/`morpho-blue` (against Yearn's Gauntlet Aera-vault report) are unchanged: those reports are proxy matches whose deltas are product-specific and do not re-score the venue",
+      "Calibration source is Yearn's published risk reports as a documentation cross-check, not a runtime feed; PYS formula shape, benchmark selection, dependency-concentration registry, history semantics, and publication guards are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.297",
+    "title": "Optional vaults.fyi Supplemental Yield Source",
+    "date": "2026-06-29",
+    "effectiveAt": 1782691200,
+    "summary": "Yield Intelligence adds vaults.fyi as a disabled-by-default supplemental source family with local credit caps, audit-only inventory probing, and allowlisted rankable vault emission behind exact stablecoin address matching.",
+    "impact": [
+      "vaults.fyi is off unless `VAULTS_FYI_ENABLED=true` and a runtime `VAULTS_FYI_API_KEY` are configured; no credential is committed or required for normal operation",
+      "When enabled without `VAULTS_FYI_RANKABLE_VAULTS`, the supplemental cron performs only a bounded detailed-vault inventory probe and publishes no ranking candidates",
+      "Only explicit `network:vaultId` allowlist entries can emit rankable supplemental candidates, and each candidate must match a tracked stablecoin by chain plus token contract address; symbol-only matches are rejected",
+      "The adapter estimates vaults.fyi credits locally, respects per-run, per-month, and page caps, fails open on provider quota/errors, and records compact provider telemetry under supplemental source-family metadata",
+      "Rankable vaults.fyi rows use stable `protocol-api:vaults-fyi:<chain>:<vault>` source keys and carry the underlying protocol slug into source-risk venue metadata when vaults.fyi provides it",
+      "PYS formula, benchmark selection, deterministic source arbitration, history semantics, and public publication guards are unchanged except for the optional new source-family candidates when explicitly enabled and allowlisted"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.296",
+    "title": "GBP SONIA St. Louis Fed Mirror Redundancy",
+    "date": "2026-06-25",
+    "effectiveAt": 1782345600,
+    "summary": "The GBP benchmark now tries the ALFRED graph CSV mirror of the same SONIA Compounded Index after the FRED graph CSV and before the Bank of England IADB fallback, reducing retained-fallback days when one St. Louis Fed graph host is unavailable from Workers.",
+    "impact": [
+      "GBP benchmark refreshes still derive `GBP 3M compounded SONIA` from the Bank of England SONIA Compounded Index (`IUDZOS2`) over the same trailing 90-day window",
+      "Source failover is now FRED graph CSV (`fred-sonia-compounded-index`), then ALFRED graph CSV (`alfred-sonia-compounded-index`), then Bank of England IADB (`boe-sonia-compounded-index`)",
+      "The GBP rate, fallback mode `gbp-sonia-compounded-index-failed`, PYS formula, source-risk calibration, history semantics, and publication guards are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.295",
+    "title": "GBP SONIA Benchmark Source Failover to FRED Mirror",
+    "date": "2026-06-25",
+    "effectiveAt": 1782345600,
+    "summary": "The GBP benchmark now resolves the SONIA Compounded Index from the FRED mirror of the same IUDZOS2 series first, because the Bank of England IADB host blocks Cloudflare Worker egress; BoE IADB is retained as a fallback.",
+    "impact": [
+      "GBP benchmark refreshes fetch the SONIA Compounded Index (`IUDZOS2`) from FRED's reachable graph CSV and record successful observations with source `fred-sonia-compounded-index`",
+      "Bank of England IADB remains wired as the secondary GBP source with provenance `boe-sonia-compounded-index`, used only when the FRED mirror is unavailable",
+      "The derived value is unchanged: the same IUDZOS2 compounded-index series and trailing 90-day annualization are applied, so the GBP rate, fallback mode `gbp-sonia-compounded-index-failed`, PYS formula, source-risk calibration, and publication guards are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.294",
+    "title": "NY Fed EFFR Benchmark Source Hardening",
+    "date": "2026-06-22",
+    "effectiveAt": 1782086400,
+    "summary": "Yield Intelligence now resolves the optional USD_EFFR benchmark from the New York Fed Markets Data API first, retaining FRED DFF as a fallback feed for EFFR-linked products.",
+    "impact": [
+      "USD_EFFR benchmark refreshes prefer the official New York Fed latest EFFR endpoint and record successful live observations with source `nyfed-effr`",
+      "FRED DFF remains wired as the secondary USD_EFFR source with provenance `fred-dff`, so a New York Fed endpoint outage can still publish a live market observation without marking the benchmark degraded",
+      "When both live EFFR feeds fail, the cron retains the prior market USD_EFFR benchmark when available and marks the fallback as `usd-effr-sources-failed-retained`; otherwise it reports `usd-effr-sources-failed`",
+      "PYS formula shape, source-risk calibration, benchmark selection semantics, history semantics, and publication guards are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.293",
+    "title": "Banxico-Only MXN Benchmark Hardening",
+    "date": "2026-06-19",
+    "effectiveAt": 1781827200,
+    "summary": "Yield Intelligence removes the Etherfuse CETES issuer page from the shared MXN benchmark fallback path so MXN benchmarks are sourced from Banxico or retained prior market data only.",
+    "impact": [
+      "MXN benchmark resolution still prefers Banxico SIE `SF43936` with `BANXICO_TOKEN`; when the token is missing or Banxico fails, the cron no longer fetches Etherfuse CETES current issuance as a global benchmark proxy",
+      "Etherfuse CETES current issuance remains available only as the CETES product's own `protocol-api:etherfuse-cetes-current-issuance` APY source",
+      "Fallback benchmark resolutions no longer refresh `lastMarket*` fields, preventing degraded proxy values from becoming retained last-market benchmarks on later source failures",
+      "If Banxico is unavailable and no prior Banxico-backed MXN benchmark is retained, MXN-pegged rows fall back to the normal USD benchmark-selection path"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.292",
+    "title": "Yearn-Style 5-Category Venue Risk and Dependency Concentration",
+    "date": "2026-06-15",
+    "effectiveAt": 1781481600,
+    "summary": "PYS source risk replaces the hand-set 3-bucket venue tier with Yearn's shipped 5-category weighted rubric, scores 49 previously-unreviewed long-tail venues (12 → 61), adds a reviewer-set cross-venue dependency-concentration sub-signal, and anchors calibration to Yearn's own published yvUSDC risk report.",
+    "impact": [
+      "Each reviewed venue now carries five Yearn-style sub-scores, weighted into a 1-5 venue-risk score: audits (20%), centralization (30%), funds management (30%), liquidity (15%), operational (5%), each 1-5 with higher = riskier; the coarse `venueRiskTier` is now DERIVED from that score (Minimal+Low → low, Medium → medium, Elevated+High → high) rather than hand-set",
+      "The PYS venue penalty moves from the flat low/medium/high buckets (0 / +0.15 / +0.35) to a continuous curve `max(0, weighted − 2.0) × 0.15`; it is calibration-preserving (weighted ≤ 2.0 → 0, the legacy `low` no-op; 3.0 → +0.15, legacy `medium`; 4.0 → +0.30; 5.0 → +0.45) and only applies when a venue carries category scores, so unscored venues stay neutral exactly as before",
+      "The reviewed venue registry expands from 12 to 61: the previously-unscored long tail is now scored, including uncollateralized/RWA credit (Clearpool, Goldfinch, 3Jane, Centrifuge, Flux, Cap, Avantis), newer EVM money markets (Euler v2, Gearbox, Curve LlamaLend, Fluid, Dolomite, Exactly, Fraxlend v2, Aave v4, Compound v2), CDPs (Felix, Frankencoin), and app-chain lenders (Kamino, JustLend, BENQI, Aries, Scallop, Echelon, Blend, Jupiter Lend, HyperLend, Curvance, Sovryn)",
+      "Reviewed venue scores bind from the DeFiLlama `project` slug carried on auto-discovered lending rows, so the long tail picks up its score without sourceKey inference; remaining unreviewed venues continue to resolve `unknown` and stay neutral",
+      "A reviewer-set `dependencyConcentration` sub-signal (keyed by stablecoin id, not auto-derived) captures cross-venue concentration that per-venue tiering structurally misses; it adds +0.10 (medium) or +0.20 (high) to the source-risk penalty. Seeded with `yvusdc-yearn` = Sky (medium): its funded debt sits ~100% behind Sky governance (sUSDS + Spark), matching Yearn's own risk report flagging that coupling as the dominant risk",
+      "Calibration is anchored to Yearn's published `yvUSDC` risk report (1.3/5 'Minimal Risk'), which agrees with the dashboard's `low` tier for that vault's venue legs; the anchor is documentation, not a runtime feed",
+      "Newly-scored medium/high venues now also feed the DEWS structured-venue Yield Anomaly branch (DEWS v6.09); no DEWS threshold changed",
+      "PYS formula shape (effective yield ÷ source-risk penalty ÷ safety penalty × consistency × scaling), benchmark selection, history semantics, and publication guards are otherwise unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.291",
+    "title": "RUB Benchmark and Audit-Queue Coverage Repairs",
+    "date": "2026-06-11",
+    "effectiveAt": 1781179200,
+    "summary": "Yield Intelligence adds a RUB benchmark lane backed by the Central Bank of Russia key-rate SOAP feed, promotes A7A5 into rate-derived coverage, repairs audited lending-opportunity pins, and exposes coverage-regression telemetry for the monthly audit workflow.",
+    "impact": [
+      "The benchmark registry adds optional `RUB`, sourced from the Central Bank of Russia DailyInfo `KeyRateXML` feed; RUB validation uses the same wider `[-10%, 100%]` band as TRY so high local reference rates are accepted",
+      "`a7a5-old-vector` leaves the intentional-gap manifest and resolves through a rate-derived `CBR key-rate reserve-yield proxy (net of 1.00pp)` row with `benchmarkOverrideKey: RUB`",
+      "`usdx-hex-trust` and `reusd-resupply` deterministic lending pins are repointed to live DeFiLlama pools, stale `doc-money-on-chain` and `pmusd-precious-metals` pins are removed, and `reusd-resupply` gets an exact-pool safety bypass with written rationale",
+      "`bifi` and `fraxlend` join the lending allowlist from the audit-queue follow-up, while the existing APY, TVL, safety, and category gates still decide whether their candidate pools publish",
+      "Same-symbol auto-lending collision blocks now protect unrelated pools such as Kava USDX vs Hex Trust USDX, Virtue VUSD vs Monad VUSD, and legacy Nexus NUSD vs Neutrl NUSD",
+      "The monthly coverage audit now emits stale auto-lending override queue items, and sync/status metadata exposes published ranking-count deltas so coverage regressions are visible in Yield Health",
+      "No global APY, TVL, safety, or floor policy changes were made; Binance BFUSD, Gate GUSD, Tradable notes, dEURO, and eBUSD remain deferred until stable public machine-readable APY sources or adapter paths are verified"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.29",
+    "title": "NAV Oracle, TRY TLREF, and Queue-Guided Coverage",
+    "date": "2026-06-09",
+    "effectiveAt": 1780984800,
+    "summary": "Yield Intelligence adds the first Midas NAV-oracle adapter, a TRY benchmark lane backed by CBRT EVDS TLREF, rate-derived benchmark overrides for treasury-like products, structured-tranche filter cleanup, and audit-queue-driven allowlist promotion metadata.",
+    "impact": [
+      "`mmev-midas` gains a curated `protocol-api:midas-mmev-nav-oracle` source from the issuer-listed Ethereum mMEV/USD oracle, using the oracle value as a NAV anchor with a three-day freshness guard",
+      "The benchmark registry adds optional `TRY`, sourced from CBRT EVDS BIST TLREF series `TP.BISTTLREF.ORAN`; TRY validation uses a wider `[-10%, 100%]` band so Turkish reference rates are not rejected by the normal 20% ceiling",
+      "`witry-brix` now has rate-derived TRY coverage through the BIST TLREF overnight proxy",
+      "Rate-derived configs can set `benchmarkOverrideKey`; the APY formula still derives from the configured product benchmark, while PYS/excess-yield provenance can compare the row against a distinct benchmark hurdle",
+      "USD tokenized T-bill/MMF proxy rows now compare against `USD_EFFR` in PYS/excess-yield provenance, and EUR/GBP treasury proxy rows carry explicit same-currency override keys for future-safe provenance",
+      "`structured-tranche` keeps its runtime taxonomy but now renders as `Structured Tranche`; frontend opportunity grouping treats structured tranches alongside lending and fixed-yield external opportunities",
+      "Monthly coverage-audit allowlist recommendations now derive from the unmatched high-TVL queue plus the protocol-category gate, with suggested config snippets, source links, and promotion metadata for cheap reviewed rounds",
+      "PYS formula, source-risk calibration, history semantics, and publication guards are unchanged except where row-level benchmark selection uses the explicit override"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.28",
+    "title": "GBP SONIA Compounded Index Benchmark",
+    "date": "2026-06-09",
+    "effectiveAt": 1780981200,
+    "summary": "Yield Intelligence upgrades GBP benchmark resolution from an overnight SONIA proxy to the Bank of England SONIA Compounded Index annualized over a trailing 90-day window.",
+    "impact": [
+      "GBP benchmark refresh now uses the Bank of England IADB SONIA Compounded Index `IUDZOS2` instead of the overnight SONIA proxy",
+      "The daily benchmark cron annualizes the trailing 90-day index change to produce `GBP 3M compounded SONIA`",
+      "Benchmark metadata records source `boe-sonia-compounded-index`",
+      "GBP feed failures use fallback mode `gbp-sonia-compounded-index-failed` and retain the existing retained-last-market behavior when available",
+      "PYS formula, source arbitration, source-risk calibration, publication guards, and non-GBP benchmark paths are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.27",
+    "title": "Fixed-Yield Pendle PT Opportunities",
+    "date": "2026-06-09",
+    "effectiveAt": 1780977600,
+    "summary": "Yield Intelligence adds a fixed-yield YieldType for Pendle principal-token opportunities and treats those rows as external alternatives that do not displace native holder-yield rows.",
+    "impact": [
+      "`fixed-yield` joins the YieldType taxonomy with the Fixed Yield label for fixed-maturity principal-token opportunities",
+      "Pendle supplemental PT market rows now publish as `protocol-api` `fixed-yield` candidates with source keys shaped as `protocol-api:pendle:<chain>:<marketAddress>`",
+      "Pendle rows keep underlying stablecoin matching through the PT market's underlying asset symbol/address instead of creating synthetic stablecoin entries",
+      "`fixed-yield` joins `lending-opportunity` in the external opportunity projection guard, so PT rows can appear alongside native holder-yield rows without displacing those rows through variant projection or parent inheritance",
+      "PYS formula, benchmark selection, source-risk calibration, history semantics, and publication guards are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.26",
+    "title": "Wave 2 Category-Gated Lending Allowlist",
+    "date": "2026-06-09",
+    "effectiveAt": 1780974000,
+    "summary": "Yield Intelligence adds a Wave 2 batch of category-gated thin-chain and app-chain lending protocols to auto-discovery after DeFiLlama category verification.",
+    "impact": [
+      "The curated lending allowlist now includes `aries-markets`, `blend-pools-v2`, `current`, `curvance`, `scallop-lend`, and `tydro`",
+      "These protocols were verified on 2026-06-09 as DeFiLlama category Lending with live single-asset stablecoin pools on Aptos, Stellar, Sui, Monad, and Ink",
+      "Speculative non-lending categories remain excluded by the protocol category gate before they can become high-confidence allowlist recommendations",
+      "The existing APY floor, chain-specific TVL floors, supply-relative `0.1%` gate, reserved-pool exclusion, and source-risk penalty semantics continue to apply",
+      "PYS formula, benchmark selection, history semantics, and publication guards are unchanged; the bump records a source-roster expansion only"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.25",
+    "title": "USDGO EFFR Rate-Derived Source",
+    "date": "2026-06-09",
+    "effectiveAt": 1780970400,
+    "summary": "Yield Intelligence promotes USDGO back into runtime yield coverage through an EFFR-linked rate-derived source using FRED DFF, net of OSL's documented 38 bps fee spread.",
+    "impact": [
+      "`usdgo-osl` is yield-bearing again and leaves the intentional-gap manifest because it now has a reliable rate-derived runtime APY path",
+      "The benchmark registry adds optional `USD_EFFR`, sourced from FRED DFF (`fred-dff`) as the Effective Federal Funds Rate feed",
+      "USDGO computes rate-derived APY as `max(0, USD_EFFR - 38 bps)`, matching OSL public material that references approximately 3.24% net yield versus May 2026 EFFR after fees",
+      "The default USD benchmark remains `USD` / FRED `DGS3MO`; `USD_EFFR` is a source-specific benchmark key for EFFR-linked products rather than a replacement global USD hurdle",
+      "PYS formula, source-risk penalties, publication guards, and benchmark retained-last-market semantics are unchanged"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.24",
+    "title": "Source Management, Venue Risk, and Sync Telemetry",
+    "date": "2026-06-09",
+    "effectiveAt": 1780966800,
+    "summary": "Yield Intelligence now uses cached DeFiLlama protocol categories for coverage-audit recommendations, table-driven chain lending TVL floors, monthly quarantine re-probes, a fully reviewed venue-risk tier registry for tracked source families, and observability metadata for deterministic-envelope rejections and comparison-anchor freshness.",
+    "impact": [
+      "The DEX-liquidity job caches a compact DeFiLlama `/protocols` slug/category snapshot under `defillama-protocols`, and the monthly yield coverage audit reuses that cache to annotate protocol recommendations with DeFiLlama category metadata",
+      "`high-confidence` lending-allowlist recommendations now require a category of Lending, CDP, RWA Lending, or Uncollateralized Lending; missing categories and non-lending categories stay `review-needed` even when TVL and pool count are high",
+      "Auto-discovered lending opportunities now use the table-driven `CHAIN_LENDING_TVL_FLOOR_USD`: `$100K` remains the default floor, while Aptos, Berachain, Cardano, Ink, Monad, Plasma, Solana, Stacks, Stellar, and Sui use the configured `$25K` smaller/pre-mainnet floor",
+      "The supply-relative lending gate still applies on top of the chain floor for eligible tracked stablecoins",
+      "Reviewed venue-risk tiers now cover the tracked backlog: `spark-savings`, `yearn`, `yearn-finance`, and `pendle` are `low`; `maple`, `morpho`, `morpho-v1`, `morpho-blue`, and `beefy` are `medium`; unknown or unreviewed venues remain neutral",
+      "Monthly coverage audits now re-probe explicit generic `convertToAssets` quarantines with configured monthly `chainRpcs` when available; `reusd-re-protocol` has an inactive audit probe config and remains outside hourly `ON_CHAIN_RATE_CONFIGS`",
+      "Successful nonzero quarantine probe rates inside the `<=300%` exchange-rate envelope produce `quarantineReadyToRestore`, `quarantineProbeSummary`, and an operator queue candidate kind `quarantine-ready-to-restore`; restoration remains manual",
+      "`scrvusd-curve` stays quarantined from the generic reader because it already uses the dedicated current-rate reader; `scrvusd-curve` and `reusd-re-protocol` both carry `nextReviewAt: 2026-07-09`",
+      "Tier 1 deterministic APYs above the 300% sanity envelope are counted in sync metadata at `sourceCoverage.onChainEnvelopeRejectionCount` with bounded examples and truncation state; fallback resolution remains unchanged",
+      "Sync metadata now records `sourceCoverage.comparisonAnchorFreshness` with anchored row count, stale anchor count, oldest stale anchor age/source, bounded stale examples, and truncation state",
+      "Admin `/api/status` exposes the comparison-anchor freshness summary at `yieldHealth.comparisonAnchorFreshness`; it is observability-only and does not change source arbitration, scoring, or publication eligibility",
+      "PYS formula, history semantics, and publication guards are unchanged; `low` remains a no-op and `medium` continues to contribute the existing +0.15 source-risk penalty",
+      "DEWS v6.07 consumes reviewed medium venue risk as `structured-medium-risk-venue` (+10) while the existing high-risk venue branch remains +25"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.23",
+    "title": "Wave 1 Source-Roster Expansion",
+    "date": "2026-06-09",
+    "effectiveAt": 1780963200,
+    "summary": "Yield Intelligence promotes selected curated wrappers to deterministic ERC-4626 coverage, adds rate-derived coverage for FUSD/SAFO/SPKCC, adds Aave v4 to lending auto-discovery, and removes an unreachable Matrixdock STBT intentional gap.",
+    "impact": [
+      "`susdc-spark`, `susdt-spark`, `syrupusdc-maple`, `syrupusdt-maple`, `yvusdc-yearn`, `gtusdc-gauntlet`, `sgho-aave`, `wsrusd-reservoir`, `stcusd-cap`, `savusd-avant`, and `yousd-yield-optimizer` now have deterministic ERC-4626 exchange-rate coverage where the configured chain reader is available",
+      "Curated DeFiLlama rows for those wrappers remain eligible as fallback or retained alternate sources; the update improves source resilience without changing wrapper ownership semantics",
+      "`fusd-finchain`, `safo-spiko-usd`, and `spkcc-spiko` gain rate-derived coverage for fund or rebase mechanics that price-derived APY cannot model cleanly",
+      "`aave-v4` joins the curated lending auto-discovery allowlist",
+      "The phantom `stbt-matrixdock` intentional-gap entry is pruned because STBT is not a tracked stablecoin and could not surface in the yield adapter manifest",
+      "VBILL is intentionally excluded from this rate-derived batch; its metadata points to an on-chain NAVLink-style NAV feed, so it belongs to a future NAV-oracle source lane",
+      "PYS scoring math, source-risk penalties, history semantics, and publication guards are unchanged; the bump records source-roster and coverage-accounting changes"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.22",
+    "title": "First-Party GBP/JPY/AUD Benchmarks",
+    "date": "2026-06-07",
+    "effectiveAt": 1780790400,
+    "summary": "The daily benchmark registry now reads GBP SONIA, JPY overnight call rate, and AUD cash-rate data from first-party central-bank endpoints instead of stale or slow FRED mirrors.",
+    "impact": [
+      "GBP benchmark refreshes use the Bank of England IADB SONIA CSV (`IUDSOIA`) directly",
+      "JPY benchmark refreshes use Bank of Japan Time-Series Data Search `STRDCLUCON`, replacing the discontinued FRED mirror that ended at December 2023",
+      "AUD benchmark refreshes use the Reserve Bank of Australia F1 money-market CSV cash-rate target instead of the FRED 3-month interbank mirror",
+      "Retained-last-market fallback semantics and PYS scoring math are unchanged; the bump records benchmark source reliability and source-roster changes"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.21",
+    "title": "Anchor Freshness and Published Coverage Guards",
+    "date": "2026-06-06",
+    "effectiveAt": 1780704000,
+    "summary": "Yield publication now treats stale comparison anchors as stale data, blocks severe lending-opportunity or total ranking collapses against the prior public snapshot, and tightens Layer-3 DeFiLlama fallback matching to exact symbols or address-corroborated wrappers.",
+    "impact": [
+      "On-chain and price-derived rows with comparison anchors older than 14 days carry `anchor-stale` decision evidence and publish the existing `data-stale` warning even when the current source observation is fresh",
+      "The hourly publisher compares the candidate rankings against the previous public cache for yield-bearing rows, non-yield-bearing lending-opportunity rows, and total ranking count before replacing the cache",
+      "Severe lending-opportunity or total ranking count regressions return a degraded no-op so partial supplemental loss does not silently overwrite the last good public rankings snapshot",
+      "Layer-3 DeFiLlama fallback no longer accepts substring-only symbol matches; exact normalized symbols can still match, and prefixed/suffixed wrapper rows require underlying-token address corroboration",
+      "PYS scoring math and source confidence tiers are unchanged; the bump records publication safety, freshness labeling, and source-resolution guardrails"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.20",
+    "title": "Deterministic APY Sanity Envelope",
+    "date": "2026-06-06",
+    "effectiveAt": 1780704000,
+    "summary": "Deterministic exchange-rate and price-derived APY rows are now rejected when short-window annualization exceeds the shared sanity ceiling.",
+    "impact": [
+      "Adds a shared 300% APY sanity envelope for generic on-chain exchange-rate and price-derived observations",
+      "Rejects out-of-envelope Tier 1 on-chain rows instead of publishing or storing the suspicious current exchange rate as a fresh history anchor",
+      "Rejects out-of-envelope price-derived NAV rows so curated DeFiLlama, protocol API, or rate-derived rows can win arbitration instead of being displaced by a transient price spike",
+      "Protocol-specific adapters and benchmark rate-derived rows keep their existing source-family rules and are not governed by this generic annualization guard"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.19",
+    "title": "Royco Dawn Tranche Opportunities",
+    "date": "2026-06-03",
+    "effectiveAt": 1780444800,
+    "summary": "Royco Dawn is now ingested as a Yield Intelligence protocol-API source with separate senior and junior structured-tranche opportunity rows attached to the tracked underlying stablecoin where the deposit token can be resolved.",
+    "impact": [
+      "Royco Dawn market rows publish under `royco-dawn:<chainId>:<marketId>:senior` and `royco-dawn:<chainId>:<marketId>:junior` source keys rather than creating synthetic stablecoin registry entries for tranche share tokens",
+      "The supplemental source lane maps Royco deposit-token addresses against tracked stablecoin contracts and configured wrapper variants, including the Neutrl `sNUSD` -> `nusd-neutrl` route",
+      "A new `structured-tranche` yield type labels tranche opportunities without applying generic base-asset lending size gates designed for ordinary lending suggestions",
+      "PYS now consumes an opportunity-level tranche Safety Score for Royco rows: senior rows are capped at or below the underlying Safety Score, while junior rows carry first-loss, utilization, coverage, drawdown, market-status, TVL, withdrawal, explicit access, and venue-posture penalties",
+      "Royco tranche safety is exposed through nested `sourceRisk` fields such as `trancheSide`, `underlyingSafetyScore`, `trancheSafetyScore`, `marketCoverageRatio`, `marketUtilizationRatio`, and `marketStatus`; the underlying Report Card Safety Score itself is unchanged",
+      "Read-time safety hydration recomputes Royco tranche safety from the live underlying Report Card snapshot instead of overwriting the row with the raw underlying Safety Score"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.18",
+    "title": "Base Asset Yield Source Corrections",
+    "date": "2026-05-22",
+    "effectiveAt": 1779481256,
+    "summary": "GHO and DOLA no longer publish savings-wrapper APY through their base stablecoin rows; tracked wrappers own their own rows when present, and untracked wrappers stay out of the runtime source roster.",
+    "impact": [
+      "`gho-aave` no longer carries parent-side yield metadata, `YIELD_POOL_MAP`, or `YIELD_VARIANT_MAP` entries for sGHO",
+      "`sgho-aave` remains the tracked Aave Savings GHO yield asset and keeps the curated Aave V3 DeFiLlama pool mapping",
+      "`dola-inverse-finance` no longer carries yield-bearing metadata, `YIELD_POOL_MAP`, `YIELD_VARIANT_MAP`, or generic on-chain exchange-rate coverage for the untracked sDOLA wrapper",
+      "The generic on-chain vault set drops the DOLA/sDOLA parent mapping, reducing the documented `ON_CHAIN_RATE_CONFIGS` count from 12 to 11",
+      "`usdn-smardex` now uses its exact SMARDEX USDN DeFiLlama single-exposure pool after the asset was corrected from NAV-token to rebase semantics",
+      "`a7a5-old-vector` is explicitly yield-bearing but remains an intentional runtime gap until a reliable RUB benchmark or issuer APY source is wired",
+      "PYS scoring math, source-risk penalties, and confidence arbitration are unchanged; the bump records source ownership and tracked-universe routing"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.17",
+    "title": "sdUSD Direct Yield Ownership",
+    "date": "2026-05-21",
+    "effectiveAt": 1779364800,
+    "summary": "dTRINITY sdUSD is now tracked as its own yield-bearing NAV variant of dUSD, so sdUSD owns the dStake yield row instead of publishing through the dUSD parent.",
+    "impact": [
+      "`sdusd-dtrinity` is admitted as a CoinGecko-backed active NAV variant with `variantOf: dusd-dtrinity` and a 100% wrapper dependency on dUSD",
+      "`dusd-dtrinity` is no longer statically marked yield-bearing and no longer resolves sdUSD through `YIELD_VARIANT_MAP`",
+      "The existing Ethereum/Fraxtal dStake weighted DeFiLlama pool group now publishes under `sdusd-dtrinity` with the same `defillama-weighted:dtrinity-sdusd` source key",
+      "Parent-side dUSD sdUSD history is suppressed through the ownership-handoff cleanup path so wrapper APY history does not remain attached to the base stablecoin",
+      "PYS scoring math, source-risk penalties, and confidence arbitration are unchanged; the bump records source ownership and tracked-universe routing"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.16",
+    "title": "NAV Metadata Fixes + cgUSD/USDN Rate Proxies",
+    "date": "2026-05-19",
+    "effectiveAt": 1779210000,
+    "summary": "Fixes FPI, SILK, and ISC NAV-token metadata so they route through NAV-appreciation coverage, and adds rate-derived proxy coverage for cgUSD and USDN.",
+    "impact": [
+      "`fpi-frax`, `silk-shade-protocol`, and `isc-international-stable-currency` now carry the NAV-token metadata needed to route through price-derived NAV-appreciation coverage instead of appearing as yield coverage gaps",
+      "`cgusd-cygnus-finance` gains a rate-derived T-bill proxy source modeled net of its 0.35% protocol fee",
+      "`usdn-noble` gains a rate-derived M0 T-bill rebase proxy source with no configured spread",
+      "PYS scoring math, source-risk penalties, and confidence arbitration are unchanged; the bump records corrected coverage routing and source-roster expansion"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.15",
+    "title": "Etherfuse CETES APY Source + MXN Benchmark Fallback",
+    "date": "2026-05-19",
+    "effectiveAt": 1779206400,
+    "summary": "Etherfuse CETES now publishes APY from Etherfuse's current Stablebond issuance rate instead of the fallback USD price-derived NAV path, and the MXN benchmark can use the same first-party issuance rate as a degraded proxy when Banxico is unavailable.",
+    "impact": [
+      "`cetes-etherfuse` gains a curated `protocol-api:etherfuse-cetes-current-issuance` source that reads Etherfuse's first-party Next data for the active CETES issuance `interestRateBps`, avoiding USD/MXN FX movement being interpreted as yield",
+      "The price-derived CETES fallback can still run as an alternate source, but curated protocol-API confidence makes the Etherfuse issuance rate the selected source when available",
+      "MXN benchmark resolution still prefers Banxico SIE `SF43936`; when `BANXICO_TOKEN` is missing or Banxico fails, the cron tries Etherfuse CETES current issuance as an explicit `isFallback` / `isProxy` benchmark with `fallbackMode` ending in `etherfuse-stablebond`",
+      "If both Banxico and Etherfuse fail, the existing retained-last-source behavior remains in place; otherwise MXN stays unavailable and affected rows fall back to USD",
+      "The CETES self-reference caveat remains: when the asset yield and the MXN benchmark both represent CETES exposure, spread credit is intentionally near zero rather than inflated by USD FX effects"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.14",
+    "title": "Adapter Manifest Public Endpoint",
+    "date": "2026-05-19",
+    "effectiveAt": 1779148800,
+    "summary": "The yield adapter manifest is now published at `/api/yield-adapter-manifest` as the canonical machine-readable source list for every yield-bearing asset, with per-entry family, exact source key when known, source-key pattern for runtime-resolved or disabled strategies, label, chain/project hints, lifecycle, and methodology version stamping.",
+    "impact": [
+      "New public endpoint `/api/yield-adapter-manifest` enumerates every adapter row (deterministic on-chain, curated DeFiLlama, protocol-API, auto-discovery lending overrides, rate-derived, price-derived, and intentional coverage gaps) with a 5-minute cache profile",
+      "Each entry exposes `stablecoinId`, `coinSymbol`, `family`, nullable `sourceKey`, optional `sourceKeyPattern`, `label`, optional `chain`/`project` hints, `lifecycle` (`active` / `quarantined` / `intentional-gap` / `experimental`), and the current `methodologyVersion`",
+      "`sourceKey` is populated only when the entry has an exact runtime key that joins to rankings, decision rows, or `/api/yield-history?sourceKey=...`; runtime-resolved and disabled rows use `sourceKeyPattern` instead of synthetic non-runtime keys",
+      "Quarantined adapter rows are surfaced as disabled entries for the underlying family, with the quarantine rationale carried in `quarantineReason`, so active sibling sources stay active",
+      "Methodology version stamp is the canonical Yield Intelligence label and is included on every entry so downstream consumers can pin against a known methodology snapshot",
+      "Public decision ledger surfaces selected reason code, previous best source key, sourceSwitch boolean, and up to 2 retained alternates (with coded rejection reasons) on every `/api/yield-rankings` row through the new `decisionLedger` field; reason codes ship as a stable enum so UI templates render text client-side",
+      "When a source switch's previous source is present in the evaluated candidate set, `decisionLedger.apy30dDeltaFromPrevious` carries the selected APY30d delta versus that previous source",
+      "Persists PYS / safety / variance snapshots on each `yield_history` row (`pys_at_publish`, `safety_at_publish`, `variance_at_publish`) for honest reconstruction of historical rankings without recomputing from live inputs",
+      "Decision-ledger alternatives migrate to a sibling `yield_source_decision_alternatives` table; the legacy `alternatives_json` blob is still written for one cycle of co-existence so admin readers can dual-source. A nullable `retention_reason` column on `yield_source_decisions` tags each row as `trend` (source switch, any evaluated-source anomaly, or rejection of a higher-confidence source) or `audit` so audit-only rows and old null rollout rows can be pruned at 30 days while trend rows persist",
+      "Scoring, source resolution, history semantics, and publication rules are unchanged in v8.14; the bump tracks the new public contract only"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.13",
+    "title": "Benchmark Registry Expansion + First Venue Tier Batch",
+    "date": "2026-05-15",
+    "effectiveAt": 1778871300,
+    "summary": "Benchmark registry adds GBP, JPY, MXN, BRL, AUD, and CAD rate feeds, ending the universal USD T-Bill fallback for those non-USD-pegged stablecoins. `sourceRiskScore` is now derived from the resolved source-risk penalty so the 0-100 display field stops being universally null, and the first reviewed venue tier batch lands for Aave V3, Compound V3, Spark, and Morpho Blue.",
+    "impact": [
+      "EUR/CHF retain their existing native benchmarks; GBP now uses FRED `IUDSOIA` (SONIA proxy), JPY uses FRED `IRSTCB01JPM156N` (TONA-equivalent overnight call rate proxy), MXN uses Banxico SIE `SF43936` (CETES 28d, requires `BANXICO_TOKEN`), BRL uses BCB SGS series `11` (SELIC), AUD uses FRED `IR3TIB01AUM156N` (3M interbank, RBA cash rate proxy), and CAD uses Bank of Canada Valet series `V122530` (CORRA proxy)",
+      "AED, IDR, TRY, ZAR, and SGD continue to fall back to USD until a stable public feed is wired; SGD is registered in the type but no fetcher landed in this batch",
+      "CETES self-reference caveat is now explicit: benchmarking the Etherfuse CETES tokenization against the MXN CETES rate yields ≈0% spread, so PYS now under-rewards the asset rather than the prior over-reward; a tokenized-treasury rule can override per-source to the next-tier-up rate later",
+      "`sourceRiskScore` is now derived from the resolved source-risk penalty via `computeSourceRiskScoreFromPenalty` when no upstream value is provided, normalizing `penalty=1` to `0` and `penalty=2.5` to `100`, ending the 100% null rate documented in the v8 production-sample calibration",
+      "First reviewed venue tier batch in `YIELD_RISK_CONFIG`: `aave-v3`, `compound-v3`, and `sparklend` move to `low` (currently a no-op penalty); `morpho-blue` moves to `medium` (+0.15 penalty contribution); remaining tracked venues stay `unknown` with rationale/evidence fields until the next monthly coverage audit",
+      "Rollback compatibility is preserved: missing or invalid source-risk inputs continue to resolve to the neutral source-risk penalty, and v7.48-shaped payloads remain schema-valid"
+    ],
+    "commits": [
+      "10e469cf4",
+      "e70720a3c"
+    ],
+    "reconstructed": false
+  },
+  {
+    "version": "8.12",
+    "title": "Tradable Private-Credit Yield Gaps",
+    "date": "2026-05-14",
+    "effectiveAt": 1778760000,
+    "summary": "Tradable private-credit note additions are inventoried as explicit yield intentional gaps until a reliable public APY or cashflow source is wired.",
+    "impact": [
+      "`pc0000031-tradable`, `pc0000033-tradable`, `pc0000089-tradable`, and `pc0000101-tradable` stay yield-bearing but do not publish synthetic runtime APY rows",
+      "The yield manifest reports the four Tradable notes as intentional gaps instead of silently dropping them from coverage accounting",
+      "Contract-priced zero-volume private-credit notes stay out of live rankings until a trustworthy source can measure realized yield"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.11",
+    "title": "Yield Coverage Expansion and Rate-Derived Fund Sources",
+    "date": "2026-05-13",
+    "effectiveAt": 1778709900,
+    "summary": "Yield coverage now includes the May 2026 curated wrapper, tokenized-treasury, Tier C lending, and commodity exact-pool expansion while keeping invalid multi-exposure DeFiLlama rows out of the native pool lane.",
+    "impact": [
+      "`gtusdc-gauntlet`, `susdc-spark`, `susdt-spark`, `sgho-aave`, `ybold-yearn`, and `yvusdc-yearn` now own curated single-exposure DeFiLlama native pool mappings",
+      "`aa-falconx-mev-capital` remains covered by its NAV/price-derived fallback path until a usable single-exposure nonzero APY source is available; the current DeFiLlama tranche row is not pinned because it is multi-exposure and reports zero APY",
+      "`benji-franklin-templeton`, `wtgxx-wisdomtree`, `ustbl-spiko`, and `eutbl-spiko` now resolve through the rate-derived benchmark lane, with EUTBL using the EUR benchmark override",
+      "The curated lending allowlist now includes AutoFinance, Neverland, Metrom, Mystic Finance, Bitway, and Frankencoin, with exact deterministic lending pins for `reusd-resupply`, `xusd-babelfish`, and `usda-anzens`",
+      "Exact-pool commodity coverage now includes XAUT on Lista Lending and PAXG on Hydration, and the source-link registry covers the new Tier C and Hydration labels"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.1",
+    "title": "Linked Variant Parent Source Projection",
+    "date": "2026-05-13",
+    "effectiveAt": 1778704800,
+    "summary": "Tracked yield-bearing variants now project eligible wrapper yield sources onto their active parent stablecoin as linked alternative sources, while retaining the variant's own first-class yield row.",
+    "impact": [
+      "Resolved sources for active tracked variants such as `ybold-yearn` and `sbold-k3-capital` can now publish linked parent candidates under `bold-liquity` with `linked-variant:<variantId>:<sourceKey>` source keys",
+      "Variant assets still own their native runtime rows and history; parent projection is a linked source route for comparison and coverage, not a reversion to parent-owned wrapper metadata",
+      "Third-party `lending-opportunity` rows are not projected from variants to parents, and duplicate parent source pools are skipped so the parent does not receive repeated observations for the same venue",
+      "`felix-cdp` and `sovryn-dex` are now in the curated lending allowlist, with deterministic pool pins for `feusd-felix`, `dllr-sovryn`, `doc-money-on-chain`, and `tgbp-tokenised` so current source-backed opportunities can pass normal APY, TVL, and safety gates",
+      "Coverage can increase only where a parent has a live source-backed tracked variant; the publisher does not create no-source or synthetic APY rows to inflate coverage counts"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.0",
+    "title": "PYS v8 Source-Risk Penalty Rollout",
+    "date": "2026-05-13",
+    "effectiveAt": 1778630400,
+    "summary": "PYS now applies nested source-risk penalties derived from measured yield-source evidence, while missing or unknown source-risk evidence remains neutral for scoring and rollback compatibility.",
+    "impact": [
+      "`sourceRisk.sourceRiskPenalty` is populated from measured reward share, source depth, source age, source-switch count, bootstrap history, and sourced venue tier where available; missing or invalid evidence stays neutral (`1`) and penalties clamp to the `1..2.5` range",
+      "DeFiLlama rows without row-level observation timestamps inherit the DeFiLlama input metadata age, keeping provenance freshness and source-age scoring penalties aligned",
+      "PYS now computes source-risk-adjusted row utility before applying the existing safety curve, volatility multiplier, benchmark spread weight, and scaling factor",
+      "Same-confidence source arbitration compares source-risk-adjusted utility after penalty resolution, then falls back to APY and TVL tie-breakers",
+      "The hourly publisher now writes the `yield-rankings` cache through CAS before replacing current `yield_data` rows, so failed cache writes or older-run CAS skips preserve the previous published D1 snapshot for downstream readers",
+      "External lending opportunities remain no-op inputs for base stablecoin Safety Scores; report-card yield-risk helpers normalize the source-risk payload but return explicit no-op adjustments until a separate report-card methodology version consumes them",
+      "Legacy `v7.48` payloads without `sourceRisk`, rank, attribution, or publication fields remain schema-valid, and missing source-risk fields continue to behave neutrally"
+    ],
+    "commits": [],
+    "reconstructed": false
+  }
+]

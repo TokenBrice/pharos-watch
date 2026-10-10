@@ -306,6 +306,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     checkCommand: "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts --check",
     command: "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts",
     bootstrap: true,
+    // The packed score-input bytes must exist before their identity is hashed.
     dependsOn: ["stablecoin-worker-full-catalog"],
     outputPaths: ["shared/data/safety-score-v9/evaluation-build-manifest-v1.ts"],
     phase: 2,
@@ -549,7 +550,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 2,
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-changelog-registry.ts",
-    sourcePaths: ["src/data/changelogs/*.ts"],
+    sourcePaths: ["src/data/changelogs/*.json", "src/data/changelogs/*.ts"],
   }),
   generatedArtifact({
     id: "editorial-style",

@@ -14,10 +14,10 @@ import { cn } from "@/lib/utils";
 import { LearnPageShell } from "./_shared/learn-page-shell";
 import { CrossLinksFooter } from "./_shared/section-primitives";
 import { CASE_STUDY_LIST, CASE_STUDY_OUTCOME_COUNTS } from "@/lib/case-studies";
-import { content as usdcSvb2023 } from "@/lib/case-studies/usdc-svb-2023";
-import { content as terraUst2022 } from "@/lib/case-studies/terra-ust-2022";
-import { content as usd0ppUsual2025 } from "@/lib/case-studies/usd0pp-usual-2025";
-import type { CaseStudyOutcome } from "@/lib/case-studies/types";
+import usdcSvb2023 from "@/lib/case-studies/usdc-svb-2023.json";
+import terraUst2022 from "@/lib/case-studies/terra-ust-2022.json";
+import usd0ppUsual2025 from "@/lib/case-studies/usd0pp-usual-2025.json";
+import type { CaseStudy, CaseStudyOutcome } from "@/lib/case-studies/types";
 import {
   CASE_STUDY_OUTCOME_CHIP_BASE,
   CASE_STUDY_OUTCOME_CHIPS,
@@ -36,7 +36,7 @@ export const metadata: Metadata = buildPageMetadata({
 // Marquee studies chosen for outcome spread (survived / died / wounded) and
 // mechanism spread. Referenced by direct import so a renamed/removed module is a
 // compile-time error rather than a runtime slug miss.
-const MARQUEE_STUDIES = [usdcSvb2023, terraUst2022, usd0ppUsual2025] as const;
+const MARQUEE_STUDIES = [usdcSvb2023, terraUst2022, usd0ppUsual2025] as readonly CaseStudy[];
 
 // The three Pharos-native signals — the terms a reader most needs before the
 // data surfaces make sense.

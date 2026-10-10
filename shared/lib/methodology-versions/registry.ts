@@ -1,57 +1,57 @@
-import { BLACKLIST_TRACKER_V1 } from "../../data/methodology-changelogs/blacklist-tracker/v1";
-import { BLACKLIST_TRACKER_V2 } from "../../data/methodology-changelogs/blacklist-tracker/v2";
-import { BLACKLIST_TRACKER_V3 } from "../../data/methodology-changelogs/blacklist-tracker/v3";
-import { BLACKLIST_TRACKER_V4 } from "../../data/methodology-changelogs/blacklist-tracker/v4";
-import { CHAIN_HEALTH_V1 } from "../../data/methodology-changelogs/chain-health/v1";
-import { DEPEG_DEWS_V1 } from "../../data/methodology-changelogs/depeg-dews/v1";
-import { DEPEG_DEWS_V2 } from "../../data/methodology-changelogs/depeg-dews/v2";
-import { DEPEG_DEWS_V3 } from "../../data/methodology-changelogs/depeg-dews/v3";
-import { DEPEG_DEWS_V4 } from "../../data/methodology-changelogs/depeg-dews/v4";
-import { DEPEG_DEWS_V5 } from "../../data/methodology-changelogs/depeg-dews/v5";
-import { DEPEG_DEWS_V6 } from "../../data/methodology-changelogs/depeg-dews/v6";
-import { LIQUIDITY_SCORE_V1 } from "../../data/methodology-changelogs/liquidity-score/v1";
-import { LIQUIDITY_SCORE_V2 } from "../../data/methodology-changelogs/liquidity-score/v2";
-import { LIQUIDITY_SCORE_V3 } from "../../data/methodology-changelogs/liquidity-score/v3";
-import { LIQUIDITY_SCORE_V4 } from "../../data/methodology-changelogs/liquidity-score/v4";
-import { LIQUIDITY_SCORE_V5 } from "../../data/methodology-changelogs/liquidity-score/v5";
-import { LIQUIDITY_SCORE_V6 } from "../../data/methodology-changelogs/liquidity-score/v6";
-import { MINT_BURN_FLOW_V1 } from "../../data/methodology-changelogs/mint-burn-flow/v1";
-import { MINT_BURN_FLOW_V2 } from "../../data/methodology-changelogs/mint-burn-flow/v2";
-import { MINT_BURN_FLOW_V3 } from "../../data/methodology-changelogs/mint-burn-flow/v3";
-import { MINT_BURN_FLOW_V4 } from "../../data/methodology-changelogs/mint-burn-flow/v4";
-import { MINT_BURN_FLOW_V5 } from "../../data/methodology-changelogs/mint-burn-flow/v5";
-import { MINT_BURN_FLOW_V6 } from "../../data/methodology-changelogs/mint-burn-flow/v6";
-import { PRICING_PIPELINE_V1 } from "../../data/methodology-changelogs/pricing-pipeline/v1";
-import { PRICING_PIPELINE_V2 } from "../../data/methodology-changelogs/pricing-pipeline/v2";
-import { PRICING_PIPELINE_V3 } from "../../data/methodology-changelogs/pricing-pipeline/v3";
-import { PRICING_PIPELINE_V4 } from "../../data/methodology-changelogs/pricing-pipeline/v4";
-import { PRICING_PIPELINE_V5 } from "../../data/methodology-changelogs/pricing-pipeline/v5";
-import { PRICING_PIPELINE_V6 } from "../../data/methodology-changelogs/pricing-pipeline/v6";
-import { REDEMPTION_BACKSTOP_V1 } from "../../data/methodology-changelogs/redemption-backstop/v1";
-import { REDEMPTION_BACKSTOP_V2 } from "../../data/methodology-changelogs/redemption-backstop/v2";
-import { REDEMPTION_BACKSTOP_V3 } from "../../data/methodology-changelogs/redemption-backstop/v3";
-import { REDEMPTION_BACKSTOP_V4 } from "../../data/methodology-changelogs/redemption-backstop/v4";
-import { SAFETY_SCORE_V1 } from "../../data/methodology-changelogs/safety-score/v1";
-import { SAFETY_SCORE_V2 } from "../../data/methodology-changelogs/safety-score/v2";
-import { SAFETY_SCORE_V3 } from "../../data/methodology-changelogs/safety-score/v3";
-import { SAFETY_SCORE_V4 } from "../../data/methodology-changelogs/safety-score/v4";
-import { SAFETY_SCORE_V5 } from "../../data/methodology-changelogs/safety-score/v5";
-import { SAFETY_SCORE_V6 } from "../../data/methodology-changelogs/safety-score/v6";
-import { SAFETY_SCORE_V7 } from "../../data/methodology-changelogs/safety-score/v7";
-import { SAFETY_SCORE_V8 } from "../../data/methodology-changelogs/safety-score/v8";
-import { SAFETY_SCORE_V9 } from "../../data/methodology-changelogs/safety-score/v9-activation";
-import { SAFETY_SCORE_V10 } from "../../data/methodology-changelogs/safety-score/v10";
-import { STABILITY_INDEX_V1 } from "../../data/methodology-changelogs/stability-index/v1";
-import { STABILITY_INDEX_V2 } from "../../data/methodology-changelogs/stability-index/v2";
-import { STABILITY_INDEX_V3 } from "../../data/methodology-changelogs/stability-index/v3";
-import { YIELD_METHODOLOGY_V1 } from "../../data/methodology-changelogs/yield-methodology/v1";
-import { YIELD_METHODOLOGY_V2 } from "../../data/methodology-changelogs/yield-methodology/v2";
-import { YIELD_METHODOLOGY_V3 } from "../../data/methodology-changelogs/yield-methodology/v3";
-import { YIELD_METHODOLOGY_V4 } from "../../data/methodology-changelogs/yield-methodology/v4";
-import { YIELD_METHODOLOGY_V5 } from "../../data/methodology-changelogs/yield-methodology/v5";
-import { YIELD_METHODOLOGY_V6 } from "../../data/methodology-changelogs/yield-methodology/v6";
-import { YIELD_METHODOLOGY_V7 } from "../../data/methodology-changelogs/yield-methodology/v7";
-import { YIELD_METHODOLOGY_V8 } from "../../data/methodology-changelogs/yield-methodology/v8";
+import BLACKLIST_TRACKER_V1 from "../../data/methodology-changelogs/blacklist-tracker/v1.json";
+import BLACKLIST_TRACKER_V2 from "../../data/methodology-changelogs/blacklist-tracker/v2.json";
+import BLACKLIST_TRACKER_V3 from "../../data/methodology-changelogs/blacklist-tracker/v3.json";
+import BLACKLIST_TRACKER_V4 from "../../data/methodology-changelogs/blacklist-tracker/v4.json";
+import CHAIN_HEALTH_V1 from "../../data/methodology-changelogs/chain-health/v1.json";
+import DEPEG_DEWS_V1 from "../../data/methodology-changelogs/depeg-dews/v1.json";
+import DEPEG_DEWS_V2 from "../../data/methodology-changelogs/depeg-dews/v2.json";
+import DEPEG_DEWS_V3 from "../../data/methodology-changelogs/depeg-dews/v3.json";
+import DEPEG_DEWS_V4 from "../../data/methodology-changelogs/depeg-dews/v4.json";
+import DEPEG_DEWS_V5 from "../../data/methodology-changelogs/depeg-dews/v5.json";
+import DEPEG_DEWS_V6 from "../../data/methodology-changelogs/depeg-dews/v6.json";
+import LIQUIDITY_SCORE_V1 from "../../data/methodology-changelogs/liquidity-score/v1.json";
+import LIQUIDITY_SCORE_V2 from "../../data/methodology-changelogs/liquidity-score/v2.json";
+import LIQUIDITY_SCORE_V3 from "../../data/methodology-changelogs/liquidity-score/v3.json";
+import LIQUIDITY_SCORE_V4 from "../../data/methodology-changelogs/liquidity-score/v4.json";
+import LIQUIDITY_SCORE_V5 from "../../data/methodology-changelogs/liquidity-score/v5.json";
+import LIQUIDITY_SCORE_V6 from "../../data/methodology-changelogs/liquidity-score/v6.json";
+import MINT_BURN_FLOW_V1 from "../../data/methodology-changelogs/mint-burn-flow/v1.json";
+import MINT_BURN_FLOW_V2 from "../../data/methodology-changelogs/mint-burn-flow/v2.json";
+import MINT_BURN_FLOW_V3 from "../../data/methodology-changelogs/mint-burn-flow/v3.json";
+import MINT_BURN_FLOW_V4 from "../../data/methodology-changelogs/mint-burn-flow/v4.json";
+import MINT_BURN_FLOW_V5 from "../../data/methodology-changelogs/mint-burn-flow/v5.json";
+import MINT_BURN_FLOW_V6 from "../../data/methodology-changelogs/mint-burn-flow/v6.json";
+import PRICING_PIPELINE_V1 from "../../data/methodology-changelogs/pricing-pipeline/v1.json";
+import PRICING_PIPELINE_V2 from "../../data/methodology-changelogs/pricing-pipeline/v2.json";
+import PRICING_PIPELINE_V3 from "../../data/methodology-changelogs/pricing-pipeline/v3.json";
+import PRICING_PIPELINE_V4 from "../../data/methodology-changelogs/pricing-pipeline/v4.json";
+import PRICING_PIPELINE_V5 from "../../data/methodology-changelogs/pricing-pipeline/v5.json";
+import PRICING_PIPELINE_V6 from "../../data/methodology-changelogs/pricing-pipeline/v6.json";
+import REDEMPTION_BACKSTOP_V1 from "../../data/methodology-changelogs/redemption-backstop/v1.json";
+import REDEMPTION_BACKSTOP_V2 from "../../data/methodology-changelogs/redemption-backstop/v2.json";
+import REDEMPTION_BACKSTOP_V3 from "../../data/methodology-changelogs/redemption-backstop/v3.json";
+import REDEMPTION_BACKSTOP_V4 from "../../data/methodology-changelogs/redemption-backstop/v4.json";
+import SAFETY_SCORE_V1 from "../../data/methodology-changelogs/safety-score/v1.json";
+import SAFETY_SCORE_V2 from "../../data/methodology-changelogs/safety-score/v2.json";
+import SAFETY_SCORE_V3 from "../../data/methodology-changelogs/safety-score/v3.json";
+import SAFETY_SCORE_V4 from "../../data/methodology-changelogs/safety-score/v4.json";
+import SAFETY_SCORE_V5 from "../../data/methodology-changelogs/safety-score/v5.json";
+import SAFETY_SCORE_V6 from "../../data/methodology-changelogs/safety-score/v6.json";
+import SAFETY_SCORE_V7 from "../../data/methodology-changelogs/safety-score/v7.json";
+import SAFETY_SCORE_V8 from "../../data/methodology-changelogs/safety-score/v8.json";
+import SAFETY_SCORE_V9 from "../../data/methodology-changelogs/safety-score/v9-activation.json";
+import SAFETY_SCORE_V10 from "../../data/methodology-changelogs/safety-score/v10.json";
+import STABILITY_INDEX_V1 from "../../data/methodology-changelogs/stability-index/v1.json";
+import STABILITY_INDEX_V2 from "../../data/methodology-changelogs/stability-index/v2.json";
+import STABILITY_INDEX_V3 from "../../data/methodology-changelogs/stability-index/v3.json";
+import YIELD_METHODOLOGY_V1 from "../../data/methodology-changelogs/yield-methodology/v1.json";
+import YIELD_METHODOLOGY_V2 from "../../data/methodology-changelogs/yield-methodology/v2.json";
+import YIELD_METHODOLOGY_V3 from "../../data/methodology-changelogs/yield-methodology/v3.json";
+import YIELD_METHODOLOGY_V4 from "../../data/methodology-changelogs/yield-methodology/v4.json";
+import YIELD_METHODOLOGY_V5 from "../../data/methodology-changelogs/yield-methodology/v5.json";
+import YIELD_METHODOLOGY_V6 from "../../data/methodology-changelogs/yield-methodology/v6.json";
+import YIELD_METHODOLOGY_V7 from "../../data/methodology-changelogs/yield-methodology/v7.json";
+import YIELD_METHODOLOGY_V8 from "../../data/methodology-changelogs/yield-methodology/v8.json";
 import {
   createMethodologyVersion,
   type MethodologyChangelogEntry,
@@ -129,7 +129,7 @@ interface ManagedMethodologyVersionConfig extends MethodologyVersionConfig {
   key: ManagedMethodologyKey;
 }
 
-const METHODOLOGY_VERSION_CONFIGS: readonly ManagedMethodologyVersionConfig[] = [
+const METHODOLOGY_VERSION_CONFIGS = [
   {
     key: "safety-score",
     currentVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
@@ -248,7 +248,7 @@ const METHODOLOGY_VERSION_CONFIGS: readonly ManagedMethodologyVersionConfig[] = 
       ...PRICING_PIPELINE_V1,
     ],
   },
-];
+] as readonly ManagedMethodologyVersionConfig[];
 
 const METHODOLOGY_VERSION_BY_KEY = Object.fromEntries(
   METHODOLOGY_VERSION_CONFIGS.map(({ key, ...config }) => [key, createMethodologyVersion(config)]),

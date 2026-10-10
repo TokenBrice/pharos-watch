@@ -9,7 +9,7 @@ import {
 } from "../methodology-versions/base";
 import { DDR_METHODOLOGY_CHANGELOG, DDR_V2_EFFECTIVE_AT } from "../methodology-versions/depeg-resolver";
 import { LIQUIDITY_METHODOLOGY_VERSION, SAFETY_SCORE_METHODOLOGY_VERSION } from "../methodology-versions/constants";
-import { LIQUIDITY_SCORE_V6 } from "../../data/methodology-changelogs/liquidity-score/v6";
+import LIQUIDITY_SCORE_V6 from "../../data/methodology-changelogs/liquidity-score/v6.json";
 import { liquidityTvlBasisEpoch } from "../dex-liquidity-evidence";
 import {
   getMethodologyVersionAt,

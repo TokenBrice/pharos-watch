@@ -9,7 +9,7 @@ const CHANGELOG_DIR = join(__dirname, "../../src/data/changelogs");
 const OUTPUT = join(CHANGELOG_DIR, "index.ts");
 const CHECK_MODE = process.argv.includes("--check");
 const SUPPORT_FILES = new Set(["index.ts", "types.ts"]);
-const CHANGELOG_ENTRY_FILE_RE = /^(?<date>\d{4}-\d{2}-\d{2})\.ts$/;
+const CHANGELOG_ENTRY_FILE_RE = /^(?<date>\d{4}-\d{2}-\d{2})\.json$/;
 
 function listChangelogFiles(): string[] {
   return readdirSync(CHANGELOG_DIR, { withFileTypes: true })
@@ -18,7 +18,7 @@ function listChangelogFiles(): string[] {
 }
 
 function isPotentialChangelogFile(fileName: string): boolean {
-  return !SUPPORT_FILES.has(fileName) && (fileName.endsWith(".ts") || /^\d{4}/.test(fileName));
+  return !SUPPORT_FILES.has(fileName) && (fileName.endsWith(".json") || fileName.endsWith(".ts") || /^\d{4}/.test(fileName));
 }
 
 function isValidIsoDate(date: string): boolean {
@@ -35,7 +35,7 @@ export function collectChangelogEntryFiles(fileNames: readonly string[] = listCh
     const date = match?.groups?.date;
     if (!date || !isValidIsoDate(date)) {
       throw new Error(
-        `[changelog-registry] Malformed changelog entry filename "${fileName}"; expected a valid YYYY-MM-DD.ts filename.`,
+        `[changelog-registry] Malformed changelog entry filename "${fileName}"; expected a valid YYYY-MM-DD.json filename.`,
       );
     }
     if (dates.has(date)) {
@@ -48,7 +48,7 @@ export function collectChangelogEntryFiles(fileNames: readonly string[] = listCh
 }
 
 function entryIdentifier(fileName: string): string {
-  return `e${fileName.slice(0, -3).replaceAll("-", "")}`;
+  return `e${fileName.slice(0, -5).replaceAll("-", "")}`;
 }
 
 export function renderChangelogRegistry(fileNames: readonly string[] = listChangelogFiles()): string {
@@ -57,10 +57,9 @@ export function renderChangelogRegistry(fileNames: readonly string[] = listChang
     throw new Error("[changelog-registry] No dated changelog entry files found.");
   }
 
-  const imports = entryFiles.map((fileName) => {
-    const date = fileName.slice(0, -3);
-    return `import { entry as ${entryIdentifier(fileName)} } from "./${date}";`;
-  });
+  const imports = entryFiles.map((fileName) =>
+    `import ${entryIdentifier(fileName)} from "./${fileName}";`,
+  );
   const entries = entryFiles.map((fileName) => `  ${entryIdentifier(fileName)},`);
 
   return [
@@ -68,9 +67,9 @@ export function renderChangelogRegistry(fileNames: readonly string[] = listChang
     "",
     ...imports,
     "",
-    "const all: ChangelogEntry[] = [",
+    "const all = [",
     ...entries,
-    "];",
+    "] as ChangelogEntry[];",
     "",
     "export const changelogs: ChangelogEntry[] = all.sort(",
     "  (a, b) => b.dateRange.to.localeCompare(a.dateRange.to),",
