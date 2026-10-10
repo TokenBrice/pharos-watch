@@ -38,7 +38,7 @@ function mockD1(
   return baseMockD1([
     ...tables,
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-    { match: "SELECT MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'", rows: [], first: null },
+    { match: "as started_at FROM cron_runs WHERE job = ?", rows: [], first: null },
   ], options);
 }
 
@@ -529,7 +529,7 @@ describe("handleYieldHistory", () => {
     const historyRow = makeYieldHistoryRow({ recorded_at: updatedAt });
     const db = mockD1([
       {
-        match: "MAX(started_at) as started_at FROM cron_runs",
+        match: "as started_at FROM cron_runs",
         rows: [],
         first: { started_at: updatedAt },
       },
@@ -559,7 +559,7 @@ describe("handleYieldHistory", () => {
     vi.setSystemTime(new Date("2026-03-28T12:00:00Z"));
     const updatedAt = Math.floor(Date.now() / 1000) - age;
     const db = mockD1([
-      { match: "MAX(started_at) as started_at FROM cron_runs", rows: [], first: { started_at: updatedAt } },
+      { match: "as started_at FROM cron_runs", rows: [], first: { started_at: updatedAt } },
       { match: "yield_history", rows: [makeYieldHistoryRow({ recorded_at: updatedAt })] },
     ]);
     const response = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
@@ -593,7 +593,7 @@ describe("handleYieldHistory", () => {
         first: { value: "{bad-json", updated_at: nowSec - 60 },
       },
       {
-        match: "MAX(started_at) as started_at FROM cron_runs",
+        match: "as started_at FROM cron_runs",
         rows: [],
         first: { started_at: latestSuccessfulCronAt },
       },
@@ -1051,7 +1051,7 @@ describe("handleYieldHistory", () => {
     const db = mockD1([
       // No cached rankings and no successful cron timestamp: the cutoff resolves to 0.
       { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [], first: null },
-      { match: "MAX(started_at) as started_at FROM cron_runs", rows: [], first: null },
+      { match: "as started_at FROM cron_runs", rows: [], first: null },
       { match: "yield_history", rows: [makeYieldHistoryRow({ recorded_at: nowSec - 120 })] },
     ]);
 
@@ -1083,7 +1083,7 @@ describe("handleYieldHistory", () => {
         first: { value: "{bad-json", updated_at: nowSec - 60 },
       },
       {
-        match: "MAX(started_at) as started_at FROM cron_runs",
+        match: "as started_at FROM cron_runs",
         rows: [],
         throwError: new Error("cron lookup failed"),
       },
@@ -1137,7 +1137,7 @@ describe("handleYieldHistory", () => {
   it.each([null, "", " \t\n", "[]"])("serves empty warnings without an unreadable marker and names fresh authority: %s", async (warnings) => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
-      { match: "MAX(started_at) as started_at FROM cron_runs", rows: [], first: { started_at: nowSec } },
+      { match: "as started_at FROM cron_runs", rows: [], first: { started_at: nowSec } },
       { match: "yield_history", rows: [makeYieldHistoryRow({ warning_signals: warnings })] },
     ]);
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));

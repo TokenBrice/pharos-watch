@@ -187,6 +187,23 @@ describe("useCompareDataModel", () => {
     ]);
   });
 
+  it("unwraps metadata-aware supply history before deriving comparison chart series", () => {
+    useQueriesMock
+      .mockReturnValueOnce([makeQueryResult({
+        data: {
+          data: [{ date: 1_700_000_000, circulatingUsd: 123 }],
+          meta: { updatedAt: 1_700_000_000, ageSeconds: 0, status: "fresh" },
+        },
+      })])
+      .mockReturnValueOnce([]);
+    const { result } = renderHook(() => useCompareDataModel({
+      selectedIds: ["usdc-circle"], flowHours: 24, radarCohort: "peg",
+    }));
+    expect(result.current.supplySeries).toEqual([
+      expect.objectContaining({ id: "usdc-circle", data: [{ ts: 1_700_000_000_000, value: 123 }] }),
+    ]);
+  });
+
   it("returns only the flow-error retry controls needed by the client", () => {
     const flowError = new Error("flow unavailable");
     const refetchFlowCoin = vi.fn().mockResolvedValue({ status: "success", error: null });

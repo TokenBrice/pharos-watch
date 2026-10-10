@@ -45,10 +45,19 @@ function isUnavailableError(error: unknown): boolean {
 function pickBaseState(
   ageMs: number | null,
   staleTime: number,
+  meta: ApiMeta | null | undefined,
 ): Exclude<DataHealthState, "error"> {
   if (ageMs === null) return "unavailable";
-  if (ageMs <= FRESHNESS_RATIOS.FRESH * staleTime) return "fresh";
-  if (ageMs <= FRESHNESS_RATIOS.DEGRADED * staleTime) return "degraded";
+  const freshBudgetSec = meta && "freshBudgetSec" in meta ? meta.freshBudgetSec : undefined;
+  const degradedBudgetSec = meta && "degradedBudgetSec" in meta ? meta.degradedBudgetSec : undefined;
+  const freshBudgetMs = typeof freshBudgetSec === "number" && Number.isFinite(freshBudgetSec) && freshBudgetSec >= 0
+    ? freshBudgetSec * 1000
+    : FRESHNESS_RATIOS.FRESH * staleTime;
+  const degradedBudgetMs = typeof degradedBudgetSec === "number" && Number.isFinite(degradedBudgetSec) && degradedBudgetSec >= 0
+    ? degradedBudgetSec * 1000
+    : FRESHNESS_RATIOS.DEGRADED * staleTime;
+  if (ageMs <= freshBudgetMs) return "fresh";
+  if (ageMs <= degradedBudgetMs) return "degraded";
   return "stale";
 }
 
@@ -75,15 +84,17 @@ export function deriveDataHealth(input: QueryHealthInput, nowMs = Date.now()): D
   const ageMs = updatedAtMs > 0 ? Math.max(0, nowMs - updatedAtMs) : null;
   const classifiedState = authorityUnavailable
     ? input.meta?.status === "stale" ? "stale" : "unavailable"
-    : pickBaseState(ageMs, input.staleTime);
-  const hasDegradationFloor = hasServerDegradation(input.meta);
-  const baseState = authorityUnavailable || !hasDegradationFloor
-    ? classifiedState
-    : classifiedState === "unavailable"
+    : pickBaseState(ageMs, input.staleTime, input.meta);
+  const serverFloor = input.meta?.status === "stale"
+    ? "stale"
+    : input.meta?.status === "degraded" || hasServerDegradation(input.meta)
       ? "degraded"
-      : STATE_PRIORITY[classifiedState] >= STATE_PRIORITY.degraded
-        ? classifiedState
-        : "degraded";
+      : null;
+  const baseState = authorityUnavailable || serverFloor === null
+    ? classifiedState
+    : classifiedState === "unavailable" || STATE_PRIORITY[classifiedState] < STATE_PRIORITY[serverFloor]
+      ? serverFloor
+      : classifiedState;
 
   if (input.error && !hasData) {
     if (isUnavailableError(input.error)) {

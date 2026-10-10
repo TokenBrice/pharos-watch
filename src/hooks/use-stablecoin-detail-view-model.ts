@@ -147,11 +147,16 @@ export function useStablecoinDetailViewModel({
       isError: !usingArchive && liveSummaryQuery.isError,
       error: usingArchive ? null : liveSummaryQuery.error,
       dataUpdatedAt: usingArchive ? 0 : liveSummaryQuery.dataUpdatedAt,
-      meta: null,
+      meta: usingArchive ? null : liveSummaryQuery.meta ?? {
+        updatedAt: null,
+        ageSeconds: null,
+        status: "unknown" as const,
+        reason: "producer-timestamp-unavailable",
+      },
       enabled: !usingArchive,
     };
   }, [archivedLiveSummary, coin, liveSummaryQuery.data, liveSummaryQuery.dataUpdatedAt, liveSummaryQuery.error,
-    liveSummaryQuery.isError, liveSummaryQuery.isLoading]);
+    liveSummaryQuery.isError, liveSummaryQuery.isLoading, liveSummaryQuery.meta]);
   const pegQuery = usePegSummary();
   const liquidityQuery = useDexLiquidity({ enabled: liquidityEnabled });
   const reportCardsQuery = useReportCardsV9({ enabled: reportCardsEnabled });

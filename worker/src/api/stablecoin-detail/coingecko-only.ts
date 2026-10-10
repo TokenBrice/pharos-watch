@@ -86,7 +86,7 @@ export async function handleCoinGeckoOnlyDetail(
       emptyReason: "coingecko-history-empty",
       staleReason: "coingecko-history-stale",
     });
-    if (tokens.length === 0) {
+    if (tokens.tokens.length === 0) {
       return handleCacheBackedDetail(
         {
           db: config.db,
@@ -97,7 +97,7 @@ export async function handleCoinGeckoOnlyDetail(
       );
     }
 
-    return detail.createFreshResponseFromTokens(tokens);
+    return detail.createResponseFromResolvedTokens(tokens);
   } catch (err) {
     await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS, false);
     logUpstreamException("coingecko-detail", config.stablecoinId, err);

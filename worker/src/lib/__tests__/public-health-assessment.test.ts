@@ -96,36 +96,12 @@ function makeMintBurnAssessmentDb(
       value: JSON.stringify({ version: 1, assessment: assessD1Capacity({ observedAt: nowSec, databaseSizeBytes: 1_000_000_000 }) }),
     },
     { key: "bluechip-ratings", updated_at: nowSec - 60, value: "{}" },
-    {
-      key: "freshness:dex-liquidity",
-      updated_at: nowSec - 60,
-      value: JSON.stringify({
-        updatedAt: nowSec - 60,
-        source: "sync-dex-liquidity",
-        publishStatus: "ok",
-      }),
-    },
-    {
-      key: "freshness:yield-data",
-      updated_at: nowSec - 60,
-      value: JSON.stringify({
-        updatedAt: nowSec - 60,
-        source: "sync-yield-data",
-        publishStatus: "ok",
-      }),
-    },
-    {
-      key: "freshness:dews",
-      updated_at: nowSec - 60,
-      value: JSON.stringify({
-        updatedAt: nowSec - 60,
-        source: "compute-dews",
-        publishStatus: "ok",
-      }),
-    },
+    { key: "freshness:dex-liquidity", updated_at: nowSec - 60, value: JSON.stringify({ updatedAt: nowSec - 60, source: "sync-dex-liquidity", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
+    { key: "freshness:yield-data", updated_at: nowSec - 60, value: JSON.stringify({ updatedAt: nowSec - 60, source: "sync-yield-data", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
+    { key: "freshness:dews", updated_at: nowSec - 60, value: JSON.stringify({ updatedAt: nowSec - 60, source: "compute-dews", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
   ];
   const timestampLookup: MockTableConfig = {
-    match: "MAX(started_at)",
+    match: "as started_at FROM cron_runs",
     matchBinds: ["sync-mint-burn"],
     rows: [],
     ...(options.latestSuccessfulSyncError
@@ -203,7 +179,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       { match: "FROM cron_runs", rows: [], first: null },
       { match: "blacklist-gap-aggregate", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
       { match: "SELECT status", matchBinds: ["sync-mint-burn"], rows: [], first: null },
-      { match: "MAX(started_at)", rows: [], first: null },
+      { match: "as started_at FROM cron_runs", rows: [], first: null },
       { match: "item_count", rows: [], first: null },
       { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [] },
       { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },

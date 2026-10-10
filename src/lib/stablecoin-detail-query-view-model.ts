@@ -179,7 +179,7 @@ export function buildDetailStaleQueries(
       dataUpdatedAt: queries.supplyHistory.dataUpdatedAt,
       error: queries.supplyHistory.error,
       hasData: queries.supplyHistory.dataUpdatedAt > 0 || (queries.supplyHistory.data?.length ?? 0) > 0,
-      meta: null,
+      meta: queries.supplyHistory.meta,
     },
   ];
   if (supplemental.flows.enabled) {

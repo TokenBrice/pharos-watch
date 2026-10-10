@@ -158,7 +158,9 @@ export function buildStablecoinDetailViewModel({
     hasBlacklist: featureAvailability.hasBlacklist,
     blacklistSymbol: featureAvailability.blacklistSymbol,
     supplyHistory: resolvedSupplyHistory,
-    supplyUpdatedAt: supplyHistory.dataUpdatedAt,
+    supplyUpdatedAt: supplyHistory.meta
+      ? (supplyHistory.meta.updatedAt ?? 0) * 1000
+      : supplyHistory.dataUpdatedAt,
     reserves: supplemental.reserves.live ?? getReserves(coin),
     reserveFetchError: supplemental.reserves.error ?? null,
     supplyError: supplyHistory.error,

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { NET_FLOW_DIRECTION_24H_VALUES, PRESSURE_SHIFT_STATE_VALUES } from "./mint-burn-signals";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
-import { FreshnessStatusSchema } from "./api-meta";
+import { ApiMetaEnvelopeSchema, FreshnessStatusSchema } from "./api-meta";
 
 export {
   NET_FLOW_DIRECTION_24H_VALUES,
@@ -198,6 +198,7 @@ export const MintBurnFlowsResponseSchema = z.object({
   windowHours: z.number().int().positive().optional(),
   scope: MintBurnScopeSchema.optional(),
   sync: MintBurnSyncSchema.optional(),
+  _meta: ApiMetaEnvelopeSchema.optional(),
 });
 export type MintBurnFlowsResponse = z.infer<typeof MintBurnFlowsResponseSchema>;
 
@@ -227,6 +228,7 @@ export const MintBurnPerCoinResponseSchema = z.object({
   windowHours: z.number().int().positive().optional(),
   scope: MintBurnScopeSchema.optional(),
   sync: MintBurnSyncSchema.optional(),
+  _meta: ApiMetaEnvelopeSchema.optional(),
 });
 export type MintBurnPerCoinResponse = z.infer<typeof MintBurnPerCoinResponseSchema>;
 

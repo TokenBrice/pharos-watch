@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const CacheStatusSchema = z.object({
   ageSeconds: z.number().nullable(),
+  timestampReason: z.enum(["missing-timestamp", "invalid-timestamp", "future-timestamp"]).optional(),
   maxAge: z.number(),
   healthyMaxRatio: z.number().optional(),
   healthyMaxAge: z.number().optional(),

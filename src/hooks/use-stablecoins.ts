@@ -3,11 +3,12 @@
 import { useQuery } from "@tanstack/react-query";
 import type { StablecoinListResponse, SupplyHistoryPoint } from "@shared/types";
 import {
-  asPlainQueryOptions,
+  asMetaQueryOptions,
   createRegisteredApiPollingQueryOptions,
   useRegisteredApiQuery,
   type QueryControlOverrides,
 } from "./api-hooks";
+import { unwrapApiQueryWithMetaResult } from "./use-api-query";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 
 export type { SupplyHistoryPoint } from "@shared/types";
@@ -29,7 +30,7 @@ export function supplyHistoryQueryOptions(
   days?: number,
   overrides?: QueryControlOverrides,
 ) {
-  return asPlainQueryOptions<SupplyHistoryPoint[]>(
+  return asMetaQueryOptions<SupplyHistoryPoint[]>(
     createRegisteredApiPollingQueryOptions<SupplyHistoryPoint[]>(
       FRONTEND_API_QUERY_DESCRIPTORS.supplyHistory(id, days),
       { enabled: !!id, ...overrides },
@@ -42,7 +43,13 @@ export function useSupplyHistory(
   days?: number,
   overrides?: QueryControlOverrides,
 ) {
-  const query = useQuery<SupplyHistoryPoint[], Error>(supplyHistoryQueryOptions(id, days, overrides));
+  const query = unwrapApiQueryWithMetaResult(useQuery(supplyHistoryQueryOptions(id, days, overrides)));
+  const meta = query.meta ?? {
+    updatedAt: null,
+    ageSeconds: null,
+    status: "unknown" as const,
+    reason: "producer-timestamp-unavailable",
+  };
 
   return {
     data: query.data ?? [],
@@ -51,5 +58,6 @@ export function useSupplyHistory(
     error: query.error,
     refetch: query.refetch,
     dataUpdatedAt: query.dataUpdatedAt,
+    meta,
   };
 }

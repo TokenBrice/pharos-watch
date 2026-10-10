@@ -53,7 +53,7 @@ describe("query option builders", () => {
 
     if (typeof options.queryFn !== "function") throw new Error("Expected a supply-history query function");
     await options.queryFn(queryContext(options.queryKey));
-    expect(apiFetchMock).toHaveBeenCalledWith(
+    expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
       "/api/supply-history?stablecoin=usdc-circle&days=1825",
       expect.objectContaining({ safeParse: expect.any(Function) }),
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
@@ -68,7 +68,7 @@ describe("query option builders", () => {
 
     if (typeof options.queryFn !== "function") throw new Error("Expected a supply-history query function");
     await options.queryFn(queryContext(options.queryKey));
-    expect(apiFetchMock).toHaveBeenCalledWith(
+    expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
       "/api/supply-history?stablecoin=usdc-circle&days=5000",
       expect.objectContaining({ safeParse: expect.any(Function) }),
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
@@ -110,7 +110,7 @@ describe("query option builders", () => {
     if (typeof options.queryFn !== "function") throw new Error("Expected a supply-history query function");
     await options.queryFn(queryContext(options.queryKey, controller.signal));
 
-    expect(apiFetchMock).toHaveBeenLastCalledWith(
+    expect(apiFetchWithMetaMock).toHaveBeenLastCalledWith(
       "/api/supply-history?stablecoin=usdc-circle&days=1825",
       expect.objectContaining({ safeParse: expect.any(Function) }),
       { signal: controller.signal },

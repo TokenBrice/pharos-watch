@@ -61,7 +61,7 @@ function makeSeededQueryClient() {
     FRONTEND_API_QUERY_DESCRIPTORS
       .supplyHistory("usdt-tether", STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS)
       .queryKey,
-    SEED_HISTORY,
+    { data: SEED_HISTORY, meta: { updatedAt: Date.now() / 1000, ageSeconds: 0, status: "fresh" } },
     { updatedAt: Date.now() },
   );
   return queryClient;
@@ -114,6 +114,18 @@ describe("MarketDataSection history expansion", () => {
     expect(slider.getAttribute("aria-valuemax")).toBe(
       String(FULL_HISTORY[FULL_HISTORY.length - 1].date * 1000),
     );
+  });
+
+  it("keeps the expanded-history freshness chip on its old producer clock after a successful read", async () => {
+    const updatedAtSec = Math.floor(Date.now() / 1000) - 3 * DAY;
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json(FULL_HISTORY, {
+      headers: { "X-Data-Updated-At": String(updatedAtSec), "X-Data-Age": String(3 * DAY) },
+    })));
+    const { container } = renderSeededSection();
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    await waitFor(() => expect(marketCapDomain()).toBe(FULL_DOMAIN));
+    await waitFor(() => expect(container.querySelector("time")?.getAttribute("datetime")).toBe(new Date(updatedAtSec * 1000).toISOString()));
+    expect(container.querySelector("time")?.getAttribute("data-state")).toBe("stale");
   });
 
   it("keeps the seeded 90-day chart visible while the full-history request is in flight", async () => {

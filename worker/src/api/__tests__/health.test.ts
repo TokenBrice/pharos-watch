@@ -145,27 +145,11 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
         // Sentinel-backed lanes attest their own published generation; without
         // one the reader can only fall back and must publish a degraded quality
         // verdict, so the steady-state fixture carries them.
-        {
-          key: "freshness:dex-liquidity",
-          updated_at: now - dexAge,
-          value: JSON.stringify({ updatedAt: now - dexAge, source: "sync-dex-liquidity", publishStatus: "ok" }),
-        },
+        { key: "freshness:dex-liquidity", updated_at: now - dexAge, value: JSON.stringify({ updatedAt: now - dexAge, source: "sync-dex-liquidity", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
         ...(yieldSentinelAge == null
           ? []
-          : [{
-              key: "freshness:yield-data",
-              updated_at: now - yieldSentinelAge,
-              value: JSON.stringify({
-                updatedAt: now - yieldSentinelAge,
-                source: "sync-yield-data",
-                publishStatus: "ok",
-              }),
-            }]),
-        {
-          key: "freshness:dews",
-          updated_at: now - 60,
-          value: JSON.stringify({ updatedAt: now - 60, source: "compute-dews", publishStatus: "ok" }),
-        },
+          : [{ key: "freshness:yield-data", updated_at: now - yieldSentinelAge, value: JSON.stringify({ updatedAt: now - yieldSentinelAge, source: "sync-yield-data", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" }]),
+        { key: "freshness:dews", updated_at: now - 60, value: JSON.stringify({ updatedAt: now - 60, source: "compute-dews", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
         ...extraCacheRows,
       ],
     },
@@ -461,21 +445,9 @@ describe("handleHealth", () => {
       {
         match: "cache WHERE key IN",
         rows: [
-          {
-            key: "freshness:dex-liquidity",
-            updated_at: now - 60,
-            value: JSON.stringify({ updatedAt: now - 60, source: "sync-dex-liquidity", publishStatus: "ok" }),
-          },
-          {
-            key: "freshness:yield-data",
-            updated_at: now - 60,
-            value: JSON.stringify({ updatedAt: now - 60, source: "sync-yield-data", publishStatus: "ok" }),
-          },
-          {
-            key: "freshness:dews",
-            updated_at: now - 60,
-            value: JSON.stringify({ updatedAt: now - 60, source: "compute-dews", publishStatus: "ok" }),
-          },
+          { key: "freshness:dex-liquidity", updated_at: now - 60, value: JSON.stringify({ updatedAt: now - 60, source: "sync-dex-liquidity", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
+          { key: "freshness:yield-data", updated_at: now - 60, value: JSON.stringify({ updatedAt: now - 60, source: "sync-yield-data", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
+          { key: "freshness:dews", updated_at: now - 60, value: JSON.stringify({ updatedAt: now - 60, source: "compute-dews", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
         ],
       },
       { match: "cache", rows: [] },
@@ -938,33 +910,9 @@ describe("handleHealth", () => {
     const db = makeHealthyHealthDb(now, {
       dexAge: 45,
       extraCacheRows: [
-        {
-          key: "freshness:dex-liquidity",
-          updated_at: now - 120,
-          value: JSON.stringify({
-            updatedAt: now - 120,
-            source: "sync-yield-data",
-            publishStatus: "ok",
-          }),
-        },
-        {
-          key: "freshness:yield-data",
-          updated_at: now - 180,
-          value: JSON.stringify({
-            updatedAt: now - 180,
-            source: "sync-yield-data",
-            publishStatus: "ok",
-          }),
-        },
-        {
-          key: "freshness:dews",
-          updated_at: now - 240,
-          value: JSON.stringify({
-            updatedAt: now - 240,
-            source: "compute-dews",
-            publishStatus: "ok",
-          }),
-        },
+        { key: "freshness:dex-liquidity", updated_at: now - 120, value: JSON.stringify({ updatedAt: now - 120, source: "sync-yield-data", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
+        { key: "freshness:yield-data", updated_at: now - 180, value: JSON.stringify({ updatedAt: now - 180, source: "sync-yield-data", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
+        { key: "freshness:dews", updated_at: now - 240, value: JSON.stringify({ updatedAt: now - 240, source: "compute-dews", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
       ],
     });
 

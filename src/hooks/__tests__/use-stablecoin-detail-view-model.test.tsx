@@ -403,7 +403,7 @@ describe("useStablecoinDetailViewModel", () => {
 
       const list = renderedStablecoinList();
 
-      expect(list).toMatchObject({ isError: false, isLoading: false, error: null, enabled: false });
+      expect(list).toMatchObject({ isError: false, isLoading: false, error: null, enabled: false, dataUpdatedAt: 0, meta: null });
       expect(list.data.peggedAssets[0]).toMatchObject({
         id: coin.id,
         price: archived.price,
@@ -413,11 +413,14 @@ describe("useStablecoinDetailViewModel", () => {
     });
 
     it("prefers the live detail row over the archive when it exists", () => {
-      mockLiveSummary({ data: { ...archived, price: 0.42 }, dataUpdatedAt: 5 } as Parameters<typeof queryResult>[0]);
+      mockLiveSummary({
+        data: { ...archived, price: 0.42 }, dataUpdatedAt: 100,
+        meta: { updatedAt: 0.005, ageSeconds: 0, status: "fresh" },
+      } as Parameters<typeof queryResult>[0]);
 
       const list = renderedStablecoinList();
 
-      expect(list).toMatchObject({ isError: false, enabled: true, dataUpdatedAt: 5 });
+      expect(list).toMatchObject({ isError: false, enabled: true, dataUpdatedAt: 100, meta: { updatedAt: 0.005 } });
       expect(list.data.peggedAssets[0].price).toBe(0.42);
     });
   });

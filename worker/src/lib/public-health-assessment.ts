@@ -47,6 +47,7 @@ import {
 } from "./stablecoin-publication-health";
 import type { SchedulerLiveness } from "@shared/types/status/public-health";
 import { loadSchedulerLiveness, schedulerLivenessImpactStatus as getSchedulerLivenessImpactStatus, schedulerLivenessWarnings } from "./status/scheduler-liveness";
+import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "./cron-output";
 
 const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
   state: "closed",
@@ -329,7 +330,7 @@ async function loadMintBurnHealth(
         () =>
           db
             .prepare(
-              "SELECT MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'",
+              `SELECT MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL}) as started_at FROM cron_runs WHERE job = ?`,
             )
             .bind(MINT_BURN_CRON_JOB)
             .first<{ started_at: number | null }>()

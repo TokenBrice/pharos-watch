@@ -43,4 +43,10 @@ describe("computeMintBurnSyncFreshnessStatus", () => {
   it("returns stale when lastSuccessfulSyncAt is null", () => {
     expect(computeMintBurnSyncFreshnessStatus(10000, null)).toBe("stale");
   });
+
+  it("rejects clocks beyond the inclusive future allowance", () => {
+    expect(computeMintBurnSyncFreshnessStatus(10000, 10060)).toBe("fresh");
+    expect(computeMintBurnSyncFreshnessStatus(10000, 10061)).toBe("stale");
+    expect(computeMintBurnSyncFreshnessStatus(10000, Infinity)).toBe("stale");
+  });
 });

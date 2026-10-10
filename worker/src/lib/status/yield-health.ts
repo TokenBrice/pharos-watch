@@ -44,6 +44,7 @@ import {
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
   YIELD_BENCHMARK_SCORE_TTL_SEC,
 } from "../../cron/yield-sync/benchmarks";
+import { assessFreshnessTimestamp } from "../api-freshness-age";
 
 const YIELD_RUNBOOK_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/yield-health.md";
 const YIELD_RANKINGS_CACHE_KEY = "yield-rankings";
@@ -146,15 +147,13 @@ function safeJsonObjectParse(json: string | null | undefined, context: string): 
 }
 
 function ageSeconds(now: number, updatedAt: number | null | undefined): number | null {
-  return typeof updatedAt === "number" && Number.isFinite(updatedAt)
-    ? Math.max(0, now - updatedAt)
-    : null;
+  return assessFreshnessTimestamp(now, updatedAt).ageSeconds;
 }
 
 function recordAgeSeconds(now: number, recordDate: string | null): number | null {
   if (!recordDate) return null;
   const parsed = Date.parse(`${recordDate}T00:00:00Z`);
-  return Number.isFinite(parsed) ? Math.max(0, now - Math.trunc(parsed / 1000)) : null;
+  return Number.isFinite(parsed) ? ageSeconds(now, Math.trunc(parsed / 1000)) : null;
 }
 
 function freshnessStatus(
@@ -746,6 +745,7 @@ function buildSupplementalHealth(
       family,
       updatedAt: row?.updated_at ?? null,
       ageSec,
+      timestampReason: assessFreshnessTimestamp(now, row?.updated_at).reason,
       sourceCount,
       maxAgeSec: familyMaxAgeSec,
       // Only a family that still holds a previous snapshot has one to retain.
@@ -761,6 +761,7 @@ function buildSupplementalHealth(
       {
         updatedAt: row.updatedAt,
         ageSec: row.ageSec,
+        timestampReason: row.timestampReason,
         sourceCount: row.sourceCount,
         maxAgeSec: row.maxAgeSec,
         status: row.status,
@@ -792,6 +793,7 @@ function buildSupplementalHealth(
   return {
     updatedAt: latestFamilyUpdatedAt,
     ageSec: ageSeconds(now, latestFamilyUpdatedAt),
+    timestampReason: assessFreshnessTimestamp(now, latestFamilyUpdatedAt).reason,
     maxAgeSec: STATUS_YIELD_HEALTH_THRESHOLDS.supplementalMaxAgeSec,
     status: worstStatus(familyStatuses),
     familyCount: requiredFamilyRows.length,
@@ -998,6 +1000,7 @@ export async function loadYieldHealthSummary(
     previousRankingCount,
     rankingUpdatedAt,
     rankingAgeSec,
+    rankingTimestampReason: assessFreshnessTimestamp(now, rankingUpdatedAt).reason,
     rankingMaxAgeSec: YIELD_RANKING_MAX_AGE_SEC,
     rankingStatus,
     safetyCoverage: {
@@ -1013,6 +1016,7 @@ export async function loadYieldHealthSummary(
     coverageAudit: {
       updatedAt: coverageAuditUpdatedAt,
       ageSec: coverageAuditAgeSec,
+      timestampReason: assessFreshnessTimestamp(now, coverageAuditUpdatedAt).reason,
       maxAgeSec: STATUS_YIELD_HEALTH_THRESHOLDS.coverageAuditMaxAgeSec,
       status: coverageAuditStatus,
       headlineGapCount,

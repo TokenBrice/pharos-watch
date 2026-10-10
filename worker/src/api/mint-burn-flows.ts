@@ -215,7 +215,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     },
   };
 
-  return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, data.latestSuccessfulSyncAt);
+  return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, data.freshnessLookup);
 }
 
 function cachedAggregateNeedsSafetyValidation(payload: unknown): boolean {
@@ -401,11 +401,10 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
     ]);
 
     const rows = hourlyResult.results ?? [];
-    const fallbackSyncAt = latestCronSnapshot.startedAt ?? (rows.length > 0 ? resolveFlowUpdatedAt(rows, 0) : null);
-    const latestSuccessfulSyncAt = latestSuccessfulSyncLookup.timestamp ?? fallbackSyncAt;
+    const latestSuccessfulSyncAt = latestSuccessfulSyncLookup.timestamp;
     const freshnessLookupWarning =
       latestSuccessfulSyncLookup.status === "lookup_failed"
-        ? "Mint/burn freshness lookup failed; falling back to cached row timestamps."
+        ? "Mint/burn freshness lookup failed; producer observation is unavailable."
         : null;
     const sync = buildMintBurnSyncHealth(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status);
 
@@ -468,6 +467,6 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       },
     };
 
-    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, latestSuccessfulSyncAt);
+    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, latestSuccessfulSyncLookup);
   });
 }

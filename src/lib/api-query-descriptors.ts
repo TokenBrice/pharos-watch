@@ -154,7 +154,7 @@ const DATA_SURFACE_PRODUCER_INTERVAL_MS = {
  */
 export const FRONTEND_API_QUERY_DESCRIPTORS = {
   stablecoinLiveSummary: defineParameterizedApiQuery(
-    "plain",
+    "meta",
     createLazySchema<StablecoinLiveSummary>(async () => StablecoinLiveSummaryResponseSchema),
     (stablecoinId: string) => ({
       queryKey: ["stablecoin-live-summary", stablecoinId] as const,
@@ -557,7 +557,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     }),
   ),
   supplyHistory: defineParameterizedApiQuery(
-    "plain",
+    "meta",
     createLazySchema<SupplyHistoryPoint[]>(
       async () => (await import("@shared/types/market")).SupplyHistoryResponseSchema,
     ),

@@ -128,7 +128,7 @@ export function mintBurnScenario({
       first: rows.cronSnapshot?.[0] ?? null,
     },
     {
-      match: "MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'",
+      match: "as started_at FROM cron_runs WHERE job = ?",
       rows: rows.latestSuccessfulSync ?? [{ started_at: null }],
       first: rows.latestSuccessfulSync?.[0] ?? null,
     },

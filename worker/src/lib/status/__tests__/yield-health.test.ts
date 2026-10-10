@@ -48,6 +48,14 @@ function makeDb(rows: Record<string, unknown>[]) {
 }
 
 describe("loadYieldHealthSummary", () => {
+  it.each([60, 61])("admits yield ranking clocks only through the %s-second future boundary", async (offset) => {
+    const summary = await loadYieldHealthSummary(makeDb([
+      yieldCacheRow("yield-rankings", NOW + offset, { rankings: [] }),
+    ]), NOW, { "sync-yield-data": cron() });
+    expect(summary.rankingAgeSec).toBe(offset === 60 ? 0 : null);
+    expect(summary.rankingStatus).toBe(offset === 60 ? "healthy" : "stale");
+    expect(summary.rankingTimestampReason).toBe(offset === 60 ? null : "future-timestamp");
+  });
   it("summarizes rankings, safety coverage, supplemental sources, benchmark registry, and audit cache state", async () => {
     const summary = await loadYieldHealthSummary(
       makeDb([

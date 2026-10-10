@@ -30,13 +30,15 @@ import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { handleCoinGeckoOnlyDetail } from "../stablecoin-detail/coingecko-only";
 
 function makeDetailHelpers(
-  resolveTokensWithSupplyHistoryFallback: DetailResponseHelpers["resolveTokensWithSupplyHistoryFallback"],
+  resolveTokens: (tokens: Record<string, unknown>[]) => Promise<Record<string, unknown>[]>,
 ): DetailResponseHelpers {
   return {
     cached: null,
     createFreshResponseFromBody: (body) => new Response(body),
     createFreshResponseFromTokens: (tokens) => Response.json({ tokens }),
-    resolveTokensWithSupplyHistoryFallback,
+    createFallbackResponseFromTokens: (tokens) => Response.json({ tokens }),
+    createResponseFromResolvedTokens: (history) => Response.json({ tokens: history.tokens }),
+    resolveTokensWithSupplyHistoryFallback: async (tokens) => ({ tokens: await resolveTokens(tokens), observedAt: null, fallback: false }),
     staleCacheOrError: (status, message) => new Response(message, { status }),
     trySupplyHistoryFallback: vi.fn(async () => null),
   };

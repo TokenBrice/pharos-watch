@@ -38,11 +38,8 @@ export interface DetailQueryResource<TData> {
   enabled?: boolean;
 }
 
-export interface DetailSupplyHistoryInput {
-  data?: SupplyHistoryPoint[];
+export interface DetailSupplyHistoryInput extends DetailQueryResource<SupplyHistoryPoint[]> {
   isLoading: boolean;
-  error: unknown | null;
-  dataUpdatedAt: number;
 }
 
 /**

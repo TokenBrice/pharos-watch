@@ -74,13 +74,28 @@ describe("cachedFlowFallbackResponse", () => {
       "mint-burn-flows:v3:aggregate:24",
       now,
       body,
-      null,
+      { timestamp: null, status: "missing" },
     );
 
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(response.headers.get("X-Data-Age")).toBe("unavailable");
     expect(response.headers.get("Warning")).toMatch(/^199 /);
-    await expect(response.json()).resolves.toEqual(body);
+    await expect(response.json()).resolves.toMatchObject({ ...body, _meta: { updatedAt: null, ageSeconds: null, reason: "producer-history-missing" } });
+  });
+
+  it("preserves a failed producer lookup through cache fallback headers and body", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([{ match: "INSERT INTO cache (key, value, updated_at)", rows: [], runMeta: { changes: 1 } }]);
+    const response = await finalizeMintBurnFlowResponse(db, "flows", now, {
+      sync: { lastSuccessfulSyncAt: null },
+    }, { timestamp: null, status: "lookup_failed" });
+    const body = await response.text();
+    const cached = cachedFlowFallbackResponse({ value: body, updatedAt: now });
+    expect(cached.headers.get("X-Data-Freshness")).toBe("unknown");
+    expect(cached.headers.get("X-Data-Freshness-Reason")).toBe("freshness-lookup-failed");
+    expect(cached.headers.get("X-Data-Age")).toBe("unavailable");
+    expect(cached.headers.get("Cache-Control")).toBe("no-store");
+    expect(await cached.json()).toMatchObject({ _meta: { status: "unknown", reason: "freshness-lookup-failed" } });
   });
 
   it("returns 503 when the cached body is malformed JSON", async () => {

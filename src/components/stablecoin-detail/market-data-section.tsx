@@ -59,7 +59,7 @@ export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, up
     ? fullHistoryQuery.data
     : supplyHistory;
   const activeUpdatedAtMs = needsFullHistory && fullHistoryQuery.data.length > 0
-    ? fullHistoryQuery.dataUpdatedAt
+    ? (fullHistoryQuery.meta?.updatedAt ?? 0) * 1000
     : updatedAtMs;
 
   return (

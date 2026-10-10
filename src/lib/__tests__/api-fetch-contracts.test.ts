@@ -129,6 +129,9 @@ describe("api contract validation policy", () => {
         updatedAt: 200,
         ageSeconds: 20,
         status: "degraded",
+        assessedAt: 220,
+        freshBudgetSec: 1800,
+        degradedBudgetSec: 3600,
         warning: null,
         dependencies: {
           reportCards: {
@@ -752,6 +755,24 @@ describe("api contract validation policy", () => {
     const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }));
 
     expect(result.meta?.updatedAt).toBe(Date.parse("2026-06-23T10:02:30.000Z") / 1000);
+  });
+
+  it("preserves absolute producer timestamps despite edge Date, Age and a new request receipt", async () => {
+    vi.setSystemTime(new Date("2026-06-23T10:05:00.000Z"));
+    const updatedAt = Date.parse("2026-06-23T08:00:00.000Z") / 1000;
+    mockJsonOnce({ ok: true }, 200, {
+      Date: "Tue, 23 Jun 2026 10:00:00 GMT", Age: "120",
+      "X-Data-Updated-At": String(updatedAt), "X-Data-Age": "30", "X-Data-Freshness": "stale",
+      Warning: '110 - "Response is stale"',
+    });
+    const result = await apiFetchWithMeta("/api/stablecoin/usdt-tether", z.object({ ok: z.boolean() }));
+    expect(result.meta).toMatchObject({ updatedAt, ageSeconds: 7500, status: "stale", warning: '110 - "Response is stale"' });
+  });
+
+  it.each(["", "unavailable", "invalid", "-1"])("does not replace invalid absolute producer clock %s with receipt time", async (updatedAt) => {
+    mockJsonOnce({ ok: true }, 200, { "X-Data-Updated-At": updatedAt, "X-Data-Age": "0" });
+    const result = await apiFetchWithMeta("/api/stablecoin/usdt-tether", z.object({ ok: z.boolean() }));
+    expect(result.meta).toMatchObject({ updatedAt: null, ageSeconds: null, status: "unknown" });
   });
 
   it("does not apply edge Age when body _meta provides updatedAt", async () => {

@@ -63,6 +63,7 @@ import type { DEWSResult } from "../../lib/dews";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { computeAndStoreDEWS } from "../../lib/dews/service";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC } from "../../lib/dews/input-assembly";
 import { buildHistoryKey } from "../yield-sync/evaluation";
 import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication";
 import {
@@ -431,6 +432,69 @@ describe("computeAndStoreDEWS", () => {
   });
 
   it.each([
+    ["fresh", 0, null],
+    ["inclusive boundary", -DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC, null],
+    ["stale", -DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC - 1, "stale"],
+    ["missing clock", null, "missing-timestamp"],
+    ["future clock", 61, "future-timestamp"],
+    ["invalid clock", Number.POSITIVE_INFINITY, "invalid-timestamp"],
+  ] as const)("admits the stablecoins generation freshness for %s", async (_label, offset, reason) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const updatedAt = offset === null ? null : nowSec + offset;
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key !== "stablecoins") return null;
+      return { ...dewsCache(), updatedAt } as never;
+    });
+    const sqlSeen: string[] = [];
+    const result = await computeAndStoreDEWS(makeDb(sqlSeen));
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.dependencies.stablecoins).toEqual({
+      generationId: updatedAt !== null && Number.isFinite(updatedAt) ? `stablecoins:${updatedAt}` : null,
+      updatedAt: updatedAt !== null && Number.isFinite(updatedAt) ? updatedAt : null,
+      ageSeconds: offset === null || offset > 60 ? null : 0 - offset,
+      freshnessBudgetSec: DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC,
+      reason,
+    });
+    if (reason !== null) {
+      expect(result.status).toBe("degraded");
+      expect(metadata.sourceFailures).toContainEqual({
+        source: "stablecoins-cache", reason: `stablecoins-cache-${reason}`,
+      });
+      expect(metadata.publicationPointerWritten).toBe(false);
+      expect(metadata.freshnessSentinelPublished).toBe(false);
+      expect(vi.mocked(writeFreshnessSentinel)).not.toHaveBeenCalled();
+      expect(vi.mocked(computeDEWS)).not.toHaveBeenCalled();
+      expect(sqlSeen).toHaveLength(0);
+    } else {
+      expect(metadata.publicationPointerWritten).toBe(true);
+      expect(metadata.freshnessSentinelPublished).toBe(true);
+    }
+  });
+
+  it("retains the accepted DEWS pointer and buffered rows when stablecoins are stale", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const acceptedAt = nowSec - 1800;
+    const pointer = JSON.stringify({
+      updatedAt: acceptedAt, source: "compute-dews", publishStatus: "published",
+    });
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("dews:published-generation", pointer, acceptedAt);
+    sqlite.prepare(`INSERT INTO stress_signal_publication_rows
+      (stablecoin_id, computed_at, score, band, signals_json) VALUES (?, ?, 22, 'WATCH', '{}')`)
+      .run("usdt-tether", acceptedAt);
+    vi.mocked(getCache).mockResolvedValue({
+      ...dewsCache(), updatedAt: nowSec - DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC - 1,
+    });
+    await computeAndStoreDEWS(db);
+    expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get("dews:published-generation"))
+      .toEqual({ value: pointer, updated_at: acceptedAt });
+    expect(sqlite.prepare("SELECT computed_at, score FROM stress_signal_publication_rows").all())
+      .toEqual([{ computed_at: acceptedAt, score: 22 }]);
+    expect(vi.mocked(writeFreshnessSentinel)).not.toHaveBeenCalled();
+  });
+
+  it.each([
     ["protocol-par", "nominal_reference", false],
     ["coingecko", "upstream", true],
   ])("scores %s price provenance without manufacturing calm from nominal par", async (priceSource, priceObservedAtMode, observed) => {
@@ -537,7 +601,7 @@ describe("computeAndStoreDEWS", () => {
     expect(result.status).toBeUndefined();
     expect(result.itemCount).toBe(1);
     expect(writeFreshnessSentinel).toHaveBeenCalledTimes(1);
-    expect(writeFreshnessSentinel).toHaveBeenCalledWith(db, "dews", Math.floor(Date.now() / 1000), undefined);
+    expect(writeFreshnessSentinel).toHaveBeenCalledWith(db, "dews", Math.floor(Date.now() / 1000), `dews:${Math.floor(Date.now() / 1000)}`, undefined);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       freshnessSentinelPublished: boolean;
       publicationPointerWritten: boolean;

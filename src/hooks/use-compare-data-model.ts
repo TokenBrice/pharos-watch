@@ -236,7 +236,7 @@ export function useCompareDataModel({
   const supplySeries = useMemo(() => {
     return deriveSupplySeries({
       selectedIds,
-      histories: selectedIds.map((_, index) => detailQueries[index]?.data ?? []),
+      histories: selectedIds.map((_, index) => detailQueries[index]?.data?.data ?? []),
       metaMap: TRACKED_META_BY_ID,
     });
   }, [detailQueries, selectedIds]);

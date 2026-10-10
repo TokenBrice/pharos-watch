@@ -942,7 +942,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(res.headers.get("X-Data-Age")).toBe(String(75 * 60));
   });
 
-  it("combines degraded freshness with the lookup fallback warning when cron freshness lookup fails", async () => {
+  it("preserves unavailable freshness when producer lookup fails instead of borrowing an attempt clock", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-11T12:00:00Z"));
 
@@ -973,7 +973,7 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       stablecoinsCache: { value: cache, updatedAt: now },
       overrides: [{
-        match: "MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'",
+        match: "as started_at FROM cron_runs WHERE job = ?",
         rows: [],
         throwError: new Error("cron lookup failed"),
       }],
@@ -983,6 +983,29 @@ describe("handleMintBurnFlows contract tests", () => {
 
     const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.sync?.warning).toContain("freshness lookup failed");
-    expect(res.headers.get("X-Data-Age")).toBe(String(75 * 60));
+    expect(res.headers.get("X-Data-Age")).toBe("unavailable");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(res.headers.get("X-Data-Freshness-Reason")).toBe("freshness-lookup-failed");
+    expect(body.sync?.lastSuccessfulSyncAt).toBeNull();
+  });
+
+  it.each(["aggregate", "per-coin"] as const)("does not use an errored attempt as %s producer freshness", async (scope) => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mintBurnScenario({
+      nowSec: now,
+      rows: {
+        hourly: [makeFlowHourlyRow(now)],
+        cronSnapshot: [{ started_at: now, status: "error", metadata: "{}" }],
+        latestSuccessfulSync: [{ started_at: null }],
+      },
+    });
+    const url = new URL("https://x/api/mint-burn-flows");
+    if (scope === "per-coin") url.searchParams.set("stablecoin", "usdt-tether");
+    const response = await handleMintBurnFlows(db, url);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-Data-Age")).toBe("unavailable");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Data-Freshness-Reason")).toBe("producer-history-missing");
+    expect(await response.json()).toMatchObject({ sync: { lastSuccessfulSyncAt: null }, _meta: { updatedAt: null } });
   });
 });

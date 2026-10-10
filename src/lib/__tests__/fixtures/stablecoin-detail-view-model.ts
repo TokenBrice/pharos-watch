@@ -58,6 +58,7 @@ export function makeBuildStablecoinDetailViewModelParams(
         isLoading: false,
         error: null,
         dataUpdatedAt: 0,
+        meta: null,
         ...overrides.queries?.supplyHistory,
       },
       stablecoinList: {

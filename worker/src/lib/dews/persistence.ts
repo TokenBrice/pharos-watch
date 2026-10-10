@@ -519,9 +519,9 @@ export async function persistDewsResults(params: {
     }
   }
 
-  if (!publicationWithheld && params.results.length > 0) {
+  if (publicationPointerWritten) {
     throwIfAborted(params.signal);
-    await writeFreshnessSentinel(params.db, "dews", params.nowSec, params.signal);
+    await writeFreshnessSentinel(params.db, "dews", params.nowSec, `dews:${params.nowSec}`, params.signal);
   }
 
   return {

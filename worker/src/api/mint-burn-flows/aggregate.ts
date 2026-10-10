@@ -9,7 +9,7 @@ import {
   type MintBurnValuationTally,
 } from "@shared/lib/mint-burn-valuation";
 import type { MintBurnValuation, MintBurnValuationCompleteness } from "@shared/types/mint-burn";
-import { getLatestSuccessfulCronTimestampResult } from "../../lib/api-freshness";
+import { getLatestSuccessfulCronTimestampResult, type CronTimestampLookupResult } from "../../lib/api-freshness";
 import type { FlightToQualityClassification } from "../../lib/flight-to-quality-classification";
 import {
   buildMintBurnSyncHealth,
@@ -49,7 +49,6 @@ import {
   MINT_BURN_CRON_JOB,
   mintBurnPairKey,
   readMintBurnCronSnapshotResult,
-  resolveFlowUpdatedAt,
   selectLargestEvents,
 } from "../../lib/mint-burn-flows-service";
 
@@ -135,6 +134,7 @@ export interface AggregateData {
   coverageMap: ReturnType<typeof buildCoinCoverageMap>;
   sync: ReturnType<typeof buildMintBurnSyncHealth>;
   latestSuccessfulSyncAt: number | null;
+  freshnessLookup: CronTimestampLookupResult;
   freshnessLookupWarning: string | null;
 }
 
@@ -334,12 +334,9 @@ export async function fetchAggregateData(
   );
   const latestCronSnapshot = latestCronSnapshotResult.value;
   const latestSuccessfulSyncLookup = await getLatestSuccessfulCronTimestampResult(db, MINT_BURN_CRON_JOB);
-  const fallbackSyncAt =
-    latestCronSnapshot.startedAt
-    ?? (hourlyRows.length > 0 ? resolveFlowUpdatedAt(hourlyRows, 0) : null);
-  const latestSuccessfulSyncAt = latestSuccessfulSyncLookup.timestamp ?? fallbackSyncAt;
+  const latestSuccessfulSyncAt = latestSuccessfulSyncLookup.timestamp;
   const freshnessLookupWarning = latestSuccessfulSyncLookup.status === "lookup_failed"
-    ? "Mint/burn freshness lookup failed; falling back to cached row timestamps."
+    ? "Mint/burn freshness lookup failed; producer observation is unavailable."
     : null;
 
   return {
@@ -359,6 +356,7 @@ export async function fetchAggregateData(
     ),
     sync: buildMintBurnSyncHealth(params.nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status),
     latestSuccessfulSyncAt,
+    freshnessLookup: latestSuccessfulSyncLookup,
     freshnessLookupWarning,
   };
 }

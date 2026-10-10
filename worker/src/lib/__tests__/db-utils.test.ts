@@ -307,7 +307,7 @@ describe("db utility helpers", () => {
 
     await expect(setCacheIfNewer(db, "stablecoins", '{"x":1}', 1700000000, controller.signal))
       .rejects.toThrow("publication aborted");
-    await expect(writeFreshnessSentinel(db, "dews", 1700000000, controller.signal))
+    await expect(writeFreshnessSentinel(db, "dews", 1700000000, "dews:1700000000", controller.signal))
       .rejects.toThrow("publication aborted");
 
     expect(calls).toEqual([]);

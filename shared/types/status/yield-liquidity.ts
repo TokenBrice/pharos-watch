@@ -198,6 +198,7 @@ export const YieldHealthSummarySchema = z.object({
   previousRankingCount: z.number().nullable(),
   rankingUpdatedAt: z.number().nullable(),
   rankingAgeSec: z.number().nullable(),
+  rankingTimestampReason: z.string().nullable().optional(),
   rankingMaxAgeSec: z.number(),
   rankingStatus: StatusHealthOrUnknownSchema,
   safetyCoverage: z.object({
@@ -211,6 +212,7 @@ export const YieldHealthSummarySchema = z.object({
   supplemental: z.object({
     updatedAt: z.number().nullable(),
     ageSec: z.number().nullable(),
+    timestampReason: z.string().nullable().optional(),
     maxAgeSec: z.number(),
     status: StatusHealthOrUnknownSchema,
     familyCount: z.number().optional(),
@@ -230,6 +232,7 @@ export const YieldHealthSummarySchema = z.object({
       z.object({
         updatedAt: z.number().nullable(),
         ageSec: z.number().nullable(),
+        timestampReason: z.string().nullable().optional(),
         sourceCount: z.number().nullable(),
         status: StatusHealthOrUnknownSchema,
         /** True when this row is the retained snapshot from the last degraded fetch. */
@@ -247,6 +250,7 @@ export const YieldHealthSummarySchema = z.object({
   coverageAudit: z.object({
     updatedAt: z.number().nullable(),
     ageSec: z.number().nullable(),
+    timestampReason: z.string().nullable().optional(),
     maxAgeSec: z.number(),
     status: StatusHealthOrUnknownSchema,
     headlineGapCount: z.number().nullable(),
