@@ -168,7 +168,7 @@ describe("focused checks", () => {
     const stdout = writer();
     const runCommandImpl = vi.fn();
     expect(await runFocusedChecks({
-      argv: ["--file", "docs/testing.md", "--json", ...(planOnly ? ["--plan-only"] : [])],
+      argv: ["--file", "CONTRIBUTING.md", "--json", ...(planOnly ? ["--plan-only"] : [])],
       runCommandImpl, stdout, stderr: writer(),
     })).toBe(0);
     expect(JSON.parse(stdout.output())).toMatchObject({
@@ -249,7 +249,7 @@ describe("focused checks", () => {
     const stderr = writer();
 
     await expect(runFocusedChecks({
-      argv: ["--file", "docs/testing.md", "--plan-only"],
+      argv: ["--file", "CONTRIBUTING.md", "--plan-only"],
       stderr,
       stdout,
     })).resolves.toBe(0);
@@ -312,6 +312,7 @@ describe("sensitive selection boundaries", () => {
   it.each([
     {
       run: "37733701624",
+      evaluationIdentity: true,
       files: [
         "docs/report-cards.md",
         "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts",
@@ -324,12 +325,13 @@ describe("sensitive selection boundaries", () => {
     },
     {
       run: "37727521161",
+      evaluationIdentity: false,
       files: [
         "worker/src/lib/__tests__/redemption-exit-route-observations.test.ts",
         "worker/src/lib/redemption-exit-route-observations.ts",
       ],
     },
-  ])("includes lint, Worker compilation, and evaluation identity for historical run $run", ({ files, run }) => {
+  ])("includes lint and Worker compilation with scoped evaluation identity for historical run $run", ({ files, run, evaluationIdentity }) => {
     const plan = buildFocusedCheckPlan(files);
     const commands = plan.checks.map((check) => check.command);
     expect(plan.classification.unmappedPaths, run).toEqual([]);
@@ -337,7 +339,7 @@ describe("sensitive selection boundaries", () => {
     expect(plan.checks.find((check) => check.argv?.includes("lint:changed"))?.argv, run)
       .toEqual(["npm", "run", "lint:changed", "--", ...files.filter((file) => file.endsWith(".ts")).sort().flatMap((file) => ["--file", file])]);
     expect(commands.some((command) => command.startsWith("npm run check:generated-artifacts -- --only=")
-      && command.split("--only=")[1].split(",").includes("safety-score-v9-evaluation-build")), run).toBe(true);
+      && command.split("--only=")[1].split(",").includes("safety-score-v9-evaluation-build")), run).toBe(evaluationIdentity);
     if (run === "37733701624") {
       expect(commands).toEqual(expect.arrayContaining([
         "npm run check:doc-sync", "npm run audit:mint-authority-review",
