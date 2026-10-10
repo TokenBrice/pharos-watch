@@ -5,8 +5,6 @@ import {
 } from "@shared/lib/safety-score-v9/mechanism-profiles";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
-import { sha256Hex } from "@shared/lib/sha256";
-import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { admitV10ReserveReportScope, resolveV10ScopedAssuranceFragments, shouldApplyV10ReserveReportScope } from "@shared/lib/safety-score-v9/reserve-scope";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
@@ -28,7 +26,7 @@ import {
 import { MechanismArchetypeReviewSchema } from "@shared/types/stablecoin-meta-schemas";
 import { isoDateStartSec } from "./extension-shared";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
-import { canonicalizeReviewedRegistryDigest, createReviewedAssetRegistry } from "./extension-reviewed-registry";
+import { canonicalizeReviewedRegistryDigest, createReviewedAssetRegistry, reviewedRegistryEnvelopeDigest } from "./extension-reviewed-registry";
 
 type MechanismMeta = Pick<
   StablecoinMeta,
@@ -445,12 +443,7 @@ const MECHANISM_REVIEW_OVERLAY_FILE = canonicalizeReviewedRegistryDigest(mechani
   "overlays.*.collateralizationMeasurement.rationale",
 ]);
 
-export const SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST = sha256Hex(
-  stableJsonStringifyV1({
-    domain: "safety-score-v9.mechanism-review-overlays.v1",
-    overlays: MECHANISM_REVIEW_OVERLAY_FILE,
-  }),
-);
+export const SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST = reviewedRegistryEnvelopeDigest("safety-score-v9.mechanism-review-overlays.v1", "overlays", MECHANISM_REVIEW_OVERLAY_FILE);
 
 const MECHANISM_REVIEW_OVERLAYS = createReviewedAssetRegistry({
   rows: mechanismEnvelope.overlays, schema: SafetyScoreV9MechanismReviewOverlaySchema, path: "mechanismReviews.overlays",

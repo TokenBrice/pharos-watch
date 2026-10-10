@@ -1,5 +1,4 @@
 import {
-  decodeAddressWord,
   decodeUintWord,
   relativeDeltaPct,
   requireCheck,
@@ -7,6 +6,8 @@ import {
   type EthCallJournal,
   type MeasurementCheck,
   type PinnedBlock,
+  readJournalAddress,
+  readJournalUint,
 } from "../core";
 import type { LiquityV1MeasurementTarget } from "../targets";
 import type { LiquityV1MeasurementEvidence } from "../schema";
@@ -30,11 +31,7 @@ export async function measureLiquityV1(
   const checks: MeasurementCheck[] = [];
   const { token, troveManager, stabilityPool, priceFeed } = target.contracts;
 
-  const derivedTroveManager = decodeAddressWord(
-    await caller.call({ name: "token.troveManagerAddress", to: token, signature: "troveManagerAddress()", selector: "0x5a4d28bb" }),
-    "troveManagerAddress",
-  );
-  caller.recordDecoded(derivedTroveManager);
+  const derivedTroveManager = await readJournalAddress(caller, { name: "token.troveManagerAddress", to: token, signature: "troveManagerAddress()", selector: "0x5a4d28bb" }, "troveManagerAddress");
   requireCheck(
     checks,
     "graph.troveManager",
@@ -42,11 +39,7 @@ export async function measureLiquityV1(
     `token.troveManagerAddress() ${derivedTroveManager} matches pinned config`,
   );
 
-  const derivedStabilityPool = decodeAddressWord(
-    await caller.call({ name: "token.stabilityPoolAddress", to: token, signature: "stabilityPoolAddress()", selector: "0x0b622ab2" }),
-    "stabilityPoolAddress",
-  );
-  caller.recordDecoded(derivedStabilityPool);
+  const derivedStabilityPool = await readJournalAddress(caller, { name: "token.stabilityPoolAddress", to: token, signature: "stabilityPoolAddress()", selector: "0x0b622ab2" }, "stabilityPoolAddress");
   requireCheck(
     checks,
     "graph.stabilityPool",
@@ -54,11 +47,7 @@ export async function measureLiquityV1(
     `token.stabilityPoolAddress() ${derivedStabilityPool} matches pinned config`,
   );
 
-  const derivedPriceFeed = decodeAddressWord(
-    await caller.call({ name: "troveManager.priceFeed", to: troveManager, signature: "priceFeed()", selector: "0x741bef1a" }),
-    "priceFeed",
-  );
-  caller.recordDecoded(derivedPriceFeed);
+  const derivedPriceFeed = await readJournalAddress(caller, { name: "troveManager.priceFeed", to: troveManager, signature: "priceFeed()", selector: "0x741bef1a" }, "priceFeed");
   requireCheck(
     checks,
     "graph.priceFeed",
@@ -69,12 +58,7 @@ export async function measureLiquityV1(
   // Canonical price: simulate the protocol's own fetchPrice() at the pinned
   // block. lastGoodPrice is a view but can freeze arbitrarily stale in quiet
   // systems (measured 5% stale on LUSD), so it is recorded informationally only.
-  const priceWei = decodeUintWord(
-    await caller.call({ name: "priceFeed.fetchPrice", to: priceFeed, signature: "fetchPrice()", selector: "0x0fdb11cf" }),
-    0,
-    "fetchPrice",
-  );
-  caller.recordDecoded(priceWei.toString());
+  const priceWei = await readJournalUint(caller, { name: "priceFeed.fetchPrice", to: priceFeed, signature: "fetchPrice()", selector: "0x0fdb11cf" }, 0, "fetchPrice");
   const priceUsd = Number(priceWei) / 1e18;
   requireCheck(
     checks,
@@ -83,12 +67,7 @@ export async function measureLiquityV1(
     `fetchPrice ${priceUsd} within [${target.sanity.minPriceUsd}, ${target.sanity.maxPriceUsd}]`,
   );
 
-  const lastGoodPriceWei = decodeUintWord(
-    await caller.call({ name: "priceFeed.lastGoodPrice", to: priceFeed, signature: "lastGoodPrice()", selector: "0x0490be83" }),
-    0,
-    "lastGoodPrice",
-  );
-  caller.recordDecoded(lastGoodPriceWei.toString());
+  const lastGoodPriceWei = await readJournalUint(caller, { name: "priceFeed.lastGoodPrice", to: priceFeed, signature: "lastGoodPrice()", selector: "0x0490be83" }, 0, "lastGoodPrice");
 
   const roundData = await caller.call({
     name: "chainlink.latestRoundData",
@@ -115,31 +94,16 @@ export async function measureLiquityV1(
     `fetchPrice deviates ${chainlinkDeltaPct.toFixed(4)}% from Chainlink (tolerance ${target.chainlink.tolerancePct}%)`,
   );
 
-  const collateral = decodeUintWord(
-    await caller.call({ name: "troveManager.getEntireSystemColl", to: troveManager, signature: "getEntireSystemColl()", selector: "0x887105d3" }),
-    0,
-    "getEntireSystemColl",
-  );
-  caller.recordDecoded(collateral.toString());
-  const debt = decodeUintWord(
-    await caller.call({ name: "troveManager.getEntireSystemDebt", to: troveManager, signature: "getEntireSystemDebt()", selector: "0x795d26c3" }),
-    0,
-    "getEntireSystemDebt",
-  );
-  caller.recordDecoded(debt.toString());
+  const collateral = await readJournalUint(caller, { name: "troveManager.getEntireSystemColl", to: troveManager, signature: "getEntireSystemColl()", selector: "0x887105d3" }, 0, "getEntireSystemColl");
+  const debt = await readJournalUint(caller, { name: "troveManager.getEntireSystemDebt", to: troveManager, signature: "getEntireSystemDebt()", selector: "0x795d26c3" }, 0, "getEntireSystemDebt");
 
-  const tcrWei = decodeUintWord(
-    await caller.call({
-      name: "troveManager.getTCR",
-      to: troveManager,
-      signature: "getTCR(uint256)",
-      selector: "0xb82f263d",
-      args: [priceWei],
-    }),
-    0,
-    "getTCR",
-  );
-  caller.recordDecoded(tcrWei.toString());
+  const tcrWei = await readJournalUint(caller, {
+    name: "troveManager.getTCR",
+    to: troveManager,
+    signature: "getTCR(uint256)",
+    selector: "0xb82f263d",
+    args: [priceWei],
+  }, 0, "getTCR");
   const expectedTcr = debt === 0n ? null : (collateral * priceWei) / debt;
   requireCheck(
     checks,
@@ -148,12 +112,7 @@ export async function measureLiquityV1(
     `getTCR(${priceWei}) == floor(coll * price / debt) == ${tcrWei}`,
   );
 
-  const totalSupply = decodeUintWord(
-    await caller.call({ name: "token.totalSupply", to: token, signature: "totalSupply()", selector: "0x18160ddd" }),
-    0,
-    "totalSupply",
-  );
-  caller.recordDecoded(totalSupply.toString());
+  const totalSupply = await readJournalUint(caller, { name: "token.totalSupply", to: token, signature: "totalSupply()", selector: "0x18160ddd" }, 0, "totalSupply");
   const supplyDebtDivergencePct = Math.abs(relativeDeltaPct(debt, totalSupply));
   requireCheck(
     checks,
@@ -162,17 +121,12 @@ export async function measureLiquityV1(
     `entire system debt diverges ${supplyDebtDivergencePct.toFixed(4)}% from token totalSupply (max ${target.sanity.maxSupplyDebtDivergencePct}%)`,
   );
 
-  const spDeposits = decodeUintWord(
-    await caller.call({
-      name: "stabilityPool.getTotalLUSDDeposits",
-      to: stabilityPool,
-      signature: "getTotalLUSDDeposits()",
-      selector: "0x9bf2f1ac",
-    }),
-    0,
-    "getTotalLUSDDeposits",
-  );
-  caller.recordDecoded(spDeposits.toString());
+  const spDeposits = await readJournalUint(caller, {
+    name: "stabilityPool.getTotalLUSDDeposits",
+    to: stabilityPool,
+    signature: "getTotalLUSDDeposits()",
+    selector: "0x9bf2f1ac",
+  }, 0, "getTotalLUSDDeposits");
 
   const recoveryModeWord = decodeUintWord(
     await caller.call({
@@ -186,18 +140,8 @@ export async function measureLiquityV1(
     "checkRecoveryMode",
   );
   caller.recordDecoded(recoveryModeWord === 0n ? "false" : "true");
-  const mcr = decodeUintWord(
-    await caller.call({ name: "troveManager.MCR", to: troveManager, signature: "MCR()", selector: "0x794e5724" }),
-    0,
-    "MCR",
-  );
-  caller.recordDecoded(mcr.toString());
-  const ccr = decodeUintWord(
-    await caller.call({ name: "troveManager.CCR", to: troveManager, signature: "CCR()", selector: "0x5733d58f" }),
-    0,
-    "CCR",
-  );
-  caller.recordDecoded(ccr.toString());
+  const mcr = await readJournalUint(caller, { name: "troveManager.MCR", to: troveManager, signature: "MCR()", selector: "0x794e5724" }, 0, "MCR");
+  const ccr = await readJournalUint(caller, { name: "troveManager.CCR", to: troveManager, signature: "CCR()", selector: "0x5733d58f" }, 0, "CCR");
 
   const collateralizationRatio = wadToRounded(tcrWei);
   requireCheck(

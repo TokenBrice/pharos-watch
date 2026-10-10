@@ -18,6 +18,7 @@ import {
   RedemptionSettlementModelSchema,
 } from "./redemption";
 import { V9EvidenceCauseSchema, V9ScoringDispositionSchema } from "./safety-score-v9-causes";
+import { V9AccessTransferSchema, V9AccessFreezeExposureSchema, V9AccessPrimaryExitSchema, V9AccessGovernanceSchema } from "./safety-score-v9-vocabulary";
 
 export const V9QualityPillarSchema = z.enum(["backing", "exit", "control"]);
 export type V9QualityPillar = z.infer<typeof V9QualityPillarSchema>;
@@ -638,25 +639,14 @@ const V9FormulaPolicySchema = z
     danger: z
       .object({
         withholdPegMultiplierFloor: z.number().finite().min(0).max(1),
-        fGatePegMultiplierFloor: z.number().finite().min(0).max(1),
         preExitPegMultiplierFloor: z.number().finite().min(0).max(1),
         adverseAttributionPegMultiplierFloor: z.number().finite().min(0).max(1),
         activeDepegMinimumBpsExclusive: z.number().finite().nonnegative(),
         withholdCentralizedMintSeverities: z.array(V9SeveritySchema).min(1),
-        fGateCentralizedMintSeverities: z.array(V9SeveritySchema).min(1),
         preExitCentralizedMintSeverities: z.array(V9SeveritySchema).min(1),
         dangerOnlyGrades: z.array(V9GradeSchema.exclude(["NR"])).min(1),
       })
-      .strict()
-      .superRefine((danger, ctx) => {
-        if (danger.fGatePegMultiplierFloor > danger.withholdPegMultiplierFloor) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["fGatePegMultiplierFloor"],
-            message: "F-gate peg floor cannot exceed the withhold danger floor",
-          });
-        }
-      }),
+      .strict(),
   })
   .strict();
 
@@ -1387,16 +1377,20 @@ const V9MethodologySemanticSchema = z
     decisions: V9DecisionPolicySchema,
     accessPostureVocabulary: z
       .object({
-        transfer: z.array(z.enum(["permissionless", "restrictable", "permissioned", "unknown"])).length(4),
-        freezeExposure: z.array(z.enum(["none-known", "upstream", "direct", "possible", "unknown"])).length(5),
-        primaryExit: z
-          .array(
-            z.enum(["permissionless", "eligibility-gated", "issuer-discretionary", "none", "undisclosed", "unknown"]),
-          )
-          .length(6),
-        governance: z.array(z.enum(["immutable", "distributed", "concentrated", "single-entity", "unknown"])).length(5),
+        transfer: z.array(V9AccessTransferSchema).length(V9AccessTransferSchema.options.length),
+        freezeExposure: z.array(V9AccessFreezeExposureSchema).length(V9AccessFreezeExposureSchema.options.length),
+        primaryExit: z.array(V9AccessPrimaryExitSchema).length(V9AccessPrimaryExitSchema.options.length),
+        governance: z.array(V9AccessGovernanceSchema).length(V9AccessGovernanceSchema.options.length),
       })
-      .strict(),
+      .strict()
+      .superRefine((vocabulary, ctx) => {
+        for (const field of ["transfer", "freezeExposure", "primaryExit", "governance"] as const) {
+          const values: readonly string[] = vocabulary[field];
+          if (new Set(values).size !== values.length) {
+            ctx.addIssue({ code: "custom", path: [field], message: "Access vocabulary must contain every canonical value exactly once" });
+          }
+        }
+      }),
   })
   .strict();
 export type V9MethodologySemantic = z.infer<typeof V9MethodologySemanticSchema>;

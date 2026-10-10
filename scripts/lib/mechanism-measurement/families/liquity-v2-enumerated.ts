@@ -8,6 +8,8 @@ import {
   type EthCallJournal,
   type MeasurementCheck,
   type PinnedBlock,
+  readJournalUint,
+  readJournalAddress,
 } from "../core";
 import type { EnumeratedLiquityV2MeasurementEvidence } from "../schema";
 import type { EnumeratedLiquityV2MeasurementTarget } from "../targets";
@@ -27,15 +29,11 @@ export async function measureEnumeratedLiquityV2(
   const registry = normalizeAddress(target.contracts.collateralRegistry, "configured registry");
 
   if (target.contracts.deriveRegistryFromToken) {
-    const derivedRegistry = decodeAddressWord(
-      await caller.call({
-        name: "token.collateralRegistryAddress",
-        to: target.contracts.token,
-        ...LIQUITY_V2_CALLS.collateralRegistryAddress,
-      }),
-      "collateralRegistryAddress",
-    );
-    caller.recordDecoded(derivedRegistry);
+    const derivedRegistry = await readJournalAddress(caller, {
+      name: "token.collateralRegistryAddress",
+      to: target.contracts.token,
+      ...LIQUITY_V2_CALLS.collateralRegistryAddress,
+    }, "collateralRegistryAddress");
     requireCheck(
       checks,
       "graph.collateralRegistry",
@@ -44,16 +42,11 @@ export async function measureEnumeratedLiquityV2(
     );
   }
 
-  const totalSupplyRaw = decodeUintWord(
-    await caller.call({
-      name: "token.totalSupply",
-      to: target.contracts.token,
-      ...LIQUITY_V2_CALLS.totalSupply,
-    }),
-    0,
-    "totalSupply",
-  );
-  caller.recordDecoded(totalSupplyRaw.toString());
+  const totalSupplyRaw = await readJournalUint(caller, {
+    name: "token.totalSupply",
+    to: target.contracts.token,
+    ...LIQUITY_V2_CALLS.totalSupply,
+  }, 0, "totalSupply");
   requireCheck(checks, "supply.positive", totalSupplyRaw > 0n, `token supply ${totalSupplyRaw} is positive`);
 
   const branchCountRaw = decodeUintWord(
@@ -106,16 +99,12 @@ export async function measureEnumeratedLiquityV2(
     );
     seenControllers.add(controller);
 
-    const collateralToken = decodeAddressWord(
-      await caller.call({
-        name: `registry.getToken(${index})`,
-        to: registry,
-        ...LIQUITY_V2_CALLS.getToken,
-        args: [BigInt(index)],
-      }),
-      `getToken ${index}`,
-    );
-    caller.recordDecoded(collateralToken);
+    const collateralToken = await readJournalAddress(caller, {
+      name: `registry.getToken(${index})`,
+      to: registry,
+      ...LIQUITY_V2_CALLS.getToken,
+      args: [BigInt(index)],
+    }, `getToken ${index}`);
     requireCheck(
       checks,
       `branch[${index}].collateral-token`,
@@ -150,16 +139,11 @@ export async function measureEnumeratedLiquityV2(
           activePool === normalizeAddress(expected.activePool),
           `active pool ${activePool} matches configured graph`,
         );
-        const activePoolDebt = decodeUintWord(
-          await caller.call({
-            name: `activePool[${index}].getBoldDebt`,
-            to: activePool,
-            ...LIQUITY_V2_CALLS.getBoldDebt,
-          }),
-          0,
-          `branch ${index} active pool debt`,
-        );
-        caller.recordDecoded(activePoolDebt.toString());
+        const activePoolDebt = await readJournalUint(caller, {
+          name: `activePool[${index}].getBoldDebt`,
+          to: activePool,
+          ...LIQUITY_V2_CALLS.getBoldDebt,
+        }, 0, `branch ${index} active pool debt`);
         requireCheck(
           checks,
           `branch[${index}].active-pool-debt`,

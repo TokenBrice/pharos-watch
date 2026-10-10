@@ -51,7 +51,7 @@ The two largest A-tier circles form one tangent hero pair whose area-weighted vi
 The generator exits non-zero rather than publishing something wrong. All of these are unconditional:
 
 - **Canonical inputs.** Report cards must satisfy the canonical API schema. Their publication status and capture time are preserved as provenance but do not gate rendering: a valid held or aged Safety Score publication still renders. The PSI sample must remain future-free and within the shared Stability Index endpoint freshness budget because the poster presents it as current context.
-- **Input hygiene.** The response must have unique card IDs, finite scores in range, exact grade vocabulary, and score/grade agreement. Negative finite supply buckets fail closed before the supply join.
+- **Input hygiene.** The canonical API schema enforces unique card IDs, finite in-range scores, grade vocabulary and score/grade agreement before map projection. Pipeline-gap cards are excluded from grade bands. Negative finite supply buckets fail closed before the supply join.
 - **Join coverage.** At least 95% of graded cards must join an admitted observed supply (including explicit zero). Unavailable entries retain fixed presence markers and are excluded only from known-supply sums/shares. Count coverage does not bound the missing dollar amount and never certifies complete-cohort value.
 - **Grade vocabulary.** An unrecognized grade letter fails; a silently dropped tier is worse than no map.
 - **Finite geometry.** A non-finite bubble scale or radius fails, as does an empty graded set.

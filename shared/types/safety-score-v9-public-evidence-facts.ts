@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { V9ReasonCode } from "./safety-score-v9";
 import type { V9EvidenceCause, V9ScoringDisposition } from "./safety-score-v9-causes";
 import type { V9EvidenceResponsibility } from "./safety-score-v9-facts";
+import type { V9PublicEvidenceFactWire } from "./safety-score-v9-public-trace";
 
 /** Public6/API7 fact columns; null sourceGapRef means an authored absent source. */
 export const V9_PUBLIC_EVIDENCE_FACT_COLUMNS = {
@@ -15,10 +16,6 @@ export const V9PublicEvidencePathSchema = z.union([
 export type V9PublicEvidencePath = z.infer<typeof V9PublicEvidencePathSchema>;
 export type V9PublicEvidenceFact = [
   reasonCode: V9ReasonCode, exactFactPath: string, sourceGapRef: number | null,
-  responsibility: V9EvidenceResponsibility, critical: boolean, cause: V9EvidenceCause, causeGapRefs: number[],
-];
-export type V9PublicEvidenceFactWire = [
-  reasonCode: V9ReasonCode, exactFactPath: V9PublicEvidencePath, sourceGapRef: number | null,
   responsibility: V9EvidenceResponsibility, critical: boolean, cause: V9EvidenceCause, causeGapRefs: number[],
 ];
 export interface V9EvidenceFactContext { facts: readonly V9PublicEvidenceFactWire[]; factPathPrefixes?: readonly string[] }

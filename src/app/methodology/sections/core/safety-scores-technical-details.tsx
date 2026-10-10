@@ -34,8 +34,8 @@ export function SafetyScoresTechnicalDetails() {
         <p>
           Since methodology v9.22 every score-bearing gate is part of the versioned policy asset
           rather than a code literal, so the semantic digest rotates whenever one changes. That
-          covers the insufficient-evidence withhold band, the danger and F-grade peg predicates, the
-          pre-exit danger predicate, the material-bridge high-share band, and the separately named
+          covers the insufficient-evidence withhold band, its danger predicate, the attribution-based
+          F-grade admission rule, the pre-exit danger predicate, the material-bridge high-share band, and the separately named
           evidence-expiry windows used by reviewed research, access reviews, overlays, and reserve
           evidence. Counterfactual replay can supply a validated gate projection and observe a
           distinct digest, so a gate change can no longer alter a published score invisibly. The
@@ -58,7 +58,7 @@ export function SafetyScoresTechnicalDetails() {
             { label: "Publication", value: "Global failures hold; proven local technical gaps preserve pipeline-gap status" },
             {
               label: "Policy provenance",
-              value: `Score-bearing gates digest-bound since v${releaseVersion}; withhold below ${formula.withhold.maxScoreExclusive}, F-gate peg floor ${formula.danger.fGatePegMultiplierFloor}, material-bridge share ${semantic.control.materialBridgeHighShareThreshold * 100}%`,
+              value: `Score-bearing gates digest-bound since v${releaseVersion}; withhold below ${formula.withhold.maxScoreExclusive}, F requires measured-adverse attribution, material-bridge share ${semantic.control.materialBridgeHighShareThreshold * 100}%`,
             },
           ]}
         />

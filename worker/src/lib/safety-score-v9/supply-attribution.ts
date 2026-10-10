@@ -50,14 +50,6 @@ import { runBudgetedSupplyAttributionAssets } from "./supply-attribution-capture
 
 export { SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS } from "./supply-attribution-source";
 
-const LOCK_MINT_SHARE_SCALE = 10n ** 15n;
-
-export interface LockMintSupplyPartition {
-  currentSupplyUsdByChain: Record<string, number>;
-  canonicalSupplyUsd: number;
-  pooledRepresentationSupplyUsd: number;
-}
-
 type V9SupplyAttributionById = SafetyScoreV9CompilerInput["safetyScoreV9SupplyAttributionById"];
 type V9CurrentChainRows = Record<string, { current: number }>;
 
@@ -105,54 +97,6 @@ export function safetyScoreV9SupplyAttributionExpectedAssetIds(
       (assetId === XAUT_ASSET_ID ||
         !hasUpstreamChainSupply(fixedInput, assetId)),
   );
-}
-
-/**
- * Partitions an existing aggregate liability by the observed canonical
- * lockbox share. Locked backing and its wrapped holder claims are counted once.
- */
-export function deriveLockMintSupplyPartition(input: {
-  aggregateSupplyUsd: number;
-  canonicalCirculatingLiabilityRaw: bigint;
-  lockboxBalancesRaw: readonly bigint[];
-  canonicalChainLabel: string;
-  pooledRepresentationLabel: string;
-}): LockMintSupplyPartition | null {
-  if (!Number.isFinite(input.aggregateSupplyUsd) || input.aggregateSupplyUsd <= 0) return null;
-  if (input.canonicalCirculatingLiabilityRaw <= 0n || input.lockboxBalancesRaw.length === 0) return null;
-
-  let lockedRaw = 0n;
-  for (const balance of input.lockboxBalancesRaw) {
-    if (balance < 0n) return null;
-    lockedRaw += balance;
-  }
-  if (lockedRaw <= 0n || lockedRaw >= input.canonicalCirculatingLiabilityRaw) return null;
-
-  const pooledShareScaled =
-    (lockedRaw * LOCK_MINT_SHARE_SCALE + input.canonicalCirculatingLiabilityRaw / 2n) /
-    input.canonicalCirculatingLiabilityRaw;
-  const pooledShare = Number(pooledShareScaled) / Number(LOCK_MINT_SHARE_SCALE);
-  if (!Number.isFinite(pooledShare) || pooledShare <= 0 || pooledShare >= 1) return null;
-
-  const pooledRepresentationSupplyUsd = input.aggregateSupplyUsd * pooledShare;
-  const canonicalSupplyUsd = input.aggregateSupplyUsd - pooledRepresentationSupplyUsd;
-  if (
-    !Number.isFinite(canonicalSupplyUsd) ||
-    canonicalSupplyUsd <= 0 ||
-    !Number.isFinite(pooledRepresentationSupplyUsd) ||
-    pooledRepresentationSupplyUsd <= 0
-  ) {
-    return null;
-  }
-
-  return {
-    currentSupplyUsdByChain: {
-      [input.canonicalChainLabel]: canonicalSupplyUsd,
-      [input.pooledRepresentationLabel]: pooledRepresentationSupplyUsd,
-    },
-    canonicalSupplyUsd,
-    pooledRepresentationSupplyUsd,
-  };
 }
 
 type SupplyAttributionValue = Exclude<

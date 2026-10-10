@@ -309,7 +309,7 @@ const SafetyScoreV9EvidenceResponsibilityItemSchema = z
     }
   });
 
-const SafetyScoreV9EvidenceResponsibilityFactSchema = z.tuple([
+export const SafetyScoreV9EvidenceResponsibilityFactSchema = z.tuple([
   V9ReasonCodeSchema, V9PublicEvidencePathSchema, z.number().int().nonnegative().nullable(),
   V9EvidenceResponsibilitySchema, z.boolean(), V9EvidenceCauseSchema, causeGapRefs(),
 ]).superRefine(([, path, sourceGapRef, responsibility, critical, cause, refs], ctx) => {
@@ -325,6 +325,7 @@ const SafetyScoreV9EvidenceResponsibilityFactSchema = z.tuple([
     ctx.addIssue({ code: "custom", message: "Evidence fact cause, responsibility and causal gap identity must agree" });
   }
 });
+export type V9PublicEvidenceFactWire = z.infer<typeof SafetyScoreV9EvidenceResponsibilityFactSchema>;
 
 const SafetyScoreV9EvidenceResponsibilityTraceBaseSchema = z.object({
   semantics: z.literal("limiting-fact-cause-v2"),

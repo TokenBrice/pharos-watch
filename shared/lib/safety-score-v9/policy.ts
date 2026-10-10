@@ -211,9 +211,6 @@ function computeV9PolicySemanticDigest(
       withholdCentralizedMintSeverities: uniqueSorted(
         policy.semantic.formula.danger.withholdCentralizedMintSeverities,
       ),
-      fGateCentralizedMintSeverities: uniqueSorted(
-        policy.semantic.formula.danger.fGateCentralizedMintSeverities,
-      ),
       preExitCentralizedMintSeverities: uniqueSorted(
         policy.semantic.formula.danger.preExitCentralizedMintSeverities,
       ),

@@ -167,15 +167,8 @@ export async function observeCentrifugeReviewedDeploymentUnitPartitionAttempt(
 }
 
 export async function observeCentrifugeReviewedDeploymentUnitPartition(
-  input: {
-    assetId: string;
-    aggregateSupplyUsd: number;
-    registryFingerprint: string;
-    scoringClockSec: number;
-    chainRpcs: Map<string, ChainRpcConfig>;
-    signal?: AbortSignal;
-  },
-  dependencyOverrides: Partial<CentrifugeObserverDependencies> = {},
+  input: Parameters<typeof observeCentrifugeReviewedDeploymentUnitPartitionAttempt>[0],
+  dependencyOverrides: Parameters<typeof observeCentrifugeReviewedDeploymentUnitPartitionAttempt>[1] = {},
 ): Promise<ReviewedDeploymentUnitPartitionV1 | null> {
   const attempt =
     await observeCentrifugeReviewedDeploymentUnitPartitionAttempt(

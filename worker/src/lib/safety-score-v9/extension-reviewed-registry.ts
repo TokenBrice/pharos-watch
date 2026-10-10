@@ -1,6 +1,8 @@
 import type { z } from "zod";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { isRecord } from "@shared/lib/type-guards";
+import { sha256Hex } from "@shared/lib/sha256";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 
 type AttributedRow = { assetId: string; [key: string]: unknown };
 const EMPTY_REGISTRY_ROWS: readonly never[] = [];
@@ -64,6 +66,10 @@ export function createReviewedAssetRegistry<T>(args: {
     return rows;
   }
   return { getAll, get: (assetId: string): T | undefined => getAll(assetId)[0] };
+}
+
+export function reviewedRegistryEnvelopeDigest(domain: string, field: "payload" | "overlays", value: unknown): string {
+  return sha256Hex(stableJsonStringifyV1({ domain, [field]: value }));
 }
 
 /** Preserve historical schema transforms in full-file digests without validating evidence. */

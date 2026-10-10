@@ -1,13 +1,11 @@
 import operationalResilienceOverlaysAsset from "@shared/data/safety-score-v9/operational-resilience-overlays-v1.json";
-import { sha256Hex } from "@shared/lib/sha256";
-import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   SafetyScoreV9OperationalResilienceOverlaySchema,
   SafetyScoreV9OperationalResilienceOverlayFileSchema,
   SafetyScoreV9OperationalResilienceOverlayEnvelopeSchema,
   type SafetyScoreV9OperationalResilienceOverlay,
 } from "@shared/types/safety-score-v9-operational-resilience-overlays";
-import { createReviewedAssetRegistry } from "./extension-reviewed-registry";
+import { createReviewedAssetRegistry, reviewedRegistryEnvelopeDigest } from "./extension-reviewed-registry";
 
 export {
   SafetyScoreV9OperationalResilienceOverlaySchema,
@@ -19,12 +17,7 @@ const OPERATIONAL_RESILIENCE_OVERLAY_FILE = SafetyScoreV9OperationalResilienceOv
   operationalResilienceOverlaysAsset,
 );
 
-export const SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST = sha256Hex(
-  stableJsonStringifyV1({
-    domain: "safety-score-v9.operational-resilience-overlays.v1",
-    payload: OPERATIONAL_RESILIENCE_OVERLAY_FILE,
-  }),
-);
+export const SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST = reviewedRegistryEnvelopeDigest("safety-score-v9.operational-resilience-overlays.v1", "payload", OPERATIONAL_RESILIENCE_OVERLAY_FILE);
 
 const SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS = createReviewedAssetRegistry({
   rows: OPERATIONAL_RESILIENCE_OVERLAY_FILE.overlays,

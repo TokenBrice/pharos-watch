@@ -1,4 +1,4 @@
-import type { V9PublicEvidenceFactWire } from "../../types/safety-score-v9-public-evidence-facts";
+import type { V9PublicEvidenceFactWire } from "../../types/safety-score-v9-public-trace";
 
 /** Producer-only: rows were just authored and are owned by this projection. */
 export function internEvidenceFactPathPrefixes(rows: V9PublicEvidenceFactWire[]): string[] | undefined {

@@ -224,15 +224,11 @@
       },
       "danger": {
         "withholdPegMultiplierFloor": 0.9,
-        "fGatePegMultiplierFloor": 0.8,
         "preExitPegMultiplierFloor": 0.9,
         "adverseAttributionPegMultiplierFloor": 0.9,
         "activeDepegMinimumBpsExclusive": 0,
         "withholdCentralizedMintSeverities": [
           "high",
-          "critical"
-        ],
-        "fGateCentralizedMintSeverities": [
           "critical"
         ],
         "preExitCentralizedMintSeverities": [
