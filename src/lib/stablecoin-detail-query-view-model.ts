@@ -65,15 +65,18 @@ export function resolveReportCardSnapshotUpdatedAtMs(
   return updatedAtSeconds != null && updatedAtSeconds > 0 ? updatedAtSeconds * 1000 : null;
 }
 
+export function isAnnualUsdPerformanceEligible(coin: Pick<StablecoinMeta, "flags">): boolean {
+  const pegCurrency = coin.flags.pegCurrency;
+  return !coin.flags.navToken && pegCurrency !== "USD" && pegCurrency !== "VAR" && pegCurrency !== "OTHER";
+}
+
 function computePerformanceVsUsd1y(
   coin: StablecoinMeta,
   currentPrice: number | null | undefined,
   supplyHistory: SupplyHistoryPoint[],
   nowMs: number,
 ): number | null {
-  const pegCurrency = coin.flags.pegCurrency;
-  const eligible = !coin.flags.navToken && pegCurrency !== "USD" && pegCurrency !== "VAR" && pegCurrency !== "OTHER";
-  if (!eligible || currentPrice == null || !Number.isFinite(currentPrice) || currentPrice <= 0) return null;
+  if (!isAnnualUsdPerformanceEligible(coin) || currentPrice == null || !Number.isFinite(currentPrice) || currentPrice <= 0) return null;
   const pricedHistory = supplyHistory.filter(
     (point) => point.price != null && Number.isFinite(point.price) && point.price > 0,
   );
@@ -180,6 +183,16 @@ export function buildDetailStaleQueries(
       meta: queries.supplyHistory.meta,
     },
   ];
+  if (queries.annualPriceHistory?.enabled) {
+    result.push({
+      label: "Annual Price History",
+      staleTime: CRON_24H,
+      dataUpdatedAt: queries.annualPriceHistory.dataUpdatedAt,
+      error: queries.annualPriceHistory.error,
+      hasData: (queries.annualPriceHistory.data?.length ?? 0) > 0,
+      meta: queries.annualPriceHistory.meta,
+    });
+  }
   if (supplemental.flows.enabled) {
     result.push({
       preset: "mintBurnFlows",

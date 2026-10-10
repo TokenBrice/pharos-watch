@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
 import { buildHeroPassportItems } from "@/lib/stablecoin-detail-passport";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -68,7 +68,69 @@ const ITEMS: HeroPassportItemViewModel[] = [
   },
 ];
 
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+  window.history.replaceState(null, "", "/");
+});
+
 describe("HeroPassportStrip", () => {
+  it.each(["wheel", "touchstart", "pointerdown", "keydown"])(
+    "stops passport alignment when the reader takes over with %s",
+    (eventName) => {
+      vi.useFakeTimers();
+      const scroll = vi.fn();
+      const { getByRole } = render(
+        <><HeroPassportStrip items={ITEMS} /><section id="mechanism" ref={(node) => { if (node) node.scrollIntoView = scroll; }} /></>,
+      );
+      const link = getByRole("link", { name: ITEMS[0].ariaLabel });
+      // The activating pointer event precedes click and must not cancel the new batch.
+      fireEvent.pointerDown(link);
+      fireEvent.click(link);
+      expect(scroll).toHaveBeenCalledWith({ block: "start" });
+      act(() => { vi.advanceTimersByTime(160); });
+      expect(scroll.mock.calls.length).toBeGreaterThan(1);
+      fireEvent(window, new Event(eventName));
+      const callsAfterTakeover = scroll.mock.calls.length;
+      act(() => { vi.advanceTimersByTime(7000); });
+      expect(scroll).toHaveBeenCalledTimes(callsAfterTakeover);
+    },
+  );
+
+  it("cancels the previous alignment batch on replacement jump and unmount", () => {
+    vi.useFakeTimers();
+    const firstScroll = vi.fn();
+    const secondScroll = vi.fn();
+    const { getByRole, unmount } = render(
+      <>
+        <HeroPassportStrip items={ITEMS} />
+        <section id="mechanism" ref={(node) => { if (node) node.scrollIntoView = firstScroll; }} />
+        <section id="attestation" ref={(node) => { if (node) node.scrollIntoView = secondScroll; }} />
+      </>,
+    );
+    fireEvent.click(getByRole("link", { name: ITEMS[0].ariaLabel }));
+    fireEvent.click(getByRole("link", { name: ITEMS[1].ariaLabel }));
+    act(() => { vi.advanceTimersByTime(2000); });
+    expect(firstScroll).toHaveBeenCalledTimes(1);
+    expect(secondScroll.mock.calls.length).toBeGreaterThan(1);
+    unmount();
+    const callsBeforeUnmount = secondScroll.mock.calls.length;
+    act(() => { vi.advanceTimersByTime(7000); });
+    expect(secondScroll).toHaveBeenCalledTimes(callsBeforeUnmount);
+  });
+
+  it("does not realign after the hash changes", () => {
+    vi.useFakeTimers();
+    const scroll = vi.fn();
+    const { getByRole } = render(
+      <><HeroPassportStrip items={ITEMS} /><section id="mechanism" ref={(node) => { if (node) node.scrollIntoView = scroll; }} /></>,
+    );
+    fireEvent.click(getByRole("link", { name: ITEMS[0].ariaLabel }));
+    window.history.pushState(null, "", "#elsewhere");
+    act(() => { vi.advanceTimersByTime(7000); });
+    expect(scroll).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     ["permissionless-onchain", "Permissionless", "Permissionless onchain"],
     ["whitelisted-onchain", "Whitelisted", "Whitelisted onchain"],

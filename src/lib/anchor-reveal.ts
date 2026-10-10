@@ -51,18 +51,22 @@ export function revealAnchorId(sectionId: string): HTMLElement | null {
   return twin;
 }
 
-/** Re-align a cold-load nested anchor while lazy dossier sections settle. */
-export function alignAnchorAfterHydration(sectionId: string): () => void {
+/** Re-align a nested anchor while lazy sections settle; click jumps skip the initial frame. */
+export function alignAnchorAfterHydration(sectionId: string, alignOnNextFrame = true): () => void {
   const initialHash = window.location.hash;
   let cancelled = false;
   const align = () => {
-    if (cancelled || window.location.hash !== initialHash) return;
+    if (cancelled) return;
+    if (window.location.hash !== initialHash) {
+      stop();
+      return;
+    }
     // An initial-position correction must not animate through every lazy
     // section: CSS smooth scrolling delays mounting and retargets mid-flight.
     revealAnchorId(sectionId)?.scrollIntoView({ block: "start", behavior: "instant" });
   };
   // Match the bounded passport-link cadence; instant also respects reduced motion.
-  const frame = window.requestAnimationFrame(align);
+  const frame = alignOnNextFrame ? window.requestAnimationFrame(align) : 0;
   const timers = [160, 480, 960, 1800].map((delay) => window.setTimeout(align, delay));
   // Lazy sections above a deep anchor (reserves, charts) can keep growing past the
   // fixed cadence, so also re-align on every page-height change, for a bounded window.
@@ -82,6 +86,7 @@ export function alignAnchorAfterHydration(sectionId: string): () => void {
     timers.forEach((timer) => window.clearTimeout(timer));
     window.clearTimeout(deadline);
     observer?.disconnect();
+    window.removeEventListener("hashchange", stop);
     for (const event of ["wheel", "touchstart", "pointerdown", "keydown"]) {
       window.removeEventListener(event, stop);
     }
@@ -90,5 +95,6 @@ export function alignAnchorAfterHydration(sectionId: string): () => void {
   for (const event of ["wheel", "touchstart", "pointerdown", "keydown"]) {
     window.addEventListener(event, stop, { passive: true });
   }
+  window.addEventListener("hashchange", stop);
   return stop;
 }

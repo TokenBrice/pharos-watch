@@ -434,6 +434,22 @@ export const DdrrV2SummarySegmentSchema = z.object({
   metrics: DdrrV2SummaryMetricsSchema,
 });
 
+/** Full reviewed coin cohort, computed before the public browse-row cap. */
+export const DdrrStablecoinSummarySchema = z.object({
+  stablecoinId: z.string(),
+  reviewedRowCount: z.number().int().nonnegative(),
+  reviewedForecastCount: z.number().int().nonnegative(),
+  scoredCount: z.number().int().nonnegative(),
+  correctCount: z.number().int().nonnegative(),
+  missCount: z.number().int().nonnegative(),
+  pendingCount: z.number().int().nonnegative(),
+  noCallCount: z.number().int().nonnegative(),
+  notCalledCount: z.number().int().nonnegative(),
+  invalidatedCount: z.number().int().nonnegative(),
+  durationScoredCount: z.number().int().nonnegative(),
+  medianAbsoluteDurationErrorSec: z.number().nullable(),
+});
+
 /**
  * Public DDRR summary contract.
  *
@@ -446,6 +462,10 @@ export const DdrrSummarySchema = z.object({
   headlineLabel: z.string(),
   headline: DdrrV2SummaryMetricsSchema,
   byPredictionPolicy: z.array(DdrrV2SummarySegmentSchema),
+  // Retained snapshots may lack this projection; never substitute capped rows.
+  byStablecoin: z.array(DdrrStablecoinSummarySchema)
+    .describe("Per-coin counts and duration errors from the reviewed cohort before the public row cap; shares _meta.computedAt.")
+    .optional(),
 });
 export type DdrrSummary = z.infer<typeof DdrrSummarySchema>;
 
@@ -473,12 +493,18 @@ export const DdrrMetaSchema = z.object({
 export const DdrrResponseSchema = z.object({
   _meta: DdrrMetaSchema,
   summary: DdrrSummarySchema,
-  rows: z.array(DdrrResponseRowSchema),
+  rows: z.array(DdrrResponseRowSchema)
+    .describe("Display sample bounded by _meta.publicRowLimit; never an input for population statistics."),
   methodology: MethodologyEnvelopeSchema,
 });
 export type DdrrResponse = z.infer<typeof DdrrResponseSchema>;
 
 /** OpenAPI documents the current generation-4 producer payload, not its transition input. */
 export const DdrrResponseOpenApiSchema = DdrrResponseSchema.extend({
-  rows: z.array(DdrrRowSchema),
+  summary: DdrrSummarySchema.extend({
+    byStablecoin: z.array(DdrrStablecoinSummarySchema)
+      .describe("Per-coin reviewed-cohort statistics computed before the public row cap, bound to _meta.computedAt."),
+  }),
+  rows: z.array(DdrrRowSchema)
+    .describe("Display sample bounded by _meta.publicRowLimit; population statistics belong to summary."),
 });

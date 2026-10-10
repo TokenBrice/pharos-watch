@@ -6,6 +6,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
 import { projectFrozenSnapshotLiveSummary } from "@/lib/api-query-descriptors";
 import { DISABLED_DETAIL_QUERY_CONTROLS, queryResult } from "./use-stablecoin-detail-view-model.test-support";
+import type * as DetailViewModelModule from "@/lib/stablecoin-detail-view-model";
 
 const mocks = vi.hoisted(() => ({
   buildStablecoinDetailViewModel: vi.fn(),
@@ -120,6 +121,44 @@ describe("useStablecoinDetailViewModel", () => {
     resetRefetchMocks();
     installQueryMocks();
   });
+  it("resolves the hero annual USD metric from an independent annual observation without expanding the chart", async () => {
+    const { buildStablecoinDetailViewModel } = await vi.importActual<typeof DetailViewModelModule>(
+      "@/lib/stablecoin-detail-view-model",
+    );
+    const coin = TRACKED_META_BY_ID.get("eurc-circle")!;
+    const nowMs = 1_800_000_000_000;
+    const now = nowMs / 1000;
+    const initial = [{ date: now - 30 * 86400, circulatingUsd: 100, price: 1.1 }];
+    let annual = queryResult({ data: [], isLoading: true, refetch: mocks.refetchSupply });
+    mocks.useSupplyHistory.mockImplementation((_id: string, days: number) =>
+      days === 90 ? queryResult({ data: initial, refetch: mocks.refetchSupply }) : annual);
+    mocks.useRegisteredApiQuery.mockImplementation((descriptor: { queryKey: readonly unknown[] }) =>
+      descriptor.queryKey[0] === "stablecoin-live-summary"
+        ? queryResult({ data: {
+          price: 1.2, priceSource: "coingecko", priceConfidence: "single-source",
+          circulating: { peggedEUR: 100 }, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {},
+          nativeSupply: { current: 100, prevWeek: 100, prevMonth: 100 },
+        }, refetch: mocks.refetchList })
+        : queryResult({ refetch: mocks.refetchRedemptionBackstops }));
+    mocks.buildStablecoinDetailViewModel.mockImplementation((params) =>
+      buildStablecoinDetailViewModel({ ...params, supplemental: { ...params.supplemental, nowMs } }));
+    const { result, rerender } = renderHook(() => useStablecoinDetailViewModel({
+      id: coin.id, coin, summary: null, supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
+    }));
+    expect(mocks.useSupplyHistory).toHaveBeenCalledWith(coin.id, 380, { enabled: true });
+    expect(result.current.status).toBe("ready");
+    if (result.current.status !== "ready") throw new Error("Expected ready dossier");
+    expect(result.current.performanceVsUsd1y).toBeNull();
+    annual = queryResult({
+      data: [{ date: now - 365 * 86400, circulatingUsd: 100, price: 1 }, ...initial],
+      refetch: mocks.refetchSupply,
+    });
+    rerender();
+    if (result.current.status !== "ready") throw new Error("Expected ready dossier");
+    expect(result.current.performanceVsUsd1y).toBeCloseTo(20);
+    expect(result.current.hero.tertiaryMetrics.find((metric) => metric.key === "performance-vs-usd")).toBeDefined();
+    expect(result.current.supplyHistory).toEqual(initial);
+  });
 
   it.each([true, false])("projects restored supply provenance into the hero coin data (%s)", (restored) => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
@@ -153,6 +192,7 @@ describe("useStablecoinDetailViewModel", () => {
     );
 
     expect(mocks.useSupplyHistory).toHaveBeenCalledWith(coin.id, 90);
+    expect(mocks.useSupplyHistory).toHaveBeenCalledWith(coin.id, 380, { enabled: false });
     expect(mocks.useRegisteredApiQuery).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ["stablecoin-live-summary", coin.id] }),
     );

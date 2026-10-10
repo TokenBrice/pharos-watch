@@ -1,6 +1,7 @@
 // src/lib/__tests__/stablecoin-detail-ddr-track-record-client.test.ts
 import { describe, expect, it } from "vitest";
 import { DDRR_PUBLIC_WARNING, type DdrrResponse, type DdrrRow } from "@shared/types/depeg-resolver-review";
+import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
 import { projectDdrTrackRecordSummary } from "../stablecoin-detail-ddr-track-record-client";
 
 const COIN = "lusd-liquity";
@@ -118,10 +119,14 @@ function invalidatedRow(overrides: Record<string, unknown> = {}): DdrrRow {
   } as unknown as DdrrRow;
 }
 
-function response(rows: DdrrRow[], meta: Record<string, unknown> | null = {}): DdrrResponse {
+function response(
+  rows: DdrrRow[],
+  meta: Record<string, unknown> | null = {},
+  summary = summarizeDdrrRows(rows),
+): DdrrResponse {
   return {
     _meta: meta === null ? undefined : { computedAt: 1_700_100_000, publicWarning: DDRR_PUBLIC_WARNING, ...meta },
-    summary: {},
+    summary,
     rows,
     methodology: {},
   } as unknown as DdrrResponse;
@@ -143,6 +148,35 @@ describe("projectDdrTrackRecordSummary", () => {
 
   it("returns null for coins carrying only coverage rows", () => {
     expect(projectDdrTrackRecordSummary(response([coverageRow(), coverageRow({ eventId: 2 })]), COIN)).toBeNull();
+  });
+
+  it("keeps authoritative counts and median unchanged as the public sample shrinks", () => {
+    const cohort = [
+      predictionRow({ eventId: 1, absoluteDurationErrorSec: 3600 }),
+      predictionRow({ eventId: 2, verdictReview: "false_terminal", absoluteDurationErrorSec: 10_800 }),
+      coverageRow({ eventId: 3 }),
+    ];
+    const summary = summarizeDdrrRows(cohort);
+    for (const sample of [cohort, cohort.slice(0, 1), []]) {
+      const record = projectDdrTrackRecordSummary(response(sample, {}, summary), COIN)!;
+      expect(record).toMatchObject({
+        reviewedForecastCount: 2, scoredCount: 2, correctCount: 1, missCount: 1,
+        notCalledCount: 1, durationScoredCount: 2, medianAbsoluteDurationErrorLabel: "2h",
+        hiddenIncidentCount: 3 - sample.length, incidentSampleIncomplete: sample.length < cohort.length,
+      });
+    }
+  });
+
+  it("withholds aggregates from retained snapshots without a producer coin summary", () => {
+    const summary = summarizeDdrrRows([predictionRow()]);
+    delete summary.byStablecoin;
+    expect(projectDdrTrackRecordSummary(response([predictionRow()], {}, summary), COIN)).toBeNull();
+  });
+
+  it("discloses a bounded producer cohort independently of the public sample", () => {
+    const record = projectDdrTrackRecordSummary(response([predictionRow()], { incidentRowsTruncated: true }), COIN)!;
+    expect(record.incidentSourceLimited).toBe(true);
+    expect(record.incidentSampleIncomplete).toBe(false);
   });
 
   it("aggregates verdict counts, the median duration miss, and the reviewed stamp", () => {
@@ -270,6 +304,7 @@ describe("projectDdrTrackRecordSummary", () => {
           predictionRow({ eventId: 3, stablecoinId: undefined }),
         ],
         null,
+        summarizeDdrrRows([predictionRow()]),
       ),
       COIN,
     )!;

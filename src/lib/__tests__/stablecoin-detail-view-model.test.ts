@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { PegSummaryCoin, PegSummaryResponse } from "@shared/types";
+import type { PegSummaryCoin, PegSummaryResponse, StablecoinData } from "@shared/types";
 import { makePegSummaryCoin as makePegSummaryCoinBase } from "@/test-utils/peg-summary-fixtures";
 import { makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -25,6 +25,35 @@ function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummary
 }
 
 describe("stablecoin detail view-model builder", () => {
+  it("keeps explicit zero supply through the hero instead of reviving older positive checkpoints", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    const params = makeReadyDetailParams({
+      id: coin.id, coin,
+      asset: { circulating: { peggedUSD: 0 }, price: 1, priceSource: "coingecko" },
+      nativeSupply: { current: 100, prevWeek: 200, prevMonth: 300 },
+    });
+    const model = buildStablecoinDetailViewModel(params);
+    expect(model.status).toBe("ready");
+    if (model.status !== "ready") return;
+    expect(model.hero.market.supply).toBe(0);
+    const trend = model.hero.market.supplyTrend;
+    expect(trend).toMatchObject({ current: 0, safePrevWeek: 200, safePrevMonth: 300 });
+    expect((trend.current! / trend.safePrevWeek! - 1) * 100).toBe(-100);
+    expect((trend.current! / trend.safePrevMonth! - 1) * 100).toBe(-100);
+    const unavailableAssets: Partial<StablecoinData>[] = [
+      { circulating: {}, price: 1 },
+      { circulating: { peggedUSD: 0 }, price: null },
+      { circulating: { peggedUSD: 0 }, price: 0 },
+    ];
+    for (const asset of unavailableAssets) {
+      const unavailable = buildStablecoinDetailViewModel(makeReadyDetailParams({
+        id: coin.id, coin, asset: { ...asset, priceSource: "coingecko" },
+        nativeSupply: { current: 100, prevWeek: 200, prevMonth: 300 },
+      }));
+      expect(unavailable.status === "ready" && unavailable.hero.market.supply).toBeNull();
+      expect(unavailable.status === "ready" && unavailable.hero.market.supplyTrend.current).toBe(100);
+    }
+  });
   it("keeps the retained dossier ready through a failed summary refresh and recovery", () => {
     const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
     const params = makeReadyDetailParams({ id: coin.id, coin });

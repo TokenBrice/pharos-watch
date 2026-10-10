@@ -18,6 +18,21 @@ function mockDexD1(tables: MockTableConfig[]) {
 describe("handleDexLiquidity", () => {
   const row = makeDexLiquidityRow();
 
+  it.each([null, "{malformed"] as const)("preserves observed DEX aggregates when protocol attribution JSON is unavailable (%s)", async (protocolJson) => {
+    const observed = makeDexLiquidityRow({
+      stablecoin_id: "usdc-circle", pool_count: 3, total_tvl_usd: 100_000, protocol_tvl_json: protocolJson,
+    });
+    const db = mockDexD1([
+      { match: "dex_liquidity", rows: [observed] },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const body = DexLiquidityMapSchema.parse(await (await handleDexLiquidity(db)).json());
+    expect(body[observed.stablecoin_id]).toMatchObject({
+      poolCount: 3, totalTvlUsd: 100_000, protocolTvl: {},
+    });
+  });
+
 
   it.each([null, -120, -3 * 86400] as const)("never timestamps an empty DEX table with render time (producer offset %s)", async (offset) => {
     const now = 1_790_000_000;

@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { buildCoinTrackerLink } from "@/lib/coin-tracker-links";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { buildDetailMarketSnapshot } from "../stablecoin-detail-query-view-model";
 import { buildDetailHero } from "./stablecoin-detail-view-model.test-support";
 
 describe("stablecoin detail hero view-model builder", () => {
-  it.each([900, 0, null])("keeps native current paired with its checkpoints rather than mixing displayed supply %s", (supply) => {
+  it.each([900, null])("keeps native current paired with its checkpoints rather than mixing displayed supply %s", (supply) => {
     const hero = buildDetailHero({
       coin: TRACKED_META_BY_ID.get("usdc-circle")!,
       supply,
@@ -23,6 +25,37 @@ describe("stablecoin detail hero view-model builder", () => {
     });
     expect(hero.market.supplyTrend.prevWeekTrendClass).toContain("text-green-700");
     expect(hero.market.supplyTrend.prevMonthTrendClass).toContain("text-green-700");
+  });
+
+  it("uses an observed zero cap with a valid price instead of older positive native current", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    const coinData = makeStablecoin({
+      id: coin.id,
+      circulating: { peggedUSD: 0 },
+      price: 2.5,
+      priceSource: "coingecko",
+    });
+    const market = buildDetailMarketSnapshot(
+      coin,
+      coinData,
+      { current: 1_100, prevWeek: 1_000, prevMonth: 950 },
+      [],
+      1_790_793_000_000,
+    );
+    const hero = buildDetailHero({ coin, coinData, ...market });
+
+    expect(hero.market.supply).toBe(0);
+    const trend = hero.market.supplyTrend;
+    expect(trend).toMatchObject({
+      current: 0,
+      safePrevWeek: 1_000,
+      safePrevMonth: 950,
+      hasPrevMonth: true,
+    });
+    expect((trend.current! / trend.safePrevWeek! - 1) * 100).toBe(-100);
+    expect((trend.current! / trend.safePrevMonth! - 1) * 100).toBe(-100);
+    expect(trend.prevWeekTrendClass).toContain("text-red-700");
+    expect(trend.prevMonthTrendClass).toContain("text-red-700");
   });
 
   it("derives hero display metrics and signal rail from raw detail inputs", () => {

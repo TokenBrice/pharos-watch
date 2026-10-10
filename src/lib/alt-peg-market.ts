@@ -56,6 +56,7 @@ export interface AltPegTrendStats {
   latestAltMarketCap: number;
   yearlyShareDeltaPctPoints: number | null;
   yearlyMarketCapChangePct: number | null;
+  valueCoverageIncomplete: boolean;
 }
 
 export interface AltPegLinkHubItem {
@@ -292,6 +293,8 @@ export function buildAltPegTrendStats(points?: readonly NonUsdSharePoint[]): Alt
       yearAgo && sharePointMarketCap(yearAgo) > 0
         ? ((latestAltMarketCap - sharePointMarketCap(yearAgo)) / sharePointMarketCap(yearAgo)) * 100
         : null,
+    valueCoverageIncomplete: [latest, yearAgo].some((point) => point != null
+      && (point.coverage == null || point.coverage.total < 1 || point.coverage.commodity < 1 || point.coverage.fiatNonUsd < 1)),
   };
 }
 

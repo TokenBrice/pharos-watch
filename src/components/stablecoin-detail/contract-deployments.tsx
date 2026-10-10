@@ -76,8 +76,9 @@ export function ContractDeployments({
   const openContract = contracts.find((contract) => getContractKey(contract) === openContractKey) ?? null;
   const quickCopyContract = openContract ?? contracts[0] ?? null;
 
-  function copyContractAddress(chain: string, address: string) {
-    void copyText(address);
+  async function copyContractAddress(chain: string, address: string) {
+    const result = await copyText(address);
+    if (!result.ok) return;
     trackEvent("contract_copied", { coin_id: coinId, chain });
     setCopiedContract(`${chain}:${address}`);
     if (copyResetTimer.current) clearTimeout(copyResetTimer.current);

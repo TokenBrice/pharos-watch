@@ -408,16 +408,11 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   if (data.length === 0) {
     return (
-      <Card className={DETAIL_MODULE_SHELL_CLASS}>
-        <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-          <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Liquidity by Protocol</StablecoinModuleTitle>
-        </CardHeader>
-        <CardContent className={DETAIL_MODULE_BODY_CLASS}>
-          <div className="rounded-md border px-4 py-2.5 text-sm border-border/60 bg-muted/40 text-muted-foreground">
-            No observed DEX liquidity pools for this stablecoin
-          </div>
-        </CardContent>
-      </Card>
+      <DistributionUnavailableCard
+        title="Liquidity by Protocol"
+        label="DEX protocol breakdown"
+        onRetry={() => void query.refetch()}
+      />
     );
   }
 

@@ -26,6 +26,7 @@ import {
   resolveEffectiveSortKey,
   sortStablecoins,
   type StablecoinTableSortKey,
+  type StablecoinTableSourceGenerations,
 } from "@/components/stablecoin-table-logic";
 import { useElementWidth } from "@/hooks/use-element-width";
 import { useFittedColumns } from "@/hooks/use-fitted-columns";
@@ -167,6 +168,7 @@ export function useStablecoinTableRows({
   pegScores,
   dexLiquidity,
   pinnedStablecoinIds,
+  sourceGenerations,
   isOverview,
   isMobileColumns,
   density,
@@ -182,6 +184,7 @@ export function useStablecoinTableRows({
   renderedSet: ReadonlySet<ColumnId>;
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
+  sourceGenerations?: StablecoinTableSourceGenerations;
   pinnedStablecoinIds: readonly string[];
   isOverview: boolean;
   isMobileColumns: boolean;
@@ -228,16 +231,30 @@ export function useStablecoinTableRows({
     () => (isOverview ? displayed.slice(overviewPageStart, overviewPageEnd) : displayed),
     [displayed, isOverview, overviewPageEnd, overviewPageStart],
   );
-  const previousRowsRef = useRef<{ rows: typeof displayed; sort: StablecoinTableSort } | null>(null);
+  // Navigation belongs to the reader's controls, not refreshed dataset identity.
+  // Serialize control values so equivalent newly allocated props do not reset it.
+  const eligibilityKey = useMemo(
+    () => eligibleIds ? JSON.stringify([...eligibleIds].sort()) : null,
+    [eligibleIds],
+  );
+  const navigationKey = JSON.stringify([
+    [...activeFilters].sort(),
+    eligibilityKey,
+    searchQuery ?? "",
+    sort.key,
+    sort.direction,
+    effectiveSortKey,
+    pinnedStablecoinIds,
+  ]);
+  const previousNavigationKeyRef = useRef(navigationKey);
 
   useEffect(() => {
-    const previous = previousRowsRef.current;
-    if (previous && (previous.rows !== displayed || previous.sort !== sort)) {
+    if (previousNavigationKeyRef.current !== navigationKey) {
       scrollRef.current?.scrollTo({ top: 0 });
       if (isOverview) setOverviewPageIndex(0);
     }
-    previousRowsRef.current = { rows: displayed, sort };
-  }, [displayed, isOverview, scrollRef, sort]);
+    previousNavigationKeyRef.current = navigationKey;
+  }, [navigationKey, isOverview, scrollRef]);
 
   const virtualDensityConfig = useMemo(
     () => ({
@@ -271,8 +288,8 @@ export function useStablecoinTableRows({
     [virtualizer],
   );
   const handleCsvExport = useCallback(() => {
-    exportStablecoinsCsv(displayed, pegScores, dexLiquidity, reportCards);
-  }, [dexLiquidity, displayed, pegScores, reportCards]);
+    exportStablecoinsCsv(displayed, pegScores, dexLiquidity, reportCards, sourceGenerations);
+  }, [dexLiquidity, displayed, pegScores, reportCards, sourceGenerations]);
   const onPreviousOverviewPage = useCallback(() => {
     setOverviewPageIndex((current) => Math.max(0, current - 1));
     scrollRef.current?.scrollTo({ top: 0 });

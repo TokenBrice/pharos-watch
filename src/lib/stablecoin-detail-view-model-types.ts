@@ -57,6 +57,8 @@ export interface DetailStablecoinListInput extends DetailQueryResource<DetailSta
 
 export interface StablecoinDetailViewModelQueryInputs {
   supplyHistory: DetailSupplyHistoryInput;
+  /** Eligible assets only; independent of the initial chart's 90-day window. */
+  annualPriceHistory?: DetailSupplyHistoryInput;
   stablecoinList: DetailStablecoinListInput;
   pegSummary: DetailQueryResource<PegSummaryResponse>;
   dexLiquidity: DetailQueryResource<DexLiquidityMap>;

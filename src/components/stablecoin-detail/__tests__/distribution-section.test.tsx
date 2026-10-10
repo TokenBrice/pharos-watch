@@ -227,3 +227,35 @@ it("keeps cached distribution visible behind a stale notice and drops it once th
   expect(staleNotice()).toBeUndefined();
   expect(screen.getByText("60%")).toBeTruthy();
 });
+
+it.each([
+  { poolCount: 2, totalTvlUsd: 0 },
+  { poolCount: 0, totalTvlUsd: 100_000 },
+])("keeps missing protocol attribution unavailable despite observed DEX activity (%j)", (aggregates) => {
+  useStablecoinsMock.mockReturnValue({
+    data: { peggedAssets: [] }, isLoading: false, error: null, dataUpdatedAt: 0, refetch: vi.fn(),
+  });
+  const refetch = vi.fn();
+  useDexLiquidityMock.mockReturnValue({
+    data: { "usdc-circle": { ...aggregates, protocolTvl: {} } },
+    isLoading: false, error: null, dataUpdatedAt: 0, refetch,
+  });
+  render(<DistributionSection stablecoinId="usdc-circle" />);
+  expect(screen.getByRole("alert").textContent).toContain("DEX protocol breakdown is temporarily unavailable");
+  expect(screen.queryByText(/No observed DEX liquidity pools/)).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Retry dex protocol breakdown" }));
+  expect(refetch).toHaveBeenCalledTimes(1);
+});
+
+it("omits the protocol distribution for genuinely empty observed DEX aggregates", () => {
+  useStablecoinsMock.mockReturnValue({
+    data: { peggedAssets: [] }, isLoading: false, error: null, dataUpdatedAt: 0, refetch: vi.fn(),
+  });
+  useDexLiquidityMock.mockReturnValue({
+    data: { "usdc-circle": { poolCount: 0, totalTvlUsd: 0, protocolTvl: {} } },
+    isLoading: false, error: null, dataUpdatedAt: 0, refetch: vi.fn(),
+  });
+  const { container } = render(<DistributionSection stablecoinId="usdc-circle" />);
+  expect(container.querySelector("[role=alert]")).toBeNull();
+  expect(screen.queryByText("Liquidity by Protocol")).toBeNull();
+});

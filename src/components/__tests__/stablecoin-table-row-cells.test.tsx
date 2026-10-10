@@ -9,6 +9,8 @@ import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 import { makeReportCardsV9Response } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
+import { getScoreColor } from "@/lib/severity-colors";
 
 function buildRow(): StablecoinTableRowCellProps {
   const coin = makeStablecoin({
@@ -124,5 +126,28 @@ describe("StablecoinTableRowCells supply availability", () => {
     expect(html).toContain("+50.00%");
     expect(html).not.toContain("<polyline");
     expect(html).not.toContain("<path");
+  });
+});
+
+describe("StablecoinTableRowCells liquidity availability", () => {
+  it.each([0, null, 75])("preserves liquidity score %s in mobile and desktop cells", (liquidityScore) => {
+    const row = buildRow();
+    row.isVisible = (column) => column === "name" || column === "liquidity";
+    row.dexLiquidity = { [row.coin.id]: makeDexLiquidityData({ liquidityScore }) };
+    const model = buildStablecoinTableRowModel({
+      coin: row.coin, dexLiquidity: row.dexLiquidity, density: row.density, variant: "default",
+    });
+    const html = renderToStaticMarkup(
+      <table><tbody><tr><StablecoinTableRowCells row={row} model={model} /></tr></tbody></table>,
+    );
+    const spans = [...html.matchAll(/<span class="([^"]+)">([^<]*)<\/span>/g)];
+    const expectedValue = liquidityScore === null ? "—" : String(liquidityScore);
+    const expectedClass = liquidityScore === null ? "text-muted-foreground" : getScoreColor(liquidityScore);
+    // Mobile's compact Liq badge and the standalone desktop liquidity cell.
+    const liquiditySpans = spans.filter(([, className, value]) =>
+      value === expectedValue && className.includes(expectedClass),
+    );
+    expect(liquiditySpans.length).toBeGreaterThanOrEqual(2);
+    expect(model.liquidityScore).toBe(liquidityScore);
   });
 });

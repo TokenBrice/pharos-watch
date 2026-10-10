@@ -56,7 +56,7 @@ export function buildStablecoinDetailViewModel({
     coin,
     coinData,
     listData.nativeSupply ?? null,
-    resolvedSupplyHistory,
+    queries.annualPriceHistory?.data ?? resolvedSupplyHistory,
     supplemental.nowMs ?? Date.now(),
   );
   const pegPrice = buildDetailPegPriceSnapshot(id, coin, pegSummary.data);

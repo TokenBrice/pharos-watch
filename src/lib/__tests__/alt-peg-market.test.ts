@@ -123,6 +123,7 @@ describe("alt-peg-market", () => {
     ])).toEqual({
       latestSharePct: 5, latestAltMarketCap: 50,
       yearlyShareDeltaPctPoints: 3, yearlyMarketCapChangePct: 150,
+      valueCoverageIncomplete: true,
     });
   });
 
@@ -140,8 +141,21 @@ describe("alt-peg-market", () => {
     ])).toEqual({
       latestSharePct: 2, latestAltMarketCap: 20,
       yearlyShareDeltaPctPoints: 2, yearlyMarketCapChangePct: null,
+      valueCoverageIncomplete: true,
     });
   });
+
+  it.each([undefined, null, { basis: "interior-gap-prior-value" as const, total: 0.99, commodity: 1, fiatNonUsd: 1 },
+    { basis: "interior-gap-prior-value" as const, total: 1, commodity: 0.8, fiatNonUsd: 1 }])(
+    "qualifies annual comparisons when either snapshot has partial or unknown coverage (%j)", (coverage) => {
+      const complete = { basis: "interior-gap-prior-value" as const, total: 1, commodity: 1, fiatNonUsd: 1 };
+      const old = { date: 1, commodityShare: 1, fiatNonUsdShare: 0, commodity: 10, fiatNonUsd: 0, total: 100 };
+      const latest = { ...old, date: 1 + 365 * 86400, commodity: 20, coverage: complete };
+      expect(buildAltPegTrendStats([{ ...old, coverage }, latest])?.valueCoverageIncomplete).toBe(true);
+      expect(buildAltPegTrendStats([{ ...old, coverage: complete }, { ...latest, coverage }])?.valueCoverageIncomplete).toBe(true);
+      expect(buildAltPegTrendStats([{ ...old, coverage: complete }, latest])?.valueCoverageIncomplete).toBe(false);
+    },
+  );
 
   it("returns no trend for absent or empty history", () => {
     expect(buildAltPegTrendStats()).toBeNull();

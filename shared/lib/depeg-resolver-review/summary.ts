@@ -362,11 +362,34 @@ export function summarizeDdrrRows(rows: readonly DdrrResponseRow[]): DdrrSummary
     if (existing == null) segments.set(key, [row]);
     else existing.push(row);
   }
+  const coinRows = new Map<string, DdrrResponseRow[]>();
+  for (const row of rows) {
+    const existing = coinRows.get(row.stablecoinId);
+    if (existing == null) coinRows.set(row.stablecoinId, [row]);
+    else existing.push(row);
+  }
 
   return {
     headlineScope,
     headlineLabel,
     headline,
+    byStablecoin: [...coinRows.entries()].map(([stablecoinId, cohort]) => {
+      const metrics = summarizeDdrrMetrics(cohort);
+      return {
+        stablecoinId,
+        reviewedRowCount: cohort.length,
+        reviewedForecastCount: metrics.lockedPredictionCount,
+        scoredCount: metrics.recoveryLikelihoodScoredCount,
+        correctCount: metrics.recoveryLikelihoodCorrectCount,
+        missCount: (metrics.falseTerminalCount ?? 0) + (metrics.falseRecoverableCount ?? 0),
+        pendingCount: cohort.filter((row) => row.kind === "prediction_review" && row.verdictReview === "pending").length,
+        noCallCount: metrics.noCallCount,
+        notCalledCount: cohort.filter((row) => row.kind === "coverage").length,
+        invalidatedCount: metrics.invalidatedPredictionCount,
+        durationScoredCount: metrics.durationScoredCount,
+        medianAbsoluteDurationErrorSec: metrics.medianAbsoluteDurationErrorSec,
+      };
+    }),
     // Public segmentation keeps prediction-policy rows separate from coverage
     // debt so accuracy and accountability can be inspected independently.
     byPredictionPolicy: [

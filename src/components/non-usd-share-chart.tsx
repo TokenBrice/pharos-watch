@@ -12,6 +12,7 @@ import {
 } from "@/components/chart-primitives/focused-stacked-area-card";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { computeChartYDomain } from "@/lib/chart-utils";
+import type { NonUsdSharePoint } from "@shared/types/market";
 
 const COMMODITY_COLOR = CHART_AMBER;
 const FIAT_COLOR = CHART_GREEN;
@@ -26,6 +27,13 @@ interface SharePoint {
   commodity: number;
   fiatNonUsd: number;
   total: number;
+  coverage: NonUsdSharePoint["coverage"];
+}
+
+function coverageLabel(coverage: SharePoint["coverage"]): string {
+  if (coverage == null) return "Value coverage unavailable";
+  const partial = coverage.total < 1 || coverage.commodity < 1 || coverage.fiatNonUsd < 1;
+  return `${partial ? "Partial value coverage" : "Interior-gap value coverage"}: total ${formatPercent(coverage.total * 100, 1)}, commodities ${formatPercent(coverage.commodity * 100, 1)}, non-commodity ${formatPercent(coverage.fiatNonUsd * 100, 1)}`;
 }
 
 const SHARE_SERIES: StackedAreaSeries[] = [
@@ -56,6 +64,7 @@ const SHARE_TABLE_COLUMNS: ChartDataTableColumn<SharePoint>[] = [
     label: "Non-commodity non-USD",
     format: (row) => formatPercent(row.fiatNonUsdShare),
   },
+  { id: "coverage", label: "Value coverage", format: (row) => coverageLabel(row.coverage) },
 ];
 
 interface ShareTooltipProps {
@@ -77,6 +86,7 @@ function ShareTooltip({ active, payload, label }: ShareTooltipProps) {
       <div className="border-t border-border/50 mt-1.5 pt-1.5">
         <TooltipRow label="Total non-USD" value={`${formatPercent(totalShare)} · ${formatCurrency(totalNonUsd, 1)}`} bold />
       </div>
+      <p className="mt-1.5 text-xs text-muted-foreground">{coverageLabel(point.coverage)}</p>
     </PharosChartTooltip>
   );
 }
@@ -109,6 +119,7 @@ export function NonUsdShareChart({
       commodity: point.commodity,
       fiatNonUsd: point.fiatNonUsd,
       total: point.total,
+      coverage: point.coverage,
     }));
 
     const last = points[points.length - 1]!;
@@ -144,6 +155,7 @@ export function NonUsdShareChart({
           <p className="text-sm text-muted-foreground">
             As of {asOfLabel}: {formatPercent(latestShare)} of total stablecoin market &middot; outside-USD
             segment size: {formatCurrency(latestNonUsd, 1)}
+            {" · "}{coverageLabel(latestSample?.coverage)}
           </p>
         ) : null
       }
@@ -153,6 +165,7 @@ export function NonUsdShareChart({
             Coverage starts {coverageStartLabel}. Built from supply-history snapshots: daily over the last 90d, then
             weekly to 2y, then monthly across the loaded history window. The non-commodity bucket includes
             currency-linked plus other non-commodity pegs.
+            {" "}Value coverage estimates interior history gaps at each asset&apos;s prior observed value, not missing-history assets.
           </p>
         ) : null
       }
@@ -171,7 +184,7 @@ export function NonUsdShareChart({
       closeFocusLabel="Return share chart to overview"
       focusedHeightClassName={FOCUSED_CHART_HEIGHT}
       ariaLabel={asOfLabel
-        ? `Share of total stablecoin market outside USD chart showing ${formatPercent(latestShare)} share as of ${asOfLabel}`
+        ? `Share of total stablecoin market outside USD chart showing ${formatPercent(latestShare)} share as of ${asOfLabel}; ${coverageLabel(latestSample?.coverage)}`
         : "Share of total stablecoin market outside USD chart; data unavailable"}
       emptyMessage="No market share data available"
       series={SHARE_SERIES}

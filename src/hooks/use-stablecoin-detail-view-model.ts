@@ -22,6 +22,7 @@ import {
   type StablecoinDetailViewModel as BaseStablecoinDetailViewModel,
 } from "@/lib/stablecoin-detail-view-model";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
+import { isAnnualUsdPerformanceEligible } from "@/lib/stablecoin-detail-query-view-model";
 import {
   FRONTEND_API_QUERY_DESCRIPTORS,
   STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS,
@@ -131,6 +132,9 @@ export function useStablecoinDetailViewModel({
   const stressEnabled = supplementalQueryControls?.stress ?? true;
   const flowsEnabled = supplementalQueryControls?.flows ?? true;
   const supplyQuery = useSupplyHistory(id, STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS);
+  const annualPriceEnabled = isAnnualUsdPerformanceEligible(coin);
+  // Include the 14-day anchor tolerance without fetching the full five-year chart.
+  const annualPriceQuery = useSupplyHistory(id, 380, { enabled: annualPriceEnabled });
   const liveSummaryQuery = useRegisteredApiQuery<StablecoinLiveSummary>(
     FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary(id),
   );
@@ -180,18 +184,20 @@ export function useStablecoinDetailViewModel({
   const stressSignals = useGatedQuerySlice(stressSignalsQuery, stressEnabled);
 
   const supplyHistory = useQuerySlice(supplyQuery);
+  const annualPriceHistory = useGatedQuerySlice(annualPriceQuery, annualPriceEnabled);
   const stablecoinList = useQuerySlice(listQuery);
   const pegSummary = useQuerySlice(pegQuery);
   const queries = useMemo(
     () => ({
       supplyHistory,
+      annualPriceHistory,
       stablecoinList,
       pegSummary,
       dexLiquidity: liquidity,
       reportCards,
       redemptionBackstops,
     }),
-    [supplyHistory, stablecoinList, pegSummary, liquidity, reportCards, redemptionBackstops],
+    [supplyHistory, annualPriceHistory, stablecoinList, pegSummary, liquidity, reportCards, redemptionBackstops],
   );
   const flowsSlice = useQuerySlice(flowsQuery);
   const blacklistSlice = useQuerySlice(blacklistQuery);
@@ -241,6 +247,7 @@ export function useStablecoinDetailViewModel({
     return refetchQueryGroup(
       [
         ...(supplyQuery.error != null ? [supplyQuery.refetch] : []),
+        ...(annualPriceEnabled && annualPriceQuery.error != null ? [annualPriceQuery.refetch] : []),
         ...(liveSummaryQuery.error != null ? [liveSummaryQuery.refetch] : []),
         ...(pegQuery.error != null ? [pegQuery.refetch] : []),
         ...(liquidityEnabled && liquidityQuery.error != null ? [liquidityQuery.refetch] : []),
@@ -257,6 +264,9 @@ export function useStablecoinDetailViewModel({
       },
     );
   }, [
+    annualPriceEnabled,
+    annualPriceQuery.error,
+    annualPriceQuery.refetch,
     liveReserves.error,
     liveReserves.refetch,
     blacklistEnabled,

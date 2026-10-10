@@ -170,11 +170,19 @@ function observedShare(observed: number, unobserved: number): number {
   return unobserved > 0 ? observed / (observed + unobserved) : 1;
 }
 
-function hasPublishableCoverage(row: AggRow, unobserved: UnobservedValue | undefined): boolean {
-  if (unobserved == null) return true;
-  return observedShare(row.total, unobserved.total) >= MIN_PUBLISHED_TOTAL_COVERAGE
-    && observedShare(row.commodity, unobserved.commodity) >= MIN_PUBLISHED_COHORT_COVERAGE
-    && observedShare(row.fiat_non_usd, unobserved.fiatNonUsd) >= MIN_PUBLISHED_COHORT_COVERAGE;
+function pointCoverage(row: AggRow, unobserved: UnobservedValue | undefined): NonNullable<NonUsdSharePoint["coverage"]> {
+  return {
+    basis: "interior-gap-prior-value",
+    total: observedShare(row.total, unobserved?.total ?? 0),
+    commodity: observedShare(row.commodity, unobserved?.commodity ?? 0),
+    fiatNonUsd: observedShare(row.fiat_non_usd, unobserved?.fiatNonUsd ?? 0),
+  };
+}
+
+function hasPublishableCoverage(coverage: NonNullable<NonUsdSharePoint["coverage"]>): boolean {
+  return coverage.total >= MIN_PUBLISHED_TOTAL_COVERAGE
+    && coverage.commodity >= MIN_PUBLISHED_COHORT_COVERAGE
+    && coverage.fiatNonUsd >= MIN_PUBLISHED_COHORT_COVERAGE;
 }
 
 export const handleNonUsdShare = async (db: D1Database, url: URL): Promise<Response> => {
@@ -210,7 +218,9 @@ export const handleNonUsdShare = async (db: D1Database, url: URL): Promise<Respo
     let lastKeptDate = 0;
 
     for (const row of rows) {
-      if (row.total <= 0 || !hasPublishableCoverage(row, unobservedByDate.get(row.snapshot_date))) continue;
+      if (row.total <= 0) continue;
+      const coverage = pointCoverage(row, unobservedByDate.get(row.snapshot_date));
+      if (!hasPublishableCoverage(coverage)) continue;
 
       let interval: number;
       if (row.snapshot_date >= ninetyDaysAgo) {
@@ -229,6 +239,7 @@ export const handleNonUsdShare = async (db: D1Database, url: URL): Promise<Respo
           commodity: row.commodity,
           fiatNonUsd: row.fiat_non_usd,
           total: row.total,
+          coverage,
         });
         lastKeptDate = row.snapshot_date;
       }
