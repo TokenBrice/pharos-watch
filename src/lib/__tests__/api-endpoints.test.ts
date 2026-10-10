@@ -42,7 +42,7 @@ describe("api endpoint registry", () => {
       "/api/reserve-attempt-history?coin=usdc-circle&limit=10",
       "/api/debug-sync-state",
     ]);
-    expect(manualPaths).toContain("/api/audit-depeg-history?dry-run=true");
+    expect(manualPaths).toContain("/api/backfill-dews");
     expect(manualPaths).toContain("/api/trigger-digest");
     for (const path of [...publicPaths, ...adminPaths, ...manualPaths]) {
       expect(path).not.toMatch(/:[a-z]/i);
@@ -113,8 +113,7 @@ describe("api endpoint registry", () => {
   });
 
   it("flags mutating admin paths for method guards", () => {
-    expect(isMutatingAdminPath("/api/backfill-depegs")).toBe(true);
-    expect(isMutatingAdminPath("/api/backfill-mint-burn")).toBe(true);
+    expect(isMutatingAdminPath("/api/remediate-blacklist-amount-gaps")).toBe(true);
     expect(isMutatingAdminPath("/api/trigger-digest")).toBe(true);
     expect(isMutatingAdminPath("/api/backfill-dews")).toBe(true);
     expect(isMutatingAdminPath("/api/stablecoins")).toBe(false);
@@ -228,7 +227,6 @@ describe("api endpoint registry", () => {
     ["/api/api-keys/1/update", "POST"],
     ["/api/api-keys/1/deactivate", "POST"],
     ["/api/api-keys/1/rotate", "POST"],
-    ["/api/audit-depeg-history?dry-run=true", "GET"],
     ["/api/backfill-dews", "GET"],
     ["/api/backfill-dews?repair=refresh-current&dry-run=true", "GET"],
     ["/api/backfill-dews", "POST"],
@@ -242,7 +240,6 @@ describe("api endpoint registry", () => {
     ["/api/stablecoins", "HEAD", ["GET"]],
     ["/api/trigger-digest", "GET", ["POST"]],
     ["/api/backfill-dews?repair=refresh-current", "GET", ["POST"]],
-    ["/api/audit-depeg-history", "GET", ["POST"]],
     ["/api/feedback", "GET", ["POST"]],
     ["/api/telegram-mini-app/session", "GET", ["POST"]],
     ["/api/credential-lifecycle-summary", "POST", ["GET"]],
@@ -295,28 +292,16 @@ describe("api endpoint registry", () => {
     )).toEqual([
       ["/api/trigger-digest", "POST", false, false, "communications"],
       ["/api/trigger-yield-coverage-audit", "POST", false, false, "audit"],
-      ["/api/bootstrap-jltxx-reserves", "POST", false, false, "audit"],
       ["/api/reset-blacklist-sync", "POST", true, false, "recovery"],
       ["/api/debug-sync-state", "GET", false, false, "audit"],
       ["/api/remediate-blacklist-amount-gaps", "POST", false, true, "recovery"],
-      ["/api/backfill-blacklist-current-balances", "POST", false, true, "recovery"],
-      ["/api/backfill-depegs", "POST", false, true, "recovery"],
-      ["/api/backfill-supply-history", "POST", false, true, "recovery"],
-      ["/api/backfill-cg-prices", "POST", false, true, "recovery"],
-      ["/api/backfill-yield-history", "POST", false, true, "recovery"],
-      ["/api/backfill-stability-index", "POST", false, false, "recovery"],
-      ["/api/backfill-mint-burn-prices", "POST", false, true, "audit"],
-      ["/api/backfill-mint-burn", "POST", false, false, "recovery"],
-      ["/api/backfill-tape", "POST", false, false, "recovery"],
-      ["/api/reclassify-atomic-roundtrips", "POST", false, true, "audit"],
-      ["/api/audit-depeg-history?dry-run=true", "GET", false, true, "audit"],
       ["/api/backfill-dews", "GET", false, false, "audit"],
     ]);
   });
 
   it("requires structured operator metadata for every status-page action", () => {
     const actions = getStatusPageActions();
-    expect(actions).toHaveLength(18);
+    expect(actions).toHaveLength(6);
 
     for (const action of actions) {
       expect(action.kind).toMatch(/^(inspect|backfill|repair|reset|communication)$/);
@@ -364,12 +349,6 @@ describe("api endpoint registry", () => {
       action.dryRun.dryRunMethod ?? action.method, action.dryRun.liveMethod ?? action.method,
     ]] : [])).toEqual([
       ["/api/remediate-blacklist-amount-gaps", "dryRun", true, "POST", "POST"],
-      ["/api/backfill-blacklist-current-balances", "dryRun", true, "POST", "POST"],
-      ["/api/backfill-depegs", "dry-run", true, "POST", "POST"],
-      ["/api/backfill-stability-index", "dry-run", true, "POST", "POST"],
-      ["/api/backfill-mint-burn-prices", "dry-run", false, "POST", "POST"],
-      ["/api/backfill-tape", "dryRun", true, "POST", "POST"],
-      ["/api/audit-depeg-history?dry-run=true", "dry-run", true, "GET", "POST"],
     ]);
   });
 

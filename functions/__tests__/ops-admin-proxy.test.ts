@@ -59,7 +59,7 @@ function makeCookieAuthedRequest(url: string, init: RequestInit = {}) {
 
 function makeStreamedAuthedPost(chunks: string[], headers: Record<string, string> = {}): Request {
   const encoder = new TextEncoder();
-  return makeAuthedRequest("https://ops.pharos.watch/api/admin/backfill-depegs", {
+  return makeAuthedRequest("https://ops.pharos.watch/api/admin/remediate-blacklist-amount-gaps", {
     method: "POST",
     headers: { Origin: "https://ops.pharos.watch", ...headers },
     body: new ReadableStream<Uint8Array>({
@@ -222,7 +222,7 @@ describe("ops admin proxy", () => {
     const fetchSpy = mockFetch([], { requireMatch: true });
 
     const response = await onRequest(
-      adminContext(new Request("https://ops.pharos.watch/api/admin/backfill-depegs", { method: "GET" })),
+      adminContext(new Request("https://ops.pharos.watch/api/admin/remediate-blacklist-amount-gaps", { method: "GET" })),
     );
 
     expect(response.status).toBe(405);
@@ -527,7 +527,6 @@ describe("ops admin proxy", () => {
   it.each([
     ["status", 20_000],
     ["status-history?limit=10", 20_000],
-    ["audit-depeg-history?dry-run=true", 45_000],
     ["request-source-stats", 10_000],
   ])("times out %s at exactly %i ms", async (path, budget) => {
     vi.useFakeTimers();
@@ -574,7 +573,6 @@ describe("ops admin proxy", () => {
   it("declares ops proxy timeout budgets in endpoint metadata", () => {
     expect(getEndpointOpsProxyTimeoutMs(API_PATHS.status(), 10_000)).toBe(20_000);
     expect(getEndpointOpsProxyTimeoutMs(API_PATHS.statusHistoryBase(), 10_000)).toBe(20_000);
-    expect(getEndpointOpsProxyTimeoutMs(API_PATHS.auditDepegHistoryBase(), 10_000)).toBe(45_000);
     expect(getEndpointOpsProxyTimeoutMs(API_PATHS.requestSourceStatsBase(), 10_000)).toBe(10_000);
   });
 

@@ -376,11 +376,11 @@ Pending rows that pass the 45-minute base expiry but still have same-direction p
 
 ## Historical Backfill Validation
 
-Historical backfills in `worker/src/api/backfill-depegs.ts` do **not** reuse the exact same guard as live DEX or fallback enrichment, but they now consult the same authoritative-price provider registry as live sync before falling back to market history.
+Historical backfills in `worker/scripts/backfills/backfill-depegs.ts` do **not** reuse the exact same guard as live DEX or fallback enrichment, but they now consult the same authoritative-price provider registry as live sync before falling back to market history.
 
 Backfill rewrites delete prior `source='backfill'` rows even when a trusted replay finds zero replacement events. Dry-runs preview that same removal scope through `removedBackfillEventCount`. For non-empty replacements, the delete and first insert chunk share one D1 `batch()` call (up to the D1 100-statement batch limit: delete + 99 inserts). Additional inserts are written in later chunks, so large replacements are bounded and restartable but not a single all-rows transaction.
 
-Replay now drops recomputed episodes that reviewed data or an existing live row already covers, inside `executeBackfillForCoin` (`worker/src/api/backfill-depegs/execution.ts`; overlap predicate `backfillEpisodeCoveredByLiveEvent` in `worker/src/api/backfill-depegs-window.ts`):
+Replay now drops recomputed episodes that reviewed data or an existing live row already covers, inside `executeBackfillForCoin` (`worker/scripts/backfills/backfill-depegs/execution.ts`; overlap predicate `backfillEpisodeCoveredByLiveEvent` in `worker/scripts/backfills/backfill-depegs-window.ts`):
 
 - **Reviewed suppression.** An episode whose inclusive `[startedAt, endedAt]` interval overlaps a matching registry entry for the same coin and direction is skipped.
 - **Live overlap.** An episode that overlaps an existing `source='live'` row of the same coin and direction (`episodeStart <= liveEnd && liveStart <= episodeEnd`, inclusive; an open row collapses to its start second) is skipped. Live detection polls at minute cadence while replay consumes hourly samples, so same-side overlapping windows are one market episode counted twice; intervals one second apart are disjoint.
@@ -395,7 +395,7 @@ When DefiLlama returns no historical rows, replay applies the live `$1M` event f
 
 Supported non-USD fiat backfills now prefer direct CoinGecko native-fiat history first and compare that series against the native `1.0` peg. In that native-fiat mode, replay uses daily points plus a two-point confirmation window across 36 hours before opening a normal event, while still preserving extreme single-point crashes of `>= 5000 bps`. Only when that native history is unavailable does the replay fall back to USD-denominated CoinGecko/DefiLlama history plus the historical FX reference.
 
-`POST /api/backfill-depegs?dry-run=true` also accepts `startDay` / `endDay` for bounded replay audits, plus optional `contextDays` to widen the replay pad around that UTC window. The handler compares only the overlapping stored `source='backfill'` rows, which makes long-history repairs practical without waiting for a full-coin HTTP request.
+`npx tsx worker/scripts/one-shot-backfill.ts backfill-depegs --query 'dry-run=true'` also accepts `startDay` / `endDay` for bounded replay audits, plus optional `contextDays` to widen the replay pad around that UTC window. The job compares only the overlapping stored `source='backfill'` rows; live replacement additionally requires `--execute --allow-atomic-import` and a coordinated [maintenance window](./runbooks/one-shot-backfills.md#transport-safety).
 For commodity-pegged assets, the peer-median reference fetch is bounded to the same replay pad and only fetches the needed gold or silver source family instead of rebuilding full hourly history for every tracked commodity token.
 Commodity lookup series and their current-rate fallback stay in per-ounce units until a single final `commodityOunces` conversion. Missing historical spot data therefore uses the current per-ounce rate times the token weight once, never an already per-token fallback weighted again. If neither a historical series anchor nor a current commodity reference is available, replay skips the coin as `missing-fx-reference` and preserves its existing events.
 
@@ -430,7 +430,7 @@ To add an entry: establish from primary evidence that the stored episode is an a
 
 ### Operator runbook
 
-Artifact-event removal is an operator procedure with a hard ordering constraint: the registry and the live-overlap skip must be deployed before the delete, and the review previews with `GET /api/audit-depeg-history?dry-run=true` before `POST /api/audit-depeg-history?delete=<ids>` and `npm run sync-depeg-events -- --allow-archive-shrink`. The full sequence, the reviewed Noon USN id set (`49235,49236,49237,24424,83782`), and the registry-entry steps live in [Depeg Artifact-Event Removal](./runbooks/depeg-artifact-removal.md).
+Artifact-event removal is an operator procedure with a hard ordering constraint: the registry and the live-overlap skip must be deployed before the delete, and the review previews with `npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'dry-run=true'` before `npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'delete=<ids>' --execute --allow-atomic-import` and `npm run sync-depeg-events -- --allow-archive-shrink`. The full sequence, the reviewed Noon USN id set (`49235,49236,49237,24424,83782`), and the registry-entry steps live in [Depeg Artifact-Event Removal](./runbooks/depeg-artifact-removal.md).
 
 ## Event Lifecycle
 

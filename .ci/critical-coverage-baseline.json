@@ -222,6 +222,7 @@
     "worker/src/lib/evm-rpc.ts": 92.9,
     "worker/src/lib/freshness-sentinels.ts": 82.6,
     "worker/src/lib/geckoterminal-price-probe-stats.ts": 100,
+    "worker/src/lib/historical-market-prices.ts": 87.1,
     "worker/src/lib/live-reserves/config-recovery-targets.ts": 100,
     "worker/src/lib/live-reserves/store-history-read.ts": 100.0,
     "worker/src/lib/live-reserves/store-overview.ts": 80.7,

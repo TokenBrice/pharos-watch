@@ -673,11 +673,11 @@ export function makeOperationalDependencyFailureStatusResponse(base = makeHealth
 
 export function makeActionRecommendedStatusResponse(base = makeHealthyStatusResponse()): StatusResponse {
   const cause = {
-    code: "missing_prices_stale",
+    code: "blacklist_gaps_stale",
     layer: "data-quality" as const,
     severity: "critical" as const,
-    message: "Fixture price coverage is stale and requires a guarded backfill.",
-    metric: "missingPrices",
+    message: "Fixture blacklist amount coverage requires guarded repair.",
+    metric: "blacklistAmountGaps",
     value: 12,
     threshold: 8,
   };

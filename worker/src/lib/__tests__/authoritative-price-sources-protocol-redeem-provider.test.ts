@@ -10,7 +10,7 @@ import {
 import { createProtocolRedeemProvider } from "../authoritative-price-sources/protocol-redeem-provider";
 
 const historicalParent = vi.hoisted(() => vi.fn());
-vi.mock("../../api/backfill-price-sources", () => ({
+vi.mock("../historical-market-prices", () => ({
   fetchMarketBackfillPriceSeries: historicalParent,
 }));
 

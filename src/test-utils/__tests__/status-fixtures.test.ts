@@ -190,7 +190,7 @@ describe("status review fixtures", () => {
     expect(recoveryHold.decision.adminState).toBe("degraded");
     expect(recoveryHold.decision.nextStep).toBe("investigate");
 
-    expect(actionRecommended.recommendedActions.map((item) => item.action.path)).toContain("/api/backfill-cg-prices");
+    expect(actionRecommended.recommendedActions.map((item) => item.action.path)).toContain("/api/remediate-blacklist-amount-gaps");
     expect(actionRecommended.decision.nextStep).toBe("manual-action");
   });
 

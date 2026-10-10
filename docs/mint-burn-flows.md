@@ -142,7 +142,7 @@ The public flows table describes configured issuance chains, and the per-coin AP
 
 ### Reviewed protocol-internal events
 
-`shared/lib/reviewed-protocol-internal-flows.ts` holds individually reviewed events that moved tokens inside an issuer's own balance sheet, each with its block timestamp. `persistMintBurnRows()` applies it through `applyReviewedProtocolInternalFlows()` (`worker/src/lib/mint-burn-pipeline/reviewed-protocol-flows.ts`) after atomic-roundtrip detection, in both the cron and `POST /api/backfill-mint-burn` paths, so a replay over the event's block rewrites the stored row and recalculates its hourly bucket. Matching requires the exact event id (chain, transaction hash, log index), stablecoin, chain, direction, and the reviewed token amount; a row whose amount drifts keeps its normal classification. There is no address-level rule. The homepage Biggest Supply Moves card reads the same registry and leaves a coin out of its week-over-week ranking while a reviewed event sits inside the comparison (see [Homepage](./homepage.md)).
+`shared/lib/reviewed-protocol-internal-flows.ts` holds individually reviewed events that moved tokens inside an issuer's own balance sheet, each with its block timestamp. `persistMintBurnRows()` applies it through `applyReviewedProtocolInternalFlows()` (`worker/src/lib/mint-burn-pipeline/reviewed-protocol-flows.ts`) after atomic-roundtrip detection, in both the cron and `npx tsx worker/scripts/one-shot-backfill.ts backfill-mint-burn --execute --allow-atomic-import` paths, so a replay over the event's block rewrites the stored row and recalculates its hourly bucket. Matching requires the exact event id (chain, transaction hash, log index), stablecoin, chain, direction, and the reviewed token amount; a row whose amount drifts keeps its normal classification. There is no address-level rule. The homepage Biggest Supply Moves card reads the same registry and leaves a coin out of its week-over-week ranking while a reviewed event sits inside the comparison (see [Homepage](./homepage.md)).
 
 The only entry is USDai's September 23, 2026 burn of 128,895,244.1 tokens (block 508,237,173). The sUSDai vault funded USD.AI's EscrowTimelock escrow-admin Safe with exactly that amount through two same-evening strategy transfers; the Safe then called the hub's `withdraw()`, burning the USDai and paying 128,895,243.0 PYUSD to a recipient address. USD.AI's dashboard loan-reserve series rose by exactly 128,895,244.1 in the same half hour while protocol TVL stayed near $609.05M. The withdrawal path is the one an ordinary redemption uses, which is why the rule is per event. Four earlier escrow-admin Safe burns (July 10, July 20, August 21, September 14) and four repayment re-deposit mints lacked matching half-hour loan-reserve evidence at review and remain counted. `reviewedProtocolInternal` in persistence results counts rows tagged during a run.
 
@@ -256,7 +256,7 @@ Cron (`sync-mint-burn`) and admin backfill (`backfill-mint-burn`) now share a si
 | `roundtrip-sweep.ts` | Post-cron sweep for cross-run atomic roundtrip detection (7-day window, 200-group limit per run) |
 | `sync-state.ts` | Sync-state key helpers plus mode-specific upserts; cron and backfill both use `monotonic-max` so a partial run cannot regress the stored frontier (`replace` remains available but has no production caller) |
 
-Implementation invariant: `worker/src/api/backfill-mint-burn.ts` does not import from `worker/src/cron/sync-mint-burn.ts`; both entrypoints import shared helpers from `mint-burn-pipeline/*`.
+Implementation invariant: `worker/scripts/backfills/backfill-mint-burn.ts` does not import from `worker/src/cron/sync-mint-burn.ts`; both entrypoints import shared helpers from `mint-burn-pipeline/*`.
 
 `mint_burn_events.flow_type` is orthogonal to `burn_type`: `burn_type` still classifies burns as economic vs bridge/review, while `flow_type` applies to both mints and burns and marks tx-level bridge noise as `bridge_transfer`, same-transaction mint+burn noise as `atomic_roundtrip`, and reviewed issuer-internal movements as `protocol_internal`. Large-flow Tape projection skips `bridge_transfer` and `protocol_internal` rows; the Tape row already projected for the September 23 USDai burn before the review remains, because it records a burn that did occur.
 
@@ -453,7 +453,7 @@ These headings remain stable for feature-document navigation. The exhaustive HTT
 
 All API totals and series use closed UTC hours: `end=floor(now/3600)*3600`, `start=end-hours*3600`, with buckets in `[start,end)`. Responses publish `window: {start,end,semantics:"closed-utc-hours"}`; the open current hour is excluded. Aggregate chart hours vary, but coin counts, volumes, pressure and largest events use 24 closed hours ending at the same boundary; 7d/30d/90d nets share that end. Hourly retention cannot reconstruct rolling raw-event fragments.
 
-Parameters, response fields, cache/freshness behavior, and errors are canonical in [API Reference: `GET /api/mint-burn-flows`](./api-reference.md#get-apimint-burn-flows).
+Parameters, response fields, cache/freshness behavior, and errors are canonical in [Operator runbook: `GET /api/mint-burn-flows`](./api-reference.md#get-apimint-burn-flows).
 
 Aggregate mode constrains configured `(stablecoin_id, chain_id)` pairs in SQL and selects the deterministic largest 24-hour event per coin there; the Worker does not materialize the full event day to compute that field.
 
@@ -463,25 +463,25 @@ Each aggregate coin row publishes `pressureShiftScore` as the sole baseline-rela
 
 The event feed exposes the recent classified, valuation-aware ledger for one stablecoin. Safely settled, aggregated, and Tape-projected rows remain available for at least 8 days; the separate hourly aggregate keeps 90 days of public flow history. The detail-page history deliberately uses the counted view so bridge transfers, review-required burns, and atomic roundtrips do not appear as ordinary economic flow.
 
-Filters, cursor/offset pagination, ordering, response fields, cache/freshness behavior, and errors are canonical in [API Reference: `GET /api/mint-burn-events`](./api-reference.md#get-apimint-burn-events).
+Filters, cursor/offset pagination, ordering, response fields, cache/freshness behavior, and errors are canonical in [Operator runbook: `GET /api/mint-burn-events`](./api-reference.md#get-apimint-burn-events).
 
-### POST /api/backfill-mint-burn-prices (admin)
+### Operator CLI: backfill-mint-burn-prices
 
 The recent cron path auto-heals bounded NULL-price debt; this operator path handles older history. It accepts only exact UTC event-day evidence from stored history or bounded historical providers, never current spot, peg par, or another day's price. Definitive no-source results become irreducible, transient provider failures remain retryable, and recovered rows stay `pending_aggregate` until every affected hourly bucket is rebuilt and verified. An interrupted run resumes aggregate verification before selecting new valuation work.
 
-Auth, dry-run/confirmation/bookmark/idempotency requirements, parameters, dispositions, response fields, and errors are canonical in [API Reference: `POST /api/backfill-mint-burn-prices`](./api-reference-admin.md#post-apibackfill-mint-burn-prices). Use the [Mint/Burn Integrity runbook](./runbooks/mint-burn-integrity.md#historical-price-debt) for the operator sequence.
+Auth, dry-run/confirmation/bookmark/idempotency requirements, parameters, dispositions, response fields, and errors are canonical in [Operator runbook: historical mint/burn prices](./runbooks/one-shot-backfills.md#backfill-mint-burn-prices). Use the [Mint/Burn Integrity runbook](./runbooks/mint-burn-integrity.md#historical-price-debt) for the operator sequence; live aggregate replacement also requires the [atomic import availability gate](./runbooks/one-shot-backfills.md#transport-safety).
 
-### POST /api/backfill-mint-burn (admin)
+### Operator CLI: backfill-mint-burn
 
 Admin ingestion shares cron parsing, classification, persistence, aggregation, decode retries and safe-frontier policy. Default/live-tip scans anchor to parsed events or the indexing-safe empty frontier (`head-75`); explicit finalized historical chunks may advance fully. Decode failures hold the cursor below their block until re-observed successfully or quarantined on the third observation. Valid peers persist; every committed cursor follows successful hourly materialization.
 
-Auth/idempotency, selection and range parameters, progression fields, reclassification counters, and errors are canonical in [API Reference: `POST /api/backfill-mint-burn`](./api-reference-admin.md#post-apibackfill-mint-burn).
+Operator CLI arguments and execution/atomic-import guards, selection and range parameters, progression fields, reclassification counters, and errors are canonical in [Operator runbook: mint/burn ingestion](./runbooks/one-shot-backfills.md#backfill-mint-burn).
 
-### POST /api/reclassify-atomic-roundtrips (admin)
+### Operator CLI: reclassify-atomic-roundtrips
 
 This bounded repair applies the shared 0.5% same-transaction amount-tolerance rule in both directions: newly recognized mint/burn pairs become atomic roundtrips, while old atomic tags that fail the tolerance return to standard flow. Every affected hourly bucket is recalculated before a batch reports completion.
 
-Auth/idempotency, scope parameters, batch progression, counters, and errors are canonical in [API Reference: `POST /api/reclassify-atomic-roundtrips`](./api-reference-admin.md#post-apireclassify-atomic-roundtrips).
+Operator CLI arguments and execution/atomic-import guards, scope parameters, batch progression, counters, and errors are canonical in [Operator runbook: roundtrip reclassification](./runbooks/one-shot-backfills.md#reclassify-atomic-roundtrips).
 
 ---
 
@@ -609,7 +609,7 @@ During the Dwellir trial this lane never reaches the supplemental Dwellir operat
 - `worker/src/lib/__tests__/mint-burn-scoring.test.ts` — pressure-shift formula, gauge bands, composite gauge, flight-to-quality
 - `worker/src/lib/__tests__/mint-burn-pipeline.test.ts` — shared parse/classification/persistence/sync-state behavior parity
 - `worker/src/cron/__tests__/sync-mint-burn.test.ts` — cron ingestion orchestration and degraded-mode handling
-- `worker/src/api/__tests__/backfill-mint-burn.test.ts` — admin backfill chunking, `done/nextFromBlock`, and sync-state progression
+- `worker/scripts/backfills/__tests__/backfill-mint-burn.test.ts` — operator backfill chunking, `done/nextFromBlock`, and sync-state progression
 - `worker/src/api/__tests__/mint-burn-flows.test.ts` — API response shape validation plus burning/improving regression coverage
 - `shared/lib/__tests__/mint-burn-signals.test.ts` — shared direction/pressure/composite interpretation coverage
 

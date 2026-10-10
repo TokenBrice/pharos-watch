@@ -12,10 +12,10 @@ import {
 import { capCusdProvider } from "../authoritative-price-sources/cap-cusd";
 import { inheritedTrackedPriceProvider } from "../authoritative-price-sources/inherited-tracked";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
-import * as extraction from "../../api/backfill-depegs-extraction";
+import * as extraction from "../historical-depeg-extraction";
 
 const historicalParent = vi.hoisted(() => vi.fn());
-vi.mock("../../api/backfill-price-sources", () => ({
+vi.mock("../historical-market-prices", () => ({
   fetchMarketBackfillPriceSeries: historicalParent,
 }));
 

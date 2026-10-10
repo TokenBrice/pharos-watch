@@ -310,7 +310,7 @@ describe("classifyChangedFiles", () => {
     expect(classifyChangedFiles(["src/app/page.tsx"]).warnings).toEqual([]);
   });
 
-  it.each(["worker/src/routes/admin-routes.ts", "worker/src/api/backfill-depegs.ts", "functions/admin-api/[[path]].ts"])(
+  it.each(["worker/src/routes/admin-routes.ts", "worker/src/api/backfill-dews.ts", "functions/admin-api/[[path]].ts"])(
     "keeps admin guidance primary for %s without imposing it on public bindings", (file) => {
       expect(classifyChangedFiles([file]).docs.map((doc) => doc.path)).toContain("docs/api-reference-admin.md");
       expect(classifyChangedFiles(["worker/src/routes/public-routes.ts"]).docs.map((doc) => doc.path)).not.toContain("docs/api-reference-admin.md");

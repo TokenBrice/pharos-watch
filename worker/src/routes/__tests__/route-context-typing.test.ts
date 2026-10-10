@@ -25,9 +25,9 @@ describe("route context typing", () => {
       return new Response("ok");
     });
 
-    defineStaticRoute("backfill-depegs", async (routeCtx) => {
-      expectTypeOf(routeCtx).toEqualTypeOf<RouteContextFor<EndpointDependenciesForKey<"backfill-depegs">>>();
-      expectTypeOf(routeCtx.coingeckoApiKey).toEqualTypeOf<string | null>();
+    defineStaticRoute("rpc-provider-trial", async (routeCtx) => {
+      expectTypeOf(routeCtx).toEqualTypeOf<RouteContextFor<EndpointDependenciesForKey<"rpc-provider-trial">>>();
+      expectTypeOf(routeCtx.coingeckoApiKey).toEqualTypeOf<string | null | undefined>();
       return new Response("ok");
     });
 

@@ -18,7 +18,7 @@ import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 function action(overrides: Partial<StatusPageAction> = {}): StatusPageAction {
   return {
     label: "Backfill Supply",
-    path: "/api/backfill-supply-history",
+    path: "/api/remediate-blacklist-amount-gaps",
     confirm: "Run it?",
     destructive: false,
     method: "POST",
@@ -47,7 +47,7 @@ const auditEntry: AdminActionAuditEntry = {
   id: 7,
   at: 100,
   actor: "operator@example.com",
-  action: "backfill-supply-history",
+  action: "remediate-blacklist-amount-gaps",
   target: "usdc-circle",
   result: "ok",
   httpStatus: 200,
@@ -88,7 +88,7 @@ describe("actions workbench model", () => {
     expect(auditEntryMatchesAction({ ...auditEntry, action: "backfill-supply" }, action())).toBe(false);
     expect(
       auditEntryMatchesAction(
-        { ...auditEntry, action: "wrapper", details: { actionPath: "/api/backfill-supply-history" } },
+        { ...auditEntry, action: "wrapper", details: { actionPath: "/api/remediate-blacklist-amount-gaps" } },
         action(),
       ),
     ).toBe(true);

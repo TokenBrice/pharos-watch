@@ -66,7 +66,6 @@
   "worker/src/api/__tests__/telegram-mini-app-mutation.test.ts": 27,
   "worker/src/api/__tests__/telegram-mini-app-portability.test.ts": 14,
   "worker/src/api/__tests__/telegram-mini-app.test.ts": 12,
-  "worker/src/api/backfill-depegs-preview.ts": 13,
   "worker/src/api/telegram-mini-app-mutations.ts": 17,
   "worker/src/api/webhook-callbacks/__tests__/watchlist-import-retry.test.ts": 16,
   "worker/src/api/webhook-commands/__tests__/command-handlers.test.ts": 16,

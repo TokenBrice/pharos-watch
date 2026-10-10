@@ -18,7 +18,7 @@ import type {
 import { computeAndStoreDEWS } from "../lib/dews/service";
 import { getDexLiquidityTrendTolerances, selectTrendBaseline } from "../lib/dex-liquidity-response";
 import type { DexHistoryRow } from "../lib/dex-liquidity-response";
-import { parseOptionalDayWindow } from "./backfill-depegs-window";
+import { parseOptionalDayWindow } from "../lib/backfill-day-window";
 
 interface DepegEventRow {
   stablecoin_id: string;

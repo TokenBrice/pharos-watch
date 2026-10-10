@@ -13,7 +13,7 @@ import {
 
 const fetchMarketBackfillPriceSeriesMock = vi.fn();
 
-vi.mock("../../api/backfill-price-sources", () => ({
+vi.mock("../historical-market-prices", () => ({
   fetchMarketBackfillPriceSeries: (...args: unknown[]) => fetchMarketBackfillPriceSeriesMock(...args),
 }));
 

@@ -869,28 +869,20 @@ The branch/PR sequence itself is owned by [deployment-process.md](../deployment-
 
 After the production deploy, backfill history for live assets:
 
-- If the coin has `llamaId`, use `POST /api/backfill-supply-history`
-- If the coin has `geckoId` but no `llamaId`, use `POST /api/backfill-cg-prices`
+- If the coin has `llamaId`, use `npx tsx worker/scripts/one-shot-backfill.ts backfill-supply-history --execute`
+- If the coin has `geckoId` but no `llamaId`, use `npx tsx worker/scripts/one-shot-backfill.ts backfill-cg-prices --execute`
 - If it is pre-launch, skip runtime backfills until activation
 
-For commodity tokens (`pegCurrency: "GOLD" | "SILVER"`), `backfill-supply-history` automatically uses CoinGecko `market_chart` market caps as the primary source rather than DefiLlama TVL, because protocol TVL can diverge from token market cap (e.g. a protocol's multi-chain reserves exceeding the on-chain token supply). You still call the same endpoint; no extra flag is required. If CoinGecko has prices but missing/zero market caps, the endpoint can replay historical EVM `totalSupply()` at each UTC day close for assets with exactly one supported EVM deployment; it does not project the current supply backward across the window. Multi-deployment assets fail closed unless CoinGecko market caps or a validated TVL fallback can cover the requested days.
+For commodity tokens (`pegCurrency: "GOLD" | "SILVER"`), `backfill-supply-history` automatically uses CoinGecko `market_chart` market caps as the primary source rather than DefiLlama TVL, because protocol TVL can diverge from token market cap (e.g. a protocol's multi-chain reserves exceeding the on-chain token supply). You still call the same CLI job; no extra flag is required. If CoinGecko has prices but missing/zero market caps, the CLI can replay historical EVM `totalSupply()` at each UTC day close for assets with exactly one supported EVM deployment; it does not project the current supply backward across the window. Multi-deployment assets fail closed unless CoinGecko market caps or a validated TVL fallback can cover the requested days.
 
 Examples:
 
 ```bash
-curl -X POST "https://ops-api.pharos.watch/api/backfill-supply-history?stablecoin=ausd-acme" \
-  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-  -H "X-Pharos-Admin: 1" \
-  -H "Idempotency-Key: backfill-supply-ausd-acme"
+npx tsx worker/scripts/one-shot-backfill.ts backfill-supply-history --query 'stablecoin=ausd-acme' --execute
 ```
 
 ```bash
-curl -X POST "https://ops-api.pharos.watch/api/backfill-cg-prices?stablecoin=ausd-acme" \
-  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-  -H "X-Pharos-Admin: 1" \
-  -H "Idempotency-Key: backfill-cg-prices-ausd-acme"
+npx tsx worker/scripts/one-shot-backfill.ts backfill-cg-prices --query 'stablecoin=ausd-acme' --execute
 ```
 
 Optional:

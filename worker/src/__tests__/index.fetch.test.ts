@@ -330,7 +330,7 @@ describe("worker.fetch", () => {
     const { ctx } = makeExecutionContext();
 
     const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/backfill-depegs", {
+      new Request("https://api.pharos.watch/api/remediate-blacklist-amount-gaps", {
         method: "GET",
         headers: { "X-API-Key": VALID_API_KEY },
       }),

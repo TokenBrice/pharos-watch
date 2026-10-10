@@ -2,7 +2,7 @@
  * Shared shape for tape-event projectors.
  *
  * Each projector is a pure function over (db, options). The cron entry point
- * calls them with watermark-based defaults; the `/api/backfill-tape` endpoint
+ * calls them with watermark-based defaults; the historical operator CLI
  * passes operator-specified overrides.
  */
 import {

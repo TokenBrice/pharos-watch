@@ -19,8 +19,8 @@ const ASSET_SCOPE: StatusPageAction["scope"] = {
 
 function makeAction(overrides: Partial<StatusPageAction> = {}): StatusPageAction {
   return {
-    label: "Backfill Supply",
-    path: API_PATHS.backfillSupplyHistory(),
+    label: "Repair Blacklist Gaps",
+    path: API_PATHS.remediateBlacklistAmountGaps(),
     confirm: "Backfill supply history snapshots?",
     destructive: false,
     method: "POST",
@@ -75,24 +75,6 @@ describe("AdminActionButton", () => {
     vi.restoreAllMocks();
   });
 
-  it("adds non-USD fallback query for backfill supply when toggle is enabled", async () => {
-    renderActions([makeAction({ acceptsStablecoinFilter: true, scope: ASSET_SCOPE, risk: "moderate" })]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
-    selectAsset("CAD Digital", /CAD Digital.*CADD/i);
-    fireEvent.click(screen.getByLabelText(/Allow constant-price fallback for non-USD backfill/i));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-    });
-
-    const [url, init] = fetchMock.mock.calls[0] ?? [];
-    expect(url).toBe(
-      "/api/admin/backfill-supply-history?stablecoin=cadd-cad-digital&allow-constant-price-fallback=true",
-    );
-    expect(init?.method).toBe("POST");
-  });
 
   it("derives symbol-scoped requests from a tracked stablecoin selection", async () => {
     renderActions([
@@ -118,7 +100,7 @@ describe("AdminActionButton", () => {
       makeAction({ acceptsStablecoinFilter: true, scope: ASSET_SCOPE, risk: "moderate" }),
     ]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     selectAsset("CAD Digital", /CAD Digital.*CADD/i);
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
@@ -126,23 +108,10 @@ describe("AdminActionButton", () => {
     expect((screen.getByRole("button", { name: "Remove CAD Digital" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("does not show non-USD fallback toggle for non-supply actions", () => {
-    renderActions([
-      makeAction({
-        label: "Backfill CG Prices",
-        path: "/api/backfill-cg-prices",
-        confirm: "Backfill CoinGecko prices?",
-      }),
-    ]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Backfill CG Prices" }));
-
-    expect(screen.queryByLabelText(/Allow constant-price fallback for non-USD backfill/i)).toBeNull();
-  });
 
   it("returns focus to the action that opened the dialog", async () => {
     renderActions([makeAction()]);
-    const trigger = screen.getByRole("button", { name: "Backfill Supply" });
+    const trigger = screen.getByRole("button", { name: "Repair Blacklist Gaps" });
     trigger.focus();
 
     fireEvent.click(trigger);
@@ -160,7 +129,7 @@ describe("AdminActionButton", () => {
       }),
     ]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     expect((screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.click(screen.getByLabelText("Batch"));
@@ -170,7 +139,7 @@ describe("AdminActionButton", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/admin/backfill-supply-history");
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/admin/remediate-blacklist-amount-gaps");
   });
 
   it("uses the configured dry-run query contract by default", async () => {
@@ -217,7 +186,7 @@ describe("AdminActionButton", () => {
     renderActions([
       makeAction({
         label: "Audit Depegs",
-        path: "/api/audit-depeg-history?dry-run=true",
+        path: "/api/backfill-dews?repair=refresh-current&dry-run=true",
         confirm: "Audit depegs?",
         method: "GET",
         risk: "high",
@@ -240,7 +209,7 @@ describe("AdminActionButton", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const [url, init] = fetchMock.mock.calls[0] ?? [];
-    expect(url).toBe("/api/admin/audit-depeg-history?dry-run=false");
+    expect(url).toBe("/api/admin/backfill-dews?repair=refresh-current&dry-run=false");
     expect(init?.method).toBe("POST");
   });
 
@@ -258,7 +227,7 @@ describe("AdminActionButton", () => {
       </AdminActionExecutionProvider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     fireEvent.click(screen.getByLabelText(/I acknowledge this live action affects/i));
     expect((screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement).disabled).toBe(false);
 
@@ -290,7 +259,7 @@ describe("AdminActionButton", () => {
       }),
     ]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     fireEvent.click(screen.getByLabelText("Batch"));
     fireEvent.click(screen.getByLabelText(/^Dry run/));
     let acknowledgement = screen.getByLabelText(/I acknowledge this live action affects/i) as HTMLInputElement;
@@ -316,7 +285,7 @@ describe("AdminActionButton", () => {
     renderActions([
       makeAction({
         label: "Preview Mint/Burn Price Repair",
-        path: "/api/backfill-mint-burn-prices",
+        path: "/api/preview-repair",
         confirm: "Preview repairs?",
         kind: "inspect",
         risk: "high",
@@ -336,7 +305,7 @@ describe("AdminActionButton", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const [url, init] = fetchMock.mock.calls[0] ?? [];
-    expect(url).toBe("/api/admin/backfill-mint-burn-prices?dry-run=true");
+    expect(url).toBe("/api/admin/preview-repair?dry-run=true");
     expect(init?.method).toBe("POST");
   });
 
@@ -361,7 +330,7 @@ describe("AdminActionButton", () => {
     const keys = ["first-intent-key", "second-intent-key"];
     renderActions([makeAction()], () => keys.shift() ?? "unexpected-key");
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
     await screen.findByText("Outcome unknown");
 
@@ -391,7 +360,7 @@ describe("AdminActionButton", () => {
     const keys = ["first-intent-key", "second-intent-key"];
     renderActions([makeAction()], () => keys.shift() ?? "unexpected-key");
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
     await screen.findByText("Failed");
 
@@ -415,7 +384,7 @@ describe("AdminActionButton", () => {
       </AdminActionExecutionProvider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
     await screen.findByText("Succeeded");
 
@@ -442,7 +411,7 @@ describe("AdminActionButton", () => {
     }]);
     renderActions([makeAction()]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
     await screen.findByText("Outcome unknown");
@@ -459,7 +428,7 @@ describe("AdminActionButton", () => {
     }]);
     renderActions([makeAction()]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
     await screen.findByText("Failed");
@@ -477,7 +446,7 @@ describe("AdminActionButton", () => {
     }]);
     renderActions([makeAction()]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     const confirm = screen.getByRole("button", { name: "Confirm" });
     fireEvent.click(confirm);
     fireEvent.click(confirm);
@@ -506,7 +475,7 @@ describe("AdminActionButton", () => {
     const action = makeAction({ acceptsStablecoinFilter: false });
     renderActions([action, action]);
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Backfill Supply" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Repair Blacklist Gaps" })[0]);
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
@@ -527,7 +496,7 @@ describe("AdminActionButton", () => {
     expect(footerClose).toBeTruthy();
     fireEvent.click(footerClose!);
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Backfill Supply" })[1]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Repair Blacklist Gaps" })[1]);
     expect(await screen.findByText(/shared-result/)).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -546,7 +515,7 @@ describe("AdminActionButton", () => {
     }]);
     renderActions([makeAction()]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(await screen.findByRole("heading", { name: "Action queued" })).toBeTruthy();
@@ -566,7 +535,7 @@ describe("AdminActionButton", () => {
     }]);
     renderActions([makeAction()]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
     const followUp = await screen.findByText("//evil.example/jobs/42");
@@ -576,7 +545,7 @@ describe("AdminActionButton", () => {
   it("does not offer another confirmation after a successful execution", async () => {
     renderActions([makeAction()]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
     await screen.findByText("Succeeded");
 
@@ -594,7 +563,7 @@ describe("AdminActionButton", () => {
       </AdminActionExecutionProvider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
     await screen.findByText("Succeeded");
     fireEvent.click(screen.getAllByRole("button", { name: "Close" })[0]);
@@ -610,7 +579,7 @@ describe("AdminActionButton", () => {
       </AdminActionExecutionProvider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     expect(await screen.findByText("Succeeded")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -625,7 +594,7 @@ describe("AdminActionButton", () => {
     }]);
     renderActions([makeAction()]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
     await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
 

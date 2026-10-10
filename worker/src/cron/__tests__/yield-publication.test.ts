@@ -38,7 +38,7 @@ import {
   makeYieldSourceMeta,
   mockD1,
 } from "./yield-publication.test-support";
-import { handleBackfillYieldHistory } from "../../api/backfill-yield-history";
+import { handleBackfillYieldHistory } from "../../../scripts/backfills/backfill-yield-history";
 import { cleanupYieldSourceTest, mockYieldSourceRoutes } from "./yield-source.test-support";
 import { baseEvaluationInput } from "./yield-evaluation.test-support";
 import { evaluateYieldSources } from "../yield-sync/evaluation";
@@ -136,7 +136,7 @@ describe("publishYieldCoordinatorResults", () => {
       expect((await publish(bucket + 25, bucket)).ok).toBe(true);
       mockYieldSourceRoutes([{ match: "zephyrprotocol.com/api/v1/historicalreturns",
         headers: { "x-last-success-at": String((bucket + 123) * 1000) }, body: { oneDay: { effectiveApy: 4.8 } } }]);
-      const response = await handleBackfillYieldHistory({ db, url: new URL("https://api.pharos.watch/api/backfill-yield-history") });
+      const response = await handleBackfillYieldHistory({ db, url: new URL("https://operator.invalid/jobs/backfill-yield-history") });
       expect((await response.json() as { rowsInserted: number }).rowsInserted).toBe(0);
       expect(sqlite.prepare("SELECT recorded_at, source_observed_at FROM yield_history").all())
         .toEqual([{ recorded_at: bucket, source_observed_at: bucket }]);

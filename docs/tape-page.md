@@ -104,7 +104,7 @@ PSI shifts use the immediately preceding sample's score, including same-band sam
 
 DEWS band projection requires durable publication proof. The forward sparse `stress_signals` scan and its prior-band seed join `surface_publication_generations` at `surface = "dews"` and `state = "published"`. Band changes always create a sparse-history row, while unchanged half-hourly samples may be omitted. A partially written generation that fails DEWS row-count validation therefore emits no Tape event and cannot advance either DEWS projector watermark; a later published generation diffs against the last published band rather than the failed intermediate row. The DEWS cache pointer and ledger row commit atomically, while migration `0182` plus runtime pointer reconciliation bootstrap the publication that predates this contract.
 
-Current projector roster (from `TAPE_PROJECTOR_JOBS` in `worker/src/lib/tape-projectors/registry.ts`, consumed by `worker/src/cron/project-tape.ts` and `worker/src/api/backfill-tape.ts`):
+Current projector roster (from `TAPE_PROJECTOR_JOBS` in `worker/src/lib/tape-projectors/registry.ts`, consumed by `worker/src/cron/project-tape.ts` and `worker/scripts/backfills/backfill-tape.ts`):
 
 Static-catalog source-key probes use the same bounded D1 overload retry as projector inserts, so a transient overload does not turn a valid catalog projection into a failed run.
 
@@ -165,7 +165,7 @@ The homepage marquee in `src/components/homepage-tape.tsx` consumes the same bac
 
 ## Admin
 
-- `POST /api/backfill-tape` (`worker/src/api/backfill-tape.ts`, route key `backfill-tape` in `shared/lib/api-endpoints/definitions.ts`) — admin-only, mutating. Re-runs projectors with overrides; supports `?dryRun=true` and the status "Backfill Tape" action. For depeg, freeze or large mint/burn repairs older than 90 days, pass `since` (`0` for full history), preferably with `until` and bounded `maxRows`; repeat to drain unprojected identities.
+- `npx tsx worker/scripts/one-shot-backfill.ts backfill-tape --query 'dry-run=true'` — operator-only remote-D1 projector replay, no HTTP/dashboard action. For repairs older than 90 days pass `since=0`, preferably `until` and bounded `maxRows`, then review before adding `--execute` with `dry-run=false`. See [command contract](./runbooks/one-shot-backfills.md#backfill-tape).
 
 ---
 

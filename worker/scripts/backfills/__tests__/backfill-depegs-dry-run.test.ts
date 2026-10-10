@@ -1,0 +1,489 @@
+import { readJsonResponse } from "../../../src/test-helpers/__shared/auth";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../../src/test-helpers/__shared/auth";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { makeReplayDiagnostics } from "../../../src/api/__tests__/depeg-replay.test-support";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { fetchAuthoritativeHistoricalPriceSeries } from "../../../src/lib/authoritative-price-sources";
+import { backfillCoin } from "../backfill-depegs-replay";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
+
+vi.mock("../../../src/lib/stablecoins-cache", () => ({
+  loadStablecoinsCache: vi.fn(async () => ({ kind: "missing", reason: "test", payload: null })),
+}));
+
+vi.mock("../../../src/lib/authoritative-price-sources", () => ({
+  fetchAuthoritativeHistoricalPriceSeries: vi.fn(async () => ({
+    matched: false,
+    source: null,
+    prices: null,
+  })),
+}));
+
+vi.mock("../../../src/lib/historical-market-prices", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../src/lib/historical-market-prices")>();
+  return {
+    ...actual,
+    fetchMarketBackfillPriceSeries: vi.fn(async () => ({
+      prices: [
+        { timestamp: 1_000, price: 1.02 },
+        { timestamp: 2_000, price: 1.03 },
+        { timestamp: 3_000, price: 1.0 },
+      ],
+      diagnostics: makeReplayDiagnostics(3),
+    })),
+  };
+});
+
+vi.mock("../../../src/lib/backfill-fx", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../src/lib/backfill-fx")>();
+  return {
+    ...actual,
+    fetchHistoricalFxRates: vi.fn(async () => ({})),
+    fetchHistoricalSecondaryFxRates: vi.fn(async () => ({})),
+    buildCommodityMedianSeriesFromCg: vi.fn(async () => ({})),
+  };
+});
+
+import { handleBackfillDepegsTrusted } from "../backfill-depegs";
+import { fetchMarketBackfillPriceSeries } from "../../../src/lib/historical-market-prices";
+import { buildCommodityMedianSeriesFromCg, fetchHistoricalFxRates } from "../../../src/lib/backfill-fx";
+
+stubCryptoForAuth();
+
+describe("handleBackfillDepegs replay windows", () => {
+  beforeEach(() => {
+    mockFetch([
+      {
+        match: "/stablecoin/",
+        body: {
+          gecko_id: "tether",
+          tokens: [{ date: "1000", circulating: { peggedUSD: 2_000_000_000 } }],
+        },
+      },
+    ]);
+  });
+  it.each(["protocol-par", "protocol-redeem"])(
+    "distinguishes nominal source-only replay from legacy executable history: %s",
+    async (source) => {
+      vi.mocked(fetchAuthoritativeHistoricalPriceSeries).mockResolvedValueOnce({
+        matched: true,
+        source,
+        prices: [
+          { timestamp: 1_000, price: 1.02 },
+          { timestamp: 2_000, price: 1.03 },
+          { timestamp: 3_000, price: 1 },
+        ],
+      });
+      const result = await backfillCoin({
+        meta: TRACKED_META_BY_ID.get("usdt-tether")!,
+        geckoId: "tether",
+        getPegRef: () => 1,
+        supplyByDate: [{ ts: 1_000, supply: 2_000_000_000 }],
+      });
+      if (source === "protocol-par") {
+        expect(result.events).toBeNull();
+        expect(result.sourceKind).toBe("preserve-existing");
+      } else {
+        expect(result.sourceKind).toBe("authoritative");
+        expect(result.events).toEqual([expect.objectContaining({
+          direction: "above",
+          startedAt: 1_000,
+          endedAt: 3_000,
+          peakDeviationBps: 300,
+        })]);
+      }
+    },
+  );
+
+  it("previews replay-vs-backfill differences without mutating existing rows", async () => {
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
+        matchBinds: ["usdt-tether"],
+        rows: [
+          {
+            id: 1,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            peg_type: "peggedUSD",
+            direction: "above",
+            peak_deviation_bps: 300,
+            started_at: 1_000,
+            ended_at: 3_000,
+            start_price: 1.02,
+            peak_price: 1.03,
+            recovery_price: 1.0,
+            peg_reference: 1,
+            source: "backfill",
+          },
+          {
+            id: 2,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            peg_type: "peggedUSD",
+            direction: "below",
+            peak_deviation_bps: -150,
+            started_at: 4_000,
+            ended_at: null,
+            start_price: 0.985,
+            peak_price: 0.985,
+            recovery_price: null,
+            peg_reference: 1,
+            source: "live",
+          },
+        ],
+      },
+    ]);
+
+    const req = makeApiRequest("/api/backfill-depegs?stablecoin=usdt-tether&dry-run=true", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
+
+    const body = await readJsonResponse(res, 200) as {
+      dryRun: boolean;
+      coinsProcessed: number;
+      recomputedBackfillEvents: number;
+      previews: Array<{
+        stablecoinId: string;
+        replaySource: string;
+        exactMatch: boolean | null;
+        existingBackfillEventCount: number;
+        recomputedBackfillEventCount: number | null;
+        existingLiveEventCount: number;
+        existingOpenLiveEventCount: number;
+      }>;
+    };
+
+    expect(body.dryRun).toBe(true);
+    expect(body.coinsProcessed).toBe(1);
+    expect(body.recomputedBackfillEvents).toBe(1);
+    expect(body.previews).toHaveLength(1);
+    expect(body.previews[0]).toMatchObject({
+      stablecoinId: "usdt-tether",
+      replaySource: "market",
+      exactMatch: true,
+      existingBackfillEventCount: 1,
+      recomputedBackfillEventCount: 1,
+      existingLiveEventCount: 1,
+      existingOpenLiveEventCount: 1,
+    });
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO depeg_events"))).toBe(false);
+  });
+
+  it("preserves existing rows on an all-absent historical supply replay", async () => {
+    mockFetch([{
+      match: "/stablecoin/",
+      body: { gecko_id: "tether", tokens: [
+        { date: "1000", circulating: {} },
+        { date: "2000" },
+        { date: "3000", circulating: { peggedUSD: "invalid" } },
+      ] },
+    }]);
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+       started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
+      VALUES (1, 'usdt-tether', 'USDT', 'peggedUSD', 'above', 300,
+       1000, 3000, 1.02, 1.03, 1, 1, 'backfill')`).run();
+    const existing = sqlite.prepare("SELECT * FROM depeg_events WHERE id = 1").get();
+    const req = makeApiRequest("/api/backfill-depegs?stablecoin=usdt-tether", {
+      adminKey: "secret", method: "POST",
+    });
+    const response = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
+    const body = await readJsonResponse(response, 200) as { eventsCreated: number };
+    expect(body.eventsCreated).toBe(0);
+    expect(sqlite.prepare("SELECT * FROM depeg_events WHERE id = 1").get()).toEqual(existing);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_backfill_runs").get()).toEqual({ count: 0 });
+  });
+
+  it("previews stale-row removal when a trusted replay finds zero events", async () => {
+    vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce({
+      prices: [
+        { timestamp: 1_000, price: 1.0 },
+        { timestamp: 2_000, price: 0.999 },
+      ],
+      diagnostics: makeReplayDiagnostics(2),
+    });
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
+        matchBinds: ["usdt-tether"],
+        rows: [
+          {
+            id: 10,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            peg_type: "peggedUSD",
+            direction: "below",
+            peak_deviation_bps: -250,
+            started_at: 1_000,
+            ended_at: 2_000,
+            start_price: 0.975,
+            peak_price: 0.975,
+            recovery_price: 1,
+            peg_reference: 1,
+            source: "backfill",
+          },
+        ],
+      },
+    ]);
+
+    const req = makeApiRequest("/api/backfill-depegs?stablecoin=usdt-tether&dry-run=true", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
+    const body = await readJsonResponse(res, 200) as {
+      recomputedBackfillEvents: number;
+      previews: Array<{
+        recomputedBackfillEventCount: number | null;
+        removedBackfillEventCount: number;
+        removedBackfillEventIdsSample: number[];
+      }>;
+    };
+
+    expect(body.recomputedBackfillEvents).toBe(0);
+    expect(body.previews[0]).toMatchObject({
+      recomputedBackfillEventCount: 0,
+      removedBackfillEventCount: 1,
+      removedBackfillEventIdsSample: [10],
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(false);
+  });
+
+  it("passes a bounded replay window through dry-run backfill previews", async () => {
+    const day1 = Math.floor(new Date("2025-01-01T00:00:00Z").getTime() / 1000);
+    const day2 = Math.floor(new Date("2025-01-31T00:00:00Z").getTime() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
+        matchBinds: ["usdt-tether"],
+        rows: [],
+      },
+    ]);
+
+    const req = makeApiRequest(`/api/backfill-depegs?stablecoin=usdt-tether&dry-run=true&startDay=${day1}&endDay=${day2}`, {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
+
+    const body = await readJsonResponse(res, 200) as {
+      dryRun: boolean;
+      startDay: number | null;
+      endDay: number | null;
+      contextDays: number | null;
+    };
+    expect(body.dryRun).toBe(true);
+    expect(body.startDay).toBe(day1);
+    expect(body.endDay).toBe(day2);
+    expect(body.contextDays).toBe(7);
+
+    expect(vi.mocked(fetchMarketBackfillPriceSeries)).toHaveBeenCalledWith(
+      expect.anything(),
+      "tether",
+      expect.objectContaining({
+        granularity: "hourly",
+        range: {
+          startSec: day1 - 7 * 86400,
+          endSec: day2 + (8 * 86400) - 1,
+        },
+      }),
+    );
+  });
+
+  it("supports configurable replay context for bounded dry-run previews", async () => {
+    const day1 = Math.floor(new Date("2025-02-01T00:00:00Z").getTime() / 1000);
+    const day2 = Math.floor(new Date("2025-02-28T00:00:00Z").getTime() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
+        matchBinds: ["usdt-tether"],
+        rows: [],
+      },
+    ]);
+
+    const req = makeApiRequest(`/api/backfill-depegs?stablecoin=usdt-tether&dry-run=true&startDay=${day1}&endDay=${day2}&contextDays=30`, {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
+
+    const body = await readJsonResponse(res, 200) as {
+      contextDays: number | null;
+    };
+    expect(body.contextDays).toBe(30);
+
+    expect(vi.mocked(fetchMarketBackfillPriceSeries)).toHaveBeenCalledWith(
+      expect.anything(),
+      "tether",
+      expect.objectContaining({
+        range: {
+          startSec: day1 - 30 * 86400,
+          endSec: day2 + (31 * 86400) - 1,
+        },
+      }),
+    );
+  });
+
+  it("requests native-peg market replay for supported non-USD fiat assets", async () => {
+    vi.mocked(fetchHistoricalFxRates).mockResolvedValueOnce({
+      EUR: [{ timestamp: 1_000, rate: 1.08 }],
+    });
+    mockFetch([
+      {
+        match: "/stablecoin/",
+        body: {
+          gecko_id: "euro-coin",
+          tokens: [{ date: "1000", circulating: { peggedUSD: 2_000_000_000 } }],
+        },
+      },
+    ]);
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
+        matchBinds: ["eurc-circle"],
+        rows: [],
+      },
+    ]);
+
+    const req = makeApiRequest("/api/backfill-depegs?stablecoin=eurc-circle&dry-run=true", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
+    expect(res.status).toBe(200);
+
+    expect(vi.mocked(fetchMarketBackfillPriceSeries)).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "eurc-circle" }),
+      "euro-coin",
+      expect.objectContaining({
+        granularity: "daily",
+        quote: {
+          pegCurrency: "EUR",
+          useNativePegQuote: true,
+        },
+      }),
+    );
+  });
+
+  it("replaces only overlapping backfill rows when mutating a bounded replay window", async () => {
+    const day1 = Math.floor(new Date("2025-01-01T00:00:00Z").getTime() / 1000);
+    const day2 = Math.floor(new Date("2025-01-02T00:00:00Z").getTime() / 1000);
+    mockFetch([
+      {
+        match: "/stablecoin/",
+        body: {
+          gecko_id: "tether",
+          tokens: [{ date: String(day1), circulating: { peggedUSD: 2_000_000_000 } }],
+        },
+      },
+    ]);
+    vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce({
+      prices: [
+        { timestamp: day1 + 3_600, price: 1.02 },
+        { timestamp: day1 + 7_200, price: 1.03 },
+        { timestamp: day2 + 3_600, price: 1.0 },
+      ],
+      diagnostics: makeReplayDiagnostics(3),
+    });
+
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+       started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
+      VALUES (?, ?, 'USDT', 'peggedUSD', 'below', -220, ?, ?, 0.98, 0.978, 1, 1, ?)`);
+    insert.run(1, "usdt-tether", day1 + 3_600, day2 + 3_600, "backfill");
+    insert.run(2, "usdt-tether", day2 + 5 * 86_400, day2 + 6 * 86_400, "backfill");
+    insert.run(3, "usdt-tether", day1 + 1_800, null, "live");
+    insert.run(4, "usdc-circle", day1 + 3_600, day2 + 3_600, "backfill");
+    insert.run(5, "usdt-tether", day1 - 86_400, day1 - 1, "backfill");
+    insert.run(6, "usdt-tether", day1 - 2 * 86_400, day1, "backfill");
+    insert.run(7, "usdt-tether", day2 + 86_400 - 1, null, "backfill");
+
+    const req = makeApiRequest("/api/backfill-depegs?stablecoin=usdt-tether&startDay=2025-01-01&endDay=2025-01-02", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
+
+    const body = await readJsonResponse(res, 200) as {
+      eventsCreated: number;
+      errors?: string[] | null;
+    };
+    expect(body.eventsCreated).toBe(1);
+    expect(body.errors ?? []).toHaveLength(0);
+
+    expect(sqlite.prepare("SELECT id FROM depeg_events WHERE id <= 7 ORDER BY id").all())
+      .toEqual([{ id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }]);
+    expect(sqlite.prepare("SELECT stablecoin_id, source, started_at, ended_at FROM depeg_events WHERE id > 7").all())
+      .toEqual([{ stablecoin_id: "usdt-tether", source: "backfill", started_at: day1 + 3_600, ended_at: day2 + 3_600 }]);
+  });
+
+  it("deletes overlapping backfill rows when a mutating trusted replay finds zero events", async () => {
+    vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce({
+      prices: [
+        { timestamp: 1_000, price: 1.0 },
+        { timestamp: 2_000, price: 0.999 },
+      ],
+      diagnostics: makeReplayDiagnostics(2),
+    });
+    const db = mockD1([
+      { match: "FROM depeg_events e", rows: [] },
+      { match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at", rows: [] },
+      { match: "DELETE FROM depeg_events", rows: [] },
+      { match: "INSERT INTO depeg_backfill_runs", rows: [] },
+    ]);
+    const req = makeApiRequest("/api/backfill-depegs?stablecoin=usdt-tether", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
+    const body = await readJsonResponse(res, 200) as { eventsCreated: number; skipped?: string[] };
+    expect(body.eventsCreated).toBe(0);
+    expect(body.skipped ?? []).toEqual([]);
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO depeg_events"))).toBe(false);
+  });
+
+  it("rejects delisted commodity assets before requesting median price history", async () => {
+    vi.mocked(buildCommodityMedianSeriesFromCg).mockClear();
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
+        matchBinds: ["xnk-kinka"],
+        rows: [],
+      },
+    ]);
+    const req = makeApiRequest(
+      "/api/backfill-depegs?stablecoin=xnk-kinka&dry-run=true&startDay=2026-05-01&endDay=2026-05-01&contextDays=1",
+      {
+        adminKey: "secret",
+        method: "POST",
+      },
+    );
+
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url), coingeckoApiKey: "cg-test-key" });
+    expect(await readJsonResponse(res, 404)).toEqual({ error: "Stablecoin not found" });
+    expect(buildCommodityMedianSeriesFromCg).not.toHaveBeenCalled();
+  });
+});

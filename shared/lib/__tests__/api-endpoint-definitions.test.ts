@@ -19,7 +19,7 @@ describe("endpoint definition factory parity", () => {
     expectTypeOf<EndpointDefinitionByKey<"stablecoins">["key"]>().toEqualTypeOf<"stablecoins">();
     expectTypeOf<EndpointDefinitionByKey<"stablecoins">["methods"]>().toEqualTypeOf<readonly ["GET"]>();
     expectTypeOf<EndpointDefinitionByKey<"feedback">["methods"]>().toEqualTypeOf<readonly ["POST"]>();
-    expectTypeOf<EndpointDefinitionByKey<"audit-depeg-history">["methods"]>()
+    expectTypeOf<EndpointDefinitionByKey<"backfill-dews">["methods"]>()
       .toEqualTypeOf<readonly ["GET", "POST"]>();
   });
 

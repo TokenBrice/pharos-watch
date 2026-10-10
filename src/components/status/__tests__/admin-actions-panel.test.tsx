@@ -82,7 +82,7 @@ describe("AdminActionsPanel", () => {
     fireEvent.change(search, { target: { value: "DEWS historical" } });
     expect(details?.hasAttribute("open")).toBe(true);
     expect(screen.getByText("Validate DEWS History")).toBeTruthy();
-    expect(screen.getByText(/2\/\d+ actions/)).toBeTruthy();
+    expect(screen.getByText(`1/${ACTIONS.length} actions`)).toBeTruthy();
   });
 
   it("opens the complete catalog when the system is not healthy and composes intent and risk filters", () => {
@@ -107,7 +107,7 @@ describe("AdminActionsPanel", () => {
             id: 9,
             at: 1_699_999_940,
             actor: "operator@example.com",
-            action: "backfill-supply-history",
+            action: "remediate-blacklist-amount-gaps",
             target: "usdc-circle",
             result: "ok",
             httpStatus: 200,
@@ -121,7 +121,7 @@ describe("AdminActionsPanel", () => {
       isError: false,
       refetch: vi.fn().mockResolvedValue(undefined),
     });
-    renderPanel({ recommendations: [recommendation("/api/backfill-supply-history")] });
+    renderPanel({ recommendations: [recommendation("/api/remediate-blacklist-amount-gaps")] });
 
     expect(screen.getByText("The matching lane is unhealthy.")).toBeTruthy();
     expect(screen.getByText("1 audited records loaded")).toBeTruthy();

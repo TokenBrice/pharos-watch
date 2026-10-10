@@ -21,9 +21,7 @@ describe("status action recommendations", () => {
       message: "Missing price ratio is stale.",
     };
 
-    expect(getRecommendedActionsForCause(cause).map((action) => action.path)).toEqual([
-      "/api/backfill-cg-prices",
-    ]);
+    expect(getRecommendedActionsForCause(cause)).toEqual([]);
   });
 
   it("recommends cron recovery actions for unhealthy jobs", () => {

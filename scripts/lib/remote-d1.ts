@@ -19,6 +19,8 @@ export type D1Client = {
   query<T>(sql: string): T[];
   queryRaw(sql: string): string;
   executeStatements(statements: string[], prefix: string): void;
+  /** One unchunked SQL-file import, retaining its aggregate receipt. */
+  executeStatementsRaw?(statements: string[], prefix: string): string;
 };
 
 export type RemoteD1Client = D1Client;
@@ -53,15 +55,15 @@ function executeSqlFile(
   statements: string[],
   prefix: string,
   options: Required<Pick<D1ClientOptions, "cwd" | "maxBuffer" | "target">>,
-): void {
-  if (statements.length === 0) return;
+): string {
+  if (statements.length === 0) return "[]";
 
   const tmpDir = mkdtempSync(join(tmpdir(), `${prefix}-`));
   try {
     const sqlFile = join(tmpDir, "statements.sql");
     // Temp SQL file is created under mkdtempSync() and never leaves this function.
     writeFileSync(sqlFile, statements.join("\n"));
-    executeWrangler(["d1", "execute", databaseName, `--${options.target}`, "--file", sqlFile, "--json"], options);
+    return executeWrangler(["d1", "execute", databaseName, `--${options.target}`, "--file", sqlFile, "--json"], options);
   } finally {
     rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -94,6 +96,9 @@ export function createD1Client(databaseName: string, options: D1ClientOptions = 
           resolvedOptions,
         );
       }
+    },
+    executeStatementsRaw(statements: string[], prefix: string): string {
+      return executeSqlFile(databaseName, statements, prefix, resolvedOptions);
     },
   };
 }

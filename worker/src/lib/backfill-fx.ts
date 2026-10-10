@@ -24,7 +24,7 @@ import {
   SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS,
 } from "./fx-config";
 import type { D1Database } from "@cloudflare/workers-types";
-import { fetchCgPriceHistoryHourly, type HistoricalMarketBackfillRange } from "../api/backfill-price-sources";
+import { fetchCgPriceHistoryHourly, type HistoricalMarketBackfillRange } from "./historical-market-prices";
 
 function isValidSecondaryFxCacheDate(date: string, year: number): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !date.startsWith(`${year}-`)) return false;

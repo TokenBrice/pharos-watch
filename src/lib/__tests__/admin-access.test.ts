@@ -37,7 +37,7 @@ describe("adminMutation", () => {
 
   it("preserves raw response and replay metadata on HTTP failures", async () => {
     mockFetch([{
-      match: "/api/admin/backfill-supply-history",
+      match: "/api/admin/remediate-blacklist-amount-gaps",
       body: { error: "execution_unknown", message: "Reconcile downstream state." },
       status: 503,
       headers: {
@@ -46,7 +46,7 @@ describe("adminMutation", () => {
       },
     }], { requireMatch: true });
 
-    const error = await adminMutation("/api/backfill-supply-history", {
+    const error = await adminMutation("/api/remediate-blacklist-amount-gaps", {
       idempotencyKey: "intent-unknown",
     }).catch((caught: unknown) => caught);
 
@@ -82,11 +82,11 @@ describe("adminMutation", () => {
 
   it("preserves an explicitly supplied content type instead of the JSON default", async () => {
     const fetchSpy = mockFetch([{
-      match: "/api/admin/backfill-supply-history",
+      match: "/api/admin/remediate-blacklist-amount-gaps",
       body: { accepted: true },
     }], { requireMatch: true });
 
-    await adminMutation("/api/backfill-supply-history", {
+    await adminMutation("/api/remediate-blacklist-amount-gaps", {
       headers: { "Content-Type": "text/csv" },
       body: "raw,payload",
     });

@@ -15,7 +15,7 @@ import { inheritedTrackedPriceProvider } from "../authoritative-price-sources/in
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 
 const historicalParent = vi.hoisted(() => vi.fn());
-vi.mock("../../api/backfill-price-sources", () => ({
+vi.mock("../historical-market-prices", () => ({
   fetchMarketBackfillPriceSeries: historicalParent,
 }));
 const context = { assetsById: new Map<string, PeggedAsset>() };

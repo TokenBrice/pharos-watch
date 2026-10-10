@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
-import { API_PATHS } from "@shared/lib/api-endpoints";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { CoinSelector } from "@/components/coin-selector";
 import type {
@@ -165,9 +164,7 @@ export function AdminActionExecutionDialog({
   const singleScopeId = useId();
   const batchScopeId = useId();
   const dryRunInputId = useId();
-  const fallbackInputId = useId();
   const acknowledgementInputId = useId();
-  const isSupplyBackfillAction = action.path === API_PATHS.backfillSupplyHistory();
   const assetScope = action.scope.type === "asset-or-batch" ? action.scope : null;
   const fixedScopeLabel = action.scope.type === "asset-or-batch" ? null : action.scope.label;
   const dryRunConfig = action.dryRun.supported ? action.dryRun : null;
@@ -179,7 +176,6 @@ export function AdminActionExecutionDialog({
   const [scopeMode, setScopeMode] = useState<"single" | "batch">("single");
   const [selectedAsset, setSelectedAsset] = useState<CoinOption | null>(null);
   const [dryRun, setDryRun] = useState(initialDryRun);
-  const [allowConstantPriceFallback, setAllowConstantPriceFallback] = useState(false);
   const [broadScopeAcknowledged, setBroadScopeAcknowledged] = useState(false);
   const assetFilter = selectedAsset
     ? assetScope?.assetIdentifier === "symbol"
@@ -200,9 +196,6 @@ export function AdminActionExecutionDialog({
   if (dryRunConfig) {
     requestPath = setQueryParameter(requestPath, dryRunConfig.queryParam, dryRun ? "true" : "false");
   }
-  if (isSupplyBackfillAction && allowConstantPriceFallback) {
-    requestPath = setQueryParameter(requestPath, "allow-constant-price-fallback", "true");
-  }
 
   const requestMethod = dryRunConfig
     ? dryRun
@@ -215,10 +208,7 @@ export function AdminActionExecutionDialog({
       : "batch"
     : action.scope.type;
   const executionModeKey = dryRunConfig ? (dryRun ? "dry-run" : "live") : "execute";
-  const fallbackScopeKey = isSupplyBackfillAction
-    ? `|constant-price-fallback:${allowConstantPriceFallback ? "allowed" : "off"}`
-    : "";
-  const scopeKey = `${baseScopeKey}|mode:${executionModeKey}${fallbackScopeKey}`;
+  const scopeKey = `${baseScopeKey}|mode:${executionModeKey}`;
   const baseScopeLabel = assetScope
     ? scopeMode === "single"
       ? selectedAsset
@@ -412,24 +402,6 @@ export function AdminActionExecutionDialog({
             </div>
           ))}
 
-        {isSupplyBackfillAction && (
-          <label
-            htmlFor={fallbackInputId}
-            className="flex min-h-11 items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm"
-          >
-            <input
-              id={fallbackInputId}
-              type="checkbox"
-              checked={allowConstantPriceFallback}
-              onChange={(event) => {
-                setAllowConstantPriceFallback(event.target.checked);
-                setBroadScopeAcknowledged(false);
-              }}
-              disabled={inputsLocked}
-            />
-            Allow constant-price fallback for non-USD backfill
-          </label>
-        )}
 
         {(action.preconditions.length > 0 || action.blockedBy.length > 0 || action.rollback || action.runbookPath) && (
           <div className="space-y-3 border-t border-border/60 pt-3 text-xs">

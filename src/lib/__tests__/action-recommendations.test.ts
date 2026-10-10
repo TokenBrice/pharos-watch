@@ -23,7 +23,6 @@ describe("deriveStatusActionRecommendations", () => {
     });
 
     expect(recommendations.map((entry) => entry.action.path)).toEqual([
-      "/api/backfill-blacklist-current-balances",
       "/api/debug-sync-state",
       "/api/remediate-blacklist-amount-gaps",
     ]);
