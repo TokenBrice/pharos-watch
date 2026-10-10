@@ -136,7 +136,7 @@ export async function reportWorkflowFailure(
   // Cancellation and unexplained skips are not a green recovery or a new failure.
   if (failedIds.length === 0) return result;
   const jobs = await github.listJobs();
-  const failures: { job: string; step: string; excerpt: string }[] = [];
+  const failures: { job: string; step: string; excerpt: string; reason?: "job-log-unavailable" }[] = [];
   for (const id of failedIds) {
     const name = report.jobNames[id] ?? id;
     const leaves = jobs.filter((job) => job.conclusion === "failure"
@@ -147,12 +147,19 @@ export async function reportWorkflowFailure(
     }
     for (const job of leaves) {
       const steps = job.steps?.filter((step) => step.conclusion === "failure") ?? [];
-      let log: string;
+      let log: string | null;
       try { log = await github.jobLog(job.id); }
-      catch { log = ""; }
+      catch { log = null; }
       const failingSteps: WorkflowStep[] = steps.length ? steps : [{ name: "job", conclusion: "failure" }];
       for (const step of failingSteps) {
-        failures.push({ job: job.name, step: step.name, excerpt: firstActionableError(log, step.name, step) });
+        failures.push({
+          job: job.name,
+          step: step.name,
+          excerpt: log === null
+            ? "Job log unavailable (reason: job-log-unavailable). Logs may be expired or inaccessible; inspect the linked run."
+            : firstActionableError(log, step.name, step),
+          reason: log === null ? "job-log-unavailable" : undefined,
+        });
       }
     }
   }
@@ -160,9 +167,12 @@ export async function reportWorkflowFailure(
   for (const failure of failures) {
     const marker = incidentMarker(report.workflowFile, failure.job, failure.step);
     const existing = issues.find((issue) => issue.body?.includes(marker));
-    const body = `${workflowMarker(report.workflowFile)}\n${marker}\n${sequence(report)}\n\n# Workflow failure\n\nWorkflow: ${safeText(report.workflowName)} (\`${report.workflowFile}\`)\nJob: ${safeText(failure.job)}\nStep: ${safeText(failure.step)}\nRun: ${report.runUrl}\n\nFirst actionable error excerpt:\n\n\`\`\`text\n${failure.excerpt}\n\`\`\`\n\nCloses automatically after the next fully green mandatory run on main. Runbook: docs/runbooks/workflow-incidents.md\n`;
+    const evidence = failure.reason
+      ? `Log evidence unavailable:\n\n\`\`\`json\n${JSON.stringify({ status: "unavailable", reason: failure.reason })}\n\`\`\`\n\n${failure.excerpt}`
+      : `First actionable error excerpt:\n\n\`\`\`text\n${failure.excerpt}\n\`\`\``;
+    const body = `${workflowMarker(report.workflowFile)}\n${marker}\n${sequence(report)}\n\n# Workflow failure\n\nWorkflow: ${safeText(report.workflowName)} (\`${report.workflowFile}\`)\nJob: ${safeText(failure.job)}\nStep: ${safeText(failure.step)}\nRun: ${report.runUrl}\n\n${evidence}\n\nCloses automatically after the next fully green mandatory run on main. Runbook: docs/runbooks/workflow-incidents.md\n`;
     if (existing) {
-      await github.comment(existing.number, `Failure ${existing.state === "closed" ? "recurred" : "repeated"}: ${report.runUrl}\n\nFirst actionable error excerpt:\n\n\`\`\`text\n${failure.excerpt}\n\`\`\``);
+      await github.comment(existing.number, `Failure ${existing.state === "closed" ? "recurred" : "repeated"}: ${report.runUrl}\n\n${evidence}`);
       await github.updateIssue(existing.number, { state: "open", body });
       if (existing.state === "open") result.repeated++;
       else result.opened++;

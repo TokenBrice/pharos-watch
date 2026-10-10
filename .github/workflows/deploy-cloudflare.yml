@@ -151,7 +151,7 @@ jobs:
             echo ""
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-            echo "- Rollback topology: restore moved plans/triggers/Workflow to public first, then drain and disable heavy with explicit empty crons."
+            echo "- Rollback topology: restore moved registry plans to public first, re-add public triggers, then deploy heavy with explicit empty crons. Do not recreate the retired Workflow; retain its referenced heavy class until export/deletion."
             echo "- Warning: version rollback alone restores neither trigger ownership nor D1 migrations."
           } >> "$GITHUB_STEP_SUMMARY"
 

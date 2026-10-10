@@ -174,8 +174,44 @@ describe("workflow incident lifecycle", () => {
     await expect(reportWorkflowFailure(f.report, f.github, (message) => sendOpsAlert(message, undefined, undefined)))
       .rejects.toThrow("TELEGRAM_BOT_TOKEN and TELEGRAM_OPERATOR_CHAT_ID");
     expect(f.issues).toHaveLength(1);
-    expect(f.issues[0].body).toContain("No actionable error line retained");
+    expect(f.issues[0].body).toContain("Job log unavailable");
+    expect(f.issues[0].body).toContain('"reason":"job-log-unavailable"');
+    expect(f.issues[0].body).not.toContain("No actionable error line retained");
   });
+
+  it("preserves unavailable log evidence on every failed step and on repeat comments", async () => {
+    const f = fixture();
+    f.jobs[0].steps!.push({ name: "Typecheck", conclusion: "failure" });
+    vi.mocked(f.github.jobLog).mockRejectedValue(new Error("logs expired; private provider detail"));
+    expect(await reportWorkflowFailure(f.report, f.github, f.alert)).toMatchObject({ opened: 2, alerted: true });
+    for (const issue of f.issues) {
+      const evidence = JSON.parse(issue.body!.match(/```json\n([^\n]+)\n```/)![1]);
+      expect(evidence).toEqual({ status: "unavailable", reason: "job-log-unavailable" });
+      expect(issue.body).toContain(f.report.runUrl);
+      expect(issue.body).not.toContain("No actionable error line retained");
+      expect(issue.body).not.toContain("private provider detail");
+    }
+    expect(f.alert).toHaveBeenCalledWith(expect.stringContaining("reason: job-log-unavailable"));
+    f.report.runNumber++;
+    f.report.runUrl = "https://github.com/org/repo/actions/runs/101/attempts/1";
+    expect(await reportWorkflowFailure(f.report, f.github, f.alert)).toMatchObject({ repeated: 2, alerted: false });
+    for (const [, comment] of vi.mocked(f.github.comment).mock.calls) {
+      expect(comment).toContain('"reason":"job-log-unavailable"');
+      expect(comment).toContain(f.report.runUrl);
+      expect(comment).not.toContain("No actionable error line retained");
+    }
+  });
+
+  it.each(["", "Process completed with exit code 1."])(
+    "does not claim retrieved logs are unavailable when no actionable error was retained: %j",
+    async (log) => {
+      const f = fixture();
+      vi.mocked(f.github.jobLog).mockResolvedValue(log);
+      await reportWorkflowFailure(f.report, f.github, f.alert);
+      expect(f.issues[0].body).toContain("No actionable error line retained");
+      expect(f.issues[0].body).not.toContain("job-log-unavailable");
+    },
+  );
 
   it("records pre-step runner failure without inventing a log excerpt", async () => {
     const f = fixture();
@@ -237,6 +273,18 @@ describe("incident provider boundaries", () => {
     expect(JSON.parse(String(options?.body))).toMatchObject({ chat_id: "private-ops-chat", text: "run failed" });
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: false })));
     await expect(sendOpsAlert("fail", "bot-credential", "private-ops-chat")).rejects.toThrow("rejected");
+  });
+
+  it.each([404, 410])("keeps unavailable job logs distinct from successful empty logs for HTTP %s", async (status) => {
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response("logs unavailable", { status }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createGitHubClient("org/repo", "123", "test-token");
+    const f = fixture();
+    f.github.jobLog = client.jobLog;
+    await reportWorkflowFailure(f.report, f.github, f.alert);
+    expect(f.issues[0].body).toContain('"status":"unavailable","reason":"job-log-unavailable"');
+    expect(f.issues[0].body).not.toContain("No actionable error line retained");
+    expect(fetchMock.mock.calls[0][0]).toBe("https://api.github.com/repos/org/repo/actions/jobs/10/logs");
   });
 
   it("paginates issues and current jobs through read-only GitHub API requests", async () => {

@@ -68,6 +68,36 @@ describe("Safety Score v9 curation worklist routing", () => {
     );
   });
 
+  it("routes CTRL and ORCL repair instructions to the typed domain sidecars, not base coin files", () => {
+    const markdown = renderCurationWorklist(
+      { pipeline: { candidate: { cards: [] }, evaluatedSet: { assets: [] } } },
+      { summary: { stablecoinCount: 0, warnings: [] }, stablecoins: [] },
+      "capture.json",
+    );
+    const control = markdown.split("## CTRL —")[1].split("\n## ")[0];
+    const oracle = markdown.split("## ORCL —")[1].split("\n## ")[0];
+    const source = {
+      file: "shared/data/stablecoins/coins/<id>.json",
+      sidecarFiles: [
+        "shared/data/stablecoins/domains/mint-authority/<id>.json",
+        "shared/data/stablecoins/domains/risk-review/<id>.json",
+      ],
+    };
+    for (const type of ["MINT_AUTHORITY", "DEPLOYMENT_CONTROLS"] as const) {
+      for (const path of V9_MISSING_DATA_WORK_TYPES[type].touchpoints(source, null)) {
+        expect(control).toContain(path);
+      }
+    }
+    for (const type of ["ORACLE_PROFILE", "ORACLE_BRANCH"] as const) {
+      for (const path of V9_MISSING_DATA_WORK_TYPES[type].touchpoints(source, null)) {
+        expect(oracle).toContain(path);
+      }
+    }
+    expect(control).not.toContain(source.file);
+    expect(oracle).not.toContain(source.file);
+    expect(oracle).not.toContain("in the coin JSON");
+  });
+
   it("renders mixed known, null, missing and zero supplies without false coverage or smallest-asset ordering", () => {
     const supplies = [
       { id: "zero", supply: 0 },
