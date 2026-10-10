@@ -44,6 +44,8 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/cron-delivery.mjs"),
     strict("scripts/maintenance/dwellir-rpc.mjs"),
     strict("scripts/maintenance/freeze-stablecoin.ts"),
+    strict("scripts/maintenance/generate-cron-doc-view.ts"),
+    strict("scripts/maintenance/generate-runbook-index.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-evidence-gap-queue.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-mint-posture-queue.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-missing-data-registry.ts"),

@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import ts from "typescript";
 import {
   assertIsolateLocalStateRegistryComplete,
   findUnregisteredIsolateLocalState,
@@ -14,7 +16,47 @@ afterEach(() => roots.cleanup());
 
 const root = resolve(import.meta.dirname, "../..");
 
+function moduleLevelDeclarations(sourcePath: string): Set<string> {
+  const source = ts.createSourceFile(sourcePath, readFileSync(sourcePath, "utf8"), ts.ScriptTarget.Latest, true);
+  const names = new Set<string>();
+  function collectName(name: ts.BindingName): void {
+    if (ts.isIdentifier(name)) names.add(name.text);
+    else for (const element of name.elements) {
+      if (ts.isBindingElement(element)) collectName(element.name);
+    }
+  }
+  for (const statement of source.statements) {
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) collectName(declaration.name);
+    }
+  }
+  return names;
+}
+
 describe("isolate-local state registry", () => {
+  it("requires every registered state name to remain a module-level declaration in its source", () => {
+    const staleEntries: string[] = [];
+    for (const entry of ISOLATE_LOCAL_STATE_REGISTRY) {
+      const declarations = moduleLevelDeclarations(resolve(root, entry.sourcePath));
+      for (const name of entry.stateNames) {
+        if (!declarations.has(name)) staleEntries.push(`${entry.sourcePath}: ${name}`);
+      }
+    }
+    expect(staleEntries, `Stale isolate-local state entries:\n${staleEntries.join("\n")}`).toEqual([]);
+  });
+
+  it("does not count comments, imports or function-local variables as module-level state", () => {
+    const fixtureRoot = roots.makeRoot();
+    roots.writeText(fixtureRoot, "state.ts", `
+      import { importedCache } from "./elsewhere";
+      // const removedCache = new Map();
+      export const moduleCache = new Map();
+      let { pending, nested: [queue] } = getState();
+      function update() { const localCache = new Map(); }
+    `);
+    expect([...moduleLevelDeclarations(resolve(fixtureRoot, "state.ts"))]).toEqual(["moduleCache", "pending", "queue"]);
+  });
+
   it("detects mutation calls, assignments, increments and recorder factories but excludes local and immutable values", () => {
     const root = roots.makeRoot();
     roots.writeText(root, "state.ts", `

@@ -130,7 +130,7 @@
         "docs/about-page.md",
         {"path": "docs/data-flow-map.md", "anchor": "market-and-supply-flows"},
         {"path": "docs/process/pricing-pipeline-appendix.md", "anchor": "active-price-coverage-health"},
-        "docs/runbooks/stablecoins-cache.md"
+        { "path": "docs/runbooks/stablecoins-cache.md", "runbook": { "label": "Stablecoin cache or publication failure", "kind": "symptom" } }
       ],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run audit:pricing-providers", "npx vitest run worker/src/lib"],
       "rules": [
@@ -197,7 +197,7 @@
       ],
       "docs": [
         {"path": "docs/dependency-map.md", "anchor": "dependency-coverage-audit"},
-        {"path": "docs/runbooks/dependency-network.md", "anchor": "scope-and-commands"},
+        { "path": "docs/runbooks/dependency-network.md", "anchor": "scope-and-commands", "runbook": { "label": "Dependency coverage audit commands", "kind": "procedure" } },
         {"path": "docs/live-reserves.md", "anchor": "adding-a-new-adapter"},
         {"path": "docs/live-reserves.md", "anchor": "registry-defined-adapter-classes"},
         {"path": "docs/process/live-reserves-appendix.md", "anchor": "adapter-specific-evidence-boundaries"},
@@ -241,12 +241,12 @@
       "docs": [{ "path": "docs/yield-intelligence.md", "anchor": "engineering-contract" }],
       "background": [
         {"path": "docs/yield-intelligence.md", "anchor": "methodology-versioning"},
-        "docs/runbooks/yield-benchmark-fallback-stale.md",
-        "docs/runbooks/yield-deterministic-cooldown.md",
-        "docs/runbooks/yield-health.md",
-        "docs/runbooks/yield-history-cleanup-writer-pause.md",
-        "docs/runbooks/yield-rankings-stale-or-missing.md",
-        "docs/runbooks/yield-supplemental-snapshot.md",
+        { "path": "docs/runbooks/yield-benchmark-fallback-stale.md", "runbook": { "label": "Yield benchmark fallback or stale state", "kind": "symptom" } },
+        { "path": "docs/runbooks/yield-deterministic-cooldown.md", "runbook": { "label": "Yield deterministic all-fail cooldown", "kind": "symptom" } },
+        { "path": "docs/runbooks/yield-health.md", "runbook": { "label": "Yield health diagnostics", "kind": "reference" } },
+        { "path": "docs/runbooks/yield-history-cleanup-writer-pause.md", "runbook": { "label": "Yield history cleanup and writer pause", "kind": "procedure" } },
+        { "path": "docs/runbooks/yield-rankings-stale-or-missing.md", "runbook": { "label": "Yield rankings stale or missing", "kind": "symptom" } },
+        { "path": "docs/runbooks/yield-supplemental-snapshot.md", "runbook": { "label": "Yield supplemental snapshot failure", "kind": "symptom" } },
         "docs/yield-intelligence-operations.md"
       ],
       "rules": ["Keep source observation, publication, and read-time freshness distinct; missing yield evidence is not a measured zero."]
@@ -362,7 +362,7 @@
         "docs/runbooks/one-shot-backfills.md"
       ],
       "docs": [{ "path": "docs/api-reference-admin.md", "anchor": "admin-auth-and-idempotency" }],
-      "background": [{ "path": "docs/runbooks/one-shot-backfills.md", "anchor": "operator-contract" }],
+      "background": [{ "path": "docs/runbooks/one-shot-backfills.md", "anchor": "operator-contract", "runbook": { "label": "One-shot historical backfill contract", "kind": "procedure" } }],
       "rules": ["Admin endpoints retain Access authentication, no-store responses, and mutation idempotency; locate the endpoint-specific contract in the admin reference."]
     },
     {
@@ -399,7 +399,7 @@
         { "path": "docs/operator-origin-access.md", "anchor": "repo-side-changes" },
         { "path": "docs/api-reference.md", "anchor": "public-endpoints" }
       ],
-      "background": [{"path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows"}, "docs/incident-response/safe-browsing-flag.md"],
+      "background": [{"path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows"}, { "path": "docs/incident-response/safe-browsing-flag.md", "runbook": { "label": "Safe Browsing flag response", "kind": "procedure" } }],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run test:critical-contracts", "npm run check:site-csp-sync", "npm run check:frozen-invariants"],
       "rules": ["Route flags, auth lane behavior, cache metadata, and site-data allowlists are centralized."]
     },
@@ -444,11 +444,11 @@
         {"path": "docs/worker-infrastructure.md", "anchor": "remote-d1-inspection"},
         "docs/process/adr-26-workflows-measurements.md",
         "docs/process/worker-runtime-experiments.md",
-        "docs/runbooks/cron-delivery-stall.md",
-        "docs/runbooks/cron-slot-abandonment.md",
-        "docs/runbooks/lease-and-breaker-recovery.md",
-        "docs/runbooks/d1-capacity-and-runtime-experiments.md",
-        "docs/runbooks/blocked-digest-edition.md"
+        { "path": "docs/runbooks/cron-delivery-stall.md", "runbook": { "label": "Scheduled delivery stall", "kind": "symptom" } },
+        { "path": "docs/runbooks/cron-slot-abandonment.md", "runbook": { "label": "Cron slot abandonment", "kind": "symptom" } },
+        { "path": "docs/runbooks/lease-and-breaker-recovery.md", "runbook": { "label": "Lease and circuit-breaker recovery", "kind": "procedure" } },
+        { "path": "docs/runbooks/d1-capacity-and-runtime-experiments.md", "runbook": { "label": "D1 capacity pressure and runtime experiments", "kind": "procedure" } },
+        { "path": "docs/runbooks/blocked-digest-edition.md", "runbook": { "label": "Blocked digest edition", "kind": "symptom" } }
       ],
       "alsoRead": ["worker/AGENTS.md"],
       "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:cron-sync", "npm run check:cron-connections", "npx vitest run worker/src/cron worker/src/handlers/scheduled", "npx vitest run worker/src/lib/__tests__/cron-leases.test.ts worker/src/lib/__tests__/cron-leases-scheduled-slot.test.ts worker/src/lib/__tests__/scheduled-slot-reconciliation-sqlite.test.ts worker/src/lib/__tests__/cron-timeouts.test.ts worker/src/lib/__tests__/v9-slot-window.test.ts"],
@@ -487,23 +487,23 @@
         { "path": "docs/telegram-mini-app.md", "anchor": "overview" }
       ],
       "background": [
-        "docs/runbooks/telegram-no-delivery.md",
-        "docs/runbooks/telegram-rate-limit-storm.md",
-        "docs/runbooks/telegram-admin-broadcast-safety.md",
-        "docs/runbooks/telegram-adoption-report.md",
-        "docs/runbooks/telegram-backlog-expiration.md",
-        "docs/runbooks/telegram-bot-wide-outage.md",
-        "docs/runbooks/telegram-digest-outbox.md",
-        "docs/runbooks/telegram-group-admin-gating-rollback.md",
-        "docs/runbooks/telegram-ingress-abuse-controls.md",
-        "docs/runbooks/telegram-mini-app-auth-failures.md",
-        "docs/runbooks/telegram-mini-app-botfather.md",
-        "docs/runbooks/telegram-operator-queries.md",
-        "docs/runbooks/telegram-preset-resolution-failure.md",
-        "docs/runbooks/telegram-secret-rotation.md",
-        "docs/runbooks/telegram-setup-wizard-stuck.md",
-        "docs/runbooks/telegram-webhook-ingress.md",
-        "docs/runbooks/telegram-webhook-retry-dedupe.md"
+        { "path": "docs/runbooks/telegram-no-delivery.md", "runbook": { "label": "Telegram alerts not delivering", "kind": "symptom" } },
+        { "path": "docs/runbooks/telegram-rate-limit-storm.md", "runbook": { "label": "Telegram rate-limit storm", "kind": "symptom" } },
+        { "path": "docs/runbooks/telegram-admin-broadcast-safety.md", "runbook": { "label": "Telegram broadcast preflight", "kind": "procedure" } },
+        { "path": "docs/runbooks/telegram-adoption-report.md", "runbook": { "label": "Telegram adoption report queries", "kind": "reference" } },
+        { "path": "docs/runbooks/telegram-backlog-expiration.md", "runbook": { "label": "Telegram backlog and expiration risk", "kind": "symptom" } },
+        { "path": "docs/runbooks/telegram-bot-wide-outage.md", "runbook": { "label": "Telegram bot-wide delivery outage", "kind": "symptom" } },
+        { "path": "docs/runbooks/telegram-digest-outbox.md", "runbook": { "label": "Telegram digest outbox recovery", "kind": "symptom" } },
+        { "path": "docs/runbooks/telegram-group-admin-gating-rollback.md", "runbook": { "label": "Telegram group-admin gating rollback", "kind": "procedure" } },
+        { "path": "docs/runbooks/telegram-ingress-abuse-controls.md", "runbook": { "label": "Telegram ingress abuse-control contract", "kind": "reference" } },
+        { "path": "docs/runbooks/telegram-mini-app-auth-failures.md", "runbook": { "label": "Telegram Mini App auth failures", "kind": "symptom" } },
+        { "path": "docs/runbooks/telegram-mini-app-botfather.md", "runbook": { "label": "Telegram BotFather configuration", "kind": "procedure" } },
+        { "path": "docs/runbooks/telegram-operator-queries.md", "anchor": "read-only-incident-entry", "runbook": { "label": "Telegram read-only operator queries", "kind": "reference" } },
+        { "path": "docs/runbooks/telegram-preset-resolution-failure.md", "runbook": { "label": "Telegram preset resolution failure", "kind": "symptom" } },
+        { "path": "docs/runbooks/telegram-secret-rotation.md", "runbook": { "label": "Telegram secret rotation", "kind": "procedure" } },
+        { "path": "docs/runbooks/telegram-setup-wizard-stuck.md", "runbook": { "label": "Telegram setup wizard stuck", "kind": "symptom" } },
+        { "path": "docs/runbooks/telegram-webhook-ingress.md", "runbook": { "label": "Telegram webhook flood-control contract", "kind": "reference" } },
+        { "path": "docs/runbooks/telegram-webhook-retry-dedupe.md", "runbook": { "label": "Telegram webhook retry and dedupe", "kind": "symptom" } }
       ],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run check:telegram-load", "npm run check:cron-sync", "npx vitest run worker/src/api worker/src/cron"],
       "rules": [
@@ -535,8 +535,8 @@
       "background": [
         {"path": "worker/migrations/MANIFEST.md", "anchor": "individual-migrations-current-active-files"},
         "docs/process/d1-baseline-squash-plan.md",
-        "docs/runbooks/db-connectivity.md",
-        "docs/runbooks/d1-telemetry-kill-switch.md"
+        { "path": "docs/runbooks/db-connectivity.md", "runbook": { "label": "D1 connectivity failure", "kind": "symptom" } },
+        { "path": "docs/runbooks/d1-telemetry-kill-switch.md", "runbook": { "label": "D1 telemetry kill switch", "kind": "procedure" } }
       ],
       "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:migrations", "npx vitest run worker/src"],
       "rules": [
@@ -593,9 +593,9 @@
         {"path": "docs/process/dex-liquidity-appendix.md", "anchor": "methodology-versioning"},
         "docs/chain-health.md",
         "docs/bluechip-ratings.md",
-        "docs/runbooks/depeg-artifact-removal.md",
-        "docs/runbooks/depeg-lifecycle-review.md",
-        "docs/runbooks/mint-burn-integrity.md"
+        { "path": "docs/runbooks/depeg-artifact-removal.md", "runbook": { "label": "Reviewed depeg artifact removal", "kind": "procedure" } },
+        { "path": "docs/runbooks/depeg-lifecycle-review.md", "runbook": { "label": "Depeg lifecycle review", "kind": "procedure" } },
+        { "path": "docs/runbooks/mint-burn-integrity.md", "runbook": { "label": "Mint/burn integrity diagnosis", "kind": "symptom" } }
       ],
       "checks": ["npm run check:doc-sync", "npx vitest run shared/lib worker/src/lib"],
       "rules": ["Methodology versions increase numerically: after v5.9 use v5.91 or v6.0, not v5.10."],
@@ -736,9 +736,12 @@
         {"path": "docs/status-dashboard.md", "anchor": "backend-contract-get-apistatus"},
         {"path": "docs/status-dashboard.md", "anchor": "cron-health-model"},
         {"path": "docs/process/worker-infrastructure-appendix.md", "anchor": "health--status-endpoints"},
-        {"path": "docs/runbooks/dated-source-age-caps.md", "anchor": "scheduled-boundaries"}
+        { "path": "docs/runbooks/dated-source-age-caps.md", "anchor": "scheduled-boundaries", "runbook": { "label": "Dated-source scheduled renewal boundaries", "kind": "procedure" } }
       ],
-      "background": ["docs/runbooks/blacklist-sync.md", "docs/runbooks/review-renewal.md"],
+      "background": [
+        { "path": "docs/runbooks/blacklist-sync.md", "runbook": { "label": "Blacklist gap checks", "kind": "symptom" } },
+        { "path": "docs/runbooks/review-renewal.md", "runbook": { "label": "Scoped review renewal", "kind": "procedure" } }
+      ],
       "checks": ["npx vitest run src/lib/status worker/src/lib/status"],
       "rules": ["Status causes, recommended actions, public-health floors, and runbooks must remain aligned."]
     },
@@ -793,7 +796,7 @@
         { "path": "docs/deployment-process.md", "anchor": "ci-deploy-sequence" },
         { "path": "docs/scripts.md", "anchor": "pr-and-release-gates" }
       ],
-      "background": [{"path": "docs/architecture.md", "anchor": "file-tree-guide"}, "docs/process/feature-flags.md", "docs/process/boundary-waivers.md", "docs/runbooks/workflow-incidents.md"],
+      "background": [{"path": "docs/architecture.md", "anchor": "file-tree-guide"}, "docs/process/feature-flags.md", "docs/process/boundary-waivers.md", { "path": "docs/runbooks/workflow-incidents.md", "runbook": { "label": "Workflow failure reporting contract", "kind": "reference" } }],
       "checks": ["npx vitest run scripts/__tests__", "npm run check:generated-artifacts"],
       "rules": [
         "Keep deploy-surface classification aligned with GitHub deploy behavior.",

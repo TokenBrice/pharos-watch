@@ -3,7 +3,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { runLocalTrustedGitleaks } from "../ci/run-gitleaks.ts";
 import { assertPinnedRuntime, readRuntimeVersions, type RuntimeVersions } from "../lib/runtime-guard.mts";
-import { computeReceiptOutcome, firstActionableError, writePrCheckReceipt, type PrCheckReceiptLeaf } from "../lib/pr-check-receipt.mts";
+import { computeReceiptOutcome, explainPrCheckReceipt, firstActionableError, writePrCheckReceipt, type PrCheckReceiptLeaf, type PrReceiptCheckout } from "../lib/pr-check-receipt.mts";
 import { buildPrStaticCheckPlan, prStaticLeafArgs } from "./run-pr-static-checks.ts";
 import { runCiParity } from "./run-ci-parity.ts";
 import { localBin } from "../lib/local-bin.mts";
@@ -27,7 +27,7 @@ import {
   type OutputWriter,
 } from "../lib/report-violations.mts";
 import { buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
-import { runDirectCli } from "../lib/cli-args.mjs";
+import { parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 
 const DOC_CHECK_LANES = getPrLane("docs").commands.map((command) => command.id as PrCheckLane);
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -73,6 +73,7 @@ export interface RunPrChecksOptions {
   repoRoot?: string;
   runtimeVersions?: () => RuntimeVersions;
   inspectCheckout?: (base: string, head: string) => { headSha: string; requestedHeadSha: string; mergeBase: string; treeClean: boolean };
+  inspectReceiptCheckout?: (base: string) => PrReceiptCheckout;
   selectPlanTestFiles?: (base: string, changedFiles: readonly string[], env: NodeJS.ProcessEnv) => string[];
   runSecrets?: typeof runLocalTrustedGitleaks;
   writeReceipt?: typeof writePrCheckReceipt;
@@ -275,6 +276,19 @@ export function inspectPrCheckout(base: string, head: string, repoRoot = process
   };
 }
 
+/** Local identity only: do not refresh refs or require a resolvable merge base. */
+export function inspectPrReceiptCheckout(base: string, repoRoot = process.cwd()): PrReceiptCheckout {
+  const git = (...args: string[]) => execFileSync("git", args, {
+    cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
+    env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
+  }).trim();
+  const headSha = git("rev-parse", "--verify", "HEAD^{commit}");
+  const treeClean = git("status", "--porcelain", "--untracked-files=all").length === 0;
+  let localBaseSha: string | undefined;
+  try { localBaseSha = git("rev-parse", "--verify", `${base}^{commit}`); } catch { /* An unavailable cached base is a limitation, not a failed gate. */ }
+  return { headSha, treeClean, baseRef: base, localBaseSha };
+}
+
 function selectPlanTestFiles(base: string, changedFiles: readonly string[], env: NodeJS.ProcessEnv): string[] {
   // This is collection only, using the same dependency selector as test:pr.
   // No assertions, gate commands or test partitions execute in plan mode.
@@ -305,11 +319,28 @@ export async function runPrChecks(
     repoRoot = process.cwd(),
     runtimeVersions = readRuntimeVersions,
     inspectCheckout: inspect = (base, head) => inspectPrCheckout(base, head, repoRoot),
+    inspectReceiptCheckout = (base) => inspectPrReceiptCheckout(base, repoRoot),
     selectPlanTestFiles: selectTests = selectPlanTestFiles,
     runSecrets = runLocalTrustedGitleaks,
     writeReceipt = writePrCheckReceipt,
   }: RunPrChecksOptions = {},
 ): Promise<number> {
+  // Dispatch before runtime guards, parity, fetches, selection, and the receipt-writing finally block.
+  if (argv.includes("--explain-receipt") || argv.some((arg) => arg.startsWith("--explain-receipt="))) {
+    try {
+      const { values } = parseStrictCliArgs(argv, { options: { "explain-receipt": { type: "boolean" } } });
+      if (values.help) {
+        stdout.write("Usage: npm run check:pr -- --explain-receipt\nRead-only current-HEAD receipt explanation; no fetch, checks, writes or push authorization.\n");
+        return 0;
+      }
+      const { base } = parseChangedFileArgs([], env);
+      stdout.write(`${explainPrCheckReceipt(inspectReceiptCheckout(base), repoRoot)}\n`);
+      return 0;
+    } catch (error) {
+      stderr.write(`[check:pr] Receipt explanation failed: ${error instanceof Error ? error.message : String(error)}\n`);
+      return error instanceof Error && "exitCode" in error && error.exitCode === 2 ? 2 : 1;
+    }
+  }
   if (argv.includes("--ci-parity")) {
     return runCiParity(argv, { repoRoot, env, runtimeVersions, writeReceipt, now,
       log: (message) => stdout.write(`${message}\n`) });
