@@ -1,5 +1,20 @@
 [
   {
+    "version": "10.16",
+    "title": "Conservative implementation age across variant layers",
+    "date": "2026-10-10",
+    "effectiveAt": 1791676800,
+    "summary": "Safety Score v10.16 aligns production track-record inputs with the documented implementation-age policy. Half-year launch periods, scoring-date clamping and the newest required variant-chain layer now use the shared resolver. Scores, grades and availability can move; pillar weights, age thresholds and grade gates are unchanged.",
+    "impact": [
+      "Implementation age resolves implementationLaunchDate with launchDate fallback for each visited child and parent layer, then selects the newest conservative date across the variant chain. Cycle detection bounds traversal; a repeated layer is not counted again. Missing or invalid dates retain the shared resolver's existing behavior.",
+      "Year, month, quarter and half-year dates use their inclusive period-end UTC date, capped to the fixed scoring asOf date. Future fuzzy periods therefore claim zero whole months rather than becoming unavailable, and YYYY-Hn dates no longer fail parsing. Compiled launch timestamps are normalized to UTC midnight; the evaluator's whole-calendar-month calculation is unchanged.",
+      "This repairs score inputs rather than adding launch evidence or changing authored catalog dates. The evaluation-build digest must be regenerated. Fixed-clock captured-input replay, mover attribution and owner review remain required before release; the catalog impact estimate is not a replay or production-health claim.",
+      "Activation is provisionally 2026-10-11 00:00 UTC (1791676800); re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.15",
     "title": "Undiluted dependency losses and stricter evidence admission",
     "date": "2026-10-10",

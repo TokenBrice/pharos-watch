@@ -15,6 +15,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/business-calendars.ts",
   "shared/lib/chain-rpc-registry.ts",
   "shared/lib/circuit-sources.ts",
+  "shared/lib/classification/resolve-implementation-launch-date.ts",
   "shared/lib/classification/resolve-mechanism-archetype.ts",
   "shared/lib/collections.ts",
   "shared/lib/compare.ts",

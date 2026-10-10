@@ -180,7 +180,7 @@ describe("methodology registry", () => {
   });
 
   it.each([
-    ["safety-score", "10.14", "10.15"],
+    ["safety-score", "10.14", "10.16"],
     ["stability-index", "3.66", "3.67"],
     ["redemption-backstop", "4.48", "4.49"],
     ["depeg-dews", "6.33", "6.34"],

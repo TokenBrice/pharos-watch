@@ -449,6 +449,14 @@ export function SafetyScoresOverview() {
         pillar weights or grade gates. Fixed-clock replay, mover attribution and owner review are required
         before release; this version does not claim completed replay or new producer observations.
       </p>
+      <p>
+        Methodology v10.16 aligns track record with the newest required implementation layer across a variant
+        and its parent chain, using each layer&apos;s implementation launch date or product launch fallback.
+        Year, month, quarter and half-year dates use the inclusive period end, capped to the fixed scoring UTC
+        date so an unfinished period claims zero whole months. Cycle detection stops repeated traversal.
+        The whole-calendar-month age calculation and its thresholds are unchanged; corrected launch inputs
+        can still move scores, grades or availability. Fixed-clock replay and mover review remain release gates.
+      </p>
       <p className="text-xs text-muted-foreground">
         See also:{" "}
         <Link href="/methodology/scoring-changelog/" className={METHODOLOGY_LINK_CLASS}>Safety Score changelog</Link>
