@@ -421,7 +421,7 @@ function addLiquidityAndBlacklistCandidates(candidates: DigestEditorialCandidate
     });
   }
 
-  if (data.blacklistActivity) {
+  if (data.blacklistActivity && data.blacklistActivity.eventCount > 0 && data.blacklistActivity.editorialEligible !== false) {
     const total = data.blacklistActivity.totalAmountUsd;
     const count = data.blacklistActivity.eventCount;
     const unpricedEventCount = data.blacklistActivity.unpricedEventCount ?? 0;

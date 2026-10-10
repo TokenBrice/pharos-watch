@@ -68,6 +68,32 @@ describe("DigestSnapshot", () => {
     expect(screen.getByText(/USDY/)).toBeTruthy();
   });
 
+  it("renders captured current severity separately from a deep historical peak", () => {
+    mockSnapshot({
+      totalMcapUsd: 1e9, activeDepegCount: 1,
+      topDepegs: [{ stablecoinId: "usdc-circle", symbol: "USDC", bps: -5000,
+        currentBps: -100, severityBasis: "current", mcapUsd: 1e8 }],
+    });
+    render(<DigestSnapshot date="2026-09-01" />);
+    const row = screen.getByText(/USDC:/);
+    expect(row.textContent).toContain("-100 bps below peg");
+    expect(row.textContent).toContain("historical peak -5000 bps");
+    expect(row.textContent).not.toContain("-5000 bps below peg");
+  });
+
+  it("labels a peak fallback and legacy capture as historical with current unavailable", () => {
+    mockSnapshot({
+      totalMcapUsd: 1e9, activeDepegCount: 2,
+      topDepegs: [
+        { symbol: "USDC", bps: -5000, severityBasis: "peak-fallback", mcapUsd: 1e8 },
+        { symbol: "USDT", bps: -900, mcapUsd: 1e8 },
+      ],
+    });
+    render(<DigestSnapshot date="2026-09-01" />);
+    expect(screen.getByText(/USDC:/).textContent).toContain("historical peak; current unavailable");
+    expect(screen.getByText(/USDT:/).textContent).toContain("historical peak; current unavailable");
+  });
+
   it("marks absent market fields as uncaptured instead of publishing zero readings", () => {
     mockSnapshot({ totalMcapUsd: 250_000_000_000, activeDepegCount: 0, topDepegs: [] });
 

@@ -150,6 +150,27 @@ describe("response and editorial contracts", () => {
     else expect(issues).toEqual([]);
     expect(hasBlockingDigestQualityIssues(issues)).toBe(severity === "hard");
   });
+
+  it.each([
+    ["above", 0.995, -50, "0.995", true],
+    ["over", 0.995, -50, "0.995", true],
+    ["below", 1.005, 50, "1.005", true],
+    ["under", 1.005, 50, "1.005", true],
+    ["below", 0.995, -50, "0.995", false],
+    ["under", 0.995, -50, "1.00", false],
+    ["above", 1.005, 50, "1.00", false],
+    ["over", 1.1055, 50, "1.106", false],
+    ["under", 1.1055, 50, "1.106", true],
+    ["below", 1.0945, -50, "1.09", false],
+    ["above", 1.0945, -50, "1.09", true],
+  ] as const)("checks signed %s peg claims at %s with rounded quote %s", (direction, price, bps, quote, blocked) => {
+    const parsed = { ...extended("USDT held its peg; watch the next print tomorrow."), digestText: `USDC trades at $${quote}, 50 bps ${direction} peg.` };
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily", depegFacts: [{ symbol: "USDC", currentPriceUsd: price, currentBps: bps }],
+    }).filter((issue) => issue.code.startsWith("price-bps-"));
+    expect(issues.some((issue) => issue.code === "price-bps-direction-mismatch" && issue.severity === "hard")).toBe(blocked);
+    expect(hasBlockingDigestQualityIssues(issues)).toBe(blocked);
+  });
 });
 
 describe("intelligence, prompt, and regime contracts", () => {
@@ -194,7 +215,7 @@ describe("intelligence, prompt, and regime contracts", () => {
     const capture = buildDigestSafetyMapCapture(data, resolution);
     expect(capture).not.toBeNull();
     expect(capture).toMatchObject({ manifest: { mapSummary: { date: "2026-08-30" } } });
-    expect(buildUserPrompt({ ...data, safetyMap: capture! })).toContain("A tier: 2 coins, 70.0% of mapped supply");
+    expect(buildUserPrompt({ ...data, safetyMap: capture! })).toContain("A tier: 2 coins, 70.0% of known mapped supply");
     expect(buildDigestSafetyMapCapture(data, { ...resolution, manifest: { ...resolution.manifest, date: "2026-08-29" } })).toBeNull();
     const unavailableSafetyData: DigestInputData = { ...data, safetyContext: { status: "unavailable", expectedModel: "v9", identity: null, publishedAt: null, reason: "held" } };
     expect(buildDigestSafetyMapCapture(unavailableSafetyData, resolution)).toBeNull();
@@ -325,6 +346,27 @@ describe("market and risk collectors", () => {
   const coverage = { coverage_class: "primary", coverage_confidence: 0.9, methodology_version: "6.1" };
   const liquidityPair = (current: number, previous: number, currentTvl = 500e6, previousTvl = 480e6, extra = {}) => [{ stablecoin_id: "usdt-tether", liquidity_score: current, total_tvl_usd: currentTvl, snapshot_date: 1_772_755_200, ...coverage, ...extra }, { stablecoin_id: "usdt-tether", liquidity_score: previous, total_tvl_usd: previousTvl, snapshot_date: 1_772_668_800, ...coverage }];
   it.each([["material", liquidityPair(85, 75), 0.0417, []], ["threshold", liquidityPair(80, 78), undefined, []], ["collapse", liquidityPair(75, 85, 13.72e6, 152e6), -0.9097, []], ["methodology", liquidityPair(71, 85, 480e6, 500e6, { methodology_version: "6.0" }).map((row, i) => i ? { ...row, methodology_version: "5.91" } : row), undefined, ["liquidity-shift-methodology-basis-change"]], ["fallback", liquidityPair(75, 85, 400e6, 500e6, { coverage_class: "fallback", coverage_confidence: 0.5 }), undefined, ["liquidity-shift-non-trendworthy-coverage"]]] as const)("handles %s liquidity pair", async (_label, rows, change, withheldStories) => { const result = await collectLiquidityShifts(ctxFor([{ match: "FROM dex_liquidity_history", rows }])); if (change == null) expect(result.value).toBeUndefined(); else expect(result.value?.[0].tvlChangePct).toBeCloseTo(change, 4); expect(result.degradedReasons).toEqual([]); expect(result.qualityReasons ?? []).toEqual(withheldStories); });
+  it("withholds monetary candidates for absent supply without erasing observed incident counts", async () => {
+    const activeCtx = ctxFor(depegTable([activeRows.usdc]));
+    activeCtx.mcapById.delete("usdc-circle");
+    const active = await collectActiveDepegs(activeCtx);
+    expect(active.value).toMatchObject({ activeDepegCount: 1, topDepegs: [] });
+    expect(active.qualityReasons).toContain("active-depeg-supply-unavailable");
+
+    const recoveredCtx = ctxFor([{ match: "FROM depeg_events", rows: [{
+      ...activeRows.usdc, ended_at: activeCtx.nowSec, close_reason: "recovered-primary", recovery_price: 1,
+    }] }]);
+    recoveredCtx.mcapById.delete("usdc-circle");
+    const recovered = await collectResolvedDepegs(recoveredCtx);
+    expect(recovered.value).toBeUndefined();
+    expect(recovered.qualityReasons).toContain("resolved-depeg-supply-unavailable");
+
+    const liquidityCtx = ctxFor([{ match: "FROM dex_liquidity_history", rows: liquidityPair(85, 75) }]);
+    liquidityCtx.mcapById.delete("usdt-tether");
+    const liquidity = await collectLiquidityShifts(liquidityCtx);
+    expect(liquidity.value).toBeUndefined();
+    expect(liquidity.qualityReasons).toContain("liquidity-shift-supply-unavailable");
+  });
 });
 
 describe("history and DEWS collectors", () => {

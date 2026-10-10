@@ -23,7 +23,10 @@ describe("public blacklist analytics eligibility", () => {
       coreAggregateStablecoinIds: new Set(), stablecoinAssetById: new Map(), mcapById: new Map(),
       stablecoinsCacheIsFresh: true });
     expect.soft(await hydrate()).toEqual({ blacklistCounts: new Map(), blacklistSourceOk: true, rowsRead: 0 });
-    expect.soft(await collect()).toEqual({ value: undefined, degradedReasons: [] });
+    expect.soft(await collect()).toEqual({
+      value: { eventCount: 0, totalAmountUsd: 0, unpricedEventCount: 0, editorialEligible: false, topEvents: [] },
+      degradedReasons: [],
+    });
     expect(registerSourceFailure).not.toHaveBeenCalled();
 
     insert.run("public-1", "0xtx3", NOW - 30, null);
@@ -33,6 +36,9 @@ describe("public blacklist analytics eligibility", () => {
       blacklistSourceOk: true,
       rowsRead: 2,
     });
-    expect(await collect()).toMatchObject({ value: { eventCount: 2, totalAmountUsd: 0 }, degradedReasons: [] });
+    expect(await collect()).toMatchObject({
+      value: { eventCount: 2, totalAmountUsd: 0, unpricedEventCount: 0, editorialEligible: true },
+      degradedReasons: [],
+    });
   });
 });

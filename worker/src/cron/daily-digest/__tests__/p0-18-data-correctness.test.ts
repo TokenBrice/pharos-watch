@@ -27,7 +27,10 @@ describe("P0-18 daily digest data correctness", () => {
       ])),
     );
 
-    expect(result).toEqual({ value: undefined, degradedReasons: [] });
+    expect(result).toEqual({
+      value: { eventCount: 0, totalAmountUsd: 0, unpricedEventCount: 0, editorialEligible: false, topEvents: [] },
+      degradedReasons: [],
+    });
   });
   it("marks a blocked tape event when its amount is unknown", async () => {
     const db = mockTapeD1([

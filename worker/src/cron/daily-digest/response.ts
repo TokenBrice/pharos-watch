@@ -655,7 +655,7 @@ function lintPriceBpsConsistency(
       .some((match) => match[0] !== fact?.symbol.toUpperCase() && !["USD", "BPS"].includes(match[0]));
     const bpsMatch = bpsMatches[0];
     const afterBps = sentence.slice(bpsMatch.end).trimStart().replace(/\s+/g, " ");
-    const boundDeviation = /^(?:below|above|under|over|off) (?:its |the )?peg\b/i.test(afterBps);
+    const boundDeviation = /^(below|above|under|over|off) (?:its |the )?peg\b/i.exec(afterBps);
     if (!fact || otherTicker || priceMatches.length !== 1 || bpsMatches.length !== 1 || !boundDeviation) {
       issues.push({
         code: "price-bps-ambiguous",
@@ -672,7 +672,20 @@ function lintPriceBpsConsistency(
     // Recover the peg reference from the fact so non-USD pegs stay lintable.
     const pegReference = fact.currentPriceUsd / (1 + fact.currentBps / 10_000);
     if (!Number.isFinite(pegReference) || pegReference <= 0) continue;
-    const impliedBps = Math.abs(((quotedPrice - pegReference) / pegReference) * 10_000);
+    const signedImpliedBps = ((quotedPrice - pegReference) / pegReference) * 10_000;
+    const impliedBps = Math.abs(signedImpliedBps);
+    const direction = boundDeviation[1].toLowerCase();
+    const statedSign = direction === "above" || direction === "over" ? 1 : direction === "below" || direction === "under" ? -1 : null;
+    const decimals = priceMatches[0].value.split(".")[1]?.length ?? 0;
+    const priceRoundingBps = (0.5 * 10 ** -decimals / pegReference) * 10_000;
+    if (statedSign != null && quotedBps > 0 &&
+      (fact.currentBps * statedSign < 0 || signedImpliedBps * statedSign < -priceRoundingBps)) {
+      issues.push({
+        code: "price-bps-direction-mismatch",
+        severity: "hard",
+        message: `${fact.symbol}: ${direction} peg contradicts the signed current deviation (${fact.currentBps} bps) or quoted price.`,
+      });
+    }
     // Prices quoted to fewer decimals than the deviation warrants are fine;
     // only a genuine cross-field contradiction should fire.
     if (Math.abs(impliedBps - quotedBps) > LINT_PRICE_BPS_TOLERANCE) {

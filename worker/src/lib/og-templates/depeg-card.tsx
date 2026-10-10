@@ -4,9 +4,9 @@ import { THREAT_BAND_HEX } from "@shared/lib/classification";
 
 export interface DepegCardData {
   activeDepegCount: number;
-  psiScore: number;
-  psiBand: string;
-  coinsAtPeg: number;
+  psiScore: number | null;
+  psiBand: string | null;
+  coinsAtPeg: number | null;
   totalCoins: number;
   dewsDistribution: {
     danger: number;
@@ -18,7 +18,8 @@ export interface DepegCardData {
   activeDepegs: Array<{
     symbol: string;
     name: string;
-    deviationBps: number;
+    deviationBps: number | null;
+    peakBps?: number;
   }>;
   recoveredToday: number;
   newToday: number;
@@ -74,19 +75,19 @@ export function DepegCard({ data }: { data: DepegCardData }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <MetricLabel>PSI SCORE</MetricLabel>
           <span style={{ fontSize: 64, fontWeight: 700 }}>
-            {data.psiScore.toFixed(1)}
+            {data.psiScore?.toFixed(1) ?? "N/A"}
           </span>
           <span style={{ fontSize: 16, color: TEXT_SECONDARY }}>
-            {data.psiBand}
+            {data.psiBand ?? "Unavailable"}
           </span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <MetricLabel>AT PEG</MetricLabel>
+          <MetricLabel>OBSERVED AT PEG</MetricLabel>
           <span style={{ fontSize: 64, fontWeight: 700 }}>
-            {data.coinsAtPeg}
-            <span style={{ fontSize: 24, color: TEXT_SECONDARY }}>
+            {data.coinsAtPeg ?? "N/A"}
+            {data.coinsAtPeg != null && <span style={{ fontSize: 24, color: TEXT_SECONDARY }}>
               /{data.totalCoins}
-            </span>
+            </span>}
           </span>
         </div>
       </div>
@@ -94,7 +95,7 @@ export function DepegCard({ data }: { data: DepegCardData }) {
       {/* Active depegs list - show top 5 */}
       {data.activeDepegs.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <MetricLabel>CURRENTLY DEPEGGED (TOP {Math.min(data.activeDepegs.length, 5)})</MetricLabel>
+          <MetricLabel>OPEN INCIDENTS (TOP {Math.min(data.activeDepegs.length, 5)})</MetricLabel>
           <div
             style={{
               display: "flex",
@@ -119,12 +120,13 @@ export function DepegCard({ data }: { data: DepegCardData }) {
                 <span
                   style={{
                     fontSize: 14,
-                    color: getDeviationColor(depeg.deviationBps),
+                    color: depeg.deviationBps == null ? TEXT_SECONDARY : getDeviationColor(depeg.deviationBps),
                     fontWeight: 700,
                   }}
                 >
-                  {depeg.deviationBps > 0 ? "+" : ""}
-                  {depeg.deviationBps} bps
+                  {depeg.deviationBps == null
+                    ? `Current unavailable; peak ${depeg.peakBps ?? "N/A"} bps`
+                    : `${depeg.deviationBps > 0 ? "+" : ""}${depeg.deviationBps} bps${depeg.peakBps != null ? ` (peak ${depeg.peakBps})` : ""}`}
                 </span>
               </div>
             ))}

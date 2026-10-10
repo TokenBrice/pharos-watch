@@ -168,6 +168,8 @@ export function CardFrame({
             position: "absolute",
             bottom: 16,
             right: 52,
+            maxWidth: 1096,
+            textAlign: "right",
             fontSize: 12,
             color: TEXT_SECONDARY,
             fontFamily: "Geist Mono",

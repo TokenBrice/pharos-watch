@@ -345,6 +345,16 @@ function sanitizeSafetyForWeekly(
   const seenTransitionIds = new Set<string>();
   return parsed.map((row) => {
     const inputData = { ...row.inputData };
+    if (safetyContext.status === "unavailable") {
+      // Both weekly rollups must see failed canonical evidence before counting
+      // the transitions removed below; unavailable is not an observed zero.
+      inputData.degradedSources = [
+        ...new Set([
+          ...(inputData.degradedSources ?? []),
+          `safety-canonical-snapshot:${safetyContext.reason}`,
+        ]),
+      ];
+    }
     const authoredIdentity = parseAuthoredSafetyIdentity(inputData);
     const copyIsComparable =
       activeIdentity != null &&
@@ -656,7 +666,8 @@ function buildWeeklyWowDeltas(
     mcap: {
       current: current.mcapEnd,
       prior: prior.mcapEnd,
-      deltaPct: prior.mcapEnd > 0 ? ((current.mcapEnd - prior.mcapEnd) / prior.mcapEnd) * 100 : null,
+      deltaPct: current.mcapEnd != null && prior.mcapEnd != null && prior.mcapEnd > 0
+        ? ((current.mcapEnd - prior.mcapEnd) / prior.mcapEnd) * 100 : null,
     },
     psi: { current: current.psiMid, prior: prior.psiMid, delta: current.psiMid - prior.psiMid },
     psiDominantBand: { current: current.psiDominantBand, prior: prior.psiDominantBand },
@@ -682,10 +693,14 @@ export function buildWeeklyInputData(
   if (parsed.length < 5) return null;
 
   const psiScores = parsed.map((d) => d.inputData.stabilityIndex?.score).filter((s): s is number => s != null);
-  const mcaps = parsed.map((d) => d.inputData.totalMcapUsd);
+  const coreMarketInputs = parsed.filter((day) => day.inputData.aggregateUniverse === "core-stablecoins-v1");
+  const marketInputs = coreMarketInputs.length > 0 ? coreMarketInputs : parsed;
+  const marketCoverageComplete = marketInputs.every((day) =>
+    day.inputData.supplyCoverage?.complete === true && Number.isFinite(day.inputData.totalMcapUsd));
+  const mcaps = marketCoverageComplete ? marketInputs.map((day) => day.inputData.totalMcapUsd) : [];
   const gauges = parsed.map((d) => d.inputData.mintBurnFlows?.gaugeScore).filter((g): g is number => g != null);
 
-  if (psiScores.length === 0 || mcaps.length === 0) return null;
+  if (psiScores.length === 0) return null;
 
   const current = rollupDigestInputs(parsed.map((d) => d.inputData));
   const dominantBand = current.psiDominantBand;
@@ -726,9 +741,8 @@ export function buildWeeklyInputData(
   const degradedSources = [
     ...currentParsed.degradedSources,
     ...prior.degradedSources,
-    ...(safetyContext?.status === "unavailable"
-      ? [`safety-canonical-snapshot:${safetyContext.reason}`]
-      : []),
+    ...parsed.flatMap((day) => day.inputData.degradedSources ?? []),
+    ...priorParsed.flatMap((day) => day.inputData.degradedSources ?? []),
   ];
 
   return {
@@ -746,15 +760,18 @@ export function buildWeeklyInputData(
       dominantBand,
     },
     mcapRange: {
-      start: mcaps[0],
-      end: mcaps[mcaps.length - 1],
-      netChange: mcaps[mcaps.length - 1] - mcaps[0],
-      pctChange: mcaps[0] === 0 ? null : ((mcaps[mcaps.length - 1] - mcaps[0]) / mcaps[0]) * 100,
+      start: mcaps[0] ?? null,
+      end: mcaps[mcaps.length - 1] ?? null,
+      netChange: mcaps.length > 0 ? mcaps[mcaps.length - 1] - mcaps[0] : null,
+      pctChange: mcaps.length > 0 && mcaps[0] > 0 ? ((mcaps[mcaps.length - 1] - mcaps[0]) / mcaps[0]) * 100 : null,
+      ...(!marketCoverageComplete ? { unavailableReason: "supply-coverage-incomplete" } : {}),
     },
     activeDepegObservationsThisWeek: current.activeDepegObs,
     uniqueDepegSignalsThisWeek: current.uniqueDepegSignals,
     totalBlacklistEventsThisWeek: current.blacklistEvents,
     totalBlacklistAmountUsd: current.blacklistUsd,
+    blacklistUnpricedEventCount: current.blacklistUnpricedEvents,
+    metricUnavailableReasons: current.unavailableReasons,
     gradeTransitionCount: current.gradeTransitions,
     gaugeRange: gauges.length >= 3 ? { min: Math.min(...gauges), max: Math.max(...gauges) } : null,
     spikeMetrics,

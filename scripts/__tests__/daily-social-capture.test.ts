@@ -87,6 +87,24 @@ describe("daily social source arithmetic", () => {
     const result = buildStabilitySocial([event, { ...event, id: 2, closeReason: "coverage-lost-supply" }, { ...event, id: 3, startedAt: now - 30 * 86400, endedAt: null }], base);
     expect(result.rows.map((row) => row.value)).toEqual([2, 1, 1]);
   });
+  it.each([
+    ["recovered-primary", null, 1],
+    ["recovered-dex", null, 1],
+    ["recovered-native", null, 1],
+    [null, 1, 1],
+    [null, null, 0],
+    ["coverage-lost-supply", null, 0],
+    ["superseded-direction", 1, 0],
+    ["orphan-tracking-removed", 1, 0],
+  ] as const)("counts only positively classified recovery %s with price %s", (closeReason, recoveryPrice, expected) => {
+    const event: DepegEvent = {
+      id: 1, stablecoinId: "usdc-circle", symbol: "USDC", pegType: "peggedUSD",
+      direction: "below", peakDeviationBps: 150, startedAt: now - 86400,
+      endedAt: now - 60, peakPrice: 0.985, recoveryPrice, pegReference: 1, closeReason,
+      startPrice: 0.99, source: "live", confirmationSources: null, pendingReason: null, provenance: null,
+    };
+    expect(buildStabilitySocial([event], base).rows.find((row) => row.id === "recovered")?.value).toBe(expected);
+  });
   it("fails closed for stale and undated responses", async () => {
     vi.stubEnv("PHAROS_API_KEY", "fixture");
     for (const meta of [undefined, { updatedAt: now - 8000, status: "fresh" }, { updatedAt: now, status: "stale" }]) {

@@ -145,6 +145,8 @@ interface VisibleDepeg {
   bps: number;
   direction: string | null;
   mcapUsd: number | null;
+  peakBps: number;
+  currentAvailable: boolean;
 }
 
 /**
@@ -158,8 +160,12 @@ function getCapturedDepegs(inputData: DigestSnapshotInputData): { count: number;
     rows: inputTopDepegs.slice(0, 5).map((depeg) => ({
       key: `${depeg.stablecoinId ?? depeg.symbol}-${depeg.startedAt ?? depeg.bps}`,
       symbol: depeg.symbol,
-      bps: depeg.bps,
-      direction: depeg.direction ?? (depeg.bps >= 0 ? "above" : "below"),
+      bps: depeg.severityBasis === "current" && depeg.currentBps != null ? depeg.currentBps : depeg.bps,
+      direction: depeg.severityBasis === "current" && depeg.currentBps != null
+        ? (depeg.currentBps >= 0 ? "above" : "below")
+        : depeg.direction ?? (depeg.bps >= 0 ? "above" : "below"),
+      peakBps: depeg.bps,
+      currentAvailable: depeg.severityBasis === "current" && depeg.currentBps != null,
       mcapUsd: depeg.mcapUsd,
     })),
   };
@@ -173,6 +179,7 @@ function DepegRowList({ rows }: { rows: VisibleDepeg[] }) {
           {d.symbol}: {d.bps > 0 ? "+" : ""}
           {d.bps} bps {d.direction ? `${d.direction} peg` : "off peg"}
           {d.mcapUsd != null ? ` (${formatCurrency(d.mcapUsd)})` : ""}
+          {d.currentAvailable ? ` (historical peak ${d.peakBps} bps)` : " (historical peak; current unavailable)"}
         </li>
       ))}
     </ul>
@@ -193,6 +200,8 @@ function ActiveDepegsCard({
     bps: depeg.peakDeviationBps,
     direction: depeg.direction,
     mcapUsd: null,
+    peakBps: depeg.peakDeviationBps,
+    currentAvailable: false,
   }));
   if (count <= 0 && dayRows.length === 0) return null;
   return (

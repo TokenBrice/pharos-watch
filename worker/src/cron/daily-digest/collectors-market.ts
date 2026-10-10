@@ -4,7 +4,7 @@ import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { classifyDepegLifecycle, type DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { compareFiniteDesc } from "@shared/lib/sort";
 import { ACTIVE_DEPEG_PROMPT_LIMIT, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import {
@@ -78,12 +78,19 @@ export async function collectActiveDepegs(
         peg_reference: number | null;
       }>();
     const rows = activeDepegs.results ?? [];
+    let activeDepegCount = 0;
+    let supplyUnavailable = false;
 
     const withImpact = rows.flatMap((row) => {
       if (!ctx.trackedStablecoinIds.has(row.stablecoin_id) || FROZEN_IDS.has(row.stablecoin_id)) {
         return [];
       }
-      const mcapUsd = ctx.mcapById.get(row.stablecoin_id) ?? 0;
+      activeDepegCount++;
+      const mcapUsd = ctx.mcapById.get(row.stablecoin_id);
+      if (mcapUsd == null) {
+        supplyUnavailable = true;
+        return [];
+      }
       const ageHours = Math.max(0, Math.round((ctx.nowSec - row.started_at) / SECONDS.ONE_HOUR));
       const asset = ctx.stablecoinAssetById.get(row.stablecoin_id);
       const priceObservedAt = asset?.priceObservedAt ?? asset?.priceUpdatedAt;
@@ -183,7 +190,11 @@ export async function collectActiveDepegs(
     // a stalled collapse must not escape review by ranking ninth.
     const lifecycleFlags = classifyDepegLifecycle(withImpact);
 
-    return collectorOk({ activeDepegCount: withImpact.length, topDepegs, lifecycleFlags });
+    return collectorResult(
+      { activeDepegCount, topDepegs, lifecycleFlags },
+      [],
+      supplyUnavailable ? ["active-depeg-supply-unavailable"] : [],
+    );
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to query active depegs:", error);
     return collectorDegraded({ activeDepegCount: 0, topDepegs: [], lifecycleFlags: [] }, "active-depegs-query");
@@ -220,8 +231,8 @@ export async function collectBlacklistActivity(
       const hasLargeEvent = activityEvents.some(
         (event) => event.amount_usd_at_event == null || event.amount_usd_at_event > 10_000_000,
       );
-      if (eventCount >= 2 || hasLargeEvent) {
-        return collectorOk({
+      return collectorOk({
+          editorialEligible: eventCount >= 2 || hasLargeEvent,
           eventCount,
           totalAmountUsd,
           unpricedEventCount,
@@ -234,13 +245,12 @@ export async function collectBlacklistActivity(
               amountUsd: event.amount_usd_at_event,
             })),
         });
-      }
     }
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to query blacklist events:", error);
     return collectorDegraded(undefined, "blacklist-activity-query");
   }
-  return collectorOk(undefined);
+  return collectorOk({ eventCount: 0, totalAmountUsd: 0, unpricedEventCount: 0, editorialEligible: false, topEvents: [] });
 }
 
 export async function collectSupplyVelocity(
@@ -248,7 +258,10 @@ export async function collectSupplyVelocity(
 ): Promise<CollectorResult<DigestInputData["supplyVelocity"]>> {
   try {
     const top10 = ctx.coreAggregateStablecoinAssets
-      .map((coin) => ({ id: coin.id, symbol: coin.symbol, mcap: getCirculatingRaw(coin) }))
+      .flatMap((coin) => {
+        const mcap = getCirculatingRawOrNull(coin);
+        return mcap == null ? [] : [{ id: coin.id, symbol: coin.symbol, mcap }];
+      })
       .sort(compareFiniteDesc<{ id: string; symbol: string; mcap: number }>((coin) => coin.mcap))
       .slice(0, 10);
 
@@ -341,15 +354,20 @@ export async function collectResolvedDepegs(
         close_reason: string | null;
         recovery_price: number | null;
       }>();
+    let supplyUnavailable = false;
 
     const recovered = (resolvedRows.results ?? [])
       .filter((row) => {
         const closure = classifyDepegClosure({ endedAt: row.ended_at, closeReason: row.close_reason, recoveryPrice: row.recovery_price });
         return closure === "recovered" || closure === "legacy_recovered";
       })
-      .map((row) => {
-        const mcapUsd = ctx.mcapById.get(row.stablecoin_id) ?? 0;
-        return {
+      .flatMap((row) => {
+        const mcapUsd = ctx.mcapById.get(row.stablecoin_id);
+        if (mcapUsd == null) {
+          supplyUnavailable = true;
+          return [];
+        }
+        return [{
           stablecoinId: row.stablecoin_id,
           symbol: row.symbol,
           peakBps: Math.abs(row.peak_deviation_bps),
@@ -359,7 +377,7 @@ export async function collectResolvedDepegs(
           startedAt: row.started_at,
           endedAt: row.ended_at,
           impactScore: getDepegMarketImpactScore(row.peak_deviation_bps, mcapUsd),
-        };
+        }];
       });
     if (ctx.evidence) ctx.evidence.recoveredDepegs = recovered;
     const candidates = recovered
@@ -367,14 +385,15 @@ export async function collectResolvedDepegs(
       .sort((a, b) => b.impactScore - a.impactScore)
       .slice(0, 5);
 
-    if (candidates.length > 0) {
-      return collectorOk(candidates);
-    }
+    return collectorResult(
+      candidates.length > 0 ? candidates : undefined,
+      [],
+      supplyUnavailable ? ["resolved-depeg-supply-unavailable"] : [],
+    );
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to query resolved depegs:", error);
     return collectorDegraded(undefined, "resolved-depegs-query");
   }
-  return collectorOk(undefined);
 }
 
 export async function collectMintBurnFlows(
@@ -529,12 +548,17 @@ export async function collectLiquidityShifts(
     const shifts: NonNullable<DigestInputData["liquidityShifts"]> = [];
     const evidenceRows: NonNullable<NonNullable<CollectorContext["evidence"]>["liquidity"]> = [];
     const rejections = new Set<LiquidityShiftRejection>();
+    let supplyUnavailable = false;
     for (const [id, { latest, previous }] of byId) {
       if (!latest || !previous) continue;
       const delta = latest.liquidity_score - previous.liquidity_score;
       if (Math.abs(delta) < 8) continue;
 
-      const mcapUsd = ctx.mcapById.get(id) ?? 0;
+      const mcapUsd = ctx.mcapById.get(id);
+      if (mcapUsd == null) {
+        supplyUnavailable = true;
+        continue;
+      }
       if (mcapUsd < 10_000_000) continue;
 
       const coin = ctx.trackedStablecoinAssets.find((candidate) => candidate.id === id);
@@ -576,7 +600,8 @@ export async function collectLiquidityShifts(
     // Surface the drop so the prompt's data-quality block and the status page
     // record that a liquidity story was withheld rather than never existed.
     // A deliberately withheld story is soft quality, never a degraded run.
-    const withheldStoryReasons = [...rejections].map((rejection) => `liquidity-shift-${rejection}`);
+    const withheldStoryReasons: string[] = [...rejections].map((rejection) => `liquidity-shift-${rejection}`);
+    if (supplyUnavailable) withheldStoryReasons.push("liquidity-shift-supply-unavailable");
 
     shifts.sort((a, b) => Math.abs(b.scoreDelta) * b.mcapUsd - Math.abs(a.scoreDelta) * a.mcapUsd);
     if (ctx.evidence) ctx.evidence.liquidity = evidenceRows;

@@ -173,6 +173,7 @@ function buildDailyRows() {
     digest_extended: null,
     input_data: JSON.stringify({
       totalMcapUsd: 100_000_000 + index * 1_000_000,
+      supplyCoverage: { complete: true, observedCount: 2, unavailableCount: 0 },
       activeDepegCount: index,
       stabilityIndex: {
         score: 90 - index,
@@ -777,6 +778,45 @@ describe("generateWeeklyRecap", () => {
         reason: "v9-snapshot-unavailable",
       },
     });
+  });
+
+  it.each([true, false])("persists truthful weekly transition availability when canonical safety is available=%s", async (safetyAvailable) => {
+    const reason = "safety-canonical-snapshot:v9-snapshot-unavailable";
+    if (!safetyAvailable) {
+      vi.mocked(loadDigestSafetyContext).mockResolvedValueOnce({
+        status: "unavailable", expectedModel: "v9", identity: null,
+        publishedAt: null, reason: "v9-snapshot-unavailable",
+      });
+    }
+    const template = buildDailyRows()[0]!;
+    const dailyRows = Array.from({ length: 7 }, (_, index) => ({
+      ...template,
+      generated_at: Math.floor(Date.UTC(2026, 2, 24 + index) / 1000),
+      input_data: JSON.stringify({ ...JSON.parse(template.input_data), gradeTransitions: [] }),
+    }));
+    const db = mockD1(makeTables({ dailyRows }), { requireMatch: true });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({
+      extended: VALID_WEEKLY_EXTENDED.replace("grade transitions", "risk transitions"),
+    }));
+
+    const result = await generateWeeklyRecap(db, "anthropic-key", null, null);
+
+    expect(result.itemCount).toBe(1);
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    expect(insert).toBeDefined();
+    const persisted = JSON.parse(String(insert!.binds[3]));
+    expect(persisted.gradeTransitionCount).toBe(safetyAvailable ? 0 : null);
+    if (safetyAvailable) {
+      expect(persisted.metricUnavailableReasons.gradeTransitions).toBeUndefined();
+      expect(persisted.degradedSources).toBeUndefined();
+    } else {
+      expect(persisted.metricUnavailableReasons.gradeTransitions).toEqual([reason]);
+      expect(persisted.degradedSources).toContain(reason);
+    }
+    const firstRequest = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body));
+    expect(firstRequest.messages[0].content).toContain(
+      safetyAvailable ? "Grade transitions: 0" : `Risk transitions: N/A (${reason})`,
+    );
   });
 
   it("repairs unbound weekly copy during the standard corrective retry", async () => {

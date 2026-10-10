@@ -48,6 +48,7 @@ function candidate(
 function digestInput(overrides: Partial<DigestInputData> = {}): DigestInputData {
   return {
     totalMcapUsd: 1_000_000_000,
+    supplyCoverage: { complete: true, observedCount: 1, unavailableCount: 0 },
     mcap7dDelta: 0,
     activeDepegCount: 0,
     topDepegs: [],
@@ -58,6 +59,13 @@ function digestInput(overrides: Partial<DigestInputData> = {}): DigestInputData 
       components: { severity: 0, breadth: 0, trend: 0 },
     },
     yesterdayIndex: null,
+    blacklistActivity: {
+      eventCount: 0,
+      totalAmountUsd: 0,
+      unpricedEventCount: 0,
+      editorialEligible: false,
+      topEvents: [],
+    },
     ...overrides,
   };
 }
@@ -446,14 +454,50 @@ describe("weekly recap safety identity", () => {
 
     expect(degraded).toMatchObject({
       totalBlacklistEventsThisWeek: 0,
-      gradeTransitionCount: 0,
+      gradeTransitionCount: null,
       degradedSources: ["safety-canonical-snapshot:v9-identity-mismatch"],
+      metricUnavailableReasons: {
+        gradeTransitions: ["safety-canonical-snapshot:v9-identity-mismatch"],
+      },
     });
     expect(restored?.gradeTransitionCount).toBe(1);
     expect(restored?.weeklySignals.topGradeTransitions[0]).toMatchObject({
       historyId: "v8-organic",
       model: "v8",
     });
+  });
+
+  it("withholds both weekly transition counts when global canonical safety is unavailable", () => {
+    const current = Array.from({ length: 7 }, (_, index) => safetyRow(index, [], v9Identity));
+    const prior = Array.from({ length: 7 }, (_, index) => safetyRow(index - 7, [], v9Identity));
+    const reason = "safety-canonical-snapshot:v9-publication-held";
+    const weekly = buildWeeklyInputData(current, prior, unavailable())!;
+
+    expect(weekly).toMatchObject({
+      gradeTransitionCount: null,
+      metricUnavailableReasons: { gradeTransitions: [reason] },
+      degradedSources: [reason],
+      weekOverWeekDeltas: { gradeTransitions: { current: null, prior: null } },
+    });
+    expect(weekly.dailyDigests.every(({ inputData }) => inputData.degradedSources?.includes(reason))).toBe(true);
+    const prompt = buildWeeklyPrompt(weekly);
+    expect(prompt).toContain(`Risk transitions: N/A (${reason})`);
+    expect(prompt).toContain("Risk transitions: current n/a / prior n/a");
+    expect(prompt).not.toContain("Risk transitions: 0");
+  });
+
+  it("retains observed zero weekly transition counts when canonical safety is available", () => {
+    const current = Array.from({ length: 7 }, (_, index) => safetyRow(index, [], v9Identity));
+    const prior = Array.from({ length: 7 }, (_, index) => safetyRow(index - 7, [], v9Identity));
+    const weekly = buildWeeklyInputData(current, prior, available(v9Identity))!;
+
+    expect(weekly.gradeTransitionCount).toBe(0);
+    expect(weekly.metricUnavailableReasons?.gradeTransitions).toBeUndefined();
+    expect(weekly.degradedSources).toBeUndefined();
+    expect(weekly.weekOverWeekDeltas?.gradeTransitions).toEqual({ current: 0, prior: 0 });
+    const prompt = buildWeeklyPrompt(weekly);
+    expect(prompt).toContain("Grade transitions: 0");
+    expect(prompt).toContain("Grade transitions: current 0 / prior 0");
   });
 
   it("withholds natural-language copy whose authored safety identity is incompatible", () => {
@@ -507,7 +551,7 @@ describe("weekly recap safety identity", () => {
     const weekly = buildWeeklyInputData(rows, [], unavailable());
     const prompt = buildWeeklyPrompt(weekly!);
 
-    expect(prompt).toContain("Risk transitions: 0");
+    expect(prompt).toContain("Risk transitions: N/A (safety-canonical-snapshot:v9-publication-held)");
     expect(prompt).not.toContain("Grade transitions:");
     expect(prompt).not.toContain("Top grade transitions by mcap");
   });

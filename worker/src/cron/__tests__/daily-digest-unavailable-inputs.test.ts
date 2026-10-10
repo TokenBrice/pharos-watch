@@ -9,6 +9,8 @@ import { buildUserPrompt } from "../daily-digest/prompt";
 import { buildEditorialCandidates } from "../daily-digest/editorial-candidates";
 import { collectBlacklistActivity } from "../daily-digest/collectors-market";
 import { resolveDailyDigestEditionNumber } from "../digest/publish";
+import { buildWeeklyInputData } from "../weekly-recap/input-data";
+import { buildWeeklyPrompt } from "../weekly-recap/prompt";
 
 const QUIET_INPUT: DigestInputData = {
   ...BASE_DIGEST_INPUT,
@@ -48,6 +50,79 @@ describe("digest publishes unavailable inputs as unavailable", () => {
     const full = rollupDigestInputs(Array.from({ length: 7 }, () => day));
     expect(full.activeDepegObs).toBe(14);
     expect(full.blacklistEvents).toBe(7);
+  });
+
+  it("withholds only failed metrics across seven editions and names the failed observations", () => {
+    const days = Array.from({ length: 7 }, (_, index) => dayInput({
+      blacklistActivity: { eventCount: 0, totalAmountUsd: 0, unpricedEventCount: 0, topEvents: [] },
+      gradeTransitions: [],
+      ...(index === 1 ? { degradedSources: ["active-depegs-query"] } : {}),
+      ...(index === 2 ? { blacklistActivity: undefined, degradedSources: ["blacklist-activity-query"] } : {}),
+    }));
+    const rollup = rollupDigestInputs(days);
+    expect(rollup).toMatchObject({
+      activeDepegObs: null, uniqueDepegSignals: null, blacklistEvents: null, blacklistUsd: null,
+      gradeTransitions: 0,
+    });
+    expect(rollup.unavailableReasons.activeDepegObs).toContain("active-depegs-query");
+    expect(rollup.unavailableReasons.blacklistEvents).toContain("blacklist-activity-query");
+    const weekly = buildWeeklyInputData(days.map((inputData, index) => ({
+      generated_at: 1_772_000_000 + index * 86400, digest_title: "Day", digest_text: "Day",
+      input_data: JSON.stringify(inputData),
+    })))!;
+    const prompt = buildWeeklyPrompt(weekly);
+    expect(prompt).toContain("Active depeg observations across daily editions: N/A (active-depegs-query)");
+    expect(prompt).toContain("Total blacklist events: N/A (blacklist-activity-query");
+    expect(prompt).not.toContain("Total blacklist events: 0");
+    expect(prompt).not.toContain("Active depeg observations across daily editions: 0");
+    expect(weekly.degradedSources).toContain("blacklist-activity-query");
+  });
+
+  it("retains sub-threshold daily freezes for weekly accounting without promoting candidates", async () => {
+    const collected = await collectBlacklistActivity(makeCollectorCtx(mockD1([{
+      match: "FROM blacklist_events",
+      rows: [{ symbol: "USDC", chain_name: "Ethereum", event_type: "blacklist", amount_usd_at_event: 1_000_000 }],
+    }])));
+    const input = dayInput({ blacklistActivity: collected.value });
+    expect(collected.value).toMatchObject({ eventCount: 1, totalAmountUsd: 1_000_000, editorialEligible: false });
+    expect(buildEditorialCandidates(input, null).some((candidate) => candidate.kind === "blacklist")).toBe(false);
+    expect(buildUserPrompt(input)).not.toContain("Blacklist activity (rolling last 24h)");
+    expect(rollupDigestInputs(Array.from({ length: 7 }, () => input))).toMatchObject({
+      blacklistEvents: 7, blacklistUsd: 7_000_000, blacklistUnpricedEvents: 0,
+    });
+  });
+
+  it("preserves unpriced counts and labels weekly known amounts as a lower bound", () => {
+    const input = dayInput({
+      blacklistActivity: { eventCount: 2, totalAmountUsd: 5, unpricedEventCount: 1, topEvents: [] },
+    });
+    const weekly = buildWeeklyInputData(Array.from({ length: 7 }, (_, index) => ({
+      generated_at: 1_772_000_000 + index * 86400, digest_title: "Day", digest_text: "Day",
+      input_data: JSON.stringify(input),
+    })))!;
+    expect(weekly).toMatchObject({ totalBlacklistEventsThisWeek: 14, totalBlacklistAmountUsd: 35, blacklistUnpricedEventCount: 7 });
+    expect(buildWeeklyPrompt(weekly)).toContain("at least $35.00 known subtotal (7 unpriced events)");
+    expect(buildWeeklyPrompt(weekly)).not.toContain("$35.00 affected");
+  });
+
+  it.each(["partial", "legacy"] as const)("withholds weekly ecosystem mcap for %s supply coverage", (coverage) => {
+    const input = dayInput({
+      supplyCoverage: coverage === "partial" ? { complete: false, observedCount: 1, unavailableCount: 1 } : undefined,
+    });
+    expect(rollupDigestInputs([input])).toMatchObject({
+      mcapEnd: null, unavailableReasons: { mcapEnd: ["supply-coverage-incomplete"] },
+    });
+    const rows = Array.from({ length: 7 }, (_, index) => ({
+      generated_at: 1_772_000_000 + index * 86400, digest_title: "Day", digest_text: "Day",
+      input_data: JSON.stringify(input),
+    }));
+    const weekly = buildWeeklyInputData(rows, rows)!;
+    expect(weekly.mcapRange).toMatchObject({
+      start: null, end: null, netChange: null, pctChange: null, unavailableReason: "supply-coverage-incomplete",
+    });
+    expect(weekly.weekOverWeekDeltas?.mcap).toEqual({ current: null, prior: null, deltaPct: null });
+    expect(buildWeeklyPrompt(weekly)).toContain("Market cap: N/A (supply-coverage-incomplete)");
+    expect(weekly.psiRange.end).toBe(BASE_DIGEST_INPUT.stabilityIndex!.score);
   });
 
   it("renders an absent prior DEWS generation as unavailable rather than an all-calm day", () => {
