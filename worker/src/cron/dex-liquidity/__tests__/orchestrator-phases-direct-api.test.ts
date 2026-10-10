@@ -169,6 +169,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
           circuitKey: "balancer-api",
           normalizedProtocol: "balancer",
           supportedChains: ["ethereum"],
+          censusScope: "exhaustive" as const,
           result: {
             pools: rawPools,
             ok: true,
@@ -226,6 +227,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
           circuitKey: "fluid-dex-api",
           normalizedProtocol: "fluid",
           supportedChains: ["ethereum"],
+          censusScope: "bounded-sample" as const,
           result: {
             pools: [{
               source: "fluid" as const,

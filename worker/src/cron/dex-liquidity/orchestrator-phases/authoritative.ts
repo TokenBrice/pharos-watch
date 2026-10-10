@@ -16,7 +16,7 @@ export function buildAuthoritativeStagedPoolConfirmationIndex(
     if (
       // A bounded sample never saw most of its protocol, so a pool missing from
       // it is not evidence that the pool does not exist.
-      entry.censusScope === "bounded-sample" ||
+      entry.censusScope !== "exhaustive" ||
       entry.result.censusScope === "bounded-sample" ||
       !entry.result.ok ||
       entry.result.degraded ||

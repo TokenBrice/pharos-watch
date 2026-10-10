@@ -57,7 +57,7 @@ describe("fetchBalancerPools sanity cap and pool.price footgun", () => {
     expect(result.pools.some((pool) => pool.poolAddress === rejectedAddress)).toBe(false);
     const compacted = compactDirectApiFetchPhasePools({
       results: [{ name: "Balancer", circuitKey: "balancer-api", normalizedProtocol: "balancer",
-        supportedChains: ["ethereum", "base"], result }],
+        supportedChains: ["ethereum", "base"], censusScope: "exhaustive", result }],
       failedSources: [], degradedSources: [], attemptedProtocolChains: [], fallbackSignals: [],
       sourceWarnings: [], circuitEvents: [],
     }, { chainAddressToId: new Map(), symbolToChainScopedIds: new Map(), contractMetaByChainAddress: new Map() });

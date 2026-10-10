@@ -25,12 +25,13 @@ import {
   fetchRowsWithTieExpansion,
   finalizeProjectorBatch,
   resolveProjectorOptions,
+  sourceReconciliationSince,
   type ProjectorOptions,
   type ProjectorResult,
 } from "./types";
 import { formatDuration, formatPrice } from "@shared/lib/format";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
-import { classifyDepegClosure } from "@shared/lib/depeg-closure";
+import { classifyDepegClosure, DEPEG_RECOVERY_CLOSE_REASONS } from "@shared/lib/depeg-closure";
 
 const PEAK_WORSENED_CACHE_KEY = "tape-projector:peak-worsened-seen";
 
@@ -73,13 +74,24 @@ async function fetchDepegRows(
               started_at, ended_at, start_price, recovery_price, peg_reference, source, close_reason`;
   const trailingWhereSql = variant === "opened"
     ? " AND source = 'live'"
-    : " AND source = 'live' AND ended_at IS NOT NULL";
+    : ` AND source = 'live' AND ended_at IS NOT NULL
+        AND (close_reason IN (${DEPEG_RECOVERY_CLOSE_REASONS.map(() => "?").join(",")})
+          OR (close_reason IS NULL AND recovery_price IS NOT NULL))`;
 
   return fetchRowsWithTieExpansion<DepegSourceRow>(db, {
     selectSql,
     fromSql: "depeg_events",
     timeColumn,
-    trailingWhereSql,
+    trailingWhereSql: `${trailingWhereSql}
+      AND NOT EXISTS (
+        SELECT 1 FROM tape_events INDEXED BY idx_tape_source_key
+        WHERE source_table = 'depeg_events'
+          AND source_row_id = CAST(depeg_events.id AS TEXT) AND transition = ?
+      )`,
+    trailingBinds: [
+      ...(variant === "resolved" ? DEPEG_RECOVERY_CLOSE_REASONS : []),
+      variant,
+    ],
     orderBySql: `${timeColumn} ASC, id ASC`,
     since,
     until,
@@ -105,7 +117,7 @@ async function projectDepegByVariant(
   const cursorKey = classCursorKey(variant);
   const { since, until, limit } = await resolveProjectorOptions(db, cursorKey, options);
 
-  const rows = await fetchDepegRows(db, variant, since, until, limit);
+  const rows = await fetchDepegRows(db, variant, sourceReconciliationSince(options), until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
 
   const events: TapeEventInsert[] = [];

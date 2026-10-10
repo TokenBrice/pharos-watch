@@ -47,7 +47,7 @@ function computeLiquidityStats(
   allRows: LiquidityRow[],
 ): LiquidityStatsData {
   const globalData = liquidityMap[DEX_GLOBAL_KEY];
-  const totalTvl = globalData?.totalTvlUsd ?? 0;
+  const totalTvl = globalData?.totalTvlUsd ?? null;
   // Unavailable global volume stays null; it is never rendered as zero activity.
   const totalVol = globalData?.totalVolume24hUsd ?? null;
   let scoreSum = 0;
@@ -66,6 +66,13 @@ function computeLiquidityStats(
     if (liq.liquidityScore != null) {
       scoreSum += liq.liquidityScore;
       scoreCount++;
+    }
+    // Retained markets remain covered when required activity makes the score NR.
+    if (
+      liq.poolCount > 0 && liq.totalTvlUsd > 0 &&
+      liq.coverageClass != null && liq.coverageClass !== "unobserved" &&
+      liq.liquidityEvidenceClass != null && liq.liquidityEvidenceClass !== "unobserved"
+    ) {
       withLiquidity++;
       if (liq.coverageClass === "primary" || liq.coverageClass === "mixed") highConfidenceCoverage++;
       if (liq.coverageClass === "fallback") fallbackCoverage++;
@@ -93,7 +100,7 @@ function computeLiquidityStats(
     totalTvl,
     totalVol,
     ...(globalData?.volume24hAvailability ? { totalVolAvailability: globalData.volume24hAvailability } : {}),
-    avgScore: scoreCount > 0 ? Math.round(scoreSum / scoreCount) : 0,
+    avgScore: scoreCount > 0 ? Math.round(scoreSum / scoreCount) : null,
     withLiquidity,
     highConfidenceCoverage,
     fallbackCoverage,

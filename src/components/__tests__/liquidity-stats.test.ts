@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { createElement, type ImgHTMLAttributes } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { LiquidityStats } from "@/components/liquidity-stats";
@@ -118,5 +118,33 @@ describe("LiquidityStats", () => {
     fireEvent.keyDown(screen.getByTestId("protocol-door-curve"), { key: " " });
     expect(screen.getByTestId("selected-exit-route-panel").textContent).toContain("Curve");
     expect(screen.getByTestId("protocol-door-curve").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it.each([
+    { totalTvl: null, avgScore: null, tvlText: "—", scoreText: "NR" },
+    { totalTvl: 0, avgScore: 0, tvlText: "$0.00", scoreText: "0/100" },
+  ])("distinguishes unavailable aggregates from measured zeros ($tvlText, $scoreText)", ({
+    totalTvl, avgScore, tvlText, scoreText,
+  }) => {
+    render(createElement(LiquidityStats, {
+      stats: {
+        totalTvl, avgScore, totalVol: null, withLiquidity: 0, highConfidenceCoverage: 0,
+        fallbackCoverage: 0, totalTracked: 6, agg7dChange: null, avgBalance: null, avgOrganic: null,
+      },
+      liquidityMap: {},
+    }));
+
+    const tvlCard = screen.getByText("Total DEX TVL").closest('[data-slot="card"]')!;
+    const scoreCard = screen.getByText("Avg Liq Score").closest('[data-slot="card"]')!;
+    expect(within(tvlCard as HTMLElement).getByText(tvlText)).toBeTruthy();
+    expect(within(scoreCard as HTMLElement).getByText((_content, node) =>
+      node?.textContent === scoreText && node.children.length === (avgScore == null ? 0 : 1),
+    )).toBeTruthy();
+    if (avgScore == null) {
+      expect(within(scoreCard as HTMLElement).getByText("NR").className).toContain("text-muted-foreground");
+      expect(within(scoreCard as HTMLElement).queryByText("/100")).toBeNull();
+      expect(within(scoreCard as HTMLElement).getByText("No active coins have a rated score")).toBeTruthy();
+      expect(within(tvlCard as HTMLElement).getByText("Global TVL observation unavailable")).toBeTruthy();
+    }
   });
 });

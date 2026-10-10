@@ -81,6 +81,7 @@ function makeFetcher(name: string, fn: DirectApiFetcher["fn"]): DirectApiFetcher
     circuitKey: `${name.toLowerCase()}-circuit`,
     normalizedProtocol: name.toLowerCase(),
     supportedChains: ["testnet"],
+    censusScope: "exhaustive",
     fn,
   };
 }
@@ -101,6 +102,29 @@ describe("runDirectApiFetchPhase", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    { declared: "bounded-sample" as const, reported: "exhaustive" as const },
+    { declared: "exhaustive" as const, reported: "bounded-sample" as const },
+  ])("cannot upgrade a bounded census ($declared declaration, $reported result)", async ({ declared, reported }) => {
+    const fetcher = makeFetcher("census", async () => ({
+      ...makeDexApiFetchResult([], { ok: true, degraded: false, errors: [] }),
+      censusScope: reported,
+    }));
+    fetcher.censusScope = declared;
+    const phase = await runDirectApiFetchPhase({} as D1Database, [fetcher]);
+    expect(phase.results[0].censusScope).toBe("bounded-sample");
+  });
+
+  it("withholds authority from an untyped adapter with an omitted census declaration", async () => {
+    const fetcher = makeFetcher("undeclared", async () => ({
+      ...makeDexApiFetchResult([], { ok: true, degraded: false, errors: [] }),
+      censusScope: "exhaustive",
+    }));
+    Reflect.deleteProperty(fetcher, "censusScope");
+    const phase = await runDirectApiFetchPhase({} as D1Database, [fetcher]);
+    expect(phase.results[0].censusScope).toBe("bounded-sample");
   });
 
   it("runs providers serially and completes each before starting the next", async () => {
@@ -407,6 +431,7 @@ describe("runDirectApiFetchPhase", () => {
         circuitKey: "pancakeswap-api",
         normalizedProtocol: "pancakeswap",
         supportedChains: ["bsc", "ethereum", "base"],
+        censusScope: "bounded-sample",
         fn: async () =>
           makeDexApiFetchResult([], {
             ok: true,

@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type * as PsiHistoryEvents from "@/lib/psi-history-events";
 import {
   buildPsiComponentData,
   buildPsiBeamDimmers,
@@ -6,6 +7,18 @@ import {
   buildPsiEventTimelineRows,
   buildPsiHistoryStats,
 } from "./view-model";
+
+vi.mock("@/lib/psi-history-events", async (importOriginal) => {
+  const actual = await importOriginal<typeof PsiHistoryEvents>();
+  return {
+    ...actual,
+    PSI_EVENTS: [
+      ...actual.PSI_EVENTS,
+      { label: "Year boundary", date: Date.UTC(2020, 11, 31), dateEnd: Date.UTC(2021, 0, 1), links: [] },
+      { label: "Single UTC day", date: Date.UTC(2021, 0, 1), links: [] },
+    ],
+  };
+});
 
 describe("stability index view-model", () => {
   it("builds component series by combining historical points with the current sample", () => {
@@ -57,7 +70,7 @@ describe("stability index view-model", () => {
       { date: 1_700_000_000, score: 84, band: "STEADY" },
       { date: 1_699_913_600, score: 76, band: "TREMOR" },
       { date: 1_699_827_200, score: 71, band: "TREMOR" },
-    ]);
+    ], 1_700_000_000);
     expect(stats).toHaveLength(3);
     expect(stats[0]).toMatchObject({ label: "30d High", value: "84.0", band: "STEADY" });
     expect(stats[1]).toMatchObject({ label: "30d Low", value: "71.0", band: "TREMOR" });
@@ -68,6 +81,21 @@ describe("stability index view-model", () => {
     ], 63_000_000_000);
     expect(contributors[0]?.symbol).toBe("USDC");
     expect(contributors[0]?.total).toBeGreaterThan(contributors[1]?.total ?? 0);
+  });
+
+  it("keeps 30d statistics inside source-anchored UTC days despite gaps", () => {
+    const day = Date.parse("2026-10-10T00:00:00Z") / 1000;
+    const stats = buildPsiHistoryStats([
+      { date: day, score: 90, band: "CALM" },
+      { date: day - 4 * 86400, score: 100, band: "CALM" },
+      { date: day - 29 * 86400, score: 80, band: "STEADY" },
+      { date: day - 30 * 86400, score: 20, band: "CRISIS" },
+      { date: day + 86400, score: 0, band: "CRISIS" },
+    ], day + 12 * 3600);
+    expect(stats.map((stat) => stat.value)).toEqual(["100.0", "80.0", "90.0"]);
+    expect(stats.every((stat) => stat.sub === "3/30 observed days")).toBe(true);
+    expect(buildPsiHistoryStats([{ date: day - 30 * 86400, score: 20, band: "CRISIS" }], day)).toEqual([]);
+    expect(buildPsiHistoryStats([{ date: day, score: 90, band: "CALM" }], null)).toEqual([]);
   });
 
   it("assigns event timeline PSI bands from the worst nearby score", () => {
@@ -83,6 +111,21 @@ describe("stability index view-model", () => {
       psiBand: "CRISIS",
     });
   });
+
+  it.each(["UTC", "America/Los_Angeles", "Asia/Tokyo"])(
+    "formats authored UTC event dates identically in %s including year boundaries",
+    (timeZone) => {
+      vi.stubEnv("TZ", timeZone);
+      try {
+        const rows = buildPsiEventTimelineRows([]);
+        expect(rows.find((row) => row.label === "COVID Crash")?.dateStr).toBe("Mar 12 – Mar 16, 2020");
+        expect(rows.find((row) => row.label === "Year boundary")?.dateStr).toBe("Dec 31, 2020 – Jan 1, 2021");
+        expect(rows.find((row) => row.label === "Single UTC day")?.dateStr).toBe("Jan 1, 2021");
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    },
+  );
 
   it("builds PSI beam dimmer lanes from current component values and prior-sample deltas", () => {
     const lanes = buildPsiBeamDimmers([

@@ -151,4 +151,47 @@ describe("liquidity page model", () => {
     expect(model.scoredRows.map((row) => row.meta.id)).toEqual([first.id]);
     expect(model.unratedRows.map((row) => row.meta.id)).toEqual([second.id]);
   });
+
+  it("counts observed primary mixed and fallback NR markets independently of rated scores", () => {
+    const [rated, primary, mixed, fallback, placeholder, unknown] = ACTIVE_STABLECOINS;
+    const model = buildLiquidityViewModel({
+      [rated.id]: makeLiquidity({ liquidityScore: 80 }),
+      [primary.id]: makeLiquidity({ liquidityScore: null, coverageClass: "primary" }),
+      [mixed.id]: makeLiquidity({
+        liquidityScore: null, coverageClass: "mixed", liquidityEvidenceClass: "partial_measured",
+      }),
+      [fallback.id]: makeLiquidity({
+        liquidityScore: null, coverageClass: "fallback", liquidityEvidenceClass: "observed_unmeasured",
+        hasMeasuredLiquidityEvidence: false, trendworthy: false,
+      }),
+      [placeholder.id]: makeLiquidity({
+        liquidityScore: null, totalTvlUsd: 0, poolCount: 0, coverageClass: "unobserved",
+        liquidityEvidenceClass: "unobserved", hasMeasuredLiquidityEvidence: false, trendworthy: false,
+      }),
+      [unknown.id]: makeLiquidity({
+        liquidityScore: null, coverageClass: null, liquidityEvidenceClass: null,
+      }),
+    }, "all", "");
+
+    expect(model.summaryStats).toMatchObject({
+      withLiquidity: 4, highConfidenceCoverage: 3, fallbackCoverage: 1, avgScore: 80,
+    });
+  });
+
+  it("preserves missing global TVL and an all-NR cohort as unavailable aggregates", () => {
+    const model = buildLiquidityViewModel({
+      [ACTIVE_STABLECOINS[0].id]: makeLiquidity({ liquidityScore: null }),
+    }, "all", "");
+
+    expect(model.summaryStats).toMatchObject({ totalTvl: null, avgScore: null, withLiquidity: 1 });
+  });
+
+  it("preserves a measured global zero TVL and a rated zero score as numeric aggregates", () => {
+    const model = buildLiquidityViewModel({
+      [DEX_GLOBAL_KEY]: makeLiquidity({ totalTvlUsd: 0 }),
+      [ACTIVE_STABLECOINS[0].id]: makeLiquidity({ liquidityScore: 0 }),
+    }, "all", "");
+
+    expect(model.summaryStats).toMatchObject({ totalTvl: 0, avgScore: 0 });
+  });
 });

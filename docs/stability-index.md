@@ -158,6 +158,8 @@ See [API Reference](./api-reference.md) for the full response shape.
 - **Homepage PSI mini-card**: `src/components/home-alt-mini-cards/psi-band-card.tsx` — shows `current.score` (raw instant, unlabeled) alongside a last-90-days score sparkline and a `90D … vs avg` delta caption, so the headline number matches its raw-sample sparkline.
 - **Dedicated page**: `src/app/stability-index/client.tsx` — hero KPI bar focused on the lighthouse/current PSI signal and historical PSI measurements, score history chart with band-colored zones, Beam Dimmers for the current formula component pressure (one independently scaled sparkline per component, with their own time range filter), methodology section, and contextual methodology hints on PSI plus the four component labels (`Severity`, `Breadth`, `Stress Breadth`, `Trend`). The headline score explicitly labels whether it is the rolling 24h average or raw instant sample. Beam Dimmers use the current PSI component values and prior-sample deltas only; they are not a causal event timeline and do not change scoring.
 - **Hook**: `src/hooks/api-hooks.ts` — `useStabilityIndex()` (homepage), `useStabilityIndexDetail()` (page)
+- **30d stats:** observed history within the source evaluation's UTC day and preceding 29 days; gaps never extend the window to obtain 30 rows.
+- **Event dates:** timeline labels preserve authored UTC calendar dates, including cross-year ranges; viewer timezone never changes labels or event-window matching.
 - **Route strategy (2026-03-05):** legacy `/stability-index-alt` was retired after Tier 3A review (no nav/sitemap/internal product usage) and now redirects to `/stability-index` via `public/_redirects`
 
 ## Digest Integration

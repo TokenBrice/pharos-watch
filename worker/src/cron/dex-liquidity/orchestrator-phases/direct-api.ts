@@ -76,8 +76,8 @@ export interface DexPoolSourceAdapter {
    */
   poolSource?: string;
   supportedChains: string[];
-  /** Defaults to "exhaustive"; declare "bounded-sample" to withhold veto authority. */
-  censusScope?: DirectApiCensusScope;
+  /** Explicit maximum census authority; a run may downgrade it, never upgrade it. */
+  censusScope: DirectApiCensusScope;
   fn: (signal?: AbortSignal) => Promise<PaginatedDexApiFetchResult>;
 }
 export type DirectApiFetcher = DexPoolSourceAdapter;
@@ -116,7 +116,7 @@ export interface DirectApiFetchPhaseEntry {
   circuitKey: string;
   normalizedProtocol: string;
   supportedChains: string[];
-  censusScope?: DirectApiCensusScope;
+  censusScope: DirectApiCensusScope;
   result: PaginatedDexApiFetchResult;
   /** Exact raw-source identities retained without keeping discarded pool objects alive. */
   authoritativeExactPoolKeys?: Set<string>;
@@ -388,6 +388,7 @@ export function buildDexDirectApiFetchers(params: {
         "hyperevm",
         "xlayer",
       ],
+      censusScope: "exhaustive",
       fn: fetchBalancerPools,
     },
     {
@@ -428,6 +429,7 @@ export function buildDexDirectApiFetchers(params: {
       normalizedProtocol: "raydium",
       poolSource: "raydium",
       supportedChains: ["solana"],
+      censusScope: "exhaustive",
       fn: fetchRaydiumPools,
     },
     {
@@ -437,6 +439,7 @@ export function buildDexDirectApiFetchers(params: {
       normalizedProtocol: "orca",
       poolSource: "orca",
       supportedChains: ["solana"],
+      censusScope: "exhaustive",
       fn: (signal) => fetchOrcaPools(signal, params.db),
     },
     {
@@ -469,6 +472,7 @@ export function buildDexDirectApiFetchers(params: {
       circuitKey: CIRCUIT_SOURCE.UNISWAP_V3_BSC_SHADOW,
       normalizedProtocol: "uniswap-v3-shadow",
       supportedChains: ["bsc"],
+      censusScope: "bounded-sample",
       fn: (signal) => fetchUniswapV3BscShadowPools({
         db: params.db,
         chainAddressToId: params.chainAddressToId,
@@ -557,7 +561,9 @@ export async function runDirectApiFetchPhase(
           circuitKey,
           normalizedProtocol,
           supportedChains,
-          censusScope: result.censusScope ?? censusScope ?? "exhaustive",
+          censusScope: censusScope === "exhaustive" && result.censusScope !== "bounded-sample"
+            ? "exhaustive"
+            : "bounded-sample",
           result,
         };
         return {
@@ -584,12 +590,13 @@ export async function runDirectApiFetchPhase(
               circuitKey,
               normalizedProtocol,
               supportedChains,
+              censusScope: "bounded-sample",
               result: makeDexApiFetchResult([], {
                 ok: false,
                 degraded: true,
                 errors: ["circuit open"],
               }),
-            },
+            } satisfies DirectApiFetchPhaseEntry,
           };
         }
         if (signal?.aborted) throw err;
@@ -610,12 +617,13 @@ export async function runDirectApiFetchPhase(
             circuitKey,
             normalizedProtocol,
             supportedChains,
+            censusScope: "bounded-sample",
             result: makeDexApiFetchResult([], {
               ok: false,
               degraded: true,
               errors: [toErrorMessage(err)],
             }),
-          },
+          } satisfies DirectApiFetchPhaseEntry,
         };
       }
     },

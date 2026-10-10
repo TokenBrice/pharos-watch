@@ -9,6 +9,11 @@ import { jsonResponse, mockFetch as createFetchMock } from "@shared/test-utils/m
 import { makeFluidTicker, makeFluidRpcResponse, makeBalancerPool, makeOrcaPool, makeCursorDb, orcaRoute } from "./dex-liquidity-direct-api.test-support";
 import { acknowledgeDexSourcePagination } from "../dex-liquidity/source-pagination-state";
 import { buildAuthoritativeStagedPoolConfirmationIndex } from "../dex-liquidity/orchestrator-phases/authoritative";
+import { compactDirectApiFetchPhasePools } from "../dex-liquidity/orchestrator-phases/direct-api";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 vi.mock("../../lib/abort", async () => {
   const actual = await vi.importActual<typeof import("../../lib/abort")>("../../lib/abort");
@@ -904,6 +909,47 @@ describe("fetchRaydiumPools", () => {
     expect(pools.ok).toBe(true);
     expect(pools.pools).toHaveLength(1);
     expect(pools.pools[0].poolAddress).toBe("validPool");
+    expect(pools.physicalPoolCensus).toEqual({
+      exactPoolKeys: ["solana:brokenPool", "solana:validPool"], incompleteChains: [],
+    });
+  });
+
+  it.each([true, false])("preserves raw Raydium confirmation keys and withholds damaged census authority (identity %s)", async (hasIdentity) => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({
+      success: true, data: { data: [
+        { id: hasIdentity ? "brokenPool" : "", tvl: 100000 },
+        { id: "validPool", tvl: 100000, mintA: { address: "a", symbol: "A", decimals: 6 },
+          mintB: { address: "b", symbol: "B", decimals: 6 }, day: { volume: 5000 } },
+      ] },
+    })).mockResolvedValueOnce(jsonResponse({ success: true, data: { data: [] } }));
+    const result = await fetchRaydiumPools();
+    expect(result.pools).toHaveLength(1);
+    const phase = compactDirectApiFetchPhasePools({
+      results: [{ name: "Raydium", circuitKey: "raydium", normalizedProtocol: "raydium",
+        supportedChains: ["solana"], censusScope: "exhaustive", result }],
+      failedSources: [], degradedSources: [], attemptedProtocolChains: [], fallbackSignals: [],
+      sourceWarnings: [], circuitEvents: [],
+    }, { chainAddressToId: new Map(), symbolToChainScopedIds: new Map(), contractMetaByChainAddress: new Map() });
+    const index = buildAuthoritativeStagedPoolConfirmationIndex(phase.phase.results);
+    expect(index.enforcedChainsByProtocol.get("raydium")?.has("solana") ?? false).toBe(hasIdentity);
+    expect(index.confirmedExactKeysByProtocol.get("raydium")?.has("solana:brokenPool") ?? false).toBe(hasIdentity);
+  });
+
+  it("never infers exhausted Raydium coverage from full pages with unreadable TVL", async () => {
+    mockFetch.mockImplementation(async (input) => {
+      const url = new URL(String(input));
+      const page = Number(url.searchParams.get("page"));
+      const rows = url.searchParams.get("poolType") === "standard" ? []
+        : page <= 2 ? Array.from({ length: 1000 }, (_, index) => ({ id: `unknown-${page}-${index}`, tvl: "unknown" }))
+          : [{ id: "late-valid", tvl: 100000, mintA: { address: "a", symbol: "A", decimals: 6 },
+            mintB: { address: "b", symbol: "B", decimals: 6 }, day: { volume: 5000 } }];
+      return jsonResponse({ success: true, data: { data: rows } });
+    });
+    const result = await fetchRaydiumPools();
+    expect(result.pools.map((pool) => pool.poolAddress)).toEqual(["late-valid"]);
+    expect(result.physicalPoolCensus?.exactPoolKeys).toContain("solana:late-valid");
+    expect(mockFetch.mock.calls.filter(([url]) => String(url).includes("poolType=concentrated")))
+      .toHaveLength(3);
   });
 
   it("sets price to null when pool price is zero", async () => {
@@ -1001,6 +1047,31 @@ describe("fetchOrcaPools", () => {
     expect(pools.pools).toHaveLength(1);
     expect(pools.pools[0].poolAddress).toBe("validPool");
     expect(pools.warnings).toContain("page 1 skipped 2 malformed pool rows");
+    expect(pools.physicalPoolCensus).toEqual({
+      exactPoolKeys: ["solana:brokenPoolMissingToken", "solana:brokenPoolBadDecimals", "solana:validPool"],
+      incompleteChains: [],
+    });
+  });
+
+  it.each([true, false])("preserves raw Orca identities and never acknowledges an unreadable inventory row (identity %s)", async (hasIdentity) => {
+    mockJsonFetch({
+      data: [{ address: hasIdentity ? "brokenPool" : "" }, makeOrcaPool("validPool")],
+      meta: { cursor: { next: null } },
+    });
+    const { db } = fixtures.open();
+    const result = await fetchOrcaPools(undefined, db);
+    expect(result.pools).toHaveLength(1);
+    const phase = compactDirectApiFetchPhasePools({
+      results: [{ name: "Orca", circuitKey: "orca", normalizedProtocol: "orca",
+        supportedChains: ["solana"], censusScope: "exhaustive", result }],
+      failedSources: [], degradedSources: [], attemptedProtocolChains: [], fallbackSignals: [],
+      sourceWarnings: [], circuitEvents: [],
+    }, { chainAddressToId: new Map(), symbolToChainScopedIds: new Map(), contractMetaByChainAddress: new Map() });
+    const index = buildAuthoritativeStagedPoolConfirmationIndex(phase.phase.results);
+    expect(result.pagination?.state).toBe(hasIdentity ? "complete" : "partial");
+    expect(result.pendingPaginationUpdates).toHaveLength(hasIdentity ? 1 : 0);
+    expect(index.enforcedChainsByProtocol.get("orca")?.has("solana") ?? false).toBe(hasIdentity);
+    expect(index.confirmedExactKeysByProtocol.get("orca")?.has("solana:brokenPool") ?? false).toBe(hasIdentity);
   });
 
   it("handles 429 rate limit gracefully", async () => {
@@ -1063,6 +1134,7 @@ describe("fetchOrcaPools", () => {
     expect(pools.censusScope).toBe("exhaustive");
     expect(buildAuthoritativeStagedPoolConfirmationIndex([{
       name: "Orca", circuitKey: "orca", normalizedProtocol: "orca", supportedChains: ["solana"],
+      censusScope: "exhaustive",
       result: pools, authoritativeExactPoolKeys: new Set(["solana:pool1", "solana:pool2"]),
     }]).enforcedChainsByProtocol.get("orca")).toEqual(new Set(["solana"]));
     expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -1090,6 +1162,7 @@ describe("fetchOrcaPools", () => {
     expect(result.pagination).toMatchObject({ state: "partial", headRefreshed: true, cycleCompleted: true });
     expect(buildAuthoritativeStagedPoolConfirmationIndex([{
       name: "Orca", circuitKey: "orca", normalizedProtocol: "orca", supportedChains: ["solana"],
+      censusScope: "exhaustive",
       result, authoritativeExactPoolKeys: new Set(["solana:head", "solana:stored-tail"]),
     }]).enforcedChainsByProtocol.has("orca")).toBe(false);
     expect(state.cursor).toBe("stored-cursor");

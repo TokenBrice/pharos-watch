@@ -119,10 +119,10 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
         <MetricStatCard
           variant="compact"
           title="Total DEX TVL"
-          value={formatCurrency(stats.totalTvl)}
+          value={stats.totalTvl == null ? "—" : formatCurrency(stats.totalTvl)}
           subtext={
             <>
-              Across all tracked stablecoins
+              {stats.totalTvl == null ? "Global TVL observation unavailable" : "Across all tracked stablecoins"}
               {stats.agg7dChange != null && (
                 <span
                   className={`ml-2 font-mono ${getNetColor(stats.agg7dChange, { positiveInclusiveZero: true })}`}
@@ -150,14 +150,14 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
         <MetricStatCard
           variant="compact"
           title={<MethodologyLabel topic="liquidityScore">Avg Liq Score</MethodologyLabel>}
-          value={
+          value={stats.avgScore == null ? "NR" :
             <>
               {stats.avgScore}
               <span className="text-lg text-muted-foreground">/100</span>
             </>
           }
-          valueClassName={getScoreColor(stats.avgScore)}
-          subtext="Mean score of active coins"
+          valueClassName={stats.avgScore == null ? "text-muted-foreground" : getScoreColor(stats.avgScore)}
+          subtext={stats.avgScore == null ? "No active coins have a rated score" : "Mean score of rated active coins"}
         />
 
         <MetricStatCard

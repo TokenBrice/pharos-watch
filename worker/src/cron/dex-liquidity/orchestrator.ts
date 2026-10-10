@@ -1113,6 +1113,7 @@ async function buildDexLiquidityPoolState(
       sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates,
     fallbackCounters: ctx.fallbackCounters,
   });
+  poolRejections.unshift(...sourceState.dataSources.poolRejections);
 
   // Primary pools and display-only enrichment maps have been projected into
   // metrics and the identity index. Keep only the exact target candidates

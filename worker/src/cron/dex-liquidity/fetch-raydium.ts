@@ -63,6 +63,8 @@ async function fetchPoolType(
   let consecutiveFullPagesWithoutEligiblePools = 0;
   const pageHasEligiblePool = new Map<number, boolean>();
   const malformedRowsByPage = new Map<number, number>();
+  const physicalPoolKeys = new Set<string>();
+  let censusIncomplete = false;
 
   const result = await runPaginatedDirectApiFetch<DexApiPool>({
     source: poolType,
@@ -81,7 +83,15 @@ async function fetchPoolType(
       return Array.isArray(pools) ? pools : { error: `${poolType} page ${page} returned malformed body` };
     },
     mapRow: (rawPool, { page }) => {
-      if (!isRaydiumPool(rawPool)) {
+      const id = isDexApiRecord(rawPool) && typeof rawPool.id === "string" ? rawPool.id.trim() : "";
+      if (id) physicalPoolKeys.add(`solana:${id}`);
+      else censusIncomplete = true;
+      // Unknown economics cannot prove this liquidity-sorted page is below the floor.
+      if (!isDexApiRecord(rawPool) || typeof rawPool.tvl !== "number" ||
+          !Number.isFinite(rawPool.tvl) || rawPool.tvl >= DIRECT_API_POOL_MIN_TVL_USD) {
+        pageHasEligiblePool.set(page, true);
+      }
+      if (!id || !isRaydiumPool(rawPool)) {
         malformedRowsByPage.set(page, (malformedRowsByPage.get(page) ?? 0) + 1);
         return null;
       }
@@ -139,12 +149,18 @@ async function fetchPoolType(
   for (const error of result.errors) {
     logWorkerEventArgs("handler", "warn", "[fetch-raydium]", error);
   }
-  return makeDexApiFetchResult(result.rows, {
-    ok: result.successfulPages > 0,
-    degraded: result.errors.length > 0,
-    errors: result.errors,
-    warnings: result.warnings,
-  });
+  return {
+    ...makeDexApiFetchResult(result.rows, {
+      ok: result.successfulPages > 0,
+      degraded: result.errors.length > 0,
+      errors: result.errors,
+      warnings: result.warnings,
+    }),
+    physicalPoolCensus: {
+      exactPoolKeys: [...physicalPoolKeys],
+      incompleteChains: censusIncomplete ? ["solana"] : [],
+    },
+  };
 }
 
 export async function fetchRaydiumPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
@@ -158,6 +174,8 @@ export async function fetchRaydiumPools(signal?: AbortSignal): Promise<DexApiFet
   const warnings: string[] = [];
   let ok = false;
   let degraded = false;
+  const physicalPoolKeys = new Set<string>();
+  let censusIncomplete = false;
 
   for (const [label, settled] of [
     ["concentrated", concentrated],
@@ -169,15 +187,22 @@ export async function fetchRaydiumPools(signal?: AbortSignal): Promise<DexApiFet
       degraded = degraded || settled.value.degraded;
       errors.push(...settled.value.errors);
       warnings.push(...(settled.value.warnings ?? []));
+      for (const key of settled.value.physicalPoolCensus?.exactPoolKeys ?? []) physicalPoolKeys.add(key);
+      censusIncomplete ||= !settled.value.physicalPoolCensus ||
+        settled.value.physicalPoolCensus.incompleteChains.length > 0;
     } else {
       const message = toErrorMessage(settled.reason);
       errors.push(`${label} request failed: ${message}`);
       degraded = true;
+      censusIncomplete = true;
     }
   }
 
   if (results.length > 0) {
     logWorkerEventArgs("handler", "info", `[fetch-raydium] Fetched ${results.length} pools`);
   }
-  return makeDexApiFetchResult(results, { ok, degraded, errors, warnings });
+  return {
+    ...makeDexApiFetchResult(results, { ok, degraded, errors, warnings }),
+    physicalPoolCensus: { exactPoolKeys: [...physicalPoolKeys], incompleteChains: censusIncomplete ? ["solana"] : [] },
+  };
 }

@@ -18,7 +18,7 @@ export interface ProjectorOptions {
    * Override the per-class watermark. For source-row-time projectors this is
    * epoch seconds and behaves as a strict greater-than filter on the source
    * row's timestamp column. NULL/undefined normally uses the persisted watermark;
-   * freeze and mint/burn instead reconcile the trailing 90 days of source identities.
+   * depeg opened/resolved, freeze and mint/burn reconcile trailing 90-day identities.
    */
   since?: number | null;
   /** Inclusive upper bound on source-row timestamp (epoch seconds). */

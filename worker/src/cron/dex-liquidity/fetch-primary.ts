@@ -40,7 +40,7 @@ import { logWorkerEvent } from "../../lib/structured-log";
 import { shouldRetainCurveCompositePoolIdentity } from "@shared/lib/curve-composite-policies";
 import { attachDefiLlamaV4PoolIdentities, DEFILLAMA_V4_IDENTITIES_URL } from "./defillama-v4-identity";
 import { requirePoolIdentity } from "./process-pool-admission-identity";
-import { ExpectedPoolInputError, POOL_REJECTION_POOL_ID_LIMIT } from "./process-pool-types";
+import { ExpectedPoolInputError, POOL_REJECTION_POOL_ID_LIMIT, type PoolProcessingRejection } from "./process-pool-types";
 
 const PRIMARY_SOURCE_JSON_TIMEOUT_MS = 30_000;
 const CURVE_API_FETCH_CONCURRENCY = 4;
@@ -94,6 +94,7 @@ export interface PrimaryPoolCompactionResult {
   retainedPoolCount: number;
   skippedUntrackedCount: number;
   rejectedPoolCount: number;
+  rejectedPoolTvlUsd: number;
   rejectedPoolIds: string[];
 }
 
@@ -103,21 +104,25 @@ export function compactPrimaryPoolsForTrackedStablecoins(
 ): PrimaryPoolCompactionResult {
   const retainedPools: LlamaPool[] = [];
   let rejectedPoolCount = 0;
+  let rejectedPoolTvlUsd = 0;
   const rejectedPoolIds: string[] = [];
   for (const pool of pools) {
     try {
       requirePoolIdentity(pool);
+      if (resolveLlamaPoolStablecoinMatches(pool, lookups).matchedIds.size > 0) {
+        retainedPools.push(pool);
+      }
     } catch (error) {
       if (!(error instanceof ExpectedPoolInputError)) throw error;
       rejectedPoolCount++;
+      if (typeof pool?.tvlUsd === "number" && Number.isFinite(pool.tvlUsd) && pool.tvlUsd > 0) {
+        rejectedPoolTvlUsd += pool.tvlUsd;
+      }
       const poolId = typeof pool?.pool === "string" ? pool.pool : "unknown";
       if (rejectedPoolIds.length < POOL_REJECTION_POOL_ID_LIMIT && !rejectedPoolIds.includes(poolId)) {
         rejectedPoolIds.push(poolId);
       }
       continue;
-    }
-    if (resolveLlamaPoolStablecoinMatches(pool, lookups).matchedIds.size > 0) {
-      retainedPools.push(pool);
     }
   }
 
@@ -127,6 +132,7 @@ export function compactPrimaryPoolsForTrackedStablecoins(
     retainedPoolCount: retainedPools.length,
     skippedUntrackedCount: pools.length - retainedPools.length - rejectedPoolCount,
     rejectedPoolCount,
+    rejectedPoolTvlUsd,
     rejectedPoolIds,
   };
 }
@@ -164,6 +170,7 @@ export async function fetchDataSources(
   // --- DL Yields (consume body to release connection) ---
   let pools: LlamaPool[] = [];
   let rawPoolCount = 0;
+  const poolRejections: PoolProcessingRejection[] = [];
   const fallbackDexProjects = new Set<string>();
   let dlYieldsAvailable = false;
 
@@ -219,6 +226,14 @@ export async function fetchDataSources(
           }
 
           const compacted = compactPrimaryPoolsForTrackedStablecoins(rawPools, lookups);
+          if (compacted.rejectedPoolCount > 0) {
+            poolRejections.push({
+              reason: "invalid-pool-identity",
+              poolIds: compacted.rejectedPoolIds,
+              count: compacted.rejectedPoolCount,
+              tvlUsd: compacted.rejectedPoolTvlUsd,
+            });
+          }
           await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
           pools = compacted.pools;
           dlYieldsAvailable = true;
@@ -453,6 +468,7 @@ export async function fetchDataSources(
   return {
     pools,
     rawPoolCount,
+    poolRejections,
     dexProjects,
     protocolTvlCaps,
     curvePayloads,
@@ -612,6 +628,9 @@ export async function buildCurveLookups(
           apiIsBroken: false,
           A,
           balanceRatio,
+          balanceTvlScope: "full-pool",
+          contributionTvlScope: pool.basePoolAddress && pool.usdTotalExcludingBasePool > 0
+            ? "base-pool-excluded" : "full-pool",
           tvl: pool.usdTotal,
           registryId: pool.registryId ?? "",
           isMetaPool: pool.isMetaPool ?? false,
