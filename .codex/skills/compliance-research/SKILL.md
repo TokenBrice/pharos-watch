@@ -18,12 +18,14 @@ For `genius`, read `docs/genius-tracker.md`, `shared/lib/compliance-regime-state
 3. Map token → legal issuer → exact authorization/public posture. Reject same-name affiliates and token-unspecific licenses.
 4. Apply the owning tracker’s schema and conservative classification. “Not assessed” is absence of a row; it is not an out-of-scope finding.
 5. Present the proposed object, source URLs/dates, access date, and confidence. Stop there for research-only requests. Before writes, establish approval for the proposed scope. Prior explicit cohort authorization persists across its 3–5 coin batches; ask only for changes outside that authorization.
-6. Patch only the compliance sidecar. For GENIUS set the required reviewer/review date; for MiCA include references where its schema requires them. Then run:
+6. Patch only the compliance sidecar. For GENIUS set the required reviewer/review date; for MiCA include references where its schema requires them. For a standalone approved edit, after coupled source edits are complete, run:
 
 ```bash
 npm run bootstrap:generated
 npm run check:stablecoin-data
 ```
+
+In a coordinated addition, keep the primary-source and pre-edit schema validation duties below, but return evidence, changed source paths, observed validation, and unexercised integration checks in the [addition/evidence handoff packet](../../../docs/process/adding-a-stablecoin.md#additionevidence-handoff-packet). The orchestrator owns the single Phase 7 generation/check pass after all specialists land; do not independently run the commands above.
 
 ## Guardrails
 
@@ -59,4 +61,4 @@ The verifier independently reopens the base and sidecar, checks every proposed U
 
 Set `safeToAutoApply=true` only for a non-empty candidate editing an existing row, with no removal or downgrade, and no stronger authorization escalation unless that claim was already present and equally or better sourced. Limit it to reference refinement, descriptive fields, a more-conservative enum correction, or a date refresh. New rows need explicit approval covering their addition; prior cohort authorization that explicitly includes new rows satisfies this requirement. `unable-to-verify` makes no change and needs more research. Treat the flag as advisory, never as permission.
 
-Return a deterministic manifest containing date, counts, safe changes, flagged changes, flags, gap proposals, regime-state notes, and per-coin verdict rows. The parent owns deduplication, approval, merge, and `npm run check:stablecoin-data`.
+Return a deterministic manifest containing date, counts, safe changes, flagged changes, flags, gap proposals, regime-state notes, and per-coin verdict rows. The parent owns deduplication, approval, and merge; generation/check ownership follows the standalone versus coordinated-addition workflow above.

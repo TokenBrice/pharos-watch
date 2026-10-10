@@ -18,7 +18,7 @@ npm run agent:route -- \
   --file docs/worker-and-api-limits.md
 ```
 
-Read only the documents, anchors, and scoped `AGENTS.md` files the route returns, then inspect the source entrypoint and its local imports. Code, schemas, registries, and checked runtime data win when prose disagrees. Author root guidance in `CLAUDE.md`; root `AGENTS.md` is generated and must not be edited by hand.
+Read the route's required entry docs and anchors plus every returned scoped `AGENTS.md`, following the read-order contract below; then inspect the source entrypoint and its local imports. Code, schemas, registries, and checked runtime data win when prose disagrees. Author root guidance in `CLAUDE.md`; root `AGENTS.md` is generated and must not be edited by hand.
 
 Use native read, grep, glob, and edit tools first. Use Bash for real commands. If a harness rejects a shell command because a native tool shadows it, switch tools and never retry the same command.
 
@@ -27,6 +27,8 @@ Use native read, grep, glob, and edit tools first. Use Bash for real commands. I
 The machine-readable routing source of truth is [`doc-ownership.json`](../doc-ownership.json). Its `mappings` array is the only authored source-to-document model; the registry loader derives the runtime path-family projection from it. Each mapping declares an id, label, risk, source globs, exact docs, and optional background references, scoped context, rules, checks, `testOwnership`, and hints. A document reference is either a path string or `{ "path": "...", "anchor": "..." }`; long documents use verified heading anchors. Generic Worker/shared routes and sensitive owners carry baseline typing, lint, and generated-artifact obligations. `testOwnership` adds explicit suites for contracts invisible to the import graph, such as closure inventories and capture schemas; consult the live mapping rather than inferring ownership from imports alone.
 
 The `agent:route` alias invokes `scripts/ci/pharos-change-contract.ts`. Its `--file` input accepts repository-relative paths, `./` paths, absolute paths under the repository, and absolute paths under the current linked worktree; separators are normalized before routing. A missing explicit path is routed as a planned new file with a warning; add repeatable `--new-file` to suppress those warnings for the invocation. Selection precedence is `--file` > `--staged` > `--base-ref`/`--head-ref` flags > `PHAROS_CHANGE_CONTRACT_*_REF` environment range > working tree.
+
+Router and focused-check range flags are not interchangeable. Consult `npm run agent:route -- --help` for routing and `npm run check:focused -- --help` for focused execution; use each command's current help rather than copying the other's range options.
 
 Routing rejects unknown options, missing values, invalid hook modes, and failed Git selections instead of reporting an empty successful contract. Git-based selection retains deletions and both sides of renames; commands that require existing files filter those paths only when executing. Ordinary text and JSON output include every required doc, check, and rule; SessionStart remains a bounded hint and explicitly reports unavailable Git evidence.
 
@@ -45,14 +47,15 @@ Use `--staged` when the intended change is staged but not committed. The command
 
 Then:
 
-1. Read only the reported `path#anchor` sections and scoped context files.
-2. Inspect the reported source entrypoints and follow local imports only as needed.
-3. Treat code, schemas, registries, and checked runtime data as authoritative when prose disagrees.
-4. Update the nearest owning doc only when behavior, API contracts, methodology, operations, or data-source policy changed.
+1. Read the exact `Read first` entry owners at their reported `path#anchor` sections and **every** returned scoped `AGENTS.md` ancestor; more-specific scoped rules take precedence.
+2. Inspect the source entrypoints and follow local imports as needed. Use `Also relevant` as conditional discovery, including single-path overflow: read the relevant contract when the source or task calls for it, not the whole background list.
+3. All returned rules, checks, and warnings still apply; conditional background reading never makes safety obligations optional.
+4. Treat code, schemas, registries, and checked runtime data as authoritative when prose disagrees.
+5. Update the nearest owning doc only when behavior, API contracts, methodology, operations, or data-source policy changed.
 
 ### When Routing Misses
 
-A path with no matching mapping emits a `Missing documentation owner` warning, including planned paths passed with `--new-file`; that flag suppresses only the filesystem-existence warning. A generic runtime match is context, not proof that every domain contract was found. For stale producer output, use the [symptom selector](../README.md#stale-output-diagnosis) and the routed observation background rather than treating scheduling guidance as an incident runbook.
+A path with no matching mapping emits a `Missing documentation owner` warning, including planned paths passed with `--new-file`; that flag suppresses only the filesystem-existence warning. A generic-only runtime or documentation match is context, not proof that a domain owner was found. Inspect the source/task and find the domain contract before relying on generic routing. For stale producer output, use the [symptom selector](../README.md#stale-output-diagnosis) and the routed observation background rather than treating scheduling guidance as an incident runbook.
 
 Any unmapped path makes `check:focused` fail with machine-readable `routing-incomplete`, including in plan-only mode. A zero-plan is not verification. A mapped deliberate no-check plan is reported separately as `intentional-no-check`; neither focused result is final readiness proof. Missing declared `testOwnership` tests separately fail PR executable-test validation.
 
@@ -85,9 +88,9 @@ Do not create a branch, worktree, or pull request unless requested. Do not expos
 
 Use [Testing: Smallest adequate check per area](../testing.md#smallest-adequate-check-per-area) for authoring feedback, not readiness proof. Preserve nearby formatting because the repository has no canonical formatter, and finish with `git diff --check`.
 
-Before every authorized push, first or replacement, follow the canonical ordered [Pre-push readiness](../testing.md#pre-push-readiness) sequence. Use mise shims reading `.nvmrc`: first enable `mise settings add idiomatic_version_file_enable_tools node`, then `mise install`; `check:pr` enforces exact `.nvmrc` Node and npm 11.x. Refresh the target refs and finish source/integration commits, run full `npm run check:generated-artifacts` convergence, then full plain `npm run check:pr` on the final committed state with no skip/filter/plan-only flags. The proof is a fresh passing `.tmp/pr-check-receipts/<HEAD>.json`; repeat readiness after subsequent edits, commits, or integration. GitHub Actions remains the authoritative release gate.
+Before **every** authorized push, first or replacement, follow the mandatory ordered [Pre-push readiness](../testing.md#pre-push-readiness) procedure on the final committed HEAD. Require its fresh passing receipt; subsequent edits, commits, or integration invalidate that proof. Focused reruns never authorize a replacement push, and GitHub Actions remains the authoritative release gate.
 
-Opt into `npm run check:pr -- --ci-parity` after generated convergence and before final plain readiness when a remote failure was not reproduced locally, or for lockfile/setup/security-policy changes. If CI fails, collect every failed leaf, reproduce narrowly, fix all causal defects in one revision, rerun full readiness, and push once. Do not treat a focused rerun as replacement-push authorization.
+For CI failures, collect every failed leaf and use the [workflow incident runbook](../runbooks/workflow-incidents.md); the readiness owner above defines the parity and replacement-push requirements.
 
 Passing deployment proves activation, not runtime health. Cron, scheduler, ingestion, migration, and other operationally risky changes also require the first relevant production execution or observation before being called operationally complete.
 

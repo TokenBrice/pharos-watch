@@ -17,15 +17,11 @@ Rankings, PYS, provenance, and detail panels may be stale or unavailable. Histor
 
 ## First Checks
 
-1. **Public status:** `/status/` for public cache/probe impact.
-2. **Access-gated status:** `https://ops.pharos.watch/admin/` -> Crons -> `sync-yield-data`; also inspect Endpoint probes for `/api/yield-rankings`.
-3. **Machine status:** `GET https://ops-api.pharos.watch/api/status` with Cloudflare Access service-token headers.
-4. **Public API:** `GET https://api.pharos.watch/api/yield-rankings`.
-5. **Source decisions:** see [Source Decision Evidence](#source-decision-evidence) below for the generation and per-asset decision queries.
+Start with the [shared read-only Yield Health checks](./yield-health.md#first-checks), focusing on ranking freshness and `sync-yield-data` metadata and leases. Also check `/status/` for public cache/probe impact and the admin Endpoint probes for `/api/yield-rankings`, then read `GET https://api.pharos.watch/api/yield-rankings`. Use [Source Decision Evidence](#source-decision-evidence) below for generation and per-asset queries.
 
-Rankings full and summary `_meta` report `assessedAt`, `freshBudgetSec: 7200`, `degradedBudgetSec: 14400`, and `reason` alongside publication time, age, and status. Age is reassessed at response time: above two hourly intervals is degraded, above four is stale. Both non-fresh states send `Warning: 110` and `Cache-Control: no-store`. Source and comparison-anchor ages also advance on both live-safety and held-safety paths; publication time does not refresh upstream observations.
+Inspect `_meta` using the [response-time freshness contract](../yield-intelligence.md#persistence-and-publication) and [wire fields](../yield-intelligence.md#public-wire-contract); compare publication-age status with the [operator threshold table](./yield-health.md#threshold-table). Source and anchor aging is independent: publishing a new cache does not refresh upstream observations.
 
-An applied `sync-yield-data` returns `ok` with `metadata.quality { degraded, reasons }`. Inspect those reasons for imperfect inputs and non-blocking coverage/quarantine alarms; use `metadata.reason` for unapplied `degraded` work. The top-level `fallbackMode` has been removed. `streakDegradedRuns` includes non-clean completed publications and exposes the latest concrete cause; Pendle-only advisory loss does not flip public producer quality.
+For publication completion versus input-quality findings and the degraded streak, use the [publisher contract](../yield-intelligence.md#persistence-and-publication). Inspect concrete `metadata.quality.reasons` / `advisoryReasons` and `metadata.reason`, not a removed top-level `fallbackMode`.
 
 Check `freshness:yield-data` against `yield-rankings`: sentinel `generationId` / `updated_at` must match rankings `publication.generationId` / publication time after any applied publication, even with quality findings. `/api/status` and `/api/health` publish yield `generationId` / `publishedAt`, or null for legacy/fallback evidence. Do not confuse served yield age with the last clean run or the independent safety clock.
 
@@ -55,13 +51,7 @@ FROM cache
 WHERE key IN ('yield-rankings', 'freshness:yield-data');
 ```
 
-```sql
-SELECT job, started_at, duration_ms, status, item_count, error, metadata
-FROM cron_runs
-WHERE job = 'sync-yield-data'
-ORDER BY started_at DESC
-LIMIT 5;
-```
+Use the [shared cron-history SELECT](./yield-health.md#read-only-d1-snippets) for `sync-yield-data`, newest 5 runs.
 
 ```sql
 SELECT COUNT(*) AS best_rows, MAX(updated_at) AS newest_row, MIN(updated_at) AS oldest_row

@@ -1,6 +1,6 @@
 ---
 name: stablecoin-identity-contracts
-description: Verify CoinGecko identity, populate known stablecoin deployments, or discover missing chain coverage. Use for `geckoId` audits and `contracts[]` work in the Pharos stablecoin registry.
+description: Verify CoinGecko identity, discover missing stablecoin chain coverage, or populate independently verified deployments only when requested. Use for `geckoId` audits and `contracts[]` work in the Pharos stablecoin registry.
 ---
 
 # Stablecoin Identity And Contracts
@@ -16,7 +16,9 @@ Cite its provenance record (keyless URL, block, timestamp); never cite `latest` 
 - Validate name, symbol, chain, deployment identity, and amount encoding before writing. Verify fixed decimals for ordinary token contracts; `ContractDeploymentSchema` in `shared/types/stablecoin-meta-schemas.ts` also permits explicit native bank-denom identities with unknown (`null`) decimals and requires `null` decimals for `xrpl-issued-currency` encoding. Never invent a scale or overwrite a curated deployment.
 - Use only chain IDs accepted by `shared/types/chain-identity.ts`; report unsupported chains instead of adding chain support. Lowercase EVM addresses and preserve native non-EVM casing.
 - DefiLlama list `circulating` is already USD-denominated; never multiply it by price.
-- Research can stop with findings. Apply changes only when requested and patch only the permitted fields. Adding a second deployment to an active asset also requires bridge-route rows and may require Mint Authority deployment references (`shared/lib/stablecoins/schema.ts`, `shared/lib/stablecoins/mint-bridge-ownership.ts`); coordinate the separately authorized sidecar edits before applying. If that work is outside scope, return verified candidates instead of leaving an invalid contracts-only change. After the coordinated edits, run `npm run bootstrap:generated` and `npm run check:stablecoin-data`.
+- Research can stop with findings. Apply changes only when requested and patch only the permitted fields. Adding a second deployment to an active asset also requires bridge-route rows and may require Mint Authority deployment references (`shared/lib/stablecoins/schema.ts`, `shared/lib/stablecoins/mint-bridge-ownership.ts`); coordinate the separately authorized sidecar edits before applying. If that work is outside scope, return verified candidates instead of leaving an invalid contracts-only change.
+- For addition handoffs, return identity/deployment evidence, observation times, native/representation/unknown issuance, coupled sidecar owners, reviewed gaps, and proposed versus changed paths in the [addition/evidence packet](../../../docs/process/adding-a-stablecoin.md#additionevidence-handoff-packet). Do not infer issuance ownership merely from an address or chain listing.
+- In coordinated work, leave shared generation and catalog checks to the orchestrator after all specialists land; required identity evidence checks still apply. For a standalone approved edit, own the applicable [Phase 7 generation/check pass](../../../docs/process/adding-a-stablecoin.md#phase-7---validate) after all coupled source edits land. Research-only `verify`/`discover` work does not regenerate or apply data.
 
 ## `verify`
 

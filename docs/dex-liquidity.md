@@ -10,6 +10,8 @@
 
 The v6.94 release records scope-matched Curve metapool quality and balance evidence, original-source-clock freshness for exact EVM execution, and pool/census admission repairs. A full-pool balance ratio cannot weight base-pool-excluded TVL: without matching-scope evidence, balance remains neutral and unmeasured. Exact V2 captures and QuoterV2, Uniswap V4 and Curve CryptoSwap evidence cannot acquire a fresh clock merely by being published again; covered EVM source headers enforce the existing inclusive three-hour ceiling. Component weights and retained-TVL measurement semantics are unchanged, so v6.94 adds no TVL-basis break.
 
+Runtime/version, public-changelog and structured-history pointers are in the [appendix's Methodology Versioning](./process/dex-liquidity-appendix.md#methodology-versioning); the structured changelog owns release history, not a second Markdown timeline.
+
 ## DEX Liquidity Score
 
 Hourly full publication admits recovered quotes at the next `:16` instead of waiting for an even hour. Source requests and the `:46` reuse path keep their existing cadence. Full generation and active-target writes run every hour; each uses the existing bounded persistence buffers and retention. Public history remains one reusable daily snapshot, not an hourly series. The reviewed DEX evidence maximum age remains four hours (`DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC`), and measured-history high confidence remains three hours; operational cadence changes do not tighten those scoring bounds.

@@ -1,15 +1,22 @@
-# Mint Authority Score (retired lane)
+<a id="mint-authority-score-retired-lane"></a>
 
-**Retired at safety methodology `9.1` (2026-08-08).** Mint risk is now graded once,
-by the Safety Score V9 Economic Control pillar's mint component. This document is
-kept because the methodology lane still renders its history at
-`/methodology/#mint-authority-score`; nothing on the site scores from it.
+# Mint Control — Live Safety Score Contract and Retired Lane
 
-> **Agent navigation** — [Entry and migration](#mint-authority-entry) · [Live scope](#current-v9-scope) · [Posture ladder](#mint-posture-derivation-and-quality-ladder-932) · [D29](#governed-unbounded-issuance-1002) / [D30](#minority-veto-issuance-1003) / [H](#operationally-governed-issuance-1005) · [Voting control](#uniform-voting-control-1005) · [Retired formula](#formula) · [Maintenance](#maintenance-checklist). Search `executionScope`, `scopedQuestions`, `D14`, or `issuanceFactsRef` for exact authoring contracts. Historical formulas never apply to live grades.
+This document owns the **live Safety Score mint-control contract**: native-issuance
+scope, derived posture and quality ladders, process certification, and evidence gates.
+Mint risk is graded once by the Economic Control pillar; [Report cards](./report-cards.md)
+owns the overall Safety Score model and publication contract.
+
+Only the **standalone Mint Authority Score** retired at safety methodology `9.1`
+(2026-08-08). Its [historical landing sections](#methodology-versioning) retain the
+terminal version marker and interpretation anchors. The public
+`/methodology/#mint-authority-score` surface remains unchanged.
+
+> **Agent navigation** — [Live contract entry](#mint-authority-entry) · [Native issuance scope](#current-v9-scope) · [Posture ladder](#mint-posture-derivation-and-quality-ladder-932) · [D29](#governed-unbounded-issuance-1002) / [D30](#minority-veto-issuance-1003) / [H](#operationally-governed-issuance-1005) · [Voting control](#uniform-voting-control-1005) · [D33 availability matrix](#availability-invariant-mint-fallback-1006) · [Retired standalone history](#methodology-versioning) · [Maintenance](#maintenance-checklist). Search `executionScope`, `scopedQuestions`, `D14`, or `issuanceFactsRef` for exact live contracts. Historical formulas never apply to live grades.
 
 ## Mint authority entry
 
-For current scoring and evidence, read [Current V9 scope](#current-v9-scope), the [Mint Authority Taxonomy](./classification.md#mint-authority-taxonomy), and the [native issuance / Bridge Risk authoring boundary](./stablecoin-data.md#mint-authority-and-bridge-risk-ownership). [Report cards](./report-cards.md) owns the live Safety Score methodology.
+For current mint scoring and evidence, start at [Current V9 scope](#current-v9-scope) (the implementation retains its V9 names in Safety Score V10), then read the applicable posture or process gates here. [Mint Authority Taxonomy](./classification.md#mint-authority-taxonomy) owns vocabulary and display labels; the [native issuance / Bridge Risk authoring boundary](./stablecoin-data.md#mint-authority-and-bridge-risk-ownership) owns schema and registry validation. [Report cards](./report-cards.md) owns overall aggregation and publication, not a second mint ladder.
 
 The sections from [Methodology Versioning](#methodology-versioning) through the historical formula, caps, and bands describe the retired lane only. Read them for historical interpretation, not live score changes.
 
@@ -158,6 +165,8 @@ The curated authoring field is `mintAuthority.economicCapSemantics`, whose vocab
 
 Seasoned credit remains 10 points after at least 60 months. The existing reconciled-posture path is unchanged. `unbounded-governed` uses the ordinary merged ladder, with a ceiling one point below the next rung (69); `unbounded-veto-guarded` uses that same ladder and caps at 79 below prudential reconciliation's 80, exactly like `partially-bounded-admin`. `unbounded-operationally-governed` starts at 55 and clips both seasoning and final positive merged credit at 59, below D29's 60, using that same ladder rather than a separate ceiling. The 60 rung also clips other eligible 55-base rows at 59. `unbounded-adverse` remains eligible regardless of `none`, `not-applicable`, `unknown`, or `internal-ledger` reconciliation, with base 25 and its dedicated ceiling of 39. The ordinary 10-point credit is awarded once after at least 60 months of implementation history: with unchanged knobs 25 becomes 35, not an automatic 39. Corporate or predecessor launch history does not substitute for implementation history. Merged penalties may lower the result but cannot cross the adverse 25 floor. There is no separate reconciliation-uncertainty seasoning branch. `compromised` is never eligible, and resolved-incident decay caps still apply after seasoning.
 
+Seasoned and positive merged-signal credit share `mintQualityLadder()` in `shared/lib/safety-score-v9/control-mint-grade.ts`: known posture, reconciliation-grading and attested-custody rungs only. The generic `unknown` quality is excluded from headroom calculation, so changing uncertainty quality cannot move the credit thresholds of an unchanged known posture.
+
 ### Governed unbounded issuance (`10.02`)
 
 **D29: economic bound and actor process are separate axes.** D14 still asks only whether any root can cause durable unbacked supply to reach a recipient of its choosing. Such power is economically `unbounded`, including when exercised by governance; numeric adjustable ceilings do not make it bounded. D29 derives `unbounded-governed` only when that unbounded power is held exclusively by delayed, flash-resistant on-chain token governance. Every gate must be positively established from pinned evidence; an unknown fails the rung.
@@ -286,7 +295,7 @@ The compiled authority model is derived from the authored `authorityType` on a m
 
 `9.46` also closes a fall-through in the same mappers. `bridge` and `custodian` are authored `authorityType` values that had no branch and silently produced `unknown`. `bridge` now compiles to `contract`, the treatment `timelock` already takes, because bridge machinery is a contract-scoped authority; `custodian` compiles to `issuer-backend`, the grouping the issuer authority-key derivation already applied to it. Both mappers — the mint-authority one and the bridge one — carry the identical ladder, so one authored `authorityType` cannot compile to two different authority models depending on which review carries it.
 
-The historical description follows.
+The short historical landing below describes only the retired standalone engine. Its headings preserve existing interpretation links; live changes belong to the contract above and the Safety Score changelog.
 
 ## Methodology Versioning
 
@@ -298,83 +307,31 @@ The historical description follows.
 
 ## Historical purpose
 
-Mint Authority Score measures how much durable stablecoin supply can be created, authorized, expanded, or routed by privileged actors. It focuses on the mint path itself: issuer minters, allowlisted minters, cap admins, proxy admins, facilitators, bridges, off-chain attestation systems, backend signers, governance, Safes/multisigs, custodians, and wrapper inheritance.
-
-Mint Authority Score began as a display and review-coverage methodology. From Safety `8.0`, it also fed the retired V8 Decentralization dimension through a 35% penalty-only blend. Safety `9.1` removed that separate engine and now evaluates the underlying facts once inside the Economic Control pillar; the sections below describe the retired v1.2 formula as shipped.
+The standalone score reviewed privileged durable-supply creation and routing. It began as a display/coverage methodology, fed V8 Decentralization through a 35% penalty-only blend from Safety `8.0`, and retired at Safety `9.1`. The [structured Mint Authority changelog](../shared/data/methodology-changelogs/mint-authority/v1.json) owns its release history; later mint changes belong to the Safety Score changelog (`shared/data/methodology-changelogs/safety-score/`).
 
 ## Inputs
 
-Historical scores were derived from curated `mintAuthority` metadata now authored in `shared/data/stablecoins/domains/mint-authority/<id>.json` and merged into runtime projections. Missing or unresolved data returns `NR`; it never implies that mint authority is safe.
-
-Primary fields:
-
-- `mintPath` - route family, such as immutable user collateral, permissioned minter, issuer direct mint, bridge/OFT synthetic, M0 minter, or inherited wrapper.
-- `authorityPosture` - reviewed posture band: none resolved (whole-of-chain), none resolved mint (mint-scoped), bounded admin, partially bounded admin, unbounded reconciled, concentrated admin, collateral gated, unbounded reconciliation unknown, unbounded or compromised, or unknown.
-- `confidence` - evidence quality: verified, probable, manual-review, or unknown.
-- `controls[]` - mint-capable or mint-adjacent control paths, including role, authority type, direct mint ability, threshold, signer count, timelock, cap status, cap-mutability evidence, Safe module/guard state, key-custody attestation, sources, and evidence.
-- `inheritedFrom` - parent stablecoin id for wrappers and variants that inherit mint authority from a reviewed parent.
-- `mintIncidents` - historical unbacked-mint or privileged-mint exploit evidence (one entry per incident) used for the hard incident cap.
+Historical inputs were curated `mintPath`, `authorityPosture`, `confidence`, `controls[]`, `inheritedFrom`, and `mintIncidents`. Missing/unresolved evidence meant `NR`, never safety. Current metadata is authored in `shared/data/stablecoins/domains/mint-authority/<id>.json`; use the [registry contract](./stablecoin-data.md#mint-authority-and-bridge-risk-ownership), not retired field semantics, for edits.
 
 ## Formula
 
-For direct reviewed profiles, Pharos computes four components and combines them as:
-
-```text
-rawScore = round(
-  route * 0.30 +
-  controller * 0.40 +
-  bounds * 0.15 +
-  posture * 0.15
-)
-```
-
-| Component  | Weight | Meaning                                                                                                                                                          |
-| ---------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Route      | 30%    | Structural mint route family. Immutable user/protocol minting scores highest; bridge, off-chain attested, and issuer-direct routes score lower.                  |
-| Controller | 40%    | Weakest mint-capable controller. Single-key, backend, bridge, custodian, Safe/multisig, timelock, DAO, and contract controls are scored by weakest active route. |
-| Bounds     | 15%    | Whether mint-capable paths are quantitatively bounded and whether caps can be raised.                                                                            |
-| Posture    | 15%    | Curated operator posture from no privileged route through unbounded or compromised authority.                                                                    |
-
-The controller component is weakest-link by design. If any mint-capable path can directly mint, authorize a minter, raise a cap, or upgrade mint logic, the lowest controller score among those paths constrains the component.
-
-The bounds component treats cap-limited mint-capable controls as bounded, but the immutable-cap bonus is stricter in `v1.2`: every cap-limited mint-capable control must explicitly record `canRaiseCap: false`. Controls with `canRaiseCap: true`, `canRaiseCap: "unknown"`, or omitted cap-mutability evidence keep the capped-path score but do not receive the immutable-cap bonus.
+The retired v1.2 formula was `round(route × 0.30 + controller × 0.40 + bounds × 0.15 + posture × 0.15)`. Controller scoring used the weakest mint-capable path (direct mint, minter authorization, cap raise or mint-logic upgrade). The immutable-cap bonus required every cap-limited mint-capable control to explicitly record `canRaiseCap: false`; mutable, unknown or omitted evidence retained only capped-path treatment. This formula is not evaluated by any current surface.
 
 ## Caps
 
-Caps apply after the weighted raw score:
-
-| Cap            | Limit         | Trigger                                                                                                                                                                                                                                                                                       |
-| -------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Incident cap   | 10 / 15 / 20  | `authorityPosture: "unbounded-or-compromised"` with at least one recorded entry in `mintIncidents`. The limit decays purely with the age of the most recent incident: under 2 years = 10, 2-4 years = 15, 4+ years = 20 (v1.1). Unparseable dates stay at 10. Always below the unbounded cap. |
-| Unbounded cap  | 25            | Unbounded or compromised posture without a recorded incident.                                                                                                                                                                                                                                 |
-| EOA cap        | 40            | Non-issuer-context EOA can directly mint or authorize minting without MPC/HSM key-custody attestation.                                                                                                                                                                                        |
-| Confidence cap | 100 / 90 / 85 | Verified = 100, probable = 90, manual-review = 85. Unknown confidence returns `NR`.                                                                                                                                                                                                           |
-
-The retired detail-page breakdown reported these caps, distinguishing a weak raw score from a hard governance, incident, or evidence cap.
+Retired post-formula limits were incident 10 / 15 / 20 (most recent incident under 2 / 2–4 / 4+ years; invalid dates stayed 10), unbounded without incident 25, non-issuer-context unattested mint-capable EOA 40, and confidence 100 / 90 / 85 for verified / probable / manual review (unknown meant `NR`). Incident limits stayed below the unbounded limit. These are historical limits, not current Economic Control caps.
 
 ## Inheritance
 
-Rows with `mintPath: "wrapped-or-variant-inherited"` inherit from `inheritedFrom`. If the parent is scoreable, the wrapper score is the lower of the parent score and a blend of 60% parent score plus 40% weakest wrapper-control score. This prevents a wrapper from outranking the base mint authority when the wrapper itself adds an extra weak control path.
-
-Inheritance returns `NR` when the parent is missing, unscoreable, cyclic, or beyond the depth limit.
+Retired `wrapped-or-variant-inherited` rows used the lower of the parent score and a 60% parent / 40% weakest wrapper-control blend. Missing, unscoreable, cyclic or depth-limited parents returned `NR`. Current inheritance follows the [Safety Score dependency contract](./process/report-cards-appendix.md#dependency-coverage), not this blend.
 
 ## Bands
 
-| Band         | Range     | Meaning                                                                                 |
-| ------------ | --------- | --------------------------------------------------------------------------------------- |
-| Hardened     | 80-100    | No resolved privileged mint path or strongly bounded, high-confidence controls.         |
-| Governed     | 65-79     | Governance or admin controls exist, but they are comparatively bounded or slow.         |
-| Managed      | 50-64     | Active mint management exists with some controls or route limits.                       |
-| Concentrated | 35-49     | A small operator, backend, custodian, bridge, or low-threshold route can affect supply. |
-| Exposed      | 0-34      | Unbounded, compromised, single-key, or otherwise weak authority dominates the score.    |
-| NR           | Not rated | Missing, unknown, inherited-but-unresolved, or insufficient review data.                |
+Retired score cutoffs were Hardened 80–100, Governed 65–79, Managed 50–64, Concentrated 35–49 and Exposed 0–34; missing or insufficient review was `NR`. Current bands derive from the [published mint posture](#mint-posture-derivation-and-quality-ladder-932), never these numeric cutoffs.
 
 ## Historical Surfaces
 
-- Stablecoin detail pages showed the retired score, band, component breakdown, weakest controller, caps, custody labels, incident callout, reviewed date, and sources when compact review data existed.
-- The current homepage and `/screener/` mint columns read Safety Score V9's published mint component, not this retired engine. `/coverage/` still counts curated review breadth by route bucket.
-- The `Mint Authority Status` kind (`resolveMintAuthorityStatusKind()` in `src/lib/mint-authority-display.ts`) is a label over **curated metadata** — `mintPath`, `authorityPosture`, and the reviewed `controls` list — not a re-binning of the published component score. The retired v1.x band used numeric score thresholds; the current V9 public band is derived from the published mint posture and is intentionally stable across small merged-signal score movements. Read the kind as "what route exists" and the V9 band as the posture-level control assessment.
-- Safety Score V9 compiles the underlying reviewed control evidence directly into Economic Control facts (see `docs/report-cards.md`). There is no current raw `mintAuthorityScore` input from this retired lane.
+Detail pages formerly displayed that standalone score, band, component breakdown and caps. Current homepage/screener/detail mint scores use the published Economic Control mint component; `/coverage/` retains curated route-review breadth. `resolveMintAuthorityStatusKind()` in `src/lib/mint-authority-display.ts` labels curated route metadata, not numeric score bins. No current raw `mintAuthorityScore` input survives the retired lane.
 
 ## Maintenance Checklist
 
@@ -385,4 +342,4 @@ When adding or updating `mintAuthority` metadata:
 3. Use the advisory audits for review breadth and ownership: `npm run audit:mint-authority-review` for the curated review backlog and cited-source probe, and `npm run audit:mint-bridge-ownership` for authored mint/bridge domain ownership. Neither gates a merge; see [Curation Audits](./scripts.md#curation-audits).
 4. Regenerate stablecoin projections and run metadata checks.
 5. Run focused scoring and surface tests when score-affecting fields change.
-6. For live scoring or display changes, update the owning [Report Cards](./report-cards.md) contract, `/methodology`, route docs, and the Safety Score structured changelog when methodology changes. The Mint Authority `v1.3` lane and its historical formulas remain terminal.
+6. For live mint scoring or display changes, update this contract, the overall [Report Cards](./report-cards.md) contract where affected, `/methodology`, route docs, and the Safety Score structured changelog when methodology changes. The Mint Authority `v1.3` lane and its historical formulas remain terminal.

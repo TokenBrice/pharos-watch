@@ -1,13 +1,13 @@
 ---
 name: reserve-research
-description: Research and populate stablecoin reserve composition, review provenance, custody evidence, dependency edges, and backing-pillar slice fields.
+description: Research stablecoin reserve composition, review provenance, custody evidence, dependency edges, and backing-pillar slices; populate the owning reserves sidecar only when explicitly requested.
 ---
 
 Read `docs/editorial-style.md`; its `technical-evidence` register governs prose.
 
 # Reserve Research
 
-Read the current methodology version, `docs/process/stablecoin-research-sidecars.md`, `docs/report-cards.md`, the coin’s base/merged entry, and its reserves sidecar. `shared/lib/stablecoins/schema.ts` and `shared/types/reserves.ts` own shapes/tolerances. Write `reserves`, `reserveReview`, and `custodyProfile` only to `shared/data/stablecoins/domains/reserves/<id>.json`; create it when absent.
+Read the current methodology version, `docs/process/stablecoin-research-sidecars.md`, `docs/report-cards.md`, the coin’s base/merged entry, and its reserves sidecar. `shared/lib/stablecoins/schema.ts` and `shared/types/reserves.ts` own shapes/tolerances. Research does not authorize mutations. When implementation is explicitly approved, write `reserves`, `reserveReview`, and `custodyProfile` only to `shared/data/stablecoins/domains/reserves/<id>.json`; create it when absent.
 
 Use `npm run research:dwellir-rpc --` for supplemental pinned on-chain evidence reads; see `docs/process/agent-artifacts.md#pinned-on-chain-evidence`.
 Cite its provenance record (keyless URL, block, timestamp); never cite `latest` reads as evidence.
@@ -21,6 +21,8 @@ Cite its provenance record (keyless URL, block, timestamp); never cite `latest` 
 5. Keep schema-required legacy `risk` accurate using `shared/lib/reserve-asset-risk.ts`; for an unlisted symbol, choose the more conservative defensible tier and explain uncertainty. The current backing pillar uses structured slice fields, not this legacy tier.
 6. Author/refresh `reserveReview` with sources, basis/date, reviewed scope, reviewer/date/confidence, and required dispositions. Add `custodyProfile` only when its provider/control claims are evidenced.
 
-For research-only work, present proposed JSON, sources, basis date, approximations, and confidence. For approved implementation, patch the sidecar, run `npm run bootstrap:generated` and `npm run check:stablecoin-data`, and follow the addition validation phase when relevant.
+For research-only work, present proposed JSON, sources, retrieval/observation times, basis date, approximations, reviewed gaps, and confidence without applying or generating data. For an addition, return the reserve portion of the [addition/evidence handoff packet](../../../docs/process/adding-a-stablecoin.md#additionevidence-handoff-packet), including authorized fields/owner and proposed versus changed source paths.
+
+For approved implementation, patch only the authorized sidecar fields. In coordinated work, return the packet and leave shared generation/catalog checks to the addition orchestrator after all specialists land. For a standalone approved edit, own the applicable [Phase 7 generation/check pass](../../../docs/process/adding-a-stablecoin.md#phase-7---validate) after source edits are complete. Report observed versus unexercised verification in either mode.
 
 Keep slice names specific; unknown structure remains explicit. A slice without `assetClass` or `coinId` is bounded unknown, not safe. A one-coin data update is not a methodology change.

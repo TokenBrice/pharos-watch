@@ -787,12 +787,23 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 
 ## Runbooks
 
-Operator-facing playbooks for Telegram incidents:
+Choose an incident procedure below; start reusable D1/status diagnostics at [Telegram Operator Queries](./runbooks/telegram-operator-queries.md#read-only-incident-entry). Query access does not grant mutation or replay authority.
 
 - [`runbooks/telegram-no-delivery.md`](./runbooks/telegram-no-delivery.md) — users report missing alerts; diagnostic checklist and remediation for snapshot, snooze, blocked-subscriber, and webhook-secret causes.
-- [`runbooks/telegram-backlog-expiration.md`](./runbooks/telegram-backlog-expiration.md) — pending queue age approaches the pending-row TTL; pause broadcasts, clear expired rows, and estimate drain time.
-- [`runbooks/telegram-rate-limit-storm.md`](./runbooks/telegram-rate-limit-storm.md) — pending queue growing, 429 dominates retry classes; per-chat backoff vs. global throttling, manual pending-queue clearance.
+- [`runbooks/telegram-backlog-expiration.md`](./runbooks/telegram-backlog-expiration.md) — pending work approaches its source-specific TTL; stop broadcasts, estimate drain time, and let fenced scheduled expiry cleanup run.
+- [`runbooks/telegram-rate-limit-storm.md`](./runbooks/telegram-rate-limit-storm.md) — 429-dominated queue growth; distinguish per-chat backoff from global throttling and size pending work without destructive clears.
 - [`runbooks/telegram-webhook-retry-dedupe.md`](./runbooks/telegram-webhook-retry-dedupe.md) — webhook retries, processed-update dedupe, and skipped command recovery.
 - [`runbooks/telegram-admin-broadcast-safety.md`](./runbooks/telegram-admin-broadcast-safety.md) — dry-run and backlog checks before sending an operator broadcast.
 - [`runbooks/telegram-operator-queries.md`](./runbooks/telegram-operator-queries.md) — D1 snippets for delivery, webhook, dead-letter, and usage-funnel incidents.
 - [`runbooks/d1-telemetry-kill-switch.md`](./runbooks/d1-telemetry-kill-switch.md) — disabling low-value telemetry writes when D1 pressure threatens product paths.
+- [`runbooks/telegram-bot-wide-outage.md`](./runbooks/telegram-bot-wide-outage.md) — systemic transport failures or intentional pauses; inspect circuit/pause generations, preserve audit boundaries, and recover through bounded probes.
+- [`runbooks/telegram-digest-outbox.md`](./runbooks/telegram-digest-outbox.md) — unresolved digest editions; exact photo/text effect proof, fenced reconciliation, permanent-failure handling, and no blind replay.
+- [`runbooks/telegram-webhook-ingress.md`](./runbooks/telegram-webhook-ingress.md) — command/callback flood admission and callback acknowledgement failures.
+- [`runbooks/telegram-ingress-abuse-controls.md`](./runbooks/telegram-ingress-abuse-controls.md) — pre-auth ingress limits, rejection telemetry, and reviewed tuning/rollback for webhook and Mini App routes.
+- [`runbooks/telegram-preset-resolution-failure.md`](./runbooks/telegram-preset-resolution-failure.md) — preset query/resolution failures hold source-wide planning; diagnose schema, cache, and registry inputs without bypassing the hold.
+- [`runbooks/telegram-setup-wizard-stuck.md`](./runbooks/telegram-setup-wizard-stuck.md) — setup flow stalls; distinguish active ownership from expired rows and use scoped cleanup.
+- [`runbooks/telegram-group-admin-gating-rollback.md`](./runbooks/telegram-group-admin-gating-rollback.md) — legitimate admins denied across groups; emergency code-toggle prerequisites, monitoring, and return to hard gating.
+- [`runbooks/telegram-mini-app-auth-failures.md`](./runbooks/telegram-mini-app-auth-failures.md) — signature-valid stale sessions, token overlap gaps, and mutation throttling; inspect auth evidence separately from dispatch health.
+- [`runbooks/telegram-mini-app-botfather.md`](./runbooks/telegram-mini-app-botfather.md) — BotFather-owned configuration, quarterly review, and deploy-time launch smoke tests.
+- [`runbooks/telegram-secret-rotation.md`](./runbooks/telegram-secret-rotation.md) — webhook-secret and bot-token overlap, verification, rollback, and Mini App freshness.
+- [`runbooks/telegram-adoption-report.md`](./runbooks/telegram-adoption-report.md) — privacy-preserving funnel/retention reads, interpretation, and freshness triage.

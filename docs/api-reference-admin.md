@@ -27,11 +27,11 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 
 A nonempty `Idempotency-Key` of at most 128 characters (after trimming) enables request fingerprinting and owner/generation-fenced reservation on those routes; an empty or overlong key is ignored. Terminal responses echo `Idempotency-Key` plus `X-Idempotent-Replay`. Replays do not rerun the action; a different request fingerprint returns `409`. Only an abandoned reservation whose execution never started can be reclaimed after its takeover window.
 
-Once execution has been marked as started, an unconfirmed outcome is never retried automatically. An in-flight duplicate, a handler throw after that point, or a terminal response that cannot be confirmed as persisted returns `503` with `error: "execution_unknown"`; subsequent requests with the same key also return `503` with `X-Idempotent-Replay: true` and do not invoke the handler again. `execution_unknown` rows are exempt from the seven-day terminal TTL, so the original key can never age out and reserve a fresh row. Operators must reconcile whether the external effect occurred before deciding whether to submit a new idempotency key.
+Once execution has been marked as started, an unconfirmed outcome is never retried automatically. An in-flight duplicate, a handler throw or `5xx` response, or a terminal response that cannot be confirmed as persisted returns `503` with `error: "execution_unknown"`; subsequent requests with the same key also return `503` with `X-Idempotent-Replay: true` and do not invoke the handler again. `execution_unknown` rows are exempt from the seven-day terminal TTL, so the original key can never age out and reserve a fresh row. Operators must reconcile whether the external effect occurred before deciding whether to submit a new idempotency key.
 
 A stale started reservation stays terminally `execution_unknown`: it is never handed back for re-execution unless the action ships a reconciliation callback that proves the original effect did not commit. No API-key or feedback action ships one today, so those keys are operator-reconciled.
 
-API-key mutations are compare-and-swap writes. `POST /api/api-keys/:id/update` sets only the fields present in the validated body and is fenced on the key prefix observed by the request, so a concurrent deactivation is never undone by an unrelated `{name}` update; `POST /api/api-keys/:id/rotate` is fenced on the same prefix in the batch that moves the donor claim. When the fence does not match, both return `409` (`API key changed concurrently; re-read it before updating`/`… before rotating`) instead of a silently lost write, and the caller must re-read the key before retrying.
+API-key update and rotate use prefix-fenced writes. `POST /api/api-keys/:id/update` sets only the fields present in the validated body and is fenced on the key prefix observed by the request, so a concurrent deactivation is never undone by an unrelated `{name}` update; `POST /api/api-keys/:id/rotate` is fenced on the same prefix in the batch that moves the donor claim. When the fence does not match, both return `409` (`API key changed concurrently; re-read it before updating`/`… before rotating`) instead of a silently lost write, and the caller must re-read the key before retrying.
 
 The worker’s idempotent admin route helpers now authenticate first and only then enter idempotency bookkeeping. That keeps the helper contract aligned with its name and prevents future admin endpoints from accidentally becoming “idempotent but unauthenticated” through wrapper misuse.
 
@@ -468,7 +468,7 @@ Cron terminal execution and observed quality are independent: `degradedCrons` co
 
 Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSupplyTrackedCoins >= 10`; below that floor, the counts remain visible but do not by themselves escalate `dataQualityStatus`.
 
-`itemCount` and `dataQuality.totalStablecoins` are illustrative example values. In the live handler they reflect the current cached stablecoin payload size, not `TRACKED_STABLECOINS.length`.
+`itemCount` reflects the recorded cron attempt. `dataQuality.totalStablecoins` uses known exact active-price coverage's expected count, falling back to cached active canonical assets.
 
 `summary.availabilityImpactingUnhealthyCrons` and `summary.availabilityImpactingCronErrors` count only cron jobs tagged `statusImpact="critical"` in `shared/lib/cron-jobs.ts`. `summary.watchUnhealthyCrons` counts the watch-tier jobs that remain visible but do not degrade `availabilityStatus` on their own.
 
@@ -574,7 +574,7 @@ Machine-readable status timeline endpoint for tooling and incident analysis.
 
 ### `GET /api/reserve-attempt-history`
 
-Admin-only per-coin attempt timeline for the live-reserve sync lane. This is the first production read path for `reserve_sync_attempt_history`; it turns triage from log grep into a bounded query.
+Admin-only per-coin attempt timeline for the live-reserve sync lane, querying `reserve_sync_attempt_history`.
 
 **Query parameters**
 
@@ -848,7 +848,7 @@ Use a unique `Idempotency-Key` for each deliberate action. A scoped mode can com
 
 The worker no longer uses HTTP `waitUntil()` for this action. It enqueues the intent in D1 and returns immediately so the Access-gated ops proxy does not need to hold the HTTP request open for the full Anthropic generation window. The scheduled poll logs each run against the `daily-digest` cron history and persists a compact `digest:last-trigger-result` cache entry for D1 inspection/future UI surfacing, including retry state, retained dead letters, and manual `skipped_locked` outcomes when another digest run already holds the lease. The current admin panel shows the enqueue result from the browser session; it does not yet render the persisted poll outcome.
 
-Unhandled pre-enqueue failures are wrapped by the shared error handler and return `500` with `{ "error": "Internal Server Error" }`.
+Unhandled pre-enqueue failures return unkeyed `500` with `{ "error": "Internal Server Error" }`, or keyed `503 execution_unknown`.
 
 ### `POST /api/trigger-yield-coverage-audit`
 
@@ -862,10 +862,10 @@ Execution is synchronous: keep the HTTP request open. The route does not launch 
 | --- | --- |
 | `200` | Audit finished with cron status `ok`. Inspect `/api/status` for the actual queue-budget verdict; completion alone does not mean the queue is healthy. |
 | `409` | Another manual or scheduled audit owns the `yield-coverage-audit` lease. No second audit ran. |
-| `503` | Audit returned a non-healthy result, for example unavailable rankings or safety inputs. The response metadata explains why; a prior report may remain cached. |
-| `500` | The audit threw or persistence failed. Check `crons["yield-coverage-audit"]` before retrying. |
+| `503` | Non-healthy audit result. Unkeyed responses carry explanatory metadata; keyed failures become `execution_unknown`. A prior report may remain cached. |
+| `500` | Unkeyed throw or persistence failure; keyed requests return `503 execution_unknown`. Check `crons["yield-coverage-audit"]` before retrying. |
 
-The response contains `ok`, `job`, `status`, `itemCount`, and JSON-encoded cron `metadata`. Publication replaces the audit report and review queue, not hourly yield-source configuration, ranking rows, or yield history. Execution does record cron/producer history.
+`ok` responses include `job`, `status`, `itemCount`, and JSON-encoded `metadata`; keyed `5xx` failures use `execution_unknown`. Publication replaces the audit report and review queue, not hourly yield-source configuration, ranking rows, or yield history. Execution does record cron/producer history.
 
 ```bash
 curl --fail-with-body --max-time 360 -X POST \
@@ -1080,9 +1080,9 @@ The 2026-10-05T19:15:06Z domain audit read H1, Multicall3, ArbSys and H2 on ever
 | Arbitrum | 512,015,100 | 26,128,190 | 512,015,102 | 512,015,103 |
 | Robinhood | 81,024,812 | 26,128,192 | 81,024,815 | 81,024,816 |
 
-Every target also reads its own token contract's `totalSupply(latest)` (selector `0x18160ddd`), because a fresh block-number sentinel does not establish freshness for another `(to,data)` pair. Using the first chain head H1, the post-token-call head H2, and same-probe sentinel block R when available, its numeric Dwellir-only window is `[max(0,H1−T), max(H2,R)]`, with the same shared T as the sentinel. Including R avoids falsely declaring stale a moving HyperEVM value served at H2+2. Every block in the window must be read, capped at ten (`RPC_PARITY_LATEST_MAX_NUMERIC_CALLS`); wider windows are inconclusive with no partial sampling. Any match is `fresh` / `matched-numeric-block`, but unchanged window values are `discriminating: false`: quiet-token matches are inconclusive about a token-specific stale cache, not negative freshness evidence. Discriminating token coverage is opportunistic and not a sufficiency requirement where a sentinel exists; it remains the floor on XDC. A fully covered, non-regressing, stable-hash window with no match is `stale` / `no-bracket-match` and always fails freshness. H1 and H2 headers fence the known head bracket, with H2 checked again after numeric reads; references through R do not require a separate future header. Detected reorgs, regressing heads, failed reads, or an unavailable numeric block above H2 remain indeterminate, never stale. Arbitrum, Monad, MegaETH and Cronos already exceed the token cap with stationary heads; their sentinel evidence can still satisfy freshness sufficiency.
+Every target also reads its own token contract's `totalSupply(latest)` (selector `0x18160ddd`), because a fresh block-number sentinel does not establish freshness for another `(to,data)` pair. Using the first chain head H1, the post-token-call head H2, and same-probe sentinel block R when available, its numeric Dwellir-only window is `[max(0,H1−T), max(H2,R)]`, with the same shared T as the sentinel. Including R avoids falsely declaring stale a moving HyperEVM value served at H2+2. Every block in the window must be read, capped at ten (`RPC_PARITY_LATEST_MAX_NUMERIC_CALLS`); wider windows are inconclusive with no partial sampling. Any match is `fresh` / `matched-numeric-block`, but unchanged window values are `discriminating: false`: quiet-token matches are inconclusive about a token-specific stale cache, not negative freshness evidence. Discriminating token coverage is opportunistic and not a sufficiency requirement where a sentinel exists; it remains the floor on XDC. A complete stable-hash H1=H2 window without a match is `stale` / `no-bracket-match`; advancing-head misses stay indeterminate / `moving-bracket-no-match`. H1 and H2 headers fence the known head bracket, with H2 checked again after numeric reads; references through R do not require a separate future header. Detected reorgs, regressing heads, failed reads, or an unavailable numeric block above H2 remain indeterminate, never stale. Arbitrum, Monad, MegaETH and Cronos already exceed the token cap with stationary heads; their sentinel evidence can still satisfy freshness sufficiency.
 
-Samples retain `sentinelFreshness` and `tokenFreshness`, including both sub-verdicts, the exact contract/selector read, acquired tolerance, heads, latest/numeric values, and token `referenceEndBlock`. The combined `latestFreshness` is stale if either check is stale; otherwise a deployed sentinel must be fresh and the token check matched or wide/inconclusive. On XDC without a deployed sentinel, the combined verdict uses the actual token verdict. A failed token read or regressing/reorg bracket never becomes a positive combined claim. A discriminating fresh sentinel remains discriminating in the combined report when a quiet token matches; token-specific discrimination remains visible separately in `.tokenState`. `lastStale` names the selected failing check's actual method, run clock, budget, heads and value/reference payload.
+Samples retain `sentinelFreshness` and `tokenFreshness`, including both sub-verdicts, the exact contract/selector read, acquired tolerance, heads, latest/numeric values, and token `referenceEndBlock`. The combined `latestFreshness` is stale if either check is stale; otherwise a deployed sentinel must be fresh and the token check matched or was `bracket-too-wide`. On XDC without a deployed sentinel, the combined verdict uses the actual token verdict. A failed token read or regressing/reorg bracket never becomes a positive combined claim. A discriminating fresh sentinel remains discriminating in the combined report when a quiet token matches; token-specific discrimination remains visible separately in `.tokenState`. `lastStale` names the selected failing check's actual method, run clock, budget, heads and value/reference payload.
 
 `latency.<operator>.firstTouch` and `.warm` contain p50/p95 and sample count for every category. The first request to an origin within the run is first-touch; later requests to that origin are warm even across targets. Per-call percentiles include failed calls; `warmRunMedian` uses successful calls only, while availability gates failures separately. `latest` includes both latest-tag reads and token numeric/header checks; the initial, post-sentinel, and post-token head reads belong to `head`. The comparator has no latest-check attempts by design.
 
@@ -1165,7 +1165,7 @@ Admin-only bounded remediation endpoint for recoverable **EVM** blacklist rows. 
 
 ### `GET /api/admin-action-log`
 
-Returns the last N audited operator actions (action name, actor, target, result, HTTP status, details) for post-incident review. This includes every endpoint surfaced by the admin action catalog, including read-only inspections and dry-run previews, plus handler-owned audit events outside that catalog.
+Returns recent audited actions (actor, target, result, HTTP status, details), including dispatched catalog inspections/previews and handler-owned events. Internal probes, payload-conflict replays, and pre-dispatch method/access rejections are excluded.
 
 **Authentication:** admin. **Optional query:** `?limit=<1-200>` (default 50).
 
@@ -1282,4 +1282,4 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
 
 Before enqueue, live execution requires the admin-delivery pause to be inactive and the bot-wide transport circuit to be closed, claims one admin transport permit, and sends the exact chunks to the private canary. A rejected, uncertain, or incomplete canary prevents all fleet enqueue. `enqueued` reports the number of non-canary chat/chunk messages submitted to the pending queue (`fleetChatCount * chunkCount`). Because the queue uses dedupe upserts, replaying the same broadcast before drain can update existing rows instead of inserting new rows. The dispatch cron drains the queue on its normal cadence.
 
-**Error responses:** `400` for invalid JSON, empty or over-16,000-character `messageHtml`, unknown `scope`, non-boolean `dryRun`, malformed `canaryChatId`, or a live request without `canaryChatId`. `422` for malformed/unsupported Telegram HTML or a canary rejected for formatting/bad-request reasons. `409` when the projected fleet backlog cannot retain the hard 15-minute reserve inside the 45-minute admin TTL, or when admin delivery is operator-paused/the transport circuit is unavailable. `503` covers a transport permit denial or non-formatting canary failure; `500` covers a missing live bot token or unhandled failures. Canary failures report `fleetEnqueued: 0`.
+**Error responses:** `400` for invalid JSON, empty or over-16,000-character `messageHtml`, unknown `scope`, non-boolean `dryRun`, malformed `canaryChatId`, or a live request without `canaryChatId`. `422` for malformed/unsupported Telegram HTML or a canary rejected for formatting/bad-request reasons. `409` when the projected fleet backlog cannot retain the hard 15-minute reserve inside the 45-minute admin TTL, or when admin delivery is operator-paused/the transport circuit is unavailable. `503` covers non-pause transport permit denial or non-formatting canary failure; unkeyed `500` covers a missing live bot token or unhandled failures. Keyed `5xx` outcomes return `503 execution_unknown`, without these bodies. Canary rejection bodies report `fleetEnqueued: 0`.

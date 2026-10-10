@@ -10,24 +10,21 @@ Detection signals:
 - `crons["dispatch-telegram-alerts"].lastRun.metadata` reports `snapshotSeeded: true` repeatedly.
 - `crons["dispatch-telegram-alerts"].lastRun.metadata` includes capacity fields: `freshCandidateCount`, `freshOverflow`, `pendingAttempted`, `pendingSent`, `pendingRetryQueued`, `pendingExpired`, `oldestPendingAgeSec`, `estimatedDrainTimeSec`, `perAlertTypeTargets`, and fan-out timing (`fanoutQueryMs`, `fanoutBuildMs`, `fanoutTotalMs`). For source-event runs, `authoritativePlanning` splits source-preset, candidate-horizon, capture/fan-out loader, preference validation, routing, materialization, duplicate suppression, handoff, and pending-drain time and includes page/load/cache/target counts.
 - `telegramBot.retryErrorClassCounts` dominated by a single value. Transport classes are `rate_limit`, `blocked`, `chat_not_found`, `chat_migrated`, `formatting_error`, `payload_too_large`, `bad_request`, `auth_error`, `server_error`, `timeout`, `network`, and `unknown`. Deferral reasons share the column (`preference_snoozed`, `preference_preset_unavailable`, `preference_generation_changed`, `recap_snoozed`) and point at preference/snooze state rather than Telegram transport.
-- A specific user reports silence: pull their per-chat state with the D1 queries below.
+- A specific user reports silence: use [Subscriber Delivery Controls](./telegram-operator-queries.md#subscriber-delivery-controls) and the single-chat checklist below.
 
 ## Quick Diagnostic Checklist
+
+Start with the shared [read-only incident entry](./telegram-operator-queries.md#read-only-incident-entry); the checks below distinguish source, queue, and subscriber causes.
 
 1. **Circuit breaker open?** `/api/status` -> `providerCircuitHealth.openProviders` (look for an entry with `providerId: "telegram-api"`; only open/half-open circuits are listed). The full per-source circuit map is on `/api/health` -> `circuits` -> `telegram-api`. An open breaker skips fan-out entirely.
 2. **D1 healthy?** Cross-check with [`db-connectivity.md`](./db-connectivity.md). Incomplete preset resolution holds all new direct, global, and preset target planning for that source event; inspect `presetFailure`, `presetQueryFailures`, and `presetResolutionFailures`. Existing pending work may still drain, and freeze has an independent outbox. Follow [`telegram-preset-resolution-failure.md`](./telegram-preset-resolution-failure.md), the source-wide hold authority; do not bypass `allComplete` or interpret unresolved presets as an empty audience.
 3. **Pending queue draining?** `/api/status` -> `telegramBot.pendingDeliveries`, `pendingDeliveryBacklog`, and `oldestPendingDeliveryAgeSec`. A growing backlog points to a rate-limit storm or expiration risk — see [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md) and [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md).
-   If `pendingDeliveryBacklog.executionUnknown > 0`, inspect both pending rows and fresh target effects with [`telegram-operator-queries.md`](./telegram-operator-queries.md). Do not retry an unknown target until an operator has reconciled whether Telegram accepted it.
+   If `pendingDeliveryBacklog.executionUnknown > 0`, inspect [pending rows](./telegram-operator-queries.md#pending-rows-for-one-chat) and [fresh target effects](./telegram-operator-queries.md#source-target-planning). Do not retry an unknown target until an operator has reconciled whether Telegram accepted it.
    Dispatch automatically reconciles expired `sending` claims and interrupted target/recap terminal projections in bounded ID-ordered passes before due transport, including orphan-only, eventless, and circuit-open runs. Compare the same IDs, owners, and generations over consecutive slots; a repair-only run must keep `pendingAttempted=0` and `messagesSent=0`. Fresh claims remain untouched. `execution_unknown` is immutable, not replayable; the existing 90-day evidence retention remains in force.
    For safety-only silence, inspect `crons["telegram-degradation-watchdog"].lastRun.metadata.safetySource` even when the primary reason is pending backlog: `failureReason` distinguishes `v9-publication-held`, `v9-snapshot-read-failed`, and `v9-snapshot-invalid`; compare `sourcePublicationGenerationId` with `acceptedPublicationGenerationId`, and `ageSeconds` with `freshnessMaxAgeSec` at `assessedAtSec`. Null provenance is unavailable, not a matching identity. Held details retain onset/age/reason codes, and suppression stays fail-closed until accepted recovery.
 4. **Source planning slow?** Inspect `authoritativePlanning`. A high `candidateHorizonQueryMs` points to candidate/index work; high direct/preset/global/snooze loader fields point to fan-out input reads; `fanoutInputLoadCallCount` above `capturePageCount` without preference-generation churn indicates lost page reuse; high `targetMaterializationD1Ms` or `enqueueHandoffMs` isolates the manifest or handoff phase. Compare `capturedSubscriberCount` with the source's actual target scope before treating a large cohort as expected.
 5. **Snapshot seeded?** `snapshotSeeded: true` for the last run means no alerts will be sent (24h staleness gate; see [`docs/telegram-alerts.md`](../telegram-alerts.md) section First-Run / Stale-Snapshot Behavior).
-6. **Single chat affected?** `GET /api/admin-telegram-chat/:chatId`, the redacted per-chat diagnostic view, was retired on 2026-08-09. Every table it read is unchanged, so query the chat's delivery controls directly:
-
-   ```bash
-   npx --no-install wrangler d1 execute stablecoin-db --remote --command \
-     "SELECT chat_id, alert_snooze_until_ts, quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc, timezone, consecutive_block_count, consecutive_block_first_at, global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve, global_alert_freeze, preference_generation, created_at, last_active_at FROM telegram_subscribers WHERE chat_id = '<chatId>';"
-   ```
+6. **Single chat affected?** `GET /api/admin-telegram-chat/:chatId`, the redacted per-chat diagnostic view, was retired on 2026-08-09. Use [Subscriber Delivery Controls](./telegram-operator-queries.md#subscriber-delivery-controls) to read the unchanged delivery-control columns directly.
 
    Check for:
    - `alert_snooze_until_ts` greater than the current Unix timestamp (user snoozed; that value is the expiry). The exact value `4102444800` is the `/pause` sentinel — alerts are paused indefinitely, not snoozed; the user resumes with `/pause off` or `/unsnooze`
@@ -36,7 +33,8 @@ Detection signals:
    - no `telegram_subscriptions` / `telegram_preset_subscriptions` rows for the chat and every `global_alert_*` column 0
    - no `telegram_subscribers` row at all: deletion (`/forget`, mini-app forget-me, inactive-subscriber cleanup) removes that chat's pending, target, plan, and dead-letter rows in the same atomic batch, and chat migration re-points them. Leftover rows for a missing subscriber mean a partially applied delete or a concurrent drain — reconcile before acting
 
-   Use [`telegram-operator-queries.md`](./telegram-operator-queries.md) for the pending-queue, dead-letter, and per-target history queries the retired endpoint bundled into one response.
+   Use [Pending Rows For One Chat](./telegram-operator-queries.md#pending-rows-for-one-chat), [Dead Letters](./telegram-operator-queries.md#dead-letters), and [Source Target Planning](./telegram-operator-queries.md#source-target-planning) for the history queries the retired endpoint bundled into one response.
+
 7. **Webhook secret valid?** Failed validations return `200 ok` without dispatch, with throttled `auth-missing-secret` / `auth-invalid-secret` warnings. Check those actions after secret rotation; logs do not expose secret values.
 
 ## Remediation

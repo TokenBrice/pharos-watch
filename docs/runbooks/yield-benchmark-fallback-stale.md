@@ -15,15 +15,13 @@ Yield rows still publish, but benchmark provenance shows a fallback or retained 
 
 ## Impact
 
-Rankings are usually available, but benchmark-relative interpretation can be degraded. Applied publication returns `ok` with benchmark findings in `metadata.quality.reasons`; unapplied work reports `degraded` with `metadata.reason`. A benchmark's own fallback evidence degrades input quality. Fetch age above 48 hours or observation age beyond its key-specific bound makes it stale (5 days for daily/overnight series, 7 days CHF, 10 days TRY, 12 days RUB, 45 days CAD monthly). Fetch and record bounds are checked independently, so a frozen upstream remains stale after a successful fetch. Non-USD fallback or stale evidence also raises `risk-free-rate:<KEY>:<reason>` independently. Past either freshness bound, affected rows are benchmark-stale and PYS is NR.
+Rankings are usually available, but benchmark-relative interpretation can be degraded. Inspect publisher completion and input quality using the [shared entry checks](./yield-health.md#first-checks). The [benchmark threshold row](./yield-health.md#threshold-table) owns the independent fetch and observation-age limits, defined in `shared/lib/yield-benchmark-freshness.ts`; a frozen upstream cannot become healthy merely because fetching succeeds. Non-USD fallback or stale evidence raises `risk-free-rate:<KEY>:<reason>` independently. Past either freshness bound, affected rows are benchmark-stale and PYS is NR.
 
 The v8.43 hurdle re-base consumes the USD reference only while it classifies healthy on its own feed evidence. A degraded reference nulls `usdBenchmarkRate`, so affected non-USD rows publish an estimated PYS with the `reference-benchmark-degraded` warning; a stale reference makes them NR (`benchmark-stale`). Documented proxy selection (`benchmarkSelectionMode: "fallback-usd"`) is a methodology choice, not a degraded feed: it is reported as `proxySelectionRowCount` / `benchmarkIsProxy` and never degrades the benchmark entry or the row by itself.
 
 ## First Checks
 
-1. **Access-gated status:** `https://ops.pharos.watch/admin/` -> Crons -> `fetch-tbill-rate` and `sync-yield-data`.
-2. **Machine status:** `GET https://ops-api.pharos.watch/api/status` with Cloudflare Access service-token headers.
-3. **Public payload:** `GET https://api.pharos.watch/api/yield-rankings` and inspect top-level `benchmarks` plus row-level `benchmarkFallbackMode`.
+Start with the [shared read-only Yield Health checks](./yield-health.md#first-checks), focusing on `yieldHealth.benchmarkRegistry` and the `fetch-tbill-rate` / `sync-yield-data` cron metadata. Then inspect top-level `benchmarks` and row-level `benchmarkFallbackMode` in `GET https://api.pharos.watch/api/yield-rankings`.
 
 ## Read-Only D1 Snippets
 
@@ -34,13 +32,7 @@ WHERE key IN ('risk_free_rates', 'risk_free_rate', 'fetch-tbill-rate:gbp-retaine
 ORDER BY key;
 ```
 
-```sql
-SELECT job, started_at, duration_ms, status, item_count, error, metadata
-FROM cron_runs
-WHERE job IN ('fetch-tbill-rate', 'sync-yield-data')
-ORDER BY started_at DESC
-LIMIT 10;
-```
+Use the [shared cron-history SELECT](./yield-health.md#read-only-d1-snippets) with jobs `fetch-tbill-rate` and `sync-yield-data`, newest 10 runs.
 
 ```sql
 SELECT key, updated_at, substr(value, 1, 1200) AS value_prefix

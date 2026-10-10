@@ -6,28 +6,20 @@ Use this runbook when Telegram authentication fails, several distinct chats retu
 
 ## Inspect
 
-1. Read the transport circuit singleton:
-
-   ```bash
-   npx --no-install wrangler d1 execute stablecoin-db --remote --command \
-     "SELECT state, generation, cause_class, cause_scope, distinct_failure_count, first_failure_at, last_failure_at, last_success_at, opened_at, next_probe_at, probe_owner, probe_generation, probe_expires_at, probe_limit, probe_attempted, updated_at FROM telegram_transport_circuit WHERE singleton_id = 1;"
-   ```
+1. Read the [Transport Circuit](./telegram-operator-queries.md#transport-circuit) singleton using the shared [read-only incident entry](./telegram-operator-queries.md#read-only-incident-entry).
 
 2. Check `state`, `cause_class`, `cause_scope`, `opened_at`, `next_probe_at`, and any half-open probe owner/expiry.
-3. Check the pause rows. The table is not seeded: an absent `fresh`, `pending`, or `admin` row means that mode is inactive with generation `0`. An existing expired row is also inert but retains its generation.
+3. Read [Delivery Pauses](./telegram-operator-queries.md#delivery-pauses). The table is not seeded: an absent `fresh`, `pending`, or `admin` row means that mode is inactive with generation `0`. An existing expired row is also inert but retains its generation.
 
-   ```bash
-   npx --no-install wrangler d1 execute stablecoin-db --remote --command \
-     "SELECT mode, generation, expires_at, reason, actor, created_at, updated_at FROM telegram_delivery_pauses ORDER BY mode;"
-   ```
-
-4. Inspect pending age and execution-unknown counts before changing controls (see [`telegram-operator-queries.md`](./telegram-operator-queries.md)). A timeout or network error after the send fence is ambiguous and must not be retried as a known rejection.
+4. Inspect [pending age](./telegram-operator-queries.md#pending-queue) and [execution-unknown effects](./telegram-operator-queries.md#source-target-planning) before changing controls. A timeout or network error after the send fence is ambiguous and must not be retried as a known rejection.
 
 The controller stores only short-lived distinct-chat observations needed for outage inference. Rows older than five minutes are pruned; raw Telegram response bodies are never stored or added to general logs.
 
 ## Pause
 
 Modes are `fresh`, `pending`, and `admin`; pausing admin delivery does not silence webhook replies. The repository currently has no supported operator mutation after the audited endpoint was retired. If an emergency pause is required, restore or add a reviewed Access-protected control/script that calls the existing `setTelegramDeliveryPause()` semantics: exact mode, 60-second-to-24-hour self-expiry, captured generation (`0` for an absent row), conditional state mutation, conditional `telegram-delivery-pause` audit in the same D1 batch, zero-change conflict handling, and post-write readback. Do not run a raw `INSERT` that leaves the permanent operator audit incomplete.
+
+Extending or re-pausing an existing row requires its current captured generation; a successful write increments the generation by one and preserves `created_at`. A generation mismatch must leave both pause state and audit unchanged.
 
 ## Recover
 

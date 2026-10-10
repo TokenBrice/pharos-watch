@@ -1,6 +1,6 @@
 # Safety Scores
 
-> **Agent navigation** — Current invariants and interfaces are below. Detailed implementation and historical decisions are retained in the [appendix](./process/report-cards-appendix.md). Read routed sections rather than either file wholesale.
+> **Agent navigation** — Current invariants and interfaces are below. The [live mint-control contract](./mint-authority-scoring.md#mint-authority-entry) owns mint posture, process gates and ladders. Other detailed implementation and historical decisions are retained in the [appendix](./process/report-cards-appendix.md). Read routed sections rather than any file wholesale.
 
 Safety Score V10 is the sole active stablecoin safety model. It publishes evidence-backed grades from A+ through F; NR is a causal withholding outcome, while Pipeline gap has no score or grade.
 
@@ -8,7 +8,7 @@ Safety Score V10 is the sole active stablecoin safety model. It publishes eviden
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v10`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.15`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.16`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public breakdown/publication schema v7, API wrapper v8 and score trace v4; retained older publications require explicit historical dispatch or refusal, never fabricated causes or route identity
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` in `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts` binds the offline candidate runtime import graph: captured fixed-input normalization, extension construction, fact-set compilation, evaluation and projection, including executable admission schemas, reviewed score-input data and full-catalog bytes/decoder. Edits anywhere in that evaluation-time closure rotate replay/publication identity. Capture-only network observers/producers and build-time generators are outside it; exact-input/fact digests bind their admitted output. Capture binding and runtime identity consumers are unchanged.
@@ -29,6 +29,8 @@ The `v10.14` release bundles the already-main PR #1366 evidence-router, stale-me
 
 The `v10.15` code-sweep release is score-moving: excluded A/B dependency events no longer dilute admitted loss or uncertainty, binding dependency limits keep measured-adverse causes through subsequent hops, and measured certificate costs at the request budget receive zero cost credit. Global no-exit evidence requires current exhaustive aggregate-reconciled deployment coverage, and each supply leg retains its own freshness budget. Reserve admission rejects USDtb shortfalls, unavailable Reserve Protocol plugin status, incomplete JupUSD holding units and malformed shared Sky debt; Djed/Youves quote warnings, gross-asset Makina weights, complete-book Falcon exposure and genuine USDD composition clocks remain explicit. Asset-local prepass failures quarantine only their owner; aggregate oracle exemptions require current evidence and verified profile confidence, while scoped bridge questions, authenticated OFT checkpoints, review-day/evidence-access maturity bounds and incident chronology fail closed. Deleting inactive F knobs deliberately rotates the semantic policy digest without changing active D/F admission, caps or availability; access vocabularies must be complete and unique, and evaluation identity binds the offline fixed-input-to-publication runtime closure and admission leaves. Fixed-clock replay, mover attribution and owner review are release prerequisites, not completed results; fresh producer observations and production resource evidence remain separate gates.
 
+`v10.16` aligns compiled track-record launch facts with the [Implementation Age Policy](./classification.md#implementation-age-policy). `buildSafetyScoreV9BaselineExtensionFromNormalizedInput` in `worker/src/lib/safety-score-v9/extension.ts` uses `resolveEffectiveImplementationLaunchDate` from `shared/lib/classification/resolve-implementation-launch-date.ts`: inclusive ends of fuzzy periods (including `YYYY-Hn`) are capped to the fixed scoring clock's UTC calendar date, and the newest required implementation layer across the variant chain wins. Cycle traversal is bounded and retains the newest visited layer; it does not introduce a new cycle-invalidation rule. The resolved date becomes UTC midnight, preserving whole-UTC-calendar-month scoring. Metadata authoring rules are unchanged; this compiler correction can move track-record-dependent scores.
+
 V10.01 introduces cause-aware scoring after the V10 major release. Internal `safety-score-v9` implementation names and API route paths remain unchanged; public body schemas distinguish technical availability from NR. Digest snapshots label their grade distribution from the captured methodology major version, preserving V9 editions rather than relabelling history.
 
 ## V10 Model
@@ -40,6 +42,8 @@ V10 evaluates three pillars:
 | Backing | <!-- GENERATED-START: report-cards-backing-pillar-weight -->40%<!-- GENERATED-END: report-cards-backing-pillar-weight --> | Reserve quality, mechanism solvency, custody, assurance, and loss-bearing structure |
 | Exit | <!-- GENERATED-START: report-cards-exit-pillar-weight -->35%<!-- GENERATED-END: report-cards-exit-pillar-weight --> | Same-notional executable capacity, cost, settlement, confidence, independent backup credit, and stress horizon |
 | Economic Control | <!-- GENERATED-START: report-cards-control-pillar-weight -->25%<!-- GENERATED-END: report-cards-control-pillar-weight --> | Mint, upgrade, oracle, bridge, and other binding control paths |
+
+The Economic Control mint component follows the [live native-issuance contract](./mint-authority-scoring.md#current-v9-scope), [posture ladder](./mint-authority-scoring.md#mint-posture-derivation-and-quality-ladder-932) and [D33 availability matrix](./mint-authority-scoring.md#availability-invariant-mint-fallback-1006). Mint quality, process certification and seasoning have one owner there; the terminal standalone Mint Authority version is not a second model.
 
 Weights bound headroom, not an unrestricted average. With included pillars S, renormalize their original weights, let m be their minimum and M their weighted mean, then Q = m + 20 × tanh((M − m)/20). Three included pillars keep 40/35/25; exactly one A/B-only pillar permits a two-pillar rating. Q ≤ M ≤ max(S) holds before independently evidenced additions. Peg behavior, positively evidenced structural/method/parent/history limits and wrapper-local risk still apply; missing-data and generic evidence ceilings do not.
 

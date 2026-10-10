@@ -10,6 +10,7 @@ For the public `/api/` access and `/about/api/` reference shells, see [API Acces
 | --- | --- |
 | Path builders | `shared/lib/api-endpoints/paths.ts` |
 | Endpoint metadata, methods, auth/cache/site-data flags | `shared/lib/api-endpoints/definitions.ts` |
+| Dynamic path families, methods and auth/site-data flags | `shared/lib/api-endpoints/dynamic.ts` |
 | Method validation helpers | `shared/lib/api-endpoints/validation.ts` |
 | Worker route registry | `worker/src/routes/registry.ts` |
 | Public route bindings | `worker/src/routes/public-routes.ts` |
@@ -21,6 +22,8 @@ For the public `/api/` access and `/about/api/` reference shells, see [API Acces
 | Public contract | `docs/api-reference.md` affected endpoint section |
 | Public OpenAPI/Postman artifact metadata | `scripts/lib/public-api-artifact-catalog.ts` |
 | Public response wire schemas | `scripts/lib/public-api-response-schemas.ts` composes body contracts with typed freshness from `shared/types/api-meta.ts`; map responses reserve `_meta` separately from asset values. Frontend schemas validate after metadata extraction in `src/lib/api.ts`. |
+
+Use the shared definitions and dynamic descriptors for endpoint inventories, path builders for construction, and Worker bindings for dispatch. The [Worker appendix](./process/worker-infrastructure-appendix.md#http-request-handling) retains CORS, auth, maintenance and action-lifecycle semantics, not a second endpoint inventory.
 
 The root `RegimeBar` uses the registered `useStabilityIndex()` query, whose descriptor points to the small stability-domain contract that validates only the PSI fields it renders. This keeps the classic Zod stability schema out of the all-route client graph while preserving the full payload in the shared TanStack cache. The `/stability-index/` detail query retains the full lazy schema.
 

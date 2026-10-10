@@ -6,7 +6,7 @@ user_invocable: true
 
 # Runtime Price + Market-Cap Gate
 
-This is a hard gate for active stablecoin additions and pre-launch promotions. A metadata-complete JSON row is not enough: Pharos must be able to fetch both a current price and a market-cap / circulating-supply value.
+This is a hard pre-edit gate for active stablecoin additions and pre-launch promotions. A metadata-complete JSON row is not enough: Pharos must be able to fetch both a current price and a market-cap / circulating-supply value. This skill is read-only preflight; a passing gate does not authorize registry edits.
 
 Pre-launch entries are exempt until promotion.
 
@@ -66,7 +66,7 @@ Additional providers strengthen price reliability but do not by themselves prove
 
 ## Output Format
 
-Report:
+Return the gate portion of the [addition/evidence handoff packet](../../../docs/process/adding-a-stablecoin.md#additionevidence-handoff-packet). The format below also works standalone:
 
 ```text
 Runtime gate: PASS/FAIL
@@ -74,9 +74,14 @@ Accepted path: DefiLlama | CoinGecko supplemental | Commodity | Explicit excepti
 Identity match: <evidence>
 Price path: <source and field>
 Market-cap path: <source and field>
+Source observations: <URLs/fields, retrieval time, upstream observation times or document dates, on-chain pins if applicable>
+Admission verdicts: <source-owned freshness/admission rule and result/reason for each price and supply source>
 Required metadata: <llamaId/geckoId/detailProvider/contracts/protocolSlug/etc.>
 Risks or follow-ups: <CMC slug, contract ambiguity, low volume, backfill needs>
+Verification: <source reads actually exercised and their results; catalog checks/runtime observations still unexercised>
 ```
 
 If the gate fails, do not add the asset as active. Recommend pre-launch/watchlist tracking or a separate runtime-source integration.
+
+Do not bootstrap shared artifacts or repeat catalog checks for this preflight. The addition orchestrator owns the integrated generation/check pass after authorized specialist source edits land; this gate must already have passed before those active-entry edits.
 

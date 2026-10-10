@@ -255,46 +255,15 @@ Changed reserve capture files select `npm run check:html-fixture-metadata` in th
 
 Docs are not a per-adapter step: the Adapter Registry notes above are for non-obvious semantics only, and the roster/counts are derived from the declaration table rather than copied.
 
-For report-backed issuers, reuse `fetchIndependentAssuranceAdapter` in `independent-assurance.ts` when the existing generic engine owns the transport/parser contract. Agora, Anchorage, AUDD, CADD, FDUSD, RLUSD and SBC keep discovery/date/classification data in `*-independent-assurance-profile.ts` modules; they do not add forwarding fetchers. `IndependentAssuranceProfile` is defined in `types.ts`. Gemini, Paxos, FIDD and BRLA retain specialized orchestration. New material-clock consumers must submit every material contributor to the coverage summary and name any reviewed zoneless policy; do not drop all-bad coverage or manufacture a verified clock.
+**Report-backed assurance registration** (reuse the shared engine when it owns the transport/parser contract):
 
-Minimal scaffold (HTTP-json single-asset shape):
+1. **Review the engagement first.** `shared/lib/independent-assurance.ts` derives `assuranceTier` from `conclusion` and rejects contradictory tiers; record examiner identity (`attestorIdentification` for reviewed inference), examined scope, original as-of instant/time zone, liabilities and adjustments. Hash-pinning establishes artifact identity, not assurance quality.
+2. **Register both owners independently.** Add the product to that schema if needed, the reviewed JSON to `shared/data/live-reserves/independent-assurance/index.ts`, and an extraction profile to `scripts/lib/independent-assurance-profiles/registry.ts`. Profiles own required/rejected text, row extraction and reviewed totals; do not derive them from the manifest. Reviewed rounding bounds belong in `shared/lib/independent-assurance-tolerances.ts`.
+3. **Compile offline from official PDF bytes.** Use `npx tsx scripts/maintenance/refresh-independent-assurance-reports.ts --product <PRODUCT> --pdf /path/report.pdf` for a candidate; review before explicit `--write`. Poppler `pdftotext -layout`/`pdfinfo` records parser version, text hash and page count alongside PDF SHA-256/byte length. Adding `--check` requires exact recompilation, including provenance; bare `--check` checks registrations/profile metadata/rows/reconciliation without PDF re-extraction. The Worker never parses PDFs.
+4. **Bind the runtime profile and descriptor.** Use `IndependentAssuranceProfile` in `types.ts` for discovery/date/classification and wire the existing engine. Favorable assurance uses `independent` / `independent-assurance`; AUP or issuer conclusions require `static-validated` / `issuer-attested`. Pin official index, exact report URL, SHA-256, byte length and reviewed hosts; reject undated/newer unreviewed reports and unknown positive asset rows. Freshness uses examined time, never download time.
+5. **Target owner checks.** Run both compiler check modes, `worker/src/cron/reserve-adapters/__tests__/independent-assurance.test.ts`, `registry.test.ts` in that directory, and the product's adapter/profile tests. Cover tier/descriptor mismatch, discovery ambiguity/newer report, artifact drift, reconciliation and original-clock freshness.
 
-```ts
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import type { AdapterContext, AdapterResult } from "./types";
-import {
-  fetchJsonWithRetry,
-  freshnessMetadataFromTimestamp,
-  parseTimestampLikeToUnixSeconds,
-  requireJsonInput,
-} from "./helpers";
-
-interface MyAdapterPayload {
-  totalReserves: number;
-  updatedAt?: string;
-}
-
-export async function fetchMyAdapterReserves(
-  _coin: StablecoinMeta,
-  config: LiveReservesConfig,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<AdapterResult> {
-  const input = requireJsonInput(config.inputs.primary, "my-adapter");
-  const params = parseLiveReserveAdapterParams("my-adapter", config.params);
-  const payload = await fetchJsonWithRetry<MyAdapterPayload>(input.url, signal, 12_000, ctx);
-  const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.updatedAt);
-
-  return {
-    slices: [{ name: params.assetLabel, pct: 100, risk: params.assetRisk }],
-    metadata: {
-      ...freshnessMetadataFromTimestamp(sourceTimestamp, "issuer-api", "payload has no source timestamp"),
-    },
-  };
-}
-```
+New material-clock consumers must submit every material contributor to the coverage summary and name any reviewed zoneless policy; do not drop all-bad coverage or manufacture a verified clock.
 
 ---
 

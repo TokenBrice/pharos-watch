@@ -7,7 +7,7 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 ## Do this first
 
 1. Locate a likely file, then route it: `npm run agent:route -- --file <path>` (repeatable).
-2. Read only the docs, anchors, and scoped `AGENTS.md` it returns; inspect the reported entrypoints and local imports.
+2. Read required entry docs/anchors and every returned scoped `AGENTS.md`; use the [read-order contract](docs/process/agent-start-here.md#2-route-a-task) for conditional background, then inspect entrypoints and local imports.
 3. Onboarding, scratch, handoff, and commit conventions: `docs/process/agent-start-here.md`.
 
 ## Tool routing
@@ -39,8 +39,8 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 ## Verify and ship
 
 - Focused checks are authoring feedback, never readiness proof (`docs/testing.md#smallest-adequate-check-per-area`); an unmapped production path's zero-plan is a routing failure.
-- Before every first or replacement push: follow [Pre-push readiness](docs/testing.md#pre-push-readiness), converge all generated artifacts after final source/integration history, then run full plain `npm run check:pr` on the final committed state, with no skip/filter/plan-only/no-fetch flags or selection overrides. Require a fresh passing `.tmp/pr-check-receipts/<HEAD>.json`; any subsequent edit/integration invalidates that proof.
-- `npm run check:pr -- --ci-parity` is opt-in after a remote failure not reproduced locally, and for lockfile/setup/security-policy changes; run it after generated convergence and before final plain readiness. Collect every failed CI leaf, fix all causal defects in one revision, rerun full readiness, then push once. `check:release` is only an explicit production rehearsal; GitHub Actions owns the release gate.
+- Before every authorized first or replacement push, follow the mandatory [Pre-push readiness](docs/testing.md#pre-push-readiness) procedure on the final committed HEAD: converge generated artifacts, then full plain `npm run check:pr` (no skip/filter/plan-only/no-fetch flags or selection overrides). Require a fresh passing `.tmp/pr-check-receipts/<HEAD>.json`; any subsequent edit, commit, or integration invalidates it.
+- `npm run check:pr -- --ci-parity` is opt-in after a remote failure not reproduced locally and for lockfile/setup/security-policy changes. CI failures: collect every failed leaf, fix all causal defects in one revision, rerun full readiness, then push once ([workflow incidents](docs/runbooks/workflow-incidents.md)). `check:release` is only an explicit production rehearsal; GitHub Actions owns the release gate.
 - Commit thematically with a descriptive subject and a why-focused body. The pre-commit hook is partial artifact sync, never a test gate or full convergence: eligible `autoStage` outputs only; it skips merge/rebase/cherry-pick/revert, an empty index, or `PHAROS_SKIP_ARTIFACT_HOOK=1` (`docs/scripts.md#operational-notes`). No pre-push test hook.
 - Do not create a branch, worktree, or PR unless asked. A request to push/publish/release authorizes the protected-main PR path; never push `main` directly. Merge release PRs with `gh pr merge --merge`; never squash or rebase them.
 - A green deploy is not runtime health: for cron, scheduler, memory, migration, or ingestion changes, observe the first production execution before claiming success.

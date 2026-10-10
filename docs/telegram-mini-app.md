@@ -215,7 +215,7 @@ Real-device inspection paths for triaging Mini App issues:
 - **iOS Safari** — cable to a Mac and use Safari's Develop menu → device list.
 - **Eruda toggle** — appending `?debug=eruda` to the Mini App URL loads Eruda from CDN when `NODE_ENV !== "production"`. Use this when you need an in-Telegram console without changing code. The toggle is no-op in production builds.
 
-For incident triage, start at the runbooks rather than DevTools:
+For incident triage, use the [complete Telegram runbook hub](./telegram-alerts.md#runbooks) rather than DevTools. Mini App-specific entry points:
 
 - [`runbooks/telegram-mini-app-auth-failures.md`](./runbooks/telegram-mini-app-auth-failures.md) — `mini_app_session_invalid` spikes.
 - [`runbooks/telegram-preset-resolution-failure.md`](./runbooks/telegram-preset-resolution-failure.md) — `presetQueryFailures` / `presetResolutionFailures` rising.

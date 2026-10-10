@@ -29,9 +29,11 @@ Discovery returns `findings` entries with `coinId`, `field`, `category`, `confid
 
 Default to “stored value is correct.” Confirm only a concrete, sourced factual error or an in-file contradiction. The skeptic independently verifies each candidate; report confirmed errors and unresolved uncertainties, drop false positives, and preserve the distinction in the summary. Numeric scores, subjective labels, prose style, and other exclusions in the rubric are never findings. Aggregation is deterministic; no model writes a report or data file.
 
+When findings feed an addition or promotion, return the relevant review scope, source observation times, checked/unverified/unavailable coverage, reviewed gaps, and proposed corrections in the [addition/evidence handoff packet](../../../docs/process/adding-a-stablecoin.md#additionevidence-handoff-packet). Preserve the adjudication fields above; a confirmed finding still does not authorize a write. Leave changed/generated-output and integration-check results to the authorized coordinator rather than implying that read-only review exercised them.
+
 ## Verification
 
-Run the focused catalog checks after the read-only pass or approved correction:
+For a standalone read-only pass, run the focused catalog checks below without generating or applying data. For a separately authorized standalone correction, include these checks in the author's applicable [Phase 7 generation/check pass](../../../docs/process/adding-a-stablecoin.md#phase-7---validate) after source edits, not a second audit check pass. In a coordinated addition, defer these catalog checks and shared generation to the orchestrator after all specialists land; return evidence findings and unexercised checks in the packet instead.
 
 ```bash
 npm run check:stablecoin-data

@@ -14,7 +14,7 @@ Supplemental family evidence is missing, malformed, empty, or expired. The publi
 
 Core publication can continue with reduced optional protocol-API/RPC coverage. A fresh empty family row is valid evidence with zero candidates. Only a wholly absent lane (`missing-cache` and zero sources) is treated as unprovisioned; one missing family alongside fresh families reports partial coverage. The hourly catch-up can provision it when its newest-marker gate is due. Acceptance is per-family: six hours by default (1.5× the four-hour producer cadence), 48 hours for daily Pendle. Pendle cadence/backoff skips are neutral while retained evidence remains in budget.
 
-Applied `sync-yield-data` remains `ok`; input findings live in `metadata.quality`, not top-level `fallbackMode`. Pendle-only loss goes in `quality.advisoryReasons`, leaving `quality.degraded` false: stale candidates are excluded and the admin supplemental tile remains degraded, but public producer quality stays clean. `partial-family-cache` is suppressed only when exactly Pendle is unavailable. Other required-family failures affect producer quality. vaults.fyi is retired; no missing-family alarm should require its cache.
+Use the [publication-quality contract](../yield-intelligence.md#persistence-and-publication) to distinguish completion from required-family failures and Pendle-only advisory loss. Stale candidates remain excluded while the admin supplemental tile diagnoses missing breadth; vaults.fyi is retired, so no missing-family alarm should require its cache.
 
 Aave refreshes three pinned Aave V3 reserves on every successful run: Ethereum USDC, Arbitrum USDT, and Base USDC, plus three rotating tracked-contract targets. Six targets run in two concurrency-three batches within the unchanged 28-second deadline. A successful generation replaces the family snapshot; old rotation windows are not accumulated or renewed with substituted timestamps. Failed/degraded fetches retain the prior snapshot under the usual rules. Rotating targets are discovery probes, not a promise of listed reserves or continuous coverage.
 
@@ -24,9 +24,7 @@ The unsuffixed aggregate `yield:supplemental-sources:v1` and retired vaults fami
 
 ## First Checks
 
-1. **Access-gated status:** `https://ops.pharos.watch/admin/` -> Crons -> `sync-yield-supplemental` and `sync-yield-data`.
-2. **Machine status:** `GET https://ops-api.pharos.watch/api/status` with Cloudflare Access service-token headers.
-3. **Public rankings:** compare `altSources` and `dataSource` distribution in `GET https://api.pharos.watch/api/yield-rankings`.
+Start with the [shared read-only Yield Health checks](./yield-health.md#first-checks), focusing on `yieldHealth.supplemental` and `sync-yield-supplemental` / `sync-yield-data` metadata and leases. Then compare `altSources` and `dataSource` distribution in `GET https://api.pharos.watch/api/yield-rankings`.
 
 ## Read-Only D1 Snippets
 
@@ -37,13 +35,7 @@ WHERE key LIKE 'yield:supplemental-%'
 ORDER BY key;
 ```
 
-```sql
-SELECT job, started_at, duration_ms, status, item_count, error, metadata
-FROM cron_runs
-WHERE job IN ('sync-yield-supplemental', 'sync-yield-data')
-ORDER BY started_at DESC
-LIMIT 12;
-```
+Use the [shared cron-history SELECT](./yield-health.md#read-only-d1-snippets) with jobs `sync-yield-supplemental` and `sync-yield-data`, newest 12 runs.
 
 ```sql
 SELECT data_source, COUNT(*) AS rows, MAX(updated_at) AS newest

@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This document defines the production deploy flow, mandatory local pre-push readiness, the GitHub Actions release gate, and optional production-profile rehearsal.
+This document defines the production deploy flow, the GitHub Actions release gate, and optional production-profile rehearsal. Mandatory local readiness is owned by [Testing: Pre-push readiness](./testing.md#pre-push-readiness).
 
 ## Core Rules
 
@@ -19,12 +19,10 @@ This document defines the production deploy flow, mandatory local pre-push readi
 
 Treat release preparation as ordered state transitions. Passing a check against an earlier state does not validate a later commit, generated diff, or environment profile.
 
-1. **Classify** — fetch `origin/main`, inspect committed/staged/worktree/untracked state, identify Pages and Worker impact, and preserve unrelated work.
-2. **Commit source** — create logical source commits first. Use mise shims reading `.nvmrc`; enable idiomatic Node files with `mise settings add idiomatic_version_file_enable_tools node`, then `mise install`. Every nested npm/`npx` command must inherit the pinned runtime; `check:pr` enforces exact `.nvmrc` Node and npm 11.x (`scripts/lib/runtime-guard.mts`).
-3. **Converge the artifact graph** — after final source/integration history, run full `npm run check:generated-artifacts`. Fixing only the first stale projection is not convergence; regenerate/commit source and outputs together, then repeat the full check.
-4. **Prove pre-push readiness** — before **every** first or replacement push, run full plain `npm run check:pr` on the final committed state with no skip/filter/plan-only flags. Require its fresh passing `.tmp/pr-check-receipts/<HEAD>.json`; revalidate after source/output/integration changes. [Pre-push readiness](./testing.md#pre-push-readiness) owns the full ordered workflow. Focused checks and optional `check:release` rehearsal do not substitute for readiness; add opt-in `--ci-parity` after an unreproduced remote failure and for lockfile/setup/security-policy changes.
-5. **Publish** — push a release branch, wait for the authoritative protected `PR gate`, merge through GitHub, and map the PR head SHA to the resulting `main` SHA and deployment run. Do not attempt direct `main` first.
-6. **Prove deployment and operation separately** — verify Worker activation and/or the immutable Pages marker. Then complete any risk-based runtime observation required by [Operational Acceptance](#operational-acceptance).
+1. **Classify** — inspect committed/staged/worktree/untracked state, identify Pages and Worker impact, and preserve unrelated work.
+2. **Prepare the release** — create logical source commits and follow the mandatory [Pre-push readiness](./testing.md#pre-push-readiness) procedure before **every** authorized first or replacement push. Its proof must cover the final committed HEAD; later source/output/integration changes invalidate it. Focused checks and optional `check:release` rehearsal do not substitute for readiness.
+3. **Publish** — push a release branch, wait for the authoritative protected `PR gate`, merge through GitHub, and map the PR head SHA to the resulting `main` SHA and deployment run. Do not attempt direct `main` first.
+4. **Prove deployment and operation separately** — verify Worker activation and/or the immutable Pages marker. Cron, scheduler, ingestion, memory, and migration changes also require the first relevant production execution or observation under [Operational Acceptance](#operational-acceptance) before being called operationally complete.
 
 ## Optional Worktree Flow
 
@@ -37,7 +35,7 @@ git fetch origin
 git worktree add ".worktrees/$FEATURE_NAME" -b "$BRANCH_NAME" origin/main
 ```
 
-2. Implement with focused feedback, commit, converge generated artifacts, and complete [pre-push readiness](./testing.md#pre-push-readiness).
+2. Implement with focused feedback, then follow the mandatory [pre-push readiness](./testing.md#pre-push-readiness) procedure on the final committed HEAD.
 3. Push the branch and open a pull request into `main`. Replacement pushes require the same full final-state readiness.
 
 ```bash
@@ -78,7 +76,7 @@ Tracked ownership handoffs and source-attribution corrections use `worker/script
 1. Deploy the read-path and hourly-purge protections first.
 2. Arm the writer pause guard.
 3. Verify `sync-yield-data` is not actively leased.
-4. Export the targeted parent/source rows from both hourly and daily tiers in a version-2 artifact; review the separate tier counts.
+4. Export the targeted parent/source rows from both hourly and daily tiers in a version-3 artifact, including each row's nullable `source_observed_at` observation clock; review the separate tier counts.
 5. Rehearse the delete + restore drill on a local throwaway SQLite dataset, including daily-only rows older than hourly retention, and compare complete rows in both tables.
 6. Run the bounded production cleanup only after the restore drill passes.
 7. Verify the parent/source rows stay absent after the next hourly writer cycle.
@@ -88,7 +86,7 @@ Tracked ownership handoffs and source-attribution corrections use `worker/script
 Use `worker/scripts/rebuild-blacklist-current-balances.ts` only after the source event set is complete:
 
 1. Preview, then arm the writer pause with `--arm-writer-pause`; live changes require `--execute --confirm rebuild-blacklist-current-balances` and an explicit `--local` or `--remote` target.
-2. Wait for the `sync-blacklist` cron lease to expire. The rebuild checks both the pause key and lease before provider work and again immediately before mutation.
+2. Wait for the `sync-blacklist` cron lease to expire. Live rebuilds check both the pause key and lease before provider work and again immediately before publication; dry-runs do not require those guards.
 3. Run the rebuild as a dry-run first. Provider lookups still run, but D1 remains unchanged; inspect `failedCount` before proceeding.
 4. Run the confirmed rebuild. More than 10% provider failures abort before D1 mutation. `--force` bypasses only this failure-rate guard and should be used only after reviewing the provider failures.
 5. Verify current balances, then preview and execute `--clear-writer-pause`. Do not clear the pause after a failed rebuild until the retained rows have been checked.
@@ -334,7 +332,7 @@ Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`
 - Schedule: `17 8 * * *` UTC, after the 08:05 UTC daily digest slot.
 - Main-only `pages-prepare → pages-release` jobs call the reusable workflows with `refresh_data: true`; this schedule is the dataset-refresh trigger.
 - It uses the reusable Pages sequence above: attempt to refresh all three API-backed datasets through the production `stablecoin-dashboard.pages.dev/_site-data` proxy, then build and verify the exact artifact, publish once, and verify the release marker on the immutable production deployment URL.
-- A single digest, depeg, or public-dataset producer failure can use its scoped committed fallback. Total producer failure and public-dataset rollback failure stop the release, and the two-day alias-age guard stops frozen mirrors before publication.
+- A single digest, depeg, or public-dataset producer failure can use its scoped committed fallback. Total producer failure and public-dataset rollback failure stop the release. The two-day alias-age check runs in the dataset generator's check/preservation paths; the release does not recheck the age of restored committed datasets before publication.
 - Manual rebuild dispatch uses the same path and the shared `production-deploy` lock.
 
 ### Wrangler and Workspace Layout
@@ -346,7 +344,7 @@ Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`
 
 ### Failure Stop and Surface Classification
 
-- Deployment stops on the first failed required step.
+- A failed required step fails its job and blocks dependent deployment gates; independent Pages preparation and applicable acceptance/failure-reporting jobs can still run.
 - Pull requests own full source/test validation. The post-merge workflow reruns only the focused Worker migration/activation checks and Pages artifact checks that are adjacent to production mutation.
 - Worker deploy is skipped unless deployed Worker/runtime/config/shared inputs changed. Root package and lockfile changes conservatively deploy both surfaces.
 - Pages publish is skipped for non-publishable or test-only Pages changes.
@@ -372,15 +370,7 @@ Tooling cache restores are best-effort acceleration for `.next/cache`, `.cache/e
 
 ## Runtime Origins
 
-The current origin split is:
-
-- public UI: `pharos.watch`
-- website data API target: `site-api.pharos.watch`. The Pages `/_site-data` proxy allowlists exactly this HTTPS origin; any other `SITE_API_ORIGIN` value (including `api.pharos.watch`) is rejected and the proxy fails closed with HTTP 500
-- operator UI: `ops.pharos.watch`
-- public API: `api.pharos.watch`
-- operator API: `ops-api.pharos.watch`
-
-The browser-facing website data lane is same-origin `/_site-data/*` on the Pages project, and its runtime contract lives in [Worker Infrastructure: Site-Data Auth](process/worker-infrastructure-appendix.md#site-data-auth). Every Pages host uses `SITE_API_SHARED_SECRET` only with the exact HTTPS `SITE_API_ORIGIN=https://site-api.pharos.watch`. The selector-snapshot Pages Function uses those same bindings server-side to recompute share artifacts from schema-validated canonical sources; missing or failing source access makes snapshot creation fail closed. Binding `DB` enables proxy-outcome attribution and is required for selector daily quotas; `SELECTOR_SNAPSHOT_IP_HASH_SECRET` is also required for privacy-preserving selector rate keys. Worker route declarations for `site-api.pharos.watch` and `ops-api.pharos.watch` live in `worker/wrangler.toml` and deploy with the normal Worker job. The Pages custom domains plus Cloudflare Access applications for the ops surfaces are account-side setup and are documented in [operator-origin-access.md](./operator-origin-access.md).
+Production separates public website/API origins from Access-protected operator origins. [Operator Origin Access: Hostnames](./operator-origin-access.md#hostnames) owns the host values, [Runtime origin bindings](./operator-origin-access.md#runtime-origin-bindings) owns the site-data and selector-snapshot bindings and fail-closed upstream policy, and [Proxy contract](./operator-origin-access.md#proxy-contract) owns operator transport. Worker custom-domain routes deploy with the normal Worker job; Pages custom domains and Access applications are [account-side setup](./operator-origin-access.md#cloudflare-account-setup-and-recovery).
 
 Public API `/api/*` POST requests are not production Pages proxy routes. On `pharos.watch`, `/api/` is the static API access page; its browser POST is the supporter-key claim, which goes cross-origin to `https://api.pharos.watch/api/donor-key-claims`, so CORS must allow JSON `POST` from `https://pharos.watch`. Local static-export smoke uses a proxy for endpoint-like `/api/*` only so the built artifact can be rehearsed without a deployed Pages Function.
 
@@ -461,13 +451,15 @@ Production smoke for this surface should confirm the retired request and verific
 
 ## Failure Policy
 
+For CI validation failures, collect **every failed leaf**, use the [workflow incident runbook](./runbooks/workflow-incidents.md) for remote diagnosis, and fix all causal failures in one revision. Follow [Pre-push readiness](./testing.md#pre-push-readiness) before the replacement push; a focused rerun alone is not authorization to push.
+
 If an explicit local `check:release` rehearsal fails:
 
 1. Do not treat the local rehearsal as green.
 2. Confirm the exact `.nvmrc` runtime, check lane, snapshot cleanliness, environment profile, and local concurrency before changing code. A release-only failure is not disproved by `npm run check:pr`, and a globally exported Pages flag does not reproduce job-scoped CI.
 3. For a small change, fix the failing command directly. For a large batch, run `npm run check:pr -- --base=<ref>` and read its final summary.
 4. Fix all blocking root failures and rerun their focused commands while editing. If local parallel load is suspect, run the focused command alone or set `PR_STATIC_MAX_PARALLEL=1`; do not loosen timeouts solely from a contended run.
-5. After focused fixes, commit the final source/integration state and complete [pre-push readiness](./testing.md#pre-push-readiness): full generated-artifact convergence, then full plain `npm run check:pr` and its fresh passing HEAD receipt.
+5. After focused fixes, follow the mandatory [Pre-push readiness](./testing.md#pre-push-readiness) procedure on the final committed source/integration state.
 6. Rerun an explicitly requested `check:release` rehearsal after its failure is resolved; it never replaces readiness. Only then push through the protected PR gate. GitHub Actions remains authoritative.
 
 If a production deployment fails after mutation:
