@@ -1000,6 +1000,7 @@ export async function runNightWatchBlacklistReconciliation(
     }),
     ...upstreamTail.map((event) => eventUpsertStatement(event, runId, startedAt, frozenIds.has(event.id))),
     ...expectations.map((expectation) => balanceUpsertStatement(expectation, startedAt)),
+    // SAFETY: safeHeadMs/startedAt are arithmetic clock values; the frozen manifest's configKey is escaped as a SQL string by sqlString.
     `UPDATE blacklist_sync_state
      SET last_block = MAX(last_block, ${safeHeadMs}),
          cursor_value = MAX(COALESCE(cursor_value, 0), ${safeHeadMs}),

@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -11,6 +12,7 @@ import {
   DROP_INDEX_GRANDFATHER_THROUGH_SEQUENCE,
   createSchemaObjectManifest,
   parseDataMigrationManifestRows,
+  createTableFixtureQuery,
   parseManifestMigrationRows,
   parseRolloutSafetyPolicy,
   validateManifestMigrationParity,
@@ -63,6 +65,23 @@ const rows = [
     sql: "CREATE INDEX idx_example_value ON example(value)",
   },
 ];
+
+describe("createTableFixtureQuery", () => {
+  it("finds only the requested table and rejects names that could change the SQL", () => {
+    const db = new DatabaseSync(":memory:");
+    try {
+      db.exec("CREATE TABLE fixture_1 (id INTEGER);");
+      expect(db.prepare(createTableFixtureQuery("fixture_1")).get()).toBeDefined();
+      expect(db.prepare(createTableFixtureQuery("missing_table")).get()).toBeUndefined();
+      for (const name of ["", "fixture_1' OR 1=1 --", "fixture_1'; DROP TABLE fixture_1; --", "main.fixture_1", "fixture_1\n"]) {
+        expect(() => createTableFixtureQuery(name)).toThrow("Invalid table name");
+      }
+      expect(db.prepare(createTableFixtureQuery("fixture_1")).get()).toBeDefined();
+    } finally {
+      db.close();
+    }
+  });
+});
 
 describe("parseRolloutSafetyPolicy", () => {
   it("reads the rollout-safety cutoff and required header from the manifest text", () => {

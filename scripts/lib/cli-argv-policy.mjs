@@ -26,6 +26,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/build-data/generate-worker-stablecoin-catalog.ts"),
     strict("scripts/ci/check-dex-census-provider-drift.ts"),
     strict("scripts/ci/check-doc-symbols.ts"),
+    strict("scripts/ci/check-editorial-content.ts"),
     strict("scripts/ci/check-failure-scenarios.ts"),
     strict("scripts/ci/check-html-fixture-age.ts"),
     strict("scripts/ci/guard-worker-deploy.ts"),
@@ -220,5 +221,10 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/subset-fonts.mjs", "build"),
     exempt("scripts/maintenance/watch-worker-cron.mjs", "read-only"),
     exempt("scripts/maintenance/weekly-curation-digest.mjs", "build"),
+    exempt(
+      "scripts/maintenance/yield-venue-risk-calibration.ts",
+      "read-only",
+      "Uses argv only for direct-run detection; fetches yield rankings and prints calibration findings without mutation.",
+    ),
   ]),
 });

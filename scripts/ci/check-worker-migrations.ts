@@ -592,6 +592,14 @@ export function validateSchemaObjectManifest(actual: string, expected: string): 
   throw new Error(`Fresh-replay schema object manifest drifted:\n- ${details.join("\n- ")}`);
 }
 
+export function createTableFixtureQuery(name: string): string {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+    throw new Error("Invalid table name for sqlite3 fixture query");
+  }
+  // SAFETY: name is rejected above unless it is an unquoted SQL identifier; no quotes, delimiters or input SQL can reach this literal.
+  return `SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = '${name}';`;
+}
+
 async function createExecutor(dbPath: string): Promise<MigrationExecutor> {
   try {
     const { DatabaseSync } = await import("node:sqlite");
@@ -650,7 +658,7 @@ async function createExecutor(dbPath: string): Promise<MigrationExecutor> {
         hasTable(name: string) {
           const result = spawnSync(
             "sqlite3",
-            ["-bail", dbPath, `SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = '${name}';`],
+            ["-bail", dbPath, createTableFixtureQuery(name)],
             { encoding: "utf8" },
           );
           if (result.error || result.status !== 0) {

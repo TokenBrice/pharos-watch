@@ -94,10 +94,12 @@ export function createBackfillDatabase(client: Client, options: {
     const receipt = `_pharos_backfill_${crypto.randomUUID().replaceAll("-", "")}`;
     const writes = [`CREATE TABLE ${receipt} (ordinal INTEGER PRIMARY KEY, changed INTEGER NOT NULL);`];
     sql.forEach(({ rendered, dml }, ordinal) => {
+      // SAFETY: receipt is a fixed prefix plus a hyphen-stripped crypto.randomUUID; ordinal is an array index and dml selects fixed SQL literals.
       writes.push(rendered, `INSERT INTO ${receipt} (ordinal, changed) SELECT ${ordinal}, ${dml ? "changes()" : "0"};`);
     });
     try {
       const imported = decode(client.executeStatementsRaw(writes, "backfill-d1"), 1);
+      // SAFETY: receipt is generated locally from crypto.randomUUID as a fixed-prefix alphanumeric identifier, never from bindings or client input.
       const rows = decode(client.queryRaw(`SELECT ordinal, changed FROM ${receipt} ORDER BY ordinal;`), 1)[0]!.results;
       if (rows.length !== items.length) throw new Error("backfill-d1-receipt-count-mismatch");
       const results = rows.map((value, ordinal) => {

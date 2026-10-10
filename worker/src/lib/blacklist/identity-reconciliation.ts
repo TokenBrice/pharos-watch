@@ -7,15 +7,22 @@ import { throwIfAborted } from "../abort";
 
 const PAGE_SIZE = 100;
 const CURSOR_PREFIX = "blacklist:identity-reconcile:v1:";
+const RECONCILIATION_TABLES = new Set(["blacklist_events", "blacklist_current_balances"] as const);
 
 /** Bounded, resumable audit-preserving cutover; public reads already fold canonical identities. */
 export async function reconcileBlacklistIdentities(db: D1Database, signal?: AbortSignal): Promise<void> {
-  for (const table of ["blacklist_events", "blacklist_current_balances"] as const) {
+  for (const table of RECONCILIATION_TABLES) {
     throwIfAborted(signal);
     const key = `${CURSOR_PREFIX}${table}`;
     const cursor = await db.prepare("SELECT value FROM cache WHERE key = ?").bind(key).first<{ value: string }>();
-    const rows = await db.prepare(`SELECT id, stablecoin, chain_id, address, config_key, contract_address${table === "blacklist_events" ? ", tx_hash" : ""}
-      FROM ${table} WHERE ${table === "blacklist_current_balances" ? "chain_id = 'tron' AND " : ""}id > ? ORDER BY id LIMIT ?`)
+    if (!RECONCILIATION_TABLES.has(table)) {
+      throw new Error(`Unsupported blacklist reconciliation table: ${table}`);
+    }
+    const rows = await db.prepare(table === "blacklist_events"
+      ? `SELECT id, stablecoin, chain_id, address, config_key, contract_address, tx_hash
+         FROM ${table} WHERE id > ? ORDER BY id LIMIT ?`
+      : `SELECT id, stablecoin, chain_id, address, config_key, contract_address
+         FROM ${table} WHERE chain_id = 'tron' AND id > ? ORDER BY id LIMIT ?`)
       .bind(cursor?.value ?? "", PAGE_SIZE).all<{
         id: string; stablecoin: BlacklistStablecoin; chain_id: string; address: string;
         config_key: string | null; contract_address: string | null; tx_hash?: string;
