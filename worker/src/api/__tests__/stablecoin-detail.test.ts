@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -5,6 +7,7 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { claimDetailCacheGeneration, publishDetailCacheGeneration } from "../../lib/detail-cache-generation";
+import { createStaleCacheHitResponse } from "../stablecoin-detail/shared";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -124,6 +127,48 @@ function makeDLDetailBody(overrides: Partial<{ tokens: unknown[]; price: number 
     price: overrides.price ?? 1.0,
   });
 }
+
+describe("scheduled detail refresh freshness", () => {
+  const capture = JSON.parse(gunzipSync(readFileSync(
+    `${process.cwd()}/src/hooks/__tests__/fixtures/stablecoin-freshness-production.json.gz`,
+  )).toString())["browser-detail"] as {
+    body: unknown;
+    headers: Record<string, string>;
+    capturedAtMs: number;
+    revalidatedHeaders: Record<string, string>;
+  };
+
+  it("reclassifies the exact production browser response without changing its body or producer clock", async () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(capture.capturedAtMs);
+    try {
+      const body = JSON.stringify(capture.body);
+      const served = createStaleCacheHitResponse(body, Number(capture.headers["x-data-age"]), Number(capture.headers["x-data-updated-at"]));
+      expect(Object.fromEntries(served.headers)).toEqual(capture.revalidatedHeaders);
+      expect(await served.text()).toBe(body);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it.each([
+    [4_800, "fresh"],
+    [4_801, "degraded"],
+    [7_200, "degraded"],
+    [7_201, "stale"],
+  ] as const)("preserves real aging at the scheduled-refresh %ss boundary", (ageSeconds, state) => {
+    const updatedAt = Number(capture.headers["x-data-updated-at"]);
+    const clock = vi.spyOn(Date, "now").mockReturnValue((updatedAt + ageSeconds) * 1000);
+    try {
+      const served = createStaleCacheHitResponse("{}", ageSeconds, updatedAt);
+      expect(served.headers.get("X-Data-Freshness")).toBe(state);
+      expect(served.headers.get("X-Data-Updated-At")).toBe(String(updatedAt));
+      expect(served.headers.get("Cache-Control")).toBe("no-store");
+      expect(served.headers.get("Warning") != null).toBe(state !== "fresh");
+    } finally {
+      clock.mockRestore();
+    }
+  });
+});
 
 describe("handleStablecoinDetail", () => {
   beforeEach(() => {
@@ -327,7 +372,8 @@ describe("handleStablecoinDetail", () => {
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(res.headers.get("Cache-Control")).toBe("no-store");
-    expect(res.headers.get("Warning")).toContain("refresh scheduled");
+    expect(res.headers.get("Warning")).toBeNull();
+    expect(res.headers.get("X-Data-Freshness")).toBe("fresh");
     expect(res.headers.get("X-Data-Updated-At")).toBe(String(now - 600));
     const body = (await readJsonResponse(res, 200)) as { tokens: Array<{ totalCirculatingUSD?: Record<string, number> }> };
     expect(body.tokens).toHaveLength(1);
@@ -498,7 +544,8 @@ describe("handleStablecoinDetail", () => {
     const backgroundCtx = makeCtx();
     const staleRes = await handleStablecoinDetail(staleDb, "usdt-tether", backgroundCtx);
     expect(staleRes.status).toBe(200);
-    expect(staleRes.headers.get("Warning")).toContain("refresh scheduled");
+    expect(staleRes.headers.get("Warning")).toBeNull();
+    expect(staleRes.headers.get("X-Data-Freshness")).toBe("fresh");
     expect(backgroundCtx.waitUntil).toHaveBeenCalledTimes(1);
 
     const syncCtx = makeCtx();

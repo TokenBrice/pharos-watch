@@ -27,6 +27,7 @@ const HOME_ALT_DATE_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", {
 
 interface HomeAltHeroChartProps {
   rows: TotalMcapChartRow[];
+  isLoadingHistory?: boolean;
 }
 
 interface ChartBounds {
@@ -100,14 +101,6 @@ function buildEvenTicks(count: number): number[] {
   return Array.from({ length: count }, (_, i) => i / (count - 1));
 }
 
-function sampleRows(rows: TotalMcapChartRow[], maxPoints = 140): TotalMcapChartRow[] {
-  if (rows.length <= maxPoints) return rows;
-  const lastIndex = rows.length - 1;
-  return Array.from({ length: maxPoints }, (_, index) => {
-    const sourceIndex = Math.round((index / (maxPoints - 1)) * lastIndex);
-    return rows[sourceIndex]!;
-  });
-}
 
 function makeScales({
   rows,
@@ -148,10 +141,13 @@ function buildAreaPath({
   const baseY = scales.y(0).toFixed(1);
   let firstX: string | null = null;
   let lastX = "";
+  let segmentPoints = 0;
   const closeSegment = () => {
     if (firstX !== null) {
-      commands.push(`L ${lastX} ${baseY} L ${firstX} ${baseY} Z`);
+      if (segmentPoints > 1) commands.push(`L ${lastX} ${baseY} L ${firstX} ${baseY} Z`);
+      else commands.pop();
       firstX = null;
+      segmentPoints = 0;
     }
   };
   for (const row of rows) {
@@ -164,6 +160,7 @@ function buildAreaPath({
     commands.push(`${firstX === null ? "M" : "L"} ${formatPoint(x, scales.y(value))}`);
     firstX ??= x.toFixed(1);
     lastX = x.toFixed(1);
+    segmentPoints++;
   }
   closeSegment();
   return commands.join(" ");
@@ -248,7 +245,9 @@ function HomeAltChartFrame({
     const end = rows[rows.length - 1]!.ts;
     const maxFromRows = rows.reduce((max, row) => row.total === null ? max : Math.max(max, row.total), 0);
     const resolvedYDomain: [number, number] = [yDomain[0], typeof yDomain[1] === "number" ? yDomain[1] : maxFromRows];
-    const visibleRows = sampleRows(rows);
+    // Keep observed points and gap boundaries: thinning can connect across a
+    // missing day or reduce the final observed segment to a vertical sliver.
+    const visibleRows = rows;
     const scales = makeScales({ rows: visibleRows, bounds, yDomain: resolvedYDomain });
 
     return { bounds, start, end, resolvedYDomain, visibleRows, scales };
@@ -471,7 +470,7 @@ function HomeAltHoverReadout({
   );
 }
 
-export function HomeAltHeroChart({ rows }: HomeAltHeroChartProps) {
+export function HomeAltHeroChart({ rows, isLoadingHistory = false }: HomeAltHeroChartProps) {
   const { chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
 
   const yDomain = useMemo(
@@ -491,7 +490,7 @@ export function HomeAltHeroChart({ rows }: HomeAltHeroChartProps) {
       role="figure"
       aria-label="Stablecoin market cap history by major cohort"
     >
-      {rows.some((row) => row.total === null || row.nonUsd === null || row.usdt === null || row.usdc === null || row.sky === null || row.others === null) ? (
+      {!isLoadingHistory && rows.some((row) => row.total === null || row.nonUsd === null || row.usdt === null || row.usdc === null || row.sky === null || row.others === null) ? (
         <p className="absolute left-2 top-0 z-10 text-xs text-muted-foreground">
           Some cohort history is unavailable; gaps are not zero.
         </p>

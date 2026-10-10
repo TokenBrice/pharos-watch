@@ -40,5 +40,5 @@ export function HomeAltHeroLiveChart(): React.JSX.Element {
     });
   }, [chartData, daiHistory, usdcHistory, usdsHistory, usdtHistory]);
 
-  return <HomeAltHeroChart rows={rows} />;
+  return <HomeAltHeroChart rows={rows} isLoadingHistory={usdtQuery.isLoading || usdcQuery.isLoading || usdsQuery.isLoading || daiQuery.isLoading} />;
 }
