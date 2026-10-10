@@ -12,7 +12,7 @@ import { ETHERSCAN_V2_BASE } from "./constants";
 import { encodeAddress, encodeUint256 } from "./evm-selectors";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import { parseQuantityHex } from "./bigint";
-import { rethrowIfAborted } from "./abort";
+import { FetchRequestNotStartedError, rethrowIfAborted } from "./abort";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isTronRpcUrl, requiresHistoricalEvmState } from "@shared/lib/tron-rpc";
 
@@ -442,6 +442,11 @@ async function fetchJsonRpcResult<T>(
       return body.result as T;
     } catch (err) {
       rethrowIfAborted(err, options?.signal);
+      if (err instanceof FetchRequestNotStartedError) {
+        if (err.attemptsStarted > 0) demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
+        failures.push(`${rpcUrl}: ${err.message}`);
+        break;
+      }
       demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
       failures.push(`${rpcUrl}: ${toErrorMessage(err)}`);
       continue;
@@ -585,6 +590,10 @@ async function runEvmRpcBatch<Value>(
       if (projected !== null) return projected;
     } catch (error) {
       rethrowIfAborted(error, options?.signal);
+      if (error instanceof FetchRequestNotStartedError) {
+        if (error.attemptsStarted > 0) demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
+        return null;
+      }
       demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
     }
   }

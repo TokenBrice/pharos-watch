@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import type * as AbortModule from "../abort";
+import { FetchRequestNotStartedError } from "../abort";
 
 const {
   sleepWithSignalMock,
@@ -18,6 +19,7 @@ vi.mock("../abort", async (importOriginal) => ({
 
 import {
   DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES,
+  fetchBinaryWithRetry,
   fetchJsonWithRetry,
   fetchTextWithRetry,
   fetchWithRetry,
@@ -75,6 +77,43 @@ describe("fetchWithRetry", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it.each([fetchWithRetry, fetchJsonWithRetry, fetchTextWithRetry, fetchBinaryWithRetry])(
+    "distinguishes a denied first request from a transport failure",
+    async (fetchBody) => {
+      const fetchSpy = mockFetch([], { requireMatch: true });
+      const pending = fetchBody("https://example.com", undefined, 0, { beforeRequest: () => false });
+      await expect(pending).rejects.toBeInstanceOf(FetchRequestNotStartedError);
+      await expect(pending).rejects.toMatchObject({ reason: "admission-denied", attemptsStarted: 0 });
+      expect(fetchSpy).not.toHaveBeenCalled();
+    },
+  );
+
+  it("distinguishes an expired deadline before any request", async () => {
+    const fetchSpy = mockFetch([], { requireMatch: true });
+    const beforeRequest = vi.fn(() => true);
+    const pending = fetchJsonWithRetry("https://example.com", undefined, 0, {
+      deadlineMs: Date.now() - 1, beforeRequest,
+    });
+    await expect(pending).rejects.toBeInstanceOf(FetchRequestNotStartedError);
+    await expect(pending).rejects.toMatchObject({ reason: "deadline-exceeded", attemptsStarted: 0 });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(beforeRequest).not.toHaveBeenCalled();
+  });
+
+  it("preserves genuine failed attempts when a retry is denied", async () => {
+    const fetchSpy = mockFetch([{ match: () => true, outcomes: [new TypeError("connection reset")] }]);
+    const beforeRequest = vi.fn().mockReturnValueOnce(true).mockReturnValue(false);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const pending = fetchJsonWithRetry("https://example.com", undefined, 1, { beforeRequest });
+      await expect(pending).rejects.toMatchObject({ reason: "admission-denied", attemptsStarted: 1 });
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(beforeRequest).toHaveBeenCalledTimes(2);
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it("forwards consumed/rejected intake for every retry attempt", async () => {

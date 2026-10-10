@@ -1,6 +1,6 @@
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
-import { sleepWithSignal, throwIfAborted } from "./abort";
+import { FetchRequestNotStartedError, sleepWithSignal, throwIfAborted } from "./abort";
 import {
   cancelResponseBodyQuietly,
   readResponseBytesWithinLimitWithSignal,
@@ -118,6 +118,9 @@ function getRetryDelayMs(response: Response, attempt: number, maxRetryDelayMs?: 
  * Fetch with retry and exponential backoff.
  * Respects Retry-After headers on 429 and 5xx responses.
  * Returns null if all attempts fail.
+ * Throws FetchRequestNotStartedError when admission or the deadline prevents
+ * a physical request; attemptsStarted distinguishes an untried URL from a
+ * denied retry after genuine failed attempts.
  *
  * If opts.signal is provided (e.g. from a cron AbortController), it is composed
  * with the per-request timeout via the shared createTimeoutSignal() helper so
@@ -250,10 +253,12 @@ async function fetchWithRetryInternal<TResult>(
     throw new RangeError(`maxResponseBytes must be a non-negative safe integer; received ${maxResponseBytes}`);
   }
   const signal = opts?.signal ?? undefined;
+  let attemptsStarted = 0;
   for (let i = 0; i <= maxRetries; i++) {
     throwIfAborted(signal);
     const remainingMs = options?.deadlineMs == null ? timeoutMs : options.deadlineMs - Date.now();
-    if (remainingMs <= 0 || options?.beforeRequest?.() === false) return null;
+    if (remainingMs <= 0) throw new FetchRequestNotStartedError("deadline-exceeded", attemptsStarted);
+    if (options?.beforeRequest?.() === false) throw new FetchRequestNotStartedError("admission-denied", attemptsStarted);
     const attemptTimeoutMs = Math.min(timeoutMs, remainingMs);
     let responseReceived = false;
     try {
@@ -271,6 +276,7 @@ async function fetchWithRetryInternal<TResult>(
         return { response, body };
       };
       try {
+        attemptsStarted += 1;
         const res = await fetch(url, {
           ...opts,
           signal: perRequestTimeout.signal,

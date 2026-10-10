@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { registerRpcAuth, type ChainRpcConfig, type RpcEndpoint } from "../chain-registry";
+import { FetchRequestNotStartedError } from "../abort";
 
 const fetchWithRetryMock = vi.fn();
 const { recordDwellirCreditsMock } = vi.hoisted(() => ({ recordDwellirCreditsMock: vi.fn() }));
@@ -7,7 +8,9 @@ const { recordDwellirCreditsMock } = vi.hoisted(() => ({ recordDwellirCreditsMoc
 vi.mock("../fetch-retry", () => ({
   fetchJsonWithRetry: async (...args: unknown[]) => {
     const options = args[3] as { beforeRequest?: () => boolean; deadlineMs?: number } | undefined;
-    if (options?.beforeRequest?.() === false) return null;
+    if (options?.beforeRequest?.() === false) {
+      throw new FetchRequestNotStartedError("admission-denied", 0);
+    }
     const result = await fetchWithRetryMock(...args);
     if (result instanceof Response) {
       return { response: result, body: await result.clone().json() };

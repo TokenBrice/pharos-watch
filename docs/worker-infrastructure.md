@@ -152,6 +152,7 @@ Dwellir EVM endpoint authority is `shared/lib/dwellir-chains.ts` (37 chains, inc
 
 Endpoint transport metadata in `worker/src/lib/chain-registry.ts` may declare an inclusive `maxLogBlockSpan` and `noBatch`. The shared RPC helpers skip endpoints that cannot accommodate an explicit log range and execute no-batch groups serially with exact response IDs, deadlines and request guards. These options do not change endpoint order, state/log history classifications or inventory eligibility; absent options preserve existing batch transport and caller-selected ranges.
 Every physical RPC retry rechecks the request guard, meters provider credits, and clips its timeout and backoff to the absolute deadline; batch and no-batch transports share this admission path.
+Admission or deadline denial in `fetch-retry.ts` throws the typed `FetchRequestNotStartedError` sentinel, carrying the denial reason and count of earlier started attempts to that URL. Single, batch, and no-batch RPC reads stop the bounded operation with their existing unavailable result. An untried supplemental endpoint is neither charged nor demoted, so later independently admitted operations sharing the same run map may still reach it; a provider that actually failed before a denied retry remains eligible for run-local demotion.
 Capped inclusive explorer log ranges split sequentially down to singleton blocks; only a capped singleton is unsplittable, including when its parent spans two adjacent blocks.
 
 ---

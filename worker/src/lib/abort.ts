@@ -1,3 +1,15 @@
+/** Local admission stopped a physical request, not a provider transport failure. */
+export class FetchRequestNotStartedError extends Error {
+  constructor(
+    readonly reason: "admission-denied" | "deadline-exceeded",
+    /** Earlier requests to this URL failed before the denied retry, if any. */
+    readonly attemptsStarted: number,
+  ) {
+    super(reason === "admission-denied" ? "request admission denied" : "request deadline exceeded");
+    this.name = "FetchRequestNotStartedError";
+  }
+}
+
 export function abortError(signal?: AbortSignal): Error {
   const reason: unknown = signal?.reason;
   if (reason instanceof Error) return reason;
