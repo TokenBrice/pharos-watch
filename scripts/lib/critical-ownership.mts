@@ -18,6 +18,10 @@ const TEST_FILE_PATTERN = /\.(?:test|spec)\.[cm]?[jt]sx?$/;
 
 export const ISOLATED_NODE_TESTS = [
   "scripts/__tests__/remote-d1.test.ts",
+  // Its vi.mock of collectChangedFiles only applies when this file loads the
+  // runner first; under isolate:false a sibling suite that already imported
+  // run-pr-checks leaves the real git-backed implementation cached.
+  "scripts/__tests__/run-pr-checks-execution.test.ts",
   "scripts/__tests__/serve-static-export.test.ts",
   "shared/lib/__tests__/psi-eligible.test.ts",
   "shared/lib/__tests__/stablecoin-id-registry.test.ts",
