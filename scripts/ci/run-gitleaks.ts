@@ -603,6 +603,21 @@ export function runGitleaksConfigSelfTest(
     const supplyAttributionSlotKey = ["v9Supply", "AttributionOffset"].join("");
     const publicControls = [
       {
+        path: "src/lib/case-studies/buidl-tokenized-tbill-2025.json",
+        value: { metaDescription: [
+          "BUIDL is the tokenized T-bill survivor",
+          ": BlackRock/Securitize fund structure, $1 NAV discipline, controlled access, and collateral that stayed boring.",
+        ].join("") },
+      },
+      {
+        path: "worker/src/cron/mint-burn/retention.ts",
+        value: { query: ["WHERE state.config_key = ", "frontier.column3"].join("") },
+      },
+      {
+        path: "worker/src/cron/mint-burn/retention.ts",
+        value: { query: ["LEFT JOIN mint_burn_sync_state state ON state.config_key = ", "frontier.column3"].join("") },
+      },
+      {
         path: "scripts/maintenance/run-worker-smoke.mjs",
         // SAFETY: The scanner control interpolates a fixed slot-key literal, not external input; preserve its fixture value.
         value: { query: `SELECT state FROM cron_slot_executions WHERE slot_key = '${supplyAttributionSlotKey}'` },

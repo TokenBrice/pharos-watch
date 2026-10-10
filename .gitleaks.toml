@@ -1,10 +1,8 @@
 # Gitleaks configuration for pharos-watch.
 #
-# Extends the default ruleset. The only repo-specific carve-out is for
-# EVM contract/account addresses (0x + exactly 40 hex chars): they are
-# public on-chain identifiers, not credentials, and keys named "token"
-# or "collateralToken" in measurement targets/fixtures otherwise trip
-# the generic-api-key rule.
+# Extends the default ruleset. Repo-specific exceptions cover reviewed public
+# identifiers, document links, prose and fixtures; narrow path/value pairs keep
+# unrelated credentials detectable.
 
 [extend]
 useDefault = true
@@ -514,3 +512,23 @@ condition = "AND"
 regexTarget = "secret"
 regexes = ['''^79d5fd49-deae-41b4-a809-9e1afaa02f32$''']
 paths = ['''(?:^|/)shared/lib/redemption-backstop-configs/offchain-issuer/discovery\.ts$''']
+
+# This editorial phrase moved from TS (historically fingerprint-ignored) to JSON.
+# Pin only the matched prose value to its case study, not the whole source line.
+[[allowlists]]
+description = "Reviewed BlackRock/Securitize editorial phrase in the BUIDL case study"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^BlackRock/Securitize$''']
+paths = ['''(?:^|/)src/lib/case-studies/buidl-tokenized-tbill-2025\.json$''']
+
+# Both retention queries compare SQL columns, not a credential assignment.
+# The exact RHS and owner path preserve detection of real config_key values.
+[[allowlists]]
+description = "Mint/burn retention config-key SQL column comparisons are not secrets"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^frontier\.column3$''']
+paths = ['''(?:^|/)worker/src/cron/mint-burn/retention\.ts$''']

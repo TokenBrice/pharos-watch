@@ -256,11 +256,16 @@ describe("run-gitleaks", () => {
   });
   it("batches self-tests into three scans while retaining per-line rule assertions", () => {
     const reports: SelfTestFinding[][] = [];
-    const fixtureCounts: number[] = [];
+    const fixtures: Array<Array<{ File: string; StartLine: number }>> = [];
     const runBinary = vi.fn((_binary: string, args: string[]) => {
-      fixtureCounts.push(readdirSync(args.at(-1)!, { recursive: true, withFileTypes: true })
+      const root = args.at(-1)!;
+      fixtures.push(readdirSync(root, { recursive: true, withFileTypes: true })
         .filter((entry) => entry.isFile())
-        .reduce((count, entry) => count + readFileSync(join(entry.parentPath, entry.name), "utf8").trimEnd().split("\n").length, 0));
+        .flatMap((entry) => {
+          const file = join(entry.parentPath, entry.name);
+          return readFileSync(file, "utf8").trimEnd().split("\n")
+            .map((_, index) => ({ File: relative(root, file), StartLine: index + 1 }));
+        }));
       return { status: selfTestScanStatus(args, (findings) => {
         reports.push(findings);
         return findings;
@@ -268,10 +273,16 @@ describe("run-gitleaks", () => {
     });
     runGitleaksConfigSelfTest("/fake/gitleaks", { runBinary });
     expect(runBinary).toHaveBeenCalledTimes(3);
-    expect(fixtureCounts).toEqual([44, 43, 44]);
-    expect(reports.map((report) => report.length)).toEqual([0, 43, 44]);
-    expect(reports[1].every((finding) => finding.RuleID === "aws-access-token")).toBe(true);
-    expect(reports[2].every((finding) => finding.RuleID === "generic-api-key")).toBe(true);
+    expect(fixtures[0].length).toBeGreaterThan(0);
+    expect(fixtures[2]).toEqual(fixtures[0]);
+    expect(fixtures[0]).toEqual(expect.arrayContaining(fixtures[1]));
+    expect(reports[0]).toEqual([]);
+    for (const [index, RuleID] of [[1, "aws-access-token"], [2, "generic-api-key"]] as const) {
+      expect(reports[index]).toHaveLength(fixtures[index].length);
+      expect(reports[index]).toEqual(expect.arrayContaining(
+        fixtures[index].map((fixture) => ({ ...fixture, RuleID })),
+      ));
+    }
     for (const path of [
       "scripts/maintenance/run-worker-smoke.mjs",
       "worker/src/lib/__tests__/v9-slot-window.test.ts",
