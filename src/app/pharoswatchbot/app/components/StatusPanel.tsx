@@ -3,6 +3,7 @@
 import { Check, Clock3, Home, Send, ShieldAlert } from "lucide-react";
 import { RECOMMENDED_OPERATION, SNOOZE_DURATION_TOKENS } from "../constants";
 import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
+import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { formatQuietHoursRange, formatSnoozePill, formatTime } from "../format";
 import type {
   TelegramMiniAppOperation,
@@ -11,8 +12,10 @@ import type {
 import { MiniButton } from "./MiniButton";
 
 export interface StatusPanelProps {
-  /** Last server-confirmed state; reading `subscriber`, `viewer`, `health`. */
+  /** Last server-confirmed subscriber, coverage, viewer, and health state. */
   state: TelegramMiniAppState;
+  /** Shared client clock in epoch seconds, also used by watchlist cards. */
+  nowSec: number;
   /** Whether the user has write access AND `initData` is present. */
   canMutate: boolean;
   /** True while a mutation POST is in flight. Disables every action button. */
@@ -56,10 +59,24 @@ function failureCopy(failureClass: string | null): { title: string; body: string
   };
 }
 
-export function StatusPanel({ state, canMutate, isMutating, pendingOperation, onMutate, homeHeadline, homeScreenStatus, onAddToHomeScreen, onSendSample }: StatusPanelProps) {
+export function StatusPanel({ state, nowSec, canMutate, isMutating, pendingOperation, onMutate, homeHeadline, homeScreenStatus, onAddToHomeScreen, onSendSample }: StatusPanelProps) {
   const snoozeUntil = state.subscriber.snoozeUntilTs;
-  const snoozeActive = snoozeUntil != null;
   const paused = isPausedSentinel(snoozeUntil);
+  const snoozeActive = paused || (snoozeUntil != null && snoozeUntil > nowSec);
+  const hasCoverage = state.subscriber.exists && (
+    TELEGRAM_ALERT_TYPES.some((type) => state.subscriber.globalAlerts[type])
+    || state.subscriptions.some((coin) => TELEGRAM_ALERT_TYPES.some((type) => coin.alertTypes[type]))
+    || state.presets.some((preset) => Object.values(preset.alertTypes).some(Boolean))
+  );
+  const watcherTitle = paused
+    ? "Alerts are paused indefinitely"
+    : snoozeActive
+      ? "Alerts are temporarily snoozed"
+      : hasCoverage
+        ? "Alerts are active"
+        : state.subscriber.exists
+          ? "No enabled alerts"
+          : "No active watcher yet";
   const showGroupReadOnlyCopy = !state.viewer.canMutate && state.viewer.mutationBlockReason !== "stale-auth";
   const recentFailure = failureCopy(state.health.recentFailureClass);
   const lastDelivery = formatTime(state.health.lastSuccessfulDeliveryAt);
@@ -98,9 +115,9 @@ export function StatusPanel({ state, canMutate, isMutating, pendingOperation, on
 
       <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
         <p className="pharos-kicker">Watcher state</p>
-        <h2 className="mt-1 text-xl font-semibold tracking-tight text-foreground">{state.subscriber.exists ? "Alerts are active" : "No active watcher yet"}</h2>
+        <h2 className="mt-1 text-xl font-semibold tracking-tight text-foreground">{watcherTitle}</h2>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          {state.subscriber.exists ? homeHeadline : "Start with the recommended setup for DEWS and depeg alerts on the top USD stablecoins."}
+          {hasCoverage ? homeHeadline : "Start with the recommended setup for DEWS and depeg alerts on the top USD stablecoins."}
         </p>
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           <MiniButton
@@ -123,7 +140,9 @@ export function StatusPanel({ state, canMutate, isMutating, pendingOperation, on
               <span className="mini-selected shrink-0 rounded-md border px-2 py-1 text-[11px] font-semibold">
                 {paused
                   ? "Paused indefinitely"
-                  : <>Quiet until <span className="pharos-numeric">{formatSnoozePill(snoozeUntil)}</span></>}
+                  : snoozeUntil != null
+                    ? <>Quiet until <span className="pharos-numeric">{formatSnoozePill(snoozeUntil)}</span></>
+                    : null}
               </span>
             ) : null}
           </div>

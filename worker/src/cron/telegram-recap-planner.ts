@@ -62,6 +62,7 @@ interface DirectSubscriptionRow {
   chat_id: string;
   stablecoin_id: string;
   alert_snooze_until_ts: number | null;
+  has_direct: number;
 }
 
 interface PresetSubscriptionRow {
@@ -77,6 +78,7 @@ interface RecipientScope {
   directCoinIds: Set<string>;
   presetCoinIds: Set<string>;
   globalFamilies: Set<TelegramRecapFact["family"]>;
+  snoozedCoinIds: Set<string>;
   fingerprintParts: string[];
 }
 
@@ -115,6 +117,7 @@ function membershipForFact(
   scope: RecipientScope,
   fact: TelegramRecapFact,
 ): TelegramRecapMembership | null {
+  if (scope.snoozedCoinIds.has(fact.coinId)) return null;
   if (scope.directCoinIds.has(fact.coinId)) return "direct";
   if (scope.presetCoinIds.has(fact.coinId)) return "preset";
   return scope.globalFamilies.has(fact.family) ? "global" : null;
@@ -208,24 +211,31 @@ async function loadDirectSubscriptions(
   db: D1Database,
   chatIds: readonly string[],
   nowSec: number,
-): Promise<Map<string, Set<string>>> {
-  if (chatIds.length === 0) return new Map();
+): Promise<{ directByChat: Map<string, Set<string>>; snoozedByChat: Map<string, Set<string>> }> {
+  if (chatIds.length === 0) return { directByChat: new Map(), snoozedByChat: new Map() };
   const inClause = buildInClause(chatIds);
   const rows = await db.prepare(`
-    SELECT chat_id, stablecoin_id, alert_snooze_until_ts
+    SELECT chat_id, stablecoin_id, alert_snooze_until_ts,
+           (alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1
+             OR alert_launch = 1 OR alert_reserve = 1 OR alert_freeze = 1) AS has_direct
       FROM telegram_subscriptions
      WHERE chat_id IN (${inClause.sql})
-       AND (alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1
-         OR alert_launch = 1 OR alert_reserve = 1 OR alert_freeze = 1)
   `).bind(...inClause.binds).all<DirectSubscriptionRow>();
   const result = new Map<string, Set<string>>();
+  const snoozedByChat = new Map<string, Set<string>>();
   for (const row of rows.results ?? []) {
-    if (row.alert_snooze_until_ts != null && Number(row.alert_snooze_until_ts) > nowSec) continue;
+    if (row.alert_snooze_until_ts != null && Number(row.alert_snooze_until_ts) > nowSec) {
+      const ids = snoozedByChat.get(row.chat_id) ?? new Set<string>();
+      ids.add(row.stablecoin_id);
+      snoozedByChat.set(row.chat_id, ids);
+      continue;
+    }
+    if (Number(row.has_direct) !== 1) continue;
     const ids = result.get(row.chat_id) ?? new Set<string>();
     ids.add(row.stablecoin_id);
     result.set(row.chat_id, ids);
   }
-  return result;
+  return { directByChat: result, snoozedByChat };
 }
 
 async function loadPresetSubscriptions(db: D1Database, chatIds: readonly string[]): Promise<Map<string, TelegramPresetId[]>> {
@@ -286,10 +296,12 @@ async function loadTapeFacts(
 function scopeForRecipient(
   subscriber: SubscriberRecapRow,
   directByChat: ReadonlyMap<string, Set<string>>,
+  snoozedByChat: ReadonlyMap<string, Set<string>>,
   presetsByChat: ReadonlyMap<string, TelegramPresetId[]>,
   presetCoinIds: ReadonlyMap<TelegramPresetId, readonly string[]>,
 ): RecipientScope {
   const directCoinIds = directByChat.get(subscriber.chat_id) ?? new Set<string>();
+  const snoozedCoinIds = snoozedByChat.get(subscriber.chat_id) ?? new Set<string>();
   const presetCoinIdsForChat = new Set<string>();
   const presetIds = [...new Set(presetsByChat.get(subscriber.chat_id) ?? [])].sort();
   for (const presetId of presetIds) {
@@ -300,11 +312,13 @@ function scopeForRecipient(
     directCoinIds,
     presetCoinIds: presetCoinIdsForChat,
     globalFamilies,
+    snoozedCoinIds,
     fingerprintParts: [
       `direct:${[...directCoinIds].sort().join(",")}`,
       `presets:${presetIds.join(",")}`,
       `presetCoins:${[...presetCoinIdsForChat].sort().join(",")}`,
       `global:${[...globalFamilies].sort().join(",")}`,
+      `snoozed:${[...snoozedCoinIds].sort().join(",")}`,
     ],
   };
 }
@@ -464,7 +478,7 @@ export async function planTelegramPersonalizedRecaps(
       continue;
     }
     const chatIds = planningPreferences.map((preference) => preference.chatId);
-    const directByChat = await loadDirectSubscriptions(db, chatIds, nowSec);
+    const { directByChat, snoozedByChat } = await loadDirectSubscriptions(db, chatIds, nowSec);
     const presetsByChat = await loadPresetSubscriptions(db, chatIds);
     const allPresetIds = [...new Set([...presetsByChat.values()].flat())];
     const resolvedPresets = allPresetIds.length === 0
@@ -528,7 +542,7 @@ export async function planTelegramPersonalizedRecaps(
       counts.nextDueAt = counts.nextDueAt == null ? nextDueAt : Math.min(counts.nextDueAt, nextDueAt);
       const window = recapWindow(preference, nowSec);
       const recapKey = buildTelegramRecapDedupeKey(preference.chatId, localDate);
-      const scope = scopeForRecipient(subscriber, directByChat, presetsByChat, presetCoinIds);
+      const scope = scopeForRecipient(subscriber, directByChat, snoozedByChat, presetsByChat, presetCoinIds);
       const fingerprint = await sha256Hex(scope.fingerprintParts.join("\n"));
       const target = {
         recapKey,

@@ -17,6 +17,7 @@ import {
 } from "../telegram-webhook-messages";
 import type { SubscriberRow, SubscriptionRow } from "../telegram-webhook-shared";
 import type { StatusForCoin } from "../telegram-webhook-status";
+import { buildCoverageMessage } from "../telegram-webhook-insights";
 
 
 describe("buildNotFoundMessage", () => {
@@ -94,9 +95,9 @@ describe("describeSubscriptionSettings", () => {
     expect(describeSubscriptionSettings(row)).toBe("Freeze");
   });
 
-  it("shows Muted when no types enabled", () => {
+  it("shows inherited defaults when no types or overrides are enabled", () => {
     const row = makeSubscriptionRow("x", { alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, });
-    expect(describeSubscriptionSettings(row)).toBe("Muted");
+    expect(describeSubscriptionSettings(row)).toBe("Inherits preset/global defaults");
   });
 
   it("shows safety mode", () => {
@@ -123,9 +124,9 @@ describe("describeSubscriptionSettings", () => {
     expect(describeSubscriptionSettings(row, nowSec)).toBe("DEWS");
   });
 
-  it("renders an all-flags-0 row as a muted override under perCoinTag (C74)", () => {
+  it("renders an unmarked all-flags-0 row as inherited under perCoinTag", () => {
     const row = makeSubscriptionRow("x", { alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, });
-    expect(describeSubscriptionSettings(row, undefined, { perCoinTag: true })).toBe("Muted (overrides defaults)");
+    expect(describeSubscriptionSettings(row, undefined, { perCoinTag: true })).toBe("Inherits preset/global defaults");
   });
 
   it("tags a flagged row as per-coin under perCoinTag (C74)", () => {
@@ -138,6 +139,22 @@ describe("describeSubscriptionSettings", () => {
     const row = makeSubscriptionRow("x", { alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
     alert_snooze_until_ts: nowSec + 38 * 60, });
     expect(describeSubscriptionSettings(row, nowSec, { perCoinTag: true })).toBe("DEWS · per-coin — snoozed for 38 min");
+  });
+
+  it("distinguishes snooze-only inheritance, one-family off, and fully explicit muting", () => {
+    const nowSec = 1_700_000_000;
+    const row = makeSubscriptionRow("x", {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      alert_reserve: 0, alert_freeze: 0, alert_snooze_until_ts: nowSec + 3600,
+    });
+    expect(describeSubscriptionSettings(row, nowSec, { perCoinTag: true }))
+      .toBe("Inherits preset/global defaults — snoozed for 1 h");
+    expect(describeSubscriptionSettings({ ...row, alert_depeg_override: 1 }, nowSec + 3600, { perCoinTag: true }))
+      .toBe("Inherits preset/global defaults; off: Depeg (overrides defaults)");
+    expect(describeSubscriptionSettings({
+      ...row, alert_dews_override: 1, alert_depeg_override: 1, alert_safety_override: 1,
+      alert_launch_override: 1, alert_reserve_override: 1, alert_freeze_override: 1,
+    }, nowSec + 3600, { perCoinTag: true })).toBe("Muted (overrides defaults)");
   });
 });
 
@@ -299,10 +316,10 @@ describe("buildListMessage", () => {
     };
     const msg = buildListMessage(sub, [], [], NOON_UTC_SEC);
     expect(msg).toContain("Precedence: per-coin &gt; preset &gt; all-stablecoins.");
-    expect(msg).toContain("A per-coin Muted overrides the rest.");
+    expect(msg).toContain("Explicit per-family off overrides inherited defaults.");
   });
 
-  it("renders an all-flags-0 coin row as a muted override and tags flagged rows (C74)", () => {
+  it("renders a fully marked-off coin row as muted and tags flagged rows", () => {
     const sub: SubscriberRow = {
       alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
       global_alert_dews: 0, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
@@ -311,6 +328,8 @@ describe("buildListMessage", () => {
     const mutedRow: SubscriptionRow = {
       stablecoin_id: "usdc-circle",
       alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      alert_dews_override: 1, alert_depeg_override: 1, alert_safety_override: 1,
+      alert_launch_override: 1, alert_reserve_override: 1, alert_freeze_override: 1,
       dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
     };
     const flaggedRow: SubscriptionRow = {
@@ -441,6 +460,18 @@ describe("buildStatusMessage 24h mint/burn flow line (C122)", () => {
     const msg = buildStatusMessage("USDC", baseStatus({ flow: null }));
     expect(msg).not.toContain("Flow 24h");
   });
+
+  it.each([3600, 6 * 3600, 6 * 3600 + 1])("retains the producer flow stale verdict at age %s", (ageSec) => {
+    const assessedAt = Math.floor(Date.now() / 1000);
+    const stale = ageSec > 6 * 3600;
+    const message = buildStatusMessage("USDC", baseStatus({ flow: {
+      netFlowUsd: 123_500, updatedAt: assessedAt - ageSec, assessedAt,
+      freshBudgetSec: 6 * 3600, stale,
+    } }));
+    const flowLine = message.split("\n").find((line) => line.startsWith("Flow 24h:"));
+    expect(flowLine).toContain("+$123.5K");
+    expect(flowLine?.includes(", stale")).toBe(stale);
+  });
 });
 
 describe("buildStatusMessage supply and DEX context", () => {
@@ -493,6 +524,7 @@ describe("buildStatusMessage canonical safety provenance", () => {
       },
     });
     expect(buildStatusMessage("USDC", source)).toContain("Safety: A (90) [V9 9.0]");
+    expect(buildCoverageMessage("USDC", source)).toContain("Safety: A (90) [V9 9.0]");
     expect(
       buildStatusMessage("USDC", baseStatus({ safetyUnavailableReason: "canonical-snapshot-unavailable" })),
     ).toContain("Safety: temporarily unavailable");
@@ -512,6 +544,10 @@ describe("buildStatusMessage canonical safety provenance", () => {
       publishedAt: 1_700_000_000, recordedAt: 1_700_000_000,
     } });
     const message = buildStatusMessage("USDC", status);
+    const coverage = buildCoverageMessage("USDC", status);
+    const sharedRating = message.split("\n").find((line) => line.startsWith("Safety:"))?.split("],")[0];
+    expect(coverage).toContain(`${sharedRating}]`);
+    expect(coverage).not.toContain("Safety: null");
     if (ratingStatus === "pipeline-gap") {
       expect(message).toContain("Safety: Pipeline gap — Unavailable");
       expect(message).not.toContain("Safety: NR");

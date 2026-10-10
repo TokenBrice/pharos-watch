@@ -11,6 +11,7 @@ import { suggestClosestToken } from "../lib/telegram/alerts";
 import { TOP_VIEW_NAMES } from "../lib/telegram/constants";
 import { formatTelegramCompactUsd } from "./telegram-format";
 import type { StatusForCoin } from "./telegram-webhook-status";
+import { formatTelegramSafety } from "./telegram-webhook-messages";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
 import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
@@ -343,7 +344,7 @@ export function buildCoverageMessage(symbol: string, status: StatusForCoin): str
     `DEWS: ${status.dews ? `${status.dews.band} (${formatAge(status.dews.computedAt)})` : "missing"}`,
     `Safety: ${
       status.safety
-        ? `${status.safety.grade}${status.safety.score != null ? ` (${status.safety.score})` : ""} [${status.safety.model.toUpperCase()} ${status.safety.methodologyVersion}]`
+        ? formatTelegramSafety(status.safety)
         : status.safetyUnavailableReason
           ? "unavailable"
           : "missing"

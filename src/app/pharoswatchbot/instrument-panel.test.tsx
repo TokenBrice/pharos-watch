@@ -130,6 +130,30 @@ describe("InstrumentPanel", () => {
     expect(screen.queryByText("7")).toBeNull();
   });
 
+  it("reserves the empty ranking claim for successfully empty telemetry", () => {
+    mockPulse({ ...pulse, topCoins: [] });
+    render(<InstrumentPanel />);
+    expect(screen.getByText("No ranked follows yet.")).toBeTruthy();
+    expect(screen.queryByText("Follow rankings are temporarily unavailable.")).toBeNull();
+  });
+
+  it.each([{ topCoins: [] }, { topCoins: ["USDT"] }])("prioritizes unavailable rankings over returned rows $topCoins", ({ topCoins }) => {
+    mockPulse({ ...pulse, topCoins, quality: { status: "partial", unavailableFields: ["topCoins"] } });
+    render(<InstrumentPanel />);
+    expect(screen.getByText("Follow rankings are temporarily unavailable.")).toBeTruthy();
+    expect(screen.queryByText("No ranked follows yet.")).toBeNull();
+    expect(screen.queryByText("USDT")).toBeNull();
+  });
+
+  it.each([{ watcherHistory: [] }, { watcherHistory: pulse.watcherHistory }])("prioritizes unavailable history over returned rows", ({ watcherHistory }) => {
+    mockPulse({ ...pulse, watcherHistory, quality: { status: "partial", unavailableFields: ["watcherHistory"] } });
+    render(<InstrumentPanel />);
+    expect(screen.getByText("Watcher history is temporarily unavailable.")).toBeTruthy();
+    expect(screen.queryByText(/Historical watcher points will appear/i)).toBeNull();
+    expect(screen.queryByRole("figure", { name: /lifecycle chart/i })).toBeNull();
+    expect(screen.queryByText(/latest daily snapshot/i)).toBeNull();
+  });
+
   it("keeps the lifecycle placeholder only when no history points are available", () => {
     mockPulse({ ...pulse, watcherHistory: [], lifecycleHistoryUpdatedAt: null });
     render(<InstrumentPanel />);

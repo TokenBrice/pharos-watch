@@ -538,9 +538,85 @@ export function loadProductionPendingClaimSql(): string {
   );
 }
 
+export function extractProductionStatusSql(sourceText: string): Map<string, string> {
+  const sourceFile = ts.createSourceFile("usage-analytics.ts", sourceText, ts.ScriptTarget.Latest, true);
+  const values = new Map<string, string>([
+    ["ACTIVE_PRESET_FLAGS_SQL", ACTIVE_PRESET_FLAGS_SQL],
+    ["ACTIVE_SUBSCRIPTION_FLAGS_SQL", ACTIVE_SUBSCRIPTION_FLAGS_SQL],
+    ["ACTIVE_WATCHER_SQL_CONDITION", ACTIVE_WATCHER_SQL_CONDITION],
+    ["PENDING_DELIVERY_STATE_PLACEHOLDERS", loadProductionPendingStates().map(() => "?").join(", ")],
+  ]);
+  function visitConstants(node: ts.Node): void {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer
+      && ts.isCallExpression(node.initializer) && ts.isIdentifier(node.initializer.expression)) {
+      const builder = node.initializer.expression.text === "buildActiveSubscriptionAggregateSql"
+        ? buildActiveSubscriptionAggregateSql
+        : node.initializer.expression.text === "buildActivePresetAggregateSql" ? buildActivePresetAggregateSql : null;
+      if (builder) {
+        const options: Record<string, boolean> = {};
+        const argument = node.initializer.arguments[0];
+        if (argument) {
+          if (!ts.isObjectLiteralExpression(argument)) throw new Error("Expected static status SQL builder options.");
+          for (const property of argument.properties) {
+            if (!ts.isPropertyAssignment(property) || !ts.isIdentifier(property.name)
+              || (property.initializer.kind !== ts.SyntaxKind.TrueKeyword && property.initializer.kind !== ts.SyntaxKind.FalseKeyword)) {
+              throw new Error("Expected boolean status SQL builder options.");
+            }
+            options[property.name.text] = property.initializer.kind === ts.SyntaxKind.TrueKeyword;
+          }
+        }
+        values.set(node.name.text, builder(options));
+      }
+    }
+    ts.forEachChild(node, visitConstants);
+  }
+  visitConstants(sourceFile);
+  const queries = new Map<string, string>();
+  const readers: Record<string, true> = {
+    computeTelegramCurrentLifecycleSnapshot: true, loadActivePresetFollowerRows: true, loadPendingDeliveryCount: true,
+    loadLifecycleEventCounts: true, loadTelegramLifecycleHistory: true, loadTelegramTopFollowedCoins: true,
+  };
+  function visit(node: ts.Node, reader?: string): void {
+    if (ts.isFunctionDeclaration(node)) reader = node.name?.text;
+    if (reader && readers[reader] && ts.isCallExpression(node)
+      && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === "prepare") {
+      const template = node.arguments[0];
+      if (!template || (!ts.isTemplateExpression(template) && !ts.isNoSubstitutionTemplateLiteral(template)
+        && !ts.isStringLiteral(template))) throw new Error(`Unsupported status SQL in ${reader}.`);
+      let sql = ts.isTemplateExpression(template) ? template.head.text : template.text;
+      if (ts.isTemplateExpression(template)) {
+        for (const span of template.templateSpans) {
+          const replacement = ts.isIdentifier(span.expression) ? values.get(span.expression.text) : undefined;
+          if (replacement == null) throw new Error(`Unsupported status SQL expression: ${span.expression.getText(sourceFile)}`);
+          sql += replacement + span.literal.text;
+        }
+      }
+      if (queries.has(reader)) throw new Error(`Expected one status SQL query in ${reader}.`);
+      queries.set(reader, sql);
+    }
+    ts.forEachChild(node, (child) => visit(child, reader));
+  }
+  visit(sourceFile);
+  for (const reader of Object.keys(readers)) {
+    if (!queries.has(reader)) throw new Error(`Missing production status SQL reader: ${reader}`);
+  }
+  return queries;
+}
+
+function loadProductionPendingStates(): string[] {
+  const source = ts.createSourceFile("constants.ts",
+    readFileSync(resolve("worker/src/lib/telegram/constants.ts"), "utf8"), ts.ScriptTarget.Latest, true);
+  const declaration = findVariableInitializer(source, "PENDING_DELIVERY_STATES");
+  let initializer = declaration;
+  while (ts.isAsExpression(initializer) || ts.isSatisfiesExpression(initializer)) initializer = initializer.expression;
+  if (!ts.isArrayLiteralExpression(initializer) || !initializer.elements.every(ts.isStringLiteral)) {
+    throw new Error("Expected static PENDING_DELIVERY_STATES.");
+  }
+  return initializer.elements.map((element) => (element as ts.StringLiteral).text);
+}
+
 export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
-  const activeSubscriptionCountsSql = buildActiveSubscriptionAggregateSql();
-  const activePresetCountsSql = buildActivePresetAggregateSql();
+  const statusSql = extractProductionStatusSql(readFileSync(resolve("worker/src/lib/telegram/usage-analytics.ts"), "utf8"));
   const productionFanoutSql = loadProductionSubscriberFanoutSql();
   const depegFanoutSql = productionFanoutSql.get("depeg");
   const dewsFanoutSql = productionFanoutSql.get("dews");
@@ -725,15 +801,7 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
     {
       id: "pulse-aggregate",
       category: "pulse-status",
-      sql: `SELECT
-             SUM(CASE WHEN ${ACTIVE_WATCHER_SQL_CONDITION} THEN 1 ELSE 0 END) AS active_watchers
-           FROM telegram_subscribers s
-           LEFT JOIN (
-             ${activeSubscriptionCountsSql}
-           ) sub ON sub.chat_id = s.chat_id
-           LEFT JOIN (
-             ${activePresetCountsSql}
-           ) preset ON preset.chat_id = s.chat_id`,
+      sql: statusSql.get("computeTelegramCurrentLifecycleSnapshot")!,
       binds: [],
       allowedFullScanTables: ["s"],
       budget: {
@@ -741,54 +809,70 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
         maxRowsRead: 35_000,
         maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
       },
-      note: "Pulse common path serves telegram:pulse:snapshot from cache; this reviews the refresh/fallback aggregate query. Measured 2026-07-11 at the 5,000-watcher fixture: 33,751 rows read, ~13ms in-memory; no rollup justified yet.",
+      note: "Production lifecycle aggregate, including every alert-family and quiet-hours projection.",
     },
     {
       id: "status-top-stablecoins",
       category: "pulse-status",
-      sql: `SELECT stablecoin_id AS source_id, COUNT(DISTINCT chat_id) AS subscribers
-        FROM telegram_subscriptions
-       WHERE ${ACTIVE_SUBSCRIPTION_FLAGS_SQL}
-       GROUP BY stablecoin_id
-       UNION ALL
-      SELECT preset_id AS source_id, COUNT(DISTINCT chat_id) AS subscribers
-        FROM telegram_preset_subscriptions
-       WHERE ${ACTIVE_PRESET_FLAGS_SQL}
-       GROUP BY preset_id`,
+      sql: statusSql.get("loadTelegramTopFollowedCoins")!,
       binds: [],
-      allowedFullScanTables: ["telegram_subscriptions", "telegram_preset_subscriptions"],
+      allowedFullScanTables: ["telegram_subscriptions"],
       budget: {
-        rowsReadTables: ["telegram_subscriptions", "telegram_preset_subscriptions"],
+        rowsReadTables: ["telegram_subscriptions"],
         maxRowsRead: 30_000,
         maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
       },
-      note: "Top-coin status runs separate explicit-coin and preset-follower aggregates before resolving preset targets in memory; reviewed until a dedicated status snapshot exists. Measured 2026-07-11 at the 5,000-watcher fixture: 28,751 rows read, ~8ms in-memory; no rollup justified yet.",
+      note: "Production explicit-coin aggregate; preset followers are budgeted separately.",
     },
     {
-      id: "lifecycle-current-active-history",
-      category: "lifecycle",
-      sql: `SELECT
-             date(s.created_at, 'unixepoch') AS day,
-             strftime('%s', date(s.created_at, 'unixepoch')) AS day_ts,
-             COUNT(*) AS new_watchers
-           FROM telegram_subscribers s
-           LEFT JOIN (
-             ${activeSubscriptionCountsSql}
-           ) sub ON sub.chat_id = s.chat_id
-           LEFT JOIN (
-             ${activePresetCountsSql}
-           ) preset ON preset.chat_id = s.chat_id
-           WHERE ${ACTIVE_WATCHER_SQL_CONDITION}
-           GROUP BY day
-           ORDER BY day ASC`,
+      id: "status-preset-followers",
+      category: "pulse-status",
+      sql: statusSql.get("loadActivePresetFollowerRows")!,
       binds: [],
-      allowedFullScanTables: ["s"],
+      allowedFullScanTables: ["telegram_preset_subscriptions"],
       budget: {
-        rowsReadTables: ["telegram_subscribers", "telegram_subscriptions", "telegram_preset_subscriptions"],
+        rowsReadTables: ["telegram_preset_subscriptions"],
+        maxRowsRead: 30_000,
+        maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
+      },
+      note: "Production preset-follower reader shared by lifecycle and top-coin status.",
+    },
+    {
+      id: "status-pending-deliveries",
+      category: "pulse-status",
+      sql: statusSql.get("loadPendingDeliveryCount")!,
+      binds: loadProductionPendingStates(),
+      budget: {
+        rowsReadTables: ["telegram_pending_alerts"],
         maxRowsRead: 35_000,
         maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
       },
-      note: "Legacy fallback history still scans subscribers only when lifecycle snapshots are missing; production history uses telegram_watcher_lifecycle_daily once populated. Measured 2026-07-11 at the 5,000-watcher fixture: 33,751 rows read, ~15ms in-memory; no rollup justified yet.",
+      note: "Production pending-delivery count used by lifecycle status.",
+    },
+    {
+      id: "status-lifecycle-events",
+      category: "lifecycle",
+      sql: statusSql.get("loadLifecycleEventCounts")!,
+      binds: ["2025-06-30"],
+      budget: {
+        rowsReadTables: ["telegram_watcher_lifecycle_events_daily"],
+        maxRowsRead: 365,
+        maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
+      },
+      note: "Production current-day lifecycle event counters.",
+    },
+    {
+      id: "lifecycle-snapshot-history",
+      category: "lifecycle",
+      sql: statusSql.get("loadTelegramLifecycleHistory")!,
+      binds: ["2025-04-01", "2025-06-30", 90],
+      allowedFullScanTables: ["(subquery-1)"],
+      budget: {
+        rowsReadTables: ["telegram_watcher_lifecycle_daily"],
+        maxRowsRead: 90,
+        maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
+      },
+      note: "Production bounded lifecycle snapshot history; no retired subscriber fallback.",
     },
   ];
 }
@@ -821,8 +905,7 @@ const STATUS_PATH_FIXTURE_CREATED_AT_SPREAD_DAYS = 180;
 /**
  * Materializes the synthetic watcher fixture into the migrated plan database so
  * status-path budgets measure real query cost at the planning target instead of
- * empty-table plans. Created-at values are spread across distinct UTC days so
- * the lifecycle fallback GROUP BY does representative work.
+ * empty-table plans. Subscriber creation dates span representative daily events.
  */
 function seedStatusPathFixture(db: DatabaseSync, fixture: SyntheticTelegramFixture): void {
   const insertSubscriber = db.prepare(
@@ -841,6 +924,12 @@ function seedStatusPathFixture(db: DatabaseSync, fixture: SyntheticTelegramFixtu
        created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
   );
+  const insertPending = db.prepare(`INSERT INTO telegram_pending_alerts
+    (chat_id, message_html, created_at, delivery_state) VALUES (?, 'fixture', ?, 'pending')`);
+  const insertHistory = db.prepare(`INSERT INTO telegram_watcher_lifecycle_daily
+    (day, snapshot_at, active_watchers) VALUES (?, ?, ?)`);
+  const insertEvents = db.prepare(`INSERT OR IGNORE INTO telegram_watcher_lifecycle_events_daily
+    (day, subscribe_events) VALUES (?, 10)`);
 
   db.exec("BEGIN");
   try {
@@ -855,6 +944,7 @@ function seedStatusPathFixture(db: DatabaseSync, fixture: SyntheticTelegramFixtu
         watcher.globals.freeze ? 1 : 0,
         watcher.chatSnoozed ? snoozeUntil : null,
       );
+      insertPending.run(watcher.chatId, createdAt);
       for (const subscription of watcher.directSubscriptions) {
         insertSubscription.run(
           watcher.chatId, subscription.stablecoinId,
@@ -872,6 +962,12 @@ function seedStatusPathFixture(db: DatabaseSync, fixture: SyntheticTelegramFixtu
         );
       }
     });
+    for (let day = 90; day < 180; day += 1) {
+      const timestamp = STATUS_PATH_FIXTURE_BASE_CREATED_AT + day * 86_400;
+      const date = new Date(timestamp * 1000).toISOString().slice(0, 10);
+      insertHistory.run(date, timestamp, fixture.watchers.length);
+      insertEvents.run(date);
+    }
     db.exec("COMMIT");
   } catch (error) {
     db.exec("ROLLBACK");
@@ -906,11 +1002,9 @@ export function evaluateStatusPathBudget(
 }
 
 /**
- * TGB-043: enforce reviewed rows-read/duration maxima for the pulse aggregate,
- * top-coins status, and lifecycle-fallback read paths at the required planning
- * target. Rows-read is deterministic (the reviewed plans fully scan their base
- * tables, so seeded row counts are the exact per-refresh read cost); duration
- * is the fastest of a few in-memory runs to dampen CI jitter.
+ * Enforce reviewed rows-read/duration maxima for the production status readers
+ * at the required planning target. Seeded table counts conservatively bound
+ * reader input sizes; duration is the fastest of a few in-memory runs.
  */
 export function runStatusPathBudgetChecks(migrationsDir?: string): StatusPathBudgetResult[] {
   const budgetedChecks = buildQueryPlanChecks().filter(

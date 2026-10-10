@@ -8,6 +8,7 @@ import {
   handleSetupTarget,
   handleSetupTypeToggle,
   parseSetupState,
+  resumeStoredSetupCallback,
 } from "../telegram-webhook-setup";
 import { SETUP_PENDING_ACTION_TYPE } from "../telegram-webhook-shared";
 import type { TelegramWebhookOperationIntent } from "../telegram-webhook-store";
@@ -73,12 +74,6 @@ export async function handleSetupCallback(
     return;
   }
 
-  const stateRow = await loadPendingDisambiguation(db, chatId);
-  const isActiveSetup =
-    stateRow?.action_type === SETUP_PENDING_ACTION_TYPE && unixNow() < stateRow.expires_at;
-  const state = isActiveSetup
-    ? parseSetupState(stateRow?.action_payload ?? null, stateRow?.initiator_user_id ?? null)
-    : null;
   const context = {
     db,
     botToken,
@@ -92,6 +87,17 @@ export async function handleSetupCallback(
     storedIntent: effect.storedIntent,
     wasMutationApplied: effect.wasMutationApplied,
   };
+  const resumed = await resumeStoredSetupCallback(context, subArg);
+  if (resumed) {
+    await answer(resumed.text);
+    return;
+  }
+  const stateRow = await loadPendingDisambiguation(db, chatId);
+  const isActiveSetup =
+    stateRow?.action_type === SETUP_PENDING_ACTION_TYPE && unixNow() < stateRow.expires_at;
+  const state = isActiveSetup
+    ? parseSetupState(stateRow?.action_payload ?? null, stateRow?.initiator_user_id ?? null)
+    : null;
 
   let result: { text: string };
   if (subAction === "branch") {

@@ -124,7 +124,7 @@ function hasMalformedDispatchCounts(value: unknown): boolean {
       readMetadataNumber(events[key]) === null
     ) return true;
   }
-  for (const key of ["messagesSent", "freshCandidateChats"] as const) {
+  for (const key of ["messagesSent", "freshCandidateChats", "freezeTargetCount"] as const) {
     if (
       Object.prototype.hasOwnProperty.call(record, key) &&
       readMetadataNumber(record[key]) === null
@@ -408,16 +408,22 @@ async function evaluateZeroSendStreak(
     outcome.detail = "dispatch metadata unavailable; streak preserved";
     return outcome;
   }
-  outcome.evaluated = true;
   const freezeEvents = metadata.eventsDetected?.freeze ?? 0;
-  const zeroSendRun = events > 0 && messagesSent === 0 && ((freshCandidateChats ?? 0) > 0 || freezeEvents > 0);
+  const freezeTargetCount = metadata.freezeTargetCount;
+  if (events > 0 && messagesSent === 0 && freezeEvents > 0 && freezeTargetCount == null) {
+    logDispatchMetadataWarning("missing-freeze-target-count");
+    outcome.detail = "dispatch metadata unavailable; streak preserved";
+    return outcome;
+  }
+  outcome.evaluated = true;
+  const zeroSendRun = events > 0 && messagesSent === 0 && ((freshCandidateChats ?? 0) > 0 || (freezeTargetCount ?? 0) > 0);
 
   if (zeroSendRun) {
     const nextStreak = priorStreak + 1;
     await writeZeroSendState(db, { streak: nextStreak, lastRunIdentity: latestRun.runIdentity });
     outcome.streak = nextStreak;
     outcome.triggered = nextStreak >= ZERO_SEND_STREAK_THRESHOLD;
-    outcome.detail = `eventsDetected=${events}, freshCandidateChats=${freshCandidateChats}, streak=${nextStreak}`;
+    outcome.detail = `eventsDetected=${events}, freshCandidateChats=${freshCandidateChats}, freezeTargetCount=${freezeTargetCount}, streak=${nextStreak}`;
     return outcome;
   }
 

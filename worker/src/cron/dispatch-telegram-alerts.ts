@@ -247,6 +247,7 @@ async function dispatchTelegramAlertsImpl(
       // rather than left at the zero its own builder produced.
       const handled = JSON.parse(recovery.metadata) as DispatchResult;
       handled.eventsDetected.freeze = freezeOutbox.observed;
+      handled.freezeTargetCount = freezeOutbox.targetCount;
       return serializeTelegramDispatchResult(handled, recovery.itemCount);
     }
     let sourceEvent = recovery.sourceEvent;
@@ -267,6 +268,7 @@ async function dispatchTelegramAlertsImpl(
         reportProgress,
       });
       result.eventsDetected.freeze = freezeOutbox.observed;
+      result.freezeTargetCount = freezeOutbox.targetCount;
       return serializeTelegramDispatchResult(result, 0);
     }
 
@@ -348,6 +350,7 @@ async function dispatchTelegramAlertsImpl(
         markTelegramDeliveryStarted,
       });
       result.eventsDetected.freeze = freezeOutbox.observed;
+      result.freezeTargetCount = freezeOutbox.targetCount;
       return serializeTelegramDispatchResult(result, result.messagesSent);
     }
 
@@ -373,6 +376,7 @@ async function dispatchTelegramAlertsImpl(
     });
 
     result.eventsDetected.freeze = freezeOutbox.observed;
+    result.freezeTargetCount = freezeOutbox.targetCount;
     return serializeTelegramDispatchResult(result, result.messagesSent);
   } catch (error) {
     if (shouldRecordTelegramDispatchFailure(error, signal, telegramDeliveryStarted)) {

@@ -62,6 +62,9 @@ export const TELEGRAM_SPLIT_VERSION = 3;
 
 // ---------- Delivery policy ----------
 
+export type PendingDeliveryState = "pending" | "sending" | "sent" | "execution_unknown";
+export const PENDING_DELIVERY_STATES = ["pending"] as const satisfies readonly PendingDeliveryState[];
+
 // Preserve the established Worker import surface while the policy itself stays
 // runtime-neutral and is shared with the synthetic load guard.
 /** Compatibility defaults for historical pending rows, not active alert families. */

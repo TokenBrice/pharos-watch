@@ -107,7 +107,10 @@ export class TelegramWebhookEffectFence {
     this.mutationApplied = true;
   }
 
-  prepareMutationAppliedStatement(nowSec = unixNow()): D1PreparedStatement {
+  prepareMutationAppliedStatement(
+    nowSec = unixNow(),
+    options: { requirePreviousChange?: boolean } = {},
+  ): D1PreparedStatement {
     if (!this.intent || this.intent.mutation !== "required") {
       throw new Error("Telegram operation does not require a mutation marker");
     }
@@ -116,6 +119,7 @@ export class TelegramWebhookEffectFence {
       nowSec,
       claimOwner: this.claim.owner,
       claimGeneration: this.claim.generation,
+      requirePreviousChange: options.requirePreviousChange,
     });
   }
 
@@ -196,7 +200,7 @@ export class TelegramWebhookEffectFence {
 export interface TelegramMutationOperations {
   beforeIrreversibleEffect: (kind: string) => Promise<void>;
   planIntent: (intent: TelegramWebhookOperationIntent) => Promise<void>;
-  prepareMutationAppliedStatement?: () => D1PreparedStatement;
+  prepareMutationAppliedStatement?: (options?: { requirePreviousChange?: boolean }) => D1PreparedStatement;
   preparePendingMutationAppliedStatement?: (input: {
     chatId: string;
     actionType: string;
@@ -269,7 +273,7 @@ export function buildMutationOperations(
     beforeIrreversibleEffect: options.beforeIrreversibleEffect,
     planIntent: async (intent) => effectFence?.plan(intent),
     prepareMutationAppliedStatement: effectFence
-      ? () => effectFence.prepareMutationAppliedStatement()
+      ? (options) => effectFence.prepareMutationAppliedStatement(undefined, options)
       : undefined,
     preparePendingMutationAppliedStatement: effectFence
       ? (input) => effectFence.preparePendingMutationAppliedStatement(input)

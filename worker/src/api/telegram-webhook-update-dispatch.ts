@@ -17,6 +17,7 @@ import {
 } from "./telegram-webhook-store";
 import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram/log";
 import { handleCallbackQuery } from "./telegram-webhook-callbacks";
+import { resumeStoredSetupCallback } from "./telegram-webhook-setup";
 import { COMMAND_HANDLERS, type WebhookCommandContext } from "./webhook-commands";
 import {
   isChannelChatType,
@@ -343,6 +344,18 @@ export async function handleTelegramMessageUpdate(args: {
         replyWithMarkup,
         storedSelection,
       });
+      return finishOk();
+    }
+
+    if (effectFence?.storedIntent?.kind === "callback:setup") {
+      await resumeStoredSetupCallback({
+        db,
+        botToken,
+        chatId,
+        actorUserId,
+        username,
+        ...buildMutationOperations(effectFence, { beforeIrreversibleEffect }),
+      }, "");
       return finishOk();
     }
 

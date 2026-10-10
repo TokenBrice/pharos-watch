@@ -1,4 +1,5 @@
 import { coerceCount } from "../../lib/telegram/usage-analytics";
+import { PENDING_DELIVERY_STATES } from "../../lib/telegram/constants";
 
 export interface TelegramPendingAlertCountRow {
   pending_count?: number | string | null;
@@ -20,8 +21,9 @@ export function prepareTelegramPendingAlertCount(
   alias: "pending_count" | "queued_alerts",
 ): D1PreparedStatement {
   return db
-    .prepare(`SELECT COUNT(*) AS ${alias} FROM telegram_pending_alerts WHERE chat_id = ?`)
-    .bind(chatId);
+    .prepare(`SELECT COUNT(*) AS ${alias} FROM telegram_pending_alerts WHERE chat_id = ?
+      AND delivery_state IN (${PENDING_DELIVERY_STATES.map(() => "?").join(", ")})`)
+    .bind(chatId, ...PENDING_DELIVERY_STATES);
 }
 
 export async function loadTelegramPendingAlertCount(

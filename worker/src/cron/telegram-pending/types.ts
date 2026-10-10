@@ -1,5 +1,6 @@
 import type { BatchMessage, TelegramSendErrorClass } from "../../lib/telegram";
 import type { TelegramPendingCapacitySnapshot } from "../../lib/telegram/pending-capacity";
+import type { PendingDeliveryState } from "../../lib/telegram/constants";
 import type { TelegramAlertType } from "@shared/types/status";
 
 export interface PendingAlertRow {
@@ -33,9 +34,6 @@ export interface PendingAlertRow {
   quiet_hours_end_utc: number | null;
   timezone: string | null;
 }
-
-export type PendingDeliveryState = "pending" | "sending" | "sent" | "execution_unknown";
-export const PENDING_DELIVERY_STATES = ["pending"] as const satisfies readonly PendingDeliveryState[];
 
 export interface PendingDeliveryClaim {
   id: number;

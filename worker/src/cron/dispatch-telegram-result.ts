@@ -16,6 +16,7 @@ export type PerAlertTypeTargets = Record<Exclude<TelegramAlertType, "freeze">, {
 
 export interface DispatchCapacityMetadata {
   freshCandidateChats: number;
+  freezeTargetCount: number;
   freshCandidateCount: number;
   freshOverflow: number;
   pendingSent: number;
@@ -257,6 +258,7 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     freshPermanentFailures: 0,
     freshDeferredPerChat: 0,
     freshCandidateChats: 0,
+    freezeTargetCount: 0,
     freshCandidateCount: 0,
     freshOverflow: 0,
     chatsWithActiveSnooze,

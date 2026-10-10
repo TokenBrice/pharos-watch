@@ -95,6 +95,36 @@ describe("telegram personalized recap planner", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets WHERE status = 'queued'").get()).toEqual({ count: 2 });
   });
 
+  it.each([
+    { source: "global", direct: false, snoozeOffset: 3600 },
+    { source: "global", direct: true, snoozeOffset: 3600 },
+    { source: "preset", direct: false, snoozeOffset: 3600 },
+    { source: "preset", direct: true, snoozeOffset: 3600 },
+    { source: "global", direct: false, snoozeOffset: 0 },
+    { source: "preset", direct: true, snoozeOffset: 0 },
+  ])("vetoes coin snoozes before $source membership (direct=$direct, expiry=$snoozeOffset)", async ({ source, direct, snoozeOffset }) => {
+    const { sqlite, db } = setup();
+    insertSubscriber(sqlite, "snoozed", { globalDepeg: source === "global" });
+    insertStablecoinsCache(sqlite);
+    if (source === "preset") {
+      sqlite.prepare(`INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_depeg, created_at, updated_at)
+        VALUES ('snoozed', 'usd-top25', 1, ?, ?)`).run(NOW, NOW);
+    }
+    sqlite.prepare(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg, alert_snooze_until_ts)
+      VALUES ('snoozed', 'usdc-circle', ?, ?)`).run(direct ? 1 : 0, NOW + snoozeOffset);
+    markTapeFresh(sqlite);
+    insertTape(sqlite, "snoozed-usdc", NOW - 60);
+    insertTape(sqlite, "unsnoozed-usdt", NOW - 30, "usdt-tether");
+
+    await planTelegramPersonalizedRecaps(db, undefined, { nowSec: NOW });
+    const messages = sqlite.prepare("SELECT message_html FROM telegram_pending_alerts").all();
+    expect(messages).toHaveLength(1);
+    expect(String(messages[0]?.message_html)).toContain("USDT");
+    expect(String(messages[0]?.message_html).includes("USDC")).toBe(snoozeOffset === 0);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets WHERE status = 'queued'").get())
+      .toEqual({ count: 1 });
+  });
+
   it("does not plan, queue, or advance schedules when recap availability is off", async () => {
     const { sqlite, db } = setup();
     insertSubscriber(sqlite, "direct");

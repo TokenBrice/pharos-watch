@@ -167,6 +167,8 @@ export function InstrumentPanel() {
   const { data, isLoading, isError } = useTelegramPulse();
   const watchers = useCountUp(data?.activeWatchers ?? null);
   const follows = useCountUp(data?.coinSubscriptions ?? null);
+  const rankingUnavailable = data?.quality?.unavailableFields.includes("topCoins") ?? false;
+  const historyUnavailable = data?.quality?.unavailableFields.includes("watcherHistory") ?? false;
 
   return (
     <section id="panel" className="pharos-night-slate scroll-mt-20" aria-labelledby="panel-title">
@@ -274,7 +276,9 @@ export function InstrumentPanel() {
               <div className="border-t border-border/55 pt-5">
                 <dt className="pharos-kicker !tracking-normal">Most followed</dt>
                 <dd className="mt-3">
-                  {data.topCoins.length > 0 ? (
+                  {rankingUnavailable ? (
+                    <p className="text-xs text-muted-foreground">Follow rankings are temporarily unavailable.</p>
+                  ) : data.topCoins.length > 0 ? (
                     <ol className="flex flex-wrap items-center gap-1.5">
                       {data.topCoins.slice(0, 5).map((coin, index) => (
                         <li
@@ -309,7 +313,7 @@ export function InstrumentPanel() {
             <div className="mt-12 border-t border-border/55 pt-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <p className="pharos-kicker !tracking-normal">Telegram chat lifecycle</p>
-                {data.watcherHistory.length > 0 ? (
+                {!historyUnavailable && data.watcherHistory.length > 0 ? (
                   <p className="font-mono text-xs text-muted-foreground">
                     latest daily snapshot{" "}
                     <span className="font-semibold text-foreground">
@@ -321,7 +325,11 @@ export function InstrumentPanel() {
                   </p>
                 ) : null}
               </div>
-              {data.watcherHistory.length > 0 ? (
+              {historyUnavailable ? (
+                <div className="mt-4 flex h-[120px] items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground">
+                  Watcher history is temporarily unavailable.
+                </div>
+              ) : data.watcherHistory.length > 0 ? (
                 <WatcherGrowthChart data={data.watcherHistory} />
               ) : (
                 <div className="mt-4 flex h-[120px] items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground">

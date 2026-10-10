@@ -83,6 +83,7 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
   state: "stale" | "seeded" | "queued" | "idle";
   observed: number;
   queued: number;
+  targetCount: number;
   skippedNoAudience: number;
   droppedUnparsed: number;
 }> {
@@ -90,11 +91,11 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
   const cursor = cached && /^\d+$/.test(cached.value) ? Number(cached.value) : null;
   const loaded = await loadFreshFreezeAlerts(db, cursor, nowSec);
   if (loaded.state === "stale") {
-    return { state: "stale", observed: 0, queued: 0, skippedNoAudience: 0, droppedUnparsed: 0 };
+    return { state: "stale", observed: 0, queued: 0, targetCount: 0, skippedNoAudience: 0, droppedUnparsed: 0 };
   }
   if (loaded.state === "unseeded") {
     if (loaded.cursor != null) await setCache(db, FREEZE_CURSOR_KEY, String(loaded.cursor));
-    return { state: "seeded", observed: 0, queued: 0, skippedNoAudience: 0, droppedUnparsed: 0 };
+    return { state: "seeded", observed: 0, queued: 0, targetCount: 0, skippedNoAudience: 0, droppedUnparsed: 0 };
   }
 
   const resumable = await db.prepare(
@@ -120,7 +121,12 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
     queuedByTapeId.set(event.tapeEventId, event);
   }
   let queued = 0;
-  for (const event of queuedByTapeId.values()) queued += await persistAndQueueFreezeEvent(db, event, nowSec);
+  let targetCount = 0;
+  for (const event of queuedByTapeId.values()) {
+    const result = await persistAndQueueFreezeEvent(db, event, nowSec);
+    queued += result.queued;
+    targetCount += result.targetCount;
+  }
   // New no-audience events are intentionally cursor-advanced without durable
   // outbox rows. A later subscriber should not receive historical freeze alerts
   // whose recipient cohort was empty at observation time.
@@ -129,12 +135,13 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
     state: queued > 0 ? "queued" : "idle",
     observed: loaded.alerts.length,
     queued,
+    targetCount,
     skippedNoAudience,
     droppedUnparsed: loaded.droppedUnparsed ?? 0,
   };
 }
 
-async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, nowSec: number): Promise<number> {
+async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, nowSec: number): Promise<{ queued: number; targetCount: number }> {
   const sourceEventId = `freeze:${event.tapeEventId}`;
   const expiresAt = nowSec + 2 * 60 * 60;
   await db.prepare(
@@ -158,7 +165,7 @@ async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, no
       db.prepare("UPDATE telegram_freeze_alert_events SET status = 'expired', updated_at = ? WHERE source_event_id = ?")
         .bind(nowSec, sourceEventId),
     ]);
-    return 0;
+    return { queued: 0, targetCount: 0 };
   }
 
   // Capture membership and close the cohort in one transaction. Resumes may
@@ -339,5 +346,5 @@ async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, no
     `telegram:${sourceEventId}:freeze`,
     nowSec,
   ).run();
-  return queued;
+  return { queued, targetCount: targetRows.results?.length ?? 0 };
 }

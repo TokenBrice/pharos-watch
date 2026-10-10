@@ -470,6 +470,8 @@ export function prepareTelegramProcessedUpdateMutationApplied(
     nowSec: number;
     claimOwner: string;
     claimGeneration: number;
+    /** The marker follows a conditional domain write in the same atomic batch. */
+    requirePreviousChange?: boolean;
   },
 ): D1PreparedStatement {
   return db
@@ -479,7 +481,7 @@ export function prepareTelegramProcessedUpdateMutationApplied(
          claim_generation,
          applied_at
        )
-       VALUES (
+       SELECT
          (
            SELECT update_id
              FROM telegram_processed_updates
@@ -492,7 +494,7 @@ export function prepareTelegramProcessedUpdateMutationApplied(
          ),
          ?,
          ?
-       )`,
+       ${input.requirePreviousChange ? "WHERE changes() > 0" : ""}`,
     )
     .bind(
       input.updateId,
