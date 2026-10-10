@@ -277,10 +277,36 @@ export function resolveYieldRowSafety(input: YieldRowSafetyInput): YieldRowSafet
   // through the market-risk adjustment.
   const safetyEvidenceObserved = !usedDefaultSafety && underlyingSafetyGrade !== "NR";
   const opportunityClass = deriveYieldOpportunityClass(input.yieldType);
+  const assessedOpportunityRisk = opportunityClass == null ? null : assessYieldOpportunityRisk({
+    opportunityClass,
+    underlyingSafetyScore,
+    venueRiskWeighted: venue.weighted,
+    sourceTvlUsd: numberValue(input.sourceTvlUsd),
+    sourceRisk: baseSourceRisk,
+  });
 
   // Royco Dawn tranches: bespoke market-health engine, published through the
   // same opportunity contract.
   if (isRoycoDawnTrancheSourceRisk(baseSourceRisk)) {
+    if (assessedOpportunityRisk && assessedOpportunityRisk.missingCriticalEvidence.length > 0) {
+      return {
+        ...shared,
+        safetyScore: underlyingSafetyScore,
+        safetyGrade: underlyingSafetyGrade,
+        safetyProvenance: usedDefaultSafety ? "default-safety" : input.ratedProvenance,
+        safetyReason: baseSafetyReason({ usedDefaultSafety, underlyingSafetyGrade }),
+        sourceRisk: {
+          ...baseSourceRisk,
+          underlyingSafetyScore,
+          trancheSafetyScore: null,
+          trancheSafetyPenalty: null,
+          opportunityRisk: assessedOpportunityRisk,
+        },
+        opportunityRisk: assessedOpportunityRisk,
+        safetyEvidenceObserved,
+        opportunityEvidenceComplete: false,
+      };
+    }
     const trancheSafety = computeRoycoDawnTrancheSafetyScore({
       underlyingSafetyScore,
       sourceRisk: baseSourceRisk,
@@ -295,8 +321,8 @@ export function resolveYieldRowSafety(input: YieldRowSafetyInput): YieldRowSafet
               underlyingSafetyScore,
               opportunitySafetyScore: trancheSafety.score,
               opportunitySafetyPenalty: trancheSafety.penalty,
-              venueReviewed: venue.tier !== "unknown",
-              missingCriticalEvidence: [],
+              venueReviewed: assessedOpportunityRisk?.venueReviewed ?? false,
+              missingCriticalEvidence: assessedOpportunityRisk?.missingCriticalEvidence ?? [],
             };
       return {
         ...shared,
@@ -318,14 +344,8 @@ export function resolveYieldRowSafety(input: YieldRowSafetyInput): YieldRowSafet
     }
   }
 
-  if (opportunityClass != null) {
-    const opportunityRisk = assessYieldOpportunityRisk({
-      opportunityClass,
-      underlyingSafetyScore,
-      venueRiskWeighted: venue.weighted,
-      sourceTvlUsd: numberValue(input.sourceTvlUsd),
-      sourceRisk: baseSourceRisk,
-    });
+  if (assessedOpportunityRisk != null) {
+    const opportunityRisk = assessedOpportunityRisk;
     const sourceRisk: YieldSourceRisk = {
       ...(baseSourceRisk ?? {}),
       opportunityRisk,

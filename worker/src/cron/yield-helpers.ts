@@ -262,6 +262,8 @@ export function matchAllDlPools(
     const baseCandidates = dlPools.filter(
       (pool) =>
         pool.exposure === "single" &&
+        YIELD_TOKENIZATION_PROJECTS[(pool.project ?? "").trim().toLowerCase()] !== true &&
+        normalizeDexSymbol(pool.symbol) === variantSymbol &&
         !seenUuids.has(pool.pool) &&
         !isReservedForAnotherCoin(pool.pool) &&
         (!variantChain || normalizeChainId(pool.chain) === variantChain),
@@ -270,7 +272,7 @@ export function matchAllDlPools(
     const addressCandidates = variantAddress
       ? baseCandidates.filter((pool) => corroboratesUnderlyingSet(pool, new Set([variantAddress])))
       : [];
-    const symbolCandidates = baseCandidates.filter((pool) => normalizeDexSymbol(pool.symbol) === variantSymbol);
+    const symbolCandidates = baseCandidates.filter((pool) => !variantAddress || !pool.underlyingTokens?.length);
     const filterByProject = <T extends { project?: string }>(candidates: T[]): T[] =>
       variantProject
         ? candidates.filter((pool) => (pool.project ?? "").trim().toLowerCase() === variantProject)

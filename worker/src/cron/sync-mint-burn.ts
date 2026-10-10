@@ -13,6 +13,7 @@ import {
   ensureMintBurnSyncStateRows,
   mintBurnConfigKey,
   readMintBurnSyncStateBatch,
+  upsertMintBurnSyncState,
 } from "../lib/mint-burn-pipeline/sync-state";
 import { D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../lib/d1-primitives";
 import type { CronProgressReporter } from "../lib/cron-logger";
@@ -83,14 +84,13 @@ export async function syncMintBurn(
   const disabledConfigIds = normalizeDisabledConfigIdSet(options.disabledConfigIds);
   const disabledSymbols = normalizeDisabledSymbolSet(options.disabledSymbols);
 
-  const allTrackableConfigs = includeActiveTrackedIds(
-    MINT_BURN_CONFIGS.filter((config) => laneIncludesConfig(lane, config)),
-    (config) => config.stablecoinId,
-  );
+  const allActiveConfigs = includeActiveTrackedIds(MINT_BURN_CONFIGS, (config) => config.stablecoinId);
+  const allTrackableConfigs = allActiveConfigs.filter((config) => laneIncludesConfig(lane, config));
   const enabledConfigs: MintBurnContractConfig[] = [];
+  const retentionConfigs: MintBurnContractConfig[] = [];
   const disabledConfigReasons = new Map<string, string>();
 
-  for (const config of allTrackableConfigs) {
+  for (const config of allActiveConfigs) {
     const key = configKey(config);
     const symbol = config.symbol.toUpperCase();
     const isDisabledByConfig = config.enabled === false;
@@ -104,11 +104,12 @@ export async function syncMintBurn(
         isDisabledByConfig ? "config-disabled" :
         isDisabledBySymbol ? "symbol-disabled" :
         "id-disabled";
-      disabledConfigReasons.set(key, reason);
+      if (laneIncludesConfig(lane, config)) disabledConfigReasons.set(key, reason);
       continue;
     }
 
-    enabledConfigs.push(config);
+    retentionConfigs.push(config);
+    if (laneIncludesConfig(lane, config)) enabledConfigs.push(config);
   }
 
   const configsDisabled = disabledConfigReasons.size;
@@ -116,7 +117,7 @@ export async function syncMintBurn(
 
   if (enabledConfigs.length === 0) {
     const retention = lane === "critical"
-      ? await pruneMintBurnRetention(db, runTimestamp, signal)
+      ? await pruneMintBurnRetention(db, runTimestamp, signal, { enabledConfigs: retentionConfigs })
       : null;
     const metadata = JSON.stringify({
       outputPublishedAt: null,
@@ -217,6 +218,7 @@ export async function syncMintBurn(
 
   const criticalContractsEnabled = enabledConfigs.filter((config) => configTier(config) === "critical").length;
   const affectedHours = new Map<string, MintBurnAffectedHour>();
+  const pendingCursorUpdates = new Map<string, number>();
 
   let phaseResult!: MintBurnRunConfigPhaseResult;
   let recalcFailed = false;
@@ -234,6 +236,7 @@ export async function syncMintBurn(
       runTimestamp,
       priceContext,
       lastBlocksAfterRun,
+      pendingCursorUpdates,
       maxScanRange: MAX_SCAN_RANGE,
       criticalConfigBudgetLimit: CRITICAL_CONFIG_BUDGET_LIMIT,
       criticalBridgeConfigBudgetLimit: CRITICAL_BRIDGE_CONFIG_BUDGET_LIMIT,
@@ -245,6 +248,13 @@ export async function syncMintBurn(
     const recalcResult = await recalcMintBurnAffectedHours(db, affectedHours, signal);
     recalcFailed = recalcResult.failed;
     recalcError = recalcResult.error;
+    if (!recalcFailed) {
+      for (const [key, nextLastBlock] of pendingCursorUpdates) {
+        throwIfAborted(signal);
+        await upsertMintBurnSyncState(db, key, nextLastBlock, "monotonic-max");
+        lastBlocksAfterRun.set(key, nextLastBlock);
+      }
+    }
   }
 
   const attemptCoverage = await updateMintBurnAttemptState({
@@ -308,7 +318,7 @@ export async function syncMintBurn(
   completion.metadata.recalcFailed = recalcFailed;
   if (recalcError) completion.metadata.recalcError = recalcError;
   if (lane === "critical") {
-    const retention = await pruneMintBurnRetention(db, runTimestamp, signal);
+    const retention = await pruneMintBurnRetention(db, runTimestamp, signal, { enabledConfigs: retentionConfigs });
     completion.metadata.retention = retention;
     if (retention.error && status === "ok") {
       status = "degraded";

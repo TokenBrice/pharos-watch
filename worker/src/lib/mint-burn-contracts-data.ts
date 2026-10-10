@@ -200,7 +200,7 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     events: transferMintBurn(),
     bridgeDetection: cctpBridgeDetection([
       "0xfd78ee919681417d192449715b2594ab58f5d002",
-    ]),
+    ], "usdc-circle"),
   },
   {
     chain: ETHEREUM,
@@ -339,7 +339,7 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     events: transferMintBurn(),
     bridgeDetection: cctpBridgeDetection([
       "0xfd78ee919681417d192449715b2594ab58f5d002",
-    ]),
+    ], "eurc-circle"),
   },
   {
     chain: ETHEREUM,

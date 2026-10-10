@@ -139,6 +139,7 @@ export function classifyPoolBridge(
   const routerSet = normalizeHexSet(detection.knownBridgeRouterAddresses);
   const topicSet = normalizeHexSet(detection.bridgeSignalTopics);
   const selectorSet = normalizeHexSet(detection.bridgeSignalSelectors);
+  const transmitter = detection.protocol === "cctp" ? detection.messageTransmitterAddress.toLowerCase() : null;
 
   for (const [txHash, txRows] of rowsByTx) {
     const ctx = txContextByHash.get(txHash) ?? null;
@@ -159,6 +160,70 @@ export function classifyPoolBridge(
         }
       }
       continue;
+    }
+
+    if (detection.protocol === "cctp" && ctx.receiptLogs) {
+      const logs = ctx.receiptLogs;
+      const received = logs.some((log) =>
+        log.address.toLowerCase() === transmitter
+        && log.topics.length === 4
+        && log.topics[0].toLowerCase() === detection.messageReceivedTopic.toLowerCase(),
+      );
+      // MessageReceived is shared infrastructure, not token mint evidence.
+      // Require the reviewed messenger's token-bound MintAndWithdraw and its
+      // matching zero-address Transfer in the same receipt. Keep it separate
+      // from the source-side deposit fingerprints below.
+      const token = detection.mintTokenAddress.toLowerCase();
+      const bridgeRows = new Set<MintBurnBridgeClassifiableRow>();
+      if (received) for (let mintIndex = 0; mintIndex < logs.length; mintIndex++) {
+        const log = logs[mintIndex];
+        if (
+          !routerSet.has(log.address.toLowerCase())
+          || log.topics.length !== 3
+          || log.topics[0].toLowerCase() !== detection.mintAndWithdrawTopic.toLowerCase()
+          || !/^0x0{24}[0-9a-f]{40}$/i.test(log.topics[1])
+          || !/^0x0{24}[0-9a-f]{40}$/i.test(log.topics[2])
+          || `0x${log.topics[2].slice(-40)}`.toLowerCase() !== token
+          || !/^0x[0-9a-f]{128}$/i.test(log.data)
+        ) continue;
+        const recipient = log.topics[1].toLowerCase();
+        const amountWord = log.data.slice(2, 66).toLowerCase();
+        const feeWord = log.data.slice(66).toLowerCase();
+        const transfers = logs.slice(0, mintIndex).filter((transfer) =>
+          transfer.address.toLowerCase() === token
+          && transfer.topics.length === 3
+          && transfer.topics[0].toLowerCase() === "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+          && transfer.topics[1].toLowerCase() === `0x${"0".repeat(64)}`
+          && /^0x0{24}[0-9a-f]{40}$/i.test(transfer.topics[2])
+          && /^0x[0-9a-f]{64}$/i.test(transfer.data),
+        );
+        let principalIndex = -1;
+        for (let index = transfers.length - 1; index >= 0; index--) {
+          if (transfers[index].topics[2].toLowerCase() === recipient && transfers[index].data.slice(2).toLowerCase() === amountWord) {
+            principalIndex = index;
+            break;
+          }
+        }
+        if (principalIndex < 0) continue;
+        const matchedTransfers = [transfers[principalIndex]];
+        // Reviewed TokenMinterV2 mints the recipient first, then the separate
+        // fee recipient. Bind that second Transfer, not arbitrary same-tx mints.
+        const feeTransfer = transfers[principalIndex + 1];
+        if (feeWord !== "0".repeat(64) && feeTransfer?.data.slice(2).toLowerCase() === feeWord) {
+          matchedTransfers.push(feeTransfer);
+        }
+        for (const transfer of matchedTransfers) {
+          if (!transfer.logIndex || !/^0x[0-9a-f]+$/i.test(transfer.logIndex)) continue;
+          const logIndex = Number.parseInt(transfer.logIndex, 16);
+          if (!Number.isSafeInteger(logIndex)) continue;
+          for (const row of txRows) {
+            if (row.direction === "mint" && row.id.endsWith(`-${txHash}-${logIndex}`)) bridgeRows.add(row);
+          }
+        }
+      }
+      if (bridgeRows.size > 0) {
+        markBridgeTransfer([...bridgeRows]);
+      }
     }
 
     const ctxTopics = normalizeHexSet(ctx.logTopics);

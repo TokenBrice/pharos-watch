@@ -64,6 +64,24 @@ describe("fetchHashnoteUsycSource", () => {
     expect(result!.comparisonAnchorObservedAt).toBe(sevenDaysAgoSec);
   });
 
+  it("retains a finite negative holder return from declining USYC NAV reports", async () => {
+    const nowSec = 1_780_000_000;
+    const anchor = nowSec - 7 * 86400;
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1000);
+    mockYieldSourceRoutes([{
+      match: "usyc.hashnote.com/api/price-reports",
+      body: { data: [
+        { price: "0.99", timestamp: String(nowSec) },
+        { price: "1", timestamp: String(anchor) },
+      ] },
+    }]);
+    const result = await fetchHashnoteUsycSource();
+    expect(result?.currentApy).toBeCloseTo((Math.pow(0.99, 365.25 / 7) - 1) * 100);
+    expect(result?.apyBase).toBe(result?.currentApy);
+    expect(result).toMatchObject({ sourceObservedAt: nowSec, comparisonAnchorObservedAt: anchor });
+  });
+
   it("returns null on HTTP error", async () => {
     mockYieldSourceRoutes([{ match: "usyc.hashnote.com", status: 500, body: "" }]);
     await expect(fetchHashnoteUsycSource()).resolves.toBeNull();

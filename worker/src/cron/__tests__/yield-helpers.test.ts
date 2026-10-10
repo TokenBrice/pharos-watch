@@ -27,7 +27,7 @@ import {
 } from "../yield-helpers";
 import { computeTvlWeightedMedianApy } from "../yield-sync/rankings";
 import { parseYieldWarningSignals as parseWarningSignals } from "../../lib/yield-utils";
-import { LENDING_PROTOCOL_ALLOWLIST } from "../../lib/yield-config/yield-config";
+import { LENDING_PROTOCOL_ALLOWLIST, YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 
 afterEach(() => vi.restoreAllMocks());
@@ -473,6 +473,43 @@ describe("matchAllDlPools", () => {
 
     const result = matchAllDlPools("test-coin", "TEST", dlPools, poolMap, variantMap);
     expect(result).toHaveLength(1);
+  });
+
+  it.each(["ftusd-flying-tulip", "iusd-infinifi"])("rejects deposit-matched PT and LP markets for %s wrappers", (id) => {
+    const variant = YIELD_VARIANT_MAP[id];
+    for (const project of ["pendle-v2", "spectra-v2"]) {
+      for (const symbol of [variant.variantSymbol, `PT-${variant.variantSymbol}`]) {
+        const tokenization = makeDlYieldPool({
+          pool: "tokenization", symbol, project, chain: "Ethereum",
+          underlyingTokens: [variant.variantAddress!],
+        });
+        expect(matchAllDlPools(id, "BASE", [tokenization], {}, YIELD_VARIANT_MAP)).toEqual([]);
+      }
+    }
+    const nativeWrapper = makeDlYieldPool({
+      pool: "native-wrapper", symbol: variant.variantSymbol, project: "native-wrapper",
+      chain: "Ethereum", stablecoin: false, underlyingTokens: [variant.variantAddress!],
+    });
+    expect(matchAllDlPools(id, "BASE", [nativeWrapper], {}, YIELD_VARIANT_MAP).map((row) => row.pool))
+      .toEqual(["native-wrapper"]);
+    expect(matchAllDlPools(id, "BASE", [{ ...nativeWrapper, symbol: "DIFFERENT-RECEIPT" }], {}, YIELD_VARIANT_MAP))
+      .toEqual([]);
+  });
+
+  it.each([
+    ["contradictory single address", ["0x1111111111111111111111111111111111111111"], false],
+    ["contradictory multi-asset set", [YIELD_VARIANT_MAP["ftusd-flying-tulip"].variantAddress!, "0x1111111111111111111111111111111111111111"], false],
+    ["absent addresses", undefined, true],
+    ["null addresses", null, true],
+    ["empty addresses", [], true],
+  ] as const)("only permits variant symbol fallback with absent evidence: %s", (_label, addresses, matches) => {
+    const variant = YIELD_VARIANT_MAP["ftusd-flying-tulip"];
+    const wrapper = makeDlYieldPool({
+      pool: "wrapper", symbol: variant.variantSymbol, chain: "Ethereum",
+      underlyingTokens: addresses == null ? addresses : [...addresses],
+    });
+    const result = matchAllDlPools("ftusd-flying-tulip", "ftUSD", [wrapper], {}, YIELD_VARIANT_MAP);
+    expect(result.map((row) => row.pool)).toEqual(matches ? ["wrapper"] : []);
   });
 
   it("does not cross-contaminate variant symbols that are prefixes of other symbols", () => {

@@ -32,7 +32,7 @@ import {
 } from "./yield-coverage-review-dispositions";
 import { findStaleVenueRiskScores } from "@shared/lib/yield-source-risk-registry";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
-import type { YieldAdapterLifecycle } from "@shared/types/yield";
+import { YieldCoverageAuditRankingsSchema, type YieldAdapterLifecycle } from "@shared/types/yield";
 import {
   buildCoverageAuditOperatorQueue,
   buildProtocolCategoryLookupFromCachePayload,
@@ -283,25 +283,18 @@ export async function runYieldCoverageAudit(
     ...Object.values(EXPLICIT_YIELD_SOURCE_POOL_MAP).flat().map((config) => config.poolId),
     ...Object.values(YIELD_WEIGHTED_POOL_GROUPS).flatMap((config) => config.poolIds),
   ]);
-  const rankingsCache = readCachedJson<{
-    rankings?: Array<{
-      id?: string;
-      sourceTvlUsd?: number | null;
-      sourceRisk?: { venueProtocol?: string | null } | null;
-      provenance?: { sourceKey?: string | null } | null;
-      altSources?: Array<{
-        sourceKey?: string | null;
-        sourceTvlUsd?: number | null;
-        sourceRisk?: { venueProtocol?: string | null } | null;
-      }>;
-    }>;
-  }>(
+  const rankingsCache = readCachedJson<unknown>(
     "yield-coverage-audit",
     "yield-rankings",
     await getCache(db, "yield-rankings"),
   );
-  if (rankingsCache.status !== "ok") {
-    const reason = `yield-rankings-cache-${rankingsCache.status}`;
+  const validatedRankings = rankingsCache.status === "ok"
+    ? YieldCoverageAuditRankingsSchema.safeParse(rankingsCache.data)
+    : null;
+  if (!validatedRankings?.success) {
+    const reason = rankingsCache.status === "missing"
+      ? "yield-rankings-cache-missing"
+      : "yield-rankings-cache-malformed";
     await reportAuditProgress("complete", "Yield coverage audit deferred pending a readable rankings cache", 5, {
       reason,
     });
@@ -311,7 +304,7 @@ export async function runYieldCoverageAudit(
       metadata: { reason },
     });
   }
-  const publishedRankingRows = rankingsCache.data.rankings ?? [];
+  const publishedRankingRows = validatedRankings.data.rankings;
   const publishedYieldIds = new Set(
     publishedRankingRows
       .map((ranking) => ranking.id)

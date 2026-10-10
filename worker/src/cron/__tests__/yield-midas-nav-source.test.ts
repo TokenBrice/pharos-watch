@@ -112,6 +112,21 @@ describe("fetchMidasMmevNavOracleSource", () => {
     expect(requestDatas).toEqual(expect.arrayContaining([DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR]));
   });
 
+  it("retains a finite negative NAV return and its next history anchor", async () => {
+    const updatedAt = NOW_SEC - 60;
+    const anchor = NOW_SEC - 7 * 86_400;
+    mockMidasRpc({ answer: 99_000_000n, updatedAt });
+    const result = await fetchMidasMmevNavOracleSource({
+      prevExchangeRate: 1, daysDelta: 7, comparisonAnchorObservedAt: anchor,
+      chainRpcs: makeChainRpcs(), nowSec: NOW_SEC,
+    });
+    expect(result?.yield.currentApy).toBeCloseTo((Math.pow(0.99, 365.25 / 7) - 1) * 100);
+    expect(result?.yield).toMatchObject({
+      exchangeRate: 0.99, sourceObservedAt: updatedAt, comparisonAnchorObservedAt: anchor,
+    });
+    expect(result?.yield.apyBase).toBe(result?.yield.currentApy);
+  });
+
   it("returns a seed candidate when no prior NAV anchor is available", async () => {
     mockMidasRpc({ answer: 104_200_000n, updatedAt: NOW_SEC - 60 });
 

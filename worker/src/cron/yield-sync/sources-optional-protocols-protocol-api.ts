@@ -195,7 +195,7 @@ export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<Res
     const apy = (Math.pow(latestPrice / anchorPrice, 365.25 / daysDelta) - 1) * 100;
     // B12 — the NAV-oracle annualization is unbounded on a short anchor window; the
     // shared deterministic envelope keeps an absurd print out of PYS.
-    if (!isDeterministicApyWithinSanityBounds(apy) || apy < 0) return null;
+    if (!isDeterministicApyWithinSanityBounds(apy)) return null;
 
     return {
       currentApy: apy, apyBase: apy, apyReward: null,
@@ -245,7 +245,7 @@ export async function fetchOndoUsdyOracleSource(
     if (!Number.isFinite(prevExchangeRate) || prevExchangeRate <= 0) return null;
     const apy = (Math.pow(currentPriceFloat / prevExchangeRate, 365.25 / daysDelta) - 1) * 100;
     // B12 — same deterministic envelope as the other NAV oracles.
-    if (!isDeterministicApyWithinSanityBounds(apy) || apy < 0) return null;
+    if (!isDeterministicApyWithinSanityBounds(apy)) return null;
 
     return {
       currentApy: apy, apyBase: apy, apyReward: null,

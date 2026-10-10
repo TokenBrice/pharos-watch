@@ -43,9 +43,15 @@ const CCTP_ETHEREUM_TOKEN_MESSENGER_V2 = "0x28b5a0e9c621a5badaa536219b3a228c8168
 const CCTP_DEPOSIT_FOR_BURN_TOPIC = "0x2fa9ca894982930190727e75500a97d8dc500233a5065e0f3126c48fbe0343c0";
 const CCTP_DEPOSIT_FOR_BURN_SELECTOR = "0x6fd3504e";
 const CCTP_DEPOSIT_FOR_BURN_WITH_CALLER_SELECTOR = "0xf856ddb6";
+// Circle V2 Ethereum deployment and exact event signatures:
+// https://developers.circle.com/cctp/references/contract-addresses
+const CCTP_ETHEREUM_MESSAGE_TRANSMITTER_V2 = "0x81d40f21f12a8f0e3252bccb954d722d4c464b64";
+const CCTP_MESSAGE_RECEIVED_TOPIC = "0xff48c13eda96b1cceacc6b9edeedc9e9db9d6226afbc30146b720c19d3addb1c";
+const CCTP_MINT_AND_WITHDRAW_TOPIC = "0x50c55e915134d457debfa58eb6f4342956f8b0616d51a89a3659360178e1ab63";
 
 export function cctpBridgeDetection(
   knownBridgePoolAddresses: string[],
+  stablecoinId: string,
 ): MintBurnBridgeDetectionConfig {
   return {
     protocol: "cctp",
@@ -53,6 +59,10 @@ export function cctpBridgeDetection(
     knownBridgeRouterAddresses: [CCTP_ETHEREUM_TOKEN_MESSENGER_V2],
     bridgeSignalTopics: [CCTP_DEPOSIT_FOR_BURN_TOPIC],
     bridgeSignalSelectors: [CCTP_DEPOSIT_FOR_BURN_SELECTOR, CCTP_DEPOSIT_FOR_BURN_WITH_CALLER_SELECTOR],
+    messageTransmitterAddress: CCTP_ETHEREUM_MESSAGE_TRANSMITTER_V2,
+    mintTokenAddress: resolveRequiredTrackedContractConfig(stablecoinId, "ethereum").contractAddress,
+    messageReceivedTopic: CCTP_MESSAGE_RECEIVED_TOPIC,
+    mintAndWithdrawTopic: CCTP_MINT_AND_WITHDRAW_TOPIC,
   };
 }
 

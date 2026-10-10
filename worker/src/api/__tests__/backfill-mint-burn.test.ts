@@ -21,6 +21,8 @@ import {
   getAlchemyTransactionContextBatchMany,
   resolveBlockTimestamps,
 } from "../../lib/alchemy-logs";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { cctpReceiveContext } from "../../lib/__tests__/mint-burn-bridge-classifier.test-support";
 
 const mutableActiveIds = ACTIVE_IDS as Set<string>;
 
@@ -202,15 +204,12 @@ describe("handleBackfillMintBurn", () => {
     expect(body.done).toBe(true);
   });
 
-  it("updates flow_type on existing rows when classifier output differs", async () => {
-    // Seed a USDC mint log for a CCTP bridge tx. The classifier should tag it
-    // bridge_transfer under the new CCIP/CCTP mint-tagging rule (Task 1.1).
-    // Assert the response reports flowTypeChanges and the pipeline ran the
-    // flow_type UPDATE against the row and recalculated the affected hour.
+  it("updates an existing destination CCTP mint using MessageReceived and matching token mint evidence", async () => {
     const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
     const ZERO_TOPIC = "0x0000000000000000000000000000000000000000000000000000000000000000";
-    const CCTP_DEPOSIT_FOR_BURN_TOPIC =
-      "0x2fa9ca894982930190727e75500a97d8dc500233a5065e0f3126c48fbe0343c0";
+    const detection = MINT_BURN_CONFIGS.find((config) => config.stablecoinId === "usdc-circle" && config.chain.chainId === "ethereum")!.bridgeDetection!;
+    if (detection.protocol !== "cctp") throw new Error("USDC must have CCTP detection");
+    const receiveContext = cctpReceiveContext(detection);
     const USDC_CONTRACT = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
     const TX_HASH = "0xcctpbridgemint";
     const BLOCK_NUMBER = 21_950_000;
@@ -248,30 +247,25 @@ describe("handleBackfillMintBurn", () => {
       .mockReset()
       .mockResolvedValue(new Map([[BLOCK_NUMBER, 1_730_000_000]]));
 
-    // Stub the CCTP signal: receipt emits the bridge-signal topic, so the
-    // classifier flips flow_type standard → bridge_transfer for the mint row.
+    // Real-shaped destination receipt: no DepositForBurn or deposit selector.
     const txContext = {
       tx: {
         hash: TX_HASH,
-        to: "0x28b5a0e9c621a5badaa536219b3a228c8168cf5d",
-        input: "0x6fd3504e",
+        to: receiveContext.to,
+        input: receiveContext.inputSelector!,
       },
       receipt: {
         transactionHash: TX_HASH,
-        to: "0x28b5a0e9c621a5badaa536219b3a228c8168cf5d",
-        logs: [
-          {
-            address: "0x28b5a0e9c621a5badaa536219b3a228c8168cf5d",
-            topics: [CCTP_DEPOSIT_FOR_BURN_TOPIC],
-            data: "0x",
-            blockNumber: "0x" + BLOCK_NUMBER.toString(16),
-            transactionHash: TX_HASH,
-            transactionIndex: "0x0",
-            blockHash: "0x0",
-            logIndex: "0x0",
-            removed: false,
-          },
-        ],
+        to: receiveContext.to,
+        logs: receiveContext.receiptLogs!.map((log, index) => ({
+          ...log,
+          blockNumber: "0x" + BLOCK_NUMBER.toString(16),
+          transactionHash: TX_HASH,
+          transactionIndex: "0x0",
+          blockHash: "0x0",
+          logIndex: "0x" + index.toString(16),
+          removed: false,
+        })),
       },
     };
     vi.mocked(getAlchemyTransactionContextBatchMany)

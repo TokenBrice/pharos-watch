@@ -185,18 +185,32 @@ describe("runYieldCoverageAudit", () => {
     expect(mockSetCache).not.toHaveBeenCalled();
   });
 
-  it("defers when the published rankings cache is malformed", async () => {
+  it.each([
+    "{",
+    "{}",
+    JSON.stringify({ rankings: null }),
+    JSON.stringify({ rankings: {} }),
+    JSON.stringify({ rankings: [null] }),
+    JSON.stringify({ rankings: [{ id: 42 }] }),
+    JSON.stringify({ rankings: [{ id: "coin", sourceTvlUsd: "unknown" }] }),
+    JSON.stringify({ rankings: [{ id: "coin", altSources: {} }] }),
+    JSON.stringify({ rankings: [{ id: "coin", altSources: [null] }] }),
+    JSON.stringify({ rankings: [{ id: "coin", altSources: [{}] }] }),
+    JSON.stringify({ rankings: [{ id: "coin", altSources: [{ sourceKey: "alternate", sourceRisk: { venueProtocol: 42 } }] }] }),
+    JSON.stringify({ rankings: [{ id: "coin", provenance: { sourceKey: 42 } }] }),
+  ])("defers without report or durable candidate writes for malformed rankings: %s", async (value) => {
     mockLoadDlStablecoinPools.mockResolvedValue({
       pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
       meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
     });
     mockGetCache.mockImplementation(async (_db, key) =>
       key === "yield-rankings"
-        ? { value: "{", updatedAt: 1_774_526_300 }
+        ? { value, updatedAt: 1_774_526_300 }
         : null
     );
 
-    const result = await runYieldCoverageAudit(mockD1());
+    const db = mockD1();
+    const result = await runYieldCoverageAudit(db);
 
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
@@ -205,6 +219,26 @@ describe("runYieldCoverageAudit", () => {
     });
     expect(mockComputeSafetyScoresSnapshot).not.toHaveBeenCalled();
     expect(mockSetCache).not.toHaveBeenCalled();
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it("treats a validated empty rankings array as available coverage", async () => {
+    mockLoadDlStablecoinPools.mockResolvedValue({
+      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
+      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
+    });
+    mockComputeSafetyScoresSnapshot.mockResolvedValue(successfulSafetySnapshot());
+    mockGetCache.mockImplementation(async (_db, key) => {
+      if (key === "yield-rankings") return { value: JSON.stringify({ rankings: [] }), updatedAt: 1_774_526_300 };
+      if (key === "stablecoins") return { value: "[]", updatedAt: 1_774_526_300 };
+      if (key === "defillama-protocols") {
+        return { value: JSON.stringify({ protocols: [] }), updatedAt: 1_774_526_300 };
+      }
+      return null;
+    });
+    const result = await runYieldCoverageAudit(mockD1([{ match: "yield_coverage_review_dispositions", rows: [] }]));
+    expect(result.status).toBe("ok");
+    expect(mockSetCache).toHaveBeenCalledWith(expect.anything(), "yield-coverage-audit", expect.any(String));
   });
 
   it.each([

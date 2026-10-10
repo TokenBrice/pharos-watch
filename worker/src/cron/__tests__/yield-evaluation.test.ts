@@ -1545,6 +1545,31 @@ describe("opportunity-level risk (yield v8.32)", () => {
       missingCriticalEvidence: [],
     });
   });
+
+  it.each([null, undefined])("retains Royco APY but withholds PYS when market status is %s", (marketStatus) => {
+    const startSec = 1776729600;
+    const sourceKey = "royco-dawn:ethereum:0xmarket:junior";
+    const [source] = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({
+        sourceKey, currentApy: 9, apyBase: 9, sourceObservedAt: startSec,
+        dataSource: "protocol-api", yieldType: "structured-tranche",
+        sourceRisk: {
+          trancheSide: "junior", venueProtocol: "royco-dawn",
+          venueRiskWeighted: 3, marketStatus, marketTvlUsd: 2_000_000,
+        },
+      }) }],
+      sourceHistory: new Map([[buildHistoryKey("coin-a", sourceKey), historyRows(sourceKey, 9, startSec)]]),
+    })).evaluatedSources;
+    expect(source).toMatchObject({
+      currentApy: 9, scoreQualification: "NR", rejected: false,
+      pharosYieldScore: null, pysNullReason: "opportunity-evidence-missing",
+    });
+    expect(source?.sourceRisk?.opportunityRisk).toMatchObject({
+      opportunitySafetyScore: null, missingCriticalEvidence: ["market-status"],
+    });
+    expect(source?.warnings).toContain("opportunity-evidence-missing");
+  });
 });
 
 describe("source eligibility and unavailable score inputs", () => {

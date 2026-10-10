@@ -134,7 +134,7 @@ export async function fetchMidasMmevNavOracleSource(
     // B12 — a short or mis-anchored window annualizes without bound; the shared
     // deterministic envelope keeps an absurd NAV move out of PYS (and out of the
     // published board) instead of clamping it to a perfect score.
-    if (!isDeterministicApyWithinSanityBounds(apy) || apy < 0) return null;
+    if (!isDeterministicApyWithinSanityBounds(apy)) return null;
 
     return buildMidasMmevNavCandidate({
       apy,

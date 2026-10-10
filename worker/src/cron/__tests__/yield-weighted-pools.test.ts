@@ -62,6 +62,21 @@ describe("buildWeightedYieldPoolGroupSource", () => {
     expect(source?.apyReward).toBe(0);
   });
 
+  it.each([
+    [1_000_000, 1_000_000, 0],
+    [1_000_000, 3_000_000, -2.5],
+  ])("includes losing constituents in the full weighted denominator (%s / %s)", (positiveTvl, negativeTvl, expectedApy) => {
+    const source = buildWeightedYieldPoolGroupSource(makeConfig(), [
+      makePool({ pool: "ethereum-pool", tvlUsd: positiveTvl, apy: 5 }),
+      makePool({ pool: "fraxtal-pool", chain: "Fraxtal", tvlUsd: negativeTvl, apy: -5 }),
+    ]);
+    expect(source).toMatchObject({
+      currentApy: expectedApy,
+      apyBase: expectedApy,
+      sourceTvlUsd: positiveTvl + negativeTvl,
+    });
+  });
+
   it("drops missing, zero-TVL, and non-single-exposure member pools", () => {
     const source = buildWeightedYieldPoolGroupSource(
       makeConfig({

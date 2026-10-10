@@ -123,7 +123,7 @@ describe("mint-burn shared pipeline modules", () => {
     expect(result.ignored).toBe(1);
   });
 
-  it("skips affected-hour aggregation work when persistence is a pure no-op", async () => {
+  it("tracks affected hours on duplicate-only replay so failed materialization is retried", async () => {
     const db = makeDb();
     vi.mocked(batchExecute).mockReset();
     vi.mocked(batchExecute)
@@ -140,7 +140,7 @@ describe("mint-burn shared pipeline modules", () => {
     expect(result.inserted).toBe(0);
     expect(result.flowTypeChanges).toBe(0);
     expect(result.burnTypeChanges).toBe(0);
-    expect(affectedHours.size).toBe(0);
+    expect(affectedHours.size).toBe(1);
   });
 
   it("tracks affected hours when inserts land even if the batch includes duplicates", async () => {

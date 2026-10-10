@@ -254,6 +254,26 @@ const YieldRankingSchema = z.object({
 });
 export type YieldRanking = z.infer<typeof YieldRankingSchema>;
 
+// The coverage audit consumes only identity and venue evidence, including older
+// rankings generations. Compose this projection from the public field schemas;
+// missing rankings are never a validated empty cohort.
+const YieldCoverageAuditVenueRiskSchema = YieldSourceRiskSchema.pick({ venueProtocol: true });
+const YieldCoverageAuditSourceSchema = AltYieldSourceSchema.pick({
+  sourceKey: true,
+  sourceTvlUsd: true,
+}).extend({
+  sourceTvlUsd: AltYieldSourceSchema.shape.sourceTvlUsd.optional(),
+  sourceRisk: YieldCoverageAuditVenueRiskSchema.nullable().optional(),
+});
+export const YieldCoverageAuditRankingsSchema = z.object({
+  rankings: z.array(YieldRankingSchema.pick({ id: true, sourceTvlUsd: true }).extend({
+    sourceTvlUsd: YieldRankingSchema.shape.sourceTvlUsd.optional(),
+    sourceRisk: YieldCoverageAuditVenueRiskSchema.nullable().optional(),
+    provenance: YieldRankingProvenanceSchema.pick({ sourceKey: true }).nullable().optional(),
+    altSources: z.array(YieldCoverageAuditSourceSchema).optional(),
+  })),
+});
+
 const YieldResponseWarningSchema = z.object({
   code: z.string(),
   message: z.string(),

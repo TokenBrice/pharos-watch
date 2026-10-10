@@ -194,6 +194,21 @@ interface SupplyHistoryPriceRow {
   price_observed_at: number;
 }
 
+export function projectMintBurnPriceHistory(
+  rows: Array<{ stablecoin_id: string; snapshot_date: number; price: number; price_observed_at: number | null }>,
+  assessedAtSec: number,
+): Map<string, MintBurnPriceHistoryPoint[]> {
+  const priceHistory = new Map<string, MintBurnPriceHistoryPoint[]>();
+  for (const row of rows) {
+    const observedAt = row.price_observed_at;
+    if (observedAt == null || !Number.isSafeInteger(observedAt) || observedAt <= 0 || observedAt > assessedAtSec) continue;
+    const series = priceHistory.get(row.stablecoin_id) ?? [];
+    series.push({ snapshotDate: row.snapshot_date, price: row.price, observedAt });
+    priceHistory.set(row.stablecoin_id, series);
+  }
+  return priceHistory;
+}
+
 /**
  * Snapshot prices with a recorded observation clock (migration 0253). Rows with
  * a NULL `price_observed_at` (legacy, prior-Worker or admin-backfill rows) have
@@ -229,10 +244,9 @@ export async function loadMintBurnPriceContextBatch(
 ): Promise<MintBurnPriceContext> {
   const uniqueIds = [...new Set(stablecoinIds)];
   const priceObservations = new Map<string, MintBurnPriceObservation>();
-  const priceHistory = new Map<string, MintBurnPriceHistoryPoint[]>();
 
   if (uniqueIds.length === 0) {
-    return { priceObservations, priceHistory };
+    return { priceObservations, priceHistory: new Map() };
   }
 
   const idChunks = chunkArray(uniqueIds, sqlInChunkSize);
@@ -250,17 +264,11 @@ export async function loadMintBurnPriceContextBatch(
   }
 
   const assessedAtSec = Math.floor(Date.now() / 1000);
-  for (const row of historyRows) {
-    const observedAt = row.price_observed_at;
-    if (!Number.isSafeInteger(observedAt) || observedAt <= 0 || observedAt > assessedAtSec) continue;
-    const series = priceHistory.get(row.stablecoin_id) ?? [];
-    series.push({ snapshotDate: row.snapshot_date, price: row.price, observedAt });
-    priceHistory.set(row.stablecoin_id, series);
-  }
+  const admittedPriceHistory = projectMintBurnPriceHistory(historyRows, assessedAtSec);
   for (const row of rows) {
     const observation = projectMintBurnPriceObservation(row, assessedAtSec);
     if (observation) priceObservations.set(row.asset_id, observation);
   }
 
-  return { priceObservations, priceHistory };
+  return { priceObservations, priceHistory: admittedPriceHistory };
 }

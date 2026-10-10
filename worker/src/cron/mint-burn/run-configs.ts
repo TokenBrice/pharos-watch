@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import { reportCronProgress } from "../../lib/cron-progress";
 import { budgetExhausted } from "../../lib/evm-logs";
-import { mintBurnConfigKey, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnAffectedHour, MintBurnPriceContext } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-contracts";
 import { deferConfig, loadActiveConfigDeferrals, shouldDeferConfig } from "./run-state";
@@ -70,6 +70,7 @@ export async function runMintBurnConfigPhase(input: {
   runTimestamp: number;
   priceContext: MintBurnPriceContext;
   lastBlocksAfterRun: Map<string, number>;
+  pendingCursorUpdates: Map<string, number>;
   maxScanRange: number;
   criticalConfigBudgetLimit: number;
   criticalBridgeConfigBudgetLimit?: number;
@@ -276,8 +277,7 @@ export async function runMintBurnConfigPhase(input: {
     if (result.newLastBlock != null) {
       const previousLastBlock = input.lastBlocksAfterRun.get(key) ?? (config.startBlock - 1);
       const nextLastBlock = Math.max(previousLastBlock, result.newLastBlock);
-      await upsertMintBurnSyncState(input.db, key, nextLastBlock, "monotonic-max");
-      input.lastBlocksAfterRun.set(key, nextLastBlock);
+      input.pendingCursorUpdates.set(key, nextLastBlock);
     }
     input.budget.count += summary.requestBudgetUsed;
 
