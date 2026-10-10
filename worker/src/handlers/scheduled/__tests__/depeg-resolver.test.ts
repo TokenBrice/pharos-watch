@@ -5,6 +5,11 @@ import {
   mockSuccessfulCronLease,
 } from "../../../test-helpers/scheduled-runtime.test-support";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import {
+  evaluateStablecoinActivePriceCoverage,
+  evaluateStablecoinPublicationCoverage,
+} from "../../../lib/stablecoin-publication-coverage";
 
 const mocks = vi.hoisted(() => ({
   computeDepegResolver: vi.fn(),
@@ -24,19 +29,21 @@ import { runDepegResolverSlot } from "../depeg-resolver";
 
 const SLOT_STARTED_AT = 2_580;
 
-function runtime(): ScheduledRuntimeContext {
+const FRESH_CAPABILITY_METADATA = {
+  capabilities: {
+    stablecoinsCache: true,
+    depegPipeline: true,
+  },
+};
+
+function runtime(metadata: Record<string, unknown> = FRESH_CAPABILITY_METADATA): ScheduledRuntimeContext {
   const db = makeNoopD1({
     prepare: vi.fn((sql: string) => {
       if (sql.includes("FROM cron_runs")) {
         return {
           first: vi.fn(async () => ({
             started_at: SLOT_STARTED_AT - 60,
-            metadata: JSON.stringify({
-              capabilities: {
-                stablecoinsCache: true,
-                depegPipeline: true,
-              },
-            }),
+            metadata: JSON.stringify(metadata),
           })),
         };
       }
@@ -116,5 +123,31 @@ describe("depeg-resolver scheduling", () => {
         outcome: "ok",
       }),
     ]);
+  });
+
+  it.each([
+    ["a published immaterial omission", "published", 30_000_000, true],
+    ["a published material omission", "published", 60_000_000, false],
+    ["a cache that was not written", "no-write", 30_000_000, false],
+  ] as const)("judges cache safety for %s", async (_label, cacheWriteMode, lastKnownCapUsd, expected) => {
+    const ids = [...WORKER_ACTIVE_IDS];
+    const missingId = ids[0]!;
+    const assets = ids.filter((id) => id !== missingId).map((id) => ({ id, price: 1, priceSource: "coingecko" }));
+    await runDepegResolverSlot(runtime({
+      cacheWriteMode,
+      capabilities: { stablecoinsCache: false, depegPipeline: true },
+      activePublicationCoverage: evaluateStablecoinPublicationCoverage(assets.map((asset) => asset.id), SLOT_STARTED_AT),
+      activePriceCoverage: evaluateStablecoinActivePriceCoverage(assets, ids, {
+        nowSec: SLOT_STARTED_AT,
+        previousAcceptedAssetsById: new Map([[missingId, {
+          id: missingId, circulating: { peggedUSD: lastKnownCapUsd }, supplyObservedAt: SLOT_STARTED_AT - 900,
+        }]]),
+      }),
+    }));
+
+    expect(mocks.computeDepegResolver).toHaveBeenCalledWith(expect.objectContaining({
+      stablecoinsCacheSafe: expected,
+      depegPipelineHealthy: true,
+    }));
   });
 });
