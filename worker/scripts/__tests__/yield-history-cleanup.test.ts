@@ -1,5 +1,5 @@
 import { runOperatorCli } from "./operator-cli.test-support";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -63,6 +63,9 @@ function seedDb(path: string): void {
     insertDaily.run("susde-ethena", "onchain:susde-ethena", 1_699_968_000, 1_700_001_080, 1, 5.3, null, null, null, 10_200_000, "onchain", null, "Ethena staking (sUSDe)", "nav-appreciation", "gen-susde-1", "published", 56.1, 91.0, 0.015, '{"apy30d":5.3}');
     // This daily-only observation outlived the hourly retention window.
     insertDaily.run("usds-sky", "d8c4eff5-c8a9-46fc-a888-057c4c668e72", 1_680_048_000, 1_680_080_000, 0, 3.8, 3.5, 0.3, 1.02, 7_000_000, "defillama", '["reward-heavy"]', "Sky Savings Rate (sUSDS)", "lending-vault", "gen-usds-old", "published", 40.1, 87.2, 0.016, '{"apy30d":3.8}');
+
+    db.exec("UPDATE yield_history SET source_observed_at = recorded_at - 1800 WHERE stablecoin_id = 'usde-ethena'");
+    db.exec("UPDATE yield_history_daily SET source_observed_at = recorded_at - 3600 WHERE stablecoin_id = 'usde-ethena'");
 
     writeFileSync(path, db.serialize());
   } finally {
@@ -133,6 +136,10 @@ describe("yield-history-cleanup", () => {
         expect(readAllRows(path)).toEqual(before);
         expect(readAllRows(path, "yield_history_daily")).toEqual(beforeDaily);
       } else {
+        await runYieldHistoryCleanupCli(["--export", restorePath], dependencies);
+        const exported = parseYieldHistoryCleanupArtifact(JSON.parse(readFileSync(restorePath, "utf8")));
+        expect(exported.hourlyRows).toEqual(artifact.hourlyRows);
+        expect(exported.dailyRows).toEqual(artifact.dailyRows);
         await runYieldHistoryCleanupCli(args, dependencies);
         expect(readAllRows(path)).toEqual(before.filter((row) =>
           row.stablecoin_id === "susde-ethena" || row.source_key === "unrelated-pool"));
@@ -336,7 +343,7 @@ describe("yield-history-cleanup", () => {
     expect(summarizeYieldHistoryCleanupRows(rows.dailyRows).totalRows).toBe(2);
   });
 
-  it("round-trips complete hourly and daily-only rows through delete and restore", () => {
+  it("round-trips complete hourly and daily-only rows including observation clocks through delete and restore", () => {
     const path = createTempDbPath();
     tempPaths.push(path);
     seedDb(path);
@@ -346,6 +353,14 @@ describe("yield-history-cleanup", () => {
     const entireDailyTable = readAllRows(path, "yield_history_daily");
     const beforeRows = loadCleanupRowsFromSqlite(path);
     const artifact = createYieldHistoryCleanupArtifact(beforeRows, "test-operator");
+    expect(artifact.hourlyRows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ stablecoin_id: "usde-ethena", recorded_at: 1_700_000_000, source_observed_at: 1_699_998_200 }),
+      expect.objectContaining({ stablecoin_id: "usds-sky", source_observed_at: null }),
+    ]));
+    expect(artifact.dailyRows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ stablecoin_id: "usde-ethena", source_observed_at: 1_699_996_400 }),
+      expect.objectContaining({ stablecoin_id: "usds-sky", source_observed_at: null }),
+    ]));
 
     deleteCleanupRowsFromSqlite(path);
     expect(readAllRows(path)).toEqual(survivors);
@@ -356,13 +371,16 @@ describe("yield-history-cleanup", () => {
     restoreCleanupRowsToSqlite(path, artifact);
     expect(readAllRows(path)).toEqual(entireTable);
     expect(readAllRows(path, "yield_history_daily")).toEqual(entireDailyTable);
-    expect(artifact.version).toBe(2);
+    expect(artifact.version).toBe(3);
     expect(artifact.hourlyRowCount).toBe(beforeRows.hourlyRows.length);
     expect(artifact.dailyRowCount).toBe(beforeRows.dailyRows.length);
     expect(artifact.operator).toBe("test-operator");
   });
 
-  it.each(["hourly-field", "daily-field", "daily-count", "daily-tier", "legacy-version"])("rejects a malformed %s restore artifact before changing either tier", async (fault) => {
+  it.each([
+    "hourly-field", "daily-field", "hourly-observation-clock", "daily-observation-clock",
+    "daily-count", "daily-tier", "legacy-version", "legacy-two-tier-version",
+  ])("rejects a malformed %s restore artifact before changing either tier", async (fault) => {
     const path = createTempDbPath();
     tempPaths.push(path);
     seedDb(path);
@@ -375,9 +393,15 @@ describe("yield-history-cleanup", () => {
     };
     if (fault === "hourly-field") delete truncated.hourlyRows[0]!.apy;
     if (fault === "daily-field") delete truncated.dailyRows[0]!.snapshot_date;
+    if (fault === "hourly-observation-clock") delete truncated.hourlyRows[0]!.source_observed_at;
+    if (fault === "daily-observation-clock") delete truncated.dailyRows[0]!.source_observed_at;
     if (fault === "daily-count") truncated.dailyRows.pop();
     if (fault === "daily-tier") delete (truncated as Record<string, unknown>).dailyRows;
     if (fault === "legacy-version") truncated.version = 1;
+    if (fault === "legacy-two-tier-version") {
+      truncated.version = 2;
+      for (const row of [...truncated.hourlyRows, ...truncated.dailyRows]) delete row.source_observed_at;
+    }
     const restorePath = path.replace("test.sqlite", "truncated.json");
     writeFileSync(restorePath, JSON.stringify(truncated));
 
@@ -394,6 +418,13 @@ describe("yield-history-cleanup", () => {
     expect(readAllRows(path)).toEqual(before);
     expect(readAllRows(path, "yield_history_daily")).toEqual(beforeDaily);
     expect(createWorkerD1Client).not.toHaveBeenCalled();
+  });
+
+  it.each([1, 2])("explains why version-%s artifacts cannot prove complete-row restoration", (version) => {
+    const artifact = createYieldHistoryCleanupArtifact({ hourlyRows: [], dailyRows: [] }, "ops");
+    expect(() => parseYieldHistoryCleanupArtifact({ ...artifact, version })).toThrow(
+      "Cleanup artifact versions 1 and 2 do not preserve complete rows with source_observed_at; restore requires version 3",
+    );
   });
 
   it("rejects drifted targets and non-finite restore numbers", () => {

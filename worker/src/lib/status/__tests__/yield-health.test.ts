@@ -164,6 +164,7 @@ describe("loadYieldHealthSummary", () => {
             benchmark: {
               fetchedAt: NOW - 3600,
               ageSeconds: 3600,
+              recordDate: new Date(NOW * 1000).toISOString().slice(0, 10),
               source: "tbill-cache",
               isFallback: false,
               fallbackMode: null,
@@ -399,6 +400,45 @@ describe("loadYieldHealthSummary", () => {
         USD: { status: "healthy", rowCount: 1 },
         GBP: { status: "stale", rowCount: 1, ageSec: 49 * 3600 },
       },
+    });
+  });
+
+  describe.each(["USD", "GBP"] as const)("%s benchmark observation freshness", (key) => {
+    it.each([
+      { recordDate: undefined, status: "stale", recordAgeSec: null },
+      { recordDate: null, status: "stale", recordAgeSec: null },
+      { recordDate: "", status: "stale", recordAgeSec: null },
+      { recordDate: "not-a-date", status: "stale", recordAgeSec: null },
+      { recordDate: "2026-01-01", status: "stale", recordAgeSec: expect.any(Number) },
+      { recordDate: "2026-05-01", status: "stale", recordAgeSec: expect.any(Number) },
+      { recordDate: new Date(NOW * 1000).toISOString().slice(0, 10), status: "healthy", recordAgeSec: expect.any(Number) },
+    ])("grades fresh fetch with recordDate=$recordDate as $status against the status clock", async ({ recordDate, status, recordAgeSec }) => {
+      const benchmark = {
+        fetchedAt: NOW - 60,
+        ageSeconds: 60,
+        recordDate,
+        isFallback: false,
+        fallbackMode: null,
+      };
+      const summary = await loadYieldHealthSummary(makeDb([
+        yieldCacheRow("yield-rankings", NOW, {
+          rankings: [{ id: "fixture", benchmarkKey: key }],
+          // Exercise both legacy USD metadata and registry entries.
+          ...(key === "USD" ? { provenance: { benchmark } } : { benchmarks: { [key]: benchmark } }),
+        }),
+      ]), NOW, {});
+
+      expect(summary.benchmarkRegistry).toMatchObject({
+        status: status === "healthy" ? "healthy" : "degraded",
+        usedBenchmarkCount: 1,
+        healthyBenchmarkCount: status === "healthy" ? 1 : 0,
+        staleBenchmarkCount: status === "stale" ? 1 : 0,
+        unknownBenchmarkCount: 0,
+        benchmarks: { [key]: { status, ageSec: 60, recordAgeSec } },
+      });
+      if (recordDate === "2026-05-01") {
+        expect(summary.benchmarkRegistry.benchmarks[key]?.recordAgeSec).toBeLessThan(0);
+      }
     });
   });
 

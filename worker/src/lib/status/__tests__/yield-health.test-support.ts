@@ -8,6 +8,7 @@ export function healthyYieldProvenance(now: number, coveredCount: number, overri
     benchmark: {
       fetchedAt: now - 3600,
       ageSeconds: 3600,
+      recordDate: new Date(now * 1000).toISOString().slice(0, 10),
       source: "tbill-cache",
       isFallback: false,
       fallbackMode: null,

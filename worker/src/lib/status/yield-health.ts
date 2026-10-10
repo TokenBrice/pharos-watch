@@ -3,6 +3,7 @@ import {
   getCacheRatioThresholds,
   STATUS_CACHE_RATIO_THRESHOLDS,
   STATUS_YIELD_HEALTH_THRESHOLDS,
+  YIELD_BENCHMARK_SCORE_TTL_SEC,
 } from "@shared/lib/status-thresholds";
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
@@ -42,10 +43,10 @@ import {
 import { safeJsonParse } from "../api-cache-read";
 import { loadActiveSafetyScoreIndex } from "../safety-score-index";
 import {
+  benchmarkRecordAgeSeconds,
   classifyYieldBenchmarkFreshness,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
-  YIELD_BENCHMARK_SCORE_TTL_SEC,
-} from "../../cron/yield-sync/benchmarks";
+} from "@shared/lib/yield-benchmark-freshness";
 import { assessFreshnessTimestamp } from "../api-freshness-age";
 
 const YIELD_RUNBOOK_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/yield-health.md";
@@ -150,12 +151,6 @@ function safeJsonObjectParse(json: string | null | undefined, context: string): 
 
 function ageSeconds(now: number, updatedAt: number | null | undefined): number | null {
   return assessFreshnessTimestamp(now, updatedAt).ageSeconds;
-}
-
-function recordAgeSeconds(now: number, recordDate: string | null): number | null {
-  if (!recordDate) return null;
-  const parsed = Date.parse(`${recordDate}T00:00:00Z`);
-  return Number.isFinite(parsed) ? ageSeconds(now, Math.trunc(parsed / 1000)) : null;
 }
 
 function freshnessStatus(
@@ -476,21 +471,21 @@ function buildBenchmarkRegistryHealth(params: {
       const fallbackMode = getString(meta?.fallbackMode);
       const recordDate = getString(meta?.recordDate);
       const maxRecordAgeSec = YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[key];
-      const recordAgeSec = recordAgeSeconds(params.now, recordDate);
+      const recordAgeSec = benchmarkRecordAgeSeconds(recordDate, params.now);
       // A1: the entry's health is a property of the feed only. Rows selecting
       // this key as a documented proxy are counted, never classified.
-      // A2: the observation bound is evaluated here against the status clock;
-      // `classifyYieldBenchmarkFreshness` resolves `recordDate` against the wall
-      // clock, which the status layer cannot inject.
+      // Assess both fetch and observation freshness against the status clock.
       const status: YieldHealthFieldStatus = meta == null
         ? "unknown"
-        : recordAgeSec != null && recordAgeSec > maxRecordAgeSec
-          ? "stale"
-          : classifyYieldBenchmarkFreshness({
-              ageSeconds: ageSec,
-              isFallback: isFallback === true,
-              fallbackMode,
-            });
+        : classifyYieldBenchmarkFreshness({
+            ageSeconds: ageSec,
+            isFallback: isFallback === true,
+            fallbackMode,
+          }, {
+            recordDate,
+            maxRecordAgeSec,
+            nowSec: params.now,
+          });
       return [
         key,
         {
@@ -504,7 +499,7 @@ function buildBenchmarkRegistryHealth(params: {
           ageSec,
           maxAgeSec: YIELD_BENCHMARK_SCORE_TTL_SEC,
           recordDate,
-          recordAgeSec: recordAgeSeconds(params.now, recordDate),
+          recordAgeSec,
           maxRecordAgeSec,
           source: getString(meta?.source),
           isFallback,
@@ -526,7 +521,7 @@ function buildBenchmarkRegistryHealth(params: {
         key,
         source: getString(meta?.source),
         recordDate,
-        recordAgeSec: recordAgeSeconds(params.now, recordDate),
+        recordAgeSec: benchmarkRecordAgeSeconds(recordDate, params.now),
         ageSec: benchmarkAgeSeconds(params.now, meta).ageSec,
       };
     })

@@ -783,6 +783,10 @@ export async function setTelegramDeliveryPause(
          (mode, generation, expires_at, reason, actor, created_at, updated_at)
        SELECT ?, 1, ?, ?, ?, ?, ?
         WHERE ? = 0
+           OR EXISTS (
+             SELECT 1 FROM telegram_delivery_pauses
+              WHERE mode = ? AND generation = ?
+           )
        ON CONFLICT(mode) DO UPDATE SET
          generation = telegram_delivery_pauses.generation + 1,
          expires_at = excluded.expires_at,
@@ -798,6 +802,8 @@ export async function setTelegramDeliveryPause(
       input.actor,
       input.nowSec,
       input.nowSec,
+      input.expectedGeneration,
+      input.mode,
       input.expectedGeneration,
       input.expectedGeneration,
     );
