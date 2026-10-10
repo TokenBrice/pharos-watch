@@ -13,11 +13,7 @@ import {
   readPositiveIntEnv,
   retrySmokeResult,
 } from "../lib/smoke-runtime.mjs";
-import { REDEMPTION_ENUMS, assertRedemptionEntry } from "../lib/smoke-redemption-assertions.mjs";
-
-// Kept as part of this module's public surface so callers can read the enum
-// catalogue the smoke assertions validate against.
-export { REDEMPTION_ENUMS };
+import { assertRedemptionResponse } from "../lib/smoke-redemption-assertions.mjs";
 
 export const STRICT_CONTRACT_SMOKE_PATHS = [
   "/api/stablecoins",
@@ -375,26 +371,7 @@ export const ENDPOINT_ASSERTIONS = {
   "/api/redemption-backstops": (result) => {
     assert(result.status === 200, `/api/redemption-backstops returned ${result.status}`);
     const body = stripMeta(result.body);
-    assert(body && body.coins && typeof body.coins === "object", "/api/redemption-backstops missing coins map");
-    assert(isFiniteNumber(body.updatedAt) && body.updatedAt >= 0, "/api/redemption-backstops updatedAt is invalid");
-    const entries = Object.entries(body.coins);
-    assert(entries.length > 0, "/api/redemption-backstops returned empty coins map");
-    for (const [key, entry] of entries.slice(0, 10)) {
-      assertRedemptionEntry(key, entry);
-    }
-    assert(
-      body.methodology && typeof body.methodology.version === "string" && body.methodology.version.length > 0,
-      "/api/redemption-backstops missing methodology.version",
-    );
-    assert(
-      body.methodology.componentWeights && typeof body.methodology.componentWeights === "object",
-      "/api/redemption-backstops missing methodology.componentWeights",
-    );
-    assert(
-      body.methodology.routeFamilyCaps && typeof body.methodology.routeFamilyCaps === "object",
-      "/api/redemption-backstops missing methodology.routeFamilyCaps",
-    );
-    return `${entries.length} redemption entries`;
+    return `${assertRedemptionResponse(body)} redemption entries`;
   },
   "/api/blacklist": (result) => {
     assert(result.status === 200, `/api/blacklist returned ${result.status}`);

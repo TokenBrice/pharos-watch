@@ -71,7 +71,7 @@ function buildRegistryMetadata(
   const familyCounts: Record<string, number> = {};
   let strongProxyCount = 0;
   let heuristicCount = 0;
-  const registryDigest = configuredIds.map((stablecoinId) => {
+  const registryDigest = [...configuredIds].sort().map((stablecoinId) => {
     const config = configById.get(stablecoinId);
     if (!config) return [stablecoinId, "missing"];
     familyCounts[config.routeFamily] = (familyCounts[config.routeFamily] ?? 0) + 1;

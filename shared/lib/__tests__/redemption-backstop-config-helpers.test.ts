@@ -96,16 +96,15 @@ describe("redemption backstop config helpers", () => {
   it("clones registry entries and keeps source file paths on the entries", () => {
     const baseConfig = createBaseConfig();
     const entries = [
-      ...defineBatch(["alpha", "beta"], baseConfig, { sourceFilePath: "shared/base.ts" }),
+      ...defineBatch(["beta"], baseConfig, { sourceFilePath: "shared/base.ts" }),
       {
         id: "alpha",
         config: {
           ...createBaseConfig(),
           settlementModel: "days" as const,
-          docs: [sourceRef("Override docs", "https://example.com/override", ["route"])],
+          docs: [sourceRef("Alpha docs", "https://example.com/alpha", ["route"])],
         },
-        overrideReason: "Reviewed override for alpha.",
-        sourceFilePath: "shared/override.ts",
+        sourceFilePath: "shared/alpha.ts",
       },
     ];
     const registry = defineBackstopRegistry(entries);
@@ -116,15 +115,13 @@ describe("redemption backstop config helpers", () => {
     expect(registry["alpha"]!.settlementModel).toBe("days");
     expect(registry["alpha"]!.docs![0]!.supports).toEqual(["route", "fees"]);
     expect(registry["beta"]!.docs![0]!.supports).toEqual(["route", "fees"]);
-    const alphaEntries = entries.filter((entry) => entry.id === "alpha");
-    expect(alphaEntries[alphaEntries.length - 1]).toMatchObject({
-      overrideReason: "Reviewed override for alpha.",
-      sourceFilePath: "shared/override.ts",
+    expect(entries.find((entry) => entry.id === "alpha")).toMatchObject({
+      sourceFilePath: "shared/alpha.ts",
     });
     expect(entries.find((entry) => entry.id === "beta")).toMatchObject({ sourceFilePath: "shared/base.ts" });
   });
 
-  it("rejects duplicate registry entries without an explicit override reason", () => {
+  it("rejects duplicate registry entries before replacing the original config", () => {
     const entries = defineBatch(["alpha", "alpha"], createBaseConfig());
     expect(() => defineBackstopRegistry(entries)).toThrow();
   });
@@ -139,11 +136,10 @@ describe("redemption backstop config helpers", () => {
     expect(built).toBe(1);
     expect(() => expandIds(["alpha", "alpha"], base)).toThrow();
     expect(() => configsFromBackstopEntries(defineBatch(["alpha", "alpha"], base))).toThrow();
-    const override = { ...base, settlementModel: "days" as const };
-    expect(configsFromBackstopEntries([
+    expect(() => configsFromBackstopEntries([
       { id: "alpha", config: base },
-      { id: "alpha", config: override, overrideReason: "Reviewed replacement" },
-    ])["alpha"]!.settlementModel).toBe("days");
+      { id: "alpha", config: { ...base, settlementModel: "days" } },
+    ])).toThrow(/alpha/);
   });
 
   it("isolates nested physical, suspension, and calendar terms from the authored registry", () => {

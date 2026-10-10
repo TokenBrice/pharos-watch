@@ -376,6 +376,27 @@ describe("syncRedemptionBackstops", () => {
     expect(typeof metadata.v4ScoringParametersHash).toBe("string");
   });
 
+  it("hashes registry config content independently of row order without changing producer order", async () => {
+    // Load after the suite's non-hoisted mocks are initialized.
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const forward = [...configuredIdsMock];
+    const first = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+    const firstHash = JSON.parse(first.metadata ?? "{}").registryHash;
+    expect(configuredIdsMock).toEqual(forward);
+    expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1].map(
+      (entry: RedemptionBackstopEntry) => entry.stablecoinId,
+    )).toEqual(forward);
+    configuredIdsMock = [...forward].reverse();
+    const second = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+    expect(JSON.parse(second.metadata ?? "{}").registryHash).toBe(firstHash);
+    expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[1][1].map(
+      (entry: RedemptionBackstopEntry) => entry.stablecoinId,
+    )).toEqual([...forward].reverse());
+    outputAssetsByIdMock = { "cusd-cap": ["usdc-circle"] };
+    const changed = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+    expect(JSON.parse(changed.metadata ?? "{}").registryHash).not.toBe(firstHash);
+  });
+
   it.each([true, false])("uses cache-present coverage while retaining cache-absent absolute capacity (active resolved=%s)", async (activeResolved) => {
     const now = Math.floor(Date.now() / 1000);
     loadStablecoinsCacheMock.mockResolvedValue({

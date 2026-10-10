@@ -41,22 +41,8 @@ const MENTO_V3_FPMM_DOC = sourceRef("Mento V3 FPMM mechanics", "https://docs.men
   "settlement",
 ]);
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/collateral-redeem.ts";
-const BASE_COLLATERAL_REDEEM_IDS = [
-  "bold-liquity",
-  "lusd-liquity",
-  "feusd-felix",
-  "meusd-mezo",
-  "nect-beraborrow",
-  "fxusd-f-x-protocol",
-  "usdq-quill",
-] as const;
-const BASE_COLLATERAL_OVERRIDE_REASON =
-  "Reviewed collateral-specific route replaces the shared collateral redemption default.";
-const BASE_COLLATERAL_REDEEM_ID_SET = new Set<string>(BASE_COLLATERAL_REDEEM_IDS);
-
 function defineCollateralRecordEntries(configs: Record<string, RedemptionBackstopConfig>) {
   return defineRecordEntries(configs, {
-    overrideReasonForIds: (id) => (BASE_COLLATERAL_REDEEM_ID_SET.has(id) ? BASE_COLLATERAL_OVERRIDE_REASON : undefined),
     sourceFilePath: SOURCE_FILE_PATH,
   });
 }
@@ -248,7 +234,6 @@ const MENTO_ROUTE_CONFIGS = defineConfigFamily(
 
 const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
   ...defineCollateralRecordEntries({ "xgld-unitas": xgldRedemptionConfig }),
-  ...defineBatch(BASE_COLLATERAL_REDEEM_IDS, collateralRedeemBase, { sourceFilePath: SOURCE_FILE_PATH }),
   ...defineBatch(
     ["jpym-mento"],
     { ...mentoFpmmPoolRedeemConfig, outputAssets: ["cusd-celo"] },

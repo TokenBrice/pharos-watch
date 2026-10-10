@@ -112,14 +112,14 @@ describe("redemption backstop config consistency", () => {
     expect(violations).toEqual([]);
   });
 
-  it("family modules do not shadow ids across files", () => {
+  it("every family authors exactly one row per id with no cross-family shadowing", () => {
     const seenById = new Map<string, string>();
     const duplicates: string[] = [];
 
     for (const moduleEntry of familyModules) {
-      for (const { id, overrideReason } of moduleEntry.entries) {
+      for (const { id } of moduleEntry.entries) {
         const previous = seenById.get(id);
-        if (previous && (previous !== moduleEntry.name || !overrideReason)) {
+        if (previous) {
           duplicates.push(`${id}: ${previous}, ${moduleEntry.name}`);
           continue;
         }
@@ -155,28 +155,23 @@ describe("redemption backstop config consistency", () => {
     expect(buildRedemptionBackstopRegistry([{ ...manifest[0]!, allowedRouteFamilies: [config.routeFamily] }])["alpha"]).toEqual(config);
   });
 
-  it("keeps explicit same-family overrides and source metadata while rejecting cross-family shadowing", () => {
+  it("rejects same-family and cross-family shadowing without mutating source metadata", () => {
     const config = getRedemptionBackstopConfig("usdc-circle")!;
     const replacement = { ...config, settlementModel: "days" as const };
     const manifest: RedemptionBackstopConfigManifestEntry[] = [{
       name: "fixture-issuer", filePath: "shared/fixture-issuer.ts", allowedRouteFamilies: [config.routeFamily],
       entries: [
         { id: "alpha", config, sourceFilePath: "shared/base-source.ts" },
-        { id: "alpha", config: replacement, overrideReason: "Reviewed replacement", sourceFilePath: "shared/override-source.ts" },
+        { id: "alpha", config: replacement, sourceFilePath: "shared/reviewed-source.ts" },
       ],
     }];
     const authored = structuredClone(manifest);
-    const result = buildRedemptionBackstopRegistry(manifest);
-    expect(result["alpha"]).toEqual(replacement);
+    expect(() => buildRedemptionBackstopRegistry(manifest)).toThrow(/alpha/);
     expect(manifest).toEqual(authored);
     expect(() => buildRedemptionBackstopRegistry([
       { ...manifest[0]!, entries: [manifest[0]!.entries[0]!] },
       { ...manifest[0]!, name: "other-owner", filePath: "shared/other-owner.ts", entries: [manifest[0]!.entries[1]!] },
     ])).toThrow();
-    expect(() => buildRedemptionBackstopRegistry([{
-      ...manifest[0]!,
-      entries: manifest[0]!.entries.map((entry) => ({ ...entry, overrideReason: undefined })),
-    }])).toThrow();
   });
 
   it("every config resolves to an explicit confidence tier", () => {

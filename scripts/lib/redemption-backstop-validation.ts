@@ -90,7 +90,6 @@ export interface RedemptionRegistryAuditRow {
   liveReserveAdapter: string | null;
   liveReserveTelemetry: string | null;
   reviewedAt: string | null;
-  overrideReason: string | null;
 }
 
 export interface RedemptionPolicyAuditRow {
@@ -195,11 +194,9 @@ export function validateRedemptionBackstopRegistry(
 ): RedemptionRegistryValidationResult {
   const manifest = options.manifest ?? REDEMPTION_BACKSTOP_CONFIG_MANIFEST;
   const mergedConfigs = options.mergedConfigs ?? mergeManifestConfigsForValidation(manifest);
-  const overrideReasonById = new Map<string, string>();
   const sourceFileById = new Map<string, string>();
   for (const moduleEntry of manifest) {
     for (const entry of moduleEntry.entries) {
-      if (entry.overrideReason) overrideReasonById.set(entry.id, entry.overrideReason);
       if (entry.sourceFilePath) sourceFileById.set(entry.id, entry.sourceFilePath);
     }
   }
@@ -402,7 +399,6 @@ export function validateRedemptionBackstopRegistry(
       liveReserveAdapter: adapterKey,
       liveReserveTelemetry: adapterDefinition?.redemptionTelemetry.capacity ?? null,
       reviewedAt: config.reviewedAt ?? null,
-      overrideReason: overrideReasonById.get(id) ?? null,
     };
   });
 
@@ -1101,22 +1097,17 @@ function validateStaticConfigSourceFile(
 
   visit(sourceFile);
 
-  const approvedOverrideIds = new Set(
-    moduleEntry.entries.filter((entry) => entry.overrideReason).map((entry) => entry.id),
-  );
   const seenInModule = new Map<string, "expandIds" | "property">();
   for (const entry of registryEntries) {
     const previous = seenInModule.get(entry.id);
     if (previous) {
-      if (!approvedOverrideIds.has(entry.id)) {
-        addFinding(
-          findings,
-          "error",
-          "unapproved-config-overwrite",
-          `${moduleEntry.name} overwrites "${entry.id}" via ${previous}->${entry.kind}; use defineBackstopRegistry with an overrideReason if intentional.`,
-          { stablecoinId: entry.id, family: moduleEntry.name, filePath },
-        );
-      }
+      addFinding(
+        findings,
+        "error",
+        "unapproved-config-overwrite",
+        `${moduleEntry.name} overwrites "${entry.id}" via ${previous}->${entry.kind}; author one config per id.`,
+        { stablecoinId: entry.id, family: moduleEntry.name, filePath },
+      );
     }
     seenInModule.set(entry.id, entry.kind);
   }

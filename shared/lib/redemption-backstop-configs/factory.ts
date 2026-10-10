@@ -7,7 +7,6 @@ import {
 export interface RedemptionBackstopRegistryEntry {
   id: string;
   config: RedemptionBackstopConfig;
-  overrideReason?: string;
   sourceFilePath?: string;
 }
 
@@ -25,8 +24,8 @@ export function defineBackstopRegistry(
 
   for (const entry of entries) {
     const hasExistingConfig = Object.prototype.hasOwnProperty.call(configs, entry.id);
-    if (hasExistingConfig && !entry.overrideReason) {
-      throw new Error(`Redemption backstop config "${entry.id}" is duplicated without an override reason.`);
+    if (hasExistingConfig) {
+      throw new Error(`Redemption backstop config "${entry.id}" is duplicated.`);
     }
     if (entry.config.routeSuspension &&
         entry.config.routeSuspension.routeId !== `redemption:${entry.id}:${entry.config.routeFamily}`) {
@@ -65,7 +64,7 @@ export function finalizeBackstopRegistry(
   }
 
   return {
-    entries: entries.map((entry) => ({ ...entry, config: configs[entry.id] ?? entry.config })),
+    entries: entries.map((entry) => ({ ...entry, config: configs[entry.id]! })),
   };
 }
 
@@ -74,8 +73,8 @@ export function configsFromBackstopEntries(
 ): Record<string, RedemptionBackstopConfig> {
   const configs = new Map<string, RedemptionBackstopConfig>();
   for (const entry of entries) {
-    if (configs.has(entry.id) && !entry.overrideReason) {
-      throw new Error(`Redemption backstop config "${entry.id}" is duplicated without an override reason.`);
+    if (configs.has(entry.id)) {
+      throw new Error(`Redemption backstop config "${entry.id}" is duplicated.`);
     }
     configs.set(entry.id, entry.config);
   }
@@ -116,27 +115,17 @@ export function defineConfigFamily<Row extends { id: string }>(
 
 /**
  * Build registry entries from a `Record<id, config>`, optionally attaching a
- * `sourceFilePath` and an override reason. Supply `overrideReason` to apply one
- * reason to every entry (uniform override of a shared default), or
- * `overrideReasonForIds` to attach a reason only to the ids it returns a string
- * for (the rest stay un-flagged). Omit `sourceFilePath` when the entries live in
- * the manifest module's own file and should inherit its path.
+ * `sourceFilePath`. Omit it when entries live in the manifest module's own file.
  */
 export function defineRecordEntries(
   configs: Record<string, RedemptionBackstopConfig>,
   options: {
-    overrideReason?: string;
-    overrideReasonForIds?: (id: string) => string | undefined;
     sourceFilePath?: string;
   } = {},
 ): RedemptionBackstopRegistryEntry[] {
-  return Object.entries(configs).map(([id, config]) => {
-    const overrideReason = options.overrideReason ?? options.overrideReasonForIds?.(id);
-    return {
-      id,
-      config,
-      ...(options.sourceFilePath ? { sourceFilePath: options.sourceFilePath } : {}),
-      ...(overrideReason ? { overrideReason } : {}),
-    };
-  });
+  return Object.entries(configs).map(([id, config]) => ({
+    id,
+    config,
+    ...(options.sourceFilePath ? { sourceFilePath: options.sourceFilePath } : {}),
+  }));
 }
