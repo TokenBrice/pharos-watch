@@ -36,6 +36,14 @@ export function createEmptyPriceSourceHealthDistribution(): Record<PriceSourceHe
   >;
 }
 
+/** Reviewed missing rows remain visible, but only unacknowledged gaps alert. */
+export function getPriceSourceHealthMissingCounts(missing: number, acknowledgedMissingCount?: number) {
+  const acknowledged = typeof acknowledgedMissingCount === "number"
+    ? Math.max(0, Math.min(acknowledgedMissingCount, missing))
+    : 0;
+  return { acknowledged, unacknowledged: missing - acknowledged };
+}
+
 export function getPricingSourceLabel(sourceKey: string): string {
   const parts = normalizePricingSourceKeys(sourceKey);
   if (parts.length > 1) {

@@ -1,5 +1,6 @@
 import type { EndpointProbeResult, HealthResponse, StatusResponse } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
 import { buildCommsWorkbenchModel, type CommsWorkbenchModel } from "@/lib/comms-workbench-model";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
 import { STATUS_PRIORITY, getStatusTone } from "@/lib/status/dashboard-presentation";
@@ -163,11 +164,24 @@ function buildSectionPriority({ data, healthData, browserProbeSummary, issueGrou
   commsModel: CommsWorkbenchModel;
 }): Record<DashboardSection["id"], DashboardSectionPriority> {
   const evidencePriority = evidence.state === "stale" || evidence.state === "unavailable" ? 2 : evidence.state === "partial" ? 1 : 0;
+  let cachePriority = 0;
+  let cacheEvidenceRisk = 0;
+  let cacheIssueCount = 0;
+  for (const [key, cache] of Object.entries(data.caches)) {
+    if (getCacheFreshnessRatio(cache) == null) {
+      cacheEvidenceRisk = 1;
+      cacheIssueCount += 1;
+    } else {
+      const priority = STATUS_PRIORITY[getCacheImpactStatus(cache, key)];
+      cachePriority = Math.max(cachePriority, priority);
+      if (priority > 0) cacheIssueCount += 1;
+    }
+  }
   const reliabilityStatus = Math.max(
     STATUS_PRIORITY[data.availabilityStatus],
     healthData ? STATUS_PRIORITY[healthData.status] : 0,
     browserProbeSummary && browserProbeSummary.failCount > 0 ? 1 : 0,
-    data.summary.worstCacheRatio == null ? 1 : data.summary.worstCacheRatio > 2 ? 2 : data.summary.worstCacheRatio > 1.5 ? 1 : 0,
+    cachePriority,
   );
   const cronStatus = data.summary.availabilityImpactingConsecutiveCronErrors > 0 ? 2
     : data.summary.availabilityImpactingCronErrors > 0 || data.summary.availabilityImpactingUnhealthyCrons > 0 ? 1
@@ -192,12 +206,12 @@ function buildSectionPriority({ data, healthData, browserProbeSummary, issueGrou
       count: data.summary.availabilityImpactingUnhealthyCrons + data.summary.availabilityImpactingCronErrors + data.summary.degradedCrons + data.summary.watchUnhealthyCrons,
     },
     reliability: {
-      active: reliabilityStatus > 0 || evidencePriority > 0,
+      active: reliabilityStatus > 0 || evidencePriority > 0 || cacheEvidenceRisk > 0,
       severity: reliabilityStatus,
-      publicImpact: data.availabilityStatus !== "healthy" || (healthData != null && healthData.status !== "healthy") || (browserProbeSummary?.failCount ?? 0) > 0 ? 1 : 0,
-      evidenceRisk: evidencePriority,
+      publicImpact: cachePriority > 0 || data.availabilityStatus !== "healthy" || (healthData != null && healthData.status !== "healthy") || (browserProbeSummary?.failCount ?? 0) > 0 ? 1 : 0,
+      evidenceRisk: Math.max(evidencePriority, cacheEvidenceRisk),
       persistence: 0,
-      count: (browserProbeSummary?.failCount ?? 0) + data.summary.availabilityImpactingCronErrors,
+      count: cacheIssueCount + (browserProbeSummary?.failCount ?? 0) + data.summary.availabilityImpactingCronErrors,
     },
     comms: {
       active: commsModel.delivery.health !== "healthy",

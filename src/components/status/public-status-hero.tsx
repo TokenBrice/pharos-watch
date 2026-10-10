@@ -4,17 +4,20 @@ import type { HealthResponse } from "@shared/types";
 import { Button } from "@/components/ui/button";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import type { BrowserProbeSummary } from "@/lib/status-dashboard-model";
-import { formatTimestampMs, formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
+import { formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
 import { getPublicHealthWarningPresentation, getPublicMintBurnStatus } from "@/lib/status/public-status";
 import { cn } from "@/lib/utils";
-
-/** Mark data stale when older than 3 min (>3x our 60s refresh cadence). */
-const PUBLIC_HERO_STALE_AFTER_MS = 180_000;
+import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";
 
 interface PublicStatusHeroProps {
   healthData: HealthResponse;
-  lastUpdated: number;
+  healthUpdatedAt: number;
+  healthStaleAfterMs: number;
+  probesUpdatedAt: number;
+  probesStaleAfterMs: number;
   probeSummary: BrowserProbeSummary | null;
+  probesLoading: boolean;
+  probesFailed: boolean;
   worstCacheRatio: number | null;
   worstCacheStatus: HealthResponse["status"];
   impactedCacheLanes: number;
@@ -50,17 +53,19 @@ function SignalTile({
 }: {
   label: string;
   value: string;
-  tone: HealthResponse["status"];
+  tone: HealthResponse["status"] | "loading" | "unknown";
 }) {
-  const toneClassName = getStatusTone(tone).badgeClassName;
+  const presentation = tone === "loading" || tone === "unknown"
+    ? { label: tone === "loading" ? "Loading" : "Unknown", badgeClassName: OPERATIONAL_PILL_CLASS.unknown }
+    : getStatusTone(tone);
 
   return (
     <div>
       <p className="pharos-kicker">{label}</p>
       <div className="mt-1.5 flex items-baseline justify-between gap-2">
         <span className="pharos-numeric text-lg font-semibold tracking-tight text-foreground">{value}</span>
-        <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", toneClassName)}>
-          {getStatusTone(tone).label}
+        <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", presentation.badgeClassName)}>
+          {presentation.label}
         </span>
       </div>
     </div>
@@ -93,8 +98,13 @@ function getHeroLeadWarning(healthData: HealthResponse): string {
 
 export function PublicStatusHero({
   healthData,
-  lastUpdated,
+  healthUpdatedAt,
+  healthStaleAfterMs,
+  probesUpdatedAt,
+  probesStaleAfterMs,
   probeSummary,
+  probesLoading,
+  probesFailed,
   worstCacheRatio,
   worstCacheStatus,
   impactedCacheLanes,
@@ -121,9 +131,14 @@ export function PublicStatusHero({
                 {statusTone.label}
               </span>
               <FreshnessIndicator
-                updatedAtMs={lastUpdated}
-                staleAfterMs={PUBLIC_HERO_STALE_AFTER_MS}
-                labelPrefix="Dashboard fetch"
+                updatedAtMs={healthUpdatedAt}
+                staleAfterMs={healthStaleAfterMs}
+                labelPrefix="Health fetch"
+              />
+              <FreshnessIndicator
+                updatedAtMs={probesUpdatedAt}
+                staleAfterMs={probesStaleAfterMs}
+                labelPrefix="Probe fetch"
               />
               {healthData.warnings.length > 0 && (
                 <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -158,7 +173,7 @@ export function PublicStatusHero({
           <SignalTile
             label="Browser Probes"
             value={probeValue}
-            tone={probeSummary?.status ?? "healthy"}
+            tone={probeSummary?.status ?? (probesLoading && !probesFailed ? "loading" : "unknown")}
           />
           <SignalTile
             label="Circuit Breakers"
@@ -175,7 +190,6 @@ export function PublicStatusHero({
         {/* ── Compact metadata footer ── */}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-border/60 pt-3">
           <MetaRow label="Health sample" value={formatTimestampSeconds(healthData.timestamp)} />
-          <MetaRow label="Client sync" value={formatTimestampMs(lastUpdated)} />
           {impactedCacheLanes > 0 && (
             <MetaRow label="Impacted lanes" value={String(impactedCacheLanes)} />
           )}

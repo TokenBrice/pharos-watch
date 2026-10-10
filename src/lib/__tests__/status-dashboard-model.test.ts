@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EndpointProbeResult, StatusCause } from "@shared/types";
+import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-model";
 import {
   makeActivePriceCoverage,
   makeHealthyHealthResponse,
@@ -47,6 +48,37 @@ function buildModel(
     ...overrides,
   });
 }
+
+describe("triage and detailed cache parity", () => {
+  it.each([
+    ["stablecoins", 3, undefined, "healthy", false],
+    ["stablecoins", 8, undefined, "healthy", false],
+    ["stablecoins", 8.01, undefined, "watch", true],
+    ["stablecoins", 12, undefined, "watch", true],
+    ["stablecoins", 12.01, undefined, "critical", true],
+    ["yield-data", 2, undefined, "healthy", false],
+    ["yield-data", 2.01, undefined, "watch", true],
+    ["yield-data", 4, undefined, "watch", true],
+    ["yield-data", 4.01, undefined, "critical", true],
+    ["stablecoins", 0.5, "cached-fallback", "watch", true],
+    ["stablecoins", null, undefined, "unknown", true],
+  ] as const)("agrees for %s at %sx (%s)", (key, ratio, mode, severity, attention) => {
+    const data = {
+      ...makeHealthyStatusResponse(),
+      caches: { [key]: { ageSeconds: ratio == null ? null : ratio * 100, maxAge: 100, healthy: severity === "healthy", ...(mode ? { mode } : {}) } },
+      summary: { ...BASE_STATUS.summary, worstCacheRatio: ratio },
+    };
+    const healthData = makeHealthyHealthResponse();
+    const detail = buildReliabilityWorkspaceModel({
+      data, healthData, probes: [], browserProbeSummary: null, requestSourceStats: undefined,
+    });
+    expect(detail.modeSummaries.find((summary) => summary.id === "cache"))
+      .toMatchObject({ severity, issueCount: attention ? 1 : 0 });
+    const triage = buildModel(data, { healthData });
+    expect(triage.attentionSections.some((section) => section.id === "reliability")).toBe(attention);
+    if (severity === "unknown") expect(triage.evidence.state).toBe("current");
+  });
+});
 
 describe("status dashboard model", () => {
   it("treats semantic degradation as an unhealthy browser probe", () => {

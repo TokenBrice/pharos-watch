@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { D1UsageSummary } from "@shared/types";
 import {
   buildPipelineIntegrityModel,
   buildPipelineModeSummaries,
@@ -155,6 +156,44 @@ describe("pipeline market price scope", () => {
     const data = degraded(base, { priceSourceHealth });
     expect(buildPipelineModeSummaries(data).find((mode) => mode.id === "markets")!.issueCount)
       .toBe(otherIssues + priceIssues);
+  });
+});
+
+describe("pipeline storage capacity", () => {
+  const telemetry: D1UsageSummary = {
+    checkedAt: 100, windowStart: 0, windowEnd: 100, databaseId: "fixture",
+    databaseName: null, databaseSizeBytes: 95, numTables: 10, region: null,
+    readReplicationMode: null, readQueries24h: 1, writeQueries24h: 1,
+    rowsRead24h: 1, rowsWritten24h: 1,
+  };
+  it.each([
+    ["normal", "healthy", 0],
+    ["watch", "watch", 1],
+    ["warning", "watch", 1],
+    ["critical", "critical", 1],
+  ] as const)("uses published %s capacity rather than telemetry presence", (thresholdState, severity, issueCount) => {
+    const data = degraded(makeHealthyStatusResponse(), { d1Usage: {
+      ...telemetry,
+      capacity: {
+        observedAt: 100, databaseSizeBytes: 95, maximumSizeBytes: 100,
+        utilizationRatio: 0.95, utilizationPercent: 95, thresholdState,
+        crossedThresholdPercent: 90, nextThresholdPercent: 100, sampleCount: 1,
+        forecastBasis: "insufficient-history", forecastSpanHours: 0,
+        growthBytesPerDay: null, nextThresholdAt: null, exhaustionAt: null, daysUntilExhaustion: null,
+      },
+    } });
+    expect(buildPipelineModeSummaries(data).find((mode) => mode.id === "storage"))
+      .toMatchObject({ severity, issueCount });
+  });
+
+  it.each([
+    ["absent capacity", telemetry, {}],
+    ["null capacity", { ...telemetry, capacity: null }, {}],
+    ["failed telemetry", null, { d1Usage: { code: "d1_usage_failed", message: "Telemetry failed" } }],
+  ] as const)("keeps %s Unknown with an evidence issue", (_label, d1Usage, sectionErrors) => {
+    const data = degraded(makeHealthyStatusResponse(), { d1Usage, sectionErrors });
+    expect(buildPipelineModeSummaries(data).find((mode) => mode.id === "storage"))
+      .toMatchObject({ severity: "unknown", issueCount: 1 });
   });
 });
 

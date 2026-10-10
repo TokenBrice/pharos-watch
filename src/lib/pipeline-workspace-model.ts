@@ -1,4 +1,6 @@
 import type { StatusResponse, StatusSectionKey } from "@shared/types";
+import { getPriceSourceHealthMissingCounts } from "@shared/lib/pricing-sources";
+import { getMissingPriceTileSeverity } from "@shared/lib/status-thresholds";
 import { healthSeverity, pickInitialMode, worstSeverity, type WorkspaceSeverity } from "@/lib/status/workspace-mode";
 import { buildPipelineIntegrityModel } from "@/lib/pipeline-workspace-integrity-builder";
 import { buildPipelineQualityModel } from "@/lib/pipeline-workspace-quality-builder";
@@ -131,11 +133,11 @@ export function buildPipelineModeSummaries(data: StatusResponse): PipelineModeSu
       if (missing == null) {
         marketStates.push("unknown");
         marketCount += 1;
-      } else if (missing > 0) {
-        marketStates.push(missing > 3 ? "critical" : "watch");
-        marketCount += missing;
       } else {
-        marketStates.push("healthy");
+        const { unacknowledged } = getPriceSourceHealthMissingCounts(missing, priceHealth.acknowledgedMissingCount);
+        const severity = getMissingPriceTileSeverity(unacknowledged);
+        marketStates.push(severity === "red" ? "critical" : severity === "amber" ? "watch" : severity === "green" ? "healthy" : "unknown");
+        marketCount += severity === "neutral" ? 1 : unacknowledged;
       }
     }
   } else {
@@ -215,8 +217,14 @@ export function buildPipelineModeSummaries(data: StatusResponse): PipelineModeSu
   const storageStates: PipelineSeverity[] = [];
   let storageCount = loaderErrorCount("storage") + freshnessMissing;
   if (freshnessMissing > 0) storageStates.push("unknown");
-  if (data.d1Usage) storageStates.push("healthy");
-  else {
+  if (data.d1Usage) {
+    const capacity = data.d1Usage.capacity;
+    const state = !capacity ? "unknown"
+      : capacity.thresholdState === "critical" ? "critical"
+        : capacity.thresholdState === "normal" ? "healthy" : "watch";
+    storageStates.push(state);
+    if (state !== "healthy") storageCount += 1;
+  } else {
     storageStates.push("unknown");
     storageCount += payloadIssueCount(Boolean(data.sectionErrors.d1Usage), 0);
   }

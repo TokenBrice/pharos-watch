@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { PriceSourceHealthSchema } from "@shared/types/pricing-source-health";
 import { PriceSourceHealthCard } from "@/components/status/price-source-health";
+import { buildPipelineModeSummaries } from "@/lib/pipeline-workspace-model";
+import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
 const legacy = { totalAssets: 567, lastSync: 100,
   confidenceDistribution: { high: 115, "single-source": 325, low: 20, fallback: 1 },
@@ -101,5 +103,43 @@ describe("price confidence severity calibration", () => {
     });
     render(<PriceSourceHealthCard health={health} nowSeconds={100} />);
     expect(screen.getByText("2").className).toContain("text-amber");
+  });
+});
+
+describe("Markets and Missing tile review parity", () => {
+  it.each([
+    ["all acknowledged", 4, 4, true, 0, "healthy"],
+    ["partially acknowledged", 4, 2, true, 2, "watch"],
+    ["expired review producer count", 4, 0, true, 4, "critical"],
+    ["legacy full-cache fallback", 4, undefined, false, 4, "critical"],
+  ] as const)("uses unacknowledged counts for %s", (_label, missing, acknowledgedMissingCount, active, expectedCount, severity) => {
+    const distribution = {
+      totalAssets: 10, confidenceDistribution: { high: 6, "single-source": 0, low: 0, fallback: 0 },
+      sourceDistribution: { missing }, acknowledgedMissingCount,
+    };
+    const health = PriceSourceHealthSchema.parse({
+      ...distribution, lastSync: 100, ...(active ? { active: distribution } : {}),
+    });
+    const data = {
+      ...makeHealthyStatusResponse(), priceSourceHealth: health,
+      liquidityHealth: {
+        lastRunStatus: "ok", currentCoverage: 10, previousCoverage: 10,
+        currentGlobalTvl: 100, previousGlobalTvl: 100,
+        currentTop10CoveredTvl: 100, previousTop10CoveredTvl: 100,
+        currentTop10GuardTvl: 100, previousTop10GuardTvl: 100,
+        failedSources: [], nearCoverageGuard: false, nearValueGuard: false, nearMajorCoverageGuard: false,
+        currentCoverageClasses: { primary: 10, mixed: 0, fallback: 0, legacy: 0, unobserved: 0 },
+        previousCoverageClasses: { primary: 10, mixed: 0, fallback: 0, legacy: 0, unobserved: 0 },
+      },
+      coingeckoPriceDiff: {
+        checkedAt: 100, trackedWithGeckoId: 10, comparedCoins: 10, mismatchedCount: 0, thresholdPct: 5, rows: [],
+      },
+    };
+    render(<PriceSourceHealthCard health={health} nowSeconds={100} />);
+    const tile = within(screen.getByText("Missing").parentElement!);
+    expect(tile.getByText(String(expectedCount))).toBeTruthy();
+    if ((acknowledgedMissingCount ?? 0) > 0) expect(tile.getByText(/acknowledged/)).toBeTruthy();
+    expect(buildPipelineModeSummaries(data).find((mode) => mode.id === "markets"))
+      .toMatchObject({ issueCount: expectedCount, severity });
   });
 });

@@ -8,6 +8,7 @@ import {
 import {
   PRICE_SOURCE_HEALTH_BUCKET_KEYS,
   getPriceSourceHealthBucketShortLabel,
+  getPriceSourceHealthMissingCounts,
 } from "@shared/lib/pricing-sources";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PriceSourceHealth, StatusSectionError } from "@shared/types";
@@ -94,12 +95,8 @@ export function PriceSourceHealthCard({
     },
   ];
 
-  // Acknowledged price-gap reviews stay visible as raw missing rows but do not
-  // drive the Missing tile; an expired review counts again on the next sync.
-  const acknowledged = typeof acknowledgedMissingCount === "number"
-    ? Math.max(0, Math.min(acknowledgedMissingCount, sd.missing))
-    : 0;
-  const unacknowledgedMissing = sd.missing - acknowledged;
+  const { acknowledged, unacknowledged: unacknowledgedMissing } =
+    getPriceSourceHealthMissingCounts(sd.missing, acknowledgedMissingCount);
 
   return (
     <Card>
