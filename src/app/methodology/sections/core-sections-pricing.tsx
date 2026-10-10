@@ -3,14 +3,7 @@ import {
   PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
   PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
-import {
-  TableBody,
-  TableCell,
-  TableFrame,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/table";
+import { ContentTable } from "@/components/table";
 import {
   MethodologyDetails,
   MethodologyDiagramFlow,
@@ -323,38 +316,32 @@ export function PricingPipelineMethodologySection() {
 
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Source Weights</h3>
-            <TableFrame
-              chrome="content"
-              density="compact"
+            <ContentTable
               tableId="methodology-pricing-source-weights"
               testId="methodology-pricing-source-weights-table"
-              viewportProps={{ mobileScrollHint: false }}
-            >
-              <TableHeader>
-                <TableRow className="text-left">
-                  <TableHead scope="col" className="py-2 pr-4 text-foreground">Source</TableHead>
-                  <TableHead scope="col" className="py-2 pr-4 text-foreground">Weight</TableHead>
-                  <TableHead scope="col" className="py-2 pr-4 text-foreground">Type</TableHead>
-                  <TableHead scope="col" className="py-2 text-foreground">Notes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">CoinGecko</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">Aggregator</TableCell><TableCell className="py-2 whitespace-normal">Primary market data via <code className="text-xs">/simple/price</code></TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">CoinGecko ticker</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">Exchange ticker</TableCell><TableCell className="py-2 whitespace-normal">Curated ticker corroboration path for tracked exchange pairs</TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">DefiLlama (list)</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">Aggregator</TableCell><TableCell className="py-2 whitespace-normal">Independent stablecoins list price via <code className="text-xs">stablecoins.llama.fi</code></TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">Binance</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">CEX</TableCell><TableCell className="py-2 whitespace-normal">Single batch call for all spot tickers</TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">Kraken</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">CEX</TableCell><TableCell className="py-2 whitespace-normal">Explicit pair mapping with alias-safe response handling</TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">Bitstamp</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">CEX</TableCell><TableCell className="py-2 whitespace-normal">Lower-weight corroboration via the all-tickers endpoint</TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">Coinbase</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">CEX</TableCell><TableCell className="py-2 whitespace-normal">Per-symbol spot prices</TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">RedStone</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">Oracle</TableCell><TableCell className="py-2 whitespace-normal">Per-venue breakdown; requires at least 2 venues and 60% agreement</TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">Curve on-chain</TableCell><TableCell className="py-2 pr-4">3</TableCell><TableCell className="py-2 pr-4">On-chain</TableCell><TableCell className="py-2 whitespace-normal">StableSwap implied prices via explicit direct, one-hop, and opt-in chained-hop <code className="text-xs">get_dy()</code> routes</TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">Curve oracle</TableCell><TableCell className="py-2 pr-4">3</TableCell><TableCell className="py-2 pr-4">On-chain</TableCell><TableCell className="py-2 whitespace-normal">Additional primary-consensus voice for <code className="text-xs">crvusd-curve</code></TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">DEX pools</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">On-chain</TableCell><TableCell className="py-2 whitespace-normal">Aggregate DEX voice, withheld only when an overlapping protocol-level DEX bridge lane is admitted; the reviewed VUSD route may enter primary publication at the existing $250K UI floor while remaining soft and non-depeg-authoritative</TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">Protocol DEX APIs</TableCell><TableCell className="py-2 pr-4">2-3</TableCell><TableCell className="py-2 pr-4">On-chain / pool-state API</TableCell><TableCell className="py-2 whitespace-normal">Primary-consensus protocol promotion currently supports Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream when the protocol lane survives registry, TVL, freshness, and corroboration gates.</TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">GeckoTerminal</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">On-chain</TableCell><TableCell className="py-2 whitespace-normal">Pool-level cross-check for weak CG / DL-list soft-source outcomes (&ge;$10K TVL)</TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">Exact-address providers</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">Market / on-chain</TableCell><TableCell className="py-2 whitespace-normal">Optional targeted DexScreener, DexPaprika, CoinGecko Onchain, Alchemy Prices, Moralis, and Solana Birdeye quotes; currently disabled in production Worker config for quarter-hour sync headroom</TableCell></TableRow>
-              </TableBody>
-            </TableFrame>
+              columns={[
+                { id: "source", header: "Source", cellClassName: "text-foreground" },
+                { id: "weight", header: "Weight" },
+                { id: "type", header: "Type" },
+                { id: "notes", header: "Notes", cellClassName: "whitespace-normal" },
+              ]}
+              rows={[
+                ["CoinGecko", "2", "Aggregator", <>Primary market data via <code className="text-xs">/simple/price</code></>],
+                ["CoinGecko ticker", "2", "Exchange ticker", "Curated ticker corroboration path for tracked exchange pairs"],
+                ["DefiLlama (list)", "1", "Aggregator", <>Independent stablecoins list price via <code className="text-xs">stablecoins.llama.fi</code></>],
+                ["Binance", "2", "CEX", "Single batch call for all spot tickers"],
+                ["Kraken", "2", "CEX", "Explicit pair mapping with alias-safe response handling"],
+                ["Bitstamp", "1", "CEX", "Lower-weight corroboration via the all-tickers endpoint"],
+                ["Coinbase", "2", "CEX", "Per-symbol spot prices"],
+                ["RedStone", "1", "Oracle", "Per-venue breakdown; requires at least 2 venues and 60% agreement"],
+                ["Curve on-chain", "3", "On-chain", <>StableSwap implied prices via explicit direct, one-hop, and opt-in chained-hop <code className="text-xs">get_dy()</code> routes</>],
+                ["Curve oracle", "3", "On-chain", <>Additional primary-consensus voice for <code className="text-xs">crvusd-curve</code></>],
+                ["DEX pools", "1", "On-chain", "Aggregate DEX voice, withheld only when an overlapping protocol-level DEX bridge lane is admitted; the reviewed VUSD route may enter primary publication at the existing $250K UI floor while remaining soft and non-depeg-authoritative"],
+                ["Protocol DEX APIs", "2-3", "On-chain / pool-state API", "Primary-consensus protocol promotion currently supports Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream when the protocol lane survives registry, TVL, freshness, and corroboration gates."],
+                ["GeckoTerminal", "1", "On-chain", <>Pool-level cross-check for weak CG / DL-list soft-source outcomes (&ge;$10K TVL)</>],
+                ["Exact-address providers", "1", "Market / on-chain", "Optional targeted DexScreener, DexPaprika, CoinGecko Onchain, Alchemy Prices, Moralis, and Solana Birdeye quotes; currently disabled in production Worker config for quarter-hour sync headroom"],
+              ].map(([source, weight, type, notes]) => ({ id: String(source), cells: { source, weight, type, notes } }))}
+            />
           </div>
 
           <div className="space-y-2">
@@ -417,27 +404,33 @@ export function PricingPipelineMethodologySection() {
 
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Confidence Levels</h3>
-            <TableFrame
-              chrome="content"
-              density="compact"
+            <ContentTable
               tableId="methodology-pricing-confidence-levels"
               testId="methodology-pricing-confidence-levels-table"
-              viewportProps={{ mobileScrollHint: false }}
-            >
-              <TableHeader>
-                <TableRow className="text-left">
-                  <TableHead scope="col" className="py-2 pr-4 text-foreground">Level</TableHead>
-                  <TableHead scope="col" className="py-2 pr-4 text-foreground">Condition</TableHead>
-                  <TableHead scope="col" className="py-2 text-foreground">Downstream effect</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow><TableCell className="py-2 pr-4 text-green-700 dark:text-green-400 font-medium">high</TableCell><TableCell className="py-2 pr-4 whitespace-normal">Independent agreeing cluster survives list-aggregator downgrade and pool challenge</TableCell><TableCell className="py-2 whitespace-normal">Published as the agreeing cluster median; depeg detection still checks authoritative-source trust before skipping confirmation</TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-yellow-700 dark:text-yellow-400 font-medium">single-source</TableCell><TableCell className="py-2 pr-4 whitespace-normal">One usable source, or a non-independent list-aggregator cluster treated as one source</TableCell><TableCell className="py-2 whitespace-normal">Depeg detection requires pending confirmation</TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-orange-700 dark:text-orange-400 font-medium">low</TableCell><TableCell className="py-2 pr-4 whitespace-normal">Sources disagree beyond threshold, or pool challenge fired</TableCell><TableCell className="py-2 whitespace-normal">Pool challenge: TVL-weighted pool price used; otherwise closest to peg reference; depeg requires confirmation</TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-red-700 dark:text-red-400 font-medium">fallback</TableCell><TableCell className="py-2 pr-4 whitespace-normal">All primary sources down; enrichment or cache used</TableCell><TableCell className="py-2 whitespace-normal">Depeg mutations blocked; stale banner shown on frontend</TableCell></TableRow>
-              </TableBody>
-            </TableFrame>
+              columns={[
+                { id: "level", header: "Level" },
+                { id: "condition", header: "Condition", cellClassName: "whitespace-normal" },
+                { id: "effect", header: "Downstream effect", cellClassName: "whitespace-normal" },
+              ]}
+              rows={[
+                { id: "high", cellClassNames: { level: "text-green-700 dark:text-green-400 font-medium" }, cells: {
+                  level: "high", condition: "Independent agreeing cluster survives list-aggregator downgrade and pool challenge",
+                  effect: "Published as the agreeing cluster median; depeg detection still checks authoritative-source trust before skipping confirmation",
+                } },
+                { id: "single-source", cellClassNames: { level: "text-yellow-700 dark:text-yellow-400 font-medium" }, cells: {
+                  level: "single-source", condition: "One usable source, or a non-independent list-aggregator cluster treated as one source",
+                  effect: "Depeg detection requires pending confirmation",
+                } },
+                { id: "low", cellClassNames: { level: "text-orange-700 dark:text-orange-400 font-medium" }, cells: {
+                  level: "low", condition: "Sources disagree beyond threshold, or pool challenge fired",
+                  effect: "Pool challenge: TVL-weighted pool price used; otherwise closest to peg reference; depeg requires confirmation",
+                } },
+                { id: "fallback", cellClassNames: { level: "text-red-700 dark:text-red-400 font-medium" }, cells: {
+                  level: "fallback", condition: "All primary sources down; enrichment or cache used",
+                  effect: "Depeg mutations blocked; stale banner shown on frontend",
+                } },
+              ]}
+            />
           </div>
 
           <div className="space-y-2">

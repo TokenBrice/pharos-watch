@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type * as PsiHistoryEvents from "@/lib/psi-history-events";
+import { getConditionBand, PSI_COMPONENT_LIMITS, PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 import {
   buildPsiComponentData,
   buildPsiBeamDimmers,
@@ -21,6 +22,24 @@ vi.mock("@/lib/psi-history-events", async (importOriginal) => {
 });
 
 describe("stability index view-model", () => {
+  it("uses the canonical bands for average and event labels and limits for beam maxima", () => {
+    const date = Date.UTC(2023, 2, 12);
+    for (const { min } of PSI_CONDITION_BANDS) {
+      for (const score of [min, min - 0.1].filter((value) => value >= 0)) {
+        const band = getConditionBand(score);
+        expect(buildPsiHistoryStats([{ date: date / 1000, score, band }], date / 1000)[2].band).toBe(band);
+        expect(buildPsiEventTimelineRows([{ ts: date, score }]).find((row) => row.label === "SVB Weekend")?.psiBand).toBe(band);
+      }
+    }
+    expect(buildPsiHistoryStats([{ date: date / 1000, score: -1, band: "" }], date / 1000)[2].band).toBe("");
+    expect(buildPsiEventTimelineRows([{ ts: date, score: -1 }]).find((row) => row.label === "SVB Weekend")?.psiBand).toBe("");
+    const lanes = buildPsiBeamDimmers([{ ...PSI_COMPONENT_LIMITS, trend: -PSI_COMPONENT_LIMITS.trend }]);
+    for (const lane of lanes) {
+      expect(lane.max).toBe(PSI_COMPONENT_LIMITS[lane.key]);
+      expect(lane.pressurePct).toBe(100);
+    }
+  });
+
   it("builds component series by combining historical points with the current sample", () => {
     const result = buildPsiComponentData(
       [

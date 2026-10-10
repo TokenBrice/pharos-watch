@@ -8,7 +8,7 @@ import {
 } from "@shared/lib/methodology-versions/base";
 import { slugifyId } from "@shared/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { ContentTable } from "@/components/table";
 
 export function scoringAnchorId(version: string) {
   return `scoring-${slugifyId(version)}`;
@@ -29,75 +29,6 @@ export const changelogTableClassNames = {
   numericHead: "h-auto whitespace-normal px-0 py-2 pr-4 text-right font-medium text-foreground last:pr-0",
   numericCell: "pharos-numeric whitespace-normal px-0 py-2 pr-4 text-right align-top last:pr-0",
 };
-
-function ChangelogTable({
-  ariaLabel,
-  children,
-  tableId,
-  testId,
-}: {
-  ariaLabel?: string;
-  children: ReactNode;
-  tableId?: string;
-  testId?: string;
-}) {
-  return (
-    <TableFrame
-      chrome="content"
-      density="compact"
-      tableId={tableId}
-      testId={testId}
-      viewportProps={{ mobileScrollHint: false }}
-      tableProps={ariaLabel ? { "aria-label": ariaLabel } : undefined}
-    >
-      {children}
-    </TableFrame>
-  );
-}
-
-type ChangelogDataTableColumn = {
-  id: string; label: ReactNode; headClassName?: string; cellClassName?: string; rowHeader?: boolean;
-};
-type ChangelogDataTableRow = { id: string; cells: Record<string, ReactNode> };
-
-export function ChangelogDataTable({
-  columns,
-  rows,
-  ...tableProps
-}: {
-  columns: readonly ChangelogDataTableColumn[];
-  rows: readonly ChangelogDataTableRow[];
-  ariaLabel?: string;
-  tableId?: string;
-  testId?: string;
-}) {
-  return (
-    <ChangelogTable {...tableProps}>
-      <TableHeader>
-        <TableRow>
-          {columns.map((column) => (
-            <TableHead key={column.id} scope="col" className={column.headClassName ?? changelogTableClassNames.head}>
-              {column.label}
-            </TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((row) => (
-          <TableRow key={row.id}>
-            {columns.map((column) => (
-              <TableCell key={column.id} className={column.cellClassName ?? (column.rowHeader
-                ? changelogTableClassNames.rowHeader
-                : changelogTableClassNames.cell)}>
-                {row.cells[column.id]}
-              </TableCell>
-            ))}
-          </TableRow>
-        ))}
-      </TableBody>
-    </ChangelogTable>
-  );
-}
 
 function ChangelogRichText({ text }: { text: MethodologyChangelogRichText }) {
   const segments = typeof text === "string" ? [text] : text;
@@ -160,12 +91,17 @@ function ChangelogDetailBlocks({ blocks }: { blocks: readonly MethodologyChangel
             return <WeightRow key={index} values={block.values} />;
           case "table":
             return (
-              <ChangelogDataTable
+              <ContentTable
                 key={index}
-                ariaLabel={block.ariaLabel}
+                tableProps={block.ariaLabel ? { "aria-label": block.ariaLabel } : undefined}
                 tableId={block.tableId}
                 testId={block.testId}
-                columns={block.columns}
+                columns={block.columns.map(({ label, headClassName, cellClassName, ...column }) => ({
+                  ...column,
+                  header: label,
+                  headerClassName: headClassName ?? changelogTableClassNames.head,
+                  cellClassName: cellClassName ?? (column.rowHeader ? changelogTableClassNames.rowHeader : changelogTableClassNames.cell),
+                }))}
                 rows={block.rows}
               />
             );
@@ -236,11 +172,11 @@ export function VersionCard({
 function WeightRow({ values }: { values: readonly [string, string, string, string, string, string] }) {
   const headers = ["Peg", "Liquidity", "Safety", "Resilience", "Decentralization", "Dep Risk"];
   return (
-    <ChangelogDataTable
+    <ContentTable
       columns={headers.map((header) => ({
         id: header,
-        label: header,
-        headClassName: changelogTableClassNames.numericHead,
+        header,
+        headerClassName: changelogTableClassNames.numericHead,
         cellClassName: changelogTableClassNames.numericCell,
       }))}
       rows={[{ id: "weights", cells: Object.fromEntries(headers.map((header, index) => [header, values[index]])) }]}

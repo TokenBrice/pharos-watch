@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
 import type { MethodologyChangelogDetailBlock } from "@shared/lib/methodology-versions/base";
 import { ScoringChangelogContent, scoringAnchorId } from "./content";
+import { StructuredChangelogDetail } from "./content-shared";
 
 describe("ScoringChangelogContent", () => {
   it("preserves the version anchor and quick-reference rendering contracts", () => {
@@ -21,6 +22,38 @@ describe("ScoringChangelogContent", () => {
     expect(html).toContain("Quick Reference");
     expect(html).toContain("Weight evolution");
     expect(html).toContain("Grade threshold evolution");
+    for (const [id, label] of [
+      ["scoring-weight-evolution", "Safety Score weight evolution"],
+      ["scoring-grade-threshold-evolution", "Safety Score grade threshold evolution"],
+    ]) {
+      expect(html).toContain(`data-table-id="${id}"`);
+      expect(html).toContain(`data-testid="${id}-table"`);
+      expect(html).toContain(`aria-label="${label}"`);
+    }
+    expect(html).toContain('scope="row"');
+  });
+
+  it("supports typed column class overrides while retaining semantic row headers", () => {
+    const detail: MethodologyChangelogDetailBlock = {
+      kind: "table",
+      ariaLabel: "Column overrides",
+      tableId: "column-overrides",
+      testId: "column-overrides-table",
+      columns: [
+        { id: "label", label: "Label", rowHeader: true, headClassName: "text-right", cellClassName: "italic" },
+        { id: "value", label: "Value" },
+      ],
+      rows: [{ id: "example", cells: { label: "Example", value: "42" } }],
+    };
+    const html = renderToStaticMarkup(
+      <StructuredChangelogDetail entry={{ ...SAFETY_SCORE_METHODOLOGY_CHANGELOG[0], detail: [detail] }} />,
+    );
+    const headers = Array.from(html.matchAll(/<th\b[^>]*>/g), ([tag]) => tag);
+    const columnClasses = headers.find((tag) => tag.includes('scope="col"'))?.match(/class="([^"]*)"/)?.[1].split(" ");
+    const rowClasses = headers.find((tag) => tag.includes('scope="row"'))?.match(/class="([^"]*)"/)?.[1].split(" ");
+    expect(columnClasses).toContain("text-right");
+    expect(rowClasses).toContain("italic");
+    expect(html).toContain('data-row-intent="static"');
   });
 
   it("renders every machine-readable safety score changelog version", () => {

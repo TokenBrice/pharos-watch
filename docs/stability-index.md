@@ -17,7 +17,7 @@ Historical entries before formal versioning were reconstructed from git commit h
 Score = 100 − severity − breadth − stressBreadth + trend
 ```
 
-Clamped to [0, 100], rounded to 1 decimal place.
+Clamped to [0, 100], rounded to 1 decimal place. `shared/lib/psi-policy.ts` owns component limits and inclusive band boundaries; Worker scoring, frontend chart zones, average/event labels, and beam maxima consume that policy.
 
 ## Components
 

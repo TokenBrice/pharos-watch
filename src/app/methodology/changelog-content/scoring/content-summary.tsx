@@ -1,15 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChangelogDataTable, changelogTableClassNames } from "./content-shared";
+import { ContentTable } from "@/components/table";
+import { changelogTableClassNames } from "./content-shared";
 
 const WEIGHT_EVOLUTION_COLUMNS = [
-  { id: "version", label: "Version", rowHeader: true },
-  { id: "peg", label: "Peg" },
-  { id: "liquidity", label: "Liquidity" },
-  { id: "safety", label: "Safety" },
-  { id: "resilience", label: "Resilience" },
-  { id: "decentralization", label: "Decentralization" },
-  { id: "dependencyRisk", label: "Dep Risk" },
-];
+  { id: "version", header: "Version", rowHeader: true },
+  { id: "peg", header: "Peg" },
+  { id: "liquidity", header: "Liquidity" },
+  { id: "safety", header: "Safety" },
+  { id: "resilience", header: "Resilience" },
+  { id: "decentralization", header: "Decentralization" },
+  { id: "dependencyRisk", header: "Dep Risk" },
+].map((column) => ({
+  ...column,
+  headerClassName: changelogTableClassNames.head,
+  cellClassName: column.rowHeader ? changelogTableClassNames.rowHeader : changelogTableClassNames.cell,
+}));
 
 const WEIGHT_EVOLUTION_ROWS = [
   ["v1.0", "25%", "25%", "20%", "15%", "10%", "5%"],
@@ -26,12 +31,15 @@ const WEIGHT_EVOLUTION_ROWS = [
 }));
 
 const GRADE_EVOLUTION_COLUMNS = [
-  { id: "grade", label: "Grade", rowHeader: true },
-  { id: "v1", label: "v1.0" },
-  { id: "v4", label: <>v4.0 (&minus;5)</> },
-  { id: "v5", label: <>v5.1 (&minus;5)</>, cellClassName: changelogTableClassNames.rowHeader },
-];
-
+  { id: "grade", header: "Grade", rowHeader: true },
+  { id: "v1", header: "v1.0" },
+  { id: "v4", header: <>v4.0 (&minus;5)</> },
+  { id: "v5", header: <>v5.1 (&minus;5)</>, cellClassName: changelogTableClassNames.rowHeader },
+].map((column) => ({
+  ...column,
+  headerClassName: changelogTableClassNames.head,
+  cellClassName: column.cellClassName ?? (column.rowHeader ? changelogTableClassNames.rowHeader : changelogTableClassNames.cell),
+}));
 const GRADE_EVOLUTION_ROWS = [
   ["A+", "97", "92", "87"], ["A", "93", "88", "83"], ["A−", "90", "85", "80"],
   ["B+", "85", "80", "75"], ["B", "80", "75", "70"], ["B−", "75", "70", "65"],
@@ -51,8 +59,8 @@ export function ScoringChangelogSummaryTables() {
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Weight evolution (V8 and earlier)</h3>
             <p>V9 replaced these dimensions with Backing 40%, Exit 35%, and Economic Control 25%.</p>
-            <ChangelogDataTable
-              ariaLabel="Safety Score weight evolution"
+            <ContentTable
+              tableProps={{ "aria-label": "Safety Score weight evolution" }}
               tableId="scoring-weight-evolution"
               testId="scoring-weight-evolution-table"
               columns={WEIGHT_EVOLUTION_COLUMNS}
@@ -62,8 +70,8 @@ export function ScoringChangelogSummaryTables() {
 
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Grade threshold evolution</h3>
-            <ChangelogDataTable
-              ariaLabel="Safety Score grade threshold evolution"
+            <ContentTable
+              tableProps={{ "aria-label": "Safety Score grade threshold evolution" }}
               tableId="scoring-grade-threshold-evolution"
               testId="scoring-grade-threshold-evolution-table"
               columns={GRADE_EVOLUTION_COLUMNS}
