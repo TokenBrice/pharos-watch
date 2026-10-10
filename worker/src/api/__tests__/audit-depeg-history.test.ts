@@ -1,11 +1,18 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { mockFetchRetry } from "../../test-helpers/cron";
 import { D1_BATCH_SIZE } from "../../lib/constants";
 import { makeAuditEvent } from "./depeg-replay.test-support";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { seedPsiPairedHistory, seedPsiEvent, readPsiDay } from "./psi-replay.test-support";
+import { buildRecomputeStabilityStatements } from "../audit-depeg-history/stability-recompute";
+import { loadPsiEligibleDepegEvents } from "../../lib/psi-replay-inputs";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 const fetchWithRetryMock = vi.hoisted(() => vi.fn());
 const DAY_SECONDS = 86_400;
@@ -173,10 +180,11 @@ describe("handleAuditDepegHistory method safety", () => {
       { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows: [longEvent] },
       { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
       {
-        match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE",
+        match: "FROM depeg_events e LEFT JOIN depeg_event_provenance p",
         rows: [],
       },
       { match: "FROM supply_history", rows: supplyRows },
+      { match: "FROM stress_signal_history", rows: supplyRows.map((row) => ({ ...row, band: "CALM" })) },
       { match: "DELETE FROM stability_index WHERE computed_at", rows: [] },
       { match: "INSERT INTO stability_index", rows: [] },
     ]);
@@ -250,13 +258,16 @@ describe("handleAuditDepegHistory method safety", () => {
       { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
       { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
       {
-        match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE",
+        match: "FROM depeg_events e LEFT JOIN depeg_event_provenance p",
         rows: [],
       },
       {
         match: "FROM supply_history",
-        rows: [{ stablecoin_id: "usdt-tether", snapshot_date: 1_799_971_200, circulating_usd: 1_000_000_000 }],
+        rows: [1_799_971_200 - 7 * DAY_SECONDS, 1_799_971_200].map((snapshot_date) => ({
+          stablecoin_id: "usdt-tether", snapshot_date, circulating_usd: 1_000_000_000,
+        })),
       },
+      { match: "FROM stress_signal_history", rows: [{ stablecoin_id: "usdt-tether", snapshot_date: 1_799_971_200, band: "CALM" }] },
       { match: "DELETE FROM stability_index WHERE computed_at", rows: [] },
       { match: "INSERT INTO stability_index", rows: [], throwError: new Error("insert failed") },
     ]) as MockD1Database;
@@ -273,7 +284,7 @@ describe("handleAuditDepegHistory method safety", () => {
     expect(supplyQuery?.sql).toContain("WHERE snapshot_date BETWEEN ? AND ?");
     expect(supplyQuery?.binds).toEqual([
       affectedDay - 21 * DAY_SECONDS,
-      affectedDay + 14 * DAY_SECONDS,
+      affectedDay,
     ]);
   });
 
@@ -310,11 +321,14 @@ describe("handleAuditDepegHistory method safety", () => {
       { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
       { match: "FROM depeg_events ORDER BY stablecoin_id, started_at", rows },
       { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
-      { match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE", rows },
+      { match: "FROM depeg_events e LEFT JOIN depeg_event_provenance p", rows },
       {
         match: "FROM supply_history",
-        rows: [{ stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 1_000_000_000 }],
+        rows: [day - 7 * DAY_SECONDS, day].map((snapshot_date) => ({
+          stablecoin_id: "usdt-tether", snapshot_date, circulating_usd: 1_000_000_000,
+        })),
       },
+      { match: "FROM stress_signal_history", rows: [{ stablecoin_id: "usdt-tether", snapshot_date: day, band: "CALM" }] },
       {
         match: "UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ? WHERE id = ?",
         rows: [],
@@ -404,11 +418,12 @@ describe("handleAuditDepegHistory method safety", () => {
       { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
       { match: "FROM depeg_events ORDER BY stablecoin_id, started_at", rows },
       { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
-      { match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE", rows },
+      { match: "FROM depeg_events e LEFT JOIN depeg_event_provenance p", rows },
       {
         match: "FROM supply_history",
         rows: [{ stablecoin_id: "susd-synthetix", snapshot_date: day, circulating_usd: 50_000_000 }],
       },
+      { match: "FROM stress_signal_history", rows: [] },
       {
         match: "UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ? WHERE id = ?",
         rows: [],
@@ -425,10 +440,15 @@ describe("handleAuditDepegHistory method safety", () => {
     const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     const body = (await readJsonResponse(res, 200)) as {
       repairedEventCount: number;
+      daysRecomputed: number;
       repairedGroups: Array<{ keeperId: number; mergedIds: number[] }>;
     };
     expect(body.repairedEventCount).toBe(1);
     expect(body.repairedGroups[0]).toMatchObject({ keeperId: 11, mergedIds: [10] });
+    expect(body.daysRecomputed).toBe(0);
+    expect(db.getHistory().some((entry) =>
+      entry.sql.includes("DELETE FROM stability_index") || entry.sql.includes("INSERT INTO stability_index"),
+    )).toBe(false);
 
     const updateEntry = db.getHistory().find((entry) =>
       entry.sql.includes("UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ? WHERE id = ?"),
@@ -706,7 +726,7 @@ describe("handleAuditDepegHistory method safety", () => {
       { match: "FROM cache WHERE key = ?", rows: [], first: null },
       { match: "FROM supply_history", rows: [] },
       { match: "INSERT INTO depeg_event_provenance", rows: [] },
-      { match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE", rows: [event] },
+      { match: "FROM depeg_events e LEFT JOIN depeg_event_provenance p", rows: [event] },
     ]) as MockD1Database;
 
     const result = await auditEvents(db, {
@@ -856,5 +876,74 @@ it("fails the batch with an explicit reason instead of a keyless CoinGecko fetch
     upstreamError: true,
     provenanceVerdict: null,
     invalidatesProvenance: false,
+  });
+});
+
+describe("audit provenance PSI transaction", () => {
+  const day = Date.parse("2026-03-05T00:00:00Z") / 1000;
+
+  const setup = async () => {
+    const { sqlite, db } = fixtures.open();
+    const event = makeAuditEvent({
+      id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
+      direction: "below", source: "live", peg_reference: 1,
+      started_at: day + 3600, ended_at: day + 7200,
+      start_price: 0.97, peak_price: 0.97, peak_deviation_bps: -300,
+    });
+    seedPsiEvent(sqlite, event);
+    seedPsiPairedHistory(sqlite, day);
+    sqlite.prepare(`INSERT INTO depeg_event_provenance
+      (event_id, source_kind, audit_verdict, created_at, updated_at)
+      VALUES (1, 'live', 'confirmed', ?, ?)`).run(day, day);
+    const initial = await buildRecomputeStabilityStatements(db, new Set([day]), await loadPsiEligibleDepegEvents(db));
+    await db.batch(initial.statements);
+    return { sqlite, db, event };
+  };
+
+  const setCgPrice = (price: number) => fetchWithRetryMock.mockImplementation(async () =>
+    new Response(JSON.stringify({ prices: [[(day + 3600) * 1000, price]] }), {
+      headers: { "Content-Type": "application/json" },
+    }));
+
+  it("excludes invalidated events and restores confirmed events in the same provenance-plus-PSI commit", async () => {
+    const { sqlite, db, event } = await setup();
+    const original = readPsiDay(sqlite, day);
+    expect(JSON.parse(original.input_snapshot).depegCount).toBe(1);
+    const options = {
+      events: [event], minSupply: 0, symbolFilter: null, offset: 0, limit: 10,
+      dryRun: false, coingeckoApiKey: "cg-test-key",
+    };
+    setCgPrice(1);
+    const invalidated = await auditEvents(db, options);
+    expect(invalidated.daysRecomputed).toBe(1);
+    expect(sqlite.prepare("SELECT audit_verdict FROM depeg_event_provenance WHERE event_id = 1").get())
+      .toMatchObject({ audit_verdict: "false_positive" });
+    const excluded = readPsiDay(sqlite, day);
+    expect(JSON.parse(excluded.input_snapshot).depegCount).toBe(0);
+    expect(JSON.parse(excluded.components)).toMatchObject({ severity: 0, breadth: 0 });
+    expect(excluded.score).toBeGreaterThan(original.score);
+
+    setCgPrice(0.97);
+    const restored = await auditEvents(db, options);
+    expect(restored.daysRecomputed).toBe(1);
+    expect(sqlite.prepare("SELECT audit_verdict FROM depeg_event_provenance WHERE event_id = 1").get())
+      .toMatchObject({ audit_verdict: "confirmed" });
+    expect(readPsiDay(sqlite, day)).toEqual(original);
+  });
+
+  it("rolls provenance and PSI back together when the downstream insert fails", async () => {
+    const { sqlite, db } = await setup();
+    const original = readPsiDay(sqlite, day);
+    sqlite.exec(`CREATE TRIGGER fail_psi_repair BEFORE INSERT ON stability_index
+      BEGIN SELECT RAISE(ABORT, 'forced PSI write failure'); END`);
+    setCgPrice(1);
+    const request = makeApiRequest("/api/audit-depeg-history?min-supply=0", { method: "POST", adminKey: "secret" });
+    const response = await handleAuditDepegHistoryTrusted({
+      db, request, url: new URL(request.url), coingeckoApiKey: "cg-test-key",
+    });
+    expect(response.status).toBe(500);
+    expect(sqlite.prepare("SELECT audit_verdict FROM depeg_event_provenance WHERE event_id = 1").get())
+      .toMatchObject({ audit_verdict: "confirmed" });
+    expect(readPsiDay(sqlite, day)).toEqual(original);
   });
 });

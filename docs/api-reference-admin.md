@@ -818,6 +818,8 @@ Backfills historical stability index scores from stored depeg events and supply 
 
 The rebuild stops at the last completed UTC day and preserves a stored day when archival inputs are unavailable. Denominators include only core stablecoins, cash equivalents and PSI historical assets; other classes retain history without contributing. Historical replay uses overlapping events and the as-of supply/price and start-day-versus-later-day severity rules in [Stability Index](./stability-index.md). Repair available historical price coverage before rerunning, including PSI historical assets; absent source series are never manufactured. Methodology `v3.0+` derives daily stress breadth from core-universe historical warning bands. The response names evaluated `startDay`/`endDay`.
 
+The replay supply window includes the full 21-day lookback needed by target/prior-week as-of admission. Trend compares paired identities only. The response's additive `unavailableDays` entries contain `{ day, reason, trendUnavailableIds }`; `trend-inputs-unavailable` and required-v3 `dews-archive-unavailable` preserve the previously stored day rather than publish neutral components. An observed all-CALM archive still yields measured zero stress.
+
 **Query parameters**
 
 | Param      | Type                               | Default                | Description                                                                      |
@@ -1112,7 +1114,7 @@ When a repair group ends in a live row, the live tail is kept as the canonical r
 
 `POST /api/audit-depeg-history?repair=contradictory-recovery-price` instead nulls ended-event `recovery_price` values that still sit outside the permitted depeg threshold. This is the bounded repair path for legacy rows closed by a native-quote recovery while the stored USD price still looked depegged.
 
-Mutating delete/repair runs and false-positive deletes stage any required PSI stability-index recompute into the same D1 batch commit. If that commit fails, the endpoint now returns `500` with a specific error and does not leave a partial delete/repair behind.
+Mutating delete/synthetic-repair runs and audit eligibility changes stage available PSI stability-index repairs into the same D1 batch commit. The canonical historical replay receives the post-audit event universe: invalidated events leave it and restored eligible events re-enter it. Supply prices, native quote-domain evidence and same-day DEWS archive rows match bounded backfill. Missing replay inputs retain the existing PSI day and log the named unavailable reason without inflating `daysRecomputed`. If the atomic provenance/mutation-plus-PSI commit fails, the endpoint returns `500` with a specific error and leaves both provenance/events and PSI unchanged.
 
 `GET` is accepted only with `dry-run=true`; mutating audits require `POST`.
 

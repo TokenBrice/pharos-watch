@@ -3,6 +3,7 @@ import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, type StabilityInput, 
 import type { SupplySnapshotMap, PsiUniverseCache } from "./psi-history-universe";
 import { getPsiHistoricalUniverseForDay } from "./psi-history-universe";
 import { buildStabilityInputForDay, type PsiDepegEventRow } from "./psi-recompute";
+import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 
 export interface PsiHistoricalDewsRow {
   stablecoin_id: string;
@@ -31,9 +32,9 @@ export function computeHistoricalDewsStressBreadth(
   supplyByCoin: SupplySnapshotMap,
   dewsByDay: PsiHistoricalDewsMap,
   universeCache?: PsiUniverseCache,
-): number {
-  const rows = dewsByDay.get(day) ?? [];
-  if (rows.length === 0) return 0;
+): number | null {
+  const rows = dewsByDay.get(day);
+  if (!rows?.length) return null;
 
   const universe = getPsiHistoricalUniverseForDay(supplyByCoin, day, universeCache);
   let stressBreadth = 0;
@@ -59,7 +60,10 @@ export interface HistoricalPsiReplayInput {
 
 export interface HistoricalPsiReplayResult {
   result: StabilityResult | null;
-  input: StabilityInput & {
+  unavailableReason: "trend-inputs-unavailable" | "dews-archive-unavailable" | "insufficient-market-cap" | null;
+  input: Omit<StabilityInput, "mcap7dChangePct"> & {
+    mcap7dChangePct: number | null;
+    trendUnavailableIds: string[];
     depegCount: number;
     eligibleUniverseCount: number;
     coveredUniverseCount: number;
@@ -67,6 +71,8 @@ export interface HistoricalPsiReplayResult {
     historicalPriceCoverageCount: number;
     peakDeviationFallbackCount: number;
     openDepegsWithoutPrice: number;
+    dewsArchiveRowCount: number;
+    dewsArchiveSnapshotDate: number | null;
   };
 }
 
@@ -80,26 +86,37 @@ export function replayHistoricalPsiForDay(
     input.supplyByCoin,
     input.universeCache,
   );
-  const stabilityInput: StabilityInput = {
+  const stressRequired = usesHistoricalStressBreadth(input.methodologyVersion);
+  const dewsArchiveRowCount = input.dewsByDay?.get(input.day)?.length ?? 0;
+  const dewsStressBreadth = stressRequired
+    ? computeHistoricalDewsStressBreadth(
+      input.day, input.supplyByCoin, input.dewsByDay ?? new Map(), input.universeCache,
+    )
+    : null;
+  const stabilityInput = {
     depegs: baseInput.depegs,
     totalMcapUsd: baseInput.totalMcapUsd,
     mcap7dChangePct: baseInput.mcap7dChangePct,
-    ...(usesHistoricalStressBreadth(input.methodologyVersion)
-      ? {
-        dewsStressBreadth: computeHistoricalDewsStressBreadth(
-          input.day,
-          input.supplyByCoin,
-          input.dewsByDay ?? new Map<number, PsiHistoricalDewsRow[]>(),
-          input.universeCache,
-        ),
-      }
-      : {}),
+    ...(dewsStressBreadth != null ? { dewsStressBreadth } : {}),
   };
+  const unavailableReason = baseInput.mcap7dChangePct == null
+    ? "trend-inputs-unavailable"
+    : stressRequired && dewsStressBreadth == null
+      ? "dews-archive-unavailable"
+      : !Number.isFinite(baseInput.totalMcapUsd) || baseInput.totalMcapUsd <= 0
+        ? "insufficient-market-cap"
+        : null;
 
   return {
-    result: computeStabilityIndex(stabilityInput),
+    unavailableReason,
+    result: unavailableReason == null && stabilityInput.mcap7dChangePct != null
+      ? computeStabilityIndex({ ...stabilityInput, mcap7dChangePct: stabilityInput.mcap7dChangePct })
+      : null,
     input: {
       ...stabilityInput,
+      trendUnavailableIds: baseInput.trendUnavailableIds,
+      dewsArchiveRowCount,
+      dewsArchiveSnapshotDate: dewsArchiveRowCount > 0 ? input.day : null,
       depegCount: baseInput.depegCount,
       eligibleUniverseCount: baseInput.eligibleUniverseCount,
       coveredUniverseCount: baseInput.coveredUniverseCount,
@@ -108,5 +125,17 @@ export function replayHistoricalPsiForDay(
       peakDeviationFallbackCount: baseInput.peakDeviationFallbackCount,
       openDepegsWithoutPrice: baseInput.openDepegsWithoutPrice,
     },
+  };
+}
+
+/** One persisted replay provenance shape for backfill and atomic audit repairs. */
+export function historicalPsiInputSnapshot(replay: HistoricalPsiReplayResult, methodologyVersion: string) {
+  const { depegs: _depegs, ...input } = replay.input;
+  return {
+    aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+    ...input,
+    degradedComponents: input.openDepegsWithoutPrice > 0 ? ["open-depeg-no-price"] : [],
+    stressBreadthIncluded: usesHistoricalStressBreadth(methodologyVersion),
+    methodologyVersion,
   };
 }

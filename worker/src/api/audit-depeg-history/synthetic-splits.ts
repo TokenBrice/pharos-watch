@@ -172,7 +172,7 @@ export function collectSyntheticSplitGroups(events: DepegRow[]): DepegRow[][] {
 }
 
 export function projectSyntheticSplitDepegEvents(
-  events: DepegRow[],
+  events: Array<PsiDepegEventRow & { id: number }>,
   repairedGroups: DepegRow[][],
 ): PsiDepegEventRow[] {
   const removedIds = new Set<number>();
@@ -188,6 +188,11 @@ export function projectSyntheticSplitDepegEvents(
 
     updatedRows.set(keeper.id, {
       stablecoin_id: keeper.stablecoin_id,
+      source: keeper.source,
+      peg_type: keeper.peg_type,
+      quote_mode: events.find((event) => event.id === keeper.id)?.quote_mode,
+      start_price: first.start_price,
+      recovery_price: tail.recovery_price,
       peak_deviation_bps: worst.peak_deviation_bps,
       peg_reference: first.peg_reference,
       started_at: first.started_at,
@@ -201,13 +206,7 @@ export function projectSyntheticSplitDepegEvents(
       continue;
     }
     projected.push(
-      updatedRows.get(row.id) ?? {
-        stablecoin_id: row.stablecoin_id,
-        peak_deviation_bps: row.peak_deviation_bps,
-        peg_reference: row.peg_reference,
-        started_at: row.started_at,
-        ended_at: row.ended_at,
-      },
+      updatedRows.get(row.id) ?? row,
     );
   }
 

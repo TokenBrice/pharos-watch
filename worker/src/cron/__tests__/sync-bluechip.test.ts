@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockD1Preset, findD1HistoryEntry, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";
-import { mockFetchRetry } from "../../test-helpers/cron";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import {
   getCacheJsonParseFailureCountersForTests,
@@ -25,10 +24,16 @@ vi.mock("@shared/lib/bluechip-slugs", () => ({
   },
 }));
 
-vi.mock("../../lib/fetch-retry", async (importOriginal) => ({
-  ...await importOriginal<typeof FetchRetry>(),
-  ...mockFetchRetry(),
-}));
+vi.mock("../../lib/fetch-retry", async (importOriginal) => {
+  const original = await importOriginal<typeof FetchRetry>();
+  return {
+    ...original,
+    // Keep retries out of orchestration fixtures, but exercise the real bounded
+    // body reader and its per-attempt deadline, including stalled 200 bodies.
+    fetchTextWithRetry: vi.fn((url: string, init?: RequestInit, _retries?: number, options?: Parameters<typeof original.fetchTextWithRetry>[3]) =>
+      original.fetchTextWithRetry(url, init, 0, { ...options, returnFinalResponse: true })),
+  };
+});
 
 vi.mock("../../lib/circuit-breaker", async (importOriginal) => {
   const original = await importOriginal<typeof import("../../lib/circuit-breaker")>();
@@ -75,6 +80,35 @@ describe("syncBluechip", () => {
       { slug: "tether", reason: "resource-budget-exceeded" },
       { slug: "usdc", reason: "resource-budget-exceeded" },
     ]);
+  });
+
+  it("cancels a stalled slug body and publishes siblings from subsequent batches", async () => {
+    BLUECHIP_SLUG_MAP.dai = "dai-makerdao";
+    BLUECHIP_SLUG_MAP.usds = "usds-sky";
+    const cancel = vi.fn();
+    const fetch = vi.fn(async (url: string) => url.endsWith("/tether")
+      ? new Response(new ReadableStream<Uint8Array>({
+        start(controller) { controller.enqueue(new TextEncoder().encode('{"data":[')); },
+        cancel,
+      }))
+      : new Response(JSON.stringify(bluechipResponse()), { headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetch);
+    const { db, sqlite } = fixtures.open();
+    const pending = syncBluechip(db);
+    await vi.runAllTimersAsync();
+    const result = await pending;
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(fetch.mock.calls.map(([url]) => {
+      const segments = url.split("/");
+      return segments[segments.length - 1];
+    })).toEqual(["tether", "usdc", "dai", "usds"]);
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(3);
+    expect(JSON.parse(result.metadata!).failedSlugs).toEqual([{ slug: "tether", reason: "no-response" }]);
+    const row = sqlite.prepare("SELECT value FROM cache WHERE key = 'bluechip-ratings'").get() as { value: string };
+    const ratings = JSON.parse(row.value);
+    expect(Object.keys(ratings).sort()).toEqual(["dai-makerdao", "usdc-circle", "usds-sky"]);
+    expect(ratings["usdc-circle"].observationState).toBe("current");
   });
   it("records malformed cached ratings JSON through the shared parse-failure counter", () => {
     expect(parseBluechipRatingsCache("{bad-json", "sync-bluechip:existing-cache")).toEqual({});
@@ -225,8 +259,6 @@ describe("syncBluechip", () => {
   it("returns degraded when bluechip API requests fail", async () => {
     const tetherResponse = new Response(JSON.stringify({ error: "down" }), { status: 500 });
     const usdcResponse = new Response(JSON.stringify({ error: "down" }), { status: 500 });
-    const tetherCancel = vi.spyOn(tetherResponse.body!, "cancel");
-    const usdcCancel = vi.spyOn(usdcResponse.body!, "cancel");
     mockFetch([{ match: () => true, respond: (request) =>
       request.url.includes("/coin-data/tether") ? tetherResponse : usdcResponse }]);
 
@@ -245,8 +277,8 @@ describe("syncBluechip", () => {
       { slug: "usdc", reason: "http-500" },
     ]);
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
-    expect(tetherCancel).toHaveBeenCalledOnce();
-    expect(usdcCancel).toHaveBeenCalledOnce();
+    expect(tetherResponse.bodyUsed).toBe(true);
+    expect(usdcResponse.bodyUsed).toBe(true);
   });
 
   it("merges fresh ratings into the existing cache when only a subset of slugs succeeds", async () => {

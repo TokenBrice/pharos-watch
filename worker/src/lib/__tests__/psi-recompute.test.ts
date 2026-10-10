@@ -303,11 +303,37 @@ describe("buildStabilityInputForDay", () => {
     expect(result.peakDeviationFallbackCount).toBe(0);
   });
 
-  it("returns 0 mcap7dChangePct when 7d-ago mcap is zero", () => {
+  it("reports unavailable trend rather than flat growth without a paired prior denominator", () => {
     const day = 12 * DAY;
     const result = buildPsiStabilityInput(day, [{ stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 1000 }]);
     expect(result.totalMcapUsd).toBe(1000);
-    expect(result.mcap7dChangePct).toBe(0);
+    expect(result.mcap7dChangePct).toBeNull();
+    expect(result.trendUnavailableIds).toContain("usdt-tether");
+  });
+
+  it("pairs trend identities independently of the current denominator and admits observed zero", () => {
+    const day = 40 * DAY;
+    const input = buildPsiStabilityInput(day, [
+      ...psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 2e9, priorMcap: 2e9 }),
+      { stablecoin_id: "usdc-circle", snapshot_date: day, circulating_usd: 10e9 },
+      // Available at the prior target but outside the current 14-day as-of window.
+      { stablecoin_id: "dai-makerdao", snapshot_date: day - 21 * DAY, circulating_usd: 3e9 },
+      ...psiSupplyPair({ stablecoinId: "usds-sky", day, currentMcap: 0, priorMcap: 0 }),
+    ]);
+    expect(input.totalMcapUsd).toBe(12e9);
+    expect(input.mcap7dChangePct).toBe(0);
+    expect(input.trendUnavailableIds).toContain("usdc-circle");
+    expect(input.trendUnavailableIds).toContain("dai-makerdao");
+    expect(input.trendUnavailableIds).not.toContain("usds-sky");
+  });
+
+  it("holds a measured zero paired prior denominator instead of inventing a trend", () => {
+    const day = 40 * DAY;
+    const input = buildPsiStabilityInput(day, psiSupplyPair({
+      stablecoinId: "usdt-tether", day, currentMcap: 1e9, priorMcap: 0,
+    }));
+    expect(input.mcap7dChangePct).toBeNull();
+    expect(input.trendUnavailableIds).not.toContain("usdt-tether");
   });
 
   it("reports PSI-universe coverage metadata", () => {

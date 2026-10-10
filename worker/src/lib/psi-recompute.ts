@@ -34,7 +34,8 @@ export interface PsiSupplyRow {
 export interface StabilityInputForDay {
   depegs: Array<{ bps: number; mcapUsd: number; depegAgeDays: number }>;
   totalMcapUsd: number;
-  mcap7dChangePct: number;
+  mcap7dChangePct: number | null;
+  trendUnavailableIds: string[];
   depegCount: number;
   eligibleUniverseCount: number;
   coveredUniverseCount: number;
@@ -178,13 +179,29 @@ export function buildStabilityInputForDay(
   const universe = getPsiHistoricalUniverseForDay(supplyByCoin, day, universeCache);
   const universe7dAgo = getPsiHistoricalUniverseForDay(supplyByCoin, day - 7 * DAY_SECONDS, universeCache);
   const totalMcapUsd = universe.totalMcapUsd;
-  const totalMcap7dAgo = universe7dAgo.totalMcapUsd;
-  const mcap7dChangePct = totalMcap7dAgo > 0 ? ((totalMcapUsd - totalMcap7dAgo) / totalMcap7dAgo) * 100 : 0;
+  let pairedCurrentMcapUsd = 0;
+  let pairedPriorMcapUsd = 0;
+  const trendUnavailableIds: string[] = [];
+  for (const coinId of CORE_PSI_ELIGIBLE_IDS) {
+    const current = universe.mcapById.get(coinId);
+    const prior = universe7dAgo.mcapById.get(coinId);
+    if (current == null || prior == null) {
+      trendUnavailableIds.push(coinId);
+      continue;
+    }
+    pairedCurrentMcapUsd += current;
+    pairedPriorMcapUsd += prior;
+  }
+  const changePct = pairedPriorMcapUsd > 0
+    ? ((pairedCurrentMcapUsd - pairedPriorMcapUsd) / pairedPriorMcapUsd) * 100
+    : null;
+  const mcap7dChangePct = changePct != null && Number.isFinite(changePct) ? changePct : null;
 
   return {
     depegs,
     totalMcapUsd,
     mcap7dChangePct,
+    trendUnavailableIds,
     depegCount: depegs.length,
     eligibleUniverseCount: universe.eligibleUniverseCount,
     coveredUniverseCount: universe.coveredUniverseCount,

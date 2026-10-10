@@ -246,6 +246,7 @@
     "worker/src/lib/primary-price-collector.ts": 94.9,
     "worker/src/lib/psi-history-universe.ts": 100,
     "worker/src/lib/psi-recompute.ts": 98.6,
+    "worker/src/lib/psi-replay-inputs.ts": 100,
     "worker/src/lib/psi-replay.ts": 100,
     "worker/src/lib/publication-contract.ts": 97.3,
     "worker/src/lib/reserve-nav-price.ts": 68.2,

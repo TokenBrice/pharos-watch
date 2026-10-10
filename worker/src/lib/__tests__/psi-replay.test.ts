@@ -14,6 +14,36 @@ describe("psi-replay", () => {
     expect(usesHistoricalStressBreadth("3.2")).toBe(true);
   });
 
+  it("distinguishes missing DEWS archive from an observed all-CALM day", () => {
+    const day = 1_746_384_000;
+    const supplyRows = psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 100e9, priorMcap: 100e9 });
+    const missing = replayPsiDay(day, "3.0", supplyRows);
+    expect(missing.result).toBeNull();
+    expect(missing.unavailableReason).toBe("dews-archive-unavailable");
+    expect(missing.input.dewsStressBreadth).toBeUndefined();
+    expect(missing.input.dewsArchiveRowCount).toBe(0);
+    expect(missing.input.dewsArchiveSnapshotDate).toBeNull();
+
+    const calm = replayPsiDay(day, "3.0", supplyRows, [], buildHistoricalDewsMap([
+      { stablecoin_id: "usdt-tether", snapshot_date: day, band: "CALM" },
+    ]));
+    expect(calm.unavailableReason).toBeNull();
+    expect(calm.result?.components.stressBreadth).toBe(0);
+    expect(calm.input.dewsStressBreadth).toBe(0);
+    expect(calm.input.dewsArchiveRowCount).toBe(1);
+    expect(calm.input.dewsArchiveSnapshotDate).toBe(day);
+  });
+
+  it("holds replay when prior-week trend evidence is absent even for pre-v3 days", () => {
+    const day = 1_746_384_000;
+    const replay = replayPsiDay(day, "2.1", [
+      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 100e9 },
+    ]);
+    expect(replay.result).toBeNull();
+    expect(replay.unavailableReason).toBe("trend-inputs-unavailable");
+    expect(replay.input.mcap7dChangePct).toBeNull();
+  });
+
   it("computes historical DEWS stress breadth from daily stress history", () => {
     const day = 1_746_384_000;
     const supplyByCoin = buildSupplySnapshotMap([

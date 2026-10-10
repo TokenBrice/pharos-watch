@@ -3,19 +3,13 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { batchExecute } from "../lib/db";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
-import { buildSupplySnapshotMap, type PsiDepegEventRow, type PsiSupplyRow } from "../lib/psi-recompute";
-import {
-  buildHistoricalDewsMap,
-  replayHistoricalPsiForDay,
-  type PsiHistoricalDewsRow,
-  usesHistoricalStressBreadth,
-} from "../lib/psi-replay";
+import { historicalPsiInputSnapshot, replayHistoricalPsiForDay } from "../lib/psi-replay";
+import { loadHistoricalPsiArchives, loadPsiEligibleDepegEvents } from "../lib/psi-replay-inputs";
 import type { PsiUniverseCache } from "../lib/psi-history-universe";
 import { runAdminJob } from "../lib/admin-job";
 import { acquireCronLease, createLeaseOwner, releaseCronLease, renewCronLease } from "../lib/cron-lease-primitives";
 import { logWorkerEvent } from "../lib/structured-log";
 import { parseOptionalDayWindow } from "./backfill-depegs-window";
-import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 
 // Advisory lease key fencing concurrent admin invocations of this rebuild. It
 // is intentionally distinct from the "stability-index" cron job key.
@@ -96,42 +90,8 @@ export async function handleBackfillStabilityIndex({
       });
     }
 
-    const supplyQueryStartDay = Math.max(0, startDay - 7 * DAY_SECONDS);
-
-    const depegQuery = db
-      .prepare(
-        `SELECT e.stablecoin_id, e.peak_deviation_bps, e.peg_reference, e.started_at, e.ended_at,
-                e.source, e.peg_type, e.start_price, e.recovery_price, p.quote_mode
-         FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
-         WHERE e.started_at < ? AND (e.ended_at IS NULL OR e.ended_at > ?)
-         ORDER BY e.started_at`,
-      )
-      .bind(endDay + DAY_SECONDS, startDay);
-
-    const allDepegs = await depegQuery.all<PsiDepegEventRow>();
-    const depegEvents = allDepegs.results ?? [];
-
-    const supplyQuery = db
-      .prepare(
-        `SELECT stablecoin_id, snapshot_date, circulating_usd, price
-         FROM supply_history
-         WHERE snapshot_date BETWEEN ? AND ?
-         ORDER BY snapshot_date`,
-      )
-      .bind(supplyQueryStartDay, endDay);
-    const allSupply = await supplyQuery.all<PsiSupplyRow>();
-    const supplyByCoin = buildSupplySnapshotMap(allSupply.results ?? []);
-
-    const dewsQuery = db
-      .prepare(
-        `SELECT stablecoin_id, snapshot_date, band
-         FROM stress_signal_history
-         WHERE snapshot_date BETWEEN ? AND ?
-         ORDER BY snapshot_date`,
-      )
-      .bind(startDay, endDay);
-    const allHistoricalDews = await dewsQuery.all<PsiHistoricalDewsRow>();
-    const dewsByDay = buildHistoricalDewsMap(allHistoricalDews.results ?? []);
+    const depegEvents = await loadPsiEligibleDepegEvents(db, { startDay, endDay });
+    const { supplyByCoin, dewsByDay } = await loadHistoricalPsiArchives(db, startDay, endDay);
 
     const existingRows = await db
       .prepare(
@@ -209,6 +169,7 @@ export async function handleBackfillStabilityIndex({
       let daysEvaluated = 0;
       let daysChanged = 0;
       let maxAbsoluteScoreDelta = 0;
+      const unavailableDays: Array<{ day: number; reason: string; trendUnavailableIds: string[] }> = [];
       const universeCache: PsiUniverseCache = new Map();
 
       for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
@@ -223,10 +184,14 @@ export async function handleBackfillStabilityIndex({
           dewsByDay,
           universeCache,
         });
-        const { input, result } = replay;
+        const { result } = replay;
         const existing = existingByDay.get(day);
         if (!result) {
           skippedInsufficientData++;
+          unavailableDays.push({
+            day, reason: replay.unavailableReason ?? "insufficient-market-cap",
+            trendUnavailableIds: replay.input.trendUnavailableIds,
+          });
           if (!dryRun && existing) {
             stmts.push(
               db
@@ -270,22 +235,7 @@ export async function handleBackfillStabilityIndex({
                 result.score,
                 result.band,
                 JSON.stringify(result.components),
-                JSON.stringify({
-                  aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
-                  depegCount: input.depegCount,
-                  totalMcapUsd: input.totalMcapUsd,
-                  mcap7dChangePct: input.mcap7dChangePct,
-                  eligibleUniverseCount: input.eligibleUniverseCount,
-                  coveredUniverseCount: input.coveredUniverseCount,
-                  historicalAssetCoverageCount: input.historicalAssetCoverageCount,
-                  historicalPriceCoverageCount: input.historicalPriceCoverageCount,
-                  peakDeviationFallbackCount: input.peakDeviationFallbackCount,
-                  openDepegsWithoutPrice: input.openDepegsWithoutPrice,
-                  degradedComponents: input.openDepegsWithoutPrice > 0 ? ["open-depeg-no-price"] : [],
-                  dewsStressBreadth: input.dewsStressBreadth ?? 0,
-                  stressBreadthIncluded: usesHistoricalStressBreadth(methodologyVersion),
-                  methodologyVersion,
-                }),
+                JSON.stringify(historicalPsiInputSnapshot(replay, methodologyVersion)),
                 methodologyVersion,
               ),
           );
@@ -301,6 +251,7 @@ export async function handleBackfillStabilityIndex({
           daysEvaluated,
           daysChanged,
           skippedInsufficientData,
+          unavailableDays,
           maxAbsoluteScoreDelta: Math.round(maxAbsoluteScoreDelta * 1000) / 1000,
           startDay,
           endDay,
@@ -355,6 +306,7 @@ export async function handleBackfillStabilityIndex({
         daysEvaluated,
         daysChanged,
         skippedInsufficientData,
+        unavailableDays,
         maxAbsoluteScoreDelta: Math.round(maxAbsoluteScoreDelta * 1000) / 1000,
         startDay,
         endDay,

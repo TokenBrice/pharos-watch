@@ -34,7 +34,7 @@ Coverage is defined explicitly in `shared/lib/bluechip-slugs.ts`; do not copy it
 1. Skips work when the `bluechip-ratings` cache is newer than 6 hours and returns `status: "skipped_neutral"` with metadata reason `cache-fresh`.
 2. If `shouldAttemptFetch()` returns false because the shared Bluechip circuit breaker is open, returns `status: "degraded"` with metadata reason `bluechip-circuit-open` and performs no fetch.
 3. Iterates the configured slug mappings in batches of 3, with a 500ms inter-batch delay.
-4. Fetches `backend.bluechip.org/coin-data/{slug}` with the shared Worker `USER_AGENT`.
+4. Fetches `backend.bluechip.org/coin-data/{slug}` with the shared Worker `USER_AGENT` through `fetchTextWithRetry()`. Each attempt's existing 15-second deadline covers headers **and bounded body completion**, cancelling stalled bodies before continuing sibling/remaining batches.
 5. Records 404s, empty payloads and missing grades as unresolved failures, preserving any original observation clock.
 6. Normalizes each successful row into `BluechipRating`, accepting Bluechip category blocks that are omitted or explicitly `null`.
 7. Strips HTML from SMIDGE category summaries before persistence.

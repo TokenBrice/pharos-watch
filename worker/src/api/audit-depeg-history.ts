@@ -1,7 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { PEG_SCORE_EXCLUDED_AUDIT_VERDICTS, type DepegAuditVerdict } from "@shared/types/depeg-audit";
+import type { DepegAuditVerdict } from "@shared/types/depeg-audit";
 import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
-import { auditVerdictNotInSql } from "../lib/depeg-audit";
 import { jsonResponse, errorResponse } from "../lib/api-response";
 import { runTrustedAdminMutation } from "../lib/route-wrappers";
 import { D1_BATCH_SIZE, getDepegThresholdBps } from "../lib/constants";
@@ -18,10 +17,8 @@ import {
   type Verdict,
 } from "./audit-depeg-history/coingecko-audit";
 import { parseAuditRequest, type AuditPaginatedRequest, type RepairMode } from "./audit-depeg-history/request";
-import {
-  buildRecomputeStabilityStatements,
-  loadSupplyHistoryRowsForWindow,
-} from "./audit-depeg-history/stability-recompute";
+import { buildRecomputeStabilityStatements } from "./audit-depeg-history/stability-recompute";
+import { loadSupplyHistoryRowsForWindow, loadPsiEligibleDepegEvents } from "../lib/psi-replay-inputs";
 import {
   collectSyntheticSplitGroups,
   planSyntheticSplitRepair,
@@ -316,27 +313,6 @@ function summarizeContradictoryRecoveryEvent(event: DepegRow): ContradictoryReco
   };
 }
 
-async function loadRemainingDepegEvents(
-  db: D1Database,
-  excludedIds: readonly number[] = [],
-): Promise<PsiDepegEventRow[]> {
-  const baseSql =
-    "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance";
-  const auditEligible = auditVerdictNotInSql("provenance_audit_verdict", PEG_SCORE_EXCLUDED_AUDIT_VERDICTS);
-  const auditEligibleWhere = auditEligible.sql;
-  const orderBy = " ORDER BY started_at";
-  if (excludedIds.length === 0) {
-    const rows = await db.prepare(`${baseSql} WHERE ${auditEligibleWhere}${orderBy}`).bind(...auditEligible.binds).all<PsiDepegEventRow>();
-    return rows.results ?? [];
-  }
-
-  const idClause = buildInClause(excludedIds);
-  const rows = await db
-    .prepare(`${baseSql} WHERE ${auditEligibleWhere} AND id NOT IN (${idClause.sql})${orderBy}`)
-    .bind(...auditEligible.binds, ...idClause.binds)
-    .all<PsiDepegEventRow>();
-  return rows.results ?? [];
-}
 
 async function commitAuditMutation(
   db: D1Database,
@@ -350,7 +326,10 @@ async function commitAuditMutation(
   // executeAtomicBatch sends the transaction.
   const recompute = recomputePlan
     ? await buildRecomputeStabilityStatements(db, recomputePlan.affectedDays, recomputePlan.remainingDepegEvents)
-    : { statements: [], daysRecomputed: 0 };
+    : { statements: [], daysRecomputed: 0, unavailableDays: [] };
+  if (recompute.unavailableDays.length > 0) {
+    logWorkerEventArgs("api", "warn", "[audit] PSI repair retained unavailable days:", recompute.unavailableDays);
+  }
   const statements = [...mutationStatements, ...recompute.statements];
   const requestedMutationCount = batchBound?.requestedMutationCount ?? mutationStatements.length;
   const availableMutationStatements = Math.max(0, D1_BATCH_SIZE - recompute.statements.length);
@@ -420,7 +399,7 @@ async function executeDirectDelete(
   if (sealedMutationResponse) return sealedMutationResponse;
 
   const mutationPlan = planDirectDelete(db, toDelete);
-  const remainingDepegEvents = await loadRemainingDepegEvents(db, toDelete.map((event) => event.id));
+  const remainingDepegEvents = await loadPsiEligibleDepegEvents(db, { excludedIds: toDelete.map((event) => event.id) });
   const daysRecomputed = await commitAuditMutation(
     db,
     mutationPlan.statements,
@@ -477,7 +456,7 @@ async function executeSyntheticSplitRepair(
     "Synthetic split repair failed before the stability-index repair could finish",
     {
       affectedDays: mutationPlan.affectedDays,
-      remainingDepegEvents: projectSyntheticSplitDepegEvents(allRows, paginatedGroups),
+      remainingDepegEvents: projectSyntheticSplitDepegEvents(await loadPsiEligibleDepegEvents(db), paginatedGroups),
     },
     { requestedMutationCount: mutationPlan.statements.length, operation: "Synthetic split repair" },
   );
@@ -668,6 +647,7 @@ export async function auditEvents(
   const affectedDays = new Set<number>();
   const provenanceStatements: D1PreparedStatement[] = [];
   const invalidatingProvenanceEventIds: number[] = [];
+  const projectedAuditVerdicts = new Map<number, DepegAuditVerdict>();
   const nowSec = Math.floor(Date.now() / 1000);
   const { outcomes, attemptedCgFetches, errorReason } = await runCoinGeckoAuditBatch(db, paginatedEvents, coingeckoApiKey);
   if (errorReason) result.upstreamErrorReason = errorReason;
@@ -680,9 +660,9 @@ export async function auditEvents(
 
     if (!dryRun && outcome.provenanceVerdict != null) {
       provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, outcome.event, outcome.provenanceVerdict, nowSec));
+      projectedAuditVerdicts.set(outcome.event.id, outcome.provenanceVerdict);
       if (outcome.invalidatesProvenance) {
         invalidatingProvenanceEventIds.push(outcome.event.id);
-        addAffectedDays(affectedDays, outcome.event.started_at, outcome.event.ended_at ?? outcome.event.started_at);
       }
     }
   }
@@ -701,7 +681,10 @@ export async function auditEvents(
       invalidatingProvenanceEventIds,
       "audit-depeg-history:provenance-invalidation",
     );
-    const remainingDepegEvents = await loadRemainingDepegEvents(db);
+    const remainingDepegEvents = await loadPsiEligibleDepegEvents(db, {
+      auditVerdicts: projectedAuditVerdicts,
+      onEligibilityChange: (event) => addAffectedDays(affectedDays, event.started_at, event.ended_at ?? event.started_at),
+    });
     result.daysRecomputed = await commitAuditMutation(
       db,
       provenanceStatements,

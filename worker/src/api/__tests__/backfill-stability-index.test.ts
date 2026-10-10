@@ -5,6 +5,8 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import type { DatabaseSync } from "node:sqlite";
 import { handleBackfillStabilityIndex } from "../backfill-stability-index";
 import { computeStabilityIndex } from "../../lib/stability-index";
+import { seedPsiDews } from "./psi-replay.test-support";
+import type { PsiHistoricalDewsRow } from "../../lib/psi-replay";
 
 stubCryptoForAuth();
 
@@ -73,6 +75,8 @@ function makeDb(options?: {
     circulating_usd: number;
     price?: number | null;
   }>;
+  /** Omit for an observed calm generation on each supplied date; [] tests absence. */
+  dewsRows?: PsiHistoricalDewsRow[];
   stabilityRows?: Array<{
     computed_at: number;
     score: number;
@@ -119,6 +123,9 @@ function makeDb(options?: {
   for (const row of options?.supplyRows ?? []) {
     insertSupply.run(row.stablecoin_id, row.snapshot_date, row.circulating_usd, row.price ?? null);
   }
+  const dewsRows = options?.dewsRows ?? [...new Set((options?.supplyRows ?? []).map((row) => row.snapshot_date))]
+    .map((snapshot_date) => ({ stablecoin_id: "usdt-tether", snapshot_date, band: "CALM" }));
+  seedPsiDews(sqlite, dewsRows);
 
   const insertStability = sqlite.prepare(
     `INSERT INTO stability_index
@@ -187,7 +194,10 @@ describe("handleBackfillStabilityIndex", () => {
     const db = makeDb({
       depegRows: [{ stablecoin_id: "eurc-circle", peak_deviation_bps: -200, peg_reference: 1,
         started_at: day, ended_at: null }],
-      supplyRows: [{ stablecoin_id: "eurc-circle", snapshot_date: day, circulating_usd: 1e9, price: 1.08 }],
+      supplyRows: [
+        { stablecoin_id: "eurc-circle", snapshot_date: day - 7 * 86400, circulating_usd: 1e9, price: 1.08 },
+        { stablecoin_id: "eurc-circle", snapshot_date: day, circulating_usd: 1e9, price: 1.08 },
+      ],
     });
     db.sqlite.prepare("UPDATE depeg_events SET peg_type = 'peggedEUR', source = 'live', start_price = 0.98").run();
     const response = await callBackfillStabilityIndex({
@@ -200,6 +210,30 @@ describe("handleBackfillStabilityIndex", () => {
       depegCount: 0, openDepegsWithoutPrice: 1, peakDeviationFallbackCount: 0,
       degradedComponents: ["open-depeg-no-price"],
     });
+  });
+
+  it.each(["trend-inputs-unavailable", "dews-archive-unavailable"])("preserves an accepted day when %s", async (reason) => {
+    const day = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+    const preserved = {
+      computed_at: day, score: 87.3, band: "STEADY", methodology_version: "3.0",
+      components: JSON.stringify({ severity: 3, breadth: 4.7, stressBreadth: 5, trend: 0 }),
+      input_snapshot: JSON.stringify({ dewsStressBreadth: 12, stressBreadthIncluded: true }),
+    };
+    const supplyRows = [{ stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 100e9, price: 0.98 }];
+    if (reason === "dews-archive-unavailable") {
+      supplyRows.push({ ...supplyRows[0], snapshot_date: day - 7 * 86400 });
+    }
+    const db = makeDb({ earliest: day, supplyRows, stabilityRows: [preserved], dewsRows: reason === "dews-archive-unavailable"
+      ? [] : [{ stablecoin_id: "usdt-tether", snapshot_date: day, band: "CALM" }] });
+    const response = await callBackfillStabilityIndex({
+      db, request: makeApiRequest(`/api/backfill-stability-index?startDay=${day}&endDay=${day}`, { method: "POST", adminKey: "secret" }),
+    });
+    expect(await readJsonResponse(response, 200)).toMatchObject({
+      daysBackfilled: 0, skippedInsufficientData: 1,
+      unavailableDays: [{ day, reason, trendUnavailableIds: expect.any(Array) }],
+    });
+    expect(db.sqlite.prepare(`SELECT computed_at, score, band, components, input_snapshot, methodology_version
+      FROM stability_index WHERE computed_at = ?`).get(day)).toEqual(preserved);
   });
 
   it("returns 404 when there are no depeg events", async () => {
@@ -227,6 +261,8 @@ describe("handleBackfillStabilityIndex", () => {
           },
         ],
         supplyRows: [
+          { stablecoin_id: "usdt-tether", snapshot_date: day0 - 7 * 86400, circulating_usd: 99_000_000, price: 1 },
+          { stablecoin_id: "usdt-tether", snapshot_date: day1 - 86400, circulating_usd: 100_000_000, price: 0.9975 },
           { stablecoin_id: "usdt-tether", snapshot_date: day0, circulating_usd: 99_000_000, price: 1 },
           { stablecoin_id: "usdt-tether", snapshot_date: day1, circulating_usd: 100_000_000, price: 0.9975 },
           { stablecoin_id: "usdt-tether", snapshot_date: day2, circulating_usd: 101_000_000, price: 0.999 },
