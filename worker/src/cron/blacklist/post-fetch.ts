@@ -208,7 +208,6 @@ export async function processFetchedBlacklistRows(
     runBudget: options.runBudget,
     signal: options.signal,
     chainRpcs: options.chainRpcs,
-    assetPriceUsd,
   });
 
   for (const row of newRows) {

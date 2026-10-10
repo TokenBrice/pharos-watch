@@ -177,7 +177,6 @@ describe("enrichRowBalances", () => {
       drpcApiKey: null,
       etherscanLimiter: limiter,
       runBudget: makeRunBudget(),
-      assetPriceUsd: 1,
     });
 
     expect(result).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
@@ -255,7 +254,7 @@ describe("enrichRowBalances", () => {
     expect(update?.binds).not.toContain("drpc");
   });
 
-  it("reuses cached asset price lookups per stablecoin during a recovery run", async () => {
+  it("retains historical EURC USD as unavailable even when a fresh current quote exists", async () => {
     vi.mocked(fetchEvmTokenBalance).mockResolvedValue(10);
     const makeCandidate = (id: string, address: string) => ({
       id,
@@ -297,8 +296,7 @@ describe("enrichRowBalances", () => {
 
     const history = db.getHistory();
     const priceLookups = history.filter((entry) => entry.sql.includes("FROM price_cache WHERE asset_id = ?"));
-    expect(priceLookups).toHaveLength(1);
-    expect(priceLookups[0]?.binds).toEqual(["eurc-circle"]);
+    expect(priceLookups).toHaveLength(0);
 
     const resolvedUpdates = history.filter((entry) =>
       entry.sql.includes("UPDATE blacklist_events") &&
@@ -307,7 +305,7 @@ describe("enrichRowBalances", () => {
     );
     expect(resolvedUpdates).toHaveLength(2);
     expect(resolvedUpdates.map((entry) => entry.binds[0])).toEqual([10, 10]);
-    expect(resolvedUpdates.map((entry) => entry.binds[1])).toEqual([12, 12]);
+    expect(resolvedUpdates.map((entry) => entry.binds[1])).toEqual([null, null]);
   });
 
   it("honors a smaller repair limit for the post-scan maintenance tail", async () => {

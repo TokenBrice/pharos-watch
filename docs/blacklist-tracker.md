@@ -142,6 +142,8 @@ Current-balance cache telemetry preserves the canonical `skippedDueBudget` count
 - The lane never reaches the supplemental Dwellir operator: log-scan target resolution and historical balance reads select registry endpoints only (`logScanRpcEndpoints` / `registryRpcUrls` in `worker/src/lib/chain-registry.ts`), because a blacklist scan needs provable history and Dwellir's `eth_getLogs` plan cap is 500 blocks per request.
 - Tron event scans and current-balance reads use TronGrid. Pagination URLs are origin/path validated before credentials are forwarded.
 
+A full 200-row TronGrid page without a validated continuation is incomplete, not a terminal page. It retains parsed rows but cannot certify the safe timestamp frontier.
+
 All credentials in `worker/src/lib/env.ts` are optional at the type boundary:
 
 | Variable            | Purpose                                 |
@@ -185,7 +187,7 @@ For a bounded operator repair, `npx tsx worker/scripts/repair-tron-blacklist-amo
 
 Live repair requires `--execute --confirm repair-tron-blacklist-amounts`. The command captures a fresh Time Travel bookmark and uses one atomic D1 SQL import for the row-count guard, audit, exact-null event updates, and canonical derived-cache invalidation. Reconstructed values are marked `amount_source=derived`, with the immutable evidence SHA-256 in provenance and `admin_action_audit`. It does not overwrite existing amounts or change current balances, cursors, thresholds, or health checks. Re-running against resolved rows refuses mutation; preserve the evidence file with the audit/bookmark for review. Use this path for rows the scheduled replay refuses — a ledger that never reconciles, a history longer than the replay page cap, or a shared-millisecond transfer — and never as a substitute for the scheduled lane.
 
-8. Non-USD assets require a fresh coin-specific price-cache conversion before Pharos publishes a USD event or snapshot value.
+8. Non-USD event valuation requires a historically attributed quote for that event, not the repair-time `price_cache` quote. The ingestion and automated/manual recovery lanes currently have no such historical quote source: they recover native amounts but retain null event-time USD. Fresh coin-specific quotes remain valid for current-balance observations only.
 9. Circle mirror actions can produce auditable zero-balance EURC rows. `circle_mirror_zero_balance` rows remain stored but are excluded from public events, active records, and frozen-value aggregates.
 10. Seize-only BUIDL coverage records destroy events; it does not create an active blacklist/freeze state.
 
@@ -244,6 +246,10 @@ The one-time legacy identity repair was completed and verified in production on 
 
 Provider refresh failures preserve the last successful value and update quality/provenance fields. They do not turn the public total into zero.
 
+Gold zero-read substitution applies only after an actual observed zero and a positive event-native amount; the ledger records `source=gold_event_zero_balance`. A null gold provider read is still `provider_failed` and preserves the previous value and successful-observation timestamp.
+
+Before cursor finalization, capture work (including budget-skipped and order-withheld rows) is retained without TTL in D1 `cache` under `blacklist:current-balance-debt:`. The maintenance tail admits at most 24 debt rows, respecting the same runtime, subrequest budget, serial limiters and provider circuit gates. Quiet scans can reconcile missing snapshots without rewinding cursors. Successful Tron block-order recovery also enqueues affected rows, including pre-deploy conflicts; release markers preserve prior ledger captures and destroy snapshots use the emitted historical value.
+
 The summary loader reads the complete retained ledger — released addresses, destroy snapshots, and legacy rows whose successful-observation timestamp is NULL or old — so historical rows keep feeding the tracked totals and the quarterly chart. Their age surfaces through `freezeLedgerMeta` freshness distributions and provider-failure counts rather than rows silently disappearing from totals.
 
 Unblacklist events do not delete historical snapshot rows. Destroy events may replace a stored amount with a better emitted seizure/burn amount. When a blacklist and release arrive in the same batch, the blacklist snapshot is still captured before the release marker is treated as non-deleting.
@@ -260,6 +266,8 @@ A config attempt claims its starting cursor and increments `attempt_generation`.
 
 EVM cursors advance only through the minimum contiguous block proven across every required topic. Missing-topic or partial coverage pins the unproven tail. Tron cursors advance only after every configured event family completes through the safe timestamp frontier.
 
+A fully scanned bounded EVM subrange is contiguous progress, not current coverage: until its frontier reaches the observed safe head, the outcome is incomplete, the success clock is retained, and producer publication is withheld. Cron metadata reports `configLag` with the frontier, observed safe head, cursor kind and remaining lag (blocks or milliseconds). Avalanche fallback scans admit up to eight serial 2,000-block provider windows per config (16,000 blocks per run), exceeding the assumed 10,800-block six-hour chain growth without increasing any individual request range.
+
 ## Producer Flow
 
 Each run performs these phases under one scan deadline, one separately capped maintenance tail, and one shared subrequest budget:
@@ -273,6 +281,8 @@ Each run performs these phases under one scan deadline, one separately capped ma
 7. **Publication and telemetry:** publish gap/summary snapshots only after every required config has a successful complete or quiet scan and enough tail budget remains. Freshness uses the oldest required config success, not cron completion time.
 
 Provider telemetry retains bounded config-level mode, coverage, frontier, count, call-depth, and failure-sample evidence. The operational response is documented in [Runbook: Blacklist Sync](./runbooks/blacklist-sync.md).
+
+RPC failover samples preserve the provider's failure reason (for example, `primary-failover:split-limit`); `primary-failover:no-coverage` is used only when the primary proves no contiguous coverage without a specific reason. Serial catch-up windows retain that diagnostic while merging their covered frontier.
 
 ## Telegram Freeze Alerts
 
@@ -308,10 +318,12 @@ The summary query supplies aggregate cards, exposure drilldowns, chart data, and
 
 `dataQuality.ambiguousOrderCount` counts unresolved contract-scoped active-state records excluded from confirmed counts. `dataQuality.ambiguousOrderReason` is `tron-cross-transaction-order` when that count is positive, otherwise `null`; the same reason appears in `warnings` and degrades quality. Both fields are additive/optional for retained old summaries; missing fields mean legacy unknown coverage, not a measured zero. Tracked ledger totals remain retained snapshots, not a claim that ambiguous current state is resolved.
 
+Summary USD aggregates (`destroyedTotal`, recent freeze amounts, and per-coin frozen/destroyed totals) are nullable and carry `stats.valuationCoverage` known/unavailable observation counts. All-unpriced cohorts publish null; mixed cohorts publish the known subtotal explicitly labelled partial; observed zero remains zero. An empty cohort publishes zero with zero observations. Producer summary cache version 3 requires valuation coverage; optional coverage on legacy public payloads means unknown coverage, not complete valuation. The same qualification is used by FreezeWatch cards, the coverage lattice, homepage recent freezes, and coin detail cards, even when unresolved values are permanently unavailable and general quality otherwise reads healthy.
+
 The page must preserve these distinctions:
 
 - missing or unresolved amounts display their status/source instead of a confirmed zero;
-- non-USD native amounts are converted only with a fresh coin-specific price;
+- non-USD current-balance observations may use a fresh coin-specific price, but historical events require an event-time quote and stay unavailable without one;
 - tracked frozen totals are last-known freeze-ledger snapshots;
 - event history and local net-active state remain separate from those snapshots;
 - mobile event cards and the desktop table use the same server query state;

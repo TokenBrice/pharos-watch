@@ -1,5 +1,4 @@
 import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types/market";
-import { getBlacklistPriceAssetId } from "@shared/lib/blacklist";
 import { runTrustedAdminMutation } from "../lib/route-wrappers";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import {
@@ -26,7 +25,6 @@ import {
   blacklistSubrequestBudgetReached,
   type BlacklistRunBudget,
 } from "../lib/blacklist/run-budget";
-import { fetchBlacklistAssetPriceFromCache } from "../lib/blacklist/row-preparation";
 import { invalidateBlacklistDerivedCaches } from "../lib/blacklist-cache-invalidation";
 
 const VALID_STABLECOINS = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
@@ -219,7 +217,6 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
       deadlineMs: Date.now() + RUNTIME_BUDGET_MS,
       minimumConfigWindowMs: 0,
     } satisfies BlacklistRunBudget;
-    const assetPriceCache = new Map<BlacklistStablecoin, number | null>();
     const updates: D1PreparedStatement[] = [];
     const attemptAt = Math.floor(Date.now() / 1000);
     let resolved = 0;
@@ -258,21 +255,12 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
       }
 
       const { row, config } = candidate;
-      let assetPriceUsd = assetPriceCache.get(config.stablecoin);
-      if (!assetPriceCache.has(config.stablecoin)) {
-        assetPriceUsd = getBlacklistPriceAssetId(config.stablecoin)
-          ? await fetchBlacklistAssetPriceFromCache(db, config.stablecoin)
-          : null;
-        assetPriceCache.set(config.stablecoin, assetPriceUsd ?? null);
-      }
-
       const recovery = await recoverBlacklistAmountForRow(row, config, {
         etherscanApiKey: null,
         drpcApiKey: null,
         etherscanLimiter: limiter,
         runBudget,
         chainRpcs,
-        assetPriceUsd,
       });
 
       if (recovery.amount == null) {

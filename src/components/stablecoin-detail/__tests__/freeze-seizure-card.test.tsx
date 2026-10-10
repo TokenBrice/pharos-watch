@@ -71,6 +71,10 @@ function statsFor(symbol: string, values: { events: number; addresses: number; f
         perCoinFrozenAddressCount: { [symbol]: values.addresses },
         perCoinFrozenTotal: { [symbol]: values.frozen },
         perCoinDestroyedTotal: { [symbol]: values.destroyed },
+        valuationCoverage: {
+          perCoinFrozen: { [symbol]: { knownCount: values.frozen > 0 ? 1 : 0, unavailableCount: 0 } },
+          perCoinDestroyed: { [symbol]: { knownCount: values.destroyed > 0 ? 1 : 0, unavailableCount: 0 } },
+        },
       },
     },
     dataUpdatedAt: Date.now(),

@@ -4,7 +4,6 @@ import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import { type BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 import { ethereumConfig, makeCacheRow } from "./balance.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 vi.mock("../../../lib/blacklist-current-balances", () => ({
   upsertBlacklistCurrentBalance: vi.fn(),
@@ -52,19 +51,17 @@ function makeContext() {
   };
 }
 
+const fixtures = createLatestSchemaFixtureTracker();
+
 function makePriceDb(price: number | null, updatedAt = Math.floor(Date.now() / 1000)): D1Database {
-  return makeNoopD1({
-    prepare: vi.fn(() => ({
-      bind: vi.fn(() => ({
-        first: vi.fn(async () => (price == null ? null : { price, updated_at: updatedAt })),
-      })),
-    })),
-  });
+  const { sqlite, db } = fixtures.open();
+  if (price != null) sqlite.prepare("INSERT INTO price_cache (asset_id, price, updated_at) VALUES (?, ?, ?)")
+    .run("a7a5-old-vector", price, updatedAt);
+  return db;
 }
 
 
 describe("syncCurrentBalanceCacheForRows", () => {
-  const fixtures = createLatestSchemaFixtureTracker();
   afterEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
@@ -73,7 +70,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
 
   it("preserves existing ledger rows on unblacklist events", async () => {
     const result = await syncCurrentBalanceCacheForRows(
-      {} as D1Database,
+      fixtures.open().db,
       ethereumConfig,
       [
         makeCacheRow({
@@ -104,7 +101,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
 
   it("persists destroy-event amounts instead of deleting the ledger row", async () => {
     const result = await syncCurrentBalanceCacheForRows(
-      {} as D1Database,
+      fixtures.open().db,
       ethereumConfig,
       [
         makeCacheRow({
@@ -150,7 +147,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
     vi.mocked(fetchEvmTokenCurrentBalance).mockResolvedValue(1250);
 
     const result = await syncCurrentBalanceCacheForRows(
-      {} as D1Database,
+      fixtures.open().db,
       ethereumConfig,
       [
         makeCacheRow({
@@ -215,7 +212,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
     };
 
     const result = await syncCurrentBalanceCacheForRows(
-      {} as D1Database,
+      fixtures.open().db,
       ethereumConfig,
       [releaseRow, blacklistRow],
       makeContext(),
@@ -244,7 +241,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
     vi.mocked(fetchEvmTokenCurrentBalance).mockResolvedValue(null);
 
     const result = await syncCurrentBalanceCacheForRows(
-      {} as D1Database,
+      fixtures.open().db,
       ethereumConfig,
       [
         makeCacheRow({
@@ -332,7 +329,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
     vi.mocked(fetchEvmTokenCurrentBalance).mockResolvedValue(0);
 
     const result = await syncCurrentBalanceCacheForRows(
-      {} as D1Database,
+      fixtures.open().db,
       ethereumConfig, // USDT — not gold
       [
         makeCacheRow({
@@ -458,5 +455,35 @@ describe("syncCurrentBalanceCacheForRows", () => {
       }),
     );
     warnSpy.mockRestore();
+  });
+
+  it.each(["PAXG", "XAUT"] as const)("preserves %s successful evidence when the current gold read fails", async (stablecoin) => {
+    const actual = await vi.importActual<typeof import("../../../lib/blacklist-current-balances")>("../../../lib/blacklist-current-balances");
+    const { sqlite, db } = fixtures.open();
+    const config = { ...ethereumConfig, stablecoin };
+    await actual.upsertBlacklistCurrentBalance(db, {
+      stablecoin, chainId: "ethereum", address: "0xgold", configKey: config.configKey,
+      contractAddress: config.contractAddress, amountNative: 12, amountUsd: 24_000,
+      source: "current_balance", status: "resolved", observedAt: 100, lastSuccessfulObservedAt: 100,
+      attemptCount: 1, lastAttemptedAt: 100, lastErrorClass: null, consecutiveFailures: 0,
+    });
+    vi.mocked(upsertBlacklistCurrentBalance).mockImplementationOnce(actual.upsertBlacklistCurrentBalance);
+    vi.mocked(fetchEvmTokenCurrentBalance).mockResolvedValue(null);
+    await syncCurrentBalanceCacheForRows(db, config, [makeCacheRow({
+      stablecoin, address: "0xgold", amount_native: 50,
+    })], { ...makeContext(), assetPriceUsd: 3_000 });
+    expect(sqlite.prepare(`SELECT amount_native, amount_usd, status, observed_at, last_successful_observed_at
+      FROM blacklist_current_balances`).get()).toEqual({
+      amount_native: 12, amount_usd: 24_000, status: "provider_failed", observed_at: 100, last_successful_observed_at: 100,
+    });
+  });
+
+  it("uses explicit historical provenance only after an observed gold zero", async () => {
+    vi.mocked(fetchEvmTokenCurrentBalance).mockResolvedValue(0);
+    await syncCurrentBalanceCacheForRows(fixtures.open().db, { ...ethereumConfig, stablecoin: "PAXG" },
+      [makeCacheRow({ stablecoin: "PAXG", amount_native: 2 })], { ...makeContext(), assetPriceUsd: 3_000 });
+    expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      amountNative: 2, amountUsd: 6_000, source: "gold_event_zero_balance", status: "resolved",
+    }));
   });
 });

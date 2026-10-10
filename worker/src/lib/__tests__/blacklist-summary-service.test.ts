@@ -10,6 +10,41 @@ afterEach(() => {
 });
 
 describe("blacklist summary freeze aggregates", () => {
+  it.each([
+    { name: "all unavailable", values: [null, null], total: null, known: 0, unavailable: 2 },
+    { name: "partial known subtotal", values: [100, null], total: 100, known: 1, unavailable: 1 },
+    { name: "fully priced", values: [100, 50], total: 150, known: 2, unavailable: 0 },
+    { name: "observed zero", values: [0, 0], total: 0, known: 2, unavailable: 0 },
+  ])("publishes $name valuations without inventing zero coverage", async ({ values, total, known, unavailable }) => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = 2_000_000_000;
+    for (const [index, usd] of values.entries()) {
+      sqlite.prepare(`INSERT INTO blacklist_events
+        (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+         timestamp, amount_usd_at_event, amount_status, explorer_tx_url, explorer_address_url)
+        VALUES (?, 'USDC', 'ethereum', 'Ethereum', 'destroy', ?, ?, ?, ?, ?, ?, '', '')`)
+        .run(`destroy-${index}`, `address-${index}`, `tx-${index}`, index + 1, now - 10,
+          usd, usd == null ? "permanently_unavailable" : "resolved");
+      sqlite.prepare(`INSERT INTO blacklist_current_balances
+        (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at)
+        VALUES (?, 'USDC', 'ethereum', ?, ?, ?, 'current_balance', 'resolved', ?)`)
+        .run(`ledger-${index}`, `address-${index}`, usd, usd, now - 10);
+    }
+    await materializeBlacklistSummarySnapshot(db, now, now);
+    const response = await handleBlacklistSummary(db);
+    const summary = await response.json() as BlacklistSummaryResponse;
+    expect(summary.stats.destroyedTotal).toBe(total);
+    expect(summary.stats.perCoinDestroyedTotal.USDC).toBe(total);
+    expect(summary.stats.perCoinFrozenTotal.USDC).toBe(total);
+    expect(summary.stats.recentFreezeAmount24hUsd).toBe(total);
+    expect(summary.stats.recentFreezeAmount7dUsd).toBe(total);
+    const coverage = { knownCount: known, unavailableCount: unavailable };
+    expect(summary.stats.valuationCoverage).toMatchObject({
+      destroyed: coverage, recent24h: coverage, recent7d: coverage,
+      perCoinFrozen: { USDC: coverage }, perCoinDestroyed: { USDC: coverage },
+    });
+  });
+
   it("counts freeze-only windows beyond the 200-row page without including releases", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     const now = 2_000_000_000;

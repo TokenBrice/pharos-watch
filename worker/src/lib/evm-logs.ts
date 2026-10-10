@@ -181,6 +181,8 @@ export interface EvmLogFetchResult {
   calls: number;
   maxDepth: number;
   failureReason?: string;
+  rejectedLogs?: unknown[];
+  validatedToBlock?: number;
 }
 
 /**
@@ -341,8 +343,23 @@ export async function fetchEvmLogsForTopicWithCompleteness(
       calls: 1 + first.calls + second.calls,
       maxDepth: Math.max(depth, first.maxDepth, second.maxDepth),
       failureReason: second.failureReason,
+      rejectedLogs: [...(first.rejectedLogs ?? []), ...(second.rejectedLogs ?? [])],
+      validatedToBlock: second.validatedToBlock,
     };
   }
 
-  return { logs, complete: true, scannedToBlock: toBlock, calls: 1, maxDepth: depth };
+  const rejectedLogs = rawLogs.filter((log) => !isEtherscanLogEntry(log));
+  let scannedToBlock = toBlock;
+  for (const raw of rejectedLogs) {
+    const block = raw != null && typeof raw === "object"
+      ? (raw as Record<string, unknown>).blockNumber : null;
+    const parsedBlock = typeof block === "string" && EVM_QUANTITY_HEX_RE.test(block) ? Number(block) : NaN;
+    scannedToBlock = Math.min(scannedToBlock,
+      Number.isSafeInteger(parsedBlock) && parsedBlock >= fromBlock && parsedBlock <= toBlock
+        ? parsedBlock - 1 : unscannedBlock);
+  }
+  return {
+    logs, complete: rejectedLogs.length === 0, scannedToBlock, calls: 1, maxDepth: depth,
+    ...(rejectedLogs.length > 0 ? { rejectedLogs, validatedToBlock: toBlock, failureReason: "etherscan-malformed-logs" } : {}),
+  };
 }

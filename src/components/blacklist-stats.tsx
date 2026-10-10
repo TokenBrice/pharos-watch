@@ -10,6 +10,7 @@ import type { BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
 import { computeFreezableSummary } from "@/components/freezewatch/freezable-supply-meter";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import type { BlacklistSummaryResponse } from "@shared/types";
+import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
 
 interface BlacklistStatsProps {
   summary: BlacklistSummaryResponse | undefined;
@@ -180,7 +181,7 @@ export function BlacklistStats({
       />
       <MetricStatCard
         title="Total Wiped Value"
-        value={stats ? formatCurrency(stats.destroyedTotal) : "—"}
+        value={stats ? formatBlacklistValuation(stats.destroyedTotal, stats.valuationCoverage?.destroyed) : "—"}
         subtext="destroyed or confiscated value"
         valueClassName="pharos-numeric text-3xl font-semibold"
         subtextClassName="text-sm text-muted-foreground"

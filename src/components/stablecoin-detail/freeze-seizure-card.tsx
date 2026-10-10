@@ -23,6 +23,7 @@ import type {
 } from "@/lib/stablecoin-detail-blacklistability-client";
 import type { TransferReviewView } from "@/lib/transfer-review";
 import { cn } from "@/lib/utils";
+import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { formatCompactUsdShort } from "@shared/lib/format";
 import type { BlacklistSummaryResponse } from "@shared/types";
@@ -181,16 +182,15 @@ function buildScopeStation(review: TransferReviewView): Station {
   };
 }
 
-function finiteOrNull(value: number | undefined): number | null {
+function finiteOrNull(value: number | null | undefined): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 /**
  * Observed use of the power, from the freeze tracker. Returns null when the
- * tracker publishes nothing usable for this coin: the station is omitted then,
- * never drawn as "0 frozen". Zero-valued figures drop out for the same reason
- * (a zero frozen total can mean "amounts unavailable"); a coin the tracker
- * watches with no recorded event reads "None recorded" in words.
+ * tracker publishes nothing usable for this coin. Measured zero remains zero;
+ * unknown valuation remains unavailable and known subtotals with missing
+ * observations are partial. A watched coin with no events reads "None recorded".
  */
 function buildUsedStation(stats: BlacklistSummaryResponse["stats"], symbol: string): Station | null {
   const events = finiteOrNull(stats.perCoinTotalEvents[symbol]);
@@ -219,13 +219,13 @@ function buildUsedStation(stats: BlacklistSummaryResponse["stats"], symbol: stri
     });
     spoken.push(`${count} ${addresses === 1 ? "address" : "addresses"} frozen`);
   }
-  if (frozenUsd != null && frozenUsd > 0) {
-    const amount = formatCompactUsdShort(frozenUsd);
+  if ((frozenUsd != null && frozenUsd > 0) || (stats.valuationCoverage?.perCoinFrozen[symbol]?.knownCount ?? 0) > 0 || stats.valuationCoverage?.perCoinFrozen[symbol]?.unavailableCount) {
+    const amount = formatBlacklistValuation(frozenUsd, stats.valuationCoverage?.perCoinFrozen[symbol], formatCompactUsdShort);
     chips.push({ key: "frozen", tone: "terminal", content: <><Figure>{amount}</Figure> frozen</> });
     spoken.push(`${amount} frozen`);
   }
-  if (destroyedUsd != null && destroyedUsd > 0) {
-    const amount = formatCompactUsdShort(destroyedUsd);
+  if ((destroyedUsd != null && destroyedUsd > 0) || (stats.valuationCoverage?.perCoinDestroyed[symbol]?.knownCount ?? 0) > 0 || stats.valuationCoverage?.perCoinDestroyed[symbol]?.unavailableCount) {
+    const amount = formatBlacklistValuation(destroyedUsd, stats.valuationCoverage?.perCoinDestroyed[symbol], formatCompactUsdShort);
     chips.push({ key: "destroyed", icon: Flame, tone: "terminal", content: <><Figure>{amount}</Figure> destroyed</> });
     spoken.push(`${amount} destroyed`);
   }

@@ -10,6 +10,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { resolveQueryViewState } from "@/lib/query-view-state";
+import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
 
 // How many recent freeze rows to surface beneath the headline.
 const MAX_RECENT = 4;
@@ -114,12 +115,15 @@ export function RecentFreezesCard(): React.JSX.Element {
   });
   const amount =
     windowKey === "24h"
-      ? (summaryQuery.data?.stats.recentFreezeAmount24hUsd ?? 0)
-      : (summaryQuery.data?.stats.recentFreezeAmount7dUsd ?? 0);
+      ? summaryQuery.data?.stats.recentFreezeAmount24hUsd
+      : summaryQuery.data?.stats.recentFreezeAmount7dUsd;
   const count =
     windowKey === "24h"
       ? (summaryQuery.data?.stats.recentFreezeCount24h ?? 0)
       : (summaryQuery.data?.stats.recentFreezeCount7d ?? 0);
+  const valuationCoverage = windowKey === "24h"
+    ? summaryQuery.data?.stats.valuationCoverage?.recent24h
+    : summaryQuery.data?.stats.valuationCoverage?.recent7d;
 
   return (
     <PulseCard
@@ -170,7 +174,7 @@ export function RecentFreezesCard(): React.JSX.Element {
             count > 0 ? "text-red-700 dark:text-red-400" : "text-foreground"
           }`}
         >
-          {formatCurrency(amount, 0)}
+          {formatBlacklistValuation(amount, valuationCoverage, (value) => formatCurrency(value, 0))}
         </span>
         <span aria-hidden="true" className="font-mono text-sm text-muted-foreground/40">
           ·

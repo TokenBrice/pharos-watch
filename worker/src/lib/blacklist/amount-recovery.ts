@@ -1,10 +1,6 @@
 import { logWorkerEventArgs } from "../structured-log";
-import {
-  computeBlacklistAmountUsdAtEvent,
-  getBlacklistPriceAssetId,
-} from "@shared/lib/blacklist";
-import type { BlacklistAmountStatus, BlacklistStablecoin } from "@shared/types/market";
-import { fetchBlacklistAssetPriceFromCache } from "./row-preparation";
+import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
+import type { BlacklistAmountStatus } from "@shared/types/market";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import {
   getBlacklistConfigByContract,
@@ -92,9 +88,8 @@ export async function enrichRowBalances(opts: {
   runBudget: BlacklistRunBudget;
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
-  assetPriceUsd?: number | null;
 }): Promise<{ attempted: number; succeeded: number; failed: number }> {
-  const { rows, config, etherscanApiKey, drpcApiKey, etherscanLimiter, runBudget, signal, chainRpcs, assetPriceUsd } =
+  const { rows, config, etherscanApiKey, drpcApiKey, etherscanLimiter, runBudget, signal, chainRpcs } =
     opts;
   const counters = { attempted: 0, succeeded: 0, failed: 0 };
   for (const row of rows) {
@@ -102,7 +97,8 @@ export async function enrichRowBalances(opts: {
     if (blacklistRuntimeBudgetReached(runBudget)) break;
     if (blacklistSubrequestBudgetReached(runBudget)) break;
     if (row.amount_native != null) {
-      row.amount_usd_at_event ??= computeBlacklistAmountUsdAtEvent(config.stablecoin, row.amount_native, assetPriceUsd);
+      // No historically attributed non-USD quote is available in this lane.
+      row.amount_usd_at_event ??= computeBlacklistAmountUsdAtEvent(config.stablecoin, row.amount_native);
       continue;
     }
     if (row.amount_status === "permanently_unavailable") continue;
@@ -128,7 +124,7 @@ export async function enrichRowBalances(opts: {
         });
 
         row.amount_native = amount;
-        row.amount_usd_at_event = computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, assetPriceUsd);
+        row.amount_usd_at_event = computeBlacklistAmountUsdAtEvent(config.stablecoin, amount);
         if (amount != null) row.amount_source = amountSource;
         row.amount_status = amount != null ? "resolved" : "provider_failed";
         row.amount_last_error_class = amount != null ? null : "provider_null";
@@ -292,7 +288,6 @@ export interface RecoverBlacklistAmountForRowOptions {
   runBudget: BlacklistRunBudget;
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
-  assetPriceUsd?: number | null;
 }
 
 export interface RecoverBlacklistAmountForRowResult {
@@ -447,7 +442,7 @@ export async function recoverBlacklistAmountForRow(
 
   return {
     amount,
-    amountUsd: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, options.assetPriceUsd),
+    amountUsd: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
     amountSource,
     amountStatus: amount != null ? "resolved" : "provider_failed",
     lastErrorClass,
@@ -550,15 +545,7 @@ export async function backfillAmounts(
   let resolvedRepairRows = 0;
   let retriedRepairRows = 0;
   let unrecoverableRepairRows = 0;
-  const assetPriceCache = new Map<BlacklistStablecoin, number | null>();
   let runtimeBudgetHit = false;
-  const getAssetPriceUsd = async (stablecoin: BlacklistStablecoin): Promise<number | null> => {
-    if (!getBlacklistPriceAssetId(stablecoin)) return null;
-    if (assetPriceCache.has(stablecoin)) return assetPriceCache.get(stablecoin) ?? null;
-    const assetPriceUsd = await fetchBlacklistAssetPriceFromCache(db, stablecoin);
-    assetPriceCache.set(stablecoin, assetPriceUsd);
-    return assetPriceUsd;
-  };
 
   for (const row of result.results) {
     throwIfAborted(signal);
@@ -612,7 +599,6 @@ export async function backfillAmounts(
       continue;
     }
 
-    const assetPriceUsd = await getAssetPriceUsd(config.stablecoin);
 
     let amount: number | null = null;
     let amountSource: "event" | "historical_balance" | "derived" | "unavailable" = "unavailable";
@@ -651,7 +637,7 @@ export async function backfillAmounts(
         eventType: row.event_type,
         config,
         amount,
-        amountUsd: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, assetPriceUsd),
+        amountUsd: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
         amountSource,
         amountStatus,
         attemptedAt: attemptAt,

@@ -265,7 +265,7 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
     expect(budget.count).toBe(1);
   });
 
-  it("drops malformed provider peers while retaining valid logs", async () => {
+  it("retains malformed provider evidence and fences its block while keeping valid peers", async () => {
     const valid = {
       address: "0x" + "11".repeat(20),
       topics: ["0x" + "22".repeat(32)],
@@ -297,7 +297,10 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
         noopLimiter,
         createBudget(10),
       );
-      expect(result).toMatchObject({ complete: true, logs: [valid], scannedToBlock: 100 });
+      expect(result).toMatchObject({
+        complete: false, logs: [valid], scannedToBlock: 0, validatedToBlock: 100,
+        rejectedLogs: [{ ...valid, topics: ["not-a-topic"] }],
+      });
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining("etherscan_logs_malformed_entries_dropped"),
       );
@@ -390,6 +393,7 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
     expect(result).toEqual({
       logs: [...first, ...second], complete: true, scannedToBlock: 100,
       calls: 3, maxDepth: 1, failureReason: undefined,
+      rejectedLogs: [], validatedToBlock: undefined,
     });
     expect(fetchSpy).toHaveBeenCalledTimes(3);
     expect(budget.count).toBe(3);
@@ -424,6 +428,7 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
     const budget = createBudget(2);
     expect(await fetchEvmLogsForTopicWithCompleteness(1, "0x123", "0xabc", null, 0, 100, 0, noopLimiter, budget)).toEqual({
       logs: first, complete: false, scannedToBlock: 50, calls: 2, maxDepth: 1, failureReason: "budget-exhausted",
+      rejectedLogs: [], validatedToBlock: undefined,
     });
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(budget.count).toBe(2);

@@ -291,6 +291,11 @@ export async function fetchTronEventsIncremental(
           safeHead,
           fingerprint,
         });
+      } else if (json.data.length >= 200) {
+        // A saturated page without a continuation cannot prove the unseen tail.
+        apiError = true;
+        incomplete = true;
+        break;
       } else {
         url = null;
       }

@@ -45,6 +45,13 @@ const validSummary: Required<BlacklistSummaryResponse> = {
     perCoinFrozenAddressCount: perCoin(() => 0), perCoinFrozenTotal: perCoin(() => 0),
     perCoinDestroyedTotal: perCoin(() => 0), perCoinQuarterlyEventTypes: perCoin(() => []),
     perCoinRecentEventTypes: perCoin(() => ({ freezes: 0, destroys: 0, releases: 0 })),
+    valuationCoverage: {
+      destroyed: { knownCount: 0, unavailableCount: 0 },
+      recent24h: { knownCount: 0, unavailableCount: 0 },
+      recent7d: { knownCount: 0, unavailableCount: 0 },
+      perCoinFrozen: perCoin(() => ({ knownCount: 0, unavailableCount: 0 })),
+      perCoinDestroyed: perCoin(() => ({ knownCount: 0, unavailableCount: 0 })),
+    },
   },
   chart: [], chains: [], totalEvents: 0,
   coverage: { supported: [], unsupportedDeferred: [], counts: {

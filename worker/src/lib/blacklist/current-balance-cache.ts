@@ -21,7 +21,22 @@ import {
 import {
   buildCurrentBalanceSnapshotRows,
   fetchBlacklistAssetPriceFromCache,
+  unambiguousRows,
 } from "./row-preparation";
+import { batchExecute } from "../db";
+
+export const CURRENT_BALANCE_DEBT_PREFIX = "blacklist:current-balance-debt:";
+
+export async function enqueueCurrentBalanceDebt(db: D1Database, rows: readonly BlacklistRow[]): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await batchExecute(db, rows.filter((row) => row.suppression_reason == null).map((row) => db.prepare(
+    "INSERT OR IGNORE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+  ).bind(`${CURRENT_BALANCE_DEBT_PREFIX}${row.id}`, row.id, now)));
+}
+
+async function clearCurrentBalanceDebt(db: D1Database, eventId: string): Promise<void> {
+  await db.prepare("DELETE FROM cache WHERE key = ?").bind(`${CURRENT_BALANCE_DEBT_PREFIX}${eventId}`).run();
+}
 
 export interface SyncCurrentBalanceCacheResult {
   updated: number;
@@ -30,7 +45,7 @@ export interface SyncCurrentBalanceCacheResult {
   budgetExhausted: boolean;
 }
 
-type CurrentBalanceFetchContext = {
+export type CurrentBalanceFetchContext = {
   etherscanApiKey: string | null;
   drpcApiKey: string | null;
   trongridApiKey: string | null;
@@ -78,6 +93,7 @@ async function persistCurrentBalanceResult(
   amount: number | null,
   now: number,
   assetPriceUsd: number | null,
+  source = "current_balance",
 ): Promise<"updated" | "failed"> {
   if (amount == null) {
     await upsertBlacklistCurrentBalance(db, {
@@ -108,7 +124,7 @@ async function persistCurrentBalanceResult(
     contractAddress: config.contractAddress,
     amountNative: amount,
     amountUsd: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, assetPriceUsd),
-    source: "current_balance",
+    source,
     status: "resolved",
     observedAt: now,
     lastSuccessfulObservedAt: now,
@@ -130,6 +146,7 @@ export async function syncCurrentBalanceCacheForRows(
     return { updated: 0, failed: 0, skippedDueBudget: 0, budgetExhausted: false };
   }
 
+  await enqueueCurrentBalanceDebt(db, rows);
   const latestRows = context.latestRows ?? buildCurrentBalanceSnapshotRows(rows);
   const counters: SyncCurrentBalanceCacheResult = {
     updated: 0,
@@ -155,6 +172,7 @@ export async function syncCurrentBalanceCacheForRows(
     if (row.event_type === "unblacklist") {
       // Preserve the freeze-ledger snapshot after releases so historical seized/frozen
       // totals do not disappear when the live blacklist status changes later.
+      await clearCurrentBalanceDebt(db, row.id);
       continue;
     }
 
@@ -167,7 +185,7 @@ export async function syncCurrentBalanceCacheForRows(
         configKey: config.configKey,
         contractAddress: config.contractAddress,
         amountNative: row.amount_native,
-        amountUsd: row.amount_usd_at_event ?? computeBlacklistAmountUsdAtEvent(config.stablecoin, row.amount_native, assetPriceUsd),
+        amountUsd: row.amount_usd_at_event,
         source: "destroy_event",
         status: "resolved",
         observedAt: row.timestamp,
@@ -178,22 +196,30 @@ export async function syncCurrentBalanceCacheForRows(
         consecutiveFailures: 0,
       });
       counters.updated++;
+      await clearCurrentBalanceDebt(db, row.id);
       continue;
     }
 
     let amount = await fetchCurrentBalanceForAddress(config, row.address, context);
+    let source = "current_balance";
 
     // Gold contracts (PAXG, XAUT) override balanceOf() to return 0 for frozen
     // addresses.  When the on-chain balance is 0 but the event captured a
     // pre-freeze amount, use the event-time amount so the freeze ledger
     // reflects the actual seized value.  Only apply to gold stablecoins —
     // for others, a 0 balance means funds were genuinely moved or destroyed.
-    if (isGoldBlacklistStablecoin(config.stablecoin) && (amount == null || amount === 0) && row.amount_native != null && row.amount_native > 0) {
+    if (isGoldBlacklistStablecoin(config.stablecoin) && amount === 0 && row.amount_native != null && row.amount_native > 0) {
       amount = row.amount_native;
+      source = "gold_event_zero_balance";
     }
 
-    const status = await persistCurrentBalanceResult(db, config, row.address, amount, now, assetPriceUsd);
+    const status = await persistCurrentBalanceResult(db, config, row.address, amount, now, assetPriceUsd, source);
+    if (status === "updated") await clearCurrentBalanceDebt(db, row.id);
     counters[status]++;
+  }
+  if (!counters.budgetExhausted && counters.failed === 0 && latestRows.length > 0
+    && !latestRows.some((row) => row.event_type === "destroy" && row.amount_native == null)) {
+    for (const row of unambiguousRows(rows)) await clearCurrentBalanceDebt(db, row.id);
   }
 
   return counters;

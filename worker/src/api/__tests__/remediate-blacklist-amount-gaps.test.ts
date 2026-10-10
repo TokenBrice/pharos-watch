@@ -1,5 +1,5 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
@@ -35,11 +35,43 @@ const testChainRpcs = new Map<string, ChainRpcConfig>([
   }],
 ]);
 
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
 describe("handleRemediateBlacklistAmountGaps", () => {
+  it("recovers historical EURC native amounts without attributing the repair-time quote to the event", async () => {
+    vi.mocked(fetchEvmTokenBalance).mockResolvedValue(100);
+    const db = mockD1([
+      { match: "FROM blacklist_events", rows: [{
+        id: "old-eurc", stablecoin: "EURC", chain_id: "avalanche", event_type: "blacklist",
+        address: "0xabc", block_number: 12_757_005, timestamp: 1_648_614_948,
+        amount_status: "recoverable_pending", amount_attempt_count: 0,
+        amount_last_attempted_at: null, contract_address: null, config_key: null,
+      }] },
+      { match: "FROM price_cache WHERE asset_id = ?", rows: [],
+        first: { price: 1.2, updated_at: Math.floor(Date.now() / 1000) }, allowUnused: true },
+      { match: "UPDATE blacklist_events", rows: [], runMeta: { changes: 1 } },
+      { match: "DELETE FROM cache WHERE key = ?", rows: [], runMeta: { changes: 1 } },
+    ], { requireMatch: true });
+    const request = makeApiRequest("/api/remediate-blacklist-amount-gaps", {
+      method: "POST", adminKey: "secret-key", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chainId: "avalanche", stablecoin: "EURC", dryRun: false }),
+    });
+    const response = await handleRemediateBlacklistAmountGapsTrusted({
+      db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request, chainRpcs: testChainRpcs,
+    });
+    expect((await readJsonResponse(response, 200) as { applied: { resolved: number } }).applied.resolved).toBe(1);
+    const update = db.getHistory().find((entry) => entry.sql.includes("UPDATE blacklist_events"));
+    expect(update?.binds[0]).toBe(100);
+    expect(update?.binds[1]).toBeNull();
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM price_cache"))).toBe(false);
+  });
+
   it.each([true, false])("rejects explicit Tron remediation before reads or writes (dryRun=%s)", async (dryRun) => {
     const db = mockD1([], { requireMatch: true });
     const response = await handleRemediateBlacklistAmountGapsTrusted({
@@ -394,7 +426,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
       "blacklist:gap-metrics:producer:v1:86400:full",
       "blacklist:gap-metrics:v1:86400:core",
       "blacklist:gap-metrics:v1:86400:full",
-      "blacklist:summary:producer:v2",
+      "blacklist:summary:producer:v3",
     ]);
   });
 

@@ -117,7 +117,7 @@ function evmResult() {
     chainHead: 1_000,
     usedRpcLogs: true,
     scannedToBlock: 120,
-    safeHead: 900,
+    safeHead: 120,
     incomplete: false,
     coverageOutcome: "quiet",
     topicCount: 1,
@@ -158,6 +158,27 @@ beforeEach(() => {
 });
 
 describe("blacklist config scan accounting", () => {
+  it("retains catch-up progress and lag without refreshing success until safe head is reached", async () => {
+    const state = makeState(EVM_CONFIG, { lastSucceededAt: 10 });
+    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    mocks.fetchEvmEventsIncremental.mockResolvedValueOnce({
+      ...evmResult(), safeHead: 900, incomplete: true, coverageOutcome: "incomplete",
+      failureSamples: ["behind-safe-head"],
+    });
+    const first = await scanBlacklistConfigs(scanArgs());
+    expect(state.cursorValue).toBe(120);
+    expect(state.lastSucceededAt).toBe(10);
+    expect(first.configsSucceeded).toBe(0);
+    expect(first.runtimeBudgetHit).toBe(false);
+    expect(first.configLag[state.configKey]).toEqual({ cursorKind: "evm_block", frontier: 120, safeHead: 900, lag: 780 });
+    mocks.fetchEvmEventsIncremental.mockResolvedValueOnce({ ...evmResult(), scannedToBlock: 900, safeHead: 900 });
+    const second = await scanBlacklistConfigs(scanArgs());
+    expect(second.configsSucceeded).toBe(1);
+    expect(state.cursorValue).toBe(900);
+    expect(state.lastSucceededAt).toBeGreaterThan(10);
+    expect(second.configLag[state.configKey]?.lag).toBe(0);
+  });
+
   it("records every remaining config when the budget is reached mid-loop", async () => {
     const states = [makeState(), makeState(EVM_CONFIG, { configKey: `${EVM_CONFIG.configKey}-2` }), makeState(EVM_CONFIG, { configKey: `${EVM_CONFIG.configKey}-3` })];
     mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: states, zeroCursorConfigs: [] });

@@ -6,6 +6,7 @@ import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/type
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { BlacklistStats } from "@/components/blacklist-stats";
 import type { BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
+import { BlacklistDetailStats } from "@/components/stablecoin-detail/blacklist-detail-stats";
 
 
 function makePerCoinRecord<T>(createValue: (symbol: BlacklistStablecoin) => T): Record<BlacklistStablecoin, T> {
@@ -78,6 +79,28 @@ function bucket(
 }
 
 describe("BlacklistStats", () => {
+  it.each([
+    { amount: null, known: 0, unavailable: 1, expected: "Unavailable" },
+    { amount: 100, known: 1, unavailable: 1, expected: "$100.00 (partial)" },
+    { amount: 100, known: 1, unavailable: 0, expected: "$100.00" },
+    { amount: 0, known: 1, unavailable: 0, expected: "$0.00" },
+  ])("qualifies destroyed valuations with known=$known unavailable=$unavailable", ({ amount, known, unavailable, expected }) => {
+    const stats = makeStats();
+    const coverage = { knownCount: known, unavailableCount: unavailable };
+    stats.destroyedTotal = amount;
+    stats.valuationCoverage = {
+      destroyed: coverage, recent24h: coverage, recent7d: coverage, perCoinFrozen: {}, perCoinDestroyed: {},
+    };
+    stats.perCoinFrozenTotal.USDC = amount;
+    stats.perCoinDestroyedTotal.USDC = amount;
+    stats.valuationCoverage.perCoinFrozen.USDC = coverage;
+    stats.valuationCoverage.perCoinDestroyed.USDC = coverage;
+    render(<BlacklistStats summary={{ ...makeSummary(), stats }} isLoading={false}
+      blacklistStatusBuckets={[]} supportDataLoading={false} />);
+    render(<BlacklistDetailStats symbol="USDC" stats={stats} isLoading={false} />);
+    expect(screen.getAllByText(expected)).toHaveLength(3);
+  });
+
   it("renders the unfreezable market-share stat from the blacklist-status no bucket", () => {
     render(
       <BlacklistStats

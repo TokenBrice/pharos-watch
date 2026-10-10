@@ -103,7 +103,7 @@ vi.mock("../../lib/blacklist-contracts", () => ({
 
 vi.mock("../../lib/alchemy-logs", () => ({
   fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 20000000, calls: 1, maxDepth: 0 })),
-  getAlchemyBlockNumber: vi.fn(async () => 20010000),
+  getAlchemyBlockNumber: vi.fn(async () => 20000450),
   resolveBlockTimestamps: vi.fn(async () => new Map()),
 }));
 
@@ -205,6 +205,7 @@ const mockD1 = createMockD1Preset([
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
   { match: "blacklist:decode-retry:", rows: [] },
   { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  { match: "DELETE FROM cache WHERE key = ?", rows: [] },
   { match: "FROM blacklist_current_balances", rows: [] },
   { match: "INSERT INTO blacklist_current_balances", rows: [] },
   { match: "UPDATE blacklist_current_balances", rows: [] },
@@ -279,7 +280,7 @@ describe("syncBlacklist", () => {
       calls: 1,
       maxDepth: 0,
     });
-    vi.mocked(getAlchemyBlockNumber).mockResolvedValue(20010000);
+    vi.mocked(getAlchemyBlockNumber).mockResolvedValue(20000450);
     vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map());
     vi.mocked(getChainRpc).mockImplementation((_chainRpcs: Map<string, unknown>, chainId: string) =>
       chainId === "base" ? baseChainRpcConfig() : undefined,
@@ -1152,6 +1153,8 @@ describe("syncBlacklist", () => {
     ];
 
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
+    // A complete OR scan must reach the observed safe head, even if it consumes the budget.
+    vi.mocked(getAlchemyBlockNumber).mockResolvedValue(19_960_450);
     vi.mocked(fetchAlchemyLogs).mockImplementationOnce(
       async (_rpcUrl, _contractAddress, _topics, _fromBlock, _toBlock, budget) => {
         budget.count = budget.limit;
@@ -1218,7 +1221,14 @@ describe("syncBlacklist", () => {
     }));
 
     try {
-      await syncBlacklist(buildTestOpts({ db }));
+      const result = await syncBlacklist(buildTestOpts({ db }));
+      const metadata = JSON.parse(result.metadata);
+      expect(result.status).toBe("degraded");
+      expect(metadata.producerSnapshotSkipped).toBe(true);
+      expect(metadata.producerSummarySnapshot).toBe(false);
+      expect(metadata.configLag[baseConfig.configKey]).toMatchObject({
+        frontier: 1_049_999, safeHead: 20_000_000, lag: 18_950_001,
+      });
 
       const baseCalls = vi
         .mocked(fetchAlchemyLogs)

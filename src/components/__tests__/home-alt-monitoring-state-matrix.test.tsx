@@ -161,6 +161,7 @@ const freezeSummaryReady = {
     recentFreezeCount7d: 1,
     recentFreezeAmount24hUsd: 1_000,
     recentFreezeAmount7dUsd: 1_000,
+    valuationCoverage: { recent24h: { knownCount: 1, unavailableCount: 0 }, recent7d: { knownCount: 1, unavailableCount: 0 } },
   },
 };
 const freezeSummaryEmpty = {
@@ -169,6 +170,7 @@ const freezeSummaryEmpty = {
     recentFreezeCount7d: 0,
     recentFreezeAmount24hUsd: 0,
     recentFreezeAmount7dUsd: 0,
+    valuationCoverage: { recent24h: { knownCount: 0, unavailableCount: 0 }, recent7d: { knownCount: 0, unavailableCount: 0 } },
   },
 };
 
@@ -332,6 +334,7 @@ describe("RecentFreezesCard authoritative totals", () => {
             recentFreezeCount7d: 350,
             recentFreezeAmount24hUsd: 123_456,
             recentFreezeAmount7dUsd: 456_789,
+            valuationCoverage: { recent24h: { knownCount: 200, unavailableCount: 0 }, recent7d: { knownCount: 350, unavailableCount: 0 } },
           },
         },
         freezeSummaryEmpty,
