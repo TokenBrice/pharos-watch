@@ -678,8 +678,6 @@ describe("syncFxRates", () => {
     const {
       sourceUpdatedAtByPeg,
       sourceModeByPeg,
-      sourceCadenceByPeg,
-      sourceDateByPeg,
     } = makeUniformFxRatesProvenance(fullPrevRates, { updatedAt: sameDayUpdatedAt });
 
     const nowSec = Math.floor(Date.now() / 1000);
@@ -690,8 +688,6 @@ describe("syncFxRates", () => {
         mode: "cached-fallback",
         sourceUpdatedAtByPeg,
         sourceModeByPeg,
-        sourceCadenceByPeg,
-        sourceDateByPeg,
         consecutiveFallbackRuns: 12,
       }, nowSec - 60),
     });

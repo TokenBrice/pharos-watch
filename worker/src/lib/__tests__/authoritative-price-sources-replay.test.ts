@@ -35,6 +35,9 @@ describe("authoritative-price-sources", () => {
   it("replays historical cUSD prices through the same authoritative provider", async () => {
     resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValueOnce(22_874_100).mockResolvedValueOnce(22_875_000);
     fetchEvmCallHexAtBlockMock.mockResolvedValue(QUOTE_HEX);
+    fetchMarketBackfillPriceSeriesMock.mockResolvedValue(makeHistoricalPriceSeries([
+      { timestamp: 1_710_000_000, price: 1 }, { timestamp: 1_710_086_400, price: 1 },
+    ]));
 
     const result = await fetchAuthoritativeHistoricalPriceSeries(
       makeHistoricalMeta("cusd-cap", "Cap cUSD", "CUSD", {
@@ -76,6 +79,7 @@ describe("authoritative-price-sources", () => {
   it("returns matched null historical prices when the authoritative provider fails", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     resolveClosestBlockAtOrBeforeTimestampMock.mockRejectedValue(new Error("rpc index down"));
+    fetchMarketBackfillPriceSeriesMock.mockResolvedValue(makeHistoricalPriceSeries([{ timestamp: 1_710_000_000, price: 1 }]));
 
     const result = await fetchAuthoritativeHistoricalPriceSeries(
       makeHistoricalMeta("cusd-cap", "Cap cUSD", "CUSD", {
@@ -105,6 +109,7 @@ describe("authoritative-price-sources", () => {
 
     const overrides = await fetchLiveOverrides([
       asset("iusd-infinifi", { circulating: { peggedUSD: 180_000_000 } }),
+      freshParent("usdc-circle", 1, "coingecko+pyth"),
     ]);
 
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
@@ -118,7 +123,7 @@ describe("authoritative-price-sources", () => {
       }),
     );
 
-    expect(overrides.get("iusd-infinifi")).toEqual({
+    expect(overrides.get("iusd-infinifi")).toMatchObject({
       price: 1,
       source: "protocol-redeem",
       confidence: "high",
@@ -391,6 +396,9 @@ describe("authoritative-price-sources", () => {
   it("replays historical iUSD prices through the infiniFi redeem quote", async () => {
     resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValueOnce(24_133_673).mockResolvedValueOnce(24_209_239);
     fetchEvmCallHexAtBlockMock.mockResolvedValue(IUSD_QUOTE_HEX);
+    fetchMarketBackfillPriceSeriesMock.mockResolvedValue(makeHistoricalPriceSeries([
+      { timestamp: 1_767_196_936, price: 0.9 }, { timestamp: 1_768_107_667, price: 1.02 },
+    ]));
 
     const result = await fetchAuthoritativeHistoricalPriceSeries(
       makeHistoricalMeta("iusd-infinifi", "infiniFi USD", "IUSD", {
@@ -409,8 +417,8 @@ describe("authoritative-price-sources", () => {
       matched: true,
       source: "protocol-redeem",
       prices: [
-        { timestamp: 1_767_196_936, price: 1 },
-        { timestamp: 1_768_107_667, price: 1 },
+        { timestamp: 1_767_196_936, price: 0.9 },
+        { timestamp: 1_768_107_667, price: 1.02 },
       ],
     });
     expect(resolveClosestBlockAtOrBeforeTimestampMock).toHaveBeenCalledTimes(2);
@@ -764,6 +772,9 @@ describe("authoritative-price-sources", () => {
   it("preserves existing backfill rows when authoritative history coverage is too low", async () => {
     resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValueOnce(22_874_100);
     fetchEvmCallHexAtBlockMock.mockResolvedValue(QUOTE_HEX);
+    fetchMarketBackfillPriceSeriesMock.mockResolvedValue(makeHistoricalPriceSeries([
+      { timestamp: 1_710_000_000, price: 1 }, { timestamp: 1_710_086_400, price: 1 },
+    ]));
 
     const result = await fetchAuthoritativeHistoricalPriceSeries(
       {

@@ -229,6 +229,8 @@ export interface LivePriceContext {
   vaultRateCache?: ReadonlyMap<string, CachedVaultRate>;
   /** Fresh live vault rates collected during the stage for one durable post-loop write. */
   vaultRateWrites?: Map<string, CachedVaultRate>;
+  /** Circuit admission skipped live vault I/O; the bounded offline rate lane remains eligible. */
+  vaultRateCacheOnly?: boolean;
 }
 
 export interface LivePriceDiagnosticTarget {
@@ -258,6 +260,8 @@ export interface PriceSourceProvider {
   /** Run this fallback only when the asset entered the authoritative stage without a usable price. */
   liveMissingOnly?: boolean;
   liveCircuitSource?: string;
+  /** This provider resolves through the bounded durable vault-rate lane even when live I/O is blocked. */
+  supportsCachedVaultRate?: boolean;
   recordNullLiveResultAsCircuitFailure?: boolean;
   /** Do not let optional refresh failures poison a recovery circuit while the input price remains usable. */
   recordLiveCircuitFailuresOnlyWhenMissing?: boolean;
@@ -578,7 +582,7 @@ export async function resolveVaultAssetsPerShareWithCache(
   let liveRate: number | null = null;
   let liveError: unknown = null;
   try {
-    liveRate = await fetchLiveRate();
+    if (!context.vaultRateCacheOnly) liveRate = await fetchLiveRate();
   } catch (error) {
     // Timeout/RPC failures fall through to the cached rate: the lookup is
     // synchronous, so serving it under an aborted candidate budget costs
@@ -691,6 +695,8 @@ function normalizeHistoricalTimestamps(candidateTimestamps: number[]): number[] 
 export async function collectHistoricalBlockPrices(
   context: HistoricalPriceContext,
   resolvePrice: HistoricalBlockPriceResolver,
+  /** Convert a cached block quote per requested timestamp (e.g. quote-token units to USD). */
+  convertQuoteToUsd?: (quote: number, timestamp: number) => number | null,
 ): Promise<HistoricalPricePoint[] | null> {
   const requestedTimestamps = normalizeHistoricalTimestamps(context.candidateTimestamps);
   if (requestedTimestamps.length === 0) return null;
@@ -717,7 +723,9 @@ export async function collectHistoricalBlockPrices(
       quoteByBlock.set(blockNumber, price);
     }
 
-    prices.push({ timestamp, price });
+    const usdPrice = convertQuoteToUsd ? convertQuoteToUsd(price, timestamp) : price;
+    if (usdPrice == null) continue;
+    prices.push({ timestamp, price: usdPrice });
   }
 
   if (prices.length === 0) return null;

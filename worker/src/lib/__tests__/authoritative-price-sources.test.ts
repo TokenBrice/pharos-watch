@@ -186,6 +186,7 @@ describe("authoritative-price-sources", () => {
       [
         asset("usx-dforce", { circulating: { peggedUSD: 1_000_000 } }),
         asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }),
+        freshParent("usdc-circle", 1, "coingecko+pyth"),
       ],
       { stats },
     );
@@ -231,6 +232,7 @@ describe("authoritative-price-sources", () => {
       [
         asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }),
         asset("usdt-tether", { circulating: { peggedUSD: 100_000_000_000 } }),
+        freshParent("usdc-circle", 1, "coingecko+pyth"),
       ],
       { stats },
     );
@@ -246,7 +248,7 @@ describe("authoritative-price-sources", () => {
       }),
     );
 
-    expect(overrides.get("cusd-cap")).toEqual({
+    expect(overrides.get("cusd-cap")).toMatchObject({
       price: 0.99999266,
       source: "protocol-redeem",
       confidence: "high",
@@ -362,7 +364,7 @@ describe("authoritative-price-sources", () => {
     const stats = createAuthoritativeLivePriceOverrideStats();
 
     const overrides = await fetchLiveOverrides(
-      [asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } })],
+      [asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }), freshParent("usdc-circle", 1, "coingecko+pyth")],
       { db, stats },
     );
 
@@ -398,7 +400,7 @@ describe("authoritative-price-sources", () => {
     const stats = createAuthoritativeLivePriceOverrideStats();
 
     const overrides = await fetchLiveOverrides(
-      [asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } })],
+      [asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }), freshParent("usdc-circle", 1, "coingecko+pyth")],
       { db, stats },
     );
 
@@ -723,7 +725,7 @@ describe("authoritative-price-sources", () => {
     const stats = createAuthoritativeLivePriceOverrideStats(1);
 
     const overrides = await fetchLiveOverrides(
-      [asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } })],
+      [asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }), freshParent("usdc-circle", 1, "coingecko+pyth")],
       { wallClockBudgetMs: 1, stats },
     );
 
@@ -824,6 +826,7 @@ describe("authoritative-price-sources", () => {
         [
           unpricedChild("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }),
           unpricedChild("iusd-infinifi", { circulating: { peggedUSD: 180_000_000 } }),
+          freshParent("usdc-circle", 1, "coingecko+pyth"),
         ],
         { stats, wallClockBudgetMs: 10_000 },
       );
@@ -887,7 +890,11 @@ describe("authoritative-price-sources", () => {
     const stats = createAuthoritativeLivePriceOverrideStats(5);
 
     const overrides = await fetchLiveOverrides(
-      [unpricedChild("cusd-cap"), unpricedChild("iusd-infinifi")],
+      [
+        unpricedChild("cusd-cap"),
+        unpricedChild("iusd-infinifi"),
+        freshParent("usdc-circle", 1, "protocol-redeem", { nowSec }),
+      ],
       // Keep the admitted probe as the only in-flight candidate so the abort
       // accounting under test stays unambiguous.
       { db, wallClockBudgetMs: 5, stats, maxConcurrency: 1 },
@@ -1096,6 +1103,7 @@ describe("authoritative-price-sources", () => {
           unpricedChild("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }),
           unpricedChild("m-m0"),
           freshParent("wm-m0", 0.999812, "coingecko", { nowSec, priceConfidence: "single-source" }),
+          freshParent("usdc-circle", 1, "protocol-redeem", { nowSec }),
         ],
         { stats },
       );
@@ -1148,6 +1156,7 @@ describe("authoritative-price-sources", () => {
         [
           unpricedChild("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }),
           unpricedChild("iusd-infinifi", { circulating: { peggedUSD: 180_000_000 } }),
+          freshParent("usdc-circle", 1, "protocol-redeem", { nowSec: Math.floor(Date.now() / 1000) }),
         ],
         { stats, wallClockBudgetMs: 10_000 },
       );

@@ -110,6 +110,77 @@ describe("chain dropout guard", () => {
     expect(Object.values(recovery.state.pairs).find((pair) => pair.chainId === "xlayer")).toMatchObject({ baselineUsd: 1_400_000_000, baselineObservedAt: NOW + 9 * DAY, quarantinedSince: null });
   });
 
+  it.each([false, true])("keeps omitted quarantined chains sticky across generations (empty map: %s)", async (emptyMap) => {
+    const initial: PeggedAsset = {
+      ...usdg(), id: "usdc-circle", circulating: { peggedUSD: 20_000_000 },
+      chainCirculating: {
+        Ethereum: { current: 20_000_000, circulatingPrevDay: 20_000_000 },
+        Sonic: { current: 0, circulatingPrevDay: 80_000_000 },
+      },
+    };
+    // Pin the vetted fixture baseline; the incident seed has a different
+    // real-world USDC/Sonic amount and intentionally outranks list prev-day.
+    const state: ChainDropoutState = { version: 1, pairs: {
+      [JSON.stringify(["usdc-circle", "sonic"])]: {
+        assetId: "usdc-circle", chainLabel: "Sonic", chainId: "sonic",
+        baselineUsd: 80_000_000, baselineObservedAt: NOW - DAY,
+        baselineSource: "state", quarantinedSince: null,
+      },
+    } };
+    const first = await guardChainDropouts({ assets: [initial], now: NOW, state });
+    expect(getCirculatingRawOrNull(initial)).toBe(100_000_000);
+    const omitted = (): PeggedAsset => ({
+      ...usdg(), id: "usdc-circle", circulating: { peggedUSD: emptyMap ? 0 : 20_000_000 },
+      chainCirculating: emptyMap ? {} : { Ethereum: { current: 20_000_000, circulatingPrevDay: 20_000_000 } },
+    });
+    const next = omitted();
+    const second = await guardChainDropouts({ assets: [next], now: NOW + 900, state: first.state });
+    expect(second.flagged).toBe(emptyMap ? 2 : 1);
+    expect(getCirculatingRawOrNull(next)).toBe(100_000_000);
+    expect(next.chainCirculating!.Sonic.current).toBeNull();
+    expect(next).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "quarantined", quarantinedSince: NOW } });
+    expect(next.supplyChainGuard?.chains.find((chain) => chain.chainId === "sonic")).toMatchObject({
+      listCurrentUsd: null, baselineUsd: 80_000_000, baselineObservedAt: NOW - DAY,
+    });
+
+    // Recovery from an unreadable state must include the identity even though
+    // the provider omitted the row and the accepted chain current is null.
+    const recovered = omitted();
+    await guardChainDropouts({
+      assets: [recovered], now: NOW + 1800, state: { version: 1, pairs: {} }, stateReadFailed: true,
+      previousAssetsById: new Map([["usdc-circle", next]]),
+    });
+    expect(getCirculatingRawOrNull(recovered)).toBe(100_000_000);
+    expect(recovered.supplyChainGuard?.quarantinedSince).toBe(NOW);
+    expect(recovered.chainCirculating!.Sonic.current).toBeNull();
+
+    const expired = omitted();
+    const expiry = await guardChainDropouts({
+      assets: [expired], now: NOW + SUPPLEMENTAL_RESTORE_MAX_AGE_SEC + 1, state: second.state,
+    });
+    expect(getCirculatingRawOrNull(expired)).toBeNull();
+    expect(expiry.unavailableAssetIds).toEqual(["usdc-circle"]);
+    expect(expired).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "unavailable", quarantinedSince: NOW } });
+  });
+
+  it("recovers omitted material identities from the previous accepted publication even without a saved pair", async () => {
+    const previous: PeggedAsset = {
+      ...usdg(), id: "usdc-circle", supplyObservedAt: NOW - 900,
+      circulating: { peggedUSD: 100_000_000 },
+      chainCirculating: { Ethereum: { current: 20_000_000 }, Sonic: { current: 80_000_000 } },
+    };
+    const next: PeggedAsset = {
+      ...previous, circulating: { peggedUSD: 20_000_000 }, chainCirculating: { Ethereum: { current: 20_000_000 } },
+    };
+    const result = await guardChainDropouts({
+      assets: [next], now: NOW, state: { version: 1, pairs: {} }, previousAssetsById: new Map([["usdc-circle", previous]]),
+    });
+    expect(result.flagged).toBe(1);
+    expect(getCirculatingRawOrNull(next)).toBe(100_000_000);
+    expect(next.chainCirculating!.Sonic.current).toBeNull();
+    expect(next.supplyRestored).toBe(true);
+  });
+
   it("publishes the native amount, not the disproven list zero, when native supply corroborates a low-but-positive collapse", async () => {
     const contract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
     mocks.onchain.mockResolvedValue(40_000_000n * 10n ** BigInt(contract.decimals!));

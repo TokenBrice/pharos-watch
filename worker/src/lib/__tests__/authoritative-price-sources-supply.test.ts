@@ -9,6 +9,8 @@ import {
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { resolveVaultNavSupplyPrice } from "../authoritative-price-sources/erc4626-nav";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { CIRCUIT_SOURCE } from "../constants";
 
 describe("resolveVaultNavSupplyPrice", () => {
   beforeEach(() => {
@@ -85,12 +87,39 @@ describe("resolveVaultNavSupplyPrice", () => {
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
   });
 
-  it("skips the resolver while the grouped protocol-redeem circuit is open", async () => {
+  it("skips live RPC while the grouped circuit is open and no cached rate is available", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeOpenProtocolRedeemCircuitDb(nowSec);
 
     expect(await resolveVaultNavSupplyPrice("eearn-ember", previousPayload(nowSec), db)).toBeNull();
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+  });
+
+  it("uses the durable supply-valuation NAV rate while live RPC circuit admission is blocked", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const circuit = JSON.stringify({
+        state: "open", consecutiveFailures: 3, openedAt: nowSec,
+        lastFailureAt: nowSec, lastSuccessAt: null,
+      });
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`, circuit, nowSec,
+      );
+      sqlite.prepare("INSERT INTO authoritative_vault_rates (stablecoin_id, rate, observed_at, updated_at) VALUES (?, ?, ?, ?)").run(
+        "eearn-ember", 1.0392, nowSec - 3600, nowSec - 3600,
+      );
+      const override = await resolveVaultNavSupplyPrice("eearn-ember", previousPayload(nowSec), db);
+      expect(override).toMatchObject({
+        price: 1.0392 * 0.9999, source: "protocol-redeem-cached-rate", confidence: "low", observedAt: nowSec - 3600,
+      });
+      expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(
+        `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
+      )).toEqual({ value: circuit });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("returns null and records a grouped failure when the live read fails with no cached rate", async () => {

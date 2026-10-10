@@ -25,7 +25,7 @@ import {
   applyResolvedPrice,
   type PeggedAsset,
 } from "./enrich-prices-shared";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import {
   collectMissingPriceCandidates,
   type EnrichPassResult,
@@ -83,7 +83,7 @@ export async function runJupiterPass(
   }).map((candidate) => ({
     ...candidate,
     mode: "fallback" as const,
-    priorityUsd: getCirculatingRaw(candidate.asset),
+    priorityUsd: getCirculatingRawOrNull(candidate.asset) ?? -1,
   }));
   const primaryCandidates = collectPrimaryAugmentationCandidates(assets);
   const candidates = [...fallbackCandidates, ...primaryCandidates];
@@ -164,7 +164,7 @@ export async function runJupiterPass(
       const liquidity = payload?.liquidity;
       if (usdPrice == null || !Number.isFinite(usdPrice) || usdPrice <= 0) continue;
       if (blockId == null || !isFreshJupiterBlock(blockId, currentSlot)) continue;
-      if (liquidity == null || !Number.isFinite(liquidity) || liquidity < JUPITER_MIN_LIQUIDITY_USD) continue;
+      if (liquidity != null && (!Number.isFinite(liquidity) || liquidity < JUPITER_MIN_LIQUIDITY_USD)) continue;
 
       if (!isUsableFallbackPrice(entry.asset, usdPrice, fxRates)) {
         continue;
@@ -211,7 +211,7 @@ function collectPrimaryAugmentationCandidates(assets: PeggedAsset[]): JupiterCan
         index,
         mint,
         mode: "primary",
-        priorityUsd: getCirculatingRaw(asset),
+        priorityUsd: getCirculatingRawOrNull(asset) ?? -1,
       };
     })
     .filter((entry): entry is JupiterCandidate => entry != null)

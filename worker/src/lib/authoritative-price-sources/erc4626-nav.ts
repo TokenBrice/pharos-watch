@@ -7,6 +7,7 @@ import { CIRCUIT_SOURCE } from "../constants";
 import {
   buildCachedRateLiveOverride,
   buildParentDerivedLiveOverride,
+  CACHED_VAULT_RATE_SOURCE,
   defineRegistryErc4626NavVault,
   ETHEREUM_CHAIN,
   fetchVaultAssetsPerShareViaSelector,
@@ -437,6 +438,7 @@ function createVaultNavProvider(input: {
   return {
     source: PROTOCOL_REDEEM_SOURCE,
     liveCircuitSource: CIRCUIT_SOURCE.PROTOCOL_REDEEM,
+    supportsCachedVaultRate: true,
     ...(input.livePriority != null ? { livePriority: input.livePriority } : {}),
     liveParentByAssetId: Object.fromEntries([...input.vaultsById].map(([stablecoinId, config]) => [stablecoinId, config.parentId])),
     matches(stablecoinId: string): boolean {
@@ -515,7 +517,7 @@ export async function resolveVaultNavSupplyPrice(
   if (!config) return null;
   const parentAsset = previousAssetsById.get(config.parentId);
   if (!parentAsset) return null;
-  if (db && !(await shouldAttemptFetch(db, CIRCUIT_SOURCE.PROTOCOL_REDEEM))) return null;
+  const liveAllowed = !db || await shouldAttemptFetch(db, CIRCUIT_SOURCE.PROTOCOL_REDEEM);
 
   const nowSec = Math.floor(Date.now() / 1000);
   const context: LivePriceContext = {
@@ -523,12 +525,15 @@ export async function resolveVaultNavSupplyPrice(
     chainRpcs,
     vaultRateCache: db ? await readVaultRateCache(db, nowSec) : undefined,
     vaultRateWrites: new Map(),
+    vaultRateCacheOnly: !liveAllowed,
   };
   const stub: PeggedAsset = { id: stablecoinId, name: stablecoinId, symbol: stablecoinId };
   try {
     const override = await erc4626NavProvider.fetchLivePrice!(stub, context, signal);
     if (db) {
-      if (override) await recordOutcomeSafe(db, CIRCUIT_SOURCE.PROTOCOL_REDEEM, true);
+      if (liveAllowed && override) {
+        await recordOutcomeSafe(db, CIRCUIT_SOURCE.PROTOCOL_REDEEM, "source" in override && override.source !== CACHED_VAULT_RATE_SOURCE);
+      }
       if (context.vaultRateWrites!.size > 0) {
         await writeVaultRateCache(db, context.vaultRateWrites!, nowSec);
       }
@@ -536,7 +541,7 @@ export async function resolveVaultNavSupplyPrice(
     return override && "price" in override ? override : null;
   } catch (error) {
     if (signal?.aborted) throw error;
-    if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.PROTOCOL_REDEEM, false);
+    if (db && liveAllowed) await recordOutcomeSafe(db, CIRCUIT_SOURCE.PROTOCOL_REDEEM, false);
     logWorkerEventArgs(
       "lib",
       "warn",

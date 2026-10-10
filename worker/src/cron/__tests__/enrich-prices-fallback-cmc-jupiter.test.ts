@@ -58,7 +58,7 @@ describe("enrichMissingPrices", () => {
     expect(JSON.stringify(result.diagnostics)).not.toContain("test-alchemy-secret");
     expect(JSON.stringify(result.diagnostics)).not.toContain("test-drpc-secret");
   });
-  it("skips Jupiter V3 quotes without reported liquidity", async () => {
+  it("accepts Jupiter V3 quotes without reported liquidity", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
       makeMissingUsdg(),
@@ -82,10 +82,44 @@ describe("enrichMissingPrices", () => {
 
     const stats = await enrichMissingPrices(assets);
 
-    expect(stats.passJupiter).toBe(0);
-    expect(assets[0].price).toBe(0);
-    expect(assets[0].priceSource).not.toBe("jupiter");
-    expect(stats.finalMissing).toBe(1);
+    expect(stats.passJupiter).toBe(1);
+    expect(assets[0].price).toBe(1.0002);
+    expect(assets[0].priceSource).toBe("jupiter");
+    expect(stats.finalMissing).toBe(0);
+  });
+
+  it.each([
+    ["omitted", {}, true],
+    ["null", { liquidity: null }, true],
+    ["sufficient", { liquidity: 50_000 }, true],
+    ["insufficient", { liquidity: 49_999 }, false],
+    ["negative", { liquidity: -1 }, false],
+    ["nonfinite", { liquidity: Infinity }, false],
+  ])("applies optional %s liquidity to both recovery and primary augmentation", async (_label, liquidity, accepted) => {
+    const currentSlot = 418_913_760;
+    for (const primary of [false, true]) {
+      const asset = primary ? makePeggedAsset({
+        id: "usdg-paxos", symbol: "USDG", price: 1.0001,
+        priceSource: "coingecko", priceConfidence: "single-source",
+        consensusSources: ["coingecko"], agreeSources: ["coingecko"],
+      }) : makeMissingUsdg();
+      const quote = { usdPrice: 1.0002, decimals: 6, blockId: currentSlot - 20, ...liquidity };
+      mockFetch(_label === "nonfinite" ? [
+        { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
+        { match: "api.jup.ag/price/v3", respond: () => new Response(
+          `{"${USDG_SOLANA_MINT}":{"usdPrice":1.0002,"decimals":6,"blockId":${currentSlot - 20},"liquidity":1e999}}`,
+          { headers: { "Content-Type": "application/json" } },
+        ) },
+      ] : jupiterRoutes(currentSlot, quote));
+      const result = await runJupiterPass([asset], undefined, undefined);
+      expect(result.resolved).toBe(accepted ? 1 : 0);
+      if (primary) {
+        expect(asset.price).toBe(1.0001);
+        expect(asset.consensusSources?.includes("jupiter") ?? false).toBe(accepted);
+      } else {
+        expect(asset.price).toBe(accepted ? 1.0002 : 0);
+      }
+    }
   });
 
   it("falls back to the next bounded Solana RPC when the primary slot endpoint returns 403", async () => {

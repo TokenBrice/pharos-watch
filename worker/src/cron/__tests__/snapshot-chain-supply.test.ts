@@ -10,17 +10,19 @@ import {
 const mockD1 = makeChainSupplySnapshotDb;
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
-  stablecoins: [{ id: "usdt-tether" }, { id: "usdc-circle" }],
+  stablecoins: [
+    { id: "usdt-tether", symbol: "USDT", flags: { pegCurrency: "USD" } },
+    { id: "usdc-circle", symbol: "USDC", flags: { pegCurrency: "USD" } },
+  ],
 }));
 
-vi.mock("@shared/lib/stablecoins/aggregate-registry", () => ({
-  CORE_AGGREGATE_ACTIVE_IDS: new Set(["usdt-tether", "usdc-circle"]),
-}));
 
 
 import { snapshotChainSupply } from "../snapshot-chain-supply";
 import type { StablecoinPublicationWaiver } from "../../lib/stablecoin-publication-coverage";
+import { restoreFallbackCacheState } from "../sync-stablecoins/fallback";
 
+import type { PeggedAsset } from "../sync-stablecoins/enrich-prices-shared";
 const DEFAULT_REQUIRED_IDS = ["usdt-tether", "usdc-circle"] as const;
 
 const completionMarker = (options: Parameters<typeof buildChainSupplySnapshotCompletionMarker>[0]) =>
@@ -82,6 +84,55 @@ describe("snapshotChainSupply", () => {
   });
   afterEach(() => vi.useRealTimers());
 
+
+  it("defers copied fallback chain histories instead of importing prior current as a fresh observation", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const previous = completePayload();
+      previous.peggedAssets[1] = makeSnapshotAsset({
+        id: "usdc-circle", circulating: { peggedUSD: 100_000_000 },
+        supplyObservedAt: nowSec - 60, chainCirculating: { Ethereum: { current: 100_000_000 } }, chains: ["Ethereum"],
+      });
+      const put = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      put.run("stablecoins", JSON.stringify(previous), nowSec - 60);
+      const fresh: PeggedAsset = {
+        id: "usdc-circle", name: "USD Coin", symbol: "USDC",
+        circulating: { peggedUSD: 150_000_000 }, supplySource: "coingecko-fallback",
+        supplyObservedAt: nowSec - 10, chainCirculating: {}, chains: [],
+      };
+      await restoreFallbackCacheState({ db, assets: [fresh] });
+      expect(fresh.circulating).toEqual({ peggedUSD: 150_000_000 });
+      expect(fresh.supplyObservedAt).toBe(nowSec - 10);
+      put.run("stablecoins", JSON.stringify({ peggedAssets: [previous.peggedAssets[0], fresh] }), nowSec);
+      const result = await snapshotChainSupply(db, undefined, { nowSec, requiredActiveIds: DEFAULT_REQUIRED_IDS });
+      expect(JSON.parse(result.metadata!)).toMatchObject({ deferredChains: { ethereum: ["usdc-circle"] } });
+      expect(sqlite.prepare("SELECT chain_id FROM chain_supply_history WHERE chain_id = 'ethereum'").all()).toEqual([]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("rejects daily chain subtotals for an omitted quarantined contributor with preserved null identity", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const payload = completePayload();
+      payload.peggedAssets[1] = makeSnapshotAsset({
+        id: "usdc-circle", circulating: { peggedUSD: 100_000_000 }, supplyObservedAt: nowSec - 900,
+        supplyRestored: true, chainCirculating: { Sonic: { current: null }, Ethereum: { current: 20_000_000 } },
+        chains: ["Sonic", "Ethereum"],
+      });
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("stablecoins", JSON.stringify(payload), nowSec);
+      const result = await snapshotChainSupply(db, undefined, { nowSec, requiredActiveIds: DEFAULT_REQUIRED_IDS });
+      expect(JSON.parse(result.metadata!)).toMatchObject({
+        restoredOnlyIds: ["usdc-circle"], deferredChains: { sonic: ["usdc-circle"], ethereum: ["usdc-circle"] },
+      });
+      expect(sqlite.prepare("SELECT chain_id FROM chain_supply_history WHERE chain_id IN ('sonic', 'ethereum')").all()).toEqual([]);
+    } finally {
+      sqlite.close();
+    }
+  });
   it.each([false, true])(
     "publishes unaffected chains for a restored small-asset cohort and recovers same-day (prior row: %s)",
     async (hasPriorRow) => {

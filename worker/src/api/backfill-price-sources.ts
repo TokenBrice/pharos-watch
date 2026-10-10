@@ -346,7 +346,7 @@ async function fetchDlPriceChart(
 }
 
 export async function fetchMarketBackfillPriceSeries(
-  meta: StablecoinMeta,
+  meta: Pick<StablecoinMeta, "id"> & { flags: Pick<StablecoinMeta["flags"], "pegCurrency"> },
   geckoId: string,
   options?: {
     granularity?: HistoricalMarketBackfillGranularity;

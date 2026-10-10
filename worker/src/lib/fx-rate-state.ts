@@ -544,7 +544,16 @@ export function hydrateFxRateState(
       ]),
     ),
     sourceDateByPeg: Object.fromEntries(
-      Object.keys(rates).map((pegKey) => [pegKey, meta.sourceDateByPeg?.[pegKey] ?? null]),
+      Object.keys(rates).map((pegKey) => {
+        const explicitCadence = meta.sourceCadenceByPeg?.[pegKey];
+        const updatedAt = meta.sourceUpdatedAtByPeg[pegKey];
+        const legacyDailyDate = explicitCadence == null
+          && inferFxSourceCadence(pegKey) !== "intraday"
+          && updatedAt != null
+          ? formatIsoDate(updatedAt)
+          : null;
+        return [pegKey, meta.sourceDateByPeg?.[pegKey] ?? legacyDailyDate];
+      }),
     ),
     sources: meta.sources,
     ecbDate: meta.ecbDate ?? null,

@@ -235,16 +235,30 @@ describe("CoinGecko fallback phases", () => {
     });
   });
 
-  it("restores chain and supply-history fields from the previous stablecoins cache", async () => {
+  it.each([false, true])("preserves fresh aggregate clocks and nulls previous chain current (previous restored: %s)", async (restored) => {
+    const nowSec = Math.floor(Date.now() / 1000);
     const current = makeAsset({
       circulatingPrevDay: null,
       circulatingPrevWeek: null,
       circulatingPrevMonth: null,
       chainCirculating: {},
       chains: [],
+      supplySource: "coingecko-fallback",
+      supplyObservedAt: nowSec - 10,
+      circulating: { peggedUSD: 1_500_000 },
     });
     const previous = makeAsset({
-      chainCirculating: { Ethereum: { current: 1_000_000 } },
+      supplyObservedAt: nowSec - 60,
+      supplyRestored: restored,
+      supplyChainGuard: restored ? {
+        reason: "supply-chain-dropout", status: "quarantined", quarantinedSince: nowSec - 60,
+        chains: [{
+          chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
+          baselineUsd: 1_000_000, baselineObservedAt: nowSec - 60,
+          baselineSource: "state", resolution: "carried-baseline",
+        }],
+      } : undefined,
+      chainCirculating: { Ethereum: { current: restored ? null : 1_000_000, circulatingPrevDay: 990_000 } },
       chains: ["Ethereum"],
       circulatingPrevDay: { peggedUSD: 990_000 },
       circulatingPrevWeek: { peggedUSD: 980_000 },
@@ -268,7 +282,10 @@ describe("CoinGecko fallback phases", () => {
       id: "fixture-usd",
       chains: ["Ethereum"],
     });
-    expect(current.chainCirculating).toEqual({ Ethereum: { current: 1_000_000 } });
+    expect(current.chainCirculating).toEqual({ Ethereum: { current: null, circulatingPrevDay: 990_000 } });
+    expect(current.circulating).toEqual({ peggedUSD: 1_500_000 });
+    expect(current.supplyObservedAt).toBe(nowSec - 10);
+    expect(current.supplyRestored).not.toBe(true);
     expect(current.chains).toEqual(["Ethereum"]);
     expect(current.circulatingPrevDay).toEqual({ peggedUSD: 990_000 });
     expect(current.circulatingPrevWeek).toEqual({ peggedUSD: 980_000 });
@@ -581,6 +598,7 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
     onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockResolvedValue({
       mcap: 4_884_400_000,
       supplySource: "onchain-total-supply",
+      observedAt: NOW_SEC + 10,
       chainCirculating: {
         Ethereum: { current: 4_517_720_000, chainId: "ethereum" },
         Base: { current: 11_478_000, chainId: "base" },
@@ -596,8 +614,9 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
       price: 1.06,
       supplySource: "coingecko-fallback",
       circulating: { peggedUSD: 4_600_000_000 },
-      chainCirculating: {},
-      chains: [],
+      chainCirculating: { Ethereum: { current: null } },
+      chains: ["Ethereum"],
+      supplyObservedAt: NOW_SEC,
     });
     // Not a curated aggregate id: it must be skipped without an on-chain probe.
     const other = makeAsset({ id: "fixture-usd", chainCirculating: { Ethereum: { current: 1 } } });
@@ -609,6 +628,7 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
     expect((meta as { id: string }).id).toBe("susds-sky");
     // Single basis: the CG NAV price is passed straight through to the probe.
     expect(priceUsd).toBe(1.06);
+    expect(susds.supplyObservedAt).toBe(NOW_SEC + 10);
 
     expect(susds.supplySource).toBe("onchain-total-supply");
     expect(susds.circulating).toEqual({ peggedUSD: 4_884_400_000 });
@@ -623,9 +643,9 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
     expect(other.chainCirculating).toEqual({ Ethereum: { current: 1 } });
   });
 
-  it("fails closed to the restored previous-row carry when a configured chain read fails", async () => {
+  it("keeps fresh aggregate and unavailable chains when a configured chain read fails", async () => {
     onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockResolvedValue(null);
-    const restoredCarry = { Ethereum: { current: 4_000_000_000 } };
+    const unavailableChains = { Ethereum: { current: null } };
     const susds = makeAsset({
       id: "susds-sky",
       symbol: "sUSDS",
@@ -633,16 +653,18 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
       price: 1.06,
       supplySource: "coingecko-fallback",
       circulating: { peggedUSD: 4_600_000_000 },
-      chainCirculating: restoredCarry,
+      chainCirculating: unavailableChains,
       chains: ["Ethereum"],
+      supplyObservedAt: NOW_SEC,
     });
 
     await overlayFallbackCuratedAggregateSupply([susds]);
 
     expect(onchainSupplyMocks.fetchCuratedAggregateOnChainMcap).toHaveBeenCalledTimes(1);
-    // No partial map: the restored carry, its chains, and supply source are all preserved.
-    expect(susds.chainCirculating).toBe(restoredCarry);
-    expect(susds.chainCirculating).toEqual({ Ethereum: { current: 4_000_000_000 } });
+    // No partial map or resurrection of a previous current observation.
+    expect(susds.chainCirculating).toBe(unavailableChains);
+    expect(susds.chainCirculating).toEqual({ Ethereum: { current: null } });
+    expect(susds.supplyObservedAt).toBe(NOW_SEC);
     expect(susds.chains).toEqual(["Ethereum"]);
     expect(susds.circulating).toEqual({ peggedUSD: 4_600_000_000 });
     expect(susds.supplySource).toBe("coingecko-fallback");

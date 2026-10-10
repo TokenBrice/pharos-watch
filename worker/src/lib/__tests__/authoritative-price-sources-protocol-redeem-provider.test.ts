@@ -1,11 +1,18 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   asset,
+  freshParent,
+  makeHistoricalPriceSeries,
   makeHistoricalMeta,
   resetAuthoritativePriceSourceMocks,
   resolveClosestBlockAtOrBeforeTimestampMock,
 } from "./authoritative-price-sources.test-support";
 import { createProtocolRedeemProvider } from "../authoritative-price-sources/protocol-redeem-provider";
+
+const historicalParent = vi.hoisted(() => vi.fn());
+vi.mock("../../api/backfill-price-sources", () => ({
+  fetchMarketBackfillPriceSeries: historicalParent,
+}));
 
 const meta = makeHistoricalMeta("test-redeem", "Test redemption", "TEST");
 const timestamps = [1_710_000_000, 1_710_003_600, 1_710_007_200, 1_710_010_800, 1_710_014_400];
@@ -14,11 +21,15 @@ describe("createProtocolRedeemProvider", () => {
   beforeEach(() => {
     resetAuthoritativePriceSourceMocks();
     resolveClosestBlockAtOrBeforeTimestampMock.mockImplementation(async (_chain, timestamp) => timestamp);
+    historicalParent.mockReset().mockResolvedValue(makeHistoricalPriceSeries(
+      timestamps.map((timestamp) => ({ timestamp, price: 1 })),
+    ));
   });
 
   it("leaves an absent live quote unavailable and propagates a failed quote read", async () => {
     const unavailable = createProtocolRedeemProvider({
       stablecoinId: meta.id,
+      parentId: "usdc-circle",
       fetchLiveQuote: async () => null,
       fetchHistoricalQuote: async () => null,
     });
@@ -27,10 +38,12 @@ describe("createProtocolRedeemProvider", () => {
     const error = new Error("protocol quote unavailable");
     const failed = createProtocolRedeemProvider({
       stablecoinId: meta.id,
+      parentId: "usdc-circle",
       fetchLiveQuote: async () => { throw error; },
       fetchHistoricalQuote: async () => { throw error; },
     });
-    await expect(failed.fetchLivePrice!(asset(meta.id), { assetsById: new Map() })).rejects.toBe(error);
+    const parent = freshParent("usdc-circle", 1, "coingecko+pyth");
+    await expect(failed.fetchLivePrice!(asset(meta.id), { assetsById: new Map([[parent.id, parent]]) })).rejects.toBe(error);
     await expect(failed.fetchHistoricalPrices!(meta, { candidateTimestamps: [timestamps[0]] })).rejects.toBe(error);
   });
 
@@ -41,6 +54,7 @@ describe("createProtocolRedeemProvider", () => {
   ])("publishes a partial history only at the 80% coverage boundary ($available/5)", async ({ available, accepted }) => {
     const provider = createProtocolRedeemProvider({
       stablecoinId: meta.id,
+      parentId: "usdc-circle",
       fetchLiveQuote: async () => null,
       fetchHistoricalQuote: async (_context, _block, timestamp) =>
         timestamp <= timestamps[available - 1] ? 0.97 : null,
@@ -58,6 +72,7 @@ describe("createProtocolRedeemProvider", () => {
     );
     const provider = createProtocolRedeemProvider({
       stablecoinId: meta.id,
+      parentId: "usdc-circle",
       fetchLiveQuote: async () => null,
       fetchHistoricalQuote: async () => 0.97,
     });
@@ -70,6 +85,7 @@ describe("createProtocolRedeemProvider", () => {
     let reads = 0;
     const provider = createProtocolRedeemProvider({
       stablecoinId: meta.id,
+      parentId: "usdc-circle",
       fetchLiveQuote: async () => null,
       fetchHistoricalQuote: async () => ++reads === 1 ? 0.97 : 1.03,
     });
@@ -85,6 +101,7 @@ describe("createProtocolRedeemProvider", () => {
   it("returns unavailable history for an empty request and honors cancellation without synthesizing prices", async () => {
     const provider = createProtocolRedeemProvider({
       stablecoinId: meta.id,
+      parentId: "usdc-circle",
       fetchLiveQuote: async () => null,
       fetchHistoricalQuote: async () => 1,
     });
@@ -96,5 +113,23 @@ describe("createProtocolRedeemProvider", () => {
     await expect(provider.fetchHistoricalPrices!(meta, {
       candidateTimestamps: timestamps, signal: controller.signal,
     })).rejects.toBe(error);
+  });
+
+  it("reuses a block's token-denominated quote but applies each timestamp's actual parent USD rate", async () => {
+    resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValue(22_874_100);
+    historicalParent.mockResolvedValue(makeHistoricalPriceSeries([
+      { timestamp: timestamps[0], price: 0.9 }, { timestamp: timestamps[1], price: 1.02 },
+    ]));
+    const quote = vi.fn(async () => 1);
+    const provider = createProtocolRedeemProvider({
+      stablecoinId: meta.id, parentId: "usdc-circle",
+      fetchLiveQuote: async () => null, fetchHistoricalQuote: quote,
+    });
+    await expect(provider.fetchHistoricalPrices!(meta, {
+      candidateTimestamps: [timestamps[0], timestamps[1]],
+    })).resolves.toEqual([
+      { timestamp: timestamps[0], price: 0.9 }, { timestamp: timestamps[1], price: 1.02 },
+    ]);
+    expect(quote).toHaveBeenCalledTimes(1);
   });
 });
