@@ -81,6 +81,7 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
       notice={{
         label: "Stability Index",
         dataUpdatedAt: query.dataUpdatedAt,
+        queries: [{ preset: "stabilityIndex", dataUpdatedAt: query.dataUpdatedAt, meta: query.meta, error: query.error, hasData: data !== undefined }],
         onRetry: () => void query.refetch(),
         compact: true,
       }}

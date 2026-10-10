@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import GlossaryPage from "../page";
 import { GLOSSARY_ENTRIES } from "@/lib/glossary-content";
 import { extractJsonLd } from "@/test/json-ld";
+import { DEWS_SIGNAL_LABELS } from "@shared/lib/dews-config";
 
 vi.mock("next/font/local", () => ({
   default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
@@ -51,5 +52,20 @@ describe("GlossaryPage", () => {
         }),
       ]),
     );
+  });
+
+  it("publishes the canonical DEWS signal roster in visible and DefinedTerm definitions", () => {
+    const html = renderToStaticMarkup(<GlossaryPage />);
+    const termSet = extractJsonLd(html).find((node) => node["@type"] === "DefinedTermSet") as {
+      hasDefinedTerm: Array<{ termCode: string; description: string }>;
+    };
+    const definition = termSet.hasDefinedTerm.find((term) => term.termCode === "dews")!.description;
+    const signalList = definition.match(/sub-signals: ([^.]+)\./)?.[1]?.split(", ");
+    expect(signalList).toEqual(Object.values(DEWS_SIGNAL_LABELS));
+    expect(definition).toMatch(/Price Confidence.*confidence loss, not distance from peg/);
+    expect(definition).toMatch(/Cross-Source Divergence.*source prices.*peg reference/);
+
+    const visibleDefinition = html.match(/<article id="dews"[\s\S]*?<\/article>/)?.[0];
+    expect(visibleDefinition).toContain(definition);
   });
 });

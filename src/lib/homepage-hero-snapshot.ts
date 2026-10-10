@@ -3,6 +3,8 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { StablecoinListResponse } from "@shared/types";
 import { HOMEPAGE_COHORT_BUCKET_IDS, type HomepageCohortBucketKey } from "@/lib/homepage-cohort-config";
 import type { TotalMcapChartRow } from "@/lib/total-mcap-chart";
+import { deriveDataHealth, type DataHealthInfo } from "@/lib/data-health";
+import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 
 // A checked-in build snapshot is only a short outage bridge, never an
 // indefinitely current headline.
@@ -40,7 +42,7 @@ interface HomepageHeroMarketRow {
 export type HomepageHeroSelection =
   | {
       status: "available";
-      source: "live" | "fallback";
+      source: "live" | "retained" | "fallback";
       snapshot: HomepageHeroSnapshot;
     }
   | {
@@ -144,13 +146,20 @@ export function selectHomepageHeroSnapshot({
   liveSnapshot,
   fallbackSnapshot,
   nowMs,
+  liveHealth,
 }: {
   liveSnapshot: HomepageHeroSnapshot | null;
   fallbackSnapshot: HomepageHeroSnapshot;
   nowMs: number;
+  liveHealth?: DataHealthInfo;
 }): HomepageHeroSelection {
   if (liveSnapshot?.totalUsd != null) {
-    return { status: "available", source: "live", snapshot: liveSnapshot };
+    const health = liveHealth ?? deriveDataHealth({
+      ...DATA_HEALTH_PRESETS.stablecoins,
+      dataUpdatedAt: liveSnapshot.asOfISO ? Date.parse(liveSnapshot.asOfISO) : 0,
+      hasData: true,
+    }, nowMs);
+    return { status: "available", source: health.state === "fresh" ? "live" : "retained", snapshot: liveSnapshot };
   }
 
   const fallbackTimestamp = fallbackSnapshot.asOfISO ? Date.parse(fallbackSnapshot.asOfISO) : Number.NaN;

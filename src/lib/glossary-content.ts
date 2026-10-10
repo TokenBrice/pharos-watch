@@ -1,4 +1,5 @@
 import { CAUSE_LABEL_LIST } from "@shared/lib/cause-of-death";
+import { DEWS_SIGNAL_LABELS } from "@shared/lib/dews-config";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
@@ -91,7 +92,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     term: "DEWS",
     letter: "D",
     definition:
-      "Depeg Early Warning System. A forward-looking per-coin stress score, 0 to 100, recomputed every 30 minutes from eight weighted sub-signals: price deviation, source divergence, liquidity erosion, pool imbalance, supply velocity, blacklist activity, mint/burn pressure, and yield anomalies. PSI condition and same-peg contagion can amplify the score before it lands in a band. Always uppercase, never spaced.",
+      `Depeg Early Warning System. A forward-looking per-coin stress score, 0 to 100, recomputed every 30 minutes from eight weighted sub-signals: ${Object.values(DEWS_SIGNAL_LABELS).join(", ")}. Price Confidence measures confidence loss, not distance from peg; Cross-Source Divergence compares source prices and the peg reference. PSI condition and same-peg contagion can amplify the score before it lands in a band. Always uppercase, never spaced.`,
     methodologyAnchor: "/methodology/#pegscore-dews-methodology",
     methodologyVersion: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     example: {

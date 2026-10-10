@@ -22,7 +22,7 @@ vi.mock("@/lib/stablecoin-static-data", () => ({
   ACTIVE_STABLECOIN_ID_SET: new Set([
     "usdc-circle",
     "eur-stasis",
-    ...Array.from({ length: 19 }, (_, i) => `fixture-coin-${String(i + 3).padStart(2, "0")}`),
+    ...Array.from({ length: 119 }, (_, i) => `fixture-coin-${String(i + 3).padStart(2, "0")}`),
   ]),
 }));
 
@@ -59,10 +59,10 @@ function makeEvent(overrides: Partial<DepegEvent> = {}): DepegEvent {
 const ACTIVE_COIN_IDS = [
   "usdc-circle",
   "eur-stasis",
-  ...Array.from({ length: 19 }, (_, i) => `fixture-coin-${String(i + 3).padStart(2, "0")}`),
+  ...Array.from({ length: 119 }, (_, i) => `fixture-coin-${String(i + 3).padStart(2, "0")}`),
 ];
 
-function makeActiveFixtures(count: number): { events: DepegEvent[]; coins: { id: string; activeDepeg: boolean; currentDeviationBps: number }[] } {
+function makeActiveFixtures(count: number): { events: DepegEvent[]; coins: { id: string; symbol: string; activeDepeg: boolean; currentDeviationBps: number }[] } {
   const ids = ACTIVE_COIN_IDS.slice(0, count);
   return {
     events: ids.map((id, index) =>
@@ -73,7 +73,7 @@ function makeActiveFixtures(count: number): { events: DepegEvent[]; coins: { id:
         peakDeviationBps: -((index + 1) * 10),
       }),
     ),
-    coins: ids.map((id, index) => ({ id, activeDepeg: true, currentDeviationBps: -((index + 1) * 10) })),
+    coins: ids.map((id, index) => ({ id, symbol: `C${String(index + 1).padStart(2, "0")}`, activeDepeg: true, currentDeviationBps: -((index + 1) * 10) })),
   };
 }
 
@@ -140,5 +140,41 @@ describe("ActiveDepegsCard", () => {
     view.rerender(<ActiveDepegsCard />);
 
     expect(view.container.querySelector(".pharos-data-fresh-up")?.textContent).toBe("20");
+  });
+  it("counts an open incident whose current observation is unavailable", () => {
+    useActiveDepegEventsMock.mockReturnValue({ data: { events: [makeEvent()] }, isLoading: false });
+    usePegSummaryMock.mockReturnValue({
+      data: { coins: [{ id: "usdc-circle", symbol: "USDC", activeDepeg: true, currentDeviationBps: null }] },
+      isLoading: false,
+    });
+    render(<ActiveDepegsCard />);
+
+    expect(screen.getByText("1")).toBeTruthy();
+    expect(screen.getByText("Observation unavailable")).toBeTruthy();
+    expect(screen.queryByText("No active incidents")).toBeNull();
+  });
+
+  it("counts the complete summary beyond the first 100 event details", () => {
+    const { events, coins } = makeActiveFixtures(120);
+    useActiveDepegEventsMock.mockReturnValue({ data: { events: events.slice(0, 100) }, isLoading: false });
+    usePegSummaryMock.mockReturnValue({ data: { coins }, isLoading: false });
+    render(<ActiveDepegsCard />);
+
+    expect(screen.getByText("120")).toBeTruthy();
+    const list = screen.getByRole("list", { name: "Top 4 of 120 active depegs by deviation" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(4);
+    expect(screen.getByText("C120")).toBeTruthy();
+    expect(within(list).getAllByText("Age unavailable")).toHaveLength(4);
+  });
+
+  it("keeps the incident count when event detail retrieval fails", () => {
+    const { coins } = makeActiveFixtures(1);
+    useActiveDepegEventsMock.mockReturnValue({ error: new Error("event details failed"), isLoading: false });
+    usePegSummaryMock.mockReturnValue({ data: { coins }, isLoading: false });
+    render(<ActiveDepegsCard />);
+
+    expect(screen.getByText("1")).toBeTruthy();
+    expect(screen.getByText("C01")).toBeTruthy();
+    expect(screen.getByText("Age unavailable")).toBeTruthy();
   });
 });

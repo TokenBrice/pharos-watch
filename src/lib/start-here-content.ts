@@ -27,6 +27,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { CAUSE_LABEL_LIST } from "@shared/lib/cause-of-death";
+import { SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
 
 export interface StartHereGoal {
   title: string;
@@ -172,7 +173,7 @@ export const START_HERE_SCORES: readonly StartHereScore[] = [
     question: "How risky is this stablecoin overall?",
     inputs:
       "Weighted V10 composite: Backing Quality (40%), Exit Strength (35%), and Economic Control (25%), followed by peg, deployment, and binding-cap adjustments.",
-    cadence: "Recomputed continuously from live inputs; bands A+ (87+) through F (0–39).",
+    cadence: `Published every ${SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC / 60} minutes from live inputs; bands A+ (87+) through F (0–39).`,
     methodologyHref: "/methodology/#safety-scores-methodology",
     surfacedOn: "Open the Safety Scores leaderboard",
     surfacedHref: "/safety-scores/",

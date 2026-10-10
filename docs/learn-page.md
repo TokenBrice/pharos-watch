@@ -75,6 +75,7 @@ Glossary entries live in `src/lib/glossary-content.ts`. Each entry owns:
 - optional `seeAlso` entry IDs
 
 `/learn/glossary/` groups entries with `groupGlossaryByLetter()`, renders a sticky A-Z jump rail, and keeps each entry's methodology/version links inline. The page metadata uses canonical `/learn/glossary/` and `public/og-editorial-learn.png`.
+The DEWS definition derives its signal roster from `DEWS_SIGNAL_LABELS`; Price Confidence measures confidence loss, while Cross-Source Divergence compares source prices and the peg reference. Visible definitions and `DefinedTerm` descriptions share that copy.
 
 ---
 

@@ -69,11 +69,13 @@ Derived helpers:
 
 Live homepage modules resolve query state through the shared `loading`, `ready`, `empty`, `unavailable`, and `stale-with-data` contract. A failed source without retained data renders an explicit unavailable state and retry action rather than a healthy or empty message. Retained data stays visible with its age and a stale notice, while a successful zero-row response can use the module's normal empty copy. The rankings workbench identifies failed source families instead of replacing them with the generic empty table.
 
+The DDR overview preserves each incident's prediction state. Only valid frozen predictions enter live verdict counts or duration estimates; pending, no-call and invalidated states stay visible without promoting original audit outcomes into live calls.
+
 Starred stablecoin state is local to the browser:
 
 - localStorage key: `pharos-watchlist-v1` (the shared watchlist store; the legacy `pharos-pinned-stablecoins` and `pharos:yield-watchlist:v1` keys are read once, merged into the canonical key, then deleted)
 - value: normalized stablecoin ID array
-- invalid, inactive, duplicate, or over-limit IDs are ignored on read
+- the homepage pin projection ignores invalid/inactive IDs and reads the first 12 unique active IDs without truncating canonical storage; starring a saved ID below that cap promotes it to the front, while unstarring a visible pin removes it from the shared watchlist
 
 Saved shortcuts are also browser-local:
 
@@ -87,6 +89,12 @@ Saved shortcuts are also browser-local:
 `HomeAltHero` receives the server fallback from `getHomepageHeroSnapshot()` in `src/app/page.tsx`, preserves that exact selection through hydration, and then reconciles the headline and cohort rows from `useStablecoins()`. It renders the `Market Pulse` page heading, the total market-cap summary, cohort rows, and the viewport-gated live chart.
 
 The current supply snapshot records observed versus expected core-aggregate IDs, plus separate present-but-unavailable and omitted-row counts. No observed supply means a nullable headline, not a live $0; the selector then uses a dated, eligible fallback or renders unavailable. Explicit observed zeros remain zero. Mixed coverage stays visible as a **Known Market Cap Subtotal** with an observed/expected census; the present-row `supplyUnavailableCount` keeps its original meaning. A subgroup with no observations is unavailable, named cohorts require all their members, and full-market percentages and the Others residual require complete core coverage.
+
+Only successful data classified fresh by `deriveDataHealth` is **Live**. Without producer metadata, query `dataUpdatedAt` supplies health and the displayed date; with neither timestamp, retained figures say **Freshness unavailable**. Stale, degraded, or failed-refresh figures keep dated values and shared notices. A minute clock rechecks query age and the fallback's 72-hour expiry.
+
+### Market Pulse cards
+
+`PulseCard` receives each contributing query's producer metadata, canonical freshness preset, and error/availability state. Successful stale/degraded responses (including empty results and non-fresh dependencies) carry shared data-health warnings; useful retained values remain visible. The active-depeg headline counts the complete peg-summary incident flags in `ACTIVE_STABLECOIN_ID_SET`, independently of event pagination or current-deviation availability. Only the top four rows are displayed; missing observations and unloaded incident ages are explicitly unavailable, and zero incidents does not claim every price is on peg.
 
 ### `HomepageTape`
 

@@ -243,4 +243,33 @@ describe("feed routes smoke", () => {
     expect(items[99]!.link).toContain("usdc-circle");
     expect(items[99]!.link.endsWith("#depeg-history")).toBe(true);
   });
+
+  it("depeg feed reserves resolved status for recovered closures", async () => {
+    const mod = await fixtureRouteModule();
+    const cases = [
+      { closeReason: "recovered-primary", recoveryPrice: 1, status: "Resolved" },
+      { closeReason: "recovered-dex", recoveryPrice: 1, status: "Resolved" },
+      { closeReason: "recovered-native", recoveryPrice: null, status: "Resolved" },
+      { closeReason: null, recoveryPrice: 1, status: "Resolved" },
+      { closeReason: "coverage-lost-supply", recoveryPrice: null, status: "Closed", detail: "coverage lost" },
+      { closeReason: "superseded-direction", recoveryPrice: null, status: "Closed", detail: "direction change" },
+      { closeReason: "orphan-tracking-removed", recoveryPrice: null, status: "Closed", detail: "removed from tracking" },
+      { closeReason: null, recoveryPrice: null, status: "Closed", detail: "unknown terminal state" },
+      { closeReason: null, recoveryPrice: null, endedAt: null, status: "Active" },
+    ];
+    writeShard(JSON.stringify(cases.map(({ status: _status, detail: _detail, ...closure }, index) =>
+      makeDepegEvent({ id: index + 1, slug: `closure-${index}`, ...closure }),
+    )));
+    const items = parseItems(await (await mod.GET()).text());
+
+    for (const [index, { status, detail }] of cases.entries()) {
+      const item = items.find(({ guid }) => guid === `pharos:depeg-event:closure-${index}`)!;
+      expect(item.description.startsWith(status)).toBe(true);
+      if (detail) {
+        expect(item.description).toContain(detail);
+        expect(item.description).toContain("recovery not confirmed");
+        expect(item.description).not.toContain("Resolved");
+      }
+    }
+  });
 });

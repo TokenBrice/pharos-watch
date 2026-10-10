@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import type { QueryViewState } from "@/lib/query-view-state";
+import { StaleDataBanner, type StaleQuery } from "@/components/stale-data-banner";
 
 // Small square button that links a pulse card to its detail route — the
 // "expand" affordance in the top-right corner of every Market Pulse card.
@@ -35,6 +36,7 @@ interface PulseCardNotice {
   dataUpdatedAt?: number;
   onRetry?: () => void;
   compact?: boolean;
+  queries: readonly StaleQuery[];
 }
 
 interface PulseCardProps {
@@ -73,14 +75,17 @@ export function PulseCard({
       ? loadingContent
       : noticeOnly
         ? <QueryStateNotice state={state === "stale-with-data" ? state : "unavailable"} {...notice} />
-        : state === "empty" && emptyContent !== undefined
-          ? emptyContent
-          : (
-              <>
-                {state === "stale-with-data" ? <QueryStateNotice state={state} {...notice} compact /> : null}
-                {children}
-              </>
-            );
+        : (
+            <>
+              {state !== "loading" ? <StaleDataBanner queries={notice.queries} /> : null}
+              {state === "stale-with-data" && notice.onRetry ? (
+                <button type="button" onClick={notice.onRetry} aria-label={`Retry ${notice.label.toLowerCase()}`} className="pharos-focus-ring min-h-11 self-start rounded-sm px-2 text-xs font-medium">
+                  Retry
+                </button>
+              ) : null}
+              {state === "empty" && emptyContent !== undefined ? emptyContent : children}
+            </>
+          );
 
   return (
     <div className={className}>

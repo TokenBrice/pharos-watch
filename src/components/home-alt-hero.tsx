@@ -11,6 +11,9 @@ import {
   selectHomepageHeroSnapshot,
 } from "@/lib/homepage-hero-snapshot";
 import { formatCurrency, formatLongDate } from "@shared/lib/format";
+import { deriveDataHealth } from "@/lib/data-health";
+import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 
 // OTHERS cohort dot — violet pulled from the shared chart palette.
 const OTHERS_PURPLE = CHART_PALETTE[1];
@@ -25,9 +28,11 @@ export function HomeAltHero({
   const stablecoinsQuery = useStablecoins();
   const liveSnapshot = useMemo(
     () => stablecoinsQuery.data
-      ? buildLiveHomepageHeroSnapshot(stablecoinsQuery.data, stablecoinsQuery.meta?.updatedAt ?? undefined)
+      ? buildLiveHomepageHeroSnapshot(stablecoinsQuery.data, stablecoinsQuery.meta?.updatedAt ?? (
+        stablecoinsQuery.dataUpdatedAt > 0 ? stablecoinsQuery.dataUpdatedAt / 1000 : undefined
+      ))
       : null,
-    [stablecoinsQuery.data, stablecoinsQuery.meta?.updatedAt],
+    [stablecoinsQuery.data, stablecoinsQuery.meta?.updatedAt, stablecoinsQuery.dataUpdatedAt],
   );
   // Hydration-stable first render: the build-time clock keeps server and
   // client output identical, then a deferred tick re-evaluates fallback
@@ -36,12 +41,23 @@ export function HomeAltHero({
   const [nowMs, setNowMs] = useState(fallbackSelectedAtMs);
   useEffect(() => {
     const timer = setTimeout(() => setNowMs(Date.now()), 0);
-    return () => clearTimeout(timer);
+    const interval = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
   }, []);
-  const selection = useMemo(
-    () => selectHomepageHeroSnapshot({ liveSnapshot, fallbackSnapshot: snapshot, nowMs }),
-    [liveSnapshot, snapshot, nowMs],
-  );
+  const meta = stablecoinsQuery.meta ?? null;
+  const liveHealth = deriveDataHealth({
+    ...DATA_HEALTH_PRESETS.stablecoins,
+    dataUpdatedAt: stablecoinsQuery.dataUpdatedAt,
+    hasData: stablecoinsQuery.data !== undefined,
+    error: stablecoinsQuery.error,
+    meta,
+  }, nowMs);
+  const selection = selectHomepageHeroSnapshot({
+    liveSnapshot, liveHealth, fallbackSnapshot: snapshot, nowMs,
+  });
 
   const visibleSnapshot = selection.snapshot;
   const latest = visibleSnapshot?.cohort ?? null;
@@ -88,15 +104,30 @@ export function HomeAltHero({
               {selection.source === "fallback" && selectedDate
                 ? `Fallback · as of ${selectedDate}`
                 : selection.source === "live"
-                  ? selectedDate
-                    ? `Live · as of ${selectedDate}`
-                    : "Live stablecoin data"
-                  : "Live market data unavailable"}
+                  ? `Live · as of ${selectedDate}`
+                  : selection.source === "retained"
+                    ? `${stablecoinsQuery.error ? "Refresh failed" : liveHealth.state === "stale" ? "Stale" : liveHealth.state === "degraded" ? "Degraded" : "Freshness unavailable"} · ${selectedDate ? `as of ${selectedDate}` : "generation unavailable"}`
+                    : "Live market data unavailable"}
             </p>
             {visibleSnapshot && !supplyComplete ? (
               <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                 {`Partial · ${visibleSnapshot.supplyObservedCount}/${visibleSnapshot.supplyExpectedCount} assets observed`}
               </p>
+            ) : null}
+            {selection.source === "live" || selection.source === "retained" ? (
+              <QueryFreshnessNotices
+                error={stablecoinsQuery.error}
+                hasData
+                onRetry={() => void stablecoinsQuery.refetch()}
+                queries={[{
+                  preset: "stablecoins",
+                  label: "Market snapshot",
+                  dataUpdatedAt: stablecoinsQuery.dataUpdatedAt,
+                  hasData: true,
+                  meta,
+                  error: stablecoinsQuery.error,
+                }]}
+              />
             ) : null}
           </div>
         </div>

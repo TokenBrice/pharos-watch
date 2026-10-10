@@ -62,6 +62,7 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
       notice={{
         label: "Mint and burn flow data",
         dataUpdatedAt: query.dataUpdatedAt,
+        queries: [{ preset: "mintBurnFlows", dataUpdatedAt: query.dataUpdatedAt, meta: query.meta, error: query.error, hasData: data !== undefined }],
         onRetry: () => void query.refetch(),
         compact: true,
       }}

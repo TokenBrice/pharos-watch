@@ -157,6 +157,10 @@ export function RecentFreezesCard(): React.JSX.Element {
       notice={{
         label: "Recent freeze data",
         dataUpdatedAt: Math.min(summaryQuery.dataUpdatedAt, eventsQuery.dataUpdatedAt),
+        queries: [
+          { preset: "blacklist", label: "Freeze totals", dataUpdatedAt: summaryQuery.dataUpdatedAt, meta: summaryQuery.meta, error: summaryQuery.error, hasData: summaryQuery.data !== undefined },
+          { preset: "blacklist", label: "Freeze events", dataUpdatedAt: eventsQuery.dataUpdatedAt, meta: eventsQuery.meta, error: eventsQuery.error, hasData: eventsQuery.data !== undefined },
+        ],
         onRetry: () => void Promise.all([summaryQuery.refetch(), eventsQuery.refetch()]),
       }}
       loadingContent={

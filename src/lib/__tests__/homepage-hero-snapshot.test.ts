@@ -86,6 +86,12 @@ describe("selectHomepageHeroSnapshot", () => {
       })).toEqual({ status: "unavailable", source: "unavailable", snapshot: null });
     },
   );
+  it("retains an old successful generation without selecting it as live", () => {
+    const liveSnapshot = snapshot("2020-01-01T00:00:00Z", 200);
+    expect(selectHomepageHeroSnapshot({ liveSnapshot, fallbackSnapshot, nowMs })).toEqual({
+      status: "available", source: "retained", snapshot: liveSnapshot,
+    });
+  });
 });
 
 describe("buildLiveHomepageHeroSnapshot supply availability", () => {
@@ -140,7 +146,7 @@ describe("buildLiveHomepageHeroSnapshot supply availability", () => {
   it("preserves a fully observed zero market and unavailable non-USD subgroup", () => {
     const zeros = buildLiveHomepageHeroSnapshot({
       peggedAssets: [...CLIENT_CORE_AGGREGATE_ACTIVE_IDS].map((id) => asset(id, { peggedUSD: 0 })),
-    });
+    }, Date.parse("2026-08-22T11:45:00Z") / 1000);
     expect(zeros.totalUsd).toBe(0);
     expect(zeros.supplyObservedCount).toBe(zeros.supplyExpectedCount);
     expect(selectHomepageHeroSnapshot({
@@ -164,5 +170,18 @@ describe("buildLiveHomepageHeroSnapshot supply availability", () => {
     expect(partial.supplyObservedCount).toBe(partial.supplyExpectedCount - 1);
     expect(partial.cohort.others).toBeNull();
     expect(partial.nonUsdShare).toBeNull();
+  });
+  it("leaves a wholly omitted non-USD population unavailable, with complete zero controls", () => {
+    const rows = [...CLIENT_CORE_AGGREGATE_ACTIVE_IDS].map((id) =>
+      asset(id, { peggedUSD: 0 }, id === "eurc-circle" ? "peggedEUR" : "peggedUSD"));
+    const complete = buildLiveHomepageHeroSnapshot({ peggedAssets: rows });
+    expect(complete.supplyMissingCount).toBe(0);
+    expect(complete.nonUsdUsd).toBe(0);
+    const omitted = buildLiveHomepageHeroSnapshot({ peggedAssets: rows.filter((row) => row.pegType === "peggedUSD") });
+    expect(omitted.supplyMissingCount).toBe(1);
+    expect(omitted.supplyObservedCount).toBe(omitted.supplyExpectedCount - 1);
+    expect(omitted.nonUsdUsd).toBeNull();
+    expect(omitted.nonUsdShare).toBeNull();
+    expect(omitted.cohort.nonUsd).toBeNull();
   });
 });
