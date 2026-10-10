@@ -39,7 +39,8 @@ import {
   makeXautObservation,
   patchXautObservation,
 } from "../../test-helpers/v9-fixed-input";
-import { captureSafetyScoreV9SupplyAttribution, safetyScoreV9SupplyAttributionExpectedAssetIds } from "../safety-score-v9/supply-attribution";
+import { captureSafetyScoreV9SupplyAttribution } from "../safety-score-v9/supply-attribution-capture";
+import { safetyScoreV9SupplyAttributionExpectedAssetIds } from "../safety-score-v9/supply-attribution";
 import { runBudgetedSupplyAttributionAssets } from "../safety-score-v9/supply-attribution-capture-budget";
 import { sleepWithSignal } from "../abort";
 import { SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";

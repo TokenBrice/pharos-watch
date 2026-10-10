@@ -14,7 +14,8 @@ import {
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
 } from "../../lib/safety-score-v9/supply-attribution-generation";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
-import type { SafetyScoreV9SupplyAttributionCaptureOptions } from "../../lib/safety-score-v9/supply-attribution";
+import type { SafetyScoreV9SupplyAttributionCaptureOptions } from "../../lib/safety-score-v9/supply-attribution-capture";
+import type * as SupplyAttributionCaptureModule from "../../lib/safety-score-v9/supply-attribution-capture";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { buildSafetyScoreV9CaptureControl, SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY } from "../../lib/safety-score-v9/capture-control";
 import { ECONOMIC_SUPPLY_BODY_CAPS } from "../../lib/safety-score-v9/economic-supply-observer";
@@ -24,11 +25,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock(
-  "../../lib/safety-score-v9/supply-attribution",
+  "../../lib/safety-score-v9/supply-attribution-capture",
   async (importOriginal) => {
     const original =
       await importOriginal<
-        typeof import("../../lib/safety-score-v9/supply-attribution")
+        typeof SupplyAttributionCaptureModule
       >();
     return {
       ...original,

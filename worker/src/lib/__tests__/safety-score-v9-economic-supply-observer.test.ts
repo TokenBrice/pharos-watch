@@ -10,7 +10,7 @@ import { ECONOMIC_SUPPLY_BODY_CAPS, observeCurveLzPending, observeEconomicSolana
 import { REVIEWED_ECONOMIC_SUPPLY_PLANS, reviewedEconomicDeploymentAttributionValidationError } from "../safety-score-v9/supply-attribution-contract";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { admissionCodeForSupplyAttributionRejection, computeSupplyAttributionJournalIdV1, createSupplyAttributionJournalV1, SupplyAttributionJournalV1Schema, withSupplyAttributionJournalDiagnosticV1, type SupplyAttributionJournalV1Payload } from "@shared/lib/safety-score-v9-supply-attribution-journal";
-import { emitSupplyAttributionDiagnostic } from "../safety-score-v9/supply-attribution-capture-budget";
+import { emitSupplyAttributionDiagnostic } from "../safety-score-v9/supply-attribution-diagnostics";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 

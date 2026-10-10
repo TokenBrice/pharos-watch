@@ -46,8 +46,8 @@ vi.mock("../safety-score-v9/xaut-supply-observer", async (importOriginal) => {
   };
 });
 
+import { captureSafetyScoreV9SupplyAttribution } from "../safety-score-v9/supply-attribution-capture";
 import {
-  captureSafetyScoreV9SupplyAttribution,
   safetyScoreV9SupplyAttributionExpectedAssetIds,
   safetyScoreV9ChainRows,
   safetyScoreV9ChainSupplyObservedAtSec,

@@ -4,26 +4,12 @@ import { BaseInputGenerationIdSchema, Sha256Schema } from "@shared/types/safety-
 import { z } from "zod";
 import { parseJson } from "../json-parse";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
-import { CENTRIFUGE_BURN_MINT_ASSET_IDS } from "./supply-attribution-contract";
-import { XAUT_ASSET_ID } from "./xaut-supply-attribution-contract";
-import { REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
-import { SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS } from "@shared/lib/safety-score-v9-supply-attribution-journal";
+import { SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS } from "./supply-attribution";
 
 export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY =
   "safety-score-v9:supply-attribution-source:v1";
 
 export const SOURCE_FIXED_INPUT_MAX_AGE_SEC = 30 * 60;
-
-export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS = Object.freeze([
-  "wm-m0",
-  XAUT_ASSET_ID,
-  ...CENTRIFUGE_BURN_MINT_ASSET_IDS,
-  ...REVIEWED_ECONOMIC_SUPPLY_PLANS.keys(),
-]);
-if (SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS.length > SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS ||
-  new Set(SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS).size !== SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS.length) {
-  throw new Error("Supply attribution reviewed registry exceeds the bounded cohort or overlaps an existing proof lane");
-}
 
 const SafetyScoreV9SupplyAttributionSourceSchema = z
   .object({

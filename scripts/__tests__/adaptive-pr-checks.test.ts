@@ -388,10 +388,15 @@ describe("adaptive PR checks", () => {
     );
   });
 
-  it("checks a changed generated artifact even when no Pages surface moved", () => {
+  it.each([
+    "worker/src/lib/full-stablecoin-catalog.ts",
+    "worker/src/lib/safety-score-v9/candidate.ts",
+    "worker/src/lib/safety-score-v9/extension.ts",
+    "worker/src/lib/safety-score-v9/fact-set.ts",
+  ])("checks the evaluation manifest for offline runtime input %s even without Pages changes", (path) => {
     // The Wave-1 near-miss: a worker-only commit touching a manifest-pinned V9
     // source left the evaluation-build manifest stale and passed the PR gate.
-    const plan = buildPrStaticCheckPlan(["worker/src/lib/full-stablecoin-catalog.ts"]);
+    const plan = buildPrStaticCheckPlan([path]);
     const artifactCommand = plan.commands.find(
       (command): command is { name: string; args: string[] } =>
         command.name === "check:generated-artifacts" && "args" in command,

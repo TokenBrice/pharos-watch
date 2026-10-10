@@ -26,7 +26,7 @@ import {
 } from "./xaut-supply-attribution-contract";
 import type {
   SafetyScoreV9SupplyAttributionCapture,
-} from "./supply-attribution";
+} from "./supply-attribution-capture";
 import {
   aggregateSupplyUsd,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET,

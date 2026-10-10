@@ -20,6 +20,7 @@ import { createTempRepoTracker } from "./helpers/test-state";
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const EVALUATOR_ENTRY = "shared/lib/safety-score-v9/evaluate-set.ts";
 const POLICY_ENTRY = "shared/lib/safety-score-v9/policy.ts";
+const CANDIDATE_ENTRY = "worker/src/lib/safety-score-v9/candidate.ts";
 // The evaluator embeds this generated digest; hashing it would be recursive.
 const MANIFEST_PATH = "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts";
 
@@ -86,7 +87,7 @@ function runtimeImports(path: string): string[] {
 
 function collectRuntimeImportClosure(): Set<string> {
   const closure = new Set<string>();
-  const pending = [EVALUATOR_ENTRY, POLICY_ENTRY];
+  const pending = [CANDIDATE_ENTRY, EVALUATOR_ENTRY, POLICY_ENTRY];
   while (pending.length > 0) {
     const current = pending.pop();
     if (!current || closure.has(current) || current === MANIFEST_PATH) continue;
@@ -120,16 +121,18 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     ]) {
       expect(selectChangedGeneratedArtifactIds([source]), source).toContain("safety-score-v9-evaluation-build");
     }
-    for (const source of ["shared/lib/cron-jobs.ts", "shared/lib/safety-score-v9/public.ts",
-      "worker/src/lib/safety-score-v9/candidate.ts", "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
-      "worker/src/lib/safety-score-v9/fact-set.ts", "worker/src/lib/safety-score-v9/extension.ts",
+    for (const source of [
+      "worker/src/lib/safety-score-v9/capture.ts",
+      "worker/src/lib/safety-score-v9/supply-attribution-capture.ts",
+      "worker/src/lib/safety-score-v9/economic-supply-observer.ts",
+      "worker/src/lib/safety-score-v9/supply-attribution-source.ts",
+      "worker/src/lib/safety-score-v9/supply-attribution-capture-budget.ts",
       "worker/src/lib/evm-rpc.ts", "worker/src/lib/fetch-retry.ts",
-      "shared/lib/p4-exit-route-capacity.ts", "shared/lib/redemption-backstops.ts",
     ]) {
       expect(selectChangedGeneratedArtifactIds([source]), source).not.toContain("safety-score-v9-evaluation-build");
     }
   });
-  it("pins exactly the evaluator import graph, reviewed score inputs and catalog decoder", () => {
+  it("pins exactly the offline candidate import graph, reviewed score inputs and catalog decoder", () => {
     const root = fixtureRoot();
     const paths = collectV9EvaluationBuildSourcePaths(root);
     const expected = [...new Set([
@@ -141,15 +144,26 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(new Set(paths).size).toBe(paths.length);
     expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain(EVALUATOR_ENTRY);
     expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/compile.ts");
+    expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain(CANDIDATE_ENTRY);
+    for (const path of [
+      "worker/src/lib/safety-score-v9/extension.ts",
+      "worker/src/lib/safety-score-v9/extension-oracle.ts",
+      "worker/src/lib/safety-score-v9/fact-set.ts",
+      "worker/src/lib/safety-score-v9/fact-set-exit.ts",
+      "worker/src/lib/safety-score-v9/native-input.ts",
+      "worker/src/lib/report-cards-fixed-input.ts",
+      "worker/src/lib/safety-score-v9/supply-attribution.ts",
+      "shared/lib/safety-score-v9/mechanism-profiles.ts",
+      "shared/lib/safety-score-v9/reserve-scope.ts",
+      "shared/lib/safety-score-v9/reserve-provenance.ts",
+    ]) {
+      expect(V9_SCORE_EVALUATOR_SOURCE_PATHS, path).toContain(path);
+    }
+    expect(paths.some((path) => /(?:__tests__|fixtures|\.test[.-])/.test(path))).toBe(false);
     expect(V9_SCORE_INPUT_DATA_PATHS).toContain("shared/data/safety-score-v9/reserve-bound-facts-v1.json");
     expect(V9_SCORE_INPUT_DATA_PATHS).toContain("shared/data/safety-score-v9/mechanism-review-overlays-v1.json");
     expect(paths).not.toContain("scripts/build-data/generate-worker-stablecoin-catalog.ts");
     expect(paths).not.toContain("shared/lib/__tests__/safety-score-v9-matched-invariants.test-support.ts");
-    // Transfer rows and measurement registries are point-in-time fact inputs;
-    // mechanism capture refs remain independently pinned by the manifest.
-    expect(paths).not.toContain("shared/data/safety-score-v9/transfer-review-overlays-v1.json");
-    expect(paths).not.toContain("shared/data/safety-score-v9/shock-coverage-measurements-v1.json");
-    expect(paths).not.toContain("shared/data/safety-score-v9/shock-coverage-replay-attestations-v1.json");
     expect(buildV9EvaluationBuildManifest(root)).toEqual(buildV9EvaluationBuildManifest(root));
   });
 
@@ -179,6 +193,17 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     "shared/lib/safety-score-v9/operational-market-depth.ts",
     "shared/lib/safety-score-v9/unavailability-roots.ts",
     "shared/data/safety-score-v9/chain-maturity-reviews-v1.ts",
+    CANDIDATE_ENTRY,
+    "worker/src/lib/safety-score-v9/extension.ts",
+    "worker/src/lib/safety-score-v9/extension-oracle.ts",
+    "worker/src/lib/safety-score-v9/fact-set.ts",
+    "worker/src/lib/safety-score-v9/fact-set-exit.ts",
+    "worker/src/lib/safety-score-v9/native-input.ts",
+    "worker/src/lib/report-cards-fixed-input.ts",
+    "worker/src/lib/safety-score-v9/supply-attribution.ts",
+    "shared/lib/safety-score-v9/mechanism-profiles.ts",
+    "shared/lib/safety-score-v9/reserve-scope.ts",
+    "shared/lib/safety-score-v9/reserve-provenance.ts",
     ...V9_SCORE_INPUT_DATA_PATHS,
   ])("rotates build identity for score-bearing source %s", (path) => {
     const root = fixtureRoot();
@@ -224,7 +249,7 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(buildV9EvaluationBuildManifest(root).digest).not.toBe(changedDecoder.digest);
   });
 
-  it("keeps the evaluator, compiler and policy runtime import closure complete", () => {
+  it("keeps the fixed-input compiler, evaluator and policy runtime import closure complete", () => {
     const manifestPaths = Object.fromEntries(
       V9_EVALUATION_BUILD_SOURCE_PATHS.map((path) => [path, true] as const),
     ) as Record<string, true>;
@@ -235,15 +260,24 @@ describe("Safety Score v9 evaluation-build manifest", () => {
   });
 
   it.each([
-    "worker/src/lib/safety-score-v9/fact-set.ts",
-    "worker/src/lib/safety-score-v9/extension.ts",
+    "worker/src/lib/safety-score-v9/capture.ts",
+    "worker/src/lib/safety-score-v9/supply-attribution-capture.ts",
+    "worker/src/lib/safety-score-v9/economic-supply-observer.ts",
+    "worker/src/lib/safety-score-v9/supply-attribution-source.ts",
+    "worker/src/lib/safety-score-v9/supply-attribution-capture-budget.ts",
+    "worker/src/lib/safety-score-v9/ccip-pending-observer.ts",
+    "worker/src/lib/safety-score-v9/l2-messenger-pending-observer.ts",
+    "worker/src/lib/safety-score-v9/layerzero-oft-pending-observer.ts",
+    "worker/src/lib/safety-score-v9/wm-supply-observer.ts",
+    "worker/src/lib/safety-score-v9/centrifuge-supply-observer.ts",
+    "worker/src/lib/safety-score-v9/xaut-supply-observer.ts",
+    "worker/src/lib/safety-score-v9/transfer-materiality-observer.ts",
     "worker/src/cron/reserve-adapters/xdai-bridge.ts",
     "worker/src/lib/evm-rpc.ts",
     "worker/src/lib/fetch-retry.ts",
-    "shared/lib/redemption-backstops.ts",
-    "shared/lib/p4-exit-route-capacity.ts",
     "scripts/build-data/generate-worker-stablecoin-catalog.ts",
-  ])("does not rotate identity for unpinned producer or tooling %s", (path) => {
+  ])("does not reach or rotate identity for capture-only producers or tooling %s", (path) => {
+    expect(collectRuntimeImportClosure().has(path), path).toBe(false);
     const root = fixtureRoot();
     const before = buildV9EvaluationBuildManifest(root);
     mkdirSync(dirname(resolve(root, path)), { recursive: true });

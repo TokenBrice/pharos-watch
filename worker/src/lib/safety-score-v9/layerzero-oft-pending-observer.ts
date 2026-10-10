@@ -11,7 +11,7 @@ import { getCache, setCache } from "../db-cache";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader } from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
-import { emitSupplyAttributionDiagnostic } from "./supply-attribution-capture-budget";
+import { emitSupplyAttributionDiagnostic } from "./supply-attribution-diagnostics";
 
 // Discovery window width is independent of provider eth_getLogs limits: Scan
 // returns identifiers, never an exhaustive quantity. Dense windows subdivide;

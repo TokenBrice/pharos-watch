@@ -411,7 +411,10 @@ describe("economic materiality consumers", () => {
       observeReviewedEconomicDeploymentPartitionAttempt: async () => ({ status: "accepted", attribution: packet }),
     }));
     try {
-      const { captureSafetyScoreV9SupplyAttribution, safetyScoreV9ChainRows, safetyScoreV9ChainSupplyMaxAgeSec } =
+      // Load after doMock: this case exercises a replacement reviewed registry and observer boundary.
+      const { captureSafetyScoreV9SupplyAttribution } =
+        await import("../safety-score-v9/supply-attribution-capture");
+      const { safetyScoreV9ChainRows, safetyScoreV9ChainSupplyMaxAgeSec } =
         await import("../safety-score-v9/supply-attribution");
       const capture = await captureSafetyScoreV9SupplyAttribution(fixed, chainRpcs());
       expect(capture.expectedAssetIds).toEqual(["alpha"]);

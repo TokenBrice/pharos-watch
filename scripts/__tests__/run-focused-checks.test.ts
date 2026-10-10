@@ -324,8 +324,17 @@ describe("sensitive selection boundaries", () => {
       ],
     },
     {
+      run: "offline-fixed-input-compiler",
+      evaluationIdentity: true,
+      files: [
+        "worker/src/lib/safety-score-v9/candidate.ts",
+        "worker/src/lib/safety-score-v9/extension.ts",
+        "worker/src/lib/safety-score-v9/fact-set.ts",
+      ],
+    },
+    {
       run: "37727521161",
-      evaluationIdentity: false,
+      evaluationIdentity: true,
       files: [
         "worker/src/lib/__tests__/redemption-exit-route-observations.test.ts",
         "worker/src/lib/redemption-exit-route-observations.ts",

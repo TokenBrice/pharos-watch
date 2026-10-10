@@ -23,7 +23,7 @@ import { fetchMoveFungibleAssetSupply, fetchTonJettonSupply } from "../../cron/r
 import { observeCcipPending } from "./ccip-pending-observer";
 import { cancelResponseBodyQuietly, isResponseBodyTooLargeError, readResponseTextWithinLimitWithSignal, type BodyReadObserver } from "../response-body";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
-import { emitSupplyAttributionDiagnostic } from "./supply-attribution-capture-budget";
+import { emitSupplyAttributionDiagnostic } from "./supply-attribution-diagnostics";
 
 export const ECONOMIC_SUPPLY_BODY_CAPS = Object.freeze({ conversion: 256 * 1024, xrplGatewayBalances: 1024 * 1024, xrplLedger: 128 * 1024 });
 
