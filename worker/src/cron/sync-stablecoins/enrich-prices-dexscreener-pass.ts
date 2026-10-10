@@ -404,8 +404,9 @@ export async function runDexScreenerPass(
           };
         }
 
-        const { ok, pairs } = lookupResult;
-        if (ok) {
+        const { pairs } = lookupResult;
+        const answered = lookupResult.ok || (lookupResult.status === 404 && !lookupResult.hardRefusal);
+        if (answered) {
           dexExactSuccessfulCalls = 1;
         } else if (!lookupFailureRecorded) {
           logWorkerEvent({
@@ -428,13 +429,18 @@ export async function runDexScreenerPass(
           );
         }
 
-        if (ok) {
+        if (answered) {
           const resolvedAssetIds = new Set<string>();
           const assetAttempts: NonNullable<PricingProviderAttemptDiagnostic["assetAttempts"]> = [];
           for (const { entry, target } of batch) {
             if (resolvedAssetIds.has(entry.asset.id)) continue;
             const exactPrice = resolveDexScreenerAddressPrice(entry.asset, target, pairs, fxRates);
-            if (exactPrice == null) continue;
+            if (exactPrice == null) {
+              assetAttempts.push({ assetId: entry.asset.id, adapter: "dexscreener-exact", source: "dexscreener-exact",
+                chain: target.chain, target: target.address, state: "attempted", result: "empty",
+                rejectionClass: "missing-quote", candidateAt: Math.floor(Date.now() / 1000), replaySafe: false });
+              continue;
+            }
 
             applyResolvedPrice(assets[entry.index], exactPrice, "dexscreener-exact", "fallback");
             resolved += 1;

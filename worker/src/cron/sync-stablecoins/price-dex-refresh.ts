@@ -355,6 +355,13 @@ export async function runPriceDexRefresh(params: {
       if (rows.some((row) => row.success)) successfulBatches++;
       summary.errorClasses.push(...rows.filter((row) => !row.success).map((row) => row.errorClass ?? "upstream-error"));
       for (const attempt of rows.flatMap((row) => row.assetAttempts ?? [])) {
+        if (attempt.state === "attempted" && attempt.result === "empty") {
+          const hint = plan.targetsById.get(attempt.assetId);
+          if (hint && hint.chain === attempt.chain && hint.target === attempt.target) {
+            plan.targetsById.delete(attempt.assetId);
+          }
+          continue;
+        }
         if (attempt.result !== "resolved" || !attempt.chain || !attempt.target) continue;
         const asset = plan.cohort.find((asset) => asset.id === attempt.assetId);
         if (!asset || !hasPublishableCurrentPrice(asset) || asset.priceObservedAt == null) continue;

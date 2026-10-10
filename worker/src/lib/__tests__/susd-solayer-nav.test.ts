@@ -22,9 +22,8 @@ import { buildPriceValidationContext } from "../price-validation";
 // Fixture capture instant: block time of Solana slot 450811104.
 const NOW = new Date("2026-09-26T22:38:14.000Z");
 const BLOCK_TIME_SEC = 1790462294;
-// SPL token-2022 exchange rate (with on-chain whole-bps average rounding) at
-// the fixture block, derived from the captured mint state.
-const EXPECTED_EXCHANGE_RATE = 1.1555804623631452;
+// Canonical SPL segment product at the captured block (365.24-day year).
+const EXPECTED_EXCHANGE_RATE = 1.1554302715936464;
 
 function ok(body: unknown): { response: Response; body: unknown } {
   return { response: new Response(null, { status: 200 }), body };
@@ -70,6 +69,21 @@ describe("Solayer sUSD Token-2022 NAV", () => {
       EXPECTED_EXCHANGE_RATE,
       10,
     );
+  });
+
+  it.each([
+    { preRate: 500, rate: 500, preSeconds: 0, postSeconds: 31_556_736, expected: 1.0512710963760241 },
+    { preRate: 400, rate: 401, preSeconds: 15_778_368, postSeconds: 15_778_368, expected: 1.040862816032133 },
+    { preRate: 500, rate: 500, preSeconds: 0, postSeconds: 0, expected: 1 },
+    // A stored pre-update average already incorporates prior rate changes.
+    { preRate: 450, rate: 600, preSeconds: 31_556_736, postSeconds: 15_778_368, expected: Math.exp(0.075) },
+  ])("matches canonical SPL UI conversion vector $preRate/$rate at $postSeconds seconds", (vector) => {
+    const initializationTimestampSec = 1_700_000_000;
+    const lastUpdateTimestampSec = initializationTimestampSec + vector.preSeconds;
+    expect(computeToken2022InterestBearingExchangeRate({
+      initializationTimestampSec, lastUpdateTimestampSec,
+      preUpdateAverageRateBps: vector.preRate, currentRateBps: vector.rate,
+    }, lastUpdateTimestampSec + vector.postSeconds)).toBeCloseTo(vector.expected, 14);
   });
 
   it("rejects accrual inputs that the on-chain formula cannot evaluate", () => {

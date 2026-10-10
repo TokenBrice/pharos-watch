@@ -20,7 +20,7 @@ export function normalizeStablecoinChartDateSeconds(value: unknown): number | nu
   return Math.trunc(numeric);
 }
 
-function normalizeStablecoinChartBuckets(value: unknown): Record<string, number> | null {
+export function normalizeStablecoinChartBuckets(value: unknown): Record<string, number> | null {
   const buckets = sanitizeRecordValues(value, (raw) => {
     const numeric = coerceFiniteNumber(raw);
     return numeric == null ? undefined : numeric;

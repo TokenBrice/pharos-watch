@@ -203,12 +203,22 @@ describe("analyzeOracleRiskCoverage", () => {
 
     expect(result.totalCryptoCdp).toBe(1);
     expect(result.missingOracleRisk).toBe(1);
+    expect(result.completeProfiles).toBe(0);
     expect(result.findings).toEqual([
       expect.objectContaining({
         id: "test-cdp",
         kind: "missing-profile",
       }),
     ]);
+  });
+
+  it("counts complete profile-bearing peers without subtracting missing profiles", () => {
+    const result = analyzeOracleRiskCoverage([
+      makeCoin({ oracleRisk: reviewedMultiBranch() }),
+      makeCoin({ id: "missing-peer" }),
+    ], { asOf: new Date("2026-08-01T00:00:00Z"), reviewedBranchDispositions: [] });
+    expect(result.withOracleRisk).toBe(1);
+    expect(result.completeProfiles).toBe(1);
   });
 
   it("requires review provenance for complete profiles", () => {
@@ -465,6 +475,11 @@ describe("analyzeOracleRiskCoverage", () => {
           detail: expect.stringContaining("no active crypto-backed CDP with that id"),
         }),
       ]);
+      expect(removedCoin.completeProfiles).toBe(0);
+      const healthyPeer = analyzeOracleRiskCoverage([makeCoin({ id: "healthy-peer", oracleRisk: reviewedMultiBranch() })], {
+        ...asOf, reviewedBranchDispositions: [disposition],
+      });
+      expect(healthyPeer.completeProfiles).toBe(1);
     });
   });
 });

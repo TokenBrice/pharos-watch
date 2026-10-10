@@ -15,6 +15,7 @@ import { executeBackfillForCoin } from "../backfill-depegs/execution";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   PRIMARY_CURRENCY_TO_PEG,
   PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS,
@@ -23,9 +24,11 @@ import {
 } from "../../lib/fx-config";
 import { makeBrzBackfillRow } from "./depeg-replay.test-support";
 
+const fxFixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  fxFixtures.closeAll();
 });
 
 describe("historical FX configuration", () => {
@@ -247,6 +250,41 @@ describe("buildFxLookup", () => {
 });
 
 describe("fetchHistoricalSecondaryFxRates", () => {
+  it("refetches and merges missing requested currencies in a partial dated cache, then replays the dated quote", async () => {
+    const { db, sqlite } = fxFixtures.open();
+    const fetchSpy = mockFetch([{
+      match: "@2025-06-14/v1/currencies/usd.min.json",
+      outcomes: [
+        { body: { date: "2025-06-14", usd: { cnh: 7.2 } } },
+        { body: { date: "2025-06-14", usd: { kes: 129 } } },
+      ],
+    }], { requireMatch: true });
+    expect((await fetchHistoricalSecondaryFxRates(db, ["CNH"], "2025-06-14", "2025-06-14")).CNH)
+      .toEqual([{ timestamp: Date.parse("2025-06-14T00:00:00Z") / 1000, rate: 1 / 7.2 }]);
+    const second = await fetchHistoricalSecondaryFxRates(db, ["KES"], "2025-06-14", "2025-06-14");
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    const timestamp = Date.parse("2025-06-14T00:00:00Z") / 1000;
+    expect(second.KES).toEqual([{ timestamp, rate: 1 / 129 }]);
+    const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025") as { value: string };
+    expect(JSON.parse(cache.value)).toEqual({ "2025-06-14": { cnh: 7.2, kes: 129 } });
+    expect(buildFxLookup(second.KES, 1 / 150)(timestamp)).toBe(1 / 129);
+  });
+
+  it("preserves partial dated evidence after a confirmed unavailable refetch", async () => {
+    const { db, sqlite } = fxFixtures.open();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("fx-history-secondary:2025", JSON.stringify({ "2025-06-14": { cnh: 7.2 } }), 1);
+    mockFetch([
+      { match: "cdn.jsdelivr.net", body: {}, status: 404 },
+      { match: ".currency-api.pages.dev", body: {}, status: 404 },
+    ], { requireMatch: true });
+    const series = await fetchHistoricalSecondaryFxRates(db, ["CNH", "KES"], "2025-06-14", "2025-06-14");
+    expect(series.CNH).toHaveLength(1);
+    expect(series.KES).toEqual([]);
+    const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025") as { value: string };
+    expect(JSON.parse(cache.value)).toEqual({ "2025-06-14": { cnh: 7.2 } });
+  });
+
   it("builds non-flat ARS and KES historical series for EM backfills", async () => {
     mockFetch([
       {
@@ -399,11 +437,11 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("secondary FX validation failed"));
   });
 
-  it("refetches a transiently failed day on the next run", async () => {
+  it.each([503, 404])("refetches a transiently failed day on the next run (fallback status=%s)", async (fallbackStatus) => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     mockFetch([
       { match: "cdn.jsdelivr.net", body: { error: "unavailable" }, status: 503 },
-      { match: ".currency-api.pages.dev", body: { error: "unavailable" }, status: 503 },
+      { match: ".currency-api.pages.dev", body: { error: "unavailable" }, status: fallbackStatus },
     ], { requireMatch: true });
     const firstDb = mockD1([
       {

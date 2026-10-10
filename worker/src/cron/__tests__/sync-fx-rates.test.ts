@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { PRIMARY_CURRENCY_TO_PEG, SECONDARY_FX_CURRENCY_TO_PEG } from "../../lib/fx-config";
 import { mockFetchRetry } from "../../test-helpers/cron";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
@@ -37,7 +38,7 @@ function resetFetchRetryMocks(): void {
 }
 
 import { syncFxRates } from "../sync-fx-rates";
-import { getFxReferenceTypeFromState, hydrateFxRateState } from "../../lib/fx-rate-state";
+import { buildFxCacheStatus, getFxReferenceTypeFromState, hydrateFxRateState } from "../../lib/fx-rate-state";
 describe("syncFxRates", () => {
   const fixtures = createLatestSchemaFixtureTracker();
   beforeEach(() => {
@@ -110,6 +111,54 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceCadenceByPeg.peggedPLN).toBe("business-daily");
     expect(cachedMeta.sourceCadenceByPeg.peggedAED).toBe("calendar-daily");
     expect(cachedMeta.sourceDateByPeg.peggedAED).toBe("2025-06-15");
+  });
+
+  it.each([false, true])("publishes successful partial Frankfurter coverage with previous complete cache=%s", async (hasPrevious) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const previousRates = makeCompleteFxRates();
+    const primary = {
+      ...frankfurterBody(),
+      rates: Object.fromEntries(Object.entries(PRIMARY_CURRENCY_TO_PEG)
+        .filter(([currency]) => currency !== "EUR")
+        .map(([currency, peg]) => [currency, 1 / previousRates[peg]])),
+    };
+    const secondary = secondaryBody(Object.fromEntries(Object.entries(SECONDARY_FX_CURRENCY_TO_PEG)
+      .map(([currency, peg]) => [currency, 1 / previousRates[peg]])));
+    mockFetch(fxMirrors({
+      frankfurter: { body: primary }, secondary: { body: secondary },
+      gold: { body: { price: 2900, updatedAt: new Date(nowSec * 1000).toISOString() } },
+      silver: { body: { price: 32, updatedAt: new Date(nowSec * 1000).toISOString() } },
+    }));
+    const previousMeta = makeFxRatesMeta(previousRates, {
+      usableSyncAt: nowSec - 60, updatedAt: nowSec - 3600,
+    });
+    const db = makeFxRatesDb(hasPrevious ? {
+      previousRates: makeCacheRow(previousRates, nowSec - 60),
+      previousMeta: makeCacheRow(previousMeta, nowSec - 60),
+    } : {});
+    const result = await syncFxRates(db);
+    const ratesWrite = findCacheWrite(db, "fx-rates")!;
+    const metaWrite = findCacheWrite(db, "fx-rates-meta")!;
+    const state = hydrateFxRateState(
+      { value: String(ratesWrite.binds[1]), updatedAt: nowSec },
+      { value: String(metaWrite.binds[1]), updatedAt: nowSec },
+    )!;
+    expect(state.rates.peggedGBP).toBeGreaterThan(0);
+    if (hasPrevious) {
+      expect(state.rates.peggedEUR).toBe(previousRates.peggedEUR);
+      expect(state.sourceUpdatedAtByPeg.peggedEUR).toBe(nowSec - 3600);
+      expect(state.sourceCadenceByPeg.peggedEUR).toBe("intraday");
+      expect(buildFxCacheStatus(state, 1800, nowSec).cacheStatus.degradedReason).toBeNull();
+    } else {
+      expect(state.rates.peggedEUR).toBeUndefined();
+      expect(result.status).toBe("degraded");
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        reason: "incomplete-expected-fx-coverage", missing: expect.arrayContaining(["peggedEUR"]),
+      });
+      expect(buildFxCacheStatus(state, 1800, nowSec).cacheStatus.healthy).toBe(false);
+      expect(buildFxCacheStatus(state, 1800, nowSec).cacheStatus.degradedReason)
+        .toContain("incomplete-expected-fx-coverage:");
+    }
   });
   it.each([
     ["fx-rates", "fx-rates-meta"],
@@ -232,9 +281,10 @@ describe("syncFxRates", () => {
 
     const result = await syncFxRates(db);
     expect(result.itemCount).toBe(2);
-    // First consecutive fallback run (1 < 4 threshold) — not yet degraded
-    expect(result.status).toBeUndefined();
+    // Missing expected pegs degrade even the first retained fallback publication.
+    expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.reason).toBe("incomplete-expected-fx-coverage");
     expect(metadata.fallbackMode).toBe("cached-fx-rates");
     expect(metadata.mode).toBe("cached-fallback");
     expect(metadata.consecutiveFallbackRuns).toBe(1);
@@ -428,8 +478,9 @@ describe("syncFxRates", () => {
 
     const result = await syncFxRates(db);
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.reason).toBe("incomplete-expected-fx-coverage");
     expect(metadata.sources.exchangeRateApi).toBe("partial");
     const ratesWrite = findCacheWrite(db, "fx-rates");
     const metaWrite = findCacheWrite(db, "fx-rates-meta");

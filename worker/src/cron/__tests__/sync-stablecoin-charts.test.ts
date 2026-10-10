@@ -7,6 +7,8 @@ vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 import { syncStablecoinCharts } from "../sync-stablecoin-charts";
 import { STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS } from "../../lib/stablecoin-charts-reconciliation";
+import { normalizeStablecoinChartPoints } from "../../lib/stablecoin-charts-payload";
+import { handleStablecoinCharts } from "../../api/cache-handlers";
 
 const DEFAULT_CHART_D1_TABLES: MockTableConfig[] = [
   { match: "SELECT key, value, updated_at FROM cache WHERE key IN", rows: [] },
@@ -128,6 +130,41 @@ describe("syncStablecoinCharts", () => {
     expect(cached.length).toBeGreaterThan(0);
     expect(cached[0].totalCirculatingUSD.peggedUSD).toBeTypeOf("number");
     expect(getCadenceCompletion(db as MockD1Database)).toBeDefined();
+  });
+
+  it.each([false, true])("quarantines invalid base buckets before overlays (overlay=%s), preserving observed zero", async (withOverlay) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const points = makeRawChartPoints(120, nowSec);
+    const empty = points[100];
+    const invalid = points[101];
+    const zero = points[99];
+    empty.totalCirculatingUSD = {};
+    invalid.totalCirculatingUSD = { peggedUSD: Number.NaN };
+    zero.totalCirculatingUSD = { peggedUSD: 0 };
+    mockFetch([{ match: "stablecoincharts/all", body: points }]);
+    const db = mockD1([{
+      match: "FROM supply_history",
+      rows: withOverlay ? [{
+        stablecoin_id: "susds-sky", snapshot_date: empty.date, circulating_usd: 25,
+      }, {
+        stablecoin_id: "susds-sky", snapshot_date: invalid.date, circulating_usd: 25,
+      }] : [],
+    }]);
+    const result = await syncStablecoinCharts(db);
+    const insert = getCacheInsert(db);
+    expect(insert).toBeDefined();
+    const cached = normalizeStablecoinChartPoints(JSON.parse(String(insert?.binds[1])));
+    expect(cached).not.toBeNull();
+    expect(cached?.some((point) => point.date === empty.date || point.date === invalid.date)).toBe(false);
+    expect(cached?.find((point) => point.date === zero.date)?.totalCirculatingUSD).toEqual({ peggedUSD: 0 });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ invalidBucketCount: 2 });
+    const endpointDb = mockD1([{
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["stablecoin-charts"],
+      rows: [], first: { value: String(insert?.binds[1]), updated_at: nowSec },
+    }]);
+    const response = await handleStablecoinCharts(endpointDb);
+    expect(response.status).toBe(200);
   });
 
   it("coerces upstream string dates before writing the cached chart payload", async () => {

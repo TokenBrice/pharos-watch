@@ -4,6 +4,7 @@ import { sha256Hex } from "@shared/lib/sha256";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { D1PreparedStatement } from "@shared/types/cloudflare-runtime";
 import { setCacheIfNewer } from "../db-cache";
+import { EXPECTED_FX_PEG_KEYS } from "../fx-config";
 import {
   buildFxCacheStatus,
   getFxReferenceTypeFromState,
@@ -242,7 +243,14 @@ describe("fx-rate-state generation identity", () => {
   });
 
   it("admits a digest-verified pair as one generation", () => {
-    const rows = verifiedRows({ peggedEUR: 1.08 }, liveMeta(NOW_SEC - 60), NOW_SEC - 60);
+    const rates = Object.fromEntries(EXPECTED_FX_PEG_KEYS.map((key) => [key, key === "peggedEUR" ? 1.08 : 1]));
+    const meta = liveMeta(NOW_SEC - 60);
+    for (const key of EXPECTED_FX_PEG_KEYS) {
+      meta.sourceUpdatedAtByPeg[key] = NOW_SEC - 120;
+      meta.sourceModeByPeg[key] = "live";
+      meta.sourceCadenceByPeg![key] = "intraday";
+    }
+    const rows = verifiedRows(rates, meta, NOW_SEC - 60);
     const state = hydrateFxRateState(rows.rates, rows.meta);
 
     expect(state?.metadataIdentity).toBe("verified");
@@ -251,6 +259,19 @@ describe("fx-rate-state generation identity", () => {
       statusFloor: "healthy",
       cacheStatus: { healthy: true, degraded: false, degradedReason: null, sourceStatus: "fresh" },
     });
+  });
+
+  it("cannot report healthy FX status for incomplete expected coverage despite fresh present observations", () => {
+    const rows = verifiedRows({ peggedEUR: 1.08 }, liveMeta(NOW_SEC - 60), NOW_SEC - 60);
+    const state = hydrateFxRateState(rows.rates, rows.meta);
+    expect(getFxReferenceTypeFromState(state, "peggedEUR", 6 * 3600, NOW_SEC)).toBe("fresh");
+    expect(buildFxCacheStatus(state, 1800, NOW_SEC)).toMatchObject({
+      statusFloor: "degraded",
+      cacheStatus: { healthy: false, degraded: true, sourceStatus: "fresh" },
+    });
+    expect(buildFxCacheStatus(state, 1800, NOW_SEC).cacheStatus.degradedReason)
+      .toContain("incomplete-expected-fx-coverage:");
+    expect(buildFxCacheStatus(state, 1800, NOW_SEC).warning).toContain("peggedGBP");
   });
 
   it.each([

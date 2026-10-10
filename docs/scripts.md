@@ -30,6 +30,8 @@ The [daily social pipeline](./daily-social.md) owns the seven-topic calendar, so
 
 State-changing/release-control entrypoints use `scripts/lib/cli-args.mjs`, a strict Node `util.parseArgs` wrapper. Before network/filesystem effects they reject unknown options, missing values, duplicate options, unexpected positionals and declared conflicts. Migrated commands support `-h` / `--help`; exits: usage `2`, runtime failure `1`, help `0`.
 
+The OpenAPI generator uses the typed `runDirectCli` entrypoint wrapper from `scripts/lib/cli-args.mjs` (declared in `scripts/lib/cli-args.d.mts`). Importing its schema builders does not generate artifacts; direct-run failures use the wrapper's stderr message and runtime-failure exit code.
+
 Every committed source file that reads `process.argv` is enrolled by exact path in `scripts/lib/cli-argv-policy.mjs`. Operator and production-mutating entrypoints must reach a parser that imports and calls the shared strict wrapper; read-only, build/local-artifact, and test/dev entrypoints require an explicit categorized exemption and audit reason. `npm run check:cli-args-policy` rejects unclassified additions, stale or duplicate declarations, strict/exempt overlaps, and strict-parser claims that are not reachable from the entrypoint. Add or remove entries in the source-owned policy with the corresponding script change; there is no count baseline to update.
 
 For these scripts, `--dry-run` means no mutation: a command may read local state or fetch remote data to validate the planned operation, but it does not write files or call a mutating API. `register-telegram.ts --check` remains a compatibility alias for its no-network dry run. `sync-digests.ts --check` remains the narrower no-network wiring check; it conflicts with `--dry-run` so the selected behavior is unambiguous. Existing no-flag workflow invocations retain their prior live behavior.
@@ -150,7 +152,7 @@ Compare captures before and after an infrastructure change by `period`, `sortBy`
 
 | Script | Purpose |
 | --- | --- |
-| `scripts/maintenance/report-telegram-adoption.ts` | Build-category reporter: read remote D1 subscriber, lifecycle, usage, and confirmed-delivery adoption telemetry, refresh the local generated block in [`telegram-alerts.md`](./telegram-alerts.md), and print report JSON. No production mutation. Planning-cost/4.1 decision reporting is retired without a measured go/no-go conclusion. |
+| `scripts/maintenance/report-telegram-adoption.ts` | Read-only remote D1 reporter; refreshes the local generated adoption block in [`telegram-alerts.md`](./telegram-alerts.md) and prints JSON. Seven-day activity uses subscriber `last_active_at`; `configuredWatchersDaily` uses the latest lifecycle snapshot with `configuredWatchersSnapshotAt`, both nullable when absent. No activity-window substitution or production mutation; planning-cost/4.1 reporting is retired without a measured decision. |
 
 ## Routing Index
 
@@ -203,7 +205,9 @@ The Git-history-derived projections publish two different clocks on purpose. A c
 
 Use `package.json` for artifact commands and `scripts/lib/automation-registry.mjs` for dependencies, lifecycle, outputs, checkability, and staging. Lifecycles are `compile-input`, `post-refresh`, and `maintenance-only`; standalone `prebuild` runs the first two, while Pages splits preparation/release for one live snapshot acquisition. Offline bootstrap writes empty detail envelopes before credentials/fetch; snapshots declare catalog prerequisites and an output directory. Setup rejects changed tracked checkable outputs and nonignored registered outputs absent from Git, including after restore; regenerate and commit repairs with their sources. Ignored compile outputs remain allowed. See [release ordering](./deployment-process.md#ci-deploy-sequence).
 
-Registry entries also declare `requiredBrowsers` (default `[]`). `scripts/ci/classify-deploy-changes.ts` derives Firefox setup only from selected artifacts whose registry entry requires it; a generic OG change is not sufficient.
+Artifact selection matches source and output paths, then propagates dependencies; automatic check plans still filter uncheckable artifacts. Registry `requiredBrowsers` (default `[]`) drives Firefox setup in `scripts/ci/classify-deploy-changes.ts`, not generic OG paths.
+
+OpenAPI generation preserves normalized stablecoin items and discriminated reserve bounded facts through explicit output schemas, without changing runtime normalization. Empty nested array-item schemas fail generation rather than silently accepting arbitrary values.
 
 Build and release ordering is documented in [Deployment Process](./deployment-process.md#ci-deploy-sequence); failure diagnosis is documented in the [generated-artifact failure playbook](./testing.md#generated-artifact-failure-playbook); OG asset maintenance is documented in [OG Images](./og-images.md); font generation and licensing are documented in [Font Assets](./process/font-assets.md).
 
@@ -239,6 +243,8 @@ Useful test-only evidence belongs in recognized `*.test-support.ts` files, not p
 
 Use the `test:smoke-*`, `validate:*-smoke`, `serve:static-export`, and `ops:*` commands in `package.json`. Choose the incident-specific procedure through the [documentation index](./README.md) before taking remedial action. Local smoke harnesses and operator watches are evidence tools; production deployment acceptance is owned by the release workflows and [Deployment Process](./deployment-process.md#operational-acceptance). `night-watch-worker --dry-run` prints its preview to stdout (`--json` selects JSON), preserves report, evidence, and checkpoint files, and performs no remote collection, including with `--fixture`. Ordinary fixture rendering remains a file-writing mode.
 
+Pages smoke preserves unrelated `STATIC_EXPORT_*` overrides, but its selected host/port and nonblank API-key/site-secret fallbacks win over blank environment values.
+
 `ops:cron-delivery` reads Cloudflare scheduled-invocation ground truth; see [cron delivery stall](./runbooks/cron-delivery-stall.md).
 
 ### Curation Audits
@@ -253,6 +259,7 @@ The shadow-era replay summary and fixed July B1 historical DEX root-ledger entry
 - `audit:coverage -- --domain=redemption-coverage` always evaluates reviewed-disposition findings. `--check` changes presentation only: a reviewed nonzero backlog can pass either mode, while missing/invalid/stale dispositions fail either mode. `--strict-active-gaps` separately escalates inferred active gaps; a disposition never configures a redemption route.
 - `audit:coverage -- --domain=reserve-coverage` is advisory and has no `--check` evaluator (the child rejects that option). `--prod` supplies report-card/stablecoin catalog snapshots, not reserve-sync telemetry; use explicit `--reserve-states <file>` for state evidence. Absent state stays unknown.
 - L2BEAT snapshot audits distinguish alias-only validation, saved observed input, and explicit `--live` drift checks; see [Chain Health](./chain-health.md#l2beat-snapshot). None imports live data into the authoritative static snapshot automatically.
+- Oracle coverage counts complete profiles directly among in-scope profile-bearing assets; missing profiles and out-of-scope stale dispositions cannot subtract from that census.
 
 `npm run audit:live-reserve-config-changes -- --base <ref>` compares working-tree semantic fingerprints to an explicit deployed/PR base offline, printing changed IDs and both digests as JSON; missing recovery fetchers fail. New/removed bindings and display/scoring edits are excluded. It shares runtime's pure selector; tests are git-independent. Bounds/acceptance: [config recovery](./live-reserves.md#deploy-time-configuration-recovery).
 

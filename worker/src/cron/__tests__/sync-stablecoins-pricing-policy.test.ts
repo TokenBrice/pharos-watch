@@ -137,7 +137,7 @@ describe("pricing application policy", () => {
       id: previous.id, name: "reUSD", symbol: "reUSD", pegType: "peggedUSD", navToken: true,
       price: 1.1036, priceSource: "defillama", circulating: { peggedUSD: 123_800_000 },
     };
-    expect(carryForwardSupplyGapFill(current, previous)).toBe(true);
+    expect(carryForwardSupplyGapFill(current, previous, nowSec)).toBe(true);
     const validationContexts = createValidationContextResolver();
 
     applyConsensusResults({ assets: [current], primaryPriceResults: new Map(), validationContexts, syncStartSec: nowSec, reason: "primary" });

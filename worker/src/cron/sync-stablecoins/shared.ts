@@ -394,6 +394,15 @@ export function replaceZeroSupplyPrimaryAssets(
   return { assets, replacedIds: [...new Set(replacedIds)].sort() };
 }
 
+export function isSupplyObservationWithinRestoreCeiling(observedAt: number, nowSec: number): boolean {
+  return (
+    Number.isSafeInteger(observedAt) &&
+    observedAt >= 0 &&
+    observedAt <= nowSec + SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC &&
+    nowSec - observedAt <= SUPPLEMENTAL_RESTORE_MAX_AGE_SEC
+  );
+}
+
 function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean {
   // Cached on-chain totals must still satisfy today's deployment roster. A
   // removed or expanded aggregate cannot re-enter through generic carry-forward.
@@ -412,12 +421,7 @@ function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean 
   // Rows without provenance get one restore; the cache read path stamps
   // supplyObservedAt from the cache row, so age accrues from there.
   if (observedAt == null) return true;
-  return (
-    Number.isSafeInteger(observedAt) &&
-    observedAt >= 0 &&
-    observedAt <= nowSec + SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC &&
-    nowSec - observedAt <= SUPPLEMENTAL_RESTORE_MAX_AGE_SEC
-  );
+  return isSupplyObservationWithinRestoreCeiling(observedAt, nowSec);
 }
 
 function getSinglePositiveCirculatingBucket(asset: PeggedAsset): string | null {

@@ -5,7 +5,7 @@
  * intake denomination/identity cases. Heavy downstream phases and D1 are mocked.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildFallbackAssetsFromCoinGecko } from "../fallback-intake";
@@ -132,10 +132,12 @@ function buildRealCgData(countLimit: number, usdPrice = 1, usdMarketCap = 5_000_
 
 describe("syncViaCoingeckoFallback orchestrator", () => {
   beforeEach(() => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
     for (const mock of Object.values(subPhaseMocks)) {
       mock.mockClear();
     }
   });
+  afterEach(() => { vi.restoreAllMocks(); });
 
   // -----------------------------------------------------------------------
   // (a) A successful fallback write still fails closed when CoinGecko cannot

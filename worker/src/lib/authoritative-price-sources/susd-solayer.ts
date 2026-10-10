@@ -26,8 +26,8 @@ const SUSD_SOLAYER_MINT = "susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X";
 const TOKEN_2022_PROGRAM = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 const SUSD_SOLAYER_DECIMALS = 6;
 
-// SPL token-2022 interest-bearing accrual constant: a 365-day year in seconds.
-const SPL_INTEREST_SECONDS_PER_YEAR = 31_536_000;
+// SPL token-2022 interest-bearing accrual constant: a 365.24-day year in seconds.
+const SPL_INTEREST_SECONDS_PER_YEAR = 31_556_736;
 
 // Mirror the ERC-4626 NAV ratio bounds: an exchange rate outside this band is
 // never published, so a compromised rate authority cannot stamp a wild NAV.
@@ -73,13 +73,7 @@ const SolanaMintAccountSchema = z.object({
   }),
 });
 
-/**
- * Replicates the SPL token-2022 interest-bearing exchange rate exactly,
- * including the on-chain rounding of the average rate to whole basis points:
- * `exchange_rate = e^(average_rate × elapsed)` where the average rate is the
- * natural log of the two accrual segments (`preUpdateAverageRate` until the
- * last rate update, `currentRate` after it) rescaled to basis points.
- */
+/** SPL UI conversion multiplies the pre-update and current continuous accrual factors. */
 export function computeToken2022InterestBearingExchangeRate(
   state: Token2022InterestBearingState,
   atTimestampSec: number,
@@ -100,16 +94,7 @@ export function computeToken2022InterestBearingExchangeRate(
       ((atTimestampSec - lastUpdateTimestampSec) / SPL_INTEREST_SECONDS_PER_YEAR),
   );
   const totalAccrual = preUpdateAccrual * currentAccrual;
-  if (!Number.isFinite(totalAccrual) || totalAccrual <= 0) return null;
-
-  const totalDeltaSec = atTimestampSec - initializationTimestampSec;
-  const averageRateBps = Math.round(
-    (Math.log(totalAccrual) * SPL_INTEREST_SECONDS_PER_YEAR) / totalDeltaSec * 10_000,
-  );
-  const exchangeRate = Math.exp(
-    (averageRateBps / 10_000) * (totalDeltaSec / SPL_INTEREST_SECONDS_PER_YEAR),
-  );
-  return Number.isFinite(exchangeRate) && exchangeRate > 0 ? exchangeRate : null;
+  return Number.isFinite(totalAccrual) && totalAccrual > 0 ? totalAccrual : null;
 }
 
 /**

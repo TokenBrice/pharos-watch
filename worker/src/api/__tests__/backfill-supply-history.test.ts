@@ -628,13 +628,76 @@ describe("handleBackfillSupplyHistory", () => {
     };
     expect(body.coinsProcessed).toBe(1);
     expect(body.rowsInserted).toBe(0);
-    expect(body.errors?.[0]).toContain("historical totalSupply backfill requires exactly one supported EVM contract");
+    expect(body.errors?.[0]).toContain("unsupported-complete-roster");
     expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
 
     const inserts = db.getHistory().filter((stmt) =>
       stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
     );
     expect(inserts).toHaveLength(0);
+  });
+
+  it("rejects an Ethereum plus Solana complete roster when a commodity cap is missing", async () => {
+    const fixtureId = useSingleDeploymentSparkSupplyFixture();
+    const fixture = psiEligibleMocks.metaById.get(fixtureId)!;
+    fixture.contracts = [
+      ...fixture.contracts!,
+      { chain: "solana", address: "So11111111111111111111111111111111111111112", decimals: 9 },
+    ];
+    // Keep the CG-only provider fixture, with the mixed-family PAXG accounting shape.
+    const ts = Date.parse("2026-04-09T00:00:00Z");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/market_chart")) {
+        return Response.json({ market_caps: [[ts, 0]], prices: [[ts, 1.01]] });
+      }
+      if (url.includes(`/coins/${fixture.geckoId}?`)) {
+        return Response.json({ market_data: { circulating_supply: 0 } });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const path = `/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-09`;
+    const res = await handleBackfillSupplyHistoryTrusted({
+      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
+      chainRpcs: ethereumSupplyRpc(),
+    });
+    const body = await readJsonResponse(res, 200) as { rowsInserted: number; errors?: string[] };
+    expect(body.rowsInserted).toBe(0);
+    expect(body.errors?.[0]).toContain("unsupported-complete-roster");
+    expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
+    expect(fetchSpy.mock.calls.every(([url]) => !String(url).includes("rpc"))).toBe(true);
+    expect(db.getHistory().filter((stmt) => stmt.sql.includes("INSERT OR REPLACE INTO supply_history"))).toEqual([]);
+  });
+
+  it.each([
+    ["matching hourly observations", [[0, 100], [23, 900]], [[0, 1], [23, 3]], 100, 1],
+    ["missing first cap", [[23, 900]], [[0, 1], [23, 3]], 900, 3],
+    ["missing last price", [[0, 100], [23, 900]], [[0, 1]], 100, 1],
+    ["daily observations", [[0, 100]], [[0, 1]], 100, 1],
+  ] as const)("pairs exact CoinGecko timestamps for %s", async (_name, caps, prices, cap, price) => {
+    const fixtureId = useSingleDeploymentSparkSupplyFixture();
+    const ts = Date.parse("2026-04-09T00:00:00Z");
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/market_chart")) {
+        return Response.json({
+          market_caps: caps.map(([hour, value]) => [ts + hour * 3_600_000, value]),
+          prices: prices.map(([hour, value]) => [ts + hour * 3_600_000, value]),
+        });
+      }
+      if (url.includes("/coins/")) return Response.json({ market_data: { circulating_supply: 0 } });
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const path = `/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-09`;
+    const res = await handleBackfillSupplyHistoryTrusted({
+      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
+    });
+    expect((await readJsonResponse(res, 200) as { rowsInserted: number }).rowsInserted).toBe(1);
+    const inserts = db.getHistory().filter((stmt) => stmt.sql.includes("INSERT OR REPLACE INTO supply_history"));
+    expect(inserts.map((stmt) => stmt.binds)).toEqual([[fixtureId, ts / 1000, cap, price]]);
+    expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
   });
 
   it("skips eEARN days when historical totalSupply has no USD price", async () => {

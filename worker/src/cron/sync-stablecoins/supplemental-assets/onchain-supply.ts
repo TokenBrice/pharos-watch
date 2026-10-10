@@ -3,7 +3,7 @@ import { logWorkerEventArgs } from "../../../lib/structured-log";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import { PinnedNativeShareObservationSchema, type PinnedNativeShareObservation } from "@shared/types/reserve-nav-supply";
-import { fetchEvmBlockHeader, fetchEvmUint256AtBlock } from "../../../lib/evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmUint256AtBlock, type EvmBlockHeader, type EvmRpcOptions } from "../../../lib/evm-rpc";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
@@ -59,6 +59,25 @@ const MOVEMENT_USDCX_ID = "usdcx-movement";
 const MOVEMENT_XRESERVE = "0x8888888199b2Df864bf678259607d6D5EBb4e3Ce";
 const MOVEMENT_XRESERVE_CALL = "0xc47cf5ef000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb480000000000000000000000000000000000000000000000000000000000002715";
 const MOVEMENT_XRESERVE_TOLERANCE_BPS = 1n;
+const JOINED_SUPPLY_OBSERVATION_MAX_AGE_SEC = 5 * 60;
+
+function joinedSupplyRpcOptions(input: {
+  chainRpcs?: Map<string, ChainRpcConfig>; signal?: AbortSignal;
+  curated?: { rpcUrl?: string; fallbackRpcUrl?: string };
+}): EvmRpcOptions {
+  return {
+    signal: input.signal, timeoutMs: 10_000,
+    chainRpcs: input.curated?.rpcUrl ? undefined : input.chainRpcs,
+    extraRpcUrls: [input.curated?.rpcUrl, input.curated?.fallbackRpcUrl].filter((url): url is string => !!url),
+  };
+}
+
+async function confirmJoinedSupplyBlock(chain: string, block: EvmBlockHeader, options: EvmRpcOptions): Promise<void> {
+  const closing = await fetchEvmBlockHeader(chain, block.number, options);
+  if (!closing || closing.hash !== block.hash || closing.timestamp !== block.timestamp || closing.number !== block.number) {
+    throw new Error("joined supply canonical header changed");
+  }
+}
 
 export interface OnChainMcapChainRow {
   current: number;
@@ -262,8 +281,8 @@ async function adjustOnChainSupplyForExcludedBalances(input: {
   supplyContract: NonNullable<StablecoinMeta["contracts"]>[number];
   totalSupplyRaw: bigint;
   signal: AbortSignal;
-  chainRpc?: ChainRpcConfig;
-  curatedRpc?: { rpcUrl?: string; fallbackRpcUrl?: string };
+  observedBlock?: EvmBlockHeader;
+  rpcOptions?: EvmRpcOptions;
 }): Promise<{ raw: bigint; supplySource: SupplementalOnChainSupplySource } | null> {
   const exclusionConfig = CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[input.meta.id];
   if (!exclusionConfig) return null;
@@ -280,16 +299,12 @@ async function adjustOnChainSupplyForExcludedBalances(input: {
   const balances = await mapWithConcurrency(
     exclusionConfig.holderAddresses,
     EXCLUDED_BALANCE_READ_CONCURRENCY,
-    (holderAddress) =>
-      fetchOnchainUint256({
-        contract: input.supplyContract.address,
-        data: encodeBalanceOfCallData(holderAddress),
-        signal: input.signal,
-        rpcUrl: input.curatedRpc?.rpcUrl ?? primaryRpcUrl(input.chainRpc),
-        fallbackRpcUrl: input.curatedRpc?.fallbackRpcUrl ?? registryRpcUrls(input.chainRpc)[1],
-        rpcMode: "public-rpc",
-        chain: input.supplyContract.chain,
-      }),
+    (holderAddress) => {
+      if (!input.observedBlock) throw new Error("excluded balances require a canonical supply block");
+      return fetchEvmUint256AtBlock(input.supplyContract.chain, input.supplyContract.address,
+        encodeBalanceOfCallData(holderAddress), input.observedBlock.number,
+        { ...input.rpcOptions, signal: input.signal, stateBlockHash: input.observedBlock.hash });
+    },
     { signal: input.signal },
   );
 
@@ -308,6 +323,15 @@ async function adjustOnChainSupplyForExcludedBalances(input: {
   };
 }
 
+interface ContractOnChainMcapResult {
+  mcap: number;
+  supplySource: SupplementalOnChainSupplySource;
+  observedAt: number;
+  chain: string;
+  chainLabel: string;
+  observedBlock?: EvmBlockHeader;
+}
+
 async function fetchOnChainSupplyForContract(input: {
   meta: StablecoinMeta;
   supplyContract: NonNullable<StablecoinMeta["contracts"]>[number];
@@ -316,13 +340,8 @@ async function fetchOnChainSupplyForContract(input: {
   dwellirNative?: DwellirNativeCapability;
   signal?: AbortSignal;
   curated?: { rpcUrl?: string; fallbackRpcUrl?: string; allowZeroSupply?: boolean };
-}): Promise<{
-  mcap: number;
-  supplySource: SupplementalOnChainSupplySource;
-  observedAt: number;
-  chain: string;
-  chainLabel: string;
-} | null> {
+  observedBlocks?: Map<string, EvmBlockHeader>;
+}): Promise<ContractOnChainMcapResult | null> {
   const supplyContract = input.supplyContract;
   if (!isFixedDecimalDeployment(supplyContract)) {
     logWorkerEventArgs("handler", "warn",
@@ -336,12 +355,32 @@ async function fetchOnChainSupplyForContract(input: {
   const supplySignal = input.signal ?? AbortSignal.timeout(10_000);
   const chainRpc = input.chainRpcs?.get(input.supplyContract.chain);
   const allowZeroSupply = input.curated?.allowZeroSupply === true;
-  const observedAt = Math.floor(Date.now() / 1000);
+  let observedAt = Math.floor(Date.now() / 1000);
 
   try {
     const rpcUrl = input.curated?.rpcUrl ?? primaryRpcUrl(chainRpc);
     const fallbackRpcUrl = input.curated?.fallbackRpcUrl ?? registryRpcUrls(chainRpc)[1];
-    const raw = await readContractSupplyRaw({
+    const rpcOptions = joinedSupplyRpcOptions({ ...input, signal: supplySignal });
+    const needsJoinedBlock = family === "evm" && (
+      !!CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[input.meta.id] ||
+      (!!CURATED_AGGREGATE_ESCROW_RESIDUALS[input.meta.id] &&
+        CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[input.meta.id] === supplyContract.chain)
+    );
+    let observedBlock = input.observedBlocks?.get(supplyContract.chain);
+    if (needsJoinedBlock && !observedBlock) {
+      const number = await fetchEvmBlockNumber(supplyContract.chain, rpcOptions);
+      observedBlock = number == null ? undefined : await fetchEvmBlockHeader(supplyContract.chain, number, rpcOptions) ?? undefined;
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (!observedBlock || observedBlock.timestamp > nowSec || nowSec - observedBlock.timestamp > JOINED_SUPPLY_OBSERVATION_MAX_AGE_SEC) {
+        throw new Error("joined supply observation block unavailable or stale");
+      }
+      input.observedBlocks?.set(supplyContract.chain, observedBlock);
+    }
+    if (observedBlock) observedAt = observedBlock.timestamp;
+    const raw = observedBlock
+      ? await fetchEvmUint256AtBlock(supplyContract.chain, supplyContract.address, TOTAL_SUPPLY_SELECTOR,
+        observedBlock.number, { ...rpcOptions, stateBlockHash: observedBlock.hash })
+      : await readContractSupplyRaw({
       meta: input.meta,
       supplyContract,
       family,
@@ -381,14 +420,15 @@ async function fetchOnChainSupplyForContract(input: {
         supplyContract: input.supplyContract,
         totalSupplyRaw: raw,
         signal: supplySignal,
-        chainRpc,
-        curatedRpc: input.curated,
+        observedBlock,
+        rpcOptions,
       })
       : null;
     const supplyRaw = adjustment?.raw ?? raw;
     const supplySource = adjustment?.supplySource ?? "onchain-total-supply";
     const supply = Number(supplyRaw) / 10 ** decimals;
     const mcap = supply * input.priceUsd;
+    if (observedBlock) await confirmJoinedSupplyBlock(supplyContract.chain, observedBlock, rpcOptions);
     if (Number.isFinite(mcap) && (mcap > 0 || allowZeroSupply)) {
       const chainLabel = contractChainLabel(input.supplyContract);
       if (mcap > 0) {
@@ -396,7 +436,7 @@ async function fetchOnChainSupplyForContract(input: {
           `[fiat-cg] ${chainLabel} supply fallback for ${input.meta.symbol}: ${supply.toFixed(2)} units -> $${mcap.toFixed(2)} mcap`,
         );
       }
-      return { mcap, supplySource, observedAt, chain: input.supplyContract.chain, chainLabel };
+      return { mcap, supplySource, observedAt, observedBlock, chain: input.supplyContract.chain, chainLabel };
     }
   } catch (err) {
     logWorkerEventArgs("handler", "warn",
@@ -420,8 +460,8 @@ async function fetchEscrowHeldMcap(input: {
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   curated?: { rpcUrl?: string; fallbackRpcUrl?: string };
+  observedBlock: EvmBlockHeader;
 }): Promise<number | null> {
-  const chainRpc = input.chainRpcs?.get(input.supplyContract.chain);
   if (!isFixedDecimalDeployment(input.supplyContract)) {
     logWorkerEventArgs("handler", "warn",
       `[fiat-cg] ${contractChainLabel(input.supplyContract)} escrow balance probe skipped for ${input.meta.symbol}: contract has no fixed-decimal amount encoding`,
@@ -431,15 +471,11 @@ async function fetchEscrowHeldMcap(input: {
   const decimals = input.supplyContract.decimals;
 
   try {
-    const balance = await fetchOnchainUint256({
-      contract: input.supplyContract.address,
-      data: encodeBalanceOfCallData(input.escrowAddress),
-      signal: input.signal ?? AbortSignal.timeout(10_000),
-      rpcUrl: input.curated?.rpcUrl ?? primaryRpcUrl(chainRpc),
-      fallbackRpcUrl: input.curated?.fallbackRpcUrl ?? registryRpcUrls(chainRpc)[1],
-      rpcMode: "public-rpc",
-      chain: input.supplyContract.chain,
-    });
+    const rpcOptions = joinedSupplyRpcOptions(input);
+    const balance = await fetchEvmUint256AtBlock(input.supplyContract.chain, input.supplyContract.address,
+      encodeBalanceOfCallData(input.escrowAddress), input.observedBlock.number,
+      { ...rpcOptions, stateBlockHash: input.observedBlock.hash });
+    await confirmJoinedSupplyBlock(input.supplyContract.chain, input.observedBlock, rpcOptions);
     if (balance == null || balance <= 0n) return null;
 
     const mcap = (Number(balance) / 10 ** decimals) * input.priceUsd;
@@ -508,12 +544,13 @@ export async function fetchCuratedAggregateOnChainMcap(
   if (!selectedContracts) {
     return null;
   }
-  const observedAt = Math.floor(Date.now() / 1000);
+  let observedAt = Math.floor(Date.now() / 1000);
+  const observedBlocks = new Map<string, EvmBlockHeader>();
 
   let totalMcap = 0;
   const chainCirculating: Record<string, OnChainMcapChainRow> = {};
   const canonicalSupplyChain = CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[meta.id];
-  let canonicalResult: { mcap: number; chain: string; chainLabel: string } | null = null;
+  let canonicalResult: ContractOnChainMcapResult | null = null;
   let representationMcap = 0;
   for (const { config: curated, contract: supplyContract } of selectedContracts) {
     throwIfAborted(signal);
@@ -526,10 +563,12 @@ export async function fetchCuratedAggregateOnChainMcap(
       signal,
       dwellirNative,
       curated,
+      observedBlocks,
     });
     if (!result || result.supplySource !== "onchain-total-supply") {
       return null;
     }
+    observedAt = Math.min(observedAt, result.observedAt);
 
     if (canonicalSupplyChain) {
       if (result.chain === canonicalSupplyChain) {
@@ -555,7 +594,7 @@ export async function fetchCuratedAggregateOnChainMcap(
     const residual = CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id];
     if (residual) {
       const canonicalLeg = selectedContracts.find(({ config }) => config.chain === canonicalSupplyChain);
-      if (!canonicalLeg) return null;
+      if (!canonicalLeg || !canonicalResult.observedBlock) return null;
 
       const escrowMcap = await fetchEscrowHeldMcap({
         meta,
@@ -565,6 +604,7 @@ export async function fetchCuratedAggregateOnChainMcap(
         chainRpcs,
         signal,
         curated: canonicalLeg.config,
+        observedBlock: canonicalResult.observedBlock,
       });
       // Fail closed: the escrow read is the whole point of the refinement, so an
       // unreadable or nonsensical balance must not quietly republish the

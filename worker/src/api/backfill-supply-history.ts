@@ -6,6 +6,7 @@ import { bucketUnixMillisecondsToUtcDay, bucketUnixSecondsToUtcDay } from "@shar
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { toTokenUnits } from "@shared/lib/math";
 import type { ContractDeployment } from "@shared/types/core";
+import { onchainSupplyProbeFamily } from "@shared/lib/onchain-supply-probe";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 import { fetchCoinGeckoMarketHistory } from "../lib/coingecko-market-history";
 import type { ChainRpcConfig } from "../lib/chain-registry";
@@ -172,10 +173,9 @@ async function fetchHistoricalPegFxPrices(
 // multi-chain reserves that far exceed the token's market cap).
 
 function selectSingleHistoricalEvmContract(contracts?: ContractDeployment[]): ContractDeployment | null {
-  const supportedContracts = contracts?.filter((c) =>
-    c.chain !== "solana" && c.chain !== "stellar" && c.chain !== "tron"
-  ) ?? [];
-  return supportedContracts.length === 1 ? supportedContracts[0] : null;
+  if (contracts?.length !== 1) return null;
+  const [contract] = contracts;
+  return onchainSupplyProbeFamily(contract) === "evm" ? contract : null;
 }
 
 function isWithinBackfillWindow(snapshotDate: number, window?: SupplyBackfillWindow): boolean {
@@ -540,7 +540,7 @@ async function backfillHistoricalTotalSupply(
 
   const contract = selectSingleHistoricalEvmContract(meta.contracts);
   if (!contract) {
-    return { rows: 0, error: "historical totalSupply backfill requires exactly one supported EVM contract" };
+    return { rows: 0, error: "unsupported-complete-roster: historical totalSupply backfill requires exactly one supported EVM deployment in the complete roster" };
   }
 
   const decimals = contract.decimals;
@@ -633,11 +633,12 @@ async function backfillCommodity(
   if (marketHistory?.prices.length) {
     fallthroughReason =
       "CoinGecko market caps all zero and historical on-chain totalSupply unavailable";
-    // Build a date-keyed map of cgMcap so we can pair each price point with its matching cap.
-    const cgMcapByDate = new Map<string, number>();
+    // Use the first valid exact-timestamp cap/price pair per UTC day.
+    // A price without a matching cap remains eligible for historical on-chain replay.
+    const cgMcapByTimestamp = new Map<number, number>();
     for (const [ts, mcap] of marketHistory.marketCaps) {
-      if (Number.isFinite(mcap)) {
-        cgMcapByDate.set(new Date(ts).toISOString().slice(0, 10), mcap);
+      if (Number.isFinite(ts) && Number.isFinite(mcap)) {
+        cgMcapByTimestamp.set(ts, mcap);
       }
     }
 
@@ -646,11 +647,11 @@ async function backfillCommodity(
     let missingMarketCapDays = 0;
 
     for (const [ts, price] of marketHistory.prices) {
-      if (!Number.isFinite(price) || price <= 0) continue;
+      if (!Number.isFinite(ts) || !Number.isFinite(price) || price <= 0) continue;
       const snapshotDate = bucketUnixMillisecondsToUtcDay(ts) / 1000;
       if (seenSnapshotDates.has(snapshotDate)) continue;
       if (!isWithinBackfillWindow(snapshotDate, config.window)) continue;
-      const cgMcap = cgMcapByDate.get(new Date(ts).toISOString().slice(0, 10));
+      const cgMcap = cgMcapByTimestamp.get(ts);
       const resolvedMcap = resolveMarketCap(cgMcap, undefined, price);
       if (!Number.isFinite(resolvedMcap) || resolvedMcap <= 0) {
         missingMarketCapDays += 1;

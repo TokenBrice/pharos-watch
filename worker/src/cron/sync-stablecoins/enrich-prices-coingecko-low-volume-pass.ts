@@ -1,4 +1,5 @@
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { fetchCoingeckoSimplePrices } from "../../lib/coingecko-simple-price";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
@@ -10,6 +11,7 @@ import {
 } from "./enrich-prices-shared";
 import {
   type EnrichPassResult,
+  isFreshFallbackObservedAt,
   isUsableFallbackPrice,
 } from "./enrich-prices-pass-common";
 
@@ -94,6 +96,14 @@ export async function runCoingeckoLowVolumePass(
     const quote = geckoId ? outcome.value.get(geckoId) : undefined;
     if (!quote) continue;
     if (!isUsableFallbackPrice(asset, quote.price, fxRates)) continue;
+    if (quote.observedAt != null && (
+      quote.observedAt <= 0 ||
+      !isFreshFallbackObservedAt(
+        quote.observedAt,
+        getPricingSourceRegistryEntry(COINGECKO_LOW_VOLUME_SOURCE)!.maxTrustedAgeSec!,
+        nowSec,
+      )
+    )) continue;
 
     applyResolvedPrice(
       assets[index],

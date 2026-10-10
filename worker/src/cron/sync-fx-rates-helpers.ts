@@ -481,17 +481,17 @@ export class FxSyncRunState {
       });
     }
 
-    for (const [currency, unitsPerUsd] of Object.entries(rates)) {
-      const pegKey = currencyToPeg[currency];
-      if (!pegKey || !Number.isFinite(unitsPerUsd) || unitsPerUsd <= 0) continue;
-      const rate = invertUnitsPerUsd(unitsPerUsd);
-      if (this.validateRate(pegKey, rate, this.prevRates[pegKey])) {
-        this.usableRates[pegKey] = rate;
-        this.markLive(pegKey, ecbUpdatedAt, "business-daily", sourceDate);
-      } else if (this.prevRates[pegKey]) {
-        this.usableRates[pegKey] = this.prevRates[pegKey]!;
-        this.inheritPrevious(pegKey);
+    for (const [currency, pegKey] of Object.entries(currencyToPeg)) {
+      const unitsPerUsd = rates[currency];
+      if (typeof unitsPerUsd === "number" && Number.isFinite(unitsPerUsd) && unitsPerUsd > 0) {
+        const rate = invertUnitsPerUsd(unitsPerUsd);
+        if (this.validateRate(pegKey, rate, this.prevRates[pegKey])) {
+          this.usableRates[pegKey] = rate;
+          this.markLive(pegKey, ecbUpdatedAt, "business-daily", sourceDate);
+          continue;
+        }
       }
+      this.ensureCachedRate(pegKey, currency, { requireCadenceValid: true });
     }
   }
 

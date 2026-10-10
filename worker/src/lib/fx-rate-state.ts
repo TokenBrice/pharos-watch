@@ -11,6 +11,7 @@ import { sanitizeRecordValues } from "./normalizers";
 import { inferFxSourceCadence, type FxSourceCadence } from "./fx-cadence";
 import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import { IsolateLocalState } from "./isolate-local-state";
+import { EXPECTED_FX_PEG_KEYS } from "./fx-config";
 
 const FX_RATES_KEY = "fx-rates";
 const FX_RATES_META_KEY = "fx-rates-meta";
@@ -642,6 +643,7 @@ export function buildFxCacheStatus(
   let sourceStatusAgeSeconds: number | null = null;
   let sourceStatusUpdatedAt: number | null = null;
   const admissionIssues: Array<{ pegKey: string; issue: FxPegAdmissionIssue }> = [];
+  const missingPegKeys = EXPECTED_FX_PEG_KEYS.filter((pegKey) => !(state.rates[pegKey] > 0));
 
   const severityRank = (status: FxSourceStatus): number =>
     status === "stale" ? 3 : status === "degraded" ? 2 : status === "fresh" ? 1 : 0;
@@ -687,6 +689,12 @@ export function buildFxCacheStatus(
       sourceStatusUpdatedAt = null;
     }
   }
+  if (missingPegKeys.length > 0) {
+    degradedReason ??= `incomplete-expected-fx-coverage:${missingPegKeys.join(",")}`;
+    admissionWarning = [admissionWarning, `missing expected FX rates: ${missingPegKeys.join(", ")}`]
+      .filter(Boolean).join("; ");
+    statusFloor = statusFloor === "stale" ? "stale" : "degraded";
+  }
 
   if (sourceStatus === "stale") {
     statusFloor = "stale";
@@ -709,8 +717,8 @@ export function buildFxCacheStatus(
   const cacheStatus: CacheStatus = {
     ageSeconds,
     maxAge: maxAgeSec,
-    healthy: ratio <= FRESHNESS_RATIOS.DEGRADED && admissionIssues.length === 0,
-    degraded: admissionIssues.length > 0,
+    healthy: ratio <= FRESHNESS_RATIOS.DEGRADED && admissionIssues.length === 0 && missingPegKeys.length === 0,
+    degraded: admissionIssues.length > 0 || missingPegKeys.length > 0,
     degradedReason,
     mode: state.mode,
     sourceUpdatedAt:

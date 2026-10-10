@@ -301,18 +301,11 @@ describe("handleHealth", () => {
     const now = Math.floor(Date.now() / 1000);
     const row = makeRawStatusSnapshotRow(now, 60);
     const snapshot = JSON.parse(row.value) as Record<string, unknown>;
-    snapshot.publicHealth = {
-      status: "healthy",
-      timestamp: now - 60,
-      warnings: [],
-      caches: {},
-      blacklist: {},
-      mintBurn: {},
-      circuits: {},
-      stablecoinPublication: null,
-      activePriceCoverage: null,
-    };
-    (snapshot.publicHealth as Record<string, unknown>).schedulerLiveness = (snapshot.raw as Record<string, unknown>).schedulerLiveness;
+    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    expect(publicHealth.status).toBe("healthy");
+    expect(publicHealth.caches["fx-rates"].healthy).toBe(true);
+    expect(publicHealth.activePriceCoverage).toMatchObject({ status: "complete" });
+    snapshot.publicHealth = publicHealth;
     row.value = JSON.stringify(snapshot);
     const db = buildStatusD1Scenario({
       sections: [],
@@ -325,19 +318,9 @@ describe("handleHealth", () => {
     });
 
     const response = await handleHealth(db);
-    const body = await response.json() as { status: string; timestamp: number };
+    const body = await response.json() as HealthResponse;
 
-    expect(body).toMatchObject({
-      status: "healthy",
-      timestamp: now,
-      warnings: [],
-      caches: {},
-      blacklist: {},
-      mintBurn: {},
-      circuits: {},
-      stablecoinPublication: null,
-      activePriceCoverage: null,
-    });
+    expect(body).toMatchObject({ ...publicHealth, timestamp: now });
     expect(db.getHistory()).toHaveLength(2);
     db.assertAllMatchesUsed();
   });
