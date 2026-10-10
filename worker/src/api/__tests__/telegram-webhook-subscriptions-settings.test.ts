@@ -308,7 +308,7 @@ describe("handleTelegramWebhook", () => {
         "usdt-tether": 100_000_000_000,
         "usdc-circle": 90_000_000_000,
         "dai-makerdao": 5_000_000_000,
-      }, 1_700_000_000),
+      }),
     ]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews usd-top25"), "test-secret", "bot-token");
 
@@ -473,7 +473,7 @@ describe("handleTelegramWebhook", () => {
         "usdt-tether": 100_000_000_000,
         "usdc-circle": 90_000_000_000,
         "dai-makerdao": 5_000_000_000,
-      }, 1_700_000_000),
+      }),
     ]);
     await handleTelegramWebhook(
       db,
@@ -505,7 +505,7 @@ describe("handleTelegramWebhook", () => {
         "usdt-tether": 100_000_000_000,
         "usdc-circle": 90_000_000_000,
         "dai-makerdao": 5_000_000_000,
-      }, 1_700_000_000),
+      }),
     ]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews usd-top-25"), "test-secret", "bot-token");
@@ -926,7 +926,7 @@ describe("handleTelegramWebhook", () => {
         "usdt-tether": 100_000_000_000,
         "usdc-circle": 90_000_000_000,
         "dai-makerdao": 5_000_000_000,
-      }, 1_700_000_000),
+      }),
     ]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/unsubscribe usd-top25"), "test-secret", "bot-token");

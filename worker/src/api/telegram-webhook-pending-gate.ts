@@ -27,6 +27,7 @@ import type { TelegramWebhookOperationIntent } from "./telegram-webhook-store";
 import {
   commandRequiresGroupAdmin,
   isRecapMutationArgs,
+  isMutatingTelegramStartPayload,
   maybeGateNonAdminGroupActor,
 } from "./telegram-webhook-ingress-policy";
 
@@ -39,7 +40,8 @@ type PendingFlowResult = "continue" | "continue-clear-pending" | "finished";
 
 function mutatesAfterPendingClear(command: ParsedTelegramCommand): boolean {
   return commandRequiresGroupAdmin(command.command, command.args)
-    || (command.command === "/recap" && isRecapMutationArgs(command.args));
+    || (command.command === "/recap" && isRecapMutationArgs(command.args))
+    || (command.command === "/start" && isMutatingTelegramStartPayload(command.args));
 }
 
 function normalizedPendingActionType(value: string | null | undefined): string {
@@ -315,6 +317,13 @@ export async function handlePendingActionBeforeDispatch(args: {
     return "finished";
   }
 
+  if (command === "/start" && isMutatingTelegramStartPayload(parsedCommand.args)) {
+    if (!canActOnPending(pendingAction, actorUserId)) {
+      await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
+      return "finished";
+    }
+    return "continue-clear-pending";
+  }
   if (PENDING_PASSTHROUGH_COMMANDS.has(command) || (command === "/recap" && parsedCommand.args.trim().length === 0)) {
     return "continue";
   }

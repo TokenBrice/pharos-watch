@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   applyRecapPreference,
@@ -13,6 +13,7 @@ import {
   setTelegramRecapPreference,
 } from "../../lib/telegram/recap-store";
 import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
+import { setSubscriberTimezone } from "../../api/telegram-store/snooze";
 
 const NOW = 1_800_000_000;
 const dbs: DatabaseSync[] = [];
@@ -151,24 +152,26 @@ describe("telegram recap store on latest SQLite schema", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 1 });
   });
 
-  it("does not use an old-generation target as schedule proof", async () => {
+  it("repairs the current schedule without consuming an old-generation target window", async () => {
     const { sqlite, db } = setup();
     subscriber(sqlite, "42");
     await setTelegramRecapPreference(db, preferenceInput("42"));
     await queueTelegramRecapTarget(db, target("42"));
     sqlite.prepare("UPDATE telegram_recap_preferences SET next_due_at = ? WHERE chat_id = '42'").run(NOW - 1);
     sqlite.prepare("UPDATE telegram_subscribers SET preference_generation = 2 WHERE chat_id = '42'").run();
+    const evidence = sqlite.prepare("SELECT * FROM telegram_recap_targets").get();
 
     await expect(queueTelegramRecapTarget(db, target("42", 2))).resolves.toBe("stale");
-    expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = '42'").get())
-      .toEqual({ next_due_at: NOW - 1 });
+    expect(sqlite.prepare("SELECT next_due_at, last_window_end_at FROM telegram_recap_preferences WHERE chat_id = '42'").get())
+      .toEqual({ next_due_at: NOW + 86400, last_window_end_at: null });
+    sqlite.prepare("UPDATE telegram_recap_preferences SET next_due_at = ? WHERE chat_id = '42'").run(NOW - 1);
     await expect(recordTelegramRecapSkip(db, {
       target: target("42", 2),
       status: "skipped_stale",
-    })).resolves.toBe(false);
-    expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = '42'").get())
-      .toEqual({ next_due_at: NOW - 1 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets").get()).toEqual({ count: 1 });
+    })).resolves.toBe(true);
+    expect(sqlite.prepare("SELECT next_due_at, last_window_end_at FROM telegram_recap_preferences WHERE chat_id = '42'").get())
+      .toEqual({ next_due_at: NOW + 86400, last_window_end_at: null });
+    expect(sqlite.prepare("SELECT * FROM telegram_recap_targets").get()).toEqual(evidence);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 1 });
   });
 
@@ -225,6 +228,82 @@ describe("telegram recap store on latest SQLite schema", () => {
       { chat_id: "unknown", delivery_state: "pending" },
     ]);
   });
+  it.each(["recap-off", "timezone-clear"] as const)(
+    "%s cancels only unstarted recap work and preserves terminal projection",
+    async (surface) => {
+      const { sqlite, db } = setup();
+      for (const state of ["pending", "sending", "sent", "execution_unknown"] as const) {
+        subscriber(sqlite, state);
+        await setTelegramRecapPreference(db, preferenceInput(state));
+        await queueTelegramRecapTarget(db, target(state));
+        sqlite.prepare("UPDATE telegram_pending_alerts SET delivery_state = ? WHERE chat_id = ?").run(state, state);
+        const before = sqlite.prepare("SELECT * FROM telegram_pending_alerts WHERE chat_id = ?").get(state);
+        if (surface === "recap-off") {
+          await setTelegramRecapPreference(db, {
+            chatId: state, enabled: false, deliveryHourLocal: 9, nextDueAt: null, nowSec: NOW + 1,
+          });
+        } else {
+          await setSubscriberTimezone(db, state, null, null);
+        }
+        expect(await getTelegramRecapPreference(db, state)).toMatchObject({ enabled: false, nextDueAt: null });
+        if (state === "pending") {
+          expect(sqlite.prepare("SELECT status FROM telegram_recap_targets WHERE chat_id = ?").get(state))
+            .toEqual({ status: "cancelled" });
+          expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE chat_id = ?").get(state))
+            .toEqual({ count: 0 });
+        } else {
+          expect(sqlite.prepare("SELECT * FROM telegram_pending_alerts WHERE chat_id = ?").get(state)).toEqual(before);
+          expect(sqlite.prepare("SELECT status FROM telegram_recap_targets WHERE chat_id = ?").get(state))
+            .toEqual({ status: "queued" });
+          const outcome = state === "execution_unknown" ? "execution_unknown" : "accepted";
+          await expect(projectTelegramRecapTerminalOutcome(db, target(state).recapKey, outcome, NOW + 2))
+            .resolves.toBe(true);
+          await expect(projectTelegramRecapTerminalOutcome(db, target(state).recapKey, "cancelled", NOW + 3))
+            .resolves.toBe(false);
+        }
+      }
+    },
+  );
+
+  it.each(["recap-off", "timezone-clear"] as const)(
+    "%s reciprocally rejects cancellation when a send is claimed before the batch",
+    async (surface) => {
+      const { sqlite, db } = setup();
+      subscriber(sqlite, "race");
+      await setTelegramRecapPreference(db, preferenceInput("race"));
+      await queueTelegramRecapTarget(db, target("race"));
+      const batch = db.batch.bind(db);
+      let batches = 0;
+      const spy = vi.spyOn(db, "batch").mockImplementation(async (statements) => {
+        // The disable path has a separate preference batch; the timezone path
+        // includes cancellation in its preference batch.
+        batches += 1;
+        if (surface === "timezone-clear" || batches === 2) {
+          sqlite.prepare(`UPDATE telegram_pending_alerts
+            SET delivery_state = 'sending', processing_owner = 'sender', delivery_owner = 'sender', delivery_generation = 1
+            WHERE chat_id = 'race'`).run();
+        }
+        return batch(statements);
+      });
+      try {
+        if (surface === "recap-off") {
+          await setTelegramRecapPreference(db, {
+            chatId: "race", enabled: false, deliveryHourLocal: 9, nextDueAt: null, nowSec: NOW + 1,
+          });
+        } else {
+          await setSubscriberTimezone(db, "race", null, null);
+        }
+        expect(sqlite.prepare("SELECT delivery_state, processing_owner FROM telegram_pending_alerts").get())
+          .toEqual({ delivery_state: "sending", processing_owner: "sender" });
+        expect(sqlite.prepare("SELECT status FROM telegram_recap_targets").get()).toEqual({ status: "queued" });
+        await expect(projectTelegramRecapTerminalOutcome(db, target("race").recapKey, "accepted", NOW + 2))
+          .resolves.toBe(true);
+      } finally {
+        spy.mockRestore();
+      }
+    },
+  );
+
 
   it("never advances a schedule when a concurrent generation change rejects the target", async () => {
     const { sqlite, db } = setup();

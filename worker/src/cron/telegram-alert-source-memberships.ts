@@ -1,4 +1,9 @@
-import { mergeTelegramDepegWorseningSteps } from "@shared/lib/telegram-delivery-policy";
+import {
+  mergeTelegramDepegWorseningSteps,
+  TELEGRAM_PRESET_RESOLUTION_MAX_MS_PER_RUN,
+  TELEGRAM_PRESET_RESOLUTION_MAX_PAGES_PER_RUN,
+  TELEGRAM_PRESET_RESOLUTION_PAGE_SIZE,
+} from "@shared/lib/telegram-delivery-policy";
 import { batchExecute, buildInClause, executeAtomicBatch, prepareMultiRowInsertStatements } from "../lib/db";
 import {
   listTelegramPresets,
@@ -22,7 +27,6 @@ import {
   type TelegramAlertSourceEvent,
 } from "./telegram-alert-source-events";
 
-const PRESET_PAGE_SIZE = 100;
 interface ResolutionPageRow {
   source_event_id: string;
   page_key: string;
@@ -267,7 +271,7 @@ async function resolveFollowerPage(
     cursor: page.cursor_chat_id == null || page.cursor_preset_id == null
       ? undefined
       : { chatId: page.cursor_chat_id, presetId: page.cursor_preset_id },
-    limit: PRESET_PAGE_SIZE,
+    limit: TELEGRAM_PRESET_RESOLUTION_PAGE_SIZE,
   });
   if (followerPage.kind === "query-failed") {
     await recordPageFailure(db, page, nowSec, "query_failed");
@@ -458,49 +462,57 @@ export async function resolveTelegramAlertSourcePresetPages(
   db: D1Database,
   source: TelegramAlertSourceEvent,
   nowSec: number,
-  options: TelegramPresetResolveOptions & { includeSubscriberMaps?: boolean } = {},
+  options: TelegramPresetResolveOptions & { includeSubscriberMaps?: boolean; maxPages?: number } = {},
 ): Promise<TelegramAlertSourceResolution> {
   const resolutionStartedAtMs = Date.now();
   const resolutionCounters = { statements: 0 };
   const resolutionDb = createSourceResolutionDatabase(db, resolutionCounters);
-  const pendingResult = await resolutionDb
-    .prepare(
-      `SELECT source_event_id, page_key, alert_type, page_index,
-              cursor_chat_id, cursor_preset_id, memberships_resolved,
-              status, attempt_count
-         FROM telegram_alert_source_resolution_pages
-        WHERE source_event_id = ? AND status = 'pending'
-        ORDER BY alert_type ASC, page_index ASC`,
-    )
-    .bind(source.sourceEventId)
-    .all<ResolutionPageRow>();
-
+  const maxPages = Math.max(1, Math.min(
+    TELEGRAM_PRESET_RESOLUTION_MAX_PAGES_PER_RUN,
+    Math.floor(options.maxPages ?? TELEGRAM_PRESET_RESOLUTION_MAX_PAGES_PER_RUN),
+  ));
+  const attemptedPages = new Set<string>();
   let pagesCompletedThisRun = 0;
   let queryFailures = 0;
   let resolutionFailures = 0;
   const queryFailuresByType: Record<PresetAlertType, number> = { dews: 0, depeg: 0, safety: 0 };
   const resolutionFailuresByType: Record<PresetAlertType, number> = { dews: 0, depeg: 0, safety: 0 };
-  for (const page of pendingResult.results ?? []) {
-    let membershipOutcome: "ok" | "query-failed" | "resolution-failed" = "ok";
-    if (page.memberships_resolved !== 1) {
-      membershipOutcome = await resolveMemberships(resolutionDb, source, page, nowSec, options);
-    }
-    if (membershipOutcome === "query-failed") {
-      queryFailures += 1;
-      queryFailuresByType[page.alert_type] += 1;
-      continue;
-    }
-    if (membershipOutcome === "resolution-failed") {
-      resolutionFailures += 1;
-      resolutionFailuresByType[page.alert_type] += 1;
-      continue;
-    }
-    const followerOutcome = await resolveFollowerPage(resolutionDb, source, page, nowSec);
-    if (followerOutcome === "query-failed") {
-      queryFailures += 1;
-      queryFailuresByType[page.alert_type] += 1;
-    } else {
-      pagesCompletedThisRun += 1;
+  while (attemptedPages.size < maxPages
+      && Date.now() - resolutionStartedAtMs < TELEGRAM_PRESET_RESOLUTION_MAX_MS_PER_RUN) {
+    const pendingResult = await resolutionDb.prepare(`
+      SELECT source_event_id, page_key, alert_type, page_index,
+             cursor_chat_id, cursor_preset_id, memberships_resolved, status, attempt_count
+        FROM telegram_alert_source_resolution_pages
+       WHERE source_event_id = ? AND status = 'pending'
+       ORDER BY alert_type ASC, page_index ASC
+    `).bind(source.sourceEventId).all<ResolutionPageRow>();
+    const pages = (pendingResult.results ?? []).filter((page) => !attemptedPages.has(page.page_key));
+    if (pages.length === 0) break;
+    for (const page of pages) {
+      if (attemptedPages.size >= maxPages
+          || Date.now() - resolutionStartedAtMs >= TELEGRAM_PRESET_RESOLUTION_MAX_MS_PER_RUN) break;
+      attemptedPages.add(page.page_key);
+      let membershipOutcome: "ok" | "query-failed" | "resolution-failed" = "ok";
+      if (page.memberships_resolved !== 1) {
+        membershipOutcome = await resolveMemberships(resolutionDb, source, page, nowSec, options);
+      }
+      if (membershipOutcome === "query-failed") {
+        queryFailures += 1;
+        queryFailuresByType[page.alert_type] += 1;
+        continue;
+      }
+      if (membershipOutcome === "resolution-failed") {
+        resolutionFailures += 1;
+        resolutionFailuresByType[page.alert_type] += 1;
+        continue;
+      }
+      const followerOutcome = await resolveFollowerPage(resolutionDb, source, page, nowSec);
+      if (followerOutcome === "query-failed") {
+        queryFailures += 1;
+        queryFailuresByType[page.alert_type] += 1;
+      } else {
+        pagesCompletedThisRun += 1;
+      }
     }
   }
 

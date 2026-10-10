@@ -8,7 +8,7 @@
 
 import { CRON_INTERVALS } from "./cron-jobs";
 
-/** Default source/queue TTL leaves 20% headroom after bounded planning and drain. */
+/** Default source/queue TTL; modeled 20% headroom is not a D1 latency guarantee. */
 export const PENDING_TTL_SEC = 2 * 60 * 60;
 
 export const TELEGRAM_ALERT_TTL_SEC = {
@@ -58,6 +58,12 @@ export const TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE = 45;
 /** Durable target-plan transitions permitted in one dispatch invocation. */
 export const TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN = 32;
 
+/** Preset membership capture shares the source TTL with target planning and transport. */
+export const TELEGRAM_PRESET_RESOLUTION_PAGE_SIZE = 100;
+/** Attempt ceiling, not guaranteed throughput: failures and D1 latency consume the wall-clock budget. */
+export const TELEGRAM_PRESET_RESOLUTION_MAX_PAGES_PER_RUN = 32;
+export const TELEGRAM_PRESET_RESOLUTION_MAX_MS_PER_RUN = 20_000;
+
 export function crossesTelegramDepegWorseningStep(
   previousDeviationBps: number,
   currentDeviationBps: number,
@@ -82,6 +88,8 @@ export function estimateTelegramTargetPlanCoordinatorBound(input: {
   subscriberCount: number;
   targetCount: number;
   maxSteps?: number;
+  /** Enabled follower rows per affected family, including overlapping presets. */
+  presetFollowerRowsByFamily?: readonly number[];
 }): { steps: number; runs: number } {
   const subscribers = Math.max(0, Math.floor(input.subscriberCount));
   const targets = Math.max(0, Math.floor(input.targetCount));
@@ -93,8 +101,17 @@ export function estimateTelegramTargetPlanCoordinatorBound(input: {
   const planningSteps = Math.ceil(subscribers / TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE) + 1;
   const openDeliverySteps = 1;
   const enqueueSteps = Math.max(1, Math.ceil(targets / TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE));
-  const steps = captureSteps + planningSteps + openDeliverySteps + enqueueSteps;
-  return { steps, runs: Math.ceil(steps / maxSteps) };
+  const presetSteps = (input.presetFollowerRowsByFamily ?? []).reduce(
+    (total, rows) => total + Math.max(1, Math.ceil(Math.max(0, rows) / TELEGRAM_PRESET_RESOLUTION_PAGE_SIZE)),
+    0,
+  );
+  const presetRuns = Math.ceil(presetSteps / TELEGRAM_PRESET_RESOLUTION_MAX_PAGES_PER_RUN);
+  const coordinatorSteps = captureSteps + planningSteps + openDeliverySteps + enqueueSteps;
+  // The invocation completing preset capture can also start the coordinator.
+  return {
+    steps: presetSteps + coordinatorSteps,
+    runs: Math.ceil(coordinatorSteps / maxSteps) + Math.max(0, presetRuns - 1),
+  };
 }
 
 /** Cheap pre-format estimate of alert lines per delivered message chunk. */

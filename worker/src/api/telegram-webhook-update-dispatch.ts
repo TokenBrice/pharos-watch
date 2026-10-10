@@ -3,10 +3,7 @@ import {
   canActOnPendingOwner,
   type TelegramWebhookUpdate,
 } from "./telegram-webhook-shared";
-import {
-  parseCommand,
-  parseStartPayload,
-} from "./telegram-webhook-parsing";
+import { parseCommand } from "./telegram-webhook-parsing";
 import {
   handlePendingActionBeforeDispatch,
   handleSetupPendingBeforeDispatch,
@@ -48,6 +45,7 @@ import {
   enforceIngressFlood,
   isAddressedToPharosBot,
   isRecapMutationArgs,
+  isMutatingTelegramStartPayload,
   logTelegramWebhookWarning,
   maybeGateNonAdminGroupActor,
   recordCommandUsage,
@@ -74,6 +72,7 @@ export type FinishOk = (errorClass?: string | null) => Promise<Response>;
 export type ReplyWithMarkupFn = (message: string, options: { replyMarkup?: unknown }) => Promise<void>;
 
 const RESUMABLE_NORMALIZED_COMMANDS = new Set([
+  "/start",
   "/mute",
   "/pause",
   "/set",
@@ -381,6 +380,9 @@ export async function handleTelegramMessageUpdate(args: {
         operation: buildPendingOperationContext(effectFence, beforeIrreversibleEffect, operationNowSec),
       });
       if (setupResult === "finished") return finishOk();
+      if (setupResult === "continue-clear-pending") {
+        commandContext.clearPendingOnMutation = true;
+      }
     }
 
     if (!isSetupPending) {
@@ -590,13 +592,9 @@ async function digestWebhookIntentInput(value: string): Promise<string> {
 
 
 function commandMutatesLocalState(command: string, args: string): boolean {
-  const startPayloadKind = command === "/start" ? parseStartPayload(args).kind : null;
   return commandRequiresGroupAdmin(command, args)
     || command === "/forget"
     || command === "/cancel"
     || (command === "/recap" && isRecapMutationArgs(args))
-    || startPayloadKind === "setup"
-    || startPayloadKind === "none"
-    || startPayloadKind === "subscribe"
-    || startPayloadKind === "adoption";
+    || (command === "/start" && isMutatingTelegramStartPayload(args));
 }

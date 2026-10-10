@@ -1,7 +1,6 @@
 import { makeReportCardsV9PipelineGapCard, makeReportCardsV9PartialCard } from "@shared/test-utils/report-cards-v9";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   buildBriefMessage,
   buildCoverageMessage,
@@ -16,6 +15,10 @@ import {
   makeWorkerV9Pillars,
 } from "../../test-helpers/report-cards-v9";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { makeYieldRanking, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
+import { YieldRankingsResponseSchema } from "@shared/types/yield";
+import { handleYieldRankings } from "../yield-rankings-cache";
+import { makeTelegramYieldCachePayload } from "./telegram-yield.test-support";
 
 const mocks = vi.hoisted(() => ({
   loadActiveSafetyScoreSource: vi.fn(),
@@ -264,45 +267,75 @@ describe("buildTopMessage", () => {
     expect(db.getHistory()).toEqual([]);
   });
 
-  it("excludes staged and failed /top yield rows behaviorally", async () => {
-    mocks.loadActiveSafetyScoreSource.mockResolvedValue({
-      kind: "error", reason: "v9-snapshot-unavailable", snapshot: null, detail: "missing",
-    });
-    const sqlite = createLatestSchemaSqlite().sqlite;
+  it("uses canonical served yield scores and per-row reasons for rated, unrated, stale and incomplete rows", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const source = activeV9();
+    mocks.loadActiveSafetyScoreSource.mockResolvedValue(source);
+    const payload = makeTelegramYieldCachePayload(nowSec, [
+      makeYieldRanking({
+        id: "usdc-circle", symbol: "USDC", yieldType: "nav-appreciation", apy30d: 5.5,
+        provenance: makeYieldProvenance({ sourceObservedAt: nowSec, sourceAgeSeconds: 0 }),
+      }),
+      makeYieldRanking({
+        id: "usdt-tether", symbol: "USDT", yieldType: "nav-appreciation", safetyScore: null, safetyGrade: "NR",
+        provenance: makeYieldProvenance({ sourceObservedAt: nowSec, sourceAgeSeconds: 0 }),
+      }),
+      makeYieldRanking({
+        id: "eurc-circle", symbol: "EURC", yieldType: "nav-appreciation", apy30d: 20,
+        provenance: makeYieldProvenance({ sourceObservedAt: nowSec - 7 * 86400, sourceAgeSeconds: 7 * 86400 }),
+      }),
+      makeYieldRanking({
+        id: "dai-makerdao", symbol: "DAI", yieldType: "lending-opportunity", apy30d: 30,
+        provenance: makeYieldProvenance({ sourceObservedAt: nowSec, sourceAgeSeconds: 0 }),
+      }),
+    ], source.snapshot.safetyScoreIdentity);
     try {
-            const insertYield = sqlite.prepare(
-        `INSERT INTO yield_data (
-          stablecoin_id, source_key, symbol, is_best, current_apy, apy_7d, apy_30d, yield_source,
-          yield_type, data_source, updated_at,
-          pharos_yield_score, source_tvl_usd, publication_generation_id, publication_state
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'lending', 'defillama', 1, ?, ?, ?, ?)`,
-      );
-      insertYield.run("usdt-tether", "usdt-source", "USDT", 1, 9, 9, 9, "Failed source", 99, 100_000_000, "gen-failed", "failed");
-      insertYield.run("usde-ethena", "usde-source", "USDe", 1, 8, 8, 8, "Staged source", 88, 90_000_000, "gen-staged", "staged");
-      insertYield.run(
-        "usdc-circle",
-        "usdc-source",
-        "USDC",
-        1,
-        4.4,
-        4.3,
-        4.2,
-        "Published source",
-        31,
-        12_000_000,
-        "gen-published",
-        "published",
-      );
-      insertYield.run("dai-makerdao", "dai-source", "DAI", 1, 3.1, 3.05, 3, "Legacy source", 99, 8_000_000, null, null);
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)")
+        .run(JSON.stringify(payload), nowSec);
+      // Raw persisted rows are intentionally not the served projection.
+      sqlite.prepare(`INSERT INTO yield_data
+        (stablecoin_id, source_key, symbol, is_best, current_apy, apy_7d, apy_30d,
+         yield_source, yield_type, data_source, updated_at, pharos_yield_score, publication_state)
+        VALUES ('staged', 'staged', 'STAGED', 1, 99, 99, 99, 'staged', 'lending', 'defillama', ?, 999, 'staged')`)
+        .run(nowSec);
+      const response = await handleYieldRankings(db);
+      expect(response.status).toBe(200);
+      const canonical = YieldRankingsResponseSchema.parse(await response.json());
+      const message = await buildTopMessage(db, "yield");
+      expect(canonical.rankings.find((row) => row.id === "usdc-circle")?.pharosYieldScore).toBeGreaterThan(0);
+      expect(canonical.rankings.find((row) => row.id === "usdt-tether")?.safetyGrade).toBe("NR");
+      expect(canonical.rankings.find((row) => row.id === "eurc-circle")?.pysNullReason).toBe("source-stale");
+      expect(canonical.rankings.find((row) => row.id === "dai-makerdao")?.pysNullReason).toBe("opportunity-evidence-missing");
+      expect(message).toContain("Top risk-adjusted yields");
+      expect(message).not.toContain("Top yields (PYS unavailable");
+      expect(message).not.toContain("STAGED");
+      canonical.rankings.forEach((row, index) => {
+        const score = row.pharosYieldScore == null
+          ? `unavailable (${row.pysNullReason ?? "safety-unrated"})`
+          : String(Math.round(row.pharosYieldScore));
+        expect(message).toContain(`${index + 1}. ${row.symbol} — ${row.apy30d.toFixed(2)}% 30d, PYS ${score}`);
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
 
-      const message = await buildTopMessage(createSqliteD1(sqlite), "yield");
-
-      expect(message).toContain("1. USDC");
-      expect(message).toContain("2. DAI");
-      expect(message).toContain("PYS unavailable");
-      expect(message).not.toContain("PYS 99");
-      expect(message).not.toContain("USDT");
-      expect(message).not.toContain("USDe");
+  it("derives global yield unavailability from the served rows rather than the model name", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const source = activeV9();
+    try {
+      const payload = makeTelegramYieldCachePayload(nowSec, [makeYieldRanking({
+        yieldType: "nav-appreciation",
+        provenance: makeYieldProvenance({ sourceObservedAt: nowSec - 7 * 86400, sourceAgeSeconds: 7 * 86400 }),
+      })], source.snapshot.safetyScoreIdentity);
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)")
+        .run(JSON.stringify(payload), nowSec);
+      const message = await buildTopMessage(db, "yield");
+      expect(message).toContain("Top yields (PYS unavailable)");
+      expect(message).toContain("PYS unavailable (source-stale)");
+      expect(message).not.toContain("expected model");
     } finally {
       sqlite.close();
     }
@@ -326,22 +359,7 @@ describe("buildTopMessage", () => {
     });
     const updatedAt = Math.floor(Date.now() / 1000);
     const chainsDb = makeTopChainsDb(updatedAt);
-    const yieldDb = mockD1([
-      {
-        match: "FROM yield_data",
-        rows: [
-          {
-            stablecoin_id: "usdc-circle",
-            symbol: "USDC",
-            current_apy: 4.4,
-            apy_30d: 4.2,
-            yield_source: "Aave V3",
-            pharos_yield_score: 99,
-            source_tvl_usd: 12_000_000,
-          },
-        ],
-      },
-    ]);
+    const yieldDb = mockD1([], { requireMatch: false });
 
     const [chainsMessage, yieldMessage] = await Promise.all([
       buildTopMessage(chainsDb, "chains"),
@@ -356,13 +374,7 @@ describe("buildTopMessage", () => {
       "Chain health unavailable; expected model V9, v9 snapshot unavailable.",
     );
 
-    expect(yieldMessage).toContain(
-      "Top yields (PYS unavailable; expected model V9, v9 snapshot unavailable)",
-    );
-    expect(yieldMessage).toContain("USDC");
-    expect(yieldMessage).toContain("4.20% 30d");
-    expect(yieldMessage).toContain("PYS unavailable");
-    expect(yieldMessage).not.toContain("PYS 99");
+    expect(yieldMessage).toBe("Yield rankings are temporarily unavailable.");
   });
 
   it("suggests the closest /top view for one-character typos", async () => {

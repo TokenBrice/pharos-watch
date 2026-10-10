@@ -608,7 +608,7 @@ describe("handleTelegramWebhook", () => {
         "usdt-tether": 100_000_000_000,
         "usdc-circle": 90_000_000_000,
         "dai-makerdao": 5_000_000_000,
-      }, 1_700_000_000),
+      }),
     ]);
     const res = await handleTelegramWebhook(
       db,

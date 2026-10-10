@@ -253,6 +253,7 @@ export async function sendWizardIntro(
   options: Omit<TelegramMutationContext, "storedIntent"> & {
     adoptionToken?: string | null;
     includeMiniAppButton?: boolean;
+    clearPending?: boolean;
   } = {},
 ): Promise<void> {
   const existingPending = await loadPendingDisambiguation(db, chatId);
@@ -281,6 +282,7 @@ export async function sendWizardIntro(
   await options.planIntent?.(createTelegramWebhookIntent("command:start", {
     stage: "setup-intro",
     nextState: setupIntentState(state),
+    clearPending: Boolean(options.clearPending),
   }, "required"));
   const operationStatements = options.prepareMutationAppliedStatement
     ? [options.prepareMutationAppliedStatement()]

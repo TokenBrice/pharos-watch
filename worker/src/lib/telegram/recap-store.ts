@@ -244,34 +244,12 @@ export async function setTelegramRecapPreference(
     // A disabled recap must not be delivered after the acknowledgement has
     // been sent. Keep the audit target, but cancel only intents that have not
     // crossed the Telegram effect boundary.
-    sideEffectStatements.push(
-      db.prepare(`
-        UPDATE telegram_recap_targets
-           SET status = 'cancelled', terminal_reason = 'recap_disabled',
-               completed_at = ?, updated_at = ?
-         WHERE chat_id = ? AND status IN ('planned', 'queued')
-           AND EXISTS (
-             SELECT 1
-               FROM telegram_recap_preferences p
-              WHERE p.chat_id = telegram_recap_targets.chat_id
-                AND p.enabled = 0
-           )
-      `).bind(input.nowSec, input.nowSec, input.chatId),
-      db.prepare(`
-        DELETE FROM telegram_pending_alerts
-         WHERE chat_id = ? AND source_type = 'personalized_recap'
-           AND source_event_id IN (
-             SELECT recap_key FROM telegram_recap_targets
-              WHERE chat_id = ? AND status = 'cancelled'
-           )
-           AND EXISTS (
-             SELECT 1
-               FROM telegram_recap_preferences p
-              WHERE p.chat_id = telegram_pending_alerts.chat_id
-                AND p.enabled = 0
-           )
-      `).bind(input.chatId, input.chatId),
-    );
+    sideEffectStatements.push(...prepareCancelUnstartedTelegramRecaps(db, {
+      chatId: input.chatId,
+      reason: "recap_disabled",
+      nowSec: input.nowSec,
+      requireDisabledPreference: true,
+    }));
   }
   sideEffectStatements.push(...(options.operationStatements ?? []));
   await executeAtomicBatch(db, sideEffectStatements);
@@ -353,6 +331,60 @@ export interface TelegramRecapRolloutCleanupResult {
   pendingRowsDeleted: number;
 }
 
+/** Both sides of cancellation stay inside one atomic batch and before the send fence. */
+export function prepareCancelUnstartedTelegramRecaps(
+  db: D1Database,
+  input: {
+    chatId?: string;
+    reason: "recap_disabled" | "timezone_cleared" | "recap_rollout_disabled";
+    nowSec: number;
+    requireDisabledPreference?: boolean;
+  },
+): D1PreparedStatement[] {
+  const chatClause = input.chatId == null ? "" : "AND chat_id = ?";
+  const chatBinds = input.chatId == null ? [] : [input.chatId];
+  const preferenceClause = input.requireDisabledPreference
+    ? `AND EXISTS (SELECT 1 FROM telegram_recap_preferences preference
+                    WHERE preference.chat_id = telegram_recap_targets.chat_id
+                      AND preference.enabled = 0)`
+    : "";
+  return [
+    db.prepare(`
+      UPDATE telegram_recap_targets
+         SET status = 'cancelled', terminal_reason = ?, completed_at = ?, updated_at = ?
+       WHERE status IN ('planned', 'queued') ${chatClause} ${preferenceClause}
+         AND NOT EXISTS (
+           SELECT 1 FROM telegram_pending_alerts pending
+            WHERE pending.source_type = 'personalized_recap'
+              AND pending.source_event_id = telegram_recap_targets.recap_key
+              AND pending.delivery_state <> 'pending'
+         )
+         AND (
+           (status = 'planned' AND NOT EXISTS (
+             SELECT 1 FROM telegram_pending_alerts pending
+              WHERE pending.source_type = 'personalized_recap'
+                AND pending.source_event_id = telegram_recap_targets.recap_key
+           ))
+           OR EXISTS (
+             SELECT 1 FROM telegram_pending_alerts pending
+              WHERE pending.source_type = 'personalized_recap'
+                AND pending.source_event_id = telegram_recap_targets.recap_key
+                AND pending.delivery_state = 'pending'
+           )
+         )
+    `).bind(input.reason, input.nowSec, input.nowSec, ...chatBinds),
+    db.prepare(`
+      DELETE FROM telegram_pending_alerts
+       WHERE source_type = 'personalized_recap' AND delivery_state = 'pending'
+         ${chatClause}
+         AND source_event_id IN (
+           SELECT recap_key FROM telegram_recap_targets
+            WHERE status = 'cancelled' AND terminal_reason = ? AND updated_at = ?
+         )
+    `).bind(...chatBinds, input.reason, input.nowSec),
+  ];
+}
+
 /**
  * Atomically remove only not-yet-sent recap work. This deliberately never
  * touches risk/admin/digest rows or a recap that has crossed the send fence.
@@ -363,29 +395,10 @@ export async function cancelQueuedTelegramRecapsForRollout(
   nowSec: number,
 ): Promise<TelegramRecapRolloutCleanupResult> {
   if (policy.mode === "public") return { targetRowsCancelled: 0, pendingRowsDeleted: 0 };
-  const targets = db.prepare(`
-    UPDATE telegram_recap_targets
-       SET status = 'cancelled', terminal_reason = 'recap_rollout_disabled',
-           completed_at = ?, updated_at = ?
-     WHERE status = 'queued'
-       AND EXISTS (
-         SELECT 1 FROM telegram_pending_alerts pending
-          WHERE pending.source_type = 'personalized_recap'
-            AND pending.delivery_state = 'pending'
-            AND pending.source_event_id = telegram_recap_targets.recap_key
-       )
-  `).bind(nowSec, nowSec);
-  const pending = db.prepare(`
-    DELETE FROM telegram_pending_alerts
-     WHERE source_type = 'personalized_recap'
-       AND delivery_state = 'pending'
-       AND source_event_id IN (
-         SELECT recap_key FROM telegram_recap_targets
-          WHERE status = 'cancelled' AND terminal_reason = 'recap_rollout_disabled'
-            AND updated_at = ?
-       )
-  `).bind(nowSec);
-  const results = await db.batch([targets, pending]);
+  const results = await executeAtomicBatch(db, prepareCancelUnstartedTelegramRecaps(db, {
+    reason: "recap_rollout_disabled",
+    nowSec,
+  }), { returnResults: true });
   return {
     targetRowsCancelled: Number(results[0]?.meta?.changes ?? 0),
     pendingRowsDeleted: Number(results[1]?.meta?.changes ?? 0),
@@ -425,10 +438,10 @@ function prepareScheduleAdvance(
   },
 ): D1PreparedStatement {
   const targetStateClause = options.requiredTarget
-    ? "AND target.recap_key = ? AND target.status = ?"
-    : "AND target.status <> 'planned'";
+    ? "AND target.preference_generation = ? AND target.recap_key = ? AND target.status = ?"
+    : "";
   const targetStateBinds = options.requiredTarget
-    ? [options.requiredTarget.recapKey, options.requiredTarget.status]
+    ? [input.preferenceGeneration, options.requiredTarget.recapKey, options.requiredTarget.status]
     : [];
   return db.prepare(`
     UPDATE telegram_recap_preferences
@@ -449,7 +462,6 @@ function prepareScheduleAdvance(
            FROM telegram_recap_targets target
            JOIN telegram_subscribers subscriber ON subscriber.chat_id = target.chat_id
           WHERE target.chat_id = ? AND target.local_date = ?
-            AND target.preference_generation = ?
             ${targetStateClause}
             AND subscriber.preference_generation = ?
        )
@@ -464,7 +476,6 @@ function prepareScheduleAdvance(
     input.expectedNextDueAt,
     input.chatId,
     input.localDate,
-    input.preferenceGeneration,
     ...targetStateBinds,
     input.preferenceGeneration,
   );
@@ -482,14 +493,11 @@ async function hasAdvancedScheduleProof(
        AND target.local_date = ?
      WHERE preference.chat_id = ? AND preference.chat_kind = 'private'
        AND preference.enabled = 1 AND preference.next_due_at IS ?
-       AND target.preference_generation = ?
-       AND target.status <> 'planned'
        AND subscriber.preference_generation = ?
   `).bind(
     input.localDate,
     input.chatId,
     input.nextDueAtAfter ?? null,
-    input.preferenceGeneration,
     input.preferenceGeneration,
   ).first<{ advanced: number }>();
   return Number(row?.advanced ?? 0) === 1;

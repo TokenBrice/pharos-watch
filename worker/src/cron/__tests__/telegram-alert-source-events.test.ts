@@ -21,7 +21,7 @@ import {
   resolveTelegramAlertSourcePresetPages,
 } from "../telegram-alert-source-memberships";
 import type { TelegramAlertSnapshots } from "../telegram-alert-snapshots";
-import { materializeTelegramTargetPlanPage } from "../telegram-alert-target-plans";
+import { materializeTelegramTargetPlanPage, runTelegramTargetPlanCoordinator } from "../telegram-alert-target-plans";
 import {
   loadHandledTelegramAlertItemsByChat,
   removeHandledTelegramAlertItems,
@@ -315,6 +315,7 @@ describe("Telegram alert source-event resolution", () => {
 
     const first = await resolveTelegramAlertSourcePresetPages(harness.db, source, NOW, {
       getStablecoinsCacheResult: async () => stablecoinsResult(),
+      maxPages: 1,
     });
     expect(first.allComplete).toBe(false);
     expect(first.pendingPages).toBe(1);
@@ -338,6 +339,75 @@ describe("Telegram alert source-event resolution", () => {
       { page_index: 0, status: "complete" },
       { page_index: 1, status: "complete" },
     ]);
+  });
+
+  it.each([2_501, 5_000])("opens delivery for %i preset followers plus direct/global before source expiry", async (count) => {
+    const harness = createHarness();
+    for (let index = 0; index < count; index += 1) {
+      const chatId = `chat-${String(index).padStart(5, "0")}`;
+      insertPresetFollower(harness.sqlite, chatId);
+      harness.sqlite.prepare(`INSERT INTO telegram_preset_subscriptions
+        (chat_id, preset_id, alert_dews, created_at, updated_at)
+        VALUES (?, 'usd-top10', 1, ?, ?)`).run(chatId, NOW, NOW);
+    }
+    for (const chatId of ["direct", "global"]) {
+      harness.sqlite.prepare(`INSERT INTO telegram_subscribers
+        (chat_id, created_at, last_active_at, global_alert_dews) VALUES (?, ?, ?, ?)`)
+        .run(chatId, NOW, NOW, chatId === "global" ? 1 : 0);
+    }
+    harness.sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('direct', 'usdc-circle', 1)").run();
+    const source = await persistedSource(harness);
+    let complete = false;
+    let membershipLoads = 0;
+    for (let slot = 0; slot < 24; slot += 1) {
+      const nowSec = NOW + slot * 300;
+      const resolution = await resolveTelegramAlertSourcePresetPages(harness.db, source, nowSec, {
+        includeSubscriberMaps: false,
+        getStablecoinsCacheResult: async () => {
+          membershipLoads += 1;
+          return stablecoinsResult();
+        },
+      });
+      expect(resolution.pagesCompletedThisRun).toBeLessThanOrEqual(32);
+      if (!resolution.allComplete) {
+        expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+        continue;
+      }
+      const result = await runTelegramTargetPlanCoordinator({
+        db: harness.db, sourceEventId: source.sourceEventId, nowSec, maxSteps: 32,
+        callbacks: {
+          resolveInitialEligibility: async (subscribers) => new Map(subscribers.map((subscriber) => [
+            subscriber.chatId, { eligible: true, observedPreferenceGeneration: subscriber.preferenceGeneration },
+          ])),
+          planSubscribers: async (subscribers) => subscribers.map((subscriber) => ({
+            subscriber, currentPreferenceGeneration: subscriber.preferenceGeneration, currentEligible: true,
+            routed: [{
+              chatId: subscriber.chatId, lastActiveAt: NOW, alerts: {
+                dews: events().dewsChanges, depegTriggered: [], depegResolved: [], depegWorsening: [],
+                safety: [], launch: [], reserve: [],
+              },
+              canonicalHtml: "<b>USDC</b> entered ALERT", chunks: ["<b>USDC</b> entered ALERT"],
+              disableNotification: false, alertType: "dews", sourceEventId: source.sourceEventId,
+              preferenceGeneration: subscriber.preferenceGeneration,
+              alertScope: [{ stablecoinId: "usdc-circle", family: "dews" }],
+            } satisfies RoutedSubscriberAlert],
+          })),
+        },
+      });
+      if (result.state === "delivery_open" && result.remainingTargets === 0) {
+        expect(nowSec).toBeLessThan(source.expiresAt);
+        complete = true;
+        break;
+      }
+    }
+    expect(complete).toBe(true);
+    expect(membershipLoads).toBe(1);
+    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_source_resolution_targets").get())
+      .toEqual({ count: count * 2 });
+    expect(harness.sqlite.prepare("SELECT COUNT(DISTINCT chat_id) AS count FROM telegram_pending_alerts").get())
+      .toEqual({ count: count + 2 });
+    expect(harness.sqlite.prepare("SELECT chat_id FROM telegram_pending_alerts WHERE chat_id IN ('direct', 'global') ORDER BY chat_id").all())
+      .toEqual([{ chat_id: "direct" }, { chat_id: "global" }]);
   });
 
   it("merges duplicate preset followers for one chat using the strictest preference", async () => {

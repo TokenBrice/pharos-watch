@@ -52,6 +52,45 @@ export async function unsubscribeAll(
   await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }
 
+/** Shared by candidate selection and every statement in the conditional purge. */
+export const INACTIVE_TELEGRAM_SUBSCRIBER_ELIGIBILITY_SQL = `
+  s.last_active_at < ?
+  AND NOT EXISTS (
+    SELECT 1 FROM telegram_subscriptions sub WHERE sub.chat_id = s.chat_id
+      AND (sub.alert_dews <> 0 OR sub.alert_depeg <> 0 OR sub.alert_safety <> 0
+        OR sub.alert_launch <> 0 OR sub.alert_reserve <> 0 OR sub.alert_freeze <> 0
+        OR sub.alert_dews_override <> 0 OR sub.alert_depeg_override <> 0
+        OR sub.alert_safety_override <> 0 OR sub.alert_launch_override <> 0
+        OR sub.alert_reserve_override <> 0 OR sub.alert_freeze_override <> 0
+        OR sub.dews_min_band IS NOT NULL OR sub.safety_mode IS NOT NULL
+        OR sub.depeg_worsening_bps_step IS NOT NULL OR sub.alert_snooze_until_ts IS NOT NULL)
+  )
+  AND NOT EXISTS (SELECT 1 FROM telegram_preset_subscriptions ps WHERE ps.chat_id = s.chat_id)
+  AND NOT EXISTS (SELECT 1 FROM telegram_pending_alerts pa WHERE pa.chat_id = s.chat_id)
+  AND NOT EXISTS (SELECT 1 FROM telegram_pending_disambiguation pd WHERE pd.chat_id = s.chat_id)
+  AND NOT EXISTS (SELECT 1 FROM telegram_recap_preferences rp WHERE rp.chat_id = s.chat_id AND rp.enabled = 1)
+  AND s.global_alert_dews = 0 AND s.global_alert_depeg = 0 AND s.global_alert_safety = 0
+  AND s.global_alert_launch = 0 AND s.global_alert_reserve = 0 AND s.global_alert_freeze = 0
+`;
+
+/** Unlike /forget, housekeeping may delete only a profile that is still empty and inactive. */
+export async function purgeInactiveTelegramSubscriber(
+  db: D1Database,
+  chatId: string,
+  cutoffSec: number,
+): Promise<boolean> {
+  const results = await executeAtomicBatch(
+    db,
+    prepareSubscriberPurge(db, chatId, {
+      sql: `EXISTS (SELECT 1 FROM telegram_subscribers s
+                     WHERE s.chat_id = ? AND ${INACTIVE_TELEGRAM_SUBSCRIBER_ELIGIBILITY_SQL})`,
+      binds: [chatId, cutoffSec],
+    }),
+    { returnResults: true },
+  );
+  return Number(results[results.length - 1]?.meta?.changes ?? 0) === 1;
+}
+
 /**
  * Delete every row this subscriber owns across the Telegram tables. Retains
  * `telegram_processed_updates` so replay-ack idempotency survives a re-/start.
@@ -62,41 +101,54 @@ export async function forgetSubscriber(
   options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
   const now = unixNow();
-  await executeAtomicBatch(db, appendTelegramOperationStatements([
-    db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_pending_alerts WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_recap_targets WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_recap_preferences WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_freeze_alert_targets WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_alert_source_resolution_targets WHERE chat_id = ?").bind(chatId),
-    db.prepare(
+  await executeAtomicBatch(db, appendTelegramOperationStatements(prepareSubscriberPurge(db, chatId), options));
+  await pruneOverflowPlanBacklogForChat(db, chatId, now);
+  await removeChatFromBurstMarkers(db, chatId);
+}
+
+function prepareSubscriberPurge(
+  db: D1Database,
+  chatId: string,
+  guard?: { sql: string; binds: unknown[] },
+): D1PreparedStatement[] {
+  const prepare = (sql: string, ...binds: unknown[]) =>
+    db.prepare(`${sql}${guard ? ` AND ${guard.sql}` : ""}`).bind(...binds, ...(guard?.binds ?? []));
+  return [
+    prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?", chatId),
+    prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?", chatId),
+    prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?", chatId),
+    prepare("DELETE FROM telegram_pending_alerts WHERE chat_id = ?", chatId),
+    prepare("DELETE FROM telegram_recap_targets WHERE chat_id = ?", chatId),
+    prepare("DELETE FROM telegram_recap_preferences WHERE chat_id = ?", chatId),
+    prepare("DELETE FROM telegram_freeze_alert_targets WHERE chat_id = ?", chatId),
+    prepare("DELETE FROM telegram_alert_source_resolution_targets WHERE chat_id = ?", chatId),
+    prepare(
       `DELETE FROM telegram_alert_target_plan_items
         WHERE (source_event_id, plan_generation, plan_key) IN (
           SELECT source_event_id, plan_generation, plan_key
             FROM telegram_alert_target_plans
            WHERE chat_id = ?
         )`,
-    ).bind(chatId),
-    db.prepare("DELETE FROM telegram_alert_job_targets WHERE chat_id = ?").bind(chatId),
+      chatId,
+    ),
+    prepare("DELETE FROM telegram_alert_job_targets WHERE chat_id = ?", chatId),
     // Job-target item lineage has no chat_id column, but its target_key is
     // chat-prefixed (`<chatId>:v<split>:<chunk>:<hash>`), so the rows are
     // chat-owned audit data and must not survive /forget.
-    db.prepare(
+    prepare(
       `DELETE FROM telegram_alert_job_target_items
-        WHERE ${dedupePrefixPredicate("target_key")}`,
-    ).bind(chatId, chatId, chatId),
-    db.prepare("DELETE FROM telegram_alert_target_plans WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_alert_planning_subscribers WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_transport_failure_observations WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_alert_dead_letters WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?").bind(chatId),
-    ...prepareDeleteTelegramChatCacheStatements(db, chatId),
-  ], options));
-  await pruneOverflowPlanBacklogForChat(db, chatId, now);
-  await removeChatFromBurstMarkers(db, chatId);
+        WHERE (${dedupePrefixPredicate("target_key")})`,
+      chatId, chatId, chatId,
+    ),
+    prepare("DELETE FROM telegram_alert_target_plans WHERE chat_id = ?", chatId),
+    prepare("DELETE FROM telegram_alert_planning_subscribers WHERE chat_id = ?", chatId),
+    prepare("DELETE FROM telegram_transport_failure_observations WHERE chat_id = ?", chatId),
+    prepare("DELETE FROM telegram_alert_dead_letters WHERE chat_id = ?", chatId),
+    prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?", chatId),
+    ...prepareDeleteTelegramChatCacheStatements(db, chatId, guard),
+    // Keep the eligibility authority alive until all guarded child deletes finish.
+    prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?", chatId),
+  ];
 }
 
 const BURST_MARKERS_CACHE_KEY = "telegram:burst-markers";
@@ -143,13 +195,16 @@ const CHAT_CACHE_PREFIX_BUILDERS = [
 export function prepareDeleteTelegramChatCacheStatements(
   db: D1Database,
   chatId: string,
+  guard?: { sql: string; binds: unknown[] },
 ): D1PreparedStatement[] {
   return [
     ...CHAT_CACHE_EXACT_KEY_BUILDERS.map((buildKey) =>
-      db.prepare("DELETE FROM cache WHERE key = ?").bind(buildKey(chatId)),
+      db.prepare(`DELETE FROM cache WHERE key = ?${guard ? ` AND ${guard.sql}` : ""}`)
+        .bind(buildKey(chatId), ...(guard?.binds ?? [])),
     ),
     ...CHAT_CACHE_PREFIX_BUILDERS.map((buildPrefix) =>
-      db.prepare("DELETE FROM cache WHERE key LIKE ?").bind(`${buildPrefix(chatId)}%`),
+      db.prepare(`DELETE FROM cache WHERE key LIKE ?${guard ? ` AND ${guard.sql}` : ""}`)
+        .bind(`${buildPrefix(chatId)}%`, ...(guard?.binds ?? [])),
     ),
   ];
 }

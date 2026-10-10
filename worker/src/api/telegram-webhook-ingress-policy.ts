@@ -41,6 +41,11 @@ export function isRecapMutationArgs(args: string): boolean {
   return /^(?:on|off|time\s+(?:[0-9]|1[0-9]|2[0-3]))$/i.test(args.trim());
 }
 
+export function isMutatingTelegramStartPayload(args: string): boolean {
+  const kind = parseStartPayload(args).kind;
+  return kind === "setup" || kind === "none" || kind === "subscribe" || kind === "adoption";
+}
+
 type FloodScope = "actor" | "chat";
 
 export function logTelegramWebhookWarning(message: string, action: string, err: unknown): void {
