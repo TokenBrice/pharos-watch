@@ -11,7 +11,7 @@ import { selectDigestIntelligence } from "./digest-intelligence-summary";
 type DigestArchiveInput = {
   stabilityIndex?: { score: number; band: string } | null;
   totalMcapUsd?: number;
-  activeDepegCount?: number;
+  activeDepegCount?: number | null;
   topDepegs?: unknown[];
   dailyDigests?: unknown[];
   nextTriggers?: unknown[];

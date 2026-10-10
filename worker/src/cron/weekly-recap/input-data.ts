@@ -86,7 +86,7 @@ function canonicalDailyCandidates(parsed: WeeklyParsedRow[], index: number): Dig
   const inputData: DigestInputData = {
     ...row.inputData,
     mcap7dDelta: row.inputData.mcap7dDelta ?? 0,
-    activeDepegCount: row.inputData.activeDepegCount ?? 0,
+    activeDepegCount: row.inputData.activeDepegCount ?? null,
     topDepegs: row.inputData.topDepegs ?? [],
     biggestSupplyChange: row.inputData.biggestSupplyChange ?? null,
     mintBurnFlows:

@@ -14,6 +14,7 @@ import {
 } from "@shared/lib/digest-liquidity-admission";
 import { buildInClause } from "../../lib/db";
 import { BLACKLIST_PUBLIC_EVENT_SQL } from "../../lib/blacklist/shared";
+import { normalizeDexLiquidityEvidence } from "../../lib/dex-liquidity";
 import { getGaugeBand, getGaugeScoreInterval, isGaugeBandRobustToWithheldWeight } from "../../lib/mint-burn-scoring";
 import {
   readPublishedMintBurnGauge,
@@ -28,6 +29,7 @@ import {
   collectorDegraded,
   collectorResult,
   collectorOk,
+  depegSignalKey,
   type CollectorContext,
   type CollectorResult,
 } from "./collectors-shared";
@@ -57,7 +59,8 @@ export async function collectActiveDepegs(
   ctx: CollectorContext,
 ): Promise<
   CollectorResult<{
-    activeDepegCount: number;
+    activeDepegCount: number | null;
+    activeDepegSignalKeys: string[] | null;
     topDepegs: DigestInputData["topDepegs"];
     lifecycleFlags: DepegLifecycleFlag[];
   }>
@@ -79,6 +82,7 @@ export async function collectActiveDepegs(
       }>();
     const rows = activeDepegs.results ?? [];
     let activeDepegCount = 0;
+    const activeDepegSignalKeys: string[] = [];
     let supplyUnavailable = false;
 
     const withImpact = rows.flatMap((row) => {
@@ -86,6 +90,7 @@ export async function collectActiveDepegs(
         return [];
       }
       activeDepegCount++;
+      activeDepegSignalKeys.push(depegSignalKey({ stablecoinId: row.stablecoin_id, startedAt: row.started_at }, "active"));
       const mcapUsd = ctx.mcapById.get(row.stablecoin_id);
       if (mcapUsd == null) {
         supplyUnavailable = true;
@@ -191,13 +196,13 @@ export async function collectActiveDepegs(
     const lifecycleFlags = classifyDepegLifecycle(withImpact);
 
     return collectorResult(
-      { activeDepegCount, topDepegs, lifecycleFlags },
+      { activeDepegCount, activeDepegSignalKeys, topDepegs, lifecycleFlags },
       [],
       supplyUnavailable ? ["active-depeg-supply-unavailable"] : [],
     );
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to query active depegs:", error);
-    return collectorDegraded({ activeDepegCount: 0, topDepegs: [], lifecycleFlags: [] }, "active-depegs-query");
+    return collectorDegraded({ activeDepegCount: null, activeDepegSignalKeys: null, topDepegs: [], lifecycleFlags: [] }, "active-depegs-query");
   }
 }
 
@@ -329,7 +334,11 @@ export async function collectSupplyVelocity(
 
 export async function collectResolvedDepegs(
   ctx: CollectorContext,
-): Promise<CollectorResult<DigestInputData["resolvedDepegs"]>> {
+): Promise<CollectorResult<{
+  resolvedDepegCount: number | null;
+  resolvedDepegSignalKeys: string[] | null;
+  resolvedDepegs: DigestInputData["resolvedDepegs"];
+}>> {
   try {
     // Recovery evidence is uncapped. Only the prompt presentation below applies
     // market-cap, peak-size and top-N filters.
@@ -356,12 +365,12 @@ export async function collectResolvedDepegs(
       }>();
     let supplyUnavailable = false;
 
-    const recovered = (resolvedRows.results ?? [])
-      .filter((row) => {
-        const closure = classifyDepegClosure({ endedAt: row.ended_at, closeReason: row.close_reason, recoveryPrice: row.recovery_price });
-        return closure === "recovered" || closure === "legacy_recovered";
-      })
-      .flatMap((row) => {
+    const recoveredRows = (resolvedRows.results ?? []).filter((row) => {
+      if (!ctx.trackedStablecoinIds.has(row.stablecoin_id) || FROZEN_IDS.has(row.stablecoin_id)) return false;
+      const closure = classifyDepegClosure({ endedAt: row.ended_at, closeReason: row.close_reason, recoveryPrice: row.recovery_price });
+      return closure === "recovered" || closure === "legacy_recovered";
+    });
+    const recovered = recoveredRows.flatMap((row) => {
         const mcapUsd = ctx.mcapById.get(row.stablecoin_id);
         if (mcapUsd == null) {
           supplyUnavailable = true;
@@ -386,13 +395,17 @@ export async function collectResolvedDepegs(
       .slice(0, 5);
 
     return collectorResult(
-      candidates.length > 0 ? candidates : undefined,
+      {
+        resolvedDepegCount: recoveredRows.length,
+        resolvedDepegSignalKeys: recoveredRows.map((row) => depegSignalKey({ stablecoinId: row.stablecoin_id, startedAt: row.started_at }, "resolved")),
+        resolvedDepegs: candidates.length > 0 ? candidates : undefined,
+      },
       [],
       supplyUnavailable ? ["resolved-depeg-supply-unavailable"] : [],
     );
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to query resolved depegs:", error);
-    return collectorDegraded(undefined, "resolved-depegs-query");
+    return collectorDegraded({ resolvedDepegCount: null, resolvedDepegSignalKeys: null, resolvedDepegs: undefined }, "resolved-depegs-query");
   }
 }
 
@@ -423,7 +436,7 @@ export async function collectMintBurnFlows(
       degradedReasons.push("mint-burn-gauge-stale");
     }
     const gaugeScore = gauge.score;
-    if (gaugeScore === null) return collectorResult(undefined, degradedReasons);
+    if (gaugeScore === null) return collectorResult(undefined, degradedReasons, ["mint-burn-gauge-unavailable"]);
     // Valuation completeness (D11-2): the digest never restates a flow claim
     // that missing USD valuation could alter. Weight withheld from the score is
     // tolerated only when every possible score preserves bands, regime and tape tone; a
@@ -531,6 +544,15 @@ export async function collectLiquidityShifts(
     type LiqRow = (typeof rows.results)[number];
     const byId = new Map<string, { latest?: LiqRow; previous?: LiqRow }>();
     for (const row of rows.results ?? []) {
+      let evidence;
+      try {
+        evidence = normalizeDexLiquidityEvidence(row);
+      } catch {
+        degradedReasons.push("liquidity-invalid-coverage-evidence");
+        continue;
+      }
+      row.coverage_class = evidence.coverageClass;
+      row.coverage_confidence = evidence.coverageConfidence;
       const entry = byId.get(row.stablecoin_id) ?? {};
       if (!entry.latest) entry.latest = row;
       else if (!entry.previous) entry.previous = row;

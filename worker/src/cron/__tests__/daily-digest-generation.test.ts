@@ -31,6 +31,7 @@ import { deliverTelegramDigestEdition, enqueueTelegramDigestEdition } from "../.
 import { runTelegramDigestDeliveryWithPermit } from "../telegram-digest-transport";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { ANTHROPIC_OK_TEXT, getInsertDigestBinds, makeDailyDigestScenario, makeRefusalResponse, makeStreamResponse, styleGateModeTables, VALID_CAPTURE_MAP_SUMMARY, VALID_DAILY_EXTENDED, withClauseDash, type DailyDigestScenario } from "./daily-digest.test-support";
+import { publishedGaugePayload, publishedGaugeTable } from "./daily-digest.test-support";
 
 const CREDS = { apiKey: "x", apiSecret: "y", accessToken: "z", accessTokenSecret: "w" };
 const TG = { botToken: "tg-token", chatId: "tg-chat" };
@@ -65,12 +66,30 @@ describe("generateDailyDigest publication contract", () => {
     const db = scenario.db as MockD1Database; const input = bindJson(db, 3); const meta = bindJson(db, 5); const body = firstRequestBody();
     expect(result).toMatchObject({ itemCount: 1 }); expect(result.metadata).toContain("tweet: ok"); expect(result.metadata).toContain("telegram: ok");
     expect(input).toMatchObject({ aggregateUniverse: "core-stablecoins-v1", totalMcapUsd: 160_000_000, activeDepegCount: 1, safetyMap: { manifest: { date: "2026-03-06" } } });
+    expect(input.resolvedDepegCount).toBe(0);
+    expect(input.depegSignalKeys).toEqual({ active: [`usdt-tether:${Math.floor(Date.now() / 1000) - 3600}:active`], resolved: [] });
     expect(input.editorialAudit).toMatchObject({ leadCandidateId: "depeg:usdt-tether:active", usedCandidateIds: ["depeg:usdt-tether:active"] });
     expect(meta).toMatchObject({ styleGateMode: "shadow", editorialStyleGate: { mode: "shadow", firstPassWouldBlock: false }, llm: { model: DIGEST_MODEL, maxTokens: 16000, attempts: [{ attemptNumber: 1, inputTokens: 1000, outputTokens: 500, httpStatus: 200 }] } });
     expect(body.messages[0].content).toContain("Safety Map census (current; depicts 2026-03-06 UTC)");
     expect(postDigestTweet).toHaveBeenCalledTimes(1); expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1); expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
     expect(runTelegramDigestDeliveryWithPermit).toHaveBeenCalledWith(expect.objectContaining({ owner: "daily-digest", editionKey: "daily:2026-03-06" }));
     expect(fetchWithRetry).toHaveBeenCalledWith("https://api.anthropic.com/v1/messages", expect.objectContaining({ method: "POST", headers: expect.objectContaining({ "x-api-key": "anthropic-key" }) }), 0, { timeoutMs: 11 * 60_000, returnFinalResponse: true });
+  });
+
+  it("persists unavailable gauge provenance without breaking Telegram publication", async () => {
+    const db = makeDailyDigestScenario({ db: { prependTables: [publishedGaugeTable({
+      value: JSON.stringify(publishedGaugePayload({ gauge: { score: null, band: null, flightToQuality: false, flightIntensity: 0, partialValuationInputs: 0 } })),
+    })] } }).db;
+    const result = await invoke(db);
+    expect(result.itemCount).toBe(1);
+    const input = bindJson(db, 3);
+    expect(input.mintBurnFlows).toBeUndefined();
+    expect(input.degradedSources).toContain("mint-burn-gauge-unavailable");
+    expect(input.dataQuality.degradedSources).toContain("mint-burn-gauge-unavailable");
+    expect(firstRequestBody().messages[0].content).toContain("Market regime: WATCHFUL");
+    expect(firstRequestBody().messages[0].content).toContain("mint-burn-gauge-unavailable");
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
   });
 
   it("sends the canonical streaming prompt contract without an attachment", async () => {

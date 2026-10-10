@@ -354,7 +354,12 @@ export interface DigestInputData {
     peakBps?: number;
     mcapUsd?: number;
   }[];
-  activeDepegCount: number;
+  /** Uncapped tracked open-event count; null when the query is unavailable. */
+  activeDepegCount: number | null;
+  /** Uncapped recovered-event count, before market-cap/severity/display filters. */
+  resolvedDepegCount?: number | null;
+  /** Full incident identities for weekly deduplication; absent on legacy editions. */
+  depegSignalKeys?: { active: string[] | null; resolved: string[] | null };
   topDepegs: {
     stablecoinId?: string;
     symbol: string;
@@ -616,7 +621,7 @@ const DigestRiskSignalSchema = z.object({
   bps: z.number(),
   mcapUsd: z.number().nullable(),
   severity: z.enum(["critical", "watch"]),
-  activeCount: z.number().optional(),
+  activeCount: z.number().nullable().optional(),
   date: z.string().nullable().optional(),
 });
 export type DigestRiskSignal = z.infer<typeof DigestRiskSignalSchema>;
@@ -757,7 +762,13 @@ const DigestSnapshotInputDataSchema = z
     aggregateUniverse: z.literal("core-stablecoins-v1").optional(),
     totalMcapUsd: z.number().optional(),
     mcap7dDelta: z.number().optional(),
-    activeDepegCount: z.number().optional(),
+    activeDepegCount: z.number().nullable().optional(),
+    resolvedDepegCount: z.number().nullable().optional(),
+    depegSignalKeys: z.object({
+      active: z.array(z.string()).nullable(),
+      resolved: z.array(z.string()).nullable(),
+    }).optional(),
+    degradedSources: z.array(z.string()).optional(),
     changeSummary: DigestChangeSummarySchema.optional(),
     nextTriggers: z.array(DigestNextTriggerSchema).optional(),
     forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).optional(),

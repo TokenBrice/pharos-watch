@@ -32,8 +32,8 @@ export function classifyRegime(data: DigestInputData): "CRISIS" | "TENSION" | "W
     return chronicUnchanged ? sum : sum + impact;
   }, 0);
   const unsuppressedActiveDepegs = data.topDepegs.filter((depeg) => !depeg.suppressReason).length;
-  const gaugeScore = data.mintBurnFlows?.gaugeScore ?? 0;
-  const gaugeRegime = classifyGaugeRegime(gaugeScore);
+  const gaugeScore = data.mintBurnFlows?.gaugeScore;
+  const gaugeRegime = gaugeScore == null ? null : classifyGaugeRegime(gaugeScore);
   const ftqActive = data.mintBurnFlows?.flightToQuality.active ?? false;
   const alertPlus = (data.dewsStress?.bandCounts.alert ?? 0)
     + (data.dewsStress?.bandCounts.warning ?? 0)

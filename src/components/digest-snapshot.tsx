@@ -153,10 +153,10 @@ interface VisibleDepeg {
  * The edition's own capture. Day-overlap episodes from the archive API describe the UTC day,
  * not what this edition published, so they never replace `activeDepegCount`/`topDepegs`.
  */
-function getCapturedDepegs(inputData: DigestSnapshotInputData): { count: number; rows: VisibleDepeg[] } {
+function getCapturedDepegs(inputData: DigestSnapshotInputData): { count: number | null; rows: VisibleDepeg[] } {
   const inputTopDepegs = inputData.topDepegs ?? [];
   return {
-    count: inputData.activeDepegCount ?? inputTopDepegs.length,
+    count: inputData.degradedSources?.includes("active-depegs-query") ? null : inputData.activeDepegCount ?? null,
     rows: inputTopDepegs.slice(0, 5).map((depeg) => ({
       key: `${depeg.stablecoinId ?? depeg.symbol}-${depeg.startedAt ?? depeg.bps}`,
       symbol: depeg.symbol,
@@ -203,13 +203,15 @@ function ActiveDepegsCard({
     peakBps: depeg.peakDeviationBps,
     currentAvailable: false,
   }));
-  if (count <= 0 && dayRows.length === 0) return null;
+  if (count === 0 && dayRows.length === 0) return null;
   return (
     <SnapshotCard
       title="Active Depegs"
       icon={<TriangleAlert className="h-4 w-4" aria-hidden="true" />}
     >
-      {count > 0 ? (
+      {count == null ? (
+        <p className="text-sm text-muted-foreground">Active depeg count unavailable for this edition</p>
+      ) : count > 0 ? (
         <>
           <p className="text-sm text-foreground/90">
             <span className="font-medium">{count}</span>{" "}

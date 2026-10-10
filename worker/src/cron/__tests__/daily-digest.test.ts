@@ -346,6 +346,14 @@ describe("market and risk collectors", () => {
   });
   const coverage = { coverage_class: "primary", coverage_confidence: 0.9, methodology_version: "6.1" };
   const liquidityPair = (current: number, previous: number, currentTvl = 500e6, previousTvl = 480e6, extra = {}) => [{ stablecoin_id: "usdt-tether", liquidity_score: current, total_tvl_usd: currentTvl, snapshot_date: 1_772_755_200, ...coverage, ...extra }, { stablecoin_id: "usdt-tether", liquidity_score: previous, total_tvl_usd: previousTvl, snapshot_date: 1_772_668_800, ...coverage }];
+  it("skips malformed newest coverage before choosing the digest pair", async () => {
+    const pair = liquidityPair(85, 75);
+    const invalid = { ...pair[0], snapshot_date: pair[0].snapshot_date + 1, coverage_confidence: 1.1 };
+    const result = await collectLiquidityShifts(ctxFor([{ match: "FROM dex_liquidity_history", rows: [invalid, ...pair] }]));
+    expect(result.value).toHaveLength(1);
+    expect(result.degradedReasons).toContain("liquidity-invalid-coverage-evidence");
+  });
+
   it.each([["material", liquidityPair(85, 75), 0.0417, []], ["threshold", liquidityPair(80, 78), undefined, []], ["collapse", liquidityPair(75, 85, 13.72e6, 152e6), -0.9097, []], ["methodology", liquidityPair(71, 85, 480e6, 500e6, { methodology_version: "6.0" }).map((row, i) => i ? { ...row, methodology_version: "5.91" } : row), undefined, ["liquidity-shift-methodology-basis-change"]], ["fallback", liquidityPair(75, 85, 400e6, 500e6, { coverage_class: "fallback", coverage_confidence: 0.5 }), undefined, ["liquidity-shift-non-trendworthy-coverage"]]] as const)("handles %s liquidity pair", async (_label, rows, change, withheldStories) => { const result = await collectLiquidityShifts(ctxFor([{ match: "FROM dex_liquidity_history", rows }])); if (change == null) expect(result.value).toBeUndefined(); else expect(result.value?.[0].tvlChangePct).toBeCloseTo(change, 4); expect(result.degradedReasons).toEqual([]); expect(result.qualityReasons ?? []).toEqual(withheldStories); });
   it("withholds monetary candidates for absent supply without erasing observed incident counts", async () => {
     const activeCtx = ctxFor(depegTable([activeRows.usdc]));
@@ -359,7 +367,7 @@ describe("market and risk collectors", () => {
     }] }]);
     recoveredCtx.mcapById.delete("usdc-circle");
     const recovered = await collectResolvedDepegs(recoveredCtx);
-    expect(recovered.value).toBeUndefined();
+    expect(recovered.value).toMatchObject({ resolvedDepegCount: 1, resolvedDepegs: undefined });
     expect(recovered.qualityReasons).toContain("resolved-depeg-supply-unavailable");
 
     const liquidityCtx = ctxFor([{ match: "FROM dex_liquidity_history", rows: liquidityPair(85, 75) }]);

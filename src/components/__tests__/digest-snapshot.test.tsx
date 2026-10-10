@@ -104,6 +104,18 @@ describe("DigestSnapshot", () => {
     expect(screen.queryByText(/\+0\.00%/)).toBeNull();
   });
 
+  it.each([null, 0])("renders a failed depeg read unavailable, not an observed %s or day-overlap count", (activeDepegCount) => {
+    mockSnapshot({
+      totalMcapUsd: 1e9, activeDepegCount, resolvedDepegCount: null,
+      depegSignalKeys: { active: null, resolved: null }, degradedSources: ["active-depegs-query"], topDepegs: [],
+    }, [{ stablecoinId: "usdc-circle", symbol: "USDC", direction: "below", peakDeviationBps: -200, startedAt: 1, endedAt: null }]);
+    render(<DigestSnapshot date="2026-10-10" />);
+    expect(screen.getByText("Active depeg count unavailable for this edition")).toBeTruthy();
+    expect(screen.getByText("Episodes active at any point this day")).toBeTruthy();
+    expect(screen.queryByText("No active depegs at publication")).toBeNull();
+    expect(screen.queryByText(/active depegs? at publication/)).toBeNull();
+  });
+
   it("publishes full daily count and qualified subtotal rather than capped sample statistics", () => {
     useDigestSnapshotMock.mockReturnValue({
       data: {

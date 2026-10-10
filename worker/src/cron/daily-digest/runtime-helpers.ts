@@ -59,7 +59,7 @@ export function buildRecentDigestMeta(
 }
 
 export function logDailyDigestLlmCall(params: {
-  activeDepegCount: number;
+  activeDepegCount: number | null;
   topDepegs: readonly unknown[];
   resolvedDepegs?: readonly unknown[] | null;
   yieldAnomalies?: readonly unknown[] | null;
@@ -69,7 +69,7 @@ export function logDailyDigestLlmCall(params: {
 }): void {
   logWorkerEventArgs("handler", "info",
     `[daily-digest] Calling Claude API ` +
-      `(activeDepegs=${params.activeDepegCount}, topDepegs=${params.topDepegs.length}, ` +
+      `(activeDepegs=${params.activeDepegCount ?? "unavailable"}, topDepegs=${params.topDepegs.length}, ` +
       `resolvedDepegs=${params.resolvedDepegs?.length ?? 0}, yieldAnomalies=${params.yieldAnomalies?.length ?? 0}, ` +
       `liquidityShifts=${params.liquidityShifts?.length ?? 0}, recentDigests=${params.recentMeta.length}, ` +
       `degradedSources=${params.degradedReasons.length})`,

@@ -116,28 +116,12 @@ export interface RollupSummary {
   expectedDays: number;
 }
 
-/**
- * Build a stable key for a depeg signal so weekly aggregation can dedup the
- * same incident observed across multiple daily editions. Prefers `startedAt`
- * (server-side incident timestamp) when present and falls back to the
- * symbol/direction/bps tuple otherwise.
- */
-function depegSignalKey(
-  depeg: {
-    stablecoinId?: string;
-    symbol: string;
-    direction?: "above" | "below";
-    startedAt?: number;
-    bps?: number;
-    peakBps?: number;
-  },
+/** Stable incident identity, collected before any editorial/display filtering. */
+export function depegSignalKey(
+  depeg: { stablecoinId: string; startedAt: number },
   kind: "active" | "resolved",
 ): string {
-  if (depeg.startedAt != null) {
-    return `${depeg.stablecoinId ?? depeg.symbol}:${depeg.startedAt}:${kind}`;
-  }
-  const bps = kind === "active" ? depeg.bps : depeg.peakBps;
-  return `${depeg.symbol}:${depeg.direction ?? ""}:${bps}:${kind}`;
+  return `${depeg.stablecoinId}:${depeg.startedAt}:${kind}`;
 }
 
 /**
@@ -165,12 +149,8 @@ export function rollupDigestInputs(
   const gauges = aggregateInputs.map((d) => d.mintBurnFlows?.gaugeScore).filter((g): g is number => g != null);
   const depegKeys = new Set<string>();
   for (const input of aggregateInputs) {
-    for (const depeg of input.topDepegs ?? []) {
-      depegKeys.add(depegSignalKey(depeg, "active"));
-    }
-    for (const depeg of input.resolvedDepegs ?? []) {
-      depegKeys.add(depegSignalKey(depeg, "resolved"));
-    }
+    for (const key of input.depegSignalKeys?.active ?? []) depegKeys.add(key);
+    for (const key of input.depegSignalKeys?.resolved ?? []) depegKeys.add(key);
   }
   const complete = aggregateInputs.length >= expectedDays;
   const unavailableReasons: RollupSummary["unavailableReasons"] = {};
@@ -186,8 +166,12 @@ export function rollupDigestInputs(
     if (reasons.size > 0) unavailableReasons[metric] = [...reasons];
     return reasons.size === 0;
   };
-  const activeObserved = observed("activeDepegObs", ["active-depegs-query"]);
-  const signalsObserved = observed("uniqueDepegSignals", ["active-depegs-query", "resolved-depegs-query"]);
+  const activeObserved = observed("activeDepegObs", ["active-depegs-query"], (input) => input.activeDepegCount == null);
+  const signalsObserved = observed(
+    "uniqueDepegSignals",
+    ["active-depegs-query", "resolved-depegs-query"],
+    (input) => input.depegSignalKeys?.active == null || input.depegSignalKeys?.resolved == null,
+  );
   // Legacy editions omitted sub-threshold activity entirely. Their missing
   // accounting cannot establish an observed zero for a weekly total.
   const blacklistObserved = observed("blacklistEvents", ["blacklist-activity-query"], (input) => input.blacklistActivity == null);
@@ -199,7 +183,7 @@ export function rollupDigestInputs(
     psiMid: psiScores.length > 0 ? psiScores.reduce((s, v) => s + v, 0) / psiScores.length : null,
     psiDominantBand,
     psiObservationDays: psiScores.length,
-    activeDepegObs: activeObserved ? aggregateInputs.reduce((sum, d) => sum + d.activeDepegCount, 0) : null,
+    activeDepegObs: activeObserved ? aggregateInputs.reduce((sum, d) => sum + d.activeDepegCount!, 0) : null,
     uniqueDepegSignals: signalsObserved ? depegKeys.size : null,
     blacklistEvents: blacklistObserved ? aggregateInputs.reduce((s, d) => s + d.blacklistActivity!.eventCount, 0) : null,
     blacklistUsd: blacklistUsdObserved ? aggregateInputs.reduce((s, d) => s + d.blacklistActivity!.totalAmountUsd, 0) : null,

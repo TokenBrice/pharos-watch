@@ -82,7 +82,7 @@ export interface DailyDigestInputBuildResult {
   recentTitles: string[];
   stablecoinsCacheReason: string | null;
   llmSignals: {
-    activeDepegCount: number;
+    activeDepegCount: number | null;
     topDepegs: NonNullable<DigestInputData["topDepegs"]>;
     resolvedDepegs: NonNullable<DigestInputData["resolvedDepegs"]>;
     yieldAnomalies: NonNullable<DigestInputData["yieldAnomalies"]>;
@@ -173,7 +173,9 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
         supplyCoverage: { complete: false, observedCount: 0, unavailableCount: CORE_AGGREGATE_ACTIVE_IDS.size },
         mcap7dDelta: 0,
         degradedSources: [stablecoinsCacheResult.reason],
-        activeDepegCount: 0,
+        activeDepegCount: null,
+        resolvedDepegCount: null,
+        depegSignalKeys: { active: null, resolved: null },
         topDepegs: [],
         biggestSupplyChange: null,
         stabilityIndex: null,
@@ -187,7 +189,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       recentTitles,
       stablecoinsCacheReason: stablecoinsCacheResult.reason,
       llmSignals: {
-        activeDepegCount: 0,
+        activeDepegCount: null,
         topDepegs: [],
         resolvedDepegs: [],
         yieldAnomalies: [],
@@ -288,7 +290,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
 
   const activeDepegsResult = await collectActiveDepegs(ctx);
   collectorResults.push(activeDepegsResult);
-  const { activeDepegCount, topDepegs, lifecycleFlags } = activeDepegsResult.value;
+  const { activeDepegCount, activeDepegSignalKeys, topDepegs, lifecycleFlags } = activeDepegsResult.value;
 
   const [latestSample, latestDaily, avg24hRow, yesterdayRow] = await Promise.all([
     db
@@ -410,7 +412,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     ...degradedReasons,
     ...aggregateCollectorReasons(collectorResults, "qualityReasons"),
   ];
-  const resolvedDepegs = resolvedDepegsResult.value;
+  const { resolvedDepegs, resolvedDepegCount, resolvedDepegSignalKeys } = resolvedDepegsResult.value;
   const mintBurnFlows = mintBurnFlowsResult.value;
   const dewsStress = dewsStressResult.value;
   const psiContributors = psiContributorsResult.value;
@@ -477,6 +479,8 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     ...(missingSources.length > 0 ? { degradedSources: [...missingSources] } : {}),
     safetyContext,
     activeDepegCount,
+    resolvedDepegCount,
+    depegSignalKeys: { active: activeDepegSignalKeys, resolved: resolvedDepegSignalKeys },
     topDepegs,
     biggestSupplyChange,
     stabilityIndex,

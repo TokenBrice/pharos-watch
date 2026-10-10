@@ -80,8 +80,8 @@ export function buildUserPrompt(
       ? `Total stablecoin market cap: ${formatCurrency(data.totalMcapUsd)}`
       : `Known stablecoin market-cap subtotal: ${formatCurrency(data.totalMcapUsd)}; supply coverage ${data.supplyCoverage ? `${data.supplyCoverage.observedCount} observed, ${data.supplyCoverage.unavailableCount} unavailable` : "unverified"}. Do not describe this as the complete market total.`,
     `7-day market cap change: ${data.mcap7dDelta >= 0 ? "+" : ""}${formatCurrency(data.mcap7dDelta)} (${mcap7dPct})${mcap7dCoverage}`,
-    `Currently active depegs (ongoing, not yet resolved): ${data.activeDepegCount}`,
-    `Depegs resolved in last 24h: ${data.resolvedDepegs?.length ?? 0}`,
+    `Currently active depegs (ongoing, not yet resolved): ${data.degradedSources?.includes("active-depegs-query") ? "unavailable (active-depegs-query)" : data.activeDepegCount ?? "unavailable (active-depegs-observation-missing)"}`,
+    `Depegs resolved in last 24h: ${data.degradedSources?.includes("resolved-depegs-query") ? "unavailable (resolved-depegs-query)" : data.resolvedDepegCount ?? "unavailable (resolved-depegs-observation-missing)"}`,
   );
 
   if (data.supplyCoverage?.complete === true && data.totalMcapAth && data.totalMcapAth.value > 0) {
