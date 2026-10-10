@@ -101,7 +101,7 @@ Build-time and release-time fetchers in `scripts/lib/sync-from-api.ts` attach `S
 The current proxy now fails closed on its own trust boundary:
 
 - it verifies the inbound UI Access token against `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD`
-- it accepts that token from `Cf-Access-Jwt-Assertion` when Cloudflare forwards the assertion header, or from same-origin `cf-access-token` / `CF_Authorization` when the request is backed by an existing Access session cookie
+- it accepts the first non-empty token from `Cf-Access-Jwt-Assertion`, `cf-access-token`, or the `CF_Authorization` cookie and signature-verifies it as a UI application JWT with a valid email claim
 - it requires same-origin `Origin` evidence for mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`)
 - it still injects the Pages-managed service token pair only on the server-to-server hop to `ops-api.pharos.watch`
 
@@ -316,10 +316,10 @@ Any enablement, exception, exact-path replacement, or plan upgrade is an account
 `scripts/ci/cloudflare-account-state-manifest.json` is the committed, secret-free
 expectation for the account-bound configuration that this repository does not
 deploy: the active zone, Pages project and production binding names/types,
-Pages and Worker custom domains, Access applications, and WAF rate-limit rules.
-It contains neither resource IDs nor secret values.
+custom domains, Access applications, WAF rules and heavy-Worker retirement state.
+It includes the expected shared D1 database ID, but no account/zone IDs or secret values.
 
-The weekly **Cloudflare Account-State Drift** workflow runs
+The weekly **Weekly Validation** workflow's `compare-account-state` job runs
 `npm run check:cloudflare-account-state` with the repository secret exposed only
 as `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN`. The script derives the account
 and zone IDs from the `pharos.watch` zone lookup at runtime, performs only
@@ -328,8 +328,8 @@ types, and differing policy fields. It never prints the token, account/zone IDs,
 or Pages secret values.
 
 Create a dedicated read-only API token for this check. It needs the minimum
-read access for the zone lookup, Pages project/domains, Access applications,
-Worker custom domains, and zone WAF/rulesets. Do not reuse a deployment or
+read access for zone lookup, Pages project/domains, Access applications,
+Worker domains/settings/subdomains/routes, Workflows and zone WAF/rulesets. Do not reuse a deployment or
 cache-purge token. If the GitHub secret is absent, the workflow fails before
 making a network request and names the required secret. Intentional account
 changes must update the manifest and its fixture tests in the same review;

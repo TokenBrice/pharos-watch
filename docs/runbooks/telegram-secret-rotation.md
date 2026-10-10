@@ -1,6 +1,6 @@
 # Telegram Secret Rotation
 
-Rotate Telegram secrets one at a time. The webhook secret supports a short overlap window; the bot token supports a constant-time overlap window for Mini App `initData` only — outbound Bot API sends always use the current token.
+Rotate Telegram secrets one at a time. The webhook secret supports a short overlap window; the previous bot token is accepted for Mini App `initData` only — outbound Bot API sends always use the current token.
 
 ## Webhook Secret
 
@@ -20,7 +20,7 @@ Rotate Telegram secrets one at a time. The webhook secret supports a short overl
 ## Bot Token
 
 1. Create the replacement token in BotFather. Do not revoke the old token until the new Worker is ready.
-2. Set `TELEGRAM_BOT_TOKEN_PREVIOUS` to the current token as an operator marker, then set `TELEGRAM_BOT_TOKEN` to the new token.
+2. Set `TELEGRAM_BOT_TOKEN_PREVIOUS` to the current token for Mini App signature validation, then set `TELEGRAM_BOT_TOKEN` to the new token.
 3. Deploy the Worker. During the `TELEGRAM_BOT_TOKEN_PREVIOUS` overlap, Mini App `initData` signed with the old token remains valid subject to the normal 24-hour read and 5-minute mutation freshness windows. Old-token `initData` is invalidated once the previous token is not configured or is removed.
 4. Verify:
 
@@ -42,5 +42,5 @@ If sends, registration, or Mini App auth fail after token rotation, restore the 
 ## Mini App impact
 
 - `validateTelegramMiniAppInitData` tries `TELEGRAM_BOT_TOKEN` first, then `TELEGRAM_BOT_TOKEN_PREVIOUS` when configured. Both branches compare with the same constant-time routine.
-- Keep `TELEGRAM_BOT_TOKEN_PREVIOUS` set until the session window expires for users still on the old token (24h). Mutation auth resets every 5 minutes regardless, so live mutations migrate quickly.
+- Keep `TELEGRAM_BOT_TOKEN_PREVIOUS` for the old-token signed-read window (24h). Mutations require `initData` no older than 5 minutes; relaunch to obtain fresh auth, not an automatic rolling refresh.
 - Remove `TELEGRAM_BOT_TOKEN_PREVIOUS` after at least 24h to fail closed for stale leaked tokens. Outbound Bot API sends never use the previous token.

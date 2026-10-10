@@ -1,12 +1,12 @@
 # PharosWatchBot and Telegram Alerts
 
-> **Agent navigation** — Start with the [Telegram architecture seam map](./telegram-architecture.md). In this document: [commands](#commands) · [dispatch detection](#dispatch) · [dispatch routing and formatting](#dispatch-routing-and-formatting) · [delivery persistence](#delivery-persistence) · [digest appendices](#digest-appendices) · [admin visibility](#admin-visibility) · [message types](#message-types) · [operational notes](#operational-notes) · [runbooks](#runbooks). Client/auth/state live in the [Mini App contract](./telegram-mini-app.md#overview).
+> **Agent navigation** — Start with the [Telegram architecture seam map](./telegram-architecture.md). In this document: [commands](#commands) · [dispatch detection](#dispatch) · [dispatch routing and formatting](#dispatch-routing-and-formatting) · [delivery persistence](#delivery-persistence) · [digest appendices](#digest-appendices) · [admin visibility](#admin-visibility) · [message types](#message-types) · [operational notes](#operational-notes) · [runbooks](#runbooks). Grep `^##`, `SNAPSHOT_KEYS`, `preference_generation`, or `execution_unknown` to find contracts without loading the whole file. Client/auth/state live in the [Mini App contract](./telegram-mini-app.md#overview).
 
 ## Overview
 
 Pharos runs PharosWatchBot for opt-in stablecoin alerts and Telegram channel posts.
 
-The subsystem has four moving parts:
+The main ingress, dispatch, and digest entrypoints are:
 
 - `POST /api/telegram-webhook` accepts Telegram commands, validates the shared secret from `X-Telegram-Bot-Api-Secret-Token`, and stores subscriber state in D1.
 - `worker/src/cron/dispatch-telegram-alerts.ts` diffs the latest DEWS, active depeg, safety-grade, launch, and reserve snapshots against cached prior snapshots, and independently drains fresh immutable freeze Tape events through their dedicated cohort outbox before handing every rendered target to the shared pending transport. Freeze Tape rows with no possible active freeze audience still advance the freeze cursor but do not create durable source/target lineage, so large no-recipient blacklist batches cannot monopolize the five-minute dispatch slot.
@@ -55,7 +55,7 @@ Eligible users configure the feature with `/recap`, `/recap on`, `/recap off`, a
 
 The delivery system is worker-owned. The frontend exposes a static `/pharoswatchbot/` landing page plus a lightweight public telemetry strip sourced from `/_site-data/telegram-pulse`, which proxies `GET /api/telegram-pulse` through the website-internal lane; it does not call any mutating bot APIs directly. Direct `https://api.pharos.watch/api/telegram-pulse` requests remain API-key protected like other non-exempt public reads. `/pharoswatchbot/` is the canonical public route, and the legacy `/telegram` and `/telegram/*` aliases redirect there. The landing page's alert examples render `shared/lib/telegram-alert-samples.ts` verbatim; `worker/src/lib/__tests__/telegram-alert-samples.test.ts` regenerates each sample (including reserve) through the production formatter so the public examples cannot drift from runtime output, and the page's visible delivery-contract TTLs and dispatch cadence derive from `shared/lib/telegram-delivery-policy.ts`.
 
-The safety-alert path resolves the canonical V9 source envelope-first: the small publication-health record names the accepted publication generation, and when the persisted thin alert envelope matches it the lane never decodes the full publication — including in the held state, which still assesses as unusable but no longer costs the multi-megabyte decode every five minutes. Only a mismatched or unparseable envelope/health pair falls back to the authoritative full publication decode. The five-minute Telegram lane suppresses only safety-grade alerts when that publication is missing, incompatible, held, stale, or from a different identity than its dispatch baseline. For a partial publication, internal attempt metadata suppresses quarantine and recovery transitions only for affected assets while unrelated grade alerts continue. Alert explanations are projected from the V9 card evidence, cap, weakest-pillar, and pillar snapshots; no Telegram-specific live score cache is maintained.
+The safety-alert path reads the persisted thin V9 alert envelope and publication-health record; it never falls back to decoding the full publication. Missing, malformed, held, stale, or publication-generation-mismatched records suppress safety alerts while other families continue. Baseline comparison permits organic base-input/publication-generation advances but reseeds across model, schema, methodology, policy, or evaluator-build boundaries. For partial publications, internal attempt metadata suppresses quarantine and recovery transitions only for affected assets while unrelated grade alerts continue. Alert explanations use projected V9 card evidence, caps, weakest-pillar, and pillar snapshots; no Telegram-specific live score cache is maintained.
 
 ## Inline Keyboards (Callback Queries)
 
@@ -191,7 +191,7 @@ Wizard state lives in `telegram_pending_disambiguation`: `action_type = "setup-s
 
 | Command | Behavior |
 |---------|----------|
-| `/start` | Opens the two-branch setup wizard (Recommended / Custom / Type commands myself). Deep-link payload `?start=setup` also opens the wizard. Unknown payloads fall back to the long-form start message. |
+| `/start` | Opens the setup wizard (Recommended / Custom / Type commands myself), including `?start=setup` and unknown/malformed payloads. Non-admin group members receive the read-only start message instead. |
 | `/help` | Sends the command reference, including `/pause`, `/export`, and `/import`; the `/subscribe` row enumerates all six alert families (`dews`, `depeg`, `safety`, `launch`, `reserve`, `freeze`) and the preset restriction. Rows derive from the shared command manifest in `shared/lib/telegram-bot-registration.ts`. Private replies include a Mini App settings button |
 | `/presets` | Returns the preset watchlist catalog plus subscribe and unsubscribe examples; private replies include a Mini App presets button |
 | `/sample` | Private-chat-only preview of a synthetic USDC DEWS alert so users can inspect the alert format before subscribing. It does not read live data or mutate subscription state. |
@@ -239,7 +239,7 @@ Supported payload schemes (lowercase, no spaces, max 64 characters, characters `
 | `why_<id>` | Runs the existing `/why` handler. Allowed in any chat. |
 | `coverage_<id>` | Runs the existing `/coverage` handler. Allowed in any chat. |
 | `setup` | Opens the standard two-branch setup wizard. |
-| `sample` | Alias entrypoint for `/sample`: in a private chat it runs the synthetic USDC DEWS preview (same message as `/sample`); in a group it falls back to the read-only start reply and does not run the preview. Surfaced by the Mini App Home "Send me a sample alert" deep link. |
+| `sample` | Alias entrypoint for `/sample`: private chats receive the synthetic USDC DEWS preview; other chat types receive the private-chat-only reply without running the preview. Surfaced by the Mini App Home "Send me a sample alert" deep link. |
 | `app` / `home` | Sends a Mini App launch nudge. Private chats receive a Web App button for the home panel; groups receive a DM link because Telegram rejects `web_app` buttons outside private chats. |
 | `pw1_landing_<placement>` (allowlisted setup-destination tokens) | Records landing placement attribution; `pw1_landing_setup` preloads recommended confirmation, while `pw1_landing_hero` opens the branch chooser. Mutating, with token retained through confirmation; non-setup tokens are not matched. |
 | Unknown or malformed | Falls back to the standard `/start` reply; the user never sees an error. |
@@ -269,7 +269,7 @@ The freeze outbox is intentionally separate from `telegram_alert_target_plans`, 
 
 Preset watchlists are persistent dynamic sources independent of the direct per-coin preference model.
 
-- Supported canonical aliases: `usd-top10`, `usd-top25`, `usd-top50`, `non-usd-top10`, `non-usd-top25`, `non-usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, `mcap-ge-100m`
+- Canonical preset aliases and their filters live in `shared/lib/telegram-presets.ts`; `/presets` renders that catalog.
 - Top-N peg presets also accept dashed aliases, for example `usd-top-10`, `non-usd-top-25`, and `usd-top-50`; commands canonicalize them before subscription storage.
 - Resolution happens for command/setup previews and at dispatch time inside `worker/src/lib/telegram/presets.ts`; dispatch-time resolution is authoritative
 - The resolver uses the current strict `stablecoins` cache plus tracked stablecoin metadata to map each preset alias to concrete active coin IDs; `non-usd-top*` includes active tracked coins whose `flags.pegCurrency` is not `USD`
@@ -361,10 +361,9 @@ The planner records no-change, paused and stale skips in `telegram_recap_targets
 
 Each dispatch run loads:
 
-- Latest DEWS rows from `stress_signals`
+- Latest published DEWS rows from the generation-aware current-row loader (`stress_signals_latest` or exact `stress_signal_publication_rows`, with `stress_signals` as the legacy fallback)
 - Active depegs from `depeg_events WHERE ended_at IS NULL`
-- The latest `safety_grade_history` row for each stablecoin (not just the latest change day)
-- The canonical V9 publication and publication-health rows, projected through the same active-source loader as the public report-card API
+- The persisted thin V9 alert-source envelope and publication-health record, assessed by `loadActiveAlertSafetySourceAssessment` without reading `safety_grade_history` or decoding the full public publication
 - Prior dispatch snapshots from cache keys:
   - `alert:dews-snapshot`
   - `alert:dews-alertable-snapshot`
@@ -379,7 +378,7 @@ DEWS and depeg dispatch snapshots older than `24 hours` are treated as stale and
 
 Reserve dispatch reads the four-hourly producer without reserve-adapter connections. Expected-generation envelopes are fresh through two producer intervals (8 hours); missing/corrupt/future/stale/wrong-generation sources suppress transitions and preserve baselines. Whole-producer recovery cold-seeds without alerts. Per-asset unavailable intervals reset only that member's observation epoch, so recovery is cold-seeded even when dispatch missed the gap; continuously observed peers remain alertable. The cohort excludes single-bucket/non-independent feeds and requires curated comparators plus admitted multi-slice live mixes. A complete observed no-drift set is a genuine empty result.
 
-The live safety source is the canonical V9 publication projected through the shared active-source loader. Safety-grade fan-out requires a current, identity-valid publication and treats held or stale data as unavailable. The prior alert snapshot persists the V9 model, schema, methodology, policy, evaluation-build, base-input, and publication identity; any mismatch forces a baseline seed instead of an organic grade-change fan-out.
+The live safety source is the persisted thin V9 alert envelope. Fan-out requires a current, identity-valid envelope matching publication health; held or stale data is unavailable. The prior snapshot persists full publication identity, but organic base-input and publication-generation advances remain comparable. Model, schema, methodology, policy, or evaluator-build changes force a baseline seed rather than grade-change fan-out.
 
 ### First-Run / Stale-Snapshot Behavior
 
@@ -427,7 +426,7 @@ If the reserve producer envelope is missing, corrupt, stale, future-dated, or fr
 
 When the safety snapshot has to be reseeded (e.g. methodology-version flip changes the source generation), the dispatcher compares the current live source against the last seen `alert:safety-snapshot` purely to count the safety changes that would otherwise have been emitted and surfaces the total as `suppressedSafetyChangesAtSeed` in the cron metadata. The count is informational — no messages are sent — so operators can spot when a generation flip is masking real downgrades and inspect the safety-grade history directly.
 
-If the cached safety snapshot is missing a coin, the dispatcher suppresses the alert unless that coin's latest grade-change row is newer than the cached snapshot timestamp. This avoids false `UNKNOWN → grade` alerts when repairing older partial snapshots or when a newly tracked coin gets its first seed row.
+If the cached safety snapshot is missing a coin, the dispatcher suppresses its grade-change alert and seeds the current value; there is no grade-history timestamp exception. Pipeline gaps, null grades, and transitions involving operationally affected assets likewise establish recovery baselines rather than organic grade movements.
 
 The separate `alert:dews-alertable-snapshot` cache key prevents duplicate same-band DEWS alerts when a coin silently dips to `WATCH` or `CALM` and then returns to the same alert band. Example: `ALERT → WATCH` produces no message and does not reset the alert dedupe baseline, so a later `WATCH → ALERT` does not resend the same `ALERT` notification.
 
@@ -485,7 +484,7 @@ If a depeg closes with a recovery reason and reopens for the same coin between t
 
 - Messages are HTML-formatted via `formatConsolidatedMessage()`.
 - Long messages are split with `splitMessage(html, 4000)`. Tag repair always advances through a positive input prefix, including deeply nested HTML; nonpositive or noninteger custom chunk limits are rejected. Split version 3 invalidates older queued chunks for this algorithm change.
-- `sendBatch()` posts in parallel batches of 4, leaving headroom in the repo's six-request trigger budget.
+- Dispatch uses distinct-chat waves with concurrency 4; messages within one chat stay serial so split chunks cannot overtake each other.
 - Hard cap: `3,600 Telegram message attempts per dispatch run`.
 - `dispatch-telegram-alerts` has a 4.5-minute app-level hard timeout and 30-second lease heartbeats; pending-drain and fresh-send loops stop starting Telegram batches after a 4-minute soft deadline, leaving 30 seconds for durable finalization. The lease TTL adds a one-minute crash fence, so an operation that ignores abort may defer at most the immediately following 5-minute tick instead of suppressing several later slots. Overlapping `skipped_locked` attempts cannot overwrite or clear the active lease owner's progress row.
 - Detection inserts immutable `telegram_alert_source_events` only for deliverable family events or resumed incomplete sources. Eventless runs preserve the safety baseline and refresh healthy snapshots without cohort capture. Depeg worsening requires a supported subscriber step (100, 250, or 500 bps). Preset capture advances newly persisted 100-follower cursor pages in the same invocation, bounded by 32 attempts and 20 seconds. Failed attempts count against both limits; slow D1 work can leave pages unattempted. Completed pages and immutable memberships survive recovery; failed pages retry only next invocation. Delivery stays closed until every family resolves.
@@ -512,7 +511,7 @@ Blocked or definitively unreachable responses (`403` or Telegram `chat not found
 
 All new risk chunks enter `telegram_pending_alerts` as pre-split HTML only after their source manifest is complete. Each dispatch run drains a bounded queue page inside its send deadline; existing retry/admin rows and newly handed-off targets share the same claim and transport policy while each row remains inside its bounded TTL.
 
-The pending drain is claim-based. It selects only `delivery_state = 'pending'` rows whose target dedupe key is not already terminal, then fences the claim update on the same delivery state so a row that moved terminal in the selection gap cannot acquire a lease or enter the claimed batch. Cleanup and dead-letter deletion likewise require the selected delivery state and, for claimed rows, the expected owner/generation; a competing re-claim therefore cannot be deleted by stale cleanup. The drain re-resolves each new-format risk row against current subscriber, direct, global, preset, explicit-local-off, chat-snooze, and coin-snooze state. Direct on wins; a marker-backed local off blocks preset/global inheritance; otherwise an active preset or global follow can keep the pair eligible. Any disabled group pair cancels the row without a Bot API attempt, while active snooze, malformed/partial provenance, or unavailable required preset membership defers conservatively. All-null provenance remains a rolling-compatible legacy row. Immediately before each Bot API wave, the `pending -> sending` update compare-and-swaps the exact `delivery_generation`, `processing_owner`, `processing_generation`, and `delivery_state`; only rows proven `sending` under that owner/generation may cross the Bot API boundary.
+The pending drain is claim-based. It selects only `delivery_state = 'pending'` rows whose target dedupe key is not already terminal, then fences the claim update on the same delivery state so a row that moved terminal in the selection gap cannot acquire a lease or enter the claimed batch. Cleanup and dead-letter deletion likewise require the selected delivery state and, for claimed rows, the expected owner/generation; a competing re-claim cannot be deleted by stale cleanup. New-format risk rows are revalidated against current direct, global, preset, explicit-local-off, chat-snooze, and coin-snooze state. Direct on wins; a marker-backed local off blocks inheritance; otherwise an active preset or global follow can keep the pair eligible. Any disabled pair cancels the chunk without a Bot API attempt; snoozes, partial provenance, or unavailable required membership defer conservatively. All-null provenance remains legacy-compatible except safety rows, which cancel without valid identity. Immediately before each Bot API wave, the `pending -> sending` CAS checks exact delivery/processing generations and owner; only rows proven `sending` under that owner/generation may cross the Bot API boundary.
 
 Only confirmed HTTP retry responses (`429` or `5xx`) owner/generation-CAS the exact send back to `pending`. Timeout, network, or unknown attempted results become explicit `execution_unknown`; an expired `sending` owner is reconciled to the same state and is never reclaimed. Confirmed successes transition to `sent`. The pending terminal transition and its authoritative `telegram_alert_job_targets.final_delivery_state` projection use reciprocal guards in one D1 batch; a bounded repair pass projects any terminal pending row left by an interruption before cleanup. A failed sent-row delete therefore leaves authoritative terminal evidence that later drains cannot resend. `/api/status.telegramBot.pendingDeliveryBacklog.executionUnknown` exposes both explicit unknown rows and aged legacy `sending` rows for operator reconciliation. This at-most-once choice avoids repeating a potentially accepted external effect.
 
@@ -574,7 +573,7 @@ expiry from real failures:
 - `pendingDroppedMaxAttemptsFallback` — defensive `PENDING_MAX_ATTEMPTS` ceiling was hit
   while the row was still retryable; expected to be 0 in normal operation.
 
-Terminal pending drops are dead-lettered before deletion with `reason` values `ttl_expired`, `permanent_failure`, `max_attempts`, `blocked_disabled`, `preference_changed`, `manual_clear`, or `execution_unknown_archived`. Each audit row uses the deterministic pending-id/delivery-generation key. Conflict replay is accepted only when the stored reason, provenance, payload, and lifecycle snapshot match, so insert-success/delete-failure and repeated cleanup/manual clear cannot duplicate or silently replace audit evidence. Ordinary admin count/clear actions select only `pending` rows; `sending` and `execution_unknown` require explicit reconciliation. Preference cancellation projects `cancelled` target truth and retains bounded cancellation detail; it is not misclassified as TTL expiry. Expired pending-row cleanup logs an error-level bypass event and still removes expired live rows when dead-letter insertion fails, so an audit-table outage cannot let the claimable delivery queue grow without bound. Execution-unknown archival instead fails closed on dead-letter/projection failure.
+Terminal pending-drop reasons are owned by `PendingDeadLetterReason` in `worker/src/cron/telegram-pending/types.ts`; historical `manual_clear` evidence remains readable, but there is no current admin clear endpoint. Each audit row uses a deterministic pending-id/delivery-generation key. Conflict replay requires matching reason, provenance, payload, and lifecycle evidence, so repeated cleanup cannot duplicate or replace it. Preference cancellation projects `cancelled` target truth with bounded detail, not TTL expiry. Expired-row cleanup logs an error-level bypass and still removes expired live rows if dead-letter insertion fails; execution-unknown archival instead fails closed on dead-letter/projection failure.
 
 Retry and deferral metadata lives on the pending rows:
 
@@ -582,7 +581,7 @@ Retry and deferral metadata lives on the pending rows:
 - `last_error_class` and `retry_after_sec` preserve the last retryable Telegram result for observability and backoff.
 - `dedupe_key` and `chunk_index` prevent duplicate queued chunks for the same chat/message while still preserving split-message order.
 
-The `dedupe_key` is hashed from the **pre-split canonical message body**, the chunk index, and the `TELEGRAM_SPLIT_VERSION` constant (`worker/src/lib/telegram/alerts.ts`). Hashing the canonical body — not the post-split chunk HTML — keeps the key stable when `splitMessage` is refactored, so in-flight pending rows survive unrelated code changes. Bump `TELEGRAM_SPLIT_VERSION` whenever the splitting algorithm changes in a way that should deterministically invalidate older queued chunks.
+`buildDedupeKey` in `worker/src/lib/telegram/pending-queue.ts` combines chat ID, split version, chunk index, and a hash of the pre-split canonical body (falling back to chunk HTML for legacy callers). Freeze chunks instead bind their immutable source-event ID so distinct Tape events with identical rendered HTML remain independently deliverable. `TELEGRAM_SPLIT_VERSION` lives in `worker/src/lib/telegram/constants.ts`; bump it when a splitting change should invalidate queued chunks.
 
 When Telegram migrates a group to a supergroup, `migrateTelegramChatId` rewrites the chat-id prefix embedded in pending `dedupe_key` values and alert-job `pending_dedupe_key` values after moving `chat_id`. Pending rows whose rewritten key collides with an already-present new-chat row are deleted so the queue keeps one deliverable copy.
 
@@ -709,43 +708,24 @@ Additional Telegram bot status metrics now include:
 
 `worker/src/cron/telegram-degradation-watchdog.ts` runs on the 5-minute Telegram lane after `dispatch-telegram-alerts` and the `telegram-personalized-recap-planner`. It reuses the same-slot pending-capacity snapshot and safety-source assessment when dispatch produced them, falls back to live reads when they are unavailable, and reads fresh dispatch metadata. Capacity reads return an explicit `available` or `unknown` result. An unknown D1 read degrades watchdog telemetry and preserves the existing onset keys unchanged; it never fabricates an empty queue or recovery:
 
-- Pending delivery risk: active pending rows exceed 500, oldest pending age is at least 15 minutes, estimated drain time is at least 30 minutes, any row is inside the 15-minute near-TTL window, or unexpired execution-unknown work is at least 15 minutes old. Count/age/drain/execution-unknown breaches use the sustained window (`telegram:degradation:pending-since`); near-TTL alerts immediately.
-- The canonical V9 safety assessment reports `state != "ok"` for more than two `compute-safety-score-v9` intervals (cache key `telegram:degradation:safety-source-since`). Held-publication outcomes add the bounded hold start, hold age, and up to five reason codes to the incident detail and cron metadata without changing the episode key or sustained threshold.
-- The most recent `dispatch-telegram-alerts` cron run reported `eventsDetected > 0`, `freshCandidateChats > 0`, and `messagesSent == 0` for three consecutive distinct runs (cache key `telegram:degradation:zero-send-streak`). The cached JSON stores both the streak and the last evaluated `cron_runs.id`, so repeated watchdog evaluation of one row cannot advance the streak; legacy integer values remain readable during rollout.
+- Pending delivery risk: active pending rows exceed 500, oldest pending age is at least 15 minutes, estimated drain time is at least 30 minutes, any row is inside the 15-minute near-TTL window, or unexpired execution-unknown work is at least 15 minutes old. A first breach only records the episode onset; count/age/drain/execution-unknown breaches trigger once sustained for 20 minutes (`telegram:degradation:pending-since`), while a near-TTL breach triggers on a later evaluation without waiting out the sustained window.
+- The canonical V9 safety assessment reports `state != "ok"` for at least two `compute-safety-score-v9` intervals (cache key `telegram:degradation:safety-source-since`). Held-publication outcomes add the bounded hold start, hold age, and up to five reason codes to the incident detail and cron metadata without changing the episode key or sustained threshold.
+- The most recent `dispatch-telegram-alerts` cron run reported `eventsDetected > 0`, `messagesSent == 0`, and either `freshCandidateChats > 0` or durable freeze `freezeTargetCount > 0` for three consecutive distinct runs (cache key `telegram:degradation:zero-send-streak`). The cached JSON stores both the streak and the last evaluated `cron_runs.id`, so repeated watchdog evaluation of one row cannot advance the streak; legacy integer values remain readable during rollout.
 
 Every watchdog `safetySource` outcome carries `failureReason`, parsed-publication `ageSeconds`, source envelope `generation`, nullable `sourcePublicationGenerationId` and `acceptedPublicationGenerationId`, `freshnessMaxAgeSec` from `SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC`, and `assessedAtSec`. These diagnostics remain visible on newly tripped, sustained, pending-masked, and recovered runs. Age uses publication time, never cache-write time; preloaded assessments retain their original assessment clock and age. Successful sibling reads retain their provenance if the other read fails. `v9-publication-held`, `v9-snapshot-read-failed`, and `v9-snapshot-invalid` distinguish producer holds, D1 failure, and invalid JSON/schema/identity without changing the canonical source-state vocabulary, episode onset, thresholds, detail strings, or safety-alert suppression.
 
 `GET /api/health.telegramSummary` uses the same lifecycle vocabulary and returns `pendingDeliveries: null` with `pendingDeliveryLifecycleStatus: "unknown"` if the capacity query fails. `/api/status.telegramBot.pendingDeliveries` counts only active claimable plus deferred rows rather than expired or in-flight cleanup states.
 
-The watchdog is wired through `runBestEffortScheduledJob` so its own failures never block the dispatch lane, and its metadata captures `triggered` and `recovered` flags per condition for admin inspection via `cron_runs`.
+The watchdog is wired through `runBestEffortScheduledJobWithOutcome` so its own failures never block the dispatch lane, and its metadata captures `triggered` and `recovered` flags per condition for admin inspection via `cron_runs`.
 
-### Per-alert-type delivery breakdown
-
-The dispatch metadata also exposes a `perAlertType` map covering each of the six
-alert categories: `dews`, `depeg`, `safety`, `launch`, `reserve`, `freeze`. Each entry reports the
-delivery outcome for that category in the latest run so operators can spot
-"DEWS delivery fine but safety alerts stalled" at a glance:
-
-- `sent` — chunks that delivered successfully on this run.
-- `enqueued` — chunks deferred to the pending queue (rate-limit overflow,
-  capacity overflow, or retryable failure).
-- `failed` — permanent failures (non-retryable, non-blocked).
-- `blocked` — chunks where the chat returned a "blocked" delivery class.
-- `firstSendLatencyMs` — wall-clock latency from the start of the dispatch
-  run to the first successful send of that category, or `null` if none sent.
-
-A consolidated message can mix multiple alert categories for a single chat.
-Attribution uses the chat's "dominant" alert type with priority order
-`depeg > dews > safety > launch > reserve > freeze`, since depeg is the most time-sensitive
-event. Pending-queue replays are not attributed because the persisted row
-stores only the rendered HTML.
+The dispatch metadata retains a `perAlertType` compatibility map for the canonical alert families, but the row-authoritative delivery path currently leaves every entry at its empty defaults (`sent`, `enqueued`, `failed`, and `blocked` are zero; `firstSendLatencyMs` is `null`). It is not evidence that a family had no delivery or that one family is healthier than another; `perAlertTypeTargets` likewise stays at empty defaults. Use authoritative `telegram_alert_job_targets` rows for final delivery outcomes. Historical fresh-send dominant-family attribution does not describe current pending-drain attribution.
 
 ### Circuit Breaker
 
 The dispatcher is protected by `CIRCUIT_SOURCE.TELEGRAM_API`.
 
 - Open circuits skip fan-out.
-- Open circuits still run the pending-queue drain and expired-row cleanup so already-enqueued retries do not age out while fresh fan-out is gated.
+- Open circuits still run pending maintenance/drain; durable transport permits can independently defer actual sends, so queued retries are not guaranteed to deliver while the circuit is open.
 - Successful snapshot seeding or alert delivery records a successful outcome.
 - Failed sends record an unsuccessful outcome.
 
@@ -779,7 +759,7 @@ The reserve-drift family (C123) ships **glyph-less**: a `Reserve Drift` section 
 
 Subscriber alert messages end with a `View on Pharos` link. Telegram digest posts carry a `Read on Pharos →` link after the editorial body and any cemetery or tracking appendices. Under `public` recap availability, the post ends with the private-recap CTA (`Open @PharosWatchBot for a private /recap →`); in `off` the `Read on Pharos →` link is last. A current daily Safety Score map contributes a dated summary block (`Today’s map`, or `<date> map` when carried forward, plus mapped supply and A-tier/C/D/F-tier counts) at the top of the digest message above the edition kicker; its image is a separate photo from the durable digest outbox, captioned `Safety Score map · <date>`, before text chunks.
 
-For single-coin alerts the first chunk is sent with `link_preview_options: { is_disabled: false, url: "https://pharos.watch/stablecoin/<id>", prefer_small_media: true, show_above_text: false }` so the "View on Pharos" link renders a compact preview card below the message body. Multi-coin alerts, overflow chunks, and pending-queue replays continue to use the batch-wide `disable_web_page_preview: true` default. Behavior requires Telegram Bot API 7.0+ (Mar 2024); older Bot API versions ignore the field and fall back to default link-preview rendering.
+For single-coin alerts the first chunk uses `link_preview_options: { is_disabled: false, url: "https://pharos.watch/stablecoin/<id>", prefer_small_media: true, show_above_text: false }` for a compact preview below the body. New-format pending rows persist this markup policy and restore it when drained, including single-coin previews. Multi-coin and overflow chunks keep previews disabled; legacy rows without persisted markup use the default disabled-preview behavior.
 
 ## Digest vs Subscriber Alerts
 
@@ -790,7 +770,7 @@ The same bot token can be used for both:
 
 The Daily Digest is a market-wide editorial edition generated once on its existing schedule. A personalized recap is a private, per-subscriber deterministic view of Tape changes over that subscriber's watchlist window. They do not share an AI request or delivery outbox: recap planning does not call the digest generator, and a missing or stale digest only removes the optional footer link from a valid recap.
 
-Retryable Daily Digest and Weekly Recap outbox editions stop after 12 claimed attempts or 24 hours from generation, whichever comes first. Exhausted rows transition to `failed_permanent` with an explicit attempt- or age-budget error class; ambiguous attempted transports remain `execution_unknown` and are never made replayable by the budget.
+Daily Digest and Weekly Recap outbox retry budgets are evaluated after a retryable transport response: 12 claimed retryable attempts may return to `pending`; the 13th retryable result, or one at least 24 hours after generation, becomes `failed_permanent` with an attempt- or age-budget error class. These are retry-return limits, not pre-send gates. Ambiguous attempted transports remain `execution_unknown` and are never made replayable by the budget.
 
 Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs stored in `telegram_subscribers`. Operator-only alerts (currently the cron freshness watchdog and the digest-publication watchdog, both dispatched by `cron-sentinel` in `status` mode) use `TELEGRAM_OPERATOR_CHAT_ID` via `buildTelegramOperatorCreds()`; they are ops signal rather than audience content, so they must never be sent with the public channel credentials, and an unset operator chat suppresses the send instead of falling back.
 

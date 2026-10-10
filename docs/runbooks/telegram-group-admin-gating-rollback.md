@@ -34,7 +34,7 @@ GROUP BY day, outcome
 ORDER BY day DESC, outcome ASC;
 ```
 
-Hard mode emits `outcome = "denied"`; soft mode emits `outcome = "warned"`. After the flip, expect the same rows to show the new outcome. A third outcome, `rate_limited`, is emitted when the per-chat `group-admin-diagnostics` cooldown suppresses the admin re-check; those rows block the command in both modes and do not change with the toggle, so ignore them when verifying the flip.
+Hard mode emits `outcome = "denied"`; soft mode emits `outcome = "warned"`. New events after the flip use the new outcome; existing rows are not rewritten. `rate_limited` means the per-chat `group-admin-diagnostics` cooldown suppressed warning/admin-list diagnostics after the fresh actor lookup failed; it blocks the command in both modes.
 
 Tail the Worker during the rollback window to confirm the new mode is taking effect:
 
@@ -53,7 +53,7 @@ npx wrangler tail stablecoin-api --format pretty
 
    Confirm that the next gated command from a non-admin produces a `denied` row in `telegram_usage_daily` and that the command did not run.
 
-3. **Audit during the soft window.** Pull the `group_admin_denial` events with `outcome = "warned"` to see which non-admins ran mutations during the rollback, in case any subscriber rows need a manual reset.
+3. **Audit during the soft window.** Use `group_admin_denial` / `outcome = "warned"` totals to measure rollback activity. `telegram_usage_daily` has no chat or user IDs, so it cannot identify affected actors or subscriber rows; any per-chat repair requires separately captured incident evidence.
 
 ## Cross-References
 

@@ -1,6 +1,6 @@
 # Pharos API Admin Reference
 
-> **Agent navigation** — Internal operator reference. Start at [Admin endpoint entry](#admin-endpoint-entry), read Admin Auth And Idempotency, then search the exact route heading.
+> **Agent navigation** — Read [auth/idempotency](#admin-auth-and-idempotency) and [endpoint entry](#admin-endpoint-entry), then grep the exact route heading. Families: status/history · API keys · DEWS repair · digest/yield triggers · blacklist/RPC diagnostics · action log · Telegram broadcast.
 
 This operator-only companion to [api-reference.md](./api-reference.md) is not published through `/docs/` or listed in `PUBLIC_DOCS`.
 
@@ -10,7 +10,7 @@ Admin endpoints are authenticated only on the `ops-api.pharos.watch` host. Cloud
 
 Mutating admin calls also require `X-Pharos-Admin: 1` after Cloudflare Access authentication. Browser proxy calls forward that header from the operator UI and additionally require same-origin `Origin`; direct `ops-api` automation must send the header along with the Access service-token credentials.
 
-The website-internal read lane is separate from Cloudflare Access. `site-api.pharos.watch` accepts allowlisted `GET` public-read paths plus the internal `POST /api/telegram-adoption` mutation and requires `X-Pharos-Site-Proxy-Secret`, which Pages proxies inject server-to-server from `SITE_API_SHARED_SECRET`. All Pages hosts — production and preview — must configure `SITE_API_ORIGIN=https://site-api.pharos.watch` (or a Worker preview URL that accepts the site-data secret); the Pages proxies fail closed with `500` when that binding is missing. The `/_site-data/*` lane additionally accepts requests only when the browser `Origin` header (or `Referer` as a fallback) matches `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, or a subdomain of `stablecoin-dashboard.pages.dev`. Public browser traffic must not call `site-api.pharos.watch` directly.
+The website-internal read lane is separate from Cloudflare Access. `site-api.pharos.watch` accepts allowlisted `GET` public-read paths plus the internal `POST /api/telegram-adoption` mutation and requires `X-Pharos-Site-Proxy-Secret`, which Pages proxies inject server-to-server from `SITE_API_SHARED_SECRET`. All Pages hosts — production and preview — must configure `SITE_API_ORIGIN=https://site-api.pharos.watch`; the Pages proxies fail closed with `500` when that binding is missing or is not the canonical HTTPS origin. The `/_site-data/*` lane additionally accepts requests only when the browser `Origin` header (or `Referer` as a fallback) matches the configured `SITE_ORIGIN` / `OPS_UI_ORIGIN` hostnames or the Pages project/preview hostname family in `shared/lib/runtime-origins.ts`. Public browser traffic must not call `site-api.pharos.watch` directly.
 
 Many router-dispatched mutating admin endpoints also support optional `Idempotency-Key` handling. Current idempotent routes are:
 
@@ -25,13 +25,13 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/api-keys/:id/deactivate`
 - `POST /api/api-keys/:id/rotate`
 
-When an `Idempotency-Key` is supplied on one of those routes, the worker fingerprints the request and reserves the key with owner/generation fencing before execution. Terminal responses echo `Idempotency-Key` plus `X-Idempotent-Replay`; a stored terminal response is replayed without rerunning the action, while reuse with a different request fingerprint returns `409`. Only an abandoned reservation whose execution never started can be reclaimed after its takeover window.
+A nonempty `Idempotency-Key` of at most 128 characters (after trimming) enables request fingerprinting and owner/generation-fenced reservation on those routes; an empty or overlong key is ignored. Terminal responses echo `Idempotency-Key` plus `X-Idempotent-Replay`. Replays do not rerun the action; a different request fingerprint returns `409`. Only an abandoned reservation whose execution never started can be reclaimed after its takeover window.
 
 Once execution has been marked as started, an unconfirmed outcome is never retried automatically. An in-flight duplicate, a handler throw after that point, or a terminal response that cannot be confirmed as persisted returns `503` with `error: "execution_unknown"`; subsequent requests with the same key also return `503` with `X-Idempotent-Replay: true` and do not invoke the handler again. `execution_unknown` rows are exempt from the seven-day terminal TTL, so the original key can never age out and reserve a fresh row. Operators must reconcile whether the external effect occurred before deciding whether to submit a new idempotency key.
 
 A stale started reservation stays terminally `execution_unknown`: it is never handed back for re-execution unless the action ships a reconciliation callback that proves the original effect did not commit. No API-key or feedback action ships one today, so those keys are operator-reconciled.
 
-API-key mutations are compare-and-swap writes. `PATCH /api/api-keys/:id` sets only the fields present in the validated body and is fenced on the key prefix observed by the request, so a concurrent deactivation is never undone by an unrelated `{name}` update; `POST /api/api-keys/:id/rotate` is fenced on the same prefix in the batch that moves the donor claim. When the fence does not match, both return `409` (`API key changed concurrently; re-read it before updating`/`… before rotating`) instead of a silently lost write, and the caller must re-read the key before retrying.
+API-key mutations are compare-and-swap writes. `POST /api/api-keys/:id/update` sets only the fields present in the validated body and is fenced on the key prefix observed by the request, so a concurrent deactivation is never undone by an unrelated `{name}` update; `POST /api/api-keys/:id/rotate` is fenced on the same prefix in the batch that moves the donor claim. When the fence does not match, both return `409` (`API key changed concurrently; re-read it before updating`/`… before rotating`) instead of a silently lost write, and the caller must re-read the key before retrying.
 
 The worker’s idempotent admin route helpers now authenticate first and only then enter idempotency bookkeeping. That keeps the helper contract aligned with its name and prevents future admin endpoints from accidentally becoming “idempotent but unauthenticated” through wrapper misuse.
 
@@ -52,7 +52,7 @@ Preferred operator access now splits by surface:
 
 Endpoint sections below do not repeat the CLI header pair. Unless an endpoint says otherwise, direct operator examples assume the `ops-api` host plus those two Cloudflare Access service-token headers.
 
-Historical rebuilds and staged captures run through `worker/scripts/one-shot-backfill.ts`, not HTTP or the dashboard; all twelve former routes are unregistered. Recurring `backfill-dews`, blacklist remediation/reset, digest and yield-audit triggers remain here with their existing authentication/idempotency contracts. CLI writes use Wrangler authentication and are not covered by HTTP idempotency reservations. Ordinary jobs use D1 commands; jobs requiring destructive multi-statement atomicity additionally require `--allow-atomic-import`, which acknowledges temporary live D1 unavailability. See [One-shot historical backfills](./runbooks/one-shot-backfills.md#operator-contract), [transport safety](./runbooks/one-shot-backfills.md#transport-safety) and [interruption/receipt cleanup](./runbooks/one-shot-backfills.md#interruption-and-cleanup) for the command inventory, unchanged job parameter/result contracts and reconciliation procedure.
+Historical rebuilds and staged captures run through `worker/scripts/one-shot-backfill.ts`, not HTTP or the dashboard; their former routes are unregistered. Recurring `backfill-dews`, blacklist remediation/reset, digest and yield-audit triggers remain here with their existing authentication/idempotency contracts. CLI writes use Wrangler authentication and are not covered by HTTP idempotency reservations. Ordinary jobs use D1 commands; jobs requiring destructive multi-statement atomicity additionally require `--allow-atomic-import`, which acknowledges temporary live D1 unavailability. See [One-shot historical backfills](./runbooks/one-shot-backfills.md#operator-contract), [transport safety](./runbooks/one-shot-backfills.md#transport-safety) and [interruption reconciliation](./runbooks/one-shot-backfills.md#interruption-and-cleanup) for the job registry and contracts.
 
 ### `GET /api/status`
 
@@ -60,7 +60,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 
 Since 2026-09-27 dedicated asset-scoped circuit outages no longer count as source-wide degradation; the shared `protocol-redeem` circuit remains source-wide. The `priceSourceHealth.sourceDistribution` vocabulary now includes all six previously omitted registry buckets: `kava-pricefeed`, `aerodrome-onchain`, `velodrome-onchain`, `mento-fpmm`, `mento-broker`, and `protocol-redeem-cached-rate`. A bucket's availability in the contract does not imply that a current asset uses that source.
 
-**Response shape:** `StatusResponse` (exported through `shared/types/index.ts`). The JSON below is illustrative; the canonical list lives in `shared/types/status/response.ts`. Retained diagnostics include yield/publication/provider/dependency health, canaries, reserve drift and reserve composition. The duplicate static custody warning and unmatched mint/burn circulation comparison are retired without response aliases.
+**Response shape:** `StatusResponse` (exported through `shared/types/index.ts`). The text block below is an illustrative excerpt, not a schema-valid fixture or exhaustive payload; required fields are omitted. Use `shared/types/status/response.ts` for the complete contract and `shared/types/pricing-source-health.ts` for distribution buckets. Retained diagnostics include yield/publication/provider/dependency health, canaries, reserve drift and reserve composition.
 
 The legacy top-level projections `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and the duplicate `alertBroker` block are intentionally omitted from `/api/status`. The retired alert-broker summary is also absent from `/api/health`; producer/provider diagnostics remain in the `sync-stablecoins` cron's latest-run metadata for operator inspection. Retained status sections are validated for their required fields and malformed sections fail closed at the admin client boundary.
 
@@ -174,7 +174,7 @@ Cron terminal execution and observed quality are independent: `degradedCrons` co
   "sectionErrors": {},
   "canaries": {
     "checkedAt": 1771856453,
-    "status": "healthy",
+    "status": "degraded",
     "latestRunAt": 1771856400,
     "maxAgeSec": 7200,
     "totalChecks": 6,
@@ -313,19 +313,7 @@ Cron terminal execution and observed quality are independent: `degradedCrons` co
     "authoritativeFreshCoverageRatio": 0.83
   },
   "priceSourceHealth": {
-    "sourceDistribution": {
-      "coingecko": 14,
-      "coingecko+defillama-list": 118,
-      "defillama": 10,
-      "defillama-list": 0,
-      "protocol-redeem": 1,
-      "defillama-contract": 4,
-      "coinmarketcap": 2,
-      "dexscreener": 1,
-      "geckoterminal": 0,
-      "cached": 4,
-      "missing": 3
-    },
+    "sourceDistribution": { ... },
     "sourceDepthDistribution": {
       "0": 3,
       "1": 15,
@@ -386,13 +374,7 @@ Cron terminal execution and observed quality are independent: `degradedCrons` co
       "thresholdState": "normal",
       "crossedThresholdPercent": null,
       "nextThresholdPercent": 60,
-      "sampleCount": 72,
-      "forecastBasis": "linear-30d",
-      "forecastSpanHours": 71,
-      "growthBytesPerDay": 12000000,
-      "nextThresholdAt": 1803605467,
-      "exhaustionAt": 1832405467,
-      "daysUntilExhaustion": 700.9
+      "forecastBasis": "linear-window"
     }
   },
   "liquidityHealth": {
@@ -490,13 +472,13 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `summary.availabilityImpactingUnhealthyCrons` and `summary.availabilityImpactingCronErrors` count only cron jobs tagged `statusImpact="critical"` in `shared/lib/cron-jobs.ts`. `summary.watchUnhealthyCrons` counts the watch-tier jobs that remain visible but do not degrade `availabilityStatus` on their own.
 
-`summary.availabilityImpactingConsecutiveCronErrors` is the subset of `availabilityImpactingCronErrors` whose most recent 2+ runs are **all** `error`. A single transient critical-cron error increments `availabilityImpactingCronErrors` (and sets `availabilityStatus` to `degraded`), but only a `≥2`-consecutive streak increments `availabilityImpactingConsecutiveCronErrors` and escalates `availabilityStatus` to `stale`. This transient-vs-sustained split prevents rare upstream flakes (e.g. DefiLlama returning a truncated response body) from flipping public state on a single bad sample.
+`summary.availabilityImpactingConsecutiveCronErrors` counts critical jobs whose two latest required attempts are `error`. Generic neutral skips do not reset that streak; a newer proven-satisfied skip supersedes the error. A fresh isolated critical error degrades availability; a two-attempt streak makes it stale. Independently, two availability-impacting unhealthy jobs also make availability stale.
 
 `summary.diagnosticIssueCount` counts best-effort status loader failures such as cache freshness lookups, reserve overview diagnostics, mint/burn diagnostics, and non-stablecoins data-quality subqueries. These issues reduce confidence and appear as info causes, but they do not degrade `availabilityStatus` or `dataQualityStatus` on their own unless all freshness evidence for the affected lane is gone.
 
-`reserveComposition.status` is a derived health signal for live reserve coverage. After bootstrap, it becomes `stale` when `freshCoins === 0`; `degraded` when `freshCoverageRatio < 0.75`, `authoritativeFreshCoverageRatio < 0.5`, `persistentlyStaleIndependentCoins.length > 0`, or reserve capacity pressure is present — `writeTimeoutUncertain > 0`, or a `runBudgetTruncated` run whose deferred share (`deferredCoins / configuredCoins`) is at least `0.25`; and `healthy` otherwise.
+`reserveComposition.status` evaluates the unacknowledged health cohort. Capacity pressure takes precedence and returns `degraded`: `writeTimeoutUncertain > 0`, or `runBudgetTruncated` with raw `deferredCoins / configuredCoins >= 0.25`. Otherwise bootstrap or an empty health cohort is `healthy`; zero health-fresh coins is `stale`; coverage ratios below `0.75` / `0.5` or an unacknowledged persistently stale independent feed are `degraded`; the remainder is `healthy`.
 
-`reserveComposition.freshCoverageRatio` is `freshCoins / configuredCoins`. `reserveComposition.authoritativeFreshCoverageRatio` counts only stronger evidence cohorts (`independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`) over `configuredCoins`.
+Coverage ratios use `healthFreshCoins` / `healthConfiguredCoins` and `healthAuthoritativeFreshCoins` / `healthConfiguredCoins`, falling back to raw cohort counts when health fields are absent. Matched feed reviews exclude their assets from these health counts, not raw diagnostics. A fully acknowledged nonempty cohort has ratios `1`; a genuinely empty cohort has `0`. See `evaluateReserveCompositionStatus` in `worker/src/lib/status/evaluation-rules.ts`.
 
 `reserveComposition.runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` expose the latest live-reserve deferred-tail cursor when the internal sync budget stopped the run before the queue tail. `persistentlyStaleIndependentCoins` lists independent feeds whose latest source has been failing beyond the persistent-stale window. `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path and could not be proven authoritative by readback.
 
@@ -523,7 +505,7 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 - `acceptanceDefinition` is the literal `telegram_bot_api_accepted_not_user_receipt`. Fields such as `planToTelegramAcceptance`, `telegramAccepted`, and `telegramAcceptanceRate` mean Telegram's Bot API accepted a send request. They are not evidence that an end user received, opened, or read the message.
 - `rollup` contains the bounded window, evidence age, detection-to-plan and plan-to-acceptance latency, acceptance-before-TTL coverage, authoritative outcomes, preference-change cancellations, unresolved backlog buckets, observed errors, execution-unknown outcomes, and dead letters. It is `null` on query failure; failure never becomes an all-zero or healthy rollup.
 
-`sectionErrors` is a machine-readable map of subsection loader failures. When an individual status subsection fails (for example Telegram stats, discovery backlog, CoinGecko price drift, D1 usage telemetry, liquidity health, reserve drift, or mint/burn reconciliation), `/api/status` still returns `200`, keeps the unaffected sections intact, and records the degraded subsection under `sectionErrors` with a stable `code` plus an operator-facing sanitized `message`. Raw exception text, SQL fragments, and table names stay in logs, not in the response body.
+`sectionErrors` is a machine-readable map of subsection loader failures. When an individual status subsection fails (for example Telegram stats, CoinGecko price drift, D1 usage telemetry, liquidity health, reserve drift, or mint/burn reconciliation), `/api/status` still returns `200`, keeps the unaffected sections intact, and records the degraded subsection under `sectionErrors` with a stable `code` plus an operator-facing sanitized `message`. Raw exception text, SQL fragments, and table names stay in logs, not in the response body.
 
 `crons["dispatch-telegram-alerts"].lastRun.metadata` now carries a richer delivery breakdown, including fields such as `freshAttempted`, `freshSent`, `freshRetryQueued`, `freshPermanentFailures`, `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDeferred`, `pendingRateLimited`, `pendingRetryAfterSec`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `launch`, `suppressedMethodologyChanges`). Rows written before this breakdown (and recovery re-writes of them) can lack the fresh-side counters while still carrying the pending-side ones; the admin comms model reads an absent `freshRetryQueued` as `0` only when that dispatch completed `ok` and `pendingRetryQueued` is present, and keeps delivery `Unknown` for any other incomplete shape.
 
@@ -542,7 +524,7 @@ When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue,
 
 `probe.internal`, `probe.external`, and `probe.internalExternalDiscrepancy` are optional because legacy `status_probe_runs` rows did not persist split-plane details. New rows compare rotating router diagnostics against three production-domain HTTP health/gate targets; these are unequal populations, not paired-route outage proof. Without an execution context, the internal-labelled cohort uses HTTPS and reports `probeMode: external-http`. Site health requires the trimmed configured shared secret; otherwise the site target measures only an expected `401`/`403` gate. Ops accepts `302`/`403` blocking responses without attesting redirect Location/Access identity or authenticated availability. There is no condition-specific probe/discrepancy push notification; escalation is operator-driven. Failed discrepancy reads expose `consecutiveDivergent: null`, not zero, and do not reset persisted streaks.
 
-`datasetFreshness` covers the key operator-visible datasets written by the pipeline: cache-backed stablecoins, blacklist, mint/burn, supply snapshots, safety-grade history, yield, depeg/dews tables, daily digest, and discovery backlog timestamps.
+`datasetFreshness` covers pipeline datasets defined by `DatasetFreshnessSchema` in `shared/types/status/core.ts` and `DATASET_FRESHNESS_TARGETS` in `worker/src/lib/status/derived-data.ts`; it does not include discovery-backlog timestamps.
 
 `dataQuality.repairDebt` summarizes low-priority repair/backfill backlog separately from foreground publication health. It reports `status`, `openCount`, `oldestAgeSec`, `byKind`, `availabilityEscalated`, `nextRunnerDueAt`, and `source` from active `worker_repair_tasks` rows. The legacy DDR-specific `ddrRepairDebt*` fields remain populated for compatibility from active DDR task `subject_id`/`payload_json` details and continue to drive the `ddr_repair_debt_present` data-quality warning.
 
@@ -554,9 +536,9 @@ Malformed CoinGecko batches fail the whole diagnostic visibly rather than publis
 
 `d1Usage` is permanent admin-only D1 diagnosis, normally reused from the 15-minute self-check raw snapshot (30-minute TTL), with live fallback when missing/stale. Dedicated Cloudflare bindings enable concurrent REST database info and trailing-24h `d1AnalyticsAdaptiveGroups` GraphQL reads; missing config yields null and failures yield `sectionErrors.d1Usage`. Preserve each `checkedAt` and 24-hour window rather than equating browser polls with upstream reads. Hourly capacity observations coalesce in UTC-hour rows; live fallback may refresh that history. `capacity` contains authoritative current 60/75/90% utilization thresholds and advisory 24h/72h/7d/30d regressions with sample spans; `conservativeWindow` means shortest valid window, not maximum slope or guaranteed runway. Missing/malformed/expired/future-clock capacity degrades public health with sanitized warnings, never exact private size/forecast fields. API-only `tableGrowth` contains daily reviewed-name/family row counts/deltas, nullable timestamp attribution, top growers and `failedTables` for unreadable/invalid counts; same-day cache reuse is not a separate claim, its serving age is at most 50 hours, and rows are not table byte sizes. The D1 card does not render per-table census details.
 
-`liquidityHealth` is derived from the latest `sync-dex-liquidity` cron metadata and summarizes row coverage, value coverage, major-asset coverage, failed sources, and current/previous coverage-class distribution for the operator dashboard.
+`liquidityHealth` uses the newest `sync-dex-liquidity` run carrying `metadata.sourceCoverage` within twice the expected interval; newer cadence-reuse runs without coverage are skipped. Missing or older evidence yields `null`. `sourceRunStartedAt` preserves the selected measurement clock. The projection summarizes row/value/major-asset coverage, failed sources, and current/previous coverage classes.
 
-`yieldHealth` is derived only from existing yield cache rows and cron metadata: `yield-rankings`, per-family `yield:supplemental-sources:v1:*`, `yield-coverage-audit`, and `crons["sync-yield-data"]`. `rankingStatus` follows the post-V9 `sync-yield-data` cache runway (`>8x` degraded, `>12x` stale); missing or stale rankings are public-critical because `/api/yield-rankings` and `/yield/` depend on them. `rankingCountDelta` and `previousRankingCount` come from `sync-yield-data` source-coverage metadata, with a fallback to the top-level severe-coverage-guard metadata when publication is blocked before normal source coverage is assembled. Safety coverage is admin-watch unless it falls below `0.75`, supplemental family cache age is admin-watch above 6h, and coverage-audit age is admin-watch above 45d. `yieldHealth.benchmarkRegistry` evaluates every benchmark key used by published rows, including row counts and fallback-selection counts; any used fallback is degraded, while a missing or older-than-48h used benchmark is stale. The legacy `yieldHealth.benchmark` field remains the USD-only compatibility view. `yieldHealth.supplemental` reports `familyCount`, `freshFamilyCount`, `degradedFamilyCount`, `staleFamilyCount`, `missingFamilyCount`, and a `families` map keyed by source family with per-family age/source-count/status; a fresh all-empty family snapshot is valid state, while no valid family rows means the supplemental section is unavailable/stale based on family evidence. `sourceRiskCoverage` reports backend-only coverage/null rates for nested `sourceRisk.*` fields across best and alternate ranking rows; `"unknown"` venue tiers count as null-equivalent coverage gaps. Loader failures return `yieldHealth: null` and `sectionErrors.yieldHealth`.
+`yieldHealth` is derived only from existing yield cache rows and cron metadata: `yield-rankings`, per-family `yield:supplemental-sources:v1:*`, `yield-coverage-audit`, and `crons["sync-yield-data"]`. `rankingStatus` uses the `yield-data` ratio override (`>2x` degraded, `>4x` stale); missing or stale rankings are public-critical because `/api/yield-rankings` and `/yield/` depend on them. `rankingCountDelta` and `previousRankingCount` come from `sync-yield-data` source-coverage metadata, with a fallback to the top-level severe-coverage-guard metadata when publication is blocked before normal source coverage is assembled. Safety coverage is admin-watch below `0.75`; supplemental age uses producer-owned per-family budgets from `getSupplementalFamilyStaleThresholdSec`, not a uniform 6h cutoff; coverage-audit age is admin-watch above 45d. `yieldHealth.benchmarkRegistry` evaluates every benchmark key used by published rows, including row counts and fallback-selection counts; any used fallback is degraded, while a missing or older-than-48h used benchmark is stale. The legacy `yieldHealth.benchmark` field remains the USD-only compatibility view. `yieldHealth.supplemental` reports `familyCount`, `freshFamilyCount`, `degradedFamilyCount`, `staleFamilyCount`, `missingFamilyCount`, and a `families` map keyed by source family with per-family age/source-count/status; a fresh all-empty family snapshot is valid state, while no valid family rows means the supplemental section is unavailable/stale based on family evidence. `sourceRiskCoverage` reports backend-only coverage/null rates for nested `sourceRisk.*` fields across best and alternate ranking rows; `"unknown"` venue tiers count as null-equivalent coverage gaps. Loader failures return `yieldHealth: null` and `sectionErrors.yieldHealth`.
 
 These are permanent operator diagnostics with no pending promotion. Hydration reads the canonical compact Safety Score index/health, respects held/error branches and both original yield/safety 24-hour clocks; index integrity failures never permit publish-time fallback. `liveSafetyHydration` reports both clocks and the fallback budget. `pysInputs` is publisher metadata, not table reconciliation: both finite nonnegative integer counters and a nonzero denominator are required, otherwise status/rate remain unknown/null with a reason and source run. Comparison-anchor examples retain `maxAgeSeconds` and source run; oldest means oldest overall anchor, not oldest stale anchor.
 
@@ -633,13 +615,13 @@ Malformed numeric params return `400`; out-of-range numeric params are clamped t
 - `generatedAt` — Unix seconds when the response was generated
 - `window` — requested `from`/`to`, `durationSec`, `bucketSizeSec`, `routeLimit`, `apiKeyLimit`, and current `retentionDays`
 - `totals` — aggregate `siteRequests`, `externalRequests`, `totalRequests`, `siteSharePct`, `externalSharePct`
-- `siteDelivery` — Pages delivery-path counters (`pagesCacheHits` is historical-only; current traffic uses `pagesUpstreamFetches`, `pagesUpstreamTimeouts`, or `pagesUpstreamErrors`) plus `publicApiSiteRequests`
+- `siteDelivery` — `totalSiteRequests` plus Pages delivery counters and `publicApiSiteRequests` (`pagesCacheHits` is historical-only; current Pages traffic records upstream fetch/timeout/error counters)
 - `lanes[]` — worker-load split by `lane` (`public-api`, `site-api`) with the same site/external counters
 - `routes[]` — normalized per-route breakdown sorted by total demand volume
 - `buckets[]` — time-series rollups using the requested `bucketSec`
 - `keyedPublicApi` — summary of authenticated protected `public-api` traffic (`keyedRequests`, `unkeyedRequests`, share percentages, total keys in window, and truncation metadata)
 - `apiKeys[]` — top API keys by keyed request volume with masked token, traffic class, active/expiry metadata, rate limit, request count, and keyed/public-api share percentages
-- `scope` — explicit booleans describing total site demand, worker load, and whether the selected historical window contains retired Pages cache-hit telemetry
+- `scope` — measurement-inclusion flags for total site demand, worker load, and retired Pages cache-hit telemetry; `includesPagesProxyCacheHits` is always `true`, not evidence that cache-hit rows exist in the window
 
 ### `GET /api/api-keys`
 
@@ -704,16 +686,16 @@ Admin-only API key creation route.
 | Field                | Type                   | Required | Description                                                                                                                                 |
 | -------------------- | ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`               | `string`               | Yes      | Display name for the key                                                                                                                    |
-| `ownerEmail`         | `string`               | No       | Optional operator / owner contact                                                                                                           |
-| `tier`               | `"standard" \| "self-serve" \| "donor"` | No       | Issuance tier; defaults to `"standard"`. `"self-serve"` is the retired self-serve lane's tier (issuance path removed 2026-09-29; existing keys drain until their 60-day expiry), and `"donor"` is written by the supporter-key claim at `POST /api/donor-key-claims` |
-| `rateLimitPerMinute` | `integer`              | No       | Per-key threshold (`1`–`10000`, default `120`)                                                                                              |
+| `ownerEmail`         | `string \| null`       | No       | Optional owner contact; null clears it. |
+| `tier`               | `ApiKeyTier \| null`   | No       | Vocabulary in `shared/types/api-keys.ts`; omission/null defaults to `"standard"`. |
+| `rateLimitPerMinute` | `integer \| null`      | No       | Per-key threshold (`1`–`10000`); omission/null defaults to `120`. |
 | `expiresAt`          | `integer \| null`      | No       | Unix timestamp when the key should expire. Omit to use the default 90-day expiry. Send `null` only for a deliberate non-expiring exception. |
 
 **Response shape:** `ApiKeyCreateResponse`
 
 **Success status:** `201 Created`
 
-`token` is returned only once. Persist it immediately; later list/read paths expose only `maskedToken`. `key.expiresAt` in the response reflects the stored expiry after the default-90-day fallback is applied.
+`token` is returned once, never persisted for keyed replay (`tokenUnavailableOnReplay: true`, `recovery`). Save it immediately or rotate the identified key. `key.expiresAt` reflects the stored default or explicit expiry.
 
 ### `POST /api/api-keys/:id/update`
 
@@ -730,7 +712,7 @@ Accepted fields:
 - `isActive`
 - `expiresAt`
 
-`trafficClass` is no longer accepted on either mutation body. It is an attribution label only — the real request lane is derived per request in `worker/src/handlers/http/gates.ts` — so issuance always writes `"external"` and existing rows keep whatever value they were created with.
+`trafficClass` is ignored, not writable; a body with no recognized update fields returns `400`. The request lane is derived in `worker/src/handlers/http/gates.ts`, so issuance writes `"external"` and existing rows retain their attribution label.
 
 **Response shape:** `ApiKeyMutationResponse`
 
@@ -738,17 +720,19 @@ Send `expiresAt: null` only for a deliberate non-expiring exception. Existing ke
 
 ### `POST /api/api-keys/:id/deactivate`
 
-Admin-only hard deactivation for an existing API key. This sets `isActive=false`; the secret cannot be used afterward.
+Admin-only deactivation sets `isActive=false` in D1 and clears the current isolate's auth cache. Previously cached standard-key GETs on another isolate may remain authorized for the remaining five-second cache TTL; donor/self-serve keys bypass that cache.
 
 Deactivation does not erase the row, wallet-bearing name, or usage metadata. For a donor privacy request, verify control of the wallet and resolve the exact donor key ID and claim prefix through the private operator lane. Deactivate that key first. Then use an operator-reviewed D1 transaction/batch restricted to that ID to delete its rows from `api_key_rate_limit`, `api_key_request_stats`, and `api_key_audit_log`, followed by its `api_keys` row. Read back that these rows are absent and that the original `api_key_donor_claims` row remains unchanged. Do not put the address or tokens in command output, audit detail, or a public feedback issue. There is no public deletion endpoint.
 
 Keep `api_key_donor_claims` as the one-claim fence: it retains the address, prefix, and claim time even after key deletion, and another claim returns `409` when the key row is missing. Tell the requester exactly what remains; this is partial erasure. Removing the claim row is a separate, explicitly authorized reissuance decision, because an eligible wallet can then obtain a new key. The public donation ledger and any separately retained provider backups are outside this key-row deletion procedure; do not promise they have been erased.
 
+Keyed create/rotate replay records in `admin_idempotency_keys.response_body` can retain `name` (including the donor address) and `ownerEmail` after the listed rows are deleted. Disclose that retention; do not delete idempotency fences to claim erasure, especially permanent `execution_unknown` records.
+
 **Response shape:** `ApiKeyMutationResponse`
 
 ### `POST /api/api-keys/:id/rotate`
 
-Admin-only secret rotation. The old token stops working immediately and a new plaintext token is returned once. Rotation does not accept expiry input and preserves the current `expiresAt`.
+Admin-only rotation replaces the D1 secret and clears local auth cache; the standard-key cross-isolate TTL caveat above still applies. Plaintext is returned once; keyed replays return `tokenUnavailableOnReplay` and `recovery`, not `token`. No expiry input is accepted; `expiresAt` is preserved.
 
 For donor keys, rotation updates the claim prefix and key material in one atomic D1 batch: both writes commit or neither does. Concurrent rotations keep the claim mapped to the surviving key prefix.
 
@@ -756,7 +740,7 @@ Donor eligibility uses Safety Score grades at claim time, not donation time. Lat
 
 **Response shape:** `ApiKeyRotateResponse`
 
-Supporter keys never rotate by self-service: re-signing the claim message returns `409`, so a donor who lost a key asks through the private channel (Telegram DM to `@TokenBrice`, secondary X DM to `@PharosWatch`; constants in `shared/lib/public-api-contract.ts`), the operator verifies the donating wallet, and rotates it here. The same channel handles key-record removal requests. The key is named `donor <full lowercase address>`, so the admin list is searchable by the full address.
+Supporter keys never rotate by self-service: re-signing an active or orphaned claim returns `409`; a deactivated claim returns `403`. A donor who lost a key uses the private channel (Telegram DM to `@TokenBrice`, secondary X DM to `@PharosWatch`; constants in `shared/lib/public-api-contract.ts`); the operator verifies the wallet and rotates it here. The same channel handles removal requests. The key name `donor <full lowercase address>` is searchable in the admin list.
 
 Correcting the ledger is a two-step operator action. When removing or correcting a donation row in `shared/data/funding/donations.json` leaves a wallet with less than $10 in qualifying stablecoin donations, the runtime does not revoke anything on its own, because eligibility is only read at claim time. Find the `donor` key whose name carries that address and deactivate it with `POST /api/api-keys/:id/deactivate`. Leave the `api_key_donor_claims` row in place: it keeps that address from claiming again, and a re-claim attempt against a deactivated key returns `403` rather than issuing a second key.
 
@@ -772,9 +756,9 @@ Backtest harness that replays DEWS over a curated set of historical depeg onsets
 
 **Authentication:** admin only (same Cloudflare Access gate as the rest of `/api/backfill-dews`).
 
-**Granularity:** `"daily"`. The harness reads `stress_signal_history` rows (one snapshot per UTC day) over a 14-day window ending at each anchor's `onsetAt` and looks for the first `ALERT` / `WARNING` / `DANGER` band inside that window.
+**Granularity:** `"daily"`. The harness reads `stress_signal_history` over the inclusive interval `[onsetAt - 14 days, onsetAt]` and selects the first `ALERT` / `WARNING` / `DANGER` snapshot. An onset-time snapshot counts, with zero lead time.
 
-**Response**
+**Response excerpt** (additional metrics/cohorts and negative controls come from `handleBacktestMetrics` in `worker/src/api/backfill-dews.ts`)
 
 ```json
 {
@@ -796,7 +780,7 @@ Backtest harness that replays DEWS over a curated set of historical depeg onsets
 
 | Field             | Type                         | Description                                                                                     |
 | ----------------- | ---------------------------- | ----------------------------------------------------------------------------------------------- |
-| `detectionRate`   | `number`                     | Fraction of anchors where DEWS surfaced at least `ALERT` before `onsetAt` (`0` if no anchors)   |
+| `detectionRate`   | `number`                     | Fraction of anchors with at least `ALERT` in the inclusive lookback ending at `onsetAt` (`0` if no anchors) |
 | `leadTimeDaysP50` | `number \| null`             | 50th-percentile lead time in days across detected anchors; `null` when no anchors were detected |
 | `leadTimeDaysP90` | `number \| null`             | 90th-percentile lead time in days across detected anchors; `null` when no anchors were detected |
 | `granularity`     | `"daily"`                    | Snapshot granularity used to compute lead time                                                  |
@@ -808,7 +792,7 @@ Backtest harness that replays DEWS over a curated set of historical depeg onsets
 | ---------------- | ------------------------------------------ | --------------------------------------------------------------------------------- |
 | `stablecoinId`   | `string`                                   | Pharos stablecoin ID of the anchor                                                |
 | `onsetAt`        | `number`                                   | Unix seconds of the curated depeg onset                                           |
-| `detected`       | `boolean`                                  | Whether DEWS reached at least `ALERT` within the 14-day pre-onset window          |
+| `detected`       | `boolean`                                  | Whether DEWS reached at least `ALERT` in the inclusive 14-day interval ending at onset |
 | `leadTimeDays`   | `number \| null`                           | Days between the first elevated band and `onsetAt`; `null` if `detected=false`    |
 | `firstAlertBand` | `"ALERT" \| "WARNING" \| "DANGER" \| null` | Band of the first elevated snapshot inside the window; `null` if `detected=false` |
 | `alertDays`      | `number`                                   | Count of elevated (`ALERT`/`WARNING`/`DANGER`) snapshots inside the 14-day window  |
@@ -817,7 +801,7 @@ Backtest harness that replays DEWS over a curated set of historical depeg onsets
 
 ### `GET /api/backfill-dews?repair=refresh-current&dry-run=true`
 
-Dry-run preview for the current-state DEWS repair. Returns the exact set of stablecoins that would be republished under the live `$1M` DEX trust floor, plus source-coverage / validation diagnostics from the preview computation.
+Current-state DEWS repair preview under the live `$1M` DEX trust floor, with candidate IDs and source/validation diagnostics. It is not an exact execution plan: execution rereads inputs and excludes malformed-core-input assets that preview can retain.
 
 ### `POST /api/backfill-dews?repair=refresh-current`
 
@@ -825,7 +809,7 @@ Immediately republishes current `stress_signals` rows under the live `$1M` DEX t
 
 ### `GET /api/backfill-dews?repair=prune-history&dry-run=true`
 
-Dry-run preview for bounded DEWS history pruning. Returns the exact `stress_signal_history` rows that fall inside the requested window, optional `stablecoin` filter scope, and the current post-window history boundary.
+Bounded DEWS prune preview: returns `totalMatchingRows`, an up-to-50-row `candidateRowsSample`, optional `stablecoin` scope, and the post-window history boundary.
 
 ### `POST /api/backfill-dews?repair=prune-history`
 
@@ -849,7 +833,7 @@ An optional JSON body instead updates exactly one editorial gate: `{"styleGateMo
 
 Use a unique `Idempotency-Key` for each deliberate action. A scoped mode can commit before the subsequent effective-mode read or response fails; an HTTP error does not imply rollback. Reconcile both exact mode keys and the original idempotency record under ADR-27 before a new mutation. An explicit force-run can likewise have an ambiguous enqueue result; reconcile its original intent rather than manufacturing another generation. See [blocked-digest-edition.md](./runbooks/blocked-digest-edition.md#promote-or-roll-back-enforcement) for readiness and kind-local rollback.
 
-**Response**
+**Response excerpt** (the full response also includes `styleGateMode: {daily, weekly}`)
 
 ```json
 {
@@ -881,7 +865,7 @@ Execution is synchronous: keep the HTTP request open. The route does not launch 
 | `503` | Audit returned a non-healthy result, for example unavailable rankings or safety inputs. The response metadata explains why; a prior report may remain cached. |
 | `500` | The audit threw or persistence failed. Check `crons["yield-coverage-audit"]` before retrying. |
 
-The response contains `ok`, `job`, `status`, `itemCount`, and the cron's JSON-encoded `metadata`. Successful publication replaces only the audit report and review-queue output; this action does not modify hourly yield-source configuration, ranking rows, or history.
+The response contains `ok`, `job`, `status`, `itemCount`, and JSON-encoded cron `metadata`. Publication replaces the audit report and review queue, not hourly yield-source configuration, ranking rows, or yield history. Execution does record cron/producer history.
 
 ```bash
 curl --fail-with-body --max-time 360 -X POST \
@@ -1125,7 +1109,7 @@ The 2026-10-05T22:30Z initial dual-check smoke completed in 54 seconds with 517 
 
 The 2026-10-05T23:26Z two-target diagnostic rerun reproduced Dwellir `latest`-category `rpc-error` failures on the first numeric `totalSupply` call at each sentinel's R=H2+1: Etherlink returned `-32603` / “No state available for block 54982591”; Blast returned `-32000` / “header not found” for block 41216502. Both known-head hash reads succeeded and both sentinels were fresh. These unavailable ahead-of-head numeric states are indeterminate, not stale or a probe defect. The keyless call traces are retained in `agents/dwellir-switch/raw/impl-stepfail-2026-10-05T23-26-58-507Z.json`; the original full-run summary alone did not retain exact failed methods/classes.
 
-`budget.reason` is `ok` when the ledger is readable and under cap, and otherwise `not-configured`, `provider-budget-exhausted`, or `ledger-unreadable`; `budget.usedCredits` is `null` when the ledger row could not be read. `circuit` is `null` until the `dwellir-evm` circuit has been written at least once. `observation` is `null` with `observationError` set when the stored parity samples could not be read — that is still a `200`, because a degraded sample store is exactly the state an operator needs to see, and the budget and circuit sections remain live diagnostics.
+`budget.reason` is `ok` when the ledger is readable and under cap; otherwise `not-configured`, `provider-budget-exhausted`, or `ledger-unreadable`. `budget.usedCredits` is `null` when the key is unconfigured or the ledger is unreadable. An absent circuit row yields a closed `circuit` object with zero failures and `updatedAtSec: null`; `circuit: null` means its read failed. `observation` is `null` with `observationError` set when stored parity samples cannot be read. Diagnostic failures still return `200`, preserving independently available budget/circuit evidence.
 
 **Error responses:** `401` without a valid admin credential, as for every ops route. Diagnostic failures inside the report are reported in the body rather than as an HTTP error status.
 
@@ -1137,16 +1121,16 @@ Admin-only bounded remediation endpoint for recoverable **EVM** blacklist rows. 
 
 **Idempotency:** supported via optional `Idempotency-Key`.
 
-**Inputs**
+**Inputs** — Query parameters or JSON body; body overrides follow numeric-query validation.
 
 - `chainId?: string`
 - `stablecoin?: BlacklistStablecoin` from the shared `BLACKLIST_STABLECOINS` set
 - `limit?: number` default `25`; max `200` in dry-run mode, max `100` in write mode (`dryRun: false`) so updates commit in one atomic D1 batch — a larger write-mode limit returns `400`
 - `dryRun?: boolean` default `true`
 - `onlyMissingProvenance?: boolean` default `false`; set `true` to restrict the pass to legacy rows missing contract/config provenance
-- `maxAttempts?: number` default `25`
+- `maxAttempts?: number` default `25`, clamped to `0`–`10000`; selects rows with attempt count at most this value, or disables that filter at `0`
 
-**Dry-run response**
+**Dry-run response excerpt** (also returns `filters`, `truncated`, budget diagnostics, and `sample`)
 
 ```json
 {
@@ -1161,7 +1145,7 @@ Admin-only bounded remediation endpoint for recoverable **EVM** blacklist rows. 
 }
 ```
 
-**Write-enabled response**
+**Write-enabled response excerpt** (also returns `filters`, candidate/resolution counts, truncation/budget diagnostics, and `cacheInvalidation`)
 
 ```json
 {
@@ -1212,7 +1196,7 @@ For browser actions, `actor` is the normalized email from the signature-verified
 
 ### `POST /api/admin-telegram-broadcast`
 
-Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via the standard pending-queue fan-out. Used for maintenance windows or outage notices. Live calls submit one pending-queue message per target chat per message chunk; existing rows with the same dedupe key are updated rather than duplicated. The existing dispatch cron delivers them with the same per-chat rate-limit isolation and wall-clock retry semantics as regular alerts. Every live call writes one row to `admin_action_audit`.
+Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via the pending queue. Live calls submit one message per target chat per chunk; dedupe conflicts update only eligible pending rows, never rows already sending, sent, or execution-unknown. The dispatch cron delivers them with the same per-chat rate-limit isolation and wall-clock retry semantics as regular alerts. Handler-owned audit writes are best-effort; some early rejections are not logged.
 
 **Authentication:** admin (`X-Pharos-Admin: 1` header required).
 
@@ -1275,7 +1259,7 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
 }
 ```
 
-`sample` lists up to the first 5 target chat IDs (sorted ascending) — useful for sanity-checking the scope filter before going live. `targetMessageCount` covers only the fleet rows; when the supplied canary is also in the selected scope, it is excluded from that count. No Bot API call or queue write occurs during dry-run. Successful dry-runs and HTML preflight failures both write admin audit entries.
+`sample` lists up to the first 5 target chat IDs (sorted ascending) — useful for sanity-checking the scope filter before going live. `targetMessageCount` covers only the fleet rows; when the supplied canary is also in the selected scope, it is excluded from that count. No Bot API call or queue write occurs during dry-run. Successful dry-runs and HTML preflight failures both attempt admin audit writes.
 
 **Live response (`dryRun: false`)**
 
@@ -1288,9 +1272,9 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
   },
   "deliveryEstimate": {
     "projectedPendingMessages": 1247,
-    "estimatedDrainTimeSec": 600,
+    "estimatedDrainTimeSec": 300,
     "minimumTtlReserveSec": 900,
-    "remainingTtlReserveSec": 2100,
+    "remainingTtlReserveSec": 2400,
     "hasMaterialTtlReserve": true
   }
 }
@@ -1298,4 +1282,4 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
 
 Before enqueue, live execution requires the admin-delivery pause to be inactive and the bot-wide transport circuit to be closed, claims one admin transport permit, and sends the exact chunks to the private canary. A rejected, uncertain, or incomplete canary prevents all fleet enqueue. `enqueued` reports the number of non-canary chat/chunk messages submitted to the pending queue (`fleetChatCount * chunkCount`). Because the queue uses dedupe upserts, replaying the same broadcast before drain can update existing rows instead of inserting new rows. The dispatch cron drains the queue on its normal cadence.
 
-**Error responses:** `400` for invalid JSON, empty or over-16,000-character `messageHtml`, unknown `scope`, non-boolean `dryRun`, malformed `canaryChatId`, or a live request without `canaryChatId`. `422` for malformed/unsupported Telegram HTML or a canary rejected for formatting/bad-request reasons. `409` when the projected fleet backlog cannot retain the hard 15-minute reserve inside the 45-minute admin TTL, or when admin delivery is operator-paused/the transport circuit is unavailable. `503` covers a transport permit denial or non-formatting canary failure, and `500` means the live Worker has no bot token. Canary failures report `fleetEnqueued: 0`.
+**Error responses:** `400` for invalid JSON, empty or over-16,000-character `messageHtml`, unknown `scope`, non-boolean `dryRun`, malformed `canaryChatId`, or a live request without `canaryChatId`. `422` for malformed/unsupported Telegram HTML or a canary rejected for formatting/bad-request reasons. `409` when the projected fleet backlog cannot retain the hard 15-minute reserve inside the 45-minute admin TTL, or when admin delivery is operator-paused/the transport circuit is unavailable. `503` covers a transport permit denial or non-formatting canary failure; `500` covers a missing live bot token or unhandled failures. Canary failures report `fleetEnqueued: 0`.

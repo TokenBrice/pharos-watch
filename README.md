@@ -74,7 +74,7 @@ npm ci
 npm run dev
 ```
 
-Frontend-only work usually needs only `npm run dev`. Full Worker work needs Cloudflare bindings and provider credentials:
+`npm run dev` starts Next.js plus the local API proxy. The frontend shell runs without credentials, but authenticated live site-data requests need `SITE_API_SHARED_SECRET` in the environment or root `.env.local`; without it the proxy exits and Next.js uses an unauthenticated public-API rewrite. Full Worker work also needs Cloudflare bindings and provider credentials:
 
 ```bash
 cd worker

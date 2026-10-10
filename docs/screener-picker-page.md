@@ -21,7 +21,7 @@ The wizard collects profile, peg, time horizon, depeg tolerance, venue/custody p
 
 The engine is deterministic and client-side. It consumes the shared adapter projection of stablecoins, report cards, peg summary, DEWS, DEX liquidity, yield rankings, and Bluechip ratings. Stablecoin-list and report-card data are critical: failure without retained data produces the typed `selector-data-unavailable` state, with "Adjust answers" and "Start over" recovery controls. Optional source gaps become coverage signals.
 
-Ranking weights are a preference re-weighting over **published domain outputs plus the Safety Score composite** (`selector-v2.0`). A profile vector carries exactly one Safety Score input — the published overall — because V9's own pillars and dependency graph are already inside it; pricing a pillar beside the composite counted the same evidence twice. A vector also spends its peg budget on a single slot, since every peg slot reads the peg domain's PegScore. Individual pillars are still read by exclusion floors, why-keys, and the "what to watch" axis: those re-bin a published output rather than adding it to the blend. Yield-rail selection orders candidates by the user's venue answer and then by published source risk, depth, and freshness; the Selector does not price APY, which the Pharos Yield Score already does. The freshness step fails closed: a non-finite or future-dated capture age scores as maximally stale rather than maximally fresh, the same place `clamp` already sends `NaN`. That is not an engine-version change, because `validateSelectorSnapshot` requires a nonnegative finite `freshness.ageSeconds`, so no storable or replayable snapshot's ordering can differ.
+Ranking weights are a preference re-weighting over **published domain outputs plus the Safety Score composite** (`selector-v2.0`). A profile vector carries exactly one Safety Score input — the published overall — because V9's own pillars and dependency graph are already inside it; pricing a pillar beside the composite counted the same evidence twice. A vector also spends its peg budget on a single slot, since every peg slot reads the peg domain's PegScore. Individual pillars are still read by exclusion floors, why-keys, and the "what to watch" axis: those re-bin a published output rather than adding it to the blend. Yield-rail selection orders candidates by the user's venue answer and then by published source risk, depth, and freshness; that rail comparator does not price APY. The yield profile's score blend separately includes selected-rail `excessApy` alongside PYS. The freshness step fails closed: a non-finite or future-dated capture age scores as maximally stale rather than maximally fresh, the same place `clamp` already sends `NaN`. That is not an engine-version change, because `validateSelectorSnapshot` requires a nonnegative finite `freshness.ageSeconds`, so no storable or replayable snapshot's ordering can differ.
 
 Since `selector-v2.2`, every profile fails closed on V9 coverage: the row must carry V9 provenance, a non-null V9 overall score, and a non-NR grade. NR assets are recorded under `coverage-too-thin` with the public NR reason and cannot enter relaxed fallback. Limited or insufficient V9 evidence lowers recommendation confidence, while a published binding cap and weakest pillar are surfaced in watch output; neither creates an additional score weight. `selector-v2.2` and older snapshot versions remain accepted as frozen historical artifacts.
 
@@ -33,7 +33,7 @@ Since `selector-v2.5`, an unresolved venue field degrades the rail it belongs to
 
 Since `selector-v2.6`, the exclusion vocabulary separates "no supply reading" from "supply below the floor". `MergedRow.supplyUsd` is `number | null` and is read through `getCirculatingRawOrNull()`: a coin absent from `/api/stablecoins` — or present with no finite circulating bucket — carries `null` and is excluded as `supply-unavailable` ("supply data"), while an explicit finite zero keeps the `below-supply-floor` reason. The `$5M` floor value and the ranking arithmetic are unchanged; the supply tie-break sorts an unavailable row last and the shortlist never publishes a stand-in supply headline. `selector-v2.5` stays on the current-generation replay path.
 
-Since `selector-v2.7`, the `short-yield-history` confidence rule judges the rail the run actually recommends. Rail selection now runs before scoring for the yield profile, and the `< 21` observed-day cap reads the winning candidate's `observationCount30d` — falling back to the row-level primary count only when the winning rail published none — so a mature primary can no longer lend its observation history to a venue-preferred alternate with only a few observation days. Scores, ranking order, and the confidence-70 `lowConfidence` threshold are unchanged; `selector-v2.6` stays on the current-generation replay path.
+Since `selector-v2.7`, the `short-yield-history` confidence rule judges the rail the run actually recommends. Rail selection runs before scoring for the yield profile; the `< 21` observed-day cap reads the winning candidate's non-null `observationCount30d`. Missing counts stay unavailable, never borrowed from primary history, so a mature primary cannot lend history to a venue-preferred alternate. Scores, ranking order, and the confidence-70 `lowConfidence` threshold are unchanged; `selector-v2.6` stays on the current-generation replay path.
 
 Since `selector-v2.8`, source-dependent eligibility is evaluated **before** venue preference: each resolved rail must satisfy the APY floor (`max(minApy, 75% of benchmark)`), native-only constraint, and published venue-risk/warning gates. An ineligible preferred alternate cannot displace an eligible primary, and an eligible alternate can survive a failing primary rail. The winning rail has one projection for source-specific score components, why-keys, watch context, observation history, and yield-chain hints. Coin-level V9 Safety, PegScore, supply, DEX liquidity, and custody remain coin-level inputs. Alternate APY and source risk use their own published readings; the current alternate producer publishes no PYS, variance, or warning evidence, so those remain unavailable rather than inheriting primary values or claiming a clean source. Missing alternate observation counts also stay unavailable, not primary history. Venue depth in yield watch text reads selected source TVL, separately from coin-level DEX liquidity. These missing critical components redistribute weights and lower confidence under the existing scoring policy; no alternate PYS/variance model is introduced. `selector-v2.7` remains supported as a frozen historical snapshot on the current component replay path.
 
@@ -41,7 +41,7 @@ Yield-domain coverage still requires a published ranking PYS for the coin; that 
 
 Since `selector-v2.9`, family deduplication includes the parent (`variantOf ?? id`) and chooses the highest score with the existing deterministic tie-breakers. Treasury and Trading keep one representative per family across strict and relaxed slots; Yield splits yield-bearing from non-yield-bearing family members. Stored `selector-v2.8` results retain their frozen membership and current-generation component replay.
 
-The `selector-v2.9` concentration substitute must use a protocol absent from the entire shortlist, within the existing three-point score window; without one, the original candidate remains. Zero-tolerance Slot B emphasizes each profile's actual peg component: Treasury `pegStabilityHistory`, Yield `pegStabilityLive`, Trading `pegScoreNow`.
+The `selector-v2.9` concentration safeguard substitutes a candidate whose protocol is absent from the entries already selected by the safeguard, within the three-point score window; without one, the original candidate remains. This does not guarantee protocol uniqueness across later or relaxed recommendations. Zero-tolerance Slot B emphasizes each profile's actual peg component: Treasury `pegStabilityHistory`, Yield `pegStabilityLive`, Trading `pegScoreNow`.
 
 The custody rail ("regulated only" / "on-chain only", derived from the treasury venue answer in `selector-state.ts`) filters on the coin's **reviewed** `custodyModel` from `shared/data/stablecoins/coins/*.json`, projected into the client registry. Coins with no custody review fall back to the `backing × governance` inference in `shared/lib/report-card-policy.ts`. Before `selector-v2.1` the row read the inference unconditionally; that table's whole range is `onchain` and `institutional-regulated`, so exchange-custodied coins cleared the on-chain rail and unregulated institutional custody cleared the regulated rail. The exit floor and the `strong-exit` why-key read the published V9 Exit pillar directly; the duplicate `effectiveExitScore` row field they used to read was retired in the same version.
 
@@ -63,12 +63,12 @@ Telegram subscribe commands use canonical recommendation IDs, deduplicated by ID
 
 ## Browser Storage
 
-| Key | Store | Purpose |
+| Written key | Store | Purpose |
 | --- | --- | --- |
 | `pharos.selector.callout.v1` | `localStorage` | Screener callout dismissal. |
-| `pharos.selector.sessionResult.v1` | `sessionStorage` | Optional last successful live-result recovery for the tab session. |
+| `pharos.selector.sessionResult.v1` | `sessionStorage` | Prior live-run state and output for tab-session answer recovery. |
 
-The Picker does not create a long-lived local result history. Restored session output is visibly identified. [privacy-page.md](./privacy-page.md) owns the user-facing storage categories.
+The Picker has no long-lived local result history. Session recovery restores prior answers and regenerates output from current query data, with a recovery banner; it is not frozen-output replay. The callout also reads the legacy `pharos-selector-callout-v1` dismissal key but writes only the canonical key above. [privacy-page.md](./privacy-page.md) owns the user-facing storage categories.
 
 ## Snapshot Sharing
 
@@ -78,12 +78,12 @@ Snapshot counts distinguish strict survivors from explicitly marked relaxed reco
 
 | Surface | Behavior |
 | --- | --- |
-| `POST /selector-snapshot` | Same-origin input validation, canonical recomputation, content-addressed snapshot write, `{ sid, ev }` response. |
+| `POST /selector-snapshot` | Allowlisted UI-origin validation, canonical recomputation, content-addressed snapshot write, `{ sid, ev }` response. |
 | `GET /selector-snapshot/:sid` | Returns a verified or explicitly legacy-unverified snapshot, or a typed miss/error. |
 
 Snapshot identifiers are content-addressed. Verified schema-v3 artifacts require matching trusted KV metadata and render as Pharos-verified. Legacy bodies without trusted metadata remain client-unverified. A missing sid-only snapshot shows not found rather than silently substituting current output.
 
-An unread snapshot expires after 90 days. Its first successful `GET` extends retention to five years; subsequent reads do not keep sliding the expiry.
+An unread snapshot expires after 90 days. A successful `GET` attempts a best-effort five-year retention extension; a failed KV write does not fail the read and can be retried by a later `GET`. Once extension metadata is stored, subsequent reads do not slide the expiry.
 
 Loaded snapshots remain frozen by default. The user can compare the frozen input with current data, including shortlist/rank, dataset hash, engine version, and methodology-version differences, without overwriting the stored artifact.
 

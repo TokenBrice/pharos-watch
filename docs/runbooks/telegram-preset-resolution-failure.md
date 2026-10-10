@@ -16,7 +16,7 @@ Behavior: the alert source event stays incomplete and new target planning stays 
 
 1. **D1 schema drift?** The live `telegram_preset_subscriptions` queries run in `resolveMemberships` and `resolveFollowerPage` (`worker/src/cron/telegram-alert-source-memberships.ts`), driven by `resolveTelegramAlertSourcePresetPages`; `resolveMemberships` calls `resolveTelegramPresetTargets` to map preset aliases to coins. Confirm the migration list (`worker/migrations/MANIFEST.md`) is in sync and the latest migration matches the deployed Worker.
 2. **Stablecoins cache available?** The resolver reads the strict `stablecoins` cache plus `ACTIVE_STABLECOINS` (active coins only; every non-active lifecycle is excluded). A missing or malformed stablecoins cache makes resolution fail closed. Check the `sync-stablecoins` cron and the `stablecoins` cache row before looking at safety-alert source state.
-3. **TRACKED_STABLECOINS drift?** If a deploy changed `shared/data/stablecoins/coins.generated.json` while the preset rows reference an alias that no longer maps to any active coin, the resolver may return zero targets. Verify each canonical preset alias (`usd-top10`, `usd-top25`, `usd-top50`, `non-usd-top10`, `non-usd-top25`, `non-usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, `mcap-ge-100m`) still produces a non-empty target set.
+3. **Registry or supply drift?** Preset definitions and aliases are owned by `shared/lib/telegram-presets.ts`; target resolution uses the Worker runtime registry. Compare followed `preset_id` values with that catalog and inspect active lifecycle, peg, and observed supply inputs. An empty resolved preset is valid when no eligible assets meet its criteria; it is not a resolution failure.
 4. **Transient D1 failure?** `presetQueryFailures` increments when the `telegram_preset_subscriptions` SELECT throws. Check the `telegram-api` and D1 circuits via [`db-connectivity.md`](./db-connectivity.md).
 
 ## Operator Commands
@@ -49,13 +49,13 @@ curl -sS -H "CF-Access-Client-Id: $CF_ID" \
         https://ops-api.pharos.watch/api/status | jq '.dataQuality.stablecoinsCacheStatus, .dataQuality.stablecoinsCacheReason, .telegramBot.presetQueryFailures, .crons["dispatch-telegram-alerts"].lastRun.metadata.presetResolutionFailures'
 ```
 
-Rerun the preset resolver via the 5-minute Telegram cron lane after fixing the upstream cause: the next scheduled `dispatch-telegram-alerts` run will retry. There is no separate preset-only re-fire; once the cache is repopulated and the next dispatch tick fires, the persistent `telegram:preset-query-failure-count` counter resets and preset delivery resumes.
+After fixing the upstream cause, the next five-minute `dispatch-telegram-alerts` tick retries a live source. There is no preset-only re-fire. The persistent `telegram:preset-query-failure-count` resets on a run without query or resolution failures, even if pages remain deferred; confirm resolution completion and target-plan progress separately before claiming delivery resumed.
 
 ## Remediation
 
 1. **Schema drift.** Apply the missing migration. Standard deploys apply D1 migrations before the new Worker is live, so a drift here indicates a partial rollback or a manually-applied environment.
 2. **Stablecoins-cache miss.** Trigger or wait for the next `sync-stablecoins` run; the resolver will succeed on the next dispatch tick once the strict stablecoins cache is readable. Confirm via the stablecoins-cache fields in `/api/status`.
-3. **TRACKED_STABLECOINS drift.** Re-verify the canonical alias map. If a preset alias no longer maps to any active coin, treat it as a bug in the deploy that removed the coin and either restore the coin to the tracked list or remove the alias from the preset catalog before redeploying.
+3. **Registry or supply drift.** Check followed IDs against `shared/lib/telegram-presets.ts` and verify the active lifecycle, peg, and observed supply inputs in `worker/src/lib/telegram/presets.ts`. Repair a confirmed registry/cache defect; do not restore a legitimately inactive asset or remove a preset merely because its current target set is empty.
 4. **Transient D1.** No operator action; the counter resets on the next clean run. If the counter sticks above zero for three consecutive runs, escalate via [`db-connectivity.md`](./db-connectivity.md).
 
 ## Cross-References

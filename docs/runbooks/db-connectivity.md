@@ -6,7 +6,7 @@ Triggered by `StatusCause.code`:
 
 ## Symptom
 
-`/api/status` reports a fallback payload; `assessPublicHealth` failed its connectivity probe. The state notifier has short-circuited, and data-quality loaders were skipped to avoid cascading failures.
+`/api/status` reports a fallback payload; `assessPublicHealth` failed its connectivity probe. Data-quality loaders were skipped to avoid cascading failures; status persistence may also fail, leaving only the raw fallback rather than a durable transition.
 
 ## First checks
 
@@ -22,5 +22,5 @@ Triggered by `StatusCause.code`:
 
 ## Prevention
 
-- `status-self-check` flags `db_unhealthy` on the first failure: a single failed sentinel escalates straight to `stale` (`escalateToStale = 1`), so short blips are not absorbed on the way in. The hysteresis damps only recovery — leaving `stale` requires three consecutive healthy self-check readings (`recoverToHealthy = 3`) as well as the 180s minimum dwell (`staleMinDwellSec`), roughly 45 minutes at the 15-minute cadence rather than the 3 minutes the dwell alone implies.
+- A failed sentinel makes the raw availability verdict `stale`. When status persistence succeeds, a previously `healthy` state escalates on one stale reading (`escalateToStale = 1`); a previously `degraded` state requires two (`STATUS_DEGRADED_TO_STALE_THRESHOLD`). Recovery from `stale` to `healthy` requires three consecutive healthy readings (`recoverToHealthy = 3`) and the 180s minimum dwell, roughly 30–45 minutes after connectivity returns at the 15-minute cadence. Recovery to `degraded` instead requires two degraded readings and the same dwell.
 - Long-running migrations should be batched so each statement stays under D1's 30s per-statement limit.

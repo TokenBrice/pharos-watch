@@ -13,7 +13,7 @@ The public `/yield/` page shows a stale-data banner, empty leaderboard, or faile
 
 ## Impact
 
-Yield Intelligence rankings, PYS, source provenance, and detail-page yield panels may be stale or unavailable. `yield-history` can still serve older D1 history, but generation-aware rows are visible only after their generation is marked `published`, and reads stay capped to the latest published `yield-rankings.updatedAt` / publication cutoff. History should not advance beyond the last good public rankings snapshot.
+Rankings, PYS, provenance, and detail panels may be stale or unavailable. History excludes unpublished generation-aware rows and normally caps reads to the last published rankings cutoff. If neither cache nor cron evidence supplies a cutoff, readable history is served uncapped with `publication-cutoff-unavailable`, stale metadata and `no-store`; this is not proof of a fresh publication.
 
 ## First Checks
 
@@ -106,7 +106,7 @@ The `alternatives_json` ledger is intentionally compact and bounded to 4 KB per 
 `/yield/` showing every row as Safety NR — blank scatter chart, `—` hero PYS, zeroed risk-tolerance bands — while APYs still populate is the *safety hydration* failure mode, not a rankings-cache failure. The read path hydrates safety from the live V9 publication only when the identity stamped into the `yield-rankings` cache is evaluator-compatible with it (`safetyScorePublicationIdentitiesAreComparable`). Every scoring deploy rotates the evaluation-build digest, so a mismatch window is expected after each rollout until the next hourly `sync-yield-data` publish.
 
 Since 2026-08-19 the API bridges that window itself: an incompatible or unavailable live publication can use the cached payload's own publish-time safety values (`yield-safety-hydration-stale`, `provenance.liveSafetyHydration.fallback: "publish-time-snapshot"`). The 24-hour stale-coherent budget applies independently to yield and safety evidence publications; missing safety time is not refreshed from cache time. A usable fallback alone does not emit an HTTP `Warning`, but publication aging still does above the two-hour boundary.
-`provenance.liveSafetyHydration.reason` is a comma-joined list naming every applicable reason, including the upstream snapshot's own reason (for example `safety-snapshot-unavailable,active-safety-score:v9`), and the publish-time-snapshot fallback path counts safety coverage as 0 under the provenance rule instead of counting stored `safetyScore` values.
+`provenance.liveSafetyHydration.reason` joins every applicable reason, including the upstream snapshot's own cause. Fallback coverage does not count `cached-publish` safety merely because a stored score exists; qualifying non-default `opportunity-safety` rows still count under `countRowSafetyCoverage`.
 
 Investigate only when `/api/health` is `degraded` with a `yield-safety-unrated-serving:<reason>` warning — that means the public surface is actually serving NR safety:
 
@@ -127,7 +127,7 @@ SELECT json_extract(value, '$.identity') AS live
 FROM cache WHERE key = 'report-cards:v9';
 ```
 
-Comparability requires equal `evaluationBuildDigest`, `policyId`, `policyDigest`, and methodology/policy version; generation IDs may differ. A run whose metadata contains `safetyIdentityChangedBeforePublish` saw a mid-run rollout, published anyway (by design), and the next run re-aligns.
+Comparability requires equal model, schema version, methodology version, `evaluationBuildDigest`, `policyId`, and `policyDigest`; input/publication generation IDs may differ. `safetyIdentityChangedBeforePublish` records a mid-run incompatible identity change; that run publishes and the next compatible run re-aligns.
 
 ## Common Causes
 
@@ -146,7 +146,7 @@ Comparability requires equal `evaluationBuildDigest`, `policyId`, `policyDigest`
 - If `sync-yield-data` is stale but not leased, wait for the next `55 * * * *` run if the last failure was transient.
 - If the cron is repeatedly `skipped_locked`, confirm the lease is stale, then clear it per [`lease-and-breaker-recovery.md`](./lease-and-breaker-recovery.md), job `sync-yield-data`.
 - If metadata shows `reason: "previous-yield-rankings-cache-invalid"` or publication guard failure, do not delete the cache blindly. Preserve the last good payload for rollback/debugging and identify whether the failure came from payload schema, severe shrink, duplicate ranking IDs, or a generation `failure_reason`.
-- If `metadata.reason` is `safety-snapshot-unavailable:<reason>`, diagnose the upstream V9 publication (`report-cards:v9`, `report-cards:v9:publication-health`, and its producer runs). Yield defers until an accepted generation is readable inside its window. `safety-snapshot:v9-publication-held` in `metadata.quality.reasons` is different: the run published against the accepted generation and only the safety chain needs attention.
+- For `metadata.reason: "safety-snapshot-unavailable:<reason>"`, inspect upstream `report-cards:v9`, `report-cards:v9:publication-health`, and producer runs. Yield defers until accepted evidence is usable. `safety-snapshot-held` in `metadata.quality.advisoryReasons` instead means publication used the accepted generation inside its budget; actual sparse coverage is a separate quality finding.
 - If the degraded reason points to benchmarks, use [`yield-benchmark-fallback-stale.md`](./yield-benchmark-fallback-stale.md).
 - If the degraded reason points to deterministic on-chain cooldown or all-fail state, use [`yield-deterministic-cooldown.md`](./yield-deterministic-cooldown.md).
 - If supplemental source coverage dropped, use [`yield-supplemental-snapshot.md`](./yield-supplemental-snapshot.md).

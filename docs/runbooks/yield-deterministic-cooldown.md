@@ -1,7 +1,7 @@
 # Runbook: Yield Deterministic All-Fail Cooldown
 
 Triggered by:
-- `sync-yield-data` metadata showing `onChainAllDeterministicFailed`, `onChainCooldownTriggered`, or `onChainSkippedDueToCooldown`
+- `sync-yield-data` metadata `sourceCoverage` shows `onChainAllDeterministicFailed`, `onChainCooldownTriggered`, or `onChainSkippedDueToCooldown`
 - `metadata.quality.reasons` containing `onchain-rates:all-deterministic-failed` or `onchain-rates:cooldown-coverage-gap`
 - `cache['yield:onchain-health:v1']` showing an active `cooldownUntil`
 
@@ -66,7 +66,7 @@ LIMIT 30;
 ## Validation
 
 - `cache['yield:onchain-health:v1']` shows either no active cooldown, a decreasing valid cooldown, or a reset after successful deterministic reads.
-- `sync-yield-data` metadata shows `onChainRatesResolved > 0` after recovery or `onChainFailureMaskedByAlternativeCoverage: true` while protected.
+- `sync-yield-data` metadata `sourceCoverage.onChainRatesResolved > 0` after recovery or `sourceCoverage.onChainFailureMaskedByAlternativeCoverage: true` while protected.
 - Public rankings remain non-empty and affected rows clearly expose their current source/provenance.
 
 ## Rollback Notes

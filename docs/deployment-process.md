@@ -1,6 +1,6 @@
 # Deployment Process
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Purpose · Core Rules · Release Snapshot State Machine · Optional Worktree Flow · Worktree hygiene · Repo Pre-Commit Hook · Local Validation Commands · Yield History Cleanup Windows · CI Deploy Sequence · Operational Acceptance · GitHub Deploy Inputs · Dependency Refresh Cadence · Runtime Measurement Notes · Runtime Origins · Self-Serve API Key Rollback · Failure Policy.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Purpose · Core Rules · Release Snapshot State Machine · Optional Worktree Flow · Worktree hygiene · Repo Pre-Commit Hook · Local Validation Commands · Yield History Cleanup Windows · CI Deploy Sequence · Operational Acceptance · GitHub Deploy Inputs · Dependency Refresh Cadence · Runtime Measurement Notes · Runtime Origins · Self-Serve Key Incident Rollback · Failure Policy.
 
 ## Purpose
 
@@ -287,7 +287,7 @@ Environment overrides for the release-marker proof in `scripts/maintenance/wait-
 
 - `PHAROS_RELEASE_MARKER_ATTEMPTS` (default 24) and `PHAROS_RELEASE_MARKER_DELAY_MS` (default 5000) bound the poll loop; `PHAROS_RELEASE_MARKER_TIMEOUT_MS` (default 8000) bounds each individual request.
 - `PHAROS_RELEASE_MARKER_PATH` (default `out/__pharos_release.json`) selects the local marker whose `commit` field the deployment must serve back.
-- Explicit CLI flags win over the environment. `.github/workflows/pages-release.yml` already passes `--attempts` and `--delay-ms`, so in that job only the timeout and marker-path variables take effect; widening the CI window means changing those flags, not exporting the variables. An unparseable or non-positive value falls back to the default without failing.
+- Explicit CLI flags win over the environment; CI already passes `--attempts` and `--delay-ms`, so only the timeout and marker-path variables apply there. Invalid numeric environment values fall back to defaults; invalid CLI integers fail, and `--delay-ms 0` is valid.
 
 Manual dispatch examples:
 
@@ -323,7 +323,7 @@ The root `fflate` override pins Satori’s transitive dependency to patched `0.7
 
 The root `miniflare` → `undici` override pins Wrangler’s Miniflare, which declares an exact `undici` version, to patched `7.29.1` for [GHSA-w293-vg96-wgc3](https://github.com/advisories/GHSA-w293-vg96-wgc3) and the five lower-severity `undici` advisories fixed in the same release. It is scoped to Miniflare so jsdom keeps resolving its declared `undici` 8 range instead of being forced onto the 7.x line. Remove it when the pinned Wrangler moves to 4.145.0 or later, whose Miniflare already depends on `undici` 7.29.1 (`npm ls undici` then shows no `overridden` marker).
 
-Risk-accepted transitive advisories are machine-readable in `scripts/ci/dependency-audit-exceptions.json`; the verifier rejects malformed, expired, or widened entries. The registry is the weekly workflow's authority, while this section records the review rationale. There are currently no active exceptions.
+Risk-accepted transitive advisories live in `scripts/ci/dependency-audit-exceptions.json`; the weekly verifier rejects malformed, expired, or widened entries. Read that registry for active exceptions; this section owns the review rationale.
 
 The production-scope check is `npm run audit:deps` (`npm audit --audit-level=high --omit=dev`) and reflects the deployed surface. Root manifest or lockfile PRs run it through `check:pr:static`. The `audit` job in `weekly-validation.yml` runs the broader full-lockfile audit through `scripts/ci/verify-dependency-audit.ts`; it passes only when every high/critical finding is the exact, unexpired reviewed exception.
 
@@ -332,7 +332,7 @@ When the weekly job finds a new high/critical full-lockfile advisory, fix it, pi
 Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`:
 
 - Schedule: `17 8 * * *` UTC, after the 08:05 UTC daily digest slot.
-- The workflow has one main-only reusable job and calls `pages-release.yml` with `refresh_data: true`; this active schedule is the dataset-refresh trigger.
+- Main-only `pages-prepare → pages-release` jobs call the reusable workflows with `refresh_data: true`; this schedule is the dataset-refresh trigger.
 - It uses the reusable Pages sequence above: attempt to refresh all three API-backed datasets through the production `stablecoin-dashboard.pages.dev/_site-data` proxy, then build and verify the exact artifact, publish once, and verify the release marker on the immutable production deployment URL.
 - A single digest, depeg, or public-dataset producer failure can use its scoped committed fallback. Total producer failure and public-dataset rollback failure stop the release, and the two-day alias-age guard stops frozen mirrors before publication.
 - Manual rebuild dispatch uses the same path and the shared `production-deploy` lock.
@@ -467,9 +467,8 @@ If an explicit local `check:release` rehearsal fails:
 2. Confirm the exact `.nvmrc` runtime, check lane, snapshot cleanliness, environment profile, and local concurrency before changing code. A release-only failure is not disproved by `npm run check:pr`, and a globally exported Pages flag does not reproduce job-scoped CI.
 3. For a small change, fix the failing command directly. For a large batch, run `npm run check:pr -- --base=<ref>` and read its final summary.
 4. Fix all blocking root failures and rerun their focused commands while editing. If local parallel load is suspect, run the focused command alone or set `PR_STATIC_MAX_PARALLEL=1`; do not loosen timeouts solely from a contended run.
-5. Once every focused command passes, rerun `npm run check:pr -- --base=<ref>` over the whole change set instead of trusting the earlier partial run.
-6. After the final source state, run the full generated-artifact freshness check. Regenerate stale artifacts with their owning generator and fold the output into the commit that moved their sources.
-7. Run `npm run check:release` only when an explicit local rehearsal is desired, then push to the protected PR gate. GitHub Actions remains authoritative.
+5. After focused fixes, commit the final source/integration state and complete [pre-push readiness](./testing.md#pre-push-readiness): full generated-artifact convergence, then full plain `npm run check:pr` and its fresh passing HEAD receipt.
+6. Rerun an explicitly requested `check:release` rehearsal after its failure is resolved; it never replaces readiness. Only then push through the protected PR gate. GitHub Actions remains authoritative.
 
 If a production deployment fails after mutation:
 

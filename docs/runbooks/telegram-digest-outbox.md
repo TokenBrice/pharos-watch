@@ -28,7 +28,7 @@ or resent.
 | `sending` | An owner/generation has crossed the external-effect boundary | Never taken over while its claim is live |
 | `sent` | Any photo, every text chunk, and the post-send appendix actions committed | None; rows are retained for 90 days |
 | `execution_unknown` | Telegram may have accepted a photo or text chunk, or acceptance could not be durably recorded | None; exact-effect operator proof is required |
-| `failed_permanent` | Telegram rejected the effect, or the authored Safety Score identity is stale/legacy-unbound | None; correct the cause or generate a current edition |
+| `failed_permanent` | Telegram permanently rejected the effect, retry/edition-age budget ran out, or payload/target/Safety Score identity validation failed | None; correct the cause or generate a current edition |
 
 An expired `sending` claim becomes `execution_unknown`. It is never returned to `pending` automatically.
 
@@ -114,11 +114,14 @@ After the final accepted text chunk, the next poll makes no Bot API call and com
 
 ## Reconcile Permanent Failure
 
-Use `last_status_code` and `last_error_class` to classify the rejection. A
-confirmed permanent Telegram rejection means the chunk was not accepted, so
-the cursor does not advance. There is no supported operator reset for a
-`failed_permanent` edition. After an external/configuration cause such as
-channel permissions has been corrected, use a new reviewed edition key unless
+Use `last_status_code` and `last_error_class` to classify the failure.
+`retry_budget_exhausted:*` means a retryable failure exceeded the 12-claim
+budget; `edition_age_exceeded:*` means the edition was at least 24 hours old
+when retry was considered. These are not permanent Telegram rejections.
+Confirmed permanent rejection does not advance the affected photo/text cursor.
+There is no supported operator reset for a `failed_permanent` edition.
+After an external/configuration cause such as channel permissions has been
+corrected, use a new reviewed edition key unless
 a reviewed recovery script is first added. Such a script must require the exact
 edition key, `state = 'failed_permanent'`, the captured delivery generation and
 update timestamp, an allowed external-error class, unchanged payload and Safety

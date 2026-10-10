@@ -23,7 +23,7 @@ Run `npm run check:migrations` for the current active/retired inventory. Crossin
 ## Procedure
 
 1. Apply the complete current migration tree to a fresh rehearsal D1 database.
-2. Export the resulting schema and required seed rows into a replacement `0000_baseline.sql`, following the existing idempotent baseline style, then remove the objects recorded under Completed Destructive Cleanup Operations and the Deferred Destructive Cleanup Queue in `worker/migrations/MANIFEST.md` and note each removal there.
+2. Export the resulting schema and required seed rows into a replacement `0000_baseline.sql`, following the existing idempotent baseline style. Omit objects already removed under Completed Destructive Cleanup Operations in `worker/migrations/MANIFEST.md`. Deferred queue membership alone does not authorize removal; any additional cleanup must first satisfy that item's rollout gates and be approved and recorded there.
 3. Apply the proposed squashed tree to a second fresh D1 database.
 4. Compare `sqlite_master`, index lists, trigger definitions, and seeded row counts between both scratch databases. The only permitted differences are the recorded destructive-cleanup removals applied in step 2; any other difference blocks the squash.
 5. Point a preview Worker at the second database. Run the preview smoke set and one full cron tick; verify the cron ledgers and status probes show no migration-name coupling.

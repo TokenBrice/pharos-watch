@@ -9,7 +9,7 @@ Detection signals:
 - `/api/status` -> `telegramBot.pendingDeliveries` trends upward across consecutive runs.
 - `crons["dispatch-telegram-alerts"].lastRun.metadata` reports `oldestPendingAgeSec`, `estimatedDrainTimeSec`, `pendingNearTtlCount`, or `pendingCapacityAfter.nearTtl` above normal.
 - `telegramBot.retryErrorClassCounts.rate_limit` dominates.
-- Watchdog status: active (non-expired) pending count `> 500`, oldest pending age 15 min or more, estimated drain time 30 min or more, or unexpired execution-unknown work 15 min or more old degrades the watchdog once the breach is sustained for 20 min or more; any near-TTL pending row degrades immediately, and a capacity read that returns `unknown` degrades the run on its own.
+- Watchdog status: active (non-expired) pending count `> 500`, oldest pending age at least 15 min, estimated drain at least 30 min, or execution-unknown work at least 15 min old degrades after a sustained 20-minute breach. A new episode first records onset; near-TTL work degrades on the next evaluation without waiting 20 minutes. An `unknown` capacity read degrades the run itself.
 - `oldestPendingDeliveryAgeSec` approaching `PENDING_TTL_SEC` (7200 for risk/legacy rows); use each row's explicit `expires_at` for shorter launch/admin work.
 - `npm run check:telegram-load` shows the matching 429-storm scenario exceeding the one-hour maximum at the current watcher scale.
 

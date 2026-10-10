@@ -10,7 +10,7 @@ The data foundation already exists in the tracked registry: many coins carry a `
 
 ## Architectural keystone
 
-MiCA status is **static editorial metadata, not pipeline data**. It is authored in `shared/data/stablecoins/domains/compliance/<id>.json`, merged by the catalog loader, bundled into the client registry at build, and rendered client-side exactly like `/screener`.
+MiCA status is **static editorial metadata, not pipeline data**. It is authored in `shared/data/stablecoins/domains/compliance/<id>.json`, merged by the catalog loader, and bundled with references in `shared/data/stablecoins/coins.compliance.generated.json` for the compliance table. Per-coin client detail projections also carry MiCA; the global client list does not.
 
 **No Worker endpoint, no D1 migration, no cron job, no API hook, no `next.config.ts` change.** This is the decision that keeps complexity at Medium. Every Worker/connection-pool/cache gotcha in `CLAUDE.md` is out of scope for this feature.
 
@@ -24,7 +24,7 @@ GENIUS is now tracked as a dedicated sibling `genius?: GeniusProfile`, not by mi
 
 ### Types — `shared/types/core.ts`
 
-MiCA metadata is implemented as `mica?: MicaProfile` on `StablecoinMeta`. Status/type/auth enums live in `shared/types/core.ts`, following the `as const` value-list + derived-type pattern used by `MECHANISM_ARCHETYPE_VALUES`, `CHAIN_TIER_VALUES`, etc. The `MicaProfile` shape itself is Zod-derived (`z.output<typeof MicaProfileSchema>`) in `shared/types/stablecoin-meta-schemas.ts` and re-exported as a type alias from `core.ts`; the block below is the resulting shape, not a hand-written interface.
+MiCA metadata is implemented as `mica?: MicaProfile` on `StablecoinMeta`. Status/type/auth enums live in `shared/types/core.ts`, following its `as const` value-list + derived-type pattern. The `MicaProfile` shape is Zod-derived (`z.output<typeof MicaProfileSchema>`) in `shared/types/stablecoin-meta-compliance-schemas.ts` and re-exported as a type alias from `core.ts`; the block below illustrates that shape.
 
 ```ts
 export const MICA_STATUS_VALUES = [
@@ -117,7 +117,7 @@ Editorial assignment rules. Each non-`out-of-scope` status should carry at least
 | `pending` | Application filed with a competent authority; decision outstanding. | Issuer disclosure + authority filing |
 | `transitional` | Offered/traded on EU venues under a member-state CASP grandfathering window (no issuer authorization yet). Every EU CASP window ended by 1 Jul 2026 (MiCA Art. 143(3)), so no current row should carry this status. | National transitional-regime notices |
 | `non-compliant` | In EU scope but no authorization and no transitional cover; delisted or restricted on EU venues. Requires an in-force EU-venue notice or EU regulator source naming this exact token; register absence alone never suffices. When any part is doubtful, leave the row unassessed. | Exchange delisting notices, issuer statements |
-| `out-of-scope` | Not offered to the public or admitted to trading in the EU, or reviewed legal/source evidence indicates the token is outside EMT/ART issuer authorization requirements (for example, no identifiable issuer for Titles II-IV). | Default for non-EU-marketed coins; sourced issuer-scope analysis for edge cases |
+| `out-of-scope` | Not offered to the public or admitted to trading in the EU, or reviewed legal/source evidence indicates the token is outside EMT/ART issuer authorization requirements (for example, no identifiable issuer for Titles II-IV). | Reviewed EU-offering or issuer-scope evidence; not a default for missing research |
 
 Leave `mica` **undefined** for coins not yet assessed — the page distinguishes "not assessed" (no row / muted) from `out-of-scope` (explicitly reviewed). This bounds the backfill: only researched coins assert a status. Assert any status only at high confidence; an unresolved or contradictory evidence record stays unassessed rather than receiving a guessed status.
 

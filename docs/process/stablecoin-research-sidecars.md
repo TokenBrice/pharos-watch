@@ -27,11 +27,11 @@ Reserve slices may carry a namespace-qualified stable `sourceKey` plus review-us
 
 `proofOfReserves.type` describes the linked reporting engagement, not a separate audit at another cadence. Use `agreed-upon-procedures` for procedures that report findings without an assurance opinion, and `attestation` for an independent verification-agent attestation that is neither an audit nor AUP. Neither type enters the V9 `independent-audit` admission or expired-audit fallback paths. The reserve coverage audit counts these types and their missing structured latest reports separately; neither label supplies missing scope, reconciliation, or review evidence.
 
-`dependencyReview` remains base metadata. It is required only for authored `dependencies` relationships that are not already represented by a linked reserve slice. When present, its relationship list must exactly cover those manual-only edges plus the implicit `variantOf` wrapper edge, including an explicit dependency type; a wrapper-only review that documents just the `variantOf` edge is valid. Reserve-derived dependencies use the reserve composition and `reserveReview` provenance instead of duplicating evidence per edge.
+`dependencyReview` remains base metadata. It is required for manual-only `dependencies`, including a reserve-linked relationship with a reviewed non-default V9 economic role. When present, it must exactly cover those edges plus the implicit `variantOf` wrapper edge, with explicit types and matching weights; a wrapper-only review is valid. Ordinary reserve-derived edges use reserve composition and `reserveReview` provenance, not duplicated per-edge evidence. `shared/lib/stablecoins/schema.ts` owns the distinction.
 
 Once a coin has a sidecar for a domain, all fields owned by that domain must stay out of its base file. This keeps the evidence and its coupled decision fields together. `blacklistabilityReview.reviewedStatus` is the sole authored freeze/blacklist verdict.
 
-Research review envelopes, including `reserveReview` and `custodyProfile`, remain server/repository evidence and are intentionally omitted from the client list and detail projections (`coins.client.list.generated.json`, `coins.client.detail/`). Structured reserve-slice facts travel with the already client-visible `reserves` field. The global client list does not project `proofOfReserves`; detail and compliance projections carry the canonical report observation for display. The full generated registry retains all P5 evidence for audits and report-card compilation.
+Research review envelopes, including `reserveReview` and `custodyProfile`, are omitted from the client list and detail projections (`coins.client.list.generated.json`, `coins.client.detail/`); structured reserve-slice facts travel with `reserves`. Neither projection includes `proofOfReserves`. The compliance summary carries its canonical latest report for GENIUS rows; the stablecoin page supplies report metadata separately through its server-built client coin. The full generated registry retains research evidence for audits and report-card compilation.
 
 `bridgeRouteRisk.routes` and `bridgeRouteRisk.controls` belong to the risk-review domain. Each route row joins an exact authored `contracts` chain/address pair through its normalized `chain:contractAddress` ID and records route class, issuance model, transfer semantics, scope, controllers, failure-domain keys, and an observation point. Active assets with multiple deployments require complete route rows. Each structured bridge control references one or more route IDs and records the bridge capabilities, controller, failure domains, Safe/multisig facts, limits, observation point, and evidence that apply to those routes. A reviewed `bridge-representation` or `wrapped-representation` route referenced by structured controls must have a covering `bridge-mint` capability; if the minter cannot be identified, omit the route from every structured control's `routeRefs` so the conservative route-derived fallback remains scoreable; otherwise the ownership gate reports `representation-route-without-bridge-mint`. Safety Score V9 compiles a structured control separately for each referenced route; when structured control evidence is absent, the compiler retains conservative route-derived controls.
 
@@ -69,10 +69,7 @@ The catalog migration is complete; new research goes directly into the owning si
 In parallel work, finish all base/sidecar moves before regenerating shared projections. Record hashes or retain an in-memory snapshot of the generated projections before a layout-only batch, then regenerate once:
 
 ```bash
-npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
-node scripts/build-data/build-client-registry.mjs
-npx tsx scripts/maintenance/generate-report-card-registry-fingerprint.ts
-node --import tsx scripts/maintenance/generate-legacy-stablecoin-redirects.ts
+npm run bootstrap:generated
 ```
 
 For a layout-only move, the full, client, compliance, Telegram Mini App, Worker runtime, report-card fingerprint, and legacy-redirect artifacts must remain byte-identical. If they change, stop and inspect the projection before proceeding.

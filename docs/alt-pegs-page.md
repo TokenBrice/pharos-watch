@@ -64,7 +64,7 @@ This route stays frontend-only and uses existing public data sources:
 Important contract:
 
 - `GET /api/stablecoins` does not expose `pegCurrency` directly on the live rows.
-- `src/lib/alt-peg-market.ts` must join live rows against tracked frontend metadata before filtering to non-USD cohorts.
+- `src/lib/alt-peg-market.ts` admits each `CLIENT_CORE_AGGREGATE_ACTIVE_IDS` member once, then joins client metadata before filtering non-USD cohorts; it does not aggregate every catalog row.
 - Current supply uses `getCirculatingRawOrNull`: absent, empty, or invalid buckets remain unavailable and explicit observed zero remains zero. Snapshot and peg rows carry observed/unavailable counts beside known subtotals. A segment with no observations has no numeric cap; incomplete denominators withhold market shares. Partial cohorts remain visible, labelled with their observed-member coverage.
 - Atlas coins retain nullable market caps. Unknown supply uses a neutral marker size (not the measured-zero floor) and an explicit unavailable hover/accessible label. Cohort hover cards name known subtotals and unavailable members, withhold incomplete-denominator shares, and do not assign complete-cohort ranks while plotted supply is incomplete.
 - The route must not add a worker/API endpoint unless the current frontend joins stop being sufficient.
@@ -84,8 +84,8 @@ The shared table's peg-deviation text and severity both read the published `peg-
 
 `AltPegsClient` then renders, in order:
 
-1. `StaleDataBanner`
-2. `SafetyScoreV9StatusNotice` — compact notice shown only while V9 ratings are held
+1. `StaleDataBanner`, followed by an inline `QueryErrorNotice` with Retry when a failed stablecoin refetch retains a usable snapshot
+2. `SafetyScoreV9StatusNotice` — compact notice shown only while the ratings publication is held
 3. `FiatWorldAtlas` — the full-width page hero and non-USD drill-down surface
 4. `AltPegStablecoinTable` (the workbench, directly beneath the hero)
 5. `AltPegMixBand` — the commodity / non-commodity mix bar

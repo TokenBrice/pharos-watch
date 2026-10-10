@@ -1,6 +1,6 @@
 # GENIUS Compliance Tracker
 
-**Status: shipped as part of `/compliance/`.** U.S. GENIUS Act metadata is the `genius` metadata extension on each tracked stablecoin. It renders in the canonical [Compliance Tracker](./compliance-page.md) at `/compliance/`, which keeps the exhaustive registry, and per coin on stablecoin detail pages through the Regulatory Standing card (`src/lib/regulatory-standing.ts`) and the hero passport item. This doc is the **source of truth for the `genius` schema, the status criteria, sourcing requirements, and legal framing** — the companion to [mica-tracker.md](./mica-tracker.md). The `compliance-research` skill (`genius` regime) encodes the workflow; this spec encodes the rules.
+**Status: shipped as part of `/compliance/`.** U.S. GENIUS Act metadata is the `genius` metadata extension on each tracked stablecoin. It renders in the canonical [Compliance Tracker](./compliance-page.md) at `/compliance/` and per coin through the Regulatory Standing card (`src/lib/regulatory-standing.ts`) and hero passport item. This doc owns **status criteria, sourcing requirements, and legal framing**; `shared/types/stablecoin-meta-compliance-schemas.ts` owns the enforced schema. The companion is [mica-tracker.md](./mica-tracker.md); the `compliance-research` skill encodes the workflow.
 
 GENIUS = the **Guiding and Establishing National Innovation for U.S. Stablecoins Act** (Public Law, signed 18 Jul 2025), the U.S. federal payment-stablecoin regime. It is an **informational, source-backed tracking surface, not legal advice** — see [Legal framing](#legal-framing--non-goals).
 
@@ -8,7 +8,7 @@ GENIUS = the **Guiding and Establishing National Innovation for U.S. Stablecoins
 
 ## Architectural keystone
 
-GENIUS status is **static editorial metadata, not pipeline data**. It is authored in `shared/data/stablecoins/domains/compliance/<id>.json`, merged by the catalog loader, and projected at build into the slim global client registry for authorization-status labels and into `shared/data/stablecoins/coins.compliance.generated.json` for the `/compliance/` table's bundled summary. Full evidence remains in `shared/data/stablecoins/coins.client.detail/<id>.generated.json`: opening a GENIUS row fold dynamically loads that coin through `loadClientStablecoinDetail(id)`, caches evidence for the session, and combines and de-duplicates top-level and nested references. The summary omits `references`, `negativeEvidenceReview`, `applicabilityBasis`, and `notes`; MiCA and canonical reserve-report projection are unchanged.
+GENIUS status is **static editorial metadata, not pipeline data**. It is authored in `shared/data/stablecoins/domains/compliance/<id>.json`, merged by the catalog loader, and projected into `shared/data/stablecoins/coins.compliance.generated.json` for the `/compliance/` table's bundled summary. The global client list carries no compliance profiles. Full GENIUS evidence remains in `shared/data/stablecoins/coins.client.detail/<id>.generated.json`: opening a row fold loads it through `loadClientStablecoinDetail(id)`, caches evidence for the session, and combines and de-duplicates top-level and nested references. The summary omits `references`, `negativeEvidenceReview`, `applicabilityBasis`, and `notes`; field sets are owned by `shared/types/stablecoin-client-meta.ts`.
 
 **No Worker endpoint, no D1 migration, no cron job, no API hook, no `next.config.ts` change.** One field does leave the presentation surface: `genius.issuerEntity` seeds the Safety Score V9 issuer key (`worker/src/lib/safety-score-v9/extension.ts`, run by the `compute-safety-score-v9` cron), so edit it with that issuer join in mind; `authorizationStatus` and the rest stay presentation-only. Missing `genius` metadata means **"not assessed"** — not "out of scope" and not "non-compliant". This is deliberate: the page distinguishes an unassessed coin (no row) from an explicitly reviewed one.
 
@@ -49,7 +49,7 @@ Required: `applicability`, `authorizationStatus`, `issuerPathway`, `reviewer` (s
 | `reviewer` | string | Who performed the review (e.g. `"Pharos compliance research"`). |
 | `reviewedAt` | `YYYY-MM-DD` | When. |
 
-`GeniusReference`: `{ label, url, sourceKind, sourceDate?, accessedAt? }`.
+`GeniusReference`: `{ label, url, sourceKind, sourceDate?, accessedAt?, quoted? }`; `quoted` marks a verbatim external title.
 
 ### Zod cross-field rules (Zod-enforced — `check:stablecoin-data` fails otherwise)
 
@@ -125,7 +125,7 @@ For non-U.S. issuers, `foreignExceptionStatus` tracks the GENIUS foreign-issuer 
 
 ## Enforcement posture
 
-`enforcementStatus`: `no-public-action-found` (the dated default), `warning-or-notice`, `prohibited-or-revoked`, or `unknown`. The two action states require a regulator-grade reference (rule 6).
+`enforcementStatus`: `no-public-action-found`, `warning-or-notice`, `prohibited-or-revoked`, or `unknown`. It is optional with no schema default; author a dated finding explicitly. The two action states require a regulator-grade reference (rule 6).
 
 ## DASP offer/sale posture
 
@@ -135,7 +135,7 @@ For non-U.S. issuers, `foreignExceptionStatus` tracks the GENIUS foreign-issuer 
 
 `reserveDisclosurePresent` / `reserveDisclosureUrl`, `redemptionPolicyPresent`, and `monthlyAttestationPresent` capture the public disclosure footprint GENIUS will require. Record what is **publicly present today**; presence of `reserveDisclosurePresent: true` requires a URL (rule 4).
 
-Reserve-report dates have one authority: `proofOfReserves.latestReport`. Its independently optional `periodEnd` and `publishedAt` are rendered with their respective labels in both the detail-page regulatory standing and the compliance table. Neither date is inferred from the other or from the compliance review date. A missing report (or a report without known dates) does not fabricate a latest-report note. The compliance projection carries the canonical report alongside the GENIUS profile; GENIUS has no separately authored latest-report date.
+Reserve-report dates have one authority: `proofOfReserves.latestReport`. Its independently optional `periodEnd` and `publishedAt` retain their respective semantics in detail-page regulatory standing and the compliance table; `publishedAtBasis: "signed-date-standin"` renders as **signed**, not published. Neither date is inferred from the other or from the compliance review date. A missing report or unknown dates fabricate no latest-report note. The compliance projection carries the canonical report alongside GENIUS; GENIUS has no separately authored latest-report date.
 
 Legacy GENIUS-only dates whose semantics were not established are preserved as `latestReport.reviewReference: { date, reviewedAt, dateKind: "unspecified" }`, with required report sources, reviewer, confidence, and assurance metadata retained. They display as a **review reference**, qualified **as of `<reviewedAt>` review**, never as a latest period end or publication date. Older review details remain in compliance sidecar notes with the same explicit review-date qualification.
 

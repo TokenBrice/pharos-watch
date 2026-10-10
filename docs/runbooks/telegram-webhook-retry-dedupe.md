@@ -7,7 +7,7 @@ A user sends a command or taps a callback, Telegram retries the webhook, but the
 Detection signals:
 
 - User reports a missing `/subscribe`, `/settings`, setup wizard, or callback action.
-- Cloudflare logs show `POST /api/telegram-webhook` for the chat around the incident.
+- Sampled Cloudflare request logs show `POST /api/telegram-webhook` near the reported time; chat/update association comes from D1, not custom Telegram logs.
 - The webhook returned `200 ok`, but the expected D1 mutation is absent.
 - The webhook returned `503 retry` with `Retry-After` for an update already being processed.
 - `telegram_processed_updates` shows a row stuck in `processing` or repeated `failed` state for the reported `update_id`.

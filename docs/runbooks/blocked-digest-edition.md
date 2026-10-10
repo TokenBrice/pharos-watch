@@ -6,7 +6,7 @@ Use this runbook when a daily or weekly digest is held by the editorial style ga
 
 A style-gate block leaves a `daily_digest` row with `digest_meta.qualityGate = "blocked"`. The row is retained for operator inspection. Public digest reads exclude it. It receives no edition number and no X or Telegram delivery.
 
-The block follows the model response and its corrective retry. A style finding identifies the policy rule, field, excerpt, and position. The active gate mode determines whether a hard style finding is advisory telemetry or a publication block.
+The block follows the model response and at most one budget-eligible corrective retry. A style finding identifies the policy rule, field, excerpt, and position. The active gate mode determines whether a hard style finding is advisory telemetry or a publication block.
 
 ## Classify the outcome
 
@@ -17,7 +17,7 @@ Use the evidence below before retriggering:
 | Style-gate block | A `daily_digest` row exists with `qualityGate = "blocked"`; `input_data.editorialAudit.qualityIssueCodes` includes `editorial-style`, and `digest_meta.editorialStyleGate` contains the bounded findings and retry result. | The copy was generated and held before publication. No channel replay is available for that copy. |
 | Missing row | No `daily_digest` row exists for the UTC date, and no blocked row exists. The `daily-digest` or `schedule_key = "digestTriggerPoll"` cron history shows an error, an abandoned slot, a skipped run, or no started child. | Treat this as a generation or scheduled-slot incident. Follow [`cron-slot-abandonment.md`](./cron-slot-abandonment.md) when the history shows slot reconciliation. |
 | Delivery skip | A non-blocked digest row exists and the archive projection assigns it a daily or weekly edition number, but channel metadata is `skipped: ...`, `queued: ...`, `outbox-*`, or another non-delivered state. | The edition was published to the archive. Follow [`telegram-digest-outbox.md`](./telegram-digest-outbox.md) for Telegram and inspect the channel delivery metadata for X. |
-| Watchdog gap alert | `/api/status` → `crons["cron-sentinel"]` → `metadata.sources.duration.metadata` reports `runtimeBreaching` or `slotAbandonmentBreaching`, or cron history contains a synthetic `scheduled-slot-abandoned` event. | Successful observation is `ok` plus quality; it is not a style finding or a failure of the watchdog. Follow [`cron-slot-abandonment.md`](./cron-slot-abandonment.md) and preserve the underlying schedule/runtime evidence. |
+| Watchdog gap alert | `/api/status` → `crons["cron-sentinel"]` → `lastRun.metadata.sources.duration.metadata` reports `runtimeBreaching` or `slotAbandonmentBreaching`, or a retained sentinel run in `recentRuns` carries those findings; a synthetic `scheduled-slot-abandoned` event is independent slot evidence. | Successful observation is `ok` plus quality; it is not a style finding or a failure of the watchdog. Follow [`cron-slot-abandonment.md`](./cron-slot-abandonment.md) and preserve the underlying schedule/runtime evidence. |
 
 ## Inspect
 
@@ -42,7 +42,7 @@ Use the evidence below before retriggering:
 
 4. Read the retry details. Confirm whether the corrective retry was eligible, whether it ran, whether it resolved the finding, its latency, and its output-token use. A retry can be skipped after the first pass crosses the elapsed-time threshold or when the output-token budget cannot reserve another request.
 
-5. Check `/api/status` for `crons["daily-digest"]`, `crons["weekly-recap"]`, `crons["digestTriggerPoll"]`, and `crons["cron-sentinel"]` (duration/digest-publication source findings). Check `/api/digest-archive` only after confirming that the row is not blocked. Public reads omit blocked rows by design.
+5. Check `/api/status` for `crons["daily-digest"]`, `crons["weekly-recap"]`, and `crons["cron-sentinel"]` (`lastRun.metadata` / `recentRuns` for duration and digest-publication findings). The poll is a schedule key, not a `crons` job: inspect its clock in `schedulerLiveness.lanes` and its diagnostic `digest-trigger-poll` entry in `budgetOnlySurfaces`. Check `/api/digest-archive` only after confirming that the row is not blocked. Public reads omit blocked rows by design.
 
 ## Retrigger
 

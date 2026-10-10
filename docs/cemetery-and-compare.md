@@ -1,5 +1,7 @@
 # Cemetery and Compare
 
+> **Agent navigation** — Cemetery: [data and curation](#data-model) · [exports](#public-dataset-export) · [selection](#selection-and-deep-links) · [register](#autopsy-register). Compare: [routes](#route-shell-and-seo) · [URL state](#selection-and-url-contract) · [data](#data-dependencies). Grep headings for `Logo atlas`, `UI behavior`, `Below the hero`, `Share and export`, or `Operational notes`.
+
 ## Overview
 
 This document covers two frontend-only feature surfaces that are not backed by dedicated page-specific worker endpoints:
@@ -71,7 +73,7 @@ Each entry follows `DeadStablecoinSchema` (`shared/types/market.ts`):
 
 - identity: `id`, `name`, `symbol`, optional `llamaId`, `geckoId`, `aliases` and `logo`
 - context: `pegCurrency`, `causeOfDeath`, `deathDate` (`YYYY-MM` or valid Gregorian `YYYY-MM-DD`). Curated and frozen authoring reuse `parseCemeteryDeathDate`; impossible days are rejected, never rolled forward.
-- narrative: optional `epitaph`, `obituary`, `sourceUrl`, `sourceLabel`
+- narrative: optional `epitaph`; required `obituary`, `sourceUrl`, `sourceLabel`
 - optional `peakMcap`: approximate peak market cap in USD; absent when no reliable figure was curated, never zero
 - optional `contracts`: an array of `{ chain, address }` for block-explorer links in the register autopsy
 - `mechanismArchetype`: how the coin was designed to hold its peg, one of `MECHANISM_ARCHETYPE_VALUES`. It is independent of `causeOfDeath` and is the one authority for cemetery mechanism links, the register's mechanism filter and the linked-death counts on mechanism explainers. `src/lib/__tests__/mechanism-explainers-cemetery.test.ts` checks every explainer `decommissioned` entry against the archetype of the cemetery record it names. Absent means not yet classified.
@@ -117,7 +119,7 @@ Each row carries `id`, `name`, `symbol`, `llamaId`, `logoUrl`, `pegCurrency`, `c
 
 Both exports are deterministic. The maintenance-only, auto-staged `cemetery-dataset` unit in `GENERATED_ARTIFACT_REGISTRY` (`scripts/lib/automation-registry.mjs`) regenerates on staged source changes. `npx --no-install tsx scripts/maintenance/generate-cemetery-dataset.ts` regenerates manually; `npm run check:generated-artifacts -- --only=cemetery-dataset` guards drift. The dependent `og-case-studies` unit reads the published JSON. Provenance pins `shared/data/dead-stablecoins.json`, `shared/lib/cemetery-merged.ts#frozenCemeteryProjection` (`buildFrozenCemeteryProjection()` output), and `shared/lib/cause-of-death.ts#causeLabels` (consumed `CAUSE_META` labels). Label changes rotate the checksum; unrelated active-coin edits do not.
 
-The stable `id` field is the primary dead-coin identifier across the cemetery UI, public dataset export, report-card defunct rows, and Telegram cemetery snapshots. `llamaId` remains optional provider metadata only.
+The stable `id` field is the primary dead-coin identifier across the cemetery UI, public dataset export, and current Telegram cemetery snapshots. `llamaId` is optional provider metadata, also consulted when deduplicating legacy Telegram snapshot keys; current snapshots store `id`.
 
 The `/cemetery/` page emits a `Dataset` JSON-LD node (`buildCemeteryDatasetJsonLd` in `src/lib/cemetery-json-ld.ts`) built from the checked-in JSON export header, alongside the `CollectionPage` and `ItemList` nodes. Its `@id` is `/cemetery/#dataset`, which resolves to the page's "Download and cite" section. The node links JSON and CSV `DataDownload` distributions at the public `/datasets/stablecoin-cemetery.{json,csv}` URLs, sets `dateModified` from `updatedAt`, exposes every row field description as `variableMeasured` (new fields join automatically), includes source checksum and row-count metadata, and must not point crawlers at internal `/_site-data/*` URLs.
 
@@ -127,7 +129,7 @@ The `/cemetery/` page emits a `Dataset` JSON-LD node (`buildCemeteryDatasetJsonL
 
 ### Logo atlas
 
-`scripts/maintenance/build-cemetery-logo-atlas.ts` packs every cemetery logo into one WebP atlas, `public/logos/atlas/cemetery-atlas.webp`, with a manifest at `src/lib/cemetery-logo-atlas.generated.json`. Each row resolves its logo through `resolveCemeteryLogoUrl`, the same rule as the rest of the UI. Each distinct source image becomes a full-colour cell and a grayscale cell; rows that share source bytes share cells, and rows with no logo are listed as missing so the UI renders an initial. The atlas stays within a 150 KB budget.
+`scripts/maintenance/build-cemetery-logo-atlas.ts` packs cemetery logos into `public/logos/atlas/cemetery-atlas.webp`, with a manifest at `src/lib/cemetery-logo-atlas.generated.json`. Rows resolve logos through the shared `resolveCemeteryLogoUrl` rule. A matching source-byte hash and resampling kernel share one full-colour/grayscale cell pair; pixel-art overrides use `nearest`, others `lanczos3`. Rows without logos are marked missing for initial rendering. The atlas stays within a 150 KB budget.
 
 It is the registered `cemetery-logo-atlas` generated artifact, auto-staged by the pre-commit hook when a staged change touches its sources: the cemetery logos, `data/logos.json`, the dead-coin data, the catalog or the cemetery modules. Freshness is judged on an input signature (`scripts/maintenance/state/cemetery-logo-atlas-signature.json`) rather than by re-encoding, because WebP bytes differ across platforms. `npm run logos:cemetery-atlas` regenerates it by hand, and `npm run check:generated-artifacts -- --only=cemetery-logo-atlas` verifies it.
 
@@ -169,7 +171,7 @@ Encodings:
 - **Orderly exits read intact.** Only counterparty-failure headstones are cracked. Regulatory tablets and the Binance USD mausoleum stay whole at every weathering class, because the stone encodes the cause of death, not what holders recovered. The legend says so, and adds that peak market cap is not what holders lost.
 - **Unrecorded peaks** stand at a neutral height (the lower median of the $10M to $100M class, never the floor) with a hatched face, an outlined plinth and their own legend swatch.
 - **Age is measured against `asOf`**, the latest recorded `deathDate`, never the clock. Weathering is quantised into five classes at 0.5, 1.5, 3 and 5 years (`PLOT_WEATHER_BOUNDS_YEARS`): grime deepens, lichen appears from the third class and a moss band from the fourth, the oldest 1×1 stones lean, and the medallion logo fades. Fresh soil marks a death within `PLOT_FRESH_DAYS` (90) days of `asOf`.
-- **Marks.** A bronze plaque means Pharos holds a frozen data page (`archivedDataAvailable`, the register's tracked archive). A footstone glyph marks a non-USD peg (`PLOT_PEG_GLYPHS`: € and ¥, ∿ for a variable peg, ◇ for any other), set in mono. The cypress verge outside the front railing carries one cypress per year, its height the number of deaths that year.
+- **Marks.** A bronze plaque means Pharos holds a frozen data page (`archivedDataAvailable`, the register's tracked archive). A footstone glyph marks a non-USD peg (`PLOT_PEG_GLYPHS`: € and ¥, ∿ for a variable peg, ◇ for any other), set in mono. The cypress verge outside the front railing scales tree height by each year's death count; empty years remain bare planting beds, and labels carry exact counts.
 - **Logos** are cells of the logo atlas (see [Logo atlas](#logo-atlas)): grey at rest, fading with weathering, with the colour cell sliding in on hover, focus or pin. A row with no logo shows the first letter of its symbol.
 - **One Beam.** The count of recorded deaths (`stats.total`) is the page's only frost figure, with the year span, the "interred" plaque and a one-line "Latest recorded death" under it. The drawn frost beam from the lantern rests on that figure and moves only on interaction.
 
@@ -323,7 +325,7 @@ Compare combines multiple query sources:
 - `/api/stress-signals` (`useStressSignals`)
 - `/api/mint-burn-flows` (`useMintBurnFlows`) for the shared flow dataset
 - per-coin `/api/supply-history?stablecoin=<id>&days=1825` (via `useQueries`) for long-range supply charts
-- per-coin `/api/mint-burn-flows?stablecoin=<id>&hours=<window>` (via `useQueries`) for comparison-specific flow panels
+- per-coin `/api/mint-burn-flows?stablecoin=<id>[&hours=<window>]` (via `useQueries`) for comparison-specific flow panels; `hours` is omitted for the 24-hour default
 
 It also derives live peg references with `derivePegRates(...)` for commodity/non-USD normalization in displayed prices.
 
@@ -344,7 +346,7 @@ Compare includes client-side share/export rendering:
 
 - overview
 - peg track record
-- Safety Score V9 construction
+- Safety Construction (current V10 pillars and constraints)
 - exit and DEX liquidity
 - issuance activity and yield
 - structure, controls, reserves, and regulatory status
@@ -360,4 +362,4 @@ The peg-track-record row `Open recorded incident` reports `activeDepeg` as Yes/N
 - Both pages are part of static export and rely on client-side fetches where applicable.
 - Cemetery reliability depends on repository data curation (`shared/data/dead-stablecoins.json` via `shared/lib/dead-stablecoins.ts`).
 - Cemetery Telegram notifications depend on the daily Telegram digest post plus `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`; additions are detected from the repo dataset, not from a separate API feed.
-- Compare global error/freshness notices include aggregate mint/burn flows. Tracking coverage requires a successful aggregate read; failed or absent evidence is unavailable, not zero tracked. Any failed per-coin history gets a retry notice, preserving retained data and successful peers.
+- Compare global error/freshness notices include aggregate mint/burn flows. Tracking coverage requires a successful aggregate read; failed or absent evidence is unavailable, not zero tracked. Per-coin flow-history failures get a retry notice; supply-history failures show inline "History unavailable". The shared retry includes both histories, preserving retained data and successful peers.

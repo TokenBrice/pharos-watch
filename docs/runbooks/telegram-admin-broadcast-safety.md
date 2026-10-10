@@ -26,7 +26,7 @@ Admin broadcasts are lower priority than risk alerts. They enqueue into `telegra
 
    In the operator broadcast panel, live send stays disabled until a successful preview covers the exact current `messageHtml` and audience. Editing either requires a new preview. If a preview response is lost, **Retry same intent** replays the original request body and idempotency key; a successful retry confirms only that original draft, not edits made while its outcome was unknown. Reconcile that intent, then use **Preview (dry run)** to review the edited draft before sending live.
 
-3. **Estimate drain time.** Read the dry-run `targetMessageCount` and `deliveryEstimate`. Proceed only when `hasMaterialTtlReserve` is true: estimated fleet drain must leave at least the hard 15-minute reserve inside the 45-minute TTL. The API returns `409` when that reserve is unavailable; no acknowledgement flag can bypass it.
+3. **Estimate drain time.** Read the dry-run `targetMessageCount` and `deliveryEstimate`. Proceed only when `hasMaterialTtlReserve` is true: estimated fleet drain must leave at least the hard 15-minute reserve inside the 45-minute TTL. Dry runs return the estimate with `200`; live requests return `409` when the reserve is unavailable. No acknowledgement flag bypasses it.
 4. **Choose the smallest scope.** Prefer `deliverable-watchers`. Use `global-subscribers` only for global-alert policy notices, and `all` only when intentionally targeting every subscriber row.
 5. **Avoid market-event windows.** Do not broadcast during an active depeg, DEWS burst, safety-grade publication issue, or Telegram 429 storm.
 
@@ -55,7 +55,7 @@ Use a private operator chat that is safe to receive the real notice. Live execut
 
 ## Cross-References
 
-- [`docs/api-reference.md`](../api-reference.md) section `POST /api/admin-telegram-broadcast`.
+- [`docs/api-reference-admin.md`](../api-reference-admin.md) section `POST /api/admin-telegram-broadcast`.
 - [`docs/telegram-alerts.md`](../telegram-alerts.md) section Pending Delivery Queue.
 - [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md).
 - [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).

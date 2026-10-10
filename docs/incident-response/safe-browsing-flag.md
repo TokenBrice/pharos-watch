@@ -25,7 +25,7 @@ Cached browser warnings can persist for hours after a clear verdict, and individ
 
 - **Authoritative public lookup**: https://transparencyreport.google.com/safe-browsing/search?url=pharos.watch
 - **Authoritative private**: Search Console → Security Issues (requires verified ownership of `pharos.watch` at `me@tokenbrice.com`)
-- **Cross-check**: `npm run check:safe-browsing` (requires `GOOGLE_SAFE_BROWSING_API_KEY` env var)
+- **Cross-check**: `npm run check:safe-browsing` requires `GOOGLE_SAFE_BROWSING_API_KEY` and checks only `URLS_TO_CHECK` in `scripts/ci/check-safe-browsing.ts`, not an arbitrary flagged URL. Exit `0` means no matches for that sample, `1` means threat matches, and `2` means configuration/API failure, not a clean verdict.
 
 If the transparency report shows "No unsafe content found" but Chrome still warns, it's a local cache. Wait 4–24h or have the user open a fresh profile. Do not proceed with the rest of this playbook.
 
@@ -61,7 +61,7 @@ If non-zero, the inline-script vector is the likely cause — see "Common trigge
 
 For the deceptive-content category specifically, build a mental model of what a classifier sees: rendered HTML + extracted text + form fields. Pages that mimic credential collection (even legitimately) are the highest-risk surface:
 
-- **/api/** — API key request form (email, name, organization, project URL, use case, expected cadence/volume, terms checkbox, plus a hidden honeypot input)
+- **/api/** — supporter-key wallet signature ceremony and one-time API-token reveal; the email/use-case request form is retired
 - **/funding/** — wallet addresses + "support" + chain logos
 - **/pharoswatchbot/** — Telegram bot integration page
 - Any page with `password`, `seed phrase`, `private key`, `wallet connect`, `claim`, `airdrop` keywords
@@ -80,7 +80,7 @@ For the deceptive-content category specifically, build a mental model of what a 
 
 **Signature:** A form with email + password inputs (or seed-phrase-like patterns) on a non-login page; a "verify your account" CTA without backend context; a "claim your tokens" button.
 
-**Fix:** Add a visible disclaimer at the top of the page stating what the form does and does not do — but word it positively. `npm run check:sensitive-page-copy` (chained into `npm run check:structural`) blocks the literal phrases `seed phrase`, `recovery phrase`, `private key`, `connect wallet`, `claim tokens`, `airdrop`, `sign message`, and browser-warning copy anywhere under `src/app/api`, `src/app/funding`, `src/app/pharoswatchbot`, or the funding components, so a disclaimer that names those terms will fail the gate. Prefer e.g. "This form only collects contact and use-case details so we can issue a read-only API key. Pharos never asks for wallet credentials of any kind." Do not widen the guardrail's phrase list to make a disclaimer pass. Rem…
+**Fix:** Explain the affected ceremony positively and accurately. `npm run check:sensitive-page-copy` (part of `check:structural`) enforces `FORBIDDEN_COPY` over `SENSITIVE_COPY_ROOTS` in `scripts/ci/check-sensitive-page-copy.ts`; consult those registries before authoring disclaimers. Do not widen the phrase list to make copy pass. Do not reintroduce the retired email-verification form or imply that supporter-key issuance collects contact details.
 
 #### C. Brand / system-warning impersonation
 
@@ -128,10 +128,10 @@ Fix deployed:
 Site purpose & integrity:
 Pharos is an open-source stablecoin analytics dashboard
 (https://github.com/TokenBrice/pharos-watch). No page collects
-passwords, seed phrases, private keys, or wallet signatures. No
-third-party advertising. No iframes or redirect chains. CSP is strict.
-The flagged URL is a public analytics dashboard with no credential
-collection. Please re-evaluate.
+passwords, seed phrases, or private keys. Supporter API-key issuance
+uses a wallet SIWE signature to prove donor-wallet ownership; it is
+not a transaction approval. No third-party advertising. CSP is strict.
+<Describe the flagged URL's actual forms, scripts and credential handling.>
 ```
 
 Be specific and technical. Vague "we've fixed it" submissions are queued behind detailed ones.

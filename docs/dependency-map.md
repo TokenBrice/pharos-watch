@@ -70,7 +70,7 @@ This distinction matters because a live adapter can legitimately supersede stale
 
 ## Dependency Semantics
 
-V9 dependency edges are serial or basket, and each carries a four-value `materiality` that also records whether the upstream score resolved (`serial-blocked`, `basket-bounded-unknown`).
+V9 dependency edges are serial or basket. Their four-value `materiality` distinguishes serial blockage (`serial-blocked`) and bounded basket uncertainty (`basket-bounded-unknown`) from ordinary serial/basket relationships; it is not a null-score test.
 
 **The map draws two relationships, not four.** `contagionEdgeRelationship()` collapses `materiality` onto `edge.kind`, using the reader-facing vocabulary the methodology page already publishes ("a serial wrapper cannot escape its parent; basket exposure is weighted") and the V8 stroke encoding readers already know:
 
@@ -79,9 +79,9 @@ V9 dependency edges are serial or basket, and each carries a four-value `materia
 | `basket` | Collateral | solid slate | Weighted share of backing; risk inherited in proportion |
 | `serial` | Wrapper | dotted violet | Full pass-through claim; inherits the upstream's risk in full |
 
-Whether the upstream score resolved stays out of the legend because it is a data-quality fact, not another relationship. Resolved links preserve `scoreKnown` from `v9DependencyEdgeScoreKnown`; edge tooltips, dependency inspection options, and live announcements mark an upstream not rateable when it is false. Known collateral shares remain visible regardless of score availability. Edge `upstreamScore` is not presented as the upstream asset's headline Safety Score.
+Blockage and bounded uncertainty stay out of the relationship legend. `v9DependencyEdgeScoreKnown()` reads materiality, not `upstreamScore`; its false state adds unavailable/not-rateable copy to tooltips, inspection options and live announcements. A bounded basket can still publish a numeric inherited score, while a serial pipeline gap can have null `upstreamScore` without `serial-blocked`. Known collateral shares remain visible in either case; `upstreamScore` is not the upstream asset's headline Safety Score.
 
-For reference, that distinction comes from one condition in `resolveV9DependencyInputs` — `cycleBlocked || unavailableDimensions.length > 0` — so an unscored edge means either a circular dependency or an upstream that is itself unrated. Both `blocked` (serial) and `boundedUnknown` (basket) are that same flag.
+`resolveV9DependencyInput` withholds an inherited score for cycles or unavailable consumed dimensions: serial claims consume final; baskets consume Backing. Serial `blocked` additionally excludes `pipeline-gap`; basket `boundedUnknown` also covers causes C/U even with a numeric score. `buildReportCardsV9DependencyGraph` projects those distinct flags into materiality.
 
 Only `collateral` sets `showWeight`, so only a weighted backing share renders a percentage. A wrapper is a full claim by definition, so a "100%" on one would be noise.
 
@@ -93,7 +93,7 @@ Only `collateral` sets `showWeight`, so only a weighted backing share renders a 
 - a basket dependency carries its published weight — including when the upstream score is unrateable (`basket-bounded-unknown`): losing the upstream score does not erase a known exposure
 - a basket edge whose weight itself is absent (`weight: null`) contributes no magnitude and exerts no link force
 
-Two different unknowns must not be conflated here. An unknown **weight** means the exposure share was never established, so the edge contributes no magnitude anywhere. An unrateable upstream **score** (`serial-blocked`, `basket-bounded-unknown` in `materiality`) means the upstream could not be scored; the exposure weight is whatever was published, and the simulation keeps it. `v9DependencyEdgeWeight()` returns `null` only for the first case and `v9DependencyEdgeScoreKnown()` reads `materiality` — never the weight — for the second.
+An unknown **weight** means the exposure share was never established, so the edge contributes no magnitude. Serial blockage or bounded basket **evidence** does not erase a published share. `v9DependencyEdgeWeight()` returns null only for an absent basket weight; `v9DependencyEdgeScoreKnown()` reads materiality, never weight or score nullability.
 
 Because an edge with no weight models to no magnitude, `contagion-graph-svg.tsx` floors stroke geometry at `MIN_EDGE_DISPLAY_WEIGHT` so the relationship still reads as a drawn edge, and the tooltip omits the percentage rather than showing a misleading `0%`.
 
@@ -115,7 +115,7 @@ DOLA's adapter publishes LP-secured debt as named `LP-secured debt (undecomposed
 
 The same module exposes `lookThroughShares()` and `exposureFootprint()` for joint-root downstream footprints. Serial parents contribute their greatest upstream share; basket parents contribute the sum of weighted upstream shares; the resulting share is the greater of those two terms. Roots are excluded from downstream rows. Each reached asset appears once with its minimum hop, nullable share, nullable USD exposure, and `scoreUnknown` derived from edge materiality rather than missing supply.
 
-Cycles produce unknown shares and integrity flags. Null-weight basket edges are excluded from share sums and flag incomplete shares; basket sums above 1.000001 remain unclamped and flag integrity. Unavailable supply stays listed but is excluded from USD totals. Bands are material at the policy's 10% threshold, minor at 1%, trace above zero, and unknown for null or zero shares. Direct and indirect totals use the full edge set and the shared-book reconciliation path. Bounded best-first paths default to three per row and never limit totals. These are module semantics, not a transitive loss estimate displayed by the hub board.
+Cycles produce unknown shares and integrity flags. Null-weight basket edges are excluded from share sums and flag incomplete shares; basket sums above 1.000001 remain unclamped and flag integrity. Unavailable supply stays listed but is excluded from USD totals. Bands are material at the policy's 10% threshold, minor at 1%, trace above zero, and unknown for null shares; zero-share rows are omitted. Direct and indirect totals use the full edge set and shared-book reconciliation. Bounded best-first paths default to three per row and never limit totals. These are module semantics, not a transitive loss estimate displayed by the hub board.
 
 ## Exposure mode
 

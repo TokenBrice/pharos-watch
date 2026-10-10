@@ -1,7 +1,7 @@
 # Depeg Lifecycle Review
 
 Owner runbook for the lifecycle flags the daily digest cron computes over the
-full open `depeg_events` set. Nothing here is automated beyond the flagging —
+eligible open `depeg_events` set. Nothing here is automated beyond the flagging —
 freezing or delisting a coin remains a manual decision with its own runbook
 ([`docs/freezing-stablecoins.md`](../freezing-stablecoins.md)).
 
@@ -18,17 +18,17 @@ its manual freeze; usda-avalon's event has been open since 2025-12-30.
 ## Flags
 
 Computed daily by `worker/src/lib/depeg-lifecycle.ts` inside the digest cron's
-active-depeg collector, over **all** open events (not the top-8 digest slice).
-Rows without a live price are never flagged — a stale stored peak must not
-trigger a freeze review. Thresholds owner-ratified 2026-07-18.
+active-depeg collector, before the prompt slice. The collector excludes
+untracked/frozen coins and unavailable market caps. Flags require a fresh live
+price and a positive stored peg reference; a stale stored peak never triggers
+a freeze review. Thresholds owner-ratified 2026-07-18.
 The 21- and 30-day thresholds use a rounded-hourly age that is then floored
-into days, so they are not exact elapsed-day boundaries and can trip up to
-~1 hour early.
+into days, so they can trip up to ~30 minutes early.
 
 | Flag | Condition | Meaning |
 |------|-----------|---------|
-| `stalled-collapse` | open ≥ 21 days AND live deviation ≥ 2,500 bps | The peg is not coming back on its own. Decide: freeze (see the freeze runbook), or document why the coin stays active. |
-| `chronic-shallow` | open ≥ 30 days AND live deviation < 300 bps | The event is technically open (never recovered inside the 50 bps close threshold — half the 100 bps USD trigger, 75 bps for non-USD pegs) but describes a chronic soft peg, not a crisis. Decide: tolerate, or consider a detector-side close/re-baseline. |
+| `stalled-collapse` | open ≥ 21 days AND absolute live deviation ≥ 2,500 bps | A persistent severe dislocation needs review. Decide: freeze (see the freeze runbook), or document why the coin stays active. |
+| `chronic-shallow` | open ≥ 30 days AND absolute live deviation < 300 bps | The event is technically open (never recovered inside the 50 bps close threshold — half the 100 bps USD trigger, 75 bps for non-USD pegs) but describes a chronic soft peg, not a crisis. Decide: tolerate, or consider a detector-side close/re-baseline. |
 
 ## Where to see them
 
@@ -50,9 +50,9 @@ into days, so they are not exact elapsed-day boundaries and can trip up to
    page, CoinGecko, on-chain pools). If the collapse is real and unremediated,
    run the freeze procedure; freezing removes the coin from the digest's
    active-depeg inputs immediately while preserving event history.
-3. For each `chronic-shallow`: no digest impact (severity runs on the live
-   deviation, and old unchanged events cannot lead) — the flag exists so a
-   months-open event is a deliberate choice, not an oversight.
+3. For each `chronic-shallow`: review whether the soft peg should remain
+   tracked. The flag itself does not control digest eligibility; age, market
+   impact, critical-risk overrides, and day-over-day changes do.
 4. A flag that should be permanently tolerated (e.g., a documented chronic
    soft peg) can be noted in the coin's `notices`; the flag itself will keep
    reappearing by design.
@@ -72,4 +72,4 @@ factor is the curation prompt — not a separate review treadmill.
 | 4. Validate | Coin schema validation + focused DDR fixtures must accept the fields. Severe K6 only applies when `windDownAnnouncedAt ≤` lock/evaluation time; future announcements must not back-fire on earlier locks. |
 | 5. Freeze if terminal | If the asset is also a stalled collapse, continue with the freeze runbook after curation; freezing is still manual. |
 
-Do not invent announcement dates. If no public issuer announcement exists, leave the fields absent and keep treating the row as fingerprint-only elevated / at-risk rather than forcing a false terminal via K6 severe.
+Do not invent announcement dates. If no public issuer announcement exists, leave the fields absent: K6 remains fingerprint-only elevated evidence, and the full rubric determines the verdict rather than forcing terminal via K6 severe.

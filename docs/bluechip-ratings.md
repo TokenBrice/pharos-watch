@@ -80,7 +80,7 @@ Each cached map value is a `BluechipRating` (`shared/types/bluechip.ts`, re-expo
 `GET /api/bluechip-ratings` is implemented by `handleBluechipRatings` in `worker/src/api/cache-handlers.ts`.
 
 - Reads the `bluechip-ratings` cache key directly.
-- Uses the `slow` cache profile (`public, s-maxage=3600, max-age=300`).
+- Starts from the `slow` cache profile (`public, s-maxage=3600, max-age=300`); freshness headers clamp TTLs to the remaining fresh runway and force `no-store` for stale or invalid future-clock responses.
 - Applies freshness headers with a 43,200-second max-age budget (the `Warning: stale` header fires at 8x that, ~345,600s; `_meta.status` becomes `stale` at 12x, ~518,400s).
 - Returns a top-level object keyed by canonical Pharos stablecoin ID.
 - The endpoint uses `createCacheHandler()` with `BluechipRatingsMapSchema`, then reassesses each constituent's observation age; it returns 503 when the cache is missing or malformed. Response `_meta` describes the map publication, not every constituent's last observation. Legacy caches and archived V8 fixed-input captures default missing provenance to `lastObservedAt: null`, `observationState: "unknown"`, `observationReason: "legacy-observation-unknown"`.
@@ -94,7 +94,7 @@ See [API Reference](./api-reference.md) for the exact response shape.
 - `src/hooks/api-hooks.ts` exposes `useBluechipRatings()` via the registered `bluechipRatings` query descriptor, whose producer interval is `CRON_BLUECHIP` (derived from `CRON_INTERVALS["sync-bluechip"]`).
 - `src/components/bluechip-header-badge.tsx` renders only the external `Bluechip: <grade>` badge/report link in both responsive stablecoin detail identity layouts. While the Pharos roster is suspended, no Pharos qualification or tenure appears in visible text, link titles, or accessible labels. An external `dateOfRating` is never evidence of Pharos designation tenure.
 - `src/hooks/use-selector.ts` reads the ratings map as one of the Selector's inputs.
-- `src/app/about/bluechip/page.tsx` states the roster rule statically; the roster itself is suspended pending the V9 grade-floor review, so `/about/bluechip/` requests neither the ratings map nor the V9 report cards.
+- `src/app/about/bluechip/page.tsx` states the roster rule statically; the roster itself is suspended pending the V10 grade-floor review, so `/about/bluechip/` requests neither the ratings map nor the report cards.
 - `src/hooks/use-compare-data-model.ts` folds Bluechip ratings into the compare-page query slices, error propagation, `bluechipMap` projection, and refetch orchestration behind `src/components/compare/compare-client.tsx` (lazily loaded by `src/app/compare/page.tsx`).
 
 `src/lib/bluechip.ts` contains:

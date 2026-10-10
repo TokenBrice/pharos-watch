@@ -22,7 +22,7 @@ The row builder starts from `CLIENT_TRACKED_STABLECOINS` and explicitly excludes
 - `useReportCardsV9()` for Safety Grade, overall score, Backing / Exit / Economic Control, evidence level, weakest pillar, binding-cap context, and the published mint component
 - `useStressSignals()` for DEWS
 - `useDexLiquidity()` for Liquidity Score
-- `useLogos()` for identity assets
+- `logosById` from `src/lib/logos.ts` for static identity assets
 - the slim client registry for lifecycle, governance type, mechanism, peg, blacklistability, Mint Authority summary, and curated custody model (with the shared backing/governance fallback)
 
 The Screener reads USD supply through `getCirculatingRawOrNull()`. `ScreenerRow.supplyUsd` is `null` when the asset is absent from `/api/stablecoins` (for example a pre-launch row) or its current peg buckets are absent, empty or wholly invalid; only an explicit finite zero is `0`. An active supply range (including a max-only filter from a URL or the command-palette `supply<=N` verb) never matches `null`, while an explicit zero passes a max-only filter. The palette drops a non-positive `supply<=` ceiling, because `supplyMax=0` means "no maximum". Table cells render `—` for `null` and the formatted value for an explicit zero; the CSV `supply_usd` cell is empty for `null` and `0` for an explicit zero. The **30d Supply** sparkline keeps a missing current endpoint as a gap rather than a zero. The Screener does not introduce its own API endpoint.
@@ -33,7 +33,7 @@ The Screener reads USD supply through `getCirculatingRawOrNull()`. `ScreenerRow.
 
 1. Exact identity: optional `coins`, limited to eight recognized tracked IDs. When present it is an inspection mode and takes precedence over the broad projection fields, so a relaxed Picker result cannot disappear on arrival.
 2. Stress and size ranges: `dewsMin`, `dewsMax`, `supplyMin`, `supplyMax`, `pegScoreMin`, and `liquidityScoreMin`.
-3. Safety V9: `safetyGrades`, `safetyEvidence`, and `safetyBackingMin`, `safetyExitMin`, `safetyControlMin`.
+3. Safety: `safetyGrades`, `safetyScoreMin`, `safetyEvidence`, and `safetyBackingMin`, `safetyExitMin`, `safetyControlMin`.
 4. Classification and custody: `types`, `mechanisms`, `pegs`, and `custodyModels`.
 5. Lifecycle and control: `lifecycle` and `blacklistable`.
 6. Mint Authority: `mintAuthority`, `mintAuthorityScoreMin`, and `mintAuthorityScores`.
@@ -46,19 +46,19 @@ Legacy `mechanism=<slug>` links normalize once after hydration to `mechanisms=<s
 
 Rows are not built until the stablecoin list is available. Query freshness from all five live data sources is combined through `buildQueryFreshnessGroup()` and rendered by `QueryFreshnessNotices`, with a shared retry action.
 
-Filters that read DEWS or the V9 report cards (safety grades, pillar floors, evidence status, and the mint control score and band) wait for their source instead of temporarily filtering against incomplete score data. During that state the table stays in its loading presentation, match counts do not claim a partial result, and export is disabled. `pegScoreMin` and `liquidityScoreMin` are not gated: they filter against whatever peg-summary and DEX-liquidity data has arrived, so an active floor can narrow the table during the first fetch. Missing optional values remain unrated; an active threshold excludes rows that lack the required score.
+Filters that read DEWS or report cards (safety grades, overall/pillar floors, evidence status, and the mint control score and band) wait during the initial source load without retained data. The table stays in its loading presentation and export is disabled; after a failed fetch, missing readings are excluded rather than keeping this loading gate open. `pegScoreMin` and `liquidityScoreMin` are not gated: they filter against whatever peg-summary and DEX-liquidity data has arrived, so an active floor can narrow the table during the first fetch.
 
 Retained data can remain visible with stale/error notices according to the shared hook metadata. This route does not invent local staleness windows.
 
 ## Sorting And Export
 
-The default sort is Safety Score descending. Sortable keys are name, supply, Peg Score, DEWS, Liquidity Score, Safety Score, and the mint control score (retained for programmatic/advanced use). The primary table replaces the old Mint Score column with a compact V9 profile (`Backing / Exit / Economic Control`), highlights the published weakest pillar, and shows Strong, Adequate, Limited, or NR evidence status. `useSort()` owns direction and `aria-sort`; unrated handling comes from the shared table comparator.
+The default sort is Safety Score descending. Sortable keys are name, supply, Peg Score, DEWS, Liquidity Score, Safety Score, and the mint control score (programmatic use). The primary table shows a compact V10 profile (`Backing / Exit / Economic Control`), highlights the published weakest pillar, and distinguishes Strong, Adequate, Limited, NR, Pipeline gap, and Unavailable evidence. Partial pipeline evidence and the binding-cap/weakest-pillar driver are surfaced separately. `useSort()` owns direction and `aria-sort`; unrated handling comes from the shared table comparator.
 
 The desktop-only **Peg Range** sparkline is a two-point `[worst tracked deviation, current deviation]` comparison from the published peg summary, not a 30-day history window. Its tooltip and accessible name use the same worst/current wording, and the Screener makes no per-coin history requests to populate it. The separate **30d Supply** sparkline compares the previous-month and current supply endpoints.
 
-`TableExportMenu` exports the currently filtered and sorted rows, not the unfiltered universe. The CSV includes identity, lifecycle/classification, supply, the Peg/DEWS/Liquidity scores, the Safety grade and score, the V9 pillar/evidence/cap fields, custody, blacklistability, and the mint route/score/band. Export stays disabled while an active score filter is waiting on source data, and stamps a single methodology label: the safety-score identity, noting that the mint control columns are included.
+`TableExportMenu` exports the currently filtered and sorted rows, not the unfiltered universe. The CSV includes identity, lifecycle/classification, supply, the Peg/DEWS/Liquidity scores, Safety grade/score, pillar/evidence/cap fields, rating status, partial-evidence causes, custody, blacklistability, and mint route/score/band. Export is disabled during the active score filter's initial source load and stamps the safety-score identity, noting the mint control columns.
 
-Since safety `9.1` the mint columns come from the published V9 mint component. The Screener CSV contract uses the literal headers `mint_authority`, `mint_authority_score`, and `mint_authority_score_band`; the shared directory-table export has a separate title-case header contract. Band keys, filter values, and saved Screener URLs are unchanged. The export provenance line stamps the safety-score identity rather than the retired mint-authority lane.
+The mint columns come from the published Safety Score mint component through the existing V9-named consumer helpers. The Screener CSV uses the literal headers `mint_authority`, `mint_authority_score`, and `mint_authority_score_band`; the shared directory-table export has a separate title-case header contract. Band keys and saved Screener URLs are unchanged. Export provenance uses the safety-score identity, not the retired mint-authority lane.
 
 ## Picker Handoff
 

@@ -1,6 +1,6 @@
 # Feature Flags
 
-Feature flags gate the riskiest of the May 2026 detail-page changes. Most default to off. Three flags are default-on and roll back only when explicitly set to `false`: `NEXT_PUBLIC_PHAROS_HERO_VERDICT` (after the W3 launch), `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`, and `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER`.
+Feature flags gate selected frontend changes. Defaults and lifecycle dates live in `src/lib/feature-flags.ts`: default-off flags enable only on literal `true`, while default-on flags roll back only on literal `false`.
 
 To enable a default-off flag locally: `NEXT_PUBLIC_PHAROS_<NAME>=true npm run dev`.
 
@@ -22,9 +22,9 @@ The no-op blacklist banner control was retired on 2026-09-27 (DEC-15): its flag,
 | `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`   | Idea 20b (mobile sticky compact summary)                                            |
 | `NEXT_PUBLIC_PHAROS_HERO_VERDICT`            | Idea 1 (hero archetype `VerdictPill`; the `oneLiner` and AI summary are not gated)  |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`          | DDR module on `/depeg/` and its inputs to the depeg outlook hero; homepage DDR overview; detail DDR card and DDR track-record section; master-gates DDRR (rollback) |
-| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | Depeg Duration Resolver Reviewer module below DDR on `/depeg/` (emergency rollback) |
+| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | DDRR module below DDR on `/depeg/` and the detail DDR track-record section (emergency rollback) |
 
-`expiresAt` is enforceable: a gated flag carries its date in an `// expiresAt:` comment above the flag in `src/lib/feature-flags.ts`, and a flag with no such comment has no expiry. Past the date, either flip and inline the on-path, or document the reason for keeping the flag. The stale-flag check (`scripts/ci/check-stale-flags.ts`) is enforced by `check:structural` for affected PR paths and every nightly/manual validation run; it fails when any flag's `expiresAt` is today or earlier and warns 30 days ahead.
+`expiresAt` is enforceable: dated flags carry an `// expiresAt:` comment immediately above the flag key in `src/lib/feature-flags.ts`; undated flags have no expiry. By the deadline, either retire the flag after acceptance or extend its date with a documented retention rationale. Documentation alone does not waive expiry. `check:stale-flags` runs in affected PR structural guards and nightly/manual validation; it fails on dates today or earlier, warns 30 days ahead, and rejects an inventory with no parsed dated flags.
 
 ## Flip readiness gates
 

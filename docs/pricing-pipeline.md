@@ -4,7 +4,7 @@
 
 Canonical reference for Pharos live-price selection, fallback enrichment, and source-specific normalization.
 
-Supply fallback behavior is owned by [Supply Snapshot: Supply Pipeline](./supply-snapshot.md#supply-pipeline). Cross-pipeline cache and integrity guardrails are retained in [Data Integrity Guardrails](process/pricing-pipeline-appendix.md#data-integrity-guardrails) below.
+Supply fallback behavior is owned by [Supply Snapshot: Supply Pipeline](./supply-snapshot.md#supply-pipeline). Cross-pipeline cache and integrity guardrails are retained in [Data Integrity Guardrails](process/pricing-pipeline-appendix.md#data-integrity-guardrails).
 
 
 ---
@@ -59,7 +59,7 @@ The 2026-10-08 `v6.43` release makes JLTXX native-share admission unconditional:
 | Chainlink/Superstate/JPMorgan reserve NAV telemetry | 3 | `reserve_composition` | Matched fresh reserve snapshots, with fresh/static FX conversion for non-USD NAVs. |
 | Promoted DEX protocol lanes | 2–3 | `worker/src/lib/depeg-helpers.ts` | Per-protocol observations from `dex_prices`; each lane must agree with a hard source or an independent promoted DEX lane, and the aggregate is withheld whenever any promoted protocol candidate exists, even when every lane is then rejected (registry, freshness, TVL, or corroboration). |
 | Authoritative protocol/NAV overrides | authoritative replacement | `worker/src/lib/authoritative-price-sources/` | Bounded route registry evaluated after primary consensus for assets with a registered known source. |
-| CoinGecko Onchain exact-address | provenance weight 1 | `worker/src/lib/address-price-providers/coingecko-onchain.ts` | Hourly corroboration only, limited to the prior publication's missing or fewer-than-three-source rows; never blocks the 15-minute publication. |
+| CoinGecko Onchain exact-address | provenance weight 1 | `worker/src/lib/address-price-providers/coingecko-onchain.ts` | Hourly corroboration plus slot-level refresh for missing/address-priced rows; outside the main publication invocation. |
 
 Reserve NAV quotes use the shared decoder in `worker/src/lib/reserve-nav-price.ts`. It accepts only registered NAV adapters, independently checks the successful snapshot fetch age and upstream NAV evidence clock, and rejects invalid/nonpositive NAV, missing or malformed metadata, and stale or excessively future evidence. JPMorgan JLTXX uses the exact issuer Token Class transaction NAV with the shared five-day business-day NAV source-age policy; Chainlink and Superstate retain their existing source-specific policies. Supply admission can read the same matched successful snapshot before a new NAV asset has a previous stablecoin cache row: `fiat-cg.ts` values positive native on-chain supply at that observed NAV and applies the existing trusted FX conversion for non-USD classes. This valuation does not itself fabricate a published market quote; primary reserve-NAV consensus supplies the live price. A missing/stale NAV and absent alternative trusted price leave the candidate out, rather than assigning nominal $1.
 
@@ -144,7 +144,7 @@ Challenger publication preserves protocol diversity before applying its 95% qual
 
 Before any pool-challenge divergence or replacement decision, protocol-level challenger medians must pass the peg-aware `dex_observation` price validator. This keeps inverse or malformed commodity marks (for example `1 / XAUUSD` instead of a USD-per-ounce gold token price) from downgrading or replacing a healthy primary price, while valid depeg-sized DEX medians remain eligible for the normal replacement paths.
 
-When pool-challenge replacement fires, the selected primary result is rewritten in lockstep so downstream carry-through sees the new source: `allPrices`, `observedAtBySource`, and `observedAtModeBySource` are collapsed to a single `pool-tvl-weighted` entry, the replacement `observedAt` is the minimum of the contributing pools' observed-at timestamps (with mode `local_fetch`), and `agreeSources` / `candidateSources` / `disagreeSources` are updated to match. This keeps `hasCorroboratedSevereDownsideCandidate` and the primary-candidate carry-through lane from reading stale pre-replacement sources during later validation passes.
+Pool replacement collapses `allPrices`, `observedAtBySource`, and `observedAtModeBySource` to `pool-tvl-weighted`, using the minimum contributing observation time and `local_fetch`. `agreeSources` becomes only that pool source; `candidateSources` retains earlier candidates and adds it, while `disagreeSources` becomes every other candidate. Downstream candidate-price checks therefore cannot reuse pre-replacement prices even though the diagnostic source roster is retained.
 
 If the selected primary price is a severe fixed-peg downside and at least two live candidate sources independently
 corroborate that downside by source family, including at least one depeg-authoritative source such as RedStone or Curve on-chain, pool challenge can still
@@ -161,7 +161,7 @@ The DEX bridge and the pool challenge now deliberately read from different stora
 
 Dead or explicitly blocked DEX ids, including Bunni and its chain-scoped variants, are filtered upstream and cannot contribute challenger pools, promoted DEX bridge sources, or pool-challenge replacement marks.
 
-This catches cases where multiple aggregators or DEX-derived bridge sources agree on a misleading price derived from small pools while ignoring large pools that show a depeg. When the challenge fires, on-chain pool liquidity provides a more honest price signal than aggregator consensus because large pools carry proportional weight. Hard sources (Binance, Kraken, Bitstamp, Coinbase, Curve on-chain, Curve oracle, RedStone with multi-venue agreement, protocol-redeem) are exempt because they provide independent market/oracle data.
+This catches weak-source agreement derived from small pools while larger pools show a depeg. Exemption is registry-owned: a selected cluster containing a hard market/oracle/protocol source is not pool-challenged; RedStone does not require additional multi-venue agreement for that exemption.
 
 ---
 
@@ -183,7 +183,7 @@ This catches cases where multiple aggregators or DEX-derived bridge sources agre
 - Fallback/search lanes remain non-authoritative even when their source labels appear inside composite strings. `coinmarketcap`, `defillama-contract`, and CoinGecko mirror/low-volume-style sources are treated as list aggregators for independence checks; Jupiter, DexScreener exact/search/address, DexPaprika, CoinGecko Onchain address augmentation, Alchemy Prices, Moralis, Birdeye, and cached replay cannot satisfy single-source depeg authority.
 - Soft single-source prices are never depeg-authoritative
 - Soft-only multi-source agreement can still publish, but it remains `confirm_required` downstream unless a hard authoritative source is present
-- Hard single-source prices are only depeg-authoritative when their freshness is source-native (`priceObservedAtMode = "upstream"`); local-fetch hard single-source prices remain `confirm_required`
+- Hard single-source prices require `upstream` freshness, except legacy unset modes on upstream-capable sources; explicit `local_fetch` remains `confirm_required`
 - Supported non-USD fiat assets can require a fresh direct native-peg corroboration step before a derived USD/FX move is allowed to publish, or to open, extend, or confirm downstream depeg state; when that native-implied mark is published, it remains a non-replay-safe fallback lane rather than cached consensus continuity
 - Weak fixed-peg price jumps versus the previous trusted price are withheld until corroboration arrives
 
@@ -221,7 +221,7 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 
 ## Treasury Benchmark Rates
 
-`fetch-tbill-rate` runs daily at 08:00 UTC and fetches every benchmark descriptor on each run: USD 3-month Treasury, USD/EFFR, EUR, CHF, GBP, JPY, MXN, BRL, AUD, CAD, RUB, and TRY.
+`fetch-tbill-rate` runs daily at 08:00 UTC, with gated hourly retries before yield publication. Every admitted fetch covers the descriptors in `BENCHMARK_DESCRIPTORS` in `worker/src/cron/fetch-tbill-rate.ts`; SGD is a null cache slot, not a fetched feed. Retry admission uses retained market-fetch and record-age evidence, not the registry cache write clock; a supplemental catch-up defers the retry for that slot.
 
 Each descriptor owns an independent circuit breaker key in the form `TREASURY_RATES:<descriptor>` (for example, `TREASURY_RATES:EUR`). An open descriptor circuit produces its retained or hardcoded fallback while every other descriptor continues through its own breaker and provider path. The daily publication preserves the structured `risk_free_rates` and legacy `risk_free_rate` cache shapes.
 

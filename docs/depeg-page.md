@@ -32,7 +32,7 @@ softening rules for discovery surfaces do not apply here.
 
 ## Section Order
 
-The order is deliberate; changing it changes the route's answer sequence.
+With the default-on DDR/DDRR feature flags enabled, the order is deliberate:
 
 1. `QueryFreshnessNotices`
 2. **`DepegOutlookHero`** (`src/components/depeg-outlook-hero.tsx`) — the signature hero
@@ -81,36 +81,35 @@ One Beam metric" shape required by `design-language.md#feature-page-heroes`.
 
 ### Metric ownership
 
-The hero block is the **sole owner** of every route-level headline figure: the active depeg count,
-the worst live move, the at-peg split, the tracked DEWS alert count, the DDR verdict split, and the
-DDRR accuracy headline. No module below it may restate them — the resolver header carries only its
-book size and visible slice, and the embedded alert queue suppresses its own count. This rule exists
-because those figures previously appeared on up to four surfaces, one of which derived them from a
-different API response and could therefore disagree.
+The hero owns route-level headline figures: active depegs, worst live move, at-peg
+split, catalog DEWS alerts, DDR verdict split, and DDRR accuracy. Lower modules
+must not repeat verdict or accuracy headlines. The resolver header does repeat
+book size, past-peak count, and calibration lineage; the embedded alert queue
+suppresses its own count.
 
 ### Universe scope
 
-Four reader-visible universes appear on this route and must always be labelled. Two of them come from
-the same response, which is the easiest mistake to make here:
+Reader-visible universes must be distinguished; `summary.*` is not one cohort:
 
 | Universe | Source | Where it appears |
 | --- | --- | --- |
-| Live-peg-status assets | `usePegSummary()` `summary.*`, counted only where `currentBps !== null` | hero holding-peg split, median deviation, worst live move, active count |
+| Live-peg-status assets | `usePegSummary()` live aggregates, only where `currentBps !== null` | hero holding-peg split, median deviation, worst live move |
 | Peg-catalog assets | `usePegSummary()` `coins[]`, every returned row | control board rows and pagination, `trackedIds`, alert-queue scope, tracked ALERT+ count |
+| Confirmed active detections | `usePegSummary()` `summary.activeDepegCount`, non-NAV active rows regardless of `currentBps` | hero active count |
 | DEWS-covered assets | `useStressSignals()` | radar marks, radar centre caption, legend band counts |
 | Resolver incidents / valid frozen forecasts | `useDepegResolver()` | worklist includes all explicit states; tier summary counts only valid frozen predictions |
 
-They are near each other and never equal — the first two differ by every row without a live
-deviation. Copy must therefore say "with live peg status" or "of the peg catalog" explicitly; the
-bare phrase "tracked set" is ambiguous on this route and must not be used.
+These cohorts differ whenever observations or coverage are missing. Label live
+deviation aggregates "with live peg status" and catalog metrics "of the peg catalog";
+do not imply the active count requires a current price.
 
 Two eligibility caveats:
 
 - Because calm radar marks are anonymous positions, a coin in a confirmed depeg that is still CALM on
   DEWS receives no halo. The legend counts halos actually drawn, not every active depeg.
-- `summary.activeDepegCount` excludes NAV tokens; the halo set is built from every returned
-  `coin.activeDepeg`. They agree today. If an active NAV incident becomes possible, apply the same
-  eligibility to the halo set.
+- `summary.activeDepegCount` excludes NAV tokens; the halo candidate set uses
+  every returned `coin.activeDepeg`. If NAV incidents are admitted, align this
+  eligibility; actual halo count also depends on DEWS elevation.
 
 ---
 
@@ -130,10 +129,10 @@ behind an explicit toggle that mounts them only when opened.
   `src/components/depeg-resolver-book-summary.ts` owns the valid frozen prediction tier split,
   past-peak count and forecast total; `rowCount` separately counts incident browsing rows.
   The hero's recovery posture excludes pending, no-call and invalidated outcomes.
-- **Header scope:** the recovery-verdict split belongs to the hero (see
-  [Metric ownership](#metric-ownership)). This module's header states only its book size and which
-  slice is on screen, so four cards are never mistaken for the whole book. The retired "Outlook
-  Posture" block must not return as a standalone surface.
+- **Header scope:** the verdict split belongs to the hero. This header shows
+  forecast and incident-row counts, the visible slice, past-peak count, and
+  calibration lineage/coin count. A four-card slice is not the whole book.
+  The retired standalone "Outlook Posture" surface must not return.
 
 ---
 
@@ -170,17 +169,17 @@ to the board, and the collapsed state unmounts the module rather than hiding it,
 goes with it. It was previously collapsed by default and placed after the history handoff; readers
 could not find it, which is the failure this placement fixes.
 
-Its **query is not gated**: the hero's forecast track record reads `summary.headline` from the same
-response, so the payload is needed on first paint regardless. Its freshness entry and error
-therefore always join the route-level notices.
+Its query is not gated by disclosure state: the hero needs `summary.headline`
+on first paint. DDR and DDRR feature flags gate the query, section, freshness
+entry, and error notice together.
 
 ---
 
 ## Event History And Crawlability
 
-- `DepegFeed` shows recent resolved detections and hands off to `/timeline/?type=depeg.*` for the
-  unbounded operational stream. It is a fixed-size handoff, not a second history browser — no
-  route-level load-more.
+- `DepegFeed` shows a responsive slice of loaded resolved detections, with a
+  local **Load more** control that reveals more loaded rows without fetching another
+  API page. `/timeline/?type=depeg.*` is the unbounded operational handoff.
 - `DepegEventArchivePreview` on `/depeg/` shows the latest month of permanent event pages and links to
   `/depeg/archive/`.
 - `/depeg/archive/` is the complete server-rendered internal link hub for every permanent event page.
@@ -209,10 +208,9 @@ query cache.
 
 ## Module Header Grammar
 
-Every module on this route uses one header shape:
-
-- **Left:** optional system mark (`DDR`, `DDRR`) → `pharos-section-title` → status/version badge
-- **Right:** scope or count → freshness, in `pharos-meta`
+DDR/DDRR use a system mark, section title, version/status badge, and metadata.
+The feed uses a title only; the control board pairs kicker/title with attention
+counts; the archive pairs its title with permanent-page/latest-month metadata.
 
 Titles use `pharos-section-title`, never a hand-copied size/weight recipe. Labels use
 `pharos-kicker`; metadata uses `pharos-meta`; figures keep `pharos-numeric`.
