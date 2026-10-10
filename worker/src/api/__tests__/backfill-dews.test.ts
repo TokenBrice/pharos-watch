@@ -69,49 +69,35 @@ vi.mock("../../lib/stablecoins-cache", () => ({
   })),
 }));
 
-vi.mock("../../lib/dews/source-state", () => ({
-  loadDewsSourceState: vi.fn(async () => ({
-    dexLiqRows: { results: [] },
-    dexLiqMap: new Map(),
-    dexLiqAgeSecById: new Map(),
-    dexLiqStaleIds: new Set(),
-    dexPriceMap: new Map(),
-    dexPriceAgeSecById: new Map(),
-    dexPriceStaleIds: new Set(),
-    liqHist7dMap: new Map(),
-    liqHistRowsRead: 0,
-    blacklistCounts: new Map(),
-    prevSignals: new Map(),
-    prevSignalStaleIds: new Set(),
-    mintBurnMap: new Map(),
-    mintBurnAgeSecById: new Map(),
-    mintBurnStaleIds: new Set(),
-    yieldWarnings: new Map(),
-    yieldSourceRisk: new Map(),
-    yieldRankChangeAttribution: new Map(),
-    latestPsiScore: null,
-    sourceCoverage: { dexPrices: 1, dexLiquidity: 1 },
-    dependencyDiagnostics: {
-      psi: { generationId: null, updatedAt: null, ageSeconds: null, freshnessBudgetSec: 3600, reason: "missing-sample" },
-      dexLiquidity: {
-        totalRows: 0,
-        freshRows: 0,
-        staleRows: 0,
-        freshnessAgeSec: null,
-        staleThresholdSec: 7200,
-        latestGenerationId: null,
-        latestGenerationState: null,
-        latestGenerationStartedAt: null,
-        latestGenerationPublishedAt: null,
-        latestGenerationFailedAt: null,
-        latestGenerationFailureReason: null,
-        latestPublishedGenerationId: null,
-        latestPublishedAt: null,
-        latestPublishedAgeSec: null,
-      },
-    },
-  })),
-}));
+vi.mock("../../lib/dews/source-state", async () => {
+  // Vitest hoists this factory before static imports; load its fixture inside the factory.
+  const { emptyDewsDependencyDiagnostics } = await import("../../cron/dews/__tests__/source-state.test-support");
+  return {
+    loadDewsSourceState: vi.fn(async () => ({
+      dexLiqRows: { results: [] },
+      dexLiqMap: new Map(),
+      dexLiqAgeSecById: new Map(),
+      dexLiqStaleIds: new Set(),
+      dexPriceMap: new Map(),
+      dexPriceAgeSecById: new Map(),
+      dexPriceStaleIds: new Set(),
+      liqHist7dMap: new Map(),
+      liqHistRowsRead: 0,
+      blacklistCounts: new Map(),
+      prevSignals: new Map(),
+      prevSignalStaleIds: new Set(),
+      mintBurnMap: new Map(),
+      mintBurnAgeSecById: new Map(),
+      mintBurnStaleIds: new Set(),
+      yieldWarnings: new Map(),
+      yieldSourceRisk: new Map(),
+      yieldRankChangeAttribution: new Map(),
+      latestPsiScore: null,
+      sourceCoverage: { dexPrices: 1, dexLiquidity: 1 },
+      dependencyDiagnostics: emptyDewsDependencyDiagnostics(),
+    })),
+  };
+});
 
 vi.mock("../../lib/dews/scoring", () => ({
   buildDewsScoringResult: vi.fn(() => ({

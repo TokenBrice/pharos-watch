@@ -24,11 +24,7 @@ import {
   type EvmBlockHeader,
 } from "../../lib/evm-rpc";
 import type { CurveGetDyQuoteFailure } from "./curve-get-dy-quote-engine";
-import {
-  canonicalEvmAddress,
-  canonicalEvmHash,
-  decodeAddressResult as decodeEvmAddressResult,
-} from "./evm-codecs";
+import { canonicalEvmAddress, canonicalEvmHash } from "./evm-codecs";
 import {
   createCurveFamilyDeploymentVerifier,
   createCurveStableSwapExecutionPipeline,
@@ -477,13 +473,11 @@ export function validateCurveStableSwapNgProfileProof(
         if (
           decodedCall.functionName !== "pool_list" ||
           decodedCall.args[0] !== BigInt(policy.factoryPoolIndex) ||
-          decodeEvmAddressResult({
-            decode: () => decodeFunctionResult({
-              abi: CURVE_STABLESWAP_NG_FACTORY_ABI,
-              functionName: "pool_list",
-              data: proof.poolListReturnData as `0x${string}`,
-            } as never),
-          }) !== policy.poolAddress
+          canonicalEvmAddress(decodeFunctionResult({
+            abi: CURVE_STABLESWAP_NG_FACTORY_ABI,
+            functionName: "pool_list",
+            data: proof.poolListReturnData as `0x${string}`,
+          } as never)) !== policy.poolAddress
         ) issues.add("factory-pool-list-proof-mismatch");
       } catch {
         issues.add("factory-pool-list-proof-mismatch");

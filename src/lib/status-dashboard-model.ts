@@ -16,7 +16,6 @@ export {
 } from "@/lib/status/probe-model";
 export {
   STATUS_OK_PILL_CLASS,
-  formatTimestampMs,
   formatTimestampSeconds,
   formatTransitionLabel,
   getIssueKindBadgeClass,

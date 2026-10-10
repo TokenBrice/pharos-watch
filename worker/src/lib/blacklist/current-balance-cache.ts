@@ -27,7 +27,7 @@ import { batchExecute } from "../db";
 
 export const CURRENT_BALANCE_DEBT_PREFIX = "blacklist:current-balance-debt:";
 
-export async function enqueueCurrentBalanceDebt(db: D1Database, rows: readonly BlacklistRow[]): Promise<void> {
+async function enqueueCurrentBalanceDebt(db: D1Database, rows: readonly BlacklistRow[]): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
   await batchExecute(db, rows.filter((row) => row.suppression_reason == null).map((row) => db.prepare(
     "INSERT OR IGNORE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",

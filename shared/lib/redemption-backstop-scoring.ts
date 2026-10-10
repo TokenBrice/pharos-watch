@@ -100,7 +100,7 @@ export const REDEMPTION_SETTLEMENT_SCORES: Record<RedemptionSettlementModel, num
 export const REDEMPTION_EXECUTION_SCORES: Record<RedemptionExecutionModel, number> =
   EXIT_ROUTE_SCORING_TABLES.executionScores;
 
-export const REDEMPTION_OUTPUT_ASSET_SCORES: Record<RedemptionOutputAssetType, number> =
+const REDEMPTION_OUTPUT_ASSET_SCORES: Record<RedemptionOutputAssetType, number> =
   EXIT_ROUTE_SCORING_TABLES.outputAssetScores;
 
 export function computeRedemptionOutputAssetQuality(

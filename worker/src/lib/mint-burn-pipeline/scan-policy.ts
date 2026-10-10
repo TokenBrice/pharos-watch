@@ -2,7 +2,7 @@ import type { AlchemyLogEntry } from "../alchemy-logs";
 import { logWorkerEventArgs } from "../structured-log";
 
 export const EVM_SAFETY_MARGIN_BLOCKS = 75; // ceil(900s indexing safety / 12s block time)
-export const DECODE_RETRY_LIMIT = 3;
+const DECODE_RETRY_LIMIT = 3;
 export const DECODE_QUARANTINE_REASON = "amount-decode-retry-exhausted" as const;
 
 /** Successful RPC reads do not prove exhaustive indexing beyond observed events. */

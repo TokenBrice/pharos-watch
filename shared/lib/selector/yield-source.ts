@@ -183,7 +183,7 @@ export function selectYieldSource(row: MergedRow, input: SelectorInput): Recomme
   return selectYieldSourceRail(row, input)?.source ?? null;
 }
 
-export function selectYieldSourceRail(row: MergedRow, input: SelectorInput): SelectedYieldSourceRail | null {
+function selectYieldSourceRail(row: MergedRow, input: SelectorInput): SelectedYieldSourceRail | null {
   const resolved = resolveYieldSourceRail(row, input);
   return resolved.exclusion == null ? resolved.rail : null;
 }

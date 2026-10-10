@@ -10,7 +10,7 @@ import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 
 export const PHAROSWATCHBOT_BOT_URL = TELEGRAM_BOT_URL;
 
-export const RECOMMENDED_SETUP = {
+const RECOMMENDED_SETUP = {
   alertTypes: ["dews", "depeg"],
   presetId: "usd-top25",
 } as const;

@@ -52,11 +52,6 @@ export function formatStatusTimestamp(
   return formatTimestampSeconds(epochSeconds, { timeZoneName });
 }
 
-export function formatTimestampMs(ms: number): string {
-  if (!ms) return "—";
-  return formatLocaleTimestampMs(ms, "short");
-}
-
 export function formatTransitionLabel(transition: StatusResponse["timeline"][number] | null): string {
   if (!transition) return "No transition history";
   return `${transition.from ?? "init"} -> ${transition.to}`;

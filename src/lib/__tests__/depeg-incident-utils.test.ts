@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DepegPendingIncidentSchema } from "@shared/types";
+import { DepegPendingIncidentSchema } from "@shared/types/market";
 import { makePendingIncident } from "@/components/__tests__/depeg.test-support";
 import { extractPendingDepegIncidents, mapPendingIncidentsByCoin } from "../depeg-incident-utils";
 

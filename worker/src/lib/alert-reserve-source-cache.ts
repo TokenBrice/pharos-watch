@@ -16,7 +16,7 @@ export interface AlertReserveSourceAssessment {
   envelope: AlertReserveSourceEnvelope | null;
 }
 
-export function parseAlertReserveSourceEnvelope(cached: CachedValue): AlertReserveSourceEnvelope | null {
+function parseAlertReserveSourceEnvelope(cached: CachedValue): AlertReserveSourceEnvelope | null {
   if (!cached) return null;
   const parsed = AlertReserveSourceEnvelopeSchema.safeParse(tryParseJson(cached.value));
   return parsed.success ? parsed.data : null;

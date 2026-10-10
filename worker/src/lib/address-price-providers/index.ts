@@ -35,7 +35,6 @@ export type {
   AddressPriceProviderCollectionResult,
   AddressPriceProviderKey,
   AddressPriceProviderRuntimeConfig,
-  AddressPriceProviderRunResult,
   AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";

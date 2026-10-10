@@ -67,7 +67,7 @@ Provider URLs that may embed credentials must pass through `redactProviderUrls()
 - `WORKER_RESERVED_ENV_KEYS`
 - `WORKER_ACTIVE_ENV_KEYS` (`required + optional`)
 
-Pages contracts (`functions/lib/ops-env.ts`, `functions/lib/site-api-env.ts`) derive the same four views. Validation reports partial Access/admin-D1/Telegram pairs, missing site-proxy/feedback/API-pepper/Banxico credentials, and no-op pepper rotation (including Telegram `_PREVIOUS` markers). Ops requires team domain plus UI audience. Site-data requires `DB` for fail-closed selector POST quotas; public reads can continue without attribution. Binding ownership/requirements are in the table below.
+Pages contracts (`functions/lib/ops-env.ts`, `functions/lib/site-api-env.ts`) derive the same four views. Validation reports partial Access/admin-D1/Telegram pairs, missing site-proxy/feedback/API-pepper/Banxico credentials, and no-op pepper rotation (including Telegram `_PREVIOUS` markers). Ops requires team domain plus UI audience. Site-data requires `DB` for fail-closed selector POST quotas; public reads can continue without attribution. Binding ownership/requirements are in the linked inventory.
 
 `ScheduledEnv` is the narrow shared scheduled-context view; `HeavyEnv` in `worker/src/lib/env.ts` retains the heavy-only `SAFETY_SCORE_V9_WORKFLOW` binding during the terminal retirement's resource-drain stage. Heavy uses the same `DB`, `CF_VERSION_METADATA`, compatibility date/flags, alias, module rules and CPU cap as public, without HTTP/CORS/rate-limit bindings. The pilot mode variable and cron trigger are removed. The class/export/binding remain only until complete history disposition and named-resource deletion; Cloudflare rejects removing a class while its Workflow resource still references the script.
 
@@ -77,7 +77,7 @@ Heavy operator secrets are exactly `COINGECKO_API_KEY`, `ALCHEMY_API_KEY`, `DRPC
 
 Operational telemetry control: set `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true` on the Worker and/or Pages site-data environment to stop low-value route/source attribution writes. This disables Worker `api_request_consumer_stats` route/source writes and Pages `site_data_request_stats` writes, while preserving API-key authentication, D1-backed rate limiting, last-used metadata updates, and per-key public API load telemetry. During keyed public-API spikes, set `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` on the Worker to pause only `api_key_request_stats` writes; auth, rate limiting, and last-used metadata still run.
 
-The complete key-by-key contract is in [Binding Inventory](process/worker-infrastructure-appendix.md#binding-inventory). Collector, repair, canary, and recovery behavior is separated into [Runtime Feature Contracts](#runtime-feature-contracts); a binding's presence alone does not establish that feature's admission or publication authority.
+The complete key-by-key contract is in [Binding Inventory](process/worker-infrastructure-appendix.md#binding-inventory), generated from the manifest and validated by `check:env-contract`. This reference table does not independently author requirements. Collector, repair, canary, and recovery behavior is separated into [Runtime Feature Contracts](#runtime-feature-contracts); a binding's presence alone does not establish that feature's admission or publication authority.
 
 ## Runtime Feature Contracts
 

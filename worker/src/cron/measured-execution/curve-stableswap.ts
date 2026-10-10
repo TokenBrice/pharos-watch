@@ -20,11 +20,7 @@ import {
 } from "../../lib/evm-rpc";
 import type { DexMeasuredExecutionRpcBudget } from "./profiles";
 import type { CurveGetDyQuoteFailure } from "./curve-get-dy-quote-engine";
-import {
-  canonicalEvmAddress,
-  canonicalEvmHash,
-  decodeAddressResult as decodeEvmAddressResult,
-} from "./evm-codecs";
+import { canonicalEvmAddress, canonicalEvmHash } from "./evm-codecs";
 import {
   createCurveFamilyDeploymentVerifier,
   createCurveStableSwapExecutionPipeline,
@@ -421,13 +417,11 @@ export function validateCurveStableSwapProfileProof(profile: DexMeasuredExecutio
         if (
           decodedCall.functionName !== "get_lp_token" ||
           canonicalEvmAddress(decodedCall.args[0]) !== policy.poolAddress ||
-          decodeEvmAddressResult({
-            decode: () => decodeFunctionResult({
-              abi: CURVE_MAIN_REGISTRY_ABI,
-              functionName: "get_lp_token",
-              data: proof.lpTokenReturnData as `0x${string}`,
-            } as never),
-          }) !== policy.lpTokenAddress
+          canonicalEvmAddress(decodeFunctionResult({
+            abi: CURVE_MAIN_REGISTRY_ABI,
+            functionName: "get_lp_token",
+            data: proof.lpTokenReturnData as `0x${string}`,
+          } as never)) !== policy.lpTokenAddress
         ) issues.add("lp-token-proof-mismatch");
       } catch {
         issues.add("lp-token-proof-mismatch");

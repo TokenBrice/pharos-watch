@@ -309,7 +309,7 @@ const SafetyScoreV9EvidenceResponsibilityItemSchema = z
     }
   });
 
-export const SafetyScoreV9EvidenceResponsibilityFactSchema = z.tuple([
+const SafetyScoreV9EvidenceResponsibilityFactSchema = z.tuple([
   V9ReasonCodeSchema, V9PublicEvidencePathSchema, z.number().int().nonnegative().nullable(),
   V9EvidenceResponsibilitySchema, z.boolean(), V9EvidenceCauseSchema, causeGapRefs(),
 ]).superRefine(([, path, sourceGapRef, responsibility, critical, cause, refs], ctx) => {
