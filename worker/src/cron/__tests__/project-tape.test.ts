@@ -36,6 +36,7 @@ function baseTables(): MockTableConfig[] {
   return [
     { match: "FROM cache WHERE key", rows: [] },
     { match: "FROM tape_events INDEXED BY idx_tape_source_key", rows: [] },
+    { match: "FROM tape_events INDEXED BY idx_tape_type_ts", rows: [] },
     { match: MATCH_DEPEG_OPEN_PEAK, rows: [] },
     { match: MATCH_DEPEG_OPENED, rows: [] },
     { match: MATCH_DEPEG_RESOLVED, rows: [] },
