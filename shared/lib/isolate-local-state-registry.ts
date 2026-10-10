@@ -228,22 +228,6 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Deterministic calendar rules and current FX cache rows are authoritative.",
   },
   {
-    sourcePath: "worker/src/lib/rate-limit.ts",
-    stateNames: ["_rl"],
-    owner: "Feedback rate-limit cleanup",
-    kind: "coordination",
-    resetOrTtl: "Tracks one pending prune promise and consecutive prune failures until completion or isolate recycle.",
-    durableTruth: "Atomic D1 feedback_rate_limit reservations are authoritative.",
-  },
-  {
-    sourcePath: "worker/src/lib/redemption-backstop/sources.ts",
-    stateNames: ["outputDependencyResolutionRuns"],
-    owner: "Redemption output-dependency resolution",
-    kind: "coordination",
-    resetOrTtl: "At most four snapshot timestamps retain row references while one serial redemption build converges; old runs are evicted and all state resets with the isolate.",
-    durableTruth: "The current redemption build inputs and persisted completed-run snapshot are authoritative; this state only reconciles rows built in either order.",
-  },
-  {
     sourcePath: "worker/src/lib/request-source-attribution.ts",
     stateNames: ["workerRequestRecorder", "apiKeyRequestRecorder"],
     owner: "Worker request attribution",

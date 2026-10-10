@@ -20,7 +20,7 @@ The route is statically exported, indexable, and included in the sitemap. It use
 
 The page has three URL-backed views:
 
-- **Overview** shows one compact directory row per assessed coin — every active coin with a MiCA or GENIUS assessment, plus pre-launch coins with a GENIUS assessment — with its peg and MiCA and GENIUS status badges. Coins with no assessment in either regime, and non-active coins, do not appear. A status badge opens the matching regime view with that status filter applied; a dash means the coin has no assessment for that regime.
+- **Overview** shows one compact directory row per assessed coin — every active coin with a MiCA or GENIUS assessment, plus pre-launch coins with a GENIUS assessment — with its peg and MiCA and GENIUS status badges. Unassessed, frozen, quarantined, and delisted coins do not appear. A status badge opens the matching regime view with that status filter; a dash means no assessment for that regime.
 - **MiCA** groups the full-detail MiCA rows into ordered status bands.
 - **GENIUS** groups rows into ordered status bands while preserving the model-owned main-table versus Implementation Watch split and effective-state empty state.
 
@@ -45,11 +45,11 @@ Do not restate regime eligibility or legal classification logic in this route do
 - `peg=<PegCurrency>`
 - `q=<search>`
 
-Absent `regime` selects Overview unless canonical `status` or `type` values infer MiCA, or a GENIUS-only status infers GENIUS. `COMPLIANCE_URL_SCHEMA` reads and writes only the canonical keys above. The retired `tokenType` and `pegCurrency` query aliases are ignored, so old alias-only bookmarks lose their filters and regime hints; there is no shim or redirect. Changing views clears regime-specific status and token-type state. Status badges and hero segments write the destination regime and status together. Search state stays synchronized with browser Back/Forward navigation, and filter writes preserve unrelated query parameters and the hash.
+Absent `regime` selects Overview unless canonical `status` or `type` values infer MiCA, or a GENIUS-only status infers GENIUS. `COMPLIANCE_URL_SCHEMA` owns `regime`, `status`, `type`, and `peg`; `useUrlSearchSync` owns `q`. Retired `tokenType` and `pegCurrency` aliases are ignored, losing their filters and regime hints without a shim. Changing views clears regime-specific status/type state. Status badges and hero segments write destination regime and status together. Search follows browser Back/Forward; writes preserve unrelated query parameters and the hash.
 
 ## Data Projection
 
-The global client registry carries compact compliance fields used across the site. `/compliance/` additionally bundles the generated compliance summary projection for public posture, regulator, and disclosure columns; MiCA retains its existing references. The GENIUS summary omits `references`, `negativeEvidenceReview`, `applicabilityBasis`, and `notes`. Opening a GENIUS row fold loads its full evidence from the per-coin detail projection through `loadClientStablecoinDetail(id)`, with session caching, a calm loading state, and a retryable error state; summary columns do not wait for that import. The summary projection still carries `proofOfReserves.latestReport` from the base catalog as the single report-date authority: period end and publication are labelled separately, and uncertain legacy dates remain dated review references.
+The global client list carries no compliance profiles; per-coin detail projections carry MiCA and full GENIUS evidence. `/compliance/` bundles the generated summary for posture, regulator, and disclosure columns, including MiCA references. GENIUS omits `references`, `negativeEvidenceReview`, `applicabilityBasis`, and `notes`. Opening a GENIUS fold loads full evidence through `loadClientStablecoinDetail(id)`, with session caching and retryable errors; summary columns do not wait. The summary carries the base catalog's `proofOfReserves.latestReport` for GENIUS rows: period end and publication are separate, a `signed-date-standin` is labelled signed, and uncertain legacy dates remain dated review references.
 
 Source links combine top-level and nested references and de-duplicate them before presentation. Schema and projection changes must keep the generated client artifacts aligned.
 

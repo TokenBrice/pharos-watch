@@ -431,6 +431,32 @@ it("scans PR merge-resolution lines for the full PR range including historical m
   expect(steps.indexOf(candidate)).toBeGreaterThan(tree);
 });
 
+it("admits protocol mechanism refresh credentials only for main dispatches and schedules", () => {
+  const workflow = parseYaml(readRepoFile(".github/workflows/protocol-api-mechanism-refresh.yml"));
+  expect(workflow.on).toHaveProperty("workflow_dispatch");
+  expect(workflow.on.schedule.length).toBeGreaterThan(0);
+  expect(workflow.jobs.refresh.if).toBe("${{ github.ref == 'refs/heads/main' }}");
+  expect(workflow.jobs.refresh.steps[0].uses).toMatch(/^actions\/checkout@[0-9a-f]{40}$/);
+  expect(workflow.jobs.refresh.steps[0].with["persist-credentials"]).toBe(false);
+  expect(workflow.jobs.refresh.steps.some(
+    (step: { uses?: string }) => step.uses === "$/.github/actions/setup-workspace",
+  )).toBe(true);
+});
+
+it("keeps the always-run Worker rollback summary within the retired Workflow contract", () => {
+  const workflow = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml"));
+  const summary = workflow.jobs["deploy-worker"].steps.find(
+    (step: { name?: string }) => step.name === "Summarize Worker release",
+  );
+  expect(summary.if).toBe("always()");
+  expect(summary.run).toContain("restore moved registry plans to public first, re-add public triggers");
+  expect(summary.run).toContain("then deploy heavy with explicit empty crons");
+  expect(summary.run).toContain("Do not recreate the retired Workflow");
+  expect(summary.run).toContain("retain its referenced heavy class until export/deletion");
+  expect(summary.run).not.toContain("restore moved plans/triggers/Workflow");
+  expect(summary.run).toContain("version rollback alone restores neither trigger ownership nor D1 migrations");
+});
+
 it("runs the mechanism-refresh verifier only from a trusted snapshot inside the token step", () => {
   const workflow = parseYaml(readRepoFile(".github/workflows/protocol-api-mechanism-refresh.yml"));
   const steps = workflow.jobs.refresh.steps as Array<{ name?: string; env?: Record<string, string>; run?: string }>;

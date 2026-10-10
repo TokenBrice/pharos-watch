@@ -18,7 +18,7 @@ The Chain Environment factor reads the static L2BEAT chain-risk snapshot in `sha
 
 The response reports the V9 dependency as degraded, stale, or unavailable as appropriate and switches to `no-store`; it never carries stale or held ratings into Chain Health.
 
-The frontend chain profile coordinates `GET /api/chains` with `GET /api/stablecoins`. It renders top-level summary data from the chain snapshot first, then shows composition, backing breakdown, and stablecoin tables only when the stablecoins snapshot includes authoritative freshness metadata, both snapshots share the same `updatedAt`, and the chain's summary total matches the per-chain stablecoin total exactly (within float tolerance).
+The frontend chain profile reads `GET /api/chains?chain=<chainId>` through `useChainDetail()`. Its summary, composition, backing breakdown, and stablecoin table use that single Worker-owned generation; it does not fetch or reconcile a separate `/api/stablecoins` snapshot.
 
 ## Formula
 
@@ -69,7 +69,7 @@ Every chain row carries `pegStabilityCoverage`, computed by `assessPegStability(
 
 **Active policy since v1.7 (DEC-04; owner threshold 2026-09-28):** zero observed peg coverage makes `healthFactors.pegStability` `null` (NR) and therefore the composite NR. Partial coverage publishes `observedScore` as the factor together with full-positive-supply coverage; the composite (`healthScore`/`healthBand`) is published when `coverage >= 0.95` (`PEG_COVERAGE_COMPOSITE_MIN`) and stays null below it. The bound: with peg weight 0.20, an unobserved share of at most 5% moves the observed-only peg factor by at most 5 points and the composite by at most 1 point. Quality's 50% gate is not reused. Complete coverage retains the existing formula and quality gate. At adoption, chains such as Ethereum (coverage 0.999961; $5.9M unpriced of $148.7B), Tron, Base, Polygon, and Scroll (0.98749) regain a composite, while Hemi (0.159) stays NR. v1.6 required complete coverage for any composite. No producer imputes neutral 50. Activation requires observed Release A Worker/Pages readiness; supported rollback is the nullable-compatible A pair. Pre-v1.6 cached payloads remain labelled with their original methodology, not restamped as observed-only results.
 
-Cutover observation: `/api/chains` uses `producerBacked` caching (edge 300 seconds; browser 60 seconds plus 300 seconds stale-while-revalidate). Allow those existing windows to expire and refetch/revalidate before claiming full cutover; confirm `healthMethodologyVersion: "1.7"`, coverage, factor, and composite together. Error/degraded responses remain `no-store`; deployment must not renew source observation clocks.
+Cutover observation: `/api/chains` uses `producerBacked` caching (maximum edge 300 seconds; browser 60 seconds plus 300 seconds stale-while-revalidate), bounded by remaining source freshness. Refetch/revalidate after those windows before claiming cutover; confirm `healthMethodologyVersion: "1.7"`, coverage, factor, and composite together. Error/degraded responses remain `no-store`; deployment must not renew source observation clocks.
 
 ## Bands
 

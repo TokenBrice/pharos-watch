@@ -9,9 +9,9 @@ Capability: spawn a read-only reviewer.
 ```text
 Audit <DOC_OR_DOC_FAMILY> against source. Do not edit files.
 
-Read docs/process/agent-start-here.md, docs/doc-ownership.json, docs/process/agent-artifacts.md, the target docs, and routed source/local imports.
+Read docs/process/agent-start-here.md#2-route-a-task, docs/doc-ownership.json, docs/process/agent-artifacts.md#source-of-truth, the assigned doc sections, and routed source/local imports; load other process anchors only for the selected branch.
 
-Return false/stale claims with source-backed corrections, missing required updates, suspect source paths, and exact doc checks. Produce edit-ready findings, not rewritten prose.
+Return source-backed semantic corrections and missing required updates, not CI-owned mechanical path/link findings. Produce edit-ready findings, not rewritten prose; return applicable doc checks to the assigned verifier.
 ```
 
 ## Methodology Consistency Reviewer
@@ -36,7 +36,7 @@ Apply only the assigned documentation fixes. Preserve unrelated work.
 Assigned write scope: <DOC PATHS ONLY>
 Findings: <FINDINGS>
 
-Verify claims against source, edit only assigned docs, avoid product/generated files, run narrow doc checks when useful, and return changed paths plus remaining issues.
+Verify claims against source, edit only assigned docs, avoid product/generated files, and return changed paths, remaining issues and required checks. The assigned verifier runs gates after writers finish; do not run them mid-flight.
 ```
 
 ## Scalable corpus mode
@@ -44,6 +44,8 @@ Verify claims against source, edit only assigned docs, avoid product/generated f
 ### Inventory and partition
 
 Enumerate the whole corpus with `getVerifiedDocFiles(repoRoot)` from `scripts/lib/doc-files.mts`. Attach ownership hints from `docs/doc-ownership.json` afterward: resolve object references through `path` and carry mapping labels, source globs, rules, and `alsoRead` context as metadata. Keep unmapped documents in scope; report every skipped document and reason. A targeted request still selects only its requested subset. Verify every selected path exists. Keep only the requested corpus (normally `docs/` and `README.md`); treat agent-guidance paths as a separate assigned family when they are explicitly in scope. Partition the rows into N disjoint sets so no document has two writers. Each row should include `path`, `category`, line count, source hints, and depth.
+
+If an expected row count is supplied, fail when the loaded inventory is shorter. Do not invent a second filename roster or commit an inventory manifest.
 
 Depth is `light` for timeline archives (check only current/latest behavior and current claims), `targeted` for `docs/api-reference.md` (use its navigation block and offsets; skip generated markers), and `deep` for ordinary docs. A reviewer may receive one set or one document at a time, but must return findings for its assigned paths only.
 

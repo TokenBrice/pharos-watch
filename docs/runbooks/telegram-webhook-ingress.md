@@ -3,10 +3,10 @@
 ## Flood control
 
 Commands, callbacks, and pending-selection replies share a fixed-window D1
-counter. Private chats use a chat-scoped key. Groups use an actor-scoped key
-plus a higher chat-wide ceiling.
+counter. Private chats use a chat-scoped key. Groups with an actor ID use
+actor and higher chat-wide ceilings; without one, the private-sized chat cap applies.
 
-Each admission is one conditional `cache` upsert with `RETURNING`; it either
+Each evaluated scope uses one conditional `cache` upsert with `RETURNING`; it either
 increments the existing window or starts a new window at the exact expiry
 boundary. This avoids lost increments when Telegram delivers webhook updates
 concurrently. If D1 cannot execute a scope's statement or return a valid count,
@@ -18,8 +18,8 @@ when one scope fails and the other evaluates as allowed.
 
 ## Callback acknowledgements
 
-Every callback path calls Telegram's `answerCallbackQuery` method to dismiss
-the client spinner. Non-OK Bot API responses are drained and emit one
+Callback acknowledgements use Telegram's `answerCallbackQuery` to dismiss
+the spinner; repeated flood denials after the first notice skip it. Non-OK responses are drained and emit one
 structured warning with `action=answer-callback-query`, `statusCode`, and a
 bounded `errorClass`. The log never includes callback, chat, user, bot-token,
 or response-body data, and acknowledgement failures are not retried inline.

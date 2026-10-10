@@ -62,7 +62,7 @@ LIMIT 20;
 - For a planned cleanup, follow the deployment-process sequence: deploy protections, arm writer pause, verify no active `sync-yield-data` lease, export targeted rows, rehearse delete and restore locally, run bounded production cleanup, then validate after the next post-V9 writer cycle.
 - Use `worker/scripts/yield-history-cleanup.ts` controls rather than ad hoc SQL. The script owns the `--arm-writer-pause`, `--clear-writer-pause`, `--execute`, `--confirm yield-history-cleanup`, and guarded restore paths.
 - If the pause key is stale and no cleanup operator owns it, clear it with the script's `--clear-writer-pause` path, then let the next post-V9 `sync-yield-data` cycle publish.
-- If cleanup failed after deleting rows, use the exported version-2 artifact and the script's guarded restore path. It includes `hourlyRows` and `dailyRows` with separate counts, including each daily row's `snapshot_date` identity and publication fields. Both tiers are validated before restore starts; missing daily data, count mismatches, and older hourly-only artifacts are rejected. Remote restore requires `--execute --confirm yield-history-cleanup` and an armed writer pause.
+- If cleanup failed after deleting rows, use the exported version-3 artifact and the script's guarded restore path. It includes `hourlyRows` and `dailyRows` with separate counts, each row's nullable `source_observed_at` observation clock, and each daily row's `snapshot_date` identity and publication fields. Both tiers are validated before restore starts; missing observation-clock fields, missing daily data, count mismatches, and older version-1/version-2 artifacts are rejected. Older artifacts cannot prove complete-row restoration; do not invent observation clocks from `recorded_at` or silently fill them with null. Remote restore requires `--execute --confirm yield-history-cleanup` and an armed writer pause.
 
 ## Abort Conditions
 
@@ -82,4 +82,4 @@ LIMIT 20;
 
 ## Rollback Notes
 
-Rollback is two-tier artifact restore through `worker/scripts/yield-history-cleanup.ts` while the writer pause is armed and `sync-yield-data` is not leased. Check the separate hourly/daily restored counts and compare complete rows in both tables to the pre-cleanup export, including daily-only observations; an hourly-only artifact cannot undo this cleanup. Clear the writer pause only after restore validation passes.
+Rollback is two-tier artifact restore through `worker/scripts/yield-history-cleanup.ts` while the writer pause is armed and `sync-yield-data` is not leased. Check the separate hourly/daily restored counts and compare complete rows in both tables to the pre-cleanup export, including `source_observed_at` and daily-only observations; an hourly-only or pre-version-3 artifact cannot undo this cleanup. Clear the writer pause only after restore validation passes.

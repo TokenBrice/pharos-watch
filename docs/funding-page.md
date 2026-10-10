@@ -1,12 +1,12 @@
 # Funding Page
 
-Public ledger of Pharos's running costs, donations, and sustainability path. The route is public and indexable with canonical `/funding/`, sitemap coverage, Reference navigation, footer navigation, and a `/llms.txt` entry.
+Public ledger of Pharos's running costs, donations, and sustainability path. The route is public and indexable with canonical `/funding/`, sitemap coverage, Resources navigation, footer navigation, and a `/llms.txt` entry.
 
 ## Route and crawlability
 
 - `src/app/funding/page.tsx` renders through `FeaturePageShell` and uses `buildPageMetadata(...)`.
 - `src/app/sitemap.ts` includes `/funding/`; `lastModified` uses the latest of the route edit date, `costs.last_reviewed_at`, and `donations.last_updated_at`.
-- `src/lib/nav-config.ts` no longer lists Funding: it is reachable from the global footer meta row, the about page, and the homepage donate card.
+- `src/lib/nav-config.ts` lists Funding in the `Resources` menu's `About Pharos` column; it is also reachable from the global footer meta row, the about page, and the homepage donate card.
 - `src/components/footer.tsx` includes Funding in the footer route list.
 - `scripts/maintenance/generate-llms-txt.ts` includes Funding in the public LLM-facing index.
 - `public/_headers` must not emit `X-Robots-Tag: noindex` for `/funding/*`.
@@ -25,7 +25,7 @@ The page uses a prose-forward layout:
 Two hand-maintained JSON files:
 
 - `shared/data/funding/costs.json` — monthly cost line items. Owned by @TokenBrice; the 1st of each month is the review target. `last_reviewed_at` (UTC unix seconds) is surfaced in the Monthly costs card footer/details text so readers can see a missed review instead of the page implying freshness. Both funding files are parsed with strict build-time schemas; invalid shapes, timestamps, or amounts fail the static build.
-- `shared/data/funding/donations.json` — every inbound donation, one row each. Populated via the Pharos `funding-update` skill on a ~weekly cadence.
+- `shared/data/funding/donations.json` — approved inbound donations, one row each, after self-activity and spam review. Populated via the Pharos `funding-update` skill on a ~weekly cadence.
 
 The Monthly costs card separately discloses $5,800 in exceptional, one-time design expenses for the full website redesign and logo. TokenBrice paid and sponsored those expenses, so they are not included in the recurring monthly total.
 
@@ -37,9 +37,9 @@ Row shape for donations is defined and validated by `shared/lib/funding/schema.t
 
 - **No cron, no D1, no API.** The page imports both JSON files at build time and renders server-side. Static export is trivially CDN-cacheable.
 - **No chart.** Until ≥6 months of donation history exist, a bar chart adds visual weight without showing anything meaningful. Revisit when the trailing window is populated.
-- **No historical-pricing pipeline at runtime.** The `funding-update` skill prices each donation once at append time: CoinGecko `/coins/{id}/history` applies to native ETH/WETH, native MATIC, and WBTC; qualifying USD-pegged stablecoins use $1 only after the contract-keyed qualifying check; EURC uses the ECB EUR/USD reference rate for the receipt date (Frankfurter), never 1:1; other tokens require a user-supplied USD value and price source. The source is recorded in `price_note` on each row.
+- **No historical-pricing pipeline at runtime.** The `funding-update` skill prices each donation once at append time: CoinGecko `/coins/{id}/history` applies to ETH, MATIC, and WBTC; qualifying USD-pegged stablecoins use $1 only after the contract-keyed qualifying check; EURC uses the ECB EUR/USD reference rate for the receipt date (Frankfurter), never 1:1; other tokens require a user-supplied USD value and price source. The source is recorded in `price_note` on each row.
 - **No ENS resolver module.** ENS reverse + forward-verify runs once per new address during the skill's run; results are frozen into `display` on the row.
-- **Human spam review, no standalone runtime module.** The maintained `funding-update` workflow asks the user to confirm candidate rows, performs ERC-20 contract-keyed identity checks while pricing (a qualifying ledger symbol is written only when the token contract matches the reviewed deployment for that chain, and a same-ticker impostor is suffixed with contract hex), and rejects familiar stablecoin tickers at unknown contracts as spoofed tokens; manual pricing is not the spam gate.
+- **Human spam review, no standalone runtime module.** The maintained `funding-update` workflow asks the user to approve reconciled candidate rows. A qualifying ledger symbol is written only when the token contract matches the reviewed deployment for that chain; an unmatched same-ticker token gets a contract-hex suffix and cannot qualify for a supporter key. Unknown tokens require user-supplied pricing, but pricing is not the spam gate.
 
 Automation is intentionally deferred while the review volume remains small. Any future runtime pipeline would require its own API, operations, and privacy contracts rather than being implied by this page doc.
 
@@ -52,7 +52,7 @@ The page advertises the perk in the `How to support` card and the FAQ, all in `s
 Donation-ledger changes select both Worker and Pages deployment through `scripts/lib/automation-registry.mjs`: the Worker embeds the eligibility ledger, while Pages publishes the funding view. Cost-only edits remain Pages-only.
 
 - `costs.json` — target review date is the 1st of each month; if it is missed, leave the stale `last_reviewed_at` visible and complete the review before describing costs as current. Bump the timestamp every time you edit.
-- `donations.json` — `funding-update` skill invoked ~weekly, or ad-hoc on alert. `last_updated_at` is bumped automatically by the skill.
+- `donations.json` — `funding-update` skill invoked ~weekly, or ad-hoc on alert. Update `last_updated_at` when appending approved rows; if no rows are approved, the skill leaves the file unchanged.
 
 ## Editorial and presentation contract
 

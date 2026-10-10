@@ -6,31 +6,44 @@ user_invocable: true
 
 # Pharos CI Failure Triage
 
-The authoritative contracts are [Testing §Commands](../../../docs/testing.md#commands), [§Pre-push readiness](../../../docs/testing.md#pre-push-readiness), [§CI Pipeline](../../../docs/testing.md#ci-pipeline), [Deployment §CI Deploy Sequence](../../../docs/deployment-process.md#ci-deploy-sequence), and [§Failure Policy](../../../docs/deployment-process.md#failure-policy). Read `docs/scripts.md` and the relevant workflow/source after routing the failing path.
+## Trigger And Exclusions
 
-## Triage
+Use for failed gates/runs or authorized repair loops, not routine readiness/trends. Local success never clears an external prerequisite.
 
-1. Capture the run ID/URL, event, head SHA, **every failed leaf job/step**, each exact command and first actionable error, selected/skipped reusable jobs, and whether the SHA is still current:
+## Classify The Operation
+
+Capture run ID/URL, event, head SHA/currentness, **every failed leaf job/step**, exact command and first actionable error, and selected/skipped reusable jobs:
 
 ```bash
 gh run view <run-id> --repo TokenBrice/pharos-watch --json status,conclusion,event,headSha,workflowName,url,jobs
 gh run view <run-id> --repo TokenBrice/pharos-watch --log-failed
 ```
 
-2. Classify every failure: generated-artifact, docs, test, Pages build/marker, Worker migration/deploy/activation, deploy infrastructure, post-deploy runtime, scheduled automation, or external transient. A skipped child may be expected; interpret the outer aggregate and deploy classifier. Do not stop at the aggregate or first red step.
-3. Map each failed leaf to the narrowest local reproduction from `package.json` and `docs/testing.md`. Use mise shims reading `.nvmrc`: enable `mise settings add idiomatic_version_file_enable_tools node` before `mise install`; readiness requires exact `.nvmrc` Node and npm 11.x. Start with narrow diagnosis, not `check:pr`, `check:release`, timeout changes, or retries. If the remote failure is not reproduced by the local gate, opt into `npm run check:pr -- --ci-parity`; also use it for lockfile/setup/security-policy changes.
-4. Fix all causal defects from the failed leaves in one revision. Generated output follows its registry owner; documentation follows source truth; test expectations change only for intended behavior. For an external failure, record URL, status, non-secret headers, and consumed response body before treating it as transient. Infrastructure/provider failures do not justify unrelated source churn.
+Classify each leaf as generated-artifact, docs, test, Pages build/marker, Worker migration/deploy/activation, infrastructure, post-deploy runtime, scheduled automation, or external transient. A skipped child may be expected; interpret the outer aggregate/deploy classifier, never stop at the first red step.
 
-## Iterate And Handoff
+## Mandatory Core
 
-Rerun each focused reproduction first; these results are authoring feedback, **not** readiness proof. Before any replacement push, follow [Pre-push readiness](../../../docs/testing.md#pre-push-readiness): finish and commit the causal revision and integration history, run full `npm run check:generated-artifacts` convergence, then full plain `npm run check:pr` on the final committed state with no skip/filter/plan-only flags. Require a fresh passing `.tmp/pr-check-receipts/<HEAD>.json`, then push once through the protected-main path when authorized. Repeat full readiness after any subsequent edit or integration; opt-in parity supplements rather than replaces it. Use `npm run check:release` only for an explicitly requested production rehearsal.
+Read [CI Pipeline](../../../docs/testing.md#ci-pipeline), [Failure Policy](../../../docs/deployment-process.md#failure-policy), and the failing workflow/source. Route each path; locate its narrow reproduction in `package.json`, [Testing commands](../../../docs/testing.md#commands), and [script validation index](../../../docs/scripts.md#validation-command-index), not whole-doc reads.
 
-Use `npm run ci:census` only when asked to measure CI trends or recovery cohorts; it is not a failure reproduction or readiness gate. Review failed leaf evidence rather than inferring cause from aggregate census outcomes.
+Start with narrow diagnosis, not broad release gates, retries, or timeout changes. Fix all causal failed-leaf defects in one revision. Generated output follows its registry owner; docs follow source truth; test expectations change only for intended behavior. Provider/infrastructure failure does not justify unrelated churn.
 
-Before manual dispatch, confirm the workflow supports `workflow_dispatch`. `pages-release` is call-only; trigger its owning deploy/rebuild workflow. Watch the exact new run rather than assuming dispatch success.
+## Branch Reads And Actions
 
-Scheduled automation failures belong to their own run/branch/issue. Route urgency and freshness through the owning docs instead of copying schedules here.
+- **Generated artifact:** read [failure playbook](../../../docs/testing.md#generated-artifact-failure-playbook) and the reported registry/generator owner.
+- **Docs/test:** read routed owner anchors and the failed check's source; preserve intended behavior.
+- **Pages/Worker/deployment:** read [CI Deploy Sequence](../../../docs/deployment-process.md#ci-deploy-sequence) and the classifier-selected surface's acceptance requirements. Deployment proof and runtime health are separate.
+- **External prerequisite/transient:** collect URL, status, non-secret headers and consumed response body. Verify current dependency-advisory, provider-access and incident-alert-secret blockers against their owning testing, coverage and deployment docs; a local green repro cannot clear them.
+- **Scheduled automation:** use that run/branch/issue and its owner docs for urgency/freshness, not copied cadence tables.
+- **Manual dispatch:** verify `workflow_dispatch` support. `pages-release` is call-only; dispatch its owning deploy/rebuild workflow and watch the exact new run.
+- **Authorized delegation:** use [reviewer prompts](references/subagents.md); parent owns edits, commits, pushes, retriggers and judgment.
+- **CI trends only:** `npm run ci:census` measures trends/recovery cohorts, never reproduction or readiness; aggregate census outcomes do not diagnose failed leaves.
 
-When the user authorizes delegation, [references/subagents.md](references/subagents.md) provides bounded read-only investigation prompts. The parent owns edits, commits, pushes, retriggers, and judgment.
+## Checks Owned By The Verifier
 
-Report every failed leaf and its root cause, changed files, focused reproductions, full readiness and HEAD receipt evidence before any replacement push, retrigger/run status, deployment proof, separate post-deploy operational evidence, and unresolved external risks. Continue until clear when requested, or stop only on a proven external blocker or missing authority. Verify current dependency-advisory, provider-access, and incident-alert-secret blockers against their owning testing, coverage, and deployment docs; never claim an external prerequisite resolved from a local passing repro.
+The assigned verifier reruns focused reproductions after causal edits; these are authoring feedback, not readiness proof. Before **every authorized replacement push**, follow [Pre-push readiness](../../../docs/testing.md#pre-push-readiness), the sole ordered runtime/ref/artifact/plain-check procedure, including parity and coverage/Pages supplements when applicable. Require a fresh passing `.tmp/pr-check-receipts/<HEAD>.json` for final committed HEAD; edits/integration invalidate proof. Push once through protected main, never directly to `main`; release policy owns authorization. `check:release` is only a requested production rehearsal.
+
+Use `npm run check:pr -- --explain-receipt` for read-only receipt diagnosis: local Git state only, no fetch/check execution/receipt rewrite/staging/push authorization. Exit success only means diagnosis completed, even for missing/failed/stale evidence; remote-base freshness remains unknown. It never replaces readiness.
+
+## Completion Evidence
+
+Report every failed leaf/root cause, changed files, focused verifier results, full readiness/current-HEAD receipt before replacement push, retrigger/run/deploy proof, separate operational evidence, and unresolved external risks. Continue until clear when requested; stop only for a proven external blocker or missing authority.

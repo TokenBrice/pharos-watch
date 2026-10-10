@@ -43,6 +43,7 @@ const YIELD_HISTORY_COLUMNS = [
   "stablecoin_id",
   "source_key",
   "recorded_at",
+  "source_observed_at",
   "is_best",
   "apy",
   "apy_base",
@@ -72,6 +73,7 @@ export interface YieldHistoryCleanupRow {
   stablecoin_id: string;
   source_key: string | null;
   recorded_at: number;
+  source_observed_at: number | null;
   is_best: number;
   apy: number;
   apy_base: number | null;
@@ -101,7 +103,7 @@ export interface YieldHistoryCleanupRows {
 }
 
 export interface YieldHistoryCleanupArtifact extends YieldHistoryCleanupRows {
-  version: 2;
+  version: 3;
   generatedAt: number;
   operator: string | null;
   targets: YieldHistoryCleanupTarget[];
@@ -114,6 +116,7 @@ const yieldHistoryCleanupRowSchema = z.object({
   stablecoin_id: z.string(),
   source_key: z.string().nullable(),
   recorded_at: z.number().finite(),
+  source_observed_at: nullableFiniteNumber,
   is_best: z.number().finite(),
   apy: z.number().finite(),
   apy_base: nullableFiniteNumber,
@@ -136,7 +139,7 @@ const yieldHistoryCleanupDailyRowSchema = yieldHistoryCleanupRowSchema.extend({
   snapshot_date: z.number().int().nonnegative(),
 });
 const yieldHistoryCleanupArtifactSchema = z.object({
-  version: z.literal(2),
+  version: z.literal(3),
   generatedAt: z.number().finite(),
   operator: z.string().nullable(),
   targets: z.array(z.object({
@@ -182,6 +185,9 @@ function listYieldHistoryCleanupTargets(): YieldHistoryCleanupTarget[] {
 }
 
 export function parseYieldHistoryCleanupArtifact(value: unknown): YieldHistoryCleanupArtifact {
+  if (value != null && typeof value === "object" && "version" in value && (value.version === 1 || value.version === 2)) {
+    throw new Error("Cleanup artifact versions 1 and 2 do not preserve complete rows with source_observed_at; restore requires version 3");
+  }
   const artifact = yieldHistoryCleanupArtifactSchema.parse(value);
   const expectedTargets = listYieldHistoryCleanupTargets();
   if (JSON.stringify(artifact.targets) !== JSON.stringify(expectedTargets)) {
@@ -269,7 +275,7 @@ export function createYieldHistoryCleanupArtifact(
   operator: string | null,
 ): YieldHistoryCleanupArtifact {
   return parseYieldHistoryCleanupArtifact({
-    version: 2,
+    version: 3,
     generatedAt: Math.floor(Date.now() / 1000),
     operator,
     targets: listYieldHistoryCleanupTargets(),

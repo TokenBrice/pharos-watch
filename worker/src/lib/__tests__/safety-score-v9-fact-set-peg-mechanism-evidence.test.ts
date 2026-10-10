@@ -53,7 +53,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
   it("materializes fuzzy quarter implementation dates at the conservative quarter end", () => {
     const fixed = exactFixedInput({ clockSec: Date.parse("2026-07-28T00:00:00Z") / 1_000 });
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(alphaMeta({ mechanismArchetype: "synthetic-delta-neutral", implementationLaunchDate: "2024-Q4" })) });
-    expect(baseline.assets[0]!.launchedAtSec).toBe(Date.parse("2024-12-31T23:59:59Z") / 1_000);
+    expect(baseline.assets[0]!.launchedAtSec).toBe(Date.parse("2024-12-31T00:00:00Z") / 1_000);
   });
 
   it.each([

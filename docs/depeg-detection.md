@@ -1,6 +1,6 @@
 # Depeg Detection Pipeline
 
-Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs every 15 minutes as part of the `sync-stablecoins` cron and writes every threshold-crossing onset to `depeg_pending`. Stage 2 runs immediately after and promotes only candidates that have remained beyond the full trigger threshold for at least 15 minutes and satisfy the applicable source-trust rule.
+Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minutes within `sync-stablecoins` and writes admitted, unsuppressed onsets to `depeg_pending`. Stage 2 runs immediately after; promotion requires at least 15 minutes beyond the full trigger threshold and the applicable source-trust rule.
 
 > **Agent navigation** — Grep the heading you need: Methodology Versioning · Downstream: Depeg Duration Resolver · Thresholds & Constants · Database Schema · Build-time event archive · Cron Scheduling · Stage 1 -- Detection · Stage 2 -- Confirmation · Historical Backfill Validation · Event Lifecycle · Types · API · Frontend · Peg Stability Metrics (`peg-stability.ts`) · Peg Score (`peg-score.ts`) · Edge Cases & Guardrails.
 
@@ -11,7 +11,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
 
-The shared `v6.34` release of 2026-10-10 preserves native/USD quote domains through confirmation, peak updates and recovery; rejects mismatched asset/currency and incomparable peaks; and excludes policy-rejected pools from event statistics. The single-$5M-pool exception now obeys the opposing-group vote. Historical floor and large-cap checks use timestamp-valued USD supply, and at-peg summaries use raw detector precision. Canonical projection failures withhold recomputed analytics while retained snapshots keep their original clock; archives and Worst Depeg are no longer display-capped. These input changes can move event histories and PegScore inputs without changing numeric trigger thresholds or scoring weights. Activation is provisional at 2026-10-11 00:00 UTC, re-dated at release, with the replay prerequisites in [DEWS](./dews.md#methodology-versioning).
+The shared `v6.34` release preserves native/USD quote domains, rejects mismatched identities and incomparable peaks, and excludes policy-rejected pool peaks. Pending confirmation's single-$5M-pool exception obeys the opposing-group vote; live recovery retains its high-TVL veto. Historical supply gates use timestamp-valued USD supply and at-peg summaries use raw detector precision. Projection failures withhold recomputed analytics; retained snapshots keep their original clock. Archives and Worst Depeg are not display-capped. Numeric triggers and weights are unchanged. Activation is provisional at 2026-10-11 00:00 UTC, re-dated at release, with [DEWS replay prerequisites](./dews.md#methodology-versioning).
 
 The shared `v6.33` release of 2026-10-08 changes only DEWS weekly DEX-history admission; depeg onset, confirmation, recovery and PegScore rules are unchanged. Its release remains conditional on owner-approved production-history replay described in [DEWS](./dews.md#methodology-versioning).
 
@@ -39,9 +39,9 @@ Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), 
 | `DEPEG_EXTREME_MOVE_BPS` | <!-- GENERATED-START: depeg-extreme-move -->5000 (50%)<!-- GENERATED-END: depeg-extreme-move --> | Adds the severe/extreme pending reason and extended expiry policy |
 | `DEX_FRESHNESS_SEC` | <!-- GENERATED-START: depeg-dex-freshness -->4500 (75 min)<!-- GENERATED-END: depeg-dex-freshness --> | Hourly DEX prices older than this are ignored |
 | `DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD` | <!-- GENERATED-START: depeg-dex-min-tvl -->1,000,000<!-- GENERATED-END: depeg-dex-min-tvl --> | Minimum aggregate DEX source TVL required before depeg logic trusts a DEX row |
-| `DEPEG_DEX_PROTOCOL_CORROBORATION_MIN` | 2 protocol groups | Minimum protocol-level DEX corroborations required before aggregate DEX rows can directly suppress or resolve live depeg state |
-| `POOL_CHALLENGE_CONFIRM_MIN` | 2 protocol/source-family groups | Number of independent pool challenger groups that can veto a primary recovery or confirm a pending depeg. A diverging set must also be at least as numerous as the groups corroborating the recovered/at-peg price (`divergingProtocolGroupsOutvote` / `corroboratingProtocolGroupsOutvote` in `worker/src/lib/constants.ts`, shared with the pricing pool challenge) |
-| `POOL_CHALLENGE_HIGH_TVL_USD` | $5,000,000 | Single-pool TVL threshold that can veto a primary recovery or confirm a pending depeg without a second pool group |
+| `DEPEG_DEX_PROTOCOL_CORROBORATION_MIN` | 2 protocol groups | Aggregate DEX corroboration minimum; per-source evidence uses `DEX_PROTOCOL_SOURCE_FRESHNESS_SEC` (35 min), distinct from the aggregate row's 75 min |
+| `POOL_CHALLENGE_CONFIRM_MIN` | 2 protocol/source-family groups | Challenger group minimum; pools require `POOL_CHALLENGE_MIN_TVL` ($100k). Confirming/diverging groups must match or outnumber opposing/recovery groups, except the recovery high-TVL veto below |
+| `POOL_CHALLENGE_HIGH_TVL_USD` | $5,000,000 | Pending confirmation: replaces the second-group minimum but not the opposing vote. Live recovery: a single qualifying pool vetoes directly |
 
 `getDepegThresholdBps(pegType)` returns 100 for `peggedUSD`, 150 for all other peg types.
 
@@ -92,7 +92,7 @@ CREATE INDEX idx_depeg_open ON depeg_events(stablecoin_id) WHERE ended_at IS NUL
 - `superseded-direction`
 - `orphan-tracking-removed`
 
-Live non-USD events opened from native-fiat quotes retain native prices and `peg_reference = 1`. Admission matches asset and canonically normalized currency identities; peak selection excludes mismatched quote domains. Native confirmers of USD-origin pending events use the admitted USD reference. USD observations may close native rows, but leave `recovery_price = NULL` without a native recovery quote.
+Live non-USD events opened from native-fiat quotes retain native prices and `peg_reference = 1`. Admission matches asset/currency identities; peaks exclude mismatched domains. Native confirmers of USD-origin pending rows use the admitted USD reference. Native-domain open rows require an admitted native quote to progress; USD prices never become their recovery price.
 
 Pending onset survives only matching direction, continuity, peg identity and quote domain. USD-primary / `native-origin` transitions or peg changes reset onset, reference and prices; other reason-flag changes preserve continuity. Historical provenance remains authoritative; unknown conversions are not invented.
 
@@ -221,7 +221,7 @@ Open-event hydration explicitly joins `depeg_event_provenance.quote_mode`. This 
 
 `dex_prices` rows are only trusted for depeg logic when they are both fresh (`updated_at < 75 min`, covering the hourly producer plus one bounded delay) and deep enough (`source_total_tvl >= $1M`). Thin DEX rows remain visible in storage for analytics, but they do not suppress or confirm events.
 
-The stablecoin detail page can still show the live price deviation for a tracked coin below the live depeg-event floor, but that state is explicitly labelled as coverage-limited. Low-cap tracked coins can therefore look off-peg in the detail UI without opening a new `depeg_events` row. If the coin already had an open live row from a period above the floor and an observed supply now sits below it, the row closes as coverage-lost with `close_reason = 'coverage-lost-supply'` and `recovery_price = NULL` instead of remaining live indefinitely. Unavailable supply is not an observation below the floor: when the asset's current circulating buckets are absent, empty or wholly invalid, the open row stays open and unchanged (marked seen, a `Kept live event ... current supply is unavailable` warning is logged) and no new row opens for that asset.
+The stablecoin detail page can show live deviation below the event-creation floor with an explicit coverage-limited label. An existing row closes as `coverage-lost-supply` with `recovery_price = NULL` only on observed sub-floor supply, including zero. Unavailable supply opens no new row and leaves the existing lifecycle and peak unchanged, but records blind price coverage rather than extending trusted intervals.
 
 ### Per-Asset Processing
 
@@ -229,16 +229,16 @@ Validation gates (skip if any fail):
 
 - Must be in `PSI_ELIGIBLE_STABLECOINS`
 - Not a NAV token (`meta.flags.navToken`)
-- Price valid: non-null, is a number, not NaN, > 0
-- Supply >= $1M (via `getCirculatingRawOrNull()`, which sums finite circulating buckets and returns `null` for absent, empty or wholly invalid buckets) for live event recording; if an existing open event later observes supply below this floor (an explicit zero included) while the coin remains tracked, the live row closes with `close_reason = 'coverage-lost-supply'` and `recovery_price = NULL` because coverage left the live-event universe rather than proving a price recovery. `null` supply skips the asset without touching an open event
+- Price valid: observed, finite and > 0
+- Supply >= $1M (via `getCirculatingRawOrNull()`) for live event recording. Observed sub-floor supply, including zero, closes existing rows as `coverage-lost-supply` with `recovery_price = NULL`; unavailable supply keeps the lifecycle open and records blind coverage
 - Peg reference valid: finite and > 0
 - Non-USD fiat peg references use the live FX rate whenever it is available. A peer median is only a fallback when at least 3 live contributors remain; thin peer medians and empty live peer sets fail closed for that cycle
 - Supported non-USD fiat pegs with reliable CoinGecko native pairs also consult a fresh native-currency quote before mutating live state; a native quote inside the recovery band or pointing the other way vetoes the derived USD/FX onset for that cycle, while a threshold-crossing native quote can initiate a pending candidate when the primary USD-vs-reference path is still inside threshold
 
 Primary-price trust gates:
 
-- `authoritative`: fresh `high` / `single-source` current-sync prices
-- `confirm_required`: cached, fallback, low-confidence, or stale primary prices
+- `authoritative`: fresh observed `single-source` with exactly one policy-admitted authoritative source, or `high` with at least two authoritative sources or one upstream-capable authoritative source (`classifyPrimaryDepegTrust()` in `worker/src/lib/depeg-trust-policy.ts`)
+- `confirm_required`: cached, fallback, low-confidence, stale, or otherwise source-policy-ineligible primary prices
 - `unusable`: invalid/missing/non-finite price, or a non-observed price (`priceObservedAtMode: "nominal_reference"`, an unsupported mode, or any `protocol-par` source component). Since pricing v6.38 the nominal par routes publish par this way whenever no trusted market quote is admitted, so par can neither open, confirm nor recover an event; an open row stays open (tracked coins are never orphan-closed) until observed price evidence decides it, while a trusted market discount on those assets is evaluated like any other primary price
 
 Before those gates are applied, `priceSource` and `agreeSources` are normalized through the pricing-source registry. Composite labels are expanded into their component source keys, unknown sources do not become pool-challenge eligible by accident, and each known key resolves to its registered `depegSourceFamily`. CoinGecko variants, DefiLlama list/detail/contract variants, and CoinMarketCap-style list aggregators are therefore not counted as independent hard corroboration just because their labels differ; promoted DEX protocol lanes and hard market/oracle/protocol sources keep provider- or protocol-specific families.
@@ -258,9 +258,9 @@ Threshold decisions use `abs(rawBps)` so a value that merely rounds to the bound
 **Path A -- Deviation beyond the trigger threshold AND event already open**
 
 - If a fresh native-currency quote is inside the recovery band, route the row through the recovery confirmation path rather than closing immediately
-- If a fresh native-currency quote still shows a depeg but in a conflicting direction: fail closed and keep the existing row unchanged
-- If direction changed and the primary price is authoritative (or a trusted aggregate DEX row is corroborated by at least 2 protocol-level DEX groups in the replacement direction): close the old event and queue the replacement in `depeg_pending`
-- If direction changed but the primary price is `confirm_required`: keep the existing (old-direction) live row open (add to `seen`) and log a warning; the flip is only acted on once an authoritative primary reading or corroborated same-direction DEX support confirms it
+- If threshold-crossing USD-primary and native quotes conflict: suppress mutation and keep the lifecycle open
+- An admitted native-domain quote can drive that row's direction replacement. For USD-domain rows, replacement requires authoritative primary input or trusted aggregate DEX corroboration from at least 2 protocol groups; close the old row and queue the replacement
+- Otherwise, `confirm_required` direction changes keep the old-direction lifecycle open and log a warning
 - Same direction: mark as legitimately open (add to `seen` set); update peak only when the primary input is authoritative or a corroborated trusted DEX row corroborates the move
 - For a live event opened in the native quote domain (`peg_reference = 1` on a non-USD peg), update the peak only from a same-direction native quote; never write the USD primary price into that row
 - Same-direction DEX disagreement is now advisory only: detection logs the mismatch but does **not** auto-close the event from that contradiction alone
@@ -287,13 +287,13 @@ Detection persistence commits all mutations for one stablecoin as one ordered at
 
 - If a supported CoinGecko native-currency quote still shows the same-direction depeg: keep the event open and ignore the derived recovery
 - If a fresh trusted aggregate DEX row still crosses the depeg threshold in the existing event direction, with at least 2 protocol-level DEX groups corroborating that direction: keep the event open and ignore the primary recovery print
-- If qualifying individual pool challengers still cross the threshold in the existing event direction — either one pool with at least $5M TVL or at least 2 independent protocol/source-family groups that are also at least as numerous as the challenger groups corroborating the recovered (inside-threshold) price — keep the event open and ignore the primary recovery print. A minority of diverging groups no longer vetoes a corroborated recovery: the 2026-09-24 `vchf-vnx` event 90792 was vetoed by two dormant diverging venues (a months-silent Celo Uniswap v3 pool with 24h volume 0 and a provider-reported $4.7M reserve, plus a zero-volume ICP kongswap pool) against four live protocols sitting at the ECB CHF rate
+- Qualifying pool challengers veto primary recovery when either one same-direction pool has at least $5M TVL, or at least 2 independent protocol/source-family groups match or outnumber groups corroborating recovery. The single-high-TVL recovery veto is independent of that group vote; only the ordinary group-based path rejects a diverging minority.
 - Challenger snapshots retain publication timestamps, not original pool-price observation timestamps. Only diverging/corroborating group counts and the high-TVL veto are derived; no positive recovery price is computed. Ambiguous primary recovery requires the fresh trusted aggregate DEX lane until original pool-price time provenance is retained end to end.
 - A qualifying recovery must be at or inside 50% of the trigger threshold: 50 bps for USD pegs and 75 bps for non-USD pegs. The first qualifying observation sets both recovery timestamps; each consecutive qualifying observation refreshes `recovery_last_seen_at`. The row closes only after total recovery age reaches 15 minutes and the gap from the prior qualified observation is no more than 1200 seconds.
 - A later qualifying recovery after a gap greater than 1200 seconds resets both recovery timestamps to the new observation. Missing data leaves the event open, but the missing interval never proves recovery.
 - A reading between the recovery and trigger thresholds is a deadband: keep the event open and clear any partial recovery timer.
-- When the existing row was opened from a native-fiat quote, prefer the recovered native quote and persist it with `close_reason = 'recovered-native'`; if only a qualifying USD primary or DEX recovery exists, close with `recovery_price = NULL` to preserve the row's quote-domain invariant.
-- Authoritative or fresh multi-source primary recovery can advance the timer. Ambiguous primary recovery requires a trusted aggregate DEX row, at least 2 corroborating DEX protocol groups, and no qualifying challenger majority showing the old direction.
+- Native-domain rows recover only with a qualifying native quote, persisted with `close_reason = 'recovered-native'`. Missing native evidence keeps the lifecycle open even if USD primary or DEX prices suggest recovery.
+- Authoritative or fresh multi-source primary recovery can advance the timer. Ambiguous primary recovery requires a trusted aggregate DEX row, at least 2 corroborating DEX protocol groups, and no qualifying pool veto.
 - Any renewed same-direction depeg or contradictory trusted evidence clears the partial recovery timer.
 
 ### Orphan Cleanup
@@ -311,7 +311,7 @@ Guards (delete pending + skip):
 1. Invalid `peg_reference` (<= 0)
 2. Open event already exists for this coin (another path created it)
 
-Recovery check: if the current **authoritative** primary price is valid and deviation now < threshold, delete pending (transient noise). Ambiguous primary prices do not clear pending rows on their own.
+Recovery checks run before the age gate. A fresh native quote strictly inside the full trigger threshold clears pending as `recovered`; authoritative primary recovery does likewise unless native evidence still confirms the pending direction. Ambiguous primary prices alone cannot clear a row. Native recovery evidence does not let a native-origin quote confirm its own promotion.
 
 Native-origin candidates keep their native quote as the event-price domain, but that quote cannot confirm itself. At confirmation time, Pharos normalizes the fresh canonical USD price through the authoritative FX reference and admits only source families outside CoinGecko. One such independent canonical family must agree with the native-domain direction and full threshold before promotion; an at-peg or opposite-direction normalized canonical reading rejects the candidate after the temporal window. Missing, stale, fallback, cached, or CoinGecko-only canonical evidence leaves the row pending rather than promoting it.
 
@@ -361,13 +361,13 @@ Age checks:
 
 | Temporal persistence | Source confirmation | Contradiction | Action |
 |----------------------|---------------------|---------------|--------|
-| Less than 15 minutes | any | any | Keep pending |
+| Less than 15 minutes | any | no terminal guard or recovery | Keep pending |
 | Full 15 minutes beyond the trigger threshold | fresh primary cluster spanning at least 2 independent families | none decisive | PROMOTE |
 | Full 15 minutes beyond the trigger threshold | independent CoinGecko, CEX, corroborated aggregate DEX, or qualifying pool evidence | none decisive | PROMOTE |
 | Full 15 minutes beyond the trigger threshold | native-origin candidate plus a fresh non-CoinGecko canonical USD family normalized through authoritative FX, both beyond threshold in the same direction | none decisive | PROMOTE |
 | Full 15 minutes beyond the trigger threshold | native-origin candidate only | normalized independent canonical price is at peg or points in the opposite direction | REJECT |
 | Full 15 minutes | only soft off-chain evidence on a `low-confidence` row | none | Keep pending; require CEX, aggregate DEX, or pool confirmation |
-| any | any | decisive opposing evidence with no same-direction rescue | REJECT under the safeguards below |
+| At least 15 minutes | any | decisive opposing evidence with no same-direction rescue | REJECT under the safeguards below |
 | any | none | none | Keep pending until dynamic expiry, then expire or record `unconfirmed-severe` |
 
 **Primary-still-depegged safeguard:** the REJECT rows above assume the refreshed authoritative primary price no longer shows the pending direction. When it still does (`primarySameDirectionDepegged`), a single opposing secondary source cannot reject the row -- rejection then requires at least two independent hard-opposing sources (reason `two-hard-opposing-sources:...`); otherwise one opposing source suffices (reason `secondary-evidence-opposes`).
@@ -380,7 +380,7 @@ Pending rows that pass the 45-minute base expiry but still have same-direction p
 
 ## Historical Backfill Validation
 
-Historical backfills in `worker/scripts/backfills/backfill-depegs.ts` do **not** reuse the exact same guard as live DEX or fallback enrichment, but they now consult the same authoritative-price provider registry as live sync before falling back to market history.
+Historical backfills in `worker/scripts/backfills/backfill-depegs.ts` consult the authoritative-provider registry before market history, but use a distinct episode policy: rounded absolute bps for triggers, a flat timestamp-valued $1B large-cap confirmation cutoff, and closure on the first sample inside the full trigger threshold. They do not inherit live tiered large-cap flags or the half-threshold/15-minute recovery window.
 
 Backfill rewrites delete prior `source='backfill'` rows even when a trusted replay finds zero replacement events. Dry-runs preview that same removal scope through `removedBackfillEventCount`. For non-empty replacements, the delete and first insert chunk share one D1 `batch()` call (up to the D1 100-statement batch limit: delete + 99 inserts). Additional inserts are written in later chunks, so large replacements are bounded and restartable but not a single all-rows transaction.
 
@@ -461,10 +461,10 @@ Low-confidence pending rows are stricter: off-chain agreement alone does not pro
 
 While event is open:
   - Peak deviation updated if worse price seen
-  - Direction change with authoritative or DEX-confirmed input: close old, queue new pending candidate
-  - Direction change with `confirm_required` input: keep the old-direction row open and log a warning; the flip is only acted on once authoritative or DEX-confirmed input arrives
+  - Direction change with authoritative, DEX-confirmed, or admitted native-domain input: close old, queue new pending candidate
+  - USD-domain direction change with only `confirm_required` input: keep old-direction lifecycle open until authoritative or DEX-confirmed input arrives
   - Trusted DEX disagreement on the same side is logged, but does not by itself close the event
-  - Price reaches the 50% recovery band: start or continue a 15-minute recovery timer when the primary recovery is authoritative, when trusted aggregate DEX recovery has enough protocol corroboration and no challenger majority veto
+  - Price reaches the 50% recovery band: start or continue a 15-minute timer with admitted native recovery, authoritative primary recovery, or corroborated trusted aggregate DEX recovery without a qualifying pool veto
   - Price returns to the deadband or depeg range: clear the recovery timer and keep the event open
 
 Orphan cleanup:
@@ -511,6 +511,7 @@ interface DepegEvent {
     | "superseded-direction"
     | "orphan-tracking-removed"
     | null
+  priceCoverage?: DepegPriceCoverage | null
   provenance?: {
     sourceKind?: string | null
     replayRunId?: string | null
@@ -554,14 +555,13 @@ Response:
   "events": [{ "...DepegEvent fields..." }],
   "total": 42,
   "totalExact": true,
-  "counts": { "incidents": 42, "thresholdCrossings": 57 },
   "nextCursor": "..." | null,
   "pending": [{ "...DepegPendingIncident fields (only when includePending=true)..." }],
   "methodology": { "version": "...", "versionLabel": "...", "currentVersion": "...", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000, "isCurrent": true }
 }
 ```
 
-`total` counts public incident rows, not necessarily individual threshold crossings. Exact `counts` are included only for a stablecoin-filtered historical request with `includeTotal=true`; `counts.incidents` matches `total`, while `counts.thresholdCrossings` counts the stored detector/replay rows before DDR projection.
+`total` counts public incident rows, not necessarily individual threshold crossings. The endpoint does not emit derived `counts`; clients sum `constituentEventCount` across the fully loaded incident history for threshold-crossing totals.
 
 Each `pending` row's `expiresAt` is the base expiry, `firstSeenAt + DEPEG_PENDING_EXPIRY_SEC`. The confirmation cron keeps a row pending past it under the extended and severe limits (see the timing table), so `lastSeenAt` may legitimately exceed `expiresAt`; the shared contract requires only `lastSeenAt >= firstSeenAt` and `expiresAt > firstSeenAt`.
 
@@ -569,7 +569,7 @@ When DDR has linked multiple raw rows into one active repaired incident, the end
 
 Rows may include a nullable `provenance` object with public replay/audit metadata (`sourceKind`, `replayRunId`, `replayVersion`, `sourcePriceProviders`, `quoteMode`, `pegReferenceSource`, `supplySource`, `confirmationPolicy`, `confirmationPointCount`, `confidenceTier`, `auditVerdict`, `pegScoreEligible`, `updatedAt`). Legacy rows return `provenance: null`.
 
-Cache: producer-backed profile (`s-maxage=300`, `max-age=60`, `stale-while-revalidate=300`). Freshness headers use the latest successful `sync-stablecoins` timestamp, falling back to the latest event `startedAt` when cron history is unavailable; TTL remains 900s.
+Cache: producer-backed profile (`s-maxage=300`, `max-age=60`, `stale-while-revalidate=300`). Freshness headers use the confirmed `sync-stablecoins` output timestamp with a 900s budget. Missing, unreadable, or invalid producer history returns `no-store` and unavailable freshness; event onset times are never a freshness fallback.
 
 ## Frontend
 
@@ -598,7 +598,7 @@ Cache: producer-backed profile (`s-maxage=300`, `max-age=60`, `stale-while-reval
 ### Component: DepegHistory (`depeg-history.tsx`)
 
 - Stablecoin-detail depeg history table backed by the filtered infinite hook
-- Separates public incidents from raw threshold crossings using the filtered API counts and per-incident `constituentEventCount`
+- Separates public incidents from raw threshold crossings using the API `total` and, once fully loaded, the sum of per-incident `constituentEventCount`
 - Shows a coverage-aware recent 90-day peg percentage alongside observed days, incident count, and threshold-crossing count; pre-coverage days are not silently treated as stable
 - Shows the PegScore coverage anchor and whether it came from a reviewed replay or an assumed asset-age/first-observation fallback
 - Background-hydrates the full per-coin history, then paginates the rendered table client-side at 25 rows per page
@@ -625,8 +625,8 @@ Used in report cards. Formula:
 ```
 knownSpanSec = spanSec - unknownCoverageSeconds
 pegPct = knownSpanSec > 0 ? (1 - totalObservedDepegSec / knownSpanSec) * 100 : null
-severityScore = 100 - sum of per-event penalties
-  per-event penalty = max(durationPenalty, magnitudeFloor)
+severityScore = max(0, 100 - sum of per-event penalties)
+  per-event penalty = max(durationPenalty, magnitudeFloor) * eventSeverityWeight
     durationPenalty = (peakBps/100) * (durationDays/30) * recencyWeight   (durationDays capped at 90)
     magnitudeFloor  = (peakBps/2000) * recencyWeight
 spreadPenalty = min(15, (stddev of (|peakBps| × eventSeverityWeight) / 1000) * 15)
@@ -666,7 +666,7 @@ Returns `null` if fewer than 7 known days remain after subtracting unknown event
 | Duplicate events | Unique index (`stablecoin_id`, `started_at`, `source`) + run-start repair; same-direction rows merge, opposite-direction rows close older directions without absorbing opposite-sign peaks |
 | NAV tokens | Skipped (expected to appreciate, depeg detection N/A) |
 | Supply < $1M | Skipped for live event recording (prevents micro-cap noise); detail UI may still show current price deviation with an explicit coverage-limited note; existing rows close with `close_reason = 'coverage-lost-supply'` only on an observed sub-floor supply |
-| Supply unavailable (absent/empty/invalid buckets) | No new event; an existing open row stays open and unchanged (no coverage closure, no recovery progress) with a per-asset warning |
+| Supply unavailable (absent/empty/invalid buckets) | No new event; an existing lifecycle stays open without peak/recovery progress, records blind price coverage, and emits a per-asset warning |
 | Missing/invalid prices | Multiple null/NaN/<= 0 checks |
 | Peg reference validation | Must be finite and > 0 |
 | DEX freshness | Prices > 75 min old ignored |
@@ -681,4 +681,4 @@ For pre-migration **open** events, the entire uninstrumented span is explicitly 
 
 The single `mergeDepegSeconds` authority counts recorded off-peg intervals only. The complement of both off-peg and at-par intervals inside each scored event is `unknownCoverageSeconds`; overlapping unknown spans merge and trusted intervals from another row take precedence. Unknown time is excluded from both off-peg time and the occupancy denominator, including recent 90-day statistics, and from duration severity. It is neither zero deviation nor verified at-peg time. `pegPct` is nullable when the known denominator is empty; `pegScore` is NR when fewer than seven known days remain. Public event `priceCoverage` and summary `unknownCoverageSeconds` expose this distinction, and exact Safety Score peg provenance retains it.
 
-**First production run:** retain the pre-window Time Travel bookmark, migration ledger, and deployed Worker version. Require the exact `0000_baseline.sql` ledger membership and only the intended tail migration pending; run the migration and SQL-safety checks before the normal migration-before-Worker deploy. After verifying sole-version activation, observe the first two `sync-stablecoins` runs: a trusted open event receives a first endpoint then at most the continuous interval between those runs, while USDA (Avalon), if its current price remains unavailable, keeps its lifecycle open, has a persisted gap, and accrues no observed off-peg seconds. Inspect its three new columns with read-only SELECTs. Then observe the next `prepare-safety-score-v9-input` job publishing `peg-analytics` and the subsequent Safety Score publication: methodology 6.31, explicit unknown coverage, nullable occupancy where fully blind, admitted sub-floor deviations where prices exist, and no `peg-supply-floor-withheld` reason for those observed facts. Frozen pre-cutover Safety Score captures cannot prove a producer change without explicitly projected recomputation; compare the first newly produced generation, not just deployment status. A Worker-only rollback leaves the additive schema/evidence intact but pauses the new producer; reactivation must start a new interval after a long gap. D1 restore is reserved for unexpected schema/data mutation and requires the retained bookmark.
+**Producer-cutover observation:** retain the pre-window Time Travel bookmark, migration ledger, and deployed Worker version; use the current migration sequence in `worker/migrations/MANIFEST.md`. After sole-version activation, observe two `sync-stablecoins` runs: a trusted open event starts an endpoint then accrues only the continuous interval; missing prices keep its lifecycle open with a persisted gap and no new observed off-peg seconds. Inspect the coverage columns with read-only SELECTs, then observe new `peg-analytics` and Safety Score publications for explicit unknown coverage, nullable fully blind occupancy, and admitted observed sub-floor deviations. Frozen pre-cutover captures cannot prove a producer change; compare newly produced generations. A Worker-only rollback preserves additive schema/evidence but pauses the producer; resumption after a long gap starts a new interval. Reserve D1 restore for unexpected schema/data mutation using the retained bookmark.

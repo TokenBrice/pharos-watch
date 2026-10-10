@@ -2,13 +2,13 @@
 
 Operational reference for the automated V9 CDP shock-coverage measurement.
 
-CDP shock coverage is a score-bearing V9 fact with a **72-hour** policy freshness bound, ratified in `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` under `semantic.backing.structural.cdp.stressMeasurementFreshness`. Past that bound the engine fails closed to legacy LCR: LUSD drops from roughly 77/B+ to 59/C via `unsafe-backing:high`, and BOLD's and BD's ratings fall with it.
+CDP shock coverage is a score-bearing Safety Score fact with a **72-hour** policy freshness bound, ratified in `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` under `semantic.backing.structural.cdp.stressMeasurementFreshness`. Past that inclusive bound the engine selects the reviewed legacy LCR instead; any resulting structural signal or rating change depends on the admitted mechanism facts, not a fixed per-asset score.
 
-Until now the measurement was produced by hand. The [Shock Coverage Refresh](../../.github/workflows/shock-coverage-refresh.yml) workflow closes that manual dependency under the LUSD, BOLD, and BD safety scores.
+The [Shock Coverage Refresh](../../.github/workflows/shock-coverage-refresh.yml) workflow refreshes the canonical targets in `shared/data/safety-score-v9/shock-coverage-targets.json`.
 
 ## Cadence
 
-`.github/workflows/shock-coverage-refresh.yml` runs at **03:41 UTC every other day** (`41 3 */2 * *`), plus `workflow_dispatch` for a manual refresh.
+`.github/workflows/shock-coverage-refresh.yml` measures at **03:41 UTC every other day** (`41 3 */2 * *`), plus `workflow_dispatch` for a manual refresh. A separate **daily 09:11 UTC** (`11 9 * * *`) job checks committed freshness without regenerating measurements.
 
 Worst-case gap between scheduled attempts is 48h, leaving a roughly 24h manual/rerun remediation window after one scheduled failure; the next automatic attempt at 96h would be too late. The freshness clock runs on the **pinned block timestamp**, not on merge time, so merge latency spends the same budget as scheduler latency; auto-merge (see [Merge path](#merge-path)) keeps that spend bounded by the required checks.
 
@@ -40,7 +40,7 @@ Each attestation entry carries its own `attestedAt` — the date that journal wa
 
 `main` is a protected branch with `enforce_admins: true` and force-pushes disabled, so the workflow **cannot** push measurements directly. It pushes to `automated/shock-coverage-refresh` and opens (or force-updates) a pull request against `main`, matching the [OG Refresh](../../.github/workflows/og-refresh.yml) pattern.
 
-The workflow **arms auto-merge** on the PR it opens (`gh pr merge --squash --auto`; repository auto-merge is enabled) per the owner ruling of 2026-07-20. The merge queues behind the required checks — branch protection is not bypassed — and does not wait for a human review, because a refresh parked on review can still cross the 72h bound and drop LUSD to `unsafe-backing:high`. The trust boundary is the measurement itself: journals must replay byte-identically offline or the job fails before a PR exists (see above). Note that replay proves determinism, not RPC truthfulness; accepting public-RPC measurements without human review is a deliberate freshness-over-review trade (ruling reaffirmed 2026-07-21 by rejecting PR #611, which proposed removing auto-merge).
+The workflow **arms squash auto-merge only for newly created PRs** through `open-automated-refresh-pr.ts --auto-merge` (`gh pr merge --squash --auto`). Updating an existing open PR force-updates its branch but does not re-arm auto-merge. Required checks remain the merge gate; a refresh parked on review can cross the 72h policy bound. Journals must replay byte-identically before a PR exists, but replay proves determinism, not RPC truthfulness. Automatic refresh merging is a deliberate freshness-over-review trade, not approval to bypass branch protection.
 
 ### Token
 
@@ -51,9 +51,7 @@ The measurement itself needs **no** credential. `shared/data/safety-score-v9/sho
 ## Manual refresh
 
 ```bash
-npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset lusd-liquity
-npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset bold-liquity
-npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset bd-basedollar
+npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts
 npx tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-attestations.ts
 npx tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts
 node --import tsx scripts/lib/mechanism-measurement/upload.ts

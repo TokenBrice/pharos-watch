@@ -14,6 +14,8 @@
  *
  * Document references stay structured through the runtime boundary so text and
  * JSON formatters can render `path#anchor` while still exposing `{path, anchor}`.
+ * Optional `runbook` metadata on existing references curates navigation labels
+ * and applicability; it is not part of runtime routing or rendered guidance.
  * Hints are deliberately separate from document slots. Exclusions are matched by
  * the same glob implementation and exist only for tracked implementation areas
  * that intentionally inherit a parent contract rather than owning documentation.
@@ -28,6 +30,10 @@ const DOC_OWNERSHIP_PATH = resolve(REPO_ROOT, "docs/doc-ownership.json");
 export interface DocReference {
   anchor?: string;
   path: string;
+  runbook?: {
+    label: string;
+    kind: "symptom" | "reference" | "procedure";
+  };
 }
 
 type RawDocReference = string | DocReference;
@@ -131,7 +137,9 @@ function readDocOwnership(path: string = DOC_OWNERSHIP_PATH): DocOwnershipRegist
 }
 
 function normalizeDocReference(reference: RawDocReference): DocReference {
-  return typeof reference === "string" ? { path: reference } : reference;
+  if (typeof reference === "string") return { path: reference };
+  if (!reference.runbook) return reference;
+  return reference.anchor ? { path: reference.path, anchor: reference.anchor } : { path: reference.path };
 }
 
 function normalizeMapping(mapping: RawMapping): PathFamily {
@@ -149,6 +157,12 @@ function normalizeMapping(mapping: RawMapping): PathFamily {
     sourceGlobs: mapping.sources,
     tier: mapping.tier ?? "specific",
   };
+}
+
+// Skill facades are symlinks; only the canonical skill files are Git-tracked.
+// Keep runtime routing globs unchanged and normalize only for source liveness.
+export function canonicalizeOwnershipSourcePattern(pattern: string): string {
+  return pattern.replace(/^\.(?:agents|claude)\/skills\//, ".codex/skills/");
 }
 
 export function matchesOwnershipGlob(file: string, pattern: string): boolean {

@@ -92,7 +92,7 @@ Goal-card rules:
 - each card represents a distinct user job, not a generic feature link
 - goal cards render in a uniform responsive grid (`sm:grid-cols-2`, `xl:grid-cols-3`)
 - each card carries its own primary route, CTA label, and destination chips
-- The portfolio goal is a holdings-risk review. It links to the Portfolio, Dependency Map, and Safety Scores without promising issuer-failure simulations.
+- The portfolio goal is a holdings-risk review. Its card links to Portfolio and names Portfolio, Dependency Map, and Safety Scores in non-interactive destination chips, without promising issuer-failure simulations.
 
 ### Glossary
 
@@ -157,4 +157,4 @@ Update this doc when any of these change:
 - the shared desktop/mobile navigation contract
 - the shared-shell contract for `/start/`
 
-When changing onboarding copy or destinations, update `src/lib/start-here-content.ts` in the same change. Safety Score explanations must stay aligned with the current V9 pillar/policy contract in [report-cards.md](./report-cards.md), without retired dimension copy. If the homepage CTA behavior changes too, update [Homepage](./homepage.md) alongside this document.
+When changing onboarding copy or destinations, update `src/lib/start-here-content.ts` in the same change. Safety Score explanations must stay aligned with the current pillar/policy contract in [report-cards.md](./report-cards.md), without retired dimension copy. If the homepage CTA behavior changes too, update [Homepage](./homepage.md) alongside this document.

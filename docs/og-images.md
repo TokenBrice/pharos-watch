@@ -82,20 +82,12 @@ npm run check:generated-artifacts -- --only=og-editorial
 
 Generated for `/learn/mechanisms/[archetype]` pages. The pipeline renders the mechanism diagram SVG directly from `src/components/stablecoin-detail/mechanism-diagrams/` and sends it through the shared static runner so the committed PNG stays diagram-consistent.
 
-| Image | Slug |
-| --- | --- |
-| `og-learn-fiat-cash.png` | `fiat-cash` |
-| `og-learn-tbill.png` | `tbill` |
-| `og-learn-cdp.png` | `cdp` |
-| `og-learn-synthetic-delta-neutral.png` | `synthetic-delta-neutral` |
-| `og-learn-algorithmic.png` | `algorithmic` |
-| `og-learn-rwa-credit-fund.png` | `rwa-credit-fund` |
-| `og-learn-commodity-claim.png` | `commodity-claim` |
+The complete card roster is `MECHANISM_EXPLAINER_ENTRIES` in `src/lib/mechanism-explainer-registry.ts`; each entry owns its slug, title, and `ogFilename`. The generator maps that registry directly rather than maintaining a separate image list.
 
 ### How to renew
 
 ```bash
-tsx scripts/maintenance/build-og-learn-images.ts
+node --import tsx scripts/maintenance/build-og-learn-images.ts
 npm run check:generated-artifacts -- --only=og-learn
 ```
 
@@ -178,7 +170,7 @@ Rendered on-request by `worker/src/api/og.tsx` using satori + resvg WASM, cached
 
 Stablecoin and depeg cards read DEWS through `stress-signals-current-rows.ts`, the same publication owner as `/api/stress-signals`. They honor completed-generation coverage rather than selecting raw maximum timestamps, so superseded or staged rows cannot override the published generation. Both use the API's eight-times-freshness fallback threshold for materialized rows and retain the owner's last-valid/history fallback (including an older single-coin result); unavailable authority yields no DEWS row. Existing rendering and response-cache limits are unchanged.
 
-Stablecoin cards preserve unavailable price, DEWS, liquidity, market cap, metadata, and seven-day flow as `—`; unavailable readings do not imply par, calm, zero liquidity, or a backing/governance classification. A numeric zero remains an observed zero. Seven-day measured flow is labelled **7D NET MINT/BURN**; when absent, a **7D SUPPLY DELTA** is shown only if both current and prior-week USD supply are available. Supply change is not measured mint/burn. With fewer than two price-history points the chart is replaced by **Price history unavailable**, never a synthetic flat line. The sparkline reads daily `supply_history` prices, which since mint-burn-flow v6.23 never store a nominal par reference; rows written earlier can, so a coin currently published as a nominal reference draws no price line at all. A coin that was nominal in the past but is observed now can still show legacy par points until they leave the seven-day window. Since mint-burn-flow v6.23 the seven-day mint/burn cell follows the hourly valuation completeness: a complete window shows its signed net, a partial window (unpriced events) shows only its known gross subtotal as a lower bound (**7D GROSS (MIN)**, `$X+`, neutral color, never a signed net and never replaced by the supply delta), and a window with legacy coverage-unknown buckets keeps its net under **7D NET (UNVERIFIED)** in neutral color. When the published price is a nominal par reference (`priceObservedAtMode: "nominal_reference"`, pricing v6.38), the price cell is labelled **NOMINAL PAR** instead of **PRICE**, so par is never presented as an observed market price; an observed price, including a trusted market discount on a nominal-par route, keeps the **PRICE** label.
+Stablecoin cards preserve unavailable price, DEWS, liquidity, market cap, metadata, and seven-day flow as `—`; unavailable readings do not imply par, calm, zero liquidity, or a backing/governance classification. A numeric zero remains an observed zero. Seven-day measured flow is labelled **7D NET MINT/BURN**; when absent, a **7D SUPPLY DELTA** is shown only if both current and prior-week USD supply are available. Supply change is not measured mint/burn. With fewer than two price-history points the chart is replaced by **Price history unavailable**, never a synthetic flat line. The sparkline selects the latest seven non-null `supply_history` prices, not a date-bounded seven-day window. Since mint-burn-flow v6.23 new rows never store a nominal par reference; a currently nominal coin draws no price line. A currently observed coin can retain older legacy par points until newer priced rows displace them. Since mint-burn-flow v6.23 the seven-day mint/burn cell follows the hourly valuation completeness: a complete window shows its signed net, a partial window (unpriced events) shows only its known gross subtotal as a lower bound (**7D GROSS (MIN)**, `$X+`, neutral color, never a signed net and never replaced by the supply delta), and a window with legacy coverage-unknown buckets keeps its net under **7D NET (UNVERIFIED)** in neutral color. When the published price is a nominal par reference (`priceObservedAtMode: "nominal_reference"`, pricing v6.38), the price cell is labelled **NOMINAL PAR** instead of **PRICE**, so par is never presented as an observed market price; an observed price, including a trusted market discount on a nominal-par route, keeps the **PRICE** label.
 
 | Route | Source |
 | --- | --- |
@@ -197,7 +189,7 @@ The shared frame inlines the Pharos brand mark as SVG paths (`worker/src/lib/og-
 ## CI guardrails
 
 - `npm run seo:check` (`scripts/ci/check-seo-static.mjs`) inspects the built `out/` for OG metadata. As part of T2, this check also asserts that every same-origin `og:image` / `twitter:image` URL — root-relative, or absolute on `pharos.watch` — resolves to a file in `out/`; cards on other hosts (the `api.pharos.watch` dynamic routes) are skipped. This catches broken references like the historical `/og-default.png` regression.
-- `seo:check` is not part of the PR merge gate. It runs post-merge in `.github/workflows/pages-release.yml` via `npm run check:pages-release`, and locally through `npm run check:release`.
+- `seo:check` runs in the classifier-selected PR `pages-artifact` lane through `npm run check:pages-artifact` → `npm run check:pages-release`. It also runs post-merge in `.github/workflows/pages-release.yml` and locally through `npm run check:release`; ordinary local `check:pr` defers the Pages lane to CI unless `--with-pages` is supplied.
 
 ## Orphans (intentional)
 

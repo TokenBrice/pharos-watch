@@ -1,6 +1,15 @@
 # Telegram Operator Queries
 
-Use these SQL snippets from the Cloudflare D1 console or `wrangler d1 execute` during PharosWatchBot incidents. They are read-only unless explicitly noted.
+Use these read-only SQL snippets during PharosWatchBot incidents. This page owns reusable diagnostics; the [incident runbooks](../telegram-alerts.md#runbooks) retain their prerequisites, stop conditions, remediation, and readback.
+
+> **Agent navigation** — [Incident entry](#read-only-incident-entry) · [Pending queue](#pending-queue) · [Subscriber controls](#subscriber-delivery-controls) · [Transport circuit](#transport-circuit) · [Delivery pauses](#delivery-pauses) · [Alert jobs](#alert-jobs) · [Dispatch diagnostics](#dispatch-runtime-diagnostics) · [Source target planning](#source-target-planning) · [Dead letters](#dead-letters) · [Webhook dedupe](#webhook-dedupe) · [Usage funnel](#usage-funnel)
+
+## Read-Only Incident Entry
+
+- Use authorized access to admin `/api/status` and the primary Worker D1 database, `stablecoin-db`. For origin-access setup, follow [Operator Origin Access](../operator-origin-access.md); query access does not authorize mutations.
+- Compare `telegramBot.pendingDeliveries`, `pendingDeliveryBacklog`, `oldestPendingDeliveryAgeSec`, and `retryErrorClassCounts` across two five-minute runs. Read dispatch timing and capacity from `crons["dispatch-telegram-alerts"].lastRun.metadata`; also inspect the watchdog and relevant `budgetOnlySurfaces`. Keep incident-specific thresholds in the selected runbook.
+- Run SQL in the Cloudflare D1 console or with `npx --no-install wrangler d1 execute stablecoin-db --remote --command "<SQL>"` from `worker/`. Replace every `?` with the current Unix timestamp (seconds), and substitute only the affected chat/update/job/source identifiers. Preserve the inspected IDs, owners, generations, and timestamps for readback.
+- These queries use the active schema in `worker/migrations/0000_baseline.sql` plus subsequent migrations. Confirm deployed schema parity before interpreting a failed query as an empty result. Never reset or delete `sending`, `started`, or `execution_unknown` evidence to force replay; incident-specific mutation authority is not supplied here.
 
 ## Pending Queue
 
@@ -21,9 +30,9 @@ GROUP BY 1, 2, 3
 ORDER BY priority ASC, rows DESC;
 ```
 
-Replace each `?` with the current Unix timestamp.
+### Pending Rows For One Chat
 
-Pending rows for one chat:
+Pending rows for one chat, including its delivery state:
 
 ```sql
 SELECT
@@ -32,6 +41,7 @@ SELECT
   source_type,
   alert_type,
   priority,
+  delivery_state,
   attempts,
   last_error_class,
   created_at,
@@ -45,6 +55,63 @@ FROM telegram_pending_alerts
 WHERE chat_id = '<chat_id>'
 ORDER BY COALESCE(priority, 50) ASC, created_at ASC;
 ```
+
+Size the chat's backlog by delivery state and backoff:
+
+```sql
+SELECT delivery_state, COUNT(*) AS rows,
+       MIN(created_at) AS oldest_created_at,
+       MAX(not_before_at) AS latest_not_before_at
+FROM telegram_pending_alerts
+WHERE chat_id = '<chat_id>'
+GROUP BY delivery_state;
+```
+
+The retired filtered-clear endpoint's read-only pending count:
+
+```sql
+SELECT COUNT(*) AS matched
+FROM telegram_pending_alerts
+WHERE chat_id = '<chat_id>' AND delivery_state = 'pending';
+```
+
+This is sizing only, not permission to clear rows. A direct `DELETE` would bypass dead-letter, target, recap, and audit bookkeeping.
+
+## Subscriber Delivery Controls
+
+```sql
+SELECT chat_id, alert_snooze_until_ts, quiet_hours_enabled,
+       quiet_hours_start_utc, quiet_hours_end_utc, timezone,
+       consecutive_block_count, consecutive_block_first_at,
+       global_alert_dews, global_alert_depeg, global_alert_safety,
+       global_alert_launch, global_alert_reserve, global_alert_freeze,
+       preference_generation, created_at, last_active_at
+FROM telegram_subscribers
+WHERE chat_id = '<chat_id>';
+```
+
+Interpret snooze, quiet-hours, block strikes, missing follows, and missing-subscriber evidence with [Single chat affected](./telegram-no-delivery.md#quick-diagnostic-checklist), not with an operator resend.
+
+## Transport Circuit
+
+```sql
+SELECT state, generation, cause_class, cause_scope, distinct_failure_count,
+       first_failure_at, last_failure_at, last_success_at, opened_at,
+       next_probe_at, probe_owner, probe_generation, probe_expires_at,
+       probe_limit, probe_attempted, updated_at
+FROM telegram_transport_circuit
+WHERE singleton_id = 1;
+```
+
+## Delivery Pauses
+
+```sql
+SELECT mode, generation, expires_at, reason, actor, created_at, updated_at
+FROM telegram_delivery_pauses
+ORDER BY mode;
+```
+
+An absent `fresh`, `pending`, or `admin` row is inactive with generation `0`; an expired row is inert but retains its generation. [Bot-wide outage](./telegram-bot-wide-outage.md#pause) owns pause/resume authority, audit, and readback. Do not write pause SQL or clear the circuit to simulate a pause.
 
 ## Alert Jobs
 
@@ -240,6 +307,32 @@ LIMIT 50;
 ```
 
 ## Webhook Dedupe
+
+### Processed Update
+
+Inspect one reported update:
+
+```sql
+SELECT update_id, received_at, processed_at, update_type, chat_id, status,
+       error_class, effect_state, intent_version, intent_kind,
+       intent_recorded_at, mutation_applied_at, effect_started_at,
+       effect_completed_at, effect_kind, effect_ordinal,
+       claim_owner, claim_generation
+FROM telegram_processed_updates
+WHERE update_id = <update_id>;
+```
+
+### Pending Command State
+
+```sql
+SELECT chat_id, ambiguous_ticker, action_type, expires_at
+FROM telegram_pending_disambiguation
+WHERE chat_id = '<chat_id>';
+```
+
+Use [Webhook retry and dedupe](./telegram-webhook-retry-dedupe.md#quick-diagnostic-checklist) to determine whether takeover is safe; the [setup-wizard runbook](./telegram-setup-wizard-stuck.md#remediation) owns its scoped expired-row cleanup.
+
+### Webhook Status And Effects
 
 Processed updates by status and age:
 

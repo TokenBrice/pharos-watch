@@ -1,7 +1,7 @@
 # Runbook: Yield Deterministic All-Fail Cooldown
 
 Triggered by:
-- `sync-yield-data` metadata showing `onChainAllDeterministicFailed`, `onChainCooldownTriggered`, or `onChainSkippedDueToCooldown`
+- `sync-yield-data` metadata `sourceCoverage` shows `onChainAllDeterministicFailed`, `onChainCooldownTriggered`, or `onChainSkippedDueToCooldown`
 - `metadata.quality.reasons` containing `onchain-rates:all-deterministic-failed` or `onchain-rates:cooldown-coverage-gap`
 - `cache['yield:onchain-health:v1']` showing an active `cooldownUntil`
 
@@ -11,13 +11,11 @@ Deterministic on-chain yield reads fail in a run. If all configured deterministi
 
 ## Impact
 
-Rows backed by non-onchain sources continue to publish. Native deterministic rows may be absent or replaced by lower-confidence alternatives until cooldown expires. A cooldown coverage gap raises input-quality reasons and retries deterministic reads on the next post-V9 cycle. Applied publication remains `ok` with `metadata.quality`; unapplied work is `degraded` with `metadata.reason`. The top-level yield `fallbackMode` is removed.
+Rows backed by non-onchain sources continue to publish. Native deterministic rows may be absent or replaced by lower-confidence alternatives until cooldown expires. A cooldown coverage gap raises input-quality reasons and retries deterministic reads on the next post-V9 cycle; the [publication contract](../yield-intelligence.md#persistence-and-publication) owns completion-versus-quality reporting.
 
 ## First Checks
 
-1. **Access-gated status:** `https://ops.pharos.watch/admin/` -> Crons -> `sync-yield-data` metadata.
-2. **Machine status:** `GET https://ops-api.pharos.watch/api/status` with Cloudflare Access service-token headers.
-3. **Public rankings:** inspect affected rows in `GET https://api.pharos.watch/api/yield-rankings` for source changes and warning signals.
+Start with the [shared read-only Yield Health checks](./yield-health.md#first-checks), focusing on `sync-yield-data` metadata and lease state. Then inspect affected rows in `GET https://api.pharos.watch/api/yield-rankings` for source changes and warning signals.
 
 ## Read-Only D1 Snippets
 
@@ -27,13 +25,7 @@ FROM cache
 WHERE key = 'yield:onchain-health:v1';
 ```
 
-```sql
-SELECT job, started_at, status, item_count, metadata
-FROM cron_runs
-WHERE job = 'sync-yield-data'
-ORDER BY started_at DESC
-LIMIT 8;
-```
+Use the [shared cron-history SELECT](./yield-health.md#read-only-d1-snippets) for `sync-yield-data`, newest 8 runs.
 
 ```sql
 SELECT stablecoin_id, source_key, data_source, yield_source, current_apy, updated_at
@@ -66,7 +58,7 @@ LIMIT 30;
 ## Validation
 
 - `cache['yield:onchain-health:v1']` shows either no active cooldown, a decreasing valid cooldown, or a reset after successful deterministic reads.
-- `sync-yield-data` metadata shows `onChainRatesResolved > 0` after recovery or `onChainFailureMaskedByAlternativeCoverage: true` while protected.
+- `sync-yield-data` metadata `sourceCoverage.onChainRatesResolved > 0` after recovery or `sourceCoverage.onChainFailureMaskedByAlternativeCoverage: true` while protected.
 - Public rankings remain non-empty and affected rows clearly expose their current source/provenance.
 
 ## Rollback Notes

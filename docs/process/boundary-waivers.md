@@ -4,7 +4,7 @@ Pharos enforces a strict layering rule: code under `worker/src/` must not import
 
 Enforcement is part of the ESLint configuration and runs on every changed file:
 
-- **frontend→worker** — a `no-restricted-imports` block in `eslint.config.mjs`, so the rule runs on every changed file through `lint:changed` rather than only when a worker file also moves.
+- **frontend→worker** — `no-restricted-imports` handles static imports/re-exports and `pharos/frontend-dynamic-import-boundaries` handles literal dynamic imports in `eslint.config.mjs`; both run through `lint:changed`, even when no Worker file changes.
 - **worker→frontend** — the `pharos/worker-import-boundaries` custom rule in `eslint.config.mjs`, which bans frontend specifiers from `worker/src/`.
 
 Bundle-graph enforcement is owned by `scripts/ci/check-runtime-reachability.ts` and its data table in `scripts/lib/runtime-reachability-policies.mts`. It detects transitive scheduled-runtime, mint/burn and memory-constrained-cron, Pages Functions, and client-registry boundary violations that direct-import lint cannot see.
@@ -19,9 +19,9 @@ The sole reviewed frontend→worker waiver is listed in `FRONTEND_TO_WORKER_WAIV
 - **Status:** Long-lived. No active retirement plan.
 - **Reason:** The freeze runbook requires asserting that frozen stablecoin IDs are absent from every independent registry that participates in lifecycle surfaces — worker-side registries (`MINT_BURN_CONFIG_SPECS`, `CONTRACT_CONFIGS`, `YIELD_POOL_MAP`) and the frontend `STATIC_COMPARE_PAIRS` fixture. The check is intentionally cross-layer because that is exactly what it validates.
 - **What was tried:** Promoting the source registries into `shared/` was evaluated:
-  - `MINT_BURN_CONFIG_SPECS` references `chainConfig()` and helper closures (`transferMintBurn`, `ccipBridgeDetection`, etc.) that resolve worker-side `tracked-contract-resolution` data. Splitting an ID-only mirror would either duplicate the source of truth or invert dependency direction across 10+ worker modules.
+  - `MINT_BURN_CONFIG_SPECS` uses `requireChainConfig()` and Worker helpers from `mint-burn-contracts-helpers.ts`; `cctpBridgeDetection()` resolves tracked contracts through `tracked-contract-resolution`. An ID-only mirror would duplicate the source of truth.
   - `CONTRACT_CONFIGS` is constructed from `CONTRACT_CONFIG_SPECS` via `resolveBlacklistContractConfig`, which uses the same worker-resolution path.
-  - `YIELD_POOL_MAP` is a pure `Record<string,string>` but has 10+ worker-side consumers; moving it to `shared/` would touch every yield cron module without changing the boundary surface (the script would still need the mint-burn and blacklist worker imports).
+  - `YIELD_POOL_MAP` is a pure `Record<string,string>`, but moving it to `shared/` would not remove the script's remaining mint/burn and blacklist Worker imports.
   - In each case the refactor expands the change surface dramatically without removing the architectural exception.
 - **Mitigations:**
   - The waiver list in `eslint.config.mjs` contains only this reviewed file; adding another requires a documented architectural review on this page.

@@ -1,6 +1,6 @@
 ---
 name: annotations-refresh
-description: Drain the chart-annotation candidate queue into reviewed per-coin annotations. Use weekly during active event periods, monthly otherwise, or when queue-health checks warn.
+description: Review the retained annotation candidate queue and curate per-coin editorial history. Use weekly during active event periods, monthly otherwise, or on queue-health warnings; this does not restore the retired live chart overlay.
 user_invocable: true
 ---
 

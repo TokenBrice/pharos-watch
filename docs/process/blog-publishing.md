@@ -16,9 +16,9 @@ what shipped, what's next, and why.
 - **Publication line:** post headers credit Pharos and link to `/about/#editorial-ai-policy`, matching the Article-family organization author. The visible published date comes from the registry, not git modification time; it makes no human-review claim.
 - **Feed:** `src/app/feed/blog.xml/route.ts` → `/feed/blog.xml` (the legacy
   extensionless `/feed/blog` path is a `_redirects` 301).
-- **Homepage banner:** `src/components/home-blog-banner.tsx` advertises the
-  latest post for `FRESH_DAYS` (14) after `datePublished`, gated at build time
-  (zero client JS — the site's CSP forbids author inline scripts).
+- **Homepage banner:** `src/components/home-blog-banner.tsx` hides the latest
+  post once its age exceeds `FRESH_DAYS` (14), evaluated at build time
+  (zero client JS). Future-dated registry entries are not hidden.
 - **Typography:** article bodies use the Georgia `font-serif` editorial register
   (the authored-editorial carve-out in `DESIGN.md`; page chrome stays sans). No
   frost-blue anywhere in blog chrome (One Beam Rule).
@@ -50,8 +50,8 @@ what shipped, what's next, and why.
    picks the new post up automatically — locally on the next
    `npm run bootstrap:generated:history`, and in production during the release
    build. There is no separate settle step.
-5. **Push** via the normal protected-main PR path. The homepage banner arms
-   itself from `datePublished` on the next build — nothing else to touch.
+5. **Push** via the normal protected-main PR path. Registry dates are metadata,
+   not a publication embargo; deploy the entry when it should become public.
 
 ## Notes
 
@@ -65,26 +65,27 @@ what shipped, what's next, and why.
   llms.txt regeneration.
 - **Discovery** is wired once and needs no per-post work: the sitemap, the
   sitemap-tree page, and the RSS feed enumerate posts straight from the
-  registry; the nav `Resources` menu's `Updates` column, footer, command palette,
-  and the feed `<link>` in `layout.tsx` are static links to the `/blog/` hub
-  and `/feed/blog.xml`.
+  registry; the command palette searches that registry and links to individual
+  posts. The nav `Resources` menu's `Updates` column and footer link the hub;
+  the feed `<link>` in `layout.tsx` points to `/feed/blog.xml`.
 
 ## Changelog
 
-`/changelog/` is the other half of the boundary above: one entry per week,
+`/changelog/` is the other half of the boundary above: weekly release notes,
 linked from the nav `Resources` menu's `Updates` column (`src/lib/nav-config.ts`).
 It shares nothing with the blog contract — separate registry, no post bodies,
 no RSS feed.
 
-- **Registry:** one JSON record per week at `src/data/changelogs/<dateRange.to>.json`,
+- **Registry:** one JSON record per entry at `src/data/changelogs/<dateRange.to>.json`,
   statically imported by the generated `src/data/changelogs/index.ts` barrel,
-  which re-sorts newest-first. Shape and per-field rules live in
-  `src/data/changelogs/types.ts`; `npm run check:editorial-content` validates
+  which re-sorts newest-first. Type declarations live in
+  `src/data/changelogs/types.ts`; runtime field rules live in
+  `scripts/lib/editorial-content.ts`. `npm run check:editorial-content` validates
   metadata, source registration and internal references before build.
 - **The filename is data.** It must equal `dateRange.to`, and every dated file
-  must be registered in the barrel. Both dates must be `YYYY-MM-DD` — the
-  barrel sort and the page's year dividers compare them lexicographically, so
-  any other format sorts wrong rather than failing loudly.
+  must be registered in the barrel. Both dates must be valid `YYYY-MM-DD` days:
+  `scripts/lib/editorial-content.ts` rejects malformed or impossible dates;
+  the barrel sorts lexicographically and page year dividers parse those dates.
 - **The commit list is capped; the count is not.** `commits` holds at most the
   20 the card renders, while `stats.totalCommits` is the authoritative
   noise-filtered total for the window and may be larger. Git is the archive —

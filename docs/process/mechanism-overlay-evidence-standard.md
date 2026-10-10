@@ -100,16 +100,15 @@ Wave-6 packet research produced the canonical negative examples; they remain the
     `proofOfReserves.latestReport` first.** `assuranceAndReconciliation` (fiat-cash,
     commodity-claim) and `lossRecoveryDesign` (tbill) are the one case where the compiler
     fallback (`assuranceFact()` in `worker/src/lib/safety-score-v9/extension-mechanism.ts`)
-    can already be `known` rather than bounded. `expandOverlayReview` gives any curated
-    component entry priority over that fallback, so a curated `unavailable` row on that
-    field demotes a known fact to bounded-unknown with no warning. When the asset's
-    `proofOfReserves.latestReport` supplies both period end and publication date, known
+    can already be `known` rather than bounded. `expandOverlayReview` prioritizes curated
+    entries over that fallback, but `buildSafetyScoreV9MechanismReview` subsequently enforces
+    admitted report scope and technical on-chain-observation bounds. Outside those gates,
+    a curated `unavailable` row can demote a known fallback to bounded-unknown.
+    When `proofOfReserves.latestReport` supplies both period end and publication date, known
     assurance method and scope, and genuinely supports the report's own grade, leave
     the component out of `components` entirely rather than curating it unavailable.
-    An uncertain dated review reference alone is not eligible assurance evidence and
-    does not prevent an explicit unavailable review.
-    `shared/types/__tests__/safety-score-v9-overlays.test.ts` fails the build if a row does
-    this.
+    An uncertain dated review reference is not assurance evidence. The regression guard is
+    `shared/types/__tests__/safety-score-v9-overlays.test.ts`, not the build.
 
 ## Metric applicability states (cdp / sdn / rwa)
 
@@ -303,8 +302,8 @@ or supply changes. Per-coin facts are deferred to the later authoring wave.
 
 ## Bounded reserve maturity and liquidity facts
 
-Active methodology V10 admits B12 through `ReserveBoundedFactSchema` and the
-asset-keyed `reserve-bound-facts-v1.json` registry (initially empty), or the same
+Active methodology V10 admits bounded reserve facts through `ReserveBoundedFactSchema` and the
+asset-keyed `reserve-bound-facts-v1.json` registry, or the same
 payload on a live reserve slice's `boundedFacts`. These are independent scoped
 facts, not reserve composition, dependency weights, supply or Exit capacity.
 Keep the original category intact; use an exact source/exposure key or a named
@@ -351,10 +350,10 @@ and rejection reason. Contradictory same-scope/same-generation records quarantin
 asset; historical captures without new facts retain their original scores.
 
 Origin's producer emits same-pin idle USDC / total vault USDC on the existing keyed
-row, without increasing its idle-only redemption capacity. The separate itemized
-collateral API observer verifies cache generation around its fetch and retains a
-`diagnostic-unreconciled` observation: Ethereum/Base/Hyper strategy figures are not
-joined to the Ethereum vault denominator without explicit reconciliation.
+row, without increasing its idle-only redemption capacity. No separate itemized
+collateral observer is shipped: external strategy figures (Ethereum/Base/Hyper
+analytics) must not join the Ethereum vault denominator without same-generation
+reconciliation.
 
 Authoring procedure: pin governing identity/scope and assertion; obtain the complete
 same-date gross coverage or leave it null; choose the factual kind (never reinterpret

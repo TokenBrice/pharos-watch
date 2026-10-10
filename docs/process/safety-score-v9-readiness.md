@@ -1,8 +1,8 @@
 # Safety Score V9 Readiness
 
-This page records the operational readiness contract for score-bearing mechanism
-captures. The score evaluator consumes committed compact summaries and generated
-registries; raw capture bodies are retained outside Git for replay.
+This page records the readiness contract for mechanism captures. Compact summaries
+feed the shock-registry and evaluation-build generators; the scorer consumes generated
+registry-backed facts. Raw capture bodies are retained outside Git for replay.
 
 ## Mechanism capture storage
 
@@ -12,11 +12,11 @@ The `captures/` prefix has a 180-day lifecycle. Each capture's Git summary
 stores its mechanism, date, SHA-256, uncompressed byte count, R2 key, and every
 field needed by the score registry or replay attestation.
 
-The evaluation-build manifest pins the latest score-bearing shock capture for
-each mechanism under `pinned/<mechanism>/<date>.json.gz`. The `pinned/` prefix
-has no lifecycle policy and is the durable replay path. The uploader uses the
-R2 credentials `R2_MEASUREMENTS_ACCESS_KEY_ID` and
-`R2_MEASUREMENTS_SECRET_ACCESS_KEY` together with `CLOUDFLARE_ACCOUNT_ID`.
+The evaluation-build manifest records the SHA-256 and `captures/` key of the latest
+shock summary per mechanism by block timestamp, not by scoring eligibility. The uploader
+mirrors referenced/latest shock objects under `pinned/`, the durable replay path.
+R2 lifecycle is external account policy. Upload requires `R2_MEASUREMENTS_ACCESS_KEY_ID`,
+`R2_MEASUREMENTS_SECRET_ACCESS_KEY`, and `CLOUDFLARE_ACCOUNT_ID`.
 
 ## Replay and expiry
 
@@ -47,7 +47,7 @@ raw body leaves `captures/`, but a new replay or an integrity mismatch fails
 closed. Registries and attestations therefore remain byte-stable while the raw
 retention policy is enforced.
 
-Protocol-API collection and reviewed weekly automation are permanent non-publishing evidence tooling. Strict replay distinguishes canonical raw-byte V2, the exact hash-verified normalized-only V1 exception, and unavailable evidence. Recognizing the frozen V1 hash in summary metadata does not verify its original bytes. Missing account/access or absent/corrupt bodies fail `--replay` and `--replay-all`; no unavailable V2 is counted as V1 or as a passed replay. Network-free verification requires local original bytes or the verified cache; otherwise signed R2 reads and a cache write occur. Original-byte hash readback is required before claiming preservation.
+Protocol-API collection and reviewed weekly automation are permanent non-publishing evidence tooling. Strict replay distinguishes canonical raw-byte V2, the exact hash-verified normalized-only V1 exception, and unavailable evidence. Recognizing the frozen V1 hash in summary metadata does not verify its original bytes. Absent/corrupt bodies fail `--replay` and `--replay-all`; missing account/access fails when replay needs R2 rather than local original bytes or verified cache. No unavailable V2 counts as V1 or as a passed replay. Network-free verification requires local original bytes or verified cache; otherwise signed R2 reads and a cache write occur. Original-byte hash readback is required before claiming preservation.
 
 ## Test-owned replay fixtures
 
@@ -131,6 +131,6 @@ for snapshot scope and current-curation mode.
 
 No separate composite ceiling is applied today, and there is no operator-side
 A+ reachability gate. V9 uses the production smooth-bounded-headroom
-aggregation and the policy's single `compensabilityHeadroom`; evidence ceilings
+aggregation with `semantic.formula.compensabilityHeadroom`; evidence ceilings
 and structural caps remain the scoped constraints documented in
 [report cards](report-cards-appendix.md#cap-limits-and-scope-gates).

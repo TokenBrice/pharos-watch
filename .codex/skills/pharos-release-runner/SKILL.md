@@ -6,33 +6,34 @@ user_invocable: true
 
 # Pharos Release Runner
 
-Read [Deployment §Core Rules](../../../docs/deployment-process.md#core-rules), [§CI Deploy Sequence](../../../docs/deployment-process.md#ci-deploy-sequence), [§Operational Acceptance](../../../docs/deployment-process.md#operational-acceptance), and [Testing §Pre-push readiness](../../../docs/testing.md#pre-push-readiness). Those sections and workflow YAML own release policy.
+## Trigger And Exclusions
 
-Do not use for a read-only review or while another writer owns overlapping files. Preserve unrelated work; never stash, reset, checkout, or delete it.
+Use only for requested commit, push, publish, release or deployment watching, not read-only reviews or overlapping active writers. Preserve unrelated work; never stash, reset, checkout or delete it.
 
-## Prepare
+## Classify The Operation
 
-1. Inspect status, cached/uncached diffs, recent history, and `origin/main`. Classify committed-ahead work, cohesive dirty work, separate themes, and unrelated user/agent files.
-2. Route the intended files. Inspect actual diffs and batch commits by ownership/theme. A request to “commit all” includes cohesive pending work, not clearly unrelated active work.
-3. Keep registered generated artifacts with their source commit. The pre-commit hook synchronizes only affected `autoStage` outputs and rejects unsafe unstaged-source overlap; it skips merge/rebase/cherry-pick/revert, an empty index, and `PHAROS_SKIP_ARTIFACT_HOOK=1`. Inspect its output and the registry: it is neither a test gate nor full convergence.
-4. After each commit or generator, re-check the tree so the state being released matches the state reviewed.
+Select commit-only, publish/protected-main PR, deployment watch, or operational acceptance. Inspect status, cached/uncached diffs, history and `origin/main`; distinguish committed-ahead work, cohesive dirty work, separate themes and unrelated user/agent files. Route intended files before acting.
 
-## Validate And Publish
+## Mandatory Core
 
-Routed focused checks are authoring feedback, never readiness proof. Before **every** first or replacement push, follow [Pre-push readiness](../../../docs/testing.md#pre-push-readiness): activate mise shims reading `.nvmrc` (enable `mise settings add idiomatic_version_file_enable_tools node` before `mise install`), refresh target refs, finish source/integration history, run full `npm run check:generated-artifacts` convergence, then full plain `npm run check:pr` on the final committed state with no skip/filter/plan-only flags. The runner requires exact `.nvmrc` Node and npm 11.x.
+Read [Deployment Core Rules](../../../docs/deployment-process.md#core-rules). Actual diffs and ownership/theme define commit batches; “commit all” includes cohesive pending work, not clearly unrelated active work.
 
-Require a **fresh passing receipt for the current HEAD** at `.tmp/pr-check-receipts/<HEAD>.json` before pushing. Inspect its runtime, frozen base/head, lane outcomes, and completeness; a failed, incomplete, stale-state, or different-HEAD receipt is not authorization. `deferred-to-ci` leaves (critical coverage, Pages artifact) are expected: the GitHub PR gate runs and requires them; rerun locally with `--with-coverage`/`--with-pages` only after such a remote failure. Any subsequent edit, generated-output commit, or integration requires full readiness again. There is no pre-push test hook.
+A push/publish/release request authorizes the necessary release branch and protected-main PR path, never direct `main` push. Parent alone stages, commits, pushes, merges and judges readiness. Missing readiness blocks publication; successful activation alone is not runtime health.
 
-Opt into `npm run check:pr -- --ci-parity` after a remote failure the local gate did not reproduce, and for lockfile/setup/security-policy changes; this supplements, not replaces, mandatory plain readiness. `npm run check:release` is only an explicit production rehearsal. GitHub's required PR gate remains authoritative.
+## Branch Reads And Actions
 
-A request to push/publish/release authorizes the necessary release branch and protected-main PR path, never a direct push to `main`. Push only after receipt proof, create the PR, wait for required checks, and merge through GitHub with `gh pr merge --merge`; never use squash or rebase merge. Verify the resulting `main` commit has two parents and contains the recorded PR head SHA, then record both SHAs. If a gate fails, switch to `pharos-ci-failure-triage`: collect every failed leaf, fix all causal defects in one revision, rerun full readiness, and push once.
+- **Commit preparation:** read [script operational notes](../../../docs/scripts.md#operational-notes) and the affected automation registry entries. Keep generated artifacts with their source commit. The pre-commit hook syncs affected `autoStage` outputs, rejects unsafe unstaged-source overlap, and skips merge/rebase/cherry-pick/revert, an empty index or `PHAROS_SKIP_ARTIFACT_HOOK=1`; it is neither a test gate nor full convergence. Inspect hook output and re-check the tree after each commit/generator so reviewed and released state match.
+- **Publish:** read [Pre-push readiness](../../../docs/testing.md#pre-push-readiness) before every first/replacement push; it is the sole ordered readiness/receipt procedure. Push only with proof, create the PR, wait for required checks and merge with `gh pr merge --merge`, never squash/rebase. Verify resulting `main` has two parents and contains the recorded PR head; retain both SHAs. A gate failure routes to `pharos-ci-failure-triage`: collect every failed leaf, fix all causal defects in one revision, obtain fresh readiness and push once.
+- **Deployment watch:** read [CI Deploy Sequence](../../../docs/deployment-process.md#ci-deploy-sequence) and [Monitoring Without Model Polling](../../../docs/deployment-process.md#monitoring-without-model-polling). Watch `Deploy to Cloudflare` for the merged SHA; record classifier-selected Pages/Worker surfaces and activation/marker proof. Use one deadline-bounded native GitHub watcher and existing Worker evidence commands, scratch samples and completion evidence, not sleep/status loops or polling-only agents. A missing matching execution at deadline is pending, not an indefinite new watch.
+- **Operational acceptance:** read [Operational Acceptance](../../../docs/deployment-process.md#operational-acceptance). Cron/scheduler/ingestion/memory/migration work remains pending until its first relevant production observation. Keep deployment and runtime proof separate.
+- **Authorized delegation:** use [reviewer prompts](references/subagents.md) for read-only readiness review or dirty-tree classification; parent retains mutation authority and final judgment.
 
-## Deployment And Acceptance
+## Checks Owned By The Verifier
 
-Watch the `Deploy to Cloudflare` run for the merged SHA and record classifier-selected Pages/Worker surfaces plus activation/marker proof. Apply the acceptance rules in `docs/deployment-process.md`: deployment proof and runtime health are separate, and cron/scheduler/ingestion/memory/migration work remains pending until its first relevant production observation.
+Assigned verifier checks are authoring feedback, not release proof. For publishing, require the final committed HEAD's fresh passing `.tmp/pr-check-receipts/<HEAD>.json` under [Pre-push readiness](../../../docs/testing.md#pre-push-readiness); subsequent edits/integration invalidate it. That owner defines runtime/base/head/lane completeness, CI-deferred coverage/Pages, supplemental parity/coverage/Pages checks and generated convergence. GitHub's required PR gate remains authoritative; `check:release` is only an explicit production rehearsal. There is no pre-push test hook.
 
-Follow [Monitoring Without Model Polling](../../../docs/deployment-process.md#monitoring-without-model-polling): use one deadline-bounded native GitHub watcher and the existing Worker evidence commands. Keep samples in scratch files; inspect completion evidence instead of cycling through sleep/status calls or assigning polling-only sub-agents. A missing matching execution at the deadline is pending acceptance, not a reason to restart the watch indefinitely.
+Use `npm run check:pr -- --explain-receipt` for read-only receipt diagnosis: local Git state only, no fetch/check execution/receipt rewrite/staging/push authorization. Diagnostic success is not readiness, even for missing/failed/stale evidence; remote-base freshness remains unknown.
 
-When the user authorizes delegation, use [references/subagents.md](references/subagents.md) for a read-only readiness review or dirty-tree classification. The parent alone stages, commits, pushes, merges, and makes final judgments.
+## Completion Evidence
 
-Report commits, focused feedback, full readiness command and HEAD receipt evidence, generated-artifact convergence, PR/run/deploy evidence, operational acceptance or pending window, excluded dirty files, and skipped checks with reasons. Missing readiness proof blocks publication; successful activation with pending operational acceptance is not operational success.
+Report commits, focused verifier feedback, full readiness/current-HEAD receipt and generated convergence, PR/run/deploy proof, operational acceptance or pending window, excluded dirty files and skipped checks with reasons. Never label pending operational acceptance as success.

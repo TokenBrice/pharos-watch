@@ -13,8 +13,8 @@ Every later task that says "verified against the harness runbook" means the proc
 | Situation                                                     | Gate                                      | Expected result                                  |
 | ------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------ |
 | Score-neutral refactor, dedup, or extraction                   | `--assert-empty`                          | `EMPTY DIFF — normalized score-output equality`   |
-| Intentional score change that must not change a grade          | `--assert-grade-stable`                   | Reported drift entries, zero grade flips          |
-| Intentional release with reviewed grade changes                | `safety-score-v9:movers --assert-declared` | Every grade flip is declared with the observed direction |
+| Intentional score change with stable grades and rating statuses | `--assert-grade-stable`                  | Drift entries reported, zero grade/status changes |
+| Intentional release with reviewed grade/status changes          | `safety-score-v9:movers --assert-declared` | Every grade/status change declared in the observed direction |
 | Before activating a score-neutral candidate stack in production | Pre-activation sweep                    | Both captures empty at both commits               |
 | Immediately after a score-neutral cutover deploy               | Post-deploy check                         | Replay at the pre-cutover commit matches the live publication |
 
@@ -27,7 +27,7 @@ Two properties make the replay equal to production:
 - The producer compiles the publication with `publishedAtSec = fixedInput.clockSec` in `worker/src/lib/safety-score-v9/publication-runner.ts`, which `worker/src/cron/compute-safety-score-v9.ts` invokes. Replaying with `--published-at <capture clockSec>` therefore reproduces the exact publication clock, not an approximation; use the symbol rather than a brittle source line as the maintenance anchor.
 - Compilation is offline, with no network, D1, or wall-clock reads. Evaluation-build identity pins the candidate's runtime closure from captured fixed-input normalization through extension construction, fact-set compilation, evaluation and projection, including executable admission schemas and reviewed score-input data. Capture-only network observers/producers and build-time generators are outside that closure; admitted capture output remains exact-input/fact-digest-bound. SHA-addressed capture acquisition may read R2 and cache verified bytes locally. Capture-time replay freezes registry and input clocks, not checkout compiler/evaluator, policy or non-transfer overlays. Determinism is not historical production equivalence; frozen V3 parsing likewise preserves format/bytes, not historical evaluator output.
 
-The prepare-time `report-cards:fixed-input:exact` row excludes compute-time supply attribution, both reserve and supply evidence journals, peg provenance, and transfer materiality. A deterministic base-only replay is not accepted-publication equivalence. Export the atomically retained accepted base and enrichment delta using `--accepted-cache-export` below, or use dependency-scenario `--mode plan` from [the offline scenario runbook](../runbooks/dependency-network.md#offline-scenario-workflow). Both paths fail closed on missing/mismatched retained rows. Preserve both journals' cause, responsibility and rejection metadata even though excluded from the base digest; explicit null transfer enrichment is not permission to load current observations.
+The prepare-time `report-cards:fixed-input:exact` row excludes compute-time supply attribution, both reserve and supply evidence journals, peg provenance, and transfer materiality. Base-only replay is not accepted-publication equivalence. Export accepted base plus enrichment using `--accepted-cache-export`, or dependency-scenario `--mode plan` from [the offline scenario runbook](../runbooks/dependency-network.md#offline-scenario-workflow). Both verify retained content identities; only `--accepted-cache-export` additionally verifies retention timestamps. Preserve both journals' cause, responsibility and rejection metadata even though excluded from the base digest; null transfer enrichment never permits loading current observations.
 
 Private peg provenance uses the historical `verifiedOnlyDiagnostic` field as a legacy-backfill-excluded scenario, not an all-verified score or a numerical upper bound. Low-provenance and unprovenanced live events remain included; only `legacy-backfill-unprovenanced` is omitted. Preserve exact seed/generation/clock binding and inclusive-result equality; the scenario never replaces the score-bearing inclusive peg row or exposes private event bytes.
 
@@ -43,8 +43,8 @@ Exact reproduction is a separate intended-revision operation: use a trusted chec
 
 > **Any redemption row-shape change is a payload identity event and needs a baseline re-cut.**
 > The redemption payload fingerprint hashes the *whole* stored row, not a V9-relevant projection of it.
-> Adding, renaming, removing, or reordering a field on a redemption row therefore rotates the
-> fingerprint even when no value the evaluator reads has changed — and an existing capture stops
+> Adding, renaming, or removing a stored field on a redemption row therefore rotates the
+> fingerprint even when no value the evaluator reads has changed; object-key order is canonicalized. A changed payload stops
 > matching. Treat it like a registry edit: cut a fresh baseline capture on the new shape and diff
 > against that, rather than reading the resulting drift as a scoring result or reaching for
 > `--allow-registry-mismatch`. A declared-but-inert passthrough field is not exempt: inertness is a
@@ -345,13 +345,13 @@ npm run safety-score-v9:diff -- \
 
 | Mode                    | Passes when                                    | Stdout                                        | Exit |
 | ----------------------- | ---------------------------------------------- | --------------------------------------------- | ---- |
-| `--assert-empty`        | Every field matches after identity-key removal | `EMPTY DIFF — normalized score-output equality` | 0 |
+| `--assert-empty`        | Every field matches after identity-key removal | `EMPTY DIFF — normalized score-output equality (activation identity checked separately)` | 0 |
 | `--assert-empty`        | Anything moved                                 | `DIFF: N entries` plus up to 50 entries (stderr) | 1  |
-| `--assert-grade-stable` | No card changes grade                          | `drift entries: N; grade flips: 0`             | 0    |
-| `--assert-grade-stable` | A card changed grade, disappeared, or appeared | the same counts, plus one `FLIP <id>` line per card (stderr) | 1 |
-| neither flag            | always                                         | the full JSON diff                             | 0 / 1 |
+| `--assert-grade-stable` | No card changes grade or rating status         | `drift entries: N; grade flips: 0`             | 0    |
+| `--assert-grade-stable` | A card changed grade/status, disappeared, or appeared | the same counts, plus one `FLIP <id>` line per card (stderr) | 1 |
+| neither flag            | Empty diff                                     | the full JSON diff and diagnostic attribution   | 0; non-empty diff exits 1 |
 
-The two diff assertion flags are mutually exclusive. Use `--assert-empty` for score-neutral work and `--assert-grade-stable` when score drift is intentional but grade flips are not.
+The diff assertions are mutually exclusive. Use `--assert-empty` for score-neutral work and `--assert-grade-stable` for intentional score drift with unchanged grades, rating statuses, and card census.
 
 ### Expected-movers gate for an intentional multi-grade release
 
@@ -367,7 +367,7 @@ npm run safety-score-v9:movers -- \
   --assert-declared
 ```
 
-The manifest declares grade transitions, not score targets:
+The manifest declares grade/availability transitions, not score targets. `from`/`to` may be `NR` or null; optional `ratingStatusFrom`/`ratingStatusTo` must agree with them:
 
 ```json
 {
@@ -383,7 +383,7 @@ The manifest declares grade transitions, not score targets:
 }
 ```
 
-`--assert-declared` fails when an observed grade flip has no manifest row or when its observed `from`/`to` direction differs from the declaration. The report also shows same-grade score moves, pillar deltas, binding-cap changes, assets present on only one side, and manifest rows that did not flip. Those remain review findings, but the gate itself is deliberately limited to undeclared or misdirected grade flips; a declared-but-absent transition does not fail automatically and must be resolved before release.
+`--assert-declared` fails on undeclared grade/status changes or directions inconsistent with `from`/`to` and any explicit rating-status declaration. Same-grade score moves, pillar/cap changes, appeared/disappeared assets and declared-but-absent transitions remain review findings; they do not fail this gate automatically and must be resolved before release.
 
 Manifest IDs must be unique/nonempty, grade/status transitions supported/coherent, and rationale/workstream nonempty. Malformed declarations fail before mapping; this does not strengthen `--assert-declared` into an exact-manifest/census gate. Manually close absent declarations, appeared/disappeared assets and same-grade findings.
 
@@ -424,7 +424,7 @@ Choose the branch by the reviewed release contract. A neutral release retains th
 ### Neutral release: pre-cutover comparison
 
 1. Wait for the first complete producer pair after the cutover Worker version is live: `prepare-safety-score-v9-input` (`16,46`) followed by `compute-safety-score-v9` (`22,52`).
-2. Export a post-cutover capture (step a) and fetch the publication that came from it:
+2. Export the accepted post-cutover capture, including enrichment (step a, `--accepted-cache-export`), and fetch its publication:
 
    ```sh
    # Subshell so the sourced credentials do not outlive the fetch.
@@ -434,7 +434,7 @@ Choose the branch by the reviewed release contract. A neutral release retains th
        -o agents/v9-captures/live-v9-<stamp>.json )
    ```
 
-   Confirm you are comparing the matching generation: the publication's `safetyScoreIdentity.baseInputGenerationId` must equal the capture's `baseInputGenerationId`. If the producer has already moved on, take a fresh pair rather than diffing across generations.
+   Confirm the matching generation: the publication's `safetyScoreIdentity.baseInputGenerationId` must equal the accepted capture's `fixedInput.baseInputGenerationId`, and its publication generation must match the capture's `publicationGenerationId`. If production advances, take a fresh pair rather than diffing across generations.
 
 3. Replay the post-cutover capture at the **pre-cutover** commit (step b).
 4. The served publication is an envelope around the same card objects, so project both sides to the card array the diff CLI keys on:
@@ -469,7 +469,7 @@ Do not compare the live publication with pre-cutover code using `--assert-empty`
        --out-dir agents/v9-captures/post-deploy-<stamp> )
    ```
 
-   This saves `publication.json` and `capture.json` using `report-cards:v9:accepted-replay-base:v1` and `report-cards:v9:accepted-replay:v1`; see the [accepted-capture contract](../runbooks/dependency-network.md#offline-scenario-workflow). Plan fails closed if either retained row is absent or mismatched. Export promptly because only one accepted generation is retained. Require the capture's publication generation and fixed-input base generation to match the saved live identity and the recorded first pair. If the generation advances during collection, obtain a fresh matching pair but preserve the first-cycle evidence and report its equivalence check as unproven; never label a later capture as the first publication. Do not run scenario compute or publish merely to obtain this check.
+   This saves `publication.json` and `capture.json` from `report-cards:v9:accepted-replay-base:v1` and `report-cards:v9:accepted-replay:v1`; see the [accepted-capture contract](../runbooks/dependency-network.md#offline-scenario-workflow). Plan requires both rows and matching base/delta/live-publication generations; it does not check retention timestamps. Export promptly: only one accepted generation is retained. Match the capture's publication and fixed-input base generations to the live identity and recorded first pair. If production advances, obtain a fresh pair but preserve first-cycle evidence and report that cycle's equivalence as unproven; never label later output the first publication. Do not run scenario compute/publish merely to obtain this check.
 3. Verify exact deployed-code/live identity **outside the normalized-card diff**, which deliberately removes activation and digest fields. Require public `methodology.version` and `safetyScoreIdentity.policyVersion` to equal the deployed release version, and require `safetyScoreIdentity.evaluationBuildDigest`, `policy.id`, and `policy.semanticDigest` to equal the exact deployed tree's reviewed build and policy identities. Record the registry fingerprint, complete `sourceGenerations`, `publicationGenerationId`, `baseInputGenerationId`, `factSetDigest`, `resultDigest`, `asOfSec`, `publishedAtSec`, `source.candidateId`, and top-level `updatedAt`; correlate them with the accepted capture and the first pair. Use refreshed identities if review fixes changed the final deployed tree, not obsolete review-head digests.
 4. Replay that accepted capture at the **exact deployed commit**, preserving enrichment and transfer materiality and using `capture.json.fixedInput.clockSec` verbatim:
 
@@ -534,11 +534,7 @@ import miniCapture from './worker/src/lib/__tests__/fixtures/safety-score-v9-rat
 import { createReportCardsFixedInput } from './worker/src/test-helpers/report-cards-fixed-input';
 writeFileSync('agents/v9-captures/selftest-input.json', JSON.stringify(createReportCardsFixedInput(miniCapture.draft as never), null, 2));
 "
-jq -r .clockSec agents/v9-captures/selftest-input.json
-```
-
-```
-1788566400
+clock_sec="$(jq -r .clockSec agents/v9-captures/selftest-input.json)"
 ```
 
 Two independent replays of that input at one commit:
@@ -547,9 +543,9 @@ Two independent replays of that input at one commit:
 # The fixture's clock is frozen while curation advances, so the future-review
 # gate must be waived here — for this self-test only, never for a production capture.
 npm run safety-score-v9:replay -- --input agents/v9-captures/selftest-input.json \
-  --output agents/v9-captures/selftest-a.json --published-at 1788566400 --allow-future-reviews
+  --output agents/v9-captures/selftest-a.json --published-at "${clock_sec}" --allow-future-reviews
 npm run safety-score-v9:replay -- --input agents/v9-captures/selftest-input.json \
-  --output agents/v9-captures/selftest-b.json --published-at 1788566400 --allow-future-reviews
+  --output agents/v9-captures/selftest-b.json --published-at "${clock_sec}" --allow-future-reviews
 jq '.pipeline.candidate.cards | length' agents/v9-captures/selftest-a.json
 ```
 
@@ -557,35 +553,38 @@ jq '.pipeline.candidate.cards | length' agents/v9-captures/selftest-a.json
 2
 ```
 
-Each artifact is ~1.5 MB for two assets, and both share one SHA-256 — the replay is byte-deterministic.
+Both artifacts should share one SHA-256; compare full bytes separately from the normalized diff.
 
 ```sh
+cmp agents/v9-captures/selftest-a.json agents/v9-captures/selftest-b.json
 npm run safety-score-v9:diff -- --baseline agents/v9-captures/selftest-a.json \
   --candidate agents/v9-captures/selftest-b.json --assert-empty
 ```
 
 ```
-EMPTY DIFF — bit-identical
+EMPTY DIFF — normalized score-output equality (activation identity checked separately)
 ```
 
-What real drift looks like — one card's score moved by one point:
+A minimal card projection demonstrates a one-point same-grade move without forging a full replay's trace/digest bindings:
 
 ```sh
-jq '.pipeline.candidate.cards[0].score = (.pipeline.candidate.cards[0].score - 1)' \
-  agents/v9-captures/selftest-a.json > agents/v9-captures/selftest-drift.json
-npm run safety-score-v9:diff -- --baseline agents/v9-captures/selftest-a.json \
+jq -n '{pipeline:{candidate:{cards:[{id:"selftest-asset",score:20,grade:"F",ratingStatus:"rated"}]}}}' \
+  > agents/v9-captures/selftest-baseline-projection.json
+jq '.pipeline.candidate.cards[0].score -= 1' \
+  agents/v9-captures/selftest-baseline-projection.json > agents/v9-captures/selftest-drift.json
+npm run safety-score-v9:diff -- --baseline agents/v9-captures/selftest-baseline-projection.json \
   --candidate agents/v9-captures/selftest-drift.json --assert-empty
 ```
 
 ```
 DIFF: 1 entries
-{"assetId":"usdc-circle","path":"cards[usdc-circle].score","baseline":20,"candidate":19}
+{"assetId":"selftest-asset","path":"cards[selftest-asset].score","baseline":20,"candidate":19}
 ```
 
-Exit code 1. The same pair under the Wave-2 gate passes, because a one-point score move inside a grade band is not a grade flip:
+Exit code 1. The same projection pair under the grade-stability gate passes because both cards retain their grade and rating status:
 
 ```sh
-npm run safety-score-v9:diff -- --baseline agents/v9-captures/selftest-a.json \
+npm run safety-score-v9:diff -- --baseline agents/v9-captures/selftest-baseline-projection.json \
   --candidate agents/v9-captures/selftest-drift.json --assert-grade-stable
 ```
 
@@ -597,7 +596,7 @@ The fixture is a frozen two-asset sample built for pipeline coverage, not a rati
 
 ## Related
 
-- [`docs/scripts.md`](../scripts.md) — CLI reference for the capture, replay, diff, and summary scripts.
+- [`docs/scripts.md`](../scripts.md) — CLI reference for capture, replay, diff, mover gates, and the historical movement ledger/archive.
 - [`docs/worker-infrastructure.md`](../worker-infrastructure.md) — cron cadence and freshness bounds for the V9 producer jobs.
 - [`docs/report-cards.md`](../report-cards.md) — the private cache keys behind the V9 publication.
 - [`docs/data-flow-map.md`](../data-flow-map.md) — where `report-cards:fixed-input:exact` sits in the pipeline.

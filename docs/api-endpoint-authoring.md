@@ -1,6 +1,6 @@
 # API Endpoint Authoring
 
-Use this checklist when adding or changing a Worker API endpoint. The route registry is intentionally centralized; do not hand-roll endpoint metadata in local components or scripts. Treat `docs/api-reference.md` as exhaustive contract output: read and edit the affected endpoint section instead of loading or rewriting the whole file when the change is narrow.
+Use this checklist when adding or changing a Worker API endpoint. The route registry is centralized; do not hand-roll endpoint metadata. Read the affected `docs/api-reference.md` section; its `public-endpoints` block is generated, not hand-authored.
 
 For the public `/api/` access and `/about/api/` reference shells, see [API Access And Reference Pages](./api-page.md).
 
@@ -10,6 +10,7 @@ For the public `/api/` access and `/about/api/` reference shells, see [API Acces
 | --- | --- |
 | Path builders | `shared/lib/api-endpoints/paths.ts` |
 | Endpoint metadata, methods, auth/cache/site-data flags | `shared/lib/api-endpoints/definitions.ts` |
+| Dynamic path families, methods and auth/site-data flags | `shared/lib/api-endpoints/dynamic.ts` |
 | Method validation helpers | `shared/lib/api-endpoints/validation.ts` |
 | Worker route registry | `worker/src/routes/registry.ts` |
 | Public route bindings | `worker/src/routes/public-routes.ts` |
@@ -22,6 +23,8 @@ For the public `/api/` access and `/about/api/` reference shells, see [API Acces
 | Public OpenAPI/Postman artifact metadata | `scripts/lib/public-api-artifact-catalog.ts` |
 | Public response wire schemas | `scripts/lib/public-api-response-schemas.ts` composes body contracts with typed freshness from `shared/types/api-meta.ts`; map responses reserve `_meta` separately from asset values. Frontend schemas validate after metadata extraction in `src/lib/api.ts`. |
 
+Use the shared definitions and dynamic descriptors for endpoint inventories, path builders for construction, and Worker bindings for dispatch. The [Worker appendix](./process/worker-infrastructure-appendix.md#http-request-handling) retains CORS, auth, maintenance and action-lifecycle semantics, not a second endpoint inventory.
+
 The root `RegimeBar` uses the registered `useStabilityIndex()` query, whose descriptor points to the small stability-domain contract that validates only the PSI fields it renders. This keeps the classic Zod stability schema out of the all-route client graph while preserving the full payload in the shared TanStack cache. The `/stability-index/` detail query retains the full lazy schema.
 
 ## Implementation Checklist
@@ -32,9 +35,9 @@ The root `RegimeBar` uses the registered `useStabilityIndex()` query, whose desc
 4. Keep handler code under `worker/src/api/` and return through shared response helpers (`jsonResponse`, `errorResponse`, cache helpers) so status codes, CORS, and freshness behavior remain consistent.
 5. If the endpoint reads cache data, decide whether it should emit `_meta`, `X-Data-Age`, and `Warning` through `createCacheHandler()` or route-specific freshness injection.
 6. If the public frontend consumes the endpoint, add one typed entry to `FRONTEND_API_QUERY_DESCRIPTORS` and retain a narrow public hook when call-site ergonomics require one. Admin/ops surfaces instead get one entry in `ADMIN_API_QUERY_DESCRIPTORS` (`src/lib/admin-api-query-descriptors.ts`), bound by a one-line `useRegisteredAdminQuery()` hook; that table has no `responseMode`, keeps schemas eager, and polls on the generic one-minute ops budget. Choose `responseMode` (`plain`, `meta`, or `static`) in the frontend descriptor; the hook/query-option wrappers derive transport behavior from it. Keep response schemas behind `createLazySchema()` except for deliberately small global-shell validators. For cron-backed data, default to `staleTime = producer interval` and `refetchInterval = 2x producer interval`; document intentional exceptions such as health/status probes or faster UI polling over slow snapshots.
-7. Update `docs/api-reference.md` for public integration endpoints with methods, auth lane, parameters, cache profile, response shape, and error bodies. Internal site-only transports are documented under `docs/worker-infrastructure.md`, outside the generated public endpoint catalogue.
-8. If the endpoint is an integration-facing public `GET` route, add or update `scripts/lib/public-api-artifact-catalog.ts` so OpenAPI and Postman exports stay aligned with the runtime route metadata.
-9. Add or update handler tests in `worker/src/api/__tests__/`. For critical endpoints, include the relevant suite in `npm run test:critical-contracts` only when it belongs on the critical path. Declare a frontend-critical route by setting `strictContract: true` on its definition in `shared/lib/api-endpoints/definitions.ts`; that enrolls the path in the broad router sweep in `worker/src/api/__tests__/router-contract.test.ts`, which asserts every strict path still resolves to a route and returns neither 404 nor 500. The sweep guards registration and routability only: it does not check payload shape, auth lane, or freshness, and cache-backed snapshot paths listed in that suite's `REGISTRATION_ONLY_PATHS` are asserted to stay statically registered without being invoked, because their handlers have dedicated tests.
+7. For public integration endpoints, update `scripts/maintenance/generate-api-reference.ts` route/order metadata and the artifact catalogue below, then regenerate the `public-endpoints` block; never edit it by hand. Edit only applicable hand-authored contract sections in `docs/api-reference.md`. Internal site-only transports belong in `docs/worker-infrastructure.md`; admin contracts belong in `docs/api-reference-admin.md`.
+8. For integration-facing public `GET` routes, update `scripts/lib/public-api-artifact-catalog.ts` with a canonical `responseSchema` from `scripts/lib/public-api-response-schemas.ts`; new entries without one fail closed. Keep the generator's operation order and OpenAPI/Postman outputs aligned with runtime metadata.
+9. Add or update handler tests in `worker/src/api/__tests__/`. Include critical suites in `npm run test:critical-contracts` only when they belong on the critical path. Set `strictContract: true` in `shared/lib/api-endpoints/definitions.ts` for frontend-critical routes: `worker/src/api/__tests__/router-contract.test.ts` checks every strict path with `getRouteMatch()` without executing handlers. Its registry/method sweep uses sentinel public handlers and unauthenticated admin requests; dedicated tests must prove payload shape, authenticated behavior, freshness and handler failures.
 
 ## Auth And Lanes
 
@@ -62,8 +65,8 @@ For worker behavior changes, also run:
 npm run typecheck:worker
 ```
 
-Before pushing deploy-impacting endpoint changes, run:
+Before pushing endpoint changes, follow [Pre-push readiness](./testing.md#pre-push-readiness) on the final committed state and require its fresh passing receipt:
 
 ```bash
-npm run check:pr -- --base=origin/main
+npm run check:pr
 ```

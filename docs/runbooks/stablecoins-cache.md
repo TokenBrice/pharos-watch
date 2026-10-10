@@ -6,6 +6,7 @@ Triggered by `StatusCause.code`:
 - `stablecoin_publication_incomplete`
 - `stablecoin_publication_unknown`
 - `active_price_coverage_incomplete`
+- `active_price_coverage_duration_degraded`
 - `active_price_coverage_unknown`
 
 ## Symptom
@@ -30,5 +31,5 @@ The cached `/api/stablecoins` payload is missing, malformed, has the wrong objec
 
 ## Prevention
 
-- The cache TTL and fallback mode are configured in the sync-stablecoins cron. Do not tune these without understanding the `status-thresholds` coupling.
+- Cache freshness budgets are owned by `shared/lib/api-freshness.ts` and the status thresholds in `shared/lib/status-thresholds.ts`; publication/fallback behavior is owned by `worker/src/cron/sync-stablecoins/`. The stablecoins cache is not deleted by an expiring cron TTL.
 - Primary recovery is to diagnose `sync-stablecoins` provider and publication state, clear a relevant lease or breaker only when its exact safety condition holds, and verify the next safe quarter-hourly publication. Do not treat historical price backfill as a generic repair for exact-publication or live-price failures.

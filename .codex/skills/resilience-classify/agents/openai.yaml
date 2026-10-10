@@ -1,4 +1,4 @@
 interface:
   display_name: "Resilience Classify"
-  short_description: "Classify stablecoin resilience overrides"
-  default_prompt: "Use $resilience-classify to identify and apply resilience override fields for this stablecoin."
+  short_description: "Classify collateral quality and whole-book custody"
+  default_prompt: "Use $resilience-classify to review and apply evidence-backed collateralQuality and custodyModel labels for this stablecoin; leave governanceQuality unchanged unless explicitly requested."

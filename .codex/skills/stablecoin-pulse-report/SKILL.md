@@ -12,11 +12,11 @@ Read [editorial-rules.md](references/editorial-rules.md) before writing copy, [r
 
 ## Inputs
 
-- Window end: default today (UTC). The window is the 30 days ending there, matching Pharos `circulatingPrevMonth`; run it on the last days of the month or the 1st of the next.
+- Window end: the fetch time (UTC), with a rolling 30-day window matching Pharos `circulatingPrevMonth`. The fetcher has no historical-end option; run it on the last days of the month or the 1st of the next, and use `data/market.json.window` for the actual dates.
 - Month label (e.g. `October 2026`) and partner name for the footer (default `Polaris`).
 - Work directory: `agents/<YYYY-MM-DD>-pulse-report/` (ignored scratch). Prior months live in sibling `agents/*-pulse-report/` directories; reuse the previous `content.json` as the structural starting point, never its facts.
 
-Prerequisites: `PHAROS_API_KEY` in the root `.env.local` (report the name only if missing); Playwright Chromium or Google Chrome; Poppler (`pdfinfo`, `pdftoppm`) optional. X research needs an agent with live X search (see research-briefs.md).
+Prerequisites: `PHAROS_API_KEY` in the process environment or root `.env.local` (environment wins; report the name only if missing); Playwright Chromium or Google Chrome; Poppler (`pdfinfo`, `pdftoppm`) optional. X research needs live X search (see research-briefs.md).
 
 ## Workflow
 
@@ -30,7 +30,7 @@ Read `data/brief.md` end to end, then the data traps in editorial-rules.md. Befo
 
 ### 2. Research in one parallel batch
 
-Split the candidate stories into the five clusters in research-briefs.md. For each cluster dispatch one web researcher and one X scout together in a single batch (ten agents), all reading `data/brief.md`. Preflight X search with a control query first; if it cannot be made to work, run web-only and state "X unavailable" in the handoff. Save every result verbatim to `research/<Agent>.md` so the fact-checker can read it.
+Split the candidate stories into the five clusters in research-briefs.md. When delegation is available, dispatch one web researcher and one X scout per cluster together in a single batch (ten agents), all reading `data/brief.md`. Preflight X search with a control query first; if unavailable, run web-only and state "X unavailable" in the handoff. Without delegation, perform the research and skeptical review sequentially and disclose that review was not independent. Save every result verbatim to `research/<Agent>.md` (or named sequential-pass notes).
 
 ### 3. Write `content.json`
 
@@ -38,7 +38,7 @@ The orchestrator writes the copy; do not delegate synthesis. Follow the schema a
 
 ### 4. Fact-check
 
-Dispatch one independent read-only reviewer (prompt in research-briefs.md) over `content.json`, `data/`, and `research/`. Apply every accepted fix yourself; re-verify disputed numbers against `data/` rather than choosing between agents.
+Dispatch one independent read-only reviewer when available (prompt in research-briefs.md) over `content.json`, `data/`, and `research/`; otherwise use the disclosed sequential review. Apply every accepted fix yourself; re-verify disputed numbers against `data/` rather than choosing between agents.
 
 ### 5. Build and inspect
 

@@ -13,7 +13,7 @@ Every provenance field below is an evidence claim about the current run, not a f
 
 Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig` (`shared/types/live-reserves.ts`, authored under `shared/data/stablecoins/coins/*.json` and validated by `shared/lib/stablecoins/schema.ts`). Producer, recovery, adapter lookups, and snapshot-store reads/writes use `shared/lib/stablecoins/worker-runtime-registry.ts`: configured feeds retain lossless `liveReservesConfig`, `flags`, `reserves`, and `reserveReview` inputs, while unconfigured entries keep only bounded classification/structural slices. `ReserveAdapterCoin` in `shared/types/core.ts` defines the adapter's metadata contract.
 
-The `worker/src/lib/live-reserves/store.ts` barrel contains only producer-safe storage and overview functions. Public `resolveReserveResult` callers import `store-views.ts` directly; only that presentation layer keeps the full registry and curated-reserve fallback templates. This prevents a producer storage import from initializing the full evidence-heavy catalog.
+The `worker/src/lib/live-reserves/store.ts` barrel contains only producer-safe storage and overview functions. Public `resolveReserveResult` callers import `store-views.ts` directly; that presentation layer owns curated-reserve fallback templates and uses the Worker runtime registry. Only an unconfigured/retired coin's fallback lazily imports the full registry. Producer storage imports do not initialize the evidence-heavy catalog.
 
 ### Registry-Defined Adapter Classes
 
@@ -29,9 +29,9 @@ Equivalent complete descriptors may select explicit named profiles; shared telem
 | `sharedSourceMode`    | Distinguishes per-coin fetches (`none`) from explicitly source-invariant result sharing (`source-invariant`) |
 | `redemptionTelemetry` | Declares whether the adapter can emit direct/proxy redemption capacity and current-fee telemetry             |
 
-- `dynamic-mix`: independently measured reserve compositions. These can be `independent` evidence for scoring when the retained snapshot passes admission.
+- `dynamic-mix`: measured multi-bucket reserve compositions. These can be `independent` evidence for scoring when the retained snapshot passes admission.
 - `validated-static`: live validation/probe adapters over curated/static slices. These remain authoritative for the reserve detail API, but they are tagged `static-validated` and do not count as independent live collateral inputs for report-card scoring.
-- `single-bucket`: one-slice live proofs/attestations. Some are true independent evidence (`anzen-usdz`, `astherus-earn-wrapper`, `blast-usdb-yield-manager`, `btcfi`, `chainlink-nav`, `chainlink-por`, `chronicle-nav`, `erc4626-single-asset`, `escrow-balance`, `hive-hbd-protocol`, `initia-wrapper-vault`, `liquity-native-active-pool`, `liquity-v1`, `m0`, `m0-wrapper-underlying`, `sgforge-coinvertible`, `spiko-api`, `superstate-liquidity`, `united-por`, `usd1-bundle-oracle`, `usdai-hub`, `yamato`), while weak liveness-only or proof-class summary feeds such as `single-asset`, `solstice-attestation`, and `river-protocol-info` are tagged `weak-live-probe`. wiTRY (`witry-brix`) binds `erc4626-single-asset` over its Ethereum ERC-4626 staking wrapper.
+- `single-bucket`: one-slice live proofs/attestations; this shape alone does not establish independent evidence. Read each adapter's `evidenceClass` in `LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS`, rather than maintaining a second roster here.
 - `independent`: scoring-eligible live evidence when the retained snapshot is fresh, authoritative, config-matched, and has no unexcused snapshot degradation; a later failed attempt does not revoke it.
 - `static-validated`, `weak-live-probe`: detail/status-visible evidence classes that never override curated collateral scoring. Nested same-run redemption telemetry (`live-direct`, `live-direct-bounded`, `live-queue`, `live-proxy-validated`, or `documented-bound` with `same-run-onchain`, `same-run-api`, or `verified-source-timestamp`) may still bound the holder-facing exit route independently of either non-scoring composition class; legacy `immediateRedeemableUsd` on those classes stays rejected.
 - `sourceOriginClass` is orthogonal to `evidenceClass`. It records `issuer-attested`, `onchain-observation`, `independent-assurance`, `reviewed-curation`, or `unknown` for diagnostic provenance. Unreviewed adapters resolve explicitly to `unknown`; the registry never guesses origin from an adapter name or input kind. Origin does not change reserve admission, standalone reserve facts, V9 facts, scores, or public API fields. The private V9 evidence-journal schema can carry the resolved value when journal writers are enabled.
@@ -120,7 +120,7 @@ Successful responses return `StablecoinReservesResponse` with one of these modes
 
 `live` / `live-stale` only apply when the stored snapshot matches the latest successful sync state by `fetched_at` / `attempt_id` and passes strict integrity validation. Staleness independently checks the stored fetch time against 48 hours and verified upstream source age against the source-specific allowance. The detail response, overview freshness counts, and scoring snapshot loader share this decision; refreshing an old document never resets its source age. Orphaned partial writes or corrupt stored snapshots fail closed to the fallback modes.
 
-Per ADR-30 the response publishes the policy values behind that verdict, not only the verdict. `sync.freshness` is the evaluator's own output, copied unchanged: the served snapshot reuses admission's assessment, while fallback and unavailable responses judge the newest consistent generation (else `sync.lastSuccessAt`) by fetch age alone. `fetchBudgetSec` is the budget the serving route actually passed (`LIVE_RESERVE_FRESHNESS_SEC` for `GET /api/stablecoin-reserves/:id`). A client can recompute the verdict: `stale` is `fetchAgeSec > fetchBudgetSec`, or `sourceAgeSec > sourceAgeBudgetSec` when the source fields are non-null. Both ages are measured at `assessedAt`.
+Per ADR-30, `sync.freshness` copies the evaluator's output: served snapshots reuse admission's assessment; fallback/unavailable responses judge the newest consistent generation (else `sync.lastSuccessAt`) by fetch age alone. `fetchBudgetSec` names the route's actual budget (`LIVE_RESERVE_FRESHNESS_SEC` here). Recompute `stale` as a non-null `fetchAgeSec < 0` or `fetchAgeSec > fetchBudgetSec`, or `sourceAgeSec > sourceAgeBudgetSec` when both source fields are non-null. Both ages use `assessedAt`; a future Worker fetch is stale despite its negative age.
 
 `StablecoinReservesResponseSchema` in `shared/types/live-reserves.ts` is the runtime contract for successful `200` responses, including `unavailable`, and is used by the frontend reserve API client. Adapter-specific `metadata`, `metadata.details`, and nested redemption telemetry remain passthrough. Internal instrumentation lives in declared `metadata.diag`, which `resolveReserveResult()` removes before public serialization.
 
@@ -196,6 +196,8 @@ Suspended, unconfigured and pre-launch assets return `404` from the reserve endp
 | `attemptId`          | Sync attempt of the judged generation; `null` for legacy rows written before attempt IDs |
 | `fetchAgeSec`        | `assessedAt - fetchedAt`, or `null` |
 | `fetchBudgetSec`     | Fetch-age budget the serving route used |
+| `freshnessMode`      | Original snapshot mode (`verified`, `unverified`, `not-applicable`), or `null`; fetch-only fallback assessments have no snapshot metadata |
+| `sourceFreshnessInvalid` | Whether the assessed generation's metadata carries `diag.invalidFreshness`; independent of age-based `stale` |
 | `sourceTimestamp`    | Upstream disclosure time judged. `null` when source age was not part of the verdict: non-`verified` freshness, no finite timestamp, or a fallback response |
 | `sourceAgeSec`       | `assessedAt - sourceTimestamp`, or `null` |
 | `sourceAgeBudgetSec` | Effective source-age budget: `min(scoring.maxSourceAgeSec, adapter validation.maxSourceAgeSec)`, else the fetch budget; `null` when source age was not judged |
@@ -207,7 +209,7 @@ Uncertain write attempts are intentionally exposed as `sync.uncertainWrite = tru
 
 Reviewed 2026-09-27 from primary sources; the config `liabilityScope` blocks in `tusd-trueusd.json` and `usd1-world-liberty-financial.json` encode these tables, and a catalog data test requires every catalog chain to be classified exactly once. A new catalog deployment therefore withholds the ratio (`liability-scope-unclassified-chain`) until it is reviewed. Supply figures are the 2026-09-27 reads, in token units.
 
-**TUSD** (`chainlink-por`, config v2). Evidence: Moore CPA assurance report as of 2026-09-27 08:30:30Z (footnote 1: issued tokens on Ethereum, Tron, Avalanche and BNB Smart Chain sum to total TrueUSD issued; footnotes 3–6 name the catalog contracts) and tusd.io/transparency "Natively Deployed Networks". The feed (`description()` "TUSD Reserves") answered $501,928,900.88, exactly Moore's "Total Assets Held in Reserve Accounts", against Moore's 494,515,082.75 issued TUSD, which the four native `totalSupply()` reads reproduce to the cent. The corrected ratio is 1.014992; the previous unscoped denominator added 819,883.78 of bridged supply and published 1.013312. `maxReserveSupplySkewSec` is 172800 (two days, equal to the adapter's default oracle-age cap), supported by issued supply being unchanged from Moore's 2026-08-07 report through 2026-09-27.
+**TUSD** (`chainlink-por`; current binding in `shared/data/stablecoins/coins/tusd-trueusd.json`). Evidence: Moore CPA assurance report as of 2026-09-27 08:30:30Z (footnote 1: issued tokens on Ethereum, Tron, Avalanche and BNB Smart Chain sum to total TrueUSD issued; footnotes 3–6 name the catalog contracts) and tusd.io/transparency "Natively Deployed Networks". The feed (`description()` "TUSD Reserves") answered $501,928,900.88, exactly Moore's "Total Assets Held in Reserve Accounts", against Moore's 494,515,082.75 issued TUSD, which the four native `totalSupply()` reads reproduce to the cent. The corrected ratio is 1.014992; the previous unscoped denominator added 819,883.78 of bridged supply and published 1.013312. `maxReserveSupplySkewSec` is 172800 (two days, equal to the adapter's default oracle-age cap), supported by issued supply being unchanged from Moore's 2026-08-07 report through 2026-09-27.
 
 | Chain | Decision | Relation | Supply read | Basis |
 |---|---|---|---|---|
@@ -241,7 +243,7 @@ The six-chain native sum was 4,416,180,470.74 at 2026-09-27T20:43:47–20:44:16Z
 
 Research intake uses `npm run audit:coverage -- --domain=reserve-coverage`. It is a permanent advisory report, not an adapter admission evaluator, and rejects unsupported `--check`. `--prod` reads report-card and stablecoin catalog snapshots only. Supply `--reserve-states <file>` separately for reserve-sync observations and retain the supplied state generation; without that file, runtime state is unknown rather than inferred from configuration or a successful catalog fetch.
 
-To register a new adapter for a coin's `liveReservesConfig.adapter`, edit these surfaces in order: **5 files, 6 edit sites** (4 files / 5 sites when the adapter takes no per-coin params). The shared schema and Worker registry tests fail if definition or fetcher coverage drifts.
+To register a new adapter for a coin's `liveReservesConfig.adapter`, edit the surfaces below in order; reuse an existing params schema when appropriate. The shared schema and Worker registry tests fail if definition or fetcher coverage drifts.
 
 1. **Params schema + descriptor declaration** — both live in `shared/types/live-reserve-adapter-declarations.ts`. Define the Zod params schema as a const above the table (or reuse `noParamsSchema` / an existing schema), then add one entry to `LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS` whose `paramsSchema` **references that schema object directly** — there is no separate schema module and no string identifier to register. Declare accepted primary input kinds, source/evidence class, source-sharing policy, supported semantics/versions, redemption telemetry, validation policy, and only non-default provenance or display metadata. Prefer a named validation tier from `shared/types/live-reserve-adapter-policy.ts` (`LATEST_STATE_VALIDATION`, `DASHBOARD_VALIDATION`, `DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION`, `MONTHLY_VERIFIED_VALIDATION`, `LATE_MONTHLY_VERIFIED_VALIDATION`, `DISCLOSURE_VALIDATION`, …); an inline `validation` block should carry a comment explaining why the adapter is an exception. EVM addresses use `EvmAddressSchema`, never a bare `z.string()`. The key union, `LIVE_RESERVE_ADAPTER_KEYS`, and the enriched `LIVE_RESERVE_ADAPTER_DEFINITIONS` map all derive from this entry.
 2. **Adapter fetch function** — add `worker/src/cron/reserve-adapters/<key>.ts` exporting `async function fetch<Name>Reserves(coin, config, signal, ctx?): Promise<AdapterResult>`. Adapter contract lives in `worker/src/cron/reserve-adapters/types.ts` (`AdapterFn`, `AdapterContext`, `ReserveAdapterDefinition` — the last is a `Pick<>` of the shared declaration, so declaration fields reach the Worker without being re-declared). Use helpers from `./helpers` rather than rebuilding fetch/parse/freshness primitives.
@@ -253,46 +255,15 @@ Changed reserve capture files select `npm run check:html-fixture-metadata` in th
 
 Docs are not a per-adapter step: the Adapter Registry notes above are for non-obvious semantics only, and the roster/counts are derived from the declaration table rather than copied.
 
-For report-backed issuers, reuse `fetchIndependentAssuranceAdapter` in `independent-assurance.ts` when the existing generic engine owns the transport/parser contract. Agora, Anchorage, AUDD, CADD, FDUSD, RLUSD and SBC keep discovery/date/classification data in `*-independent-assurance-profile.ts` modules; they do not add forwarding fetchers. `IndependentAssuranceProfile` is defined in `types.ts`. Gemini, Paxos, FIDD and BRLA retain specialized orchestration. New material-clock consumers must submit every material contributor to the coverage summary and name any reviewed zoneless policy; do not drop all-bad coverage or manufacture a verified clock.
+**Report-backed assurance registration** (reuse the shared engine when it owns the transport/parser contract):
 
-Minimal scaffold (HTTP-json single-asset shape):
+1. **Review the engagement first.** `shared/lib/independent-assurance.ts` derives `assuranceTier` from `conclusion` and rejects contradictory tiers; record examiner identity (`attestorIdentification` for reviewed inference), examined scope, original as-of instant/time zone, liabilities and adjustments. Hash-pinning establishes artifact identity, not assurance quality.
+2. **Register both owners independently.** Add the product to that schema if needed, the reviewed JSON to `shared/data/live-reserves/independent-assurance/index.ts`, and an extraction profile to `scripts/lib/independent-assurance-profiles/registry.ts`. Profiles own required/rejected text, row extraction and reviewed totals; do not derive them from the manifest. Reviewed rounding bounds belong in `shared/lib/independent-assurance-tolerances.ts`.
+3. **Compile offline from official PDF bytes.** Use `npx tsx scripts/maintenance/refresh-independent-assurance-reports.ts --product <PRODUCT> --pdf /path/report.pdf` for a candidate; review before explicit `--write`. Poppler `pdftotext -layout`/`pdfinfo` records parser version, text hash and page count alongside PDF SHA-256/byte length. Adding `--check` requires exact recompilation, including provenance; bare `--check` checks registrations/profile metadata/rows/reconciliation without PDF re-extraction. The Worker never parses PDFs.
+4. **Bind the runtime profile and descriptor.** Use `IndependentAssuranceProfile` in `types.ts` for discovery/date/classification and wire the existing engine. Favorable assurance uses `independent` / `independent-assurance`; AUP or issuer conclusions require `static-validated` / `issuer-attested`. Pin official index, exact report URL, SHA-256, byte length and reviewed hosts; reject undated/newer unreviewed reports and unknown positive asset rows. Freshness uses examined time, never download time.
+5. **Target owner checks.** Run both compiler check modes, `worker/src/cron/reserve-adapters/__tests__/independent-assurance.test.ts`, `registry.test.ts` in that directory, and the product's adapter/profile tests. Cover tier/descriptor mismatch, discovery ambiguity/newer report, artifact drift, reconciliation and original-clock freshness.
 
-```ts
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import type { AdapterContext, AdapterResult } from "./types";
-import {
-  fetchJsonWithRetry,
-  freshnessMetadataFromTimestamp,
-  parseTimestampLikeToUnixSeconds,
-  requireJsonInput,
-} from "./helpers";
-
-interface MyAdapterPayload {
-  totalReserves: number;
-  updatedAt?: string;
-}
-
-export async function fetchMyAdapterReserves(
-  _coin: StablecoinMeta,
-  config: LiveReservesConfig,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<AdapterResult> {
-  const input = requireJsonInput(config.inputs.primary, "my-adapter");
-  const params = parseLiveReserveAdapterParams("my-adapter", config.params);
-  const payload = await fetchJsonWithRetry<MyAdapterPayload>(input.url, signal, 12_000, ctx);
-  const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.updatedAt);
-
-  return {
-    slices: [{ name: params.assetLabel, pct: 100, risk: params.assetRisk }],
-    metadata: {
-      ...freshnessMetadataFromTimestamp(sourceTimestamp, "issuer-api", "payload has no source timestamp"),
-    },
-  };
-}
-```
+New material-clock consumers must submit every material contributor to the coverage summary and name any reviewed zoneless policy; do not drop all-bad coverage or manufacture a verified clock.
 
 ---
 
@@ -302,7 +273,7 @@ Reserve composition and collateralization footers separate the source/report-as-
 
 `buildReserveFeedStatus()` appends reviewed exclusion reason, evidence date/URL, owner, reviewed date and expiry to stale/error/bootstrap/fallback disclosure rows. The status card distinguishes raw evidence coverage from health-cohort exclusions; neither surface claims acknowledgement makes evidence fresh.
 
-- `src/hooks/use-stablecoin-reserves.ts` uses mode-aware polling: `live` responses follow the 4-hour reserve producer cadence (`staleTime = 4 hours` / `refetchInterval = 8 hours`), while stale or fallback modes tighten to `1 minute` / `2 minutes` so the UI re-checks recovery faster
+- `src/hooks/use-stablecoin-reserves.ts` uses mode-aware polling: clean `live` responses follow the 4-hour reserve producer cadence (`staleTime = 4 hours` / `refetchInterval = 8 hours`); all other modes and `live` responses with non-`ok` sync status or `uncertainWrite` use `1 minute` / `2 minutes`
 - `src/hooks/use-stablecoin-detail-view-model.ts` injects the reserve result into the detail-page view model
 - `src/lib/coverage.ts` uses the adapter badge taxonomy in `shared/lib/live-reserve-display.ts` so `/coverage` distinguishes true `Live` reserve feeds from `Curated-Validated` and `Proof` reserve-sync paths
 - `worker/src/api/status.ts` uses `computeReserveCompositionOverview()` to surface reserve-sync health on `/status`

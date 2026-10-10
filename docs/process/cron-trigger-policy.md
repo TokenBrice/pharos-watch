@@ -6,7 +6,7 @@ This policy governs the union of cron trigger expressions in `worker/wrangler.to
 
 The two Wrangler configs jointly own deployed cron expressions. Each expression occurs exactly once under its public/heavy owner in `shared/lib/scheduled-runner-registry.ts` and maps to one Cloudflare scheduled invocation dispatched through `worker/src/handlers/scheduled.ts`. `shared/lib/cron-jobs.ts` remains the logical/physical schedule authority. Run `npm run check:cron-sync` and `npm run check:cron-connections` for the aggregate inventory and capacity report.
 
-The platform header-wait limit and the stricter trigger-wide budget Pharos applies on top of it are stated once, in `docs/worker-and-api-limits.md` under "Connection-budget operating assumption". How that budget is measured and applied per slot is in `docs/worker-infrastructure.md`, section "Cron Scheduling", subsection "Cron Slot Capacity and Connection Pool Budget".
+The platform header-wait limit and Pharos's stricter trigger-wide budget are owned by [Worker and API Limits: Connection-budget operating assumption](../worker-and-api-limits.md#connection-budget-operating-assumption). Per-slot measurement and enforcement are in [Worker Infrastructure Appendix: Cron Slot Capacity and Connection Pool Budget](worker-infrastructure-appendix.md#cron-slot-capacity-and-connection-pool-budget).
 
 ## Target
 
@@ -53,7 +53,7 @@ When proposing a new cron job:
 
 ## Enforcement
 
-- `npm run check:cron-connections` (canonical path: `scripts/ci/check-cron-connection-budget.ts`) — runs for Worker-impacting PRs; fails on missing or stale schedule-bound budget rows, when any trigger is at or above `6/6`, when a third `5/6` slot is introduced, or when the fetch-capable scheduled-entry count passes `maxFetchCapableEntriesBeforeRebalance` in `CRON_GROWTH_HEADROOM_POLICY`.
+- `npm run check:cron-connections` (`scripts/ci/check-cron-connection-budget.ts`) — runs for Worker-impacting PRs; rejects missing/stale schedule-bound budget rows, triggers at or above `6/6`, and counts above `CRON_GROWTH_HEADROOM_POLICY`'s fetch-capable-job or headroom-full-slot ceilings.
 - `npm run check:cron-sync` (canonical path: `scripts/ci/check-cron-schedule-sync.ts`) — keeps the duplicate-free union of both Wrangler configs aligned with `shared/lib/cron-jobs.ts` and `shared/lib/scheduled-runner-registry.ts`, rejects omitted, duplicate or misowned expressions, and enforces the unchanged aggregate physical-trigger gate in `CRON_GROWTH_HEADROOM_POLICY`.
 
 ## Workflow and Queue Review Outcome (ADR-26)
@@ -68,7 +68,7 @@ The available remote-D1 `cron_runs` sample for the requested 14-day lower-bound 
 
 The table is a review plan, not permission to remove an expression now. A row may retire only after its condition is observed in production and the schedule-sync and connection checks pass. Retirement removes physical aliases, not logical freshness slots.
 
-This is the dated pre-expansion 41-expression review, not today's inventory. ADR-39's supplemental `halfHourlyMeasuredExecutionSupplemental` expressions `20 * * * *` and `50 * * * *` bring the current union to 43; neither is freed or covered by the historical retirement proposal below. Any replacement must account for both active slots, preserved native diagnostics and the separately retained daily EVM shadow lane in a new accepted topology.
+This is the dated pre-expansion 41-expression review, not today's inventory. ADR-39's supplemental `halfHourlyMeasuredExecutionSupplemental` expressions are not covered by the historical retirement proposal. Read `CRON_TRIGGER_SCHEDULES` and `CRON_GROWTH_HEADROOM_POLICY` for current expressions and ceilings; any replacement must account for both active lanes, preserved native diagnostics and the separately retained daily EVM shadow lane in a new accepted topology.
 
 | Logical lane | Dated reviewed physical expression(s) | Conditional after-review disposition | Net change |
 | --- | --- | --- | ---: |

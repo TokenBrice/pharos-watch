@@ -34,7 +34,7 @@ Only signals where `available = true` participate. Weights are redistributed pro
 **Evidence-quality WATCH cap:** After the amplifier formula, `computeDEWS()` caps preliminary scores above `WATCH_MAX_SCORE = 35` back to WATCH when the evidence set has neither market-price evidence nor DEX-liquidity evidence and there is no severe issuer-control signal. Severe issuer-control evidence is a blacklist sub-signal at or above the configured severe threshold, so a real freeze/blacklist surge can exceed WATCH even without market or DEX corroboration. Capped rows carry `insufficientEvidenceReason = "data_quality_only"` when the price-confidence stress score is at least 50 and there is no other non-systemic evidence (only data quality plus systemic backdrop), or `"missing_market_or_liquidity_evidence"` when other non-market evidence exists, or the data-quality stress is below 50, while market/DEX corroboration is missing.
 The gate constants live in `shared/lib/dews-config.ts`. Market-price evidence requires available divergence stress ≥ `EVIDENCE_STRESS_THRESHOLD` (10); DEX-liquidity evidence requires available pool-balance or liquidity-erosion stress ≥ 10. Severe issuer-control evidence requires available blacklist stress ≥ `SEVERE_ISSUER_CONTROL_THRESHOLD` (55). Source availability alone never bypasses the cap. Final DEWS is the preliminary score when either bypass qualifies, otherwise `min(preliminaryScore, WATCH_MAX_SCORE)`.
 
-Known and accepted: the market-price evidence gate is `value >= 10`, which sits on the `[25, 10]` knot of the divergence curve and so behaves as `worstBps >= 25`; the non-USD `x0.7` damper moves that to a non-integer ~32.143 bps, so whole-bps rounding upstream drops market-price evidence across a ~0.36 bps window (`worstBps` in 32.143-32.5) on non-USD pegs only. It gates an evidence kind rather than a score, and USD pegs round one-directionally in the conservative direction.
+The market-price gate uses the final divergence sub-signal, after whole-bps derivation, curve interpolation, non-USD dampening and eligible previous-reading smoothing; it is not a fixed raw-deviation threshold.
 
 **Systemic backdrop amplifier:** When PSI drops below 75 (below the STEADY band; 75 is STEADY's floor), individual DEWS scores are amplified by up to 30%. At PSI=40, amplification is ~14%. At PSI=0, amplification is 30%. This reflects that individual coin stress is more dangerous during systemic instability.
 
@@ -87,7 +87,7 @@ Measures supply contraction rate. Only negative changes contribute stress.
 
 DEX pool imbalances from `dex_liquidity`. Blends:
 
-- 40% balance stress (1 - weighted_balance_ratio)
+- 40% balance stress (`100 * (1 - weighted_balance_ratio)`)
 - 35% pool stress score (avg_pool_stress)
 - 25% worst single pool imbalance (from `top_pools_json`, counting only pools with at least $100k TVL and a measured `extra.balanceRatio`)
 
@@ -129,7 +129,7 @@ The primary price must pass `isObservedPrice(...)`. Nominal par references are n
 - DEX input comes only from `dex_prices` rows refreshed within the live depeg trust window (`DEX_FRESHNESS_SEC = 4500`, currently 75 minutes) **and** backed by at least `$1M` of aggregate source TVL, matching the live depeg trust floor
 - **Anchors:** `[0bps, 0] → [25bps, 10] → [50bps, 25] → [75bps, 50] → [100bps, 75] → [200bps, 90] → [500bps, 100]`
 - **Non-USD peg dampening:** `value *= 0.7`
-- Smoothed with previous reading.
+- Averaged with the previous reading only when that reading was available.
 
 Historical `stress_signal_history` rows do not retain the underlying DEX trust metadata (`source_total_tvl`, per-row freshness context) needed to replay this gate exactly. The Wave 5.9 repair path therefore refreshes current rows and prunes unrecomputable daily history from the Mar 9, 2026 trust-floor boundary onward instead of pretending those stored snapshots can be deterministically recomputed.
 
@@ -140,11 +140,9 @@ If the blacklist source read fails, tracked coins mark this signal unavailable r
 
 Only public events (`suppression_reason IS NULL`) enter either window. Suppressed EURC mirror-zero rows remain stored for provenance but cannot create a blacklist surge. The daily digest applies the same public-event eligibility before counting its rolling 24-hour activity or selecting candidates; unsuppressed zero-value events remain eligible. Excluding rows can change both the numerator and the 7-day baseline, so it does not imply every resulting DEWS score decreases.
 
-If the `blacklist_events` read fails, tracked coins mark this sub-signal unavailable rather than treating the missing rows as an observed zero; its weight is redistributed across the remaining available signals.
-
 ### S_flow — Mint/Burn Flow
 
-Available only when `mint_burn_hourly` has at least 7 observed baseline days and a fresh latest 24h row. A fresh 24h row with zero mint/burn volume still contributes zero flow stress; a mature baseline with no fresh 24h row is marked stale and its signal weight is redistributed. Measures:
+Requires at least 7 observed baseline days, a latest hourly row no older than 24h, complete 24h USD valuation, and no partial burn-baseline valuation. Missing values or failed gates make the signal unavailable; unknown legacy baseline valuation is tolerated. Fresh fully valued zero-volume rows produce zero stress. Measures:
 
 - **Burn surge:** 24h burn volume / 30d daily average
 - **Burn-to-mint ratio:** 24h burns / 24h mints
@@ -181,7 +179,7 @@ Structured Yield Intelligence source-risk and rank-attribution evidence adds the
 | `rankChangeAttribution.primaryDriver = "source-switch"` | 20 |
 | `rankChangeAttribution.primaryDriver = "source-risk"` | 20 |
 
-Both rank-driver rows count at most once per row: `computeStructuredYieldSignal` hoists a rank-attribution driver whose static twin (`sourceRisk.sourceSwitchCount30d > 0`, or the source-risk branches) already fired for the same row, so one counted switch or one `>= 1.5` source-risk penalty contributes +20, not +40. A rank driver with no static counterpart still scores on its own.
+Rank drivers add no duplicate points when their static counterpart fired: `source-switch` is paired only with `sourceSwitchCount30d > 0`; `source-risk` is paired only with `sourceRiskPenalty >= 1.5`. Other source-risk conditions do not suppress the rank-driver points.
 
 `rankChangeAttribution` is populated generation-over-generation at publish time, when the publisher is given the previous publication; a payload without a comparable previous generation carries no rank-attribution evidence, and those rows simply contribute no structured driver points.
 
@@ -210,7 +208,7 @@ Structured evidence is additive with warning-string evidence and the final Yield
 | `stress_signals`        | 7 days (frozen IDs exempt) | Sparse rolling history: at least hourly, plus band changes and score moves of 1+ point |
 | `stress_signals_latest` | current  | Latest-row materialization for hot readers and smoothing |
 | `stress_signal_publication_rows` | 2 generations | Exact, complete rows for current and previous publication proofs |
-| `stress_signal_history` | 365 days (frozen IDs exempt) | Daily snapshots (first exact-coverage run of UTC day) |
+| `stress_signal_history` | 365 days (frozen IDs exempt) | Daily first-run values while admitted IDs are unchanged; atomically resealed when that ID set changes |
 | `surface_publication_generations` (`surface = "dews"`) | durable | Successfully published generations consumed by Tape and publication health |
 
 Age-based pruning and orphan deletes both skip stablecoin IDs in `FROZEN_IDS`, so frozen coins keep their DEWS history indefinitely.
@@ -237,7 +235,7 @@ PSI amplification admits `stability_index_samples.stored_at` through `DEWS_PSI_F
 1. Read stablecoins cache, derive peg rates with cached `fxFallbackRates` for thin non-USD groups
 2. Read `dex_liquidity`, live-depeg-trusted `dex_prices`, and `dex_liquidity_history`
 3. Read `blacklist_events` counts (24h + 7d)
-4. Read previous `stress_signals` for smoothing
+4. Load prior published-bound stress rows for smoothing; discard readings older than `DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC` (2 hours)
 5. Read `mint_burn_hourly` aggregates, separating 30d baseline coverage from latest-row freshness
 6. Read `yield_data.warning_signals` and structured `sourceRisk` / `rankChangeAttribution` evidence from the published `yield-rankings` cache
 
@@ -258,20 +256,20 @@ PSI amplification admits `stability_index_samples.stored_at` through `DEWS_PSI_F
 
 **All coins (no params):** Returns latest DEWS for active tracked stablecoins. The response-level freshness headers use the latest aggregate publication timestamp (`updatedAt`) so one retained long-tail row does not stale the entire `/depeg` surface; `oldestComputedAt` remains in the body for consumers that need to detect per-coin lag. Non-active tracked entries (pre-launch, quarantined, delisted, frozen) are excluded because the aggregate handler gates rows on `ACTIVE_IDS`, and `eligibleCount` is the active-registry size.
 
-When a coin has insufficient data in a cycle (`computeDEWS() === null`), that run skips writes for the coin. Because current reads are scoped to the exact published generation, the coin is absent from the aggregate response (it still counts toward `missingCount`) and the single-coin route returns `current: null` with `currentStatus: "unavailable"`; its previous row is not resurrected except on the legacy/no-pointer compatibility path.
+A null `computeDEWS()` result skips that coin's writes. If peers publish a new accepted generation without it, it is absent from aggregate results (`missingCount`) and single-coin `current` is null/unavailable. Held or zero-result runs leave the accepted pointer unchanged, so its prior accepted score remains readable and ages normally.
 
-Current DEWS readers verify the exact pointer generation against `stress_signal_publication_rows`; Telegram snapshots and smoothing continue to use the full latest materialization within the published bound. That prevents partially written newer runs from becoming visible. PSI likewise requires the exact pointed generation, so incomplete coverage fails closed rather than mixing rows from different runs.
+Current readers first validate the pointer-bounded latest materialization's timestamp, count and ID digest, then use exact `stress_signal_publication_rows` as fallback. Telegram and smoothing share that loader; strictly newer timestamps are excluded. PSI separately requires the exact pointed publication generation and fails closed on incomplete coverage.
 
 ```text
 {
   "signals": {
-    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "6.21" },
+    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "..." },
     ...
   },
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
-  "methodology": { "version": "6.21", "versionLabel": "...", "currentVersion": "6.21", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "...", "versionLabel": "...", "currentVersion": "...", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -285,13 +283,13 @@ Unknown IDs return `404` with `Unknown stablecoin`; non-readable (pre-launch) tr
 
 ```text
 {
-  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "6.21" },
+  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "..." },
   "history": [
-    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "6.21" },
+    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "..." },
     ...
   ],
   "malformedRows": 0,
-  "methodology": { "version": "6.21", "versionLabel": "...", "currentVersion": "6.21", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "...", "versionLabel": "...", "currentVersion": "...", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -299,7 +297,7 @@ Unknown IDs return `404` with `Unknown stablecoin`; non-readable (pre-launch) tr
 
 ### `GET /api/backfill-dews` (admin)
 
-Validates DEWS against historical depeg events. The primary calibration path uses stored `stress_signal_history` rows plus curated anchors and reports precision, recall, false-positive days, false-negative incidents, lead-time P50/P90, alert churn, band-transition stability, and cohort metrics. The older supply/liquidity reconstruction remains a diagnostic path because it cannot replay every live signal or source-trust gate.
+Use `?mode=backtest-metrics` for the primary calibration path: stored `stress_signal_history` plus curated anchors report precision, recall, false-positive days, false-negative incidents, lead-time P50/P90, alert churn, band-transition stability, and cohort metrics. Without that mode, the route uses supply/liquidity reconstruction, a diagnostic that cannot replay every live signal or trust gate.
 The reconstruction preserves missing supply anchors and discloses per-event evaluation availability/reasons. Events without a scored pre-event day have `predicted=null`, not a false negative; detection rates exclude them and report excluded/partial coverage separately.
 
 ### `GET /api/backfill-dews?repair=...&dry-run=true` / `POST /api/backfill-dews?repair=...` (admin)

@@ -21,7 +21,7 @@ For tooltip/deep-link changes, read [Methodology-Context Anchors](#methodology-c
 - **Shared section summary/markdown registry:** `src/lib/methodology-content.ts` (non-React section ids, titles, and markdown-export summaries)
 - **Per-section body modules:** `src/app/methodology/sections/core/*.tsx`, `src/app/methodology/sections/monitoring/*.tsx`, and `src/app/methodology/sections/dependency-exposure-section.tsx`
 - **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav`
-- **Mode switching:** `MethodologyModeToggle`; mobile renders the toggle inside the hero guide card, `md+` renders it in the jump rail. It and the inline `ShowYourWorkToggle` adopt the `pharos-toggle-pill` control language (design-canon grammar alignment, 2026-07-01); `ShowYourWorkToggle` is shared, so the pill classes are passed additively from `page.tsx` and its other consumers are unchanged.
+- **Mode switching:** `MethodologyModeToggle`; mobile renders the toggle inside the hero guide card, `md+` renders it in the jump rail. Its buttons use `pharos-toggle-pill`; `page.tsx` supplies the inline `ShowYourWorkToggle`'s pill classes through a replacement `className`, leaving other consumers' defaults unchanged.
 - **Design carve-out:** `/methodology/` stays a longform reference page — no signature hero and no frost "One Beam". This is an explicit exception to [Feature-page heroes](./design-language.md#feature-page-heroes); the 76rem measure and `MethodologySectionShell` layout are unchanged. Only the control + numeric *grammar* is aligned to canon: the toggles use the pill language and figures/version badges use `.pharos-numeric` (semantic badge colors preserved).
 - **Mode persistence contract:** both `MethodologyModeToggle` controls subscribe to `pharos.methodology.mode` in `localStorage`, with Reader as the hydration-safe server snapshot and same-tab notifications. Shared mode opens/closes authored `details` via `data-methodology-details` / `data-methodology-worked-example`.
 - **Orientation content:** mobile compresses the reading guide into the hero card; `md+` keeps both the top-right reader-guide hero card and the dedicated "How to Read This Page" overview card
@@ -87,7 +87,7 @@ When changing any methodology surface, update the runtime implementation, the de
 2. Detailed methodology doc (`docs/*.md` for that system).
 3. `/methodology` page copy and worked examples in the relevant section body module under `src/app/methodology/sections/core/` or `src/app/methodology/sections/monitoring/`. If the markdown export summary should also change, update the matching entry in `src/lib/methodology-content.ts`. Use `src/app/methodology/sections/methodology-sections.tsx` only when changing section composition or order.
 
-If a versioned methodology changes, add the JSON entry under `shared/data/methodology-changelogs/`, update the corresponding domain module under `shared/lib/methodology-versions/`, and bump the shared constant when applicable so badges and changelog links stay consistent.
+If a versioned methodology changes, add the JSON entry under `shared/data/methodology-changelogs/` and register its import in `shared/lib/methodology-versions/registry.ts`. Runtime versions live in `constants.ts`, with Safety Score read from `current-version.json`; resolver history is managed by `depeg-resolver.ts`.
 
 Commit provenance in structured changelog entries uses real commit hashes only. Use `commits: []` when provenance was not recorded; public changelog routes should omit `Commit(s)` output for those entries rather than using `unreleased` as a placeholder.
 
@@ -127,7 +127,7 @@ For the safety-score changelog specifically, update both:
 
 ## Methodology-Context Anchors
 
-`src/lib/methodology-context.ts` deep-links from in-app tooltips and metric cards into the methodology page. The full long-form page exposes the 15 top-level `METHODOLOGY_SECTIONS` ids in `src/app/methodology/methodology-shared.tsx`, including `#dependency-exposure-methodology`. The `blacklistTracker` context key maps to `#blacklist-tracker-methodology`, while `bluechip` and `proofOfReserves` both map to `#safety-scores-methodology`; there are no separate single-topic anchors for those contexts:
+`src/lib/methodology-context.ts` deep-links from in-app tooltips and metric cards into the methodology page. `METHODOLOGY_SECTIONS` in `src/app/methodology/methodology-shared.tsx` owns the top-level ids, including `#dependency-exposure-methodology`. The `blacklistTracker` context key maps to `#blacklist-tracker-methodology`, while `bluechip` and `proofOfReserves` both map to `#safety-scores-methodology`; there are no separate single-topic anchors for those contexts:
 
 Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Backstop, Chain Health, and the V9 mint component) are wrapped in `<ScoreBadgeWrapper>` (`src/components/score-badge-wrapper.tsx`), which routes the badge through the unified `MethodologyHint` tooltip and appends the inline `vX.Y` methodology version as a small superscript only when that badge's `METHODOLOGY_CONTEXT` entry carries a `versionLabel`. The `safetyScore` entry deliberately carries none — the active Safety Score methodology is identity-based — so Safety Score badges get the tooltip but no inline version superscript. Table-context badges use `variant="tooltip-only"` so rows stay clean and the column-header `<MethodologyHint>` carries the version chip. The mint component keeps a terminal `v1.3` version badge and closing note for context — its section passes no `changelogPath`, so there is no "Version history" link, and in-app mint tooltips carry the Safety Score version and scoring-changelog path instead; it is not a live standalone scoring lane.
 
@@ -141,11 +141,11 @@ Runtime source: `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-c
 
 ### Bluechip rating {#bluechip}
 
-Bluechip has two surfaces: the external Bluechip rating sync documented in [bluechip-ratings.md](bluechip-ratings.md), and the Pharos `/about/bluechip` editorial roster. The active roster's rule admits mapped assets whose synced external Bluechip grade is A-tier and whose Pharos report-card overall grade is A-tier (`A-`, `A`, or `A+`). It is an intersection of two current feeds, not a separate hidden floor model over safety/liquidity/resilience. The rule is stated in the page copy (`src/app/about/bluechip/content.tsx` and Section 5 of `src/app/about/bluechip/page.tsx`), and the roster itself is suspended pending the V9 grade-floor review: the page says so statically and fetches neither feed while that hold stands.
+Bluechip has two surfaces: the external Bluechip rating sync documented in [bluechip-ratings.md](bluechip-ratings.md), and the Pharos `/about/bluechip` editorial roster. The roster rule admits mapped assets whose synced external Bluechip grade and Pharos report-card overall grade are both A-tier. It is an intersection of two current feeds, not a separate hidden floor model over safety/liquidity/resilience. The rule is stated in `src/app/about/bluechip/content.tsx` and Section 5 of `src/app/about/bluechip/page.tsx`; the roster is suspended pending the V10 grade-floor review and fetches neither feed while that hold stands.
 
 ### Proof of Reserves
 
-`StablecoinMeta.proofOfReserves` (in `shared/types/core.ts`) was extended in May 2026 with an `attestorTier` field — one of `big4` / `regional` / `niche` / `self` / `none` / `undisclosed` — paired with a `cadence` field of `daily-nav` / `real-time` / `daily` / `weekly` / `monthly` / `semi-monthly` / `quarterly` / `semi-annual` / `annual` / `ad-hoc` / `none` / `undisclosed`. The combination determines the badge color and label rendered by `POR_TIER_STYLES` in `shared/lib/classification/badges.ts`:
+`StablecoinMeta.proofOfReserves` uses optional `attestorTier` and `cadence` fields; `ATTESTOR_TIER_VALUES` and `PROOF_OF_RESERVES_CADENCE_VALUES` in `shared/types/core.ts` own their vocabulary. `POR_TIER_STYLES` in `shared/lib/classification/badges.ts` defines tier labels/colors independently of cadence:
 
 - `big4` — emerald. Independent attestation from a Big-4 firm (Deloitte, EY, KPMG, PwC).
 - `regional` — blue. Licensed regional CPA or auditor with a recognized practice.
@@ -156,19 +156,19 @@ Bluechip has two surfaces: the external Bluechip rating sync documented in [blue
 
 `none` and `undisclosed` are not interchangeable, and the distinction is the reviewer's: refuting an attestor is a finding, failing to reach one is a gap. Where an asset has no attestor concept at all — reserves verifiable directly on-chain through a bridge or factory contract — the field is omitted rather than forced onto either value, and the badge falls back to the `proofOfReserves.type` label.
 
-The cadence field is rendered alongside the tier badge as supporting text (e.g. "Big-4 attestor · monthly").
+The hero passport uses the tier's text style (`src/lib/stablecoin-detail-passport.ts`). Cadence appears in the Regulatory Standing attestation disclosure (`src/lib/regulatory-standing.ts`), not as a combined tier/cadence badge.
 
 ## StablecoinMeta surfacing fields (May 2026)
 
-`StablecoinMeta` carries three optional editorial fields used by the detail-page hero and mechanism diagram. None of these change scoring — they only affect how a coin is presented:
+`StablecoinMeta` carries optional fields used by the detail-page hero and mechanism diagram. `oneLiner` is editorial; `mechanismArchetype` also selects the Safety Score mechanism review and policy rubric:
 
-- `oneLiner?: string` — short editorial verdict rendered as the hero TL;DR whenever the field is present; it is not feature-flagged. `NEXT_PUBLIC_PHAROS_HERO_VERDICT` gates only the separate archetype verdict pill (see [process/feature-flags.md](process/feature-flags.md)).
-- `mechanismArchetype?: MechanismArchetype` — coarse classification (e.g. `fiat-cash`, `cdp`, `synthetic-delta-neutral`, etc.) used by the mechanism diagram primitives. The full enum (`MECHANISM_ARCHETYPE_VALUES`) lives in `shared/types/stablecoin-taxonomy.ts` and is re-exported from `shared/types/core.ts`.
+- `oneLiner?: string` — short editorial verdict rendered as the hero TL;DR whenever present; it is not feature-flagged. `NEXT_PUBLIC_PHAROS_HERO_VERDICT` gates only the separate archetype verdict pill (see [process/feature-flags.md](process/feature-flags.md)).
+- `mechanismArchetype?: MechanismArchetype` — classification resolved by `shared/lib/classification/resolve-mechanism-archetype.ts` for both presentation and scoring. Native families additionally require an admitted `mechanismArchetypeReview`. `MECHANISM_ARCHETYPE_VALUES` in `shared/types/stablecoin-taxonomy.ts` owns the vocabulary.
 - `proofOfReserves.attestorTier?` and `proofOfReserves.cadence?` — see the [Proof of Reserves](#proof-of-reserves) sub-section above.
 
 ## Show Your Work
 
-Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, Chain Health) expose a `<ShowYourWorkPanel>` reading the visible inputs already on the payload (`rawInputs`, `signals`, `scoreComponents`, `components`+`contributors`, sub-scores, `healthFactors`). V9 Safety Score cards use their native report-v5 breakdown rather than the V8 `rawInputs` contract: Backing rows show effective weights and contributions, Exit shows the selected route's six weighted components plus route modifiers/caps and alternatives, and Economic Control shows component scores with binding or diagnostic status but no invented weights. Stable technical keys remain visible in this audit view, and pillar adjustments reconcile evaluator and published scores. Toggle via `?show-work=1` URL flag or the inline "Show inputs" link; once a user hides or shows the panel, that explicit `localStorage` preference under `pharos.show-work` wins over the URL flag until changed again. PegScore SYW is deferred to v2 — its decomposition is not yet on the worker payload.
+Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, Chain Health) expose a `<ShowYourWorkPanel>` reading visible payload inputs. Current Safety Score cards use native pillar breakdowns, not V8 `rawInputs`; `shared/types/report-cards-v9.ts` owns the response schema version. Backing shows effective weights/contributions; Exit shows six selected-route components, modifiers/caps and alternatives; Economic Control shows binding or diagnostic component scores without invented weights. Technical keys and pillar adjustments remain visible. Toggle via `?show-work=1` or "Show inputs"; an explicit `pharos.show-work` localStorage preference wins over the URL flag. PegScore decomposition is not on the worker payload.
 
 ## Verification Shortcuts
 

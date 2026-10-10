@@ -65,7 +65,7 @@ DOM SVG and Recharts paths rendered by the browser can use CSS variables. Litera
 --psi-bedrock-hex: #22c55e; /* JS/Recharts usage */
 ```
 
-The JS-side token map in `chart-colors.ts` uses those same hex values where CSS companions exist; the `--severity-*-hex` companions are read directly as `var()` from component styles rather than through `severity-colors.ts`, which emits Tailwind classes only. `chart-colors.ts` also exports palette, risk, signal, and brand colors that are JS-only and do not have one CSS companion per export.
+Chart accent literals in `chart-colors.ts` match `--chart-*-hex`. Its re-exported `THREAT_BAND_HEX` uses the shared classification palette, not theme-switched `--dews-*-hex`. `severity-colors.ts` emits Tailwind classes; severity hex companions are consumed directly through CSS. Runtime exports do not each have a CSS companion.
 
 ### Layer 3: Component Tokens (in `semantic.css`)
 
@@ -121,14 +121,14 @@ For colors needed at JS runtime (Recharts, canvas, dynamic styles):
 ### Do
 
 - Reference semantic tokens in CSS/Tailwind: `var(--surface-base)`, `var(--text-secondary)`
-- Import from `chart-colors.ts` or `severity-colors.ts` for Recharts colors
+- Import `chart-colors.ts` or shared classification palettes for Recharts colors; `severity-colors.ts` supplies Tailwind classes.
 - Use the bridge vars (`--background`, `--card`, etc.) in existing code — no rush to migrate
 - Add new component tokens to `semantic.css` when needed
 
 ### Don't
 
 - Reference primitives (`--p-blue-500`) directly in components, except when a documented local visualization intentionally needs a primitive ramp before a semantic token exists
-- Hardcode hex values in chart components — use the JS token maps, except for intentional local canonical palettes: market-cap delta colors in `src/components/mcap-chart.tsx` and `PEG_BAND_HEX` in `src/components/peg-deviation-chart.tsx`.
+- Hardcode hex values in chart components — use the runtime maps (`PEG_BAND_HEX` belongs to `shared/lib/classification.ts`). The market-cap delta colors in `src/components/mcap-chart.tsx` are an intentional local exception.
 - Edit shadcn/ui primitives in `src/components/ui/` to use tokens
 - Define one-off color variables in individual component files
 

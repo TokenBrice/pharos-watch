@@ -38,11 +38,13 @@ Run the commands below from the repository root with Wrangler authentication. Hi
    npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'dry-run=true&symbol=USN' | jq
    ```
 
-   Check `totalMatching`, each `auditedEvents[*].verdict`, and the stored
-   provenance. `upstreamErrorReason: "coingecko_api_key_missing"` with
-   `upstreamReachable: false` means the `COINGECKO_API_KEY` binding is unset —
-   fix the configuration before trusting any CoinGecko verdict (delete and
-   repair modes do not need the key).
+   Check `totalMatching` and each `auditedEvents[*].verdict`. Read stored
+   provenance and canonical coin identity separately from D1
+   `depeg_events_with_provenance` by event id; the preview omits both.
+   `upstreamErrorReason: "coingecko_api_key_missing"` with
+   `upstreamReachable: false` means the CLI's `COINGECKO_API_KEY` process
+   environment variable is unset. Fix it before trusting CoinGecko verdicts
+   (delete and repair modes do not need the key).
 
 2. **Record the verdict.** Add the reviewed window to
    `shared/data/depegs/backfill-replay-suppressions.ts` (see
@@ -51,6 +53,11 @@ Run the commands below from the repository root with Wrangler authentication. Hi
 
 3. **Delete.** The `delete` mode skips the CoinGecko audit and stages the PSI
    stability-index recompute with the deletes in one D1 batch commit:
+
+   Delete ids are global, not constrained by the preview's `symbol` filter.
+   First preview `delete=49235,49236,49237,24424,83782&dry-run=true` with the
+   same CLI, then compare the complete requested id set with `deletedEvents`;
+   a partial match can succeed. Verify coin identity from D1 before execution.
 
    ```bash
    npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'delete=49235,49236,49237,24424,83782' --execute --allow-atomic-import | jq
@@ -68,13 +75,15 @@ Run the commands below from the repository root with Wrangler authentication. Hi
    disappear only through the reviewed shrink override:
 
    ```bash
-   npm run sync-depeg-events -- --allow-archive-shrink
+   npx tsx scripts/maintenance/sync-depeg-events.ts --api-url https://api.pharos.watch --allow-archive-shrink
    ```
 
-   `public/_redirects` carries the one-hop 301s for the retired slugs, so no
-   published `/depeg/<slug>/` URL 404s; the next Pages build picks them up and
-   `npm run seo:check` enforces that continuity. The three retired Noon USN
-   slugs redirect to `/stablecoin/usn-noon/`.
+   Set `DEPEG_EVENTS_API_KEY` (or `SMOKE_API_KEY`) for this HTTP fetch;
+   Wrangler authentication alone does not authenticate it. Add one-hop 301s
+   in `public/_redirects` for every retired published slug before the Pages
+   build. The Pages release gate configures `SEO_PREVIOUS_SITEMAP_URL` to
+   enforce continuity; local `npm run seo:check` compares prior URLs only
+   when that variable is set. Existing USN redirects live in `public/_redirects`.
 
 5. **Verify.** Re-read the coin's history
    (`GET https://api.pharos.watch/api/depeg-events?stablecoin=usn-noon` with a

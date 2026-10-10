@@ -90,7 +90,7 @@ Default sort is `totalUsd desc`.
 - rejects unknown chain IDs with `notFound()`
 - statically generates params from `getActiveChainIds()` / the current `CHAIN_META` key set
 - sets canonical metadata at `/chains/[chain]/`
-- builds the title/description from the mapped deployment count and leading ticker symbols when they fit the search-snippet title budget
+- builds the title from leading ticker symbols when they fit the search-snippet budget; the description includes mapped deployment count and leading symbols
 - emits `CollectionPage` + `ItemList` JSON-LD for tracked deployments, with chain/deployment entities typed as `Thing` and no `Product` markup
 - renders the live client first, then a compact server-rendered deployment anchor hub linking each tracked stablecoin on the chain to its `/stablecoin/[id]/` page, a `Next Check` CTA (compare cohort + alerts), and finally related taxonomy and research route hubs
 

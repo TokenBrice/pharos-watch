@@ -14,6 +14,7 @@ permissions:
 
 jobs:
   refresh:
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     strategy:

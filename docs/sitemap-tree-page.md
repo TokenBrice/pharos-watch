@@ -28,13 +28,13 @@ Three lookups are deliberately tolerant and fail silently rather than at build t
 
 Renaming a nav group key, a `more` column key, or an extra-page href drops content from the page without failing a check, so verify the rendered tiers after any of those changes. Methodology changelog rows behave the opposite way: they resolve `publicPath` through `getMethodologyChangelogEntry()` in `shared/lib/methodology-versions/registry.ts`, which throws on an unknown key, and the route-local copy table is `satisfies`-bound to `MethodologyChangelogRegistryKey`.
 
-The hand-curated sub-clusters (taxonomy browse, stablecoin profiles, About, methodology changelogs, more reference) are the exception to the derive-everything rule: they exist to surface a tier's children next to their parent. Stablecoin profile rows come from `TRACKED_STABLECOINS` in `shared/lib/stablecoins/registry.ts` with `buildStablecoinUrl()` from `shared/lib/urls.ts`, and their description is chosen from the coin's lifecycle status. `/coverage/` and `/funding/` are reachable through the `more` group's `Transparency` and `About Pharos` columns, so they no longer need the indexed-archive backstop.
+The hand-curated sub-clusters (taxonomy browse, stablecoin profiles, About, methodology changelogs, more reference) are the exception to the derive-everything rule: they exist to surface a tier's children next to their parent. Stablecoin profile rows come from `CLIENT_TRACKED_STABLECOINS` in `shared/lib/stablecoins/client-registry.ts` with `buildStablecoinUrl()` from `shared/lib/urls.ts`, and their description is chosen from the coin's lifecycle status. `/coverage/` and `/funding/` are reachable through the `more` group's `Transparency` and `About Pharos` columns, so they no longer need the indexed-archive backstop.
 
 ## Indexed Archive
 
 The closing `Every remaining public route` section is the completeness backstop: it renders every `PUBLIC_ROUTE_INVENTORY` entry that the curated tiers and companion rows did not already list, labelled by its `PublicRouteKind`. A new indexable route family appears here automatically, so the page cannot silently fall behind the XML sitemap.
 
-What it does not do: the archive is a projection, not a gate. Nothing asserts that the curated tiers agree with the inventory — the sitemap parity test in `src/app/__tests__/sitemap-frozen.test.ts` covers `src/app/sitemap.ts` against the registry, not this route. Deduplication is by exact `href` string, so a curated row that differs from its inventory entry only by trailing slash or hash is listed twice rather than suppressed.
+What it does not do: the archive is a projection, not a gate. Nothing asserts that the curated tiers agree with the inventory — the sitemap parity test in `src/app/__tests__/sitemap-frozen.test.ts` covers `src/app/sitemap.ts` against the registry, not this route. `navToRow()` normalizes internal nav paths to trailing slashes while retaining hashes; archive deduplication then compares exact `href` strings, so hash links or non-normalized hand-curated rows can still duplicate an inventory entry.
 
 ## Update Rules
 

@@ -286,6 +286,136 @@ describe("Telegram transport outage control", () => {
     expect(resumed).toMatchObject({ generation: 2, active: false, expiresAt: NOW + 10 });
   });
 
+  it("creates a pause only when the captured generation is zero for an absent mode", async () => {
+    const { db } = fixtures.open();
+    const input = {
+      mode: "fresh" as const,
+      expiresAt: NOW + 120,
+      reason: "incident review",
+      actor: "operator@example.com",
+      nowSec: NOW,
+    };
+    await expect(setTelegramDeliveryPause(db, {
+      ...input, expectedGeneration: 1,
+    })).resolves.toBeNull();
+    await expect(readTelegramDeliveryPause(db, "fresh", NOW)).resolves.toBeNull();
+
+    await expect(setTelegramDeliveryPause(db, {
+      ...input, expectedGeneration: 0,
+    })).resolves.toEqual({
+      mode: "fresh",
+      generation: 1,
+      active: true,
+      expiresAt: NOW + 120,
+      reason: "incident review",
+      actor: "operator@example.com",
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+  });
+
+  it.each([10, 121])("renews a pause at +%s seconds with its matching captured generation", async (elapsedSec) => {
+    const { sqlite, db } = fixtures.open();
+    const paused = await setTelegramDeliveryPause(db, {
+      mode: "pending",
+      expectedGeneration: 0,
+      expiresAt: NOW + 120,
+      reason: "incident review",
+      actor: "operator@example.com",
+      nowSec: NOW,
+    });
+    expect(paused?.generation).toBe(1);
+
+    const renewed = await setTelegramDeliveryPause(db, {
+      mode: "pending",
+      expectedGeneration: paused!.generation,
+      expiresAt: NOW + 300,
+      reason: "incident ongoing",
+      actor: "second-operator@example.com",
+      nowSec: NOW + elapsedSec,
+      auditAction: "telegram-delivery-pause",
+    });
+    expect(renewed).toEqual({
+      mode: "pending",
+      generation: 2,
+      active: true,
+      expiresAt: NOW + 300,
+      reason: "incident ongoing",
+      actor: "second-operator@example.com",
+      createdAt: NOW,
+      updatedAt: NOW + elapsedSec,
+    });
+    expect(sqlite.prepare("SELECT action, target, details_json FROM admin_action_audit").all()).toEqual([
+      {
+        action: "telegram-delivery-pause",
+        target: "pending",
+        details_json: JSON.stringify({
+          mode: "pending",
+          generation: 2,
+          active: true,
+          expiresAt: NOW + 300,
+          reason: "incident ongoing",
+        }),
+      },
+    ]);
+  });
+
+  it("re-pauses a resumed mode with its matching captured generation", async () => {
+    const { db } = fixtures.open();
+    await setTelegramDeliveryPause(db, {
+      mode: "admin",
+      expectedGeneration: 0,
+      expiresAt: NOW + 120,
+      reason: "incident review",
+      actor: "operator@example.com",
+      nowSec: NOW,
+    });
+    const resumed = await resumeTelegramDelivery(db, {
+      mode: "admin", expectedGeneration: 1, actor: "operator@example.com", nowSec: NOW + 10,
+    });
+    expect(resumed).toMatchObject({ generation: 2, active: false });
+
+    await expect(setTelegramDeliveryPause(db, {
+      mode: "admin",
+      expectedGeneration: resumed!.generation,
+      expiresAt: NOW + 300,
+      reason: "incident returned",
+      actor: "operator@example.com",
+      nowSec: NOW + 20,
+    })).resolves.toMatchObject({
+      generation: 3,
+      active: true,
+      expiresAt: NOW + 300,
+      createdAt: NOW,
+      updatedAt: NOW + 20,
+    });
+  });
+
+  it.each([0, 2])("refuses a pause renewal with mismatched generation %s without state or audit changes", async (expectedGeneration) => {
+    const { sqlite, db } = fixtures.open();
+    const paused = await setTelegramDeliveryPause(db, {
+      mode: "pending",
+      expectedGeneration: 0,
+      expiresAt: NOW + 120,
+      reason: "incident review",
+      actor: "operator@example.com",
+      nowSec: NOW,
+    });
+    expect(paused).toMatchObject({ generation: 1, active: true });
+
+    await expect(setTelegramDeliveryPause(db, {
+      mode: "pending",
+      expectedGeneration,
+      expiresAt: NOW + 300,
+      reason: "stale renewal",
+      actor: "second-operator@example.com",
+      nowSec: NOW + 10,
+      auditAction: "telegram-delivery-pause",
+    })).resolves.toBeNull();
+    await expect(readTelegramDeliveryPause(db, "pending", NOW + 10)).resolves.toEqual(paused);
+    expect(sqlite.prepare("SELECT id FROM admin_action_audit").all()).toEqual([]);
+  });
+
   it("prunes observations beyond the documented bounded retention", async () => {
     const { sqlite, db } = fixtures.open();
     sqlite.prepare(

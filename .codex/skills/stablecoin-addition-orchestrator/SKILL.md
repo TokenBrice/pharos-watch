@@ -1,6 +1,6 @@
 ---
 name: stablecoin-addition-orchestrator
-description: Coordinate a Pharos stablecoin addition or pre-launch promotion by enforcing prerequisites and routing each research domain to its specialist skill.
+description: Coordinate a Pharos stablecoin addition or pre-launch promotion by enforcing pre-edit runtime admission, routing specialist research and authorized edits, and owning the integrated generation/check handoff.
 user_invocable: true
 ---
 
@@ -18,19 +18,21 @@ Cite its provenance record (keyless URL, block, timestamp); never cite `latest` 
 1. Route the planned files and classify the asset as active or pre-launch under [Phase 0](../../../docs/process/adding-a-stablecoin.md#phase-0---decide-what-you-are-adding).
 2. Confirm listing eligibility. Before creating or promoting an active entry, run `stablecoin-runtime-price-marketcap-gate`; stop if either price or market-cap/circulating-supply admission is unavailable. Pre-launch drafts are exempt until promotion.
 3. Choose the canonical `ticker-issuer` ID, base file, canonical-order position, and listing decision before edits.
+4. Open one [addition/evidence handoff packet](../../../docs/process/adding-a-stablecoin.md#additionevidence-handoff-packet). Collect specialist evidence, observation times, admission verdicts, deployment issuance ownership, reviewed gaps, and explicit base/sidecar write boundaries there. The packet is task handoff data, not a persisted registry or authorization to mutate.
 
 ## Research And Routing
 
 - Gather generic base metadata from structured APIs and primary issuer material: identity, collateral, peg mechanism, jurisdiction, official links, `llamaId`, `geckoId`, `cmcSlug`, proof-of-reserves configuration, and lifecycle fields. Treat existing values as hypotheses; do not guess or replace stronger curated evidence.
-- Use `stablecoin-identity-contracts` (`verify`, then `populate` or `discover`) for CoinGecko identity and `contracts[]`.
+- Use `stablecoin-identity-contracts` for CoinGecko identity and `contracts[]`: verify proposed identities against primary deployment evidence before registry edits; the `verify` CLI accepts only already-catalogued IDs, so run it after authoring the approved entry. Use `populate` or `discover` for deployment coverage.
 - Use `reserve-research` for reserve composition/review, `resilience-classify` for explicit overrides, and `compliance-research` for `genius`, `mica`, or both.
 - Use `issuer-questionnaire` only for issuer-only unknowns, `write-ai-summaries` for editorial copy, and `pre-launch-update` for milestone/date maintenance.
 - Route reserves, mint authority, compliance, and risk-review fields to their sidecars per `docs/process/stablecoin-research-sidecars.md`. Generic scalar metadata remains in the base file.
 - Follow [Phase 5](../../../docs/process/adding-a-stablecoin.md#phase-5---evaluate-downstream-coverage-branches) for Mint Authority, blacklistability, bridge routes, yield, reserves, redemption, mint/burn, Bluechip, history, and current Safety Score coverage. Record every branch as added, not applicable, or an intentional gap.
-- Every new or promoted Mint Authority profile must author `mintAuthority.headline`: one verdict sentence of at most 25 words with no raw identifiers (addresses, block heights, second counts, gate codes, evaluator keys, version pins). Schema validation rejects anything else; the long reviewer narrative stays in `summary`.
+- Give each specialist its packet scope and authorized source paths. Identity/deployment changes must name the separately authorized Mint Authority and Bridge Risk owners when coupled edits are required; do not accept a contracts-only change that leaves those owners unresolved.
+- Every new or promoted Mint Authority profile must author `mintAuthority.headline`: one verdict sentence of at most 25 words with no raw identifiers (addresses, block heights, second counts, gate codes, evaluator keys, version pins). The schema validates the word/identifier budget when a headline is present; the addition workflow requires its presence. The long reviewer narrative stays in `summary`.
 
 ## Apply And Finish
 
-Edit only after the research packet and required approvals are complete. Follow [Phase 4](../../../docs/process/adding-a-stablecoin.md#phase-4---edit-the-registry) for registry/generated artifacts, [Phase 7](../../../docs/process/adding-a-stablecoin.md#phase-7---validate) for checks, and Phases 8–9 for protected release, backfill, and runtime verification.
+Edit only after the research packet and required approvals are complete; a research request alone does not authorize writes. Follow [Phase 4](../../../docs/process/adding-a-stablecoin.md#phase-4---edit-the-registry) for source edits. After all specialist base/sidecar/downstream edits land, own the single [Phase 7](../../../docs/process/adding-a-stablecoin.md#phase-7---validate) generation/check pass; specialists return changed sources and unexercised integration checks instead of independently regenerating shared artifacts. Refresh affected results if later source edits invalidate them. Follow Phases 8–9 for separately authorized protected release, backfill, and runtime verification.
 
-Do not claim completion without reporting lifecycle, admitted runtime path or exemption, source/sidecar files, canonical order/listing decision, identity/contracts, editorial and downstream coverage decisions, generated artifacts, validation, and post-deploy backfill/verification status.
+Finish the packet with actually changed sources/generated outputs and observed versus unexercised checks, backfills, and runtime observations. Do not claim completion without reporting lifecycle, admitted runtime path or exemption, source/sidecar files, canonical order/listing decision, identity/contracts and issuance ownership, editorial/downstream coverage decisions, generated artifacts, validation, and post-deploy backfill/verification status.

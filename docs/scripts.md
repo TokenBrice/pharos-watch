@@ -1,6 +1,6 @@
 # Scripts
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Safety Score Map Refresh · Operator CLI Contract · [Safety Score movement ledger](#safety-score-movement-ledger) · [Safety Score historical capture archive](#safety-score-historical-capture-archive) · [DEX liquidity acceptance capture](#dex-liquidity-acceptance-capture) · Safety Score Capture-Time Replay · D1 Insights Capture · Routing Index · Validation Command Index · Build And Generated Artifacts · PR And Release Gates · Operational Notes · Pre-Commit Hook Mechanics · Release Ownership · Safe Usage Guidelines.
+> **Agent navigation** — Grep `^##` / `^###` or a command name, then read only the matched section: [Overview](#overview) · [Map refresh](#safety-score-map-refresh) · [Daily social](#daily-social-posters) · [Operator CLI contract](#operator-cli-contract) (movement ledger, historical archive, DEX acceptance) · [Capture-time replay](#safety-score-capture-time-replay) · [D1 insights](#d1-insights-capture) (Telegram adoption) · [Routing index](#routing-index) (validation, artifacts, release, smoke, curation, direct tools) · [Operational notes](#operational-notes) (credentials, mutation, destinations, hook) · [Safe usage](#safe-usage-guidelines).
 
 ## Overview
 
@@ -158,17 +158,17 @@ Compare captures before and after an infrastructure change by `period`, `sortBy`
 
 ## Routing Index
 
-Root [`package.json`](../package.json) owns command names, composition and default invocations. Use npm `-- --help` or direct-entrypoint `--help` for current flags/defaults. `scripts/lib/cli-argv-policy.mjs` owns argument-safety classification; do not duplicate its roster.
+Root [`package.json`](../package.json) owns command names and composition. Use `--help` only where supported; legacy validators such as `check:migrations` reject it, so inspect their entrypoint for flags. `scripts/lib/cli-argv-policy.mjs` owns argument-safety classification, not universal help support.
 
 ### Validation Command Index
 
-[`package.json`](../package.json) owns the live commands and their composition; use each entrypoint's help for flags. [Testing: Commands](./testing.md#commands) owns lane behavior, not this discoverability index. Implementation-only changes to runners do not require a copied command or option roster here; behavior, operations, methodology and data-source policy still require their owning documentation.
+[`package.json`](../package.json) owns the live commands and their composition; use supported entrypoint help or inspect its source for flags. [Testing: Commands](./testing.md#commands) owns lane behavior, not this discoverability index. Implementation-only changes to runners do not require a copied command or option roster here; behavior, operations, methodology and data-source policy still require their owning documentation.
 
 ### Build And Generated Artifacts
 
 The stablecoin client projection generator counts the public cemetery as curated dead records plus frozen tracked profiles. Its lightweight generated cemetery count is shared by About copy and root metadata; it is not the curated-only source count.
 
-The Git-history-derived projections publish two different clocks on purpose. A coin profile's sitemap `lastmod` is the newest commit across its base coin file, every `shared/data/stablecoins/domains/**` research sidecar it owns, and the shared detail-page sources, so a reserves, mint-authority, compliance or risk-review edit moves that profile's date without touching its base file. Generated docs metadata uses committer time for `dateModified`, because that is deployment modification time rather than the author clock a rebase or cherry-pick can preserve, and keeps author time for `dateCreated`, which is the authored-inception date of the document. Both projections are selected by the sources declared in `scripts/lib/automation-registry.mjs`, so a new sidecar tree or a new public doc must be added to those declarations to reselect its generator.
+The Git-history-derived projections publish different clocks on purpose. A coin profile's sitemap `lastmod` uses the newest source commit across its base coin file, owned research sidecars and shared detail-page sources. Docs metadata uses committer time for `dateModified` and author time for `dateCreated`. Artifact selection is declared in `scripts/lib/automation-registry.mjs`: sitemap source families come from `scripts/lib/sitemap-source-paths.mts`, while public-doc paths are derived from `shared/lib/public-doc-manifest.json`. Update the owning inventory when adding an uncovered family or public doc; do not maintain a second roster in the registry.
 
 Use `package.json` for artifact commands and `scripts/lib/automation-registry.mjs` for dependencies, lifecycle, outputs, checkability, and staging. Lifecycles are `compile-input`, `post-refresh`, and `maintenance-only`; standalone `prebuild` runs the first two, while Pages splits preparation/release for one live snapshot acquisition. Offline bootstrap writes empty detail envelopes before credentials/fetch; snapshots declare catalog prerequisites and an output directory. Setup rejects changed tracked checkable outputs and nonignored registered outputs absent from Git, including after restore; regenerate and commit repairs with their sources. Ignored compile outputs remain allowed. See [release ordering](./deployment-process.md#ci-deploy-sequence).
 
@@ -182,13 +182,13 @@ Build and release ordering is documented in [Deployment Process](./deployment-pr
 
 `PHAROS_DETAIL_SNAPSHOT_SOURCE` defaults to `per-coin` (the Pages release sets `bulk`); `verify:detail-snapshot-sources` reports byte/field diffs and pass timings; `--keep-dir` retains evidence: [bulk source](./stablecoin-detail-page.md#build-snapshot-hydration).
 
-`postbuild` runs `inline-homepage-critical-css.ts` in a Beasties worker pool; `PHAROS_CRITICAL_CSS_WORKERS` overrides concurrency: [Pages release](./deployment-process.md#ci-deploy-sequence).
+`postbuild` generates Markdown exports, then runs `inline-homepage-critical-css.ts` in a Beasties worker pool; `PHAROS_CRITICAL_CSS_WORKERS` overrides concurrency: [Pages release](./deployment-process.md#ci-deploy-sequence).
 
 ### PR And Release Gates
 
 Use [Pre-push readiness](./testing.md#pre-push-readiness) for the ordered runtime/ref/artifact/receipt contract and [release policy](./deployment-process.md#release-snapshot-state-machine) for deployment gates. [Boundary waivers](./process/boundary-waivers.md) retain their reviewed scope. Focused, filtered and plan-only checks are authoring feedback, never readiness proof; unmapped production paths are routing failures.
 
-[`scripts/lib/pr-test-plan.mts`](../scripts/lib/pr-test-plan.mts) owns selection and weighted shard plans; [CI Pipeline](./testing.md#ci-pipeline) owns plan consumption and timing refresh/provenance/review. Timing lanes must remain explicit and consistent across headings and overflow links; scheduling telemetry never establishes test or coverage correctness.
+[`scripts/lib/pr-test-selection.mts`](../scripts/lib/pr-test-selection.mts) owns changed-file test selection, with always-run sets in [`scripts/lib/critical-test-files.mts`](../scripts/lib/critical-test-files.mts); [`scripts/lib/pr-test-plan.mts`](../scripts/lib/pr-test-plan.mts) only partitions the selected list into weighted shards and serializes the plan. [CI Pipeline](./testing.md#ci-pipeline) owns plan consumption and timing refresh/provenance/review. Timing lanes must remain explicit and consistent across headings and overflow links; scheduling telemetry never establishes test or coverage correctness.
 
 Critical ownership reads base-revision Git blobs by declared byte length, so NULs and multibyte text cannot shift later records. Import-boundary checks include literal dynamic imports and retain only the reviewed waiver. Use the [smallest adequate check matrix](./testing.md#smallest-adequate-check-per-area) for focused selection and preview.
 

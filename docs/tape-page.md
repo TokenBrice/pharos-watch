@@ -57,7 +57,7 @@ Metadata is authored directly in `src/app/timeline/page.tsx` with canonical `/ti
 
 ## URL Filter Contract
 
-Filter state is read from URL search params via `useUrlFilters` and decoded in `TIMELINE_URL_SCHEMA` (`src/app/timeline/client.tsx`) through the shared URL-state codec. The schema preserves the legacy `alltime` and `all` window tokens:
+Filter state is read from URL search params via `useUrlFilters` and decoded in `TIMELINE_URL_SCHEMA` (`src/app/timeline/client.tsx`) through the shared URL-state codec. `alltime` is the canonical all-time window token; legacy `all` remains accepted.
 
 | Param      | Values                                                                                | Default  | Notes                                                                                  |
 | ---------- | ------------------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------- |
@@ -70,7 +70,7 @@ Filter state is read from URL search params via `useUrlFilters` and decoded in `
 | `q`        | free-text                                                                             | empty    | Debounced 200 ms in the client, then forwarded to `/api/events?q=` for server-side search |
 | `event`    | event id (`${ts_ms}-${type}-${hash8}`)                                                | empty    | Permalink target; resolved through a 200-row latest-events buffer when out of view     |
 
-`severity`, `peg`, `chain`, and `window` are always set; clearing them returns to the defaults shown above. The all-time empty-state CTA writes `window=alltime`.
+Decoded state always supplies `severity`, `peg`, `chain`, and `window`; default-valued params are omitted from the URL. Clearing them restores the defaults above. The all-time empty-state CTA writes `window=alltime`.
 
 ---
 
@@ -78,11 +78,11 @@ Filter state is read from URL search params via `useUrlFilters` and decoded in `
 
 The route is a thin client over `GET /api/events` (handler `worker/src/api/events.ts`, route key `events` in `shared/lib/api-endpoints/definitions.ts`).
 
-- **Pagination:** opaque cursor (base64url-encoded `{v:1, ts, id}`); page size is 500 (also the API max).
+- **Pagination:** opaque cursor (base64url-encoded `{v:1, ts, id}`); the timeline hook requests 500 rows (the API maximum), while direct API requests default to 50.
 - **Severity floor expansion:** server expands `severityFloor=<level>` into the inclusive set at or above that rank using `SEVERITY_RANK` from `@shared/types/tape-event`.
 - **Type filters:** `type=foo` matches exactly; `type=foo.*` matches all subtypes; `class=foo` is a shortcut for `type=foo.*`. Both can be passed multiple times.
-- **Freshness:** the response Cache-Control is the `realtime` profile (`public, s-maxage=60, max-age=10`); the freshness budget (`FRESHNESS_MAX_AGE_SEC = 600`, 10 minutes) instead drives `_meta` `{updatedAt, ageSeconds, status}`. The `project-tape` cron lane runs every 30 minutes, so `Warning: 110` fires after roughly 80 minutes absent.
-- **Read boundary:** every queried row is mapped and then validated against the complete `TapeEventSchema` (in `worker/src/lib/tape-event-helpers.ts`) before it is emitted. A row whose stored `payload_json` is not a JSON object, or whose mapped event fails the schema, is quarantined with a named reason in the Worker log (`payload-json-invalid` / `wire-schema-invalid`, plus the failing field paths) and counted in `droppedRows`; it is never published as an event, and the remaining rows are still served. Corrupt JSON is not coerced into an empty payload.
+- **Freshness:** nominal Cache-Control is the `realtime` profile (`public, s-maxage=60, max-age=10`). The 600-second base is multiplied by the shared freshness ratios: `_meta` is fresh through 80 minutes and degraded through 120 minutes. TTLs are bounded by the remaining fresh runway; stale responses use `no-store` with Warning 110. Missing/invalid producer history or failed freshness lookup uses `no-store` with Warning 199 and a named `_meta.reason`. Freshness follows confirmed `project-tape` output, not the newest event.
+- **Read boundary:** queried rows are mapped and validated against `TapeEventSchema` in `worker/src/lib/tape-event-helpers.ts`. Non-object/invalid JSON or wire-schema failures are quarantined in Worker logs (`payload-json-invalid` / `wire-schema-invalid`, with failing paths), counted in `droppedRows`, and excluded; valid rows still publish. Corrupt JSON is never coerced to an empty payload.
 - **Static-catalog dates:** cemetery and lifecycle projectors accept only round-trip-valid `YYYY-MM` or `YYYY-MM-DD` UTC dates. Missing or calendar-invalid values are logged and skipped; they never become publication-time events.
 - **Hook:** `useEvents()` in `src/hooks/use-events.ts` wraps the infinite-query path; `useLatestEvents()` wraps the single-page latest-N path used by the homepage tape marquee and the permalink buffer.
 
@@ -106,7 +106,7 @@ Every non-dry-run freeze projector invocation also reconciles one page of **at m
 
 This recurring sweep closes the migration-before-activation overlap and repairs display-name rows written during a Worker rollback after the fixed Worker is reactivated. Inserts ahead of an in-progress repair cursor are found on the next sweep, regardless of event age or source watermark. Activation alone is not completion: after old writers drain, retain a full repair sweep's counts and verify that the exact `0266` source/type/name predicate has no remaining rows before declaring reconciliation complete. Rollback to an old Worker suspends this repair and can reintroduce legacy chains; roll forward and observe the sweep again. A chain-only repair never inserts or replays a Telegram event, and the existing 24-hour freeze-alert recovery age gate is unchanged. Operator `backfill-tape` runs share this repair path; dry runs make no chain or repair-cursor writes.
 
-Repair failures are isolated from fresh source projection and logged with machine-readable reason `freeze-chain-repair-failed`; the repair cursor advances only after successful repair writes, so failed pages remain retryable without delaying new freeze events.
+Repair failures are isolated from fresh projection and logged as `freeze-chain-repair-failed`. Cursor progress persists only after successful batch completion, including clean pages with no eligible updates; failed batches leave their page retryable.
 
 DEWS band projection requires durable publication proof. The forward sparse `stress_signals` scan and its prior-band seed join `surface_publication_generations` at `surface = "dews"` and `state = "published"`. Band changes always create a sparse-history row, while unchanged half-hourly samples may be omitted. A partially written generation that fails DEWS row-count validation therefore emits no Tape event and cannot advance either DEWS projector watermark; a later published generation diffs against the last published band rather than the failed intermediate row. The DEWS cache pointer and ledger row commit atomically, while migration `0182` plus runtime pointer reconciliation bootstrap the publication that predates this contract.
 
@@ -123,11 +123,11 @@ Static-catalog source-key probes use the same bounded D1 overload retry as proje
 | `dews.band_transitions` (emits `.escalated` / `.deescalated`) | `stress_signals`                        | DEWS stress-level changes                                            |
 | `mint_burn.large_flow` (emits `.large_mint` / `.large_burn`)          | `mint_burn_events`                      | Large single-transaction mint or burn flows (one event per direction) |
 | `yield.warning_emitted` / `.pys_dropped`        | `yield_history` (warning_emitted) / `yield_source_decisions` (pys_dropped) | Yield-risk warnings and PYS drops                                    |
-| `methodology.bumped` (emits `:<domain>`)                   | `shared/lib/*-version` modules          | Methodology version bumps (first-observation pattern)                |
+| `methodology.bumped` (emits `:<domain>`)                   | `shared/lib/methodology-versions/registry.ts` and its authored changelog data | Methodology version bumps (first-observation pattern)                |
 | `cemetery.entry.added`                          | `shared/lib/cemetery-merged.ts`         | Newly added cemetery entries                                         |
 | `lifecycle.tracked.frozen`                      | `shared/lib/stablecoins/` (frozen status)| Tracked coin frozen-lifecycle entries                                |
 
-`TAPE_CLASSES` (`src/components/tape/tape-classes.ts`) carries exactly the classes with a live projector — one entry per row in the table above. The three reserved chip slots (`reserve`, `redemption`, `liquidity`) and the `hasProjector` flag that subdued them were deleted on 2026-08-09: a class earns a chip when its projector ships. `TAPE_CLASS_LABEL` in `src/lib/tape-class-style.ts` is derived from this list rather than re-authored.
+`TAPE_CLASSES` (`src/components/tape/tape-classes.ts`) owns the live-projector class roster. A class earns a chip when its projector ships; no reserved inactive slots are rendered. `TAPE_CLASS_LABEL` in `src/lib/tape-class-style.ts` derives from that list.
 
 `tape_events` schema lives in `worker/migrations/0000_baseline.sql`, which absorbed the pre-squash `0129_tape_events.sql`. The wire `event_id` is `${ts_ms}-${type}-${hash8}` and is reused as the `?event=<id>` permalink.
 
@@ -143,7 +143,7 @@ Retention policy: `tape_events` is a product timeline archive kept forever. The 
 - **Day grouping:** events are bucketed by UTC day; today and yesterday get `Today` / `Yesterday` primary labels. The day separator carries a per-day counter (`N EVT · M CLS · MAX <severity glyph>`, plus `· K OPEN` when that day has open incidents) so users can decide whether to scan a day before scrolling. Quiet days with `≤ 3` events render as a collapsed day-level `<details>` summary listing class/ticker tokens before the underlying class groups.
 - **Digest grouping:** within each day, events are partitioned by class by `digestPage(...)` and `mergeDigestedPages(...)` in `src/lib/tape-digest.ts`. Classes with `≥ 3` events render as a collapsible `<details>` recap row carrying a class background tint, count, top tickers, and class-specific aggregate stats (`worst N bps`, `$X frozen`, `N upgrades · M downgrades`, `max <severity>`). Classes with `< 3` events render inline unless the whole day is using the quiet-day wrapper. The recap line stays visible when closed; clicking reveals the underlying `EventCard` rows. Severity above the notice floor is communicated via the colored `max <severity>` chip in the recap and via the per-event severity text in the open state.
 - **Page-seam merging:** `digestPage(...)` digests each infinite-query page independently and `mergeDigestedPages(...)` re-merges adjacent pages that share a UTC day, preserving day grouping across pagination seams.
-- **Collapse-by-coin-class:** within an expanded digest, events sharing the same coin/chain attribution, full event type, severity, and transition further collapse (regardless of adjacency) into a single card with a count badge via `collapseByCoinClass(...)`; different types within one class (e.g. `depeg.opened` vs `depeg.resolved`) stay separate.
+- **Collapse-by-coin-class:** every per-day class group collapses events with the same coin/chain attribution, full type, severity, and transition into one count-badged card via `collapseByCoinClass(...)`, regardless of adjacency or digest-wrapper threshold. Different types (e.g. `depeg.opened` and `depeg.resolved`) remain separate.
 - **Per-class tints:** every `EventCard` and digest recap row carries a class background tint (`bg-{rose|cyan|indigo|…}-500/[0.08]` for rows; `/10` for marquee chips). The tint scheme is `src/lib/tape-class-style.ts` and is shared with `src/components/homepage-tape.tsx`. Class is signaled by hue; severity stays text-color (Aesthetic Lock).
 - **Open incidents banner:** active `depeg.opened` events whose `sourceRowId` has not yet been seen as recovery-backed `depeg.resolved` in the visible window render in a separate amber band above the day groups. Deduped per coin.
 - **`?event=<id>` permalink:** when absent from the filtered feed, query a 200-row latest buffer (`useLatestEvents({ limit: 200 })`) and pin the resolved event inside `#tape-feed`, even with zero ordinary rows. Show the filtered-feed empty explanation separately. Resolved targets receive scroll, keyboard focus, and pulse-highlight for `HIGHLIGHT_DURATION_MS` (2000 ms).

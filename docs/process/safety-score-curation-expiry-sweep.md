@@ -1,35 +1,35 @@
 # Safety Score V9 Curation-Expiry Sweep
 
-Run this sweep weekly to refresh the Safety Score V9 evidence-curation queue before
-reviewed curated reserve compositions cross their 31-day freshness window plus the
-fixed 7-day reporting grace. With the default 10-day lookahead, the pre-expiry queue
-starts surfacing admitted compositions as they approach the 38-day effective bound,
-normally around age 28 days.
+Run this sweep weekly to refresh the evidence-curation queue before reviewed reserve
+evidence loses admission. With the default 10-day lookahead, the preventive queue
+re-evaluates the applicable source-strength, freshness, and whole-asset denominator
+gates in production's `resolveReviewedReserveRows()`; expiry is not one universal
+composition-age threshold.
 
 Run every command from the repository root. Use one fresh production capture for the
 entire sweep; do not combine worklists or dates from different producer cycles.
 
 The sweep is also automated: `.github/workflows/curation-expiry-sweep.yml` runs this
 procedure every Tuesday at 05:45 UTC (and on manual dispatch) with the deploy
-pipeline's Cloudflare credentials. It publishes the live-withheld counterfactual
-report, expiry queue, the worklist's Dependencies/Backing streams, and a compact
-missing-data-registry summary into the pinned "Safety Score curation expiry sweep"
-issue. The full missing-data registry is retained as a workflow artifact for 30 days.
-The workflow run fails when any generator breaks, so a green run means the queues are
-trustworthy. Draining the queues stays operator work — follow the steps below.
+pipeline's Cloudflare credentials. It updates or creates the "Safety Score curation
+expiry sweep" issue with bounded live-withheld/expiry/Dependencies/Backing excerpts
+and registry counts. Only the full missing-data registry is retained as a 30-day
+artifact; full queue/report files are not uploaded. Generator/projection failures
+fail the run, but green generation does not attest cache freshness.
+Draining complete queues stays operator work — follow the steps below.
 
 **Operator contract:** the sweep operator reviews and drains the `DEP`/`RESV`,
 pre-expiry, and live-withheld rows weekly. Mark a high-supply counterfactual grade drop
-as high priority in the pinned issue, record the next action or blocker before the next
+as high priority in the sweep issue, record the next action or blocker before the next
 producer cycle, and keep it open until the fallback path is reviewed.
 
 ## 1. Capture the current production input
 
-Create `agents/v9-captures/`, then follow
-[section (a) of the equivalence harness](./safety-score-equivalence-harness.md#a-export-a-production-capture)
-with `--normalized-only` on `report-cards:capture-fixed-input`. This sweep
-intentionally uses HEAD curation rather than an embedded capture-time registry;
-the plain normalized capture retains the authoritative top-level `clockSec`.
+Create `agents/v9-captures/`, then use the
+[prepare-time base-only export in section (a)](./safety-score-equivalence-harness.md#prepare-time-base-only)
+with `--exact-cache-export --normalized-only` on `report-cards:capture-fixed-input`.
+This sweep uses HEAD curation, not an accepted/embedded-registry capture;
+the normalized input retains top-level `clockSec`.
 
 ```bash
 mkdir -p agents/v9-captures
@@ -107,12 +107,11 @@ queue until dated evidence exists.
 
 The worklist reports gaps that already affect the replay. It does not list every still
 admitted composition approaching expiry. Run this extraction against the same replay;
-it lists compositions that remain admitted at the capture clock but will cross the
-31-day composition window plus 7-day reporting grace within the requested lookahead,
-for assets with no live reserve snapshot in that capture. Unknown supply sorts first
-(asset-ID ties), then known supplies descend. Null/missing rows carry unavailable
-reasons; observed zero stays zero. The queue subtotal counts only known supply and
-is not a complete supply denominator:
+it lists compositions admitted at the capture clock but inadmissible within the
+requested lookahead, for assets with no live reserve rows in that capture.
+Unknown supply sorts first (asset-ID ties), then known supplies descend. Null/missing
+rows carry unavailable reasons; observed zero stays zero. The queue subtotal counts
+only known supply and is not a complete supply denominator:
 
 ```bash
 npm run safety-score-v9:expiry-queue -- --replay "${replay}"
@@ -124,17 +123,17 @@ the asset is in `fixedInput.liveToFallbackCoins`)
 `buildSafetyScoreV9ReviewedAuditedFallbackReserveRows` and
 `buildSafetyScoreV9ReviewedCuratedFallbackReserveRows`, or
 `buildSafetyScoreV9ReviewedStandaloneReserveRows` when there is no live producer.
-It is re-evaluated at the capture clock plus the lookahead (`--days`, default 10),
-so it cannot drift from the 31-day window, the 7-day reporting grace, the
-one-year audited admission path, or the D6 prudential path.
+It is re-evaluated at the capture clock plus the lookahead (`--days`, default 10).
+`extension-reserves.ts` and the active policy's `evidenceExpiry` own the source-specific
+freshness and whole-asset admission gates; do not copy age cutoffs into this workflow.
 Only compositions that are admitted today and stop being admitted within the
 lookahead are listed — currently-inadmissible compositions already surface in the
 worklist's `RESV` and `DEP` streams and are deliberately excluded here.
 
-The queue is about to become inadmissible, not about to lose evidence strength. An
-audited fallback crossing its 38-day evidence bound remains admitted for the
-one-year audited path; its strength/ceiling transition belongs to the
-live-withheld counterfactual report below.
+The queue is about to become inadmissible, not merely about to change evidence strength.
+Named independent reports use the policy's report-period bound, not a one-year audited
+escape path; expired named reports cannot fall through to the generic curated lane.
+Use the live-withheld report below to inspect the resulting fallback score and ceiling.
 
 The columns are asset ID, evaluated-set circulating USD (drain priority, largest
 first), curated `compositionAsOf`, age in days, whether the composition carries
@@ -310,17 +309,17 @@ counterfactual report.
 | Check | Done when |
 | --- | --- |
 | `DEP` / `RESV` drain | Each supply-prioritized item disappeared or has a current, evidence-backed blocker. |
-| Pre-expiry review | Every listed composition was refreshed, received a live snapshot, or has a documented blocker before the 31-day window plus 7-day reporting grace closes. |
-| Live-withheld review | Each high-supply grade-drop row has a reviewed fallback path, a current producer action, or a documented blocker/escalation in the pinned issue. |
+| Pre-expiry review | Every listed composition was refreshed, received a live snapshot, or has a documented blocker before its applicable production admission bound closes. |
+| Live-withheld review | Each high-supply grade-drop row has a reviewed fallback path, a current producer action, or a documented blocker/escalation in the sweep issue. |
 | Missing-data registry | Every reviewed claim group has a promote/reject/defer ledger entry; promoted facts count only after their exact sentinel disappears on a fresh production replay. |
 | Measurement | The closing worklist, pre-expiry list, and counterfactual report come from one fresh capture replayed with its own `clockSec`. |
 
 
 ## Artifact hygiene
 
-Keep captures, replays, generated worklists, the full missing-data registry, and
-temporary queue output under `agents/v9-captures/`. The entire `agents/` tree is
-gitignored scratch space. Never commit these multi-megabyte, point-in-time artifacts
+For manual runs, keep captures, replays, worklists, the full missing-data registry, and
+queue output under `agents/v9-captures/`; automation uses ephemeral `agents/sweep/`.
+Both are gitignored scratch. Never commit these multi-megabyte, point-in-time artifacts
 or move them into `docs/`; re-export production input on every weekly sweep. The only
 committed point-in-time projection is the compact registry summary named above, while
 the append-only reviewed ledger preserves operator decisions. Follow the equivalence harness's

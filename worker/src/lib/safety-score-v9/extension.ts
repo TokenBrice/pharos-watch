@@ -1,6 +1,7 @@
 import { buildSafetyScoreV9ReserveBoundFacts, SAFETY_SCORE_V9_RESERVE_BOUND_FACTS_DIGEST } from "./extension-reserve-bounds";
 import { buildSafetyScoreV10ScopedReserveAdmissions, addScopedReserveEvidence } from "./extension-reserves";
 import { resolveMechanismArchetype } from "@shared/lib/classification/resolve-mechanism-archetype";
+import { resolveEffectiveImplementationLaunchDate } from "@shared/lib/classification/resolve-implementation-launch-date";
 import { resolveChainId } from "@shared/types/chain-identity";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
@@ -123,7 +124,6 @@ import {
   projectControlAuthority,
   boundedObservedAt,
   confidenceForResearch,
-  conservativeDateEndSec,
   parseBoundedDateSec,
   maximumObservedAt,
   notApplicableStatus,
@@ -2298,6 +2298,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   // resulting artifact measures code and curation together and is replay-only.
   const registryFingerprint = allowRegistryMismatch ? fixedInput.registryFingerprint : localRegistryFingerprint;
   const clockSec = fixedInput.clockSec;
+  const asOfDate = new Date(clockSec * 1_000).toISOString().slice(0, 10);
   const activeIds = new Set(fixedInput.activeAssetIds);
   const preparedById = new Map<string, PreparedDependency>();
   const dependencyAdmissionErrors = new Map<string, unknown>();
@@ -2649,7 +2650,11 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           controls.length > 0 &&
           controls.every(controlCanCarryKnownStatus);
         admissionPath = "launchedAtSec";
-        const launchedAtSec = conservativeDateEndSec(meta.implementationLaunchDate ?? meta.launchDate, clockSec);
+        const implementationLaunch = resolveEffectiveImplementationLaunchDate(meta, metaById, asOfDate);
+        // Track-record months use UTC calendar dates, not intraday duration.
+        const launchedAtSec = implementationLaunch.date === null
+          ? null
+          : Date.parse(`${implementationLaunch.date}T00:00:00.000Z`) / 1_000;
         admissionPath = "mechanismExitFacts";
         const mechanismExitFacts = getSafetyScoreV9MechanismExitFacts(assetId, archetype, clockSec);
         admissionPath = "routeReviews";

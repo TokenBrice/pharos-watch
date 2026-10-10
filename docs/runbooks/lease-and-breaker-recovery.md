@@ -8,7 +8,7 @@ Shared recovery procedure for two operator actions that several symptom runbooks
 
 ## Safety Precondition
 
-Never clear a lease while `/api/status` shows a fresh matching `crons[*].inFlight` progress row for the same job: the run is still live and the lease is doing its job. Confirm the lease is stale first — repeated `skipped_locked` runs with no fresh progress heartbeat. Never clear a breaker before the upstream has actually recovered; the delete forces the next call to re-probe closed and a still-failing source simply re-opens it.
+Never clear a lease while `/api/status` shows a fresh matching `crons[*].inFlight` progress row for the same job: the run is still live and the lease is doing its job. Confirm the lease is stale first — repeated `skipped_locked` runs with no fresh progress heartbeat. Never clear a breaker before the upstream has actually recovered; after the existing five-second isolate memo expires, the missing row reads as closed and permits another fetch. A still-failing source accumulates failures and re-opens at `CIRCUIT_OPEN_THRESHOLD` (`shared/lib/ops-limits.ts`).
 
 For reserve-family locks, inspect `blockedBy` rather than treating the lease key as the holder job: config repair and checkpoint replay intentionally share `sync-live-reserves`. The requester `leaseOwner` is separate. Versioned holder envelopes name the actual path/invocation/slot; legacy owners are attributed only through exact-owner-matched progress, and unknown fields remain null. The natural producer waits only within its fixed admission budget (approximately 145 seconds for a fresh head); a renewed/long rollout lease can exceed that budget. Do not evict it to force admission.
 
@@ -18,7 +18,7 @@ Incompatible checkpoint debt requires supersession, not a checkpoint/lease reset
 
 ## Clear A Stuck Cron Lease
 
-Lease rows are keyed by `cron_leases.job`, using the status-tracked job id (`sync-stablecoins`, `sync-yield-data`, `fetch-tbill-rate`, and so on):
+Run the Wrangler examples from `worker/`, where `wrangler.toml` declares `stablecoin-db`. Lease rows are keyed by `cron_leases.job`, using the status-tracked job id (`sync-stablecoins`, `sync-yield-data`, `fetch-tbill-rate`, and so on):
 
 ```bash
 npx --no-install wrangler d1 execute stablecoin-db --remote --command \

@@ -30,7 +30,7 @@ The script prints two artifacts:
 ### 2. Apply the JSON edits
 
 - Append the snapshot entry to `frozen-snapshots.json`.
-- In the coin's per-coin source file (`shared/data/stablecoins/coins/<id>.json`), set `status: "frozen"`, add `frozenAt: "YYYY-MM-DD"`, and add the `obituary` block. Replace the placeholder strings (`causeOfDeath`, `epitaph`, `obituary`, `sourceUrl`, `sourceLabel`) with finalized copy. The obituary must satisfy the cemetery inclusion and primary-cause rules in [Cemetery and Compare](./cemetery-and-compare.md#curating-a-record).
+- In the coin's per-coin source file (`shared/data/stablecoins/coins/<id>.json`), set `status: "frozen"`, add `frozenAt: "YYYY-MM-DD"`, and add the `obituary` block. Replace the placeholder strings with finalized copy and review the generated `deathDate` (defaults to the freeze month, not the actual death date) and `peakMcap` (maximum observed within 1,825 days, not a guaranteed lifetime peak; omit it without reliable evidence). Follow [Cemetery and Compare](./cemetery-and-compare.md#curating-a-record).
 - The cemetery row's `recordedAt` (the UTC date the record entered Pharos) is `frozenAt` unless `obituary.recordedAt` overrides it. Set `obituary.recordedAt` to the strict UTC `YYYY-MM-DD` on which the coin enters the cemetery only when `frozenAt` preserves an earlier historical freeze date. The row also takes the coin's `mechanismArchetype`, so keep that field.
 - Keep the core tracked metadata fields intact (`id`, `name`, `symbol`, and `flags`). Frozen archive pages and cemetery exports still read the tracked metadata source; the freeze transition adds lifecycle fields rather than replacing the coin with a dead-stablecoin-only record.
 - Run `npm run bootstrap:generated`, then `npx --no-install tsx scripts/maintenance/generate-cemetery-dataset.ts`, `npm run logos:cemetery-atlas` and `npm run build:og-cemetery`, then `npm run check:generated-artifacts`, to refresh and verify the gitignored aggregate, report-card registry fingerprint, legacy redirect map, client registry projections, cemetery dataset exports, cemetery logo atlas and cemetery OG image. The pre-commit hook also regenerates and stages the three cemetery artifacts. Do not edit generated projections by hand.
@@ -51,7 +51,7 @@ Some worker subsystems maintain their own per-coin tables. Remove the frozen coi
 - Any per-coin sync cron (e.g. `sync-usds-status.ts`, `sync-kinesis-supply.ts`) — disable or remove.
 - **`liveReservesConfig` block in the coin's own meta JSON.** If the frozen coin has a `liveReservesConfig` field on its `StablecoinMeta`, **delete that field**. Otherwise the live-reserves cron's `ACTIVE_STABLECOINS.filter(coin.liveReservesConfig)` would still include the coin once the registry filter widens (it is currently safe because `ACTIVE_STABLECOINS` excludes frozen, but removing the config eliminates ambiguity and matches the "no live data sources" intent of the freeze).
 
-The CI guard in `npm run check:frozen-invariants` enforces the listed independent registry removals; `liveReservesConfig` and bespoke per-coin crons still require manual review.
+`npm run check:frozen-invariants` enforces the independent registries imported by `scripts/ci/check-frozen-invariants.ts`; yield variants, `liveReservesConfig`, and bespoke per-coin crons require manual review. Reviewed redemption dispositions are checked by `npm run check:stablecoin-data`.
 
 ### 3b. Add or verify the cemetery logo
 
@@ -93,14 +93,14 @@ npm run build:og-cemetery  # regenerates the /cemetery/ OG card (plot map; no-op
 
 ### 6. Commit
 
-Commit/push according to current repo guidance. Open a PR only when explicitly requested; if a PR is requested, use title `feat(stablecoin): freeze <symbol> (<coin-id>)` and include a brief obituary in the PR body.
+Commit/push according to [Pre-push readiness](./testing.md#pre-push-readiness) and current repo release guidance, including the protected-main PR path for an authorized release. The checks above do not replace readiness. For a freeze release PR, use title `feat(stablecoin): freeze <symbol> (<coin-id>)` and include a brief obituary in the PR body.
 
 ### 7. Post-deploy verification (within 24h)
 
 - Visit `/cemetery/#<id>`: confirm the coin's register row opens, its autopsy reads "Tracked archive: frozen detail page" with an "Archived data →" link to `/stablecoin/<id>/`, and the key-facts "Latest record added" date reflects its `recordedAt` when it is the newest record. On the plot map, confirm its grave stands in its cause's section and death year with a bronze plaque and its logo on the medallion.
 - Visit `/stablecoin/<id>/` — confirm the frozen banner below the hero (within the identity zone), and the "Data frozen on YYYY-MM-DD" footer above each chart section.
 - Inspect Worker logs — confirm no INSERT/UPDATE for the coin's id from any cron.
-- Confirm the next daily Telegram digest fires a **Newly Frozen Stablecoins** appendix section for the coin (`frozenDetected` in the digest appendix metadata). The cemetery appendix diffs `DEAD_STABLECOINS` only and stays silent on a freeze.
+- With a valid prior frozen-ID snapshot, confirm the next daily Telegram digest includes **Newly Frozen Stablecoins** for the coin (`frozenDetected` in appendix metadata). An absent or invalid baseline is seeded silently, not replayed. The cemetery appendix diffs `DEAD_STABLECOINS` only and stays silent on a freeze.
 - Test OG: `https://api.pharos.watch/api/og/stablecoin/<id>` returns 200.
 
 ## Known behaviors (not bugs)

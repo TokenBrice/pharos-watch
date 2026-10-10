@@ -43,14 +43,14 @@ Record date, `reportedAt`, counts, and whether evidence is production, local,
 or fixture-derived.
 
 Record `queueBudgetBasis`: new reports use `post-disposition` unresolved counts
-before truncation, with budgets of 150 headline gaps and 100 recommendation
-candidates. Dead-pin queue items count once; suppressed reviewed work does not.
+before truncation. Read budgets from `COVERAGE_AUDIT_QUEUE_BUDGET` in
+`worker/src/lib/status/yield-health.ts`; the source file wins. Dead-pin items count once; suppressed reviewed work does not.
 Record `queueTotals.totalItemCount`, `publishedItemCount`, `truncatedItemCount`,
 and `byKindScope`: `full-visible` names pre-cap by-kind counts; legacy
 `published-sample` counts are not full totals. Visible = published + truncated;
-candidate = visible + suppressed. Status samples six items per side and the
-report queue twenty; neither is the full count. The admin queue is permanently
-DISPLAY-ONLY (`queueDisplayOnly: true`), with no disposition UI/API.
+candidate = visible + suppressed. Status and report queues are bounded samples;
+read their limits from `COVERAGE_AUDIT_QUEUE_ITEM_LIMIT` in the status owner and
+`OPERATOR_QUEUE_ITEM_LIMIT` in the audit producer, not as full counts. The admin queue is permanently DISPLAY-ONLY (`queueDisplayOnly: true`), with no disposition UI/API.
 Missing or malformed supply cache defers the audit and preserves the prior report.
 
 ## Decision Workflow
@@ -127,8 +127,8 @@ publication gates:
   explicit source-family config.
 - Non-yield-bearing venue opportunities belong in `AUTO_LENDING_POOL_MAP` only
   when the pinned DeFiLlama UUID is safer than generic discovery.
-- Reusable lending protocols belong in `LENDING_PROTOCOL_ALLOWLIST`; keep labels
-  in `LENDING_PROTOCOL_LABELS`.
+- Reusable lending protocols belong in the authored `LENDING_PROTOCOLS` map in
+  `worker/src/lib/yield-config/yield-config-lending-protocols.ts`; its slugs and labels derive `LENDING_PROTOCOL_ALLOWLIST` and `LENDING_PROTOCOL_LABELS`. Do not edit the derived exports.
 - Benchmark-derived assets require a benchmark fetcher, cache schema, yield
   benchmark type update, rate-derived config, tests, and docs/source roster
   updates.

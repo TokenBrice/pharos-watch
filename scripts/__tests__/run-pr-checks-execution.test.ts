@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resolve } from "node:path";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { inspectPrCheckout, runPrChecks, type RunPrChecksOptions } from "../maintenance/run-pr-checks.ts";
-import type { PrCheckReceipt } from "../lib/pr-check-receipt.mts";
+import { writePrCheckReceipt, type PrCheckReceipt } from "../lib/pr-check-receipt.mts";
 import type * as ChangedFilesModule from "../lib/changed-files.mts";
 import type * as CriticalOwnershipModule from "../lib/critical-ownership.mts";
 
@@ -45,6 +45,84 @@ function harness() {
 }
 
 beforeEach(() => { fixture.changedFiles = ["worker/src/api/example.ts"]; });
+
+describe("receipt explanation dispatch", () => {
+  it("reads the current-HEAD receipt without invoking runtime guards, fetches, checks, discovery or receipt writes", async () => {
+    const root = mkdtempSync(`${tmpdir()}/pharos-explain-dispatch-`);
+    try {
+      const path = writePrCheckReceipt({
+        schemaVersion: 1, node: "24.16.0", npm: "11.13.0", baseSha, headSha,
+        treeClean: true, flags: {}, weakened: false, startedAt: "start", finishedAt: "finish",
+        leaves: [{ id: "tests", command: "npm run test:pr", status: "failed", durationMs: 1, firstError: "Type error" }],
+        outcome: "failed",
+      }, root);
+      const before = readFileSync(path, "utf8");
+      const h = harness();
+      const runtimeVersions = vi.fn(() => { throw new Error("must not inspect runtime"); });
+      const inspectReceiptCheckout = vi.fn(() => ({ headSha, treeClean: true, baseRef: "origin/main", localBaseSha: baseSha }));
+      const inspectCheckout = vi.fn(() => { throw new Error("must not inspect gate checkout"); });
+      expect(await runPrChecks(["--explain-receipt"], { ...testEnv, PR_HEAD_SHA: "other-commit" }, {
+        ...h.options, repoRoot: root, runtimeVersions, inspectReceiptCheckout, inspectCheckout,
+      })).toBe(0);
+      expect(inspectReceiptCheckout).toHaveBeenCalledWith("origin/main");
+      expect(runtimeVersions).not.toHaveBeenCalled();
+      expect(inspectCheckout).not.toHaveBeenCalled();
+      expect(h.runCommandImpl).not.toHaveBeenCalled();
+      expect(h.runSecrets).not.toHaveBeenCalled();
+      expect(h.selectPlanTestFiles).not.toHaveBeenCalled();
+      expect(h.receipts).toEqual([]);
+      expect(readFileSync(path, "utf8")).toBe(before);
+      expect(h.stdout.write.mock.calls.map(([chunk]) => chunk).join("")).toContain("Next action: Fix every failed lane (tests)");
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it.each(["--ci-parity", "--plan", "--no-fetch", "--head=other", "--explain-receipt", "--typo"])(
+    "rejects %s alongside explanation before inspecting or executing anything",
+    async (arg) => {
+      const h = harness();
+      const inspectReceiptCheckout = vi.fn(() => { throw new Error("must not inspect checkout"); });
+      expect(await runPrChecks(["--explain-receipt", arg], testEnv, { ...h.options, inspectReceiptCheckout })).toBe(2);
+      expect(inspectReceiptCheckout).not.toHaveBeenCalled();
+      expect(h.runCommandImpl).not.toHaveBeenCalled();
+      expect(h.runSecrets).not.toHaveBeenCalled();
+      expect(h.receipts).toEqual([]);
+    },
+  );
+
+  it("treats a missing receipt as a completed diagnostic, not readiness or a trigger to run checks", async () => {
+    const root = mkdtempSync(`${tmpdir()}/pharos-explain-missing-`);
+    try {
+      const h = harness();
+      expect(await runPrChecks(["--explain-receipt"], testEnv, {
+        ...h.options, repoRoot: root,
+        inspectReceiptCheckout: () => ({ headSha, treeClean: true, baseRef: "origin/main" }),
+      })).toBe(0);
+      expect(h.stdout.write.mock.calls.map(([chunk]) => chunk).join("")).toContain("Receipt: missing");
+      expect(h.runCommandImpl).not.toHaveBeenCalled();
+      expect(h.receipts).toEqual([]);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it("reports unreadable receipt evidence without overwriting it or falling through to the gate", async () => {
+    const root = mkdtempSync(`${tmpdir()}/pharos-explain-invalid-`);
+    try {
+      const path = writePrCheckReceipt({
+        schemaVersion: 1, node: "24.16.0", npm: "11.13.0", baseSha, headSha, treeClean: true,
+        flags: {}, weakened: false, startedAt: "start", finishedAt: "finish", leaves: [], outcome: "passed",
+      }, root);
+      writeFileSync(path, "{invalid");
+      const h = harness();
+      expect(await runPrChecks(["--explain-receipt"], testEnv, {
+        ...h.options, repoRoot: root,
+        inspectReceiptCheckout: () => ({ headSha, treeClean: true, baseRef: "origin/main", localBaseSha: baseSha }),
+      })).toBe(1);
+      expect(h.stderr.write.mock.calls.map(([chunk]) => chunk).join("")).toContain("Receipt explanation failed");
+      expect(h.runCommandImpl).not.toHaveBeenCalled();
+      expect(h.receipts).toEqual([]);
+      expect(readFileSync(path, "utf8")).toBe("{invalid");
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+});
 
 describe("readiness execution", () => {
   it("plans every selected command and test partition without executing a gate", async () => {

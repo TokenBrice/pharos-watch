@@ -22,11 +22,11 @@ Optional discovery of untracked candidates is research-only: search recent issue
 
 Approval must cover each coin and action; an earlier explicit cohort instruction covering those coins remains valid. Ask again only for an uncovered addition, promotion, or other scope change. Preserve canonical identity, flags, and historical milestones. Add milestones oldest-first with a primary `sourceUrl`; add only notable featured content.
 
-Before every `expectedLaunchDate` change, append the old value to `dateHistory` as `{ "date": "<old>", "setOn": "<today>" }`; never reconstruct guessed history.
+When changing an existing `expectedLaunchDate`, first append its old value to `dateHistory` as `{ "date": "<old>", "setOn": "<today>" }`. An initial date has no prior value to append; never reconstruct guessed history.
 
 Refresh an AI summary only for a material change: phase advance, launch-date shift of at least a quarter, named regulator/custodian/major partner, completed reputable audit, approval/charter/license decision, or confirmed mainnet date. Use `write-ai-summaries` for the editorial contract.
 
-Run `npm run bootstrap:generated` and `npm run check:stablecoin-data` after approved edits. Do not treat a build alone as schema validation.
+For standalone approved edits, run `npm run bootstrap:generated` and `npm run check:stablecoin-data` after coupled source edits are complete. In a coordinated addition, keep the research and promotion-evidence duties here, but return evidence, changed source paths, and observed versus unexercised checks in the [addition/evidence handoff packet](../../../docs/process/adding-a-stablecoin.md#additionevidence-handoff-packet); the orchestrator owns the single Phase 7 generation/check pass after all specialists land. Do not treat a build alone as schema validation.
 
 ## Promotion Handoff
 

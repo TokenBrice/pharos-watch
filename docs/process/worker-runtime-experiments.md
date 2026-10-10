@@ -19,7 +19,7 @@ Promotion gate:
 1. Review Cloudflare's compatibility flags introduced between the two dates.
 2. Require all four role/date bundle/startup/smoke outcomes and explicit complete evidence; review the Heavy neutral proof separately from actual producer acceptance.
 3. Advance **both** `worker/wrangler.toml` and `worker/wrangler.heavy.toml` together in a dedicated release with no D1 migration, methodology change, data repair, or read-replication change.
-4. Run the normal discover/push gate and production smoke.
+4. Complete [pre-push readiness](../testing.md#pre-push-readiness) and production smoke.
 
 Rollback restores both prior role dates/versions together. Cloudflare continues to support older dates; no D1 restore is required for a date-only rollback. The permanent tooling repair itself does not change either checked-in date.
 

@@ -24,7 +24,7 @@ Before writing, record the exact scope, schema/release identity, a fresh D1 Time
 
 Ordinary jobs (`backfill-supply-history`, `backfill-cg-prices`, `backfill-yield-history`, `backfill-tape`) use `wrangler d1 execute --command --json`, not D1 file imports. Each write is followed by `SELECT changes()` in the same command; batches of independent writes run sequentially. Earlier commands can commit before a later failure: there is **no cross-command rollback**, no automatic retry and no import-induced availability outage. Ordinary query contention/latency still applies. A DDL receipt records zero, not the stale count from the preceding DML.
 
-Eight jobs require **`--execute --allow-atomic-import`** for live writes, including when testing with `--local`:
+The atomic jobs listed below (owned by `ATOMIC_IMPORT_BACKFILL_JOBS` in `worker/scripts/one-shot-backfill.ts`) require **`--execute --allow-atomic-import`** for live writes, including with `--local`:
 
 | Job | Atomic boundary that must not be split |
 | --- | --- |
@@ -60,7 +60,7 @@ These Wrangler examples are operator instructions, not checks to run during impl
 
 ## Classification evidence
 
-The original “24 handlers” count mixed route entrypoints and historical helper files. The current route inventory has **12 one-shot actions**, not the projected 14. The classification is based on current route registrations, schedule registries, cron imports, operator runbooks and UI callers—not an inferred production completion receipt.
+`ONE_SHOT_BACKFILL_JOBS` in `worker/scripts/one-shot-backfill.ts` owns the current CLI inventory. Classification below uses route registrations, schedule registries, cron imports, runbooks and UI callers—not inferred production completion receipts.
 
 | Owner / family | Lane and evidence |
 | --- | --- |
@@ -97,7 +97,7 @@ Admin-only one-shot backfill job for `blacklist_current_balances`, intended for 
 
 | Param        | Type      | Default | Description                                                                                   |
 | ------------ | --------- | ------- | --------------------------------------------------------------------------------------------- |
-| `stablecoin` | `string`  | —       | Optional uppercase symbol filter; matches any configured blacklist-contract stablecoin symbol |
+| `stablecoin` | `string`  | —       | Optional uppercase symbol filter; only configs whose `stablecoinId` is active are eligible |
 | `chainId`    | `string`  | —       | Optional chain filter matching the blacklist contract config `chainId`                        |
 | `limit`      | `integer` | `500`   | Max newest canonical addresses per config (`2000` max); retain their transition history |
 | `dryRun`     | `"true"`  | —       | Preview the execution snapshot fold, including retained freezes after releases; unconfirmed Tron order is withheld |
@@ -210,7 +210,7 @@ Commodity/CoinGecko history pairs prices and caps at the same timestamp, selecti
 | `allow-constant-price-fallback` | `"true"`                           | —       | Allow current-price fallback when historical non-USD prices are missing                   |
 | `startDay`                      | `integer \| ISO date (YYYY-MM-DD)` | —       | Lower bound for UTC daily rows written                                                    |
 | `endDay`                        | `integer \| ISO date (YYYY-MM-DD)` | —       | Upper bound for UTC daily rows written; future values clamp to the last completed UTC day |
-| `windowDays`                    | `integer`                          | `30`    | Initial daily-window size (`1`–`90`); explicit values override and persist through continuation cursors |
+| `windowDays`                    | `integer`                          | `30` when windowed | Window size (`1`–`90`); explicit values persist through cursors. Omitting all window/cursor/date parameters processes unbounded history. |
 | `cursor`                        | `string`                           | —       | Opaque continuation cursor; cursor-only requests resume the stored window size, while an explicit `windowDays` overrides and persists a new size |
 
 ## backfill-stability-index
@@ -243,7 +243,7 @@ Backfills market prices for the PSI-eligible universe, including off-catalog his
 
 ## backfill-yield-history
 
-Backfills protocol API yield-history rows for the curated target set used by yield intelligence. The current target set is limited to Zephyr ZYS (`zys-zephyr-protocol`) through the protocol API source.
+Backfills protocol API yield-history rows for the curated `TARGET_YIELD_HISTORY_SOURCES` in `worker/scripts/backfills/backfill-yield-history.ts`; consult that table for supported IDs and source keys.
 
 **Query parameters**
 
@@ -255,7 +255,7 @@ Backfills protocol API yield-history rows for the curated target set used by yie
 
 ## backfill-tape
 
-Runs the same TAPE projectors used by the `project-tape` cron with operator-supplied window and limit overrides. Writes are idempotent on `(source_table, source_row_id, transition)`, so the job is safe to re-run. `depeg.peak_worsened` honors `since` / `until` against open rows' `started_at` and pages through matches in batches of 500, stopping once `maxRows` source rows have been scanned; without `maxRows` it scans every matching open row, like the cron. The first-observation projectors `methodology.bumped`, `cemetery.entry.added`, and `lifecycle.tracked.frozen` are window- and cap-blind: they ignore `since`, `until`, and `maxRows` because they scan static sources keyed by ID.
+Runs the same TAPE projectors as `project-tape` with operator window/limit overrides. Writes are idempotent on `(source_table, source_row_id, transition)`. `depeg.peak_worsened` filters open rows by `started_at` and scans pages of 500 up to `maxRows`; the CLI defaults to 5000, while the uncapped cron scans all matches. `methodology.bumped`, `cemetery.entry.added`, and `lifecycle.tracked.frozen` ignore `since`, `until`, and `maxRows`: they scan static sources keyed by ID.
 
 **Request body or query parameters**
 
@@ -263,14 +263,14 @@ Query parameters win when the same field is supplied in both places.
 
 | Param     | Type      | Default | Description                                                            |
 | --------- | --------- | ------- | ---------------------------------------------------------------------- |
-| `class`   | `string`  | all     | Repeatable projector class filter, for example `class=depeg.opened`    |
+| `class`   | `string`  | all     | Query-only repeatable projector filter, for example `class=depeg.opened` |
 | `since`   | `integer` | none    | Lower source-row timestamp bound in Unix seconds                       |
 | `until`   | `integer` | none    | Upper source-row timestamp bound in Unix seconds                       |
 | `maxRows` | `integer` | `5000`  | Per-class scan cap, min `1`, max `50000`                               |
 | `dryRun`  | `boolean` | `false` | Compute results without writing rows or advancing projector watermarks |
 | `dry-run` | `boolean` | `false` | Query/body alias for `dryRun`                                          |
 
-Supported projector classes are `depeg.opened`, `depeg.resolved`, `depeg.peak_worsened`, `freeze.blocked`, `freeze.unblocked`, `freeze.destroyed`, `score.upgraded`, `score.downgraded`, `psi.band_changed`, `dews.band_transitions`, `mint_burn.large_flow`, `yield.warning_emitted`, `yield.pys_dropped`, `methodology.bumped`, `cemetery.entry.added`, and `lifecycle.tracked.frozen`. `dews.band_transitions` is the single DEWS projector class and emits both `dews.escalated` and `dews.deescalated` tape events. `depeg.resolved` projects only recovery-backed depeg closures, not coverage-loss, orphan, or superseded-direction terminal rows.
+Supported classes come from `TAPE_PROJECTOR_JOBS` in `worker/src/lib/tape-projectors/registry.ts`. `dews.band_transitions` emits both `dews.escalated` and `dews.deescalated` events. `depeg.resolved` projects only recovery-backed closures, not coverage-loss, orphan, or superseded-direction terminal rows.
 
 For every selected blind class, the response `ignoredParams` map lists the ignored fields (`since`, `until`, and `maxRows`). Other classes honor all supplied window and cap parameters.
 
@@ -356,7 +356,7 @@ Decode failures count in `rowsDropped` and `rowsDroppedDecode`; valid peers pers
 
 ## reclassify-atomic-roundtrips
 
-Retroactively tags same-transaction mint+burn pairs for the same stablecoin as `flow_type='atomic_roundtrip'` and recalculates the affected hourly buckets.
+Retroactively reclassifies `(tx_hash, stablecoin_id, chain_id)` groups using the shared amount-match tolerance, then recalculates affected hours.
 
 **Query parameters**
 
@@ -380,7 +380,7 @@ Retroactively tags same-transaction mint+burn pairs for the same stablecoin as `
 }
 ```
 
-The job processes up to 1000 `(tx_hash, stablecoin_id)` groups per request. Repeat until `done=true`.
+Each forward and reverse pass processes up to 1000 `(tx_hash, stablecoin_id, chain_id)` groups. Repeat until `done=true` (both passes return fewer than 1000 groups).
 
 ## audit-depeg-history
 
@@ -421,7 +421,7 @@ The audit can only rule on episodes whose stored move CoinGecko's own history do
 | `limit`      | `integer`                                              | `25`     | Max events or repair candidates to inspect per request (`max 25`)                                                           |
 | `offset`     | `integer`                                              | `0`      | Pagination offset                                                                                                           |
 | `dry-run`    | `"true"`                                               | required | Must be exactly `"true"` for `GET`                                                                                          |
-| `min-supply` | `number`                                               | `0`      | Minimum supply (USD) to include in audit                                                                                    |
+| `min-supply` | `integer`                                              | `0`      | Minimum supply (USD) to include in audit                                                                                    |
 | `symbol`     | `string`                                               | —        | Filter by symbol (case-insensitive)                                                                                         |
 | `repair`     | `"synthetic-splits" \| "contradictory-recovery-price"` | —        | Preview synthetic split consolidation or contradictory terminal-price repairs instead of the CoinGecko false-positive audit |
 
@@ -450,6 +450,6 @@ Mutating delete/synthetic-repair runs and audit eligibility changes stage availa
 | `offset`     | `integer`                                              | `0`     | Pagination offset                                                                                                      |
 | `delete`     | `string`                                               | —       | Comma-separated event IDs to delete directly (skips CG audit)                                                          |
 | `dry-run`    | `"true"`                                               | —       | When `"true"`, preview deletions without touching DB. Default behavior deletes false positives                         |
-| `min-supply` | `number`                                               | `0`     | Minimum supply (USD) to include in audit                                                                               |
+| `min-supply` | `integer`                                              | `0`     | Minimum supply (USD) to include in audit                                                                               |
 | `symbol`     | `string`                                               | —       | Filter by symbol (case-insensitive)                                                                                    |
 | `repair`     | `"synthetic-splits" \| "contradictory-recovery-price"` | —       | Run synthetic split consolidation or contradictory terminal-price repair instead of the CoinGecko false-positive audit |

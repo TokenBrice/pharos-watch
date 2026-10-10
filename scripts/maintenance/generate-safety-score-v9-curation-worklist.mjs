@@ -23,13 +23,13 @@ const STREAMS = [
     key: "CTRL",
     title: "Control — mint / upgrade / control identity",
     ceiling: "cause-scoped control components; no missing-data cap",
-    fix: "Resolve the asset's mintAuthority block in shared/data/stablecoins/coins/<id>.json: mint path, authority type + threshold, cap semantics, upgradeability model and controlRef, per-control evidence with sources. Mostly deterministic explorer/RPC reads (proxy admin slots, owner()/minters(), multisig thresholds); RPC endpoints and structural-blocker notes are in the mint-authority verified-campaign memory. Multichain assets need every deployment's authority graph.",
+    fix: "Resolve the asset's mintAuthority block in shared/data/stablecoins/domains/mint-authority/<id>.json and related control reviews in shared/data/stablecoins/domains/risk-review/<id>.json: mint path, authority type + threshold, cap semantics, upgradeability model and controlRef, per-control evidence with sources. Mostly deterministic explorer/RPC reads (proxy admin slots, owner()/minters(), multisig thresholds); RPC endpoints and structural-blocker notes are in the mint-authority verified-campaign memory. Multichain assets need every deployment's authority graph.",
   },
   {
     key: "ORCL",
     title: "Oracle — profile and CDP branch reviews",
     ceiling: "cause-scoped oracle components; no missing-data cap",
-    fix: "Populate/complete the oracleRisk block (tier, branch applicability disposition, per-branch feed/collateral-parameter/liquidation/backstop/shutdown reviews) in the coin JSON. CDP-family assets need the branch-applicability ruling; non-oracle designs need an explicit not-applicable review.",
+    fix: "Populate/complete the oracleRisk block (tier, branch applicability disposition, per-branch feed/collateral-parameter/liquidation/backstop/shutdown reviews) in shared/data/stablecoins/domains/risk-review/<id>.json. CDP-family assets need the branch-applicability ruling; non-oracle designs need an explicit not-applicable review.",
   },
   {
     key: "BRDG",

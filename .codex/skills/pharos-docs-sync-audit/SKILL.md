@@ -6,122 +6,39 @@ user_invocable: true
 
 # Pharos Docs Sync Audit
 
-Use this skill from the Pharos repository root when the user asks to:
+## Trigger And Exclusions
 
-- verify docs against code
-- update docs after behavior/API/pipeline/methodology changes
-- fix `check:doc-source-paths`, `check:doc-sync`, or `check:verified-doc-links`
-- run a documentation update pass
-- reconcile agent guidance or skill routing
+Use for source-backed docs verification/repair and agent guidance/skill routing, not prose polish without evidence. Code and checked runtime data are truth; existing docs are hypotheses. Semantic auditors do not repeat CI-owned mechanical checks.
 
-## Core Rules
+## Classify The Operation
 
-- Code and checked runtime data are the source of truth. Do not trust existing docs without verifying.
-- Start with `docs/process/agent-start-here.md` and read only the docs for the matched task family.
-- Use `docs/doc-ownership.json` to decide which docs may need updates.
-- Keep `/docs/` and `README.md` as the verified documentation corpus. Do not create committed planning archives.
-- Do not re-verify what CI already guards: file-path citations (`check:doc-source-paths`), internal doc links (`check:verified-doc-links`), methodology/doc sync (`check:doc-sync`), the generated `AGENTS.md` mirror (`check:generated-artifacts -- --only=agents-doc`), and generated API artifacts (`check:generated-artifacts -- --only=api-reference,openapi,postman`). The rest of the API reference is hand-written and remains in semantic-audit scope.
-- `docs/api-reference.md` is far over the wholesale-read threshold. Navigate it via its top navigation block plus Grep or offset reads only.
-- Author durable top-level guidance in `CLAUDE.md`, or move it into `docs/process/*` and reference it from `CLAUDE.md`. Regenerate `AGENTS.md` with `node --import tsx scripts/maintenance/generate-agents-doc.ts`; never edit the generated mirror by hand.
-- If pricing pipeline, PSI, PegScore/DEWS, LiquidityScore, Report Cards, blacklist tracker, mint/burn flow, yield intelligence, Chain Health, or other methodology behavior changes, update `/methodology`, the owning methodology doc, and the structured entry under `shared/data/methodology-changelogs/`.
-- Methodology versions increase numerically: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10`.
+Select targeted failing doc check, code-change documentation update, broad semantic audit, methodology/version/timeline work, or agent/skill maintenance. Route likely source paths through `docs/doc-ownership.json`; inspect the matched source/local imports. Use `node scripts/ci/pharos-change-contract.ts` (`--staged` for staged changes) when assessing a change contract.
 
-## Read First
+## Mandatory Core
 
-1. `docs/process/agent-start-here.md`
-2. `docs/process/agent-artifacts.md`
-3. `docs/doc-ownership.json`
-4. `docs/testing.md`
-5. The task-family docs selected by the router
+- [Route A Task](../../../docs/process/agent-start-here.md#2-route-a-task), `docs/doc-ownership.json`, and [Documentation Rules](../../../docs/README.md#documentation-rules); read only the selected family/anchors, not all background docs.
+- [Source Of Truth](../../../docs/process/agent-artifacts.md#source-of-truth): `/docs/` and `README.md` are the verified corpus, not committed planning archives. Durable process guidance belongs in existing verified docs.
+- Make source-backed, smallest-scope corrections; remove stale claims, not caveats around false prose. Preserve generated marker blocks; edit the owning source/generator, never literal generated values.
+- Docs at or above 400 lines or 50 KB need a top `> **Agent navigation**` block. Use matched section/offset reads, especially for `docs/api-reference.md`.
+- CI owns source-path citations, internal links, methodology/doc sync, the generated agent mirror and generated API artifacts. Hand-written API prose remains in semantic scope. Structural proof is not semantic truth.
 
-For skill changes, also read the "Agent Skills" section of `docs/process/agent-artifacts.md`.
+## Branch Reads And Actions
 
-## Workflow
+- **Targeted check failure:** read the failing command in [Testing commands](../../../docs/testing.md#commands), [script validation index](../../../docs/scripts.md#validation-command-index), its implementation and affected owner sections. For generated failures, read [failure playbook](../../../docs/testing.md#generated-artifact-failure-playbook) and registry entries.
+- **Code-change docs:** read routed owner anchors and sources for each claim: routes/pages (`src/app/**`, `src/components/**`, `src/lib/page-metadata.ts`); API (`shared/lib/api-endpoints/**`, `worker/src/routes/**`, `worker/src/api/**`); cron (`shared/lib/cron-jobs.ts`, `shared/lib/scheduled-runner-registry.ts`, `worker/src/cron/**`); stablecoins (`shared/data/stablecoins/coins/*.json`, `shared/lib/stablecoins/schema.ts`); scripts/CI (`package.json`, `scripts/**`, `.github/workflows/**`); scoring (`shared/lib/**`, methodology changelogs and route sections). Use existing feature/process owners; update architecture only for structural changes and top-level guidance only when its contract changes.
+- **Methodology/version:** read [ADR-3](../../../docs/architecture.md#architectural-decision-records) and all owning targets, including runtime version and `shared/data/methodology-changelogs/`. Actual behavior changes update every target; prose correction of unchanged behavior needs no bump/changelog. Numeric versions have at most two decimal digits: `v5.9` → `v5.91` or `v6.0`, never `v5.10` or `v5.911`.
+- **Agent/skill maintenance:** read [Agent Skills](../../../docs/process/agent-artifacts.md#agent-skills); edit only canonical bodies and preserve symlink facades. Author root guidance in `CLAUDE.md` or linked `docs/process/*`, regenerate with `node --import tsx scripts/maintenance/generate-agents-doc.ts`, never hand-edit `AGENTS.md`.
+- **Broad audit/delegated review:** read [reviewer and scalable-corpus contracts](references/subagents.md) and [Harness Configuration](../../../docs/process/agent-artifacts.md#harness-configuration). Enumerate `getVerifiedDocFiles(repoRoot)` in `scripts/lib/doc-files.mts`, attach registry hints via reference `path`, and keep unmapped docs in scope. Reject missing selected paths and short expected inventories; no second filename roster or committed manifest. Partition disjoint coverage; record every skipped row/reason. Independent skeptics reopen non-empty findings and default to `REJECTED`; confirmed/revised source-backed findings alone enter synthesis. Without delegation, perform bounded discovery/skeptical reopening sequentially and disclose non-independent review. Remediation needs authorization (existing cohort approval remains valid), narrow writer scope and reopened evidence; parent owns de-duplication, final edits and validation.
 
-### 1. Scope The Audit
+## Checks Owned By The Verifier
 
-Classify the docs request:
+The assigned verifier runs relevant gates after writers finish; semantic reviewers return source evidence, not mechanical CI findings.
 
-- targeted doc failure
-- docs update required by code change
-- broad docs-vs-code audit
-- methodology/version/timeline update
-- agent guidance or skill maintenance
+- Docs: `npm run check:doc-source-paths`, `npm run check:verified-doc-links`, `npm run check:doc-sync`.
+- Root guidance: `npm run check:generated-artifacts -- --only=agents-doc`; skills: `npm run check:agent-skills`.
+- Generated API: `npm run check:generated-artifacts -- --only=api-reference,openapi,postman`; broader generated work uses the registry-owned checks.
+- Start with the failing gate. If PR readiness is requested, follow [Pre-push readiness](../../../docs/testing.md#pre-push-readiness), never a focused check/base override as readiness proof.
 
-Use:
+## Completion Evidence
 
-```bash
-node scripts/ci/pharos-change-contract.ts
-```
-
-or `--staged` when auditing staged changes.
-
-### 2. Verify Against Source
-
-For each doc claim, inspect the source that owns the behavior:
-
-- routes/pages: `src/app/**`, `src/components/**`, `src/lib/page-metadata.ts`
-- API: `shared/lib/api-endpoints/**`, `worker/src/routes/**`, `worker/src/api/**`
-- cron/pipeline: `shared/lib/cron-jobs.ts`, `shared/lib/scheduled-runner-registry.ts`, `worker/src/cron/**`
-- stablecoin data: `shared/data/stablecoins/coins/*.json`, `shared/lib/stablecoins/schema.ts`
-- scripts/CI: `package.json`, `scripts/**`, `.github/workflows/**`
-- methodology/scoring: `shared/lib/**`, `shared/data/methodology-changelogs/**`, and route methodology sections
-
-Prefer source-backed corrections over prose polish.
-
-### 3. Edit Docs Surgically
-
-Update the smallest set of verified docs. Remove stale claims rather than adding caveats around false text.
-
-Common doc destinations:
-
-- route-specific docs linked from `docs/README.md`
-- `docs/architecture.md` for structural routing/runtime model changes
-- `docs/testing.md`, `docs/deployment-process.md`, `docs/scripts.md` for CI/release behavior
-- `docs/process/*` for durable agent/operator process
-- methodology docs plus structured changelog entries for scoring behavior
-- `README.md` and `CLAUDE.md` only when top-level guidance actually changes; regenerate `AGENTS.md` after editing `CLAUDE.md`
-
-### 4. Validate
-
-Run the relevant doc checks:
-
-```bash
-npm run check:doc-source-paths
-npm run check:verified-doc-links
-npm run check:doc-sync
-npm run check:generated-artifacts -- --only=agents-doc
-```
-
-For generated docs/API artifacts:
-
-```bash
-npm run check:generated-artifacts
-npm run check:generated-artifacts -- --only=api-reference,openapi,postman
-```
-
-For broad docs work, prefer the specific failing check first, then `npm run check:pr -- --base=<ref>` after commit if the user asked for PR readiness.
-
-### 5. Broad Audit With Reviewers
-
-When the user authorizes delegation, use `references/subagents.md` to split a broad audit by documentation family. Prefer read-only reviewers; grant a writer only a narrow, disjoint docs set. Capability mappings are in `docs/process/agent-artifacts.md#harness-configuration`.
-
-The parent agent owns final edits, de-duplication, and validation.
-
-### 6. Scalable audit mode
-
-For a whole-corpus pass, enumerate `getVerifiedDocFiles(repoRoot)` from `scripts/lib/doc-files.mts`, the canonical verified corpus collector. Then attach category/source-glob hints from `docs/doc-ownership.json`, resolving object references through `path`. Unmapped documents remain in scope. Targeted requests still use only their requested subset. Reject missing selected paths and do not invent a second filename roster. Keep the inventory in memory or ignored scratch space; do not commit a manifest.
-
-When delegation is available and authorized, partition the inventory into N disjoint doc sets and fan out read-only verifiers. Otherwise perform the same bounded verification and skeptical reopening sequentially, explicitly reporting that review was not independent. Each verifier audits only its assigned files, using `light` depth for timeline archives, `targeted` navigation/offset reads for `docs/api-reference.md`, and `deep` reads elsewhere; record every skipped row with its reason in coverage; never silently omit it. If an expected row count is supplied, fail when the loaded inventory is shorter. It must report concrete semantic discrepancies only; CI-owned path/link/generated checks stay out of scope. For every non-empty result, an independent skeptic reopens the doc and cited source, defaults to `REJECTED`, and returns only `CONFIRMED` or `REVISED` findings when code clearly contradicts the prose. Deterministically deduplicate and split adjudicated findings into auto-fixable versus needs-decision.
-
-Remediation requires authorization; an earlier explicit instruction to repair this cohort already supplies it, so do not ask again for the same scope. Give one writer a narrow per-document scope; it must re-find the claim, reopen the evidence, skip stale findings, apply the smallest doc-only edit, and return applied/skipped entries. The parent owns synthesis, approval, edits, and the final checks. See `references/subagents.md` for the inventory, verifier, skeptic, and remediation contracts.
-
-## Completion Report
-
-Report:
-
-- docs updated
-- source files used as truth
-- doc checks run and outcome
-- unresolved docs questions, if any
-- any intentionally skipped broader validation
+Report docs changed, source files used as truth, actual verifier checks/outcomes or assigned checks, coverage/skips and independence for broad audits, unresolved questions, and intentionally omitted broader validation. Keep evidence in ignored scratch, not a new product-doc archive.

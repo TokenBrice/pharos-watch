@@ -1,6 +1,6 @@
 # Compliance Batch Schemas
 
-These are the harness-neutral response envelopes for batch mode. The live regime object, enum set, cross-field rules, and required evidence remain owned by `shared/types/stablecoin-meta-schemas.ts`, `docs/genius-tracker.md`, and `docs/mica-tracker.md`; validate parsed `proposedJson` and `finalJson` with the repository check before writing.
+These are the harness-neutral response envelopes for batch mode. The live regime object, enum set, cross-field rules, and required evidence remain owned by `shared/types/stablecoin-meta-compliance-schemas.ts`, `docs/genius-tracker.md`, and `docs/mica-tracker.md`; validate parsed `proposedJson` and `finalJson` in memory with the regime, sidecar, and merged-coin schemas before writing, then run the repository check after approved edits and regeneration.
 
 ```json
 {

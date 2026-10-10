@@ -44,7 +44,7 @@ Pages uses the Cloudflare Pages project environment variables. Set `REQUEST_SOUR
 ## Verification
 
 1. Check `/api/request-source-stats` after one or two aggregation windows. Route/source counters should stop increasing for disabled environments.
-2. If `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` is set, confirm the `apiKeys` and `keyedPublicApi` sections stop increasing while protected API requests still enforce `X-API-Key` and per-key limits.
+2. If `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` is set, confirm no new per-key counts are recorded (`apiKeys[].requestCount` and `keyedPublicApi.keyedRequests`). Route totals and derived shares may still change; protected requests must retain API-key and quota enforcement.
 3. Confirm Telegram dispatch still writes `cron_runs` metadata and pending queue rows.
 4. Remove the flag after D1 pressure clears, then verify counters resume.
 

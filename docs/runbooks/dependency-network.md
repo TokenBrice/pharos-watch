@@ -36,7 +36,7 @@ The production failure lane covers report-card self-edges, duplicate edges and s
 
 The job compares the captured publication's methodology version with the checkout. A mismatch produces the named `checkout-production-skew` status and a workflow warning. During skew, published self-edges, duplicate edges and strongly connected components still fail, as do duplicate registry entries or invalid review provenance. Checkout-sensitive target lifecycle/reference/scoreability issues, missing or stale adapter reviews and authored dependency-kind mismatches remain visible but do not fail the weekly job until the publication matches the checkout. Static checks are unchanged. Matching methodology versions do not prove identical registry contents; reconciliation remains advisory.
 
-In wave 1, `coinIdWithoutDepTypeCount` is an advisory audit counter; its zero-tolerance gate is planned for wave 3. The full audit and static-versus-published reconciliation are advisory artifacts, including material unlinked slices, symbol leads and additive split-position groups. An additive split is not automatically a duplicate. Artifact uploads live under `.tmp/dependency-coverage/`: `audit.json`, `audit.md`, and `reconciliation.md`.
+`coinIdWithoutDepTypeCount` is zero-tolerance in the static and weekly production gates, including during checkout-production skew. The published runtime counter and kind mismatches also fail the weekly gate when versions match; skew leaves those checkout-sensitive counters advisory. Unlinked slices, symbol leads, additive split-position groups and static-versus-published reconciliation remain advisory. An additive split is not automatically a duplicate. Artifacts live under `.tmp/dependency-coverage/`: `audit.json`, `audit.md`, and `reconciliation.md`.
 
 When the weekly job fails:
 
@@ -52,7 +52,7 @@ Use the `dependency-coverage-drain` skill monthly and after coverage drops or we
 
 The durable ledger is [`artifacts/dependency-coverage-reviewed-ledger.json`](./artifacts/dependency-coverage-reviewed-ledger.json). It mirrors the reviewed-history envelope used by `.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger.json`: `schemaVersion`, decision-field inventory, allowed decisions and a `decisions` array. Dependency entries add status and explicit dependent/upstream identity. Audit regeneration must not overwrite or prune it.
 
-The initial 16 entries are `open`, with `firstSeenAt: 2026-09-29` and null `reviewedAt`, reviewer and decision. They identify WS1.E's unresolved published claims, including NC-163 as the third DUSD-alto edge alongside NC-164/165. The seed is an investigation index, not independently verified evidence, and does not author any edge or weight.
+The ledger retains open seed rows as append-only history alongside subsequent dated review decisions. Derive current queue status from each claim's latest decision, not the seed inventory. Seed rows are an investigation index, not independently verified evidence, and author no edge or weight.
 
 For every actual review, append a dated decision with:
 

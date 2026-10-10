@@ -18,12 +18,14 @@ For `genius`, read `docs/genius-tracker.md`, `shared/lib/compliance-regime-state
 3. Map token → legal issuer → exact authorization/public posture. Reject same-name affiliates and token-unspecific licenses.
 4. Apply the owning tracker’s schema and conservative classification. “Not assessed” is absence of a row; it is not an out-of-scope finding.
 5. Present the proposed object, source URLs/dates, access date, and confidence. Stop there for research-only requests. Before writes, establish approval for the proposed scope. Prior explicit cohort authorization persists across its 3–5 coin batches; ask only for changes outside that authorization.
-6. Patch only the compliance sidecar. For GENIUS set the required reviewer/review date; for MiCA include references where its schema requires them. Then run:
+6. Patch only the compliance sidecar. For GENIUS set the required reviewer/review date; for MiCA include references where its schema requires them. For a standalone approved edit, after coupled source edits are complete, run:
 
 ```bash
 npm run bootstrap:generated
 npm run check:stablecoin-data
 ```
+
+In a coordinated addition, keep the primary-source and pre-edit schema validation duties below, but return evidence, changed source paths, observed validation, and unexercised integration checks in the [addition/evidence handoff packet](../../../docs/process/adding-a-stablecoin.md#additionevidence-handoff-packet). The orchestrator owns the single Phase 7 generation/check pass after all specialists land; do not independently run the commands above.
 
 ## Guardrails
 
@@ -44,14 +46,14 @@ Use this mode for a bounded multi-coin review. It is read-only unless the caller
 
 ### Exact per-coin researcher contract
 
-Prompt the researcher to read the base coin, the existing compliance sidecar, `shared/types/stablecoin-meta-schemas.ts`, `shared/lib/compliance-regime-state.ts`, `docs/genius-tracker.md`, and `docs/mica-tracker.md`. For every requested regime, it must:
+Prompt the researcher to read the base coin, the existing compliance sidecar, `shared/types/stablecoin-meta-compliance-schemas.ts`, `shared/lib/compliance-regime-state.ts`, `docs/genius-tracker.md`, and `docs/mica-tracker.md`. For every requested regime, it must:
 
-1. Decide whether the regime applies; use `assessed=false` for a genuine out-of-scope/unassessable coin, not for missing research.
+1. Decide whether the regime applies; a sourced exclusion is an assessment (`assessed=true`). Use `assessed=false` when the evidence cannot support a row, not as a substitute for missing research.
 2. Classify the result as `no-change`, `correct`, `add-new-row`, `remove-row`, or `unable-to-verify`; preserve good fields and explain uncertainty.
 3. Use the regime’s primary-source order in [genius.md](references/genius.md) and [mica.md](references/mica.md), map token → legal issuer → exact public posture, and record consulted URLs with what each showed.
 4. Return `id`, `mica`, `genius`, and optional `notes`. Each regime object returns `assessed`, `changeKind`, `consequential`, `confidence`, `summary`, and `proposedJson`; set `consequential=true` for a new/upgraded authorization claim, status escalation, removal, or downgrade of an existing strong claim. `proposedJson` is compact JSON for the full candidate object only for a correction or new row, otherwise `""`. A proposed GENIUS object includes reviewer `Pharos compliance research` and `reviewedAt` set to the review date; MiCA has no reviewer/date fields.
 
-Use the response envelopes in [batch-schema.md](references/batch-schema.md); the caller parses candidate JSON, merges it, and runs the real schema check before any edit.
+Use the response envelopes in [batch-schema.md](references/batch-schema.md); before any edit, parse candidate JSON with the regime schema in `shared/types/stablecoin-meta-compliance-schemas.ts`, then validate the proposed sidecar with `StablecoinComplianceSidecarSchema` and the merged coin with `StablecoinMetaAssetSchema` from `shared/lib/stablecoins/schema.ts`. The repository check validates files on disk after the approved write and regeneration; it does not accept scratch candidates.
 
 ### Adjudication contract
 
@@ -59,4 +61,4 @@ The verifier independently reopens the base and sidecar, checks every proposed U
 
 Set `safeToAutoApply=true` only for a non-empty candidate editing an existing row, with no removal or downgrade, and no stronger authorization escalation unless that claim was already present and equally or better sourced. Limit it to reference refinement, descriptive fields, a more-conservative enum correction, or a date refresh. New rows need explicit approval covering their addition; prior cohort authorization that explicitly includes new rows satisfies this requirement. `unable-to-verify` makes no change and needs more research. Treat the flag as advisory, never as permission.
 
-Return a deterministic manifest containing date, counts, safe changes, flagged changes, flags, gap proposals, regime-state notes, and per-coin verdict rows. The parent owns deduplication, approval, merge, and `npm run check:stablecoin-data`.
+Return a deterministic manifest containing date, counts, safe changes, flagged changes, flags, gap proposals, regime-state notes, and per-coin verdict rows. The parent owns deduplication, approval, and merge; generation/check ownership follows the standalone versus coordinated-addition workflow above.

@@ -28,7 +28,7 @@ The listing class separates the research catalog from the core monetary aggregat
 | `stable-value-investment` | A non-variant classified as `mechanismArchetype: "rwa-credit-fund"`, or held outside core aggregates by an unresolved exact-product mechanism review | Tracked on its separate investment surface, excluded from the core monetary aggregate |
 | `excluded` | Fails the scope or instrument tests | Historical record only; never active |
 
-Class precedence is deterministic: `excluded`, then `stablecoin-variant`, then `stable-value-investment`, then `cash-equivalent`, then the residual `core-stablecoin` class. `npm run check:stablecoin-data` enforces exact catalog coverage and this precedence.
+Class precedence follows the guard's branches: delisted → `excluded`; `variantOf` → `stablecoin-variant`; credit-fund archetype → `stable-value-investment`; NAV/T-bill → `cash-equivalent`; remaining unresolved mechanism hold → `stable-value-investment`; otherwise `core-stablecoin`. `npm run check:stablecoin-data` enforces catalog coverage and this order.
 
 An unresolved mechanism review preserves delisted, variant, credit-fund and NAV/T-bill invariants before applying its hold. Remaining unresolved mechanisms require `stable-value-investment`; the currently authored class cannot validate itself or promote an unresolved asset into core aggregates. USDR Ring is held on that basis pending exact-product qualification; its listing class does not assert a proven credit-fund mechanism.
 

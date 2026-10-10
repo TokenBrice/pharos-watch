@@ -7,7 +7,7 @@ A user sends a command or taps a callback, Telegram retries the webhook, but the
 Detection signals:
 
 - User reports a missing `/subscribe`, `/settings`, setup wizard, or callback action.
-- Cloudflare logs show `POST /api/telegram-webhook` for the chat around the incident.
+- Sampled Cloudflare request logs show `POST /api/telegram-webhook` near the reported time; chat/update association comes from D1, not custom Telegram logs.
 - The webhook returned `200 ok`, but the expected D1 mutation is absent.
 - The webhook returned `503 retry` with `Retry-After` for an update already being processed.
 - `telegram_processed_updates` shows a row stuck in `processing` or repeated `failed` state for the reported `update_id`.
@@ -23,19 +23,8 @@ Ordinary processed-update rows are retained for 7 days; `started` and `execution
 ## Quick Diagnostic Checklist
 
 1. **Confirm webhook auth.** Invalid `X-Telegram-Bot-Api-Secret-Token` requests intentionally return `200 ok` without side effects. Check logs for secret-validation failures.
-2. **Inspect the processed-update row.**
-
-   ```bash
-   npx wrangler d1 execute stablecoin-db --remote --command \
-     "SELECT update_id, received_at, processed_at, update_type, chat_id, status, error_class, effect_state, intent_version, intent_kind, intent_recorded_at, mutation_applied_at, effect_started_at, effect_completed_at, effect_kind, effect_ordinal, claim_owner, claim_generation FROM telegram_processed_updates WHERE update_id = <updateId>;"
-   ```
-
-3. **Check pending command state for the chat.** `GET /api/admin-telegram-chat/:chatId` was retired on 2026-08-09; read the disambiguation row it surfaced directly.
-
-   ```bash
-   npx --no-install wrangler d1 execute stablecoin-db --remote --command \
-     "SELECT chat_id, ambiguous_ticker, action_type, expires_at FROM telegram_pending_disambiguation WHERE chat_id = '<chatId>';"
-   ```
+2. **Inspect the processed-update row.** Use [Processed Update](./telegram-operator-queries.md#processed-update) for the reported `update_id`, preserving its normalized-intent, mutation, and effect-fence fields.
+3. **Check pending command state for the chat.** `GET /api/admin-telegram-chat/:chatId` was retired on 2026-08-09; use [Pending Command State](./telegram-operator-queries.md#pending-command-state) to read the disambiguation row it surfaced.
 
 4. **Determine whether retry is safe.** A `failed` `unstarted`/`planned` row is reclaimed on the next redelivery; one still `processing` is reclaimed only after the five-minute stale window. Planned work uses its stored normalized intent. Never force-retry a `started` or `execution_unknown` row. First reconcile Telegram/user-visible state and the exact intent/mutation marker.
 

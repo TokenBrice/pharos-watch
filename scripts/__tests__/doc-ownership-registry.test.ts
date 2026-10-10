@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { collectMarkdownReferences, requiresDocNavigation } from "../lib/doc-markdown.mts";
 import { getVerifiedDocFiles } from "../lib/doc-files.mts";
-import { createOwnershipGlobMatcher } from "../lib/doc-ownership-registry.mts";
+import { canonicalizeOwnershipSourcePattern, createOwnershipGlobMatcher, PATH_FAMILIES } from "../lib/doc-ownership-registry.mts";
 import { assertExecutableTestFiles } from "../lib/critical-ownership.mts";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
@@ -76,6 +76,20 @@ describe("doc-ownership registry integrity", () => {
     expect(match("scripts/check-docs.ts")).toBe(true);
     expect(match("scripts/ci/nested/check-docs.ts")).toBe(true);
     expect(match("worker/check-docs.ts")).toBe(false);
+  });
+
+  it("normalizes only skill facade sources to canonical tracked paths", () => {
+    for (const facade of [".agents", ".claude"]) {
+      expect(canonicalizeOwnershipSourcePattern(`${facade}/skills/**/SKILL.md`)).toBe(".codex/skills/**/SKILL.md");
+    }
+    expect(canonicalizeOwnershipSourcePattern(".codex/skills/**")).toBe(".codex/skills/**");
+    expect(canonicalizeOwnershipSourcePattern(".claude/settings.json")).toBe(".claude/settings.json");
+  });
+
+  it("keeps curated runbook navigation metadata out of runtime routing references", () => {
+    for (const reference of PATH_FAMILIES.flatMap((family) => [...family.docs, ...family.background])) {
+      expect(reference).not.toHaveProperty("runbook");
+    }
   });
 
   it("uses mappings as the sole authored routing model", () => {
@@ -221,14 +235,16 @@ describe("doc-ownership registry integrity", () => {
     }
   });
 
-  it("rejects dead mappings and dead exclusions", () => {
+  it("rejects every dead mapping source pattern and dead exclusions", () => {
+    const unmatchedSources: string[] = [];
     for (const mapping of mappings) {
       expect(mapping.sources.length, mapping.id).toBeGreaterThan(0);
-      expect(
-        trackedFiles.some((file) => matchesAny(file, mapping.sources)),
-        `${mapping.id}: ${mapping.sources.join(", ")}`,
-      ).toBe(true);
+      for (const source of mapping.sources) {
+        const match = createOwnershipGlobMatcher(canonicalizeOwnershipSourcePattern(source));
+        if (!trackedFiles.some(match)) unmatchedSources.push(`${mapping.id}: ${source}`);
+      }
     }
+    expect(unmatchedSources, `Unmatched ownership source patterns:\n${unmatchedSources.join("\n")}`).toEqual([]);
     for (const exclusion of exclusions) {
       expect(exclusion.reason.trim()).not.toBe("");
       expect(trackedFiles.some((file) => matchesAny(file, exclusion.sources)), exclusion.reason).toBe(true);

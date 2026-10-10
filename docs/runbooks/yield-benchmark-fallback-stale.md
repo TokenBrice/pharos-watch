@@ -15,15 +15,13 @@ Yield rows still publish, but benchmark provenance shows a fallback or retained 
 
 ## Impact
 
-Rankings are usually available, but benchmark-relative interpretation can be degraded. Applied publication returns `ok` with benchmark findings in `metadata.quality.reasons`; unapplied work reports `degraded` with `metadata.reason`. A benchmark's own fallback evidence degrades input quality. Fetch age above 48 hours or observation age beyond its key-specific bound makes it stale (5 days for daily/overnight series, 7 days CHF, 10 days TRY, 12 days RUB, 45 days CAD monthly). Fetch and record bounds are checked independently, so a frozen upstream remains stale after a successful fetch. Non-USD fallback or stale evidence also raises `risk-free-rate:<KEY>:<reason>` independently. Past either freshness bound, affected rows are benchmark-stale and PYS is NR.
+Rankings are usually available, but benchmark-relative interpretation can be degraded. Inspect publisher completion and input quality using the [shared entry checks](./yield-health.md#first-checks). The [benchmark threshold row](./yield-health.md#threshold-table) owns the independent fetch and observation-age limits, defined in `shared/lib/yield-benchmark-freshness.ts`; a frozen upstream cannot become healthy merely because fetching succeeds. Non-USD fallback or stale evidence raises `risk-free-rate:<KEY>:<reason>` independently. Past either freshness bound, affected rows are benchmark-stale and PYS is NR.
 
 The v8.43 hurdle re-base consumes the USD reference only while it classifies healthy on its own feed evidence. A degraded reference nulls `usdBenchmarkRate`, so affected non-USD rows publish an estimated PYS with the `reference-benchmark-degraded` warning; a stale reference makes them NR (`benchmark-stale`). Documented proxy selection (`benchmarkSelectionMode: "fallback-usd"`) is a methodology choice, not a degraded feed: it is reported as `proxySelectionRowCount` / `benchmarkIsProxy` and never degrades the benchmark entry or the row by itself.
 
 ## First Checks
 
-1. **Access-gated status:** `https://ops.pharos.watch/admin/` -> Crons -> `fetch-tbill-rate` and `sync-yield-data`.
-2. **Machine status:** `GET https://ops-api.pharos.watch/api/status` with Cloudflare Access service-token headers.
-3. **Public payload:** `GET https://api.pharos.watch/api/yield-rankings` and inspect top-level `benchmarks` plus row-level `benchmarkFallbackMode`.
+Start with the [shared read-only Yield Health checks](./yield-health.md#first-checks), focusing on `yieldHealth.benchmarkRegistry` and the `fetch-tbill-rate` / `sync-yield-data` cron metadata. Then inspect top-level `benchmarks` and row-level `benchmarkFallbackMode` in `GET https://api.pharos.watch/api/yield-rankings`.
 
 ## Read-Only D1 Snippets
 
@@ -34,13 +32,7 @@ WHERE key IN ('risk_free_rates', 'risk_free_rate', 'fetch-tbill-rate:gbp-retaine
 ORDER BY key;
 ```
 
-```sql
-SELECT job, started_at, duration_ms, status, item_count, error, metadata
-FROM cron_runs
-WHERE job IN ('fetch-tbill-rate', 'sync-yield-data')
-ORDER BY started_at DESC
-LIMIT 10;
-```
+Use the [shared cron-history SELECT](./yield-health.md#read-only-d1-snippets) with jobs `fetch-tbill-rate` and `sync-yield-data`, newest 10 runs.
 
 ```sql
 SELECT key, updated_at, substr(value, 1, 1200) AS value_prefix
@@ -51,7 +43,7 @@ WHERE key = 'yield-rankings';
 ## Common Causes
 
 - FRED, Treasury.gov, ECB, SIX, or central-bank benchmark fetches failed during the daily `0 8 * * *` lane.
-- A FRED DGS3MO/DFF CSV fetch succeeded but its latest row is older than the 5-day record bound or future-dated, so the parser rejects it and the key falls through to Treasury.gov or the retained last-known-good value.
+- FRED DGS3MO/DFF's latest valid row falls outside its five-day observation bound or one-day parser future-skew allowance. USD can try Treasury.gov; USD_EFFR tries NYFed then FRED, then retained evidence.
 - The GBP SONIA source family (FRED graph CSV, ALFRED graph CSV, and BoE IADB `IUDZOS2`) failed on consecutive daily runs, so `fetch-tbill-rate` retained the last GBP market benchmark and fired the repeated-fallback alert. HTTP 520 from both St. Louis Fed graph hosts can indicate that their required contact-bearing Worker user agent drifted.
 - `fetch-tbill-rate` retained the last market-derived rate after an upstream outage.
 - The benchmark cache exists but is malformed or missing one of the structured benchmark entries.
@@ -59,7 +51,7 @@ WHERE key = 'yield-rankings';
 
 ## Remediation
 
-- If the benchmark fetch failed once and the retained rate is recent, monitor until the next daily benchmark lane or the hourly yield lane's gated retry: the `:55` hourly slot re-invokes `fetch-tbill-rate` and skips neutral while the registry still carries a market observation younger than 24 hours, unless a USD, USD_EFFR, or GBP record is within a day of its record bound (those series publish after the next business day's 08:00 UTC fetch, so the retry picks up the new print hourly instead of letting it cross the bound). The daily `0 8 * * *` run remains the canonical producer.
+- After a transient fetch failure, monitor the daily `0 8 * * *` lane or the `:55` gated retry. If supplemental catch-up actually ran in that hourly slot, the benchmark leg defers with `deferred-after-supplemental-catch-up`. Otherwise it skips neutrally while both the newest market fetch and USD's market fetch are at most 24 hours old, unless USD/USD_EFFR/GBP observation age is within a day of its record bound. Fetch age and observation age are separate checks; the daily lane remains the canonical producer.
 - If the GBP SONIA retained-fallback alert or canary fired, inspect `cache['fetch-tbill-rate:gbp-retained-fallback-streak']` for `consecutiveRetainedRuns`, `consecutiveFreshRuns`, `lastMarketSource`, `lastMarketRecordDate`, `lastFreshSource`, `lastFreshRecordDate`, and `lastFallbackMode`; repeat alerting is visible as the `gbp-retained-fallback-repeated` cron event, not as a cached timestamp. Inspect the latest `fetch-tbill-rate` cron metadata `gbpResponseAttempts` to distinguish transport failure, HTTP status failure, empty body, and parse failure across FRED, ALFRED, and BoE. If FRED and ALFRED both return HTTP 520, verify their adapter still sends `Pharos/1.0 (+https://pharos.watch)` before treating the incident as an upstream outage. Response bodies and URLs are intentionally absent from diagnostics.
 - Inspect the latest `fetch-tbill-rate` metadata for `registryCacheState`, `registryCacheWrite`, and `resolvedBenchmarkKeys` (an unreadable prior cache row is skipped — left unwritten — only when the run resolved zero benchmark keys, per the `registryCacheWrite` guard in `worker/src/cron/fetch-tbill-rate.ts`; any resolved key rewrites the row) and, for USD, `usdFreshPublicationStreak` / `usdLastFresh*` fields feeding the `yield-usd-benchmark-current` canary.
 - If a provider-specific outage is visible, wait for upstream recovery rather than replacing rates manually.
@@ -76,7 +68,7 @@ WHERE key = 'yield-rankings';
 
 - `fetch-tbill-rate` has a recent `ok` or expected `degraded` run.
 - `cache['risk_free_rates']` parses as JSON with a current USD benchmark and any available non-USD benchmark entries.
-- If GBP SONIA sources recovered, `cache['fetch-tbill-rate:gbp-retained-fallback-streak']` shows `consecutiveRetainedRuns: 0`, `consecutiveFreshRuns >= 2`, and a current `lastFreshSource` / `lastFreshRecordDate`. The `yield-gbp-benchmark-current` canary is `ok` only when the GBP row is non-fallback, fetched within 48 hours, observed within 7 days, and verified across two consecutive daily publications.
+- After GBP recovery, `cache['fetch-tbill-rate:gbp-retained-fallback-streak']` must show `consecutiveRetainedRuns: 0`, `consecutiveFreshRuns >= 2`, and current `lastFreshSource` / `lastFreshRecordDate`. The canary requires a non-fallback row fetched within 48 hours and observed within the shared GBP bound (five days), plus two consecutive fresh publications; hourly retries also count.
 - New `yield-rankings` rows expose benchmark fields, and `metadata.quality.reasons` contains no benchmark finding after recovery. The yield run no longer has a top-level `fallbackMode`; benchmark-specific fallback fields remain.
 - The `yield-usd-benchmark-current` canary is `ok` only when the USD row is direct and current and has been published fresh in two consecutive generations.
 - The retained entries carry a current `recordDate` inside the key's observation bound, not just a recent fetch timestamp.

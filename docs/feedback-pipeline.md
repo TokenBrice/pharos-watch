@@ -27,7 +27,7 @@ Inside the worker route, the handler is intentionally split into focused modules
 
 ### `FeedbackButton` (`src/components/feedback-button.tsx`)
 
-A fixed-position FAB mounted globally in `src/app/layout.tsx` but shown only on `sm+` viewports (`hidden ... sm:flex`). Both it and `MobileUtilityDock` also return `null` on the homepage (`pathname === "/"`), independent of viewport. Renders at `bottom-6 right-6 z-50`. Opens `FeedbackModal` with default type `"bug"`. On mobile, `MobileUtilityDock` provides the equivalent entry.
+A fixed-position FAB mounted globally in `src/app/layout.tsx`, shown on `sm+` viewports (`hidden ... sm:flex`), at `bottom-6 right-6 z-50`. It returns `null` on `/` and `/api/`, and opens `FeedbackModal` with default type `"bug"`. On mobile, `MobileUtilityDock` returns `null` on `/`; on `/api/` it retains scroll-to-top but omits feedback so API-key requests do not enter public GitHub issues.
 
 ```tsx
 <FeedbackButton />
@@ -75,7 +75,7 @@ A shadcn `Dialog` with three feedback modes selected via a segmented tab control
 
 **Honeypot:** a hidden `website` input (off-screen, `tabIndex=-1`, `aria-hidden`) is sent as an empty string. If the worker receives a non-empty `website` value, the submission is silently accepted but discarded.
 
-**Submission:** `POST buildApiUrl("/api/feedback")` with `Content-Type: application/json` and a collision-resistant `Idempotency-Key`. The modal retains the same key when retrying the same serialized payload and creates a new key after the payload changes. On Pharos production and Pages preview hosts the request resolves to `https://api.pharos.watch/api/feedback`; local proxy and explicit `NEXT_PUBLIC_API_BASE` setups follow the frontend runtime API rules in `src/lib/api.ts`. Optional contact handles are echoed publicly in the created GitHub issue. On success the modal transitions to a thank-you screen. On error the server's error message is displayed inline.
+**Submission:** `POST buildApiUrl("/api/feedback")` with `Content-Type: application/json` and a collision-resistant `Idempotency-Key`. The modal retains the same key when retrying the same serialized payload, except it clears the key on any HTTP `500` response, including an explicit GitHub rejection or a pre-execution idempotency-reservation failure. A changed payload also creates a new key. Ambiguous execution outcomes (`503`) and network failures retain the key. On Pharos production and Pages preview hosts the request resolves to `https://api.pharos.watch/api/feedback`; local proxy and explicit `NEXT_PUBLIC_API_BASE` setups follow the frontend runtime API rules in `src/lib/api.ts`. Optional contact handles are echoed publicly in the created GitHub issue. On success the modal transitions to a thank-you screen. On error the server's error message is displayed inline.
 
 ---
 
@@ -96,7 +96,7 @@ Implemented in D1 via the `feedback_rate_limit` table. Logic:
 4. If no row is inserted, the endpoint returns `429 Too Many Submissions`.
 5. Rows older than 3600 seconds are pruned in a non-blocking fire-and-forget call.
 
-**D1 schema** (`feedback_rate_limit` is part of `worker/migrations/0000_baseline.sql`; pre-squash migration `0078_feedback_submissions.sql` added `feedback_submissions` and the squashed baseline still creates it for fresh databases, but production D1 removed that unused table during the 2026-07-29 operated cleanup):
+**D1 schema** (`feedback_rate_limit` is created by `worker/migrations/0000_baseline.sql`):
 
 ```sql
 CREATE TABLE IF NOT EXISTS feedback_rate_limit (
@@ -118,8 +118,8 @@ When `type === "data-correction"` and a valid `stablecoinId` is provided, the wo
 |--------|--------|
 | Cached price | `coin.price` from the normalized stablecoins cache payload (`N/A` when absent) |
 | USD circulating market cap | `getCirculatingRawOrNull(coin)` from the normalized cache payload; DefiLlama list values are already USD-denominated. Always emitted: null renders `N/A (supply unavailable)`; observed zero still formats |
-| Peg deviation | `((price - pegReference) / pegReference) * 100` using the tracked peg currency |
-| Peg reference | `getPegReference()` on the tracked peg type, annotated with its rate source (`FX`, `median`, or `fallback`) |
+| Peg deviation | `((price - pegReference) / pegReference) * 100` using the cached coin's peg type |
+| Peg reference | `getPegReference(coin.pegType, rates, meta?.commodityOunces)`, annotated with its rate source (`FX`, `median`, or `fallback`) |
 | Depeg threshold | `getDepegThresholdBps()` for the normalized peg type, in bps |
 | Cache age | `now - cache.updatedAt` in seconds |
 | Verification result | `⚠️ Confirmed` or `✅ Unconfirmed`, matching the label below |
@@ -134,7 +134,7 @@ The verification result produces one of three GitHub labels:
 
 The full snapshot block is embedded in the GitHub issue body as a `**--- Auto-Verification Snapshot (at time of submission) ---**` section.
 
-For non-USD pegs, the worker now derives `pegReference` from the tracked peg type plus cached fallback rates (`peggedEUR`, `peggedGOLD`, etc.). Commodity pegs also respect `commodityOunces`, so tokens such as XAUT and PAXG are compared against per-token gold references rather than `$1`.
+Peg references use the cached coin's peg type and `derivePegRates()` rates, including cached fallbacks; tracked metadata supplies `commodityOunces`. Only threshold/rate-source lookup falls back to tracked peg currency when peg-type normalization fails.
 
 #### GitHub routing
 
@@ -149,7 +149,7 @@ For non-USD pegs, the worker now derives `pegReference` from the tracked peg typ
 | Type | Title |
 |------|-------|
 | `"bug"` | `[Bug] <title>` |
-| `"data-correction"` | `[Data Correction] <stablecoinName>: <first 60 chars of description>…` |
+| `"data-correction"` | `[Data Correction] <optional stablecoinName prefix><first 60 chars of normalized description>` with `...` only when the normalized description exceeds 60 characters |
 | `"feature-request"` | `[Feature Request] <title>` |
 
 **Issue body fields:**

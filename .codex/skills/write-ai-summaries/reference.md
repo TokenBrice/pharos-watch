@@ -13,12 +13,12 @@ Stablecoin metadata lives in `shared/data/stablecoins/coins/*.json` (generated i
 - **Reserve composition**: `reserves[]` — slices with `name`, `pct`, `coinId` + `depType` for dependency tracking, and the V9 scoring fields (`assetClass`, `issuerOrObligor`, `liquidityHorizon`, `maturityDaysMax`, `riskFactors`) that make a reserve-structure paragraph specific. For many coins this lives in the sidecar `shared/data/stablecoins/domains/reserves/<id>.json`, alongside `reserveReview` and `custodyProfile` — not the base file
 - **Resilience sub-factors**: `custodyModel`, `collateralQuality`, `governanceQuality` — valid values live in `shared/types/core.ts` (the source file wins). These drive the Selector and DDR verdicts, not V9 grades
 - **Jurisdiction**: `jurisdiction.country`, `jurisdiction.regulator`, `jurisdiction.license`
-- **Proof of reserves**: `proofOfReserves.type` (independent-audit / real-time / self-reported), `.provider`
-- **Dependencies**: `dependencies[]` — upstream stablecoins with `weight` and `type` (wrapper / mechanism / collateral)
-- **Blacklist exposure**: `canBeBlacklisted` (true / false / "possible")
-- **Yield config**: `yieldConfig.yieldSource`, `yieldConfig.yieldType` (lending-vault / rebase / fee-sharing / lp-receipt / nav-appreciation / governance-set)
+- **Proof of reserves**: `proofOfReserves.type` and `.provider`; read `PROOF_OF_RESERVES_TYPE_VALUES` in `shared/types/core.ts` for the current engagement vocabulary, and `latestReport` for the reviewed assurance scope
+- **Dependencies**: `dependencies[]` — upstream stablecoins with `weight` and `type`; `shared/types/dependency-types.ts` owns the vocabulary
+- **Blacklist exposure**: `blacklistabilityReview.reviewedStatus` in the base entry or risk-review sidecar; `shared/types/stablecoin-meta-schemas.ts` owns its vocabulary, including inherited exposure. The detail page uses the resolved `blacklistStatus`, not a `canBeBlacklisted` field
+- **Yield config**: `yieldConfig.yieldSource`, `yieldConfig.yieldType`; `YIELD_TYPE_VALUES` in `shared/types/core.ts` owns the current vocabulary
 - **Deployment footprint**: `contracts[]` (count and chains), `tradedContracts[]`
-- **Notices**: `notices[]` — danger/warning/info notices the page surfaces to users
+- **Notices**: `notices[]` — the page surfaces notice types from `COIN_NOTICE_TYPE_VALUES` in `shared/types/core.ts` (the source file wins)
 - **Links**: `links[]` — official sources for fact-checking
 
 #### Live Analytical Data (check when refreshing or writing high-profile coins)
@@ -27,8 +27,8 @@ The detail page at `pharos.watch/stablecoin/{id}` shows live scoring and analyti
 
 - **Report card (Safety Score V9)**: Overall grade (A+ to F, or NR when evidence is insufficient) and the three pillars — backing, exit, economic control — with per-mechanism breakdown bars, binding caps ("why not higher"), and the mechanism review panel. Look for the interesting story: a strong overall grade with one weak pillar, a cap-held score, or an NR on a well-known coin
 - **Peg score**: 0-100 score, active depeg status, depeg event count, worst historical deviation
-- **Liquidity score**: 0-100 score, DEX TVL, concentration (HHI), coverage class (primary vs fallback)
-- **Redemption backstop**: Route family (stablecoin-redeem / collateral-redeem / psm-swap / offchain-issuer), access model (permissionless vs whitelisted), settlement speed, fee bps, capacity ratio
+- **Liquidity score**: 0-100 score, DEX TVL, concentration (HHI), and coverage class from `LiquidityCoverageClassSchema` in `shared/types/market.ts`
+- **Redemption backstop**: Route family, access model, settlement model/terms, fees, and capacity ratio; read the current enums in `shared/types/redemption.ts` rather than reducing every route to a permissionless/whitelisted binary
 - **DEWS stress band**: CALM→DANGER scale; the band vocabulary lives in `shared/lib/dews-config.ts` (source file wins)
 - **Yield**: Current APY, yield-to-risk ratio, safety grade
 - **Mint/burn flows**: Net flow direction, flow intensity, pressure shift

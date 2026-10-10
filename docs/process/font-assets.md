@@ -6,7 +6,7 @@ How the self-hosted webfonts under `src/assets/fonts/` are produced and staged. 
 
 | Face | Source | Produced by |
 | --- | --- | --- |
-| Geist, Geist Mono | TTFs in `src/assets/fonts/originals/` | `npm run subset:fonts` — format-only TTF→woff2 conversion, all glyphs retained |
+| Geist, Geist Mono | TTFs in `src/assets/fonts/originals/` | `npm run subset:fonts` — TTF→woff2 conversion, all glyphs retained, hinting removed |
 | Newsreader (roman + italic variable) | TTFs in `src/assets/fonts/originals/` | `npm run subset:fonts` — subsetted against `data/fonts/glyphs-allowlist.txt`, `wght 200..800` preserved |
 | Bricolage Grotesque, JetBrains Mono | committed woff2, no tracked original | none — there is no regeneration path; replace the woff2 by hand |
 
@@ -27,6 +27,6 @@ Two gaps follow from that, and both need operator discipline:
 
 ## Licensed Whyte Webfonts (`npm run install:whyte-fonts`)
 
-`npm run install:whyte-fonts -- /path/to/dinamo-order.zip` extracts the ABC Whyte Inktrap woff2 entries named in `scripts/maintenance/install-whyte-fonts.ts` into `public/fonts/abc-whyte-inktrap/`. It needs `unzip` on PATH and fails closed on a missing zip or a missing entry.
+`npm run install:whyte-fonts -- /path/to/dinamo-order.zip` extracts the ABC Whyte Inktrap woff2 entries named in `scripts/maintenance/install-whyte-fonts.ts` into `public/fonts/abc-whyte-inktrap/`. It needs `unzip` on PATH and exits nonzero on a missing zip or entry. Extraction is incremental: a later missing entry leaves earlier extracted files in place.
 
 The Dinamo license permits WOFF2 `@font-face` on the licensed domain but not the font files in a public repository, so the output directory is gitignored and this command stages local files only. Staging the files does not enable them: the production display face stays the tracked Bricolage Grotesque face in `src/lib/fonts/redesign.ts`, and a clean build emits no reference to Whyte. Switching to Whyte would require a deploy that provisions the files on the serving origin as well as a CSS change.
