@@ -1,6 +1,5 @@
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
 import type { PegAssetBase } from "@shared/types/core";
-import type { DepegRow } from "../../lib/depeg-helpers";
 import {
   signalCrossesThreshold,
   signalIsWithinThreshold,
@@ -26,12 +25,12 @@ interface NativeQuotePolicyContext {
 }
 
 
-export function recoveryPriceForEvent(event: DepegRow, price: number): number | null {
+export function recoveryPriceForEvent(event: DepegDetectionRow, price: number): number | null {
   return isNativePegEvent(event) ? null : price;
 }
 
 export function resolvePeakUpdateCommand(params: {
-  existing: DepegRow;
+  existing: DepegDetectionRow;
   nativeSignal: DepegSignal | null;
   nativePegPrice: number | null;
   primarySignal: DepegSignal;
@@ -55,7 +54,7 @@ export function resolvePeakUpdateCommand(params: {
 }
 
 export function resolveDirectRecovery(params: {
-  existing: DepegRow;
+  existing: DepegDetectionRow;
   nativeSignal: DepegSignal | null;
   nativePegPrice: number | null;
   primaryPrice: number;

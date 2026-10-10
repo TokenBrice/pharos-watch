@@ -94,7 +94,7 @@ describe("backfill replay episode skips", () => {
 
     const outcome = await executeBackfillForCoin({
       db,
-      prepared: { meta: USN_META, geckoId: "noon-usn", supplyByDate: [], currentSupplyUsd: 1_000_000_000 },
+      prepared: { meta: USN_META, geckoId: "noon-usn", supplyTokens: [], currentSupplyUsd: 1_000_000_000 },
       pegRates: { peggedUSD: 1 },
       fxRates: undefined,
       fxSeries: {},
@@ -133,7 +133,7 @@ describe("backfill replay episode skips", () => {
 
     const outcome = await executeBackfillForCoin({
       db,
-      prepared: { meta: USN_META, geckoId: "noon-usn", supplyByDate: [], currentSupplyUsd: 1_000_000_000 },
+      prepared: { meta: USN_META, geckoId: "noon-usn", supplyTokens: [], currentSupplyUsd: 1_000_000_000 },
       pegRates: { peggedUSD: 1 },
       fxRates: undefined,
       fxSeries: {},
@@ -169,7 +169,7 @@ describe("backfill replay episode skips", () => {
 
     const outcome = await executeBackfillForCoin({
       db,
-      prepared: { meta: USN_META, geckoId: "noon-usn", supplyByDate: [], currentSupplyUsd: 1_000_000_000 },
+      prepared: { meta: USN_META, geckoId: "noon-usn", supplyTokens: [], currentSupplyUsd: 1_000_000_000 },
       pegRates: { peggedUSD: 1 },
       fxRates: undefined,
       fxSeries: {},
@@ -182,6 +182,76 @@ describe("backfill replay episode skips", () => {
 
     expect(outcome.status).toBe("applied");
     expect(outcome.eventCount).toBe(1);
+  });
+
+  it.each([false, true])("preserves all-absent supply history even with a current fallback (dryRun=%s)", async (dryRun) => {
+    stubReplayEvents([]);
+    const applyBackfillEvents = vi.fn();
+    const db = mockD1([{
+      match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
+      matchBinds: ["usn-noon"],
+      rows: [{ ...LIVE_ROW, source: "backfill" }],
+    }]);
+    const outcome = await executeBackfillForCoin({
+      db,
+      prepared: {
+        meta: USN_META, geckoId: "noon-usn",
+        supplyTokens: [{ date: "1700000000", circulating: {} }],
+        currentSupplyUsd: 1_000_000_000,
+      },
+      pegRates: { peggedUSD: 1 }, fxRates: undefined, fxSeries: {}, commoditySeries: {},
+      replayWindow: null, coingeckoApiKey: null, dryRun, applyBackfillEvents,
+    });
+    expect(outcome.status).toBe("skipped");
+    expect(applyBackfillEvents).not.toHaveBeenCalled();
+    expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(false);
+    const calls = vi.mocked(backfillCoin).mock.calls;
+    expect(calls[calls.length - 1]?.[0].missingSupplyUsd).toBeNull();
+    if (dryRun) expect(outcome.preview?.recomputedBackfillEventCount).toBeNull();
+  });
+
+  it("converts native history with the historical FX reference before replay", async () => {
+    stubReplayEvents([]);
+    const meta = TRACKED_META_BY_ID.get("eurc-circle")!;
+    await executeBackfillForCoin({
+      db: mockD1(),
+      prepared: {
+        meta, geckoId: "euro-coin",
+        supplyTokens: [
+          { date: "1000", circulating: { peggedEUR: 900_000 } },
+          { date: "2000", circulating: { peggedEUR: 900_000 } },
+        ],
+        currentSupplyUsd: null,
+      },
+      pegRates: { peggedEUR: 2 }, fxRates: { peggedEUR: 2 },
+      fxSeries: { EUR: [{ timestamp: 1_000, rate: 1.1 }, { timestamp: 2_000, rate: 1.2 }] },
+      commoditySeries: {}, replayWindow: null, coingeckoApiKey: null, dryRun: true,
+      applyBackfillEvents: vi.fn(),
+    });
+    const calls = vi.mocked(backfillCoin).mock.calls;
+    const snapshots = calls[calls.length - 1]![0].supplyByDate;
+    expect(snapshots.map((snapshot) => snapshot.ts)).toEqual([1_000, 2_000]);
+    expect(snapshots[0].supply).toBeCloseTo(990_000);
+    expect(snapshots[1].supply).toBeCloseTo(1_080_000);
+  });
+
+  it("converts fractional commodity native token counts with the per-token peg reference", async () => {
+    stubReplayEvents([]);
+    const meta = TRACKED_META_BY_ID.get("ggbr-goldfish-gold")!;
+    await executeBackfillForCoin({
+      db: mockD1(),
+      prepared: {
+        meta, geckoId: "goldfish-gold",
+        supplyTokens: [{ date: "1000", circulating: { peggedGOLD: 500_000 } }],
+        currentSupplyUsd: null,
+      },
+      pegRates: {}, fxRates: undefined, fxSeries: {},
+      commoditySeries: { GOLD: [{ timestamp: 1_000, rate: 3_000 }] },
+      replayWindow: null, coingeckoApiKey: null, dryRun: true,
+      applyBackfillEvents: vi.fn(),
+    });
+    const calls = vi.mocked(backfillCoin).mock.calls;
+    expect(calls[calls.length - 1]![0].supplyByDate).toEqual([{ ts: 1_000, supply: 1_500_000 }]);
   });
 });
 

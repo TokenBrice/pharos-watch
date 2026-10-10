@@ -62,7 +62,7 @@ describe("historical FX configuration", () => {
       prepared: {
         meta,
         geckoId: "unused-because-missing-fx-skips-first",
-        supplyByDate: [],
+        supplyTokens: [],
         currentSupplyUsd: null,
       },
       pegRates: { peggedUSD: 1 },
@@ -95,7 +95,7 @@ describe("historical FX configuration", () => {
       prepared: {
         meta,
         geckoId: "unused-because-missing-commodity-reference-skips-first",
-        supplyByDate: [],
+        supplyTokens: [],
         currentSupplyUsd: null,
       },
       pegRates: { peggedUSD: 1 },
@@ -132,10 +132,55 @@ describe("parseSupplyData", () => {
     ]);
   });
 
-  it("sums all circulating buckets without applying a price", () => {
+  it("sums USD buckets without applying a native-unit conversion", () => {
     expect(parseSupplyData([
-      { date: "100", circulating: { peggedUSD: 125, peggedEUR: 75 } },
-    ])).toEqual([{ ts: 100, supply: 200 }]);
+      { date: "100", totalCirculatingUSD: { peggedUSD: 125, peggedEUR: 75 } },
+    ], () => 2)).toEqual([{ ts: 100, supply: 200 }]);
+  });
+
+  it("drops absent and invalid buckets but preserves explicit observed zero", () => {
+    expect(parseSupplyData([
+      { date: "100" },
+      { date: "200", circulating: {} },
+      { date: "300", circulating: { peggedUSD: Number.NaN } },
+      { date: "400", circulating: { peggedUSD: -1 } },
+      { date: "500", totalCirculatingUSD: { peggedUSD: Number.POSITIVE_INFINITY } },
+      { date: "600", circulating: { peggedUSD: 0 } },
+      { date: "700", totalCirculatingUSD: { peggedJPY: 0 }, circulating: { peggedJPY: 200_000_000 } },
+    ])).toEqual([{ ts: 600, supply: 0 }, { ts: 700, supply: 0 }]);
+  });
+
+  it.each([
+    ["peggedJPY", 200_000_000, 1 / 150, true],
+    ["peggedJPY", 75_000_000, 1 / 150, false],
+    ["peggedEUR", 900_000, 1.2, true],
+    ["peggedGOLD", 500, 3_000, true],
+  ] as const)("uses USD-converted %s supply for the event floor", (pegType, native, rate, expectedEvent) => {
+    const tokens = [{ date: "1000", circulating: { [pegType]: native } }];
+    const converted = parseSupplyData(tokens, () => rate);
+    expect(converted[0].supply).toBeCloseTo(native * rate);
+    const events = extractDepegEvents(
+      [{ timestamp: 1_000, price: rate * 0.98 }, { timestamp: 2_000, price: rate }],
+      () => rate,
+      pegType,
+      converted,
+    );
+    expect(events).toHaveLength(expectedEvent ? 1 : 0);
+  });
+
+  it("prefers historical USD supply over conflicting native units", () => {
+    const parsed = parseSupplyData([
+      { date: "1000", circulating: { peggedEUR: 500_000 }, totalCirculatingUSD: { peggedEUR: 2_000_000_000 } },
+    ], () => 1.2);
+    expect(parsed).toEqual([{ ts: 1_000, supply: 2_000_000_000 }]);
+    expect(extractDepegEvents(
+      [{ timestamp: 1_000, price: 1.17 }, { timestamp: 2_000, price: 1.2 }],
+      () => 1.2, "peggedEUR", parsed,
+    )).toEqual([]);
+  });
+
+  it("does not admit non-USD native supply without a conversion reference", () => {
+    expect(parseSupplyData([{ date: "1000", circulating: { peggedJPY: 200_000_000 } }])).toEqual([]);
   });
 });
 
@@ -623,6 +668,14 @@ describe("extractDepegEvents", () => {
       peakPrice: 0.97,
       recoveryPrice: 1.0,
     });
+  });
+
+  it("does not replace observed historical zero with a positive current fallback", () => {
+    const prices = [{ timestamp: 1_000, price: 0.98 }, { timestamp: 2_000, price: 1 }];
+    const options = { missingSupplyUsd: 2_000_000 };
+    const observedZero = parseSupplyData([{ date: "1000", circulating: { peggedUSD: 0 } }]);
+    expect(extractDepegEvents(prices, () => 1, "peggedUSD", observedZero, undefined, undefined, options)).toEqual([]);
+    expect(extractDepegEvents(prices, () => 1, "peggedUSD", [], undefined, undefined, options)).toHaveLength(1);
   });
 
   it("supports daily native-peg confirmation windows with wider point gaps", () => {

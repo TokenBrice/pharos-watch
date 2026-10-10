@@ -18,7 +18,7 @@ import {
   type ExistingDepegEventRow,
 } from "../backfill-depegs-preview";
 import { backfillCoin } from "../backfill-depegs-replay";
-import type { BackfillEvent } from "../backfill-depegs-extraction";
+import { parseSupplyData, type BackfillEvent } from "../backfill-depegs-extraction";
 import type { PreparedBackfillCoin } from "./planning";
 import {
   type BackfillEventProvenanceInput,
@@ -131,7 +131,7 @@ export async function executeBackfillForCoin(opts: {
     dryRun,
     applyBackfillEvents,
   } = opts;
-  const { meta, geckoId, supplyByDate, currentSupplyUsd } = prepared;
+  const { meta, geckoId, currentSupplyUsd } = prepared;
 
   if (!geckoId) {
     return { status: "skipped", eventCount: 0 };
@@ -216,6 +216,11 @@ export async function executeBackfillForCoin(opts: {
     getPegRef = buildFxLookup(series, resolvedFallback);
   }
 
+  // DefiLlama detail history is native units unless it supplies USD buckets.
+  // The peg reference includes commodityOunces for per-token commodity conversion.
+  const supplyByDate = parseSupplyData(prepared.supplyTokens, getPegRef);
+  const degradedSupplyHistory = prepared.supplyTokens.length > 0 && supplyByDate.length === 0;
+
   try {
     const replay = await backfillCoin({
       meta,
@@ -225,12 +230,12 @@ export async function executeBackfillForCoin(opts: {
       fxRates,
       replayWindow,
       coingeckoApiKey: coingeckoApiKey ?? null,
-      missingSupplyUsd: currentSupplyUsd,
+      missingSupplyUsd: degradedSupplyHistory ? null : currentSupplyUsd,
     });
     const existingRows = await loadExistingReplayRows(db, meta.id, replayWindow);
     // Reviewed skip decisions run before the preview and the apply call so the
     // dry-run diff, the run fingerprint, and the inserted rows all agree.
-    const events = replay.events === null
+    const events = degradedSupplyHistory || replay.events === null
       ? null
       : skipCoveredBackfillEpisodes(meta, replay.events, existingRows.existingLiveRows);
 

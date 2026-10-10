@@ -3,7 +3,7 @@ import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/p
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { DAY_MS } from "@shared/lib/time-constants";
 import { derivePegRates } from "@shared/lib/peg-rates";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { D1Database } from "@cloudflare/workers-types";
 import type { StablecoinMeta } from "@shared/types/core";
 import { DEFILLAMA_BASE, USER_AGENT } from "../../lib/constants";
@@ -22,11 +22,7 @@ import {
   type CommodityPeg,
 } from "../../lib/backfill-fx";
 import type { BackfillReplayWindow } from "../backfill-depegs-window";
-import {
-  parseSupplyData,
-  type SupplyPoint,
-  type SupplySnapshot,
-} from "../backfill-depegs-extraction";
+import type { SupplyPoint } from "../backfill-depegs-extraction";
 
 interface CoinDetail {
   gecko_id?: string;
@@ -37,7 +33,7 @@ interface CoinDetail {
 export interface PreparedBackfillCoin {
   meta: StablecoinMeta;
   geckoId?: string;
-  supplyByDate: SupplySnapshot[];
+  supplyTokens: SupplyPoint[];
   currentSupplyUsd: number | null;
 }
 
@@ -80,7 +76,8 @@ export async function buildBackfillPlan(opts: {
     ));
     fxRates = stablecoinsPayload.fxFallbackRates;
     for (const asset of stablecoinsPayload.peggedAssets) {
-      currentSupplyById.set(asset.id, getCirculatingRaw(asset));
+      const supply = getCirculatingRawOrNull(asset);
+      if (supply != null) currentSupplyById.set(asset.id, supply);
     }
   }
 
@@ -122,20 +119,25 @@ export async function buildBackfillPlan(opts: {
 
     const trackedMeta = PSI_ELIGIBLE_META_BY_ID.get(meta.id);
     const geckoId = trackedMeta?.geckoId ?? detail?.gecko_id;
-    const supplyByDate = parseSupplyData(detail?.tokens ?? []);
+    const supplyTokens = detail?.tokens ?? [];
     preparedCoins.push({
       meta,
       geckoId,
-      supplyByDate,
+      supplyTokens,
       currentSupplyUsd: currentSupplyById.get(meta.id) ?? null,
     });
 
     const peg = meta.flags.pegCurrency;
     if (peg === "USD") continue;
 
+    // Native-only rows still anchor the FX fetch, but never enter USD thresholds.
+    const firstSupplyTimestamp = supplyTokens.reduce((earliest, point) => {
+      const ts = Number.parseInt(point.date, 10);
+      return Number.isFinite(ts) ? Math.min(earliest, ts) : earliest;
+    }, Number.POSITIVE_INFINITY);
     let earliestDate: string;
-    if (supplyByDate[0]) {
-      earliestDate = new Date(supplyByDate[0].ts * 1000).toISOString().slice(0, 10);
+    if (Number.isFinite(firstSupplyTimestamp)) {
+      earliestDate = new Date(firstSupplyTimestamp * 1000).toISOString().slice(0, 10);
     } else if (SECONDARY_PEG_TO_FX[peg] && geckoId) {
       // Secondary FX coins with no DL supply data would otherwise default to 10 years,
       // triggering ~3,600 per-day CDN fetches for the cold-start FX cache build.

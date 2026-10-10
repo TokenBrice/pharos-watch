@@ -58,7 +58,12 @@ export async function hydrateDepegDetection(
 
   throwIfAborted(signal);
   const openResult = await db
-    .prepare(`SELECT ${DEPEG_EVENTS_DEPEGROW_COLUMNS}, recovery_last_seen_at FROM depeg_events WHERE ended_at IS NULL LIMIT ?`)
+    .prepare(`SELECT open_event.*, provenance.quote_mode
+      FROM (
+        SELECT ${DEPEG_EVENTS_DEPEGROW_COLUMNS}, recovery_last_seen_at
+        FROM depeg_events WHERE ended_at IS NULL LIMIT ?
+      ) AS open_event
+      LEFT JOIN depeg_event_provenance AS provenance ON provenance.event_id = open_event.id`)
     .bind(MAX_OPEN_DEPEG_EVENTS)
     .all<DepegDetectionRow>();
   const openRows = openResult.results ?? [];

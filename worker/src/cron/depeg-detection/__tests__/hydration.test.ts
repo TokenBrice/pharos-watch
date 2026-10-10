@@ -3,10 +3,13 @@ import type { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { makeAsset } from "../../../test-helpers/__shared/fixtures";
 import { MAX_OPEN_DEPEG_EVENTS } from "../../../lib/constants";
 import { seedDexEvidence, seedOpenEvent } from "../../__tests__/detect-depegs.test-support";
 import { hydrateDepegDetection } from "../hydration";
+import { resolveDirectRecovery, resolvePeakUpdateCommand } from "../native-quote-policy";
+import { persistDepegCommands } from "../persistence";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const NOW = 1_780_358_400;
@@ -46,6 +49,46 @@ describe("hydrateDepegDetection", () => {
     const cached = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'depeg-native-quote:1'").get();
     expect(cached?.updated_at).toBe(NOW - 60);
     expect(JSON.parse(String(cached?.value))).toEqual({ value: 0.98, observedAt: NOW - 60, source: "coingecko" });
+  });
+
+  it.each([
+    { label: "native backfill provenance", source: "backfill", quoteMode: "native-peg", native: true },
+    { label: "USD backfill provenance", source: "backfill", quoteMode: "usd", native: false },
+    { label: "legacy live native event", source: "live", quoteMode: null, native: true },
+  ])("preserves the hydrated quote domain for $label through peak and recovery persistence", async ({ source, quoteMode, native }) => {
+    const { db, sqlite } = fixtures.open();
+    seedOpenEvent(sqlite, {
+      id: 1, stablecoin_id: asset.id, symbol: "BRZ", peg_type: "peggedREAL",
+      source, peg_reference: native ? 1 : 0.193, start_price: native ? 0.98 : 0.18914,
+      peak_price: native ? 0.98 : 0.18914, peak_deviation_bps: -200,
+    });
+    if (quoteMode != null) {
+      sqlite.prepare(`INSERT INTO depeg_event_provenance
+        (event_id, source_kind, quote_mode, created_at, updated_at) VALUES (1, 'coingecko', ?, ?, ?)`)
+        .run(quoteMode, NOW, NOW);
+    }
+    quoteResponse();
+    const hydrated = await hydrateDepegDetection(db, [asset], { peggedREAL: 0.193 });
+    const existing = hydrated.openRows[0];
+    expect(existing.quote_mode).toBe(quoteMode);
+    const peak = resolvePeakUpdateCommand({
+      existing, nativeSignal: deriveDepegSignal(0.96, 1), nativePegPrice: 0.96,
+      primarySignal: deriveDepegSignal(0.186, 0.193)!, primaryPrice: 0.186,
+      primaryTrust: "authoritative", dexSupportsDirection: false,
+    });
+    expect(peak).not.toBeNull();
+    await persistDepegCommands(db, [peak!]);
+    expect(sqlite.prepare("SELECT peak_deviation_bps, peak_price FROM depeg_events WHERE id = 1").get())
+      .toEqual({ peak_deviation_bps: native ? -400 : -363, peak_price: native ? 0.96 : 0.186 });
+    const recovery = resolveDirectRecovery({
+      existing, nativeSignal: deriveDepegSignal(0.999, 1), nativePegPrice: 0.999,
+      primaryPrice: 0.193, recoveryThreshold: 50, primarySupportsRecovery: true,
+      primaryRecoveryContradicted: false,
+    });
+    expect(recovery).not.toBeNull();
+    await persistDepegCommands(db, [{ type: "close-event", id: existing.id, endedAt: NOW, ...recovery! }]);
+    expect(sqlite.prepare("SELECT recovery_price, close_reason FROM depeg_events WHERE id = 1").get())
+      .toEqual({ recovery_price: native ? 0.999 : 0.193, close_reason: native ? "recovered-native" : "recovered-primary" });
   });
 
   it.each([MAX_OPEN_DEPEG_EVENTS, MAX_OPEN_DEPEG_EVENTS + 1])("fails closed at %s open events and leaves native cache evidence unchanged", async (count) => {

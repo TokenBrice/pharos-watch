@@ -44,6 +44,7 @@ export type DexPoolChallengersByCoin = Awaited<ReturnType<typeof loadDexPoolChal
 
 export interface PeakCandidate {
   bps: number | null | undefined;
+  /** Price normalized into the pending event's quote domain before peak selection. */
   price: number | null | undefined;
 }
 

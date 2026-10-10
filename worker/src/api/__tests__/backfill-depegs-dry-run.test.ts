@@ -181,6 +181,32 @@ describe("handleBackfillDepegs replay windows", () => {
     expect(history.some((entry) => entry.sql.includes("INSERT INTO depeg_events"))).toBe(false);
   });
 
+  it("preserves existing rows on an all-absent historical supply replay", async () => {
+    mockFetch([{
+      match: "/stablecoin/",
+      body: { gecko_id: "tether", tokens: [
+        { date: "1000", circulating: {} },
+        { date: "2000" },
+        { date: "3000", circulating: { peggedUSD: "invalid" } },
+      ] },
+    }]);
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+       started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
+      VALUES (1, 'usdt-tether', 'USDT', 'peggedUSD', 'above', 300,
+       1000, 3000, 1.02, 1.03, 1, 1, 'backfill')`).run();
+    const existing = sqlite.prepare("SELECT * FROM depeg_events WHERE id = 1").get();
+    const req = makeApiRequest("/api/backfill-depegs?stablecoin=usdt-tether", {
+      adminKey: "secret", method: "POST",
+    });
+    const response = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
+    const body = await readJsonResponse(response, 200) as { eventsCreated: number };
+    expect(body.eventsCreated).toBe(0);
+    expect(sqlite.prepare("SELECT * FROM depeg_events WHERE id = 1").get()).toEqual(existing);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_backfill_runs").get()).toEqual({ count: 0 });
+  });
+
   it("previews stale-row removal when a trusted replay finds zero events", async () => {
     vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce({
       prices: [

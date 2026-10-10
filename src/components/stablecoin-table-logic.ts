@@ -4,7 +4,7 @@ import { createTableComparator } from "@/lib/table-comparator";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import type { ColumnId } from "@/hooks/use-preferences";
 import { GRADE_FILTER_TAGS, getFilterTags, gradeMatchesFilter, OTHER_PEG_TAGS } from "@shared/lib/filter-tags";
-import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import {
   CLIENT_ACTIVE_IDS as ACTIVE_IDS,
   CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
@@ -33,9 +33,9 @@ interface SortState {
 }
 
 export type StablecoinTableRowRiskLevel = "depeg" | "poor" | "warning" | "normal";
-/** Return a supply change in percentage points, or null without a positive previous value. */
-export function getSupplyChangePercent(current: number, previous: number): number | null {
-  if (previous <= 0) return null;
+/** Return a supply change in percentage points only with both observations and a positive previous value. */
+export function getSupplyChangePercent(current: number | null, previous: number | null): number | null {
+  if (current == null || previous == null || previous <= 0) return null;
   return ((current - previous) / previous) * 100;
 }
 
@@ -177,9 +177,9 @@ export function sortStablecoins({
   const extractors: Record<StablecoinTableSortKey, (row: StablecoinData) => StablecoinSortValue> = {
     name: (r) => r.name.toLowerCase(),
     price: (r) => isObservedPrice(r) ? r.price ?? null : null,
-    mcap: (r) => getCirculatingRaw(r),
-    change24h: (r) => getSupplyChangePercent(getCirculatingRaw(r), getPrevDayRaw(r)),
-    change7d: (r) => getSupplyChangePercent(getCirculatingRaw(r), getPrevWeekRaw(r)),
+    mcap: (r) => getCirculatingRawOrNull(r),
+    change24h: (r) => getSupplyChangePercent(getCirculatingRawOrNull(r), getPrevDayRawOrNull(r)),
+    change7d: (r) => getSupplyChangePercent(getCirculatingRawOrNull(r), getPrevWeekRawOrNull(r)),
     stability: (r) => pegScores?.get(r.id)?.pegScore ?? null,
     liquidity: (r) => dexLiquidity?.[r.id]?.liquidityScore ?? null,
     grade: (r) => reportCards?.[r.id]?.score ?? null,
@@ -226,18 +226,18 @@ export function exportStablecoinsCsv(
       { header: "Name", accessor: (row) => row.name },
       { header: "Symbol", accessor: (row) => row.symbol },
       { header: "Price", accessor: (row) => isObservedPrice(row) ? row.price ?? null : null },
-      { header: "Market Cap (USD)", accessor: (row) => getCirculatingRaw(row) },
+      { header: "Market Cap (USD)", accessor: (row) => getCirculatingRawOrNull(row) },
       {
         header: "24h Change (%)",
         accessor: (row) => {
-          const change = getSupplyChangePercent(getCirculatingRaw(row), getPrevDayRaw(row));
+          const change = getSupplyChangePercent(getCirculatingRawOrNull(row), getPrevDayRawOrNull(row));
           return change == null ? null : Number(change.toFixed(2));
         },
       },
       {
         header: "7d Change (%)",
         accessor: (row) => {
-          const change = getSupplyChangePercent(getCirculatingRaw(row), getPrevWeekRaw(row));
+          const change = getSupplyChangePercent(getCirculatingRawOrNull(row), getPrevWeekRawOrNull(row));
           return change == null ? null : Number(change.toFixed(2));
         },
       },

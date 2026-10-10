@@ -28,9 +28,11 @@ interface RowCellsProps {
   model: StablecoinTableRowModel;
 }
 
-function MiniSparkline({ values }: { values: number[] }) {
-  if (values.every((value) => value === 0)) return null;
-  const trending = values[values.length - 1] >= values[0];
+function MiniSparkline({ values }: { values: (number | null)[] }) {
+  if (values.every((value) => value == null || value === 0)) return null;
+  const first = values.find((value) => value != null);
+  const last = values[values.length - 1];
+  const trending = first != null && last != null && last >= first;
 
   return <RowSparkline
     data={values}
@@ -200,7 +202,9 @@ function MarketCells({ row, model }: RowCellsProps) {
         </TableCell>
       ) : null}
       {row.isVisible("mcap") ? (
-        <TableCell className="text-right pharos-numeric">{formatCurrency(model.circulating)}</TableCell>
+        <TableCell className="text-right pharos-numeric">
+          {model.circulating == null ? <span className="text-muted-foreground" title="Supply unavailable">—</span> : formatCurrency(model.circulating)}
+        </TableCell>
       ) : null}
       {row.isVisible("change24h") ? (
         <TableCell className="text-right pharos-numeric text-sm">
@@ -209,7 +213,7 @@ function MarketCells({ row, model }: RowCellsProps) {
             negativeClass: "text-red-700 dark:text-red-400",
             positiveInclusiveZero: true,
           })}>
-            {model.change24h != null ? (
+            {model.change24h != null && model.circulating != null && model.prevDay != null ? (
               <>{model.change24h >= 0 ? "↑" : "↓"} {formatPercentChange(model.circulating, model.prevDay)}</>
             ) : "—"}
           </span>
@@ -222,7 +226,7 @@ function MarketCells({ row, model }: RowCellsProps) {
             negativeClass: "text-red-700 dark:text-red-400",
             positiveInclusiveZero: true,
           })}>
-            {model.change7d != null ? (
+            {model.change7d != null && model.circulating != null && model.prevWeek != null ? (
               <>
                 <span className="hidden lg:inline"><MiniSparkline values={model.supplySparklineValues} /></span>
                 {model.change7d >= 0 ? "↑" : "↓"} {formatPercentChange(model.circulating, model.prevWeek)}

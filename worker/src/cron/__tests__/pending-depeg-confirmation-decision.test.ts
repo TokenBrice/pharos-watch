@@ -435,6 +435,160 @@ describe("evaluatePromotionDecision opposite-direction corroboration", () => {
 });
 
 describe("evaluatePromotionDecision promotion peak aggregation across channels", () => {
+  it.each([
+    { currency: "EUR", reference: 1.1 },
+    { currency: "BRL", reference: 0.193 },
+  ])("normalizes a $currency native confirmer peak into a USD-origin event", async ({ currency, reference }) => {
+    const { sqlite, db } = openFixture();
+    const row = makePendingRow({
+      id: 300, stablecoin_id: "non-usd-coin", symbol: currency,
+      peg_type: currency === "EUR" ? "peggedEUR" : "peggedREAL",
+      peg_reference: reference, first_seen_bps: -200, first_price: reference * 0.98,
+      last_seen_bps: -200, last_price: reference * 0.98,
+      peak_seen_bps: -200, peak_price: reference * 0.98,
+    });
+    insertPending(sqlite, row);
+    const plan = makePlan({
+      row, pegReference: reference, authoritativePrice: reference * 0.98,
+      primaryStatus: "confirm", primarySameDirectionDepegged: true,
+      temporalSameDirectionConfirmed: true, nativeSourceKey: `native:${currency.toLowerCase()}`,
+      nativeSignal: deriveDepegSignal(0.94, 1),
+      nativePegQuote: { stablecoinId: row.stablecoin_id, geckoId: "non-usd-coin", pegCurrency: currency, price: 0.94, updatedAt: NOW_SEC - 30 },
+    });
+    const evidence = await collectConfirmationEvidence({
+      ...plan, db, now: NOW_SEC, coingeckoAllowed: false, coingeckoApiKey: undefined,
+      signal: undefined, cexAllowed: false, cexPrices: null,
+      dexPriceRows: new Map(), dexPriceSources: new Map(), poolChallengers: new Map(),
+    });
+    expect(evidence.offchainPeakCandidate?.price).toBeCloseTo(reference * 0.94, 10);
+    await settle(db, plan, evidence);
+    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
+    expect(state.pending).toBeUndefined();
+    expect(state.events[0]).toMatchObject({
+      start_price: reference * 0.98, peg_reference: reference, peak_deviation_bps: -600,
+    });
+    expect(Number(state.events[0].peak_price)).toBeCloseTo(reference * 0.94, 10);
+    expect((Number(state.events[0].peak_price) / reference - 1) * 10_000).toBeCloseTo(-600, 6);
+    expect(state.events[0].confirmation_sources).toBe(`temporal:15m+native:${currency.toLowerCase()}`);
+  });
+
+  it("retains native prices and reference for a native-origin promotion", async () => {
+    const { sqlite, db } = openFixture();
+    const row = makePendingRow({
+      id: 301, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL",
+      reason: "large-cap+native-origin", peg_reference: 1,
+      first_seen_bps: -200, first_price: 0.98, peak_seen_bps: -200, peak_price: 0.98,
+    });
+    insertPending(sqlite, row);
+    const plan = makePlan({
+      row, authoritativePrice: 0.94, primaryStatus: "confirm", primarySameDirectionDepegged: true,
+      primaryConfirmationSources: ["primary:oracle:pyth"], temporalSameDirectionConfirmed: true,
+    });
+    const evidence = await collectConfirmationEvidence({
+      ...plan, db, now: NOW_SEC, coingeckoAllowed: false, coingeckoApiKey: undefined,
+      signal: undefined, cexAllowed: false, cexPrices: null,
+      dexPriceRows: new Map(), dexPriceSources: new Map(), poolChallengers: new Map(),
+    });
+    await settle(db, plan, evidence);
+    expect(readLifecycle(sqlite, row.stablecoin_id, row.id).events[0])
+      .toMatchObject({ start_price: 0.98, peak_price: 0.94, peg_reference: 1, peak_deviation_bps: -600 });
+  });
+
+  it.each([1, 2])("admits pool peaks only after %s confirming groups pass the opposing vote", async (confirmingCount) => {
+    const { sqlite, db } = openFixture();
+    const row = makePendingRow({
+      id: 302, first_seen_bps: -200, first_price: 0.98, last_seen_bps: -200,
+      last_price: 0.98, peak_seen_bps: -200, peak_price: 0.98,
+    });
+    insertPending(sqlite, row);
+    const plan = makePlan({
+      row, authoritativePrice: 0.98, primaryStatus: "confirm", primarySameDirectionDepegged: true,
+      primaryConfirmationSources: ["primary:oracle:pyth", "primary:oracle:chainlink"],
+      temporalSameDirectionConfirmed: true,
+    });
+    const evidence = await collectConfirmationEvidence({
+      ...plan, db, now: NOW_SEC, coingeckoAllowed: false, coingeckoApiKey: undefined,
+      signal: undefined, cexAllowed: false, cexPrices: null,
+      dexPriceRows: new Map(), dexPriceSources: new Map(),
+      poolChallengers: new Map([[row.stablecoin_id, [
+        ...["curve", "uniswap"].slice(0, confirmingCount).map((protocol) => ({
+          price: 0.8, tvlUsd: 1_000_000, protocol, sourceFamily: protocol, chain: "ethereum",
+        })),
+        ...["aerodrome", "balancer"].map((protocol) => ({
+          price: 1, tvlUsd: 1_000_000, protocol, sourceFamily: protocol, chain: "ethereum",
+        })),
+      ]]]),
+    });
+    expect(evidence.poolStatus).toBe(confirmingCount === 1 ? "insufficient" : "confirm");
+    expect(evidence.poolConfirmations).toHaveLength(confirmingCount === 1 ? 0 : 2);
+    await settle(db, plan, evidence);
+    const event = readLifecycle(sqlite, row.stablecoin_id, row.id).events[0];
+    expect(event).toMatchObject({
+      peak_deviation_bps: confirmingCount === 1 ? -200 : -2000,
+      peak_price: confirmingCount === 1 ? 0.98 : 0.8,
+    });
+    expect(event.confirmation_sources).toBe("temporal:15m+primary:oracle:pyth+primary:oracle:chainlink" +
+      (confirmingCount === 1 ? "" : "+pool:curve:curve+pool:uniswap:uniswap"));
+  });
+
+  it("ignores unadmitted pool candidates even when another source promotes", async () => {
+    const { sqlite, db } = openFixture();
+    const row = makePendingRow({ id: 303, first_seen_bps: -200, first_price: 0.98, peak_seen_bps: -200, peak_price: 0.98 });
+    insertPending(sqlite, row);
+    const plan = makePlan({
+      row, authoritativePrice: 0.98, primaryStatus: "confirm", primarySameDirectionDepegged: true,
+      primaryConfirmationSources: ["primary:oracle:pyth", "primary:oracle:chainlink"],
+      temporalSameDirectionConfirmed: true,
+    });
+    const evidence = makeEvidence({
+      poolStatus: "insufficient", poolConfirmations: [{
+        key: "curve:curve", pool: { price: 0.8, tvlUsd: 1_000_000, protocol: "curve", sourceFamily: "curve" },
+        signal: deriveDepegSignal(0.8, 1)!,
+      }],
+    });
+    await settle(db, plan, evidence);
+    expect(readLifecycle(sqlite, row.stablecoin_id, row.id).events[0]).toMatchObject({
+      peak_deviation_bps: -200, peak_price: 0.98,
+      confirmation_sources: "temporal:15m+primary:oracle:pyth+primary:oracle:chainlink",
+    });
+  });
+
+  it.each([
+    { opposingCount: 0, opposingPrice: 1 },
+    { opposingCount: 1, opposingPrice: 1 },
+    { opposingCount: 2, opposingPrice: 1 },
+    { opposingCount: 2, opposingPrice: 1.02 },
+  ])("requires the high-TVL pool vote with $opposingCount opposing groups at $opposingPrice before pool-only promotion", async ({ opposingCount, opposingPrice }) => {
+    const { sqlite, db } = openFixture();
+    const row = makePendingRow({ id: 304 });
+    insertPending(sqlite, row);
+    const plan = makePlan({
+      row, authoritativePrice: 0.98, primaryStatus: "confirm", primarySameDirectionDepegged: true,
+      temporalSameDirectionConfirmed: true,
+    });
+    const evidence = await collectConfirmationEvidence({
+      ...plan, db, now: NOW_SEC, coingeckoAllowed: false, coingeckoApiKey: undefined,
+      signal: undefined, cexAllowed: false, cexPrices: null,
+      dexPriceRows: new Map(), dexPriceSources: new Map(),
+      poolChallengers: new Map([[row.stablecoin_id, [
+        { price: 0.8, tvlUsd: 6_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+        ...["uniswap", "aerodrome"].slice(0, opposingCount).map((protocol) => ({
+          price: opposingPrice, tvlUsd: 6_000_000, protocol, sourceFamily: protocol, chain: "ethereum",
+        })),
+      ]]]),
+    });
+    await settle(db, plan, evidence);
+    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
+    if (opposingCount <= 1) {
+      expect(state.pending).toBeUndefined();
+      expect(state.events[0]).toMatchObject({ peak_deviation_bps: -2000, peak_price: 0.8, confirmation_sources: "temporal:15m+pool:curve:curve" });
+      expect(state.outcomes[0]).toMatchObject({ outcome: "promoted" });
+    } else {
+      expect(state).toMatchObject({ pending: { id: row.id }, events: [], outcomes: [] });
+      expect(evidence.confirmingSources).toEqual([]);
+    }
+  });
+
   it("promotes with the deepest CEX peak candidate and credits confirmed pools in the event record", async () => {
     const { sqlite, db } = openFixture();
     const row = makePendingRow({ id: 205, peak_seen_bps: -300, peak_price: 0.97 });

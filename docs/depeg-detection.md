@@ -187,6 +187,10 @@ Cleaned up non-USD depeg events with `peak_deviation_bps < 150` when the non-USD
 
 The Pages build snapshot is maintained by `scripts/maintenance/sync-depeg-events.ts` under `data/depeg-events/`. `index.json` is the compact route-bearing projection used to enumerate permanent `/depeg/<event>/` pages and build the command-palette payload. It carries each route's slug, coin identity, direction, start date, and peak severity. The full event ledger is partitioned into UTC-year shards (`YYYY.json`); feeds, public dataset generation, and page hydration read those shards. A refresh therefore changes the index and only the affected year shard instead of rewriting one monolithic archive file.
 
+Synchronization follows the API cursor until exhaustion, not a display-sized page cap. An outstanding cursor at the 1,000-page safety ceiling, an empty continuation page, or a unique-event count that disagrees with the initial API total is a `SnapshotIntegrityError` before any output write. Fetch-failure fallback cannot turn these integrity failures into successful refreshes; the Pages release wrapper retains the committed directory on producer failure. Published static-page preservation checks remain in force.
+
+Every successful sync also writes `data/depeg-events/metadata/capture.json`: the SHA-256 identity of the exact yearly shard bytes, event count, API total when supplied, source URL, methodology label, and observation start/end clocks. Capture metadata lives in a subdirectory so top-level JSON archive enumeration sees only the route index and event shards; synchronization removes the superseded top-level `capture.json`. Keeping metadata within the archive directory also preserves the Pages release wrapper's directory-level copy and replacement; the release archive allowlist admits only this metadata directory and its capture file, not arbitrary metadata contents. Dataset generation validates this identity before using the ledger; legacy shards without a capture must be synchronized first. The ledger is a current capture, not a reconstruction of event peaks or recoveries at an older market snapshot's clock. Dated `depeg-history` exports therefore publish explicitly retrospective windowed history with this capture's provenance (see [Surface Split](./api-reference.md#surface-split)).
+
 ## Cron Scheduling
 
 Detection runs as part of the `*/15 * * * *` sync cycle. After `syncStablecoins()` enriches prices, it calls:
@@ -206,6 +210,8 @@ The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts
 2. Derive peg rates (handles FX lookups once)
 3. Load DEX prices from `dex_prices` table (silently skip if table missing)
 4. Merge duplicate open events: same-direction duplicates keep the earliest row and absorb only same-direction peaks; if opposite directions are open, the newest direction remains live and older direction rows close with `close_reason = 'superseded-direction'` and `recovery_price = NULL`
+
+Open-event hydration explicitly joins `depeg_event_provenance.quote_mode`. This structured quote domain is authoritative for both live and backfilled rows: `native-peg` events keep native-currency peak and recovery prices with reference 1, while USD-domain rows use USD prices. Only legacy live non-USD events without quote-mode provenance use the reference-1 native heuristic.
 
 `dex_prices` rows are only trusted for depeg logic when they are both fresh (`updated_at < 75 min`, covering the hourly producer plus one bounded delay) and deep enough (`source_total_tvl >= $1M`). Thin DEX rows remain visible in storage for analytics, but they do not suppress or confirm events.
 
@@ -341,6 +347,7 @@ Age checks:
 - Loads qualifying individual DEX pool challengers from the published challenger snapshot tables via `loadDexPoolChallengers(...)`
 - Uses the same freshness / minimum-TVL guardrail family as the depeg helper layer
 - Counts as confirmation only when **at least two distinct protocol/source-family groups** reach the full trigger threshold in the same direction, **or** a single qualifying pool with `>= $5M` TVL does so, and the confirming groups are at least as numerous as the groups contradicting the pending direction (opposite-direction or back inside the bar). Multiple same-protocol pools from the same source family count as one group.
+- The single-high-TVL exception replaces only the two-group minimum, never the opposing-group vote: one confirming group can be unopposed or tied with one opposing group, but cannot confirm against two opposing groups.
 - Non-fatal: missing challenger tables or incomplete published snapshots fall back through the helper's legacy path and still yield `null`/`false` safely
 - Persisted confirmation keys use `pool:<protocol>:<sourceFamily>`.
 
@@ -361,6 +368,8 @@ Age checks:
 
 Promotion inserts into `depeg_events` with `started_at` = the current continuous episode's `first_seen_at`, direction = the active pending direction, the refreshed authoritative `peg_reference` (or the stored pending reference when the refreshed non-USD fiat reference is not authoritative), canonical `confirmation_sources` beginning with `temporal:15m`, and peak = worst of the stored pending peak, current same-domain authoritative price, and trustworthy same-direction confirmer prices, then atomically inserts the outcome and deletes from `depeg_pending` as one candidate transition.
 
+Native-currency confirmers on USD-origin candidates normalize their price by multiplying the native quote (reference 1) by the candidate's admitted USD peg reference before peak selection; native-origin candidates retain native prices and reference 1. Pool peak candidates are exposed and consumed only when the pool confirmation policy accepts them, so rejected minority pools cannot deepen a primary-led promotion or supply uncredited event peaks.
+
 Pending rows that pass the 45-minute base expiry but still have same-direction primary evidence, unavailable sources, or open confirmation circuits remain pending until their final dynamic limit. Rows that exceed that final limit are deleted with a recorded pending outcome; extreme-move expiries use `unconfirmed-severe` instead of the generic `expired` label.
 
 ## Historical Backfill Validation
@@ -378,7 +387,9 @@ Both rules run before the dry-run/apply split, so the preview, `expectedEventCou
 
 Mutating backfills now persist replay-run status and event provenance. Backfilled rows receive replay version, provider roster, quote mode, peg-reference source, supply source, confirmation policy, confidence tier, and compact public provenance. Existing rows without provenance are still accepted by API mappers and PegScore.
 
-When DefiLlama historical supply is absent, replay applies the live `$1M` event floor using the current stablecoins-cache supply for that asset. If neither historical nor current supply is available, the backfill preserves existing rows instead of silently replaying market prices without a supply floor. The same fallback supply also controls large-cap confirmation behavior for absent-history assets.
+Historical supply admission prefers DefiLlama `totalCirculatingUSD`. Native-only `totalCirculating` / `circulating` snapshots are converted through the timestamp's historical FX or commodity peg reference (including per-token `commodityOunces`) before applying the `$1M` event floor or large-cap confirmation threshold; native units are never compared directly to USD thresholds. Absent, empty, invalid, or unconvertible records do not become zero snapshots; explicit finite zero remains observed zero.
+
+When DefiLlama returns no historical rows, replay applies the live `$1M` event floor using the current stablecoins-cache supply for that asset. If neither historical nor current supply is available, the backfill preserves existing rows instead of silently replaying market prices without a supply floor. A non-empty historical response with no usable supply snapshots is treated as degraded and preserves existing rows even when current supply exists. The same current fallback supply controls large-cap confirmation behavior for genuinely absent-history assets.
 
 Supported non-USD fiat backfills now prefer direct CoinGecko native-fiat history first and compare that series against the native `1.0` peg. In that native-fiat mode, replay uses daily points plus a two-point confirmation window across 36 hours before opening a normal event, while still preserving extreme single-point crashes of `>= 5000 bps`. Only when that native history is unavailable does the replay fall back to USD-denominated CoinGecko/DefiLlama history plus the historical FX reference.
 

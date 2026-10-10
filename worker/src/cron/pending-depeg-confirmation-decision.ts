@@ -66,10 +66,10 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
         ...(evidence.offchainPeakCandidate ? [evidence.offchainPeakCandidate] : []),
         ...(evidence.cexPeakCandidate ? [evidence.cexPeakCandidate] : []),
         ...evidence.dexPeakCandidates,
-        ...evidence.poolConfirmations.map((confirmation) => ({
+        ...(evidence.poolStatus === "confirm" ? evidence.poolConfirmations.map((confirmation) => ({
           bps: confirmation.signal.bps,
           price: confirmation.pool.price,
-        })),
+        })) : []),
       ],
       { bps: pendingState.peakSeenBps, price: pendingState.peakPrice },
     );

@@ -43,6 +43,20 @@ describe("native quote mutation policy", () => {
       .toEqual({ type: "update-peak", id: 7, peakDeviationBps: -900, peakPrice: 0.18 });
   });
 
+  it("honors structured quote provenance over the legacy live reference heuristic", () => {
+    const existing = { ...event(), quote_mode: "usd" };
+    expect(resolvePeakUpdateCommand({
+      existing, nativeSignal: signal(-400), nativePegPrice: 0.96,
+      primarySignal: signal(-900), primaryPrice: 0.91, primaryTrust: "authoritative",
+      dexSupportsDirection: false,
+    })).toEqual({ type: "update-peak", id: 7, peakDeviationBps: -900, peakPrice: 0.91 });
+    expect(resolveDirectRecovery({
+      existing, nativeSignal: signal(-400), nativePegPrice: 0.96, primaryPrice: 1,
+      recoveryThreshold: 50, primarySupportsRecovery: true, primaryRecoveryContradicted: false,
+    })).toEqual({ recoveryPrice: 1, closeReason: "recovered-primary" });
+    expect(recoveryPriceForEvent(existing, 1)).toBe(1);
+  });
+
   it("requires an available native quote at the inclusive raw recovery boundary", () => {
     const input = { existing: event(), nativeSignal: signal(-50), nativePegPrice: 0.995,
       primaryPrice: 1, recoveryThreshold: 50, primarySupportsRecovery: true, primaryRecoveryContradicted: false };

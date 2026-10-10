@@ -1,6 +1,6 @@
 import { DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { admitSupplyBuckets } from "@shared/lib/supply";
 import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import { binarySearchNearest } from "../lib/binary-search";
 
@@ -19,6 +19,8 @@ const BACKFILL_PENDING_MAX_GAP_SEC = 6 * 3600;
 export interface SupplyPoint {
   date: string;
   circulating?: Record<string, number>;
+  totalCirculatingUSD?: Record<string, number>;
+  totalCirculating?: Record<string, number>;
 }
 
 export interface BackfillEvent {
@@ -46,12 +48,30 @@ export interface BackfillEventExtractionOptions {
   missingSupplyUsd?: number | null;
 }
 
-export function parseSupplyData(tokens: SupplyPoint[]): SupplySnapshot[] {
+export function parseSupplyData(
+  tokens: SupplyPoint[],
+  getNativeUsdRate?: (timestamp: number) => number,
+): SupplySnapshot[] {
   const map = new Map<number, number>();
   for (const point of tokens) {
     const ts = Number.parseInt(point.date, 10);
-    if (Number.isNaN(ts)) continue;
-    map.set(ts, getCirculatingRaw(point));
+    if (!Number.isFinite(ts)) continue;
+    const usd = admitSupplyBuckets(point.totalCirculatingUSD);
+    if (usd.status === "observed") {
+      map.set(ts, usd.total);
+      continue;
+    }
+    // An invalid USD record is not permission to publish a different number.
+    if (usd.status === "invalid") continue;
+    const buckets = point.totalCirculating ?? point.circulating;
+    const native = admitSupplyBuckets(buckets);
+    if (native.status !== "observed") continue;
+    // Without a conversion reference only explicitly USD buckets are usable.
+    const rate = getNativeUsdRate?.(ts) ??
+      (Object.keys(buckets!).every((key) => key === "peggedUSD") ? 1 : null);
+    if (rate == null || !Number.isFinite(rate) || rate <= 0) continue;
+    const supply = native.total * rate;
+    if (Number.isFinite(supply)) map.set(ts, supply);
   }
   return Array.from(map.entries())
     .map(([ts, supply]) => ({ ts, supply }))

@@ -238,7 +238,10 @@ export async function collectConfirmationEvidence(
     evidence.offchainStatus = classifyDirectionalSignal(nativeSignal, threshold, pendingState.direction);
     evidence.offchainSourceKey = nativeSourceKey;
     if (evidence.offchainStatus === "confirm") {
-      evidence.offchainPeakCandidate = { bps: nativeSignal.bps, price: nativePegQuote?.price ?? null };
+      // Native quotes have reference 1; normalize the price into this USD-origin
+      // pending event's admitted peg reference before it reaches peak selection.
+      const eventDomainPrice = nativePegQuote != null ? nativePegQuote.price * pegReference : null;
+      evidence.offchainPeakCandidate = { bps: nativeSignal.bps, price: eventDomainPrice };
       addSource(evidence.confirmingSources, nativeSourceKey);
     } else if (isOpposingConfirmationStatus(evidence.offchainStatus)) {
       addSource(evidence.opposingSources, nativeSourceKey);
@@ -462,7 +465,9 @@ export async function collectConfirmationEvidence(
       divergingCount: poolConfirmGroups.size,
       corroboratingCount: poolRecoverGroups.size + poolContradictGroups.size,
     });
-    if (poolHighTvlConfirm != null || poolConfirmOutvotes) {
+    const highTvlConfirmOutvotes = poolHighTvlConfirm != null &&
+      poolConfirmGroups.size >= poolRecoverGroups.size + poolContradictGroups.size;
+    if (highTvlConfirmOutvotes || poolConfirmOutvotes) {
       evidence.poolStatus = "confirm";
       addSources(
         evidence.confirmingSources,
@@ -502,7 +507,7 @@ export async function collectConfirmationEvidence(
   }
 
   evidence.poolConfirmations =
-    evidence.dexStatus === "confirm"
+    evidence.poolStatus !== "confirm" || evidence.dexStatus === "confirm"
       ? []
       : poolHighTvlConfirm != null
         ? [poolHighTvlConfirm]
