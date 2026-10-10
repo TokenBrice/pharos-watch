@@ -9,6 +9,7 @@ import { claimDetailCacheGeneration, publishDetailCacheGeneration } from "../../
 import { logWorkerEvent } from "../../lib/structured-log";
 import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
 import { buildFreshnessMeta } from "../../lib/api-freshness";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 export const CACHE_TTL_SECONDS = PER_COIN_CACHE_TTL_SECONDS;
 export const DETAIL_UPSTREAM_TIMEOUT_MS = 12_000;
@@ -84,14 +85,20 @@ export function createFreshCacheHitResponse(cachedValue: string, ageSeconds: num
 }
 
 export function createStaleCacheHitResponse(cachedValue: string, ageSeconds: number, updatedAt: number): Response {
+  // A cache entry due for background revalidation is not necessarily old data.
+  // Keep the producer clock and no-store policy; classify its public health
+  // using the same budget as the detail page's current market snapshot.
+  const freshness = buildFreshnessMeta(updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, "stablecoin-detail");
   return new Response(cachedValue, {
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": CACHE_PROFILES.noStore,
       "X-Data-Age": String(Math.max(0, ageSeconds)),
       "X-Data-Updated-At": String(updatedAt),
-      "Warning": "110 - \"Stablecoin detail cache is stale; refresh scheduled\"",
-      "X-Data-Freshness": "stale",
+      ...(freshness.status !== "fresh" ? {
+        Warning: '110 - "Stablecoin detail cache is stale; refresh scheduled"',
+      } : {}),
+      "X-Data-Freshness": freshness.status,
     },
   });
 }
