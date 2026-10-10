@@ -3,13 +3,19 @@ import { describe, it, expect } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeDigestRow } from "../../test-helpers/__shared/fixtures";
 import { handleDailyDigest } from "../daily-digest";
+import { DailyDigestResponseArtifactSchema } from "../../../../scripts/lib/public-api-response-schemas";
 
 describe("handleDailyDigest", () => {
-  it("returns 200 with digest: null when no data", async () => {
+  it("returns the complete nullable public contract when no daily edition exists", async () => {
     const db = mockD1([{ match: "FROM daily_digest", rows: [] }]);
     const res = await handleDailyDigest(db);
-    const body = (await readJsonResponse(res, 200)) as { digest: null };
-    expect(body.digest).toBeNull();
+    const body = await readJsonResponse(res, 200);
+    expect(DailyDigestResponseArtifactSchema.safeParse(body).success).toBe(true);
+    expect(body).toEqual({
+      digest: null, digestTitle: null, digestExtended: null, generatedAt: null, editionNumber: null,
+      riskSignal: null, changeSummary: null, nextTriggers: null, forwardLookOutcomes: null,
+      riskTape: null, standingConditions: null,
+    });
   });
 
   it("returns 200 with digest text when data exists", async () => {

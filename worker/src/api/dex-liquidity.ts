@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { safeJsonParse } from "../lib/api-cache-read";
-import { addFreshnessHeaders } from "../lib/api-freshness";
+import { addFreshnessHeaders, buildCronFreshnessHeaders, getLatestSuccessfulCronTimestampResult } from "../lib/api-freshness";
 import { jsonResponseWithHeaders } from "../lib/api-response";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { isMissingTableError } from "../lib/db";
@@ -116,12 +116,18 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
   const sevenDaysAgo = nowSec - 7 * 86_400;
   const { day: trend24hToleranceSec, week: trend7dToleranceSec } = getDexLiquidityTrendTolerances();
   const rows = result.results ?? [];
-  const freshnessTs = rows.length > 0 ? Math.max(...rows.map((row) => row.updated_at)) : nowSec;
-  const headers = addFreshnessHeaders(
-    { "Cache-Control": advisoryUnavailableReason ? CACHE_PROFILES.noStore : CACHE_PROFILES.custom },
-    freshnessTs,
-    API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
-  );
+  const cacheControl = advisoryUnavailableReason ? CACHE_PROFILES.noStore : CACHE_PROFILES.custom;
+  const headers = rows.length > 0
+    ? addFreshnessHeaders(
+        { "Cache-Control": cacheControl },
+        Math.max(...rows.map((row) => row.updated_at)),
+        API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
+      )
+    : buildCronFreshnessHeaders(
+        await getLatestSuccessfulCronTimestampResult(db, "sync-dex-liquidity"),
+        API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
+        cacheControl,
+      );
 
   const map: Record<string, unknown> = {};
   for (const row of result.results ?? []) {

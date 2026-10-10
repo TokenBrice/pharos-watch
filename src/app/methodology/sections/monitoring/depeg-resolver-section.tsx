@@ -17,8 +17,8 @@ export function DepegResolverMethodologySection() {
       <p>
         When Pharos confirms an active depeg, the Depeg Duration Resolver answers two questions in order at the public
         forecast lock: will it come back, and if so, when. Stage 1 emits an ordinal Resolution Outlook &mdash; Recovery
-        Likely, At Risk, Recovery Unlikely, or Insufficient Signal &mdash; from five kill signals (supply weaponization,
-        backing impairment, freeze/seizure, reflexive death-spiral, exit collapse) and five recovery anchors
+        Likely, At Risk, Recovery Unlikely, or Insufficient Signal &mdash; from six kill signals (supply weaponization,
+        backing impairment, freeze/seizure, reflexive death-spiral, exit collapse, issuer wind-down) and five recovery anchors
         (non-inflatable supply, hard collateral with live redemption, no supply anomaly, no single freeze point, proven
         mean-reversion), each shown with the factors that drove it.
       </p>

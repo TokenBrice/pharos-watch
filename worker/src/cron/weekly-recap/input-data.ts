@@ -394,7 +394,7 @@ function sanitizeSafetyForWeekly(
 }
 
 interface WeeklyTopSignals extends Omit<WeeklyInputData["weeklySignals"], "riskLeaderboard"> {
-  allDepegSignals: WeeklyDepegSignal[];
+  allDepegObservations: WeeklyDepegSignal[];
 }
 
 function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
@@ -452,11 +452,11 @@ function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
           id: weeklySignalId("depeg", [eventIdentity]),
           eventIdentity,
           symbol: depeg.symbol,
-          label: `${depeg.peakBps} bps resolved after ${depeg.durationHours}h`,
+          label: `${Math.abs(depeg.peakBps)} bps resolved after ${depeg.durationHours}h`,
           impactScore,
           severityScore: impactScore,
           mcapUsd: depeg.mcapUsd,
-          bps: depeg.peakBps,
+          bps: Math.abs(depeg.peakBps),
           date: d.date,
           kind: "resolved" as const,
           critical: isCriticalDepegRisk({ bps: depeg.peakBps, mcapUsd: depeg.mcapUsd }),
@@ -595,7 +595,7 @@ function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
   );
 
   return {
-    allDepegSignals,
+    allDepegObservations,
     topDepegSignals,
     topSupplySignals,
     topDewsChanges,
@@ -608,7 +608,7 @@ function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
   };
 }
 
-function buildWeeklySpikeMetrics(parsed: WeeklyParsedRow[], allDepegSignals: WeeklyDepegSignal[]): WeeklySpikeMetrics {
+function buildWeeklySpikeMetrics(parsed: WeeklyParsedRow[], allDepegObservations: WeeklyDepegSignal[]): WeeklySpikeMetrics {
   const psiObservations = parsed
     .map((d) =>
       d.inputData.stabilityIndex
@@ -623,7 +623,7 @@ function buildWeeklySpikeMetrics(parsed: WeeklyParsedRow[], allDepegSignals: Wee
         : null,
     )
     .filter((entry): entry is { date: string; score: number } => entry !== null);
-  const { maxDepegByBps, maxDepegByImpact } = allDepegSignals.reduce<{
+  const { maxDepegByBps, maxDepegByImpact } = allDepegObservations.reduce<{
     maxDepegByBps: WeeklyDepegSignal | undefined;
     maxDepegByImpact: WeeklyDepegSignal | undefined;
   }>(
@@ -669,7 +669,12 @@ function buildWeeklyWowDeltas(
       deltaPct: current.mcapEnd != null && prior.mcapEnd != null && prior.mcapEnd > 0
         ? ((current.mcapEnd - prior.mcapEnd) / prior.mcapEnd) * 100 : null,
     },
-    psi: { current: current.psiMid, prior: prior.psiMid, delta: current.psiMid - prior.psiMid },
+    psi: {
+      current: current.psiMid,
+      prior: prior.psiMid,
+      delta: current.psiMid != null && prior.psiMid != null ? current.psiMid - prior.psiMid : null,
+      ...(current.psiMid == null || prior.psiMid == null ? { unavailableReason: "psi-observations-missing" } : {}),
+    },
     psiDominantBand: { current: current.psiDominantBand, prior: prior.psiDominantBand },
     activeDepegObservations: { current: current.activeDepegObs, prior: prior.activeDepegObs },
     uniqueDepegSignals: { current: current.uniqueDepegSignals, prior: prior.uniqueDepegSignals },
@@ -677,7 +682,7 @@ function buildWeeklyWowDeltas(
     blacklistUsd: { current: current.blacklistUsd, prior: prior.blacklistUsd },
     gradeTransitions: { current: current.gradeTransitions, prior: prior.gradeTransitions },
     gauge: { current: current.gaugeMid, prior: prior.gaugeMid },
-    dataCoverage: { currentDays: current.days, priorDays: prior.days },
+    dataCoverage: { currentDays: current.days, priorDays: prior.days, currentPsiDays: current.psiObservationDays, priorPsiDays: prior.psiObservationDays },
   };
 }
 
@@ -703,9 +708,9 @@ export function buildWeeklyInputData(
   if (psiScores.length === 0) return null;
 
   const current = rollupDigestInputs(parsed.map((d) => d.inputData));
-  const dominantBand = current.psiDominantBand;
+  const dominantBand = current.psiDominantBand!;
 
-  const { allDepegSignals, ...topSignalsResult } = collectWeeklyTopSignals(parsed);
+  const { allDepegObservations, ...topSignalsResult } = collectWeeklyTopSignals(parsed);
   const {
     topDepegSignals,
     topSupplySignals,
@@ -718,7 +723,7 @@ export function buildWeeklyInputData(
     topLiquidityShifts,
   } = topSignalsResult;
 
-  const spikeMetrics = buildWeeklySpikeMetrics(parsed, allDepegSignals);
+  const spikeMetrics = buildWeeklySpikeMetrics(parsed, allDepegObservations);
 
   const riskLeaderboard = buildWeeklyRiskLeaderboard({
     parsed,

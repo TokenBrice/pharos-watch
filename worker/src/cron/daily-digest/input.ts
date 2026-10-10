@@ -17,6 +17,7 @@ import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getConditionBand } from "../../lib/stability-index";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { SECONDS } from "../../lib/time-constants";
+import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
 import {
   collectActiveDepegs,
   collectBlacklistActivity,
@@ -299,18 +300,24 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       )
       .first<{ score: number; band: string; components: string; stored_at: number }>(),
     db
-      .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
-      .bind(nowSec - SECONDS.ONE_DAY)
+      .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ? AND stored_at <= ?")
+      .bind(nowSec - SECONDS.ONE_DAY, nowSec)
       .first<{ avg: number | null }>(),
     db
       .prepare("SELECT score, band FROM stability_index WHERE computed_at = ?")
       .bind(yesterdayTs)
       .first<{ score: number; band: string }>(),
   ]);
-  if (latestSample && nowSec - latestSample.stored_at > 2 * SECONDS.ONE_HOUR) {
-    collectorResults.push(collectorDegraded(undefined, "psi-sample-stale"));
+  const sampleAge = assessFreshnessTimestamp(nowSec, latestSample?.stored_at, 0);
+  // Daily rows key the completed UTC observation day, not their publication instant.
+  const dailyWindowEnd = latestDaily == null ? undefined : latestDaily.stored_at + SECONDS.ONE_DAY;
+  const dailyAge = assessFreshnessTimestamp(nowSec, dailyWindowEnd, 0);
+  const sampleFresh = sampleAge.reason == null && sampleAge.ageSeconds <= 2 * SECONDS.ONE_HOUR;
+  const dailyFresh = dailyAge.reason == null && dailyAge.ageSeconds <= SECONDS.ONE_DAY;
+  if (latestSample && !sampleFresh) {
+    collectorResults.push(collectorDegraded(undefined, sampleAge.reason == null ? "psi-sample-stale" : `psi-sample-${sampleAge.reason}`));
   }
-  const currentPsiSource = latestSample ?? latestDaily;
+  const currentPsiSource = sampleFresh ? latestSample : dailyFresh ? latestDaily : null;
 
   const avg24h = avg24hRow?.avg != null ? round1(avg24hRow.avg) : null;
 
@@ -320,7 +327,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
         band: currentPsiSource.band,
         avg24h: avg24h ?? undefined,
         avg24hBand: avg24h != null ? getConditionBand(avg24h) : undefined,
-        computedAt: nowSec,
+        computedAt: currentPsiSource.stored_at,
       })
     : null;
   const displayScore = displayPsi?.score ?? null;
@@ -338,6 +345,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     currentPsiSource && displayScore != null && displayBand && parsedComponents != null
       ? { score: displayScore, band: displayBand, components: parsedComponents }
       : null;
+  if (!stabilityIndex) collectorResults.push(collectorDegraded(undefined, "psi-unavailable"));
 
   const yesterdayIndex = yesterdayRow ? { score: yesterdayRow.score, band: yesterdayRow.band } : null;
 

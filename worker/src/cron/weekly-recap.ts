@@ -388,10 +388,10 @@ export async function generateWeeklyRecap(
       },
     },
   });
-  // 15-day cutoff + LIMIT 15 captures current + prior weeks for WoW
-  // deltas and bounds the result set deterministically even if the dedup
-  // guard ever drifts.
-  const cutoff = scheduledAtSec - 15 * SECONDS.ONE_DAY;
+  // Two seven-day UTC edition windows, bounded by the scheduled slot.
+  const todayTs = bucketUnixSecondsToUtcDay(scheduledAtSec);
+  const weekBoundary = todayTs - 6 * SECONDS.ONE_DAY;
+  const cutoff = weekBoundary - 7 * SECONDS.ONE_DAY;
   const dailyRows = await db
     .prepare(
       `WITH latest_daily AS (
@@ -401,25 +401,20 @@ export async function generateWeeklyRecap(
                   ORDER BY generated_at DESC
                 ) AS row_rank
          FROM daily_digest
-         WHERE generated_at >= ? AND (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
+         WHERE generated_at >= ? AND generated_at <= ? AND (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
        )
        SELECT generated_at, digest_title, digest_text, input_data
        FROM latest_daily
        WHERE row_rank = 1
        ORDER BY generated_at ASC
-       LIMIT 15`,
+       LIMIT 14`,
     )
-    .bind(cutoff)
+    .bind(cutoff, scheduledAtSec)
     .all<DailyDigestSourceRow>();
 
   const allRows = dailyRows.results ?? [];
-  // Snap the split to a UTC day boundary (= last Tuesday 00:00 UTC given
-  // the Monday 08:05 cron slot). Day-level snap removes sub-second drift
-  // ambiguity between weekly runs, unlike a rolling `now - 7d` window.
-  const todayTs = bucketUnixSecondsToUtcDay(scheduledAtSec);
-  const weekBoundary = todayTs - 6 * SECONDS.ONE_DAY;
   const currentRows = allRows.filter((r) => r.generated_at >= weekBoundary);
-  const priorRows = allRows.filter((r) => r.generated_at < weekBoundary);
+  const priorRows = allRows.filter((r) => r.generated_at >= cutoff && r.generated_at < weekBoundary);
   await reportCronProgress(reportProgress, {
     stage: "input-collected",
     message: "Collected weekly recap source digests",

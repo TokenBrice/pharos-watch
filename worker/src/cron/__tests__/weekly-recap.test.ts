@@ -220,7 +220,7 @@ function makeTables(overrides: Partial<{
       first: null,
     },
     {
-      match: "WHERE generated_at >= ? AND (digest_meta IS NULL OR json_extract(digest_meta, '$.type') IS NULL OR json_extract(digest_meta, '$.type') != 'weekly')",
+      match: "WITH latest_daily AS",
       rows: overrides.dailyRows ?? buildDailyRows(),
     },
     {
@@ -978,6 +978,36 @@ describe("generateWeeklyRecap", () => {
       expect(input.dailyDigests.map((day: { inputData: { totalMcapUsd: number } }) => day.inputData.totalMcapUsd))
         .toEqual([200_000_000, 202_000_000, 204_000_000, 206_000_000, 208_000_000]);
       expect(input.mcapRange).toEqual({ start: 200_000_000, end: 208_000_000, netChange: 8_000_000, pctChange: 4 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("bounds current and prior recap windows to seven UTC edition dates in SQLite", async () => {
+    vi.setSystemTime(new Date("2026-03-30T08:10:00Z"));
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_title, digest_text, input_data) VALUES (?, ?, ?, ?)");
+      const template = buildDailyRows()[0]!;
+      const base = Math.floor(Date.parse("2026-03-16T08:05:00Z") / 1000);
+      for (let index = 0; index < 15; index++) {
+        const input = JSON.parse(template.input_data);
+        input.stabilityIndex.score = 80 + index;
+        input.activeDepegCount = index;
+        insert.run(base + index * 86400, `Day ${index}`, template.digest_text, JSON.stringify(input));
+      }
+      vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+      await generateWeeklyRecap(db, "anthropic-key", null, null);
+      const persisted = sqlite.prepare("SELECT input_data FROM daily_digest WHERE json_extract(digest_meta, '$.type') = 'weekly'").get();
+      const input = JSON.parse(String(persisted!.input_data));
+      expect(input.dailyDigests.map((day: { date: string }) => day.date)).toEqual([
+        "2026-03-24", "2026-03-25", "2026-03-26", "2026-03-27", "2026-03-28", "2026-03-29", "2026-03-30",
+      ]);
+      expect(input.weekOverWeekDeltas).toMatchObject({
+        dataCoverage: { currentDays: 7, priorDays: 7 },
+        psi: { current: 91, prior: 84, delta: 7 },
+        activeDepegObservations: { current: 77, prior: 28 },
+      });
     } finally {
       sqlite.close();
     }

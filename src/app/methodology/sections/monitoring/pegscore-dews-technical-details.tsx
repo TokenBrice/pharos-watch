@@ -5,6 +5,9 @@ import {
   DEWS_SIGNAL_SHORT_LABELS,
   DEWS_SIGNAL_WEIGHTS,
   DEWS_THREAT_BANDS,
+  EVIDENCE_STRESS_THRESHOLD,
+  SEVERE_ISSUER_CONTROL_THRESHOLD,
+  WATCH_MAX_SCORE,
   type DewsSignalKey,
 } from "@shared/lib/dews-config";
 import {
@@ -265,10 +268,18 @@ function DewsTechnicalDetails() {
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Score Formula</h3>
         <p className="pharos-numeric text-xs border border-border/60 bg-muted/50 rounded-lg px-4 py-3">
-          base = sum(W_i &times; S_i) / sum(W_i); psiAmp = PSI &lt; 75 ? 1 + ((75 - PSI) / 75) &times; 0.3 : 1; contagionAmp = same-peg first-pass bump, clamped to 1.2; DEWS = round(clamp(0, 100, base &times; psiAmp &times; contagionAmp))
+          base = sum(W_i &times; S_i) / sum(W_i); psiAmp = PSI &lt; 75 ? 1 + ((75 - PSI) / 75) &times; 0.3 : 1; contagionAmp = same-peg first-pass bump, clamped to 1.2; preliminaryScore = round(clamp(0, 100, base &times; psiAmp &times; contagionAmp))
         </p>
         <p>
           At least 2 available signal sources (total weight &ge; 0.30) are required; otherwise DEWS returns null.
+        </p>
+        <p>
+          Final DEWS is capped at WATCH ({WATCH_MAX_SCORE}) unless there is qualifying market-price or DEX-liquidity
+          stress evidence: an available Cross-Source Divergence, Pool Balance Drift, or Liquidity Erosion sub-signal
+          at least {EVIDENCE_STRESS_THRESHOLD}. An available Blacklist Activity sub-signal at least{" "}
+          {SEVERE_ISSUER_CONTROL_THRESHOLD} also bypasses the cap as severe issuer-control evidence. Mere source
+          availability does not qualify. With either bypass the preliminary score is final; without either,
+          finalScore = min(preliminaryScore, {WATCH_MAX_SCORE}). The final score sets the band.
         </p>
       </div>
 

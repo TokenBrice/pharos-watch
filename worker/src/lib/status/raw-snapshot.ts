@@ -11,6 +11,7 @@ import {
   ProviderCircuitHealthSchema,
   ReserveDriftEntrySchema,
   YieldHealthSummarySchema,
+  StatusResponseSchema,
   type CanaryStatus,
   type CoinGeckoPriceDiff,
   type HealthResponse,
@@ -31,10 +32,7 @@ import {
 import type { RawStatusComputation } from "../status-evaluation";
 import { getCache, setCacheIfNewer } from "../db-cache";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import {
-  STATUS_SYSTEM_FRESHNESS_SEC,
-  type StatusLevel,
-} from "../status-reliability-shared";
+import { STATUS_SYSTEM_FRESHNESS_SEC } from "../status-reliability-shared";
 import { logWorkerEvent } from "../structured-log";
 import { PriceSourceHealthSchema } from "@shared/types/pricing-source-health";
 import { parseJsonObjectWithSchema } from "../json-parse";
@@ -97,9 +95,6 @@ interface UnavailableStatusRawSnapshot {
 export type StatusRawSnapshotLoadResult = FreshStatusRawSnapshot | UnavailableStatusRawSnapshot;
 
 
-function isStatusLevel(value: unknown): value is StatusLevel {
-  return value === "healthy" || value === "degraded" || value === "stale";
-}
 
 function truncateString(value: string, limit = SNAPSHOT_STRING_LIMIT): string {
   if (value.length <= limit) return value;
@@ -107,18 +102,21 @@ function truncateString(value: string, limit = SNAPSHOT_STRING_LIMIT): string {
 }
 
 function compactSnapshotValue(value: unknown, depth = 0, path = ""): unknown {
+  // Sentinel nesting must not erase the clocks/budgets inside a stale verdict.
+  const freshnessEvidence = path === "sources.freshness.metadata.stale" || path.startsWith("sources.freshness.metadata.stale.");
+  const depthLimit = path.startsWith("adapterLatency.") || freshnessEvidence ? 7 : SNAPSHOT_METADATA_DEPTH_LIMIT;
   if (value == null) return value;
   if (typeof value === "string") return truncateString(value);
   if (typeof value === "number" || typeof value === "boolean") return value;
   if (Array.isArray(value)) {
     const latencyGroups = path === "adapterLatency.groups";
-    if (depth >= (path.startsWith("adapterLatency.") ? 7 : SNAPSHOT_METADATA_DEPTH_LIMIT)) return "[truncated-depth]";
+    if (depth >= depthLimit) return "[truncated-depth]";
     return value
-      .slice(0, latencyGroups ? 128 : SNAPSHOT_METADATA_ARRAY_LIMIT)
+      .slice(0, latencyGroups || freshnessEvidence ? 128 : SNAPSHOT_METADATA_ARRAY_LIMIT)
       .map((entry) => compactSnapshotValue(entry, depth + 1, path));
   }
   if (!isRecord(value)) return null;
-  if (depth >= (path.startsWith("adapterLatency.") ? 7 : SNAPSHOT_METADATA_DEPTH_LIMIT)) return "[truncated-depth]";
+  if (depth >= depthLimit) return "[truncated-depth]";
 
   const compacted: Record<string, unknown> = {};
   for (const [key, entry] of Object.entries(value).slice(0, SNAPSHOT_METADATA_OBJECT_KEY_LIMIT)) {
@@ -179,48 +177,6 @@ function compactRawStatusForSnapshot(raw: RawStatusComputation): RawStatusComput
   };
 }
 
-function hasRawStatusShape(value: unknown): value is RawStatusComputation {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value.dbHealthy === "boolean" &&
-    isStatusLevel(value.availabilityStatus) &&
-    isStatusLevel(value.dataQualityStatus) &&
-    isStatusLevel(value.rawOverallStatus) &&
-    typeof value.confidence === "number" &&
-    isRecord(value.causes) &&
-    isRecord(value.caches) &&
-    isRecord(value.crons) &&
-    isRecord(value.dataQuality) &&
-    (value.telegramBot === null || isRecord(value.telegramBot)) &&
-    isRecord(value.sectionErrors) &&
-    isRecord(value.datasetFreshness) &&
-    isRecord(value.summary) &&
-    isRecord(value.reserveComposition) &&
-    (value.reserveComposition.status === "unavailable"
-      || (typeof value.reserveComposition.healthConfiguredCoins === "number"
-        && typeof value.reserveComposition.healthFreshCoins === "number"
-        && typeof value.reserveComposition.healthAuthoritativeFreshCoins === "number"
-        && Array.isArray(value.reserveComposition.acknowledgedFeeds)
-        && Array.isArray(value.reserveComposition.acknowledgedFeedIds)
-        && Array.isArray(value.reserveComposition.expiredFeedReviewIds)
-        && Array.isArray(value.reserveComposition.invalidFeedReviewIds)
-        && Array.isArray(value.reserveComposition.unacknowledgedPersistentlyStaleIndependentCoins))) &&
-    Array.isArray(value.freshnessDiagnostics)
-  );
-}
-function hasPublicHealthShape(value: unknown): value is HealthResponse {
-  if (!isRecord(value)) return false;
-  return (
-    isStatusLevel(value.status)
-    && typeof value.timestamp === "number"
-    && Number.isFinite(value.timestamp)
-    && Array.isArray(value.warnings)
-    && isRecord(value.caches)
-    && isRecord(value.blacklist)
-    && isRecord(value.mintBurn)
-    && isRecord(value.circuits)
-  );
-}
 
 
 const StatusSectionErrorsSchema = z.record(
@@ -244,16 +200,48 @@ const StatusSupplementsSchema = z.object({
   telegramSummary: HealthResponseSchema.shape.telegramSummary.unwrap(),
   sectionErrors: StatusSectionErrorsSchema,
 });
+const RawStatusSchema = StatusResponseSchema.in.pick({
+  dbHealthy: true,
+  availabilityStatus: true,
+  dataQualityStatus: true,
+  rawOverallStatus: true,
+  confidence: true,
+  causes: true,
+  caches: true,
+  crons: true,
+  budgetOnlySurfaces: true,
+  dataQuality: true,
+  telegramBot: true,
+  sectionErrors: true,
+  datasetFreshness: true,
+  summary: true,
+  reserveComposition: true,
+  schedulerLiveness: true,
+}).extend({
+  budgetOnlySurfaces: StatusResponseSchema.in.shape.budgetOnlySurfaces.default([]),
+  evidenceReadFailures: z.array(z.string()).optional(),
+  freshnessDiagnostics: z.array(z.object({
+    key: z.string(),
+    freshnessSource: z.enum(["freshness-sentinel", "table-fallback", "cron-fallback"]),
+    warning: z.string().optional(),
+    failureSource: z.enum(["cache-table", "table-freshness", "cron-fallback"]).optional(),
+  }).passthrough()),
+}).refine(({ reserveComposition: reserve }) =>
+  reserve.status === "unavailable" ||
+  (reserve.healthConfiguredCoins != null
+    && reserve.healthFreshCoins != null
+    && reserve.healthAuthoritativeFreshCoins != null
+    && reserve.acknowledgedFeeds != null
+    && reserve.acknowledgedFeedIds != null
+    && reserve.expiredFeedReviewIds != null
+    && reserve.invalidFeedReviewIds != null
+    && reserve.unacknowledgedPersistentlyStaleIndependentCoins != null),
+);
 const StatusRawSnapshotPayloadSchema = z.object({
   version: z.literal(1),
   producedAt: z.number().finite(),
-  raw: z.custom<RawStatusComputation>(hasRawStatusShape).transform((raw) => ({
-    ...raw,
-    budgetOnlySurfaces: Array.isArray(raw.budgetOnlySurfaces)
-      ? raw.budgetOnlySurfaces
-      : [],
-  })),
-  publicHealth: z.custom<HealthResponse>(hasPublicHealthShape).optional(),
+  raw: RawStatusSchema,
+  publicHealth: HealthResponseSchema.optional(),
   supplements: StatusSupplementsSchema.optional(),
 });
 

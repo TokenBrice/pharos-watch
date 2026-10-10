@@ -197,6 +197,9 @@ export interface CronStalenessObservation {
   cacheKey: string | null;
   producerJob: string;
   ageSeconds: number | null;
+  publishedAt: number | null;
+  generationId: string | null;
+  assessedAt: number;
   thresholdSec: number;
   producerThresholdSec: number;
   endpointThresholdSec: number;
@@ -230,7 +233,8 @@ function classifyAge(
 function buildFullObservation(
   laneKey: CacheFreshnessLaneKey,
   lane: CacheFreshnessLaneConfig,
-  cache: Pick<CacheStatus, "ageSeconds"> | undefined,
+  cache: Pick<CacheStatus, "ageSeconds" | "publishedAt" | "generationId"> | undefined,
+  assessedAt: number,
 ): CronStalenessObservation {
   const thresholdSec = lane.producerIntervalSec * 2;
   const ageSeconds = cache?.ageSeconds ?? null;
@@ -239,6 +243,9 @@ function buildFullObservation(
     cacheKey: lane.cacheKey,
     producerJob: lane.producerJob,
     ageSeconds,
+    publishedAt: cache?.publishedAt ?? null,
+    generationId: cache?.generationId ?? null,
+    assessedAt,
     thresholdSec,
     producerThresholdSec: thresholdSec,
     endpointThresholdSec: lane.endpointMaxAgeSec,
@@ -277,6 +284,9 @@ function buildCronObservation(
     cacheKey: producer.cacheKey,
     producerJob: producer.producerJob,
     ageSeconds,
+    publishedAt: fact?.lastSuccessAt ?? null,
+    generationId: null,
+    assessedAt: nowSec,
     thresholdSec: producer.thresholdSec,
     producerThresholdSec: producer.thresholdSec,
     endpointThresholdSec: producer.thresholdSec,
@@ -340,20 +350,22 @@ function buildDependencyRecoveryChecks(observations: readonly CronStalenessObser
 function buildObservation(
   laneKey: CacheFreshnessLaneKey,
   lane: CacheFreshnessLaneConfig,
-  cache: Pick<CacheStatus, "ageSeconds"> | undefined,
+  cache: Pick<CacheStatus, "ageSeconds" | "publishedAt" | "generationId"> | undefined,
+  assessedAt: number,
 ): CronStalenessObservation | null {
-  const observation = buildFullObservation(laneKey, lane, cache);
+  const observation = buildFullObservation(laneKey, lane, cache, assessedAt);
   return isStale(observation) ? observation : null;
 }
 
 export function evaluateCronStaleness(
-  caches: Record<string, Pick<CacheStatus, "ageSeconds"> | undefined>,
+  caches: Record<string, Pick<CacheStatus, "ageSeconds" | "publishedAt" | "generationId"> | undefined>,
   laneKeys: readonly CacheFreshnessLaneKey[] = deriveCronFreshnessProducers()
     .flatMap((producer) => producer.laneKey == null ? [] : [producer.laneKey]),
+  assessedAt = Math.floor(Date.now() / 1000),
 ): CronStalenessObservation[] {
   return laneKeys.flatMap((laneKey) => {
     const lane = CACHE_FRESHNESS_LANES[laneKey];
-    const observation = buildObservation(laneKey, lane, caches[lane.cacheKey]);
+    const observation = buildObservation(laneKey, lane, caches[lane.cacheKey], assessedAt);
     return observation ? [observation] : [];
   });
 }
@@ -461,6 +473,7 @@ export async function runCronStalenessWatchdog(
         producer.laneKey,
         CACHE_FRESHNESS_LANES[producer.laneKey],
         status.caches[CACHE_FRESHNESS_LANES[producer.laneKey].cacheKey],
+        nowSec,
       ));
   const stale = watchedObservations.filter(isStale);
   const dependencyRecoveryChecks = buildDependencyRecoveryChecks(watchedObservations);

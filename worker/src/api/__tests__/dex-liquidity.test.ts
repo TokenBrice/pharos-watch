@@ -18,6 +18,37 @@ function mockDexD1(tables: MockTableConfig[]) {
 describe("handleDexLiquidity", () => {
   const row = makeDexLiquidityRow();
 
+
+  it.each([null, -120, -3 * 86400] as const)("never timestamps an empty DEX table with render time (producer offset %s)", async (offset) => {
+    const now = 1_790_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      if (offset != null) {
+        const publishedAt = now + offset;
+        sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-dex-liquidity', ?, 1, 'ok', ?)")
+          .run(publishedAt, JSON.stringify({ outputPublishedAt: publishedAt }));
+      }
+      // A successful no-output attempt does not replace the served generation.
+      sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-dex-liquidity', ?, 1, 'ok', ?)")
+        .run(now, JSON.stringify({ outputPublishedAt: null }));
+      const res = await handleDexLiquidity(db);
+      expect(await res.json()).toEqual({});
+      if (offset == null) {
+        expect(res.headers.get("X-Data-Updated-At")).toBe("unknown");
+        expect(res.headers.get("X-Data-Age")).toBe("unavailable");
+        expect(res.headers.get("X-Data-Freshness-Reason")).toBe("producer-history-missing");
+        expect(res.headers.get("Cache-Control")).toBe("no-store");
+      } else {
+        expect(res.headers.get("X-Data-Updated-At")).toBe(String(now + offset));
+        expect(res.headers.get("X-Data-Age")).toBe(String(-offset));
+        expect(res.headers.get("Warning")?.includes("stale") ?? false).toBe(offset === -3 * 86400);
+      }
+    } finally {
+      sqlite.close();
+      vi.restoreAllMocks();
+    }
+  });
   it.each([false, true])("distinguishes an empty producer advisory read from failure=%s", async (failed) => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockDexD1([
@@ -114,7 +145,8 @@ describe("handleDexLiquidity", () => {
       insert.run(300, "skipped_locked", null);
       insert.run(350, "ok", JSON.stringify({ persistence: { skippedReason: "liquidity-cadence-reuse" } }));
       expect((await handleDexLiquidity(db)).headers.get("Warning")).toContain("staged-merge-drop");
-      insert.run(400, "ok", "{}");
+      const publishedAt = Math.floor(Date.now() / 1000);
+      insert.run(publishedAt, "ok", JSON.stringify({ outputPublishedAt: publishedAt }));
       expect((await handleDexLiquidity(db)).headers.get("Warning")).toBeNull();
     } finally {
       sqlite.close();

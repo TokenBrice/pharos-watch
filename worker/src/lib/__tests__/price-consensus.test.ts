@@ -26,6 +26,27 @@ describe("computePriceConsensus", () => {
     expect(result!.price).toBe(1.0);
   });
 
+  it("publishes the six-source methodology example's exact midpoint and Curve provenance", () => {
+    const sources: SourcePrice[] = [
+      { source: "coingecko", price: 1.0001, weight: 2 },
+      { source: "defillama", price: 0.9999, weight: 1 },
+      { source: "binance", price: 1.0001, weight: 2 },
+      { source: "kraken", price: 1.0000, weight: 2 },
+      { source: "coinbase", price: 0.9998, weight: 2 },
+      { source: "curve-onchain", price: 1.0003, weight: 3 },
+    ];
+
+    const consensus = computePriceConsensus(sources, 1, 50);
+
+    expect(consensus).not.toBeNull();
+    expect(consensus!.price).toBe((1.0000 + 1.0001) / 2);
+    expect(consensus!.price).toBeCloseTo(1.00005, 12);
+    expect(consensus!.confidence).toBe("high");
+    expect(consensus!.agreeSources).toHaveLength(6);
+    expect(consensus!.agreeSources).toEqual(expect.arrayContaining(sources.map(({ source }) => source)));
+    expect(consensus!.selectedSource).toBe("curve-onchain");
+  });
+
   it("returns low confidence when sources diverge", () => {
     const sources: SourcePrice[] = [
       { source: "coingecko", price: 1.01, weight: 1 },

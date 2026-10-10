@@ -1,3 +1,4 @@
+import { DEX_VOLUME_COVERAGE_MIN } from "@shared/lib/dex-volume-availability";
 import { MethodologyFacts, MethodologyPreconditions } from "../../methodology-shared";
 
 export function LiquidityOverview() {
@@ -40,7 +41,11 @@ export function LiquidityPreconditions() {
         facts={[
           {
             label: "Minimum data",
-            value: "No hard minimum in scorer; missing stability history defaults to neutral 50 sub-scores",
+            value: `Volume Activity requires a complete 24h window or at least ${DEX_VOLUME_COVERAGE_MIN * 100}% retained-TVL coverage (inclusive); otherwise the composite is not rated`,
+          },
+          {
+            label: "Durability history",
+            value: "Missing stability history defaults to neutral 50 sub-scores; this does not bypass the volume-coverage requirement",
           },
           {
             label: "Required sources",

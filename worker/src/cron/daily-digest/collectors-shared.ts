@@ -97,8 +97,9 @@ export const WEEKLY_ROLLUP_EXPECTED_DAYS = 7;
 
 export interface RollupSummary {
   mcapEnd: number | null;
-  psiMid: number;
-  psiDominantBand: string;
+  psiMid: number | null;
+  psiDominantBand: string | null;
+  psiObservationDays: number;
   /**
    * Cross-day sums. Null below full coverage: a total labelled "this week"
    * must not be the sum of however many editions happened to be readable.
@@ -152,15 +153,15 @@ export function rollupDigestInputs(
 ): RollupSummary {
   const coreInputs = inputs.filter((input) => input.aggregateUniverse === "core-stablecoins-v1");
   const aggregateInputs = coreInputs.length > 0 ? coreInputs : inputs;
-  const psiScores = aggregateInputs.map((d) => d.stabilityIndex?.score).filter((s): s is number => s != null);
+  const psiScores = inputs.map((d) => d.stabilityIndex?.score).filter((s): s is number => s != null && Number.isFinite(s));
   const latestInput = aggregateInputs[aggregateInputs.length - 1];
   const mcapEnd = latestInput?.supplyCoverage?.complete === true && Number.isFinite(latestInput.totalMcapUsd)
     ? latestInput.totalMcapUsd
     : null;
-  const psiBands = aggregateInputs.map((d) => d.stabilityIndex?.band).filter((b): b is string => b != null);
+  const psiBands = inputs.map((d) => d.stabilityIndex?.band).filter((b): b is string => b != null);
   const bandFreq = new Map<string, number>();
   for (const b of psiBands) bandFreq.set(b, (bandFreq.get(b) ?? 0) + 1);
-  const psiDominantBand = [...bandFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "BEDROCK";
+  const psiDominantBand = [...bandFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   const gauges = aggregateInputs.map((d) => d.mintBurnFlows?.gaugeScore).filter((g): g is number => g != null);
   const depegKeys = new Set<string>();
   for (const input of aggregateInputs) {
@@ -195,8 +196,9 @@ export function rollupDigestInputs(
   if (mcapEnd == null) unavailableReasons.mcapEnd = ["supply-coverage-incomplete"];
   return {
     mcapEnd,
-    psiMid: psiScores.length > 0 ? psiScores.reduce((s, v) => s + v, 0) / psiScores.length : 0,
+    psiMid: psiScores.length > 0 ? psiScores.reduce((s, v) => s + v, 0) / psiScores.length : null,
     psiDominantBand,
+    psiObservationDays: psiScores.length,
     activeDepegObs: activeObserved ? aggregateInputs.reduce((sum, d) => sum + d.activeDepegCount, 0) : null,
     uniqueDepegSignals: signalsObserved ? depegKeys.size : null,
     blacklistEvents: blacklistObserved ? aggregateInputs.reduce((s, d) => s + d.blacklistActivity!.eventCount, 0) : null,

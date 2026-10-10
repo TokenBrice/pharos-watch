@@ -7,10 +7,8 @@
  * graduating beyond WATCH on data-quality-only inputs.
  */
 
-import type { DewsSignalKey } from "@shared/lib/dews-config";
+import { EVIDENCE_STRESS_THRESHOLD, type DewsSignalKey } from "@shared/lib/dews-config";
 import type { DEWSEvidenceKind, SignalResult } from "./types";
-
-const EVIDENCE_STRESS_THRESHOLD = 10;
 
 /**
  * Known sub-bps rounding window on non-USD pegs (accepted, not a defect).

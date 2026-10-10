@@ -3,6 +3,7 @@ import { jsonResponse } from "../lib/api-response";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { DailyDigestResponseSchema } from "@shared/types/digest";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { selectDigestRiskSignal } from "./digest-risk-summary";
 import { selectDigestIntelligence } from "./digest-intelligence-summary";
@@ -22,7 +23,7 @@ export const handleDailyDigest = async (db: D1Database): Promise<Response> => {
   const row = digestResult.results?.[0] as { digest_text: string; digest_title: string | null; generated_at: number; digest_extended: string | null; input_data: string | null } | undefined;
 
   if (!row) {
-    return jsonResponse({ digest: null }, { headers: { "Cache-Control": CACHE_PROFILES.standard } });
+    return jsonResponse(DailyDigestResponseSchema.parse({ digest: null }), { headers: { "Cache-Control": CACHE_PROFILES.standard } });
   }
 
   const editionNumber = (countResult.results?.[0] as { cnt: number } | undefined)?.cnt ?? null;

@@ -1,3 +1,4 @@
+import { median } from "@shared/lib/stats";
 import {
   PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
   PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL,
@@ -19,6 +20,21 @@ import {
   WorkedExample,
 } from "../methodology-shared";
 import { PRICING_PIPELINE_SECTION_CONTENT } from "@/lib/methodology-content";
+
+const CONSENSUS_EXAMPLE_SOURCES = [
+  { label: "CoinGecko", price: 1.0001, weight: 2 },
+  { label: "DL-list", price: 0.9999, weight: 1 },
+  { label: "Binance", price: 1.0001, weight: 2 },
+  { label: "Kraken", price: 1.0000, weight: 2 },
+  { label: "Coinbase", price: 0.9998, weight: 2 },
+  { label: "Curve", price: 1.0003, weight: 3 },
+];
+const consensusExampleMedian = median(CONSENSUS_EXAMPLE_SOURCES.map(({ price }) => price));
+if (consensusExampleMedian === null) {
+  throw new Error("The pricing consensus worked example requires at least one source.");
+}
+const CONSENSUS_EXAMPLE_MEDIAN = consensusExampleMedian.toFixed(5);
+
 export function PricingPipelineMethodologySection() {
   return (
     <MethodologySectionShell
@@ -220,17 +236,18 @@ export function PricingPipelineMethodologySection() {
         />
         <WorkedExample summary="Worked example: USDC price consensus across 6 sources">
           <p className="pharos-numeric">
-            Sources: CoinGecko=1.0001 (w2), DL-list=0.9999 (w1), Binance=1.0001 (w2),
-            Kraken=1.0000 (w2), Coinbase=0.9998 (w2), Curve=1.0003 (w3)
+            Sources: {CONSENSUS_EXAMPLE_SOURCES.map(({ label, price, weight }) => (
+              `${label}=${price.toFixed(4)} (w${weight})`
+            )).join(", ")}
           </p>
           <p className="pharos-numeric">
             Peg ref=1.0, threshold=50 bps. All 6 within 50 bps of each other &rarr; single cluster of 6.
           </p>
           <p className="pharos-numeric">
-            Published price = cluster median = 1.0001. Internal selected source for provenance = Curve (highest-weight member).
+            Published price = cluster median = {CONSENSUS_EXAMPLE_MEDIAN} (midpoint of 1.0000 and 1.0001, not a four-decimal display rounding). Internal selected source for provenance = Curve (highest-weight member).
           </p>
           <p>
-            Result: <span className="text-foreground">price 1.0001, confidence &ldquo;high&rdquo;, source label from the full agreeing cluster</span>.
+            Result: <span className="text-foreground">price {CONSENSUS_EXAMPLE_MEDIAN}, confidence &ldquo;high&rdquo;, source label from the full agreeing cluster</span>.
           </p>
         </WorkedExample>
 

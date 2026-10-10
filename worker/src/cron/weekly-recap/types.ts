@@ -93,8 +93,8 @@ export interface WeeklyInputData {
   forwardLookScoreboard: Record<DigestForwardLookOutcome["status"], number> | null;
   weekOverWeekDeltas: {
     mcap: { current: number | null; prior: number | null; deltaPct: number | null };
-    psi: { current: number; prior: number; delta: number };
-    psiDominantBand: { current: string; prior: string };
+    psi: { current: number | null; prior: number | null; delta: number | null; unavailableReason?: string };
+    psiDominantBand: { current: string | null; prior: string | null };
     activeDepegObservations: { current: number | null; prior: number | null };
     uniqueDepegSignals: { current: number | null; prior: number | null };
     blacklistEvents: { current: number | null; prior: number | null };
@@ -102,7 +102,7 @@ export interface WeeklyInputData {
     /** Unavailable canonical safety evidence withholds both comparison counts. */
     gradeTransitions: { current: number | null; prior: number | null };
     gauge: { current: number | null; prior: number | null };
-    dataCoverage: { currentDays: number; priorDays: number };
+    dataCoverage: { currentDays: number; priorDays: number; currentPsiDays: number; priorPsiDays: number };
   } | null;
 }
 

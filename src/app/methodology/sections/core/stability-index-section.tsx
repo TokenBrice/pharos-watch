@@ -239,6 +239,8 @@ export function StabilityIndexMethodologySection() {
             <li>
               <span className="text-foreground font-medium">Age-aware depreciation:</span> fresh depegs get full weight
               for 30 days, then decay linearly to a 25% floor by asset age 120 days.
+              Contributor costs use the full-precision scoring factor; rounding applies only to visible age,
+              percentage and cost text.
             </li>
           </ul>
           <code className="block rounded-lg border border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">

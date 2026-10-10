@@ -121,6 +121,48 @@ describe("weekly recap canonical candidate aggregation", () => {
     });
   });
 
+  it.each([5, 7])("keeps %s prior editions without PSI unavailable while preserving market-cap comparisons", (days) => {
+    const current = Array.from({ length: 7 }, (_, index) => row(index, { totalMcapUsd: 200_000_000 }));
+    const prior = Array.from({ length: days }, (_, index) => row(index - 7, {
+      totalMcapUsd: 100_000_000, stabilityIndex: null,
+    }));
+    const weekly = buildWeeklyInputData(current, prior)!;
+    expect(weekly.weekOverWeekDeltas).toMatchObject({
+      mcap: { current: 200_000_000, prior: 100_000_000, deltaPct: 100 },
+      psi: { current: 90, prior: null, delta: null, unavailableReason: "psi-observations-missing" },
+      psiDominantBand: { current: "BEDROCK", prior: null },
+      dataCoverage: { currentPsiDays: 7, priorPsiDays: 0 },
+    });
+    const prompt = buildWeeklyPrompt(weekly);
+    expect(prompt).toContain("PSI midpoint: current 90.0 / prior unavailable / delta unavailable (psi-observations-missing)");
+    expect(prompt).toContain("PSI dominant band: current BEDROCK / prior unavailable");
+    expect(prompt).not.toContain("delta +90.0");
+  });
+
+  it("calculates depeg spike metrics from all observations independently of impact representatives", () => {
+    const rows = Array.from({ length: 7 }, (_, index) => row(index));
+    rows[0] = row(0, { topDepegs: [
+      { stablecoinId: "coin", symbol: "COIN", startedAt: START_SEC, bps: -100, mcapUsd: 1_000_000_000 },
+    ] });
+    rows[1] = row(1, { topDepegs: [
+      { stablecoinId: "coin", symbol: "COIN", startedAt: START_SEC, bps: -500, mcapUsd: 10_000_000 },
+      { stablecoinId: "other", symbol: "OTHER", startedAt: START_SEC, bps: -400, mcapUsd: 10_000_000 },
+    ] });
+    const weekly = buildWeeklyInputData(rows)!;
+    expect(weekly.weeklySignals.topDepegSignals.find((signal) => signal.symbol === "COIN")?.bps).toBe(100);
+    expect(weekly.spikeMetrics.maxDepeg).toMatchObject({ symbol: "COIN", bps: 500 });
+    expect(weekly.spikeMetrics.maxDepegImpact).toMatchObject({ symbol: "COIN", bps: 100, mcapUsd: 1_000_000_000 });
+  });
+
+  it("uses the magnitude of signed recovered depeg peaks for the weekly maximum", () => {
+    const rows = Array.from({ length: 7 }, (_, index) => row(index));
+    rows[0] = row(0, { resolvedDepegs: [
+      { stablecoinId: "coin", symbol: "COIN", startedAt: START_SEC, peakBps: -900, mcapUsd: 10_000_000, durationHours: 5 },
+    ] });
+    rows[1] = row(1, { topDepegs: [{ symbol: "OTHER", bps: 400, mcapUsd: 10_000_000 }] });
+    expect(buildWeeklyInputData(rows)?.spikeMetrics.maxDepeg).toMatchObject({ symbol: "COIN", bps: 900, kind: "resolved" });
+  });
+
   it("rejects malformed grade transitions while preserving comparable valid transitions", () => {
     const identity = {
       model: "v8" as const, schemaVersion: 1 as const, methodologyVersion: "8.17",

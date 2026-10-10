@@ -94,7 +94,7 @@ The cron captures a per-coin breakdown in `input_snapshot.contributors`:
 [{ "id": "a7a5-old-vector", "symbol": "A7A5", "bps": -9871, "mcapUsd": 507000000, "ageDays": 61.2, "factor": 0.74 }]
 ```
 
-The API surfaces this array in `current.contributors` (not in history). The frontend renders it as a "Top Contributors" table showing each coin's deviation, market cap, age, depreciation factor, and severity/breadth cost.
+The API surfaces this array in `current.contributors` (not in history). The frontend renders it as a "Top Contributors" table showing each coin's deviation, market cap, age, depreciation factor, and severity/breadth cost. `factor` retains the full-precision scoring value, so `computePsiDepegContribution()` reproduces the uncapped costs; only visible ages, percentages and costs are rounded. Legacy samples may retain their originally rounded factors.
 
 ## Condition Bands
 

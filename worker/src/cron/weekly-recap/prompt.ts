@@ -159,9 +159,9 @@ export function buildWeeklyPrompt(
       `  mcap: current ${d.mcap.current == null ? "n/a" : formatCurrency(d.mcap.current)} / prior ${d.mcap.prior == null ? "n/a" : formatCurrency(d.mcap.prior)} / delta ${d.mcap.deltaPct == null ? "n/a" : `${d.mcap.deltaPct >= 0 ? "+" : ""}${d.mcap.deltaPct.toFixed(2)}%`}`,
     );
     lines.push(
-      `  PSI midpoint: current ${d.psi.current.toFixed(1)} / prior ${d.psi.prior.toFixed(1)} / delta ${d.psi.delta >= 0 ? "+" : ""}${d.psi.delta.toFixed(1)}`,
+      `  PSI midpoint: current ${d.psi.current?.toFixed(1) ?? "unavailable"} / prior ${d.psi.prior?.toFixed(1) ?? "unavailable"} / delta ${d.psi.delta == null ? `unavailable (${d.psi.unavailableReason ?? "psi-observations-missing"})` : `${d.psi.delta >= 0 ? "+" : ""}${d.psi.delta.toFixed(1)}`}`,
     );
-    lines.push(`  PSI dominant band: current ${d.psiDominantBand.current} / prior ${d.psiDominantBand.prior}`);
+    lines.push(`  PSI dominant band: current ${d.psiDominantBand.current ?? "unavailable"} / prior ${d.psiDominantBand.prior ?? "unavailable"}`);
     lines.push(
       `  Active depeg observations: current ${d.activeDepegObservations.current ?? "n/a"} / prior ${d.activeDepegObservations.prior ?? "n/a"}`,
     );
@@ -181,6 +181,7 @@ export function buildWeeklyPrompt(
       );
     }
     lines.push(`  Data coverage: ${d.dataCoverage.currentDays}d current, ${d.dataCoverage.priorDays}d prior`);
+    lines.push(`  PSI observation coverage: ${d.dataCoverage.currentPsiDays}d current, ${d.dataCoverage.priorPsiDays}d prior`);
   } else {
     lines.push("", "Week-over-week deltas: unavailable (insufficient prior-week history).");
   }
