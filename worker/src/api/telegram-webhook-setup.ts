@@ -530,10 +530,10 @@ export async function handleSetupTypeToggle(
   if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
     return { text: "Only the user who started this setup can continue." };
   }
-  if (!isAllowedAlertType(arg)) {
+  const resumed = resumedNextState(context, "type-toggle");
+  if (!resumed && !isAllowedAlertType(arg)) {
     return { text: "Action not recognized." };
   }
-  const resumed = resumedNextState(context, "type-toggle");
   const selected = new Set((resumed ?? state).alertTypes);
   if (!resumed) {
     if (selected.has(arg)) selected.delete(arg);
@@ -549,7 +549,7 @@ export async function handleSetupTypeToggle(
     `Selected: ${alertTypesSummary(nextAlertTypes)}`,
     { replyMarkup: buildTypeToggleKeyboard(selected) },
   );
-  return { text: ALERT_TYPE_LABELS[arg] };
+  return { text: isAllowedAlertType(arg) ? ALERT_TYPE_LABELS[arg] : "Alert types updated." };
 }
 
 export async function handleSetupNext(

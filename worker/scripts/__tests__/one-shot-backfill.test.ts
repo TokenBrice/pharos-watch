@@ -95,6 +95,19 @@ describe("remote D1 backfill statements", () => {
     expect(() => bindBackfillSql("SELECT 1", [1])).toThrow("Unused");
   });
 
+  it("preserves doubled-backtick identifiers when binding and validating writes", async () => {
+    const sql = "UPDATE `has``?;RETURNING` SET `value``?` = ?1 WHERE `key``?` = ?2";
+    const rendered = "UPDATE `has``?;RETURNING` SET `value``?` = 'bound' WHERE `key``?` = 7";
+    expect(bindBackfillSql(sql, ["bound", 7])).toBe(rendered);
+    const client = { queryRaw: vi.fn(() => JSON.stringify([
+      { success: true, results: [], meta: { duration: 0 } },
+      { success: true, results: [{ __pharos_changes: 1 }], meta: { duration: 0 } },
+    ])) };
+    const result = await createBackfillDatabase(client).prepare(sql).bind("bound", 7).run();
+    expect(result.meta.changes).toBe(1);
+    expect(client.queryRaw).toHaveBeenCalledWith(`${rendered}\n; SELECT changes() AS __pharos_changes;`);
+  });
+
   it("retains result ordering, changes, bound values and transaction rollback on the latest schema", async () => {
     const { sqlite } = fixtures.open();
     const client = {

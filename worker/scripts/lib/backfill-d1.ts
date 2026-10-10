@@ -5,11 +5,11 @@ type Client = {
   executeStatementsRaw?(statements: string[], prefix: string): string;
 };
 
-const SQL_QUOTED_OR_COMMENT = /'(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`|\[[^\]]*\]|--[^\n]*|\/\*[\s\S]*?\*\//g;
+const SQL_TOKEN = /'(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`|\[[^\]]*\]|--[^\n]*|\/\*[\s\S]*?\*\/|\?(\d*)/g;
 
 function writeSql(sql: string): { rendered: string; dml: boolean } {
   // Strip only code-external tokens; INSERT ... SELECT is still a write.
-  const tokens = sql.replace(SQL_QUOTED_OR_COMMENT, " ").trim();
+  const tokens = sql.replace(SQL_TOKEN, (token) => token.startsWith("?") ? token : " ").trim();
   const code = tokens.replace(/;$/, "").trim();
   if (!/^(INSERT|UPDATE|DELETE|REPLACE|CREATE|DROP|ALTER)\b/i.test(code) ||
       /\bRETURNING\b/i.test(code) || code.includes(";")) {
@@ -22,7 +22,7 @@ function writeSql(sql: string): { rendered: string; dml: boolean } {
 /** Render D1 positional bindings without treating quoted/commented question marks as parameters. */
 export function bindBackfillSql(sql: string, bindings: readonly unknown[]): string {
   let cursor = 0;
-  const rendered = sql.replace(/'(?:''|[^'])*'|"(?:""|[^"])*"|`[^`]*`|\[[^\]]*\]|--[^\n]*|\/\*[\s\S]*?\*\/|\?(\d*)/g, (token, index: string | undefined) => {
+  const rendered = sql.replace(SQL_TOKEN, (token, index: string | undefined) => {
     if (!token.startsWith("?")) return token;
     const position = index ? Number(index) - 1 : cursor;
     cursor = Math.max(cursor, position + 1);
@@ -82,7 +82,7 @@ export function createBackfillDatabase(client: Client, options: {
       return text();
     });
     const reads = texts.map((text) => {
-      const code = text.replace(SQL_QUOTED_OR_COMMENT, " ").trim().replace(/;$/, "").trim();
+      const code = text.replace(SQL_TOKEN, (token) => token.startsWith("?") ? token : " ").trim().replace(/;$/, "").trim();
       return /^SELECT\b/i.test(code) && !code.includes(";");
     });
     // TAPE static projectors probe count/rows together. Keep reads on the query
