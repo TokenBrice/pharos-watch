@@ -10,23 +10,41 @@ vi.mock("@/hooks/api-hooks", () => ({ useStabilityIndex: useStabilityIndexMock }
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
 
 describe("buildBandStripCells", () => {
-  it("keeps completed UTC days oldest-first and excludes the current day", () => {
-    const computedAt = 1_772_401_200;
-    const todayMidnight = 1_772_323_200;
-    const yesterday = todayMidnight - 86_400;
-    const twoDaysAgo = yesterday - 86_400;
+  const todayMidnight = Date.UTC(2026, 9, 9) / 1000;
+  const computedAt = todayMidnight + 12 * 3600;
 
+  it("aligns a complete month oldest-first and excludes current and expired days", () => {
+    const history = Array.from({ length: 31 }, (_, index) => ({
+      date: todayMidnight - index * 86_400,
+      band: "STEADY",
+    }));
     const cells = buildBandStripCells([
-      { date: todayMidnight, band: "STEADY" },
-      { date: yesterday, band: "TREMOR" },
-      { date: twoDaysAgo, band: "CALM" },
+      ...history,
+      { date: todayMidnight - 90 * 86_400, band: "CRISIS" },
     ], computedAt);
+    expect(cells).toHaveLength(30);
+    expect(cells.map((cell) => cell?.date)).toEqual(
+      Array.from({ length: 30 }, (_, index) => todayMidnight - (30 - index) * 86_400),
+    );
+    expect(cells.every((cell) => cell?.band === "STEADY")).toBe(true);
+  });
 
-    expect(cells.slice(0, 3)).toEqual([
-      { date: twoDaysAgo, band: "CALM" },
+  it("leaves sparse bootstrap and interior missing days in their calendar positions", () => {
+    const yesterday = todayMidnight - 86_400;
+    const threeDaysAgo = todayMidnight - 3 * 86_400;
+    const cells = buildBandStripCells([
       { date: yesterday, band: "TREMOR" },
+      { date: threeDaysAgo, band: "STEADY" },
+      { date: todayMidnight - 90 * 86_400, band: "CRISIS" },
+    ], computedAt);
+    expect(cells).toHaveLength(30);
+    expect(cells.slice(0, 27)).toEqual(Array(27).fill(null));
+    expect(cells.slice(27)).toEqual([
+      { date: threeDaysAgo, band: "STEADY" },
       null,
+      { date: yesterday, band: "TREMOR" },
     ]);
+    expect(buildBandStripCells(undefined, computedAt)).toEqual(Array(30).fill(null));
   });
 });
 

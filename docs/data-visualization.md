@@ -28,6 +28,8 @@ Selection shared with sibling panels belongs in the route client, not hidden ins
 
 Prefer position for the primary relationship. Size can show magnitude; hue can show category or band; shape, opacity, and motion can reinforce those meanings.
 
+Safety pillar radars use the absolute numeric domain `[0, 100]`; adding a comparison cohort never rescales an unchanged score.
+
 Stablecoin data often spans several orders of magnitude. Use an appropriate non-linear or piecewise scale for magnitude and give every rendered size an explicit floor and ceiling. The view model must handle null, empty, non-finite, negative, and out-of-range inputs without producing invalid SVG geometry.
 
 Derived layout must be deterministic. Seed any jitter or long-tail accent from a stable identifier; do not use `Math.random()` during render.
@@ -69,6 +71,7 @@ Do not announce decorative labels or duplicate the same data through several liv
 - Where a tap both previews and navigates, use an explicit touch interaction model that prevents accidental navigation.
 - Tooltips supplement the equivalent data surface; they are not the sole location for important information.
 - Auto-cycling or ambient selection yields as soon as the user interacts.
+- Chart brushes allow dragging any empty track area to replace a selection; the body moves it, edges resize it, and double-click clears it.
 - Provide an inspection or reflow strategy when a dense scene cannot remain legible on narrow screens.
 
 ## Motion
@@ -104,7 +107,7 @@ Supply the context needed to avoid misreading:
 - methodology link or label for coined scores
 - a short caveat where correlation, sample scope, or retained stale data could be mistaken for something stronger
 
-The global regime bar uses the `stabilityIndex` data-health preset, response producer metadata, and PSI generation time. Non-fresh or failed-refresh evidence gets a neutral bar and an explicitly retained, as-of observation in visible and accessible text, not a current market-regime claim.
+The global regime bar uses the `stabilityIndex` data-health preset, producer metadata and PSI generation. Non-fresh/failed-refresh evidence gets neutral color and a visibly/accessibly retained as-of observation, not a current-regime claim. Its 30 cells are completed UTC days ending yesterday relative to that generation; missing days stay empty and older rows are excluded.
 
 The non-USD share chart labels its latest sample date separately from coverage start and HTTP receipt time. Its cohort amounts and shares are non-null producer observations (an observed empty cohort is zero); absent overall history remains unavailable. Server freshness metadata feeds the existing Alt Pegs page stale-data banner even when a stalled snapshot is returned over successful HTTP.
 

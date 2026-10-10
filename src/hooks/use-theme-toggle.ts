@@ -12,7 +12,7 @@ interface ThemeToggleOptions {
 const getMountedServerSnapshot = () => false;
 
 export function useThemeToggle(options?: ThemeToggleOptions) {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const [mountStore] = useState(() => {
     let mounted = false;
     return {
@@ -24,9 +24,10 @@ export function useThemeToggle(options?: ThemeToggleOptions) {
       },
     };
   });
-  const mounted = useSyncExternalStore(mountStore.subscribe, mountStore.getSnapshot, getMountedServerSnapshot);
+  const mounted = useSyncExternalStore(mountStore.subscribe, mountStore.getSnapshot, getMountedServerSnapshot)
+    && (resolvedTheme === "dark" || resolvedTheme === "light");
 
-  const isDark = mounted ? theme === "dark" : false;
+  const isDark = mounted ? resolvedTheme === "dark" : false;
   const nextTheme = isDark ? "light" : "dark";
   const label = isDark ? "Light mode" : "Dark mode";
 

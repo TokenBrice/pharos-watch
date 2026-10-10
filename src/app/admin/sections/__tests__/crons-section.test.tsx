@@ -73,6 +73,35 @@ function renderCrons({
 }
 
 describe("CronsSection", () => {
+  it.each(["unknown", "errors", "empty", "success"] as const)(
+    "scopes last-completed evidence for %s history",
+    (history) => {
+      const recentRuns = history === "success"
+        ? [{ startedAt: 1_699_999_940, durationMs: 200, status: "ok" as const }]
+        : history === "errors"
+          ? Array.from({ length: 10 }, (_, index) => ({
+            startedAt: 1_699_999_940 - index * 60, durationMs: 200, status: "error" as const,
+          }))
+          : [];
+      renderCrons({ groups: [makeGroup([["sync-stablecoins", makeCronStatus({
+        recentRuns,
+        lastRun: recentRuns[0] ?? null,
+        healthy: history === "unknown" ? null : false,
+        telemetryUnknown: history === "unknown",
+        telemetryUnknownReason: history === "unknown" ? "cron-history-read-failed" : undefined,
+      })]])] });
+      const row = screen.getByTestId("cron-row-sync-stablecoins");
+      if (history === "unknown") {
+        expect(within(row).getByText("completed Unknown: cron-history-read-failed")).toBeTruthy();
+      } else if (history === "success") {
+        expect(within(row).queryByText(/No successful run/)).toBeNull();
+        expect(within(row).getAllByText(/ago$/).length).toBeGreaterThanOrEqual(2);
+      } else {
+        expect(within(row).getByText("completed No successful run in recent history")).toBeTruthy();
+      }
+      expect(within(row).queryByText("No successful run", { exact: true })).toBeNull();
+    },
+  );
   it("defers healthy rows by default and lets the operator mount all jobs explicitly", () => {
     renderCrons({
       groups: [

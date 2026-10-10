@@ -183,6 +183,23 @@ describe("actions workbench model", () => {
     });
   });
 
+  it.each([null, undefined, "response", 0, false])(
+    "keeps certainty-based headlines for a non-record body %s",
+    (body) => {
+      expect(extractStructuredActionOutcome(body, "unknown")).toEqual({
+        headline: "Outcome needs reconciliation", fields: [], followUp: null,
+      });
+      expect(extractStructuredActionOutcome(body, "failed").headline).toBe("Action failed");
+      expect(extractStructuredActionOutcome(body, "succeeded").headline).toBe("Action completed");
+    },
+  );
+
+  it("does not let structured response status override unknown or failed certainty", () => {
+    expect(extractStructuredActionOutcome({ status: "completed" }, "unknown").headline)
+      .toBe("Outcome needs reconciliation");
+    expect(extractStructuredActionOutcome({ status: "completed" }, "failed").headline).toBe("Action failed");
+  });
+
   it("allows only single-slash internal or explicit HTTP(S) follow-up links", () => {
     expect(getSafeActionFollowUpHref("/admin/crons")).toBe("/admin/crons");
     expect(getSafeActionFollowUpHref("https://ops.example.com/jobs/42")).toBe("https://ops.example.com/jobs/42");

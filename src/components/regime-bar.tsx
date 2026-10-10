@@ -23,16 +23,17 @@ export function buildBandStripCells(
 ): Array<{ date: number; band: string } | null> {
   if (!history?.length) return Array.from({ length: BAND_STRIP_WINDOW_DAYS }, () => null);
   const todayMidnight = bucketUnixSecondsToUtcDay(computedAt);
-  const completedOldestFirst = history
-    .filter((p) => p.date < todayMidnight)
-    .slice(0, BAND_STRIP_WINDOW_DAYS)
-    .reverse();
-  const out: Array<{ date: number; band: string } | null> = [];
-  for (let i = 0; i < BAND_STRIP_WINDOW_DAYS; i++) {
-    const point = completedOldestFirst[i];
-    out.push(point ? { date: point.date, band: point.band } : null);
-  }
-  return out;
+  const oldestDay = todayMidnight - BAND_STRIP_WINDOW_DAYS * 86_400;
+  const byDay = new Map(
+    history
+      .filter((point) => point.date >= oldestDay && point.date < todayMidnight)
+      .map((point) => [point.date, point]),
+  );
+  return Array.from({ length: BAND_STRIP_WINDOW_DAYS }, (_, index) => {
+    const date = oldestDay + index * 86_400;
+    const point = byDay.get(date);
+    return point ? { date, band: point.band } : null;
+  });
 }
 
 /** Persistent 3px bar at the top of every page, colored by current PSI band. */

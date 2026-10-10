@@ -187,16 +187,16 @@ function PortraitLayer({
   flowers,
   onLeaveFlower,
 }: Omit<PlotMapPortraitSlotProps, "aspectRatio">): ReactElement {
-  const { revealRecord, registerPinGrave, setRecordHash } = useCemeterySelection();
+  const { heroPin, setHeroPin, revealRecord, registerPinGrave, setRecordHash } = useCemeterySelection();
   const reducedMotion = usePrefersReducedMotion();
   const map = useMemo(() => buildCemeteryPlotMap(toPlotMapInput(rows), { asOf, preset: "portrait" }), [rows, asOf]);
   const rowById = useMemo(() => new Map(rows.map((r) => [r.id, r])), [rows]);
   const dates = useMemo(() => new Map(map.graves.map((g) => [g.id, dateOrdinal(g.deathDate)])), [map]);
 
-  const [tabStopId, setTabStopId] = useState(map.keyboard.initialId);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [tabStopId, setTabStopId] = useState(heroPin?.id ?? map.keyboard.initialId);
+  const [openId, setOpenId] = useState<string | null>(heroPin && heroPin.source !== "hash" ? heroPin.id : null);
   /** Last opened record: stays in the sheet while it slides out. */
-  const [shownId, setShownId] = useState<string | null>(null);
+  const [shownId, setShownId] = useState<string | null>(openId);
   /** Bumped on every open so re-opening the same grave re-runs the scroll/focus effect. */
   const [openSeq, setOpenSeq] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -228,11 +228,12 @@ function PortraitLayer({
       if (!rowById.has(id)) return;
       setTabStopId(id);
       setOpenId(id);
+      setHeroPin(id);
       setShownId(id);
       setOpenSeq((n) => n + 1);
       setRecordHash(id);
     },
-    [rowById, setRecordHash],
+    [rowById, setHeroPin, setRecordHash],
   );
 
   const closeSheet = useCallback(
@@ -240,6 +241,7 @@ function PortraitLayer({
       const id = openId;
       if (!id) return;
       setOpenId(null);
+      setHeroPin(null);
       if (how === "register") {
         revealRecord(id, "hero");
         return;
@@ -247,13 +249,13 @@ function PortraitLayer({
       setRecordHash(null);
       if (how === "dismiss") document.getElementById(`walk-${id}`)?.focus();
     },
-    [openId, revealRecord, setRecordHash],
+    [openId, setHeroPin, revealRecord, setRecordHash],
   );
 
   // After an open (openSeq: also a re-open of the same grave): bring the grave above the sheet, focus the sheet.
   useLayoutEffect(() => {
     const sheet = sheetRef.current;
-    if (!openId || !sheet) return;
+    if (!openSeq || !openId || !sheet) return;
     const grave = document.getElementById(`walk-${openId}`);
     if (grave) scrollGraveAboveSheet(grave, sheet, reducedMotion);
     sheet.focus({ preventScroll: true });
@@ -277,8 +279,10 @@ function PortraitLayer({
   useEffect(() => {
     pinRef.current = (id, source) => {
       if (!rowById.has(id)) return;
-      if (source === "hash") setTabStopId(id);
-      else openSheet(id);
+      if (source === "hash") {
+        setTabStopId(id);
+        setOpenId(null);
+      } else openSheet(id);
     };
   }, [rowById, openSheet]);
   useEffect(() => registerPinGrave((id, source) => pinRef.current(id, source)), [registerPinGrave]);

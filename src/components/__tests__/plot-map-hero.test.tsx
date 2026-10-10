@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
 import type { ComponentType } from "react";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { useState } from "react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import atlasManifest from "@/lib/cemetery-logo-atlas.generated.json";
@@ -9,7 +10,8 @@ import { buildCemeteryPlotMap } from "@/lib/cemetery-plot-map";
 import { toPlotLogoAtlas, toPlotMapInput } from "@/lib/cemetery-plot-map-input";
 import { buildCemeteryRegisterRows } from "@/lib/cemetery-register";
 import { buildCemeteryStats } from "@/lib/cemetery-stats";
-import type { CemeterySelectionHandler } from "../cemetery/cemetery-selection-context";
+import { CemeterySelectionProvider, type CemeterySelectionHandler } from "../cemetery/cemetery-selection-context";
+import type * as CemeterySelectionModule from "../cemetery/cemetery-selection-context";
 import type { PlotMapPortraitSlotProps } from "../cemetery/plot-map-portrait-slot";
 import { PLOT_BEAM_DWELL_MS, PlotMapHero } from "../cemetery/plot-map-hero";
 import { desktopPlotLayout } from "../cemetery/plot-map-scene";
@@ -33,13 +35,30 @@ vi.mock("@/hooks/use-prefers-reduced-motion", () => ({ usePrefersReducedMotion: 
 
 const selection = vi.hoisted(() => ({
   selectedId: null,
+  real: false,
+  heroPin: null,
+  setHeroPin: vi.fn(),
   pinGrave: vi.fn(),
   revealRecord: vi.fn(),
   registerPinGrave: vi.fn(),
   registerRevealRecord: vi.fn(),
   setRecordHash: vi.fn(),
 }));
-vi.mock("@/components/cemetery/cemetery-selection-context", () => ({ useCemeterySelection: () => selection }));
+vi.mock("@/components/cemetery/cemetery-selection-context", async (importOriginal) => {
+  const actual = await importOriginal<typeof CemeterySelectionModule>();
+  function useMockSelection() {
+    const [heroPin, setHeroPin] = useState<CemeterySelectionModule.CemeterySelectionContextValue["heroPin"]>(null);
+    return {
+      ...selection,
+      heroPin,
+      setHeroPin: (id: string | null, source: CemeterySelectionModule.CemeterySelectionSource = "hero") => setHeroPin(id ? { id, source } : null),
+    };
+  }
+  return { ...actual, useCemeterySelection: () => {
+    const useSelection = selection.real ? actual.useCemeterySelection : useMockSelection;
+    return useSelection();
+  } };
+});
 
 const rows = buildCemeteryRegisterRows(CEMETERY_ENTRIES);
 const asOf = buildCemeteryStats(CEMETERY_ENTRIES).asOf.date;
@@ -59,6 +78,8 @@ const unregister = vi.fn();
 
 beforeEach(() => {
   phone = false;
+  selection.real = false;
+  window.history.replaceState(null, "", "/cemetery/");
   portrait.real = false;
   motion.reduced = false;
   pinHandler = null;
@@ -84,6 +105,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -218,6 +240,70 @@ describe("PlotMapHero pinning", () => {
     fireEvent.keyDown(ust, { key: "f" });
     expect(within(card).getByText("2 flowers left this session")).toBeTruthy();
     expect(ust.querySelector("[data-plot-flowers]")?.children).toHaveLength(2);
+  });
+});
+
+describe("PlotMapHero responsive selection continuity", () => {
+  const a = "ust-terrausd-2022-05";
+  const b = "mim-abracadabra";
+  const setPhone = (value: boolean) => {
+    phone = value;
+    act(() => mediaListeners.forEach((listener) => listener()));
+  };
+  const pressed = (prefix: string, id: string) => document.getElementById(`${prefix}-${id}`)?.getAttribute("aria-pressed");
+  function renderResponsive() {
+    selection.real = true;
+    portrait.real = true;
+    return render(
+      <CemeterySelectionProvider knownIds={rows.map((row) => row.id)}>
+        <PlotMapHero rows={rows} asOf={asOf} atlas={atlas} layout={layout} portraitAspectRatio="292 / 1100">
+          <h1 id="cemetery-title">Stablecoin Cemetery</h1>
+        </PlotMapHero>
+      </CemeterySelectionProvider>,
+    );
+  }
+
+  it("restores the live pin across layouts without replaying focus or scroll and never resurrects a dismissed pin", () => {
+    renderResponsive();
+    fireEvent.click(document.getElementById(`grave-${a}`)!);
+    expect(window.location.hash).toBe(`#${a}`);
+    const focus = document.activeElement;
+    vi.mocked(window.scrollBy).mockClear();
+    setPhone(true);
+    expect(pressed("walk", a)).toBe("true");
+    expect(screen.getByRole("dialog").getAttribute("data-open")).toBe("true");
+    expect(document.activeElement).toBe(focus);
+    expect(window.scrollBy).not.toHaveBeenCalled();
+
+    fireEvent.click(document.getElementById(`walk-${b}`)!);
+    expect(window.location.hash).toBe(`#${b}`);
+    vi.mocked(window.scrollBy).mockClear();
+    setPhone(false);
+    expect(pressed("grave", b)).toBe("true");
+    expect(pressed("grave", a)).toBe("false");
+    expect(window.scrollBy).not.toHaveBeenCalled();
+
+    setPhone(true);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(window.location.hash).toBe("");
+    setPhone(false);
+    expect(pressed("grave", a)).toBe("false");
+    expect(pressed("grave", b)).toBe("false");
+  });
+
+  it("preserves the hash-only portrait tab stop after an intervening desktop layout", () => {
+    phone = true;
+    window.history.replaceState(null, "", `/cemetery/#${a}`);
+    renderResponsive();
+    expect((document.getElementById(`walk-${a}`) as HTMLElement)?.tabIndex).toBe(0);
+    expect(screen.getByRole("dialog").getAttribute("data-open")).toBe("false");
+    setPhone(false);
+    expect(pressed("grave", a)).toBe("true");
+    setPhone(true);
+    expect((document.getElementById(`walk-${a}`) as HTMLElement)?.tabIndex).toBe(0);
+    expect(pressed("walk", a)).toBe("false");
+    expect(screen.getByRole("dialog").getAttribute("data-open")).toBe("false");
+    expect(window.location.hash).toBe(`#${a}`);
   });
 });
 

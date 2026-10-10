@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import {
   PHAROS_QUERY_DEFAULT_OPTIONS,
   Providers,
@@ -9,6 +9,9 @@ import {
   type SortColumnEventDetail,
 } from "@/components/providers";
 import { setSingleKeyShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
+import { openCommandPalette } from "@/lib/command-palette";
+
+const setThemeMock = vi.hoisted(() => vi.fn());
 
 let pathname = "/";
 
@@ -28,22 +31,29 @@ vi.mock("@/components/keyboard-shortcuts", () => ({
     open ? <div data-testid="keyboard-shortcuts-dialog" /> : null,
 }));
 
+vi.mock("@/components/command-palette-root", () => ({
+  CommandPalette: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="command-palette" /> : null,
+}));
+
 vi.mock("next-themes", () => ({
   ThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useTheme: () => ({ theme: "light", setTheme: vi.fn() }),
+  useTheme: () => ({ theme: "light", setTheme: setThemeMock }),
 }));
 
 vi.mock("@/components/route-progress-bar", () => ({
   RouteProgressBar: () => <div data-testid="route-progress-bar" />,
 }));
 
-function pressKey(key: string) {
-  const event = new KeyboardEvent("keydown", { key, cancelable: true });
-  window.dispatchEvent(event);
+function pressKey(key: string, options: KeyboardEventInit = {}, target: EventTarget = window) {
+  const event = new KeyboardEvent("keydown", { key, cancelable: true, bubbles: true, ...options });
+  act(() => { target.dispatchEvent(event); });
   return event;
 }
 
 afterEach(() => {
+  cleanup();
+  setThemeMock.mockClear();
   pathname = "/";
   window.localStorage.clear();
 });
@@ -72,10 +82,47 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
     // Global chrome (TopNav health menu, RegimeBar PSI) queries on every route.
     expect(screen.getByTestId("query-client-provider")).toBeTruthy();
     // Give the lazy interactive layer a tick so an incorrect mount would surface.
-    const tick = Promise.withResolvers<void>();
-    setTimeout(tick.resolve, 0);
-    await tick.promise;
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
     expect(screen.queryByTestId("route-progress-bar")).toBeNull();
+  });
+
+  it.each(["/docs/api-reference/", "/about/", "/stablecoin/usdt-tether/"])(
+    "opens global search by its real trigger and modified shortcut on %s without eager overlays",
+    async (route) => {
+      pathname = route;
+      render(<Providers><button onClick={openCommandPalette}>Search</button></Providers>);
+      expect(screen.queryByTestId("command-palette")).toBeNull();
+      fireEvent.click(await screen.findByRole("button", { name: "Search" }));
+      expect(await screen.findByTestId("command-palette")).toBeTruthy();
+      expect(pressKey("k", { ctrlKey: true }).defaultPrevented).toBe(true);
+      expect(screen.queryByTestId("command-palette")).toBeNull();
+      expect(pressKey("k", { metaKey: true }).defaultPrevented).toBe(true);
+      expect(await screen.findByTestId("command-palette")).toBeTruthy();
+      if (route.startsWith("/docs") || route.startsWith("/about")) {
+        expect(screen.queryByTestId("route-progress-bar")).toBeNull();
+      }
+    },
+  );
+
+  it.each(["t", "/"])("honors the opt-out for %s while preserving modified search", async (key) => {
+    render(<Providers><input aria-label="Editable" /></Providers>);
+    await screen.findByTestId("route-progress-bar");
+    expect(pressKey(key, {}, screen.getByRole("textbox")).defaultPrevented).toBe(false);
+    expect(setThemeMock).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("command-palette")).toBeNull();
+
+    setSingleKeyShortcutDisabled(true);
+    expect(pressKey(key).defaultPrevented).toBe(false);
+    expect(setThemeMock).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("command-palette")).toBeNull();
+    expect(pressKey("k", { ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(await screen.findByTestId("command-palette")).toBeTruthy();
+    pressKey("k", { ctrlKey: true });
+
+    setSingleKeyShortcutDisabled(false);
+    expect(pressKey(key).defaultPrevented).toBe(true);
+    if (key === "t") expect(setThemeMock).toHaveBeenCalledTimes(1);
+    else expect(await screen.findByTestId("command-palette")).toBeTruthy();
   });
 
   it("cold-loads the interactive layer on data routes", async () => {

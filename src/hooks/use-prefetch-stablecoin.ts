@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supplyHistoryQueryOptions } from "./use-stablecoins";
+import { STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
 
 const PREFETCH_DEBOUNCE_MS = 100;
 
@@ -33,7 +34,7 @@ export function usePrefetchStablecoin() {
         // (view-model supply history), with a matching query key. DEX
         // liquidity, safety-score history (10y), and depeg events live
         // behind below-fold LazySections and fetch on scroll instead.
-        void queryClient.prefetchQuery(supplyHistoryQueryOptions(coinId));
+        void queryClient.prefetchQuery(supplyHistoryQueryOptions(coinId, STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS));
       }, PREFETCH_DEBOUNCE_MS);
     },
     [queryClient]

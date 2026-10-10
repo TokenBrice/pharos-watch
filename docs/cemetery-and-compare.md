@@ -75,7 +75,7 @@ Each entry follows `DeadStablecoinSchema` (`shared/types/market.ts`):
 - optional `peakMcap`: approximate peak market cap in USD; absent when no reliable figure was curated, never zero
 - optional `contracts`: an array of `{ chain, address }` for block-explorer links in the register autopsy
 - `mechanismArchetype`: how the coin was designed to hold its peg, one of `MECHANISM_ARCHETYPE_VALUES`. It is independent of `causeOfDeath` and is the one authority for cemetery mechanism links, the register's mechanism filter and the linked-death counts on mechanism explainers. `src/lib/__tests__/mechanism-explainers-cemetery.test.ts` checks every explainer `decommissioned` entry against the archetype of the cemetery record it names. Absent means not yet classified.
-- `recordedAt`: the UTC `YYYY-MM-DD` date on which the record entered Pharos. It is not the death date: it separates recently died from recently documented, and it drives the "Latest record added" date and the dataset `updatedAt`.
+- `recordedAt`: <!-- GENERATED-START: cemetery-recorded-at-description -->UTC cemetery-entry/documentation date (YYYY-MM-DD); tracked rows default to frozenAt unless obituary.recordedAt explicitly overrides it. Distinct from deathDate; null when not recorded.<!-- GENERATED-END: cemetery-recorded-at-description --> Drives "Latest record added" and dataset `updatedAt`.
 
 Frozen rows also carry `archivedDataAvailable: true` (the `CemeteryEntry` type); curated rows leave it absent.
 
@@ -192,6 +192,8 @@ Render boundary. `CemeteryHero` is a server component: it renders the route head
 ### Selection and deep links
 
 `CemeterySelectionProvider` (`src/components/cemetery/cemetery-selection-context.tsx`) is the only owner of `location.hash` on `/cemetery/`. It parses the hash on mount and on every `hashchange` through `parseCemeteryHash`, ignores the echo of a hash it wrote itself, and never scrolls: registered handlers own scrolling and reduced motion. A record hash pins the grave (`pinGrave`) and reveals the record (`revealRecord`) with the source `hash`. Surfaces register their handlers with `registerPinGrave` and `registerRevealRecord`; a request made before its handler registers is queued, and the latest one wins. `setRecordHash` writes `#<id>` with `history.replaceState`, so opening records never adds history entries.
+
+The provider retains the hero pin and its source separately from register reveals. Layout handoff restores or clears that pin without replaying scroll/focus actions; portrait hash-source pins restore only the roving tab stop, never a sheet. Dismissed pins cannot reappear on resize.
 
 Anchors:
 
