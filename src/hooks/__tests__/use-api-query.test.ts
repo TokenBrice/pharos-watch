@@ -13,7 +13,7 @@ import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { deriveDataHealth } from "@/lib/data-health";
 import { type ApiMeta } from "@/lib/api";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { type NonUsdSharePoint } from "@shared/types/market";
+import { type NonUsdSharePoint, type StablecoinChartPoint } from "@shared/types/market";
 
 // Stub modules that are not relevant to what we're testing here.
 vi.mock("@shared/lib/site-data-lane", () => ({
@@ -77,6 +77,36 @@ describe("use-api-query", () => {
       }, now);
       expect(health.state).toBe("stale");
       expect(health.dataUpdatedAt).toBe(point.date * 1000);
+    } finally {
+      client.clear();
+    }
+  });
+
+  it("carries chart producer generation and budgets through the registered metadata path", async () => {
+    const now = Date.now();
+    const budget = API_FRESHNESS_MAX_AGE_SEC.stablecoinCharts;
+    const updatedAt = Math.floor(now / 1000) - 20 * budget;
+    const point = { date: updatedAt - 86400, totalCirculatingUSD: { peggedEUR: 1_000_000, peggedJPY: null } };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify([point]), {
+      headers: {
+        "Content-Type": "application/json",
+        "X-Data-Updated-At": String(updatedAt),
+        "X-Data-Age": String(20 * budget),
+        Date: new Date(now).toUTCString(),
+      },
+    }));
+    const client = new QueryClient();
+    try {
+      const options = createRegisteredApiPollingQueryOptions(FRONTEND_API_QUERY_DESCRIPTORS.stablecoinCharts, { retry: false });
+      const result = await client.fetchQuery(options as FetchQueryOptions<{ data: StablecoinChartPoint[]; meta: ApiMeta | null }>);
+      expect(result.data).toEqual([point]);
+      expect(result.meta?.updatedAt).toBe(updatedAt);
+      const health = deriveDataHealth({
+        label: "Alt-Peg Cohort History", dataUpdatedAt: now, hasData: true,
+        staleTime: budget * 1000, meta: result.meta,
+      }, now);
+      expect(health.state).toBe("stale");
+      expect(health.dataUpdatedAt).toBe(updatedAt * 1000);
     } finally {
       client.clear();
     }

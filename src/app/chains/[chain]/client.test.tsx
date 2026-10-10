@@ -86,6 +86,35 @@ describe("ChainProfileClient", () => {
     expect(screen.getByText("View all chains")).toBeTruthy();
   });
 
+  it("shows unavailable supply rather than untracked copy for a coverage-listed chain", () => {
+    useChainProfileDataMock.mockReturnValue(makeHookState({
+      chain: null,
+      supplyUnavailable: true,
+      canConfirmMissingChain: false,
+    }));
+    render(<ChainProfileClient chainId="ethereum" />);
+    expect(screen.getByText(/all current observations were excluded/i)).toBeTruthy();
+    expect(screen.queryByText(/may not be tracked/i)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Retry chain data" }));
+    expect(refetchAll).toHaveBeenCalledTimes(1);
+  });
+
+  it("discloses partial chain supply and the incomplete global-share denominator", () => {
+    useChainProfileDataMock.mockReturnValue(makeHookState({
+      chain: makeChain({ unavailableSupplyObservationCount: 2 }),
+      supplyCoverage: {
+        aggregateUnavailableAssetCount: 3,
+        chainUnavailableObservationCount: 2,
+        chainIdsWithUnavailableObservations: ["ethereum"],
+      },
+    }));
+    render(<ChainProfileClient chainId="ethereum" />);
+    expect(screen.getByText("Partial Supply")).toBeTruthy();
+    expect(screen.getByText(/2 unavailable supply observations excluded/)).toBeTruthy();
+    expect(screen.getByText("Partial Global Share")).toBeTruthy();
+    expect(screen.getByText(/3 assets excluded from global supply/)).toBeTruthy();
+  });
+
   it("shows a query error instead of the missing-chain fallback when chain summaries are unavailable", () => {
     useChainProfileDataMock.mockReturnValue(makeHookState({
       chain: null,

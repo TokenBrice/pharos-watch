@@ -5,6 +5,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
  */
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import type { StablecoinChartPoint } from "@shared/types/market";
 import {
   handleStablecoins,
   handleStablecoinCharts,
@@ -273,6 +274,19 @@ describe("cache-passthrough: handleStablecoinCharts", () => {
     expect(res.status).toBe(503);
   });
 
+  it("serves unavailable historical bucket gaps without converting them to zero", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const points = [
+      { date: nowSec - 3 * 86400, totalCirculatingUSD: { peggedEUR: 6_000_000, peggedJPY: 1_000_000 } },
+      { date: nowSec - 2 * 86400, totalCirculatingUSD: { peggedEUR: null, peggedJPY: null } },
+      { date: nowSec - 86400, totalCirculatingUSD: { peggedEUR: 0, peggedJPY: 0 } },
+    ];
+    const res = await handleStablecoinCharts(makeCacheDb("stablecoin-charts", points, nowSec));
+    const body = await readJsonResponse(res, 200) as StablecoinChartPoint[];
+    expect(body.map((point) => point.totalCirculatingUSD)).toEqual(points.map((point) => point.totalCirculatingUSD));
+    expect(res.headers.get("X-Data-Age")).toBe("0");
+  });
+
   it("marks legacy provider history and does not append a mixed-universe live point", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
@@ -329,11 +343,7 @@ describe("cache-passthrough: handleStablecoinCharts", () => {
     ]);
     const res = await handleStablecoinCharts(db);
 
-    const body = (await readJsonResponse(res, 200)) as Array<{
-      date: number;
-      totalCirculatingUSD: Record<string, number>;
-      aggregateUniverse: string;
-    }>;
+    const body = await readJsonResponse(res, 200) as StablecoinChartPoint[];
 
     expect(body).toEqual([
       {

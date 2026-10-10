@@ -452,7 +452,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       path: API_PATHS.stablecoinCharts(),
       producerIntervalMs: CRON_CHARTS,
     },
-    "plain",
+    "meta",
     createLazySchema<StablecoinChartPoint[]>(
       async () => (await import("@shared/types/market")).StablecoinChartResponseSchema,
     ),

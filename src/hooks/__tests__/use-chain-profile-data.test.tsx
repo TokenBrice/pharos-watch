@@ -101,6 +101,22 @@ describe("useChainProfileData", () => {
     expect(result.current.coins).toEqual([]);
   });
 
+  it("distinguishes a coverage-listed wholly unavailable chain from a registry absence", () => {
+    const supplyCoverage = {
+      aggregateUnavailableAssetCount: 1,
+      chainUnavailableObservationCount: 2,
+      chainIdsWithUnavailableObservations: ["ethereum"],
+    };
+    useRegisteredApiQueryMock.mockReturnValue(makeQuery(makeResponse({
+      chains: [], chainDetail: undefined, supplyCoverage,
+    })));
+    const { result } = renderHook(() => useChainProfileData("ethereum"));
+    expect(result.current.chain).toBeNull();
+    expect(result.current.supplyUnavailable).toBe(true);
+    expect(result.current.canConfirmMissingChain).toBe(false);
+    expect(result.current.supplyCoverage).toBe(supplyCoverage);
+  });
+
   it("reports initial loading before the chain response arrives", () => {
     useRegisteredApiQueryMock.mockReturnValue(makeQuery(undefined, { isLoading: true }));
 

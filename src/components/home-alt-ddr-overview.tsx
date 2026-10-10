@@ -2,10 +2,12 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
+import { ListFilter } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeAltTrackerLink } from "@/components/home-alt-tracker-link";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
+import type { ApiMeta } from "@/lib/api";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -20,7 +22,7 @@ import {
 } from "@shared/types/depeg-resolver";
 import {
   formatDurationSec,
-  getDuration,
+  formatUtcTimestamp,
   getLiveCurrentDeviationBps,
   getPeakDeviationBps,
   getResolution,
@@ -69,6 +71,10 @@ interface ForecastItem {
   nowBps: number | null;
   /** Benchmarked median time-to-repeg, seconds; null when no duration band. */
   medianSec: number | null;
+  remainingAsOf: number | null;
+  medianResolveAt: number | null;
+  stale: boolean;
+  degradedReason: string | null;
   severity: number;
 }
 
@@ -82,7 +88,7 @@ function rowSeverity(row: DdrV2ResponseRow): number {
 
 function toForecastItem(row: DdrV2ResponseRow): ForecastItem {
   const currentForecast = isCurrentForecast(row);
-  const duration = currentForecast ? getDuration(row) : null;
+  const duration = isCurrentForecast(row) ? row.frozen.duration : null;
   const nowBps = getLiveCurrentDeviationBps(row);
   const benchmarked = duration != null && !duration.suppressed && duration.medianSec != null;
   return {
@@ -93,6 +99,10 @@ function toForecastItem(row: DdrV2ResponseRow): ForecastItem {
     tier: currentForecast ? getResolution(row).tier : null,
     nowBps,
     medianSec: benchmarked ? duration.medianSec : null,
+    remainingAsOf: benchmarked ? duration.remainingAsOf : null,
+    medianResolveAt: benchmarked ? duration.medianResolveAt : null,
+    stale: row.live.stale,
+    degradedReason: row.live.degradedReason,
     severity: rowSeverity(row),
   };
 }
@@ -112,8 +122,11 @@ function DurationCell({ item }: { item: ForecastItem }) {
   }
   if (item.medianSec != null) {
     return (
-      <span className="font-mono text-[11px] font-semibold tabular-nums text-sky-700 dark:text-sky-400">
-        ~{formatDurationSec(item.medianSec)}
+      <span
+        className="font-mono text-[11px] font-semibold tabular-nums text-muted-foreground"
+        title={`Locked estimate as of ${formatUtcTimestamp(item.remainingAsOf) ?? "unknown"}; median deadline ${formatUtcTimestamp(item.medianResolveAt) ?? "unknown"}${item.degradedReason ? `; ${item.degradedReason}` : ""}`}
+      >
+        {item.degradedReason === "duration-exceeded" ? "overdue" : item.stale ? "stale" : "locked"} ~{formatDurationSec(item.medianSec)}
       </span>
     );
   }
@@ -173,7 +186,7 @@ function ForecastRow({ item, logoSrc }: { item: ForecastItem; logoSrc: string | 
         <span className={cn("w-24 text-right text-[10px] font-semibold uppercase tracking-wide", item.tier == null ? "text-muted-foreground" : TIER_META[item.tier].accent)}>
           {item.tier == null ? item.state.replaceAll("_", " ") : TIER_SHORT[item.tier]}
         </span>
-        <span className="w-16 text-right">
+        <span className="w-28 text-right">
           <DurationCell item={item} />
         </span>
       </span>
@@ -249,7 +262,7 @@ function VerdictDistribution({ items }: { items: ForecastItem[] }) {
             </span>
           </span>
         ))}
-        <span className="ml-auto font-mono text-[10px] uppercase tracking-wide text-muted-foreground">{total} live</span>
+        <span className="ml-auto font-mono text-[10px] uppercase tracking-wide text-muted-foreground">{total} forecasts</span>
       </div>
     </div>
   );
@@ -265,12 +278,12 @@ function ForecastZone({
   if (items.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 py-8 text-center">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 ring-1 ring-inset ring-emerald-500/30 dark:text-emerald-400">
-          <ShieldCheck aria-hidden="true" className="h-6 w-6" strokeWidth={2} />
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          <ListFilter aria-hidden="true" className="h-6 w-6" strokeWidth={2} />
         </span>
         <div className="space-y-0.5">
-          <p className="font-display text-lg font-bold text-foreground">All clear</p>
-          <p className="text-sm text-muted-foreground">No active depeg forecasts — every monitored coin is on peg.</p>
+          <p className="font-display text-lg font-bold text-foreground">No published active forecasts</p>
+          <p className="text-sm text-muted-foreground">No active forecasts in the available snapshot; this is not a market-wide peg assessment.</p>
         </div>
       </div>
     );
@@ -371,6 +384,54 @@ function TrackRecordZone({
   );
 }
 
+function SourceStatus({ label, computedAt, degradedReason, usable, error, dataUpdatedAt, meta, onRetry, loading }: {
+  label: string;
+  computedAt: number | undefined;
+  degradedReason: string | null | undefined;
+  usable: boolean;
+  error: unknown;
+  dataUpdatedAt: number;
+  meta: ApiMeta | null | undefined;
+  onRetry: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="mb-3 space-y-2">
+      <p className="text-xs text-muted-foreground">
+        {label}: {loading ? "Loading" : !usable ? "Unavailable" : error || degradedReason ? "Retained snapshot" : "Available snapshot"}
+        {" · "}as of {formatUtcTimestamp(computedAt) ?? "unavailable"}
+        {degradedReason ? ` · ${degradedReason}` : ""}
+      </p>
+      <QueryFreshnessNotices
+        error={error}
+        hasData={usable}
+        onRetry={onRetry}
+        queries={[{
+          preset: label === "Resolver" ? "depegResolver" : "depegResolverReview",
+          dataUpdatedAt,
+          hasData: usable,
+          error,
+          meta: computedAt != null ? {
+            ...(meta?.updatedAt != null ? {
+              warning: meta.warning,
+              dependencies: meta.dependencies,
+              assessedAt: meta.assessedAt,
+              freshBudgetSec: meta.freshBudgetSec,
+              degradedBudgetSec: meta.degradedBudgetSec,
+            } : {}),
+            updatedAt: computedAt,
+            ageSeconds: meta?.ageSeconds ?? 0,
+            status: degradedReason === "stale-cache" || meta?.status === "stale" ? "stale" : degradedReason ? "degraded" : meta?.status === "degraded" ? "degraded" : "fresh",
+          } : meta,
+        }]}
+      />
+      {!usable && !error && !loading ? (
+        <button type="button" className="pharos-focus-ring text-xs text-primary hover:underline" onClick={onRetry}>Retry {label.toLowerCase()}</button>
+      ) : null}
+    </div>
+  );
+}
+
 // --- public component ----------------------------------------------------
 
 export function HomeAltDdrOverview(): React.JSX.Element | null {
@@ -401,10 +462,10 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
   const loading =
     (resolverEnabled && !resolverData && !resolverError) ||
     (resolverReviewerEnabled && !resolverReviewData && !resolverReviewError);
-  if (!ddrUsable && !ddrrUsable && loading) return <HomeAltDdrOverviewFallback />;
-  if (!ddrUsable && !ddrrUsable) return null;
+  if (!ddrUsable && !ddrrUsable && loading && !resolverData && !resolverReviewData && !resolverError && !resolverReviewError) return <HomeAltDdrOverviewFallback />;
+  // Failed sources stay visible independently, even when neither has a usable snapshot.
 
-  const headline = resolverReviewData?.summary.headline;
+  const headline = ddrrUsable ? resolverReviewData?.summary.headline : undefined;
   const scored = headline?.recoveryLikelihoodScoredCount ?? 0;
   const accuracyPct = headline?.recoveryLikelihoodAccuracyPct ?? null;
   const accuracyValue = scored === 0 || accuracyPct == null ? "—" : formatPercentFromRatio(accuracyPct, 1);
@@ -415,11 +476,11 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
     .map((h) => ({ horizon: h.horizon, hitRate: h.hitRate as number }));
 
   const stat = ddrUsable
-    ? { value: items.filter((item) => item.tier != null).length, label: "live forecasts" }
+    ? { value: items.filter((item) => item.tier != null).length, label: "published forecasts" }
     : { value: headline?.lockedPredictionCount ?? 0, label: "graded" };
 
-  const forecastSpan = ddrrUsable && headline ? "lg:col-span-3" : "lg:col-span-5";
-  const trackSpan = ddrUsable ? "lg:col-span-2" : "lg:col-span-5";
+  const forecastSpan = resolverReviewerEnabled ? "lg:col-span-3" : "lg:col-span-5";
+  const trackSpan = resolverEnabled ? "lg:col-span-2" : "lg:col-span-5";
 
   return (
     <section aria-labelledby="ddr-overview-title" className="space-y-3 sm:space-y-4">
@@ -431,21 +492,29 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
 
       <div className="pharos-card-shell overflow-hidden">
         <div className="grid grid-cols-1 divide-y divide-border/50 lg:grid-cols-5 lg:divide-x lg:divide-y-0">
-          {ddrUsable ? (
+          {resolverEnabled ? (
             <div className={cn("p-4 sm:p-5", forecastSpan)}>
-              <ForecastZone items={items} logoMap={logoMap} />
+              <SourceStatus label="Resolver" computedAt={resolverData?._meta.computedAt}
+                degradedReason={resolverData?._meta.degradedReason} usable={ddrUsable} error={resolverError}
+                dataUpdatedAt={resolver.dataUpdatedAt} meta={resolver.meta} loading={!resolverData && !resolverError}
+                onRetry={() => { void resolver.refetch(); }} />
+              {ddrUsable ? <ForecastZone items={items} logoMap={logoMap} /> : null}
             </div>
           ) : null}
-          {ddrrUsable && headline ? (
+          {resolverReviewerEnabled ? (
             <div className={cn("bg-muted/20 p-4 sm:p-5", trackSpan)}>
-              <TrackRecordZone
+              <SourceStatus label="Reviewer" computedAt={resolverReviewData?._meta.computedAt}
+                degradedReason={resolverReviewData?._meta.degradedReason} usable={ddrrUsable} error={resolverReviewError}
+                dataUpdatedAt={resolverReview.dataUpdatedAt} meta={resolverReview.meta} loading={!resolverReviewData && !resolverReviewError}
+                onRetry={() => { void resolverReview.refetch(); }} />
+              {ddrrUsable && headline ? <TrackRecordZone
                 accuracyValue={accuracyValue}
                 accuracyTone={accuracyTone}
                 scored={scored}
                 lockedCount={headline.lockedPredictionCount}
                 durationScored={headline.durationScoredCount}
                 rates={rates}
-              />
+              /> : null}
             </div>
           ) : null}
         </div>

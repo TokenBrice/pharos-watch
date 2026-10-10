@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AltPegCohortHistoryChart } from "@/app/alt-pegs/alt-peg-cohort-history-chart";
 import { Tooltip } from "recharts";
 import type { ReactElement } from "react";
 import type * as ChartAxes from "@/components/chart-primitives/axes";
 import { PEG_CHART_COLORS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 const { useStablecoinChartsMock, handleAnimationEndMock, chartState } = vi.hoisted(() => ({
   useStablecoinChartsMock: vi.fn(),
@@ -70,6 +71,8 @@ describe("AltPegCohortHistoryChart", () => {
       isLoading: false,
       isError: false,
       error: null,
+      dataUpdatedAt: Date.now(),
+      meta: { updatedAt: Math.floor(Date.now() / 1000), status: "fresh", ageSeconds: 0 },
     });
   });
 
@@ -117,17 +120,17 @@ describe("AltPegCohortHistoryChart", () => {
     expect(onCloseFocus).toHaveBeenCalled();
   });
 
-  it("excludes USD and preserves historical-only supply in Other at the $5m boundary", async () => {
+  it("excludes USD and preserves explicit-zero historical cohorts in Other at the $5m boundary", async () => {
     chartState.ready = true;
     useStablecoinChartsMock.mockReturnValue({
       isLoading: false,
       data: [
-        { date: 1_713_571_200, totalCirculatingUSD: { peggedUSD: 900_000_000_000, peggedEUR: 6_000_000, peggedJPY: 3_000_000 } },
-        { date: 1_713_657_600, totalCirculatingUSD: { peggedUSD: 900_000_000_000, peggedEUR: 5_000_000, peggedBRL: 4_999_999 } },
+        { date: 1_713_571_200, totalCirculatingUSD: { peggedUSD: 900_000_000_000, peggedEUR: 6_000_000, peggedJPY: 3_000_000, peggedBRL: 0 } },
+        { date: 1_713_657_600, totalCirculatingUSD: { peggedUSD: 900_000_000_000, peggedEUR: 5_000_000, peggedBRL: 4_999_999, peggedJPY: 0 } },
       ],
     });
     render(<AltPegCohortHistoryChart initialRange="all" />);
-    expect(screen.getByText(/current alt-peg market cap:/).textContent).toContain("$10.0M");
+    expect(screen.getByText(/latest provider-wide sample/).textContent).toContain("$10.0M");
     expect(screen.getByRole("figure").getAttribute("aria-label")).toContain("3 peg currencies");
     expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
     expect((await screen.findByText("Total")).nextElementSibling?.textContent).toBe("$9.00M");
@@ -136,7 +139,7 @@ describe("AltPegCohortHistoryChart", () => {
     expect(screen.queryByText(PEG_LABELS_SHORT.USD)).toBeNull();
   });
 
-  it("treats missing historical-only supply as zero in the latest tooltip", async () => {
+  it("withholds incomplete latest totals and Other instead of inventing zeros", async () => {
     chartState.ready = true;
     chartState.selectedIndex = 1;
     useStablecoinChartsMock.mockReturnValue({
@@ -147,7 +150,43 @@ describe("AltPegCohortHistoryChart", () => {
       ],
     });
     render(<AltPegCohortHistoryChart initialRange="all" />);
-    expect((await screen.findByText("Total")).nextElementSibling?.textContent).toBe("$7.00M");
+    expect((await screen.findByText("Total")).nextElementSibling?.textContent).toBe("Unavailable");
+    expect(screen.getByText(/latest provider-wide sample/).textContent).toContain("Unavailable");
+    expect(within(screen.getByRole("table")).getAllByText("Unavailable").length).toBeGreaterThan(0);
+  });
+
+  it("keeps invalid major and folded buckets as chart/table gaps but preserves later explicit zeros", async () => {
+    chartState.ready = true;
+    chartState.selectedIndex = 1;
+    useStablecoinChartsMock.mockReturnValue({
+      ...useStablecoinChartsMock(),
+      data: [
+        { date: 1_713_398_400, totalCirculatingUSD: { peggedEUR: 6_000_000, peggedJPY: 1_000_000 } },
+        { date: 1_713_484_800, totalCirculatingUSD: { peggedEUR: null, peggedJPY: null } },
+        { date: 1_713_571_200, totalCirculatingUSD: { peggedEUR: 0, peggedJPY: 0 } },
+        { date: 1_713_657_600, totalCirculatingUSD: { peggedEUR: 6_000_000, peggedJPY: 0 } },
+      ],
+    });
+    render(<AltPegCohortHistoryChart initialRange="all" />);
+    const rows = within(screen.getByRole("table")).getAllByRole("row").slice(1);
+    expect(within(rows[1]).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["Unavailable", "Unavailable"]);
+    expect(within(rows[2]).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["$0.00", "$0.00"]);
+    expect((await screen.findByText("Total")).nextElementSibling?.textContent).toBe("Unavailable");
+  });
+
+  it.each([0, 20])("uses chart-specific producer metadata for %s age budgets and labels the sample date", (budgets) => {
+    const now = Date.now();
+    const ageSeconds = budgets * API_FRESHNESS_MAX_AGE_SEC.stablecoinCharts;
+    useStablecoinChartsMock.mockReturnValue({
+      ...useStablecoinChartsMock(),
+      dataUpdatedAt: now,
+      meta: { updatedAt: Math.floor(now / 1000) - ageSeconds, ageSeconds, status: "fresh" },
+    });
+    render(<AltPegCohortHistoryChart />);
+    expect(screen.getByText(/latest provider-wide sample/).textContent).toContain("April 21, 2024");
+    expect(screen.getByText(/historical provider-wide cohort feed/)).toBeTruthy();
+    expect(screen.queryByText("Showing an older snapshot") !== null).toBe(budgets > 0);
+    if (budgets > 0) expect(screen.getByText(/Alt-Peg Cohort History/)).toBeTruthy();
   });
 
   it("transitions from loading to an explicit empty-data state", () => {

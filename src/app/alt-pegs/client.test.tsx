@@ -192,6 +192,26 @@ describe("AltPegsClient", () => {
     expect(screen.getByTestId("non-usd-share-chart")).toBeTruthy();
   });
 
+  it.each([false, true])("separates initial failure from retained failed refresh (hasData=%s)", (hasData) => {
+    const now = Date.now();
+    const saved = useStablecoinsMock();
+    useStablecoinsMock.mockReturnValue({
+      ...saved,
+      data: hasData ? saved.data : undefined,
+      isError: true,
+      error: new Error("Offline"),
+      dataUpdatedAt: hasData ? now : 0,
+    });
+    useNonUsdShareMock.mockReturnValue({ ...useNonUsdShareMock(), dataUpdatedAt: now });
+    render(<AltPegsClient />);
+    expect(screen.queryByTestId("alt-peg-stablecoin-table") !== null).toBe(hasData);
+    expect(screen.queryByTestId("alt-peg-cohort-chart") !== null).toBe(hasData);
+    expect(screen.queryByText("Peg Diversity Atlas") !== null).toBe(hasData);
+    if (hasData) expect(screen.getByText("Refresh failed; showing saved data")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetchMock).toHaveBeenCalledOnce();
+  });
+
   it("renders the core current-state sections and history block", () => {
     render(<AltPegsClient />);
 
@@ -203,6 +223,19 @@ describe("AltPegsClient", () => {
     expect(screen.getByTestId("alt-peg-cohort-chart")).toBeTruthy();
     expect(screen.getByText(/share-chart default 1y/i)).toBeTruthy();
     expect(screen.getByText(/cohort-chart default 1y/i)).toBeTruthy();
+  });
+
+  it("qualifies annual historical comparisons when the reference cohort was partial", () => {
+    const saved = useNonUsdShareMock();
+    useNonUsdShareMock.mockReturnValue({
+      ...saved,
+      data: saved.data.map((point: object, index: number) => ({ ...point,
+        coverage: { basis: "interior-gap-prior-value", total: index === 0 ? 0.99 : 1, commodity: 1, fiatNonUsd: 1 },
+      })),
+    });
+    render(<AltPegsClient />);
+    expect(screen.getByText(/Observed outside-USD segment size/).textContent)
+      .toContain("Partial or unavailable value coverage in the compared snapshots");
   });
 
   it("retains an unknown-supply cohort without formatting its segment as $0", () => {

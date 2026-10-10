@@ -18,6 +18,7 @@ import type {
   ChainEnvironmentEvidence,
   ChainPegStabilityCoverage,
   ChainSummary,
+  ChainsSupplyCoverage,
   HealthBand,
 } from "@shared/types/chains";
 import type { ApiMeta } from "@/lib/api";
@@ -243,20 +244,32 @@ function IdentityRow({ meta, chainName }: { meta: ChainMeta; chainName: string }
   );
 }
 
-function MarketMetrics({ chain }: { chain: ChainSummary | null }) {
+function MarketMetrics({ chain, supplyCoverage, supplyUnavailable }: {
+  chain: ChainSummary | null;
+  supplyCoverage?: ChainsSupplyCoverage;
+  supplyUnavailable?: boolean;
+}) {
+  const unavailableCount = chain?.unavailableSupplyObservationCount ?? 0;
+  const partialShare = unavailableCount > 0 || (supplyCoverage?.aggregateUnavailableAssetCount ?? 0) > 0;
   return (
     <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-5">
       <div>
-        <p className="pharos-kicker">Total Supply</p>
+        <p className="pharos-kicker">{unavailableCount > 0 ? "Partial Supply" : "Total Supply"}</p>
         <div className="pharos-numeric mt-1 text-2xl font-bold leading-none text-frost-blue">
-          {chain ? formatCompactUsd(chain.totalUsd) : <Skeleton className="h-7 w-24" />}
+          {chain ? formatCompactUsd(chain.totalUsd) : supplyUnavailable ? "Unavailable" : <Skeleton className="h-7 w-24" />}
         </div>
+        {unavailableCount > 0 ? (
+          <p className="mt-1 text-xs text-muted-foreground">{unavailableCount} unavailable supply observations excluded</p>
+        ) : null}
       </div>
       <div>
-        <p className="pharos-kicker">Global Share</p>
+        <p className="pharos-kicker">{partialShare ? "Partial Global Share" : "Global Share"}</p>
         <div className="mt-1 font-mono text-2xl font-bold leading-none tabular-nums">
-          {chain ? `${(chain.dominanceShare * 100).toFixed(1)}%` : <Skeleton className="h-7 w-16" />}
+          {chain ? `${(chain.dominanceShare * 100).toFixed(1)}%` : supplyUnavailable ? "Unavailable" : <Skeleton className="h-7 w-16" />}
         </div>
+        {(supplyCoverage?.aggregateUnavailableAssetCount ?? 0) > 0 ? (
+          <p className="mt-1 text-xs text-muted-foreground">{supplyCoverage?.aggregateUnavailableAssetCount} assets excluded from global supply</p>
+        ) : null}
       </div>
       {TREND_WINDOWS.map(({ key, label }) => (
         <div key={key}>
@@ -355,10 +368,14 @@ export function ChainHero({
   meta,
   chain,
   apiMeta,
+  supplyCoverage,
+  supplyUnavailable,
 }: {
   meta: ChainMeta;
   chain: ChainSummary | null;
   apiMeta: ApiMeta | null;
+  supplyCoverage?: ChainsSupplyCoverage;
+  supplyUnavailable?: boolean;
 }) {
   return (
     <Card className="overflow-hidden">
@@ -367,7 +384,7 @@ export function ChainHero({
 
         <div className="h-px w-full bg-border/60" />
 
-        <MarketMetrics chain={chain} />
+        <MarketMetrics chain={chain} supplyCoverage={supplyCoverage} supplyUnavailable={supplyUnavailable} />
 
         <div className="h-px w-full bg-border/60" />
 

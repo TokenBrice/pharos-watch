@@ -10,6 +10,7 @@ export function LaunchPhaseBadge({ phase, size = "compact" }: { phase: LaunchPha
 export function LaunchDriftBadge({ status, size = "compact" }: { status: DriftStatus; size?: BadgeSize }) {
   return <span className={`${DRIFT_BADGE_CLASSES[size]} ${DRIFT_STATUS_BADGE[status]}`}>{DRIFT_STATUS_LABEL[status]}</span>;
 }
+
 export function LaunchMilestoneBadge({ type }: { type: LaunchMilestoneType }) {
   return <span className={`${MILESTONE_BADGE_CLASS} ${MILESTONE_TYPE_BADGE[type]}`}>{MILESTONE_TYPE_LABELS[type]}</span>;
 }

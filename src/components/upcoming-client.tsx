@@ -9,11 +9,11 @@ import {
 } from "@shared/lib/classification";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { LaunchDriftBadge, LaunchPhaseBadge } from "@/components/pre-launch-badge";
+import { LaunchPhaseBadge } from "@/components/pre-launch-badge";
+import { ExpectedLaunchDriftBadge } from "@/components/expected-launch-drift-badge";
 import { UpcomingHorizonHero } from "@/components/upcoming-horizon-hero";
 import {
   LAUNCH_PHASE_LABELS,
-  getDriftStatus,
   dateScore,
   formatFuzzyDate,
 } from "@/lib/pre-launch";
@@ -313,7 +313,6 @@ export function UpcomingClient({
           {filtered.map((coin) => {
             const teaserText = teasers[coin.id];
             const teaser = teaserText ? stripTermMarkup(teaserText) : null;
-            const drift = getDriftStatus(coin.dateHistory, coin.expectedLaunchDate);
 
             return (
               <Link
@@ -362,9 +361,7 @@ export function UpcomingClient({
                       Expected {formatFuzzyDate(coin.expectedLaunchDate)}
                     </span>
                   )}
-                  {drift !== "on-track" && (
-                    <LaunchDriftBadge status={drift} />
-                  )}
+                  <ExpectedLaunchDriftBadge dateHistory={coin.dateHistory} expectedLaunchDate={coin.expectedLaunchDate} />
                   {coin.milestones && coin.milestones.length > 0 && (
                     <span className="text-[10px] text-muted-foreground/70">
                       <span className="pharos-numeric">{coin.milestones.length}</span> milestone{coin.milestones.length !== 1 ? "s" : ""}

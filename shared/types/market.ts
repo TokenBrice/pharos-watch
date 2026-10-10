@@ -800,12 +800,19 @@ export const SupplyHistoryResponseSchema = z.array(SupplyHistoryPointSchema);
 
 const NonUsdSharePointSchema = z.object({
   date: z.number(),
-  // SQL cohort aggregates are complete numbers; unavailable history is not a zero point.
+  // Numeric observed subtotals; historical cohort coverage is disclosed separately.
   commodityShare: z.number(),
   fiatNonUsdShare: z.number(),
   commodity: z.number(),
   fiatNonUsd: z.number(),
   total: z.number(),
+  coverage: z.object({
+    basis: z.literal("interior-gap-prior-value"),
+    total: z.number().min(0).max(1),
+    commodity: z.number().min(0).max(1),
+    fiatNonUsd: z.number().min(0).max(1),
+  }).describe("Observed value divided by observed plus prior-value estimates for interior history gaps; not a deployment census.")
+    .nullable().optional(),
 });
 export type NonUsdSharePoint = z.infer<typeof NonUsdSharePointSchema>;
 export const NonUsdShareResponseSchema = z.array(NonUsdSharePointSchema);
@@ -1317,7 +1324,8 @@ export const StablecoinChartAggregateUniverseSchema = z.enum([
 export const StablecoinChartResponseSchema = z.array(
   z.object({
     date: z.number(),
-    totalCirculatingUSD: z.record(z.string(), z.number()),
+    // Omitted and null buckets are unavailable; only explicit finite nonnegative values are observations.
+    totalCirculatingUSD: z.record(z.string(), z.number().finite().nonnegative().nullable()),
     aggregateUniverse: StablecoinChartAggregateUniverseSchema.optional(),
   }),
 );

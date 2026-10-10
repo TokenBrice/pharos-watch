@@ -105,6 +105,13 @@ describe("syncStablecoinCharts", () => {
 
     const db = mockD1([
       fxPairRead(nowSec, { peggedUSD: 1 }),
+      {
+        match: "FROM supply_history",
+        rows: makeRawChartPoints(120, nowSec).flatMap((point) =>
+          STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map((config) => ({
+            stablecoin_id: config.id, snapshot_date: point.date, circulating_usd: 0,
+          }))),
+      },
     ]);
 
     const result = await syncStablecoinCharts(db);
@@ -132,32 +139,34 @@ describe("syncStablecoinCharts", () => {
     expect(getCadenceCompletion(db as MockD1Database)).toBeDefined();
   });
 
-  it.each([false, true])("quarantines invalid base buckets before overlays (overlay=%s), preserving observed zero", async (withOverlay) => {
+  it.each([false, true])("keeps invalid bucket gaps through overlays (overlay=%s), preserving observed zero", async (withOverlay) => {
     const nowSec = Math.floor(Date.now() / 1000);
     const points = makeRawChartPoints(120, nowSec);
     const empty = points[100];
     const invalid = points[101];
     const zero = points[99];
     empty.totalCirculatingUSD = {};
-    invalid.totalCirculatingUSD = { peggedUSD: Number.NaN };
-    zero.totalCirculatingUSD = { peggedUSD: 0 };
+    invalid.totalCirculatingUSD = { peggedUSD: Number.NaN, peggedJPY: Number.NaN };
+    zero.totalCirculatingUSD = { peggedUSD: 0, peggedJPY: 0 };
     mockFetch([{ match: "stablecoincharts/all", body: points }]);
     const db = mockD1([{
       match: "FROM supply_history",
-      rows: withOverlay ? [{
-        stablecoin_id: "susds-sky", snapshot_date: empty.date, circulating_usd: 25,
-      }, {
-        stablecoin_id: "susds-sky", snapshot_date: invalid.date, circulating_usd: 25,
-      }] : [],
+      rows: points.flatMap((point) =>
+        STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map((config) => ({
+          stablecoin_id: config.id,
+          snapshot_date: point.date,
+          circulating_usd: withOverlay && config.id === "usg-tangent" ? 25 : 0,
+        }))),
     }]);
     const result = await syncStablecoinCharts(db);
     const insert = getCacheInsert(db);
     expect(insert).toBeDefined();
     const cached = normalizeStablecoinChartPoints(JSON.parse(String(insert?.binds[1])));
     expect(cached).not.toBeNull();
-    expect(cached?.some((point) => point.date === empty.date || point.date === invalid.date)).toBe(false);
-    expect(cached?.find((point) => point.date === zero.date)?.totalCirculatingUSD).toEqual({ peggedUSD: 0 });
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ invalidBucketCount: 2 });
+    expect(cached?.some((point) => point.date === empty.date)).toBe(false);
+    expect(cached?.find((point) => point.date === invalid.date)?.totalCirculatingUSD.peggedJPY).toBeNull();
+    expect(cached?.find((point) => point.date === zero.date)?.totalCirculatingUSD.peggedJPY).toBe(0);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ invalidBucketCount: 1 });
     const endpointDb = mockD1([{
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
       matchBinds: ["stablecoin-charts"],
@@ -205,23 +214,14 @@ describe("syncStablecoinCharts", () => {
       fxPairRead(nowSec, { peggedUSD: 1 }),
       {
         match: "FROM supply_history",
-        rows: [
-          {
-            stablecoin_id: "susds-sky",
-            snapshot_date: nowSec - 30 * 86_400,
-            circulating_usd: 25,
-          },
-          {
-            stablecoin_id: "usg-tangent",
-            snapshot_date: nowSec - 30 * 86_400,
-            circulating_usd: 13,
-          },
-          {
-            stablecoin_id: "paxg-paxos",
-            snapshot_date: nowSec - 30 * 86_400,
-            circulating_usd: 7,
-          },
-        ],
+        rows: makeRawChartPoints(120, nowSec).flatMap((point) =>
+          STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map((config) => ({
+            stablecoin_id: config.id,
+            snapshot_date: point.date,
+            circulating_usd: point.date >= nowSec - 30 * 86_400
+              ? (config.id === "usg-tangent" ? 13 : config.id === "paxg-paxos" ? 7 : 0)
+              : 0,
+          }))),
       },
     ]);
 
@@ -469,6 +469,12 @@ describe("syncStablecoinCharts", () => {
         sourceCadenceByPeg: { peggedEUR: "intraday" },
         consecutiveFallbackRuns: 0,
       }),
+      {
+        match: "FROM supply_history",
+        rows: STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map((config) => ({
+          stablecoin_id: config.id, snapshot_date: oldPointDate, circulating_usd: 0,
+        })),
+      },
     ]);
 
     const result = await syncStablecoinCharts(db);

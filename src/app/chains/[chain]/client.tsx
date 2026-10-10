@@ -25,6 +25,8 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
     coins,
     totalUsd,
     canConfirmMissingChain,
+    supplyCoverage,
+    supplyUnavailable,
     hasAnyData,
     routeError,
     chainsQuery,
@@ -44,7 +46,7 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
   }, [routeModel.coins, backingFilter]);
 
   const hero = meta ? (
-    <ChainHero meta={meta} chain={chain} apiMeta={chainsQuery.meta} />
+    <ChainHero meta={meta} chain={chain} apiMeta={chainsQuery.meta} supplyCoverage={supplyCoverage} supplyUnavailable={supplyUnavailable} />
   ) : null;
 
   if (routeError && !hasAnyData) {
@@ -56,6 +58,20 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
     );
   }
 
+  if (supplyUnavailable) {
+    return (
+      <div className="space-y-6">
+        {hero}
+        <p className="text-sm text-muted-foreground" role="status">
+          Supply data is unavailable for this chain in the available snapshot; all current observations were excluded.
+        </p>
+        <QueryErrorNotice error={routeError} hasData={hasAnyData} onRetry={() => { void refetchAll(); }} />
+        <button type="button" className="pharos-focus-ring text-sm text-primary hover:underline" onClick={() => { void refetchAll(); }}>
+          Retry chain data
+        </button>
+      </div>
+    );
+  }
   if (!chain && canConfirmMissingChain) {
     return (
       <div className="space-y-6">

@@ -8,14 +8,14 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { CopyButton } from "@/components/copy-button";
 import { PreLaunchTweetEmbed } from "@/components/pre-launch-tweet-embed";
 import { PreLaunchTimelineBar } from "@/components/pre-launch-timeline-bar";
-import { LaunchDriftBadge, LaunchMilestoneBadge, LaunchPhaseBadge } from "@/components/pre-launch-badge";
+import { LaunchMilestoneBadge, LaunchPhaseBadge } from "@/components/pre-launch-badge";
+import { ExpectedLaunchDriftBadge } from "@/components/expected-launch-drift-badge";
 import { TermText } from "@/components/term-text";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import {
-  getDriftStatus,
   formatFuzzyDate,
   dateScore,
 } from "@/lib/pre-launch";
@@ -277,9 +277,8 @@ export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps
 
       {/* ── Launch Timeline ───────────────────────────────────────── */}
       {(() => {
-        const drift = getDriftStatus(coin.dateHistory, coin.expectedLaunchDate);
         const hasDrift = coin.dateHistory && coin.dateHistory.length > 0;
-        const driftBadge = hasDrift ? <LaunchDriftBadge status={drift} size="detail" /> : null;
+        const driftBadge = <ExpectedLaunchDriftBadge dateHistory={coin.dateHistory} expectedLaunchDate={coin.expectedLaunchDate} size="detail" />;
         const dateTrail =
           hasDrift && coin.expectedLaunchDate ? (
             <p className="mt-2 text-xs text-muted-foreground/70">

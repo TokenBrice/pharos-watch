@@ -12,7 +12,9 @@ export function useChainProfileData(chainId: string) {
   }, [chainId, chainsQuery.data]);
 
   const detail = chainsQuery.data?.chainDetail;
-  const canConfirmMissingChain = Boolean(chainsQuery.data?.chains) && chainsQuery.error == null;
+  const supplyCoverage = chainsQuery.data?.supplyCoverage;
+  const supplyUnavailable = !chain && Boolean(supplyCoverage?.chainIdsWithUnavailableObservations.includes(chainId));
+  const canConfirmMissingChain = Boolean(chainsQuery.data?.chains) && chainsQuery.error == null && !supplyUnavailable;
 
   return {
     chain,
@@ -21,6 +23,8 @@ export function useChainProfileData(chainId: string) {
     coins: detail?.coins ?? [],
     totalUsd: detail?.totalUsd ?? 0,
     canConfirmMissingChain,
+    supplyCoverage,
+    supplyUnavailable,
     hasAnyData: Boolean(chain) || chainsQuery.dataUpdatedAt > 0,
     isInitialLoading: chainsQuery.isLoading && !chainsQuery.data,
     routeError: chainsQuery.error ?? null,

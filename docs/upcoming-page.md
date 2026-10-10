@@ -86,8 +86,9 @@ Each card:
 - shows logo, name, symbol, peg/backing/governance badges, and launch-phase badge when present
 - shows teaser copy only when `data/ai-summaries.json` has text for that coin
 - shows `Expected <date>` when `expectedLaunchDate` exists
-- shows a drift badge only when `getDriftStatus(...) !== "on-track"`
+- shows a drift badge only when computed status is not `on-track`, on both cards and detail; expiry depends on the current deadline, not revision history
 - shows milestone count only when `coin.milestones.length > 0`
+- treats year/month/quarter/half-year/day targets as inclusive UTC periods, expiring at the following midnight rather than their sorting date. `ExpectedLaunchDriftBadge` is the clock-aware client island: it hydrates and updates at expiry without fetching. Static phase/milestone badges remain server-renderable.
 
 The empty-state copy is:
 

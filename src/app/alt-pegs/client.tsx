@@ -292,7 +292,7 @@ export function AltPegsClient() {
     );
   }
 
-  if (stablecoinsQuery.isError || (!stablecoinsQuery.isLoading && snapshot.altCoinCount === 0)) {
+  if (!stablecoinsQuery.isLoading && snapshot.altCoinCount === 0) {
     return (
       <QueryErrorNotice
         error={stablecoinsQuery.error ?? new Error("Alt-peg market data is temporarily unavailable.")}
@@ -325,6 +325,9 @@ export function AltPegsClient() {
           },
         ]}
       />
+      {stablecoinsQuery.isError ? (
+        <QueryErrorNotice error={stablecoinsQuery.error} hasData onRetry={() => void stablecoinsQuery.refetch()} />
+      ) : null}
       <SafetyScoreV9StatusNotice response={reportCardsQuery.data} />
 
       {/* The celestial atlas is the sole page hero — full-width, its own chrome. */}
@@ -357,8 +360,9 @@ export function AltPegsClient() {
               <p className="pharos-meta">
                 {trendStats?.yearlyMarketCapChangePct != null ? (
                   <>
-                    Current outside-USD segment size is {formatSignedPercent(trendStats.yearlyMarketCapChangePct, 1)}{" "}
+                    Observed outside-USD segment size is {formatSignedPercent(trendStats.yearlyMarketCapChangePct, 1)}{" "}
                     versus the nearest point one year ago.
+                    {trendStats.valueCoverageIncomplete ? " Partial or unavailable value coverage in the compared snapshots." : ""}
                   </>
                 ) : (
                   "This first history view tracks share of the total stablecoin market outside USD before you split the segment into individual cohorts."

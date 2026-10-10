@@ -40,12 +40,12 @@ interface RawChartPoint {
 interface NormalizedRawChartPoint {
   date: number;
   totalCirculating?: Record<string, number>;
-  totalCirculatingUSD?: Record<string, number>;
+  totalCirculatingUSD?: Record<string, number | null>;
 }
 
 interface DownsampledPoint {
   date: number;
-  totalCirculatingUSD: Record<string, number>;
+  totalCirculatingUSD: Record<string, number | null>;
 }
 
 
@@ -236,7 +236,9 @@ async function runStablecoinChartsPublication(
         if (referenceType !== "fresh") continue;
         const fxRate = fxState.rates[key];
         if (!fxRate || fxRate <= 0) continue;
-        const impliedRate = usd[key] / rawVal;
+        const usdVal = usd[key];
+        if (usdVal == null) continue;
+        const impliedRate = usdVal / rawVal;
         if (impliedRate < fxRate / RATE_TOLERANCE || impliedRate > fxRate * RATE_TOLERANCE) {
           usd[key] = rawVal * fxRate;
           fixes++;
