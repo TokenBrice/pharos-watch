@@ -442,7 +442,7 @@ No gate threshold, waiver, or enumerated path is relaxed to accommodate a deleti
 ### Test style
 
 - Use `describe` per function, `it` per behavior.
-- Test names describe the behavior, not the implementation: `"returns 0 for undefined input"` not `"calls sumPegBuckets with undefined"`.
+- Test names describe the behavior, not the implementation: `"returns null for undefined input"` not `"calls sumPegBucketsOrNull with undefined"`.
 - Use `makeStablecoin()` / `makeStablecoinMeta()` from `shared/test-utils/stablecoin.ts` (see `shared/lib/__tests__/supply.test.ts`) for partial `StablecoinData` mocks — avoids `as any` casts.
 - Use shared fixtures from `worker/src/test-helpers/__shared/fixtures.ts` for DB row mocks.
 - Keep tests focused: one assertion per `it` block when possible.
