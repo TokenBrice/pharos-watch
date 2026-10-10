@@ -59,15 +59,11 @@ export function CoinFlowCard({
 
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground">Net 24h</span>
-        {netFlowDirection24h === "inactive" ? (
-          <span className={cn("pharos-numeric text-xs font-semibold", directionUi.valueClass)}>—</span>
-        ) : (
-          <FlowSignedNetValue
-            net={netFlow24h}
-            format={formatSignedCurrency}
-            className={cn("pharos-numeric text-xs font-semibold", directionUi.valueClass)}
-          />
-        )}
+        <FlowSignedNetValue
+          net={netFlow24h}
+          format={formatSignedCurrency}
+          className={cn("pharos-numeric text-xs font-semibold", directionUi.valueClass)}
+        />
       </div>
 
       <div className="flex items-center justify-between gap-2">

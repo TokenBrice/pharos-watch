@@ -6,6 +6,7 @@ import {
 } from "@/components/depeg-resolver-row-card-model";
 import {
   DDR_RESOLUTION_TIER_VALUES,
+  type DdrResponse,
   type DdrResolutionTier,
   type DdrV2ResponseRow,
 } from "@shared/types/depeg-resolver";
@@ -15,6 +16,12 @@ import {
  * 2% margin is only 2bps at a 100bps event threshold.
  */
 const PAST_PEAK_FLOOR_BPS = 25;
+
+/** Keep headline claims and forecast cards behind the same fail-closed gate. */
+export function isResolverBookAvailable(data: DdrResponse | undefined): data is DdrResponse {
+  return data != null && (!data._meta.degraded
+    || (data._meta.degradedReason === "stale-cache" && data.rows.length > 0));
+}
 
 /**
  * Has the live gap to peg opened up beyond this event's benchmark peak?

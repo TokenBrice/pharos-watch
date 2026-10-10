@@ -74,7 +74,7 @@ describe("production stablecoin freshness", () => {
         ...(query.preset ? DATA_HEALTH_PRESETS[query.preset] : { label: query.label!, staleTime: query.staleTime! }),
         ...query,
       }, now));
-      const prices = entries.find((entry) => entry.label === "Prices")!;
+      const prices = entries.find((entry) => entry.label === "Detail snapshot")!;
       expect(prices.ageMs).toBeGreaterThan(lane === "detail" ? 12 * 60_000 : 5 * 60_000);
       expect(prices.dataUpdatedAt).toBe(Number(captured[lane].headers["x-data-updated-at"]) * 1000);
       expect(prices.state).toBe("fresh");

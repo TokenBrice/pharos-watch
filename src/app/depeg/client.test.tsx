@@ -4,6 +4,9 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { makePendingIncident } from "@/components/__tests__/depeg.test-support";
+import { DDR_TEST_META, makeDdrSourceRow, makeFrozenDdrV2Row } from "@/components/depeg-resolver-test-support";
+import type { DdrResponse } from "@shared/types/depeg-resolver";
+import type { ResolverBookSummary } from "@/components/depeg-resolver-book-summary";
 
 import { DepegClient } from "./client";
 import {
@@ -73,12 +76,14 @@ vi.mock("@/components/depeg-outlook-hero", () => ({
     dewsAlertCount?: number | null;
     footer?: ReactNode;
     alertQueue?: ReactNode;
+    book?: ResolverBookSummary | null;
   }) => (
     <div
       data-testid="depeg-hero"
       data-active-ids={[...(props.activeDepegIds ?? [])].join(",")}
       data-pending={String(props.pendingCount)}
       data-alerts={String(props.dewsAlertCount)}
+      data-resolver-total={props.book?.total ?? "unavailable"}
     >
       {props.alertQueue}
       {props.footer}
@@ -130,6 +135,7 @@ function mountDepegRoute(options: {
   signals?: Parameters<typeof makeStressSignalsResult>[0];
   events?: Parameters<typeof makeEventsResult>[0];
   surfaces?: Parameters<typeof makeResolverSurfaces>[0];
+  resolverData?: DdrResponse;
   params?: Record<string, string>;
 } = {}) {
   const peg = makePegSummaryResult({ coins: options.coins ?? [makeCoin("coin-a", "A")] });
@@ -139,13 +145,33 @@ function mountDepegRoute(options: {
   mocks.usePegSummary.mockReturnValue(peg);
   mocks.useStressSignals.mockReturnValue(dews);
   mocks.useInfiniteDepegEvents.mockReturnValue(events);
-  mocks.useDepegResolverSurfaces.mockReturnValue(surfaces);
+  mocks.useDepegResolverSurfaces.mockReturnValue(options.resolverData
+    ? { ...surfaces, resolver: { ...surfaces.resolver, data: options.resolverData } }
+    : surfaces);
   mocks.useUrlFilters.mockReturnValue(makeUrlFilters(options.params));
   render(<DepegClient />);
   return { peg, dews, events, surfaces };
 }
 
 describe("DepegClient", () => {
+  it.each([
+    [false, null, "1"],
+    [true, "stale-cache", "1"],
+    [true, "secondary-overlay-unavailable", "unavailable"],
+    [true, "manifest-fallback:missing-cache", "unavailable"],
+    [true, "unknown-failure", "unavailable"],
+  ] as const)("gates hero recovery totals with forecast availability (%s, %s)", (degraded, degradedReason, expected) => {
+    mountDepegRoute({ resolverData: {
+      _meta: { ...DDR_TEST_META, degraded, degradedReason },
+      rows: [makeFrozenDdrV2Row(makeDdrSourceRow())],
+      methodology: {
+        version: "4.6", versionLabel: "v4.6", currentVersion: "4.6", currentVersionLabel: "v4.6",
+        changelogPath: "/methodology/depeg-resolver-changelog/", asOf: 1, isCurrent: true,
+      },
+    } });
+    expect(screen.getByTestId("depeg-hero").dataset.resolverTotal).toBe(expected);
+  });
+
   it.each(["events", "dews", "peg"] as const)("does not manufacture headline counts when %s query settles without data", (missing) => {
     const peg = makePegSummaryResult({ coins: [makeCoin("coin-a", "A")] });
     const dews = makeStressSignalsResult({ signals: { "coin-a": { band: "ALERT" } } });

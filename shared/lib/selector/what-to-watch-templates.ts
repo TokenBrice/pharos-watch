@@ -187,19 +187,19 @@ export function renderWatchText(
   row: MergedRow,
 ): string | undefined {
   if (row.safetyBindingCap != null) {
-    return `V9 Safety is capped at ${Math.round(row.safetyBindingCap.limit)}: ${row.safetyBindingCap.reason}`;
+    return `Safety Score is capped at ${Math.round(row.safetyBindingCap.limit)}: ${row.safetyBindingCap.reason}`;
   }
 
   if (row.safetyEvidenceLevel === "limited" || row.safetyEvidenceLevel === "insufficient") {
     const weakest = row.safetyWeakestPillar?.pillar;
     const label = weakest === "control" ? "Economic Control" : weakest === "exit" ? "Exit" : "Backing";
-    return `V9 evidence is ${row.safetyEvidenceLevel}; review the ${label} pillar and score trace.`;
+    return `Safety Score evidence is ${row.safetyEvidenceLevel}; review the ${label} pillar and score trace.`;
   }
 
   if (row.safetyWeakestPillar != null) {
     const { pillar, score } = row.safetyWeakestPillar;
     const label = pillar === "control" ? "Economic Control" : pillar === "exit" ? "Exit" : "Backing";
-    return `V9 weakest pillar is ${label} at ${Math.round(score)}; review its evidence and score trace.`;
+    return `Safety Score weakest pillar is ${label} at ${Math.round(score)}; review its evidence and score trace.`;
   }
 
   if (lowest.key === "pegStability" && row.currentDeviationBps != null) {

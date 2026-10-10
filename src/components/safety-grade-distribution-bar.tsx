@@ -10,7 +10,7 @@ const GRADE_RANGES = ["A", "B", "C", "D", "F", "NR"] as const satisfies readonly
 export function SafetyGradeDistributionBar({
   gradeCounts,
   totalCards,
-  totalLabel = "rated",
+  totalLabel = "assets",
 }: {
   gradeCounts: Partial<Record<ReportCardGradeRange, number>>;
   totalCards: number;

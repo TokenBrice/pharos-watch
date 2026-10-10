@@ -289,7 +289,7 @@ CRITICAL_COVERAGE_RATCHET_ALL=1 npm run coverage:critical -- --pool=threads
 
 The required release runtime is the exact `.nvmrc` Node and npm 11.x runtime. The future-major nightly typecheck is advisory, not build/test/release qualification. Keep JavaScript/TypeScript source maps and Worker per-file isolation enabled; the catalog JSON transform deliberately omits synthetic named exports and unnecessary maps to avoid retaining an oversized transform graph.
 
-Pure Node suites may reuse processes; stateful exceptions require isolation. Worker and frontend suites retain isolation because they own module-level state; the native full-registry Safety pipeline uses its reviewed thread worker. jsdom is a per-file opt-in. If a Node suite fails only in a full run, fix module-state leakage or enroll it in the existing isolated project. Nested worktrees must not enter the parent checkout's corpus.
+Pure Node suites may reuse processes; stateful exceptions require isolation. Worker and frontend suites retain isolation because they own module-level state; the native full-registry Safety pipeline uses its reviewed thread worker. jsdom is a per-file opt-in. If a Node suite fails only in a full run, fix module-state leakage or enroll it in the existing isolated project. Registry-mocking selector fixtures remove their mock and reset dependent modules after the suite so later snapshot census validation uses the real registry. Nested worktrees must not enter the parent checkout's corpus.
 
 Optional Poppler (`pdftotext` and `pdfinfo` on `PATH`) enables RLUSD assurance PDF extraction cases; compiler/manifest parity remains unconditional without it.
 

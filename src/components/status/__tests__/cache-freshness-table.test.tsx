@@ -50,6 +50,7 @@ describe("CacheFreshnessTable", () => {
       maxAge: 3_600,
       healthy: false,
       producerJob: "sync-yield-data",
+      endpointMaxAge: 3_600,
       availabilityMaxAge: 3_600,
     };
 
@@ -59,6 +60,8 @@ describe("CacheFreshnessTable", () => {
     const row = screen.getByText("yield-data").closest("tr");
     expect(row).not.toBeNull();
     expect(within(row as HTMLTableRowElement).getByText("degraded (>2.00x)")).toBeTruthy();
+    expect(within(row as HTMLTableRowElement).getByText("warning after 2h")).toBeTruthy();
+    expect(within(row as HTMLTableRowElement).queryByText("warning after 8h")).toBeNull();
     expect(
       within(row as HTMLTableRowElement).getByText("degraded >2.00x · stale >4.00x"),
     ).toBeTruthy();

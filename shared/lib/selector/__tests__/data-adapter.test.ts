@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { buildSelectorRows, type BuildSelectorRowsArgs } from "../data-adapter";
 import { applyInputDrivenExclusions, hasRequiredSignals } from "../exclusions";
 import { selectYieldSource } from "../yield-source";
@@ -10,6 +10,13 @@ import { whyKeyTriggers } from "../recommendation";
 
 // Non-isolated suites may have loaded the adapter before this registry mock.
 vi.hoisted(() => vi.resetModules());
+
+// Do not leak the compact fixture registry or its dependent modules into
+// later non-isolated suites, including canonical snapshot census validation.
+afterAll(() => {
+  vi.doUnmock("../../stablecoins/client-registry");
+  vi.resetModules();
+});
 
 vi.mock("../../stablecoins/client-registry", async (importOriginal) => {
   const actual = await importOriginal<typeof ClientRegistry>();

@@ -118,7 +118,8 @@ export function HeroPriceMetric({
   coinData,
   price: { pegRef, deviationBps, pegReferenceUnavailable, isNavToken, limitedDepegCoverageNote },
 }: HeroPriceMetricProps & { variant: HeroMetricVariant }) {
-  const observed = isObservedPrice(coinData);
+  const observed = isObservedPrice(coinData) && typeof coinData.price === "number"
+    && Number.isFinite(coinData.price) && coinData.price > 0;
   const price = formatHeroNativePrice(observed ? coinData.price : null, coin.flags.pegCurrency ?? "USD", pegRef);
   const referenceLine = observed
     ? formatPriceReferenceLine({ deviationBps, pegReferenceUnavailable, isNavToken })

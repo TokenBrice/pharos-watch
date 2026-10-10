@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { DepegResolverRowCard } from "@/components/depeg-resolver-row-card-parts";
 import {
   compareResolverUrgency,
+  isResolverBookAvailable,
   summarizeResolverBook,
 } from "@/components/depeg-resolver-book-summary";
 import { isDepegResolverEnabled } from "@/lib/feature-flags";
@@ -88,7 +89,8 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
 
   if (!isDepegResolverEnabled()) return null;
 
-  const showStaleRows = data?._meta.degraded === true && data._meta.degradedReason === "stale-cache" && rows.length > 0;
+  const bookAvailable = isResolverBookAvailable(data);
+  const showStaleRows = bookAvailable && data._meta.degraded;
   const visible = showAll ? ordered : ordered.slice(0, DEFAULT_VISIBLE_ROWS);
   const hiddenCount = ordered.length - visible.length;
 
@@ -96,7 +98,7 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
   // posture. This header only states the book size and which slice is on
   // screen, so the four cards are never mistaken for the whole book.
   const summary =
-    rows.length > 0 ? (
+    bookAvailable && rows.length > 0 ? (
       <p className="pharos-meta">
         Whole book · <span className="pharos-numeric text-foreground">{book.total}</span>{" "}
         {book.total === 1 ? "forecast" : "forecasts"} across {book.rowCount} incident rows ·{" "}
@@ -116,7 +118,7 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
 
       {!data ? (
         <div className="pharos-empty-note text-center">Resolver data is loading.</div>
-      ) : data._meta.degraded && !showStaleRows ? (
+      ) : !bookAvailable ? (
         <div className="pharos-empty-note text-center">Resolver data is temporarily unavailable.</div>
       ) : rows.length === 0 ? (
         <div className="pharos-empty-note">

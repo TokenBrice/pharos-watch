@@ -124,7 +124,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
           {cache.endpointMaxAge != null ? `basis ${formatElapsedSeconds(cache.endpointMaxAge)}` : "—"}
           {cache.endpointMaxAge != null ? (
             <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              warning after {formatElapsedSeconds(cache.endpointMaxAge * FRESHNESS_RATIOS.FRESH)}
+              warning after {formatElapsedSeconds(cache.endpointMaxAge * getCacheRatioThresholds(key).degraded)}
             </div>
           ) : null}
           {budgetsDiffer ? (

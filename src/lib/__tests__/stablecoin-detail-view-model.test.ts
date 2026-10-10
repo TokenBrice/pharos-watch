@@ -64,6 +64,7 @@ describe("stablecoin detail view-model builder", () => {
     expect(retained.status).toBe("ready");
     if (retained.status !== "ready") return;
     const query = retained.staleQueries.find((entry) => entry.preset === "stablecoins")!;
+    expect(query.label).toBe("Detail snapshot");
     expect(deriveDataHealth({ ...DATA_HEALTH_PRESETS.stablecoins, ...query }).degradationReason).toBe("refresh");
     params.queries.stablecoinList.error = null;
     params.queries.stablecoinList.isError = false;
