@@ -82,6 +82,17 @@ export function processReasonLabel(code: string): string {
     : sentenceCase(code.split(/[-_]+/).filter(Boolean));
 }
 
+/** Reader status for the same published reason taxonomy used by reason labels. */
+export function processReasonStatus(code: ProcessReasonCode): MintIssuanceDiagnosticStatus {
+  if (code === "external-accounting-trust") return "Analytical note";
+  if (code === "operational-screen-failed") return "Failed screen";
+  return [
+    "delay-too-short", "governor-not-governance", "discretionary-root-independent",
+    "voting-affiliated-unilateral", "voting-other-holder-operator", "voting-privilege-independent",
+    "operational-decision-rule-inadmissible", "restructure-reachable", "active-incident",
+  ].includes(code) ? "Failed gate" : "Missing evidence";
+}
+
 /** Path containers whose next segment is an evaluator id (`routes.<id>.…`). */
 const FIELD_COLLECTIONS: Record<string, string> = {
   routes: "route",

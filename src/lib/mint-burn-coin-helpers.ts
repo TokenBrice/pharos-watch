@@ -137,9 +137,7 @@ export function aggregateCoinFlows24h(coins: readonly MintBurnCoinFlow[]): MintB
   const mintCompleteness = combineMintBurnValuationCompleteness(...mintSides);
   const burnCompleteness = combineMintBurnValuationCompleteness(...burnSides);
   let direction: NetFlowDirection24h | null;
-  if (net.valueUsd != null) {
-    direction = getNetFlowDirection24h({ netFlow24hUsd: net.valueUsd, has24hActivity });
-  } else if (knownNetUsd != null) {
+  if (knownNetUsd != null) {
     direction = provenNetFlowDirection24h({
       knownNetUsd,
       has24hActivity,

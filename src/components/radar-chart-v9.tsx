@@ -1,6 +1,6 @@
 "use client";
 
-import { PolarAngleAxis, PolarGrid, Radar, RadarChart as RechartsRadarChart } from "recharts";
+import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart as RechartsRadarChart } from "recharts";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import type { SafetyScorePublicationIdentity, SafetyScoreV9Card } from "@shared/types";
@@ -74,7 +74,6 @@ export function buildV9RadarDataset(
       identity: anchor,
       rows: V9_PILLARS.map((pillar) => ({
         pillar: V9_PILLAR_LABELS[pillar],
-        fullMark: 100,
         ...Object.fromEntries(series.map((entry) => [entry.card.id, entry.card.pillars[pillar].score!])),
         ...(completeMedians ? { __cohortMedian: completeMedians[pillar] } : {}),
       })),
@@ -130,6 +129,7 @@ export function CompareRadarV9({
           outerRadius={compact ? compactOuterRadius : "75%"}
         >
           <PolarGrid stroke="currentColor" className="text-border" />
+          <PolarRadiusAxis type="number" domain={[0, 100]} tick={false} axisLine={false} />
           <PolarAngleAxis
             dataKey="pillar"
             tickSize={narrow ? 4 : compact ? 5 : 8}

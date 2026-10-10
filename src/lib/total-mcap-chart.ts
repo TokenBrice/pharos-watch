@@ -1,4 +1,6 @@
 import type { StablecoinChartPoint, SupplyHistoryPoint } from "@shared/types";
+import { findAsOfSnapshot, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
+import { admitSupplyBuckets } from "@shared/lib/supply";
 
 export interface TotalMcapChartRow {
   ts: number;
@@ -7,7 +9,7 @@ export interface TotalMcapChartRow {
   sky: number | null;
   others: number | null;
   nonUsd: number | null;
-  total: number;
+  total: number | null;
 }
 
 export const TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS = 5000;
@@ -29,22 +31,12 @@ function alignHistoryAtOrBeforeDate(
   history: SupplyHistoryPoint[] | null,
 ): (number | null)[] {
   const sortedHistory = history ? [...history].sort((a, b) => a.date - b.date) : [];
-  const aligned: (number | null)[] = [];
-  let historyIndex = 0;
-  // A successful full-history read starts at zero before the coin existed.
-  // Failed/missing (including empty) reads remain unknown at every date.
-  let lastValue: number | null = sortedHistory.length > 0 ? 0 : null;
-
-  for (const point of chartPoints) {
-    const chartDate = Number(point.date);
-    while (historyIndex < sortedHistory.length && sortedHistory[historyIndex]!.date <= chartDate) {
-      lastValue = sortedHistory[historyIndex]!.circulatingUsd;
-      historyIndex += 1;
-    }
-    aligned.push(lastValue);
-  }
-
-  return aligned;
+  return chartPoints.map((point) => findAsOfSnapshot(
+    sortedHistory,
+    Number(point.date),
+    (snapshot) => snapshot.date,
+    MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC,
+  )?.circulatingUsd ?? null);
 }
 
 export function buildTotalMcapChartRows(
@@ -67,19 +59,26 @@ export function buildTotalMcapChartRows(
   const usdcSeries = alignHistoryAtOrBeforeDate(chartPoints, usdcHistory);
   const usdsSeries = alignHistoryAtOrBeforeDate(chartPoints, usdsHistory);
   const daiSeries = alignHistoryAtOrBeforeDate(chartPoints, daiHistory);
+  // Older cached feeds may omit a bucket instead of publishing the newer null marker.
+  const pegTypes = [...new Set(chartPoints.flatMap((point) => Object.keys(point.totalCirculatingUSD)))];
 
   return chartPoints.map((point, index) => {
-    const total = Object.values(point.totalCirculatingUSD).reduce((sum, value) => sum + (value ?? 0), 0);
-    const nonUsd = Object.entries(point.totalCirculatingUSD).reduce(
-      (sum, [bucket, value]) => (bucket === "peggedUSD" ? sum : sum + (value ?? 0)),
-      0,
+    const aggregate = admitSupplyBuckets(point.totalCirculatingUSD);
+    const total = aggregate.status === "observed" && pegTypes.every((bucket) => point.totalCirculatingUSD[bucket] != null)
+      ? aggregate.total : null;
+    const nonUsdBuckets = Object.fromEntries(
+      Object.entries(point.totalCirculatingUSD).filter(([bucket]) => bucket !== "peggedUSD"),
     );
+    const nonUsdAdmission = admitSupplyBuckets(nonUsdBuckets);
+    const missingNonUsd = pegTypes.some((bucket) => bucket !== "peggedUSD" && point.totalCirculatingUSD[bucket] == null);
+    const nonUsd = missingNonUsd ? null : nonUsdAdmission.status === "observed" ? nonUsdAdmission.total
+      : nonUsdAdmission.status === "absent" && total !== null ? 0 : null;
     const usdt = usdtSeries[index] ?? null;
     const usdc = usdcSeries[index] ?? null;
     const usds = usdsSeries[index] ?? null;
     const dai = daiSeries[index] ?? null;
     const sky = usds !== null && dai !== null ? usds + dai : null;
-    const residual = usdt !== null && usdc !== null && sky !== null ? total - usdt - usdc - sky : null;
+    const residual = total !== null && usdt !== null && usdc !== null && sky !== null ? total - usdt - usdc - sky : null;
     const others = residual !== null && residual >= 0 ? residual : null;
 
     return {

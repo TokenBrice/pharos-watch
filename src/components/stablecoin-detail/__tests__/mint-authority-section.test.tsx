@@ -11,7 +11,7 @@ import type {
 import { buildControlPostureView } from "@/lib/control-posture";
 import type { ControlComponentRoles } from "@/lib/pillar-evidence-strips";
 import { CONTROL_COMPONENT_ROLE_LABELS, type ControlComponentRole } from "@shared/lib/classification";
-import { makePublishedProcessDiagnostic } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
+import { makePublishedIssuanceSummary, makePublishedProcessDiagnostic } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import type { V1005ProcessDiagnostic } from "@shared/types/safety-score-v9-facts";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-client-coin";
@@ -120,6 +120,21 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
 };
 
 describe("MintAuthoritySection", () => {
+  it("renders a published active issuance incident as a failed gate, not missing evidence", () => {
+    const coin = buildStablecoinDetailClientCoin(TRACKED_META_BY_ID.get("usdc-circle")!);
+    const profile = buildMintAuthorityDetailViewModel(coin, {
+      mint: null, caps: [],
+      issuanceSummary: makePublishedIssuanceSummary({}, [makePublishedProcessDiagnostic({
+        code: "active-incident", gate: "H0", field: "incidentState", controlRef: null,
+        pathId: null, classId: null, memberRef: null, evidenceRefIds: [],
+      })]),
+    });
+    expect(profile.processDiagnostics[0]?.statusLabel).toBe("Failed gate");
+    const dom = renderDom(<MintAuthoritySection profile={profile} />);
+    expect(dom.textContent).toContain("Failed gate");
+    expect(dom.textContent).toContain("Active incident");
+    expect(dom.textContent).not.toContain("Missing evidence");
+  });
   it("hides the section until a compact review is available", () => {
     const html = renderToStaticMarkup(<MintAuthoritySection profile={undefined} />);
 

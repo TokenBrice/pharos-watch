@@ -119,4 +119,16 @@ describe("HomeAltHeroChart", () => {
 
     expect(topTickY).toBeGreaterThanOrEqual(24);
   });
+
+  it("shows unavailable total and non-USD history as gaps rather than zero geometry", () => {
+    const { container } = render(<HomeAltHeroChart rows={rows.map((row) => ({
+      ...row, total: null, nonUsd: null, others: null,
+    }))} />);
+    expect(container.textContent).toContain("gaps are not zero");
+    const totalPath = [...container.querySelectorAll("path title")]
+      .find((title) => title.textContent === "Total market cap")?.parentElement;
+    expect(totalPath?.getAttribute("d")).toBe("");
+    expect(container.innerHTML).not.toContain("NaN");
+    expect(container.innerHTML).not.toContain("Infinity");
+  });
 });

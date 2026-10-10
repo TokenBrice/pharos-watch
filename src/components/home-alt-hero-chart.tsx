@@ -246,7 +246,7 @@ function HomeAltChartFrame({
     const bounds = { x0, x1, y0, y1 };
     const start = rows[0]!.ts;
     const end = rows[rows.length - 1]!.ts;
-    const maxFromRows = rows.reduce((max, row) => Math.max(max, row.total), 0);
+    const maxFromRows = rows.reduce((max, row) => row.total === null ? max : Math.max(max, row.total), 0);
     const resolvedYDomain: [number, number] = [yDomain[0], typeof yDomain[1] === "number" ? yDomain[1] : maxFromRows];
     const visibleRows = sampleRows(rows);
     const scales = makeScales({ rows: visibleRows, bounds, yDomain: resolvedYDomain });
@@ -491,7 +491,7 @@ export function HomeAltHeroChart({ rows }: HomeAltHeroChartProps) {
       role="figure"
       aria-label="Stablecoin market cap history by major cohort"
     >
-      {rows.some((row) => row.usdt === null || row.usdc === null || row.sky === null || row.others === null) ? (
+      {rows.some((row) => row.total === null || row.nonUsd === null || row.usdt === null || row.usdc === null || row.sky === null || row.others === null) ? (
         <p className="absolute left-2 top-0 z-10 text-xs text-muted-foreground">
           Some cohort history is unavailable; gaps are not zero.
         </p>

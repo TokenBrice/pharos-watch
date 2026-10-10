@@ -274,13 +274,13 @@ The handler also supports `detailProvider === "coingecko"` and `"commodity"`. Co
 
 **File:** `src/components/mcap-chart.tsx`
 
-Individual stablecoin market cap history. Area chart with time range filtering (7d, 30d, 90d, 1y, all). Used on the stablecoin detail page.
+Individual stablecoin market cap history. Area chart with time range filtering (7d, 30d, 90d, 1y, all). Observed zero remains visible. The header labels a change `24h` only with the previous UTC-day observation inside the visible/brush window; sparse pairs and zero baselines withhold that percentage.
 
 ### HomeAltHero Market-Cap Chart
 
 **File:** `src/components/home-alt-hero.tsx`
 
-Aggregated homepage market-cap breakdown. The total series comes from `GET /api/stablecoin-charts`, whose cached historical backbone starts from DefiLlama aggregate chart data but is reconciled with structural supplemental tracked-asset daily history from D1 `supply_history` before publication. The endpoint serves that cached series as published and no longer splices a live trailing point from the `stablecoins` cache, so the chart's last point can trail the KPI card until the next `sync-stablecoin-charts` run. The named buckets use per-coin `useSupplyHistory(...)` data and `buildTotalMcapChartRows(...)` in `src/lib/total-mcap-chart.ts` so the homepage breakdown has full-history coverage instead of the shorter `supply_history` window. Those per-coin histories are aligned to the latest point at or before each total-chart date before computing `Others`. A successfully read, non-empty history is zero before its first point (the coin did not exist yet); a failed, missing or empty history stays unavailable at every date, so `Others` is withheld rather than absorbing that cohort, and the chart shows its "gaps are not zero" notice only in that case. The chart fills a gray total-market-cap envelope with the USDT cohort area beneath it (both baselined at zero, not stacked) and overlays cohort lines for USDC, `USDS + DAI`, `Others`, and a dashed `Non-USD share`.
+Aggregated homepage market-cap breakdown. `GET /api/stablecoin-charts` serves cached DefiLlama aggregate history plus structural supplemental D1 `supply_history`, without a live trailing point; its last point can trail the KPI until `sync-stablecoin-charts` runs. Provider buckets retain malformed values as `null`; omission is not observed zero. Named cohorts use full-history `useSupplyHistory(...)` reads and `buildTotalMcapChartRows(...)` in `src/lib/total-mcap-chart.ts`. Cohorts and supplemental overlays use shared `findAsOfSnapshot` semantics with `MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC` (14 days): no future rows, inferred prehistory zero, or unbounded carry. Only a dated observation/backfill proves zero. An unobserved/over-budget structural contributor withholds its peg bucket; missing cohort history withholds dependent `USDS + DAI` and `Others`. Unavailable aggregate buckets withhold total/residual and affected non-USD values. The chart shows gaps and an unavailable-history notice, with a gray total envelope, zero-baselined USDT area (not stacked), and USDC, Sky, Others and dashed non-USD lines.
 
 ### Compare page
 

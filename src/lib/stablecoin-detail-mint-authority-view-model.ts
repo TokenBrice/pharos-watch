@@ -18,6 +18,7 @@ import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-co
 import type { SafetyScoreV9IssuanceSummary } from "@shared/types/safety-score-v9-public-breakdowns";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { selectMintAuthorityDetailControls } from "@/lib/stablecoin-detail-mint-authority-client";
+import { processReasonStatus } from "@/lib/mint-issuance-diagnostics";
 
 /**
  * A single externally-owned key is presented as unverifiable custody unless the
@@ -484,12 +485,7 @@ export function buildMintAuthorityDetailViewModel(
   const diagnostics: MintAuthorityProcessDiagnosticViewModel[] = (summary?.diagnostics ?? []).map((diagnostic) => ({
     ...diagnostic,
     key: JSON.stringify([diagnostic.gate, diagnostic.code, diagnostic.classId, diagnostic.field]),
-    statusLabel: diagnostic.code === "external-accounting-trust" ? "Analytical note"
-      : diagnostic.code === "operational-screen-failed" ? "Failed screen"
-        : ["delay-too-short", "governor-not-governance", "discretionary-root-independent",
-          "voting-affiliated-unilateral", "voting-other-holder-operator", "voting-privilege-independent",
-          "operational-decision-rule-inadmissible", "restructure-reachable"].includes(diagnostic.code)
-          ? "Failed gate" : "Missing evidence",
+    statusLabel: processReasonStatus(diagnostic.code),
   }));
   if (!candidate) return {
     ...NOT_REVIEWED_MINT_AUTHORITY, processDiagnostics: diagnostics,
