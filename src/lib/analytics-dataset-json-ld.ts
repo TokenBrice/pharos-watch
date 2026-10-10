@@ -27,7 +27,7 @@ export const PUBLIC_DATASET_JSON_LD_DESCRIPTORS: readonly PublicDatasetDescripto
     slug: "top-stablecoins",
     name: "Pharos Top Stablecoins Dataset",
     description:
-      "Public snapshot of tracked stablecoins with peg type, peg mechanism, price, circulating USD supply, chain count, and chain coverage.",
+      "Public snapshot of tracked stablecoins with peg type, peg mechanism, price, circulating USD supply, chain count, and chain coverage. The final CSV column, supplyUnavailableReason, explains unavailable supply without shifting existing columns.",
     keywords: ["stablecoin market cap", "stablecoin supply", "stablecoin chains", "stablecoin dataset"],
     export: PUBLIC_DATASET_CURRENT_EXPORTS["top-stablecoins"] as PublicDatasetExport,
   },

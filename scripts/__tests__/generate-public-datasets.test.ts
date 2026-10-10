@@ -130,7 +130,7 @@ function makeCapture(eventCount = 2): depegCapture.DepegLedgerCapture {
 }
 
 describe("generate-public-datasets", () => {
-  it("exports absent supply as null and blank CSV while keeping observed zero", () => {
+  it("appends the supply reason without shifting existing CSV columns and preserves null versus zero", () => {
     const envelope = makeEnvelope("2026-05-16");
     const base = envelope.stablecoins[0];
     envelope.stablecoins = [
@@ -149,10 +149,41 @@ describe("generate-public-datasets", () => {
     expect(json.data ?? json.rows).toEqual(spec.rows);
     const lines = artifacts.ndjson.trim().split("\n").map((line) => JSON.parse(line));
     expect(lines).toContainEqual(expect.objectContaining({ id: "unknown", circulatingUsd: null, supplyUnavailableReason: "absent" }));
-    const csvRow = artifacts.csv.split("\n").find((line) => line.startsWith("unknown,"));
-    expect(csvRow).toContain(",1,,absent,1,");
-    expect(artifacts.csv.split("\n").find((line) => line.startsWith("zero,"))).toContain(",1,0,,1,");
+    const csvLines = artifacts.csv.trimEnd().split("\n").filter((line) => !line.startsWith("#"));
+    expect(csvLines[0].split(",")).toEqual([
+      "id", "symbol", "name", "pegType", "pegMechanism", "price", "circulatingUsd",
+      "chainCount", "chains", "supplyUnavailableReason",
+    ]);
+    expect(csvLines.find((line) => line.startsWith("unknown,"))?.split(",")).toEqual([
+      "unknown", "USDC", "USD Coin", "peggedUSD", "fiat-backed", "1", "", "1", "ethereum", "absent",
+    ]);
+    expect(csvLines.find((line) => line.startsWith("zero,"))?.split(",")).toEqual([
+      "zero", "USDC", "USD Coin", "peggedUSD", "fiat-backed", "1", "0", "1", "ethereum", "",
+    ]);
   });
+
+  it.each([
+    {
+      topic: "depeg-history",
+      header: "id,stablecoinId,symbol,direction,peakDeviationBps,startedAtISO,endedAtISO,durationSec,startPrice,peakPrice,recoveryPrice,pegReference,source",
+    },
+    {
+      topic: "scores-latest",
+      header: "stablecoinId,symbol,pegScore,safetyScore,safetyGrade,dewsScore,dewsBand,liquidityScore,coverageClass",
+    },
+    {
+      topic: "peg-mechanism-distribution",
+      header: "mechanismArchetype,mechanismLabel,pegReferenceId,jurisdiction,coinCount",
+    },
+  ])("preserves the existing $topic CSV column order", ({ topic, header }) => {
+    const specs = testExports.buildTopicSpecs(makeEnvelope("2026-05-16"), [makeEvent(null)], "2026-05-16", {
+      depegCapture: makeCapture(1),
+    });
+    const spec = specs.find((item) => item.topic === topic)!;
+    const artifacts = testExports.buildTopicArtifacts(spec, "2026-05-16T10:00:00.000Z");
+    expect(artifacts.csv.split("\n").find((line) => !line.startsWith("#"))).toBe(header);
+  });
+
   it("generates direct 200 rewrites for latest datasets and Sheets CSV aliases", () => {
     const block = testExports.buildPublicDatasetRedirectBlock("2026-07-08");
 

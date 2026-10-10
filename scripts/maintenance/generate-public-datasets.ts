@@ -199,9 +199,9 @@ const TOP_STABLECOINS_COLUMNS: DatasetColumn<TopStablecoinRow>[] = [
   { header: "pegMechanism", accessor: (r) => r.pegMechanism },
   { header: "price", accessor: (r) => r.price ?? null },
   { header: "circulatingUsd", accessor: (r) => r.circulatingUsd },
-  { header: "supplyUnavailableReason", accessor: (r) => r.supplyUnavailableReason },
   { header: "chainCount", accessor: (r) => r.chainCount },
   { header: "chains", accessor: (r) => r.chains },
+  { header: "supplyUnavailableReason", accessor: (r) => r.supplyUnavailableReason },
 ];
 
 function projectTopStablecoins(envelope: SnapshotEnvelope | null): TopStablecoinRow[] {
