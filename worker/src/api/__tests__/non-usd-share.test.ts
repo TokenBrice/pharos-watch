@@ -7,7 +7,7 @@ import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 import { NonUsdShareResponseSchema, type NonUsdSharePoint } from "@shared/types/market";
 
 const fixtures = createLatestSchemaFixtureTracker();
-const COIN_HISTORY_GAPS = { match: "LAG(snapshot_date)", rows: [] };
+const COIN_HISTORY_GAPS = { match: "LEAD(snapshot_date)", rows: [] };
 const COMPLETE_COVERAGE = { basis: "interior-gap-prior-value", total: 1, commodity: 1, fiatNonUsd: 1 };
 
 
@@ -74,7 +74,7 @@ describe("handleNonUsdShare", () => {
     const date = Math.floor(Date.now() / 1000) - 86400;
     const db = mockD1([
       { match: "FROM cache", rows: [] },
-      { match: "LAG(snapshot_date)", rows: [
+      { match: "LEAD(snapshot_date)", rows: [
         { stablecoin_id: COMMODITY_IDS[0], previous_date: date - 86400, next_date: date + 86400, previous_usd: 10 },
         { stablecoin_id: FIAT_NON_USD_IDS[0], previous_date: date - 86400, next_date: date + 86400, previous_usd: 15 },
       ] },
@@ -318,6 +318,31 @@ describe("handleNonUsdShare", () => {
         commodityShare: 2,
         fiatNonUsdShare: 3,
         coverage: COMPLETE_COVERAGE,
+      });
+    });
+
+    it.each([
+      { name: "a small asset", missing: smallUsdId!, published: true },
+      { name: "the dominant asset", missing: largeUsdId!, published: false },
+    ])("counts $name absent from the latest day with no later row", async ({ missing, published }) => {
+      vi.spyOn(Date, "now").mockReturnValue((partial + 12 * 3600) * 1000);
+      const { db, sqlite } = fixtures.open();
+      const insert = sqlite.prepare(
+        "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, 1)",
+      );
+      for (const date of [before, partial]) {
+        for (const [stablecoinId, circulatingUsd] of Object.entries(completeDay)) {
+          if (date === partial && stablecoinId === missing) continue;
+          insert.run(stablecoinId, date, circulatingUsd);
+        }
+      }
+
+      const response = await handleNonUsdShare(db, new URL("https://example.com/api/non-usd-share"));
+      const body = NonUsdShareResponseSchema.parse(await response.json());
+
+      expect(body.map((point) => point.date)).toEqual(published ? [before, partial] : [before]);
+      if (published) expect(body.find((point) => point.date === partial)?.coverage).toEqual({
+        basis: "interior-gap-prior-value", total: 0.99, commodity: 1, fiatNonUsd: 1,
       });
     });
   });

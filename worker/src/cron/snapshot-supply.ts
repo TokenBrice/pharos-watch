@@ -15,7 +15,7 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { formatIsoDate } from "@shared/lib/format";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
-import { createCronResult } from "../lib/cron-result";
+import { createCronResult, type CronMetadataRecord } from "../lib/cron-result";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import {
   buildStablecoinsCacheFreshnessGateResult,
@@ -26,6 +26,7 @@ import {
 import {
   STABLECOIN_PUBLICATION_WAIVERS,
   evaluateStablecoinPublicationCoverage,
+  classifyStablecoinPublicationGap,
   type StablecoinPublicationWaiver,
 } from "../lib/stablecoin-publication-coverage";
 
@@ -166,20 +167,44 @@ export async function snapshotSupply(
     requiredActiveIds,
     snapshotDate,
   } = preflight;
+  const publicationGapBand = classifyStablecoinPublicationGap(publicationCoverage);
+  const publicationGap: CronMetadataRecord = publicationGapBand === "none" ? {} : {
+    publicationGap: {
+      band: publicationGapBand,
+      missingActiveCount: publicationCoverage.missingActiveIds.length,
+      missingActiveIds: publicationCoverage.missingActiveIds.slice(0, 20),
+    },
+  };
+  const recoveredSinceLastWrite = lastWrite?.snapshotDate === snapshotDate
+    ? [...validSnapshotIds].filter(
+      (id) => requiredActiveIdSet.has(id) && !(lastWrite.ownedRowIds ?? []).includes(id),
+    )
+    : [];
+  const alreadyWritten = publicationGapBand !== "systemic"
+    && lastWrite?.snapshotDate === snapshotDate
+    && lastWrite.coverageIdentityVerified
+    && recoveredSinceLastWrite.length === 0;
   if (
     options.minStablecoinsCacheUpdatedAtSec != null
     && stablecoinsCache.updatedAt < options.minStablecoinsCacheUpdatedAtSec
   ) {
-    if (
-      publicationCoverage.complete
-      && lastWrite?.snapshotDate === snapshotDate
-      && lastWrite.exactCoverageVerified
-    ) {
-      return buildStablecoinsCacheFreshnessGateResult({
+    if (alreadyWritten) {
+      const result = buildStablecoinsCacheFreshnessGateResult({
         alreadyWrittenSnapshotDate: snapshotDate,
         cacheUpdatedAt: stablecoinsCache.updatedAt,
         requiredUpdatedAt: options.minStablecoinsCacheUpdatedAtSec,
         freshnessGateLabel: options.freshnessGateLabel,
+      });
+      return createCronResult({
+        ...result,
+        ...(publicationGapBand !== "none" ? {
+          status: publicationGapBand === "elevated" ? "degraded" as const : "ok" as const,
+        } : {}),
+        metadata: {
+          ...JSON.parse(result.metadata ?? "{}"),
+          ...(publicationGapBand === "elevated" ? { reason: "publication_gap_elevated" } : {}),
+          ...publicationGap,
+        },
       });
     }
     return buildStablecoinsCacheFreshnessGateResult({
@@ -193,26 +218,20 @@ export async function snapshotSupply(
     logWorkerEventArgs("handler", "warn", `[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_DEGRADED_AGE_SEC}s), proceeding with degraded freshness`);
   }
 
-  // A same-day rerun normally short-circuits, but a required id that was
-  // restored at write time and has since produced a fresh observation must
-  // re-write the day so its row stops missing (atomic date replacement).
-  const recoveredSinceLastWrite = lastWrite?.snapshotDate === snapshotDate
-    ? [...validSnapshotIds].filter(
-      (id) => requiredActiveIdSet.has(id) && !(lastWrite.ownedRowIds ?? []).includes(id),
-    )
-    : [];
-  if (
-    publicationCoverage.complete
-    && lastWrite?.snapshotDate === snapshotDate
-    && lastWrite.exactCoverageVerified
-    && recoveredSinceLastWrite.length === 0
-  ) {
+  // Missing or restored required IDs recovering later trigger an atomic
+  // date replacement; an unchanged partial day retains its first observations.
+  if (alreadyWritten) {
     try {
       const repairedPriceRows = await repairSameDayMissingPrices(db, snapshotDate, snapshotRows, signal);
       return createCronResult({
+        ...(publicationGapBand !== "none" ? {
+          status: publicationGapBand === "elevated" ? "degraded" as const : "ok" as const,
+        } : {}),
         itemCount: repairedPriceRows,
         metadata: {
           reason: repairedPriceRows > 0 ? "repaired_missing_prices_today" : "already_written_today",
+          ...(publicationGapBand === "elevated" ? { reason: "publication_gap_elevated" } : {}),
+          ...publicationGap,
           snapshotDate,
           repairedPriceRows,
         },
@@ -227,7 +246,7 @@ export async function snapshotSupply(
       });
     }
   }
-  if (!publicationCoverage.complete) {
+  if (publicationGapBand === "systemic") {
     const cacheCoverage = evaluateStablecoinPublicationCoverage(
       cachedIds,
       nowSec,
@@ -239,7 +258,7 @@ export async function snapshotSupply(
       (id) => cachedIds.has(id),
     );
     logWorkerEventArgs("handler", "warn",
-      `[snapshot-supply] Exact active coverage failed: ` +
+      `[snapshot-supply] Systemic active coverage gap: ` +
       `${publicationCoverage.presentActiveCount}/${publicationCoverage.expectedActiveCount}; ` +
       `missing=${guardMissingActiveIds.slice(0, 20).join(",")}`,
     );
@@ -269,6 +288,7 @@ export async function snapshotSupply(
           accountedActiveCount:
             publicationCoverage.presentActiveCount + publicationCoverage.waivedActiveCount,
           ownedRowIds: snapshotRows.map(([stablecoinId]) => stablecoinId),
+          missingActiveIds: publicationCoverage.missingActiveIds,
         }),
         writtenRows: snapshotRows.length,
       });
@@ -307,18 +327,25 @@ export async function snapshotSupply(
   }
 
   logWorkerEventArgs("handler", "info", `[snapshot-supply] Inserted ${snapshotRows.length} rows for date ${formatIsoDate(snapshotDate)}`);
-  if (restoredOnlyIds.length > 0) {
-    // The atomic replacement above already committed the full snapshot: a
-    // restored-only tail is input quality, not work that did not happen.
-    return createCronResult({
-      itemCount: snapshotRows.length,
-      metadata: {
-        writtenRows: snapshotRows.length,
+  if (restoredOnlyIds.length > 0 || publicationGapBand !== "none") {
+    const metadata: CronMetadataRecord = {
+      writtenRows: snapshotRows.length,
+      ...publicationGap,
+      ...(restoredOnlyIds.length > 0 ? {
         quality: {
           reason: "snapshot_written_restored_skipped",
           restoredOnlyIds,
         },
-      },
+      } : {}),
+    };
+    return createCronResult(publicationGapBand === "elevated" ? {
+      status: "degraded",
+      itemCount: snapshotRows.length,
+      metadata: { ...metadata, reason: "publication_gap_elevated" },
+    } : {
+      ...(publicationGapBand === "routine" ? { status: "ok" as const } : {}),
+      itemCount: snapshotRows.length,
+      metadata,
     });
   }
   return { itemCount: snapshotRows.length };

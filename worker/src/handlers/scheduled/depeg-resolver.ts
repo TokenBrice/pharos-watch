@@ -1,10 +1,6 @@
-import { getStablecoinPublicationImpactStatus } from "@shared/lib/status-thresholds";
-import { isRecord } from "@shared/lib/type-guards";
 import type { ScheduledRuntimeContext } from "./context";
 import { parseStablecoinsCapabilities } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
-import { tryParseJson } from "../../lib/json-parse";
-import { parseStablecoinCoverageHealth } from "../../lib/stablecoin-publication-health";
 import { runV9AfterCoreWithinWindow } from "../../lib/v9-slot-window";
 
 const DDR_WINDOW_MS = 2 * 60_000;
@@ -13,17 +9,6 @@ const DDR_MINIMUM_REMAINING_MS = 45_000;
 interface StablecoinsCapabilityRow {
   metadata: string | null;
   started_at: number;
-}
-
-/** DDR reads live deviation per asset and treats an absent asset as missing
- * live price, so it does not need the exact active set. A published cache whose
- * only gap is within the public-health immaterial-omission margin stays safe;
- * unpublished, blocked, unreadable or materially incomplete caches do not. */
-function hasOnlyImmaterialPublicationGaps(row: StablecoinsCapabilityRow, nowSec: number): boolean {
-  const metadata = row.metadata == null ? null : tryParseJson(row.metadata);
-  if (!isRecord(metadata) || metadata.cacheWriteMode !== "published") return false;
-  const { publication, activePriceCoverage } = parseStablecoinCoverageHealth(metadata, row.started_at, nowSec);
-  return getStablecoinPublicationImpactStatus(publication, activePriceCoverage, nowSec) === "healthy";
 }
 
 async function loadLatestStablecoinsCapabilities(
@@ -44,9 +29,7 @@ async function loadLatestStablecoinsCapabilities(
   );
   const stale = row == null || row.started_at < nowSec - 30 * 60;
   return {
-    stablecoinsCacheSafe: !stale && (
-      capabilities.stablecoinsCache || hasOnlyImmaterialPublicationGaps(row, nowSec)
-    ),
+    stablecoinsCacheSafe: !stale && capabilities.stablecoinsCache,
     depegPipelineHealthy: !stale && capabilities.depegPipeline,
   };
 }

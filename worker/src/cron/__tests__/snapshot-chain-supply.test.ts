@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockRegistry } from "../../test-helpers/cron";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import type * as WorkerRuntimeRegistry from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   buildChainSupplySnapshotCompletionMarker,
   makeChainSupplySnapshotDb,
@@ -15,6 +16,21 @@ vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
     { id: "usdc-circle", symbol: "USDC", flags: { pegCurrency: "USD" } },
   ],
 }));
+
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal) => {
+  const actual = await importOriginal<typeof WorkerRuntimeRegistry>();
+  const metaById = new Map(actual.WORKER_ACTIVE_META_BY_ID);
+  const usdc = metaById.get("usdc-circle")!;
+  metaById.set("usdc-circle", {
+    ...usdc, contracts: [{ chain: "Ethereum", address: "0x1", decimals: 6 }], tradedContracts: [],
+  });
+  metaById.set("missing-coin", {
+    ...usdc, id: "missing-coin",
+    contracts: [{ chain: "Ethereum", address: "0x1", decimals: 6 }],
+    tradedContracts: [{ chain: "BSC", address: "0x2", decimals: 6 }],
+  });
+  return { ...actual, WORKER_ACTIVE_META_BY_ID: metaById };
+});
 
 
 
@@ -393,7 +409,7 @@ describe("snapshotChainSupply", () => {
     expect(metadata.reason).toBe("no-valid-chain-rows");
   });
 
-  it("blocks a partial active universe without sealing the day", async () => {
+  it("blocks a systemic publication gap without sealing the day", async () => {
     const payload = completePayload();
     payload.peggedAssets.pop();
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
@@ -428,7 +444,7 @@ describe("snapshotChainSupply", () => {
       nowSec: waiver.expiresAt - 1,
       publicationWaivers: [waiver],
     });
-    expect(beforeExpiry.itemCount).toBe(3);
+    expect(beforeExpiry.itemCount).toBe(2);
 
     const atExpiry = await snapshotChainSupply(buildDb(), undefined, {
       nowSec: waiver.expiresAt,
@@ -440,6 +456,104 @@ describe("snapshotChainSupply", () => {
       missingActiveIds: ["usdc-circle"],
       expiredWaiverIds: ["usdc-circle"],
     });
+  });
+
+  it.each([
+    { missingCount: 1, band: "routine", status: "ok" },
+    { missingCount: 4, band: "elevated", status: "degraded" },
+  ])("defers only known chains for a $band absence and admits them after recovery", async ({
+    missingCount, band, status,
+  }) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const payload = completePayload();
+      const fillerIds = Array.from({ length: 393 }, (_, index) => `filler-${index}`);
+      const requiredActiveIds = [...DEFAULT_REQUIRED_IDS, ...fillerIds, "missing-coin"];
+      payload.peggedAssets.push(...fillerIds.slice(0, fillerIds.length - missingCount + 1)
+        .map((id) => makeSnapshotAsset({ id, chainCirculating: {} })));
+      const put = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      put.run("stablecoins", JSON.stringify(payload), nowSec);
+      const options = { nowSec, requiredActiveIds };
+      const first = await snapshotChainSupply(db, undefined, options);
+      expect(first.status).toBe(status);
+      expect(first.itemCount).toBe(1);
+      expect(JSON.parse(first.metadata!)).toMatchObject({
+        publicationGap: { band, missingActiveCount: missingCount },
+        deferredChains: { ethereum: ["missing-coin"], bsc: ["missing-coin"] },
+        ...(band === "elevated" ? { reason: "publication_gap_elevated" } : {}),
+      });
+      expect(sqlite.prepare("SELECT chain_id, total_usd FROM chain_supply_history").all())
+        .toEqual([{ chain_id: "citrea", total_usd: 10 }]);
+      const saved = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+        .get("snapshot-chain-supply:last-write")!;
+      expect(JSON.parse(String(saved.value))).toMatchObject({
+        expectedActiveCount: 396, accountedActiveCount: 396 - missingCount,
+        ownedRowIds: ["citrea"], chainObservationProgressVersion: 1,
+        missingActiveIds: expect.arrayContaining(["missing-coin"]),
+      });
+      expect(JSON.parse(String(saved.value)).chainObservationAdmissionVersion).toBeUndefined();
+      payload.peggedAssets[0]!.chainCirculating = {
+        Ethereum: { current: 70 }, BSC: { current: 40 }, "Citrea Mainnet": { current: 20 },
+      };
+      put.run("stablecoins", JSON.stringify(payload), nowSec + 60);
+      const retry = await snapshotChainSupply(db, undefined, { ...options, nowSec: nowSec + 60 });
+      expect(retry.status).toBe(status);
+      expect(retry.itemCount).toBe(0);
+      expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+        .get("snapshot-chain-supply:last-write")).toEqual(saved);
+      payload.peggedAssets.push(makeSnapshotAsset({
+        id: "missing-coin", chainCirculating: { Ethereum: { current: 50 }, BSC: { current: 5 } },
+      }));
+      put.run("stablecoins", JSON.stringify(payload), nowSec + 120);
+      const recovered = await snapshotChainSupply(db, undefined, { ...options, nowSec: nowSec + 120 });
+      expect(recovered.itemCount).toBe(2);
+      expect(sqlite.prepare("SELECT chain_id, total_usd FROM chain_supply_history ORDER BY chain_id").all()).toEqual([
+        { chain_id: "bsc", total_usd: 45 },
+        { chain_id: "citrea", total_usd: 10 },
+        { chain_id: "ethereum", total_usd: 120 },
+      ]);
+      expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = ?")
+        .get("snapshot-chain-supply:last-write")).toEqual({ updated_at: nowSec + 120 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("names an absent unmapped HBD without inventing a tracked-chain contribution", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const payload = completePayload();
+      const fillerIds = Array.from({ length: 393 }, (_, index) => `filler-${index}`);
+      payload.peggedAssets.push(...fillerIds.map((id) => makeSnapshotAsset({ id, chainCirculating: {} })));
+      const requiredActiveIds = [...DEFAULT_REQUIRED_IDS, ...fillerIds, "hbd-hive"];
+      const put = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      put.run("stablecoins", JSON.stringify(payload), nowSec);
+      const first = await snapshotChainSupply(db, undefined, { nowSec, requiredActiveIds });
+      expect(first.status).toBe("ok");
+      expect(first.itemCount).toBe(3);
+      expect(JSON.parse(first.metadata!)).toMatchObject({
+        absentUnmappedIds: ["hbd-hive"], deferredChainIds: [],
+        publicationGap: { band: "routine", missingActiveIds: ["hbd-hive"] },
+      });
+      const marker = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+        .get("snapshot-chain-supply:last-write")!;
+      const retry = await snapshotChainSupply(db, undefined, { nowSec, requiredActiveIds });
+      expect(retry.itemCount).toBe(0);
+      expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+        .get("snapshot-chain-supply:last-write")).toEqual(marker);
+      payload.peggedAssets.push(makeSnapshotAsset({ id: "hbd-hive", chainCirculating: {} }));
+      put.run("stablecoins", JSON.stringify(payload), nowSec + 60);
+      const recovered = await snapshotChainSupply(db, undefined, { nowSec: nowSec + 60, requiredActiveIds });
+      expect(recovered.itemCount).toBe(0);
+      expect(JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+        .get("snapshot-chain-supply:last-write")!.value))).toMatchObject({
+        accountedActiveCount: 396, missingActiveIds: [], chainObservationAdmissionVersion: 1,
+      });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("invalidates a same-count active-ID replacement", async () => {
@@ -593,7 +707,7 @@ describe("snapshotChainSupply", () => {
         publicationWaivers: [currentWaiver],
       });
 
-      expect(result.itemCount).toBe(3);
+      expect(result.itemCount).toBe(2);
     }
   });
 

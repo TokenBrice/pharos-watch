@@ -464,6 +464,26 @@ export function evaluateStablecoinPublicationCoverage(
   };
 }
 
+/** Absent active assets are unavailable, never zero, and every downstream job
+ * handles them per asset. A gap under 1% of the expected active set is routine
+ * upstream churn; up to 10% jobs still run but report the gap; above 10% it is a
+ * systemic upstream failure and downstream jobs fail closed. */
+export const STABLECOIN_PUBLICATION_GAP_ROUTINE_MAX_SHARE = 0.01;
+export const STABLECOIN_PUBLICATION_GAP_TOLERATED_MAX_SHARE = 0.1;
+
+export type StablecoinPublicationGapBand = "none" | "routine" | "elevated" | "systemic";
+
+export function classifyStablecoinPublicationGap(
+  coverage: Pick<StablecoinPublicationCoverage, "expectedActiveCount" | "missingActiveIds">,
+): StablecoinPublicationGapBand {
+  const missingCount = coverage.missingActiveIds.length;
+  if (missingCount === 0) return "none";
+  if (coverage.expectedActiveCount <= 0) return "systemic";
+  const missingShare = missingCount / coverage.expectedActiveCount;
+  if (missingShare > STABLECOIN_PUBLICATION_GAP_TOLERATED_MAX_SHARE) return "systemic";
+  return missingShare < STABLECOIN_PUBLICATION_GAP_ROUTINE_MAX_SHARE ? "routine" : "elevated";
+}
+
 function finiteNumberOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
