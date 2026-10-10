@@ -94,12 +94,6 @@ describe("depeg-resolver scheduling", () => {
       slot: "scheduled-quarter-hour",
       stablecoinsCacheSafe: true,
       depegPipelineHealthy: true,
-      syncCapabilities: expect.objectContaining({
-        stablecoinsCache: true,
-        depegPipeline: true,
-        latestSyncStartedAt: SLOT_STARTED_AT - 60,
-        stale: false,
-      }),
     }));
     expect(summary.jobs).toEqual([
       expect.objectContaining({

@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   compareDepegTrackerRows,
-  rowAccentClass,
   type DepegTableSortKey,
 } from "@/components/depeg-table-logic";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import type { PegSummaryCoin, StressSignalEntry } from "@shared/types";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
-import { makeDews } from "./depeg.test-support";
+import { makeDews, makePendingIncident } from "./depeg.test-support";
 import { NUMERIC_INPUT_STATES } from "@shared/test-utils/boundary-contract-vectors.test-support";
 
 
@@ -30,44 +29,6 @@ const observedValues = NUMERIC_INPUT_STATES.flatMap(({ state, value }) =>
   state === "zero" || state === "positive" ? [value] : [],
 );
 
-describe("rowAccentClass", () => {
-  it("returns red border for active depeg", () => {
-    const row = makeRow({ activeDepeg: true });
-    expect(rowAccentClass(row)).toBe("border-l-[3px] border-l-red-500");
-  });
-
-  it("returns orange border for WARNING band", () => {
-    const row = makeRow({ activeDepeg: false }, makeDews({ band: "WARNING" }));
-    expect(rowAccentClass(row)).toBe("border-l-[3px] border-l-orange-500");
-  });
-
-  it("returns amber border for pending incidents", () => {
-    const row = makeRow({ activeDepeg: false }, makeDews({ band: "CALM" }));
-    row.pendingIncident = {
-      stablecoinId: "usdc",
-      symbol: "USDC",
-      direction: "below",
-      firstSeenAt: 1_700_000_000,
-    };
-    expect(rowAccentClass(row)).toBe("border-l-[3px] border-l-amber-500");
-  });
-
-  it("returns orange border for DANGER band", () => {
-    const row = makeRow({ activeDepeg: false }, makeDews({ band: "DANGER" }));
-    expect(rowAccentClass(row)).toBe("border-l-[3px] border-l-orange-500");
-  });
-
-  it("returns empty string for CALM band with no active depeg", () => {
-    const row = makeRow({ activeDepeg: false }, makeDews({ band: "CALM" }));
-    expect(rowAccentClass(row)).toBe("");
-  });
-
-  it("returns empty string when dews is null", () => {
-    const row = makeRow({ activeDepeg: false }, null);
-    expect(rowAccentClass(row)).toBe("");
-  });
-});
-
 describe("compareDepegTrackerRows — __attention sort", () => {
   it("places active depeg rows first", () => {
     const activeRow = makeRow({ activeDepeg: true, currentDeviationBps: 50 });
@@ -81,12 +42,7 @@ describe("compareDepegTrackerRows — __attention sort", () => {
 
   it("places pending rows ahead of ordinary DEWS warning rows", () => {
     const pending = makeRow({ activeDepeg: false }, makeDews({ band: "CALM" }));
-    pending.pendingIncident = {
-      stablecoinId: "usdc",
-      symbol: "USDC",
-      direction: "below",
-      firstSeenAt: 1_700_000_000,
-    };
+    pending.pendingIncident = makePendingIncident({ stablecoinId: "usdc", symbol: "USDC" });
     const warning = makeRow({ activeDepeg: false }, makeDews({ band: "WARNING", score: 70 }));
     const result = compareDepegTrackerRows(pending, warning, sort("__attention"));
     expect(result).toBeLessThan(0);

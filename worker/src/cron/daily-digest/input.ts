@@ -14,7 +14,7 @@ import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-reg
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import { getConditionBand } from "../../lib/stability-index";
+import { getConditionBand } from "@shared/lib/psi-policy";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { SECONDS } from "../../lib/time-constants";
 import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
@@ -397,7 +397,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     crossDayTrendsResult,
     totalMcapAthResult,
   );
-  const historicalContextResult = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange);
+  const historicalContextResult = await collectHistoricalContext(ctx, displayScore, displayBand, currentPsiSource?.stored_at ?? null, biggestSupplyChange);
   collectorResults.push(historicalContextResult);
   const gradeTransitionsResult = await collectGradeTransitions(ctx, safetyGrades, safetyIdentity);
   collectorResults.push(gradeTransitionsResult);

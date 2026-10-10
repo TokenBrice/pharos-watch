@@ -298,7 +298,6 @@ describe("recordSystemHealthDeferrals", () => {
       nowSec: 1_750_100_000,
       ddrRunId: "run-3",
       runAt: 1_750_100_000,
-      syncCapabilities: {},
       reason: "stablecoins-cache-unsafe",
     });
 

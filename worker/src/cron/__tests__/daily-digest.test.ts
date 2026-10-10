@@ -32,6 +32,7 @@ import { collectCrossDayTrends, collectHistoricalContext, collectPsiContributors
 import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
 import { buildForwardLookOutcomes, buildNextTriggers } from "../daily-digest/digest-next-triggers";
 import { buildEditorialPrompt, scanEditorialText } from "@shared/lib/editorial-style";
+import { getPsiBandStreak } from "@shared/lib/psi-view-model";
 import type { DigestInputData } from "@shared/types/digest";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import { BASE_DIGEST_INPUT, BASE_SAFETY_CONTEXT, canonicalSafetySource, makeCollectorCtx, makeDigestRow, makePublishedDewsTables, missingPublishedGaugeTable, PUBLISHED_GAUGE_SCORE, publishedGaugePayload, publishedGaugeTable, VALID_CAPTURE_MAP_SUMMARY } from "./daily-digest.test-support";
@@ -378,8 +379,36 @@ describe("history and DEWS collectors", () => {
     expect((await collectCrossDayTrends(ctxFor([{ match: "FROM daily_digest", rows: [makeDigestRow(now, 1, 92, "BEDROCK", 200e9), makeDigestRow(now, 2, 91, "BEDROCK", 199e9)] }]))).value).toBeUndefined();
   });
   it("collects historical PSI and market context", async () => {
-    const today = 1_772_755_200; const db = mockD1([first("SELECT COUNT(*) as cnt FROM stability_index", { cnt: 90 }), first("SELECT MIN(generated_at) as oldest FROM daily_digest", null), first("FROM daily_digest\n           WHERE json_extract(input_data", { generated_at: today - 30 * 86_400 + 8 * 3600, psi_score: 89, psi_band: "STEADY" }), { match: "ORDER BY computed_at DESC LIMIT 90", rows: [0, 1, 2].map((daysAgo) => ({ computed_at: today - daysAgo * 86_400, band: "BEDROCK" })) }, first("SELECT circulating_usd AS ath_mcap, snapshot_date FROM supply_history", { ath_mcap: 120e6, snapshot_date: today - 60 * 86_400 }), first("ABS(s1.circulating_usd - s2.circulating_usd)", { snapshot_date: today - 45 * 86_400, abs_change: 8e6 })]);
-    expect((await collectHistoricalContext(makeCollectorCtx(db), 91.2, "BEDROCK", { id: "usdt-tether", symbol: "USDT", name: "Tether", changeUsd: 5e6, currentMcap: 100e6 })).value).toMatchObject({ psiBandStreak: 3, psiPrecedent: { lastSeenDaysAgo: 30 } });
+    const today = 1_772_755_200; const db = mockD1([first("SELECT COUNT(*) as cnt FROM stability_index", { cnt: 90 }), first("SELECT MIN(generated_at) as oldest FROM daily_digest", null), first("FROM daily_digest\n           WHERE json_extract(input_data", { generated_at: today - 30 * 86_400 + 8 * 3600, psi_score: 89, psi_band: "STEADY" }), { match: "ORDER BY computed_at DESC LIMIT 90", rows: [0, 1, 2].map((daysAgo) => ({ date: today - daysAgo * 86_400, score: 91.2, band: "BEDROCK" })) }, first("SELECT circulating_usd AS ath_mcap, snapshot_date FROM supply_history", { ath_mcap: 120e6, snapshot_date: today - 60 * 86_400 }), first("ABS(s1.circulating_usd - s2.circulating_usd)", { snapshot_date: today - 45 * 86_400, abs_change: 8e6 })]);
+    expect((await collectHistoricalContext(makeCollectorCtx(db), 91.2, "BEDROCK", today, { id: "usdt-tether", symbol: "USDT", name: "Tether", changeUsd: 5e6, currentMcap: 100e6 })).value).toMatchObject({ psiBandStreak: 3, psiPrecedent: { lastSeenDaysAgo: 30 } });
+  });
+  it.each([
+    { name: "missing yesterday", days: [0, 2], changedYesterday: false, currentDayOffset: 0, expected: 1 },
+    { name: "changed yesterday band", days: [0, 1, 2], changedYesterday: true, currentDayOffset: 0, expected: 1 },
+    { name: "uninterrupted days", days: [0, 1, 2], changedYesterday: false, currentDayOffset: 0, expected: 3 },
+    { name: "daily fallback observation", days: [0, 1, 2], changedYesterday: false, currentDayOffset: 1, expected: 3 },
+  ])("uses canonical calendar PSI streaks for $name", async ({ days, changedYesterday, currentDayOffset, expected }) => {
+    const today = 1_772_755_200;
+    const computedAt = today - currentDayOffset * 86_400 + (currentDayOffset === 0 ? 8 * 3600 : 0);
+    const observationDay = today - currentDayOffset * 86_400;
+    const history = days.map((daysAgo) => ({
+      date: observationDay - daysAgo * 86_400,
+      score: 91.2,
+      band: changedYesterday && daysAgo === 1 ? "STEADY" : "BEDROCK",
+    }));
+    const db = mockD1([
+      first("SELECT COUNT(*) as cnt FROM stability_index", { cnt: 90 }),
+      first("SELECT MIN(generated_at) as oldest FROM daily_digest", null),
+      first("FROM daily_digest\n           WHERE json_extract(input_data", null),
+      { match: "ORDER BY computed_at DESC LIMIT 90", rows: history },
+    ]);
+    const ctx = makeCollectorCtx(db);
+    ctx.todayTs = today;
+    const result = await collectHistoricalContext(ctx, 91.2, "BEDROCK", computedAt, null);
+
+    expect(result.degradedReasons).toEqual([]);
+    expect(result.value?.psiBandStreak).toBe(expected);
+    expect(result.value?.psiBandStreak).toBe(getPsiBandStreak(history, computedAt, "BEDROCK"));
   });
   it("accepts flat and wrapped DEWS signals, records malformed input, and rejects partial publication", async () => {
     const at = Math.floor(Date.now() / 1000) - 600; const signals = { supply: { value: 30, available: true }, pool: { value: 80, available: true }, liq: { value: 45, available: true }, price: { value: 10, available: true } };

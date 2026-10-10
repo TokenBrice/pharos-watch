@@ -9,7 +9,7 @@ import { cleanupFrontendTest } from "@/test-utils/frontend";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import type { PegSummaryCoin, StressSignalEntry } from "@shared/types";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
-import { makeDews } from "./depeg.test-support";
+import { makeDews, makePendingIncident } from "./depeg.test-support";
 
 vi.mock("@/hooks/use-prefetch-stablecoin", () => ({
   usePrefetchStablecoin: () => vi.fn(),
@@ -113,12 +113,7 @@ describe("DepegControlBoard", () => {
         ? makeDews({ band: status === "warning" ? "WARNING" : "DANGER" })
         : null);
       if (status === "pending") {
-        row.pendingIncident = {
-          stablecoinId: row.coin.id,
-          symbol: row.coin.symbol,
-          direction: "below",
-          firstSeenAt: 1_700_000_000,
-        };
+        row.pendingIncident = makePendingIncident({ stablecoinId: row.coin.id, symbol: row.coin.symbol });
       }
       renderBoard([row]);
       const renderedRow = screen.getByRole("button", { name: /open susd depeg detail/i });

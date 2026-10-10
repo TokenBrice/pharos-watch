@@ -1,4 +1,3 @@
-import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   attachDdrPublicRowHash,
   computeDdrPublicRowHash,
@@ -37,65 +36,6 @@ import {
 import {
   loadPredictionErrata as loadPredictionErrataStore,
 } from "../../lib/depeg-resolver-errata-store";
-import { readRecord } from "@shared/lib/type-guards";
-
-export interface DdrStorageJsonDecodeFailure {
-  kind: "missing" | "malformed_json" | "non_object";
-  field: "sealedPayloadJson";
-  recordId: number;
-  incidentKey: string;
-  eventId: number;
-  outcomeKind: string;
-  message: string;
-}
-
-class DdrStorageJsonDecodeError extends Error {
-  readonly failure: DdrStorageJsonDecodeFailure;
-
-  constructor(failure: DdrStorageJsonDecodeFailure) {
-    super(
-      `DDR sealed payload decode failed for public prediction ${failure.recordId} ` +
-        `(${failure.incidentKey}/${failure.eventId}): ${failure.message}`,
-    );
-    this.name = "DdrStorageJsonDecodeError";
-    this.failure = failure;
-  }
-}
-
-function failStorageDecode(failure: DdrStorageJsonDecodeFailure): never {
-  throw new DdrStorageJsonDecodeError(failure);
-}
-
-function decodeJsonObject(value: string | null | undefined, context: Omit<DdrStorageJsonDecodeFailure, "kind" | "message">): Record<string, unknown> {
-  if (!value) {
-    failStorageDecode({ ...context, kind: "missing", message: "sealed payload JSON is missing" });
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value) as unknown;
-  } catch (error) {
-    failStorageDecode({
-      ...context,
-      kind: "malformed_json",
-      message: toErrorMessage(error),
-    });
-  }
-  const record = readRecord(parsed);
-  if (record) return record;
-  failStorageDecode({ ...context, kind: "non_object", message: "sealed payload JSON decoded to a non-object value" });
-}
-
-function sealedPayloadFromStore(row: StoreDdrSealedPublicPrediction): Record<string, unknown> {
-  const payload = readRecord(row.sealedPayload);
-  if (payload) return payload;
-  return decodeJsonObject(row.sealedPayloadJson, {
-    field: "sealedPayloadJson",
-    recordId: row.id,
-    incidentKey: row.incidentKey,
-    eventId: row.eventId,
-    outcomeKind: row.outcomeKind,
-  });
-}
 
 export function publicPredictionIdOf(row: DdrSealedPublicPrediction | StoreDdrSealedPublicPrediction): number {
   return "publicPredictionId" in row && row.publicPredictionId != null ? row.publicPredictionId : row.id;
@@ -155,7 +95,7 @@ function mapStoreSealedPublicPrediction(row: StoreDdrSealedPublicPrediction): Dd
     backstopAt: row.backstopAt,
     backstopDelaySec: row.backstopDelaySec,
     rowHash: row.rowHash,
-    sealedPayload: sealedPayloadFromStore(row),
+    sealedPayload: row.sealedPayload,
   };
 }
 

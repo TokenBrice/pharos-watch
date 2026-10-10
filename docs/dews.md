@@ -238,6 +238,8 @@ PSI amplification admits `stability_index_samples.stored_at` through `DEWS_PSI_F
 4. Read previous `stress_signals` for smoothing
 5. Read `mint_burn_hourly` aggregates, separating 30d baseline coverage from latest-row freshness
 6. Read `yield_data.warning_signals` and structured `sourceRisk` / `rankChangeAttribution` evidence from the published `yield-rankings` cache
+
+   `worker/src/lib/dews/source-state.ts` assembles the nine fixed hydrators in a typed concurrent tuple. Diagnostics replay in source order, coverage keys retain that order, and maps/sets plus dependency diagnostics pass through by reference; each loader still owns admission and degraded fallbacks.
 7. Quarantine eligible assets with malformed core persisted inputs, then compute DEWS and contagion for admitted peers
 8. Write sparse history to `stress_signals`, exact candidate rows to `stress_signal_publication_rows` (healthy runs only), and full latest state to `stress_signals_latest` (only for coins where `computeDEWS()` returned a score)
 9. Retire current rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current circulating supply. "Explicitly" is enforced: a cache row carrying no circulating peg buckets at all is skipped for the cycle (no write, no retire), because the retire path hard-deletes the coin's current **and** 7-day rolling rows and they are never resurrected

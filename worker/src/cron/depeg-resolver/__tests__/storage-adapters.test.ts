@@ -281,7 +281,6 @@ describe("DDR storage adapters", () => {
       predictionPolicyVersion: "ddr-policy-v1",
       healthStatus: "healthy",
       reason: "waiting",
-      syncCapabilities: {},
     } as const;
 
     await DEFAULT_DDR_V2_STORE_CONTRACTS.recordLockDeferral(db, { ...base, action: "deferred" });
@@ -380,6 +379,7 @@ describe("DDR storage adapters", () => {
     }]);
     stores.loadPredictionErrata.mockResolvedValue([{
       id: 9,
+      state: "invalidated",
       publicPredictionId: 77,
       incidentKey: "ddr:usdc:below",
       eventId: 42,
@@ -416,32 +416,4 @@ describe("DDR storage adapters", () => {
     ]);
   });
 
-  it.each([
-    [null, null, "missing"],
-    [null, "{", "malformed_json"],
-    [null, "[]", "non_object"],
-  ] as const)("fails closed for %s sealed payloads", async (sealedPayload, sealedPayloadJson, kind) => {
-    stores.loadSealedPublicPredictions.mockResolvedValueOnce([{
-      ...STORE_SEALED,
-      sealedPayload,
-      sealedPayloadJson,
-    }]);
-
-    await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.loadSealedPublicPredictions(db, {})).rejects.toMatchObject({
-      name: "DdrStorageJsonDecodeError",
-      failure: { kind },
-    });
-  });
-
-  it("decodes the persisted sealed JSON when no materialized payload is present", async () => {
-    stores.loadSealedPublicPredictions.mockResolvedValueOnce([{
-      ...STORE_SEALED,
-      sealedPayload: null,
-      sealedPayloadJson: JSON.stringify({ kind: "prediction", restored: true }),
-    }]);
-
-    await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.loadSealedPublicPredictions(db, {})).resolves.toEqual([
-      expect.objectContaining({ sealedPayload: { kind: "prediction", restored: true } }),
-    ]);
-  });
 });

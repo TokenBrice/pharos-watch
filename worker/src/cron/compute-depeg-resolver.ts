@@ -227,7 +227,6 @@ export async function computeDepegResolver(
       nowSec,
       ddrRunId: options.ddrRunId,
       runAt: options.runAt,
-      syncCapabilities: options.syncCapabilities,
       reason: degradedReason,
     });
     const degradedArtifacts = await persistDegradedArtifacts({
@@ -290,7 +289,6 @@ export async function computeDepegResolver(
       confirmedAtByEventId: confirmationTiming.byEventId,
       ddrRunId: options.ddrRunId,
       runAt: options.runAt,
-      syncCapabilities: options.syncCapabilities,
     });
     rows = resolveDdrIncidents(contextResult.context, nowSec);
   }
@@ -313,7 +311,6 @@ export async function computeDepegResolver(
     nowSec,
     ddrRunId: options.ddrRunId,
     runAt: options.runAt,
-    syncCapabilities: options.syncCapabilities,
   });
   v2LockedPredictions = lockResult.lockedCount;
   v2LockedNoCalls = lockResult.noCallCount;

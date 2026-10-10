@@ -24,7 +24,6 @@ import type {
   DdrSealedPublicPrediction,
   DdrV2StoreContracts,
 } from "./depeg-resolver-v2-contracts";
-import { normalizeErratumRecord } from "./depeg-resolver/public-projection";
 import { firstPublicationByPredictionId, publicPredictionIdOf } from "./depeg-resolver/storage-adapters";
 import { throwIfAborted } from "../lib/abort";
 import {
@@ -46,7 +45,7 @@ export interface DdrrV2ReviewSource {
   incidents: DdrCanonicalIncident[];
   firstPublication: DdrFirstPublicationMembership[];
   sealedPublicPredictions: DdrSealedPublicPrediction[];
-  errata: Array<Record<string, unknown>>;
+  errata: DdrPredictionErratum[];
   nowSec: number;
   incidentRowLimit: number;
   incidentRowsTruncated: boolean;
@@ -161,12 +160,10 @@ function arrayValue(value: unknown): unknown[] {
 }
 
 function latestErrataByPredictionId(
-  rows: readonly Record<string, unknown>[],
+  rows: readonly DdrPredictionErratum[],
 ): Map<number, { latest: DdrPredictionErratum; history: DdrPredictionErratum[] }> {
   const out = new Map<number, { latest: DdrPredictionErratum; history: DdrPredictionErratum[] }>();
-  for (const row of rows) {
-    const erratum = normalizeErratumRecord(row);
-    if (!erratum) continue;
+  for (const erratum of rows) {
     const publicPredictionId = erratum.publicPredictionId;
     const current = out.get(publicPredictionId);
     const history = [...(current?.history ?? []), erratum].sort((left, right) => right.createdAt - left.createdAt || right.id - left.id);

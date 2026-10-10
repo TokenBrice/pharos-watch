@@ -4,7 +4,7 @@ import type { DdrRow } from "@shared/types/depeg-resolver";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { DdrCanonicalIncident, DdrSealedPublicPrediction } from "../depeg-resolver-v2-contracts";
 import { DDR_METHODOLOGY_VERSION, DDR_SNAPSHOT_CACHE_GENERATION } from "@shared/lib/methodology-versions/depeg-resolver";
-import { buildDdrResponse, normalizeErratumRecord } from "../depeg-resolver/public-projection";
+import { buildDdrResponse } from "../depeg-resolver/public-projection";
 import { sealEligibleLocks } from "../depeg-resolver/publication";
 import type { DdrEventDbRow } from "../depeg-resolver/types";
 import { computeDepegResolver, type DdrV2StoreContracts } from "../compute-depeg-resolver";
@@ -17,20 +17,6 @@ afterEach(() => {
 
 describe("computeDepegResolver", () => {
   const NOW_SEC = 1_779_984_600;
-
-  it("drops malformed public prediction erratum rows", () => {
-    expect(normalizeErratumRecord({
-      id: 99,
-      public_prediction_id: 7,
-      incident_key: "usdc-circle:42:below",
-      event_id: 42,
-      assessment_id: 70,
-      reason: "unknown_reason",
-      created_at: NOW_SEC,
-      operator_note: "bad reason",
-      created_by: "operator",
-    })).toBeNull();
-  });
 
   function activeEvent(overrides: Partial<DdrEventDbRow> = {}): DdrEventDbRow & Record<string, unknown> {
     return {
@@ -291,7 +277,6 @@ describe("computeDepegResolver", () => {
       slot: "quarter-hour",
       stablecoinsCacheSafe: false,
       depegPipelineHealthy: true,
-      syncCapabilities: { depegPipeline: true },
       storeContracts: stores,
     });
     const metadata = JSON.parse(result.metadata ?? "{}");
@@ -370,7 +355,6 @@ describe("computeDepegResolver", () => {
       slot: "quarter-hour",
       stablecoinsCacheSafe: false,
       depegPipelineHealthy: true,
-      syncCapabilities: { depegPipeline: true },
       storeContracts: stores,
     });
 
@@ -406,7 +390,6 @@ describe("computeDepegResolver", () => {
       slot: "quarter-hour",
       stablecoinsCacheSafe: true,
       depegPipelineHealthy: true,
-      syncCapabilities: { depegPipeline: true },
       storeContracts: stores,
     });
     const metadata = JSON.parse(result.metadata ?? "{}");
@@ -441,7 +424,6 @@ describe("computeDepegResolver", () => {
       slot: "quarter-hour",
       stablecoinsCacheSafe: false,
       depegPipelineHealthy: true,
-      syncCapabilities: { depegPipeline: true },
       storeContracts: stores,
     });
 
@@ -471,7 +453,6 @@ describe("computeDepegResolver", () => {
       slot: "quarter-hour",
       stablecoinsCacheSafe: true,
       depegPipelineHealthy: true,
-      syncCapabilities: { depegPipeline: true },
       storeContracts: stores,
     });
     const metadata = JSON.parse(result.metadata ?? "{}");
@@ -543,7 +524,6 @@ describe("computeDepegResolver", () => {
       slot: "quarter-hour",
       stablecoinsCacheSafe: true,
       depegPipelineHealthy: true,
-      syncCapabilities: { depegPipeline: true },
       storeContracts: stores,
     });
 
@@ -599,7 +579,6 @@ describe("computeDepegResolver", () => {
       slot: "quarter-hour",
       stablecoinsCacheSafe: true,
       depegPipelineHealthy: true,
-      syncCapabilities: { depegPipeline: true },
       storeContracts: stores,
     });
 
@@ -626,11 +605,12 @@ describe("computeDepegResolver", () => {
     stores.loadPredictionErrata = vi.fn(async () => [
       {
         id: 99,
+        state: "invalidated" as const,
         publicPredictionId: 7,
         incidentKey: sealed.incidentKey,
         eventId: 42,
         assessmentId: 70,
-        reason: "event_identity_error",
+        reason: "event_identity_error" as const,
         operatorNote: "Source event was repaired after first publication",
         replacementAssessmentId: null,
         replacementRowHash: null,
@@ -666,7 +646,6 @@ describe("computeDepegResolver", () => {
       slot: "quarter-hour",
       stablecoinsCacheSafe: true,
       depegPipelineHealthy: true,
-      syncCapabilities: { depegPipeline: true },
       storeContracts: stores,
     });
     const payload = readDdrSnapshotPayload(db);
@@ -730,7 +709,6 @@ describe("computeDepegResolver", () => {
       slot: "quarter-hour",
       stablecoinsCacheSafe: true,
       depegPipelineHealthy: true,
-      syncCapabilities: { depegPipeline: true },
       storeContracts: stores,
     });
 
@@ -773,7 +751,6 @@ describe("computeDepegResolver", () => {
       nowSec: NOW_SEC,
       ddrRunId: "ddr:quarter-hour:1779984600:test",
       runAt: NOW_SEC,
-      syncCapabilities: { depegPipeline: true },
     });
 
     const sealInput = stores.sealPublicPrediction.mock.calls[0]?.[1];
@@ -836,7 +813,6 @@ describe("computeDepegResolver", () => {
       nowSec: NOW_SEC,
       ddrRunId: "ddr:quarter-hour:1779984600:test",
       runAt: NOW_SEC,
-      syncCapabilities: { depegPipeline: true },
     });
 
     const sealInput = stores.sealPublicPrediction.mock.calls[0]?.[1];
@@ -886,7 +862,6 @@ describe("computeDepegResolver", () => {
       nowSec: NOW_SEC,
       ddrRunId: "ddr:quarter-hour:1779984600:test",
       runAt: NOW_SEC,
-      syncCapabilities: { depegPipeline: true },
     });
 
     expect(result).toMatchObject({ lockedCount: 0, noCallCount: 0, pendingCount: 1 });
@@ -959,7 +934,6 @@ describe("computeDepegResolver", () => {
       nowSec: NOW_SEC,
       ddrRunId: "ddr:quarter-hour:1779984600:test",
       runAt: NOW_SEC,
-      syncCapabilities: { depegPipeline: true },
     });
 
     expect(result.lockedCount).toBe(1);
@@ -1012,7 +986,6 @@ describe("computeDepegResolver", () => {
       nowSec: NOW_SEC,
       ddrRunId: "ddr:quarter-hour:1779984600:test",
       runAt: NOW_SEC,
-      syncCapabilities: { depegPipeline: true },
     });
 
     expect(result.lockedCount).toBe(0);
@@ -1110,7 +1083,6 @@ describe("computeDepegResolver", () => {
       slot: "quarter-hour" as const,
       stablecoinsCacheSafe: true,
       depegPipelineHealthy: true,
-      syncCapabilities: { depegPipeline: true },
     };
 
     // First run: the new quarantined id alerts and records the marker.

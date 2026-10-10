@@ -14,14 +14,6 @@ export type DepegTableSortKey =
   | "dexAgrees"
   | "trackingSpanDays";
 
-export function rowAccentClass(row: DepegTrackerRow): string {
-  if (row.coin.activeDepeg) return "border-l-[3px] border-l-red-500";
-  if (row.pendingIncident) return "border-l-[3px] border-l-amber-500";
-  const band = row.dews?.band ?? "CALM";
-  if (band === "WARNING" || band === "DANGER") return "border-l-[3px] border-l-orange-500";
-  return "";
-}
-
 type DepegFieldKey = Exclude<DepegTableSortKey, "__attention">;
 
 const fieldExtractors: Record<DepegFieldKey, (r: DepegTrackerRow) => number | null> = {

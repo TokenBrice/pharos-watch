@@ -2,6 +2,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { round1 } from "@shared/lib/math";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
+import { getPsiBandStreak, type PsiHistoryPointLike } from "@shared/lib/psi-view-model";
 import { SECONDS } from "../../lib/time-constants";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
 import {
@@ -93,6 +94,7 @@ export async function collectHistoricalContext(
   ctx: CollectorContext,
   displayScore: number | null,
   displayBand: string | null,
+  currentComputedAt: number | null,
   biggestSupplyChange: DigestInputData["biggestSupplyChange"],
 ): Promise<CollectorResult<DigestInputData["historicalContext"]>> {
   const degradedReasons: string[] = [];
@@ -109,7 +111,7 @@ export async function collectHistoricalContext(
       ? Math.round((ctx.todayTs - oldestDigest.oldest) / SECONDS.ONE_DAY)
       : 0;
 
-    if (displayScore != null && displayBand && (histDepth?.cnt ?? 0) > 30) {
+    if (displayScore != null && displayBand && currentComputedAt != null && (histDepth?.cnt ?? 0) > 30) {
       const digestPrecedent = await ctx.db
         .prepare(
           `SELECT generated_at,
@@ -144,17 +146,12 @@ export async function collectHistoricalContext(
 
       const bandHistory = await ctx.db
         .prepare(
-          "SELECT computed_at, band FROM stability_index WHERE computed_at <= ? ORDER BY computed_at DESC LIMIT 90",
+          "SELECT computed_at AS date, score, band FROM stability_index WHERE computed_at <= ? ORDER BY computed_at DESC LIMIT 90",
         )
-        .bind(ctx.todayTs)
-        .all<{ computed_at: number; band: string }>();
+        .bind(currentComputedAt)
+        .all<PsiHistoryPointLike>();
 
-      let psiBandStreak = 0;
-      for (const row of bandHistory.results ?? []) {
-        if (row.band === displayBand) psiBandStreak++;
-        else break;
-      }
-      if (psiBandStreak === 0) psiBandStreak = 1;
+      const psiBandStreak = getPsiBandStreak(bandHistory.results ?? [], currentComputedAt, displayBand);
 
       let supplyMoverContext: NonNullable<DigestInputData["historicalContext"]>["supplyMoverContext"] = null;
       if (biggestSupplyChange) {

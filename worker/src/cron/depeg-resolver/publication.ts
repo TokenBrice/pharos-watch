@@ -22,7 +22,7 @@ import {
 } from "../depeg-resolver-v2-contracts";
 import type { DdrDiagnosticResponse, DdrEventDbRow } from "./types";
 import { computeLockTiming } from "./incident-state";
-import { buildSealPayload, buildV2PublicationBasePayload, normalizeErratumRecord } from "./public-projection";
+import { buildSealPayload, buildV2PublicationBasePayload } from "./public-projection";
 import {
   firstPublicationByPredictionId,
   publicPredictionIdOf,
@@ -60,7 +60,6 @@ export async function sealEligibleLocks(input: {
   nowSec: number;
   ddrRunId: string;
   runAt: number;
-  syncCapabilities: Record<string, unknown>;
 }): Promise<{ sealed: DdrSealedPublicPrediction[]; lockedCount: number; noCallCount: number; pendingCount: number }> {
   const sealed = [...input.existingSealed];
   const sealedByKey = sealedByIncident(sealed);
@@ -95,7 +94,6 @@ export async function sealEligibleLocks(input: {
         healthStatus: "healthy",
         action: "pending",
         reason: null,
-        syncCapabilities: input.syncCapabilities,
         lockTrigger: null,
         forecastReadinessScore: readiness.score,
         forecastReadinessVersion: readiness.version,
@@ -161,7 +159,7 @@ export async function loadErrataForSealedPredictions(input: {
       incidentKeys: input.sealed.map((sealed) => sealed.incidentKey),
     });
     return {
-      errata: rows.map(normalizeErratumRecord).filter((row): row is DdrPredictionErratum => row != null),
+      errata: rows,
       error: null,
     };
   } catch (error) {
@@ -234,7 +232,6 @@ export async function writePublicationBeforeCache(input: {
         healthStatus: "healthy",
         action: "publication_retry_pending",
         reason: formatDdrrFailure(error),
-        syncCapabilities: {},
         lockTrigger: sealed.lockTrigger ?? null,
         forecastReadinessScore: sealed.forecastReadinessScore ?? null,
         forecastReadinessVersion: sealed.forecastReadinessVersion ?? null,

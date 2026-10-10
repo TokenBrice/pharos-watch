@@ -14,23 +14,9 @@
  * scoring updates.
  */
 
-import type { DewsSourceState, PersistedJsonDecodeReason } from "./contracts";
+import type { DewsSourceState } from "./contracts";
 import * as hydration from "./source-state/hydration";
 import type { HydrationContext } from "./source-state/hydration";
-
-interface LoadDewsSourceStateOptions {
-  db: D1Database;
-  nowSec: number;
-  registerSourceFailure: (source: string, error: unknown) => void;
-  registerMalformedPersistedInput: (options: {
-    source: string;
-    context: string;
-    stablecoinId: string;
-    updatedAt?: number | null;
-    reason: PersistedJsonDecodeReason;
-    degradesRun: boolean;
-  }) => void;
-}
 
 type HydrationEvent =
   | {
@@ -43,97 +29,9 @@ type HydrationEvent =
       options: Parameters<HydrationContext["registerMalformedPersistedInput"]>[0];
     };
 
-type ProjectedSourceState = Omit<DewsSourceState, "sourceCoverage" | "dependencyDiagnostics">;
-
-type HydrationProjection = {
-  state: Partial<ProjectedSourceState>;
-  coverage: Record<string, number>;
-  dependencyDiagnostics?: Partial<DewsSourceState["dependencyDiagnostics"]>;
-};
-
-function defineHydration<DescriptorKey extends string, Result, StateKey extends keyof Result & keyof ProjectedSourceState>(
-  key: DescriptorKey,
-  loader: (ctx: HydrationContext) => Promise<Result>,
-  stateKeys: readonly StateKey[],
-  projectCoverage: (result: Result) => Record<string, number>,
-  projectDependencyDiagnostics?: (result: Result) => Partial<DewsSourceState["dependencyDiagnostics"]>,
-) {
-  return {
-    key,
-    async hydrate(ctx: HydrationContext): Promise<HydrationProjection> {
-      const result = await loader(ctx);
-      return {
-        state: Object.fromEntries(stateKeys.map((stateKey) => [stateKey, result[stateKey]])) as Partial<ProjectedSourceState>,
-        coverage: projectCoverage(result),
-        dependencyDiagnostics: projectDependencyDiagnostics?.(result),
-      };
-    },
-  };
-}
-
-
-const DEWS_HYDRATION_REGISTRY = [
-  defineHydration(
-    "dexLiquidity",
-    hydration.hydrateDexLiquidity,
-    ["dexLiqRows", "dexLiqMap", "dexLiqAgeSecById", "dexLiqStaleIds"],
-    (result) => ({
-      dexLiquidity: result.totalRows,
-      dexLiquidityFreshRows: result.freshCount,
-      dexLiquidityStaleRows: result.staleCount,
-      ...(result.freshnessAgeSec != null ? { dexLiquidityAgeSec: result.freshnessAgeSec } : {}),
-    }),
-    (result) => ({ dexLiquidity: result.dependencyDiagnostics }),
-  ),
-  defineHydration(
-    "dexPrices",
-    hydration.hydrateDexPrices,
-    ["dexPriceMap", "dexPriceAgeSecById", "dexPriceStaleIds"],
-    (result) => ({
-      dexPrices: result.trustedCount,
-      ...(result.staleCount != null ? { dexPricesStaleRows: result.staleCount } : {}),
-    }),
-  ),
-  defineHydration("dexLiquidityHistory", hydration.hydrateDexLiquidityHistory,
-    ["liqHist7dMap", "liqHistRowsRead"],
-    (result) => ({ dexLiquidityHistory: result.liqHistRowsRead }),
-  ),
-  defineHydration("blacklistEvents", hydration.hydrateBlacklistEvents, ["blacklistCounts", "blacklistSourceOk"],
-    (result) => ({ blacklistEvents: result.rowsRead }),
-  ),
-  defineHydration(
-    "previousStressSignals",
-    hydration.hydratePreviousStressSignals,
-    ["prevSignals", "prevSignalStaleIds"],
-    (result) => ({ previousStressSignals: result.rowsRead,
-      previousStressSignalsFreshRows: result.prevSignals.size, previousStressSignalsStaleRows: result.prevSignalStaleIds.size }),
-  ),
-  defineHydration(
-    "mintBurn",
-    hydration.hydrateMintBurn,
-    ["mintBurnMap", "mintBurnAgeSecById", "mintBurnStaleIds"],
-    (result) => ({
-      mintBurnHourly: result.rowsRead,
-      mintBurnHourlyFreshRows: result.freshCount,
-      mintBurnHourlyStaleRows: result.staleCount,
-      ...(result.freshnessAgeSec != null ? { mintBurnHourlyAgeSec: result.freshnessAgeSec } : {}),
-    }),
-  ),
-  defineHydration("yieldWarnings", hydration.hydrateYieldWarnings, ["yieldWarnings"],
-    (result) => ({ yieldWarnings: result.rowsRead }),
-  ),
-  defineHydration("yieldRankings", hydration.hydrateYieldRankingsCache,
-    ["yieldSourceRisk", "yieldRankChangeAttribution"],
-    (result) => ({ yieldStructuredRows: result.yieldSourceRisk.size }),
-  ),
-  defineHydration("latestPsiScore", hydration.hydrateLatestPsiScore, ["latestPsiScore"], () => ({}),
-    (result) => ({ psi: result.dependencyDiagnostics }),
-  ),
-] as const;
-
 async function hydrateSource<T>(
   ctx: HydrationContext,
-  descriptor: { hydrate: (ctx: HydrationContext) => Promise<T> },
+  loader: (ctx: HydrationContext) => Promise<T>,
 ): Promise<{ result: T; events: HydrationEvent[] }> {
   const events: HydrationEvent[] = [];
   const bufferedCtx: HydrationContext = {
@@ -145,7 +43,7 @@ async function hydrateSource<T>(
       events.push({ kind: "malformedPersistedInput", options });
     },
   };
-  return { result: await descriptor.hydrate(bufferedCtx), events };
+  return { result: await loader(bufferedCtx), events };
 }
 
 function replayHydrationEvents(hydrations: readonly { events: HydrationEvent[] }[], ctx: HydrationContext): void {
@@ -160,38 +58,71 @@ function replayHydrationEvents(hydrations: readonly { events: HydrationEvent[] }
   }
 }
 
-export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): Promise<DewsSourceState> {
-  const ctx: HydrationContext = {
-    db: options.db,
-    nowSec: options.nowSec,
-    registerSourceFailure: options.registerSourceFailure,
-    registerMalformedPersistedInput: options.registerMalformedPersistedInput,
-  };
-
+export async function loadDewsSourceState(ctx: HydrationContext): Promise<DewsSourceState> {
   // These hydrators are D1/cache-only and each owns its degraded fallback
   // handling. Run them concurrently, then replay diagnostics in legacy order
   // so metadata shape is stable even when D1 reads finish out of order.
-  const orderedHydrations = await Promise.all(
-    DEWS_HYDRATION_REGISTRY.map((descriptor) => hydrateSource(ctx, descriptor)),
-  );
+  const orderedHydrations = await Promise.all([
+    hydrateSource(ctx, hydration.hydrateDexLiquidity),
+    hydrateSource(ctx, hydration.hydrateDexPrices),
+    hydrateSource(ctx, hydration.hydrateDexLiquidityHistory),
+    hydrateSource(ctx, hydration.hydrateBlacklistEvents),
+    hydrateSource(ctx, hydration.hydratePreviousStressSignals),
+    hydrateSource(ctx, hydration.hydrateMintBurn),
+    hydrateSource(ctx, hydration.hydrateYieldWarnings),
+    hydrateSource(ctx, hydration.hydrateYieldRankingsCache),
+    hydrateSource(ctx, hydration.hydrateLatestPsiScore),
+  ]);
   replayHydrationEvents(orderedHydrations, ctx);
 
   // Source-coverage keys are emitted in the same order the legacy orchestrator
   // produced them so downstream diagnostics (`Object.assign` consumers) see an
   // identical iteration order. The dex-prices stale-rows key is intentionally
   // omitted on load failure to match legacy behavior.
-  const state: Partial<ProjectedSourceState> = {};
-  const sourceCoverage: Record<string, number> = {};
-  const dependencyDiagnostics: Partial<DewsSourceState["dependencyDiagnostics"]> = {};
-  for (const { result } of orderedHydrations) {
-    Object.assign(state, result.state);
-    Object.assign(sourceCoverage, result.coverage);
-    Object.assign(dependencyDiagnostics, result.dependencyDiagnostics);
-  }
-
+  const [liq, prices, history, blacklist, previous, mintBurn, warnings, rankings, psi] = orderedHydrations;
   return {
-    ...state,
-    sourceCoverage,
-    dependencyDiagnostics,
-  } as DewsSourceState;
+    dexLiqRows: liq.result.dexLiqRows,
+    dexLiqMap: liq.result.dexLiqMap,
+    dexLiqAgeSecById: liq.result.dexLiqAgeSecById,
+    dexLiqStaleIds: liq.result.dexLiqStaleIds,
+    dexPriceMap: prices.result.dexPriceMap,
+    dexPriceAgeSecById: prices.result.dexPriceAgeSecById,
+    dexPriceStaleIds: prices.result.dexPriceStaleIds,
+    liqHist7dMap: history.result.liqHist7dMap,
+    liqHistRowsRead: history.result.liqHistRowsRead,
+    blacklistCounts: blacklist.result.blacklistCounts,
+    blacklistSourceOk: blacklist.result.blacklistSourceOk,
+    prevSignals: previous.result.prevSignals,
+    prevSignalStaleIds: previous.result.prevSignalStaleIds,
+    mintBurnMap: mintBurn.result.mintBurnMap,
+    mintBurnAgeSecById: mintBurn.result.mintBurnAgeSecById,
+    mintBurnStaleIds: mintBurn.result.mintBurnStaleIds,
+    yieldWarnings: warnings.result.yieldWarnings,
+    yieldSourceRisk: rankings.result.yieldSourceRisk,
+    yieldRankChangeAttribution: rankings.result.yieldRankChangeAttribution,
+    latestPsiScore: psi.result.latestPsiScore,
+    sourceCoverage: {
+      dexLiquidity: liq.result.totalRows,
+      dexLiquidityFreshRows: liq.result.freshCount,
+      dexLiquidityStaleRows: liq.result.staleCount,
+      ...(liq.result.freshnessAgeSec != null ? { dexLiquidityAgeSec: liq.result.freshnessAgeSec } : {}),
+      dexPrices: prices.result.trustedCount,
+      ...(prices.result.staleCount != null ? { dexPricesStaleRows: prices.result.staleCount } : {}),
+      dexLiquidityHistory: history.result.liqHistRowsRead,
+      blacklistEvents: blacklist.result.rowsRead,
+      previousStressSignals: previous.result.rowsRead,
+      previousStressSignalsFreshRows: previous.result.prevSignals.size,
+      previousStressSignalsStaleRows: previous.result.prevSignalStaleIds.size,
+      mintBurnHourly: mintBurn.result.rowsRead,
+      mintBurnHourlyFreshRows: mintBurn.result.freshCount,
+      mintBurnHourlyStaleRows: mintBurn.result.staleCount,
+      ...(mintBurn.result.freshnessAgeSec != null ? { mintBurnHourlyAgeSec: mintBurn.result.freshnessAgeSec } : {}),
+      yieldWarnings: warnings.result.rowsRead,
+      yieldStructuredRows: rankings.result.yieldSourceRisk.size,
+    },
+    dependencyDiagnostics: {
+      dexLiquidity: liq.result.dependencyDiagnostics,
+      psi: psi.result.dependencyDiagnostics,
+    },
+  };
 }

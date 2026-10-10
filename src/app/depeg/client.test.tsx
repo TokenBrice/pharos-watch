@@ -3,6 +3,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
+import { makePendingIncident } from "@/components/__tests__/depeg.test-support";
 
 import { DepegClient } from "./client";
 import {
@@ -179,7 +180,7 @@ describe("DepegClient", () => {
           { id: 1, stablecoinId: "coin-a", symbol: "A", endedAt: null },
           { id: 2, stablecoinId: "coin-b", symbol: "B", endedAt: NOW_SEC + 100 },
         ],
-        pending: [{ stablecoinId: "coin-b", symbol: "B", direction: "below", firstSeenAt: NOW_SEC }],
+        pending: [makePendingIncident({ stablecoinId: "coin-b", symbol: "B", firstSeenAt: NOW_SEC })],
       },
       params: { peg: "EUR" },
     });
@@ -202,7 +203,7 @@ describe("DepegClient", () => {
     mountDepegRoute({
       coins: [makeCoin("coin-a", "A"), makeCoin("coin-b", "B")],
       events: {
-        pending: [{ stablecoinId: "coin-b", symbol: "B", direction: "below", firstSeenAt: NOW_SEC }],
+        pending: [makePendingIncident({ stablecoinId: "coin-b", symbol: "B", firstSeenAt: NOW_SEC })],
       },
     });
 

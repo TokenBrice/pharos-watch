@@ -89,12 +89,13 @@ describe("P0-18 daily digest data correctness", () => {
           psi_band: "STEADY",
         },
       },
-      { match: "ORDER BY computed_at DESC LIMIT 90", rows: [{ computed_at: NOW, band: "BEDROCK" }] },
+      { match: "ORDER BY computed_at DESC LIMIT 90", rows: [{ date: NOW, score: 91, band: "BEDROCK" }] },
     ];
     const result = await collectHistoricalContext(
       makeCollectorCtx(mockD1(baseTables)),
       91,
       "BEDROCK",
+      NOW,
       null,
     );
 
@@ -107,6 +108,7 @@ describe("P0-18 daily digest data correctness", () => {
       ))),
       91,
       "BEDROCK",
+      NOW,
       null,
     );
     expect(noPrecedent.value?.psiPrecedent).toBeNull();
