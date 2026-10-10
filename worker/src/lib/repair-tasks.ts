@@ -513,7 +513,7 @@ async function listDueRepairRunnerTasks(
        FROM worker_repair_tasks
        WHERE ((${dueClaimableWhereSql()}) OR (${staleClaimWhereSql()}))
          AND kind = ?
-       ORDER BY priority ASC, created_at ASC, task_id ASC
+       ORDER BY priority ASC, last_attempt_at ASC, attempt_count ASC, created_at ASC, task_id ASC
        LIMIT ?`,
     )
     .bind(timestamp, timestamp, DDR_REPAIR_TASK_KIND, DDR_REPAIR_RUNNER_BATCH_LIMIT_V1)

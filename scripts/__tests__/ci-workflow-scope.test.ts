@@ -9,6 +9,24 @@ function readRepoFile(path: string): string {
 }
 
 describe("CI workflow scope", () => {
+  it("restricts auxiliary production publishers to main for manual and scheduled runs", () => {
+    const scenarios = parseYaml(readRepoFile(".github/workflows/dependency-scenarios-refresh.yml"));
+    const map = parseYaml(readRepoFile(".github/workflows/safety-map-refresh.yml"));
+    for (const workflow of [scenarios, map]) {
+      expect(workflow.on).toHaveProperty("workflow_dispatch");
+      expect(workflow.on.schedule.length).toBeGreaterThan(0);
+    }
+    // Main-only, without an event restriction: main dispatches and schedules
+    // remain admitted, while feature-branch dispatches cannot get credentials.
+    for (const job of [scenarios.jobs.scenarios, map.jobs.plan]) {
+      expect(job.if).toBe("${{ github.ref == 'refs/heads/main' }}");
+    }
+    expect(map.jobs.render.needs).toBe("plan");
+    expect(map.jobs.render.if).toBe(
+      "${{ github.ref == 'refs/heads/main' && needs.plan.outputs.should_render == 'true' }}",
+    );
+  });
+
   it("builds Pages without the Next compiler cache and consolidates artifact checks", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/pages-release.yml"));
     const steps = workflow.jobs["pages-release"].steps as Array<{

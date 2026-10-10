@@ -363,7 +363,45 @@ export function parseDataMigrationMode(sql: string): string | null {
 }
 
 export function stripSqlComments(sql: string): string {
-  return sql.replace(/\/\*[\s\S]*?\*\//g, "").replace(/--.*$/gm, "");
+  let result = "";
+  let quote = "";
+  for (let index = 0; index < sql.length; index += 1) {
+    const char = sql[index];
+    if (quote) {
+      result += char;
+      if (char === quote) {
+        // SQL strings and quoted identifiers escape their delimiter by doubling it.
+        if (quote !== "]" && sql[index + 1] === quote) {
+          result += sql[index + 1];
+          index += 1;
+        } else {
+          quote = "";
+        }
+      }
+      continue;
+    }
+    if (char === "'" || char === '"' || char === "`" || char === "[") {
+      quote = char === "[" ? "]" : char;
+      result += char;
+    } else if (char === "-" && sql[index + 1] === "-") {
+      result += " ";
+      index += 2;
+      while (index < sql.length && sql[index] !== "\n" && sql[index] !== "\r") index += 1;
+      if (index < sql.length) result += sql[index];
+    } else if (char === "/" && sql[index + 1] === "*") {
+      // Keep token boundaries and newlines; DELETE/* note */FROM is still DML.
+      result += " ";
+      index += 2;
+      while (index < sql.length && !(sql[index] === "*" && sql[index + 1] === "/")) {
+        if (sql[index] === "\n" || sql[index] === "\r") result += sql[index];
+        index += 1;
+      }
+      if (index < sql.length) index += 1;
+    } else {
+      result += char;
+    }
+  }
+  return result;
 }
 
 export function findUnsafeRolloutStatements(sql: string): string[] {

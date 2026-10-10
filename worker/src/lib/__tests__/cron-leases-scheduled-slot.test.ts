@@ -1113,7 +1113,7 @@ describe("runScheduledSlotWithFence", () => {
         return {
           bind: (...args: unknown[]) => {
             const bound = statement.bind(...args);
-            const isHeartbeat = sql.includes("UPDATE cron_slot_executions") && sql.includes("SET updated_at = ?");
+            const isHeartbeat = sql.includes("UPDATE cron_slot_executions") && sql.includes("SET updated_at = MAX(updated_at, ?)");
             if (!isHeartbeat || heartbeatBinds++ > 0) return bound;
             return {
               run: () =>

@@ -9,6 +9,8 @@ This document defines the production deploy flow, mandatory local pre-push readi
 ## Core Rules
 
 1. Pull requests into protected `main` must pass the aggregate validation gate. The resulting merge push triggers production deployment, while a separate Pages-only rebuild workflow refreshes the static export daily. Manual production dispatch is main-only.
+
+   Auxiliary publication follows the same rule: the Dependency Scenarios `scenarios` job and Safety Map `plan` and `render` jobs require `refs/heads/main` before checkout or credential use. Non-main manual dispatch skips those jobs; main dispatch and scheduled execution remain enabled, with Safety Map rendering still conditional on `should_render`.
 2. Agents and routine maintenance default to the current `main` checkout. Do not create a branch, worktree, or PR unless the maintainer explicitly asks for one. A request to push, publish, release, or take work to production is authorization to use the required protected-main branch/PR path; it is not authorization for a direct `main` push.
 3. Merge release pull requests with a merge commit (`gh pr merge --merge`), never with squash or rebase merge. Before declaring the release merged, verify the resulting `main` commit has two parents and contains the recorded PR head SHA.
 4. Heavy feature/refactor work may use a dedicated worktree branch when the maintainer chooses that workflow. Focused checks provide authoring feedback; full local readiness is required before every push. GitHub Actions owns the authoritative protected release gate.
@@ -76,8 +78,8 @@ Tracked ownership handoffs and source-attribution corrections use `worker/script
 1. Deploy the read-path and hourly-purge protections first.
 2. Arm the writer pause guard.
 3. Verify `sync-yield-data` is not actively leased.
-4. Export the targeted parent/source rows.
-5. Rehearse the delete + restore drill on a local throwaway SQLite dataset.
+4. Export the targeted parent/source rows from both hourly and daily tiers in a version-2 artifact; review the separate tier counts.
+5. Rehearse the delete + restore drill on a local throwaway SQLite dataset, including daily-only rows older than hourly retention, and compare complete rows in both tables.
 6. Run the bounded production cleanup only after the restore drill passes.
 7. Verify the parent/source rows stay absent after the next hourly writer cycle.
 

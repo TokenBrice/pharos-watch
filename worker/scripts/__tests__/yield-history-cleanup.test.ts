@@ -61,6 +61,8 @@ function seedDb(path: string): void {
     `);
     insertDaily.run("usde-ethena", "66985a81-9c51-46ca-9977-42b4fe7bc6df", 1_699_968_000, 1_700_000_000, 1, 5.1, 4.9, 0.2, 1.0, 10_000_000, "defillama", null, "Ethena staking (sUSDe)", "nav-appreciation", "gen-usde-1", "published", 55.2, 90.1, 0.012, '{"apy30d":5.1}');
     insertDaily.run("susde-ethena", "onchain:susde-ethena", 1_699_968_000, 1_700_001_080, 1, 5.3, null, null, null, 10_200_000, "onchain", null, "Ethena staking (sUSDe)", "nav-appreciation", "gen-susde-1", "published", 56.1, 91.0, 0.015, '{"apy30d":5.3}');
+    // This daily-only observation outlived the hourly retention window.
+    insertDaily.run("usds-sky", "d8c4eff5-c8a9-46fc-a888-057c4c668e72", 1_680_048_000, 1_680_080_000, 0, 3.8, 3.5, 0.3, 1.02, 7_000_000, "defillama", '["reward-heavy"]', "Sky Savings Rate (sUSDS)", "lending-vault", "gen-usds-old", "published", 40.1, 87.2, 0.016, '{"apy30d":3.8}');
 
     writeFileSync(path, db.serialize());
   } finally {
@@ -102,6 +104,7 @@ describe("yield-history-cleanup", () => {
     tempPaths.push(path);
     seedDb(path);
     const before = readAllRows(path);
+    const beforeDaily = readAllRows(path, "yield_history_daily");
     const artifact = createYieldHistoryCleanupArtifact(loadCleanupRowsFromSqlite(path), "ops");
     const restorePath = path.replace("test.sqlite", "restore.json");
     writeFileSync(restorePath, JSON.stringify(artifact));
@@ -128,12 +131,17 @@ describe("yield-history-cleanup", () => {
         expect(readAllRows(path)).toEqual(before);
         await expect(runYieldHistoryCleanupCli([...args, "--restore", restorePath], dependencies)).rejects.toThrow(reason);
         expect(readAllRows(path)).toEqual(before);
+        expect(readAllRows(path, "yield_history_daily")).toEqual(beforeDaily);
       } else {
         await runYieldHistoryCleanupCli(args, dependencies);
         expect(readAllRows(path)).toEqual(before.filter((row) =>
           row.stablecoin_id === "susde-ethena" || row.source_key === "unrelated-pool"));
         await runYieldHistoryCleanupCli([...args, "--restore", restorePath], dependencies);
         expect(readAllRows(path)).toEqual(before);
+        expect(readAllRows(path, "yield_history_daily")).toEqual(beforeDaily);
+        expect(dependencies.printJson).toHaveBeenLastCalledWith(expect.objectContaining({
+          restored: { hourly: 3, daily: 2 },
+        }));
       }
     } finally {
       sqlite.close();
@@ -320,14 +328,15 @@ describe("yield-history-cleanup", () => {
     seedDb(path);
 
     const rows = loadCleanupRowsFromSqlite(path);
-    const summary = summarizeYieldHistoryCleanupRows(rows);
+    const summary = summarizeYieldHistoryCleanupRows(rows.hourlyRows);
 
     expect(summary.totalRows).toBe(3);
     expect(summary.byStablecoin["usde-ethena"]).toBe(2);
     expect(summary.byStablecoin["usds-sky"]).toBe(1);
+    expect(summarizeYieldHistoryCleanupRows(rows.dailyRows).totalRows).toBe(2);
   });
 
-  it("supports a delete and restore drill", () => {
+  it("round-trips complete hourly and daily-only rows through delete and restore", () => {
     const path = createTempDbPath();
     tempPaths.push(path);
     seedDb(path);
@@ -344,22 +353,31 @@ describe("yield-history-cleanup", () => {
       entireDailyTable.filter((row) => row.stablecoin_id === "susde-ethena"),
     );
 
-    restoreCleanupRowsToSqlite(path, artifact.rows);
+    restoreCleanupRowsToSqlite(path, artifact);
     expect(readAllRows(path)).toEqual(entireTable);
-    expect(artifact.rowCount).toBe(beforeRows.length);
+    expect(readAllRows(path, "yield_history_daily")).toEqual(entireDailyTable);
+    expect(artifact.version).toBe(2);
+    expect(artifact.hourlyRowCount).toBe(beforeRows.hourlyRows.length);
+    expect(artifact.dailyRowCount).toBe(beforeRows.dailyRows.length);
     expect(artifact.operator).toBe("test-operator");
   });
 
-  it("rejects a truncated restore artifact before changing sqlite", async () => {
+  it.each(["hourly-field", "daily-field", "daily-count", "daily-tier", "legacy-version"])("rejects a malformed %s restore artifact before changing either tier", async (fault) => {
     const path = createTempDbPath();
     tempPaths.push(path);
     seedDb(path);
     const before = readAllRows(path);
+    const beforeDaily = readAllRows(path, "yield_history_daily");
     const artifact = createYieldHistoryCleanupArtifact(loadCleanupRowsFromSqlite(path), "ops");
-    const truncated = structuredClone(artifact) as unknown as {
-      rows: Array<Record<string, unknown>>;
+    const truncated = structuredClone(artifact) as unknown as Record<string, unknown> & {
+      hourlyRows: Array<Record<string, unknown>>;
+      dailyRows: Array<Record<string, unknown>>;
     };
-    delete truncated.rows[0]!.apy;
+    if (fault === "hourly-field") delete truncated.hourlyRows[0]!.apy;
+    if (fault === "daily-field") delete truncated.dailyRows[0]!.snapshot_date;
+    if (fault === "daily-count") truncated.dailyRows.pop();
+    if (fault === "daily-tier") delete (truncated as Record<string, unknown>).dailyRows;
+    if (fault === "legacy-version") truncated.version = 1;
     const restorePath = path.replace("test.sqlite", "truncated.json");
     writeFileSync(restorePath, JSON.stringify(truncated));
 
@@ -369,12 +387,17 @@ describe("yield-history-cleanup", () => {
       "--restore",
       restorePath,
       "--execute",
-    ], { printJson: vi.fn() })).rejects.toThrow(/apy/);
+    ], { printJson: vi.fn() })).rejects.toThrow();
+    await expect(runYieldHistoryCleanupCli([
+      "--restore", restorePath, "--execute", "--confirm", "yield-history-cleanup",
+    ], { printJson: vi.fn() })).rejects.toThrow();
     expect(readAllRows(path)).toEqual(before);
+    expect(readAllRows(path, "yield_history_daily")).toEqual(beforeDaily);
+    expect(createWorkerD1Client).not.toHaveBeenCalled();
   });
 
   it("rejects drifted targets and non-finite restore numbers", () => {
-    const artifact = createYieldHistoryCleanupArtifact([], "ops");
+    const artifact = createYieldHistoryCleanupArtifact({ hourlyRows: [], dailyRows: [] }, "ops");
     expect(() => parseYieldHistoryCleanupArtifact({
       ...artifact,
       targets: [{ stablecoinId: "unexpected", sourceKeys: [] }],
@@ -386,7 +409,7 @@ describe("yield-history-cleanup", () => {
     const withRows = createYieldHistoryCleanupArtifact(loadCleanupRowsFromSqlite(path), "ops");
     expect(() => parseYieldHistoryCleanupArtifact({
       ...withRows,
-      rows: [{ ...withRows.rows[0]!, apy: Number.POSITIVE_INFINITY }, ...withRows.rows.slice(1)],
+      hourlyRows: [{ ...withRows.hourlyRows[0]!, apy: Number.POSITIVE_INFINITY }, ...withRows.hourlyRows.slice(1)],
     })).toThrow(/Infinity/);
   });
 });

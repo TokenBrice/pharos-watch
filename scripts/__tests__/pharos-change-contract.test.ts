@@ -908,6 +908,16 @@ describe("W2.7 opaque shell guards", () => {
     ["bash -c", "bash -c 'wrangler deploy'"],
     ["zsh -c", "zsh -c 'worker/migrations/0240_guard.sql'"],
     ["pipe to sh", "printf guarded | sh -c 'git clean -fd'"],
+    ["stdin-fed reset", "printf '%s\\n' 'git reset --hard HEAD' | sh"],
+    ["stdin-fed deploy", "printf '%s\\n' 'wrangler pages deploy out' | sh"],
+    ["stdin-fed remote D1 mutation", "printf '%s\\n' 'wrangler d1 execute stablecoin-db --remote --command \"DELETE FROM cache\"' | sh"],
+    ["wrapped stdin shell", "printf '%s\\n' 'git reset --hard HEAD' | env CI=1 command sh"],
+    ["wrapped stdin producer", "env CI=1 printf '%s\\n' 'git reset --hard HEAD' | nice -n 2 bash"],
+    ["dash stdin shell", "echo 'git reset --hard HEAD' | /bin/dash"],
+    ["multi-stage stdin pipeline", "printf '%s\\n' 'git reset --hard HEAD' | cat | exec sh"],
+    ["opaque guarded stdin producer", "cat 'git reset --hard HEAD' | sh"],
+    ["split printf script", "printf '%s %s\\n' git 'reset --hard HEAD' | sh"],
+    ["nested stdin pipeline", "sh -c \"printf '%s\\\\n' 'git reset --hard HEAD' | env sh\""],
     ["background separator", "echo ready & wrangler deploy"],
     ["xargs sh", "printf guarded | xargs sh -c 'git reset --hard HEAD'"],
   ] as const;
@@ -918,6 +928,18 @@ describe("W2.7 opaque shell guards", () => {
     expect(requireBlockingReason(output)).toContain("opaque shell construct around a guarded command; run it directly");
   });
 
+  it.each([
+    "printf '%s\\n' 'git reset --hard HEAD' | sh",
+    "printf '%s\\n' 'wrangler pages deploy out' | sh",
+    "printf '%s\\n' 'wrangler d1 execute stablecoin-db --remote --command \"DELETE FROM cache\"' | env sh",
+  ])("denies guarded stdin scripts in permission requests: %s", (command) => {
+    expect(buildPermissionRequestHookOutput({ tool_input: { command } })).toMatchObject({
+      hookSpecificOutput: {
+        decision: { behavior: "deny", message: expect.stringContaining("opaque shell construct around a guarded command") },
+      },
+    });
+  });
+
   const allowedOpaqueCommands = [
     ["command substitution", "echo $(git rev-parse HEAD)"],
     ["backticks", "echo `git status --short`"],
@@ -926,6 +948,11 @@ describe("W2.7 opaque shell guards", () => {
     ["bash -c", "bash -c 'git status --short'"],
     ["zsh -c", "zsh -c 'git status --short'"],
     ["pipe to sh", "printf status | sh"],
+    ["wrapped stdin shell", "printf status | env CI=1 command sh"],
+    ["stdin-fed read-only git", "printf '%s\\n' 'git status --short' | sh"],
+    ["stdin-fed deployment help", "printf '%s\\n' 'wrangler deploy --help' | sh"],
+    ["stdin-fed literal example", "printf '%s\\n' \"echo 'git reset --hard HEAD'\" | sh"],
+    ["unrelated pipeline keyword", "echo 'git reset --hard HEAD'; printf status | sh"],
     ["background separator", "git status --short & echo done"],
     ["xargs sh", "printf status | xargs sh"],
     ["background keyword argument", "echo ready & echo deploy"],

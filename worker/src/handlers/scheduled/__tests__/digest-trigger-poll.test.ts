@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 vi.mock("../../../cron/daily-digest", () => ({
   generateDailyDigest: vi.fn(),
@@ -76,11 +77,34 @@ describe("runDigestTriggerPollSlot", () => {
   let runLeasedCron: ReturnType<typeof vi.fn>;
   let errorSpy: ReturnType<typeof vi.spyOn>;
   let warnSpy: ReturnType<typeof vi.spyOn>;
+  const fixtures = createLatestSchemaFixtureTracker();
+  let fixture = fixtures.open();
+  let intentWrites: DigestForceRunIntent[];
 
   beforeEach(() => {
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     runLeasedCron = vi.fn();
+    fixture = fixtures.open();
+    intentWrites = [];
+    const prepare = fixture.db.prepare.bind(fixture.db);
+    vi.spyOn(fixture.db, "prepare").mockImplementation((sql) => {
+      const statement = prepare(sql);
+      if (sql.startsWith("UPDATE cache SET value")) {
+        const bind = statement.bind.bind(statement);
+        vi.spyOn(statement, "bind").mockImplementation((...values) => {
+          const bound = bind(...values);
+          const run = bound.run.bind(bound);
+          vi.spyOn(bound, "run").mockImplementation(async () => {
+            const result = await run();
+            if (result.meta.changes === 1) intentWrites.push(JSON.parse(values[0] as string));
+            return result;
+          });
+          return bound;
+        });
+      }
+      return statement;
+    });
     vi.mocked(buildTelegramCreds).mockReturnValue(null);
     vi.mocked(buildTwitterCreds).mockReturnValue(null);
     vi.mocked(resumeDailyDigestDelivery).mockResolvedValue({ kind: "no-publishable-digest" });
@@ -107,17 +131,27 @@ describe("runDigestTriggerPollSlot", () => {
     vi.useRealTimers();
     errorSpy.mockRestore();
     warnSpy.mockRestore();
+    vi.restoreAllMocks();
+    fixtures.closeAll();
   });
 
   function latestIntentWrite(): DigestForceRunIntent | null {
+    if (intentWrites.length > 0) return intentWrites[intentWrites.length - 1];
     const calls = vi.mocked(setCache).mock.calls.filter(([, key]) => key === DIGEST_FORCE_RUN_CACHE_KEY);
     const value = calls[calls.length - 1]?.[2];
     return value ? JSON.parse(value) as DigestForceRunIntent : null;
   }
 
+  function queueIntent(intent: DigestForceRunIntent): void {
+    const value = JSON.stringify(intent);
+    fixture.sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(DIGEST_FORCE_RUN_CACHE_KEY, value, intent.requestedAt);
+    vi.mocked(getCache).mockResolvedValueOnce({ value, updatedAt: intent.requestedAt });
+  }
+
   function buildRuntime(): ScheduledRuntimeContext {
     return makeScheduledRuntime({
-      db: {} as D1Database,
+      db: fixture.db as D1Database,
       env: { ANTHROPIC_API_KEY: "anthropic-key" } as ScheduledRuntimeContext["env"],
       cron: "*/5 * * * *",
       scheduleKey: "digestTriggerPoll" as ScheduledRuntimeContext["scheduleKey"],
@@ -300,10 +334,7 @@ describe("runDigestTriggerPollSlot", () => {
       accessToken: "tw-token",
       accessTokenSecret: "tw-token-secret",
     });
-    vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify(buildIntent("manual-digest-abc")),
-      updatedAt: 1_700_000_000,
-    });
+    queueIntent(buildIntent("manual-digest-abc"));
     runLeasedCron.mockImplementationOnce(async (_job, fn) => {
       await fn(new AbortController().signal, async () => {});
       return { status: "ok", itemCount: 1, metadata: "" } as CronResult;
@@ -324,11 +355,11 @@ describe("runDigestTriggerPollSlot", () => {
     });
     expect(digestArgs[3]).toBe(true);
 
-    expect(deleteCache).toHaveBeenCalledWith(expect.anything(), DIGEST_FORCE_RUN_CACHE_KEY);
+    expect(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(DIGEST_FORCE_RUN_CACHE_KEY)).toBeUndefined();
     expect(latestIntentWrite()).toMatchObject({
       requestId: "manual-digest-abc",
       state: "succeeded",
-      attempts: 0,
+      attempts: 1,
       lastError: null,
     });
     expect(setCache).toHaveBeenCalledWith(
@@ -359,10 +390,7 @@ describe("runDigestTriggerPollSlot", () => {
   });
 
   it("preserves the intent when the daily-digest lease is skipped_locked", async () => {
-    vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify(buildIntent("manual-digest-locked")),
-      updatedAt: 1_700_000_000,
-    });
+    queueIntent(buildIntent("manual-digest-locked"));
     runLeasedCron.mockResolvedValueOnce({ status: "skipped_locked", metadata: "" } as CronResult);
 
     await runDigestTriggerPollSlot(buildRuntime());
@@ -390,11 +418,9 @@ describe("runDigestTriggerPollSlot", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(1_800_000_000 * 1000));
     const firstIntent = buildIntent("manual-digest-transient");
-    vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify(firstIntent),
-      updatedAt: firstIntent.requestedAt,
-    });
-    runLeasedCron.mockRejectedValueOnce(new Error("network timeout"));
+    queueIntent(firstIntent);
+    vi.mocked(generateDailyDigest).mockRejectedValueOnce(new Error("network timeout"));
+    runLeasedCron.mockImplementation(async (_job, fn) => fn(new AbortController().signal, async () => {}));
 
     await runDigestTriggerPollSlot(buildRuntime());
 
@@ -411,11 +437,8 @@ describe("runDigestTriggerPollSlot", () => {
     expect(deleteCache).not.toHaveBeenCalled();
 
     vi.setSystemTime(new Date((retryOne?.nextAttemptAt ?? 0) * 1000));
-    vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify(retryOne),
-      updatedAt: retryOne?.nextAttemptAt ?? 0,
-    });
-    runLeasedCron.mockRejectedValueOnce(new Error("D1 unavailable"));
+    queueIntent(retryOne!);
+    vi.mocked(generateDailyDigest).mockRejectedValueOnce(new Error("D1 unavailable"));
 
     await runDigestTriggerPollSlot(buildRuntime());
 
@@ -430,11 +453,8 @@ describe("runDigestTriggerPollSlot", () => {
     );
 
     vi.setSystemTime(new Date((retryTwo?.nextAttemptAt ?? 0) * 1000));
-    vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify(retryTwo),
-      updatedAt: retryTwo?.nextAttemptAt ?? 0,
-    });
-    runLeasedCron.mockRejectedValueOnce(new Error("Anthropic 503"));
+    queueIntent(retryTwo!);
+    vi.mocked(generateDailyDigest).mockRejectedValueOnce(new Error("Anthropic 503"));
 
     await runDigestTriggerPollSlot(buildRuntime());
 
@@ -448,11 +468,9 @@ describe("runDigestTriggerPollSlot", () => {
 
   it("dead-letters a permanent failure immediately", async () => {
     const intent = buildIntent("manual-digest-permanent");
-    vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify(intent),
-      updatedAt: intent.requestedAt,
-    });
-    runLeasedCron.mockRejectedValueOnce(new Error("validation failed: invalid prompt"));
+    queueIntent(intent);
+    vi.mocked(generateDailyDigest).mockRejectedValueOnce(new Error("validation failed: invalid prompt"));
+    runLeasedCron.mockImplementationOnce(async (_job, fn) => fn(new AbortController().signal, async () => {}));
 
     await runDigestTriggerPollSlot(buildRuntime());
 
@@ -466,11 +484,9 @@ describe("runDigestTriggerPollSlot", () => {
   });
 
   it("reports degraded outcome when digest returned status=degraded", async () => {
-    vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify(buildIntent("manual-digest-deg")),
-      updatedAt: 1_700_000_000,
-    });
-    runLeasedCron.mockResolvedValueOnce({ status: "degraded", itemCount: 1, metadata: "" } as CronResult);
+    queueIntent(buildIntent("manual-digest-deg"));
+    vi.mocked(generateDailyDigest).mockResolvedValueOnce({ status: "degraded", itemCount: 1, metadata: "" });
+    runLeasedCron.mockImplementationOnce(async (_job, fn) => fn(new AbortController().signal, async () => {}));
 
     await runDigestTriggerPollSlot(buildRuntime());
 
@@ -490,6 +506,80 @@ describe("runDigestTriggerPollSlot", () => {
       surface: "digest-trigger-poll",
       outcome: "degraded",
     }));
+  });
+
+  it("durably consumes three terminated starts and dead-letters without a fourth generation", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000 * 1000);
+    let intent = buildIntent("manual-digest-crashes");
+    runLeasedCron.mockImplementation(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      queueIntent(intent);
+      let started!: () => void;
+      const generationStarted = new Promise<void>((resolve) => { started = resolve; });
+      vi.mocked(generateDailyDigest).mockImplementationOnce(() => {
+        started();
+        // Model isolate termination: no producer result or post-run settlement.
+        return new Promise<never>(() => {});
+      });
+      void runDigestTriggerPollSlot(buildRuntime());
+      await generationStarted;
+      intent = latestIntentWrite()!;
+      expect(intent).toMatchObject({ state: "running", attempts: attempt });
+      vi.setSystemTime(intent.nextAttemptAt * 1000);
+    }
+
+    queueIntent(intent);
+    await runDigestTriggerPollSlot(buildRuntime());
+    expect(generateDailyDigest).toHaveBeenCalledTimes(MAX_ATTEMPTS);
+    expect(latestIntentWrite()).toMatchObject({ state: "dead_letter", attempts: MAX_ATTEMPTS });
+    expect(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(DIGEST_FORCE_RUN_CACHE_KEY)).toBeDefined();
+  });
+
+  it("does not start or consume an attempt if the durable claim fails", async () => {
+    const intent = buildIntent("manual-digest-write-failure");
+    queueIntent(intent);
+    const prepare = fixture.db.prepare.bind(fixture.db);
+    vi.spyOn(fixture.db, "prepare").mockImplementation((sql) => {
+      if (sql.startsWith("UPDATE cache SET value")) throw new Error("D1 unavailable");
+      return prepare(sql);
+    });
+    runLeasedCron.mockImplementationOnce(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+
+    await runDigestTriggerPollSlot(buildRuntime());
+
+    expect(generateDailyDigest).not.toHaveBeenCalled();
+    expect(resumeDailyDigestDelivery).not.toHaveBeenCalled();
+    expect(JSON.parse(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+      .get(DIGEST_FORCE_RUN_CACHE_KEY)!.value as string)).toEqual(intent);
+    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      surface: "digest-trigger-poll", outcome: "error", processedCount: 0,
+    }));
+  });
+
+  it("does not start a replaced intent or overwrite a newer request during settlement", async () => {
+    const oldIntent = buildIntent("manual-digest-old");
+    const newIntent = buildIntent("manual-digest-new");
+    queueIntent(oldIntent);
+    runLeasedCron.mockImplementationOnce(async (_job, fn) => {
+      fixture.sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?")
+        .run(JSON.stringify(newIntent), DIGEST_FORCE_RUN_CACHE_KEY);
+      return fn(new AbortController().signal, async () => {});
+    });
+    await runDigestTriggerPollSlot(buildRuntime());
+    expect(generateDailyDigest).not.toHaveBeenCalled();
+
+    queueIntent(oldIntent);
+    vi.mocked(generateDailyDigest).mockImplementationOnce(async () => {
+      fixture.sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?")
+        .run(JSON.stringify(newIntent), DIGEST_FORCE_RUN_CACHE_KEY);
+      return { status: "ok", itemCount: 1, metadata: "" };
+    });
+    runLeasedCron.mockImplementationOnce(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+    await runDigestTriggerPollSlot(buildRuntime());
+    expect(JSON.parse(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+      .get(DIGEST_FORCE_RUN_CACHE_KEY)!.value as string)).toEqual(newIntent);
   });
 
   it("resumes a missing weekly recap on Monday after 08:10", async () => {

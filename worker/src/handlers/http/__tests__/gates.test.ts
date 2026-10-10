@@ -358,11 +358,11 @@ describe("evaluateAccessGate", () => {
     warn.mockRestore();
   });
 
-  it("fails closed for donor keys while the rate-limit circuit is open instead of degrading per isolate", async () => {
+  it.each(["donor", "self-serve"])("fails closed for %s keys while the rate-limit circuit is open instead of degrading per isolate", async (tier) => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({
       kind: "valid",
-      key: { ...validKey, id: 9, tier: "donor", rateLimitPerMinute: 10 },
+      key: { ...validKey, id: 9, tier, rateLimitPerMinute: tier === "donor" ? 10 : 30 },
     });
     apiKeyMocks.isApiKeyRateLimitDependencyCircuitOpen.mockReturnValueOnce(true);
     const request = new Request("https://api.pharos.watch/api/stablecoins", {
@@ -376,6 +376,7 @@ describe("evaluateAccessGate", () => {
     } as never);
 
     expect(result.response?.status).toBe(503);
+    expect(result.response?.headers.get("Retry-After")).toBe("60");
     expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).not.toHaveBeenCalled();
     expect(apiKeyMocks.recordApiKeyUsage).not.toHaveBeenCalled();
     expect(parseWarnEvents(warn)).toContainEqual(expect.objectContaining({

@@ -574,7 +574,14 @@ function commandHasOpaqueGuardedConstruct(analysis: ShellCommandAnalysis): boole
   // which lines execute; never let that ambiguity hide a guarded command.
   const hasUnresolvedHereDocBody =
     analysis.unresolvedHereDocBody !== "" && textHasGuardedKeyword(analysis.unresolvedHereDocBody);
-  return hasOpaqueHereDocBody || hasUnresolvedHereDocBody || (
+  const hasGuardedPipedInput = analysis.pipedShellInputs.some((input) => {
+    if (input.script === null) return textHasGuardedKeyword(input.text);
+    const scriptAnalysis = analyzeShellCommand(input.script, analysis.cwd);
+    return scriptAnalysis.invocations.some(isGuardedShellInvocation) ||
+      commandHasUnresolvedShellIndirection(scriptAnalysis) ||
+      commandHasOpaqueGuardedConstruct(scriptAnalysis);
+  });
+  return hasOpaqueHereDocBody || hasUnresolvedHereDocBody || hasGuardedPipedInput || (
     (
       analysis.hasOpaqueSyntax ||
       analysis.hasPipedShell ||

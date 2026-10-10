@@ -21,6 +21,8 @@ import {
   validateSchemaObjectManifest,
   validateWorkerMigrations,
   findDataMigrationTargets,
+  findDestructiveDataStatements,
+  stripSqlComments,
 } from "../ci/check-worker-migrations.ts";
 
 const manifestText = `
@@ -391,6 +393,54 @@ describe("validateRolloutSafetyAnnotation", () => {
         `-- rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE}\n${statement}`,
       ),
     ).toThrow(operation);
+  });
+
+  it.each([
+    "'--'",
+    "'/*'",
+    "'*/'",
+    "'it''s -- still literal'",
+    "'it''s /* still literal */'",
+    "\"marker--column\"",
+    "`marker/*column`",
+    "[marker--column]",
+  ])("requires reviewed metadata after the quoted delimiter %s", (literal) => {
+    const sql = `-- rollout-safety: backward-compatible\nINSERT INTO cache VALUES (${literal}); DELETE FROM cache;`;
+    expect(findDestructiveDataStatements(sql)).toEqual(["DELETE FROM"]);
+    expect(findDataMigrationTargets(sql)).toEqual(["cache"]);
+    expect(() => validateRolloutSafetyAnnotation("0244_literal.sql", sql)).toThrow(
+      "requires a Reviewed Data Migrations manifest row",
+    );
+  });
+
+  it("keeps actual comments inert without merging executable SQL tokens", () => {
+    const sql = [
+      "-- rollout-safety: backward-compatible",
+      "/* DELETE FROM ignored; UPDATE ignored SET value = 1; */",
+      "INSERT INTO cache VALUES ('-- /* */ it''s literal'); -- DELETE FROM ignored;",
+      "DELETE/* boundary */FROM cache;",
+    ].join("\n");
+    expect(stripSqlComments(sql)).toContain("'-- /* */ it''s literal'");
+    expect(findDestructiveDataStatements(sql)).toEqual(["DELETE FROM"]);
+    expect(findDataMigrationTargets(sql)).toEqual(["cache"]);
+    expect(() => validateRolloutSafetyAnnotation("0244_comments.sql", sql)).toThrow(
+      "requires a Reviewed Data Migrations manifest row",
+    );
+    expect(findDestructiveDataStatements("-- DELETE FROM cache;\n/* UPDATE cache SET value = 1; */")).toEqual([]);
+  });
+
+  it("requires reviewed metadata for DML between literal block-comment delimiters", () => {
+    const sql = [
+      "-- rollout-safety: backward-compatible",
+      "INSERT INTO cache (key, value, updated_at) VALUES ('start', '/*', 0);",
+      "DELETE FROM cache;",
+      "INSERT INTO cache (key, value, updated_at) VALUES ('end', '*/', 0);",
+    ].join("\n");
+    expect(findDestructiveDataStatements(sql)).toEqual(["DELETE FROM"]);
+    expect(findDataMigrationTargets(sql)).toEqual(["cache"]);
+    expect(() => validateRolloutSafetyAnnotation("0244_block_literals.sql", sql)).toThrow(
+      "requires a Reviewed Data Migrations manifest row",
+    );
   });
 
   it("keeps the reviewed 0236 data migration grandfathered", () => {

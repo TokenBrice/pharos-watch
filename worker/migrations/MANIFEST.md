@@ -290,6 +290,8 @@ Current owner rulings for append-only operational/product tables; permanent arch
 
 Destructive DML is not permitted under the rollout-safety header alone. A new migration containing `DELETE FROM`, `UPDATE` (including qualified and `OR REPLACE` spellings), `INSERT OR REPLACE` or its `REPLACE INTO` alias, or `INSERT ... ON CONFLICT ... DO UPDATE` must also declare `-- data-migration: reviewed`, have a row below, and pass the seeded pre-migration fixture replay. Migration 0236 predates this annotation and is grandfathered only through its explicit review row.
 
+Statement and target detection share a quote-aware SQL comment pass: `--` and `/* ... */` inside strings or quoted identifiers do not hide later executable DML, doubled quote escapes stay literal, and real comments retain token boundaries. Comments alone do not require data-migration review.
+
 | Sequence | Filename | Predicate | Old-Worker compatibility | Rollback / bookmark | Expected row bounds |
 | --- | --- | --- | --- | --- | --- |
 | 0236 | `0236_dex_deployment_attempt_attribution.sql` | All existing `dex_deployment_outcomes` rows; `last_attempt_at` becomes the greater of that row's `observed_at` and its coin's legacy `last_crawl_at`. | The old Worker ignores the new nullable column and continues reading and writing the legacy coin fence during migration. | Capture the pre-deploy Time Travel bookmark; Worker rollback keeps the additive column, while unexpected data mutation restores from that bookmark. | At most the pre-migration `dex_deployment_outcomes` row count; no rows inserted or deleted. |

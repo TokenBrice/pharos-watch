@@ -107,7 +107,7 @@ describe("applyCuratedDetailAddress", () => {
 });
 
 describe("normalizeDefiLlamaDetailBody", () => {
-  it("materializes native and USD supply fields for non-USD pegs without mutating raw circulating", () => {
+  it("preserves non-USD native history without inventing USD values from today's quote", () => {
     const body = JSON.stringify({
       price: 1.25,
       tokens: [
@@ -130,15 +130,26 @@ describe("normalizeDefiLlamaDetailBody", () => {
           totalCirculating: {
             peggedEUR: 80,
           },
-          totalCirculatingUSD: {
-            peggedEUR: 100,
-          },
           circulating: {
             peggedEUR: 80,
           },
         },
       ],
     });
+  });
+
+  it.each(["circulating", "totalCirculating"])("preserves historical USD observations beside %s despite current FX changes", (field) => {
+    const tokens = [
+      { date: 1_700_000_000, [field]: { peggedEUR: 100 }, totalCirculatingUSD: { peggedEUR: 110 } },
+      { date: 1_700_086_400, [field]: { peggedEUR: 100 }, totalCirculatingUSD: { peggedEUR: 115 } },
+      { date: 1_700_172_800, [field]: { peggedEUR: 0 }, totalCirculatingUSD: { peggedEUR: 0 } },
+    ];
+    const normalized = JSON.parse(normalizeDefiLlamaDetailBody(
+      JSON.stringify({ price: 1.25, tokens }), { flags: { pegCurrency: "EUR" } },
+    ));
+    expect(normalized.tokens).toEqual(tokens.map((row) => ({
+      ...row, totalCirculating: row[field as keyof typeof row],
+    })));
   });
 
   it("materializes consistent fields for USD pegs", () => {
@@ -241,7 +252,7 @@ describe("normalizeDefiLlamaDetailBody", () => {
     });
   });
 
-  it("converts gold native history to USD using the detail price", () => {
+  it("leaves gold USD history unavailable without a day-specific valuation", () => {
     const body = JSON.stringify({
       price: 2_300,
       tokens: [
@@ -262,14 +273,13 @@ describe("normalizeDefiLlamaDetailBody", () => {
       tokens: [
         {
           totalCirculating: { peggedGOLD: 1_000 },
-          totalCirculatingUSD: { peggedGOLD: 2_300_000 },
           circulating: { peggedGOLD: 1_000 },
         },
       ],
     });
   });
 
-  it("derives native units from USD totals when non-USD payload only exposes totalCirculatingUSD", () => {
+  it("preserves non-USD USD-only history without inventing native units from today's quote", () => {
     const body = JSON.stringify({
       price: 2,
       tokens: [
@@ -290,7 +300,6 @@ describe("normalizeDefiLlamaDetailBody", () => {
       tokens: [
         {
           totalCirculatingUSD: { peggedEUR: 120 },
-          totalCirculating: { peggedEUR: 60 },
         },
       ],
     });
@@ -338,7 +347,9 @@ function makeDetailHelpers(): DetailResponseHelpers {
     cached: null,
     createFreshResponseFromBody: vi.fn((body: string) => new Response(body)),
     createFreshResponseFromTokens: vi.fn((tokens) => new Response(JSON.stringify({ tokens }))),
-    resolveTokensWithSupplyHistoryFallback: vi.fn(async (tokens) => tokens),
+    createFallbackResponseFromTokens: vi.fn((tokens) => new Response(JSON.stringify({ tokens }))),
+    createResponseFromResolvedTokens: vi.fn((history) => new Response(JSON.stringify({ tokens: history.tokens }))),
+    resolveTokensWithSupplyHistoryFallback: vi.fn(async (tokens) => ({ tokens, observedAt: null, fallback: false })),
     staleCacheOrError: vi.fn((status: number, message: string) =>
       new Response(JSON.stringify({ error: message }), { status })),
     trySupplyHistoryFallback: vi.fn(async () => null),

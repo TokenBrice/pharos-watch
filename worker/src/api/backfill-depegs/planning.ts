@@ -23,6 +23,10 @@ import {
 } from "../../lib/backfill-fx";
 import type { BackfillReplayWindow } from "../backfill-depegs-window";
 import type { SupplyPoint } from "../backfill-depegs-extraction";
+import {
+  acquireDefiLlamaDetailMaterialization,
+  DEFILLAMA_DETAIL_MAX_RESPONSE_BYTES,
+} from "../stablecoin-detail/defillama";
 
 interface CoinDetail {
   gecko_id?: string;
@@ -101,17 +105,23 @@ export async function buildBackfillPlan(opts: {
     let detail: CoinDetail | null = null;
     const dlId = meta.llamaId ?? meta.id;
     try {
-      const result = await fetchJsonWithRetry<CoinDetail>(
-        `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`,
-        { headers: { "User-Agent": USER_AGENT } },
-        1,
-        { timeoutMs: 10_000 },
-      );
-      if (result?.response.ok) {
-        const raw = result.body;
-        if (raw && typeof raw === "object") {
-          detail = raw as CoinDetail;
+      const release = await acquireDefiLlamaDetailMaterialization();
+      try {
+        const result = await fetchJsonWithRetry<CoinDetail>(
+          `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`,
+          { headers: { "User-Agent": USER_AGENT } },
+          1,
+          { timeoutMs: 10_000, maxResponseBytes: DEFILLAMA_DETAIL_MAX_RESPONSE_BYTES },
+        );
+        if (result?.response.ok) {
+          const raw = result.body;
+          if (raw && typeof raw === "object") {
+            // Retain only replay inputs; do not keep the unused per-chain history.
+            detail = { gecko_id: raw.gecko_id, address: raw.address, tokens: raw.tokens };
+          }
         }
+      } finally {
+        release();
       }
     } catch (err) {
       logWorkerEventArgs("api", "error", `[backfill-depegs] Failed to fetch detail for ${meta.symbol}:`, err);

@@ -513,6 +513,53 @@ describe("repair tasks", () => {
     }
   });
 
+  it("rotates deferred debt fairly so a newer safe repair is not starved by the oldest five", async () => {
+    const db = makeSqliteD1();
+    try {
+      seedNaturalPredecessorFixture(db);
+      const insert = db.sqlite.prepare(`INSERT INTO worker_repair_tasks
+        (task_id, kind, subject_id, priority, state, payload_json, created_at, updated_at)
+        VALUES (?, 'ddr-repair-required-event', ?, 50, 'open', ?, ?, ?)`);
+      for (let id = 1; id <= 5; id++) {
+        insert.run(`blocked:${id}`, String(id), JSON.stringify({ eventId: id }), NOW - 1000 + id, NOW - 1000 + id);
+      }
+      // A live claim and a not-yet-due task remain outside both daily batches.
+      insert.run("protected", "98", '{"eventId":98}', NOW - 2000, NOW - 2000);
+      insert.run("not-due", "99", '{"eventId":99}', NOW - 2000, NOW - 2000);
+      db.sqlite.prepare(`UPDATE worker_repair_tasks SET state = 'claimed',
+        locked_by = 'other-owner', locked_until = ? WHERE task_id = 'protected'`).run(NOW + 2 * 86400);
+      db.sqlite.prepare("UPDATE worker_repair_tasks SET next_attempt_at = ? WHERE task_id = 'not-due'")
+        .run(NOW + 2 * 86400);
+
+      const first = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      expect(JSON.parse(first.metadata ?? "{}")).toMatchObject({
+        claimed: 5, deferred: 5, closed: 0, batchLimit: DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
+      });
+      expect(db.sqlite.prepare("SELECT attempt_count FROM worker_repair_tasks WHERE subject_id = '42'").get())
+        .toMatchObject({ attempt_count: 0 });
+
+      const second = await runWorkerRepairTaskRunner(db, { nowSec: NOW + 86400 });
+      expect(JSON.parse(second.metadata ?? "{}")).toMatchObject({
+        claimed: 5, closed: 1, deferred: 4, autoRepairCount: 1, batchLimit: DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
+      });
+      expect(db.sqlite.prepare("SELECT state, attempt_count FROM worker_repair_tasks WHERE subject_id = '42'").get())
+        .toMatchObject({ state: "closed", attempt_count: 1 });
+      expect(db.sqlite.prepare("SELECT current_event_id FROM depeg_resolver_incidents").get())
+        .toMatchObject({ current_event_id: 42 });
+      const third = await runWorkerRepairTaskRunner(db, { nowSec: NOW + 86400 + 1 });
+      expect(JSON.parse(third.metadata ?? "{}")).toMatchObject({ claimed: 1, deferred: 1, closed: 0 });
+      expect(db.sqlite.prepare("SELECT state, attempt_count FROM worker_repair_tasks WHERE task_id LIKE 'blocked:%'").all())
+        .toEqual(Array.from({ length: 5 }, () => ({ state: "deferred", attempt_count: 2 })));
+      expect(db.sqlite.prepare("SELECT task_id, state, attempt_count FROM worker_repair_tasks WHERE task_id IN ('protected', 'not-due') ORDER BY task_id").all())
+        .toEqual([
+          { task_id: "not-due", state: "open", attempt_count: 0 },
+          { task_id: "protected", state: "claimed", attempt_count: 0 },
+        ]);
+    } finally {
+      db.close();
+    }
+  });
+
   it("selects only the five highest-priority due tasks", async () => {
     const db = makeSqliteD1();
     try {
