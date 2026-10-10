@@ -477,6 +477,14 @@ describe("buildStatusMessage 24h mint/burn flow line (C122)", () => {
 describe("buildStatusMessage supply and DEX context", () => {
   const nowSec = Math.floor(Date.now() / 1000);
 
+  it("states invalid DEX evidence as unavailable rather than silently omitting liquidity", () => {
+    const message = buildStatusMessage("USDC", baseStatus({
+      liquidity: null, liquidityUnavailableReason: "invalid-coverage-evidence",
+    }));
+    expect(message).toContain("Liquidity: unavailable (invalid-coverage-evidence)");
+    expect(message).not.toContain("Liquidity: NR");
+  });
+
   it("states unavailable supply explicitly instead of $0 or dropping it", () => {
     const msg = buildStatusMessage("USDC", baseStatus({ supplyUsd: null }));
     expect(msg).toContain("Supply: unavailable");

@@ -146,6 +146,8 @@ Breakdowns are intentionally dense and should stay short:
 
 `Data n/a` is neither covered nor uncovered: it leaves feature count/cap denominators and ordinary gap filters, except the intentionally inclusive `No Dependency` filter. All-unavailable features render null reach and cannot win insight tiles. Source-depth counts and filters require observed `sourceCount`; omitted sources stay unknown, while an explicit empty array measures zero. Cap aggregation carries observation counts/completeness: partial ratios/subtotals name **known market cap**, no observations render `n/a`, and observed zero remains `$0` (a zero-denominator ratio is still `n/a`). Cap skew requires both count and cap shares; without a measured candidate it renders `n/a`.
 
+Market-cap reach also remains `n/a` when uncovered rows have observed cap but no covered row has an observed cap: a known denominator cannot manufacture a zero numerator beside an unavailable covered subtotal.
+
 #### Source count enrichment
 
 When `consensusSources` data is available from the peg-summary API, the "Tracked" badge shows a source count suffix: "Tracked (5 sources)" (or "Tracked (5)" in compact mode). Tooltip expands to show confidence level and source names (e.g., "High confidence — CoinGecko, DefiLlama, RedStone"). The feature snapshot breakdown adds a secondary source-depth distribution: `5+ sources: N · 3-4: N · 1-2: N`. The snapshot header also includes a compact `Source target` tile for the `>=3` candidate-source count and market-cap reach.

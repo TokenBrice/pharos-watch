@@ -25,6 +25,13 @@ const numericKeys = [
 ] as const;
 
 describe("compareLiquidityRows", () => {
+  it.each(["asc", "desc"] as const)("sorts NR after observed zero scores (%s)", (direction) => {
+    const missing = makeRow({ liquidityScore: null });
+    const zero = makeRow({ liquidityScore: 0 });
+    expect(compareLiquidityRows(missing, zero, { key: "score", direction })).toBeGreaterThan(0);
+    expect(compareLiquidityRows(zero, missing, { key: "score", direction })).toBeLessThan(0);
+  });
+
   it.each(numericKeys)("sorts %s in both directions", (key, field) => {
     const fractional = key === "balance" || key === "organic";
     const high = makeRow({ [field]: fractional ? 0.9 : 9 });
@@ -34,7 +41,6 @@ describe("compareLiquidityRows", () => {
   });
 
   it.each([
-    ["score", "liquidityScore"],
     ["tvlTrend", "tvlChange7d"],
     ["balance", "weightedBalanceRatio"],
     ["organic", "organicFraction"],

@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { TapeEvent } from "@shared/types/tape-event";
+import { renderToString } from "react-dom/server";
 import { makeTapeEvent } from "@shared/test-utils/tape-event";
 import type { ApiMeta } from "@/lib/api";
 
@@ -92,6 +93,17 @@ function mockEvents(events: TapeEvent[], overrides: Partial<UseEventsResult> = {
 }
 
 describe("TimelineClient", () => {
+  it("does not read the browser clock or query during server rendering", () => {
+    const clock = vi.spyOn(Date, "now");
+    try {
+      expect(renderToString(<TimelineClient />)).toBe("");
+      expect(clock).not.toHaveBeenCalled();
+      expect(useEventsMock).not.toHaveBeenCalled();
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it("keeps timeline pagination manual on initial page load", () => {
     mockEvents([]);
 

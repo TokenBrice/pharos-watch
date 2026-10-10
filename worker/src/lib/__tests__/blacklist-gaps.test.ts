@@ -3,6 +3,18 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { materializeBlacklistGapMetrics, queryBlacklistGapMetrics } from "../blacklist-gaps";
 
 describe("queryBlacklistGapMetrics", () => {
+  it("rejects an absent aggregate without writing fabricated metrics", async () => {
+    const db = mockD1([
+      { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
+      { match: "blacklist-gap-aggregate", rows: [], first: null },
+    ], { requireMatch: true });
+    await expect(queryBlacklistGapMetrics(db, 1_700_000_000, {
+      includeDistributions: false,
+      cacheTtlSec: 300,
+    })).rejects.toThrow("blacklist-gap-aggregate-missing");
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT"))).toBe(false);
+  });
+
   it("returns extended recoverable-gap telemetry", async () => {
     const db = mockD1([
       {

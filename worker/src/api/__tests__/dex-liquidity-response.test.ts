@@ -7,6 +7,20 @@ import {
   selectTrendBaseline,
 } from "../../lib/dex-liquidity-response";
 
+describe("stored trend evidence admission", () => {
+  it.each([
+    { coverage_class: "primary", coverage_confidence: 1.1 },
+    { coverage_class: "invalid", coverage_confidence: 0.9 },
+    { coverage_class: null, coverage_confidence: 0.9 },
+    { coverage_class: "primary", coverage_confidence: null },
+    { coverage_class: "primary", coverage_confidence: Number.NaN },
+  ])("skips invalid coverage before selecting a baseline ($coverage_class/$coverage_confidence)", (coverage) => {
+    const valid = { stablecoin_id: "usdc-circle", total_tvl_usd: 100, snapshot_date: 999,
+      coverage_class: "primary", coverage_confidence: 0.5 };
+    expect(selectTrendBaseline([{ ...valid, ...coverage, snapshot_date: 1_000 }, valid], 1_000, 10)).toBe(valid);
+  });
+});
+
 describe("normalizeTopPools", () => {
   it("strips dead per-pool fields and preserves allowed keys", () => {
     const json = JSON.stringify([

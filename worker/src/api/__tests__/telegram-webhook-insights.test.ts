@@ -76,6 +76,23 @@ function makeTopChainsDb(updatedAt: number) {
   );
 }
 
+describe("DEX liquidity coverage", () => {
+  it("filters invalid coverage before the visible top-five limit", async () => {
+    const row = { stablecoin_id: "bad", symbol: "BAD", liquidity_score: 100,
+      total_tvl_usd: 100, pool_count: 1, coverage_class: "primary", coverage_confidence: 1.1 };
+    const db = mockD1([{ match: "FROM dex_liquidity", rows: [
+      row, ...Array.from({ length: 6 }, (_, index) => ({ ...row, stablecoin_id: `valid-${index}`,
+        symbol: `VALID${index}`, liquidity_score: 90 - index, coverage_confidence: 0.9 })),
+    ] }]);
+    const message = await buildTopMessage(db, "liquidity");
+    expect(message).not.toContain("BAD — score");
+    expect(message).toContain("VALID4");
+    expect(message).not.toContain("VALID5");
+    expect(message).toContain("invalid-coverage-evidence");
+    expect(db.getHistory()[0].sql).not.toContain("LIMIT");
+  });
+});
+
 describe("buildBriefMessage", () => {
   afterEach(() => {
     vi.useRealTimers();

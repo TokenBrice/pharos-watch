@@ -322,7 +322,7 @@ export async function hydrateDexLiquidityHistory(ctx: HydrationContext): Promise
     const liqHistRows = await ctx.db
       .prepare(
         `SELECT /* pharos:dews:dex-liquidity-history */
-           stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, coverage_confidence
+           stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, coverage_class, coverage_confidence
          FROM dex_liquidity_history
          WHERE snapshot_date >= ?
          ORDER BY snapshot_date ASC`,
@@ -334,13 +334,14 @@ export async function hydrateDexLiquidityHistory(ctx: HydrationContext): Promise
         liquidity_score: number | null;
         total_tvl_usd: number | null;
         coverage_confidence: number | null;
+        coverage_class: string | null;
       }>();
     liqHistRowsRead = liqHistRows.results.length;
 
     const byId = new Map<string, (DexHistoryRow & { liquidity_score: number | null })[]>();
     for (const row of liqHistRows.results) {
       const history = byId.get(row.stablecoin_id) ?? [];
-      history.push({ ...row, total_tvl_usd: row.total_tvl_usd ?? 0, coverage_class: null });
+      history.push({ ...row, total_tvl_usd: row.total_tvl_usd ?? 0 });
       byId.set(row.stablecoin_id, history);
     }
     for (const [id, history] of byId) {

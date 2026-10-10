@@ -115,8 +115,8 @@ export function buildCoverageFeatureSummary(
     coveredMcapUsd: coveredCap.totalUsd,
     marketCapObservedCount: scopedCap.observedCount,
     marketCapComplete: scopedCap.complete,
-    mcapSharePct: scopedCap.totalUsd != null && scopedCap.totalUsd > 0
-      ? ((coveredCap.totalUsd ?? 0) / scopedCap.totalUsd) * 100
+    mcapSharePct: coveredCap.totalUsd != null && scopedCap.totalUsd != null && scopedCap.totalUsd > 0
+      ? (coveredCap.totalUsd / scopedCap.totalUsd) * 100
       : null,
     countLabel: feature.headlineCountLabel ?? "Coin count",
     coverageLabel:

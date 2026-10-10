@@ -1,7 +1,7 @@
 "use client";
 
 import "./phosphor.css";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import { CoinCrossTrackerHatnote } from "@/components/coin-cross-tracker-hatnote";
 import {
   TapeFilters,
@@ -97,6 +97,27 @@ function decodeTimelineFilters(urlState: TimelineUrlState): TapeFilterState {
 }
 
 export function TimelineClient() {
+  const clockRef = useRef<{ queryAnchorMs: number; nowMs: number } | null>(null);
+  const subscribe = useCallback((notify: () => void) => {
+    // React subscribes after mounting, never during the server/hydration render.
+    const mountedAt = Date.now();
+    const queryAnchorMs = clockRef.current?.queryAnchorMs ?? mountedAt;
+    clockRef.current = { queryAnchorMs, nowMs: mountedAt };
+    notify();
+    const timer = window.setInterval(() => {
+      clockRef.current = { queryAnchorMs, nowMs: Date.now() };
+      notify();
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const getSnapshot = useCallback(() => clockRef.current, []);
+  const clock = useSyncExternalStore(subscribe, getSnapshot, () => null);
+
+  if (clock == null) return null;
+  return <MountedTimelineClient queryAnchorMs={clock.queryAnchorMs} nowMs={clock.nowMs} />;
+}
+
+function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number; nowMs: number }) {
   const { setParam, setParams } = useUrlFilters();
   const { state: urlState, patchState } = useUrlState(TIMELINE_URL_SCHEMA);
   const filters = useMemo(() => decodeTimelineFilters(urlState), [urlState]);
@@ -110,12 +131,6 @@ export function TimelineClient() {
     }, [patchState, setParam],
   );
   const logos = logosById;
-  const [queryAnchorMs] = useState(() => Date.now());
-  const [nowMs, setNowMs] = useState(queryAnchorMs);
-  useEffect(() => {
-    const timer = window.setInterval(() => setNowMs(Date.now()), 60_000);
-    return () => window.clearInterval(timer);
-  }, []);
 
   // Keep the query window stable while presentation timestamps continue aging.
   const since = tapeWindowSince(filters.window, queryAnchorMs);

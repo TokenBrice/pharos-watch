@@ -6,6 +6,27 @@ import { makeActivePriceCoverage, makeHealthyHealthResponse, makeMissingActiveAs
 import { PublicServiceSummarySection } from "../public-service-summary-section";
 
 describe("PublicServiceSummarySection", () => {
+  it("renders unavailable mint/burn evidence without dereferencing unknown stale cohorts", () => {
+    const health = makeHealthyHealthResponse();
+    render(<PublicServiceSummarySection healthData={{
+      ...health,
+      mintBurn: { ...health.mintBurn, majorStaleCount: null, staleMajorSymbols: null,
+        unavailableReason: "mint-burn-read-failed", sync: { ...health.mintBurn.sync, criticalLaneHealthy: null } },
+    }} />);
+    expect(screen.getByText("Mint/burn health evidence unavailable (mint-burn-read-failed).")).toBeTruthy();
+    expect(screen.queryByText("Critical mint/burn lanes are within their expected freshness and run-health windows.")).toBeNull();
+  });
+
+  it.each([0.001, 0.2])("keeps missing recent-gap evidence distinct from no new gaps (ratio %s)", (missingRatio) => {
+    render(<PublicServiceSummarySection healthData={{
+      ...makeHealthyHealthResponse(),
+      blacklist: { totalEvents: 100, missingAmounts: 2, recentMissingAmounts: null,
+        recentWindowSec: 86_400, missingRatio, unavailableReason: "blacklist-read-failed" },
+    }} />);
+    expect(screen.getByText("2 blacklist event(s) are still missing amounts. Recent gap evidence is unavailable (blacklist-read-failed).")).toBeTruthy();
+    expect(screen.queryByText(/no new gaps were recorded/i)).toBeNull();
+  });
+
   it("renders unavailable blacklist measurements without a zero-gap claim", () => {
     render(<PublicServiceSummarySection healthData={{
       ...makeHealthyHealthResponse(),

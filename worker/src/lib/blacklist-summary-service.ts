@@ -1,7 +1,7 @@
 import { blacklistEventOrderSql } from "@shared/lib/blacklist-event-order";
 import { buildCronFreshnessHeaders, getLatestSuccessfulCronTimestampResult, type CronTimestampLookupResult } from "./api-freshness";
 import { buildMethodologyEnvelope } from "./api-methodology";
-import { jsonResponseWithHeaders } from "./api-response";
+import { errorResponse, jsonResponseWithHeaders } from "./api-response";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
@@ -600,7 +600,8 @@ async function buildBlacklistSummaryPayload(
     }),
     loadBlacklistReconciliationStatus(db),
   ]);
-  const latestTs = aggregateRow?.max_ts ?? now;
+  if (aggregateRow == null) throw new Error("blacklist-summary-aggregate-missing");
+  const latestTs = aggregateRow.max_ts ?? now;
 
   const { activeRecordEvents, frozenAddresses, perCoinFrozenAddressCount, activeStats } = resolveActiveBlacklistRecords(
     activeHistory,
@@ -673,12 +674,12 @@ async function buildBlacklistSummaryPayload(
     if (perCoinDestroyedCoverage[symbol]!.knownCount === 0 && perCoinDestroyedCoverage[symbol]!.unavailableCount > 0) perCoinDestroyedTotal[symbol] = null;
   }
   const recent24hCoverage = {
-    knownCount: aggregateRow?.freeze_known_24h ?? 0,
-    unavailableCount: (aggregateRow?.freeze_24h ?? 0) - (aggregateRow?.freeze_known_24h ?? 0),
+    knownCount: aggregateRow.freeze_known_24h ?? 0,
+    unavailableCount: (aggregateRow.freeze_24h ?? 0) - (aggregateRow.freeze_known_24h ?? 0),
   };
   const recent7dCoverage = {
-    knownCount: aggregateRow?.freeze_known_7d ?? 0,
-    unavailableCount: (aggregateRow?.freeze_7d ?? 0) - (aggregateRow?.freeze_known_7d ?? 0),
+    knownCount: aggregateRow.freeze_known_7d ?? 0,
+    unavailableCount: (aggregateRow.freeze_7d ?? 0) - (aggregateRow.freeze_known_7d ?? 0),
   };
 
   const perCoinQuarterlyEventTypes = buildPerCoinQuarterlyEventTypes(perCoinQuarterlyResult.results ?? []);
@@ -704,12 +705,12 @@ async function buildBlacklistSummaryPayload(
         goldBlacklisted,
         frozenAddresses, // NET, not distinct-ever
         destroyedTotal: destroyedCoverage.knownCount === 0 && destroyedCoverage.unavailableCount > 0 ? null : destroyedTotal,
-        recentCount: aggregateRow?.recent_30d ?? 0,
-        recentCount24h: aggregateRow?.recent_24h ?? 0,
-        recentFreezeCount24h: aggregateRow?.freeze_24h ?? 0,
-        recentFreezeCount7d: aggregateRow?.freeze_7d ?? 0,
-        recentFreezeAmount24hUsd: recent24hCoverage.knownCount === 0 && recent24hCoverage.unavailableCount > 0 ? null : aggregateRow?.freeze_usd_24h ?? 0,
-        recentFreezeAmount7dUsd: recent7dCoverage.knownCount === 0 && recent7dCoverage.unavailableCount > 0 ? null : aggregateRow?.freeze_usd_7d ?? 0,
+        recentCount: aggregateRow.recent_30d ?? 0,
+        recentCount24h: aggregateRow.recent_24h ?? 0,
+        recentFreezeCount24h: aggregateRow.freeze_24h ?? 0,
+        recentFreezeCount7d: aggregateRow.freeze_7d ?? 0,
+        recentFreezeAmount24hUsd: recent24hCoverage.knownCount === 0 && recent24hCoverage.unavailableCount > 0 ? null : aggregateRow.freeze_usd_24h ?? 0,
+        recentFreezeAmount7dUsd: recent7dCoverage.knownCount === 0 && recent7dCoverage.unavailableCount > 0 ? null : aggregateRow.freeze_usd_7d ?? 0,
         recoverableGapCount: gapMetrics.missingAmounts,
         activeAddressCount: activeStats.activeAddressCount,
         activeFrozenTotal: activeStats.activeFrozenTotal,
@@ -735,7 +736,7 @@ async function buildBlacklistSummaryPayload(
       freezeLedgerMeta,
       dataQuality,
       reconciliation,
-      totalEvents: aggregateRow?.total ?? 0,
+      totalEvents: aggregateRow.total,
       methodology: buildMethodologyEnvelope({
         version: BLACKLIST_TRACKER_METHODOLOGY_VERSION,
         versionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
@@ -823,8 +824,16 @@ function blacklistSummaryHeaders(snapshot: CachedBlacklistSummarySnapshot): Reco
 
 export const handleBlacklistSummary = async (db: D1Database): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
-  const snapshot = await readBlacklistSummarySnapshot(db)
-    ?? await materializeBlacklistSummaryForRequest(db, now);
-  return jsonResponseWithHeaders(snapshot.payload, blacklistSummaryHeaders(snapshot));
+  try {
+    const snapshot = await readBlacklistSummarySnapshot(db)
+      ?? await materializeBlacklistSummaryForRequest(db, now);
+    return jsonResponseWithHeaders(snapshot.payload, blacklistSummaryHeaders(snapshot));
+  } catch (error) {
+    if (error instanceof Error
+      && (error.message === "blacklist-summary-aggregate-missing" || error.message === "blacklist-gap-aggregate-missing")) {
+      return errorResponse(503, error.message, { noStore: true });
+    }
+    throw error;
+  }
 };
 

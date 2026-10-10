@@ -55,6 +55,7 @@ const PublicSnapshotLiquidityRowSchema = z
     liquidityScore: z.number().finite().nullable(),
     durabilityScore: z.number().finite().nullable(),
     coverageClass: z.string().nullable(),
+    unavailableReason: z.literal("invalid-coverage-evidence").nullable().optional(),
     /** Liquidity methodology the row was scored under; absent on snapshots written before 2026-09-28. */
     methodologyVersion: z.string().nullable().optional(),
     updatedAt: z.number().int().nonnegative(),

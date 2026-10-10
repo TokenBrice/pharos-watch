@@ -12,7 +12,7 @@ import { TOP_VIEW_NAMES } from "../lib/telegram/constants";
 import { formatTelegramCompactUsd } from "./telegram-format";
 import type { StatusForCoin } from "./telegram-webhook-status";
 import { formatTelegramSafety } from "./telegram-webhook-messages";
-import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER, normalizeDexLiquidityEvidence } from "../lib/dex-liquidity";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
 import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
@@ -197,26 +197,39 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
     case "liquidity": {
       const result = await db
         .prepare(
-          `SELECT stablecoin_id, symbol, liquidity_score, total_tvl_usd, pool_count
+          `SELECT stablecoin_id, symbol, liquidity_score, total_tvl_usd, pool_count, coverage_class, coverage_confidence
              FROM dex_liquidity
             WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
-            ORDER BY liquidity_score DESC, total_tvl_usd DESC
-            LIMIT ?`,
+            ORDER BY liquidity_score DESC, total_tvl_usd DESC`,
         )
-        .bind(TOP_LIMIT)
         .all<{
           stablecoin_id: string;
           symbol: string;
           liquidity_score: number | null;
           total_tvl_usd: number;
           pool_count: number;
+          coverage_class: string | null;
+          coverage_confidence: number | null;
         }>();
-      return formatTopRows(
+      let invalidCoverageCount = 0;
+      const admitted = (result.results ?? []).filter((row) => {
+        try {
+          normalizeDexLiquidityEvidence(row);
+          return true;
+        } catch {
+          invalidCoverageCount++;
+          return false;
+        }
+      });
+      const message = formatTopRows(
         "Top DEX liquidity",
-        result.results ?? [],
+        admitted.slice(0, TOP_LIMIT),
         (row, i) =>
           `${i}. ${row.symbol} — score ${row.liquidity_score ?? "NR"}, TVL ${formatTelegramCompactUsd(row.total_tvl_usd) ?? "n/a"}, ${row.pool_count} pools`,
       );
+      return invalidCoverageCount > 0
+        ? `${message}\nCoverage unavailable for ${invalidCoverageCount} token(s) (invalid-coverage-evidence).`
+        : message;
     }
     case "chains": {
       const activeSource = await loadActiveSafetyScoreIndex(db);

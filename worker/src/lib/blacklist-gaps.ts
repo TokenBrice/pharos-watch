@@ -279,9 +279,10 @@ async function queryLiveBlacklistGapMetrics(
     sourceRowsPromise,
   ]);
 
-  const totalEvents = row?.total ?? 0;
-  const missingAmounts = row?.missing ?? 0;
-  const recentMissingAmounts = row?.missing_recent ?? 0;
+  if (row == null) throw new Error("blacklist-gap-aggregate-missing");
+  const totalEvents = row.total;
+  const missingAmounts = row.missing ?? 0;
+  const recentMissingAmounts = row.missing_recent ?? 0;
   const statusDistribution = Object.fromEntries(
     (statusRows.results ?? []).map((statusRow) => [statusRow.amount_status ?? "unknown", statusRow.n]),
   );
@@ -295,10 +296,10 @@ async function queryLiveBlacklistGapMetrics(
     recentMissingAmounts,
     recentWindowSec: options.recentWindowSec,
     missingRatio: totalEvents > 0 ? missingAmounts / totalEvents : 0,
-    unrecoverableMissingAmounts: row?.unrecoverable ?? 0,
-    oldestRecoverableAgeSec: row?.oldest_gap_age_sec ?? null,
-    neverAttemptedCount: row?.never_attempted ?? 0,
-    repeatedFailureCount: row?.repeated_failures ?? 0,
+    unrecoverableMissingAmounts: row.unrecoverable ?? 0,
+    oldestRecoverableAgeSec: row.oldest_gap_age_sec ?? null,
+    neverAttemptedCount: row.never_attempted ?? 0,
+    repeatedFailureCount: row.repeated_failures ?? 0,
     statusDistribution,
     sourceDistribution,
   };

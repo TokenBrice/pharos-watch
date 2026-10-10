@@ -239,8 +239,23 @@ function buildTestOpts(overrides: Partial<SyncBlacklistOptions> = {}): SyncBlack
   };
 }
 
+function emptyBlacklistAggregateTables() {
+  return [
+    { match: "blacklist-gap-aggregate", rows: [], first: {
+      total: 0, missing: null, missing_recent: null, oldest_gap_age_sec: null,
+      never_attempted: null, repeated_failures: null, unrecoverable: null,
+    } },
+    { match: "blacklist-summary-public-aggregate", rows: [], first: {
+      total: 0, max_ts: null, recent_30d: null, recent_24h: null,
+      freeze_24h: null, freeze_7d: null, freeze_usd_24h: null, freeze_usd_7d: null,
+      freeze_known_24h: null, freeze_known_7d: null,
+    } },
+  ];
+}
+
 function makeDb(syncStateRows: Record<string, unknown>[] = []) {
   return mockD1([
+    ...emptyBlacklistAggregateTables(),
     { match: "blacklist_sync_state", rows: syncStateRows },
     { match: "blacklist_events", rows: [] },
   ]);
@@ -875,6 +890,7 @@ describe("syncBlacklist", () => {
 
   it("records producer snapshot materialization errors without failing an otherwise healthy run", async () => {
     const db = mockD1([
+      ...emptyBlacklistAggregateTables(),
       { match: "blacklist_sync_state", rows: [] },
       { match: "blacklist_events", rows: [] },
       { match: "blacklist-gap-metrics-cache-write", rows: [], throwError: new Error("snapshot write failed") },

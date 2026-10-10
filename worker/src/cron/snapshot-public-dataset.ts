@@ -26,7 +26,7 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
-import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER, normalizeDexLiquidityEvidence } from "../lib/dex-liquidity";
 import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { sha256Hex } from "../lib/hash";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -93,6 +93,7 @@ interface DexLiquidityRow {
   liquidity_score: number | null;
   durability_score: number | null;
   coverage_class: string | null;
+  coverage_confidence: number | null;
   methodology_version: string | null;
   updated_at: number;
 }
@@ -389,7 +390,7 @@ export async function snapshotPublicDataset(
     const result = await db
       .prepare(
         `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, volume_availability_json, pool_count, liquidity_score,
-                durability_score, coverage_class, methodology_version, updated_at
+                durability_score, coverage_class, coverage_confidence, methodology_version, updated_at
          FROM dex_liquidity
          WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
          ORDER BY liquidity_score DESC`,
@@ -456,22 +457,31 @@ export async function snapshotPublicDataset(
         `snapshot-public-dataset:dews:${row.stablecoin_id}:${row.computed_at}:signals_json`,
       ),
     })),
-    liquidity: dexRows.map((row) => ({
-      stablecoinId: row.stablecoin_id,
-      totalTvlUsd: row.total_tvl_usd,
-      // Measured 24h total only: recorded partial/missing/stale windows export null.
-      totalVolume24hUsd: readStoredDexVolumeWindow(
-        row.total_volume_24h_usd,
-        parseDexVolumeAvailabilityRecord(row.volume_availability_json),
-        "24h",
-      ).measuredUsd,
-      poolCount: row.pool_count,
-      liquidityScore: row.liquidity_score,
-      durabilityScore: row.durability_score,
-      coverageClass: row.coverage_class,
-      methodologyVersion: row.methodology_version,
-      updatedAt: row.updated_at,
-    })),
+    liquidity: dexRows.map((row) => {
+      let evidence = null;
+      try {
+        evidence = normalizeDexLiquidityEvidence({ ...row, total_tvl_usd: row.total_tvl_usd ?? 0 });
+      } catch {
+        // Quarantine coverage-dependent ratings without losing observed pool aggregates.
+      }
+      return {
+        stablecoinId: row.stablecoin_id,
+        totalTvlUsd: row.total_tvl_usd,
+        // Measured 24h total only: recorded partial/missing/stale windows export null.
+        totalVolume24hUsd: readStoredDexVolumeWindow(
+          row.total_volume_24h_usd,
+          parseDexVolumeAvailabilityRecord(row.volume_availability_json),
+          "24h",
+        ).measuredUsd,
+        poolCount: row.pool_count,
+        liquidityScore: evidence ? row.liquidity_score : null,
+        durabilityScore: evidence ? row.durability_score : null,
+        coverageClass: evidence?.coverageClass ?? null,
+        unavailableReason: evidence ? null : "invalid-coverage-evidence" as const,
+        methodologyVersion: row.methodology_version,
+        updatedAt: row.updated_at,
+      };
+    }),
   } satisfies PublicSnapshotEnvelopeV2;
   PublicSnapshotEnvelopeV2Schema.parse(envelope);
 

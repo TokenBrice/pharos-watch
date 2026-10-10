@@ -1,7 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 
 describe("liquidity coverage", () => {
+  it("distinguishes invalid evidence from genuinely unobserved coverage", () => {
+    expect(getLiquidityCoverageBadge(null, "invalid-coverage-evidence").label).toBe("Unavailable");
+    expect(getLiquidityCoverageBadge("unobserved").label).toBe("NR");
+  });
+
 
   it("all colliding symbols have contracts for address-based disambiguation", () => {
     const symbolToIds = new Map<string, string[]>();

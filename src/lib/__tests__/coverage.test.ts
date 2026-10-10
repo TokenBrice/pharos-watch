@@ -112,6 +112,16 @@ function coverageFeature(key: CoverageFeatureKey) {
 }
 
 describe("coverage helpers", () => {
+  it("keeps market-cap reach unavailable when only uncovered rows have observed cap", () => {
+    const summary = buildCoverageFeatureSummary(coverageFeature("yield"), [
+      makeCoverageRow(["covered", "COV"], { hasYieldCoverage: true, marketCapAvailable: false }),
+      makeCoverageRow(["uncovered", "UNC"], { hasYieldCoverage: false, marketCapUsd: 100 }),
+    ]);
+    expect(summary.coveredMcapUsd).toBeNull();
+    expect(summary.mcapSharePct).toBeNull();
+    expect(summary.marketCapObservedCount).toBe(1);
+  });
+
   it("marks NAV tokens as price-only instead of depeg-tracked", () => {
     const status = priceCoverageFeature.resolve(
       makeCoin({

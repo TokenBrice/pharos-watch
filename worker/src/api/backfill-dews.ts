@@ -361,7 +361,7 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
 
   const liqRows = await db
     .prepare(
-      `SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, coverage_confidence
+      `SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, coverage_class, coverage_confidence
        FROM dex_liquidity_history
        WHERE snapshot_date BETWEEN ? AND ?
        ORDER BY snapshot_date ASC`,
@@ -373,6 +373,7 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
       liquidity_score: number | null;
       total_tvl_usd: number | null;
       coverage_confidence: number | null;
+      coverage_class: string | null;
     }>();
 
   const liqIndex = new Map<string, (DexHistoryRow & { liquidity_score: number | null })[]>();
@@ -381,7 +382,6 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
     liqIndex.get(row.stablecoin_id)!.push({
       ...row,
       total_tvl_usd: row.total_tvl_usd ?? 0,
-      coverage_class: null,
     });
   }
 

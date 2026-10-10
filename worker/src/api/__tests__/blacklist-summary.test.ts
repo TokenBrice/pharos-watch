@@ -77,6 +77,19 @@ function makeBlacklistSummaryFallbackTables() {
 
 
 describe("handleBlacklistSummary", () => {
+  it.each([
+    ["blacklist-summary-public-aggregate", "blacklist-summary-aggregate-missing"],
+    ["blacklist-gap-aggregate", "blacklist-gap-aggregate-missing"],
+  ])("returns unavailable for absent %s without persisting a summary", async (match, reason) => {
+    const db = mockD1(makeBlacklistSummaryFallbackTables().map((table) =>
+      table.match === match ? { ...table, first: null } : table));
+    const response = await handleBlacklistSummary(db);
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toEqual({ error: reason });
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
+  });
+
   it("serves an actual producer snapshot through the public cache reader", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);

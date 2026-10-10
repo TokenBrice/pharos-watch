@@ -545,7 +545,9 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
   const liquidityTvl = formatTelegramCompactUsd(s.liquidity?.totalTvlUsd);
   const liquidityLine = s.liquidity
     ? `Liquidity: ${s.liquidity.score ?? "NR"}${liquidityTvl ? `, TVL ${liquidityTvl}` : ""} (${formatAge(s.liquidity.updatedAt, nowSec)}${staleSuffix(s.liquidity.current)})`
-    : null;
+    : s.liquidityUnavailableReason
+      ? `Liquidity: unavailable (${escapeHtml(s.liquidityUnavailableReason)})`
+      : null;
   const yieldLine = s.yield
     ? `Yield: ${s.yield.apy30d.toFixed(2)}% 30d at ${escapeHtml(s.yield.source)}${
         s.yield.pharosYieldScore != null

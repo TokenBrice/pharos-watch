@@ -27,7 +27,7 @@ export const compareLiquidityRows: (
   b: LiquidityRow,
   sort: TableSortState<LiquiditySortKey>,
 ) => number = createTableComparator<LiquiditySortKey, LiquidityRow>({
-  score: (r) => r.liq.liquidityScore ?? 0,
+  score: (r) => r.liq.liquidityScore,
   tvl: (r) => r.liq.totalTvlUsd,
   tvlTrend: (r) => r.liq.tvlChange7d ?? 0,
   // Unavailable volume (null) is not zero activity: it sorts last in both directions.

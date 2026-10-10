@@ -156,6 +156,21 @@ describe("DexLiquidityCard", () => {
     chartReadyMock.mockReturnValue({ ref: vi.fn(), ready: false, width: 0, height: 0 });
   });
 
+  it.each([0, 100_000])("renders invalid coverage as unavailable even with TVL %s", (totalTvlUsd) => {
+    useDexLiquidityMock.mockReturnValue({
+      data: { "usdc-circle": makeDexLiquidityData({
+        totalTvlUsd, poolCount: 0, coverageClass: null, coverageConfidence: null,
+        liquidityEvidenceClass: null, liquidityScore: null,
+        unavailableReason: "invalid-coverage-evidence",
+      }) },
+      isLoading: false,
+    });
+    render(<DexLiquidityCard stablecoinId="usdc-circle" />);
+    expect(screen.getByText("Unavailable coverage")).toBeTruthy();
+    expect(screen.getByText("DEX coverage evidence is unavailable (invalid-coverage-evidence).")).toBeTruthy();
+    expect(screen.queryByText("No observed direct DEX market for this token in the current pipeline.")).toBeNull();
+  });
+
 
   it("renders unavailable instead of hiding the module when the query fails", () => {
     useDexLiquidityMock.mockReturnValue({
