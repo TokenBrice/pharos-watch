@@ -131,6 +131,24 @@ describe("BlacklistSection", () => {
     expect(getByRole("link", { name: "See all events →" }).getAttribute("href")).toBe("/freezewatch/?stablecoin=USDC");
   });
 
+  it("folds the event log behind a counted summary and tags a shared amount source once", () => {
+    vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub());
+    vi.mocked(useBlacklistEventsPage).mockReturnValueOnce({
+      ...ONE_EVENT_PAGE,
+      data: { events: [
+        { ...FREEZE_EVENT, amountSource: "historical_balance" },
+        { ...FREEZE_EVENT, id: "evt-2", amountSource: "historical_balance" },
+      ], total: 2 },
+    } as unknown as EventsPageResult);
+
+    render(<BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />);
+
+    const fold = screen.getByTestId("stablecoin-blacklist-events-table").closest("details");
+    expect(fold?.open).toBe(false);
+    expect(fold?.querySelector("summary")?.textContent).toMatch(/Latest events.*2/);
+    expect(screen.getAllByText(/historical/i).map((el) => el.textContent)).toEqual(["Amount source: historical"]);
+  });
+
   it("BlacklistHistorySection returns null for a supported coin with zero events", () => {
     vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub({ perCoinTotalEvents: { USDC: 0 } }));
     const { container } = render(<BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />);
