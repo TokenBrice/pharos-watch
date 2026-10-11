@@ -532,3 +532,45 @@ condition = "AND"
 regexTarget = "secret"
 regexes = ['''^frontier\.column3$''']
 paths = ['''(?:^|/)worker/src/cron/mint-burn/retention\.ts$''']
+
+# Safety Score 10.17 incident research (reviewed 2026-10-11). Bridge-control keys
+# end in a 20-hex digest of public route metadata, and review ids embed that key
+# after the asset id, so GLDT's ids open with the GitLab deploy-token prefix.
+# The registry and its generated runtime projection are one-line-per-value or
+# single-line JSON: pin exact spans/digests to those two files only, so any other
+# value on the same line is still scanned.
+[[allowlists]]
+description = "Reviewed GLDT bridge-control incident review ids are not GitLab deploy tokens"
+targetRules = ["gitlab-deploy-token"]
+condition = "AND"
+regexTarget = "match"
+regexes = ['''^gldt\-gold-dao-(?:7f073131893|db9cc9d0b6d|fe4353c1cde)$''']
+paths = ['''(?:^|/)shared/data/safety-score-v9/incident-(?:reviews-v1|runtime-v1\.generated)\.json$''']
+
+[[allowlists]]
+description = "Reviewed EUROT and tGBP bridge-control key digests in incident reviews"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^(?:c4d94e69af7b57c052ce|8564a2ec799484aab123)$''']
+paths = ['''(?:^|/)shared/data/safety-score-v9/incident-(?:reviews-v1|runtime-v1\.generated)\.json$''']
+
+# Incident findings and source excerpts quote bridge names, contract labels and
+# transfer amounts right after words the generic rule treats as key names.
+[[allowlists]]
+description = "Reviewed prose terms in incident-review findings and excerpts"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^(?:Nomic/Gravity|StargateOFT7753|releasing154\.05452047)$''']
+paths = ['''(?:^|/)shared/data/safety-score-v9/incident-reviews-v1\.json$''']
+
+# The missing-data ledger lists residual IDRT and wsrUSD bridge-control keys in
+# rationales ("Residual keys: ...", once followed by the sentence period).
+[[allowlists]]
+description = "Reviewed IDRT and wsrUSD bridge-control key digests in missing-data ledger rationales"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^(?:f8213d7cc261751b055f|1ef645130fda84cf9841)\.?$''']
+paths = ['''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''']

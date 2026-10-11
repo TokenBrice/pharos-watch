@@ -46,6 +46,8 @@ Wave-4 recurring exceptions retain exact public values and their owning paths: t
 
 Midas mTBILL July 2026 Final Terms capability exceptions are now governed by `.gitleaks.toml`, including the reviewed compliance-sidecar allowlist. The evidence-gap registry's earlier token-free citation and historical fingerprints do not imply a repository-wide ban or exemption; inspect the owning path and rule before changing policy.
 
+Safety Score 10.17 incident research adds exact value/path exceptions for the incident registry (`shared/data/safety-score-v9/incident-reviews-v1.json`), its generated runtime projection and the missing-data ledger: the three GLDT bridge-control review-id spans formed by `gldt` plus `-gold-dao-` and a reviewed 11-hex digest prefix (`gitlab-deploy-token`), the EUROT/tGBP control-key digests, the IDRT/wsrUSD ledger control-key digests, and three quoted prose terms from incident findings and excerpts (`generic-api-key`). Each pair has public, AWS and generic-credential self-test controls; no digest, review-id or prose shape is exempted.
+
 ## Monitoring
 
 ### Google Search Console
