@@ -727,6 +727,21 @@ describe("derived supply-model route observations", () => {
     expect(overlay).not.toHaveProperty("feeEvidence");
   });
 
+  it("evaluates a ceiling's minimum fee at every curve rung, not only the modeled request", () => {
+    // usdt-tether: 10 bps ceiling with a USD 1,000 minimum. A 40k modeled exit
+    // costs 250 bps (over the 200 bps budget); the 100k rung costs 100 bps.
+    const observation = deriveSupplyModelExitRouteObservation(
+      { ...supplyFullEntry, stablecoinId: "usdt-tether", feeModelKind: "documented-variable", feeBps: null,
+        capacityProfile: { ...supplyFullEntry.capacityProfile!, modeledExitSizeUsd: 40_000 } },
+      now,
+    )!;
+    const at = (request: number) => observation.capacityCurve!.find((point) => point.requestedNotionalUsd === request)!;
+
+    expect(observation).toMatchObject({ requestedNotionalUsd: 40_000, executableUsd: 0, scoreEligible: false });
+    expect(at(100_000)).toMatchObject({ executableUsd: 100_000, completionRatio: 1 });
+    expect(at(1_000_000)).toMatchObject({ executableUsd: 1_000_000, completionRatio: 1 });
+  });
+
   it("resolves derived outputs from the reviewed static config's outputAssets", () => {
     // dai-makerdao's psm-swap config documents the LitePSM DAI <-> USDC leg.
     const daiEntry: RedemptionBackstopEntry = {

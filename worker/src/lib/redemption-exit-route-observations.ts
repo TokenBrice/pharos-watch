@@ -531,15 +531,15 @@ export function deriveSupplyModelExitRouteObservation(
   const hasPublishedSchedule = staticConfig?.v9RouteCostTerms?.publishedFeeSchedule !== undefined;
   const evaluatesSchedule = hasFeeComponents || hasPublishedSchedule;
   const boundReferences = { clockSec: now, pegDataById: fiatReferences?.pegDataById ?? {} };
-  const feeBoundBps = evaluatesSchedule && staticConfig
-    ? resolveV9RedemptionRouteCostBpsAtNotional(staticConfig, modeledExitSizeUsd, entry.feeBps, boundReferences)
-    :
-    entry.feeModelKind === "fixed-bps" && entry.feeBps != null
-      ? entry.feeBps
-      : entry.feeModelKind === "documented-variable" && staticConfig &&
-          (staticConfig.v9RouteCostTerms?.feeBpsMax ?? staticConfig.costModel.feeBpsMax) != null
-        ? resolveV9RedemptionRouteCostBpsAtNotional(staticConfig, modeledExitSizeUsd, null, boundReferences)
-        : null;
+  // Ceiling-backed and scheduled fees are re-evaluated per request: minimum
+  // and fixed charges make the bound notional-dependent.
+  const ceilingBacked = !evaluatesSchedule && entry.feeModelKind === "documented-variable" &&
+    (staticConfig?.v9RouteCostTerms?.feeBpsMax ?? staticConfig?.costModel.feeBpsMax) != null;
+  const costAt = (request: number): number | null =>
+    staticConfig && (evaluatesSchedule || ceilingBacked)
+      ? resolveV9RedemptionRouteCostBpsAtNotional(staticConfig, request, evaluatesSchedule ? entry.feeBps : null, boundReferences)
+      : entry.feeModelKind === "fixed-bps" && entry.feeBps != null ? entry.feeBps : null;
+  const feeBoundBps = costAt(modeledExitSizeUsd);
   const withinCost = feeBoundBps != null && feeBoundBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps;
   const boundedUnknownFee =
     feeBoundBps === null &&
@@ -552,8 +552,7 @@ export function deriveSupplyModelExitRouteObservation(
     );
   const requests = mergeExitCurveRequests(modeledExitSizeUsd, eventualUsd);
   const capacityCurve = requests.map((request) => {
-    const costBps = evaluatesSchedule && staticConfig
-      ? resolveV9RedemptionRouteCostBpsAtNotional(staticConfig, request, entry.feeBps, boundReferences) : feeBoundBps;
+    const costBps = costAt(request);
     const point = buildExitRouteCapacityPoint({
       requestedNotionalUsd: request,
       maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
