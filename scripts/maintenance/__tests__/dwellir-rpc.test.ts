@@ -241,17 +241,30 @@ describe("pinned supplemental research RPC", () => {
     });
   });
 
-  it("splits 501 inclusive log blocks into 500 + 1 in order and never treats empty as absence", async () => {
+  it.each([
+    { chain: "ethereum", span: 1_000, provider: "dwellir" },
+    { chain: "monad", span: 1_000, provider: "dwellir" },
+    { chain: "astar", span: 1_024, provider: "dwellir" },
+    { chain: "base", span: 10_000, provider: "dwellir" },
+    { chain: "ethereum", span: 500, provider: "public" },
+    { chain: "zksync", span: 500, provider: "dwellir" },
+  ])("splits $provider $chain log ranges at its inclusive $span-block span", async ({ chain, span, provider }) => {
     fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
       const body = JSON.parse(String(init.body));
       return rpcResponse(body.id, body.method === "eth_getLogs" ? [] : header(body.params[0]));
     });
-    const record = await invoke(["--block", "1500"], "ethereum", "eth_getLogs", '[{"fromBlock":"0x3e8","toBlock":"0x5dc"}]');
+    const end = 1_000 + span;
+    const record = await invoke(["--provider", provider, "--block", String(end)], chain, "eth_getLogs",
+      JSON.stringify([{ fromBlock: "1000", toBlock: String(end) }]));
     const calls = fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init.body))).filter((body) => body.method === "eth_getLogs");
     expect(calls.map((body) => body.params[0])).toEqual([
-      { fromBlock: "0x3e8", toBlock: "0x5db" }, { fromBlock: "0x5dc", toBlock: "0x5dc" },
+      { fromBlock: "0x3e8", toBlock: `0x${(end - 1).toString(16)}` },
+      { fromBlock: `0x${end.toString(16)}`, toBlock: `0x${end.toString(16)}` },
     ]);
-    expect(record).toMatchObject({ state: "empty", reason: "empty-result-not-proof-of-absence", result: [], range: { fromBlock: "1000", toBlock: "1500" } });
+    expect(record).toMatchObject({
+      state: "empty", reason: "empty-result-not-proof-of-absence", result: [],
+      range: { fromBlock: "1000", toBlock: String(end) },
+    });
     expect(record.chunks).toHaveLength(2);
   });
 
@@ -264,7 +277,7 @@ describe("pinned supplemental research RPC", () => {
       if (logCalls === 2) return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, error: { code: -32005, message: KEY } }));
       return rpcResponse(body.id, [{ blockNumber: "0x3e8", blockHash: HASH, logIndex: "0x0" }]);
     });
-    const record = await invoke(["--block", "1500"], "ethereum", "eth_getLogs", '[{"fromBlock":"1000","toBlock":"1500"}]');
+    const record = await invoke(["--block", "2000"], "ethereum", "eth_getLogs", '[{"fromBlock":"1000","toBlock":"2000"}]');
     expect(record).toMatchObject({ state: "error", reason: "rpc-error", result: null, error: { rpcCode: -32005 } });
     expect(record.chunks).toHaveLength(1);
     expect(stdout.join("")).not.toContain(KEY);

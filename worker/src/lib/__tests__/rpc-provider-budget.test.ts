@@ -102,6 +102,16 @@ describe("loadDwellirBudgetState", () => {
     });
   });
 
+  it.each([
+    { usedCredits: 99_999_999, usable: true, reason: "ok" },
+    { usedCredits: 100_000_000, usable: false, reason: "provider-budget-exhausted" },
+  ])("uses the 100M default boundary at $usedCredits credits", async ({ usedCredits, usable, reason }) => {
+    const db = makeCreditLedgerDb({ [SEPTEMBER_LEDGER_KEY]: septemberRow(usedCredits) });
+    await expect(
+      loadDwellirBudgetState(db, { DWELLIR_API_KEY: API_KEY }, SEPTEMBER_NOW_SEC),
+    ).resolves.toMatchObject({ usedCredits, usable, reason, capCredits: 100_000_000 });
+  });
+
   it("exhausts the month at the cap and not one credit earlier", async () => {
     const belowCap = makeCreditLedgerDb({ [SEPTEMBER_LEDGER_KEY]: septemberRow(999) });
     await expect(
@@ -153,6 +163,9 @@ describe("loadDwellirBudgetState", () => {
   });
 
   it.each([
+    { label: "unset", value: undefined, capCredits: DWELLIR_DEFAULT_MAX_CREDITS_PER_MONTH },
+    { label: "empty", value: "", capCredits: DWELLIR_DEFAULT_MAX_CREDITS_PER_MONTH },
+    { label: "whitespace", value: "   ", capCredits: DWELLIR_DEFAULT_MAX_CREDITS_PER_MONTH },
     { label: "zero", value: "0", capCredits: DWELLIR_DEFAULT_MAX_CREDITS_PER_MONTH },
     { label: "negative", value: "-25", capCredits: DWELLIR_DEFAULT_MAX_CREDITS_PER_MONTH },
     { label: "non-numeric", value: "abc", capCredits: DWELLIR_DEFAULT_MAX_CREDITS_PER_MONTH },

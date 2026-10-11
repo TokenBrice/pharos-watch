@@ -5,16 +5,16 @@ import { getCache } from "./db-cache";
 import { logWorkerEvent } from "./structured-log";
 
 /**
- * Credit accounting for the Dwellir supplemental-RPC trial.
+ * Conservative local credit admission for Dwellir's shared Growth access.
  *
- * Dwellir meters JSON-RPC response items per UTC calendar month and the plan is
- * shared by every isolate serving the trial, so the only durable authority is
- * one cache-table row per month. Increments compare-and-swap on the stored row,
- * and an unreadable row fails closed: overspending the shared plan would take
- * the trial offline for the rest of the month.
+ * EVM transports count attempted JSON-RPC members (including errors/retries);
+ * native transports count received HTTP responses. Vendor JSON-RPC billing
+ * excludes error members, so this is not an invoice meter or spend reservation.
+ * One cache-table row per UTC month durably merges flushed usage using
+ * compare-and-swap; an unreadable row fails closed.
  */
 
-export const DWELLIR_DEFAULT_MAX_CREDITS_PER_MONTH = 20_000_000;
+export const DWELLIR_DEFAULT_MAX_CREDITS_PER_MONTH = 100_000_000;
 
 const DWELLIR_CREDIT_LEDGER_CACHE_PREFIX = "rpc:dwellir:credits:v1";
 const DWELLIR_LEDGER_CAS_ATTEMPTS = 3;
@@ -146,9 +146,9 @@ export async function loadDwellirBudgetState(
 }
 
 /**
- * Adds to the isolate-local pending month bucket (1 credit per JSON-RPC response
- * item, including errors). Counts are truncated to whole credits; non-finite
- * and non-positive results are ignored.
+ * Adds conservative usage to the isolate-local pending month bucket: attempted
+ * EVM JSON-RPC members or received native HTTP responses, including errors.
+ * Counts truncate to whole credits; non-finite/non-positive counts are ignored.
  */
 export function recordDwellirCredits(count: number, observedAtSec = Date.now() / 1000): void {
   if (!Number.isFinite(count)) return;
