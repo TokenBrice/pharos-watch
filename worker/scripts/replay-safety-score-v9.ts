@@ -263,9 +263,11 @@ export function rederiveUndisclosedFeeObservations(
   const map: SafetyScoreV9CompilerInput["redemptionBackstopMap"] = { ...fixedInput.redemptionBackstopMap };
   let changed = false;
   for (const [assetId, entry] of Object.entries(map)) {
-    if (!entry || entry.feeModelKind !== "undisclosed-reviewed") continue;
+    if (!entry) continue;
     const profile = entry.capacityProfile;
     if (!profile || (profile.exitRouteObservations?.length ?? 0) === 0) continue;
+    if (entry.feeModelKind !== "undisclosed-reviewed" &&
+        profile.exitRouteObservations?.some((observation) => observation.feeEvidence === "undisclosed-reviewed") !== true) continue;
     const derived = deriveSupplyModelExitRouteObservation(
       { ...entry, capacityProfile: { ...profile, exitRouteObservations: undefined } },
       fixedInput.clockSec,

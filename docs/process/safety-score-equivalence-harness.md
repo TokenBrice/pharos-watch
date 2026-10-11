@@ -310,7 +310,8 @@ The NAV validator and baseline extension use snapshot classifications and
 metadata, never today's classifications. No NAV rows are discarded.
 Every ordinary replay preserves captured redemption observations and base generation.
 Only `--rederive-current-redemption` requests the current-producer scenario for
-undisclosed-reviewed fee rows; it reseals changed bytes and records the source generation.
+undisclosed-reviewed fee rows and rows whose captured observation carries
+`feeEvidence: "undisclosed-reviewed"`; it reseals changed bytes and records the source generation.
 The option is rejected with accepted captures, embedded registry wrappers or `--registry-ref`.
 
 The registry fingerprint does **not** identify every V9 overlay or the evaluator.

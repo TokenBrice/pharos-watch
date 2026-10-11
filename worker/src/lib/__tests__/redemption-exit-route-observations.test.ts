@@ -665,7 +665,7 @@ describe("derived supply-model route observations", () => {
 
   it("preserves reviewed capacity while distinguishing unquantified published fees", () => {
     const variable = deriveSupplyModelExitRouteObservation(
-      { ...supplyFullEntry, feeModelKind: "documented-variable", feeBps: null },
+      { ...supplyFullEntry, stablecoinId: "xsgd-straitsx", feeModelKind: "documented-variable", feeBps: null },
       now,
     );
     expect(variable).toMatchObject({
@@ -716,9 +716,15 @@ describe("derived supply-model route observations", () => {
       completionRatio: 1,
       scoreEligible: true,
     });
-    // usdc-circle's config has no feeBpsMax: documented-variable keeps its
-    // reviewed capacity under the bounded-unknown marker, while only a primary
-    // source numeric ceiling can make the route producer-level score eligible.
+    // eurc-circle's ceiling lives only in the v9 route-cost overlay; it bounds
+    // the eventual supply-model route exactly like the hot-buffer path.
+    const overlay = deriveSupplyModelExitRouteObservation(
+      { ...supplyFullEntry, stablecoinId: "eurc-circle", settlementModel: "same-day",
+        feeModelKind: "documented-variable", feeBps: null },
+      now,
+    );
+    expect(overlay).toMatchObject({ routeId: "redemption:eurc-circle:offchain-issuer", executableUsd: 5_000_000 });
+    expect(overlay).not.toHaveProperty("feeEvidence");
   });
 
   it("resolves derived outputs from the reviewed static config's outputAssets", () => {

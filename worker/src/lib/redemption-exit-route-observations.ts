@@ -520,8 +520,9 @@ export function deriveSupplyModelExitRouteObservation(
       : "eventual-redemption";
   // A defensible cost bound is a documented fixed-bps fee on the published row,
   // or (T1, owner ruling 2026-07-22 R3/R4) a reviewed documented ceiling
-  // (`feeBpsMax`) on the same static config that already supplies this route's
-  // output composition. Formula and documented-variable fees
+  // (`feeBpsMax`, including the v9 route-cost overlay, with its reviewed
+  // minimum and fixed charges) on the same static config that already supplies
+  // this route's output composition. Formula and documented-variable fees
   // without a stated ceiling remain cost-unbounded. Preserve modeled capacity,
   // but distinguish disclosed terms from issuer non-disclosure; neither proves
   // a same-notional execution cost bound.
@@ -535,8 +536,9 @@ export function deriveSupplyModelExitRouteObservation(
     :
     entry.feeModelKind === "fixed-bps" && entry.feeBps != null
       ? entry.feeBps
-      : entry.feeModelKind === "documented-variable" && staticConfig?.costModel.feeBpsMax != null
-        ? staticConfig.costModel.feeBpsMax
+      : entry.feeModelKind === "documented-variable" && staticConfig &&
+          (staticConfig.v9RouteCostTerms?.feeBpsMax ?? staticConfig.costModel.feeBpsMax) != null
+        ? resolveV9RedemptionRouteCostBpsAtNotional(staticConfig, modeledExitSizeUsd, null, boundReferences)
         : null;
   const withinCost = feeBoundBps != null && feeBoundBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps;
   const boundedUnknownFee =
