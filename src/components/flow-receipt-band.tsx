@@ -37,7 +37,7 @@ function ReceiptValue({ row }: { row: FlowPressureReceiptRow }) {
   if (row.tone === "net") {
     return (
       <FlowSignedNetValue
-        net={{ valueUsd: row.valueUsd, completeness: row.completeness, note: row.note }}
+        net={{ valueUsd: row.valueUsd, completeness: row.completeness, note: row.note, bound: row.bound }}
         format={formatSignedCurrency}
         colorClassName={getNetColor}
         className={className}

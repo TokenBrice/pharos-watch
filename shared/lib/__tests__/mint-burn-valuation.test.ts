@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  mintBurnSignedNetBound,
   provenNetFlowDirection24h,
   resolveMintBurnValuation,
   summarizeMintBurnValuation,
@@ -45,5 +46,19 @@ describe("mint/burn valuation completeness", () => {
 
   it("never resolves an absent published valuation as complete", () => {
     expect(resolveMintBurnValuation(undefined)).toMatchObject({ completeness: "unknown" });
+  });
+});
+
+describe("mintBurnSignedNetBound", () => {
+  it("bounds the net from below when only mints are unpriced and from above when only burns are", () => {
+    expect(mintBurnSignedNetBound(10, { mintCompleteness: "partial", burnCompleteness: "complete" }))
+      .toEqual({ kind: "lower", valueUsd: 10 });
+    expect(mintBurnSignedNetBound(10, { mintCompleteness: "complete", burnCompleteness: "partial" }))
+      .toEqual({ kind: "upper", valueUsd: 10 });
+  });
+
+  it("publishes no bound for an exact net or when both sides are incomplete", () => {
+    expect(mintBurnSignedNetBound(10, { mintCompleteness: "complete", burnCompleteness: "complete" })).toBeNull();
+    expect(mintBurnSignedNetBound(10, { mintCompleteness: "partial", burnCompleteness: "unknown" })).toBeNull();
   });
 });

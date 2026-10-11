@@ -19,7 +19,7 @@ const NetFlowDirection24hSchema = z.enum(NET_FLOW_DIRECTION_24H_VALUES);
  * - `complete`: every counted event carried a USD valuation, so totals are exact. A window with no
  *   counted events is complete (genuine zero activity).
  * - `partial`: counted events without a USD valuation exist. Mint/burn volumes are known-subtotal lower
- *   bounds; a signed net is not a bound in either direction.
+ *   bounds; the known signed net is a one-sided bound only when exactly one side is partial.
  * - `unknown`: part of the window was aggregated before valuation completeness was recorded.
  */
 export const MINT_BURN_VALUATION_COMPLETENESS_VALUES = ["complete", "partial", "unknown"] as const;
@@ -37,6 +37,17 @@ export const MintBurnValuationSchema = z.object({
   unpricedBurnEventCount: z.number().int().nonnegative(),
 });
 export type MintBurnValuation = z.infer<typeof MintBurnValuationSchema>;
+
+/**
+ * Proven one-sided bound on a withheld signed net (mint-burn-flow v6.25). Unpriced mints can only
+ * raise the true net (`lower`: net ≥ valueUsd); unpriced burns can only lower it (`upper`: net ≤
+ * valueUsd). Published only when exactly one side is partial; never the net itself.
+ */
+export const MintBurnSignedNetBoundSchema = z.object({
+  kind: z.enum(["lower", "upper"]),
+  valueUsd: z.number().finite(),
+});
+export type MintBurnSignedNetBound = z.infer<typeof MintBurnSignedNetBoundSchema>;
 
 const MintBurnGaugeSchema = z.object({
   score: SignedFlowIntensitySchema.nullable(),
@@ -125,6 +136,10 @@ const MintBurnCoinValuationSchema = z.object({
   netFlow7d: MintBurnValuationCompletenessSchema,
   netFlow30d: MintBurnValuationCompletenessSchema,
   netFlow90d: MintBurnValuationCompletenessSchema,
+  /** One-sided bound on a withheld window net; `null` when none is proven. Absent before v6.25. */
+  netFlow7dBound: MintBurnSignedNetBoundSchema.nullable().optional(),
+  netFlow30dBound: MintBurnSignedNetBoundSchema.nullable().optional(),
+  netFlow90dBound: MintBurnSignedNetBoundSchema.nullable().optional(),
 });
 
 const MintBurnCoinFlowSchema = z.object({

@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.25",
+    "title": "One-sided bounds on partially valued nets",
+    "date": "2026-10-11",
+    "effectiveAt": 1791763200,
+    "summary": "When unpriced events sit on only one side of a window, the flow tracker now shows the proven bound on the signed net (≥ when only mints are unpriced, ≤ when only burns are) instead of a bare NR, and the aggregate 24-hour direction is proven from every coin's known subtotals.",
+    "impact": [
+      "Unpriced mints can only raise the true net and unpriced burns can only lower it. When exactly one side of a window is partial, the known-valuation net is therefore a proven floor or ceiling. Per-coin 24h nets derive it from the published subtotals; the API adds additive valuation.netFlow7dBound, netFlow30dBound and netFlow90dBound ({ kind: lower | upper, valueUsd }, null when none is proven) beside the still-null signed nets",
+      "Pages render a bounded net as an explicit ≥ or ≤ value with the unpriced counts in its accessible reason, never as the net itself; sorts, leaders, chart bars and cumulative lines still exclude it. Client-side sums keep a bound only when every withheld component is bounded on the same side and no component is coverage-unknown; unpriced events on both sides still render NR",
+      "The aggregate 24h overview direction now adds a partial coin's known subtotals to the proven range instead of discarding the whole range, so one unpriced mint no longer hides a net minting day that missing valuation cannot reverse. Pressure, gauge weighting, flight-to-quality and event-time pricing are unchanged. Activation is provisionally 2026-10-12 00:00 UTC (1791763200); re-date effectiveAt at release"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.24",
     "title": "Closed-hour flow windows and complete repair evidence",
     "date": "2026-10-10",

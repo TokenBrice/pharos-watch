@@ -163,11 +163,18 @@ describe("mint/burn valuation completeness on real SQLite", () => {
       netFlow7dUsd: null,
       netFlow30dUsd: null,
     });
+    // Withheld longer nets publish only their proven one-sided bound: unpriced mints can only raise them.
+    expect(usdt.valuation).toMatchObject({
+      netFlow7dBound: { kind: "lower", valueUsd: -1_000_000 },
+      netFlow30dBound: { kind: "lower", valueUsd: 4_000_000 },
+    });
 
     const usdc = byId.get("usdc-circle")!;
     expect(usdc.has24hActivity).toBe(true);
     expect(usdc.valuation.window24h).toMatchObject({ completeness: "partial", unpricedBurnEventCount: 1 });
     expect(usdc).toMatchObject({ netFlow24hUsd: null, netFlowDirection24h: null });
+    // Only a burn is unpriced, so the known +$5M 7d net is a ceiling.
+    expect(usdc.valuation.netFlow7dBound).toEqual({ kind: "upper", valueUsd: 5_000_000 });
 
     const usdai = byId.get("usdai-usd-ai")!;
     expect(usdai.valuation.window24h.completeness).toBe("complete");
@@ -197,6 +204,9 @@ describe("mint/burn valuation completeness on real SQLite", () => {
       netFlow7d: "complete",
       netFlow30d: "complete",
       netFlow90d: "complete",
+      netFlow7dBound: null,
+      netFlow30dBound: null,
+      netFlow90dBound: null,
     });
     expect(empty.netFlowDirection24h).toBe("inactive");
     expect(empty.netFlow24hUsd).toBe(0);

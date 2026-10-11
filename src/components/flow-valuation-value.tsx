@@ -9,7 +9,8 @@ import {
 /**
  * Signed mint/burn net with valuation-completeness semantics: an unavailable net
  * (null, or partial valuation) renders the placeholder with an accessible reason,
- * never $0; a coverage-unknown net keeps its value with a subtle marker.
+ * never $0, unless it carries a proven one-sided bound, which renders as an explicit
+ * `≥`/`≤` value; a coverage-unknown net keeps its value with a subtle marker.
  */
 export function FlowSignedNetValue({
   net,
@@ -25,6 +26,21 @@ export function FlowSignedNetValue({
   className?: string;
   placeholder?: string;
 }) {
+  if (net.valueUsd == null && net.bound) {
+    const { kind, valueUsd } = net.bound;
+    // Colour only when the bound already proves the sign; otherwise the bound stays neutral.
+    const provesSign = kind === "lower" ? valueUsd > 0 : valueUsd < 0;
+    return (
+      <span
+        className={cn(provesSign ? colorClassName?.(valueUsd) : "text-muted-foreground", className)}
+        title={net.note ?? undefined}
+      >
+        {kind === "lower" ? "≥ " : "≤ "}
+        {format(valueUsd)}
+        <span className="sr-only"> ({net.note ?? (kind === "lower" ? "lower bound" : "upper bound")})</span>
+      </span>
+    );
+  }
   if (net.valueUsd == null) {
     return (
       <span className={cn("text-muted-foreground", className)} title={net.note ?? undefined}>

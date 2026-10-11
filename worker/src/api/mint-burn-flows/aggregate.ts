@@ -4,11 +4,12 @@ import { getPressureShiftState } from "@shared/lib/mint-burn-signals";
 import {
   addMintBurnValuationTally,
   emptyMintBurnValuationTally,
+  mintBurnSignedNetBound,
   provenNetFlowDirection24h,
   summarizeMintBurnValuation,
   type MintBurnValuationTally,
 } from "@shared/lib/mint-burn-valuation";
-import type { MintBurnValuation, MintBurnValuationCompleteness } from "@shared/types/mint-burn";
+import type { MintBurnSignedNetBound, MintBurnValuation, MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import { getLatestSuccessfulCronTimestampResult, type CronTimestampLookupResult } from "../../lib/api-freshness";
 import type { FlightToQualityClassification } from "../../lib/flight-to-quality-classification";
 import {
@@ -105,6 +106,9 @@ export interface CoinFlowValuation {
   netFlow7d: MintBurnValuationCompleteness;
   netFlow30d: MintBurnValuationCompleteness;
   netFlow90d: MintBurnValuationCompleteness;
+  netFlow7dBound: MintBurnSignedNetBound | null;
+  netFlow30dBound: MintBurnSignedNetBound | null;
+  netFlow90dBound: MintBurnSignedNetBound | null;
 }
 
 /** Known-valuation window net with its valuation tally. */
@@ -481,9 +485,15 @@ export function buildCoinSummaries(
     const net30d = data.net30dMap.get(id);
     const net90d = data.net90dMap.get(id);
     // A window without buckets is genuinely empty, hence complete.
-    const net7dValuation = summarizeMintBurnValuation(net7d?.valuation ?? emptyMintBurnValuationTally()).completeness;
-    const net30dValuation = summarizeMintBurnValuation(net30d?.valuation ?? emptyMintBurnValuationTally()).completeness;
-    const net90dValuation = summarizeMintBurnValuation(net90d?.valuation ?? emptyMintBurnValuationTally()).completeness;
+    const net7dSummary = summarizeMintBurnValuation(net7d?.valuation ?? emptyMintBurnValuationTally());
+    const net30dSummary = summarizeMintBurnValuation(net30d?.valuation ?? emptyMintBurnValuationTally());
+    const net90dSummary = summarizeMintBurnValuation(net90d?.valuation ?? emptyMintBurnValuationTally());
+    const net7dValuation = net7dSummary.completeness;
+    const net30dValuation = net30dSummary.completeness;
+    const net90dValuation = net90dSummary.completeness;
+    // A withheld (partial) net publishes only its proven one-sided bound, never the known net itself.
+    const windowBound = (window: WindowNetFlow | undefined, summary: MintBurnValuation) =>
+      window && summary.completeness === "partial" ? mintBurnSignedNetBound(window.netUsd, summary) : null;
     coins.push({
       stablecoinId: id,
       symbol: config.symbol,
@@ -516,6 +526,9 @@ export function buildCoinSummaries(
         netFlow7d: net7dValuation,
         netFlow30d: net30dValuation,
         netFlow90d: net90dValuation,
+        netFlow7dBound: windowBound(net7d, net7dSummary),
+        netFlow30dBound: windowBound(net30d, net30dSummary),
+        netFlow90dBound: windowBound(net90d, net90dSummary),
       },
     });
   }
