@@ -563,6 +563,7 @@ export function OracleLiquidationSection({
           {branchesNode}
         </div>
       }
+      visualFold="Pricing path"
       verdict={summary.verdict}
       chipRow={
         confidence ? (

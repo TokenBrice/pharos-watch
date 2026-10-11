@@ -773,6 +773,7 @@ export function BridgingDeploymentsModule({
           bandLimiting={uncelledLimiting.bandCaption ?? undefined}
         />
       ) : undefined}
+      visualFold={`Routes by chain (${routeCells.length})`}
       verdict={verdict}
       chipRow={chips.length > 0 ? chips : undefined}
       folds={

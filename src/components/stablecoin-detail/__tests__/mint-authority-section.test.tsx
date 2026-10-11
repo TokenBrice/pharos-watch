@@ -208,6 +208,7 @@ describe("MintAuthoritySection", () => {
     const html = container.innerHTML;
 
     expect(disclosureOrder(container)).toEqual([
+      "mint-authority-visual",
       "Scoring breakdown",
       "mint-primary-controls",
       "mint-issuance-diagnostics",

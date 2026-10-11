@@ -144,7 +144,8 @@ describe("FreezeSeizureModule", () => {
   it("omits the scope station when there is no transfer review", () => {
     renderModule({ transferReview: null });
     expect(rail().textContent).not.toMatch(/scope/i);
-    expect(document.querySelectorAll("details")).toHaveLength(1);
+    // The power/scope rail fold plus the merged provenance fold.
+    expect(document.querySelectorAll("details")).toHaveLength(2);
   });
 
   it("groups the transfer review by scope and posture and lists every deployment in a fold", () => {
@@ -209,7 +210,8 @@ describe("FreezeSeizureModule", () => {
     expect(link?.closest("details")).toBe(fold);
     // Two notes plus one source.
     expect(fold?.querySelector("summary")?.textContent).toContain("(3)");
-    expect(document.querySelectorAll("details")).toHaveLength(1);
+    // The power/scope rail fold plus the merged provenance fold.
+    expect(document.querySelectorAll("details")).toHaveLength(2);
   });
 
   it("keeps the merged provenance fold for a source-free review and states the missing source inside it", () => {
@@ -224,7 +226,8 @@ describe("FreezeSeizureModule", () => {
     expect(summaryLine).toContain("(2)");
     expect(screen.getByText("No public source.").closest("details")).toBe(fold);
     expect(screen.getByText(/Resolved by the resolver\./).closest("details")).toBe(fold);
-    expect(document.querySelectorAll("details")).toHaveLength(1);
+    // The power/scope rail fold plus the merged provenance fold.
+    expect(document.querySelectorAll("details")).toHaveLength(2);
   });
 
   it("says the review cites no source when it carries neither sources nor a rationale", () => {

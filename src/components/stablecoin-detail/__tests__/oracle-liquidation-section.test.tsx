@@ -292,7 +292,7 @@ describe("OracleLiquidationSection", () => {
   it("orders the folds as domain detail, then review notes and sources, all closed", () => {
     const { container } = render(<OracleLiquidationSection summary={SUMMARY} />);
     const folds = [...container.querySelectorAll("details")];
-    expect(folds.map((fold) => fold.id)).toEqual(["oracle-feeds", "oracle-review-notes"]);
+    expect(folds.map((fold) => fold.id)).toEqual(["oracle-visual", "oracle-feeds", "oracle-review-notes"]);
     expect(folds.every((fold) => !fold.hasAttribute("open"))).toBe(true);
   });
 
