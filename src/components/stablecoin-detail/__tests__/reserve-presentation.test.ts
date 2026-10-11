@@ -8,6 +8,7 @@ import type {
   ReserveDisplayBadgeView,
 } from "@shared/types";
 import {
+  condenseReserveSlices,
   buildReserveFetchNotice,
   buildReserveFootnoteModel,
   buildReserveCompositionNote,
@@ -707,5 +708,27 @@ describe("dated reserve disclosures", () => {
     // Ages in a diagnostic read in days, never raw seconds.
     expect(status?.rows.join(" ")).toContain("66.8 days old");
     expect(status?.rows.join(" ")).not.toContain("5775332");
+  });
+});
+
+describe("condenseReserveSlices", () => {
+  const slice = (key: string, pct: number, role: string | null = null, risk: "very-low" | "low" = "very-low") =>
+    ({ key, label: key, pct, risk, detail: null, role });
+
+  it("passes short baskets through unchanged", () => {
+    const slices = [slice("a", 60), slice("b", 40)];
+    expect(condenseReserveSlices(slices)).toEqual({ shown: slices, rest: [], restPct: 0 });
+  });
+
+  it("merges same-class same-tier slices, draws five groups and states the remainder share", () => {
+    const slices = [
+      slice("Repo A", 30, "Repo"), slice("Repo B", 20, "Repo"),
+      slice("c", 15), slice("d", 10), slice("e", 8), slice("f", 7), slice("g", 6), slice("h", 4, null, "low"),
+    ];
+    const { shown, rest, restPct } = condenseReserveSlices(slices);
+    expect(shown).toHaveLength(5);
+    expect(shown[0]).toMatchObject({ label: "Repo (2 slices)", pct: 50, role: "Repo" });
+    expect(rest.map((s) => s.key)).toEqual(["g", "h"]);
+    expect(restPct).toBe(10);
   });
 });

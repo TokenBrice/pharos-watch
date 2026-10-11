@@ -18,6 +18,7 @@ import {
   buildReserveSourceChip,
   liveCompositionDiffers,
   compositionSlices,
+  condenseReserveSlices,
   lookThroughCompositionSlices,
   reserveSliceLabel,
   reviewedCompositionSlices,
@@ -280,6 +281,35 @@ function SliceDetail({ summary }: { summary: ReserveQualityClientSummary }) {
         </ul>
       </div>
     </ModuleDisclosure>
+  );
+}
+
+/**
+ * The reserve visual for long baskets: the largest groups draw, the remainder
+ * folds beneath with its count and share in the summary, so a collapsed fold
+ * still accounts for every slice.
+ */
+function CondensedReserveVisual({ slices, subject }: { slices: readonly ReserveCompositionSlice[]; subject: string }) {
+  const { shown, rest, restPct } = condenseReserveSlices(slices);
+  return (
+    <>
+      <ReserveTreemap slices={shown} subject={subject} />
+      {rest.length > 0 ? (
+        <ModuleDisclosure
+          label={`${rest.length} more ${rest.length === 1 ? "slice" : "slices"} · ${formatReserveQualityPct(restPct)}`}
+        >
+          <ul aria-label="Remaining reserve slices" className="mt-2 space-y-1">
+            {rest.map((slice) => (
+              <li key={slice.key} className={cn(SLICE_LINE_CLASS, "flex items-center gap-1.5")}>
+                <ReserveRiskSwatch risk={slice.risk} />
+                <span className="font-medium text-foreground">{slice.label}</span>
+                {` · ${formatReserveRiskTier(slice.risk)} · ${formatReserveQualityPct(slice.pct)}`}
+              </li>
+            ))}
+          </ul>
+        </ModuleDisclosure>
+      ) : null}
+    </>
   );
 }
 
@@ -568,13 +598,13 @@ export function ReservesSection({
       {lookThroughView ? (
         <div className="space-y-3">
           <LookThroughCaption wrapper={lookThroughView.wrapper} lookThrough={lookThroughView.parent} />
-          <ReserveTreemap
+          <CondensedReserveVisual
             slices={lookThroughSlices}
             subject={`${lookThroughView.parent.parentSymbol} reviewed reserve slices, held via ${lookThroughView.wrapper.label}`}
           />
         </div>
       ) : hasReviewedBasis ? (
-        <ReserveTreemap slices={reviewedSlices} subject={qualitySummary?.contextual ? "Contextual reserve slices, not whole-token composition" : "Reviewed reserve slices"} />
+        <CondensedReserveVisual slices={reviewedSlices} subject={qualitySummary?.contextual ? "Contextual reserve slices, not whole-token composition" : "Reviewed reserve slices"} />
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
