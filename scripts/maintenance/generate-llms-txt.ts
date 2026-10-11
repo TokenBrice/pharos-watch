@@ -173,7 +173,7 @@ const changelogLinks = [
 ] as const;
 
 const docsLinks = [
-  ["Documentation Archive", absolute("/docs/"), "Architecture, methodology, and design documentation."],
+  ["Documentation Archive", absolute("/docs/"), "Methodology and API reference documentation."],
   ...PUBLIC_DOCS.map((doc) => [doc.title, absolute(`/docs/${doc.slug}/`), doc.summary] as const),
 ] as const;
 

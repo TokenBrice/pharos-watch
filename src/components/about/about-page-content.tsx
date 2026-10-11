@@ -79,12 +79,6 @@ const ABOUT_PAGE_JSON_LD = {
       url: `${SITE_ORIGIN}/coverage/`,
     },
     {
-      "@type": "TechArticle",
-      "@id": `${SITE_ORIGIN}/docs/data-flow-map/#tech-article`,
-      name: "Data Flow Map",
-      url: `${SITE_ORIGIN}/docs/data-flow-map/`,
-    },
-    {
       "@type": "WebPage",
       "@id": `${SITE_ORIGIN}/methodology/#methodology`,
       name: "Methodology",
@@ -414,7 +408,7 @@ export function AboutPageContent() {
             <Link href="/docs/listing-policy/" className={INLINE_EXTERNAL_LINK_CLASS}>
               listing policy
             </Link>
-            . For architecture, methodology, and design references, use the{" "}
+            . For methodology and API references, use the{" "}
             <Link href="/docs/" className={INLINE_EXTERNAL_LINK_CLASS}>
               documentation archive
             </Link>

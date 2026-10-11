@@ -7,14 +7,13 @@ import { DOC_GROUPS, PUBLIC_DOCS } from "@shared/lib/public-docs";
 export const metadata: Metadata = buildPageMetadata({
   title: "Docs - Pharos Documentation Archive",
   description:
-    "Browse Pharos documentation for stablecoin methodology, API contracts, architecture, data pipelines, design rules, and public dashboard operations.",
+    "Browse Pharos documentation for stablecoin methodology, API contracts, pricing, depeg detection, scoring, and classification rules.",
   canonical: "/docs/",
 });
 
 const GROUP_TITLES: Record<(typeof DOC_GROUPS)[number], string> = {
   system: "System and Data",
   methodology: "Methodology",
-  design: "Design",
 };
 
 const FEATURED_DOCS = [
@@ -31,10 +30,10 @@ const FEATURED_DOCS = [
       "Mint and burn ingestion, pressure scoring, Bank Run Gauge inputs, reconciliation, and historical backfill policy.",
   },
   {
-    slug: "architecture",
-    label: "Maintainers",
+    slug: "depeg-detection",
+    label: "Peg monitors",
     description:
-      "Static export ownership, Cloudflare Pages and Worker lanes, crawl metadata, generated artifacts, and route maps.",
+      "Two-stage depeg confirmation, peg-score inputs, severity bands, event lifecycle, and recovery handling.",
   },
 ] as const;
 
@@ -42,7 +41,6 @@ export default function DocsIndexPage() {
   const byGroup: Record<(typeof DOC_GROUPS)[number], typeof PUBLIC_DOCS> = {
     system: PUBLIC_DOCS.filter((doc) => doc.group === "system"),
     methodology: PUBLIC_DOCS.filter((doc) => doc.group === "methodology"),
-    design: PUBLIC_DOCS.filter((doc) => doc.group === "design"),
   };
 
   return (
@@ -52,7 +50,7 @@ export default function DocsIndexPage() {
       title="Documentation"
       variant="longform"
       leadParagraphs={[
-        "Architecture, methodology, and design references for Pharos. Every page is also served as plain markdown for agents.",
+        "Methodology and API references for Pharos. Every page is also served as plain markdown for agents.",
       ]}
     >
       <div className="space-y-10">
@@ -63,7 +61,7 @@ export default function DocsIndexPage() {
               High-signal public docs
             </h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Durable reference pages for external integrations, flow methodology, and the static-export architecture.
+              Durable reference pages for external integrations, flow methodology, and depeg detection.
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-3">

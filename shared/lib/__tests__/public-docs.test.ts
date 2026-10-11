@@ -13,7 +13,7 @@ const DOC_SOURCES = PUBLIC_DOCS.map((doc) => ({
 
 describe("PUBLIC_DOCS registry", () => {
   it("contains the reviewed initial public set", () => {
-    expect(PUBLIC_DOCS.length).toBe(19);
+    expect(PUBLIC_DOCS.length).toBe(14);
   });
 
   it("points every entry at an existing single-file markdown source", () => {

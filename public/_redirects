@@ -16,13 +16,29 @@
 /feedback/ /api/#partner-access 301
 /feedback /api/#partner-access 301
 
-# Consolidated public documentation routes.
-/docs/data-pipeline/* /docs/data-flow-map/ 301
-/docs/data-pipeline/ /docs/data-flow-map/ 301
-/docs/data-pipeline /docs/data-flow-map/ 301
-/docs/design-context/* /docs/design-language/ 301
-/docs/design-context/ /docs/design-language/ 301
-/docs/design-context /docs/design-language/ 301
+# Consolidated public documentation routes. The engineering and design docs
+# were withdrawn from the public set (2026-10-11); they remain internal in docs/.
+/docs/data-pipeline/* /docs/ 301
+/docs/data-pipeline/ /docs/ 301
+/docs/data-pipeline /docs/ 301
+/docs/design-context/* /docs/ 301
+/docs/design-context/ /docs/ 301
+/docs/design-context /docs/ 301
+/docs/architecture/* /docs/ 301
+/docs/architecture/ /docs/ 301
+/docs/architecture /docs/ 301
+/docs/worker-and-api-limits/* /docs/ 301
+/docs/worker-and-api-limits/ /docs/ 301
+/docs/worker-and-api-limits /docs/ 301
+/docs/data-flow-map/* /docs/ 301
+/docs/data-flow-map/ /docs/ 301
+/docs/data-flow-map /docs/ 301
+/docs/design-language/* /docs/ 301
+/docs/design-language/ /docs/ 301
+/docs/design-language /docs/ 301
+/docs/design-tokens/* /docs/ 301
+/docs/design-tokens/ /docs/ 301
+/docs/design-tokens /docs/ 301
 
 # Stablecoin selector route was renamed to picker; preserve old snapshot links.
 /screener/selector/* /screener/picker/:splat 301

@@ -16,7 +16,7 @@ Pharos keeps four kinds of documentation:
 
 | Audience | Content | Source of inventory |
 | --- | --- | --- |
-| Public readers and integrators | Public architecture, methodology, design, and API reference rendered at `/docs/` | `shared/lib/public-docs.ts` |
+| Public readers and integrators | Public methodology and API reference rendered at `/docs/` (architecture, data-flow, worker-limit, and design docs stay internal) | `shared/lib/public-docs.ts` |
 | Maintainers | Engineering and route contracts in `docs/*.md` | [doc-ownership.json](./doc-ownership.json) and source entrypoints |
 | Operators | Repeatable policies in `docs/process/` | The owning process file |
 | Incident responders | Symptom-led procedures in `docs/runbooks/` and `docs/incident-response/` | The relevant status surface or feature doc |
