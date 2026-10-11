@@ -375,6 +375,19 @@ describe("check-seo-static", () => {
       ],
     },
     {
+      name: "fails static redirect rules placed after a dynamic rule",
+      redirects: "/old/* /new/:splat 301\n/old/ /new/ 301\n/retired /new/ 301\n",
+      errors: [
+        "_redirects static rule /old/ follows a dynamic rule; move it above every splat/placeholder rule",
+        "_redirects static rule /retired follows a dynamic rule; move it above every splat/placeholder rule",
+      ],
+    },
+    {
+      name: "accepts static redirect rules ahead of dynamic rules",
+      redirects: "/old/ /new/ 301\n/retired /new/ 301\n/old/* /new/:splat 301\n",
+      absentErrors: ["follows a dynamic rule", "dynamic-counted rules"],
+    },
+    {
       name: "allows direct public-dataset and Sheets 200 rewrites to dated artifacts",
       redirects: [
         "/datasets/top-stablecoins/latest.csv /datasets/top-stablecoins/2026-07-08.csv 200",
