@@ -55,7 +55,7 @@ export function ScoreChart({
   const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
   const formatTimestamp = useCallback((ts: number) => formatRangeTickDate(ts, range), [range]);
   const chartMargin = useMemo(
-    () => ({ top: showHeader ? 30 : 26, right: 5, bottom: showHeader ? 20 : 8, left: 5 }),
+    () => ({ top: showHeader ? 30 : 26, right: 30, bottom: showHeader ? 20 : 8, left: 5 }),
     [showHeader],
   );
 
