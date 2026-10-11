@@ -184,16 +184,13 @@ export default function FreezeWatchClient() {
               <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
                 {heroUnavailable || freezableShare === null || freezableSummary.coverage === "unavailable"
                   ? "—"
-                  : freezableSummary.coverage === "partial"
-                    ? "Partial"
-                    : formatShare(freezableShare)}
+                  : formatShare(freezableShare)}
               </p>
             )}
             <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-              of tracked stablecoin market cap sits under direct, upstream, or possible issuer freeze control.
+              of {freezableSummary.coverage === "partial" ? "observed" : "tracked"} stablecoin market cap sits under direct, upstream, or possible issuer freeze control.
               {freezableCoverageNote && !heroUnavailable ? (
                 <span className="block font-mono text-[10px] uppercase tracking-wider">
-                  {freezableShare !== null ? `${formatShare(freezableShare)} of observed supply · ` : ""}
                   {freezableCoverageNote}
                 </span>
               ) : null}
