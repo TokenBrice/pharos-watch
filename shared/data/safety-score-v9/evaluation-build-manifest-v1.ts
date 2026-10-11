@@ -22,7 +22,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/exit-execution-model-reviews-v1.json",
-      "sha256": "7ec51c10658c6039b572ae177a04b8570b7eeebfe79691d7768f30b6a0b6981e"
+      "sha256": "6cfe4b4d4323ca398d969291e8318b5c75ba346bbb0d0f7f676818b2af0018f4"
     },
     {
       "path": "shared/data/safety-score-v9/incident-reviews-v1.json",
@@ -1263,7 +1263,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-09-block-26154298-shock-coverage.json.gz"
     }
   ],
-  "digest": "a5d0e28a687e06fde164d949e4a107214807911159ec1862750abfb7f181e488"
+  "digest": "eeaee0a8ce89c070f4c3ed8db65b7f682c47616bc260cf523152ca250f83b86b"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

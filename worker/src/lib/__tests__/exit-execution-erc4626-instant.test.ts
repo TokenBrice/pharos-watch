@@ -25,7 +25,9 @@ const VAULT = "0x0000000000000000000000000000000000000001";
 const TOKEN = "0x0000000000000000000000000000000000000002";
 const HASH = `0x${"1".repeat(64)}`;
 const MULTICALL = parseAbi(["function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)"]);
-const state = vi.hoisted(() => ({ liquidity: 1_000_000_000_000_000n, idleLiquidity: null as bigint | null, rejectPartial: false, feeBps: 0n, grossPreview: false, grossReturn: false, escrowOnly: false, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0 }));
+const state = vi.hoisted(() => ({ liquidity: 1_000_000_000_000_000n, idleLiquidity: null as bigint | null, rejectPartial: false, feeBps: 0n, grossPreview: false, grossReturn: false, escrowOnly: false, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0,
+  feeShares: 0n, unexplainedSupplyDelta: 0n, feeRecipientDelta: null as bigint | null,
+  feeGetter: "feeRecipient", feeRecipient: 3n, feeGetterChanged: false, feeBalanceFails: false, holderBurnMismatch: false, inverseOffset: 0n, outputDust: 0n }));
 const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}` as `0x${string}`;
 vi.mock("@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json", () => ({
   default: { schemaVersion: 1, get reviews() { return [review]; } },
@@ -49,17 +51,37 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
       const amount = tx.data.length >= 74 ? BigInt("0x" + tx.data.slice(10, 74)) : 0n;
       if (selector === toFunctionSelector("aggregate3((address,bool,bytes)[])")) {
         const decoded = decodeFunctionData({ abi: MULTICALL, data: tx.data });
-        const redeemData = decoded.args![0][2]!.callData;
-        const executed = BigInt("0x" + redeemData.slice(10, 74));
+        const innerCalls = decoded.args![0];
+        const redeem = innerCalls.find((entry) => entry.callData.slice(0, 10) === toFunctionSelector("redeem(uint256,address,address)"));
+        const executed = redeem ? BigInt("0x" + redeem.callData.slice(10, 74)) : 0n;
         const succeeds = !state.redeemFails && executed <= state.liquidity && !(state.rejectPartial && executed < shares);
-        const received = executed * (10_000n - state.feeBps) / 10_000n;
-        results.push(encodeAbiParameters(parseAbiParameters("(bool success,bytes returnData)[]"), [[
-          { success: true, returnData: word(7n) }, { success: true, returnData: word(shares) },
-          { success: succeeds, returnData: succeeds ? word(state.grossReturn ? executed : received) : "0x" },
-          { success: true, returnData: word(7n + (succeeds ? received + (state.realizedMismatch ? 1n : 0n) : 0n)) },
-          { success: true, returnData: word(shares - (succeeds ? executed : 0n)) },
-          { success: true, returnData: word(1_000_000_000_000_000n - (succeeds && !state.escrowOnly ? executed : 0n)) },
-        ]]));
+        const received = executed * (10_000n - state.feeBps) / 10_000n - state.outputDust;
+        let redeemed = false;
+        const receipt = innerCalls.map((entry) => {
+          const innerSelector = entry.callData.slice(0, 10);
+          if (innerSelector === toFunctionSelector("redeem(uint256,address,address)")) {
+            redeemed = succeeds;
+            return { success: succeeds, returnData: succeeds ? word(state.grossReturn ? executed : received) : "0x" as `0x${string}` };
+          }
+          if (innerSelector === toFunctionSelector("totalSupply()")) return {
+            success: true, returnData: word(1_000_000_000_000_000n + (redeemed ? state.feeShares + state.unexplainedSupplyDelta - (state.escrowOnly ? 0n : executed) : 0n)),
+          };
+          if (innerSelector === toFunctionSelector("balanceOf(address)")) {
+            const owner = BigInt("0x" + entry.callData.slice(10, 74));
+            const holder = owner === BigInt("0xca11bde05977b3631167028862be2a173976ca11");
+            // eslint-disable-next-line security/detect-possible-timing-attacks -- mock routes by public token address, not a secret.
+            if (entry.target.toLowerCase() === TOKEN) return {
+              success: true, returnData: word(7n + (redeemed ? received + (state.realizedMismatch ? 1n : 0n) : 0n)),
+            };
+            if (holder) return { success: true, returnData: word(shares - (redeemed ? executed - (state.holderBurnMismatch ? 1n : 0n) : 0n)) };
+            return { success: !state.feeBalanceFails, returnData: word(123n + (redeemed ? state.feeRecipientDelta ?? state.feeShares : 0n)) };
+          }
+          if (innerSelector === toFunctionSelector(`${state.feeGetter}()`)) return {
+            success: true, returnData: word(state.feeRecipient + (redeemed && state.feeGetterChanged ? 1n : 0n)),
+          };
+          return { success: false, returnData: "0x" as `0x${string}` };
+        });
+        results.push(encodeAbiParameters(parseAbiParameters("(bool success,bytes returnData)[]"), [receipt]));
         continue;
       }
       const quotedMaximum = (shares < state.liquidity ? shares : state.liquidity) * state.maxBps / 10_000n;
@@ -71,7 +93,7 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
         [toFunctionSelector("maxRedeem(address)")]: state.nonBinding ? 0n : quotedMaximum,
         [toFunctionSelector("maxWithdraw(address)")]: state.nonBinding ? 0n : quotedMaximum,
         [toFunctionSelector("convertToAssets(uint256)")]: amount,
-        [toFunctionSelector("convertToShares(uint256)")]: amount,
+        [toFunctionSelector("convertToShares(uint256)")]: amount > state.inverseOffset ? amount - state.inverseOffset : 0n,
         [toFunctionSelector("previewRedeem(uint256)")]: state.grossPreview ? amount : amount * (10_000n - state.feeBps) / 10_000n,
         [toFunctionSelector("paused()")]: state.paused ? 1n : 0n,
       };
@@ -93,7 +115,8 @@ const inputReference: ExitExecutionCertificate["inputReference"] = { assetKey: "
   unitValueUsd: 1, expectedUnitValueUsd: 1, sourceId: "observed-price", sourceGenerationId: "fixture-price", observedAtSec: CLOCK };
 const outputReference = { ...inputReference, assetKey: "fixture-underlying", deployment: `ethereum:${TOKEN}` };
 const args = { review, inputReference, outputReference, requests: [{ requestedNotionalUsd: 100_000, maxCostBps: 200 }] };
-beforeEach(() => { Object.assign(state, { liquidity: 1_000_000_000_000_000n, idleLiquidity: null, rejectPartial: false, feeBps: 0n, grossPreview: false, grossReturn: false, escrowOnly: false, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0 }); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
+beforeEach(() => { Object.assign(state, { liquidity: 1_000_000_000_000_000n, idleLiquidity: null, rejectPartial: false, feeBps: 0n, grossPreview: false, grossReturn: false, escrowOnly: false, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0,
+  feeShares: 0n, unexplainedSupplyDelta: 0n, feeRecipientDelta: null, feeGetter: "feeRecipient", feeRecipient: 3n, feeGetterChanged: false, feeBalanceFails: false, holderBurnMismatch: false, inverseOffset: 0n, outputDust: 0n }); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
 afterEach(() => vi.useRealTimers());
 
 describe("reviewed synchronous ERC4626 exact execution", () => {
@@ -102,6 +125,49 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     expect(result.points[0]).toMatchObject({ executableUsd: 100_000, requestedRawInput: "100000000000", executedRawInput: "100000000000", certification: "exact-complete", outputs: [{ rawUnits: "100000000000" }] });
     expect(result.source).toMatchObject({ number: 100, hash: HASH, complete: true, truncated: false });
     state.realizedMismatch = true;
+    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+  });
+  it("admits an exact receipt when conservative conversion rounding is not a one-unit inverse", async () => {
+    state.inverseOffset = 846_920n;
+    expect((await observeErc4626InstantExit(args)).points[0]).toMatchObject({
+      certification: "exact-complete", executedRawInput: "100000000000", outputs: [{ rawUnits: "100000000000" }],
+    });
+    state.realizedMismatch = true;
+    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+  });
+  it("certifies a reviewed gross return and preview using the exact rebasing-token net receipt, not a dust tolerance", async () => {
+    state.outputDust = 1n; state.grossPreview = true; state.grossReturn = true;
+    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    const grossReview = { ...review, producer: { ...review.producer, previewRedeem: "gross-before-fee", redeemReturns: "gross-before-fee" } } as ExitExecutionModelReview;
+    expect((await observeErc4626InstantExit({ ...args, review: grossReview })).points[0]).toMatchObject({
+      certification: "exact-complete", outputs: [{ rawUnits: "99999999999" }], fees: [{ rawUnits: "1" }],
+    });
+    state.holderBurnMismatch = true;
+    await expect(observeErc4626InstantExit({ ...args, review: grossReview })).rejects.toThrow("erc4626-realized-output-inconsistent");
+  });
+  it.each(["feeRecipient", "performanceFeeRecipient", "managementFeeRecipient"])("reconciles redeem-time fee shares only against the same-call configured %s balance", async (getter) => {
+    state.feeGetter = getter;
+    // Accrual can mint more shares than the holder burns: supply increases.
+    state.feeShares = 1324860943254759196n;
+    expect((await observeErc4626InstantExit(args)).points[0]).toMatchObject({
+      certification: "exact-complete", executedRawInput: "100000000000", outputs: [{ rawUnits: "100000000000" }],
+    });
+    state.holderBurnMismatch = true;
+    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+  });
+  it("rejects unexplained supply increases and decreases despite an exact holder receipt", async () => {
+    state.unexplainedSupplyDelta = 1n;
+    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    state.unexplainedSupplyDelta = -1n;
+    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+  });
+  it.each(["missing-getter", "wrong-balance", "changed-getter", "unreadable-balance", "holder-recipient"])("rejects fee share mint with %s proof", async (failure) => {
+    state.feeShares = 11n;
+    if (failure === "missing-getter") state.feeGetter = "unsupportedFeeRecipient";
+    if (failure === "wrong-balance") state.feeRecipientDelta = 10n;
+    if (failure === "changed-getter") state.feeGetterChanged = true;
+    if (failure === "unreadable-balance") state.feeBalanceFails = true;
+    if (failure === "holder-recipient") state.feeRecipient = BigInt("0xca11bde05977b3631167028862be2a173976ca11");
     await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
   });
   it.each([9_999n, 0n])("proves full execution even when ordinary max functions conservatively underestimate at %s bps", async (maxBps) => {

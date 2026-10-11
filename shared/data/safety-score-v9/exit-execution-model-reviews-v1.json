@@ -1784,6 +1784,8 @@
           "keyOrder": "account-slot"
         },
         "maxFunctions": "binding",
+        "previewRedeem": "gross-before-fee",
+        "redeemReturns": "gross-before-fee",
         "unrestrictedGateSelectors": [],
         "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd"
       }

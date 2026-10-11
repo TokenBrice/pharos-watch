@@ -13,6 +13,9 @@ const ABI = parseAbi([
   "function maxWithdraw(address) view returns (uint256)",
   "function redeem(uint256,address,address) returns (uint256)",
   "function approve(address,uint256) returns (bool)",
+  "function feeRecipient() view returns (address)",
+  "function performanceFeeRecipient() view returns (address)",
+  "function managementFeeRecipient() view returns (address)",
 ]);
 const MULTICALL_ABI = parseAbi(["function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)"]);
 const ZERO_SLOT = `0x${"0".repeat(64)}`;
@@ -181,6 +184,64 @@ export async function observeErc4626InstantExit(args: {
   const probe2 = await batch([{ to: shareToken, data: calldata("balanceOf", [HOLDER]) }], 71n);
   if (uint(probe[0]!) !== 37n || uint(probe2[0]!) !== 71n) throw new Error("erc4626-state-override-unsupported");
   overrideVerified = true;
+  async function proveFeeShareMint(
+    calls: readonly { target: `0x${string}`; allowFailure: boolean; callData: `0x${string}` }[],
+    receipt: readonly { success: boolean; returnData: `0x${string}` }[],
+    requested: bigint,
+    amount: bigint,
+  ) {
+    // Do not relax the burn invariant on a quote or a separate accrual read.
+    // Discover optional getters, then re-execute the IDENTICAL receipt with
+    // configured-recipient identities and balances surrounding the redeem.
+    if (externalShares) return false;
+    const getters = ["feeRecipient", "performanceFeeRecipient", "managementFeeRecipient"].map((name) => ({
+      target: vault, allowFailure: true, callData: calldata(name),
+    }));
+    const discovery = await batch([{ to: HOLDER, data: encodeFunctionData({
+      abi: MULTICALL_ABI, functionName: "aggregate3", args: [getters],
+    }) }]);
+    const discovered = decodeFunctionResult({
+      abi: MULTICALL_ABI, functionName: "aggregate3", data: discovery[0] as `0x${string}`,
+    });
+    if (discovered.length !== getters.length) return false;
+    const configured = discovered.flatMap((entry, index) => {
+      if (!entry.success || !/^0x0{24}[0-9a-fA-F]{40}$/.test(entry.returnData)) return [];
+      const address = `0x${entry.returnData.slice(-40)}`.toLowerCase() as `0x${string}`;
+      if (BigInt(address) === 0n || address === HOLDER.toLowerCase()) return [];
+      return [{ getter: { ...getters[index]!, allowFailure: false }, address }];
+    });
+    if (configured.length === 0) return false;
+    const recipients = [...new Set(configured.map((entry) => entry.address))];
+    const identities = configured.map((entry) => entry.getter);
+    const balances = recipients.map((address) => ({
+      target: shareToken, allowFailure: false, callData: calldata("balanceOf", [address]),
+    }));
+    const prefix = [...identities, ...balances, {
+      target: shareToken, allowFailure: false, callData: calldata("totalSupply"),
+    }];
+    const proofCalls = [...prefix, ...calls, ...identities, ...balances];
+    const proof = await batch([{ to: HOLDER, data: encodeFunctionData({
+      abi: MULTICALL_ABI, functionName: "aggregate3", args: [proofCalls],
+    }) }], requested);
+    const result = decodeFunctionResult({
+      abi: MULTICALL_ABI, functionName: "aggregate3", data: proof[0] as `0x${string}`,
+    });
+    if (result.length !== proofCalls.length || result.some((entry) => !entry.success)) return false;
+    const suffix = prefix.length + calls.length;
+    if (configured.some((entry, index) => uint(result[index]!.returnData) !== BigInt(entry.address) ||
+        uint(result[suffix + index]!.returnData) !== BigInt(entry.address)) ||
+        uint(result[prefix.length - 1]!.returnData) !== totalSupply ||
+        receipt.some((entry, index) => entry.success !== result[prefix.length + index]!.success ||
+          entry.returnData.toLowerCase() !== result[prefix.length + index]!.returnData.toLowerCase())) return false;
+    let minted = 0n;
+    for (const [index] of recipients.entries()) {
+      const before = uint(result[identities.length + index]!.returnData);
+      const after = uint(result[suffix + identities.length + index]!.returnData);
+      if (after < before) return false;
+      minted += after - before;
+    }
+    return minted > 0n && uint(receipt[5]!.returnData) + amount === totalSupply + minted;
+  }
   const points: ExitExecutionRequestPoint[] = [];
   let provenShares = 0n;
   for (const request of args.requests) {
@@ -199,10 +260,11 @@ export async function observeErc4626InstantExit(args: {
     }
     const inverse = await batch([
       { to: vault, data: calldata("convertToShares", [grossRequest]) },
-      { to: vault, data: calldata("convertToShares", [grossRequest + 1n]) },
     ]);
-    // One underlying base unit can span many share base units (e.g. USDC vaults).
-    if (grossRequest === 0n || uint(inverse[0]!) > requested || uint(inverse[1]!) < requested) throw new Error("erc4626-conversion-inconsistent");
+    // Conversion views can use opposite conservative exchange-rate rounding
+    // (sBOLD does); gross + one asset unit need not round-trip to these shares.
+    // Only the exact holder burn and realized transfer below prove execution.
+    if (grossRequest === 0n || uint(inverse[0]!) > requested) throw new Error("erc4626-conversion-inconsistent");
     // ERC-4626 max functions may conservatively underestimate. Only successful
     // redemption of the ENTIRE requested balance establishes exact-complete.
     let amount = requested;
@@ -292,10 +354,13 @@ export async function observeErc4626InstantExit(args: {
     const received = after >= before ? after - before : 0n;
     const supplyAfter = uint(results[5]!.returnData);
     if (sharesBefore !== requested || sharesAfter > sharesBefore || sharesBefore - sharesAfter !== amount ||
-        supplyAfter > totalSupply || totalSupply - supplyAfter !== amount ||
         after < before || received > gross || received === 0n ||
         (config.redeemReturns === "gross-before-fee" ? returned !== gross : returned !== received) ||
         (config.previewRedeem !== "gross-before-fee" && received < preview)) throw new Error("erc4626-realized-output-inconsistent");
+    if (supplyAfter + amount !== totalSupply &&
+        !(supplyAfter + amount > totalSupply && await proveFeeShareMint(calls, results, requested, amount))) {
+      throw new Error("erc4626-realized-output-inconsistent");
+    }
     let gasRaw = 0n;
     if (externalShares) {
       // Both the execution and fee-history quote refer to this exact block.
