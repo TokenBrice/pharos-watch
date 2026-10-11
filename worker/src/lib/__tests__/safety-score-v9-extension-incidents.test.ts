@@ -13,6 +13,7 @@ import {
   routeSafetyScoreV9OperationalIncidents,
   routeSafetyScoreV9NegativeIncidentReviews,
   addSafetyScoreV9NegativeIncidentEvidence,
+  getSafetyScoreV9NegativeIncidentReviews,
 } from "../safety-score-v9/extension-incidents";
 import type { ControlOverlay } from "../safety-score-v9/extension-shared";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
@@ -181,16 +182,23 @@ describe("Safety Score v9 independent negative incident routing", () => {
     expect(routeSafetyScoreV9NegativeIncidentReviews(rows, "fixture", NEGATIVE_CLOCK_SEC, [], [])).toBe(rows);
   });
 
-  it("rebuilds every reviewed source's full-payload evidence identity from the compact projection", () => {
-    for (const value of incidentRegistry.negativeReviews) {
-      const review = V9NegativeIncidentReviewSchema.parse(value);
-      const clock = v9NegativeIncidentReviewTimeSec(review.reviewedAt);
-      const original = new ReviewEvidenceBuilder(review.assetId, clock);
+  it("rebuilds the full-payload evidence identity of two-digit source indexes from the runtime projection", () => {
+    // Keys embed the sorted-source index, so indexes 10+ order before 2 in the
+    // finished evidence list; every review with 11+ sources exercises that.
+    const reviews = incidentRegistry.negativeReviews
+      .map((value) => V9NegativeIncidentReviewSchema.parse(value))
+      .filter((review) => review.sources.length >= 11);
+    expect(reviews.length).toBeGreaterThan(0);
+    for (const review of reviews) {
+      const reviewedSec = v9NegativeIncidentReviewTimeSec(review.reviewedAt);
+      const original = new ReviewEvidenceBuilder(review.assetId, reviewedSec);
       original.add({ componentKeys: ["control"], sourceId: `safety-score-v9.negative-incident-review.${review.reviewId}`,
-        reviewedAtSec: clock, observedAtSec: review.windowEndSec, confidence: "manual-review",
+        reviewedAtSec: reviewedSec, observedAtSec: review.windowEndSec, confidence: "manual-review",
         sources: review.sources, payload: review, maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC });
-      const rebuilt = new ReviewEvidenceBuilder(review.assetId, clock);
-      addSafetyScoreV9NegativeIncidentEvidence(rebuilt, [projectNegativeIncidentReview(review)]);
+      const runtime = getSafetyScoreV9NegativeIncidentReviews(review.assetId, Math.max(reviewedSec, review.windowEndSec))
+        .filter((row) => row.reviewId === review.reviewId);
+      const rebuilt = new ReviewEvidenceBuilder(review.assetId, reviewedSec);
+      addSafetyScoreV9NegativeIncidentEvidence(rebuilt, runtime);
       expect(rebuilt.finish()).toEqual(original.finish());
     }
   });

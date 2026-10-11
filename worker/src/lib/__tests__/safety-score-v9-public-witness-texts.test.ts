@@ -125,5 +125,6 @@ describe("card-local public witness texts", () => {
     expect(buildAlertSafetyV9SourceEnvelopeFromParts(parts)).toEqual(buildAlertSafetyV9SourceEnvelopeFromParts({
       ...parts, cards: [resolveV9PublicWitnessTexts(card!)],
     }));
-  }, 60_000);
+  // One full-registry publication: 23s in the plain lane, 41-81s under V8 coverage.
+  }, 180_000);
 });

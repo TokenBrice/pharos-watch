@@ -8,8 +8,9 @@ import { buildSafetyScoreV9Candidate, type SafetyScoreV9CandidatePipelineResult 
 // The shared setup evaluates both capture lanes. Preserve the coverage budget
 // for two full-registry compile/evaluate passes without repeating the native pass;
 // v10.05's Sky liability book made each pass ~40% costlier, which exceeded 60s
-// under V8 coverage on the two-core CI runner.
-const V9_EVALUATION_TEST_TIMEOUT_MS = 120_000;
+// under V8 coverage on the two-core CI runner. On the v10.17 registry the
+// coverage-lane setup measured 102s and 151s in consecutive runs (plain lane: 34s).
+const V9_EVALUATION_TEST_TIMEOUT_MS = 240_000;
 
 function cardsById(candidate: SafetyScoreV9CandidatePipelineResult["candidate"]) {
   return new Map(candidate.cards.map((card) => [card.id, {
