@@ -86,7 +86,7 @@ const sourceReferences = GENIUS_REGIME_STATE.sourceReferences ?? [
 ];
 
 const COMPLIANCE_STATIC_SECTION = (
-  <section className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+  <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
     <div className="pharos-card-shell p-5">
       <p className="pharos-kicker">How To Read Status</p>
       <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
