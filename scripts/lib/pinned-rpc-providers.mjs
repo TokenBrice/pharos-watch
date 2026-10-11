@@ -21,6 +21,26 @@ export async function resolvePinnedProvider(chain, provider) {
     if (canonicalChain === "sui") return { endpoint: "https://graphql.mainnet.sui.io/graphql", protocol: "sui-graphql" };
     // https://docs.usecorn.com/docs/developers/Network/Run_a_Node — Maizenet 21000000.
     if (canonicalChain === "corn") return { endpoint: "https://maizenet-rpc.usecorn.com", protocol: "evm" };
+    // https://docs.abs.xyz/connect-to-abstract — mainnet 2741.
+    if (canonicalChain === "abstract") return { endpoint: "https://api.mainnet.abs.xyz", protocol: "evm" };
+    // https://doc.aurora.dev/dev-reference/network-endpoints/ — mainnet 1313161554.
+    if (canonicalChain === "aurora") return { endpoint: "https://mainnet.aurora.dev", protocol: "evm" };
+    // https://docs.citrea.xyz/developer-documentation/chain-information — mainnet 4114.
+    if (canonicalChain === "citrea") return { endpoint: "https://rpc.mainnet.citrea.xyz", protocol: "evm" };
+    // https://docs.soneium.org/docs/builders/overview — mainnet 1868.
+    if (canonicalChain === "soneium") return { endpoint: "https://rpc.soneium.org", protocol: "evm" };
+    // https://mezo.org/docs/users/getting-started/connect — mainnet 31612.
+    if (canonicalChain === "mezo") return { endpoint: "https://mezo-mainnet.boar.network", protocol: "evm" };
+    // https://docs.redbelly.network/pages/eligibility-sdk/backend/ — mainnet 151.
+    if (canonicalChain === "redbelly") return { endpoint: "https://governors.mainnet.redbelly.network", protocol: "evm" };
+    // https://dev.flare.network/network/overview — mainnet 14.
+    if (canonicalChain === "flare") return { endpoint: "https://flare-api.flare.network/ext/C/rpc", protocol: "evm" };
+    // https://docs.exsat.network/user-guides/wallet-setup — mainnet 7200.
+    if (canonicalChain === "exsat") return { endpoint: "https://evm.exsat.network", protocol: "evm" };
+    // https://docs.lisk.com/guides/connecting-to-a-wallet/ — mainnet 1135.
+    if (canonicalChain === "lisk") return { endpoint: "https://rpc.api.lisk.com", protocol: "evm" };
+    // https://docs.assetchain.org/general-info/network-details — mainnet 42420.
+    if (canonicalChain === "assetchain") return { endpoint: "https://mainnet-rpc.assetchain.org", protocol: "evm" };
     const { PUBLIC_RPC_URLS, SUPPLY_RPC_DEFAULTS } = await import("../../shared/lib/chain-rpc-registry.ts");
     const endpoint = PUBLIC_RPC_URLS[canonicalChain] ?? SUPPLY_RPC_DEFAULTS[canonicalChain]?.rpcUrl;
     if (endpoint && meta?.type === "evm") return { endpoint, protocol: "evm" };

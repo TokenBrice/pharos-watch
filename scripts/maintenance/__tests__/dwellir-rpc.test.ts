@@ -525,11 +525,23 @@ describe("pinned supplemental research RPC", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("registers Corn Maizenet research reads without leaking a keyed provider credential", async () => {
-    const record = await invoke(["--provider", "public", "--block", "1711897"], "corn");
-    expect(record).toMatchObject({ state: "ok", endpoint: "https://maizenet-rpc.usecorn.com", block: { number: "1711897" } });
+  it.each([
+    ["corn", "https://maizenet-rpc.usecorn.com"],
+    ["abstract", "https://api.mainnet.abs.xyz"],
+    ["aurora", "https://mainnet.aurora.dev"],
+    ["citrea", "https://rpc.mainnet.citrea.xyz"],
+    ["soneium", "https://rpc.soneium.org"],
+    ["mezo", "https://mezo-mainnet.boar.network"],
+    ["redbelly", "https://governors.mainnet.redbelly.network"],
+    ["flare", "https://flare-api.flare.network/ext/C/rpc"],
+    ["exsat", "https://evm.exsat.network"],
+    ["lisk", "https://rpc.api.lisk.com"],
+    ["assetchain", "https://mainnet-rpc.assetchain.org"],
+  ])("registers %s research reads without leaking a keyed provider credential", async (chain, endpoint) => {
+    const record = await invoke(["--provider", "public", "--block", "1711897"], chain);
+    expect(record).toMatchObject({ state: "ok", endpoint, block: { number: "1711897" } });
     for (const [url, init] of fetchMock.mock.calls) {
-      expect(String(url)).toBe("https://maizenet-rpc.usecorn.com");
+      expect(String(url)).toBe(endpoint);
       expect(init.headers).not.toHaveProperty("Authorization");
       expect(init.headers).not.toHaveProperty("X-Api-Key");
       expect(init.headers).not.toHaveProperty("Drpc-Key");
