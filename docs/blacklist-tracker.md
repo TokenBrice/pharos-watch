@@ -11,6 +11,8 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the
 
 The 2026-10-10 `v4.3` release counts canonical account/log identities once and persists Tron accounts as validated lowercase `0x` bytes rather than provider Base58. Numeric local ordering and proven cross-transaction evidence govern lifecycle and amount state; matching block hashes govern RPC event timestamps. Bounded scan progress is not caught-up coverage and cannot renew success/publication clocks. Durable snapshot debt retries budget-skipped or ambiguous work. Unknown USD valuations remain unavailable, mixed totals disclose partial coverage, and gold totals include every canonical tracked cohort, including XAUM, with explicit provenance for zero substitution. Historical repair cannot use current quotes as event-time USD evidence. Classification thresholds and cadence are unchanged. Activation is provisionally 2026-10-11 00:00 UTC, re-dated at release; fixed-clock identity/ordering/valuation/coverage comparison remains required.
 
+**Release obligations recorded 2026-10-10:** for v4.3, fresh admitted producer observations and production resource evidence remain separate gates from fixed-clock supply/valuation/coverage comparison; these prerequisites do not assert completed production replay or runtime health.
+
 Three registries have deliberately different jobs:
 
 - `CONTRACT_CONFIGS` in `worker/src/lib/blacklist-contracts.ts` is the cron-backed scan set. It owns tracker-specific chain, contract, start-block, event-family, topic, and decoding metadata.

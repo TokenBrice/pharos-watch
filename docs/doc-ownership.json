@@ -6,7 +6,7 @@
   "coreRules": [
     "Prefer the smallest root-cause fix; avoid unrelated refactors.",
     "Update matching docs for behavior, API, pipeline, methodology, or data-source changes.",
-    "Do not replace DefiLlama list supply with manual/on-chain/CMC/DEX overrides; supplemental supply admission paths must be explicit, documented, fail-closed, and double-count safe.",
+    "Do not replace DefiLlama list supply with manual/on-chain/CMC/DEX overrides; supplemental supply admission paths must be explicit, documented, fail-closed, and double-count safe. Reviewed chain-dropout repair/quarantine is a permitted supplemental path under docs/architecture.md#adr-8 clause (c).",
     "Keep Tailwind classes as static strings.",
     "Do not edit shadcn primitives in src/components/ui/ unless explicitly required."
   ],
@@ -127,6 +127,9 @@
         { "path": "docs/supply-snapshot.md", "anchor": "supply-pipeline" }
       ],
       "background": [
+        { "path": "docs/architecture.md", "anchor": "adr-8" },
+        { "path": "docs/architecture.md", "anchor": "adr-28" },
+        { "path": "docs/architecture.md", "anchor": "adr-35" },
         "docs/about-page.md",
         {"path": "docs/data-flow-map.md", "anchor": "market-and-supply-flows"},
         {"path": "docs/process/pricing-pipeline-appendix.md", "anchor": "active-price-coverage-health"},
@@ -399,7 +402,12 @@
         { "path": "docs/operator-origin-access.md", "anchor": "repo-side-changes" },
         { "path": "docs/api-reference.md", "anchor": "public-endpoints" }
       ],
-      "background": [{"path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows"}, { "path": "docs/incident-response/safe-browsing-flag.md", "runbook": { "label": "Safe Browsing flag response", "kind": "procedure" } }],
+      "background": [
+        { "path": "docs/architecture.md", "anchor": "adr-7" },
+        { "path": "docs/architecture.md", "anchor": "adr-27" },
+        {"path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows"},
+        { "path": "docs/incident-response/safe-browsing-flag.md", "runbook": { "label": "Safe Browsing flag response", "kind": "procedure" } }
+      ],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run test:critical-contracts", "npm run check:site-csp-sync", "npm run check:frozen-invariants"],
       "rules": ["Route flags, auth lane behavior, cache metadata, and site-data allowlists are centralized."]
     },
@@ -424,6 +432,7 @@
         "worker/src/cron/**",
         "worker/src/cron/rpc-provider-parity/**",
         "docs/README.md",
+        "docs/process/adr-20-25-cron-incident-evidence.md",
         "docs/process/adr-26-workflows-measurements.md",
         "docs/process/cron-trigger-policy.md",
         "docs/process/worker-runtime-experiments.md",
@@ -436,6 +445,15 @@
       ],
       "docs": ["docs/process/cron-trigger-policy.md"],
       "background": [
+        { "path": "docs/architecture.md", "anchor": "adr-7" },
+        { "path": "docs/architecture.md", "anchor": "adr-10" },
+        { "path": "docs/architecture.md", "anchor": "adr-20" },
+        { "path": "docs/architecture.md", "anchor": "adr-24" },
+        { "path": "docs/architecture.md", "anchor": "adr-25" },
+        { "path": "docs/architecture.md", "anchor": "adr-26" },
+        { "path": "docs/architecture.md", "anchor": "adr-38" },
+        { "path": "docs/architecture.md", "anchor": "adr-39" },
+        "docs/process/adr-20-25-cron-incident-evidence.md",
         {"path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption"},
         {"path": "docs/data-flow-map.md", "anchor": "risk-and-reserve-flows"},
         {"path": "docs/worker-infrastructure.md", "anchor": "cron-scheduling"},
@@ -533,6 +551,7 @@
         "docs/process/d1-migrations.md"
       ],
       "background": [
+        { "path": "docs/architecture.md", "anchor": "adr-6" },
         {"path": "worker/migrations/MANIFEST.md", "anchor": "individual-migrations-current-active-files"},
         "docs/process/d1-baseline-squash-plan.md",
         { "path": "docs/runbooks/db-connectivity.md", "runbook": { "label": "D1 connectivity failure", "kind": "symptom" } },
@@ -581,6 +600,7 @@
       ],
       "docs": [{ "path": "docs/methodology-page.md", "anchor": "methodology-editing-entry" }, { "path": "docs/report-cards.md", "anchor": "methodology-identity" }],
       "background": [
+        { "path": "docs/architecture.md", "anchor": "adr-3" },
         {"path": "docs/depeg-detection.md", "anchor": "thresholds--constants"},
         "docs/dews.md",
         {"path": "docs/depeg-resolver.md", "anchor": "methodology-versioning"},
@@ -656,6 +676,9 @@
         {"path": "docs/digest-pipeline.md", "anchor": "distribution"}
       ],
       "background": [
+        { "path": "docs/architecture.md", "anchor": "adr-19" },
+        { "path": "docs/architecture.md", "anchor": "adr-35" },
+        { "path": "docs/architecture.md", "anchor": "adr-37" },
         "docs/tape-page.md",
         {"path": "docs/process/safety-score-equivalence-harness.md", "anchor": "when-to-use-it"},
         "docs/process/safety-score-curation-expiry-sweep.md",
@@ -739,6 +762,14 @@
         { "path": "docs/runbooks/dated-source-age-caps.md", "anchor": "scheduled-boundaries", "runbook": { "label": "Dated-source scheduled renewal boundaries", "kind": "procedure" } }
       ],
       "background": [
+        { "path": "docs/architecture.md", "anchor": "adr-9" },
+        { "path": "docs/architecture.md", "anchor": "adr-28" },
+        { "path": "docs/architecture.md", "anchor": "adr-29" },
+        { "path": "docs/architecture.md", "anchor": "adr-30" },
+        { "path": "docs/architecture.md", "anchor": "adr-31" },
+        { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/architecture.md", "anchor": "adr-33" },
+        { "path": "docs/architecture.md", "anchor": "adr-34" },
         { "path": "docs/runbooks/blacklist-sync.md", "runbook": { "label": "Blacklist gap checks", "kind": "symptom" } },
         { "path": "docs/runbooks/review-renewal.md", "runbook": { "label": "Scoped review renewal", "kind": "procedure" } }
       ],
@@ -988,7 +1019,12 @@
       "risk": "medium",
       "sources": ["shared/**"],
       "docs": [{ "path": "docs/architecture.md", "anchor": "file-tree-guide" }],
-      "background": [{ "path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows" }],
+      "background": [
+        { "path": "docs/architecture.md", "anchor": "adr-1" },
+        { "path": "docs/architecture.md", "anchor": "adr-2" },
+        { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows" }
+      ],
       "alsoRead": ["shared/AGENTS.md"],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run check:generated-artifacts"],
       "rules": ["Use @shared/lib/... and @shared/types... for shared runtime imports; avoid relative cross-boundary imports."]

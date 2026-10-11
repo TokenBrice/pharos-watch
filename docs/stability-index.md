@@ -13,6 +13,8 @@ Historical entries before formal versioning were reconstructed from git commit h
 
 The `v3.67` release is score-moving for historical repairs, not a formula or band change. Audit repairs and bounded backfills use canonical daily-price/native-domain/DEWS replay with a shared twenty-one-day supply lookback. Trend pairs admitted identities and holds accepted days when the prior denominator is unavailable; required missing DEWS archives cannot become zero stress. Exclusion/restoration projects the post-audit eligible event universe and commits event provenance with PSI atomically. Full-precision contributor factors and source-anchored thirty-day calendar statistics correct attribution/display without rewriting legacy factors. Fixed-clock replay, changed-day attribution and owner review are required before release; no historical rewrite or replay result is asserted by the version bump.
 
+**Release obligations recorded 2026-10-10:** for v3.67, fresh admitted producer observations and production resource evidence remain separate gates from fixed-clock replay, changed-day attribution and owner review; a defined version or replay does not prove production health.
+
 ## Formula
 
 ```
