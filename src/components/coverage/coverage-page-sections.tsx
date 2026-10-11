@@ -179,6 +179,7 @@ export function CoverageFeatureSnapshotCard({
                         : `${mostConcentratedFeature.mcapSharePct.toFixed(0)}%`}
                     </span>
                     <span className="ml-1 text-muted-foreground/80">{mostConcentratedFeature.marketCapComplete ? "cap" : "known cap"}</span>
+                    <span aria-hidden="true" className="mx-1.5 text-muted-foreground/60">·</span>
                     {mostConcentratedFeature.coveragePct == null ? "n/a" : `${mostConcentratedFeature.coveragePct.toFixed(0)}%`} count
                   </>
                 }

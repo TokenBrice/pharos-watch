@@ -510,7 +510,7 @@ export function DigestArchiveClient() {
                 <div className="flex-1 min-w-0">
                   <span
                     className={cn(
-                      "truncate flex items-center gap-1.5",
+                      "flex flex-wrap items-center gap-x-1.5 gap-y-0.5 sm:flex-nowrap sm:truncate",
                       isWeekly ? "text-sm font-semibold" : "text-sm font-medium",
                     )}
                     style={EDITORIAL_META_STYLE}
@@ -524,7 +524,7 @@ export function DigestArchiveClient() {
                     {riskSignal && (
                       <span
                         className={cn(
-                          "rounded border px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider",
+                          "hidden rounded border px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider sm:inline",
                           riskSignal.severity === "critical"
                             ? "border-red-500/35 bg-red-500/10 text-red-700 dark:text-red-300"
                             : "border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300",
