@@ -200,15 +200,10 @@
           "label": "#1 & Longevity Premium",
           "points": 12,
           "maximumPublishedScore": 87,
-          "minimumBaseScore": 75,
           "minimumTrackRecordMonths": 120,
           "requiredMarketRank": 1,
           "minimumExitScore": 70,
-          "requiredEvidenceLevel": "strong",
-          "requiredOperationalComponents": [
-            "stress-redemption",
-            "reserve-reconciliation"
-          ],
+          "requiredEvidenceLevel": "limited",
           "capRelief": {
             "source": "structural",
             "kind": "signal:centralized-mint:low",

@@ -177,8 +177,8 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
     ["not market rank one", (input: V9ProductionScoreInput) => { input.marketRank = 2; }],
     ["less than ten years old", (input: V9ProductionScoreInput) => { input.trackRecordMonths = 119; }],
     ["a degraded 45-point exit", (input: V9ProductionScoreInput) => { input.pillars.exit = pillar(45); }],
-    ["non-strong pillar evidence", (input: V9ProductionScoreInput) => {
-      input.pillars.backing = pillar(95, { evidenceLevel: "adequate" });
+    ["insufficient pillar evidence", (input: V9ProductionScoreInput) => {
+      input.pillars.backing = pillar(95, { evidenceLevel: "insufficient" });
     }],
     ["an unresolved peg reason", (input: V9ProductionScoreInput) => {
       input.peg.reasons = [{
@@ -195,22 +195,15 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
     ["a serial parent", (input: V9ProductionScoreInput) => {
       input.parent = { required: true, score: 83, propagatedReasons: [] };
     }],
-    ["operationally ineligible", (input: V9ProductionScoreInput) => {
-      input.operationalResilience = { ...operationalResilience(), eligible: false };
+    ["an unobserved operational resilience result", (input: V9ProductionScoreInput) => {
+      input.operationalResilience = null;
     }],
-    ["an operational blocker", (input: V9ProductionScoreInput) => {
+    ["an operational danger blocker beside issuer opacity", (input: V9ProductionScoreInput) => {
       input.operationalResilience = {
         ...operationalResilience(),
-        blockerCodes: ["activeDepeg"],
-      };
-    }],
-    ["missing reserve reconciliation", (input: V9ProductionScoreInput) => {
-      const resilience = operationalResilience();
-      input.operationalResilience = {
-        ...resilience,
-        contributions: resilience.contributions.filter(
-          (contribution) => contribution.component !== "reserve-reconciliation",
-        ),
+        eligible: false,
+        contributions: [],
+        blockerCodes: ["issuerOpacity", "activeDepeg"],
       };
     }],
     ["a different asset", (input: V9ProductionScoreInput) => { input.assetId = "usdc-circle"; }],
@@ -272,11 +265,38 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
     });
   });
 
-  it("keeps premium eligibility and publication aligned to the B+ and A+ floors", () => {
+  it("applies below the B+ floor with limited Control evidence and issuer opacity", () => {
+    const input = healthyInput();
+    input.pillars = {
+      backing: pillar(60.22),
+      exit: pillar(97.32),
+      control: pillar(79, {
+        evidenceLevel: "limited",
+        structuralSignals: [signal("centralized-mint", "low")],
+      }),
+    };
+    input.operationalResilience = {
+      ...operationalResilience(),
+      eligible: false,
+      contributions: [],
+      blockerCodes: ["issuerOpacity"],
+    };
+
+    const trace = scoreV9EvaluatedAsset(input, V9_CANDIDATE_POLICY_V1);
+    const [adjustment] = trace.scoreAdjustments;
+
+    expect(adjustment).toMatchObject({ kind: "market-anchor-longevity", appliedPoints: 12 });
+    expect(adjustment!.publishedScoreBefore).toBeLessThan(75);
+    expect(trace.finalScore).toBe(adjustment!.publishedScoreBefore + 12);
+    expect(trace.inheritableScore).toBe(adjustment!.publishedScoreBefore);
+  });
+
+  it("keeps premium publication aligned to the A+ floor", () => {
     const invalid = structuredClone(
       V9_CANDIDATE_POLICY_V1.policy,
     ) as V9MethodologyPolicy;
-    invalid.semantic.formula.assetPremiums[0]!.minimumBaseScore = 74;
+    invalid.semantic.formula.assetPremiums[0]!.maximumPublishedScore = 86;
+    invalid.semantic.formula.assetPremiums[0]!.capRelief.toLimit = 86;
 
     expect(V9MethodologyPolicySchema.safeParse(invalid).success).toBe(false);
   });

@@ -91,18 +91,11 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
       ...policy.semantic,
       formula: {
         ...formulaSemantics,
-        assetPremiums: [...policy.semantic.formula.assetPremiums]
-          .map((premium) => ({
-            ...premium,
-            requiredOperationalComponents: uniqueSorted(
-              premium.requiredOperationalComponents,
-            ),
-          }))
-          .sort(
-            (left, right) =>
-              compareText(left.assetId, right.assetId) ||
-              compareText(left.kind, right.kind),
-          ),
+        assetPremiums: [...policy.semantic.formula.assetPremiums].sort(
+          (left, right) =>
+            compareText(left.assetId, right.assetId) ||
+            compareText(left.kind, right.kind),
+        ),
       },
       materiality: {
         ...policy.semantic.materiality,

@@ -495,14 +495,6 @@ const V9MultiplierBandSchema = z
 export const V9AssetPremiumKindSchema = z.enum(["market-anchor-longevity"]);
 export type V9AssetPremiumKind = z.infer<typeof V9AssetPremiumKindSchema>;
 
-const V9OperationalResilienceComponentSchema = z.enum([
-  "cumulative-redemption",
-  "stress-redemption",
-  "persistent-market-depth",
-  "stress-recovery",
-  "reserve-reconciliation",
-]);
-
 const V9AssetPremiumPolicySchema = z
   .object({
     assetId: z.string().min(1),
@@ -510,14 +502,10 @@ const V9AssetPremiumPolicySchema = z
     label: z.string().min(1),
     points: z.number().finite().positive().max(20),
     maximumPublishedScore: ScoreSchema,
-    minimumBaseScore: ScoreSchema,
     minimumTrackRecordMonths: z.number().int().positive(),
     requiredMarketRank: z.number().int().positive(),
     minimumExitScore: ScoreSchema,
     requiredEvidenceLevel: V9EvidenceLevelSchema,
-    requiredOperationalComponents: z
-      .array(V9OperationalResilienceComponentSchema)
-      .min(1),
     capRelief: z
       .object({
         source: z.literal("structural"),
@@ -542,13 +530,6 @@ const V9AssetPremiumPolicySchema = z
         message: "Asset premium cap relief must name one exact registered structural signal",
       });
     }
-    if (premium.minimumBaseScore >= premium.maximumPublishedScore) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["minimumBaseScore"],
-        message: "Asset premium minimum base score must remain below its maximum published score",
-      });
-    }
     if (premium.capRelief.fromLimit >= premium.capRelief.toLimit) {
       ctx.addIssue({
         code: "custom",
@@ -561,13 +542,6 @@ const V9AssetPremiumPolicySchema = z
         code: "custom",
         path: ["capRelief", "toLimit"],
         message: "Asset premium cap relief must stop at the maximum published score",
-      });
-    }
-    if (new Set(premium.requiredOperationalComponents).size !== premium.requiredOperationalComponents.length) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["requiredOperationalComponents"],
-        message: "Asset premium operational components cannot contain duplicates",
       });
     }
   });
@@ -1592,13 +1566,6 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
   const bPlusFloor = grades.find((entry) => entry.grade === "B+")?.minScore;
   const aPlusFloor = grades.find((entry) => entry.grade === "A+")?.minScore;
   formula.assetPremiums.forEach((premium, index) => {
-    if (premium.minimumBaseScore !== bPlusFloor) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "formula", "assetPremiums", index, "minimumBaseScore"],
-        "Market-anchor premium eligibility must begin at the configured B+ floor",
-      );
-    }
     if (premium.maximumPublishedScore !== aPlusFloor) {
       addPolicyIssue(
         ctx,

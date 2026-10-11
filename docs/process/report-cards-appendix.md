@@ -111,9 +111,9 @@ Report-v7 distinguishes rated (numeric score/letter grade), not-rated (null scor
 
 ### Asset premiums and dependency inheritance
 
-The policy-declared `market-anchor-longevity` premium applies only to `usdt-tether` when its eligibility gates are met: market rank 1, at least 120 months of history, base score at least 75, exit score at least 70, strong evidence, a clean peg, and the `stress-redemption` plus `reserve-reconciliation` operational components. It adds 12 points, raises the `signal:centralized-mint:low` cap from 83 to 87, and limits the public score to 87, the A+ threshold.
+The policy-declared `market-anchor-longevity` premium applies only to `usdt-tether` when its eligibility gates are met: market rank 1, at least 120 months of history, exit score at least 70, every pillar included with at most `limited` evidence (an `insufficient` pillar withholds it), a clean peg, an observed operational-resilience result, and no operational danger blocker (active depeg, global reserve impairment, critical control failure, critical dependency or active material incident). There is no base-score floor, and issuer opacity alone does not withhold it: the premium rewards longevity on top of whatever the evidence-driven base is. It adds 12 points, raises the `signal:centralized-mint:low` cap from 83 to 87, and limits the public score to 87, the A+ threshold. Any other cap below 87 still binds.
 
-Premium gates re-evaluate each capture; new chain admission can restore eligibility without policy change. Neither 9.9 replay nor 2026-09-23 TRON re-review met every gate. [Structured changelog](../../shared/data/methodology-changelogs/safety-score/v10.json) owns capture scores/history; `CHAIN_MATURITY_REVIEWS_V1` owns current admission/rationale.
+Premium gates re-evaluate each capture. Dependents inherit the pre-premium score. [Structured changelog](../../shared/data/methodology-changelogs/safety-score/v10.json) owns capture scores/history; `CHAIN_MATURITY_REVIEWS_V1` owns current admission/rationale.
 
 Premiums are not inherited: `applyV9AssetPremium` leaves `inheritableScore` unchanged; `projectV9DependencyScore` returns it. USDT may publicly score 87 while `steakusdt-steakhouse`/`susdt-spark` inherit 83. That 83 snapshot is not stale and must not sync to the premium-adjusted parent.
 

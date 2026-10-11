@@ -281,9 +281,6 @@ function mutateNumericPolicyParameter(
   }
   current[segments.at(-1)!] = value;
   if (path.startsWith("semantic.formula.gradeThresholds[")) {
-    const baselineA = baseline.policy.semantic.formula.gradeThresholds.find(
-      (threshold) => threshold.grade === "A",
-    )!.minScore;
     const baselineAPlus = baseline.policy.semantic.formula.gradeThresholds.find(
       (threshold) => threshold.grade === "A+",
     )!.minScore;
@@ -294,9 +291,6 @@ function mutateNumericPolicyParameter(
       (threshold) => threshold.grade === "A+",
     )!.minScore;
     for (const premium of policy.semantic.formula.assetPremiums) {
-      if (premium.minimumBaseScore === baselineA) {
-        premium.minimumBaseScore = aFloor;
-      }
       if (premium.maximumPublishedScore === baselineAPlus) {
         premium.maximumPublishedScore = aPlusFloor;
       }
