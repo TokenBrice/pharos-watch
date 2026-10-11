@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 
 ## Metadata Contract
 
-Every provenance field below is an evidence claim about the current run, not a feed-family label — rule R6 (ADR-33 in [architecture.md](./architecture.md#architectural-decision-records)), enforced for route attribution by `buildRedemptionSnapshotMetadata` in `worker/src/cron/reserve-adapters/redemption.ts`.
+Every provenance field below is an evidence claim about the current run, not a feed-family label — rule R6 (ADR-33 in [architecture.md](./architecture.md#adr-33)), enforced for route attribution by `buildRedemptionSnapshotMetadata` in `worker/src/cron/reserve-adapters/redemption.ts`.
 
 Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig` (`shared/types/live-reserves.ts`, authored under `shared/data/stablecoins/coins/*.json` and validated by `shared/lib/stablecoins/schema.ts`). Producer, recovery, adapter lookups, and snapshot-store reads/writes use `shared/lib/stablecoins/worker-runtime-registry.ts`: configured feeds retain lossless `liveReservesConfig`, `flags`, `reserves`, and `reserveReview` inputs, while unconfigured entries keep only bounded classification/structural slices. `ReserveAdapterCoin` in `shared/types/core.ts` defines the adapter's metadata contract.
 

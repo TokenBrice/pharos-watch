@@ -408,7 +408,9 @@ async function upsertTelegramLifecycleSnapshot(
     || snapshot.churnedWatchers == null
     || snapshot.reactivatedWatchers == null
     || snapshot.presetImpliedCoinFollows == null
+    || snapshot.unavailableFields?.includes("pendingDeliveries")
   ) {
+    // The daily table has no availability marker: never persist a failed pending read as zero.
     return;
   }
   // NOTE: reserve and freeze opt-ins are computed live (above) but intentionally not persisted here.

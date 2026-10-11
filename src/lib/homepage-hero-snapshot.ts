@@ -58,6 +58,8 @@ export function buildHomepageHeroSnapshot(
   let totalUsd = 0;
   let nonUsdUsd = 0;
   let nonUsdObservedCount = 0;
+  let othersUsd = 0;
+  let othersObservedCount = 0;
   let supplyUnavailableCount = 0;
   const cohortSums: Record<HomepageCohortBucketKey, number> = { usdt: 0, usdc: 0, sky: 0 };
   const observedIds = new Set<string>();
@@ -85,6 +87,10 @@ export function buildHomepageHeroSnapshot(
 
     const bucket = COHORT_BUCKET_BY_ID.get(row.id);
     if (bucket) cohortSums[bucket] += circulatingUsd;
+    else {
+      othersUsd += circulatingUsd;
+      othersObservedCount += 1;
+    }
   }
 
   // A cohort is known only when every core-aggregate member reported an observed supply;
@@ -98,7 +104,6 @@ export function buildHomepageHeroSnapshot(
   const sky = cohortValue("sky");
   const supplyExpectedCount = CLIENT_CORE_AGGREGATE_ACTIVE_IDS.size;
   const supplyMissingCount = supplyExpectedCount - presentIds.size;
-  const complete = observedIds.size === supplyExpectedCount;
   const knownTotal = observedIds.size > 0 ? totalUsd : null;
   const knownNonUsd = nonUsdObservedCount > 0 ? nonUsdUsd : null;
 
@@ -106,7 +111,7 @@ export function buildHomepageHeroSnapshot(
     asOfISO,
     totalUsd: knownTotal,
     nonUsdUsd: knownNonUsd,
-    nonUsdShare: complete && knownNonUsd !== null && totalUsd > 0 ? nonUsdUsd / totalUsd : null,
+    nonUsdShare: knownNonUsd !== null && totalUsd > 0 ? nonUsdUsd / totalUsd : null,
     supplyUnavailableCount,
     supplyObservedCount: observedIds.size,
     supplyExpectedCount,
@@ -116,8 +121,7 @@ export function buildHomepageHeroSnapshot(
       usdt,
       usdc,
       sky,
-      others: complete && usdt !== null && usdc !== null && sky !== null
-        && totalUsd >= usdt + usdc + sky ? totalUsd - usdt - usdc - sky : null,
+      others: othersObservedCount > 0 ? othersUsd : null,
       nonUsd: knownNonUsd,
       total: knownTotal,
     },

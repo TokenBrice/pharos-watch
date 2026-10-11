@@ -197,6 +197,8 @@ The frontend `apiFetchWithMeta()` helper (`src/lib/api.ts`) reads generic `_meta
 
 ## Cache-Control Profiles
 
+Active `GET /api/stablecoin/{stablecoinId}` reads refresh expired detail caches in the background only while `buildFreshnessMeta` classifies the generation as fresh using `API_FRESHNESS_MAX_AGE_SEC.stablecoins`. Older generations refresh synchronously so the first visitor receives the refreshed detail; provider failures may retain the original stale generation below the 24-hour cache ceiling, with its original clock and warning.
+
 These profiles are ceilings, not a fresh lifetime renewed on each read. Freshness-aware responses clamp browser `max-age`, shared `s-maxage`, and the combined TTL plus `stale-while-revalidate` window to the remaining fresh runway. At the boundary (no whole second remains), or for a non-fresh/invalid timestamp, the response is `no-store`. Generic responses retain 8x/12x bands, chains 1x/2x, and yield its own publication bands; no cadence or SLO is changed. Edge cache reads reject entries whose HTTP `Age`/`Date` has exhausted that bounded lifetime. Proxies preserve `Age` and `Date`; clients interpreting cached `_meta` must distinguish its `assessedAt` from the current wall clock.
 
 Profile strings below come from `API_CACHE_PROFILES` (`shared/lib/api-cache-profiles.ts`), except route-local immutable snapshots (`IMMUTABLE_CACHE_CONTROL` in `worker/src/api/snapshot.ts`) and telegram-pulse's equivalent custom policy.
@@ -361,6 +363,18 @@ For `GET /api/stablecoin-reserves/{stablecoinId}`, optional `sync.collectionElig
 ## Blacklist Valuation Availability
 
 `GET /api/blacklist-summary` publishes `stats.destroyedTotal`, `recentFreezeAmount24hUsd`, `recentFreezeAmount7dUsd`, and values in `perCoinFrozenTotal` / `perCoinDestroyedTotal` as `number | null`. Null means valuation unavailable, not zero. Mixed cohorts publish only the known subtotal: optional `stats.valuationCoverage` qualifies `destroyed`, `recent24h`, `recent7d`, `perCoinFrozen`, and `perCoinDestroyed` with `{ knownCount, unavailableCount }`. A positive unavailable count makes that subtotal partial; absent coverage means unknown completeness. Fully priced cohorts and observed zero remain numeric, including zero for an empty cohort.
+
+## Supply Provenance
+
+`GET /api/stablecoins` exposes optional per-asset supply provenance on `peggedAssets[]`. The owning schemas are `SupplyGapFillProvenanceSchema` and `SupplyChainGuardProvenanceSchema` in `shared/types/market.ts`; [Supply Snapshot](./supply-snapshot.md#supply-pipeline) owns admission and carry limits.
+
+| Optional field | Type | Meaning |
+|---|---|---|
+| `supplyGapFill` | object | Bounded CoinGecko raise for one missing metadata chain identity. Carries `method: "coingecko-single-missing-chain"`, `admission: "entered" \| "retained"`, `missingChainId`, `canonicalSource: "defillama"`, `canonicalCurrentUsd`, `supplementalSource: "coingecko"`, `supplementalCurrentUsd`, `ratio`, `maxRatio`, and `observedAt`. Optional `carryForwardRuns` counts bounded no-decision carries. |
+| `supplyGapFill.withheldHistoricalBuckets` | `("day" \| "week" \| "month")[]` | Non-empty when present; omitted when no historical bucket is withheld. Names the missing chain's historical buckets published as `null` because existing chain observations are incomplete or do not conserve the corresponding DefiLlama aggregate within `max($0.01, DL bucket × 1e-6)`, or because DefiLlama did not observe that aggregate bucket. Existing chain values are never scaled; an admitted aggregate bucket retains its CoinGecko series value, while an unobserved DefiLlama aggregate bucket stays unavailable. |
+| `supplyGapFill.withheldHistoricalBucketReasons` | `Partial<Record<"day" \| "week" \| "month", "history-unobserved" \| "nonconserving">>` | Present exactly when `withheldHistoricalBuckets` is present; its keys equal those withheld buckets. `"history-unobserved"` means the DefiLlama aggregate bucket or any existing chain's bucket value is unobserved. `"nonconserving"` means all values were observed but the existing chains' sum differs from the DefiLlama aggregate beyond the conservation tolerance above. |
+| `supplyChainGuard` | object | Chain-dropout evidence with `reason: "supply-chain-dropout"`, `status: "repaired" \| "quarantined" \| "unavailable" \| "chains-unavailable"`, optional `quarantinedSince` / `concurrentGainUsd`, and `chains[]`. Each chain includes `chainLabel`, optional `chainId`, nullable `listCurrentUsd`, `baselineUsd`, `baselineObservedAt`, `baselineSource: "state" \| "seed" \| "list-prev-day"`, and `resolution: "onchain-total-supply" \| "defillama-chain-history" \| "carried-baseline" \| "unavailable"`, with optional `repairedCurrentUsd` / `observedAt`. |
+| `supplyChainGuard.chains[].observedAtKind` | `"upstream" \| "local-read"` | Optional clock kind for chain repair evidence. Native issuer `onchain-total-supply` repairs use `"local-read"` with the sync-start run clock; DefiLlama chart repairs use `"upstream"` with the point date. Without quarantine, aggregate `supplyObservedAt` uses the oldest admitted upstream chart repair clock; native-only repairs preserve the incoming list clock or its absence, and mixed repairs use only chart clocks. Withheld repairs discard the repair clock/kind before any carried-baseline or unavailable outcome. An absent kind on older provenance is unknown, not proof of an upstream clock. |
 
 ## Public Endpoints
 

@@ -73,6 +73,19 @@ describe("methodology markdown", () => {
     expect(md).toMatch(/## v\d+\.\d+/);
     expect(md).toContain('canonical: "https://pharos.watch/methodology/scoring-changelog/"');
   });
+
+  it("retains main's Pricing v6.47 history while exporting SOFID as v6.48", () => {
+    const index = buildMethodologyIndexMarkdown();
+    expect(index).toContain("Pricing v6.48 retires SOFID's nominal protocol-par override");
+    expect(index).not.toContain("Pricing v6.47 retires SOFID");
+    const changelog = buildMethodologyChangelogMarkdown("pricing-pipeline");
+    const sofid = changelog.indexOf("## v6.48");
+    const conservation = changelog.indexOf("## v6.47");
+    expect(sofid).toBeGreaterThanOrEqual(0);
+    expect(conservation).toBeGreaterThan(sofid);
+    expect(changelog).toContain("Conserved historical missing-chain attribution");
+    expect(changelog).toContain("Observed SOFID consensus without nominal-par override");
+  });
 });
 
 

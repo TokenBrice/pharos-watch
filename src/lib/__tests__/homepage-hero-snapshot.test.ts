@@ -160,6 +160,8 @@ describe("buildLiveHomepageHeroSnapshot supply availability", () => {
       peggedAssets: [...CLIENT_CORE_AGGREGATE_ACTIVE_IDS].map((id) => asset(id, { peggedUSD: 0 })),
     }, Date.parse("2026-08-22T11:45:00Z") / 1000);
     expect(zeros.totalUsd).toBe(0);
+    expect(zeros.nonUsdShare).toBeNull();
+    expect(zeros.cohort.others).toBe(0);
     expect(zeros.supplyObservedCount).toBe(zeros.supplyExpectedCount);
     expect(selectHomepageHeroSnapshot({
       liveSnapshot: zeros, fallbackSnapshot: snapshot("2026-08-22T00:00:00Z", 100),
@@ -180,8 +182,32 @@ describe("buildLiveHomepageHeroSnapshot supply availability", () => {
     expect(partial.supplyUnavailableCount).toBe(0);
     expect(partial.supplyMissingCount).toBe(1);
     expect(partial.supplyObservedCount).toBe(partial.supplyExpectedCount - 1);
-    expect(partial.cohort.others).toBeNull();
+    expect(partial.cohort.others).toBe(partial.totalUsd! - 4);
     expect(partial.nonUsdShare).toBeNull();
+  });
+  it.each([undefined, {}])("keeps observed shares and Others when an asset is missing or unavailable (%s)", (missingSupply) => {
+    const result = buildLiveHomepageHeroSnapshot({ peggedAssets: [
+      asset("usdt-tether", { peggedUSD: 100 }),
+      asset("usdc-circle", { peggedUSD: 60 }),
+      asset("usds-sky", { peggedUSD: 20 }),
+      asset("dai-makerdao", { peggedUSD: 0 }),
+      asset("eurc-circle", { peggedEUR: 20 }, "peggedEUR"),
+      ...(missingSupply ? [asset("usde-ethena", missingSupply)] : []),
+    ] });
+    expect(result.totalUsd).toBe(200);
+    expect(result.nonUsdShare).toBe(0.1);
+    expect(result.cohort.others).toBe(20);
+    expect(result.supplyUnavailableCount).toBe(missingSupply ? 1 : 0);
+  });
+
+  it("keeps Others available independently of a missing named cohort", () => {
+    const result = buildLiveHomepageHeroSnapshot({ peggedAssets: [
+      asset("usdt-tether", {}),
+      asset("eurc-circle", { peggedEUR: 20 }, "peggedEUR"),
+    ] });
+    expect(result.cohort.usdt).toBeNull();
+    expect(result.cohort.others).toBe(20);
+    expect(result.nonUsdShare).toBe(1);
   });
   it("leaves a wholly omitted non-USD population unavailable, with complete zero controls", () => {
     const rows = [...CLIENT_CORE_AGGREGATE_ACTIVE_IDS].map((id) =>

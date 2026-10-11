@@ -33,6 +33,7 @@ export interface SupplySnapshotCompletionMarkerInput {
   coverage: SupplySnapshotCoverageExpectation;
   accountedActiveCount: number;
   ownedRowIds: readonly string[];
+  missingActiveIds?: readonly string[];
 }
 
 export interface SupplySnapshotCompletionOptions {
@@ -79,6 +80,8 @@ export interface CompletedSupplySnapshot {
   snapshotDate: number;
   updatedAt: number;
   exactCoverageVerified: boolean;
+  coverageIdentityVerified: boolean;
+  missingActiveIds: string[] | null;
   ownedRowIds: string[] | null;
   chainObservationAdmissionVerified: boolean;
   chainObservationProgressVerified: boolean;
@@ -170,6 +173,7 @@ export function buildSupplySnapshotCompletionMarker(
     accountedActiveCount: input.accountedActiveCount,
     coverageDigest: input.coverage.coverageDigest,
     ownedRowIds: [...new Set(input.ownedRowIds)].sort(),
+    missingActiveIds: [...new Set(input.missingActiveIds ?? [])].sort(),
   };
 }
 
@@ -242,17 +246,27 @@ export async function getCompletedSupplySnapshot(
       accountedActiveCount?: unknown;
       coverageDigest?: unknown;
       ownedRowIds?: unknown;
+      missingActiveIds?: unknown;
       writtenRows?: unknown;
       chainObservationAdmissionVersion?: unknown;
       chainObservationProgressVersion?: unknown;
     };
     const ownedRowIds = parseCanonicalOwnedRowIds(parsed.ownedRowIds);
-    const structurallyExact = parsed.coverageVersion === SUPPLY_SNAPSHOT_COVERAGE_VERSION
+    const missingActiveIds = parsed.missingActiveIds === undefined
+      ? []
+      : parseCanonicalOwnedRowIds(parsed.missingActiveIds);
+    // Keep v2's exact-coverage claim intact for rollback readers. Partial v2
+    // markers add a truthful missing-ID proof, never count equality.
+    const structurallyValid = parsed.coverageVersion === SUPPLY_SNAPSHOT_COVERAGE_VERSION
       && typeof parsed.expectedActiveCount === "number"
       && Number.isInteger(parsed.expectedActiveCount)
       && parsed.expectedActiveCount >= 0
       && typeof parsed.accountedActiveCount === "number"
-      && parsed.expectedActiveCount === parsed.accountedActiveCount
+      && Number.isInteger(parsed.accountedActiveCount)
+      && parsed.accountedActiveCount >= 0
+      && parsed.accountedActiveCount <= parsed.expectedActiveCount
+      && missingActiveIds != null
+      && missingActiveIds.length === parsed.expectedActiveCount - parsed.accountedActiveCount
       && typeof parsed.coverageDigest === "string"
       && SHA_256_HEX_PATTERN.test(parsed.coverageDigest)
       && ownedRowIds != null;
@@ -264,8 +278,11 @@ export async function getCompletedSupplySnapshot(
       ? {
           snapshotDate: parsed.snapshotDate,
           updatedAt: cached.updatedAt,
-          exactCoverageVerified: structurallyExact && matchesExpectedCoverage,
-          ownedRowIds: structurallyExact ? ownedRowIds : null,
+          exactCoverageVerified: structurallyValid && matchesExpectedCoverage
+            && parsed.accountedActiveCount === parsed.expectedActiveCount,
+          coverageIdentityVerified: structurallyValid && matchesExpectedCoverage,
+          missingActiveIds: structurallyValid ? missingActiveIds : null,
+          ownedRowIds: structurallyValid ? ownedRowIds : null,
           chainObservationAdmissionVerified: parsed.chainObservationAdmissionVersion === 1,
           chainObservationProgressVerified: parsed.chainObservationProgressVersion === 1,
         }

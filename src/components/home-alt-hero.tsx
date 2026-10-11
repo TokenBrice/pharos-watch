@@ -65,7 +65,7 @@ export function HomeAltHero({
   const visibleSnapshot = selection.snapshot;
   const latest = visibleSnapshot?.cohort ?? null;
   const supplyComplete = !!visibleSnapshot && visibleSnapshot.supplyObservedCount === visibleSnapshot.supplyExpectedCount;
-  const cohortTotal = supplyComplete ? latest?.total ?? null : null;
+  const cohortTotal = latest?.total ?? null;
   const selectedDate = visibleSnapshot?.asOfISO
     ? formatLongDate(new Date(visibleSnapshot.asOfISO), { utc: true })
     : null;
@@ -143,6 +143,9 @@ export function HomeAltHero({
             reads as one continuous story instead of headline-then-gap-then-list. */}
         <div className="space-y-2 p-5 sm:p-6 lg:col-start-1 lg:border-r lg:border-t lg:border-border/50 lg:p-7">
           <p className="pharos-kicker">Market Cohorts</p>
+          {visibleSnapshot && !supplyComplete ? (
+            <p className="text-xs text-muted-foreground">Shares of known market cap subtotal</p>
+          ) : null}
           <ul className="flex min-h-[6.5rem] flex-col gap-1.5 text-xs">
             {latest ? (
               <>

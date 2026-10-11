@@ -21,6 +21,41 @@ function dispatchCron(metadata: Record<string, unknown>, status: "ok" | "degrade
 }
 
 describe("buildCommsWorkbenchModel", () => {
+  it("does not certify a present Telegram payload without quality as complete", () => {
+    const bot = makeCompleteTelegramBotStatus();
+    delete bot.quality;
+    const model = buildCommsWorkbenchModel({
+      telegramBot: bot,
+      dispatchCron: dispatchCron(makeDispatchMetadata()),
+      nowSeconds: NOW_SECONDS,
+    });
+
+    expect(model.quality).toEqual({
+      status: "unknown",
+      unavailableFields: [],
+      errors: [],
+      sectionError: null,
+    });
+    expect(model.audience.totalChats).toBe(bot.totalChats);
+  });
+
+  it.each(["complete", "partial", "unknown"] as const)("preserves supplied %s quality", (status) => {
+    const model = buildCommsWorkbenchModel({
+      telegramBot: {
+        ...makeCompleteTelegramBotStatus(),
+        quality: { status, unavailableFields: ["topCoins"], errors: { topCoins: "read failed" } },
+      },
+      nowSeconds: NOW_SECONDS,
+    });
+
+    expect(model.quality).toEqual({
+      status,
+      unavailableFields: ["topCoins"],
+      errors: [{ field: "topCoins", message: "read failed" }],
+      sectionError: null,
+    });
+  });
+
   it("keeps the operator priority order stable", () => {
     const model = buildCommsWorkbenchModel({
       telegramBot: makeCompleteTelegramBotStatus(),

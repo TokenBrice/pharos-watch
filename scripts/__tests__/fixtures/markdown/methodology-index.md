@@ -18,7 +18,7 @@ Fallback enrichment is bounded. CoinMarketCap, Jupiter, DexScreener, audited low
 
 Price coverage is evaluated independently from row publication. A stablecoin can remain visible with supply and lifecycle data while its unusable price degrades cron and public health; the incident remains explicit instead of blocking the full cache or being hidden behind a nominal peg fill.
 
-Pricing v6.47 retires SOFID's nominal protocol-par override so existing exact-identity CoinGecko/Kraken consensus reaches price and peg consumers. Observed discounts or premiums keep their original value and clock; Kraken remains local-fetch and confirm_required. Missing quotes and carried nominal references stay unavailable, not $1. Source weights, freshness and liquidity gates are unchanged; production gap closure requires a fresh admitted publication.
+Pricing v6.48 retires SOFID's nominal protocol-par override so existing exact-identity CoinGecko/Kraken consensus reaches price and peg consumers. Observed discounts or premiums keep their original value and clock; Kraken remains local-fetch and confirm_required. Missing quotes and carried nominal references stay unavailable, not $1. Source weights, freshness and liquidity gates are unchanged; production gap closure requires a fresh admitted publication.
 
 Pricing v6.43 requires JLTXX's full pinned native-share admission even with positive CoinGecko market cap: finalized EIP-1898 raw shares, observed decimals, original canonical hash/time and original NAV dealing date must fit a reviewed temporal/legal perimeter. Class assets are never circulating supply. Staged bootstrap captures evidence only and cannot activate JLTXX or publish scores; quarantine remains until approved runtime price/market-cap admission.
 

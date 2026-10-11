@@ -15,6 +15,8 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 Latest `v4.49` update: fractional live fees remain unrounded through the existing cost thresholds and scenario evaluation. Rejected payout identities cannot supply favorable live fees, openness, holder eligibility or settlement; independently reviewed static fees and sourced adverse status remain distinct. sBOLD requires readable collateral-health evidence for open status, Mento capacity requires same-block execution predicates plus a bounded quote, and dEURO basket valuation retains complete bounded member/FX evidence at its oldest clock. Physical commodity outputs stay distinct from fiat and require source-timed USD valuation without bypassing V9 admission. These repairs can move route scores; fixed-clock scenario comparison, owner review and fresh admitted producer evidence remain release prerequisites. Component weights and ladders are unchanged.
 
+**Release obligations recorded 2026-10-10:** for v4.49, production resource evidence remains a separate gate from fixed-clock route comparison and owner review; fresh producer observations, not rewritten history, establish producer-dependent capacity/status. No production-health result is asserted here.
+
 Earlier release history lives in `shared/data/methodology-changelogs/redemption-backstop/`; keep this document focused on the current contract.
 
 The standalone history is published at `/methodology/redemption-backstop-changelog/`. The current methodology section distinguishes this route diagnostic from V9 Exit, which re-evaluates exact same-notional route evidence under the V9 policy.

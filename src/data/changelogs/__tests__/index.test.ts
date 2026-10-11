@@ -33,6 +33,17 @@ describe("changelogs barrel", () => {
     }
   });
 
+  it("each entry spans one Monday-to-Sunday week without overlapping the next", () => {
+    for (const [i, entry] of changelogs.entries()) {
+      const from = new Date(`${entry.dateRange.from}T00:00:00Z`);
+      const to = new Date(`${entry.dateRange.to}T00:00:00Z`);
+      expect(from.getUTCDay(), entry.dateRange.from).toBe(1);
+      expect(to.getTime() - from.getTime(), entry.dateRange.to).toBe(6 * 86_400_000);
+      const older = changelogs[i + 1];
+      if (older) expect(older.dateRange.to < entry.dateRange.from, entry.dateRange.to).toBe(true);
+    }
+  });
+
   it("fieldNotes entries do not exceed 80 words", () => {
     for (const entry of changelogs) {
       if (entry.fieldNotes != null) {

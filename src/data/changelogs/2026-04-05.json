@@ -1,0 +1,142 @@
+{
+  "dateRange": {
+    "from": "2026-03-30",
+    "to": "2026-04-05"
+  },
+  "headline": "API key authentication goes live on protected endpoints as live reserve tracking reaches 126 coins.",
+  "fieldNotes": "Access control was the week's structural change: protected endpoints now require an API key, with rotation, expiry, and an audit log behind it. Reserve work continued in parallel, adding issuer balance sheets from Frax and Block Analitica. Liquidity scoring started weighing pool depth against each coin's size, and the site gained a weekly changelog, a public status history, and collapsible navigation.",
+  "summary": [
+    {
+      "label": "API key authentication",
+      "tag": "security",
+      "description": "Full auth gate on protected endpoints with key rotation, audit logging, dual-pepper hashing, and rate limiting"
+    },
+    {
+      "label": "Liquidity Score v5.0",
+      "tag": "feature",
+      "description": "Size-aware scoring formulas use market cap to judge depth relative to supply, with component weights reset to 30/20/20/20/10",
+      "href": "/methodology/liquidity-score-changelog/"
+    },
+    {
+      "label": "Live reserve expansion",
+      "tag": "coverage",
+      "description": "USDSC, satUSD, USDai, Anzen USDz, Liquity v1 LUSD, frxUSD, eUSD, feUSD, USSD, and Honey go live; DAI and USDS move to Block Analitica, bringing coverage to 126 coins"
+    },
+    {
+      "label": "Richer risk surfaces",
+      "tag": "feature",
+      "description": "Non-USD market share charts, blacklist status distribution, and a treasury stable exposure view covering 18 issuer treasuries"
+    },
+    {
+      "label": "Safety Score v6.93",
+      "tag": "feature",
+      "description": "Steeper peg multiplier and an active-depeg grade cap",
+      "href": "/methodology/scoring-changelog/"
+    },
+    {
+      "label": "Broader stablecoin coverage",
+      "tag": "coverage",
+      "description": "BUCK added, Base Dollar listed as upcoming, and USD.AI and sUSDai tracked separately, bringing tracking to 188 stablecoins"
+    },
+    {
+      "label": "Pipeline reliability",
+      "tag": "infra",
+      "description": "Hardened pricing consensus, reserve sync, redemption backstops, depeg recovery, and cron orchestration"
+    },
+    {
+      "label": "Status page upgrades",
+      "tag": "infra",
+      "description": "Public status history API with uptime bar and transition timeline, request-source attribution, D1 usage telemetry, and FX degradation isolated from overall status"
+    },
+    {
+      "label": "Changelog and navigation",
+      "tag": "design",
+      "description": "Weekly changelog page with timeline layout, collapsible sidebar groups, and a two-column API reference with scrollspy and method badges"
+    }
+  ],
+  "stats": {
+    "totalCommits": 208
+  },
+  "commits": [
+    {
+      "hash": "29013cc5",
+      "message": "chore(pre-launch): weekly update for 10 tracked pre-launch stablecoins"
+    },
+    {
+      "hash": "dfe44f5c",
+      "message": "feat(reserves): update USDS and DAI config to Block Analitica source"
+    },
+    {
+      "hash": "c16d8521",
+      "message": "feat(reserves): rewrite sky-makercore adapter to use Block Analitica module-level API"
+    },
+    {
+      "hash": "9cf6f2b7",
+      "message": "fix(status): distill, clarify, and rearrange the public status page"
+    },
+    {
+      "hash": "97089cf4",
+      "message": "fix(fx): tolerate 1 missed business-daily publish for market holidays"
+    },
+    {
+      "hash": "b67b563b",
+      "message": "fix(ui): clarify collateral usage heading with stablecoin ticker"
+    },
+    {
+      "hash": "60fb9a36",
+      "message": "fix(seo): add /status/ to sitemap"
+    },
+    {
+      "hash": "fb28db79",
+      "message": "feat(status): add public status history API, uptime bar and transition timeline"
+    },
+    {
+      "hash": "bb6b607a",
+      "message": "feat(treasury): expand stablecoin issuer coverage to 18 treasuries"
+    },
+    {
+      "hash": "96f6ee14",
+      "message": "fix(status): polish public status page for menu-level traffic"
+    },
+    {
+      "hash": "ce2c29a3",
+      "message": "fix(status): stop FX source-degraded from cascading to overall system status"
+    },
+    {
+      "hash": "7101a12f",
+      "message": "docs: sync redemption-backstops.md version to v3.5"
+    },
+    {
+      "hash": "80167254",
+      "message": "Agents doc cleanup"
+    },
+    {
+      "hash": "4311334d",
+      "message": "feat(nav): add Status page to info menu and about reference cards"
+    },
+    {
+      "hash": "bf1c2284",
+      "message": "fix(scoring): relax freshness gate for adapters with capacity telemetry (v3.5)"
+    },
+    {
+      "hash": "b9479b1a",
+      "message": "feat(scoring): steeper peg multiplier + active depeg grade cap (v6.93)"
+    },
+    {
+      "hash": "516a5565",
+      "message": "refactor(worker): split route registration by domain"
+    },
+    {
+      "hash": "d229e3e3",
+      "message": "ci: extract shared workspace setup action"
+    },
+    {
+      "hash": "2dcff8ca",
+      "message": "refactor(worker): dedupe loaders and status helpers"
+    },
+    {
+      "hash": "587ee0cf",
+      "message": "refactor(frontend): extract shared dashboard helpers"
+    }
+  ]
+}

@@ -1,10 +1,10 @@
 {
   "dateRange": {
-    "from": "2026-06-07",
+    "from": "2026-06-08",
     "to": "2026-06-14"
   },
   "headline": "Safety Score v8.0 folds in mint authority, report cards score chain and oracle risk, and a depeg control board ships.",
-  "fieldNotes": "The week's spine was scoring: mint authority finally counts toward decentralization in Safety Score v8.0, and report cards learned to weigh chain and oracle risk, with each risk backed by on-chain verification rather than assertion. Around that, reserves and redemption gained real evidence, the depeg view became a working control board, and a long platform pass folded the app's tables and helpers into shared foundations. Plenty shipped; most of it quietly load-bearing.",
+  "fieldNotes": "The week's spine was scoring: mint authority finally counts toward decentralization in Safety Score v8.0, and report cards learned to weigh chain and oracle risk, with each risk backed by on-chain verification rather than assertion. Around that, reserves and redemption gained real evidence, the depeg view became a working control board, and a long code-health pass folded duplicated helpers into shared foundations. Plenty shipped; most of it quietly load-bearing.",
   "summary": [
     {
       "label": "Safety Score v8.0",
@@ -24,10 +24,10 @@
       "description": "Reserve views ship for 11 active coins, eight more become evidence-bearing attestation feeds, and 30 redemption routes gain live reserve-sync capacity. Redemption reaches v4.11 with documented same-day buffers."
     },
     {
-      "label": "Yield & compliance",
+      "label": "Yield & new coins",
       "tag": "coverage",
       "href": "/methodology/yield-changelog/",
-      "description": "Yield coverage expands via the Wave 1 source-roster (v8.23), and GBP, JPY, and AUD benchmarks move to direct central-bank sources. A broad MiCA and GENIUS data pass refreshes compliance metadata across the registry."
+      "description": "Yield coverage expands via the Wave 1 source-roster (v8.23) and a wider coverage audit, and Royco eEARN and autoUSD join the tracked set with vault supply backfilled from chain."
     },
     {
       "label": "Depeg control board",
@@ -43,21 +43,29 @@
     {
       "label": "Search, a11y & performance",
       "tag": "infra",
-      "description": "Per-chain OG cards ship for 107 chain pages, detail pages gain FAQ and Article JSON-LD, and a hydrated-state axe lane plus screen-reader tables raise accessibility. Critical CSS inlines and the CSP drops unsafe-eval."
+      "description": "Per-chain OG cards ship for 107 chain pages, detail pages gain FAQ and Article JSON-LD, and a hydrated-state axe lane plus screen-reader tables raise accessibility. The CSP drops unsafe-eval."
     },
     {
       "label": "Platform consolidation",
       "tag": "infra",
-      "description": "A shared table system replaces bespoke tables with common shells, controls, and skeletons. Code-health Waves 1 to 4 dedupe helpers, prune dead exports, name magic numbers, and tidy worker and scoring internals."
+      "description": "Code-health Waves 1 to 4 dedupe helpers across worker, scripts, shared, and frontend layers, prune dead exports, name magic numbers, and tidy worker, redemption, and scoring internals."
     }
   ],
   "stats": {
-    "totalCommits": 591
+    "totalCommits": 420
   },
   "commits": [
     {
-      "hash": "47dfa7a7",
-      "message": "chore(generated): refresh docs metadata"
+      "hash": "49bcdb5d",
+      "message": "fix(pricing): validate DEX pool replacements"
+    },
+    {
+      "hash": "fb6441aa",
+      "message": "docs: update operator runbooks and process guidance"
+    },
+    {
+      "hash": "e07da89d",
+      "message": "chore(docs): add docs verification workflow scripts"
     },
     {
       "hash": "f3d419ca",
@@ -80,40 +88,16 @@
       "message": "test(stablecoins): sync Royco static projections"
     },
     {
-      "hash": "3c49e10c",
-      "message": "chore(generated): refresh release metadata"
-    },
-    {
       "hash": "f534cad3",
       "message": "feat(stablecoins): add Royco eEARN and autoUSD"
-    },
-    {
-      "hash": "d67f7763",
-      "message": "docs: align config examples and data-flow map"
-    },
-    {
-      "hash": "62f2210f",
-      "message": "docs: align operator and status runbooks with source"
     },
     {
       "hash": "f5c60d08",
       "message": "test(gate): extend remaining load-sensitive timeouts"
     },
     {
-      "hash": "ce110d3c",
-      "message": "chore(generated): refresh docs metadata"
-    },
-    {
-      "hash": "5f82dcfa",
-      "message": "chore(generated): refresh sitemap dates"
-    },
-    {
       "hash": "77dc6ba9",
       "message": "chore(agent): add reusable Claude workflows"
-    },
-    {
-      "hash": "5d98e4db",
-      "message": "chore(ci): refresh validation baselines"
     },
     {
       "hash": "e54f47cd",
@@ -128,12 +112,28 @@
       "message": "fix(worker): avoid coercing non-error objects"
     },
     {
-      "hash": "1408d629",
-      "message": "docs: sync audit findings with source"
+      "hash": "53b5e8c0",
+      "message": "refactor(worker): centralize error message coercion"
     },
     {
-      "hash": "e3b93f6d",
-      "message": "docs: refresh code-health tracking"
+      "hash": "f640d67e",
+      "message": "refactor(runtime): consolidate record guards and cron statuses"
+    },
+    {
+      "hash": "c6b5f71f",
+      "message": "refactor(frontend): split mint authority view model"
+    },
+    {
+      "hash": "5ef1cad5",
+      "message": "Close Wave 2 repair expiry sentinel comment"
+    },
+    {
+      "hash": "89a1e464",
+      "message": "Close Wave 2 audit history limit comment"
+    },
+    {
+      "hash": "47a1dbee",
+      "message": "Close Wave 2 benchmark order comment"
     }
   ]
 }

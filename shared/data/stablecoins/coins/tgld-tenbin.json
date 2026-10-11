@@ -117,6 +117,13 @@
       "sourceUrl": "https://github.com/tenbinlabs/tenbin-contracts/tree/master/audit"
     },
     {
+      "date": "2026-09-09",
+      "type": "milestone",
+      "title": "tGLD, tBRL and tMXN become swappable through 1inch",
+      "description": "1inch announced that Tenbin's Ethereum ERC-20 tokens tGLD, tBRL and tMXN can be swapped through its aggregator, with Tenbin quoting liquidity against USDC. 1inch states it is not the issuer and makes no representation about price tracking or collateralization.",
+      "sourceUrl": "https://1inch.com/blog/post/tenbins-tokenized-gold-and-fx-tradable-on-1inch"
+    },
+    {
       "date": "2026-09-14",
       "type": "audit",
       "title": "Tenbin ships v1.5.1 and a bug bounty after landing audit remediations",

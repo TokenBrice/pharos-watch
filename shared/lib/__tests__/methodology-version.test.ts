@@ -192,7 +192,7 @@ describe("methodology registry", () => {
   });
 
   it.each([
-    ["pricing-pipeline", "6.46", "6.47"],
+    ["pricing-pipeline", "6.46", "6.48"],
   ] as const)("activates the October 11 %s cutover without relabeling prior publications", (key, previousVersion, version) => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === key)!;
     expect(methodology.entries.find((candidate) => candidate.version === version)).toMatchObject({
@@ -231,6 +231,29 @@ describe("methodology registry", () => {
     });
     expect(getMethodologyVersionAt(key, release.effectiveAt - 1)).toBe(previousVersion);
     expect(getMethodologyVersionAt(key, release.effectiveAt)).toBe(version);
+  });
+
+  it("pins the historical chain-conservation Pricing release after v6.46", () => {
+    const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
+    const release = methodology.entries.find((candidate) => candidate.version === "6.47")!;
+    const previous = methodology.entries.find((candidate) => candidate.version === "6.46")!;
+    expect(methodology.currentLabel).toBe("v6.48");
+    expect(release).toMatchObject({
+      version: "6.47",
+      date: "2026-10-11",
+      effectiveAt: 1_791_763_200,
+      reconstructed: false,
+    });
+    expect(release.effectiveAt).toBeGreaterThan(previous.effectiveAt);
+    expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt - 1)).toBe("6.46");
+    // Both independently authored releases activate at this midnight; the newer
+    // combined branch identity wins without rewriting main's historical entry.
+    expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt)).toBe("6.48");
+    const sofidRelease = methodology.entries.find((candidate) => candidate.version === "6.48")!;
+    expect(sofidRelease.effectiveAt).toBe(release.effectiveAt);
+    expect(sofidRelease.title).toBe("Observed SOFID consensus without nominal-par override");
+    expect(release.title).toBe("Conserved historical missing-chain attribution");
+    expect(methodology.entries.slice(0, 2).map((candidate) => candidate.version)).toEqual(["6.48", "6.47"]);
   });
 
   it("provides an LLM-facing description for every changelog", () => {

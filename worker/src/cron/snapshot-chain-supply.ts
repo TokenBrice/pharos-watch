@@ -1,15 +1,17 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { executeAtomicBatch, prepareMultiRowInsertStatements } from "../lib/db";
 import { prepareCacheUpsert } from "../lib/db-cache";
-import { CHAIN_META } from "@shared/types/chain-identity";
+import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
-import { createCronResult } from "../lib/cron-result";
+import { createCronResult, type CronMetadataRecord } from "../lib/cron-result";
 import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 import { formatIsoDate } from "@shared/lib/format";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
+import { WORKER_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   STABLECOIN_PUBLICATION_WAIVERS,
+  classifyStablecoinPublicationGap,
   type StablecoinPublicationWaiver,
 } from "../lib/stablecoin-publication-coverage";
 import {
@@ -52,10 +54,16 @@ export async function snapshotChainSupply(
     publicationWaivers: options.publicationWaivers ?? STABLECOIN_PUBLICATION_WAIVERS,
     completionCacheKey: SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY,
     maxCacheAgeSec: CACHE_MAX_AGE_SEC,
-    deriveCoverage: (payload, requiredActiveIds) => ({
-      accountedIds: payload.peggedAssets.map((asset) => String(asset.id)),
-      context: { expectedActiveIdSet: new Set(requiredActiveIds) },
-    }),
+    deriveCoverage: (payload, requiredActiveIds) => {
+      const cachedIds = new Set(payload.peggedAssets.map((asset) => String(asset.id)));
+      return {
+        accountedIds: cachedIds,
+        context: {
+          expectedActiveIdSet: new Set(requiredActiveIds),
+          absentActiveIds: requiredActiveIds.filter((id) => !cachedIds.has(id)),
+        },
+      };
+    },
   });
   if (preflight.kind === "cache-unavailable") {
     logWorkerEventArgs("handler", "error", "[snapshot-chain-supply] No stablecoins cache found");
@@ -72,14 +80,22 @@ export async function snapshotChainSupply(
 
   const {
     cache,
-    context: { expectedActiveIdSet },
+    context: { expectedActiveIdSet, absentActiveIds },
     coverageExpectation,
     lastWrite,
     nowSec,
     publicationCoverage,
     snapshotDate,
   } = preflight;
-  if (!publicationCoverage.complete) {
+  const publicationGapBand = classifyStablecoinPublicationGap(publicationCoverage);
+  const publicationGap: CronMetadataRecord = publicationGapBand === "none" ? {} : {
+    publicationGap: {
+      band: publicationGapBand,
+      missingActiveCount: publicationCoverage.missingActiveIds.length,
+      missingActiveIds: publicationCoverage.missingActiveIds.slice(0, 20),
+    },
+  };
+  if (publicationGapBand === "systemic") {
     return createCronResult({
       status: "degraded",
       itemCount: 0,
@@ -93,8 +109,11 @@ export async function snapshotChainSupply(
       },
     });
   }
-  const sameDayCoverageVerified = lastWrite?.snapshotDate === snapshotDate && lastWrite.exactCoverageVerified;
-  if (sameDayCoverageVerified && lastWrite.chainObservationAdmissionVerified) {
+  const sameDayCoverageVerified = lastWrite?.snapshotDate === snapshotDate && lastWrite.coverageIdentityVerified;
+  if (
+    sameDayCoverageVerified && lastWrite.exactCoverageVerified && lastWrite.chainObservationAdmissionVerified
+    && absentActiveIds.length === 0
+  ) {
     return createCronResult({ itemCount: 0, metadata: { reason: "already_written_today", snapshotDate } });
   }
   // An identity-matched partial day owns its first admitted observations.
@@ -109,6 +128,25 @@ export async function snapshotChainSupply(
   const staleSupplyIds = new Set<string>();
   const missingSupplyIds = new Set<string>();
   const deferredChains = new Map<string, Set<string>>();
+  const absentUnmappedIds: string[] = [];
+  // Deployments identify known possible contributors, never numeric supply.
+  // Unknown attribution is named separately rather than inventing a partition
+  // or globally vetoing unrelated chains (native HBD has no tracked partition).
+  for (const assetId of absentActiveIds) {
+    const meta = WORKER_ACTIVE_META_BY_ID.get(assetId);
+    const deployments = [...(meta?.contracts ?? []), ...(meta?.tradedContracts ?? [])];
+    const knownChainIds = new Set<string>();
+    for (const deployment of deployments) {
+      const chainId = resolveChainId(deployment.chain);
+      if (chainId && CHAIN_META[chainId]) knownChainIds.add(chainId);
+    }
+    if (knownChainIds.size === 0) absentUnmappedIds.push(assetId);
+    for (const chainId of knownChainIds) {
+      const assetIds = deferredChains.get(chainId) ?? new Set<string>();
+      assetIds.add(assetId);
+      deferredChains.set(chainId, assetIds);
+    }
+  }
 
   for (const asset of cache.payload.peggedAssets) {
     if (!expectedActiveIdSet.has(String(asset.id))) continue;
@@ -144,6 +182,8 @@ export async function snapshotChainSupply(
     staleSupplyIds: [...staleSupplyIds].sort(),
     missingSupplyIds: [...missingSupplyIds].sort(),
     deferredChainIds,
+    absentActiveIds,
+    absentUnmappedIds,
     deferredChains: Object.fromEntries(
       deferredChainIds.map((chainId) => [chainId, [...deferredChains.get(chainId)!].sort()]),
     ),
@@ -156,6 +196,27 @@ export async function snapshotChainSupply(
     chainRows.push([chainId, snapshotDate, totalUsd, coinCount]);
   }
 
+  const recoveredSinceLastWrite = sameDayCoverageVerified
+    && (lastWrite.missingActiveIds ?? []).some((id) => !publicationCoverage.missingActiveIds.includes(id));
+  if (
+    sameDayCoverageVerified
+    && lastWrite.chainObservationProgressVerified
+    && chainRows.length === 0
+    && !recoveredSinceLastWrite
+  ) {
+    return createCronResult({
+      status: publicationGapBand === "elevated" ? "degraded" : "ok",
+      itemCount: 0,
+      metadata: {
+        reason: publicationGapBand === "elevated" ? "publication_gap_elevated" : "already_written_today",
+        snapshotDate,
+        quality: deferredChainIds.length > 0 ? "partial" : "complete",
+        ...publicationGap,
+        ...observationMetadata,
+      },
+    });
+  }
+
   if (chainRows.length === 0 && admittedChainIds.size === 0) {
     logWorkerEventArgs("handler", "warn", "[snapshot-chain-supply] No valid chain rows produced, preserving previous snapshot");
     return createCronResult({
@@ -164,6 +225,7 @@ export async function snapshotChainSupply(
       metadata: {
         reason: deferredChainIds.length > 0 ? "chain_observations_unavailable" : "no-valid-chain-rows",
         assetCount: cache.payload.peggedAssets.length,
+        ...publicationGap,
         ...observationMetadata,
       },
     });
@@ -177,11 +239,13 @@ export async function snapshotChainSupply(
         coverage: coverageExpectation,
         accountedActiveCount: publicationCoverage.presentActiveCount + publicationCoverage.waivedActiveCount,
         ownedRowIds,
+        missingActiveIds: publicationCoverage.missingActiveIds,
       }),
       writtenChains: ownedRowIds.length,
       chainObservationProgressVersion: 1,
       // Version 1 certifies complete observation admission, not partial progress.
-      ...(deferredChainIds.length === 0 ? { chainObservationAdmissionVersion: 1 } : {}),
+      ...(deferredChainIds.length === 0 && absentActiveIds.length === 0
+        ? { chainObservationAdmissionVersion: 1 } : {}),
       ...observationMetadata,
     });
     const replacementStatements = [
@@ -209,13 +273,19 @@ export async function snapshotChainSupply(
   }
 
   logWorkerEventArgs("handler", "info", `[snapshot-chain-supply] Inserted ${chainRows.length} rows for ${formatIsoDate(snapshotDate)}`);
-  return createCronResult({
+  const metadata: CronMetadataRecord = {
+    quality: deferredChainIds.length > 0 ? "partial" : "complete",
+    ...(deferredChainIds.length > 0 ? { reason: "chain_observations_partially_deferred" } : {}),
+    ...publicationGap,
+    ...observationMetadata,
+  };
+  return createCronResult(publicationGapBand === "elevated" ? {
+    status: "degraded",
+    itemCount: chainRows.length,
+    metadata: { ...metadata, reason: "publication_gap_elevated" },
+  } : {
     status: "ok",
     itemCount: chainRows.length,
-    metadata: {
-      quality: deferredChainIds.length > 0 ? "partial" : "complete",
-      ...(deferredChainIds.length > 0 ? { reason: "chain_observations_partially_deferred" } : {}),
-      ...observationMetadata,
-    },
+    metadata,
   });
 }

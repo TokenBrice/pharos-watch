@@ -28,10 +28,10 @@ export const DEPEG_EXTREME_MOVE_BPS = 5000;
  * `offPeg` is the USD trigger threshold; `severe` is the 25% band that gates the
  * redemption lane and the digest's critical-risk copy; `extreme` is the 50% band.
  *
- * ADR-19 note: the V9 methodology policy JSON stays the scoring owner — its
+ * ADR-19 note: the V9 methodology policy JSON stays the scoring source — its
  * `semantic.formula.activeDepegCaps` entry carries its own 2500 and is never
- * read from here. `shared/lib/__tests__/exit-policy-constants-pin.test.ts`
- * asserts the two agree so drift is a CI failure rather than a silent divergence.
+ * read from here. This vocabulary serves depeg/redemption views; it is not a
+ * policy mirror and whole-policy parity is not a contract.
  */
 export const DEPEG_SEVERITY_BPS = {
   offPeg: DEPEG_THRESHOLD_BPS,

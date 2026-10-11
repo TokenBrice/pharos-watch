@@ -100,6 +100,32 @@ const pharosBoundaryPlugin = {
         };
       },
     },
+    "require-shared-alias": {
+      meta: {
+        type: "problem",
+        schema: [],
+        messages: {
+          alias: "ADR-2: imports into root shared/ from src/, worker/ or functions/ must use @shared/*, not relative paths.",
+        },
+      },
+      create(context) {
+        const sharedRoot = resolve(process.cwd(), "shared");
+
+        function check(node) {
+          const specifier = staticImportSpecifier(node);
+          if (!specifier || (!specifier.startsWith("./") && !specifier.startsWith("../"))) return;
+          const target = resolve(dirname(context.filename), specifier);
+          if (isWithinPath(sharedRoot, target)) context.report({ node, messageId: "alias" });
+        }
+
+        return {
+          ImportDeclaration: check,
+          ExportNamedDeclaration: check,
+          ExportAllDeclaration: check,
+          ImportExpression: check,
+        };
+      },
+    },
     "frontend-dynamic-import-boundaries": {
       meta: { type: "problem", schema: [], messages: { worker: "ADR-2: non-Worker code must not import worker/src/**." } },
       create(context) {
@@ -294,6 +320,20 @@ const eslintConfig = defineConfig([
     rules: {
       "pharos/frontend-dynamic-import-boundaries": "error",
       "no-restricted-imports": ["error", { patterns: frontendToWorkerRestrictedImportPatterns }],
+    },
+  },
+  {
+    // Caller spelling is a separate boundary from the Worker/frontend bans.
+    // shared/ internals retain relative imports, and local shared dirs are not
+    // the root runtime-neutral boundary.
+    files: [
+      "src/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+      "worker/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+      "functions/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+    ],
+    plugins: { pharos: pharosBoundaryPlugin },
+    rules: {
+      "pharos/require-shared-alias": "error",
     },
   },
   {

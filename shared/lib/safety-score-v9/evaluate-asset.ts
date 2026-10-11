@@ -12,12 +12,12 @@ import type {
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import { isDexMeasuredExecutionObservationHistoryMature } from "../../types/measured-execution";
-import { clampShare } from "../math";
 import { V9_NEUTRAL_CONTROL_SCORE } from "../../types/safety-score-v9-public-facts";
 import { evaluateV9AccessPosture, type V9AccessPostureResult } from "./access-posture";
 import { createUnavailableV9BackingResult } from "./archetypes/evaluation";
 import { V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT } from "./backing-inheritance";
 import {
+  v9StructuralSignalSharePct,
   type V9BackingResult,
   type V9CdpLiquidationCapacitySelection,
   type V9InheritedStablecoinBacking,
@@ -228,7 +228,7 @@ function attributedReasonPath(
   return `${basePath}:cause:${encodeURIComponent(attribution.causalKey)}`;
 }
 
-function structuralSignalFromBacking(reason: V9BackingResult["structuralReasons"][number]): V9StructuralSignal {
+function structuralSignalFromBacking(assetId: string, reason: V9BackingResult["structuralReasons"][number]): V9StructuralSignal {
   return {
     kind: reason.kind,
     severity: reason.severity,
@@ -242,7 +242,9 @@ function structuralSignalFromBacking(reason: V9BackingResult["structuralReasons"
           ? "The reviewed credit-quality condition is weak."
           : "Material private-credit holdings create credit exposure.",
     responsibility: reason.responsibility,
-    ...(reason.materialShare === null ? {} : { materialSharePct: clampShare(reason.materialShare) * 100 }),
+    ...(reason.materialShare === null ? {} : {
+      materialSharePct: v9StructuralSignalSharePct(assetId, "structuralSignals[*].materialSharePct", reason.materialShare),
+    }),
     economicLossScope: "reserve-claim",
     recoveryPath: "unknown",
     expectedRecoverySec: null,
@@ -654,7 +656,7 @@ function backingPillar(
     ...reasonClassifiedEvidence(result.score, evidenceReasons, "strong", result.aggregationDisposition === "excluded-a-b"),
     reasons: canonicalReasons([...reasons, ...boundedComponents.map((component) => component.reason)]),
     boundedComponents,
-    structuralSignals: result.structuralReasons.map(structuralSignalFromBacking),
+    structuralSignals: result.structuralReasons.map((reason) => structuralSignalFromBacking(result.assetId, reason)),
   };
 }
 

@@ -209,6 +209,7 @@ async function buildTelegramPulseSnapshot(
   const heavySectionsUpdatedAt = await loadPulseHeavySectionsUpdatedAt(db, cachedPulse);
   const reusablePulse =
     cachedPulse &&
+    cachedPulse.pulse.quality.status !== "unknown" &&
     heavySectionsUpdatedAt != null &&
     nowSec - heavySectionsUpdatedAt < TELEGRAM_PULSE_HEAVY_SECTION_SECONDS &&
     utcDayFromUnixSeconds(heavySectionsUpdatedAt) === utcDayFromUnixSeconds(nowSec) &&
@@ -366,7 +367,7 @@ export async function publishTelegramPulseSnapshotWithOutcome(
       const published = await loadCachedTelegramPulseSnapshot(db);
       return {
         pulse: published?.pulse ?? built.pulse,
-        status: published?.pulse.quality.status === "partial" ? "degraded" : "ok",
+        status: (published?.pulse ?? built.pulse).quality.status === "complete" ? "ok" : "degraded",
         snapshotPublished: false,
         heavySectionsRecomputed: built.heavySectionsRecomputed,
         heavyMarkerAdvanced: false,

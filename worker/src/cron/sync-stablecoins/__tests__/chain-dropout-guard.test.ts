@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { StablecoinListResponseSchema } from "@shared/types/market";
+import { StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema, SupplyGapFillProvenanceSchema } from "@shared/types/market";
 import { getCirculatingRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
 import { buildChainRpcs, hasRegistryRpc } from "../../../lib/chain-registry";
 import { normalizeStablecoinsPayload } from "../shared";
@@ -67,6 +67,9 @@ describe("chain dropout guard", () => {
     expect(result).toMatchObject({ flagged: 3, repaired: 3, historyFetches: 3, quarantinedAssetIds: [] });
     expect(getCirculatingRawOrNull(asset)).toBeCloseTo(3_138_111_240.93, 2);
     expect(asset).toMatchObject({ supplySource: "defillama-chain-repair", supplyObservedAt: NOW - 6 * 3600, supplyChainGuard: { status: "repaired", reason: "supply-chain-dropout" } });
+    for (const chain of asset.supplyChainGuard!.chains) {
+      expect(chain).toMatchObject({ resolution: "defillama-chain-history", observedAt: NOW - 6 * 3600, observedAtKind: "upstream" });
+    }
     expect(asset.supplyRestored).toBeUndefined();
     expect(asset.circulatingPrevDay).toEqual({ peggedUSD: 3_134_000_000 });
     expect(asset.chainCirculating!["X Layer"].circulatingPrevDay).toBe(1_427_900_000);
@@ -74,6 +77,35 @@ describe("chain dropout guard", () => {
     const normalized = normalizeStablecoinsPayload({ peggedAssets: [asset] });
     const published = StablecoinListResponseSchema.parse(normalized).peggedAssets[0];
     expect(published.supplyChainGuard).toEqual(asset.supplyChainGuard);
+  });
+
+  it("parses legacy guard provenance without observedAtKind", () => {
+    const legacy = {
+      reason: "supply-chain-dropout", status: "repaired",
+      chains: [{
+        chainId: "xlayer", chainLabel: "X Layer", listCurrentUsd: 0,
+        baselineUsd: 1_427_900_000, baselineObservedAt: NOW - DAY, baselineSource: "state",
+        resolution: "onchain-total-supply", repairedCurrentUsd: 1_409_030_000, observedAt: NOW,
+      }],
+    };
+    expect(SupplyChainGuardProvenanceSchema.parse(legacy)).toEqual(legacy);
+    expect(SupplyChainGuardProvenanceSchema.safeParse({
+      ...legacy, chains: [{ ...legacy.chains[0], observedAtKind: "fetch-time" }],
+    }).success).toBe(false);
+  });
+
+  it("keeps gap-fill provenance additive and validates nonempty withheld historical buckets", () => {
+    const legacy = {
+      method: "coingecko-single-missing-chain", admission: "entered", missingChainId: "xlayer",
+      canonicalSource: "defillama", canonicalCurrentUsd: 100_000_000,
+      supplementalSource: "coingecko", supplementalCurrentUsd: 110_000_000,
+      ratio: 1.1, maxRatio: 1.2, observedAt: NOW,
+    };
+    expect(SupplyGapFillProvenanceSchema.parse(legacy)).toEqual(legacy);
+    const withheld = { ...legacy, withheldHistoricalBuckets: ["day", "week", "month"] };
+    expect(SupplyGapFillProvenanceSchema.parse(withheld)).toEqual(withheld);
+    expect(SupplyGapFillProvenanceSchema.safeParse({ ...legacy, withheldHistoricalBuckets: [] }).success).toBe(false);
+    expect(SupplyGapFillProvenanceSchema.safeParse({ ...legacy, withheldHistoricalBuckets: ["year"] }).success).toBe(false);
   });
 
   it("freezes vetted baseline across multi-day zeros, expires carry without releasing, then releases only on recovery", async () => {
@@ -185,17 +217,19 @@ describe("chain dropout guard", () => {
     const contract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
     mocks.onchain.mockResolvedValue(40_000_000n * 10n ** BigInt(contract.decimals!));
     const asset = usdg();
+    asset.supplyObservedAt = NOW - 900;
     asset.chainCirculating = { "X Layer": asset.chainCirculating!["X Layer"] };
     const before = getCirculatingRawOrNull(asset)!;
     const result = await guardChainDropouts({ assets: [asset], now: NOW, state: { version: 1, pairs: {} } });
     expect(asset.chainCirculating!["X Layer"].current).toBe(40_000_000);
     expect(asset.supplyChainGuard?.chains.find((chain) => chain.chainId === "xlayer"))
-      .toMatchObject({ resolution: "onchain-total-supply", listCurrentUsd: 0, repairedCurrentUsd: 40_000_000 });
+      .toMatchObject({ resolution: "onchain-total-supply", listCurrentUsd: 0, repairedCurrentUsd: 40_000_000, observedAt: NOW, observedAtKind: "local-read" });
     const xlayer = Object.values(result.state.pairs).find((pair) => pair.chainId === "xlayer")!;
     expect(xlayer).toMatchObject({ baselineUsd: 40_000_000, quarantinedSince: null, releasedAt: NOW });
     expect(asset.supplyChainGuard?.status).toBe("repaired");
     expect(asset.supplyRestored).toBeUndefined();
     expect(asset.supplySource).toBe("defillama-chain-repair");
+    expect(asset.supplyObservedAt).toBe(NOW - 900);
     expect(getCirculatingRawOrNull(asset)).toBe(before + 40_000_000);
   });
 
@@ -314,15 +348,41 @@ describe("chain dropout guard", () => {
     expect(result.state.pairs[JSON.stringify(["usdg-paxos", "solana"])]).toMatchObject({ heldTotalUsd: null, quarantinedSince: now - DAY });
   });
 
-  it("uses reviewed native onchain units at USD par for repair", async () => {
+  it.each([undefined, NOW - 900])("uses reviewed native onchain units with a local-read clock, preserving aggregate clock %s", async (listObservedAt) => {
     const contract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
     mocks.onchain.mockResolvedValue(1_409_030_000n * 10n ** BigInt(contract.decimals!));
     const asset = usdg();
+    if (listObservedAt != null) asset.supplyObservedAt = listObservedAt;
     asset.chainCirculating = { "X Layer": asset.chainCirculating!["X Layer"] };
     await guardChainDropouts({ assets: [asset], now: NOW, state: { version: 1, pairs: {} } });
     expect(asset.chainCirculating!["X Layer"].current).toBe(1_409_030_000);
-    expect(asset.supplyChainGuard?.chains[0]).toMatchObject({ resolution: "onchain-total-supply", observedAt: NOW });
+    expect(asset.supplyChainGuard?.chains[0]).toMatchObject({ resolution: "onchain-total-supply", observedAt: NOW, observedAtKind: "local-read" });
+    expect(asset.supplyObservedAt).toBe(listObservedAt);
+    const published = StablecoinListResponseSchema.parse(normalizeStablecoinsPayload({ peggedAssets: [asset] })).peggedAssets[0];
+    expect(published.supplyChainGuard?.chains[0]).toMatchObject({ observedAt: NOW, observedAtKind: "local-read" });
+    expect(published.supplyObservedAt).toBe(listObservedAt);
     expect(mocks.onchain.mock.calls[0][1]).toBe(contract.address);
+  });
+
+  it("uses only upstream chart clocks for a mixed native and chart repair", async () => {
+    const asset = usdg();
+    asset.supplyObservedAt = NOW - 900;
+    asset.chainCirculating = {
+      "X Layer": asset.chainCirculating!["X Layer"],
+      Ink: asset.chainCirculating!.Ink,
+    };
+    const contract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
+    mocks.onchain.mockResolvedValueOnce(1_409_030_000n * 10n ** BigInt(contract.decimals!));
+    mocks.chart.mockResolvedValue({
+      response: { ok: true },
+      body: JSON.stringify([{ date: NOW - 6 * 3600, totalCirculatingUSD: { peggedUSD: 63_474_779.8 } }]),
+    });
+    await guardChainDropouts({ assets: [asset], now: NOW, state: { version: 1, pairs: {} } });
+    expect(asset.supplyChainGuard?.chains.find((chain) => chain.chainId === "xlayer"))
+      .toMatchObject({ observedAt: NOW, observedAtKind: "local-read" });
+    expect(asset.supplyChainGuard?.chains.find((chain) => chain.chainId === "ink"))
+      .toMatchObject({ observedAt: NOW - 6 * 3600, observedAtKind: "upstream" });
+    expect(asset.supplyObservedAt).toBe(NOW - 6 * 3600);
   });
 
   it.each(["failed-read", "invalid-json", "invalid-schema"])("does not clobber persisted quarantine after %s", async (failure) => {
@@ -421,6 +481,7 @@ describe("chain dropout guard", () => {
       expect(outage.chainCirculating!.Ethereum.current).toBe(source);
       expect(outage.supplyChainGuard).toMatchObject({ status: "quarantined", chains: [{ chainId: "xlayer", resolution: "carried-baseline" }] });
       expect(outage.supplyChainGuard?.chains[0].repairedCurrentUsd).toBeUndefined();
+      expect(outage.supplyChainGuard?.chains[0].observedAtKind).toBeUndefined();
       state = run.state;
     }
   });
@@ -438,6 +499,7 @@ describe("chain dropout guard", () => {
     expect(asset.chainCirculating!["X Layer"].current).toBeNull();
     expect(asset.supplyChainGuard).toMatchObject({ status: "quarantined", quarantinedSince: NOW, concurrentGainUsd: 8_700_000 });
     expect(asset.supplyChainGuard?.chains[0].repairedCurrentUsd).toBeUndefined();
+    expect(asset.supplyChainGuard?.chains[0].observedAtKind).toBeUndefined();
     expect(getCirculatingRawOrNull(asset)).toBeGreaterThan(0);
     const xlayer = Object.values(result.state.pairs).find((pair) => pair.chainId === "xlayer")!;
     expect(xlayer).toMatchObject({ quarantinedSince: NOW, baselineSource: "seed", ambiguousSince: NOW });

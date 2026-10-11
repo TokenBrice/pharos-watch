@@ -4,6 +4,7 @@ import {
   STABLECOIN_PUBLICATION_WAIVERS,
   STABLECOIN_PRICE_GAP_REVIEWS,
   resolveStablecoinPriceGapReviews,
+  classifyStablecoinPublicationGap,
   compactStablecoinActivePriceCoverage,
   parsePersistedMissingActivePriceState,
   evaluateStablecoinActivePriceCoverage,
@@ -84,6 +85,21 @@ describe("evaluateStablecoinPublicationCoverage", () => {
 
   it("becomes exact again as soon as a restored row is present", () => {
     expect(evaluateStablecoinPublicationCoverage(activeIds, nowSec).complete).toBe(true);
+  });
+});
+
+describe("classifyStablecoinPublicationGap", () => {
+  it.each([
+    [400, 0, "none"],
+    [400, 3, "routine"],
+    [400, 4, "elevated"],
+    [400, 40, "elevated"],
+    [400, 41, "systemic"],
+    [0, 0, "none"],
+    [0, 1, "systemic"],
+  ] as const)("classifies %i expected with %i missing as %s", (expectedActiveCount, missingCount, band) => {
+    const missingActiveIds = Array.from({ length: missingCount }, (_, index) => `missing-${index}`);
+    expect(classifyStablecoinPublicationGap({ expectedActiveCount, missingActiveIds })).toBe(band);
   });
 });
 

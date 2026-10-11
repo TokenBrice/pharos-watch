@@ -17,16 +17,18 @@ describe("authored editorial JSON", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
     expect(packageJson.scripts["check:structural"].split(" && ")).toContain("npm run check:editorial-content");
     expect(packageJson.scripts["check:editorial-content"]).toContain("scripts/ci/check-editorial-content.ts");
-    for (const path of ["shared/data/methodology-changelogs/safety-score/v10.json", "src/data/changelogs/2026-07-27.json", "src/lib/case-studies/usdc-svb-2023.json", "src/app/dependency-map/content.json"]) {
+    for (const path of ["shared/data/methodology-changelogs/safety-score/v10.json", "src/data/changelogs/2026-08-02.json", "src/lib/case-studies/usdc-svb-2023.json", "src/app/dependency-map/content.json"]) {
       expect(buildPrStaticCheckPlan([path], { group: "guards" }).commands.map((command) => command.name)).toContain("check:structural");
     }
   });
 
   it("validates weekly metadata without normalizing authored values", () => {
-    const input = load("src/data/changelogs/2026-07-27.json");
+    const input = load("src/data/changelogs/2026-08-02.json");
     const parsed = WeeklyContentSchema.parse(input);
     expect(parsed).toEqual(input);
     expect(WeeklyContentSchema.safeParse({ ...parsed, dateRange: { from: "2026-02-30", to: "2026-07-27" } }).success).toBe(false);
+    expect(WeeklyContentSchema.safeParse({ ...parsed, dateRange: { from: "2026-10-08", to: "2026-10-08" } }).success).toBe(false);
+    expect(WeeklyContentSchema.safeParse({ ...parsed, dateRange: { from: "2026-07-26", to: "2026-08-01" } }).success).toBe(false);
     expect(WeeklyContentSchema.safeParse({ ...parsed, summary: [{ ...parsed.summary[0], href: "https://example.com" }] }).success).toBe(false);
     expect(WeeklyContentSchema.safeParse({ ...parsed, stats: { totalCommits: 0 } }).success).toBe(false);
     expect(WeeklyContentSchema.safeParse({ ...parsed, fieldNotes: Array(81).fill("word").join(" ") }).success).toBe(false);

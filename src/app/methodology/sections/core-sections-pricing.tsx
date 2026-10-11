@@ -45,7 +45,7 @@ export function PricingPipelineMethodologySection() {
         </p>
 
         <p>
-          <strong className="text-foreground">Observed SOFID market prices (v6.47).</strong>{" "}
+          <strong className="text-foreground">Observed SOFID market prices (v6.48).</strong>{" "}
           SOFID&apos;s nominal protocol-par override is retired so its existing exact-identity CoinGecko/Kraken
           consensus can reach price and peg consumers. Original clocks remain; Kraken still uses local-fetch
           timing and requires independent depeg confirmation. Missing quotes and carried nominal references
@@ -406,7 +406,7 @@ export function PricingPipelineMethodologySection() {
 
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">CoinGecko Supply Gap-Fill Limits</h3>
-            <p>DefiLlama list totals remain the canonical supply for DefiLlama-backed assets. When exactly one reviewed deployment is missing from DefiLlama&apos;s chain breakdown, a fresh CoinGecko market cap may raise the aggregate only while CoinGecko/DefiLlama stays inside a bounded band: a new fill needs a ratio above 1.05 and at most 1.45, an existing fill is kept above 1.02 (hysteresis), and no fill ever exceeds 1.50 at current or at any compared 1d/7d/30d point. All published buckets come from one CoinGecko series, only the remainder is attributed to the missing chain, and the row exposes <code className="text-xs">supplyGapFill</code> provenance with the retained DefiLlama total. Out-of-band, incomplete or ambiguous cases keep the DefiLlama figures unchanged.</p>
+            <p>DefiLlama list totals remain the canonical supply for DefiLlama-backed assets. When exactly one reviewed deployment is missing from DefiLlama&apos;s chain breakdown, a fresh CoinGecko market cap may raise the aggregate only while CoinGecko/DefiLlama stays inside a bounded band: a new fill needs a ratio above 1.05 and at most 1.45, an existing fill is kept above 1.02 (hysteresis), and no fill ever exceeds 1.50 at current or at any compared 1d/7d/30d point. All admitted aggregate buckets come from one CoinGecko series, and the row exposes <code className="text-xs">supplyGapFill</code> provenance with the retained DefiLlama total. Since v6.47, each historical remainder is attributed to the missing chain only when every existing chain has an observed bucket and their sum matches the DefiLlama baseline within max($0.01, baseline &times; 1e-6). Otherwise that missing-chain bucket is null and <code className="text-xs">withheldHistoricalBuckets</code> names the unavailable window; observed chain values are never scaled and admitted aggregates are unchanged. Aggregate admission still fails closed for out-of-band, incomplete or ambiguous supplemental evidence.</p>
           </div>
 
           <div className="space-y-2">

@@ -117,6 +117,7 @@ export interface PublicHealthAssessment {
   d1CapacityImpactStatus: HealthResponse["status"];
   d1CapacityQueryFailed?: boolean;
   yieldSafetyQueryFailed?: boolean;
+  yieldSafetyQueryErrors?: YieldSafetyQueryErrors;
   d1CapacityQueryError: string | null;
   stablecoinPublication: StablecoinPublicationHealth;
   stablecoinPublicationImpactStatus: HealthResponse["status"];
@@ -136,7 +137,9 @@ export function getPublicHealthEvidenceReadFailures(assessment: PublicHealthAsse
       ["mint-burn", assessment.mintBurnQueryError],
       ["circuits", assessment.circuitQueryError],
       ["d1-capacity", assessment.d1CapacityQueryFailed ? assessment.d1CapacityQueryError : null],
-      ["yield-safety", assessment.yieldSafetyQueryFailed ? "read-failed" : null],
+      ["yield-safety", assessment.yieldSafetyQueryFailed && !assessment.yieldSafetyQueryErrors ? "read-failed" : null],
+      ["yield-safety-live-identity", assessment.yieldSafetyQueryErrors?.liveIdentity],
+      ["yield-safety-publication-health", assessment.yieldSafetyQueryErrors?.publicationHealth],
       ["mint-burn-output", assessment.mintBurn.queryErrors?.latestSuccessfulSyncAt],
       ["mint-burn-count", assessment.mintBurn.queryErrors?.rowCount],
     ].filter(([, error]) => error != null).map(([source]) => `${source}:read-failed`),
@@ -448,10 +451,16 @@ async function loadMintBurnHealth(
   }
 }
 
+type YieldSafetyQueryErrors = {
+  liveIdentity: string | null;
+  publicationHealth: string | null;
+};
+
 interface YieldSafetyAvailability {
   impactStatus: "healthy" | "degraded";
   warning: string | null;
   queryFailed?: boolean;
+  queryErrors?: YieldSafetyQueryErrors;
 }
 
 /**
@@ -489,10 +498,39 @@ async function assessYieldSafetyAvailability(
     if (stamped == null) {
       return { impactStatus: "degraded", warning: "yield-safety-unrated-serving:safety-identity-missing" };
     }
-    const [live, health] = await Promise.all([
-      loadSafetyScoreV9PublicationIdentityEnvelope(db),
-      loadSafetyScoreV9PublicationHealth(db),
+    const [liveResult, healthResult] = await Promise.all([
+      capturePublicHealthRead(
+        {
+          event: "yield_safety_live_identity_read_failed",
+          source: "yield-safety-live-identity",
+          message: "Live yield safety identity unavailable.",
+          reason: "yield-safety-live-identity-read-failed",
+        },
+        () => loadSafetyScoreV9PublicationIdentityEnvelope(db),
+      ),
+      capturePublicHealthRead(
+        {
+          event: "yield_safety_publication_health_read_failed",
+          source: "yield-safety-publication-health",
+          message: "Yield safety publication health unavailable.",
+          reason: "yield-safety-publication-health-read-failed",
+        },
+        () => loadSafetyScoreV9PublicationHealth(db),
+      ),
     ]);
+    if (!liveResult.ok || !healthResult.ok) {
+      return {
+        impactStatus: "degraded",
+        warning: "yield-safety-availability-unknown",
+        queryFailed: true,
+        queryErrors: {
+          liveIdentity: liveResult.error,
+          publicationHealth: healthResult.error,
+        },
+      };
+    }
+    const live = liveResult.value;
+    const health = healthResult.value;
     if (!health || (live && health.acceptedPublicationGenerationId !== live.publicationGenerationId)) {
       return { impactStatus: "degraded", warning: "yield-safety-availability-unknown" };
     }
@@ -783,6 +821,9 @@ export async function assessPublicHealth(
   if (yieldSafetyAvailability.warning) {
     warnings.push(yieldSafetyAvailability.warning);
   }
+  for (const error of Object.values(yieldSafetyAvailability.queryErrors ?? {})) {
+    if (error) warnings.push(error);
+  }
 
   const overallStatus = maxPublicStatus(
     cacheImpactStatus,
@@ -827,6 +868,7 @@ export async function assessPublicHealth(
     d1CapacityQueryError: d1CapacityResult.error,
     d1CapacityQueryFailed: d1CapacityResult.reason === "query-failed",
     yieldSafetyQueryFailed: yieldSafetyAvailability.queryFailed === true,
+    ...(yieldSafetyAvailability.queryErrors ? { yieldSafetyQueryErrors: yieldSafetyAvailability.queryErrors } : {}),
     stablecoinPublication,
     stablecoinPublicationImpactStatus,
     activePriceCoverage,

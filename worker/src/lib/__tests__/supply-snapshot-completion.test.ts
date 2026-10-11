@@ -3,6 +3,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   buildSupplySnapshotCoverageExpectation,
+  buildSupplySnapshotCompletionMarker,
   getCompletedSupplySnapshot,
   preflightSupplySnapshot,
 } from "../supply-snapshot-completion";
@@ -130,12 +131,44 @@ describe("supply snapshot completion identity", () => {
     });
   });
 
+  it("keeps a truthful partial v2 marker identity-verifiable but never exact", async () => {
+    const expectedCoverage = buildSupplySnapshotCoverageExpectation(["coin-a", "coin-b"], []);
+    const marker = buildSupplySnapshotCompletionMarker({
+      snapshotDate: SNAPSHOT_DATE,
+      coverage: expectedCoverage,
+      accountedActiveCount: 1,
+      ownedRowIds: ["coin-a"],
+      missingActiveIds: ["coin-b"],
+    });
+    expect(marker).toMatchObject({
+      coverageVersion: 2, expectedActiveCount: 2, accountedActiveCount: 1,
+      missingActiveIds: ["coin-b"], ownedRowIds: ["coin-a"],
+    });
+    const db = mockD1([{
+      match: "cache",
+      matchBinds: ["snapshot-supply:last-write"],
+      rows: [markerRow(marker)],
+    }]);
+    await expect(getCompletedSupplySnapshot(db, { expectedCoverage })).resolves.toMatchObject({
+      exactCoverageVerified: false, coverageIdentityVerified: true,
+      ownedRowIds: ["coin-a"], missingActiveIds: ["coin-b"],
+    });
+    const changedCoverage = buildSupplySnapshotCoverageExpectation(["coin-a", "coin-c"], []);
+    await expect(getCompletedSupplySnapshot(db, { expectedCoverage: changedCoverage })).resolves.toMatchObject({
+      coverageIdentityVerified: false, ownedRowIds: ["coin-a"],
+    });
+  });
+
   it.each([
     { ownedRowIds: ["coin-b", "coin-a"], accountedActiveCount: 2 },
     { ownedRowIds: ["coin-a", "coin-a"], accountedActiveCount: 2 },
     { ownedRowIds: ["", "coin-b"], accountedActiveCount: 2 },
     { ownedRowIds: [42, "coin-b"], accountedActiveCount: 2 },
     { ownedRowIds: ["coin-a", "coin-b"], accountedActiveCount: 1 },
+    { ownedRowIds: ["coin-a"], accountedActiveCount: -1, missingActiveIds: ["coin-b"] },
+    { ownedRowIds: ["coin-a"], accountedActiveCount: 1, missingActiveIds: [] },
+    { ownedRowIds: ["coin-a"], accountedActiveCount: 1, missingActiveIds: ["coin-b", "coin-b"] },
+    { ownedRowIds: ["coin-a"], accountedActiveCount: 3, missingActiveIds: [] },
   ])("rejects malformed v2 ownership $ownedRowIds / $accountedActiveCount", async (proof) => {
     const expectedCoverage = buildSupplySnapshotCoverageExpectation(["coin-a", "coin-b"], []);
     const db = mockD1([{

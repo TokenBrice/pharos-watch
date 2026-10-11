@@ -33,6 +33,8 @@ Mint and burn events measure token creation and destruction, not investor intent
 
 The v6.24 release aligns aggregate and per-coin windows to N closed UTC hours ending at the current hour boundary, excluding the open hour without dropping the oldest hour's valuation debt. Verified CCTP V2 destination recipient/fee mints leave issuance while unrelated same-transaction flow stays counted. Actual observation-clock admission governs historical pricing, and whole-hour retention plus post-materialization cursor advancement preserves all siblings needed for repair. Pressure formulas and gauge weights are unchanged; existing pruned evidence and overadvanced historical cursors are not automatically repaired.
 
+**Release obligations recorded 2026-10-10:** for v6.24, fixed-clock input/output comparison and owner review of changed flow outcomes remain release gates; fresh admitted producer observations and production resource evidence are separate prerequisites. Replay cannot reconstruct pruned mint evidence, and none of these requirements asserts completed repair or production health.
+
 Earlier release history lives in `shared/data/methodology-changelogs/mint-burn-flow/`; keep this document focused on the current contract.
 
 ---

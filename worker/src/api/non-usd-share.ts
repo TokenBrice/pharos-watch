@@ -28,10 +28,12 @@ const FIAT_NON_USD_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter(
 const COMMODITY_ID_SET = new Set(COMMODITY_IDS);
 const FIAT_NON_USD_ID_SET = new Set(FIAT_NON_USD_IDS);
 
-// A day is published only when the core assets observed on both sides of it but
-// missing on it (valued at their previous row) leave its total and each non-USD
-// cohort mostly observed. The daily snapshot is all-or-nothing, so a partial day is
-// a missed snapshot that later received per-coin backfill rows only; publishing it
+// A day is published only when the core assets observed before it but missing
+// on it (valued at their previous row) leave its total and each non-USD cohort
+// mostly observed. That covers interior holes and trailing ones: the snapshot
+// job writes a day without a non-systemic set of absent coins, so the latest
+// days can lack an asset that has no later row yet. A partial day can also be a
+// missed snapshot that later received per-coin backfill rows only; publishing it
 // charts a near-empty market as a real share (2026-08-06 plotted a 0% share).
 // Measured genuine per-coin holes stay far above these floors (total >= 99.4%,
 // cohorts >= 82% across 2015-02-25..2026-09-29).
@@ -48,7 +50,8 @@ interface AggRow {
 interface CoinHistoryGapRow {
   stablecoin_id: string;
   previous_date: number;
-  next_date: number;
+  /** Next observation of the asset; null while it is still unobserved. */
+  next_date: number | null;
   previous_usd: number;
 }
 
@@ -93,7 +96,8 @@ async function readRows(
   return result.results ?? [];
 }
 
-/** Per-coin interior gaps: consecutive rows of one asset more than a day apart. */
+/** Per-coin gaps: consecutive rows of one asset more than a day apart, and each
+ * asset's last row, which leaves a trailing gap until it is observed again. */
 async function readCoinHistoryGaps(
   db: D1Database,
   cutoff: number,
@@ -122,14 +126,14 @@ async function readCoinHistoryGaps(
            SELECT
              stablecoin_id,
              snapshot_date,
-             LAG(snapshot_date) OVER by_coin AS previous_date,
-             LAG(circulating_usd) OVER by_coin AS previous_usd
+             circulating_usd,
+             LEAD(snapshot_date) OVER by_coin AS next_date
            FROM bounded_history
            WINDOW by_coin AS (PARTITION BY stablecoin_id ORDER BY snapshot_date)
          )
-       SELECT stablecoin_id, previous_date, snapshot_date AS next_date, previous_usd
+       SELECT stablecoin_id, snapshot_date AS previous_date, next_date, circulating_usd AS previous_usd
        FROM coin_history
-       WHERE snapshot_date >= ? AND snapshot_date - previous_date > ${DAY_SECONDS}`,
+       WHERE next_date IS NULL OR (next_date >= ? AND next_date - snapshot_date > ${DAY_SECONDS})`,
     )
     .bind(JSON.stringify(CORE_IDS), cutoff, ...latestSnapshotBinds, cutoff, ...latestSnapshotBinds, cutoff)
     .all<CoinHistoryGapRow>();
@@ -138,8 +142,9 @@ async function readCoinHistoryGaps(
 }
 
 /**
- * Value of assets missing on each published date although observed before and
- * after it. `rows` must be sorted by `snapshot_date` ascending.
+ * Value of assets missing on each published date although observed before it,
+ * whether or not a later row exists yet. `rows` must be sorted by
+ * `snapshot_date` ascending.
  */
 function sumUnobservedValueByDate(
   rows: readonly AggRow[],
@@ -154,7 +159,8 @@ function sumUnobservedValueByDate(
       if (rows[mid]!.snapshot_date <= gap.previous_date) low = mid + 1;
       else high = mid;
     }
-    for (let index = low; index < rows.length && rows[index]!.snapshot_date < gap.next_date; index++) {
+    const nextDate = gap.next_date ?? Number.POSITIVE_INFINITY;
+    for (let index = low; index < rows.length && rows[index]!.snapshot_date < nextDate; index++) {
       const date = rows[index]!.snapshot_date;
       const unobserved = unobservedByDate.get(date) ?? { total: 0, commodity: 0, fiatNonUsd: 0 };
       unobserved.total += gap.previous_usd;

@@ -53,6 +53,9 @@ export const RUNTIME_REACHABILITY_POLICIES = [
         "shared/data/stablecoins/coins.generated.json",
         "shared/lib/stablecoins/registry.ts",
         "shared/lib/tracked-stablecoin-utils.ts",
+        // ADR-24: alert lanes must use the thin envelope, not full V9 snapshot decoding.
+        "worker/src/lib/safety-score-active-source.ts",
+        "worker/src/lib/report-cards-v9-cache.ts",
       ],
     },
     directImports: {
@@ -64,7 +67,7 @@ export const RUNTIME_REACHABILITY_POLICIES = [
     },
     failureHeading: "Worker runtime import boundary failed",
     remediation:
-      "Use the lightweight Worker runtime registry; the full stablecoin registry exceeds the lane's isolate memory budget.",
+      "Use the lightweight Worker runtime registry and thin alert safety envelope; ADR-24 excludes the full stablecoin registry and full V9 snapshot decoding from these lanes' isolate memory budget.",
     successLabel: "Worker runtime import boundary",
   },
   {

@@ -1,9 +1,10 @@
 {
   "dateRange": {
-    "from": "2026-04-05",
+    "from": "2026-04-06",
     "to": "2026-04-12"
   },
-  "headline": "Infrastructure axis launches, PSI hero gets arc gauge and event timeline, and Liquidity Score v5.0 brings size-aware scoring.",
+  "headline": "Infrastructure axis launches and the PSI hero gains an arc gauge with an annotated crisis timeline.",
+  "fieldNotes": "The week added a new way to group coins: an Infrastructure axis that tags Liquity and M0 derivatives by the protocol they run on, replacing the older lineage fields. Four M0 wrappers and USDat arrived alongside it. The Stability Index gained annotated crisis events, exit liquidity moved to a best-path model, and Telegram delivery was hardened against rate limits. The treasury exposure page was retired.",
   "summary": [
     {
       "label": "Infrastructure axis",
@@ -13,24 +14,24 @@
     {
       "label": "Stability intelligence",
       "tag": "feature",
-      "description": "PSI page ships an arc gauge hero with annotated crisis events from COVID Crash to BTC ATH, plus hardened non-USD depeg replay for BRZ, TRYB, and commodity pegs."
+      "description": "PSI page ships an arc gauge hero with annotated crisis events from COVID Crash to BTC ATH, plus hardened non-USD depeg replay for BRZ, TRYB, and commodity pegs.",
+      "href": "/methodology/stability-index-changelog/"
     },
     {
       "label": "Safety Scores redesign",
       "tag": "design",
-      "description": "Grade-grouped card grid, systemic risk headline, entrance animations, and v6.93 scoring with steeper peg multiplier and active-depeg grade cap.",
-      "href": "/methodology/scoring-changelog/"
+      "description": "Grade-grouped card grid, a systemic risk headline ranked by dependent TVL, and entrance animations."
     },
     {
-      "label": "Live reserves surge",
-      "tag": "coverage",
-      "description": "10+ new adapters push live reserve tracking to 126 coins, including Frax's balance sheet, Block Analitica for DAI/USDS, MIM cauldrons, eUSD, feUSD, and Honey."
-    },
-    {
-      "label": "Liquidity Score v5.0",
+      "label": "Best-path exit model",
       "tag": "feature",
-      "description": "Size-aware scoring formulas, best-path exit model with diversification premium, and Uniswap V2/V4 split replace the v4 blend.",
-      "href": "/methodology/liquidity-score-changelog/"
+      "description": "Exit liquidity replaces the blend with a best-path model and diversification premium (backstop methodology v3.7); Uniswap V2 and V4 pools split from the generic bucket.",
+      "href": "/methodology/redemption-backstop-changelog/"
+    },
+    {
+      "label": "Live reserve adapters",
+      "tag": "coverage",
+      "description": "Abracadabra adapter for MIM cauldron collateral, a Lista adapter, live configs for seven more coins, and USDT reserves upgraded to Q4 2025 attestation data, reaching 136 coins."
     },
     {
       "label": "Broader coverage",
@@ -40,7 +41,7 @@
     {
       "label": "Navigation & pages",
       "tag": "design",
-      "description": "Collapsible sidebar groups, two-column API reference with scrollspy, redesigned /telegram page, and changelog timeline with category tags."
+      "description": "Redesigned /telegram page, changelog week nav with scroll-spy, refined sidebar signals, and the treasury exposure page retired."
     },
     {
       "label": "Pipeline hardening",
@@ -49,88 +50,88 @@
     }
   ],
   "stats": {
-    "totalCommits": 353
+    "totalCommits": 268
   },
   "commits": [
     {
-      "hash": "61290ed",
+      "hash": "b2119d11",
+      "message": "fix(changelog): replace retired treasuries page mention with /telegram redesign"
+    },
+    {
+      "hash": "61290ede",
       "message": "fix: admit eva stablecoins to runtime cache"
     },
     {
-      "hash": "8653fa3",
+      "hash": "8653fa3e",
       "message": "docs: bump tracked count to 194 after adding eva tokens"
     },
     {
-      "hash": "fb5f066",
+      "hash": "fb5f066d",
       "message": "add evaUSDC and evaUSDT to tracked stablecoins"
     },
     {
-      "hash": "e4a47e3",
+      "hash": "e4a47e3a",
       "message": "fix dews freshness and price staleness"
     },
     {
-      "hash": "bcbb0ee",
-      "message": "chore: refresh hotspot ratchet baseline"
-    },
-    {
-      "hash": "53bd099",
+      "hash": "53bd099e",
       "message": "docs(status): document cron error transient-vs-sustained escalation"
     },
     {
-      "hash": "5d4c4cb",
+      "hash": "5d4c4cbe",
       "message": "test(status/cron-health): cover consecutive-error streak counter"
     },
     {
-      "hash": "ffefafd",
+      "hash": "ffefafdf",
       "message": "fix(status): treat single critical cron error as degraded, not stale"
     },
     {
-      "hash": "77d2580",
+      "hash": "77d2580d",
       "message": "fix(sync-stablecoins): retry DL response body parse failures before falling back"
     },
     {
-      "hash": "35423cc",
+      "hash": "35423ccc",
       "message": "test(sync-stablecoins): failing test for DL parse retry path"
     },
     {
-      "hash": "2526d2c",
+      "hash": "2526d2cc",
       "message": "fix: report scrvUSD current yield"
     },
     {
-      "hash": "a8a0522",
-      "message": "chore: refresh hotspot ratchet waivers"
-    },
-    {
-      "hash": "bfef7a2",
+      "hash": "bfef7a26",
       "message": "fix: add m0 extension price inheritance"
     },
     {
-      "hash": "df63d99",
+      "hash": "df63d994",
       "message": "test(status): cover freshness fallbacks"
     },
     {
-      "hash": "4a9e57f",
-      "message": "refactor(status): trim evaluation hotspot"
-    },
-    {
-      "hash": "05fcb80",
+      "hash": "05fcb802",
       "message": "fix(status): harden freshness diagnostics"
     },
     {
-      "hash": "48d6806",
-      "message": "chore(deps): bump the minor-and-patch group with 11 updates (#72)"
-    },
-    {
-      "hash": "59edd0a",
-      "message": "chore(deps-dev): bump @cloudflare/workers-types (#71)"
-    },
-    {
-      "hash": "19c6cfe",
+      "hash": "19c6cfec",
       "message": "chore: bump next to 16.2.3"
     },
     {
-      "hash": "6eac818",
+      "hash": "6eac818d",
       "message": "fix: harden supplemental solana stablecoin fallback"
+    },
+    {
+      "hash": "8e78a75f",
+      "message": "fix(filter-bar): rebalance desktop grid so Infrastructure stays on one line"
+    },
+    {
+      "hash": "b4c713a2",
+      "message": "fix(_redirects): move infrastructure redirects above auto-generated separator"
+    },
+    {
+      "hash": "7ae62203",
+      "message": "docs(homepage): fix stale infrastructure filter URL key reference"
+    },
+    {
+      "hash": "612ef058",
+      "message": "docs: refresh stablecoin addition process"
     }
   ]
 }

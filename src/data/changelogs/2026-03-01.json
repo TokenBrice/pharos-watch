@@ -1,0 +1,138 @@
+{
+  "dateRange": {
+    "from": "2026-02-23",
+    "to": "2026-03-01"
+  },
+  "headline": "Safety Scores and the Pharos Stability Index launch, followed on Mar 1 by DEWS, yield rankings, and mint/burn flows.",
+  "fieldNotes": "Pharos added its scoring layer this week. Report Cards arrived on Feb 25, were renamed Safety Scores the next day, and moved from methodology v2.0 to v5.5 by Sunday as resilience factors, governance tiers, and reserve-derived dependencies were added. The Stability Index gave the whole market one composite score with annotated crisis history. On Mar 1 the DEWS, depeg tracker, yield, and mint/burn flow pages shipped, with yield and flows labeled Experimental.",
+  "summary": [
+    {
+      "label": "Safety Scores launch",
+      "tag": "feature",
+      "description": "Report Cards debut and become Safety Scores, moving from v2.0 to v5.5 with a four-factor resilience model, governance quality tiers, reserve-derived dependencies, and peg as a multiplier",
+      "href": "/methodology/scoring-changelog/"
+    },
+    {
+      "label": "Stability Index launch",
+      "tag": "feature",
+      "description": "New /stability-index page with a 15-minute PSI cron, 24h rolling average, contributor table, and history extended with UST and IRON shadow coins and annotated crisis events",
+      "href": "/methodology/stability-index-changelog/"
+    },
+    {
+      "label": "Depeg early warning",
+      "tag": "feature",
+      "description": "Multi-source confirmation for depegs on coins above $1B, DEWS stress scoring with 7 sub-signals every 15 minutes, and a new /depeg tracker page",
+      "href": "/methodology/depeg-changelog/"
+    },
+    {
+      "label": "Yield and flows debut",
+      "tag": "feature",
+      "description": "/yield leaderboard with three-tier APY resolution and lending auto-discovery, plus /flows with mint/burn event tracking for 10 coins and a Bank Run Gauge"
+    },
+    {
+      "label": "Reserves and coverage",
+      "tag": "coverage",
+      "description": "Curated reserves for 94 stablecoins on a 5-tier risk scale, 78 new contract deployments, broader DEX pool discovery, and syrupUSDC, syrupUSDT, yoUSD, GAIB AID, and apxUSD tracked"
+    },
+    {
+      "label": "Navigation and tools",
+      "tag": "design",
+      "description": "Collapsible sidebar, Ctrl/Cmd+K command palette, KPI bar homepage, standalone dependency map and portfolio pages, five-coin compare with share images, and CSV/PNG export"
+    },
+    {
+      "label": "Digest and Telegram",
+      "tag": "feature",
+      "description": "Daily digest split into tweet and extended commentary, upgraded to Sonnet, redesigned as a broadsheet with a wire archive, and posted to a Telegram channel"
+    },
+    {
+      "label": "Platform hardening",
+      "tag": "security",
+      "description": "Circuit breakers, dual-primary prices, tighter CSP and HSTS headers, ESLint and Vitest in CI, Zod response validation, in-app data feedback, and a 34-fix post-release audit"
+    }
+  ],
+  "stats": {
+    "totalCommits": 790
+  },
+  "commits": [
+    {
+      "hash": "74147aaf",
+      "message": "feat: add additional gho contracts"
+    },
+    {
+      "hash": "8671b914",
+      "message": "fix: GHO repo depreciated url"
+    },
+    {
+      "hash": "fd83a466",
+      "message": "fix(peg-score): fair scoring for young coins with chronic depegs (v5.5)"
+    },
+    {
+      "hash": "c72db4c7",
+      "message": "feat(mobile): replace dropdown with full-screen grouped navigation sheet"
+    },
+    {
+      "hash": "507ceb19",
+      "message": "chore: add shadcn Sheet component for mobile menu"
+    },
+    {
+      "hash": "e72a0824",
+      "message": "fix: resolve 3 production console errors"
+    },
+    {
+      "hash": "fd6b14c6",
+      "message": "feat(report-card): show amber annotation when peg stability is capped"
+    },
+    {
+      "hash": "3b9dd62b",
+      "message": "chore: remove unused StabilityResult import in PSI test"
+    },
+    {
+      "hash": "d43a7b03",
+      "message": "test(infra): add coverage config, fix type-checking, and clean up test infra"
+    },
+    {
+      "hash": "b2552caf",
+      "message": "test: add 59 unit tests for PSI formula (stability-index)"
+    },
+    {
+      "hash": "57fc55a8",
+      "message": "test: add 56 unit tests for peg scoring algorithms"
+    },
+    {
+      "hash": "38a162f1",
+      "message": "fix(frontend): 7 minor reliability and safety fixes"
+    },
+    {
+      "hash": "7556aa2c",
+      "message": "fix(logos): register apxUSD logo in logos.json"
+    },
+    {
+      "hash": "e52532c8",
+      "message": "fix(types): tighten Zod schemas, remove `any` types, and fix type safety gaps"
+    },
+    {
+      "hash": "394b1ec9",
+      "message": "feat(logos): add apxUSD logo"
+    },
+    {
+      "hash": "c0fc2dd3",
+      "message": "fix(migrations): make 0031a_mint_burn_v2 idempotent with IF NOT EXISTS"
+    },
+    {
+      "hash": "ff0f1380",
+      "message": "feat(stablecoins): add apxUSD (DL ID 354)"
+    },
+    {
+      "hash": "4134c0e8",
+      "message": "fix: replace Math.min/max spread with reduce to avoid V8 stack overflow"
+    },
+    {
+      "hash": "c184f2a6",
+      "message": "fix(worker): add logging to silent catches, retry Claude API, warn on SAFE_HAVEN fallback"
+    },
+    {
+      "hash": "8345f114",
+      "message": "fix(worker): init all module state in fetch handler + validate API query params"
+    }
+  ]
+}

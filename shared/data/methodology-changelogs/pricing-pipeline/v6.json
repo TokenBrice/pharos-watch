@@ -1,14 +1,30 @@
 [
   {
-    "version": "6.47",
+    "version": "6.48",
     "title": "Observed SOFID consensus without nominal-par override",
     "date": "2026-10-11",
     "effectiveAt": 1791763200,
-    "summary": "Pricing v6.47 retires SOFID's nominal protocol-par route so its existing exact-identity CoinGecko/Kraken market consensus can reach price and peg consumers. Source weights, freshness budgets and depeg confirmation rules are unchanged.",
+    "summary": "Pricing v6.48 retires SOFID's nominal protocol-par route so its existing exact-identity CoinGecko/Kraken market consensus can reach price and peg consumers. Source weights, freshness budgets and depeg confirmation rules are unchanged.",
     "impact": [
       "Observed SOFID discounts and premiums retain their original consensus value and observation clock instead of being replaced by a $1 nominal reference. No new provider or ticker-identity exception is admitted.",
       "Kraken midpoint evidence remains local-fetch and confirm_required, not independently authoritative for depeg detection. Missing quotes and carried nominal SOFID references publish unavailable, never par or zero.",
       "Other registered nominal routes retain their existing non-observed classification. Fresh producer publication is required before this source cutover can close a production peg-data gap; local source observations are not production acceptance."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.47",
+    "title": "Conserved historical missing-chain attribution",
+    "date": "2026-10-11",
+    "effectiveAt": 1791763200,
+    "summary": "CoinGecko missing-chain gap-fill now attributes a historical remainder only when every existing chain has an observed bucket and their sum conserves the DefiLlama aggregate baseline. Unavailable or non-conserving history publishes the missing chain's bucket as null with explicit provenance, without changing admitted aggregate supply.",
+    "impact": [
+      "ADR-8 conservation and audit finding V-04 require the historical chain packet to conserve its aggregate, not just the current packet. Each 1d/7d/30d baseline uses the same tolerance as current supply: max($0.01, DefiLlama bucket × 1e-6).",
+      "Complete, conserving historical chain baselines retain the CoinGecko-minus-DefiLlama remainder. Otherwise the missing chain's historical bucket is null and supplyGapFill.withheldHistoricalBuckets names day, week or month. Existing observed chain values are never scaled.",
+      "Some missing-chain historical buckets and their dependent chain-local comparisons become unavailable rather than publishing a numeric mismatch. Current supply, admitted CoinGecko aggregate history, ratio bounds, hysteresis, consensus weights and scoring formulas are unchanged.",
+      "A valid-JSON non-object CoinGecko simple-price root is unavailable supplemental evidence, logged as non-object-root and routed through the existing no-decision/carry path instead of aborting healthy DefiLlama publication.",
+      "Activation is provisionally 2026-10-12 00:00 UTC (1791763200); re-date effectiveAt at release"
     ],
     "commits": [],
     "reconstructed": false

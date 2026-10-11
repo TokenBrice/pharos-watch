@@ -10,6 +10,8 @@
 
 The v6.94 release records scope-matched Curve metapool quality and balance evidence, original-source-clock freshness for exact EVM execution, and pool/census admission repairs. A full-pool balance ratio cannot weight base-pool-excluded TVL: without matching-scope evidence, balance remains neutral and unmeasured. Exact V2 captures and QuoterV2, Uniswap V4 and Curve CryptoSwap evidence cannot acquire a fresh clock merely by being published again; covered EVM source headers enforce the existing inclusive three-hour ceiling. Component weights and retained-TVL measurement semantics are unchanged, so v6.94 adds no TVL-basis break.
 
+**Release obligations recorded 2026-10-08 and 2026-10-10:** the v6.93 registry/ticker cutover requires fixed-clock ordinary/API/gap comparison, independently of the separate Solidly diagnostic gate. The v6.94 release requires fixed-clock input/output comparison and owner review of changed route, quality and execution outcomes; fresh admitted producer observations and production resource evidence remain separate gates. These are prerequisites, not completed comparison or production-health claims.
+
 Runtime/version, public-changelog and structured-history pointers are in the [appendix's Methodology Versioning](./process/dex-liquidity-appendix.md#methodology-versioning); the structured changelog owns release history, not a second Markdown timeline.
 
 ## DEX Liquidity Score

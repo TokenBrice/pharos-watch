@@ -90,6 +90,57 @@ describe("runtime reachability policies", () => {
     });
   });
 
+  it("pins the ADR-24 full V9 snapshot boundary on the Telegram lane", () => {
+    const telegramPolicy = policy("mint-burn");
+    expect(telegramPolicy.entrypoints).toMatchObject({
+      kind: "paths",
+      paths: expect.arrayContaining(["worker/src/handlers/scheduled/five-minute-telegram.ts"]),
+    });
+    expect(telegramPolicy.forbidden).toMatchObject({
+      kind: "paths",
+      paths: expect.arrayContaining([
+        "worker/src/lib/safety-score-active-source.ts",
+        "worker/src/lib/report-cards-v9-cache.ts",
+      ]),
+    });
+    expect(telegramPolicy.remediation).toContain("ADR-24");
+  });
+
+  it.each([
+    ["safety-score-active-source", "loadActiveSafetyScoreSource"],
+    ["report-cards-v9-cache", "loadPublishedReportCardsV9Snapshot"],
+  ])("rejects full V9 snapshot reachability through Telegram context: %s", async (module, loader) => {
+    const root = makeRoot();
+    writeText(root, "worker/src/handlers/scheduled/twenty-minute-mint-burn-extended.ts", "export const ok = true;\n");
+    writeText(root, "worker/src/handlers/scheduled/five-minute-telegram.ts", 'export { buildAlertContextLines } from "../../cron/telegram-alert-context";\n');
+    writeText(root, "worker/src/cron/telegram-alert-context.ts", `import { ${loader} } from "../lib/${module}";\nexport const buildAlertContextLines = ${loader};\n`);
+    writeText(root, `worker/src/lib/${module}.ts`, `export const ${loader} = () => true;\n`);
+    writeText(root, "worker/src/cron/prune-detail-cache.ts", "export const ok = true;\n");
+    writeText(root, "worker/src/cron/snapshot-supply.ts", "export const ok = true;\n");
+
+    const result = await checkRuntimeReachabilityPolicy(policy("mint-burn"), root);
+    expect(result.configurationErrors).toEqual([]);
+    expect(result.violations).toContainEqual({
+      entrypoint: "worker/src/handlers/scheduled/five-minute-telegram.ts",
+      forbidden: `worker/src/lib/${module}.ts`,
+      kind: "reachable",
+    });
+  });
+
+  it("allows the thin Telegram envelope with a type-only full source import", async () => {
+    const root = makeRoot();
+    writeText(root, "worker/src/handlers/scheduled/twenty-minute-mint-burn-extended.ts", "export const ok = true;\n");
+    writeText(root, "worker/src/handlers/scheduled/five-minute-telegram.ts", 'export { loadActiveAlertSafetySourceAssessment } from "../../lib/alert-safety-source-cache";\n');
+    writeText(root, "worker/src/lib/alert-safety-source-cache.ts", 'import type { ActiveSafetyScoreSource } from "./safety-score-active-source";\nexport const loadActiveAlertSafetySourceAssessment = (): Pick<ActiveSafetyScoreSource, "kind"> => ({ kind: "v9" });\n');
+    writeText(root, "worker/src/lib/safety-score-active-source.ts", 'export interface ActiveSafetyScoreSource { kind: "v9" }\nexport const loadActiveSafetyScoreSource = () => ({ kind: "v9" });\n');
+    writeText(root, "worker/src/cron/prune-detail-cache.ts", "export const ok = true;\n");
+    writeText(root, "worker/src/cron/snapshot-supply.ts", "export const ok = true;\n");
+
+    const result = await checkRuntimeReachabilityPolicy(policy("mint-burn"), root);
+    expect(result.configurationErrors).toEqual([]);
+    expect(result.violations).toEqual([]);
+  });
+
   it("rejects Worker implementation reachability from Pages Functions", async () => {
     const root = makeRoot();
     writeText(root, "functions/example.ts", 'import { secret } from "../worker/src/secret";\nexport { secret };\n');

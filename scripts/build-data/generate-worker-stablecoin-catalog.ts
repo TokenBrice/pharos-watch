@@ -13,6 +13,9 @@ const SOURCE_PATH = resolve(REPO_ROOT, "shared/data/stablecoins/coins.generated.
 const OUTPUT_PATH = resolve(REPO_ROOT, "shared/data/stablecoins/coins.worker-full.generated.json");
 
 export function buildWorkerStablecoinCatalog<T extends { id: string }>(coins: readonly T[]) {
+  if (coins.length === 0) {
+    throw new Error("Cannot generate an empty Worker stablecoin catalog");
+  }
   let maxUncompressedBytes = 0;
   const rows = coins.map((coin): [string, number, string] => {
     const bytes = Buffer.from(JSON.stringify(coin), "utf8");
