@@ -163,6 +163,84 @@ describe("pinned supplemental research RPC", () => {
     expect(record.params[1]).toBe("0x3e8");
   });
 
+  describe.each(["eth_getTransactionReceipt", "eth_getTransactionByHash"])("%s", (method) => {
+    const transactionHash = `0x${"b".repeat(64)}`;
+    const params = JSON.stringify([transactionHash]);
+
+    it.each(["1000", HASH])("accepts execution evidence matching the numeric and canonical hash pin %s", async (block) => {
+      const result = { transactionHash, blockNumber: "0x3e8", blockHash: HASH };
+      fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+        const body = JSON.parse(String(init.body));
+        if (body.method === method) expect(body.params).toEqual([transactionHash]);
+        return rpcResponse(body.id, body.method === method ? result : header("0x3e8"));
+      });
+      const record = await invoke(["--block", block], "ethereum", method, params);
+      expect(record).toMatchObject({ state: "ok", reason: null, result, block: { number: "1000", hash: HASH } });
+      expect(fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init.body)).method)).toEqual([
+        block === HASH ? "eth_getBlockByHash" : "eth_getBlockByNumber", method, "eth_getBlockByNumber",
+      ]);
+    });
+
+    it.each([
+      { block: "1000", blockNumber: "0x3e9", blockHash: HASH },
+      { block: "1000", blockNumber: "0x3e8", blockHash: `0x${"c".repeat(64)}` },
+      { block: HASH, blockNumber: "0x3e8", blockHash: `0x${"c".repeat(64)}` },
+    ])("withholds execution evidence with a mismatched block: %j", async ({ block, blockNumber, blockHash }) => {
+      fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+        const body = JSON.parse(String(init.body));
+        return rpcResponse(body.id, body.method === method ? { blockNumber, blockHash } : header("0x3e8"));
+      });
+      const record = await invoke(["--block", block], "ethereum", method, params);
+      expect(record).toMatchObject({ state: "error", reason: "block-pin-mismatch", result: null });
+      expect(process.exitCode).toBe(1);
+    });
+
+    it("withholds execution evidence if the canonical header changes after the read", async () => {
+      let headerReads = 0;
+      fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+        const body = JSON.parse(String(init.body));
+        if (body.method === method) return rpcResponse(body.id, { blockNumber: "0x3e8", blockHash: HASH });
+        headerReads++;
+        return rpcResponse(body.id, { ...header("0x3e8"), hash: headerReads === 1 ? HASH : `0x${"c".repeat(64)}` });
+      });
+      const record = await invoke(["--block", HASH], "ethereum", method, params);
+      expect(record).toMatchObject({ state: "error", reason: "block-changed", result: null });
+      expect(process.exitCode).toBe(1);
+    });
+
+    it("records a null result as empty, never proof of absence", async () => {
+      fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+        const body = JSON.parse(String(init.body));
+        return rpcResponse(body.id, body.method === method ? null : header("0x3e8"));
+      });
+      const record = await invoke(["--block", "1000"], "ethereum", method, params);
+      expect(record).toMatchObject({ state: "empty", reason: "empty-result-not-proof-of-absence", result: null });
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+
+    it.each([[], ["0x1234"], [`0x${"g".repeat(64)}`], [42], [transactionHash, transactionHash]])(
+      "rejects malformed transaction hash parameters without requesting execution evidence: %j", async (...hashes) => {
+        const record = await invoke(["--block", "1000"], "ethereum", method, JSON.stringify(hashes));
+        expect(record).toMatchObject({ state: "error", reason: "invalid-arguments", result: null });
+        expect(process.exitCode).toBe(2);
+        expect(fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init.body)).method)).not.toContain(method);
+      },
+    );
+
+    it("requires --block before fetching", async () => {
+      const record = await invoke([], "ethereum", method, params);
+      expect(record).toMatchObject({ state: "error", reason: "invalid-arguments", result: null });
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("rejects transaction reads inside a batch", async () => {
+      const record = await invoke(["--block", "1000"], "ethereum", "batch",
+        JSON.stringify([{ method, params: [transactionHash] }]));
+      expect(record).toMatchObject({ state: "error", reason: "invalid-arguments", result: null });
+      expect(fetchMock.mock.calls.every(([, init]) => !Array.isArray(JSON.parse(String(init.body))))).toBe(true);
+    });
+  });
+
   it("splits 501 inclusive log blocks into 500 + 1 in order and never treats empty as absence", async () => {
     fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
       const body = JSON.parse(String(init.body));

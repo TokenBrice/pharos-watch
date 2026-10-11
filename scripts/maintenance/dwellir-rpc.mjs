@@ -16,7 +16,9 @@ import { resolvePinnedProvider } from "../lib/pinned-rpc-providers.mjs";
 const USAGE = `Pinned supplemental Dwellir evidence reads (no provider-priority changes).
 Usage: node scripts/maintenance/dwellir-rpc.mjs --chain <Pharos id> --method <method> --params <json> --block <number|hash> [--provider dwellir|alchemy|drpc|public] [--out <file>]
 EVM: eth_call, eth_getBalance, eth_getStorageAt, eth_getCode, eth_getTransactionCount,
-     eth_getLogs, eth_getBlockByNumber, eth_getBlockByHash; batch accepts [{method,params}] (1–100).
+     eth_getLogs, eth_getBlockByNumber, eth_getBlockByHash,
+     eth_getTransactionReceipt, eth_getTransactionByHash (one 32-byte tx hash; returned block must match --block).
+     batch accepts [{method,params}] (1–100), excluding logs and transaction reads.
 Move: --method 'GET /accounts/<address>/resource/<type>' --block <ledger_version>
 Starknet: --method starknet_call --params '{"request":{...}}' --block <number>
 Solana: getBlock/getTransaction/getBlocks; Alchemy paid getAccountInfo with exact slot.
@@ -28,7 +30,8 @@ JSON states: ok, empty (not proof of absence), error, unsupported. Usage exits 2
 const STATE_INDEX = new Map([
   ["eth_call", 1], ["eth_getBalance", 1], ["eth_getStorageAt", 2], ["eth_getCode", 1], ["eth_getTransactionCount", 1],
 ]);
-const EVM_METHODS = new Set([...STATE_INDEX.keys(), "eth_getLogs", "eth_getBlockByNumber", "eth_getBlockByHash"]);
+const TRANSACTION_METHODS = new Set(["eth_getTransactionReceipt", "eth_getTransactionByHash"]);
+const EVM_METHODS = new Set([...STATE_INDEX.keys(), "eth_getLogs", "eth_getBlockByNumber", "eth_getBlockByHash", ...TRANSACTION_METHODS]);
 
 class EvidenceError extends Error {
   constructor(reason, message, details) {
@@ -208,6 +211,9 @@ function normalizeEvm(method, params, block) {
     }
     normalized[0] = method === "eth_getBlockByHash" ? block.hash : hex(BigInt(block.number));
     normalized[1] = params[1] ?? false;
+  } else if (TRANSACTION_METHODS.has(method)) {
+    assertCliUsage(params.length === 1 && typeof params[0] === "string" && /^0x[0-9a-f]{64}$/i.test(params[0]),
+      `${method} requires exactly one 32-byte transaction hash`);
   } else {
     assertCliUsage(params.length === 1 && params[0] && typeof params[0] === "object" && !Array.isArray(params[0]), "eth_getLogs requires one filter object");
     const filter = { ...params[0] };
@@ -233,6 +239,7 @@ async function evmRead(transport, method, params, requested, record) {
     assertCliUsage(Array.isArray(params) && params.length > 0 && params.length <= 100, "batch requires 1–100 {method,params} entries");
     const calls = params.map((item) => {
       assertCliUsage(item && typeof item === "object" && item.method !== "eth_getLogs", "Batch log reads must use standalone eth_getLogs for chunk provenance");
+      assertCliUsage(!TRANSACTION_METHODS.has(item.method), "Batch transaction reads must use standalone methods for block-pin validation");
       return normalizeEvm(item.method, item.params, block);
     });
     record.params = calls.map(({ method: callMethod, params: callParams }) => ({ method: callMethod, params: callParams }));
@@ -311,7 +318,14 @@ async function evmRead(transport, method, params, requested, record) {
       sameHeader(block, evmHeader(result, { number: BigInt(block.number) }));
     }
   }
-  sameHeader(block, await readEvmHeader(transport.rpc, { number: BigInt(block.number) }));
+  const after = await readEvmHeader(transport.rpc, { number: BigInt(block.number) });
+  sameHeader(block, after);
+  if (TRANSACTION_METHODS.has(method) && result !== null) {
+    if (integer(result?.blockNumber, "transaction block number") !== BigInt(after.number)
+      || typeof result?.blockHash !== "string" || result.blockHash.toLowerCase() !== after.hash) {
+      throw new EvidenceError("block-pin-mismatch", "Transaction result does not match the pinned canonical block; result withheld");
+    }
+  }
   return result;
 }
 
