@@ -615,6 +615,20 @@ export function runGitleaksConfigSelfTest(
       "XAUT0x68749665ff8d2d112fa859aa293f07a622782f38",
     ].join("/");
     const supplyAttributionSlotKey = ["v9Supply", "AttributionOffset"].join("");
+    const incidentPaths = [
+      "shared/data/safety-score-v9/incident-reviews-v1.json",
+      "shared/data/safety-score-v9/incident-runtime-v1.generated.json",
+    ];
+    const incidentGldtReviewIds = [
+      ["gldt-gold-dao", "7f0731318938db09dc91"],
+      ["gldt-gold-dao", "db9cc9d0b6d77024b415"],
+      ["gldt-gold-dao", "fe4353c1cde590220a54"],
+    ].map((parts) => `i18uktblb-${parts.join("-")}-20261011`);
+    const incidentControlKeys = [
+      `bridge-meta:eurot-token-teknoloji:${["c4d94e69af", "7b57c052ce"].join("")}`,
+      `bridge-meta:tgbp-tokenised:${["8564a2ec79", "9484aab123"].join("")}`,
+    ];
+    const ledgerPath = ".github/workflows/artifacts/safety-score-missing-data-reviewed-ledger.json";
     const publicControls = [
       {
         path: "src/lib/case-studies/buidl-tokenized-tbill-2025.json",
@@ -732,6 +746,23 @@ export function runGitleaksConfigSelfTest(
         path: "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
         value: { contractOrTokenId: identifier },
       })),
+      ...incidentPaths.flatMap((path) => [
+        ...incidentGldtReviewIds.map((reviewId) => ({ path, value: { reviewId } })),
+        ...incidentControlKeys.map((controlKey) => ({ path, value: { controlKey } })),
+      ]),
+      ...[
+        ["no exact USDX ICS20 control incident. Osmosis AMM/Levana,Axelar Sec", "ret,Nomic/Gravity and USDX peg issues"],
+        ["Official guide names exact EURC.e tok", "en, StargateOFT7753 and TokenMessaging19ff."],
+        ["systemf1 calls transfer on linked FEUSD tok", "en, releasing154.05452047 feUSD to recipient."],
+      ].map((parts) => ({ path: incidentPaths[0], value: { finding: parts.join("") } })),
+      {
+        path: ledgerPath,
+        value: { rationale: `Residual keys: bridge-meta:idrt-rupiah-token:${["f8213d7cc2", "61751b055f"].join("")}. Proposed fragment only.` },
+      },
+      {
+        path: ledgerPath,
+        value: { rationale: `Residual U keys: ${["1ef645130f", "da84cf9841"].join("")}; no confirmed incident.` },
+      },
     ];
     const awsKey = ["AKIA", "Q7M2V3N4P6R2S3T5"].join("");
     // Multiple controls share a path. Keep each on its own line so report
