@@ -135,6 +135,13 @@ export const SupplyGapFillProvenanceSchema = z.object({
   observedAt: z.number().int().nonnegative(),
   /** Consecutive no-decision publications; fresh reconciliation resets this bounded carry. */
   carryForwardRuns: z.number().int().nonnegative().optional(),
+  /** Missing-chain history withheld when aggregate or chain history is unobserved or nonconserving. */
+  withheldHistoricalBuckets: z.array(z.enum(["day", "week", "month"])).min(1).optional(),
+  /** Present iff buckets are withheld; its key set exactly equals `withheldHistoricalBuckets`. */
+  withheldHistoricalBucketReasons: z.partialRecord(
+    z.enum(["day", "week", "month"]),
+    z.enum(["history-unobserved", "nonconserving"]),
+  ).optional(),
 });
 export type SupplyGapFillProvenance = z.infer<typeof SupplyGapFillProvenanceSchema>;
 
@@ -159,6 +166,8 @@ export const SupplyChainGuardProvenanceSchema = z.object({
     resolution: z.enum(["onchain-total-supply", "defillama-chain-history", "carried-baseline", "unavailable"]),
     repairedCurrentUsd: z.number().finite().nonnegative().optional(),
     observedAt: z.number().int().nonnegative().optional(),
+    /** Native probes carry a local-read clock; daily chart points carry their upstream observation time. */
+    observedAtKind: z.enum(["upstream", "local-read"]).optional(),
   })).min(1),
 });
 export type SupplyChainGuardProvenance = z.infer<typeof SupplyChainGuardProvenanceSchema>;

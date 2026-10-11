@@ -24,10 +24,20 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.46`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.47`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
+
+The historical-bucket conservation change checks each CoinGecko missing-chain gap-fill window independently. A missing chain receives the historical `CG − DL` remainder only when every existing canonical chain has an observed value and their sum conserves that DefiLlama bucket within `max($0.01, DL bucket × 1e-6)`. Otherwise the missing chain's historical field is `null` and optional `supplyGapFill.withheldHistoricalBuckets` names `"day"`, `"week"`, and/or `"month"`. Existing chain observations are never scaled; admitted aggregate buckets retain the single CoinGecko series, while a bucket DefiLlama did not observe stays unavailable under the existing admission rule. Current-bucket conservation, ratio bounds and hysteresis are unchanged. See [DEC-01 supply admission](./supply-snapshot.md#coingecko-aggregate-gap-fill-limits-dec-01).
+
+Chain repair evidence separately labels native issuer reads `observedAtKind: "local-read"` and DefiLlama chart points `"upstream"`. Aggregate `supplyObservedAt` uses only upstream repair clocks, preserving the incoming list clock or its absence for native-only repairs. The dropout guard intentionally admits explicit-zero aggregate rows for conservative, provenance-marked continuity; immaterial unresolved chains publish `null` without restoring the whole asset. A non-object CoinGecko simple-price root is unavailable supplemental evidence and takes the existing no-decision/carry path, rather than aborting the supply attempt.
+
+### Release obligations
+
+Before releasing a Pricing methodology change, converge its runtime constant/registry, structured Pricing history, owning prose and public Pricing section, together with current-version route-parity fixtures and generated methodology documentation blocks. Public changelog metadata and Markdown exports derive from the registry. Provisional activation dates in structured history must be re-dated at release; the generated version marker above is not edited by hand.
+
+Fixed-clock price/supply/valuation/coverage comparison remains a release prerequisite for the admitted-input and coverage changes. Fresh admitted producer observations and production resource evidence are separate acceptance gates, not conclusions established by a version bump or a passing local comparison. These obligations do not claim a completed replay or production-health observation.
 
 The 2026-10-10 `v6.46` release keeps material supply quarantine sticky when known chain rows disappear and publishes stale fallback chain current as unavailable. Strict buckets, joined canonical-block circulation/escrow accounting and timestamp-matched historical valuation preserve completeness rather than optimistic zero. Historical cohort and structural-supplement chart buckets remain nullable without complete evidence inside the existing 14-day as-of budget; 7D/30D checkpoints use paired native supply at the current observation clock. Cap cUSD and infiniFi iUSD use observed USDC/USD, Solayer uses canonical SPL accrual, and reserve NAV rejects superseded bindings. Jupiter optional liquidity, CMC collection continuity and bounded missing-only vault rescue keep their source contracts. FX carry preserves cadence/source age and explicitly reports partial publication; gap-fill ceilings and future-skew gates retain original clocks. Coverage/replay follow admitted rows. Consensus weights and current scoring formulas are unchanged. Activation is provisionally 2026-10-11 00:00 UTC, re-dated at release; fixed-clock price/supply/coverage comparison remains required.
 

@@ -132,6 +132,7 @@ function repair(candidate: Candidate, valueUsd: number, observedAt: number, reso
   candidate.evidence.resolution = resolution;
   candidate.evidence.repairedCurrentUsd = valueUsd;
   candidate.evidence.observedAt = observedAt;
+  candidate.evidence.observedAtKind = resolution === "onchain-total-supply" ? "local-read" : "upstream";
   candidate.resolved = true;
 }
 
@@ -410,6 +411,7 @@ export async function guardChainDropouts(input: {
         });
         delete candidate.evidence.repairedCurrentUsd;
         delete candidate.evidence.observedAt;
+        delete candidate.evidence.observedAtKind;
         candidate.evidence.resolution = "unavailable";
         candidate.resolved = false;
         if (candidate.state.quarantinedSince == null) {
@@ -476,7 +478,12 @@ export async function guardChainDropouts(input: {
     } else {
       if (repairs.length > 0) {
         asset.supplySource = "defillama-chain-repair";
-        asset.supplyObservedAt = Math.min(...repairs.map((candidate) => candidate.evidence.observedAt!));
+        // Native probes expose their local-read clock only in per-chain evidence, never as an
+        // aggregate upstream clock. Without a chart repair, retain the existing list clock (or absence).
+        const upstreamRepairs = repairs.filter((candidate) => candidate.evidence.observedAtKind === "upstream");
+        if (upstreamRepairs.length > 0) {
+          asset.supplyObservedAt = Math.min(...upstreamRepairs.map((candidate) => candidate.evidence.observedAt!));
+        }
       }
     }
     asset.supplyChainGuard = {

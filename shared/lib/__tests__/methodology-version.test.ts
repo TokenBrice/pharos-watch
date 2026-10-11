@@ -203,6 +203,22 @@ describe("methodology registry", () => {
     expect(getMethodologyVersionAt(key, release.effectiveAt)).toBe(version);
   });
 
+  it("pins the historical chain-conservation Pricing release after v6.46", () => {
+    const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
+    const release = methodology.entries.find((candidate) => candidate.version === "6.47")!;
+    const previous = methodology.entries.find((candidate) => candidate.version === "6.46")!;
+    expect(methodology.currentLabel).toBe("v6.47");
+    expect(release).toMatchObject({
+      version: "6.47",
+      date: "2026-10-11",
+      effectiveAt: 1_791_763_200,
+      reconstructed: false,
+    });
+    expect(release.effectiveAt).toBeGreaterThan(previous.effectiveAt);
+    expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt - 1)).toBe("6.46");
+    expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt)).toBe("6.47");
+  });
+
   it("provides an LLM-facing description for every changelog", () => {
     expect(METHODOLOGY_CHANGELOG_REGISTRY).toHaveLength(11);
     for (const methodology of METHODOLOGY_CHANGELOG_REGISTRY) {
