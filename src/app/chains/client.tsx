@@ -217,7 +217,7 @@ export function ChainsLeaderboardClient() {
             getAriaSortValue,
           }}
           mobileScrollHint={false}
-          viewportClassName="pb-[calc(var(--mobile-utility-safe-offset)-1rem)] sm:pb-0 md:max-h-[70vh]"
+          viewportClassName="pb-[calc(var(--mobile-utility-safe-offset)-1rem)] sm:pb-0"
           viewportProps={{ compactBottomPadding: false, vertical: true }}
           tableClassName="min-w-[760px] w-full"
           stickyHeader

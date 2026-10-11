@@ -30,18 +30,35 @@ export function buildSafetyScoreV9AccessRows(
   });
   const summary = card.accessPosture.freezeLookthrough;
   if (!summary) return rows;
-  rows.push({ key: "reserve-access-coverage", label: "Reserve access (diagnostic)", value: ACCESS_LOOKTHROUGH_COVERAGE_LABELS[summary.coverageState] });
-  // The authority key identifies the row only; the reader sees the capability
-  // (label), the chain it acts on and its known reach, never an internal key.
+  rows.push({ key: "reserve-access-coverage", label: "Reserve-access coverage", value: ACCESS_LOOKTHROUGH_COVERAGE_LABELS[summary.coverageState] });
+  // Authorities that read the same to a holder (capability, acting chain,
+  // known reach) merge into one row with a count; the authority key
+  // identifies the group only and never reaches the reader.
+  const groups = new Map<string, { key: string; label: string; chainName: string; reach: string; count: number }>();
   for (const authority of summary.authorities) {
     const reach = authority.knownReachShare === null
-      ? "known reach unquantified"
+      ? "reach unquantified"
       : `${(100 * authority.knownReachShare).toFixed(1)}% known reach`;
     const chainId = authority.actingDeployment.chainId;
     const chainName = CHAIN_META[chainId]?.name ?? titleCaseSlug(chainId);
-    rows.push({ key: `reserve-access:${authority.authorityKey}`, label: `${ACCESS_LOOKTHROUGH_CAPABILITY_LABELS[authority.capability]} (diagnostic)`, value: `On ${chainName} · ${reach}; authorities are not additive` });
+    const label = ACCESS_LOOKTHROUGH_CAPABILITY_LABELS[authority.capability];
+    const groupKey = [label, chainName, reach].join("|");
+    const group = groups.get(groupKey);
+    if (group) group.count += 1;
+    else groups.set(groupKey, { key: `reserve-access:${authority.authorityKey}`, label, chainName, reach, count: 1 });
   }
-  rows.push({ key: "reserve-access-unknown", label: "Unknown reserve-access remainder", value: summary.unresolvedCoverageShare === null ? "Unknown / unquantified" : `${(100 * summary.unresolvedCoverageShare).toFixed(1)}%` });
-  for (const branch of summary.unresolved) rows.push({ key: `reserve-access-gap:${branch.branchKey}`, label: "Reserve-access diagnostic", value: ACCESS_LOOKTHROUGH_REASON_LABELS[branch.reason] });
+  for (const group of groups.values()) {
+    rows.push({ key: group.key, label: group.label, value: `${group.chainName}${group.count > 1 ? ` ×${group.count}` : ""} · ${group.reach}` });
+  }
+  rows.push({ key: "reserve-access-unknown", label: "Unknown remainder", value: summary.unresolvedCoverageShare === null ? "Unknown / unquantified" : `${(100 * summary.unresolvedCoverageShare).toFixed(1)}%` });
+  const reasons = new Map<string, { key: string; count: number }>();
+  for (const branch of summary.unresolved) {
+    const reason = reasons.get(branch.reason);
+    if (reason) reason.count += 1;
+    else reasons.set(branch.reason, { key: `reserve-access-gap:${branch.branchKey}`, count: 1 });
+  }
+  for (const [reason, { key, count }] of reasons) {
+    rows.push({ key, label: "Unresolved", value: `${ACCESS_LOOKTHROUGH_REASON_LABELS[reason]}${count > 1 ? ` ×${count}` : ""}` });
+  }
   return rows;
 }

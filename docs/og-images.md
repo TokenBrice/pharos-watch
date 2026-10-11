@@ -26,7 +26,6 @@ This table is the screenshot capture roster, not proof that a route selects the 
 | `og-blacklist.png` | `/freezewatch` |
 | `og-dependency-map.png` | `/dependency-map` |
 | `og-portfolio.png` | `/portfolio?p=...` (pre-loaded so the capture is not empty state) |
-| `og-start.png` | `/start` |
 | `og-pharoswatchbot.png` | `/pharoswatchbot/` |
 | `og-default.png` | `/screener` |
 
@@ -56,10 +55,10 @@ Write mode renders each PNG into ignored staging first and replaces the checked-
 
 | Image | Used by |
 | --- | --- |
-| `og-editorial-about.png` | `/about/`, `/about/api/`, `/about/bluechip/` |
+| `og-editorial-about.png` | `/about/` |
 | `og-editorial-depeg.png` | Depeg briefings |
 | `og-editorial-digest.png` | Daily/weekly digest pages |
-| `og-editorial-learn.png` | `/learn/`, `/learn/mechanisms/`, `/learn/case-studies/`, `/learn/glossary/` |
+| `og-editorial-learn.png` | `/learn/`, `/learn/mechanisms/`, `/learn/case-studies/` |
 | `og-editorial-methodology.png` | Methodology pages |
 | `og-editorial-profile.png` | Generated profile-category card, currently reserved for future stablecoin-profile editorial surfaces |
 

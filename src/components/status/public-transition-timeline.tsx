@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import type { PublicStatusHistoryWindow, PublicStatusTransition } from "@shared/types";
 import { PUBLIC_STATUS_HISTORY_WINDOWS } from "@shared/types/status";
 import { DataTableShell } from "@/components/data-table-shell";
@@ -13,6 +14,8 @@ const TYPE_LABELS: Record<string, string> = {
   recover: "Recovery",
   init: "Initialized",
 };
+
+const INITIAL_VISIBLE_TRANSITIONS = 12;
 
 const PUBLIC_TRANSITION_COLUMNS = defineStatusColumns([
   ["time", "Time"], ["transition", "Transition"], ["type", "Type"], ["reason", "Reason"],
@@ -34,6 +37,8 @@ export function PublicTransitionTimeline({
   isLoading,
   error = null,
 }: PublicTransitionTimelineProps) {
+  const [showAll, setShowAll] = useState(false);
+  const visibleTransitions = showAll ? transitions : transitions.slice(0, INITIAL_VISIBLE_TRANSITIONS);
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -71,8 +76,11 @@ export function PublicTransitionTimeline({
             headerClassName=""
             headerRowClassName="border-b text-left text-muted-foreground"
           >
-            {transitions.map((transition) => {
-                const toTone = getStatusTone(transition.to as "healthy" | "degraded" | "stale");
+            {visibleTransitions.map((transition) => {
+                // A recovery pill is one tone whatever state it lands in (it can land on degraded).
+                const toTone = getStatusTone(
+                  transition.transitionType === "recover" ? "healthy" : (transition.to as "healthy" | "degraded" | "stale"),
+                );
                 return (
                   <TableRow key={transition.id} className="border-b last:border-0">
                     <TableCell className="py-2.5 pharos-numeric text-xs text-muted-foreground">
@@ -98,6 +106,15 @@ export function PublicTransitionTimeline({
               })}
           </DataTableShell>
         )}
+        {transitions.length > INITIAL_VISIBLE_TRANSITIONS ? (
+          <button
+            type="button"
+            className="pharos-focus-ring mt-3 rounded-sm text-xs text-muted-foreground underline hover:text-foreground"
+            onClick={() => setShowAll((value) => !value)}
+          >
+            {showAll ? "Show fewer transitions" : `Show all ${transitions.length} transitions`}
+          </button>
+        ) : null}
       </div>
     </div>
   );

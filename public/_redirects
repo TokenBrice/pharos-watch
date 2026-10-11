@@ -16,13 +16,44 @@
 /feedback/ /api/#partner-access 301
 /feedback /api/#partner-access 301
 
-# Consolidated public documentation routes.
-/docs/data-pipeline/* /docs/data-flow-map/ 301
-/docs/data-pipeline/ /docs/data-flow-map/ 301
-/docs/data-pipeline /docs/data-flow-map/ 301
-/docs/design-context/* /docs/design-language/ 301
-/docs/design-context/ /docs/design-language/ 301
-/docs/design-context /docs/design-language/ 301
+# The glossary folded into the A-Z Definitions section of /methodology/
+# (site simplification, 2026-10-11).
+/learn/glossary/* /methodology/#definitions 301
+/learn/glossary/ /methodology/#definitions 301
+/learn/glossary /methodology/#definitions 301
+
+# The API access page, API reference page and API reference doc merged into
+# one /api/ page with Access | Reference tabs (site simplification, 2026-10-11).
+/about/api/* /api/#reference 301
+/about/api/ /api/#reference 301
+/about/api /api/#reference 301
+/docs/api-reference/* /api/#reference 301
+/docs/api-reference/ /api/#reference 301
+/docs/api-reference /api/#reference 301
+
+# Consolidated public documentation routes. The engineering and design docs
+# were withdrawn from the public set (2026-10-11); they remain internal in docs/.
+/docs/data-pipeline/* /docs/ 301
+/docs/data-pipeline/ /docs/ 301
+/docs/data-pipeline /docs/ 301
+/docs/design-context/* /docs/ 301
+/docs/design-context/ /docs/ 301
+/docs/design-context /docs/ 301
+/docs/architecture/* /docs/ 301
+/docs/architecture/ /docs/ 301
+/docs/architecture /docs/ 301
+/docs/worker-and-api-limits/* /docs/ 301
+/docs/worker-and-api-limits/ /docs/ 301
+/docs/worker-and-api-limits /docs/ 301
+/docs/data-flow-map/* /docs/ 301
+/docs/data-flow-map/ /docs/ 301
+/docs/data-flow-map /docs/ 301
+/docs/design-language/* /docs/ 301
+/docs/design-language/ /docs/ 301
+/docs/design-language /docs/ 301
+/docs/design-tokens/* /docs/ 301
+/docs/design-tokens/ /docs/ 301
+/docs/design-tokens /docs/ 301
 
 # Stablecoin selector route was renamed to picker; preserve old snapshot links.
 /screener/selector/* /screener/picker/:splat 301
@@ -125,6 +156,23 @@
 /about/editorial /about/ 301
 /about/style/* /about/ 301
 /about/style /about/ 301
+
+# Site simplification (2026-10-11): the hand-maintained human sitemap
+# duplicated /sitemap.xml; the homepage is the honest successor.
+/sitemap-tree/* / 301
+/sitemap-tree/ / 301
+/sitemap-tree / 301
+
+# /start/ duplicated the nav and methodology copy (2026-10-11); its walkthrough
+# videos moved to /about/#media.
+/start/* / 301
+/start/ / 301
+/start / 301
+
+# The Bluechip explainer folded into a section of /about/ (2026-10-11).
+/about/bluechip/* /about/#bluechip 301
+/about/bluechip/ /about/#bluechip 301
+/about/bluechip /about/#bluechip 301
 
 # Coins removed from the tracked catalog (bed599cc4); /coverage/ documents
 # what Pharos tracks and why. Old detail URLs still earn search impressions.

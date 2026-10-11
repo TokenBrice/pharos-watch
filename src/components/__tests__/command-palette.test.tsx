@@ -184,7 +184,7 @@ describe("CommandPalette", () => {
     });
     const optionLabels = screen.getAllByRole("option").map((option) => option.textContent ?? "");
 
-    expect(optionLabels[0]).toContain("API Access");
+    expect(optionLabels[0]).toContain("API");
   });
 
   it("shows category chips on zero results and navigates on click", () => {

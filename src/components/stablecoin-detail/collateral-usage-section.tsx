@@ -19,7 +19,7 @@ export interface PublishedCollateralUsageEntry {
   marketCap: number | null;
 }
 
-const PREVIEW_COUNT = 9;
+const PREVIEW_COUNT = 5;
 
 function CollateralUsageItem({ entry }: { entry: PublishedCollateralUsageEntry }) {
   const share = entry.weight === null
@@ -38,12 +38,7 @@ function CollateralUsageItem({ entry }: { entry: PublishedCollateralUsageEntry }
       className="pharos-focus-ring flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-muted/40"
     >
       <StablecoinLogo src={logosById[entry.coin.id]} name={entry.coin.name} size={24} />
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="shrink-0 text-sm font-medium">{entry.coin.symbol}</span>
-        <span className="min-w-0 truncate rounded-sm bg-muted/50 px-1.5 text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
-          {relationshipLabel}
-        </span>
-      </div>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">{entry.coin.symbol}</span>
       {entry.edgeType === "basket" ? (
         <span className="shrink-0 font-mono text-sm tabular-nums text-foreground">{share}</span>
       ) : null}
@@ -66,6 +61,10 @@ export function CollateralUsageSection({ entries }: { entries: readonly Publishe
 
   const needsCollapse = usage.length > PREVIEW_COUNT;
   const visible = showAll ? usage : usage.slice(0, PREVIEW_COUNT);
+  const visibleGroups = [...visible.reduce((groups, entry) => {
+    const label = DEPENDENCY_RELATIONSHIP_LABELS[entry.relationshipType];
+    return groups.set(label, [...(groups.get(label) ?? []), entry]);
+  }, new Map<string, PublishedCollateralUsageEntry[]>())];
   const relationshipCounts = Object.entries(DEPENDENCY_RELATIONSHIP_LABELS)
     .map(([kind, label]) => ({ label, count: usage.filter((entry) => entry.relationshipType === kind).length }))
     .filter(({ count }) => count > 0);
@@ -83,10 +82,18 @@ export function CollateralUsageSection({ entries }: { entries: readonly Publishe
         ) : null}
       </div>
       <div className={showAll ? "max-h-96 overflow-y-auto" : undefined}>
-        <div className={usage.length <= 3
-          ? "flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-4"
-          : "grid grid-cols-1 gap-0.5 @lg:grid-cols-2 @3xl:grid-cols-3"}>
-          {visible.map((entry) => <CollateralUsageItem key={`${entry.coin.id}:${entry.edgeType}`} entry={entry} />)}
+        {/* The relationship tag heads each group once instead of repeating on every row. */}
+        <div className="space-y-2">
+          {visibleGroups.map(([label, groupEntries]) => (
+            <div key={label} className="space-y-0.5">
+              <p className="px-2.5 text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">{label}</p>
+              <div className={usage.length <= 3
+                ? "flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-4"
+                : "grid grid-cols-1 gap-0.5 @lg:grid-cols-2 @3xl:grid-cols-3"}>
+                {groupEntries.map((entry) => <CollateralUsageItem key={`${entry.coin.id}:${entry.edgeType}`} entry={entry} />)}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
       {needsCollapse ? (

@@ -1,6 +1,5 @@
 import type { ComponentProps } from "react";
-import Link from "next/link";
-import { BookOpen, Globe, KeyRound, ShieldCheck } from "lucide-react";
+import { Globe, KeyRound, ShieldCheck } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
@@ -8,7 +7,6 @@ import { CopyButton } from "@/components/copy-button";
 import { FaqSection } from "@/components/faq-section";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { markdownLinkComponent } from "@/components/markdown-link";
-import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ApiReferenceLayout } from "@/components/api-reference-layout";
 import type { SidebarSection } from "@/components/api-reference-sidebar";
 import {
@@ -23,7 +21,6 @@ import type { FaqItem } from "@/lib/faq";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildApiArtifactCatalogJsonLd } from "@/lib/api-artifact-json-ld";
 import { PUBLIC_DATASET_JSON_LD_DESCRIPTORS } from "@/lib/analytics-dataset-json-ld";
-import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { DONOR_API_KEY_MIN_USD, DONOR_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
@@ -37,7 +34,6 @@ import {
   PUBLIC_API_KEY_HEADER,
 } from "@shared/lib/public-api-contract";
 import {
-  getConciseApiReferenceSections,
   getPublicApiEndpointSummaries,
   loadApiReferenceDocument,
   type ApiReferenceEndpointSummary,
@@ -45,21 +41,13 @@ import {
   type ApiReferenceSection,
 } from "@/lib/api-reference-doc";
 
-export const metadata = buildPageMetadata({
-  title: "Pharos API Reference: Stablecoin Data Contracts",
-  description:
-    "Pharos API reference for stablecoin integrations: auth model, API-key requirements, host split, endpoints, artifacts, and response contracts.",
-  canonical: "/about/api/",
-  ogImage: `${SITE_URL}/og-editorial-about.png`,
-});
-
 const HERO_LANES = [
   {
     title: "External API",
     icon: KeyRound,
     eyebrow: "For integrations",
     description:
-      `Call \`${PUBLIC_API_HOST}\` directly. \`GET ${API_PATHS.safetyGrades()}\` needs no key; other non-exempt \`/api/*\` requests require a valid \`${PUBLIC_API_KEY_HEADER}\`, and missing or invalid keys return \`401\`. Access options are on [/api/](/api/).`,
+      `Call \`${PUBLIC_API_HOST}\` directly. \`GET ${API_PATHS.safetyGrades()}\` needs no key; other non-exempt \`/api/*\` requests require a valid \`${PUBLIC_API_KEY_HEADER}\`, and missing or invalid keys return \`401\`. Access options are on the [Access tab](/api/#access).`,
   },
   {
     title: "Website lane",
@@ -98,9 +86,6 @@ const ABOUT_API_FAQ: FaqItem[] = [
       "Admin routes live behind Cloudflare Access on ops.pharos.watch and ops-api.pharos.watch. They do not use public API keys; access is granted through the Pharos Cloudflare Access team domain.",
   },
 ];
-
-const SUPPORTER_KEY_HREF = `/api/#${API_PAGE_ANCHORS.supporterKey}`;
-const PARTNER_ACCESS_HREF = `/api/#${API_PAGE_ANCHORS.partnerAccess}`;
 
 const CODE_EXAMPLES = [
   { label: "curl", code: buildPublicApiCurlCommand() },
@@ -171,6 +156,8 @@ function MethodBadge({
 
 const inlineMarkdownComponents = {
   p: ({ children }: ComponentProps<"p">) => <>{children}</>,
+  // Blocks render inside a <p>; a markdown blockquote must not nest a block element.
+  blockquote: ({ children }: ComponentProps<"blockquote">) => <>{children}</>,
   a: markdownLinkComponent({ httpOnly: true }),
   code: InlineCode,
   strong: ({ children }: ComponentProps<"strong">) => (
@@ -291,7 +278,7 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
             <MarkdownBlockRenderer
               key={`${section.id}-block-${index}`}
               block={block}
-              tableId={`about-api-${section.id}-table-${index}`}
+              tableId={`api-reference-${section.id}-table-${index}`}
               tableLabel={`${stripMarkdownHeadingFormatting(section.title)} table`}
             />
           ))}
@@ -317,7 +304,7 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
                   <MarkdownBlockRenderer
                     key={`${subsection.id}-block-${index}`}
                     block={block}
-                    tableId={`about-api-${subsection.id}-table-${index}`}
+                    tableId={`api-reference-${subsection.id}-table-${index}`}
                     tableLabel={`${stripMarkdownHeadingFormatting(subsection.title)} table`}
                   />
                 ))}
@@ -335,50 +322,41 @@ const HIDDEN_SECTIONS = new Set(["admin-auth-and-idempotency", "admin-endpoints"
 function EndpointDirectory({ endpoints }: { endpoints: ApiReferenceEndpointSummary[] }) {
   return (
     <section className="pharos-card-shell px-4 py-5 sm:px-5 sm:py-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-2">
-          <p className="pharos-kicker">Endpoint Directory</p>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Public API routes</h2>
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            This page keeps the route list scannable. The canonical field tables, examples, and edge-case contracts live in the{" "}
-            <Link href="/docs/api-reference/#public-endpoints" className="pharos-prose-link">
-              full API reference
-            </Link>
-            .
-          </p>
-        </div>
-        <Link
-          href="/docs/api-reference/"
-          className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border border-border/60 px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/60"
-        >
-          <BookOpen className="h-4 w-4" aria-hidden="true" />
-          Full reference
-        </Link>
+      <div className="space-y-2">
+        <p className="pharos-kicker">Endpoint Directory</p>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Public API routes</h2>
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Every public route on one screen. Each links to its field tables, examples, and edge-case contract above.
+        </p>
       </div>
 
       <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {endpoints.map((endpoint) => (
-          <Link
+          <a
             key={endpoint.id}
-            href={`/docs/api-reference/#${endpoint.docAnchor}`}
+            href={`#${endpoint.id}`}
             className="pharos-focus-ring flex min-w-0 items-center gap-2 rounded-xl border border-border/55 bg-background/45 px-3 py-2 text-sm hover:bg-muted/45"
           >
             {endpoint.method ? <MethodBadge method={endpoint.method} tone="directory" /> : null}
             <code className="truncate font-mono tabular-nums text-[0.82rem] text-foreground">{endpoint.path}</code>
-          </Link>
+          </a>
         ))}
       </div>
     </section>
   );
 }
 
-export default async function AboutApiPage() {
+/**
+ * Reference tab of /api/: the HTTP contract rendered from the canonical
+ * docs/api-reference.md (single source; also the markdown agents read).
+ */
+export async function ApiReferencePanel() {
   const document = await loadApiReferenceDocument();
-  const conciseSections = getConciseApiReferenceSections(document).filter((s) => !HIDDEN_SECTIONS.has(s.id));
+  const referenceSections = document.sections.filter((s) => !HIDDEN_SECTIONS.has(s.id));
   const endpoints = getPublicApiEndpointSummaries(document);
   const sidebarSections: SidebarSection[] = [
     { id: "quickstart", label: "Quickstart", subsections: [] },
-    ...conciseSections.map((section) => ({
+    ...referenceSections.map((section) => ({
       id: section.id,
       label: stripMarkdownHeadingFormatting(section.title),
       subsections: section.subsections.map((sub) => ({
@@ -391,62 +369,30 @@ export default async function AboutApiPage() {
   ];
 
   return (
-    <FeaturePageShell
-      breadcrumbName="API Reference"
-      path="/about/api/"
-      breadcrumbItems={[
-        { name: "Home", url: "/" },
-        { name: "About", url: "/about/" },
-        { name: "API Reference", url: "/about/api/" },
-      ]}
-      title="API Reference"
-      leadParagraphs={[
-        <>
+    <div className="space-y-8">
+      <JsonLdScript json={safeJsonLd(buildApiArtifactCatalogJsonLd())} />
+      <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+        <p>
           The public integration lane is <InlineCode>{PUBLIC_API_HOST}</InlineCode>. In production, protected public
           routes require <InlineCode>{PUBLIC_API_KEY_HEADER}</InlineCode>. The website itself does not use that lane
           directly; it talks to the internal site-data proxy instead.
-        </>,
-        <>
-          For implementation context beyond the HTTP contract, read the{" "}
-          <Link href="/docs/api-reference/" className="pharos-prose-link">
-            public API reference doc
-          </Link>{" "}
-          and the broader{" "}
-          <Link href="/docs/" className="pharos-prose-link">
-            documentation archive
-          </Link>
-          .
-        </>,
-        <>
+        </p>
+        <p>
           Prefer machine-readable tooling? Download the{" "}
-          <a
-            href={PUBLIC_API_ARTIFACTS.openApi}
-            className="pharos-prose-link"
-          >
+          <a href={PUBLIC_API_ARTIFACTS.openApi} className="pharos-prose-link">
             OpenAPI spec
           </a>
           , or import the{" "}
-          <a
-            href={PUBLIC_API_ARTIFACTS.postmanCollection}
-            className="pharos-prose-link"
-          >
+          <a href={PUBLIC_API_ARTIFACTS.postmanCollection} className="pharos-prose-link">
             Pharos API collection
           </a>{" "}
           with the{" "}
-          <a
-            href={PUBLIC_API_ARTIFACTS.postmanEnvironment}
-            className="pharos-prose-link"
-          >
+          <a href={PUBLIC_API_ARTIFACTS.postmanEnvironment} className="pharos-prose-link">
             production environment template
           </a>
           .
-        </>,
-      ]}
-      preface={
-        <JsonLdScript json={safeJsonLd(buildApiArtifactCatalogJsonLd())} />
-      }
-    >
-      <div className="space-y-8">
+        </p>
+      </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {HERO_LANES.map((lane) => {
           const Icon = lane.icon;
@@ -481,30 +427,6 @@ export default async function AboutApiPage() {
           </ul>
         </div>
       </div>
-
-      <section className="pharos-card-shell px-4 py-5 sm:px-5 sm:py-6">
-        <div className="space-y-2">
-          <p className="pharos-kicker">API Keys</p>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Grades are free; keys unlock the rest</h2>
-        </div>
-        <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
-          <p>
-            <InlineCode>GET {API_PATHS.safetyGrades()}</InlineCode> on {PUBLIC_API_HOST} needs no key and returns one
-            Safety Score and grade per tracked stablecoin.
-          </p>
-          <p>
-            For keyed access, donors of ${DONOR_API_KEY_MIN_USD} or more can claim a{" "}
-            <Link href={SUPPORTER_KEY_HREF} className="pharos-prose-link">
-              supporter key
-            </Link>
-            , and teams that need higher limits and direct support can request a{" "}
-            <Link href={PARTNER_ACCESS_HREF} className="pharos-prose-link">
-              partner key
-            </Link>
-            .
-          </p>
-        </div>
-      </section>
 
       <section id="quickstart" className="pharos-card-shell space-y-4 px-4 py-5 sm:px-5 sm:py-6">
         <div className="space-y-2">
@@ -564,7 +486,7 @@ export default async function AboutApiPage() {
               <MarkdownBlockRenderer
                 key={`intro-${index}`}
                 block={block}
-                tableId={`about-api-intro-table-${index}`}
+                tableId={`api-reference-intro-table-${index}`}
                 tableLabel="API reference introduction table"
               />
             ))}
@@ -574,14 +496,13 @@ export default async function AboutApiPage() {
 
       {/* Zone 2: Two-column reference body */}
       <ApiReferenceLayout sections={sidebarSections}>
-        {conciseSections.map((section) => (
+        {referenceSections.map((section) => (
           <SectionRenderer key={section.id} section={section} />
         ))}
         <div id="endpoint-directory">
           <EndpointDirectory endpoints={endpoints} />
         </div>
       </ApiReferenceLayout>
-      </div>
-    </FeaturePageShell>
+    </div>
   );
 }

@@ -4,6 +4,8 @@ import { createElement, type ImgHTMLAttributes } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { LiquidityStats } from "@/components/liquidity-stats";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
+import { summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
+import { formatCurrency } from "@shared/lib/format";
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
 
 vi.mock("next/image", () => ({
@@ -146,5 +148,29 @@ describe("LiquidityStats", () => {
       expect(within(scoreCard as HTMLElement).getByText("No active coins have a rated score")).toBeTruthy();
       expect(within(tvlCard as HTMLElement).getByText("Global TVL observation unavailable")).toBeTruthy();
     }
+  });
+
+  it("headlines a partial 24h volume window as an explicit lower bound, never a total", () => {
+    const asOfSec = 1_800_000_000;
+    const { availability } = summarizeDexVolumeWindow(
+      [
+        { volumeUsd: 1_980_000_000, observedAtSec: asOfSec - 60, tvlUsd: 8_400 },
+        { volumeUsd: null, observedAtSec: null, tvlUsd: 1_600 },
+      ],
+      "24h",
+      { asOfSec, maxObservationAgeSec: 72 * 3600 },
+    );
+    render(createElement(LiquidityStats, {
+      stats: {
+        totalTvl: null, avgScore: null, totalVol: null, totalVolAvailability: availability, withLiquidity: 0,
+        highConfidenceCoverage: 0, fallbackCoverage: 0, totalTracked: 6, agg7dChange: null, avgBalance: null,
+        avgOrganic: null,
+      },
+      liquidityMap: {},
+    }));
+
+    const volumeCard = screen.getByText("24h DEX Volume").closest('[data-slot="card"]') as HTMLElement;
+    expect(within(volumeCard).getByText(`≥ ${formatCurrency(1_980_000_000)}`)).toBeTruthy();
+    expect(within(volumeCard).getByText("Partial lower bound: pools holding 84% of TVL")).toBeTruthy();
   });
 });

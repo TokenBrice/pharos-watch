@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 export interface BluechipGate {
   readonly id: string;
   readonly title: string;
@@ -11,12 +9,12 @@ export interface BluechipRefusal {
   readonly body: string;
 }
 
-export const BLUECHIP_LEDE: ReactNode =
-  "Pharos Bluechip is an editorial roster built from external Bluechip reference ratings intersected with Pharos report-card grades. A coin appears here only when Bluechip's synced rating is A-tier and Pharos independently rates the same asset A-tier or better.";
+export const BLUECHIP_LEDE =
+  "Pharos Bluechip is an editorial roster built from external Bluechip reference ratings intersected with Pharos report-card grades. A coin qualifies only when Bluechip's synced rating is A-tier and Pharos independently rates the same asset A-tier or better.";
 
 export const BLUECHIP_WHAT_IT_MEANS: readonly string[] = [
   "The Bluechip grade itself comes from the external Bluechip data sync. Pharos does not recompute that methodology or expose a hidden Bluechip score; it stores the synced grade, date, and reference metadata as a separate input.",
-  "The roster adds a Pharos guardrail on top of that input. If an asset is not A-tier in Pharos report cards, it stays out of this page even when the external Bluechip feed still carries a high grade. That keeps the page from presenting an external rating as if it were a Pharos-owned floor result.",
+  "The roster adds a Pharos guardrail on top of that input. If an asset is not A-tier in Pharos report cards, it stays off the roster even when the external Bluechip feed still carries a high grade. That keeps Pharos from presenting an external rating as if it were a Pharos-owned floor result.",
 ];
 
 export const BLUECHIP_GATES: readonly BluechipGate[] = [
@@ -62,7 +60,7 @@ export const BLUECHIP_REFUSALS: readonly BluechipRefusal[] = [
   },
   {
     title: "No hidden methodology",
-    body: "This page does not claim a separate Pharos Bluechip formula. Methodology details for Pharos grades live in the report-card documentation; Bluechip grade semantics come from the external source.",
+    body: "Pharos does not claim a separate Bluechip formula. Methodology details for Pharos grades live in the report-card documentation; Bluechip grade semantics come from the external source.",
   },
   {
     title: "No stale roster carry",

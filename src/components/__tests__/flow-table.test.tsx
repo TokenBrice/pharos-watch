@@ -60,7 +60,7 @@ describe("FlowTable", () => {
     expect((html.match(/partial/g) ?? []).length).toBeGreaterThanOrEqual(2);
   });
 
-  it("renders a partial 24h net as unavailable and its incomplete volume as a lower bound", () => {
+  it("renders a burn-side partial 24h net as an upper bound and its incomplete volume as a lower bound", () => {
     const partialCoin = {
       ...coin,
       valuation: {
@@ -79,9 +79,11 @@ describe("FlowTable", () => {
     };
     const html = renderToStaticMarkup(<FlowTable coins={[partialCoin]} isLoading={false} />);
 
-    expect(html).not.toContain("-$12.00M");
+    // Only burns are unpriced, so the known net is a ceiling: shown as "≤", never as the net itself.
+    expect(html).toContain("≤ -$12.00M");
+    expect(html.replaceAll("≤ -$12.00M", "")).not.toContain("-$12.00M");
     expect(html).not.toContain("-$15.00M");
-    expect(html).toContain("0 mint / 3 burn events unpriced; signed net unavailable");
+    expect(html).toContain("Upper bound: 0 mint / 3 burn events unpriced; unpriced burns can only lower the net");
     expect(html).toContain("≥ $20.00M");
     expect(html).not.toContain("≥ $8.00M");
     expect(html).toContain("-$30.00M");

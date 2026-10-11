@@ -16,6 +16,9 @@ export const metadata: Metadata = buildPageMetadata({
   description: TIMELINE_DESCRIPTION,
   canonical: "/timeline/",
   ogImage: `${SITE_URL}/og-timeline.png`,
+  // Kept as a nav tool but out of the index (2026-10-11): the static shell is
+  // ~40 words and the homepage tape, coin pages and /depeg/ carry the events.
+  robots: { index: false, follow: true },
 });
 
 const TIMELINE_URL = `${SITE_URL}/timeline/`;

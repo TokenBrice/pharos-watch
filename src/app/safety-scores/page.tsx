@@ -69,6 +69,16 @@ const route = createClientFeaturePage({
     ),
     leadParagraphs: [
       "Every tracked stablecoin assessed across three dimensions: Backing, Exit, and Economic Control, distilled into a single comprehensive safety grade.",
+      <>
+        Prefer a single image?{" "}
+        <Link
+          href="/safety-scores/map/"
+          className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+        >
+          Open the Safety Score Map
+        </Link>
+        .
+      </>,
     ],
   },
   afterClient: (

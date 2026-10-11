@@ -370,12 +370,11 @@ export function FreezeSeizureModule({
           {summary.statusLabel}
         </Badge>
       }
-      visual={
-        <div ref={tracked ? usageGateRef : undefined}>
-          <FreezePowerRail stations={stations} />
-        </div>
-      }
-      verdict={summary.statusNote}
+      visual={<FreezePowerRail stations={stations} />}
+      visualFold="Power and scope"
+      // The usage-stats gate rides on the always-visible verdict: the visual
+      // sits in a closed fold, where it has no box to intersect.
+      verdict={<span ref={tracked ? usageGateRef : undefined}>{summary.statusNote}</span>}
       chipRow={
         <Badge
           variant="outline"

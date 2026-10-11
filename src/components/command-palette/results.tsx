@@ -4,7 +4,6 @@ import {
   Moon,
   Sun,
   FileText,
-  BookA,
   BookMarked,
   BookOpen,
   Copy,
@@ -117,8 +116,6 @@ function getKindIcon(kind: CommandPaletteResultDescriptor["kind"]): ReactNode {
       return <GitCompare className="h-4 w-4" />;
     case "case-study":
       return <BookMarked className="h-4 w-4" />;
-    case "glossary-term":
-      return <BookA className="h-4 w-4" />;
     case "doc":
       return <BookOpen className="h-4 w-4" />;
     case "blog-post":
@@ -166,7 +163,7 @@ function buildSearchResult(
         closePalette();
         return;
       case "open-api-docs":
-        router.push("/about/api/");
+        router.push("/api/#reference");
         closePalette();
         return;
       case "compare-watchlist": {

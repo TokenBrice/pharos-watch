@@ -483,8 +483,16 @@ export function DigestArchiveClient() {
           {wireDigests.length === 0 && (
             <p className="text-sm text-muted-foreground py-4">No digests match these filters.</p>
           )}
-          {wireDigests.map((d) => {
+          {wireDigests.map((d, index) => {
             const isWeekly = d.digestType === "weekly";
+            // The risk signal often repeats verbatim across consecutive editions;
+            // show it where it first appears or changes, not on every row.
+            const previousSignal = index > 0 ? wireDigests[index - 1]?.riskSignal : null;
+            const riskSignal =
+              d.riskSignal &&
+              (previousSignal?.symbol !== d.riskSignal.symbol || previousSignal?.bps !== d.riskSignal.bps)
+                ? d.riskSignal
+                : null;
             return (
               <Link
                 key={d.generatedAt}
@@ -502,7 +510,7 @@ export function DigestArchiveClient() {
                 <div className="flex-1 min-w-0">
                   <span
                     className={cn(
-                      "truncate flex items-center gap-1.5",
+                      "flex flex-wrap items-center gap-x-1.5 gap-y-0.5 sm:flex-nowrap sm:truncate",
                       isWeekly ? "text-sm font-semibold" : "text-sm font-medium",
                     )}
                     style={EDITORIAL_META_STYLE}
@@ -513,34 +521,34 @@ export function DigestArchiveClient() {
                         Weekly{d.editionNumber ? ` #${d.editionNumber}` : ""}
                       </span>
                     )}
-                    {d.riskSignal && (
+                    {riskSignal && (
                       <span
                         className={cn(
-                          "rounded border px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider",
-                          d.riskSignal.severity === "critical"
+                          "hidden rounded border px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider sm:inline",
+                          riskSignal.severity === "critical"
                             ? "border-red-500/35 bg-red-500/10 text-red-700 dark:text-red-300"
                             : "border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300",
                         )}
                       >
-                        {formatArchiveRiskSignal(d.riskSignal)}
+                        {formatArchiveRiskSignal(riskSignal)}
                       </span>
                     )}
                     {!isWeekly && d.editionNumber != null && (
                       <span className="font-mono text-[0.65rem] text-muted-foreground/70">#{d.editionNumber}</span>
                     )}
                   </span>
-                  {(d.psiBand || d.totalMcapUsd != null || d.riskSignal) && (
+                  {(d.psiBand || d.totalMcapUsd != null || riskSignal) && (
                     <div className="flex items-center gap-2 mt-0.5 sm:hidden">
-                      {d.riskSignal && (
+                      {riskSignal && (
                         <span
                           className={cn(
                             "text-xs font-mono font-medium",
-                            d.riskSignal.severity === "critical"
+                            riskSignal.severity === "critical"
                               ? "text-red-700 dark:text-red-300"
                               : "text-amber-700 dark:text-amber-300",
                           )}
                         >
-                          {formatArchiveRiskSignal(d.riskSignal)}
+                          {formatArchiveRiskSignal(riskSignal)}
                         </span>
                       )}
                       {d.psiBand && d.psiScore != null && (

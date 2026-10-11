@@ -81,6 +81,10 @@ const COMPLIANCE_HERO = (
   </section>
 );
 
+const sourceReferences = GENIUS_REGIME_STATE.sourceReferences ?? [
+  { label: GENIUS_REGIME_STATE.sourceLabel, url: GENIUS_REGIME_STATE.sourceUrl },
+];
+
 const COMPLIANCE_STATIC_SECTION = (
   <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
     <div className="pharos-card-shell p-5">
@@ -108,35 +112,27 @@ const COMPLIANCE_STATIC_SECTION = (
         <dt className="text-muted-foreground">Phase</dt>
         <dd className="capitalize text-foreground">{GENIUS_REGIME_STATE.rulemakingPhase.replace(/-/g, " ")}</dd>
       </dl>
+      <details className="mt-3 text-sm text-muted-foreground">
+        <summary className="pharos-focus-ring cursor-pointer rounded-sm py-1 hover:text-foreground">
+          Sources ({sourceReferences.length})
+        </summary>
+        <ul className="mt-2 list-disc space-y-1 pl-5 leading-relaxed">
+          {sourceReferences.map((source) => (
+            <li key={source.url}>
+              <a href={source.url} target="_blank" rel="noopener noreferrer" className="pharos-prose-link">
+                {source.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </details>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-        Sources:{" "}
-        {(GENIUS_REGIME_STATE.sourceReferences ?? [
-          { label: GENIUS_REGIME_STATE.sourceLabel, url: GENIUS_REGIME_STATE.sourceUrl },
-        ]).map((source, index, sources) => (
-          <span key={source.url}>
-            <a
-              href={source.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="pharos-prose-link"
-            >
-              {source.label}
-            </a>
-            {index < sources.length - 1 ? ", " : ". "}
-          </span>
-        ))}
         Pair this with{" "}
-        <Link
-          href="/screener/"
-          className="pharos-prose-link"
-        >
+        <Link href="/screener/" className="pharos-prose-link">
           Screener
         </Link>{" "}
         and{" "}
-        <Link
-          href="/safety-scores/"
-          className="pharos-prose-link"
-        >
+        <Link href="/safety-scores/" className="pharos-prose-link">
           Safety Scores
         </Link>{" "}
         for the non-legal risk picture.

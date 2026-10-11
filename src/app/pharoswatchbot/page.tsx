@@ -1,19 +1,25 @@
 import type { Metadata } from "next";
-import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { FaqSection } from "@/components/faq-section";
+import { FeaturePageShell } from "@/components/feature-page-shell";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
+import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import "./night-watch.css";
-import { TELEGRAM_PAGE_DESCRIPTION } from "./telegram-content";
+import { TELEGRAM_FAQ, TELEGRAM_PAGE_DESCRIPTION } from "./telegram-content";
 import { buildTelegramPageJsonLd } from "./telegram-json-ld";
-import { NightWatchHero } from "./night-watch-hero";
-import { NightSignalsTimeline } from "./night-signals-timeline";
-import { NightSetupStrip } from "./night-setup-strip";
 import { InstrumentPanel } from "./instrument-panel";
-import { ControlDeck } from "./control-deck";
-import { DawnRecap } from "./dawn-recap";
-import { FieldManual } from "./field-manual";
+import { AlertFamilies } from "./alert-families";
+import {
+  AlertControls,
+  CommandReference,
+  FinalCta,
+  GettingStarted,
+  MiniAppShowcase,
+  PrimaryActions,
+  ReliabilityContract,
+  TelegramChannels,
+} from "./landing-sections";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "PharosWatchBot: Stablecoin Telegram Alerts",
@@ -23,30 +29,33 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 /**
- * One night of alerts, told as a descent from dusk to dawn. The wrapper
- * escapes the shell padding for a full-bleed scene and follows the site
- * theme: dark theme renders the night world, light theme the same scene as
- * day (the page-scoped ladder and scene variables in night-watch.css switch
- * on `.dark`). Acts: hero → alert examples → setup → live adoption →
- * Mini App → daily recap → reference.
+ * Product page for the Telegram bot on the shared feature-page shell: pitch and
+ * CTAs → live adoption hero → alert families with verbatim previews → setup →
+ * tuning controls → Mini App → channels → reference (commands, reliability,
+ * FAQ) → closing CTA.
  */
 export default function PharosWatchBotPage() {
   return (
-    <div className="pharos-night -mx-4 -mt-6 md:-mt-7 lg:-mx-5 xl:-mx-9 -mb-6 md:-mb-7">
-      <BreadcrumbJsonLd
-        items={[
-          { name: "Home", url: "/" },
-          { name: "PharosWatchBot", url: "/pharoswatchbot/" },
-        ]}
-      />
-      <NightWatchHero />
-      <NightSignalsTimeline />
-      <NightSetupStrip />
+    <FeaturePageShell
+      breadcrumbName="PharosWatchBot"
+      path="/pharoswatchbot/"
+      title="PharosWatchBot"
+      leadParagraphs={[
+        `Stablecoin risk alerts in your Telegram chat, free for all ${TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins. Six alert families watch every peg and message you only when something changes.`,
+      ]}
+      headerSupplement={<PrimaryActions />}
+    >
       <InstrumentPanel />
-      <ControlDeck />
-      <DawnRecap />
-      <FieldManual />
+      <AlertFamilies />
+      <GettingStarted />
+      <AlertControls />
+      <MiniAppShowcase />
+      <TelegramChannels />
+      <CommandReference />
+      <ReliabilityContract />
+      <FaqSection items={TELEGRAM_FAQ} title="Frequently asked questions" includeJsonLd />
+      <FinalCta />
       <JsonLdScript json={safeJsonLd(buildTelegramPageJsonLd(SITE_URL))} />
-    </div>
+    </FeaturePageShell>
   );
 }

@@ -110,3 +110,14 @@ export function migratePortfolioIds(
 export function isPortfolioHolding(value: unknown): value is PortfolioHolding {
   return normalizePortfolioHolding(value) !== null;
 }
+
+/**
+ * `coins` is the shared coin-list URL param (e.g. screener handoff); coins with no
+ * amount in `p` become zero-amount holdings instead of being silently dropped.
+ */
+export function mergeCoinsParam(p: string | null | undefined, coins: string | null | undefined): string | undefined {
+  if (!coins) return p ?? undefined;
+  const held = new Set((p ?? "").split(",").map((part) => part.split(":")[0]));
+  const extra = coins.split(",").filter((token) => token && !held.has(token)).map((token) => `${token}:0`);
+  return [p, ...extra].filter(Boolean).join(",") || undefined;
+}

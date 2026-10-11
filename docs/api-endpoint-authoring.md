@@ -2,7 +2,7 @@
 
 Use this checklist when adding or changing a Worker API endpoint. The route registry is centralized; do not hand-roll endpoint metadata. Read the affected `docs/api-reference.md` section; its `public-endpoints` block is generated, not hand-authored.
 
-For the public `/api/` access and `/about/api/` reference shells, see [API Access And Reference Pages](./api-page.md).
+For the public `/api/` page (Access and Reference tabs), see [API Access And Reference Pages](./api-page.md).
 
 ## Source Of Truth
 

@@ -16,13 +16,15 @@ export function TableSkeletonRows({
   columns,
   rowCount = 5,
   rowIntent = "static",
+  rowClassName,
 }: {
   columns: readonly TableSkeletonColumn[];
   rowCount?: number;
   rowIntent?: TableRowIntent;
+  rowClassName?: string;
 }) {
   return Array.from({ length: rowCount }, (_, rowIndex) => (
-    <TableRow key={rowIndex} rowIntent={rowIntent} className="animate-fade-in">
+    <TableRow key={rowIndex} rowIntent={rowIntent} className={cn("animate-fade-in", rowClassName)}>
       {columns.map((column) => (
         <TableCell key={column.id} className={column.cellClassName}>
           <Skeleton className={cn("h-4 w-16", column.skeletonClassName)} />

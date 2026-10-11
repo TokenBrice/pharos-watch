@@ -3,7 +3,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import SafetyScoresPage from "./page";
-import { NightSetupStrip } from "../pharoswatchbot/night-setup-strip";
+import { GettingStarted } from "../pharoswatchbot/landing-sections";
 
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 
@@ -18,7 +18,7 @@ describe("SafetyScoresPage", () => {
     expect(target.hash).not.toBe("");
 
     const setup = document.createElement("div");
-    setup.innerHTML = renderToStaticMarkup(<NightSetupStrip />);
+    setup.innerHTML = renderToStaticMarkup(<GettingStarted />);
     expect(setup.querySelector(target.hash)).not.toBeNull();
   });
 });

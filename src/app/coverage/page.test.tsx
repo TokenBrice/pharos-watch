@@ -24,9 +24,9 @@ describe("CoveragePage", () => {
       isAccessibleForFree: true,
       includedInDataCatalog: {
         "@type": "DataCatalog",
-        "@id": "https://pharos.watch/about/api/#data-catalog",
+        "@id": "https://pharos.watch/api/#data-catalog",
         name: "Pharos Public API Data Catalog",
-        url: "https://pharos.watch/about/api/",
+        url: "https://pharos.watch/api/",
       },
     });
     expect(dataset).not.toHaveProperty("isPartOf");

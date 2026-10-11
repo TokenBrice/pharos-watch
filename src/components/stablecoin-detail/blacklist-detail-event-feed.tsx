@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
 import { EventFeedEmpty, EventFeedSkeleton, EventTransactionCell } from "@/components/event-feed-state";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import { formatAddress, timeAgo, formatEventDate } from "@shared/lib/format";
 import type { BlacklistEvent, BlacklistStablecoin } from "@shared/types";
@@ -52,8 +53,19 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
   }
   if (!data || data.events.length === 0) return <EventFeedEmpty variant="blacklist" />;
 
+  // One amount-source tag for the whole feed when every row shares it
+  // (usually "historical" ×10); per-row tags only when sources are mixed.
+  const sourceLabels = new Set(data.events.map(getBlacklistAmountSourceLabel));
+  const sharedSourceLabel = sourceLabels.size === 1 ? [...sourceLabels][0] : null;
+
+  // The log folds by default; its summary keeps the event count visible.
   return (
     <>
+      <ModuleDisclosure label="Latest events" count={data.events.length}>
+      {sharedSourceLabel ? (
+        <p className="mt-2 text-[10px] uppercase tracking-wide text-muted-foreground">Amount source: {sharedSourceLabel}</p>
+      ) : null}
+      <div className="mt-2">
       <DataTableShell
         tableId="stablecoin-blacklist-events"
         testId="stablecoin-blacklist-events-table"
@@ -90,9 +102,11 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
                 >
                   {amount}
                 </span>
-                <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">
-                  {getBlacklistAmountSourceLabel(evt)}
-                </span>
+                {sharedSourceLabel ? null : (
+                  <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {getBlacklistAmountSourceLabel(evt)}
+                  </span>
+                )}
               </TableCell>
               <TableCell className="hidden sm:table-cell text-sm">{evt.chainName}</TableCell>
               <EventTransactionCell txHash={evt.txHash} href={evt.explorerTxUrl} />
@@ -100,6 +114,8 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
           );
         })}
       </DataTableShell>
+      </div>
+      </ModuleDisclosure>
       <div className="mt-3 flex justify-end">
         <Link
           href={`/freezewatch/?stablecoin=${symbol}`}

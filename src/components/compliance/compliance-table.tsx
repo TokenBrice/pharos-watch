@@ -64,17 +64,17 @@ export function ComplianceTable({
       testId={testId}
       chrome="bare"
       className="pharos-table-shell"
-      tableClassName="table-fixed min-w-[860px]"
+      tableClassName="table-fixed min-w-[1020px]"
       tableProps={{ "aria-label": ariaLabel }}
       viewportClassName="relative w-full"
       viewportProps={{ compactBottomPadding: false }}
     >
       <TableHeader>
         <TableRow className="hover:bg-transparent">
-          <TableHead className="w-[180px]">Coin</TableHead>
-          <TableHead className="w-[140px]">Status</TableHead>
-          <TableHead className="w-[165px]">Pathway / Type</TableHead>
-          <TableHead className="w-[150px]">Authority</TableHead>
+          <TableHead className="w-[170px]">Coin</TableHead>
+          <TableHead className="w-[210px]">Status</TableHead>
+          <TableHead className="w-[190px]">Pathway / Type</TableHead>
+          <TableHead className="w-[230px]">Authority</TableHead>
           <TableHead>Issuer Entity</TableHead>
           <TableHead className="w-12"><span className="sr-only">Details</span></TableHead>
         </TableRow>
@@ -171,10 +171,10 @@ function ComplianceTableRow({
   return (
     <>
       <TableRow>
-        <TableCell>
+        <TableCell className="align-top">
           <CoinLink row={row} logo={logo} />
         </TableCell>
-        <TableCell>{row.regime === "mica" ? <MicaStatusCell row={row} /> : <GeniusStatusCell row={row} />}</TableCell>
+        <TableCell className="align-top">{row.regime === "mica" ? <MicaStatusCell row={row} /> : <GeniusStatusCell row={row} />}</TableCell>
         <TableCell className={COMPLIANCE_TEXT_CELL_CLASS}>
           {row.regime === "mica" ? <MicaPathwayCell row={row} /> : <GeniusPathwayCell row={row} />}
         </TableCell>
@@ -193,7 +193,7 @@ function ComplianceTableRow({
             <EmptyCell />
           )}
         </TableCell>
-        <TableCell className="px-1 text-right">
+        <TableCell className="px-1 text-right align-top">
           {hasExtraDetail ? (
             <button
               type="button"

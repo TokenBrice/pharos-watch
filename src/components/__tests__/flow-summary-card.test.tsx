@@ -66,12 +66,14 @@ describe("FlowSummaryCard", () => {
 
     const { container } = render(<FlowSummaryCard stablecoinId="usdc-circle" />);
 
-    // Unpriced mints could lift the -$3M known net above zero, so neither the net nor "burning" is claimed.
-    expect(container.textContent).not.toContain("-$3.00M");
+    // Unpriced mints could lift the -$3M known net above zero: it renders only as a floor, and "burning" is not claimed.
+    expect(container.textContent).toContain("≥ -$3.00M");
+    expect(container.textContent?.replaceAll("≥ -$3.00M", "")).not.toContain("-$3.00M");
     expect(screen.queryByText("Burning")).toBeNull();
     expect(screen.queryByText("Flat")).toBeNull();
     expect(screen.getByText("Direction unavailable")).toBeTruthy();
-    expect(screen.getByText("Partial valuation: 4 mint / 0 burn events unpriced; signed net unavailable")).toBeTruthy();
+    expect(screen.getAllByText(/Lower bound: 4 mint \/ 0 burn events unpriced; unpriced mints can only raise the net/).length)
+      .toBeGreaterThan(0);
     expect(container.textContent).not.toContain("-42");
     expect(screen.getByText(/pressure shift unavailable/i)).toBeTruthy();
     // Baseline average daily net is withheld when the baseline valuation is partial.

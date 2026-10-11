@@ -240,6 +240,14 @@ describe("check-seo-static", () => {
     ).toEqual([]);
   });
 
+  it("accepts an archive page that left the sitemap but still exports HTML (noindexed)", () => {
+    const previous = "<urlset><url><loc>https://pharos.watch/digest/2026-07-17/</loc></url></urlset>";
+    const current = "<urlset><url><loc>https://pharos.watch/digest/</loc></url></urlset>";
+
+    expect(findPublishedArchiveContinuityErrors(previous, current, [], new Set(["/digest/2026-07-17/"]))).toEqual([]);
+    expect(findPublishedArchiveContinuityErrors(previous, current, [], new Set())).toHaveLength(1);
+  });
+
   type SeoFixtureCase = {
     name: string;
     rootLinks?: string[];
@@ -672,24 +680,24 @@ describe("check-seo-static", () => {
 
   it("asserts required structured-data fields for representative routes", async () => {
     const root = await makeOutDir();
-    await writeBaselinePages(root, ["/about/api/"]);
-    await writePage(root, "/about/api/", {
+    await writeBaselinePages(root, ["/api/"]);
+    await writePage(root, "/api/", {
       h1: "API Reference",
       extraHead: jsonLdScript({
         "@context": "https://schema.org",
         "@type": "DataCatalog",
         name: "Pharos Public API Data Catalog",
-        url: "https://pharos.watch/about/api/",
+        url: "https://pharos.watch/api/",
       }),
     });
-    await writeSitemap(root, ["/", "/stability-index/", "/about/api/"]);
+    await writeSitemap(root, ["/", "/stability-index/", "/api/"]);
 
     const result = collectSeoStaticCheckResult({
       outDir: root,
       structuredDataRouteMatrix: [
         {
-          label: "about API reference",
-          route: "/about/api/",
+          label: "API page",
+          route: "/api/",
           nodes: [{ type: "DataCatalog", requiredPaths: ["name", "url", "dataset.0.@id"] }],
         },
       ],
@@ -697,7 +705,7 @@ describe("check-seo-static", () => {
 
     expect(result.errors).toEqual(
       expect.arrayContaining([
-        expect.stringContaining("/about/api/: about API reference DataCatalog structured data missing dataset.0.@id"),
+        expect.stringContaining("/api/: API page DataCatalog structured data missing dataset.0.@id"),
       ]),
     );
   });
@@ -711,7 +719,7 @@ describe("check-seo-static", () => {
         "@context": "https://schema.org",
         "@type": "Dataset",
         name: "Pharos Latest Stablecoin Scores Dataset",
-        includedInDataCatalog: { "@id": "https://pharos.watch/about/api/#data-catalog" },
+        includedInDataCatalog: { "@id": "https://pharos.watch/api/#data-catalog" },
       }),
     });
     await writeSitemap(root, ["/", "/stability-index/", "/safety-scores/"]);

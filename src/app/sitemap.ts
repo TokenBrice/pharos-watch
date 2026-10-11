@@ -12,7 +12,7 @@ import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import {
   METHODOLOGY_CHANGELOG_SITEMAP_PATHS as SHARED_METHODOLOGY_CHANGELOG_SITEMAP_PATHS,
 } from "@shared/lib/methodology-versions/registry";
-import { DIGEST_ENTRIES } from "@/lib/digest-registry";
+import { DIGEST_ENTRIES, INDEXABLE_DIGEST_ENTRIES } from "@/lib/digest-registry";
 import sitemapDates from "@/generated/sitemap-dates.json";
 import docsMetadata from "@/generated/docs-metadata.json";
 import costsData from "@shared/data/funding/costs.json";
@@ -152,7 +152,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/": ["hourly", 1.0, liveDataLastModified],
     "/coverage/": ["weekly", 0.6],
     "/alt-pegs/": ["daily", 0.7],
-    "/start/": ["monthly", 0.6],
     "/freezewatch/": ["daily", 0.85, liveDataLastModified],
     "/depeg/": ["daily", 0.8, liveDataLastModified],
     "/cemetery/": ["monthly", 0.7],
@@ -169,7 +168,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/funding/": ["weekly", 0.5, fundingLastModified],
     "/status/": ["daily", 0.4, liveDataLastModified],
     "/flows/": ["daily", 0.7],
-    "/timeline/": ["hourly", 0.75, liveDataLastModified],
     "/compliance/": ["weekly", 0.6],
     "/pharoswatchbot/": ["weekly", 0.7],
     "/methodology/": ["monthly", 0.6],
@@ -178,12 +176,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/changelog/": ["weekly", 0.5, changelogLastModified],
     "/blog/": ["weekly", 0.6],
     "/about/": ["monthly", 0.5],
-    "/about/api/": ["monthly", 0.5],
-    "/about/bluechip/": ["monthly", 0.5],
     "/depeg/archive/": ["monthly", 0.5, (path) => lastEdited(path, "/depeg/")],
     "/learn/": ["monthly", 0.5],
-    "/learn/glossary/": ["monthly", 0.5],
-    "/sitemap-tree/": ["monthly", 0.3],
     "/api/": ["monthly", 0.5],
     "/stablecoins/": ["weekly", 0.7],
     "/stablecoins/backing/": ["weekly", 0.6],
@@ -244,7 +238,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  const digestPages: MetadataRoute.Sitemap = DIGEST_ENTRIES.map((d) => ({
+  const digestPages: MetadataRoute.Sitemap = INDEXABLE_DIGEST_ENTRIES.map((d) => ({
     url: `${SITE_URL}/digest/${d.date}/`,
     lastModified: new Date(d.generatedAt * 1000),
     changeFrequency: "never" as const,
@@ -339,7 +333,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // RSS feeds (/feed/<topic>.xml) and public datasets (.csv/.json) are excluded
   // from the sitemap — both are non-HTML URLs and the SEO check rejects entries
   // without HTML artifacts. They remain discoverable via <link rel="alternate">
-  // tags, the footer "Subscribe" cluster, /llms.txt, and /about/api/.
+  // tags, the footer "Subscribe" cluster, /llms.txt, and /api/.
 
   return [
     ...staticPages,

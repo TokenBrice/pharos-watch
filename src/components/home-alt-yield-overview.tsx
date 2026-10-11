@@ -21,7 +21,7 @@ const LEADERBOARD_SIZE = 5;
 // Shared 5-column grid so the (separate) header row and each leaderboard row
 // align: rank · coin · APY · PYS · grade. Fixed metric widths keep the columns
 // flush across the independent grid containers.
-const ROW_GRID = "grid grid-cols-[1.5rem_minmax(0,1fr)_4.5rem_3.5rem_2.75rem] items-center gap-x-2";
+const ROW_GRID = "grid grid-cols-[1.5rem_minmax(0,1fr)_4.5rem_3.5rem_2.75rem] items-center sm:grid-cols-[1.5rem_7rem_minmax(0,1fr)_4.5rem_3.5rem_2.75rem] gap-x-2";
 
 interface OverviewData {
   /** `null` when the payload carries no safety-snapshot coverage: "unknown", never "N/N". */
@@ -122,10 +122,10 @@ function StatStrip({
         <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">Best risk-adjusted</span>
         {bestRiskAdjusted ? (
           <span className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 truncate">
-            <span className="truncate font-mono text-sm font-semibold uppercase tracking-tight text-foreground">
+            <span className="truncate font-mono text-lg font-semibold uppercase tracking-tight text-foreground sm:text-xl">
               {bestRiskAdjusted.symbol}
             </span>
-            <span className="pharos-numeric shrink-0 text-sm font-semibold text-frost-blue">
+            <span className="pharos-numeric shrink-0 text-lg font-semibold text-frost-blue sm:text-xl">
               {formatPercent(bestRiskAdjusted.apy30d)}
             </span>
             <span className="pharos-numeric shrink-0 text-[11px] text-muted-foreground">
@@ -160,6 +160,14 @@ function LeaderRow({
         <span className="flex min-w-0 items-center gap-1.5">
           <CoinCell logoSrc={logoSrc} />
           <span className="truncate font-mono text-xs uppercase tracking-tight text-foreground">{row.symbol}</span>
+        </span>
+        <span aria-hidden="true" className="hidden h-1.5 overflow-hidden rounded-full bg-muted/60 sm:block">
+          {row.pharosYieldScore === null ? null : (
+            <span
+              className="block h-full rounded-full bg-[var(--chart-primary)]/70"
+              style={{ width: `${Math.max(0, Math.min(100, row.pharosYieldScore))}%` }}
+            />
+          )}
         </span>
         <span className="pharos-numeric justify-self-end text-xs font-semibold text-foreground">
           {formatPercent(row.apy30d)}
@@ -252,6 +260,7 @@ export function HomeAltYieldOverview(): React.JSX.Element | null {
           >
             <span aria-hidden="true" />
             <span>Top by PYS</span>
+            <span aria-hidden="true" className="hidden sm:block" />
             <span className="justify-self-end">APY</span>
             <span className="justify-self-end">PYS</span>
             <span className="justify-self-end">Grade</span>

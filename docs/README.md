@@ -16,7 +16,7 @@ Pharos keeps four kinds of documentation:
 
 | Audience | Content | Source of inventory |
 | --- | --- | --- |
-| Public readers and integrators | Public architecture, methodology, design, and API reference rendered at `/docs/` | `shared/lib/public-docs.ts` |
+| Public readers and integrators | Public methodology and API reference rendered at `/docs/` (architecture, data-flow, worker-limit, and design docs stay internal) | `shared/lib/public-docs.ts` |
 | Maintainers | Engineering and route contracts in `docs/*.md` | [doc-ownership.json](./doc-ownership.json) and source entrypoints |
 | Operators | Repeatable policies in `docs/process/` | The owning process file |
 | Incident responders | Symptom-led procedures in `docs/runbooks/` and `docs/incident-response/` | The relevant status surface or feature doc |
@@ -41,12 +41,12 @@ rg -n '/route-name/|src/app/route-name' docs
 - [portfolio-page.md](./portfolio-page.md) - personal stablecoin risk workspace
 - [upcoming-page.md](./upcoming-page.md) - pre-launch stablecoin tracker
 - [homepage.md](./homepage.md) and [about-page.md](./about-page.md) - dashboard and product/source overview
-- [coverage-page.md](./coverage-page.md), [start-page.md](./start-page.md), and [feedback-pipeline.md](./feedback-pipeline.md) - coverage availability, onboarding, and feedback delivery
+- [coverage-page.md](./coverage-page.md) and [feedback-pipeline.md](./feedback-pipeline.md) - coverage availability and feedback delivery
 - [compliance-page.md](./compliance-page.md) - compliance workbench; regime evidence is owned by [mica-tracker.md](./mica-tracker.md) and [genius-tracker.md](./genius-tracker.md)
 
 ## Cross-Cutting Contracts
 
-- [api-reference.md](./api-reference.md) - public integration routes, schemas, authentication, and cache policy; [api-reference-admin.md](./api-reference-admin.md) is the internal operator-route companion and is not published through `/docs/`
+- [api-reference.md](./api-reference.md) - public integration routes, schemas, authentication, and cache policy, rendered as the Reference tab of `/api/`; [api-reference-admin.md](./api-reference-admin.md) is the internal operator-route companion and is not published through `/docs/`
 - [One-shot historical backfills](./runbooks/one-shot-backfills.md#operator-contract) - operator-only CLI rebuilds and staged captures, atomic-import availability consent, interrupted-run reconciliation and receipt cleanup
 - [pharos-urn.md](./pharos-urn.md) - stable citation identifiers and JSON-LD integration
 - [telegram-architecture.md](./telegram-architecture.md) - Telegram seam index; routes ingress/storage to Architecture, commands/dispatch/delivery to Alerts, and client/auth/state to the Mini App contract

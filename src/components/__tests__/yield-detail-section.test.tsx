@@ -490,6 +490,8 @@ describe("YieldDetailSection", () => {
     ]);
 
     const { rerender } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    // The dossier previews three alternates; open the rest first.
+    fireEvent.click(screen.getByRole("button", { name: /Show 2 more sources/ }));
 
     const sourceNames = ["Alt Source 1", "Alt Source 2", "Alt Source 3", "Alt Source 4", "Alt Source 5"];
     for (const [index, sourceName] of sourceNames.entries()) {

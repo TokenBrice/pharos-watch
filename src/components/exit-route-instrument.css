@@ -86,7 +86,11 @@
 }
 
 .exit-route-instrument__route-dimmed {
-  opacity: 0.34;
+  opacity: 0.5;
+}
+
+.dark .exit-route-instrument__route-dimmed {
+  opacity: 0.68;
 }
 
 .exit-route-instrument__route-selected {

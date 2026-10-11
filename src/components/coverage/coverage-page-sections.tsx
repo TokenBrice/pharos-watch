@@ -179,6 +179,7 @@ export function CoverageFeatureSnapshotCard({
                         : `${mostConcentratedFeature.mcapSharePct.toFixed(0)}%`}
                     </span>
                     <span className="ml-1 text-muted-foreground/80">{mostConcentratedFeature.marketCapComplete ? "cap" : "known cap"}</span>
+                    <span aria-hidden="true" className="mx-1.5 text-muted-foreground/60">·</span>
                     {mostConcentratedFeature.coveragePct == null ? "n/a" : `${mostConcentratedFeature.coveragePct.toFixed(0)}%`} count
                   </>
                 }
@@ -538,7 +539,7 @@ export function CoverageMatrixCard(
                       Stablecoin
                     </TableHead>
                     {COVERAGE_FEATURES.map((feature) => (
-                      <TableHead key={feature.key} scope="col" className="h-11 text-sm font-medium text-foreground">
+                      <TableHead key={feature.key} scope="col" className="h-11 px-1 text-sm font-medium text-foreground">
                         <span>{feature.shortLabel}</span>
                         <span className="sr-only">
                           : {feature.label}. {feature.description}
@@ -563,8 +564,8 @@ export function CoverageMatrixCard(
                           <CoverageCoinIdentity row={row} logoSrc={model.logos?.[row.id]} logoSize={24} linked />
                         </TableHead>
                         {COVERAGE_FEATURES.map((feature) => (
-                          <TableCell key={feature.key} className="pb-2 pt-3 align-top">
-                            <CoverageBadge status={row.statuses[feature.key]} />
+                          <TableCell key={feature.key} className="px-1 pb-2 pt-3 align-top">
+                            <CoverageBadge status={row.statuses[feature.key]} compact />
                           </TableCell>
                         ))}
                       </TableRow>

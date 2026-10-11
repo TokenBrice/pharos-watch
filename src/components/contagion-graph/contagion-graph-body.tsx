@@ -54,7 +54,7 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation, commo
 
   return (
     <div
-      className={detailNodePresentation ? "pharos-focus-ring group/dependency-help min-w-0 rounded-sm lg:h-full" : "contents"}
+      className={detailNodePresentation ? "pharos-focus-ring group/dependency-help min-w-0 rounded-sm lg:flex lg:h-full lg:flex-col" : "contents"}
       role={detailNodePresentation ? "group" : undefined}
       aria-label={detailNodePresentation ? "Interactive dependency graph" : undefined}
       aria-describedby={detailNodePresentation ? helpId : undefined}
@@ -126,10 +126,10 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation, commo
             {graph.showSmallLinks ? `Hide ${graph.smallLinkCount} small links` : `${graph.smallLinkCount} small links hidden. Show small links`}
           </button>
         )}
-        <label className="flex items-center gap-2">
-          Inspect dependency
+        <label className="flex min-w-0 max-w-full flex-1 items-center gap-2">
+          <span className="shrink-0">Inspect dependency</span>
           <select
-            className="pharos-focus-ring min-h-11 min-w-0 rounded-sm border bg-background px-2 py-1"
+            className="pharos-focus-ring min-h-11 min-w-0 flex-1 truncate rounded-sm border bg-background px-2 py-1"
             value={graph.activeHoveredEdge ?? ""}
             onChange={event => {
               graph.handleNodeMouseLeave();

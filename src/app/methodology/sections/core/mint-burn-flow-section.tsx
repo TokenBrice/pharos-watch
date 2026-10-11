@@ -160,9 +160,10 @@ export function MintBurnFlowMethodologySection() {
                     </li>
                     <li>
                       <span className="text-foreground">Valuation completeness</span> &mdash; events without a USD price
-                      are counted as unpriced, never as $0. Known mint and burn totals are then lower bounds, and a signed
-                      net is not a bound: a partial window publishes no net, and a direction is shown only when missing
-                      valuation cannot flip it. Buckets aggregated before v6.22 read as coverage unknown and keep their
+                      are counted as unpriced, never as $0. Known mint and burn totals are then lower bounds, and a partial
+                      window publishes no net. Because unpriced mints can only raise the net and unpriced burns can only
+                      lower it, a window with only one side unpriced shows the known net as an explicit bound (&ge; or
+                      &le;); a direction is shown only when missing valuation cannot flip it. Buckets aggregated before v6.22 read as coverage unknown and keep their
                       old-method net, labelled, until they leave the 30-day baseline and 7/30/90-day windows.
                     </li>
                     <li>

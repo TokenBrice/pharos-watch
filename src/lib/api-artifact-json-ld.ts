@@ -28,15 +28,15 @@ export function buildApiArtifactCatalogJsonLd() {
       name: PHAROS_PUBLIC_DATA_CATALOG_NAME,
       description:
         "Machine-readable Pharos integration artifacts and public stablecoin data surfaces for external API consumers.",
-      url: `${SITE_URL}/about/api/`,
+      url: `${SITE_URL}/api/`,
       inLanguage: "en",
       provider: organization,
       publisher: organization,
       isAccessibleForFree: true,
       dataset: [
-        { "@id": `${SITE_URL}/about/api/#openapi-spec` },
-        { "@id": `${SITE_URL}/about/api/#postman-collection` },
-        { "@id": `${SITE_URL}/about/api/#postman-environment` },
+        { "@id": `${SITE_URL}/api/#openapi-spec` },
+        { "@id": `${SITE_URL}/api/#postman-collection` },
+        { "@id": `${SITE_URL}/api/#postman-environment` },
         { "@id": `${SITE_URL}/coverage/#dataset` },
         { "@id": `${SITE_URL}/cemetery/#dataset` },
         ...PUBLIC_DATASET_JSON_LD_DESCRIPTORS.map((descriptor) => ({
@@ -47,12 +47,12 @@ export function buildApiArtifactCatalogJsonLd() {
     {
       "@context": "https://schema.org",
       "@type": "WebAPI",
-      "@id": `${SITE_URL}/about/api/#webapi`,
+      "@id": `${SITE_URL}/api/#webapi`,
       name: "Pharos API",
       description:
         "Read-only public integration API for stablecoin market, peg, liquidity, risk, blacklist, yield, chain, and flow data.",
-      url: `${SITE_URL}/about/api/`,
-      documentation: `${SITE_URL}/about/api/`,
+      url: `${SITE_URL}/api/`,
+      documentation: `${SITE_URL}/api/`,
       endpointUrl: PUBLIC_API_HOST,
       provider: organization,
       isPartOf: { "@id": catalogId },
@@ -60,7 +60,7 @@ export function buildApiArtifactCatalogJsonLd() {
     {
       "@context": "https://schema.org",
       "@type": "CreativeWork",
-      "@id": `${SITE_URL}/about/api/#openapi-spec`,
+      "@id": `${SITE_URL}/api/#openapi-spec`,
       additionalType: "https://schema.org/APIReference",
       name: "Pharos OpenAPI Specification",
       description: "OpenAPI 3.1 specification for the public Pharos API endpoint catalog.",
@@ -73,7 +73,7 @@ export function buildApiArtifactCatalogJsonLd() {
     {
       "@context": "https://schema.org",
       "@type": "CreativeWork",
-      "@id": `${SITE_URL}/about/api/#postman-collection`,
+      "@id": `${SITE_URL}/api/#postman-collection`,
       name: "Pharos Postman Collection",
       description: "Postman collection for testing and importing public Pharos API requests.",
       url: `${SITE_URL}/postman/pharos-api.postman_collection.json`,
@@ -85,7 +85,7 @@ export function buildApiArtifactCatalogJsonLd() {
     {
       "@context": "https://schema.org",
       "@type": "CreativeWork",
-      "@id": `${SITE_URL}/about/api/#postman-environment`,
+      "@id": `${SITE_URL}/api/#postman-environment`,
       name: "Pharos Postman Environment",
       description: "Postman environment template for the production Pharos API host.",
       url: `${SITE_URL}/postman/pharos-api.postman_environment.json`,

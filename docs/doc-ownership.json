@@ -287,14 +287,6 @@
       "rules": ["Unavailable data is neither covered nor uncovered and must not enter coverage denominators."]
     },
     {
-      "id": "start-page",
-      "label": "Start page contract",
-      "risk": "medium",
-      "sources": ["src/app/start/**", "src/components/start-here*", "src/lib/start-here*", "docs/start-page.md"],
-      "docs": [{ "path": "docs/start-page.md", "anchor": "content-registry-contract" }],
-      "rules": ["Preserve shared onboarding-retirement state and the internal route registry boundary."]
-    },
-    {
       "id": "feedback-pipeline",
       "label": "Feedback pipeline contract",
       "risk": "high",
@@ -945,7 +937,6 @@
         "docs/process/font-assets.md",
         "docs/screener-page.md",
         "docs/screener-picker-page.md",
-        "docs/sitemap-tree-page.md",
         "docs/stablecoin-detail-page.md",
         "docs/stablecoin-taxonomy-pages.md",
         "docs/upcoming-page.md"
@@ -971,7 +962,6 @@
         "docs/process/font-assets.md",
         "docs/screener-page.md",
         "docs/screener-picker-page.md",
-        "docs/sitemap-tree-page.md",
         {"path": "docs/stablecoin-detail-page.md", "anchor": "route-shape"},
         "docs/stablecoin-taxonomy-pages.md",
         "docs/upcoming-page.md"

@@ -66,7 +66,7 @@ export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }
   if (!record) {
     if (!unavailable) return null;
     return (
-      <section id="ddr-track-record" aria-label="DDR track record" className={SECTION_SCROLL_MT}>
+      <section aria-label="DDR track record" className={SECTION_SCROLL_MT}>
         <QueryStateNotice state="unavailable" label="DDR track record" onRetry={() => void query.refetch()} />
         {degraded || summaryUnavailable ? (
           <p className="mt-2 text-xs text-muted-foreground">
@@ -108,7 +108,7 @@ export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }
   ];
 
   return (
-    <Card id="ddr-track-record" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
+    <Card className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
         <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>DDR track record</StablecoinModuleTitle>
         <Badge variant="outline" className={cn("text-[11px] font-medium", limitedPopulation ? "text-muted-foreground" : record.chipToneClass)}>

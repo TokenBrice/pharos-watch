@@ -270,7 +270,7 @@ export function TopNav() {
       {/* Destinations sit left of the fold; browsing sits on the right, next to
           search — one direction for "go", one for "explore". */}
       <nav aria-label="Quick links" className="flex shrink-0 items-center gap-0.5">
-        <span className="flex items-center gap-0.5 rounded-lg bg-muted/35 p-0.5">
+        <span className="flex items-center gap-0 rounded-lg bg-muted/35 p-0.5 min-[1440px]:gap-0.5">
           {QUICK_NAV_ITEMS.map((item) => {
             const isActive = isNavItemActive(pathname, item);
             const Icon = item.icon;
@@ -283,7 +283,7 @@ export function TopNav() {
                 title={item.description}
                 onClick={() => trackEvent("nav_click", { surface: "rail", group: "rail", href: item.href })}
                 className={cn(
-                  "pharos-focus-ring inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-sm font-semibold whitespace-nowrap transition-colors xl:px-2.5",
+                  "pharos-focus-ring inline-flex h-8 items-center gap-1.5 rounded-md px-1.5 text-sm font-semibold whitespace-nowrap transition-colors xl:px-2 min-[1440px]:px-2.5",
                   isActive
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
@@ -292,10 +292,12 @@ export function TopNav() {
                 {/* The icon is the affordance that separates a direct link from
                     a menu trigger; triggers carry a chevron and no glyph. */}
                 <Icon className="size-4 shrink-0 opacity-70" aria-hidden />
-                {/* Keep the in-product shorthand until there is room for both
-                    full rail labels and the expanded search control. */}
-                <span className="2xl:hidden">{item.shortLabel ?? item.label}</span>
-                <span className="hidden 2xl:inline">{item.label}</span>
+                {/* Three label tiers keep six items inside the masthead next to
+                    the menus and search (measured 2026-10-11): compact below
+                    1440px, short to 1679px, canonical from 1680px. */}
+                <span className="min-[1440px]:hidden">{item.compactLabel ?? item.shortLabel ?? item.label}</span>
+                <span className="hidden min-[1440px]:inline min-[1680px]:hidden">{item.shortLabel ?? item.label}</span>
+                <span className="hidden min-[1680px]:inline">{item.label}</span>
               </Link>
             );
           })}

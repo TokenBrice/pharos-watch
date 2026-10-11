@@ -102,12 +102,12 @@ export function ActiveDepegsCard(): React.JSX.Element {
       <div className="flex items-baseline gap-2 pharos-numeric font-bold tracking-tight">
         <span className={`rounded-md text-4xl text-frost-blue ${flashClass}`}>{activeCount}</span>
         <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">active</span>
+        {activeRows.length > 4 ? (
+          <span className="ml-auto hidden font-mono text-[10px] font-normal uppercase tracking-wider text-muted-foreground sm:inline">
+            Top 4 by deviation
+          </span>
+        ) : null}
       </div>
-      {activeRows.length > 4 ? (
-        <p className="hidden font-mono text-[10px] uppercase tracking-wider text-muted-foreground sm:block">
-          Top 4 by deviation
-        </p>
-      ) : null}
       <ul
         aria-label={
           activeRows.length > 4

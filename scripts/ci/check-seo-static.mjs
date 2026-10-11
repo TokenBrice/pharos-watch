@@ -41,6 +41,14 @@ const RETIRED_INTERNAL_ROUTE_PREFIXES = [
   { prefix: "/about/principles", replacement: "/about/" },
   { prefix: "/about/editorial", replacement: "/about/" },
   { prefix: "/about/style", replacement: "/about/" },
+  { prefix: "/sitemap-tree", replacement: "/" },
+  { prefix: "/start", replacement: "/" },
+  { prefix: "/about/bluechip", replacement: "/about/#bluechip" },
+  { prefix: "/docs/architecture", replacement: "/docs/" },
+  { prefix: "/docs/worker-and-api-limits", replacement: "/docs/" },
+  { prefix: "/docs/data-flow-map", replacement: "/docs/" },
+  { prefix: "/docs/design-language", replacement: "/docs/" },
+  { prefix: "/docs/design-tokens", replacement: "/docs/" },
   { prefix: "/stablecoin/pusd-pleasing", replacement: "/coverage/" },
   { prefix: "/stablecoin/phpc-coins-ph", replacement: "/coverage/" },
   { prefix: "/feed/digest", replacement: "/feed/digest.xml" },
@@ -244,8 +252,8 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
     ],
   },
   {
-    label: "about API reference",
-    route: "/about/api/",
+    label: "API page",
+    route: "/api/",
     nodes: [
       { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
       { type: "DataCatalog", requiredPaths: ["name", "url", "dataset.0.@id"] },
@@ -434,6 +442,7 @@ export function findPublishedArchiveContinuityErrors(
   previousSitemapXml,
   currentSitemapXml,
   redirectRules = [],
+  currentHtmlRoutes = new Set(),
 ) {
   const previousUrls = new Set(parseSitemapLocs(previousSitemapXml).map(normalizeSitemapUrl).filter(Boolean));
   const currentUrls = new Set(parseSitemapLocs(currentSitemapXml).map(normalizeSitemapUrl).filter(Boolean));
@@ -442,6 +451,10 @@ export function findPublishedArchiveContinuityErrors(
   for (const previousUrl of previousUrls) {
     const pathname = new URL(previousUrl).pathname;
     if (!DURABLE_ARCHIVE_ROUTE_PATTERN.test(pathname) || currentUrls.has(previousUrl)) continue;
+    // A deliberately noindexed archive page (e.g. a daily digest past its
+    // index window) leaves the sitemap but still resolves; only a vanished
+    // page needs a 301.
+    if (currentHtmlRoutes.has(pathname)) continue;
 
     const sourceKey = redirectSourceKey(pathname);
     const hasCanonicalRedirect = redirectRules.some((rule) => {
@@ -1261,7 +1274,7 @@ function fail(errors, warning = []) {
 }
 
 async function main() {
-  const { errors, warnings } = await collectSeoStaticCheckResultParallel();
+  const { errors, warnings, pageRecords } = await collectSeoStaticCheckResultParallel();
 
   const previousSitemapUrl = process.env.SEO_PREVIOUS_SITEMAP_URL?.trim();
   if (previousSitemapUrl) {
@@ -1280,6 +1293,7 @@ async function main() {
           previousSitemapXml,
           currentSitemapXml,
           collectRedirectRules(DEFAULT_OUT_DIR),
+          new Set(pageRecords.map((record) => record.route)),
         ),
       );
     } catch (error) {

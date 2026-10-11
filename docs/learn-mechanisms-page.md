@@ -5,7 +5,7 @@ Contract for the educational explainer surfaces:
 - `/learn/mechanisms/` — hub listing every configured archetype
 - `/learn/mechanisms/[archetype]/` — per-archetype deep explainer
 
-The broader `/learn/case-studies/` and `/learn/glossary/` surfaces are documented in [learn-page.md](./learn-page.md). Mechanisms are one section of the Learn namespace, not the only `/learn/*` route family.
+The broader `/learn/case-studies/` surfaces are documented in [learn-page.md](./learn-page.md). Mechanisms are one section of the Learn namespace, not the only `/learn/*` route family.
 
 Each configured `mechanismArchetype` gets a dedicated educational page covering the design, failure modes, and relevant Pharos signals. `MECHANISM_ARCHETYPE_VALUES` in `shared/types/core.ts` is the canonical roster.
 
@@ -103,7 +103,6 @@ These suites run in the ordinary noncritical lane. `scripts/maintenance/build-og
 - **Stablecoin detail Explore Next (`src/components/stablecoin-detail/explore-next-section.tsx`):** does **not** link the explainer (`PegStabilityCard` already carries that CTA); its archetype-gated slot is a canonical `/screener/?mechanisms=<archetype>&lifecycle=active` deep-link instead.
 - **Methodology index (`src/app/methodology/page.tsx`):** single "Learn how each stablecoin design produces its peg" callout near the top.
 - **About (`src/app/about/page.tsx`):** inline link on the word "mechanisms" inside the Classification section.
-- **Start Here (`src/lib/start-here-content.ts`):** single tile under the Learn group.
 
 No footer entry. The hub is the only entry in the header/mobile nav rail; per-archetype pages are reachable from the command palette's `Mechanism archetypes` section (`PALETTE_MECHANISMS` in `src/components/command-palette-model.ts`) and from in-page links on methodology, cemetery, and coin-detail surfaces.
 

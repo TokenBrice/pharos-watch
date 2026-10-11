@@ -330,6 +330,7 @@ function HomeAltChartFrame({
             return (
               <text
                 key={i}
+                className={i === 1 || i === 3 || i === 4 ? "hidden sm:inline" : undefined}
                 x={x}
                 y={y1 + 10 + HOME_ALT_TICK_FONT_SIZE}
                 fill="var(--color-muted-foreground)"

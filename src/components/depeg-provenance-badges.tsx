@@ -9,7 +9,7 @@ interface DepegProvenanceBadgesProps {
 }
 
 const BADGE_CLASS =
-  "rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground";
+  "rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground";
 
 const REASON_LABELS: Record<string, string> = {
   "large-cap": "large cap",
@@ -38,6 +38,11 @@ function labelReason(reason: string): string {
 
 function labelConfirmationSource(source: string): string {
   if (SOURCE_LABELS[source]) return SOURCE_LABELS[source];
+  const temporal = /^temporal:(\d+[smhd])$/.exec(source);
+  if (temporal) return `${temporal[1]} persistence`;
+  if (source.startsWith("primary:protocol:")) return `${source.slice("primary:protocol:".length)} protocol`;
+  if (source.startsWith("primary:")) return labelConfirmationSource(source.slice("primary:".length));
+  if (source === "coingecko") return "CoinGecko";
   if (source.startsWith("native:")) return `native ${source.slice("native:".length).toUpperCase()} quote`;
   if (source.startsWith("dex:")) return `${source.slice("dex:".length)} DEX`;
   if (source.startsWith("pool:")) {

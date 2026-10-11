@@ -38,7 +38,7 @@ function StablecoinVirtualRowBase({
       style={{ height: row.densityConfig.rowHeight }}
       data-cursor={isCursor ? "true" : undefined}
       data-index={virtualIndex}
-      data-row-intent={model.isOverview ? "scan" : undefined}
+      rowIntent={model.isOverview ? "scan" : undefined}
       data-row-striped={isStriped ? "true" : undefined}
       tabIndex={isCursor ? 0 : undefined}
       onClick={(event) => {

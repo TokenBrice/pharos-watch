@@ -29,7 +29,8 @@ vi.mock("@/lib/analytics", () => ({
   trackEvent: vi.fn(),
 }));
 
-const routeItems = QUICK_NAV_ITEMS.filter((item) => item.href !== "/stability-index/");
+// The bar keeps four route slots; Stability and FreezeWatch live in the drawer.
+const routeItems = QUICK_NAV_ITEMS.filter((item) => !["/stability-index/", "/freezewatch/"].includes(item.href));
 
 afterEach(() => {
   vi.clearAllMocks();

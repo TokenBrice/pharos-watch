@@ -6,6 +6,7 @@ import {
   getMethodologyChangelogEntryByMarkdownKey,
   type MethodologyChangelogMarkdownKey,
 } from "@shared/lib/methodology-versions/registry";
+import { getListedDefinitions } from "../../src/lib/definitions";
 import { METHODOLOGY_INDEX_SECTION_CONTENT } from "../../src/lib/methodology-content";
 import { frontMatterBlock } from "./markdown-renderers";
 
@@ -21,6 +22,9 @@ export function buildMethodologyIndexMarkdown(): string {
   const body = METHODOLOGY_INDEX_SECTION_CONTENT.map((section) => section.markdown)
     .join("\n\n")
     .replace(/\n+$/, "");
+  const definitions = getListedDefinitions()
+    .map((def) => `- **${def.term}**: ${def.text}`)
+    .join("\n");
   return (
     frontMatterBlock({
       title: "Methodology: How Pharos Grades Stablecoins",
@@ -28,7 +32,7 @@ export function buildMethodologyIndexMarkdown(): string {
       description:
         "Full methodology behind Pharos safety grades, peg scores, liquidity scores, PSI, DEWS, yield intelligence, and dependency propagation.",
     }) +
-    `# Methodology\n\n${body}\n`
+    `# Methodology\n\n${body}\n\n## Definitions\n\n${definitions}\n`
   );
 }
 

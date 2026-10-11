@@ -42,8 +42,8 @@ export function CoverageBadge({ status, compact = false }: CoverageBadgeProps) {
       title={tooltip}
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.01em]",
-        compact ? "min-w-[4.25rem]" : "min-w-[5rem]",
+        "inline-flex items-center justify-center whitespace-nowrap rounded-full border py-1 text-[11px] font-medium tracking-[0.01em]",
+        compact ? "min-w-[4.25rem] px-1.5" : "min-w-[5rem] px-2",
         COVERAGE_BADGE_TONE_CLASS[status.tone],
       )}
     >

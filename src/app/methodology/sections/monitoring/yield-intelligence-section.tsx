@@ -125,7 +125,7 @@ export function YieldIntelligenceMethodologySection() {
                   ranking pipeline, along with each entry&apos;s lifecycle (`active`, `quarantined`,
                   `intentional-gap`, `experimental`). The manifest is published at{" "}
                   <Link
-                    href="/docs/api-reference/#get-apiyield-adapter-manifest"
+                    href="/api/#get-api-yield-adapter-manifest"
                     className="text-foreground underline underline-offset-2 hover:text-foreground/80 transition-colors"
                   >
                     <code className="text-xs bg-muted px-1 py-0.5 rounded">/api/yield-adapter-manifest</code>

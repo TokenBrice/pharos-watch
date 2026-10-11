@@ -7,7 +7,10 @@ import { trackEvent } from "@/lib/analytics";
 import { QUICK_NAV_ITEMS, isNavItemActive } from "@/lib/nav-config";
 import { openNavDrawer } from "@/lib/nav-drawer";
 
-const MOBILE_ROUTE_ITEMS = QUICK_NAV_ITEMS.filter((item) => item.href !== "/stability-index/");
+// Four route slots plus Menu fill the five-column bar; the remaining rail
+// items (Stability, FreezeWatch) stay one tap away in the drawer's quick rail.
+const MOBILE_ROUTE_HREFS = new Set(["/", "/safety-scores/", "/yield/", "/depeg/"]);
+const MOBILE_ROUTE_ITEMS = QUICK_NAV_ITEMS.filter((item) => MOBILE_ROUTE_HREFS.has(item.href));
 
 export function MobileBottomNav() {
   const pathname = usePathname();

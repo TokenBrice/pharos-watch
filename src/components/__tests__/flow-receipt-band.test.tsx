@@ -146,7 +146,7 @@ describe("FlowReceiptBand", () => {
     expect(screen.getByText("-$5.00M").className).toContain("text-red-700");
   });
 
-  it("renders a partial-valuation net as NR with its reason and marks the volume a lower bound", () => {
+  it("renders a one-sided partial net as an explicit lower bound and marks the volume a lower bound", () => {
     const partial = coin("DAI", -9_000_000);
     partial.valuation = {
       ...partial.valuation!,
@@ -167,8 +167,36 @@ describe("FlowReceiptBand", () => {
       variant: "compact",
     }));
 
+    // Only mints are unpriced: the known net (+$25M − $9M) is a proven floor, never the net itself.
     expect(screen.queryByText("+$16.00M")).toBeNull();
-    expect(screen.getAllByText(/summed signed net unavailable/i).length).toBeGreaterThan(0);
+    expect(screen.getByText((_content, node) => node?.tagName === "SPAN" && node.firstChild?.textContent === "≥ "
+      && node.textContent?.startsWith("≥ +$16.00M") === true)).toBeTruthy();
+    expect(screen.getAllByText(/lower bound: 2 mint \/ 0 burn events unpriced/i).length).toBeGreaterThan(0);
     expect(screen.getByText("≥ $25.00M", { exact: false })).toBeTruthy();
+  });
+
+  it("renders NR when unpriced events on both sides leave the summed net unbounded", () => {
+    const partial = coin("DAI", -9_000_000);
+    partial.valuation = {
+      ...partial.valuation!,
+      window24h: {
+        completeness: "partial",
+        mintCompleteness: "partial",
+        burnCompleteness: "partial",
+        unpricedMintEventCount: 2,
+        unpricedBurnEventCount: 1,
+      },
+    };
+    render(createElement(FlowReceiptBand, {
+      gauge,
+      coins: [coin("USDC", 25_000_000), partial],
+      weeklyHourly: [],
+      scopeLabel: "Configured issuance chains",
+      syncWarning: null,
+      variant: "compact",
+    }));
+
+    expect(screen.queryByText(/\+\$16\.00M/)).toBeNull();
+    expect(screen.getAllByText(/summed signed net unavailable/i).length).toBeGreaterThan(0);
   });
 });

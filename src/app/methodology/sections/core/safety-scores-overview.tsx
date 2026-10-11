@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   METHODOLOGY_LINK_CLASS,
+  MethodologyDetails,
   MethodologyFacts,
   MethodologyPreconditions,
 } from "../../methodology-shared";
@@ -22,6 +23,47 @@ export function SafetyScoresOverview() {
         shared-resource checks still apply. Cards show selected routes, backup credit and stress-request completion
         separately; standalone route scores are not the Safety Score Exit pillar.
       </p>
+      <p className="text-xs text-muted-foreground">
+        See also:{" "}
+        <Link href="/methodology/scoring-changelog/" className={METHODOLOGY_LINK_CLASS}>Safety Score changelog</Link>
+        {" · "}
+        <a href="#pegscore-dews-methodology" className={METHODOLOGY_LINK_CLASS}>PegScore + DEWS</a>
+        {" · "}
+        <a href="#liquidity-methodology" className={METHODOLOGY_LINK_CLASS}>Liquidity Score</a>
+        {" · "}
+        <a href="#infrastructure-methodology" className={METHODOLOGY_LINK_CLASS}>Infrastructure</a>
+      </p>
+      <MethodologyFacts
+        facts={[
+          { label: "Model shape", value: "3 pillars + bounded aggregation" },
+          { label: "Grade output", value: "A+ to F; NR and Pipeline gap are distinct" },
+          { label: "Publication state", value: "Current or held; never V8 fallback" },
+        ]}
+      />
+      <MethodologyPreconditions
+        facts={[
+          { label: "Minimum data", value: "At least two included pillars for a score; scoped cause proof for exclusions" },
+          { label: "Required sources", value: "Backing, exit, control, peg, dependency, and evidence-provenance inputs" },
+          {
+            label: "Failure behavior",
+            value: "Technical gaps have no score/grade; NR needs causal evidence gates; global failures hold accepted state",
+          },
+        ]}
+      />
+      <MethodologyDetails summary="Evidence rules, version notes and replay results">
+        <SafetyScoresVersionNotes />
+      </MethodologyDetails>
+    </>
+  );
+}
+
+/**
+ * Release-level evidence rules and replay notes. Collapsed under Reader mode
+ * (MethodologyDetails), opened by Analyst mode.
+ */
+function SafetyScoresVersionNotes() {
+  return (
+    <>
       <p>
         Since methodology v9.96, issuer redemption routes honor reviewed explicit stablecoin payouts before the legacy
         fiat projection. Reviewed USDC payouts cover pathUSD, USYC Teller, pUSD and USDO; USDC/USDT payouts cover
@@ -245,15 +287,15 @@ export function SafetyScoresOverview() {
       <p>
         Since methodology v9.92, an asset whose intake publishes only an aggregate circulating quantity and no per-chain
         rows no longer bounds that quantity on a bridge gap the control pillar already owns: there is no per-chain
-        partition for the bridge-materiality join to be ambiguous about, the state is diagnosed as
+        partition for the bridge-materiality join to be ambiguous about, the state is diagnosed as{" "}
         <code className="text-xs">supply-review.unpartitioned-aggregate</code>, and the circulating USD publishes as
         known so the Exit pillar can size a stress request. Bridge-materiality availability keeps its single owner on
         the control pillar (<code className="text-xs">runtime-bridge-materiality-unavailable</code>), while a join that
         ran and failed over real rows, a missing bridge profile, stale input, and a missing or rejected runtime
-        attribution packet all still fail closed. The same release attributes a gapless
+        attribution packet all still fail closed. The same release attributes a gapless{" "}
         <code className="text-xs">missing-same-notional-route</code> — a route the method withholds by design with no
-        authored producer gap — to <code className="text-xs">integration-missing</code> instead of
-        <code className="text-xs">producer-failed</code>; only an authored causal gap carrying a
+        authored producer gap — to <code className="text-xs">integration-missing</code> instead of{" "}
+        <code className="text-xs">producer-failed</code>; only an authored causal gap carrying a{" "}
         <code className="text-xs">sourceGapId</code> may claim a producer failure, and scores, ceilings, and NR
         treatment are unchanged.
       </p>
@@ -281,11 +323,11 @@ export function SafetyScoresOverview() {
         Since methodology v9.47, a dependent&apos;s exposure to an upstream with an open reserve gap counts once per
         upstream cause. The backing projection folds the slice-level reasons an upstream raises into one reason per
         projected code, source code, and owner on each dependent exposure, and the slice paths survive in the causal
-        key. An upstream on the audited fallback with nine stale reserve slices previously put 18
-        <code className="text-xs">bounded-unknown-reserve-exposure</code> facts on every direct holder. On replay of
-        <code className="text-xs">capture-20260907-0917.json</code> at clock
-        <code className="text-xs">1788772631</code>, open data points fell 1,280 -&gt; 733
-        (<code className="text-xs">published-evidence-expired</code> 602 -&gt; 58,
+        key. An upstream on the audited fallback with nine stale reserve slices previously put 18{" "}
+        <code className="text-xs">bounded-unknown-reserve-exposure</code> facts on every direct holder. On replay of{" "}
+        <code className="text-xs">capture-20260907-0917.json</code> at clock{" "}
+        <code className="text-xs">1788772631</code>, open data points fell 1,280 -&gt; 733{" "}
+        (<code className="text-xs">published-evidence-expired</code> 602 -&gt; 58,{" "}
         <code className="text-xs">issuer-undisclosed</code> 354 -&gt; 351), 30 assets changed fact counts, 0 scores
         moved, 0 grades flipped. No evidence was added.
       </p>
@@ -300,43 +342,43 @@ export function SafetyScoresOverview() {
       </p>
       <p>
         Since methodology v9.461, two evaluator mapping defects are corrected without adding evidence. First,
-        reviewed-native selected supply rows no longer enter the bridge-exposure completeness join:
-        <code className="text-xs">evaluateV9SubthresholdUnresolvedBridgeJoins</code> excludes them from
+        reviewed-native selected supply rows no longer enter the bridge-exposure completeness join:{" "}
+        <code className="text-xs">evaluateV9SubthresholdUnresolvedBridgeJoins</code> excludes them from{" "}
         <code className="text-xs">bridgeControlsByDeployment</code>, while the route predicate and native-liability
-        boundary keep native controls as umbrella facts and exclude native route ids from
-        <code className="text-xs">bridgeClaimControls</code>. On replay of
-        <code className="text-xs">capture-20260904-1100.json</code> at clock
-        <code className="text-xs">1788509806</code>, this corrected a wrong join and closed 9 facts
-        (<code className="text-xs">nonmaterial-bridge-supply-unmatched</code> on
-        <code className="text-xs">ausd-agora</code>, <code className="text-xs">pyusd-paypal</code>,
-        <code className="text-xs">reusd-re-protocol</code>, <code className="text-xs">usbd-bima</code>,
-        <code className="text-xs">fusd-finchain</code>, <code className="text-xs">cusd-celo</code>,
-        <code className="text-xs">frxusd-frax</code>, <code className="text-xs">usdy-ondo-finance</code>, plus
-        <code className="text-xs">missing-bridge-route-rows</code> on
-        <code className="text-xs">fusd-finchain</code>), with 0 replacements and exactly 1 mover:
-        <code className="text-xs">fusd-finchain</code> NR -&gt; 46/D. Floors, the completeness predicate, and
+        boundary keep native controls as umbrella facts and exclude native route ids from{" "}
+        <code className="text-xs">bridgeClaimControls</code>. On replay of{" "}
+        <code className="text-xs">capture-20260904-1100.json</code> at clock{" "}
+        <code className="text-xs">1788509806</code>, this corrected a wrong join and closed 9 facts{" "}
+        (<code className="text-xs">nonmaterial-bridge-supply-unmatched</code> on{" "}
+        <code className="text-xs">ausd-agora</code>, <code className="text-xs">pyusd-paypal</code>,{" "}
+        <code className="text-xs">reusd-re-protocol</code>, <code className="text-xs">usbd-bima</code>,{" "}
+        <code className="text-xs">fusd-finchain</code>, <code className="text-xs">cusd-celo</code>,{" "}
+        <code className="text-xs">frxusd-frax</code>, <code className="text-xs">usdy-ondo-finance</code>, plus{" "}
+        <code className="text-xs">missing-bridge-route-rows</code> on{" "}
+        <code className="text-xs">fusd-finchain</code>), with 0 replacements and exactly 1 mover:{" "}
+        <code className="text-xs">fusd-finchain</code> NR -&gt; 46/D. Floors, the completeness predicate, and{" "}
         <code className="text-xs">unknownBridgeShare</code> are unchanged; Pharos learned nothing new.
       </p>
       <p>
-        Second, offchain-issuer commodity routes whose
-        <code className="text-xs">outputAssetType</code> is
-        <code className="text-xs">bluechip-collateral</code> (physical GOLD/SILVER delivery) now resolve as
-        <code className="text-xs">unresolved-asset</code> rather than fiat. The old mapping let
+        Second, offchain-issuer commodity routes whose{" "}
+        <code className="text-xs">outputAssetType</code> is{" "}
+        <code className="text-xs">bluechip-collateral</code> (physical GOLD/SILVER delivery) now resolve as{" "}
+        <code className="text-xs">unresolved-asset</code> rather than fiat. The old mapping let{" "}
         <code className="text-xs">buildOutputReview</code> imply a synthetic $1 value for a physical bar; removing
-        that false valuation ADDED 5 facts
-        (<code className="text-xs">unresolved-exit-output</code> and
-        <code className="text-xs">missing-runtime-route-evidence</code> on
-        <code className="text-xs">gldt-gold-dao</code>, <code className="text-xs">paxg-paxos</code>, and
-        <code className="text-xs">xnk-kinka</code>) and moved 2 grades:
-        <code className="text-xs">gldt-gold-dao</code> 47/D -&gt; NR and
+        that false valuation ADDED 5 facts{" "}
+        (<code className="text-xs">unresolved-exit-output</code> and{" "}
+        <code className="text-xs">missing-runtime-route-evidence</code> on{" "}
+        <code className="text-xs">gldt-gold-dao</code>, <code className="text-xs">paxg-paxos</code>, and{" "}
+        <code className="text-xs">xnk-kinka</code>) and moved 2 grades:{" "}
+        <code className="text-xs">gldt-gold-dao</code> 47/D -&gt; NR and{" "}
         <code className="text-xs">xnk-kinka</code> 41/D -&gt; 39/F. This is an honest loss of false coverage, not a
-        newly learned adverse fact. The affected asset set is
-        <code className="text-xs">cgo-comtech</code>, <code className="text-xs">dgld-gold-token-sa</code>,
-        <code className="text-xs">ggbr-goldfish-gold</code>, <code className="text-xs">gldt-gold-dao</code>,
-        <code className="text-xs">gldy-streamex</code>, <code className="text-xs">kag-kinesis</code>,
-        <code className="text-xs">kau-kinesis</code>, <code className="text-xs">paxg-paxos</code>,
-        <code className="text-xs">pgold-pleasing</code>, <code className="text-xs">xagm-matrixdock</code>,
-        <code className="text-xs">xaum-matrixdock</code>, <code className="text-xs">xaut-tether</code>, and
+        newly learned adverse fact. The affected asset set is{" "}
+        <code className="text-xs">cgo-comtech</code>, <code className="text-xs">dgld-gold-token-sa</code>,{" "}
+        <code className="text-xs">ggbr-goldfish-gold</code>, <code className="text-xs">gldt-gold-dao</code>,{" "}
+        <code className="text-xs">gldy-streamex</code>, <code className="text-xs">kag-kinesis</code>,{" "}
+        <code className="text-xs">kau-kinesis</code>, <code className="text-xs">paxg-paxos</code>,{" "}
+        <code className="text-xs">pgold-pleasing</code>, <code className="text-xs">xagm-matrixdock</code>,{" "}
+        <code className="text-xs">xaum-matrixdock</code>, <code className="text-xs">xaut-tether</code>, and{" "}
         <code className="text-xs">xnk-kinka</code>. Both effects are measured on that fixed capture; producer-side
         repairs in these waves cannot manifest until a real producer cycle runs.
       </p>
@@ -489,33 +531,6 @@ export function SafetyScoresOverview() {
         Unknown shares remain unavailable, and independent opacity, impairment and depeg blockers still apply.
         Fixed-clock mover review and fresh producer observations remain release requirements.
       </p>
-      <p className="text-xs text-muted-foreground">
-        See also:{" "}
-        <Link href="/methodology/scoring-changelog/" className={METHODOLOGY_LINK_CLASS}>Safety Score changelog</Link>
-        {" · "}
-        <a href="#pegscore-dews-methodology" className={METHODOLOGY_LINK_CLASS}>PegScore + DEWS</a>
-        {" · "}
-        <a href="#liquidity-methodology" className={METHODOLOGY_LINK_CLASS}>Liquidity Score</a>
-        {" · "}
-        <a href="#infrastructure-methodology" className={METHODOLOGY_LINK_CLASS}>Infrastructure</a>
-      </p>
-      <MethodologyFacts
-        facts={[
-          { label: "Model shape", value: "3 pillars + bounded aggregation" },
-          { label: "Grade output", value: "A+ to F; NR and Pipeline gap are distinct" },
-          { label: "Publication state", value: "Current or held; never V8 fallback" },
-        ]}
-      />
-      <MethodologyPreconditions
-        facts={[
-          { label: "Minimum data", value: "At least two included pillars for a score; scoped cause proof for exclusions" },
-          { label: "Required sources", value: "Backing, exit, control, peg, dependency, and evidence-provenance inputs" },
-          {
-            label: "Failure behavior",
-            value: "Technical gaps have no score/grade; NR needs causal evidence gates; global failures hold accepted state",
-          },
-        ]}
-      />
     </>
   );
 }

@@ -139,12 +139,12 @@ describe("DepegControlBoard", () => {
     expect(within(row).queryByText("0.0% at peg")).toBeNull();
     expect(within(row).queryByText("100.0% at peg")).toBeNull();
   });
-  it("renders full-row severity without side-stripe classes and keeps units explicit", () => {
+  it("renders rows without side-stripe or blanket severity tint and keeps units explicit", () => {
     renderBoard([makeRow()]);
 
     const row = screen.getByRole("button", { name: /open susd depeg detail/i });
     expect(row.className).not.toContain("border-l-2");
-    expect(row.className).toContain("bg-red-500");
+    expect(row.className).not.toContain("bg-red-500");
     expect(screen.getByText("worst -6988 bps")).toBeTruthy();
     expect(screen.getAllByText("Peg health").length).toBeGreaterThan(0);
     expect(screen.queryByText("Peg score")).toBeNull();

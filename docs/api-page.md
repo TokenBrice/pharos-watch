@@ -14,14 +14,17 @@ Route contract for the public API access and reference surfaces for external Pha
 - **Disclosure blocks (route-local):** `src/app/api/api-disclosure.tsx` renders the shared `<details>` blocks: framed (bordered box) in the `#claim` section, unframed (`framed={false}`, top rule only) for the partner template inside its card
 - **Qualifying-coin derivation:** `src/lib/donor-key-qualifying-coins.ts` joins `DONOR_KEY_QUALIFYING_STABLECOINS` with the build-time snapshot grades
 - **Supporter key claim client:** `src/components/donor-key-claim.tsx`, revealing the token through the shared one-time token panel (`src/components/issued-token-panel.tsx`)
-- **Reference route:** `/about/api/`
-- **Server route:** `src/app/about/api/page.tsx`
-- **Error boundary:** `src/app/about/api/error.tsx`
+- **Tabs (route-local client):** `src/app/api/api-tabs.tsx` renders the `Access | Reference` tab bar and both panels
+- **Reference tab (route-local server):** `src/app/api/api-reference-panel.tsx`
 - **Build-time doc parser:** `src/lib/api-reference-doc.ts`
 - **Reference source of truth:** `docs/api-reference.md`
 - **Navigation rail:** `src/components/api-reference-layout.tsx` and `src/components/api-reference-sidebar.tsx`
 
-Both routes are static build-time pages. `/api/` is the API access page: it advertises the free grades feed, presents the two keyed-access offers, and hosts the supporter-key claim. `/about/api/` reads the checked-in API reference markdown from `docs/api-reference.md`, parses the supported markdown subset (paragraphs, lists, tables, code fences, rules, H2/H3 headings), and renders a concise public integration guide plus an endpoint directory inside the public site chrome. The exhaustive HTTP contract remains canonical at `/docs/api-reference/`.
+`/api/` is one static build-time page with two tabs. **Access** advertises the free grades feed, presents the two keyed-access offers, and hosts the supporter-key claim. **Reference** reads the checked-in API reference markdown from `docs/api-reference.md`, parses the supported markdown subset (paragraphs, lists, tables, code fences, rules, H2/H3 headings), and renders the whole public HTTP contract (every non-admin section, including each public endpoint's field tables) plus an endpoint directory. `docs/api-reference.md` stays the single source; it is no longer published separately under `/docs/`. The former `/about/api/` and `/docs/api-reference/` routes 301 to `/api/#reference`.
+
+### Tabs
+
+Both panels are in the exported HTML (the inactive one carries `hidden`), so crawlers and the JSON-LD see the full page. Selection is hash-addressed and runs in the `ApiTabs` client component after hydration, never in an inline script (CSP): `#reference`, or any anchor inside the Reference panel (`#polling-guidance`, `#endpoint-directory`, `#get-api-stablecoins`, ...), selects Reference and scrolls to the anchor; `#access` or any Access anchor (`#supporter-key`, `#claim`, ...) selects Access, which is also the default. Tab clicks replace the hash without scrolling. In-page links to the other panel must be plain `<a href="#...">` so the browser fires `hashchange`; `next/link` hash navigation does not.
 
 ---
 
@@ -32,11 +35,11 @@ Both routes are static build-time pages. `/api/` is the API access page: it adve
 1. **Supporter key:** get donors of `$`{`DONOR_API_KEY_MIN_USD`} (10) or more to claim and use their free supporter key, and make non-donors want one.
 2. **Partner key:** tell professional teams that partner keys with higher limits, integration help and direct support are available on request.
 
-Everything else (the full endpoint catalogue, quickstart code examples, the access FAQ) belongs on `/about/api/` and `/docs/api-reference/`, and `/api/` links there. Both offer CTAs sit in the first desktop viewport; on mobile the supporter card renders first.
+Everything else (the full endpoint catalogue, quickstart code examples, the access FAQ) belongs on the Reference tab. Both offer CTAs sit in the first desktop viewport; on mobile the supporter card renders first.
 
 The access page also advertises the free no-key Safety Score grades feed (`GET /api/safety-grades`) in the band between the two offers and the claim section.
 
-The reference page exists to give external integrators one public URL that explains:
+The Reference tab exists to give external integrators one public URL that explains:
 
 1. which Pharos host they should call
 2. when an API key is required
@@ -47,21 +50,23 @@ The reference page exists to give external integrators one public URL that expla
 
 ## `/api/` Shell Contract
 
-The route renders inside `FeaturePageShell` (`src/components/feature-page-shell.tsx`). Design tier: Discovery public landing (`docs/design-language.md`), with generous whitespace, step explainers, and no cards inside cards. Metadata: title `Stablecoin API Access: Supporter and Partner Keys`, breadcrumb name `API Access` (matching the nav label). There is no FAQ section and no FAQPage JSON-LD on this route; the two `<details>` blocks and the partner card cover the questions.
+The route renders inside `FeaturePageShell` (`src/components/feature-page-shell.tsx`). Design tier: Discovery public landing (`docs/design-language.md`), with generous whitespace, step explainers, and no cards inside cards. Metadata: title `Pharos Stablecoin API: Access Keys and Reference`, breadcrumb name `API` (matching the nav label). The Access tab has no FAQ; the two `<details>` blocks and the partner card cover the questions. The Reference tab carries the API access FAQ and its FAQPage JSON-LD.
+
+The Access tab section order follows.
 
 Section order:
 
-0. **Hero:** H1 `Pharos API access`, a two-sentence lead saying Safety Score grades need no key and naming the data the keys unlock (peg, supply, liquidity, reserve and depeg data need a supporter or partner key), and three jump pills: `Supporter key` to `#supporter-key`, `Partner key` to `#partner-access`, `API reference` to `/about/api/`.
+0. **Hero (above both tabs):** H1 `Pharos API`, a two-sentence lead saying Safety Score grades need no key and naming the data the keys unlock (peg, supply, liquidity, reserve and depeg data need a supporter or partner key), and three jump pills: `Supporter key` to `#supporter-key`, `Partner key` to `#partner-access`, `API reference` to `#reference`.
 1. **Two offer cards in one grid, supporter first (mobile order too):** each card is top-aligned (`md:items-start`) and sized to its own content, so opening the partner template never stretches the supporter card.
    - `#supporter-key` (kicker `For individual builders`): pitch, three facts rendered from constants (`{DONOR_API_KEY_RATE_LIMIT_PER_MINUTE}` requests/min, no expiry, every read endpoint), the qualifying-coin line (`Counts toward the key: {names}, graded A or B as of {date}.`), the community social-proof line, a filled `Claim your key` CTA to `#claim` plus an outline donation CTA to `/funding/#how-to-support`, and revocable, no-SLA fine print.
    - `#partner-access` (kicker `For teams in production`): pitch, bullets (rate, expiry and rotation, integration help, service commitments, cached endpoints during brief database outages), the public-good line, a filled Telegram CTA plus an outline X CTA (both wrap instead of overflowing at 320px), and an unframed `<details>` block holding the copyable `PARTNER_KEY_REQUEST_TEMPLATE` with a copy button, closing with the anti-impersonation line (`Check the exact handle. Pharos never asks for wallet credentials or payment by direct message.`).
 2. **Free-grades band:** one line naming the free `GET /api/safety-grades` feed, a no-key curl command built from `PUBLIC_API_HOST` and `API_PATHS.safetyGrades()`, and a copy button.
 3. **`#claim` section (anchor scroll offset applied):** heading `Claim your supporter key`, the three-step strip (Donate, with the qualifying coins grouped by grade status, the snapshot date in the first group label, and the note that each coin counts only on its listed networks; Wait for Sunday's update, naming the ledger reconciliation date; Sign and copy; on `lg` the Donate step takes a double-width column), `<DonorKeyClaim />` (see Supporter Key Claim Contract; its own no-wallet notice covers the browser-wallet requirement, so the section has no separate requirement line), the `Already donated? Check a wallet` disclosure (see Wallet check), and two `<details>` blocks: `Which donations count` and `Lost key, privacy and terms`. `Which donations count` includes one bullet generated at build time from `DONOR_KEY_QUALIFYING_STABLECOINS[].contracts` and `CHAIN_META` names: the coins on every funding network, then the network list for each other coin, ending `Bridged or look-alike tokens never count.` The lost-key bullet ends with the same anti-impersonation line as the partner template.
-4. **`#developer-resources` nav:** link pills for `/about/api/`, `/docs/api-reference/`, the OpenAPI and Postman artifacts from `PUBLIC_API_ARTIFACTS`, and `/status/`.
+4. **`#developer-resources` nav:** link pills for `#reference`, the OpenAPI and Postman artifacts from `PUBLIC_API_ARTIFACTS`, and `/status/`.
 
 ### Anchors
 
-Section ids come from `API_PAGE_ANCHORS` in `shared/lib/public-api-contract.ts`: `supporterKey` maps to `supporter-key`, `partnerAccess` to `partner-access`, `claim` to `claim`, `developerResources` to `developer-resources`. Inbound links target these anchors: the funding page and `/about/api/` deep-link `#supporter-key`; Worker messages and `API_PARTNER_ACCESS_URL` (`https://pharos.watch/api/#partner-access`) target `#partner-access`; the `/feedback/` redirect lands there too. Never rename an anchor without changing the constant and its callers in the same change.
+Section ids come from `API_PAGE_ANCHORS` in `shared/lib/public-api-contract.ts`: `supporterKey` maps to `supporter-key`, `partnerAccess` to `partner-access`, `claim` to `claim`, `developerResources` to `developer-resources`. Inbound links target these anchors: the funding page and the Reference tab FAQ deep-link `#supporter-key`; Worker messages and `API_PARTNER_ACCESS_URL` (`https://pharos.watch/api/#partner-access`) target `#partner-access`; the `/feedback/` redirect lands there too. Never rename an anchor without changing the constant and its callers in the same change.
 
 ### Private channel
 
@@ -137,11 +142,11 @@ Supporter claims are switched by `DONOR_KEY_CLAIMS_OPEN` in `shared/lib/public-a
 
 ---
 
-## `/about/api/` Shell Contract
+## Reference Tab Contract
 
-The route renders:
+The Reference panel renders:
 
-1. Breadcrumb JSON-LD (structured data only, not a visible element): `Home / About / API Reference`
+1. Artifact-catalog JSON-LD (`buildApiArtifactCatalogJsonLd`), plus intro copy naming the public host, the key header, and the OpenAPI/Postman artifacts
 2. Top-fold copy that makes the auth model explicit (hero paragraph plus the lane and `Quick Facts` cards):
    - external integrations use `https://api.pharos.watch`
    - protected public routes require `X-API-Key`
@@ -153,19 +158,19 @@ The route renders:
    - `Website lane`
    - `Ops lane`
    - `Quick Facts` (public auth header, selected no-key public routes including the supporter-key claim, admin auth on the ops hosts)
-4. An API-keys section that names the free `GET /api/safety-grades` feed, then points keyed access at `/api/#supporter-key` (supporter key for donors) and `/api/#partner-access` (partner key for teams). There is no issuance branch.
+4. (Key offers live on the Access tab; the Reference tab does not repeat them.)
 5. A `Quickstart` section (`id="quickstart"`) holding the curl, JavaScript and Python examples moved from `/api/`, built from `buildPublicApiCurlCommand`, `PUBLIC_API_HOST` and `PUBLIC_API_KEY_HEADER`. The examples call from a server or script, never from browser code.
 6. Direct links to the static machine-readable integration artifacts:
    - `/openapi.json`
    - `/postman/pharos-api.postman_collection.json`
    - `/postman/pharos-api.postman_environment.json`
-7. Data-catalog JSON-LD describing the public integration artifacts and crawlable static dataset downloads without pointing at `/_site-data/*`; Dataset nodes that use `includedInDataCatalog` include the catalog `@id`, `name`, and `url` so Google can validate the nested catalog reference in isolation. The `public-datasets` section renders the four mirror descriptions from `PUBLIC_DATASET_JSON_LD_DESCRIPTORS` with JSON, CSV, NDJSON and Sheets CSV links, explicitly distinguishing published snapshots from live API responses. Each mirror Dataset's `url` and `sameAs` target the matching visible `/about/api/#dataset-<topic>` description; stable Dataset IDs and `distribution.contentUrl` downloads are unchanged.
+7. Data-catalog JSON-LD describing the public integration artifacts and crawlable static dataset downloads without pointing at `/_site-data/*`; Dataset nodes that use `includedInDataCatalog` include the catalog `@id`, `name`, and `url` so Google can validate the nested catalog reference in isolation. The `public-datasets` section renders the four mirror descriptions from `PUBLIC_DATASET_JSON_LD_DESCRIPTORS` with JSON, CSV, NDJSON and Sheets CSV links, explicitly distinguishing published snapshots from live API responses. Each mirror Dataset's `url` and `sameAs` target the matching visible `/api/#dataset-<topic>` description; stable Dataset IDs and `distribution.contentUrl` downloads are unchanged.
 8. A visible API access FAQ rendered with matching `FAQPage` JSON-LD: how to get a key (supporter key and partner key on `/api/`), whether every endpoint needs a key, the public-lane versus website-lane difference, and admin auth. No entry offers closed issuance, a paid tier, or the feedback form as a key-access channel; feedback submission is named only as a no-key endpoint. JSON-LD answers stay in sync with visible text.
 9. A `Before You Call The API` section rendered from the intro portion of `docs/api-reference.md`
-10. A top-level scrollspy rail driven by the concise rendered H2 sections and the endpoint directory
-11. An endpoint directory derived from the canonical public endpoint H3 headings, with a clear link to `/docs/api-reference/#public-endpoints` for exhaustive field tables and examples
+10. Every non-admin H2 section of `docs/api-reference.md` (admin auth and admin endpoints stay out), with a scrollspy rail driven by those sections, their H3 subsections and the endpoint directory
+11. An endpoint directory derived from the canonical public endpoint H3 headings, each linking to that endpoint's in-page subsection (`#get-api-...`)
 
-The reference page is presentation and navigation around the canonical contract, not a second hand-maintained API spec. It renders only selected overview sections from `docs/api-reference.md` plus a route directory derived from the canonical public endpoint section. Full endpoint field tables, examples, edge cases, and admin sections remain in `docs/api-reference.md` and `/docs/api-reference/`.
+The reference page is presentation and navigation around the canonical contract, not a second hand-maintained API spec. It renders `docs/api-reference.md` (minus admin sections) plus a route directory derived from the canonical public endpoint section.
 
 The machine-readable OpenAPI artifact factors repeated response definitions into `$ref` components under `components/schemas`, while the previous inline artifact remains available in git history for clients that depended on that representation.
 
@@ -198,7 +203,7 @@ If `docs/api-reference.md` starts using additional markdown constructs that the 
 ## Update Rules
 
 - Treat `docs/api-reference.md` as the canonical HTTP contract.
-- Anchors and channel data are contract constants, not page copy: `API_PAGE_ANCHORS`, `API_PARTNER_ACCESS_URL`, `API_ACCESS_TELEGRAM_HANDLE`, `API_ACCESS_TELEGRAM_URL`, `API_ACCESS_X_HANDLE`, `API_ACCESS_X_URL`, `PARTNER_KEY_REPLY_BUSINESS_DAYS` and `PARTNER_KEY_REQUEST_TEMPLATE` live in `shared/lib/public-api-contract.ts`. `/api/`, `/about/api/`, the Worker error strings and the maintenance generators all read them; change a handle, anchor, reply window or template there once, then update dependent surfaces in the same change.
-- Update `/api/` offer and claim copy, and `/about/api/` hero/auth copy, when the lane split, key requirement, key-request workflow, supporter-key terms, or operator-access model changes.
+- Anchors and channel data are contract constants, not page copy: `API_PAGE_ANCHORS`, `API_PARTNER_ACCESS_URL`, `API_ACCESS_TELEGRAM_HANDLE`, `API_ACCESS_TELEGRAM_URL`, `API_ACCESS_X_HANDLE`, `API_ACCESS_X_URL`, `PARTNER_KEY_REPLY_BUSINESS_DAYS` and `PARTNER_KEY_REQUEST_TEMPLATE` live in `shared/lib/public-api-contract.ts`. `/api/` (both tabs), the Worker error strings and the maintenance generators all read them; change a handle, anchor, reply window or template there once, then update dependent surfaces in the same change.
+- Update `/api/` offer and claim copy, and Reference tab intro/auth copy, when the lane split, key requirement, key-request workflow, supporter-key terms, or operator-access model changes.
 - Update the parser only when the markdown source adds a new structure the page needs to support.
 - If the route path changes, also update `src/app/sitemap.ts`, `docs/README.md`, and `docs/architecture.md`.

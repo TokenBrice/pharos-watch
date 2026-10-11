@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildHeldCardIds, parseUsdInput } from "./model";
+import { mergeCoinsParam } from "@/lib/portfolio-codec";
 
 describe("portfolio page model", () => {
   it("parses supported USD input formats", () => {
@@ -15,5 +16,12 @@ describe("portfolio page model", () => {
         { coinId: "usdt-tether", amount: 20 },
       ]),
     ).toEqual(new Set(["usdc-circle", "usdt-tether"]));
+  });
+
+  it("merges the shared coins param as zero-amount holdings without overriding amounts", () => {
+    expect(mergeCoinsParam("usdt-tether:25000", "usdt-tether,usds-sky")).toBe("usdt-tether:25000,usds-sky:0");
+    expect(mergeCoinsParam("", "usdc-circle")).toBe("usdc-circle:0");
+    expect(mergeCoinsParam("usdc-circle:5", "")).toBe("usdc-circle:5");
+    expect(mergeCoinsParam("", "")).toBe("");
   });
 });

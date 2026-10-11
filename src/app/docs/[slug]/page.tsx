@@ -34,7 +34,6 @@ interface MarkdownAstNode {
 function buildDocMetadataTitle(doc: { slug: string; title: string; group: string }): string {
   if (doc.slug === "api-reference") return "Stablecoin API Reference - Pharos Docs";
   if (doc.group === "methodology") return `${doc.title} Methodology - Pharos Docs`;
-  if (doc.group === "design") return `${doc.title} System - Pharos Docs`;
   return `${doc.title} Guide - Pharos Docs`;
 }
 

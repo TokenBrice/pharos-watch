@@ -42,7 +42,6 @@ const ALL_PAGES = [
     path: "/portfolio?p=usdt-tether:10000,usdc-circle:5000,dai-makerdao:2000,usde-ethena:1000",
     file: "og-portfolio.png",
   },
-  { path: "/start", file: "og-start.png" },
   { path: "/pharoswatchbot/", file: "og-pharoswatchbot.png" },
   { path: "/screener", file: "og-default.png" },
 ];

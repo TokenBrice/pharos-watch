@@ -65,7 +65,7 @@ export function MobileSortPills<TKey extends string>({
             onClick={() => onSort(option.key)}
             className={`pharos-focus-ring inline-flex min-h-11 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
               active
-                ? "border-frost-blue/50 bg-frost-blue/12 text-foreground"
+                ? "border-foreground/20 bg-foreground text-background"
                 : "border-border/60 bg-background/60 text-muted-foreground hover:text-foreground"
             }`}
           >

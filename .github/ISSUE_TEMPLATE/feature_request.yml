@@ -25,7 +25,7 @@ body:
     id: surface
     attributes:
       label: Suggested route or API surface
-      placeholder: /liquidity/, /about/api/, /api/stablecoins
+      placeholder: /liquidity/, /api/, /api/stablecoins
   - type: textarea
     id: sources
     attributes:

@@ -3,7 +3,6 @@ import {
   buildCommandPaletteResultDescriptors,
   buildCommandPaletteActionDefinitions,
   buildPopularStablecoinDescriptors,
-  COMMAND_PALETTE_PAGES,
   fuzzyMatch,
   groupCommandPaletteResults,
   rankCommandPaletteResults,
@@ -17,7 +16,6 @@ import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
 import { STATIC_COMPARE_PAIRS, buildStaticComparisonSlug } from "@/lib/compare-links";
 import { CASE_STUDY_CLIENT_LIST } from "@/lib/case-study-client-index";
-import { GLOSSARY_ENTRIES } from "@/lib/glossary-content";
 import { BLOG_POSTS } from "@/data/blog";
 import depegEvents from "@/generated/depeg-event-search-data.json";
 
@@ -27,7 +25,6 @@ const peg = PEG_TAXONOMY_PAGES.find((entry) => entry.value === "EUR")!;
 const [leftId, rightId] = STATIC_COMPARE_PAIRS[0];
 const pairLabel = `${CLIENT_TRACKED_META_BY_ID.get(leftId)!.symbol} vs ${CLIENT_TRACKED_META_BY_ID.get(rightId)!.symbol}`;
 const study = CASE_STUDY_CLIENT_LIST[0];
-const term = GLOSSARY_ENTRIES[0];
 const mechanism = MECHANISM_ARCHETYPE_VALUES[0];
 const event = depegEvents[0];
 const date = event.startedAt ? new Date(event.startedAt * 1000).toISOString().slice(0, 10) : "";
@@ -39,7 +36,6 @@ const corpusCases = [
   { query: "euro", id: `peg-${peg.slug}`, label: peg.title, sublabel: `${peg.coins.length} tracked stablecoin${peg.coins.length === 1 ? "" : "s"}`, section: "Peg currencies", kind: "peg", href: peg.href, historySublabel: peg.shortLabel, extra: { lead: true } },
   { query: pairLabel, id: `comparison-${leftId}-vs-${rightId}`, label: pairLabel, sublabel: "Static comparison page", section: "Comparisons", kind: "comparison", href: `/compare/${buildStaticComparisonSlug(leftId, rightId)}/`, historySublabel: "Comparison" },
   { query: study.title, id: `case-study-${study.slug}`, label: study.title, sublabel: `Case study${study.year ? ` · ${study.year}` : ""}`, section: "Case studies", kind: "case-study", href: `/learn/case-studies/${study.slug}/`, historySublabel: "Case study" },
-  { query: term.term, id: `glossary-${term.id}`, label: term.term, sublabel: "Glossary term", section: "Glossary", kind: "glossary-term", href: `/learn/glossary/#${term.id}`, historySublabel: "Glossary term" },
   { query: mechanism, id: `mechanism-${mechanism}`, label: MECHANISM_ARCHETYPE_LABELS[mechanism], sublabel: "Mechanism archetype explainer", section: "Mechanism archetypes", kind: "mechanism", href: `/learn/mechanisms/${mechanism}/`, historySublabel: "Mechanism archetype" },
   { query: event.symbol, id: `depeg-${event.slug}`, label: `${event.symbol} ${event.direction === "below" ? "below" : "above"} ${event.pegType}`, sublabel: date ? `${date} · peak ${event.peakDeviationBps}bps` : `peak ${event.peakDeviationBps}bps`, section: "Recent depegs", kind: "depeg-event", href: `/depeg/${event.slug}/`, historySublabel: "Depeg event", historyLabel: `${event.symbol} ${date}`.trim(), extra: { logoId: event.stablecoinId } },
   { query: doc.title, id: `doc-${doc.slug}`, label: doc.title, sublabel: doc.summary, section: "Docs", kind: "doc", href: `/docs/${doc.slug}/`, historySublabel: "Docs" },
@@ -232,17 +228,6 @@ describe("command palette model", () => {
     });
   });
 
-  it("keeps Start Here unique in the command palette route model", () => {
-    expect(COMMAND_PALETTE_PAGES.filter((page) => page.href === "/start/")).toHaveLength(1);
-
-    const startResults = buildCommandPaletteResultDescriptors({
-      query: "start",
-      history: [],
-      isDark: false,
-    });
-    expect(startResults.filter((result) => result.href === "/start/")).toHaveLength(1);
-  });
-
   it("covers important route-only pages in palette search", () => {
     const routeQueries = [
       { query: "privacy", href: "/privacy/" },
@@ -277,10 +262,9 @@ describe("command palette model", () => {
 
   it("floats exact-intent pages above coin substring matches", () => {
     const pageIntentQueries = [
-      { query: "api", href: "/api/", label: "API Access" },
+      { query: "api", href: "/api/", label: "API" },
       { query: "yield", href: "/yield/", label: "Yield Intelligence" },
       { query: "depeg", href: "/depeg/", label: "Depeg & Recovery" },
-      { query: "glossary", href: "/learn/glossary/", label: "Glossary" },
       { query: "psi", href: "/stability-index/", label: "Stability Index" },
       { query: "mica", href: "/compliance/", label: "Compliance" },
     ];

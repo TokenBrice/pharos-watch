@@ -63,8 +63,8 @@ what shipped, what's next, and why.
   `/feed/blog.xml`; adding them would require a change to
   `scripts/maintenance/generate-llms-txt.ts` first. Publishing never forces an
   llms.txt regeneration.
-- **Discovery** is wired once and needs no per-post work: the sitemap, the
-  sitemap-tree page, and the RSS feed enumerate posts straight from the
+- **Discovery** is wired once and needs no per-post work: the sitemap and
+  the RSS feed enumerate posts straight from the
   registry; the command palette searches that registry and links to individual
   posts. The nav `Resources` menu's `Updates` column and footer link the hub;
   the feed `<link>` in `layout.tsx` points to `/feed/blog.xml`.

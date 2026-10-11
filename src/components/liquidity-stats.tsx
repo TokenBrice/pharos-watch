@@ -137,19 +137,20 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
 
         {(() => {
           const volume = describeDexVolume(stats.totalVol, stats.totalVolAvailability);
+          // A partial window headlines its admitted sum as an explicit lower bound, never a total (R1/R7).
           return (
             <MetricStatCard
               variant="compact"
               title="24h DEX Volume"
-              value={volume.text}
-              subtext={volume.detail ?? "Trading volume today"}
+              value={volume.lowerBound ? <span title={volume.title}>{volume.lowerBound.text}</span> : volume.text}
+              subtext={volume.lowerBound?.detail ?? volume.detail ?? "Trading volume today"}
             />
           );
         })()}
 
         <MetricStatCard
           variant="compact"
-          title={<MethodologyLabel topic="liquidityScore">Avg Liq Score</MethodologyLabel>}
+          title={<MethodologyLabel topic="liquidityScore" className="-my-2.5 md:my-0">Avg Liq Score</MethodologyLabel>}
           value={stats.avgScore == null ? "NR" :
             <>
               {stats.avgScore}
@@ -162,7 +163,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
 
         <MetricStatCard
           variant="compact"
-          title={<MethodologyLabel topic="liquidityScore">Covered on DEX</MethodologyLabel>}
+          title={<MethodologyLabel topic="liquidityScore" className="-my-2.5 md:my-0">Covered on DEX</MethodologyLabel>}
           value={stats.withLiquidity}
           subtext={`${stats.highConfidenceCoverage} primary/mixed · ${stats.fallbackCoverage} fallback · of ${stats.totalTracked}`}
         />

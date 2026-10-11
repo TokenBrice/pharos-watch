@@ -34,16 +34,17 @@ The page is organized into these sections, in order:
 1. `Why Pharos?`
 2. `Principles, AI Policy, and Corrections`
 3. `Who Is Building Pharos?`
-4. `Pharos in the Media`
+4. `Pharos in the Media` (`#media`; also the home of the recorded walkthroughs formerly on `/start/` — rows in `WALKTHROUGH_APPEARANCES` are flagged "Full walkthrough" with their duration)
 5. `What Pharos Tracks`
 6. `What Pharos Computes`
 7. `Companion Experiences`
 8. `Classification`
-9. `Data Pipeline`
-10. `Methodology`
-11. `About Pharos FAQ`
-12. `Disclaimer` (rendered as an `<aside>`, not a titled `AboutSection`)
-13. `Get in Touch`
+9. `Pharos Bluechip` (`#bluechip`; the former `/about/bluechip/` page, which now 301s here — copy lives in `src/components/about/bluechip-content.ts`)
+10. `Data Pipeline`
+11. `Methodology`
+12. `About Pharos FAQ`
+13. `Disclaimer` (rendered as an `<aside>`, not a titled `AboutSection`)
+14. `Get in Touch`
 
 ## Design And Interaction Rules
 
@@ -51,12 +52,12 @@ The page is organized into these sections, in order:
 - `What Pharos Tracks` and `What Pharos Computes` use full-row links instead of small linked headings. This preserves larger touch targets on mobile and reduces the repeated tile-grid feel.
 - CTA buttons keep `min-h-11` on mobile so the tap target does not collapse below the 44px floor.
 - Section cards stay flat with no per-section accent color; `frost-blue` is reserved for the brand hero numeral and inline link-hover states.
-- The data pipeline section should stay flat. Use a source-group list plus a 3-step flow summary rather than nested card grids.
+- The data pipeline section should stay flat. Use a source-group list plus a 3-step flow summary rather than nested card grids. Each source group in `DATA_SOURCE_GROUPS` (`src/lib/about-content.ts`) leads with a one-line `summary`; the exhaustive `sources` list and its evidence caveats sit behind a "Full source list" `<details>` disclosure (still in the static HTML). Grid items carry `min-w-0` and the long lists wrap anywhere, so unbreakable tokens cannot widen the card on phones.
 
 ## Navigation Contract
 
 - `/about/` remains a top-level route in the `Resources` menu's `About Pharos` column (the `NAV_GROUPS` entry keyed `"more"`).
-- `/about/` is the reference hub for low-frequency reference surfaces. `Start Here`, `Funding`, and `PharosVille` sit beside it in that column; `Daily Digest`, `Timeline`, `Changelog`, and `Blog` fill the `Updates` column; `Methodology`, `Coverage`, and `System Status` fill the `Transparency` column; and the Learn surfaces fill the `Research` column. `Upcoming` lives in the `Markets` menu; `Alert Bot` and `API Access` live in the `Tools` menu. The lighthouse button is gone: the masthead icon beside search now controls appearance only.
+- `/about/` is the reference hub for low-frequency reference surfaces. `Funding` and `PharosVille` sit beside it in that column; `Daily Digest`, `Timeline`, `Changelog`, and `Blog` fill the `Updates` column; `Methodology`, `Coverage`, and `System Status` fill the `Transparency` column; and the Learn surfaces fill the `Research` column. `Upcoming` lives in the `Markets` menu; `Alert Bot` and `API Access` live in the `Tools` menu. The lighthouse button is gone: the masthead icon beside search now controls appearance only.
 - `Peg Tracker` must link to `/depeg/`, because the dedicated depeg route owns the heatmap and depeg-history surface
 - `Dependency Map` must link to `/dependency-map/` and describe mapped collateral and wrapper links. Exposure mode traces linked coins using publication-bound supply and does not estimate losses or changes in Safety Scores. The computed-feature roster has no failure-scenario scoreboard or stress panel.
 - The tracked-feature roster's `Failure scenarios` entry describes the dossier's "How it breaks" section as a curated, maintainer-approved narrative of one hypothetical failure path per coin, not a simulator: nothing is computed or scored, and it never changes a Safety Score. It sits with the curated tracked features, not the computed roster, and has no link, because the section appears only on coins with an approved scenario.

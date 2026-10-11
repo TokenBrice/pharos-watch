@@ -138,10 +138,31 @@ describe("resolveNetDirection — valuation completeness", () => {
 });
 
 describe("resolveCoinNetFlow", () => {
-  it("withholds a partial window net with the unpriced counts", () => {
-    const net = resolveCoinNetFlow(stubCoin({ netFlow24hUsd: 5, valuation: valuation24h(PARTIAL_MINT_SIDE) }), "24h");
+  it("withholds a one-sided partial net but keeps its proven bound", () => {
+    const net = resolveCoinNetFlow(stubCoin({
+      netFlow24hUsd: null, mintVolume24hUsd: 30, burnVolume24hUsd: 25, valuation: valuation24h(PARTIAL_MINT_SIDE),
+    }), "24h");
     expect(net.valueUsd).toBeNull();
-    expect(net.note).toBe("Partial valuation: 2 mint / 0 burn events unpriced; signed net unavailable");
+    expect(net.bound).toEqual({ kind: "lower", valueUsd: 5 });
+    expect(net.note).toBe("Lower bound: 2 mint / 0 burn events unpriced; unpriced mints can only raise the net");
+  });
+
+  it("bounds a burn-side partial net from above", () => {
+    const net = resolveCoinNetFlow(stubCoin({
+      netFlow24hUsd: null, mintVolume24hUsd: 10, burnVolume24hUsd: 25,
+      valuation: valuation24h({ completeness: "partial", burnCompleteness: "partial", unpricedBurnEventCount: 1 }),
+    }), "24h");
+    expect(net.bound).toEqual({ kind: "upper", valueUsd: -15 });
+  });
+
+  it("withholds a net with no bound when both sides are partial", () => {
+    const net = resolveCoinNetFlow(stubCoin({
+      netFlow24hUsd: null, mintVolume24hUsd: 30, burnVolume24hUsd: 25,
+      valuation: valuation24h({ ...PARTIAL_MINT_SIDE, burnCompleteness: "partial", unpricedBurnEventCount: 1 }),
+    }), "24h");
+    expect(net.valueUsd).toBeNull();
+    expect(net.bound).toBeUndefined();
+    expect(net.note).toBe("Partial valuation: 2 mint / 1 burn events unpriced; signed net unavailable");
   });
 
   it("renders a null net unavailable, never 0", () => {
@@ -212,6 +233,31 @@ describe("aggregateCoinFlows24h", () => {
     expect(aggregate.net.valueUsd).toBe(netFlow24hUsd);
     expect(aggregate.net.completeness).toBe("unknown");
     expect(aggregate.net.note).toMatch(/coverage unknown/i);
+  });
+
+  it("proves the aggregate direction and bound from a partial coin's known subtotals", () => {
+    const aggregate = aggregateCoinFlows24h([
+      stubCoin({ has24hActivity: true, netFlow24hUsd: -50, valuation: valuation24h() }),
+      stubCoin({
+        has24hActivity: true, netFlow24hUsd: null, netFlowDirection24h: "minting",
+        mintVolume24hUsd: 300, burnVolume24hUsd: 100, valuation: valuation24h(PARTIAL_MINT_SIDE),
+      }),
+    ]);
+    expect(aggregate.direction).toBe("minting");
+    expect(aggregate.net.valueUsd).toBeNull();
+    expect(aggregate.net.bound).toEqual({ kind: "lower", valueUsd: 150 });
+  });
+
+  it("leaves the aggregate unbounded when components are bounded on opposite sides", () => {
+    const aggregate = aggregateCoinFlows24h([
+      stubCoin({ has24hActivity: true, netFlow24hUsd: null, mintVolume24hUsd: 300, valuation: valuation24h(PARTIAL_MINT_SIDE) }),
+      stubCoin({
+        has24hActivity: true, netFlow24hUsd: null, burnVolume24hUsd: 100,
+        valuation: valuation24h({ completeness: "partial", burnCompleteness: "partial", unpricedBurnEventCount: 1 }),
+      }),
+    ]);
+    expect(aggregate.direction).toBeNull();
+    expect(aggregate.net.bound).toBeUndefined();
   });
 
   it("keeps the aggregate direction when missing valuation cannot overturn it", () => {

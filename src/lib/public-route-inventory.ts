@@ -8,7 +8,7 @@ import { BLOG_POSTS } from "@/data/blog";
 import { CASE_STUDY_EVENT_WINDOWS } from "@/lib/case-study-client-index";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
-import { DIGEST_ENTRIES } from "@/lib/digest-registry";
+import { INDEXABLE_DIGEST_ENTRIES } from "@/lib/digest-registry";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -34,16 +34,16 @@ export interface PublicRouteInventoryEntry {
 }
 
 export const PUBLIC_PRIMARY_ROUTE_PATHS = [
-  "/", "/coverage/", "/alt-pegs/", "/start/", "/freezewatch/", "/depeg/", "/cemetery/",
+  "/", "/coverage/", "/alt-pegs/", "/freezewatch/", "/depeg/", "/cemetery/",
   "/compare/", "/liquidity/", "/upcoming/", "/digest/", "/safety-scores/", "/safety-scores/map/",
   "/stability-index/",
-  "/dependency-map/", "/yield/", "/screener/", "/funding/", "/status/", "/flows/", "/timeline/",
+  "/dependency-map/", "/yield/", "/screener/", "/funding/", "/status/", "/flows/",
   "/compliance/", "/pharoswatchbot/", "/methodology/",
 ] as const;
 
 export const PUBLIC_REFERENCE_ROUTE_PATHS = [
-  "/changelog/", "/blog/", "/about/", "/about/api/", "/about/bluechip/", "/depeg/archive/", "/learn/",
-  "/learn/glossary/", "/sitemap-tree/", "/api/", "/stablecoins/", "/stablecoins/backing/",
+  "/changelog/", "/blog/", "/about/", "/depeg/archive/", "/learn/",
+  "/api/", "/stablecoins/", "/stablecoins/backing/",
   "/stablecoins/governance/", "/stablecoins/infrastructure/", "/privacy/", "/docs/",
 ] as const;
 
@@ -70,12 +70,12 @@ const PUBLIC_ROUTE_CANDIDATES: readonly PublicRouteInventoryEntry[] = [
   ]),
   ...entries("blog", BLOG_POSTS.map((post) => `/blog/${post.slug}/`)),
   ...entries("comparison", STATIC_COMPARISON_PAGES.map((page) => page.href)),
-  ...entries("digest", DIGEST_ENTRIES.map((digest) => `/digest/${digest.date}/`)),
+  ...entries("digest", INDEXABLE_DIGEST_ENTRIES.map((digest) => `/digest/${digest.date}/`)),
   ...entries("depeg-event", DEPEG_EVENT_ENTRIES.map((event) => `/depeg/${event.slug}/`)),
   ...entries("docs", PUBLIC_DOCS.map((doc) => `/docs/${doc.slug}/`)),
 ];
 
-export const PUBLIC_ROUTE_INVENTORY: readonly PublicRouteInventoryEntry[] = Array.from(
+const PUBLIC_ROUTE_INVENTORY: readonly PublicRouteInventoryEntry[] = Array.from(
   new Map(PUBLIC_ROUTE_CANDIDATES.map((route) => [route.href, route])).values(),
 );
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CollateralUsageSection, type PublishedCollateralUsageEntry } from "../collateral-usage-section";
 
@@ -12,7 +12,9 @@ describe("CollateralUsageSection", () => {
   it("shows serial claims as wrappers without a percentage", () => {
     render(<CollateralUsageSection entries={[entry("susde-ethena", "serial", null)]} />);
     const row = screen.getByRole("link");
-    expect(row.textContent).toContain("Wrapper");
+    // The tag heads the group once rather than repeating on every row.
+    expect(screen.getByText("Wrapper")).toBeTruthy();
+    expect(row.getAttribute("aria-label")).toContain("Wrapper");
     expect(row.textContent).not.toContain("%");
     expect(row.textContent).not.toContain("share unknown");
   });
@@ -25,7 +27,7 @@ describe("CollateralUsageSection", () => {
       ...entry("susdc-spark", "serial", null), relationshipType,
     }]} />);
     const row = screen.getByRole("link", { name: `susdc-spark ${label}` });
-    expect(row.textContent).toContain(label);
+    expect(screen.getByText(label)).toBeTruthy();
     expect(row.textContent).not.toContain("Wrapper");
     expect(row.textContent).not.toContain("%");
   });
@@ -57,6 +59,8 @@ describe("CollateralUsageSection", () => {
       entry("large-basket", "basket", 0.521),
       entry("unknown-basket", "basket", null),
     ]} />);
+    expect(screen.getAllByRole("link")).toHaveLength(5);
+    fireEvent.click(screen.getByRole("button", { name: /Show all 6/ }));
     expect(screen.getAllByRole("link").map((row) => row.getAttribute("href"))).toEqual([
       "/stablecoin/large-basket", "/stablecoin/small-basket", "/stablecoin/unknown-basket",
       "/stablecoin/large-wrapper", "/stablecoin/small-wrapper", "/stablecoin/unknown-wrapper",

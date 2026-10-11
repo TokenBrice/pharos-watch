@@ -218,22 +218,18 @@ function ChainDeploymentAnchors({
           Crawlable links to the stablecoin profiles with checked-in deployments on this chain.
         </p>
       </div>
-      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
         {deployments.map((deployment) => (
           <li key={deployment.id} className="min-w-0">
             <Link
               href={deployment.href}
-              className="pharos-focus-ring block rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
+              title={`${deployment.pegLabel} / ${deployment.backingLabel} / ${deployment.governanceLabel}`}
+              className="pharos-focus-ring flex min-w-0 items-baseline justify-between gap-3 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent"
             >
-              <span className="flex min-w-0 items-baseline justify-between gap-3">
-                <span className="min-w-0 truncate font-medium text-foreground">{deployment.name}</span>
-                <span className="shrink-0 font-mono text-xs text-muted-foreground">{deployment.symbol}</span>
-              </span>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                {deploymentCountLabel(deployment.contractCount)} on {chainName}
-              </span>
-              <span className="mt-2 block truncate text-[11px] text-muted-foreground/80">
-                {deployment.pegLabel} / {deployment.backingLabel} / {deployment.governanceLabel}
+              <span className="min-w-0 truncate font-medium text-foreground">{deployment.name}</span>
+              <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                {deployment.symbol}
+                {deployment.contractCount > 1 ? ` ×${deployment.contractCount}` : ""}
               </span>
             </Link>
           </li>

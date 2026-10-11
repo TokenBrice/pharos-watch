@@ -51,10 +51,10 @@ export function ClassDigestRow({ digest, logos, highlightedId, eventDomId }: Cla
           {digest.rawCount} {digest.rawCount === 1 ? "event" : "events"}
         </span>
         {digest.summary ? (
-          <span className="min-w-0 flex-[1_1_12rem] break-words text-muted-foreground">· {digest.summary}</span>
+          <span className="order-2 min-w-0 flex-[1_1_100%] break-words text-muted-foreground lg:order-none lg:flex-[1_1_12rem]">· {digest.summary}</span>
         ) : null}
         <span className="hidden flex-1 sm:block" aria-hidden="true" />
-        <span className={`shrink-0 uppercase tracking-wide ${severityText}`} aria-label={`max severity ${severityLabel}`}>
+        <span className={`order-1 ml-auto shrink-0 uppercase tracking-wide lg:order-none ${severityText}`} aria-label={`max severity ${severityLabel}`}>
           max {severityLabel}
         </span>
       </summary>

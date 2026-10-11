@@ -14,7 +14,6 @@ import { NAV_ITEMS } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 import { CASE_STUDY_CLIENT_LIST } from "@/lib/case-study-client-index";
-import { GLOSSARY_ENTRIES } from "@/lib/glossary-content";
 import { BLOG_POSTS } from "@/data/blog";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { getActiveChainIds } from "@shared/lib/chains";
@@ -59,7 +58,7 @@ export {
   rankCommandPaletteResults,
 } from "./command-palette-scoring";
 
-export const COMMAND_PALETTE_EXTRA_PAGES: readonly NavItem[] = [
+const COMMAND_PALETTE_EXTRA_PAGES: readonly NavItem[] = [
   {
     href: "/stablecoins/",
     label: "Stablecoins",
@@ -97,7 +96,7 @@ export const COMMAND_PALETTE_EXTRA_PAGES: readonly NavItem[] = [
     description: "Privacy policy for Pharos web, API, and alert surfaces",
   },
   {
-    href: "/about/api/",
+    href: "/api/#reference",
     label: "API Reference",
     icon: KeyRound,
     description: "Endpoint reference, authentication model, and public API access",
@@ -159,7 +158,6 @@ const COMMAND_PALETTE_SECTION_ORDER: readonly CommandPaletteSection[] = [
   "Peg currencies",
   "Comparisons",
   "Case studies",
-  "Glossary",
   "Mechanism archetypes",
   "Recent depegs",
   "Docs",
@@ -652,18 +650,6 @@ export function buildCommandPaletteResultDescriptors({
         kind: "case-study",
         href: `/learn/case-studies/${study.slug}/`,
       }), "Case study");
-
-    // Glossary label tiers and weaker definition hits, deep-linked to the term.
-    appendMatches(GLOSSARY_ENTRIES,
-      (entry) => scorePageSearchMatch(searchQuery, { label: entry.term, description: entry.definition }) > 0,
-      (entry) => ({
-        id: `glossary-${entry.id}`,
-        label: entry.term,
-        sublabel: "Glossary term",
-        section: "Glossary",
-        kind: "glossary-term",
-        href: `/learn/glossary/#${entry.id}`,
-      }), "Glossary term");
 
     // Mechanism archetypes
     appendMatches(PALETTE_MECHANISMS,

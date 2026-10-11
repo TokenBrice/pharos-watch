@@ -10,6 +10,7 @@ import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { PUBLIC_ROUTE_PATHS } from "@/lib/public-route-inventory";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
+import { DAILY_DIGEST_INDEX_WINDOW_SEC } from "@/lib/digest-registry";
 import sitemap, { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "../sitemap";
 import digests from "../../../data/digests.json";
 import aiSummaries from "../../../data/ai-summaries.json";
@@ -37,19 +38,17 @@ describe("sitemap", () => {
   it("preserves the frozen URL, frequency, and priority policy for public hubs", () => {
     const expected = [
       ["/", "hourly", 1], ["/coverage/", "weekly", 0.6], ["/alt-pegs/", "daily", 0.7],
-      ["/start/", "monthly", 0.6], ["/freezewatch/", "daily", 0.85], ["/depeg/", "daily", 0.8],
+      ["/freezewatch/", "daily", 0.85], ["/depeg/", "daily", 0.8],
       ["/cemetery/", "monthly", 0.7], ["/compare/", "weekly", 0.7], ["/liquidity/", "daily", 0.8],
       ["/upcoming/", "daily", 0.6], ["/digest/", "daily", 0.6], ["/safety-scores/", "daily", 0.8],
       ["/safety-scores/map/", "daily", 0.6], ["/stability-index/", "daily", 0.8],
       ["/dependency-map/", "daily", 0.7], ["/yield/", "daily", 0.7], ["/screener/", "daily", 0.7],
       ["/funding/", "weekly", 0.5], ["/status/", "daily", 0.4], ["/flows/", "daily", 0.7],
-      ["/timeline/", "hourly", 0.75], ["/compliance/", "weekly", 0.6],
+      ["/compliance/", "weekly", 0.6],
       ["/pharoswatchbot/", "weekly", 0.7], ["/methodology/", "monthly", 0.6],
       ["/changelog/", "weekly", 0.5], ["/blog/", "weekly", 0.6], ["/about/", "monthly", 0.5],
-      ["/about/api/", "monthly", 0.5], ["/about/bluechip/", "monthly", 0.5],
       ["/depeg/archive/", "monthly", 0.5], ["/learn/", "monthly", 0.5],
-      ["/learn/glossary/", "monthly", 0.5],
-      ["/sitemap-tree/", "monthly", 0.3], ["/api/", "monthly", 0.5],
+      ["/api/", "monthly", 0.5],
       ["/stablecoins/", "weekly", 0.7], ["/stablecoins/backing/", "weekly", 0.6],
       ["/stablecoins/governance/", "weekly", 0.6], ["/stablecoins/infrastructure/", "weekly", 0.6],
       ["/privacy/", "yearly", 0.3], ["/docs/", "monthly", 0.6],
@@ -169,12 +168,18 @@ describe("sitemap", () => {
     expect(Number.isNaN((entry?.lastModified as Date).getTime())).toBe(false);
   });
 
-  it("lists every digest detail page as durable archive content", () => {
-
+  it("lists weekly recaps and recent daily digests, leaving older dailies out", () => {
+    const newestGeneratedAt = Math.max(...digests.map((digest) => digest.generatedAt));
     for (const digest of digests) {
       const entry = entriesByUrl.get(`${SITE_ORIGIN}/digest/${digest.date}/`);
+      const indexable = digest.digestType === "weekly"
+        || newestGeneratedAt - digest.generatedAt <= DAILY_DIGEST_INDEX_WINDOW_SEC;
 
-      expect(entry).toBeDefined();
+      if (!indexable) {
+        expect(entry, digest.date).toBeUndefined();
+        continue;
+      }
+      expect(entry, digest.date).toBeDefined();
       expect(entry?.lastModified).toEqual(new Date(digest.generatedAt * 1000));
       expect(entry?.changeFrequency).toBe("never");
     }

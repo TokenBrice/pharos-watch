@@ -179,22 +179,21 @@ describe("changelog and digest markdown", () => {
 
 describe("docs markdown", () => {
   it("prepends front matter to public docs", () => {
-    const apiDoc = PUBLIC_DOCS.find((doc) => doc.slug === "api-reference");
-    expect(apiDoc).toBeDefined();
-    const md = renderDocMarkdown(apiDoc!);
-    expect(md).toMatch(/^---\ntitle: "API Reference/);
-    expect(md).toContain('canonical: "https://pharos.watch/docs/api-reference/"');
-    expect(md).toContain("# Pharos API Reference");
+    const dewsDoc = PUBLIC_DOCS.find((doc) => doc.slug === "dews");
+    expect(dewsDoc).toBeDefined();
+    const md = renderDocMarkdown(dewsDoc!);
+    expect(md).toMatch(/^---\ntitle: "DEWS/);
+    expect(md).toContain('canonical: "https://pharos.watch/docs/dews/"');
   });
 
   it("renders the docs index with one route per public doc plus index", () => {
     const md = renderDocsIndexMarkdown();
     expect(md).toContain('canonical: "https://pharos.watch/docs/"');
     expect(md).toContain("# Documentation");
-    const apiDoc = PUBLIC_DOCS.find((doc) => doc.slug === "api-reference")!;
-    vi.spyOn(PUBLIC_DOCS, Symbol.iterator).mockImplementation(() => [apiDoc][Symbol.iterator]());
+    const dewsDoc = PUBLIC_DOCS.find((doc) => doc.slug === "dews")!;
+    vi.spyOn(PUBLIC_DOCS, Symbol.iterator).mockImplementation(() => [dewsDoc][Symbol.iterator]());
     const routes = [...iterateDocRoutes()];
-    expect(routes.map((route) => route.path)).toEqual(["/docs/", "/docs/api-reference/"]);
+    expect(routes.map((route) => route.path)).toEqual(["/docs/", "/docs/dews/"]);
     for (const route of routes) expect(route.body).toContain(`canonical: "https://pharos.watch${route.path}"`);
   });
 });

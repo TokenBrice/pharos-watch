@@ -90,6 +90,12 @@ export interface EvidenceModuleProps {
   headerRight?: ReactNode;
   /** The required visual summary: spectrum, rail, bar, matrix or strip. */
   visual?: ReactNode;
+  /**
+   * Moves `visual` out of the summary layer into the first fold, under this
+   * label, so the module reads as header · verdict · chips · folds. Used by
+   * the Control board, whose sub-modules stack four visuals in a row.
+   */
+  visualFold?: string;
   /** One verdict sentence (≤ 25 words), inline content only. */
   verdict?: ReactNode;
   /** At most three chips, in order: confidence · inheritance · scope. */
@@ -197,6 +203,7 @@ export function EvidenceModule({
   methodology,
   headerRight,
   visual,
+  visualFold,
   verdict,
   chipRow,
   children,
@@ -305,7 +312,12 @@ export function EvidenceModule({
   );
 
   const { summary, domainFolds, provenance } = partitionBodyChildren(children);
-  const hasVisual = visual != null && visual !== false;
+  const visualFoldNode = visualFold && visual != null && visual !== false ? (
+    <ModuleDisclosure id={id ? `${id}-visual` : undefined} label={visualFold}>
+      <div className="pt-2">{visual}</div>
+    </ModuleDisclosure>
+  ) : null;
+  const hasVisual = visualFoldNode === null && visual != null && visual !== false;
   const verdictNode = verdict ? (
     <p className="text-sm leading-relaxed text-pretty text-foreground">{verdict}</p>
   ) : null;
@@ -343,7 +355,7 @@ export function EvidenceModule({
         </div>
       ) : (
         <>
-          {visual}
+          {hasVisual ? visual : null}
           {verdictNode}
           {chipRowNode}
           {summary}
@@ -351,6 +363,7 @@ export function EvidenceModule({
       )}
       {/* One fold run, in fixed order, as direct children of the body so
           `MODULE_FOLD_RHYTHM_CLASS` closes the gaps between them. */}
+      {visualFoldNode}
       {domainFolds}
       {folds}
       {provenance}

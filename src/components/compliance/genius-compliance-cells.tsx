@@ -51,9 +51,9 @@ export function GeniusAuthorityCell({ row }: { row: GeniusComplianceRow }) {
       : undefined;
 
   return authority ? (
-    <span className="text-sm">
-      {authority}
-      {secondaryAuthority ? <span className="block text-xs text-muted-foreground">{secondaryAuthority}</span> : null}
+    <span className="block text-sm" title={[authority, secondaryAuthority].filter(Boolean).join(" / ")}>
+      <span className="line-clamp-3">{authority}</span>
+      {secondaryAuthority ? <span className="line-clamp-2 text-xs text-muted-foreground">{secondaryAuthority}</span> : null}
     </span>
   ) : (
     <EmptyCell />

@@ -54,8 +54,8 @@ export const MEDIA_APPEARANCES: readonly MediaAppearance[] = [
 ];
 
 /**
- * The subset that actually drives the product on screen, offered on /start as a
- * watch-instead-of-read path. The Ethereum Foundation broadcast is a discussion
+ * The subset that actually drives the product on screen, flagged on /about/ as
+ * a watch-instead-of-read path. The Ethereum Foundation broadcast is a discussion
  * rather than a tour, so it stays out.
  */
 export const WALKTHROUGH_APPEARANCES: readonly MediaAppearance[] = [

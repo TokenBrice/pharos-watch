@@ -568,3 +568,45 @@ export function liveCompositionDiffers(
       || sliceIdentity(slice.label) !== sliceIdentity(counterpart.label);
   });
 }
+
+/** The Reserves visual draws at most this many slices; the rest fold beneath it. */
+const RESERVE_VISUAL_SLICE_LIMIT = 5;
+
+export interface CondensedReserveSlices {
+  /** Drawn by the visual, largest first. */
+  shown: ReserveCompositionSlice[];
+  /** Folded beneath the visual, largest first; their share is stated, never dropped. */
+  rest: ReserveCompositionSlice[];
+  restPct: number;
+}
+
+/**
+ * Long baskets (USDT 11 slices, FRAX 45) drew a treemap of crumbs and
+ * near-duplicate tiles. Above the limit, slices sharing an asset class (or,
+ * unclassified, the same normalized name) and a risk tier merge into one
+ * tile; the largest groups are drawn and the remainder folds with its count
+ * and share. Short baskets pass through unchanged.
+ */
+export function condenseReserveSlices(slices: readonly ReserveCompositionSlice[]): CondensedReserveSlices {
+  if (slices.length <= RESERVE_VISUAL_SLICE_LIMIT) return { shown: [...slices], rest: [], restPct: 0 };
+  const groups = new Map<string, ReserveCompositionSlice[]>();
+  for (const slice of slices) {
+    const key = `${slice.role ? `class:${slice.role}` : `name:${sliceIdentity(slice.label)}`}|${slice.risk}`;
+    groups.set(key, [...(groups.get(key) ?? []), slice]);
+  }
+  const merged = [...groups.entries()].map(([key, members]): ReserveCompositionSlice => {
+    const [first] = members as [ReserveCompositionSlice, ...ReserveCompositionSlice[]];
+    if (members.length === 1) return first;
+    return {
+      key: `group:${key}`,
+      label: `${first.role ?? first.label} (${members.length} slices)`,
+      pct: members.reduce((sum, member) => sum + member.pct, 0),
+      risk: first.risk,
+      detail: members.map((member) => member.label).join(" · "),
+      role: first.role ?? null,
+    };
+  }).sort((a, b) => b.pct - a.pct);
+  const shown = merged.slice(0, RESERVE_VISUAL_SLICE_LIMIT);
+  const rest = merged.slice(RESERVE_VISUAL_SLICE_LIMIT);
+  return { shown, rest, restPct: rest.reduce((sum, slice) => sum + slice.pct, 0) };
+}

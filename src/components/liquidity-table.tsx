@@ -39,7 +39,7 @@ const LIQUIDITY_COLUMNS: readonly DataTableColumn<LiquiditySortKey>[] = [
     label: "Score",
     headerAdornment: <MethodologyHint topic="liquidityScore" />,
     sortKey: "score",
-    className: "w-[84px] text-right",
+    className: "w-[100px] text-right",
   },
   { id: "tvl", label: "DEX TVL", sortKey: "tvl", className: "w-[104px] text-right" },
   { id: "tvlTrend", label: "7d Trend", sortKey: "tvlTrend", className: "hidden lg:table-cell text-right" },
@@ -48,8 +48,8 @@ const LIQUIDITY_COLUMNS: readonly DataTableColumn<LiquiditySortKey>[] = [
   { id: "vtRatio", label: "Vol/TVL", sortKey: "vtRatio", className: "hidden sm:table-cell text-right" },
   { id: "pools", label: "Pools", sortKey: "pools", className: "hidden sm:table-cell text-right" },
   { id: "chains", label: "Chains", sortKey: "chains", className: "hidden sm:table-cell text-right" },
-  { id: "topProtocol", label: "Top Protocol", className: "hidden md:table-cell text-left" },
-  { id: "balance", label: "Balance", sortKey: "balance", className: "hidden xl:table-cell text-right" },
+  { id: "topProtocol", label: "Top Protocol", className: "hidden md:table-cell min-w-[10rem] text-left" },
+  { id: "balance", label: "Balance", sortKey: "balance", className: "hidden xl:table-cell w-[7.5rem] text-right" },
   { id: "organic", label: "Organic", sortKey: "organic", className: "hidden xl:table-cell text-right" },
   { id: "durability", label: "Durability", sortKey: "durability", className: "hidden xl:table-cell text-right" },
 ] as const;
@@ -144,7 +144,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
                   badge={
                     <Badge
                       variant="outline"
-                      className={`text-[10px] ${coverageBadge.className}`}
+                      className={`text-[10px] ${coverageBadge.className} ${coverageBadge.label === "Mixed" || coverageBadge.label === "Primary" ? "hidden sm:inline-flex" : ""}`}
                       title={liq.unavailableReason ?? formatLiquiditySourceMix(liq.sourceMix)}
                     >
                       {coverageBadge.label}

@@ -28,7 +28,6 @@ const FOOTER_NAV: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/methodology/", label: "Methodology" },
   { href: "/coverage/", label: "Coverage" },
   { href: "/api/", label: "API" },
-  { href: "/sitemap-tree/", label: "Sitemap" },
 ];
 
 const FOOTER_META: ReadonlyArray<{ href: string; label: string; external?: boolean }> = [

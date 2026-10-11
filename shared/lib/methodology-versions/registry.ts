@@ -432,10 +432,6 @@ export const METHODOLOGY_CHANGELOG_MARKDOWN_KEYS = METHODOLOGY_CHANGELOG_REGISTR
   (entry) => entry.markdownKey,
 ) as readonly MethodologyChangelogMarkdownKey[];
 
-const REGISTRY_BY_KEY = Object.fromEntries(
-  METHODOLOGY_CHANGELOG_REGISTRY.map((entry) => [entry.key, entry]),
-) as Record<MethodologyChangelogRegistryKey, MethodologyChangelogRegistryEntry>;
-
 const REGISTRY_BY_MARKDOWN_KEY = Object.fromEntries(
   METHODOLOGY_CHANGELOG_REGISTRY.map((entry) => [entry.markdownKey, entry]),
 ) as Record<MethodologyChangelogMarkdownKey, MethodologyChangelogRegistryEntry>;
@@ -444,16 +440,6 @@ export function getMethodologyVersionAt(key: MethodologyChangelogRegistryKey, un
   return key === "depeg-resolver"
     ? getDepegResolverMethodologyVersionAt(unixSeconds)
     : getManagedMethodologyVersion(key).getVersionAt(unixSeconds);
-}
-
-export function getMethodologyChangelogEntry(
-  key: MethodologyChangelogRegistryKey,
-): MethodologyChangelogRegistryEntry {
-  const entry = REGISTRY_BY_KEY[key];
-  if (!entry) {
-    throw new Error(`Unknown methodology changelog key: ${key}`);
-  }
-  return entry;
 }
 
 export function getMethodologyChangelogEntryByMarkdownKey(

@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   TableCell,
+  TableRow,
   TableToolbarFrame,
 } from "@/components/table";
 import {
@@ -95,8 +97,20 @@ function FlowNetCell({
   );
 }
 
+/** Observed zero: both 24h sides fully valued and no mint or burn event. Unknown valuation is never "idle". */
+function hasNoObserved24hActivity(coin: MintBurnCoinFlow): boolean {
+  const window24h = resolveMintBurnValuation(coin.valuation?.window24h);
+  return (
+    coin.mintVolume24hUsd === 0 &&
+    coin.burnVolume24hUsd === 0 &&
+    window24h.mintCompleteness === "complete" &&
+    window24h.burnCompleteness === "complete"
+  );
+}
+
 export function FlowTable({ coins, isLoading }: FlowTableProps) {
   const router = useRouter();
+  const [showIdle, setShowIdle] = useState(false);
   const {
     sortKey,
     sortDirection,
@@ -110,6 +124,9 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
   );
   const logos = logosById;
   const prefetch = usePrefetchStablecoin();
+
+  const idleCount = sorted.filter(hasNoObserved24hActivity).length;
+  const visibleRows = showIdle ? sorted : sorted.filter((coin) => !hasNoObserved24hActivity(coin));
 
   const toolbar = (
     <TableToolbarFrame
@@ -147,7 +164,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
         getAriaSortValue,
       }}
     >
-      {sorted.map((coin) => {
+      {visibleRows.map((coin) => {
             const meta = TRACKED_META_BY_ID.get(coin.stablecoinId);
             const name = meta?.name ?? coin.symbol;
             const label = stablecoinLabel({ id: coin.stablecoinId, symbol: coin.symbol });
@@ -277,6 +294,22 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
               </InteractiveTableRow>
             );
       })}
+      {idleCount > 0 && (
+        <TableRow rowIntent="static">
+          <TableCell colSpan={FLOW_TABLE_COLUMNS.length} className="py-3 text-center text-sm text-muted-foreground">
+            <button
+              type="button"
+              onClick={() => setShowIdle((value) => !value)}
+              aria-expanded={showIdle}
+              className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/60 px-4 py-2 text-foreground hover:bg-muted/40 sm:min-h-9"
+            >
+              {showIdle
+                ? `Hide ${idleCount} coins with no 24h mint or burn`
+                : `Show ${idleCount} coins with no mint or burn in the last 24h`}
+            </button>
+          </TableCell>
+        </TableRow>
+      )}
       {sorted.length === 0 && (
         <DataTableEmptyRow colSpan={FLOW_TABLE_COLUMNS.length}>
           No mint/burn events in this period.

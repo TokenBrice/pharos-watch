@@ -3,6 +3,7 @@ import type {
   MintBurnCoinFlow,
   MintBurnGauge,
   MintBurnHourlyBucket,
+  MintBurnSignedNetBound,
   MintBurnValuationCompleteness,
 } from "@shared/types";
 import {
@@ -30,6 +31,8 @@ export interface FlowPressureReceiptRow {
   completeness: MintBurnValuationCompleteness;
   /** Accessible reason for a lower bound, unavailable net, or unknown coverage; `null` when complete. */
   note: string | null;
+  /** Proven one-sided bound on an unavailable net row. */
+  bound?: MintBurnSignedNetBound | null;
 }
 
 export interface FlowPressureReceiptCoverageRow {
@@ -169,6 +172,7 @@ export function buildFlowPressureReceiptModel({
         detail: "Mint minus burn",
         completeness: aggregate.net.completeness,
         note: aggregate.net.note,
+        bound: aggregate.net.bound ?? null,
       },
       {
         id: "mint-7d",
@@ -196,6 +200,7 @@ export function buildFlowPressureReceiptModel({
         detail: "Per-coin covered window",
         completeness: net7d.completeness,
         note: net7d.note,
+        bound: net7d.bound ?? null,
       },
     ],
   };

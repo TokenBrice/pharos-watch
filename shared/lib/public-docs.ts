@@ -1,6 +1,6 @@
 import PUBLIC_DOC_SOURCE_FILES from "./public-doc-manifest.json";
 
-export const DOC_GROUPS = ["system", "methodology", "design"] as const;
+export const DOC_GROUPS = ["methodology"] as const;
 export type DocGroup = (typeof DOC_GROUPS)[number];
 
 export interface PublicDoc {
@@ -17,34 +17,6 @@ export interface PublicDoc {
 }
 
 const PUBLIC_DOC_METADATA: readonly Omit<PublicDoc, "source">[] = [
-  {
-    slug: "api-reference",
-    title: "API Reference",
-    summary:
-      "Public Pharos API contracts for stablecoin data: endpoints, authentication, response schemas, pagination, freshness headers, and dataset exports.",
-    group: "system",
-  },
-  {
-    slug: "architecture",
-    title: "Architecture",
-    summary:
-      "How Pharos is built: static Next.js export, Cloudflare Pages Functions, Worker API lanes, D1 storage, route ownership, and SEO metadata rules.",
-    group: "system",
-  },
-  {
-    slug: "data-flow-map",
-    title: "Data Flow Map",
-    summary:
-      "Source-to-UI map for Pharos stablecoin data, covering market prices, peg monitoring, liquidity, report cards, alerts, and generated public artifacts.",
-    group: "system",
-  },
-  {
-    slug: "worker-and-api-limits",
-    title: "Worker and API Limits",
-    summary:
-      "Operational limits for the Pharos Worker and API: cron budgets, fetch connection caps, polling intervals, cache behavior, and guardrail checks.",
-    group: "system",
-  },
   {
     slug: "classification",
     title: "Classification",
@@ -135,20 +107,6 @@ const PUBLIC_DOC_METADATA: readonly Omit<PublicDoc, "source">[] = [
     summary:
       "Off-catalog PSI historical assets: authoritative continuity, monitoring eligibility, public listing exclusions and unavailable source history.",
     group: "methodology",
-  },
-  {
-    slug: "design-language",
-    title: "Design Language",
-    summary:
-      "Pharos design language reference for live UI patterns, typography, spacing, responsive behavior, visual hierarchy, and route-specific conventions.",
-    group: "design",
-  },
-  {
-    slug: "design-tokens",
-    title: "Design Tokens",
-    summary:
-      "Design token reference for Pharos CSS variables, semantic layers, colors, spacing, component styling, and token ownership rules.",
-    group: "design",
   },
 ] as const;
 

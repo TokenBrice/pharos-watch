@@ -1,8 +1,4 @@
 [
-  "api-reference.md",
-  "architecture.md",
-  "data-flow-map.md",
-  "worker-and-api-limits.md",
   "classification.md",
   "listing-policy.md",
   "pricing-pipeline.md",
@@ -15,7 +11,5 @@
   "chain-health.md",
   "mint-burn-flows.md",
   "yield-intelligence.md",
-  "shadow-stablecoins.md",
-  "design-language.md",
-  "design-tokens.md"
+  "shadow-stablecoins.md"
 ]

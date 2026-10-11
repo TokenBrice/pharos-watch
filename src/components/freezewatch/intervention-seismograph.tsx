@@ -44,6 +44,7 @@ const VIEWBOX_HEIGHT = 220;
 const PADDING_TOP = 28;
 const PADDING_BOTTOM = 28;
 const PLOT_HEIGHT = VIEWBOX_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
+const ANNOTATION_LIFT = 16;
 const BASELINE_Y = VIEWBOX_HEIGHT - PADDING_BOTTOM;
 
 function quarterLabelSortKey(label: string): number | null {
@@ -175,7 +176,7 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
   const yForCount = (count: number) => BASELINE_Y - (count / peakTotal) * PLOT_HEIGHT;
   const labelInterval = Math.max(1, Math.ceil(n / 6));
 
-  const annotations = NOTABLE_QUAKES.map((quake) => {
+  const placed = NOTABLE_QUAKES.map((quake) => {
     const index = points.findIndex((p) => p.quarter === quake.quarter);
     if (index === -1) return null;
     const point = points[index];
@@ -186,6 +187,15 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
     (entry): entry is { quarter: string; label: string; point: QuarterPoint; x: number; topY: number } =>
       entry !== null,
   );
+  // A label whose neighbour sits within ~12% of the width is lifted one step so the two never overprint.
+  const annotations = placed.map((annotation, index) => {
+    const previous = index > 0 ? placed[index - 1] : null;
+    const lift = previous && annotation.x - previous.x < VIEWBOX_WIDTH * 0.12 ? ANNOTATION_LIFT : 0;
+    return { ...annotation, lift };
+  });
+  // Drop a regular tick that would sit on top of the final (always-shown) tick.
+  const showTick = (index: number) =>
+    index === n - 1 || (index % labelInterval === 0 && n - 1 - index >= labelInterval * 0.75);
 
   const horizonPoints = points
     .map((point, index) => {
@@ -198,7 +208,7 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
   const horizonPath = `M ${horizonPoints}`;
 
   return (
-    <div className="mt-5 overflow-hidden rounded-xl border border-border/70 bg-muted/20 p-3">
+    <div className="relative mt-5 overflow-hidden rounded-xl border border-border/70 bg-muted/20 p-3">
       <svg
         role="img"
         aria-label="Quarterly intervention seismograph"
@@ -271,42 +281,45 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
               x1={annotation.x}
               x2={annotation.x}
               y1={annotation.topY - 4}
-              y2={annotation.topY - 18}
+              y2={annotation.topY - 18 - annotation.lift}
               stroke="var(--color-muted-foreground)"
               strokeWidth={0.75}
             />
             <circle cx={annotation.x} cy={annotation.topY - 4} r={1.6} fill="var(--color-muted-foreground)" />
-            <text
-              x={annotation.x}
-              y={annotation.topY - 22}
-              textAnchor="middle"
-              fontSize={10}
-              fontFamily="ui-monospace, monospace"
-              fill="var(--color-foreground)"
-            >
-              {annotation.label}
-            </text>
           </g>
         ))}
-
-        {points.map((point, index) => {
-          if (index % labelInterval !== 0 && index !== n - 1) return null;
-          const x = index * slotWidth + slotWidth / 2;
-          return (
-            <text
+      </svg>
+      {/* Labels are HTML over the stretched SVG so preserveAspectRatio="none" cannot distort the type. */}
+      <div className="pointer-events-none absolute font-mono text-[10px]" style={{ inset: "0.75rem" }} aria-hidden="true">
+        {annotations.map((annotation) => (
+          <span
+            key={`label-${annotation.quarter}`}
+            className="absolute whitespace-nowrap leading-none text-foreground"
+            style={{
+              transform: "translate(-50%, -100%)",
+              left: `${(annotation.x / VIEWBOX_WIDTH) * 100}%`,
+              top: `${((annotation.topY - 20 - annotation.lift) / VIEWBOX_HEIGHT) * 100}%`,
+            }}
+          >
+            {annotation.label}
+          </span>
+        ))}
+        {points.map((point, index) =>
+          showTick(index) ? (
+            <span
               key={`tick-${point.quarter}`}
-              x={x}
-              y={BASELINE_Y + 14}
-              textAnchor="middle"
-              fontSize={10}
-              fontFamily="ui-monospace, monospace"
-              fill="var(--color-muted-foreground)"
+              className="absolute whitespace-nowrap leading-none text-muted-foreground"
+              style={{
+                transform: index === 0 ? undefined : index === n - 1 ? "translateX(-100%)" : "translateX(-50%)",
+                left: `${(((index === n - 1 ? n : index === 0 ? 0 : index + 0.5) * slotWidth) / VIEWBOX_WIDTH) * 100}%`,
+                top: `${((BASELINE_Y + 6) / VIEWBOX_HEIGHT) * 100}%`,
+              }}
             >
               {point.quarter}
-            </text>
-          );
-        })}
-      </svg>
+            </span>
+          ) : null,
+        )}
+      </div>
     </div>
   );
 }

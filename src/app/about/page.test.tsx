@@ -47,9 +47,8 @@ describe("AboutPage", () => {
     });
     expect(aboutJsonLd?.mentions).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ "@id": "https://pharos.watch/about/api/#webapi" }),
-        expect.objectContaining({ "@id": "https://pharos.watch/about/api/#data-catalog" }),
-        expect.objectContaining({ "@id": "https://pharos.watch/docs/data-flow-map/#tech-article" }),
+        expect.objectContaining({ "@id": "https://pharos.watch/api/#webapi" }),
+        expect.objectContaining({ "@id": "https://pharos.watch/api/#data-catalog" }),
         expect.objectContaining({ "@id": "https://pharos.watch/about/#principles" }),
         expect.objectContaining({ "@id": "https://pharos.watch/funding/#funding" }),
       ]),
@@ -85,5 +84,15 @@ describe("AboutPage", () => {
     const visibleText = visibleDocument.body.textContent ?? "";
 
     expect(visibleText).toContain(`freeze monitoring across ${BLACKLIST_STABLECOINS.length} stablecoins`);
+  });
+
+  it("hosts the Bluechip explainer at the #bluechip anchor the old route redirects to", () => {
+    const section = visibleDocument.getElementById("bluechip");
+    expect(section?.querySelector("h2")?.textContent).toBe("Pharos Bluechip");
+    expect(section?.textContent).toContain("Gate 05");
+  });
+
+  it("flags the recorded walkthroughs that moved here from /start/", () => {
+    expect(visibleDocument.getElementById("media")?.textContent).toContain("Full walkthrough");
   });
 });

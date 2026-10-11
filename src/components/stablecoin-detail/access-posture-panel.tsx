@@ -11,6 +11,7 @@ import { EvidenceModule } from "@/components/stablecoin-detail/evidence-module";
 import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { RailCard } from "@/components/stablecoin-detail/rail-card";
+import { ACCESS_LOOKTHROUGH_NOT_ADDITIVE_NOTE } from "@shared/lib/classification";
 import type { StablecoinSafetyScoreV9AccessRow } from "@/lib/stablecoin-safety-score-v9-presentation";
 import type { TransferReviewDeployment, TransferReviewView } from "@/lib/transfer-review";
 
@@ -89,10 +90,35 @@ function VerificationDisclosure({ review, children }: { review: TransferReviewVi
 }
 
 /**
+ * "Reserve-access diagnostics (N)": the look-through rows, folded on both
+ * variants. The count stays in the summary so a collapsed fold still states
+ * that diagnostics exist; the non-additive caveat is said once, not per row.
+ */
+function DiagnosticsDisclosure({ rows }: { rows: readonly StablecoinSafetyScoreV9AccessRow[] }) {
+  const hasAuthorities = rows.some((row) => row.key.startsWith("reserve-access:"));
+  return (
+    <ModuleDisclosure label="Reserve-access diagnostics" count={rows.length}>
+      <dl className="mt-1 space-y-1.5 pb-1">
+        {rows.map((row) => (
+          <div key={row.key} className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs">
+            <dt className="text-muted-foreground">{row.label}</dt>
+            <dd className="text-foreground">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {hasAuthorities ? (
+        <p className="pb-1 text-[11px] leading-snug text-muted-foreground">{ACCESS_LOOKTHROUGH_NOT_ADDITIVE_NOTE}</p>
+      ) : null}
+    </ModuleDisclosure>
+  );
+}
+
+/**
  * The scored access-posture enums and, when a transfer review exists, the
  * per-deployment evidence behind them.
  *
- * - `rail` (xl+): the compact rail card, every row as a label/value line.
+ * - `rail` (xl+): the compact rail card, the scored enums as label/value
+ *   lines, then the same diagnostics fold as the strip.
  * - `strip` (the in-flow twin below xl, inside the Exit board): an evidence
  *   module in strip form — the four scored enums on one row of labelled
  *   cells, then the reserve-access diagnostics (when published), the
@@ -124,6 +150,9 @@ export function AccessPosturePanel({
 }) {
   if (rows.length === 0) return null;
 
+  const scored = rows.filter((row) => SCORED_ACCESS_KEYS[row.key] === true);
+  const diagnostics = rows.filter((row) => SCORED_ACCESS_KEYS[row.key] !== true);
+
   if ((variant ?? (compact ? "rail" : "strip")) === "rail") {
     return (
       <RailCard
@@ -133,13 +162,18 @@ export function AccessPosturePanel({
       >
         <div className="px-4 pb-4">
           <dl className="space-y-1">
-            {rows.map((row) => (
+            {(scored.length > 0 ? scored : rows).map((row) => (
               <div key={row.key} className="flex items-baseline justify-between gap-3 text-xs">
                 <dt className="text-muted-foreground">{row.label}</dt>
                 <dd className="text-right font-mono text-foreground">{row.value}</dd>
               </div>
             ))}
           </dl>
+          {scored.length > 0 && diagnostics.length > 0 ? (
+            <div className="mt-1">
+              <DiagnosticsDisclosure rows={diagnostics} />
+            </div>
+          ) : null}
           {review === null ? null : (
             <div className="mt-1">
               <VerificationDisclosure review={review}>
@@ -155,9 +189,6 @@ export function AccessPosturePanel({
       </RailCard>
     );
   }
-
-  const scored = rows.filter((row) => SCORED_ACCESS_KEYS[row.key] === true);
-  const diagnostics = rows.filter((row) => SCORED_ACCESS_KEYS[row.key] !== true);
 
   return (
     <EvidenceModule
@@ -184,18 +215,7 @@ export function AccessPosturePanel({
       }
       folds={
         <>
-          {diagnostics.length > 0 ? (
-            <ModuleDisclosure label="Reserve-access diagnostics" count={diagnostics.length}>
-              <dl className="mt-1 space-y-1.5 pb-1">
-                {diagnostics.map((row) => (
-                  <div key={row.key} className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs">
-                    <dt className="text-muted-foreground">{row.label}</dt>
-                    <dd className="text-foreground">{row.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </ModuleDisclosure>
-          ) : null}
+          {diagnostics.length > 0 ? <DiagnosticsDisclosure rows={diagnostics} /> : null}
           {review !== null ? <VerificationDisclosure review={review} /> : null}
         </>
       }

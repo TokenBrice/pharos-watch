@@ -9,7 +9,7 @@ import { openCommandPalette } from "@/lib/command-palette";
 import { guessRoute, type RouteSuggestion } from "@/lib/route-guess";
 
 const FIXED_ENTRY_POINTS: { href: string; label: string }[] = [
-  { href: "/", label: "Dashboard" },
+  { href: "/", label: "Home" },
   { href: "/stablecoins/usd/", label: "Browse Stablecoins" },
   { href: "/digest/", label: "Daily Digest" },
   { href: "/compare/", label: "Compare Tools" },

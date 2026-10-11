@@ -23,12 +23,11 @@ import {
   CASE_STUDY_OUTCOME_CHIPS,
   CASE_STUDY_OUTCOME_LABELS,
 } from "@/lib/case-study-outcomes";
-import { GLOSSARY_ENTRIES } from "@/lib/glossary-content";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Learn Stablecoin Mechanisms and Case Studies",
   description:
-    "Learn how stablecoins hold their pegs, why they fail, and how Pharos names the risks across mechanisms, case studies, and glossary definitions.",
+    "Learn how stablecoins hold their pegs, why they fail, and how Pharos names the risks across mechanisms and case studies.",
   canonical: "/learn/",
   ogImage: `${SITE_ORIGIN}/og-editorial-learn.png`,
 });
@@ -37,10 +36,6 @@ export const metadata: Metadata = buildPageMetadata({
 // mechanism spread. Referenced by direct import so a renamed/removed module is a
 // compile-time error rather than a runtime slug miss.
 const MARQUEE_STUDIES = [usdcSvb2023, terraUst2022, usd0ppUsual2025] as readonly CaseStudy[];
-
-// The three Pharos-native signals — the terms a reader most needs before the
-// data surfaces make sense.
-const FEATURED_GLOSSARY_IDS = ["psi", "dews", "pegscore"] as const;
 
 // Outcome vocabulary for the verdict ledger. Bar fills match the existing
 // segmented bar; figure colors reuse the case-study outcome-chip palette so the
@@ -200,12 +195,6 @@ export default function LearnIndexPage() {
 
   const totalStudies = CASE_STUDY_LIST.length;
 
-  const glossaryById = new Map(GLOSSARY_ENTRIES.map((entry) => [entry.id, entry]));
-  const featuredTerms = FEATURED_GLOSSARY_IDS.map((id) => glossaryById.get(id)).filter(
-    (entry): entry is NonNullable<typeof entry> => Boolean(entry),
-  );
-  const remainingTerms = GLOSSARY_ENTRIES.length - featuredTerms.length;
-
   return (
     <LearnPageShell
       breadcrumbItems={[
@@ -213,7 +202,7 @@ export default function LearnIndexPage() {
         { name: "Learn", url: "/learn/" },
       ]}
       title="How Stables Work & Break"
-      subtitle="How stablecoins hold a dollar, why they break it, and the vocabulary Pharos uses to name the risk."
+      subtitle="How stablecoins hold a dollar, why they break it, and what the record of real depegs shows."
     >
       <OutcomeLedger total={totalStudies} counts={CASE_STUDY_OUTCOME_COUNTS} />
 
@@ -315,49 +304,6 @@ export default function LearnIndexPage() {
             </li>
           ))}
         </ul>
-      </section>
-
-      {/* 03 — Glossary: the lexicon */}
-      <section
-        aria-labelledby="learn-glossary"
-        className="space-y-6 border-t border-border/60 pt-12 sm:pt-14"
-      >
-        <ModuleHeader
-          index="03"
-          headingId="learn-glossary"
-          title="Glossary"
-          href="/learn/glossary/"
-          blurb={`The vocabulary, version-pinned. Every Pharos term defined and anchored to the methodology section that uses it, ${GLOSSARY_ENTRIES.length} entries deep.`}
-          cta="Open the glossary"
-        />
-        <dl className="grid gap-x-10 gap-y-6 border-t border-border/40 pt-5 sm:grid-cols-3">
-          {featuredTerms.map((entry) => (
-            <div key={entry.id} className="space-y-1.5">
-              <dt className="flex items-baseline justify-between gap-2">
-                <Link
-                  href={`/learn/glossary/#${entry.id}`}
-                  className="pharos-focus-ring rounded-sm font-semibold text-foreground transition-colors hover:text-frost-blue"
-                >
-                  {entry.term}
-                </Link>
-                <span className="shrink-0 pharos-numeric text-[10px] uppercase tracking-[0.08em] text-muted-foreground/80">
-                  {entry.methodologyVersion}
-                </span>
-              </dt>
-              <dd className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">
-                {entry.definition}
-              </dd>
-            </div>
-          ))}
-        </dl>
-        <p className="text-xs text-muted-foreground">
-          <Link
-            href="/learn/glossary/"
-            className="pharos-focus-ring rounded-sm font-mono uppercase tracking-[0.08em] text-foreground hover:underline hover:underline-offset-4"
-          >
-            +{remainingTerms} more terms, A&ndash;Z &rarr;
-          </Link>
-        </p>
       </section>
 
       <CrossLinksFooter

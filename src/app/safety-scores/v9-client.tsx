@@ -284,7 +284,7 @@ export function ReportCardsV9Client() {
   const renderCard = (card: V9ConsumerCard, index: number) => (
     <div
       key={card.id}
-      className="min-w-0 rounded-xl"
+      className="min-w-0 rounded-xl [&>div]:h-full [&>div>div]:h-full"
     >
       <LazySection rootMargin="100px" placeholder={lazyCardSkeleton}>
         <div className="pharos-card-enter">

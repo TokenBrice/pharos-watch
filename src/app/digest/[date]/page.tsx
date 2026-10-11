@@ -14,7 +14,7 @@ import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { formatIsoTimestamp } from "@shared/lib/format";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { DigestContentEntry } from "@shared/types";
-import { DIGEST_BY_DATE, DIGEST_ENTRIES } from "@/lib/digest-registry";
+import { DIGEST_BY_DATE, DIGEST_ENTRIES, isDigestIndexable } from "@/lib/digest-registry";
 import { getDigestModelLabel } from "@/lib/digest-model-label";
 
 type DigestWithLlmMetadata = DigestContentEntry & {
@@ -215,6 +215,7 @@ const route = createStaticSlugRoute({
       ogImage: "/og-editorial-digest.png",
       ogType: "article",
       publishedTime: formatIsoTimestamp(digest.generatedAt),
+      robots: isDigestIndexable(digest) ? undefined : { index: false, follow: true },
     });
   },
   missingMetadata: { title: "Digest Not Found", robots: { index: false } },

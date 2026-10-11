@@ -23,8 +23,10 @@ import {
   TEAM_MEMBERS,
   type AboutFeatureItem,
 } from "@/lib/about-content";
-import { MEDIA_APPEARANCES, type MediaAppearance } from "@/lib/media-appearances";
+import { MEDIA_APPEARANCES, WALKTHROUGH_APPEARANCES, type MediaAppearance } from "@/lib/media-appearances";
 import { PRINCIPLES_AI_POLICY, PRINCIPLES_AXIOMS, PRINCIPLES_CORRECTIONS } from "@/lib/about-principles-content";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
+import { BLUECHIP_GATES, BLUECHIP_LEDE, BLUECHIP_REFUSALS, BLUECHIP_WHAT_IT_MEANS } from "./bluechip-content";
 import {
   ACTIVE_STABLE_VALUE_INVESTMENT_COUNT,
   ACTIVE_VARIANT_STABLECOIN_COUNT,
@@ -62,27 +64,21 @@ const ABOUT_PAGE_JSON_LD = {
   mentions: [
     {
       "@type": "WebAPI",
-      "@id": `${SITE_ORIGIN}/about/api/#webapi`,
+      "@id": `${SITE_ORIGIN}/api/#webapi`,
       name: "Pharos API",
-      url: `${SITE_ORIGIN}/about/api/`,
+      url: `${SITE_ORIGIN}/api/`,
     },
     {
       "@type": "DataCatalog",
-      "@id": `${SITE_ORIGIN}/about/api/#data-catalog`,
+      "@id": `${SITE_ORIGIN}/api/#data-catalog`,
       name: "Pharos public data artifacts",
-      url: `${SITE_ORIGIN}/about/api/`,
+      url: `${SITE_ORIGIN}/api/`,
     },
     {
       "@type": "WebPage",
       "@id": `${SITE_ORIGIN}/coverage/#coverage`,
       name: "Coverage Matrix",
       url: `${SITE_ORIGIN}/coverage/`,
-    },
-    {
-      "@type": "TechArticle",
-      "@id": `${SITE_ORIGIN}/docs/data-flow-map/#tech-article`,
-      name: "Data Flow Map",
-      url: `${SITE_ORIGIN}/docs/data-flow-map/`,
     },
     {
       "@type": "WebPage",
@@ -111,13 +107,27 @@ const ABOUT_PAGE_JSON_LD = {
   ],
 } as const;
 
+// Each group leads with a one-line summary; the exhaustive vendor list (and its
+// evidence caveats) sits behind a disclosure so the section stays scannable.
 function PipelineSources() {
   return (
     <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
       {DATA_SOURCE_GROUPS.map((group) => (
-        <div key={group.label} className="space-y-1">
+        <div key={group.label} className="min-w-0 space-y-1">
           <dt className="pharos-kicker">{group.label}</dt>
-          <dd className="text-xs leading-relaxed text-muted-foreground">{group.sources}</dd>
+          {"summary" in group ? (
+            <dd className="space-y-1 text-sm leading-relaxed text-muted-foreground">
+              <p>{group.summary}</p>
+              <details className="group/sources">
+                <summary className="pharos-focus-ring cursor-pointer rounded-sm text-xs font-medium text-foreground/80 hover:text-foreground">
+                  Full source list
+                </summary>
+                <p className="mt-1 text-xs leading-relaxed [overflow-wrap:anywhere]">{group.sources}</p>
+              </details>
+            </dd>
+          ) : (
+            <dd className="text-sm leading-relaxed text-muted-foreground">{group.sources}</dd>
+          )}
         </div>
       ))}
     </dl>
@@ -226,6 +236,13 @@ function AppearanceRow({ appearance }: { appearance: MediaAppearance }) {
         </p>
         <p className="text-xs text-muted-foreground">
           {appearance.host} &middot; <time dateTime={appearance.date}>{appearanceDateLabel(appearance.date)}</time>
+          {WALKTHROUGH_APPEARANCES.includes(appearance) ? (
+            <>
+              {" "}
+              &middot; Full walkthrough
+              {appearance.durationMinutes ? `, ${appearance.durationMinutes} min` : ""}
+            </>
+          ) : null}
         </p>
         <p>{appearance.description}</p>
       </div>
@@ -402,19 +419,15 @@ export function AboutPageContent() {
             community support plus future paid API access for heavy programmatic usage.{" "}
             <Link href="/funding/" className={INLINE_EXTERNAL_LINK_CLASS}>
               See the funding ledger
-            </Link>{" "}
-            or{" "}
-            <Link href="/start/" className={INLINE_EXTERNAL_LINK_CLASS}>
-              get started
-            </Link>{" "}
-            and make the most of it.
+            </Link>
+            .
           </p>
           <p>
             For asset eligibility and lifecycle decisions, read the{" "}
             <Link href="/docs/listing-policy/" className={INLINE_EXTERNAL_LINK_CLASS}>
               listing policy
             </Link>
-            . For architecture, methodology, and design references, use the{" "}
+            . For methodology and API references, use the{" "}
             <Link href="/docs/" className={INLINE_EXTERNAL_LINK_CLASS}>
               documentation archive
             </Link>
@@ -533,6 +546,10 @@ export function AboutPageContent() {
           title="Pharos in the Media"
           contentClassName="space-y-4 text-sm leading-relaxed text-muted-foreground"
         >
+          <p>
+            Prefer to watch? Appearances marked &ldquo;Full walkthrough&rdquo; are unscripted sessions of someone
+            driving the dashboard live, hosted elsewhere.
+          </p>
           {featuredAppearance ? <FeaturedAppearance appearance={featuredAppearance} /> : null}
           {otherAppearances.length > 0 ? (
             <div className="divide-y divide-border/60 border-t border-border/60">
@@ -596,6 +613,67 @@ export function AboutPageContent() {
         </AboutSection>
 
         <AboutSection
+          id="bluechip"
+          eyebrow="Editorial designation"
+          title="Pharos Bluechip"
+          contentClassName="space-y-5 text-sm leading-relaxed text-muted-foreground"
+        >
+          <p className="text-foreground/88">{BLUECHIP_LEDE}</p>
+          {BLUECHIP_WHAT_IT_MEANS.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">The gates</h3>
+            <p>
+              Each gate is independent. A coin clears Bluechip only when every gate clears at the same moment, and
+              only while it continues to do so.
+            </p>
+            <ol className="divide-y divide-border/60 border-y border-border/60">
+              {BLUECHIP_GATES.map((gate, index) => (
+                <li key={gate.id} className="grid gap-1 py-3 sm:grid-cols-[3.5rem_minmax(0,1fr)] sm:gap-6">
+                  <span className="font-mono text-xs uppercase tracking-[0.08em]">
+                    Gate {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <p>
+                    <span className="font-medium text-foreground">{gate.title}.</span> {gate.body}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">What Bluechip refuses to grant</h3>
+            <ul className="list-disc space-y-1.5 pl-5">
+              {BLUECHIP_REFUSALS.map((entry) => (
+                <li key={entry.title}>
+                  <span className="font-medium text-foreground">{entry.title}.</span> {entry.body}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p>
+            <span className="font-medium text-foreground">Roster suspended</span> while the V10 grade floor is under
+            review. It resumes under the same rule: the live intersection of external Bluechip A-tier ratings and
+            Pharos A-tier report cards, current-state rather than historical. Bluechip rides the Safety Score
+            methodology ({SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}) and is re-derived, never grandfathered, when a
+            floor changes. The per-coin badge still links to the external Bluechip report.
+          </p>
+          <p>
+            <Link href="/methodology/#safety-scores-methodology" className={INLINE_EXTERNAL_LINK_CLASS}>
+              Safety Scores methodology
+            </Link>
+            {" · "}
+            <Link href="/methodology/scoring-changelog/" className={INLINE_EXTERNAL_LINK_CLASS}>
+              Scoring changelog
+            </Link>
+            {" · "}
+            <Link href="/methodology/#def-bluechip" className={INLINE_EXTERNAL_LINK_CLASS}>
+              Definition
+            </Link>
+          </p>
+        </AboutSection>
+
+        <AboutSection
           eyebrow="Source flow"
           title="Data Pipeline"
           contentClassName="space-y-5 text-sm leading-relaxed text-muted-foreground"
@@ -604,12 +682,12 @@ export function AboutPageContent() {
             All data is fetched server-side by a Cloudflare Worker and cached in D1. The browser never calls external
             APIs directly.
           </p>
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.95fr)]">
-            <div className="space-y-4 rounded-xl bg-muted/20 p-4">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.95fr)] lg:items-start">
+            <div className="min-w-0 space-y-4 rounded-xl bg-muted/20 p-4">
               <p className="text-sm font-semibold text-foreground">Source groups</p>
               <PipelineSources />
             </div>
-            <div className="space-y-4 rounded-xl bg-muted/20 p-4 lg:border-l lg:border-l-2 lg:border-border/60 lg:bg-transparent lg:p-0">
+            <div className="min-w-0 space-y-4 rounded-xl bg-muted/20 p-4 lg:border-l lg:border-l-2 lg:border-border/60 lg:bg-transparent lg:p-0 lg:pl-5">
               <p className="text-sm font-semibold text-foreground">Processing path</p>
               <ol className="space-y-4">
                 {DATA_PIPELINE_STEPS.map((step) => (

@@ -6,7 +6,6 @@ import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { TableSourceLink } from "@/components/table/client";
-import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
 import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
@@ -308,13 +307,11 @@ export function YieldSourceDetails({
   row,
   confidenceStyle,
   confidenceLabel,
-  sourceRiskScore,
   freshness,
 }: {
   row: YieldViewModelRow;
   confidenceStyle: YieldSourceConfidenceStyle | null;
   confidenceLabel: string | null;
-  sourceRiskScore: number | null;
   freshness: YieldSourceFreshnessDisplay | null;
 }) {
   const depth = getYieldSourceDepthDisplay({
@@ -329,7 +326,7 @@ export function YieldSourceDetails({
     : (row.provenance?.selectionReason ?? row.yieldSource);
   return (
     <div className="min-w-0 text-sm text-muted-foreground" title={selectionReason}>
-      {/* Line 1: confidence dot · source name · source-changed chip · compact risk bar */}
+      {/* Line 1: confidence dot · source name · source-changed chip */}
       <div className="flex min-w-0 items-center gap-1.5">
         <YieldSourceIdentity
           displayLabel={row.yieldSource}
@@ -338,12 +335,11 @@ export function YieldSourceDetails({
           confidenceLabel={confidenceLabel}
           sourceChanged={row.provenance?.sourceSwitch}
         />
-        <YieldSourceRiskBar score={sourceRiskScore} compact tooltip className="shrink-0" />
       </div>
       {/* Line 2: freshness · source depth. Benchmark moved off-row (redundant per row):
           it stays in the APY cell, the PYS tooltip, the expanded panel, and the
           page-level Reference Rates strip. */}
-      <div className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-muted-foreground">
+      <div className="mt-0.5 flex flex-wrap items-center gap-x-1 text-[10px] text-muted-foreground">
         {sourceRiskSummary ? (
           <>
             <span className="font-medium text-amber-700 dark:text-amber-300">{sourceRiskSummary}</span>

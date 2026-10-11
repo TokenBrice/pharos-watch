@@ -149,8 +149,8 @@ function McapChartBody({
           : "var(--color-muted-foreground)";
 
   const header = (
-    <div className="flex flex-row items-center justify-between gap-3">
-      <div className="flex flex-col gap-0.5">
+    <div className="flex flex-row flex-wrap items-center justify-between gap-3">
+      <div className="flex min-w-0 flex-col gap-0.5">
         <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Market Cap</StablecoinModuleTitle>
         {readout ? (
           <div className="flex items-baseline gap-2 font-mono text-xs tabular-nums">
@@ -169,7 +169,7 @@ function McapChartBody({
           </div>
         ) : null}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 max-w-full items-center gap-2">
         <ChartScaleToggle
           value={useLog ? "log" : "lin"}
           onChange={(v) => setLogScale(v === "log")}

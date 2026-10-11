@@ -218,8 +218,7 @@ describe("StablecoinDetailClient", () => {
       false, // Overview FlowsSection
       true, // DexLiquidityCard
       false, // Activity BlacklistSection
-      true, // SafetyScoreHistorySection
-      true, // DepegHistory
+      true, // HistoryTabs (grade, depeg, DDR)
       true, // FlowHistorySection
       true, // BlacklistHistorySection
     );

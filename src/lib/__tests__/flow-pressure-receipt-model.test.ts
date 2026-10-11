@@ -158,11 +158,13 @@ describe("buildFlowPressureReceiptModel", () => {
 
     expect(model.net24hUsd).toBeNull();
     expect(model.net7dUsd).toBeNull();
-    // DAI's partial net is not a bound, so it cannot lead even though its known net is larger.
+    // DAI's partial net is only an upper bound, so it cannot lead even though its known net is larger.
     expect(model.topMint).toEqual({ symbol: "USDC", valueUsd: 50 });
     const byId = Object.fromEntries(model.rows.map((row) => [row.id, row]));
     expect(byId["net-24h"]).toMatchObject({ valueUsd: null, completeness: "partial" });
-    expect(byId["net-24h"].note).toMatch(/partial valuation/i);
+    // Only burns are unpriced, so the summed net keeps a proven upper bound: 50 + 900.
+    expect(byId["net-24h"].bound).toEqual({ kind: "upper", valueUsd: 950 });
+    expect(byId["net-24h"].note).toMatch(/upper bound/i);
     expect(byId["net-7d"].valueUsd).toBeNull();
     expect(byId["burn-24h"]).toMatchObject({ completeness: "partial" });
     expect(byId["burn-24h"].note).toBe("Known subtotal, lower bound: 4 events unpriced");

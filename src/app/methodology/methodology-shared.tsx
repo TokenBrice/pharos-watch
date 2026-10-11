@@ -22,6 +22,7 @@ export const METHODOLOGY_SECTIONS = [
   { id: "depeg-resolver-methodology", label: "Depeg Duration Resolver" },
   { id: "blacklist-tracker-methodology", label: "Blacklist Tracker" },
   { id: "chain-health-score", label: "Chain Health Score" },
+  { id: "definitions", label: "Definitions" },
 ] as const;
 
 export const METHODOLOGY_READING_STEPS = [

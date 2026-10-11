@@ -1,9 +1,7 @@
 "use client";
 
-import { ArrowRight, LockKeyhole, Waves } from "lucide-react";
-import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { ArrowRight } from "lucide-react";
 import { buildPresetPreview, PresetCard } from "@/components/preset-card";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { EmptyStateSurface } from "@/components/empty-state-surface";
 import type { ComparePreset } from "@/lib/compare-types";
 import { getPresetCoins } from "@/lib/compare-config";
@@ -14,86 +12,27 @@ interface CompareEmptyStateProps {
   onApplyPreset: (preset: ComparePreset) => void;
 }
 
-function ComparePreview({
-  logos,
-  featuredCoins,
-}: {
-  logos?: Record<string, string>;
-  featuredCoins: readonly string[];
-}) {
+const COMPARE_OUTPUTS = [
+  { title: "Market cap history", detail: "Normalized overlays across the set" },
+  { title: "Peg and supply deltas", detail: "Deviation, 7d supply change, liquidity score" },
+  { title: "Safety Score radar", detail: "Pillar-by-pillar view of every selected coin" },
+] as const;
+
+function ComparePreview() {
   return (
-    <div className="min-w-0 space-y-4">
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <p className="pharos-kicker">Preview</p>
-          <p className="mt-1 text-sm font-medium text-foreground">Comparison output unlocks after two selections</p>
-        </div>
-        <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-3 py-1 text-xs text-muted-foreground">
-          <LockKeyhole className="h-3.5 w-3.5" />
-          <span className="min-w-0 truncate">Share stays hidden until then</span>
-        </span>
+    <div className="min-w-0 space-y-3">
+      <div>
+        <p className="pharos-kicker">No comparison yet</p>
+        <p className="mt-1 text-sm font-medium text-foreground">Select at least two stablecoins to see</p>
       </div>
-
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        {featuredCoins.map((coinId) => {
-          const coin = TRACKED_META_BY_ID.get(coinId);
-          if (!coin) return null;
-          return (
-            <div
-              key={coinId}
-              className="inline-flex min-w-0 items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs text-muted-foreground"
-            >
-              <StablecoinLogo src={logos?.[coinId]} name={coin.name} size={20} />
-              <span className="font-medium text-foreground">{coin.symbol}</span>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="min-w-0 divide-y divide-border/50">
-        <div className="pb-4">
-          <div className="mb-3 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-medium text-foreground">Market cap history</p>
-            <span className="text-xs text-muted-foreground">Normalized overlays</span>
-          </div>
-          <div className="flex h-24 items-end gap-2">
-            <div className="h-24 flex-1 rounded-lg border-2 border-dashed border-border/40" />
-          </div>
-        </div>
-
-        <div className="grid gap-4 pt-4 sm:grid-cols-[1.05fr_0.95fr] sm:gap-6">
-          <div className="min-w-0">
-            <div className="mb-2 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-medium text-foreground">Quick deltas</p>
-              <span className="text-xs text-muted-foreground">peg, supply, liquidity</span>
-            </div>
-            <div className="divide-y divide-border/40">
-              {["Peg deviation", "7d supply", "Liquidity score"].map((label, index) => (
-                <div key={label} className="flex items-center justify-between py-2">
-                  <span className="text-xs text-muted-foreground">{label}</span>
-                  <span
-                    className="text-xs pharos-numeric text-muted-foreground"
-                  >
-                    {index === 0 ? "-0.02%" : index === 1 ? "+2.4%" : "78/100"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="min-w-0">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-medium text-foreground">Safety score radar</p>
-              <Waves className="h-4 w-4 text-primary/80" />
-            </div>
-            <div className="relative mx-auto mt-2 flex h-32 w-32 items-center justify-center rounded-full border border-dashed border-border/60">
-              <div className="absolute inset-4 rounded-full border border-border/50" />
-              <div className="absolute inset-8 rounded-full border border-border/40" />
-              <div className="h-14 w-14 rounded-full bg-primary/12" />
-            </div>
-          </div>
-        </div>
-      </div>
+      <ul className="divide-y divide-border/50">
+        {COMPARE_OUTPUTS.map((output) => (
+          <li key={output.title} className="py-2.5">
+            <p className="text-sm font-medium text-foreground">{output.title}</p>
+            <p className="text-xs text-muted-foreground">{output.detail}</p>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -169,9 +108,7 @@ export function CompareEmptyState({ presets, logos, onApplyPreset }: CompareEmpt
             ))}
           </div>
         }
-        preview={
-          <ComparePreview logos={logos} featuredCoins={featured.flatMap(getPresetCoins).slice(0, 4)} />
-        }
+        preview={<ComparePreview />}
       />
 
       <div className="space-y-3">

@@ -1,6 +1,6 @@
 import { getNetFlowDirection24h } from "./mint-burn-signals";
 import type { NetFlowDirection24h } from "../types/mint-burn-signals";
-import type { MintBurnValuation, MintBurnValuationCompleteness } from "../types/mint-burn";
+import type { MintBurnSignedNetBound, MintBurnValuation, MintBurnValuationCompleteness } from "../types/mint-burn";
 
 /**
  * Mint/burn USD valuation completeness (D11-2).
@@ -9,7 +9,8 @@ import type { MintBurnValuation, MintBurnValuationCompleteness } from "../types/
  * counts. A bucket written before the counts existed (NULL columns) has unknown
  * coverage on each side that counted events; a side with no counted events is
  * provably complete. Missing valuation is never read as zero dollars: a known
- * gross subtotal is a lower bound, and a signed partial net is not a bound.
+ * gross subtotal is a lower bound, and a known signed net is a one-sided bound
+ * only when exactly one side is partial (see `mintBurnSignedNetBound`).
  */
 export interface MintBurnValuationTally {
   /** Counted mints without a USD valuation, in hours whose coverage was recorded. */
@@ -88,6 +89,24 @@ export function mintBurnSignedNetRange(
     lowerUsd: valuation.burnCompleteness === "complete" ? knownNetUsd : Number.NEGATIVE_INFINITY,
     upperUsd: valuation.mintCompleteness === "complete" ? knownNetUsd : Number.POSITIVE_INFINITY,
   };
+}
+
+/**
+ * One-sided bound of a proven range, or `null` when the range is exact (no bound
+ * needed) or open on both ends (no bound exists).
+ */
+export function boundMintBurnSignedNetRange(range: { lowerUsd: number; upperUsd: number }): MintBurnSignedNetBound | null {
+  const lowerFinite = Number.isFinite(range.lowerUsd);
+  if (lowerFinite === Number.isFinite(range.upperUsd)) return null;
+  return lowerFinite ? { kind: "lower", valueUsd: range.lowerUsd } : { kind: "upper", valueUsd: range.upperUsd };
+}
+
+/** Bound on a withheld net from its known-valuation net and per-side completeness. */
+export function mintBurnSignedNetBound(
+  knownNetUsd: number,
+  valuation: Pick<MintBurnValuation, "mintCompleteness" | "burnCompleteness">,
+): MintBurnSignedNetBound | null {
+  return boundMintBurnSignedNetRange(mintBurnSignedNetRange(knownNetUsd, valuation));
 }
 
 /**

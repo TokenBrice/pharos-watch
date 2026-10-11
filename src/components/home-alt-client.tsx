@@ -139,7 +139,7 @@ function RankingsSectionFallback() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableSkeletonRows columns={RANKINGS_SKELETON_COLUMNS} rowCount={10} />
+            <TableSkeletonRows columns={RANKINGS_SKELETON_COLUMNS} rowCount={20} rowClassName="h-14" />
           </TableBody>
         </TableFrame>
       </div>

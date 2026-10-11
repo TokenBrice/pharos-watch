@@ -217,7 +217,7 @@ export function EvidenceFooter({
   const line = hasLeft || hasStamp ? (
     <div
       className={cn(
-        "flex items-baseline gap-x-3 border-t border-border/50 pt-3 text-xs text-muted-foreground",
+        "flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-border/50 pt-3 text-xs text-muted-foreground",
         hasFold ? undefined : className,
       )}
     >

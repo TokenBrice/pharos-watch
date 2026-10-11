@@ -23,9 +23,9 @@ describe("buildCoverageDatasetJsonLd", () => {
       license: "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE",
       includedInDataCatalog: {
         "@type": "DataCatalog",
-        "@id": "https://pharos.watch/about/api/#data-catalog",
+        "@id": "https://pharos.watch/api/#data-catalog",
         name: "Pharos Public API Data Catalog",
-        url: "https://pharos.watch/about/api/",
+        url: "https://pharos.watch/api/",
       },
       identifier: [{ "@type": "PropertyValue", propertyID: "Pharos URN", value: "urn:pharos:dataset:coverage" }],
       sameAs: "https://pharos.watch/coverage/",
@@ -64,18 +64,18 @@ describe("buildPublicDatasetMirrorJsonLd", () => {
       "@type": "Dataset",
       "@id": "https://pharos.watch/datasets/scores-latest/#dataset",
       name: "Pharos Latest Stablecoin Scores Dataset",
-      url: "https://pharos.watch/about/api/#dataset-scores-latest",
+      url: "https://pharos.watch/api/#dataset-scores-latest",
       creator: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
       publisher: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
       license: "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE",
       includedInDataCatalog: {
         "@type": "DataCatalog",
-        "@id": "https://pharos.watch/about/api/#data-catalog",
+        "@id": "https://pharos.watch/api/#data-catalog",
         name: "Pharos Public API Data Catalog",
-        url: "https://pharos.watch/about/api/",
+        url: "https://pharos.watch/api/",
       },
       identifier: [{ "@type": "PropertyValue", propertyID: "Pharos URN", value: "urn:pharos:dataset:scores-latest" }],
-      sameAs: "https://pharos.watch/about/api/#dataset-scores-latest",
+      sameAs: "https://pharos.watch/api/#dataset-scores-latest",
     });
     const distribution = jsonLd.distribution as Array<{ contentUrl: string; encodingFormat: string }>;
     expect(distribution.map((entry) => entry.contentUrl)).toEqual([

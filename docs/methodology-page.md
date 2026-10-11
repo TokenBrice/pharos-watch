@@ -20,9 +20,10 @@ For tooltip/deep-link changes, read [Methodology-Context Anchors](#methodology-c
 - **Composite section body:** `src/app/methodology/sections/core-sections-pricing.tsx`
 - **Shared section summary/markdown registry:** `src/lib/methodology-content.ts` (non-React section ids, titles, and markdown-export summaries)
 - **Per-section body modules:** `src/app/methodology/sections/core/*.tsx`, `src/app/methodology/sections/monitoring/*.tsx`, and `src/app/methodology/sections/dependency-exposure-section.tsx`
-- **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav`
+- **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav` (with `edgeFade`, so the rail that cannot fit on desktop fades at its right edge instead of showing a clipped label)
 - **Mode switching:** `MethodologyModeToggle`; mobile renders the toggle inside the hero guide card, `md+` renders it in the jump rail. Its buttons use `pharos-toggle-pill`; `page.tsx` supplies the inline `ShowYourWorkToggle`'s pill classes through a replacement `className`, leaving other consumers' defaults unchanged.
 - **Design carve-out:** `/methodology/` stays a longform reference page — no signature hero and no frost "One Beam". This is an explicit exception to [Feature-page heroes](./design-language.md#feature-page-heroes); the 76rem measure and `MethodologySectionShell` layout are unchanged. Only the control + numeric *grammar* is aligned to canon: the toggles use the pill language and figures/version badges use `.pharos-numeric` (semantic badge colors preserved).
+- **Reader-mode budget:** release-level evidence rules, version notes and replay results sit inside a `MethodologyDetails` block (Safety Scores: `SafetyScoresVersionNotes`), so Reader mode shows the summary, facts and preconditions only.
 - **Mode persistence contract:** both `MethodologyModeToggle` controls subscribe to `pharos.methodology.mode` in `localStorage`, with Reader as the hydration-safe server snapshot and same-tab notifications. Shared mode opens/closes authored `details` via `data-methodology-details` / `data-methodology-worked-example`.
 - **Orientation content:** mobile compresses the reading guide into the hero card; `md+` keeps both the top-right reader-guide hero card and the dedicated "How to Read This Page" overview card
 - **Reusable long-form primitives:** `MethodologyDetails`, `MethodologyFacts`, `WorkedExample`, and `MethodologySectionShell`; `ContentTable` owns section and scoring-changelog tables, including compact spacing, IDs, classes, and row-header scopes.
@@ -31,7 +32,7 @@ For tooltip/deep-link changes, read [Methodology-Context Anchors](#methodology-c
 - **Changelog wrappers:** `src/app/methodology/[slug]/page.tsx` holds each lane's display config; the shared shell is `src/components/methodology-changelog-page.tsx`, which renders an overview block linking back to the current methodology and public docs archive before the version cards
 - **Changelog sitemap policy:** `METHODOLOGY_CHANGELOG_SITEMAP_PATHS` (`shared/lib/methodology-versions/registry.ts`) is derived from every `METHODOLOGY_CHANGELOG_REGISTRY` entry's `publicPath`, and `src/app/sitemap.ts` re-exports and spreads it, so registering a changelog lane automatically promotes its route. Register a lane only when its route has enough standalone context for external readers, normally through the shared overview block plus a useful latest-version summary.
 - **Scoring changelog special case:** the `scoring-changelog` slug renders every version card from its structured changelog record — `src/app/methodology/changelog-content/scoring/content.tsx` walks the machine-readable changelog and hands each entry to `StructuredChangelogDetail` in `content-shared.tsx`, which renders the entry's optional ordered `detail` body (headings, paragraphs, lists, formulas, weight rows, and tables) or its `summary` plus `impact`. `content-summary.tsx` adds the standalone quick-reference tables after the cards.
-- **Cross-app methodology links:** `src/lib/methodology-context.ts` hard-codes methodology anchors and imports shared version/changelog constants from `shared/lib/methodology-versions/constants.ts`; `src/components/methodology-hint.tsx` renders those resolved links for cards/tooltips across the app
+- **Cross-app methodology links:** `src/lib/definitions.ts` (the single term source, see [Definitions](#definitions)) hard-codes methodology anchors and imports shared version/changelog constants from `shared/lib/methodology-versions/constants.ts`; `src/lib/methodology-context.ts` projects it into `METHODOLOGY_CONTEXT`, and `src/components/methodology-hint.tsx` renders those resolved links for cards/tooltips across the app
 
 ---
 
@@ -125,6 +126,12 @@ For the safety-score changelog specifically, update both:
 
 ---
 
+## Definitions
+
+`src/lib/definitions.ts` is the single term source for the site. Each entry has a tooltip `label`/`short` (plus optional `detail`), and entries marked `listed` carry a citation-ready `long` text for the A–Z **Definitions** section rendered last on the page (`src/app/methodology/sections/definitions-section.tsx`, anchor `#definitions`, per-term anchors `#def-<key>` such as `#def-peg-score`). The same section emits the `DefinedTermSet` JSON-LD, and `scripts/lib/methodology-to-markdown.ts` appends the list to the methodology markdown export.
+
+Consumers are projections, not copies: `METHODOLOGY_CONTEXT` (`src/lib/methodology-context.ts`) takes entries with a `methodologyPath` (Pharos metrics), `GLOSSARY` (`src/lib/glossary.ts`) takes the DeFi-jargon entries without one (the `<Term>` popover and `[[term]]` markup), and `scripts/maintenance/generate-llms-txt.ts` cites the listed set. Numbers in definition text (Safety Score weights and grade thresholds, DEWS and PSI bands, Liquidity Score weights, depeg thresholds) are interpolated from their owning constants; edit the constant, not the copy. Product names (Digest, Cemetery, FreezeWatch) are not definitions. The retired `/learn/glossary/` route 301s to `/methodology/#definitions`.
+
 ## Methodology-Context Anchors
 
 `src/lib/methodology-context.ts` deep-links from in-app tooltips and metric cards into the methodology page. `METHODOLOGY_SECTIONS` in `src/app/methodology/methodology-shared.tsx` owns the top-level ids, including `#dependency-exposure-methodology`. The `blacklistTracker` context key maps to `#blacklist-tracker-methodology`, while `bluechip` and `proofOfReserves` both map to `#safety-scores-methodology`; there are no separate single-topic anchors for those contexts:
@@ -141,7 +148,7 @@ Runtime source: `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-c
 
 ### Bluechip rating {#bluechip}
 
-Bluechip has two surfaces: the external Bluechip rating sync documented in [bluechip-ratings.md](bluechip-ratings.md), and the Pharos `/about/bluechip` editorial roster. The roster rule admits mapped assets whose synced external Bluechip grade and Pharos report-card overall grade are both A-tier. It is an intersection of two current feeds, not a separate hidden floor model over safety/liquidity/resilience. The rule is stated in `src/app/about/bluechip/content.tsx` and Section 5 of `src/app/about/bluechip/page.tsx`; the roster is suspended pending the V10 grade-floor review and fetches neither feed while that hold stands.
+Bluechip has two surfaces: the external Bluechip rating sync documented in [bluechip-ratings.md](bluechip-ratings.md), and the Pharos Bluechip editorial roster (the `#bluechip` section of `/about/`). The roster rule admits mapped assets whose synced external Bluechip grade and Pharos report-card overall grade are both A-tier. It is an intersection of two current feeds, not a separate hidden floor model over safety/liquidity/resilience. The rule is stated in `src/components/about/bluechip-content.ts` and rendered by the Bluechip section of `src/components/about/about-page-content.tsx`; the roster is suspended pending the V10 grade-floor review and fetches neither feed while that hold stands.
 
 ### Proof of Reserves
 

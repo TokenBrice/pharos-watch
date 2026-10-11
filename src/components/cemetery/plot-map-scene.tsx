@@ -607,7 +607,7 @@ export function PlotMapScene({ map, layout, atlas, state, toolbar, overlay, chil
             <span
               key={b.key}
               className={styles.yearStamp}
-              style={at(b.stamp[0], b.stamp[1])}
+              style={{ ...at(b.stamp[0], b.stamp[1]), "--stamp-angle": `${b.stampAngle}deg` } as CSSProperties}
               aria-hidden="true"
               data-year={b.year}
               data-plot-year={b.empty ? undefined : b.year}

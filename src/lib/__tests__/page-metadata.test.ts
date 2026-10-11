@@ -93,7 +93,7 @@ describe("buildPageMetadata", () => {
     expect(getMarkdownAlternateForCanonical("/methodology/scoring-changelog/")).toBe(
       "/methodology/scoring-changelog/index.md",
     );
-    expect(getMarkdownAlternateForCanonical("/docs/api-reference/")).toBe("/docs/api-reference/index.md");
+    expect(getMarkdownAlternateForCanonical("/docs/dews/")).toBe("/docs/dews/index.md");
     expect(getMarkdownAlternateForCanonical("/changelog/")).toBe("/changelog/index.md");
     expect(getMarkdownAlternateForCanonical("/learn/glossary/")).toBeNull();
     expect(getMarkdownAlternateForCanonical("/stablecoin/not-a-coin/")).toBeNull();
@@ -110,18 +110,18 @@ describe("buildPageMetadata", () => {
 
   it("places markdown alternates under metadata alternates.types", () => {
     const metadata = buildPageMetadata({
-      title: "API Reference",
-      description: "HTTP contracts and response conventions.",
-      canonical: "/docs/api-reference/",
+      title: "DEWS",
+      description: "Depeg Early Warning System methodology.",
+      canonical: "/docs/dews/",
     });
 
     expect(metadata.alternates).toMatchObject({
-      canonical: "/docs/api-reference/",
+      canonical: "/docs/dews/",
       types: {
         "text/markdown": [
           {
-            title: "API Reference (Markdown)",
-            url: "/docs/api-reference/index.md",
+            title: "DEWS (Markdown)",
+            url: "/docs/dews/index.md",
           },
         ],
       },

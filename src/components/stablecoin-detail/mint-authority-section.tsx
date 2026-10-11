@@ -525,6 +525,7 @@ export function MintAuthoritySection({
       methodology={methodology}
       headerRight={headerRight}
       visual={visual}
+      visualFold="Control map"
       // Strip form included: the rail never shares its width with the verdict.
       bodyLayout="stack"
       verdict={profile.verdict}

@@ -10,9 +10,9 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
-// 6 bordered rows ≈ the dependency graph's height, so the Dependency Context
-// split stays balanced even for parents with dozens of variants (USDC).
-const PREVIEW_COUNT = 6;
+// 5 bordered rows, matching the Used-by preview, keep the Dependency Context
+// split balanced even for parents with dozens of variants (USDC).
+const PREVIEW_COUNT = 5;
 
 interface ParentVariantsCardProps {
   variants: StablecoinClientMeta[];

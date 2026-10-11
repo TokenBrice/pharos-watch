@@ -7,13 +7,13 @@ import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-
 import { useTelegramPulse } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useCountUp } from "@/hooks/use-count-up";
+import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DAY_MS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { formatDecimal } from "@shared/lib/format";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 import type { TelegramWatcherHistoryPoint } from "@shared/types/status";
-import { isTelegramPulseAvailable } from "./live-watcher-count";
 
 const COMPACT_NUMBER_FORMATTER = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -36,6 +36,10 @@ const PULSE_UPDATED_FORMATTER = new Intl.DateTimeFormat("en-US", {
   hour: "2-digit",
   minute: "2-digit",
 });
+
+function isTelegramPulseAvailable(query: { data?: unknown; isLoading: boolean; isError: boolean }): boolean {
+  return !query.isLoading && !query.isError && query.data != null;
+}
 
 function formatCount(value: number): string {
   return formatDecimal(value, 0, 3);
@@ -148,20 +152,20 @@ function WatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoint[] }) {
 
 function PanelLoading() {
   return (
-    <div role="status" aria-label="Loading Telegram adoption metrics" aria-live="polite" aria-busy="true" className="mt-10 space-y-8">
-      <div className="grid gap-x-8 gap-y-10 lg:grid-cols-3">
-        <Skeleton className="h-28 lg:col-span-2" />
-        <Skeleton className="h-28" />
-      </div>
+    <div role="status" aria-label="Loading Telegram adoption metrics" aria-live="polite" aria-busy="true" className="p-5 sm:p-6 lg:p-7">
       <Skeleton className="h-[260px]" />
     </div>
   );
 }
 
+const PROSE_LINK_CLASS =
+  "pharos-focus-ring rounded-sm underline underline-offset-4 transition-colors hover:text-foreground";
+
 /**
- * Act III — 02:13, live adoption. Aggregate counts from the bot itself,
- * presented as a watch-floor board: one dominant figure, supporting reads,
- * the lifecycle chart. Public adoption metrics only — no operational counts,
+ * The page hero: live, aggregate adoption counts from the bot itself on the
+ * shared feature-hero split. Active watchers is the One Beam figure; follows,
+ * today's lifecycle and the most-followed coins support it; the lifecycle
+ * chart is the visual. Public adoption metrics only — no operational counts,
  * no per-chat anything (privacy contract).
  */
 export function InstrumentPanel() {
@@ -172,125 +176,83 @@ export function InstrumentPanel() {
   const follows = useCountUp(available ? data?.coinSubscriptions ?? null : null);
   const rankingUnavailable = data?.quality?.unavailableFields.includes("topCoins") ?? false;
   const historyUnavailable = data?.quality?.unavailableFields.includes("watcherHistory") ?? false;
+  const live = available && data ? data : null;
+  const todayDeltas = live
+    ? [
+        { label: "New today", value: live.newWatchersToday },
+        { label: "Reactivated today", value: live.reactivatedWatchersToday },
+        { label: "Churned today", value: live.churnedWatchersToday },
+      ].filter((item): item is { label: string; value: number } => typeof item.value === "number")
+    : [];
 
   return (
-    <section id="panel" className="pharos-night-slate scroll-mt-20" aria-labelledby="panel-title">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24 lg:px-5 xl:px-9">
-        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
-          <div className="max-w-2xl">
-            <h2 id="panel-title" className="pharos-display text-foreground">
-              Live adoption
-            </h2>
-            <p className="pharos-lead mt-3">
-              Live, aggregate counts from the bot itself, refreshed every five minutes. Adoption telemetry only —
-              nothing operational, nothing individual.
-            </p>
-          </div>
-          {available && data ? (
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
-                data.quality?.status === "complete"
-                  ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-200"
-                  : "bg-amber-500/10 text-amber-800 dark:text-amber-200",
-              )}
-            >
-              {data.quality?.status === "complete"
-                ? "Complete telemetry"
-                : data.quality?.status === "partial"
-                  ? "Partial telemetry"
-                  : "Unknown telemetry"}
-            </span>
-          ) : null}
-        </div>
-
-        {isLoading ? <PanelLoading /> : null}
-
-        {!isLoading && !available ? (
-          <div role="status" aria-label="Telegram adoption metrics unavailable" aria-live="polite" aria-busy="false" className="mt-10">
-            <p className="border-t border-border/55 pt-6 text-sm text-muted-foreground">
-              Public Telegram adoption metrics are temporarily unavailable. They retry automatically; bot links and
-              setup commands keep working.
-            </p>
-          </div>
-        ) : null}
-
-        {available && data ? (
+    <section id="panel" className="scroll-mt-24" aria-labelledby="panel-title">
+      <h2 id="panel-title" className="sr-only">
+        Live adoption
+      </h2>
+      <FeatureHeroSplit
+        ariaLabel="Live Telegram adoption metrics"
+        beamLabel={
+          <span title={TELEGRAM_METRIC_SEMANTICS.activeWatchers.description}>
+            {TELEGRAM_METRIC_SEMANTICS.activeWatchers.label}
+          </span>
+        }
+        beamValue={
           <>
-            {data.quality?.status === "partial" ? (
-              <p className="mt-6 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
-                Some public Telegram telemetry is temporarily unavailable. Counts shown here keep working where source
-                data is complete.
-              </p>
+            {/* useCountUp keeps its last display on null; availability gates the beam too (R1). */}
+            <span aria-hidden="true">{live ? watchers.display ?? "—" : "—"}</span>
+            {live && watchers.value != null ? (
+              <span className="sr-only">{formatCount(watchers.value)} active watchers</span>
             ) : null}
-
-            <dl className="mt-10 grid gap-x-8 gap-y-10 lg:grid-cols-3">
-              <div className="border-t border-border/55 pt-5 lg:col-span-2">
-                <dt className="pharos-kicker !tracking-normal" title={TELEGRAM_METRIC_SEMANTICS.activeWatchers.description}>
-                  {TELEGRAM_METRIC_SEMANTICS.activeWatchers.label}
+          </>
+        }
+        sub={
+          live ? (
+            <dl className="space-y-5">
+              <div>
+                <dt className="pharos-kicker" title={TELEGRAM_METRIC_SEMANTICS.coinFollows.description}>
+                  {TELEGRAM_METRIC_SEMANTICS.coinFollows.label}
                 </dt>
-                <dd className="mt-3 flex items-baseline gap-3">
-                  <span aria-hidden="true" className="relative flex h-2.5 w-2.5 self-center">
-                    <span className="absolute inset-0 animate-ping rounded-full bg-[var(--brand-accent)]/70 motion-reduce:animate-none" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[var(--brand-accent)]" />
-                  </span>
-                  <span aria-hidden="true" className="pharos-numeric text-5xl font-semibold leading-none tracking-tight text-frost-blue">
-                    {watchers.display ?? "—"}
-                  </span>
-                  {watchers.value != null ? (
-                    <span className="sr-only">{formatCount(watchers.value)} active watchers</span>
-                  ) : null}
+                <dd className="mt-2 pharos-numeric text-2xl font-semibold leading-none text-foreground">
+                  {follows.display ?? "—"}
                 </dd>
-                <dd className="mt-4 flex flex-wrap gap-x-8 gap-y-3">
-                  {[
-                    { label: "New today", value: data.newWatchersToday },
-                    { label: "Reactivated today", value: data.reactivatedWatchersToday },
-                    { label: "Churned today", value: data.churnedWatchersToday },
-                  ]
-                    .filter((item): item is { label: string; value: number } => typeof item.value === "number")
-                    .map((item) => (
-                      <span key={item.label} className="flex items-baseline gap-2 text-xs text-muted-foreground">
-                        <span className="pharos-numeric text-sm font-semibold text-foreground">
-                          {formatCount(item.value)}
-                        </span>
+                {typeof live.explicitCoinSubscriptions === "number" &&
+                typeof live.presetImpliedCoinSubscriptions === "number" ? (
+                  <dd className="mt-2 text-xs text-muted-foreground">
+                    {formatCount(live.explicitCoinSubscriptions)} explicit ·{" "}
+                    {formatCount(live.presetImpliedCoinSubscriptions)} preset-implied
+                  </dd>
+                ) : null}
+                {typeof live.activePresetFollowers === "number" ? (
+                  <dd className="mt-0.5 text-xs text-muted-foreground">
+                    {formatCount(live.activePresetFollowers)} chats using presets
+                  </dd>
+                ) : null}
+              </div>
+              {todayDeltas.length > 0 ? (
+                <div>
+                  <dt className="sr-only">Today</dt>
+                  <dd className="flex flex-wrap gap-x-5 gap-y-2">
+                    {todayDeltas.map((item) => (
+                      <span key={item.label} className="flex items-baseline gap-1.5 text-xs text-muted-foreground">
+                        <span className="pharos-numeric text-sm font-semibold text-foreground">{formatCount(item.value)}</span>
                         {item.label}
                       </span>
                     ))}
-                </dd>
-              </div>
-
-              <div className="border-t border-border/55 pt-5">
-                <dt className="pharos-kicker !tracking-normal" title={TELEGRAM_METRIC_SEMANTICS.coinFollows.description}>
-                  {TELEGRAM_METRIC_SEMANTICS.coinFollows.label}
-                </dt>
-                <dd className="mt-3 pharos-numeric text-3xl font-semibold leading-none text-foreground">
-                  {follows.display ?? "—"}
-                </dd>
-                {typeof data.explicitCoinSubscriptions === "number" &&
-                typeof data.presetImpliedCoinSubscriptions === "number" ? (
-                  <dd className="mt-3 text-xs text-muted-foreground">
-                    {formatCount(data.explicitCoinSubscriptions)} explicit ·{" "}
-                    {formatCount(data.presetImpliedCoinSubscriptions)} preset-implied
                   </dd>
-                ) : null}
-                {typeof data.activePresetFollowers === "number" ? (
-                  <dd className="mt-1 text-xs text-muted-foreground">
-                    {formatCount(data.activePresetFollowers)} chats using presets
-                  </dd>
-                ) : null}
-              </div>
-
-              <div className="border-t border-border/55 pt-5">
-                <dt className="pharos-kicker !tracking-normal">Most followed</dt>
-                <dd className="mt-3">
+                </div>
+              ) : null}
+              <div>
+                <dt className="pharos-kicker">Most followed</dt>
+                <dd className="mt-2">
                   {rankingUnavailable ? (
                     <p className="text-xs text-muted-foreground">Follow rankings are temporarily unavailable.</p>
-                  ) : data.topCoins.length > 0 ? (
+                  ) : live.topCoins.length > 0 ? (
                     <ol className="flex flex-wrap items-center gap-1.5">
-                      {data.topCoins.slice(0, 5).map((coin, index) => (
+                      {live.topCoins.slice(0, 5).map((coin, index) => (
                         <li
                           key={coin}
-                          className="inline-flex items-center gap-1.5 rounded-md bg-muted/45 px-2.5 py-1.5 pharos-numeric text-[13px] font-semibold text-foreground"
+                          className="inline-flex items-center gap-1.5 rounded-md bg-muted/60 px-2 py-1 pharos-numeric text-xs font-semibold text-foreground"
                         >
                           <span aria-hidden="true" className="text-[10px] font-medium text-muted-foreground">
                             {index + 1}
@@ -304,59 +266,93 @@ export function InstrumentPanel() {
                   )}
                 </dd>
               </div>
-
-              <div className="border-t border-border/55 pt-5 lg:col-span-2">
-                <dt className="pharos-kicker !tracking-normal">Current snapshot</dt>
-                <dd className="mt-3 font-mono text-sm font-semibold text-foreground">
-                  {formatSnapshotAt(data.currentSnapshotAt ?? data.updatedAt) ?? "every 5m"}
-                </dd>
-                <dd className="mt-2 text-xs text-muted-foreground">
-                  Refresh target: every {Math.round((data.updatedEverySeconds ?? 300) / 60)} minutes · Aggregate
-                  counts; small daily changes are hidden to protect individual chats.
-                </dd>
-              </div>
             </dl>
-
-            <div className="mt-12 border-t border-border/55 pt-6">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <p className="pharos-kicker !tracking-normal">Telegram chat lifecycle</p>
-                {!historyUnavailable && data.watcherHistory.length > 0 ? (
-                  <p className="font-mono text-xs text-muted-foreground">
-                    latest daily snapshot{" "}
-                    <span className="font-semibold text-foreground">
-                      {formatCount(data.watcherHistory.at(-1)?.activeWatchers ?? 0)}
-                    </span>
-                    {formatSnapshotAt(data.lifecycleHistoryUpdatedAt) ? (
-                      <span> · {formatSnapshotAt(data.lifecycleHistoryUpdatedAt)}</span>
-                    ) : null}
-                  </p>
-                ) : null}
-              </div>
-              {historyUnavailable ? (
-                <div className="mt-4 flex h-[120px] items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground">
-                  Watcher history is temporarily unavailable.
-                </div>
-              ) : data.watcherHistory.length > 0 ? (
-                <WatcherGrowthChart data={data.watcherHistory} />
-              ) : (
-                <div className="mt-4 flex h-[120px] items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground">
-                  Historical watcher points will appear once subscription telemetry is available.
-                </div>
-              )}
-              <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-                Operational service health lives on the{" "}
-                <Link
-                  href="/status/"
-                  className="pharos-focus-ring rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
-                >
+          ) : null
+        }
+        footer={
+          live ? (
+            <div className="flex flex-col gap-2 text-xs leading-relaxed text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
+              <span
+                className={cn(
+                  "inline-flex w-fit items-center rounded-md px-2 py-0.5 font-medium",
+                  live.quality?.status === "complete"
+                    ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-200"
+                    : "bg-amber-500/10 text-amber-800 dark:text-amber-200",
+                )}
+              >
+                {live.quality?.status === "complete"
+                  ? "Complete telemetry"
+                  : live.quality?.status === "partial"
+                    ? "Partial telemetry"
+                    : "Unknown telemetry"}
+              </span>
+              <span>
+                Snapshot{" "}
+                <span className="font-mono text-foreground">
+                  {formatSnapshotAt(live.currentSnapshotAt ?? live.updatedAt) ?? "every 5m"}
+                </span>{" "}
+                · refreshed every {Math.round((live.updatedEverySeconds ?? 300) / 60)} minutes · aggregate counts; small
+                daily changes are hidden to protect individual chats. Service health lives on the{" "}
+                <Link href="/status/" className={PROSE_LINK_CLASS}>
                   status page
                 </Link>
                 .
-              </p>
+              </span>
             </div>
-          </>
+          ) : null
+        }
+      >
+        {isLoading ? <PanelLoading /> : null}
+        {!isLoading && !live ? (
+          <div
+            role="status"
+            aria-label="Telegram adoption metrics unavailable"
+            aria-live="polite"
+            aria-busy="false"
+            className="flex h-full min-h-[200px] items-center p-5 sm:p-6 lg:p-7"
+          >
+            <p className="max-w-md text-sm text-muted-foreground">
+              Public Telegram adoption metrics are temporarily unavailable. They retry automatically; bot links and
+              setup commands keep working.
+            </p>
+          </div>
         ) : null}
-      </div>
+        {live ? (
+          <div className="p-5 sm:p-6 lg:p-7">
+            {live.quality?.status === "partial" ? (
+              <p className="mb-4 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
+                Some public Telegram telemetry is temporarily unavailable. Counts shown here keep working where source
+                data is complete.
+              </p>
+            ) : null}
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+              <p className="text-sm font-medium text-muted-foreground">Telegram chat lifecycle</p>
+              {!historyUnavailable && live.watcherHistory.length > 0 ? (
+                <p className="font-mono text-xs text-muted-foreground">
+                  latest daily snapshot{" "}
+                  <span className="font-semibold text-foreground">
+                    {formatCount(live.watcherHistory.at(-1)?.activeWatchers ?? 0)}
+                  </span>
+                  {formatSnapshotAt(live.lifecycleHistoryUpdatedAt) ? (
+                    <span> · {formatSnapshotAt(live.lifecycleHistoryUpdatedAt)}</span>
+                  ) : null}
+                </p>
+              ) : null}
+            </div>
+            {historyUnavailable ? (
+              <div className="mt-4 flex h-[120px] items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground">
+                Watcher history is temporarily unavailable.
+              </div>
+            ) : live.watcherHistory.length > 0 ? (
+              <WatcherGrowthChart data={live.watcherHistory} />
+            ) : (
+              <div className="mt-4 flex h-[120px] items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground">
+                Historical watcher points will appear once subscription telemetry is available.
+              </div>
+            )}
+          </div>
+        ) : null}
+      </FeatureHeroSplit>
     </section>
   );
 }
