@@ -15,6 +15,8 @@ interface DexVolumeDisplay {
   text: string;
   /** Secondary label for unavailable windows (never a substitute headline). */
   detail: string | null;
+  /** Partial-window lower bound as an explicit `≥` claim, for KPIs that headline a bound. */
+  lowerBound: { text: string; detail: string } | null;
   /** Accessible explanation of the window's availability. */
   title: string;
   view: DexVolumeView;
@@ -32,10 +34,10 @@ export function describeDexVolume(
   const view = resolveDexVolumeView(valueUsd, availability);
   const text = view.valueUsd != null ? formatCurrency(view.valueUsd) : "—";
   if (view.status === "measured") {
-    return { text, detail: null, title: "Measured over every contributing pool", view };
+    return { text, detail: null, lowerBound: null, title: "Measured over every contributing pool", view };
   }
   if (view.status === "legacy-unknown") {
-    return { text, detail: null, title: "Completeness not recorded for this snapshot", view };
+    return { text, detail: null, lowerBound: null, title: "Completeness not recorded for this snapshot", view };
   }
   const partialGrossUsd = view.partialGrossUsd;
   // A legacy payload's null (e.g. pre-record 7d volume) carries no completeness record.
@@ -46,6 +48,14 @@ export function describeDexVolume(
   return {
     text,
     detail: partialGrossUsd != null ? `Partial ≥ ${formatCurrency(partialGrossUsd)}` : label,
+    lowerBound: partialGrossUsd != null
+      ? {
+          text: `≥ ${formatCurrency(partialGrossUsd)}`,
+          detail: typeof coverage === "number"
+            ? `Partial lower bound: pools holding ${Math.floor(coverage * 100)}% of TVL`
+            : "Partial lower bound: not every pool measured",
+        }
+      : null,
     title: partialGrossUsd != null
       ? `${label}: no full-window measurement; admitted observations sum to ${formatCurrency(partialGrossUsd)}${coverageClause}`
       : `${label}: no full-window measurement`,
