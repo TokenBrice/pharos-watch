@@ -28,6 +28,23 @@ afterEach(() => {
 });
 
 describe("HomeAltHero producer freshness", () => {
+  it("shows shares of the known subtotal with incomplete supply coverage", () => {
+    useStablecoinsMock.mockReturnValue({
+      data: { peggedAssets: [
+        makeStablecoin({ id: "usdt-tether", circulating: { peggedUSD: 80 } }),
+        makeStablecoin({ id: "eurc-circle", pegType: "peggedEUR", circulating: { peggedEUR: 20 } }),
+      ] },
+      dataUpdatedAt: NOW, error: null, refetch: vi.fn(),
+      meta: { updatedAt: NOW / 1000, ageSeconds: 0, status: "fresh" },
+    });
+    render(<HomeAltHero snapshot={fallback} fallbackSelectedAtMs={NOW} />);
+    expect(screen.getByText("Known Market Cap Subtotal")).toBeTruthy();
+    expect(screen.getByText("Shares of known market cap subtotal")).toBeTruthy();
+    expect(screen.getByText("80.0%")).toBeTruthy();
+    expect(screen.getAllByText("20.0%")).toHaveLength(2);
+    expect(screen.queryByText("share unavailable")).toBeNull();
+  });
+
   it("reserves Live for a fresh successful producer generation", () => {
     useStablecoinsMock.mockReturnValue({
       data, dataUpdatedAt: NOW, error: null, refetch: vi.fn(),
