@@ -390,12 +390,15 @@ export function SafetyScoreV9PillarRow({
           same thing (owner ruling 2026-08-11); both read `gradeMetadata`, so
           they cannot drift apart. A pillar without a score draws the dashed
           unavailable track, never an empty bar that reads as zero. */}
+      {/* The bar and the evidence jump share one row, so the link adds no
+          line of its own under every pillar. */}
+      <div className="mt-0.5 flex items-center gap-2">
       <span
         role="img"
         aria-label={pillar.score === null
           ? `${pillar.label}: score unavailable`
           : `${pillar.label}: ${pillar.score.toFixed(0)} out of 100`}
-        className={cn("mt-0.5 block h-2.5", pillar.score === null ? UNAVAILABLE_TRACK_CLASS : TRACK_CLASS)}
+        className={cn("block h-2.5 min-w-0 flex-1", pillar.score === null ? UNAVAILABLE_TRACK_CLASS : TRACK_CLASS)}
       >
         {pillar.score === null ? null : (
           <span
@@ -405,16 +408,18 @@ export function SafetyScoreV9PillarRow({
         )}
       </span>
       {evidenceVisibility === "none" ? null : (
-        <div className={cn("mt-0.5 flex justify-end", evidenceVisibility === "below-xl" && "xl:hidden")}>
           <a
             href={`#${pillar.key}-evidence`}
-            className="pharos-focus-ring rounded-sm px-1 py-1 text-[11px] text-muted-foreground underline decoration-dashed underline-offset-2 hover:text-foreground"
+            className={cn(
+              "pharos-focus-ring shrink-0 rounded-sm px-1 py-1 text-[11px] text-muted-foreground underline decoration-dashed underline-offset-2 hover:text-foreground",
+              evidenceVisibility === "below-xl" && "xl:hidden",
+            )}
             aria-label={`${pillar.label} evidence`}
           >
             Evidence ↓
           </a>
-        </div>
       )}
+      </div>
       {hasDetails && open ? (
         <div
           id={detailsId}
