@@ -294,6 +294,8 @@ export interface PlotYearBlock {
   sub: string | null;
   /** Stamp anchor (desktop: under the headland's cut face; portrait: left grid edge, block middle). */
   stamp: PlotPoint;
+  /** Screen angle (deg, clockwise) of the front edge, so the desktop stamp is set along the slab. */
+  stampAngle: number;
   /** Screen y extent along the front edge (portrait margin labels). */
   span: { y0: number; y1: number };
   /** Grave ids in the block, oldest first. */
@@ -804,6 +806,7 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
       text: b.empty ? label : `${label} · ${ids.length}`,
       sub: b.empty ? "none recorded" : null,
       stamp: [0, 0],
+      stampAngle: 0,
       span: { y0: 0, y1: 0 },
       ids,
       greedyLots: !b.empty && greedyYears.has(lo),
@@ -1045,7 +1048,13 @@ function buildDesktop(
     cypress.push({ year: y, count: n, i, j: frame.jVerge, height, foot: roundPoint(P(i, frame.jVerge, 0)), top: roundPoint(tree.top), label: `${y} · ${n} ${n === 1 ? "death" : "deaths"}` });
   }
 
-  for (const b of blocks) b.stamp = roundPoint(P((b.i0 + b.i1) / 2, frame.jB, -slab));
+  for (const b of blocks) {
+    const mid = (b.i0 + b.i1) / 2;
+    b.stamp = roundPoint(P(mid, frame.jB, -slab));
+    const [ax, ay] = P(mid - 0.5, frame.jB, -slab);
+    const [bx, by] = P(mid + 0.5, frame.jB, -slab);
+    b.stampAngle = Math.round((Math.atan2(by - ay, bx - ax) * 18000) / Math.PI) / 100;
+  }
 
   // Extents: tight crop from the gate corner to the lighthouse rock, UST top to the slab bottom.
   const { iA, iB, jN, jB } = frame;
