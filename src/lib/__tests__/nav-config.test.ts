@@ -15,6 +15,7 @@ describe("nav-config", () => {
       "/yield/",
       "/depeg/",
       "/stability-index/",
+      "/freezewatch/",
     ]);
 
     expect(NAV_GROUPS.map((group) => group.key)).toEqual(["markets", "risk", "tools", "more"]);
@@ -29,6 +30,7 @@ describe("nav-config", () => {
       { href: "/yield/", label: "Yield Intelligence" },
       { href: "/safety-scores/", label: "Safety Scores" },
       { href: "/depeg/", label: "Depeg & Recovery" },
+      { href: "/freezewatch/", label: "FreezeWatch" },
     ];
 
     // The rail is now the sole desktop surface for promoted routes. Their
@@ -37,12 +39,14 @@ describe("nav-config", () => {
     expect(marketsHrefs).not.toContain("/yield/");
     expect(riskHrefs).not.toContain("/safety-scores/");
     expect(riskHrefs).not.toContain("/depeg/");
+    expect(riskHrefs).not.toContain("/freezewatch/");
     for (const { href, label } of promotedRoutes) {
       expect(QUICK_NAV_ITEMS.map((item) => item.href)).toContain(href);
       const indexedItems = NAV_ITEMS.filter((item) => item.href === href);
       expect(indexedItems).toHaveLength(1);
       expect(indexedItems[0]).toEqual(expect.objectContaining({ href, label }));
       expect(indexedItems[0]?.shortLabel).toBeUndefined();
+      expect(indexedItems[0]?.compactLabel).toBeUndefined();
     }
   });
 
@@ -57,7 +61,6 @@ describe("nav-config", () => {
     ]);
 
     expect(NAV_GROUPS.find((group) => group.key === "risk")?.items.map((item) => item.href)).toEqual([
-      "/freezewatch/",
       "/compliance/",
       "/dependency-map/",
       "/cemetery/",
@@ -140,13 +143,30 @@ describe("nav-config", () => {
   it("seeds NAV_ITEMS with the canonical rail items ahead of groups and aliases", () => {
     // Canonical entries win the dedupe so index consumers surface primary
     // routes ("Yield Intelligence", not the rail's "Yield") first.
-    expect(NAV_ITEMS.slice(0, 5).map((item) => item.href)).toEqual(QUICK_NAV_ITEMS.map((item) => item.href));
-    expect(NAV_ITEMS.slice(0, 5).map((item) => item.label)).toEqual([
-      "Dashboard",
+    expect(NAV_ITEMS.slice(0, 6).map((item) => item.href)).toEqual(QUICK_NAV_ITEMS.map((item) => item.href));
+    expect(NAV_ITEMS.slice(0, 6).map((item) => item.label)).toEqual([
+      "Home",
       "Safety Scores",
       "Yield Intelligence",
       "Depeg & Recovery",
       "Stability Index",
+      "FreezeWatch",
+    ]);
+  });
+
+  it("steps rail labels down through three width tiers", () => {
+    const tiers = QUICK_NAV_ITEMS.map((item) => [
+      item.compactLabel ?? item.shortLabel ?? item.label,
+      item.shortLabel ?? item.label,
+      item.label,
+    ]);
+    expect(tiers).toEqual([
+      ["Home", "Home", "Home"],
+      ["Safety", "Safety", "Safety Scores"],
+      ["Yield", "Yield", "Yield"],
+      ["Depeg", "Depeg", "Depeg & Recovery"],
+      ["PSI", "Stability", "Stability Index"],
+      ["Freeze", "FreezeWatch", "FreezeWatch"],
     ]);
   });
 

@@ -8,7 +8,7 @@ export interface RouteSuggestion {
 
 /** Curated registry of recoverable top-level routes. */
 const KNOWN_ROUTES: { href: string; label: string }[] = [
-  { href: "/", label: "Dashboard" },
+  { href: "/", label: "Home" },
   { href: "/stablecoins/usd/", label: "Stablecoins · USD" },
   { href: "/stablecoins/eur/", label: "Stablecoins · EUR" },
   { href: "/digest/", label: "Daily Digest" },
@@ -31,7 +31,7 @@ const ALIASES: { match: RegExp; href: string; label: string }[] = [
   { match: /^\/peg[-_]?tracker\/?$/i, href: "/depeg/", label: "Depeg" },
   { match: /^\/tape\/?$/i, href: "/timeline/", label: "Timeline" },
   { match: /^\/news\/?$/i, href: "/digest/", label: "Daily Digest" },
-  { match: /^\/dashboard\/?$/i, href: "/", label: "Dashboard" },
+  { match: /^\/dashboard\/?$/i, href: "/", label: "Home" },
 ];
 
 function normalize(path: string): string {

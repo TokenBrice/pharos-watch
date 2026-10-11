@@ -53,11 +53,16 @@ export interface NavItem {
   href: string;
   label: string;
   /**
-   * Presentation-only short form for the desktop quick rail below `2xl` and
-   * the mobile bottom bar. Never the label a search/index consumer should
-   * show — `NAV_ITEMS` is ordered so canonical entries win the dedupe.
+   * Presentation-only short form for the desktop quick rail from 1440px to
+   * 1679px and the mobile bottom bar. Never the label a search/index consumer
+   * should show — `NAV_ITEMS` is ordered so canonical entries win the dedupe.
    */
   shortLabel?: string;
+  /**
+   * Presentation-only narrowest form for the desktop quick rail below 1440px
+   * (falls back to `shortLabel`). Same indexing caveat as `shortLabel`.
+   */
+  compactLabel?: string;
   icon: LucideIcon;
   description?: string;
   /**
@@ -94,10 +99,10 @@ export interface NavGroup {
 
 const DASHBOARD_NAV_ITEM: NavItem = {
   href: "/",
-  label: "Dashboard",
+  label: "Home",
   icon: LayoutDashboard,
   description: "Market stress, rankings, and triage",
-  keywords: "home overview market stress rankings",
+  keywords: "home dashboard overview market stress rankings",
 };
 
 const STABILITY_INDEX_NAV_ITEM: NavItem = {
@@ -125,6 +130,14 @@ const YIELD_NAV_ITEM: NavItem = {
   keywords: "yield apy apr rates savings earn pys",
 };
 
+const FREEZEWATCH_NAV_ITEM: NavItem = {
+  href: "/freezewatch/",
+  label: "FreezeWatch",
+  icon: FreezeShieldIcon,
+  description: "Issuer power to freeze your balance",
+  keywords: "freeze blacklist seize censorship issuer control frozen",
+};
+
 const DEPEG_NAV_ITEM: NavItem = {
   href: "/depeg/",
   label: "Depeg & Recovery",
@@ -137,9 +150,11 @@ const DEPEG_NAV_ITEM: NavItem = {
 };
 
 /**
- * Desktop quick rail: the five highest-traffic routes, promoted out of the
- * dropdowns so they cost one click instead of hover-then-scan. Apart from the
- * dashboard, the rail is their sole desktop navigation surface.
+ * Desktop quick rail: the six highest-traffic routes, promoted out of the
+ * dropdowns so they cost one click instead of hover-then-scan. Apart from
+ * Home, the rail is their sole desktop navigation surface. Labels step down
+ * in three tiers to fit the masthead (measured 2026-10-11): `compactLabel`
+ * below 1440px, `shortLabel` from 1440px, the canonical `label` from 1680px.
  */
 export const QUICK_NAV_ITEMS: readonly NavItem[] = [
   DASHBOARD_NAV_ITEM,
@@ -149,9 +164,10 @@ export const QUICK_NAV_ITEMS: readonly NavItem[] = [
   { ...YIELD_NAV_ITEM, label: "Yield", shortLabel: "Yield" },
   // Compact labels keep the rail and section menus within the masthead.
   { ...DEPEG_NAV_ITEM, shortLabel: "Depeg" },
-  // "Stability" is a real word; "PSI" was the only acronym-only top-level
-  // label and newcomers had no way to decode it. The palette keeps `psi`.
-  { ...STABILITY_INDEX_NAV_ITEM, shortLabel: "Stability" },
+  // "Stability" is a real word and wins wherever it fits; below 1440px the
+  // six-item rail only fits the in-product acronym. The palette keeps `psi`.
+  { ...STABILITY_INDEX_NAV_ITEM, shortLabel: "Stability", compactLabel: "PSI" },
+  { ...FREEZEWATCH_NAV_ITEM, shortLabel: "FreezeWatch", compactLabel: "Freeze" },
 ];
 
 /* ── Resources columns — reference, updates, and product links ─────── */
@@ -228,7 +244,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     key: "risk",
     label: "Risk",
     items: [
-      { href: "/freezewatch/", label: "FreezeWatch", icon: FreezeShieldIcon, description: "Issuer power to freeze your balance", keywords: "freeze blacklist seize censorship issuer control frozen" },
       { href: "/compliance/", label: "Compliance", icon: Landmark, description: "MiCA and GENIUS status, coin by coin", keywords: "compliance mica genius regulation regulated license authorized" },
       { href: "/dependency-map/", label: "Dependency Map", icon: Network, description: "Collateral and wrapper dependency graph", keywords: "dependency map contagion collateral wrapper graph exposure" },
       { href: "/cemetery/", label: "Cemetery", icon: Skull, description: "Failed stablecoins and their lessons", keywords: "cemetery dead failed collapsed defunct graveyard" },
@@ -296,6 +311,7 @@ export const NAV_ITEMS: NavItem[] = (() => {
     YIELD_NAV_ITEM,
     DEPEG_NAV_ITEM,
     STABILITY_INDEX_NAV_ITEM,
+    FREEZEWATCH_NAV_ITEM,
   ];
   for (const item of [
     ...canonicalRailItems,

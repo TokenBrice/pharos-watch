@@ -77,22 +77,25 @@ describe("TopNav", () => {
     expect(railLinks[0].getAttribute("aria-current")).toBe("page");
   });
 
-  it("keeps compact rail labels through xl while expanding entity search", () => {
+  it("steps rail labels through three width tiers while expanding entity search", () => {
     installMatchMediaMock(true);
 
     render(<TopNav />);
 
-    const compactItem = QUICK_NAV_ITEMS.find((item) => item.shortLabel && item.shortLabel !== item.label);
-    expect(compactItem).toBeDefined();
-    const compactLink = [...document.querySelectorAll<HTMLAnchorElement>('nav[aria-label="Quick links"] a')].find(
-      (link) => normalizeNavPath(link.getAttribute("href") ?? "") === normalizeNavPath(compactItem!.href),
+    const tieredItem = QUICK_NAV_ITEMS.find((item) => item.compactLabel && item.shortLabel !== item.label);
+    expect(tieredItem).toBeDefined();
+    const tieredLink = [...document.querySelectorAll<HTMLAnchorElement>('nav[aria-label="Quick links"] a')].find(
+      (link) => normalizeNavPath(link.getAttribute("href") ?? "") === normalizeNavPath(tieredItem!.href),
     )!;
-    const compactLabel = [...compactLink.querySelectorAll("span")].find((node) => node.classList.contains("2xl:hidden"));
-    const fullLabel = [...compactLink.querySelectorAll("span")].find((node) => node.classList.contains("2xl:inline"));
+    const spans = [...tieredLink.querySelectorAll("span")];
+    const compactLabel = spans.find((node) => node.className === "min-[1440px]:hidden");
+    const shortLabel = spans.find((node) => node.classList.contains("min-[1680px]:hidden"));
+    const fullLabel = spans.find((node) => node.className === "hidden min-[1680px]:inline");
     const search = screen.getByRole("button", { name: "Search" });
 
-    expect(compactLabel?.textContent).toBe(compactItem!.shortLabel);
-    expect(fullLabel?.textContent).toBe(compactItem!.label);
+    expect(compactLabel?.textContent).toBe(tieredItem!.compactLabel);
+    expect(shortLabel?.textContent).toBe(tieredItem!.shortLabel);
+    expect(fullLabel?.textContent).toBe(tieredItem!.label);
     // Assert the breakpoint contract, not the width literal: the search
     // control expands one breakpoint before the rail gives up its shorthand,
     // and the exact xl width is a fitting detail that has already had to move
