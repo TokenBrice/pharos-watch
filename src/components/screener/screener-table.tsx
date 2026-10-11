@@ -89,7 +89,7 @@ const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
   {
     id: "v9Profile",
     label: "V10 Profile",
-    className: "text-center",
+    className: "w-[15rem] max-w-[15rem] text-center",
     title: "Safety Score V10 pillars: Backing / Exit / Economic Control. The weakest published pillar is highlighted.",
   },
   { id: "mechanism", label: "Mechanism", className: "text-left" },
@@ -444,8 +444,8 @@ function ScreenerTableRow({
           <span className="text-muted-foreground">—</span>
         )}
       </TableCell>
-      <TableCell className="text-center">
-        <div className="flex flex-col items-center gap-1">
+      <TableCell className="w-[15rem] max-w-[15rem] text-center">
+        <div className="flex min-w-0 max-w-full flex-col items-center gap-1">
           <V9Profile row={row} />
           <SafetyScoreTopDriver driver={topDriver} coinId={row.id} subjectLabel={row.symbol} />
         </div>
@@ -535,7 +535,7 @@ function V9Profile({ row, compact = false }: { row: ScreenerRow; compact?: boole
     ? `Binding V10 cap: ${row.safetyBindingCapReason}`
     : `V10 evidence: ${evidenceLabel}`;
   return (
-    <span className={`inline-flex ${compact ? "items-center" : "flex-col"} gap-1`} title={title}>
+    <span className={`inline-flex max-w-full ${compact ? "items-center" : "min-w-0 flex-col"} gap-1`} title={title}>
       <span className="inline-flex items-center gap-1 pharos-numeric text-xs">
         <PillarReading label="B" value={row.safetyBackingScore} weakest={row.safetyWeakestPillar === "backing"} />
         <span className="text-border">/</span>

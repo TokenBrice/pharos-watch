@@ -13,6 +13,7 @@ import { useDexLiquidity, useNonUsdShare, usePegSummary, useReportCardsV9 } from
 import { TimeRangeOption, isTimeRangeOption } from "@/hooks/use-time-range-filter";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useStablecoins } from "@/hooks/use-stablecoins";
+import { CHART_AMBER } from "@/lib/chart-colors";
 import { logosById } from "@/lib/logos";
 import { AltPegCohortHistoryChart } from "./alt-peg-cohort-history-chart";
 import { AltPegStablecoinTable } from "./alt-peg-stablecoin-table";
@@ -68,13 +69,13 @@ function AltPegMixBand({
         {supplyUnavailableCount > 0 ? <p className="pharos-meta">Known supply subtotals · {supplyUnavailableCount} assets without supply observations; mix shares unavailable.</p> : null}
       </div>
       <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/35">
-        <div className="h-full bg-[color:var(--chart-5)]" style={{ width: `${commodityShare ?? 0}%` }} />
+        <div className="h-full" style={{ width: `${commodityShare ?? 0}%`, backgroundColor: CHART_AMBER }} />
         <div className="h-full bg-[color:var(--brand-accent)]" style={{ width: `${nonCommodityShare ?? 0}%` }} />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <p className="pharos-kicker flex items-center gap-2">
-            <span className="size-2 rounded-full bg-[color:var(--chart-5)]" aria-hidden="true" />
+            <span className="size-2 rounded-full" style={{ backgroundColor: CHART_AMBER }} aria-hidden="true" />
             Commodities
           </p>
           <p className="mt-1 pharos-numeric text-base font-semibold text-foreground">

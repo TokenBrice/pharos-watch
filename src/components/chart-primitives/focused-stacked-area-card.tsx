@@ -121,7 +121,9 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
           {isFocused ? focusedNote : null}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <TimeRangeButtons options={options} value={range} onChange={handleRangeChange} />
+          <div className="w-full min-w-0 sm:w-auto">
+            <TimeRangeButtons options={options} value={range} onChange={handleRangeChange} />
+          </div>
           {isFocused ? (
             <button
               type="button"

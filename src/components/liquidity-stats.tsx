@@ -149,7 +149,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
 
         <MetricStatCard
           variant="compact"
-          title={<MethodologyLabel topic="liquidityScore">Avg Liq Score</MethodologyLabel>}
+          title={<MethodologyLabel topic="liquidityScore" className="-my-2.5 md:my-0">Avg Liq Score</MethodologyLabel>}
           value={stats.avgScore == null ? "NR" :
             <>
               {stats.avgScore}
@@ -162,7 +162,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
 
         <MetricStatCard
           variant="compact"
-          title={<MethodologyLabel topic="liquidityScore">Covered on DEX</MethodologyLabel>}
+          title={<MethodologyLabel topic="liquidityScore" className="-my-2.5 md:my-0">Covered on DEX</MethodologyLabel>}
           value={stats.withLiquidity}
           subtext={`${stats.highConfidenceCoverage} primary/mixed · ${stats.fallbackCoverage} fallback · of ${stats.totalTracked}`}
         />
