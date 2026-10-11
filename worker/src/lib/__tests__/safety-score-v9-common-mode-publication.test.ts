@@ -8,7 +8,7 @@ import { SafetyScoreV9CommonModeGroupsSchema } from "@shared/types/safety-score-
 import { projectSafetyScoreV9CommonModeGroups } from "@shared/lib/safety-score-v9/public";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { structuralSignalNeedsHardCap } from "@shared/lib/safety-score-v9/formula";
-import { resolveV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
+import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 
 function replay() {
   const fixedInput = createReportCardsFixedInput(capture.draft as unknown as ReportCardsFixedInputDraft);

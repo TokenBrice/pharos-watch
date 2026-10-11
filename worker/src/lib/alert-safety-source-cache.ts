@@ -1,6 +1,6 @@
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { isRecord } from "@shared/lib/type-guards";
-import { resolveV9PublicWitnessText } from "@shared/lib/safety-score-v9/public-witness-texts";
+import { resolveV9PublicWitnessText } from "@shared/types/safety-score-v9-public-witness-texts";
 import type { SafetyAlertSourceState } from "@shared/types";
 import { SafetyGradesResponseSchema, type ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import {

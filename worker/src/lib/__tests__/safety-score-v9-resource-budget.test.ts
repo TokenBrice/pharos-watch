@@ -121,7 +121,7 @@ describe("Safety Score V9 canonical publication resource budget", {
           import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment.ts";
           import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input.ts";
           import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-          import { resolveV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
+          import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
           import { iterateEvidenceResponsibilityFacts } from "@shared/types/safety-score-v9-public-evidence-facts";
           import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension.ts";
           import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set.ts";

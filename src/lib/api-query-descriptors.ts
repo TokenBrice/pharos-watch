@@ -1,5 +1,5 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { resolveV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
+import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/data-surface-descriptors";

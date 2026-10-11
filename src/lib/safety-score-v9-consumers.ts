@@ -1,6 +1,6 @@
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
-import { resolveV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
+import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import type {
   SafetyScorePublicationIdentity,
   SafetyScoreV9Card,

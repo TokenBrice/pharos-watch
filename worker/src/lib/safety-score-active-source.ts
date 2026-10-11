@@ -1,6 +1,6 @@
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
-import { resolveV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
+import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import { loadPublishedReportCardsV9Snapshot } from "./report-cards-v9-cache";
 import { loadActiveSafetyScoreIndex } from "./safety-score-index";
 

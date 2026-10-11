@@ -5,7 +5,7 @@ import mechanismReviewOverlays from "@shared/data/safety-score-v9/mechanism-revi
 import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
 import { readCompiledV9FactSetForEvaluation } from "@shared/lib/safety-score-v9/facts";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
-import { resolveV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
+import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import {
   V9EvidenceGapQueueV2Schema,
   type V9EvidenceGapQueueEntryV2,

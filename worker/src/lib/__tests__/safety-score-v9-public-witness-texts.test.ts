@@ -6,9 +6,8 @@ import { normalizeFixedInput } from "../report-cards-fixed-input";
 import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
 import { buildSafetyScoreV9PublicationFromNormalizedInput } from "../safety-score-v9/candidate";
 import { buildAlertSafetyV9SourceEnvelopeFromParts } from "../alert-safety-source-cache";
-import {
-  internV9PublicWitnessTexts, resolveV9PublicWitnessTexts, validateV9PublicWitnessTexts,
-} from "@shared/lib/safety-score-v9/public-witness-texts";
+import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
+import { resolveV9PublicWitnessTexts, validateV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 
 const captured = vi.hoisted(() => ({ usdc: null as object | null, resolvedCards: 0 }));
 vi.mock("@shared/lib/safety-score-v9/public-witness-texts", async (importOriginal) => {
@@ -19,7 +18,7 @@ vi.mock("@shared/lib/safety-score-v9/public-witness-texts", async (importOrigina
       if ("id" in card && card.id === "usdc-circle") captured.usdc = structuredClone(card);
       const wire = actual.internV9PublicWitnessTexts(card);
       if ("id" in card) {
-        expect(actual.resolveV9PublicWitnessTexts(wire)).toEqual(card);
+        expect(resolveV9PublicWitnessTexts(wire)).toEqual(card);
         captured.resolvedCards++;
       }
       return wire;

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isV9WitnessTextReference } from "../lib/safety-score-v9/public-witness-texts";
+import { isV9WitnessTextReference } from "./safety-score-v9-public-witness-texts";
 import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import {
   V9AssetPremiumKindSchema,

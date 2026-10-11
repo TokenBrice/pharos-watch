@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { countV9EvidenceObligations, iterateEvidenceResponsibilityFacts } from "../../types/safety-score-v9-public-evidence-facts";
 import { resolveCauseGapId } from "../../types/safety-score-v9-public-cause-gaps";
-import { resolveV9PublicWitnessTexts } from "../safety-score-v9/public-witness-texts";
+import { resolveV9PublicWitnessTexts } from "../../types/safety-score-v9-public-witness-texts";
 import {
   projectV9RoleDependencyPillarLimits,
   type V9ResolvedDependencyInputs,

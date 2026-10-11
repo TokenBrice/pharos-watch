@@ -31,8 +31,12 @@ import { V9EffectiveDependenciesV3Schema } from "./safety-score-v9-facts";
 import { ReserveSliceSchema } from "./reserves";
 import { causeGapRefs, V9RatingStatusSchema, V9PartialEvidenceSchema, V9DependencyCauseShape, refineV9RatingStatusFields, refineV9PublicGapReferences, refineV9PublicGapContext } from "./safety-score-v9-public-causes";
 import { canonicalTextArray } from "./safety-score-v9-fact-primitives";
-import { resolveV9PublicWitnessTexts, validateV9PublicWitnessTexts, validateV9ResolvedWitnessViews } from "../lib/safety-score-v9/public-witness-texts";
-import { V9PublicWitnessTextTableSchema } from "./safety-score-v9-public-witness-texts";
+import {
+  resolveV9PublicWitnessTexts,
+  validateV9PublicWitnessTexts,
+  validateV9ResolvedWitnessViews,
+  V9PublicWitnessTextTableSchema,
+} from "./safety-score-v9-public-witness-texts";
 
 export const SafetyScoreV9DependencyProvenanceSchema = z.object({
   source: V9EffectiveDependenciesV3Schema.shape.source,

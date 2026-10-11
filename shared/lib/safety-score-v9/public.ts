@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { internV9PublicCauseGaps, finalizeV9PublicCauseGaps, type V9InternedPublicCardDraft, type V9UninternedPublic, type V9UninternedPublicCard } from "./public-cause-interning";
-import { resolveV9PublicWitnessText, resolveV9PublicWitnessTexts } from "./public-witness-texts";
+import { resolveV9PublicWitnessText, resolveV9PublicWitnessTexts } from "../../types/safety-score-v9-public-witness-texts";
 import {
   SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9CurrentResponseSchema,

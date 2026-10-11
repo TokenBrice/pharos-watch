@@ -2,7 +2,7 @@ import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards
 import { computeDexLiquidityPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { iterateEvidenceResponsibilityFacts } from "@shared/types/safety-score-v9-public-evidence-facts";
 import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-gaps";
-import { resolveV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
+import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import {
   evaluateV9FactSet,
   evaluateValidatedV9FactSet,
