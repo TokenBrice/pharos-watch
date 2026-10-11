@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, BookOpen, Handshake, KeyRound } from "lucide-react";
+import { ArrowUpRight, Handshake, KeyRound } from "lucide-react";
 import { CopyButton } from "@/components/copy-button";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { getCurrentDonorKeyQualifyingCoins } from "@/lib/donor-key-qualifying-coins";
@@ -68,10 +68,6 @@ export default async function ApiPage() {
           <a href={`#${API_PAGE_ANCHORS.partnerAccess}`} className={PILL_CLASS_NAME}>
             <Handshake className="h-4 w-4" aria-hidden="true" />
             Partner key
-          </a>
-          <a href={`#${API_TAB_IDS.reference}`} className={PILL_CLASS_NAME}>
-            <BookOpen className="h-4 w-4" aria-hidden="true" />
-            API reference
           </a>
         </div>
       }
