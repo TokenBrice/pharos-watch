@@ -10,7 +10,7 @@ import { copyText } from "@/lib/clipboard";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { encodePortfolioHoldings } from "@/lib/portfolio-codec";
+import { encodePortfolioHoldings, mergeCoinsParam } from "@/lib/portfolio-codec";
 import { PortfolioEmptyState } from "@/components/portfolio-empty-state";
 import type { PortfolioPreset } from "@/components/portfolio-empty-state";
 import {
@@ -46,7 +46,7 @@ export function PortfolioClient() {
   // Wait for the browser URL snapshot before exposing or writing holdings;
   // the portfolio bootstrap preserves incoming shares during hydration.
   const { getParam, isReady, setParam } = useUrlFilters();
-  const portfolio = usePortfolio(getParam("p"), isReady);
+  const portfolio = usePortfolio(mergeCoinsParam(getParam("p"), getParam("coins")), isReady);
 
   // Clean up toast timer on unmount
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
@@ -188,7 +188,10 @@ export function PortfolioClient() {
       {portfolio.holdings.length > 0 && (
         <>
           <h2 className="pharos-kicker">Holdings Safety Grades</h2>
-          {v9Projection?.status === "unavailable" ? (
+          {v9Projection?.status === "unavailable" && v9Projection.reason === "portfolio-empty" && (
+            <p className="text-sm text-muted-foreground">Enter an amount for at least one holding to compute the weighted safety aggregate.</p>
+          )}
+          {v9Projection?.status === "unavailable" && v9Projection.reason !== "portfolio-empty" ? (
             <p className="text-sm text-muted-foreground" role="alert">
               V10 portfolio safety is unavailable ({v9Projection.reason}).
             </p>

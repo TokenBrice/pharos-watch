@@ -222,7 +222,8 @@ export function buildV9PortfolioProjection(
     weightedScore += card.score * holding.amount;
     for (const pillar of ["backing", "exit", "control"] as const) {
       const value = card.pillars[pillar];
-      if (value.aggregationDisposition !== "included" || value.score === null) continue;
+      // aggregationDisposition is optional and defaults to "included".
+      if (value.aggregationDisposition === "excluded-a-b" || value.score === null) continue;
       weightedPillars[pillar] += value.score * holding.amount;
       pillarUsd[pillar] += holding.amount;
     }

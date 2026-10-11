@@ -58,6 +58,18 @@ describe("V9 safety consumer projections", () => {
     });
   });
 
+  it("aggregates pillars whose optional aggregationDisposition is absent (defaults to included)", () => {
+    const base = makeV9Card({ id: "implicit" });
+    const pillars = Object.fromEntries((["backing", "exit", "control"] as const).map((key) => {
+      const { aggregationDisposition: _omit, ...rest } = base.pillars[key];
+      return [key, rest];
+    })) as typeof base.pillars;
+    const card = { ...base, pillars };
+    const response = makeReportCardsV9Response({ cards: [card] });
+    const result = buildV9PortfolioProjection(response, response.safetyScoreIdentity, [{ coinId: "implicit", amount: 10 }]);
+    expect(result).toMatchObject({ status: "available", value: { pillars: { backing: base.pillars.backing.score, exit: base.pillars.exit.score, control: base.pillars.control.score } } });
+  });
+
   it("returns null portfolio aggregates when no holding has a score", () => {
     const card = makeReportCardsV9PipelineGapCard(null, "B");
     const response = makeReportCardsV9Response({ cards: [card] });

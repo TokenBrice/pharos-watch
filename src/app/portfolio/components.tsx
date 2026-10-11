@@ -24,9 +24,9 @@ export function PortfolioHeroStrip({ holdingCount, totalUsd }: { holdingCount: n
     <section className="pharos-card-shell px-5 py-5 sm:px-6 sm:py-6" aria-label="Portfolio overview">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-2">
-          <p className="pharos-kicker">Portfolio Risk</p>
+          <p className="pharos-kicker">{hasHoldings ? "Total portfolio value" : "Modelable stablecoins"}</p>
           <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
-            {hasHoldings ? formatUsd(totalUsd) : PORTFOLIO_COIN_OPTIONS.length}
+            {hasHoldings ? (totalUsd > 0 ? formatUsd(totalUsd) : "Enter amounts") : PORTFOLIO_COIN_OPTIONS.length}
           </p>
           <p className="pharos-meta">
             {hasHoldings

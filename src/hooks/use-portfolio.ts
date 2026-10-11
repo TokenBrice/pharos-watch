@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   encodePortfolioHoldings,
   isPortfolioHolding,
+  mergeCoinsParam,
   migratePortfolioIds,
   normalizePortfolioHolding,
   parsePortfolioUrlParam,
@@ -68,7 +69,10 @@ function getInitialPortfolioState(initialUrlParam?: string): {
   // Prefer a router-sourced param from the caller; fall back to the location
   // bar only when the caller does not supply one.
   const urlParam =
-    initialUrlParam ?? parseStringSearchParam(window.location.search, "p");
+    initialUrlParam ?? mergeCoinsParam(
+      parseStringSearchParam(window.location.search, "p"),
+      parseStringSearchParam(window.location.search, "coins"),
+    );
   if (urlParam) {
     return {
       holdings: parsePortfolioUrlParam(urlParam),
