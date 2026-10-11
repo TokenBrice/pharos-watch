@@ -245822,6 +245822,509 @@
       ],
       "nextReviewTrigger": "Issuer publishes a binding unconditional end-to-end redemption maximum, with applicable cutoff/calendar and gate treatment; otherwise recheck 2026-11-11.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:usdc-circle",
+      "taskIds": [
+        "V9G-d97d616875282e6f",
+        "V9G-5c5184ee5d956a9f",
+        "V9G-18d9be677e24f5ee",
+        "V9G-29d0bb3d6e1e7d7d",
+        "V9G-01e13371369fe5d6",
+        "V9G-010b7532e0dea220"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:45:20Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I200)",
+      "evidence": [
+        "https://api-ethereum-mainnet-erigon.n.dwellir.com",
+        "https://api.llama.fi/hacks",
+        "https://explorer.mainnet.citrea.xyz/api/v2/smart-contracts/0xc5Ec494878F51d2641a17B49606B47e933c961d3",
+        "https://flare-api.flare.network/ext/C/rpc",
+        "https://flare-explorer.flare.network/api/v2/addresses/0x77C71633C34C3784ede189d74223122422492a0f/logs",
+        "https://flare-explorer.flare.network/api/v2/addresses/0xfbda5f676cb37624f28265a144a48b0d6e87d3b6/logs",
+        "https://flare-explorer.flare.network/api/v2/smart-contracts/0x3AdAE7Ad0449e26ad2e95059e08CC29ECB93E194",
+        "https://flare-explorer.flare.network/api/v2/smart-contracts/0x77C71633C34C3784ede189d74223122422492a0f",
+        "https://layerzero.network/blog/cross-chain-bridge-security",
+        "https://layerzero.network/blog/kelpdao-incident-statement",
+        "https://rekt.news/",
+        "https://rpc.soneium.org",
+        "https://soneium.blockscout.com/api/v2/addresses/0x8be79275fcfd08a931087ecf70ba8a99aee3ac59/logs",
+        "https://soneium.blockscout.com/api/v2/addresses/0xba9986d2381edf1da03b0b9c1f8b00dc4aacc369/logs",
+        "https://soneium.blockscout.com/api/v2/smart-contracts/0x03056Debabeb27D2ae346Abd7128EaD75b6a676A",
+        "https://soneium.blockscout.com/api/v2/smart-contracts/0x2dCc04f35E0E763301Cd482bE13AEa2c62462EC5",
+        "https://sourcify.dev/server/v2/contract/1/0x23ddd3e3692d1861ed57ede224608875809e127f?fields=all",
+        "https://sourcify.dev/server/v2/contract/1/0xc026395860db2d07ee33e05fe50ed7bd583189c7?fields=abi,compilation,sources,proxyResolution",
+        "https://sourcify.dev/server/v2/contract/1/0xcff35e3c0b8d197a6ce10802cd649fbb9957da07?fields=all",
+        "https://sourcify.dev/server/v2/contract/151/0xe08ded898d7782b085cd240d7b234063696765ad?fields=abi,proxyResolution,deployment,compilation,sources",
+        "https://sourcify.dev/server/v2/contract/2741/0x84a71ccd554cc1b02749b35d22f684cc8ec987e1?fields=abi,proxyResolution,deployment,compilation,sources",
+        "https://status.circle.com/api/v2/incidents.json",
+        "https://status.soneium.org/",
+        "https://status.soneium.org/history/2"
+      ],
+      "rationale": "All six packet items accounted. Two exact-control no-known-incident proposals for Soneium and Flare after source-bound first-activity receipts, bounded token/controller explorer JSON pages, issuer/tracker/provider research and recent pinned emergency state. Abstract and Redbelly retain latest unverified deployed token application ABI blockers; Citrea retains latest unverified OApp implementation ABI blocker, not re-litigated through provider availability. Aurora token paused=0 and exact creation receipt succeed, but verified Ethereum ERC20Locker paused=253 at26169000 disables public lock/deposit (PAUSED_LOCK=1), so a negative is disqualified. Operational suspension is not an invented mint-control/supply-integrity incident. No root/sibling fanout, new B/C, historical exposureShare, observed score change or production sentinel closure.",
+      "changeRefs": [
+        "agents/curation-campaign/fragments/I200.json",
+        "agents/curation-campaign/results/I200.md",
+        "agents/curation-campaign/research/I200-rpc.json",
+        "agents/curation-campaign/research/I200-surfaces.json",
+        "agents/curation-campaign/research/I200-search-summary.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "usdc-circle:gap:control:bridge-meta:usdc-circle:0712b639dbae35d03c06:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "usdc-circle:gap:control:bridge-meta:usdc-circle:15ae7c4328e40a98277d:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "usdc-circle:gap:control:bridge-meta:usdc-circle:1f94846f0ce4c0f41474:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "usdc-circle:gap:control:bridge-meta:usdc-circle:7e9afc73c461e33952ba:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "usdc-circle:gap:control:bridge-meta:usdc-circle:9f08b117566777de53d6:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "usdc-circle:gap:control:bridge-meta:usdc-circle:c49ab81a36cf94aa634c:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Re-review 2026-10-18 or earlier upon verified exact token ABI/source and birth for Abstract/Redbelly, verified exact Citrea OApp implementation ABI/source, or primary exact Aurora locker suspension/migration/recovery disposition. Coordinator admission plus later-clock replay/production reconciliation required for the two proposed negative sentinels.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:usdt-tether",
+      "taskIds": [
+        "V9G-a4fb6957dee3c890"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:44:39Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I201)",
+      "evidence": [
+        "https://api.llama.fi/hacks",
+        "https://blog.usdt0.to/flare-integrates-usdt0-for-native-omnichain-liquidity",
+        "https://blog.usdt0.to/security-is-the-product",
+        "https://docs.usdt0.to/api/deployments",
+        "https://flare-api.flare.network/ext/C/rpc",
+        "https://flare-explorer.flare.network/api/v2/addresses/0x567287d2a9829215a37e3b88843d32f9221e7588/logs",
+        "https://flare-explorer.flare.network/api/v2/addresses/0xe7cd86e13ac4309349f30b3435a9d337750fc82d/logs",
+        "https://flare.network/news/get-started-usdt0",
+        "https://github.com/Everdawn-Labs/usdt0-audit-reports/issues/4",
+        "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report",
+        "https://rekt.news/",
+        "https://sourcify.dev/server/v2/contract/14/0x767F94783B3Ca9eC74807932d3FeB3c5010B9c89?fields=abi,metadata",
+        "https://sourcify.dev/server/v2/contract/14/0x779Ded0c9e1022225f8E0630b35a9b54bE713736?fields=abi,metadata"
+      ],
+      "rationale": "Promote only the one assigned Flare-control incidentState item. Pinned exact token/OFT source identities, two account-specific false blocklist observations, exact origin receipts and same-explorer bounded event pages recover the previous provider/surface blocker. Named issuer/tracker/rail searches identify no exact Flare-control incident. This does not close other USDT deployment controls or certify all holders/channels; factsClosed0 pending coordinator admission and production sentinel readback.",
+      "changeRefs": [
+        "agents/curation-campaign/results/I201.md",
+        "agents/curation-campaign/research/I201-surface-observations.json",
+        "agents/curation-campaign/fragments/I201.json#i201-usdt-tether-0d9d2576ac1a89994ba0-20261011",
+        "agents/curation-campaign/research/I201-usdt-flare-live-control-state.json",
+        "agents/curation-campaign/research/I201-usdt-flare-creation.json",
+        "agents/curation-campaign/research/I201-usdt-flare-oft-creation.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "usdt-tether:gap:control:bridge-meta:usdt-tether:0d9d2576ac1a89994ba0:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "2026-10-18, or earlier newly disclosed exact Flare token/OFT incident or emergency restriction; coordinator should admit this review and observe the exact assigned sentinel at a later eligible production clock.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:dai-makerdao",
+      "taskIds": [
+        "V9G-1becdd21cfa71437"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:44:39Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I201)",
+      "evidence": [
+        "https://explorer.aurora.dev/api/v2/smart-contracts/0xe3520349f477a5f6eb06107066048508498a291b",
+        "https://explorer.aurora.dev/api/v2/transactions/0x82ba603d175b0ee6a9a133dc8f67d90cf2c1c0e677d23e79a3bec0d5999f4555",
+        "https://mainnet.aurora.dev"
+      ],
+      "rationale": "Defer the one exact Aurora DAI incidentState item. Registered public provider now successfully pins recent and mint-era admin4444588443c3a91288c5002483449aba1054192b and paused uint0. Exact pinned successful September27 mint receipt still has sender7d2b87d5d7ac17a2ea2319f7f7e72ac36f0db97a; source onlyAdmin/execution-authority mapping remains unresolved. No benign rotation, compromise or incident invented. Exact NEAR locker emergency-state witness also remains unavailable. Current zero flags do not settle these substantive joins.",
+      "changeRefs": [
+        "agents/curation-campaign/results/I201.md",
+        "agents/curation-campaign/research/I201-surface-observations.json",
+        "agents/curation-campaign/research/I201-dai-aurora-state.json",
+        "agents/curation-campaign/research/I201-dai-aurora-mint-era-state.json",
+        "agents/curation-campaign/research/I201-dai-aurora-mint-receipt.json",
+        "agents/curation-campaign/results/H02DAI.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "dai-makerdao:gap:control:bridge-meta:dai-makerdao:f67d9f539a23747ab186:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "2026-10-18, or earlier primary exact Aurora mint execution/source-authority reconciliation and registered pin-capable NEAR locker emergency-state evidence; a current false token flag alone is insufficient.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:frxusd-frax",
+      "taskIds": [
+        "V9G-608341706b9c02a8",
+        "V9G-f5a02fa88bfad05f"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:44:39Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I201)",
+      "evidence": [
+        "https://explorer.mainnet.aurora.dev/api/v2/addresses/0x80eede496655fb9047dd39d9f418d5483ed600df/logs",
+        "https://explorer.mainnet.aurora.dev/api/v2/blocks/217681451",
+        "https://scan.layerzero-api.com/v1/messages/oapp/30324/0xea77c590bb36c43ef7139ce649cfbcfd6163170d?limit=100"
+      ],
+      "rationale": "Defer both assigned Frax incidentState items without re-litigation. Latest H03FRXUSD Abstract carries exact failed-compose leads plus unverified active ABI and Safe scope; Aurora carries exact PeerSet30255zero reset requiring primary disposition/current resumption. New provider support is not permission to erase substantive failed-message/disabled-route/source blockers. No new observation timestamps, negative review or incident entry authored.",
+      "changeRefs": [
+        "agents/curation-campaign/results/I201.md",
+        "agents/curation-campaign/research/I201-surface-observations.json",
+        "agents/curation-campaign/results/H03FRXUSD.md",
+        "agents/curation-campaign/research/H03FRXUSD-abstract-aurora.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "frxusd-frax:gap:control:bridge-meta:frxusd-frax:2debb2f9042332cb7767:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "frxusd-frax:gap:control:bridge-meta:frxusd-frax:366da54fe412e1f0e955:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "2026-10-18, but reopen Abstract only on NEW primary exact failed-compose completion/fund disposition plus verified active ABI/authority including retained Safe; reopen Aurora only on NEW primary exact30255 zero-peer reset/resumption disposition. Do not retry solely because provider support was added.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:pyusd-paypal",
+      "taskIds": [
+        "V9G-455b88b74e06b784"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:44:39Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I201)",
+      "evidence": [
+        "https://api.mainnet.abs.xyz",
+        "https://block-explorer-api.mainnet.abs.xyz/api?module=contract&action=getsourcecode&address=0x3cd2b89c49d130c08f1d683225b2e5deb63ff876",
+        "https://block-explorer-api.mainnet.abs.xyz/api?module=contract&action=getsourcecode&address=0x56d7bd2dfec4aab05616e63c06767cdc5f0cc168",
+        "https://sourcify.dev/server/v2/contract/2741/0x3cd2b89c49d130c08f1d683225b2e5deb63ff876?fields=abi,metadata",
+        "https://sourcify.dev/server/v2/contract/2741/0x56d7bd2dfec4aab05616e63c06767cdc5f0cc168?fields=abi,metadata"
+      ],
+      "rationale": "Defer the exact Abstract PYUSD incidentState item. Registered provider pins token implementation56d7bd2dfec4aab05616e63c06767cdc5f0cc168 and predecessor-selector paused0/isFrozen(wrapper)0, wrapper token() exact. Ink30339 predecessor-selector rate tuple(0,1783458319,0,0), send capacity[0,0] and zero peer reveal a disabled-route lead. Exact current implementation and wrapper source API return unverified ABI, Sourcify404; successful selector calls are diagnostics, not verified complete emergency inventory. False flags cannot override zero-peer/capacity or current-source blocker; no negative or synthetic incident.",
+      "changeRefs": [
+        "agents/curation-campaign/results/I201.md",
+        "agents/curation-campaign/research/I201-surface-observations.json",
+        "agents/curation-campaign/research/I201-pyusd-abstract-recent-state.json",
+        "agents/curation-campaign/research/I201-pyusd-abstract-ink-route.json",
+        "agents/curation-campaign/research/I201-pyusd-abstract-wrapper-token.json",
+        "agents/curation-campaign/results/H05PYUSD.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "pyusd-paypal:gap:control:bridge-meta:pyusd-paypal:cadc50417d9d962a5bea:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "2026-10-18, or earlier primary exact Abstract-to-Ink30339 restriction/retirement/migration/resumption disposition and verified deployed current token/wrapper ABI with complete local controller binding; another provider-only retry cannot clear the new substantive lead.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:m-m0",
+      "taskIds": [
+        "V9G-fa2a71a25390efa6",
+        "V9G-cfad0fb713421ef5"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:41:28Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I202)",
+      "evidence": [
+        "https://api.llama.fi/hacks",
+        "https://rekt.news/",
+        "https://rpc.mainnet.citrea.xyz",
+        "https://rpc.soneium.org",
+        "https://soneium.blockscout.com/api/v2/addresses/0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b/logs",
+        "https://soneium.blockscout.com/api/v2/addresses/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd/logs",
+        "https://soneium.blockscout.com/api/v2/smart-contracts/0x065A618Cd5f8a6875a7d7982d8B0D7a503CAcf9c",
+        "https://soneium.blockscout.com/api/v2/smart-contracts/0x46A8CFBA44e5d29B6ee556277eAC2C233cF52DdA",
+        "https://soneium.blockscout.com/api/v2/transactions/0x5a3341d55aa0e957a629512b108ee76158c7240439b3b1647c340b0b4f604ce5",
+        "https://www.hyperlane.xyz/blog",
+        "https://www.m0.org/newsroom",
+        "https://www.radixdlt.com/blog/public-incident-report-vault-authorisation-vulnerability-2026"
+      ],
+      "rationale": "Two packet items reviewed. Soneium exact provider blocker resolved: own verified implementation, actual both directional flags false, exact birth/JSON events and issuer/tracker/provider surfaces support one bounded negative. Citrea stays U because latest H13M has no verified own deployed Portal interface; do not re-litigate or infer getters from siblings. Newly supported Citrea helper yields successful exact M birth receipt, not current ABI/emergency evidence or incident absence. Other M controls outside this packet retain their predecessor decisions.",
+      "changeRefs": [
+        "agents/curation-campaign/fragments/I202.json",
+        "agents/curation-campaign/results/I202.md",
+        "agents/curation-campaign/research/I202-native-surfaces.json",
+        "agents/curation-campaign/research/I202-tracker-search.json",
+        "agents/curation-campaign/research/I202-m-citrea-creation.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "m-m0:gap:control:bridge-meta:m-m0:1625bf9d7bcbca9bf3a7:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "m-m0:gap:control:bridge-meta:m-m0:ddb0f81d1364cfb4e20d:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Recheck by 2026-10-18T00:00:00Z or earlier upon verified own Citrea Portal implementation/interface and ABI-corresponding recent emergency-state recovery. Coordinator may admit Soneium candidate independently and inspect its later-clock production sentinel; never infer current state from creation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:frax-frax",
+      "taskIds": [
+        "V9G-a30769f28919464d"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:41:28Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I202)",
+      "evidence": [
+        "https://api.llama.fi/hacks",
+        "https://aurora.dev/blog/aurora-mitigates-two-vulnerabilities",
+        "https://aurora.dev/blog/the-rainbow-bridge-is-back",
+        "https://explorer.mainnet.aurora.dev/api/v2/addresses/0xe4b9e004389d91e4134a28f19bd833cba1d994b6/logs",
+        "https://explorer.mainnet.aurora.dev/api/v2/smart-contracts/0xe4b9e004389d91e4134a28f19bd833cba1d994b6",
+        "https://explorer.mainnet.aurora.dev/api/v2/transactions/0x7d2bdc7559b67d028ca21fcbd699f55db07af832d0f05f8601948b050d6fddf7",
+        "https://frax.com/blog/security-is-our-product/",
+        "https://gov.frax.finance/t/fip-281-283-sunset-fraxferry-for-frax-boba-aurora-evmos/2526",
+        "https://mainnet.aurora.dev",
+        "https://rekt.news/"
+      ],
+      "rationale": "The one packet Aurora FRAX provider-only blocker resolved: exchangesPaused=false at canonical recent pin, own verified CrossChainCanonicalFRAX, exact successful first activity and bounded JSON logs; issuer/tracker/provider searches retain resolved Rainbow precautionary pause and mitigated white-hat findings without inventing FRAX loss or lifetime absence. Ready exact negative only; no other FRAX control changed. Latest predecessor FIP281–283 Ferry sunset proposal is retained as proposal, not proven executed suspension; exact canonical token state is separately observed.",
+      "changeRefs": [
+        "agents/curation-campaign/fragments/I202.json",
+        "agents/curation-campaign/results/I202.md",
+        "agents/curation-campaign/research/I202-native-surfaces.json",
+        "agents/curation-campaign/research/I202-tracker-search.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "frax-frax:gap:control:bridge-meta:frax-frax:db9bee2e3c030f4d136b:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Coordinator merges/schema-admits this exact candidate, evaluates a later admissible review clock and confirms the exact production sentinel disappearance; otherwise recheck 2026-10-18T00:00:00Z or sooner on new primary exact adverse disclosure.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:susn-noon",
+      "taskIds": [
+        "V9G-cf46c4b2ced8ddb8"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:41:28Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I202)",
+      "evidence": [
+        "https://rpc.mainnet.citrea.xyz"
+      ],
+      "rationale": "The packet Citrea item remains U for latest H15sUSN unverified deployed implementation/emergency/rate ABI, retained without re-litigating. New public provider yields successful exact creation receipt with canonical block/hash/time; this is source recovery only, not a permitted guess of current pause/rate state or negative review. Sophon/TAC substantive blockers outside packet remain untouched.",
+      "changeRefs": [
+        "agents/curation-campaign/fragments/I202.json",
+        "agents/curation-campaign/results/I202.md",
+        "agents/curation-campaign/research/I202-native-surfaces.json",
+        "agents/curation-campaign/research/I202-tracker-search.json",
+        "agents/curation-campaign/research/I202-susn-citrea-creation.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "susn-noon:gap:control:bridge-meta:susn-noon:5dcb171059762f26ceb5:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Recheck by 2026-10-18T00:00:00Z or earlier upon verified exact current Citrea sUSN deployed implementation/ABI and matching recent emergency/rate-limit state. Provider/creation-receipt capability is no longer the blocker; substantive sibling incidents stay out of scope.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:usdsc-startale",
+      "taskIds": [
+        "V9G-12cedd0865a74881"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:41:28Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I202)",
+      "evidence": [
+        "https://api.llama.fi/hacks",
+        "https://rekt.news/",
+        "https://rpc.soneium.org",
+        "https://soneium.blockscout.com/api/v2/addresses/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+        "https://soneium.blockscout.com/api/v2/addresses/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a/logs",
+        "https://soneium.blockscout.com/api/v2/addresses/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd/logs",
+        "https://soneium.blockscout.com/api/v2/smart-contracts/0x38E4713a896EfCF253430efD6292515Dc13489A1",
+        "https://soneium.blockscout.com/api/v2/smart-contracts/0x46A8CFBA44e5d29B6ee556277eAC2C233cF52DdA",
+        "https://soneium.blockscout.com/api/v2/transactions/0xd313130d5a886cbeefdf1f721b9505c15635e751cfec88e621271fbfa7ff50ff",
+        "https://usd.startale.com/news?tag=All&page=1",
+        "https://www.hyperlane.xyz/blog",
+        "https://www.radixdlt.com/blog/public-incident-report-vault-authorisation-vulnerability-2026",
+        "https://x.com/exvulsec/status/2100111910524072258"
+      ],
+      "rationale": "The one packet Soneium provider-only blocker resolved: actual both Portal flags false; own pinned current Portal/token implementations and mToken/facility bindings; sampled exact rail-account isFrozen values false; exact first activity and bounded token/Portal JSON events; issuer and provider/tracker searches. September Startale lead remains a separate Ethereum smart-account/factory attack, not a USDSC-token or Portal exploit. One exact no-known negative ready; not an all-holder freeze or lifetime event census.",
+      "changeRefs": [
+        "agents/curation-campaign/fragments/I202.json",
+        "agents/curation-campaign/results/I202.md",
+        "agents/curation-campaign/research/I202-native-surfaces.json",
+        "agents/curation-campaign/research/I202-tracker-search.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "usdsc-startale:gap:control:bridge-meta:usdsc-startale:6d35e2061e058f9bebbd:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Coordinator merges/schema-admits this exact candidate, evaluates a later admissible review clock and confirms the exact production sentinel disappearance; otherwise recheck 2026-10-18T00:00:00Z or sooner on new primary exact adverse disclosure.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:nusd-nexus",
+      "taskIds": [
+        "V9G-40310aacae7ad869"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:41:28Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I202)",
+      "evidence": [
+        "https://api.llama.fi/hacks",
+        "https://explorer.mainnet.aurora.dev/api/v2/addresses/0x07379565cd8b0cae7c60dc78e7f601b34af2a21c",
+        "https://explorer.mainnet.aurora.dev/api/v2/addresses/0x07379565cd8b0cae7c60dc78e7f601b34af2a21c/logs",
+        "https://explorer.mainnet.aurora.dev/api/v2/smart-contracts/0x5B0000258c622551A1c7C45b9f860Ef90200005B",
+        "https://explorer.mainnet.aurora.dev/api/v2/smart-contracts/0x84A420459cd31C3c34583F67E0f0fB191067D32f",
+        "https://explorer.mainnet.aurora.dev/api/v2/transactions/0x573ee817332ab381315a02e409aa3d09309dd8b61c26bb3c3848bbd7ba83f668",
+        "https://mainnet.aurora.dev",
+        "https://r.jina.ai/http://medium.com/synapse-protocol",
+        "https://r.jina.ai/http://medium.com/synapse-protocol/11-06-2021-post-mortem-of-synapse-metapool-exploit-3003b4df4ef4",
+        "https://rekt.news/"
+      ],
+      "rationale": "The one packet Aurora provider-only blocker resolved: exact SynapseBridge paused=false/isLegacySendDisabled=false, canonical current implementation and token-clone joins to verified own-chain source, exact first activity and bounded JSON events. Issuer primary November2021 report confines AMM issue outside core bridge, rejects malicious mint and documents bridge restoration; event predates this exact Aurora deployment. One exact negative ready; no sibling Avalanche/Harmony/Cronos adverse disposition changed.",
+      "changeRefs": [
+        "agents/curation-campaign/fragments/I202.json",
+        "agents/curation-campaign/results/I202.md",
+        "agents/curation-campaign/research/I202-native-surfaces.json",
+        "agents/curation-campaign/research/I202-tracker-search.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "nusd-nexus:gap:control:bridge-meta:nusd-nexus:6b3d7a176f1339434313:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Coordinator merges/schema-admits this exact candidate, evaluates a later admissible review clock and confirms the exact production sentinel disappearance; otherwise recheck 2026-10-18T00:00:00Z or sooner on new primary exact adverse disclosure.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:sfrxusd-frax",
+      "taskIds": [
+        "V9G-8aef813614bbce79"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:49:23Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I203)",
+      "evidence": [
+        "https://github.com/FraxFinance/hop-v2"
+      ],
+      "rationale": "Latest H22sfrxUSD/J27SfrxUSD retains a substantive exact Aurora route shutdown: issuer HopV2 README says remoteHop unset, Fraxtal peers removed, disconnected. New RPC availability cannot disposition active suspension; per wave-I2 contract do not re-litigate or retry this item as provider-only. Keep U; no negative or fabricated compromise/loss incident. Need new issuer-primary exact-route reinstatement or holder-safe scoped disposition.",
+      "changeRefs": [
+        "agents/curation-campaign/fragments/I203.json",
+        "agents/curation-campaign/results/I203.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "sfrxusd-frax:gap:control:bridge-meta:sfrxusd-frax:a8214d27941f8b110c99:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "2026-10-18, or earlier on new issuer-primary exact Aurora route reinstatement or holder-safe scoped disposition.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:cngn-compliant-naira",
+      "taskIds": [
+        "V9G-6c35ebfbcfb42726",
+        "V9G-70ae1e54ecc0cd89"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:49:23Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I203)",
+      "evidence": [
+        "https://api.llama.fi/hacks",
+        "https://bantufoundation.org/case-studies/cngn",
+        "https://bantufoundation.org/legal/security",
+        "https://blockscout.lisk.com/api/v2/addresses/0xc7ab2c35ea37236e644c24a4e4a1911c082887c0/logs",
+        "https://blockscout.lisk.com/api/v2/addresses/0xd7dc1fb7e1d7fad9a61c12f77647b4e26e852d8d/logs",
+        "https://blockscout.lisk.com/api/v2/smart-contracts/0x50A1b2D9583Cc12dAAED29c91C2e767e4316fEFD",
+        "https://blockscout.lisk.com/api/v2/smart-contracts/0x86f1afdf772b85b2034fa06939391b60c4e55003",
+        "https://blockscout.lisk.com/api/v2/transactions/0x872816d6f4733f011e0e9b329917f8d04012200bc0ab7d6fa5b840a18a26c713",
+        "https://docs.cngn.co/changelog.md",
+        "https://getfailsafe.com/nigerias-cngn-stablecoin-solidity-smart-contract-audit",
+        "https://mainnet-rpc.assetchain.org",
+        "https://rekt.news/",
+        "https://rpc.api.lisk.com",
+        "https://scan.assetchain.org/api/v2/addresses/0xc930784d6e14e2fc2a1f49be1068dc40f24762d3/logs",
+        "https://scan.assetchain.org/api/v2/transactions/0x28132d9b14f005a0ae048baba558310c434ac7dd2de7cb56824797936412490a"
+      ],
+      "rationale": "Lisk provider-only blocker resolved: exact proxy and controller paused=false, pinned runtime/source correspondence and bounded named issuer/tracker/provider/explorer evidence support one exact negative-review proposal. AssetChain provider blocker also resolved with false global pause snapshots and verified runtime, but fresh exact controller events show account3b57dd438593261d4fc58f051162cc30db6dfa13 AddedBlackList; same-pin isBlackListed=true/external whitelist=false. No issuer disposition of this active scoped restriction was found in retained surfaces. Keep that incidentState U; do not turn a holder restriction into a global pause, exploit or supply-integrity failure. Defer claim group because one assigned item remains unresolved; factsClosed0 until coordinator admission and later-clock production observation.",
+      "changeRefs": [
+        "agents/curation-campaign/fragments/I203.json",
+        "agents/curation-campaign/results/I203.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "cngn-compliant-naira:gap:control:bridge-meta:cngn-compliant-naira:3ed94b7a7d58976299ac:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "cngn-compliant-naira:gap:control:bridge-meta:cngn-compliant-naira:a85949220faa325a792e:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "2026-10-18, or earlier when issuer-primary exact AssetChain account-restriction context/remediation is disclosed; coordinator admission and eligible-clock production observation for Lisk.",
+      "factsClosed": 0
     }
   ]
 }

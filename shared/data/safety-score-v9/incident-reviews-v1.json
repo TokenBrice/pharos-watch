@@ -67080,6 +67080,993 @@
           "excerpt": "Exact chain56 runtime match; GMToken implementation0x578f397ca4661d1db4d9a65065d6b284a1a850fd. Verification clock is not deployment time."
         }
       ]
+    },
+    {
+      "reviewId": "i200-usdc-circle-0712b639dbae35d03c06-20261011",
+      "assetId": "usdc-circle",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:usdc-circle:0712b639dbae35d03c06"
+      },
+      "reviewedAt": "2026-10-11T12:45:20Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I200)",
+      "windowStartSec": 1735038373,
+      "windowEndSec": 1791722720,
+      "conclusion": "no-known-incident",
+      "searchedSurfaces": [
+        {
+          "kind": "issuer-status",
+          "url": "https://status.circle.com/api/v2/incidents.json",
+          "finding": "All 50 returned issuer incidents searched for USDC, Soneium and canonical-bridge terms. No retrieved notice binds an adverse mint/supply event to the exact representation; bounded issuer feed only."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://api.llama.fi/hacks",
+          "finding": "Searched all fields of all 1,299 hacks rows plus retrieved rekt.news current index and Soneium provider status/history for issuer, asset, rail, chain and exact addresses. No known incident retrieved for this exact control; no lifetime absence certificate."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://soneium.blockscout.com/api/v2/addresses/0xba9986d2381edf1da03b0b9c1f8b00dc4aacc369/logs",
+          "finding": "Exact token API page has41 Transfer/9 Approval and exact L2 adapter page10 MessageSent/40 MessageReceived, both50 records with pagination. Authenticated nested first-activity receipt at951811. At29292810 token paused=false and controller blacklist=false; verified L2 messengerStatus=0 Active; linked verified L1 adapter messengerStatus=0 Active at26169000. API pages and recent state are bounded, not lifetime event absence."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Pinned linked Soneium L1 adapter state",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com",
+          "observedAt": "2026-10-11T12:41:45.858Z",
+          "location": "Ethereum26169000/hashd2273f423b10fef4f7e081e32d57eea4f920038b32a9f03186b9d11d872c8a16/time2026-10-11T11:46:47Z; messengerStatus and EIP-1967 slot ofc67a8c5f22b40274ca7c4a56db89569ee2ad3fab",
+          "excerpt": "Linked L1 adapter messengerStatus=0 Active; current implementation slot resolves verified L1OpUSDCBridgeAdapter cff35e3c0b8d197a6ce10802cd649fbb9957da07. Recent state only, not incident-era history."
+        },
+        {
+          "label": "DefiLlama full hacks dataset",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-11T12:35:01.709821Z",
+          "location": "All fields of all 1,299 returned rows; issuer, USDC, exact chain, rail and address terms",
+          "excerpt": "Full-text search returned no Soneium or Flare match. Stargate Finance 2023 is phishing with bridgeHack=false, before the Flare July 2024 deployment; unrelated protocols/transport use do not bind this exact control."
+        },
+        {
+          "label": "Rekt current index",
+          "url": "https://rekt.news/",
+          "observedAt": "2026-10-11T12:35:01.766248Z",
+          "location": "Complete retrieved current homepage; Circle, USDC, Soneium, Flare, canonical bridge and LayerZero/Stargate terms",
+          "excerpt": "Searched the bounded current article index. No retrieved article identifies a mint-control or supply-integrity event on these exact deployments. This is not a complete historical article census."
+        },
+        {
+          "label": "Pinned Soneium first activity and current emergency package",
+          "url": "https://rpc.soneium.org",
+          "observedAt": "2026-10-11T12:38:35.975Z",
+          "location": "eth_getTransactionReceipt tx407625e329969870a417b958e2aa1808e2e10e2662db49fb700fcd5faae9013b at951811/hash29e50af0e74ce633add1710f8afee01359e225833970363e9e49871d75522898/time2024-12-24T11:06:13Z; batch and isBlacklisted/LINKED_ADAPTER at29292810/hashee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b/time2026-10-11T12:06:11Z",
+          "excerpt": "Receipt status=1, top-level contractAddress=null (nested deployment); exact token and adapter emit initialization/activity logs. At current pin token paused=false and exact adapter isBlacklisted=false; L2 messengerStatus=0 Active; USDC() binds ba9986...; implementation() binds2dcc04... and adapter EIP-1967 slot binds03056d...; LINKED_ADAPTER binds Ethereum c67a8c... ."
+        },
+        {
+          "label": "Exact Soneium adapter events API",
+          "url": "https://soneium.blockscout.com/api/v2/addresses/0x8be79275fcfd08a931087ecf70ba8a99aee3ac59/logs",
+          "observedAt": "2026-10-11T12:35:01.258519Z",
+          "location": "items[0..49], next_page_params",
+          "excerpt": "Returned 10 MessageSent and 40 MessageReceived events with pagination. No MessagingStopped or migration event appears in this bounded page; not a lifetime event census."
+        },
+        {
+          "label": "Exact Soneium token events API",
+          "url": "https://soneium.blockscout.com/api/v2/addresses/0xba9986d2381edf1da03b0b9c1f8b00dc4aacc369/logs",
+          "observedAt": "2026-10-11T12:35:01.262072Z",
+          "location": "items[0..49], next_page_params",
+          "excerpt": "Returned 41 Transfer and 9 Approval events with pagination. No pause/freeze event appears in this bounded page; not a lifetime event census."
+        },
+        {
+          "label": "Verified Soneium L2 adapter application",
+          "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0x03056Debabeb27D2ae346Abd7128EaD75b6a676A",
+          "observedAt": "2026-10-11T12:35:01.259960Z",
+          "location": "is_verified=true; ABI and additional_sources IOpUSDCBridgeAdapter enum Status",
+          "excerpt": "L2OpUSDCBridgeAdapter messengerStatus() returns Status; verified enum is Active=0, Paused=1, Upgrading=2, Deprecated=3. No separate rate-limit or peer getter is exposed."
+        },
+        {
+          "label": "Verified Soneium token application",
+          "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0x2dCc04f35E0E763301Cd482bE13AEa2c62462EC5",
+          "observedAt": "2026-10-11T12:35:01.252973Z",
+          "location": "is_verified=true; FiatTokenV2_2 ABI; paused and isBlacklisted getters",
+          "excerpt": "Verified FiatTokenV2_2 exposes paused() and blacklist state. Current token implementation() independently resolves this exact application at the pin."
+        },
+        {
+          "label": "Verified linked Ethereum adapter application",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xcff35e3c0b8d197a6ce10802cd649fbb9957da07?fields=all",
+          "observedAt": "2026-10-11T12:39:00.811360Z",
+          "location": "runtimeMatch=exact_match; L1OpUSDCBridgeAdapter ABI/source",
+          "excerpt": "Source-corresponding current EIP-1967 implementation is cff35e3c0b8d197a6ce10802cd649fbb9957da07; messengerStatus=0 is Active."
+        },
+        {
+          "label": "Circle issuer incident feed",
+          "url": "https://status.circle.com/api/v2/incidents.json",
+          "observedAt": "2026-10-11T12:35:01.709094Z",
+          "location": "incidents[] and incident_updates[]; 50 returned incidents",
+          "excerpt": "Searched the complete returned 50-incident slice for USDC, Circle and the exact chain/rail names. No retrieved entry identifies a mint-control or supply-integrity incident on these exact Soneium/Flare representations; native-chain and Noble notices are not fanned to them."
+        },
+        {
+          "label": "Soneium provider status",
+          "url": "https://status.soneium.org/",
+          "observedAt": "2026-10-11T12:38:06.290546Z",
+          "location": "All systems operational and recent notices",
+          "excerpt": "Retrieved provider status shows all systems operational and no notices reported for the past 7 days; bounded current status, not lifetime absence."
+        },
+        {
+          "label": "Soneium provider notice history",
+          "url": "https://status.soneium.org/history/2",
+          "observedAt": "2026-10-11T12:38:06.292001Z",
+          "location": "May through July 2026 displayed notices",
+          "excerpt": "Displayed May, June and July 2026 pages each say no notices reported; no historical census beyond the retrieved page is asserted."
+        }
+      ]
+    },
+    {
+      "reviewId": "i200-usdc-circle-9f08b117566777de53d6-20261011",
+      "assetId": "usdc-circle",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:usdc-circle:9f08b117566777de53d6"
+      },
+      "reviewedAt": "2026-10-11T12:45:20Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I200)",
+      "windowStartSec": 1720816930,
+      "windowEndSec": 1791722720,
+      "conclusion": "no-known-incident",
+      "searchedSurfaces": [
+        {
+          "kind": "issuer-status",
+          "url": "https://status.circle.com/api/v2/incidents.json",
+          "finding": "All50 returned issuer incidents searched for USDC, Flare, Stargate/Hydra and LayerZero terms. No retrieved notice binds an adverse mint/supply event to the exact representation; bounded issuer feed only."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://api.llama.fi/hacks",
+          "finding": "Searched all fields of all1,299 hacks rows plus retrieved rekt.news index and LayerZero primary disclosures for exact issuer/asset/rail/chain/address terms. Stargate2023 phishing precedes this deployment and has bridgeHack=false; primary Kelp rsETH report excludes other assets/OApps. No known exact-control mint/supply incident retrieved; no lifetime rail absence claim."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://flare-explorer.flare.network/api/v2/addresses/0xfbda5f676cb37624f28265a144a48b0d6e87d3b6/logs",
+          "finding": "Exact token API page has43 Transfer/7 Approval; exact OApp page has8 OFTReceived/21 OFTSent/9 CreditsReceived/12 CreditsSent, both50 records with pagination. Authenticated exact token/OApp creation receipts26783442/26783471. At71853813 token paused=false and OApp blacklist=false; verified OApp status=1 NOT_ENTERED, not PAUSED; Ethereum path30101 nonzero credit. Exact Ethereum pool status=1 at26169000. No PauseSet in bounded OApp page, not lifetime absence or message-delivery proof."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Pinned Ethereum Stargate pool emergency state",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com",
+          "observedAt": "2026-10-11T12:41:45.858Z",
+          "location": "Ethereum26169000/hashd2273f423b10fef4f7e081e32d57eea4f920038b32a9f03186b9d11d872c8a16/time2026-10-11T11:46:47Z; status() ofc026395860db2d07ee33e05fe50ed7bd583189c7",
+          "excerpt": "Exact Ethereum StargatePoolUSDC status()=1 (NOT_ENTERED, not PAUSED). Recent state only, not incident-era archive evidence."
+        },
+        {
+          "label": "DefiLlama full hacks dataset",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-11T12:35:01.709821Z",
+          "location": "All fields of all 1,299 returned rows; issuer, USDC, exact chain, rail and address terms",
+          "excerpt": "Full-text search returned no Soneium or Flare match. Stargate Finance 2023 is phishing with bridgeHack=false, before the Flare July 2024 deployment; unrelated protocols/transport use do not bind this exact control."
+        },
+        {
+          "label": "Pinned Flare births and current emergency package",
+          "url": "https://flare-api.flare.network/ext/C/rpc",
+          "observedAt": "2026-10-11T12:40:30.681Z",
+          "location": "Receipts token txb05df834c411c8dc265e07e2cc223245f3acba7ed401bef424ed3f4f046e1ea4 at26783442/hash9b0cd2fff25730fc849bcbc6bed3607830368e74b39ef1ee80b908109ec7dbf8/time2024-07-12T20:42:10Z; OApp tx945fb332e8a77f81fd72b31d5219585f479fff2290f7676e2bfc9c276901b90d at26783471/hashcfe3e96bd19cb27e7c8fd3fc795ae5e6da8d0d16eb20f6a30582f8f75dbcc5e6/time2024-07-12T20:43:04Z; batch/paths at71853813/hashf2f5fd43c94ef9fc15769ed3b7a0c754abd971376228b18e09ed187d5c431161/time2026-10-11T12:40:05Z",
+          "excerpt": "Both creation receipts status=1 and contractAddress match their exact token/OApp. Current token paused=false, OApp status=1, token implementation=3adae7..., OApp isBlacklisted=false. paths(30101) has nonzero credit. Earlier71853166 missing-trie-node error supplied no state and was replaced by a fresh explicit numeric pin."
+        },
+        {
+          "label": "Exact Flare OApp events API",
+          "url": "https://flare-explorer.flare.network/api/v2/addresses/0x77C71633C34C3784ede189d74223122422492a0f/logs",
+          "observedAt": "2026-10-11T12:39:28.106560Z",
+          "location": "items[0..49], next_page_params",
+          "excerpt": "Returned 8 OFTReceived, 21 OFTSent, 9 CreditsReceived and 12 CreditsSent events, with pagination. No PauseSet event appears in this bounded page; not a lifetime census or delivered-message assertion."
+        },
+        {
+          "label": "Exact Flare token events API",
+          "url": "https://flare-explorer.flare.network/api/v2/addresses/0xfbda5f676cb37624f28265a144a48b0d6e87d3b6/logs",
+          "observedAt": "2026-10-11T12:39:28.106430Z",
+          "location": "items[0..49], next_page_params",
+          "excerpt": "Returned 43 Transfer and 7 Approval events, with pagination. No pause/freeze event appears in this bounded page; not a lifetime census."
+        },
+        {
+          "label": "Verified Flare token application",
+          "url": "https://flare-explorer.flare.network/api/v2/smart-contracts/0x3AdAE7Ad0449e26ad2e95059e08CC29ECB93E194",
+          "observedAt": "2026-10-11T12:39:28.106151Z",
+          "location": "is_verified=true; FiatTokenV2_2 ABI",
+          "excerpt": "Verified token implementation exposes paused() and isBlacklisted(address); current implementation() resolves this exact source."
+        },
+        {
+          "label": "Verified Flare StargateOFTUSDC application",
+          "url": "https://flare-explorer.flare.network/api/v2/smart-contracts/0x77C71633C34C3784ede189d74223122422492a0f",
+          "observedAt": "2026-10-11T12:39:28.106294Z",
+          "location": "is_verified=true; ABI; additional_sources StargateBase.sol",
+          "excerpt": "Verified StargateBase defines NOT_ENTERED=1, ENTERED=2, PAUSED=3; setPause(true) sets status=3. Current status=1 is not paused. ABI exposes paths(uint32) credit, but no standalone peer or rate-limit getter."
+        },
+        {
+          "label": "LayerZero security disclosure",
+          "url": "https://layerzero.network/blog/cross-chain-bridge-security",
+          "observedAt": "2026-10-11T12:41:04.987494Z",
+          "location": "2026-08-10; application-selected verification, failure modes and message records",
+          "excerpt": "Provider describes configuration-specific security and message records. Architecture alone is not evidence of exact-control incident absence."
+        },
+        {
+          "label": "LayerZero scoped KelpDAO incident disclosure",
+          "url": "https://layerzero.network/blog/kelpdao-incident-statement",
+          "observedAt": "2026-10-11T12:41:04.987330Z",
+          "location": "2026-04-19; Scope and Contagion: Limited to rsETH",
+          "excerpt": "Primary statement explicitly excludes other assets/OApps from the rsETH single-DVN incident. That incident is not fanned to this Flare USDC control."
+        },
+        {
+          "label": "Rekt current index",
+          "url": "https://rekt.news/",
+          "observedAt": "2026-10-11T12:35:01.766248Z",
+          "location": "Complete retrieved current homepage; Circle, USDC, Soneium, Flare, canonical bridge and LayerZero/Stargate terms",
+          "excerpt": "Searched the bounded current article index. No retrieved article identifies a mint-control or supply-integrity event on these exact deployments. This is not a complete historical article census."
+        },
+        {
+          "label": "Verified Ethereum Stargate USDC pool",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc026395860db2d07ee33e05fe50ed7bd583189c7?fields=abi,compilation,sources,proxyResolution",
+          "observedAt": "2026-10-11T12:41:04.987629Z",
+          "location": "Matched application ABI/source; StargateBase status semantics",
+          "excerpt": "Reviewed Ethereum controller source binds the existing USDC pool c026395860db2d07ee33e05fe50ed7bd583189c7 and its status() getter; current status=1 is NOT_ENTERED, not PAUSED."
+        },
+        {
+          "label": "Circle issuer incident feed",
+          "url": "https://status.circle.com/api/v2/incidents.json",
+          "observedAt": "2026-10-11T12:35:01.709094Z",
+          "location": "incidents[] and incident_updates[]; 50 returned incidents",
+          "excerpt": "Searched the complete returned 50-incident slice for USDC, Circle and the exact chain/rail names. No retrieved entry identifies a mint-control or supply-integrity incident on these exact Soneium/Flare representations; native-chain and Noble notices are not fanned to them."
+        }
+      ]
+    },
+    {
+      "reviewId": "i201-usdt-tether-0d9d2576ac1a89994ba0-20261011",
+      "assetId": "usdt-tether",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:usdt-tether:0d9d2576ac1a89994ba0"
+      },
+      "reviewedAt": "2026-10-11T12:44:39Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I201)",
+      "windowStartSec": 1739713683,
+      "windowEndSec": 1791722679,
+      "conclusion": "no-known-incident",
+      "searchedSurfaces": [
+        {
+          "kind": "issuer-announcements",
+          "url": "https://blog.usdt0.to/security-is-the-product",
+          "finding": "Bounded USDT0/Tether issuer announcements and exact Flare deployment search retained and security disclosure retrieved; no exact reviewed Flare-control incident identified. Issuer architecture assertions are not proof of absence."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://api.llama.fi/hacks",
+          "finding": "Reuse same-day H04USDT complete1299-row whole-text search including USDT/Tether/USDT0/LayerZero/Stargate/Flare with unchanged source observation clock; no Flare match. Rekt current index and bounded exact query reviewed; LayerZero primary Kelp report excludes other OApps from that event only. Broad third-party chain/asset hits are not this exact control."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://flare-explorer.flare.network/api/v2/addresses/0xe7cd86e13ac4309349f30b3435a9d337750fc82d/logs",
+          "finding": "Same-explorer exact-address JSON API WaveF2: token logs page returns50 bounded rows, displayed Transfer/Approval/Burn with pagination cursor block71852877/index71; most recent displayed block71853670. Exact OFT logs page returns50 bounded rows with displayed OFTSent/OFTReceived and pagination cursor block71777081/index13; most recent displayed block71853287. No claim of50k block or lifetime completeness, event absence, full-message census or unqueried peer state. Combined with current verified-ABI emergency observations and exact origin receipts; LayerZero Scan is not the event substitute for this review. Exact Flare token0xe7cd86e13ac4309349f30b3435a9d337750fc82d and OFT0x567287d2a9829215a37e3b88843d32f9221e7588 current implementations independently pinned at block71853693/hash0xa793923eac4c9f33a9e2bef3ed0f5781a00e442000bdb252c4f787d81d4137f9/time2026-10-11T12:37:43.000Z to same-chain exact-match verified0x779ded0c9e1022225f8e0630b35a9b54be713736 and0x767f94783b3ca9ec74807932d3feb3c5010b9c89. Token isBlocked(token)=false and isBlocked(OFT)=false, oftContract()=exact OFT. No global pause/freeze/rate-limit getter in these exact token/OFT ABIs; not a claim all holders unblocked or all peers available. Token creation receipt37572228/hash0x99d7b199e7a13d2d2288e810d20f6b28c9c62cc9e9a5cb5e7d41556170b18ce9/time2025-02-16T13:48:03.000Z/status0x1/contractAddress matches exact token. OFT first-activity receipt37573908/hash0xce8f5306c7e023ce0b8b75264446ced7e4d0bfe3cf964507b69577598f7b1803/time2025-02-16T14:43:31.000Z/status0x1 emits exact OFT initialization/upgrade logs; factory call has contractAddress:null, not direct CREATE receipt."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://github.com/Everdawn-Labs/usdt0-audit-reports/issues/4",
+          "finding": "Carry forward latest H04USDT exact issue disposition unchanged: mock threat model and missing production target/transaction evidence do not establish exact Flare control involvement. Retain unverified allegation, no invented remediation or all-vulnerability clearance."
+        }
+      ],
+      "sources": [
+        {
+          "label": "DefiLlama full hacks API search",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-11T10:36:46.652523Z",
+          "location": "research/H04USDT-trackers.json: observation.data and terms/matchedRows retained unchanged",
+          "excerpt": "All1299 rows were searched over all fields for USDT/Tether/USDT0/LayerZero/Stargate and all packet chains including Flare;485 broad matches, no Flare match. Broad symbol/chain matches are not exact-control incidents or absence certificates."
+        },
+        {
+          "label": "USDT0 exact Flare launch announcement",
+          "url": "https://blog.usdt0.to/flare-integrates-usdt0-for-native-omnichain-liquidity",
+          "observedAt": "2026-10-11T12:44:39Z",
+          "location": "April28 2025 issuer launch announcement",
+          "excerpt": "Issuer announces USDT0 live on Flare via LayerZero OFT; no compromise or suspension disclosed. This announcement is not a current-state or absence certificate."
+        },
+        {
+          "label": "USDT0 issuer security disclosure",
+          "url": "https://blog.usdt0.to/security-is-the-product",
+          "observedAt": "2026-10-11T12:41:22Z",
+          "location": "May9 2026 issuer disclosure; bounded USDT0 security/Flare incident search",
+          "excerpt": "Issuer describes independently assessed per-chain deployments and routes upgraded to3-of-3; architecture statements are not no-incident or current-DVN certificates."
+        },
+        {
+          "label": "Issuer exact Flare deployment identity",
+          "url": "https://docs.usdt0.to/api/deployments",
+          "observedAt": "2026-10-11T10:31:14.006327Z",
+          "location": "research/H04USDT-oft-handoff.md: Flare chain14/EID30295 row",
+          "excerpt": "Issuer binds exact Flare token0xe7cd86e13ac4309349f30b3435a9d337750fc82d and OFT0x567287d2a9829215a37e3b88843d32f9221e7588; shared hex addresses on other chains are not substituted."
+        },
+        {
+          "label": "Flare pinned origin and current control state",
+          "url": "https://flare-api.flare.network/ext/C/rpc",
+          "observedAt": "2026-10-11T12:38:11.042Z",
+          "location": "research/I201-usdt-flare-{creation,oft-creation,live-control-state}.json; creation tx0xedea0d0f9f50bd7c7180bb221655f343b0a32ba91da67169f2cb7d14591a84e6; OFT activity tx0xf1017efb1656fb89748f04a146560d1b5f32d2efc2cbfa8a98e28a800c40eb13",
+          "excerpt": "Exact Flare token0xe7cd86e13ac4309349f30b3435a9d337750fc82d and OFT0x567287d2a9829215a37e3b88843d32f9221e7588 current implementations independently pinned at block71853693/hash0xa793923eac4c9f33a9e2bef3ed0f5781a00e442000bdb252c4f787d81d4137f9/time2026-10-11T12:37:43.000Z to same-chain exact-match verified0x779ded0c9e1022225f8e0630b35a9b54be713736 and0x767f94783b3ca9ec74807932d3feb3c5010b9c89. Token isBlocked(token)=false and isBlocked(OFT)=false, oftContract()=exact OFT. No global pause/freeze/rate-limit getter in these exact token/OFT ABIs; not a claim all holders unblocked or all peers available. Token creation receipt37572228/hash0x99d7b199e7a13d2d2288e810d20f6b28c9c62cc9e9a5cb5e7d41556170b18ce9/time2025-02-16T13:48:03.000Z/status0x1/contractAddress matches exact token. OFT first-activity receipt37573908/hash0xce8f5306c7e023ce0b8b75264446ced7e4d0bfe3cf964507b69577598f7b1803/time2025-02-16T14:43:31.000Z/status0x1 emits exact OFT initialization/upgrade logs; factory call has contractAddress:null, not direct CREATE receipt."
+        },
+        {
+          "label": "Exact OFT bounded explorer events",
+          "url": "https://flare-explorer.flare.network/api/v2/addresses/0x567287d2a9829215a37e3b88843d32f9221e7588/logs",
+          "observedAt": "2026-10-11T12:41:22Z",
+          "location": "API items[]; next_page_params block71777081/index13/items_count50",
+          "excerpt": "Same-explorer exact-address JSON API WaveF2: token logs page returns50 bounded rows, displayed Transfer/Approval/Burn with pagination cursor block71852877/index71; most recent displayed block71853670. Exact OFT logs page returns50 bounded rows with displayed OFTSent/OFTReceived and pagination cursor block71777081/index13; most recent displayed block71853287. No claim of50k block or lifetime completeness, event absence, full-message census or unqueried peer state. Combined with current verified-ABI emergency observations and exact origin receipts; LayerZero Scan is not the event substitute for this review."
+        },
+        {
+          "label": "Exact token bounded explorer events",
+          "url": "https://flare-explorer.flare.network/api/v2/addresses/0xe7cd86e13ac4309349f30b3435a9d337750fc82d/logs",
+          "observedAt": "2026-10-11T12:41:22Z",
+          "location": "API items[]; next_page_params block71852877/index71/items_count50",
+          "excerpt": "Same-explorer exact-address JSON API WaveF2: token logs page returns50 bounded rows, displayed Transfer/Approval/Burn with pagination cursor block71852877/index71; most recent displayed block71853670. Exact OFT logs page returns50 bounded rows with displayed OFTSent/OFTReceived and pagination cursor block71777081/index13; most recent displayed block71853287. No claim of50k block or lifetime completeness, event absence, full-message census or unqueried peer state. Combined with current verified-ABI emergency observations and exact origin receipts; LayerZero Scan is not the event substitute for this review."
+        },
+        {
+          "label": "Flare exact token migration and legacy distinction",
+          "url": "https://flare.network/news/get-started-usdt0",
+          "observedAt": "2026-10-11T12:44:39Z",
+          "location": "May1 2025 What happens to bridged USDT and exact token link",
+          "excerpt": "Legacy Stargate bridged USDT is to be phased out and remain redeemable for USDT0. The guide separately links exact USDT0 token0xe7cd86e13ac4309349f30b3435a9d337750fc82d. This migration context is not an incident or suspension of the reviewed distinct USDT0 control."
+        },
+        {
+          "label": "Retained unverified bounty allegation disposition",
+          "url": "https://github.com/Everdawn-Labs/usdt0-audit-reports/issues/4",
+          "observedAt": "2026-10-11T11:08:43Z",
+          "location": "results/H04USDT.md:46; retrieved issue body/activity and two named attachments, unchanged observation",
+          "excerpt": "Prior review found missing exact target addresses/signatures/traces/balances and a hypothetical mock threat model signing assumed DVN keys, not production execution. Later issue text says its empty-configuration investigation is not evidence of confirmed DVN failure. No exact Flare-control incident established; allegation is not declared fixed or universally false."
+        },
+        {
+          "label": "LayerZero primary KelpDAO affected scope",
+          "url": "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report",
+          "observedAt": "2026-10-11T12:41:22Z",
+          "location": "May20 2026 Executive Summary",
+          "excerpt": "Affected KelpDAO rsETH OApp used single-verifier configuration; provider states no other OApps, channels or transactions were compromised. This excludes that event only, not lifetime rail safety."
+        },
+        {
+          "label": "Rekt bounded exact issuer rail chain search",
+          "url": "https://rekt.news/",
+          "observedAt": "2026-10-11T12:44:39Z",
+          "location": "Fresh retrieved current index and bounded site:rekt.news (USDT0 OR Tether) Flare bridge hack incident search; H04USDT earlier source clocks are not renewed",
+          "excerpt": "Retained current index and bounded searches establish no exact reviewed Flare USDT0 control incident. Fresh targeted query returned Gravity/Secret/Poly and other unrelated leads, not exact Flare failure. Not a complete archive/census."
+        },
+        {
+          "label": "Exact-match Flare OFT implementation ABI",
+          "url": "https://sourcify.dev/server/v2/contract/14/0x767F94783B3Ca9eC74807932d3FeB3c5010B9c89?fields=abi,metadata",
+          "observedAt": "2026-10-11T12:41:22Z",
+          "location": "abi plus runtimeMatch/match exact_match; chainId14/address",
+          "excerpt": "Exact OUpgradeable current implementation ABI exposes peers/options/owner/token and messaging interfaces, no global pause/freeze/rate-limit getter. No LayerZero-only H4 substitute or all-peer health claim is used."
+        },
+        {
+          "label": "Exact-match Flare token implementation ABI",
+          "url": "https://sourcify.dev/server/v2/contract/14/0x779Ded0c9e1022225f8E0630b35a9b54bE713736?fields=abi,metadata",
+          "observedAt": "2026-10-11T12:41:22Z",
+          "location": "abi plus runtimeMatch/creationMatch/match exact_match; chainId14/address",
+          "excerpt": "TetherTokenOFTExtension exact verified ABI exposes isBlocked(address), isTrusted(address), oftContract(), block/destroy/ownership events, no global pause/freeze/rate-limit getter. Matches the current pinned token implementation; Blockscout partial verification is not the sole runtime witness."
+        }
+      ]
+    },
+    {
+      "reviewId": "i202-m-m0-ddb0f81d1364cfb4e20d-20261011",
+      "assetId": "m-m0",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:m-m0:ddb0f81d1364cfb4e20d"
+      },
+      "reviewedAt": "2026-10-11T12:41:28Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I202)",
+      "windowStartSec": 1762532321,
+      "windowEndSec": 1791722488,
+      "conclusion": "no-known-incident",
+      "searchedSurfaces": [
+        {
+          "kind": "issuer-announcements",
+          "url": "https://www.m0.org/newsroom",
+          "finding": "Issuer list retrieved and searched; no exact Soneium M/Portal adverse announcement identified. Bounded page, not an exhaustive current incident archive."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://www.hyperlane.xyz/blog",
+          "finding": "Provider blog searched for M0/Portal/USDSC/Soneium and incident/pause/hack/exploit leads; no exact candidate control incident identified. This is a bounded disclosure surface."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://www.radixdlt.com/blog/public-incident-report-vault-authorisation-vulnerability-2026",
+          "finding": "Radix Engine vault authorization failure; Hyperlane bridge, validators and verification operated correctly. Every destination release matched a legitimately committed burn on Radix. Radix-route containment is not a Soneium M/USDSC Portal suspension."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://api.llama.fi/hacks",
+          "finding": "No M0/M^0/Mzero, USDSC, FRAX/Ferry, Synapse/nUSD, Hyperlane/LayerZero/Rainbow/Wormhole, Aurora or Soneium matches. Startale Ethereum access-control row is a separate smart-account attack; Nexus matches are FinNexus/Nexus Mutual. Citrea matches Zentra Finance, not an exact M or sUSN finding. Tracker omissions are not proof of absence."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://rekt.news/",
+          "finding": "Current feed and targeted M0/Startale/USDSC/FRAX/Synapse with Soneium/Aurora/bridge/hack search did not identify an incident on the four exact candidate controls. Indexed results are bounded, not a complete incident archive."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://soneium.blockscout.com/api/v2/addresses/0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b/logs",
+          "finding": "Bounded first-page exact-address explorer JSON events, not lifetime absence. Exact Soneium Portal sendPaused=false and receivePaused=false at block 29292810/hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b/time 2026-10-11T12:06:11Z. Pinned implementation is own verified SpokePortal 0x46a8cfba44e5d29b6ee556277eac2c233cf52dda; mToken() binds exact M; hubChainId=1/currentChainId=1868, nonzero default adapter for hub 1 is supported. MToken verified ABI has no global pause/freeze/rate-limit getter. No whole-remote inventory, historical incident-era state or lifetime absence claim."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://soneium.blockscout.com/api/v2/addresses/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd/logs",
+          "finding": "Bounded first-page exact-address explorer JSON events, not lifetime absence. Exact Soneium Portal sendPaused=false and receivePaused=false at block 29292810/hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b/time 2026-10-11T12:06:11Z. Pinned implementation is own verified SpokePortal 0x46a8cfba44e5d29b6ee556277eac2c233cf52dda; mToken() binds exact M; hubChainId=1/currentChainId=1868, nonzero default adapter for hub 1 is supported. MToken verified ABI has no global pause/freeze/rate-limit getter. No whole-remote inventory, historical incident-era state or lifetime absence claim."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Complete DefiLlama hacks feed named-surface search",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-11T12:37:29.072Z",
+          "location": "I202-tracker-search.json; all 1299 returned records, every serialized field; exact issuer/asset/rail/chain terms",
+          "excerpt": "No M0/M^0/Mzero, USDSC, FRAX/Ferry, Synapse/nUSD, Hyperlane/LayerZero/Rainbow/Wormhole, Aurora or Soneium matches. Startale Ethereum access-control row is a separate smart-account attack; Nexus matches are FinNexus/Nexus Mutual. Citrea matches Zentra Finance, not an exact M or sUSN finding. Tracker omissions are not proof of absence."
+        },
+        {
+          "label": "Rekt bounded incident search",
+          "url": "https://rekt.news/",
+          "observedAt": "2026-10-11T12:39:04.564Z",
+          "location": "Current displayed front-page feed and successful targeted issuer/rail/chain indexed query during this review",
+          "excerpt": "Current feed and targeted M0/Startale/USDSC/FRAX/Synapse with Soneium/Aurora/bridge/hack search did not identify an incident on the four exact candidate controls. Indexed results are bounded, not a complete incident archive."
+        },
+        {
+          "label": "Pinned emergency state and exact implementation/rail bindings",
+          "url": "https://rpc.soneium.org",
+          "observedAt": "2026-10-11T12:38:38.637Z",
+          "location": "I202-soneium-emergency.json; batch; block 29292810; hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b; timestamp 2026-10-11T12:06:11.000Z; actual observedAt 2026-10-11T12:34:28.794Z | I202-soneium-binding-freeze.json; batch; block 29292810; hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b; timestamp 2026-10-11T12:06:11.000Z; actual observedAt 2026-10-11T12:37:06.195Z | I202-usdsc-safety-binding.json; batch; block 29292810; hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b; timestamp 2026-10-11T12:06:11.000Z; actual observedAt 2026-10-11T12:38:38.637Z",
+          "excerpt": "Exact Soneium Portal sendPaused=false and receivePaused=false at block 29292810/hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b/time 2026-10-11T12:06:11Z. Pinned implementation is own verified SpokePortal 0x46a8cfba44e5d29b6ee556277eac2c233cf52dda; mToken() binds exact M; hubChainId=1/currentChainId=1868, nonzero default adapter for hub 1 is supported. MToken verified ABI has no global pause/freeze/rate-limit getter. No whole-remote inventory, historical incident-era state or lifetime absence claim. Multiple reads on this one endpoint are folded into one source; each original observation is retained in location."
+        },
+        {
+          "label": "Exact bounded explorer JSON events",
+          "url": "https://soneium.blockscout.com/api/v2/addresses/0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b/logs",
+          "observedAt": "2026-10-11T12:36:32.891Z",
+          "location": "Returned first 50 rows; next_page_params retained in I202-native-surfaces.json",
+          "excerpt": "Exact address log page retrieved successfully. Returned decoded rows: IndexUpdated(uint128 indexed index); Transfer(address indexed sender, address indexed recipient, uint256 amount); Approval(address indexed account, address indexed spender, uint256 amount). No emergency event on the returned first page; pagination remains and this is not lifetime absence. Exact Soneium Portal sendPaused=false and receivePaused=false at block 29292810/hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b/time 2026-10-11T12:06:11Z. Pinned implementation is own verified SpokePortal 0x46a8cfba44e5d29b6ee556277eac2c233cf52dda; mToken() binds exact M; hubChainId=1/currentChainId=1868, nonzero default adapter for hub 1 is supported. MToken verified ABI has no global pause/freeze/rate-limit getter. No whole-remote inventory, historical incident-era state or lifetime absence claim."
+        },
+        {
+          "label": "Exact bounded explorer JSON events",
+          "url": "https://soneium.blockscout.com/api/v2/addresses/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd/logs",
+          "observedAt": "2026-10-11T12:35:41.865Z",
+          "location": "Returned first 50 rows; next_page_params retained in I202-native-surfaces.json",
+          "excerpt": "Exact address log page retrieved successfully. Returned decoded rows: MTokenIndexReceived(uint128 index, bytes32 messageId); TokenReceived(uint32 sourceChainId, address indexed destinationToken, bytes32 indexed sender, address indexed recipient, uint256 amount, uint128 index, bytes32 messageId); TokenSent(address indexed sourceToken, uint32 destinationChainId, bytes32 destinationToken, address indexed sender, bytes32 indexed recipient, uint256 amount, uint128 index, address bridgeAdapter, bytes32 messageId). No emergency event on the returned first page; pagination remains and this is not lifetime absence. Exact Soneium Portal sendPaused=false and receivePaused=false at block 29292810/hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b/time 2026-10-11T12:06:11Z. Pinned implementation is own verified SpokePortal 0x46a8cfba44e5d29b6ee556277eac2c233cf52dda; mToken() binds exact M; hubChainId=1/currentChainId=1868, nonzero default adapter for hub 1 is supported. MToken verified ABI has no global pause/freeze/rate-limit getter. No whole-remote inventory, historical incident-era state or lifetime absence claim."
+        },
+        {
+          "label": "Own verified deployed interface",
+          "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0x065A618Cd5f8a6875a7d7982d8B0D7a503CAcf9c",
+          "observedAt": "2026-10-11T12:36:33.605Z",
+          "location": "Exact native explorer source/ABI; is_verified=true; MToken",
+          "excerpt": "Own chain deployed ABI inspected; no interface is transplanted from a sibling. Exact Soneium Portal sendPaused=false and receivePaused=false at block 29292810/hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b/time 2026-10-11T12:06:11Z. Pinned implementation is own verified SpokePortal 0x46a8cfba44e5d29b6ee556277eac2c233cf52dda; mToken() binds exact M; hubChainId=1/currentChainId=1868, nonzero default adapter for hub 1 is supported. MToken verified ABI has no global pause/freeze/rate-limit getter. No whole-remote inventory, historical incident-era state or lifetime absence claim."
+        },
+        {
+          "label": "Own verified deployed interface",
+          "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0x46A8CFBA44e5d29B6ee556277eAC2C233cF52DdA",
+          "observedAt": "2026-10-11T12:35:40.886Z",
+          "location": "Exact native explorer source/ABI; is_verified=true; SpokePortal",
+          "excerpt": "Own chain deployed ABI inspected; no interface is transplanted from a sibling. Exact Soneium Portal sendPaused=false and receivePaused=false at block 29292810/hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b/time 2026-10-11T12:06:11Z. Pinned implementation is own verified SpokePortal 0x46a8cfba44e5d29b6ee556277eac2c233cf52dda; mToken() binds exact M; hubChainId=1/currentChainId=1868, nonzero default adapter for hub 1 is supported. MToken verified ABI has no global pause/freeze/rate-limit getter. No whole-remote inventory, historical incident-era state or lifetime absence claim."
+        },
+        {
+          "label": "Exact deployment creation or first-activity witness",
+          "url": "https://soneium.blockscout.com/api/v2/transactions/0x5a3341d55aa0e957a629512b108ee76158c7240439b3b1647c340b0b4f604ce5",
+          "observedAt": "2026-10-11T12:36:16.648Z",
+          "location": "Successful exact explorer transaction; creation metadata joins token; original first timestamp",
+          "excerpt": "Exact soneium:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b; successful transaction 0x5a3341d55aa0e957a629512b108ee76158c7240439b3b1647c340b0b4f604ce5 at block 14698785; timestamp 2025-11-07T16:18:41Z. Factory transaction may have null top-level created_contract; token address metadata plus exact activity supplies first-activity witness, not a fabricated top-level receipt contractAddress."
+        },
+        {
+          "label": "Hyperlane provider disclosures",
+          "url": "https://www.hyperlane.xyz/blog",
+          "observedAt": "2026-10-11T12:39:04.293Z",
+          "location": "Retrieved provider blog list and security-related entries",
+          "excerpt": "Provider blog searched for M0/Portal/USDSC/Soneium and incident/pause/hack/exploit leads; no exact candidate control incident identified. This is a bounded disclosure surface."
+        },
+        {
+          "label": "M0 issuer announcement surface",
+          "url": "https://www.m0.org/newsroom",
+          "observedAt": "2026-10-11T12:39:03.442Z",
+          "location": "Current displayed news/press/podcast/events lists; search for M0/M/Portal/bridge/Soneium",
+          "excerpt": "Issuer list retrieved and searched; no exact Soneium M/Portal adverse announcement identified. Bounded page, not an exhaustive current incident archive."
+        },
+        {
+          "label": "Primary adjacent Hyperlane incident scope",
+          "url": "https://www.radixdlt.com/blog/public-incident-report-vault-authorisation-vulnerability-2026",
+          "observedAt": "2026-10-11T12:40:56.278Z",
+          "location": "September 17 2026 report, sections 1, 3.3 and 4",
+          "excerpt": "Radix Engine vault authorization failure; Hyperlane bridge, validators and verification operated correctly. Every destination release matched a legitimately committed burn on Radix. Radix-route containment is not a Soneium M/USDSC Portal suspension."
+        }
+      ]
+    },
+    {
+      "reviewId": "i202-frax-frax-db9bee2e3c030f4d136b-20261011",
+      "assetId": "frax-frax",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:frax-frax:db9bee2e3c030f4d136b"
+      },
+      "reviewedAt": "2026-10-11T12:41:28Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I202)",
+      "windowStartSec": 1641690593,
+      "windowEndSec": 1791722488,
+      "conclusion": "no-known-incident",
+      "searchedSurfaces": [
+        {
+          "kind": "issuer-announcements",
+          "url": "https://frax.com/blog/security-is-our-product/",
+          "finding": "Issuer security and bridge announcement searched for legacy FRAX/Aurora/Ferry incidents. Current frxUSD DVN statements are not inherited by legacy CrossChainCanonicalFRAX or a lifetime certificate."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://aurora.dev/blog/the-rainbow-bridge-is-back",
+          "finding": "Ethereum/NEAR/Aurora bridging reactivated after Merge-related precautionary pause, monitoring and audits. Resolved precautionary pause alone is not a disqualifier."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://aurora.dev/blog/aurora-mitigates-two-vulnerabilities",
+          "finding": "Provider describes white-hat bug reports, closes spoofed withdrawal-output vulnerability, and removes unused fee-setting logic. It does not report an executed FRAX-control integrity failure; not a blanket security guarantee."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://api.llama.fi/hacks",
+          "finding": "No M0/M^0/Mzero, USDSC, FRAX/Ferry, Synapse/nUSD, Hyperlane/LayerZero/Rainbow/Wormhole, Aurora or Soneium matches. Startale Ethereum access-control row is a separate smart-account attack; Nexus matches are FinNexus/Nexus Mutual. Citrea matches Zentra Finance, not an exact M or sUSN finding. Tracker omissions are not proof of absence."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://rekt.news/",
+          "finding": "Current feed and targeted M0/Startale/USDSC/FRAX/Synapse with Soneium/Aurora/bridge/hack search did not identify an incident on the four exact candidate controls. Indexed results are bounded, not a complete incident archive."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://explorer.mainnet.aurora.dev/api/v2/addresses/0xe4b9e004389d91e4134a28f19bd833cba1d994b6/logs",
+          "finding": "Bounded first-page exact-address explorer JSON events, not lifetime absence. Exact verified Aurora CrossChainCanonicalFRAX exchangesPaused=false at block 219523539/hash 0xd61a884994774b02ba78fb851646e025beebff898e81cb1116808e6ed686a8bf/time 2026-10-11T12:23:05Z. toggleExchanges need not emit an event; no event absence is substituted for this actual getter. Rainbow mitigated white-hat findings and resolved Merge precautionary pause retained. No whole bridge-token configuration guarantee or lifetime event census."
+        },
+        {
+          "kind": "governance",
+          "url": "https://gov.frax.finance/t/fip-281-283-sunset-fraxferry-for-frax-boba-aurora-evmos/2526",
+          "finding": "Proposal to sunset low-volume Ferry routes retains token retrieval; no executed suspension or integrity failure of this exact canonical FRAX token is established. Latest predecessor treated proposal as distinct from execution; I202 does not re-litigate it or infer lifetime route availability."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Complete DefiLlama hacks feed named-surface search",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-11T12:37:29.072Z",
+          "location": "I202-tracker-search.json; all 1299 returned records, every serialized field; exact issuer/asset/rail/chain terms",
+          "excerpt": "No M0/M^0/Mzero, USDSC, FRAX/Ferry, Synapse/nUSD, Hyperlane/LayerZero/Rainbow/Wormhole, Aurora or Soneium matches. Startale Ethereum access-control row is a separate smart-account attack; Nexus matches are FinNexus/Nexus Mutual. Citrea matches Zentra Finance, not an exact M or sUSN finding. Tracker omissions are not proof of absence."
+        },
+        {
+          "label": "Provider vulnerability mitigation disclosure",
+          "url": "https://aurora.dev/blog/aurora-mitigates-two-vulnerabilities",
+          "observedAt": "2026-10-11T12:40:56.189Z",
+          "location": "August 29 2022; two June bug reports and implemented fixes",
+          "excerpt": "Provider describes white-hat bug reports, closes spoofed withdrawal-output vulnerability, and removes unused fee-setting logic. It does not report an executed FRAX-control integrity failure; not a blanket security guarantee."
+        },
+        {
+          "label": "Provider resolved precautionary pause",
+          "url": "https://aurora.dev/blog/the-rainbow-bridge-is-back",
+          "observedAt": "2026-10-11T12:40:56.129Z",
+          "location": "September 27 2022 Rainbow Bridge reactivation",
+          "excerpt": "Ethereum/NEAR/Aurora bridging reactivated after Merge-related precautionary pause, monitoring and audits. Resolved precautionary pause alone is not a disqualifier."
+        },
+        {
+          "label": "Exact bounded explorer JSON events",
+          "url": "https://explorer.mainnet.aurora.dev/api/v2/addresses/0xe4b9e004389d91e4134a28f19bd833cba1d994b6/logs",
+          "observedAt": "2026-10-11T12:35:41.949Z",
+          "location": "Returned first 50 rows; next_page_params retained in I202-native-surfaces.json",
+          "excerpt": "Exact address log page retrieved successfully. Returned decoded rows: Transfer(address indexed from, address indexed to, uint256 value); Approval(address indexed owner, address indexed spender, uint256 value). No emergency event on the returned first page; pagination remains and this is not lifetime absence. Exact verified Aurora CrossChainCanonicalFRAX exchangesPaused=false at block 219523539/hash 0xd61a884994774b02ba78fb851646e025beebff898e81cb1116808e6ed686a8bf/time 2026-10-11T12:23:05Z. toggleExchanges need not emit an event; no event absence is substituted for this actual getter. Rainbow mitigated white-hat findings and resolved Merge precautionary pause retained. No whole bridge-token configuration guarantee or lifetime event census."
+        },
+        {
+          "label": "Own verified deployed interface",
+          "url": "https://explorer.mainnet.aurora.dev/api/v2/smart-contracts/0xe4b9e004389d91e4134a28f19bd833cba1d994b6",
+          "observedAt": "2026-10-11T12:35:41.294Z",
+          "location": "Exact native explorer source/ABI; is_verified=true; CrossChainCanonicalFRAX",
+          "excerpt": "Own chain deployed ABI inspected; no interface is transplanted from a sibling. Exact verified Aurora CrossChainCanonicalFRAX exchangesPaused=false at block 219523539/hash 0xd61a884994774b02ba78fb851646e025beebff898e81cb1116808e6ed686a8bf/time 2026-10-11T12:23:05Z. toggleExchanges need not emit an event; no event absence is substituted for this actual getter. Rainbow mitigated white-hat findings and resolved Merge precautionary pause retained. No whole bridge-token configuration guarantee or lifetime event census."
+        },
+        {
+          "label": "Exact deployment creation or first-activity witness",
+          "url": "https://explorer.mainnet.aurora.dev/api/v2/transactions/0x7d2bdc7559b67d028ca21fcbd699f55db07af832d0f05f8601948b050d6fddf7",
+          "observedAt": "2026-10-11T12:36:19.372Z",
+          "location": "Successful exact explorer transaction; creation metadata joins token; original first timestamp",
+          "excerpt": "Exact aurora:0xe4b9e004389d91e4134a28f19bd833cba1d994b6; successful transaction 0x7d2bdc7559b67d028ca21fcbd699f55db07af832d0f05f8601948b050d6fddf7 at block 56999983; timestamp 2022-01-09T01:09:53Z. Factory transaction may have null top-level created_contract; token address metadata plus exact activity supplies first-activity witness, not a fabricated top-level receipt contractAddress."
+        },
+        {
+          "label": "Frax issuer security announcement",
+          "url": "https://frax.com/blog/security-is-our-product/",
+          "observedAt": "2026-10-11T12:39:04.390Z",
+          "location": "May 21 2026 issuer security record and Crosschain infrastructure sections",
+          "excerpt": "Issuer security and bridge announcement searched for legacy FRAX/Aurora/Ferry incidents. Current frxUSD DVN statements are not inherited by legacy CrossChainCanonicalFRAX or a lifetime certificate."
+        },
+        {
+          "label": "Retained issuer governance Ferry sunset proposal",
+          "url": "https://gov.frax.finance/t/fip-281-283-sunset-fraxferry-for-frax-boba-aurora-evmos/2526",
+          "observedAt": "2026-10-11T10:32:10.535408Z",
+          "location": "H11FRAX-primary-observations.json; original source observation retained, not fetched or date-bumped by I202",
+          "excerpt": "Proposal to sunset low-volume Ferry routes retains token retrieval; no executed suspension or integrity failure of this exact canonical FRAX token is established. Latest predecessor treated proposal as distinct from execution; I202 does not re-litigate it or infer lifetime route availability."
+        },
+        {
+          "label": "Pinned emergency state and exact implementation/rail bindings",
+          "url": "https://mainnet.aurora.dev",
+          "observedAt": "2026-10-11T12:34:27.724Z",
+          "location": "I202-frax-aurora-emergency.json; eth_call; block 219523539; hash 0xd61a884994774b02ba78fb851646e025beebff898e81cb1116808e6ed686a8bf; timestamp 2026-10-11T12:23:05.000Z; actual observedAt 2026-10-11T12:34:27.724Z",
+          "excerpt": "Exact verified Aurora CrossChainCanonicalFRAX exchangesPaused=false at block 219523539/hash 0xd61a884994774b02ba78fb851646e025beebff898e81cb1116808e6ed686a8bf/time 2026-10-11T12:23:05Z. toggleExchanges need not emit an event; no event absence is substituted for this actual getter. Rainbow mitigated white-hat findings and resolved Merge precautionary pause retained. No whole bridge-token configuration guarantee or lifetime event census. Multiple reads on this one endpoint are folded into one source; each original observation is retained in location."
+        },
+        {
+          "label": "Rekt bounded incident search",
+          "url": "https://rekt.news/",
+          "observedAt": "2026-10-11T12:39:04.564Z",
+          "location": "Current displayed front-page feed and successful targeted issuer/rail/chain indexed query during this review",
+          "excerpt": "Current feed and targeted M0/Startale/USDSC/FRAX/Synapse with Soneium/Aurora/bridge/hack search did not identify an incident on the four exact candidate controls. Indexed results are bounded, not a complete incident archive."
+        }
+      ]
+    },
+    {
+      "reviewId": "i202-usdsc-startale-6d35e2061e058f9bebbd-20261011",
+      "assetId": "usdsc-startale",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:usdsc-startale:6d35e2061e058f9bebbd"
+      },
+      "reviewedAt": "2026-10-11T12:41:28Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I202)",
+      "windowStartSec": 1763565991,
+      "windowEndSec": 1791722488,
+      "conclusion": "no-known-incident",
+      "searchedSurfaces": [
+        {
+          "kind": "issuer-announcements",
+          "url": "https://usd.startale.com/news?tag=All&page=1",
+          "finding": "Sparse issuer page has USDSC FAQ and launch announcements, no exact Soneium token/Portal incident disclosure. Sparse archive is disclosed, not treated as lifetime proof."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://www.hyperlane.xyz/blog",
+          "finding": "Provider blog searched for M0/Portal/USDSC/Soneium and incident/pause/hack/exploit leads; no exact candidate control incident identified. This is a bounded disclosure surface."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://www.radixdlt.com/blog/public-incident-report-vault-authorisation-vulnerability-2026",
+          "finding": "Radix Engine vault authorization failure; Hyperlane bridge, validators and verification operated correctly. Every destination release matched a legitimately committed burn on Radix. Radix-route containment is not a Soneium M/USDSC Portal suspension."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://x.com/exvulsec/status/2100111910524072258",
+          "finding": "Ethereum StartaleSmartAccount 0x000000b8f5f723a680d3d7ee624fe0bc84a6e05a and factory 0x0000003b3e7b530b4f981ae80d9350392defef90; USDC/USDT counterfactual-account losses. Different chain/contracts/control from Soneium USDSC token and M0 Portal; neither is named as exploited. Real smart-account loss is retained; no remediation or exhaustive victim-list claim."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://api.llama.fi/hacks",
+          "finding": "No M0/M^0/Mzero, USDSC, FRAX/Ferry, Synapse/nUSD, Hyperlane/LayerZero/Rainbow/Wormhole, Aurora or Soneium matches. Startale Ethereum access-control row is a separate smart-account attack; Nexus matches are FinNexus/Nexus Mutual. Citrea matches Zentra Finance, not an exact M or sUSN finding. Tracker omissions are not proof of absence."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://rekt.news/",
+          "finding": "Current feed and targeted M0/Startale/USDSC/FRAX/Synapse with Soneium/Aurora/bridge/hack search did not identify an incident on the four exact candidate controls. Indexed results are bounded, not a complete incident archive."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://soneium.blockscout.com/api/v2/addresses/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a/logs",
+          "finding": "Bounded first-page exact-address explorer JSON events, not lifetime absence. Exact Soneium Portal sendPaused=false and receivePaused=false at block 29292810/hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b/time 2026-10-11T12:06:11Z; own current verified SpokePortal implementation bound by pinned EIP1967 slot. USDSC current own verified UsdscToken implementation is 0x38e4713a896efcf253430efd6292515dc13489a1. Token and Portal mToken() bind exact M; configured hub adapter nonzero and supported. Exposed isFrozen(address)=false for exact Portal, USDSC token, underlying M and configured swapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278, all at the same pin. These are bounded exact rail-account samples, not all-holder freeze absence or a route-completion guarantee."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://soneium.blockscout.com/api/v2/addresses/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd/logs",
+          "finding": "Bounded first-page exact-address explorer JSON events, not lifetime absence. Exact Soneium Portal sendPaused=false and receivePaused=false at block 29292810/hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b/time 2026-10-11T12:06:11Z; own current verified SpokePortal implementation bound by pinned EIP1967 slot. USDSC current own verified UsdscToken implementation is 0x38e4713a896efcf253430efd6292515dc13489a1. Token and Portal mToken() bind exact M; configured hub adapter nonzero and supported. Exposed isFrozen(address)=false for exact Portal, USDSC token, underlying M and configured swapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278, all at the same pin. These are bounded exact rail-account samples, not all-holder freeze absence or a route-completion guarantee."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Complete DefiLlama hacks feed named-surface search",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-11T12:37:29.072Z",
+          "location": "I202-tracker-search.json; all 1299 returned records, every serialized field; exact issuer/asset/rail/chain terms",
+          "excerpt": "No M0/M^0/Mzero, USDSC, FRAX/Ferry, Synapse/nUSD, Hyperlane/LayerZero/Rainbow/Wormhole, Aurora or Soneium matches. Startale Ethereum access-control row is a separate smart-account attack; Nexus matches are FinNexus/Nexus Mutual. Citrea matches Zentra Finance, not an exact M or sUSN finding. Tracker omissions are not proof of absence."
+        },
+        {
+          "label": "Rekt bounded incident search",
+          "url": "https://rekt.news/",
+          "observedAt": "2026-10-11T12:39:04.564Z",
+          "location": "Current displayed front-page feed and successful targeted issuer/rail/chain indexed query during this review",
+          "excerpt": "Current feed and targeted M0/Startale/USDSC/FRAX/Synapse with Soneium/Aurora/bridge/hack search did not identify an incident on the four exact candidate controls. Indexed results are bounded, not a complete incident archive."
+        },
+        {
+          "label": "Pinned emergency state and exact implementation/rail bindings",
+          "url": "https://rpc.soneium.org",
+          "observedAt": "2026-10-11T12:39:45.144Z",
+          "location": "I202-soneium-emergency.json; batch; block 29292810; hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b; timestamp 2026-10-11T12:06:11.000Z; actual observedAt 2026-10-11T12:34:28.794Z | I202-soneium-binding-freeze.json; batch; block 29292810; hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b; timestamp 2026-10-11T12:06:11.000Z; actual observedAt 2026-10-11T12:37:06.195Z | I202-usdsc-safety-binding.json; batch; block 29292810; hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b; timestamp 2026-10-11T12:06:11.000Z; actual observedAt 2026-10-11T12:38:38.637Z | I202-usdsc-facility-freeze.json; eth_call; block 29292810; hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b; timestamp 2026-10-11T12:06:11.000Z; actual observedAt 2026-10-11T12:39:45.144Z",
+          "excerpt": "Exact Soneium Portal sendPaused=false and receivePaused=false at block 29292810/hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b/time 2026-10-11T12:06:11Z; own current verified SpokePortal implementation bound by pinned EIP1967 slot. USDSC current own verified UsdscToken implementation is 0x38e4713a896efcf253430efd6292515dc13489a1. Token and Portal mToken() bind exact M; configured hub adapter nonzero and supported. Exposed isFrozen(address)=false for exact Portal, USDSC token, underlying M and configured swapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278, all at the same pin. These are bounded exact rail-account samples, not all-holder freeze absence or a route-completion guarantee. Multiple reads on this one endpoint are folded into one source; each original observation is retained in location."
+        },
+        {
+          "label": "Exact factory deployment metadata",
+          "url": "https://soneium.blockscout.com/api/v2/addresses/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+          "observedAt": "2026-10-11T12:36:17.182Z",
+          "location": "Exact-address creation_transaction_hash and own current implementation metadata",
+          "excerpt": "Creation hash links exact token to the successful first-activity transaction; implementation identity is independently pinned to the verified own-chain source."
+        },
+        {
+          "label": "Exact bounded explorer JSON events",
+          "url": "https://soneium.blockscout.com/api/v2/addresses/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a/logs",
+          "observedAt": "2026-10-11T12:36:33.348Z",
+          "location": "Returned first 50 rows; next_page_params retained in I202-native-surfaces.json",
+          "excerpt": "Exact address log page retrieved successfully. Returned decoded rows: Transfer(address indexed sender, address indexed recipient, uint256 amount); AuthorizationUsed(address indexed authorizer, bytes32 indexed nonce); Approval(address indexed account, address indexed spender, uint256 amount). No emergency event on the returned first page; pagination remains and this is not lifetime absence. Exact Soneium Portal sendPaused=false and receivePaused=false at block 29292810/hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b/time 2026-10-11T12:06:11Z; own current verified SpokePortal implementation bound by pinned EIP1967 slot. USDSC current own verified UsdscToken implementation is 0x38e4713a896efcf253430efd6292515dc13489a1. Token and Portal mToken() bind exact M; configured hub adapter nonzero and supported. Exposed isFrozen(address)=false for exact Portal, USDSC token, underlying M and configured swapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278, all at the same pin. These are bounded exact rail-account samples, not all-holder freeze absence or a route-completion guarantee."
+        },
+        {
+          "label": "Exact bounded explorer JSON events",
+          "url": "https://soneium.blockscout.com/api/v2/addresses/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd/logs",
+          "observedAt": "2026-10-11T12:35:41.865Z",
+          "location": "Returned first 50 rows; next_page_params retained in I202-native-surfaces.json",
+          "excerpt": "Exact address log page retrieved successfully. Returned decoded rows: MTokenIndexReceived(uint128 index, bytes32 messageId); TokenReceived(uint32 sourceChainId, address indexed destinationToken, bytes32 indexed sender, address indexed recipient, uint256 amount, uint128 index, bytes32 messageId); TokenSent(address indexed sourceToken, uint32 destinationChainId, bytes32 destinationToken, address indexed sender, bytes32 indexed recipient, uint256 amount, uint128 index, address bridgeAdapter, bytes32 messageId). No emergency event on the returned first page; pagination remains and this is not lifetime absence. Exact Soneium Portal sendPaused=false and receivePaused=false at block 29292810/hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b/time 2026-10-11T12:06:11Z; own current verified SpokePortal implementation bound by pinned EIP1967 slot. USDSC current own verified UsdscToken implementation is 0x38e4713a896efcf253430efd6292515dc13489a1. Token and Portal mToken() bind exact M; configured hub adapter nonzero and supported. Exposed isFrozen(address)=false for exact Portal, USDSC token, underlying M and configured swapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278, all at the same pin. These are bounded exact rail-account samples, not all-holder freeze absence or a route-completion guarantee."
+        },
+        {
+          "label": "Own verified deployed interface",
+          "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0x38E4713a896EfCF253430efD6292515Dc13489A1",
+          "observedAt": "2026-10-11T12:36:33.884Z",
+          "location": "Exact native explorer source/ABI; is_verified=true; UsdscToken",
+          "excerpt": "Own chain deployed ABI inspected; no interface is transplanted from a sibling. Exact Soneium Portal sendPaused=false and receivePaused=false at block 29292810/hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b/time 2026-10-11T12:06:11Z; own current verified SpokePortal implementation bound by pinned EIP1967 slot. USDSC current own verified UsdscToken implementation is 0x38e4713a896efcf253430efd6292515dc13489a1. Token and Portal mToken() bind exact M; configured hub adapter nonzero and supported. Exposed isFrozen(address)=false for exact Portal, USDSC token, underlying M and configured swapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278, all at the same pin. These are bounded exact rail-account samples, not all-holder freeze absence or a route-completion guarantee."
+        },
+        {
+          "label": "Own verified deployed interface",
+          "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0x46A8CFBA44e5d29B6ee556277eAC2C233cF52DdA",
+          "observedAt": "2026-10-11T12:35:40.886Z",
+          "location": "Exact native explorer source/ABI; is_verified=true; SpokePortal",
+          "excerpt": "Own chain deployed ABI inspected; no interface is transplanted from a sibling. Exact Soneium Portal sendPaused=false and receivePaused=false at block 29292810/hash 0xee335427a5bea7ae7eb95450f8c1ce4bce5a2be83193b7452887d32fbaf2307b/time 2026-10-11T12:06:11Z; own current verified SpokePortal implementation bound by pinned EIP1967 slot. USDSC current own verified UsdscToken implementation is 0x38e4713a896efcf253430efd6292515dc13489a1. Token and Portal mToken() bind exact M; configured hub adapter nonzero and supported. Exposed isFrozen(address)=false for exact Portal, USDSC token, underlying M and configured swapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278, all at the same pin. These are bounded exact rail-account samples, not all-holder freeze absence or a route-completion guarantee."
+        },
+        {
+          "label": "Exact deployment creation or first-activity witness",
+          "url": "https://soneium.blockscout.com/api/v2/transactions/0xd313130d5a886cbeefdf1f721b9505c15635e751cfec88e621271fbfa7ff50ff",
+          "observedAt": "2026-10-11T12:36:17.431Z",
+          "location": "Successful exact explorer transaction; creation metadata joins token; original first timestamp",
+          "excerpt": "Exact soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a; successful transaction 0xd313130d5a886cbeefdf1f721b9505c15635e751cfec88e621271fbfa7ff50ff at block 15215620; timestamp 2025-11-19T15:26:31Z. Factory transaction may have null top-level created_contract; token address metadata plus exact activity supplies first-activity witness, not a fabricated top-level receipt contractAddress."
+        },
+        {
+          "label": "Startale USDSC issuer announcements",
+          "url": "https://usd.startale.com/news?tag=All&page=1",
+          "observedAt": "2026-10-11T12:39:04.246Z",
+          "location": "Current displayed USDSC news list; search for USDSC/Soneium/bridge/Portal and adverse terms",
+          "excerpt": "Sparse issuer page has USDSC FAQ and launch announcements, no exact Soneium token/Portal incident disclosure. Sparse archive is disclosed, not treated as lifetime proof."
+        },
+        {
+          "label": "Hyperlane provider disclosures",
+          "url": "https://www.hyperlane.xyz/blog",
+          "observedAt": "2026-10-11T12:39:04.293Z",
+          "location": "Retrieved provider blog list and security-related entries",
+          "excerpt": "Provider blog searched for M0/Portal/USDSC/Soneium and incident/pause/hack/exploit leads; no exact candidate control incident identified. This is a bounded disclosure surface."
+        },
+        {
+          "label": "Primary adjacent Hyperlane incident scope",
+          "url": "https://www.radixdlt.com/blog/public-incident-report-vault-authorisation-vulnerability-2026",
+          "observedAt": "2026-10-11T12:40:56.278Z",
+          "location": "September 17 2026 report, sections 1, 3.3 and 4",
+          "excerpt": "Radix Engine vault authorization failure; Hyperlane bridge, validators and verification operated correctly. Every destination release matched a legitimately committed burn on Radix. Radix-route containment is not a Soneium M/USDSC Portal suspension."
+        },
+        {
+          "label": "Firsthand observer exact smart-account attack scope",
+          "url": "https://x.com/exvulsec/status/2100111910524072258",
+          "observedAt": "2026-10-11T12:40:16Z",
+          "location": "Primary September 16 2026 ExVul post; I202-startale-account-disposition.json; predecessor exact-scope disposition retained",
+          "excerpt": "Ethereum StartaleSmartAccount 0x000000b8f5f723a680d3d7ee624fe0bc84a6e05a and factory 0x0000003b3e7b530b4f981ae80d9350392defef90; USDC/USDT counterfactual-account losses. Different chain/contracts/control from Soneium USDSC token and M0 Portal; neither is named as exploited. Real smart-account loss is retained; no remediation or exhaustive victim-list claim."
+        }
+      ]
+    },
+    {
+      "reviewId": "i202-nusd-nexus-6b3d7a176f1339434313-20261011",
+      "assetId": "nusd-nexus",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:nusd-nexus:6b3d7a176f1339434313"
+      },
+      "reviewedAt": "2026-10-11T12:41:28Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I202)",
+      "windowStartSec": 1640599579,
+      "windowEndSec": 1791722488,
+      "conclusion": "no-known-incident",
+      "searchedSurfaces": [
+        {
+          "kind": "issuer-announcements",
+          "url": "https://r.jina.ai/http://medium.com/synapse-protocol",
+          "finding": "Bounded issuer collection and postmortem consulted; no complete or up-to-date announcement archive claimed."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://r.jina.ai/http://medium.com/synapse-protocol/11-06-2021-post-mortem-of-synapse-metapool-exploit-3003b4df4ef4",
+          "finding": "Issue confined to Saddle-derived AMM, not core Synapse bridging contracts. Validators rejected malicious mint; bridge returned to fully functioning and pending user transactions were processed November 7. Event predates the exact Aurora nUSD first activity on December 27. No sibling Avalanche/Harmony/Cronos blocker is cleared."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://api.llama.fi/hacks",
+          "finding": "No M0/M^0/Mzero, USDSC, FRAX/Ferry, Synapse/nUSD, Hyperlane/LayerZero/Rainbow/Wormhole, Aurora or Soneium matches. Startale Ethereum access-control row is a separate smart-account attack; Nexus matches are FinNexus/Nexus Mutual. Citrea matches Zentra Finance, not an exact M or sUSN finding. Tracker omissions are not proof of absence."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://rekt.news/",
+          "finding": "Current feed and targeted M0/Startale/USDSC/FRAX/Synapse with Soneium/Aurora/bridge/hack search did not identify an incident on the four exact candidate controls. Indexed results are bounded, not a complete incident archive."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://explorer.mainnet.aurora.dev/api/v2/addresses/0x07379565cd8b0cae7c60dc78e7f601b34af2a21c/logs",
+          "finding": "Bounded first-page exact-address explorer JSON events, not lifetime absence. Exact Aurora SynapseBridge controller 0xaed5b25be1c3163c907a471082640450f928ddfe paused=false and isLegacySendDisabled=false at block 219523539/hash 0xd61a884994774b02ba78fb851646e025beebff898e81cb1116808e6ed686a8bf/time 2026-10-11T12:23:05Z. Pinned EIP1967 slot binds own verified SynapseBridge implementation 0x5b0000258c622551a1c7c45b9f860ef90200005b; pinned token EIP1167 code binds own verified SynapseERC20 0x84a420459cd31c3c34583f67e0f0fb191067d32f. SynapseERC20 ABI has no pause/freeze/rate getter; SynapseBridge has no additional freeze/rate getter. No nonexistent getter treated as false; no lifetime incident census."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Complete DefiLlama hacks feed named-surface search",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-11T12:37:29.072Z",
+          "location": "I202-tracker-search.json; all 1299 returned records, every serialized field; exact issuer/asset/rail/chain terms",
+          "excerpt": "No M0/M^0/Mzero, USDSC, FRAX/Ferry, Synapse/nUSD, Hyperlane/LayerZero/Rainbow/Wormhole, Aurora or Soneium matches. Startale Ethereum access-control row is a separate smart-account attack; Nexus matches are FinNexus/Nexus Mutual. Citrea matches Zentra Finance, not an exact M or sUSN finding. Tracker omissions are not proof of absence."
+        },
+        {
+          "label": "Exact factory deployment metadata",
+          "url": "https://explorer.mainnet.aurora.dev/api/v2/addresses/0x07379565cd8b0cae7c60dc78e7f601b34af2a21c",
+          "observedAt": "2026-10-11T12:36:19.440Z",
+          "location": "Exact-address creation_transaction_hash and own current implementation metadata",
+          "excerpt": "Creation hash links exact token to the successful first-activity transaction; implementation identity is independently pinned to the verified own-chain source."
+        },
+        {
+          "label": "Exact bounded explorer JSON events",
+          "url": "https://explorer.mainnet.aurora.dev/api/v2/addresses/0x07379565cd8b0cae7c60dc78e7f601b34af2a21c/logs",
+          "observedAt": "2026-10-11T12:35:42.057Z",
+          "location": "Returned first 50 rows; next_page_params retained in I202-native-surfaces.json",
+          "excerpt": "Exact address log page retrieved successfully. Returned decoded rows: Approval(address indexed owner, address indexed spender, uint256 value); Transfer(address indexed from, address indexed to, uint256 value). No emergency event on the returned first page; pagination remains and this is not lifetime absence. Exact Aurora SynapseBridge controller 0xaed5b25be1c3163c907a471082640450f928ddfe paused=false and isLegacySendDisabled=false at block 219523539/hash 0xd61a884994774b02ba78fb851646e025beebff898e81cb1116808e6ed686a8bf/time 2026-10-11T12:23:05Z. Pinned EIP1967 slot binds own verified SynapseBridge implementation 0x5b0000258c622551a1c7c45b9f860ef90200005b; pinned token EIP1167 code binds own verified SynapseERC20 0x84a420459cd31c3c34583f67e0f0fb191067d32f. SynapseERC20 ABI has no pause/freeze/rate getter; SynapseBridge has no additional freeze/rate getter. No nonexistent getter treated as false; no lifetime incident census."
+        },
+        {
+          "label": "Own verified deployed interface",
+          "url": "https://explorer.mainnet.aurora.dev/api/v2/smart-contracts/0x5B0000258c622551A1c7C45b9f860Ef90200005B",
+          "observedAt": "2026-10-11T12:35:41.501Z",
+          "location": "Exact native explorer source/ABI; is_verified=true; SynapseBridge",
+          "excerpt": "Own chain deployed ABI inspected; no interface is transplanted from a sibling. Exact Aurora SynapseBridge controller 0xaed5b25be1c3163c907a471082640450f928ddfe paused=false and isLegacySendDisabled=false at block 219523539/hash 0xd61a884994774b02ba78fb851646e025beebff898e81cb1116808e6ed686a8bf/time 2026-10-11T12:23:05Z. Pinned EIP1967 slot binds own verified SynapseBridge implementation 0x5b0000258c622551a1c7c45b9f860ef90200005b; pinned token EIP1167 code binds own verified SynapseERC20 0x84a420459cd31c3c34583f67e0f0fb191067d32f. SynapseERC20 ABI has no pause/freeze/rate getter; SynapseBridge has no additional freeze/rate getter. No nonexistent getter treated as false; no lifetime incident census."
+        },
+        {
+          "label": "Own verified deployed interface",
+          "url": "https://explorer.mainnet.aurora.dev/api/v2/smart-contracts/0x84A420459cd31C3c34583F67E0f0fB191067D32f",
+          "observedAt": "2026-10-11T12:35:42.475Z",
+          "location": "Exact native explorer source/ABI; is_verified=true; SynapseERC20",
+          "excerpt": "Own chain deployed ABI inspected; no interface is transplanted from a sibling. Exact Aurora SynapseBridge controller 0xaed5b25be1c3163c907a471082640450f928ddfe paused=false and isLegacySendDisabled=false at block 219523539/hash 0xd61a884994774b02ba78fb851646e025beebff898e81cb1116808e6ed686a8bf/time 2026-10-11T12:23:05Z. Pinned EIP1967 slot binds own verified SynapseBridge implementation 0x5b0000258c622551a1c7c45b9f860ef90200005b; pinned token EIP1167 code binds own verified SynapseERC20 0x84a420459cd31c3c34583f67e0f0fb191067d32f. SynapseERC20 ABI has no pause/freeze/rate getter; SynapseBridge has no additional freeze/rate getter. No nonexistent getter treated as false; no lifetime incident census."
+        },
+        {
+          "label": "Exact deployment creation or first-activity witness",
+          "url": "https://explorer.mainnet.aurora.dev/api/v2/transactions/0x573ee817332ab381315a02e409aa3d09309dd8b61c26bb3c3848bbd7ba83f668",
+          "observedAt": "2026-10-11T12:36:19.510Z",
+          "location": "Successful exact explorer transaction; creation metadata joins token; original first timestamp",
+          "excerpt": "Exact aurora:0x07379565cd8b0cae7c60dc78e7f601b34af2a21c; successful transaction 0x573ee817332ab381315a02e409aa3d09309dd8b61c26bb3c3848bbd7ba83f668 at block 56092558; timestamp 2021-12-27T10:06:19Z. Factory transaction may have null top-level created_contract; token address metadata plus exact activity supplies first-activity witness, not a fabricated top-level receipt contractAddress."
+        },
+        {
+          "label": "Pinned emergency state and exact implementation/rail bindings",
+          "url": "https://mainnet.aurora.dev",
+          "observedAt": "2026-10-11T12:38:39.886Z",
+          "location": "I202-nusd-aurora-emergency.json; batch; block 219523539; hash 0xd61a884994774b02ba78fb851646e025beebff898e81cb1116808e6ed686a8bf; timestamp 2026-10-11T12:23:05.000Z; actual observedAt 2026-10-11T12:34:29.555Z | I202-nusd-clone-binding.json; eth_getCode; block 219523539; hash 0xd61a884994774b02ba78fb851646e025beebff898e81cb1116808e6ed686a8bf; timestamp 2026-10-11T12:23:05.000Z; actual observedAt 2026-10-11T12:38:39.886Z",
+          "excerpt": "Exact Aurora SynapseBridge controller 0xaed5b25be1c3163c907a471082640450f928ddfe paused=false and isLegacySendDisabled=false at block 219523539/hash 0xd61a884994774b02ba78fb851646e025beebff898e81cb1116808e6ed686a8bf/time 2026-10-11T12:23:05Z. Pinned EIP1967 slot binds own verified SynapseBridge implementation 0x5b0000258c622551a1c7c45b9f860ef90200005b; pinned token EIP1167 code binds own verified SynapseERC20 0x84a420459cd31c3c34583f67e0f0fb191067d32f. SynapseERC20 ABI has no pause/freeze/rate getter; SynapseBridge has no additional freeze/rate getter. No nonexistent getter treated as false; no lifetime incident census. Multiple reads on this one endpoint are folded into one source; each original observation is retained in location."
+        },
+        {
+          "label": "Synapse issuer announcement index",
+          "url": "https://r.jina.ai/http://medium.com/synapse-protocol",
+          "observedAt": "2026-10-11T12:41:00.473Z",
+          "location": "Displayed Medium issuer index, last visible December 2025; search for Synapse/nUSD/bridge/Aurora",
+          "excerpt": "Bounded issuer collection and postmortem consulted; no complete or up-to-date announcement archive claimed."
+        },
+        {
+          "label": "Issuer primary AMM and precautionary bridge-pause disposition",
+          "url": "https://r.jina.ai/http://medium.com/synapse-protocol/11-06-2021-post-mortem-of-synapse-metapool-exploit-3003b4df4ef4",
+          "observedAt": "2026-10-11T12:40:56.687Z",
+          "location": "Full primary November 10 2021 report; scope and November 6–7 timeline",
+          "excerpt": "Issue confined to Saddle-derived AMM, not core Synapse bridging contracts. Validators rejected malicious mint; bridge returned to fully functioning and pending user transactions were processed November 7. Event predates the exact Aurora nUSD first activity on December 27. No sibling Avalanche/Harmony/Cronos blocker is cleared."
+        },
+        {
+          "label": "Rekt bounded incident search",
+          "url": "https://rekt.news/",
+          "observedAt": "2026-10-11T12:39:04.564Z",
+          "location": "Current displayed front-page feed and successful targeted issuer/rail/chain indexed query during this review",
+          "excerpt": "Current feed and targeted M0/Startale/USDSC/FRAX/Synapse with Soneium/Aurora/bridge/hack search did not identify an incident on the four exact candidate controls. Indexed results are bounded, not a complete incident archive."
+        }
+      ]
+    },
+    {
+      "reviewId": "i203-cngn-compliant-naira-3ed94b7a7d58976299ac-20261011",
+      "assetId": "cngn-compliant-naira",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:cngn-compliant-naira:3ed94b7a7d58976299ac"
+      },
+      "reviewedAt": "2026-10-11T12:49:23Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (I203)",
+      "windowStartSec": 1761732793,
+      "windowEndSec": 1791722963,
+      "conclusion": "no-known-incident",
+      "searchedSurfaces": [
+        {
+          "kind": "issuer-announcements",
+          "url": "https://docs.cngn.co/changelog.md",
+          "finding": "Issuer asset plus exact bridge/chain announcement/status surfaces searched as described in sources; no known exact-control adverse incident identified. Bounded search, not lifetime absence."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://api.llama.fi/hacks",
+          "finding": "Full 1299-row DefiLlama exact-name search, Rekt index and retained bounded indexed searches, plus rail-provider security disclosures reviewed. Generic chain hits and prospective audit findings are not exact-control incidents; fresh combined Rekt query failed and is not a no-hit result."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://blockscout.lisk.com/api/v2/addresses/0xc7ab2c35ea37236e644c24a4e4a1911c082887c0/logs",
+          "finding": "Exact token50-row paginated Transfer/Approval page and exact AdminOperations49-row displayed page reviewed; no displayed pause/seizure/holder-blacklist events. Ordinary BlackListedMinter is verified removeCanMint cleanup, not holder blacklist. Token proxy paused()=false, active Cngn3 implementation 0x50a1b2d9583cc12daaed29c91c2e767e4316fefd and slot207 AdminOperations 0xd7dc1fb7e1d7fad9a61c12f77647b4e26e852d8d; observed 2026-10-11T12:34:34.123Z. AdminOperations proxy paused()=false, active Admin2 implementation 0x86f1afdf772b85b2034fa06939391b60c4e55003; observed 2026-10-11T12:35:20.430Z. All at Lisk block 38489417, hash 0x82dd934a9b993660d116d76043861267e3aea3ffe284985cd50097ac62f856bc, timestamp 2026-10-11T08:33:45.000Z. Both pinned implementation eth_getCode results exactly equal their exact-chain explorer verified deployed_bytecode; observed 2026-10-11T12:46:44.489Z. These are present-state snapshots, not historical incident absence or individual-holder blacklist absence."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Full DefiLlama hacks database",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-11T07:18:34.018533+00:00",
+          "location": "All 1299 rows; full serialized-row case-insensitive search",
+          "excerpt": "Searched cNGN, Bantu, Ripio, wMXN, wCOP, wCLP, wFIAT, BridgeDeposit, LimitedMinterBridge and every assigned chain name. No issuer, asset or rail-name matches; generic chain hits are not exact-control incidents."
+        },
+        {
+          "label": "Bantu cNGN bridge case study, bounded partial retrieval",
+          "url": "https://bantufoundation.org/case-studies/cngn",
+          "observedAt": "2026-10-11T07:20:14.332824+00:00",
+          "location": "Main cNGN case-study content; response ended IncompleteRead",
+          "excerpt": "Actual retrieved text states Bantu is the single source of truth and bridge contracts lock cNGN on Bantu and mint an equivalent representation on the destination chain. No exact-control incident was identified in the bounded retrieved case study; trailing page bytes unavailable."
+        },
+        {
+          "label": "Bantu rail provider security policy, bounded partial retrieval",
+          "url": "https://bantufoundation.org/legal/security",
+          "observedAt": "2026-10-11T07:20:14.332647+00:00",
+          "location": "Main security-policy content in bounded partial HTML; response ended IncompleteRead",
+          "excerpt": "Actual retrieved text describes responsible vulnerability disclosure, acknowledgment within 48 hours, assessment within seven days and default 90-day coordinated disclosure. No cNGN bridge incident/postmortem was identified in that bounded content. Trailing page bytes unavailable; not a complete incident archive."
+        },
+        {
+          "label": "Exact token displayed explorer API page",
+          "url": "https://blockscout.lisk.com/api/v2/addresses/0xc7ab2c35ea37236e644c24a4e4a1911c082887c0/logs",
+          "observedAt": "2026-10-11T07:14:53.701569+00:00",
+          "location": "J37CNGN-reader-apis.json; all50 returned items plus next_page_params",
+          "excerpt": "Bounded first page has50 Transfer/Approval logs, block35533488 (2026-08-03T22:22:47Z) through29157317 (2026-03-09T08:03:45Z), with pagination. No displayed pause, seizure or emergency event in this page; not lifetime coverage or synchronization through October."
+        },
+        {
+          "label": "Exact AdminOperations displayed explorer API page",
+          "url": "https://blockscout.lisk.com/api/v2/addresses/0xd7dc1fb7e1d7fad9a61c12f77647b4e26e852d8d/logs",
+          "observedAt": "2026-10-11T12:48:19Z",
+          "location": "I203-admin-reader-logs.json; all49 returned items, next_page_params=null",
+          "excerpt": "49 displayed logs span creation/upgrade block23501993 (2025-10-29T10:12:57Z) to30463240 (2026-04-08T13:34:31Z). No Paused/Unpaused or AddedBlackList/RemovedBlackList shown. WhitelistedMinter/MintAmountAdded/BlackListedMinter cycles agree with verified one-use mint authorization cleanup, not a known incident. Bounded explorer view, no index completeness or lifetime guarantee."
+        },
+        {
+          "label": "Exact active Cngn3 verified source and ABI",
+          "url": "https://blockscout.lisk.com/api/v2/smart-contracts/0x50A1b2D9583Cc12dAAED29c91C2e767e4316fEFD",
+          "observedAt": "2026-10-11T07:15:11.355781+00:00",
+          "location": "J37CNGN-verified-sources.json; Cngn3.local.sol and inherited ABI",
+          "excerpt": "Exact Lisk source is_verified=true/is_fully_verified=true. Token exposes global paused(), pause/unpause and per-holder destroyBlackFunds. Cngn3 mint() calls AdminOperations removeCanMint after a successful mint; account-role revocation is not a holder blacklist or supply-integrity failure. Its deployed_bytecode equals the same-pin implementation runtime."
+        },
+        {
+          "label": "Exact active Admin2 explorer-verified source and ABI",
+          "url": "https://blockscout.lisk.com/api/v2/smart-contracts/0x86f1afdf772b85b2034fa06939391b60c4e55003",
+          "observedAt": "2026-10-11T12:46:23Z",
+          "location": "I203-admin-reader-sources.json; Operations2.sol, inherited Pausable ABI and deployed_bytecode",
+          "excerpt": "Exact Lisk active Admin2 source/ABI is_verified=true via bytecode database; is_partially_verified=true/is_fully_verified=false retained, not falsely claimed full verification. Same-pin runtime exactly equals returned deployed_bytecode. Global emergency getter is paused(); isBlackListed, mintAmount and permission/whitelist mappings are account-specific, not global health or time-based rate limit. removeCanMint clears canMint/mintAmount and emits BlackListedMinter, distinct from addBlackList/AddedBlackList."
+        },
+        {
+          "label": "Exact token proxy creation",
+          "url": "https://blockscout.lisk.com/api/v2/transactions/0x872816d6f4733f011e0e9b329917f8d04012200bc0ab7d6fa5b840a18a26c713",
+          "observedAt": "2026-10-11T07:14:54.254623+00:00",
+          "location": "J37CNGN-creations.json; created_contract.hash, status, block_number and timestamp",
+          "excerpt": "Successful creation of exact Lisk cNGN proxy 0xc7ab2c35ea37236e644c24a4e4a1911c082887c0 at block23502001, 2025-10-29T10:13:13Z; not implementation creation."
+        },
+        {
+          "label": "cNGN issuer bridge announcements",
+          "url": "https://docs.cngn.co/changelog.md",
+          "observedAt": "2026-10-11T07:19:45.582067+00:00",
+          "location": "July 22 through September 21 2026 changelog",
+          "excerpt": "Searched cNGN and supported-network bridge updates. September 21 adds bridge.completed and transaction.failed webhooks; August 6 announces Celo. No known exact deployment compromise, unbacked mint or supply loss was identified in these retrieved announcements."
+        },
+        {
+          "label": "FailSafe cNGN security disclosure",
+          "url": "https://getfailsafe.com/nigerias-cngn-stablecoin-solidity-smart-contract-audit",
+          "observedAt": "2026-10-11T07:19:45.672025+00:00",
+          "location": "Audit author case study; predecessor recovered Solidity report pages 3-12",
+          "excerpt": "Security audit/source findings and resolved findings are not proof of a deployed exploit. Prior recovered audit explains the intentional external-to-internal bridge burning architecture; no realized exact-control incident established."
+        },
+        {
+          "label": "Rekt incident index",
+          "url": "https://rekt.news/",
+          "observedAt": "2026-10-11T07:19:45.876006+00:00",
+          "location": "Retrieved index plus predecessor bounded exact-name searches",
+          "excerpt": "Retrieved index contains no identified assigned-control incident. Reused successful bounded indexed asset/issuer search from I41EUROTb and I38WBRLb; fresh combined site query failed across providers, not treated as a successful no-hit search or complete archive."
+        },
+        {
+          "label": "Pinned exact token/controller emergency state and runtime",
+          "url": "https://rpc.api.lisk.com",
+          "observedAt": "2026-10-11T12:46:44.489Z",
+          "location": "I203-lisk-state.json, I203-lisk-admin-state.json, I203-lisk-runtime.json; paused() selector0x5c975abb, EIP1967 slots, token slot207, both implementation code reads",
+          "excerpt": "Token proxy paused()=false, active Cngn3 implementation 0x50a1b2d9583cc12daaed29c91c2e767e4316fefd and slot207 AdminOperations 0xd7dc1fb7e1d7fad9a61c12f77647b4e26e852d8d; observed 2026-10-11T12:34:34.123Z. AdminOperations proxy paused()=false, active Admin2 implementation 0x86f1afdf772b85b2034fa06939391b60c4e55003; observed 2026-10-11T12:35:20.430Z. All at Lisk block 38489417, hash 0x82dd934a9b993660d116d76043861267e3aea3ffe284985cd50097ac62f856bc, timestamp 2026-10-11T08:33:45.000Z. Both pinned implementation eth_getCode results exactly equal their exact-chain explorer verified deployed_bytecode; observed 2026-10-11T12:46:44.489Z. These are present-state snapshots, not historical incident absence or individual-holder blacklist absence."
+        }
+      ]
     }
   ]
 }
