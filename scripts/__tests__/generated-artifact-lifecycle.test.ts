@@ -101,6 +101,7 @@ describe("generated artifact lifecycle", () => {
       "report-card-registry-fingerprint",
       "legacy-stablecoin-redirects",
       "stablecoin-client-registry",
+      "safety-score-v9-incident-runtime",
       "stablecoin-worker-full-catalog",
       "stablecoin-client-projections",
       "case-study-client-index",

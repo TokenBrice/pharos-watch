@@ -16,6 +16,9 @@ if (!fs.existsSync(LCOV_PATH)) {
 
 const lcov = fs.readFileSync(LCOV_PATH, "utf8");
 const parsed = parseLcov(lcov);
+const previous = fs.existsSync(BASELINE_PATH)
+  ? JSON.parse(fs.readFileSync(BASELINE_PATH, "utf8")) as { files: Record<string, number> }
+  : { files: {} };
 const files: Record<string, number> = {};
 
 for (const file of CRITICAL_FILES) {
@@ -24,7 +27,10 @@ for (const file of CRITICAL_FILES) {
     console.error(`[coverage] Missing in lcov: ${file}`);
     process.exit(1);
   }
-  files[file] = Number.parseFloat(cov.pct.toFixed(1));
+  const measured = Number.parseFloat(cov.pct.toFixed(1));
+  // Enrollment must not silently accept a regression in an existing source.
+  const floor = previous.files[file];
+  files[file] = Number.isFinite(floor) ? Math.max(floor, measured) : measured;
 }
 
 const out = {

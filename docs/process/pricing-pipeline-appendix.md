@@ -29,6 +29,14 @@ CoinGecko reassigned `solomon-usdv` to the separate Chancery mint in September 2
 
 The replacement `usdv-solomon-v2` alone owns `geckoId: solomon-usdv` and uses the existing CoinGecko supplemental current-price/market-cap path. The recycled provider history is current-only: CoinGecko market-history, direct price backfill, depeg-history audit, hourly price history, caller-provided history seeds and their DefiLlama proxy history are withheld. New detail charts use local supply/cache history, and forward local collection continues. No historical rows are deleted and no guessed migration date divides the mixed provider series.
 
+### Challenger storage views
+
+The DEX bridge and the pool challenge now deliberately read from different storage views:
+
+- `dex_prices.price_sources_json`: one aggregate per protocol, used for primary-price promotion
+- `dex_price_challenger_snapshots` + `dex_price_challengers`: current individual challenger pools, selected from the full retained DEX pool set with protocol-first diversity and bounded TVL coverage for large-pool challenge / depeg confirmation
+- `dex_liquidity.top_pools_json`: display-oriented top pools for UI detail, no longer the canonical challenger source
+
 ## Provider-Specific Normalization
 
 Primary provider implementations are normalized before their prices can enter the active 15-minute `sync-stablecoins` consensus. The exact-address rule applies only to hourly corroboration.

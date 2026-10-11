@@ -167,11 +167,7 @@ also satisfies the temporal-jump guard when the previous trusted price was near 
 liquidity from erasing a corroborated severe depeg while preserving the normal challenge behavior for weak,
 uncorroborated soft-source prices.
 
-The DEX bridge and the pool challenge now deliberately read from different storage views:
-
-- `dex_prices.price_sources_json`: one aggregate per protocol, used for primary-price promotion
-- `dex_price_challenger_snapshots` + `dex_price_challengers`: current individual challenger pools, selected from the full retained DEX pool set with protocol-first diversity and bounded TVL coverage for large-pool challenge / depeg confirmation
-- `dex_liquidity.top_pools_json`: display-oriented top pools for UI detail, no longer the canonical challenger source
+The [challenger storage views](./process/pricing-pipeline-appendix.md#challenger-storage-views) distinguish promotion, challenge and display inputs.
 
 Dead or explicitly blocked DEX ids, including Bunni and its chain-scoped variants, are filtered upstream and cannot contribute challenger pools, promoted DEX bridge sources, or pool-challenge replacement marks.
 

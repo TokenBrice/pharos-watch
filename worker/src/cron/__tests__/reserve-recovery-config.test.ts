@@ -3,9 +3,12 @@ import { mockWorkerRuntimeRegistry } from "../../test-helpers/cron";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { mockLiveReserveAdapterRegistry, getReserveAdapterMock, shouldAttemptFetchMock, recordOutcomeSafeMock } from "./live-reserves.test-support";
+import type * as WorkerRuntimeRegistry from "@shared/lib/stablecoins/worker-runtime-registry";
 
-vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
-  const registry = mockWorkerRuntimeRegistry({ stablecoins: Array.from({ length: 8 }, (_, index) => ({
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal) => {
+  const original = await importOriginal<typeof WorkerRuntimeRegistry>();
+  // Keep production metadata for transitive reviewed-doc lookups; only the sync cohort is synthetic.
+  const registry = mockWorkerRuntimeRegistry({ trackedMetaById: original.WORKER_TRACKED_META_BY_ID, stablecoins: Array.from({ length: 8 }, (_, index) => ({
     id: `coin-${index}`, name: `Coin ${index}`, symbol: `C${index}`,
     flags: { backing: "rwa-backed", pegCurrency: "USD", governance: "centralized", yieldBearing: false, rwa: true, navToken: false },
     liveReservesConfig: { adapter: "m0", version: 1, semantics: "collateral-mix", inputs: { primary: { kind: "http-json", url: `https://example.com/${index}` } } },
@@ -13,7 +16,10 @@ vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
   return {
     ...registry,
     WORKER_TRACKED_STABLECOINS: [...registry.WORKER_TRACKED_STABLECOINS],
-    WORKER_TRACKED_META_BY_ID: new Map(registry.WORKER_TRACKED_META_BY_ID),
+    WORKER_TRACKED_META_BY_ID: new Map([
+      ...registry.WORKER_TRACKED_META_BY_ID,
+      ...registry.WORKER_TRACKED_STABLECOINS.map((coin) => [coin.id, coin] as const),
+    ]),
   };
 });
 
@@ -31,11 +37,14 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const slices = [{ name: "Treasuries", pct: 100, risk: "low" as const }];
+const originalBootstrapMeta = WORKER_TRACKED_META_BY_ID.get("jltxx-jpmorgan");
 const signal = () => new AbortController().signal;
 const good = async () => ({ slices, metadata: { freshnessMode: "verified" as const, sourceTimestamp: Math.floor(Date.now() / 1000) } });
 afterEach(() => {
   WORKER_TRACKED_STABLECOINS.splice(8);
-  (WORKER_TRACKED_META_BY_ID as Map<string, WorkerRuntimeStablecoinMeta>).delete("jltxx-jpmorgan");
+  const trackedMeta = WORKER_TRACKED_META_BY_ID as Map<string, WorkerRuntimeStablecoinMeta>;
+  if (originalBootstrapMeta) trackedMeta.set("jltxx-jpmorgan", originalBootstrapMeta);
+  else trackedMeta.delete("jltxx-jpmorgan");
   fixtures.closeAll(); vi.restoreAllMocks(); vi.useRealTimers();
 });
 beforeEach(() => {
