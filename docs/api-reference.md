@@ -378,6 +378,8 @@ For `GET /api/stablecoin-reserves/{stablecoinId}`, optional `sync.collectionElig
 
 On `https://api.pharos.watch`, these routes require `X-API-Key` unless marked `Authentication: exempt`. [OpenAPI schemas](https://pharos.watch/openapi.json) describe bodies; `shared/lib/api-endpoints/definitions.ts` owns auth/cache flags.
 
+Active `GET /api/stablecoin/{stablecoinId}` reads refresh expired detail caches in the background only while `buildFreshnessMeta` classifies the generation as fresh using `API_FRESHNESS_MAX_AGE_SEC.stablecoins`. Older generations refresh synchronously so the first visitor receives the refreshed detail; provider failures may retain the original stale generation below the 24-hour cache ceiling, with its original clock and warning.
+
 `GET /api/stablecoin/{stablecoinId}` supply-history/stablecoins-cache fallbacks publish `_meta`: newest served token source time, response assessment time, 72-hour history budgets and stale floor `detail-history-fallback`. They emit `Warning: 110`, `Cache-Control: no-store`, and neither enqueue detail-cache publication nor renew old rows. Invalid/missing history clocks stay null/unknown with the timestamp-admission reason. Stale external history without fresher D1 rescue uses this same contract.
 
 `GET /api/mint-burn-flows` aggregate/per-coin `_meta` preserves the confirmed-output lookup verdict through cached fallbacks. Missing/failed lookup cannot substitute attempt/event-hour clocks for `sync.lastSuccessfulSyncAt`; unavailable metadata and headers retain their machine-readable reason.
