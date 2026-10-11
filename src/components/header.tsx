@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import {
   NAV_GROUPS,
   QUICK_NAV_ITEMS,
-  START_HERE_NAV_ITEM,
   isNavItemActive,
   stickyChromeTopOffsetClass,
 } from "@/lib/nav-config";
@@ -19,7 +18,6 @@ import { ChevronLeft, ChevronRight, ExternalLink, Menu, Search, X } from "lucide
 import { trackEvent } from "@/lib/analytics";
 import { openCommandPalette } from "@/lib/command-palette";
 import { OPEN_NAV_DRAWER_EVENT } from "@/lib/nav-drawer";
-import { useStartHereNavVisibility } from "@/hooks/use-start-here-nav-visibility";
 
 function MobileNavLink({
   item,
@@ -29,7 +27,7 @@ function MobileNavLink({
 }: {
   item: NavItem;
   active: boolean;
-  /** Analytics bucket for the tap: the category key, or "start-here". */
+  /** Analytics bucket for the tap: the category key. */
   group: string;
   onNavigate: () => void;
 }) {
@@ -100,11 +98,6 @@ export function Header() {
   const categoryButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const returnFocusCategoryKeyRef = useRef<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
-  const { isReady: startHereReady, shouldShow: shouldShowStartHereNav } = useStartHereNavVisibility();
-  // First-visit pinned slot above the quick rail. Once it retires, Start
-  // Here stays reachable inside the About Pharos category via NAV_GROUPS.
-  const showPinnedStartHere = startHereReady && shouldShowStartHereNav;
-  const pinnedStartHereCount = showPinnedStartHere ? 1 : 0;
   const mobileCategories = NAV_GROUPS.flatMap((group) =>
     group.columns
       ? group.columns.map((column) => ({
@@ -115,8 +108,8 @@ export function Header() {
       : [{ key: group.key, label: group.label, items: group.items }],
   );
   const activeCategory = mobileCategories.find((category) => category.key === activeCategoryKey) ?? null;
-  // +1 so the quick rail occupies the first animation slot.
-  const mobileLeadItemCount = pinnedStartHereCount + 1;
+  // The quick rail occupies the first animation slot.
+  const mobileLeadItemCount = 1;
   const topOffsetClass = stickyChromeTopOffsetClass(pathname);
 
   function handleOpenChange(nextOpen: boolean) {
@@ -278,31 +271,10 @@ export function Header() {
                     key="root"
                     className="animate-in fade-in slide-in-from-left-2 duration-[220ms] ease-[var(--motion-ease-standard)] motion-reduce:animate-none"
                   >
-                    {showPinnedStartHere ? (
-                      <div
-                        className={`animate-in fade-in slide-in-from-left-2 ease-[var(--motion-ease-standard)] [animation-fill-mode:backwards] motion-reduce:animate-none ${
-                          isNavItemActive(pathname, START_HERE_NAV_ITEM)
-                            ? "border-l-2 border-l-frost-blue pl-3"
-                            : "pl-[14px]"
-                        }`}
-                        style={{ animationDelay: "50ms", animationDuration: "220ms" }}
-                      >
-                        <MobileNavLink
-                          item={START_HERE_NAV_ITEM}
-                          active={isNavItemActive(pathname, START_HERE_NAV_ITEM)}
-                          group="start-here"
-                          onNavigate={handleNavigate}
-                        />
-                      </div>
-                    ) : null}
-
                     {/* Quick rail: the highest-traffic routes, always visible. */}
                     <div
                       className="mt-4 grid grid-cols-2 gap-2 pl-[14px] animate-in fade-in slide-in-from-left-2 ease-[var(--motion-ease-standard)] [animation-fill-mode:backwards] motion-reduce:animate-none"
-                      style={{
-                        animationDelay: `${pinnedStartHereCount * 50}ms`,
-                        animationDuration: "220ms",
-                      }}
+                      style={{ animationDelay: "0ms", animationDuration: "220ms" }}
                     >
                       {QUICK_NAV_ITEMS.map((item) => {
                         const Icon = item.icon;

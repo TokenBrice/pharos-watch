@@ -232,17 +232,6 @@ describe("command palette model", () => {
     });
   });
 
-  it("keeps Start Here unique in the command palette route model", () => {
-    expect(COMMAND_PALETTE_PAGES.filter((page) => page.href === "/start/")).toHaveLength(1);
-
-    const startResults = buildCommandPaletteResultDescriptors({
-      query: "start",
-      history: [],
-      isDark: false,
-    });
-    expect(startResults.filter((result) => result.href === "/start/")).toHaveLength(1);
-  });
-
   it("covers important route-only pages in palette search", () => {
     const routeQueries = [
       { query: "privacy", href: "/privacy/" },

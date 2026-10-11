@@ -4,7 +4,6 @@ import {
   CircleDollarSign,
   LayoutDashboard,
   Waves,
-  Compass,
   Skull,
   Info,
   Layers,
@@ -138,14 +137,6 @@ const DEPEG_NAV_ITEM: NavItem = {
   keywords: "depeg ddr dews duration resolver early warning peg incident recovery",
 };
 
-export const START_HERE_NAV_ITEM: NavItem = {
-  href: "/start/",
-  label: "Start Here",
-  icon: Compass,
-  description: "The fastest way into Pharos",
-  keywords: "start here onboarding guide new beginner intro help",
-};
-
 /**
  * Desktop quick rail: the five highest-traffic routes, promoted out of the
  * dropdowns so they cost one click instead of hover-then-scan. Apart from the
@@ -200,7 +191,6 @@ const MORE_COLUMNS: readonly NavColumn[] = [
     key: "pharos",
     label: "About Pharos",
     items: [
-      START_HERE_NAV_ITEM,
       { href: "/about/", label: "About", icon: Info, description: "Scope, sources, and why Pharos exists", keywords: "about team independent sources mission" },
       { href: "/funding/", label: "Funding", icon: Heart, description: "Costs, donations, and sustainability", keywords: "funding donate support costs sponsor" },
       {

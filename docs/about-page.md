@@ -34,7 +34,7 @@ The page is organized into these sections, in order:
 1. `Why Pharos?`
 2. `Principles, AI Policy, and Corrections`
 3. `Who Is Building Pharos?`
-4. `Pharos in the Media`
+4. `Pharos in the Media` (`#media`; also the home of the recorded walkthroughs formerly on `/start/` — rows in `WALKTHROUGH_APPEARANCES` are flagged "Full walkthrough" with their duration)
 5. `What Pharos Tracks`
 6. `What Pharos Computes`
 7. `Companion Experiences`
@@ -56,7 +56,7 @@ The page is organized into these sections, in order:
 ## Navigation Contract
 
 - `/about/` remains a top-level route in the `Resources` menu's `About Pharos` column (the `NAV_GROUPS` entry keyed `"more"`).
-- `/about/` is the reference hub for low-frequency reference surfaces. `Start Here`, `Funding`, and `PharosVille` sit beside it in that column; `Daily Digest`, `Timeline`, `Changelog`, and `Blog` fill the `Updates` column; `Methodology`, `Coverage`, and `System Status` fill the `Transparency` column; and the Learn surfaces fill the `Research` column. `Upcoming` lives in the `Markets` menu; `Alert Bot` and `API Access` live in the `Tools` menu. The lighthouse button is gone: the masthead icon beside search now controls appearance only.
+- `/about/` is the reference hub for low-frequency reference surfaces. `Funding` and `PharosVille` sit beside it in that column; `Daily Digest`, `Timeline`, `Changelog`, and `Blog` fill the `Updates` column; `Methodology`, `Coverage`, and `System Status` fill the `Transparency` column; and the Learn surfaces fill the `Research` column. `Upcoming` lives in the `Markets` menu; `Alert Bot` and `API Access` live in the `Tools` menu. The lighthouse button is gone: the masthead icon beside search now controls appearance only.
 - `Peg Tracker` must link to `/depeg/`, because the dedicated depeg route owns the heatmap and depeg-history surface
 - `Dependency Map` must link to `/dependency-map/` and describe mapped collateral and wrapper links. Exposure mode traces linked coins using publication-bound supply and does not estimate losses or changes in Safety Scores. The computed-feature roster has no failure-scenario scoreboard or stress panel.
 - The tracked-feature roster's `Failure scenarios` entry describes the dossier's "How it breaks" section as a curated, maintainer-approved narrative of one hypothetical failure path per coin, not a simulator: nothing is computed or scored, and it never changes a Safety Score. It sits with the curated tracked features, not the computed roster, and has no link, because the section appears only on coins with an approved scenario.

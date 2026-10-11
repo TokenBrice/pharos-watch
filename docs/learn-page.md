@@ -86,7 +86,6 @@ The DEWS definition derives its signal roster from `DEWS_SIGNAL_LABELS`; Price C
 Primary inbound surfaces:
 
 - Top-nav `Resources` menu, `Research` column in `src/lib/nav-config.ts`, with the `/learn/` overview and direct links to Mechanisms, Case Studies, and Glossary
-- Start Here content in `src/lib/start-here-content.ts`
 - Mechanism pages' Continue Reading links into relevant case studies
 - Depeg event pages, via `CASE_STUDY_BY_DEPEG_SLUG`
 - About, methodology, and taxonomy pages linking into mechanism explainers or glossary definitions

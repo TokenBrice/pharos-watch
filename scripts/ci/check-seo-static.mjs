@@ -42,6 +42,7 @@ const RETIRED_INTERNAL_ROUTE_PREFIXES = [
   { prefix: "/about/editorial", replacement: "/about/" },
   { prefix: "/about/style", replacement: "/about/" },
   { prefix: "/sitemap-tree", replacement: "/" },
+  { prefix: "/start", replacement: "/" },
   { prefix: "/docs/architecture", replacement: "/docs/" },
   { prefix: "/docs/worker-and-api-limits", replacement: "/docs/" },
   { prefix: "/docs/data-flow-map", replacement: "/docs/" },

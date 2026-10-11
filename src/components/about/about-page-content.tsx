@@ -23,7 +23,7 @@ import {
   TEAM_MEMBERS,
   type AboutFeatureItem,
 } from "@/lib/about-content";
-import { MEDIA_APPEARANCES, type MediaAppearance } from "@/lib/media-appearances";
+import { MEDIA_APPEARANCES, WALKTHROUGH_APPEARANCES, type MediaAppearance } from "@/lib/media-appearances";
 import { PRINCIPLES_AI_POLICY, PRINCIPLES_AXIOMS, PRINCIPLES_CORRECTIONS } from "@/lib/about-principles-content";
 import {
   ACTIVE_STABLE_VALUE_INVESTMENT_COUNT,
@@ -220,6 +220,13 @@ function AppearanceRow({ appearance }: { appearance: MediaAppearance }) {
         </p>
         <p className="text-xs text-muted-foreground">
           {appearance.host} &middot; <time dateTime={appearance.date}>{appearanceDateLabel(appearance.date)}</time>
+          {WALKTHROUGH_APPEARANCES.includes(appearance) ? (
+            <>
+              {" "}
+              &middot; Full walkthrough
+              {appearance.durationMinutes ? `, ${appearance.durationMinutes} min` : ""}
+            </>
+          ) : null}
         </p>
         <p>{appearance.description}</p>
       </div>
@@ -396,12 +403,8 @@ export function AboutPageContent() {
             community support plus future paid API access for heavy programmatic usage.{" "}
             <Link href="/funding/" className={INLINE_EXTERNAL_LINK_CLASS}>
               See the funding ledger
-            </Link>{" "}
-            or{" "}
-            <Link href="/start/" className={INLINE_EXTERNAL_LINK_CLASS}>
-              get started
-            </Link>{" "}
-            and make the most of it.
+            </Link>
+            .
           </p>
           <p>
             For asset eligibility and lifecycle decisions, read the{" "}
@@ -527,6 +530,10 @@ export function AboutPageContent() {
           title="Pharos in the Media"
           contentClassName="space-y-4 text-sm leading-relaxed text-muted-foreground"
         >
+          <p>
+            Prefer to watch? The walkthroughs below are full, unscripted sessions of someone driving the dashboard
+            live, hosted elsewhere.
+          </p>
           {featuredAppearance ? <FeaturedAppearance appearance={featuredAppearance} /> : null}
           {otherAppearances.length > 0 ? (
             <div className="divide-y divide-border/60 border-t border-border/60">

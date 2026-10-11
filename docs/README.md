@@ -41,7 +41,7 @@ rg -n '/route-name/|src/app/route-name' docs
 - [portfolio-page.md](./portfolio-page.md) - personal stablecoin risk workspace
 - [upcoming-page.md](./upcoming-page.md) - pre-launch stablecoin tracker
 - [homepage.md](./homepage.md) and [about-page.md](./about-page.md) - dashboard and product/source overview
-- [coverage-page.md](./coverage-page.md), [start-page.md](./start-page.md), and [feedback-pipeline.md](./feedback-pipeline.md) - coverage availability, onboarding, and feedback delivery
+- [coverage-page.md](./coverage-page.md) and [feedback-pipeline.md](./feedback-pipeline.md) - coverage availability and feedback delivery
 - [compliance-page.md](./compliance-page.md) - compliance workbench; regime evidence is owned by [mica-tracker.md](./mica-tracker.md) and [genius-tracker.md](./genius-tracker.md)
 
 ## Cross-Cutting Contracts

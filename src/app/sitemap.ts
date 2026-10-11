@@ -152,7 +152,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/": ["hourly", 1.0, liveDataLastModified],
     "/coverage/": ["weekly", 0.6],
     "/alt-pegs/": ["daily", 0.7],
-    "/start/": ["monthly", 0.6],
     "/freezewatch/": ["daily", 0.85, liveDataLastModified],
     "/depeg/": ["daily", 0.8, liveDataLastModified],
     "/cemetery/": ["monthly", 0.7],

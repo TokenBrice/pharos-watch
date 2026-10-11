@@ -20,7 +20,7 @@ This document owns product posture and visual or brand adjectives. [Pharos Edito
 
 Crypto-native DeFi participants who actively monitor stablecoin health — checking market conditions, peg stability, and risk signals regularly to inform financial decisions. The core audience is power-user-leaning: they value density, precision, and speed-to-insight over softness or consumer-app hand-holding.
 
-Discovery and onboarding surfaces (`/start/`, first-run callouts, `/about/`, `/api/` public landing, `/learn/mechanisms/`) deliberately soften their layout and use warmer framing to welcome newcomers. The data surfaces they hand off to remain practitioner-grade, so the softer treatment belongs to the _funnel_.
+Discovery and onboarding surfaces (first-run callouts, `/about/`, `/api/` public landing, `/learn/mechanisms/`) deliberately soften their layout and use warmer framing to welcome newcomers. The data surfaces they hand off to remain practitioner-grade, so the softer treatment belongs to the _funnel_.
 
 ### Brand Personality
 
@@ -36,11 +36,11 @@ Pharos calibrates density and posture to surface intent across three explicit ti
 
 | Tier           | Routes / Surfaces                                                                                                                                                     | Density | Posture                                               | Layout signal                                                                             |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| **Discovery**  | `/start/`, `/about/`, `/api/` public landing, `/learn/mechanisms/`, marketing-adjacent shells                                                                         | Lowest  | Softer framing permitted; inviting presentation       | Larger rounded shells, generous whitespace, fewer controls, step explainers, route boards |
+| **Discovery**  | `/about/`, `/api/` public landing, `/learn/mechanisms/`, marketing-adjacent shells                                                                         | Lowest  | Softer framing permitted; inviting presentation       | Larger rounded shells, generous whitespace, fewer controls, step explainers, route boards |
 | **Analytics**  | Homepage dashboard, `/depeg/`, `/chains/`, `/liquidity/`, `/freezewatch/`, `/yield/`, `/coverage/`, `/alt-pegs/`, `/safety-scores/`, `/upcoming/`, `/digest/` archive | Default | Composed, analytical, information-rich                | `pharos-card-shell`, KPI grids, charts, sortable tables, control pills                    |
 | **Power-user** | `/stablecoin/[id]/`, `/compare/`, `/screener/`, `/timeline/`, `/portfolio/`, ops admin                                                                                | Highest | Maximum information per pixel; assumes domain fluency | Dense tables, minimal chrome, hairline dividers, mono-heavy, multi-pane composition       |
 
-The gradient runs Discovery → Analytics → Power-user. Drift between adjacent tiers is acceptable when justified by the surface's actual user intent; jumps across tiers (warm presentation on `/timeline/`, marketing-style soft chrome on `/screener/`, or dense multi-pane composition inside `/start/`) are not.
+The gradient runs Discovery → Analytics → Power-user. Drift between adjacent tiers is acceptable when justified by the surface's actual user intent; jumps across tiers (warm presentation on `/timeline/`, marketing-style soft chrome on `/screener/`, or dense multi-pane composition inside `/about/`) are not.
 
 ### Aesthetic Direction
 

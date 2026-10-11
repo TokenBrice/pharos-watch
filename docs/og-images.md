@@ -26,7 +26,6 @@ This table is the screenshot capture roster, not proof that a route selects the 
 | `og-blacklist.png` | `/freezewatch` |
 | `og-dependency-map.png` | `/dependency-map` |
 | `og-portfolio.png` | `/portfolio?p=...` (pre-loaded so the capture is not empty state) |
-| `og-start.png` | `/start` |
 | `og-pharoswatchbot.png` | `/pharoswatchbot/` |
 | `og-default.png` | `/screener` |
 

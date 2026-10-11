@@ -276,7 +276,6 @@ describe("classifyChangedFiles", () => {
     ["src/app/page.tsx", "docs/homepage.md"],
     ["src/components/about/about-page-content.tsx", "docs/about-page.md"],
     ["src/app/coverage/client.tsx", "docs/coverage-page.md"],
-    ["src/app/start/page.tsx", "docs/start-page.md"],
     ["worker/src/api/feedback.ts", "docs/feedback-pipeline.md"],
     ["shared/data/stablecoins/domains/compliance/usdc-circle.json", "docs/compliance-page.md"],
     [".omp/config.yml", "docs/process/agent-artifacts.md"],

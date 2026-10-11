@@ -60,10 +60,6 @@ vi.mock("@/components/ui/sheet", async () => {
   };
 });
 
-vi.mock("@/hooks/use-start-here-nav-visibility", () => ({
-  useStartHereNavVisibility: () => ({ isReady: true, shouldShow: true }),
-}));
-
 vi.mock("@/lib/command-palette", () => ({
   openCommandPalette: vi.fn(),
 }));
@@ -123,15 +119,6 @@ describe("Header mobile drawer", () => {
     }
   });
 
-  it("pins Start Here above the quick rail for first-visit users", () => {
-    render(<Header />);
-    openDrawer();
-
-    const pinnedLink = screen.getAllByRole("link").find((link) => link.getAttribute("href") === "/start/");
-    expect(pinnedLink).toBeTruthy();
-    expect(pinnedLink?.textContent).toContain("Start Here");
-  });
-
   it("offers a labeled search pill, not a bare icon, in the header bar", () => {
     render(<Header />);
 
@@ -149,21 +136,13 @@ describe("Header mobile drawer", () => {
     expect(screen.getByText(markets.items[0]!.description!)).toBeTruthy();
   });
 
-  it("fires drawer nav_click events from the pinned slot, quick rail, and category rows", () => {
+  it("fires drawer nav_click events from the quick rail and category rows", () => {
     render(<Header />);
     openDrawer();
 
     const linkTo = (href: string) =>
       screen.getAllByRole("link").find((link) => link.getAttribute("href") === href)!;
 
-    fireEvent.click(linkTo("/start/"));
-    expect(trackEvent).toHaveBeenCalledWith("nav_click", {
-      surface: "drawer",
-      group: "start-here",
-      href: "/start/",
-    });
-
-    openDrawer();
     fireEvent.click(linkTo("/depeg/"));
     expect(trackEvent).toHaveBeenCalledWith("nav_click", {
       surface: "drawer",

@@ -38,7 +38,7 @@ describe("sitemap", () => {
   it("preserves the frozen URL, frequency, and priority policy for public hubs", () => {
     const expected = [
       ["/", "hourly", 1], ["/coverage/", "weekly", 0.6], ["/alt-pegs/", "daily", 0.7],
-      ["/start/", "monthly", 0.6], ["/freezewatch/", "daily", 0.85], ["/depeg/", "daily", 0.8],
+      ["/freezewatch/", "daily", 0.85], ["/depeg/", "daily", 0.8],
       ["/cemetery/", "monthly", 0.7], ["/compare/", "weekly", 0.7], ["/liquidity/", "daily", 0.8],
       ["/upcoming/", "daily", 0.6], ["/digest/", "daily", 0.6], ["/safety-scores/", "daily", 0.8],
       ["/safety-scores/map/", "daily", 0.6], ["/stability-index/", "daily", 0.8],

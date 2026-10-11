@@ -3,7 +3,6 @@ import {
   NAV_GROUPS,
   NAV_ITEMS,
   QUICK_NAV_ITEMS,
-  START_HERE_NAV_ITEM,
   isNavItemActive,
 } from "@/lib/nav-config";
 import { COMMAND_PALETTE_PAGES } from "@/components/command-palette-model";
@@ -79,13 +78,11 @@ describe("nav-config", () => {
     expect(more?.label).toBe("Resources");
     expect(more?.columns?.map((column) => column.key)).toEqual(["research", "watch", "methods", "pharos"]);
     expect(more?.columns?.map((column) => column.label)).toEqual(["Research", "Updates", "Transparency", "About Pharos"]);
-    // Start Here gets its permanent desktop home as the first About Pharos row.
-    expect(more?.columns?.find((column) => column.key === "pharos")?.items[0]).toEqual(START_HERE_NAV_ITEM);
     expect(more?.columns?.map((column) => column.items.map((item) => item.label))).toEqual([
       ["Learn", "Mechanisms", "Case Studies", "Glossary"],
       ["Daily Digest", "Timeline", "Changelog", "Blog"],
       ["Methodology", "Coverage", "Status"],
-      ["Start Here", "About", "Funding", "PharosVille"],
+      ["About", "Funding", "PharosVille"],
     ]);
     // `items` must stay the exact flattening, or the mobile drawer and the
     // command palette silently drop rows the desktop panel still shows.
