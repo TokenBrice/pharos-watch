@@ -9,6 +9,7 @@ import {
   buildChainRpcs,
   getChainRpc,
   registryRpcEndpoints,
+  logScanRpcEndpoints,
   supplementalRpcEndpoints,
   type ChainRpcConfig,
 } from "../../lib/chain-registry";
@@ -20,10 +21,10 @@ import { fetchEvmEventsIncremental, RPC_LOG_SCAN_WINDOWS } from "../blacklist/ev
 import { ethereumConfig } from "../blacklist/__tests__/balance.test-support";
 
 /**
- * Trial invariant 2: the blacklist and mint/burn lanes never read Dwellir.
+ * Non-allowlisted Base logs and direct-Alchemy mint/burn never read Dwellir.
  *
  * Every case below runs the real transports against a recorded fetch while a
- * Dwellir-enabled registry is present, so a supplemental-endpoint leak is
+ * Dwellir-enabled registry is present, so an excluded-operator leak is
  * observed as a `*.n.dwellir.com` request instead of a mocked-away one.
  * The last case is the control: it proves the recorder does see a Dwellir
  * request, and that `excludeSupplementalRpc` is what stops it.
@@ -114,7 +115,7 @@ describe("blacklist log scan", () => {
   it("scans the Alchemy registry endpoint with the alchemy window and never requests Dwellir", async () => {
     const chainRpcs = buildChainRpcs("alchemy-test", "drpc-test", { dwellirApiKey: DWELLIR_API_KEY });
     const base = getChainRpc(chainRpcs, "base")!;
-    expect(supplementalRpcEndpoints(base).map((endpoint) => endpoint.url)).toEqual([
+    expect(base.endpoints.filter((endpoint) => endpoint.operator === "dwellir").map((endpoint) => endpoint.url)).toEqual([
       expect.stringContaining(DWELLIR_HOST_SUFFIX),
     ]);
 
@@ -171,11 +172,11 @@ describe("blacklist log scan", () => {
     expect([...new Set(hostsOf(fetchMock))]).toEqual([registryHosts(base)[0]!]);
   });
 
-  it("stops at the registry endpoints instead of falling through to the Dwellir supplemental", async () => {
+  it("stops at allowed log endpoints instead of falling through to unallowlisted Dwellir", async () => {
     const chainRpcs = buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: DWELLIR_API_KEY });
     const base = getChainRpc(chainRpcs, "base")!;
-    const [alchemyHost, fallbackHost] = registryHosts(base);
-    const dwellirHost = new URL(supplementalRpcEndpoints(base)[0]!.url).host;
+    const [alchemyHost, fallbackHost] = logScanRpcEndpoints(base).map((endpoint) => new URL(endpoint.url).host);
+    const dwellirHost = new URL(base.endpoints.find((endpoint) => endpoint.operator === "dwellir")!.url).host;
     expect(dwellirHost).toContain(DWELLIR_HOST_SUFFIX);
 
     // Only Dwellir can answer, so a lane that offered every endpoint as a
@@ -314,7 +315,7 @@ describe("supplemental endpoint exclusion", () => {
   });
 
   it("reaches Dwellir only without the lane exclusion, and never with it", async () => {
-    const chainRpcs = buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: DWELLIR_API_KEY });
+    const chainRpcs = buildChainRpcs(undefined, undefined, { dwellirApiKey: DWELLIR_API_KEY });
     const base = getChainRpc(chainRpcs, "base")!;
     const registry = registryRpcEndpoints(base).map((endpoint) => endpoint.url);
     const dwellirUrl = supplementalRpcEndpoints(base)[0]!.url;

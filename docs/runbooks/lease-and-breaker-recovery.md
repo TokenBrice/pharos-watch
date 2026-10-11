@@ -37,3 +37,9 @@ npx --no-install wrangler d1 execute stablecoin-db --remote --command \
 ```
 
 Delete only the affected source row. Admin provider summaries enumerate active sources and read bounded direct `circuit:<source>` rows; no aggregate rebuild is needed. The obsolete `provider:circuit:index` has no runtime reader/writer. Its orphan row may be deleted only in a separately authorized destructive release after current/deployed/rollback/external zero-use proof, rollback-floor closure, an exact-row durable R2 export retained indefinitely and a recorded Time Travel bookmark. Never clear all circuits or shared registries/ledgers/history as index cleanup.
+
+## Dwellir Routing Rollback And Malformed Circuit Recovery
+
+To restore incumbent-first routing and disable Dwellir logs for selected chains, set the comma-separated chain IDs (trimmed and case-insensitive) on **both** `stablecoin-api` and `stablecoin-heavy`. From the repository root, run `npx --no-install wrangler secret put DWELLIR_ROUTING_DISABLED_CHAINS --config worker/wrangler.toml` and `npx --no-install wrangler secret put DWELLIR_ROUTING_DISABLED_CHAINS --config worker/wrangler.heavy.toml`, entering the same CSV at each prompt; no separate redeploy is needed. Unknown IDs produce one structured warning per parse. Listed chains retain Dwellir only as a last-resort state fallback.
+
+A malformed `circuit:dwellir-evm` row denies admission until the hourly parity job writes a fresh measured outcome (success closes it; failure keeps it open). If that repair cannot run and the upstream has recovered, the last-resort manual reset is the scoped delete above with `DELETE FROM cache WHERE key = 'circuit:dwellir-evm';`; never clear the Dwellir credit ledger.

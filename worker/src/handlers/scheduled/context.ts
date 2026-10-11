@@ -20,7 +20,7 @@ import { flushDwellirCredits, loadDwellirBudgetState } from "../../lib/rpc-provi
 import { createDwellirNativeCapability, type DwellirNativeCapability } from "../../lib/dwellir-native";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { normalizeCronMetadataWithLease } from "../../lib/cron-metadata";
-import { parseCsvEnv, type ScheduledEnv } from "../../lib/env";
+import { parseCsvEnv, parseDwellirRoutingDisabledChains, type ScheduledEnv } from "../../lib/env";
 import {
   resolveMintBurnFreshnessConfig,
   type MintBurnFreshnessConfig,
@@ -69,11 +69,9 @@ const PER_JOB_LEASE_OPTIONS: Record<string, Pick<CronLeaseOptions, "heartbeatSec
 };
 
 /**
- * Contract C (Dwellir trial): `runtime.chainRpcs` is always built without
- * Dwellir, and each runtime opts into the supplemental endpoints at most once,
- * keyed by its own chainRpcs Map. Every failure mode is fail-closed — an
- * unreadable ledger, an exhausted budget, an open circuit, or an unexpected
- * error leaves `chainRpcs` registry-only.
+ * Contract C: each scheduled runtime starts without Dwellir and admits routing
+ * at most once. Unreadable ledger, exhausted budget, unavailable circuit, or
+ * unexpected errors leave the original endpoint map unchanged.
  */
 const dwellirEnablementByChainRpcs = new WeakMap<Map<string, ChainRpcConfig>, Promise<void>>();
 
@@ -86,10 +84,9 @@ async function applyDwellirEndpoints(runtime: ScheduledRuntimeContext): Promise<
 
   const keyedChainRpcs = buildChainRpcs(runtime.env.ALCHEMY_API_KEY, runtime.env.DRPC_API_KEY, {
     dwellirApiKey: runtime.env.DWELLIR_API_KEY,
+    dwellirRoutingDisabledChains: parseDwellirRoutingDisabledChains(runtime.env.DWELLIR_ROUTING_DISABLED_CHAINS),
   });
-  // Copied in place so every holder of this runtime's Map observes the
-  // supplemental endpoints, and the registry configs keep the same operators
-  // in the same order (Dwellir only ever appends after them).
+  // Copied in place so every holder observes the same admitted routing policy.
   for (const [chainId, config] of keyedChainRpcs) {
     runtime.chainRpcs.set(chainId, config);
   }
@@ -107,7 +104,7 @@ function ensureDwellirEndpointsEnabled(runtime: ScheduledRuntimeContext): Promis
       scope: "handler",
       level: "warn",
       event: "dwellir_runtime_enablement_failed",
-      message: "Dwellir supplemental RPC endpoints stayed disabled for this runtime",
+      message: "Dwellir RPC endpoints stayed disabled for this runtime",
       provider: "dwellir",
       error,
     });

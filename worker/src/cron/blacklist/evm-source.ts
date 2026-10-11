@@ -17,7 +17,7 @@ import {
   type ContractEventConfig,
 } from "../../lib/blacklist-contracts";
 import type { BlacklistEventType } from "@shared/types/market";
-import { getChainRpc, logScanRpcEndpoints, type ChainRpcConfig } from "../../lib/chain-registry";
+import { getChainRpc, logScanRpcEndpoints, type ChainRpcConfig, type RpcEndpoint } from "../../lib/chain-registry";
 import {
   decodeAddressWord,
   decodeUint256AtSlotOrNull,
@@ -69,6 +69,7 @@ type EvmLogLike = Pick<
 
 type RpcLogTarget = {
   rpcUrl: string;
+  endpoint: RpcEndpoint;
   chainHead: number;
   scanWindowBlocks: number | null;
 };
@@ -78,13 +79,13 @@ type RpcLogWindowClass = "alchemy" | "fallback";
 
 type RpcLogCandidate = {
   url: string;
+  endpoint: RpcEndpoint;
   windowClass: RpcLogWindowClass;
 };
 
 /**
- * Registry log-scan endpoints in failover order. `logScanRpcEndpoints` is the
- * only endpoint source here: the blacklist log lane must never reach a
- * supplemental (Dwellir) endpoint, even as a last-resort fallback.
+ * Registry log-scan endpoints in failover order, including only reviewed,
+ * admitted Dwellir log chains. Preserve metadata through the physical scan.
  */
 function getRpcLogCandidates(
   chainId: string,
@@ -97,6 +98,7 @@ function getRpcLogCandidates(
     .filter((endpoint) => endpoint.url.length > 0)
     .map((endpoint) => ({
       url: endpoint.url,
+      endpoint,
       // Today's `alchemyPrimary`: only an Alchemy primary earns the wide window.
       windowClass: endpoint.operator === "alchemy" ? "alchemy" : "fallback",
     }));
@@ -340,10 +342,13 @@ async function resolveRpcLogTarget(
     const chainHead = await getAlchemyBlockNumber(target.url, runBudget.subrequestBudget, signal);
     if (chainHead != null) {
       const chainWindow = RPC_LOG_SCAN_WINDOWS[chainId];
+      const scanWindowBlocks = Math.min(chainWindow?.[target.windowClass] ?? Infinity,
+        target.endpoint.operator === "dwellir" ? target.endpoint.maxLogBlockSpan ?? Infinity : Infinity);
       return {
         rpcUrl: target.url,
+        endpoint: target.endpoint,
         chainHead,
-        scanWindowBlocks: chainWindow ? chainWindow[target.windowClass] : null,
+        scanWindowBlocks: Number.isFinite(scanWindowBlocks) ? scanWindowBlocks : null,
       };
     }
   }
@@ -424,7 +429,8 @@ export async function fetchEvmEventsIncremental(
         ? { logs: [], complete: true, scannedToBlock: end, calls: 0, maxDepth: 0 }
         : await fetchAlchemyLogs(target.rpcUrl, config.contractAddress,
           [{ index: 0, value: topics.length === 1 ? topics[0]! : topics }], start, end,
-          runBudget.subrequestBudget, signal, { deadlineMs: runBudget.deadlineMs });
+          runBudget.subrequestBudget, signal, { deadlineMs: runBudget.deadlineMs,
+            endpoint: target.endpoint, headBlock: target.chainHead });
       if (!batch) return { safeHead: targetSafeHead, scanToBlock: finalBlock, logs: null };
       batches.push(batch);
       if (!batch.complete || blacklistRuntimeBudgetReached(runBudget) || blacklistSubrequestBudgetReached(runBudget)) break;

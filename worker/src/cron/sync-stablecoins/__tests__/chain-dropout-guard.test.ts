@@ -56,6 +56,23 @@ beforeEach(() => {
 });
 
 describe("chain dropout guard", () => {
+  it("keeps pre-resolved corroboration URLs incumbent-only even with promoted Dwellir", async () => {
+    const chainRpcs = buildChainRpcs("test-alchemy", undefined, { dwellirApiKey: "test-dwellir" });
+    const xlayer = chainRpcs.get("xlayer")!;
+    const incumbentUrls = ["https://primary.example", "https://fallback.example"];
+    const dwellir = chainRpcs.get("sonic")!.endpoints.find((endpoint) => endpoint.operator === "dwellir")!;
+    xlayer.endpoints = [
+      { ...dwellir, position: "registry" },
+      ...incumbentUrls.map((url) => ({ url, operator: "public" as const, keyed: false, position: "registry" as const,
+        stateHistory: "archive" as const, logsHistory: "full" as const })),
+    ];
+    const asset = usdg();
+    asset.chainCirculating = { "X Layer": asset.chainCirculating!["X Layer"] };
+    await guardChainDropouts({ assets: [asset], now: NOW, state: { version: 1, pairs: {} }, chainRpcs });
+    expect(mocks.onchain.mock.calls[0]?.filter((argument) => typeof argument === "string" && argument.startsWith("https://")))
+      .toEqual(incumbentUrls);
+  });
+
   it("repairs today's USDG current chains from fresh daily charts, preserving historical buckets and wire provenance", async () => {
     const asset = usdg();
     const values: Record<string, number> = { "X Layer": 1_428_126_998.38, Ink: 63_474_779.8, "Hyperliquid L1": 1_209_462.75 };

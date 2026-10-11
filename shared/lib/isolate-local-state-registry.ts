@@ -299,7 +299,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
   {
     sourcePath: "worker/src/lib/rpc-provider-budget.ts",
     stateNames: ["pendingDwellirCredits"],
-    owner: "Dwellir supplemental EVM/native credit accounting",
+    owner: "Dwellir EVM/native credit accounting",
     kind: "counter",
     resetOrTtl: "Credits accumulate by usage-observation UTC month until flushDwellirCredits() drains each bucket through a successful month-ledger compare-and-swap; failed drains restore the same bucket alongside concurrent usage. Isolate recycle drops the remainder.",
     durableTruth: "The cache-table row rpc:dwellir:credits:v1:<YYYY-MM> is authoritative; pending month buckets are per-isolate write buffers only.",
@@ -323,15 +323,15 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
   {
     sourcePath: "worker/src/lib/evm-rpc.ts",
     stateNames: ["demotedSupplementalRpcOriginsByRun"],
-    owner: "EVM RPC supplemental failover (Dwellir trial)",
+    owner: "EVM RPC Dwellir run-local failover",
     kind: "cache",
     resetOrTtl: "WeakMap keyed by each run's chainRpcs Map; demoted origins live only as long as that map object and are garbage-collectable, then reset with the isolate.",
-    durableTruth: "None: it only shortens supplemental failover within a single run, registry endpoints are never demoted, and no read result depends on it.",
+    durableTruth: "None: Dwellir origins are demoted within a single run at any placement; incumbent endpoints are never demoted, and no read result depends on it.",
   },
   {
     sourcePath: "worker/src/handlers/scheduled/context.ts",
     stateNames: ["dwellirEnablementByChainRpcs"],
-    owner: "Scheduled-runtime Dwellir EVM/native admission (provider trial)",
+    owner: "Scheduled-runtime Dwellir EVM/native admission",
     kind: "cache",
     resetOrTtl: "WeakMap keyed by each scheduled runtime's chainRpcs Map; memoizes one shared EVM/native budget + circuit admission per runtime and dies with that map object or the isolate.",
     durableTruth: "The Dwellir credit ledger row and the dwellir-evm circuit row are authoritative; the memo only prevents repeat reads within one runtime.",

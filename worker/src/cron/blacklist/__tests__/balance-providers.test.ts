@@ -102,6 +102,24 @@ describe("fetchEvmTokenCurrentBalance", () => {
     vi.restoreAllMocks();
   });
 
+  it("skips registry-positioned Dwellir in balance recovery", async () => {
+    const rpcs = chainRpcFixture(["https://chain-rpc.test"]);
+    const config = rpcs.get("ethereum")!;
+    config.endpoints = [{
+      url: "https://dwellir-balance.test", operator: "dwellir", keyed: true,
+      position: "registry", stateHistory: "archive", logsHistory: "full",
+    }, ...config.endpoints];
+    const fetchMock = mockFetch([
+      { match: "chain-rpc.test", body: { result: "0x0f4240" } },
+    ], { requireMatch: true });
+    const amount = await fetchEvmTokenCurrentBalance(
+      ethereumConfig, "0x0000000000000000000000000000000000000abc",
+      null, null, async (fn) => fn(), createBudget(10), undefined, rpcs,
+    );
+    expect(amount).toBe(1);
+    expect(fetchMock.getHistory().map((call) => call.url)).toEqual(["https://chain-rpc.test/"]);
+  });
+
   it("reads the latest balance via the Etherscan proxy path", async () => {
     mockFetch([{
       match: "etherscan.io",

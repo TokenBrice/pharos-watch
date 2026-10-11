@@ -19,6 +19,7 @@ import {
 import {
   hasRegistryRpc,
   primaryRpcUrl,
+  registryRpcEndpoints,
   registryRpcUrls,
   type ChainRpcConfig,
 } from "../../../lib/chain-registry";
@@ -365,8 +366,9 @@ async function fetchOnChainSupplyForContract(input: {
   let observedAt = Math.floor(Date.now() / 1000);
 
   try {
-    const rpcUrl = input.curated?.rpcUrl ?? primaryRpcUrl(chainRpc);
-    const fallbackRpcUrl = input.curated?.fallbackRpcUrl ?? registryRpcUrls(chainRpc)[1];
+    const incumbentUrls = registryRpcEndpoints(chainRpc).filter((endpoint) => endpoint.operator !== "dwellir").map((endpoint) => endpoint.url);
+    const rpcUrl = input.curated?.rpcUrl ?? incumbentUrls[0];
+    const fallbackRpcUrl = input.curated?.fallbackRpcUrl ?? incumbentUrls[1];
     const rpcOptions = joinedSupplyRpcOptions({ ...input, signal: supplySignal });
     const needsJoinedBlock = family === "evm" && (
       !!CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[input.meta.id] ||

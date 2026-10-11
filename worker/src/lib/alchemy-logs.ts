@@ -1,4 +1,5 @@
-import { ALCHEMY_CHAINS, buildAlchemyRpcUrl, getRpcAuthHeaders } from "./chain-registry";
+import { ALCHEMY_CHAINS, buildAlchemyRpcUrl, getRpcAuth, getRpcAuthHeaders, type RpcEndpoint } from "./chain-registry";
+import { recordDwellirCredits } from "./rpc-provider-budget";
 import { parseQuantityHex } from "./bigint";
 import type { SubrequestBudget } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
@@ -10,6 +11,7 @@ import type { CacheRetentionPolicy } from "./db-cache";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 const ALCHEMY_RPC_TIMEOUT_MS = 30_000;
+const TRANSACTION_CONTEXT_MAX_MEMBER_RETRIES = 8;
 const ALCHEMY_RPC_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 
 // --- Types ---
@@ -148,6 +150,7 @@ async function jsonRpcCall<T>(
   signal?: AbortSignal,
   timeoutMs = ALCHEMY_RPC_TIMEOUT_MS,
 ): Promise<JsonRpcCallResult<T>> {
+  if (getRpcAuth(alchemyUrl)?.provider === "dwellir") recordDwellirCredits(1);
   const fetched = await fetchTextWithRetry(
     alchemyUrl,
     {
@@ -303,12 +306,14 @@ export async function getAlchemyTransactionContextBatchMany(
   budget: SubrequestBudget,
   signal?: AbortSignal,
   timeoutMs = ALCHEMY_RPC_TIMEOUT_MS,
+  deadlineMs?: number,
 ): Promise<Map<string, AlchemyTransactionContextBatch>> {
   const uniqueTxHashes = [...new Set(txHashes)];
   const results = new Map<string, AlchemyTransactionContextBatch>(
     uniqueTxHashes.map((txHash) => [txHash, { tx: null, receipt: null }]),
   );
-  if (uniqueTxHashes.length === 0 || budgetExhausted(budget)) return results;
+  throwIfAborted(signal);
+  if (uniqueTxHashes.length === 0 || budgetExhausted(budget) || (deadlineMs != null && Date.now() >= deadlineMs)) return results;
   budget.count++;
 
   const payload = uniqueTxHashes.flatMap((txHash, index) => [
@@ -326,6 +331,7 @@ export async function getAlchemyTransactionContextBatchMany(
     },
   ]);
 
+  if (getRpcAuth(alchemyUrl)?.provider === "dwellir") recordDwellirCredits(payload.length);
   const fetched = await fetchTextWithRetry(
     alchemyUrl,
     {
@@ -339,7 +345,7 @@ export async function getAlchemyTransactionContextBatchMany(
     },
     0,
     {
-      timeoutMs: Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs)),
+      timeoutMs: Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs, deadlineMs != null ? deadlineMs - Date.now() : Infinity)),
       maxResponseBytes: ALCHEMY_RPC_MAX_RESPONSE_BYTES,
       returnFinalResponse: true,
       retryMode: "network-only",
@@ -395,7 +401,22 @@ export async function getAlchemyTransactionContextBatchMany(
     return results;
   }
 
+  let memberRetries = 0;
   for (const item of parsed as Array<JsonRpcResponse<unknown>>) {
+    if (item?.error?.code === -32000 && (item.error.message ?? "").toLowerCase().includes("batch not executed")
+      && Number.isInteger(item.id) && item.id >= 0 && item.id < payload.length && !budgetExhausted(budget)
+      && memberRetries < TRANSACTION_CONTEXT_MAX_MEMBER_RETRIES && (deadlineMs == null || Date.now() < deadlineMs)) {
+      // Retry unexecuted members serially within the caller's abort, deadline,
+      // and request budgets. Excess members retain their fail-closed context.
+      throwIfAborted(signal);
+      budget.count++;
+      memberRetries++;
+      const request = payload[item.id]!;
+      const retryTimeoutMs = deadlineMs != null ? Math.min(timeoutMs, deadlineMs - Date.now()) : timeoutMs;
+      const retried = await jsonRpcCall<unknown>(alchemyUrl, request.method, request.params, signal, retryTimeoutMs);
+      item.result = retried.result;
+      item.error = retried.error ?? undefined;
+    }
     if (item?.error) {
       logWorkerEvent({
         scope: "lib",
@@ -453,12 +474,39 @@ export async function fetchAlchemyLogs(
   toBlock: number,
   budget: SubrequestBudget,
   signal?: AbortSignal,
-  options?: { deadlineMs?: number; maxSplitCalls?: number },
+  options?: { deadlineMs?: number; maxSplitCalls?: number; endpoint?: RpcEndpoint; headBlock?: number },
 ): Promise<AlchemyLogsFetchResult | null> {
   const callBudget = {
     count: 0,
     limit: Math.max(1, Math.floor(options?.maxSplitCalls ?? DEFAULT_LOG_SPLIT_MAX_CALLS)),
   };
+  const endpoint = options?.endpoint;
+  if (endpoint?.logsHistory === "none" || (typeof endpoint?.logsHistory === "object"
+    && (options?.headBlock == null || fromBlock < options.headBlock - endpoint.logsHistory.retainedBlocks))) {
+    return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 0, maxDepth: 0,
+      failureReason: "log-history-unavailable" };
+  }
+  // Preserve incumbent lane windows; these measured caps admit the new Dwellir route.
+  const span = endpoint?.operator === "dwellir" ? endpoint.maxLogBlockSpan : undefined;
+  if (span != null && (!Number.isSafeInteger(span) || span < 1)) {
+    return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 0, maxDepth: 0,
+      failureReason: "invalid-log-span" };
+  }
+  if (span != null && toBlock - fromBlock + 1 > span) {
+    const logs: AlchemyLogEntry[] = [];
+    let calls = 0;
+    let maxDepth = 0;
+    for (let start = fromBlock; start <= toBlock; start += span) {
+      const end = Math.min(toBlock, start + span - 1);
+      const page = await fetchAlchemyLogsRange(alchemyUrl, contractAddress, topics, start, end,
+        budget, signal, 0, options, callBudget);
+      logs.push(...page.logs);
+      calls += page.calls;
+      maxDepth = Math.max(maxDepth, page.maxDepth);
+      if (!page.complete) return { ...page, logs, calls, maxDepth };
+    }
+    return { logs, complete: true, scannedToBlock: toBlock, calls, maxDepth };
+  }
   return fetchAlchemyLogsRange(
     alchemyUrl,
     contractAddress,
@@ -711,6 +759,7 @@ async function fetchBlockTimestampBatch(
   }));
 
   try {
+    if (getRpcAuth(alchemyUrl)?.provider === "dwellir") recordDwellirCredits(payload.length);
     const fetched = await fetchTextWithRetry(
       alchemyUrl,
       {

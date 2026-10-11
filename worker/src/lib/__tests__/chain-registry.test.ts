@@ -8,6 +8,8 @@ import {
   buildAlchemyRpcUrl,
   CCIP_MONAD_CANONICAL_HASH_ARCHIVE_REQUIRED_REASON,
   buildChainRpcs,
+  DWELLIR_LOG_SCAN_CHAINS,
+  DWELLIR_STATE_PLACEMENT,
   getRpcAuthHeaders,
   hasRegistryRpc,
   logScanRpcEndpoints,
@@ -227,41 +229,39 @@ describe("buildChainRpcs", () => {
     },
   );
 
-  it("appends one supplemental Dwellir endpoint per chain, after every registry endpoint", () => {
-    const withKey = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY });
-    const withoutKey = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY);
-
+  it.each(KEY_COMBINATIONS)("attaches exactly one Dwellir endpoint without changing eligibility ($label)", ({ alchemyApiKey, drpcApiKey }) => {
+    const withKey = buildChainRpcs(alchemyApiKey, drpcApiKey, { dwellirApiKey: DWELLIR_KEY });
+    const withoutKey = buildChainRpcs(alchemyApiKey, drpcApiKey);
     for (const entry of DWELLIR_CHAINS) {
-      const config = withKey.get(entry.chainId);
-      expect(config, entry.chainId).toBeDefined();
-
-      const endpoints = config!.endpoints;
-      expect(endpoints[endpoints.length - 1], entry.chainId).toMatchObject({
-        url: dwellirRpcUrl(entry),
-        operator: "dwellir",
-        keyed: true,
-        position: "supplemental",
-        stateHistory: entry.stateHistory,
-        logsHistory: entry.logsHistory,
-        verifiedAt: entry.verifiedAt,
+      const config = withKey.get(entry.chainId)!;
+      const previous = withoutKey.get(entry.chainId);
+      expect(hasRegistryRpc(config), entry.chainId).toBe(hasRegistryRpc(previous));
+      expect(Boolean(primaryRpcUrl(config)), entry.chainId).toBe(Boolean(primaryRpcUrl(previous)));
+      expect(config.endpoints.filter((endpoint) => endpoint.operator !== "dwellir"))
+        .toEqual(previous?.endpoints ?? []);
+      const dwellir = config.endpoints.filter((endpoint) => endpoint.operator === "dwellir");
+      expect(dwellir).toHaveLength(1);
+      const placement = DWELLIR_STATE_PLACEMENT[entry.chainId];
+      const index = placement === "primary" ? 0 : placement === "after-alchemy" && alchemyApiKey ? 1 : config.endpoints.length - 1;
+      expect(config.endpoints[index]).toBe(dwellir[0]);
+      expect(dwellir[0]).toMatchObject({
+        url: dwellirRpcUrl(entry), maxLogBlockSpan: entry.maxLogBlockSpan,
+        position: placement === "primary" || (placement === "after-alchemy" && alchemyApiKey) ? "registry" : "supplemental",
       });
-      expect(
-        endpoints.slice(0, -1).some((endpoint) => endpoint.operator === "dwellir"),
-        entry.chainId,
-      ).toBe(false);
-
-      const supplemented = supplementalRpcEndpoints(config);
-      expect(supplemented.filter((endpoint) => endpoint.operator === "dwellir"), entry.chainId).toHaveLength(1);
-      expect(supplemented, entry.chainId).toHaveLength(
-        supplementalRpcEndpoints(withoutKey.get(entry.chainId)).length + 1,
-      );
-      expect(endpoints.slice(-supplemented.length), entry.chainId).toEqual(supplemented);
     }
+  });
 
-    for (const config of withKey.values()) {
-      expect(registryRpcUrls(config), config.chainId).toEqual(
-        registryRpcUrls(withoutKey.get(config.chainId)),
-      );
+  it("rolls disabled chains back to supplemental-last and excludes their log scans", () => {
+    const disabled = new Set([...Object.keys(DWELLIR_STATE_PLACEMENT), ...DWELLIR_LOG_SCAN_CHAINS]);
+    const rpcs = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, {
+      dwellirApiKey: DWELLIR_KEY, dwellirRoutingDisabledChains: disabled,
+    });
+    const baseline = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY);
+    for (const chainId of disabled) {
+      const config = rpcs.get(chainId)!;
+      expect(registryRpcUrls(config)).toEqual(registryRpcUrls(baseline.get(chainId)));
+      expect(config.endpoints[config.endpoints.length - 1]).toMatchObject({ operator: "dwellir", position: "supplemental" });
+      expect(logScanRpcEndpoints(config).some((endpoint) => endpoint.operator === "dwellir")).toBe(false);
     }
   });
 
@@ -354,14 +354,16 @@ describe("buildChainRpcs", () => {
     });
   });
 
-  it("keeps Dwellir out of log-scan endpoints", () => {
+  it("admits Dwellir logs only on the reviewed full-history allowlist", () => {
     const chainRpcs = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY });
 
     for (const config of chainRpcs.values()) {
       expect(
         logScanRpcEndpoints(config).some((endpoint) => endpoint.operator === "dwellir"),
         config.chainId,
-      ).toBe(false);
+      ).toBe(DWELLIR_LOG_SCAN_CHAINS.has(config.chainId) && config.endpoints.some(
+        (endpoint) => endpoint.operator === "dwellir" && endpoint.logsHistory === "full",
+      ));
     }
 
     const ethereum = chainRpcs.get("ethereum")!;

@@ -8,7 +8,7 @@ import {
   budgetExhausted,
 } from "../evm-logs";
 import { fetchEtherscanProxyHex, fetchJsonRpcHexAtUrl } from "../evm-rpc";
-import { getChainRpc, hasRegistryRpc, registryRpcUrls, type ChainRpcConfig } from "../chain-registry";
+import { getChainRpc, hasRegistryRpc, registryRpcEndpoints, type ChainRpcConfig } from "../chain-registry";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import {
@@ -121,8 +121,8 @@ async function fetchBalanceViaChainRpc(
 
   const data = encodeBalanceOfCallData(address);
   const blockTag = blockNumberOrTag === "latest" ? "latest" : "0x" + blockNumberOrTag.toString(16);
-  // Registry endpoints only: this lane must never reach a supplemental (Dwellir) endpoint.
-  const urls = registryRpcUrls(rpc);
+  // Balance recovery retains its incumbent operators, independent of state placement.
+  const urls = registryRpcEndpoints(rpc).filter((endpoint) => endpoint.operator !== "dwellir").map((endpoint) => endpoint.url);
 
   for (const rpcUrl of urls) {
     if (budgetExhausted(budget)) return null;

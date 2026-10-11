@@ -1,3 +1,6 @@
+import { DWELLIR_CHAINS } from "@shared/lib/dwellir-chains";
+import { logWorkerEvent } from "./structured-log";
+
 export interface WorkerVersionMetadata {
   id: string;
   tag: string;
@@ -34,6 +37,7 @@ export interface Env {
   ALCHEMY_API_KEY?: string;
   DWELLIR_API_KEY?: string;
   DWELLIR_MAX_CREDITS_PER_MONTH?: string;
+  DWELLIR_ROUTING_DISABLED_CHAINS?: string;
   ADDRESS_PRICE_PROVIDERS_ENABLED?: string;
   GRAPH_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;
@@ -134,6 +138,24 @@ export function parseCsvEnv(value: string | undefined): string[] {
     .split(",")
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
+}
+
+/** Normalize operator rollback IDs and report all unknown entries once per parse. */
+export function parseDwellirRoutingDisabledChains(value: string | undefined): ReadonlySet<string> {
+  const requested = new Set(parseCsvEnv(value).map((chain) => chain.toLowerCase()));
+  const knownChains = new Set(DWELLIR_CHAINS.map((chain) => chain.chainId));
+  const unknownChains = [...requested].filter((chain) => !knownChains.has(chain));
+  if (unknownChains.length > 0) {
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "dwellir_routing_disabled_unknown_chains",
+      message: "Dwellir routing rollback contains unknown chain IDs",
+      provider: "dwellir",
+      metadata: { unknownChains },
+    });
+  }
+  return new Set([...requested].filter((chain) => knownChains.has(chain)));
 }
 
 function parseBooleanEnv(value: string | undefined): boolean | null {
