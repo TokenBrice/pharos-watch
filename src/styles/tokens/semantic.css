@@ -111,7 +111,7 @@
   --mechanism-fiat-cash: oklch(0.67 0.17 252);
   --mechanism-tbill: oklch(0.65 0.21 295);
   --mechanism-cdp: oklch(0.75 0.13 212);
-  --mechanism-synthetic-delta-neutral: oklch(0.68 0.13 182);
+  --mechanism-synthetic-delta-neutral: oklch(0.68 0.122 182);
   --mechanism-algorithmic: oklch(0.7 0.18 15);
   --mechanism-rwa-credit-fund: oklch(0.7 0.15 50);
   --mechanism-commodity-claim: oklch(0.72 0.13 88);
@@ -221,11 +221,11 @@
 
   /* ── Mechanism Archetype Accents (Dark) ────────────────────────
      Same hues, lifted lightness/chroma for legibility on dark bg. */
-  --mechanism-fiat-cash: oklch(0.74 0.16 252);
-  --mechanism-tbill: oklch(0.74 0.18 295);
+  --mechanism-fiat-cash: oklch(0.74 0.138 252);
+  --mechanism-tbill: oklch(0.74 0.150 295);
   --mechanism-cdp: oklch(0.8 0.12 212);
   --mechanism-synthetic-delta-neutral: oklch(0.76 0.12 182);
-  --mechanism-algorithmic: oklch(0.76 0.16 15);
+  --mechanism-algorithmic: oklch(0.76 0.144 15);
   --mechanism-rwa-credit-fund: oklch(0.78 0.14 50);
   --mechanism-commodity-claim: oklch(0.8 0.12 88);
 
