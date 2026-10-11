@@ -126,39 +126,27 @@ function ComparePairDirectory() {
         </section>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {STATIC_COMPARISON_PAGES.map((page) => (
-          <article key={page.href} className="pharos-card-shell px-4 py-4">
-            <div className="flex h-full flex-col gap-3">
-              <div className="min-w-0 space-y-2">
-                <p className="pharos-kicker">
-                  {page.left.symbol} / {page.right.symbol}
-                </p>
-                <h3 className="text-base font-semibold tracking-tight text-foreground">
-                  <Link href={page.href} className="pharos-focus-ring rounded-sm hover:text-frost-blue">
-                    {page.shortTitle}
-                  </Link>
-                </h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">{page.description}</p>
-              </div>
-              <div className="mt-auto flex flex-wrap gap-2 text-sm">
-                <Link
-                  href={page.href}
-                  className="pharos-focus-ring inline-flex min-h-10 items-center rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
-                >
-                  Read comparison
-                </Link>
-                <Link
-                  href={buildLiveCompareUrl([page.left.id, page.right.id])}
-                  className="pharos-focus-ring inline-flex min-h-10 items-center rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                >
-                  Live tool
-                </Link>
-              </div>
-            </div>
-          </article>
+      <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+        {STATIC_COMPARISON_PAGES.filter((page) => !PRIORITY_COMPARISON_SLUGS.has(page.slug)).map((page) => (
+          <li
+            key={page.href}
+            className="flex min-w-0 items-center justify-between gap-3 border-b border-border/40 py-2 text-sm"
+          >
+            <Link
+              href={page.href}
+              className="pharos-focus-ring min-w-0 truncate rounded-sm font-medium text-foreground hover:text-frost-blue"
+            >
+              {page.shortTitle}
+            </Link>
+            <Link
+              href={buildLiveCompareUrl([page.left.id, page.right.id])}
+              className="pharos-focus-ring shrink-0 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+            >
+              Live tool
+            </Link>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
