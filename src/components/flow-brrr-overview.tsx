@@ -211,7 +211,7 @@ export function FlowBrrrOverview({
               "grid",
               isCompact
                 ? "gap-4 2xl:grid-cols-[minmax(0,1.12fr)_minmax(15rem,0.88fr)]"
-                : "gap-5 lg:grid-cols-[1.2fr_1fr]",
+                : "gap-5 lg:grid-cols-[1.2fr_1fr] lg:items-center",
             )}
           >
             <div className="flex flex-col gap-4">
