@@ -190,12 +190,16 @@ export function InstrumentPanel() {
             <span
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
-                data.quality?.status === "partial"
-                  ? "bg-amber-500/10 text-amber-800 dark:text-amber-200"
-                  : "bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
+                data.quality?.status === "complete"
+                  ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-200"
+                  : "bg-amber-500/10 text-amber-800 dark:text-amber-200",
               )}
             >
-              {data.quality?.status === "partial" ? "Partial telemetry" : "Complete telemetry"}
+              {data.quality?.status === "complete"
+                ? "Complete telemetry"
+                : data.quality?.status === "partial"
+                  ? "Partial telemetry"
+                  : "Unknown telemetry"}
             </span>
           ) : null}
         </div>

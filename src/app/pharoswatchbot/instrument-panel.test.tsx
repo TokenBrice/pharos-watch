@@ -9,6 +9,7 @@ import { InstrumentPanel } from "./instrument-panel";
 import { useTelegramPulse } from "@/hooks/api-hooks";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 import type { TelegramPulse } from "@shared/types/status";
+import { TelegramPulseSchema } from "@shared/types/status/telegram";
 import { LiveWatcherCount } from "./live-watcher-count";
 import { NightShiftMetric } from "./night-shift-metric";
 
@@ -115,6 +116,16 @@ describe("InstrumentPanel", () => {
     expect(screen.queryByText("Adoption history")).toBeNull();
     expect(screen.queryByText(/watcher load scenarios|modeled workloads|fixed capacity limit/i)).toBeNull();
     expect(screen.getByRole("link", { name: "status page" }).getAttribute("href")).toMatch(/^\/status\/?$/);
+  });
+
+  it("labels legacy pulse quality unknown instead of complete", () => {
+    mockPulse(TelegramPulseSchema.parse({ ...pulse, quality: undefined }));
+    render(<InstrumentPanel />);
+
+    const badge = screen.getByText("Unknown telemetry");
+    expect(badge.className).toContain("bg-amber-500/10");
+    expect(badge.className).not.toContain("bg-emerald-500/10");
+    expect(screen.queryByText("Complete telemetry")).toBeNull();
   });
 
   it("keeps operational Mini App and delivery counts off the public board", () => {

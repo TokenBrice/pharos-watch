@@ -748,6 +748,7 @@ describe("loadCronHealth — running scheduled slot telemetry", () => {
             started_at: NOW - 600,
             updated_at: NOW - 60,
             running_count: 42,
+            stale_candidate_count: 1,
           },
           {
             slot_key: "halfHourlyOffset",
@@ -755,6 +756,8 @@ describe("loadCronHealth — running scheduled slot telemetry", () => {
             execution_owner: "slot-owner-stale",
             started_at: NOW - 4_000,
             updated_at: NOW - 2_400,
+            running_count: 42,
+            stale_candidate_count: 1,
           },
         ],
       },
@@ -770,6 +773,80 @@ describe("loadCronHealth — running scheduled slot telemetry", () => {
       queryFailed: false,
     });
     expect(snapshot.scheduledSlotEventMarkerQueryFailed).toBe(false);
+  });
+
+  it("uses full-population stale counts beyond the 25-row detail cap", async () => {
+    const rows = seedWithOverrides(NOW, []);
+    const slotRows = Array.from({ length: 25 }, (_, index) => ({
+      slot_key: `stale-slot-${index}`,
+      slot_started_at: NOW - 4_000,
+      execution_owner: `slot-owner-${index}`,
+      started_at: NOW - 4_000,
+      updated_at: NOW - 2_400 + index,
+      running_count: 60,
+      stale_candidate_count: 42,
+    }));
+    const db = mockD1([
+      { match: "UNION ALL", rows },
+      { match: "FROM cron_leases", rows: [] },
+      { match: "FROM cron_run_progress", rows: [] },
+      { match: "FROM cache", rows: [] },
+      { match: "FROM cron_slot_executions", rows: slotRows },
+    ]);
+
+    const snapshot = await loadCronHealth(db, NOW);
+
+    expect(snapshot.scheduledSlots).toEqual({
+      runningSlots: 60,
+      staleCandidateSlots: 42,
+      oldestRunningAgeSec: 2_400,
+      oldestStaleAgeSec: 2_400,
+      queryFailed: false,
+    });
+    const slotQuery = db.getHistory().find((entry) => entry.sql.includes("FROM cron_slot_executions"));
+    expect(slotQuery?.sql).toContain(
+      "SUM(CASE WHEN updated_at <= ? THEN 1 ELSE 0 END) OVER () AS stale_candidate_count",
+    );
+    expect(slotQuery?.sql).toContain("LIMIT 25");
+    expect(slotQuery?.binds).toEqual([NOW - 600]);
+  });
+
+  it("executes full-population scheduled slot counts against SQLite beyond the detail cap", async () => {
+    let runningSlotSql = "";
+    const { sqlite, db } = createLatestSchemaSqlite({
+      onAll: (sql) => {
+        if (sql.includes("FROM cron_slot_executions")) runningSlotSql = sql;
+      },
+    });
+    try {
+      const insert = sqlite.prepare(
+        `INSERT INTO cron_slot_executions
+           (slot_key, slot_started_at, state, execution_owner, started_at, updated_at)
+         VALUES (?, ?, 'running', ?, ?, ?)`,
+      );
+      for (let index = 0; index < 30; index++) {
+        const ageSec = index < 27 ? 2_400 - index * 60 : (index - 27) * 60;
+        insert.run(`slot-${index}`, NOW - 3_000, `slot-owner-${index}`, NOW - 3_000, NOW - ageSec);
+      }
+
+      const snapshot = await loadCronHealth(db, NOW);
+
+      expect(snapshot.scheduledSlots).toEqual({
+        runningSlots: 30,
+        staleCandidateSlots: 27,
+        oldestRunningAgeSec: 2_400,
+        oldestStaleAgeSec: 2_400,
+        queryFailed: false,
+      });
+      // Inspect the exact SQL executed by the summary path, without maintaining
+      // a second copy of the production query just to check its detail cap.
+      expect(runningSlotSql).not.toBe("");
+      const details = await db.prepare(runningSlotSql).bind(NOW - 600).all<{ slot_key: string }>();
+      expect(details.results).toHaveLength(25);
+      expect(details.results.map((row) => row.slot_key)).toEqual(
+        Array.from({ length: 25 }, (_, index) => `slot-${index}`),
+      );
+    } finally { sqlite.close(); }
   });
 
   it("surfaces running-slot query failures distinctly from event-marker failures", async () => {

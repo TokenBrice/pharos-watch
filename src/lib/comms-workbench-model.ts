@@ -534,7 +534,7 @@ export function buildCommsWorkbenchModel(input: {
       },
     },
     quality: {
-      status: telegramBot?.quality?.status ?? (telegramBot ? "complete" : "unknown"),
+      status: telegramBot?.quality?.status ?? "unknown",
       unavailableFields: [...unavailableFields].sort(),
       errors: Object.entries(telegramBot?.quality?.errors ?? {})
         .map(([field, message]) => ({ field, message }))

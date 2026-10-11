@@ -2,9 +2,40 @@ import { describe, expect, it } from "vitest";
 import { PublicStatusHistoryResponseSchema, StatusHistoryResponseSchema, StatusResponseSchema } from "../status";
 import { CronRunSchema, CronInFlightSchema, ResourcePressureSchema } from "../status/cron";
 import { HealthResponseSchema } from "../status";
+import { TelegramPulseOutputSchema, TelegramPulseSchema } from "../status/telegram";
 import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
 
 import { makeReserveComposition, reserveComposition, statusResponse } from "./status.test-support";
+
+describe("TelegramPulseSchema quality admission", () => {
+  const legacyPulse = {
+    activeWatchers: 8,
+    coinSubscriptions: 13,
+    topCoins: ["USDC"],
+    watcherHistory: [],
+    pendingDeliveries: 0,
+    updatedAt: 1_800_000_000,
+    updatedEverySeconds: 300,
+  };
+
+  it("keeps legacy payloads without quality unknown rather than complete", () => {
+    const parsed = TelegramPulseSchema.parse(legacyPulse);
+
+    expect(parsed.quality).toEqual({ status: "unknown", unavailableFields: [] });
+    expect(TelegramPulseOutputSchema.parse(parsed)).toEqual(parsed);
+  });
+
+  it.each([
+    { status: "complete", unavailableFields: [] },
+    { status: "partial", unavailableFields: ["topCoins"], errors: { topCoins: "read failed" } },
+    { status: "unknown", unavailableFields: [] },
+  ])("preserves supplied $status quality evidence", (quality) => {
+    const parsed = TelegramPulseSchema.parse({ ...legacyPulse, quality });
+
+    expect(parsed.quality).toEqual(quality);
+    expect(TelegramPulseOutputSchema.parse(parsed).quality).toEqual(quality);
+  });
+});
 
 describe("StatusResponseSchema reserve composition contract", () => {
   it("admits nullable public diagnostic observations without breaking retained payloads", () => {
