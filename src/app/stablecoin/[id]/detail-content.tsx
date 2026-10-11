@@ -288,14 +288,12 @@ function DetailSummaryRail({
   viewModel: ReadyDetailViewModel;
 }) {
   const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.coinData.nominalPriceReference) || Boolean(viewModel.dexPriceCheck);
-  // A compact companion that sticks below the scrollspy bar at xl+ (owner
-  // decision 2026-10-11, replacing S1's normal-flow rail, which left the right
-  // third blank for ~8,000px): it scrolls inside its own viewport-high box when
-  // taller than the screen. Pillar metrics first (Safety → Backing KPI →
-  // Access posture → Evidence index), then the reference cards. The metric cards are anchor twins of their
+  // A compact companion in normal flow, never sticky (decision S1): pillar
+  // metrics first (Safety → Backing KPI → Access posture → Evidence index),
+  // then the reference cards. The metric cards are anchor twins of their
   // in-flow `xl:hidden` copies; evidence modules live once, in their board.
   return (
-    <aside aria-label="Coin summary rail" className="hidden min-w-0 overscroll-contain xl:sticky xl:top-[calc(env(safe-area-inset-top)+5.5rem)] xl:block xl:max-h-[calc(100dvh-6.5rem)] xl:-mx-1 xl:self-start xl:overflow-y-auto xl:px-1">
+    <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
       <div className="space-y-4 pb-4">
         <RailSafetySummary
           items={heroModel.signalRailItems}
