@@ -94,7 +94,7 @@ See [API Reference](./api-reference.md) for the exact response shape.
 - `src/hooks/api-hooks.ts` exposes `useBluechipRatings()` via the registered `bluechipRatings` query descriptor, whose producer interval is `CRON_BLUECHIP` (derived from `CRON_INTERVALS["sync-bluechip"]`).
 - `src/components/bluechip-header-badge.tsx` renders only the external `Bluechip: <grade>` badge/report link in both responsive stablecoin detail identity layouts. While the Pharos roster is suspended, no Pharos qualification or tenure appears in visible text, link titles, or accessible labels. An external `dateOfRating` is never evidence of Pharos designation tenure.
 - `src/hooks/use-selector.ts` reads the ratings map as one of the Selector's inputs.
-- `src/app/about/bluechip/page.tsx` states the roster rule statically; the roster itself is suspended pending the V10 grade-floor review, so `/about/bluechip/` requests neither the ratings map nor the report cards.
+- The `#bluechip` section of `/about/` (`src/components/about/about-page-content.tsx`, copy in `src/components/about/bluechip-content.ts`) states the roster rule statically; the roster itself is suspended pending the V10 grade-floor review, so it requests neither the ratings map nor the report cards.
 - `src/hooks/use-compare-data-model.ts` folds Bluechip ratings into the compare-page query slices, error propagation, `bluechipMap` projection, and refetch orchestration behind `src/components/compare/compare-client.tsx` (lazily loaded by `src/app/compare/page.tsx`).
 
 `src/lib/bluechip.ts` contains:

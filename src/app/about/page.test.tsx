@@ -85,4 +85,14 @@ describe("AboutPage", () => {
 
     expect(visibleText).toContain(`freeze monitoring across ${BLACKLIST_STABLECOINS.length} stablecoins`);
   });
+
+  it("hosts the Bluechip explainer at the #bluechip anchor the old route redirects to", () => {
+    const section = visibleDocument.getElementById("bluechip");
+    expect(section?.querySelector("h2")?.textContent).toBe("Pharos Bluechip");
+    expect(section?.textContent).toContain("Gate 05");
+  });
+
+  it("flags the recorded walkthroughs that moved here from /start/", () => {
+    expect(visibleDocument.getElementById("media")?.textContent).toContain("Full walkthrough");
+  });
 });

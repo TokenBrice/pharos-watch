@@ -39,11 +39,12 @@ The page is organized into these sections, in order:
 6. `What Pharos Computes`
 7. `Companion Experiences`
 8. `Classification`
-9. `Data Pipeline`
-10. `Methodology`
-11. `About Pharos FAQ`
-12. `Disclaimer` (rendered as an `<aside>`, not a titled `AboutSection`)
-13. `Get in Touch`
+9. `Pharos Bluechip` (`#bluechip`; the former `/about/bluechip/` page, which now 301s here — copy lives in `src/components/about/bluechip-content.ts`)
+10. `Data Pipeline`
+11. `Methodology`
+12. `About Pharos FAQ`
+13. `Disclaimer` (rendered as an `<aside>`, not a titled `AboutSection`)
+14. `Get in Touch`
 
 ## Design And Interaction Rules
 

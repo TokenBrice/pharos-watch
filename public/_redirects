@@ -154,6 +154,11 @@
 /start/ / 301
 /start / 301
 
+# The Bluechip explainer folded into a section of /about/ (2026-10-11).
+/about/bluechip/* /about/#bluechip 301
+/about/bluechip/ /about/#bluechip 301
+/about/bluechip /about/#bluechip 301
+
 # Coins removed from the tracked catalog (bed599cc4); /coverage/ documents
 # what Pharos tracks and why. Old detail URLs still earn search impressions.
 /stablecoin/341/ /coverage/ 301

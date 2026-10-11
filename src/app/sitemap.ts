@@ -177,7 +177,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/blog/": ["weekly", 0.6],
     "/about/": ["monthly", 0.5],
     "/about/api/": ["monthly", 0.5],
-    "/about/bluechip/": ["monthly", 0.5],
     "/depeg/archive/": ["monthly", 0.5, (path) => lastEdited(path, "/depeg/")],
     "/learn/": ["monthly", 0.5],
     "/learn/glossary/": ["monthly", 0.5],

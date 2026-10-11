@@ -141,7 +141,7 @@ Runtime source: `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-c
 
 ### Bluechip rating {#bluechip}
 
-Bluechip has two surfaces: the external Bluechip rating sync documented in [bluechip-ratings.md](bluechip-ratings.md), and the Pharos `/about/bluechip` editorial roster. The roster rule admits mapped assets whose synced external Bluechip grade and Pharos report-card overall grade are both A-tier. It is an intersection of two current feeds, not a separate hidden floor model over safety/liquidity/resilience. The rule is stated in `src/app/about/bluechip/content.tsx` and Section 5 of `src/app/about/bluechip/page.tsx`; the roster is suspended pending the V10 grade-floor review and fetches neither feed while that hold stands.
+Bluechip has two surfaces: the external Bluechip rating sync documented in [bluechip-ratings.md](bluechip-ratings.md), and the Pharos Bluechip editorial roster (the `#bluechip` section of `/about/`). The roster rule admits mapped assets whose synced external Bluechip grade and Pharos report-card overall grade are both A-tier. It is an intersection of two current feeds, not a separate hidden floor model over safety/liquidity/resilience. The rule is stated in `src/components/about/bluechip-content.ts` and rendered by the Bluechip section of `src/components/about/about-page-content.tsx`; the roster is suspended pending the V10 grade-floor review and fetches neither feed while that hold stands.
 
 ### Proof of Reserves
 

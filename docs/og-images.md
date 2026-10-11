@@ -55,7 +55,7 @@ Write mode renders each PNG into ignored staging first and replaces the checked-
 
 | Image | Used by |
 | --- | --- |
-| `og-editorial-about.png` | `/about/`, `/about/api/`, `/about/bluechip/` |
+| `og-editorial-about.png` | `/about/`, `/about/api/` |
 | `og-editorial-depeg.png` | Depeg briefings |
 | `og-editorial-digest.png` | Daily/weekly digest pages |
 | `og-editorial-learn.png` | `/learn/`, `/learn/mechanisms/`, `/learn/case-studies/`, `/learn/glossary/` |

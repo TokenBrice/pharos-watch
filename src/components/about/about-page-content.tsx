@@ -25,6 +25,8 @@ import {
 } from "@/lib/about-content";
 import { MEDIA_APPEARANCES, WALKTHROUGH_APPEARANCES, type MediaAppearance } from "@/lib/media-appearances";
 import { PRINCIPLES_AI_POLICY, PRINCIPLES_AXIOMS, PRINCIPLES_CORRECTIONS } from "@/lib/about-principles-content";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
+import { BLUECHIP_GATES, BLUECHIP_LEDE, BLUECHIP_REFUSALS, BLUECHIP_WHAT_IT_MEANS } from "./bluechip-content";
 import {
   ACTIVE_STABLE_VALUE_INVESTMENT_COUNT,
   ACTIVE_VARIANT_STABLECOIN_COUNT,
@@ -593,6 +595,67 @@ export function AboutPageContent() {
             </Link>
             ), and <span className="font-medium text-foreground">DeFi</span> (fully on-chain, no centralized custody
             dependency). The classification reflects actual infrastructure dependency, not marketing claims.
+          </p>
+        </AboutSection>
+
+        <AboutSection
+          id="bluechip"
+          eyebrow="Editorial designation"
+          title="Pharos Bluechip"
+          contentClassName="space-y-5 text-sm leading-relaxed text-muted-foreground"
+        >
+          <p className="text-foreground/88">{BLUECHIP_LEDE}</p>
+          {BLUECHIP_WHAT_IT_MEANS.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">The gates</h3>
+            <p>
+              Each gate is independent. A coin clears Bluechip only when every gate clears at the same moment, and
+              only while it continues to do so.
+            </p>
+            <ol className="divide-y divide-border/60 border-y border-border/60">
+              {BLUECHIP_GATES.map((gate, index) => (
+                <li key={gate.id} className="grid gap-1 py-3 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-4">
+                  <span className="font-mono text-xs uppercase tracking-[0.08em]">
+                    Gate {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <p>
+                    <span className="font-medium text-foreground">{gate.title}.</span> {gate.body}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">What Bluechip refuses to grant</h3>
+            <ul className="list-disc space-y-1.5 pl-5">
+              {BLUECHIP_REFUSALS.map((entry) => (
+                <li key={entry.title}>
+                  <span className="font-medium text-foreground">{entry.title}.</span> {entry.body}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p>
+            <span className="font-medium text-foreground">Roster suspended</span> while the V10 grade floor is under
+            review. It resumes under the same rule: the live intersection of external Bluechip A-tier ratings and
+            Pharos A-tier report cards, current-state rather than historical. Bluechip rides the Safety Score
+            methodology ({SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}) and is re-derived, never grandfathered, when a
+            floor changes. The per-coin badge still links to the external Bluechip report.
+          </p>
+          <p>
+            <Link href="/methodology/#safety-scores-methodology" className={INLINE_EXTERNAL_LINK_CLASS}>
+              Safety Scores methodology
+            </Link>
+            {" · "}
+            <Link href="/methodology/scoring-changelog/" className={INLINE_EXTERNAL_LINK_CLASS}>
+              Scoring changelog
+            </Link>
+            {" · "}
+            <Link href="/methodology/#def-bluechip" className={INLINE_EXTERNAL_LINK_CLASS}>
+              Definition
+            </Link>
           </p>
         </AboutSection>
 
