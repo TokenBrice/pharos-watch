@@ -92,11 +92,15 @@ export function EndpointHealthGrid({
             });
           }
 
+          // Unsampled routes are not failures: group them behind one explicit line instead of N "—" rows.
+          const unsampled = isInline ? [] : paths.filter((path) => !probeMap.has(path));
+          const sampled = isInline ? paths : paths.filter((path) => probeMap.has(path));
+
           return (
             <div key={key}>
               <h3 className="mb-2 text-sm font-medium text-muted-foreground">{label}</h3>
               <div className="space-y-1">
-                {paths.map((path) => {
+                {sampled.map((path) => {
                   const probe = probeMap.get(path);
                   const display = path.replace(/^\/api\//, "");
 
@@ -157,6 +161,21 @@ export function EndpointHealthGrid({
                   );
                 })}
               </div>
+              {unsampled.length > 0 ? (
+                <details className="mt-2 text-xs text-muted-foreground">
+                  <summary className="pharos-focus-ring cursor-pointer rounded-sm py-1 hover:text-foreground">
+                    {unsampled.length} {unsampled.length === 1 ? "route" : "routes"} not sampled this session
+                  </summary>
+                  <ul className="mt-1 space-y-1">
+                    {unsampled.map((path) => (
+                      <li key={path} className="flex items-center justify-between gap-3">
+                        <span className="font-mono">{path.replace(/^\/api\//, "")}</span>
+                        <span>Not probed</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
             </div>
           );
         })}
