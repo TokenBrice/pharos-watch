@@ -3,6 +3,8 @@ import { getCache } from "../lib/db-cache";
 import { errorResponse } from "../lib/api-response";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { buildFreshnessMeta } from "../lib/api-freshness";
 import {
   CACHE_TTL_SECONDS,
   DETAIL_STALE_CACHE_MAX_AGE_SECONDS,
@@ -134,15 +136,16 @@ const resolveStablecoinDetail = async (db: D1Database, id: string, ctx: Executio
       if (!providerRefreshAllowed) {
         return createStaleCacheHitResponse(normalizedCached.value, age, normalizedCached.updatedAt);
       }
-      if (age >= DETAIL_STALE_CACHE_MAX_AGE_SECONDS) {
+      const freshness = buildFreshnessMeta(normalizedCached.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, "stablecoin-detail");
+      if (freshness.status !== "fresh") {
         logWorkerEventArgs("api", "warn",
-          `[detail] cache too stale stablecoin=${id} age=${age} max=${DETAIL_STALE_CACHE_MAX_AGE_SECONDS}; refreshing synchronously`,
+          `[detail] cache past freshness budget stablecoin=${id} age=${age}; refreshing synchronously`,
         );
         const response = await startStablecoinDetailRefresh({
           db,
           id,
           pegType,
-          cached: null,
+          cached: age < DETAIL_STALE_CACHE_MAX_AGE_SECONDS ? normalizedCached : null,
           ctx,
           coingeckoApiKey,
         });

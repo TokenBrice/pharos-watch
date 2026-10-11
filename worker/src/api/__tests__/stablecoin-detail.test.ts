@@ -5,6 +5,8 @@ import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { buildFreshnessMeta } from "../../lib/api-freshness";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { claimDetailCacheGeneration, publishDetailCacheGeneration } from "../../lib/detail-cache-generation";
 import { createStaleCacheHitResponse } from "../stablecoin-detail/shared";
@@ -383,6 +385,40 @@ describe("handleStablecoinDetail", () => {
     const refreshed = await handleStablecoinDetail(db, "usdt-tether", makeCtx());
     expect(await refreshed.json()).toMatchObject(JSON.parse(freshUpstreamBody));
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([buildFreshnessMeta(0, API_FRESHNESS_MAX_AGE_SEC.stablecoins, "stablecoin-detail").freshBudgetSec + 1, 5 * 60 * 60])("refreshes an aged %ss detail before responding to the first visitor", async (age) => {
+    const now = Math.floor(Date.now() / 1000);
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("detail:usdt-tether", makeDLDetailBody(), now - age);
+    const freshBody = makeDLDetailBody({ tokens: [
+      { date: now, totalCirculatingUSD: { peggedUSD: 120_000_000 }, totalCirculating: { peggedUSD: 120_000_000 } },
+    ] });
+    queueFetch(new Response(freshBody, { status: 200 }));
+    const ctx = makeCtx();
+    const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
+    expect(response.headers.get("X-Data-Updated-At")).toBe(String(now));
+    expect(response.headers.get("Warning")).toBeNull();
+    expect(await response.json()).toMatchObject(JSON.parse(freshBody));
+    await Promise.all(ctx.waitUntilPromises);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains an aged detail with its warning when synchronous refresh fails", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const cachedValue = makeDLDetailBody();
+    const db = mockD1([
+      { match: "cache", rows: [], first: { value: cachedValue, updated_at: now - 18_000 } },
+      { match: "supply_history", rows: [] },
+    ]);
+    queueFetch(new Response("Server Error", { status: 500 }));
+    const response = await handleStablecoinDetail(db, "usdt-tether", makeCtx());
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - 18_000));
+    expect(response.headers.get("X-Data-Freshness")).toBe("stale");
+    expect(response.headers.get("Warning")).toContain("refresh failed");
+    expect(await response.json()).toMatchObject(JSON.parse(cachedValue));
   });
 
   it("returns stale cache when upstream fails but cache exists", async () => {
