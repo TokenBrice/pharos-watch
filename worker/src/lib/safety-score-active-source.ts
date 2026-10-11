@@ -1,4 +1,4 @@
-import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
+import { buildReportCardsV9DependencyGraph, type ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import { loadPublishedReportCardsV9Snapshot } from "./report-cards-v9-cache";
@@ -40,7 +40,11 @@ export async function loadActiveSafetyScoreSource(
 ): Promise<ActiveSafetyScoreSource> {
   return loadPublishedReportCardsV9Snapshot(db, signal).then(
     (snapshot): ActiveSafetyScoreSource => {
-      snapshot = { ...snapshot, cards: snapshot.cards.map((card) => resolveV9PublicWitnessTexts(card)) };
+      const cards = snapshot.cards.map((card) => resolveV9PublicWitnessTexts(card));
+      // The stored graph projects the interned cards; re-project from the
+      // decoded cards so witness-text tokens (e.g. intermediary labels) never
+      // leak and the public exact-projection refinement holds.
+      snapshot = { ...snapshot, cards, dependencyGraph: buildReportCardsV9DependencyGraph(cards) };
       return (
       snapshot.publicationHealth.status === "held"
         ? {
