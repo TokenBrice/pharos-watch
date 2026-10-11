@@ -259,10 +259,11 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
     now: new Date(),
   });
   const structuredDataDateModified = summary?.updatedAt ?? coin.frozenAt;
-  // Keep the FAQ visible and its FAQPage JSON-LD attached to the hydrated
-  // dossier without placing it ahead of the primary coin identity.
+  // Keep the FAQ and its FAQPage JSON-LD attached to the hydrated dossier
+  // without placing it ahead of the primary coin identity; it folds behind one
+  // counted disclosure (answers stay in the HTML) so it costs one line.
   const faqContent = (
-    <FaqSection items={buildStablecoinFaqItems(coin)} title={`${coin.symbol} quick answers`} includeJsonLd />
+    <FaqSection items={buildStablecoinFaqItems(coin)} title={`${coin.symbol} quick answers`} includeJsonLd collapsed />
   );
 
   return (

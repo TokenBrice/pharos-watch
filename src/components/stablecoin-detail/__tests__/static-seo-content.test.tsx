@@ -253,8 +253,12 @@ describe("StablecoinDetailSeoContent", () => {
     expect(items[3].answer).toContain("freeze");
 
     // Same composition the detail page mounts in both render states.
-    const { container } = render(<FaqSection items={items} title="TSTD quick answers" includeJsonLd />);
+    const { container } = render(<FaqSection items={items} title="TSTD quick answers" includeJsonLd collapsed />);
     expect(screen.getByText("TSTD quick answers")).toBeTruthy();
+    // One counted fold, closed by default, with every answer still in the DOM.
+    const fold = screen.getByText("TSTD quick answers").closest("details");
+    expect(fold?.open).toBe(false);
+    expect(fold?.querySelector("summary")?.textContent).toContain(String(items.length));
     expect(screen.getByText("What backs TSTD?")).toBeTruthy();
     const jsonLdScripts = [...container.querySelectorAll('script[type="application/ld+json"]')];
     const faqJsonLd = jsonLdScripts.find((script) => script.textContent?.includes('"FAQPage"'));
