@@ -52,7 +52,7 @@ The page is organized into these sections, in order:
 - `What Pharos Tracks` and `What Pharos Computes` use full-row links instead of small linked headings. This preserves larger touch targets on mobile and reduces the repeated tile-grid feel.
 - CTA buttons keep `min-h-11` on mobile so the tap target does not collapse below the 44px floor.
 - Section cards stay flat with no per-section accent color; `frost-blue` is reserved for the brand hero numeral and inline link-hover states.
-- The data pipeline section should stay flat. Use a source-group list plus a 3-step flow summary rather than nested card grids.
+- The data pipeline section should stay flat. Use a source-group list plus a 3-step flow summary rather than nested card grids. Each source group in `DATA_SOURCE_GROUPS` (`src/lib/about-content.ts`) leads with a one-line `summary`; the exhaustive `sources` list and its evidence caveats sit behind a "Full source list" `<details>` disclosure (still in the static HTML). Grid items carry `min-w-0` and the long lists wrap anywhere, so unbreakable tokens cannot widen the card on phones.
 
 ## Navigation Contract
 

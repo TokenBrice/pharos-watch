@@ -107,13 +107,27 @@ const ABOUT_PAGE_JSON_LD = {
   ],
 } as const;
 
+// Each group leads with a one-line summary; the exhaustive vendor list (and its
+// evidence caveats) sits behind a disclosure so the section stays scannable.
 function PipelineSources() {
   return (
     <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
       {DATA_SOURCE_GROUPS.map((group) => (
-        <div key={group.label} className="space-y-1">
+        <div key={group.label} className="min-w-0 space-y-1">
           <dt className="pharos-kicker">{group.label}</dt>
-          <dd className="text-xs leading-relaxed text-muted-foreground">{group.sources}</dd>
+          {"summary" in group ? (
+            <dd className="space-y-1 text-sm leading-relaxed text-muted-foreground">
+              <p>{group.summary}</p>
+              <details className="group/sources">
+                <summary className="pharos-focus-ring cursor-pointer rounded-sm text-xs font-medium text-foreground/80 hover:text-foreground">
+                  Full source list
+                </summary>
+                <p className="mt-1 text-xs leading-relaxed [overflow-wrap:anywhere]">{group.sources}</p>
+              </details>
+            </dd>
+          ) : (
+            <dd className="text-sm leading-relaxed text-muted-foreground">{group.sources}</dd>
+          )}
         </div>
       ))}
     </dl>
@@ -533,8 +547,8 @@ export function AboutPageContent() {
           contentClassName="space-y-4 text-sm leading-relaxed text-muted-foreground"
         >
           <p>
-            Prefer to watch? The walkthroughs below are full, unscripted sessions of someone driving the dashboard
-            live, hosted elsewhere.
+            Prefer to watch? Appearances marked &ldquo;Full walkthrough&rdquo; are unscripted sessions of someone
+            driving the dashboard live, hosted elsewhere.
           </p>
           {featuredAppearance ? <FeaturedAppearance appearance={featuredAppearance} /> : null}
           {otherAppearances.length > 0 ? (
@@ -616,7 +630,7 @@ export function AboutPageContent() {
             </p>
             <ol className="divide-y divide-border/60 border-y border-border/60">
               {BLUECHIP_GATES.map((gate, index) => (
-                <li key={gate.id} className="grid gap-1 py-3 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-4">
+                <li key={gate.id} className="grid gap-1 py-3 sm:grid-cols-[3.5rem_minmax(0,1fr)] sm:gap-6">
                   <span className="font-mono text-xs uppercase tracking-[0.08em]">
                     Gate {String(index + 1).padStart(2, "0")}
                   </span>
@@ -668,12 +682,12 @@ export function AboutPageContent() {
             All data is fetched server-side by a Cloudflare Worker and cached in D1. The browser never calls external
             APIs directly.
           </p>
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.95fr)]">
-            <div className="space-y-4 rounded-xl bg-muted/20 p-4">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.95fr)] lg:items-start">
+            <div className="min-w-0 space-y-4 rounded-xl bg-muted/20 p-4">
               <p className="text-sm font-semibold text-foreground">Source groups</p>
               <PipelineSources />
             </div>
-            <div className="space-y-4 rounded-xl bg-muted/20 p-4 lg:border-l lg:border-l-2 lg:border-border/60 lg:bg-transparent lg:p-0">
+            <div className="min-w-0 space-y-4 rounded-xl bg-muted/20 p-4 lg:border-l lg:border-l-2 lg:border-border/60 lg:bg-transparent lg:p-0 lg:pl-5">
               <p className="text-sm font-semibold text-foreground">Processing path</p>
               <ol className="space-y-4">
                 {DATA_PIPELINE_STEPS.map((step) => (
