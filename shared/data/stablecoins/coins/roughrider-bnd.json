@@ -38,7 +38,7 @@
     }
   ],
   "launchPhase": "beta",
-  "launchPhaseDetail": "IC unanimously approved bank-to-bank pilot March 25; risk rated low-to-moderate; 10 local banks interested; cost-neutral model; Fiserv contract negotiations still ongoing (not yet signed). Roughrider will be the first white-label deployment on Fiserv's FIUSD platform (Solana); FIUSD itself slipped from end-2025 to July 2026 (Fiserv CEO, June 3 2026), and that July window passed with no go-live announcement and no mention of FIUSD in Fiserv's Q2 2026 results. As of September 13 2026 the Bank of North Dakota's Roughrider page still describes a not-yet-started beta test under a non-binding, zero-cost agreement with total investment to be determined. No source has announced a start, so Pharos widened the September 2026 expectation to the year on September 13 2026",
+  "launchPhaseDetail": "IC unanimously approved bank-to-bank pilot March 25; risk rated low-to-moderate; 10 local banks interested; cost-neutral model; Fiserv contract negotiations still ongoing (not yet signed). Roughrider will be the first white-label deployment on Fiserv's FIUSD platform (Solana); FIUSD itself slipped from end-2025 to July 2026 (Fiserv CEO, June 3 2026), and that July window passed with no go-live announcement and no mention of FIUSD in Fiserv's Q2 2026 results. As of September 13 2026 the Bank of North Dakota's Roughrider page still describes a not-yet-started beta test under a non-binding, zero-cost agreement with total investment to be determined. No source has announced a start, so Pharos widened the September 2026 expectation to the year on September 13 2026. On October 1 2026 Fiserv announced its digital asset platform live with Roughrider Coin as the first financial-institution use case (VersaBank USA issuer and custodian, Fireblocks infrastructure, Solana), and on October 5 Bank of North Dakota named Gate City Bank, First International Bank & Trust, Capital Credit Union and North Star Community Credit Union as pilot partners in a voluntary, permissioned bank-to-bank pilot with no end date; the coin is not available to the public",
   "featuredContent": [
     {
       "type": "tweet",
@@ -117,6 +117,20 @@
       "title": "September pilot window passes with no Roughrider start announced",
       "description": "The September 2026 bank-to-bank pilot timing reaffirmed at the March 25 Industrial Commission vote passed without a start announcement: the Bank of North Dakota Roughrider page was last modified February 17 2026 and still describes a not-yet-started beta under a non-binding, zero-cost agreement, the Fiserv contract conclusion was never announced, and the FIUSD platform it depends on has no confirmed go-live.",
       "sourceUrl": "https://bnd.nd.gov/roughrider/"
+    },
+    {
+      "date": "2026-10-01",
+      "type": "milestone",
+      "title": "Roughrider Coin goes live on Fiserv's digital asset platform",
+      "description": "Fiserv announced its digital asset platform in production with Roughrider Coin as the first financial-institution use case. VersaBank USA is the issuer, handling minting, burning, custody and reserve management; Fireblocks provides digital asset infrastructure and transactions settle on Solana. More than 90 North Dakota banks and credit unions can access the coin through Fiserv's Commercial Center online banking.",
+      "sourceUrl": "https://www.globenewswire.com/news-release/2026/10/01/3372889/0/en/fiserv-digital-asset-platform-goes-live-with-financial-institution-clients-advancing-stablecoin-powered-banking-and-payments.html"
+    },
+    {
+      "date": "2026-10-05",
+      "type": "partnership",
+      "title": "Bank of North Dakota names four pilot partners for Roughrider Coin",
+      "description": "Bank of North Dakota announced a bank-to-bank pilot with Gate City Bank, First International Bank & Trust, Capital Credit Union and North Star Community Credit Union, naming Fiserv, VersaBank USA and Solana as technology partners. Participation is voluntary and limited to approved institutions, access expands in phases, and no end date is set; the coin is not available to the public or merchants.",
+      "sourceUrl": "https://bnd.nd.gov/bank-of-north-dakota-launches-roughrider-coin-credits-collaboration-and-controlled-innovation/"
     }
   ]
 }
