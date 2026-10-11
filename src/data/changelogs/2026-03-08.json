@@ -1,9 +1,10 @@
 {
   "dateRange": {
-    "from": "2026-03-01",
+    "from": "2026-03-02",
     "to": "2026-03-08"
   },
   "headline": "Dynamic social cards, motion design overhaul, DEWS radar redesign, and mint/burn flows rebuilt on Alchemy.",
+  "fieldNotes": "The week's work split between presentation and plumbing. Satori-rendered social cards and a homepage motion pass changed how pages look when shared and loaded, and the DEWS radar was inverted so danger sits at the center. Underneath, mint/burn scanning moved from Etherscan to Alchemy and expanded to the top 50 Ethereum coins, and every stablecoin ID moved to the canonical ticker-issuer format in a four-phase migration with redirects.",
   "summary": [
     {
       "label": "Dynamic OG images",
@@ -33,12 +34,12 @@
     {
       "label": "Worker hardening",
       "tag": "infra",
-      "description": "Circuit breakers, AbortSignal cron timeouts, D1 retry logic, 160+ new tests, and degraded-mode pipeline handling"
+      "description": "Circuit breakers, AbortSignal cron timeouts, D1 retry logic, 100+ new worker tests, and degraded-mode pipeline handling"
     },
     {
       "label": "Expanded coverage",
       "tag": "coverage",
-      "description": "USTB, OUSG, USCC, mTBILL, USD+, apxUSD, wsrUSD, ebUSD, USND, USDaf added to tracking with reserves and AI summaries"
+      "description": "USTB, OUSG, USCC, mTBILL, XMMF, USD+, wsrUSD, ebUSD, USND, USDaf added to tracking with reserves and AI summaries"
     },
     {
       "label": "Methodology versioning",
@@ -48,88 +49,88 @@
     }
   ],
   "stats": {
-    "totalCommits": 564
+    "totalCommits": 468
   },
   "commits": [
     {
-      "hash": "525fbb5",
-      "message": "fix(og): use local resvg WASM binary for proper CompiledWasm import"
+      "hash": "164757ad",
+      "message": "fix(dex): tighten pool crawl budget"
     },
     {
-      "hash": "6263269",
-      "message": "fix(worker): add nodejs_compat flag for satori process reference"
+      "hash": "e6e2334d",
+      "message": "fix(worker): leave headroom for dex cron runtime"
     },
     {
-      "hash": "16090b0",
-      "message": "fix(og): use static import for OG handler, stub resvg-wasm in vitest"
+      "hash": "07d29189",
+      "message": "fix(ci): explicitly deploy worker triggers"
     },
     {
-      "hash": "7009f94",
-      "message": "feat: add logos for ebUSD/USND/USDaf and peg score NR explainer"
+      "hash": "68382d56",
+      "message": "Clarify admin status probe and degraded cron details"
     },
     {
-      "hash": "acf7a51",
-      "message": "Refactor liquidity chain registry by provider"
+      "hash": "805034ea",
+      "message": "Add Telegram bot stats to admin status page"
     },
     {
-      "hash": "734eb64",
-      "message": "fix(edge-cache): skip caching non-2xx responses"
+      "hash": "5a38a98b",
+      "message": "fix(mobile): fix column selector showing all columns as enabled on mobile"
     },
     {
-      "hash": "4d8a294",
-      "message": "fix(og): remove path comment triggering worker boundary check"
+      "hash": "29254d38",
+      "message": "fix(mobile): reduce table dead space, hide CSV export and peg filter on small screens"
     },
     {
-      "hash": "255834f",
-      "message": "Add USND, USDaf, and ebUSD metadata"
+      "hash": "d28503a3",
+      "message": "fix(backfill): anchor secondary FX window to CG inception date for DL-less coins"
     },
     {
-      "hash": "63ed652",
-      "message": "feat(about): add cmcs logo and workflow mention"
+      "hash": "92f2b28a",
+      "message": "fix: allow fractional commodity token prices"
     },
     {
-      "hash": "3df1fe8",
-      "message": "fix: resolve React 19 lint errors and worker test failures"
+      "hash": "f6067e68",
+      "message": "fix(og): use space-between instead of space-evenly (unsupported by satori)"
     },
     {
-      "hash": "1226721",
-      "message": "feat(og): integrate ShareButton into stablecoin detail and feature pages"
+      "hash": "943002d0",
+      "message": "fix(og): use space-evenly for balanced content distribution"
     },
     {
-      "hash": "7782146",
-      "message": "feat(og): point OG metadata to dynamic Worker-generated images"
+      "hash": "2835285e",
+      "message": "fix(og): fill OG card canvas — scale up metrics, spread content vertically"
     },
     {
-      "hash": "7643e6d",
-      "message": "feat(og): add OG image generation endpoint with Satori + resvg-wasm"
+      "hash": "64edc9cc",
+      "message": "fix(og): use net_flow_usd column from mint_burn_hourly schema"
     },
     {
-      "hash": "5abd395",
-      "message": "feat(og): add ShareButton component for copy-link and copy-as-image"
+      "hash": "cbfa9d2b",
+      "message": "Agents docs cleanup"
     },
     {
-      "hash": "cbaec05",
-      "message": "feat(motion): wire entrance choreography across homepage components"
+      "hash": "a18a32de",
+      "message": "Add stablecoin metadata and CNH FX support"
     },
     {
-      "hash": "2b0d305",
-      "message": "feat(og): add aggregate OG card templates (safety, depeg, PSI)"
+      "hash": "f4087071",
+      "message": "fix(og): use satori/standalone to avoid yoga WASM dynamic instantiation"
     },
     {
-      "hash": "6358d0e",
-      "message": "feat(og): add stablecoin OG card template with state-adaptive treatment"
+      "hash": "4e977baa",
+      "message": "fix(og): handle @cf-wasm/resvg double-init in persistent isolates"
     },
     {
-      "hash": "f919415",
-      "message": "feat(briefing): integrate IntelligenceBriefing into homepage"
+      "hash": "d9a94a60",
+      "message": "refactor: remove Intelligence Briefing component from homepage"
     },
     {
-      "hash": "d335fda",
-      "message": "feat(briefing): add IntelligenceBriefing component"
+      "hash": "78356293",
+      "message": "Fix status self-check probing and blacklist RPC fallbacks"
     },
     {
-      "hash": "82ff4d0",
-      "message": "fix(kpi): move animated display vars after useCountUp declarations"
+      "hash": "cee91445",
+      "message": "fix(og): switch to @cf-wasm/resvg for Workers-compatible WASM init"
     }
   ]
 }

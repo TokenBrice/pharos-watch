@@ -1,0 +1,144 @@
+{
+  "dateRange": {
+    "from": "2026-03-16",
+    "to": "2026-03-22"
+  },
+  "headline": "Four new DEX APIs feed pricing consensus, Safety Score hits v6.0, and live reserves double to 114 coins.",
+  "fieldNotes": "Most of the week went into widening what each number rests on. Four direct DEX APIs and four more price sources now feed consensus, which also stopped treating DefiLlama as an independent vote. Live reserve tracking reached 114 coins and redemption backstops 136. Chain profiles opened a second way to read supply, and the week closed with audit remediation across cron, digest, and backstop pipelines.",
+  "summary": [
+    {
+      "label": "Chain analytics launch",
+      "tag": "feature",
+      "description": "New /chains/ leaderboard and per-chain profile pages with health scores, supply snapshots, and cross-linked stablecoin detail",
+      "href": "/methodology/chain-health-changelog/"
+    },
+    {
+      "label": "Multi-DEX API integration",
+      "tag": "feature",
+      "description": "Fluid, Balancer, Raydium, and Orca direct API fetchers with per-protocol price disaggregation into pricing consensus"
+    },
+    {
+      "label": "Pricing source expansion",
+      "tag": "feature",
+      "description": "Kraken, Bitstamp, Jupiter, and Chainlink added to consensus; DefiLlama no longer counts as an independent source; tertiary FX fallback for multi-source outages",
+      "href": "/methodology/pricing-pipeline-changelog/"
+    },
+    {
+      "label": "Safety Score v6.0",
+      "tag": "feature",
+      "description": "Custody tiers, mature-alt-L1 classification, 2-factor Resilience scoring, and custodyModel overrides for all remaining coins",
+      "href": "/methodology/scoring-changelog/"
+    },
+    {
+      "label": "Live reserve expansion",
+      "tag": "coverage",
+      "description": "Coverage expanded from 54 to 114 coins with curated-validated adapters, display blocks, and risk validation"
+    },
+    {
+      "label": "Redemption backstop coverage",
+      "tag": "coverage",
+      "description": "Expanded from 66 to 136 coins with BUIDL, NAV-based, AMM, and on-chain backstop configs plus fee accuracy fixes",
+      "href": "/methodology/redemption-backstop-changelog/"
+    },
+    {
+      "label": "Pre-launch module",
+      "tag": "feature",
+      "description": "New /upcoming page with milestone tracking, Telegram launch alerts, pre-launch detail views, a homepage timeline, and seven seeded pre-launch stablecoins"
+    },
+    {
+      "label": "Stablecoin additions",
+      "tag": "coverage",
+      "description": "thBILL, Alto DUSD, USSD, and USBD added to tracking; dUSD gains a prominent exploit notice banner"
+    },
+    {
+      "label": "Table and page polish",
+      "tag": "design",
+      "description": "Table density toggle, column resize, context menus, command palette history, richer OG share images, and design-system utilities across ten routes"
+    }
+  ],
+  "stats": {
+    "totalCommits": 324
+  },
+  "commits": [
+    {
+      "hash": "f5807c17",
+      "message": "Refresh content and harden stablecoin sync"
+    },
+    {
+      "hash": "16aeca66",
+      "message": "Wrangler clarification"
+    },
+    {
+      "hash": "ebb5c679",
+      "message": "Fix Circle live reserve parsing"
+    },
+    {
+      "hash": "12f29c0c",
+      "message": "Keep active depegs in PSI via replay price fallback"
+    },
+    {
+      "hash": "f5249138",
+      "message": "Remove unused pricing policy exports"
+    },
+    {
+      "hash": "42dbd6da",
+      "message": "Harden pricing trust and provenance handling"
+    },
+    {
+      "hash": "ed57fb37",
+      "message": "fix: keep safety methodology hotspot stable"
+    },
+    {
+      "hash": "0ee34486",
+      "message": "fix: remove unused reserve sync export"
+    },
+    {
+      "hash": "4c57a53e",
+      "message": "feat: harden redemption backstop live metadata and provenance"
+    },
+    {
+      "hash": "705a48bf",
+      "message": "docs: cover upcoming route surface"
+    },
+    {
+      "hash": "93dd7109",
+      "message": "fix: move At a Glance before Launch Timeline on pre-launch detail page"
+    },
+    {
+      "hash": "0e9121d4",
+      "message": "fix: include upcoming page in sitemap"
+    },
+    {
+      "hash": "97436afb",
+      "message": "feat: harden live reserve sync storage and validation"
+    },
+    {
+      "hash": "8f2b1314",
+      "message": "fix: add rollout-safety header to migration 0072"
+    },
+    {
+      "hash": "34505028",
+      "message": "fix: renumber Telegram launch alerts migration to 0072"
+    },
+    {
+      "hash": "bcf493ba",
+      "message": "feat: enhance pre-launch module with milestones, /upcoming page, Telegram launch alerts, and curation skill"
+    },
+    {
+      "hash": "86b293ba",
+      "message": "feat: harden live reserve scoring and validation"
+    },
+    {
+      "hash": "efb54736",
+      "message": "Refactor pricing publication helpers"
+    },
+    {
+      "hash": "22d6836a",
+      "message": "Remove unused pricing policy exports"
+    },
+    {
+      "hash": "40118478",
+      "message": "Harden pricing integrity and expand redemption backstops"
+    }
+  ]
+}

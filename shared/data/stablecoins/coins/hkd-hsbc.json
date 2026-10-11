@@ -33,7 +33,7 @@
   "announcedDate": "2026-03",
   "expectedLaunchDate": "2026-H2",
   "launchPhase": "announced",
-  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS02, effective April 10 2026; launch expected in the coming months / H2 2026 with integration into PayMe (3.3M users) and HSBC HK App; peer-to-peer payments and tokenized investment subscriptions; 1:1 backed by HKD-denominated high-quality liquid assets in segregated accounts; symbol and ticker not yet confirmed",
+  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS02, effective April 10 2026; launch expected in the coming months / H2 2026 with integration into PayMe (3.3M users) and HSBC HK App; peer-to-peer payments and tokenized investment subscriptions; 1:1 backed by HKD-denominated high-quality liquid assets in segregated accounts; on September 30 2026 HSBC named the token HSBC RedCoin, offered at launch only through PayMe and the HSBC HK Mobile App; ticker not yet confirmed",
   "featuredContent": [
     {
       "type": "article",
@@ -63,6 +63,13 @@
       "title": "HKMA grants stablecoin issuer licence to HSBC",
       "description": "The HKMA grants The Hongkong and Shanghai Banking Corporation Limited a stablecoin issuer licence under the Stablecoins Ordinance, effective April 10 2026.",
       "sourceUrl": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
+    },
+    {
+      "date": "2026-09-30",
+      "type": "announcement",
+      "title": "HSBC names its Hong Kong dollar stablecoin HSBC RedCoin",
+      "description": "HSBC named its planned HKD stablecoin HSBC RedCoin and stated that at launch it will be offered only through PayMe and the HSBC HK Mobile App, restating a launch plan for the second half of 2026.",
+      "sourceUrl": "https://www.about.hsbc.com.hk/news-and-media/hsbc-names-stablecoin-hsbc-redcoin"
     }
   ]
 }

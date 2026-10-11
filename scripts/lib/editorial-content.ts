@@ -39,6 +39,9 @@ export const WeeklyContentSchema: z.ZodType<ChangelogEntry> = z.object({
   commits: z.array(z.object({ hash: text.regex(/^[0-9a-f]{7,40}$/), message: text }).strict()).min(1).max(20),
 }).strict().superRefine((entry, ctx) => {
   if (entry.dateRange.from > entry.dateRange.to) ctx.addIssue({ code: "custom", path: ["dateRange"], message: "Date range is reversed" });
+  const fromMs = Date.parse(`${entry.dateRange.from}T00:00:00Z`);
+  const toMs = Date.parse(`${entry.dateRange.to}T00:00:00Z`);
+  if (new Date(fromMs).getUTCDay() !== 1 || toMs - fromMs !== 6 * 86_400_000) ctx.addIssue({ code: "custom", path: ["dateRange"], message: "Weekly changelog range must span exactly Monday through Sunday" });
   if (entry.stats.totalCommits < entry.commits.length) ctx.addIssue({ code: "custom", path: ["stats", "totalCommits"], message: "Total commits is less than the rendered list" });
 });
 const eventWindow = z.object({

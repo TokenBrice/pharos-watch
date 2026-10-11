@@ -240,6 +240,13 @@
       "title": "Digital Asset Basic Act September public hearing effectively cancelled; FSC now targets a November subcommittee",
       "description": "The public hearing expected around September 30 fell through after the government bill was delayed, leaving year-end passage uncertain; the FSC still aims for a National Assembly bill-review subcommittee in November. The framework that would authorise won-pegged issuers, and therefore KRW1's commercial launch, remains unenacted.",
       "sourceUrl": "https://www.edaily.co.kr/News/Read?newsId=04598566645582744"
+    },
+    {
+      "date": "2026-10-01",
+      "type": "testnet",
+      "title": "BDACS demonstrates a testnet KRW1 to USDC swap through Circle StableFX",
+      "description": "At the Korea Blockchain Week side event Bridging Finance Onchain, co-hosted with Circle, Kyobo Life and SBI Holdings, BDACS demonstrated an onchain exchange and settlement of KRW1 against USDC using Circle's StableFX institutional FX program in a testnet environment.",
+      "sourceUrl": "https://www.digitaltoday.co.kr/en/view/110174/bdacs-kim-tak-jong-krw-stablecoin-should-target-new-payment-areas"
     }
   ]
 }

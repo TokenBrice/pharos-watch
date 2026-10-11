@@ -1,0 +1,138 @@
+{
+  "dateRange": {
+    "from": "2026-03-23",
+    "to": "2026-03-29"
+  },
+  "headline": "Yield intelligence moves to protocol-native adapters as sixteen stablecoin additions take tracking to 185.",
+  "fieldNotes": "Yield was the week's main build: more than ten protocol-native adapters joined the pipeline, and benchmarks now follow each peg's own risk-free rate, including EUR and CHF. The catalog grew in the same stretch, with Liquity v2 forks, non-USD fiat coins, and a MiCA-regulated CHF stablecoin. Every AI editorial summary was rewritten, and the week closed with an audit remediation pass covering validation, SQL safety, and cron observability.",
+  "summary": [
+    {
+      "label": "Yield intelligence overhaul",
+      "tag": "feature",
+      "description": "10+ protocol-native adapters (Aave V3, Compound V3, Morpho, Pendle, Beefy, Yearn Kong), benchmark-aware scoring, coverage audits, and 365-day backfill charts",
+      "href": "/methodology/yield-changelog/"
+    },
+    {
+      "label": "Broader stablecoin coverage",
+      "tag": "coverage",
+      "description": "ftUSD, CHFAU, USDKG, USDh, ctUSD, trUSD, Liquity v2 forks USDQ and USDK, and non-USD coins including BRLA, IDRX, MXNB, and CJPY added; five dead coins moved to the cemetery"
+    },
+    {
+      "label": "Detail page depth",
+      "tag": "feature",
+      "description": "All 174 AI editorial summaries rewritten, a new Used as Collateral section, chain and DEX distribution donuts, and Liquity fork lineage badges"
+    },
+    {
+      "label": "Design polish",
+      "tag": "design",
+      "description": "RegimeBar PSI indicator, confidence typography, chart tooltip standardization, an interactive Safety Score calculator, and the stablecoin table promoted to the homepage hero"
+    },
+    {
+      "label": "Blacklist coverage",
+      "tag": "coverage",
+      "description": "PayPal USD and USD1 freeze tracking (methodology v3.3), blacklistability in the hero and homepage table, gold-peg freeze chart support, and a quarterly freeze ledger",
+      "href": "/methodology/blacklist-tracker-changelog/"
+    },
+    {
+      "label": "Reserve and backstop depth",
+      "tag": "coverage",
+      "description": "Redemption backstop confidence upgraded across lower-cap and medium-confidence tranches; live reserves added for reUSD and USDD, reaching 119 live-enabled coins",
+      "href": "/methodology/redemption-backstop-changelog/"
+    },
+    {
+      "label": "Status page upgrades",
+      "tag": "infra",
+      "description": "Telegram delivery summary, degraded-first cache freshness tables, tripped-first circuit breaker tables, and aligned admin and public health semantics"
+    },
+    {
+      "label": "Codebase hardening",
+      "tag": "security",
+      "description": "Audit remediation passes add Zod validation at boundaries, SQL interpolation and stablecoin-data CI checks, error boundaries on eight pages, and remove the webhook secret query fallback"
+    }
+  ],
+  "stats": {
+    "totalCommits": 366
+  },
+  "commits": [
+    {
+      "hash": "e870dac0",
+      "message": "test: add RPC failure logging coverage for evm-rpc [Q10]"
+    },
+    {
+      "hash": "d46ba00e",
+      "message": "chore: add sql-safety and stablecoin-data checks to CI workflow"
+    },
+    {
+      "hash": "d55a94dd",
+      "message": "feat: add --audit-allowlist flag to check:unused-code for periodic review [S4]"
+    },
+    {
+      "hash": "dd69f1a5",
+      "message": "feat: add pre-build stablecoin data validation with per-entry Zod errors [S6]"
+    },
+    {
+      "hash": "ab8b72f7",
+      "message": "feat: add CI check for SQL interpolation safety enforcement [S3]"
+    },
+    {
+      "hash": "3d542846",
+      "message": "refactor: add observability to silent catch blocks in cron pipelines [Q1]"
+    },
+    {
+      "hash": "963cfc44",
+      "message": "refactor: add RPC failure summary logging for debugging observability [Q10]"
+    },
+    {
+      "hash": "6426ac26",
+      "message": "refactor: add DEX_LIQUIDITY_TABLES allowlist for SQL interpolation safety [Q5]"
+    },
+    {
+      "hash": "bfae251f",
+      "message": "refactor: extract mergeCronMetadataWithLease to reduce runLeasedCron complexity [Q2]"
+    },
+    {
+      "hash": "1d19f5af",
+      "message": "refactor: consolidate getPriceCache into single query with schema fallback [Q4]"
+    },
+    {
+      "hash": "23f0c35d",
+      "message": "refactor: extract CHART_NO_ANIM constant to deduplicate animation pattern [R6]"
+    },
+    {
+      "hash": "1236308a",
+      "message": "refactor: consolidate duplicate getStatusSeverity into shared/lib/public-health [R5]"
+    },
+    {
+      "hash": "5876c391",
+      "message": "fix: restore yield-detail-section local formatSignedPercent wrapper"
+    },
+    {
+      "hash": "f552d6ec",
+      "message": "chore: align TypeScript targets to ES2022 to match Node 22+ runtime [S8]"
+    },
+    {
+      "hash": "71f9f891",
+      "message": "chore: rename runTwentyMinuteDexDiscoverySlot to match 30-minute schedule [Q11]"
+    },
+    {
+      "hash": "6d5b08d7",
+      "message": "chore: fix import alias, simplify UUID generation, add SQL safety comment [R9, Q6, Q7]"
+    },
+    {
+      "hash": "d53b3117",
+      "message": "chore: remove findChainData wrapper, use findCanonicalChainData directly [R4]"
+    },
+    {
+      "hash": "4b4ee08a",
+      "message": "chore: remove cache-health re-export shim, import from @shared directly [R8]"
+    },
+    {
+      "hash": "82181b55",
+      "message": "chore: remove worker re-export shims for depeg-config and dews-config [R3]"
+    },
+    {
+      "hash": "be060829",
+      "message": "chore: remove dead DESIGN-MAPPING-TABLE and unused formatDeathDateShort [R1/S1, R2]"
+    }
+  ]
+}
