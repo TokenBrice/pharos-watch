@@ -7,6 +7,7 @@ import {
   requiredV9Applicability,
   minimalAsset,
 } from "@shared/lib/__tests__/safety-score-v9-facts.fixture-support";
+import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { V9_REASON_CODES } from "@shared/types/safety-score-v9";
 import {
@@ -33,8 +34,11 @@ function classify(reasonCode: string, componentKey = "fixture"): V9MissingDataWo
   } as Parameters<typeof classifyV9MissingDataWorkType>[0]);
 }
 
+const SHARED_EXIT_MESSAGE = "Comparable exit route evidence is missing for the reviewed settlement window of this fixture.";
+
 function generateExitProjectionFixture(
   reasonCodes: readonly ("unproven-settlement-bound" | "unsupported-same-notional-route")[],
+  options: { intern?: boolean } = {},
 ) {
   const assetId = "exit-fixture";
   const core = coreFixture();
@@ -68,13 +72,14 @@ function generateExitProjectionFixture(
   pillars.exit.reasons = reasonCodes.map((code) => ({
     code,
     path: "exit:fixture-route",
-    message: `${code} fixture`,
+    message: options.intern ? SHARED_EXIT_MESSAGE : `${code} fixture`,
   }));
-  const card = makeReportCardsV9Card({
+  const plainCard = makeReportCardsV9Card({
     id: assetId,
     pillars,
     reasonCodes: [...reasonCodes].sort(),
   });
+  const card = options.intern ? internV9PublicWitnessTexts(plainCard) : plainCard;
 
   return generateV9MissingDataRegistry({
     replay: {
@@ -243,6 +248,18 @@ describe("Safety Score v9 missing-data work routing", () => {
       requiresSupplementalTask: true,
     });
     expect(registry.summary.scoreProjectionReasonNeedingSupplementCount).toBe(1);
+  });
+
+  it("emits readable reason text and scope for interned wire cards", () => {
+    const codes = ["unsupported-same-notional-route", "unproven-settlement-bound"] as const;
+    const plain = generateExitProjectionFixture(codes).stablecoins[0]!;
+    const interned = generateExitProjectionFixture(codes, { intern: true }).stablecoins[0]!;
+    const settlement = interned.missingItems.find((item) => item.taskSource === "score-projection-gap")!;
+
+    expect(settlement).toMatchObject({ message: SHARED_EXIT_MESSAGE, path: { kind: "score-projection", scorePath: "exit:fixture-route" } });
+    expect(JSON.stringify(interned.scoreProjectionGaps)).not.toMatch(/"~[0-9a-z]+"/u);
+    expect(interned.scoreProjectionGaps.map((gap) => gap.workType))
+      .toEqual(plain.scoreProjectionGaps.map((gap) => gap.workType));
   });
 
   it("does not turn explicitly non-curation structural risk into a missing-data task", () => {
